@@ -1,14 +1,14 @@
 const CACHE_PREFIX = 'folio-';
-const CACHE_NAME = 'folio-v1.3.0';
-const APP_VERSION = '1.3.0';
+const CACHE_NAME = 'folio-v1.4.0';
+const APP_VERSION = '1.4.0';
 const RELEASE_DATE = '2026-10-11';
 const RELEASE_NOTES = [
-  "Большой художественный редизайн FOLIO: иллюстрированный скетчбук, новые цветовые материалы и собственный визуальный язык вместо однотипного веб-интерфейса.",
-  "Контрастный мобильный пенал и обновлённый редактор для ПК: читаемые подписи, тактильные кнопки, рисованные образцы кистей и удобная иерархия.",
-  "Новый авторский значок, яркая художественная палитра и деликатные анимации с поддержкой reduced-motion."
+  "Заливка теперь ориентируется только на реальные контуры, а не на ранее закрашенные участки: можно свободно перекрашивать области, пересечения линий аккуратно закрываются.",
+  "Быстрые штрихи больше не обрываются до точки отпускания: сглаживание подстраивается под скорость движения, последние координаты учитываются, рисунок не превращается неожиданно в прямую линию.",
+  "На ПК курсор показывает реальный круг размера кисти и ластика с учётом масштаба, включая обычный ввод мышью и графическим пером."
 ];
 const CACHE_PROTOCOL = 2;
-const APP_SHELL = ['./','./index.html','./styles.css','./app.js','./app.config.json','./manifest.webmanifest','./icons/icon.svg',
+const APP_SHELL = ['./','./index.html','./styles.css','./app.js','./fill-engine.mjs','./app.config.json','./manifest.webmanifest','./icons/icon.svg',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
   '../../shared/update-manager.css','../../shared/update-manager.js',
   '../../shared/workshop-mode.css','../../shared/workshop-mode.js',

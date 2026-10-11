@@ -145,7 +145,7 @@
           <label class="desktop-slider-label">Толщина <output id="desktop-size-value">9 px</output><input type="range" min="1" max="72" step="1" value="9" id="desktop-size"></label>
           <label class="desktop-slider-label">Насыщенность <output id="desktop-opacity-value">100%</output><input type="range" min="10" max="100" step="5" value="100" id="desktop-opacity"></label>
           <div class="desktop-color-control"><span>Текущий цвет</span><input id="desktop-color" type="color" aria-label="Цвет кисти" value="#a6553e"></div>
-          <div class="desktop-fill-control" id="desktop-fill-control"><label for="desktop-fill-tolerance">Допуск заливки <output id="desktop-fill-value">28</output></label><input type="range" id="desktop-fill-tolerance" min="0" max="100" value="28"><small>Заливка замкнутых областей в активном слое</small></div>
+          <div class="desktop-fill-control" id="desktop-fill-control"><label for="desktop-fill-tolerance">Порог контура <output id="desktop-fill-value">28</output></label><input type="range" id="desktop-fill-tolerance" min="0" max="100" value="28"><small>Границы создают линии, а не предыдущие заливки. Больший порог пропускает прозрачные штрихи.</small></div>
         </div>
         <div class="inspector-section">
           <div class="inspector-label">СПОСОБ ВВОДА</div>
@@ -166,7 +166,7 @@
           <span class="rail-caption" id="brush-label">Тушь</span>
           <label class="rail-slider"><span>РАЗМЕР</span><input id="brush-size" aria-label="Размер кисти" type="range" min="1" max="72" step="1" value="9"><output id="brush-size-value">9</output></label>
           <label class="rail-slider rail-opacity"><span>КРАСКА</span><input id="brush-opacity" aria-label="Непрозрачность краски" type="range" min="10" max="100" step="5" value="100"><output id="brush-opacity-value">100%</output></label>
-          <label class="rail-slider rail-fill-tolerance" id="mobile-fill-control" hidden><span>ДОПУСК</span><input id="fill-tolerance" aria-label="Допуск заливки" type="range" min="0" max="100" value="28"><output id="fill-tolerance-value">28</output></label>
+          <label class="rail-slider rail-fill-tolerance" id="mobile-fill-control" hidden><span>ПОРОГ</span><input id="fill-tolerance" aria-label="Порог прозрачности границы заливки" type="range" min="0" max="100" value="28"><output id="fill-tolerance-value">28</output></label>
         </div>
         <nav class="tool-bar" aria-label="Инструменты рисования">
           <button class="tool selected" id="brush-tool" aria-label="Кисти" data-tool="brush"><svg><use href="#i-brush"/></svg><small>Кисти</small></button>
