@@ -214,12 +214,12 @@ function renderBattle() {
     </section>
     <section class="battle-panel">
       <div class="turn-plaque"><div class="turn-top"><span>${esc(turnTitle)}</span><span>${current === 0 ? 'СИНИЕ' : 'КРАСНЫЕ'}</span></div>
-        <div class="turn-name">${esc(state.players[current]?.name || 'Полководец')}</div>
+        <div class="turn-name">${esc(state.players[current]?.name || 'Полководец')}${pocketPlayerBadge(state.players[current])}</div>
         <div class="action-pips">${[0,1].map(i=>`<i class="${i >= state.actions ? 'used' : ''}"></i>`).join('')}</div>
       </div>
       <div class="scores">
-        <div class="score"><strong>${esc(state.players[0]?.name || 'Север')} · Север</strong><div class="score-flags">${flags(state.scores[0])}</div><small>Знамёна ${state.scores[0]} / 3</small></div>
-        <div class="score south"><strong>${esc(state.players[1]?.name || 'Юг')} · Юг</strong><div class="score-flags">${flags(state.scores[1])}</div><small>Знамёна ${state.scores[1]} / 3</small></div>
+        <div class="score"><strong>${esc(state.players[0]?.name || 'Север')}${pocketPlayerBadge(state.players[0])} · Север</strong><div class="score-flags">${flags(state.scores[0])}</div><small>Знамёна ${state.scores[0]} / 3</small></div>
+        <div class="score south"><strong>${esc(state.players[1]?.name || 'Юг')}${pocketPlayerBadge(state.players[1])} · Юг</strong><div class="score-flags">${flags(state.scores[1])}</div><small>Знамёна ${state.scores[1]} / 3</small></div>
       </div>
       <p class="battle-instruction">${tip}</p>
       <div class="command-set">
