@@ -50,6 +50,7 @@ jobs:
           node --check pocket-id/hub.mjs
           node --check shared/pocket-id.js
           node --check shared/capabilities/identity.js
+          node shared/capabilities/identity.test.mjs
           node --check pocketnet/test/identity.mjs
           node --check scripts/build-pocketnet-modules.mjs
           node --check apps/zamazka/app.js
