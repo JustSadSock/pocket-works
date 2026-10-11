@@ -23,7 +23,7 @@ for(let n=0;n<80;n++){
 const cfg=await request('config');
 assert.ok(cfg.data.avatars.includes('clay'));
 assert.equal(cfg.data.googleEnabled,false);
-const name='IdentityTest'+Date.now().toString(36);
+const name='PID'+Date.now().toString(36);
 const registered=await request('register',{method:'POST',body:{nickname:name,avatar:'clay'}});
 assert.equal(registered.status,201,JSON.stringify(registered.data));
 assert.equal(registered.data.user.nickname,name);
