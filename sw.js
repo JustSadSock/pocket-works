@@ -1,17 +1,17 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.6';
-const APP_VERSION = '0.10.6';
-const RELEASE_DATE = '2026-10-09';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.7';
+const APP_VERSION = '0.10.7';
+const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
   'A redesigned Pocket Deck home screen with movable and configurable widgets.',
   'Dense visual Contact Sheet library, reversible archive and project development notes.',
-  'Authentic game screenshot covers when available, with native icons as fallback.'
+  'Persistent Pocket ID profiles, unique nicknames, avatar badges, and optional Google sign-in.'
 ];
 const APP_SHELL = [
   './', './index.html', './styles.css', './deck-shell.css', './covers/index.json', './launcher-performance.css', './launcher-sync.css', './app.js',
   './launcher-new-app-focus.js', './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
-  './shared/pocket-works-icon.svg', './shared/pocket-deck.js', './shared/deck-state.js', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
+  './shared/pocket-id.css', './shared/pocket-id.js', './shared/pocket-works-icon.svg', './shared/pocket-deck.js', './shared/deck-state.js', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
   './shared/update-manager.css', './shared/update-manager.js', './shared/release-guard.js', './shared/view-transition-guard.js',
   './shared/app-icon-previews.css', './shared/app-icon-previews.js', './shared/launcher-list-motion.css', './shared/launcher-list-motion.js'
 ];
@@ -75,6 +75,7 @@ self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== location.origin) return;
   if (requestUrl.pathname.startsWith(APPLICATIONS_PATH)) return;
+  if (requestUrl.pathname.startsWith('/pocket-id/') || requestUrl.pathname.startsWith('/pocketnet/')) return;
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
     return;
