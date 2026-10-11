@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'pocketnet/**'
+      - 'pocket-id/**'
+      - 'shared/pocket-id.js'
+      - 'shared/pocket-id.css'
       - 'apps/*/server/**'
       - 'scripts/build-pocketnet-modules.mjs'
       - 'wrangler.jsonc'
@@ -13,6 +16,9 @@ on:
     branches: [main]
     paths:
       - 'pocketnet/**'
+      - 'pocket-id/**'
+      - 'shared/pocket-id.js'
+      - 'shared/pocket-id.css'
       - 'apps/*/server/**'
       - 'scripts/build-pocketnet-modules.mjs'
       - 'wrangler.jsonc'
@@ -39,6 +45,8 @@ jobs:
           npm run build:pocketnet
           node --check pocketnet/hub.mjs
           node --check pocketnet/worker.mjs
+          node --check pocket-id/hub.mjs
+          node --check shared/pocket-id.js
           node --check scripts/build-pocketnet-modules.mjs
           node --check apps/zamazka/app.js
           node apps/zamazka/test-room-code.mjs
@@ -56,5 +64,6 @@ jobs:
           /tmp/pocketnet-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/pocketnet-dev.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true; cat /tmp/pocketnet-dev.log | tail -n 100' EXIT
+          node pocket-id/test/edge.mjs
           node pocketnet/test/edge.mjs
           node pocketnet/test/flagpost.mjs
