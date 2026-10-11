@@ -52,7 +52,7 @@ test('publish, route, reconnect and restore a pinned room', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'pocket-server-'));
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
-  const env = { ...process.env, PORT: String(port), POCKET_DATA_DIR: directory, POCKET_AUTH_SECRET: 'test-auth-secret', POCKET_DEPLOY_TOKEN: 'test-deploy-token' };
+  const env = { ...process.env, PORT: String(port), POCKET_DATA_DIR: directory, POCKET_AUTH_SECRET: 'test-auth-secret', POCKET_DEPLOY_TOKEN: 'test-deploy-token', POCKET_MAX_ROOMS: '1' };
   const entry = fileURLToPath(new URL('../src/main.mjs', import.meta.url));
   let server = spawn(process.execPath, [entry], { env, stdio: 'ignore' });
   const stop = async () => {
@@ -77,6 +77,15 @@ test('publish, route, reconnect and restore a pinned room', async () => {
     first.send('create_room', { gameId: 'counter' });
     const room = await first.next('room_joined');
     assert.equal(room.state.count, 0);
+    const sessionTwo = await fetch(`${base}/session`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Second' }) });
+    const { token: secondToken } = await sessionTwo.json();
+    const second = await connect(base, secondToken);
+    second.send('create_room', { gameId: 'counter' });
+    assert.equal((await second.next('error')).code, 'server_at_capacity');
+    second.send('join_room', { roomId: room.roomId });
+    assert.equal((await second.next('room_joined')).roomId, room.roomId);
+    second.ws.close();
+    await new Promise(resolve => second.ws.once('close', resolve));
     await publish('counter-v2');
     first.send('game_message', { payload: {} });
     assert.equal((await first.next('game_event')).event.payload, 1);

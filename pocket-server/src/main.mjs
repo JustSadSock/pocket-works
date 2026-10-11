@@ -11,6 +11,14 @@ const authSecret = process.env.POCKET_AUTH_SECRET || (production ? '' : randomBy
 const deployToken = process.env.POCKET_DEPLOY_TOKEN || '';
 if (!authSecret || (production && !deployToken)) throw new Error('Set POCKET_AUTH_SECRET and POCKET_DEPLOY_TOKEN in production');
 const port = Number(process.env.PORT || 8788);
+const host = process.env.POCKET_HOST || '127.0.0.1';
+const maxRooms = Number(process.env.POCKET_MAX_ROOMS || 32);
+const maxConnections = Number(process.env.POCKET_MAX_CONNECTIONS || 48);
+if (!Number.isInteger(port) || port < 1 || port > 65535 ||
+    !Number.isSafeInteger(maxRooms) || maxRooms < 1 ||
+    !Number.isSafeInteger(maxConnections) || maxConnections < 1) {
+  throw new Error('Invalid port or capacity configuration');
+}
 const dataDir = path.resolve(process.env.POCKET_DATA_DIR || './pocket-server-data');
 const modules = new ModuleRegistry(path.join(dataDir, 'modules'));
 const roomDir = path.join(dataDir, 'rooms');
@@ -73,9 +81,9 @@ async function transition(room, action, player, payload = null) {
   const result = await modules.call(room.handle, action, { state: room.state, player: { id: player.id, name: player.name }, payload, players: room.players });
   const encoded = JSON.stringify(result.state);
   if (Buffer.byteLength(encoded) > 256 * 1024) throw new Error('room_state_too_large');
+  if (!Array.isArray(result.events) || result.events.length > 32) throw new Error('invalid_module_events');
   room.state = result.state;
   await saveRoom(room);
-  if (!Array.isArray(result.events) || result.events.length > 32) throw new Error('invalid_module_events');
   for (const event of result.events) {
     if (typeof event?.type !== 'string' || event.type.length > 64) continue;
     if (event.to) {
@@ -146,11 +154,17 @@ const server = createServer(async (req, res) => {
 const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE_BYTES });
 server.on('upgrade', (req, socket, head) => {
   if (req.url !== '/ws') return socket.destroy();
+  if (wss.clients.size >= maxConnections) {
+    socket.end('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n');
+    return;
+  }
   const allowed = process.env.POCKET_ALLOWED_ORIGINS?.split(',').map(x => x.trim()).filter(Boolean) || [];
   if (production && (!allowed.length || !allowed.includes(req.headers.origin))) return socket.destroy();
   wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
 });
 wss.on('connection', ws => {
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
   let player = null;
   let roomId = null;
   let count = 0;
@@ -177,6 +191,7 @@ wss.on('connection', ws => {
         if (roomId && rooms.has(roomId)) throw new Error('already_in_room');
         roomId = null;
         if (!GAME_ID.test(message.gameId)) throw new Error('invalid_game');
+        if (rooms.size >= maxRooms) throw new Error('server_at_capacity');
         const handle = modules.current(message.gameId);
         if (!handle) throw new Error('game_unavailable');
         const id = randomUUID();
@@ -236,7 +251,14 @@ wss.on('connection', ws => {
     }
   });
 });
-server.listen(port, () => log('server_listening', { port, restoredRooms: rooms.size }));
+server.listen(port, host, () => log('server_listening', { host, port, maxRooms, maxConnections, restoredRooms: rooms.size }));
+setInterval(() => {
+  for (const ws of wss.clients) {
+    if (!ws.isAlive) { ws.terminate(); continue; }
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, 30_000).unref();
 setInterval(() => {
   for (const [address, window] of sessionRates) if (Date.now() - window.start > 60_000) sessionRates.delete(address);
 }, 60_000).unref();

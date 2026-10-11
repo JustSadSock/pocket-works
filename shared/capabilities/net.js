@@ -55,6 +55,12 @@ export class PocketNet {
           this.persist();
           this.emit('room_joined', message);
         } else {
+          if (message.type === 'error' && !authenticated) {
+            if (message.code === 'invalid_token') { this.token = null; this.persist(); }
+            socket.close();
+            reject(new Error(`PocketNet authentication failed: ${message.code || 'unknown'}`));
+            return;
+          }
           if (message.type === 'room_closed') { this.roomId = null; this.persist(); }
           if (message.type === 'error' && message.code === 'room_not_found') { this.roomId = null; this.persist(); }
           this.emit(message.type, message);
