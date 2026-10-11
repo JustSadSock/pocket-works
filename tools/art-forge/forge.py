@@ -350,9 +350,9 @@ def validate_output(path, budget):
         with Image.open(path) as image:
             if image.format != "PNG":
                 raise ValueError("Expected real PNG")
-            image.load()
             if image.width > budget["maxWidth"] or image.height > budget["maxHeight"]:
                 raise ValueError("Texture dimensions exceed budget")
+            image.load()
             metrics.update(width=image.width, height=image.height)
     elif path.suffix == ".glb":
         metrics.update(glb_metrics(path))
@@ -469,18 +469,31 @@ def build(app, data, caps, trusted=False):
 def check(app, data):
     ordered, runtime, index = plan(app, data)
     document = json.loads(index.read_text())
-    if document.get("manifestSha256") != hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest():
+    if document.get("version") != 1 or document.get("manifestSha256") != hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest():
         raise ValueError("Stale manifest; rebuild assets")
     by_id = {record["id"]: record for record in document["assets"]}
+    if len(by_id) != len(document["assets"]) or set(by_id) != {j["id"] for j in ordered}:
+        raise ValueError("Index must contain exact declared jobs")
     for job in ordered:
         record = by_id[job["id"]]
+        if set(record["inputs"]) != {job["source"], *job.get("inputs", [])} or set(record["outputs"]) != set(job["outputs"]):
+            raise ValueError("Index must contain exact declared inputs/outputs")
+        for key in ("adapter", "seed", "provenance"):
+            if record[key] != job[key]:
+                raise ValueError("Index metadata differs from manifest")
+        if record["parameters"] != job.get("parameters", {}):
+            raise ValueError("Index parameters differ from manifest")
         for path, expected in record["inputs"].items():
             if digest(local(app, path, True)) != expected:
                 raise ValueError("Stale source: " + path)
         for role, path in job["outputs"].items():
-            metrics = validate_output(local(app, path, True), job["budget"])
-            if metrics["sha256"] != record["outputs"][role]["sha256"]:
+            target = local(app, path, True)
+            metrics = validate_output(target, job["budget"])
+            location = {"source": target.relative_to(app).as_posix()} if role == "editable" else {"url": target.relative_to(runtime).as_posix()}
+            if {**location, **metrics} != record["outputs"][role]:
                 raise ValueError("Changed export: " + path)
+        if sum(o["bytes"] for role, o in record["outputs"].items() if role != "editable") > job["budget"]["maxBytes"]:
+            raise ValueError("Combined runtime exports exceed byte budget")
     return document
 
 

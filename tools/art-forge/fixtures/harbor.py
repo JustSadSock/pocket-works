@@ -46,6 +46,9 @@ cylinder("Oval glazed tidal plinth", 2.1, .20, -.08, sea, 64).scale.y = .72
 cylinder("Rock shelf", 1.5, .18, .08, stone, 7).scale.y = .7
 cylinder("Tower footing", .65, .23, .28, stone)
 tower = cylinder("Tapered lighthouse wall", .52, 2.1, 1.40, stone, taper=.38)
+bpy.context.view_layer.objects.active = tower
+for modifier in list(tower.modifiers):
+    bpy.ops.object.modifier_apply(modifier=modifier.name)
 for z in (.48, 1.05, 1.66, 2.38):
     cylinder("Masonry string course", .55 - z * .06, .07, z, brass)
 cylinder("Lantern walkway", .64, .12, 2.52, stone)
@@ -79,6 +82,7 @@ for z in (1.0, 1.7):
     obj.name = "Window lintel"
     obj.scale = (.23, .1, .06)
     obj.data.materials.append(stone)
+normals = tower.modifiers.new("Window reveal normals", "WEIGHTED_NORMAL")
 for i in range(5):
     bpy.ops.mesh.primitive_cube_add(size=1, location=(.92, -.85 + i * .12, .15 + i * .045))
     obj = bpy.context.object

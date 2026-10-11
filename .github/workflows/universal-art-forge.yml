@@ -18,8 +18,11 @@ jobs:
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
     env:
-      ART_FORGE_EVIDENCE: /tmp/art-forge-evidence
+      ART_FORGE_EVIDENCE: ${{ github.workspace }}/quality-artifacts/art-forge-source
       BLENDER_VERSION: "5.2.1"
       BLENDER_BASE_URL: "https://download.blender.org/release/Blender5.2"
     steps:
@@ -30,7 +33,7 @@ jobs:
       - name: Install CPU art editors
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends python3-pil inkscape krita
+          apt-get install -y --no-install-recommends python3-pil inkscape krita xz-utils
           curl -fsSL -o /tmp/pixelorama.tar.gz https://github.com/Orama-Interactive/Pixelorama/releases/download/v1.2.3/Pixelorama-Linux-64bit.tar.gz
           echo 'e7bb3b5f485e3a67f06b15a2c8414a8a7c18b7c6d2cf73f6b3b5904d86821e4b  /tmp/pixelorama.tar.gz' | sha256sum --check --strict
           tar -xf /tmp/pixelorama.tar.gz -C /tmp
@@ -65,8 +68,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: universal-art-forge-evidence
-          path: |
-            /tmp/art-forge-evidence
-            quality-artifacts/art-forge-browser
+          path: quality-artifacts/art-forge-*
           if-no-files-found: error
           retention-days: 14
