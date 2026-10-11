@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "ne-moya-problema",
+  "name": "НЕ МОЯ ПРОБЛЕМА",
+  "shortName": "НЕ МОЯ",
+  "description": "Настольный абсурдный кооператив на 3–8 человек: секретные поручения, кризисы и протоколы виновных.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-11",
+  "releaseDateTime": "2026-10-11T20:30:00+03:00",
+  "changelog": [
+    "Первая полноценная локальная партия на 3–8 игроков с тремя происшествиями, тайными целями и обвинениями.",
+    "Шесть катастроф, восемь должностей, десятки решений и анимированное изометрическое бюро.",
+    "Автосохранение партии, безопасная передача телефона, финальный рейтинг, звук и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#dc763f",
+  "backgroundColor": "#22352e",
+  "themeColor": "#22352e",
+  "orientation": "portrait",
+  "cacheName": "ne-moya-problema-v1.0.0",
+  "storageNamespace": "pocket-works:ne-moya-problema",
+  "tags": [
+    "game",
+    "party",
+    "pass-and-play",
+    "multiplayer",
+    "comedy",
+    "offline",
+    "strategy"
+  ],
+  "order": 23
+}
