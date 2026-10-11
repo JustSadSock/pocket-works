@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { randomInt } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
+import {PocketNet} from '../../../../shared/capabilities/net.js';
 const here=fileURLToPath(new URL('.',import.meta.url));
 const root=await mkdtemp(join(tmpdir(),'zamazka-online-test-'));
 const port=randomInt(16000,40000);
@@ -14,6 +15,7 @@ const child=spawn(process.execPath,[join(here,'server.mjs')],{cwd:here,env:{...p
 let serverLog='';child.stderr.on('data',x=>serverLog+=String(x));
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 const users=[];
+const browserClients=[];
 async function waitUntil(url){
  for(let i=0;i<120;i++){
   if(child.exitCode!==null)break;
@@ -72,9 +74,45 @@ try {
  if(three.event.payload.participants.length!==3)throw Error('Three-player regression');
  const now=await waitUntil(base+'/health');
  if(now.rooms!==2)throw Error('Expected two rooms');
+ // Regression: PocketNet clients are browser tabs with a SHARED site origin,
+ // but must authenticate with SEPARATE tab session stores and distinct nicknames.
+ // Earlier, localStorage made tab B take over tab A's session forever.
+ globalThis.WebSocket=WebSocket;
+ class FakeTabStore{
+  constructor(){this.items=new Map()}
+  getItem(k){return this.items.get(k)||null}
+  setItem(k,v){this.items.set(k,String(v))}
+  removeItem(k){this.items.delete(k)}
+ }
+ const owner=new PocketNet({serverUrl:base,name:'Two Tabs Alice',storage:new FakeTabStore()});
+ const visitor=new PocketNet({serverUrl:base,name:'Two Tabs Bob',storage:new FakeTabStore()});
+ browserClients.push(owner,visitor);
+ await Promise.all([owner.connect(),visitor.connect()]);
+ if(!owner.token||!visitor.token||owner.token===visitor.token)throw Error('Tab identities were duplicated');
+ const ownerJoined=new Promise(resolve=>owner.on('room_joined',resolve));
+ owner.createRoom('zamazka');
+ const secondRoom=(await ownerJoined).roomId;
+ const hostUpdated=new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>reject(Error('Host never saw second player')),5000);
+   owner.on('game_event',data=>{
+     if(data.event?.type==='state'&&data.event.payload?.participants?.length===2){
+       clearTimeout(timer);resolve(data.event.payload)
+     }
+   });
+ });
+ const visitorJoined=new Promise(resolve=>visitor.on('room_joined',resolve));
+ visitor.joinRoom(secondRoom);
+ await visitorJoined;
+ const lobby=await hostUpdated;
+ const names=lobby.participants.map(p=>p.name).sort();
+ if(names.join('|')!=='Two Tabs Alice|Two Tabs Bob')throw Error('Tab nicknames were lost: '+names);
+ await delay(400);
+ if(owner.socket.readyState!==WebSocket.OPEN||visitor.socket.readyState!==WebSocket.OPEN)throw Error('Tab socket replaced by another browser tab');
+ console.log('PASS: two PocketNet browser-tab clients coexist, names differ, and both sockets remain connected');
  console.log('PASS: health / session / websocket / 2-player and 3-player rooms / start / sync / persistence');
 }finally{
  for(const u of users)u.ws.close();
+ for(const client of browserClients)client.close();
  child.kill();
  await delay(80);
  await rm(root,{recursive:true,force:true});
