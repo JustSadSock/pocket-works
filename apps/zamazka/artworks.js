@@ -38,18 +38,17 @@ export function artworkFallbackURL(id,failedUrl){
 const pending=new Map();
 async function imageSource(id){
  if(!ARTS[id].isReal)return artworkURL(id);
- if(typeof caches==='undefined')return artworkURL(id,1920);
- const cache=await caches.open(ART_CACHE);
+ const cache=typeof caches==='undefined'?null:await caches.open(ART_CACHE).catch(()=>null);
  for(const width of MASTER_WIDTHS){
    const url=artworkURL(id,width);
    try{
-     const saved=await cache.match(url);
+     const saved=await cache?.match(url);
      if(saved&&saved.ok)return URL.createObjectURL(await saved.blob());
      const response=await fetch(url,{mode:'cors',credentials:'omit'});
      if(!response.ok)continue;
      const blob=await response.blob();
      if(!blob.type.startsWith('image/')||blob.size<4096)continue;
-     try{await cache.put(url,response)}catch{}
+     try{await cache?.put(url,response)}catch{}
      return URL.createObjectURL(blob);
    }catch{}
  }
