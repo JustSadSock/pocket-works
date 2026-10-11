@@ -15,7 +15,7 @@ async function register(suffix,avatar){
 async function token(name,cookie,extra={}){
  const res=await fetch(base+'/pocketnet/session',{method:'POST',headers:{origin:base,'content-type':'application/json',...(cookie?{cookie}:{}),...extra},
   body:JSON.stringify({name})});
- assert.equal(res.status,200,'session: '+await res.text().catch(()=>'')); // status test
+ if(res.status!==200)throw Error('session: '+res.status+' '+await res.text());
  return (await res.json()).token;
 }
 async function open(token,cookie){
@@ -34,7 +34,7 @@ async function open(token,cookie){
    if(i>=0)return inbox.splice(i,1)[0];
    return Promise.race([
     new Promise(resolve=>waiting.push({type,resolve})),
-    sleep(7000).then(()=>{throw Error('Timed out waiting for '+type+'; '+JSON.stringify(inbox))})
+    sleep(7000,undefined,{ref:false}).then(()=>{throw Error('Timed out waiting for '+type+'; '+JSON.stringify(inbox))})
    ]);
   }
  };
