@@ -5,14 +5,18 @@ import {tabGuestName,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest}
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
+import {getSavedEmblem,storeEmblem,paintEmblem,exportEmblem,EMBLEM_SIZE,EMBLEM_COLORS,EMBLEM_LIMITS} from './emblem.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.7.2',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.8.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
 const q=new URLSearchParams(location.search);
 let invitedRoom=q.get('room')||'';
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
+let personalEmblem=getSavedEmblem();
+let museumIndex=0,lastMuseumWheel=0;
+const museumOrder=[0,...PLAYABLE_IDS];
 let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===3?g.art:g.edition===2?(g.art>=8?g.art+46:g.art):Number(g.art)+REAL_COUNT,edition:3})):[]}catch{return[]}})();
 
 // Retry a smaller Wikimedia thumbnail when the original master is too small.
@@ -25,6 +29,86 @@ document.addEventListener('error',e=>{
  image.alt=ARTS[id]?.title+' · изображение временно недоступно';
 },true);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function imageTag(src,alt='Личный знак'){
+ return typeof src==='string'&&src.length<=EMBLEM_LIMITS.encoded&&/^data:image\/(?:png|webp);base64,/.test(src)
+   ?'<img src="'+esc(src)+'" alt="'+esc(alt)+'" loading="eager">'
+   :'<span class="empty-seal" aria-hidden="true">✎</span>';
+}
+function mySealMarkup(){return '<span class="personal-seal">'+imageTag(personalEmblem.image)+'</span>'}
+function memberSeal(p){
+ const source=view?.emblems?.[p.id]||(p.id===me?.id?personalEmblem.image:'');
+ return '<span class="member-seal">'+imageTag(source,'Личный знак '+p.name)+'</span>';
+}
+function syncIdentity(){
+ const btn=document.querySelector('#profileBtn');
+ if(btn){btn.innerHTML=imageTag(personalEmblem.image);btn.title='Редактировать свой знак';}
+ screen.querySelectorAll('[data-personal-seal]').forEach(el=>el.innerHTML=imageTag(personalEmblem.image));
+}
+function shiftMuseum(step){
+ if(page!=='home')return;
+ museumIndex=(museumIndex+step+museumOrder.length)%museumOrder.length;
+ const id=museumOrder[museumIndex],left=museumOrder[(museumIndex-1+museumOrder.length)%museumOrder.length],right=museumOrder[(museumIndex+1)%museumOrder.length];
+ const display=screen.querySelector('.museum-display');
+ if(!display)return;
+ for(const [selector,artId] of [['.museum-centerpiece img',id],['.museum-echo-left img',left],['.museum-echo-right img',right]]){
+  const img=display.querySelector(selector);if(img){img.dataset.artId=String(artId);img.src=artworkURL(artId);img.alt=ARTS[artId]?.title||'Картина'}
+ }
+ const caption=display.querySelector('.museum-centerpiece figcaption');
+ if(caption)caption.innerHTML='<strong>'+esc(ARTS[id]?.title||'Без названия')+'</strong><span>'+esc(ARTS[id]?.artist||'Коллекция')+' · '+esc(ARTS[id]?.date||'')+'</span>';
+ const number=display.querySelector('.museum-exhibit-number');
+ if(number)number.textContent=String(museumIndex+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0');
+ display.classList.remove('exhibit-turn');void display.offsetWidth;display.classList.add('exhibit-turn');
+ sound(365);
+}
+function editEmblem(){
+ const current=personalEmblem.strokes.map(s=>({c:s.c,s:s.s,p:s.p.map(p=>[...p])}));
+ let strokes=current,ink=EMBLEM_COLORS[0],size=7,drawing=null,pointer=null;
+ const markup='<p class="emblem-explainer">Твоя нарисованная подпись. Она появится рядом с ником у остальных игроков.</p>'+
+  '<div class="emblem-board"><canvas id="emblemCanvas" width="'+EMBLEM_SIZE.w+'" height="'+EMBLEM_SIZE.h+'" aria-label="Холст личного знака"></canvas><span class="emblem-board-caption">ЛИЧНАЯ ПЕЧАТЬ · 240 × 144</span></div>'+
+  '<div class="emblem-palette" aria-label="Цвет кисти">'+EMBLEM_COLORS.map((c,i)=>'<button type="button" class="emblem-ink'+(i===0?' selected':'')+'" data-emblem-ink="'+c+'" style="--ink-color:'+c+'" aria-label="Цвет '+(i+1)+'"></button>').join('')+'</div>'+
+  '<div class="emblem-tools"><label>Толщина <input id="emblemSize" type="range" min="2" max="24" value="7"></label><button type="button" id="emblemUndo">↶ Отмена</button><button type="button" id="emblemClear">Очистить</button></div>';
+ modal('Твой личный знак',markup,[['Сохранить',()=>{
+   const image=exportEmblem(strokes);
+   if(!image){notify('Слишком сложный рисунок. Уменьши количество деталей.');return}
+   if(!storeEmblem(strokes,image)){notify('Не удалось сохранить знак на устройстве.');return}
+   personalEmblem={strokes,image};
+   if(net&&roomId&&view?.participants?.some(p=>p.id===me?.id)){try{net.sendGame({type:'emblem',image})}catch{notify('Знак сохранён. В комнате обновится после подключения.')}}
+   closeDialog();syncIdentity();
+   if(page==='lobby')lobby();
+   notify('Личный знак сохранён');
+ },'primary'],['Отмена',closeDialog,'ghost']]);
+ const canvas=dialog.querySelector('#emblemCanvas'),palette=dialog.querySelector('.emblem-palette');
+ const paint=()=>paintEmblem(canvas,strokes);
+ paint();
+ const point=e=>{
+  const r=canvas.getBoundingClientRect();
+  return [Math.round(Math.max(0,Math.min(EMBLEM_SIZE.w,(e.clientX-r.left)*EMBLEM_SIZE.w/r.width))),Math.round(Math.max(0,Math.min(EMBLEM_SIZE.h,(e.clientY-r.top)*EMBLEM_SIZE.h/r.height)))];
+ };
+ canvas.addEventListener('pointerdown',e=>{
+  if(pointer!==null||strokes.length>=EMBLEM_LIMITS.strokes){if(strokes.length>=EMBLEM_LIMITS.strokes)notify('Лимит мазков. Отмени последний штрих.');return}
+  e.preventDefault();pointer=e.pointerId;canvas.setPointerCapture(pointer);drawing={c:ink,s:size,p:[point(e)]};strokes.push(drawing);paint();
+ });
+ canvas.addEventListener('pointermove',e=>{
+  if(pointer!==e.pointerId||!drawing)return;
+  e.preventDefault();const p=point(e),q=drawing.p.at(-1);
+  if(Math.hypot(p[0]-q[0],p[1]-q[1])<1.5)return;
+  if(drawing.p.length>=300||strokes.reduce((n,s)=>n+s.p.length,0)>=EMBLEM_LIMITS.points)return;
+  drawing.p.push(p);paint();
+ });
+ const stop=e=>{if(pointer===e.pointerId){pointer=null;drawing=null}};
+ canvas.addEventListener('pointerup',stop);canvas.addEventListener('pointercancel',stop);
+ palette.addEventListener('click',e=>{
+  const button=e.target.closest('[data-emblem-ink]');if(!button)return;
+  ink=button.dataset.emblemInk;palette.querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b===button));
+ });
+ dialog.querySelector('#emblemSize').addEventListener('input',e=>size=Number(e.target.value));
+ dialog.querySelector('#emblemUndo').addEventListener('click',()=>{strokes.pop();paint()});
+ dialog.querySelector('#emblemClear').addEventListener('click',()=>modal('Очистить знак?','<p class="hint">Все штрихи на холсте будут стёрты. Пока ты не сохранишь, старый знак останется на устройстве.</p>',[
+  ['Очистить',()=>{strokes=[];editEmblem();const currentCanvas=dialog.querySelector('#emblemCanvas');paintEmblem(currentCanvas,[])},'primary'],
+  ['Оставить',()=>{closeDialog();editEmblem()},'ghost']
+ ]));
+}
 function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const ac=window.__zamazkaAudio||(window.__zamazkaAudio=new Audio());if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(f,ac.currentTime);o.frequency.exponentialRampToValueAtTime(f*.83,ac.currentTime+.09);g.gain.setValueAtTime(.025,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.11);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.12)}catch{}}
 let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 function closeDialog(){dialog.classList.add('hidden');dialog.innerHTML=''}
