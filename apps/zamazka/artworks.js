@@ -29,18 +29,32 @@ export function artworkURL(id){
  return url;
 }
 const pending=new Map();
+const ART_CACHE='zamazka-artworks-v1.1.0';
+async function imageSource(id){
+ const url=artworkURL(id);
+ if(!ARTS[id].isReal||typeof caches==='undefined')return url;
+ try{
+   const cache=await caches.open(ART_CACHE);
+   const stored=await cache.match(url);
+   if(stored)return URL.createObjectURL(await stored.blob());
+   const response=await fetch(url,{mode:'cors',credentials:'omit'});
+   if(!response.ok)throw new Error('HTTP '+response.status);
+   const blob=await response.blob();
+   try{await cache.put(url,new Response(blob,{headers:{'Content-Type':'image/jpeg'}}))}catch{}
+   return URL.createObjectURL(blob);
+ }catch{return url}
+}
 export function loadArtwork(id){
  if(pending.has(id))return pending.get(id);
- const url=artworkURL(id);
- if(!url)return Promise.reject(Error('Произведение не найдено'));
- const task=new Promise((resolve,reject)=>{
+ if(!ARTS[id])return Promise.reject(Error('Произведение не найдено'));
+ const task=imageSource(id).then(src=>new Promise((resolve,reject)=>{
    const image=new Image();
    if(ARTS[id].isReal)image.crossOrigin='anonymous';
    image.decoding='async';
    image.onload=()=>resolve(image);
-   image.onerror=()=>reject(Error('Не удалось получить картину. Проверь подключение или попробуй ещё раз.'));
-   image.src=url;
- }).catch(error=>{pending.delete(id);throw error});
+   image.onerror=()=>reject(Error('Изображение недоступно. Подключи интернет для первого просмотра.'));
+   image.src=src;
+ })).catch(error=>{pending.delete(id);throw error});
  pending.set(id,task);return task;
 }
 /** Identical framing in the museum, editor, voting, and reveal: never distort a source. */
@@ -63,4 +77,4 @@ export function zoneFor(id,variation=0){
  const r=rand((id+11)*16331+(variation+1)*113);
  return {x:Math.floor(65+r()*340),y:Math.floor(55+r()*205),w:116,h:106};
 }
-export function primeGallery(){return Promise.allSettled(PLAYABLE_IDS.map(id=>loadArtwork(id)))}
+export function primeGallery(){return Promise.allSettled(REAL.map((_,id)=>loadArtwork(id)))}
