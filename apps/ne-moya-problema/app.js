@@ -93,7 +93,7 @@ function render(){
  if(phase==='handoff'||phase==='blameHand'){
   const accusation=phase==='blameHand';
   html='<span class="eyebrow">'+(accusation?'СЕКРЕТНОЕ СЛЕДСТВИЕ':'ПЕРЕДАТЬ ТЕЛЕФОН')+' · '+(state.index+1)+' из '+state.players.length+'</span>'+
-  '<div class="envelope"><span class="serial">ЛИЧНО В РУКИ</span><div class="seal">'+esc(role(state.index).sig)+'</div><h2>'+esc(state.players[state.index])+'</h2><p>'+(accusation?'Вам предстоит назвать виновного. Ваш выбор скрыт от остальных.':'Не показывайте своё служебное задание соседям.')+'</p></div>';
+  '<div class="envelope"><span class="serial">ЛИЧНО В РУКИ</span><div class="seal">Б</div><h2>'+esc(state.players[state.index])+'</h2><p>'+(accusation?'Вам предстоит назвать виновного. Ваш выбор скрыт от остальных.':'Не показывайте своё служебное задание соседям.')+'</p></div>';
   html+=accusation?button('openBlame','Я готов обвинить →'):button('open','Вскрыть конверт →');
   html+='<div class="fineprint">'+(accusation?'Чужие голоса будут раскрыты после последнего обвинения.':'Каждый получит одну должность и одно тайное распоряжение.')+'</div>';
  }
