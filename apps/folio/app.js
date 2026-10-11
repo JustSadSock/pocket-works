@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const uid = () => (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now().toString(36));
 const palettes = {
-  atelier: ['#253b36','#a6553e','#c79569','#e7cda3','#607e73','#7b8f96','#d6b068','#f2eee1','#b67b74','#4d6260','#899167','#433b3b','#df986b','#8186a2','#e4af98','#252c31'],
+  atelier: ['#24465c','#c54a35','#efbd59','#3d9a89','#5877b3','#ffedd2','#e7976c','#6e8f74','#a05675','#cc9668','#94b8b3','#253f54','#cf6f50','#abbd7d','#deaaad','#2a313a'],
   dusk: ['#2c3c4c','#6b7890','#d3a37e','#d5bea4','#813e45','#51605d','#7a8b66','#f3e4cb'],
   garden: ['#3a5949','#86a77e','#d2b376','#e8d7ac','#a6624c','#6b7d7d','#c4a1a2','#37404b']
 };
@@ -715,7 +715,8 @@ function showModal({title,note='',input=null,okText='Продолжить',dange
   $('modal-fields').innerHTML=input!==null?'<label>НАЗВАНИЕ<input id="modal-input" type="text" autocomplete="off" maxlength="70"></label>':'';
   if(input!==null)$('modal-input').value=input;
   $('modal-ok').textContent=okText;
-  $('modal-ok').style.background=danger?'#94503f':'#2b433a';
+  $('modal-ok').classList.toggle('danger-confirm',danger);
+  $('modal-ok').style.background=danger?'#ac352a':'#285b65';
   const cancel=()=>{backdrop.hidden=true;};
   $('modal-cancel').onclick=cancel;
   $('modal-ok').onclick=async()=>{
@@ -740,7 +741,7 @@ function newCanvasDialog(idea=null){
     form=button.dataset.format;
     $('modal-fields').querySelectorAll('[data-format]').forEach(b=>b.classList.toggle('active',b.dataset.format===form));
   });
-  $('modal-ok').textContent='Создать холст';$('modal-ok').style.background='#2b433a';
+  $('modal-ok').textContent='Создать холст';$('modal-ok').classList.remove('danger-confirm');$('modal-ok').style.background='#285b65';
   $('modal-cancel').onclick=()=>{b.hidden=true;};
   $('modal-ok').onclick=()=>{
     const name=$('modal-input').value.trim()||'Без названия';
@@ -798,7 +799,7 @@ function renderGallery(){
   const gallery=$('gallery');
   $('work-count').textContent=state.works.length;
   if(!state.works.length){
-    gallery.innerHTML='<div class="empty-library"><span>✎</span><p>Здесь будут твои рисунки.<br>Создай первую страницу альбома.</p></div>';return;
+    gallery.innerHTML='<div class="empty-library"><span aria-hidden="true">✳</span><p><strong>Пока что чистый лист.</strong><br>Самое интересное начинается с первого мазка.</p></div>';return;
   }
   gallery.innerHTML=state.works.map(doc=>{
     const date=new Date(doc.updatedAt||Date.now()).toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
@@ -869,7 +870,7 @@ function syncDesktop(){
   });
   $('desktop-brush-name').textContent=brushes.find(b=>b.id===state.brush)?.name||'Кисть';
   $('desktop-brush-choices').innerHTML=brushes.map(b=>
-    '<button type="button" class="'+(state.brush===b.id?'active':'')+'" data-desktop-brush="'+b.id+'" title="'+escapeHTML(b.hint)+'">'+escapeHTML(b.name)+'</button>'
+    '<button type="button" class="'+(state.brush===b.id?'active':'')+'" data-desktop-brush="'+b.id+'" title="'+escapeHTML(b.hint)+'"><i aria-hidden="true" class="paint-preview '+b.id+'"></i><span>'+escapeHTML(b.name)+'</span></button>'
   ).join('');
   $('desktop-swatches').innerHTML=doc.palette.slice(0,16).map(c=>
     '<button type="button" aria-label="Выбрать '+c+'" class="'+(state.color.toLowerCase()===c.toLowerCase()?'active':'')+'" style="--chip:'+c+'" data-desktop-color="'+c+'"></button>'
@@ -984,7 +985,7 @@ window.addEventListener('pagehide',()=>{
   if(state.doc){finishStroke();void persist();}
 });
 
-createWorkshopMode({appName:'FOLIO',version:'1.2.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
+createWorkshopMode({appName:'FOLIO',version:'1.3.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
   if(database)await txPromise('readwrite',s=>s.clear());else localStorage.removeItem(DB_NAME+':fallback');
   state.doc=null;await showHome();
 }});
