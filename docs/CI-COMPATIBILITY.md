@@ -67,3 +67,11 @@ exploratory job limit. Exploratory automation pins both its image and package
 to Playwright 1.64.0. The KVARTA scenario stalled on native mouse input under
 the old 1.55 runner, while the identical scenario with video enabled completes
 in about four seconds under 1.64; no game input or video checks are bypassed.
+
+The full catalog's two backdrop filters per card stalled WebKit's compositor:
+JavaScript continued but animation frames and normal input stability checks
+stopped. Card actions retain their dark fill without per-card backdrop blur;
+images, layout and normal clicks remain intact. PETLYA 17 checks its adaptive
+drawing buffer against the actual viewport and the supported 1–2 scaling budget
+instead of assuming a fixed pixel count. SENTE migration fixtures are installed
+before boot so a running game's pagehide autosave cannot overwrite legacy data.

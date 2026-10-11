@@ -16,17 +16,27 @@ test('ПЕТЛЯ 17 loads WebGL, accelerates and exposes live handling state', a
 
   const renderer = await page.locator('#renderCanvas').evaluate((canvas: HTMLCanvasElement) => {
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    const bounds = canvas.getBoundingClientRect();
     return {
       width: canvas.width,
       height: canvas.height,
+      displayWidth: bounds.width,
+      displayHeight: bounds.height,
       webgl: Boolean(gl),
       version: gl ? String(gl.getParameter(gl.VERSION)) : ''
     };
   });
 
   expect(renderer.webgl).toBe(true);
-  expect(renderer.width).toBeGreaterThan(600);
-  expect(renderer.height).toBeGreaterThan(250);
+  // Auto quality deliberately scales the drawing buffer between 1x and 0.5x
+  // the displayed viewport. Check that budget and aspect ratio on both phones.
+  expect(renderer.displayWidth).toBeGreaterThan(600);
+  expect(renderer.displayHeight).toBeGreaterThan(250);
+  expect(renderer.width).toBeGreaterThanOrEqual(Math.floor(renderer.displayWidth / 2));
+  expect(renderer.width).toBeLessThanOrEqual(Math.ceil(renderer.displayWidth));
+  expect(renderer.height).toBeGreaterThanOrEqual(Math.floor(renderer.displayHeight / 2));
+  expect(renderer.height).toBeLessThanOrEqual(Math.ceil(renderer.displayHeight));
+  expect(renderer.width / renderer.height).toBeCloseTo(renderer.displayWidth / renderer.displayHeight, 1);
   expect(renderer.version).toContain('WebGL');
 
   await page.locator('#practice').click();
