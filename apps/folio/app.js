@@ -1,4 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { floodLinework } from './fill-engine.mjs';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 
 installMobileRuntime();
@@ -254,15 +255,14 @@ function smoothAim(e,first=false){
     state.aimPointerId=e.pointerId;state.aimPoint={...raw};state.aimTime=stamp;return;
   }
   const last=state.aimPoint;
-  const dt=clamp(stamp-state.aimTime||8,4,48);
-  let dx=raw.x-last.x,dy=raw.y-last.y;
-  const distance=Math.hypot(dx,dy);
-  // A few mobile touch drivers occasionally report isolated jumps.
-  // Limit the maximum plausible displacement but keep rapid deliberate strokes responsive.
-  const maxStep=40+dt*3.2;
-  if(distance>maxStep){const factor=maxStep/distance;dx*=factor;dy*=factor;}
-  const speed=Math.hypot(dx,dy)/dt;
-  const alpha=clamp(0.27+speed*.12,0.27,0.88);
+  const dt=clamp(stamp-state.aimTime||8,1,60);
+  const dx=raw.x-last.x,dy=raw.y-last.y,dist=Math.hypot(dx,dy);
+  // Ignore truly implausible single-event glitches, never clip an entire fast
+  // gesture to a short increment (that used to leave the stroke behind).
+  if(dt<6&&dist>240)return;
+  const speed=dist/dt;
+  // Slow movements are stabilized. Deliberate quick lines follow at full speed.
+  const alpha=clamp(.43+speed*.45,.43,1);
   state.aimPoint={x:last.x+dx*alpha,y:last.y+dy*alpha};
   state.aimTime=Math.max(state.aimTime,stamp);
 }
@@ -288,7 +288,9 @@ function updateNibSize(){
   $('nib-measure').textContent=state.size+' px';
 }
 function setCursor(e){
-  if(state.mode==='direct'||state.tool==='pipette'||state.tool==='fill'){
+  const pen=e.pointerType==='mouse'||e.pointerType==='pen';
+  const drawable=state.tool==='brush'||state.tool==='eraser';
+  if(!drawable||(!pen&&state.mode==='direct')||state.spacePan||state.panPointer!==null||state.pinch){
     $('nib-cursor').hidden=true;return;
   }
   const p=pointerTip(drawingPosition(e),e.pointerType),nib=$('nib-cursor');
@@ -367,11 +369,8 @@ function finishStroke(cancel=false){
   const points=draft.points;
   const layer=state.doc.layers.find(l=>l.id===draft.layer);
   if(!layer)return;
-  if(points.length>2 && performance.now()-state.lastMove>480&&
-      ['ink','pencil'].includes(draft.brush)&&draft.tool!=='eraser'){
-    draft.points=[points[0],points[points.length-1]];
-    notify('Линия выровнена');
-  }
+  // Keep the actual sampled trajectory. Holding the pointer at the end
+  // must not unexpectedly replace a detailed stroke with one straight line.
   layer.strokes.push(draft);
   state.undo.push({layer:layer.id,stroke:draft,index:layer.strokes.length-1});
   if(state.undo.length>200)state.undo.shift();
@@ -414,42 +413,28 @@ function hexRGB(value){
 function fillAt(e){
   const layer=currentLayer(),doc=state.doc;
   if(!layer?.visible||layer.opacity===0){notify('Выбери видимый слой для заливки');return;}
-  const point=inputPoint(e),x=Math.floor(point[0]),y=Math.floor(point[1]),w=doc.width,h=doc.height;
+  const tip=pointerTip(drawingPosition(e),e.pointerType);
+  const point=screenDoc(tip.x,tip.y);
+  const x=Math.floor(point[0]),y=Math.floor(point[1]),w=doc.width,h=doc.height;
   if(x<0||y<0||x>=w||y>=h)return;
-  const source=createCanvas(w,h),ctx=source.getContext('2d',{willReadFrequently:true});
-  drawContents(ctx,true);
-  const pixels=ctx.getImageData(0,0,w,h).data,at=(y*w+x)*4;
-  const target=[pixels[at],pixels[at+1],pixels[at+2]],goal=hexRGB(state.color);
-  if(state.opacity===1&&goal.every((v,i)=>Math.abs(v-target[i])<=1)){
-    notify('Область уже этого цвета');return;
-  }
-  const tolerance=state.fillTolerance,visited=new Uint8Array(w*h),stack=[y*w+x],runs=[];
-  const matches=i=>{
-    const p=i*4;
-    return Math.max(Math.abs(pixels[p]-target[0]),Math.abs(pixels[p+1]-target[1]),Math.abs(pixels[p+2]-target[2]))<=tolerance;
-  };
-  while(stack.length){
-    const index=stack.pop();
-    if(visited[index]||!matches(index))continue;
-    const row=Math.floor(index/w),base=row*w;
-    let left=index-base,right=left;
-    while(left>0&&!visited[base+left-1]&&matches(base+left-1))left--;
-    while(right<w-1&&!visited[base+right+1]&&matches(base+right+1))right++;
-    visited.fill(1,base+left,base+right+1);
-    runs.push([row,left,right]);
-    for(const adjacentRow of [row-1,row+1]){
-      if(adjacentRow<0||adjacentRow>=h)continue;
-      let inSpan=false;const adjacentBase=adjacentRow*w;
-      for(let col=left;col<=right;col++){
-        const i=adjacentBase+col;
-        if(!visited[i]&&matches(i)){
-          if(!inSpan){stack.push(i);inSpan=true;}
-        }else inSpan=false;
-      }
+  // Build a transparent ink map from the real drawn strokes only.
+  // Existing bucket fills are NOT region boundaries, so repainting works.
+  const inkCanvas=createCanvas(w,h),inkCtx=inkCanvas.getContext('2d',{willReadFrequently:true});
+  const scratch=createCanvas(w,h),scratchCtx=scratch.getContext('2d');
+  for(const visibleLayer of doc.layers){
+    if(!visibleLayer.visible||visibleLayer.opacity===0)continue;
+    scratchCtx.clearRect(0,0,w,h);
+    for(const stroke of visibleLayer.strokes){
+      if(stroke.tool!=='fill')paintStroke(scratchCtx,stroke);
     }
+    inkCtx.save();inkCtx.globalAlpha=visibleLayer.opacity;
+    inkCtx.drawImage(scratch,0,0);inkCtx.restore();
   }
-  if(!runs.length){notify('Область для заливки не найдена');return;}
+  const linePixels=inkCtx.getImageData(0,0,w,h).data;
+  const runs=floodLinework(linePixels,w,h,x,y,state.fillTolerance);
+  if(!runs.length){notify('Коснись пространства внутри контура');return;}
   const stroke={id:uid(),layer:layer.id,tool:'fill',color:state.color,opacity:state.opacity,runs};
+  // All buckets paint over previous buckets, but beneath hand-drawn contours.
   const position=layer.strokes.findIndex(s=>s.tool!=='fill');
   const index=position<0?layer.strokes.length:position;
   layer.strokes.splice(index,0,stroke);
@@ -502,7 +487,10 @@ canvas.addEventListener('pointermove',e=>{
   if(state.blockDraw)return;
   if(state.tool==='pipette'||state.tool==='fill')return;
   const coalesced=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
-  const samples=coalesced.length?coalesced:[e];
+  const samples=coalesced.length?[...coalesced]:[];
+  // Some drivers omit the current PointerEvent from their coalesced batch.
+  if(!samples.length||samples[samples.length-1].timeStamp!==e.timeStamp||
+      samples[samples.length-1].clientX!==e.clientX||samples[samples.length-1].clientY!==e.clientY) samples.push(e);
   for(const sample of samples){
     smoothAim(sample);
     state.aimEvent=sample;
@@ -525,11 +513,19 @@ function endPointer(e){
     state.aimEvent=null;resetAim();hideCursor();return;
   }
   const wasMany=state.blockDraw||state.pointers.size>1;
+  if(!wasMany&&e.type==='pointerup'&&state.draft&&
+    (state.tool==='brush'||state.tool==='eraser')){
+    // A fast flick often ends between pointermove frames. Record its true tip.
+    smoothAim(e);state.aimEvent=e;extendStroke(e);
+  }
   state.pointers.delete(e.pointerId);
   if(wasMany){
     finishStroke(true);state.pinch=null;state.blockDraw=state.pointers.size!==0;
   }else finishStroke(e.type==='pointercancel');
-  if(!state.pointers.size){state.blockDraw=false;state.aimEvent=null;resetAim();hideCursor();}
+  if(!state.pointers.size){
+    state.blockDraw=false;state.aimEvent=null;resetAim();hideCursor();
+    if((e.pointerType==='mouse'||e.pointerType==='pen')&&e.type==='pointerup'&&!state.sheet&&!state.spacePan)setCursor(e);
+  }
 }
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
@@ -607,6 +603,7 @@ function updateToolUI(){
   $('mode-icon').textContent=state.mode==='precision'?'⊙':state.mode==='nib'?'◎':'●';
   $('working-area').classList.toggle('left-handed',state.hand==='left');
   $('studio').classList.toggle('tool-fill',state.tool==='fill');
+  $('studio').classList.toggle('tool-drawing',state.tool==='brush'||state.tool==='eraser');
   $('mobile-fill-control').hidden=state.tool!=='fill';
   $('fill-tolerance').value=state.fillTolerance;
   $('fill-tolerance-value').textContent=state.fillTolerance;
@@ -985,7 +982,7 @@ window.addEventListener('pagehide',()=>{
   if(state.doc){finishStroke();void persist();}
 });
 
-createWorkshopMode({appName:'FOLIO',version:'1.3.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
+createWorkshopMode({appName:'FOLIO',version:'1.4.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
   if(database)await txPromise('readwrite',s=>s.clear());else localStorage.removeItem(DB_NAME+':fallback');
   state.doc=null;await showHome();
 }});
