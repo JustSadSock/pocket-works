@@ -1,6 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {ROLES,CASES,resolveRound,initial,validate} from './data.js';
 import {drawRoom} from './scene.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
 const STORAGE='pocket-works:ne-moya-problema:session:1';
 const screen=document.querySelector('#screen'),stage=document.querySelector('#room-stage'),stamp=document.querySelector('#case-stamp'),caption=document.querySelector('#world-caption'),progress=document.querySelector('#progress');
@@ -163,3 +164,11 @@ window.addEventListener('pagehide',persist);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)persist()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)modal.hidden=true});
 render();
+
+createWorkshopMode({
+  appName: 'НЕ МОЯ ПРОБЛЕМА',
+  version: '1.0.0',
+  cachePrefix: 'ne-moya-problema-',
+  storageNamespace: 'pocket-works:ne-moya-problema',
+  onReset: () => {state=initial();persist();render();}
+});
