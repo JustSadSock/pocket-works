@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#29271e"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Клятвы — живая средневековая хроника. Держи слово или потеряй корону.">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css">
+<title>КЛЯТВЫ — Живая хроника</title>
+</head>
+<body>
+<main id="app" class="app-shell" data-app-shell data-fullscreen-app>
+  <header class="royal-head" data-ui>
+    <div class="royal-brand"><span class="brand-diamond" aria-hidden="true">♛</span><div><b>КЛЯТВЫ</b><small>ХРОНИКА КОРОЛЕВСТВА</small></div></div>
+    <button class="head-menu" id="pauseBtn" type="button" data-native-press aria-label="Открыть меню">☰</button>
+  </header>
+  <section class="indicators" aria-label="Положение королевства">
+    <div class="measure"><span>КАЗНА</span><strong id="gold">—</strong><small>◈</small></div>
+    <div class="measure"><span>УСТОЙЧИВОСТЬ</span><strong id="stability">—</strong></div>
+    <div class="measure"><span>ЗАКОННОСТЬ</span><strong id="legitimacy">—</strong></div>
+    <div class="measure"><span>ОПОЛЧЕНИЕ</span><strong id="troops">—</strong></div>
+  </section>
+  <section class="atlas" id="atlas" aria-label="Карта владений">
+    <div class="atlas-lettering top"><span>REGNUM · AURELIAE</span><span id="season">ВЕСНА · 1184</span></div>
+    <svg id="world" viewBox="0 0 440 670" role="group" aria-label="Нажмите на владение, чтобы открыть подробности" data-gesture-surface data-block-callout></svg>
+    <div class="map-modes" role="group" aria-label="Режим карты">
+      <button type="button" data-mode="legal" class="active" data-native-press>Владения</button>
+      <button type="button" data-mode="control" data-native-press>Власть</button>
+      <button type="button" data-mode="oaths" data-native-press>Клятвы</button>
+    </div>
+    <div class="atlas-lettering bottom"><span>✦</span><span id="mapHint">КОСНИТЕСЬ ЗАМКА</span><span>✦</span></div>
+    <div id="mapCallout" class="map-callout" aria-live="polite"></div>
+  </section>
+  <section class="royal-desk" data-ui>
+    <div class="selection" id="selection"><div class="select-seal" id="selectedSigil">♜</div><div class="selection-copy"><b id="selectedName">Королевский атлас</b><small id="selectedSub">Изучайте владения и заключайте клятвы</small></div><button id="inspectBtn" class="inspect" type="button" data-native-press>Открыть ›</button></div>
+    <div class="desk-actions">
+      <button id="councilBtn" type="button" data-native-press><span class="action-icon">⚖</span><span>Совет</span></button>
+      <button id="archiveBtn" type="button" data-native-press><span class="action-icon">▤</span><span>Летопись</span></button>
+      <button id="seasonBtn" class="advance" type="button" data-native-press><span class="action-icon">⌛</span><span>Следующий сезон</span><b>›</b></button>
+    </div>
+  </section>
+  <div class="veil hidden" id="veil"><div class="overlay-sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Королевские дела"></div></div>
+  <div class="opening" id="opening" aria-label="Открытие хроники">
+    <div class="cover-foil"><div class="cover-knot">✥</div><div class="cover-name">КЛЯТВЫ</div><div class="cover-rule"></div><div class="cover-motto">Власть стоит на слове.<br>Слово стоит дороже власти.</div><div class="cover-signet">♛</div><div class="cover-date">LIBER REGNI · ANNO 1184</div></div>
+    <div class="open-actions"><button id="startBtn" type="button" data-native-press>Открыть хронику <span>→</span></button><a href="../../" data-app-control>Вернуться в Pocket Works</a></div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Клятвы" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
