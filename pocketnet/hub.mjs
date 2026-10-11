@@ -158,7 +158,9 @@ export class PocketNetHub {
       const [client, server] = Object.values(pair);
       this.ctx.acceptWebSocket(server);
       this.attachment(server, { id: null, name: null, roomId: null,
-        edgeAccountId: request.headers.get('x-pw-account-id') || null });
+        edgeAccountId: request.headers.get('x-pw-account-id') || null,
+        edgeName: request.headers.get('x-pw-account-name') || null,
+        edgeAvatar: request.headers.get('x-pw-account-avatar') || null });
       setTimeout(() => {
         if (server.readyState === 1 && !server.deserializeAttachment()?.id) server.close(1008, 'authentication_required');
       }, 5000);
@@ -185,6 +187,15 @@ export class PocketNetHub {
           if (typeof msg.token !== 'string' || msg.token.length !== 64) throw new Error('invalid_token');
           const found = this.sql('SELECT id, name, account_id, avatar FROM sessions WHERE token = ? AND expires > ?', msg.token, Date.now()).toArray()[0];
           if (!found || (found.account_id || null) !== (player.edgeAccountId || null)) throw new Error('invalid_token');
+          // A linked user's nickname/portrait may have changed since token issuance.
+          // Only edge-validated identity fields may refresh the durable record.
+          if (found.account_id && player.edgeName) {
+            if (found.name !== player.edgeName || found.avatar !== player.edgeAvatar) {
+              found.name = player.edgeName;
+              found.avatar = player.edgeAvatar;
+              this.sql('UPDATE sessions SET name = ?, avatar = ? WHERE token = ?',found.name,found.avatar,msg.token);
+            }
+          }
           // Legacy unverified sessions may predate the guest marker.
           if (!found.account_id && !found.name.startsWith('Гость · ')) {
             found.name = 'Гость · ' + found.name.slice(0,24);
