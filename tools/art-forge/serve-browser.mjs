@@ -1,0 +1,4 @@
+import http from 'node:http';import fs from 'node:fs/promises';import path from 'node:path';
+const root=path.resolve(process.env.ART_FORGE_EVIDENCE||'');if(!process.env.ART_FORGE_EVIDENCE)throw Error('Missing evidence directory');
+const types={'.html':'text/html','.js':'text/javascript','.json':'application/json','.glb':'model/gltf-binary','.png':'image/png','.svg':'image/svg+xml'};
+http.createServer(async(req,res)=>{try{let filename=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://local').pathname));if(!filename.startsWith(root+path.sep))throw Error();if((await fs.stat(filename)).isDirectory())filename=path.join(filename,'index.html');const data=await fs.readFile(filename);res.writeHead(200,{'Content-Type':types[path.extname(filename)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404);res.end();}}).listen(4199,'127.0.0.1');

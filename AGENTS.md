@@ -200,6 +200,14 @@ When forced to choose, ship one excellent mechanic rather than a broad pile of s
 
 Pocket Works provides a shared Blender Asset Forge documented in `docs/ASSET-FORGE.md`. Use it when authored asset quality materially improves the product.
 
+Universal Art Forge v2 (`docs/UNIVERSAL-ART-FORGE.md`) adds app-owned pixel/raster,
+vector, Krita/Pixelorama exports, editable Blender source and 2.5D baking. Run its
+capability probe and plan first; record unavailable tools in the Art Bible rather
+than silently changing the intended medium. Preserve sources, provenance and
+budgets. Run source/export freshness checks, include runtime index URLs in the
+app-owned offline cache and visually inspect actual rendering. Blender Python
+requires explicit trust; never execute untrusted source with credentials.
+
 ### 3D asset rule
 
 - Do not default to Babylon/Three runtime primitives for a visually important object merely because the task is being performed by a repository agent.

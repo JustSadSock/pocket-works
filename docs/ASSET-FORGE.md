@@ -24,6 +24,11 @@ CI uses Blender `5.2.1 LTS` from the official Blender download archive and verif
 
 ## App-local contract
 
+Version 2 extends this same app-owned manifest to 2D, vector, professional editor
+exports and Blender-to-sprite baking. See [Universal Art Forge](UNIVERSAL-ART-FORGE.md).
+Version 1 remains compatible. Inspect capabilities before selecting an adapter;
+the runner never silently substitutes another medium.
+
 An app that wants generated Blender assets owns everything under its own directory:
 
 ```text
