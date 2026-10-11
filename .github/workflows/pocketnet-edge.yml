@@ -40,6 +40,8 @@ jobs:
           node --check pocketnet/hub.mjs
           node --check pocketnet/worker.mjs
           node --check scripts/build-pocketnet-modules.mjs
+          node --check apps/zamazka/app.js
+          node apps/zamazka/test-room-code.mjs
       - name: Install Wrangler 4
         run: npm install --prefix /tmp/pocketnet-wrangler --no-audit --no-fund wrangler@4
       - name: Compile Worker and verify Durable Object configuration

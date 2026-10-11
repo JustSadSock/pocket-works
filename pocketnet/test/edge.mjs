@@ -87,7 +87,10 @@ try {
   assert.equal(created.state.phase, 'lobby');
   assert.equal(created.version, 'v1');
   const roomId = created.roomId;
-  second.send('join_room', { roomId });
+  const code = roomId.slice(0, 8).toUpperCase();
+  second.send('join_room', { roomId: '00000000' });
+  assert.equal((await second.next('error')).code, 'room_not_found');
+  second.send('join_room', { roomId: code });
   assert.equal((await second.next('room_joined')).roomId, roomId);
   first.send('game_message', { payload: { type: 'start', rounds: 1 } });
   const started = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.phase === 'preview');
@@ -105,7 +108,7 @@ try {
   await sleep(100);
   again.send('leave_room');
   assert.equal((await health()).rooms, 0);
-  console.log('PASS: Cloudflare DO session, 2 players, state, reconnect, leave and SQLite room cleanup');
+  console.log('PASS: Cloudflare DO session, short room code, invalid code, UUID reconnect and cleanup');
 } finally {
   await close(first);
   await close(second);

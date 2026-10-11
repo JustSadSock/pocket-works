@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {inviteCode,parseRoomInput} from './room-code.js';
+const id='a3f92c10-9876-43ba-bafa-1cb1e9474321';
+assert.equal(inviteCode(id),'A3F92C10');
+assert.equal(parseRoomInput('a3f92c10'),'A3F92C10');
+assert.equal(parseRoomInput('A3F-92C10'),'A3F92C10');
+assert.equal(parseRoomInput(' a3f9 2c10 '),'A3F92C10');
+assert.equal(parseRoomInput(id.toUpperCase()),id);
+assert.equal(parseRoomInput('https://example.org/apps/zamazka/?room=A3F92C10','https://example.org/'),'A3F92C10');
+assert.equal(parseRoomInput('/apps/zamazka/?room='+id,'https://example.org/'),id);
+assert.equal(parseRoomInput('https://example.org/apps/zamazka/?server=untrusted','https://example.org/'),'');
+assert.equal(parseRoomInput('invalid'),'');
+assert.equal(parseRoomInput('1234'),'');
+console.log('PASS: short codes, UUID, share links and malformed invitations');

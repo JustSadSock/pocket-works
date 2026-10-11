@@ -1,26 +1,17 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {inviteCode,parseRoomInput} from './room-code.js';
 import {tabGuestName,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.7.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{const server=localStorage.getItem('pocket-works:zamazka:server');if(server)sessionStorage.removeItem('pocket-net:'+server)}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.7.2',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
-const NS='pocket-works:zamazka:',SERVER_KEY=NS+'server',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
-const DEFAULT_SERVER=location.origin+'/pocketnet';
+const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
+const POCKETNET_URL=location.origin+'/pocketnet';
 const q=new URLSearchParams(location.search);
-if(q.get('server')&&/^https?:\/\//.test(q.get('server')))localStorage.setItem(SERVER_KEY,q.get('server'));
-else {
-  // The old setup pointed users to a temporary Cloudflare Tunnel or local Windows host.
-  // Move those obsolete default addresses to the bundled Durable Objects endpoint.
-  const previous=localStorage.getItem(SERVER_KEY);
-  try {
-    const url=new URL(previous);
-    if(url.hostname.endsWith('.trycloudflare.com')||['localhost','127.0.0.1'].includes(url.hostname))
-      localStorage.setItem(SERVER_KEY,DEFAULT_SERVER);
-  } catch { /* First-time visitor: DEFAULT_SERVER is used without storing anything. */ }
-}
+let invitedRoom=q.get('room')||'';
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===3?g.art:g.edition===2?(g.art>=8?g.art+46:g.art):Number(g.art)+REAL_COUNT,edition:3})):[]}catch{return[]}})();
 
@@ -44,6 +35,8 @@ const head=(phase,title,until)=>'<div class="phase-head"><div><div class="eyebro
 const picture=id=>'<div class="frame"><img src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'"></div>';
 function home(){
  connectionEpoch++;
+ invitedRoom='';
+ if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
  clearTabGuest();
  if(net){try{net.leaveRoom()}catch{}net.close();net=null}
  view=null;roomId='';practice=null;
@@ -58,7 +51,7 @@ function home(){
   '</div>'+
   '<div class="museum-control">'+
     '<button class="start-restoration" id="primary-action" data-action="practice" disabled><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Загружаем оригиналы…</strong><small>Готовим музейную экспозицию</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
-    '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> По приглашению</button></div>'+
+    '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
     '<div class="museum-footer"><button data-action="collection">МОЙ АРХИВ <span>'+String(saved.length).padStart(2,'0')+'</span></button>'+
     (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'<span>54 ПОЛОТНА · 2–8 ИГРОКОВ</span>')+'</div>'+
   '</div></section>','home');
@@ -76,11 +69,30 @@ function home(){
    }
  });
 }
-function setup(mode){change('<section class="page"><div class="section-label">ПРИЁМНАЯ / '+(mode==='create'?'НОВАЯ КОМНАТА':'ПРИСОЕДИНЕНИЕ')+'</div><h2>'+(mode==='create'?'Открыть выставку':'Найти выставку')+'</h2><label class="field" for="who">Имя реставратора</label><input class="input" id="who" maxlength="22" autocomplete="nickname" value="'+esc(tabGuestName())+'"><label class="field" for="address">Адрес PocketNet</label><input class="input" id="address" type="url" inputmode="url" placeholder="https://ваш-игровой-сервер" value="'+esc(localStorage.getItem(SERVER_KEY)||DEFAULT_SERVER)+'"><p class="hint">Онлайн-комнаты работают на Cloudflare PocketNet без запуска сервера на компьютере. Адрес выбран автоматически; для самостоятельного сервера его можно изменить.</p>'+(mode==='join'?'<label class="field" for="room">Ссылка или идентификатор комнаты</label><input class="input" id="room" placeholder="UUID комнаты" value="'+esc(q.get('room')||'')+'">':'')+'<div class="subtle-rule"></div><div class="stack"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+(mode==='create'?'Создать комнату':'Присоединиться')+'</button><button class="btn ghost" data-action="menu">Назад</button></div></section>','setup')}
+function setup(mode,error='',roomValue=invitedRoom){
+ const creating=mode==='create';
+ change('<section class="page lobby-entry">'+
+  '<div class="section-label">БЮРО РЕСТАВРАЦИИ / '+(creating?'НОВАЯ ВЫСТАВКА':'ПРИГЛАШЕНИЕ')+'</div>'+
+  '<div class="entry-heading"><div><h2>'+(creating?'Открыть выставку':'Войти на выставку')+'</h2><p class="hint">'+(creating?'Собери реставраторов и начни собственную выставку.':'Введи код друга или открой присланную ссылку.')+'</p></div><div class="entry-stamp" aria-hidden="true">З<br>М</div></div>'+
+  '<label class="field" for="who">Твой ник</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Имя реставратора" value="'+esc(tabGuestName())+'">'+
+  (creating?'<div class="entry-guide"><span class="entry-step">01</span><span>Создай комнату и получи код из 8 символов.</span></div><div class="entry-guide"><span class="entry-step">02</span><span>Отправь код друзьям. Каждый войдёт со своим ником.</span></div>':
+   '<label class="field" for="room">Код комнаты или ссылка</label><input class="input room-entry-input" id="room" maxlength="250" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Например, A3F92C10" value="'+esc(roomValue)+'"><p class="hint">Восемь символов. Ссылку тоже можно вставить целиком.</p>')+
+  (error?'<div class="notice entry-error" role="alert">'+esc(error)+'</div>':'')+
+  '<div class="subtle-rule"></div><div class="stack"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+(creating?'Создать комнату ↗':'Присоединиться ↗')+'</button><button class="btn ghost" data-action="menu">В главное меню</button></div></section>','setup');
+}
+let roundsChoice=3;
 function lobby(){
- if(!view)return;
- const players=view.participants||[],leader=view.host===me?.id;
- change('<section class="page"><div class="section-label">ЧАСТНАЯ ЭКСПОЗИЦИЯ</div><h2>Комната готова</h2><p class="hint">Поделись приглашением. Можно играть вдвоём; дополнительные участники присоединятся до начала партии.</p><div class="room-ticket"><div class="section-label">КОД ПРИГЛАШЕНИЯ</div><div class="code">'+esc(roomId)+'</div><button class="btn ghost" data-action="share">Скопировать ссылку</button></div><div class="section-label">ГОСТИ · '+players.length+'/8</div><div class="players">'+players.map(p=>'<div class="player"><div class="seal">'+esc(p.name.slice(0,1).toUpperCase())+'</div><div class="player-name">'+esc(p.name)+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div><div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds"><option value="3">3 раунда</option><option value="1">1 раунд</option><option value="5">5 раундов</option></select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>Открыть экспозицию</button>':'<div class="notice">Ожидаем, пока куратор начнёт выставку.</div>')+'<button class="btn ghost" data-action="leave">Покинуть комнату</button></div></section>','lobby')
+ if(!view||!roomId)return;
+ const players=view.participants||[],leader=view.host===me?.id,code=inviteCode(roomId);
+ change('<section class="page exhibition-lobby"><div class="section-label">ЧАСТНАЯ ЭКСПОЗИЦИЯ / ЗАЛ ОЖИДАНИЯ</div><h2>Ждём гостей.</h2>'+
+  '<p class="hint">Поделись кодом — друзья войдут со своими никами. Как только соберётесь, можно начинать.</p>'+
+  '<div class="room-ticket"><div class="ticket-top"><span class="section-label">КОД КОМНАТЫ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
+  '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div><p class="ticket-help">Продиктуй код или отправь ссылку.</p>'+
+  '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Отправить ссылку ↗</button></div></div>'+
+  '<div class="lobby-list-heading"><span class="section-label">РЕСТАВРАТОРЫ · '+players.length+'/8</span><span>'+(leader?'Ты — куратор':'Ожидаем куратора')+'</span></div>'+
+  '<div class="players">'+players.map(p=>'<div class="player"><div class="seal">'+esc(p.name.slice(0,1).toUpperCase())+'</div><div class="player-name">'+esc(p.name)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
+  '<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
+  '<button class="btn ghost" data-action="leave">Покинуть комнату</button></div></section>','lobby');
 }
 function galleryHtml(list,select=false){return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+'</span></button>').join('')+'</div>'}
 function preview(local=false){
@@ -194,84 +206,67 @@ function renderView(){
  lastUiKey=key;
 }
 async function connect(mode){
- const name=(screen.querySelector('#who')?.value||'').trim(),address=(screen.querySelector('#address')?.value||'').trim();
- if(!name||name.length>22){notify('Укажи имя до 22 символов');return}
- let u;try{u=new URL(address);if(!['https:','http:'].includes(u.protocol)||u.protocol==='http:'&&!['localhost','127.0.0.1'].includes(u.hostname))throw Error('HTTPS required')}catch{notify('Нужен корректный HTTPS-адрес PocketNet-сервера');return}
- let room='';
- if(mode==='join'){const raw=(screen.querySelector('#room')?.value||'').trim();room=raw.includes('?')?(new URL(raw,location.href).searchParams.get('room')||''):raw;
- if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(room)){notify('Вставь ссылку или идентификатор комнаты');return}}
- // Older self-hosted servers may still run the three-player rule even after
- // the browser app updates. Verify the live server before entering the lobby.
- try{
-  const endpoint=u.origin+(u.pathname.replace(/\/$/,'')==='/pocketnet'?'/pocketnet':'');
-  const response=await fetch(endpoint+'/health',{cache:'no-store',signal:AbortSignal.timeout(5000)});
-  if(response.ok){
-   const health=await response.json();
-   if(health?.gameId==='zamazka'&&(Number(health.minPlayers)!==2||Number(health.rulesVersion||0)<2)){
-    modal('Сервер использует старые правила','<p class="hint">Этот сервер ещё не поддерживает новые правила фишек и повреждений. Закрой окно старого сервера на Windows, заново запусти <strong>INSTALL-AND-START.bat</strong>, скопируй новый HTTPS-адрес и создай новую комнату.</p><p class="hint">Для версии 1.7 нужен обновлённый сервер с rulesVersion 2.</p>',[['Понятно',closeDialog,'primary']]);
-    return;
-   }
-  }
- }catch{ /* Unreachable servers will report a connection error below. */ }
- localStorage.setItem(SERVER_KEY,endpoint);
+ const name=(screen.querySelector('#who')?.value||'').trim();
+ const input=(screen.querySelector('#room')?.value||'').trim();
+ const room=mode==='join'?parseRoomInput(input,location.href):'';
+ if(!name||name.length>22){notify('Введи ник до 22 символов');return}
+ if(mode==='join'&&!room){notify('Введи код из 8 символов или ссылку');screen.querySelector('#room')?.focus();return}
+ rememberTabName(name);
  const epoch=++connectionEpoch;
  me=null;view=null;roomId='';
- change('<section class="page center"><h2>Открываем зал</h2><p class="hint"><span class="busy"></span> Подключаемся к игровому серверу…</p><button class="btn ghost wide" data-action="menu">Отменить</button></section>','connecting');
+ change('<section class="page center connecting-room"><span class="busy"></span><h2>Открываем зал…</h2><p class="hint">Соединяем с выставкой.</p><button class="btn ghost wide" data-action="menu">Отменить</button></section>','connecting');
  try{
-  // localStorage is deliberately NOT passed to PocketNet: tabs must never share
-  // a guest token. Detect copied/duplicated tab sessions before authentication.
-  const storage=await prepareTabGuest(endpoint,name);
-  if(epoch!==connectionEpoch)return; // User left the connecting screen.
-  if(net)net.close();
-  const client=new PocketNet({serverUrl:endpoint,name,storage});
-  net=client;
-  // A deliberate create/join starts without a pending room auto-join.
-  client.roomId=null;client.persist();
-  client.on('connected',data=>{
-    if(client.closed)return;
-    me=data.player;
-    markTabGuest(endpoint,client.token);
-  });
-  client.on('room_joined',msg=>{
-    if(client.closed)return;
-    roomId=msg.roomId;
-    client.sendGame({type:'sync'});
-    // The lightweight Windows host may deliver onJoin game_event BEFORE
-    // room_joined; redraw the lobby now that its invitation code is known.
-    if(view)renderView();
-    else change('<section class="page center"><h2>Получаем экспозицию</h2><p class="hint"><span class="busy"></span> Загружаем комнату…</p></section>','connecting');
-  });
-  client.on('game_event',msg=>{
-    if(client.closed)return;
-    const e=msg.event;
-    if(e?.type==='state'){view=e.payload;renderView()}
-    else if(e?.type==='notice'){
-      const message=String(e.payload||'Не удалось выполнить действие');
-      if(/минимум три участника/i.test(message)){
-        modal('Нужно обновить сервер','<p class="hint">Этот игровой сервер работает на старых правилах для трёх участников. Останови его, снова запусти актуальный <strong>INSTALL-AND-START.bat</strong> и создай новую комнату.</p>',[['Понятно',closeDialog,'primary']]);
-      }else notify(message);
-    }
-  });
-  client.on('presence',data=>{
-    if(client.closed)return;
-    if(data.disconnected)notify('Один из гостей потерял соединение');
-    try{client.sendGame({type:'sync'})}catch{}
-  });
-  client.on('disconnected',()=>{
-    if(!client.closed)notify('Связь прервана. Переподключаемся…');
-  });
-  client.on('error',error=>{
-    if(!client.closed)notify('Сеть: '+(error?.code||error?.message||'ошибка'));
-  });
-  await client.connect();
-  if(epoch!==connectionEpoch){client.close();return}
-  if(mode==='create')client.createRoom('zamazka');
-  else client.joinRoom(room);
- }catch(e){
-  if(epoch!==connectionEpoch)return;
-  const cause=e?.message||'нет ответа';
-  notify('Не удалось подключиться: '+cause);
-  net?.close();net=null;clearTabGuest();setup(mode);
+   const response=await fetch(POCKETNET_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(8000)});
+   if(!response.ok)throw new Error('Выставки временно недоступны. Попробуй ещё раз.');
+   const health=await response.json();
+   if(!health.ok||!health.modules?.includes('zamazka'))throw new Error('Онлайн-комнаты сейчас недоступны.');
+   if(epoch!==connectionEpoch)return;
+   // Separate authenticated identities for each open browser tab.
+   const storage=await prepareTabGuest(POCKETNET_URL,name);
+   if(epoch!==connectionEpoch)return;
+   if(net)net.close();
+   const client=new PocketNet({serverUrl:POCKETNET_URL,name,storage});
+   net=client;
+   client.roomId=null;client.persist();
+   client.on('connected',data=>{if(client.closed)return;me=data.player;markTabGuest(POCKETNET_URL,client.token)});
+   client.on('room_joined',msg=>{
+     if(client.closed)return;
+     roomId=msg.roomId;
+     client.sendGame({type:'sync'});
+     if(view)renderView();
+     else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
+   });
+   client.on('game_event',msg=>{
+     if(client.closed)return;
+     const event=msg.event;
+     if(event?.type==='state'){view=event.payload;renderView()}
+     else if(event?.type==='notice')notify(String(event.payload||'Не удалось выполнить действие'));
+   });
+   client.on('presence',data=>{
+     if(client.closed)return;
+     if(data.disconnected)notify('Один из гостей потерял соединение');
+     try{client.sendGame({type:'sync'})}catch{}
+   });
+   client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
+   client.on('disconnected',()=>{if(!client.closed)notify('Связь прервана. Переподключаемся…')});
+   client.on('error',error=>{
+     if(client.closed)return;
+     const code=String(error?.code||error?.message||'');
+     const messages={room_not_found:'Комната не найдена. Проверь код и попробуй снова.',room_full:'В комнате уже восемь человек.',server_at_capacity:'Все игровые комнаты заняты.',game_unavailable:'Игра временно недоступна.',room_version_unavailable:'Эта комната создана в старой версии.'};
+     if(page==='connecting'&&messages[code]){
+       client.close();if(net===client)net=null;clearTabGuest();setup(mode,messages[code],input);
+     }else if(!client.closed)notify(messages[code]||'Ошибка подключения: '+code);
+   });
+   await client.connect();
+   if(epoch!==connectionEpoch){client.close();return}
+   if(mode==='create')client.createRoom('zamazka');
+   else client.joinRoom(room);
+ }catch(error){
+   if(epoch!==connectionEpoch)return;
+   if(net){net.close();net=null}
+   clearTabGuest();
+   const message=error?.name==='TimeoutError'?'Сервер не ответил. Попробуй ещё раз.':error instanceof TypeError?'Нет соединения с интернетом. Проверь сеть.':error?.message||'Не удалось подключиться. Попробуй ещё раз.';
+   setup(mode,message,input);
  }
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
@@ -279,11 +274,27 @@ function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  const data=editor.getData();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
  ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.clearDraft();try{net.sendGame({type:'submit',strokes:data});notify('Работа отправлена')}catch{notify('Нет подключения — сохранили работу в личном фонде')}} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
-function share(){const link=new URL(location.href);link.searchParams.set('room',roomId);const server=net?.serverUrl||localStorage.getItem(SERVER_KEY);if(server)link.searchParams.set('server',server);const href=link.toString();if(navigator.share){navigator.share({title:'ЗАМАЗКА — приглашение',url:href}).catch(()=>navigator.clipboard?.writeText(href))}else if(navigator.clipboard){navigator.clipboard.writeText(href).then(()=>notify('Приглашение скопировано')).catch(()=>notify(href))}else notify(href)}
+async function copyText(value,success){
+ try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);notify(success)}
+ catch{
+   modal('Скопируй приглашение','<p class="hint">Выдели и скопируй текст ниже.</p><input class="input" id="manualCopy" readonly value="'+esc(value)+'">',[['Готово',closeDialog,'primary']]);
+   dialog.querySelector('#manualCopy')?.select();
+ }
+}
+function share(){
+ if(!roomId)return;
+ const url=new URL(location.pathname,location.origin);
+ url.searchParams.set('room',inviteCode(roomId));
+ const href=url.toString();
+ if(navigator.share)navigator.share({title:'ЗАМАЗКА — приглашение',text:'Код комнаты: '+inviteCode(roomId),url:href}).catch(error=>{if(error?.name!=='AbortError')copyText(href,'Ссылка скопирована')});
+ else copyText(href,'Ссылка скопирована');
+}
 function inspect(id){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata">'+esc(a.artist)+' · '+esc(a.date)+'<div>'+esc(a.museum)+'</div></div><p class="hint">Запомни цвета и фактуру оригинала.</p>'+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
-function settings(){modal('Настройки','<label class="field" for="settingName">Имя</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'"><label class="field" for="settingServer">Сервер интернет-комнат</label><input class="input" id="settingServer" type="url" value="'+esc(localStorage.getItem(SERVER_KEY)||DEFAULT_SERVER)+'" placeholder="https://"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки интерфейса</label><p class="hint">Новое имя и адрес применятся при следующем подключении. Каждая вкладка может использовать собственное имя и игровую сессию.</p>',[
- ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');localStorage.setItem(SERVER_KEY,dialog.querySelector('#settingServer').value.trim());beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']])}
+function settings(){
+ modal('Настройки','<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки интерфейса</label><p class="hint">Новый ник применится при следующем подключении к комнате.</p>',[
+  ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']]);
+}
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 screen.addEventListener('click',e=>{
  const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub]');if(!b)return;
@@ -302,6 +313,7 @@ screen.addEventListener('click',e=>{
  else if(action==='menu'){if(net||practice&&practice.phase==='drawing'){modal('Покинуть выставку?','<p class="hint">Текущая партия будет покинута. Несданные мазки сохраняются на устройстве.</p>',[['Покинуть',()=>{closeDialog();home()},'primary'],['Остаться',closeDialog,'ghost']])}else home()}
  else if(action==='connect')connect(b.dataset.mode);
  else if(action==='share')share();
+ else if(action==='copy-code')copyText(inviteCode(roomId),'Код комнаты скопирован');
  else if(action==='start')net?.sendGame({type:'start',rounds:Number(screen.querySelector('#rounds')?.value||3)});
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
@@ -316,7 +328,8 @@ function tick(){
  if(clock&&v?.deadline){const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');clock.classList.toggle('urgent',s<=10)}
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}}
 }
+screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
 setInterval(tick,350);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
-if(q.get('room'))setup('join');else home();
+if(q.has('room'))setup('join');else home();
 // Shared update manager owns service worker registration and activation.

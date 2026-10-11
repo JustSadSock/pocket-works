@@ -1,10 +1,10 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.7.1';
-const ART_CACHE = 'zamazka-artworks-v1.7.1';
-const APP_VERSION = '1.7.1';
+const CACHE_NAME = 'zamazka-v1.7.2';
+const ART_CACHE = 'zamazka-artworks-v1.7.2';
+const APP_VERSION = '1.7.2';
 const RELEASE_DATE = '2026-10-11';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["PocketNet теперь работает через Cloudflare Durable Objects без собственного компьютера или отдельного VPS.","Сетевой адрес заполняется автоматически; ссылка приглашения сохраняет выбранный сервер.","Комнаты и данные матчей сохраняются в SQLite, доступно переподключение после разрыва связи."];
+const RELEASE_NOTES = ["Комнаты PocketNet без ручной настройки сервера.","Короткий код из 8 символов: копируй код или отправляй ссылку.","Игроки входят со своим ником; понятные ошибки подключения."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const APP_SHELL = [
   './legacy-artworks.js',
   './app.js',
   './tab-guests.js',
+  './room-code.js',
   './artworks.js',
   './museum-catalog.js',
   './editor.js',
