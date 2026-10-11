@@ -236,6 +236,10 @@ async function connect(mode){
  const ticket=++requestSerial;
  connecting=true;root.innerHTML='<section class="loading">Открываем связь с PocketNet…</section>';status('Подключение');
  try{
+  // A PocketNet guest transport identity is scoped to the active Pocket ID nickname.
+  // Switching Google/Pocket ID accounts must not silently reuse a previous guest name.
+  if(adapter.getItem('last-player-name')!==name)adapter.removeItem('pocket-net:'+SERVER);
+  adapter.setItem('last-player-name',name);
   if(mode!=='resume')adapter.removeItem('pocket-net:'+SERVER);
   await ensureUniqueTab();
   const client=new PocketNet({serverUrl:SERVER,name,storage:adapter});
