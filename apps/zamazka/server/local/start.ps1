@@ -48,7 +48,7 @@ function Update-Game-Rules {
  try {
   Invoke-WebRequest -Uri $source -OutFile $temporary -UseBasicParsing -TimeoutSec 30
   $contents=Get-Content $temporary -Raw
-  if($contents -notmatch 'export\\s+const\\s+MIN_PLAYERS\\s*=\\s*2\\s*;'){
+  if($contents -notmatch 'export\s+const\s+MIN_PLAYERS\s*=\s*2\s*;'){
    throw 'Downloaded game module does not advertise two-player support'
   }
   Move-Item -Path $temporary -Destination $destination -Force
