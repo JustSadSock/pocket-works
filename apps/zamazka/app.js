@@ -45,7 +45,7 @@ function syncIdentity(){
  if(btn){btn.innerHTML=imageTag(personalEmblem.image);btn.title='Редактировать свой знак';}
  screen.querySelectorAll('[data-personal-seal]').forEach(el=>el.innerHTML=imageTag(personalEmblem.image));
 }
-function shiftMuseum(step){
+function shiftMuseum(step,play=true){
  if(page!=='home')return;
  museumIndex=(museumIndex+step+museumOrder.length)%museumOrder.length;
  const id=museumOrder[museumIndex],left=museumOrder[(museumIndex-1+museumOrder.length)%museumOrder.length],right=museumOrder[(museumIndex+1)%museumOrder.length];
@@ -59,7 +59,7 @@ function shiftMuseum(step){
  const number=display.querySelector('.museum-exhibit-number');
  if(number)number.textContent=String(museumIndex+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0');
  display.classList.remove('exhibit-turn');void display.offsetWidth;display.classList.add('exhibit-turn');
- sound(365);
+ if(play)sound(365);
 }
 function editEmblem(){
  const current=personalEmblem.strokes.map(s=>({c:s.c,s:s.s,p:s.p.map(p=>[...p])}));
@@ -104,10 +104,8 @@ function editEmblem(){
  });
  dialog.querySelector('#emblemSize').addEventListener('input',e=>size=Number(e.target.value));
  dialog.querySelector('#emblemUndo').addEventListener('click',()=>{strokes.pop();paint()});
- dialog.querySelector('#emblemClear').addEventListener('click',()=>modal('Очистить знак?','<p class="hint">Все штрихи на холсте будут стёрты. Пока ты не сохранишь, старый знак останется на устройстве.</p>',[
-  ['Очистить',()=>{strokes=[];editEmblem();const currentCanvas=dialog.querySelector('#emblemCanvas');paintEmblem(currentCanvas,[])},'primary'],
-  ['Оставить',()=>{closeDialog();editEmblem()},'ghost']
- ]));
+ let confirmClear=false;
+ dialog.querySelector('#emblemClear').addEventListener('click',e=>{if(!confirmClear){confirmClear=true;e.currentTarget.textContent='Точно очистить?';return}strokes=[];confirmClear=false;e.currentTarget.textContent='Очистить';paint()});
 }
 function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const ac=window.__zamazkaAudio||(window.__zamazkaAudio=new Audio());if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(f,ac.currentTime);o.frequency.exponentialRampToValueAtTime(f*.83,ac.currentTime+.09);g.gain.setValueAtTime(.025,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.11);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.12)}catch{}}
 let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
@@ -131,14 +129,15 @@ function home(){
     '<div class="museum-echo museum-echo-left"><img data-art-id="3" src="'+artworkURL(3)+'" alt=""></div>'+
     '<figure class="museum-centerpiece"><div class="museum-gilded"><img data-art-id="0" src="'+artworkURL(0)+'" alt="Ян Вермеер — Девушка с жемчужной серёжкой"><span class="museum-ribbon">НАСТОЯЩИЕ ПРОИЗВЕДЕНИЯ</span></div><figcaption><strong>Ян Вермеер</strong><span>Девушка с жемчужной серёжкой, ок. 1665</span></figcaption></figure>'+
     '<div class="museum-echo museum-echo-right"><img data-art-id="1" src="'+artworkURL(1)+'" alt=""></div>'+
-    '<span class="museum-exhibit-number">I / LIV</span>'+
+    '<div class="museum-wheel"><button data-action="museum-prev" aria-label="Предыдущая картина">‹</button><span>КОЛЕСО / СВАЙП</span><button data-action="museum-next" aria-label="Следующая картина">›</button></div><span class="museum-exhibit-number">01 / 54</span>'+
   '</div>'+
-  '<div class="museum-control">'+
+  '<div class="museum-control">'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(tabGuestName())+'</strong><small>Личный знак · нарисовать / изменить</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
     '<button class="start-restoration" id="primary-action" data-action="practice" disabled><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Загружаем оригиналы…</strong><small>Готовим музейную экспозицию</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
     '<div class="museum-footer"><button data-action="collection">МОЙ АРХИВ <span>'+String(saved.length).padStart(2,'0')+'</span></button>'+
     (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'<span>54 ПОЛОТНА · 2–8 ИГРОКОВ</span>')+'</div>'+
   '</div></section>','home');
+ shiftMuseum(0,false);syncIdentity();
  primeGallery().then(results=>{
    if(page!=='home')return;
    const primary=screen.querySelector('#primary-action');
@@ -158,7 +157,7 @@ function setup(mode,error='',roomValue=invitedRoom){
  change('<section class="page lobby-entry">'+
   '<div class="section-label">БЮРО РЕСТАВРАЦИИ / '+(creating?'НОВАЯ ВЫСТАВКА':'ПРИГЛАШЕНИЕ')+'</div>'+
   '<div class="entry-heading"><div><h2>'+(creating?'Открыть выставку':'Войти на выставку')+'</h2><p class="hint">'+(creating?'Собери реставраторов и начни собственную выставку.':'Введи код друга или открой присланную ссылку.')+'</p></div><div class="entry-stamp" aria-hidden="true">З<br>М</div></div>'+
-  '<label class="field" for="who">Твой ник</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Имя реставратора" value="'+esc(tabGuestName())+'">'+
+  '<div class="entry-identity"><button class="identity-seal-button" data-action="emblem" aria-label="Нарисовать свой знак">'+mySealMarkup()+'<span>✎</span></button><div class="identity-label"><strong>Личный знак</strong><small>Нарисовать или изменить</small></div></div>'+ '<label class="field" for="who">Твой ник</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Имя реставратора" value="'+esc(tabGuestName())+'">'+
   (creating?'<div class="entry-guide"><span class="entry-step">01</span><span>Создай комнату и получи код из 8 символов.</span></div><div class="entry-guide"><span class="entry-step">02</span><span>Отправь код друзьям. Каждый войдёт со своим ником.</span></div>':
    '<label class="field" for="room">Код комнаты или ссылка</label><input class="input room-entry-input" id="room" maxlength="250" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Например, A3F92C10" value="'+esc(roomValue)+'"><p class="hint">Восемь символов. Ссылку тоже можно вставить целиком.</p>')+
   (error?'<div class="notice entry-error" role="alert">'+esc(error)+'</div>':'')+
@@ -170,11 +169,11 @@ function lobby(){
  const players=view.participants||[],leader=view.host===me?.id,code=inviteCode(roomId);
  change('<section class="page exhibition-lobby"><div class="section-label">ЧАСТНАЯ ЭКСПОЗИЦИЯ / ЗАЛ ОЖИДАНИЯ</div><h2>Ждём гостей.</h2>'+
   '<p class="hint">Поделись кодом — друзья войдут со своими никами. Как только соберётесь, можно начинать.</p>'+
-  '<div class="room-ticket"><div class="ticket-top"><span class="section-label">КОД КОМНАТЫ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
+  '<button class="lobby-self" data-action="emblem"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span><strong>'+esc(me?.name||tabGuestName())+'</strong><small>Твоя эмблема · изменить рисунок</small></span><span class="lobby-self-arrow">✎</span></button>'+'<div class="room-ticket"><div class="ticket-top"><span class="section-label">КОД КОМНАТЫ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
   '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div><p class="ticket-help">Продиктуй код или отправь ссылку.</p>'+
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Отправить ссылку ↗</button></div></div>'+
   '<div class="lobby-list-heading"><span class="section-label">РЕСТАВРАТОРЫ · '+players.length+'/8</span><span>'+(leader?'Ты — куратор':'Ожидаем куратора')+'</span></div>'+
-  '<div class="players">'+players.map(p=>'<div class="player"><div class="seal">'+esc(p.name.slice(0,1).toUpperCase())+'</div><div class="player-name">'+esc(p.name)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
+  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)<div class="player-name">'+esc(p.name)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
   '<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
   '<button class="btn ghost" data-action="leave">Покинуть комнату</button></div></section>','lobby');
 }
@@ -208,7 +207,7 @@ function vote(){
  if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=[0,0,0,0,0]}
  const count=(v.voted||[]).length,expected=v.participants.length-1;
  change('<section class="phase-page expert-phase">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Суд реставраторов',v.deadline)+
- '<div class="phase-body expert-layout"><div class="expert-focus"><span class="step-stamp">I. ПОДОЗРИТЕЛЬНЫЙ ЭКСПОНАТ</span><h3>'+esc(target?.name||'Неизвестный реставратор')+'</h3><p class="hint">Перед тобой восстановленная картина. Найди среди оригиналов ту, с которой она была создана.</p><div class="expert-focus-frame"><canvas id="examinedCanvas" aria-label="Восстановленная картина"></canvas></div><p class="expert-observers">Получено заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
+ '<div class="phase-body expert-layout"><div class="expert-focus"><span class="step-stamp">I. ПОДОЗРИТЕЛЬНЫЙ ЭКСПОНАТ</span><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Неизвестный реставратор')+'</h3></div><p class="hint">Перед тобой восстановленная картина. Найди среди оригиналов ту, с которой она была создана.</p><div class="expert-focus-frame"><canvas id="examinedCanvas" aria-label="Восстановленная картина"></canvas></div><p class="expert-observers">Получено заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
  '<div class="expert-ballot"><span class="step-stamp">II. МУЗЕЙНЫЙ КАТАЛОГ</span><h3>Куда поставить фишки?</h3><p class="hint">'+(isOwn?'Это твоя работа. Остальные раздают свои три фишки.':already?'Твои фишки приняты. Ждём остальных реставраторов.':'Раздай ровно три фишки между любыми оригиналами. Каждая правильная приносит очки.')+'</p>'+
  '<div class="stake-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="stake-frame"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager"><span class="stake-number">'+String(i+1).padStart(2,'0')+'</span></div><div class="stake-details"><strong>'+esc(ARTS[id]?.title||'Картина')+'</strong><small>'+esc(ARTS[id]?.artist||'')+'</small></div>'+(!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с картины '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на картину '+(i+1)+'">＋</button></div>':'<span class="stake-locked">№ '+(i+1)+'</span>')+'</div>').join('')+'</div>'+
  (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div><button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button></div>':'<div class="stake-wait"><span class="busy"></span> Судейская коллегия рассматривает работу…</div>')+
@@ -259,7 +258,7 @@ function reveal(local=false){
 }
 function results(){
  const rank=[...view.participants].sort((a,b)=>(view.scores[b.id].mask+view.scores[b.id].eye)-(view.scores[a.id].mask+view.scores[a.id].eye));
- change('<section class="page"><div class="section-label">ИТОГИ ВЫСТАВКИ</div><h2>Каталог разоблачений</h2><div class="notice">Обман и наблюдательность оцениваются отдельно. Побеждает самая высокая сумма.</div>'+rank.map((p,i)=>'<div class="result-item"><div class="result-rank"><div><span class="section-label">№ '+(i+1)+'</span><h3>'+esc(p.name)+'</h3></div><div class="points">'+(view.scores[p.id].mask+view.scores[p.id].eye)+' очк.</div></div><div class="quiet">Маскировка '+view.scores[p.id].mask+' · Экспертиза '+view.scores[p.id].eye+'</div></div>').join('')+'<div class="stack" style="margin-top:20px">'+(me?.id===view.host?'<button class="btn primary" data-action="next">Новый матч с этой компанией</button>':'<div class="hint">Создатель комнаты может начать следующий матч.</div>')+'<button class="btn ghost" data-action="leave">Выйти из комнаты</button></div></section>','results')
+ change('<section class="page"><div class="section-label">ИТОГИ ВЫСТАВКИ</div><h2>Каталог разоблачений</h2><div class="notice">Обман и наблюдательность оцениваются отдельно. Побеждает самая высокая сумма.</div>'+rank.map((p,i)=>'<div class="result-item"><div class="result-rank"><div class="result-identity">'+memberSeal(p)+'<div><span class="section-label">№ '+(i+1)+'</span><h3>'+esc(p.name)+'</h3></div></div><div class="points">'+(view.scores[p.id].mask+view.scores[p.id].eye)+' очк.</div></div><div class="quiet">Маскировка '+view.scores[p.id].mask+' · Экспертиза '+view.scores[p.id].eye+'</div></div>').join('')+'<div class="stack" style="margin-top:20px">'+(me?.id===view.host?'<button class="btn primary" data-action="next">Новый матч с этой компанией</button>':'<div class="hint">Создатель комнаты может начать следующий матч.</div>')+'<button class="btn ghost" data-action="leave">Выйти из комнаты</button></div></section>','results')
 }
 function collection(){
  change('<section class="page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2>'+(saved.length?'<div class="gallery">'+saved.map((g,i)=>'<button class="picture" data-saved="'+i+'"><canvas data-saved-canvas="'+i+'"></canvas><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
@@ -317,6 +316,7 @@ async function connect(mode){
      if(client.closed)return;
      roomId=msg.roomId;
      client.sendGame({type:'sync'});
+     if(personalEmblem.image)client.sendGame({type:'emblem',image:personalEmblem.image});
      if(view)renderView();
      else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
    });
@@ -380,6 +380,8 @@ function settings(){
   ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']]);
 }
 document.querySelector('#settingsBtn').addEventListener('click',settings);
+document.querySelector('#profileBtn')?.addEventListener('click',editEmblem);
+syncIdentity();
 screen.addEventListener('click',e=>{
  const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub]');if(!b)return;
  if(b.hasAttribute('data-magnify')){magnify(Number(b.dataset.magnify));return}
@@ -390,6 +392,9 @@ screen.addEventListener('click',e=>{
  if(b.hasAttribute('data-saved')){const g=saved[Number(b.dataset.saved)];modal('Реставрация из фонда','<div class="compare"><div><img src="'+artworkURL(g.art)+'" style="width:100%" alt=""><small>Подлинник</small></div><div><canvas id="savedFull"></canvas><small>Твоя работа</small></div></div>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#savedFull'),g.art,g.variation,g.strokes,true);return}
  const action=b.dataset.action;sound();
  if(action==='create'||action==='join')setup(action);
+ else if(action==='emblem')editEmblem();
+ else if(action==='museum-next')shiftMuseum(1);
+ else if(action==='museum-prev')shiftMuseum(-1);
  else if(action==='practice')newPractice();
  else if(action==='retry-gallery')home();
  else if(action==='resume')resumePractice();
@@ -412,6 +417,12 @@ function tick(){
  if(clock&&v?.deadline){const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');clock.classList.toggle('urgent',s<=10)}
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}}
 }
+let museumSwipe=null;
+screen.addEventListener('pointerdown',e=>{if(page==='home'&&e.target.closest('.museum-display'))museumSwipe={x:e.clientX,y:e.clientY,id:e.pointerId}});
+screen.addEventListener('pointerup',e=>{if(!museumSwipe||e.pointerId!==museumSwipe.id)return;const x=e.clientX-museumSwipe.x,y=e.clientY-museumSwipe.y;museumSwipe=null;if(Math.abs(x)>42&&Math.abs(x)>Math.abs(y)*1.2)shiftMuseum(x<0?1:-1)});
+screen.addEventListener('pointercancel',()=>museumSwipe=null);
+screen.addEventListener('wheel',e=>{if(page!=='home'||!e.target.closest('.museum-display'))return;e.preventDefault();if(Math.abs(e.deltaY)<4&&Math.abs(e.deltaX)<4)return;if(Date.now()-lastMuseumWheel<260)return;lastMuseumWheel=Date.now();shiftMuseum((Math.abs(e.deltaY)>Math.abs(e.deltaX)?e.deltaY:e.deltaX)>0?1:-1)},{passive:false});
+document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();shiftMuseum(e.key==='ArrowRight'?1:-1)}});
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
 setInterval(tick,350);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
