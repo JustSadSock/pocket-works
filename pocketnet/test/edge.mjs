@@ -85,7 +85,7 @@ try {
   first.send('create_room', { gameId: 'zamazka' });
   const created = await first.next('room_joined');
   assert.equal(created.state.phase, 'lobby');
-  assert.equal(created.version, 'v2');
+  assert.equal(created.version, 'v3');
   const roomId = created.roomId;
   const code = roomId.slice(0, 8).toUpperCase();
   second.send('join_room', { roomId: '00000000' });
@@ -98,7 +98,27 @@ try {
   second.send('game_message', { payload: { type: 'emblem', image: png } });
   const badge = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.emblems?.[(event.event.payload.participants || []).find(p => p.name === 'Observer')?.id] === png);
   assert.equal(Object.values(badge.event.payload.emblems).includes(png), true);
-  first.send('game_message', { payload: { type: 'start', rounds: 1 } });
+  // Live strokes: send deltas, receive in peer socket without full state rerender.
+  const packet={type:'board_delta',revision:0,k:'smoke1',q:0,c:'#3d3028',s:9,p:[[12,15],[55,77]]};
+  first.send('game_message',{payload:packet});
+  const live=await second.next('game_event',m=>m.event?.type==='board_delta');
+  assert.equal(live.event.payload.u,created.players[0].id);
+  assert.deepEqual(live.event.payload.p,packet.p);
+  second.send('game_message',{payload:{type:'sync'}});
+  const fresh=await second.next('game_event',m=>m.event?.type==='state'&&m.event.payload.board?.segments.length===1);
+  assert.equal(fresh.event.payload.board.segments[0].k,'smoke1');
+  second.send('game_message',{payload:{...packet,c:'not-a-color'}});
+  const rejected=await second.next('game_event',m=>m.event?.type==='notice');
+  assert.match(rejected.event.payload,/мазок/i);
+  second.send('game_message',{payload:{type:'board_clear'}});
+  const denied=await second.next('game_event',m=>m.event?.type==='notice');
+  assert.match(denied.event.payload,/куратор/i);
+  first.send('game_message',{payload:{type:'board_clear'}});
+  const cleared=await second.next('game_event',m=>m.event?.type==='board_reset');
+  assert.equal(cleared.event.payload.segments.length,0);
+  assert.equal(cleared.event.payload.revision,1);
+  first.send('game_message',{payload:{type:'start',rounds:1}});
+
   const started = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.phase === 'preview');
   assert.equal(started.event.payload.round, 1);
   await close(second);
@@ -114,7 +134,7 @@ try {
   await sleep(100);
   again.send('leave_room');
   assert.equal((await health()).rooms, 0);
-  console.log('PASS: PocketNet short rooms, 2 players, persistent profile images, unsafe image rejection, reconnect and cleanup');
+  console.log('PASS: PocketNet rooms, concurrent incremental drawing, snapshots, clear permissions, security, reconnect');
 } finally {
   await close(first);
   await close(second);

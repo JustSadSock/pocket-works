@@ -1,0 +1,54 @@
+/* Museum motion: five physical frames travel in slots, without image swaps in view. */
+.museum-display{position:relative;overflow:hidden;min-height:245px;isolation:isolate;--museum-step:clamp(150px,40vw,255px)}
+.museum-stage{position:absolute;inset:0 0 68px;overflow:hidden;pointer-events:auto;touch-action:pan-y;perspective:900px}
+.museum-slide{position:absolute;left:50%;top:50%;height:96%;width:clamp(142px,42vw,245px);max-width:53%;margin:0;display:flex;align-items:center;justify-content:center;opacity:1;pointer-events:none;will-change:transform,opacity;transform-origin:center center;transition:transform 560ms cubic-bezier(.22,.78,.18,1),opacity 490ms ease,filter 560ms ease;filter:brightness(1)}
+.museum-slide-rim{padding:7px;border:7px ridge #bd9d68;outline:1px solid #4c3925;background:#241b13;box-shadow:0 18px 30px #070504aa,inset 0 0 0 2px #e6c788;max-height:100%;max-width:100%;height:100%;display:flex;align-items:stretch;justify-content:center}
+.museum-slide img{width:100%;height:100%;object-fit:cover;display:block;border:2px solid #3b271a;background:#382e23}
+.museum-slide[data-slot="0"]{transform:translate(-50%,-50%) translateX(0) scale(1) rotate(0deg);opacity:1;z-index:5}
+.museum-slide[data-slot="-1"]{transform:translate(-50%,-50%) translateX(calc(-1 * var(--museum-step))) scale(.68) rotate(-7deg);opacity:.74;filter:brightness(.72) saturate(.8);z-index:3}
+.museum-slide[data-slot="1"]{transform:translate(-50%,-50%) translateX(var(--museum-step)) scale(.68) rotate(7deg);opacity:.74;filter:brightness(.72) saturate(.8);z-index:3}
+.museum-slide[data-slot="-2"],.museum-slide[data-slot="-3"]{transform:translate(-50%,-50%) translateX(calc(-2.1 * var(--museum-step))) scale(.45) rotate(-12deg);opacity:0;filter:brightness(.55);z-index:1}
+.museum-slide[data-slot="2"],.museum-slide[data-slot="3"]{transform:translate(-50%,-50%) translateX(calc(2.1 * var(--museum-step))) scale(.45) rotate(12deg);opacity:0;filter:brightness(.55);z-index:1}
+.museum-slide.instant{transition:none!important}
+.museum-stage-caption{position:absolute;z-index:6;left:12%;right:12%;bottom:37px;text-align:center;color:#ebd2a8;pointer-events:none;display:flex;flex-direction:column;gap:2px;text-shadow:0 2px 8px #000d}
+.museum-stage-caption strong{font:italic 15px/1.12 Georgia,serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.museum-stage-caption span{font:10px system-ui,sans-serif;color:#c0ae91;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.museum-wheel{z-index:8}
+.museum-exhibit-number{z-index:7;bottom:44px}
+.museum-home .museum-display:before{bottom:74px}
+@media(min-width:700px){.museum-display{--museum-step:clamp(160px,21vw,295px)}.museum-stage{inset:0 0 68px}.museum-slide{width:clamp(210px,23vw,300px);max-width:48%}.museum-slide-rim{border-width:9px}.museum-stage-caption strong{font-size:18px}.museum-stage-caption span{font-size:11px}}
+@media(max-height:760px) and (max-width:699px){.museum-display{min-height:190px}.museum-slide-rim{border-width:5px;padding:4px}.museum-stage{bottom:53px}.museum-stage-caption{bottom:33px}.museum-stage-caption strong{font-size:12px}.museum-stage-caption span{font-size:9px}.museum-exhibit-number{bottom:33px}}
+@media(prefers-reduced-motion:reduce){.museum-slide{transition:none!important}}
+
+/* Commons board: a single shared tabletop, not another site form. */
+.exhibition-lobby .commons-desk{min-width:0;margin:18px 0 22px;background:linear-gradient(132deg,#e5d4b8,#f3e7d0 30%,#e4d0ae);border:2px solid #b79a72;box-shadow:5px 6px 0 #c2aa89;padding:clamp(10px,2vw,18px)}
+.commons-topline{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 0 11px}
+.commons-topline .section-label{font-size:9px;letter-spacing:.15em;color:#92744e}
+.commons-topline h3{font:italic clamp(20px,3vw,29px) Georgia,serif;color:#3b3025;margin:3px 0 3px}
+.commons-topline p{font-size:11px;line-height:1.4;color:#75614b;margin:0;max-width:420px}
+.commons-online{white-space:nowrap;font:700 9px system-ui,sans-serif;letter-spacing:.08em;color:#576a4b;padding-top:6px}
+.commons-online i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#748554;box-shadow:0 0 0 3px #75854e22;margin-right:5px}
+.commons-frame{position:relative;padding:9px;border:8px ridge #866746;box-shadow:0 10px 22px #35261850,inset 0 2px #c2a079;background:#2a211a}
+.commons-frame canvas{display:block;width:100%;height:auto;aspect-ratio:8 / 5;background:radial-gradient(ellipse at 45% 30%,#fbf0db,#e5d1b1);touch-action:none;cursor:crosshair;user-select:none}
+.commons-corner{position:absolute;bottom:2px;right:4px;font:13px Georgia,serif;color:#d3b68a;pointer-events:none}
+.commons-controls{display:flex;flex-wrap:wrap;align-items:center;gap:13px;padding-top:12px}
+.commons-palette{display:flex;align-items:center;gap:5px;flex:1 1 225px}
+.commons-swatch{background:var(--swatch);width:clamp(23px,5vw,36px);height:clamp(23px,5vw,36px);border:2px solid #e2d4bb;box-shadow:0 1px 0 #9c8667;flex:0 1 auto;padding:0}
+.commons-swatch.selected{outline:3px solid #493627;outline-offset:1px;transform:translateY(-2px)}
+.commons-width{display:flex;align-items:center;gap:8px;font:600 11px system-ui,sans-serif;color:#5d4833;flex:1 1 150px}
+.commons-width input{min-width:60px;flex:1;accent-color:#735234}
+.commons-wipe{background:#ded0b8;border:1px solid #957b5c;color:#49372a;min-height:34px;font-size:11px;padding:7px 10px}
+.commons-wipe:active{transform:translateY(2px)}
+.commons-note{color:#927d63;font-size:10px}
+@media(min-width:1000px){.exhibition-lobby .commons-desk{grid-column:1/-1;grid-row:8;margin:8px 0 20px;max-width:100%}.exhibition-lobby .commons-frame{max-width:100%}.exhibition-lobby .commons-desk canvas{max-height:450px;object-fit:contain}}
+@media(max-width:699px){.exhibition-lobby .commons-desk{margin:14px -8px 22px}.commons-frame{border-width:5px;padding:5px}.commons-controls{gap:10px}.commons-palette{justify-content:space-between}.commons-swatch{width:clamp(25px,6vw,34px);height:clamp(25px,6vw,34px)}}
+
+/* Override legacy desktop lobby grid placement; the canvas occupies its own row. */
+@media(min-width:1000px){
+ .page.exhibition-lobby:has(.room-ticket)>.room-ticket{grid-column:1;grid-row:4/6}
+ .page.exhibition-lobby:has(.room-ticket)>.lobby-self{grid-column:2;grid-row:4}
+ .page.exhibition-lobby:has(.room-ticket)>.lobby-list-heading{grid-column:1;grid-row:6}
+ .page.exhibition-lobby:has(.room-ticket)>.players{grid-column:1;grid-row:7;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .page.exhibition-lobby:has(.room-ticket)>.stack{grid-column:2;grid-row:5/8;position:sticky;top:20px}
+ .page.exhibition-lobby:has(.room-ticket)>.commons-desk{grid-column:1/-1;grid-row:8}
+}

@@ -11,10 +11,18 @@ test.describe('ЗАМАЗКА · музей и личная эмблема', () 
     expect(response?.status()).toBeLessThan(400);
     await expect(page.locator('.museum-home')).toBeVisible();
 
-    const painting = page.locator('.museum-centerpiece img');
+    const painting = page.locator('.museum-slide[data-slot="0"] img');
     const initial = await painting.getAttribute('src');
+    await expect(page.locator('.museum-slide')).toHaveCount(5);
     await page.locator('.museum-display').dispatchEvent('wheel', { deltaY: 140 });
-    await expect.poll(() => painting.getAttribute('src')).not.toBe(initial);
+    const oldFrame = page.locator('.museum-slide[data-slot="-1"] img');
+    // The same DOM frame physically moves left; it must keep its image during motion.
+    await expect(oldFrame).toHaveAttribute('src', initial!);
+    await expect.poll(() => page.locator('.museum-slide[data-slot="0"] img').getAttribute('src')).not.toBe(initial);
+    await expect(page.locator('.museum-slide[data-slot="0"]')).toHaveCount(1);
+    await page.waitForTimeout(700);
+    await expect(page.locator('.museum-slide')).toHaveCount(5);
+    await expect(page.locator('#museumCaption strong')).not.toBeEmpty();
 
     await page.locator('#profileBtn').click();
     const canvas = page.locator('#emblemCanvas');
