@@ -8,7 +8,7 @@ const validDoc=d=>d&&typeof d.id==='string'&&/^[\w-]{1,80}$/.test(d.id)&&
 const clone=d=>typeof structuredClone==='function'?structuredClone(d):JSON.parse(JSON.stringify(d));
 const changed=(doc,meta)=>!meta||doc.updatedAt>meta.updatedAt;
 const uniqueId=()=>crypto.randomUUID();
-export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,notify}){
+export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,getOpenId=()=>null,notify}){
  const status=document.querySelector('#folio-cloud-status');
  const action=document.querySelector('#folio-cloud-action');
  let user=null,client=null,working=false,timer=null,enabled=false,rerun=false;
@@ -77,7 +77,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
   if(working){rerun=true;return;}
   if(!navigator.onLine){setStatus('Нет сети · рисунки сохранены локально');return}
   working=true;setStatus('Соединяем альбом с Pocket ID…',true);
-  let failures=[];
+  let failures=[],deferred=false;
   try{
    if(!await authorize(manual))return;
    setStatus('Сверяем версии рисунков…',true);
@@ -90,6 +90,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
    for(const item of remote.items){
     const id=item.id,doc=local.get(id),prior=meta[id];
     remoteIds.add(id);
+    if(getOpenId()===id){deferred=true;continue;} // Keep live canvas untouched.
     try{
      if(item.deleted){
       if(doc){
@@ -132,7 +133,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
     notify(failures[0].slice(0,140));
    }else {
     const total=stats.uploads+stats.downloads+stats.copies+stats.deletions;
-    setStatus(total
+    setStatus(deferred?'Открытый рисунок сверим после выхода в альбом':total
       ?'Облако готово · ↑'+stats.uploads+' ↓'+stats.downloads+(stats.copies?' · '+stats.copies+' версии сохранены':'')
       :'Все рисунки синхронизированы');
    }
