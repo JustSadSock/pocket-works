@@ -11,6 +11,7 @@ on:
       - 'scripts/build-pocketnet-modules.mjs'
       - 'wrangler.jsonc'
       - 'package.json'
+      - 'privacy.html'
       - '.github/workflows/pocketnet-edge.yml'
   push:
     branches: [main]
@@ -23,6 +24,7 @@ on:
       - 'scripts/build-pocketnet-modules.mjs'
       - 'wrangler.jsonc'
       - 'package.json'
+      - 'privacy.html'
       - '.github/workflows/pocketnet-edge.yml'
   workflow_dispatch:
 
@@ -58,6 +60,7 @@ jobs:
         run: |
           mkdir -p dist-site
           printf '<!doctype html><title>Edge CI</title>' > dist-site/index.html
+          cp privacy.html dist-site/privacy.html
           /tmp/pocketnet-wrangler/node_modules/.bin/wrangler deploy --assets ./dist-site/ --dry-run --outdir /tmp/pocketnet-bundle
       - name: Test real local Worker, SQLite, WebSocket and rooms
         shell: bash
