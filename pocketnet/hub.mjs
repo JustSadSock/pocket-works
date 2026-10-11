@@ -14,6 +14,7 @@ const ROOM_TTL = 30 * 60_000;
 const SESSION_TTL = 7 * 86400_000;
 const GAME_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const shortCode = /^[0-9a-f]{8}$/i;
 const encoder = new TextEncoder();
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
@@ -193,7 +194,15 @@ export class PocketNetHub {
           const players = [member];
           const result = await mod.createRoom({ player: member, players, payload: msg.payload ?? null });
           if (!result || !('state' in result)) throw new Error('invalid_module_state');
-          const room = { id: crypto.randomUUID(), gameId: msg.gameId, version, players,
+          // Guarantee unique invite prefixes among active rooms.
+          let id;
+          for (let attempt = 0; attempt < 10; attempt++) {
+            const candidate = crypto.randomUUID();
+            const existing = this.sql('SELECT id FROM rooms WHERE substr(id, 1, 8) = ? LIMIT 1', candidate.slice(0, 8)).toArray();
+            if (!existing.length) { id = candidate; break; }
+          }
+          if (!id) throw new Error('server_at_capacity');
+          const room = { id, gameId: msg.gameId, version, players,
             state: result.state, createdAt: Date.now() };
           this.persist(room);
           this.setRoom(ws, room.id);
@@ -204,8 +213,15 @@ export class PocketNetHub {
         }
         if (msg.type === 'join_room') {
           if (player.roomId && this.readRoom(player.roomId)) throw new Error('already_in_room');
-          if (typeof msg.roomId !== 'string' || !uuid.test(msg.roomId)) throw new Error('room_not_found');
-          const room = this.readRoom(msg.roomId);
+          const requested = typeof msg.roomId === 'string' ? msg.roomId.trim() : '';
+          if (!uuid.test(requested) && !shortCode.test(requested)) throw new Error('room_not_found');
+          let resolved = requested.toLowerCase();
+          if (shortCode.test(requested)) {
+            const matches = this.sql('SELECT id FROM rooms WHERE substr(id, 1, 8) = ? LIMIT 2', resolved).toArray();
+            if (matches.length !== 1) throw new Error('room_not_found');
+            resolved = matches[0].id;
+          }
+          const room = this.readRoom(resolved);
           if (!room) throw new Error('room_not_found');
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
