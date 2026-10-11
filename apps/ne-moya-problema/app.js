@@ -129,6 +129,7 @@ function render(){
   '<div class="testimony">Лучшая способность уходить от ответственности: '+esc(winners.join(', '))+'.</div>'+rankings(true)+
   button('again','Ещё одна партия →')+'<div class="button-row">'+button('reset','Удалить протокол','secondary')+'</div>';
  }
+ if(!['home','finished','roster'].includes(phase))html+='<div class="abort-row"><button class="abort-control" type="button" data-action="reset">Прервать дело и начать заново</button></div>';
  screen.innerHTML=html;
  screen.scrollTop=0;
  window.__AI_TEST_STATE__={phase:state.phase,round:state.round,playerIndex:state.index,players:state.players.length,score:state.scores,caseId:c.id,actions:Object.keys(state.actions).length,votes:Object.keys(state.votes).length};
