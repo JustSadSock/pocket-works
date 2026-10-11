@@ -34,7 +34,7 @@ export function createZamazkaCloud({getArchive,setArchive,getEmblem,setEmblem,no
    if(manual)location.assign('/?pocket-id=login');
    return false;
   }
-  user=identity;client=new PocketCloudClient('zamazka');
+  user=identity;client=new PocketCloudClient('zamazka',user.id);
   const owner=localStorage.getItem(OWNER);
   if(owner&&owner!==user.id){
    if(!manual){enabled=false;update('Другой аккаунт · требуется подтверждение');return false}
