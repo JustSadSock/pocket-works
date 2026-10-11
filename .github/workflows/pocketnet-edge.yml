@@ -5,6 +5,7 @@ on:
     paths:
       - 'pocketnet/**'
       - 'pocket-id/**'
+      - 'pocket-cloud/**'
       - 'shared/pocket-id.js'
       - 'shared/pocket-id.css'
       - 'apps/*/server/**'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'pocketnet/**'
       - 'pocket-id/**'
+      - 'pocket-cloud/**'
       - 'shared/pocket-id.js'
       - 'shared/pocket-id.css'
       - 'apps/*/server/**'
@@ -48,6 +50,10 @@ jobs:
           node --check pocketnet/hub.mjs
           node --check pocketnet/worker.mjs
           node --check pocket-id/hub.mjs
+          node --check pocket-cloud/hub.mjs
+          node --check shared/capabilities/cloud.js
+          node --check apps/folio/cloud-sync.js
+          node --check apps/zamazka/cloud-sync.js
           node --check shared/pocket-id.js
           node --check shared/capabilities/identity.js
           node shared/capabilities/identity.test.mjs
@@ -77,6 +83,7 @@ jobs:
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true; cat /tmp/pocketnet-dev.log | tail -n 100' EXIT
           node pocket-id/test/edge.mjs
+          node pocket-cloud/test/edge.mjs
           node pocketnet/test/identity.mjs
           node pocketnet/test/edge.mjs
           node pocketnet/test/flagpost.mjs
