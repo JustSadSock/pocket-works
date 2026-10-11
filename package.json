@@ -24,7 +24,7 @@
     "test:moss-marble": "node scripts/audit-moss-marble-1-2.mjs && node scripts/audit-moss-marble-1-3.mjs && node scripts/audit-moss-marble-1-4.mjs && node scripts/audit-moss-marble-1-4-1.mjs",
     "prepare:site": "node scripts/prepare-site.mjs",
     "validate:site": "node scripts/validate-site.mjs",
-    "deploy:site": "npm run build:enhanced && npm run prepare:site && npm run validate:site",
+    "deploy:site": "npm run build:enhanced && npm run build:pocketnet && npm run prepare:site && npm run validate:site",
     "build:site": "npm run deploy:site",
     "ci:full": "npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site",
     "build:quality-site": "npm run prepare:sente-engine && npm run build:enhanced && npm run prepare:site && npm run validate:site",
@@ -52,7 +52,9 @@
     "test:forge:godot": "node scripts/test-godot-forge.mjs",
     "health": "npm run build:enhanced && npm run validate:all && npm run test:enhanced && npm run test:forge:quick && npm run test:forge:enhanced && npm run test:forge:godot && npm run test:shpilka && npm run test:moss-marble",
     "visual:memory": "node scripts/visual-memory.mjs",
-    "sync:metadata": "node scripts/sync-app-metadata.mjs"
+    "sync:metadata": "node scripts/sync-app-metadata.mjs",
+    "build:pocketnet": "node scripts/build-pocketnet-modules.mjs",
+    "snapshot:pocketnet": "node scripts/build-pocketnet-modules.mjs --snapshot"
   },
   "dependencies": {
     "phaser": "^3.90.0",

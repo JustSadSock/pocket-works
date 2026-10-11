@@ -12,3 +12,6 @@ quality-artifacts/
 apps/sente/assets/gnugo/
 apps/sente/AI_AUDIT.json
 apps/sente/AI_AUDIT.md
+
+# Bundled at build time from immutable PocketNet snapshots
+pocketnet/generated-modules.mjs
