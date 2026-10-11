@@ -1,6 +1,7 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { PocketNet } from '../../shared/capabilities/net.js';
+import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPlayerBadge,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 
 installMobileRuntime();
 createWorkshopMode({
@@ -69,6 +70,8 @@ async function separateDuplicateTab() {
 }
 
 let savedName = 'Полководец';
+let pocketIdentity = null;
+const memberName=()=>preferredPocketName(pocketIdentity,savedName);
 try { savedName = localStorage.getItem(STORE + 'name') || savedName; } catch {}
 let typedCode = (params.get('room') || '').trim().toUpperCase();
 let net = null, state = null, me = null, roomId = null, shortCode = null;
@@ -140,6 +143,7 @@ function board() {
   return html;
 }
 function saveName() {
+  if (pocketIdentity?.complete) return;
   const next = root.querySelector('#playerName')?.value.trim().slice(0,22) || savedName;
   savedName = next;
   try { localStorage.setItem(STORE + 'name', savedName); } catch {}
@@ -157,7 +161,8 @@ function renderMenu() {
     <section class="control-stand" aria-labelledby="enter-title">
       <div class="kicker">01 / Штаб</div><h2 class="form-heading" id="enter-title">Открыть партию</h2>
       <label class="label" for="playerName">Твоё имя</label>
-      <input id="playerName" class="text-field" maxlength="22" value="${esc(savedName)}" autocomplete="nickname" spellcheck="false">
+      <input id="playerName" class="text-field" maxlength="22" value="${esc(memberName())}" autocomplete="nickname" spellcheck="false" ${pocketIdentity?.complete?'readonly aria-readonly="true"':''}>
+       <p class="form-description pw-identity-notice">${pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.avatar,{small:true})+' Ник Pocket ID · <a href="'+pocketIdProfileUrl+'">изменить профиль</a>':'Гостевой вход · <a href="'+pocketIdProfileUrl+'">войти в Pocket ID</a>'}</p>
       <div class="actions-stack">
         <button id="primary-action" class="action accent" data-action="create" type="button">Создать комнату →</button>
       </div>
@@ -186,7 +191,7 @@ function renderLobby() {
         <button class="action" type="button" data-action="copy-link" ${shortCode ? '' : 'disabled'}>Ссылка другу</button>
       </div>
     </div>
-    <div class="guest-list">${[0,1].map((n) => `<div class="guest"><span class="dot ${n ? 'south' : 'north'}"></span><div><div class="name">${esc(players[n]?.name || 'Ожидаем игрока…')}</div><small>${n ? 'Юг / красные' : 'Север / синие'} · ${players[n] ? 'подключён' : 'свободно'}</small></div></div>`).join('')}</div>
+    <div class="guest-list">${[0,1].map((n) => `<div class="guest"><span class="dot ${n ? 'south' : 'north'}"></span><div><div class="name">${esc(players[n]?.name || 'Ожидаем игрока…')}${players[n]?pocketPlayerBadge(players[n]):''}</div><small>${n ? 'Юг / красные' : 'Север / синие'} · ${players[n] ? 'подключён' : 'свободно'}</small></div></div>`).join('')}</div>
     <div class="room-footer">
       <button class="action accent" type="button" data-action="start" ${host && players.length === 2 && connected && !busy ? '' : 'disabled'}>${host ? 'Начать сражение' : 'Начнёт создатель'} →</button>
       <button class="action quiet small" type="button" data-action="quit">Выйти</button>
@@ -267,7 +272,8 @@ function setState(next) {
 }
 async function startConnection(mode, code = null) {
   if (screen === 'connecting') return;
-  const name = (root.querySelector('#playerName')?.value || savedName).trim().slice(0,22);
+  pocketIdentity=await getPocketIdentity({force:true});
+  const name = pocketIdentity?.complete?pocketIdentity.nickname:(root.querySelector('#playerName')?.value || savedName).trim().slice(0,22);
   if (!name) { toast('Введи имя полководца.'); return; }
   saveName();
   const target = String(code ?? root.querySelector('#roomCode')?.value ?? '').trim().toUpperCase();
@@ -288,7 +294,7 @@ async function startConnection(mode, code = null) {
   let timeout;
   try {
     await separateDuplicateTab();
-    const client = new PocketNet({ serverUrl: URL_SERVER, name, storage: adapter });
+    const client = new PocketNet({ serverUrl: URL_SERVER, name, storage: adapter, identityKey:pocketIdentitySessionKey(pocketIdentity) });
     net = client;
     if (mode !== 'resume') { client.roomId = null; client.persist(); }
     client.on('connected', info => {
@@ -439,3 +445,11 @@ root.addEventListener('input', event => {
 window.addEventListener('pagehide', () => { activeToken = null; });
 render();
 checkServer();
+async function refreshGameIdentity(){
+  const old=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
+  pocketIdentity=await getPocketIdentity({force:true});
+  if(old!==(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'') && screen==='menu')render();
+}
+void refreshGameIdentity();
+window.addEventListener('pageshow',()=>void refreshGameIdentity());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshGameIdentity()});
