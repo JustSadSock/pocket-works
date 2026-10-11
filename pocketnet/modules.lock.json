@@ -4,5 +4,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "flagpost": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }

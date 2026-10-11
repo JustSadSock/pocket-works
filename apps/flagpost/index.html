@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#252e31">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ФЛАГПОСТ">
+<title>ФЛАГПОСТ · Сражение на двоих</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app-shell" data-app-shell data-fullscreen-app data-keyboard-aware>
+  <header class="masthead" data-ui>
+    <a class="library-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
+    <div class="brand-mark"><span class="brand-emblem">✥</span> ФЛАГПОСТ</div>
+    <div class="mast-actions"><span class="connection" id="connection" role="status">Проверка связи</span><button type="button" class="tool-icon" title="Диагностика" aria-label="Диагностика" data-workshop-trigger data-native-press>⌕</button></div>
+  </header>
+  <div class="view" id="view" aria-live="polite">
+    <section class="loading"><span class="loading-circle" aria-hidden="true"></span><p>Подготавливаем полевой штаб…</p></section>
+  </div>
+  <footer class="footline" data-ui><span>ДВЕ СТОРОНЫ · ОДНО ПОЛЕ</span><span>v1.0.0 · POCKETNET</span></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="dialog" class="veil hidden" role="dialog" aria-modal="true" aria-label="Подтверждение"></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ФЛАГПОСТ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

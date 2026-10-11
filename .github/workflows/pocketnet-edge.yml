@@ -57,3 +57,4 @@ jobs:
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true; cat /tmp/pocketnet-dev.log | tail -n 100' EXIT
           node pocketnet/test/edge.mjs
+          node pocketnet/test/flagpost.mjs

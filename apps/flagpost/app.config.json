@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "flagpost",
+  "name": "ФЛАГПОСТ",
+  "shortName": "ФЛАГПОСТ",
+  "description": "Тактическая сетевая дуэль: два полководца, по два приказа за ход и борьба за сигнальную башню. Проверка реального PocketNet.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T01:20:00+03:00",
+  "changelog": [
+    "Новая мини-стратегия для двух настоящих игроков: комнаты по восьмизначному коду и ссылка-приглашение.",
+    "Серверные ходы, войска, бой, набор подкреплений, подсчёт знамён и победа.",
+    "Автоматическое восстановление соединения и сохранение партий в Cloudflare Durable Objects."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#a5543f",
+  "backgroundColor": "#e9e5d9",
+  "themeColor": "#252e31",
+  "orientation": "portrait",
+  "cacheName": "flagpost-v1.0.0",
+  "storageNamespace": "pocket-works:flagpost",
+  "tags": [
+    "strategy",
+    "medieval",
+    "multiplayer",
+    "tactics",
+    "online"
+  ],
+  "order": 335
+}

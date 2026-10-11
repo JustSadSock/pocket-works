@@ -1,0 +1,25 @@
+{
+  "id": "/apps/flagpost/",
+  "name": "ФЛАГПОСТ",
+  "short_name": "ФЛАГПОСТ",
+  "description": "Дуэльная стратегия на двоих с настоящим PocketNet: вход по шестизначному коду, серверные ходы, поле 5×7.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#e9e5d9",
+  "theme_color": "#252e31",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
