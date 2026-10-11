@@ -12,6 +12,6 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "test": "node test-server.mjs && node test-game.mjs && node test-tab-guests.mjs"
+    "test": "node test-server.mjs && node test-game.mjs && node test-tab-guests.mjs && node test-editor-gestures.mjs"
   }
 }
