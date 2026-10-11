@@ -14,6 +14,18 @@ const camera=new ArcRotateCamera('camera',-Math.PI/2-.55,1.12,7,new Vector3(0,1.
 const light=new HemisphericLight('sky',new Vector3(1,2,-1),scene);light.intensity=1.35;
 const imported=await SceneLoader.ImportMeshAsync(null,'',assets.harbor.outputs.model.url,scene);
 const root=imported.meshes[0];
+const bounds=root.getHierarchyBoundingVectors(true);
+const framingCenter=bounds.min.add(bounds.max).scale(.5);
+const framingRadius=Vector3.Distance(bounds.min,bounds.max)/2;
+function fitCamera(){
+ engine.resize();
+ const box=world.parentElement.getBoundingClientRect();
+ const aspect=box.width/Math.max(1,box.height);
+ const halfFov=Math.min(camera.fov/2,Math.atan(Math.tan(camera.fov/2)*aspect));
+ camera.setTarget(framingCenter);
+ camera.radius=framingRadius/Math.sin(halfFov)*1.12;
+ camera.lowerRadiusLimit=camera.radius*.8;camera.upperRadiusLimit=camera.radius*1.5;
+}
 engine.runRenderLoop(()=>{if(medium==='model'&&!document.hidden)scene.render();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)engine.stopRenderLoop();else engine.runRenderLoop(()=>{if(medium==='model')scene.render();});});
 
@@ -32,7 +44,7 @@ function draw(){
  }
 }
 function publish(){window.__ART_TEST_STATE__={medium,actions,meshes:imported.meshes.length,triangles:assets.harbor.outputs.model.triangles,loaded:true};document.querySelector('#status').textContent=`${medium} · revisions ${actions}`;}
-document.querySelectorAll('[data-medium]').forEach(button=>button.onclick=()=>{medium=button.dataset.medium;document.querySelectorAll('[data-medium]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));canvas.hidden=medium==='model';world.hidden=medium!=='model';document.querySelector('#action').textContent={pixel:'Advance scout',drawn:'Reframe illustration',model:'Turn diorama',baked:'Place miniature'}[medium];engine.resize();draw();scene.render();publish();});
+document.querySelectorAll('[data-medium]').forEach(button=>button.onclick=()=>{medium=button.dataset.medium;document.querySelectorAll('[data-medium]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));canvas.hidden=medium==='model';world.hidden=medium!=='model';document.querySelector('#action').textContent={pixel:'Advance scout',drawn:'Reframe illustration',model:'Turn diorama',baked:'Place miniature'}[medium];fitCamera();draw();scene.render();publish();});
 document.querySelector('#action').onclick=()=>{actions++;if(medium==='model')root.rotation.y+=Math.PI/4;draw();publish();};
-new ResizeObserver(()=>{engine.resize();draw();}).observe(canvas.parentElement);draw();publish();
+new ResizeObserver(()=>{fitCamera();draw();}).observe(canvas.parentElement);draw();publish();
 const registration=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));window.__ART_TEST_STATE__.offlineReady=true;
