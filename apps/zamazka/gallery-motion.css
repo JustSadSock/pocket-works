@@ -42,3 +42,13 @@
 .commons-note{color:#927d63;font-size:10px}
 @media(min-width:1000px){.exhibition-lobby .commons-desk{grid-column:1/-1;grid-row:8;margin:8px 0 20px;max-width:100%}.exhibition-lobby .commons-frame{max-width:100%}.exhibition-lobby .commons-desk canvas{max-height:450px;object-fit:contain}}
 @media(max-width:699px){.exhibition-lobby .commons-desk{margin:14px -8px 22px}.commons-frame{border-width:5px;padding:5px}.commons-controls{gap:10px}.commons-palette{justify-content:space-between}.commons-swatch{width:clamp(25px,6vw,34px);height:clamp(25px,6vw,34px)}}
+
+/* Override legacy desktop lobby grid placement; the canvas occupies its own row. */
+@media(min-width:1000px){
+ .page.exhibition-lobby:has(.room-ticket)>.room-ticket{grid-column:1;grid-row:4/6}
+ .page.exhibition-lobby:has(.room-ticket)>.lobby-self{grid-column:2;grid-row:4}
+ .page.exhibition-lobby:has(.room-ticket)>.lobby-list-heading{grid-column:1;grid-row:6}
+ .page.exhibition-lobby:has(.room-ticket)>.players{grid-column:1;grid-row:7;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .page.exhibition-lobby:has(.room-ticket)>.stack{grid-column:2;grid-row:5/8;position:sticky;top:20px}
+ .page.exhibition-lobby:has(.room-ticket)>.commons-desk{grid-column:1/-1;grid-row:8}
+}
