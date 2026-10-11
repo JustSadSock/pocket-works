@@ -3,7 +3,7 @@ const number=(n,min,max)=>typeof n==='number'&&Number.isFinite(n)&&n>=min&&n<=ma
 const name=n=>typeof n==='string'&&/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(n);
 export function validateClip(value){
  const c=structuredClone(value);
- if(c.version!==1||!name(c.id)||!number(c.duration,.001,600)||typeof c.loop!=='boolean'||!Array.isArray(c.events)||c.events.length>256||!Array.isArray(c.tracks)||c.tracks.length>64)throw Error('Invalid clip');
+ if(c.version!==1||!name(c.id)||!number(c.duration,.001,600)||typeof c.loop!=='boolean'||(c.loop&&c.duration<1/24)||!Array.isArray(c.events)||c.events.length>256||!Array.isArray(c.tracks)||c.tracks.length>64)throw Error('Invalid clip');
  let previous=-1;const ids=new Set();
  for(const e of c.events){if(!name(e.name)||!number(e.time,0,c.duration)||e.time<previous)throw Error('Invalid ordered event');previous=e.time;}
  for(const t of c.tracks){

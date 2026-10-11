@@ -17,11 +17,12 @@ const group=imported.animationGroups.find(g=>g.name.includes('Strike'));if(!grou
 for(const g of imported.animationGroups)g.stop();const rig=bindSkeletal(group,1);
 const C=window.AudioContext||window.webkitAudioContext,context=C?new C():null;
 const schedules=[];let audio=null;
-if(context){const buffer=await context.decodeAudioData(await (await load('assets/contact.wav')).arrayBuffer());audio=new EventAudio(context,{contact:buffer},{onSchedule:e=>schedules.push({...e,wall:performance.now()})});}
+if(context){const buffer=await context.decodeAudioData(await (await load('assets/contact.wav')).arrayBuffer());audio=new EventAudio(context,{contact:buffer},{onSchedule:e=>{schedules.push({...e,wall:performance.now()});if(schedules.length>100)schedules.shift();}});}
+else{document.querySelector('#sound').disabled=true;document.querySelector('#sound').textContent='No audio';}
 let medium='drawn',contacts=0,particles=[],particleAge=0,clock=0,last=null,raf=0,autoPause=false,reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const spring=new Spring({mass:3,stiffness:280,damping:27}),events=[],intervals=[];
 const timeline=new Timeline({onEvent:e=>{
- events.push({...e,wall:performance.now()});if(e.name==='contact'){contacts++;spring.impulse(-55);particles=reduced?[]:impactParticles(27+contacts);particleAge=0;audio?.play('contact',e);}
+ events.push({...e,wall:performance.now()});if(events.length>100)events.shift();if(e.name==='contact'){contacts++;spring.impulse(-55);particles=reduced?[]:impactParticles(27+contacts);particleAge=0;audio?.play('contact',e);}
 },onCancel:e=>{audio?.cancel(e.generation);particles=[];spring.reset();}});
 const base={version:1,id:'PhysicalStrike',duration:1,loop:false,events:[{name:'release',time:.28},{name:'contact',time:.5}],tracks:[{id:'height',type:'value',keys:[{time:0,value:0,ease:'smooth'},{time:.28,value:-.15,ease:'smooth'},{time:.5,value:1,ease:'smooth'},{time:.68,value:.73,ease:'smooth'},{time:1,value:0}]}]};
 const skeletal={...base,id:'Strike',tracks:[{id:'rig',type:'skeletal',action:'Strike',fps:24,startFrame:1}]};
@@ -44,11 +45,11 @@ function render(){
  }
 }
 function loop(now){raf=0;if(document.hidden)return;const dt=last===null?0:(now-last)/1000;last=now;if(dt>0&&dt<1)intervals.push(dt*1000);
- const before=timeline.snapshot();timeline.advance(dt);if(!timeline.paused){spring.advance(Math.min(dt,.25));particleAge+=Math.min(dt,.25);}clock+=dt;
+ if(intervals.length>240)intervals.shift();const before=timeline.snapshot();timeline.advance(dt);if(!timeline.paused){spring.advance(Math.min(dt,.25));particleAge+=Math.min(dt,.25);}clock+=dt;
  render();publish();if(!timeline.paused&&(before&&!before.completed||Math.abs(spring.value)>.001||particleAge<.5&&particles.length))raf=requestAnimationFrame(loop);else last=null;
 }
 function wake(){if(!raf&&!document.hidden){last=null;raf=requestAnimationFrame(loop);}}
-document.querySelector('#strike').onclick=async()=>{const pending=audio?.unlock();timeline.play(clips[medium],{fade:medium==='physical'?.1:0});render();publish();wake();const unlocked=await pending;document.querySelector('#audio-status').textContent=unlocked?'Audio ready':context?'Audio unavailable; motion works':'Audio unsupported; motion works';};
+document.querySelector('#strike').onclick=async()=>{const pending=audio?.unlock();timeline.play(clips[medium],{fade:medium==='physical'?.1:0});document.querySelector('#pause').textContent='Pause';render();publish();wake();const unlocked=await pending;document.querySelector('#audio-status').textContent=unlocked?'Audio ready':context?'Audio unavailable; motion works':'Audio unsupported; motion works';};
 document.querySelector('#pause').onclick=()=>{if(timeline.paused){timeline.resume();wake();}else{timeline.pause();audio?.cancel();}document.querySelector('#pause').textContent=timeline.paused?'Resume':'Pause';publish();};
 document.querySelector('#cancel').onclick=()=>{timeline.cancel();render();publish();};
 document.querySelector('#speed').onchange=e=>timeline.setSpeed(Number(e.target.value));

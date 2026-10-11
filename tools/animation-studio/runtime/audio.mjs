@@ -1,6 +1,6 @@
 // Audio Forge WAV/OGG buffers, scheduled only for events already crossed.
 export class EventAudio{
- constructor(context,buffers,{onSchedule=()=>{},enabled=true,maxVoices=8}={}){Object.assign(this,{context,buffers,onSchedule,enabled,maxVoices});this.voices=new Set();this.serial=0;}
+ constructor(context,buffers,{onSchedule=()=>{},enabled=true,maxVoices=8}={}){if(!Number.isInteger(maxVoices)||maxVoices<1||maxVoices>32)throw Error('Invalid voice budget');Object.assign(this,{context,buffers,onSchedule,enabled,maxVoices});this.voices=new Set();this.serial=0;}
  async unlock(){try{await this.context.resume();return this.context.state==='running';}catch{return false;}}
  play(key,event,{volume=.35}={}){
   const buffer=this.buffers[key];if(!this.enabled||this.context.state!=='running'||!buffer)return false;

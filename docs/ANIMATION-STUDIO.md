@@ -28,6 +28,7 @@ Their durations must sum to the clip duration. `skeletal` tracks bind a named
 with outgoing `linear`, `smooth` or `hold` interpolation. Track IDs are unique.
 Events are ordered; same-time events retain author order. Event payloads are
 app data, never executable commands. Validate loaded clips before rendering.
+Loops shorter than 1/24 second are rejected to bound event churn.
 
 `Timeline.play(clip,{fade})`, `advance(dt)`, `pause()`, `resume()`, `setSpeed()`
 and `cancel()` own the presentation clock. `seek()` samples silently: it does

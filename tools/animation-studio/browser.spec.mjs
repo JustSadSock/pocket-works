@@ -20,6 +20,7 @@ test('authored motion, contact audio, interruption, pause and offline replay',as
  await page.locator('#strike').click();await page.waitForTimeout(70);await page.locator('#cancel').click();await page.waitForTimeout(650);expect((await state()).contacts).toBe(before);
  await page.locator('#strike').click();await page.waitForTimeout(70);await page.locator('#strike').click();await expect.poll(async()=>(await state()).completed).toBe(true);expect((await state()).contacts).toBe(before+1);
  const s=await state();expect(s.audioState).toBe('running');expect(s.audio.length).toBeGreaterThanOrEqual(5);expect(s.audio.every(a=>a.eventTime===.5)).toBe(true);
+ const pacing=[...s.frameIntervals].sort((a,b)=>a-b);expect(pacing.length).toBeGreaterThan(20);expect(pacing[Math.floor(pacing.length*.95)]).toBeLessThan(125);
  // A sound is dispatched alongside each contact, not prequeued for future hits.
  for(const sound of s.audio){const event=s.events.find(e=>e.generation===sound.generation&&e.name==='contact');expect(event).toBeTruthy();expect(Math.abs(sound.wall-event.wall)).toBeLessThan(50);}
  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('[data-medium=physical]').click();await page.locator('#strike').click();await expect.poll(async()=>(await state()).completed).toBe(true);expect((await state()).particles).toBe(0);
