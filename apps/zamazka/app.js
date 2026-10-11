@@ -5,7 +5,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.4.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{const server=localStorage.getItem('pocket-works:zamazka:server');if(server)sessionStorage.removeItem('pocket-net:'+server)}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.5.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{const server=localStorage.getItem('pocket-works:zamazka:server');if(server)sessionStorage.removeItem('pocket-net:'+server)}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',SERVER_KEY=NS+'server',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const q=new URLSearchParams(location.search);
@@ -133,6 +133,18 @@ async function connect(mode){
  let room='';
  if(mode==='join'){const raw=(screen.querySelector('#room')?.value||'').trim();room=raw.includes('?')?(new URL(raw,location.href).searchParams.get('room')||''):raw;
  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(room)){notify('Вставь ссылку или идентификатор комнаты');return}}
+ // Older self-hosted servers may still run the three-player rule even after
+ // the browser app updates. Verify the live server before entering the lobby.
+ try{
+  const response=await fetch(u.origin+'/health',{cache:'no-store',signal:AbortSignal.timeout(5000)});
+  if(response.ok){
+   const health=await response.json();
+   if(health?.gameId==='zamazka'&&Number(health.minPlayers)!==2){
+    modal('Сервер использует старые правила','<p class="hint">Игровой сервер ещё требует трёх участников. Закрой окно старого сервера на Windows, заново запусти <strong>INSTALL-AND-START.bat</strong>, скопируй новый HTTPS-адрес и создай новую комнату.</p><p class="hint">Версия браузерной игры сама не обновляет уже запущенный сервер.</p>',[['Понятно',closeDialog,'primary']]);
+    return;
+   }
+  }
+ }catch{ /* Unreachable servers will report a connection error below. */ }
  localStorage.setItem(SERVER_KEY,u.origin);
  const epoch=++connectionEpoch;
  me=null;view=null;roomId='';
@@ -165,7 +177,12 @@ async function connect(mode){
     if(client.closed)return;
     const e=msg.event;
     if(e?.type==='state'){view=e.payload;renderView()}
-    else if(e?.type==='notice')notify(String(e.payload||'Не удалось выполнить действие'));
+    else if(e?.type==='notice'){
+      const message=String(e.payload||'Не удалось выполнить действие');
+      if(/минимум три участника/i.test(message)){
+        modal('Нужно обновить сервер','<p class="hint">Этот игровой сервер работает на старых правилах для трёх участников. Останови его, снова запусти актуальный <strong>INSTALL-AND-START.bat</strong> и создай новую комнату.</p>',[['Понятно',closeDialog,'primary']]);
+      }else notify(message);
+    }
   });
   client.on('presence',data=>{
     if(client.closed)return;

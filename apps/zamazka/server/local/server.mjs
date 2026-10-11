@@ -1,8 +1,8 @@
 // ZAMAZKA PocketNet-compatible local host. Only listens on loopback.
 // The public WebSocket/HTTPS endpoint is furnished separately by Cloudflare Tunnel.
 import { createServer } from 'node:http';
-import { randomBytes, randomUUID } from 'node:crypto';
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { randomBytes, randomUUID, createHash } from 'node:crypto';
+import { readFile, writeFile, mkdir, rename, access } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -19,9 +19,21 @@ const TOKENS_FILE=resolve(dataDir,'sessions.json');
 
 if(!Number.isInteger(PORT)||PORT<1024||PORT>65535)throw Error('Invalid port');
 await mkdir(dataDir,{recursive:true});
-const compiled=await build({entryPoints:[resolve(here,'../module.ts')],bundle:true,platform:'node',target:'node22',format:'esm',write:false,logLevel:'silent'});
-const game=(await import('data:text/javascript;base64,'+Buffer.from(compiled.outputFiles[0].contents).toString('base64'))).default;
+// The Windows launcher downloads the newest rules to this untracked path on
+// every run. The checked-out source remains untouched for local developers.
+const newestRules=resolve(here,'live-module.ts');
+const localRules=resolve(here,'../module.ts');
+const selectedRules=await access(newestRules).then(()=>newestRules).catch(()=>localRules);
+const compiled=await build({entryPoints:[selectedRules],bundle:true,platform:'node',target:'node22',format:'esm',write:false,logLevel:'silent'});
+const compiledBundle=compiled.outputFiles[0].contents;
+const compiledRules=(await import('data:text/javascript;base64,'+Buffer.from(compiledBundle).toString('base64')));
+const game=compiledRules.default;
+const rulesHash=createHash('sha256').update(compiledBundle).digest('hex').slice(0,12);
+// Historical builds with no metadata required three people. Do not advertise
+// 2-player compatibility unless the running module explicitly confirms it.
+const minPlayers=Number.isInteger(compiledRules.MIN_PLAYERS)?compiledRules.MIN_PLAYERS:3;
 if(game?.protocolVersion!==1)throw Error('Game module version mismatch');
+console.log(JSON.stringify({event:'game_rules_loaded',path:selectedRules,minPlayers,rulesHash}));
 
 async function readJson(path,fallback){try{return JSON.parse(await readFile(path,'utf8'))}catch{return fallback}}
 const sessions=new Map(Object.entries(await readJson(TOKENS_FILE,{})));
@@ -112,7 +124,7 @@ const web=createServer(async(req,res)=>{
  try{
   const pathname=new URL(req.url,'http://localhost').pathname;
   if(req.method==='OPTIONS')return respond(res,204,{});
-  if(req.method==='GET'&&pathname==='/health')return respond(res,200,{ok:true,gameId:'zamazka',rooms:rooms.size,players:connections.size});
+  if(req.method==='GET'&&pathname==='/health')return respond(res,200,{ok:true,gameId:'zamazka',minPlayers,rulesHash,rooms:rooms.size,players:connections.size});
   if(req.method==='POST'&&pathname==='/session'){
    const ip=String(req.headers['cf-connecting-ip']||req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0];
    const rate=sessionRates.get(ip)||{at:0,count:0};

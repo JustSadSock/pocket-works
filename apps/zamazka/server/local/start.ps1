@@ -38,6 +38,27 @@ function Get-Tunnel {
  }
  return $exe
 }
+function Update-Game-Rules {
+ # Always fetch current multiplayer rules on start. Do not overwrite the git
+ # checkout; the runtime compiles this separate, untracked copy.
+ $destination=Join-Path $here 'live-module.ts'
+ $temporary=$destination+'.download'
+ $source='https://raw.githubusercontent.com/JustSadSock/pocket-works/main/apps/zamazka/server/module.ts'
+ Write-Host '[RULES] Checking current 2-player game rules...' -ForegroundColor Cyan
+ try {
+  Invoke-WebRequest -Uri $source -OutFile $temporary -UseBasicParsing -TimeoutSec 30
+  $contents=Get-Content $temporary -Raw
+  if($contents -notmatch 'export\s+const\s+MIN_PLAYERS\s*=\s*2\s*;'){
+   throw 'Downloaded game module does not advertise two-player support'
+  }
+  Move-Item -Path $temporary -Destination $destination -Force
+  Write-Host '  Current rules installed: minimum 2 players.' -ForegroundColor Green
+ }catch {
+  Remove-Item $temporary -ErrorAction SilentlyContinue
+  if(-not $LocalOnly){throw ('Cannot download current multiplayer rules from GitHub. Check your internet: '+$_.Exception.Message)}
+  Write-Host '  OFFLINE TEST: Could not update the rules. Using previously installed source.' -ForegroundColor Yellow
+ }
+}
 function Stop-Child($p) {
  if($null -ne $p){
   try{Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue}catch{}
@@ -50,6 +71,7 @@ try {
  Write-Host ''
  $node=Get-Node
  $tunnel=if($LocalOnly){$null}else{Get-Tunnel}
+ Update-Game-Rules
  Set-Location $here
  Write-Host '[3/4] Installing server packages...' -ForegroundColor Cyan
  $npm=Join-Path (Split-Path -Parent $node) 'npm.cmd'
@@ -73,17 +95,17 @@ try {
   if($serverProcess.HasExited){break}
   try{
    $health=Invoke-RestMethod -Uri "http://127.0.0.1:$port/health" -TimeoutSec 2
-   if($health.ok -and $health.gameId -eq 'zamazka'){$healthy=$true;break}
+   if($health.ok -and $health.gameId -eq 'zamazka' -and $health.minPlayers -eq 2){$healthy=$true;break}
   }catch{}
   Start-Sleep -Milliseconds 600
  }
  if(-not $healthy){
   if(Test-Path $serverErr){Get-Content $serverErr -Tail 22}
-  throw 'Game backend could not start. Read local-logs/server-errors.log'
+  throw 'Game backend could not start with 2-player rules. Close old server windows (port 8788), then rerun INSTALL-AND-START.bat. Read local-logs/server-errors.log'
  }
- Write-Host '  Game server running on 127.0.0.1:8788.' -ForegroundColor Green
+ Write-Host '  Game server running on 127.0.0.1:8788 (2-8 players supported).' -ForegroundColor Green
  if($LocalOnly){
-  Write-Host '  Health: http://127.0.0.1:8788/health'
+  Write-Host '  Health: http://127.0.0.1:8788/health (minPlayers=2)'
   Write-Host '  HTTPS Pocket Works needs START-ONLINE.bat to connect.'
  }else{
   Write-Host '  Creating free HTTPS tunnel...'

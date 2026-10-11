@@ -1,4 +1,7 @@
 import type { PocketModule } from '../../../pocket-server/module-contract.js';
+// The local host exports this in /health so an outdated three-player backend
+// cannot silently masquerade as the current two-player edition.
+export const MIN_PLAYERS=2;
 type Stroke={c:string;s:number;t:string;p:number[][]};
 type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type State={host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;votes:Record<string,Record<string,number>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
@@ -91,7 +94,7 @@ const module: PocketModule<State>={
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
    if(a.type==='start'&&state.phase==='lobby'){
      if(state.host!==id)return {state,events:notice(id,'Запустить матч может создатель комнаты.')};
-     if(members(state).length<2)return {state,events:notice(id,'Для онлайна нужны минимум два участника.')};
+     if(members(state).length<MIN_PLAYERS)return {state,events:notice(id,'Для онлайна нужны минимум два участника.')};
      state.round=1;state.rounds=[1,3,5].includes(Number(a.rounds))?Number(a.rounds):3;
      members(state).forEach(p=>state.scores[p.id]={mask:0,eye:0});choose(state);
    }else if(a.type==='submit'&&state.phase==='drawing'){
