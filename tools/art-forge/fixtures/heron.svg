@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="560" viewBox="0 0 480 560">
+ <defs>
+  <linearGradient id="wing" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#718781"/><stop offset="1" stop-color="#293e43"/></linearGradient>
+ </defs>
+ <!-- Original editable natural-history illustration; transparent silhouette. -->
+ <path d="M258 345 Q248 408 228 467 L198 496 M230 467 L236 502 M291 349 Q302 422 316 473 L340 493 M315 473 L304 503" fill="none" stroke="#a77842" stroke-width="7" stroke-linecap="round"/>
+ <path d="M356 154 Q351 200 324 245 Q376 303 327 353 Q289 386 215 350 L162 359 Q192 319 197 292 Q204 264 244 250 Q280 239 300 205 Q285 185 296 155 Q312 133 339 142Z" fill="#dadfcf" stroke="#283f40" stroke-width="3"/>
+ <path d="M237 273 Q291 235 332 269 Q355 314 305 343 Q249 364 200 346 Q224 316 237 273Z" fill="url(#wing)" stroke="#283f40" stroke-width="3"/>
+ <path d="M314 278 Q275 294 226 338 M325 292 Q283 311 247 345 M326 309 Q301 327 275 346" fill="none" stroke="#acbaaa" stroke-width="4" stroke-linecap="round"/>
+ <path d="M342 150 L436 168 L349 176" fill="#c29952" stroke="#283f40" stroke-width="3"/>
+ <path d="M303 150 Q266 149 244 170 Q275 160 303 164" fill="#293e43"/>
+ <path d="M310 163 Q304 191 319 207 Q294 249 267 256" fill="none" stroke="#8f9e91" stroke-width="7"/>
+ <circle cx="338" cy="157" r="5" fill="#e7bb58"/><circle cx="339" cy="157" r="2.5" fill="#223436"/>
+ <path d="M225 328 L206 342 M242 332 L225 347 M303 267 L324 271" stroke="#d6dece" stroke-width="3" stroke-linecap="round"/>
+ <path d="M52 509 Q76 431 80 390 M66 480 Q38 456 31 441 M74 450 Q104 422 111 402 M392 526 Q381 464 401 414 M389 481 Q420 457 428 436" stroke="#748b67" fill="none" stroke-width="4" stroke-linecap="round"/>
+ <path d="M36 531 Q210 510 397 535" fill="none" stroke="#acb395" stroke-width="3"/>
+</svg>

@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+import re
 from pathlib import Path
 
 
@@ -58,6 +59,8 @@ def changed_manifests(base: str) -> list[Path]:
 
 def discover(args: argparse.Namespace) -> list[Path]:
     if args.app:
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", args.app):
+            raise RuntimeError("Invalid owning app slug")
         manifest = APPS / args.app / "asset-forge" / "manifest.json"
         return [manifest]
     if args.changed_from:
@@ -76,6 +79,12 @@ def run_manifest(blender: Path, manifest_path: Path) -> list[Path]:
         raise RuntimeError(f"Manifest is outside apps/: {manifest_path}")
 
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if data.get("version") == 2:
+        # Platform-owned adapters; v1 source and output contracts remain unchanged.
+        sys.path.insert(0, str(ROOT / "tools" / "art-forge"))
+        from forge import build, capabilities
+        outputs, _ = build(app_dir, data, capabilities({"blender": str(blender)}), trusted=True)
+        return outputs
     if data.get("version") != 1:
         raise RuntimeError(f"Unsupported Asset Forge manifest version in {manifest_path}")
 
@@ -110,6 +119,8 @@ def run_manifest(blender: Path, manifest_path: Path) -> list[Path]:
                 str(blender),
                 "--background",
                 "--factory-startup",
+                "--python-exit-code",
+                "1",
                 "--python",
                 str(script),
                 "--",
@@ -129,6 +140,8 @@ def run_manifest(blender: Path, manifest_path: Path) -> list[Path]:
                 str(blender),
                 "--background",
                 "--factory-startup",
+                "--python-exit-code",
+                "1",
                 "--python",
                 str(VERIFY),
                 "--",
