@@ -19,31 +19,41 @@ export const ARTS=[
  ...REAL.map((entry,id)=>({...entry,id,isReal:true})),
  ...LEGACY.map((entry,i)=>({...entry,id:i+REAL.length,artist:'Коллекция ЗАМАЗКИ 1.0',date:'2026',museum:'Личный архив',isReal:false}))
 ];
-const thumbnails=new Map();
-export function artworkURL(id){
- if(thumbnails.has(id))return thumbnails.get(id);
- const entry=ARTS[id];
- if(!entry)return '';
- const url=entry.isReal ? ROOT+entry.path+entry.file+'/960px-'+entry.file : 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(legacySvg(id-REAL_COUNT));
- thumbnails.set(id,url);
- return url;
+// Gallery previews use a mid-sized source. The brush/editor uses high-resolution
+// sources and gracefully falls back where the original master is smaller than 1920px.
+const PREVIEW_WIDTH=1280;
+const MASTER_WIDTHS=[1920,1280,960];
+const ART_CACHE='zamazka-artworks-v1.3.0';
+export function artworkURL(id,width=PREVIEW_WIDTH){
+ const entry=ARTS[id];if(!entry)return '';
+ return entry.isReal ? ROOT+entry.path+entry.file+'/'+width+'px-'+entry.file
+   : 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(legacySvg(id-REAL_COUNT));
+}
+export function artworkFallbackURL(id,failedUrl){
+ const entry=ARTS[id];if(!entry?.isReal)return '';
+ const index=MASTER_WIDTHS.findIndex(width=>artworkURL(id,width)===failedUrl);
+ if(index<0)return artworkURL(id,960);
+ return MASTER_WIDTHS[index+1]?artworkURL(id,MASTER_WIDTHS[index+1]):'';
 }
 const pending=new Map();
-const ART_CACHE='zamazka-artworks-v1.1.0';
 async function imageSource(id){
- const url=artworkURL(id);
- if(!ARTS[id].isReal||typeof caches==='undefined')return url;
- try{
-   const cache=await caches.open(ART_CACHE);
-   const stored=await cache.match(url);
-   if(stored)return URL.createObjectURL(await stored.blob());
-   const response=await fetch(url,{mode:'cors',credentials:'omit'});
-   if(!response.ok)throw new Error('HTTP '+response.status);
-   const copy=response.clone();
-   const blob=await response.blob();
-   try{await cache.put(url,copy)}catch{}
-   return URL.createObjectURL(blob);
- }catch{return url}
+ if(!ARTS[id].isReal)return artworkURL(id);
+ const cache=typeof caches==='undefined'?null:await caches.open(ART_CACHE).catch(()=>null);
+ for(const width of MASTER_WIDTHS){
+   const url=artworkURL(id,width);
+   try{
+     const saved=await cache?.match(url);
+     if(saved&&saved.ok)return URL.createObjectURL(await saved.blob());
+     const response=await fetch(url,{mode:'cors',credentials:'omit'});
+     if(!response.ok)continue;
+     const copy=response.clone();
+     const blob=await response.blob();
+     if(!blob.type.startsWith('image/')||blob.size<4096)continue;
+     try{await cache?.put(url,copy)}catch{}
+     return URL.createObjectURL(blob);
+   }catch{}
+ }
+ return artworkURL(id,960);
 }
 export function loadArtwork(id){
  if(pending.has(id))return pending.get(id);

@@ -91,7 +91,7 @@ const module: PocketModule<State>={
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
    if(a.type==='start'&&state.phase==='lobby'){
      if(state.host!==id)return {state,events:notice(id,'Запустить матч может создатель комнаты.')};
-     if(members(state).length<3)return {state,events:notice(id,'Для онлайна нужны минимум три участника.')};
+     if(members(state).length<2)return {state,events:notice(id,'Для онлайна нужны минимум два участника.')};
      state.round=1;state.rounds=[1,3,5].includes(Number(a.rounds))?Number(a.rounds):3;
      members(state).forEach(p=>state.scores[p.id]={mask:0,eye:0});choose(state);
    }else if(a.type==='submit'&&state.phase==='drawing'){

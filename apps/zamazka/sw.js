@@ -1,16 +1,17 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.2.0';
-const ART_CACHE = 'zamazka-artworks-v1.1.0';
-const APP_VERSION = '1.2.0';
+const CACHE_NAME = 'zamazka-v1.3.0';
+const ART_CACHE = 'zamazka-artworks-v1.3.0';
+const APP_VERSION = '1.3.0';
 const RELEASE_DATE = '2026-10-11';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Интернет-комнаты теперь можно запускать на своём Windows-ПК одним BAT-файлом, без настройки роутера или покупки хостинга.","Автоматическая установка переносимого Node.js, Cloudflare Quick Tunnel, сохранение комнат и проверка WebSocket-подключений.","Прямое руководство по запуску сервера внутри игры; ссылка-приглашение переносит адрес сервера друзьям."];
+const RELEASE_NOTES = ["Матчи доступны вдвоём: сервер, лобби, подсчёт очков и приглашения поддерживают 2–8 игроков.","Полотна загружаются в разрешении до 1920 пикселей; холст редактора, экспертизы и сравнений теперь отрисовывается с повышенной плотностью пикселей.","Отдельный режим компьютера: большой холст, боковая палитра, экспозиция из пяти полотен и управление мышью и горячими клавишами."];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
   './gallery-theme.css',
+  './desktop-layout.css',
   './legacy-artworks.js',
   './app.js',
   './artworks.js',

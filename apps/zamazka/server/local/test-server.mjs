@@ -1,4 +1,4 @@
-// Integration smoke: actual HTTP guest session, WS auth, room, 3 joins, start, sync, leave.
+// Integration smoke: actual HTTP guest session, WS auth, duo/trio rooms, start, sync, persistence.
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -51,21 +51,28 @@ async function connect(name){
 try {
  const health=await waitUntil(base+'/health');
  if(!health.ok||health.gameId!=='zamazka')throw Error('Bad /health');
- const [a,b,c]=await Promise.all([connect('Alice'),connect('Bob'),connect('Chloe')]);
+ const [a,b]=await Promise.all([connect('Alice'),connect('Bob')]);
  a.send('create_room',{gameId:'zamazka'});
  const {roomId}=await a.next('room_joined');
  if(!/^[a-f0-9-]{36}$/.test(roomId))throw Error('Invalid room id');
  b.send('join_room',{roomId});await b.next('room_joined');
- c.send('join_room',{roomId});await c.next('room_joined');
  a.send('game_message',{payload:{type:'start',rounds:1}});
  const state=await a.next('game_event',m=>m.event?.type==='state'&&m.event.payload?.phase==='preview');
- if(state.event.payload.selected.length!==5||state.event.payload.participants.length!==3)throw Error('Game phase mismatch');
- c.send('game_message',{payload:{type:'sync'}});
- const synced=await c.next('game_event',m=>m.event?.type==='state'&&m.event.payload?.phase==='preview');
+ if(state.event.payload.selected.length!==5||state.event.payload.participants.length!==2)throw Error('Two-player game failed');
+ b.send('game_message',{payload:{type:'sync'}});
+ const synced=await b.next('game_event',m=>m.event?.type==='state'&&m.event.payload?.phase==='preview');
  if(synced.event.payload.mine?.art===undefined)throw Error('Missing personal artwork');
+ const [c,d,e]=await Promise.all([connect('Chloe'),connect('Daniel'),connect('Emma')]);
+ c.send('create_room',{gameId:'zamazka'});
+ const joined=await c.next('room_joined');
+ d.send('join_room',{roomId:joined.roomId});await d.next('room_joined');
+ e.send('join_room',{roomId:joined.roomId});await e.next('room_joined');
+ c.send('game_message',{payload:{type:'start',rounds:1}});
+ const three=await c.next('game_event',m=>m.event?.type==='state'&&m.event.payload?.phase==='preview');
+ if(three.event.payload.participants.length!==3)throw Error('Three-player regression');
  const now=await waitUntil(base+'/health');
- if(now.rooms!==1)throw Error('Expected one room');
- console.log('PASS: health / session / websocket / 3 players / room / game start / sync / persistence');
+ if(now.rooms!==2)throw Error('Expected two rooms');
+ console.log('PASS: health / session / websocket / 2-player and 3-player rooms / start / sync / persistence');
 }finally{
  for(const u of users)u.ws.close();
  child.kill();
