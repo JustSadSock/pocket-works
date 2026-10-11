@@ -451,7 +451,13 @@ screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=
 setInterval(tick,350);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
 async function refreshPocketBadge(){
  const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
+ const priorAccount=pocketIdentity?.id||null;
  pocketIdentity=await getPocketIdentity({force:true});
+ if(net && priorAccount!==(pocketIdentity?.id||null)){
+  home();
+  notify('Аккаунт Pocket ID изменился — подключись к комнате заново');
+  return;
+ }
  if(prior===(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||''))return;
  if(page==='home'){
   const caption=screen.querySelector('.persona-caption strong');
