@@ -5,14 +5,14 @@
 <meta name="theme-color" content="#29271e"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="Клятвы — живая средневековая хроника. Держи слово или потеряй корону.">
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css">
 <title>КЛЯТВЫ — Живая хроника</title>
 </head>
 <body>
 <main id="app" class="app-shell" data-app-shell data-fullscreen-app>
   <header class="royal-head" data-ui>
     <div class="royal-brand"><span class="brand-diamond" aria-hidden="true">♛</span><div><b>КЛЯТВЫ</b><small>ХРОНИКА КОРОЛЕВСТВА</small></div></div>
-    <button class="head-menu" id="pauseBtn" type="button" data-native-press aria-label="Открыть меню">☰</button>
+    <div class="head-tools"><button class="head-menu" type="button" data-workshop-trigger data-native-press aria-label="Инструменты и диагностика">⚙</button><button class="head-menu" id="pauseBtn" type="button" data-native-press aria-label="Открыть меню">☰</button></div>
   </header>
   <section class="indicators" aria-label="Положение королевства">
     <div class="measure"><span>КАЗНА</span><strong id="gold">—</strong><small>◈</small></div>
