@@ -17,7 +17,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
   status.textContent=label;
   status.dataset.busy=String(busy);
   action.disabled=busy;
-  action.textContent=busy?'Синхронизируем…':'Синхронизировать';
+  action.textContent=busy?'Синхронизируем…':user?'Синхронизировать':'Войти в Pocket ID';
  };
  const loadMeta=()=>{try{return JSON.parse(localStorage.getItem(metadataKey(user.id))||'{}')}catch{return{}}};
  const saveMeta=meta=>{try{localStorage.setItem(metadataKey(user.id),JSON.stringify(meta))}catch{}};
@@ -147,7 +147,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
   timer=setTimeout(()=>{void run()},2200);
  }
  function start(){void authorize(false).then(ok=>{if(ok)void run()}).catch(()=>setStatus('Локальный режим'))}
- action.addEventListener('click',()=>void run({manual:true}));
+ action.addEventListener('click',()=>{if(!user){location.assign('/?pocket-id=login');return}void run({manual:true})});
  window.addEventListener('online',()=>schedule());
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void run()});
  return {start,schedule,sync:()=>run({manual:true})};
