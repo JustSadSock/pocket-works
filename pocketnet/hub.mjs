@@ -36,6 +36,10 @@ export class PocketNetHub {
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY, id TEXT NOT NULL, name TEXT NOT NULL, expires INTEGER NOT NULL
     )`);
+    // Additive migration: existing guest sessions and active rooms must survive.
+    const sessionColumns = new Set(ctx.storage.sql.exec('PRAGMA table_info(sessions)').toArray().map(c => c.name));
+    if (!sessionColumns.has('account_id')) ctx.storage.sql.exec('ALTER TABLE sessions ADD COLUMN account_id TEXT');
+    if (!sessionColumns.has('avatar')) ctx.storage.sql.exec('ALTER TABLE sessions ADD COLUMN avatar TEXT');
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS rooms (
       id TEXT PRIMARY KEY, game_id TEXT NOT NULL, version TEXT NOT NULL,
       state TEXT NOT NULL, players TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
@@ -134,20 +138,27 @@ export class PocketNetHub {
       let body;
       try { const raw = await request.text(); if (bytes(raw) > 1024) throw Error(); body = JSON.parse(raw); }
       catch { return json({ error: 'invalid_request' }, 400); }
-      const name = typeof body?.name === 'string' ? body.name.trim() : '';
-      if (!name || name.length > 32) return json({ error: 'invalid_name' }, 400);
-      // Unpredictable bearer capability, not a user-supplied identity.
+      if (request.headers.get('x-pw-account-incomplete') === '1') return json({error:'profile_incomplete'},409);
+      const accountId = request.headers.get('x-pw-account-id') || null;
+      const verifiedName = request.headers.get('x-pw-account-name');
+      const avatar = request.headers.get('x-pw-account-avatar');
+      const guestName = typeof body?.name === 'string' ? body.name.trim() : '';
+      if (!accountId && (!guestName || guestName.length > 32)) return json({ error: 'invalid_name' }, 400);
+      if (accountId && (!uuid.test(accountId) || !verifiedName || verifiedName.length > 20)) return json({error:'invalid_identity'},401);
+      // All guest names are explicitly marked, even when they match a reserved nickname.
+      const name = accountId ? verifiedName : 'Гость · ' + guestName.slice(0, 24);
       const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
-      this.sql('INSERT INTO sessions (token, id, name, expires) VALUES (?, ?, ?, ?)',
-        token, crypto.randomUUID(), name, now + SESSION_TTL);
-      return json({ token });
+      this.sql('INSERT INTO sessions (token, id, name, expires, account_id, avatar) VALUES (?, ?, ?, ?, ?, ?)',
+        token, crypto.randomUUID(), name, now + SESSION_TTL, accountId, accountId ? avatar : null);
+      return json({ token, verified: !!accountId, accountId });
     }
     if (endpoint === '/ws' && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
       if (this.ctx.getWebSockets().length >= MAX_CONNECTIONS) return json({ error: 'server_at_capacity' }, 503);
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
       this.ctx.acceptWebSocket(server);
-      this.attachment(server, { id: null, name: null, roomId: null });
+      this.attachment(server, { id: null, name: null, roomId: null,
+        edgeAccountId: request.headers.get('x-pw-account-id') || null });
       setTimeout(() => {
         if (server.readyState === 1 && !server.deserializeAttachment()?.id) server.close(1008, 'authentication_required');
       }, 5000);
@@ -172,18 +183,27 @@ export class PocketNetHub {
         if (msg.type === 'auth') {
           if (player.id) throw new Error('already_authenticated');
           if (typeof msg.token !== 'string' || msg.token.length !== 64) throw new Error('invalid_token');
-          const found = this.sql('SELECT id, name FROM sessions WHERE token = ? AND expires > ?', msg.token, Date.now()).toArray()[0];
-          if (!found) throw new Error('invalid_token');
+          const found = this.sql('SELECT id, name, account_id, avatar FROM sessions WHERE token = ? AND expires > ?', msg.token, Date.now()).toArray()[0];
+          if (!found || (found.account_id || null) !== (player.edgeAccountId || null)) throw new Error('invalid_token');
+          // Legacy unverified sessions may predate the guest marker.
+          if (!found.account_id && !found.name.startsWith('Гость · ')) {
+            found.name = 'Гость · ' + found.name.slice(0,24);
+            this.sql('UPDATE sessions SET name = ? WHERE token = ?', found.name, msg.token);
+          }
           for (const old of this.ctx.getWebSockets()) {
             if (old !== ws && old.deserializeAttachment()?.id === found.id) old.close(4000, 'reconnected');
           }
-          player = { id: found.id, name: found.name, roomId: null };
+          player = { id: found.id, name: found.name, roomId: null,
+            accountId: found.account_id || null, avatar: found.avatar || null,
+            verified: !!found.account_id, edgeAccountId: player.edgeAccountId || null };
           this.attachment(ws, player);
-          message(ws, 'authenticated', { player: { id: player.id, name: player.name } });
+          message(ws, 'authenticated', { player: { id: player.id, name: player.name,
+            accountId: player.accountId, avatar: player.avatar, verified: player.verified } });
           return;
         }
         if (!player.id) throw new Error('authentication_required');
-        const member = { id: player.id, name: player.name };
+        const member = { id: player.id, name: player.name, accountId: player.accountId,
+          avatar: player.avatar, verified: player.verified };
         if (msg.type === 'create_room') {
           if (player.roomId && this.readRoom(player.roomId)) throw new Error('already_in_room');
           if (!GAME_ID.test(msg.gameId) || !POCKET_MODULES[msg.gameId]) throw new Error('game_unavailable');
