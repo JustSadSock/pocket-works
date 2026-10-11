@@ -1,18 +1,19 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.8';
-const APP_VERSION = '0.10.8';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.9';
+const APP_VERSION = '0.10.9';
 const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
   'A redesigned Pocket Deck home screen with movable and configurable widgets.',
   'Dense visual Contact Sheet library, reversible archive and project development notes.',
   'Persistent Pocket ID profiles, unique nicknames, avatar badges, and optional Google sign-in.',
-  'Public privacy policy for Pocket ID accounts, Google sign-in and local applications.'
+  'Public privacy policy for Pocket ID accounts, Google sign-in and local applications.',
+  'Pocket ID identity across multiplayer games, profile links and verified account badges.'
 ];
 const APP_SHELL = [
   './', './index.html', './privacy.html', './styles.css', './deck-shell.css', './covers/index.json', './launcher-performance.css', './launcher-sync.css', './app.js',
   './launcher-new-app-focus.js', './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
-  './shared/pocket-id.css', './shared/pocket-id.js', './shared/pocket-works-icon.svg', './shared/pocket-deck.js', './shared/deck-state.js', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
+  './shared/capabilities/identity.js', './shared/capabilities/identity.css', './shared/pocket-id.css', './shared/pocket-id.js', './shared/pocket-works-icon.svg', './shared/pocket-deck.js', './shared/deck-state.js', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
   './shared/update-manager.css', './shared/update-manager.js', './shared/release-guard.js', './shared/view-transition-guard.js',
   './shared/app-icon-previews.css', './shared/app-icon-previews.js', './shared/launcher-list-motion.css', './shared/launcher-list-motion.js'
 ];
