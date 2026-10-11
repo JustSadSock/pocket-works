@@ -11,6 +11,16 @@ const NS='pocket-works:zamazka:',SERVER_KEY=NS+'server',GALLERY_KEY=NS+'gallery'
 const DEFAULT_SERVER=location.origin+'/pocketnet';
 const q=new URLSearchParams(location.search);
 if(q.get('server')&&/^https?:\/\//.test(q.get('server')))localStorage.setItem(SERVER_KEY,q.get('server'));
+else {
+  // The old setup pointed users to a temporary Cloudflare Tunnel or local Windows host.
+  // Move those obsolete default addresses to the bundled Durable Objects endpoint.
+  const previous=localStorage.getItem(SERVER_KEY);
+  try {
+    const url=new URL(previous);
+    if(url.hostname.endsWith('.trycloudflare.com')||['localhost','127.0.0.1'].includes(url.hostname))
+      localStorage.setItem(SERVER_KEY,DEFAULT_SERVER);
+  } catch { /* First-time visitor: DEFAULT_SERVER is used without storing anything. */ }
+}
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===3?g.art:g.edition===2?(g.art>=8?g.art+46:g.art):Number(g.art)+REAL_COUNT,edition:3})):[]}catch{return[]}})();
 
