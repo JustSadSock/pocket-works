@@ -47,3 +47,5 @@ Professional concepts such as PSD exchange, pixel-grid editing, onion-skin anima
 - `B`, `E`, `I` = brush/eraser/pipette; `[` and `]` = brush size; `0` = fit; `F` = focus; `Ctrl/Cmd+Z` and `Ctrl/Cmd+Y` = history; `Ctrl/Cmd+S` = persist; `Ctrl/Cmd+Shift+S` = PNG.
 - The same IndexedDB work database, brush engine and image formats are used on desktop and mobile. No user account or sync is implied.
 
+
+Optional precision lock: switch on “Двойной тап закрепляет кнопку” in the brush sheet. Double tap the draw button to latch it; tap once to release. It is **off by default**.
