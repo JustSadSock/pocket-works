@@ -63,7 +63,7 @@ function normalize(raw:unknown):Stroke[]|null{
      if(!Array.isArray(point)||point.length!==2||point.some(v=>!Number.isFinite(v))||point[0]<0||point[0]>600||point[1]<0||point[1]>450)return null;
      points.push([Math.round(point[0]*10)/10,Math.round(point[1]*10)/10]);
    }
-   total+=points.length;if(total>2300)return null;
+   total+=points.length;if(total>1600)return null;
    out.push({c:String(o.c),s:Number(o.s),t:String(o.t),p:points});
  }
  return out;
