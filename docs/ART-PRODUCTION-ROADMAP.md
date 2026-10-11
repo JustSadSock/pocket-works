@@ -6,7 +6,7 @@ Implemented contract: research, three competing concepts, evidence-backed visual
 memory, expanded Art Bible, production budgets and rendered-image diagnostics.
 See VISUAL-INTELLIGENCE.md. Keep visual checks active throughout all stages.
 
-## II. Universal Art Forge — next platform task
+## II. Universal Art Forge — implementation and acceptance
 
 Build a versioned asset job protocol: input/source, tool adapter, deterministic
 parameters/seed, outputs, provenance, validation, preview and app integration.
@@ -19,6 +19,7 @@ ordering, formats, texture/geometry budgets and runtime loading.
 
 Accept with real pixel/raster, vector, authored GLB and baked 2.5D assets; export,
 edit source, regenerate, load offline and visually inspect each in a real scene.
+See UNIVERSAL-ART-FORGE.md for the v2 contract and the source-to-scene CI evidence.
 
 ## III. Animation & Game Feel Studio
 

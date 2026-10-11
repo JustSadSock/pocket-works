@@ -7,6 +7,11 @@
     "apps/[!_]*"
   ],
   "scripts": {
+    "art:capabilities": "python3 tools/art-forge/forge.py capabilities",
+    "art:plan": "python3 tools/art-forge/forge.py plan",
+    "art:build": "python3 tools/art-forge/forge.py build",
+    "art:check": "python3 tools/art-forge/forge.py check",
+    "test:art": "python3 -m unittest discover -s tools/art-forge -p test_forge.py -v",
     "new:app": "node scripts/new-app.mjs",
     "registry:build": "node scripts/build-registry.mjs --output=dist-site/apps.json",
     "registry:check": "node scripts/build-registry.mjs --check",

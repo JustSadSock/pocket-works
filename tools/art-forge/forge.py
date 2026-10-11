@@ -29,8 +29,11 @@ PARAMS = {"pixel": set(), "raster": {"size", "crop", "resample"},
 
 
 def command(args, env=None, timeout=180):
-    return subprocess.run([str(a) for a in args], check=True, text=True,
-                          capture_output=True, timeout=timeout, env=env)
+    try:
+        return subprocess.run([str(a) for a in args], check=True, text=True,
+                              capture_output=True, timeout=timeout, env=env)
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(f"Tool failed ({error.returncode}): {(error.stdout + error.stderr)[-4000:]}") from error
 
 
 def capabilities(overrides=None):
@@ -50,14 +53,14 @@ def capabilities(overrides=None):
         if executable:
             try:
                 env = dict(os.environ, QT_QPA_PLATFORM="offscreen")
-                prefix = [executable, "--headless", "--"] if tool == "pixelorama" else [executable]
+                prefix = [executable, "--headless", "--quit", "--"] if tool == "pixelorama" else [executable]
                 version = command(prefix + ["--version"], env, 20)
                 help_text = command(prefix + ["--help"], env, 20)
                 text = help_text.stdout + help_text.stderr
                 missing = [flag for flag in flags[tool] if flag not in text]
                 info.update(available=not missing, version=(version.stdout + version.stderr).strip()[:500],
                             reason="Missing CLI flags: " + ", ".join(missing) if missing else "")
-            except (OSError, subprocess.SubprocessError) as error:
+            except (OSError, RuntimeError, subprocess.SubprocessError) as error:
                 info["reason"] = str(error)
         else:
             info["reason"] = "Not installed; no automatic fallback"
@@ -66,7 +69,7 @@ def capabilities(overrides=None):
 
 
 def local(root, value, must_exist=False):
-    if not isinstance(value, str) or not value or "\\" in value or "\n" in value or "\r" in value:
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./-]+", value):
         raise ValueError("Expected an app-relative path")
     parts = Path(value)
     if parts.is_absolute() or ".." in parts.parts or parts == Path("."):
@@ -113,7 +116,7 @@ def plan(app, data):
             raise ValueError("Wrong editable source format for " + adapter)
         inputs = job.get("inputs", [])
         deps = job.get("dependsOn", [])
-        if not isinstance(inputs, list) or not isinstance(deps, list) or len(set(deps)) != len(deps):
+        if not isinstance(inputs, list) or not all(isinstance(p, str) for p in inputs) or not isinstance(deps, list) or not all(isinstance(d, str) for d in deps) or len(set(deps)) != len(deps):
             raise ValueError("inputs and dependsOn must be lists; dependencies unique")
         sources.update(local(app, p) for p in [job["source"], *inputs])
         outputs = job.get("outputs")
@@ -128,7 +131,7 @@ def plan(app, data):
         params = job.get("parameters", {})
         if not isinstance(params, dict) or (PARAMS[adapter] is not None and set(params) - PARAMS[adapter]):
             raise ValueError("Unsupported parameters for " + adapter)
-        if len(json.dumps(params)) > 65536:
+        if len(json.dumps(params, allow_nan=False)) > 65536:
             raise ValueError("Parameters too large")
         seed = job.get("seed")
         if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2**32:
@@ -269,7 +272,10 @@ def raster(source, inputs, outputs, params):
     for layer in layers:
         if layer.get("input") not in inputs or (layer.get("mask") and layer["mask"] not in inputs):
             raise ValueError("Raster layer and mask must be declared inputs")
-        image = Image.open(inputs[layer["input"]]).convert("RGBA")
+        with Image.open(inputs[layer["input"]]) as original:
+            if original.format != "PNG" or max(original.size) > 4096:
+                raise ValueError("Raster input must be a bounded PNG")
+            image = original.convert("RGBA")
         opacity = layer.get("opacity", 1)
         if not isinstance(opacity, (int, float)) or not 0 <= opacity <= 1:
             raise ValueError("Layer opacity must be in [0,1]")
@@ -388,7 +394,7 @@ def execute(job, source, inputs, outputs, caps, trusted):
         command([executable, source, "--export", "--export-filename", outputs["image"]],
                 dict(os.environ, QT_QPA_PLATFORM="offscreen"))
     elif adapter == "pixelorama":
-        command([executable, "--headless", "--", "--export", "--spritesheet", "--direction", "0",
+        command([executable, "--headless", "--quit", "--", "--export", "--spritesheet", "--direction", "0",
                  "--output", outputs["image"], source])
     elif adapter == "blender":
         if not trusted:
@@ -430,6 +436,8 @@ def build(app, data, caps, trusted=False):
                 location = {"source": targets[role].relative_to(app).as_posix()} if role == "editable" else {"url": targets[role].relative_to(runtime).as_posix()}
                 records[role] = {**location, **validate_output(output, job["budget"])}
                 staged[targets[role]] = output
+            if sum(record["bytes"] for role, record in records.items() if role != "editable") > job["budget"]["maxBytes"]:
+                raise ValueError("Combined runtime exports exceed byte budget")
             entries.append({"id": job["id"], "adapter": job["adapter"], "seed": job["seed"],
                             "parameters": job.get("parameters", {}), "inputs": before,
                             "provenance": job["provenance"], "tool": caps[tool_for(job["adapter"])].get("version"),
@@ -481,10 +489,12 @@ def main():
     parser.add_argument("operation", choices=["capabilities", "plan", "build", "check"])
     parser.add_argument("--app")
     parser.add_argument("--blender")
+    parser.add_argument("--krita")
+    parser.add_argument("--pixelorama")
     parser.add_argument("--allow-authored-python", action="store_true")
     args = parser.parse_args()
     if args.operation == "capabilities":
-        print(json.dumps(capabilities({"blender": args.blender}), indent=2))
+        print(json.dumps(capabilities({"blender": args.blender, "krita": args.krita, "pixelorama": args.pixelorama}), indent=2))
         return
     if not args.app or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", args.app):
         parser.error("--app requires an owning app slug")
@@ -495,7 +505,7 @@ def main():
     if args.operation == "check":
         print(json.dumps(check(app, data), indent=2))
         return
-    caps = capabilities({"blender": args.blender})
+    caps = capabilities({"blender": args.blender, "krita": args.krita, "pixelorama": args.pixelorama})
     if args.operation == "plan":
         ordered, _, _ = plan(app, data)
         print(json.dumps({"jobs": [{"id": j["id"], "adapter": j["adapter"], "tool": caps[tool_for(j["adapter"])]} for j in ordered]}, indent=2))

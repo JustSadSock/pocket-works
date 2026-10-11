@@ -45,7 +45,7 @@ def cylinder(name, radius, depth, z, mat, vertices=32, taper=None):
 cylinder("Oval glazed tidal plinth", 2.1, .20, -.08, sea, 64).scale.y = .72
 cylinder("Rock shelf", 1.5, .18, .08, stone, 7).scale.y = .7
 cylinder("Tower footing", .65, .23, .28, stone)
-cylinder("Tapered lighthouse wall", .52, 2.1, 1.40, stone, taper=.38)
+tower = cylinder("Tapered lighthouse wall", .52, 2.1, 1.40, stone, taper=.38)
 for z in (.48, 1.05, 1.66, 2.38):
     cylinder("Masonry string course", .55 - z * .06, .07, z, brass)
 cylinder("Lantern walkway", .64, .12, 2.52, stone)
@@ -59,12 +59,22 @@ cylinder("Copper conical cap", .56, .43, 3.34, brick, taper=.025)
 cylinder("Roof finial", .025, .27, 3.63, brass, 8)
 for z in (1.0, 1.7):
     # Individual deeply set openings with stone lintels, not painted dots.
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, -.47 + z * .035, z))
+    surface = -.52 + (z - .35) * .067
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, surface + .04, z))
+    cutter = bpy.context.object
+    cutter.name = "Temporary window cutter"
+    cutter.scale = (.18, .35, .30)
+    boolean = tower.modifiers.new("Cut seaward window", "BOOLEAN")
+    boolean.operation, boolean.object = "DIFFERENCE", cutter
+    bpy.context.view_layer.objects.active = tower
+    bpy.ops.object.modifier_apply(modifier=boolean.name)
+    bpy.data.objects.remove(cutter, do_unlink=True)
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, surface + .18, z))
     obj = bpy.context.object
     obj.name = "Recessed seaward window"
-    obj.scale = (.15, .04, .28)
+    obj.scale = (.17, .04, .28)
     obj.data.materials.append(dark)
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, -.49 + z * .035, z + .16))
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, surface -.025, z + .16))
     obj = bpy.context.object
     obj.name = "Window lintel"
     obj.scale = (.23, .1, .06)

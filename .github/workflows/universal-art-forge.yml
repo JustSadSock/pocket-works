@@ -1,0 +1,72 @@
+name: Universal Art Forge
+on:
+  pull_request:
+    paths:
+      - "tools/art-forge/**"
+      - "apps/*/asset-forge/**"
+      - "tools/asset-forge/**"
+      - "docs/UNIVERSAL-ART-FORGE.md"
+      - ".github/workflows/universal-art-forge.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: universal-art-forge-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-to-scene:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 30
+    env:
+      ART_FORGE_EVIDENCE: /tmp/art-forge-evidence
+      BLENDER_VERSION: "5.2.1"
+      BLENDER_BASE_URL: "https://download.blender.org/release/Blender5.2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install CPU art editors
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil inkscape krita
+          curl -fsSL -o /tmp/pixelorama.tar.gz https://github.com/Orama-Interactive/Pixelorama/releases/download/v1.2.3/Pixelorama-Linux-64bit.tar.gz
+          echo 'e7bb3b5f485e3a67f06b15a2c8414a8a7c18b7c6d2cf73f6b3b5904d86821e4b  /tmp/pixelorama.tar.gz' | sha256sum --check --strict
+          tar -xf /tmp/pixelorama.tar.gz -C /tmp
+          echo '/tmp/Pixelorama-Linux-64bit' >> "$GITHUB_PATH"
+          ln -s /tmp/Pixelorama-Linux-64bit/Pixelorama.x86_64 /usr/local/bin/pixelorama
+      - name: Install pinned Blender LTS
+        run: |
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          curl -fsSL -o "/tmp/$archive" "${BLENDER_BASE_URL}/${archive}"
+          curl -fsSL -o /tmp/blender.sha256 "${BLENDER_BASE_URL}/blender-${BLENDER_VERSION}.sha256"
+          cd /tmp
+          grep " ${archive}$" blender.sha256 | sha256sum --check --strict
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Validate jobs, isolation, budgets and failure rollback
+        run: python3 -m unittest discover -s tools/art-forge -p test_forge.py -v
+      - name: Validate committed v2 source/export freshness
+        run: python3 tools/art-forge/check_apps.py
+      - name: Export, revise editable sources, rebuild and re-import
+        run: python3 tools/art-forge/smoke.py --blender "$BLENDER" --output "$ART_FORGE_EVIDENCE"
+      - name: Test native editor contracts
+        run: python3 tools/art-forge/test_editors.py --pixelorama /usr/local/bin/pixelorama --krita /usr/bin/krita
+      - name: Install browser scene tooling
+        run: |
+          npm install --ignore-scripts --no-package-lock
+          npm install --no-save --no-package-lock @playwright/test@1.64.0
+          node tools/art-forge/prepare-browser.mjs
+      - name: Exercise real scenes in Chromium and WebKit offline
+        run: npx playwright test --config tools/art-forge/playwright.config.mjs
+      - name: Retain source revisions, exports and rendered evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-art-forge-evidence
+          path: |
+            /tmp/art-forge-evidence
+            quality-artifacts/art-forge-browser
+          if-no-files-found: error
+          retention-days: 14
