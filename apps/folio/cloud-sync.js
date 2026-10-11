@@ -30,7 +30,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
    setStatus('Только на устройстве · войди в Pocket ID');
    return false;
   }
-  const former=user?.id;user=identity;client=new PocketCloudClient('folio');
+  const former=user?.id;user=identity;client=new PocketCloudClient('folio',user.id);
   const owner=localOwner();
   if(owner!==user.id){
    const docs=await loadWorks();
