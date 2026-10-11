@@ -8,7 +8,7 @@ const members=(s:State)=>s.participants;
 const strip=(s:State,id:string)=>({
  host:s.host,phase:s.phase,round:s.round,rounds:s.rounds,deadline:s.deadline,
  selected:s.selected,participants:s.participants,turn:s.turn,scores:s.scores,
- done:members(s).filter(p=>s.assignments[p.id]?.strokes!==null).map(p=>p.id),
+ done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation}:null,
  author:members(s)[s.turn]||null,
@@ -18,7 +18,7 @@ const strip=(s:State,id:string)=>({
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
 function choose(s:State){
- s.selected=shuffled(Array.from({length:50},(_,i)=>i)).slice(0,5);
+ s.selected=shuffled(Array.from({length:10},(_,i)=>i)).slice(0,5).map(family=>family+10*Math.floor(Math.random()*5));
  // Pick different works for the first five participants; further participants repeat independently.
  s.assignments={};s.votes={};s.turn=0;s.revealed=false;
  const shuffledArt=shuffled(s.selected);
@@ -39,7 +39,7 @@ function completeVotes(s:State){
 }
 function step(s:State){
  if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+105000;}
- else if(s.phase==='drawing'){for(const p of members(s))if(!s.assignments[p.id]?.strokes)s.assignments[p.id].strokes=[];s.phase='voting';s.turn=0;s.deadline=now()+20000;}
+ else if(s.phase==='drawing'){for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=[];s.phase='voting';s.turn=0;s.deadline=now()+20000;}
  else if(s.phase==='voting'){
    if(s.turn<members(s).length-1){s.turn++;s.deadline=now()+20000;}
    else completeVotes(s);
