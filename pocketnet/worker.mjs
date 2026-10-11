@@ -1,6 +1,7 @@
 // Same-origin PocketNet and Pocket ID APIs. All remaining paths are static assets.
 export { PocketNetHub } from './hub.mjs';
 export { PocketIdentity } from '../pocket-id/hub.mjs';
+export { PocketCloud } from '../pocket-cloud/hub.mjs';
 
 export default {
   async fetch(request, env) {
@@ -16,6 +17,27 @@ export default {
     }
     if (url.pathname.startsWith('/pocket-id/')) {
       return env.POCKET_ID.get(env.POCKET_ID.idFromName('pocket-id-global-v1')).fetch(request);
+    }
+    if (url.pathname.startsWith('/pocket-cloud/')) {
+      // The cookie is checked in Pocket ID, never in the browser.
+      // The account ID passed to the cloud is minted at this trusted edge only.
+      const idService=env.POCKET_ID.get(env.POCKET_ID.idFromName('pocket-id-global-v1'));
+      let user;
+      try {
+        const reply=await idService.fetch(new Request(new URL('/pocket-id/me',url),{
+          headers:{cookie:request.headers.get('cookie')||''}
+        }));
+        if(!reply.ok)return new Response(JSON.stringify({error:'identity_unavailable'}),{status:503,headers:{'content-type':'application/json'}});
+        user=(await reply.json()).user;
+      } catch {return new Response(JSON.stringify({error:'identity_unavailable'}),{status:503,headers:{'content-type':'application/json'}});}
+      if(!user?.complete)return new Response(JSON.stringify({error:'sign_in_required'}),{
+        status:401,headers:{'content-type':'application/json','cache-control':'no-store'}
+      });
+      const headers=new Headers(request.headers);
+      for(const key of [...headers.keys()])if(key.startsWith('x-pw-'))headers.delete(key);
+      headers.set('x-pw-account-id',user.id);
+      const cloud=env.POCKET_CLOUD.get(env.POCKET_CLOUD.idFromName('account-v1:'+user.id));
+      return cloud.fetch(new Request(request,{headers}));
     }
     if (url.pathname.startsWith('/pocketnet/')) {
       // The edge worker, not the browser, vouches for account identity.
