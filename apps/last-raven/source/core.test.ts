@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceNight, canChoose, choose, createGame, restoreGame, serializeGame, startGame, stepSiege } from './core';
+import { advanceNight, canChoose, canSiegeOrder, choose, createGame, issueSiegeOrder, restoreGame, serializeGame, startGame, stepSiege } from './core';
 
 describe('Last Raven campaign',()=>{
   it('starts at the gate with a deterministic encounter',()=>{
@@ -23,7 +23,7 @@ describe('Last Raven campaign',()=>{
   it('reaches and resolves the siege',()=>{
     const s=createGame(33);startGame(s);
     while(s.day<=12){if(s.phase==='visitor'||s.phase==='letter')choose(s,s.current!.choices.find(c=>canChoose(s,c.id))!.id);else if(s.phase==='night')advanceNight(s);else break}
-    expect(s.phase).toBe('siege');for(let i=0;i<1000&&s.phase==='siege';i++)stepSiege(s,1/30);expect(['won','lost']).toContain(s.phase);
+    expect(s.phase).toBe('siege');for(let i=0;i<1100&&s.phase==='siege';i++){if(s.siege?.awaitingOrder)issueSiegeOrder(s,canSiegeOrder(s,'volley')?'volley':'hold');stepSiege(s,1/30)}expect(['won','lost']).toContain(s.phase);
   });
   it('lets a consistently hostile campaign lose the final siege',()=>{
     const s=createGame(1);startGame(s);
@@ -34,8 +34,33 @@ describe('Last Raven campaign',()=>{
         choose(s,choice.id);
       }else if(s.phase==='night')advanceNight(s);
     }
-    for(let i=0;i<1000&&s.phase==='siege';i++)stepSiege(s,1/30);
+    for(let i=0;i<1100&&s.phase==='siege';i++){if(s.siege?.awaitingOrder)issueSiegeOrder(s,'hold');stepSiege(s,1/30)}
     expect(s.phase).toBe('lost');
+  });
+  it('does not repeat encounters while fresh alternatives exist',()=>{
+    const s=createGame(123);startGame(s);
+    while(s.phase!=='siege'){
+      if(s.phase==='visitor'||s.phase==='letter'){const ok=s.current!.choices.find(c=>canChoose(s,c.id));expect(ok).toBeTruthy();choose(s,ok!.id)}
+      else if(s.phase==='night')advanceNight(s);
+    }
+    expect(new Set(s.seen).size).toBe(s.seen.length);
+    expect(s.seen.length).toBe(24);
+  });
+  it('pauses the siege for three meaningful orders',()=>{
+    const s=createGame(9);s.phase='siege';s.siege={progress:0,wall:55,enemy:70,breaches:0,resultText:'',awaitingOrder:true,orderStage:0,orders:[]};
+    expect(canSiegeOrder(s,'reinforce')).toBe(true);
+    const wood=s.resources.wood;expect(issueSiegeOrder(s,'reinforce')).toBe(true);
+    expect(s.resources.wood).toBe(wood-3);
+    expect(issueSiegeOrder(s,'reinforce')).toBe(false);
+    while(s.siege!.progress<.35&&s.phase==='siege')stepSiege(s,1/30);
+    expect(s.siege?.awaitingOrder).toBe(true);
+    expect(s.siege?.orderStage).toBe(1);
+    expect(issueSiegeOrder(s,'volley')).toBe(true);
+    while(s.siege!.progress<.69&&s.phase==='siege')stepSiege(s,1/30);
+    expect(s.siege?.awaitingOrder).toBe(true);
+    expect(s.siege?.orderStage).toBe(2);
+    expect(issueSiegeOrder(s,'hold')).toBe(true);
+    expect(s.siege?.orders).toEqual(['reinforce','volley','hold']);
   });
   it('round-trips persistence',()=>{const s=createGame(91);startGame(s);const r=restoreGame(serializeGame(s));expect(r?.day).toBe(1);expect(r?.current?.id).toBe(s.current?.id)});
 });
