@@ -15,7 +15,7 @@ export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=f
  const ctx=canvas.getContext('2d');canvas.width=W;canvas.height=H;
  try{const image=await loadArtwork(id);if(!canvas.isConnected)return;ctx.clearRect(0,0,W,H);ctx.drawImage(image,0,0,W,H);
  if(damaged){const z=zoneFor(id,variation);ctx.save();clipZone(ctx,z);ctx.fillStyle='#e8ddc6';ctx.fillRect(z.x,z.y,z.w,z.h);(strokes||[]).forEach(s=>drawStroke(ctx,s));ctx.restore();
- ctx.save();ctx.strokeStyle='#b19e80';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.strokeRect(z.x+.5,z.y+.5,z.w-1,z.h-1);ctx.restore();}
+ }
  }catch{ctx.fillStyle='#ddc6aa';ctx.fillRect(0,0,W,H);ctx.fillStyle='#512d2a';ctx.fillText('Не удалось открыть картину',20,50);}
 }
 const key='pocket-works:zamazka:draft:';
