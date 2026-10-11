@@ -769,3 +769,18 @@ button:focus-visible,a:focus-visible,input:focus-visible{
 @media (min-width:960px) and (min-height:500px){
  .top-actions .export-button{background:#b83b29}
 }
+
+
+/* 1.4 — Real footprint cursor on desktop, matching the mobile precise nib. */
+@media (pointer:fine){
+  .studio-screen.tool-drawing #artboard{cursor:none}
+  .studio-screen.tool-drawing.is-panning #artboard{cursor:grabbing}
+  .studio-screen.tool-fill #artboard,.studio-screen:not(.tool-drawing) #artboard{cursor:crosshair}
+  .studio-screen.tool-drawing .nib-cursor{
+    z-index:6;pointer-events:none;border:1.5px solid #f9efdc;
+    background:color-mix(in srgb,var(--nib-color,#c54a35) 14%,transparent);
+    box-shadow:0 0 0 1px #203d50,0 0 3px 1px #fff8df59;
+  }
+  .studio-screen.tool-drawing .nib-core{width:2px;height:2px;background:#263e50}
+  .studio-screen.tool-drawing .nib-measure{font-weight:800;font-size:10px}
+}
