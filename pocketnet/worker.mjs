@@ -33,6 +33,10 @@ export default {
       if(!user?.complete)return new Response(JSON.stringify({error:'sign_in_required'}),{
         status:401,headers:{'content-type':'application/json','cache-control':'no-store'}
       });
+      const expected=request.headers.get('x-pw-expected-account');
+      if(expected && expected!==user.id)return new Response(JSON.stringify({error:'account_changed'}),{
+        status:409,headers:{'content-type':'application/json','cache-control':'no-store'}
+      });
       const headers=new Headers(request.headers);
       for(const key of [...headers.keys()])if(key.startsWith('x-pw-'))headers.delete(key);
       headers.set('x-pw-account-id',user.id);
