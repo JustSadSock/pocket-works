@@ -1,3 +1,4 @@
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {PROVINCES,FACTIONS,EDICTS,LAWS,TECHNOLOGIES,DIPLOMACY,PETITIONS,newGame,validState,governmentName,enactEdict,enactLaw,research,foreignAction,choosePetition,endTurn,scoreState,warnings} from './core-v2.js';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 installMobileRuntime();
@@ -90,7 +91,7 @@ function popup(){
  if(modal==='end')return `<div class="veil"><section class="dialog ending" role="dialog" aria-modal="true"><small class="eyebrow">ПОСЛЕДНЯЯ СТРАНИЦА</small><div class="end-score">${scoreState(state)}</div><h2>Правление окончено</h2><p>${state.summary}</p><button class="dialog-action primary" data-close>ЧИТАТЬ ЛЕТОПИСЬ</button><button class="dialog-action" data-reset>НОВАЯ ДИНАСТИЯ</button></section></div>`;
  if(modal==='reset')return `<div class="veil"><section class="dialog" role="dialog" aria-modal="true"><small class="eyebrow">СЛОМАТЬ ПЕЧАТЬ</small><h2>Начать заново?</h2><p>Нынешняя кампания будет заменена. Архив старой ДОКТРИНЫ 0.1 не удаляется.</p><button class="dialog-action primary" data-confirm-reset>НОВАЯ КАМПАНИЯ</button><button class="dialog-action" data-close>ОТМЕНА</button></section></div>`;
  if(modal==='help')return `<div class="veil"><section class="dialog" role="dialog" aria-modal="true"><small class="eyebrow">ПОСОБИЕ ПРАВИТЕЛЯ</small><h2>Две печати на сезон</h2><p>Нажимайте на землю, чтобы издать местный указ. В Совете принимайте законы, а во внешних дворах отправляйте посольства. Каждое действие расходует одну печать.</p><p>Завершите сезон, чтобы получить доход, содержать войско и узнать об угрозах. Следите за хлебом, легитимностью, смутой, поддержкой сословий и летописью решений.</p><button class="dialog-action primary" data-close>ПОНЯТНО</button></section></div>`;
- if(modal==='settings')return `<div class="veil"><section class="dialog" role="dialog" aria-modal="true"><small class="eyebrow">ПАЛАТА ПИСЦА</small><h2>Настройки</h2><button class="dialog-action" data-sound>${state.flags?.sound===false?'ВКЛЮЧИТЬ ЗВУК':'ВЫКЛЮЧИТЬ ЗВУК'}</button><button class="dialog-action" data-help>ПРАВИЛА ИГРЫ</button><button class="dialog-action" data-reset>НОВАЯ КАМПАНИЯ</button><button class="dialog-action primary" data-close>К КАРТЕ</button></section></div>`;
+ if(modal==='settings')return `<div class="veil"><section class="dialog" role="dialog" aria-modal="true"><small class="eyebrow">ПАЛАТА ПИСЦА</small><h2>Настройки</h2><button class="dialog-action" data-sound>${state.flags?.sound===false?'ВКЛЮЧИТЬ ЗВУК':'ВЫКЛЮЧИТЬ ЗВУК'}</button><button class="dialog-action" data-help>ПРАВИЛА ИГРЫ</button>${document.getElementById('workshop-action').innerHTML}<button class="dialog-action" data-reset>НОВАЯ КАМПАНИЯ</button><button class="dialog-action primary" data-close>К КАРТЕ</button></section></div>`;
  return '';
 }
 
@@ -111,8 +112,9 @@ function render(){
  window.__AI_TEST_STATE__={app:'doctrina',version:'2.0.0',turn:state.turn,phase:state.phase,selected:chosen,tab:page,treasury:state.treasury,grain:state.grain,ap:state.ap,petition:!!state.petition,score:scoreState(state),laws:state.laws.length,technologies:(state.technologies||[]).length};
 }
 root.addEventListener('click',event=>{
- const t=event.target.closest('[data-start],[data-region],[data-tab],[data-law],[data-research],[data-edict],[data-foreign],[data-petition],[data-next],[data-settings],[data-sound],[data-help],[data-close],[data-reset],[data-confirm-reset]');
+ const t=event.target.closest('[data-workshop-trigger],[data-start],[data-region],[data-tab],[data-law],[data-research],[data-edict],[data-foreign],[data-petition],[data-next],[data-settings],[data-sound],[data-help],[data-close],[data-reset],[data-confirm-reset]');
  if(!t)return;
+ if(t.hasAttribute('data-workshop-trigger')){modal=null;render();workshop.open();return;}
  if(t.dataset.start){state=newGame(t.dataset.start,Date.now());chosen='capital';page='council';modal=null;save();ping();render();notify('Власть учреждена. Подпишите первый указ.');return;}
  if(t.dataset.region){chosen=t.dataset.region;page='province';const pane=root.querySelector('#pane-scroll');if(pane)pane.scrollTop=0;ping(260);render();return;}
  if(t.dataset.tab){page=t.dataset.tab;const pane=root.querySelector('#pane-scroll');if(pane)pane.scrollTop=0;ping(290);render();return;}
@@ -138,3 +140,5 @@ root.addEventListener('keydown',event=>{
 window.addEventListener('pagehide',()=>{if(modal!=='start')save();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&modal!=='start')save();});
 render();
+
+const workshop=createWorkshopMode({ appName: 'ДОКТРИНА II', version: '2.0.0', cachePrefix: 'doctrina-', storageNamespace: 'pocket-works:doctrina', triggerSelector: '[data-workshop-static-trigger]', onReset: () => { state=newGame('crown',1348);chosen='capital';page='council';modal='start';notice='';save();render(); } });

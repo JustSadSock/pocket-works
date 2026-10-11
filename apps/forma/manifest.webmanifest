@@ -1,8 +1,8 @@
 {
-  "id": "./",
-  "name": "FORMA — AI CAD → 3D Print",
+  "id": "/apps/forma/",
+  "name": "FORMA",
   "short_name": "FORMA",
-  "description": "Компилирует OpenSCAD-код, проверяет функциональный контракт и экспортирует модели для 3D-печати.",
+  "description": "AI→CAD мастерская: импортирует OpenSCAD-код, проверяет отдельный функциональный контракт механизма и экспортирует STL, 3MF, OBJ и GLB только после доказуемой проверки.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,6 +10,11 @@
   "theme_color": "#1c2928",
   "orientation": "any",
   "icons": [
-    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

@@ -14,3 +14,5 @@
     if(bar){bar.style.width='100%';bar.style.background='#ff2c67';}
   }
 })();
+
+import('../../shared/update-manager.js').then(({ registerManagedServiceWorker }) => registerManagedServiceWorker({ path: './sw.js', currentVersion: '1.0.0', renderPrompt: false })).catch(error => console.warn('Offline installation unavailable', error));

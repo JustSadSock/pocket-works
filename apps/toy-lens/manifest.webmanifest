@@ -2,7 +2,7 @@
   "id": "/apps/toy-lens/",
   "name": "Toy Lens",
   "short_name": "Toy Lens",
-  "description": "Локальная tilt-shift студия для фото и видео с эффектом миниатюрного мира.",
+  "description": "Локальная tilt-shift студия: превращает фото и видео любого соотношения сторон в эффект миниатюрного мира с живой настройкой зоны фокуса.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,8 +10,18 @@
   "background_color": "#f2efe7",
   "theme_color": "#f2efe7",
   "lang": "ru",
-  "categories": ["photo", "video", "utilities", "entertainment"],
+  "categories": [
+    "photo",
+    "video",
+    "utilities",
+    "entertainment"
+  ],
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

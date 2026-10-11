@@ -75,7 +75,11 @@ for (const config of configs) {
   try {
     const worker = await readFile(path.join(root, workerPath), 'utf8');
     const cacheMatch = worker.match(/(?:const|let)\s+CACHE_NAME\s*=\s*['"`]([^'"`]+)['"`]/);
-    if (!cacheMatch || cacheMatch[1] !== config.cacheName) fail(`${workerPath} CACHE_NAME must equal ${config.cacheName}`);
+    const workboxOwned = runtime === 'enhanced' && worker.includes('setCacheNameDetails') &&
+      new RegExp(`prefix\\s*:\\s*['"]${config.slug}['"]`).test(worker) &&
+      new RegExp(`APP_VERSION\\s*=\\s*['"]${config.version.replaceAll('.', '\\.') }['"]`).test(worker) &&
+      /suffix\s*:\s*`v\$\{APP_VERSION\}`/.test(worker);
+    if ((!cacheMatch || cacheMatch[1] !== config.cacheName) && !workboxOwned) fail(`${workerPath} requires the configured cache name or equivalent app-owned Workbox namespace`);
     if (!worker.includes(`'${config.slug}-'`) && !worker.includes(`"${config.slug}-"`)) fail(`${workerPath} must declare the ${config.slug}- cache ownership prefix`);
   } catch (error) {
     fail(`${workerPath}: ${error.message}`);

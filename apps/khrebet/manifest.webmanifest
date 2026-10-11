@@ -2,11 +2,15 @@
   "id": "/apps/khrebet/",
   "name": "ХРЕБЕТ",
   "short_name": "ХРЕБЕТ",
-  "description": "Процедурный 3D-полёт бумажного самолётика с аэродинамикой, зональными повреждениями и горными препятствиями.",
+  "description": "Процедурный 3D-полёт бумажного самолётика с аэродинамикой, зональными повреждениями и разными горными препятствиями.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "landscape",
   "background_color": "#d6d7cf",
   "theme_color": "#172020",

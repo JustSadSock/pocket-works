@@ -2,15 +2,24 @@
   "id": "/apps/kaskad/",
   "name": "KASKAD",
   "short_name": "KASKAD",
-  "description": "Визуальный конструктор залипательных физических симуляций без кода.",
+  "description": "Визуальный конструктор залипательных физических симуляций без единой строки кода.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#efe9dc",
   "theme_color": "#efe9dc",
   "icons": [
-    {"src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

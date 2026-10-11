@@ -10,4 +10,4 @@ export {
   mapLookDelta,
   rollLoot,
   roomByPoint
-} from './core.js';
+} from './core-runtime.js';

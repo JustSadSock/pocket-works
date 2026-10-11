@@ -1,13 +1,20 @@
 {
-  "name":"VELORIA // MANDATE",
-  "short_name":"VELORIA",
-  "description":"Симулятор колониального губернатора о двойной реальности, политике и эмерджентных кризисах.",
-  "id":"./",
-  "start_url":"./",
-  "scope":"./",
-  "display":"standalone",
-  "orientation":"landscape",
-  "background_color":"#e7dfc9",
-  "theme_color":"#e7dfc9",
-  "icons":[{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "name": "VELORIA // MANDATE",
+  "short_name": "VELORIA",
+  "description": "Глубокий симулятор колониального губернатора: управляйте Велорией через указы, ненадёжные донесения, личные отношения и квартальные депеши метрополии.",
+  "id": "/apps/veloria-mandate/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#e7dfc9",
+  "theme_color": "#e7dfc9",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

@@ -1,8 +1,8 @@
 {
-  "id": "./",
+  "id": "/apps/palimpsest/",
   "name": "ПАЛИМПСЕСТ",
   "short_name": "ПАЛИМПСЕСТ",
-  "description": "Процедурная лаборатория альтернативной истории с живыми державами, вмешательствами и ветвящейся летописью.",
+  "description": "Карманная лаборатория альтернативной истории: процедурные державы воюют, торгуют и распадаются, а игрок вмешивается раз в десятилетие и может отматывать летопись, создавая новые ветви мира.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,6 +10,11 @@
   "background_color": "#2b2a24",
   "theme_color": "#2b2a24",
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

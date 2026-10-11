@@ -2,13 +2,24 @@
   "id": "/apps/witness-of-era/",
   "name": "СВИДЕТЕЛЬ ЭПОХИ",
   "short_name": "СВИДЕТЕЛЬ",
-  "description": "Игра про убедительно невозможные исторические цитаты.",
+  "description": "Постироничная игра про псевдоисторические цитаты: соберите невозможную связку так, чтобы она выглядела подозрительно убедительно.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#d9d4c7",
   "theme_color": "#171714",
-  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

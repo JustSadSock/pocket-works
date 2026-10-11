@@ -134,7 +134,7 @@ export function installPocketDeck({
     $('#deck-density-controls').hidden=state.view==='home';
     $('#deck-organize-start').hidden=state.view!=='library';
     if(state.view!=='library'){organizing=false;chosen.clear();}
-    for(const button of document.querySelectorAll('[data-deck-density]')){
+    for(const button of document.querySelectorAll('button[data-deck-density]')){
       button.setAttribute('aria-pressed',String(button.dataset.deckDensity===state.density));
     }
   }

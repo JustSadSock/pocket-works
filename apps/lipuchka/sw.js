@@ -8,7 +8,7 @@ const RELEASE_NOTES = [
   'Локальное сохранение, синтезированный звук, вибрация и полный офлайн.'
 ];
 
-const APP_SHELL = [
+const APP_SHELL = ['../../shared/update-manager.js',
   './',
   './index.html',
   './app.config.json',

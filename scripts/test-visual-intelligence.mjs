@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { draftArtBible, validateArtBible } from './art-bible.mjs';
+import { recordMemory, visualCatalog } from './visual-memory.mjs';
+const b=draftArtBible('sample');
+assert.ok(validateArtBible(b,'sample').length>15);
+b.status='ready';
+b.concepts.forEach((c,i)=> {for(const k of ['medium','composition','interaction','motion','rationale']) c[k]=`Direction ${i} ${k}: deliberately authored approach to the gameplay.`;});
+b.selection={concept:'concept-1',reason:'Direct manipulation gives the player readable causal feedback.',rejected:[2,3].map(n=>({concept:`concept-${n}`,reason:'This approach hides contacts and weakens phone-sized silhouettes.'}))};
+b.references=[1,2,3].map(n=>({url:`https://example.org/reference-${n}`,inspectedAt:'2026-10-10',observation:'Large masses separate foreground actors from background scenery.',principle:'Value separation preserves readable action at small display sizes.',application:'Soldiers use dark outlines with restrained bright cloth accents.',avoid:'Do not transplant the original characters or interface composition.'}));
+b.memoryReview=['older-a','older-b'].map(slug=>({slug,evidence:'missing: recapture required',lesson:'Persistent toolbars obscured the battlefield and reduced play space.'}));
+b.tools=[{id:'svg',availability:'available',reason:'Authored vector silhouettes retain legibility at the target size.'}];
+b.assets=[{id:'soldier',tool:'svg',source:'art/soldier.svg',output:'assets/soldier.png',role:'The soldier silhouette conveys formation and facing direction.',acceptance:'Facing direction must remain visible at thirty-two pixels.',integration:'Load the sprite atlas in the main battlefield render pass.',provenance:'Original authored geometry with no third-party source imagery.',maxBytes:100000}];
+b.constraints.textureBytes=100000;b.verification.risks=['Formation silhouettes overlap at the smallest viewport'];b.verification.comparisons=['older-a','older-b'];
+assert.deepEqual(validateArtBible(b,'sample'),[]);
+const clone=structuredClone(b);clone.concepts[1]={...clone.concepts[0],id:'concept-2'};
+assert.ok(validateArtBible(clone,'sample').some(e=>e.includes('three production')));
+const escaped=structuredClone(b);escaped.assets[0].source='../other/source.svg';assert.ok(validateArtBible(escaped,'sample').some(e=>e.includes('app-local')));
+const unavailable=structuredClone(b);unavailable.tools[0].availability='unverified';assert.ok(validateArtBible(unavailable,'sample').some(e=>e.includes('fallback')));
+const root=await mkdtemp(path.join(os.tmpdir(),'pw-memory-'));
+try {
+ await mkdir(path.join(root,'apps/sample'),{recursive:true});await mkdir(path.join(root,'apps/empty'),{recursive:true});
+ for(const slug of ['sample','empty']) await writeFile(path.join(root,`apps/${slug}/app.config.json`),JSON.stringify({slug,name:slug,version:'1.0',releaseDateTime:'2026-10-10'}));
+ const frame=path.join(root,'frame.png');await writeFile(frame,'test evidence bytes');
+ const manifest={commit:'a'.repeat(40),viewport:[390,844],state:'action',engine:'chromium',action:'Drag the soldier banner',files:[frame],feedback:{author:'user',text:'Silhouettes are too small',source:'Conversation 2026-10-10'}};
+ await recordMemory(root,'sample',manifest);await recordMemory(root,'sample',manifest);
+ const memory=JSON.parse(await readFile(path.join(root,'apps/sample/visual-memory/memory.json'),'utf8'));
+ assert.equal(memory.captures.length,1);assert.equal(memory.feedback.length,1);assert.equal(memory.captures[0].files[0].sha256.length,64);
+ assert.equal((await visualCatalog(root)).entries.find(e=>e.slug==='empty').coverage,'missing');
+ await assert.rejects(()=>recordMemory(root,'../escape',manifest));
+ await assert.rejects(()=>recordMemory(root,'sample',{...manifest,commit:'unknown'}));
+} finally {await rm(root,{recursive:true,force:true});}
+console.log('Visual Intelligence: divergence, references, asset isolation, tool fallback, capture provenance and memory deduplication passed.');

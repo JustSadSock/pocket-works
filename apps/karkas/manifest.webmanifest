@@ -2,11 +2,15 @@
   "id": "/apps/karkas/",
   "name": "КАРКАС",
   "short_name": "КАРКАС",
-  "description": "Тренажёр рисунка на бумаге: идея, каркас, развитие и уверенный лайнер.",
+  "description": "Тренажёр рисунка на бумаге: собирает небанальные задания, ведёт от карандашного каркаса к уверенному лайнеру и отслеживает реальные работы.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#e8e0d3",
   "theme_color": "#191918",

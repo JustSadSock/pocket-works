@@ -1,8 +1,8 @@
 {
-  "id": "./",
+  "id": "/apps/linii-vetra/",
   "name": "ЛИНИИ ВЕТРА",
   "short_name": "ВЕТЕР",
-  "description": "Стратегическая roguelite-кампания о бумажной курьерской службе.",
+  "description": "Камерная стратегическая roguelite-кампания о бумажной курьерской службе: выбирай, кому помочь, складывай самолётик и проводи его через живые воздушные маршруты.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,6 +10,11 @@
   "background_color": "#e9dfc8",
   "theme_color": "#263c37",
   "icons": [
-    {"src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

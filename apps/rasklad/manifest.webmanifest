@@ -2,11 +2,14 @@
   "id": "/apps/rasklad/",
   "name": "РАСКЛАД",
   "short_name": "РАСКЛАД",
-  "description": "Случайная раскладка изображений на A4 с качественным PNG-экспортом.",
+  "description": "Быстрая случайная раскладка изображений на лист A4 с lossless PNG-экспортом в печатном разрешении.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#d8d0bf",
   "theme_color": "#20352f",

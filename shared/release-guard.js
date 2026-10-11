@@ -206,10 +206,16 @@
   },60000);
 
   if('serviceWorker'in navigator){
+    let hadController=Boolean(navigator.serviceWorker.controller);
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      const replacesController=hadController;
+      hadController=Boolean(navigator.serviceWorker.controller);
       if(recovering)return;
       const controller=navigator.serviceWorker.controller;
       if(!controller||!workerMatches(controller))return;
+      // A first installation claims an already coherent page. Reloading it
+      // interrupts startup, user input and unsaved games without an update.
+      if(!replacesController)return;
       if(sessionStorage.getItem(reloadKey)==='1')return;
       sessionStorage.setItem(reloadKey,'1');
       const target=releaseUrl();

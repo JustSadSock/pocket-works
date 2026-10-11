@@ -1,14 +1,25 @@
 {
   "id": "/apps/chancellery/",
-  "name": "КАНЦЕЛЯРИЯ — стратегический штаб EU5",
+  "name": "КАНЦЕЛЯРИЯ",
   "short_name": "КАНЦЕЛЯРИЯ",
-  "description": "Локальный штаб Europa Universalis V: анализ сохранений, сценарии решений, военное планирование, сословия и хроника.",
+  "description": "Локальный штаб Europa Universalis V: сценарии решений, военное планирование, сословия, хроника и диагностика сейвов.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#e7dfc9",
   "theme_color": "#d9cfb5",
-  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

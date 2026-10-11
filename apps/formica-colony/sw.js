@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'formica-colony-';
-const CACHE_NAME = 'formica-colony-v1.1.0-p2';
+const CACHE_NAME = 'formica-colony-v1.1.0-p1';
 const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-09-17';
 const CACHE_PROTOCOL = 2;

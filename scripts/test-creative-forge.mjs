@@ -16,6 +16,10 @@ try {
     const folder = path.join(root, 'apps', slug);
     const direction = JSON.parse(await readFile(path.join(folder,'visual-direction.json'),'utf8'));
     assert.equal(direction.product, slug);
+    const bible = JSON.parse(await readFile(path.join(folder, 'art-bible.json'), 'utf8'));
+    assert.equal(bible.product, slug);
+    assert.equal(bible.status, 'draft');
+    assert.equal(bible.concepts.length, 3);
     assert.ok(validateVisualDirection(direction,slug).length > 10, 'generated visual document must require real creative work');
     if (runtime !== 'godot') {
       const html = await readFile(path.join(folder,runtime==='enhanced'?'source/index.html':'index.html'),'utf8');

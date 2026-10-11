@@ -1,3 +1,4 @@
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {TINCTURES,DIVISIONS,CHARGES,HOUSES,REGIONS,CASES} from './data.js';
 import {isValidArms,armsDescription,signature,shieldSvg} from './heraldry.js';
@@ -213,3 +214,5 @@ $('resetBtn').addEventListener('click',confirmReset);
 $('caseView').addEventListener('click',e=>{if(e.target.closest('#endingChronicle')){setTab('history');renderHistory()}if(e.target.closest('#endingReset'))confirmReset()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&audio?.state==='running')audio.suspend().catch(()=>{})});
 draft={...state.houses[state.forgeHouse].arms};render();
+
+createWorkshopMode({ appName: 'ГЕРБОВНИК', version: '1.0.0', cachePrefix: 'gerbovnik-', storageNamespace: 'pocket-works:gerbovnik', onReset: () => { state=initial();draft={...state.houses[0].arms};lastClue=-1;store();closeModal();render(); } });

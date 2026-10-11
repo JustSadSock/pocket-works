@@ -1,15 +1,20 @@
 {
-  "id": "./",
-  "name": "Rivals Roulette",
-  "short_name": "Rivals",
-  "description": "Случайный выбор героя Marvel Rivals.",
+  "id": "/apps/rivals-roulette/",
+  "name": "RIVALS ROULETTE",
+  "short_name": "RIVALS",
+  "description": "Тактильное колесо случайного героя Marvel Rivals с ролевыми фильтрами, банами, тройным пиком и режимом без повторов.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f0e9dc",
+  "background_color": "#efe7d8",
   "theme_color": "#171717",
   "icons": [
-    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

@@ -2,10 +2,10 @@ const CACHE_PREFIX = 'folio-';
 const CACHE_NAME = 'folio-v1.0.0';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-10-11';
-const RELEASE_NOTES = [
-  'Рисование пальцем с виртуальным остриём, кистями и мультитач-холстом.',
-  'Слои, локальная галерея проектов, автосохранение и PNG.',
-  'Небольшие художественные задания и полноценная автономная PWA.'
+const RELEASE_NOTES=[
+  "Первая версия FOLIO: пальцевое рисование, точное остриё, мультитач-навигация и кисти.",
+  "Слои, палитры, история действий, сохранение проектов офлайн и экспорт PNG.",
+  "Личная галерея, идеи для набросков и автономная установка в Pocket Works."
 ];
 const CACHE_PROTOCOL = 2;
 const APP_SHELL = ['./','./index.html','./styles.css','./app.js','./app.config.json','./manifest.webmanifest','./icons/icon.svg',
@@ -33,9 +33,9 @@ async function precache() {
   await Promise.all([...new Set(FILES.values())].map(async url => cache.put(url, await getFresh(url))));
 }
 self.addEventListener('install', e => e.waitUntil(precache()));
-self.addEventListener('message', e => {
-  if (e.data?.type === 'GET_UPDATE_INFO') e.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:CACHE_PROTOCOL,cacheName:CACHE_NAME});
-  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+self.addEventListener('message', event => {
+  if (event.data?.type === 'GET_UPDATE_INFO') event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:CACHE_PROTOCOL,cacheName:CACHE_NAME});
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

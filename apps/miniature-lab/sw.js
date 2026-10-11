@@ -1,5 +1,5 @@
 const CACHE_NAME = 'miniature-lab-v1.0.0';
-const CACHE_PREFIX = 'miniature-lab-v';
+const CACHE_PREFIX = "miniature-lab-";
 const APP_SHELL = [
   './',
   './index.html',

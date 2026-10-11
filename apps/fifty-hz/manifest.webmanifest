@@ -1,8 +1,8 @@
 {
-  "id": "./",
-  "name": "50 ГЦ — симулятор подстанции",
+  "id": "/apps/fifty-hz/",
+  "name": "50 ГЦ",
   "short_name": "50 ГЦ",
-  "description": "Удержи городскую энергосеть во время утреннего пика.",
+  "description": "Симулятор диспетчера подстанции: управляй рубильниками, держи частоту сети и проведи город через утренний пик.",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
@@ -11,6 +11,11 @@
   "background_color": "#c9c5ad",
   "theme_color": "#2e3c37",
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

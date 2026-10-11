@@ -2,15 +2,24 @@
   "id": "/apps/kalibr/",
   "name": "КАЛИБР",
   "short_name": "КАЛИБР",
-  "description": "Мобильный тактический FPS с многоэтапными операциями и управлением для горизонтального хвата.",
+  "description": "Полноценный мобильный тактический FPS с тремя операциями, классами оружия, умным управлением и многоэтапными миссиями.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
-  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "landscape",
   "background_color": "#0d1417",
   "theme_color": "#0d1417",
   "icons": [
-    {"src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

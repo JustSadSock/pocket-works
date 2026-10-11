@@ -1,4 +1,5 @@
 import { parseCampaignFile as parseBaseCampaign, SaveParseError } from './parser.js';
+export { SaveParseError } from './parser.js';
 
 const decoder = new TextDecoder('utf-8');
 const MAX_BLOCK = 180 * 1024 * 1024;

@@ -1,8 +1,8 @@
 {
-  "id": "./",
-  "name": "КАУЗА — причинная лаборатория",
+  "id": "/apps/causa/",
+  "name": "КАУЗА",
   "short_name": "КАУЗА",
-  "description": "Лаборатория причинных систем, обратных связей и контрфактических шоков.",
+  "description": "Лаборатория причинных систем: применяет контрфактические шоки, находит петли обратной связи и реальные точки рычага.",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
@@ -10,6 +10,17 @@
   "orientation": "any",
   "background_color": "#ded8ca",
   "theme_color": "#ded8ca",
-  "categories": ["education", "utilities", "productivity"],
-  "icons": [{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "categories": [
+    "education",
+    "utilities",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

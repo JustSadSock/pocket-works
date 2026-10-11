@@ -30,6 +30,7 @@ function run(command, args, label) {
 }
 
 try {
+  run(npm, ['run', 'build:enhanced'], 'build existing Enhanced apps before runtime validation');
   for (const [index, preset] of ENHANCED_APP_PRESETS.entries()) {
     const slug = `enhanced-smoke-${preset}`;
     generatedSlugs.push(slug);

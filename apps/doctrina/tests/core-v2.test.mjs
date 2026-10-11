@@ -78,8 +78,8 @@ test('atlas UI starts, navigates, applies edict/research and resolves council pe
  const document={getElementById(){return root},addEventListener(){}};
  const window={addEventListener(){},AudioContext:null,__AI_TEST_STATE__:null};
  const localStorage={getItem(key){return storage.get(key)||null},setItem(key,value){storage.set(key,value)},removeItem(key){storage.delete(key)}};
- const factory=new Function('document','window','localStorage','navigator','installMobileRuntime','setTimeout','clearTimeout',engine+'\n'+source+'\nreturn {getState:()=>state,root};');
- const ui=factory(document,window,localStorage,{},()=>{},()=>1,()=>{});
+ const factory=new Function('document','window','localStorage','navigator','installMobileRuntime','setTimeout','clearTimeout','createWorkshopMode',engine+'\n'+source+'\nreturn {getState:()=>state,root};');
+ const ui=factory(document,window,localStorage,{},()=>{},()=>1,()=>{},()=>({open(){}}));
  const click=dataset=>events.click({target:{closest:()=>({dataset,hasAttribute:key=>Object.hasOwn(dataset,key.replace('data-','').replace(/-([a-z])/g,(_,c)=>c))})}});
  assert.match(root.html,/Семь земель/);
  click({start:'league'});assert.equal(ui.getState().realm,'league');assert.equal(storage.size,1);

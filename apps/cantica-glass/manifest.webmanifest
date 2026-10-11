@@ -2,7 +2,7 @@
   "id": "/apps/cantica-glass/",
   "name": "CANTICA — Песнь света",
   "short_name": "CANTICA",
-  "description": "Средневековые витражные головоломки в каменной часовне и иллюминированном манускрипте.",
+  "description": "500 головоломок в средневековом манускрипте и готической часовне: физическое стекло, живой свет и адаптивная архитектура.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -13,7 +13,7 @@
   ],
   "orientation": "portrait",
   "background_color": "#111a1d",
-  "theme_color": "#172222",
+  "theme_color": "#131b20",
   "icons": [
     {
       "src": "./icons/icon.svg",

@@ -227,14 +227,16 @@ html.has-pocket-deck .app-entry__description,.has-pocket-deck .app-entry__meta,.
 html.has-pocket-deck .app-entry__favorite{
   position:absolute;top:5px;left:5px;z-index:5;display:grid;place-items:center;width:42px;min-width:0;
   height:42px;min-height:0;padding:0;border:0;border-radius:5px;background:rgba(10,21,26,.82);
-  color:#d8e0dd;font-size:1rem;backdrop-filter:blur(5px);
+  color:#d8e0dd;font-size:1rem;backdrop-filter:none;
 }
 html.has-pocket-deck .app-entry__favorite[aria-pressed=true]{color:#f7a886;}
 html.has-pocket-deck .app-entry__open{
   position:absolute;top:5px;right:5px;z-index:5;display:grid;place-items:center;width:42px;min-width:0;
   height:42px;min-height:0;padding:0;border:0;border-radius:5px;background:rgba(10,21,26,.84);
-  font-size:.9rem;color:#e5eee5;text-decoration:none;backdrop-filter:blur(5px);
+  font-size:.9rem;color:#e5eee5;text-decoration:none;backdrop-filter:none;
 }
+/* Each catalog card owns two actions. Hundreds of backdrop surfaces stall
+   WebKit's compositor; the dark button fill already provides readable contrast. */
 html.has-pocket-deck .app-entry__open span{display:none;}
 html.has-pocket-deck .app-entry__open b{font-size:.85rem;}
 html.has-pocket-deck .app-entry__select:active .app-preview{transform:none;box-shadow:none;}

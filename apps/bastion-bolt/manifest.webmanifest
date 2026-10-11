@@ -2,13 +2,17 @@
   "id": "/apps/bastion-bolt/",
   "name": "БАСТИОН: БАЛЛИСТА",
   "short_name": "БАСТИОН",
-  "description": "Вертикальная 3D-осада средневекового замка с баллистой, баллистикой и разрушениями.",
+  "description": "Вертикальная мобильная 3D-осада с полноценной кампанией, структурными разрушениями, ответным огнём и физическими коллизиями.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
-  "background_color": "#171914",
+  "background_color": "#24251e",
   "theme_color": "#25251d",
   "icons": [
     {

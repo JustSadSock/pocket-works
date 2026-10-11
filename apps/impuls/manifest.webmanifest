@@ -1,8 +1,8 @@
 {
-  "id": "./",
-  "name": "ИМПУЛЬС — физическая песочница",
+  "id": "/apps/impuls/",
+  "name": "ИМПУЛЬС",
   "short_name": "ИМПУЛЬС",
-  "description": "Мобильный физический стол с телами, связями, силовыми полями и импульсами.",
+  "description": "Тактильная физическая песочница: строй разрушаемые конструкции, рви связи, управляй полями и запускай цепные аварии.",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
@@ -10,8 +10,17 @@
   "orientation": "any",
   "background_color": "#ece5d2",
   "theme_color": "#ece5d2",
-  "categories": ["games", "education", "utilities"],
+  "categories": [
+    "games",
+    "education",
+    "utilities"
+  ],
   "icons": [
-    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

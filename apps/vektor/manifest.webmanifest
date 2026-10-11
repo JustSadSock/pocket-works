@@ -1,8 +1,8 @@
 {
-  "name": "ВЕКТОР — абстрактная дуэль",
+  "name": "ВЕКТОР",
   "short_name": "ВЕКТОР",
-  "description": "Скользи по прямой, уничтожай покинутые клетки и оставь соперника без хода.",
-  "id": "./",
+  "description": "Математически выверенная абстрактная дуэль без случайности: скользи по прямой и оставь соперника без хода.",
+  "id": "/apps/vektor/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,6 +10,11 @@
   "background_color": "#f0ede4",
   "theme_color": "#f0ede4",
   "icons": [
-    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

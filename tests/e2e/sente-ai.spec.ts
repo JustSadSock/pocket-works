@@ -103,8 +103,10 @@ test.describe('SENTE GNU Go browser core', () => {
   });
 
   test('drops only the unfinished legacy AI game on the first 2.2 load', async ({ page }) => {
-    await page.goto('/apps/sente/', { waitUntil: 'domcontentloaded' });
-    await page.evaluate(() => {
+    // Seed a previous installation before boot. Mutating a running game's save
+    // before reload races its pagehide persistence and can overwrite the fixture.
+    await page.addInitScript(() => {
+      if (!location.pathname.startsWith('/apps/sente/')) return;
       localStorage.setItem('pocket-works:sente:engine-build', '2.1.0');
       localStorage.setItem('pocket-works:sente:state:v1', JSON.stringify({
         settings: { size: 19, mode: 'ai', level: 'sharp', sound: false },
@@ -113,7 +115,7 @@ test.describe('SENTE GNU Go browser core', () => {
       }));
     });
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.goto('/apps/sente/', { waitUntil: 'domcontentloaded' });
     const migrated = await page.evaluate(() => ({
       build: localStorage.getItem('pocket-works:sente:engine-build'),
       state: JSON.parse(localStorage.getItem('pocket-works:sente:state:v1') || 'null')

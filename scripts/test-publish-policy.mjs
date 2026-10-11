@@ -4,7 +4,7 @@ import { shouldPublishAppPath, shouldPublishSharedPath, shouldPublishGodotWebPat
 for (const file of [
   'index.html', 'app.js', 'styles.css', 'app.config.json', 'release.json',
   'engine/part-1.txt', 'assets/world.glb', 'audio/theme.ogg', 'models/crow.glb',
-  'game-data/chapters.json'
+  'game-data/chapters.json', 'src/spec.js'
 ]) {
   assert.equal(shouldPublishAppPath(file), true, `runtime asset ${file} must be retained`);
 }

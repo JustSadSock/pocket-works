@@ -13,12 +13,12 @@
 <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
 <link rel="apple-touch-icon" href="./icons/icon.svg">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
-<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-fullscreen-app>
-<div id="app" data-app-shell><main style="min-height:100dvh;display:grid;place-items:center;background:#30382e;color:#e7dcbf;font:20px Georgia,serif"><a style="position:absolute;top:18px;left:18px;color:inherit" href="../../">← Pocket Works</a><span>ДОКТРИНА · Открываем государственный атлас…</span></main></div>
+<div id="app" data-app-shell><main style="min-height:100dvh;display:grid;place-items:center;background:#30382e;color:#e7dcbf;font:20px Georgia,serif"><a style="position:absolute;top:18px;left:18px;color:inherit" href="../../" data-app-control data-native-press>← Pocket Works</a><span>ДОКТРИНА · Открываем государственный атлас…</span></main></div>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ДОКТРИНА" data-app-version="2.0.0"></script>
 <script type="module" src="./atlas-v2.js"></script>
-</body>
+<template id="workshop-action"><button type="button" class="dialog-action" data-workshop-trigger data-native-press>Workshop Mode</button></template></body>
 </html>

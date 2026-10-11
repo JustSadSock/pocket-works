@@ -1,5 +1,5 @@
-const CACHE_PREFIX = "pocket-works-vektor-";
-const CACHE_NAME = `${CACHE_PREFIX}v1.0.0`;
+const CACHE_PREFIX = "vektor-";
+const CACHE_NAME = "vektor-v1.0.0";
 const APP_SHELL = [
   "./", "./index.html", "./styles.css", "./app.js", "./engine.js", "./ai-worker.js",
   "./manifest.webmanifest", "./icons/icon.svg",

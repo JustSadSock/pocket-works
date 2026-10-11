@@ -2,14 +2,25 @@
   "id": "/apps/emergence-lab/",
   "name": "Лаборатория эмерджентности",
   "short_name": "Эмерджентность",
-  "description": "Лаборатория сложных систем с ресурсами, генетикой и естественным отбором.",
+  "description": "Лаборатория сложных систем: ресурсы, наследование, естественный отбор и визуальные правила без кода.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#ece5d2",
   "theme_color": "#ece5d2",
   "lang": "ru",
-  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

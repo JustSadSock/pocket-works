@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const appRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -9,6 +9,7 @@ const buildRoot = path.join(appRoot, '.dist');
 
 export default defineConfig({
   root: sourceRoot,
+  test: { include: ['**/*.test.ts'], environment: 'node' },
   base: './',
   publicDir: path.join(appRoot, 'public'),
   build: {

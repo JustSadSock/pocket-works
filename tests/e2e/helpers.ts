@@ -28,6 +28,13 @@ export async function openStablePage(page: Page, url: string, ready: string | Lo
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 }
 
+export async function openLibraryPage(page: Page, ready: string | Locator) {
+  await openStablePage(page, '/', 'h1');
+  await expect(page.locator('html')).toHaveClass(/is-launcher-ui-ready/);
+  await page.locator('#deck-bottom-nav button[data-deck-view="library"]').click();
+  await expect(typeof ready === 'string' ? page.locator(ready).first() : ready).toBeVisible();
+}
+
 export async function assertNoHorizontalOverflow(page: Page) {
   const overflow = await page.evaluate(() => {
     const width = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);

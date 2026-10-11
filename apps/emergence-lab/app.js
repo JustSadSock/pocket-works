@@ -60,7 +60,7 @@ let lastFrame = performance.now(), frameCounter = 0, sampleAt = performance.now(
 let fieldClearPending = true, renderedFrames = 0, inspectRefreshAt = 0, mutationWave = 0, newDishArmedUntil = 0;
 let history = [], reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const clamp = (v,min,max) => Math.min(max, Math.max(min,v));
+function clamp(v,min,max) { return Math.min(max, Math.max(min,v)); }
 const randomBetween = (min,max) => min + Math.random() * (max-min);
 const mutateGene = (value, amount, min, max) => clamp(value + randomBetween(-amount, amount), min, max);
 

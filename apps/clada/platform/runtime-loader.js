@@ -13,7 +13,9 @@ export async function loadRuntimeGroup(parts) {
   const failedIndex = responses.findIndex((response) => !response.ok);
   if (failedIndex >= 0) throw new Error(`Не удалось загрузить ${parts[failedIndex]}: ${responses[failedIndex].status}`);
   const chunks = await Promise.all(responses.map((response) => response.text()));
-  const source = chunks.map((chunk, index) => `${chunk}\n//# sourceURL=${parts[index]}\n`).join('\n');
+  // These are byte slices of a single script, including cuts inside identifiers
+  // and strings. Adding separators between fragments changes the program.
+  const source = `${chunks.join('')}\n//# sourceURL=${parts[0]}\n`;
   const blobUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
   try { await loadClassicScript(blobUrl); }
   finally { URL.revokeObjectURL(blobUrl); }

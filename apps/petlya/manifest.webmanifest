@@ -2,11 +2,15 @@
   "id": "/apps/petlya/",
   "name": "ПЕТЛЯ",
   "short_name": "ПЕТЛЯ",
-  "description": "Головоломка про запись маршрутов и координацию собственных временных копий.",
+  "description": "Необычная головоломка про запись маршрутов: отматывай время, координируй собственные эха, удерживай печати и открывай затворы.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#efe6d2",
   "theme_color": "#18313a",

@@ -27,6 +27,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify rendered-image comparison diagnostics
+        run: |
+          python -m pip install Pillow==11.3.0
+          python tools/visual-intelligence/test_images.py
       - name: Validate creative contract and Forge technical templates
         run: npm run validate:creative
       - name: Require a finished visual direction for visible app changes
@@ -154,6 +161,15 @@ jobs:
       - name: Validate browser quality contract
         run: npm run validate:quality
 
+      - name: Upload explicit legacy validation debt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-validation-debt
+          path: quality-artifacts/validation-debt
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Test published Enhanced apps
         run: npm run test:enhanced
 
@@ -198,6 +214,10 @@ jobs:
   browser-quality:
     needs: health
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium-mobile-portrait, webkit-mobile-portrait, chromium-mobile-landscape, webkit-mobile-landscape]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -217,13 +237,13 @@ jobs:
         run: npm run build:quality-site
 
       - name: Run Playwright mobile matrix
-        run: npm run test:e2e
+        run: npm run test:e2e -- --project="${{ matrix.project }}"
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: |
             playwright-report
             test-results

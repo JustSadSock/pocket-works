@@ -2,11 +2,15 @@
   "id": "/apps/sovpalo/",
   "name": "СОВПАЛО",
   "short_name": "СОВПАЛО",
-  "description": "Точный интерактивный калькулятор парадокса дней рождения.",
+  "description": "Интерактивная лаборатория парадокса дней рождения с точными шансами пар, троек и нескольких независимых совпадений.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#f3efe4",
   "theme_color": "#f3efe4",
