@@ -9,7 +9,7 @@ const CACHE_NAME = 'last-raven-v0.2.0';
 const APP_VERSION = '0.2.0';
 const RELEASE_DATE = '2026-10-11';
 const RELEASE_NOTES = [
-  '38 уникальных посетителей и писем, ветвящиеся последствия и сюжетные продолжения.',
+  '40 уникальных посетителей и писем, ветвящиеся последствия и сюжетные продолжения.',
   'Три тактических приказа во время осады, зимние крыши, лес и осадный таран.'
 ];
 setCacheNameDetails({ prefix: 'last-raven', suffix: `v${APP_VERSION}`, precache: 'precache', runtime: 'runtime' });
