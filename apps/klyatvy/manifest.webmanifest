@@ -1,0 +1,24 @@
+{
+  "id": "/apps/klyatvy/",
+  "name": "КЛЯТВЫ — Живая хроника",
+  "short_name": "КЛЯТВЫ",
+  "description": "Стратегия о цене слова и власти над феодальным королевством.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#29271e",
+  "theme_color": "#29271e",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
