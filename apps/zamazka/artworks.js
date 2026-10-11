@@ -38,5 +38,5 @@ export function svgFor(id){
  return '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="450" viewBox="0 0 600 450">'+s+'</svg>';
 }
 const cache=new Map(),loaded=new Map();
-export function artworkURL(id){if(!cache.has(id))cache.set(id),' ';if(!cache.get(id))cache.set(id,'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgFor(id)));return cache.get(id)}
+export function artworkURL(id){if(!cache.has(id))cache.set(id,'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgFor(id)));return cache.get(id)}
 export function loadArtwork(id){if(!loaded.has(id))loaded.set(id,new Promise((ok,bad)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>bad(Error('Изображение недоступно'));im.src=artworkURL(id)}));return loaded.get(id)}
