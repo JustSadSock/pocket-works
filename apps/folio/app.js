@@ -27,13 +27,25 @@ const ideas = [
 ];
 const state = {
   doc:null, works:[], tool:'brush', brush:'ink', color:'#a6553e', size:9, opacity:1,
-  mode:'nib', hand:'right', sheet:null, focus:false, idea:0,
+  mode:'precision', hand:'right', sheet:null, focus:false, idea:0,
+  armPointer:null, armKeyboard:false, aimEvent:null, spacePan:false,
+  panPointer:null, panStart:null, cursorActive:false,
   view:{cx:0,cy:0,scale:1,rot:0}, pointers:new Map(), pinch:null,
   draft:null, draftStart:0, lastMove:0, blockDraw:false,
   undo:[], redo:[], cache:new Map(), dirty:new Set(),
   frame:0, saveTimer:0, cursorTimer:0, toastTimer:0
 };
 try { if(localStorage.getItem('pocket-works:folio:hand')==='left')state.hand='left'; }catch{}
+const isDesktop=()=>matchMedia('(min-width:960px) and (pointer:fine) and (min-height:500px)').matches;
+function preferredMode(){
+  const key='pocket-works:folio:mode:'+(isDesktop()?'desktop':'mobile');
+  let saved;
+  try{saved=localStorage.getItem(key);}catch{}
+  return ['precision','nib','direct'].includes(saved)?saved:(isDesktop()?'direct':'precision');
+}
+function rememberMode(mode){
+  try{localStorage.setItem('pocket-works:folio:mode:'+(isDesktop()?'desktop':'mobile'),mode);}catch{}
+}
 let database=null;
 const DB_NAME='pocket-works:folio:documents';
 const DB_STORE='works';
@@ -216,24 +228,59 @@ function canvasPoint(event){
   const r=canvas.getBoundingClientRect();
   return {x:event.clientX-r.left,y:event.clientY-r.top};
 }
-function pointerTip(p){
-  if(state.mode==='direct'||state.tool==='pipette')return p;
+function pointerTip(p,pointerType='touch'){
+  if(state.mode==='direct'||state.tool==='pipette'||pointerType==='mouse'||pointerType==='pen')return p;
   return {x:p.x+(state.hand==='left'?18:-18),y:p.y-51};
 }
 function inputPoint(e){
-  const tip=pointerTip(canvasPoint(e));
+  const tip=pointerTip(canvasPoint(e),e.pointerType);
   const [x,y]=screenDoc(tip.x,tip.y);
   return [clamp(x,0,state.doc.width),clamp(y,0,state.doc.height)];
 }
 function setCursor(e){
   if(state.mode==='direct'||state.tool==='pipette'){$('nib-cursor').hidden=true;return;}
-  const p=pointerTip(canvasPoint(e)),nib=$('nib-cursor');
+  const p=pointerTip(canvasPoint(e),e.pointerType),nib=$('nib-cursor');
   nib.style.left=p.x+'px';nib.style.top=p.y+'px';nib.hidden=false;
 }
 function hideCursor(){ $('nib-cursor').hidden=true; }
+function isArmed(){return state.armPointer!==null||state.armKeyboard;}
+function updateArmUI(){
+  const pressed=isArmed();
+  $('precision-arm').classList.toggle('is-armed',pressed);
+  $('precision-arm').setAttribute('aria-pressed',String(pressed));
+}
+function armDrawing(pointerOrKeyboard,isDown,cancel=false){
+  if(pointerOrKeyboard==='keyboard')state.armKeyboard=isDown;
+  else state.armPointer=isDown?pointerOrKeyboard:null;
+  updateArmUI();
+  if(state.mode!=='precision'||!state.doc)return;
+  if(!isArmed())finishStroke(cancel);
+  else if(!state.draft&&state.aimEvent&&state.pointers.size===1&&!state.pinch&&!state.spacePan){
+    beginStroke(state.aimEvent);
+  }
+  if(state.aimEvent&&state.pointers.size===1)setCursor(state.aimEvent);
+}
+function setInputMode(mode,{save=true}={}){
+  if(!['precision','nib','direct'].includes(mode))return;
+  finishStroke();
+  state.mode=mode;
+  if(save)rememberMode(mode);
+  const active=mode==='precision';
+  $('studio').classList.toggle('mode-precision',active);
+  $('canvas-guide').textContent=active?'Наведи остриё · зажми «Рисовать» другой рукой':
+    mode==='nib'?'Остриё выше пальца · движение рисует':'Веди пальцем или мышью по бумаге';
+  if(!active){state.armPointer=null;state.armKeyboard=false;updateArmUI();}
+  hideCursor();updateToolUI();
+  if(state.doc)syncDesktop();
+}
+function resetInput(){
+  finishStroke(true);state.pointers.clear();state.pinch=null;state.blockDraw=false;
+  state.aimEvent=null;state.panPointer=null;state.panStart=null;state.spacePan=false;
+  state.armPointer=null;state.armKeyboard=false;updateArmUI();hideCursor();
+}
 function beginStroke(e){
   if(!currentLayer()?.visible || currentLayer()?.opacity===0){notify('Этот слой скрыт или прозрачен');return;}
-  const tip=pointerTip(canvasPoint(e));
+  const tip=pointerTip(canvasPoint(e),e.pointerType);
   const rawPoint=screenDoc(tip.x,tip.y);
   if(rawPoint[0]<0||rawPoint[0]>state.doc.width||rawPoint[1]<0||rawPoint[1]>state.doc.height)return;
   const point=[rawPoint[0],rawPoint[1]];
@@ -259,6 +306,7 @@ function extendStroke(e){
 function finishStroke(cancel=false){
   const draft=state.draft;state.draft=null;state.previewCanvas=null;
   stage.classList.remove('is-drawing');hideCursor();
+  if(state.mode==='precision'&&state.aimEvent&&state.pointers.size===1)setCursor(state.aimEvent);
   if(!draft||cancel){scheduleDraw();return;}
   const points=draft.points;
   const layer=state.doc.layers.find(l=>l.id===draft.layer);
@@ -299,40 +347,109 @@ function sampleColor(e){
   state.color='#'+[...rgba].slice(0,3).map(v=>v.toString(16).padStart(2,'0')).join('');
   state.tool='brush';updateToolUI();notify('Цвет взят с рисунка');
 }
+
+function translatePan(e){
+  if(state.panPointer!==e.pointerId||!state.panStart)return;
+  const p=canvasPoint(e);
+  state.view.cx=state.panStart.cx+(p.x-state.panStart.x);
+  state.view.cy=state.panStart.cy+(p.y-state.panStart.y);
+  scheduleDraw();
+}
 canvas.addEventListener('pointerdown',e=>{
   if(!state.doc||state.sheet)return;
+  if(e.button===2){e.preventDefault();sampleColor(e);return;}
   e.preventDefault();try{canvas.setPointerCapture(e.pointerId);}catch{}
-  state.pointers.set(e.pointerId,canvasPoint(e));
+  const point=canvasPoint(e);
+  state.pointers.set(e.pointerId,point);
   if(state.pointers.size===2){
-    finishStroke(true);state.blockDraw=true;pinchStart();return;
+    finishStroke(true);state.blockDraw=true;state.aimEvent=null;
+    state.panPointer=null;state.panStart=null;state.pinch=null;pinchStart();return;
   }
   if(state.pointers.size>2){state.blockDraw=true;return;}
+  if(e.button===1||state.spacePan){
+    state.panPointer=e.pointerId;
+    state.panStart={x:point.x,y:point.y,cx:state.view.cx,cy:state.view.cy};
+    $('studio').classList.add('is-panning');
+    hideCursor();return;
+  }
   if(state.blockDraw)return;
-  if(state.tool==='pipette'){sampleColor(e);return;}
-  setCursor(e);beginStroke(e);
+  state.aimEvent=e;
+  if(state.tool==='pipette'){sampleColor(e);state.aimEvent=null;return;}
+  setCursor(e);
+  if(state.mode!=='precision'||isArmed())beginStroke(e);
 });
 canvas.addEventListener('pointermove',e=>{
-  if(!state.pointers.has(e.pointerId))return;
+  if(!state.pointers.has(e.pointerId)){
+    if(e.pointerType==='mouse'||e.pointerType==='pen'){
+      if(!state.spacePan&&!state.sheet&&state.doc)setCursor(e);
+    }
+    return;
+  }
   e.preventDefault();state.pointers.set(e.pointerId,canvasPoint(e));
   if(state.pointers.size>=2){pinchUpdate();return;}
+  if(state.panPointer===e.pointerId){translatePan(e);return;}
   if(state.blockDraw)return;
+  state.aimEvent=e;
   setCursor(e);
+  if(state.mode==='precision'&&!isArmed())return;
+  if(state.tool==='pipette')return;
+  if(!state.draft&&state.mode==='precision')beginStroke(e);
   const coalesced=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];
   for(const sub of coalesced.length?coalesced:[e])extendStroke(sub);
+});
+canvas.addEventListener('pointerleave',e=>{
+  if(!state.pointers.has(e.pointerId))hideCursor();
 });
 function endPointer(e){
   if(!state.pointers.has(e.pointerId))return;
   e.preventDefault();
+  if(state.panPointer===e.pointerId){
+    state.pointers.delete(e.pointerId);state.panPointer=null;state.panStart=null;
+    $('studio').classList.remove('is-panning');
+    state.aimEvent=null;hideCursor();return;
+  }
   const wasMany=state.blockDraw||state.pointers.size>1;
   state.pointers.delete(e.pointerId);
-  if(wasMany){finishStroke(true);state.pinch=null;state.blockDraw=state.pointers.size!==0;}
-  else finishStroke(e.type==='pointercancel');
-  if(!state.pointers.size){state.blockDraw=false;hideCursor();}
+  if(wasMany){
+    finishStroke(true);state.pinch=null;state.blockDraw=state.pointers.size!==0;
+  }else finishStroke(e.type==='pointercancel');
+  if(!state.pointers.size){state.blockDraw=false;state.aimEvent=null;hideCursor();}
 }
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('lostpointercapture',e=>{if(state.pointers.has(e.pointerId))endPointer(e);});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
+$('precision-arm').addEventListener('pointerdown',e=>{
+  if(!state.doc||state.mode!=='precision'||state.sheet)return;
+  e.preventDefault();e.stopPropagation();
+  try{$('precision-arm').setPointerCapture(e.pointerId);}catch{}
+  armDrawing(e.pointerId,true);
+});
+function stopArm(e){
+  if(state.armPointer!==e.pointerId)return;
+  e.preventDefault();
+  armDrawing(e.pointerId,false,e.type==='pointercancel');
+}
+$('precision-arm').addEventListener('pointerup',stopArm);
+$('precision-arm').addEventListener('pointercancel',stopArm);
+$('precision-arm').addEventListener('lostpointercapture',stopArm);
+window.addEventListener('pointerup',e=>{if(state.armPointer===e.pointerId)stopArm(e);});
+function zoomAt(x,y,scale){
+  const v=state.view,doc=state.doc;
+  const anchor=screenDoc(x,y),rot=v.rot;
+  const dx=(anchor[0]-doc.width/2)*scale,dy=(anchor[1]-doc.height/2)*scale;
+  v.scale=scale;
+  v.cx=x-(dx*Math.cos(rot)-dy*Math.sin(rot));
+  v.cy=y-(dx*Math.sin(rot)+dy*Math.cos(rot));
+  scheduleDraw();
+}
+canvas.addEventListener('wheel',e=>{
+  if(!state.doc||state.sheet)return;
+  e.preventDefault();
+  const p=canvasPoint(e);
+  const factor=Math.exp(-clamp(e.deltaY,-140,140)*.0025);
+  zoomAt(p.x,p.y,clamp(state.view.scale*factor,.09,7));
+},{passive:false});
 
 function updateUndoRedo(){
   $('undo').disabled=state.undo.length===0;
@@ -360,8 +477,10 @@ function updateToolUI(){
   $('brush-label').textContent=state.tool==='eraser'?'Ластик':state.tool==='pipette'?'Пипетка':brushes.find(b=>b.id===state.brush)?.name||'Кисть';
   $('brush-size').value=state.size;$('brush-size-value').textContent=state.size;
   $('brush-opacity').value=Math.round(state.opacity*100);$('brush-opacity-value').textContent=Math.round(state.opacity*100)+'%';
-  $('mode-label').textContent=state.mode==='nib'?'Острие':'Прямо';
-  $('mode-icon').textContent=state.mode==='nib'?'◎':'●';
+  $('mode-label').textContent=state.mode==='precision'?'Точное перо':state.mode==='nib'?'Остриё':'Прямо';
+  $('mode-icon').textContent=state.mode==='precision'?'⊙':state.mode==='nib'?'◎':'●';
+  $('working-area').classList.toggle('left-handed',state.hand==='left');
+  if(state.doc)syncDesktop();
 }
 function selectTool(tool){
   finishStroke(true);state.tool=tool;updateToolUI();
@@ -499,6 +618,7 @@ function drawThumbnail(){
 }
 function queueSave(){
   if(!state.doc)return;
+  syncDesktop();
   state.doc.updatedAt=Date.now();
   clearTimeout(state.saveTimer);
   state.saveTimer=setTimeout(()=>{void persist();},700);
@@ -514,20 +634,19 @@ async function persist(){
 }
 async function openWork(doc,isNew=false){
   if(state.doc)await persist();
-  state.doc=doc;state.undo=[];state.redo=[];state.draft=null;state.pointers.clear();state.pinch=null;state.blockDraw=false;resetCache();
+  resetInput();state.doc=doc;state.undo=[];state.redo=[];resetCache();
   state.color=doc.palette?.[1]||'#a6553e';
   state.tool='brush';state.brush='ink';state.size=9;state.opacity=1;
   $('document-title').textContent=doc.title;
   $('home').hidden=true;$('studio').hidden=false;
-  $('canvas-guide').textContent='Один палец рисует · два двигают холст';
   state.focus=false;$('studio').classList.remove('focus');
-  closeSheet();updateToolUI();updateUndoRedo();
+  closeSheet();setInputMode(preferredMode(),{save:false});updateUndoRedo();
   requestAnimationFrame(()=>fitView());
   if(isNew)queueSave();
 }
 async function showHome(){
   if(state.doc)await persist();
-  state.doc=null;state.draft=null;state.pointers.clear();state.pinch=null;state.blockDraw=false;resetCache();
+  resetInput();state.doc=null;resetCache();
   $('studio').hidden=true;$('home').hidden=false;closeSheet();
   state.works=(await loadWorks()).sort((a,b)=>b.updatedAt-a.updatedAt);
   renderGallery();
@@ -578,20 +697,134 @@ $('pipette-tool').onclick=()=>selectTool('pipette');
 $('color-tool').onclick=()=>openSheet('color');
 $('layers-tool').onclick=()=>openSheet('layers');
 $('sheet-close').onclick=closeSheet;$('sheet-backdrop').onclick=closeSheet;
-$('mode-toggle').onclick=()=>{state.mode=state.mode==='nib'?'direct':'nib';updateToolUI();notify(state.mode==='nib'?'Остриё видно над пальцем':'Прямой ввод');};
+$('mode-toggle').onclick=()=>{const modes=['precision','nib','direct'];setInputMode(modes[(modes.indexOf(state.mode)+1)%modes.length]);notify(state.mode==='precision'?'Точное перо: наведи и зажми кнопку':state.mode==='nib'?'Остриё автоматически рисует':'Прямой ввод');};
 $('fit').onclick=fitView;
 $('brush-size').oninput=e=>{state.size=Number(e.target.value);$('brush-size-value').textContent=state.size;};
 $('brush-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;$('brush-opacity-value').textContent=e.target.value+'%';};
 $('focus-toggle').onclick=()=>{state.focus=true;$('studio').classList.add('focus');fitView();};
 $('focus-restore').onclick=()=>{state.focus=false;$('studio').classList.remove('focus');fitView();};
+
+function syncDesktop(){
+  if(!state.doc)return;
+  const doc=state.doc;
+  document.querySelectorAll('.desktop-tool').forEach(el=>{
+    const match={
+      'desktop-brush-tool':state.tool==='brush',
+      'desktop-eraser-tool':state.tool==='eraser',
+      'desktop-pipette-tool':state.tool==='pipette'
+    };
+    el.classList.toggle('is-active',Boolean(match[el.id]));
+  });
+  $('desktop-brush-name').textContent=brushes.find(b=>b.id===state.brush)?.name||'Кисть';
+  $('desktop-brush-choices').innerHTML=brushes.map(b=>
+    '<button type="button" class="'+(state.brush===b.id?'active':'')+'" data-desktop-brush="'+b.id+'" title="'+escapeHTML(b.hint)+'">'+escapeHTML(b.name)+'</button>'
+  ).join('');
+  $('desktop-swatches').innerHTML=doc.palette.slice(0,16).map(c=>
+    '<button type="button" aria-label="Выбрать '+c+'" class="'+(state.color.toLowerCase()===c.toLowerCase()?'active':'')+'" style="--chip:'+c+'" data-desktop-color="'+c+'"></button>'
+  ).join('');
+  $('desktop-layers').innerHTML=[...doc.layers].reverse().map(l=>
+    '<div class="desktop-layer '+(doc.activeLayer===l.id?'active':'')+'">'+
+    '<button class="layer-eye" data-desktop-eye="'+l.id+'" aria-label="'+(l.visible?'Скрыть слой':'Показать слой')+'"><svg><use href="#i-'+(l.visible?'eye':'hide')+'"/></svg></button>'+
+    '<button class="layer-select" data-desktop-layer="'+l.id+'"><strong>'+escapeHTML(l.name)+'</strong><small>'+l.strokes.length+' штрихов · '+Math.round(l.opacity*100)+'%</small></button></div>'
+  ).join('');
+  $('desktop-size').value=state.size;$('desktop-size-value').textContent=state.size+' px';
+  $('desktop-opacity').value=Math.round(state.opacity*100);
+  $('desktop-opacity-value').textContent=Math.round(state.opacity*100)+'%';
+  $('desktop-color').value=/^#[0-9a-f]{6}$/i.test(state.color)?state.color:'#a6553e';
+  document.querySelectorAll('[data-input-mode]').forEach(b=>b.classList.toggle('active',b.dataset.inputMode===state.mode));
+  $('desktop-mode-help').textContent=state.mode==='precision'?
+    'Наведите курсор. Для нанесения штриха зажмите Shift или кнопку на холсте.':
+    state.mode==='nib'?'На сенсорном экране остриё рисует немного выше пальца. Мышь рисует прямо под курсором.':
+      'Мышь, перо или касание сразу оставляют линию. Пробел + перетаскивание перемещает холст.';
+}
+$('desktop-brush-tool').onclick=()=>selectTool('brush');
+$('desktop-eraser-tool').onclick=()=>selectTool('eraser');
+$('desktop-pipette-tool').onclick=()=>selectTool('pipette');
+$('desktop-color-tool').onclick=()=>openSheet('color');
+$('desktop-idea').onclick=()=>openSheet('spark');
+$('desktop-layer-options').onclick=()=>openSheet('layers');
+$('desktop-add-layer').onclick=()=>{
+  if(state.doc.layers.length>=12){notify('Максимум 12 слоёв');return;}
+  const l=newLayer('Слой '+(state.doc.layers.length+1));
+  state.doc.layers.push(l);state.doc.activeLayer=l.id;syncDesktop();queueSave();scheduleDraw();
+};
+$('desktop-brush-choices').onclick=e=>{
+  const b=e.target.closest('[data-desktop-brush]');if(!b)return;
+  state.brush=b.dataset.desktopBrush;selectTool('brush');syncDesktop();
+};
+$('desktop-swatches').onclick=e=>{
+  const b=e.target.closest('[data-desktop-color]');if(!b)return;
+  state.color=b.dataset.desktopColor;selectTool('brush');syncDesktop();
+};
+$('desktop-layers').onclick=e=>{
+  const eye=e.target.closest('[data-desktop-eye]');
+  if(eye){const l=state.doc.layers.find(l=>l.id===eye.dataset.desktopEye);l.visible=!l.visible;syncDesktop();scheduleDraw();queueSave();return;}
+  const layer=e.target.closest('[data-desktop-layer]');
+  if(layer){state.doc.activeLayer=layer.dataset.desktopLayer;syncDesktop();queueSave();}
+};
+$('desktop-color').oninput=e=>{state.color=e.target.value;selectTool('brush');};
+$('desktop-size').oninput=e=>{state.size=Number(e.target.value);updateToolUI();};
+$('desktop-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;updateToolUI();};
+$('desktop-mode-choices').onclick=e=>{
+  const button=e.target.closest('[data-input-mode]');
+  if(button)setInputMode(button.dataset.inputMode);
+};
+function activeEditorKey(e){
+  if($('studio').hidden||!$('modal-backdrop').hidden||state.sheet)return false;
+  return !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)
+    &&!document.activeElement?.isContentEditable;
+}
 window.addEventListener('keydown',e=>{
-  if($('studio').hidden||!$('modal-backdrop').hidden||['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey)redo();else undo();}
-  if(e.key==='Escape'){if(state.sheet)closeSheet();else if(state.focus)$('focus-restore').click();}
+  if(!activeEditorKey(e)){
+    if(e.key==='Escape'&&state.sheet)closeSheet();
+    return;
+  }
+  if(e.code==='Space'){e.preventDefault();state.spacePan=true;return;}
+  if(e.key==='Shift'&&state.mode==='precision'){armDrawing('keyboard',true);return;}
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){
+    e.preventDefault();if(e.shiftKey)redo();else undo();return;
+  }
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='y'){e.preventDefault();redo();return;}
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){
+    e.preventDefault();if(e.shiftKey)exportPNG();else{void persist();notify('Сохранено в альбоме');}return;
+  }
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(e.key.toLowerCase()==='b')selectTool('brush');
+  else if(e.key.toLowerCase()==='e')selectTool('eraser');
+  else if(e.key.toLowerCase()==='i')selectTool('pipette');
+  else if(e.key==='['){state.size=clamp(state.size-2,1,72);updateToolUI();}
+  else if(e.key===']'){state.size=clamp(state.size+2,1,72);updateToolUI();}
+  else if(e.key==='0'){fitView();}
+  else if(e.key.toLowerCase()==='f'){$(state.focus?'focus-restore':'focus-toggle').click();}
+  else if(e.key==='Escape'){
+    if(state.sheet)closeSheet();else if(state.focus)$('focus-restore').click();
+  }
 });
-window.addEventListener('resize',()=>{if(!state.doc)return;fitView();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){finishStroke();void persist();}});
-window.addEventListener('pagehide',()=>{if(state.doc){finishStroke();void persist();}});
+window.addEventListener('keyup',e=>{
+  if(e.code==='Space')state.spacePan=false;
+  if(e.key==='Shift'&&state.armKeyboard)armDrawing('keyboard',false);
+});
+window.addEventListener('blur',()=>{
+  state.spacePan=false;state.panPointer=null;state.panStart=null;
+  if(state.armKeyboard)armDrawing('keyboard',false,true);
+  if(state.armPointer!==null)armDrawing(state.armPointer,false,true);
+  finishStroke(true);hideCursor();
+});
+window.addEventListener('resize',()=>{
+  if(!state.doc)return;
+  fitView();
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    if(state.armPointer!==null)armDrawing(state.armPointer,false,true);
+    if(state.armKeyboard)armDrawing('keyboard',false,true);
+    finishStroke();void persist();
+  }
+});
+window.addEventListener('pagehide',()=>{
+  if(state.doc){finishStroke();void persist();}
+});
+
 createWorkshopMode({appName:'FOLIO',version:'1.0.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
   if(database)await txPromise('readwrite',s=>s.clear());else localStorage.removeItem(DB_NAME+':fallback');
   state.doc=null;await showHome();
