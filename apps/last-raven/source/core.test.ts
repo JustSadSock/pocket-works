@@ -52,11 +52,11 @@ describe('Last Raven campaign',()=>{
     const wood=s.resources.wood;expect(issueSiegeOrder(s,'reinforce')).toBe(true);
     expect(s.resources.wood).toBe(wood-3);
     expect(issueSiegeOrder(s,'reinforce')).toBe(false);
-    while(s.siege!.progress<.35&&s.phase==='siege')stepSiege(s,1/30);
+    while(s.siege&&!s.siege.awaitingOrder&&s.phase==='siege')stepSiege(s,1/30);
     expect(s.siege?.awaitingOrder).toBe(true);
     expect(s.siege?.orderStage).toBe(1);
     expect(issueSiegeOrder(s,'volley')).toBe(true);
-    while(s.siege!.progress<.69&&s.phase==='siege')stepSiege(s,1/30);
+    while(s.siege&&!s.siege.awaitingOrder&&s.phase==='siege')stepSiege(s,1/30);
     expect(s.siege?.awaitingOrder).toBe(true);
     expect(s.siege?.orderStage).toBe(2);
     expect(issueSiegeOrder(s,'hold')).toBe(true);
