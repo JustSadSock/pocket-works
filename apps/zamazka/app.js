@@ -176,6 +176,12 @@ function lobby(){
    for(const selector of ['.lobby-self','.lobby-list-heading','.players','.exhibition-lobby>.stack']){
      const old=screen.querySelector(selector),newer=future.querySelector(selector);if(old&&newer)old.replaceWith(newer);
    }
+   const controls=screen.querySelector('.commons-controls');
+   if(controls){
+     const wipe=controls.querySelector('[data-action="board-clear"]'),note=controls.querySelector('.commons-note');
+     if(leader&&!wipe){note?.remove();controls.insertAdjacentHTML('beforeend','<button class="commons-wipe" data-action="board-clear">Очистить холст</button>')}
+     if(!leader&&wipe){wipe.remove();controls.insertAdjacentHTML('beforeend','<span class="commons-note">Очистка доступна куратору</span>')}
+   }
    if(view?.board&&(boardResync||commonsBoard.revision!==view.board.revision)){commonsBoard.reset(view.board);boardResync=false}
    return;
  }
