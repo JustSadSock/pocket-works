@@ -12,6 +12,7 @@ const strip=(s:State,id:string)=>({
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation}:null,
  author:members(s)[s.turn]||null,
+ candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
  gallery:(s.phase==='reveal'||s.phase==='results')?members(s).map(p=>({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}})):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
