@@ -101,13 +101,13 @@ try {
    if(Test-Path $tunnelErr){Get-Content $tunnelErr -Tail 20}
    throw 'Cloudflare tunnel did not start. Read local-logs/tunnel-errors.log'
   }
-  Set-Clipboard -Value $online
+  try { Set-Clipboard -Value $online } catch { Write-Host '  Clipboard unavailable: copy the link from the line below.' -ForegroundColor Yellow }
   Write-Host ''
   Write-Host '  ================================================' -ForegroundColor Green
   Write-Host '  ONLINE SERVER READY!' -ForegroundColor Green
   Write-Host "  $online" -ForegroundColor White
   Write-Host '  ================================================'
-  Write-Host '  Address copied to clipboard.' -ForegroundColor Yellow
+  Write-Host '  HTTPS address displayed above (and copied if clipboard is available).' -ForegroundColor Yellow
   Write-Host ''
   Write-Host '  1. Open ZAMAZKA in Pocket Works.'
   Write-Host '  2. Choose Create room.'
