@@ -1,6 +1,7 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { floodLinework } from './fill-engine.mjs';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
+import {createFolioCloudSync} from './cloud-sync.js';
 
 installMobileRuntime();
 
@@ -53,6 +54,7 @@ function rememberMode(mode){
   try{localStorage.setItem('pocket-works:folio:mode:'+(isDesktop()?'desktop':'mobile'),mode);}catch{}
 }
 let database=null;
+let folioCloud=null;
 const DB_NAME='pocket-works:folio:documents';
 const DB_STORE='works';
 try {const stored=localStorage.getItem('pocket-works:folio:fillTolerance');if(stored!==null){const n=Number(stored);if(Number.isFinite(n)&&n>=0&&n<=100)state.fillTolerance=n;}}catch{}
@@ -663,7 +665,7 @@ function renderSheet(){
       const copy=cloneData(state.doc);copy.id=uid();copy.title+=' — копия';copy.updatedAt=Date.now();
       await putWork(copy);notify('Копия добавлена в альбом');closeSheet();
     };
-    $('do-delete').onclick=()=>showModal({title:'Удалить работу?',note:'Рисунок исчезнет из локального альбома. Это действие нельзя отменить.',okText:'Удалить',danger:true,onOk:async()=>{const id=state.doc.id;await removeWork(id);state.doc=null;closeSheet();await showHome();notify('Работа удалена');}});
+    $('do-delete').onclick=()=>showModal({title:'Удалить работу?',note:'Рисунок исчезнет из локального альбома. Это действие нельзя отменить.',okText:'Удалить',danger:true,onOk:async()=>{const id=state.doc.id;await removeWork(id);state.doc=null;closeSheet();await showHome();folioCloud?.schedule();notify('Работа удалена');}});
   }
 }
 function renderLayerSheet(body){
@@ -771,6 +773,7 @@ async function persist(){
   try{
     doc.thumb=drawThumbnail();
     await putWork(doc);
+    folioCloud?.schedule();
   }catch(error){console.error('FOLIO save',error);notify('Нет места для сохранения рисунка');}
 }
 async function openWork(doc,isNew=false){
@@ -809,7 +812,7 @@ $('gallery').addEventListener('click',e=>{
   if(open){const doc=state.works.find(w=>w.id===open.dataset.open);if(doc)void openWork(doc);}
   if(del){
     const id=del.dataset.delete,doc=state.works.find(w=>w.id===id);
-    showModal({title:'Удалить страницу?',note:'«'+doc.title+'» исчезнет из альбома. Это нельзя отменить.',okText:'Удалить',danger:true,onOk:async()=>{await removeWork(id);state.works=state.works.filter(x=>x.id!==id);renderGallery();notify('Страница удалена');}});
+    showModal({title:'Удалить страницу?',note:'«'+doc.title+'» исчезнет из альбома. Это нельзя отменить.',okText:'Удалить',danger:true,onOk:async()=>{await removeWork(id);state.works=state.works.filter(x=>x.id!==id);renderGallery();folioCloud?.schedule();notify('Страница удалена');}});
   }
 });
 function exportPNG(){
@@ -982,7 +985,7 @@ window.addEventListener('pagehide',()=>{
   if(state.doc){finishStroke();void persist();}
 });
 
-createWorkshopMode({appName:'FOLIO',version:'1.4.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
+createWorkshopMode({appName:'FOLIO',version:'1.5.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
   if(database)await txPromise('readwrite',s=>s.clear());else localStorage.removeItem(DB_NAME+':fallback');
   state.doc=null;await showHome();
 }});
@@ -990,5 +993,10 @@ async function boot(){
   database=await openDatabase();
   if(!database&&!('localStorage' in window))notify('Локальное хранилище недоступно');
   await showHome();
+  folioCloud=createFolioCloudSync({
+    loadWorks,putWork,removeWork,notify,
+    async onUpdate(){if(!state.doc){state.works=(await loadWorks()).sort((a,b)=>b.updatedAt-a.updatedAt);renderGallery();}}
+  });
+  folioCloud.start();
 }
 boot().catch(error=>{console.error(error);notify('Не удалось открыть мастерскую');});
