@@ -41,7 +41,7 @@ export class Editor{
     const p=this.point(e);if(this.tool==='picker'){this.pick(p);return}
     if(this.tool==='hand'){this.panStart=[e.clientX,e.clientY,this.tx,this.ty];return}
     if(!this.inside(p))return;
-    if(this.strokes.length>=72){this.onChange(-1);return}
+    if(this.strokes.length>=72||this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)>=1600){this.onChange(-1);return}
     this.working={c:this.color,s:this.size,t:this.tool,p:[p]};this.redoStack=[];
     this.render();
   };
@@ -56,7 +56,7 @@ export class Editor{
     }
     if(this.panStart){this.tx=this.panStart[2]+e.clientX-this.panStart[0];this.ty=this.panStart[3]+e.clientY-this.panStart[1];this.transform();return}
     if(!this.working)return;const p=this.point(e),pts=this.working.p,prev=pts[pts.length-1];
-    if(this.inside(p)&&pts.length<45&&Math.hypot(p[0]-prev[0],p[1]-prev[1])>1.1){pts.push(p);this.render()}
+    if(this.inside(p)&&pts.length<45&&this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)+pts.length<1600&&Math.hypot(p[0]-prev[0],p[1]-prev[1])>1.1){pts.push(p);this.render()}
   };
   this.up=e=>{this.pointers.delete(e.pointerId);if(this.pointers.size<2)this.pinch=null;
     if(this.working){this.strokes.push(this.working);this.working=null;this.save();this.render()}this.panStart=null;
