@@ -84,6 +84,13 @@ try{
  assert.equal(joined.state.participants[0].name,nick1);
  assert.equal(joined.state.participants[0].verified,true);
  assert.equal(joined.state.participants[1].verified,false);
+ // A second tab with the same Pocket ID cannot occupy another player seat.
+ const duplicateToken=await token('Impersonated name',alice.cookie);
+ const duplicate=await open(duplicateToken,alice.cookie);
+ await duplicate.next('authenticated');
+ duplicate.send('join_room',{roomId:room.roomId});
+ assert.equal((await duplicate.next('error')).code,'account_already_in_room');
+ await close(duplicate);
  // The room seat must survive a verified profile edit and WebSocket reconnection.
  const revisedName=nick1+'X';
  const updated=await fetch(base+'/pocket-id/profile',{method:'POST',headers:{
