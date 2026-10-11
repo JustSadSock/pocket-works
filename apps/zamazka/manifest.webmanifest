@@ -1,0 +1,20 @@
+{
+  "name": "ЗАМАЗКА — бюро реставрации",
+  "short_name": "ЗАМАЗКА",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#293b37",
+  "theme_color": "#293b37",
+  "orientation": "portrait",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

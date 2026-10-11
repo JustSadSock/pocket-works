@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "zamazka",
+  "name": "ЗАМАЗКА",
+  "shortName": "ЗАМАЗКА",
+  "description": "Онлайн-игра о реставрации подделок: запомните пять полотен, дорисуйте потерянный фрагмент и разоблачите работы друзей.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-11",
+  "releaseDateTime": "2026-10-11T18:15:00+03:00",
+  "changelog": [
+    "Новая игра: комнаты для 3–8 реставраторов, последовательное голосование и серверные очки.",
+    "Пятьдесят авторских иллюстраций десяти художественных направлений, повреждения и мобильные кисти.",
+    "Автономная тренировка, локальная галерея, сравнение оригинала с подделкой, офлайн PWA."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#b89564",
+  "backgroundColor": "#293b37",
+  "themeColor": "#293b37",
+  "orientation": "portrait",
+  "cacheName": "zamazka-v1.0.0",
+  "storageNamespace": "pocket-works:zamazka",
+  "tags": [
+    "art",
+    "drawing",
+    "party",
+    "deduction",
+    "multiplayer",
+    "offline"
+  ],
+  "order": 310
+}
