@@ -277,6 +277,7 @@ function resetInput(){
   finishStroke(true);state.pointers.clear();state.pinch=null;state.blockDraw=false;
   state.aimEvent=null;state.panPointer=null;state.panStart=null;state.spacePan=false;
   state.armPointer=null;state.armKeyboard=false;updateArmUI();hideCursor();
+  $('studio').classList.remove('is-panning');
 }
 function beginStroke(e){
   if(!currentLayer()?.visible || currentLayer()?.opacity===0){notify('Этот слой скрыт или прозрачен');return;}
@@ -363,7 +364,7 @@ canvas.addEventListener('pointerdown',e=>{
   state.pointers.set(e.pointerId,point);
   if(state.pointers.size===2){
     finishStroke(true);state.blockDraw=true;state.aimEvent=null;
-    state.panPointer=null;state.panStart=null;state.pinch=null;pinchStart();return;
+    state.panPointer=null;state.panStart=null;$('studio').classList.remove('is-panning');state.pinch=null;pinchStart();return;
   }
   if(state.pointers.size>2){state.blockDraw=true;return;}
   if(e.button===1||state.spacePan){
@@ -741,6 +742,7 @@ $('desktop-brush-tool').onclick=()=>selectTool('brush');
 $('desktop-eraser-tool').onclick=()=>selectTool('eraser');
 $('desktop-pipette-tool').onclick=()=>selectTool('pipette');
 $('desktop-color-tool').onclick=()=>openSheet('color');
+$('desktop-focus-tool').onclick=()=>{$('focus-toggle').click();};
 $('desktop-idea').onclick=()=>openSheet('spark');
 $('desktop-layer-options').onclick=()=>openSheet('layers');
 $('desktop-add-layer').onclick=()=>{
@@ -805,7 +807,7 @@ window.addEventListener('keyup',e=>{
   if(e.key==='Shift'&&state.armKeyboard)armDrawing('keyboard',false);
 });
 window.addEventListener('blur',()=>{
-  state.spacePan=false;state.panPointer=null;state.panStart=null;
+  state.spacePan=false;state.panPointer=null;state.panStart=null;$('studio').classList.remove('is-panning');
   if(state.armKeyboard)armDrawing('keyboard',false,true);
   if(state.armPointer!==null)armDrawing(state.armPointer,false,true);
   finishStroke(true);hideCursor();
