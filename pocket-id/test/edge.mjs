@@ -20,6 +20,13 @@ for(let n=0;n<80;n++){
   if(n===79)throw new Error('Pocket ID API did not start');
   await delay(300);
 }
+const policy=await fetch(base+'/privacy');
+assert.equal(policy.status,200,'Public privacy policy must resolve without login');
+assert.match(policy.headers.get('content-type')||'',/text\/html/i);
+const policyBody=await policy.text();
+assert.match(policyBody,/<title>Privacy Policy — Pocket Works<\/title>/);
+assert.match(policyBody,/Google subject ID/);
+assert.match(policyBody,/Cloudflare/);
 const cfg=await request('config');
 assert.ok(cfg.data.avatars.includes('clay'));
 assert.equal(cfg.data.googleEnabled,false);
