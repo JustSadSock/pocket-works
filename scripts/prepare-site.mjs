@@ -282,6 +282,8 @@ async function stampRelease(destination,config){
 await rm(output,{recursive:true,force:true});
 await mkdir(output,{recursive:true});
 for(const file of rootFiles)await cp(path.join(root,file),path.join(output,file));
+// Serve /privacy from a non-HTML asset alias to avoid Cloudflare's automatic .html redirects.
+await cp(path.join(root,'privacy.html'),path.join(output,'privacy.txt'));
 await copyDirectoryFiltered(
   path.join(root,'shared'),
   path.join(output,'shared'),
