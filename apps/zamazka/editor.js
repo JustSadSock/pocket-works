@@ -96,7 +96,6 @@ export class Editor{
   this.keyboardDown=e=>{
    if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
       document.querySelector('#dialog:not(.hidden)')||e.altKey||e.metaKey)return;
-   const focusOnControls=e.target?.closest?.('button,a');
    const byCode={KeyB:'brush',KeyP:'pencil',KeyS:'spray',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
    let target;
    if(e.ctrlKey){
@@ -105,7 +104,6 @@ export class Editor{
     if(target){e.preventDefault();this.root.querySelector('[data-cmd="'+target+'"]')?.click()}
     return;
    }
-   if(focusOnControls)return;
    if(e.code==='Space'&&!e.repeat){
     e.preventDefault();
     this.spaceTool=this.tool;
