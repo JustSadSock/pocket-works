@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "picto",
+  "name": "ПИКТО · Язык без слов",
+  "shortName": "ПИКТО",
+  "description": "Необычная party-игра: создавайте сообщения из живых пиктограмм и расшифровывайте их вместе. Комнаты PocketNet, 2–8 игроков.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T02:26:00+03:00",
+  "changelog": [
+    "Новая игра для компании: создавать и разгадывать композиции из 28 пиктограмм.",
+    "Настоящие интернет-комнаты PocketNet, короткий код, серверные раунды и восстановление после обрыва.",
+    "Ник из Pocket ID, сенсорный редактор символов, общая коллекция результатов."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#d35935",
+  "backgroundColor": "#f3ebda",
+  "themeColor": "#272c28",
+  "orientation": "any",
+  "cacheName": "picto-v1.0.0",
+  "storageNamespace": "pocket-works:picto",
+  "tags": [
+    "party",
+    "multiplayer",
+    "creative",
+    "puzzle",
+    "online"
+  ],
+  "order": 316
+}
