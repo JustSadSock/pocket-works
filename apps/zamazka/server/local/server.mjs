@@ -9,7 +9,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { build } from 'esbuild';
 
 const here=dirname(fileURLToPath(import.meta.url));
-const dataDir=resolve(here,'../local-data');
+const dataDir=resolve(process.env.ZAMAZKA_DATA_DIR || resolve(here,'../local-data'));
 const PORT=Number(process.env.ZAMAZKA_PORT || 8788);
 const MAX_BODY=128*1024;
 const MAX_STATE=512*1024;
