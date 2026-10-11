@@ -63,6 +63,57 @@ Do not share any secret in chat, source control, screenshots or frontend JS.
 If credentials are absent, the login route returns a clear 503 and the UI hides
 the Google action. Recovery-key accounts remain fully usable.
 
+## Stage A — Pocket ID in applications (2026-10-12)
+
+Implemented integrations:
+
+- **ЗАМАЗКА 1.10** — account nickname automatically fills the restoration-room
+  entry field; verified nicknames are read-only, the server supplies the actual
+  account name, and the lobby/results show verified avatar badges. Hand-drawn
+  player seals remain independently editable and device-local.
+- **ФЛАГПОСТ 1.1** — verified player nicknames and avatars in entry, lobby,
+  battle information and scores.
+- **ЛЕНТА 1.1** — current account nickname and visual avatar in music-studio
+  tracks, with local guest fallback. **PocketLAN is peer-to-peer** and cannot
+  cryptographically establish that another peer owns a Google account; avatar
+  artwork received over PocketLAN is never displayed as a server-verification badge.
+
+Reusable frontend capability: `shared/capabilities/identity.js`. Apps call
+`getPocketIdentity({force:true})`, `preferredPocketName(user, guestName)`,
+`pocketAvatarMarkup(avatar)`, and `pocketPlayerBadge(player)`. The library
+exposes `/?pocket-id=login` for returning to the profile sheet.
+
+Online room identity is verified **at the Worker edge** on
+`POST /pocketnet/session` and the `/pocketnet/ws` handshake using the
+HttpOnly Pocket ID cookie. The Worker strips all inbound `x-pw-*` identity
+headers before attaching the server-validated identity. The PocketNet
+Durable Object accepts identity metadata only from this edge proxy:
+
+- Online sessions store a persistent optional `account_id`, nickname and
+  preset avatar. Legacy guest rows are migrated additively with nullable
+  account columns. No guest can claim a verified member badge.
+- The server overwrites any client-provided nickname with the
+  account's currently registered nickname.
+- All unauthenticated nicknames are prefixed `Гость · `.
+- A room cannot contain two simultaneous seats with the same account UUID.
+- PocketNet tokens are bound to the currently verified Pocket ID on WebSocket
+  authentication. A stolen account token without its valid session cookie,
+  or with another user's cookie, is rejected.
+- Nickname/portrait changes refresh on reconnection without changing the
+  user's room seat or game scores.
+- Token caching in `shared/capabilities/net.js` distinguishes account IDs
+  from guests, preventing a guest token being reused after sign-in or the
+  reverse after sign-out.
+
+No cloud saves, drawings, music compositions, friends, achievements or
+cross-device game-state sync are implemented in this stage. Those remain the
+planned Pocket Cloud and Pocket Social follow-ups.
+
+Security test: `node pocketnet/test/identity.mjs` inside local Wrangler
+tests account impersonation, forged HTTP headers, name collisions, token
+theft, account-switch rejection, verified avatar/name propagation, same-account
+double joins, and logout.
+
 ## HTTP API
 
 All endpoints start with `/pocket-id/`, are same-origin and return uncached JSON
