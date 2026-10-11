@@ -43,3 +43,5 @@ h1,h2,h3,p{margin:0}h1,h2{font-family:Georgia,"Times New Roman",serif;letter-spa
 @media(max-height:690px){.world{flex-basis:34dvh;min-height:175px}.topbar{min-height:44px}.docket-body{padding-top:12px}.office-art{width:105%;max-width:none}}
 @media(min-width:650px){.world{flex-basis:clamp(260px,44dvh,430px)}.docket-body{padding:22px 30px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.abort-row{margin:24px 0 0;border-top:1px dotted #baa989;padding-top:13px;text-align:center}.abort-control{font:700 10px 'Courier New',monospace;letter-spacing:.04em;text-decoration:underline;text-underline-offset:3px;color:#786851;border:0;background:transparent;padding:14px 12px;min-height:44px}
