@@ -15,7 +15,7 @@ const getCookie = (request,name) => (request.headers.get('cookie')||'').split(';
 const codeError = error => /UNIQUE constraint failed/i.test(String(error));
 const publicUser = row => row && ({
   id:row.id, nickname:row.nickname, avatar:row.avatar,
-  complete:Boolean(row.nickname), linkedGoogle:Boolean(row.google_sub), createdAt:row.created_at
+  complete:Boolean(row.nickname), linkedGoogle:Boolean(row.google_sub), createdAt:row.created_at, updatedAt:row.updated_at
 });
 function validateNickname(value) {
   if(typeof value!=='string') return null;
