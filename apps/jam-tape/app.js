@@ -320,8 +320,9 @@ function attachRoom(next,host){
   if(isHost){
    let member=session.players.find(p=>p.id===peer.id);
    if(!member&&session.players.length>=4){inform('Студия заполнена');return}
-   if(member){member.online=true;member.name=peer.name.slice(0,24)}
-   else{session.players.push({id:peer.id,name:peer.name.slice(0,24),inst:'keys',air:true,online:true});session.tracks[peer.id]=[]}
+   const peerAvatar=['clay','moss','ink','sun','wave','ember','plum','stone'].includes(peer.metadata?.avatar)?peer.metadata.avatar:null;
+   if(member){member.online=true;member.name=peer.name.slice(0,24);member.avatar=peerAvatar}
+   else{session.players.push({id:peer.id,name:peer.name.slice(0,24),avatar:peerAvatar,inst:'keys',air:true,online:true});session.tracks[peer.id]=[]}
    session.rev++;broadcastState();
    inform(peer.name+' подключился к ленте');
   }else{
