@@ -1,4 +1,22 @@
 import {W,H,zoneFor,loadArtwork,drawArtwork} from './artworks.js';
+
+// Keep stroke coordinates in the 600×450 logical world, but rasterize on a much
+// denser backing buffer. Previously both zoomed desktop editing and the reveal
+// stretched a literal 600px canvas; that was the second source of pixelation.
+function prepareCanvas(canvas,editor=false){
+ const screenWidth=canvas.getBoundingClientRect().width||canvas.parentElement?.clientWidth||600;
+ const dpr=typeof window==='undefined'?1:Math.max(1,Math.min(3,window.devicePixelRatio||1));
+ const desktop=typeof window!=='undefined'&&window.matchMedia('(min-width:900px) and (pointer:fine)').matches;
+ const needed=editor?Math.max(2.5,dpr*1.6):Math.max(2,dpr,desktop?2.5:2);
+ const scale=Math.min(editor?3.5:3,needed,Math.max(2,3500/W));
+ const w=Math.round(W*scale),h=Math.round(H*scale);
+ if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
+ const ctx=canvas.getContext('2d');
+ ctx.setTransform(scale,0,0,scale,0,0);
+ ctx.imageSmoothingEnabled=true;
+ ctx.imageSmoothingQuality='high';
+ return ctx;
+}
 function clipZone(ctx,z){ctx.beginPath();ctx.rect(z.x,z.y,z.w,z.h);ctx.clip();}
 function dab(ctx,x,y,r,color,alpha=1){ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,Math.max(.5,r),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
 function drawStroke(ctx,stroke){
@@ -12,7 +30,7 @@ function drawStroke(ctx,stroke){
  ctx.restore();
 }
 export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false){
- const ctx=canvas.getContext('2d');canvas.width=W;canvas.height=H;
+ const ctx=prepareCanvas(canvas);
  try{const image=await loadArtwork(id);if(!canvas.isConnected)return;ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id);
  if(damaged){const z=zoneFor(id,variation);ctx.save();clipZone(ctx,z);ctx.fillStyle='#e8ddc6';ctx.fillRect(z.x,z.y,z.w,z.h);(strokes||[]).forEach(s=>drawStroke(ctx,s));ctx.restore();
  }
@@ -80,7 +98,7 @@ export class Editor{
  }
  async pick(p){if(this.inside(p))return;try{const image=await loadArtwork(this.id);const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');drawArtwork(x,image,this.id);const rgb=x.getImageData(p[0]|0,p[1]|0,1,1).data;this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.root.querySelector('#customColor').value=this.color;this.tool='brush';this.root.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='brush'));this.onChange(this.strokes.length)}catch{}}
  async render(){if(this.closed)return;const c=this.canvas,version=this.renderVersion=(this.renderVersion||0)+1;const img=await loadArtwork(this.id).catch(()=>null);if(!img||this.closed||version!==this.renderVersion)return;
- c.width=W;c.height=H;const x=c.getContext('2d');drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);[...this.strokes,...(this.working?[this.working]:[])].forEach(s=>drawStroke(x,s));x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;x.strokeRect(this.zone.x+.5,this.zone.y+.5,this.zone.w-1,this.zone.h-1);x.restore();
+ const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);[...this.strokes,...(this.working?[this.working]:[])].forEach(s=>drawStroke(x,s));x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;x.strokeRect(this.zone.x+.5,this.zone.y+.5,this.zone.w-1,this.zone.h-1);x.restore();
  }
  getData(){return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
