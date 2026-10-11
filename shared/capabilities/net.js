@@ -1,6 +1,6 @@
 // PocketNet is for internet rooms. PocketLAN remains the offline local transport.
 export class PocketNet {
-  constructor({ serverUrl, name, token, storage = globalThis.localStorage } = {}) {
+  constructor({ serverUrl, name, token, identityKey = 'guest', storage = globalThis.localStorage } = {}) {
     if (!serverUrl || !/^https?:\/\//.test(serverUrl)) throw new TypeError('PocketNet requires an HTTP(S) server URL');
     this.serverUrl = serverUrl.replace(/\/$/, '');
     this.name = name;
@@ -8,10 +8,13 @@ export class PocketNet {
     this.storageKey = `pocket-net:${this.serverUrl}`;
     let saved = null;
     try { saved = JSON.parse(storage?.getItem(this.storageKey) || 'null'); } catch { /* Storage may be unavailable. */ }
-    this.token = token || saved?.token || null;
+    // Tokens belong to one profile revision; never reuse guest tokens after login
+    // or an authenticated token after logout / switching accounts.
+    this.identityKey = identityKey;
+    this.token = token || (saved?.identityKey === identityKey ? saved?.token : null) || null;
     this.listeners = new Map();
     this.socket = null;
-    this.roomId = saved?.roomId || null;
+    this.roomId = saved?.identityKey === identityKey ? saved?.roomId || null : null;
     this.closed = false;
     this.retry = 0;
   }
@@ -23,7 +26,7 @@ export class PocketNet {
   }
   emit(type, value) { for (const listener of this.listeners.get(type) || []) listener(value); }
   persist() {
-    try { this.storage?.setItem(this.storageKey, JSON.stringify({ token: this.token, roomId: this.roomId })); } catch { /* Private mode may disable storage. */ }
+    try { this.storage?.setItem(this.storageKey, JSON.stringify({ token: this.token, roomId: this.roomId, identityKey: this.identityKey })); } catch { /* Private mode may disable storage. */ }
   }
   async connect() {
     if (this.closed) throw new Error('PocketNet is closed');
@@ -31,7 +34,12 @@ export class PocketNet {
       const response = await fetch(`${this.serverUrl}/session`, {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: this.name })
       });
-      if (!response.ok) throw new Error(`PocketNet session failed: ${response.status}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error === 'profile_incomplete'
+          ? 'Заверши создание профиля Pocket ID перед входом в комнату'
+          : `PocketNet session failed: ${response.status}`);
+      }
       this.token = (await response.json()).token;
       this.persist();
     }
