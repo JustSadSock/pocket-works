@@ -84,6 +84,15 @@ try{
  assert.equal(joined.state.participants[0].name,nick1);
  assert.equal(joined.state.participants[0].verified,true);
  assert.equal(joined.state.participants[1].verified,false);
+ // Leave both seats before revoking the host cookie, so room cleanup is deterministic.
+ verified.send('leave_room');
+ guest.send('leave_room');
+ for(let attempt=0;attempt<40;attempt++){
+  const health=await (await fetch(base+'/pocketnet/health')).json();
+  if(health.rooms===0)break;
+  await sleep(50);
+  if(attempt===39)throw Error('Identity room was not cleaned up');
+ }
  // Logging out invalidates cookies for any new connection to the trusted identity.
  const logout=await fetch(base+'/pocket-id/logout',{method:'POST',headers:{
   origin:base,'content-type':'application/json',cookie:alice.cookie
@@ -93,7 +102,6 @@ try{
  const revoked=await open(aliceToken,alice.cookie);
  assert.equal((await revoked.next('error')).code,'invalid_token');
  await close(revoked);
- guest.send('leave_room');
  console.log('PASS: Pocket ID verified room identity, server-enforced nicknames, guest markings, spoofed headers, stolen tokens and logout');
 }finally{
  await Promise.all([close(verified),close(guest),close(stolen),close(wrong)]);
