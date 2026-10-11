@@ -257,6 +257,9 @@ export class PocketNetHub {
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
           const previous = room.players.some(p => p.id === player.id);
+          if (!previous && member.accountId && room.players.some(p => p.accountId === member.accountId)) {
+            throw new Error('account_already_in_room');
+          }
           if (!previous) {
             if (room.players.length >= MAX_PLAYERS) throw new Error('room_full');
             room.players.push(member);
