@@ -9,11 +9,11 @@ from PIL import Image
 from forge import command, json_write, positive
 
 
-def pack(paths, durations, outputs, identity, events, loop):
+def metadata(durations, identity, events, loop):
     if not isinstance(identity, str) or not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}", identity) or not isinstance(loop, bool):
         raise ValueError("Invalid animation id/loop")
     duration = sum(durations)
-    if not math.isfinite(duration) or not .001 <= duration <= 600:
+    if not math.isfinite(duration) or not .001 <= duration <= 600 or (loop and duration < 1/24):
         raise ValueError("Invalid animation duration")
     previous = -1
     if not isinstance(events, list) or len(events) > 256:
@@ -23,6 +23,11 @@ def pack(paths, durations, outputs, identity, events, loop):
         if not isinstance(at, (int, float)) or isinstance(at, bool) or not math.isfinite(at) or not 0 <= at <= duration or at < previous or not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}", event.get("name", "")):
             raise ValueError("Invalid ordered contact event")
         previous = at
+    return duration
+
+
+def pack(paths, durations, outputs, identity, events, loop):
+    duration = metadata(durations, identity, events, loop)
     size = None
     for path in paths:
         with Image.open(path) as im:
@@ -72,6 +77,13 @@ def export_bake(source, outputs, params, executable):
     frames = list(range(start, end + 1, step))
     if not 1 <= len(frames) <= 128:
         raise ValueError("Bake sequence needs 1–128 frames")
+    width = positive(params.get("width", 512), 2048, "bake width")
+    height = positive(params.get("height", 512), 2048, "bake height")
+    positive(params.get("samples", 32), 256, "bake samples")
+    columns = min(len(frames), 4096 // width)
+    if math.ceil(len(frames) / columns) * height > 4096:
+        raise ValueError("Bake atlas exceeds 4096px")
+    metadata([step / fps] * len(frames), params.get("id", "Baked"), params.get("events", []), params.get("loop", False))
     with tempfile.TemporaryDirectory(prefix="animation-bake-", dir=outputs["image"].parent) as directory:
         env = dict(os.environ, ART_FORGE_PARAMETERS=json.dumps(params), ANIMATION_FRAMES=json.dumps(frames), ANIMATION_DIRECTORY=directory)
         command([executable, "--background", "--disable-autoexec", source, "--python-exit-code", "1",

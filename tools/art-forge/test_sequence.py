@@ -31,7 +31,10 @@ class SequenceTests(unittest.TestCase):
         Image.new("RGBA",(9,8)).save(self.inputs["1.png"])
         with self.assertRaises(ValueError):self.export()
     def test_bake_range_is_bounded_before_editor(self):
-        for params in ({"start":10,"end":1},{"start":1,"end":1000},{"fps":True},{"step":0}):
+        for params in ({"start":10,"end":1},{"start":1,"end":1000},{"fps":True},{"step":0},{"width":4096},{"width":2048,"height":2048,"end":30},{"end":1,"step":100000},{"events":[{"name":"hit","time":10}]}):
             with self.assertRaises(ValueError):export_bake(self.root/"missing.blend",self.outputs,params,"missing-blender")
+    def test_subframe_loop_rejected_consistently_with_runtime(self):
+        self.data["frames"]=[{"input":"0.png","duration":.001}]
+        with self.assertRaises(ValueError):self.export()
 
 if __name__=="__main__":unittest.main()

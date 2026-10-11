@@ -59,7 +59,7 @@ export class Timeline{
   const token=this.generation,s=this.state,c=s.clip;
   while(remaining>1e-10&&token===this.generation){
    const end=Math.min(c.duration,s.time+remaining),used=end-s.time;
-   for(const e of c.events){if(token!==this.generation)break;if(e.time>s.time&&e.time<=end)this.onEvent({...e,clip:c.id,cycle:s.cycle,generation:token});}
+   for(const e of c.events){if(token!==this.generation)break;if(e.time>s.time&&e.time<=end){this.onEvent({...e,clip:c.id,cycle:s.cycle,generation:token});if(this.paused&&token===this.generation){s.time=e.time;return this.snapshot();}}}
    if(token!==this.generation)break;s.time=end;remaining-=used;
    if(end>=c.duration){if(!c.loop){s.completed=true;break;}s.time=0;s.cycle++;for(const e of c.events.filter(e=>e.time===0)){if(token!==this.generation)break;this.onEvent({...e,clip:c.id,cycle:s.cycle,generation:token});}}
   }

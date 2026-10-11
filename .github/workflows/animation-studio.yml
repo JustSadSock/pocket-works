@@ -45,7 +45,9 @@ jobs:
       - name: Test common timeline, physics and audio dispatch
         run: node --test tools/animation-studio/timeline.test.mjs
       - name: Test asset isolation, rollback and sequence budgets
-        run: python3 -m unittest discover -s tools/art-forge -p 'test_*.py' -v
+        run: |
+          python3 -m unittest discover -s tools/art-forge -p test_forge.py -v
+          python3 -m unittest discover -s tools/art-forge -p test_sequence.py -v
       - name: Export drawn, skeletal, baked and Audio Forge resources
         run: python3 tools/animation-studio/smoke.py --blender "$BLENDER" --output "$MOTION_EVIDENCE"
       - name: Bundle production-like offline scene
