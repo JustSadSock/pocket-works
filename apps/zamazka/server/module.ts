@@ -2,9 +2,13 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
+export const RULESET_VERSION=2;
+// Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
+const CATALOG_COUNT=54;
 type Stroke={c:string;s:number;t:string;p:number[][]};
 type Assignment={art:number;variation:number;strokes:Stroke[]|null};
-type State={host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;votes:Record<string,Record<string,number>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type Chips=number[];
+type State={host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
@@ -16,38 +20,49 @@ const strip=(s:State,id:string)=>({
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation}:null,
  author:members(s)[s.turn]||null,
  candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
- gallery:(s.phase==='reveal'||s.phase==='results')?members(s).map(p=>({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}})):null
+ gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='results')?members(s).map(p=>({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}})):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
 function choose(s:State){
- s.selected=shuffled([1,2,3,4,5,6,7]).slice(0,5);
+ s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1)).slice(0,5);
  // Pick different works for the first five participants; further participants repeat independently.
  s.assignments={};s.votes={};s.turn=0;s.revealed=false;
  const shuffledArt=shuffled(s.selected);
- members(s).forEach((p,i)=>s.assignments[p.id]={art:shuffledArt[i%5],variation:(s.round+i)%4,strokes:null});
+ members(s).forEach((p,i)=>s.assignments[p.id]={art:shuffledArt[i%5],variation:Math.floor(Math.random()*0xffffffff),strokes:null});
  s.phase='preview';s.deadline=now()+25000;
 }
 function completeVotes(s:State){
- const others=members(s).length-1;
+ // Three brass tokens per target. Every token on the correct original pays
+ // 100 in a two-player match. Normalize by possible other voters so scores
+ // stay comparable between duos and larger groups. Wrong tokens pay the
+ // restorer instead; no explicit punishment for a wrong guess.
+ const others=Math.max(1,members(s).length-1);
  for(const p of members(s)){
-   const found=s.votes[p.id]||{};
-   const hits=Object.values(found).filter(v=>v===s.assignments[p.id]?.art).length;
-   s.scores[p.id].mask+=others?Math.round(100*(others-hits)/others):0;
-   let eye=0;
-   for(const q of members(s)){if(q.id!==p.id&&s.votes[q.id]?.[p.id]===s.assignments[q.id]?.art)eye++;}
-   s.scores[p.id].eye+=others?Math.round(100*eye/others):0;
+  const index=s.selected.indexOf(s.assignments[p.id]?.art);
+  const ballots=Object.values(s.votes[p.id]||{}).filter(Array.isArray);
+  const correct=ballots.reduce((n,chips)=>n+(chips[index]||0),0);
+  const total=ballots.reduce((n,chips)=>n+chips.reduce((a,b)=>a+b,0),0);
+  s.scores[p.id].mask+=Math.round(50*(total-correct)/others);
+  let eye=0;
+  for(const q of members(s)){
+   if(q.id===p.id)continue;
+   const ballot=s.votes[q.id]?.[p.id];
+   if(Array.isArray(ballot))eye+=ballot[s.selected.indexOf(s.assignments[q.id]?.art)]||0;
+  }
+  s.scores[p.id].eye+=Math.round(100*eye/others);
  }
- s.phase='reveal';s.turn=0;s.deadline=now()+9500;s.revealed=true;
+ s.phase='verdict';s.turn=0;s.deadline=now()+5600;s.revealed=true;
 }
 function step(s:State){
  if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+105000;}
- else if(s.phase==='drawing'){for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=[];s.phase='voting';s.turn=0;s.deadline=now()+20000;}
+ else if(s.phase==='drawing'){for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=[];s.phase='voting';s.turn=0;s.deadline=now()+25500;}
  else if(s.phase==='voting'){
-   if(s.turn<members(s).length-1){s.turn++;s.deadline=now()+20000;}
+   if(s.turn<members(s).length-1){s.turn++;s.deadline=now()+25500;}
    else completeVotes(s);
- }else if(s.phase==='reveal'){
-   if(s.turn<members(s).length-1){s.turn++;s.deadline=now()+9500;}
+ }else if(s.phase==='verdict'){s.phase='reveal';s.deadline=now()+11500;}
+ else if(s.phase==='reveal'){
+   if(s.turn<members(s).length-1){s.turn++;s.phase='verdict';s.deadline=now()+5600;}
    else if(s.round<s.rounds){s.round++;choose(s);}
    else {s.phase='results';s.deadline=0;}
  }
@@ -104,13 +119,19 @@ const module: PocketModule<State>={
      item.strokes=strokes;
      if(members(state).every(p=>state.assignments[p.id]?.strokes!==null))step(state);
    }else if(a.type==='vote'&&state.phase==='voting'){
-     const target=members(state)[state.turn]?.id;const art=Number(a.art);
+     const target=members(state)[state.turn]?.id;
      if(!target||id===target)return {state,events:notice(id,'Автор не голосует за собственную работу.')};
-     if(!state.selected.includes(art))return {state,events:notice(id,'Выбери одну из пяти картин.')};
+     const chips=a.chips;
+     if(!Array.isArray(chips)||chips.length!==5||chips.some(n=>!Number.isInteger(n)||n<0||n>3)||chips.reduce((a,b)=>a+b,0)!==3)
+      return {state,events:notice(id,'Распредели ровно три фишки между пятью оригиналами.')};
      state.votes[target]||={};
-     if(id in state.votes[target])return {state,events:notice(id,'Голос уже принят.')};
-     state.votes[target][id]=art;
+     if(id in state.votes[target])return {state,events:notice(id,'Фишки уже поставлены.')};
+     state.votes[target][id]=[...chips] as Chips;
      if(eligible(state,target,players.map(p=>p.id)).every(p=>p.id in state.votes[target]))step(state);
+   }else if(a.type==='advance'&&id===state.host&&['verdict','reveal'].includes(state.phase)){
+     // Prevent accidental double-clicks from skipping two artworks.
+     const phaseMs=state.phase==='verdict'?5600:11500;
+     if(now()>state.deadline-phaseMs+2800)step(state);
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
      state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.votes={};state.selected=[];state.turn=0;
    }

@@ -5,13 +5,13 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.6.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{const server=localStorage.getItem('pocket-works:zamazka:server');if(server)sessionStorage.removeItem('pocket-net:'+server)}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.7.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{const server=localStorage.getItem('pocket-works:zamazka:server');if(server)sessionStorage.removeItem('pocket-net:'+server)}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',SERVER_KEY=NS+'server',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const q=new URLSearchParams(location.search);
 if(q.get('server')&&/^https?:\/\//.test(q.get('server')))localStorage.setItem(SERVER_KEY,q.get('server'));
-let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
-let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===2?g.art:Number(g.art)+REAL_COUNT,edition:2})):[]}catch{return[]}})();
+let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
+let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===3?g.art:g.edition===2?(g.art>=8?g.art+46:g.art):Number(g.art)+REAL_COUNT,edition:3})):[]}catch{return[]}})();
 
 // Retry a smaller Wikimedia thumbnail when the original master is too small.
 document.addEventListener('error',e=>{
@@ -43,13 +43,13 @@ function home(){
     '<div class="museum-echo museum-echo-left"><img data-art-id="3" src="'+artworkURL(3)+'" alt=""></div>'+
     '<figure class="museum-centerpiece"><div class="museum-gilded"><img data-art-id="0" src="'+artworkURL(0)+'" alt="Ян Вермеер — Девушка с жемчужной серёжкой"><span class="museum-ribbon">НАСТОЯЩИЕ ПРОИЗВЕДЕНИЯ</span></div><figcaption><strong>Ян Вермеер</strong><span>Девушка с жемчужной серёжкой, ок. 1665</span></figcaption></figure>'+
     '<div class="museum-echo museum-echo-right"><img data-art-id="1" src="'+artworkURL(1)+'" alt=""></div>'+
-    '<span class="museum-exhibit-number">I / VII</span>'+
+    '<span class="museum-exhibit-number">I / LIV</span>'+
   '</div>'+
   '<div class="museum-control">'+
     '<button class="start-restoration" id="primary-action" data-action="practice" disabled><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Загружаем оригиналы…</strong><small>Готовим музейную экспозицию</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> По приглашению</button></div>'+
     '<div class="museum-footer"><button data-action="collection">МОЙ АРХИВ <span>'+String(saved.length).padStart(2,'0')+'</span></button>'+
-    (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'<span>7 ПОЛОТЕН · 2–8 ИГРОКОВ</span>')+'</div>'+
+    (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'<span>54 ПОЛОТНА · 2–8 ИГРОКОВ</span>')+'</div>'+
   '</div></section>','home');
  primeGallery().then(results=>{
    if(page!=='home')return;
@@ -74,9 +74,9 @@ function lobby(){
 function galleryHtml(list,select=false){return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+'</span></button>').join('')+'</div>'}
 function preview(local=false){
  const v=local?practice:view;
- change('<section class="phase-page">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+'<div class="phase-body"><div class="notice">Пять произведений. Через несколько секунд одному из них понадобится твоя кисть. Нажми на картину, чтобы рассмотреть её.</div>'+galleryHtml(v.selected)+'<p class="hint">Оригиналы исчезнут после начала реставрации. Все работы — настоящие музейные произведения.</p>'+(local?'<button class="btn primary wide" data-action="skip">Перейти к реставрации</button>':'')+'</div></section>','preview');
+ change('<section class="phase-page">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+'<div class="phase-body"><div class="notice">Пять настоящих произведений. Запомни их детали: повреждение появится в случайном месте и каждый раз будет другой формы.</div>'+galleryHtml(v.selected)+'<p class="hint">Оригиналы исчезнут после начала реставрации. Все работы — настоящие музейные произведения.</p>'+(local?'<button class="btn primary wide" data-action="skip">Перейти к реставрации</button>':'')+'</div></section>','preview');
 }
-function toolbar(){return '<div class="tools">'+[['brush','◉','Кисть'],['pencil','╱','Контур'],['spray','✣','Фактура'],['picker','◈','Пипетка'],['erase','⌫','Ластик'],['hand','✥','Панорама']].map(([id,icon,label])=>'<button class="tool'+(id==='brush'?' active':'')+'" data-tool="'+id+'" aria-label="'+label+'"><strong>'+icon+'</strong><span>'+label+'</span></button>').join('')+'</div><div class="colors">'+['#304a43','#9d4c3c','#d6ae6f','#f1e4c5','#263d57','#637f68'].map((c,i)=>'<button class="swatch'+(i===0?' active':'')+'" data-color="'+c+'" aria-label="Цвет '+(i+1)+'" style="background:'+c+'"></button>').join('')+'<input type="color" class="color-input" id="customColor" value="#304a43" aria-label="Другой цвет"></div><div class="adjust"><label for="brushSize">Размер</label><input type="range" id="brushSize" min="1" max="48" value="12"><button class="tool" data-cmd="undo" aria-label="Отменить">↶</button><button class="tool" data-cmd="redo" aria-label="Вернуть">↷</button><button class="tool" data-cmd="out" aria-label="Отдалить">−</button><button class="tool" data-cmd="in" aria-label="Приблизить">+</button><button class="tool" data-cmd="center" aria-label="К повреждению">◎</button></div>'}
+function toolbar(){return '<div class="tools">'+[['brush','◉','Кисть'],['picker','◈','Пипетка'],['erase','⌫','Ластик'],['hand','✥','Панорама']].map(([id,icon,label])=>'<button class="tool'+(id==='brush'?' active':'')+'" data-tool="'+id+'" aria-label="'+label+'"><strong>'+icon+'</strong><span>'+label+'</span></button>').join('')+'</div><div class="colors">'+['#304a43','#9d4c3c','#d6ae6f','#f1e4c5','#263d57','#637f68'].map((c,i)=>'<button class="swatch'+(i===0?' active':'')+'" data-color="'+c+'" aria-label="Цвет '+(i+1)+'" style="background:'+c+'"></button>').join('')+'<input type="color" class="color-input" id="customColor" value="#304a43" aria-label="Другой цвет"></div><div class="adjust"><label for="brushSize">Размер</label><input type="range" id="brushSize" min="1" max="48" value="12"><button class="tool" data-cmd="undo" aria-label="Отменить">↶</button><button class="tool" data-cmd="redo" aria-label="Вернуть">↷</button><button class="tool" data-cmd="out" aria-label="Отдалить">−</button><button class="tool" data-cmd="in" aria-label="Приблизить">+</button><button class="tool" data-cmd="center" aria-label="К повреждению">◎</button></div>'}
 function drawing(local=false){
  const v=local?practice:view,ass=local?v.mine:v.mine;
  if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
@@ -85,19 +85,70 @@ function drawing(local=false){
  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит мазков, используй отмену':'Мазков: '+n+' / 72'}});
  const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Мазков: '+editor.strokes.length+' / 72';
 }
+function chipDots(count){return '<span class="chip-dots">'+Array.from({length:count},()=>'<i class="chip-dot" aria-hidden="true"></i>').join('')+'</span>'}
+function updateChips(){
+ const total=chips.reduce((a,b)=>a+b,0);
+ screen.querySelectorAll('[data-chip-count]').forEach(el=>{el.textContent=chips[Number(el.dataset.chipCount)]});
+ screen.querySelectorAll('[data-chipadd]').forEach(el=>{el.disabled=total>=3});
+ screen.querySelectorAll('[data-chipsub]').forEach(el=>{el.disabled=chips[Number(el.dataset.chipsub)]===0});
+ screen.querySelectorAll('[data-stake-card]').forEach(el=>{const i=Number(el.dataset.stakeCard),n=chips[i];el.classList.toggle('has-chips',n>0);el.querySelector('[data-chip-pips]').innerHTML=chipDots(n)});
+ const remain=screen.querySelector('#chipsRemaining');if(remain)remain.innerHTML=chipDots(3-total)+'<strong>'+(3-total)+'</strong> свободно';
+ const button=screen.querySelector('[data-action="vote"]');if(button)button.disabled=total!==3;
+}
 function vote(){
  const v=view,target=v.author,isOwn=target?.id===me?.id,already=(v.voted||[]).includes(me?.id);
- const names=v.selected||[];
- change('<section class="phase-page">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Чья-то рука дрогнула',v.deadline)+'<div class="phase-body"><div class="notice"><strong>'+esc(target?.name||'Неизвестный')+'</strong> дорисовал одну из пяти работ. '+(isOwn?'Твоя работа — теперь судят остальные.':already?'Заключение принято. Ожидаем остальных.':'Какая картина отличается от оригинала?')+'</div><div class="gallery">'+names.map((id,i)=>'<div class="picture'+(choice===id?' selected':'')+'"><canvas data-art-canvas="'+id+'"></canvas><span class="caption">'+(i+1)+' · '+esc(ARTS[id].title)+'</span><span class="style">'+esc(ARTS[id].style)+'</span><div class="choice-row"><button class="mini-action" data-magnify="'+id+'" aria-label="Увеличить картину">Увеличить</button>'+(!isOwn&&!already?'<button class="mini-action accent" data-choice="'+id+'">Выбрать</button>':'')+'</div></div>').join('')+'</div>'+(!isOwn&&!already?'<button class="btn primary wide" data-action="vote" '+(choice===null?'disabled':'')+'>Подтвердить выбор</button>':'<p class="hint center">Следующая экспертиза начнётся автоматически.</p>')+'</div></section>','vote');
- screen.querySelectorAll('[data-art-canvas]').forEach(c=>{const id=Number(c.dataset.artCanvas),cand=v.candidate;renderArtwork(c,id,cand?.variation||0,cand?.strokes||[],cand?.art===id)});
+ const sessionKey=v.round+':'+v.turn;
+ if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=[0,0,0,0,0]}
+ const count=(v.voted||[]).length,expected=v.participants.length-1;
+ change('<section class="phase-page expert-phase">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Суд реставраторов',v.deadline)+
+ '<div class="phase-body expert-layout"><div class="expert-focus"><span class="step-stamp">I. ПОДОЗРИТЕЛЬНЫЙ ЭКСПОНАТ</span><h3>'+esc(target?.name||'Неизвестный реставратор')+'</h3><p class="hint">Перед тобой восстановленная картина. Найди среди оригиналов ту, с которой она была создана.</p><div class="expert-focus-frame"><canvas id="examinedCanvas" aria-label="Восстановленная картина"></canvas></div><p class="expert-observers">Получено заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
+ '<div class="expert-ballot"><span class="step-stamp">II. МУЗЕЙНЫЙ КАТАЛОГ</span><h3>Куда поставить фишки?</h3><p class="hint">'+(isOwn?'Это твоя работа. Остальные раздают свои три фишки.':already?'Твои фишки приняты. Ждём остальных реставраторов.':'Раздай ровно три фишки между любыми оригиналами. Каждая правильная приносит очки.')+'</p>'+
+ '<div class="stake-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="stake-frame"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager"><span class="stake-number">'+String(i+1).padStart(2,'0')+'</span></div><div class="stake-details"><strong>'+esc(ARTS[id]?.title||'Картина')+'</strong><small>'+esc(ARTS[id]?.artist||'')+'</small></div>'+(!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с картины '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на картину '+(i+1)+'">＋</button></div>':'<span class="stake-locked">№ '+(i+1)+'</span>')+'</div>').join('')+'</div>'+
+ (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div><button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button></div>':'<div class="stake-wait"><span class="busy"></span> Судейская коллегия рассматривает работу…</div>')+
+ '</div></div></section>','vote');
+ const targetCanvas=screen.querySelector('#examinedCanvas');
+ if(v.candidate&&targetCanvas)renderArtwork(targetCanvas,v.candidate.art,v.candidate.variation,v.candidate.strokes||[],true);
+ if(!isOwn&&!already)updateChips();
+}
+function verdict(){
+ const v=view,g=v.gallery?.[v.turn];if(!g)return;
+ const people=v.participants||[];
+ const ballotTotals=v.selected.map((id,i)=>Object.values(g.votes||{}).reduce((n,bet)=>n+(Array.isArray(bet)?bet[i]||0:0),0));
+ const stakeNames=(index)=>people.filter(p=>p.id!==g.id).flatMap(p=>Array.from({length:Array.isArray(g.votes?.[p.id])?(g.votes[p.id][index]||0):0},()=>p.name));
+ change('<section class="phase-page verdict-phase">'+head('ПРОТОКОЛ ГОЛОСОВАНИЯ · '+(v.turn+1)+' / '+people.length,'Фишки уже на столе',v.deadline)+
+ '<div class="phase-body"><div class="verdict-intro"><span class="step-stamp">I. ОТКРЫТИЕ БЮЛЛЕТЕНЕЙ</span><h3>'+esc(g.name)+' — реставратор под следствием</h3><p>Ставки всех участников раскрыты. Но какой из пяти подлинников правильный, станет известно лишь через мгновение.</p></div>'+
+ '<div class="verdict-gallery">'+v.selected.map((id,i)=>'<div class="verdict-card"><div class="verdict-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'"><span>№ '+(i+1)+'</span></div><strong>'+esc(ARTS[id]?.title||'Картина')+'</strong><div class="verdict-tokens">'+chipDots(ballotTotals[i])+'<em>'+ballotTotals[i]+' фиш.</em></div><small>'+esc(stakeNames(i).join(' · ')||'Без ставок')+'</small></div>').join('')+'</div>'+
+ '<div class="verdict-footer"><span>Следующий этап — сравнение с подлинником</span>'+(me?.id===v.host?'<button class="btn ghost" data-action="advance">Раскрыть сейчас ↗</button>':'<span class="busy"></span>')+'</div></div></section>','verdict');
 }
 function reveal(local=false){
- const v=local?practice:view,index=local?0:v.turn,g=local?{name:'Твоя реставрация',...v.mine,strokes:v.strokes,votes:{}}:v.gallery?.[index];
+ const v=local?practice:view,index=local?0:v.turn;
+ const g=local?{name:'Твоя реставрация',...v.mine,strokes:v.strokes,votes:{}}:v.gallery?.[index];
  if(!g)return;
- const votes=Object.values(g.votes||{}),hits=votes.filter(x=>Number(x)===g.art).length;
- change('<section class="phase-page">'+head(local?'ТРЕНИРОВКА · ГОТОВО':'РАЗОБЛАЧЕНИЕ · '+(index+1)+' / '+v.participants.length,'Подлинник против копии',local?0:v.deadline)+'<div class="phase-body"><h3>'+esc(g.name)+'</h3><p class="hint">'+esc(ARTS[g.art].title)+' · '+esc(ARTS[g.art].style)+'</p><div class="compare"><div><canvas id="origCanvas"></canvas><small>Подлинник</small></div><div><canvas id="restCanvas"></canvas><small>Реставрация</small></div></div><div class="subtle-rule"></div><div class="notice">'+(local?'Сравни мазки с оригиналом. Лучшие работы останутся в личной коллекции.':'Подделку заметили '+hits+' из '+votes.length+' голосующих.')+'</div>'+(local?'<div class="stack" style="margin-top:18px"><button class="btn primary" data-action="practice">Ещё одна работа</button><button class="btn ghost" data-action="collection">Моя галерея</button><button class="btn ghost" data-action="menu">В главное меню</button></div>':'<p class="hint center">Следующее разоблачение начнётся автоматически.</p>')+'</div></section>','reveal');
- renderArtwork(screen.querySelector('#origCanvas'),g.art,0,null,false);
- renderArtwork(screen.querySelector('#restCanvas'),g.art,g.variation,g.strokes||[],true);
+ const idIndex=local?-1:v.selected.indexOf(g.art),others=Math.max(1,(v.participants?.length||2)-1);
+ const breakdown=local?[]:v.participants.filter(p=>p.id!==g.id).map(p=>{
+  const ballot=g.votes?.[p.id],correct=Array.isArray(ballot)?ballot[idIndex]||0:0;
+  const total=Array.isArray(ballot)?ballot.reduce((a,b)=>a+b,0):0;
+  return {name:p.name,correct,wrong:total-correct,points:Math.round(correct*100/others)};
+ });
+ const wrong=breakdown.reduce((n,x)=>n+x.wrong,0);
+ const bonus=Math.round(wrong*50/others);
+ change('<section class="phase-page reveal-phase">'+head(local?'УЧЕБНАЯ РЕСТАВРАЦИЯ · ГОТОВО':'РАЗОБЛАЧЕНИЕ · '+(index+1)+' / '+v.participants.length,'Подлинник найден',local?0:v.deadline)+
+ '<div class="phase-body reveal-layout"><div class="reveal-main"><span class="step-stamp">II. СНЯТИЕ ПОДДЕЛКИ</span><h3>'+esc(g.name)+'</h3><p class="hint">Подлинник: <strong>'+esc(ARTS[g.art].title)+'</strong> · '+esc(ARTS[g.art].artist)+'</p>'+
+ '<div class="unveil-frame" id="unveilStage" style="--split:100%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Подлинник"></canvas><span class="unveil-label left">РЕСТАВРАЦИЯ</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
+ '<label class="unveil-control" for="unveilRange">Сравнение: двигай разделитель <input id="unveilRange" type="range" min="0" max="100" value="100" aria-label="Показать фрагмент оригинала"></label>'+
+ (g.source?'<p class="hint">'+esc(g.source)+'</p>':'')+'</div>'+
+ '<div class="reveal-brief"><span class="step-stamp">III. ПРОТОКОЛ ЭКСПЕРТИЗЫ</span>'+
+ (local?'<h3>Личная реставрация</h3><p>Сдвигай разделитель и сравни свою работу с настоящим изображением.</p>':
+ '<div class="outcome-head"><span>ПРАВИЛЬНЫЙ ОТВЕТ</span><h3>Полотно № '+(idIndex+1)+'</h3><strong>'+esc(ARTS[g.art].title)+'</strong></div>'+
+ '<div class="audit-lines">'+breakdown.map(x=>'<div class="audit-line"><span>'+esc(x.name)+'</span><span class="audit-chips">'+chipDots(x.correct)+'<small>'+x.correct+' верно · '+x.wrong+' мимо</small></span><strong>+'+x.points+'</strong></div>').join('')+'</div>'+
+ '<div class="outcome-bonus"><span>Реставратору за '+wrong+' ошибочных фишек</span><strong>+'+bonus+' очк.</strong></div>')+
+ '<p class="hint">За точную фишку — 100 очков в партии на двоих. Для большой компании очки нормируются по числу судей, чтобы партии оставались честными.</p>'+
+ (local?'<div class="stack"><button class="btn primary" data-action="practice">Новая реставрация</button><button class="btn ghost" data-action="collection">Моя галерея</button><button class="btn ghost" data-action="menu">В главное меню</button></div>':(me?.id===v.host?'<button class="btn primary" data-action="advance">Следующий экспонат ↗</button>':'<div class="stake-wait">Ожидаем следующий экспонат…</div>'))+
+ '</div></div></section>','reveal');
+ const source=screen.querySelector('#restCanvas'),original=screen.querySelector('#origCanvas'),stage=screen.querySelector('#unveilStage');
+ Promise.all([renderArtwork(original,g.art,0,null,false),renderArtwork(source,g.art,g.variation,g.strokes||[],true)]).then(()=>{
+  if(stage?.isConnected){requestAnimationFrame(()=>{if(stage.isConnected)stage.style.setProperty('--split','50%')});const range=screen.querySelector('#unveilRange');if(range)range.value='50';}
+ });
 }
 function results(){
  const rank=[...view.participants].sort((a,b)=>(view.scores[b.id].mask+view.scores[b.id].eye)-(view.scores[a.id].mask+view.scores[a.id].eye));
@@ -107,21 +158,26 @@ function collection(){
  change('<section class="page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2>'+(saved.length?'<div class="gallery">'+saved.map((g,i)=>'<button class="picture" data-saved="'+i+'"><canvas data-saved-canvas="'+i+'"></canvas><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
  screen.querySelectorAll('[data-saved-canvas]').forEach(c=>{const g=saved[Number(c.dataset.savedCanvas)];renderArtwork(c,g.art,g.variation,g.strokes,true)});
 }
-function saveArtwork(art,variation,strokes){saved=[{art,variation,strokes,time:Date.now(),edition:2},...saved].slice(0,24);try{localStorage.setItem(GALLERY_KEY,JSON.stringify(saved))}catch{}}
-function persistPractice(){if(practice)try{localStorage.setItem(PRACTICE_KEY,JSON.stringify({phase:practice.phase,round:practice.round,rounds:practice.rounds,selected:practice.selected,deadline:practice.deadline,mine:practice.mine,strokes:practice.strokes,edition:2}))}catch{}}
-function newPractice(){const selected=[...PLAYABLE_IDS].sort(()=>Math.random()-.5).slice(0,5);practice={phase:'preview',round:1,rounds:1,selected,deadline:Date.now()+25000,mine:{art:selected[0],variation:Math.floor(Math.random()*4)},strokes:[]};persistPractice();preview(true)}
-function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition!==2){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;if(p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else preview(true)}catch{newPractice()}}
+function saveArtwork(art,variation,strokes){saved=[{art,variation,strokes,time:Date.now(),edition:3},...saved].slice(0,24);try{localStorage.setItem(GALLERY_KEY,JSON.stringify(saved))}catch{}}
+function persistPractice(){if(practice)try{localStorage.setItem(PRACTICE_KEY,JSON.stringify({phase:practice.phase,round:practice.round,rounds:practice.rounds,selected:practice.selected,deadline:practice.deadline,mine:practice.mine,strokes:practice.strokes,edition:3}))}catch{}}
+function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preview',round:1,rounds:1,selected,deadline:Date.now()+25000,mine:{art:selected[Math.floor(Math.random()*5)],variation:Math.floor(Math.random()*0xffffffff)},strokes:[]};persistPractice();preview(true)}
+function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;if(p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else preview(true)}catch{newPractice()}}
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=Date.now()+105000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
 function renderView(){
  if(!view)return;
- const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id);
+ const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
+ if(page==='vote'&&view.phase==='voting'&&key===lastUiKey){
+  const ready=screen.querySelector('#votesReady');if(ready)ready.textContent=(view.voted||[]).length+' / '+(view.participants.length-1);
+  return;
+ }
  lastUiKey=key;choice=null;
  if(view.phase==='lobby')lobby();
  else if(view.phase==='preview')preview();
  else if(view.phase==='drawing')drawing();
  else if(view.phase==='voting')vote();
+ else if(view.phase==='verdict')verdict();
  else if(view.phase==='reveal')reveal();
  else if(view.phase==='results')results();
  lastUiKey=key;
@@ -139,8 +195,8 @@ async function connect(mode){
   const response=await fetch(u.origin+'/health',{cache:'no-store',signal:AbortSignal.timeout(5000)});
   if(response.ok){
    const health=await response.json();
-   if(health?.gameId==='zamazka'&&Number(health.minPlayers)!==2){
-    modal('Сервер использует старые правила','<p class="hint">Игровой сервер ещё требует трёх участников. Закрой окно старого сервера на Windows, заново запусти <strong>INSTALL-AND-START.bat</strong>, скопируй новый HTTPS-адрес и создай новую комнату.</p><p class="hint">Версия браузерной игры сама не обновляет уже запущенный сервер.</p>',[['Понятно',closeDialog,'primary']]);
+   if(health?.gameId==='zamazka'&&(Number(health.minPlayers)!==2||Number(health.rulesVersion||0)<2)){
+    modal('Сервер использует старые правила','<p class="hint">Этот сервер ещё не поддерживает новые правила фишек и повреждений. Закрой окно старого сервера на Windows, заново запусти <strong>INSTALL-AND-START.bat</strong>, скопируй новый HTTPS-адрес и создай новую комнату.</p><p class="hint">Для версии 1.7 нужен обновлённый сервер с rulesVersion 2.</p>',[['Понятно',closeDialog,'primary']]);
     return;
    }
   }
@@ -218,8 +274,10 @@ function settings(){modal('Настройки','<label class="field" for="settin
  ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');localStorage.setItem(SERVER_KEY,dialog.querySelector('#settingServer').value.trim());beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']])}
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 screen.addEventListener('click',e=>{
- const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved]');if(!b)return;
+ const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub]');if(!b)return;
  if(b.hasAttribute('data-magnify')){magnify(Number(b.dataset.magnify));return}
+ if(b.hasAttribute('data-chipadd')){const i=Number(b.dataset.chipadd);if(chips.reduce((a,b)=>a+b,0)<3){chips[i]++;sound(450);updateChips()}return}
+ if(b.hasAttribute('data-chipsub')){const i=Number(b.dataset.chipsub);if(chips[i]>0){chips[i]--;sound(360);updateChips()}return}
  if(b.hasAttribute('data-choice')){choice=Number(b.dataset.choice);screen.querySelectorAll('[data-choice]').forEach(x=>x.closest('.picture')?.classList.toggle('selected',Number(x.dataset.choice)===choice));const v=screen.querySelector('[data-action=vote]');if(v)v.disabled=false;return}
  if(b.hasAttribute('data-inspect')){if(page==='preview'||page==='vote'&&(view?.author?.id===me?.id||(view?.voted||[]).includes(me?.id)))inspect(Number(b.dataset.inspect));return}
  if(b.hasAttribute('data-saved')){const g=saved[Number(b.dataset.saved)];modal('Реставрация из фонда','<div class="compare"><div><img src="'+artworkURL(g.art)+'" style="width:100%" alt=""><small>Подлинник</small></div><div><canvas id="savedFull"></canvas><small>Твоя работа</small></div></div>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#savedFull'),g.art,g.variation,g.strokes,true);return}
@@ -236,7 +294,8 @@ screen.addEventListener('click',e=>{
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
  else if(action==='submit')doSubmit();
- else if(action==='vote'&&choice!==null){try{net?.sendGame({type:'vote',art:choice});b.disabled=true;notify('Заключение отправлено')}catch{notify('Потеряно соединение')}}
+ else if(action==='vote'&&chips.reduce((a,b)=>a+b,0)===3){try{net?.sendGame({type:'vote',chips:[...chips]});b.disabled=true;notify('Три фишки поставлены')}catch{notify('Потеряно соединение')}}
+ else if(action==='advance')net?.sendGame({type:'advance'});
  else if(action==='next')net?.sendGame({type:'next'});
 });
 function tick(){
@@ -245,6 +304,7 @@ function tick(){
  if(clock&&v?.deadline){const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');clock.classList.toggle('urgent',s<=10)}
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}}
 }
+screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
 setInterval(tick,350);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
 if(q.get('room'))setup('join');else home();
 // Shared update manager owns service worker registration and activation.

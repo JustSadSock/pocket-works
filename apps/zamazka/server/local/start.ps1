@@ -44,15 +44,15 @@ function Update-Game-Rules {
  $destination=Join-Path $here 'live-module.ts'
  $temporary=$destination+'.download'
  $source='https://raw.githubusercontent.com/JustSadSock/pocket-works/main/apps/zamazka/server/module.ts'
- Write-Host '[RULES] Checking current 2-player game rules...' -ForegroundColor Cyan
+ Write-Host '[RULES] Updating gallery, damage and 3-token betting rules...' -ForegroundColor Cyan
  try {
   Invoke-WebRequest -Uri $source -OutFile $temporary -UseBasicParsing -TimeoutSec 30
   $contents=Get-Content $temporary -Raw
-  if($contents -notmatch 'export\s+const\s+MIN_PLAYERS\s*=\s*2\s*;'){
+  if($contents -notmatch 'export\s+const\s+MIN_PLAYERS\s*=\s*2\s*;' -or $contents -notmatch 'export\s+const\s+RULESET_VERSION\s*=\s*2\s*;'){
    throw 'Downloaded game module does not advertise two-player support'
   }
   Move-Item -Path $temporary -Destination $destination -Force
-  Write-Host '  Current rules installed: minimum 2 players.' -ForegroundColor Green
+  Write-Host '  Current rules installed: minimum 2 players, protocol revision 2.' -ForegroundColor Green
  }catch {
   Remove-Item $temporary -ErrorAction SilentlyContinue
   if(-not $LocalOnly){throw ('Cannot download current multiplayer rules from GitHub. Check your internet: '+$_.Exception.Message)}
@@ -95,7 +95,7 @@ try {
   if($serverProcess.HasExited){break}
   try{
    $health=Invoke-RestMethod -Uri "http://127.0.0.1:$port/health" -TimeoutSec 2
-   if($health.ok -and $health.gameId -eq 'zamazka' -and $health.minPlayers -eq 2){$healthy=$true;break}
+   if($health.ok -and $health.gameId -eq 'zamazka' -and $health.minPlayers -eq 2 -and $health.rulesVersion -eq 2){$healthy=$true;break}
   }catch{}
   Start-Sleep -Milliseconds 600
  }

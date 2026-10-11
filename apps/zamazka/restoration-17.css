@@ -1,0 +1,101 @@
+/* GRAND RESTORATION · the museum turns into a live tribunal.
+   Brass wagers are deliberately tactile; the art, not cards, dominates. */
+.expert-phase,.verdict-phase,.reveal-phase{background:#26211d;color:#f0e7d7}
+.expert-phase .phase-body,.verdict-phase .phase-body,.reveal-phase .phase-body{max-width:1540px;margin:0 auto;color:#f0e7d7}
+.expert-phase .hint,.verdict-phase .hint,.reveal-phase .hint{color:#bfafa0}
+.expert-phase .step-stamp,.verdict-phase .step-stamp,.reveal-phase .step-stamp{display:inline-block;font:700 10px/1.4 system-ui,sans-serif;letter-spacing:.23em;color:#d3ab6d;text-transform:uppercase}
+.expert-phase h3,.verdict-phase h3,.reveal-phase h3{font:italic 28px/1.12 Georgia,serif;letter-spacing:-.035em;color:#f2e4cd;margin:7px 0 11px}
+.expert-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:26px}
+.expert-focus{border-bottom:1px solid #796653;padding-bottom:23px}
+.expert-focus-frame{border:10px ridge #aa8a5c;box-shadow:0 21px 39px #100c09bd,0 0 0 2px #2c1b10;background:#1c1a15;max-width:780px;margin:16px auto}
+.expert-focus-frame canvas{width:100%;aspect-ratio:4/3;display:block}
+.expert-observers{text-align:center;color:#beaa8c;font:12px system-ui,sans-serif;letter-spacing:.03em}
+.expert-observers strong{color:#ffe1a1}
+.expert-ballot>p{max-width:700px}
+.stake-gallery,.verdict-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:20px 0}
+.stake-card{position:relative;min-width:0;background:#3a3128;border:1px solid #705940;box-shadow:0 4px #17120d,0 7px 12px #0004;display:flex;flex-direction:column;transition:background .2s,border-color .2s}
+.stake-card.has-chips{background:#4b3828;border-color:#ca9e5f;box-shadow:inset 0 0 0 1px #be975c,0 4px #17120d}
+.stake-frame{position:relative;padding:7px;background:#302821}
+.stake-frame img,.verdict-image img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#201d19;border:4px ridge #8f714b}
+.stake-number{position:absolute;left:16px;top:15px;background:#201710e3;color:#f8deb0;padding:4px 7px;font:700 10px system-ui,sans-serif;letter-spacing:.1em}
+.stake-details{padding:7px 10px 6px;display:flex;flex-direction:column;gap:4px;min-height:54px}
+.stake-details strong{font:italic 15px/1.15 Georgia,serif;color:#f7e5c7}
+.stake-details small{font:10px/1.3 system-ui,sans-serif;color:#baa58c}
+.stake-actions{display:grid;grid-template-columns:43px minmax(0,1fr) 43px;align-items:stretch;border-top:1px solid #786046;min-height:48px}
+.stake-actions button{background:#5f4b33;color:#f7e2bd;border:0;border-right:1px solid #876c4a;font:26px Georgia,serif;transition:filter .12s,background .12s}
+.stake-actions button:last-child{background:#926f3c;border:0;border-left:1px solid #a5885c}
+.stake-actions button:active{filter:brightness(1.25);transform:scale(.95)}
+.stake-actions button:disabled{opacity:.35;cursor:not-allowed}
+.stake-amount{display:flex;align-items:center;justify-content:center;gap:6px;color:#f7e7cb;font:18px Georgia,serif}
+.stake-locked{display:block;text-align:center;padding:15px;color:#c4a779;letter-spacing:.12em}
+.chip-dots{display:inline-flex;gap:3px;align-items:center;flex-wrap:wrap}
+.chip-dot{display:inline-block;width:15px;height:15px;flex:none;border-radius:50%;background:radial-gradient(circle at 30% 27%,#ffeca9,#cca362 44%,#79502b 82%);border:2px ridge #9e713a;box-shadow:0 2px 0 #32200e,inset 0 0 0 2px #ebcd84}
+.stake-tray{position:sticky;bottom:0;background:#30251bf5;border-top:2px solid #b08c59;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(12px,env(safe-area-inset-right)) calc(13px + env(safe-area-inset-bottom));box-shadow:0 -12px 24px #1b120b90;z-index:3}
+.stake-tray #chipsRemaining{display:flex;align-items:center;gap:5px;font:11px system-ui,sans-serif;color:#dec8a8}
+.stake-tray .btn{font-size:12px;min-width:150px;min-height:49px}
+.stake-wait{padding:18px;color:#e4c9a2;font:italic 15px Georgia,serif;text-align:center;border:1px dashed #806a50;margin:20px 0}
+.verdict-intro{max-width:780px}
+.verdict-intro p{font:15px/1.55 Georgia,serif;color:#c8b7a3}
+.verdict-card{min-width:0;background:#3d3228;padding:9px;border:1px solid #856a4a;animation:disclose .55s both}
+.verdict-card:nth-child(2){animation-delay:.1s}.verdict-card:nth-child(3){animation-delay:.2s}.verdict-card:nth-child(4){animation-delay:.3s}.verdict-card:nth-child(5){animation-delay:.4s}
+@keyframes disclose{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+.verdict-image{position:relative}.verdict-image img{border-width:5px}
+.verdict-image>span{position:absolute;top:6px;left:6px;background:#271d13eb;color:#f9ddb0;padding:5px 9px;font:700 11px system-ui,sans-serif}
+.verdict-card>strong{font:italic 17px/1.3 Georgia,serif;display:block;color:#f2dfc5;min-height:40px;padding:8px 3px 0}
+.verdict-tokens{border-top:1px solid #766045;padding:9px 2px;display:flex;justify-content:space-between;align-items:center;gap:6px;min-height:41px}
+.verdict-tokens em{font:11px system-ui,sans-serif;color:#d7b17a;white-space:nowrap}
+.verdict-card>small{color:#bfa78a;display:block;font:11px/1.5 system-ui,sans-serif;word-break:break-word;min-height:31px}
+.verdict-footer{border-top:1px solid #8c7559;padding:19px 2px 25px;display:flex;justify-content:space-between;align-items:center;gap:12px;color:#c9b392;font:italic 15px Georgia,serif}
+.reveal-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:26px}
+.unveil-frame{position:relative;max-width:850px;width:100%;aspect-ratio:4/3;border:12px ridge #b39762;box-shadow:0 24px 45px #090604bd;margin:17px auto;overflow:hidden;background:#241b16;isolation:isolate}
+.unveil-frame canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.unveil-top{clip-path:inset(0 0 0 var(--split));transition:clip-path 2.3s cubic-bezier(.23,.8,.34,1)}
+.unveil-ruler{position:absolute;z-index:1;left:var(--split);top:0;bottom:0;width:3px;transform:translateX(-1px);background:#f7deb1;box-shadow:0 0 0 1px #493019,0 0 14px #f9d888;transition:left 2.3s cubic-bezier(.23,.8,.34,1)}
+.unveil-label{position:absolute;z-index:2;bottom:8px;background:#1d170ddb;color:#ffebc8;padding:5px 8px;letter-spacing:.16em;font:700 9px system-ui,sans-serif}
+.unveil-label.left{left:7px}.unveil-label.right{right:7px}
+.unveil-control{display:flex;align-items:center;gap:15px;font:12px system-ui,sans-serif;color:#d5bd97;max-width:850px;margin:auto}
+.unveil-control input{flex:1;accent-color:#d2a25c;min-width:80px;touch-action:pan-x}
+.reveal-brief{border-top:1px solid #967b59;padding-top:19px}
+.outcome-head{background:#443426;border-left:5px solid #d2a35f;padding:15px 18px;margin:16px 0 20px}
+.outcome-head>span{font:700 10px system-ui,sans-serif;letter-spacing:.17em;color:#d1ac76}
+.outcome-head h3{font:italic 39px Georgia,serif;margin:8px 0;color:#ffe5ac}
+.outcome-head strong{font:17px Georgia,serif;color:#f4dcc0}
+.audit-lines{border-top:1px solid #715d46}
+.audit-line{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) auto;align-items:center;gap:11px;padding:14px 2px;border-bottom:1px solid #715d46}
+.audit-line>span:first-child{font:italic 14px Georgia,serif;overflow-wrap:anywhere}
+.audit-line>strong{font:700 20px Georgia,serif;color:#ead09b}
+.audit-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.audit-chips small{font:10px system-ui,sans-serif;color:#c6ae91}
+.outcome-bonus{margin:17px 0;background:#3e3224;padding:16px;display:flex;justify-content:space-between;gap:14px;align-items:center;font:13px Georgia,serif;color:#dbc09b}
+.outcome-bonus strong{font-size:21px;color:#f6d48b;white-space:nowrap}
+.reveal-brief>.btn{margin-top:15px;width:100%}
+@media(min-width:1020px){
+ .expert-layout{grid-template-columns:minmax(0,1.18fr) minmax(410px,.82fr);gap:35px}
+ .expert-focus{border-bottom:0;border-right:1px solid #796653;padding:10px 28px 15px 0;align-self:start;position:sticky;top:15px}
+ .stake-gallery,.verdict-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .verdict-gallery{grid-template-columns:repeat(5,minmax(0,1fr));gap:13px}
+ .reveal-layout{grid-template-columns:minmax(0,1.45fr) minmax(325px,.7fr);gap:32px}
+ .reveal-brief{border-top:0;border-left:1px solid #806d54;padding:10px 0 0 25px}
+ .stake-tray{position:relative;bottom:auto;margin-top:18px}
+}
+@media(max-width:500px){
+ .expert-phase h3,.verdict-phase h3,.reveal-phase h3{font-size:24px}
+ .stake-gallery{gap:8px}
+ .stake-card .stake-details{min-height:65px}
+ .stake-details strong{font-size:13px}
+ .stake-actions{grid-template-columns:38px minmax(0,1fr) 38px}
+ .chip-dot{height:13px;width:13px}
+ .verdict-gallery{gap:8px}
+ .verdict-card{padding:6px}
+ .verdict-card>strong{font-size:13px;min-height:48px}
+ .verdict-tokens{align-items:flex-start;flex-direction:column}
+ .verdict-footer{flex-direction:column;align-items:stretch}
+ .unveil-frame{border-width:8px}
+ .audit-line{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px}
+ .audit-line>span:first-child{font-size:13px}
+ .stake-tray{margin:0 -14px}
+}
+@media(prefers-reduced-motion:reduce){
+ .verdict-card{animation:none}
+ .unveil-top,.unveil-ruler{transition:none}
+}
