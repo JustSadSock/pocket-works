@@ -8,7 +8,7 @@ Launch → gallery → create a canvas (portrait, square or landscape) → draw 
 
 ### Controls
 
-- One pointer draws. Two pointers pan, zoom and rotate the paper; pinch cancels an uncommitted stroke.
+- In Direct and Offset modes one pointer draws. In Precision mode, the leading pointer aims without painting until the other hand holds the draw button. Two pointers pan, zoom and rotate the paper; pinch cancels an uncommitted stroke.
 - **Точно:** visible nib is offset above the finger; the cursor reveals the precise stroke position.
 - **Обычно:** the brush follows the finger directly.
 - Size and opacity use the lower hand-reachable tool strip.
