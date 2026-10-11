@@ -45,3 +45,5 @@ h1,h2,h3,p{margin:0}h1,h2{font-family:Georgia,"Times New Roman",serif;letter-spa
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .abort-row{margin:24px 0 0;border-top:1px dotted #baa989;padding-top:13px;text-align:center}.abort-control{font:700 10px 'Courier New',monospace;letter-spacing:.04em;text-decoration:underline;text-underline-offset:3px;color:#786851;border:0;background:transparent;padding:14px 12px;min-height:44px}
+
+.workshop-trigger{background:none;border:0;padding:6px 7px;color:#9bac8c;text-decoration:underline;text-underline-offset:3px;min-height:32px;font:700 10px 'Courier New',monospace;cursor:pointer}
