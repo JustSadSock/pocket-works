@@ -109,7 +109,7 @@ const module: PocketModule<State>={
      state.votes[target][id]=art;
      if(eligible(state,target,players.map(p=>p.id)).every(p=>p.id in state.votes[target]))step(state);
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
-     state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.votes={};state.selected=[];state.turn=0;
+     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.votes={};state.selected=[];state.turn=0;
    }
    return {state,events:emit(state)};
  }
