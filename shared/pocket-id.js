@@ -236,11 +236,11 @@ nicknameInput.addEventListener('input',()=>{
     publish(null);mode='create';display();
   }
   const query=new URLSearchParams(location.search),result=query.get('pocket-id');
-  if(result==='welcome'||result==='error') {
+  if(result==='welcome'||result==='error'||result==='login') {
     query.delete('pocket-id');const reason=query.get('reason');query.delete('reason');
     history.replaceState(history.state,'',location.pathname+(query.toString()?'?'+query:'')+location.hash);
     openDialog();
     if(result==='error') message('Google sign-in was unsuccessful: '+(reason||'unknown error').replaceAll('_',' '),'error');
-    else message('Google account connected. Set your nickname and avatar to finish.','success');
+    else if(result==='welcome') message('Google account connected. Set your nickname and avatar to finish.','success');
   }
 })();
