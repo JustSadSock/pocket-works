@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "jam-tape",
+  "name": "ЛЕНТА",
+  "shortName": "ЛЕНТА",
+  "description": "Совместная музыкальная party-студия. Живые инструменты, лупы, персональные дорожки, независимый звук и PocketLAN.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T01:45:00+03:00",
+  "changelog": [
+    "Три музыкальных инструмента, живая игра и запись индивидуальных дублей.",
+    "Независимые переключатели слышимости, обрезка клипов, микширование и экспорт WAV.",
+    "Одиночная студия и групповая игра через PocketLAN с сохранением эскизов."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#e8663b",
+  "backgroundColor": "#f1e9d9",
+  "themeColor": "#233631",
+  "orientation": "any",
+  "cacheName": "jam-tape-v1.0.0",
+  "storageNamespace": "pocket-works:jam-tape",
+  "tags": [
+    "party",
+    "music",
+    "multiplayer",
+    "creative",
+    "lan"
+  ],
+  "order": 344
+}

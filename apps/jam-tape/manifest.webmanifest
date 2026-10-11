@@ -1,0 +1,20 @@
+{
+  "id": "/apps/jam-tape/",
+  "name": "ЛЕНТА — общая музыка",
+  "short_name": "ЛЕНТА",
+  "description": "Музыкальная party-студия для друзей",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f1e9d9",
+  "theme_color": "#233631",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
