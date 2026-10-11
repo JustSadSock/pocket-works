@@ -33,12 +33,24 @@ function home(){
     '<span class="museum-exhibit-number">I / VII</span>'+
   '</div>'+
   '<div class="museum-control">'+
-    '<button class="start-restoration" id="primary-action" data-action="practice"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Начать реставрацию</strong><small>Один пробный раунд · без регистрации</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
+    '<button class="start-restoration" id="primary-action" data-action="practice" disabled><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Загружаем оригиналы…</strong><small>Готовим музейную экспозицию</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> По приглашению</button></div>'+
     '<div class="museum-footer"><button data-action="collection">МОЙ АРХИВ <span>'+String(saved.length).padStart(2,'0')+'</span></button>'+
     (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'<span>7 ПОЛОТЕН · 3–8 ИГРОКОВ</span>')+'</div>'+
   '</div></section>','home');
- primeGallery().then(results=>{if(page==='home'&&results.every(x=>x.status==='rejected'))notify('Для первой загрузки оригиналов нужен интернет')});
+ primeGallery().then(results=>{
+   if(page!=='home')return;
+   const primary=screen.querySelector('#primary-action');
+   if(!primary)return;
+   const ready=results.every(r=>r.status==='fulfilled');
+   primary.disabled=!ready;
+   primary.querySelector('strong').textContent=ready?'Начать реставрацию':'Оригиналы пока недоступны';
+   primary.querySelector('small').textContent=ready?'Один пробный раунд · без регистрации':'Нужен интернет для первой загрузки';
+   if(!ready){
+     const foot=screen.querySelector('.museum-footer');
+     const retry=document.createElement('button');retry.dataset.action='retry-gallery';retry.textContent='ПОВТОРИТЬ ЗАГРУЗКУ ↗';foot?.append(retry);
+   }
+ });
 }
 function setup(mode){change('<section class="page"><div class="section-label">ПРИЁМНАЯ / '+(mode==='create'?'НОВАЯ КОМНАТА':'ПРИСОЕДИНЕНИЕ')+'</div><h2>'+(mode==='create'?'Открыть выставку':'Найти выставку')+'</h2><label class="field" for="who">Имя реставратора</label><input class="input" id="who" maxlength="22" autocomplete="nickname" value="'+esc(localStorage.getItem(NAME_KEY)||'Реставратор')+'"><label class="field" for="address">Адрес PocketNet</label><input class="input" id="address" type="url" inputmode="url" placeholder="https://ваш-игровой-сервер" value="'+esc(localStorage.getItem(SERVER_KEY)||'')+'"><p class="hint">Интернет-игра требует запущенного PocketNet-сервера. Если он не настроен, тренировка полностью доступна офлайн.</p>'+(mode==='join'?'<label class="field" for="room">Ссылка или идентификатор комнаты</label><input class="input" id="room" placeholder="UUID комнаты" value="'+esc(q.get('room')||'')+'">':'')+'<div class="subtle-rule"></div><div class="stack"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+(mode==='create'?'Создать комнату':'Присоединиться')+'</button><button class="btn ghost" data-action="menu">Назад</button></div></section>','setup')}
 function lobby(){
@@ -144,6 +156,7 @@ screen.addEventListener('click',e=>{
  const action=b.dataset.action;sound();
  if(action==='create'||action==='join')setup(action);
  else if(action==='practice')newPractice();
+ else if(action==='retry-gallery')home();
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
  else if(action==='menu'){if(net||practice&&practice.phase==='drawing'){modal('Покинуть выставку?','<p class="hint">Текущая партия будет покинута. Несданные мазки сохраняются на устройстве.</p>',[['Покинуть',()=>{closeDialog();home()},'primary'],['Остаться',closeDialog,'ghost']])}else home()}
