@@ -52,6 +52,8 @@ jobs:
           node --check pocket-id/hub.mjs
           node --check pocket-cloud/hub.mjs
           node --check shared/capabilities/cloud.js
+          node shared/capabilities/cloud.test.mjs
+          node --check apps/folio/app.js
           node --check apps/folio/cloud-sync.js
           node --check apps/zamazka/cloud-sync.js
           node --check shared/pocket-id.js
