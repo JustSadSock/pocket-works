@@ -75,7 +75,7 @@ export class PocketCloud {
     return json({error:'invalid_payload'},400);
   const size=encoder.encode(payload).length;
   if(size>MAX_ITEM_BYTES)return json({error:'item_too_large',maxItemBytes:MAX_ITEM_BYTES},413);
-  if(!old&&this.one('SELECT COUNT(*) AS n FROM items')?.n>=MAX_ROWS)
+  if((!old||old.deleted)&&this.one('SELECT COUNT(*) AS n FROM items WHERE deleted=0')?.n>=MAX_ROWS)
     return json({error:'item_limit',maxItems:MAX_ROWS},413);
   const used=this.one('SELECT COALESCE(SUM(bytes),0) AS used FROM items WHERE deleted=0')?.used||0;
   if(used-(old?.deleted?0:old?.bytes||0)+size>MAX_USER_BYTES)
