@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "slug": "folio",
+  "name": "FOLIO — Мастерская рисунка",
+  "shortName": "FOLIO",
+  "description": "Тактильная рисовальная мастерская для пальца: живые кисти, точное остриё, слои, палитры и личный альбом.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-11",
+  "releaseDateTime": "2026-10-11T02:30:00+03:00",
+  "changelog": [
+    "Первая версия FOLIO: пальцевое рисование, точное остриё, мультитач-навигация и кисти.",
+    "Слои, палитры, история действий, сохранение проектов офлайн и экспорт PNG.",
+    "Личная галерея, идеи для набросков и автономная установка в Pocket Works."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#b46342",
+  "backgroundColor": "#e6dcc9",
+  "themeColor": "#e6dcc9",
+  "orientation": "portrait",
+  "cacheName": "folio-v1.0.0",
+  "storageNamespace": "pocket-works:folio",
+  "tags": [
+    "drawing",
+    "art",
+    "creative",
+    "canvas",
+    "offline",
+    "utility"
+  ],
+  "order": 344
+}

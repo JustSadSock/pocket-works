@@ -75,3 +75,10 @@ images, layout and normal clicks remain intact. PETLYA 17 checks its adaptive
 drawing buffer against the actual viewport and the supported 1–2 scaling budget
 instead of assuming a fixed pixel count. SENTE migration fixtures are installed
 before boot so a running game's pagehide autosave cannot overwrite legacy data.
+
+Integration with main at 31c11718 preserves FOLIO, ГЕРБОВНИК and DOCTRINA II.
+Their update notes and install metadata follow app.config.json; the new apps
+receive real Workshop controls and scoped offline dependencies rather than new
+ledger exemptions. Workshop resets replace the live campaign as well as its
+save. DOCTRINA's browser test exercises the current atlas, laws, regional taxes,
+season progression, settings and persistence instead of its retired 0.1 UI.

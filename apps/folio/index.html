@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#e6dcc9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="FOLIO">
+  <title>FOLIO — Мастерская рисунка</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <svg class="svg-sprites" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-2"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5m5 5H10a6 6 0 0 0 0 12h2"/></symbol>
+    <symbol id="i-brush" viewBox="0 0 24 24"><path d="m13 11 7.5-7.5a2 2 0 0 0-3-3L10 8m3 3-4 4M6 14a4 4 0 0 0-4 4c0 1.3-.5 2.4-1 3 2.5 0 4.2.5 6-1a4 4 0 0 0-1-6Z"/></symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m20 20H9a3 3 0 0 1-2-1l-4-4a3 3 0 0 1 0-4l8-8a3 3 0 0 1 4 0l6 6a3 3 0 0 1 0 4l-8 8M9 7l8 8"/></symbol>
+    <symbol id="i-pipette" viewBox="0 0 24 24"><path d="m12 6 6 6m-1-9 4 4-3 3-4-4ZM7 11 3 15l-1 6 6-1 10-10-4-4-7 7"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12c3-5 6-7 10-7s7 2 10 7c-3 5-6 7-10 7S5 17 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-hide" viewBox="0 0 24 24"><path d="m3 3 18 18M10 5c5-1 9 2 12 7-1 2-2 3-4 4M6 7C4 8 3 10 2 12c3 5 6 7 10 7 1 0 2 0 3-1"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2 9 9l-7 3 7 3 3 7 3-7 7-3-7-3-3-7Z"/></symbol>
+    <symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6m-8-11H7m3-3v6"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 3h6M7 7l1 14h8l1-14M10 11v6m4-6v6"/></symbol>
+    <symbol id="i-duplicate" viewBox="0 0 24 24"><rect x="7" y="7" width="14" height="14" rx="2"/><path d="M17 7V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h3"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="m3 21 5-1 12-12-4-4L4 16l-1 5ZM14 6l4 4"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18m6-18v18"/></symbol>
+  </svg>
+
+  <main class="app-shell" data-app-shell data-fullscreen-app>
+    <section class="home-screen" id="home" aria-label="Личная мастерская">
+      <div class="home-top" data-ui>
+        <a class="return-link" href="../../" data-app-control><svg><use href="#i-arrow"/></svg> Pocket Works</a>
+        <button class="tiny-action" type="button" data-workshop-trigger data-native-press>Workshop</button>
+      </div>
+      <div class="home-intro">
+        <div class="brand-lockup"><span class="brand-seal">F<span class="seal-dot">.</span></span><span class="brand-caption">АТЕЛЬЕ РИСУНКА</span></div>
+        <h1>Линия, с которой<br><em>всё начинается.</em></h1>
+        <p>Твоя тихая мастерская. Бумага, краски<br>и идеи всегда под рукой.</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 360 215" preserveAspectRatio="xMidYMid meet">
+          <defs><clipPath id="art-mask"><path d="M49 31Q85 17 137 28T257 31Q312 17 323 63L310 177Q201 195 78 183Z"/></clipPath></defs>
+          <path d="M49 31Q85 17 137 28T257 31Q312 17 323 63L310 177Q201 195 78 183Z" fill="#eadcc0"/>
+          <g clip-path="url(#art-mask)">
+            <path d="M-8 174Q53 63 101 111T203 92Q266 35 351 114v142H-8Z" fill="#a0ae94"/>
+            <path d="M-6 201Q71 115 146 147T287 116q28-15 71-4v112H-6Z" fill="#557568"/>
+            <path d="M-3 213Q81 171 138 202T287 180q50-19 80-5v70H-3Z" fill="#2f514c"/>
+            <path d="M215 148V84l18-15 17 15v57" fill="#d6ae81" stroke="#7b674f" stroke-width="2"/>
+            <path d="M204 89h57l-27-39Z" fill="#a25b43"/>
+            <path d="M213 146h44m-33-48h11v18h-11z" fill="none" stroke="#5e6657" stroke-width="3"/>
+            <path d="M71 188q23-31 42-29 25 2 41 38" stroke="#c7b27d" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <circle cx="103" cy="67" r="21" fill="#e1a36c"/>
+            <path d="M24 170c41-4 37-17 67-19 24-2 29-2 41-13" stroke="#c3d1b1" stroke-width="2" fill="none"/>
+            <path d="m34 145 6-17 5 17m12 7 9-31 8 32m-2-7 4-15 5 15" fill="none" stroke="#364d46" stroke-width="5" stroke-linecap="round"/>
+          </g>
+          <path d="M18 183C74 178 144 203 206 204c52 0 90-15 137-10" fill="none" stroke="#b46342" stroke-width="4" stroke-linecap="round"/>
+          <path d="m316 22-18 22 9 1-14 26" stroke="#bc8056" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </svg>
+        <span class="hero-stamp">НАРИСОВАНО ОТ РУКИ</span>
+      </div>
+      <div class="home-actions" data-ui>
+        <button id="new-work" class="make-button" data-native-press><svg><use href="#i-plus"/></svg><span>Новый холст</span><span class="make-arrow">↗</span></button>
+        <button id="spark-action" class="inspire-button" data-native-press><svg><use href="#i-spark"/></svg> Дайте идею</button>
+      </div>
+      <section class="library-section" aria-labelledby="library-title">
+        <div class="library-title"><div><span class="eyebrow">ВАШ АЛЬБОМ</span><h2 id="library-title">Последние работы</h2></div><span id="work-count" class="count-label">0</span></div>
+        <div id="gallery" class="gallery"></div>
+      </section>
+      <div class="home-bottom-note">FOLIO <span>·</span> made for fingertips</div>
+    </section>
+
+    <section class="studio-screen" id="studio" hidden aria-label="Рисование">
+      <header class="studio-top" data-ui>
+        <button class="back-studio" id="back-home" aria-label="К альбому"><svg><use href="#i-arrow"/></svg><span>Альбом</span></button>
+        <button class="work-title" id="edit-title" title="Переименовать рисунок"><span id="document-title">Без названия</span><svg><use href="#i-pen"/></svg></button>
+        <div class="top-actions">
+          <button id="undo" aria-label="Отменить" title="Отменить"><svg><use href="#i-undo"/></svg></button>
+          <button id="redo" aria-label="Повторить" title="Повторить"><svg><use href="#i-redo"/></svg></button>
+          <button id="export" class="export-button" aria-label="Экспортировать PNG" title="Экспортировать PNG"><svg><use href="#i-export"/></svg></button>
+        </div>
+      </header>
+      <div class="working-area" id="working-area">
+        <canvas id="artboard" data-gesture-surface data-block-callout aria-label="Холст, рисуйте пальцем"></canvas>
+        <div class="nib-cursor" id="nib-cursor" hidden></div>
+        <div class="stage-hud" data-ui>
+          <button id="mode-toggle" class="mode-toggle" title="Переключить режим ввода"><span id="mode-icon">◎</span><span id="mode-label">Острие</span></button>
+          <button id="fit" class="zoom-button" title="Вписать холст в экран"><span id="zoom-label">100%</span><svg><use href="#i-zoom"/></svg></button>
+        </div>
+        <button class="focus-restore" id="focus-restore" hidden>Показать инструменты</button>
+        <div class="canvas-guide" id="canvas-guide" aria-live="polite">Один палец рисует · два двигают холст</div>
+      </div>
+      <div class="studio-bottom" data-ui>
+        <div class="precision-rail">
+          <span class="rail-caption" id="brush-label">Тушь</span>
+          <label class="rail-slider"><span>РАЗМЕР</span><input id="brush-size" aria-label="Размер кисти" type="range" min="1" max="72" step="1" value="9"><output id="brush-size-value">9</output></label>
+          <label class="rail-slider rail-opacity"><span>КРАСКА</span><input id="brush-opacity" aria-label="Непрозрачность краски" type="range" min="10" max="100" step="5" value="100"><output id="brush-opacity-value">100%</output></label>
+        </div>
+        <nav class="tool-bar" aria-label="Инструменты рисования">
+          <button class="tool selected" id="brush-tool" aria-label="Кисти" data-tool="brush"><svg><use href="#i-brush"/></svg><small>Кисти</small></button>
+          <button class="tool" id="eraser-tool" aria-label="Ластик" data-tool="eraser"><svg><use href="#i-eraser"/></svg><small>Ластик</small></button>
+          <button class="tool" id="pipette-tool" aria-label="Пипетка" data-tool="pipette"><svg><use href="#i-pipette"/></svg><small>Пипетка</small></button>
+          <button class="color-tool" id="color-tool" aria-label="Палитра" title="Палитра"><span id="active-swatch" class="active-swatch"></span><small>Цвет</small></button>
+          <button class="tool" id="layers-tool" aria-label="Слои"><svg><use href="#i-layers"/></svg><small>Слои</small></button>
+          <button class="tool focus-tool" id="focus-toggle" aria-label="Скрыть интерфейс" title="Скрыть интерфейс"><svg><use href="#i-grid"/></svg><small>Фокус</small></button>
+        </nav>
+      </div>
+    </section>
+    <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+    <section class="bottom-sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+      <div class="sheet-grip"></div>
+      <div class="sheet-heading"><h2 id="sheet-title">Инструменты</h2><button id="sheet-close" aria-label="Закрыть"><svg><use href="#i-x"/></svg></button></div>
+      <div id="sheet-body" class="sheet-body"></div>
+    </section>
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <h2 id="modal-title"></h2>
+        <p id="modal-note"></p>
+        <div id="modal-fields"></div>
+        <div class="modal-buttons"><button type="button" id="modal-cancel">Отмена</button><button type="button" id="modal-ok">Продолжить</button></div>
+      </section>
+    </div>
+    <div id="toast" class="toast" aria-live="polite"></div>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
