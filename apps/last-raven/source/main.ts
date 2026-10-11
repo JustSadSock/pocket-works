@@ -16,14 +16,14 @@ import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Scene } from '@babylonjs/core/scene';
-import { advanceNight, canChoose, choose, createGame, relationLabel, restoreGame, serializeGame, startGame, stepSiege } from './core';
+import { advanceNight, canChoose, canSiegeOrder, choose, createGame, issueSiegeOrder, relationLabel, restoreGame, serializeGame, startGame, stepSiege } from './core';
 
 installMobileRuntime();
-registerEnhancedUpdate({appName:'ПОСЛЕДНИЙ ВОРОН',version:'0.1.0',releaseNotes:[
-  '12-дневная кампания у ворот северного замка с письмами и отложенными последствиями.',
-  'Неполная информация, четыре политические силы, живая погода и финальная автоматическая осада.'
+registerEnhancedUpdate({appName:'ПОСЛЕДНИЙ ВОРОН',version:'0.2.0',releaseNotes:[
+  '38–40 основных событий: новые цепочки решений и возвращающиеся персонажи.',
+  'Финальная осада теперь требует приказов кастеляна; объёмный зимний замок и новый боевой интерфейс.'
 ]});
-createWorkshopMode({appName:'ПОСЛЕДНИЙ ВОРОН',version:'0.1.0',cachePrefix:'last-raven-',storageNamespace:'pocket-works:last-raven'});
+createWorkshopMode({appName:'ПОСЛЕДНИЙ ВОРОН',version:'0.2.0',cachePrefix:'last-raven-',storageNamespace:'pocket-works:last-raven'});
 
 const $=(id)=>document.getElementById(id);
 const canvas=$('world');
@@ -99,6 +99,53 @@ const folk=[];for(let i=0;i<12;i++){const root=new TransformNode('folk'+i,scene)
 const visitors=new TransformNode('visitors',scene);visitors.parent=world;visitors.position.set(0,.05,8.6);const visitorParts=[];
 function buildVisitors(kind,count){for(const n of visitorParts)n.dispose(false,true);visitorParts.length=0;for(let i=0;i<count;i++){const r=new TransformNode('visitor'+i,scene);r.parent=visitors;r.position.set((i-(count-1)/2)*.58,0,(i%2)*.35);cyl('cloak',kind==='soldiers'?.44:.38,kind==='soldiers'?1.35:1.15,0,.62,0,kind==='soldiers'?M.pink:kind==='rangers'?M.black:M.cloak,r,7);cyl('head',.26,.28,0,1.32,0,M.mortar,r,7);if(kind==='soldiers')box('spear',.05,1.7,.05,.27,1.05,0,M.wood,r);if(kind==='trader'&&i===0){box('cart',1.2,.55,.85,0,.35,.9,M.wood,r);cyl('wheel',.45,.12,-.48,.2,.9,M.iron,r,8).rotation.z=Math.PI/2;cyl('wheel',.45,.12,.48,.2,.9,M.iron,r,8).rotation.z=Math.PI/2}visitorParts.push(r)}}
 
+// Architectural silhouette: steep winter roofs, a living approach road and conifers.
+const slate=mat('slate ice','#343e41'),snowEdge=mat('roof snow','#d5e2db'),pine=mat('dark fir','#253a34'),pineLight=mat('frosted needles','#456058'),bark=mat('pine bark','#413a33'),lantern=mat('lantern core','#e3a76e',.3,'#f49b47');
+for(const [x,z] of [[-6.2,-4.9],[6.2,-4.9],[-6.2,4.9],[6.2,4.9]]){
+  const roof=MeshBuilder.CreateCylinder('watchtower steep roof',{diameterTop:0,diameterBottom:3.25,height:2.05,tessellation:10},scene);
+  roof.parent=castle;roof.position.set(x,7.58,z);roof.material=slate;
+  const cap=cyl('iron roof finial',.13,.46,x,8.85,z,M.iron,castle,6);
+  cap.isPickable=false;
+  for(let j=0;j<6;j++){const a=j*Math.PI/3;box('tower arrow slit',.13,.56,.06,x+Math.sin(a)*1.28,3.55,z+Math.cos(a)*1.28,M.iron,castle).rotation.y=a;}
+}
+const rookRoof=MeshBuilder.CreateCylinder('rookery roof',{diameterTop:0,diameterBottom:2.9,height:2.45,tessellation:9},scene);
+rookRoof.parent=castle;rookRoof.position.set(-3.4,8.25,-1.6);rookRoof.material=slate;
+for(const [x,z] of [[-4.8,1.4],[3.8,1.2]]){
+  const roof=MeshBuilder.CreateCylinder('angled timber roof',{diameterTop:.25,diameterBottom:3.6,height:1.42,tessellation:4},scene);
+  roof.parent=castle;roof.position.set(x,3.15,z);roof.rotation.y=Math.PI/4;roof.scaling.z=.8;roof.material=slate;
+}
+for(let i=0;i<54;i++){
+  // Masonry joints read as shadows, not a tiled material on every face.
+  const x=(i%9-4)*1.22,y=1+(Math.floor(i/9)%4)*.72;
+  const front=box('gatehouse stone joint',.9,.06,.036,x*.52,y,5.59,i%3===0?M.mortar:M.stoneDark,castle);
+  front.isPickable=false;
+}
+for(let i=0;i<16;i++){
+  const side=i%2===0?-1:1, z=17-(i%8)*3.2, x=side*(8.9+(i%3)*1.6);
+  const t=new TransformNode('frost fir',scene);t.parent=world;t.position.set(x,0,z);
+  cyl('bark',.27,1.55,0,.78,0,bark,t,6);
+  for(let layer=0;layer<3;layer++){
+    const d=2.3-layer*.48,h=2.5-layer*.45;
+    const cone=MeshBuilder.CreateCylinder('fir crown',{diameterTop:0,diameterBottom:d,height:h,tessellation:6},scene);
+    cone.parent=t;cone.position.y=1.65+layer*.68;cone.material=layer===2?pineLight:pine;
+  }
+  cyl('snow at fir foot',2,.12,0,.08,0,snowEdge,t,6);
+}
+for(let i=0;i<8;i++){
+ const s=i%2?-1:1,x=s*(5.4+(i%3)*2),z=10+Math.floor(i/2)*2.6;
+ box('roadside stone',.6,.28,.42,x,.14,z,M.stoneDark,world).rotation.y=i*.63;
+}
+const siegeRam=new TransformNode('moving siege ram',scene);siegeRam.parent=world;
+siegeRam.position.set(0,0,12);
+box('ram timber beam',.62,.54,4,0,1.25,0,M.woodDark,siegeRam);
+box('ram iron head',.85,.7,.72,0,1.25,-2,M.iron,siegeRam);
+for(const side of [-1,1]){
+ box('ram roof support',.15,1.6,.13,side*.9,1.4,0,M.wood,siegeRam);
+ for(const z of [-1.3,1.3]){const wheel=cyl('ram wheel',.72,.2,side*.85,.47,z,M.iron,siegeRam,9);wheel.rotation.z=Math.PI/2;}
+}
+const ramRoof=box('ram canopy',2.25,.18,3.25,0,2.35,0,M.pink,siegeRam);ramRoof.rotation.z=.05;
+siegeRam.setEnabled(false);
+
 const raven=new TransformNode('raven',scene);raven.parent=world;raven.position.set(-3.4,8.2,-1.5);const ravenBody=cyl('raven body',.28,.55,0,0,0,M.black,raven,7);ravenBody.rotation.x=Math.PI/2;const wingL=box('wing L',.85,.06,.28,-.46,.05,0,M.black,raven);const wingR=box('wing R',.85,.06,.28,.46,.05,0,M.black,raven);raven.setEnabled(false);
 
 const flake=MeshBuilder.CreateBox('snow particle',{size:.055},scene);flake.material=M.snow;flake.isPickable=false;const FLAKES=100;const flakeData=Array.from({length:FLAKES},(_,i)=>({x:(Math.sin(i*12.73)*.5+.5)*24-12,y:2+(i%20)*.65,z:(Math.sin(i*4.31+2)*.5+.5)*27-8,s:.8+(i%7)*.11}));const flakeMatrices=new Float32Array(FLAKES*16);
@@ -118,10 +165,10 @@ function updateWorld(dt){cameraGoal=cameraForPhase();camera.position=Vector3.Ler
   const snowScale=.4+state.weather.snow*.85;granarySnow.scaling.y=snowScale;for(const f of folk){const i=f.metadata.i,t=performance.now()*.001;f.position.x=f.metadata.baseX+Math.sin(t*.45+i)*.18;f.position.z=f.metadata.baseZ+Math.cos(t*.37+i*.7)*.13;f.rotation.y=Math.sin(t*.31+i)*.6;f.setEnabled(i<Math.max(3,Math.min(folk.length,Math.round(state.population/4.2))))}
   for(let i=0;i<torches.length;i++){const t=performance.now()*.001;torches[i].scaling.y=.8+Math.sin(t*11+i)*.28;torches[i].scaling.x=.85+Math.sin(t*7+i)*.15}
   for(const m of scene.meshes.filter(x=>x.metadata?.banner)){const t=performance.now()*.001;m.scaling.x=.94+Math.sin(t*4+m.metadata.side)*.06;m.rotation.z=Math.sin(t*3.4+m.metadata.side)*.035*state.weather.wind}
-  updateSnow(dt);updateEnemies();audio.updateWind();
+  siegeRam.setEnabled(state.phase==='siege');if(state.siege){siegeRam.position.z=12-state.siege.progress*4.1;ramRoof.rotation.x=Math.sin(performance.now()*.003)*.015}updateSnow(dt);updateEnemies();audio.updateWind();
 }
 
-function visitorCount(enc){if(!enc)return 0;if(enc.id==='bolton-men')return 6;if(enc.id==='watch-rangers')return 3;if(enc.id==='freefolk-family')return 4;if(enc.id==='salt-trader')return 3;if(enc.id==='sick-maester')return 2;return 7}
+function visitorCount(enc){if(!enc)return 0;if(enc.id==='bolton-men')return 6;if(enc.id==='watch-rangers')return 3;if(enc.id==='freefolk-family')return 4;if(enc.id==='salt-trader')return 3;if(enc.id==='sick-maester')return 2;return Math.min(7,Math.max(2,enc.source.match(/один|одна|двое|трое|четыре|пятеро|шестеро/i)?3:5))}
 function setEncounterVisual(){const enc=state.current;if(!enc||enc.kind!=='visitor')return;if(visitorKey===enc.id)return;visitorKey=enc.id;buildVisitors(enc.visual,visitorCount(enc));visitors.position.z=8.6}
 function renderChoices(){const root=$('choices');root.replaceChildren();for(const c of state.current?.choices??[]){const b=document.createElement('button');b.className='choice';b.type='button';b.dataset.choice=c.id;b.innerHTML=`<b>${c.label}</b><small>${c.hint}</small>`;b.disabled=!canChoose(state,c.id);if(b.disabled)b.title='Не хватает припасов';b.onclick=()=>decide(c.id);root.appendChild(b)}}
 function renderIntel(){for(const k of ['stark','bolton','watch','freefolk'])$(`rel-${k}`).textContent=relationLabel(state.relations[k]);const kn=$('knowledge');kn.replaceChildren();for(const text of state.knowledge.slice(0,7)){const p=document.createElement('p');p.textContent=text;kn.appendChild(p)}if(!state.knowledge.length){const p=document.createElement('p');p.textContent='Пока только слухи. Проверяйте людей и письма.';kn.appendChild(p)}const hi=$('history');hi.replaceChildren();for(const text of state.history.slice(0,8)){const p=document.createElement('p');p.textContent=text;hi.appendChild(p)}}
@@ -132,19 +179,33 @@ function renderUI(){
   const transitioning=performance.now()<visitorDeparture;show('encounter',started&&!transitioning&&(state.phase==='visitor'||state.phase==='letter'));show('night-panel',started&&state.phase==='night');show('siege-panel',started&&state.phase==='siege');
   if(state.phase==='visitor'||state.phase==='letter'){const e=state.current;if(e){$('encounter').classList.toggle('letter',state.phase==='letter');$('phase-kicker').textContent=state.phase==='visitor'?'У ВОРОТ':'ВОРОН ПРИЛЕТЕЛ';$('source').textContent=e.source;$('event-title').textContent=e.title;$('event-body').textContent=e.body;renderChoices();setEncounterVisual()}}
   if(state.phase==='night')$('night-copy').textContent=state.nightText;
-  if(state.phase==='siege'&&state.siege){const s=state.siege;$('wall-fill').style.width=`${s.wall}%`;$('enemy-fill').style.width=`${Math.min(100,s.enemy/78*100)}%`;$('wall-text').textContent=String(Math.round(s.wall));$('enemy-text').textContent=String(Math.round(s.enemy));$('siege-time').textContent=`00:${String(Math.max(0,Math.ceil(24-s.progress*24))).padStart(2,'0')}`}
+  if(state.phase==='siege'&&state.siege){const s=state.siege;
+    $('siege-instruction').textContent=s.awaitingOrder
+      ?['ПЕРВЫЙ ПРИКАЗ · ВРАГ ПОДХОДИТ','ВТОРОЙ ПРИКАЗ · АТАКА НА СТЕНЫ','ПОСЛЕДНИЙ ПРИКАЗ · РЕШАЮЩИЙ НАТИСК'][Math.min(2,s.orderStage)]
+      :'Приказ исполнен. Наблюдайте за натиском и готовьтесь к следующему сигналу.';
+    $('siege-actions').classList.toggle('awaiting',s.awaitingOrder);
+    for(const b of document.querySelectorAll('[data-siege-order]')){b.disabled=!canSiegeOrder(state,b.dataset.siegeOrder);b.classList.toggle('used',s.orders.includes(b.dataset.siegeOrder))}
+    $('siege-history').textContent=state.history.find(t=>/залп|Сапёры|Вылазка|Гарнизон укрылся|Кастелян выплатил/.test(t))||'Каждый приказ влияет на выживание крепости.';
+    $('wall-fill').style.width=`${s.wall}%`;$('enemy-fill').style.width=`${Math.min(100,s.enemy/78*100)}%`;$('wall-text').textContent=String(Math.round(s.wall));$('enemy-text').textContent=String(Math.round(s.enemy));$('siege-time').textContent=`00:${String(Math.max(0,Math.ceil(24-s.progress*24))).padStart(2,'0')}`}
   renderIntel();
 }
 function decide(id){if(!started||!(state.phase==='visitor'||state.phase==='letter'))return;audio.unlock();const was=state.phase;const title=state.current?.title||'';const ok=choose(state,id);if(!ok)return;if(was==='visitor'){visitorAllowed=state.gateOpen;visitorDeparture=performance.now()+1100;audio.gate();toast(state.gateOpen?'Ворота открываются.':'Ворота остаются закрытыми.');setTimeout(()=>{audio.raven();renderUI()},1120)}else{audio.paper();toast(`Решение по письму: ${title}.`)}save();renderUI()}
+function siegeCommand(order){
+  if(!started||!issueSiegeOrder(state,order)){toast('Для такого приказа не хватает припасов.');return}
+  audio.unlock();audio.siege();
+  toast({reinforce:'Укрепления подняты.',volley:'Лучники открыли огонь.',sortie:'Отряд вышел за ворота.',rally:'Гарнизон собрался под знаменем.',hold:'Караул держит строй.'}[order]||'Приказ отдан.');
+  save();renderUI();
+}
 function nextDay(){audio.unlock();const due=advanceNight(state);if(due.length)toast(due[0]+(due.length>1?' + ещё одно последствие.':''));else if(state.phase==='siege'){audio.siege();toast('На дороге показались знамёна.')}save();renderUI()}
 function newCampaign(){state=createGame();startGame(state);started=true;endShown=false;gateVisual=0;visitorKey='';show('start-screen',false);show('end-screen',false);audio.unlock();save();renderUI()}
 function continueCampaign(){if(!restored||restored.completed)return newCampaign();state=restored;started=true;endShown=false;show('start-screen',false);show('end-screen',false);audio.unlock();renderUI()}
 function finish(){if(endShown||!(state.phase==='won'||state.phase==='lost'))return;endShown=true;meta.completed=(meta.completed||0)+1;saveMeta();save();show('siege-panel',false);show('end-screen',true);$('end-kicker').textContent=state.phase==='won'?'РАССВЕТ · ЗНАМЯ НА МЕСТЕ':'РАССВЕТ · ВОРОТА ПАЛИ';$('end-title').textContent=state.phase==='won'?'Замок устоял.':'Замок взят.';$('end-copy').textContent=state.siege?.resultText||'Кампания завершена.';$('end-guards').textContent=String(Math.round(state.resources.guards));$('end-morale').textContent=String(Math.round(state.resources.morale));audio.tone(state.phase==='won'?250:62,.45,.06,state.phase==='won'?'triangle':'sawtooth')}
 
+for(const button of document.querySelectorAll('[data-siege-order]'))button.addEventListener('click',()=>siegeCommand(button.dataset.siegeOrder));
 $('new-game').onclick=newCampaign;$('continue').onclick=continueCampaign;$('again').onclick=newCampaign;$('next-day').onclick=nextDay;$('exit').onclick=home;$('start-exit').onclick=home;$('end-exit').onclick=home;$('sound').onclick=()=>{audio.toggle();renderUI()};$('intel').onclick=()=>{audio.unlock();renderIntel();show('intel-panel',true)};$('close-intel').onclick=()=>show('intel-panel',false);
 if(restored&&!restored.completed){show('continue',true);$('continue-day').textContent=String(restored.day)}
 
-window.__AI_TEST_STATE__={getState:()=>JSON.parse(JSON.stringify(state)),newCampaign,choose:(id)=>decide(id),nextDay,openIntel:()=>{$('intel').click()},version:'0.1.0'};
+window.__AI_TEST_STATE__={getState:()=>JSON.parse(JSON.stringify(state)),newCampaign,choose:(id)=>decide(id),nextDay,openIntel:()=>{$('intel').click()},siegeCommand,version:'0.2.0'};
 
 let acc=0;
 function frame(now){const dt=Math.min(.06,Math.max(0,(now-last)/1000));last=now;if(started&&state.phase==='siege'){acc+=dt;while(acc>=1/30&&state.phase==='siege'){stepSiege(state,1/30);acc-=1/30}if(state.phase==='won'||state.phase==='lost')finish()}updateWorld(dt);if(started&&(phaseKey!==state.phase||snowClock>1)){phaseKey=state.phase;snowClock=0;renderUI()}snowClock+=dt;scene.render();requestAnimationFrame(frame)}
