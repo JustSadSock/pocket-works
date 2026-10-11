@@ -1,14 +1,17 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'zamazka-v1.1.0';
+const ART_CACHE = 'zamazka-artworks-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-10-11';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Новая игра: комнаты для 3–8 реставраторов, последовательное голосование и серверные очки.","Пятьдесят авторских иллюстраций десяти художественных направлений, повреждения и мобильные кисти.","Автономная тренировка, локальная галерея, сравнение оригинала с подделкой, офлайн PWA."];
+const RELEASE_NOTES = ["Коллекционерское оформление: музейная экспозиция, картина Вермеера на главном экране, галерея с подписью художника и новый реставрационный стол.","Семь настоящих произведений в игровом цикле: Ван Гог, Рембрандт, Хокусай, Констебл, Моне, Боттичелли; восемь оригиналов с Вермеером на обложке.","Проверенные источники Public Domain на Wikimedia Commons, сохранение старых работ в архиве и кеширование музейных изображений."];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
+  './gallery-theme.css',
+  './legacy-artworks.js',
   './app.js',
   './artworks.js',
   './editor.js',
@@ -103,7 +106,7 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((keys) => Promise.all(
         keys
-          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME && key !== ART_CACHE)
           .map((key) => caches.delete(key))
       ))
       .then(() => self.clients.claim())
@@ -114,6 +117,24 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin === 'https://thumb.wikimedia.org' &&
+      requestUrl.pathname.startsWith('/wikipedia/commons/thumb/')) {
+    event.respondWith((async () => {
+      const cache = await caches.open(ART_CACHE);
+      const stored = await cache.match(event.request);
+      if (stored) return stored;
+      try {
+        const response = await fetch(event.request);
+        if (response.ok && response.type === 'cors') {
+          await cache.put(event.request, response.clone());
+        }
+        return response;
+      } catch {
+        return (await cache.match(event.request)) || Response.error();
+      }
+    })());
+    return;
+  }
   if (requestUrl.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
