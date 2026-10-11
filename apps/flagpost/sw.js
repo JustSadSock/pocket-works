@@ -1,20 +1,16 @@
 const CACHE_PREFIX = 'flagpost-';
-const CACHE_NAME = 'flagpost-v1.0.1';
-const APP_VERSION = '1.0.1';
+const CACHE_NAME = 'flagpost-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = [
-  "Новая мини-стратегия для двух настоящих игроков: комнаты по восьмизначному коду и ссылка-приглашение.",
-  "Серверные ходы, войска, бой, набор подкреплений, подсчёт знамён и победа.",
-  "Автоматическое восстановление соединения и сохранение партий в Cloudflare Durable Objects."
-];
+const RELEASE_NOTES = ["Новая мини-стратегия для двух настоящих игроков: комнаты по восьмизначному коду и ссылка-приглашение.","Серверные ходы, войска, бой, набор подкреплений, подсчёт знамён и победа.","Автоматическое восстановление соединения и сохранение партий в Cloudflare Durable Objects.","Pocket ID: ник и аватар полководца, защита от выдачи себя за другого игрока."];
 const APP_SHELL = [
   './','./index.html','./app.config.json','./styles.css','./app.js',
   './manifest.webmanifest','./icons/icon.svg',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
   '../../shared/pwa-utils.js','../../shared/update-manager.css',
   '../../shared/update-manager.js','../../shared/workshop-mode.css',
-  '../../shared/workshop-mode.js','../../shared/capabilities/net.js',
+  '../../shared/workshop-mode.js','../../shared/capabilities/net.js','../../shared/capabilities/identity.js','../../shared/capabilities/identity.css',
   '../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js',
   '../../shared/capabilities/diagnostics.js'
 ];
