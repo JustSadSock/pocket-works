@@ -48,40 +48,54 @@
         <button class="tiny-action" type="button" data-workshop-trigger data-native-press>Workshop</button>
       </div>
       <div class="home-intro">
-        <div class="brand-lockup"><span class="brand-seal">F<span class="seal-dot">.</span></span><span class="brand-caption">АТЕЛЬЕ РИСУНКА</span></div>
-        <h1>Линия, с которой<br><em>всё начинается.</em></h1>
-        <p>Твоя тихая мастерская. Бумага, краски<br>и идеи всегда под рукой.</p>
+        <div class="home-doodle" aria-hidden="true"><span class="doodle-star">✳</span><span>01 / НАРИСУЙ ЧТО-НИБУДЬ</span></div>
+        <div class="brand-lockup"><span class="brand-seal">F<span class="seal-dot">.</span></span><span class="brand-caption">МАЛЕНЬКАЯ ХУДОЖЕСТВЕННАЯ МАСТЕРСКАЯ</span></div>
+        <h1>У каждой линии<br><em>свой характер.</em></h1>
+        <p>Рисуй странное, красивое, смешное.<br>В мастерской нет неправильных штрихов.</p>
       </div>
       <div class="hero-art" aria-hidden="true">
-        <svg viewBox="0 0 360 215" preserveAspectRatio="xMidYMid meet">
-          <defs><clipPath id="art-mask"><path d="M49 31Q85 17 137 28T257 31Q312 17 323 63L310 177Q201 195 78 183Z"/></clipPath></defs>
-          <path d="M49 31Q85 17 137 28T257 31Q312 17 323 63L310 177Q201 195 78 183Z" fill="#eadcc0"/>
-          <g clip-path="url(#art-mask)">
-            <path d="M-8 174Q53 63 101 111T203 92Q266 35 351 114v142H-8Z" fill="#a0ae94"/>
-            <path d="M-6 201Q71 115 146 147T287 116q28-15 71-4v112H-6Z" fill="#557568"/>
-            <path d="M-3 213Q81 171 138 202T287 180q50-19 80-5v70H-3Z" fill="#2f514c"/>
-            <path d="M215 148V84l18-15 17 15v57" fill="#d6ae81" stroke="#7b674f" stroke-width="2"/>
-            <path d="M204 89h57l-27-39Z" fill="#a25b43"/>
-            <path d="M213 146h44m-33-48h11v18h-11z" fill="none" stroke="#5e6657" stroke-width="3"/>
-            <path d="M71 188q23-31 42-29 25 2 41 38" stroke="#c7b27d" stroke-width="4" fill="none" stroke-linecap="round"/>
-            <circle cx="103" cy="67" r="21" fill="#e1a36c"/>
-            <path d="M24 170c41-4 37-17 67-19 24-2 29-2 41-13" stroke="#c3d1b1" stroke-width="2" fill="none"/>
-            <path d="m34 145 6-17 5 17m12 7 9-31 8 32m-2-7 4-15 5 15" fill="none" stroke="#364d46" stroke-width="5" stroke-linecap="round"/>
+        <span class="hero-scribble hero-scribble-left">✳</span><span class="hero-scribble hero-scribble-right">♪</span>
+        <svg class="hero-illustration" viewBox="0 0 480 310" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="folio-grain"><feTurbulence type="fractalNoise" baseFrequency=".47" numOctaves="2" seed="5"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".12"/></feComponentTransfer></filter>
+            <clipPath id="folio-paper"><path d="M95 29Q238 16 387 31L394 264Q249 292 97 268Z"/></clipPath>
+          </defs>
+          <path d="M100 38 398 35 403 278 107 281Z" fill="#26384b" opacity=".27"/>
+          <path d="M95 29Q238 16 387 31L394 264Q249 292 97 268Z" fill="#fff0d3" stroke="#26384b" stroke-width="3.5"/>
+          <g clip-path="url(#folio-paper)">
+            <path d="M78 220Q127 171 186 218 249 121 292 184 341 126 410 184L418 306H80Z" fill="#baca93"/>
+            <path d="M78 258Q140 203 193 235 257 165 326 215 362 190 418 217V310H75Z" fill="#63a5a0"/>
+            <path d="M75 274Q174 231 230 270 318 215 417 261L410 315H75Z" fill="#2e7485"/>
+            <circle class="hero-sun" cx="306" cy="91" r="41" fill="#f7bd48"/>
+            <path d="M270 71q27-34 69-10" stroke="#eb8952" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <path d="m307 30 1-13m-55 84-18 0m25-44-13-12m115 5 16-12m-11 67 19 7m-45 24 10 15" stroke="#e99d3b" stroke-width="4" stroke-linecap="round"/>
+            <path d="M150 231V136h22v95" fill="#f6d1a6" stroke="#2c4457" stroke-width="3"/>
+            <path d="m138 138 23-41 26 41Z" fill="#ea654d" stroke="#2c4457" stroke-width="3"/>
+            <path d="M156 196v-26q7-11 12 0v26" fill="#31516b"/>
+            <path d="M142 172h38m-39 30h40" stroke="#3d5e62" stroke-width="2" opacity=".5"/>
+            <path d="m159 109 2-27m-8 16 8-13 7 13" stroke="#27475a" stroke-width="3" fill="none"/>
+            <path d="M123 231q23-15 47-3t45 5" stroke="#f5edc5" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M211 148q11-14 23 0 13-16 27-7" stroke="#27475a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M120 82q11-14 23 0 13-16 27-7" stroke="#27475a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="m345 255 18-84m-17 46q-18-18-14-34m25 22q18-13 19-31" stroke="#2b6b60" stroke-width="4" fill="none"/>
+            <path d="M362 186q-24-14-15-35 23 8 15 35m-19 12q-26 0-24-25 25 2 24 25m23-4q16-20 29-10-15 21-29 10" fill="#e1bf60"/>
+            <path d="M99 257q23-11 45 7" stroke="#ffefcb" stroke-width="3" fill="none"/>
           </g>
-          <path d="M18 183C74 178 144 203 206 204c52 0 90-15 137-10" fill="none" stroke="#b46342" stroke-width="4" stroke-linecap="round"/>
-          <path d="m316 22-18 22 9 1-14 26" stroke="#bc8056" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="m79 48-17 20m-8-4 3 11m358 8 25-3m-27 20 27 6m-26 9 19 13" stroke="#db634b" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M95 29Q238 16 387 31L394 264Q249 292 97 268Z" fill="#fff7e8" filter="url(#folio-grain)" opacity=".55"/>
+          <g transform="translate(32 286) rotate(-7)"><text y="-13" fill="#254a5a" font-family="Georgia,serif" font-style="italic" font-size="18">просто попробуй!</text><path d="M0 0q48-7 110-3" fill="none" stroke="#d85d45" stroke-width="5" stroke-linecap="round"/></g>
         </svg>
-        <span class="hero-stamp">НАРИСОВАНО ОТ РУКИ</span>
+        <span class="hero-stamp">ЛИСТ № 01 · ЖДЁТ ТВОЕГО ШТРИХА</span>
       </div>
       <div class="home-actions" data-ui>
-        <button id="new-work" class="make-button" data-native-press><svg><use href="#i-plus"/></svg><span>Новый холст</span><span class="make-arrow">↗</span></button>
-        <button id="spark-action" class="inspire-button" data-native-press><svg><use href="#i-spark"/></svg> Дайте идею</button>
+        <button id="new-work" class="make-button" data-native-press><svg><use href="#i-plus"/></svg><span>Нарисовать</span><span class="make-arrow">↗</span></button>
+        <button id="spark-action" class="inspire-button" data-native-press><svg><use href="#i-spark"/></svg> Подкинь идею</button>
       </div>
       <section class="library-section" aria-labelledby="library-title">
-        <div class="library-title"><div><span class="eyebrow">ВАШ АЛЬБОМ</span><h2 id="library-title">Последние работы</h2></div><span id="work-count" class="count-label">0</span></div>
+        <div class="library-title"><div><span class="eyebrow">НЕЗАКОНЧЕННЫЕ ШЕДЕВРЫ И ПРОЧЕЕ</span><h2 id="library-title">Твой альбом</h2></div><span id="work-count" class="count-label">0</span></div>
         <div id="gallery" class="gallery"></div>
       </section>
-      <div class="home-bottom-note">FOLIO <span>·</span> made for fingertips</div>
+      <div class="home-bottom-note"><span class="bottom-note-doodle">✳</span> КАРМАННЫЕ КРАСКИ. БОЛЬШИЕ ИДЕИ. <span class="bottom-note-doodle">✳</span></div>
     </section>
 
     <section class="studio-screen" id="studio" hidden aria-label="Рисование">
@@ -96,7 +110,7 @@
       </header>
       <div class="workspace">
         <aside class="desktop-rail" data-ui aria-label="Инструменты ПК">
-          <div class="desktop-rail-heading"><strong>F<span>.</span></strong><small>ИНСТРУМЕНТЫ</small></div>
+          <div class="desktop-rail-heading"><strong>F<span>.</span></strong><small>ПЕНАЛ<br>ХУДОЖНИКА</small></div>
           <div class="desktop-tool-stack">
             <button id="desktop-brush-tool" class="desktop-tool is-active" title="Кисть — B"><svg><use href="#i-brush"/></svg><span>Кисть <kbd>B</kbd></span></button>
             <button id="desktop-fill-tool" class="desktop-tool" title="Заливка — G"><svg><use href="#i-fill"/></svg><span>Заливка <kbd>G</kbd></span></button>
@@ -105,7 +119,7 @@
             <button id="desktop-color-tool" class="desktop-tool" title="Выбрать цвет"><svg><use href="#i-layers"/></svg><span>Палитра</span></button>
             <button id="desktop-focus-tool" class="desktop-tool" title="Скрыть панели — F"><svg><use href="#i-grid"/></svg><span>Фокус <kbd>F</kbd></span></button>
           </div>
-          <div class="desktop-swatches-title">БЫСТРЫЕ ЦВЕТА</div>
+          <div class="desktop-swatches-title">ЦВЕТА НА ПАЛИТРЕ</div>
           <div class="desktop-swatches" id="desktop-swatches"></div>
           <div class="desktop-rail-footer">
             <button id="desktop-idea" class="desktop-inspire"><svg><use href="#i-spark"/></svg> Найти идею</button>
@@ -124,7 +138,7 @@
         <div class="canvas-guide" id="canvas-guide" aria-live="polite">Наведи остриё · зажми «Рисовать» слева</div>
       </div>
       <aside class="desktop-inspector" data-ui aria-label="Свойства кистей и слои">
-        <div class="inspector-intro"><span>РАБОЧИЙ ПРОЦЕСС</span><strong>Настройка штриха</strong></div>
+        <div class="inspector-intro"><span>НАСТРОЙ СВОЮ КИСТЬ</span><strong>Мазок и цвет<span class="inspector-flower" aria-hidden="true">✳</span></strong></div>
         <div class="inspector-section">
           <div class="inspector-label">КИСТЬ <span id="desktop-brush-name">Тушь</span></div>
           <div id="desktop-brush-choices" class="desktop-brush-choices"></div>
@@ -181,7 +195,7 @@
     </div>
     <div id="toast" class="toast" aria-live="polite"></div>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.2.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.3.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
