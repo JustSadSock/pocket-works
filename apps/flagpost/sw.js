@@ -1,12 +1,12 @@
 const CACHE_PREFIX = 'flagpost-';
-const CACHE_NAME = 'flagpost-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'flagpost-v1.0.1';
+const APP_VERSION = '1.0.1';
 const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Настоящая сетевая стратегия на двоих через Cloudflare Durable Objects.',
-  'Короткий восьмизначный код для входа и прямые ссылки-приглашения.',
-  'Отряды, два приказа, центральная башня, подкрепления и серверное определение победителя.'
+  "Новая мини-стратегия для двух настоящих игроков: комнаты по восьмизначному коду и ссылка-приглашение.",
+  "Серверные ходы, войска, бой, набор подкреплений, подсчёт знамён и победа.",
+  "Автоматическое восстановление соединения и сохранение партий в Cloudflare Durable Objects."
 ];
 const APP_SHELL = [
   './','./index.html','./app.config.json','./styles.css','./app.js',

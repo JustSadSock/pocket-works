@@ -4,7 +4,7 @@ import { PocketNet } from '../../shared/capabilities/net.js';
 
 installMobileRuntime();
 createWorkshopMode({
-  appName: 'ФЛАГПОСТ', version: '1.0.0',
+  appName: 'ФЛАГПОСТ', version: '1.0.1',
   cachePrefix: 'flagpost-', storageNamespace: 'pocket-works:flagpost',
   onReset() { try { sessionStorage.removeItem('pocket-works:flagpost:identity'); } catch {} }
 });
