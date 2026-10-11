@@ -1,0 +1,17 @@
+{
+  "name": "zamazka-local-host",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "esbuild": "^0.25.12",
+    "ws": "^8.18.3"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node test-server.mjs"
+  }
+}
