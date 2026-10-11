@@ -5,6 +5,7 @@ import { POCKET_MODULES } from './generated-modules.mjs';
 // Game code is statically bundled from pinned version snapshots; no eval/remote code.
 const WIRE_VERSION = 1;
 const MAX_PAYLOAD = 16 * 1024;
+const MAX_EVENT_BYTES = 256 * 1024;
 const MAX_STATE = 256 * 1024;
 const MAX_ROOMS = 32;
 const MAX_CONNECTIONS = 48;
@@ -30,6 +31,7 @@ export class PocketNetHub {
     this.env = env;
     this.queue = Promise.resolve();
     this.rates = new Map();
+    this.messageRates = new WeakMap();
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY, id TEXT NOT NULL, name TEXT NOT NULL, expires INTEGER NOT NULL
     )`);
@@ -64,7 +66,7 @@ export class PocketNetHub {
     for (const event of events) {
       if (typeof event?.type !== 'string' || event.type.length > 64) continue;
       const packet = { roomId: room.id, event };
-      if (bytes(packet) > MAX_PAYLOAD) throw new Error('event_too_large');
+      if (bytes(packet) > MAX_EVENT_BYTES) throw new Error('event_too_large');
       if (event.to) {
         if (!room.players.some(p => p.id === event.to)) continue;
         const target = this.connected(event.to, room.id);
@@ -160,6 +162,11 @@ export class PocketNetHub {
         let msg;
         try { msg = JSON.parse(raw); } catch { throw new Error('invalid_message'); }
         if (!msg || typeof msg !== 'object' || msg.wireVersion !== WIRE_VERSION || typeof msg.type !== 'string') throw new Error('invalid_message');
+        const recent = this.messageRates.get(ws);
+        const now = Date.now();
+        const rate = !recent || now - recent.start > 1000 ? { start: now, count: 0 } : recent;
+        this.messageRates.set(ws, rate);
+        if (++rate.count > 30) throw new Error('rate_limited');
         let player = ws.deserializeAttachment() || {};
         if (msg.type === 'auth') {
           if (player.id) throw new Error('already_authenticated');
@@ -234,7 +241,7 @@ export class PocketNetHub {
           if (!result || !('state' in result)) throw new Error('invalid_module_state');
           if (!Array.isArray(result.events ?? []) || result.events.length > 32) throw new Error('invalid_module_events');
           // Validate event payloads before modifying persistent game state.
-          for (const event of result.events ?? []) if (bytes({ roomId: room.id, event }) > MAX_PAYLOAD) throw new Error('event_too_large');
+          for (const event of result.events ?? []) if (bytes({ roomId: room.id, event }) > MAX_EVENT_BYTES) throw new Error('event_too_large');
           room.state = result.state;
           this.persist(room);
           this.emit(room, result.events ?? []);
