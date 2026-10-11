@@ -1,5 +1,6 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPlayerBadge,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import {inviteCode,parseRoomInput} from './room-code.js';
 import {tabGuestName,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
@@ -17,6 +18,9 @@ const q=new URLSearchParams(location.search);
 let invitedRoom=q.get('room')||'';
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 let personalEmblem=getSavedEmblem();
+let pocketIdentity=null;
+const gameName=()=>preferredPocketName(pocketIdentity,tabGuestName());
+const isPocketMember=()=>Boolean(pocketIdentity?.complete);
 let museumMotion=null,commonsBoard=null,lastMuseumWheel=0,boardResync=false,roomModuleVersion='v3';
 const museumOrder=[0,...PLAYABLE_IDS.filter(id=>id!==3),3];
 let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===3?g.art:g.edition===2?(g.art>=8?g.art+46:g.art):Number(g.art)+REAL_COUNT,edition:3})):[]}catch{return[]}})();
@@ -125,7 +129,7 @@ function home(){
     '<div class="museum-stage-caption" id="museumCaption" aria-live="polite"><strong>Девушка с жемчужной серёжкой</strong><span>Ян Вермеер · ок. 1665</span></div>'+
     '<div class="museum-wheel"><button data-action="museum-prev" aria-label="Предыдущая картина">‹</button><span>КОЛЕСО / СВАЙП</span><button data-action="museum-next" aria-label="Следующая картина">›</button></div><span class="museum-exhibit-number">01 / 54</span>'+
   '</div>'+
-  '<div class="museum-control">'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(tabGuestName())+'</strong><small>Личный знак · нарисовать / изменить</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
+  '<div class="museum-control">'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(gameName())+'</strong><small>Личный знак · нарисовать / изменить</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
     '<button class="start-restoration" id="primary-action" data-action="practice" disabled><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Загружаем оригиналы…</strong><small>Готовим музейную экспозицию</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
     '<div class="museum-footer"><button data-action="collection">МОЙ АРХИВ <span>'+String(saved.length).padStart(2,'0')+'</span></button>'+
@@ -152,7 +156,8 @@ function setup(mode,error='',roomValue=invitedRoom){
  change('<section class="page lobby-entry">'+
   '<div class="section-label">БЮРО РЕСТАВРАЦИИ / '+(creating?'НОВАЯ ВЫСТАВКА':'ПРИГЛАШЕНИЕ')+'</div>'+
   '<div class="entry-heading"><div><h2>'+(creating?'Открыть выставку':'Войти на выставку')+'</h2><p class="hint">'+(creating?'Собери реставраторов и начни собственную выставку.':'Введи код друга или открой присланную ссылку.')+'</p></div><div class="entry-stamp" aria-hidden="true">З<br>М</div></div>'+
-  '<div class="entry-identity"><button class="identity-seal-button" data-action="emblem" aria-label="Нарисовать свой знак">'+mySealMarkup()+'<span>✎</span></button><div class="identity-label"><strong>Личный знак</strong><small>Нарисовать или изменить</small></div></div>'+ '<label class="field" for="who">Твой ник</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Имя реставратора" value="'+esc(tabGuestName())+'">'+
+  '<div class="entry-identity"><button class="identity-seal-button" data-action="emblem" aria-label="Нарисовать свой знак">'+mySealMarkup()+'<span>✎</span></button><div class="identity-label"><strong>Личный знак</strong><small>Нарисовать или изменить</small></div></div>'+ '<label class="field" for="who">Твой ник</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Имя реставратора" value="'+esc(gameName())+'" '+(isPocketMember()?'readonly aria-readonly="true"':'')+'>'+
+   (isPocketMember()?'<p class="hint pw-room-identity">'+pocketAvatarMarkup(pocketIdentity.avatar,{small:true})+' Ник подтверждён Pocket ID · <a href="'+pocketIdProfileUrl+'">Изменить профиль</a></p>':'<p class="hint">Гостевой режим · <a href="'+pocketIdProfileUrl+'">Войти через Pocket ID</a></p>')+
   (creating?'<div class="entry-guide"><span class="entry-step">01</span><span>Создай комнату и получи код из 8 символов.</span></div><div class="entry-guide"><span class="entry-step">02</span><span>Отправь код друзьям. Каждый войдёт со своим ником.</span></div>':
    '<label class="field" for="room">Код комнаты или ссылка</label><input class="input room-entry-input" id="room" maxlength="250" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Например, A3F92C10" value="'+esc(roomValue)+'"><p class="hint">Восемь символов. Ссылку тоже можно вставить целиком.</p>')+
   (error?'<div class="notice entry-error" role="alert">'+esc(error)+'</div>':'')+
@@ -168,7 +173,7 @@ function lobby(){
   '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div><p class="ticket-help">Продиктуй код или отправь ссылку.</p>'+
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Отправить ссылку ↗</button></div></div>'+
   '<div class="lobby-list-heading"><span class="section-label">РЕСТАВРАТОРЫ · '+players.length+'/8</span><span>'+(leader?'Ты — куратор':'Ожидаем куратора')+'</span></div>'+
-  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
+  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+pocketPlayerBadge(p)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
   (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Эта комната создана до появления общего холста. Для совместного рисования открой новую комнату.</div>')+'<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
   '<button class="btn ghost" data-action="leave">Покинуть комнату</button></div></section>';
  if(page==='lobby'&&commonsBoard){
@@ -301,7 +306,8 @@ function renderView(){
  lastUiKey=key;
 }
 async function connect(mode){
- const name=(screen.querySelector('#who')?.value||'').trim();
+ pocketIdentity=await getPocketIdentity({force:true});
+ const name=isPocketMember()?pocketIdentity.nickname:(screen.querySelector('#who')?.value||'').trim();
  const input=(screen.querySelector('#room')?.value||'').trim();
  const room=mode==='join'?parseRoomInput(input,location.href):'';
  if(!name||name.length>22){notify('Введи ник до 22 символов');return}
@@ -320,7 +326,7 @@ async function connect(mode){
    const storage=await prepareTabGuest(POCKETNET_URL,name);
    if(epoch!==connectionEpoch)return;
    if(net)net.close();
-   const client=new PocketNet({serverUrl:POCKETNET_URL,name,storage});
+   const client=new PocketNet({serverUrl:POCKETNET_URL,name,storage,identityKey:pocketIdentitySessionKey(pocketIdentity)});
    net=client;
    client.roomId=null;client.persist();
    client.on('connected',data=>{if(client.closed)return;me=data.player;markTabGuest(POCKETNET_URL,client.token)});
@@ -443,5 +449,22 @@ document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
 setInterval(tick,350);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+async function refreshPocketBadge(){
+ const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
+ pocketIdentity=await getPocketIdentity({force:true});
+ if(prior===(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||''))return;
+ if(page==='home'){
+  const caption=screen.querySelector('.persona-caption strong');
+  if(caption)caption.textContent=gameName();
+ } else if(page==='setup') {
+  const field=screen.querySelector('#who');
+  if(field){field.value=gameName();field.readOnly=isPocketMember();}
+  const note=screen.querySelector('.pw-room-identity');
+  if(note)note.hidden=!isPocketMember();
+ }
+}
 if(q.has('room'))setup('join');else home();
+void refreshPocketBadge();
+window.addEventListener('pageshow',()=>void refreshPocketBadge());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshPocketBadge()});
 // Shared update manager owns service worker registration and activation.
