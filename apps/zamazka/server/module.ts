@@ -18,7 +18,7 @@ const strip=(s:State,id:string)=>({
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
 function choose(s:State){
- s.selected=shuffled(Array.from({length:10},(_,i)=>i)).slice(0,5).map(family=>family+10*Math.floor(Math.random()*5));
+ s.selected=shuffled([1,2,3,4,5,6,7]).slice(0,5);
  // Pick different works for the first five participants; further participants repeat independently.
  s.assignments={};s.votes={};s.turn=0;s.revealed=false;
  const shuffledArt=shuffled(s.selected);
