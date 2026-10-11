@@ -33,12 +33,16 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
   const former=user?.id;user=identity;client=new PocketCloudClient('folio');
   const owner=localOwner();
   if(owner!==user.id){
-   if(!manual){
+   const docs=await loadWorks();
+   // First Pocket ID on this browser inherits its existing local album.
+   // A DIFFERENT user must explicitly consent before uploading those files.
+   if(!manual&&owner&&docs.length){
     enabled=false;
-    setStatus(owner?'Другой аккаунт · выбери синхронизацию':'Облако готово · подключи альбом');
+    setStatus('Другой аккаунт · выбери синхронизацию');
     return false;
    }
-   const docs=await loadWorks();
+   if(!manual&&!owner||!docs.length){setOwner(user.id)}
+   else {
    const question=owner
     ?'На этом устройстве есть рисунки другого профиля. Перенести их копии в облако текущего аккаунта? Локальные оригиналы сохранятся.'
     :'Подключить текущий локальный альбом к Pocket ID и загрузить рисунки в облако?';
@@ -46,6 +50,7 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,noti
     enabled=false;setStatus('Локальные рисунки не загружены');return false;
    }
    setOwner(user.id);
+   }
   }
   enabled=true;
   if(former&&former!==user.id)stats={uploads:0,downloads:0,copies:0,deletions:0};
