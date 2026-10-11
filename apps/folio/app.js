@@ -29,6 +29,7 @@ const state = {
   doc:null, works:[], tool:'brush', brush:'ink', color:'#a6553e', size:9, opacity:1,
   mode:'precision', hand:'right', sheet:null, focus:false, idea:0,
   armPointer:null, armKeyboard:false, armLocked:false, allowLock:false, lastArmTap:0,
+  fillTolerance:28, aimPointerId:null, aimPoint:null, aimTime:0,
   aimEvent:null, spacePan:false,
   panPointer:null, panStart:null, cursorActive:false,
   view:{cx:0,cy:0,scale:1,rot:0}, pointers:new Map(), pinch:null,
@@ -53,6 +54,7 @@ function rememberMode(mode){
 let database=null;
 const DB_NAME='pocket-works:folio:documents';
 const DB_STORE='works';
+try {const stored=localStorage.getItem('pocket-works:folio:fillTolerance');if(stored!==null){const n=Number(stored);if(Number.isFinite(n)&&n>=0&&n<=100)state.fillTolerance=n;}}catch{}
 const stage=$('working-area');
 const canvas=$('artboard');
 const viewCtx=canvas.getContext('2d',{alpha:true});
@@ -120,6 +122,12 @@ function createCanvas(w,h){
   const c=document.createElement('canvas');c.width=w;c.height=h;return c;
 }
 function paintStroke(ctx,stroke){
+  if(stroke.tool==='fill'){
+    ctx.save();ctx.globalCompositeOperation='source-over';
+    ctx.globalAlpha=clamp(stroke.opacity??1,0,1);ctx.fillStyle=stroke.color;
+    for(const run of stroke.runs||[])ctx.fillRect(run[1],run[0],run[2]-run[1]+1,1);
+    ctx.restore();return;
+  }
   const p=stroke.points;
   if(!Array.isArray(p)||!p.length)return;
   const erasing=stroke.tool==='eraser';
@@ -274,7 +282,7 @@ function setInputMode(mode,{save=true}={}){
   if(save)rememberMode(mode);
   const active=mode==='precision';
   $('studio').classList.toggle('mode-precision',active);
-  $('canvas-guide').textContent=active?'Наведи остриё · зажми «Рисовать» другой рукой':
+  $('canvas-guide').textContent=state.tool==='fill'?'Коснись области, чтобы залить её':active?'Наведи остриё · зажми «Рисовать» другой рукой':
     mode==='nib'?'Остриё выше пальца · движение рисует':'Веди пальцем или мышью по бумаге';
   if(!active){state.armPointer=null;state.armKeyboard=false;state.armLocked=false;updateArmUI();}
   hideCursor();updateToolUI();
@@ -325,7 +333,7 @@ function finishStroke(cancel=false){
     notify('Линия выровнена');
   }
   layer.strokes.push(draft);
-  state.undo.push({layer:layer.id,stroke:draft});
+  state.undo.push({layer:layer.id,stroke:draft,index:layer.strokes.length-1});
   if(state.undo.length>200)state.undo.shift();
   state.redo=[];
   markDirty(layer.id);updateUndoRedo();queueSave();
@@ -356,6 +364,60 @@ function sampleColor(e){
   state.tool='brush';updateToolUI();notify('Цвет взят с рисунка');
 }
 
+
+// Snapshot the visible drawing, flood on that composite, and store only scanline
+// ranges. The fill is inserted beneath linework but above earlier fills.
+function hexRGB(value){
+  const v=value.match(/^#([a-f0-9]{6})$/i);
+  return v?[0,2,4].map(i=>parseInt(v[1].slice(i,i+2),16)):[0,0,0];
+}
+function fillAt(e){
+  const layer=currentLayer(),doc=state.doc;
+  if(!layer?.visible||layer.opacity===0){notify('Выбери видимый слой для заливки');return;}
+  const point=inputPoint(e),x=Math.floor(point[0]),y=Math.floor(point[1]),w=doc.width,h=doc.height;
+  if(x<0||y<0||x>=w||y>=h)return;
+  const source=createCanvas(w,h),ctx=source.getContext('2d',{willReadFrequently:true});
+  drawContents(ctx,true);
+  const pixels=ctx.getImageData(0,0,w,h).data,at=(y*w+x)*4;
+  const target=[pixels[at],pixels[at+1],pixels[at+2]],goal=hexRGB(state.color);
+  if(state.opacity===1&&goal.every((v,i)=>Math.abs(v-target[i])<=1)){
+    notify('Область уже этого цвета');return;
+  }
+  const tolerance=state.fillTolerance,visited=new Uint8Array(w*h),stack=[y*w+x],runs=[];
+  const matches=i=>{
+    const p=i*4;
+    return Math.max(Math.abs(pixels[p]-target[0]),Math.abs(pixels[p+1]-target[1]),Math.abs(pixels[p+2]-target[2]))<=tolerance;
+  };
+  while(stack.length){
+    const index=stack.pop();
+    if(visited[index]||!matches(index))continue;
+    const row=Math.floor(index/w),base=row*w;
+    let left=index-base,right=left;
+    while(left>0&&!visited[base+left-1]&&matches(base+left-1))left--;
+    while(right<w-1&&!visited[base+right+1]&&matches(base+right+1))right++;
+    visited.fill(1,base+left,base+right+1);
+    runs.push([row,left,right]);
+    for(const adjacentRow of [row-1,row+1]){
+      if(adjacentRow<0||adjacentRow>=h)continue;
+      let inSpan=false;const adjacentBase=adjacentRow*w;
+      for(let col=left;col<=right;col++){
+        const i=adjacentBase+col;
+        if(!visited[i]&&matches(i)){
+          if(!inSpan){stack.push(i);inSpan=true;}
+        }else inSpan=false;
+      }
+    }
+  }
+  if(!runs.length){notify('Область для заливки не найдена');return;}
+  const stroke={id:uid(),layer:layer.id,tool:'fill',color:state.color,opacity:state.opacity,runs};
+  const position=layer.strokes.findIndex(s=>s.tool!=='fill');
+  const index=position<0?layer.strokes.length:position;
+  layer.strokes.splice(index,0,stroke);
+  state.undo.push({layer:layer.id,stroke,index});
+  if(state.undo.length>200)state.undo.shift();
+  state.redo=[];markDirty(layer.id);updateUndoRedo();queueSave();
+  notify('Область залита');
+}
 function translatePan(e){
   if(state.panPointer!==e.pointerId||!state.panStart)return;
   const p=canvasPoint(e);
@@ -486,22 +548,31 @@ function redo(){
   const entry=state.redo.pop();if(!entry)return;
   const layer=state.doc.layers.find(l=>l.id===entry.layer);
   if(!layer)return;
-  if(!layer.strokes.some(s=>s.id===entry.stroke.id))layer.strokes.push(entry.stroke);
+  if(!layer.strokes.some(s=>s.id===entry.stroke.id))layer.strokes.splice(Math.min(entry.index??layer.strokes.length,layer.strokes.length),0,entry.stroke);
   state.undo.push(entry);markDirty(layer.id);updateUndoRedo();queueSave();
 }
 function updateToolUI(){
   for(const btn of document.querySelectorAll('.tool[data-tool]'))btn.classList.toggle('selected',btn.dataset.tool===state.tool);
   $('active-swatch').style.background=state.color;
-  $('brush-label').textContent=state.tool==='eraser'?'Ластик':state.tool==='pipette'?'Пипетка':brushes.find(b=>b.id===state.brush)?.name||'Кисть';
+  $('brush-label').textContent=state.tool==='fill'?'Заливка':state.tool==='eraser'?'Ластик':state.tool==='pipette'?'Пипетка':brushes.find(b=>b.id===state.brush)?.name||'Кисть';
   $('brush-size').value=state.size;$('brush-size-value').textContent=state.size;
   $('brush-opacity').value=Math.round(state.opacity*100);$('brush-opacity-value').textContent=Math.round(state.opacity*100)+'%';
   $('mode-label').textContent=state.mode==='precision'?'Точное перо':state.mode==='nib'?'Остриё':'Прямо';
   $('mode-icon').textContent=state.mode==='precision'?'⊙':state.mode==='nib'?'◎':'●';
   $('working-area').classList.toggle('left-handed',state.hand==='left');
+  $('studio').classList.toggle('tool-fill',state.tool==='fill');
+  $('mobile-fill-control').hidden=state.tool!=='fill';
+  $('fill-tolerance').value=state.fillTolerance;
+  $('fill-tolerance-value').textContent=state.fillTolerance;
+  updateNibSize();
   if(state.doc)syncDesktop();
 }
 function selectTool(tool){
-  finishStroke(true);state.tool=tool;updateToolUI();
+  finishStroke(true);state.tool=tool;
+  $('canvas-guide').textContent=tool==='fill'?'Коснись области, чтобы залить её':
+    state.mode==='precision'?'Наведи остриё · зажми «Рисовать» другой рукой':
+    state.mode==='nib'?'Остриё выше пальца · движение рисует':'Веди пальцем или мышью по бумаге';
+  updateToolUI();
 }
 function openSheet(kind){
   finishStroke(true);
@@ -719,6 +790,7 @@ $('undo').onclick=undo;$('redo').onclick=redo;
 $('export').onclick=()=>openSheet('export');
 $('brush-tool').onclick=()=>openSheet('brush');
 $('eraser-tool').onclick=()=>selectTool('eraser');
+$('fill-tool').onclick=()=>selectTool('fill');
 $('pipette-tool').onclick=()=>selectTool('pipette');
 $('color-tool').onclick=()=>openSheet('color');
 $('layers-tool').onclick=()=>openSheet('layers');
@@ -726,7 +798,14 @@ $('sheet-close').onclick=closeSheet;$('sheet-backdrop').onclick=closeSheet;
 $('mode-toggle').onclick=()=>{const modes=['precision','nib','direct'];setInputMode(modes[(modes.indexOf(state.mode)+1)%modes.length]);notify(state.mode==='precision'?'Точное перо: наведи и зажми кнопку':state.mode==='nib'?'Остриё автоматически рисует':'Прямой ввод');};
 $('fit').onclick=fitView;
 $('brush-size').oninput=e=>{state.size=Number(e.target.value);$('brush-size-value').textContent=state.size;};
-$('brush-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;$('brush-opacity-value').textContent=e.target.value+'%';};
+$('brush-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;updateToolUI();};
+function changeFillTolerance(value){
+  state.fillTolerance=clamp(Number(value),0,100);
+  try{localStorage.setItem('pocket-works:folio:fillTolerance',String(state.fillTolerance));}catch{}
+  updateToolUI();
+}
+$('fill-tolerance').oninput=e=>changeFillTolerance(e.target.value);
+$('desktop-fill-tolerance').oninput=e=>changeFillTolerance(e.target.value);
 $('focus-toggle').onclick=()=>{state.focus=true;$('studio').classList.add('focus');fitView();};
 $('focus-restore').onclick=()=>{state.focus=false;$('studio').classList.remove('focus');fitView();};
 
@@ -736,6 +815,7 @@ function syncDesktop(){
   document.querySelectorAll('.desktop-tool').forEach(el=>{
     const match={
       'desktop-brush-tool':state.tool==='brush',
+      'desktop-fill-tool':state.tool==='fill',
       'desktop-eraser-tool':state.tool==='eraser',
       'desktop-pipette-tool':state.tool==='pipette'
     };
@@ -757,6 +837,8 @@ function syncDesktop(){
   $('desktop-opacity').value=Math.round(state.opacity*100);
   $('desktop-opacity-value').textContent=Math.round(state.opacity*100)+'%';
   $('desktop-color').value=/^#[0-9a-f]{6}$/i.test(state.color)?state.color:'#a6553e';
+  $('desktop-fill-tolerance').value=state.fillTolerance;
+  $('desktop-fill-value').textContent=state.fillTolerance;
   document.querySelectorAll('[data-input-mode]').forEach(b=>b.classList.toggle('active',b.dataset.inputMode===state.mode));
   $('desktop-mode-help').textContent=state.mode==='precision'?
     'Наведите курсор. Для нанесения штриха зажмите Shift или кнопку на холсте.':
@@ -765,6 +847,7 @@ function syncDesktop(){
 }
 $('desktop-brush-tool').onclick=()=>selectTool('brush');
 $('desktop-eraser-tool').onclick=()=>selectTool('eraser');
+$('desktop-fill-tool').onclick=()=>selectTool('fill');
 $('desktop-pipette-tool').onclick=()=>selectTool('pipette');
 $('desktop-color-tool').onclick=()=>openSheet('color');
 $('desktop-focus-tool').onclick=()=>{$('focus-toggle').click();};
@@ -818,6 +901,7 @@ window.addEventListener('keydown',e=>{
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.key.toLowerCase()==='b')selectTool('brush');
   else if(e.key.toLowerCase()==='e')selectTool('eraser');
+  else if(e.key.toLowerCase()==='g')selectTool('fill');
   else if(e.key.toLowerCase()==='i')selectTool('pipette');
   else if(e.key==='['){state.size=clamp(state.size-2,1,72);updateToolUI();}
   else if(e.key===']'){state.size=clamp(state.size+2,1,72);updateToolUI();}
