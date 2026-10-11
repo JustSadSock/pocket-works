@@ -1,0 +1,65 @@
+name: Animation Studio
+on:
+  pull_request:
+    paths:
+      - "tools/animation-studio/**"
+      - "tools/art-forge/**"
+      - "tools/audio-forge/**"
+      - "docs/ANIMATION-STUDIO.md"
+      - ".github/workflows/animation-studio.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: animation-studio-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  motion-to-contact:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.64.0-noble
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      MOTION_EVIDENCE: ${{ github.workspace }}/quality-artifacts/motion-source
+      TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BLENDER_VERSION: "5.2.1"
+      BLENDER_BASE_URL: "https://download.blender.org/release/Blender5.2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install CPU production tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pil inkscape sox xz-utils
+          archive="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          curl -fsSL -o "/tmp/$archive" "${BLENDER_BASE_URL}/${archive}"
+          curl -fsSL -o /tmp/blender.sha256 "${BLENDER_BASE_URL}/blender-${BLENDER_VERSION}.sha256"
+          cd /tmp
+          grep " ${archive}$" blender.sha256 | sha256sum --check --strict
+          tar -xf "$archive"
+          echo "BLENDER=/tmp/blender-${BLENDER_VERSION}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Test common timeline, physics and audio dispatch
+        run: node --test tools/animation-studio/timeline.test.mjs
+      - name: Test asset isolation, rollback and sequence budgets
+        run: python3 -m unittest discover -s tools/art-forge -p 'test_*.py' -v
+      - name: Export drawn, skeletal, baked and Audio Forge resources
+        run: python3 tools/animation-studio/smoke.py --blender "$BLENDER" --output "$MOTION_EVIDENCE"
+      - name: Bundle production-like offline scene
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund --no-package-lock
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
+          node tools/animation-studio/prepare-browser.mjs
+      - name: Record motion and test contact scenarios
+        run: npx playwright test --config tools/animation-studio/playwright.config.mjs
+      - name: Retain editable sources, clips, sound and motion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: animation-studio-evidence
+          path: quality-artifacts/motion-*
+          if-no-files-found: error
+          retention-days: 14

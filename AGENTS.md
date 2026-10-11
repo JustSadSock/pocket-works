@@ -218,6 +218,11 @@ requires explicit trust; never execute untrusted source with credentials.
 
 ### Animation rule
 
+- Stage III (`docs/ANIMATION-STUDIO.md`) provides app-owned clip/event timing,
+  frame-sequence and sprite-baking exports, physical springs and Audio Forge
+  contact scheduling. Bundle/copy the runtime inside the app, keep gameplay
+  authoritative, cancel stale feedback, and review actual recorded motion.
+
 - When a 3D object benefits from authored animation, prefer a real armature and readable named animation actions in the exported GLB.
 - Use Blender actions for authored motion such as `Idle`, `Walk`, `Run`, `Attack`, `Hit` and `Death`; use runtime Babylon logic for blending, IK, foot planting, look/aim targets, springs, inertia and gameplay-dependent contact response.
 - Do not fake articulated characters as unrelated meshes when a small skeleton is the cleaner production solution.

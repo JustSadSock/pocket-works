@@ -20,12 +20,15 @@ ADAPTERS = {
     "pixelorama": {"image": ".png"},
     "blender": {"model": ".glb", "editable": ".blend"},
     "bake": {"image": ".png"},
+    "frames": {"image": ".png", "clip": ".json"},
+    "bake-sequence": {"image": ".png", "clip": ".json"},
 }
 SOURCE_SUFFIX = {"pixel": ".json", "raster": ".json", "vector": ".svg",
-                 "krita": ".kra", "pixelorama": ".pxo", "blender": ".py", "bake": ".blend"}
+                 "krita": ".kra", "pixelorama": ".pxo", "blender": ".py", "bake": ".blend", "frames": ".json", "bake-sequence": ".blend"}
 PARAMS = {"pixel": set(), "raster": {"size", "crop", "resample"},
           "vector": {"width", "height"}, "krita": set(), "pixelorama": set(),
-          "blender": None, "bake": {"width", "height", "frame", "samples"}}
+          "blender": None, "bake": {"width", "height", "frame", "samples"}, "frames": set(),
+          "bake-sequence": {"width", "height", "samples", "start", "end", "step", "fps", "id", "events", "loop"}}
 
 
 def command(args, env=None, timeout=180):
@@ -389,7 +392,7 @@ def validate_output(path, budget):
 
 
 def tool_for(adapter):
-    return {"pixel": "pillow", "raster": "pillow", "vector": "inkscape", "bake": "blender"}.get(adapter, adapter)
+    return {"pixel": "pillow", "raster": "pillow", "frames": "pillow", "vector": "inkscape", "bake": "blender", "bake-sequence": "blender"}.get(adapter, adapter)
 
 
 def execute(job, source, inputs, outputs, caps, trusted):
@@ -400,6 +403,12 @@ def execute(job, source, inputs, outputs, caps, trusted):
     executable = tool.get("executable")
     if adapter == "pixel":
         pixel(source, outputs)
+    elif adapter in {"frames", "bake-sequence"}:
+        from sequence import export_frames, export_bake
+        if adapter == "frames":
+            export_frames(source, inputs, outputs)
+        else:
+            export_bake(source, outputs, params, executable)
     elif adapter == "raster":
         raster(source, inputs, outputs, params)
     elif adapter == "vector":

@@ -66,6 +66,10 @@ geometry/render properties in addition to hashes.
 | `pixelorama` | PXO | Headless CLI horizontal spritesheet PNG; native tags remain in PXO |
 | `blender` | Authored Python + declared inputs | Save editable BLEND + GLB using explicit output contract |
 | `bake` | BLEND (including a dependency output) | Fixed background rendering, orthographic camera preserved, transparent PNG |
+| `frames` | Sequence JSON + declared PNG inputs | Bounded multi-row atlas + common animation clip |
+| `bake-sequence` | Animated packed BLEND | CPU render sequence → atlas + clip |
+
+Animation sequence/event contracts are documented in ANIMATION-STUDIO.md.
 
 `capabilities` probes installed tools and their relevant help flags. An absent
 editor is a **blocked job**, never a silently selected alternative. Pixel and
