@@ -212,6 +212,21 @@ class ForgeTests(unittest.TestCase):
             self.assertFalse(observed[name]["available"])
             self.assertIn("Missing shared library", observed[name]["reason"])
 
+    def test_atlas_resolves_image_in_another_runtime_directory(self):
+        data = self.pixel_only()
+        data["jobs"][0]["outputs"]["image"] = "public/sprites/scout.png"
+        build(self.app, data, self.caps)
+        atlas = json.loads((self.app / "public/assets/scout.json").read_text())
+        self.assertEqual(atlas["image"], "../sprites/scout.png")
+        check(self.app, data)
+
+    def test_case_and_url_delimiters_cannot_bypass_format_or_loading_validation(self):
+        for output in ["public/scout.PNG", "public/a#b.png", "public/a?b.png"]:
+            data = self.pixel_only()
+            data["jobs"][0]["outputs"]["image"] = output
+            with self.assertRaises(ValueError):
+                plan(self.app, data)
+
 
 if __name__ == "__main__":
     unittest.main()

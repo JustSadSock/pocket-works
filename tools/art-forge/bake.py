@@ -6,6 +6,12 @@ import bpy
 params = json.loads(os.environ["ART_FORGE_PARAMETERS"])
 outputs = json.loads(os.environ["ART_FORGE_OUTPUTS"])
 scene = bpy.context.scene
+for image in bpy.data.images:
+    if image.source == "FILE" and not image.packed_file:
+        raise ValueError("Bake sources must pack textures; external image reads forbidden")
+for font in bpy.data.fonts:
+    if font.filepath not in {"", "<builtin>"} and not font.packed_file:
+        raise ValueError("Bake sources must pack external fonts")
 if not scene.camera:
     raise ValueError("Baking needs an authored camera in the BLEND source")
 for key in ("width", "height"):

@@ -75,7 +75,7 @@ def run_manifest(blender: Path, manifest_path: Path) -> list[Path]:
 
     app_dir = manifest_path.parents[1].resolve()
     forge_dir = manifest_path.parent.resolve()
-    if not inside(app_dir, APPS):
+    if not inside(app_dir, APPS) or manifest_path.parents[1].is_symlink():
         raise RuntimeError(f"Manifest is outside apps/: {manifest_path}")
 
     data = json.loads(manifest_path.read_text(encoding="utf-8"))

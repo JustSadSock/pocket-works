@@ -136,7 +136,7 @@ def plan(app, data):
         for role, value in outputs.items():
             path = local(app, value)
             owned_editable = role == "editable" and path.is_relative_to(app / "asset-forge")
-            if path in producers or path.suffix.lower() != ADAPTERS[adapter][role] or (not owned_editable and not path.is_relative_to(runtime_dir)):
+            if path in producers or path.suffix != ADAPTERS[adapter][role] or (not owned_editable and not path.is_relative_to(runtime_dir)):
                 raise ValueError("Duplicate, invalid or non-runtime output: " + value)
             producers[path] = identity
         params = job.get("parameters", {})
@@ -274,7 +274,7 @@ def pixel(source, outputs):
         records.append({"name": name, "rect": [i * width, 0, width, height], "durationMs": duration,
                         "pivot": pivot, "tag": tag})
     sheet.save(outputs["image"])
-    json_write(outputs["atlas"], {"version": 1, "image": outputs["image"].name,
+    json_write(outputs["atlas"], {"version": 1, "image": os.path.relpath(outputs["image"], outputs["atlas"].parent).replace(os.sep, "/"),
                                    "sampling": "nearest", "frames": records})
 
 
@@ -497,6 +497,7 @@ def build(app, data, caps, trusted=False):
 
 
 def check(app, data):
+    app = app.resolve()
     ordered, runtime, index = plan(app, data)
     document = json.loads(index.read_text())
     if document.get("version") != 1 or document.get("manifestSha256") != hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest():
@@ -542,7 +543,7 @@ def main():
     if not args.app or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", args.app):
         parser.error("--app requires an owning app slug")
     app = (ROOT / "apps" / args.app).resolve()
-    if app.parent != (ROOT / "apps").resolve():
+    if app.parent != (ROOT / "apps").resolve() or app.name != args.app or (ROOT / "apps" / args.app).is_symlink():
         parser.error("App directory escapes apps/")
     data = json.loads((app / "asset-forge/manifest.json").read_text())
     if args.operation == "check":

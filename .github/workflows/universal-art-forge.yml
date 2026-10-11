@@ -59,8 +59,8 @@ jobs:
         run: python3 tools/art-forge/test_editors.py --pixelorama /usr/local/bin/pixelorama --krita /usr/bin/krita
       - name: Install browser scene tooling
         run: |
-          npm install --ignore-scripts --no-package-lock
-          npm install --no-save --no-package-lock @playwright/test@1.64.0
+          npm install --legacy-peer-deps --no-audit --no-fund --no-package-lock
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund --no-package-lock @playwright/test@1.64.0
           node tools/art-forge/prepare-browser.mjs
       - name: Exercise real scenes in Chromium and WebKit offline
         run: npx playwright test --config tools/art-forge/playwright.config.mjs
