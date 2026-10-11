@@ -9,7 +9,7 @@ const RELEASE_NOTES = [
   "Авторская нарисованная карта, отзывчивый мобильный интерфейс, автосохранение и офлайн-доступ."
 ];
 const CACHE_PROTOCOL = 2;
-const APP_SHELL = ['./','./index.html','./app.js','./engine.js','./world.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const APP_SHELL = ['./','./index.html','./app.js','./engine.js','./world.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/workshop-mode.js','../../shared/workshop-mode.css'];
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = APP_VERSION + '-p' + CACHE_PROTOCOL;
 const SHELL_KEYS = new Map(APP_SHELL.map(entry => { const url = new URL(entry, SCOPE_URL); return [url.pathname, url.href]; }));
