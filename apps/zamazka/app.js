@@ -1,16 +1,26 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
-import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,primeGallery} from './artworks.js';
+import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.2.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){for(const key of Object.keys(localStorage)){if(key.startsWith('pocket-works:zamazka:'))localStorage.removeItem(key)}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.3.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){for(const key of Object.keys(localStorage)){if(key.startsWith('pocket-works:zamazka:'))localStorage.removeItem(key)}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',SERVER_KEY=NS+'server',NAME_KEY=NS+'name',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const q=new URLSearchParams(location.search);
 if(q.get('server')&&/^https?:\/\//.test(q.get('server')))localStorage.setItem(SERVER_KEY,q.get('server'));
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,24).map(g=>({...g,art:g.edition===2?g.art:Number(g.art)+REAL_COUNT,edition:2})):[]}catch{return[]}})();
+
+// Retry a smaller Wikimedia thumbnail when the original master is too small.
+document.addEventListener('error',e=>{
+ const image=e.target;
+ if(!(image instanceof HTMLImageElement)||!image.dataset.artId)return;
+ const id=Number(image.dataset.artId);
+ const fallback=artworkFallbackURL(id,image.currentSrc||image.src);
+ if(fallback&&fallback!==image.src){image.src=fallback;return}
+ image.alt=ARTS[id]?.title+' · изображение временно недоступно';
+},true);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const ac=window.__zamazkaAudio||(window.__zamazkaAudio=new Audio());if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(f,ac.currentTime);o.frequency.exponentialRampToValueAtTime(f*.83,ac.currentTime+.09);g.gain.setValueAtTime(.025,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.11);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.12)}catch{}}
 let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
@@ -27,9 +37,9 @@ function home(){
   '<div class="museum-kicker"><span>ATELIER · № 001</span><span>БЮРО РЕСТАВРАЦИИ</span></div>'+
   '<div class="museum-headline"><div class="museum-smalltitle">Игра для тех, кто видит детали</div><h1>Искусство<br><em>подделки.</em></h1><p>Подлинные шедевры. Утраченные фрагменты.<br>Одна очень убедительная ложь.</p></div>'+
   '<div class="museum-display">'+
-    '<div class="museum-echo museum-echo-left"><img src="'+artworkURL(3)+'" alt=""></div>'+
-    '<figure class="museum-centerpiece"><div class="museum-gilded"><img src="'+artworkURL(0)+'" alt="Ян Вермеер — Девушка с жемчужной серёжкой"><span class="museum-ribbon">НАСТОЯЩИЕ ПРОИЗВЕДЕНИЯ</span></div><figcaption><strong>Ян Вермеер</strong><span>Девушка с жемчужной серёжкой, ок. 1665</span></figcaption></figure>'+
-    '<div class="museum-echo museum-echo-right"><img src="'+artworkURL(1)+'" alt=""></div>'+
+    '<div class="museum-echo museum-echo-left"><img data-art-id="3" src="'+artworkURL(3)+'" alt=""></div>'+
+    '<figure class="museum-centerpiece"><div class="museum-gilded"><img data-art-id="0" src="'+artworkURL(0)+'" alt="Ян Вермеер — Девушка с жемчужной серёжкой"><span class="museum-ribbon">НАСТОЯЩИЕ ПРОИЗВЕДЕНИЯ</span></div><figcaption><strong>Ян Вермеер</strong><span>Девушка с жемчужной серёжкой, ок. 1665</span></figcaption></figure>'+
+    '<div class="museum-echo museum-echo-right"><img data-art-id="1" src="'+artworkURL(1)+'" alt=""></div>'+
     '<span class="museum-exhibit-number">I / VII</span>'+
   '</div>'+
   '<div class="museum-control">'+
@@ -58,7 +68,7 @@ function lobby(){
  const players=view.participants||[],leader=view.host===me?.id;
  change('<section class="page"><div class="section-label">ЧАСТНАЯ ЭКСПОЗИЦИЯ</div><h2>Комната готова</h2><p class="hint">Поделись приглашением. Можно играть вдвоём; дополнительные участники присоединятся до начала партии.</p><div class="room-ticket"><div class="section-label">КОД ПРИГЛАШЕНИЯ</div><div class="code">'+esc(roomId)+'</div><button class="btn ghost" data-action="share">Скопировать ссылку</button></div><div class="section-label">ГОСТИ · '+players.length+'/8</div><div class="players">'+players.map(p=>'<div class="player"><div class="seal">'+esc(p.name.slice(0,1).toUpperCase())+'</div><div class="player-name">'+esc(p.name)+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div><div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds"><option value="3">3 раунда</option><option value="1">1 раунд</option><option value="5">5 раундов</option></select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>Открыть экспозицию</button>':'<div class="notice">Ожидаем, пока куратор начнёт выставку.</div>')+'<button class="btn ghost" data-action="leave">Покинуть комнату</button></div></section>','lobby')
 }
-function galleryHtml(list,select=false){return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><img src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+'</span></button>').join('')+'</div>'}
+function galleryHtml(list,select=false){return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+'</span></button>').join('')+'</div>'}
 function preview(local=false){
  const v=local?practice:view;
  change('<section class="phase-page">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+'<div class="phase-body"><div class="notice">Пять произведений. Через несколько секунд одному из них понадобится твоя кисть. Нажми на картину, чтобы рассмотреть её.</div>'+galleryHtml(v.selected)+'<p class="hint">Оригиналы исчезнут после начала реставрации. Все работы — настоящие музейные произведения.</p>'+(local?'<button class="btn primary wide" data-action="skip">Перейти к реставрации</button>':'')+'</div></section>','preview');
@@ -142,7 +152,7 @@ function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.clearDraft();try{net.sendGame({type:'submit',strokes:data});notify('Работа отправлена')}catch{notify('Нет подключения — сохранили работу в личном фонде')}} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 function share(){const link=new URL(location.href);link.searchParams.set('room',roomId);const server=localStorage.getItem(SERVER_KEY);if(server)link.searchParams.set('server',server);const href=link.toString();if(navigator.share){navigator.share({title:'ЗАМАЗКА — приглашение',url:href}).catch(()=>navigator.clipboard?.writeText(href))}else if(navigator.clipboard){navigator.clipboard.writeText(href).then(()=>notify('Приглашение скопировано')).catch(()=>notify(href))}else notify(href)}
-function inspect(id){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata">'+esc(a.artist)+' · '+esc(a.date)+'<div>'+esc(a.museum)+'</div></div><p class="hint">Запомни цвета и фактуру оригинала.</p>'+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
+function inspect(id){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata">'+esc(a.artist)+' · '+esc(a.date)+'<div>'+esc(a.museum)+'</div></div><p class="hint">Запомни цвета и фактуру оригинала.</p>'+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
 function settings(){modal('Настройки','<label class="field" for="settingName">Имя</label><input class="input" id="settingName" maxlength="22" value="'+esc(localStorage.getItem(NAME_KEY)||'Реставратор')+'"><label class="field" for="settingServer">Сервер интернет-комнат</label><input class="input" id="settingServer" type="url" value="'+esc(localStorage.getItem(SERVER_KEY)||'')+'" placeholder="https://"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки интерфейса</label><p class="hint">Изменение адреса сервера действует при следующем подключении. Офлайн-тренировка не требует сервера.</p>',[
  ['Сохранить',()=>{localStorage.setItem(NAME_KEY,dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');localStorage.setItem(SERVER_KEY,dialog.querySelector('#settingServer').value.trim());beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']])}
