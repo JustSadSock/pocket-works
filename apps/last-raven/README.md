@@ -15,7 +15,7 @@ After day twelve, the accumulated state becomes an interactive siege. The assaul
 ## Architecture
 
 - `core.ts` owns deterministic campaign state, non-repeating eligible event selection, resource validation, delayed consequences, tactical order validation and siege math.
-- `campaign-events.ts` expands the 10 original encounters with 28 new scenes, including unlockable flag-based follow-ups.
+- `campaign-events.ts` expands the 10 original encounters with 30 new scenes, including unlockable flag-based follow-ups.
 - `main.ts` owns Babylon.js presentation, mobile UI, camera direction, procedural audio and persistence.
 - The 3D castle is a compact winter diorama with slate tower roofs, stonework relief, snow-buried firs and a moving siege ram. The world visually reflects food/wood/population and weather rather than drawing decorative charts.
 - `window.__AI_TEST_STATE__` exposes a safe gameplay QA surface for Pocket Works automation.
@@ -32,7 +32,7 @@ All essential actions are explicit touch targets. The player can open the intell
 
 ## Winter remembers · v0.2.0
 
-- 38 authored gate and raven encounters, including multiple conditional returning characters and consequence chains.
+- 40 authored gate and raven encounters, including multiple conditional returning characters and consequence chains.
 - Random eligible scenes no longer repeat within the twelve-day campaign, as long as fresh alternatives are available.
 - Three explicit siege stops. During each stop the player issues one tactical order and the simulation resumes.
 - Old v0.1.0 saved campaigns migrate in-place; existing saves and relationship history are retained.
