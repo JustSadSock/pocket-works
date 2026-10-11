@@ -1,5 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createPocketLan } from '../../shared/capabilities/lan.js';
+import {getPocketIdentity,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import { STEPS, INSTRUMENTS, stepMs, loopMs, unlockAudio, audioContext, playNote, canHearTrack, renderWav } from './audio.js';
 installMobileRuntime();
 const STORAGE='pocket-works:jam-tape:session-v1', PROFILE='pocket-works:jam-tape:profile-v1';
@@ -8,6 +9,7 @@ const clipDialog=document.querySelector('#clipDialog'), confirmDialog=document.q
 const ownId=(()=>{try{let id=sessionStorage.getItem(PROFILE+':id');if(!id){id=crypto.randomUUID();sessionStorage.setItem(PROFILE+':id',id)}return id}catch{return crypto.randomUUID()}})();
 let saved=(()=>{try{return JSON.parse(localStorage.getItem(STORAGE)||'null')}catch{return null}})();
 let name=(()=>{try{return localStorage.getItem(PROFILE+':name')||'Музыкант'}catch{return 'Музыкант'}})();
+let pocketIdentity=null;
 let instrument='keys', air=true, hearOthers=true, onlyMine=false;
 let screen='welcome', lan=null, room=null, isHost=false, pairingMode='', inviteSignal='', replySignal='', offerText='', answerText='', nearbyRooms=[];
 let session=null, recording=null, editClip=null, held=new Map(), remoteVoices=new Map(), busy=false, timer=null, probeTimer=null, toastTimer=null;
@@ -24,7 +26,7 @@ const rand=()=>Math.random().toString(36).slice(2,7);
 const fmt=x=>String(x).padStart(2,'0');
 function inform(text){clearTimeout(toastTimer);toastEl.textContent=text;toastEl.classList.add('visible');toastTimer=setTimeout(()=>toastEl.classList.remove('visible'),3300)}
 function emptySession(){
- const p={id:ownId,name:name.slice(0,24),inst:instrument,air:true,online:true};
+ const p={id:ownId,name:name.slice(0,24),avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:instrument,air:true,online:true};
  return {bpm:108,playing:false,anchor:0,players:[p],tracks:{[ownId]:[]},rev:1};
 }
 function tidyClip(raw){
@@ -38,7 +40,7 @@ function tidyClip(raw){
 function tidySession(s){
  if(!s||typeof s!=='object'||!Array.isArray(s.players)||s.players.length>4||!s.tracks)return null;
  const players=s.players.filter(p=>typeof p?.id==='string'&&p.id.length<80&&typeof p?.name==='string').map(p=>({
-  id:p.id,name:p.name.slice(0,24),inst:['keys','bass','drums'].includes(p.inst)?p.inst:'keys',air:p.air!==false,online:p.online!==false
+  id:p.id,name:p.name.slice(0,24),avatar:typeof p.avatar==='string'&&['clay','moss','ink','sun','wave','ember','plum','stone'].includes(p.avatar)?p.avatar:null,inst:['keys','bass','drums'].includes(p.inst)?p.inst:'keys',air:p.air!==false,online:p.online!==false
  }));
  if(!players.length)return null;
  const tracks={};
@@ -50,11 +52,11 @@ function loadSketch(){
  if(!prior)return emptySession();
  const previous=prior.players.find(p=>p.id===ownId);
  if(previous){instrument=previous.inst;air=previous.air}else{
-  prior.players.unshift({id:ownId,name,inst:instrument,air:true,online:true});
+  prior.players.unshift({id:ownId,name,avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:instrument,air:true,online:true});
   if(prior.players.length>4)prior.players=prior.players.slice(0,4);
   prior.tracks[ownId]=[];
  }
- prior.players=prior.players.map(p=>({...p,online:p.id===ownId,name:p.id===ownId?name:p.name}));
+ prior.players=prior.players.map(p=>({...p,online:p.id===ownId,name:p.id===ownId?name:p.name,avatar:p.id===ownId?(pocketIdentity?.complete?pocketIdentity.avatar:null):p.avatar}));
  prior.playing=false;prior.anchor=0;return prior;
 }
 function saveSketch(){
@@ -63,7 +65,7 @@ function saveSketch(){
  try{localStorage.setItem(STORAGE,JSON.stringify(saved))}catch{inform('Место в памяти браузера закончилось — экспортируй микс')}
 }
 function createLan(){
- return createPocketLan({applicationId:'jam-tape',protocolVersion:1,displayName:name,player:{id:ownId,name,metadata:{app:'jam-tape'}}});
+ return createPocketLan({applicationId:'jam-tape',protocolVersion:1,displayName:name,player:{id:ownId,name,metadata:{app:'jam-tape',avatar:pocketIdentity?.complete?pocketIdentity.avatar:null}}});
 }
 function setScreen(next){screen=next;render()}
 function render(){document.querySelector('#roomButton').hidden=!(room&&screen==='studio');document.querySelector('#peerCount').textContent=String(session?.players.filter(p=>p.online).length||1);if(screen==='welcome')renderWelcome();if(screen==='pair')renderPair();if(screen==='studio')renderStudio()}
@@ -71,7 +73,8 @@ function renderWelcome(){
  view.innerHTML='<section class="welcome"><div class="cover"><div class="cover-stamp">ЖИВАЯ ЛУП-СТУДИЯ / ВЫПУСК 001</div>'+
  '<div class="tape-art"><div class="tape-label">PLAY<br>TOGETHER</div><div class="reel left"><b></b></div><div class="reel right"><b></b></div><div class="tape-stripe"></div></div>'+
  '<h1>Вместе<br><em>звучим.</em></h1><p>Придумай мелодию, запиши свой кусочек и передай ритм друзьям. Каждый играет на своём инструменте, а лента собирает всё вместе.</p></div>'+
- '<div class="entry"><label for="nameInput">ТВОЙ ПСЕВДОНИМ</label><input id="nameInput" type="text" maxlength="24" autocomplete="nickname" value="'+safe(name)+'" placeholder="Музыкант">'+
+ '<div class="entry"><label for="nameInput">ТВОЙ ПСЕВДОНИМ</label><input id="nameInput" type="text" maxlength="24" autocomplete="nickname" value="'+safe(name)+'" placeholder="Музыкант" '+(pocketIdentity?.complete?'readonly aria-readonly="true"':'')+'>'+
+ '<p class="small-note pw-identity-notice">'+(pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.avatar,{small:true})+' '+safe(pocketIdentity.nickname)+' · Pocket ID':'Гостевой музыкант')+' · <a href="'+pocketIdProfileUrl+'">'+(pocketIdentity?.complete?'Профиль':'Войти')+'</a></p>'+
  '<div class="entry-actions"><button class="action primary" data-action="solo">Открыть свою студию <span>↗</span></button>'+
  '<button class="action" data-action="host">Создать LAN-студию <span>↗</span></button>'+
  '<button class="action" data-action="join">Присоединиться <span>→</span></button></div>'+
@@ -116,7 +119,7 @@ function trackView(p,i){
    '<div class="clip" aria-label="Чужой дубль: '+safe(labels[c.inst])+'">'+body+'</div>';
  }).join('');
  return '<section class="track '+(!audible?'off-air':'')+'" style="--track-color:'+colors[i%colors.length]+'">'+
- '<div class="track-head"><div class="track-name">'+safe(p.name)+(owns?' · ТЫ':'')+
+ '<div class="track-head"><div class="track-name">'+(p.avatar?pocketAvatarMarkup(p.avatar,{small:true}):'')+safe(p.name)+(owns?' · ТЫ':'')+
  '<small>'+safe(labels[p.inst])+' · '+(p.air?'В ЭФИРЕ':'НЕ В ЭФИРЕ')+(p.online?'':' · ОФЛАЙН')+'</small></div>'+
  '<span class="track-count">'+track.length+' / 6 ДУБЛЕЙ</span></div>'+
  '<div class="track-lane">'+(clips||'<div class="track-empty">Пока тишина</div>')+'</div></section>';
@@ -436,6 +439,7 @@ async function acceptAnswer(){
  }catch{inform('Неверный или устаревший ответ. Создай новый код приглашения.')}
 }
 function saveName(){
+ if(pocketIdentity?.complete){name=pocketIdentity.nickname;return}
  const raw=view.querySelector('#nameInput')?.value.trim();
  if(raw)name=raw.slice(0,24);
  try{localStorage.setItem(PROFILE+':name',name)}catch{}
@@ -563,3 +567,20 @@ document.querySelector('#confirmReset').addEventListener('click',()=>{
 window.addEventListener('pagehide',()=>{if(!room)saveSketch()});
 startTicker();probeTimer=setInterval(probeClock,12000);
 renderWelcome();
+async function refreshIdentity(){
+ const previous=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
+ pocketIdentity=await getPocketIdentity({force:true});
+ if(previous===(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||''))return;
+ if(pocketIdentity?.complete)name=pocketIdentity.nickname;
+ else try{name=localStorage.getItem(PROFILE+':name')||'Музыкант'}catch{name='Музыкант'}
+ if(session){
+  const own=self();
+  if(own){own.name=name;own.avatar=pocketIdentity?.complete?pocketIdentity.avatar:null}
+  if(!room)saveSketch();
+ }
+ if(screen==='welcome')renderWelcome();
+ else if(screen==='studio'&&!room)renderStudio();
+}
+void refreshIdentity();
+window.addEventListener('pageshow',()=>void refreshIdentity());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshIdentity()});
