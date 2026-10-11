@@ -49,6 +49,8 @@ jobs:
           node --check pocketnet/worker.mjs
           node --check pocket-id/hub.mjs
           node --check shared/pocket-id.js
+          node --check shared/capabilities/identity.js
+          node --check pocketnet/test/identity.mjs
           node --check scripts/build-pocketnet-modules.mjs
           node --check apps/zamazka/app.js
           node apps/zamazka/test-room-code.mjs
@@ -74,5 +76,6 @@ jobs:
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true; cat /tmp/pocketnet-dev.log | tail -n 100' EXIT
           node pocket-id/test/edge.mjs
+          node pocketnet/test/identity.mjs
           node pocketnet/test/edge.mjs
           node pocketnet/test/flagpost.mjs
