@@ -4,7 +4,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,artworkURL} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.0.0',cachePrefix:'zamazka-',storageNamespace:'pocket-works:zamazka',onReset(){for(const key of Object.keys(localStorage)){if(key.startsWith('pocket-works:zamazka:'))localStorage.removeItem(key)}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.0.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){for(const key of Object.keys(localStorage)){if(key.startsWith('pocket-works:zamazka:'))localStorage.removeItem(key)}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',SERVER_KEY=NS+'server',NAME_KEY=NS+'name',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const q=new URLSearchParams(location.search);
