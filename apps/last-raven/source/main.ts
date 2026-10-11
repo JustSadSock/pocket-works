@@ -19,11 +19,11 @@ import { Scene } from '@babylonjs/core/scene';
 import { advanceNight, canChoose, canSiegeOrder, choose, createGame, issueSiegeOrder, relationLabel, restoreGame, serializeGame, startGame, stepSiege } from './core';
 
 installMobileRuntime();
-registerEnhancedUpdate({appName:'ПОСЛЕДНИЙ ВОРОН',version:'0.2.0',releaseNotes:[
+registerEnhancedUpdate({appName:'ПОСЛЕДНИЙ ВОРОН',version: '0.2.0',releaseNotes:[
   '40 основных событий: новые цепочки решений и возвращающиеся персонажи.',
   'Финальная осада теперь требует приказов кастеляна; объёмный зимний замок и новый боевой интерфейс.'
 ]});
-createWorkshopMode({appName:'ПОСЛЕДНИЙ ВОРОН',version:'0.2.0',cachePrefix:'last-raven-',storageNamespace:'pocket-works:last-raven'});
+createWorkshopMode({appName:'ПОСЛЕДНИЙ ВОРОН',version: '0.2.0',cachePrefix:'last-raven-',storageNamespace:'pocket-works:last-raven'});
 
 const $=(id)=>document.getElementById(id);
 const canvas=$('world');
@@ -205,7 +205,7 @@ for(const button of document.querySelectorAll('[data-siege-order]'))button.addEv
 $('new-game').onclick=newCampaign;$('continue').onclick=continueCampaign;$('again').onclick=newCampaign;$('next-day').onclick=nextDay;$('exit').onclick=home;$('start-exit').onclick=home;$('end-exit').onclick=home;$('sound').onclick=()=>{audio.toggle();renderUI()};$('intel').onclick=()=>{audio.unlock();renderIntel();show('intel-panel',true)};$('close-intel').onclick=()=>show('intel-panel',false);
 if(restored&&!restored.completed){show('continue',true);$('continue-day').textContent=String(restored.day)}
 
-window.__AI_TEST_STATE__={getState:()=>JSON.parse(JSON.stringify(state)),newCampaign,choose:(id)=>decide(id),nextDay,openIntel:()=>{$('intel').click()},siegeCommand,version:'0.2.0'};
+window.__AI_TEST_STATE__={getState:()=>JSON.parse(JSON.stringify(state)),newCampaign,choose:(id)=>decide(id),nextDay,openIntel:()=>{$('intel').click()},siegeCommand,version: '0.2.0'};
 
 let acc=0;
 function frame(now){const dt=Math.min(.06,Math.max(0,(now-last)/1000));last=now;if(started&&state.phase==='siege'){acc+=dt;while(acc>=1/30&&state.phase==='siege'){stepSiege(state,1/30);acc-=1/30}if(state.phase==='won'||state.phase==='lost')finish()}updateWorld(dt);if(started&&(phaseKey!==state.phase||snowClock>1)){phaseKey=state.phase;snowClock=0;renderUI()}snowClock+=dt;scene.render();requestAnimationFrame(frame)}
