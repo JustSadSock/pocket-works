@@ -46,9 +46,10 @@ async function imageSource(id){
      if(saved&&saved.ok)return URL.createObjectURL(await saved.blob());
      const response=await fetch(url,{mode:'cors',credentials:'omit'});
      if(!response.ok)continue;
+     const copy=response.clone();
      const blob=await response.blob();
      if(!blob.type.startsWith('image/')||blob.size<4096)continue;
-     try{await cache?.put(url,response)}catch{}
+     try{await cache?.put(url,copy)}catch{}
      return URL.createObjectURL(blob);
    }catch{}
  }
