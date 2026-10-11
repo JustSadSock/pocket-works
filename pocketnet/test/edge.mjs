@@ -80,8 +80,8 @@ const first = await channel(firstToken);
 const second = await channel(secondToken);
 let again;
 try {
-  assert.equal((await first.next('authenticated')).player.name, 'Painter');
-  assert.equal((await second.next('authenticated')).player.name, 'Observer');
+  assert.equal((await first.next('authenticated')).player.name, 'Гость · Painter');
+  assert.equal((await second.next('authenticated')).player.name, 'Гость · Observer');
   first.send('create_room', { gameId: 'zamazka' });
   const created = await first.next('room_joined');
   assert.equal(created.state.phase, 'lobby');
@@ -96,7 +96,7 @@ try {
   second.send('game_message', { payload: { type: 'emblem', image: 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' } });
   assert.match((await second.next('game_event', m => m.event?.type === 'notice')).event.payload, /знак/i);
   second.send('game_message', { payload: { type: 'emblem', image: png } });
-  const badge = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.emblems?.[(event.event.payload.participants || []).find(p => p.name === 'Observer')?.id] === png);
+  const badge = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.emblems?.[(event.event.payload.participants || []).find(p => p.name === 'Гость · Observer')?.id] === png);
   assert.equal(Object.values(badge.event.payload.emblems).includes(png), true);
   // Live strokes: send deltas, receive in peer socket without full state rerender.
   const packet={type:'board_delta',revision:0,k:'smoke1',q:0,c:'#3d3028',s:9,p:[[12,15],[55,77]]};
