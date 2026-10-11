@@ -5,17 +5,19 @@
   "assets": {
     "directory": "./dist-site",
     "binding": "ASSETS",
-    "run_worker_first": ["/pocketnet/*", "/pocket-id/*", "/privacy"]
+    "run_worker_first": ["/pocketnet/*", "/pocket-id/*", "/pocket-cloud/*", "/privacy"]
   },
   "main": "./pocketnet/worker.mjs",
   "durable_objects": {
     "bindings": [
       { "name": "POCKETNET", "class_name": "PocketNetHub" },
-      { "name": "POCKET_ID", "class_name": "PocketIdentity" }
+      { "name": "POCKET_ID", "class_name": "PocketIdentity" },
+      { "name": "POCKET_CLOUD", "class_name": "PocketCloud" }
     ]
   },
   "migrations": [
     { "tag": "pocketnet-sqlite-v1", "new_sqlite_classes": ["PocketNetHub"] },
-    { "tag": "pocket-id-sqlite-v1", "new_sqlite_classes": ["PocketIdentity"] }
+    { "tag": "pocket-id-sqlite-v1", "new_sqlite_classes": ["PocketIdentity"] },
+    { "tag": "pocket-cloud-sqlite-v1", "new_sqlite_classes": ["PocketCloud"] }
   ]
 }
