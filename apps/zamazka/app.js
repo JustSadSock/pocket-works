@@ -85,7 +85,7 @@ function lobby(){
  if(!view||!roomId)return;
  const players=view.participants||[],leader=view.host===me?.id,code=inviteCode(roomId);
  change('<section class="page exhibition-lobby"><div class="section-label">ЧАСТНАЯ ЭКСПОЗИЦИЯ / ЗАЛ ОЖИДАНИЯ</div><h2>Ждём гостей.</h2>'+
-  '<p class="hint">Друзья вводят код и своё имя. Сервер уже подключён — ничего настраивать не нужно.</p>'+
+  '<p class="hint">Поделись кодом — друзья войдут со своими никами. Как только соберётесь, можно начинать.</p>'+
   '<div class="room-ticket"><div class="ticket-top"><span class="section-label">КОД КОМНАТЫ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
   '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div><p class="ticket-help">Продиктуй код или отправь ссылку.</p>'+
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Отправить ссылку ↗</button></div></div>'+
