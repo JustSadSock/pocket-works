@@ -794,6 +794,7 @@ async function showHome(){
   $('studio').hidden=true;$('home').hidden=false;closeSheet();
   state.works=(await loadWorks()).sort((a,b)=>b.updatedAt-a.updatedAt);
   renderGallery();
+  folioCloud?.schedule();
 }
 function renderGallery(){
   const gallery=$('gallery');
@@ -994,7 +995,7 @@ async function boot(){
   if(!database&&!('localStorage' in window))notify('Локальное хранилище недоступно');
   await showHome();
   folioCloud=createFolioCloudSync({
-    loadWorks,putWork,removeWork,notify,
+    loadWorks,putWork,removeWork,notify,getOpenId:()=>state.doc?.id||null,
     async onUpdate(){if(!state.doc){state.works=(await loadWorks()).sort((a,b)=>b.updatedAt-a.updatedAt);renderGallery();}}
   });
   folioCloud.start();
