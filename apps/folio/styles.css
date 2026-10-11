@@ -320,3 +320,38 @@ button svg,a svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-wid
 .precision-lock-toggle{border-top:1px solid #c9b79d;padding:12px 2px 5px;margin:3px 0 0;display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;line-height:1.5}
 .precision-lock-toggle input{width:22px;height:22px;accent-color:#38604d;flex-shrink:0}
 .precision-lock-toggle small{font-size:10px;color:#8a7a67;font-weight:400}
+
+
+/* FOLIO 1.2 — calibrated brush cursor + paint bucket */
+.nib-cursor{box-sizing:border-box;will-change:left,top;width:var(--nib-diameter,9px);height:var(--nib-diameter,9px);min-width:2px;min-height:2px;border:1px solid #fff5e7;background:color-mix(in srgb,var(--nib-color,#a6553e) 22%,transparent);box-shadow:0 0 0 1px #203a31,0 1px 5px #14241d69;border-radius:50%;transition:none!important}
+.nib-cursor::before,.nib-cursor::after{display:none}
+.nib-core{position:absolute;top:50%;left:50%;width:2px;height:2px;transform:translate(-50%,-50%);border-radius:50%;background:#253b36;box-shadow:0 0 0 1px #f8f0df}
+.nib-measure{display:block;position:absolute;left:calc(100% + 9px);top:50%;transform:translateY(-50%);white-space:nowrap;background:#1d3429dd;color:#f1e6d5;font-size:10px;font-weight:700;line-height:1.6;font-variant-numeric:tabular-nums;padding:1px 5px;border:1px solid #ffffff36;pointer-events:none;letter-spacing:.02em}
+.working-area:has(.arm-button.is-armed) .nib-cursor{border-color:#e9a478;background:color-mix(in srgb,var(--nib-color,#a6553e) 32%,transparent)}
+.working-area:has(.arm-button.is-armed) .nib-core{background:#c96c4c}
+.tool-bar button[data-tool=fill].selected{color:#3e715b}
+.rail-fill-tolerance{display:none}
+.studio-screen.tool-fill #mobile-fill-control{display:flex}
+.studio-screen.tool-fill #mobile-fill-control[hidden]{display:none}
+.studio-screen.tool-fill .rail-opacity{display:none}
+.studio-screen.tool-fill .rail-slider:not(.rail-fill-tolerance):not(.rail-opacity){display:none}
+.studio-screen.tool-fill .rail-caption{width:65px;flex-basis:65px}
+.desktop-fill-control{display:none;margin-top:15px;background:#e5d5bd;border-left:3px solid #a66f51;padding:10px 9px}
+.studio-screen.tool-fill .desktop-fill-control{display:flex;flex-direction:column;gap:7px}
+.desktop-fill-control label{display:flex;justify-content:space-between;font-size:11px;font-weight:750}
+.desktop-fill-control output{font-variant-numeric:tabular-nums}
+.desktop-fill-control input{accent-color:#a66f51;width:100%;cursor:pointer}
+.desktop-fill-control small{font-size:10px;line-height:1.4;color:#6c7161}
+@media (max-width:420px){
+ .tool-bar{gap:0;padding:4px 2px 1px}
+ .tool-bar button{height:54px;min-height:54px}
+ .tool-bar svg{width:21px;height:21px}
+ .tool-bar small{font-size:8px}
+ .active-swatch{width:23px;height:23px}
+}
+@media (prefers-reduced-motion:reduce){
+ .nib-cursor,.nib-measure{transition:none!important}
+}
+
+.studio-screen.tool-fill .arm-button{display:none!important}
+.studio-screen.tool-fill .nib-cursor{display:none!important}

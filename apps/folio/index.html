@@ -23,6 +23,7 @@
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-2"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5m5 5H10a6 6 0 0 0 0 12h2"/></symbol>
     <symbol id="i-brush" viewBox="0 0 24 24"><path d="m13 11 7.5-7.5a2 2 0 0 0-3-3L10 8m3 3-4 4M6 14a4 4 0 0 0-4 4c0 1.3-.5 2.4-1 3 2.5 0 4.2.5 6-1a4 4 0 0 0-1-6Z"/></symbol>
+    <symbol id="i-fill" viewBox="0 0 24 24"><path d="m3 13 10-10 8 8-10 10-8-8Zm5-5 8 8M5 4l4 4"/><path d="M18 18c0 2 1.5 3 3 3 1.5 0 2-1 2-2 0-1-1-3-2-4-1 1-3 3-3 4Z"/></symbol>
     <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m20 20H9a3 3 0 0 1-2-1l-4-4a3 3 0 0 1 0-4l8-8a3 3 0 0 1 4 0l6 6a3 3 0 0 1 0 4l-8 8M9 7l8 8"/></symbol>
     <symbol id="i-pipette" viewBox="0 0 24 24"><path d="m12 6 6 6m-1-9 4 4-3 3-4-4ZM7 11 3 15l-1 6 6-1 10-10-4-4-7 7"/></symbol>
     <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></symbol>
@@ -98,6 +99,7 @@
           <div class="desktop-rail-heading"><strong>F<span>.</span></strong><small>ИНСТРУМЕНТЫ</small></div>
           <div class="desktop-tool-stack">
             <button id="desktop-brush-tool" class="desktop-tool is-active" title="Кисть — B"><svg><use href="#i-brush"/></svg><span>Кисть <kbd>B</kbd></span></button>
+            <button id="desktop-fill-tool" class="desktop-tool" title="Заливка — G"><svg><use href="#i-fill"/></svg><span>Заливка <kbd>G</kbd></span></button>
             <button id="desktop-eraser-tool" class="desktop-tool" title="Ластик — E"><svg><use href="#i-eraser"/></svg><span>Ластик <kbd>E</kbd></span></button>
             <button id="desktop-pipette-tool" class="desktop-tool" title="Пипетка — I"><svg><use href="#i-pipette"/></svg><span>Пипетка <kbd>I</kbd></span></button>
             <button id="desktop-color-tool" class="desktop-tool" title="Выбрать цвет"><svg><use href="#i-layers"/></svg><span>Палитра</span></button>
@@ -107,12 +109,12 @@
           <div class="desktop-swatches" id="desktop-swatches"></div>
           <div class="desktop-rail-footer">
             <button id="desktop-idea" class="desktop-inspire"><svg><use href="#i-spark"/></svg> Найти идею</button>
-            <div class="desktop-shortcuts"><span>ПРОСТЫЕ ЖЕСТЫ</span><p><kbd>Пробел</kbd> + перетаскивание — переместить</p><p><kbd>Колесо</kbd> — масштаб</p><p><kbd>B</kbd> <kbd>E</kbd> <kbd>I</kbd> — инструменты</p><p><kbd>Ctrl</kbd> + <kbd>Z</kbd> — отменить</p></div>
+            <div class="desktop-shortcuts"><span>ПРОСТЫЕ ЖЕСТЫ</span><p><kbd>Пробел</kbd> + перетаскивание — переместить</p><p><kbd>Колесо</kbd> — масштаб</p><p><kbd>B</kbd> <kbd>E</kbd> <kbd>G</kbd> <kbd>I</kbd> — инструменты</p><p><kbd>Ctrl</kbd> + <kbd>Z</kbd> — отменить</p></div>
           </div>
         </aside>
       <div class="working-area" id="working-area">
         <canvas id="artboard" data-gesture-surface data-block-callout aria-label="Холст, рисуйте пальцем"></canvas>
-        <div class="nib-cursor" id="nib-cursor" hidden></div>
+        <div class="nib-cursor" id="nib-cursor" hidden><span class="nib-core"></span><span class="nib-measure" id="nib-measure">9 px</span></div>
         <div class="stage-hud" data-ui>
           <button id="mode-toggle" class="mode-toggle" title="Переключить режим ввода"><span id="mode-icon">◎</span><span id="mode-label">Точное перо</span></button>
           <button id="fit" class="zoom-button" title="Вписать холст в экран"><span id="zoom-label">100%</span><svg><use href="#i-zoom"/></svg></button>
@@ -129,6 +131,7 @@
           <label class="desktop-slider-label">Толщина <output id="desktop-size-value">9 px</output><input type="range" min="1" max="72" step="1" value="9" id="desktop-size"></label>
           <label class="desktop-slider-label">Насыщенность <output id="desktop-opacity-value">100%</output><input type="range" min="10" max="100" step="5" value="100" id="desktop-opacity"></label>
           <div class="desktop-color-control"><span>Текущий цвет</span><input id="desktop-color" type="color" aria-label="Цвет кисти" value="#a6553e"></div>
+          <div class="desktop-fill-control" id="desktop-fill-control"><label for="desktop-fill-tolerance">Допуск заливки <output id="desktop-fill-value">28</output></label><input type="range" id="desktop-fill-tolerance" min="0" max="100" value="28"><small>Заливка замкнутых областей в активном слое</small></div>
         </div>
         <div class="inspector-section">
           <div class="inspector-label">СПОСОБ ВВОДА</div>
@@ -149,9 +152,11 @@
           <span class="rail-caption" id="brush-label">Тушь</span>
           <label class="rail-slider"><span>РАЗМЕР</span><input id="brush-size" aria-label="Размер кисти" type="range" min="1" max="72" step="1" value="9"><output id="brush-size-value">9</output></label>
           <label class="rail-slider rail-opacity"><span>КРАСКА</span><input id="brush-opacity" aria-label="Непрозрачность краски" type="range" min="10" max="100" step="5" value="100"><output id="brush-opacity-value">100%</output></label>
+          <label class="rail-slider rail-fill-tolerance" id="mobile-fill-control" hidden><span>ДОПУСК</span><input id="fill-tolerance" aria-label="Допуск заливки" type="range" min="0" max="100" value="28"><output id="fill-tolerance-value">28</output></label>
         </div>
         <nav class="tool-bar" aria-label="Инструменты рисования">
           <button class="tool selected" id="brush-tool" aria-label="Кисти" data-tool="brush"><svg><use href="#i-brush"/></svg><small>Кисти</small></button>
+          <button class="tool" id="fill-tool" aria-label="Заливка" data-tool="fill"><svg><use href="#i-fill"/></svg><small>Заливка</small></button>
           <button class="tool" id="eraser-tool" aria-label="Ластик" data-tool="eraser"><svg><use href="#i-eraser"/></svg><small>Ластик</small></button>
           <button class="tool" id="pipette-tool" aria-label="Пипетка" data-tool="pipette"><svg><use href="#i-pipette"/></svg><small>Пипетка</small></button>
           <button class="color-tool" id="color-tool" aria-label="Палитра" title="Палитра"><span id="active-swatch" class="active-swatch"></span><small>Цвет</small></button>
@@ -176,7 +181,7 @@
     </div>
     <div id="toast" class="toast" aria-live="polite"></div>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.1.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.2.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

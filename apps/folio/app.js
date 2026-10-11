@@ -29,6 +29,7 @@ const state = {
   doc:null, works:[], tool:'brush', brush:'ink', color:'#a6553e', size:9, opacity:1,
   mode:'precision', hand:'right', sheet:null, focus:false, idea:0,
   armPointer:null, armKeyboard:false, armLocked:false, allowLock:false, lastArmTap:0,
+  fillTolerance:28, aimPointerId:null, aimPoint:null, aimTime:0,
   aimEvent:null, spacePan:false,
   panPointer:null, panStart:null, cursorActive:false,
   view:{cx:0,cy:0,scale:1,rot:0}, pointers:new Map(), pinch:null,
@@ -53,6 +54,7 @@ function rememberMode(mode){
 let database=null;
 const DB_NAME='pocket-works:folio:documents';
 const DB_STORE='works';
+try {const stored=localStorage.getItem('pocket-works:folio:fillTolerance');if(stored!==null){const n=Number(stored);if(Number.isFinite(n)&&n>=0&&n<=100)state.fillTolerance=n;}}catch{}
 const stage=$('working-area');
 const canvas=$('artboard');
 const viewCtx=canvas.getContext('2d',{alpha:true});
@@ -120,6 +122,12 @@ function createCanvas(w,h){
   const c=document.createElement('canvas');c.width=w;c.height=h;return c;
 }
 function paintStroke(ctx,stroke){
+  if(stroke.tool==='fill'){
+    ctx.save();ctx.globalCompositeOperation='source-over';
+    ctx.globalAlpha=clamp(stroke.opacity??1,0,1);ctx.fillStyle=stroke.color;
+    for(const run of stroke.runs||[])ctx.fillRect(run[1],run[0],run[2]-run[1]+1,1);
+    ctx.restore();return;
+  }
   const p=stroke.points;
   if(!Array.isArray(p)||!p.length)return;
   const erasing=stroke.tool==='eraser';
@@ -221,7 +229,7 @@ function fitView(){
   if(!state.doc)return;
   const r=stage.getBoundingClientRect();
   state.view={cx:r.width/2,cy:r.height/2,scale:Math.min((r.width-38)/state.doc.width,(r.height-44)/state.doc.height),rot:0};
-  scheduleDraw();
+  updateNibSize();scheduleDraw();
 }
 function screenDoc(x,y){
   const v=state.view,d=state.doc;
@@ -233,18 +241,58 @@ function canvasPoint(event){
   return {x:event.clientX-r.left,y:event.clientY-r.top};
 }
 function pointerTip(p,pointerType='touch'){
-  if(state.mode==='direct'||state.tool==='pipette'||pointerType==='mouse'||pointerType==='pen')return p;
+  if(state.mode==='direct'||state.tool==='pipette'||state.tool==='fill'||pointerType==='mouse'||pointerType==='pen')return p;
   return {x:p.x+(state.hand==='left'?18:-18),y:p.y-51};
 }
+function resetAim(){
+  state.aimPointerId=null;state.aimPoint=null;state.aimTime=0;
+}
+function smoothAim(e,first=false){
+  if(e.pointerType!=='touch')return;
+  const raw=canvasPoint(e),stamp=Number.isFinite(e.timeStamp)?e.timeStamp:performance.now();
+  if(first||state.aimPointerId!==e.pointerId||!state.aimPoint){
+    state.aimPointerId=e.pointerId;state.aimPoint={...raw};state.aimTime=stamp;return;
+  }
+  const last=state.aimPoint;
+  const dt=clamp(stamp-state.aimTime||8,4,48);
+  let dx=raw.x-last.x,dy=raw.y-last.y;
+  const distance=Math.hypot(dx,dy);
+  // A few mobile touch drivers occasionally report isolated jumps.
+  // Limit the maximum plausible displacement but keep rapid deliberate strokes responsive.
+  const maxStep=40+dt*3.2;
+  if(distance>maxStep){const factor=maxStep/distance;dx*=factor;dy*=factor;}
+  const speed=Math.hypot(dx,dy)/dt;
+  const alpha=clamp(0.27+speed*.12,0.27,0.88);
+  state.aimPoint={x:last.x+dx*alpha,y:last.y+dy*alpha};
+  state.aimTime=Math.max(state.aimTime,stamp);
+}
+function drawingPosition(e){
+  if(e.pointerType==='touch'&&state.aimPointerId===e.pointerId&&state.aimPoint)return state.aimPoint;
+  return canvasPoint(e);
+}
 function inputPoint(e){
-  const tip=pointerTip(canvasPoint(e),e.pointerType);
+  const tip=pointerTip(drawingPosition(e),e.pointerType);
   const [x,y]=screenDoc(tip.x,tip.y);
   return [clamp(x,0,state.doc.width),clamp(y,0,state.doc.height)];
 }
+function brushDiameter(){
+  const multiplier=state.tool==='eraser'?1:
+    state.brush==='wash'?2.1:state.brush==='marker'?1.45:state.brush==='gouache'?1.4:1;
+  return state.size*multiplier*state.view.scale;
+}
+function updateNibSize(){
+  const nib=$('nib-cursor');
+  const diameter=Math.max(2,brushDiameter());
+  nib.style.setProperty('--nib-diameter',diameter+'px');
+  nib.style.setProperty('--nib-color',state.color);
+  $('nib-measure').textContent=state.size+' px';
+}
 function setCursor(e){
-  if(state.mode==='direct'||state.tool==='pipette'){$('nib-cursor').hidden=true;return;}
-  const p=pointerTip(canvasPoint(e),e.pointerType),nib=$('nib-cursor');
-  nib.style.left=p.x+'px';nib.style.top=p.y+'px';nib.hidden=false;
+  if(state.mode==='direct'||state.tool==='pipette'||state.tool==='fill'){
+    $('nib-cursor').hidden=true;return;
+  }
+  const p=pointerTip(drawingPosition(e),e.pointerType),nib=$('nib-cursor');
+  updateNibSize();nib.style.left=p.x+'px';nib.style.top=p.y+'px';nib.hidden=false;
 }
 function hideCursor(){ $('nib-cursor').hidden=true; }
 function isArmed(){return state.armLocked||state.armPointer!==null||state.armKeyboard;}
@@ -274,7 +322,7 @@ function setInputMode(mode,{save=true}={}){
   if(save)rememberMode(mode);
   const active=mode==='precision';
   $('studio').classList.toggle('mode-precision',active);
-  $('canvas-guide').textContent=active?'Наведи остриё · зажми «Рисовать» другой рукой':
+  $('canvas-guide').textContent=state.tool==='fill'?'Коснись области, чтобы залить её':active?'Наведи остриё · зажми «Рисовать» другой рукой':
     mode==='nib'?'Остриё выше пальца · движение рисует':'Веди пальцем или мышью по бумаге';
   if(!active){state.armPointer=null;state.armKeyboard=false;state.armLocked=false;updateArmUI();}
   hideCursor();updateToolUI();
@@ -282,13 +330,13 @@ function setInputMode(mode,{save=true}={}){
 }
 function resetInput(){
   finishStroke(true);state.pointers.clear();state.pinch=null;state.blockDraw=false;
-  state.aimEvent=null;state.panPointer=null;state.panStart=null;state.spacePan=false;
+  state.aimEvent=null;resetAim();state.panPointer=null;state.panStart=null;state.spacePan=false;
   state.armPointer=null;state.armKeyboard=false;state.armLocked=false;state.lastArmTap=0;updateArmUI();hideCursor();
   $('studio').classList.remove('is-panning');
 }
 function beginStroke(e){
   if(!currentLayer()?.visible || currentLayer()?.opacity===0){notify('Этот слой скрыт или прозрачен');return;}
-  const tip=pointerTip(canvasPoint(e),e.pointerType);
+  const tip=pointerTip(drawingPosition(e),e.pointerType);
   const rawPoint=screenDoc(tip.x,tip.y);
   if(rawPoint[0]<0||rawPoint[0]>state.doc.width||rawPoint[1]<0||rawPoint[1]>state.doc.height)return;
   const point=[rawPoint[0],rawPoint[1]];
@@ -325,7 +373,7 @@ function finishStroke(cancel=false){
     notify('Линия выровнена');
   }
   layer.strokes.push(draft);
-  state.undo.push({layer:layer.id,stroke:draft});
+  state.undo.push({layer:layer.id,stroke:draft,index:layer.strokes.length-1});
   if(state.undo.length>200)state.undo.shift();
   state.redo=[];
   markDirty(layer.id);updateUndoRedo();queueSave();
@@ -345,7 +393,7 @@ function pinchUpdate(){
   const rot=p.rot+Math.atan2(b.y-a.y,b.x-a.x)-p.angle;
   const ox=(p.anchor[0]-d.width/2)*scale,oy=(p.anchor[1]-d.height/2)*scale;
   state.view={cx:mid.x-(ox*Math.cos(rot)-oy*Math.sin(rot)),cy:mid.y-(ox*Math.sin(rot)+oy*Math.cos(rot)),scale,rot};
-  scheduleDraw();
+  updateNibSize();scheduleDraw();
 }
 function sampleColor(e){
   const p=inputPoint(e),c=createCanvas(1,1),cx=c.getContext('2d',{willReadFrequently:true});
@@ -356,6 +404,60 @@ function sampleColor(e){
   state.tool='brush';updateToolUI();notify('Цвет взят с рисунка');
 }
 
+
+// Snapshot the visible drawing, flood on that composite, and store only scanline
+// ranges. The fill is inserted beneath linework but above earlier fills.
+function hexRGB(value){
+  const v=value.match(/^#([a-f0-9]{6})$/i);
+  return v?[0,2,4].map(i=>parseInt(v[1].slice(i,i+2),16)):[0,0,0];
+}
+function fillAt(e){
+  const layer=currentLayer(),doc=state.doc;
+  if(!layer?.visible||layer.opacity===0){notify('Выбери видимый слой для заливки');return;}
+  const point=inputPoint(e),x=Math.floor(point[0]),y=Math.floor(point[1]),w=doc.width,h=doc.height;
+  if(x<0||y<0||x>=w||y>=h)return;
+  const source=createCanvas(w,h),ctx=source.getContext('2d',{willReadFrequently:true});
+  drawContents(ctx,true);
+  const pixels=ctx.getImageData(0,0,w,h).data,at=(y*w+x)*4;
+  const target=[pixels[at],pixels[at+1],pixels[at+2]],goal=hexRGB(state.color);
+  if(state.opacity===1&&goal.every((v,i)=>Math.abs(v-target[i])<=1)){
+    notify('Область уже этого цвета');return;
+  }
+  const tolerance=state.fillTolerance,visited=new Uint8Array(w*h),stack=[y*w+x],runs=[];
+  const matches=i=>{
+    const p=i*4;
+    return Math.max(Math.abs(pixels[p]-target[0]),Math.abs(pixels[p+1]-target[1]),Math.abs(pixels[p+2]-target[2]))<=tolerance;
+  };
+  while(stack.length){
+    const index=stack.pop();
+    if(visited[index]||!matches(index))continue;
+    const row=Math.floor(index/w),base=row*w;
+    let left=index-base,right=left;
+    while(left>0&&!visited[base+left-1]&&matches(base+left-1))left--;
+    while(right<w-1&&!visited[base+right+1]&&matches(base+right+1))right++;
+    visited.fill(1,base+left,base+right+1);
+    runs.push([row,left,right]);
+    for(const adjacentRow of [row-1,row+1]){
+      if(adjacentRow<0||adjacentRow>=h)continue;
+      let inSpan=false;const adjacentBase=adjacentRow*w;
+      for(let col=left;col<=right;col++){
+        const i=adjacentBase+col;
+        if(!visited[i]&&matches(i)){
+          if(!inSpan){stack.push(i);inSpan=true;}
+        }else inSpan=false;
+      }
+    }
+  }
+  if(!runs.length){notify('Область для заливки не найдена');return;}
+  const stroke={id:uid(),layer:layer.id,tool:'fill',color:state.color,opacity:state.opacity,runs};
+  const position=layer.strokes.findIndex(s=>s.tool!=='fill');
+  const index=position<0?layer.strokes.length:position;
+  layer.strokes.splice(index,0,stroke);
+  state.undo.push({layer:layer.id,stroke,index});
+  if(state.undo.length>200)state.undo.shift();
+  state.redo=[];markDirty(layer.id);updateUndoRedo();queueSave();
+  notify('Область залита');
+}
 function translatePan(e){
   if(state.panPointer!==e.pointerId||!state.panStart)return;
   const p=canvasPoint(e);
@@ -370,7 +472,7 @@ canvas.addEventListener('pointerdown',e=>{
   const point=canvasPoint(e);
   state.pointers.set(e.pointerId,point);
   if(state.pointers.size===2){
-    finishStroke(true);state.blockDraw=true;state.aimEvent=null;
+    finishStroke(true);state.blockDraw=true;state.aimEvent=null;resetAim();
     state.panPointer=null;state.panStart=null;$('studio').classList.remove('is-panning');state.pinch=null;pinchStart();return;
   }
   if(state.pointers.size>2){state.blockDraw=true;return;}
@@ -381,8 +483,9 @@ canvas.addEventListener('pointerdown',e=>{
     hideCursor();return;
   }
   if(state.blockDraw)return;
-  state.aimEvent=e;
+  state.aimEvent=e;smoothAim(e,true);
   if(state.tool==='pipette'){sampleColor(e);state.aimEvent=null;return;}
+  if(state.tool==='fill'){fillAt(e);state.aimEvent=null;return;}
   setCursor(e);
   if(state.mode!=='precision'||isArmed())beginStroke(e);
 });
@@ -397,13 +500,18 @@ canvas.addEventListener('pointermove',e=>{
   if(state.pointers.size>=2){pinchUpdate();return;}
   if(state.panPointer===e.pointerId){translatePan(e);return;}
   if(state.blockDraw)return;
-  state.aimEvent=e;
+  if(state.tool==='pipette'||state.tool==='fill')return;
+  const coalesced=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
+  const samples=coalesced.length?coalesced:[e];
+  for(const sample of samples){
+    smoothAim(sample);
+    state.aimEvent=sample;
+    if(state.mode==='precision'&&!isArmed())continue;
+    if(!state.draft)beginStroke(sample);
+    extendStroke(sample);
+  }
+  // Use the same filtered coordinates for both the ring and the painted path.
   setCursor(e);
-  if(state.mode==='precision'&&!isArmed())return;
-  if(state.tool==='pipette')return;
-  if(!state.draft&&state.mode==='precision')beginStroke(e);
-  const coalesced=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];
-  for(const sub of coalesced.length?coalesced:[e])extendStroke(sub);
 });
 canvas.addEventListener('pointerleave',e=>{
   if(!state.pointers.has(e.pointerId))hideCursor();
@@ -414,14 +522,14 @@ function endPointer(e){
   if(state.panPointer===e.pointerId){
     state.pointers.delete(e.pointerId);state.panPointer=null;state.panStart=null;
     $('studio').classList.remove('is-panning');
-    state.aimEvent=null;hideCursor();return;
+    state.aimEvent=null;resetAim();hideCursor();return;
   }
   const wasMany=state.blockDraw||state.pointers.size>1;
   state.pointers.delete(e.pointerId);
   if(wasMany){
     finishStroke(true);state.pinch=null;state.blockDraw=state.pointers.size!==0;
   }else finishStroke(e.type==='pointercancel');
-  if(!state.pointers.size){state.blockDraw=false;state.aimEvent=null;hideCursor();}
+  if(!state.pointers.size){state.blockDraw=false;state.aimEvent=null;resetAim();hideCursor();}
 }
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
@@ -459,7 +567,7 @@ function zoomAt(x,y,scale){
   v.scale=scale;
   v.cx=x-(dx*Math.cos(rot)-dy*Math.sin(rot));
   v.cy=y-(dx*Math.sin(rot)+dy*Math.cos(rot));
-  scheduleDraw();
+  updateNibSize();scheduleDraw();
 }
 canvas.addEventListener('wheel',e=>{
   if(!state.doc||state.sheet)return;
@@ -486,22 +594,31 @@ function redo(){
   const entry=state.redo.pop();if(!entry)return;
   const layer=state.doc.layers.find(l=>l.id===entry.layer);
   if(!layer)return;
-  if(!layer.strokes.some(s=>s.id===entry.stroke.id))layer.strokes.push(entry.stroke);
+  if(!layer.strokes.some(s=>s.id===entry.stroke.id))layer.strokes.splice(Math.min(entry.index??layer.strokes.length,layer.strokes.length),0,entry.stroke);
   state.undo.push(entry);markDirty(layer.id);updateUndoRedo();queueSave();
 }
 function updateToolUI(){
   for(const btn of document.querySelectorAll('.tool[data-tool]'))btn.classList.toggle('selected',btn.dataset.tool===state.tool);
   $('active-swatch').style.background=state.color;
-  $('brush-label').textContent=state.tool==='eraser'?'Ластик':state.tool==='pipette'?'Пипетка':brushes.find(b=>b.id===state.brush)?.name||'Кисть';
+  $('brush-label').textContent=state.tool==='fill'?'Заливка':state.tool==='eraser'?'Ластик':state.tool==='pipette'?'Пипетка':brushes.find(b=>b.id===state.brush)?.name||'Кисть';
   $('brush-size').value=state.size;$('brush-size-value').textContent=state.size;
   $('brush-opacity').value=Math.round(state.opacity*100);$('brush-opacity-value').textContent=Math.round(state.opacity*100)+'%';
   $('mode-label').textContent=state.mode==='precision'?'Точное перо':state.mode==='nib'?'Остриё':'Прямо';
   $('mode-icon').textContent=state.mode==='precision'?'⊙':state.mode==='nib'?'◎':'●';
   $('working-area').classList.toggle('left-handed',state.hand==='left');
+  $('studio').classList.toggle('tool-fill',state.tool==='fill');
+  $('mobile-fill-control').hidden=state.tool!=='fill';
+  $('fill-tolerance').value=state.fillTolerance;
+  $('fill-tolerance-value').textContent=state.fillTolerance;
+  updateNibSize();
   if(state.doc)syncDesktop();
 }
 function selectTool(tool){
-  finishStroke(true);state.tool=tool;updateToolUI();
+  finishStroke(true);state.tool=tool;
+  $('canvas-guide').textContent=tool==='fill'?'Коснись области, чтобы залить её':
+    state.mode==='precision'?'Наведи остриё · зажми «Рисовать» другой рукой':
+    state.mode==='nib'?'Остриё выше пальца · движение рисует':'Веди пальцем или мышью по бумаге';
+  updateToolUI();
 }
 function openSheet(kind){
   finishStroke(true);
@@ -529,7 +646,7 @@ function renderSheet(){
   if(state.sheet==='color'){
     const colors=state.doc?.palette||palettes.atelier;
     body.innerHTML='<p class="sheet-subheading">ЦВЕТА ЭТОГО РИСУНКА</p><div class="palette-grid">'+colors.map(c=>'<button class="palette-chip '+(c.toLowerCase()===state.color.toLowerCase()?'is-active':'')+'" style="--chip:'+c+'" data-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('')+'</div><div class="color-picker-line"><input id="custom-color" type="color" value="'+state.color+'"><label for="custom-color">Свой оттенок<br><small>Выбери любой цвет спектра</small></label><button class="action-quiet" id="keep-color">В палитру +</button></div>';
-    $('custom-color').addEventListener('input',e=>{state.color=e.target.value;selectTool('brush');updateToolUI();});
+    $('custom-color').addEventListener('input',e=>{state.color=e.target.value;selectTool(state.tool==='fill'?'fill':'brush');updateToolUI();});
     $('keep-color').onclick=()=>{
       if(!state.doc.palette.includes(state.color)){state.doc.palette.push(state.color);queueSave();notify('Цвет сохранён');}
       renderSheet();
@@ -584,7 +701,7 @@ $('sheet-body').addEventListener('click',e=>{
   const target=e.target.closest('button');if(!target)return;
   if(target.dataset.hand){state.hand=target.dataset.hand;try{localStorage.setItem('pocket-works:folio:hand',state.hand);}catch{}renderSheet();notify(state.hand==='left'?'Острие для левой руки':'Острие для правой руки');}
   if(target.dataset.brush){state.brush=target.dataset.brush;selectTool('brush');closeSheet();notify(brushes.find(b=>b.id===state.brush).name);}
-  if(target.dataset.color){state.color=target.dataset.color;selectTool('brush');closeSheet();}
+  if(target.dataset.color){state.color=target.dataset.color;selectTool(state.tool==='fill'?'fill':'brush');closeSheet();}
   if(target.dataset.toggleLayer){const l=state.doc.layers.find(x=>x.id===target.dataset.toggleLayer);l.visible=!l.visible;renderSheet();scheduleDraw();queueSave();}
   if(target.dataset.selectLayer){state.doc.activeLayer=target.dataset.selectLayer;renderSheet();scheduleDraw();}
   if(target.dataset.shiftLayer){
@@ -719,14 +836,22 @@ $('undo').onclick=undo;$('redo').onclick=redo;
 $('export').onclick=()=>openSheet('export');
 $('brush-tool').onclick=()=>openSheet('brush');
 $('eraser-tool').onclick=()=>selectTool('eraser');
+$('fill-tool').onclick=()=>selectTool('fill');
 $('pipette-tool').onclick=()=>selectTool('pipette');
 $('color-tool').onclick=()=>openSheet('color');
 $('layers-tool').onclick=()=>openSheet('layers');
 $('sheet-close').onclick=closeSheet;$('sheet-backdrop').onclick=closeSheet;
 $('mode-toggle').onclick=()=>{const modes=['precision','nib','direct'];setInputMode(modes[(modes.indexOf(state.mode)+1)%modes.length]);notify(state.mode==='precision'?'Точное перо: наведи и зажми кнопку':state.mode==='nib'?'Остриё автоматически рисует':'Прямой ввод');};
 $('fit').onclick=fitView;
-$('brush-size').oninput=e=>{state.size=Number(e.target.value);$('brush-size-value').textContent=state.size;};
-$('brush-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;$('brush-opacity-value').textContent=e.target.value+'%';};
+$('brush-size').oninput=e=>{state.size=Number(e.target.value);updateToolUI();};
+$('brush-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;updateToolUI();};
+function changeFillTolerance(value){
+  state.fillTolerance=clamp(Number(value),0,100);
+  try{localStorage.setItem('pocket-works:folio:fillTolerance',String(state.fillTolerance));}catch{}
+  updateToolUI();
+}
+$('fill-tolerance').oninput=e=>changeFillTolerance(e.target.value);
+$('desktop-fill-tolerance').oninput=e=>changeFillTolerance(e.target.value);
 $('focus-toggle').onclick=()=>{state.focus=true;$('studio').classList.add('focus');fitView();};
 $('focus-restore').onclick=()=>{state.focus=false;$('studio').classList.remove('focus');fitView();};
 
@@ -736,6 +861,7 @@ function syncDesktop(){
   document.querySelectorAll('.desktop-tool').forEach(el=>{
     const match={
       'desktop-brush-tool':state.tool==='brush',
+      'desktop-fill-tool':state.tool==='fill',
       'desktop-eraser-tool':state.tool==='eraser',
       'desktop-pipette-tool':state.tool==='pipette'
     };
@@ -757,6 +883,8 @@ function syncDesktop(){
   $('desktop-opacity').value=Math.round(state.opacity*100);
   $('desktop-opacity-value').textContent=Math.round(state.opacity*100)+'%';
   $('desktop-color').value=/^#[0-9a-f]{6}$/i.test(state.color)?state.color:'#a6553e';
+  $('desktop-fill-tolerance').value=state.fillTolerance;
+  $('desktop-fill-value').textContent=state.fillTolerance;
   document.querySelectorAll('[data-input-mode]').forEach(b=>b.classList.toggle('active',b.dataset.inputMode===state.mode));
   $('desktop-mode-help').textContent=state.mode==='precision'?
     'Наведите курсор. Для нанесения штриха зажмите Shift или кнопку на холсте.':
@@ -765,6 +893,7 @@ function syncDesktop(){
 }
 $('desktop-brush-tool').onclick=()=>selectTool('brush');
 $('desktop-eraser-tool').onclick=()=>selectTool('eraser');
+$('desktop-fill-tool').onclick=()=>selectTool('fill');
 $('desktop-pipette-tool').onclick=()=>selectTool('pipette');
 $('desktop-color-tool').onclick=()=>openSheet('color');
 $('desktop-focus-tool').onclick=()=>{$('focus-toggle').click();};
@@ -781,7 +910,7 @@ $('desktop-brush-choices').onclick=e=>{
 };
 $('desktop-swatches').onclick=e=>{
   const b=e.target.closest('[data-desktop-color]');if(!b)return;
-  state.color=b.dataset.desktopColor;selectTool('brush');syncDesktop();
+  state.color=b.dataset.desktopColor;selectTool(state.tool==='fill'?'fill':'brush');syncDesktop();
 };
 $('desktop-layers').onclick=e=>{
   const eye=e.target.closest('[data-desktop-eye]');
@@ -789,7 +918,7 @@ $('desktop-layers').onclick=e=>{
   const layer=e.target.closest('[data-desktop-layer]');
   if(layer){state.doc.activeLayer=layer.dataset.desktopLayer;syncDesktop();queueSave();}
 };
-$('desktop-color').oninput=e=>{state.color=e.target.value;selectTool('brush');};
+$('desktop-color').oninput=e=>{state.color=e.target.value;selectTool(state.tool==='fill'?'fill':'brush');};
 $('desktop-size').oninput=e=>{state.size=Number(e.target.value);updateToolUI();};
 $('desktop-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;updateToolUI();};
 $('desktop-mode-choices').onclick=e=>{
@@ -818,6 +947,7 @@ window.addEventListener('keydown',e=>{
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.key.toLowerCase()==='b')selectTool('brush');
   else if(e.key.toLowerCase()==='e')selectTool('eraser');
+  else if(e.key.toLowerCase()==='g')selectTool('fill');
   else if(e.key.toLowerCase()==='i')selectTool('pipette');
   else if(e.key==='['){state.size=clamp(state.size-2,1,72);updateToolUI();}
   else if(e.key===']'){state.size=clamp(state.size+2,1,72);updateToolUI();}
@@ -854,7 +984,7 @@ window.addEventListener('pagehide',()=>{
   if(state.doc){finishStroke();void persist();}
 });
 
-createWorkshopMode({appName:'FOLIO',version:'1.1.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
+createWorkshopMode({appName:'FOLIO',version:'1.2.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
   if(database)await txPromise('readwrite',s=>s.clear());else localStorage.removeItem(DB_NAME+':fallback');
   state.doc=null;await showHome();
 }});
