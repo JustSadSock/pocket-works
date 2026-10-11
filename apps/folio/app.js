@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const uid = () => (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now().toString(36));
 const palettes = {
-  atelier: ['#253b36','#a6553e','#c79569','#e7cda3','#607e73','#7b8f96','#d6b068','#f2eee1','#b67b74','#4d6260','#899167','#433b3b','#df986b','#8186a2','#e4af98','#252c31'],
+  atelier: ['#24465c','#c54a35','#efbd59','#3d9a89','#5877b3','#ffedd2','#e7976c','#6e8f74','#a05675','#cc9668','#94b8b3','#253f54','#cf6f50','#abbd7d','#deaaad','#2a313a'],
   dusk: ['#2c3c4c','#6b7890','#d3a37e','#d5bea4','#813e45','#51605d','#7a8b66','#f3e4cb'],
   garden: ['#3a5949','#86a77e','#d2b376','#e8d7ac','#a6624c','#6b7d7d','#c4a1a2','#37404b']
 };
