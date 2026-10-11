@@ -229,7 +229,7 @@ function fitView(){
   if(!state.doc)return;
   const r=stage.getBoundingClientRect();
   state.view={cx:r.width/2,cy:r.height/2,scale:Math.min((r.width-38)/state.doc.width,(r.height-44)/state.doc.height),rot:0};
-  scheduleDraw();
+  updateNibSize();scheduleDraw();
 }
 function screenDoc(x,y){
   const v=state.view,d=state.doc;
@@ -241,18 +241,58 @@ function canvasPoint(event){
   return {x:event.clientX-r.left,y:event.clientY-r.top};
 }
 function pointerTip(p,pointerType='touch'){
-  if(state.mode==='direct'||state.tool==='pipette'||pointerType==='mouse'||pointerType==='pen')return p;
+  if(state.mode==='direct'||state.tool==='pipette'||state.tool==='fill'||pointerType==='mouse'||pointerType==='pen')return p;
   return {x:p.x+(state.hand==='left'?18:-18),y:p.y-51};
 }
+function resetAim(){
+  state.aimPointerId=null;state.aimPoint=null;state.aimTime=0;
+}
+function smoothAim(e,first=false){
+  if(e.pointerType!=='touch')return;
+  const raw=canvasPoint(e),stamp=Number.isFinite(e.timeStamp)?e.timeStamp:performance.now();
+  if(first||state.aimPointerId!==e.pointerId||!state.aimPoint){
+    state.aimPointerId=e.pointerId;state.aimPoint={...raw};state.aimTime=stamp;return;
+  }
+  const last=state.aimPoint;
+  const dt=clamp(stamp-state.aimTime||8,4,48);
+  let dx=raw.x-last.x,dy=raw.y-last.y;
+  const distance=Math.hypot(dx,dy);
+  // A few mobile touch drivers occasionally report isolated jumps.
+  // Limit the maximum plausible displacement but keep rapid deliberate strokes responsive.
+  const maxStep=40+dt*3.2;
+  if(distance>maxStep){const factor=maxStep/distance;dx*=factor;dy*=factor;}
+  const speed=Math.hypot(dx,dy)/dt;
+  const alpha=clamp(0.27+speed*.12,0.27,0.88);
+  state.aimPoint={x:last.x+dx*alpha,y:last.y+dy*alpha};
+  state.aimTime=Math.max(state.aimTime,stamp);
+}
+function drawingPosition(e){
+  if(e.pointerType==='touch'&&state.aimPointerId===e.pointerId&&state.aimPoint)return state.aimPoint;
+  return canvasPoint(e);
+}
 function inputPoint(e){
-  const tip=pointerTip(canvasPoint(e),e.pointerType);
+  const tip=pointerTip(drawingPosition(e),e.pointerType);
   const [x,y]=screenDoc(tip.x,tip.y);
   return [clamp(x,0,state.doc.width),clamp(y,0,state.doc.height)];
 }
+function brushDiameter(){
+  const multiplier=state.tool==='eraser'?1:
+    state.brush==='wash'?2.1:state.brush==='marker'?1.45:state.brush==='gouache'?1.4:1;
+  return state.size*multiplier*state.view.scale;
+}
+function updateNibSize(){
+  const nib=$('nib-cursor');
+  const diameter=Math.max(2,brushDiameter());
+  nib.style.setProperty('--nib-diameter',diameter+'px');
+  nib.style.setProperty('--nib-color',state.color);
+  $('nib-measure').textContent=state.size+' px';
+}
 function setCursor(e){
-  if(state.mode==='direct'||state.tool==='pipette'){$('nib-cursor').hidden=true;return;}
-  const p=pointerTip(canvasPoint(e),e.pointerType),nib=$('nib-cursor');
-  nib.style.left=p.x+'px';nib.style.top=p.y+'px';nib.hidden=false;
+  if(state.mode==='direct'||state.tool==='pipette'||state.tool==='fill'){
+    $('nib-cursor').hidden=true;return;
+  }
+  const p=pointerTip(drawingPosition(e),e.pointerType),nib=$('nib-cursor');
+  updateNibSize();nib.style.left=p.x+'px';nib.style.top=p.y+'px';nib.hidden=false;
 }
 function hideCursor(){ $('nib-cursor').hidden=true; }
 function isArmed(){return state.armLocked||state.armPointer!==null||state.armKeyboard;}
@@ -290,13 +330,13 @@ function setInputMode(mode,{save=true}={}){
 }
 function resetInput(){
   finishStroke(true);state.pointers.clear();state.pinch=null;state.blockDraw=false;
-  state.aimEvent=null;state.panPointer=null;state.panStart=null;state.spacePan=false;
+  state.aimEvent=null;resetAim();state.panPointer=null;state.panStart=null;state.spacePan=false;
   state.armPointer=null;state.armKeyboard=false;state.armLocked=false;state.lastArmTap=0;updateArmUI();hideCursor();
   $('studio').classList.remove('is-panning');
 }
 function beginStroke(e){
   if(!currentLayer()?.visible || currentLayer()?.opacity===0){notify('Этот слой скрыт или прозрачен');return;}
-  const tip=pointerTip(canvasPoint(e),e.pointerType);
+  const tip=pointerTip(drawingPosition(e),e.pointerType);
   const rawPoint=screenDoc(tip.x,tip.y);
   if(rawPoint[0]<0||rawPoint[0]>state.doc.width||rawPoint[1]<0||rawPoint[1]>state.doc.height)return;
   const point=[rawPoint[0],rawPoint[1]];
@@ -353,7 +393,7 @@ function pinchUpdate(){
   const rot=p.rot+Math.atan2(b.y-a.y,b.x-a.x)-p.angle;
   const ox=(p.anchor[0]-d.width/2)*scale,oy=(p.anchor[1]-d.height/2)*scale;
   state.view={cx:mid.x-(ox*Math.cos(rot)-oy*Math.sin(rot)),cy:mid.y-(ox*Math.sin(rot)+oy*Math.cos(rot)),scale,rot};
-  scheduleDraw();
+  updateNibSize();scheduleDraw();
 }
 function sampleColor(e){
   const p=inputPoint(e),c=createCanvas(1,1),cx=c.getContext('2d',{willReadFrequently:true});
@@ -432,7 +472,7 @@ canvas.addEventListener('pointerdown',e=>{
   const point=canvasPoint(e);
   state.pointers.set(e.pointerId,point);
   if(state.pointers.size===2){
-    finishStroke(true);state.blockDraw=true;state.aimEvent=null;
+    finishStroke(true);state.blockDraw=true;state.aimEvent=null;resetAim();
     state.panPointer=null;state.panStart=null;$('studio').classList.remove('is-panning');state.pinch=null;pinchStart();return;
   }
   if(state.pointers.size>2){state.blockDraw=true;return;}
@@ -443,8 +483,9 @@ canvas.addEventListener('pointerdown',e=>{
     hideCursor();return;
   }
   if(state.blockDraw)return;
-  state.aimEvent=e;
+  state.aimEvent=e;smoothAim(e,true);
   if(state.tool==='pipette'){sampleColor(e);state.aimEvent=null;return;}
+  if(state.tool==='fill'){fillAt(e);state.aimEvent=null;return;}
   setCursor(e);
   if(state.mode!=='precision'||isArmed())beginStroke(e);
 });
@@ -459,13 +500,18 @@ canvas.addEventListener('pointermove',e=>{
   if(state.pointers.size>=2){pinchUpdate();return;}
   if(state.panPointer===e.pointerId){translatePan(e);return;}
   if(state.blockDraw)return;
-  state.aimEvent=e;
+  if(state.tool==='pipette'||state.tool==='fill')return;
+  const coalesced=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
+  const samples=coalesced.length?coalesced:[e];
+  for(const sample of samples){
+    smoothAim(sample);
+    state.aimEvent=sample;
+    if(state.mode==='precision'&&!isArmed())continue;
+    if(!state.draft&&state.mode==='precision')beginStroke(sample);
+    extendStroke(sample);
+  }
+  // Use the same filtered coordinates for both the ring and the painted path.
   setCursor(e);
-  if(state.mode==='precision'&&!isArmed())return;
-  if(state.tool==='pipette')return;
-  if(!state.draft&&state.mode==='precision')beginStroke(e);
-  const coalesced=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];
-  for(const sub of coalesced.length?coalesced:[e])extendStroke(sub);
 });
 canvas.addEventListener('pointerleave',e=>{
   if(!state.pointers.has(e.pointerId))hideCursor();
@@ -476,14 +522,14 @@ function endPointer(e){
   if(state.panPointer===e.pointerId){
     state.pointers.delete(e.pointerId);state.panPointer=null;state.panStart=null;
     $('studio').classList.remove('is-panning');
-    state.aimEvent=null;hideCursor();return;
+    state.aimEvent=null;resetAim();hideCursor();return;
   }
   const wasMany=state.blockDraw||state.pointers.size>1;
   state.pointers.delete(e.pointerId);
   if(wasMany){
     finishStroke(true);state.pinch=null;state.blockDraw=state.pointers.size!==0;
   }else finishStroke(e.type==='pointercancel');
-  if(!state.pointers.size){state.blockDraw=false;state.aimEvent=null;hideCursor();}
+  if(!state.pointers.size){state.blockDraw=false;state.aimEvent=null;resetAim();hideCursor();}
 }
 canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
@@ -521,7 +567,7 @@ function zoomAt(x,y,scale){
   v.scale=scale;
   v.cx=x-(dx*Math.cos(rot)-dy*Math.sin(rot));
   v.cy=y-(dx*Math.sin(rot)+dy*Math.cos(rot));
-  scheduleDraw();
+  updateNibSize();scheduleDraw();
 }
 canvas.addEventListener('wheel',e=>{
   if(!state.doc||state.sheet)return;
@@ -797,7 +843,7 @@ $('layers-tool').onclick=()=>openSheet('layers');
 $('sheet-close').onclick=closeSheet;$('sheet-backdrop').onclick=closeSheet;
 $('mode-toggle').onclick=()=>{const modes=['precision','nib','direct'];setInputMode(modes[(modes.indexOf(state.mode)+1)%modes.length]);notify(state.mode==='precision'?'Точное перо: наведи и зажми кнопку':state.mode==='nib'?'Остриё автоматически рисует':'Прямой ввод');};
 $('fit').onclick=fitView;
-$('brush-size').oninput=e=>{state.size=Number(e.target.value);$('brush-size-value').textContent=state.size;};
+$('brush-size').oninput=e=>{state.size=Number(e.target.value);updateToolUI();};
 $('brush-opacity').oninput=e=>{state.opacity=Number(e.target.value)/100;updateToolUI();};
 function changeFillTolerance(value){
   state.fillTolerance=clamp(Number(value),0,100);
