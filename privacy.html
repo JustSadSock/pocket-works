@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11191d">
+  <meta name="description" content="Pocket Works Privacy Policy: information about Pocket ID accounts, Google sign-in, cookies, and local app data.">
+  <link rel="icon" type="image/svg+xml" href="/shared/pocket-works-icon.svg">
+  <title>Privacy Policy — Pocket Works</title>
+  <style>
+    :root { color-scheme:dark; --night:#11191d;--paper:#eae8dc;--ink:#26332e;--quiet:#52625b;--rust:#a64f35;--stroke:#bac5b7; }
+    * { box-sizing:border-box; }
+    html {scroll-behavior:smooth;scroll-padding-top:28px;}
+    body {margin:0;background:var(--night);color:var(--ink);font-family: "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;-webkit-font-smoothing:antialiased;}
+    a {color:inherit;text-underline-offset:4px;}
+    a:hover {color:#ae5438;}
+    :focus-visible {outline:3px solid #c67e59;outline-offset:4px;}
+    .skip {position:absolute;top:-70px;left:12px;padding:12px;background:white;z-index:99;}
+    .skip:focus{top:10px;}
+    .mast {display:flex;align-items:center;justify-content:space-between;gap:20px;max-width:1150px;margin:0 auto;padding:24px 26px;color:#f1eee4;}
+    .brand {display:flex;align-items:center;gap:10px;text-decoration:none;font-size:.82rem;letter-spacing:.035em;font-weight:780;}
+    .mark{display:grid;place-items:center;width:35px;height:35px;background:#b96c50;color:#171d1d;font:700 26px/1 Georgia,serif;border-radius:4px;}
+    .back {display:flex;align-items:center;gap:8px;font-size:.78rem;color:#b5c5bc;text-decoration:none;border-bottom:1px solid #4b6159;padding-bottom:5px;}
+    .back:hover{color:#f1eee4;}
+    .sheet {max-width:1150px;margin:0 auto 50px;background:var(--paper);border:1px solid #d4d6c7;box-shadow:0 28px 80px #0007;min-height:80vh;}
+    .cover {padding:66px clamp(22px,6vw,84px) 45px;background:linear-gradient(125deg,#eae8dc 0%,#eae8dc 62%,#dddccc 100%);border-bottom:1px solid var(--stroke);position:relative;overflow:hidden;}
+    .cover:after{content:"PW";position:absolute;right:-26px;bottom:-100px;font:800 clamp(180px,31vw,350px)/1 Georgia,serif;letter-spacing:-.12em;color:#a0aa9933;pointer-events:none;}
+    .eyebrow {margin:0 0 28px;color:var(--rust);font:750 .68rem/1.4 ui-monospace, "SFMono-Regular", monospace;letter-spacing:.16em;text-transform:uppercase;}
+    h1{position:relative;z-index:1;font-size:clamp(3.4rem,9.5vw,7.7rem);line-height:.92;letter-spacing:-.095em;max-width:850px;margin:0 0 25px;font-weight:760;}
+    .deck {position:relative;z-index:1;max-width:580px;font-size:1.07rem;line-height:1.65;color:#4b5a52;margin:0 0 24px;}
+    .updated {display:inline-flex;align-items:center;gap:9px;font:700 .7rem ui-monospace,monospace;letter-spacing:.07em;color:#5b675e;}
+    .updated:before{content:"";display:inline-block;background:#b26b4b;width:8px;height:8px;border-radius:50%;}
+    .reading {display:grid;grid-template-columns:220px minmax(0,1fr);}
+    .sidebar {background:#e1e3d6;border-right:1px solid var(--stroke);padding:38px 23px;align-self:stretch;}
+    .sidebar-inner {position:sticky;top:28px;}
+    .sidebar p{font:800 .62rem ui-monospace,monospace;letter-spacing:.15em;color:#68736b;margin:0 0 18px;text-transform:uppercase;}
+    .sidebar a{display:block;padding:9px 0;text-decoration:none;font-size:.8rem;color:#4c6256;border-bottom:1px solid #c8d0c3;transition:transform .15s,color .15s;}
+    .sidebar a:hover{transform:translateX(3px);}
+    .sections {padding:38px clamp(22px,5vw,78px) 55px;max-width:800px;}
+    section {border-bottom:1px solid var(--stroke);padding:5px 0 28px;margin-bottom:27px;scroll-margin-top:25px;}
+    section:last-child{border:0;margin-bottom:0;}
+    .section-index {color:var(--rust);font:750 .69rem/1 ui-monospace,monospace;}
+    h2 {font-size:clamp(1.35rem,3vw,1.85rem);letter-spacing:-.045em;line-height:1.2;margin:11px 0 14px;}
+    p,li {font-size:.94rem;line-height:1.75;}
+    p {margin:0 0 13px;}
+    p:last-child {margin-bottom:0;}
+    ul {padding-left:20px;margin:10px 0 15px;}
+    li {padding-left:2px;margin-bottom:5px;}
+    strong {font-weight:750;}
+    .note {display:flex;gap:14px;padding:18px 20px;margin:22px 0;background:#d9dfd0;border-left:3px solid #75947c;color:#334939;font-size:.87rem;line-height:1.65;}
+    .note:before {content:"i";display:grid;place-items:center;flex:none;width:22px;height:22px;border:1.5px solid #56735d;border-radius:50%;font:700 .78rem Georgia,serif;}
+    .footer{max-width:1150px;margin:0 auto;display:flex;justify-content:space-between;gap:20px;padding:0 26px 28px;color:#a7b8ae;font-size:.75rem;}
+    .footer a{color:#eac2ac;}
+    @media(max-width:750px){
+      .mast{padding:14px 17px 18px;}
+      .sheet{border-left:0;border-right:0;margin-bottom:25px;}
+      .cover{padding:39px 22px 30px;}
+      .cover:after{right:-10px;bottom:-45px;font-size:180px;}
+      .eyebrow{margin-bottom:19px;}
+      .deck{font-size:.93rem;}
+      .reading{grid-template-columns:1fr;}
+      .sidebar{padding:15px 20px;border-right:0;border-bottom:1px solid var(--stroke);}
+      .sidebar p{margin:0 0 8px;}
+      .sidebar-inner{position:static;}
+      .sidebar nav{display:flex;gap:12px;overflow-x:auto;scrollbar-width:thin;}
+      .sidebar a{white-space:nowrap;padding:7px 0;font-size:.76rem;flex:none;}
+      .sections{padding:27px 22px 38px;}
+      .footer{padding:0 20px 28px;}
+    }
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.sidebar a{transition:none;}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to privacy policy</a>
+  <header class="mast">
+    <a class="brand" href="/" aria-label="Pocket Works home"><span class="mark" aria-hidden="true">◎</span>POCKET WORKS</a>
+    <a class="back" href="/"><span aria-hidden="true">←</span> Back to library</a>
+  </header>
+  <main class="sheet" id="main">
+    <div class="cover">
+      <p class="eyebrow">Pocket Works / Trust &amp; transparency / 001</p>
+      <h1>Privacy<br>policy.</h1>
+      <p class="deck">What we collect, why we need it, and what remains yours. This policy covers the Pocket Works launcher, Pocket ID accounts, and PocketNet multiplayer infrastructure.</p>
+      <span class="updated">EFFECTIVE OCTOBER 12, 2026</span>
+    </div>
+    <div class="reading">
+      <aside class="sidebar" aria-label="Policy sections">
+        <div class="sidebar-inner">
+          <p>On this page</p>
+          <nav>
+            <a href="#who">01 / Overview</a>
+            <a href="#information">02 / Information</a>
+            <a href="#google">03 / Google sign-in</a>
+            <a href="#storage">04 / Storage</a>
+            <a href="#uses">05 / How it's used</a>
+            <a href="#retention">06 / Retention</a>
+            <a href="#providers">07 / Providers</a>
+            <a href="#choices">08 / Your choices</a>
+            <a href="#contact">09 / Contact</a>
+          </nav>
+        </div>
+      </aside>
+      <div class="sections">
+        <section id="who">
+          <span class="section-index">01 — OVERVIEW</span>
+          <h2>Who operates Pocket Works?</h2>
+          <p>Pocket Works is an independent collection of browser-based applications and games, including the optional Pocket ID account system. The project is published at <a href="/">this website</a>, and its public source repository is <a href="https://github.com/JustSadSock/pocket-works" rel="noopener noreferrer">JustSadSock/pocket-works</a>.</p>
+          <p>You can browse and use supported offline apps without creating a Pocket ID. Creating an account is optional.</p>
+        </section>
+        <section id="information">
+          <span class="section-index">02 — INFORMATION WE HANDLE</span>
+          <h2>Your profile, not your inbox.</h2>
+          <p>When you register a Pocket ID or update your profile, the server stores:</p>
+          <ul>
+            <li>A generated account identifier (UUID), your chosen <strong>unique nickname</strong> and <strong>avatar preset</strong>.</li>
+            <li>Account creation and update timestamps.</li>
+            <li>If you link Google: your Google account's unique identifier (<strong>Google subject ID</strong>).</li>
+            <li>Cryptographic hashes of recovery keys and active sign-in session tokens, plus session expiration times. Plaintext recovery keys are shown to you only when issued.</li>
+          </ul>
+          <p>For account security, the service temporarily processes your IP address to limit repeated registration, recovery and sign-in attempts. Rate-limit records normally expire after approximately 15 minutes. Temporary Google authorization state is retained for up to 10 minutes.</p>
+          <div class="note">The current Pocket ID implementation does not store your Google email address in the account database. Google may provide it during sign-in; we use its verified status to confirm authentication.</div>
+        </section>
+        <section id="google">
+          <span class="section-index">03 — GOOGLE SIGN-IN</span>
+          <h2>What happens when you use Google?</h2>
+          <p>If you select “Continue with Google”, you are redirected to Google to choose an account and authorize basic sign-in. We request only <strong>openid, email and profile</strong> scopes. We use Google's response to verify your identity and associate your Google subject ID with your Pocket ID profile.</p>
+          <p>Google authentication tokens and profile details are processed for sign-in and are not saved as persistent Pocket ID account data. We do not request access to Gmail messages, Drive files or your contacts.</p>
+          <p>Google independently processes data under its <a href="https://policies.google.com/privacy" rel="noopener noreferrer">Privacy Policy</a>.</p>
+        </section>
+        <section id="storage">
+          <span class="section-index">04 — ON YOUR DEVICE</span>
+          <h2>What stays local?</h2>
+          <p>Supported games and creative apps may store drawings, progress, settings and other content locally in your browser or installed web app using device storage and caches. Pocket ID <strong>does not currently synchronize these items between devices</strong>.</p>
+          <p>We use secure, HttpOnly cookies to keep you signed in. A session can remain valid for up to 30 days. You can sign out to revoke the current session. The service also uses a short-lived cookie during Google login to protect the authorization process.</p>
+          <p>PocketNet multiplayer uses separate guest sessions and room data to run shared games. Its temporary room information is not linked to Pocket ID by default. Individual games may have their own specific data behavior.</p>
+        </section>
+        <section id="uses">
+          <span class="section-index">05 — PURPOSE</span>
+          <h2>Why we use this information.</h2>
+          <ul>
+            <li>To create your identity, display your nickname and avatar, and prevent duplicate nicknames.</li>
+            <li>To authenticate you, restore account access and protect against automated abuse.</li>
+            <li>To run optional multiplayer sessions and maintain the site's functionality and security.</li>
+            <li>To troubleshoot errors and operate the service.</li>
+          </ul>
+          <p>We do not sell Pocket ID profile data or use it to deliver targeted advertisements. Future services, such as cloud saves or friends, will require an update to this policy before their data handling is introduced.</p>
+        </section>
+        <section id="retention">
+          <span class="section-index">06 — RETENTION &amp; SECURITY</span>
+          <h2>How long is it kept?</h2>
+          <p>Your Pocket ID profile is kept while your account exists. Authentication sessions expire after 30 days and can be revoked by signing out; expired records are periodically cleared. OAuth authorization state expires after approximately 10 minutes. Security rate limits expire after approximately 15 minutes, subject to routine cleanup.</p>
+          <p>Session tokens and recovery secrets are not stored in plaintext in the account database. Data is transmitted over HTTPS. No technical system can guarantee absolute security.</p>
+          <p><strong>Account deletion and self-service cloud-data export are not yet available.</strong> To make a privacy or deletion request, use the contact method below. Do not publish passwords, recovery keys or private account details in a public issue.</p>
+        </section>
+        <section id="providers">
+          <span class="section-index">07 — THIRD PARTIES</span>
+          <h2>Infrastructure and transfers.</h2>
+          <p><strong>Cloudflare</strong> hosts the application and provides Workers and Durable Objects used for accounts and multiplayer. Cloudflare may process technical request metadata under its <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener noreferrer">Privacy Policy</a>.</p>
+          <p><strong>Google</strong> handles authentication when you choose Google sign-in. <strong>GitHub</strong> hosts the project's public source and issue tracker. These providers may process data in countries other than your own according to their respective policies.</p>
+        </section>
+        <section id="choices">
+          <span class="section-index">08 — YOUR CHOICES</span>
+          <h2>Your account is optional.</h2>
+          <ul>
+            <li>Use compatible apps without a Pocket ID account.</li>
+            <li>Change your nickname and preset avatar inside the profile screen.</li>
+            <li>Sign out at any time, and rotate your recovery key while signed in.</li>
+            <li>Manage third-party Google authorization from your <a href="https://myaccount.google.com/connections" rel="noopener noreferrer">Google Account connections</a>.</li>
+            <li>Request access, correction or deletion of your account information through the project contact below.</li>
+          </ul>
+          <p>Clearing browser data may remove locally saved drawings or progress. Signing out of Pocket ID does not itself delete local app data.</p>
+        </section>
+        <section id="contact">
+          <span class="section-index">09 — CONTACT &amp; UPDATES</span>
+          <h2>Questions about privacy?</h2>
+          <p>Contact the project maintainer through the <a href="https://github.com/JustSadSock/pocket-works/issues/new" rel="noopener noreferrer">Pocket Works issue tracker</a>. Issues are public: describe your request without sharing sensitive personal information, and arrange a private communication channel with the maintainer for account-specific details.</p>
+          <p>If this policy changes materially, the revised version and effective date will be posted here before or when the corresponding features become available.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+  <footer class="footer"><span>© 2026 Pocket Works</span><a href="/">Return to the library ↑</a></footer>
+</body>
+</html>
