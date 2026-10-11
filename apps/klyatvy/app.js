@@ -1,4 +1,5 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {HOUSES,REGIONS,mapSvg,portraitSvg} from './world.js';
 import {initial,validate,when,clamp,chance,offer,gift,levy,audit,march,decree,councilAct,resolveIncident,seasonAdvance,score,UPGRADES} from './engine.js';
 installMobileRuntime();
@@ -144,5 +145,16 @@ $('sheet').addEventListener('click',e=>{
 });
 $('veil').addEventListener('click',e=>{if(e.target===$('veil')&&!['incident','end'].includes(panel))hide()});
 window.addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+createWorkshopMode({
+ appName:'Клятвы',
+ version:'1.0.0',
+ cachePrefix: 'klyatvy-',
+ storageNamespace: 'pocket-works:klyatvy',
+ onReset(){
+  game=initial();draft=null;hide();render();
+  $('opening').classList.remove('dismissed');
+  $('startBtn').textContent='Открыть хронику →';
+ }
+});
 window.__KLYATVY_QA__=()=>({turn:game.turn,gold:game.gold,stability:game.stability,legitimacy:game.legitimacy,troops:game.troops,selected:game.selected,owners:[...game.owners],rebels:[...game.rebels],charters:game.charters.length,history:game.history.length,pending:!!game.pending,ended:game.ended,panel});
 render();
