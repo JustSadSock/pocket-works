@@ -65,6 +65,8 @@ function commonsHtml(leader){
 function editEmblem(){
  const current=personalEmblem.strokes.map(s=>({c:s.c,s:s.s,p:s.p.map(p=>[...p])}));
  let strokes=current,ink=EMBLEM_COLORS[0],size=7,drawing=null,pointer=null;
+ let backupKey='';
+ try{backupKey=Object.keys(localStorage).filter(k=>k.startsWith('pocket-works:zamazka:emblem-cloud-backup:')).sort().at(-1)||''}catch{}
  const markup='<p class="emblem-explainer">Твоя нарисованная подпись. Она появится рядом с ником у остальных игроков.</p>'+
   '<div class="emblem-board"><canvas id="emblemCanvas" width="'+EMBLEM_SIZE.w+'" height="'+EMBLEM_SIZE.h+'" aria-label="Холст личного знака"></canvas><span class="emblem-board-caption">ЛИЧНАЯ ПЕЧАТЬ · 240 × 144</span></div>'+
   '<div class="emblem-palette" aria-label="Цвет кисти">'+EMBLEM_COLORS.map((c,i)=>'<button type="button" class="emblem-ink'+(i===0?' selected':'')+'" data-emblem-ink="'+c+'" style="--ink-color:'+c+'" aria-label="Цвет '+(i+1)+'"></button>').join('')+'</div>'+
@@ -106,6 +108,21 @@ function editEmblem(){
  });
  dialog.querySelector('#emblemSize').addEventListener('input',e=>size=Number(e.target.value));
  dialog.querySelector('#emblemUndo').addEventListener('click',()=>{strokes.pop();paint()});
+ if(backupKey){
+  const button=document.createElement('button');
+  button.type='button';button.textContent='Вернуть предыдущую версию знака';button.className='emblem-restore-backup';
+  dialog.querySelector('.emblem-tools').after(button);
+  button.addEventListener('click',()=>{
+   if(!confirm('Заменить текущий знак сохранённой локальной версией?'))return;
+   try{
+    const backup=JSON.parse(localStorage.getItem(backupKey));
+    if(!storeEmblem(backup.strokes,backup.image))throw Error('Не удалось сохранить знак');
+    personalEmblem=getSavedEmblem();zamazkaCloud?.schedule();
+    closeDialog();syncIdentity();if(page==='lobby')lobby();
+    notify('Предыдущий знак восстановлен');
+   }catch{notify('Резервная копия не открывается')}
+  });
+ }
  let confirmClear=false;
  dialog.querySelector('#emblemClear').addEventListener('click',e=>{if(!confirmClear){confirmClear=true;e.currentTarget.textContent='Точно очистить?';return}strokes=[];confirmClear=false;e.currentTarget.textContent='Очистить';paint()});
 }
