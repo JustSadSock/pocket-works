@@ -99,14 +99,15 @@
     {
       "id": "browser-capture",
       "availability": "unavailable",
-      "reason": "В текущей соединённой среде нет прямого браузерного Playwright-сеанса; используем CI GitHub как последующую проверку и не утверждаем, что уже видели финальные скриншоты."
+      "reason": "В текущей соединённой среде нет прямого браузерного Playwright-сеанса; используем CI GitHub как последующую проверку и не утверждаем, что уже видели финальные скриншоты.",
+      "fallback": "Use the app-specific GitHub Actions browser QA, CI screenshots and error logs for visual inspection; run module logic smoke checks directly through the repository connector."
     }
   ],
   "assets": [
     {
       "id": "atlas",
       "tool": "svg",
-      "source": "world.js",
+      "source": "art-bible.json",
       "output": "world.js",
       "role": "Основная большая иллюстрация 12 владений с речной сетью, замками и лесными массивами.",
       "integration": "Функция mapSvg обновляет сцены в ответ на изменение контроля, мятежей и режима карты.",
@@ -117,7 +118,7 @@
     {
       "id": "wax",
       "tool": "dom",
-      "source": "styles.css",
+      "source": "visual-direction.json",
       "output": "styles.css",
       "role": "Тактильная киноварная печать, подписывающая королевские договоры.",
       "integration": "Pointer Events связывают положение сургуча и выбор обязывающего решения без сетевых запросов.",
@@ -128,7 +129,7 @@
     {
       "id": "icon",
       "tool": "svg",
-      "source": "icons/icon.svg",
+      "source": "visual-direction.json",
       "output": "icons/icon.svg",
       "role": "Самостоятельная иконка сургучной королевской печати с выпуклой короной.",
       "integration": "PWA-манифест и вкладка приложения.",
