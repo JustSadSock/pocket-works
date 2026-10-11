@@ -197,7 +197,7 @@ function updateClock(){
 }
 function setState(next){
  if(!next||!Array.isArray(next.players)||!next.phase)return;
- const changed=state?.phase!==next.phase||state?.author!==next.author||state?.round!==next.round;
+ const changed=state?.phase!==next.phase||state?.author!==next.author||state?.round!==next.round||state?.prompt!==next.prompt;
  state=next;
  if(changed){selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
  if(next.phase==='compose'&&next.author===me?.id){
@@ -208,8 +208,8 @@ function setState(next){
 }
 function syncRoom(message){
  roomId=message.roomId;code=message.roomId?.slice(0,8).toUpperCase()||code;
- state=null;setState(message.state);
- try{net.sendGame({type:'sync'});}catch{}
+ state=null;root.innerHTML='<section class="loading">Синхронизируем комнату…</section>';
+ try{net.sendGame({type:'sync'});}catch{notify('Не удалось синхронизировать комнату.');}
  const address=new URL(location.href);address.searchParams.set('room',code);history.replaceState(null,'',address.pathname+address.search);
 }
 function stop(leave=true){
@@ -232,8 +232,8 @@ async function connect(mode){
  const target=String(root.querySelector('#roomCode')?.value||typedCode).trim().toUpperCase();
  if(mode==='join'&&!(/^[0-9A-F]{8}$/.test(target)||/^[0-9A-F-]{36}$/.test(target))){notify('Нужен код из восьми символов.');return;}
  typedCode=target;
- const ticket=++requestSerial;
  if(net)stop(false);
+ const ticket=++requestSerial;
  connecting=true;root.innerHTML='<section class="loading">Открываем связь с PocketNet…</section>';status('Подключение');
  try{
   if(mode!=='resume')adapter.removeItem('pocket-net:'+SERVER);
