@@ -447,7 +447,13 @@ render();
 checkServer();
 async function refreshGameIdentity(){
   const old=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
+  const oldAccount=pocketIdentity?.id||null;
   pocketIdentity=await getPocketIdentity({force:true});
+  if(net && oldAccount!==(pocketIdentity?.id||null)){
+    closeSession(true);
+    toast('Аккаунт Pocket ID изменился — подключись к партии заново');
+    return;
+  }
   if(old!==(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'') && screen==='menu')render();
 }
 void refreshGameIdentity();
