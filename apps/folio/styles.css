@@ -624,7 +624,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{
 .format-picker button{background:#ead6b2;color:#294355;border:2px solid #bea47c}
 .format-picker button.active{background:#ffe7b4;border:3px solid #bd553b}
 .modal-buttons button{background:#e2c48e;color:#253e4e;border:1px solid #bda579;font-weight:850}
-.modal-buttons button:last-child{background:#285b65!important;color:#fff4dc}
+.modal-buttons button:last-child{background:#285b65;color:#fff4dc}.modal-buttons button.danger-confirm{background:#ac352a!important;color:#fff7e9}
 .toast{
  background:#1e475c;color:#fff1d5;border:2px solid #efc267;
  box-shadow:3px 4px 0 #0d2b3b;font-size:12px;font-weight:850;white-space:normal;
@@ -744,4 +744,28 @@ button:focus-visible,a:focus-visible,input:focus-visible{
 @media (prefers-reduced-motion:reduce){
  .hero-sun,.doodle-star,.hero-illustration{animation:none!important}
  .home-actions button,.tool-bar button{transition:none!important}
+}
+
+/* Hand-painted previews in the desktop brush rack. */
+@media (min-width:960px) and (min-height:500px){
+ .desktop-brush-choices button{display:flex;flex-direction:column;align-items:flex-start;gap:7px;justify-content:center;min-height:69px;padding:8px 9px}
+ .desktop-brush-choices button span{font-size:11px;font-weight:900}
+ .paint-preview{
+  display:block;height:14px;width:min(100%,105px);position:relative;
+  background:#3b7984;transform:rotate(-3deg);clip-path:polygon(0 29%,22% 3%,48% 18%,81% 5%,100% 29%,95% 82%,56% 91%,18% 76%,0 100%)
+ }
+ .paint-preview.ink{height:4px;margin:5px 0 5px;background:#245a66;clip-path:none;border-radius:40% 65% 45% 50%}
+ .paint-preview.pencil{height:3px;margin:6px 0 6px;background:repeating-linear-gradient(0deg,#59757a 0 1px,transparent 1px 2px);opacity:.85}
+ .paint-preview.gouache{background:#cb5c45;height:18px;clip-path:polygon(0 10%,27% 1%,51% 16%,88% 0,100% 27%,99% 67%,66% 88%,30% 82%,0 100%)}
+ .paint-preview.marker{height:13px;background:#d1a74b;opacity:.75;clip-path:none;transform:rotate(-2deg)}
+ .paint-preview.wash{height:21px;background:#5caaa5;filter:blur(3px);opacity:.8;clip-path:none;border-radius:45%}
+ .desktop-brush-choices button.active .paint-preview{background:#f8d887}
+ .desktop-brush-choices button.active .paint-preview.marker{background:#fac17b}
+ .desktop-brush-choices button.active .paint-preview.pencil{background:repeating-linear-gradient(0deg,#e7e8db 0 1px,transparent 1px 2px)}
+}
+.home-actions .make-button{background:#b83b29}
+.home-actions .make-button:hover{background:#a93829}
+.top-actions .export-button{background:#b83b29}
+@media (min-width:960px) and (min-height:500px){
+ .top-actions .export-button{background:#b83b29}
 }
