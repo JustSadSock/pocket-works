@@ -129,7 +129,7 @@ function renderCompose(){
  const prompt=author?(state.prompt||'Получаем фразу…'):'Смотри, как рождается сообщение';
  const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div>'+
   (author?'<span class="micro">НЕ ВСЕ ЗНАКИ ДОСТУПНЫ</span>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
- const available=GLYPHS.filter(g=>state.palette?.includes(g[0]));
+ const available=GLYPHS.filter(g=>!state.palette?.length||state.palette.includes(g[0]));
  const palette=available.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
  const blocked=GLYPHS.filter(g=>state.blocked?.includes(g[0]));
  const blockedHTML=blocked.length?'<div class="blocked-strip"><span>ЗАПРЕЩЕНО</span>'+
@@ -173,6 +173,7 @@ function updateGuessDraft(){
 }
 
 function renderGuess(){
+ if(!state.choices?.length)return renderLegacyGuess();
  const author=state.author===me?.id;
  const did=state.answered.includes(me?.id);
  const cells=did&&state.myAnswer?state.myAnswer:draftAnswer;
@@ -189,6 +190,7 @@ function renderGuess(){
 }
 
 function renderReveal(){
+ if(!state.choices?.length)return renderLegacyReveal();
  const result=state.history?.at(-1);
  const solution=state.solution||[];
  const mine=state.myAnswer||[null,null,null,null,null];
@@ -211,6 +213,33 @@ function renderReveal(){
   '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+
   '<div class="review-grid">'+review+'</div><div class="reveal-peers">'+peers+'</div>'+
   '<p class="small-note">+2 за точное слово, −1 за ошибку, 0 за пропуск. Раунд: '+(result?.points||0)+' очков.</p>'+
+  (state.host===me?.id?'<button class="btn primary" data-action="next">Следующий этап →</button>':'<p class="small-note">Следующий этап начнётся автоматически.</p>')+
+  '</div></div></section>';
+ updateClock();
+}
+
+function renderLegacyGuess(){
+ const author=state.author===me?.id,did=state.answered.includes(me?.id);
+ const choices=state.options||[];
+ const options=author?'<div class="wait-box">Ты автор. Друзья выбирают смысл твоей композиции.</div>':
+  choices.map((phrase,i)=>'<button class="option '+(state.myAnswer===i?'selected':'')+'" data-choice="'+i+'" '+(did||!connected?'disabled':'')+'><small>'+(i+1)+'</small>'+esc(phrase)+'</button>').join('');
+ root.innerHTML='<section class="game-shell">'+phaseTop('Что это значит?','КЛАССИЧЕСКАЯ РАСШИФРОВКА')+
+  '<div class="prompt-strip"><b>'+(did?'Ответ принят':author?'Ждём друзей':'Выбери интерпретацию')+'</b><span class="micro">'+state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ</span></div>'+
+  '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+options+
+  '<button class="btn quiet slim" data-action="leave">Выйти из комнаты</button></div></div></section>';
+ updateClock();
+}
+function renderLegacyReveal(){
+ const result=state.history?.at(-1),correct=state.correct;
+ const peers=state.players.filter(p=>p.id!==state.author).map(p=>{
+  const answer=state.answers[p.id],right=answer===correct;
+  return '<span class="answer-pill '+(answer===undefined?'':right?'yes':'no')+'">'+esc(p.name)+': '+(answer===undefined?'не ответил':right?'угадал':'другая версия')+'</span>';
+ }).join('');
+ root.innerHTML='<section class="game-shell">'+phaseTop('А вот что имелось в виду','РАСКРЫТИЕ')+
+  '<div class="reveal-head"><div><span class="micro">ИСХОДНАЯ ФРАЗА</span><h2>'+esc(state.options[correct]||'—')+'</h2></div><strong>'+(result?.correct||0)+' / '+(result?.total||0)+'</strong></div>'+
+  '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+
+  state.options.map((phrase,i)=>'<div class="option '+(i===correct?'correct':'wrong')+'"><small>'+(i+1)+'</small>'+esc(phrase)+'</div>').join('')+
+  '<div class="reveal-peers">'+peers+'</div>'+
   (state.host===me?.id?'<button class="btn primary" data-action="next">Следующий этап →</button>':'<p class="small-note">Следующий этап начнётся автоматически.</p>')+
   '</div></div></section>';
  updateClock();
@@ -335,7 +364,7 @@ function paintBoard(){
 }
 function addSymbol(id){
  if(state?.phase!=='compose'||state.author!==me?.id)return;
- if(!state.palette?.includes(id)){notify('Этот знак недоступен в раунде.');return;}
+ if(state.palette?.length&&!state.palette.includes(id)){notify('Этот знак недоступен в раунде.');return;}
  if(draft.length>=26){notify('На доске может быть не больше 26 знаков.');return;}
  remember();
  const offset=(draft.length%7-3)*4;
@@ -376,6 +405,10 @@ async function copyText(value){
 root.addEventListener('click',e=>{
  const glyph=e.target.closest('[data-glyph]');if(glyph&&!glyph.disabled){addSymbol(glyph.dataset.glyph);return;}
  
+ const option=e.target.closest('[data-choice]');
+ if(option&&!option.disabled){
+  if(send({type:'answer',choice:Number(option.dataset.choice)})){option.disabled=true;option.classList.add('selected');playTone(740);}return;
+ }
  const btn=e.target.closest('[data-action]');if(!btn||btn.disabled)return;
  const action=btn.dataset.action;
  if(action==='create'||action==='join'||action==='resume'){connect(action);return;}
