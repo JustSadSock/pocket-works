@@ -14,7 +14,8 @@ For any task that creates or materially changes visible output:
    - `GAME-UI.md` for HUDs, menus, overlays, inventory, dialogue, controls, onboarding, and other in-game UI.
    - `MOTION-GAME-FEEL.md` for animation, transitions, VFX, hit feedback, tactile response, camera response, or sound-linked motion.
    - `3D-SCENE.md` for WebGL/Babylon/Godot scenes, authored models, lighting, materials, camera composition, or environmental dressing.
-3. Read `VISUAL-QA.md` before final sign-off.
+3. Read `AI-VISUAL-PRODUCTION.md` when an AI agent authors, revises or selects pixel art, sprites, SVG, 2.5D or 3D assets. It defines the medium choice, editable-source pipeline, provenance and in-game visual acceptance contract.
+4. Read `VISUAL-QA.md` before final sign-off.
 4. Existing product identity and explicit user direction override generic taste advice.
 
 ## Shared operating principle
