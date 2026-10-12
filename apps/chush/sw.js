@@ -1,7 +1,7 @@
-const APP_VERSION='1.0.0';
-const CACHE='chush-v1.0.0';
+const APP_VERSION='1.1.0';
+const CACHE='chush-v1.1.0';
 const RELEASE_DATE='2026-10-12';
-const RELEASE_NOTES=["320 SVG-объектов: 64 характерных силуэта с пятью необычными превращениями.","Каждому игроку выдаётся собственная сбалансированная случайная колода; 18–22 предмета на раунд.","90 разнообразных абсурдных сценариев; пять раундов, интерактивный коллаж, порядок слоёв и таймер.","PocketNet для 2–8 игроков, скрытые работы до голосования, двухместный режим оценки, результаты и повторная партия."];
+const RELEASE_NOTES=["Предметы полностью переработаны в простые залитые цветом силуэты: 64 формы, пять цветовых вариантов, без сценок и декоративных наложений.","Каждый из 18–22 персональных штампов работает как многоразовая кисть: тап создаёт отпечаток, проведение пальцем — непрерывный мазок.","Добавлены восемь цветов, размер кисти, ластик, очистка и отмена целого мазка. Холст вмещает 140 отпечатков.","PocketNet v2 синхронизирует рисунки, сохраняет анонимное голосование, поддерживает 2–8 игроков и корректный экспорт SVG."];
 const VERSION=APP_VERSION,PREFIX='chush-',CACHE_PROTOCOL=2;
 const FILES=['./','./index.html','./app.js','./pieces.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/workshop-mode.js','../../shared/workshop-mode.css','../../shared/capabilities/net.js','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope),ENTRIES=new Map(FILES.map(p=>{const url=new URL(p,ROOT);return[url.pathname,url.href]}));
