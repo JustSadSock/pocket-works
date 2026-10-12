@@ -48,11 +48,12 @@ function moveCrate(s:State,dx:number,dy:number):boolean{
 function moveAxis(s:State,p:Runner,axis:'x'|'y',delta:number,hold:boolean){
  if(Math.abs(delta)<.00001)return;
  const next={x:p.x,y:p.y};next[axis]+=delta;
+ let pushed=false;
  if(s.crate&&near(next,s.crate,.67)&&hold){
-  const pushed=axis==='x'?moveCrate(s,delta,0):moveCrate(s,0,delta);
+  pushed=axis==='x'?moveCrate(s,delta,0):moveCrate(s,0,delta);
   if(!pushed){p[axis==='x'?'vx':'vy']=0;return;}
  }
- if(blocked(s,next,.30)){p[axis==='x'?'vx':'vy']=0;return;}
+ if(blocked(s,next,.30,!pushed)){p[axis==='x'?'vx':'vy']=0;return;}
  p[axis]=next[axis];
 }
 function simulate(s:State,dt:number,t:number){
@@ -103,7 +104,7 @@ const module:PocketModule<State>={
   if(data.type==='start'||data.type==='again'){
    if(state.host!==player.id||state.players.length!==2||players.length!==2)return {state,events:notice(player.id,'Нужны два подключённых игрока.')};
    if(data.type==='start'&&state.phase!=='lobby'||data.type==='again'&&state.phase!=='finished')return {state,events:notice(player.id,'Действие сейчас недоступно.')};
-   sStart: {state.totalHits=0;state.runners={};setup(state,0);}
+   state.totalHits=0;state.runners={};setup(state,0);
    return {state,events:events(state)};
   }
   if(state.phase!=='playing')return {state,events:[]};
