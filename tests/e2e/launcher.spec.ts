@@ -63,7 +63,7 @@ test('launcher shelf supports precise updated sorting, search, details and favor
   await expectExpandedLauncherList(page);
 
   const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
-  await screenLabEntry.locator('.app-entry__select').click();
+  await screenLabEntry.locator('.app-entry__more').click();
   await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#detail-name')).toHaveText('Screen Lab');
   await expect(page.locator('#detail-version')).toHaveText(`v${screenLabVersion}`);
