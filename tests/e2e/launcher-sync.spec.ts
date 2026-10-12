@@ -35,6 +35,7 @@ test('launcher Sync updates only already-installed application workers', async (
   });
   expect(before).toEqual(['/apps/screen-lab/']);
 
+  await page.locator('#library-options > summary').click();
   const sync = page.locator('#update-installed-button');
   await sync.click();
   await expect(sync).toBeEnabled({ timeout: 35_000 });
