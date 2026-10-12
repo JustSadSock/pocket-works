@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.10';
-const APP_VERSION = '0.10.10';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.11';
+const APP_VERSION = '0.10.11';
 const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
@@ -9,7 +9,8 @@ const RELEASE_NOTES = [
   'Persistent Pocket ID profiles, unique nicknames, avatar badges, and optional Google sign-in.',
   'Public privacy policy for Pocket ID accounts, Google sign-in and local applications.',
   'Pocket ID identity across multiplayer games, profile links and verified account badges.',
-  'Pocket Social player cards, drawn portraits, friends, presence and verified room invitations.'
+  'Pocket Social player cards, drawn portraits, friends, presence and verified room invitations.',
+  'Unified Pocket ID profile editor, account settings and personal portraits across supported games.'
 ];
 const APP_SHELL = [
   './', './index.html', './privacy.html', './styles.css', './deck-shell.css', './covers/index.json', './launcher-performance.css', './launcher-sync.css', './app.js',
