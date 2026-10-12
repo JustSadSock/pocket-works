@@ -32,8 +32,8 @@
       "dependsOn": [],
       "seed": 7126,
       "parameters": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 128
       },
       "outputs": {
         "image": "assets/abbey-emblem.png",
