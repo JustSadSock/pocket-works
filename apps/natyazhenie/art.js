@@ -14,7 +14,7 @@ export function rubberPoints(start,end,{time=0,tight=0,reduced=false}={}){
  const segments=Math.max(8,Math.ceil(len/18)*2);
  const slack=Math.pow(1-clamp(tight,0,1),1.45);
  const sag=slack*Math.min(43,len*.22);
- const oscillation=reduced?0:slack*2.6;
+ const oscillation=reduced?0:Math.min(sag*.22,slack*2.6);
  const pts=[];
  for(let i=0;i<=segments;i++){
   const t=i/segments,b=Math.sin(Math.PI*t);
