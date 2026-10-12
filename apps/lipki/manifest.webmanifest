@@ -1,0 +1,25 @@
+{
+  "id": "/apps/lipki/",
+  "name": "ЛИПКИ",
+  "short_name": "ЛИПКИ",
+  "description": "Фетровый кооперативный физический платформер: прыгайте, прилипайте к друзьям, решайте головоломки и добирайтесь до кармана через PocketNet.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "landscape",
+  "background_color": "#e8dccb",
+  "theme_color": "#e8dccb",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
