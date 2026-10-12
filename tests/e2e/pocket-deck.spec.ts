@@ -2,6 +2,17 @@ import { expect, test } from '@playwright/test';
 import { attachCriticalScreenshot, assertNoHorizontalOverflow, monitorUnexpectedBrowserOutput } from './helpers';
 
 async function openDeck(page: import('@playwright/test').Page) {
+  // Static production-like preview has no Pocket ID / Pocket Social worker.
+  // Stub the two account discovery surfaces instead of logging spurious 404s.
+  await page.route('**/pocket-id/me',route=>route.fulfill({
+    status:200,contentType:'application/json',body:JSON.stringify({user:null})
+  }));
+  await page.route('**/pocket-id/config',route=>route.fulfill({
+    status:200,contentType:'application/json',body:JSON.stringify({googleEnabled:false,avatars:[]})
+  }));
+  await page.route('**/pocket-social/me',route=>route.fulfill({
+    status:200,contentType:'application/json',body:JSON.stringify({profile:null})
+  }));
   await page.goto('/', {waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveClass(/has-pocket-deck/);
   await expect(page.locator('#deck-bottom-nav')).toBeVisible();
