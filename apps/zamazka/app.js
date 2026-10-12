@@ -408,7 +408,7 @@ function waiting(){
  '<div class="unveil-frame" id="unveilStage" style="--split:50%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Моя реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Оригинальная картина"></canvas><span class="unveil-label left">МОЯ РАБОТА</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
  '<label class="unveil-control" for="unveilRange">Сравнить до и после <input id="unveilRange" type="range" min="0" max="100" value="50" aria-label="Сравнить мою реставрацию и оригинал"></label></div>'+
  '<aside class="waiting-progress"><h3>Ожидаем остальных</h3><strong id="readyCount">'+finished.length+' / '+players.length+'</strong>'+
- '<details class="waiting-players"><summary>Кто ещё рисует <span aria-hidden="true">⌄</span></summary><div id="readyList" class="waiting-roster">'+players.map(p=>'<div class="waiting-person">'+memberSeal(p)+'<span>'+esc(p.name)+'</span><strong>'+(finished.includes(p.id)?'Готово':'Рисует')+'</strong></div>').join('')+'</div></details></aside></div></section>','waiting');
+ '<details class="waiting-players"><summary>Кто ещё рисует <span aria-hidden="true">⌄</span></summary><div id="readyList" class="waiting-roster">'+players.map(p=>'<div class="waiting-person'+(finished.includes(p.id)?' is-ready':'')+'">'+memberSeal(p)+'<span>'+esc(p.name)+'</span><strong>'+(finished.includes(p.id)?'Готово':'Рисует')+'</strong></div>').join('')+'</div></details></aside></div></section>','waiting');
  void renderArtwork(screen.querySelector('#restCanvas'),ass.art,ass.variation,ass.strokes||[],true);
  void renderArtwork(screen.querySelector('#origCanvas'),ass.art,0,null,false);
 }
@@ -559,7 +559,7 @@ function renderView(){
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
     const count=screen.querySelector('#readyCount');if(count)count.textContent=(view.done||[]).length+' / '+view.participants.length;
-    screen.querySelectorAll('.waiting-person').forEach((el,i)=>{const p=view.participants[i],status=el.querySelector('strong');if(p&&status)status.textContent=(view.done||[]).includes(p.id)?'Готово':'Рисует'});
+    screen.querySelectorAll('.waiting-person').forEach((el,i)=>{const p=view.participants[i],status=el.querySelector('strong');if(p&&status){const ready=(view.done||[]).includes(p.id);status.textContent=ready?'Готово':'Рисует';el.classList.toggle('is-ready',ready)}});
     return;
   }
  if(page==='preparing'&&view.phase==='preparing'&&key===lastUiKey){
@@ -660,7 +660,7 @@ async function connect(mode){
    });
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
    client.on('disconnected',()=>{
-     if(client.closed)return;
+     if(client.closed)return;connectionStatus('offline');
      lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';
      if(pendingSubmit){pendingSubmit.sentAt=0;persistPending();draftIndicator('Нет связи · работа на устройстве')}
      else draftIndicator('Нет связи · черновик на устройстве');
@@ -687,6 +687,7 @@ async function connect(mode){
    // Stored rooms are rejoined automatically after PocketNet authentication.
  }catch(error){
    if(epoch!==connectionEpoch)return;
+   connectionStatus('offline');
    if(net){net.close();net=null}
    clearTabGuest();
    const message=error?.name==='TimeoutError'?'Сервер не ответил. Попробуй ещё раз.':error instanceof TypeError?'Нет соединения с интернетом. Проверь сеть.':error?.message||'Не удалось подключиться. Попробуй ещё раз.';
