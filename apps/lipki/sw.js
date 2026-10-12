@@ -1,0 +1,12 @@
+const APP_VERSION='1.0.0',RELEASE_DATE='2026-10-12';
+const RELEASE_NOTES=["Новый физический платформер в мире фетра: десять уровней, липучки, пружины, катушки и кнопки.","Тренировка с переключением двух героев и сохранением открытых уровней.","Комнаты PocketNet на 2–4 игроков, Pocket ID и управление с телефона."];
+const PREFIX='lipki-';
+const CACHE_NAME='lipki-v1.0.0';
+const FILES=["./","./index.html","./app.config.json","./app.js","./physics.js","./art.js","./styles.css","./icons/icon.svg","./manifest.webmanifest","../../shared/mobile-runtime.css","../../shared/mobile-runtime.js","../../shared/pwa-utils.js","../../shared/capabilities/net.js","../../shared/capabilities/identity.js","../../shared/update-manager.css","../../shared/update-manager.js","../../shared/workshop-mode.css","../../shared/workshop-mode.js","../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js"];
+const ROOT=new URL('./',self.registration.scope);
+const INDEX=new Map(FILES.map(p=>{const u=new URL(p,ROOT);return [u.pathname,u.href]}));
+self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await Promise.all([...new Set(INDEX.values())].map(async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('Cache failed '+r.status);await cache.put(url,r)}))})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{await Promise.all((await caches.keys()).filter(k=>k.startsWith(PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim()})()));
+self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:1,cacheName:CACHE_NAME})});
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);if(url.origin!==location.origin)return;if(event.request.mode!=='navigate'&&!INDEX.has(url.pathname))return;const fallback=event.request.mode==='navigate'?ROOT.href:INDEX.get(url.pathname);
+event.respondWith((async()=>{try{const res=await fetch(event.request);if(res.ok)(await caches.open(CACHE_NAME)).put(fallback,res.clone()).catch(()=>{});return res}catch{return await caches.match(fallback)||Response.error()}})())});

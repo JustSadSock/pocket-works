@@ -33,5 +33,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "lipki": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
