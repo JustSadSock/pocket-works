@@ -149,3 +149,7 @@ node pocket-id/test/edge.mjs
 
 PocketNet Edge CI runs this alongside its room/WebSocket suite, ensuring new
 account functionality does not break the existing multiplayer backend.
+
+## Stage C — one profile interface (PocketWorks 0.10.11)
+
+For signed-in players, the existing Pocket ID launcher button opens the Pocket Social card, which is now the single profile editor. It edits the nickname, drawn avatar, background, frame, favorite game and privacy settings, and offers Friends and Invitations as neighboring tabs. Pocket ID's separate dialog handles **authentication and account security only** (Google, recovery key, sign-out, and first-time account creation). The older editable badge grid and signed-in Pocket ID appearance editor have been removed from the user flow. Older badge presets remain secure fallbacks; they are not a second customization surface. Direct links from games use `/?pocket-id=profile` to open the unified card.

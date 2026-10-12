@@ -10,18 +10,83 @@ const presets={
   plum:['#816181','#ebcfdf','M32 7l7 15 17 2-12 13 3 18-15-8-15 8 3-18L8 24l17-2z'],
   stone:['#7b7b6c','#efecde','M32 7 53 21v25L32 57 11 46V21zM11 21l21 14 21-14M32 35v22']
 };
-export const pocketIdProfileUrl='/?pocket-id=login';
+export const pocketIdProfileUrl='/?pocket-id=profile';
 export const escapeIdentityHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function pocketAvatarMarkup(value,{small=false}={}){
+const DRAWN=/^data:image\/(?:png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const safePortrait=value=>typeof value==='string'&&value.length<=24000&&DRAWN.test(value)?value:'';
+const portraits=new Map(),loadingPortraits=new Map();
+export function pocketAvatarMarkup(value,{small=false,accountId=''}={}){
   const id=Object.hasOwn(presets,value)?value:'clay';
   const [bg,ink,path]=presets[id];
-  return '<span class="pw-identity-avatar'+(small?' pw-identity-avatar--small':'')+'" style="--pw-a-bg:'+bg+';--pw-a-ink:'+ink+'" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="'+path+'"/></svg></span>';
+  const portrait=safePortrait(value)||portraits.get(accountId)||'';
+  const account=UUID.test(accountId)?' data-pw-account="'+accountId+'" data-pw-preset="'+id+'"':'';
+  return '<span class="pw-identity-avatar'+(small?' pw-identity-avatar--small':'')+'"'+account+
+    ' style="--pw-a-bg:'+bg+';--pw-a-ink:'+ink+'" aria-hidden="true">'+
+    (portrait?'<img src="'+portrait+'" alt="">':'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="'+path+'"/></svg>')+'</span>';
+}
+function showPortrait(accountId,artwork){
+  if(typeof document==='undefined')return;
+  for(const el of document.querySelectorAll('[data-pw-account="'+accountId+'"]')){
+    let img=el.querySelector('img');
+    if(!artwork){
+      if(img){
+        const preset=Object.hasOwn(presets,el.dataset.pwPreset)?el.dataset.pwPreset:'clay';
+        const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+        svg.setAttribute('viewBox','0 0 64 64');
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',presets[preset][2]);svg.append(path);el.replaceChildren(svg);
+      }
+      continue;
+    }
+    if(!img){el.replaceChildren();img=document.createElement('img');img.alt='';el.append(img)}
+    if(img.src!==artwork)img.src=artwork;
+  }
+}
+async function fetchPortrait(accountId){
+  if(!UUID.test(accountId)||portraits.has(accountId))return;
+  if(loadingPortraits.has(accountId))return loadingPortraits.get(accountId);
+  const task=(async()=>{
+    try{
+      const reply=await fetch('/pocket-social/user?id='+encodeURIComponent(accountId),{
+        credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(5000)});
+      if(!reply.ok)return;
+      const data=await reply.json();
+      const artwork=safePortrait(data.profile?.artwork);
+      portraits.set(accountId,artwork);
+      showPortrait(accountId,artwork);
+    }catch{}finally{loadingPortraits.delete(accountId)}
+  })();
+  loadingPortraits.set(accountId,task);
+  return task;
+}
+function hydratePortraits(){
+  if(typeof document==='undefined')return;
+  for(const el of document.querySelectorAll('[data-pw-account]')){
+    const id=el.getAttribute('data-pw-account');
+    if(!UUID.test(id))continue;
+    if(portraits.has(id))showPortrait(id,portraits.get(id));
+    else fetchPortrait(id);
+  }
+}
+if(typeof document!=='undefined'){
+  const setup=()=>{
+    if(!document.body)return;
+    const observer=new MutationObserver(()=>hydratePortraits());
+    observer.observe(document.body,{subtree:true,childList:true});
+    document.addEventListener('pocket-social:portrait',e=>{
+      const id=e.detail?.accountId,art=safePortrait(e.detail?.artwork);
+      if(UUID.test(id)){portraits.set(id,art);showPortrait(id,art)}
+    });
+    hydratePortraits();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
 }
 // A badge is only marked verified when PocketNet's trusted room state says so.
 // LAN peers cannot claim a verified badge merely by sending metadata.
 export function pocketPlayerBadge(player,{showGuest=true}={}){
   return player?.verified===true && player.accountId
-    ? '<span class="pw-identity-mark pw-identity-mark--verified" title="Ник подтверждён Pocket ID">'+pocketAvatarMarkup(player.avatar,{small:true})+'<span>Pocket ID</span></span>'
+    ? '<span class="pw-identity-mark pw-identity-mark--verified" title="Ник подтверждён Pocket ID">'+pocketAvatarMarkup(player.avatar,{small:true,accountId:player.accountId})+'<span>Pocket ID</span></span>'
     : showGuest?'<span class="pw-identity-mark pw-identity-mark--guest" title="Гостевое имя без подтверждения аккаунта">Гость</span>':'';
 }
 let cached=null,received=0,pending=null;
@@ -35,6 +100,20 @@ export async function getPocketIdentity({force=false}={}){
       if(!response.ok)throw new Error('Pocket ID unavailable');
       const info=await response.json();
       cached=info.user&&typeof info.user.id==='string'?info.user:null;
+      if(cached?.complete){
+        // Public card art is the same portrait used by the launcher, but account
+        // authorization and verified names still belong to Pocket ID.
+        try{
+          const portraitReply=await fetch('/pocket-social/me',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(3500)});
+          if(portraitReply.ok){
+            const social=await portraitReply.json();
+            if(social.profile?.id===cached.id){
+              cached.artwork=safePortrait(social.profile.artwork);
+              portraits.set(cached.id,cached.artwork);
+            }
+          }
+        }catch{}
+      }
     }catch{cached=null}
     received=Date.now();
     return cached;

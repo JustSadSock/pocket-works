@@ -84,3 +84,6 @@
 .pw-id-dialog__bottom a:hover {color:#ffe0cb;}
 html.has-pocket-deck .shelf-footer .pw-id-privacy-link {color:#d9b8a4;text-underline-offset:3px;white-space:nowrap;}
 html.has-pocket-deck .shelf-footer .pw-id-privacy-link:hover {color:#fff0de;}
+
+/* Account/security dialog intentionally has no competing avatar presentation. */
+#pocket-id-active-avatar{display:none!important}

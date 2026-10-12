@@ -8,20 +8,21 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
-  <meta name="pocket-works-build" content="0.10.10">
+  <meta name="pocket-works-build" content="0.10.11">
   <title>Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=0.10.10">
-  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.10.10" type="image/svg+xml">
-  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.10.10">
-  <link rel="stylesheet" href="./shared/update-manager.css?v=0.10.10">
-  <link rel="stylesheet" href="./styles.css?v=0.10.10">
-  <link rel="stylesheet" href="./launcher-performance.css?v=0.10.10">
-  <link rel="stylesheet" href="./launcher-sync.css?v=0.10.10">
-  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.10.10">
-  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.10.10">
-  <link rel="stylesheet" href="./deck-shell.css?v=0.10.10">
-  <link rel="stylesheet" href="./shared/pocket-id.css?v=0.10.10">
-  <link rel="stylesheet" href="./shared/pocket-social.css?v=0.10.10">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.10.11">
+  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.10.11" type="image/svg+xml">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.10.11">
+  <link rel="stylesheet" href="./shared/update-manager.css?v=0.10.11">
+  <link rel="stylesheet" href="./styles.css?v=0.10.11">
+  <link rel="stylesheet" href="./launcher-performance.css?v=0.10.11">
+  <link rel="stylesheet" href="./launcher-sync.css?v=0.10.11">
+  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.10.11">
+  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.10.11">
+  <link rel="stylesheet" href="./deck-shell.css?v=0.10.11">
+  <link rel="stylesheet" href="./shared/capabilities/identity.css?v=0.10.11">
+  <link rel="stylesheet" href="./shared/pocket-id.css?v=0.10.11">
+  <link rel="stylesheet" href="./shared/pocket-social.css?v=0.10.11">
 </head>
 <body>
   <div class="library-room" aria-hidden="true"><span class="room-light"></span><span class="room-grain"></span><span class="room-shadow"></span></div>
@@ -32,7 +33,7 @@
         <span><strong>Pocket Works</strong><small>personal library</small></span>
       </a>
       <div class="shelf-heading">
-        <p class="eyebrow">COLLECTION · 0.10.10</p>
+        <p class="eyebrow">COLLECTION · 0.10.11</p>
         <h1>PocketWorks</h1>
       </div>
       <div class="system-rail" aria-label="Library status">
@@ -178,18 +179,16 @@
           <div><span class="pw-id-dialog__eyebrow">MEMBER PROFILE</span><strong id="pocket-id-active-name">—</strong><p id="pocket-id-active-caption">—</p></div>
         </div>
         <div class="pw-id-active__actions">
-          <button id="pocket-id-edit-action" type="button" class="pw-id-dialog__text-button">Edit profile</button>
+          <button id="pocket-id-edit-action" type="button" class="pw-id-dialog__text-button">Вернуться к профилю</button>
           <button id="pocket-id-recovery-action" type="button" class="pw-id-dialog__text-button">Reset recovery key</button>
           <button id="pocket-id-signout" type="button" class="pw-id-dialog__text-button">Sign out</button>
         </div>
       </div>
       <div id="pocket-id-edit" class="pw-id-dialog__form">
-        <div class="pw-id-dialog__field"><label for="pocket-id-nickname">Nickname · unique across Pocket Works</label>
+        <div class="pw-id-dialog__field"><label for="pocket-id-nickname">Уникальный никнейм в PocketWorks</label>
           <input id="pocket-id-nickname" type="text" maxlength="20" minlength="3" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Choose your nickname">
           <div class="pw-id-dialog__hint" id="pocket-id-nickname-hint" aria-live="polite">3–20 characters · letters, numbers, _ and -</div>
         </div>
-        <p class="pw-id-dialog__label">Pick a badge</p>
-        <div id="pocket-id-avatars" class="pw-id-avatars" role="group" aria-label="Avatar badges"></div>
         <button id="pocket-id-save" type="button" class="pw-id-dialog__primary">Create Pocket ID</button>
       </div>
       <div id="pocket-id-recover" class="pw-id-dialog__form" hidden>
@@ -218,16 +217,16 @@
   <template id="app-card-template">
     <article class="app-entry"><button class="app-entry__select" type="button" data-action="details" data-native-press><span class="app-preview" aria-hidden="true"><span class="preview-grid"></span><span class="preview-orbit"></span><span class="preview-signal"></span><span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span><span class="preview-scan"></span></span><span class="app-entry__body"><span class="app-entry__topline"><strong class="app-entry__name"></strong><span class="app-entry__status"></span></span><span class="app-entry__description"></span><span class="app-entry__meta"></span></span></button><button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="Save application" aria-pressed="false">☆</button><a class="app-entry__open" data-action="open" data-native-press aria-label="Open application"><span>Open</span><b aria-hidden="true">↗</b></a></article>
   </template>
-  <script type="module" src="./shared/update-manager.js?v=0.10.10" data-update-manager data-service-worker="./sw.js?build=0.10.10" data-app-name="Pocket Works" data-app-version="0.10.10"></script>
-  <script src="./shared/view-transition-guard.js?v=0.10.10" type="module"></script>
-  <script src="./launcher-new-app-focus.js?v=0.10.10"></script>
-  <script src="./app.js?v=0.10.10" type="module"></script>
-  <script src="./launcher-release-links.js?v=0.10.10" type="module"></script>
-  <script src="./launcher-update-all-v3.js?v=0.10.10" type="module"></script>
-  <script src="./launcher-sync.js?v=0.10.10" type="module"></script>
-  <script src="./shared/launcher-list-motion.js?v=0.10.10" type="module"></script>
-  <script type="module" src="./shared/pocket-id.js?v=0.10.10"></script>
-  <script type="module" src="./shared/pocket-social.js?v=0.10.10"></script>
-  <script src="./shared/app-icon-previews.js?v=0.10.10" type="module"></script>
+  <script type="module" src="./shared/update-manager.js?v=0.10.11" data-update-manager data-service-worker="./sw.js?build=0.10.11" data-app-name="Pocket Works" data-app-version="0.10.11"></script>
+  <script src="./shared/view-transition-guard.js?v=0.10.11" type="module"></script>
+  <script src="./launcher-new-app-focus.js?v=0.10.11"></script>
+  <script src="./app.js?v=0.10.11" type="module"></script>
+  <script src="./launcher-release-links.js?v=0.10.11" type="module"></script>
+  <script src="./launcher-update-all-v3.js?v=0.10.11" type="module"></script>
+  <script src="./launcher-sync.js?v=0.10.11" type="module"></script>
+  <script src="./shared/launcher-list-motion.js?v=0.10.11" type="module"></script>
+  <script type="module" src="./shared/pocket-id.js?v=0.10.11"></script>
+  <script type="module" src="./shared/pocket-social.js?v=0.10.11"></script>
+  <script src="./shared/app-icon-previews.js?v=0.10.11" type="module"></script>
 </body>
 </html>

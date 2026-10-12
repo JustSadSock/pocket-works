@@ -31,7 +31,7 @@ Avatar drawings are restricted to a small raster data URL. Never accept SVG or f
 
 ## Using it
 
-In the PocketWorks launcher, select the Friends icon next to Pocket ID. Open Profile to choose a background/frame, draw an avatar and select a favorite game. Open Friends to search by nickname or UUID, view profiles and send requests.
+In the PocketWorks launcher, click the existing Pocket ID portrait. The unified profile contains Profile, Friends and Invitations tabs. In Profile, edit nickname, draw the canonical avatar, choose background/frame, favorite game and privacy preferences. Security/Google/recovery actions live behind Account and Security inside the profile. There is no separate Social button, avatar picker, or duplicate appearance editor. Standalone apps may expose their own entry while preserving their unrelated in-game art controls.
 
 In Zamazka, sign in with Pocket ID, create a multiplayer room and press **Позвать друзей Pocket ID**. The receiving friend finds the invitation in the social overlay and can join with one press. A game that has already started cannot be joined through an invitation.
 
@@ -45,3 +45,9 @@ In Zamazka, sign in with Pocket ID, create a multiplayer room and press **Поз
 - npm run deploy:site
 
 No achievements, global statistics, public art uploads, profile mottos, group chat or free-position room editors are part of stage C.
+
+## Unified account surface (PocketWorks 0.10.11)
+
+Pocket ID remains the authoritative account UUID, nickname, recovery and Google sign-in service. Pocket Social owns public card art, visual presets, favorite game, visibility and friend/invite metadata. Their UI is **one** profile editor. The client saves a changed nickname to Pocket ID and appearance to Pocket Social, with retryable partial-failure feedback. It never attempts to duplicate or synchronize two different avatar choices.
+
+Supported games render the small user-painted raster portrait from Pocket Social (with a preset fallback). Verified PocketNet badges hydrate a remote player portrait by confirmed `accountId`; they do not trust user-provided image URLs or client-provided verified flags. Old preset avatars are preserved as fallback assets and for backwards compatibility with rooms and LAN peers.

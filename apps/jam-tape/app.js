@@ -74,7 +74,7 @@ function renderWelcome(){
  '<div class="tape-art"><div class="tape-label">PLAY<br>TOGETHER</div><div class="reel left"><b></b></div><div class="reel right"><b></b></div><div class="tape-stripe"></div></div>'+
  '<h1>Вместе<br><em>звучим.</em></h1><p>Придумай мелодию, запиши свой кусочек и передай ритм друзьям. Каждый играет на своём инструменте, а лента собирает всё вместе.</p></div>'+
  '<div class="entry"><label for="nameInput">ТВОЙ ПСЕВДОНИМ</label><input id="nameInput" type="text" maxlength="24" autocomplete="nickname" value="'+safe(name)+'" placeholder="Музыкант" '+(pocketIdentity?.complete?'readonly aria-readonly="true"':'')+'>'+
- '<p class="small-note pw-identity-notice">'+(pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.avatar,{small:true})+' '+safe(pocketIdentity.nickname)+' · Pocket ID':'Гостевой музыкант')+' · <a href="'+pocketIdProfileUrl+'">'+(pocketIdentity?.complete?'Профиль':'Войти')+'</a></p>'+
+ '<p class="small-note pw-identity-notice">'+(pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' '+safe(pocketIdentity.nickname)+' · Pocket ID':'Гостевой музыкант')+' · <a href="'+pocketIdProfileUrl+'">'+(pocketIdentity?.complete?'Профиль':'Войти')+'</a></p>'+
  '<div class="entry-actions"><button class="action primary" data-action="solo">Открыть свою студию <span>↗</span></button>'+
  '<button class="action" data-action="host">Создать LAN-студию <span>↗</span></button>'+
  '<button class="action" data-action="join">Присоединиться <span>→</span></button></div>'+
@@ -119,7 +119,7 @@ function trackView(p,i){
    '<div class="clip" aria-label="Чужой дубль: '+safe(labels[c.inst])+'">'+body+'</div>';
  }).join('');
  return '<section class="track '+(!audible?'off-air':'')+'" style="--track-color:'+colors[i%colors.length]+'">'+
- '<div class="track-head"><div class="track-name">'+(p.avatar?pocketAvatarMarkup(p.avatar,{small:true}):'')+safe(p.name)+(owns?' · ТЫ':'')+
+ '<div class="track-head"><div class="track-name">'+(p.avatar?pocketAvatarMarkup(owns&&pocketIdentity?.artwork?pocketIdentity.artwork:p.avatar,{small:true,accountId:owns?pocketIdentity?.id:''}):'')+safe(p.name)+(owns?' · ТЫ':'')+
  '<small>'+safe(labels[p.inst])+' · '+(p.air?'В ЭФИРЕ':'НЕ В ЭФИРЕ')+(p.online?'':' · ОФЛАЙН')+'</small></div>'+
  '<span class="track-count">'+track.length+' / 6 ДУБЛЕЙ</span></div>'+
  '<div class="track-lane">'+(clips||'<div class="track-empty">Пока тишина</div>')+'</div></section>';
