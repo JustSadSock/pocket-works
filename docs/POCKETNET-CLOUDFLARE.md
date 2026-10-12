@@ -1,3 +1,5 @@
+> **Текущая политика платформы (12.10.2026).** PocketNet на Cloudflare Durable Objects — **основной и предпочтительный транспорт для всех новых многопользовательских приложений Pocket Works**. Новые игры подключаются через `shared/capabilities/net.js` и создают серверный игровой модуль `apps/<slug>/server/module.ts`. PocketLAN сейчас неактивен и не должен подключаться к новым приложениям, импортироваться в их клиент или добавляться в Service Worker. Старые LAN-игры считаются legacy и не являются референсом для новой сетевой разработки. Возврат PocketLAN потребует отдельного явного решения.
+
 # PocketNet на Cloudflare Durable Objects (Workers Free)
 
 PocketNet для друзей теперь размещается внутри **существующего** Cloudflare Worker `pocket-works`, без отдельного VPS, платного тарифа и домашнего компьютера. Публичный API: `https://<ваш-site>/pocketnet/health`, `POST /pocketnet/session`, `wss://<ваш-site>/pocketnet/ws`. Внешний домен не нужен: достаточно штатного workers.dev.
