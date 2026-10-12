@@ -119,159 +119,297 @@ export function simplifyPoints(points,limit){
  return kept;
 }
 const MAX_STROKES=72,MAX_STROKE_POINTS=45,MAX_TOTAL_POINTS=1600;
-function keepWithinNetworkBudget(strokes){
- const total=strokes.reduce((count,stroke)=>count+stroke.p.length,0);
- if(total<=MAX_TOTAL_POINTS)return;
- for(const stroke of strokes){
-  if(stroke.p.length>2){
-   const reduced=simplifyPoints(stroke.p,Math.max(2,Math.floor(stroke.p.length*.82)));
-   stroke.p.splice(0,stroke.p.length,...reduced);
-  }
- }
-}
 
 const key='pocket-works:zamazka:draft:';
 export class Editor{
  constructor(root,{id,variation=0,round=1,onChange=()=>{}}){
    this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.zone=zoneFor(id,variation);
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
-   this.tool='brush';this.color='#3d594d';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
+   this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
+    this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
+    this.hand=localStorage.getItem('pocket-works:zamazka:precision-hand')==='left'?'left':'right';
+    this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.limitWarned=false;
+    this.cursor=root.querySelector('#brushCursor');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
    this.draftKey=key+id+':'+variation+':'+round;
    try{const stored=JSON.parse(localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
-   this.attach();this.center();this.render();
+   this.attach();this.setMode(this.inputMode,false);this.center();this.render();
  }
  center(){const w=this.viewport.clientWidth,h=this.viewport.clientHeight||w*.75,z=this.zone;this.tx=w/2-(z.x+z.w/2)*w/600*this.scale;this.ty=h/2-(z.y+z.h/2)*h/450*this.scale;this.transform();}
- transform(){this.canvas.style.transform='translate('+this.tx+'px,'+this.ty+'px) scale('+this.scale+')'}
+ transform(){this.canvas.style.transform='translate('+this.tx+'px,'+this.ty+'px) scale('+this.scale+')';if(this.lastCursor)this.showCursor(this.lastCursor)}
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(4,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
  save(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.strokes))}catch{}this.onChange(this.strokes.length)}
- attach(){
-  this.down=e=>{
-    // Left mouse = draw; middle mouse = temporary pan regardless of tool.
-    // Never paint with the right button or accidentally invoke autoscroll.
-    if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1)return;
-    e.preventDefault();
-    (e.target===this.canvas?this.canvas:this.viewport).setPointerCapture(e.pointerId);
-    this.pointers.set(e.pointerId,[e.clientX,e.clientY]);
-    if(e.target===this.viewport)this.viewportCapturedPointer=e.pointerId;
-    if(this.pointers.size>1){
-      if(this.working){this.strokes.push(this.working);this.working=null;this.save()}
-      this.moving=true;const pp=[...this.pointers.values()];
-      this.pinch={d:Math.hypot(pp[0][0]-pp[1][0],pp[0][1]-pp[1][1]),z:this.scale,x:this.tx,y:this.ty,mid:[(pp[0][0]+pp[1][0])/2,(pp[0][1]+pp[1][1])/2]};
-      return;
-    }
-    if(e.button===1||this.tool==='hand'){
-      this.panStart=[e.clientX,e.clientY,this.tx,this.ty];
-      this.viewport.classList.add('is-panning');return;
-    }
-    const p=this.point(e);
-    if(this.tool==='picker'){this.pick(p);return}
+
+  // The remote game accepts at most 45 points per segment, 72 segments and
+  // 1600 points total. Segment *forward*; never retroactively simplify ink.
+  countPoints(){return this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)+(this.working?.p.length||0)}
+  beginStroke(p){
     if(!this.inside(p))return;
-    if(this.strokes.length>=MAX_STROKES){this.onChange(-1);return}
-    if(this.tool==='fill'){
-       this.strokes.push({c:this.color,s:this.size,t:'fill',p:[p]});
-       this.redoStack=[];this.save();this.render();return;
-     }
-     this.working={c:this.color,s:this.size,t:this.tool,p:[p]};this.redoStack=[];
+    if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
+    this.working={c:this.color,s:this.size,t:this.tool,p:[p],g:'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
+    this.redoStack=[];this.render();
+  }
+  warnLimit(){if(!this.limitWarned){this.onChange(-1);this.limitWarned=true}}
+  extendStroke(p){
+    if(!this.working||!this.inside(p))return;
+    const pts=this.working.p,prev=pts[pts.length-1];
+    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<=1.1)return;
+    if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0)){this.warnLimit();return}
+    if(pts.length>=MAX_STROKE_POINTS){
+      if(this.strokes.length+1>=MAX_STROKES){this.warnLimit();return}
+      const old=this.working;
+      this.strokes.push(old);
+      this.working={c:old.c,s:old.s,t:old.t,g:old.g,p:[prev,p]};
+    }else pts.push(p);
     this.render();
-  };
-  this.move=e=>{
-    if(!this.pointers.has(e.pointerId))return;
-    e.preventDefault();this.pointers.set(e.pointerId,[e.clientX,e.clientY]);
-    if(this.pointers.size>1&&this.pinch){const pp=[...this.pointers.values()],dist=Math.hypot(pp[0][0]-pp[1][0],pp[0][1]-pp[1][1])||1;
-      const old=this.scale;this.scale=Math.max(1,Math.min(4,this.pinch.z*dist/Math.max(10,this.pinch.d)));
-      const mid=[(pp[0][0]+pp[1][0])/2,(pp[0][1]+pp[1][1])/2];
-      this.tx=this.pinch.x+(mid[0]-this.pinch.mid[0])+(this.viewport.clientWidth/2-this.pinch.x)*(1-this.scale/this.pinch.z);
-      this.ty=this.pinch.y+(mid[1]-this.pinch.mid[1])+(this.viewport.clientHeight/2-this.pinch.y)*(1-this.scale/this.pinch.z);this.transform();return;
-    }
-    if(this.panStart){this.tx=this.panStart[2]+e.clientX-this.panStart[0];this.ty=this.panStart[3]+e.clientY-this.panStart[1];this.transform();return}
+  }
+  finishStroke(){
     if(!this.working)return;
-    const p=this.point(e),pts=this.working.p,prev=pts[pts.length-1];
-    if(this.inside(p)&&Math.hypot(p[0]-prev[0],p[1]-prev[1])>1.1){
-      pts.push(p);
-      if(pts.length>MAX_STROKE_POINTS)pts.splice(0,pts.length,...simplifyPoints(pts,32));
-      keepWithinNetworkBudget([...this.strokes,this.working]);
-      this.render();
-    }
-  };
-  this.up=e=>{
-    if(!this.pointers.has(e.pointerId))return;
-    this.pointers.delete(e.pointerId);
-    if(this.viewportCapturedPointer===e.pointerId)this.viewportCapturedPointer=null;
-    if(this.pointers.size<2)this.pinch=null;
-    if(this.working){this.strokes.push(this.working);this.working=null;this.save();this.render()}
-    this.panStart=null;this.viewport.classList.remove('is-panning');
-  };
-  this.canvas.addEventListener('pointerdown',this.down);this.canvas.addEventListener('pointermove',this.move);this.canvas.addEventListener('pointerup',this.up);this.canvas.addEventListener('pointercancel',this.up);
-  // Dragging the frame outside the transformed canvas should also allow a middle-click pan.
-  this.frameDown=e=>{if(e.target===this.viewport&&e.pointerType==='mouse'&&e.button===1)this.down(e)};
-  this.frameMove=e=>{if(this.viewportCapturedPointer===e.pointerId)this.move(e)};
-  this.frameUp=e=>{if(this.viewportCapturedPointer===e.pointerId)this.up(e)};
-  this.viewport.addEventListener('pointerdown',this.frameDown);
-  this.viewport.addEventListener('pointermove',this.frameMove);
-  this.viewport.addEventListener('pointerup',this.frameUp);
-  this.viewport.addEventListener('pointercancel',this.frameUp);
-  this.preventMiddle=e=>{if(e.button===1)e.preventDefault()};
-  this.viewport.addEventListener('mousedown',this.preventMiddle);
-  this.viewport.addEventListener('auxclick',this.preventMiddle);
-  this.wheel=e=>{
-   e.preventDefault();
-   const bounds=this.viewport.getBoundingClientRect();
-   this.zoom(e.deltaY<0?1.12:.89,e.clientX-bounds.left,e.clientY-bounds.top);
-  };
-  this.viewport.addEventListener('wheel',this.wheel,{passive:false});
-  this.actions=e=>{const b=e.target.closest('[data-tool],[data-cmd],[data-color]');if(!b)return;
-   if(b.dataset.tool){this.tool=b.dataset.tool;this.viewport.classList.toggle('hand-mode',this.tool==='hand');this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===this.tool))}
-   if(b.dataset.color){this.color=b.dataset.color;this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.toggle('active',x===b))}
-   if(b.dataset.cmd==='undo'&&this.strokes.length){this.redoStack.push(this.strokes.pop());this.save();this.render()}
-   if(b.dataset.cmd==='redo'&&this.redoStack.length){this.strokes.push(this.redoStack.pop());this.save();this.render()}
-   if(b.dataset.cmd==='in')this.zoom(1.3);
-   if(b.dataset.cmd==='out')this.zoom(.77);
-   if(b.dataset.cmd==='center')this.center();
-  };
-  // Keyboard shortcuts for desktop conservation; Space temporarily pans
-  // without stealing Ctrl+ shortcuts outside the active canvas.
-  this.keyboardDown=e=>{
-   if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
-      document.querySelector('#dialog:not(.hidden)')||e.altKey||e.metaKey)return;
-   const byCode={KeyB:'brush',KeyF:'fill',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
-   let target;
-   if(e.ctrlKey){
-    if(e.code==='KeyZ')target=e.shiftKey?'redo':'undo';
-    else if(e.code==='KeyY')target='redo';
-    if(target){e.preventDefault();this.root.querySelector('[data-cmd="'+target+'"]')?.click()}
-    return;
-   }
-   if(e.code==='Space'&&!e.repeat){
-    e.preventDefault();
-    this.spaceTool=this.tool;
-    this.root.querySelector('[data-tool="hand"]')?.click();
-   }else if(e.code==='Digit0'){e.preventDefault();this.root.querySelector('[data-cmd="center"]')?.click()}
-   else if(['Equal','NumpadAdd'].includes(e.code)){e.preventDefault();this.root.querySelector('[data-cmd="in"]')?.click()}
-   else if(['Minus','NumpadSubtract'].includes(e.code)){e.preventDefault();this.root.querySelector('[data-cmd="out"]')?.click()}
-   else if(byCode[e.code]){e.preventDefault();this.root.querySelector('[data-tool="'+byCode[e.code]+'"]')?.click()}
-  };
-  this.keyboardUp=e=>{
-   if(e.code==='Space'&&this.spaceTool){
-     this.root.querySelector('[data-tool="'+this.spaceTool+'"]')?.click();
-     this.spaceTool=null;
-   }
-  };
-  this.keyboardBlur=()=>this.keyboardUp({code:'Space'});
-  window.addEventListener('blur',this.keyboardBlur);
-  window.addEventListener('keydown',this.keyboardDown);
-  window.addEventListener('keyup',this.keyboardUp);
-  this.root.addEventListener('click',this.actions);
-  this.slider=e=>{if(e.target.id==='brushSize')this.size=Number(e.target.value);if(e.target.id==='customColor')this.color=e.target.value};
-  this.root.addEventListener('input',this.slider);
-  this.resize=()=>this.center();window.addEventListener('resize',this.resize);
- }
+    this.strokes.push(this.working);this.working=null;this.limitWarned=false;
+    this.save();this.render();
+  }
+  // On touch, the precision nib is above the finger, as in Folio.
+  tip(e){
+    const offset=this.inputMode==='precision'&&e.pointerType==='touch'&&this.tool!=='picker'&&this.tool!=='fill';
+    return {clientX:e.clientX+(offset?(this.hand==='left'?18:-18):0),
+      clientY:e.clientY-(offset?50:0),pointerType:e.pointerType};
+  }
+  pointAt(e){return this.point(this.tip(e))}
+  showCursor(e){
+    if(!this.cursor)return;
+    if(['hand','picker','fill'].includes(this.tool)||this.pinch||this.panStart){this.hideCursor();return}
+    this.lastCursor=e;
+    const tip=this.tip(e),v=this.viewport.getBoundingClientRect(),c=this.canvas.getBoundingClientRect();
+    const effectiveSize=this.tool==='pencil'?Math.max(1,this.size*.4):this.size;
+    const diameter=Math.max(2,effectiveSize*c.width/W);
+    this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
+    this.cursor.style.left=tip.clientX-v.left+'px';this.cursor.style.top=tip.clientY-v.top+'px';
+    this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.color);
+    this.cursor.hidden=false;
+  }
+  hideCursor(){if(this.cursor)this.cursor.hidden=true}
+  setMode(mode,persist=true){
+    this.finishStroke();
+    this.inputMode=mode==='precision'?'precision':'direct';
+    if(persist)localStorage.setItem('pocket-works:zamazka:input-mode',this.inputMode);
+    const precision=this.inputMode==='precision';
+    this.root.querySelector('.restore')?.classList.toggle('precision-mode',precision);
+    this.root.querySelector('.restore')?.classList.toggle('left-hand',this.hand==='left');
+    if(this.armButton){this.armButton.hidden=!precision;this.armButton.classList.remove('is-armed')}
+    if(this.sideButton)this.sideButton.hidden=!precision;
+    const switcher=this.root.querySelector('[data-cmd="precision"]');
+    if(switcher){switcher.setAttribute('aria-pressed',String(precision));switcher.setAttribute('title',precision?'Обычное рисование':'Точное перо: двумя пальцами');switcher.querySelector('span').textContent=precision?'Точное':'Прямое'}
+    const tip=this.root.querySelector('#drawingTip');
+    if(tip)tip.textContent=precision?'Один палец наводит перо · вторым удерживай «РИСОВАТЬ»':'Рисуй в повреждённой части';
+    if(!precision){this.armed=false;this.armPointer=null;this.aimPointer=null;this.aim=null}
+    if(this.lastCursor)this.showCursor(this.lastCursor);
+  }
+  attach(){
+    this.down=e=>{
+      if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1)return;
+      e.preventDefault();
+      try{(e.target===this.canvas?this.canvas:this.viewport).setPointerCapture(e.pointerId)}catch{}
+      this.pointers.set(e.pointerId,[e.clientX,e.clientY]);
+      if(e.target===this.viewport)this.viewportCapturedPointer=e.pointerId;
+      if(this.pointers.size>1){
+        this.finishStroke();this.aimPointer=null;this.aim=null;
+        this.moving=true;const pp=[...this.pointers.values()];
+        this.pinch={d:Math.hypot(pp[0][0]-pp[1][0],pp[0][1]-pp[1][1]),z:this.scale,x:this.tx,y:this.ty,
+          mid:[(pp[0][0]+pp[1][0])/2,(pp[0][1]+pp[1][1])/2]};
+        this.hideCursor();return;
+      }
+      if(e.button===1||this.tool==='hand'){
+        this.panStart=[e.clientX,e.clientY,this.tx,this.ty];
+        this.viewport.classList.add('is-panning');this.hideCursor();return;
+      }
+      this.showCursor(e);
+      const p=this.pointAt(e);
+      if(this.tool==='picker'){this.pick(p);return}
+      if(this.tool==='fill'){
+        if(!this.inside(p))return;
+        if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
+        this.strokes.push({c:this.color,s:this.size,t:'fill',p:[p]});
+        this.redoStack=[];this.save();this.render();return;
+      }
+      if(this.inputMode==='precision'&&e.pointerType==='touch'){
+        this.aimPointer=e.pointerId;this.aim={clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType};
+        if(this.armed)this.beginStroke(p);
+        return;
+      }
+      this.beginStroke(p);
+    };
+    this.move=e=>{
+      if(!this.pointers.has(e.pointerId)){
+        if(e.pointerType==='mouse'||e.pointerType==='pen')this.showCursor(e);
+        return;
+      }
+      e.preventDefault();this.pointers.set(e.pointerId,[e.clientX,e.clientY]);
+      if(this.pointers.size>1&&this.pinch){
+        const pp=[...this.pointers.values()],dist=Math.hypot(pp[0][0]-pp[1][0],pp[0][1]-pp[1][1])||1;
+        this.scale=Math.max(1,Math.min(4,this.pinch.z*dist/Math.max(10,this.pinch.d)));
+        const mid=[(pp[0][0]+pp[1][0])/2,(pp[0][1]+pp[1][1])/2];
+        this.tx=this.pinch.x+(mid[0]-this.pinch.mid[0])+(this.viewport.clientWidth/2-this.pinch.x)*(1-this.scale/this.pinch.z);
+        this.ty=this.pinch.y+(mid[1]-this.pinch.mid[1])+(this.viewport.clientHeight/2-this.pinch.y)*(1-this.scale/this.pinch.z);
+        this.transform();return;
+      }
+      if(this.panStart){
+        this.tx=this.panStart[2]+e.clientX-this.panStart[0];this.ty=this.panStart[3]+e.clientY-this.panStart[1];
+        this.transform();return;
+      }
+      if(this.inputMode==='precision'&&e.pointerType==='touch'&&e.pointerId===this.aimPointer){
+        this.aim={clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType};
+        this.showCursor(e);
+        if(this.armed){
+          const p=this.pointAt(e);
+          if(!this.working)this.beginStroke(p);
+          else this.extendStroke(p);
+        }
+        return;
+      }
+      this.showCursor(e);
+      if(this.working)this.extendStroke(this.pointAt(e));
+    };
+    this.up=e=>{
+      if(!this.pointers.has(e.pointerId))return;
+      if(e.type==='pointerup'&&this.working&&this.pointers.size===1&&this.inputMode!=='precision')this.extendStroke(this.pointAt(e));
+      this.pointers.delete(e.pointerId);
+      if(this.viewportCapturedPointer===e.pointerId)this.viewportCapturedPointer=null;
+      if(this.pointers.size<2)this.pinch=null;
+      this.finishStroke();
+      if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
+      this.panStart=null;this.viewport.classList.remove('is-panning');
+      if(e.pointerType==='touch'){this.lastCursor=null;this.hideCursor()}
+      else this.showCursor(e);
+    };
+    this.canvas.addEventListener('pointerdown',this.down);
+    this.canvas.addEventListener('pointermove',this.move);
+    this.canvas.addEventListener('pointerup',this.up);
+    this.canvas.addEventListener('pointercancel',this.up);
+    this.frameDown=e=>{if(e.target===this.viewport&&e.pointerType==='mouse'&&e.button===1)this.down(e)};
+    this.frameMove=e=>{if(this.viewportCapturedPointer===e.pointerId)this.move(e);else if(e.target===this.viewport&&(e.pointerType==='mouse'||e.pointerType==='pen'))this.showCursor(e)};
+    this.frameUp=e=>{if(this.viewportCapturedPointer===e.pointerId)this.up(e)};
+    this.viewport.addEventListener('pointerdown',this.frameDown);
+    this.viewport.addEventListener('pointermove',this.frameMove);
+    this.viewport.addEventListener('pointerup',this.frameUp);
+    this.viewport.addEventListener('pointercancel',this.frameUp);
+    this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor()}};
+    this.viewport.addEventListener('pointerleave',this.cursorLeave);
+    this.armDown=e=>{
+      if(this.inputMode!=='precision'||this.armPointer!==null)return;
+      e.preventDefault();e.stopPropagation();
+      this.armPointer=e.pointerId;this.armed=true;this.armButton.classList.add('is-armed');
+      this.armButton.setAttribute('aria-pressed','true');
+      try{this.armButton.setPointerCapture(e.pointerId)}catch{}
+      if(this.aim&&this.aimPointer!==null&&this.pointers.size===1&&!this.working){
+        this.beginStroke(this.pointAt(this.aim));
+      }
+    };
+    this.armUp=e=>{
+      if(this.armPointer!==e.pointerId)return;
+      e.preventDefault();e.stopPropagation();
+      this.armPointer=null;this.armed=false;
+      this.armButton.classList.remove('is-armed');this.armButton.setAttribute('aria-pressed','false');
+      this.finishStroke();
+      if(this.aim)this.showCursor(this.aim);
+    };
+    this.armButton?.addEventListener('pointerdown',this.armDown);
+    this.armButton?.addEventListener('pointerup',this.armUp);
+    this.armButton?.addEventListener('pointercancel',this.armUp);
+    this.armButton?.addEventListener('lostpointercapture',this.armUp);
+    this.armGlobalUp=e=>{if(this.armPointer===e.pointerId)this.armUp(e)};
+    window.addEventListener('pointerup',this.armGlobalUp);
+    window.addEventListener('pointercancel',this.armGlobalUp);
+    this.preventMiddle=e=>{if(e.button===1)e.preventDefault()};
+    this.viewport.addEventListener('mousedown',this.preventMiddle);
+    this.viewport.addEventListener('auxclick',this.preventMiddle);
+    this.wheel=e=>{
+      e.preventDefault();
+      const bounds=this.viewport.getBoundingClientRect();
+      this.zoom(e.deltaY<0?1.12:.89,e.clientX-bounds.left,e.clientY-bounds.top);
+    };
+    this.viewport.addEventListener('wheel',this.wheel,{passive:false});
+    this.actions=e=>{
+      const b=e.target.closest('[data-tool],[data-cmd],[data-color]');if(!b)return;
+      if(b.dataset.tool){
+        this.finishStroke();this.tool=b.dataset.tool;
+        this.viewport.classList.toggle('hand-mode',this.tool==='hand');
+        this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===this.tool));
+        if(this.lastCursor)this.showCursor(this.lastCursor);
+      }
+      if(b.dataset.color){this.color=b.dataset.color;this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.toggle('active',x===b));if(this.lastCursor)this.showCursor(this.lastCursor)}
+      if(b.dataset.cmd==='precision')this.setMode(this.inputMode==='precision'?'direct':'precision');
+      if(b.dataset.cmd==='handedness'){
+        this.hand=this.hand==='right'?'left':'right';
+        localStorage.setItem('pocket-works:zamazka:precision-hand',this.hand);
+        this.root.querySelector('.restore')?.classList.toggle('left-hand',this.hand==='left');
+        b.setAttribute('aria-label','Кнопка рисования '+(this.hand==='left'?'справа':'слева'));
+        if(this.lastCursor)this.showCursor(this.lastCursor);
+      }
+      if(b.dataset.cmd==='undo'&&(this.strokes.length||this.working)){
+        this.finishStroke();
+        const tail=this.strokes.pop(),group=[tail];
+        if(tail.g)while(this.strokes.length&&this.strokes[this.strokes.length-1].g===tail.g)group.unshift(this.strokes.pop());
+        this.redoStack.push(group);this.save();this.render();
+      }
+      if(b.dataset.cmd==='redo'&&this.redoStack.length){
+        this.finishStroke();
+        const group=this.redoStack.pop();
+        this.strokes.push(...group);this.save();this.render();
+      }
+      if(b.dataset.cmd==='in')this.zoom(1.3);
+      if(b.dataset.cmd==='out')this.zoom(.77);
+      if(b.dataset.cmd==='center')this.center();
+    };
+    this.keyboardDown=e=>{
+      if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
+         document.querySelector('#dialog:not(.hidden)')||e.altKey||e.metaKey)return;
+      const byCode={KeyB:'brush',KeyF:'fill',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
+      let target;
+      if(e.ctrlKey){
+        if(e.code==='KeyZ')target=e.shiftKey?'redo':'undo';
+        else if(e.code==='KeyY')target='redo';
+        if(target){e.preventDefault();this.root.querySelector('[data-cmd="'+target+'"]')?.click()}
+        return;
+      }
+      if(e.code==='Space'&&!e.repeat){
+        e.preventDefault();this.spaceTool=this.tool;
+        this.root.querySelector('[data-tool="hand"]')?.click();
+      }else if(e.code==='Digit0'){e.preventDefault();this.root.querySelector('[data-cmd="center"]')?.click()}
+      else if(['Equal','NumpadAdd'].includes(e.code)){e.preventDefault();this.root.querySelector('[data-cmd="in"]')?.click()}
+      else if(['Minus','NumpadSubtract'].includes(e.code)){e.preventDefault();this.root.querySelector('[data-cmd="out"]')?.click()}
+      else if(byCode[e.code]){e.preventDefault();this.root.querySelector('[data-tool="'+byCode[e.code]+'"]')?.click()}
+    };
+    this.keyboardUp=e=>{
+      if(e.code==='Space'&&this.spaceTool){
+        this.root.querySelector('[data-tool="'+this.spaceTool+'"]')?.click();this.spaceTool=null;
+      }
+    };
+    this.keyboardBlur=()=>{
+      this.keyboardUp({code:'Space'});
+      if(this.armPointer!==null)this.armUp({pointerId:this.armPointer,preventDefault(){},stopPropagation(){}});
+    };
+    window.addEventListener('blur',this.keyboardBlur);
+    window.addEventListener('keydown',this.keyboardDown);
+    window.addEventListener('keyup',this.keyboardUp);
+    this.root.addEventListener('click',this.actions);
+    this.slider=e=>{
+      if(e.target.id==='brushSize')this.size=Number(e.target.value);
+      if(e.target.id==='customColor'){
+        this.color=e.target.value;
+        this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.remove('active'));
+      }
+      if(this.lastCursor)this.showCursor(this.lastCursor);
+    };
+    this.root.addEventListener('input',this.slider);
+    this.resize=()=>{if(!this.pointers.size)this.center()};
+    window.addEventListener('resize',this.resize);
+  }
  async pick(p){if(this.inside(p))return;try{const image=await loadArtwork(this.id);const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');drawArtwork(x,image,this.id);const rgb=x.getImageData(p[0]|0,p[1]|0,1,1).data;this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.root.querySelector('#customColor').value=this.color;this.tool='brush';this.root.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='brush'));this.onChange(this.strokes.length)}catch{}}
  async render(){if(this.closed)return;const c=this.canvas,version=this.renderVersion=(this.renderVersion||0)+1;const img=await loadArtwork(this.id).catch(()=>null);if(!img||this.closed||version!==this.renderVersion)return;
  const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);renderStrokes(x,[...this.strokes,...(this.working?[this.working]:[])],this.zone);x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;damagePath(x,this.zone);x.stroke();x.restore();
  }
- getData(){return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
+ getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
- dispose(){this.closed=true;this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
+ dispose(){this.closed=true;this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }

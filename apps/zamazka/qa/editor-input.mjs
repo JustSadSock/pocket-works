@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import {Editor} from '../editor.js';
+
+function editor(){
+ const target=Object.create(Editor.prototype);
+ Object.assign(target,{
+  color:'#304a43',size:12,tool:'brush',strokes:[],redoStack:[],
+  working:null,limitWarned:false,
+  inside(){return true},render(){},save(){},onChange(message){this.notice=message}
+ });
+ return target;
+}
+
+const art=editor();
+art.beginStroke([0,0]);
+const fixed=[];
+for(let i=1;i<=300;i++){
+ art.extendStroke([i*1.5,6*Math.sin(i/7)]);
+ if(i===30)fixed.push(...art.working.p.map(p=>[...p]));
+}
+art.finishStroke();
+assert.ok(art.strokes.length>1,'Long gesture is segmented');
+assert.ok(art.strokes.every(s=>s.p.length<=45),'Each segment fits PocketNet');
+assert.deepEqual(art.strokes[0].p.slice(0,fixed.length),fixed,'Existing geometry stays unchanged');
+assert.equal(new Set(art.strokes.map(s=>s.g)).size,1,'One gesture has one undo group');
+for(let i=1;i<art.strokes.length;i++)
+ assert.deepEqual(art.strokes[i-1].p.at(-1),art.strokes[i].p[0],'Continuous segment seam');
+
+const budget=editor();
+budget.beginStroke([0,0]);
+for(let i=1;i<=2800;i++)budget.extendStroke([(i*3)%597,Math.floor(i/199)*6]);
+budget.finishStroke();
+assert.ok(budget.strokes.length<=72,'72 segment cap');
+assert.ok(budget.strokes.every(s=>s.p.length<=45),'45 point cap');
+assert.ok(budget.strokes.reduce((n,s)=>n+s.p.length,0)<=1600,'1600 point cap');
+
+const aim=editor();
+aim.inputMode='precision';aim.hand='right';
+assert.deepEqual(aim.tip({clientX:120,clientY:140,pointerType:'touch'}),{clientX:102,clientY:90,pointerType:'touch'});
+aim.tool='fill';
+assert.deepEqual(aim.tip({clientX:120,clientY:140,pointerType:'touch'}),{clientX:120,clientY:140,pointerType:'touch'});
+aim.tool='brush';aim.hand='left';
+assert.equal(aim.tip({clientX:120,clientY:140,pointerType:'touch'}).clientX,138);
+aim.inputMode='direct';
+assert.equal(aim.tip({clientX:120,clientY:140,pointerType:'touch'}).clientY,140);
+console.log('ZAMAZKA stable drawing, network budgets and precision input: OK');
