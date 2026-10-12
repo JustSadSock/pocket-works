@@ -1,1 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="38" fill="#132421"/><circle cx="96" cy="96" r="73" fill="#334943" stroke="#a9b7a8" stroke-width="3"/><circle cx="96" cy="96" r="58" fill="none" stroke="#829b90" stroke-width="2" opacity=".48"/><path d="M51 139 141 47" stroke="#f1f0e5" stroke-width="7" stroke-linecap="round"/><path d="m46 130 15 15m-25-16 26 26" stroke="#c4aa8f" stroke-width="8" stroke-linecap="round"/><path d="M46 49 144 145" stroke="#c1ad9a" stroke-width="7" stroke-linecap="round"/><path d="m131 155 22-22m-33 12 25 26" stroke="#c4aa8f" stroke-width="8" stroke-linecap="round"/><circle cx="96" cy="96" r="7" fill="#f8e7c3"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+<defs><radialGradient id="stone"><stop stop-color="#647b67"/><stop offset="1" stop-color="#273e33"/></radialGradient></defs>
+<rect width="192" height="192" rx="35" fill="#142820"/>
+<ellipse cx="96" cy="96" rx="76" ry="79" fill="#0e1d17" stroke="#cfbf9f" stroke-width="3"/>
+<ellipse cx="96" cy="96" rx="67" ry="70" fill="url(#stone)" stroke="#97a48c" stroke-width="1.5"/>
+<ellipse cx="96" cy="96" rx="56" ry="58" fill="none" stroke="#d6cdb3" opacity=".42"/>
+<path d="M52 135 142 44" stroke="#f4f1da" stroke-width="4.2" stroke-linecap="round"/>
+<path d="m50 129 12 12M47 134c-8-3-8-12 1-15m14 26c-8 6-17 2-17-5" fill="none" stroke="#dcbf91" stroke-width="4" stroke-linecap="round"/>
+<path d="m43 144-9 9" stroke="#392f24" stroke-width="7" stroke-linecap="round"/>
+<path d="M144 135 72 59" stroke="#d6ab86" stroke-width="3" stroke-linecap="round"/>
+<path d="m142 134-10 12m-1-19 17 17" fill="none" stroke="#e1b896" stroke-width="3"/>
+<path d="m153 149 7 8" stroke="#41352e" stroke-width="6" stroke-linecap="round"/>
+<path d="M97 89 84 95l12 13 13-12z" fill="#fff4cc"/>
+<path d="M96 80v34M78 96h36" stroke="#f4e6b7" stroke-width="1" opacity=".8"/>
+</svg>
