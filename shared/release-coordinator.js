@@ -149,7 +149,8 @@ export async function hasActiveAppDocument(slug, { timeout = 250 } = {}) {
 
 export async function clearStaleAppRuntime(slug, release, { serviceWorkers = navigator.serviceWorker, cacheStorage = caches } = {}) {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) throw new TypeError('Invalid app slug');
-  if (await hasActiveAppDocument(slug)) return false;
+  // Preserve the installed offline copy until connectivity returns.
+  if (globalThis.navigator?.onLine === false || await hasActiveAppDocument(slug)) return false;
   const scope = appScope({ path: `./apps/${slug}/` });
   if (serviceWorkers?.getRegistrations) {
     const registrations = await serviceWorkers.getRegistrations();
