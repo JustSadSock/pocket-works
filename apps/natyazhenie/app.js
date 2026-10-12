@@ -6,7 +6,7 @@ import {paint,coverWorld} from './art.js';
 import {advancePosition} from './engine.js';
 import {newLocal,tickLocal,verifyLocalLayouts,CHAPTERS} from './local.js';
 installMobileRuntime();
-createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'1.2.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
+createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'1.3.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
 const $=id=>document.getElementById(id);
 const localKey='pocket-works:natyazhenie:';
 const read=(key,fallback='')=>{try{return localStorage.getItem(localKey+key)??fallback;}catch{return fallback;}};
@@ -82,7 +82,8 @@ function updateGameUI(){
  $('chapter').textContent=world.stage.name;
  const stage=world.stage,seq=stage.sequence||[],goal=seq[world.phase||0];
  const names={wheels:'Заведи ленту на барабан',stars:'Собери искры',pads:'Займи кнопки и держи',
-  beacons:'Протяни ленту через кольцо',tension:'Натяни связь и удержи',rescue:'Вытащи сорвавшегося друга'};
+  beacons:'Протяни ленту через кольцо',tension:'Натяни связь и удержи',rescue:'Вытащи сорвавшегося друга',
+  signals:'Проведи ленту через линзы',balance:'Удержи противовес'};
  const done=world.pads.filter(Boolean).length+world.stars.filter(Boolean).length+
   (world.beacons||[]).filter(Boolean).length+(world.wheelDone||[]).filter(Boolean).length+
   (world.tensionDone?1:0)+(world.saveCount>0?1:0);
