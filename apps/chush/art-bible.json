@@ -33,7 +33,7 @@
       "inspectedAt": "2026-10-12",
       "observation": "A small historical toy theatre builds scenes from moveable print elements at different depths.",
       "principle": "The composition can be assembled from independently manipulated objects.",
-      "application": "Direct finger positioning of SVG silhouettes, deliberate stacking order and visible object tray.",
+      "application": "Простой принцип печатной формы: силуэт используется как многократный отпечаток вдоль движения пальца вместо перестановки самостоятельных сцен.",
       "avoid": "Do not replicate the museum's Cinderella illustration, wooden frame or staging."
     },
     {
@@ -48,9 +48,9 @@
   "concepts": [
     {
       "id": "plastic-puppet-cabaret",
-      "medium": "Original stroke-drawn SVG plastic toy silhouettes with eight category inks and five overlay mutations.",
+      "medium": "64 плоских силуэта с плотной цветной заливкой и пятью оттенками по умолчанию, без сценок или аксессуаров.",
       "composition": "Large square free scene and a horizontal mobile prop tray; dark set-like header.",
-      "interaction": "Choose an item, place it, drag/flip/rotate/change layer, secretly publish then vote.",
+      "interaction": "Проведи пальцем по холсту — повторяющиеся штампы рисуют линию; тап ставит фигуру, ластик удаляет, отмена возвращает мазок.",
       "motion": "Firm physical depressions, a brief snap on creation, no idle visual effects.",
       "rationale": "Fits online party tempo and differs materially from paper, museum and audio projects."
     },
@@ -73,7 +73,7 @@
   ],
   "selection": {
     "concept": "plastic-puppet-cabaret",
-    "reason": "The grotesque physical objects and fast stacking mechanics are the actual game's identity, not cosmetic skin.",
+    "reason": "Простая однокомпонентная форма превращает выданный случайный предмет в настоящую кисть, не заменяя рисование готовой сценкой.",
     "rejected": [
       {
         "concept": "architectural-rotunda",
@@ -89,7 +89,7 @@
     {
       "id": "inline-svg",
       "availability": "available",
-      "reason": "All 64 original SVG silhouettes and their composite accessories are written by hand in pieces.js without a separate graphics tool."
+      "reason": "Плотные одноцветные фигуры строятся напрямую из простых SVG path, circle, rect. Без генераторов изображений."
     }
   ],
   "assets": [
@@ -98,9 +98,9 @@
       "tool": "inline-svg",
       "source": "art-bible.json",
       "output": "pieces.js",
-      "role": "Main playable library: 64 hand-authored subjects, 5 variants each, 320 total.",
-      "acceptance": "At 64px tray size, objects are individually recognizable; categories are balanced by server.",
-      "integration": "The same pieceSVG renderer powers the tray, interactive stage, anonymous gallery and saved SVG export.",
+      "role": "Кистевой каталог: 64 оригинальных плоских штампа × 5 базовых цветов, всего 320 вариантов.",
+      "acceptance": "Формы однозначны в лотке 44–60 px и не содержат наложенных корон, огня, крыльев или дополнительных сюжетов.",
+      "integration": "Единая функция pieceSVG используется для личной палитры, штампов на холсте, просмотра галереи и экспорта.",
       "provenance": "Original geometric SVG paths, no third-party artwork.",
       "maxBytes": 60000
     },
