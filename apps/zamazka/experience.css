@@ -82,9 +82,9 @@
 .dialog-box button:focus-visible,.restore button:focus-visible,.round-view-controls button:focus-visible{
  outline:3px solid #ae8354;outline-offset:2px}
 @media (max-width:650px){
- .net-status{width:12px;min-width:12px;min-height:12px;height:12px;padding:0;overflow:hidden;
+ .net-status{position:relative;width:12px;min-width:12px;min-height:12px;height:12px;padding:0;overflow:hidden;
  color:transparent;font-size:0;border-radius:50%;background:transparent}
- .net-status::before{position:absolute;width:8px;height:8px}
+ .net-status::before{position:absolute;left:1px;top:1px;width:8px;height:8px}
 }
 @media (prefers-reduced-motion:reduce){
  .waiting-person.is-ready{animation:none}
