@@ -79,7 +79,7 @@ function evaluate(world,dt){
   if(world.stretch>=1)world.stretched=true;
  }
  if(world.pads.every(Boolean)&&world.stars.every(Boolean)&&(!s.stretch||world.stretched))world.gateOpen=true;
- if(world.gateOpen&&ps.every(q=>q.x>s.finishX&&q.y<GROUND+R)){
+ if(world.gateOpen&&ps.some(q=>q.x>s.finishX)&&ps.every(q=>q.x>s.finishX-133&&q.y<GROUND+R)){
   if(world.level===LEVELS.length-1)world.finished=true;
   else reset(world,world.level+1);
   return true;

@@ -29,7 +29,7 @@ try{
   for(let level=0;level<6;level++){
    assert.equal(state.world.level,level);
    state.world.gateOpen=true;
-   for(const p of state.world.players){p.x=1138;p.y=522;p.vx=0;p.vy=0;p.ground=true;}
+   for(const [i,p] of state.world.players.entries()){p.x=1138-(state.world.players.length-1-i)*34;p.y=522;p.vx=0;p.vy=0;p.ground=true;}
    now+=100;state=game.onMessage({state,player:members[0],payload:{type:'input',dir:0,jump:false}}).state;
   }
   assert.equal(state.phase,'done','the sixth chapter must lead to a result screen');

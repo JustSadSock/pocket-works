@@ -38,7 +38,7 @@ export function tickLocal(w,inputs,delta){
    if(w.stretch>=1)w.stretched=true;
   }
   if(w.pads.every(Boolean)&&w.stars.every(Boolean)&&(!w.stage.stretch||w.stretched))w.gateOpen=true;
-  if(w.gateOpen&&w.players.every(p=>p.x>w.stage.finishX&&p.y<560)){
+  if(w.gateOpen&&w.players.some(p=>p.x>w.stage.finishX)&&w.players.every(p=>p.x>w.stage.finishX-133&&p.y<560)){
    if(w.level===5)w.finished=true;else Object.assign(w,newLocal(w.level+1));
    return true;
   }
