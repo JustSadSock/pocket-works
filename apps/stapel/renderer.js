@@ -157,15 +157,30 @@ export function renderFlight(canvas,f,map,t){
   const worldR=WORLD.radius/pxScale;
   const planetY=rocketY+(WORLD.radius+alt)/pxScale;
   if(planetY-worldR<h){
-    atmosphere(c,w*.5,planetY,worldR);
-    planetDetails(c,w*.5,planetY,worldR);
-    if(alt<5000){
-      const elevation=h*.84+Math.sin(f.t*.018)*3;
-      rect(c,0,elevation,w,h-elevation,'#6f4335');
-      for(let i=0;i<18;i++){
-        const xx=((i*73.7+20)%w), yy=elevation+((i*7)%11);
-        line(c,xx,yy,xx+5,yy-3,'#c0805b',1);
+    if(worldR>1300){
+      // On the ascent the globe has a radius of thousands of screen pixels.
+      // Draw only the actually visible arc: enormous Canvas arcs choke mobile WebKit.
+      const surface=planetY-worldR;
+      const surfaceY=x=>surface+Math.pow(x-w*.5,2)/(2*worldR);
+      c.beginPath();
+      c.moveTo(-4,surfaceY(-4));
+      const slices=24;
+      for(let k=1;k<=slices;k++){const xx=-4+(w+8)*k/slices;c.lineTo(xx,surfaceY(xx));}
+      c.lineTo(w+4,h+4);c.lineTo(-4,h+4);c.closePath();
+      const ground=c.createLinearGradient(0,surface,0,Math.max(surface+280,h));
+      ground.addColorStop(0,'#ae6f51');ground.addColorStop(.6,'#8c503e');ground.addColorStop(1,'#503730');
+      c.fillStyle=ground;c.fill();
+      c.strokeStyle='#d98c68';c.lineWidth=6;c.beginPath();
+      c.moveTo(-4,surfaceY(-4));
+      for(let k=1;k<=slices;k++){const xx=-4+(w+8)*k/slices;c.lineTo(xx,surfaceY(xx));}
+      c.stroke();
+      for(let i=0;i<12;i++){
+        const xx=(i*97+17)%w, yy=surfaceY(xx)+12+(i*43)%180;
+        if(yy<h)line(c,xx,yy,xx+17+(i%4)*9,yy-3,'#d293704c',1.8);
       }
+    } else {
+      atmosphere(c,w*.5,planetY,worldR);
+      planetDetails(c,w*.5,planetY,worldR);
     }
   }
   // Vehicle camera locked to craft, not to the inertial world.
