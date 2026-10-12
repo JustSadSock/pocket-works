@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+import ts from 'typescript';
+
+let current=10_000;
+class ControlledDate extends Date{static now(){return current}}
+const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
+const transpiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+const exports={};
+runInNewContext(transpiled,{exports,Date:ControlledDate,Math,Array,Number,Object,Error,JSON,Set,Map,console});
+assert.equal(exports.RULESET_VERSION,8);
+const module=exports.default,host={id:'host',name:'Host'},guest={id:'guest',name:'Guest'},players=[host,guest];
+function setup(){
+ const state=module.createRoom({player:host}).state;
+ module.onJoin({state,player:guest,players});
+ const message=(player,payload)=>module.onMessage({state,player,players,payload});
+ return {state,message};
+}
+for(const seconds of [60,90,120,160,240,300]){
+ current=10_000;
+ const {state,message}=setup();
+ message(host,{type:'start',rounds:3,drawingSeconds:seconds});
+ assert.equal(state.phase,'preview');
+ assert.equal(state.drawingSeconds,seconds,'accepted room duration');
+ current=state.deadline+1;message(host,{type:'pulse'});
+ assert.equal(state.phase,'drawing');
+ assert.equal(state.deadline-current,seconds*1000,'first drawing phase is '+seconds+' seconds');
+ const ownerView=message(host,{type:'sync'}).events[0].payload;
+ const guestView=message(guest,{type:'sync'}).events[0].payload;
+ assert.equal(ownerView.drawingSeconds,seconds);
+ assert.equal(guestView.drawingSeconds,seconds);
+ current=state.deadline+1;message(host,{type:'pulse'});
+ assert.equal(state.phase,'voting');
+ for(let i=0;i<players.length;i++){
+  current=state.deadline+1;message(host,{type:'pulse'});
+  assert.equal(state.phase,'reveal');
+  current=state.deadline+1;message(host,{type:'pulse'});
+ }
+ assert.equal(state.phase,'round-review');
+ message(guest,{type:'continue'});
+ assert.equal(state.phase,'round-review','only curator may advance');
+ message(host,{type:'continue'});
+ assert.equal(state.phase,'preview');
+ assert.equal(state.round,2);
+ current=state.deadline+1;message(host,{type:'pulse'});
+ assert.equal(state.phase,'drawing');
+ assert.equal(state.deadline-current,seconds*1000,'second round keeps same duration');
+}
+for(const invalid of [0,-1,45,360,600,NaN,'invalid']){
+ const {state,message}=setup();message(host,{type:'start',rounds:1,drawingSeconds:invalid});
+ assert.equal(state.drawingSeconds,160,'invalid duration falls back to 2:40');
+}
+const {state:defaultState,message:defaultMessage}=setup();
+defaultMessage(guest,{type:'start',rounds:1,drawingSeconds:300});
+assert.equal(defaultState.phase,'lobby','guest cannot change the rules or start');
+defaultMessage(host,{type:'start',rounds:1});
+assert.equal(defaultState.drawingSeconds,160,'legacy client falls back to 2:40');
+const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+assert.match(ui,/id="drawingSeconds"/,'curator has a drawing duration control');
+assert.match(ui,/drawingSeconds:Number\(screen\.querySelector\('#drawingSeconds'\)/,'client sends selected duration');
+console.log('ZAMAZKA: six host duration presets, guest guard, invalid fallback, reconnect and multi-round timing OK');

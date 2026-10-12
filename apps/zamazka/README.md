@@ -162,3 +162,12 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - Desktop shared board is rendered at its intrinsic 8:5 aspect ratio, without `object-fit:contain` letterboxing. Pointer coordinates map against the actual canvas bounds. Restoration editor cursor subtracts border offsets, matching the canvas coordinate system.
 - `Alt + wheel` adjusts brush diameter, while wheel without Alt still zooms. Losing pointer capture or focus clears stale pointers and pinch state rather than disabling drawing. Temporary Space eyedropper samples the fully rendered canvas.
 - Regression coverage: `node apps/zamazka/qa/large-painting.mjs`, `node apps/zamazka/qa/coordinate-input.mjs`, and existing picker, drawing and draft tests.
+
+
+## 1.18.0 — Время реставрации выбирает куратор
+
+- В комнате ожидания организатор выбирает время рисования: **1:00, 1:30, 2:00, 2:40 (по умолчанию), 4:00 или 5:00**. Настройка передаётся серверу при запуске выставки, не требуя дополнительных подтверждений.
+- Сервер валидирует длительность, сохраняет её для комнаты и применяет ко **всем** раундам и игрокам. Некорректное значение или старая версия клиента возвращают 2:40. Гость не может запускать игру или задавать время.
+- Прочие этапы матча, тренировка, автосохранение и защита от переполнения сообщений не меняются.
+- Тест: `node apps/zamazka/qa/drawing-time.mjs`.
+- Важно: продолжительность матча задаётся при создании новой комнаты PocketNet v9; ранее открытые комнаты продолжают использовать закреплённую старую версию правил.
