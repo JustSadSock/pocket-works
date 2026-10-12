@@ -36,7 +36,7 @@ try{
  assert.match(badge,/pw-identity-avatar/);
  assert.doesNotMatch(pocketPlayerBadge({name:'Restorer',verified:false,avatar:'plum'}),/Pocket ID/);
  assert.match(pocketPlayerBadge({name:'Restorer',verified:false}),/Гость/);
- assert.equal(pocketIdProfileUrl,'/?pocket-id=login');
+ assert.equal(pocketIdProfileUrl,'/?pocket-id=profile');
  globalThis.fetch=async()=>{throw Error('network down')};
  assert.equal(await getPocketIdentity({force:true}),null);
  console.log('PASS: app identity capability, safe avatars, guest fallback, shared profile deep-link');
