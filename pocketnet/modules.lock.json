@@ -50,5 +50,11 @@
       "v2",
       "v3"
     ]
+  },
+  "blind-pals": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
