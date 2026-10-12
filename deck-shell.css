@@ -582,3 +582,15 @@ html.has-pocket-deck[data-deck-density=micro] .app-entry__more{display:none}
 @media(prefers-reduced-motion:reduce){
   .deck-account-spotlight,.deck-focus__play-mark{transition:none!important}
 }
+
+/* Quiet launcher update: actionable in Settings, never a multi-paragraph banner. */
+.deck-top-actions [data-deck-tools]{position:relative}
+.deck-top-actions [data-deck-tools].has-pending-update::after{content:'';position:absolute;right:3px;top:3px;
+  width:9px;height:9px;border-radius:50%;background:#eca175;border:1px solid #172125}
+.deck-update-ready{display:flex;gap:12px;align-items:center;justify-content:space-between;
+  margin:0 0 12px;padding:12px 13px;background:#304037;border:1px solid #657c64;border-radius:7px;color:#e7f0e4}
+.deck-update-ready[hidden]{display:none}
+.deck-update-ready strong{font-size:.8rem;font-weight:750}
+.deck-update-ready button{min-height:42px;min-width:106px;padding:9px 10px;border:0;border-radius:6px;
+  background:#e5ad8b;color:#1b282a;font-weight:750}
+.deck-update-ready button:disabled{opacity:.65}
