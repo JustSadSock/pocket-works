@@ -20,7 +20,7 @@
    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7M8 12h12"/></svg>
   </a>
   <div class="brand"><span class="brand-symbol"><svg viewBox="0 0 34 24" aria-hidden="true"><path d="M2 19 15 5l7 6-13 12M31 5 18 19l-6-5L25 2"/></svg></span><strong>СТЫК</strong><span class="brand-caption">ЖИВОЙ ФРОНТ</span></div>
-  <button id="menuBtn" class="icon-btn" type="button" aria-label="Меню">
+  <button id="menuBtn" data-native-press class="icon-btn" type="button" aria-label="Меню">
    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
   </button>
  </header>
@@ -49,7 +49,7 @@
    </div>
    <div class="action-row">
     <div class="command-hint" id="command-help">Коснитесь поля для приказа</div>
-    <button id="execute" class="execute" type="button"><span id="play-label">Выполнить приказы</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 10 7-10 7z"/></svg></button>
+    <button id="execute" data-native-press class="execute" type="button"><span id="play-label">Выполнить приказы</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 10 7-10 7z"/></svg></button>
    </div>
   </aside>
  </div>
@@ -64,7 +64,7 @@
   <div class="chapter-head"><span>КАМПАНИЯ</span><span>3 СРАЖЕНИЯ</span></div>
   <div id="chapters" class="chapters"></div>
   <div class="home-current"><strong id="home-title">У БРОДА</strong><span id="home-subtitle">Переправа через Нарву</span></div>
-  <button id="start" class="big-action" type="button">Начать сражение</button>
+  <button id="start" data-native-press class="big-action" type="button">Начать сражение</button>
   <p class="home-help">Коснитесь синего отряда, выберите место и потяните края строя. Затем выполните ход.</p>
  </div>
 </section>
@@ -72,11 +72,11 @@
  <div class="veil-card narrow">
   <p class="kicker">ПЕРЕДЫШКА</p><h2>Полевой совет</h2>
   <p class="modal-copy">Приказы и потери сохранены.</p>
-  <button id="resume" class="big-action" type="button">Вернуться в бой</button>
+  <button id="resume" data-native-press class="big-action" type="button">Вернуться в бой</button>
   <div class="menu-actions">
    <button id="audio" type="button">Звук: вкл.</button>
-   <button id="restart" type="button">Переиграть бой</button>
-   <button id="back-campaign" type="button">К кампании</button>
+   <button id="restart" data-native-press type="button">Переиграть бой</button>
+   <button id="back-campaign" data-native-press type="button">К кампании</button>
   </div>
  </div>
 </section>
@@ -85,16 +85,16 @@
   <p class="kicker" id="result-kicker">ПОБЕДА</p><h2 id="result-title">Фронт устоял</h2>
   <p class="modal-copy" id="result-copy"></p>
   <p class="outcome-score" id="result-score"></p>
-  <button id="next" class="big-action" type="button">Следующее сражение</button>
-  <button id="result-home" class="sub-action" type="button">К кампании</button>
+  <button id="next" data-native-press class="big-action" type="button">Следующее сражение</button>
+  <button id="result-home" data-native-press class="sub-action" type="button">К кампании</button>
  </div>
 </section>
 <section id="restart-confirm" class="veil confirm-veil" aria-label="Подтверждение перезапуска" hidden>
  <div class="veil-card narrow"><p class="kicker">НОВЫЙ БОЙ</p><h2>Сбросить сражение?</h2><p class="modal-copy">Все приказы и потери текущего боя будут сброшены.</p>
- <div class="confirm-actions"><button id="confirm-no" type="button">Отмена</button><button id="confirm-yes" type="button">Сбросить</button></div></div>
+ <div class="confirm-actions"><button id="confirm-no" data-native-press type="button">Отмена</button><button id="confirm-yes" data-native-press type="button">Сбросить</button></div></div>
 </section>
 <section id="about" class="veil confirm-veil" aria-label="Как играть" hidden>
- <div class="veil-card narrow"><p class="kicker">ПАМЯТКА</p><h2>СТЫК</h2><p class="modal-copy">Выделите синий отряд. Коснитесь поля, чтобы переместить линию. Перетащите один из её концов, чтобы изменить ширину и угол. За ход можно изменить приказы двум отрядам. Оба войска действуют одновременно; узкие плотные линии устойчивее, фланговые удары вызывают панику.</p><button id="about-close" class="big-action" type="button">Понятно</button></div>
+ <div class="veil-card narrow"><p class="kicker">ПАМЯТКА</p><h2>СТЫК</h2><p class="modal-copy">Выделите синий отряд. Коснитесь поля, чтобы переместить линию. Перетащите один из её концов, чтобы изменить ширину и угол. За ход можно изменить приказы двум отрядам. Оба войска действуют одновременно; узкие плотные линии устойчивее, фланговые удары вызывают панику.</p><button id="about-close" data-native-press class="big-action" type="button">Понятно</button></div>
 </section>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СТЫК" data-app-version="1.0.0"></script>
 <script type="module" src="./app.js"></script>
