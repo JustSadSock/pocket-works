@@ -140,6 +140,7 @@ function backupDraft(force=false){
  if(practice||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
  const ass=view.mine;if(!ass)return;
  const token=[roomId,view.round,ass.art,ass.variation].join(':');
+ if(autoSubmitted===token)return; // final transfer owns this revision
  const strokes=editor.getSnapshot(),serialized=JSON.stringify(strokes);
  if(!force&&token===lastDraftRound&&serialized===lastDraftPayload&&
     (lastDraftAckRevision===lastDraftRevision||Date.now()-lastDraftSentAt<6500))return;
@@ -492,7 +493,7 @@ async function connect(mode){
      try{client.sendGame({type:'sync'})}catch{}
    });
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
-   client.on('disconnected',()=>{if(!client.closed){lastDraftSentAt=0;lastDraftAckRevision='';notify('Связь прервана. Переподключаемся…')}});
+   client.on('disconnected',()=>{if(!client.closed){lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';notify('Связь прервана. Переподключаемся…')}});
    client.on('error',error=>{
      if(client.closed)return;
      const code=String(error?.code||error?.message||'');
