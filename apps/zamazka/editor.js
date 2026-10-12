@@ -494,10 +494,65 @@ export class Editor{
      this.onChange(this.strokes.length);
    }catch{this.root.querySelector('#drawingTip')?.setAttribute('title','Пипетка не смогла прочитать цвет. Попробуйте ещё раз.');}
  }
- async render(){if(this.closed)return;const c=this.canvas,version=this.renderVersion=(this.renderVersion||0)+1;const img=await loadArtwork(this.id).catch(()=>null);if(!img||this.closed||version!==this.renderVersion)return;
- const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);renderStrokes(x,[...this.strokes,...(this.working?[this.working]:[])],this.zone);x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;damagePath(x,this.zone);x.stroke();x.restore();
+ // Two immutable caches: artwork with damage, and committed strokes. A
+ // pointermove composites only these layers plus the live gesture. Flood-fill
+ // and old strokes never rerun 120 times/second while the mouse is moving.
+ async render(){
+   if(this.closed)return;
+   this.artPromise ||= loadArtwork(this.id).catch(()=>null);
+   const img=await this.artPromise;
+   if(!img||this.closed)return;
+   return new Promise(resolve=>{
+     (this.paintWaiters ||= []).push(resolve);
+     if(this.paintFrameId)return;
+     const frame=()=>{this.paintFrameId=null;this.paintCachedFrame(img);for(const cb of this.paintWaiters.splice(0))cb()};
+     this.paintFrameId=typeof requestAnimationFrame==='function'?requestAnimationFrame(frame):setTimeout(frame,16);
+   });
+ }
+ paintCachedFrame(img){
+   if(this.closed)return;
+   const c=this.canvas,ctx=prepareCanvas(c,true);
+   const resized=!this.baseLayer||this.baseLayer.width!==c.width||this.baseLayer.height!==c.height;
+   const makeLayer=()=>{
+     const layer=document.createElement('canvas');layer.width=c.width;layer.height=c.height;
+     const x=layer.getContext('2d');x.setTransform(c.width/W,0,0,c.height/H,0,0);
+     x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+     return {canvas:layer,ctx:x};
+   };
+   if(resized){
+     const base=makeLayer(),ink=makeLayer();this.baseLayer=base.canvas;this.inkLayer=ink.canvas;this.inkCtx=ink.ctx;
+     drawArtwork(base.ctx,img,this.id);
+     base.ctx.save();clipZone(base.ctx,this.zone);
+     base.ctx.fillStyle='#e8ddc6';base.ctx.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);
+     base.ctx.restore();
+     this.cachedRevision=-1;
+   }
+   const rev=this.paintRevision||0;
+   if(this.cachedRevision!==rev){
+     this.inkCtx.clearRect(0,0,W,H);
+     this.inkCtx.save();clipZone(this.inkCtx,this.zone);
+     renderStrokes(this.inkCtx,this.strokes,this.zone);
+     this.inkCtx.restore();
+     this.cachedRevision=rev;
+   }
+   ctx.clearRect(0,0,W,H);
+   ctx.drawImage(this.baseLayer,0,0,W,H);
+   ctx.drawImage(this.inkLayer,0,0,W,H);
+   if(this.working){
+     ctx.save();clipZone(ctx,this.zone);drawStroke(ctx,this.working);ctx.restore();
+   }
+   ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#806950';ctx.lineWidth=1.5;
+   damagePath(ctx,this.zone);ctx.stroke();ctx.restore();
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
- dispose(){this.closed=true;this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
+ dispose(){this.closed=true;
+ if(this.paintFrameId){
+   if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
+   this.paintFrameId=null;
+ }
+ for(const cb of this.paintWaiters||[])cb();
+ this.paintWaiters=[];
+ this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;
+ this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }
