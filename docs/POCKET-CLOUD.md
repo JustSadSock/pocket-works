@@ -43,8 +43,8 @@ promised as part of this release.
 
 ## Initial quota / operational constraints
 
-Per account: **16 MB** of uploaded Base64-encoded payload; per item: **1 MB**
-and 160 item slots (including tombstones). Text JSON is compressed using
+Per account: **16 MB** (16,000,000 bytes) of uploaded Base64-encoded payload; per item: **1 MB**
+and 160 active item slots (deleted tombstones do not count against usage). Text JSON is compressed using
 browser-native gzip when available, or Base64-encoded unchanged otherwise.
 This is a first-stage small-artwork quota for an inexpensive deployment, not
 large-file or professional media storage. A larger R2 object-store pipeline
@@ -52,6 +52,7 @@ can be added later without changing the public user identity.
 
 ## API
 
+- `GET /pocket-cloud/usage`: authenticated, cross-app per-account usage including used/free/total bytes, active item slots, per-app totals and individual item titles/sizes (no payloads). Used by the Pocket ID profile meter.
 - `GET /pocket-cloud/list?app=folio|zamazka`: metadata, revisions,
   tombstones, size usage and quota. No content is exposed until a signed-in user
   calls `GET /pocket-cloud/item?app=...&id=...`.
