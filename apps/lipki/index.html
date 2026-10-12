@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#e8dccb"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Липки">
+<title>ЛИПКИ · Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css"></head>
+<body><main class="app-shell" data-app-shell data-fullscreen-app data-keyboard-aware>
+<section id="menu" class="menu-screen">
+  <header class="menu-top" data-ui>
+    <a href="../../" class="library" data-app-control>← Pocket Works</a>
+    <button id="soundBtn" class="sound" type="button">Звук: вкл</button>
+  </header>
+  <div class="menu-main">
+   <div class="title-area">
+    <div class="thread"><span></span><span></span><span></span></div>
+    <h1>ЛИПКИ<span class="sew-dot">.</span></h1>
+    <p>Прыгайте, цепляйтесь, падайте. Главное — добраться до кармана вместе.</p>
+    <div class="info"><span>2–4 игрока</span><span>10 испытаний</span><span>Мягкая физика</span></div>
+   </div>
+   <div class="menu-art"><canvas id="preview" aria-label="Два плюшевых существа в текстильном мире"></canvas><div class="sewn-caption">ИГРУШЕЧНАЯ МАСТЕРСКАЯ</div></div>
+   <div class="menu-controls">
+    <div class="field-row"><label for="nickname">ИМЯ</label><input id="nickname" maxlength="22" autocomplete="nickname" placeholder="Игрок"><span id="identity">Гостевой профиль</span></div>
+    <div class="play-actions"><button type="button" id="soloBtn" class="big-action" data-native-press>Играть <span>→</span><small>Два героя, один экран</small></button><button type="button" id="hostBtn" data-native-press class="big-action secondary" data-native-press>Создать комнату <span>↗</span><small>PocketNet · с друзьями</small></button></div>
+    <div class="sub-actions"><label for="levelChoice">Уровень</label><select id="levelChoice" aria-label="Выбрать открытый уровень"></select><button type="button" id="onlineBtn" data-native-press>По коду →</button></div>
+    <p id="netStatus" role="status">Проверка PocketNet…</p>
+   </div>
+  </div>
+  <button class="workshop" type="button" data-workshop-trigger>Инструменты</button>
+</section>
+<section id="lobby" class="lobby-screen" hidden>
+  <header class="lobby-top"><button id="backLobby" type="button" class="text-button" data-native-press>← Назад</button><span>ЛИПКИ / POCKETNET</span></header>
+  <div class="lobby-wrap"><div class="stitched-emblem"><svg width="92" height="90" viewBox="0 0 92 90" aria-hidden="true"><path d="M20 30C9 8 33 4 39 27M70 30C81 8 57 4 51 27" fill="#e78970" stroke="#71594d" stroke-width="4"/><ellipse cx="45" cy="50" rx="35" ry="32" fill="#e78970" stroke="#71594d" stroke-width="4"/><circle cx="34" cy="45" r="4" fill="#493d3b"/><circle cx="56" cy="45" r="4" fill="#493d3b"/><path d="M40 56q5 8 10 0" fill="none" stroke="#493d3b" stroke-width="3" stroke-linecap="round"/></svg></div>
+    <h2 id="lobbyHeading">Твоя команда</h2><p id="connectLine" role="status">Подключаемся…</p>
+    <div id="joinBlock"><label for="joinInput">Код приглашения</label><input id="joinInput" maxlength="36" inputmode="text" autocomplete="off" spellcheck="false" placeholder="8 символов"><button id="joinBtn" type="button" class="big-action" data-native-press>Присоединиться →</button></div>
+    <div id="roomBlock" hidden><div class="code-label">КОД КОМНАТЫ</div><div id="roomCode" class="room-code" data-selectable>········</div>
+      <div class="code-actions"><button id="copyCode" type="button">Скопировать код</button><button id="copyLink" type="button">Пригласить ссылкой</button></div><div id="people" class="people"></div><p id="lobbyHint">Пригласи друга</p><button id="startBtn" type="button" class="big-action" data-native-press>Начать игру →</button>
+    </div>
+  </div>
+  <a href="../../" class="lobby-library" data-app-control>← Pocket Works</a>
+</section>
+<section id="game" class="game-screen" hidden>
+  <header class="game-top" data-ui>
+    <button id="backGame" type="button" class="pause-key" aria-label="Открыть паузу" data-native-press>Ⅱ</button>
+    <div class="game-title"><strong id="levelName">Первый стежок</strong><span id="levelHint">Доберитесь до кармана вместе</span></div>
+    <div class="stage-number" id="levelIndex">1 / 10</div>
+  </header>
+  <div class="playfield-wrap" data-gesture-surface><canvas id="canvas" aria-label="Поле физического платформера Липки"></canvas></div>
+  <div class="game-bottom" data-ui>
+    <div class="direction">
+      <button type="button" data-native-press data-hold="left" class="pad-button" aria-label="Влево">←</button>
+      <button type="button" data-native-press data-hold="right" class="pad-button" aria-label="Вправо">→</button>
+    </div>
+    <div class="mode-stat"><strong id="roleLabel">Герой 1</strong><span id="roomIndicator" hidden>PocketNet</span><button type="button" id="switchBtn" data-native-press>Сменить ↻</button></div>
+    <div class="abilities">
+     <button type="button" data-native-press data-hold="stick" class="ability stick" aria-label="Прилипнуть или отлипнуть"><b>ЛИП!</b><small>прилипнуть</small></button>
+     <button type="button" data-native-press data-hold="jump" class="ability jump" aria-label="Прыгнуть"><b>↑</b><small>прыжок</small></button>
+    </div>
+  </div>
+  <div id="pauseSheet" class="overlay" hidden><div class="sewn-sheet">
+    <span class="mini-label">ЛИПКИ</span><h2>Пауза</h2><p id="pauseCaption">Тренировка на паузе</p>
+    <button id="resumeBtn" type="button" class="big-action" data-native-press>Продолжить →</button>
+    <button id="restartBtn" type="button" class="sheet-action" data-native-press>Заново этот уровень</button>
+    <button id="leaveBtn" type="button" class="sheet-action">В главное меню</button>
+    <a class="sheet-library" href="../../" data-app-control>← Pocket Works</a>
+   </div></div>
+  <div id="endSheet" class="overlay" hidden><div class="sewn-sheet">
+   <span class="mini-label">КОМАНДА СПРАВИЛАСЬ</span><h2>Вы слиплись!</h2><p>Все десять испытаний пройдены. Команда добралась домой.</p>
+   <button id="againBtn" type="button" class="big-action" data-native-press>Играть снова →</button>
+   <button id="endExit" type="button" class="sheet-action">В главное меню</button>
+   <a class="sheet-library" href="../../" data-app-control>← Pocket Works</a>
+  </div></div>
+</section>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЛИПКИ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
