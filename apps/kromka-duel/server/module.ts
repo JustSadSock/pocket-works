@@ -152,9 +152,9 @@ export function aiInput(s,tier=1){
  let my=Math.sin(heading)*desired+Math.cos(heading)*strafe;
  if(length(mx,my)>1){const l=length(mx,my);mx/=l;my/=l;}
  // A finite, visible reaction window avoids impossible instant AI parries.
- const danger=op.jab>.07&&op.jab<.185&&dist<104;
+ const danger=op.jab>.14&&op.jab<.27&&dist<116;
  const facing=Math.abs(delta(f.a,heading))<.55;
- const parry=danger&&f.parryCd<=0&&f.jab<=0&&facing&&tier>0&&Math.sin(phase*7.3)>.05;
+ const parry=danger&&f.parryCd<=0&&f.jab<=0&&facing&&tier>0&&Math.sin(phase*7.3)>-.2;
  const jab=dist<102&&dist>34&&f.attackCd<=0&&f.jab<=0&&f.stagger<=0&&
   (f.riposte>0||((Math.sin(s.elapsed*5.2+phase*2.1)>.56)&&op.parry<.05));
  const dash=(dist<57&&op.jab>.14&&f.dashCd<=0&&Math.sin(s.elapsed*13)>.3);
