@@ -8,15 +8,15 @@ export const CHAPTERS=[
  {name:'В одной связке',hint:'Каждый держит свою кнопку',type:'plates',x:330,spread:480,hold:.65,floors:[[0,540,1180,80]]},
  {name:'Не отпускай',hint:'Перепрыгните яму вместе и соберите искру',type:'gap',x:655,spread:330,hold:.75,floors:[[0,540,438,80],[570,540,610,80]],stars:[[501,413]]},
  {name:'Живой якорь',hint:'Перекиньте резинку через штырь. Один держит ЯКОРЬ, другой тянет',type:'beam',floors:[[0,540,1180,80]],hooks:[[524,508]],wheels:[0],beacons:[[524,522]],anchor:true,sequence:['wheels','beacons']},
- {name:'Небесные пуговицы',hint:'Сначала достаньте искры. Затем вся команда должна одновременно удерживать кнопки',type:'spring',x:655,spread:300,hold:.85,floors:[[0,540,1180,80]],platforms:[[430,424,124,20],[760,420,125,20]],springs:[308,580],stars:[[397,300],[665,320]],sequence:['stars','pads']},
- {name:'Никого не бросим',hint:'Маятник мешает занять места. Удержите все кнопки две секунды',type:'sync',x:365,spread:490,hold:2,floors:[[0,540,1180,80]],hazards:[[288,492,55,1.65,21]]},
+ {name:'Линия связи',hint:'Перехватите два воздушных сигнала одной лентой — второй исчезнет через четыре секунды',type:'spring',floors:[[0,540,1180,80]],platforms:[[406,424,132,20],[754,420,130,20]],springs:[308,580],signals:[[480,454],[694,448]],signalWindow:4.8,sequence:['signals']},
+ {name:'Противовес',hint:'Удержите рычаг ровно: игроки по разные стороны, натянутая резинка и баланс',type:'sync',floors:[[0,540,1180,80]],balance:[605,505,113,1.7],hazards:[[290,490,55,1.65,20]],sequence:['balance']},
  {name:'Силовое поле',hint:'Зацепите резинку, раскрутите барабан. Только затем достаньте искру и натяните связь',type:'tension',floors:[[0,540,1180,80]],hooks:[[505,507]],wheels:[0],tension:true,anchor:true,stars:[[684,404]],sequence:['wheels','stars','tension']},
- {name:'Качели',hint:'Вместе на лифте достаньте искры. Затем удержите кнопки',type:'lift',x:690,spread:290,hold:1.2,floors:[[0,540,1180,80]],platforms:[[398,438,100,18],[810,424,113,18]],lifts:[[548,440,112,18,59,2.8]],hazards:[[705,440,75,2.1,19]],stars:[[600,293],[844,319]],sequence:['stars','pads']},
- {name:'Подвесной мост',hint:'Прыгайте через островки. Связка удержит товарища',type:'islands',x:765,spread:214,hold:1,floors:[[0,540,306,80],[450,540,200,80],[738,540,442,80]],platforms:[[334,450,110,20],[682,438,96,20]],springs:[246,606],stars:[[372,331],[701,321]]},
- {name:'Последнее натяжение',hint:'По очереди запустите барабан, соберите искры и зарядите резинку',type:'finale',x:733,spread:235,hold:1.2,floors:[[0,540,436,80],[568,540,612,80]],platforms:[[463,431,116,18],[734,422,112,18]],springs:[325],hooks:[[668,508]],wheels:[0],beacons:[[780,522]],stars:[[375,318],[690,306]],tension:true,anchor:true,sequence:['wheels','stars','pads','beacons','tension']},
- {name:'На растяжке',hint:'Натяните ленту на штыре, а затем пролетите к верхним искрам',type:'sling',floors:[[0,540,1180,80]],platforms:[[436,410,130,18],[712,384,134,18]],hooks:[[525,507]],wheels:[0],stars:[[489,283],[766,277]],springs:[325],sequence:['wheels','stars']},
- {name:'Друг в беде',hint:'Сорвитесь в пропасть и вытяните друга резинкой. Затем откройте ворота',type:'rescue',x:734,spread:220,hold:1.3,floors:[[0,540,439,80],[573,540,607,80]],platforms:[[468,434,96,18]],springs:[361],rescue:true,stars:[[520,323]],sequence:['rescue','stars','pads']},
- {name:'Узел на память',hint:'Два барабана, две искры, общий заряд. Ошибки исправляются вместе',type:'master',x:731,spread:237,hold:1.5,floors:[[0,540,1180,80]],platforms:[[420,430,110,18],[702,413,110,18]],hooks:[[426,507],[640,507]],wheels:[0,1],stars:[[485,305],[751,293]],hazards:[[820,490,54,1.7,18]],tension:true,anchor:true,sequence:['wheels','stars','tension','pads']}
+ {name:'Срыв сигнала',hint:'На лифте проведите лентой через две линзы. После этого ворота откроются ненадолго',type:'lift',floors:[[0,540,1180,80]],platforms:[[398,438,100,18],[810,424,113,18]],lifts:[[548,440,112,18,59,2.8]],hazards:[[705,440,75,2.1,19]],signals:[[552,418],[735,452]],signalWindow:5.5,escape:6.5,sequence:['signals']},
+ {name:'Подвесной мост',hint:'Через две пропасти протяните ленту через обе линзы за пять секунд',type:'islands',floors:[[0,540,306,80],[450,540,200,80],[738,540,442,80]],platforms:[[334,450,110,20],[682,438,96,20]],springs:[246,606],signals:[[365,430],[704,421]],signalWindow:5.8,escape:7.2,sequence:['signals']},
+ {name:'Найти равновесие',hint:'Запусти барабан, получи две искры, уравновесь рычаг и удержи натяжение',type:'finale',floors:[[0,540,436,80],[568,540,612,80]],platforms:[[463,431,116,18],[734,422,112,18]],springs:[325],hooks:[[668,508]],wheels:[0],stars:[[375,318],[690,306]],balance:[842,508,110,1.5],tension:true,anchor:true,sequence:['wheels','stars','balance','tension']},
+ {name:'На растяжке',hint:'Разгон с резинки и две линзы на разной высоте',type:'sling',floors:[[0,540,1180,80]],platforms:[[436,410,130,18],[712,384,134,18]],hooks:[[525,507]],wheels:[0],signals:[[489,394],[765,368]],signalWindow:5.2,springs:[325],sequence:['wheels','signals']},
+ {name:'Друг в беде',hint:'Сначала вытащи сорвавшегося. Когда мост поднят, поймай два сигнала над ним',type:'rescue',floors:[[0,540,439,80],[573,540,607,80]],platforms:[[468,434,96,18]],springs:[361],rescue:true,signals:[[513,449],[731,459]],signalWindow:5.5,sequence:['rescue','signals']},
+ {name:'Узел на память',hint:'Заведи два барабана, поймай импульсы и уравновесь противовес перед финальным зарядом',type:'master',floors:[[0,540,1180,80]],platforms:[[420,430,110,18],[702,413,110,18]],hooks:[[426,507],[640,507]],wheels:[0,1],signals:[[505,440],[750,435]],signalWindow:5.4,balance:[855,505,110,1.6],hazards:[[830,482,62,1.7,18]],tension:true,anchor:true,sequence:['wheels','signals','balance','tension']}
 ];
 export const MIN_PLAYERS=2,MAX_PLAYERS=5;
 export function stageFor(level,count){
@@ -30,6 +30,9 @@ export function stageFor(level,count){
  stars:(spec.stars||[]).map(([x,y])=>({x,y})),
  beacons:(spec.beacons||[]).map(([x,y])=>({x,y})),
  hooks:(spec.hooks||[]).map(([x,y])=>({x,y})),wheels:spec.wheels||[],sequence:spec.sequence||[],rescue:!!spec.rescue,
+ signals:(spec.signals||[]).map(([x,y])=>({x,y})),signalWindow:spec.signalWindow||5,
+ balance:spec.balance?{x:spec.balance[0],y:spec.balance[1],reach:spec.balance[2],hold:spec.balance[3]}:null,
+ escape:spec.escape||0,
  pads:spec.x?Array.from({length:n},(_,i)=>({x:spec.x+span*i/(n-1),y:FLOOR,owner:i})):[],
  hold:spec.hold||0,tension:!!spec.tension,anchor:!!spec.anchor,
  requiredLinks:spec.tension?Math.max(1,Math.ceil((n-1)*.5)):0,
@@ -41,7 +44,9 @@ export function worldFor(players,level=0){
  return {level,stage,players:players.map(spawn),inputs:{},pads:stage.pads.map(()=>false),
  stars:stage.stars.map(()=>false),beacons:stage.beacons.map(()=>false),
  wraps:players.slice(1).map(()=>-1),wheelCharge:stage.wheels.map(()=>0),wheelDone:stage.wheels.map(()=>false),
- phase:0,phaseTime:0,saveCount:0,tensionCharge:0,tensionDone:false,plateCharge:0,gateOpen:false,clock:0,revision:0,finished:false,falls:0};
+ phase:0,phaseTime:0,saveCount:0,signalIndex:0,signalLeft:0,signalDone:false,
+ balanceCharge:0,balanceDone:false,balanceTilt:0,escapeLeft:0,
+ tensionCharge:0,tensionDone:false,plateCharge:0,gateOpen:false,clock:0,revision:0,finished:false,falls:0};
 }
 export function reset(w,level=w.level){const v=worldFor(w.players.map(p=>({id:p.id,name:p.name})),level);Object.assign(w,v);}
 export function movingPlatforms(s,time){
@@ -177,6 +182,8 @@ function complete(w,name){
  if(name==='wheels')return w.wheelDone.every(Boolean);
  if(name==='tension')return w.tensionDone;
  if(name==='rescue')return w.saveCount>0;
+ if(name==='signals')return w.signalDone;
+ if(name==='balance')return w.balanceDone;
  return false;
 }
 function updateGoals(w,dt){
@@ -215,14 +222,58 @@ function updateGoals(w,dt){
   w.tensionCharge=clamp(w.tensionCharge+(valid?dt/1.6:-dt/.6),0,1);
   if(w.tensionCharge>=1)w.tensionDone=true;
  }
+ // Ribbon sensors activate only when the actual stretched band intersects
+ // the lens. After the first pulse, the next lens must be caught promptly.
+ if(goalActive(w,'signals')&&s.signals.length&&!w.signalDone){
+  if(w.signalIndex>0){
+   w.signalLeft=Math.max(0,w.signalLeft-dt);
+   if(!w.signalLeft){w.signalIndex=0;}
+  }
+  const lens=s.signals[w.signalIndex];
+  if(lens){
+   const caught=ps.some((p,i)=>i<ps.length-1&&ropeDistance(w,i)>ROPE.soft&&
+    ropePath(w,i).some((a,j,pts)=>j>0&&distanceToSegment(lens.x,lens.y,pts[j-1],a).d<23));
+   if(caught){
+    w.signalIndex++;
+    if(w.signalIndex>=s.signals.length){w.signalDone=true;w.signalLeft=0;}
+    else w.signalLeft=s.signalWindow;
+   }
+  }
+ }
+ // A counterweight is steadied by a taut band shared between bodies standing
+ // on opposite sides. Wind adds gentle drift, so players must make corrections.
+ if(goalActive(w,'balance')&&s.balance&&!w.balanceDone){
+  const b=s.balance;let best=Infinity;
+  for(let i=0;i<ps.length-1;i++){
+   const a=ps[i],p=ps[i+1];
+   if(!a.ground||!p.ground)continue;
+   const left=a.x<p.x?a:p,right=a.x<p.x?p:a;
+   if(left.x>=b.x||right.x<=b.x)continue;
+   const la=b.x-left.x,ra=right.x-b.x;
+   if(la<68||ra<68||la>164||ra>164)continue;
+   const error=la-ra+Math.sin(w.clock*2.8)*8;
+   if(Math.abs(error)<Math.abs(best))best=error;
+  }
+  w.balanceTilt=Number.isFinite(best)?clamp(best/80,-1,1):1;
+  const centered=Math.abs(best)<25;
+  w.balanceCharge=clamp(w.balanceCharge+(centered?dt/b.hold:-dt/.65),0,1);
+  if(w.balanceCharge>=1)w.balanceDone=true;
+ }
  if(s.sequence?.length){
   if(complete(w,goal)){
    w.phase++;w.phaseTime=0;
   }else w.phaseTime+=dt;
-  if(w.phase>=s.sequence.length)w.gateOpen=true;
+  if(w.phase>=s.sequence.length){
+   if(!w.gateOpen&&s.escape)w.escapeLeft=s.escape;
+   w.gateOpen=true;
+  }
  }else if((!s.pads.length||w.plateCharge>=1)&&w.stars.every(Boolean)&&
   w.beacons.every(Boolean)&&w.wheelDone.every(Boolean)&&(!s.tension||w.tensionDone)&&
   (!s.rescue||w.saveCount>0))w.gateOpen=true;
+ if(w.gateOpen&&s.escape){
+  w.escapeLeft=Math.max(0,w.escapeLeft-dt);
+  if(w.escapeLeft===0){w.gateOpen=false;w.signalDone=false;w.signalIndex=0;w.signalLeft=0;w.phase=s.sequence.indexOf('signals');w.phaseTime=0;}
+ }
  if(w.gateOpen&&ps.some(p=>p.x>s.finishX)&&ps.every(p=>p.x>s.finishX-136&&p.y<FLOOR+RADIUS)){
   if(w.level===CHAPTERS.length-1)w.finished=true;else reset(w,w.level+1);
   return true;
@@ -300,7 +351,9 @@ export const viewWorld=w=>({
  vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),ground:p.ground,anchor:p.anchor,face:p.face,squash:p.squash,hang:p.hang,falls:p.falls})),
  pads:w.pads,stars:w.stars,beacons:w.beacons,tensionCharge:w.tensionCharge,tensionDone:w.tensionDone,
  plateCharge:w.plateCharge,wraps:w.wraps,wheelCharge:w.wheelCharge,wheelDone:w.wheelDone,
- phase:w.phase,phaseTime:w.phaseTime,saveCount:w.saveCount,gateOpen:w.gateOpen,clock:w.clock,finished:w.finished,revision:w.revision,falls:w.falls
+ phase:w.phase,phaseTime:w.phaseTime,saveCount:w.saveCount,signalIndex:w.signalIndex,signalLeft:w.signalLeft,signalDone:w.signalDone,
+ balanceCharge:w.balanceCharge,balanceDone:w.balanceDone,balanceTilt:w.balanceTilt,escapeLeft:w.escapeLeft,
+ gateOpen:w.gateOpen,clock:w.clock,finished:w.finished,revision:w.revision,falls:w.falls
 });
 export function validateLayouts(){
  const errors=[];
@@ -317,8 +370,11 @@ export function validateLayouts(){
   for(const b of s.beacons)if(!ground.some(f=>b.x>f.x+130&&b.x<f.x+f.w-130))errors.push([n,level,'beacon has no standing room']);
   for(const h of s.hooks)if(!ground.some(f=>h.x>f.x+22&&h.x<f.x+f.w-22))errors.push([n,level,'hook unsupported']);
   if(s.wheels.some(k=>k<0||k>=s.hooks.length))errors.push([n,level,'invalid wheel']);
-  if(s.sequence.some(g=>!['wheels','stars','pads','tension','beacons','rescue'].includes(g)))errors.push([n,level,'unknown goal']);
+  if(s.sequence.some(g=>!['wheels','stars','pads','tension','beacons','rescue','signals','balance'].includes(g)))errors.push([n,level,'unknown goal']);
   if(s.tension&&s.requiredLinks>n-1)errors.push([n,level,'too many taut segments']);
+  for(const lens of s.signals)if(lens.x<170||lens.x>920||lens.y<340||lens.y>480)errors.push([n,level,'sensor unreachable']);
+  if(s.balance&&(!ground.some(f=>s.balance.x-f.x>180&&f.x+f.w-s.balance.x>180)))errors.push([n,level,'balance requires supported straddle']);
+  if(s.escape&&!s.sequence.includes('signals'))errors.push([n,level,'timer without resettable signal']);
  }
  return errors;
 }
