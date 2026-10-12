@@ -214,7 +214,7 @@ function invitesPanel(){
 }
 function invitePanel(){
   if(!state.me)return profilePanel();
-  return '<h2>Позвать в Замазку</h2><p class="pws-muted">Приглашение получит друг, который сможет войти в эту комнату одним нажатием.</p>'+
+  return '<h2>Позвать в '+esc(gameLabel(state.game))+'</h2><p class="pws-muted">Приглашение получит друг, который сможет войти в эту комнату одним нажатием.</p>'+
     '<div class="pws-list">'+(state.me.friends.filter(p=>p.allowInvites).map(p=>
       personRow(p,button('send-invite','Пригласить','primary','data-id="'+esc(p.id)+'"'))
     ).join('')||
@@ -283,7 +283,8 @@ async function loadCatalog(){
   }catch{}
 }
 function resetNotice(){state.notice='';state.error='';state.confirm=null}
-async function open(room='',editNow=false){
+async function open(room='',editNow=false,gameId='zamazka'){
+  state.game=['zamazka','blind-pals'].includes(gameId)?gameId:'zamazka';
   if(!dialog.open)dialog.showModal();
   state.room=room||'';state.tab=room?'invite':'profile';state.edit=false;state.other=null;
   state.loading=true;resetNotice();render();
@@ -457,7 +458,7 @@ function install(){
   });
   document.addEventListener('click',e=>{
     const target=e.target.closest?.('[data-social-invite]');
-    if(target){e.preventDefault();open(target.dataset.roomId||'')}
+    if(target){e.preventDefault();open(target.dataset.roomId||'',false,target.dataset.gameId||'zamazka')}
   });
   dialog.addEventListener('click',async e=>{
     const tab=e.target.closest('[data-pws-tab]');
@@ -503,7 +504,7 @@ function install(){
     try{
       const u=await fetch('/pocket-id/me',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json());
       if(!u.user?.complete)return;
-      const gameId=location.pathname.startsWith('/apps/zamazka/')?'zamazka':'';
+      const gameId=location.pathname.startsWith('/apps/zamazka/')?'zamazka':location.pathname.startsWith('/apps/blind-pals/')?'blind-pals':'';
       await api('presence',{gameId});
     }catch{}
   }
@@ -522,5 +523,5 @@ function install(){
   });
   pulse();reload(false).catch(()=>{});
 }
-window.PocketSocial=Object.freeze({open:(room='')=>open(room),openEditor:()=>open('',true)});
+window.PocketSocial=Object.freeze({open:(room='',gameId='zamazka')=>open(room,false,gameId),openEditor:()=>open('',true)});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
