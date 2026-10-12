@@ -1,5 +1,9 @@
 
-const CACHE_PREFIX='lipki-',CACHE_NAME='lipki-v1.0.0',APP_VERSION='1.0.0',RELEASE_DATE='2026-10-12',CACHE_PROTOCOL=2;
+const CACHE_PREFIX='lipki-';
+const CACHE_NAME='lipki-v1.0.0';
+const APP_VERSION='1.0.0';
+const RELEASE_DATE='2026-10-12';
+const CACHE_PROTOCOL=2;
 const RELEASE_NOTES=["Новая физическая 2D-игра: прыжки, прилипающие герои, упругие шары, кнопки, двери и пружины.","12 коротких уровней, одиночная тренировка с сохранением прогресса и интернет-комнаты PocketNet на 2–4 игрока.","Авторский фетровый мир, сенсорное и клавиатурное управление, Pocket ID и offline-first PWA."];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./game-core.js','./render.js',
  './manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
