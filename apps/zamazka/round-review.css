@@ -71,3 +71,6 @@
 }
 @media(max-height:550px){.round-view-dialog .round-viewer{overflow-y:auto}.round-view-window{flex:none;max-width:520px;max-height:270px}.round-review-bottom>span{display:none}}
 @media(prefers-reduced-motion:reduce){.round-art-card{transition:none}}
+
+.round-view-header .round-art-provenance{margin-top:4px;font:500 10px/1.4 system-ui,sans-serif;color:#81694a;max-width:640px}
+@media(max-height:680px){.round-view-header .round-art-provenance{font-size:9px;line-height:1.25}}
