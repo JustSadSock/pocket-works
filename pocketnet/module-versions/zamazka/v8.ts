@@ -10,7 +10,7 @@ type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type Chips=number[];
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[]};
-type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;strokes:Stroke[]};
+type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
 type State={draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
@@ -183,20 +183,31 @@ const module: PocketModule<State>={
      if(a.index===0){
        // A new revision replaces only an INCOMPLETE assembly. The committed
        // draft remains available until every part has passed all checks.
-       assembling={revision:a.revision,kind,parts:a.parts,next:0,strokes:[]};
+       assembling={revision:a.revision,kind,parts:a.parts,next:0,prefix:0,strokes:[]};
        state.draftAssemblies[id]=assembling;
      }
      if(!assembling||assembling.revision!==a.revision||assembling.kind!==kind||
         assembling.parts!==a.parts||assembling.next!==a.index)
        return {state,events:notice(id,'Части рисунка пришли не по порядку. Повторяем сохранение.')};
-     assembling.strokes.push(...strokes);
-     if(assembling.strokes.length>100||assembling.strokes.reduce((n,stroke)=>n+stroke.p.length,0)>2000){
+     // Most saves differ only by their last few strokes. Keep the unchanged
+     // prefix by reference to the committed backup instead of duplicating a
+     // 2000-point painting in the persistent room state for every player.
+     const previous=state.drafts?.[id]||[];
+     for(const stroke of strokes){
+       if(!assembling.strokes.length&&assembling.prefix<previous.length&&
+          JSON.stringify(stroke)===JSON.stringify(previous[assembling.prefix]))assembling.prefix++;
+       else assembling.strokes.push(stroke);
+     }
+     const totalStrokes=assembling.prefix+assembling.strokes.length;
+     const totalPoints=previous.slice(0,assembling.prefix).reduce((n,stroke)=>n+stroke.p.length,0)+
+       assembling.strokes.reduce((n,stroke)=>n+stroke.p.length,0);
+     if(totalStrokes>100||totalPoints>2000){
        delete state.draftAssemblies[id];
        return {state,events:notice(id,'Превышен лимит линий или точек.')};
      }
      assembling.next++;
      if(assembling.next!==assembling.parts)return {state,events:[]};
-     const completed=normalize(assembling.strokes);
+     const completed=normalize([...previous.slice(0,assembling.prefix),...assembling.strokes]);
      delete state.draftAssemblies[id];
      if(!completed)return {state,events:notice(id,'Сохранение повреждено; предыдущая копия сохранена.')};
      state.drafts||={};
