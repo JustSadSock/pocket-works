@@ -10,3 +10,5 @@
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
 .netline{display:block;min-height:15px;font-size:10px;font-weight:900;letter-spacing:.08em;color:#698273}.netline.bad{color:#b05e45}
+
+.workshop-access{border:0;background:transparent;color:#796455;font-size:12px;text-align:left;font-weight:800;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px;min-height:36px;align-self:start;padding:2px 5px}
