@@ -72,18 +72,24 @@ export function renderBuild(canvas,craft,selected){
   c.clearRect(0,0,w,h);
   for(let x=0;x<w;x+=22) line(c,x+.5,0,x+.5,h,'#8e9e9639');
   for(let y=0;y<h;y+=22) line(c,0,y+.5,w,y+.5,'#71877d34');
+  const builder=canvas.closest('.builder');
+  const missionH=builder?.querySelector('.mission-strip')?.getBoundingClientRect().height||76;
+  const benchH=builder?.querySelector('.bench')?.getBoundingClientRect().height||310;
+  const top=missionH+20;
+  const by=Math.max(top+86,h-benchH-24);
   const full=craft.reduce((a,s)=>a+s.tanks*34+28,0)+50;
-  const scale=Math.min(1.02,(h-47)/full,w/145);
-  const x=w*.50,by=h-25;
-  // Assembly gantry is a working alignment reference.
-  rect(c,x-84,20,3,h-28,'#7b908854');
-  rect(c,x+83,20,3,h-28,'#7b908854');
-  for(let y=24;y<h-20;y+=34){
+  const scale=Math.min(1.02,Math.max(.18,(by-top-19)/full),w/145);
+  const x=w*.50;
+  // The gantry is continuous under the instrument controls; the visible
+  // rocket remains in the exposed central opening at every phone height.
+  rect(c,x-84,top-8,3,Math.max(1,by-top+15),'#7b908854');
+  rect(c,x+83,top-8,3,Math.max(1,by-top+15),'#7b908854');
+  for(let y=top-4;y<by+12;y+=34){
     line(c,x-84,y,x-74,y,'#74867e83',1.3);line(c,x+74,y,x+84,y,'#74867e83',1.3);
   }
-  line(c,14,h-13,w-14,h-13,'#667f7488',2);
-  rect(c,x-44,h-22,88,9,'#63756c');
-  rect(c,x-63,h-13,126,7,'#455c53');
+  line(c,14,by+11,w-14,by+11,'#667f7488',2);
+  rect(c,x-44,by+2,88,9,'#63756c');
+  rect(c,x-63,by+11,126,7,'#455c53');
   const rocket=drawRocket(c,x,by,craft,selected,scale,false,0,0);
   const labels=rocket.hits.map((r,i)=>({...r,index:i}));
   return labels;
