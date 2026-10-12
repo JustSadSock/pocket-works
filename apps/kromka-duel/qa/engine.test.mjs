@@ -1,52 +1,76 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {startFighters,resolveExchange,neutral,actionOf,botChoice,commitment,digest,bladeOf,CX,CY,R} from '../engine.js';
+import {FIELD,STEP,NO_INPUT,createDuel,tick,inputOf,spawn,tip,aiInput,copyDuel} from '../engine.js';
 
-test('idle is inert: no automatic hit or bind',()=>{
-  const s=startFighters(),out=resolveExchange(s,[neutral(),neutral()]);
-  assert.equal(out.hit,null);
-  assert.equal(out.contact,null);
-  assert.deepEqual(out.before,out.after);
-  assert.equal(out.frames.length,19);
+const empty=()=>({...NO_INPUT});
+test('input validation rejects impossible movement and preserves idempotent canonical controls',()=>{
+ assert.equal(inputOf({mx:2,my:0,ax:0,ay:1}),null);
+ assert.equal(inputOf({mx:Infinity,my:0,ax:0,ay:1}),null);
+ assert.equal(inputOf({mx:'1',my:0,ax:0,ay:1}),null);
+ for(let k=0;k<300;k++){
+  const a=inputOf({mx:Math.sin(k*.371),my:Math.cos(k*.25),ax:Math.cos(k*.17),ay:Math.sin(k*.79)});
+  assert.deepEqual(inputOf(a),a);
+ }
 });
-
-test('input validation rejects non-numbers, overlarge values and non-finite controls',()=>{
-  assert.equal(actionOf({mx:Infinity,my:0,blade:0}),null);
-  assert.equal(actionOf({mx:0,my:0,blade:2}),null);
-  assert.equal(actionOf({mx:'1',my:0,blade:0}),null);
-  assert.ok(actionOf({mx:1,my:1,blade:.5}));
+test('idle opponents do not automatically hit each other',()=>{
+ const s=createDuel();
+ for(let i=0;i<100;i++)tick(s,[empty(),{...empty(),ay:1}],STEP);
+ assert.deepEqual(s.scores,[0,0]);
+ assert.equal(s.event,null);
+ assert.equal(s.phase,'battle');
 });
-
-test('simulator is deterministic for identical actions',()=>{
-  const actions=[{mx:.3,my:-.61,blade:-.78},{mx:-.1,my:.2,blade:.4}];
-  const a=resolveExchange(startFighters(),actions);
-  const b=resolveExchange(startFighters(),actions);
-  assert.deepEqual(a,b);
-  assert.ok(a.frames.length>=2&&a.frames.length<=19);
+function direct(guard){
+ const s=createDuel();
+ s.fighters[0].x=180;s.fighters[0].y=319;s.fighters[0].a=-Math.PI/2;
+ s.fighters[1].x=180;s.fighters[1].y=258;s.fighters[1].a=Math.PI/2;
+ for(let i=0;i<16;i++)tick(s,[
+  {...empty(),jab:i===0},
+  {...empty(),ay:1,parry:guard&&i===0}
+ ],STEP);
+ return s;
+}
+test('an aimed rapier lands one point, without random damage',()=>{
+ const s=direct(false);
+ assert.deepEqual(s.scores,[1,0]);
+ assert.equal(s.event.type,'point');
+ assert.equal(s.event.who,0);
 });
-
-test('thousand exchanges preserve bounded positions and finite sword segments',()=>{
-  let fighters=startFighters();
-  for(let i=0;i<1000;i++){
-    const left=actionOf({mx:Math.sin(i*.37),my:Math.cos(i*.41),blade:Math.sin(i*.51)});
-    const right=botChoice(fighters,i),out=resolveExchange(fighters,[left,right]);
-    for(const f of out.after){
-      assert.ok(Number.isFinite(f.x)&&Number.isFinite(f.y)&&Number.isFinite(f.a));
-      assert.ok(Math.hypot(f.x-CX,f.y-CY)<=R);
-      const blade=bladeOf(f);
-      assert.ok(Object.values(blade).every(Number.isFinite));
-    }
-    assert.ok(out.hit===null||out.hit===0||out.hit===1||out.hit==='double');
-    fighters=out.hit===null?out.after:startFighters();
+test('timely facing parry intercepts a thrust and creates a riposte window',()=>{
+ const s=direct(true);
+ assert.deepEqual(s.scores,[0,0]);
+ assert.equal(s.event.type,'parry');
+ assert.ok(s.fighters[1].riposte>0);
+ assert.ok(s.fighters[0].stagger>0);
+});
+test('side-step dash grants brief evasion and has cooldown',()=>{
+ const s=createDuel();
+ tick(s,[{...empty(),mx:1,dash:true},{...empty(),ay:1}],STEP);
+ assert.ok(s.fighters[0].dash>0);
+ assert.ok(s.fighters[0].dashCd>.5);
+ assert.ok(s.fighters[0].immunity>0);
+ const cd=s.fighters[0].dashCd;
+ tick(s,[{...empty(),mx:1,dash:true},{...empty(),ay:1}],STEP);
+ assert.ok(s.fighters[0].dashCd<cd);
+});
+test('10000 deterministic frames remain finite and constrained to the oval arena',()=>{
+ const s=createDuel();s.roundTime=999;
+ for(let i=0;i<10000;i++){
+  const actor=inputOf({mx:Math.sin(i*.137),my:Math.cos(i*.3),ax:Math.sin(i*.08),ay:-Math.cos(i*.08),
+    jab:i%33===0,parry:i%117===0,dash:i%142===0});
+  const rival=aiInput(s,1);
+  tick(s,[actor,rival],STEP);
+  for(const f of s.fighters){
+   assert.ok([f.x,f.y,f.a,f.vx,f.vy].every(Number.isFinite));
+   const v=Math.hypot((f.x-FIELD.cx)/FIELD.rx,(f.y-FIELD.cy)/FIELD.ry);
+   assert.ok(v<=.914);
+   assert.ok(Object.values(tip(f)).every(Number.isFinite));
   }
+  if(s.phase==='finished')break;
+ }
 });
-
-test('commitment includes round, player, action and secret nonce',async()=>{
-  const a={mx:0,my:1,blade:-.5},nonce='9af93111-eeee-4455-aaaa-bbbbccccdddd';
-  const hash=await digest(commitment(4,0,a,nonce));
-  assert.match(hash,/^[0-9a-f]{64}$/);
-  assert.notEqual(hash,await digest(commitment(4,1,a,nonce)));
-  assert.notEqual(hash,await digest(commitment(5,0,a,nonce)));
-  assert.notEqual(hash,await digest(commitment(4,0,{...a,blade:.5},nonce)));
-  assert.notEqual(hash,await digest(commitment(4,0,a,'21d4dd99-eeee-4455-aaaa-bbbbccccdddd')));
+test('no rendering input can mutate an authoritative duel snapshot',()=>{
+ const s=createDuel(),c=copyDuel(s);
+ c.fighters[0].x+=80;c.scores[0]++;
+ assert.notDeepEqual(s,c);
+ assert.equal(s.scores[0],0);
 });

@@ -1,6 +1,6 @@
-const VERSION='1.0.0',CACHE='kromka-duel-v1.0.0',PREFIX='kromka-duel-',PROTOCOL=2;
-const NOTES=['Топ-даун дуэль с геометрическими клинками и отражениями воды.','Дуэли двух игроков через PocketNet с фиксацией намерений.','Локальная тренировка и повторы ударов.'];
-const FILES=['./','./index.html','./app.js','./engine.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/update-manager.js','../../shared/capabilities/net.js'];
+const VERSION='2.0.0',CACHE='kromka-duel-v2.0.0',PREFIX='kromka-duel-',PROTOCOL=2;
+const NOTES=['Поединки в реальном времени вместо пошаговых команд.','Быстрые выпады рапирой, точные парирования, рывки и контратаки.','PocketNet v2 с локальным предсказанием, тренировка и новая арена.'];
+const FILES=['./','./index.html','./app.js','./engine.js','./art.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/update-manager.js','../../shared/capabilities/net.js'];
 const SCOPE=new URL('./',self.registration.scope),MAP=new Map(FILES.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fresh(value){const u=new URL(value instanceof Request?value.url:value,SCOPE);u.searchParams.set('__pw_build',VERSION+'-p'+PROTOCOL);const r=await fetch(u,{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw Error('offline');return r;}
 self.addEventListener('install',e=>e.waitUntil((async()=>{const cache=await caches.open(CACHE);await Promise.all([...new Set(MAP.values())].map(async u=>cache.put(u,await fresh(u))));})()));
