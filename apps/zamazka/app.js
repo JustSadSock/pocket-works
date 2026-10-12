@@ -144,6 +144,7 @@ function submissionToken(ass,round){return [roomId,round,ass.art,ass.variation].
 function confirmSubmission(art,round){
  if(!pendingSubmit||pendingSubmit.round!==round||pendingSubmit.art!==art||pendingSubmit.room!==roomId)return;
  const committed=pendingSubmit;pendingSubmit=null;persistPending();autoSubmitted=committed.token;
+ screen.querySelector('.restore')?.classList.remove('is-submitting');
  const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
  draftIndicator('Принято сервером ✓');sound(700);
 }
@@ -156,6 +157,7 @@ function attemptSubmission(force=false){
    {type:'submit_chunk',round:p.round,art:p.art,variation:p.variation,strokes:p.strokes});
   p.revision=result.revision;p.sentAt=Date.now();p.attempts=(p.attempts||0)+1;persistPending();
   const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
+  screen.querySelector('.restore')?.classList.add('is-submitting');
   draftIndicator('Передаём работу…');
  }catch{
   p.sentAt=0;persistPending();
@@ -334,7 +336,7 @@ function drawing(local=false){
   const v=local?practice:view,ass=v.mine;
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
-  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art))+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 100</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art))+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div><div class="picker-preview" id="pickerPreview" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 100</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
   editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 100';if(n>=0)queueDraft()}});
   if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
   const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Линий: '+editor.strokes.length+' / 100';
@@ -453,8 +455,17 @@ function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>
 function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;if(p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else preview(true)}catch{newPractice()}}
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=Date.now()+160000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
+let previousVisualPhase='',lastPhaseCue='';
 function renderView(){
  if(!view)return;
+ const phaseToken=view.round+':'+view.phase;
+ if(previousVisualPhase&&previousVisualPhase!==phaseToken&&lastPhaseCue!==phaseToken){
+   lastPhaseCue=phaseToken;
+   if(view.phase==='voting')sound(560);
+   else if(view.phase==='reveal')sound(740);
+   else if(view.phase==='round-review')sound(490);
+ }
+ previousVisualPhase=phaseToken;
  if(view.phase==='drawing'&&view.done?.includes(me?.id)){
    if(view.mine)confirmSubmission(view.mine.art,view.round);
    if(editor)editor.clearDraft();
@@ -649,11 +660,20 @@ screen.addEventListener('click',e=>{
  else if(action==='continue'&&view?.phase==='round-review'&&me?.id===view.host){b.disabled=true;try{net?.sendGame({type:'continue'})}catch{b.disabled=false;notify('Нет соединения с комнатой')}}
  else if(action==='next')net?.sendGame({type:'next'});
 });
+let lastClockCue='';
 function tick(){
  if(practice&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
  autoFinishOnDeadline();
  const v=practice||view,clock=document.querySelector('#clock');
- if(clock&&v?.deadline){const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');clock.classList.toggle('urgent',s<=10)}
+ if(clock&&v?.deadline){
+  const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));
+  clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  clock.classList.toggle('urgent',s<=10);
+  if(page==='drawing'&&s<=10&&s>0){
+    const cue=(practice?'practice':roomId)+':'+v.round+':'+(s<=3?'final':'ten');
+    if((s===10||s===3)&&cue!==lastClockCue){lastClockCue=cue;sound(s===3?670:450)}
+  }
+}
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}}
 }
 let museumSwipe=null;
