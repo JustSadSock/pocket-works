@@ -6,7 +6,7 @@ import {LEVELS,initialize,simulate,getView,resetLevel} from './physics.js';
 import {draw} from './art.js';
 import {readSoloControls,readDuoControls,isGameplayCode,isTypingTarget} from './desktop-controls.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЛИПКИ',version:'1.2.0',cachePrefix: 'lipki-',storageNamespace: 'pocket-works:lipki'});
+createWorkshopMode({appName:'ЛИПКИ',version:'1.2.1',cachePrefix: 'lipki-',storageNamespace: 'pocket-works:lipki'});
 const $=id=>document.getElementById(id),ORIGIN=location.origin+'/pocketnet',PREFIX='pocket-works:lipki:';
 const store=(k,v)=>{try{localStorage.setItem(PREFIX+k,String(v))}catch{}};
 const read=(k,d='')=>{try{return localStorage.getItem(PREFIX+k)??d}catch{return d}};

@@ -48,10 +48,18 @@ function starBadge(c,s,on,t){
 function platform(c,r,index){textile(c,r.x,r.y,r.w,r.h,['#8ba8a2','#be998f','#b1a8ca','#bca58b'][index%4],index+3);}
 function spring(c,s,time){
  c.save();c.translate(s.x,s.y);
+ // The coil and its crown are one complete drawing operation.
+ const flex=Math.sin(time*5+s.x*.013)*1.2;
  fill(c,-43,-8,86,10,5,'#bc6d62');
- c.strokeStyle='#536e6a';c.lineWidth=6;c.lineJoin='round';c.beginPath();c.moveTo(-27,-8);
- for(let i=0;i<7;i++)c.lineTo(-24+i*8,-22+(i%2?0:-15));c.lineTo(-20+i*8,-8);c.stroke();
- fill(c,-39,-27,78,10,6,'#dfad5e');stitch(c,-32,-22,32,-22);c.restore();
+ c.strokeStyle='#536e6a';c.lineWidth=5;c.lineJoin='round';c.lineCap='round';
+ c.beginPath();c.moveTo(-29,-9);
+ for(let i=0;i<7;i++){
+  c.lineTo(-24+i*8,-24+(i%2?1:-13)+flex);
+ }
+ c.lineTo(29,-9);c.stroke();
+ fill(c,-39,-31+flex,78,10,6,'#dfad5e');
+ stitch(c,-32,-26+flex,32,-26+flex);
+ c.restore();
 }
 function ball(c,b,t){
  c.save();c.translate(b.x,b.y);c.rotate(b.x*.04);
