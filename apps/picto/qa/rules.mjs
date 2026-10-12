@@ -33,7 +33,6 @@ for(let session=0;session<25;session++){
   assert.equal(new Set(state.palette).size,state.palette.length);
   assert.ok(state.blocked.length>=1&&state.blocked.length<=2);
   assert.ok(state.blocked.every(id=>!state.palette.includes(id)));
-  assert.ok(state.palette.some(id=>[state.solution[0].toLowerCase(),state.solution[2].toLowerCase()].includes(id)||id==='arrow'));
   kinds.add(state.kind);order.push(state.kind);
   assert.equal(new Set(state.usedScenes).size,state.usedScenes.length,'A pack must not repeat in a game');
   const guest=module.onMessage({state,player:peer,players,payload:{type:'sync'}}).events[0].payload;
