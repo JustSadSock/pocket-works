@@ -1,30 +1,35 @@
 {
   "schemaVersion": 1,
   "slug": "styk",
-  "name": "СТЫК",
-  "shortName": "Стык",
-  "description": "Средневековая тактика живого фронта: гни строй, обходи фланги и ломай мораль врага.",
+  "name": "СТЫК · Живой фронт",
+  "shortName": "СТЫК",
+  "description": "Средневековая тактика без сетки: растягивайте линии строя, отдавайте два приказа за ход и ломайте фронт соперника в живых WEGO-сражениях.",
   "version": "1.0.0",
   "releaseDate": "2026-10-12",
-  "releaseDateTime": "2026-10-12T21:30:00+03:00",
+  "releaseDateTime": "2026-10-12T21:40:00+03:00",
   "changelog": [
-    "Первый выпуск: три боя, пластичные формирования, приказы WEGO, мораль, ИИ и сохранения."
+    "Новая тактическая игра: три сражения кампании против самостоятельного противника.",
+    "Скрытое планирование и одновременные приказы, изменение ширины и угла живых построений, мораль и цепная паника.",
+    "Авторский 2D-рендер средневекового поля, офлайн-режим, сохранение и управление для сенсорного экрана."
   ],
   "status": "active",
   "preset": "game-2d",
-  "accent": "#ad7143",
-  "backgroundColor": "#e4dbc4",
-  "themeColor": "#283a31",
+  "runtime": "quick",
+  "accent": "#ba9769",
+  "backgroundColor": "#27362e",
+  "themeColor": "#242e28",
   "orientation": "portrait",
   "cacheName": "styk-v1.0.0",
   "storageNamespace": "pocket-works:styk",
-  "runtime": "quick",
   "tags": [
     "game",
     "strategy",
-    "medieval",
     "tactics",
-    "canvas"
+    "medieval",
+    "WEGO",
+    "canvas",
+    "AI",
+    "offline"
   ],
-  "order": 18
+  "order": 320
 }

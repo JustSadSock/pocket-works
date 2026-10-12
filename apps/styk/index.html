@@ -1,1 +1,102 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#283a31"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="СТЫК"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css"><title>СТЫК — живой фронт</title></head><body><main class="app-shell" data-app-shell data-fullscreen-app><header class="top" data-ui><a href="../../" data-app-control>← Pocket Works</a><strong>СТЫК <small>живой фронт</small></strong><button id="menu" aria-label="Меню">☰</button></header><div class="score" data-ui><span id="ally">СВОИ · 100</span><span id="turn">ХОД 1</span><span id="enemy">ВРАГ · 100</span></div><section class="battlefield"><canvas id="field" data-gesture-surface data-block-callout aria-label="Поле боя. Выберите синий отряд. Перетащите край строя для изменения ширины или центр для передвижения."></canvas><div class="toast" id="toast" role="status"></div><div class="playback" id="playback"><span>СРАЖЕНИЕ</span><div class="track"><i id="progress"></i></div></div></section><div class="desk" data-ui><div class="unit"><span id="unitIcon">⚑</span><div><strong id="unitName">Выбери свой отряд</strong><small id="unitStats">Нажми на синих солдат</small></div><span id="points">2 приказа</span></div><div class="actions" id="actions"><button data-mode="move" class="active">↗ <span>Манёвр</span></button><button data-mode="shape">↔ <span>Строй</span></button><button data-mode="charge">⚔ <span>Натиск</span></button><button data-mode="hold">▣ <span>Держать</span></button></div><div class="bottom"><span id="hint">Выбери отряд, затем протяни его линию</span><button id="next">ИСПОЛНИТЬ <b>›</b></button></div></div><div class="overlay" id="overlay"><article class="panel"><div class="emblem"><svg viewBox="0 0 270 145"><path d="M0 133 45 76 88 117 152 48 199 97 270 41V145H0" fill="#839183"/><path d="M0 145 72 104 148 137 219 87 270 120V145" fill="#536f61"/><path d="M30 112Q78 76 119 108" stroke="#f4dfb2" stroke-width="7" fill="none" stroke-dasharray="5 8"/><path d="M141 112Q195 60 244 105" stroke="#a94b3d" stroke-width="7" fill="none" stroke-dasharray="5 8"/><path d="M129 28v93" stroke="#322f27" stroke-width="5"/><path d="M131 30 191 48 150 78 131 68" fill="#b66a48"/></svg></div><div class="eyebrow" id="eyebrow">ТАКТИКА ЖИВОГО ФРОНТА</div><h1 id="title">СТЫК</h1><p id="description">Не считай убитых — ломай строй. Выбери отряд, перетащи его центр для манёвра или край, чтобы растянуть фронт. Оба войска исполняют приказы одновременно.</p><button id="primary">НАЧАТЬ БОЙ →</button><button id="secondary" class="quiet">Вернуться в Pocket Works</button></article></div></main><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СТЫК" data-app-version="1.0.0"></script><script type="module" src="./app.js"></script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#242e28">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>СТЫК — Тактика живого фронта</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="game-2d">
+<main id="app" data-app-shell>
+ <header class="topbar">
+  <a href="../../" class="exit" aria-label="Назад в Pocket Works" data-app-control>
+   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7M8 12h12"/></svg>
+  </a>
+  <div class="brand"><span class="brand-symbol"><svg viewBox="0 0 34 24" aria-hidden="true"><path d="M2 19 15 5l7 6-13 12M31 5 18 19l-6-5L25 2"/></svg></span><strong>СТЫК</strong><span class="brand-caption">ЖИВОЙ ФРОНТ</span></div>
+  <button id="menuBtn" class="icon-btn" type="button" aria-label="Меню">
+   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+ </header>
+ <div class="workspace">
+  <section class="battle-area" aria-label="Поле сражения">
+    <canvas id="field" aria-label="Поле боя с отрядами. Выберите синий стяг, коснитесь места назначения или перетащите концы линии."></canvas>
+    <div class="hud" aria-live="polite">
+      <div class="hud-row">
+       <div class="banner-score friendly"><div class="banner-top"><span>ВАШИ</span><strong id="friend-men">0</strong></div><div class="score-track"><div id="friend-progress"></div></div></div>
+       <div class="battle-status"><span id="phase">ПРИКАЗЫ</span><span id="round">ХОД 01</span></div>
+       <div class="banner-score hostile"><div class="banner-top"><strong id="enemy-men">0</strong><span>ВРАГ</span></div><div class="score-track"><div id="enemy-progress"></div></div></div>
+      </div>
+      <div class="scenario-label" id="scenario">У БРОДА</div>
+    </div>
+    <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+    <button id="speed" class="speed" type="button" hidden aria-label="Скорость воспроизведения">1×</button>
+  </section>
+  <aside class="dock inactive" id="dock" aria-label="Управление армией">
+   <div class="order-meta"><span>ВАШ ОТРЯД</span><span class="order-count">ПРИКАЗЫ <strong id="commands">2 / 2</strong></span></div>
+   <div class="unit-row"><span class="unit-color" id="unit-color"></span><div class="unit-title"><strong id="unit-name">Выберите отряд</strong><span id="unit-details">Коснитесь своего знамени</span></div></div>
+   <div class="stance-row" role="group" aria-label="Поведение отряда">
+    <button type="button" data-stance="hold"><svg viewBox="0 0 24 24"><path d="M6 5v14M18 5v14M6 12h12"/></svg><span>Стоять</span></button>
+    <button type="button" data-stance="advance"><svg viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></svg><span>Вперёд</span></button>
+    <button type="button" data-stance="charge"><svg viewBox="0 0 24 24"><path d="M3 20 20 3M10 3h10v10M4 9l6 6"/></svg><span>Натиск</span></button>
+    <button type="button" data-stance="withdraw"><svg viewBox="0 0 24 24"><path d="M12 4v15m-6-6 6 6 6-6"/></svg><span>Отход</span></button>
+   </div>
+   <div class="action-row">
+    <div class="command-hint" id="command-help">Коснитесь поля для приказа</div>
+    <button id="execute" class="execute" type="button"><span id="play-label">Выполнить приказы</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 10 7-10 7z"/></svg></button>
+   </div>
+  </aside>
+ </div>
+</main>
+<section id="home" class="veil" aria-label="Главное меню">
+ <a class="home-back" href="../../" aria-label="В библиотеку Pocket Works"><svg viewBox="0 0 24 24"><path d="m14.5 5-7 7 7 7M8 12h12"/></svg><span>Библиотека</span></a>
+ <div class="veil-card home-card">
+  <div class="crest"><svg viewBox="0 0 64 80" aria-hidden="true"><path d="M7 8h50v34c0 16-12 24-25 31C19 66 7 58 7 42Z"/><path d="M16 24h32M32 15v44M22 49l10-10 10 10"/></svg></div>
+  <p class="kicker">ТАКТИКА ЖИВОГО ФРОНТА</p>
+  <h1>СТЫК</h1>
+  <p class="home-intro">Два приказа на ход. Сохраняйте свои линии — ломайте чужие.</p>
+  <div class="chapter-head"><span>КАМПАНИЯ</span><span>3 СРАЖЕНИЯ</span></div>
+  <div id="chapters" class="chapters"></div>
+  <div class="home-current"><strong id="home-title">У БРОДА</strong><span id="home-subtitle">Переправа через Нарву</span></div>
+  <button id="start" class="big-action" type="button">Начать сражение</button>
+  <p class="home-help">Коснитесь синего отряда, выберите место и потяните края строя. Затем выполните ход.</p>
+ </div>
+</section>
+<section id="pause" class="veil" aria-label="Пауза" hidden>
+ <div class="veil-card narrow">
+  <p class="kicker">ПЕРЕДЫШКА</p><h2>Полевой совет</h2>
+  <p class="modal-copy">Приказы и потери сохранены.</p>
+  <button id="resume" class="big-action" type="button">Вернуться в бой</button>
+  <div class="menu-actions">
+   <button id="audio" type="button">Звук: вкл.</button>
+   <button id="restart" type="button">Переиграть бой</button>
+   <button id="back-campaign" type="button">К кампании</button>
+  </div>
+ </div>
+</section>
+<section id="result" class="veil" aria-label="Результат сражения" hidden>
+ <div class="veil-card narrow outcome-card">
+  <p class="kicker" id="result-kicker">ПОБЕДА</p><h2 id="result-title">Фронт устоял</h2>
+  <p class="modal-copy" id="result-copy"></p>
+  <p class="outcome-score" id="result-score"></p>
+  <button id="next" class="big-action" type="button">Следующее сражение</button>
+  <button id="result-home" class="sub-action" type="button">К кампании</button>
+ </div>
+</section>
+<section id="restart-confirm" class="veil confirm-veil" aria-label="Подтверждение перезапуска" hidden>
+ <div class="veil-card narrow"><p class="kicker">НОВЫЙ БОЙ</p><h2>Сбросить сражение?</h2><p class="modal-copy">Все приказы и потери текущего боя будут сброшены.</p>
+ <div class="confirm-actions"><button id="confirm-no" type="button">Отмена</button><button id="confirm-yes" type="button">Сбросить</button></div></div>
+</section>
+<section id="about" class="veil confirm-veil" aria-label="Как играть" hidden>
+ <div class="veil-card narrow"><p class="kicker">ПАМЯТКА</p><h2>СТЫК</h2><p class="modal-copy">Выделите синий отряд. Коснитесь поля, чтобы переместить линию. Перетащите один из её концов, чтобы изменить ширину и угол. За ход можно изменить приказы двум отрядам. Оба войска действуют одновременно; узкие плотные линии устойчивее, фланговые удары вызывают панику.</p><button id="about-close" class="big-action" type="button">Понятно</button></div>
+</section>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СТЫК" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
