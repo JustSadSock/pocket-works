@@ -16,3 +16,13 @@
 .builder .bay-scale{top:calc(var(--mission-h) + 35px)}
 .builder .bay-help{display:none}
 @media(max-height:720px){.builder{--mission-h:60px}.builder .bench{max-height:57%}}
+
+.top-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.top-actions .icon-button{width:41px;height:44px}
+@media(max-width:360px){
+  .topbar{padding-left:9px;padding-right:9px;gap:4px}
+  .back{min-width:75px;font-size:10px}
+  .brand strong{font-size:14px;letter-spacing:.12em}
+  .brand small{font-size:7px;letter-spacing:.1em}
+  .top-actions .icon-button{width:37px}
+}
