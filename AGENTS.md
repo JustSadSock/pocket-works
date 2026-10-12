@@ -140,6 +140,20 @@ Before coding, define internally:
 
 Each app must have its own visual language without sacrificing usability.
 
+## 8a. Focus-first interface contract
+
+Every PocketWorks interface (the launcher and new or revised apps) must be understandable without training. Rich visual materials and deep game systems are desirable; competing instructional text and simultaneous choices are not.
+
+- Make the **next meaningful action** visually dominant. A game stage should show controls for that stage, not the last/next stage's controls.
+- Remove atmospheric labels, repeated explanatory paragraphs, decorative indices and microcopy that add no functional information. Preserve concise rules, safety warnings, errors, progress and real feedback.
+- A newcomer should identify the primary action within five seconds. Intro rules should be taught through the first interaction when feasible; never hide a critical rule behind an undocumented gesture.
+- Every identical interaction should mean the same thing across launcher surfaces: tap app art to open the app, use a separate explicit Details control.
+- Prefer contextual disclosures for rarely needed controls and technical metadata, but do not bury frequent actions beneath more than two steps. Make disclosures visible, keyboard accessible, reversible and usable on touch screens.
+- On portrait phones, avoid vertical scrolling on a single-purpose home, lobby or screen unless content actually requires it. Libraries, collections, long records and image galleries are intentionally scrollable. Never clip controls just to remove scroll.
+- Reserve attention-grabbing badges for **real** actionable status (e.g. new requests, pending invitations, updates). Do not animate or repeatedly announce success as if it were an error.
+- During reviews, ask: what can be removed without affecting comprehension? What is competing with the user's next action? Can an unfamiliar player navigate this without being told what to press?
+- This is an information hierarchy contract, **not** a generic sparse UI template: preserve each app's distinct art direction, tactility, motion and physical metaphor.
+
 ## 9. Interaction, motion and mobile ergonomics
 
 - Design mobile-first with `100dvh`, `viewport-fit=cover` and safe-area insets.
