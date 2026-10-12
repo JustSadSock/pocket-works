@@ -95,7 +95,7 @@ export function tick(s,raw,dt=STEP){
   for(const k of ['attackCd','parry','parryCd','dash','dashCd','stagger','riposte','immunity','slash','shieldFlash','clashCd'])f[k]=Math.max(0,f[k]-dt);
   if(f.jab>0)f.jab=Math.max(0,f.jab-dt);
   f.guard=v.guard;
-  f.bladeKick=(f.bladeKick||0)*Math.exp(-dt*12);
+  f.bladeKick=(f.bladeKick||0)*Math.exp(-dt*4.2);
   if(length(v.ax,v.ay)>.14){
    const aim=angle(v.ax,v.ay);
    const turn=clamp(delta(f.a,aim),-18*dt,18*dt);
@@ -156,11 +156,14 @@ export function tick(s,raw,dt=STEP){
     pointSegment(current.bx,current.by,other.ax,other.ay,other.bx,other.by)<5.4||
     pointSegment(previous.bx,previous.by,other.ax,other.ay,other.bx,other.by)<5.4;
   const active=attacker.jab>.065&&attacker.jab<.225&&!attacker.hit&&attacker.stagger<=0;
-  if(clash&&attacker.clashCd<=0&&defender.clashCd<=0){
+  if(clash&&attacker.clashCd<=0&&defender.clashCd<=0&&
+   (active||defender.jab>.02||length(attacker.vx,attacker.vy)>75)){
    const swing=delta(attacker.a,defender.a);
-   attacker.bladeKick=clamp(attacker.bladeKick+(Math.sin(swing)>=0?.22:-.22),-.52,.52);
-   defender.bladeKick=clamp(defender.bladeKick-(Math.sin(swing)>=0?.18:-.18),-.52,.52);
-   attacker.clashCd=.17;defender.clashCd=.17;
+   const beat=active&&defender.jab<=0&&defender.parry<=0&&!defender.guard;
+   const sign=Math.sin(swing)>=0?1:-1;
+   attacker.bladeKick=clamp(attacker.bladeKick+sign*(beat?-.08:.17),-.68,.68);
+   defender.bladeKick=clamp(defender.bladeKick-sign*(beat?.85:.2),-.96,.96);
+   attacker.clashCd=.2;defender.clashCd=.2;
    event(s,'bind',i,(current.bx+other.bx)/2,(current.by+other.by)/2);
   }
   if(!active)continue;
@@ -176,7 +179,7 @@ export function tick(s,raw,dt=STEP){
   const shield=shieldOf(defender);
   const shieldContact=front<1.36&&(pointSegment(shield.x,shield.y,previous.bx,previous.by,current.bx,current.by)<shield.r+3||
    pointSegment(shield.x,shield.y,current.ax,current.ay,current.bx,current.by)<shield.r+3);
-  const bladeContact=clash&&front<1.75;
+  const bladeContact=clash&&front<1.75&&(defender.guard||defender.parry>0||defender.jab>.03);
   const protectedBy=timedParry?'parry':shieldContact?'shield':bladeContact?'bind':null;
   if(protectedBy){
    attacker.hit=true;attacker.jab=0;attacker.stagger=protectedBy==='parry'?.26:.13;
