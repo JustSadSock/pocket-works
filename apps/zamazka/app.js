@@ -11,7 +11,7 @@ import {createMuseumMotion} from './museum-motion.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.12.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.12.2',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -178,7 +178,7 @@ function setup(mode,error='',roomValue=invitedRoom){
   '<div class="section-label">БЮРО РЕСТАВРАЦИИ / '+(creating?'НОВАЯ ВЫСТАВКА':'ПРИГЛАШЕНИЕ')+'</div>'+
   '<div class="entry-heading"><div><h2>'+(creating?'Открыть выставку':'Войти на выставку')+'</h2><p class="hint">'+(creating?'Собери реставраторов и начни собственную выставку.':'Введи код друга или открой присланную ссылку.')+'</p></div><div class="entry-stamp" aria-hidden="true">З<br>М</div></div>'+
   '<div class="entry-identity"><button class="identity-seal-button" data-action="emblem" aria-label="Нарисовать свой знак">'+mySealMarkup()+'<span>✎</span></button><div class="identity-label"><strong>Личный знак</strong><small>Нарисовать или изменить</small></div></div>'+ '<label class="field" for="who">Твой ник</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Имя реставратора" value="'+esc(gameName())+'" '+(isPocketMember()?'readonly aria-readonly="true"':'')+'>'+
-   '<p class="hint pw-room-identity">'+(isPocketMember()?pocketAvatarMarkup(pocketIdentity.avatar,{small:true})+' Ник подтверждён Pocket ID · <a href="'+pocketIdProfileUrl+'">Изменить профиль</a>':'Гостевой режим · <a href="'+pocketIdProfileUrl+'">Войти через Pocket ID</a>')+'</p>'+
+   '<p class="hint pw-room-identity">'+(isPocketMember()?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' Ник подтверждён Pocket ID · <a href="'+pocketIdProfileUrl+'">Изменить профиль</a>':'Гостевой режим · <a href="'+pocketIdProfileUrl+'">Войти через Pocket ID</a>')+'</p>'+
   (creating?'<div class="entry-guide"><span class="entry-step">01</span><span>Создай комнату и получи код из 8 символов.</span></div><div class="entry-guide"><span class="entry-step">02</span><span>Отправь код друзьям. Каждый войдёт со своим ником.</span></div>':
    '<label class="field" for="room">Код комнаты или ссылка</label><input class="input room-entry-input" id="room" maxlength="250" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Например, A3F92C10" value="'+esc(roomValue)+'"><p class="hint">Восемь символов. Ссылку тоже можно вставить целиком.</p>')+
   (error?'<div class="notice entry-error" role="alert">'+esc(error)+'</div>':'')+
@@ -515,7 +515,7 @@ async function refreshPocketBadge(){
   const field=screen.querySelector('#who');
   if(field){field.value=gameName();field.readOnly=isPocketMember();}
   const note=screen.querySelector('.pw-room-identity');
-  if(note)note.innerHTML=isPocketMember()?pocketAvatarMarkup(pocketIdentity.avatar,{small:true})+' Ник подтверждён Pocket ID · <a href="'+pocketIdProfileUrl+'">Изменить профиль</a>':'Гостевой режим · <a href="'+pocketIdProfileUrl+'">Войти через Pocket ID</a>';
+  if(note)note.innerHTML=isPocketMember()?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' Ник подтверждён Pocket ID · <a href="'+pocketIdProfileUrl+'">Изменить профиль</a>':'Гостевой режим · <a href="'+pocketIdProfileUrl+'">Войти через Pocket ID</a>';
  }
 }
 zamazkaCloud=createZamazkaCloud({
