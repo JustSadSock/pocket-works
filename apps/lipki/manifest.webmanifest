@@ -1,0 +1,25 @@
+{
+  "id": "/apps/lipki/",
+  "name": "ЛИПКИ — кооперативные липучки",
+  "short_name": "ЛИПКИ",
+  "description": "Мягкий физический платформер про живые липучки. Кооператив PocketNet на 2–4 игрока, 12 уровней и тренировка.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#ecdcc1",
+  "theme_color": "#ecdcc1",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
