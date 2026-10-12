@@ -11,7 +11,11 @@ const APP_SHELL=[
   './','./index.html','./app.config.json','./app.js','./physics.js','./renderer.js',
   './styles.css','./manifest.webmanifest','./icons/icon.svg',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
-  '../../shared/update-manager.css','../../shared/update-manager.js'
+  '../../shared/update-manager.css','../../shared/update-manager.js',
+  '../../shared/capabilities/motion.js','../../shared/capabilities/storage.js',
+  '../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js',
+  '../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js',
+  '../../shared/workshop-mode.js','../../shared/workshop-mode.css'
 ];
 const SCOPE=new URL('./',self.registration.scope);
 const KEYS=new Map(APP_SHELL.map(path=>{const u=new URL(path,SCOPE);return [u.pathname,u.href]}));
