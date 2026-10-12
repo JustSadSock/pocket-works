@@ -119,3 +119,12 @@ PocketNet разрешает короткий код по первым вось�
 ## Stage-first UI · 1.12.5
 
 Mobile home fits within the visible app viewport without forcing vertical scrolling on a normal-sized portrait screen; gallery art and one primary action lead the composition. Lobby keeps room code, invitation buttons, players and synchronized drawing without repeat setup explanations. Preview, drawing, voting, waiting and reveal each show one short actionable instruction instead of duplicative atmospheric microcopy. Waiting roster is an accessible optional disclosure; live ready counts and player state still update while it is closed. Gallery, painting and detailed result phases retain scrolling when the images or controls require space. No scoring, networking, canvas state or Pocket ID contracts changed.
+
+
+## 1.13.0 — Лёгкая рисовалка
+
+- Штрихи никогда не деформируются при превышении 45 точек: непрерывное движение разделяется на сегменты без ретроактивной упрощающей обработки. Отмена и повтор работают на уровне жеста, а в PocketNet уходят прежние валидные сегменты (не более 72 сегментов/1600 точек).
+- Курсор-окружность показывает реальный диаметр выбранной кисти с учётом масштаба — при наведении мыши и при касании; заливка, панорама и пипетка не маскируются кругом кисти.
+- Мобильная панель короче, холст заметнее. Иконки инструментов нарисованы отдельными SVG-путями.
+- Режим «Точное» включается из редактора, запоминается между запусками. Первый палец перемещает остриё, поднятое над пальцем на 50 CSS px, второй удерживает отдельную кнопку «РИСОВАТЬ». Сторону кнопки можно поменять. Обычный режим рисования остаётся режимом по умолчанию. Мышь и стилус всегда рисуют непосредственно.
+- Двумя пальцами на самом холсте по-прежнему выполняется масштабирование, независимо от режима.
