@@ -476,8 +476,9 @@ async function connect(mode){
      const event=msg.event;
      if(event?.type==='state'){view=event.payload;renderView()}
      else if(event?.type==='draft_saved'){
-       if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art){
-         if(event.payload.revision===lastDraftRevision)lastDraftAckRevision=lastDraftRevision;
+       if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art&&
+          event.payload.revision===lastDraftRevision){
+         lastDraftAckRevision=lastDraftRevision;
          draftIndicator('Копия в PocketNet ✓');
        }
      }
