@@ -14,6 +14,7 @@ let missionIndex=Number.isInteger(data.missionIndex)?clamp(data.missionIndex,0,M
 let selected=0,mode='build',flight=null,paused=false,warpIndex=0,map=false;
 let lastFrame=0,frameId=0,hitRects=[],seenEvent='',pendingConfirmation=null;
 let savedSound=typeof data.sound==='boolean'?data.sound:false;
+let restoreFlightPause=null;
 let audioContext=null;
 const warpLevels=[1,4,12,24];
 const sleepFrames=()=>{cancelAnimationFrame(frameId);frameId=0;lastFrame=0;};
@@ -41,7 +42,7 @@ function setSoundButton(){
 function notify(message){$('buildMessage').textContent=message;}
 function refreshBuild(){
   const m=MISSIONS[missionIndex];
-  $('missionIndex').textContent=String(missionIndex+1).padStart(2,'0')+' / 03';
+  $('missionIndex').textContent=String(missionIndex+1).padStart(2,'0')+' / 03'+(Array.isArray(data.completed)&&data.completed.includes(missionIndex)?'  ✓':'');
   $('missionName').textContent=m.name;
   $('missionConditions').textContent=N.format(m.payload)+' кг · орбита '+Math.round(m.min/1000)+'–'+Math.round(m.max/1000)+' км';
   $('missionPrev').disabled=missionIndex===0;
@@ -86,7 +87,7 @@ function confirmAction(title,text,action){
   const o=$('confirmOverlay');$('confirmTitle').textContent=title;$('confirmText').textContent=text;
   pendingConfirmation=action;o.hidden=false;
 }
-function hideConfirm(){pendingConfirmation=null;$('confirmOverlay').hidden=true;}
+function hideConfirm(){pendingConfirmation=null;$('confirmOverlay').hidden=true;if(restoreFlightPause!==null){if(mode==='flight')paused=restoreFlightPause;restoreFlightPause=null;}}
 $('confirmCancel').addEventListener('click',()=>hideConfirm());
 $('confirmYes').addEventListener('click',()=>{const action=pendingConfirmation;hideConfirm();if(action)action();});
 $('soundButton').addEventListener('click',()=>{savedSound=!savedSound;setSoundButton();save();beep(640,.095);});
@@ -138,12 +139,10 @@ $('launchButton').addEventListener('click',startLaunch);
 $('retryButton').addEventListener('click',startLaunch);
 $('reviseButton').addEventListener('click',showBuilder);
 $('abortFlight').addEventListener('click',()=>{
-  if(!flight)return;const wasPaused=paused;paused=true;
+  if(!flight)return;
+  restoreFlightPause=paused;
+  paused=true;
   confirmAction('Прервать полёт?','Текущий полёт будет завершён. Проект ракеты останется в ангаре.',()=>showBuilder());
-  // Remember previous pause state when dismissing.
-  const button=$('confirmCancel');
-  const resume=()=>{if(mode==='flight')paused=wasPaused;button.removeEventListener('click',resume);};
-  button.addEventListener('click',resume,{once:true});
 });
 $('autoButton').addEventListener('click',()=>{
   if(!flight||flight.outcome)return;
