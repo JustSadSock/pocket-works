@@ -137,6 +137,9 @@ jobs:
       - name: Test ZAMAZKA extended drawing timer and artwork provenance
         run: node apps/zamazka/qa/timing-provenance.mjs
 
+      - name: Test ZAMAZKA host-configured drawing time
+        run: node apps/zamazka/qa/drawing-time.mjs
+
       - name: Test ZAMAZKA multipart paintings and PocketNet frame limit
         run: node apps/zamazka/qa/large-painting.mjs
 
