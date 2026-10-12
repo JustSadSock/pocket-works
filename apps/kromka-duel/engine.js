@@ -30,7 +30,7 @@ export function createDuel(){
  return {phase:'battle',fighters:[spawn(0),spawn(1)],scores:[0,0],winner:null,
   elapsed:0,roundTime:47,round:1,freeze:0,eventId:0,event:null,revision:0,exchanges:0};
 }
-export const copyDuel=s=>structuredClone(s);
+export const copyDuel=s=>JSON.parse(JSON.stringify(s));
 export function bound(f){
  let dx=(f.x-FIELD.cx)/FIELD.rx,dy=(f.y-FIELD.cy)/FIELD.ry;
  const r=Math.hypot(dx,dy);
