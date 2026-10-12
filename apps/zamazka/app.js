@@ -694,9 +694,10 @@ document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraf
 window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
 async function refreshPocketBadge(){
  const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
+ const initialIdentityKnown=pocketIdentity!==null;
  const priorAccount=pocketIdentity?.id||null;
  pocketIdentity=await getPocketIdentity({force:true});
- if(net && priorAccount!==(pocketIdentity?.id||null)){
+ if(net && initialIdentityKnown && priorAccount!==(pocketIdentity?.id||null)){
   home();
   notify('Аккаунт Pocket ID изменился — подключись к комнате заново');
   return;
