@@ -181,3 +181,10 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - Пипетка на пробеле показывает цвет непосредственно у указателя; курсор привязан к координатам записываемого мазка.
 - Увеличена рабочая область; последние 10 секунд, сдача и смена этапов получают тихие сигналы и реакции. Уважает настройку звука и `prefers-reduced-motion`. Ошибки сети объясняются без повторяющегося технического шума.
 - Проверка: `node apps/zamazka/qa/experience-reliability.mjs`, плюс существующие тесты координат, длительности и передачи больших картин.
+
+## 1.19.1 — Clean flood-fill seams
+
+- Flood fill still stops at hand-drawn contours using 4-connected region discovery. A one-logical-pixel-radius colour underlap paints beneath antialiased line and damage-mask edges, without crossing into a second reachable paint basin. Thin lines, damaged-mask perimeter and diagonally touching areas are covered by regression tests.
+- Unlike the previous rendering path, the beige damage background, flood colour and ink are composed into **one** opaque restoration layer, then clipped against the irregular damage mask exactly once. Applying multiple clipped translucent layers previously multiplied edge alpha and produced pale, torn-looking seams.
+- Editor, restored artwork display, round reveal and personal archive share the corrected painting routine; no multiplayer rules or stored stroke formats change.
+- Test: `node apps/zamazka/qa/fill-seams.mjs`.
