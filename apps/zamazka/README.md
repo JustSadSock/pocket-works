@@ -188,3 +188,8 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - Unlike the previous rendering path, the beige damage background, flood colour and ink are composed into **one** opaque restoration layer, then clipped against the irregular damage mask exactly once. Applying multiple clipped translucent layers previously multiplied edge alpha and produced pale, torn-looking seams.
 - Editor, restored artwork display, round reveal and personal archive share the corrected painting routine; no multiplayer rules or stored stroke formats change.
 - Test: `node apps/zamazka/qa/fill-seams.mjs`.
+
+
+## Адаптивный музей — 1.20.0
+
+Большие мониторы получают компоновку «заголовок и действия слева — экспозиция справа», крупные полотна в этапе запоминания, расширенный архив и сравнение работ. Размер элементов определяется доступными CSS-пикселями и высотой экрана, а не `transform: scale()` на родительском контейнере: координаты рисования остаются прежними. На телефонах остаётся одноколоночный focus-first интерфейс, на коротких экранах допускается прокрутка только там, где содержимое иначе обрезалось бы. Проверка разных размеров: `node apps/zamazka/qa/responsive-viewports.mjs` (при установленных браузерах Playwright).
