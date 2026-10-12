@@ -33,11 +33,19 @@ function card(p){
   '<span>'+ (p.owned?'Мой профиль':p.online?'● В сети':'Не в сети')+'</span></div></div>';
 }
 const errorMarkup=()=>state.error?'<div class="pws-error" role="alert">'+esc(state.error)+'</div>':state.notice?'<div class="pws-notice" role="status">'+esc(state.notice)+'</div>':'';
+// The compact identity card uses the same saved Pocket ID background, frame and art
+// as the full player card. All social surfaces share this renderer.
+const presenceLabel=p=>p.online?'● В сети'+(p.gameId?' · '+gameLabel(p.gameId):''):'Не в сети';
+function personRow(p,actions,subtitle=presenceLabel(p)){
+  const background=backgrounds.some(t=>t[0]===p.background)?p.background:'forest';
+  const frame=frames.some(t=>t[0]===p.frame)?p.frame:'clean';
+  return '<div class="pws-person" data-background="'+background+'" data-frame="'+frame+'">'+
+    '<div class="pws-person__avatar">'+avatar(p)+'</div>'+
+    '<div class="pws-person__name"><strong>'+esc(p.nickname)+'</strong><small>'+esc(subtitle)+'</small></div>'+
+    '<div class="pws-person__actions">'+actions+'</div></div>';
+}
 function person(p){
-  return '<div class="pws-person"><div class="pws-person__avatar">'+avatar(p)+'</div>'+
-  '<div class="pws-person__name"><strong>'+esc(p.nickname)+'</strong><small>'+
-  (p.online?'● В сети'+(p.gameId?' · '+esc(gameLabel(p.gameId)):''):'Не в сети')+'</small></div>'+
-  button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"')+'</div>';
+  return personRow(p,button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"'));
 }
 function listPeople(list,empty){return list?.length?'<div class="pws-list">'+list.map(person).join('')+'</div>':'<div class="pws-empty">'+empty+'</div>'}
 const cloudBytes=value=>{
@@ -191,22 +199,25 @@ function invitesPanel(){
   if(!state.me)return profilePanel();
   const invites=state.me.invites.filter(i=>i.status==='pending');
   return '<h2>Игровые приглашения</h2>'+
-    (invites.length?'<div class="pws-list">'+invites.map(i=>'<div class="pws-person"><div class="pws-person__avatar">↗</div>'+
-    '<div class="pws-person__name"><strong>'+esc(i.incoming?i.fromName:i.toName)+'</strong>'+
-    '<small>'+esc(gameLabel(i.gameId))+' · '+(i.incoming?'приглашает тебя':'ожидает ответа')+'</small></div>'+
-    (i.incoming?button('accept-invite','Войти','primary','data-id="'+esc(i.id)+'"')+
-      button('decline-invite','Отклонить','quiet','data-id="'+esc(i.id)+'"'):
-      button('cancel-invite','Отозвать','quiet','data-id="'+esc(i.id)+'"'))+
-    '</div>').join('')+'</div>':'<div class="pws-empty">Нет ожидающих приглашений.</div>')+
-    '';
+    (invites.length?'<div class="pws-list">'+invites.map(i=>{
+      const peerId=i.incoming?i.fromId:i.toId;
+      // Invitations are sent between friends. Reuse the actual profile rather than
+      // substituting an arrow or an initial for their chosen portrait.
+      const peer=state.me.friends.find(p=>p.id===peerId)||
+        {id:peerId,nickname:i.incoming?i.fromName:i.toName,avatar:'clay'};
+      const actions=i.incoming?
+        button('accept-invite','Войти','primary','data-id="'+esc(i.id)+'"')+
+        button('decline-invite','Отклонить','quiet','data-id="'+esc(i.id)+'"'):
+        button('cancel-invite','Отозвать','quiet','data-id="'+esc(i.id)+'"');
+      return personRow(peer,actions,gameLabel(i.gameId)+' · '+(i.incoming?'приглашает тебя':'ожидает ответа'));
+    }).join('')+'</div>':'<div class="pws-empty">Нет ожидающих приглашений.</div>');
 }
 function invitePanel(){
   if(!state.me)return profilePanel();
   return '<h2>Позвать в Замазку</h2><p class="pws-muted">Приглашение получит друг, который сможет войти в эту комнату одним нажатием.</p>'+
     '<div class="pws-list">'+(state.me.friends.filter(p=>p.allowInvites).map(p=>
-    '<div class="pws-person"><div class="pws-person__avatar">'+esc((p.nickname||'?')[0].toUpperCase())+'</div>'+
-    '<div class="pws-person__name"><strong>'+esc(p.nickname)+'</strong><small>'+(p.online?'● В сети':'Не в сети')+'</small></div>'+
-    button('send-invite','Пригласить','primary','data-id="'+esc(p.id)+'"')+'</div>').join('')||
+      personRow(p,button('send-invite','Пригласить','primary','data-id="'+esc(p.id)+'"'))
+    ).join('')||
     '<div class="pws-empty">Нет друзей, которым можно отправить приглашение. Добавь их в разделе «Друзья».</div>')+'</div>';
 }
 function render(){
