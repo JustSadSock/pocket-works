@@ -73,10 +73,11 @@ try{
  ferry.players[1].x=440;ferry.players[1].y=438;ferry.players[1].ground=true;
  ferry.players[2].x=505;ferry.players[2].y=438;ferry.players[2].ground=true;
  const start=ferry.ferryX;
- for(let t=0;t<55;t++){
-  controls(ferry,(p,i)=>i===0?{anchor:true}:{dir:t%9<6?1:-.4});
+ for(let t=0;t<270&&!ferry.ferryDone;t++){
+  controls(ferry,(p,i)=>i===0?{anchor:true}:{dir:1});
  }
- assert.ok(ferry.ferryX>start+5,'anchored teammate allows a passenger to drive ferry');
+ assert.ok(ferry.ferryDone&&ferry.gateOpen,'a driver and shore anchor must carry the ferry to the far side');
+ assert.ok(ferry.ferryX>start+185,'raft covers the entire real chasm');
  // Cargo reacts to obstacles and resets without losing the level.
  const cargo=worldFor(people.slice(0,3),2);
  cargo.cargoBall.x=424;cargo.cargoBall.y=386;
@@ -95,6 +96,23 @@ try{
  assert.equal(pulse.waveIndex,1,'real first jump starts relay');
  for(let i=0;i<180;i++)controls(pulse,()=>({}));
  assert.equal(pulse.waveIndex,0,'missed reply resets the pulse without reloading');
+ // Complete physically triggered jump relay, including the middle friend's return jump.
+ for(const n of [2,3,4,5]){
+  const w=worldFor(people.slice(0,n),3);
+  w.players.forEach((p,i)=>{p.x=w.stage.waveSlots[i].x;p.y=522;p.ground=true;});
+  for(const [j,actor] of w.stage.waveSequence.entries()){
+   controls(w,(p,i)=>({jump:i===actor,anchor:i!==actor}));
+   assert.equal(w.waveIndex,j+1,'relay pulse '+j+' of '+n+' must be a genuine jump');
+   for(let t=0;t<69;t++)controls(w,(p,i)=>({anchor:i!==actor}));
+  }
+  assert.ok(w.gateOpen,'full up-and-down relay unlocks the gate for '+n);
+ }
+ // Force a cargo endpoint without faking the goal flag. The ball itself must arrive.
+ const delivered=worldFor(people.slice(0,3),2);
+ delivered.players.forEach((p,i)=>{p.x=910+i*21;p.y=522;p.ground=true;});
+ delivered.cargoBall.x=918;delivered.cargoBall.y=415;
+ controls(delivered,()=>({}));
+ assert.ok(delivered.gateOpen,'delivering the unbroken shared cargo opens the actual door');
  // Rope braiding requires every correct hook simultaneously and a grounded anchor.
  for(let n=2;n<=5;n++){
   const w=worldFor(people.slice(0,n),4),hooks=w.stage.hooks;
