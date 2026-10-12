@@ -8,8 +8,8 @@ const rect=(x,y,w,h)=>({x,y,w,h});
 // 2/4/5 have deliberate geometries and participation rules.
 export const CHAPTERS=[
  {name:'ПО ОДНОЙ ЛИНИИ',kind:'balance',theme:0,
-  book:'Не просто стойте на местах. Все участники должны удерживать общую конструкцию в равновесии — резинка постоянно тянет соседей друг к другу.',
-  second:'Следите за наклоном балок. Чем больше друзей, тем больше соединённых плеч.',image:'balance',
+  book:'Запрыгните НА качели. Каждый участник должен удержать свою часть конструкции в равновесии, пока резинка тянет соседей друг к другу.',
+  second:'Стоять под качелями бесполезно: важны ноги на доске. Чем больше друзей, тем больше связанных качелей.',image:'balance',
   floors:[[0,540,1180,80]]},
  {name:'ПОСЛЕДНИЙ НА ПЛОТУ',kind:'ferry',theme:3,
   book:'Плот движется, только когда один едет вперёд, а другой удерживается на берегу. Но якорному тоже нужно попасть на другой берег.',
@@ -30,7 +30,7 @@ export const CHAPTERS=[
 ];
 const BALANCES={2:[580],3:[425,645],4:[350,560,770],5:[300,480,660,840]};
 const PULSE_SLOTS={2:[425,650],3:[320,535,750],4:[240,435,630,825],5:[220,390,560,730,900]};
-const BRAID_HOOKS={2:[585],3:[425,663],4:[325,520,715],5:[300,470,640,810]};
+const BRAID_HOOKS={2:[585],3:[425,610],4:[325,520,715],5:[300,470,640,810]};
 export const MIN_PLAYERS=2,MAX_PLAYERS=5;
 export function stageFor(level,count){
  const spec=CHAPTERS[clamp(level|0,0,CHAPTERS.length-1)],n=clamp(count|0,2,5);
@@ -44,7 +44,7 @@ export function stageFor(level,count){
   floors:spec.floors.map(v=>rect(...v)),platforms:[],lifts:[],springs:[],hazards:[],stars:[],
   pads:[],beacons:[],sequence:[],wheels:[],signals:[],
   hooks:hookXs.map(x=>({x,y:508})),balances:balanceXs.map((x,i)=>({x,y:493,slot:i,hold:n===2?1.7:1.75})),
-  ferry:ferry?{x:354,y:456,w:168,h:18,start:354,end:548}:null,
+  ferry:ferry?{x:388,y:482,w:184,h:19,start:388,end:548}:null,
   cargo:cargo?{barriers:[rect(412,328,24,120),rect(618,265,24,120),rect(806,355,24,132)],end:914}:null,
   waveSlots:pulse?PULSE_SLOTS[n].map((x,i)=>({x,i})):[],
   waveSequence:pulse?[...Array.from({length:n},(_,i)=>i),...Array.from({length:n-1},(_,i)=>n-2-i)]:[],
@@ -62,7 +62,7 @@ export function worldFor(players,level=0){
   phase:0,phaseTime:0,saveCount:0,signalIndex:0,signalLeft:0,signalDone:false,
   balanceCharge:0,balanceDone:false,balanceTilt:0,escapeLeft:0,
   beamCharge:stage.balances.map(()=>0),beamTilt:stage.balances.map(()=>0),
-  ferryX:stage.ferry?.x??0,ferryDone:false,
+  ferryX:stage.ferry?.x??0,ferryDone:false,ferryBoarded:0,
   cargoBall:stage.cargo?{x:130,y:414,vx:0,vy:0,cracks:0}:null,
   waveIndex:0,waveLeft:0,waveGlow:0,
   braidCharge:0,braidDone:false,
@@ -77,16 +77,45 @@ export function movingHazards(s,time,phase=0){
  return (s.hazards||[]).map(h=>({x:h.x+Math.sin(time*rate*Math.PI*2/h.period)*h.amp,y:h.y,r:h.r}));
 }
 function rescueBridge(w){return w.stage.rescue&&w.phase>=1?rect(439,530-22*clamp(w.phaseTime/.55,0,1),136,18):null;}
-function solids(w){return [...w.stage.floors,...w.stage.platforms,...movingPlatforms(w.stage,w.clock),...(w.stage.ferry?[{...w.stage.ferry,x:w.ferryX}]:[]),...(w.gateOpen?[]:[w.stage.gate])];}
+// Visual balance boards are also *real* platforms. Thin one-way physical slices
+// approximate their inclined top without trapping a jumper underneath the beam.
+function balanceBoards(w){
+ if(w.stage.kind!=='balance')return [];
+ const boards=[];
+ for(let i=0;i<w.stage.balances.length;i++){
+  const beam=w.stage.balances[i],r=Math.sin((w.beamTilt[i]||0)*.3);
+  for(let k=0;k<12;k++){
+   const left=-110+k*220/12,right=left+220/12,mid=(left+right)*.5;
+   boards.push(rect(beam.x+left,beam.y-8+r*mid,220/12+.6,9));
+   boards.at(-1).oneWay=true;
+   boards.at(-1).beam=i;
+  }
+ }
+ return boards;
+}
+function onBeam(w,p,beam,index){
+ if(!p.ground)return false;
+ const dx=p.x-beam.x;
+ if(Math.abs(dx)>115||p.y+RADIUS>=FLOOR-12)return false;
+ const top=beam.y-8+Math.sin((w.beamTilt[index]||0)*.3)*dx;
+ return Math.abs(p.y+RADIUS-top)<11;
+}
+function solids(w){return [...w.stage.floors,...w.stage.platforms,...movingPlatforms(w.stage,w.clock),
+ ...balanceBoards(w),...(w.stage.ferry?[{...w.stage.ferry,x:w.ferryX,oneWay:true}]:[]),
+ ...(w.gateOpen?[]:[w.stage.gate])];}
 function overlap(p,s){return p.x+RADIUS>s.x&&p.x-RADIUS<s.x+s.w&&p.y+RADIUS>s.y&&p.y-RADIUS<s.y+s.h;}
 function resolveMove(p,dt,blocks){
  const ox=p.x,oy=p.y;p.x+=p.vx*dt;
- for(const s of blocks)if(overlap(p,s)){
+ for(const s of blocks)if(!s.oneWay&&overlap(p,s)){
   if(ox+RADIUS<=s.x+5&&p.vx>0){p.x=s.x-RADIUS;p.vx=0;}
   else if(ox-RADIUS>=s.x+s.w-5&&p.vx<0){p.x=s.x+s.w+RADIUS;p.vx=0;}
  }
  p.x=clamp(p.x,RADIUS,WIDTH-RADIUS);p.y+=p.vy*dt;p.ground=false;
  for(const s of blocks)if(overlap(p,s)){
+  if(s.oneWay){
+   if(oy+RADIUS<=s.y+7&&p.vy>=0){p.y=s.y-RADIUS;p.vy=0;p.ground=true;p.squash=Math.max(p.squash||0,.28);}
+   continue;
+  }
   if(oy+RADIUS<=s.y+9&&p.vy>=0){p.y=s.y-RADIUS;p.vy=0;p.ground=true;p.squash=Math.max(p.squash||0,.65);}
   else if(oy-RADIUS>=s.y+s.h-6&&p.vy<0){p.y=s.y+s.h+RADIUS;p.vy=0;}
   else if(s.y===0&&s.h>=FLOOR){p.x=p.x<s.x+s.w/2?s.x-RADIUS:s.x+s.w+RADIUS;p.vx=0;}
@@ -105,6 +134,10 @@ function resolveMove(p,dt,blocks){
 function resolveStatic(p,blocks){
  p.x=clamp(p.x,RADIUS,WIDTH-RADIUS);p.y=Math.max(RADIUS,p.y);
  for(const s of blocks)if(overlap(p,s)){
+  if(s.oneWay){
+   if(p.vy>=0&&p.y+RADIUS>=s.y&&p.y+RADIUS<=s.y+8){p.y=s.y-RADIUS;p.vy=0;p.ground=true;}
+   continue;
+  }
   const l=p.x+RADIUS-s.x,r=s.x+s.w-p.x+RADIUS,t=p.y+RADIUS-s.y,b=s.y+s.h-p.y+RADIUS;
   const min=Math.min(l,r,t,b);
   if(s.y===0&&s.h>=FLOOR||min===l){p.x=s.x-RADIUS;p.vx=Math.min(0,p.vx);}
@@ -231,7 +264,7 @@ function moveFerry(w,dt){
   if(p.x>maxX){p.x=maxX;p.vx=Math.min(0,p.vx);}
   if(p.x<minX){p.x=minX;p.vx=Math.max(0,p.vx);}
  }
- if(w.ferryX>=s.end-1){w.ferryDone=true;w.gateOpen=true;}
+ if(w.ferryX>=s.end-1)w.ferryDone=true;
 }
 function updatePrototype(w,dt){
  const s=w.stage,ps=w.players,n=ps.length;
@@ -243,9 +276,9 @@ function updatePrototype(w,dt){
    const wind=Math.sin(w.clock*2.3+i*1.9)*14;
    const delta=mid-beam.x+wind;
    w.beamTilt[i]=clamp(delta/55,-1,1);
-   const valid=a.ground&&b.ground&&Math.abs(a.y-b.y)<25&&
-    gap>=142&&gap<=ROPE.max+1&&Math.abs(delta)<19&&
-    Math.abs(a.x-beam.x)>65&&Math.abs(b.x-beam.x)>65;
+   const valid=onBeam(w,a,beam,i)&&onBeam(w,b,beam,i)&&
+    Math.abs(a.y-b.y)<70&&gap>=142&&gap<=ROPE.max+1&&
+    Math.abs(delta)<19&&Math.abs(a.x-beam.x)>65&&Math.abs(b.x-beam.x)>65;
    w.beamCharge[i]=clamp(w.beamCharge[i]+(valid?dt/beam.hold:-dt/2.2),0,1);
    if(w.beamCharge[i]<1)all=false;
   }
@@ -258,12 +291,16 @@ function updatePrototype(w,dt){
   }
   w.waveGlow=Math.max(0,w.waveGlow-dt);
  }
- if(s.kind==='ferry')moveFerry(w,dt);
+ if(s.kind==='ferry'){
+  moveFerry(w,dt);
+  if(w.ferryDone&&ps.every(p=>p.ground&&p.x>=s.floors[1].x+RADIUS+7&&
+   p.y+RADIUS>=FLOOR-3))w.gateOpen=true;
+ }
  if(s.kind==='cargo'){
   const cargo=w.cargoBall,tx=ps.reduce((v,p)=>v+p.x,0)/n,
    ty=ps.reduce((v,p)=>v+p.y,0)/n-108;
-  cargo.vx+=(tx-cargo.x)*dt*19;cargo.vy+=(ty-cargo.y)*dt*20;
-  cargo.vx*=Math.max(0,1-dt*6.5);cargo.vy*=Math.max(0,1-dt*6.8);
+  cargo.vx+=(tx-cargo.x)*dt*65;cargo.vy+=(ty-cargo.y)*dt*80;
+  cargo.vx*=Math.max(0,1-dt*10);cargo.vy*=Math.max(0,1-dt*11);
   cargo.x+=cargo.vx*dt;cargo.y+=cargo.vy*dt;
   let struck=false;
   for(const wall of s.cargo.barriers){
@@ -369,7 +406,7 @@ export const viewWorld=w=>({
  vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),ground:p.ground,anchor:p.anchor,face:p.face,squash:p.squash,hang:p.hang,falls:p.falls})),
  pads:[],stars:[],beacons:[],tensionCharge:0,tensionDone:false,plateCharge:0,
  wraps:w.wraps,wheelCharge:[],wheelDone:[],phase:0,phaseTime:0,saveCount:w.saveCount,
- beamCharge:w.beamCharge,beamTilt:w.beamTilt,ferryX:w.ferryX,ferryDone:w.ferryDone,
+ beamCharge:w.beamCharge,beamTilt:w.beamTilt,ferryX:w.ferryX,ferryDone:w.ferryDone,ferryBoarded:w.ferryBoarded,
  cargoBall:w.cargoBall,waveIndex:w.waveIndex,waveLeft:w.waveLeft,waveGlow:w.waveGlow,
  braidCharge:w.braidCharge,braidDone:w.braidDone,escapeLeft:w.escapeLeft,
  signalIndex:0,signalLeft:0,signalDone:false,balanceCharge:0,balanceDone:false,balanceTilt:0,
@@ -382,6 +419,14 @@ export function validateLayouts(){
   for(const s of stages){
    if(!s.floors.length)errors.push([n,s.index,'no floor']);
    if(s.kind==='balance'&&s.balances.length!==n-1)errors.push([n,s.index,'wrong beam count']);
+   if(s.kind==='balance'&&s.balances.some((beam,i)=>i&&beam.x-s.balances[i-1].x>233))
+    errors.push([n,s.index,'balance beams too far to physically share']);
+   if(s.kind==='braid'){
+    const xs=s.hooks.map(h=>h.x),start=xs[0]-80;
+    const positions=[start];for(let i=0;i<xs.length;i++)positions.push(xs[i]+80);
+    if(positions.some((x,i)=>i&&x-positions[i-1]>ROPE.max-20))
+     errors.push([n,s.index,'hooks cannot be spanned by real players']);
+   }
    if(s.kind==='pulse'&&(s.waveSequence.length!==n*2-1||s.waveSlots.length!==n))
     errors.push([n,s.index,'wrong pulse count']);
    if(s.kind==='braid'&&s.hooks.length!==n-1)errors.push([n,s.index,'wrong hooks']);

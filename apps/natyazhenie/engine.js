@@ -5,6 +5,12 @@ export function advancePosition(player,input,dt,stage,players=[]){
  const now=Date.now(),members=players.length?players:[player];
  const world=worldFor(members.map(p=>({id:p.id,name:p.name||'Игрок'})),stage.index||0);
  world.stage=stage;world.gateOpen=!!stage.open;
+ // Local prediction must reuse live moving-platform and rocking-beam state;
+ // otherwise a player standing on the docked raft appears to fall remotely.
+ if(Number.isFinite(stage.ferryX))world.ferryX=stage.ferryX;
+ if(Array.isArray(stage.beamTilt))world.beamTilt=stage.beamTilt.slice();
+ if(Array.isArray(stage.wraps))world.wraps=stage.wraps.slice();
+ if(stage.ferryDone===true)world.ferryDone=true;
  world.players=members.map(p=>({...p,coyote:p.coyote||0,jumpHeld:!!p.jumpHeld,anchor:!!p.anchor,checkpoint:p.checkpoint||0}));
  world.pads=stage.pads.map(()=>false);world.stars=stage.stars.map(()=>false);
  world.beacons=(stage.beacons||[]).map(()=>false);
