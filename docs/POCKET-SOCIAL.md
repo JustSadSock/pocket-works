@@ -8,7 +8,7 @@ Pocket Social adds optional identity cards and social play to the existing Pocke
 - Public player cards, prefix nickname search and exact account UUID lookup. Account nicknames and preset fallbacks still originate in Pocket ID.
 - Bidirectional friends, pending incoming/outgoing requests, mutual-request acceptance, removal, block/unblock, public discoverability and online-visibility switches.
 - Account-aware presence with a 95-second expiry. Online state and the current game are descriptive; only PocketNet is authoritative about active room membership.
-- Private in-app room invitations for Zamazka, delivered to authenticated friends. The server validates sender membership and room phase before dispatch, and validates room availability again before accepting. Invitations expire in 30 minutes.
+- Private in-app room invitations for Zamazka and Blind Pals, delivered to authenticated friends. The server validates sender membership and room phase before dispatch, and validates room availability again before accepting. Invitations expire in 30 minutes.
 - A shared, mobile-friendly social overlay for the launcher and Zamazka; badge notification refreshes approximately every 22 seconds while visible.
 
 ## Architecture
@@ -33,7 +33,7 @@ Avatar drawings are restricted to a small raster data URL. Never accept SVG or f
 
 In the PocketWorks launcher, click the existing Pocket ID portrait. The unified profile contains Profile, Friends and Invitations tabs. In Profile, edit nickname, draw the canonical avatar, choose background/frame, favorite game and privacy preferences. Security/Google/recovery actions live behind Account and Security inside the profile. There is no separate Social button, avatar picker, or duplicate appearance editor. Standalone apps may expose their own entry while preserving their unrelated in-game art controls.
 
-In Zamazka, sign in with Pocket ID, create a multiplayer room and press **Позвать друзей Pocket ID**. The receiving friend finds the invitation in the social overlay and can join with one press. A game that has already started cannot be joined through an invitation.
+In Zamazka and Blind Pals, sign in with Pocket ID, create a multiplayer room and press **Позвать друзей Pocket ID**. The receiving friend finds the invitation in the social overlay and can join with one press. A game that has already started cannot be joined through an invitation.
 
 ## Test & release
 
