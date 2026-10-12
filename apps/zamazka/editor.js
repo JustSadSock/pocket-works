@@ -129,7 +129,7 @@ export class Editor{
     this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
     this.hand=localStorage.getItem('pocket-works:zamazka:precision-hand')==='left'?'left':'right';
     this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
-    this.cursor=root.querySelector('#brushCursor');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
+    this.cursor=root.querySelector('#brushCursor');this.pickerPreview=root.querySelector('#pickerPreview');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
    this.draftKey=key+id+':'+variation+':'+round;
    try{const stored=JSON.parse(localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
    this.attach();this.setMode(this.inputMode,false);this.center();this.render();
@@ -213,8 +213,14 @@ export class Editor{
   pointAt(e){return this.point(this.tip(e))}
   showCursor(e){
     if(!this.cursor)return;
-    if(['hand','picker','fill'].includes(this.tool)||this.pinch||this.panStart){this.hideCursor();return}
+    if(this.pinch||this.panStart||this.tool==='hand'||this.tool==='fill'){
+      this.hideCursor();this.hidePickerPreview();return;
+    }
     this.lastCursor=e;
+    if(this.tool==='picker'){
+      this.hideCursor();this.showPickerPreview(e);return;
+    }
+    this.hidePickerPreview();
     const tip=this.tip(e),v=this.viewport.getBoundingClientRect(),c=this.canvas.getBoundingClientRect();
     const effectiveSize=this.tool==='pencil'?Math.max(1,this.size*.4):this.size;
     const diameter=Math.max(2,effectiveSize*c.width/W);
@@ -227,6 +233,26 @@ export class Editor{
     this.cursor.hidden=false;
   }
   hideCursor(){if(this.cursor)this.cursor.hidden=true}
+  hidePickerPreview(){if(this.pickerPreview)this.pickerPreview.hidden=true}
+  showPickerPreview(e){
+    const sample=this.pickerPreview;if(!sample)return;
+    const v=this.viewport.getBoundingClientRect(),
+      x=e.clientX-v.left-this.viewport.clientLeft,y=e.clientY-v.top-this.viewport.clientTop;
+    sample.style.left=Math.max(24,Math.min(this.viewport.clientWidth-24,x+19))+'px';
+    sample.style.top=Math.max(30,Math.min(this.viewport.clientHeight-18,y-29))+'px';
+    if(!this.lastPickerTick||Date.now()-this.lastPickerTick>45){
+      this.lastPickerTick=Date.now();
+      try{
+        const p=this.pointAt(e);
+        const px=Math.min(this.canvas.width-1,Math.floor(p[0]/W*this.canvas.width)),
+          py=Math.min(this.canvas.height-1,Math.floor(p[1]/H*this.canvas.height));
+        const rgba=this.canvas.getContext('2d').getImageData(px,py,1,1).data;
+        if(rgba[3])this.previewInk='#'+[rgba[0],rgba[1],rgba[2]].map(n=>n.toString(16).padStart(2,'0')).join('');
+      }catch{}
+    }
+    sample.style.setProperty('--sample-color',this.previewInk||this.color);
+    sample.hidden=false;
+  }
   setMode(mode,persist=true){
     this.finishStroke();
     this.inputMode=mode==='precision'?'precision':'direct';
@@ -322,7 +348,7 @@ export class Editor{
       this.finishStroke();
       if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
       this.panStart=null;this.viewport.classList.remove('is-panning');
-      if(e.pointerType==='touch'){this.lastCursor=null;this.lastMousePoint=null;this.hideCursor()}
+      if(e.pointerType==='touch'){this.lastCursor=null;this.lastMousePoint=null;this.hideCursor();this.hidePickerPreview()}
       else this.showCursor(e);
     };
     this.canvas.addEventListener('pointerdown',this.down);
@@ -336,7 +362,7 @@ export class Editor{
     this.viewport.addEventListener('pointermove',this.frameMove);
     this.viewport.addEventListener('pointerup',this.frameUp);
     this.viewport.addEventListener('pointercancel',this.frameUp);
-    this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor()}};
+    this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor();this.hidePickerPreview()}};
     this.viewport.addEventListener('pointerleave',this.cursorLeave);
     this.armDown=e=>{
       if(this.inputMode!=='precision'||this.armPointer!==null)return;
@@ -487,7 +513,7 @@ export class Editor{
        rgb=ctx.getImageData(Math.min(sample.width-1,Math.floor(p[0]*2)),Math.min(sample.height-1,Math.floor(p[1]*2)),1,1).data;
      }
      if(this.closed||!rgb||!rgb[3])return;
-     this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');
+     this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.previewInk=this.color;
      const input=this.root.querySelector('#customColor');if(input)input.value=this.color;
      this.root.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('active',b.dataset.color?.toLowerCase()===this.color));
      if(!temporary)this.setTool('brush');
