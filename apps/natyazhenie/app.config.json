@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "natyazhenie",
+  "name": "НАТЯЖЕНИЕ",
+  "shortName": "НАТЯЖЕНИЕ",
+  "description": "Яркий кооперативный платформер с общей резинкой: 6 физических головоломок для 2–5 друзей через PocketNet, плюс режим вдвоём за одним ПК.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-13",
+  "releaseDateTime": "2026-10-13T00:20:00+03:00",
+  "changelog": [
+    "Первая версия кооперативного платформера для 2–5 игроков: шесть адаптивных глав, пружины, островки, натяжение и командные ворота.",
+    "Плавная клиентская анимация: локальное предсказание движения, экстраполяция и сглаживание удалённых персонажей.",
+    "Комнаты PocketNet по коду, восстановление связи, управление с клавиатуры и экрана, локальная игра вдвоём на ПК."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#ff7282",
+  "backgroundColor": "#fff2ce",
+  "themeColor": "#fff2ce",
+  "orientation": "landscape",
+  "cacheName": "natyazhenie-v1.0.0",
+  "storageNamespace": "pocket-works:natyazhenie",
+  "tags": [
+    "game",
+    "co-op",
+    "puzzle",
+    "platformer",
+    "physics",
+    "pocketnet",
+    "party"
+  ],
+  "order": 352
+}

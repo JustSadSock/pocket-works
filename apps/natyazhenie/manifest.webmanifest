@@ -1,0 +1,25 @@
+{
+  "id": "/apps/natyazhenie/",
+  "name": "НАТЯЖЕНИЕ",
+  "short_name": "НАТЯЖЕНИЕ",
+  "description": "Вместе связаны одной резинкой.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "landscape",
+  "background_color": "#fff2ce",
+  "theme_color": "#fff2ce",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
