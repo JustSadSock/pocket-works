@@ -11,7 +11,6 @@ const guestIntro = $('#pocket-id-guest');
 const edit = $('#pocket-id-edit');
 const nicknameInput = $('#pocket-id-nickname');
 const nameHint = $('#pocket-id-nickname-hint');
-const avatarGrid = $('#pocket-id-avatars');
 const primary = $('#pocket-id-save');
 const recoveryBox = $('#pocket-id-recovery');
 const recoveryValue = $('#pocket-id-recovery-value');
@@ -29,7 +28,6 @@ const resetKey = $('#pocket-id-reset-key');
 const signout = $('#pocket-id-signout');
 let user=null;
 let config={googleEnabled:false,avatars:['clay','moss','ink','sun','wave','ember','plum','stone']};
-let selectedAvatar='clay';
 let mode='create',busy=false,validationClock=0,validationGeneration=0;
 const artwork={
   clay:'<path d="M17 54 32 13l16 41z"/><circle cx="32" cy="38" r="6"/>',
@@ -93,49 +91,33 @@ function publish(userValue) {
 }
 window.PocketID=Object.freeze({
   getUser:()=>user?Object.freeze({...user}):null,
-  refresh:async()=>{const data=await api('me');publish(data.user);return data.user;}
+  refresh:async()=>{const data=await api('me');publish(data.user);return data.user;},
+  openAccount:()=>{mode=user?(user.complete?'view':'onboarding'):'create';openDialog()},
+  openSignIn:()=>{mode='create';openDialog()}
 });
-function renderAvatars() {
-  avatarGrid.replaceChildren();
-  for(const id of config.avatars) {
-    if(!artwork[id]) continue;
-    const item=document.createElement('button');
-    item.type='button';item.className='pw-id-avatar-option';item.dataset.avatar=id;
-    item.setAttribute('aria-label',id+' avatar');
-    item.setAttribute('aria-pressed',String(id===selectedAvatar));
-    item.innerHTML=avatar(id);
-    item.addEventListener('click',()=>{
-      selectedAvatar=id;
-      avatarGrid.querySelectorAll('button').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.avatar===id)));
-    });
-    avatarGrid.append(item);
-  }
-}
 function display() {
   guestIntro.hidden=Boolean(user?.linkedGoogle)||!config.googleEnabled;
   activeSection.hidden=!user;
-  edit.hidden=!['create','edit','onboarding'].includes(mode);
+  edit.hidden=!user?.complete&&(mode==='create'||mode==='onboarding');
   recoverSection.hidden=mode!=='recover';
   recoveryBox.hidden=mode!=='key';
   recoverToggle.hidden=Boolean(user)||mode==='recover';
   newAccount.hidden=Boolean(user)||mode!=='recover';
   googleAction.hidden=!config.googleEnabled||Boolean(user?.linkedGoogle);
   googleAction.textContent=user?'Link Google account':'Continue with Google';
-  headline.textContent=user?'Your Pocket ID':mode==='recover'?'Recover your ID':'An identity for your worlds.';
-  subtitle.textContent=user?'Your profile follows you between devices.':'Create a permanent profile or sign in with Google.';
+  headline.textContent=user?'Безопасность Pocket ID':mode==='recover'?'Восстановление доступа':'Твой Pocket ID';
+  subtitle.textContent=user?'Внешний вид, рисунок и никнейм настраиваются в общей карточке пользователя.':'Войди или создай учётную запись. Играть можно и без неё.';
   if(user) {
     activeName.textContent=user.nickname||'Choose your nickname';
     activeAvatar.innerHTML=avatar(user.avatar);
     activeCaption.textContent=user.linkedGoogle?'Google connected':'Recovery-key account';
   }
-  if(mode==='edit'||mode==='create'||mode==='onboarding') {
+  if(mode==='create'||mode==='onboarding') {
     nicknameInput.value=user?.nickname||nicknameInput.value||'';
-    selectedAvatar=user?.avatar||selectedAvatar;
-    renderAvatars();
-    primary.textContent=user?'Save profile':'Create Pocket ID';
+    primary.textContent=user?'Завершить создание профиля':'Создать Pocket ID';
     nameHint.textContent='3–20 characters · letters, numbers, _ and -';
   }
-  $('#pocket-id-edit-action').hidden=!user||!user.complete||mode==='edit';
+  $('#pocket-id-edit-action').hidden=!user?.complete;
   $('#pocket-id-recovery-action').hidden=!user||mode==='key';
   signout.hidden=!user;
 }
@@ -163,13 +145,16 @@ async function refresh() {
   display();
 }
 trigger.addEventListener('click',()=>{
-  mode=user?(user.complete?'view':'onboarding'):'create';
-  openDialog();
+  if(user?.complete&&window.PocketSocial?.open)window.PocketSocial.open();
+  else {mode=user?(user.complete?'view':'onboarding'):'create';openDialog()}
 });
 $('#pocket-id-close').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('click',event=>{if(event.target===dialog) dialog.close();});
 googleAction.addEventListener('click',()=>{location.assign('/pocket-id/login/google');});
-$('#pocket-id-edit-action').addEventListener('click',()=>{mode='edit';display();message('Update your nickname or avatar.');});
+$('#pocket-id-edit-action').addEventListener('click',()=>{
+  dialog.close();
+  if(window.PocketSocial?.open)window.PocketSocial.open();
+});
 $('#pocket-id-recovery-action').addEventListener('click',async()=>{
   if(!confirm('Replace your current recovery key? Your old key will stop working.')) return;
   setBusy(true);
@@ -186,7 +171,8 @@ recoveryCopy.addEventListener('click',async()=>{
   } catch {message('Copy unavailable. Select and copy the key manually.','warning');}
 });
 $('#pocket-id-recovery-done').addEventListener('click',()=>{
-  mode='view';display();message('Your profile is ready.','success');
+  mode='view';display();message('Профиль создан.','success');
+  if(user?.complete){dialog.close();window.PocketSocial?.open?.()}
 });
 signout.addEventListener('click',async()=>{
   setBusy(true);
@@ -196,16 +182,16 @@ signout.addEventListener('click',async()=>{
 recoverButton.addEventListener('click',async()=>{
   setBusy(true);
   try { const result=await api('recover',{method:'POST',body:JSON.stringify({recoveryCode:recoverInput.value.trim()})});
-    publish(result.user);mode='view';recoverInput.value='';display();message('Signed in successfully.','success');
+    publish(result.user);mode='view';recoverInput.value='';display();message('Вход выполнен.','success');if(result.user?.complete){dialog.close();window.PocketSocial?.open?.()}
   }catch(error){message(error.message,'error');}finally{setBusy(false);}
 });
 primary.addEventListener('click',async()=>{
   setBusy(true);
   try {
-    const result=await api(user?'profile':'register',{method:'POST',body:JSON.stringify({nickname:nicknameInput.value.trim(),avatar:selectedAvatar})});
+    const result=await api(user?'profile':'register',{method:'POST',body:JSON.stringify({nickname:nicknameInput.value.trim(),avatar:user?.avatar||'clay'})});
     publish(result.user);
     if(result.recoveryCode) showRecovery(result.recoveryCode);
-    else {mode='view';display();message('Profile saved.','success');}
+    else {mode='view';display();message('Профиль сохранён.','success');dialog.close();window.PocketSocial?.open?.()}
   }catch(error){message(error.message,'error');}finally{setBusy(false);}
 });
 nicknameInput.addEventListener('input',()=>{
