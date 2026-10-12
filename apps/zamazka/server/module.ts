@@ -76,7 +76,7 @@ function step(s:State){
 }
 function eligible(s:State,target:string,connected:string[]){return members(s).filter(p=>p.id!==target&&connected.includes(p.id))}
 function normalize(raw:unknown):Stroke[]|null{
- if(!Array.isArray(raw)||raw.length>72)return null;
+ if(!Array.isArray(raw)||raw.length>100)return null;
  let total=0;const out:Stroke[]=[];
  for(const item of raw){
    if(!item||typeof item!=='object')return null;
@@ -88,7 +88,7 @@ function normalize(raw:unknown):Stroke[]|null{
      if(!Array.isArray(point)||point.length!==2||point.some(v=>!Number.isFinite(v))||point[0]<0||point[0]>600||point[1]<0||point[1]>450)return null;
      points.push([Math.round(point[0]*10)/10,Math.round(point[1]*10)/10]);
    }
-   total+=points.length;if(total>1600)return null;
+   total+=points.length;if(total>2000)return null;
    out.push({c:String(o.c),s:Number(o.s),t:String(o.t),p:points});
  }
  return out;
@@ -172,7 +172,7 @@ const module: PocketModule<State>={
      if(!item||item.strokes!==null||a.round!==state.round||a.art!==item.art||a.variation!==item.variation)
        return {state,events:notice(id,'Этот рисунок уже завершён или относится к другому раунду.')};
      if(typeof a.revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(a.revision)||
-        !Number.isInteger(a.parts)||a.parts<1||a.parts>12||
+        !Number.isInteger(a.parts)||a.parts<1||a.parts>16||
         !Number.isInteger(a.index)||a.index<0||a.index>=a.parts||
         !Array.isArray(a.strokes)||a.strokes.length>8)
        return {state,events:notice(id,'Некорректная часть рисунка.')};
@@ -190,7 +190,7 @@ const module: PocketModule<State>={
         assembling.parts!==a.parts||assembling.next!==a.index)
        return {state,events:notice(id,'Части рисунка пришли не по порядку. Повторяем сохранение.')};
      assembling.strokes.push(...strokes);
-     if(assembling.strokes.length>72||assembling.strokes.reduce((n,stroke)=>n+stroke.p.length,0)>1600){
+     if(assembling.strokes.length>100||assembling.strokes.reduce((n,stroke)=>n+stroke.p.length,0)>2000){
        delete state.draftAssemblies[id];
        return {state,events:notice(id,'Превышен лимит линий или точек.')};
      }
