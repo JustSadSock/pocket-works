@@ -25,7 +25,7 @@
    <div class="menu-art"><canvas id="preview" aria-label="Два плюшевых существа в текстильном мире"></canvas><div class="sewn-caption">ИГРУШЕЧНАЯ МАСТЕРСКАЯ</div></div>
    <div class="menu-controls">
     <div class="field-row"><label for="nickname">ИМЯ</label><input id="nickname" maxlength="22" autocomplete="nickname" placeholder="Игрок"><span id="identity">Гостевой профиль</span></div>
-    <div class="play-actions"><button type="button" id="soloBtn" class="big-action" data-native-press>Играть <span>→</span><small>Два героя, один экран</small></button><button type="button" id="hostBtn" class="big-action secondary" data-native-press>Создать комнату <span>↗</span><small>PocketNet · с друзьями</small></button></div>
+    <div class="play-actions"><button type="button" id="soloBtn" class="big-action" data-native-press>Играть <span>→</span><small>Два героя, один экран</small></button><button type="button" id="hostBtn" data-native-press class="big-action secondary" data-native-press>Создать комнату <span>↗</span><small>PocketNet · с друзьями</small></button></div>
     <div class="sub-actions"><label for="levelChoice">Уровень</label><select id="levelChoice" aria-label="Выбрать открытый уровень"></select><button type="button" id="onlineBtn" data-native-press>По коду →</button></div>
     <p id="netStatus" role="status">Проверка PocketNet…</p>
    </div>
@@ -52,13 +52,13 @@
   <div class="playfield-wrap" data-gesture-surface><canvas id="canvas" aria-label="Поле физического платформера Липки"></canvas></div>
   <div class="game-bottom" data-ui>
     <div class="direction">
-      <button type="button" data-hold="left" class="pad-button" aria-label="Влево">←</button>
-      <button type="button" data-hold="right" class="pad-button" aria-label="Вправо">→</button>
+      <button type="button" data-native-press data-hold="left" class="pad-button" aria-label="Влево">←</button>
+      <button type="button" data-native-press data-hold="right" class="pad-button" aria-label="Вправо">→</button>
     </div>
     <div class="mode-stat"><strong id="roleLabel">Герой 1</strong><span id="roomIndicator" hidden>PocketNet</span><button type="button" id="switchBtn" data-native-press>Сменить ↻</button></div>
     <div class="abilities">
-     <button type="button" data-hold="stick" class="ability stick" aria-label="Прилипнуть или отлипнуть"><b>ЛИП!</b><small>прилипнуть</small></button>
-     <button type="button" data-hold="jump" class="ability jump" aria-label="Прыгнуть"><b>↑</b><small>прыжок</small></button>
+     <button type="button" data-native-press data-hold="stick" class="ability stick" aria-label="Прилипнуть или отлипнуть"><b>ЛИП!</b><small>прилипнуть</small></button>
+     <button type="button" data-native-press data-hold="jump" class="ability jump" aria-label="Прыгнуть"><b>↑</b><small>прыжок</small></button>
     </div>
   </div>
   <div id="pauseSheet" class="overlay" hidden><div class="sewn-sheet">
