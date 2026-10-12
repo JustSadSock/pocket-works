@@ -75,7 +75,7 @@ const exchangeTriples:[Word,Word,Word][]=[
  ['dragon','book','bird'],['fish','heart','cat'],['bird','clock','human'],
  ['human','key','bird'],['cat','flower','dragon'],['fish','star','bird'],
  ['dragon','crown','cat'],['bird','book','fish'],['human','moon','cat'],
- ['cat','heart','fish'],['dragon','key','human'],['fish','flower','human'],
+ ['cat','heart','dragon'],['dragon','key','human'],['fish','flower','human'],
  ['human','clock','dragon'],['cat','star','bird'],['bird','crown','dragon']
 ];
 const SCENES:Scene[]=[
