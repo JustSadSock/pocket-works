@@ -7,7 +7,7 @@ const frames=[['clean','Чистая'],['double','Двойная'],['corners','�
 const colors=['#1d3040','#d65b48','#edb55f','#529276','#8b65ab','#ffffff'];
 const errors={sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
-const state={tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0};
+const state={tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
 let dialog,content,entry,searchClock=0,pollClock=0,heartbeatClock=0;
 const api=async(path,body)=>{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
@@ -113,14 +113,18 @@ async function loadCloudUsage(){
 }
 function profilePanel(){
   const p=state.me?.profile;
-  if(!p)return '<div class="pws-empty">Создай аккаунт Pocket ID, чтобы открыть профиль и список друзей.</div>'+
+  if(!p)return '<div class="pws-empty">Создай Pocket ID, чтобы добавить друзей.</div>'+
     '<div class="pws-actions">'+button('login','Открыть Pocket ID','primary')+'</div>';
-  return '<h2>Твоя карточка</h2><div class="pws-profile-layout"><section>'+card(state.edit?{...p,...state.draft}:p)+
+  return '<h2>Профиль</h2><div class="pws-profile-layout"><section>'+card(state.edit?{...p,...state.draft}:p)+
     '<div class="pws-actions">'+(state.edit?'':button('edit','Изменить профиль','primary'))+
-    button('copy-id','Скопировать ID','quiet')+'</div></section><section class="pws-section">'+
-    '<h3>Личный профиль</h3><div class="pws-muted">Рисунок, любимая игра и оформление видны другим игрокам. При желании можно скрыть присутствие и профиль из поиска.</div>'+
-    '<p class="pws-muted">ID: <code>'+esc(p.id)+'</code></p>'+button('account','Аккаунт и безопасность')+'</section></div>'+
-    (state.edit?editor():cloudPanel());
+    button('copy-id','Скопировать ID','quiet')+'</div></section>'+
+    '<details class="pws-fold pws-fold--aside" data-pws-fold="account"'+(state.expanded.account?' open':'')+'>'+
+    '<summary>Аккаунт и безопасность</summary><div class="pws-fold__body"><p class="pws-muted">ID: <code>'+esc(p.id)+'</code></p>'+
+    button('account','Настройки Pocket ID')+'</div></details></div>'+
+    (state.edit?editor():
+      '<details class="pws-fold pws-cloud-fold" data-pws-fold="cloud"'+(state.expanded.cloud?' open':'')+'>'+
+      '<summary>Облако'+(state.cloud?' · '+cloudBytes(state.cloud.usedBytes)+' / '+cloudBytes(state.cloud.maxBytes):'')+'</summary>'+
+      cloudPanel()+'</details>');
 }
 function editor(){
   const d=state.draft;
@@ -165,13 +169,18 @@ function confirmPanel(){
 }
 function friendsPanel(){
   if(!state.me)return profilePanel();
-  return '<h2>Друзья</h2><div class="pws-field"><label for="pws-search">Найти игрока по нику или ID</label>'+
-    '<input id="pws-search" type="search" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Введите никнейм…" value="'+esc(state.query)+'"></div>'+
+  const m=state.me, fold=(key,label,items)=>{
+    if(!items?.length)return '';
+    return '<details class="pws-fold" data-pws-fold="'+key+'"'+(state.expanded[key]?' open':'')+'>'+
+      '<summary>'+label+' · '+items.length+'</summary><div class="pws-fold__body">'+listPeople(items,'')+'</div></details>';
+  };
+  return '<h2>Друзья</h2><div class="pws-field">'+
+    '<input id="pws-search" type="search" aria-label="Поиск игрока" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Найти игрока по нику или ID" value="'+esc(state.query)+'"></div>'+
     '<div id="pws-results">'+searchResults()+'</div>'+
-    '<h3>Друзья · '+state.me.friends.length+'</h3>'+listPeople(state.me.friends,'Пока никого. Найди игрока по нику, чтобы отправить заявку.')+
-    '<h3>Входящие заявки · '+state.me.incoming.length+'</h3>'+listPeople(state.me.incoming,'Новых заявок нет.')+
-    '<h3>Отправленные заявки · '+state.me.outgoing.length+'</h3>'+listPeople(state.me.outgoing,'Нет ожидающих заявок.')+
-    '<h3>Заблокированные · '+(state.me.blocked||[]).length+'</h3>'+listPeople(state.me.blocked||[],'Заблокированных нет.');
+    (m.incoming.length?fold('incoming','Заявки',m.incoming):'')+
+    '<h3>Мои друзья · '+m.friends.length+'</h3>'+listPeople(m.friends,'Пока нет друзей. Найди игрока по нику.')+
+    fold('outgoing','Отправленные заявки',m.outgoing)+
+    fold('blocked','Заблокированные',m.blocked||[]);
 }
 function searchResults(){
   if(!state.query.trim())return '';
@@ -189,7 +198,7 @@ function invitesPanel(){
       button('decline-invite','Отклонить','quiet','data-id="'+esc(i.id)+'"'):
       button('cancel-invite','Отозвать','quiet','data-id="'+esc(i.id)+'"'))+
     '</div>').join('')+'</div>':'<div class="pws-empty">Нет ожидающих приглашений.</div>')+
-    '<p class="pws-muted">Приглашения действуют 30 минут, пока комната ожидания открыта.</p>';
+    '';
 }
 function invitePanel(){
   if(!state.me)return profilePanel();
@@ -405,6 +414,10 @@ function install(){
     if(t.id==='pws-invites')state.draft.allowInvites=t.checked;
     if(t.id==='pws-nickname')state.draft.nickname=t.value;
   });
+  dialog.addEventListener('toggle',event=>{
+    const key=event.target?.dataset?.pwsFold;
+    if(key&&Object.hasOwn(state.expanded,key))state.expanded[key]=event.target.open;
+  },true);
   dialog.addEventListener('input',e=>{
     if(e.target.id==='pws-nickname'&&state.draft){state.draft.nickname=e.target.value;return}
     if(e.target.id!=='pws-search')return;
