@@ -1,4 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { WORLD, ENGINES, MISSIONS, defaultCraft, isValidCraft, craftStats, altitude,
   orbitalElements, createFlight, advanceFlight, separateStage, remainingFuel, clamp } from './physics.js';
 import { renderBuild, renderFlight } from './renderer.js';
@@ -251,6 +252,20 @@ window.addEventListener('pagehide',save);
 window.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if(!$('confirmOverlay').hidden){hideConfirm();return;}if(mode==='flight')$('abortFlight').click();}
   if(mode==='flight'&&e.code==='Space'){e.preventDefault();$('pauseButton').click();}
+});
+createWorkshopMode({
+  appName: 'СТАПЕЛЬ',
+  version: '1.0.0',
+  cachePrefix: 'stapel-',
+  storageNamespace: 'pocket-works:stapel',
+  onReset(){
+    craft=defaultCraft();
+    missionIndex=0; selected=0;
+    data.completed=[];
+    savedSound=false;
+    setSoundButton();
+    showBuilder();
+  }
 });
 setSoundButton();
 refreshBuild();
