@@ -205,7 +205,7 @@ function drawPath(t) {
  for(const k of targets) {
   stroke([[180,startY+16],[k.x-28,k.y+18]],rgba('#8a7487',k.active?.32:.10),1);
   stoneShape(k.x,k.y,k,k.active,t);
-  if(k.active)text(k.row===state.row?'−1':'−2',k.x,k.y+43,11,'#e1d3c7');
+
  }
  // Looming exit spire in far distance.
  if(state.step>=18) {
