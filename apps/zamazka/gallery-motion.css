@@ -52,3 +52,62 @@
  .page.exhibition-lobby:has(.room-ticket)>.stack{grid-column:2;grid-row:5/8;position:sticky;top:20px}
  .page.exhibition-lobby:has(.room-ticket)>.commons-desk{grid-column:1/-1;grid-row:8}
 }
+
+
+/* 1.12.5 — stage-first mobile layout: one task, little scrolling until art requires it. */
+.phase-directive{margin:5px 0 12px;font:650 13px/1.45 system-ui,-apple-system,sans-serif;color:#5f4b37}
+.expert-phase .phase-directive,.verdict-phase .phase-directive,.waiting-phase .phase-directive{color:#d6c5ab}
+.waiting-players{margin-top:12px;border-top:1px solid #8167486b}
+.waiting-players summary{display:flex;align-items:center;justify-content:space-between;min-height:42px;
+  list-style:none;cursor:pointer;color:#dfc6a2;font:700 12px system-ui,-apple-system,sans-serif}
+.waiting-players summary::-webkit-details-marker{display:none}
+.waiting-players summary span{color:#c6a578}
+.waiting-players[open] summary span{transform:rotate(180deg)}
+.waiting-players summary:focus-visible{outline:2px solid #e2b884;outline-offset:2px}
+.waiting-progress #readyCount{margin:3px 0;font-size:clamp(28px,7vw,42px);line-height:1.1}
+.waiting-work>h3{margin-top:3px}
+.expert-intro{padding-bottom:8px}
+.expert-round .expert-author h3{margin:0}
+@media(max-width:699px){
+ .screen:has(> .museum-home){overflow:hidden}
+ .museum-home{height:100%;min-height:0;padding:8px 12px calc(7px + env(safe-area-inset-bottom))}
+ .museum-headline{margin:0 auto}
+ .museum-headline h1{font-size:clamp(32px,9vw,43px);line-height:.92}
+ .museum-display{flex:1;min-height:100px;max-height:none;margin:0 -12px 3px}
+ .museum-home .museum-display .museum-stage{inset:0 0 60px}
+ .museum-stage-caption{bottom:30px}
+ .museum-exhibit-number{bottom:29px}
+ .museum-wheel{bottom:0}
+ .museum-wheel button{min-width:42px;min-height:32px}
+ .museum-control{flex:none;min-height:0}
+ .museum-persona{min-height:43px;padding:4px 8px;grid-template-columns:45px minmax(0,1fr) 22px;margin:0 0 5px}
+ .museum-persona .personal-seal{width:45px;height:33px}
+ .persona-caption strong{font-size:14px}
+ .persona-caption small{font-size:10px}
+ .start-restoration{min-height:56px}
+ .museum-lower{margin-top:5px;gap:6px}
+ .museum-lower button{min-height:42px;font-size:12px}
+ .museum-footer{margin-top:6px;padding-top:4px;min-height:28px;gap:7px}
+ .museum-footer button{min-height:29px;letter-spacing:0;font-size:10px;padding:4px}
+ .gallery.exhibition-grid .picture .style{display:none}
+ .phase-page .phase-body{padding-top:10px}
+ .phase-page .phase-head{min-height:65px;padding:11px 13px}
+ .phase-page .phase-head h2{font-size:clamp(20px,5.7vw,25px)}
+ .phase-page .phase-head .eyebrow{letter-spacing:.12em}
+ .waiting-layout{gap:13px}
+ .waiting-progress{padding:12px 14px}
+ .waiting-progress h3{font-size:18px;margin:0}
+ .waiting-work h3{font-size:20px}
+ .expert-intro{align-items:center;gap:8px}
+ .expert-intro .expert-author h3{font-size:19px}
+ .expert-intro .expert-observers{font-size:11px}
+ .expert-ballot>.hint{margin:8px 0}
+}
+@media(max-height:620px) and (max-width:699px){
+ .museum-headline h1{font-size:32px}
+ .museum-display{min-height:75px}
+ .museum-control .start-restoration{min-height:48px}
+ .museum-persona{min-height:39px}
+ .museum-lower button{min-height:39px}
+ .museum-footer{min-height:20px}
+}
