@@ -1,0 +1,20 @@
+{
+  "id": "/apps/uzel-party/",
+  "name": "УЗЕЛ — вместе крепче",
+  "short_name": "УЗЕЛ",
+  "description": "Кооперативные испытания с общей верёвкой через PocketLAN.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#efe8d7",
+  "theme_color": "#efe8d7",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
