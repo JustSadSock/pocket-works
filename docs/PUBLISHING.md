@@ -40,18 +40,33 @@ No retired hosting integration is part of the release contract. Production verif
 
 ## Installed PWA update lifecycle
 
-A new Service Worker downloads and reaches the `waiting` state. It does not call `skipWaiting()` during installation.
+**Production rule: application updates are applied at a document boundary, never
+in the middle of an open game or PocketNet room.** A new release must not
+reload the active document, replace it after `controllerchange`, or delete
+its app cache while another tab is using it.
 
-The shared update manager:
+- The launcher **Check updates** action refreshes the registry and reads installed
+  worker metadata. It does **not** call `registration.update()` or `SKIP_WAITING`
+  for open applications. Outdated releases are reported as **on next launch**.
+- A normal launch from **Home** or **Library** carries the published fingerprint.
+  If the observed/verified release differs, the launcher replaces a stale
+  registration and its app-scoped cache before navigation, provided the device
+  is online and no other app document reports itself open.
+- Production `shared/release-guard.js` checks `release.json` during gameplay,
+  on return to the tab and after controller changes. It records a pending
+  release but **never reloads that live document**.
+- On the **next document entry**, the guard consumes a pending release and
+  performs one bounded recovery if necessary. It preserves the current offline
+  copy while disconnected, and avoids cache eviction when another tab of the
+  same app is active. Only the new document gets the new release.
+- The shared managed/enhanced update managers defer to the production guard.
+  Older standalone app builds without that guard can retain their own opt-in
+  update prompts until migrated.
 
-- detects the waiting worker;
-- requests its version, release date and notes through `GET_UPDATE_INFO`;
-- shows a visible in-app update prompt;
-- leaves the active session untouched when the user chooses **Later**;
-- sends `SKIP_WAITING` only after **Update now**;
-- waits for `controllerchange` and then reloads once.
-
-This avoids silent mid-session replacement and stale mixed-version interfaces.
+This separation preserves a live game's network session even if a release is
+published, a browser resumes the tab or the launcher checks all applications.
+Client/server multiplayer compatibility must still be maintained across
+published releases; the updater is not a substitute for protocol versioning.
 
 ## Cache ownership
 
