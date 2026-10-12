@@ -49,7 +49,7 @@ function updateGame(){
 function beginLocal(level=unlocked){exitRoom();mode='local';world=initialize([{id:'hero-1',name:nickname()},{id:'hero-2',name:'Напарник'}],level);activeId='hero-1';lastLevel=-1;show('game');updateGame();tone();}
 function switchHero(){if(mode!=='local'||!world||paused)return;const n=world.players.findIndex(p=>p.id===activeId);activeId=world.players[(n+1)%world.players.length].id;keys.clear();touch.clear();updateGame();tone()}
 function onState(state){if(!state||!['lobby','play','done'].includes(state.phase)||!Array.isArray(state.players)||state.players.length>4)return;
- server=state;connecting=false;if(state.phase==='lobby'){show('lobby');updateLobby()}else{if(screen!=='game'){lastLevel=-1;show('game')}updateGame()}}
+ const previousPhase=server?.phase;server=state;connecting=false;if(state.phase==='lobby'){show('lobby');updateLobby()}else{if(screen!=='game'){lastLevel=-1;show('game')}if(state.phase==='play'&&previousPhase==='done'){paused=false;lastLevel=-1;$('endSheet').hidden=true;$('pauseSheet').hidden=true;}updateGame()}}
 function wire(client){
  client.on('connected',v=>{if(net!==client)return;me=v.player;connected=true;netStatus('PocketNet · подключён');if(screen==='lobby')updateLobby()});
  client.on('room_joined',v=>{if(net!==client)return;room=v.roomId;onState(v.state);try{client.sendGame({type:'sync'})}catch{}});
