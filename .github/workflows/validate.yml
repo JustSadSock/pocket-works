@@ -152,6 +152,9 @@ jobs:
       - name: Test ZAMAZKA flood fill and contour edge quality
         run: node apps/zamazka/qa/fill-seams.mjs
 
+      - name: Test ZAMAZKA art readiness, vote receipts and archive constraints
+        run: node apps/zamazka/qa/ux-reliability.mjs
+
       - name: Build published Enhanced apps
         run: npm run build:enhanced
 
