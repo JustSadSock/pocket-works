@@ -3,6 +3,7 @@ import game,{MIN_PLAYERS,MAX_PLAYERS} from './server/module.ts';
 import {CHAPTERS,ROPE,stageFor,worldFor,simulate,validateLayouts,ropeDistance,currentGoal} from './physics.js';
 import {newLocal,tickLocal,verifyLocalLayouts} from './local.js';
 import {advancePosition} from './engine.js';
+import {rubberPoints} from './art.js';
 assert.equal(MIN_PLAYERS,2);assert.equal(MAX_PLAYERS,5);assert.equal(CHAPTERS.length,12);
 assert.deepEqual(validateLayouts(),[],'all capacities must have reachable layouts');
 assert.deepEqual(verifyLocalLayouts(),[]);
@@ -73,7 +74,58 @@ try{
  rescue.players[1].x=500;rescue.players[1].y=645;rescue.players[1].vy=0;rescue.players[1].ground=false;rescue.players[1].hang=1.1;
  for(let i=0;i<160;i++){now+=11;rescue.inputs.p0={dir:0,jump:false,anchor:true,at:now};rescue.inputs.p1={dir:0,jump:false,anchor:false,at:now};simulate(rescue,.011,now);if(rescue.saveCount)break;}
  assert.ok(rescue.saveCount>=1,'an anchored friend must be able to reel a dangling person to safety');
- assert.equal(currentGoal(rescue),'stars','rescue unlocks collectible stage');
+ assert.equal(currentGoal(rescue),'signals','rescue unlocks physical sensor puzzle');
+ // Rendered slack always falls DOWN in world coordinates regardless of endpoint order,
+ // and stays the same even if the players exchange sides or one anchors.
+ for(const a of [{x:220,y:420},{x:610,y:505},{x:400,y:550}]){
+  for(const b of [{x:650,y:490},{x:230,y:310},{x:620,y:550}]){
+   const f=rubberPoints(a,b,{reduced:true,tight:0}),r=rubberPoints(b,a,{reduced:true,tight:0});
+   const m=f[Math.floor(f.length/2)],nr=r[Math.floor(r.length/2)];
+   const fy=(a.y+b.y)/2;
+   assert.ok(m.y>=fy-1,'rubber cannot float upward under gravity');
+   assert.ok(Math.abs(m.y-nr.y)<1.7,'reversing linked friends cannot invert sag');
+  }
+ }
+ // Signals are actual geometric crossings of the physical cord, not pickups by a body.
+ const relay=worldFor(people.slice(0,2),3);
+ assert.equal(currentGoal(relay),'signals');
+ let lens=relay.stage.signals[0];
+ relay.players[0].x=lens.x-86;relay.players[0].y=lens.y+63;relay.players[1].x=lens.x+86;relay.players[1].y=lens.y-63;
+ for(let i=0;i<2;i++){now+=11;relay.players.forEach(p=>relay.inputs[p.id]={dir:0,jump:false,anchor:false,at:now});simulate(relay,.011,now);}
+ assert.equal(relay.signalIndex,1,'first airborne lens registers a stretched cord');
+ assert.ok(!relay.gateOpen,'one signal is insufficient');
+ lens=relay.stage.signals[1];
+ relay.players[0].x=lens.x-85;relay.players[0].y=lens.y+61;relay.players[1].x=lens.x+85;relay.players[1].y=lens.y-61;
+ now+=11;relay.players.forEach(p=>relay.inputs[p.id]={dir:0,jump:false,anchor:false,at:now});simulate(relay,.011,now);
+ assert.ok(relay.signalDone&&relay.gateOpen,'second sensor opens the route');
+ const lapse=worldFor(people.slice(0,2),3);
+ let l=lapse.stage.signals[0];
+ lapse.players[0].x=l.x-90;lapse.players[0].y=l.y+61;lapse.players[1].x=l.x+90;lapse.players[1].y=l.y-61;
+ now+=11;lapse.players.forEach(p=>lapse.inputs[p.id]={dir:0,jump:false,anchor:false,at:now});simulate(lapse,.011,now);
+ assert.equal(lapse.signalIndex,1);
+ lapse.players.forEach(p=>{p.x=120;p.y=522;}); // clear the first lens
+ for(let j=0;j<50;j++){now+=120;lapse.players.forEach(p=>lapse.inputs[p.id]={dir:0,jump:false,anchor:false,at:now});simulate(lapse,.12,now);}
+ assert.equal(lapse.signalIndex,0,'failed rapid relay resets without reloading the level');
+ // Real moving bodies can react to the counterweight's oscillating drift.
+ const balance=worldFor(people.slice(0,2),4),center=balance.stage.balance.x;
+ balance.players[0].x=center-111;balance.players[1].x=center+111;
+ balance.players.forEach(p=>{p.y=522;p.vx=0;p.vy=0;p.ground=true;});
+ for(let tick=0;tick<610;tick++){
+  now+=11;
+  const target=center+Math.sin(balance.clock*2.3)*11;
+  const middle=(balance.players[0].x+balance.players[1].x)/2;
+  const correction=target-middle,dir=Math.abs(correction)<2?0:Math.sign(correction);
+  balance.players.forEach(p=>{balance.inputs[p.id]={dir,jump:false,anchor:false,at:now};});
+  simulate(balance,.011,now);
+  if(balance.balanceDone)break;
+ }
+ assert.ok(balance.balanceDone,'counterweight must be achievable with player directional inputs');
+ // Expiring after the signal pulse closes temporary gates and allows retry.
+ const sprint=worldFor(people.slice(0,2),6);
+ sprint.signalDone=true;sprint.phase=sprint.stage.sequence.length;sprint.gateOpen=true;sprint.escapeLeft=.04;
+ now+=110;sprint.players.forEach(p=>sprint.inputs[p.id]={dir:0,jump:false,anchor:false,at:now});
+ simulate(sprint,.12,now);
+ assert.ok(!sprint.gateOpen&&!sprint.signalDone,'expired gate resets the puzzle without softlocking');
  for(let n=2;n<=5;n++){
   let state=game.createRoom({player:people[0]}).state;
   state=game.onJoin({state,players:people.slice(0,n)}).state;
@@ -81,7 +133,7 @@ try{
   assert.equal(state.phase,'play');
   for(let level=0;level<CHAPTERS.length;level++){
    assert.equal(state.world.level,level);
-   state.world.gateOpen=true;
+   state.world.gateOpen=true;state.world.escapeLeft=10;
    state.world.players.forEach((p,i)=>{p.x=1138-(n-1-i)*34;p.y=522;p.ground=true;p.anchor=false;p.vx=0;p.vy=0;});
    now+=100;state=game.onMessage({state,player:people[0],payload:{type:'input',dir:0,jump:false,anchor:false}}).state;
   }
@@ -93,5 +145,5 @@ try{
  assert.equal(w.level,0,'running right alone must not clear tutorial');
  const p=advancePosition(w.players[0],{dir:1,jump:false,anchor:false},1/60,{...w.stage,open:false},w.players);
  assert.ok(Number.isFinite(p.x),'client prediction must stay finite');
- console.log('NATYAZHENIE v1.2: 12 stages at 2–5 players, peg-routed constraints, anchor sling, ordered objectives, rescue and PocketNet room lifecycle passed');
+ console.log('NATYAZHENIE v1.3: 12 stages, gravity ribbon, physical relay puzzles, counterweights, exit timer and multiplayer lifecycle passed');
 }finally{Date.now=wasNow;}
