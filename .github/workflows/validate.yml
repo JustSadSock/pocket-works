@@ -131,6 +131,9 @@ jobs:
       - name: Test ZAMAZKA unconfirmed drawing and autosave recovery
         run: node apps/zamazka/qa/draft-recovery.mjs
 
+      - name: Test ZAMAZKA own-paint picker and Space shortcut
+        run: node apps/zamazka/qa/picker-snapshot.mjs
+
       - name: Build published Enhanced apps
         run: npm run build:enhanced
 
