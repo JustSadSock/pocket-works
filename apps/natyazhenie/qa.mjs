@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import game,{MIN_PLAYERS,MAX_PLAYERS} from './server/module.ts';
-import {CHAPTERS,ROPE,worldFor,stageFor,simulate,validateLayouts,ropeDistance,viewWorld} from './physics.js';
+import {CHAPTERS,ROPE,FLOOR,worldFor,stageFor,simulate,validateLayouts,ropeDistance,viewWorld} from './physics.js';
 import {newLocal,tickLocal,verifyLocalLayouts} from './local.js';
 import {advancePosition} from './engine.js';
 import {rubberPoints} from './art.js';
@@ -53,31 +53,65 @@ try{
   assert.equal(p.waveSequence.length,2*n-1);
   assert.equal(r.hooks.length,n-1);
  }
- // Dual and triple-actor counterweight must work with real input acceleration.
- for(const count of [2,3,4,5]){
+ // Level 1: the painted seesaws must have actual collision. Standing on
+ // the floor *under* them cannot charge a single beam.
+ for(let count=2;count<=5;count++){
   const w=worldFor(people.slice(0,count),0),beams=w.stage.balances;
-  const start=beams[0].x-(count===5?90:count===4?105:110);
-  const initial=[start];for(const beam of beams)initial.push(beam.x*2-initial.at(-1));
-  w.players.forEach((p,i)=>Object.assign(p,{x:initial[i],y:522,vx:0,vy:0,ground:true}));
-  for(let step=0;step<1050&&!w.gateOpen;step++){
-   const targets=[start];for(let i=0;i<beams.length;i++)
-    targets.push(2*(beams[i].x-Math.sin(w.clock*2.3+i*1.9)*14)-targets[i]);
-   controls(w,(p,i)=>({dir:Math.max(-1,Math.min(1,(targets[i]-p.x)*.13))}));
+  const first=beams[0].x-(count===5?90:count===4?100:110);
+  const targets=[first];for(const beam of beams)targets.push(2*beam.x-targets.at(-1));
+  w.players.forEach((p,i)=>{p.x=targets[i];p.y=522;p.ground=true;});
+  for(let j=0;j<220;j++)controls(w,()=>({}));
+  assert.ok(w.beamCharge.every(x=>x===0),'standing underneath does not count ('+count+' players)');
+  assert.ok(w.players.every(p=>p.y>503),'floor characters cannot be placed on top of a decorative seesaw');
+  // Reset and approach on the floor, jump THROUGH the board, land on its
+  // actual sloping collider, then actively balance against the spring.
+  const trial=worldFor(people.slice(0,count),0);
+  let phase=0,landed=false;
+  for(let step=0;step<1600&&!trial.gateOpen;step++){
+   if(phase===0&&trial.players.every((p,i)=>Math.abs(p.x-targets[i])<12&&p.ground))phase=1;
+   controls(trial,(p,i)=>({dir:Math.max(-1,Math.min(1,(targets[i]-p.x)*.14)),
+    jump:phase===1&&trial.players.every(q=>q.y>485)&&step%60===0}));
+   if(trial.players.every(p=>p.ground&&p.y+18<515))landed=true;
   }
-  if(!w.gateOpen)console.log('Balance trace',count,JSON.stringify({beams:w.stage.balances.map(b=>b.x),charge:w.beamCharge,tilt:w.beamTilt,players:w.players.map(p=>({x:p.x,y:p.y,ground:p.ground,vx:p.vx}))}));
-  assert.ok(w.gateOpen,'balancing team '+count+' must be able to open the gate');
+  assert.ok(landed,'all '+count+' must be able to jump onto real physical boards');
+  assert.ok(trial.gateOpen,'real on-board team balancing must open the door ('+count+')');
+  assert.ok(trial.beamCharge.every(x=>x>=(count===5?.65:1)),'every linked board participates');
+  // Movement to the exit after a solved puzzle is also playable.
+  let walked=false;
+  for(let step=0;step<600&&!walked;step++){
+   const before=trial.level;controls(trial,()=>({dir:1}));
+   walked=trial.level!==before;
+  }
+  assert.ok(walked,'balanced team can physically reach the next stage ('+count+')');
  }
- // Ferry: an actual grounded rider and anchored teammate, no virtual button.
- const ferry=worldFor(people.slice(0,3),1);
- ferry.players[0].x=337;ferry.players[0].y=522;ferry.players[0].ground=true;
- ferry.players[1].x=440;ferry.players[1].y=438;ferry.players[1].ground=true;
- ferry.players[2].x=505;ferry.players[2].y=438;ferry.players[2].ground=true;
- const start=ferry.ferryX;
- for(let t=0;t<270&&!ferry.ferryDone;t++){
-  controls(ferry,(p,i)=>i===0?{anchor:true}:{dir:1});
+ // Level 2: real approaches, one-way raft boarding, rider driving the
+ // full distance and *all* passengers/shore holders reaching the far bank.
+ for(let count=2;count<=5;count++){
+  const ferry=worldFor(people.slice(0,count),1),bracer=count===5?2:0,driver=count-1;
+  let phase=0,boarded=false,docked=false;
+  for(let step=0;step<1700&&!ferry.gateOpen;step++){
+   if(phase===0&&ferry.players[0].x>(count===5?285:335))phase=1;
+   if(phase===1&&ferry.players[driver].ground&&ferry.players[driver].y<500){phase=2;boarded=true;}
+   if(phase===2&&ferry.ferryDone){phase=3;docked=true;}
+   controls(ferry,(p,i)=>{
+    if(phase===0)return {dir:1};
+    if(phase===1)return {anchor:i===bracer,jump:(count===5?i>=3:i===driver)&&step%(count===5?30:25)<3};
+    if(phase===2)return {anchor:i===bracer,dir:count===5?+(i>=3):+(i===driver)};
+    return {dir:1,jump:p.ground&&p.x<705&&step%55<3};
+   });
+  }
+  assert.ok(boarded,'driver can actually jump from below onto the deck ('+count+')');
+  assert.ok(docked&&ferry.ferryDone,'raft must reach opposite bank with players aboard ('+count+')');
+  assert.ok(ferry.gateOpen,'every player must be able to disembark and reach far bank ('+count+')');
+  assert.ok(ferry.players.every(p=>p.x>=ferry.stage.floors[1].x+25&&p.ground&&p.y+18>=FLOOR-3),
+   'far-shore condition checks physical footing of everyone ('+count+')');
+  let walked=false;
+  for(let step=0;step<300&&!walked;step++){
+   const before=ferry.level;controls(ferry,()=>({dir:1}));
+   walked=ferry.level!==before;
+  }
+  assert.ok(walked,'whole crew can leave level two after docking ('+count+')');
  }
- assert.ok(ferry.ferryDone&&ferry.gateOpen,'a driver and shore anchor must carry the ferry to the far side');
- assert.ok(ferry.ferryX>start+185,'raft covers the entire real chasm');
  // Cargo reacts to obstacles and resets without losing the level.
  const cargo=worldFor(people.slice(0,3),2);
  cargo.cargoBall.x=424;cargo.cargoBall.y=386;
@@ -87,6 +121,28 @@ try{
  controls(cargo,()=>({}));
  assert.ok(cargo.cargoBall.cracks>=1,'glass cargo cracks when it hits an obstacle');
  assert.equal(cargo.level,2);assert.ok(!cargo.finished);
+ // Level 3: traverse ALL three glass hazards with real movement / jump pulses.
+ for(let count=2;count<=5;count++){
+  const w=worldFor(people.slice(0,count),2);let phase=0,launch=0,achieved=false;
+  for(let step=0;step<700&&!w.gateOpen&&w.cargoBall.cracks===0;step++){
+   const ball=w.cargoBall;
+   if(phase===0&&ball.x>=290){phase=1;launch=step;}
+   if(phase===1&&step-launch>=24)phase=2;
+   if(phase===2&&ball.x>465)phase=3;
+   if(phase===3&&ball.x>700){phase=4;launch=step;}
+   if(phase===4&&step-launch>=24)phase=5;
+   controls(w,()=>({dir:[1,0,1,1,0,1][phase],
+    jump:step===launch&&(phase===1||phase===4)}));
+  }
+  assert.ok(w.gateOpen&&w.cargoBall.cracks===0,
+   'unbroken cargo can really travel over, under, over the maze ('+count+')');
+  let walked=false;
+  for(let step=0;step<350&&!walked;step++){
+   const before=w.level;controls(w,()=>({dir:1}));walked=w.level!==before;
+  }
+  assert.ok(walked,'cargo team can physically finish after delivering ('+count+')');
+ }
+
  // Pulse: success requires genuine jumps, designated turns and spread positions.
  const pulse=worldFor(people.slice(0,3),3);
  pulse.players.forEach((p,i)=>{p.x=pulse.stage.waveSlots[i].x;p.y=522;p.ground=true;});
@@ -115,14 +171,41 @@ try{
  delivered.cargoBall.x=918;delivered.cargoBall.y=415;
  controls(delivered,()=>({}));
  assert.ok(delivered.gateOpen,'delivering the unbroken shared cargo opens the actual door');
- // Rope braiding requires every correct hook simultaneously and a grounded anchor.
- for(let n=2;n<=5;n++){
-  const w=worldFor(people.slice(0,n),4),hooks=w.stage.hooks;
-  const xs=[hooks[0].x-95];for(const h of hooks)xs.push(h.x*2-xs.at(-1));
-  w.players.forEach((p,i)=>Object.assign(p,{x:xs[i],y:522,ground:true,vx:0,vy:0}));
-  for(let j=0;j<240&&!w.braidDone;j++)controls(w,()=>({anchor:true}));
-  assert.ok(w.braidDone,'all '+n+' people can latch every physical peg');
-  assert.ok(w.gateOpen&&w.escapeLeft>0,'braid starts a real group escape window');
+ // Level 4: approach the coloured spots by walking in from the actual spawn.
+ for(let count=2;count<=5;count++){
+  const w=worldFor(people.slice(0,count),3);
+  let prepared=false;
+  for(let step=0;step<900;step++){
+   controls(w,(p,i)=>({dir:Math.max(-1,Math.min(1,(w.stage.waveSlots[i].x-p.x)*.12))}));
+   if(w.players.every((p,i)=>Math.abs(p.x-w.stage.waveSlots[i].x)<10&&p.ground)){prepared=true;break;}
+  }
+  assert.ok(prepared,'real walking lets all '+count+' assemble on wave spots');
+  for(const [step,actor] of w.stage.waveSequence.entries()){
+   controls(w,(p,i)=>({jump:i===actor,anchor:i!==actor}));
+   assert.equal(w.waveIndex,step+1,'physical jump impulse '+step+'/'+count);
+   for(let t=0;t<86;t++)controls(w,(p,i)=>({anchor:i!==actor}));
+  }
+  assert.ok(w.gateOpen,'up-and-down chain of '+count+' friends opens gate');
+  let walked=false;
+  for(let step=0;step<650&&!walked;step++){
+   const before=w.level;controls(w,()=>({dir:1}));walked=w.level!==before;
+  }
+  assert.ok(walked,'wave team reaches final prototype ('+count+')');
+ }
+ // Level 5: independently drive each actor into a realistic <=250px
+ // straddling configuration, hook real rope segments, then escape the gate.
+ for(let count=2;count<=5;count++){
+  const w=worldFor(people.slice(0,count),4),hooks=w.stage.hooks;
+  const targets=[hooks[0].x-80];for(const hook of hooks)targets.push(hook.x+80);
+  for(let step=0;step<1000&&!w.braidDone;step++)
+   controls(w,(p,i)=>({dir:Math.max(-1,Math.min(1,(targets[i]-p.x)*.09)),
+    anchor:i===0&&Math.abs(targets[0]-p.x)<9}));
+  assert.ok(w.braidDone&&w.gateOpen,'all '+count+' friends can catch the proper pegs');
+  assert.ok(w.wraps.every((hook,i)=>hook===i),'each physical segment has its proper peg');
+  const initial=w.escapeLeft;
+  for(let step=0;step<850&&!w.finished;step++)controls(w,()=>({dir:1}));
+  assert.ok(w.finished,'whole group must physically escape before closing time ('+count+')');
+  assert.ok(w.escapeLeft>0&&w.escapeLeft<initial,'real shared countdown is still running');
  }
  // Room lifecycle: unanimous briefing, no simulation while reading, every transition freezes.
  for(let count=2;count<=5;count++){
@@ -162,5 +245,5 @@ try{
  const estimate=advancePosition(local.players[0],{dir:1,jump:false},1/60,{...local.stage,open:false},local.players);
  assert.ok(Number.isFinite(estimate.x));
  assert.equal(viewWorld(local).stage.kind,'balance');
- console.log('NATYAZHENIE five prototypes passed: 2–5 players, actual puzzle rules, all-ready server briefings, local prediction.');
+ console.log('NATYAZHENIE acceptance passed: all 5 stages COMPLETE with real 2–5 player inputs, solid seesaws, docked raft, fragile cargo, jump chain, hook escape, and ready-gated network lifecycle.');
 }finally{Date.now=originalNow;}
