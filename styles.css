@@ -7,7 +7,7 @@
   --brass:#c8a460; --accent:var(--brass); --danger:#d77968;
   --object-shadow:0 18px 40px rgba(0,0,0,.34),0 4px 10px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.055);
   --app-update-surface:var(--paper); --app-update-ink:var(--deep); --app-update-accent:var(--brass);
-  --safe-top:max(18px,var(--app-safe-top,env(safe-area-inset-top)));
+  --safe-top:max(24px,var(--app-safe-top,env(safe-area-inset-top)));
   --safe-right:max(16px,var(--app-safe-right,env(safe-area-inset-right)));
   --safe-bottom:max(22px,var(--app-safe-bottom,env(safe-area-inset-bottom)));
   --safe-left:max(16px,var(--app-safe-left,env(safe-area-inset-left)));
