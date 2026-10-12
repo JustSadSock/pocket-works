@@ -3,9 +3,6 @@
 // App-local release-guard.js remains compatible with existing installed PWAs.
 const VERIFIED_KEY = 'pocket-works:verified-releases:v1';
 const OBSERVED_KEY = 'pocket-works:observed-releases:v1';
-const CHECK_TIMEOUT = 12_000;
-const INSTALL_TIMEOUT = 18_000;
-const ACTIVATION_TIMEOUT = 8_000;
 
 export function releaseIdentity(app) {
   return { version: String(app.version || ''), fingerprint: app.fingerprint || `version-${app.version}` };
@@ -89,38 +86,6 @@ export async function workerInfo(worker) {
     if (result) return result;
   }
   return null;
-}
-
-function waitForState(worker, accepted, milliseconds) {
-  if (accepted.includes(worker.state)) return Promise.resolve(worker.state);
-  return withTimeout(new Promise(resolve => {
-    function changed() {
-      if (!accepted.includes(worker.state)) return;
-      worker.removeEventListener('statechange', changed);
-      resolve(worker.state);
-    }
-    worker.addEventListener('statechange', changed);
-  }), milliseconds, 'Service Worker installation');
-}
-
-async function activateCandidate(registration, candidate, onStage) {
-  if (candidate.state === 'installing') {
-    onStage('installing', 'Installing offline files');
-    const state = await waitForState(candidate, ['installed', 'activated', 'redundant'], INSTALL_TIMEOUT);
-    if (state === 'redundant') throw new Error('new worker became redundant');
-  }
-  const waiting = registration.waiting || (candidate.state === 'installed' ? candidate : null);
-  if (waiting) {
-    onStage('activating', 'Activating release');
-    waiting.postMessage({ type: 'SKIP_WAITING' });
-  }
-  const deadline = Date.now() + ACTIVATION_TIMEOUT;
-  while (Date.now() < deadline) {
-    if (registration.active === candidate || candidate.state === 'activated') return;
-    if (candidate.state === 'redundant') throw new Error('new worker became redundant');
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  throw new Error('Service Worker activation timed out');
 }
 
 export async function updateInstalledApplication(app, registration, { verified = getVerifiedReleases(), onStage = () => {} } = {}) {
