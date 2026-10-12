@@ -570,6 +570,8 @@ function renderShelf({ transition = false } = {}) {
 
 function openDetailPanel() {
   if (!mobilePanelQuery.matches || !selectedApp()) return;
+  const extras = document.querySelector('#detail-extras');
+  if (extras) extras.open = false;
   panelOpen = true;
   lastFocusedElement = document.activeElement;
   detailBackdrop.hidden = false;
