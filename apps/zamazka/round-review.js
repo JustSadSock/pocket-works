@@ -1,6 +1,7 @@
 // The round review is intentionally a distinct, untimed stage.
 // All artwork is available only after the server has finished revealing every vote.
 let viewerCleanup=null;
+const archiveViewState={scale:1,dx:0,dy:0};
 export function closeRoundViewer(){
  if(viewerCleanup){const stop=viewerCleanup;viewerCleanup=null;stop();}
 }
@@ -34,12 +35,13 @@ export function openRoundViewer({index,view,dialog,renderArtwork,arts,esc,closeD
  dialog.innerHTML='<div class="dialog-box round-viewer" role="document"><header class="round-view-header"><div><span>'+(archived?'АРХИВ':'ЭКСПОНАТ')+' '+(index+1)+' / '+works.length+'</span><h2>'+esc(work.name)+'</h2><p>'+esc(arts[work.art].title)+'</p><p class="round-art-provenance">'+esc([arts[work.art].artist,arts[work.art].date,arts[work.art].schoolCountry?'Школа: '+arts[work.art].schoolCountry:null,arts[work.art].creationPlace?'Создано: '+arts[work.art].creationPlace.city+', '+arts[work.art].creationPlace.country:null].filter(Boolean).join(' · '))+'</p></div><button type="button" class="round-view-close" data-round-close aria-label="Закрыть картину">×</button></header><div class="round-view-window" id="roundViewWindow" aria-label="Масштабируемая картина"><div class="round-view-image" id="roundViewImage" style="--split:50%"><canvas id="roundRestoration" aria-label="Реставрация"></canvas><canvas class="round-view-original" id="roundOriginal" aria-label="Подлинник"></canvas><span class="round-view-split"></span></div></div><div class="round-view-legend"><span>Реставрация</span><span>Подлинник</span></div><input id="roundCompare" class="round-view-range" type="range" min="0" max="100" value="50" aria-label="Сравнить с подлинником"><div class="round-view-controls"><div>'+(archived&&works.length>1?'<button type="button" data-round-nav="prev" aria-label="Предыдущая работа">‹</button>':'')+'<button type="button" data-round-zoom="out" aria-label="Отдалить">−</button><output id="roundZoom">100%</output><button type="button" data-round-zoom="in" aria-label="Приблизить">+</button><button type="button" data-round-zoom="reset">Сброс</button>'+(archived&&works.length>1?'<button type="button" data-round-nav="next" aria-label="Следующая работа">›</button>':'')+'</div>'+(archived?'':'<small>'+correct+' верно · '+wrong+' мимо</small>')+'</div></div>';
  const pane=dialog.querySelector('#roundViewWindow'),image=dialog.querySelector('#roundViewImage'),range=dialog.querySelector('#roundCompare'),meter=dialog.querySelector('#roundZoom');
  const pointers=new Map(),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
- let scale=1,dx=0,dy=0,pinch=null;
+ let scale=archived?archiveViewState.scale:1,dx=archived?archiveViewState.dx:0,dy=archived?archiveViewState.dy:0,pinch=null;
  function draw(){
   const boundX=(pane.clientWidth*(scale-1))/2,boundY=(pane.clientHeight*(scale-1))/2;
   dx=clamp(dx,-boundX,boundX);dy=clamp(dy,-boundY,boundY);
   image.style.transform='translate('+dx+'px,'+dy+'px) scale('+scale+')';
   meter.textContent=Math.round(scale*100)+'%';
+  if(archived)Object.assign(archiveViewState,{scale,dx,dy});
  }
  function zoomTo(next,cx,cy){
   const newScale=clamp(next,1,5),ratio=newScale/scale,rect=pane.getBoundingClientRect();
