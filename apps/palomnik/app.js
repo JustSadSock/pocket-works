@@ -59,19 +59,21 @@ function hexRgb(hex) {let n=parseInt(hex.slice(1),16);return [(n>>16)&255,(n>>8)
 function zone(){return Math.min(2,Math.floor(state.step/7));}
 function buildSky() {
  const z=zone(), p=schemes[z], arr=p.sky.map(hexRgb), seed=state.seed;
- back.width=W;back.height=H;
+ const BW=Math.ceil(W/2),BH=Math.ceil(H/2);
+ back.width=BW;back.height=BH;
  const c=back.getContext('2d',{alpha:false});
- const im=c.createImageData(W,H), px=im.data, bayer=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+ const im=c.createImageData(BW,BH), px=im.data, bayer=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
  const cx=z===2?240:278, cy=H*.32, scale=H/680;
- for(let y=0;y<H;y++) for(let x=0;x<W;x++) {
-   const i=(y*W+x)*4, ang=Math.atan2((y-cy)/scale,(x-cx)), dist=Math.hypot((x-cx)*.95,(y-cy)/scale);
-   const broad=noise(x/83,y/99,seed)*.47+noise(x/34,y/39,seed+4)*.29+noise(x/12,y/16,seed+9)*.17+noise(x/4,y/5,seed+3)*.07;
-   const spiral=Math.sin(dist*.074-ang*4.3+noise(x/72,y/71,seed+1)*4.0);
+ for(let y=0;y<BH;y++) for(let x=0;x<BW;x++) {
+   const sx=x*2,sy=y*2;
+   const i=(y*BW+x)*4, ang=Math.atan2((sy-cy)/scale,(sx-cx)), dist=Math.hypot((sx-cx)*.95,(sy-cy)/scale);
+   const broad=noise(sx/83,sy/99,seed)*.47+noise(sx/34,sy/39,seed+4)*.29+noise(sx/12,sy/16,seed+9)*.17+noise(sx/4,sy/5,seed+3)*.07;
+   const spiral=Math.sin(dist*.074-ang*4.3+noise(sx/72,sy/71,seed+1)*4.0);
    const swirl=(1-clamp(dist/290,0,1))*(spiral*.34+.03);
-   const light=(1-clamp(Math.hypot((x-(z===0?66:300))/275,(y-H*.49)/(H*.51)),0,1));
-   const h=y/H;
+   const light=(1-clamp(Math.hypot((sx-(z===0?66:300))/275,(sy-H*.49)/(H*.51)),0,1));
+   const h=sy/H;
    let value=clamp(.10+(h*.26)+broad*.72+swirl+light*.12,0,.999);
-   if(z===0){value+=.035*Math.sin(x*.013+y*.024);}
+   if(z===0){value+=.035*Math.sin(sx*.013+sy*.024);}
    if(z===2){value+=.08*(h>.35?1:0);}
    value=clamp(value,0,.999);
    const t=value*(arr.length-1);
@@ -125,11 +127,11 @@ function drawFloor(t) {
  const z=zone(),s=schemes[z],y=H*.83;
  poly([[0,y+16],[24,y-8],[80,y+9],[130,y-32],[178,y+12],[230,y-20],[290,y+6],[360,y-17],[360,H],[0,H]],'#10151c');
  for(let i=0;i<55;i++){
-   const x=hash(i,15,state.seed)*W, yy=y+hash(i,16,state.seed)*(H-y);
+   const x=hash(i,15,state.seed+state.step*5)*W, yy=y+hash(i,16,state.seed+state.step*5)*(H-y);
    poly([[x-5,yy+3],[x-1,yy-3],[x+hash(i,17)*15+4,yy+1],[x+13,yy+6]],i%4?'#28303a':s.rim);
  }
  for(let i=0;i<85;i++){
-   const x=hash(i,62,state.seed)*W, yy=y+hash(i,63,state.seed)*(H-y);
+   const x=hash(i,62,state.seed+state.step*5)*W, yy=y+hash(i,63,state.seed+state.step*5)*(H-y);
    rect(x,yy,hash(i,64)*5+1,1,i%5===0?rgba(s.glow,.75):rgba(s.rim,.35));
  }
 }
@@ -327,7 +329,7 @@ function drawRain(t){
 }
 function draw(){
  if(!sky)buildSky();
- ctx.imageSmoothingEnabled=false;ctx.drawImage(sky,0,0);
+ ctx.imageSmoothingEnabled=false;ctx.drawImage(sky,0,0,W,H);
  const p=schemes[zone()];
  ctx.globalAlpha=.13;circle(288,H*.26,50,p.glow);ctx.globalAlpha=1;
  renderMountains(tick);oldRuins(tick);drawFloor(tick);drawPath(tick);
