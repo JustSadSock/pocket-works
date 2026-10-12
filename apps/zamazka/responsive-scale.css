@@ -1,0 +1,211 @@
+/* ZAMAZKA 1.20 — fluid museum layout.
+   Increase actual control and canvas geometry rather than scaling the page:
+   pointer-to-canvas coordinates must stay in the same CSS pixel space. */
+
+/* The large-screen composition is one exhibition, not two tiny panels
+   over a mostly empty wall. Controls belong under the title. */
+@media (min-width:1200px) and (min-height:620px) {
+  .museum-home {
+    height:100%; min-height:0;
+    display:grid;
+    grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);
+    grid-template-rows:auto auto;
+    align-content:center; align-items:center;
+    gap:clamp(16px,2.5vh,30px) clamp(36px,4.3vw,88px);
+    padding:clamp(23px,4vh,60px) clamp(38px,5vw,118px);
+  }
+  .museum-headline {
+    grid-area:1/1;
+    width:100%; max-width:none;
+    justify-self:stretch; align-self:end; margin:0;
+  }
+  .museum-headline h1 {
+    font-size:clamp(67px,5.7vw,117px);
+    line-height:.94;
+  }
+  .museum-control {
+    grid-area:2/1;
+    justify-self:stretch; align-self:start;
+    width:100%; max-width:650px; margin:0;
+  }
+  .museum-persona {
+    min-height:clamp(61px,8vh,78px);
+    grid-template-columns:64px minmax(0,1fr) 28px;
+    padding:10px 14px; gap:14px; margin-bottom:11px;
+  }
+  .museum-persona .personal-seal { width:64px;height:48px; }
+  .persona-caption strong { font-size:clamp(18px,1.35vw,23px); }
+  .persona-caption small { font-size:12px; }
+  .start-restoration {
+    min-height:clamp(74px,9.3vh,100px);
+    grid-template-columns:58px minmax(0,1fr) 26px;
+    padding:13px 18px; gap:14px;
+  }
+  .start-emblem { font-size:42px; }
+  .start-restoration strong { font-size:clamp(22px,1.6vw,29px); }
+  .start-restoration small { font-size:12px; }
+  .museum-lower { gap:12px; margin-top:12px; }
+  .museum-lower button { min-height:clamp(52px,6.6vh,69px);font-size:clamp(13px,.92vw,16px); }
+  .museum-lower button span { font-size:22px; }
+  .museum-footer { margin-top:12px; padding-top:9px; gap:10px;flex-wrap:wrap; }
+  .museum-footer button { min-height:39px;font-size:11px;letter-spacing:.05em; }
+  .museum-footer .cloud-control { min-height:37px;font-size:11px; }
+  .museum-display {
+    grid-area:1/2/3/3;
+    width:100%; height:clamp(420px,calc(100dvh - 170px),790px);
+    min-height:0; max-height:none; margin:0;
+    --museum-step:clamp(190px,19vw,354px);
+  }
+  .museum-stage { inset:0 0 73px; }
+  .museum-slide { width:clamp(230px,22vw,390px);max-width:54%;height:96%; }
+  .museum-stage-caption { bottom:42px; }
+  .museum-stage-caption strong { font-size:clamp(18px,1.25vw,23px); }
+  .museum-stage-caption span { font-size:12px; }
+  .museum-exhibit-number { bottom:51px; }
+  .museum-wheel button { min-width:46px;min-height:39px; }
+}
+
+/* Wider screens must display more art, not more blank margins. */
+@media (min-width:1100px) {
+  .phase-page:has(.gallery.exhibition-grid) {
+    display:flex;flex-direction:column;min-height:100%;
+  }
+  .phase-page:has(.gallery.exhibition-grid)>.phase-body {
+    flex:1;
+    width:100%; max-width:1680px;
+    padding:clamp(18px,2.5vw,45px) clamp(26px,3.3vw,62px);
+    display:flex; flex-direction:column;justify-content:center;
+  }
+  .phase-page .gallery.exhibition-grid {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:clamp(12px,1.25vw,25px);
+    width:100%; padding:clamp(15px,2vh,26px) 0;
+  }
+  .gallery.exhibition-grid .picture {
+    min-width:0;padding:clamp(7px,.7vw,13px);
+  }
+  .gallery.exhibition-grid .picture .caption { font-size:clamp(17px,1.12vw,22px); }
+  .gallery.exhibition-grid .picture .style { font-size:clamp(10px,.7vw,13px); }
+  .phase-page:has(.gallery.exhibition-grid)>.phase-body>.btn {
+    margin-top:clamp(9px,1.6vh,19px);
+    min-height:clamp(50px,6vh,66px);
+    font-size:clamp(14px,1vw,17px);
+  }
+
+  /* Private collection uses the same physical gallery proportions. */
+  .screen>.page:has(> .gallery:not(.exhibition-grid)) {
+    max-width:1560px;
+    padding:clamp(25px,4vh,48px) clamp(28px,3.5vw,64px) 60px;
+  }
+  .screen>.page:has(> .gallery:not(.exhibition-grid))>.gallery {
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:clamp(17px,1.8vw,31px);
+    padding-top:clamp(17px,2.2vh,28px);
+  }
+  .screen>.page:has(> .gallery:not(.exhibition-grid)) .picture {
+    padding:clamp(9px,.8vw,14px);
+  }
+  .screen>.page:has(> .gallery:not(.exhibition-grid)) .caption {
+    font-size:clamp(17px,1.15vw,22px);
+  }
+
+  /* Reveal page: artwork gets the extra room, controls remain readable. */
+  .reveal-phase>.phase-body,
+  .waiting-phase>.phase-body {
+    width:100%;max-width:1700px;
+    padding:clamp(20px,2.4vw,42px) clamp(25px,3vw,58px);
+  }
+  .reveal-layout { grid-template-columns:minmax(0,1.65fr) minmax(335px,.72fr); }
+  .reveal-main { min-width:0; }
+  .reveal-main .unveil-frame,
+  .waiting-work .unveil-frame {
+    width:min(100%,calc(max(330px,100dvh - 270px) * 4 / 3),1050px);
+    max-width:100%;
+  }
+  .reveal-brief { padding-left:clamp(21px,2vw,37px); }
+  .reveal-brief>.btn { min-height:51px;font-size:14px; }
+  .unveil-control { font-size:14px; }
+  .phase-head h2 { font-size:clamp(29px,2.5vw,42px); }
+  .phase-head .timer { font-size:clamp(29px,2.2vw,37px); }
+}
+
+/* A comparison dialog used to be capped at 510px on any desktop. */
+@media (min-width:720px) {
+  .dialog:has(#savedFull) .dialog-box {
+    width:min(92vw,1100px); max-width:1100px;
+    padding:clamp(18px,2.4vw,34px);
+  }
+  .dialog:has(#savedFull) .compare { gap:clamp(14px,2vw,30px); }
+  .dialog:has(#savedFull) .compare img,
+  .dialog:has(#savedFull) .compare canvas {
+    display:block;width:100%;aspect-ratio:4/3;object-fit:contain;
+    background:#302720;border:5px ridge #a88a61;
+  }
+  .dialog:has(#savedFull) .compare small {
+    display:block;margin-top:10px;font-size:12px;
+  }
+  .dialog:has(.art-inspection) .dialog-box {
+    width:min(90vw,810px);max-width:810px;
+  }
+  .dialog:has(.art-inspection) .art-inspection { max-height:58dvh;object-fit:contain; }
+}
+
+/* The editor keeps 1:1 hit-testing in its existing canvas; the cabinet and
+   touch targets may grow without introducing a visual-only zoom. */
+@media (min-width:1200px) and (pointer:fine) {
+  .restore { grid-template-columns:minmax(0,1fr) clamp(280px,18vw,340px); }
+  .restore>.work-tools { padding:clamp(13px,1.7vh,22px) clamp(13px,1vw,20px);gap:clamp(9px,1.4vh,16px); }
+  .restore .tool { min-height:clamp(51px,6.2vh,64px); }
+  .restore .tool .draw-icon { width:clamp(24px,1.6vw,29px);height:clamp(24px,1.6vw,29px); }
+  .restore .tool span { font-size:11px; }
+  .restore .colors { padding:clamp(8px,1.1vh,15px) 0;gap:clamp(6px,.5vw,10px); }
+  .restore .swatch { width:clamp(32px,2.1vw,41px);height:clamp(32px,2.1vw,41px);min-width:clamp(32px,2.1vw,41px); }
+  .restore .adjust label { font-size:12px; }
+  .restore .zoom-actions .tool { min-height:40px; }
+  .restore .work-foot .btn { min-height:52px;font-size:14px; }
+  .restore .work-foot .quiet { font-size:11px; }
+  .restore .viewport {
+    max-height:calc(100dvh - 145px);
+    width:min(100%,calc((100dvh - 145px) * 4 / 3),1520px);
+  }
+}
+
+/* Short landscape laptops: allow scrolling instead of clipping the museum
+   or forcing a 600px artwork into a 500px viewport. */
+@media (min-width:700px) and (max-height:619px) {
+  .screen:has(> .museum-home){overflow-y:auto}
+  .museum-home{height:auto;min-height:100%;overflow:visible}
+  .museum-display{min-height:250px;max-height:350px}
+}
+@media (min-width:700px) and (max-width:1199px) {
+  .museum-control { max-width:min(92%,680px); }
+  .museum-display { max-width:100%; }
+  .screen>.page:has(> .gallery:not(.exhibition-grid)) { max-width:1000px; }
+  .screen>.page:has(> .gallery:not(.exhibition-grid))>.gallery {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+}
+
+/* Mobile: keep the focus-first single-screen home and genuine 44px controls;
+   do not inherit the desktop grid, card density, or canvas resizing. */
+@media (max-width:699px) {
+  .museum-home {max-width:100%;width:100%}
+  .museum-control {width:100%;max-width:100%}
+  .museum-lower button {min-height:44px}
+  .museum-persona {min-height:44px}
+  .museum-display {width:calc(100% + 24px)}
+  .dialog:has(#savedFull) .dialog-box {width:min(96vw,540px);max-width:540px}
+}
+@media (max-width:420px) {
+  .dialog:has(#savedFull) .compare {grid-template-columns:1fr;gap:10px}
+  .dialog:has(#savedFull) .compare img,
+  .dialog:has(#savedFull) .compare canvas {
+    max-height:31dvh;object-fit:contain;
+  }
+  .dialog:has(#savedFull) .dialog-box {padding:12px}
+}
+/* Prefer intrinsic sizing for scaled text, low vision, and browser zoom. */
+@media (min-width:700px) and (max-width:1199px) and (max-height:720px) {
+  .museum-home {overflow:visible;height:auto;min-height:100%}
+  .screen:has(> .museum-home) {overflow:auto}
+}
