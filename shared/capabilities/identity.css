@@ -11,3 +11,5 @@
 .pw-identity-status .pw-identity-avatar{width:27px;height:27px;}
 .pw-identity-profile-link{font-size:.76rem;color:inherit;text-underline-offset:3px;opacity:.8;white-space:nowrap;}
 .pw-identity-profile-link:hover{opacity:1;}
+
+.pw-identity-avatar img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
