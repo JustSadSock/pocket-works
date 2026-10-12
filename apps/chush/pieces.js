@@ -84,8 +84,11 @@ export function pieceInfo(t) {
  const base=Math.floor(n/5),variant=n%5;
  return {id:n,base,variant,category:Math.floor(base/8),name:B[base][0],color:INKS[variant]};
 }
+let nextMask=0;
 export function pieceSVG(t,color) {
  const info=pieceInfo(t),ink=color===undefined?info.color:INKS[Math.max(0,Math.min(INKS.length-1,Math.trunc(Number(color)||0)))];
- // Only one silhouette. The white cutouts are small counterforms, never scenery.
- return '<svg viewBox="0 0 100 100" class="piece-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="color:'+ink+'"><g fill="currentColor">'+B[info.base][1]+'</g></svg>';
+ // A mask makes eyes/windows true transparent counterforms, never white paint over older stamps.
+ const id='chush-ink-'+(++nextMask);
+ const solid=B[info.base][1].replaceAll('fill="#fffef6"','fill="black"');
+ return '<svg viewBox="0 0 100 100" class="piece-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><mask id="'+id+'" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><g fill="white" style="color:white">'+solid+'</g></mask></defs><rect width="100" height="100" fill="'+ink+'" mask="url(#'+id+')"/></svg>';
 }
