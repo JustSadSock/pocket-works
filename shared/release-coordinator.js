@@ -126,43 +126,29 @@ async function activateCandidate(registration, candidate, onStage) {
 export async function updateInstalledApplication(app, registration, { verified = getVerifiedReleases(), onStage = () => {} } = {}) {
   const stage = (phase, label) => onStage(label, phase);
   try {
-    const before = registration.active;
-    const previousInfo = await workerInfo(before);
+    // A "check all" must NEVER call registration.update(), skipWaiting or
+    // clear an app cache: the same worker may still serve a live PocketNet game.
     const expected = releaseIdentity(app);
-    if (sameRelease(verified[app.slug], expected) &&
-        previousInfo?.version === expected.version &&
-        (!previousInfo.fingerprint || previousInfo.fingerprint === expected.fingerprint)) {
+    stage('checking', 'Reading installed release');
+    const info = await workerInfo(registration.active);
+    const versionMatches = info?.version === expected.version;
+    const fingerprintMatches = !expected.fingerprint ||
+      info?.fingerprint === expected.fingerprint ||
+      (!info?.fingerprint && sameRelease(verified[app.slug], expected));
+
+    if (versionMatches && fingerprintMatches) {
+      saveVerified(app);
       stage('current', 'Current release verified');
       return { app, status: 'current' };
     }
 
-    stage('checking', 'Checking installed release');
-    await withTimeout(registration.update(), CHECK_TIMEOUT, `${app.name} worker check`);
-    let candidate = registration.installing || registration.waiting;
-    if (candidate) await activateCandidate(registration, candidate, stage);
-    else if (registration.active !== before) candidate = registration.active;
-
-    stage('verifying', 'Verifying active release');
-    const active = registration.active;
-    const info = await workerInfo(active);
-    if (info?.version && info.version !== expected.version)
-      throw new Error(`active worker reports v${info.version}; expected v${expected.version}`);
-    if (info?.fingerprint && expected.fingerprint && info.fingerprint !== expected.fingerprint)
-      throw new Error('active worker fingerprint does not match published release');
-
-    if (info?.version === expected.version) {
-      saveVerified(app);
-      const status = candidate || previousInfo?.version !== expected.version ? 'updated' : 'current';
-      stage(status, status === 'updated' ? 'Release updated' : 'Release current');
-      return { app, status };
-    }
-    // Older workers may not report metadata. A successful check is not proof
-    // that the intended release is installed: never write a false verified receipt.
-    stage('checked', 'Worker checked; release not verified');
-    return { app, status: 'checked' };
+    // A deferred update is applied by the versioned launcher handoff, or by
+    // the app's boot guard on its next document entry.
+    stage('deferred', 'Update on next launch');
+    return { app, status: 'deferred' };
   } catch (error) {
     stage('failed', 'Release check failed');
-    return { app, status: 'failed', error: errorMessage(error), timedOut: errorMessage(error).includes('timed out') };
+    return { app, status: 'failed', error: errorMessage(error) };
   }
 }
 
