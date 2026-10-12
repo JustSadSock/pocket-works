@@ -1,4 +1,4 @@
-# ЗАМАЗКА · Большая реставрация 1.7
+# ЗАМАЗКА · Большая реставрация 1.12.5
 
 Музейная игра о подделке и реставрации настоящих картин в Pocket Works.
 
@@ -114,3 +114,8 @@ PocketNet разрешает короткий код по первым вось�
 В лобби появился общий холст 960×600 со свободной кистью, восьмью красками и изменением толщины. Локальные движения видны без ожидания сети, дельты отправляются через существующий WebSocket примерно раз в 42 мс и сервер транслирует их участникам сразу (без рассылки полного снимка на каждый мазок). История ограничена последними 400 пакетами, передаётся при присоединении и переподключении, сбрасывается с началом матча. Очистка только у куратора с подтверждением. Задержка зависит от фактической сети; гарантировать фиксированный ping невозможно.
 
 `node apps/zamazka/test-gallery-commons.mjs` проверяет пакеты и индексы картин; PocketNet Edge E2E проверяет синхронизацию реального холста между браузерами.
+
+
+## Stage-first UI · 1.12.5
+
+Mobile home fits within the visible app viewport without forcing vertical scrolling on a normal-sized portrait screen; gallery art and one primary action lead the composition. Lobby keeps room code, invitation buttons, players and synchronized drawing without repeat setup explanations. Preview, drawing, voting, waiting and reveal each show one short actionable instruction instead of duplicative atmospheric microcopy. Waiting roster is an accessible optional disclosure; live ready counts and player state still update while it is closed. Gallery, painting and detailed result phases retain scrolling when the images or controls require space. No scoring, networking, canvas state or Pocket ID contracts changed.
