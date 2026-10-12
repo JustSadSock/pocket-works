@@ -1,6 +1,6 @@
 /* ЗАМАЗКА 1.8 · One exhibition hall, from admission to final verdict. */
 :root{--paper:#eee3cf;--paper-edge:#c4ad8a;--museum-ink:#342920;--museum-gold:#c39b61;--museum-wood:#392c24}
-.top{position:relative;z-index:4;min-height:64px;gap:8px;background:linear-gradient(180deg,#29231e,#1b1715);border-bottom:3px ridge #655038;padding:calc(6px + env(safe-area-inset-top)) clamp(10px,2.5vw,26px) 7px}
+.top{position:relative;z-index:4;min-height:64px;gap:8px;background:linear-gradient(180deg,#29231e,#1b1715);border-bottom:3px ridge #655038;padding:calc(6px + var(--app-safe-top,env(safe-area-inset-top))) clamp(10px,2.5vw,26px) 7px}
 .return{min-width:0;height:44px;padding:0 9px;border:1px solid #554433;background:#2a211a;font-size:10px;gap:6px}
 .return .return-symbol{font:23px Georgia,serif;color:#d7b98e}.return span:last-child{white-space:nowrap}
 .wordmark{flex:1;text-align:center;font-size:clamp(12px,2vw,18px);letter-spacing:.18em;white-space:nowrap}
