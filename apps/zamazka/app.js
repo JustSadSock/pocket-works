@@ -137,6 +137,43 @@ function notify(t){const message=String(t||'');if(message===lastToast&&Date.now(
 function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML=''}
 function modal(title,body,buttons){dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)})}
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
+const SUBMIT_KEY=NS+'pending-submission';
+let pendingSubmit=(()=>{try{return JSON.parse(localStorage.getItem(SUBMIT_KEY)||'null')}catch{return null}})();
+function persistPending(){try{if(pendingSubmit)localStorage.setItem(SUBMIT_KEY,JSON.stringify(pendingSubmit));else localStorage.removeItem(SUBMIT_KEY)}catch{}}
+function submissionToken(ass,round){return [roomId,round,ass.art,ass.variation].join(':')}
+function confirmSubmission(art,round){
+ if(!pendingSubmit||pendingSubmit.round!==round||pendingSubmit.art!==art||pendingSubmit.room!==roomId)return;
+ const committed=pendingSubmit;pendingSubmit=null;persistPending();autoSubmitted=committed.token;
+ const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
+ draftIndicator('Принято сервером ✓');sound(700);
+}
+function attemptSubmission(force=false){
+ const p=pendingSubmit;
+ if(!p||p.room!==roomId||!net||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
+ if(!force&&Date.now()-(p.sentAt||0)<3600)return;
+ try{
+  const result=sendPainting(packet=>net.sendGame(packet),
+   {type:'submit_chunk',round:p.round,art:p.art,variation:p.variation,strokes:p.strokes});
+  p.revision=result.revision;p.sentAt=Date.now();p.attempts=(p.attempts||0)+1;persistPending();
+  const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
+  draftIndicator('Передаём работу…');
+ }catch{
+  p.sentAt=0;persistPending();
+  draftIndicator('Нет связи · работа сохранена на устройстве');
+ }
+}
+function submitArtwork({automatic=false}={}){
+ if(!editor||!view?.mine||!roomId)return;
+ const ass=view.mine,token=submissionToken(ass,view.round);
+ if(pendingSubmit?.token===token){attemptSubmission(true);return}
+ const strokes=editor.getData();editor.saveSnapshot();
+ pendingSubmit={token,room:roomId,round:view.round,art:ass.art,variation:ass.variation,strokes,revision:null,sentAt:0,attempts:0};
+ persistPending();
+ if(strokes.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,strokes)}
+ attemptSubmission(true);
+ if(!automatic)sound(550);
+}
+
 function draftIndicator(message){const el=screen.querySelector('#draftStatus');if(el)el.textContent=message}
 function backupDraft(force=false){
  if(!editor||page!=='drawing')return;
@@ -144,7 +181,7 @@ function backupDraft(force=false){
  if(practice||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
  const ass=view.mine;if(!ass)return;
  const token=[roomId,view.round,ass.art,ass.variation].join(':');
- if(autoSubmitted===token)return; // final transfer owns this revision
+ if(autoSubmitted===token||pendingSubmit?.token===token)return; // final transfer owns this revision
  const strokes=editor.getSnapshot(),serialized=JSON.stringify(strokes);
  if(!force&&token===lastDraftRound&&serialized===lastDraftPayload&&
     (lastDraftAckRevision===lastDraftRevision||Date.now()-lastDraftSentAt<6500))return;
@@ -164,17 +201,10 @@ function queueDraft(){
 function stopEditor(){clearTimeout(draftDelay);draftDelay=null;if(editor){editor.dispose();editor=null}}
 function autoFinishOnDeadline(){
  if(!editor||practice||page!=='drawing'||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
- if(Date.now()<view.deadline-3200)return;
- const ass=view.mine;if(!ass)return;
- const token=[roomId,view.round,ass.art,ass.variation].join(':');
- if(autoSubmitted===token)return;
- const data=editor.getData();editor.saveSnapshot();
- try{
-  if(!net)throw Error('offline');
-  sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:ass.art,variation:ass.variation,strokes:data});autoSubmitted=token;
-  if(data.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,data)}
-  draftIndicator('Работа отправлена автоматически');
- }catch{draftIndicator('Нет связи · черновик сохранён')}
+ if(Date.now()<view.deadline-1900)return;
+ const token=submissionToken(view.mine,view.round);
+ if(autoSubmitted===token||pendingSubmit?.token===token)return;
+ submitArtwork({automatic:true});
 }
 function change(html,which){if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
 const head=(phase,title,until,context='')=>'<div class="phase-head"><div><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2>'+(context?'<div class="art-head-context">'+context+'</div>':'')+'</div><div class="timer" id="clock">'+(until?'…':'')+'</div></div>';
@@ -187,6 +217,7 @@ function artFactsHtml(id){
 const picture=id=>'<div class="frame"><img src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'"></div>';
 function home(){
  connectionEpoch++;
+ pendingSubmit=null;persistPending();
  invitedRoom='';
  if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
  clearTabGuest();
@@ -525,7 +556,7 @@ async function connect(mode){
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
  const data=editor.getData();editor.saveSnapshot();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
- ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:a.art,variation:a.variation,strokes:data});autoSubmitted=[roomId,view.round,a.art,a.variation].join(':');notify('Передаём работу…')}catch{notify('Нет подключения — черновик сохранён, попробуй сдать ещё раз')}} ,'primary'],
+ ['Сдать',()=>{closeDialog();submitArtwork()} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 async function copyText(value,success){
  try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);notify(success)}
@@ -600,7 +631,11 @@ document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=Number(e.target.value)||160});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
 setInterval(tick,350);
-setInterval(()=>{if(page==='drawing')backupDraft()},10000);
+setInterval(()=>{
+ if(page!=='drawing')return;
+ if(pendingSubmit?.room===roomId&&pendingSubmit.round===view?.round)attemptSubmission();
+ else backupDraft();
+},3600);
 document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden)tick()});
 window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
 async function refreshPocketBadge(){
