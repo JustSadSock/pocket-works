@@ -1,5 +1,5 @@
 // A fully procedural top-down illustration. No sprite sheets or rigid-body puppets.
-import {FIELD,tip,clamp,delta} from './engine.js';
+import {FIELD,tip,shieldOf,clamp,delta} from './engine.js';
 const TAU=Math.PI*2;
 const noise=(x)=>{let z=Math.sin(x*91.379+43.71)*43758.5453;return z-Math.floor(z);};
 const stones=Array.from({length:380},(_,i)=>({x:noise(i+3)*FIELD.w,y:noise(i*2+17)*FIELD.h,
@@ -69,12 +69,12 @@ function makeFloor(){
 }
 function mark(ctx,x,y,r,type,t){
  if(type==='dash'){outline(ctx,x,y,13+t*29,(13+t*29)*.8,'rgba(241,228,189,'+(1-t)*.38+')',1.5);return;}
- if(type==='point'||type==='parry'){
+ if(type==='point'||type==='parry'||type==='shield'||type==='bind'){
   for(let k=0;k<12;k++){
-   const a=k*TAU/12+.22,dist=8+t*(type==='point'?85:52)*(k%3/4+.75);
+   const a=k*TAU/12+.22,dist=8+t*(type==='point'?85:type==='shield'?35:52)*(k%3/4+.75);
    const xx=x+Math.cos(a)*dist,yy=y+Math.sin(a)*dist;
    line(ctx,xx,yy,xx+Math.cos(a)*(13*(1-t)),yy+Math.sin(a)*(13*(1-t)),
-     type==='point'?'rgba(255,246,207,'+(1-t)+')':'rgba(219,241,222,'+(1-t)+')',2*(1-t)+.4);
+     type==='point'?'rgba(255,246,207,'+(1-t)+')':type==='shield'?'rgba(246,211,142,'+(1-t)+')':'rgba(219,241,222,'+(1-t)+')',2*(1-t)+.4);
   }
   outline(ctx,x,y,10+t*45,7+t*30,'rgba(255,242,205,'+(1-t)*.7+')',1.5);
  }
@@ -107,8 +107,37 @@ function duelist(ctx,f,i,t){
  pathCircle(ctx,9,-10,4.3,player?'#cfb399':'#baa28d');
  ctx.restore();
 }
+function buckler(ctx,f,i,t){
+ const shield=shieldOf(f),player=i===0;
+ const handX=f.x+Math.cos(f.a)*9-Math.sin(f.a)*9;
+ const handY=f.y+Math.sin(f.a)*9+Math.cos(f.a)*9;
+ // The forearm is connected to the shoulder even under inertial lag.
+ line(ctx,handX,handY,shield.x,shield.y,player?'#a0b9a7':'#bda087',7);
+ line(ctx,handX,handY,shield.x,shield.y,player?'#d9d6c2':'#806c5d',3.2);
+ ctx.save();ctx.translate(shield.x,shield.y);
+ ctx.rotate(shield.angle+.17*Math.sin(t*.007+f.step*.014));
+ const flash=clamp((f.shieldFlash||0)/.21,0,1);
+ ctx.shadowColor='#040f0aa8';ctx.shadowBlur=6;ctx.shadowOffsetY=4;
+ ctx.beginPath();ctx.ellipse(0,0,shield.r*1.05,shield.r*.88,0,0,Math.PI*2);
+ ctx.fillStyle='#1a2a24';ctx.fill();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+ const metallic=ctx.createLinearGradient(-shield.r,-shield.r,shield.r,shield.r);
+ if(player){metallic.addColorStop(0,'#f4e1b9');metallic.addColorStop(.45,'#a6b5a5');metallic.addColorStop(1,'#667c71');}
+ else{metallic.addColorStop(0,'#e0b98d');metallic.addColorStop(.45,'#8c7865');metallic.addColorStop(1,'#51483f');}
+ ctx.beginPath();ctx.ellipse(0,0,shield.r*.9,shield.r*.73,0,0,Math.PI*2);
+ ctx.fillStyle=metallic;ctx.fill();ctx.strokeStyle=flash?'#fff6d6':'#d9c9a1';ctx.lineWidth=1.7+flash*2;ctx.stroke();
+ // Four rivets and engraved radial ribs make the buckler legible from above.
+ for(let j=0;j<4;j++){
+  const a=j*Math.PI/2;
+  pathCircle(ctx,Math.cos(a)*shield.r*.58,Math.sin(a)*shield.r*.48,1.2,'#f5e7c9');
+ }
+ ctx.beginPath();ctx.moveTo(-shield.r*.44,0);ctx.lineTo(shield.r*.44,0);
+ ctx.moveTo(0,-shield.r*.35);ctx.lineTo(0,shield.r*.35);
+ ctx.strokeStyle=player?'#456152':'#503d34';ctx.lineWidth=1.2;ctx.stroke();
+ pathCircle(ctx,0,0,shield.r*.25,flash?'#fff9d9':'#e9d6af');
+ ctx.restore();
+}
 function foil(ctx,f,i,t){
- const p=tip(f),a=f.a,r=63;
+ const p=tip(f),a=f.a+(f.bladeKick||0),r=63;
  ctx.save();ctx.translate(f.x,f.y);ctx.rotate(a);
  const thrust=f.jab>0&&f.jab<.225;
  const k=thrust?.5+.5*Math.sin((.225-f.jab)/.225*Math.PI):0;
@@ -159,11 +188,12 @@ export function drawScene(ctx,w,h,t,duel,options={}){
    }
   }
   for(let i=0;i<2;i++)duelist(ctx,duel.fighters[i],i,t);
+  for(let i=0;i<2;i++)buckler(ctx,duel.fighters[i],i,t);
   for(let i=0;i<2;i++)foil(ctx,duel.fighters[i],i,t);
  }else{
   const a={x:180+Math.sin(t*.0014)*22,y:356+Math.cos(t*.0012)*12,a:-Math.PI/2+.25*Math.sin(t*.002),vx:0,vy:0,step:t*.04,jab:0};
   const b={x:180+Math.cos(t*.0017)*18,y:176+Math.sin(t*.001)*10,a:Math.PI/2+.31*Math.sin(t*.0016),vx:0,vy:0,step:t*.04,jab:0};
-  duelist(ctx,a,0,t);duelist(ctx,b,1,t);foil(ctx,a,0,t);foil(ctx,b,1,t);
+  duelist(ctx,a,0,t);duelist(ctx,b,1,t);buckler(ctx,a,0,t);buckler(ctx,b,1,t);foil(ctx,a,0,t);foil(ctx,b,1,t);
  }
  for(const effect of options.effects||[]){
   const age=(t-effect.at)/620;
