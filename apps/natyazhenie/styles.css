@@ -16,3 +16,9 @@ h1,h2,p{margin:0}.home-content h1{font-family:ui-rounded,system-ui,sans-serif;fo
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
 /* v1.1: tactile anchor. */
 .action-pad{display:flex;gap:9px;align-items:center}.key.anchor{background:#9de3bc;min-width:97px;font-size:14px;letter-spacing:.04em}.key.anchor.held{background:#60c28c;transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}.key.jump.held{background:#ff98a5;transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}.key.arrow.held{background:#a3dfff;transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}@media(max-width:760px){.action-pad{gap:7px}.key.anchor{min-width:72px;padding:6px;font-size:12px}.key.jump{min-width:76px}.controls{gap:4px}.dpad{gap:6px}}@media(max-width:380px){.key.arrow{min-width:49px}.key.anchor{min-width:66px}.key.jump{min-width:69px}}
+
+/* Elastic response in the small controls, mouse and touch alike. */
+.key{transition:transform .12s cubic-bezier(.16,1.45,.38,1),box-shadow .12s,background-color .14s}
+.key:active,.key.held{transform:translateY(4px) scale(.955)!important;filter:saturate(1.16)}
+.primary:active,.secondary:active,.ticket-actions button:active{transform:translateY(2px) scale(.985);filter:brightness(.98)}
+@media(prefers-reduced-motion:reduce){.key,.primary,.secondary{transition:none!important}}
