@@ -24,7 +24,8 @@ const WORDS = {
  mountain:['Гора','гору','горы','горе','горой'],
  boat:['Лодка','лодку','лодки','лодке','лодкой'],
  cloud:['Облако','облако','облака','облаку','облаком'],
- fire:['Огонь','огонь','огня','огню','огнём']
+ fire:['Огонь','огонь','огня','огню','огнём'],
+ sword:['Меч','меч','меча','мечу','мечом']
 } as const;
 type Word = keyof typeof WORDS;
 type Kind = 'action'|'space'|'roles'|'change'|'journey'|'exchange';
@@ -52,7 +53,7 @@ const spacePairs:[Word,Word][]=[
 const rolePairs:[Word,Word][]=[
  ['cat','bird'],['bird','fish'],['human','cat'],['dragon','bird'],['cat','fish'],
  ['human','dragon'],['fish','human'],['fish','dragon'],['dragon','cat'],['bird','human'],
- ['fish','cat'],['bird','dragon']
+ ['cat','sun'],['dragon','moon']
 ];
 const changePairs:[Word,Word][]=[
  ['cat','bird'],['bird','fish'],['dragon','bird'],['cat','dragon'],['human','fish'],
