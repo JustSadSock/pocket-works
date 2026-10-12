@@ -236,15 +236,16 @@ async function connectRoom(action='create',withInvite=false){
   session.on('room_joined',e=>{
    if(net!==session)return;
    if(e.gameId!=='blind-pals'){
-    releaseNetwork(true);entry(true);toast('Этот код принадлежит другой игре.');return;
+    roomId=e.roomId;releaseNetwork(true);entry(true);toast('Этот код принадлежит другой игре.');return;
    }
+   const firstEntry=!roomId;
    roomId=e.roomId;connecting=false;disconnectedPeer=false;
    updateUrl(code());
    if(e.state)onState(e.state);
    safeSend({type:'sync'});
-   status('КОМНАТА ОТКРЫТА','online');
-   flash('КОМНАТА ОТКРЫТА');
-   beep(570,.12);
+   status('НА СВЯЗИ','online');
+   if(firstEntry){flash('КОМНАТА ОТКРЫТА');beep(570,.12);}
+   else toast('Соединение с комнатой восстановлено.');
    if(inviteAfterRoom){
     inviteAfterRoom=false;
     requestSocialInvite();
