@@ -45,7 +45,7 @@ export function stageFor(level,count){
   pads:[],beacons:[],sequence:[],wheels:[],signals:[],
   hooks:hookXs.map(x=>({x,y:508})),balances:balanceXs.map((x,i)=>({x,y:493,slot:i,hold:n===2?1.7:1.75})),
   ferry:ferry?{x:354,y:456,w:168,h:18,start:354,end:548}:null,
-  cargo:cargo?{barriers:[rect(412,328,24,120),rect(618,320,24,111),rect(806,355,24,132)],end:914}:null,
+  cargo:cargo?{barriers:[rect(412,328,24,120),rect(618,265,24,120),rect(806,355,24,132)],end:914}:null,
   waveSlots:pulse?PULSE_SLOTS[n].map((x,i)=>({x,i})):[],
   waveSequence:pulse?[...Array.from({length:n},(_,i)=>i),...Array.from({length:n-1},(_,i)=>n-2-i)]:[],
   braid:braid?{hold:n===2?1.25:1.8,escape:8.2}:null,
@@ -222,7 +222,14 @@ function moveFerry(w,dt){
  const previous=w.ferryX;
  w.ferryX=clamp(w.ferryX+dir*90*dt,s.start,s.end);
  const delta=w.ferryX-previous;
- if(delta)for(const p of riders){p.x+=delta;p.vx+=delta/dt*.18;}
+ if(delta)for(const p of riders){
+  p.x+=delta;p.vx+=delta/dt*.18;
+  // Leaning against the raft's edge propels it; riders do not accidentally
+  // walk off a moving vehicle while steering.
+  const minX=w.ferryX+RADIUS+5,maxX=w.ferryX+s.w-RADIUS-5;
+  if(p.x>maxX){p.x=maxX;p.vx=Math.min(0,p.vx);}
+  if(p.x<minX){p.x=minX;p.vx=Math.max(0,p.vx);}
+ }
  if(w.ferryX>=s.end-1){w.ferryDone=true;w.gateOpen=true;}
 }
 function updatePrototype(w,dt){
