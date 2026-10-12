@@ -389,6 +389,8 @@ function updateControlState(apps) {
     if (counter) counter.textContent = String(counts[filter] || 0);
   }
 
+  const extraLabel = document.querySelector('#library-options-label');
+  if (extraLabel) extraLabel.textContent = shelfState.filter === 'offline' ? 'Offline' : shelfState.filter === 'experimental' ? 'Workshop' : 'More';
   if (searchInput.value !== shelfState.query) searchInput.value = shelfState.query;
   clearSearch.hidden = shelfState.query.length === 0;
   sortButton.dataset.sort = shelfState.sort;
@@ -479,7 +481,14 @@ function installInstruction() {
 }
 
 let lastDetailSignature = '';
+let lastDetailSlug = '';
 function renderDetail(app) {
+  const slug = app?.slug || '';
+  if (slug !== lastDetailSlug) {
+    const extras = document.querySelector('#detail-extras');
+    if (extras) extras.open = false;
+    lastDetailSlug = slug;
+  }
   const signature = app ? JSON.stringify([
     app.slug, app.version, app.description, app.updatedAt, app.status, app.preset,
     app.accent, app.tags, app.changelog, isFavorite(app.slug),
@@ -499,7 +508,7 @@ function renderDetail(app) {
   detailEmpty.hidden = true;
   detailContent.hidden = false;
   detailPanel.style.setProperty('--detail-accent', app.accent || '#c8a460');
-  detailKicker.textContent = `${app.status} / ${app.preset || 'application'}`;
+  detailKicker.textContent = '';
   detailName.textContent = app.name;
   detailDescription.textContent = app.description;
   detailVersion.textContent = `v${app.version}`;
@@ -513,7 +522,7 @@ function renderDetail(app) {
   detailOpen.dataset.slug = app.slug;
   detailFavorite.dataset.slug = app.slug;
   detailFavorite.setAttribute('aria-pressed', String(isFavorite(app.slug)));
-  detailFavorite.textContent = isFavorite(app.slug) ? 'Remove from saved' : 'Save to shelf';
+  detailFavorite.textContent = isFavorite(app.slug) ? 'Saved ✓' : 'Save ☆';
   detailCopy.dataset.slug = app.slug;
   installNote.textContent = installInstruction();
 
@@ -561,6 +570,8 @@ function renderShelf({ transition = false } = {}) {
 
 function openDetailPanel() {
   if (!mobilePanelQuery.matches || !selectedApp()) return;
+  const extras = document.querySelector('#detail-extras');
+  if (extras) extras.open = false;
   panelOpen = true;
   lastFocusedElement = document.activeElement;
   detailBackdrop.hidden = false;
@@ -725,6 +736,8 @@ filterStrip.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-filter]');
   if (!button) return;
   shelfState.filter = FILTERS.includes(button.dataset.filter) ? button.dataset.filter : 'all';
+  const options = document.querySelector('#library-options');
+  if (options?.open) options.open = false;
   persistShelfState();
   renderShelf({ transition: true });
 });

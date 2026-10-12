@@ -2,6 +2,18 @@
 
 The launcher is a native-feeling **installed PWA**, not a replacement game runtime. Existing app manifests, Service Workers, game saves and scoped caches are unchanged.
 
+## Focus-first interaction (0.10.15)
+
+The launcher separates the next action from optional information without removing functionality:
+
+- **Home** leads with the currently relevant application, its cover and its Play action. Widget captions and catalogue codes no longer compete with game names.
+- **Library** keeps search and Library / Saved / Recent filters visible. **More** contains Offline / Workshop filters, cover density, sorting, organization, refresh, app updates, and settings. When an advanced filter is selected, the More label reflects it; choosing another filter returns it to More.
+- **Game details** show name, brief description, Play and Save first. **About this game** reveals version/offline facts, personal project status, notes, release history, and sharing.
+- **Pocket Social** shows player card, main friendships and incoming requests; security, storage consumption, outgoing requests and blocked accounts remain available in labeled disclosure sections.
+- Destructive personal-shelf reset is found in Settings and requires confirmation. The game data itself remains untouched.
+
+These are native HTML disclosure controls (keyboard accessible, reversible) and do not change app manifests, game saves, personal cloud data or account identity. The project philosophy is *rich presentation, minimal competing decisions*; functional hints and error messages must remain visible when necessary.
+
 ## Surfaces
 
 - **Home** is a personalized, independently scrollable widget composition. Default: Continue, On my shelf and Just made.

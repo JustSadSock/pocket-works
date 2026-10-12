@@ -176,3 +176,31 @@
 .pws-cloud__warning{border-top:1px solid #705d4e;padding-top:10px;margin:13px 0 0;font-size:12px}
 @media(max-width:480px){.pws-cloud{padding:16px;margin-top:17px}.pws-cloud:before{left:16px;right:16px}.pws-cloud__heading{align-items:flex-start}.pws-cloud__heading .pws-btn{font-size:11px!important}.pws-cloud__totals{gap:13px 22px}.pws-cloud__totals .pws-cloud__capacity{margin-left:0}.pws-cloud__totals>div{min-width:calc(50% - 12px)}.pws-cloud__totals .pws-cloud__capacity{min-width:100%}}
 @media(prefers-reduced-motion:reduce){.pws-cloud__fill,.pws-cloud__details summary:before{transition:none}}
+
+/* Progressive disclosure: identity and friendship actions first, maintenance on demand. */
+.pws-content .pws-profile-layout{align-items:start}
+.pws-content .pws-profile-layout>.pws-fold{margin:0}
+.pws-fold{display:block;margin:14px 0 0;border:1px solid #425559;border-radius:8px;background:#1b2b30;overflow:hidden}
+.pws-fold>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  list-style:none;min-height:48px;padding:11px 14px;cursor:pointer;font-weight:720;font-size:13px;color:#e5eee8}
+.pws-fold>summary::-webkit-details-marker{display:none}
+.pws-fold>summary::after{content:'⌄';color:#a5bab1;font-size:18px;font-weight:500;line-height:1}
+.pws-fold[open]>summary::after{transform:rotate(180deg)}
+.pws-fold>summary:focus-visible{outline:2px solid #e8b194;outline-offset:-3px}
+.pws-fold__body{padding:0 14px 14px}
+.pws-fold__body .pws-muted{margin:5px 0 14px;overflow-wrap:anywhere}
+.pws-fold__body .pws-list{margin-top:2px}
+.pws-fold--aside{margin-top:0}
+.pws-cloud-fold{margin-top:18px}
+.pws-cloud-fold>.pws-cloud{border:0;border-top:1px solid #425559;border-radius:0;margin:0;padding:15px 16px}
+.pws-cloud-fold>.pws-cloud::before{display:none}
+.pws-cloud-fold .pws-cloud__kicker{display:none}
+.pws-cloud-fold .pws-cloud__heading h3{margin-top:0}
+.pws-content .pws-profile-layout+.pws-cloud-fold{margin-top:18px}
+.pws-content .pws-field:has(#pws-search){margin:0 0 17px}
+.pws-content .pws-field #pws-search{min-height:48px}
+.pws-content h3{margin-top:18px}
+@media(max-width:650px){
+  .pws-content .pws-profile-layout{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.pws-fold>summary::after{transition:none}}

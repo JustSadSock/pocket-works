@@ -23,7 +23,9 @@ test('Pocket Deck boots into an authored home and switches to dense library',asy
   await expect(page.locator('#deck-view-title')).toHaveText('Library');
   await expect(page.locator('#app-list .app-entry').first()).toBeVisible();
   expect(await page.locator('#app-list .app-entry').count()).toBeGreaterThan(30);
+  await page.locator('#library-options > summary').click();
   await page.locator('[data-deck-density="micro"]').click();
+  await page.locator('#library-options > summary').click();
   await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro');
   await assertNoHorizontalOverflow(page);
   await attachCriticalScreenshot(page,info,'deck-contact-sheet',{fullPage:false});
@@ -68,6 +70,7 @@ test('archive is reversible and project development notes persist independently 
   const slug=await target.getAttribute('data-slug');
   expect(slug).toBeTruthy();
   await target.locator('.app-entry__select').click();
+  await page.locator('#detail-extras > summary').click();
   await expect(page.locator('#deck-project-detail')).toBeVisible();
   await page.locator('#deck-project-note').fill('Improve flight feel and landing transitions');
   await page.locator('#deck-project-detail [data-deck-stage="building"]').click();
@@ -83,6 +86,7 @@ test('archive is reversible and project development notes persist independently 
   const archived=page.locator('.app-entry[data-slug="'+slug+'"]');
   await expect(archived).toBeVisible();
   await archived.locator('.app-entry__select').click();
+  await page.locator('#detail-extras > summary').click();
   await expect(page.locator('#deck-project-note')).toHaveValue('Improve flight feel and landing transitions');
   await page.locator('#deck-project-detail [data-deck-stage="trial"]').click();
   await page.locator('#detail-close').click();
@@ -116,6 +120,7 @@ test('one-hand customization and search preserve mobile navigation',async({page}
 test('bulk organization selects unkept projects and archives only after confirmation',async({page})=>{
   await openDeck(page);
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await page.locator('#library-options > summary').click();
   await expect(page.locator('#deck-organize-start')).toBeVisible();
   await page.locator('#deck-organize-start').click();
   const bar=page.locator('#deck-organize-bar');
@@ -147,6 +152,7 @@ test('bulk organization selects unkept projects and archives only after confirma
   await expect(page.locator('[data-digest-close]')).toBeVisible();
   await page.locator('[data-digest-close]').click();
   await page.locator('.app-entry[data-slug="'+first+'"] .app-entry__select').click();
+  await page.locator('#detail-extras > summary').click();
   await page.locator('[data-deck-stage="trial"]').click();
   await page.locator('#detail-close').click();
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
@@ -183,6 +189,7 @@ test('archiving a spotlight removes the project from home widgets',async({page})
   await page.locator('#deck-editor-save').click();
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await page.locator(`.app-entry[data-slug="${slug}"] .app-entry__select`).click();
+  await page.locator('#detail-extras > summary').click();
   await page.locator('[data-deck-stage="archive"]').click();
   await page.locator('#detail-close').click();
   await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
@@ -200,7 +207,9 @@ test('saved layout and launcher navigation remain available offline',async({page
       navigator.serviceWorker.addEventListener('controllerchange',()=>resolve(),{once:true}));
   });
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await page.locator('#library-options > summary').click();
   await page.locator('[data-deck-density="micro"]').click();
+  await page.locator('#library-options > summary').click();
   await context.setOffline(true);
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#deck-view-title')).toHaveText('Library');
@@ -209,4 +218,25 @@ test('saved layout and launcher navigation remain available offline',async({page
   await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
   await expect(page.locator('#deck-home')).toBeVisible();
   await context.setOffline(false);
+});
+
+
+test('focus-first library shows actions on demand without losing advanced filters',async({page})=>{
+  await openDeck(page);
+  await expect(page.locator('.deck-home__intro h2')).toHaveText('Pick a game.');
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await expect(page.locator('#library-options')).not.toHaveAttribute('open');
+  await expect(page.locator('#update-installed-button')).toBeHidden();
+  await page.locator('#library-options > summary').click();
+  await expect(page.locator('#update-installed-button')).toBeVisible();
+  await page.locator('#library-options [data-filter="offline"]').click();
+  await expect(page.locator('#library-options')).not.toHaveAttribute('open');
+  await expect(page.locator('#library-options-label')).toHaveText('Offline');
+  await page.locator('[data-filter="all"]').click();
+  await expect(page.locator('#library-options-label')).toHaveText('More');
+  await page.locator('#app-list .app-entry').first().locator('.app-entry__select').click();
+  await expect(page.locator('#detail-open')).toBeVisible();
+  await expect(page.locator('#detail-changelog')).toBeHidden();
+  await page.locator('#detail-extras > summary').click();
+  await expect(page.locator('#detail-changelog')).toBeVisible();
 });
