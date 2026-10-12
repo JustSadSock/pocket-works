@@ -7,7 +7,7 @@ const CACHE_PREFIX='komnatka-';
 const APP_VERSION='0.1.0';
 const RELEASE_DATE='2026-10-13';
 const RELEASE_NOTES=['Первый уютный редактор комнаты: мебель, обои, освещение, сохранение и фотографии.'];
-setCacheNameDetails({prefix:'komnatka',suffix:'v'+APP_VERSION,precache:'precache',runtime:'runtime'});
+setCacheNameDetails({prefix:'komnatka',suffix:`v${APP_VERSION}`,precache:'precache',runtime:'runtime'});
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')));
