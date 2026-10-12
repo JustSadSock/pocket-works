@@ -43,7 +43,7 @@ function updateGame(){
  $('roleLabel').textContent=mode==='local'?'Герой '+(v.players.findIndex(x=>x.id===activeId)+1):(v.players.find(x=>x.id===me?.id)?.name||'Игрок');
  $('switchBtn').hidden=mode!=='local';$('roomIndicator').hidden=mode!=='online';$('roomIndicator').textContent=connected?'PocketNet':'Переподключение…';
  if(v.level!==lastLevel){if(lastLevel>=0&&v.level>lastLevel){tone('win');toast('Уровень пройден!')}lastLevel=v.level;
-  if(mode==='local'&&v.level>unlocked){unlocked=v.level;store('level',unlocked)}}
+  if(mode==='local'&&v.level>unlocked){unlocked=v.level;store('level',unlocked);[...options.options].forEach((op,i)=>op.disabled=i>unlocked);options.value=unlocked}}
  if(v.finished){$('endSheet').hidden=false;paused=true;$('againBtn').hidden=mode==='online'&&server?.host!==me?.id;}
 }
 function beginLocal(level=unlocked){exitRoom();mode='local';world=initialize([{id:'hero-1',name:nickname()},{id:'hero-2',name:'Напарник'}],level);activeId='hero-1';lastLevel=-1;show('game');updateGame();tone();}
@@ -82,7 +82,7 @@ function updateLobby(){
  $('lobbyHint').textContent=(server?.players.length||0)<2?'Пригласи друга: нужно 2–4 игрока':'Команда собрана. Ведущий начинает.';
 }
 function join(){const code=$('joinInput').value.trim().toUpperCase();if(!/^(?:[0-9A-F]{8}|[0-9A-F-]{36})$/.test(code)){toast('Нужен код из 8 символов');return}if(connected){requestedRoom=code;try{net.joinRoom(code)}catch{toast('Не удалось войти')}}}
-function copy(text){navigator.clipboard?.writeText(text).then(()=>toast('Скопировано')).catch(()=>toast('Копирование недоступно'))??toast('Копирование недоступно')}
+function copy(text){if(!navigator.clipboard?.writeText){toast('Копирование недоступно');return}navigator.clipboard.writeText(text).then(()=>toast('Скопировано')).catch(()=>toast('Копирование недоступно'))}
 function control(){return {x:(keys.has('a')||keys.has('arrowleft')||touch.has('left')?-1:0)+(keys.has('d')||keys.has('arrowright')||touch.has('right')?1:0),jump:keys.has(' ')||keys.has('arrowup')||keys.has('w')||touch.has('jump'),stick:keys.has('e')||keys.has('s')||touch.has('stick'),up:keys.has('w')||keys.has('arrowup')}}
 function pauseGame(){if(screen!=='game')return;paused=!paused;$('pauseSheet').hidden=!paused;keys.clear();touch.clear();$('restartBtn').disabled=mode==='online'&&server?.host!==me?.id;$('pauseCaption').textContent=mode==='online'?'Игра у друзей продолжается':'Тренировка на паузе'}
 function restart(){if(mode==='local'){resetLevel(world);activeId='hero-1';paused=false;$('pauseSheet').hidden=true}else send({type:'restart'});tone()}
