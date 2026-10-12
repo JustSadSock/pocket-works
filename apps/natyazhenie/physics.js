@@ -4,49 +4,69 @@ export const WIDTH=1180, HEIGHT=620, RADIUS=18, FLOOR=540;
 export const ROPE={slack:118,soft:152,max:250,spring:27,damping:9,reel:174};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rect=(x,y,w,h)=>({x,y,w,h});
+// Five complete prototype levels. Three players is the authoring baseline;
+// 2/4/5 have deliberate geometries and participation rules.
 export const CHAPTERS=[
- {name:'В одной связке',hint:'Каждый держит свою кнопку',type:'plates',x:330,spread:480,hold:.65,floors:[[0,540,1180,80]]},
- {name:'Не отпускай',hint:'Перепрыгните яму вместе и соберите искру',type:'gap',x:655,spread:330,hold:.75,floors:[[0,540,438,80],[570,540,610,80]],stars:[[501,413]]},
- {name:'Живой якорь',hint:'Перекиньте резинку через штырь. Один держит ЯКОРЬ, другой тянет',type:'beam',floors:[[0,540,1180,80]],hooks:[[524,508]],wheels:[0],beacons:[[524,522]],anchor:true,sequence:['wheels','beacons']},
- {name:'Линия связи',hint:'Перехватите два воздушных сигнала одной лентой — второй исчезнет через четыре секунды',type:'spring',floors:[[0,540,1180,80]],platforms:[[406,424,132,20],[754,420,130,20]],springs:[308,580],signals:[[480,454],[694,448]],signalWindow:4.8,sequence:['signals']},
- {name:'Противовес',hint:'Удержите рычаг ровно: игроки по разные стороны, натянутая резинка и баланс',type:'sync',floors:[[0,540,1180,80]],balance:[605,505,113,1.7],hazards:[[290,490,55,1.65,20]],sequence:['balance']},
- {name:'Силовое поле',hint:'Зацепите резинку, раскрутите барабан. Только затем достаньте искру и натяните связь',type:'tension',floors:[[0,540,1180,80]],hooks:[[505,507]],wheels:[0],tension:true,anchor:true,stars:[[684,404]],sequence:['wheels','stars','tension']},
- {name:'Срыв сигнала',hint:'На лифте проведите лентой через две линзы. После этого ворота откроются ненадолго',type:'lift',floors:[[0,540,1180,80]],platforms:[[398,438,100,18],[810,424,113,18]],lifts:[[548,440,112,18,59,2.8]],hazards:[[705,440,75,2.1,19]],signals:[[552,418],[735,452]],signalWindow:5.5,escape:6.5,sequence:['signals']},
- {name:'Подвесной мост',hint:'Через две пропасти протяните ленту через обе линзы за пять секунд',type:'islands',floors:[[0,540,306,80],[450,540,200,80],[738,540,442,80]],platforms:[[334,450,110,20],[682,438,96,20]],springs:[246,606],signals:[[365,430],[704,421]],signalWindow:5.8,escape:7.2,sequence:['signals']},
- {name:'Найти равновесие',hint:'Запусти барабан, получи две искры, уравновесь рычаг и удержи натяжение',type:'finale',floors:[[0,540,436,80],[568,540,612,80]],platforms:[[463,431,116,18],[734,422,112,18]],springs:[325],hooks:[[668,508]],wheels:[0],stars:[[375,318],[690,306]],balance:[842,508,110,1.5],tension:true,anchor:true,sequence:['wheels','stars','balance','tension']},
- {name:'На растяжке',hint:'Разгон с резинки и две линзы на разной высоте',type:'sling',floors:[[0,540,1180,80]],platforms:[[436,410,130,18],[712,384,134,18]],hooks:[[525,507]],wheels:[0],signals:[[489,394],[765,368]],signalWindow:5.2,springs:[325],sequence:['wheels','signals']},
- {name:'Друг в беде',hint:'Сначала вытащи сорвавшегося. Когда мост поднят, поймай два сигнала над ним',type:'rescue',floors:[[0,540,439,80],[573,540,607,80]],platforms:[[468,434,96,18]],springs:[361],rescue:true,signals:[[513,449],[731,459]],signalWindow:5.5,sequence:['rescue','signals']},
- {name:'Узел на память',hint:'Заведи два барабана, поймай импульсы и уравновесь противовес перед финальным зарядом',type:'master',floors:[[0,540,1180,80]],platforms:[[420,430,110,18],[702,413,110,18]],hooks:[[426,507],[640,507]],wheels:[0,1],signals:[[505,440],[750,435]],signalWindow:5.4,balance:[855,505,110,1.6],hazards:[[830,482,62,1.7,18]],tension:true,anchor:true,sequence:['wheels','signals','balance','tension']}
+ {name:'ПО ОДНОЙ ЛИНИИ',kind:'balance',theme:0,
+  book:'Не просто стойте на местах. Все участники должны удерживать общую конструкцию в равновесии — резинка постоянно тянет соседей друг к другу.',
+  second:'Следите за наклоном балок. Чем больше друзей, тем больше соединённых плеч.',image:'balance',
+  floors:[[0,540,1180,80]]},
+ {name:'ПОСЛЕДНИЙ НА ПЛОТУ',kind:'ferry',theme:3,
+  book:'Плот движется, только когда один едет вперёд, а другой удерживается на берегу. Но якорному тоже нужно попасть на другой берег.',
+  second:'Передавайте роль опоры друг другу. Никого не бросайте.',image:'ferry',
+  floors:[[0,540,456,80],[708,540,472,80]]},
+ {name:'НЕ РАЗБЕЙ!',kind:'cargo',theme:1,
+  book:'Хрупкий шар подвешен посреди вашей связки. Проведите его через препятствия: иногда его нужно поднять, иногда опустить.',
+  second:'Резкие движения раскачивают груз. Разбитый шар возвращает группу к началу.',image:'cargo',
+  floors:[[0,540,1180,80]]},
+ {name:'ВОЛНА',kind:'pulse',theme:5,
+  book:'Встаньте на цветные метки и передайте прыжок по цепочке туда и обратно. Каждый прыгает, когда до него доходит импульс.',
+  second:'Не спешите и не опаздывайте. Среднему игроку придётся ловить волну дважды.',image:'pulse',
+  floors:[[0,540,1180,80]]},
+ {name:'РАСПУТАЙСЯ!',kind:'braid',theme:2,
+  book:'Завести резинку на все штыри нужно одновременно. После этого ворота откроются ненадолго — бегите всей командой.',
+  second:'Не оставляйте якорного позади. Когда лента освободится, не потеряйте друг друга.',image:'braid',
+  floors:[[0,540,1180,80]]}
 ];
+const BALANCES={2:[580],3:[430,680],4:[350,560,770],5:[300,480,660,840]};
+const PULSE_SLOTS={2:[425,650],3:[320,535,750],4:[240,435,630,825],5:[220,390,560,730,900]};
+const BRAID_HOOKS={2:[585],3:[425,663],4:[325,520,715],5:[300,470,640,810]};
 export const MIN_PLAYERS=2,MAX_PLAYERS=5;
 export function stageFor(level,count){
  const spec=CHAPTERS[clamp(level|0,0,CHAPTERS.length-1)],n=clamp(count|0,2,5);
- const span=n===2?Math.min(214,spec.spread||214):spec.spread||0;
- return {index:level,name:spec.name,hint:spec.hint,kind:spec.type,theme:level%6,
- floors:spec.floors.map(a=>rect(...a)),platforms:(spec.platforms||[]).map(a=>rect(...a)),
- lifts:(spec.lifts||[]).map(a=>({x:a[0],y:a[1],w:a[2],h:a[3],amp:a[4],period:a[5]})),
- springs:(spec.springs||[]).map(x=>({x,y:FLOOR})),
- hazards:(spec.hazards||[]).map(a=>({x:a[0],y:a[1],amp:a[2],period:a[3],r:a[4]})),
- stars:(spec.stars||[]).map(([x,y])=>({x,y})),
- beacons:(spec.beacons||[]).map(([x,y])=>({x,y})),
- hooks:(spec.hooks||[]).map(([x,y])=>({x,y})),wheels:spec.wheels||[],sequence:spec.sequence||[],rescue:!!spec.rescue,
- signals:(spec.signals||[]).map(([x,y])=>({x,y})),signalWindow:spec.signalWindow||5,
- balance:spec.balance?{x:spec.balance[0],y:spec.balance[1],reach:spec.balance[2],hold:spec.balance[3]}:null,
- escape:spec.escape||0,
- pads:spec.x?Array.from({length:n},(_,i)=>({x:spec.x+span*i/(n-1),y:FLOOR,owner:i})):[],
- hold:spec.hold||0,tension:!!spec.tension,anchor:!!spec.anchor,
- requiredLinks:spec.tension?Math.max(1,Math.ceil((n-1)*.5)):0,
- gate:rect(1036,0,31,FLOOR),finishX:1102};
+ const balance=spec.kind==='balance',ferry=spec.kind==='ferry',
+  cargo=spec.kind==='cargo',pulse=spec.kind==='pulse',braid=spec.kind==='braid';
+ const balanceXs=balance?BALANCES[n]:[];
+ const hookXs=braid?BRAID_HOOKS[n]:[];
+ return {
+  index:clamp(level|0,0,CHAPTERS.length-1),name:spec.name,kind:spec.kind,theme:spec.theme,
+  book:spec.book,second:spec.second,image:spec.image,
+  floors:spec.floors.map(v=>rect(...v)),platforms:[],lifts:[],springs:[],hazards:[],stars:[],
+  pads:[],beacons:[],sequence:[],wheels:[],signals:[],
+  hooks:hookXs.map(x=>({x,y:508})),balances:balanceXs.map((x,i)=>({x,y:493,slot:i,hold:n===2?1.7:2.1})),
+  ferry:ferry?{x:354,y:456,w:168,h:18,start:354,end:548}:null,
+  cargo:cargo?{barriers:[rect(412,328,24,120),rect(618,320,24,111),rect(806,355,24,132)],end:914}:null,
+  waveSlots:pulse?PULSE_SLOTS[n].map((x,i)=>({x,i})):[],
+  waveSequence:pulse?[...Array.from({length:n},(_,i)=>i),...Array.from({length:n-1},(_,i)=>n-2-i)]:[],
+  braid:braid?{hold:n===2?1.25:1.8,escape:8.2}:null,
+  balance:null,rescue:false,tension:false,anchor:balance||braid||ferry,
+  hold:0,signalWindow:0,escape:0,requiredLinks:0,
+  gate:rect(1036,0,31,FLOOR),finishX:1102
+ };
 }
 const spawn=(p,i)=>({id:p.id,name:p.name||'Игрок',x:92+i*42,y:FLOOR-RADIUS,vx:0,vy:0,ground:true,anchor:false,coyote:.1,jumpHeld:false,face:1,falls:0,squash:0,checkpoint:0,hang:0,slingshot:0});
 export function worldFor(players,level=0){
  const stage=stageFor(level,players.length);
- return {level,stage,players:players.map(spawn),inputs:{},pads:stage.pads.map(()=>false),
- stars:stage.stars.map(()=>false),beacons:stage.beacons.map(()=>false),
- wraps:players.slice(1).map(()=>-1),wheelCharge:stage.wheels.map(()=>0),wheelDone:stage.wheels.map(()=>false),
- phase:0,phaseTime:0,saveCount:0,signalIndex:0,signalLeft:0,signalDone:false,
- balanceCharge:0,balanceDone:false,balanceTilt:0,escapeLeft:0,
- tensionCharge:0,tensionDone:false,plateCharge:0,gateOpen:false,clock:0,revision:0,finished:false,falls:0};
+ return {level,stage,players:players.map(spawn),inputs:{},pads:[],stars:[],beacons:[],
+  wraps:players.slice(1).map(()=>-1),wheelCharge:[],wheelDone:[],
+  phase:0,phaseTime:0,saveCount:0,signalIndex:0,signalLeft:0,signalDone:false,
+  balanceCharge:0,balanceDone:false,balanceTilt:0,escapeLeft:0,
+  beamCharge:stage.balances.map(()=>0),beamTilt:stage.balances.map(()=>0),
+  ferryX:stage.ferry?.x??0,ferryDone:false,
+  cargoBall:stage.cargo?{x:130,y:414,vx:0,vy:0,cracks:0}:null,
+  waveIndex:0,waveLeft:0,waveGlow:0,
+  braidCharge:0,braidDone:false,
+  tensionCharge:0,tensionDone:false,plateCharge:0,gateOpen:false,clock:0,revision:0,finished:false,falls:0};
 }
 export function reset(w,level=w.level){const v=worldFor(w.players.map(p=>({id:p.id,name:p.name})),level);Object.assign(w,v);}
 export function movingPlatforms(s,time){
@@ -57,7 +77,7 @@ export function movingHazards(s,time,phase=0){
  return (s.hazards||[]).map(h=>({x:h.x+Math.sin(time*rate*Math.PI*2/h.period)*h.amp,y:h.y,r:h.r}));
 }
 function rescueBridge(w){return w.stage.rescue&&w.phase>=1?rect(439,530-22*clamp(w.phaseTime/.55,0,1),136,18):null;}
-function solids(w){return [...w.stage.floors,...w.stage.platforms,...movingPlatforms(w.stage,w.clock),...(rescueBridge(w)?[rescueBridge(w)]:[]),...(w.gateOpen?[]:[w.stage.gate])];}
+function solids(w){return [...w.stage.floors,...w.stage.platforms,...movingPlatforms(w.stage,w.clock),...(w.stage.ferry?[{...w.stage.ferry,x:w.ferryX}]:[]),...(w.gateOpen?[]:[w.stage.gate])];}
 function overlap(p,s){return p.x+RADIUS>s.x&&p.x-RADIUS<s.x+s.w&&p.y+RADIUS>s.y&&p.y-RADIUS<s.y+s.h;}
 function resolveMove(p,dt,blocks){
  const ox=p.x,oy=p.y;p.x+=p.vx*dt;
@@ -173,106 +193,96 @@ function respawn(w,p,i){
  const floor=w.stage.floors.find(f=>x>=f.x+RADIUS&&x<=f.x+f.w-RADIUS);
  Object.assign(p,spawn(p,i),{x:floor?x:90+i*42,falls});w.falls++;
 }
-export function currentGoal(w){return w.stage.sequence?.[w.phase]||null;}
-function goalActive(w,name){const goal=currentGoal(w);return !w.stage.sequence?.length||goal===name;}
-function complete(w,name){
- if(name==='pads')return w.plateCharge>=1;
- if(name==='stars')return w.stars.every(Boolean);
- if(name==='beacons')return w.beacons.every(Boolean);
- if(name==='wheels')return w.wheelDone.every(Boolean);
- if(name==='tension')return w.tensionDone;
- if(name==='rescue')return w.saveCount>0;
- if(name==='signals')return w.signalDone;
- if(name==='balance')return w.balanceDone;
- return false;
+// Jump-wave reactions are recorded only on an actual edge-triggered jump.
+// The centre of a three-person team must respond on both the outgoing and return pulse.
+function jumpPulse(w,i){
+ const order=w.stage.waveSequence;
+ if(!order.length||w.gateOpen)return;
+ const expected=order[w.waveIndex];
+ if(i!==expected)return;
+ if(w.waveIndex>0&&w.waveLeft<=0){w.waveIndex=0;w.waveLeft=0;return;}
+ const mark=w.stage.waveSlots[i];
+ if(Math.abs(w.players[i].x-mark.x)>58)return;
+ for(let k=0;k<w.players.length-1;k++)
+  if(Math.hypot(w.players[k].x-w.players[k+1].x,w.players[k].y-w.players[k+1].y)<115)return;
+ w.waveIndex++;
+ w.waveLeft=1.55;
+ w.waveGlow=.55;
+ if(w.waveIndex===order.length){w.gateOpen=true;w.waveLeft=0;}
 }
-function updateGoals(w,dt){
- const s=w.stage,ps=w.players,goal=currentGoal(w);
- w.pads=s.pads.map(p=>{const actor=ps[p.owner];return !!actor?.ground&&Math.abs(actor.x-p.x)<30&&Math.abs(actor.y+RADIUS-p.y)<13;});
- if(goalActive(w,'pads')&&s.pads.length){
-  const held=w.pads.every(Boolean);
-  w.plateCharge=clamp(w.plateCharge+(held?dt/(s.hold||.7):-dt/.48),0,1);
- }
- if(goalActive(w,'stars'))for(let i=0;i<s.stars.length;i++){
-  if(!w.stars[i]&&ps.some(p=>Math.hypot(p.x-s.stars[i].x,p.y-s.stars[i].y)<34))w.stars[i]=true;
- }
- if(goalActive(w,'beacons'))for(let i=0;i<s.beacons.length;i++)if(!w.beacons[i]){
-  const b=s.beacons[i];
-  for(let j=0;j<ps.length-1;j++){
-   const a=ps[j],p=ps[j+1],dx=p.x-a.x,dy=p.y-a.y;
-   if(!dx)continue;
-   const ratio=(b.x-a.x)/dx,y=a.y+dy*ratio;
-   if(ratio>=0&&ratio<=1&&Math.abs(y-b.y)<24&&ropeDistance(w,j)>=ROPE.soft&&(a.anchor||p.anchor)){
-    w.beacons[i]=true;break;
-   }
+function moveFerry(w,dt){
+ const s=w.stage.ferry;
+ if(!s||w.ferryDone)return;
+ const riders=w.players.filter(p=>p.ground&&p.x>s.x-12+(w.ferryX-s.x)&&p.x<w.ferryX+s.w+12&&Math.abs(p.y+RADIUS-s.y)<5);
+ const bracer=w.players.some(p=>p.anchor&&p.ground&&p.x<448&&!riders.includes(p));
+ if(!riders.length||!bracer)return;
+ let dir=0;
+ for(const p of riders){const r=w.inputs[p.id]||{};dir+=clamp(Number(r.dir)||0,-1,1);}
+ dir=clamp(dir,-1,1);
+ const previous=w.ferryX;
+ w.ferryX=clamp(w.ferryX+dir*90*dt,s.start,s.end);
+ const delta=w.ferryX-previous;
+ if(delta)for(const p of riders){p.x+=delta;p.vx+=delta/dt*.18;}
+ if(w.ferryX>=s.end-1){w.ferryDone=true;w.gateOpen=true;}
+}
+function updatePrototype(w,dt){
+ const s=w.stage,ps=w.players,n=ps.length;
+ if(s.kind==='balance'){
+  let all=true;
+  for(let i=0;i<s.balances.length;i++){
+   const beam=s.balances[i],a=ps[i],b=ps[i+1],mid=(a.x+b.x)/2;
+   const gap=Math.hypot(b.x-a.x,b.y-a.y);
+   const wind=Math.sin(w.clock*2.3+i*1.9)*17;
+   const delta=mid-beam.x+wind;
+   w.beamTilt[i]=clamp(delta/55,-1,1);
+   const valid=a.ground&&b.ground&&Math.abs(a.y-b.y)<25&&
+    gap>=142&&gap<=ROPE.max+1&&Math.abs(delta)<15&&
+    Math.abs(a.x-beam.x)>65&&Math.abs(b.x-beam.x)>65;
+   w.beamCharge[i]=clamp(w.beamCharge[i]+(valid?dt/beam.hold:-dt/.62),0,1);
+   if(w.beamCharge[i]<1)all=false;
   }
+  if(all)w.gateOpen=true;
  }
- if(goalActive(w,'wheels'))for(let i=0;i<(s.wheels||[]).length;i++){
-  if(w.wheelDone[i])continue;
-  const pegIndex=s.wheels[i];
-  const winding=w.wraps.some((hook,j)=>hook===pegIndex&&ropeDistance(w,j)>=ROPE.soft&&
-    (ps[j].anchor||ps[j+1].anchor));
-  w.wheelCharge[i]=clamp(w.wheelCharge[i]+(winding?dt/1.2:-dt/.65),0,1);
-  if(w.wheelCharge[i]>=1)w.wheelDone[i]=true;
- }
- if(goalActive(w,'tension')&&s.tension&&!w.tensionDone){
-  let taut=0;
-  for(let j=0;j<ps.length-1;j++)if(ropeDistance(w,j)>=ROPE.soft+20)taut++;
-  const valid=taut>=s.requiredLinks&&ps.some(p=>p.anchor);
-  w.tensionCharge=clamp(w.tensionCharge+(valid?dt/1.6:-dt/.6),0,1);
-  if(w.tensionCharge>=1)w.tensionDone=true;
- }
- // Ribbon sensors activate only when the actual stretched band intersects
- // the lens. After the first pulse, the next lens must be caught promptly.
- if(goalActive(w,'signals')&&(s.signals||[]).length&&!w.signalDone){
-  if(w.signalIndex>0){
-   w.signalLeft=Math.max(0,w.signalLeft-dt);
-   if(!w.signalLeft){w.signalIndex=0;}
+ if(s.kind==='pulse'){
+  if(w.waveIndex>0&&!w.gateOpen){
+   w.waveLeft=Math.max(0,w.waveLeft-dt);
+   if(!w.waveLeft){w.waveIndex=0;w.waveGlow=.4;}
   }
-  const lens=s.signals[w.signalIndex];
-  if(lens){
-   const caught=ps.some((p,i)=>i<ps.length-1&&ropeDistance(w,i)>ROPE.soft&&
-    ropePath(w,i).some((a,j,pts)=>j>0&&distanceToSegment(lens.x,lens.y,pts[j-1],a).d<23));
-   if(caught){
-    w.signalIndex++;
-    if(w.signalIndex>=s.signals.length){w.signalDone=true;w.signalLeft=0;}
-    else w.signalLeft=s.signalWindow;
-   }
-  }
+  w.waveGlow=Math.max(0,w.waveGlow-dt);
  }
- // A counterweight is steadied by a taut band shared between bodies standing
- // on opposite sides. Wind adds gentle drift, so players must make corrections.
- if(goalActive(w,'balance')&&s.balance&&!w.balanceDone){
-  const b=s.balance;let best=Infinity;
-  for(let i=0;i<ps.length-1;i++){
-   const a=ps[i],p=ps[i+1];
-   if(!a.ground||!p.ground)continue;
-   const left=a.x<p.x?a:p,right=a.x<p.x?p:a;
-   if(left.x>=b.x||right.x<=b.x)continue;
-   const la=b.x-left.x,ra=right.x-b.x;
-   if(la<85||ra<85||la>151||ra>151||ropeDistance(w,i)<185)continue;
-   const error=la-ra+Math.sin(w.clock*2.3)*22;
-   if(Math.abs(error)<Math.abs(best))best=error;
+ if(s.kind==='ferry')moveFerry(w,dt);
+ if(s.kind==='cargo'){
+  const cargo=w.cargoBall,tx=ps.reduce((v,p)=>v+p.x,0)/n,
+   ty=ps.reduce((v,p)=>v+p.y,0)/n-108;
+  cargo.vx+=(tx-cargo.x)*dt*19;cargo.vy+=(ty-cargo.y)*dt*20;
+  cargo.vx*=Math.max(0,1-dt*6.5);cargo.vy*=Math.max(0,1-dt*6.8);
+  cargo.x+=cargo.vx*dt;cargo.y+=cargo.vy*dt;
+  let struck=false;
+  for(const wall of s.cargo.barriers){
+   if(cargo.x+16>wall.x&&cargo.x-16<wall.x+wall.w&&
+    cargo.y+16>wall.y&&cargo.y-16<wall.y+wall.h)struck=true;
   }
-  w.balanceTilt=Number.isFinite(best)?clamp(best/80,-1,1):1;
-  const centered=Math.abs(best)<18;
-  w.balanceCharge=clamp(w.balanceCharge+(centered?dt/b.hold:-dt/.65),0,1);
-  if(w.balanceCharge>=1)w.balanceDone=true;
+  if(cargo.y>FLOOR+22||cargo.y<120)struck=true;
+  if(struck){
+   // Short, recoverable and visually readable failure; only this level rewinds.
+   cargo.cracks++;const fails=cargo.cracks;
+   ps.forEach((p,i)=>Object.assign(p,spawn(p,i)));
+   cargo.x=130;cargo.y=414;cargo.vx=0;cargo.vy=0;cargo.cracks=fails;
+   w.wraps=w.wraps.map(()=>-1);
+  }
+  if(cargo.x>=s.cargo.end&&cargo.y>190&&cargo.y<530)w.gateOpen=true;
  }
- if(s.sequence?.length){
-  if(complete(w,goal)){
-   w.phase++;w.phaseTime=0;
-  }else w.phaseTime+=dt;
-  if(w.phase>=s.sequence.length){
-   if(!w.gateOpen&&s.escape)w.escapeLeft=s.escape;
-   w.gateOpen=true;
+ if(s.kind==='braid'){
+  const links=ps.length-1;
+  const valid=w.wraps.length===links&&
+   w.wraps.every((hook,i)=>hook===i&&ropeDistance(w,i)>=146)&&
+   ps.some(p=>p.anchor);
+  w.braidCharge=clamp(w.braidCharge+(valid?dt/s.braid.hold:-dt/.5),0,1);
+  if(w.braidCharge>=1&&!w.braidDone){w.braidDone=true;w.gateOpen=true;w.escapeLeft=s.braid.escape;}
+  if(w.braidDone){
+   w.escapeLeft=Math.max(0,w.escapeLeft-dt);
+   if(!w.escapeLeft){w.braidDone=false;w.braidCharge=0;w.gateOpen=false;}
   }
- }else if((!s.pads.length||w.plateCharge>=1)&&w.stars.every(Boolean)&&
-  w.beacons.every(Boolean)&&w.wheelDone.every(Boolean)&&(!s.tension||w.tensionDone)&&
-  (!s.rescue||w.saveCount>0))w.gateOpen=true;
- if(w.gateOpen&&s.escape){
-  w.escapeLeft=Math.max(0,w.escapeLeft-dt);
-  if(w.escapeLeft===0){w.gateOpen=false;w.signalDone=false;w.signalIndex=0;w.signalLeft=0;w.phase=s.sequence.indexOf('signals');w.phaseTime=0;}
  }
  if(w.gateOpen&&ps.some(p=>p.x>s.finishX)&&ps.every(p=>p.x>s.finishX-136&&p.y<FLOOR+RADIUS)){
   if(w.level===CHAPTERS.length-1)w.finished=true;else reset(w,w.level+1);
@@ -280,7 +290,6 @@ function updateGoals(w,dt){
  }
  return false;
 }
-
 export function simulate(w,seconds,now=Date.now()){
  let remaining=clamp(Number(seconds)||0,0,.16);
  while(remaining>0&&!w.finished){
@@ -294,6 +303,7 @@ export function simulate(w,seconds,now=Date.now()){
    p.anchor=!!(grab&&p.ground);
    if(jump&&!p.jumpHeld&&(p.ground||p.coyote>0)){
     const spring=w.players.some(q=>q!==p&&q.anchor&&Math.hypot(q.x-p.x,q.y-p.y)>180);
+    if(w.stage.kind==='pulse')jumpPulse(w,w.players.indexOf(p));
     p.anchor=false;p.vy=spring?-686:-535;p.vx+=spring?p.face*115:0;
     p.y-=2;p.ground=false;p.coyote=0;p.squash=spring?1:.8;
    }
@@ -342,39 +352,36 @@ export function simulate(w,seconds,now=Date.now()){
   for(const hazard of movingHazards(w.stage,w.clock,w.phase))for(let i=0;i<w.players.length;i++){
    const p=w.players[i];if(Math.hypot(p.x-hazard.x,p.y-hazard.y)<RADIUS+hazard.r-3)respawn(w,p,i);
   }
-  if(updateGoals(w,dt))break;
+  if(updatePrototype(w,dt))break;
  }
  w.revision++;
 }
 export const viewWorld=w=>({
  level:w.level,stage:w.stage,players:w.players.map(p=>({id:p.id,name:p.name,x:+p.x.toFixed(2),y:+p.y.toFixed(2),
  vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),ground:p.ground,anchor:p.anchor,face:p.face,squash:p.squash,hang:p.hang,falls:p.falls})),
- pads:w.pads,stars:w.stars,beacons:w.beacons,tensionCharge:w.tensionCharge,tensionDone:w.tensionDone,
- plateCharge:w.plateCharge,wraps:w.wraps,wheelCharge:w.wheelCharge,wheelDone:w.wheelDone,
- phase:w.phase,phaseTime:w.phaseTime,saveCount:w.saveCount,signalIndex:w.signalIndex,signalLeft:w.signalLeft,signalDone:w.signalDone,
- balanceCharge:w.balanceCharge,balanceDone:w.balanceDone,balanceTilt:w.balanceTilt,escapeLeft:w.escapeLeft,
+ pads:[],stars:[],beacons:[],tensionCharge:0,tensionDone:false,plateCharge:0,
+ wraps:w.wraps,wheelCharge:[],wheelDone:[],phase:0,phaseTime:0,saveCount:w.saveCount,
+ beamCharge:w.beamCharge,beamTilt:w.beamTilt,ferryX:w.ferryX,ferryDone:w.ferryDone,
+ cargoBall:w.cargoBall,waveIndex:w.waveIndex,waveLeft:w.waveLeft,waveGlow:w.waveGlow,
+ braidCharge:w.braidCharge,braidDone:w.braidDone,escapeLeft:w.escapeLeft,
+ signalIndex:0,signalLeft:0,signalDone:false,balanceCharge:0,balanceDone:false,balanceTilt:0,
  gateOpen:w.gateOpen,clock:w.clock,finished:w.finished,revision:w.revision,falls:w.falls
 });
 export function validateLayouts(){
  const errors=[];
- for(let n=2;n<=5;n++)for(let level=0;level<CHAPTERS.length;level++){
-  const s=stageFor(level,n),ground=s.floors.filter(f=>f.y===FLOOR);
-  if(s.pads.length&&s.pads.length!==n)errors.push([n,level,'pad count']);
-  for(let i=0;i<s.pads.length;i++){const p=s.pads[i];
-   if(!ground.some(f=>p.x>f.x+RADIUS+4&&p.x<f.x+f.w-RADIUS-4))errors.push([n,level,'pad unsupported',p.x]);
-   if(i&&p.x-s.pads[i-1].x<48)errors.push([n,level,'pad spacing']);
-   if(p.x>=s.gate.x-30)errors.push([n,level,'pad beyond gate']);
+ for(let n=2;n<=5;n++){
+  const stages=CHAPTERS.map((_,i)=>stageFor(i,n));
+  for(const s of stages){
+   if(!s.floors.length)errors.push([n,s.index,'no floor']);
+   if(s.kind==='balance'&&s.balances.length!==n-1)errors.push([n,s.index,'wrong beam count']);
+   if(s.kind==='pulse'&&(s.waveSequence.length!==n*2-1||s.waveSlots.length!==n))
+    errors.push([n,s.index,'wrong pulse count']);
+   if(s.kind==='braid'&&s.hooks.length!==n-1)errors.push([n,s.index,'wrong hooks']);
+   if(s.kind==='ferry'&&(s.ferry.end+s.ferry.w<s.floors[1].x-20))
+    errors.push([n,s.index,'ferry cannot reach second shore']);
+   if(s.kind==='cargo'&&s.cargo.barriers.some(b=>b.x<300||b.x>930))
+    errors.push([n,s.index,'barriers unreachable']);
   }
-  for(let i=1;i<ground.length;i++){const gap=ground[i].x-(ground[i-1].x+ground[i-1].w);if(gap>150)errors.push([n,level,'unreachable floor gap']);}
-  for(const star of s.stars){if(star.x>985||star.y<245||star.y>498)errors.push([n,level,'unreachable star']);}
-  for(const b of s.beacons)if(!ground.some(f=>b.x>f.x+130&&b.x<f.x+f.w-130))errors.push([n,level,'beacon has no standing room']);
-  for(const h of s.hooks)if(!ground.some(f=>h.x>f.x+22&&h.x<f.x+f.w-22))errors.push([n,level,'hook unsupported']);
-  if(s.wheels.some(k=>k<0||k>=s.hooks.length))errors.push([n,level,'invalid wheel']);
-  if(s.sequence.some(g=>!['wheels','stars','pads','tension','beacons','rescue','signals','balance'].includes(g)))errors.push([n,level,'unknown goal']);
-  if(s.tension&&s.requiredLinks>n-1)errors.push([n,level,'too many taut segments']);
-  for(const lens of s.signals)if(lens.x<170||lens.x>920||lens.y<340||lens.y>480)errors.push([n,level,'sensor unreachable']);
-  if(s.balance&&(!ground.some(f=>s.balance.x-f.x>180&&f.x+f.w-s.balance.x>180)))errors.push([n,level,'balance requires supported straddle']);
-  if(s.escape&&!s.sequence.includes('signals'))errors.push([n,level,'timer without resettable signal']);
  }
  return errors;
 }
