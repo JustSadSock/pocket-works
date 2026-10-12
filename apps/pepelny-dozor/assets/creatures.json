@@ -1,187 +1,187 @@
 {
+  "version": 1,
+  "image": "creatures.png",
+  "sampling": "nearest",
   "frames": [
     {
-      "durationMs": 180,
       "name": "lamp-0",
-      "pivot": [
-        16,
-        30
-      ],
       "rect": [
         0,
         0,
         32,
         32
       ],
-      "tag": "lamp"
-    },
-    {
-      "durationMs": 210,
-      "name": "lamp-1",
-      "pivot": [
-        16,
-        30
-      ],
-      "rect": [
-        32,
-        0,
-        32,
-        32
-      ],
-      "tag": "lamp"
-    },
-    {
       "durationMs": 180,
-      "name": "hollow-0",
       "pivot": [
         16,
         30
       ],
+      "tag": "lamp"
+    },
+    {
+      "name": "lamp-1",
+      "rect": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "durationMs": 210,
+      "pivot": [
+        16,
+        30
+      ],
+      "tag": "lamp"
+    },
+    {
+      "name": "hollow-0",
       "rect": [
         64,
         0,
         32,
         32
       ],
-      "tag": "hollow"
-    },
-    {
-      "durationMs": 210,
-      "name": "hollow-1",
+      "durationMs": 180,
       "pivot": [
         16,
         30
       ],
+      "tag": "hollow"
+    },
+    {
+      "name": "hollow-1",
       "rect": [
         96,
         0,
         32,
         32
       ],
-      "tag": "hollow"
-    },
-    {
-      "durationMs": 180,
-      "name": "hound-0",
+      "durationMs": 210,
       "pivot": [
         16,
         30
       ],
+      "tag": "hollow"
+    },
+    {
+      "name": "hound-0",
       "rect": [
         128,
         0,
         32,
         32
       ],
-      "tag": "hound"
-    },
-    {
-      "durationMs": 210,
-      "name": "hound-1",
+      "durationMs": 180,
       "pivot": [
         16,
         30
       ],
+      "tag": "hound"
+    },
+    {
+      "name": "hound-1",
       "rect": [
         160,
         0,
         32,
         32
       ],
-      "tag": "hound"
-    },
-    {
-      "durationMs": 180,
-      "name": "warden-0",
+      "durationMs": 210,
       "pivot": [
         16,
         30
       ],
+      "tag": "hound"
+    },
+    {
+      "name": "warden-0",
       "rect": [
         192,
         0,
         32,
         32
       ],
-      "tag": "warden"
-    },
-    {
-      "durationMs": 210,
-      "name": "warden-1",
+      "durationMs": 180,
       "pivot": [
         16,
         30
       ],
+      "tag": "warden"
+    },
+    {
+      "name": "warden-1",
       "rect": [
         224,
         0,
         32,
         32
       ],
-      "tag": "warden"
-    },
-    {
-      "durationMs": 180,
-      "name": "moth-0",
+      "durationMs": 210,
       "pivot": [
         16,
         30
       ],
+      "tag": "warden"
+    },
+    {
+      "name": "moth-0",
       "rect": [
         256,
         0,
         32,
         32
       ],
-      "tag": "moth"
-    },
-    {
-      "durationMs": 210,
-      "name": "moth-1",
+      "durationMs": 180,
       "pivot": [
         16,
         30
       ],
+      "tag": "moth"
+    },
+    {
+      "name": "moth-1",
       "rect": [
         288,
         0,
         32,
         32
       ],
-      "tag": "moth"
-    },
-    {
-      "durationMs": 180,
-      "name": "abbot-0",
+      "durationMs": 210,
       "pivot": [
         16,
         30
       ],
+      "tag": "moth"
+    },
+    {
+      "name": "abbot-0",
       "rect": [
         320,
         0,
         32,
         32
       ],
-      "tag": "abbot"
-    },
-    {
-      "durationMs": 210,
-      "name": "abbot-1",
+      "durationMs": 180,
       "pivot": [
         16,
         30
       ],
+      "tag": "abbot"
+    },
+    {
+      "name": "abbot-1",
       "rect": [
         352,
         0,
         32,
         32
       ],
+      "durationMs": 210,
+      "pivot": [
+        16,
+        30
+      ],
       "tag": "abbot"
     }
-  ],
-  "image": "creatures.png",
-  "sampling": "nearest",
-  "version": 1
+  ]
 }
