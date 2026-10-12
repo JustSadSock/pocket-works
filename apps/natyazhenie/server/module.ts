@@ -1,146 +1,225 @@
-// НАТЯЖЕНИЕ — server-authoritative, fixed-substep multiplayer platformer.
-// No timers required in Durable Objects: input heartbeats advance time while clients render at display Hz.
-const W=1180,H=620,R=18,GROUND=540,GRAVITY=1050;
+// Shared deterministic gameplay for local co-op, prediction and the pinned PocketNet server.
+// 90 Hz substeps; no browser APIs. Hard rope constraints are solved after collisions.
+export const WIDTH=1180, HEIGHT=620, RADIUS=18, FLOOR=540;
+export const ROPE={slack:128,soft:162,max:242,spring:24,damping:8};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rect=(x,y,w,h)=>({x,y,w,h});
-export const LEVELS=[
- {name:'Все на места',hint:'Каждому — своя цветная кнопка',kind:'plates',pads:350,spread:400,floors:[[0,540,1180,80]],theme:0},
- {name:'Через край',hint:'Перепрыгните разрыв. Не дайте резинке утащить друга',kind:'gap',pads:685,spread:280,floors:[[0,540,442,80],[554,540,626,80]],theme:1},
- {name:'Выше головы',hint:'Пружины подбросят к двум искрам',kind:'stars',pads:730,spread:260,floors:[[0,540,1180,80]],springs:[340,700],stars:[[404,302],[758,290]],platforms:[[470,420,130,18],[790,409,105,18]],theme:2},
- {name:'До предела',hint:'Растяните резинку и удержите натяжение',kind:'stretch',pads:345,spread:435,floors:[[0,540,1180,80]],theme:3},
- {name:'Не расцепиться',hint:'Через островки, к искрам и кнопкам',kind:'islands',pads:755,spread:220,floors:[[0,540,314,80],[410,540,210,80],[712,540,468,80]],springs:[269,567],stars:[[464,330],[760,306]],platforms:[[350,442,73,18],[653,431,75,18]],theme:4},
- {name:'Последний рывок',hint:'Соберите искры, натяните связь и откройте выход',kind:'finale',pads:674,spread:304,floors:[[0,540,446,80],[561,540,619,80]],springs:[335],stars:[[394,304],[660,311]],platforms:[[470,410,112,18],[745,404,105,18]],theme:5}
+export const CHAPTERS=[
+ {name:'В одной связке',hint:'Каждый держит свою кнопку',type:'plates',x:330,spread:480,hold:.65,floors:[[0,540,1180,80]]},
+ {name:'Не отпускай',hint:'Перепрыгните яму вместе и соберите искру',type:'gap',x:655,spread:330,hold:.75,floors:[[0,540,438,80],[570,540,610,80]],stars:[[501,413]]},
+ {name:'Живой якорь',hint:'Shift / ЯКОРЬ: держись за землю. Натяни ленту через кольцо',type:'beam',floors:[[0,540,1180,80]],beacons:[[524,522]],anchor:true},
+ {name:'Небесные пуговицы',hint:'Пружины подбросят к искрам, потом займитесь кнопками',type:'spring',x:655,spread:300,hold:.85,floors:[[0,540,1180,80]],platforms:[[430,424,124,20],[760,420,125,20]],springs:[308,580],stars:[[397,300],[665,320]]},
+ {name:'Никого не бросим',hint:'Одновременно удержите свои места, обходя маятник',type:'sync',x:365,spread:490,hold:1.2,floors:[[0,540,1180,80]],hazards:[[288,492,55,1.65,21]]},
+ {name:'Силовое поле',hint:'Держите ЯКОРЬ и натягивайте связь, пока не заполнится шкала',type:'tension',floors:[[0,540,1180,80]],tension:true,anchor:true,stars:[[684,404]]},
+ {name:'Качели',hint:'Лифт и маятники: держите связку и достаньте искры',type:'lift',x:690,spread:290,hold:.85,floors:[[0,540,1180,80]],platforms:[[398,438,100,18],[810,424,113,18]],lifts:[[548,440,112,18,59,2.8]],hazards:[[705,440,75,2.1,19]],stars:[[600,293],[844,319]]},
+ {name:'Подвесной мост',hint:'Прыгайте через островки. Связка удержит товарища',type:'islands',x:765,spread:214,hold:1,floors:[[0,540,306,80],[450,540,200,80],[738,540,442,80]],platforms:[[334,450,110,20],[682,438,96,20]],springs:[246,606],stars:[[372,331],[701,321]]},
+ {name:'Последнее натяжение',hint:'Искры, кольцо, натяжение и все кнопки — одновременно',type:'finale',x:733,spread:235,hold:1.2,floors:[[0,540,436,80],[568,540,612,80]],platforms:[[463,431,116,18],[734,422,112,18]],springs:[325],beacons:[[780,522]],stars:[[375,318],[690,306]],tension:true,anchor:true}
 ];
 export const MIN_PLAYERS=2,MAX_PLAYERS=5;
-export function stageFor(index,count){
- const spec=LEVELS[clamp(index|0,0,LEVELS.length-1)],n=clamp(count|0,MIN_PLAYERS,MAX_PLAYERS);
- // Same chapter and same challenges; more teammates means more independent activation points.
- const spread=n===2?Math.min(spec.spread,244):spec.spread;
- const pads=Array.from({length:n},(_,i)=>({x:spec.pads+spread*i/(n-1),y:GROUND}));
- return {index,name:spec.name,hint:spec.hint,kind:spec.kind,theme:spec.theme,
-  floors:spec.floors.map(a=>rect(...a)),platforms:(spec.platforms||[]).map(a=>rect(...a)),
-  springs:(spec.springs||[]).map(x=>({x,y:GROUND})),
-  stars:(spec.stars||[]).map(([x,y])=>({x,y})),pads,
-  stretch:spec.kind==='stretch'?spread-24:spec.kind==='finale'?spread-40:0,
-  gate:rect(1036,0,31,GROUND),finishX:1102};
+export function stageFor(level,count){
+ const spec=CHAPTERS[clamp(level|0,0,CHAPTERS.length-1)],n=clamp(count|0,2,5);
+ const span=n===2?Math.min(214,spec.spread||214):spec.spread||0;
+ return {index:level,name:spec.name,hint:spec.hint,kind:spec.type,theme:level%6,
+ floors:spec.floors.map(a=>rect(...a)),platforms:(spec.platforms||[]).map(a=>rect(...a)),
+ lifts:(spec.lifts||[]).map(a=>({x:a[0],y:a[1],w:a[2],h:a[3],amp:a[4],period:a[5]})),
+ springs:(spec.springs||[]).map(x=>({x,y:FLOOR})),
+ hazards:(spec.hazards||[]).map(a=>({x:a[0],y:a[1],amp:a[2],period:a[3],r:a[4]})),
+ stars:(spec.stars||[]).map(([x,y])=>({x,y})),
+ beacons:(spec.beacons||[]).map(([x,y])=>({x,y})),
+ pads:spec.x?Array.from({length:n},(_,i)=>({x:spec.x+span*i/(n-1),y:FLOOR,owner:i})):[],
+ hold:spec.hold||0,tension:!!spec.tension,anchor:!!spec.anchor,
+ requiredLinks:spec.tension?Math.max(1,Math.ceil((n-1)*.5)):0,
+ gate:rect(1036,0,31,FLOOR),finishX:1102};
 }
-function spawn(player,i){return {id:player.id,name:player.name||'Игрок',x:92+i*42,y:GROUND-R,vx:0,vy:0,ground:true,coyote:0,face:1,jumpHeld:false,squash:0,falls:0};}
-export function worldFor(players,index=0){
- const stage=stageFor(index,players.length);
- return {level:index,stage,players:players.map(spawn),inputs:{},stars:stage.stars.map(()=>false),
-  pads:stage.pads.map(()=>false),stretch:0,stretched:false,gateOpen:false,ticks:0,clock:0,finished:false,revision:0};
+const spawn=(p,i)=>({id:p.id,name:p.name||'Игрок',x:92+i*42,y:FLOOR-RADIUS,vx:0,vy:0,ground:true,anchor:false,coyote:.1,jumpHeld:false,face:1,falls:0,squash:0,checkpoint:0});
+export function worldFor(players,level=0){
+ const stage=stageFor(level,players.length);
+ return {level,stage,players:players.map(spawn),inputs:{},pads:stage.pads.map(()=>false),
+ stars:stage.stars.map(()=>false),beacons:stage.beacons.map(()=>false),
+ tensionCharge:0,tensionDone:false,plateCharge:0,gateOpen:false,clock:0,revision:0,finished:false,falls:0};
 }
-export function reset(world,index=world.level){
- const next=worldFor(world.players.map(p=>({id:p.id,name:p.name})),index);
- Object.assign(world,next);world.revision++;
+export function reset(w,level=w.level){const v=worldFor(w.players.map(p=>({id:p.id,name:p.name})),level);Object.assign(w,v);}
+export function movingPlatforms(s,time){
+ return (s.lifts||[]).map(l=>({x:l.x,y:l.y+Math.sin(time*Math.PI*2/l.period)*l.amp,w:l.w,h:l.h,moving:true}));
 }
-function solids(world){return world.gateOpen?[...world.stage.floors,...world.stage.platforms]:[...world.stage.floors,...world.stage.platforms,world.stage.gate];}
-function hit(q,s){return q.x+R>s.x&&q.x-R<s.x+s.w&&q.y+R>s.y&&q.y-R<s.y+s.h;}
-function move(q,dt,blocks){
- const oldX=q.x,oldY=q.y;
- q.x+=q.vx*dt;
- for(const s of blocks)if(hit(q,s)){
-  if(oldX+R<=s.x+4&&q.vx>0){q.x=s.x-R;q.vx=0;}
-  else if(oldX-R>=s.x+s.w-4&&q.vx<0){q.x=s.x+s.w+R;q.vx=0;}
+export function movingHazards(s,time){
+ return (s.hazards||[]).map(h=>({x:h.x+Math.sin(time*Math.PI*2/h.period)*h.amp,y:h.y,r:h.r}));
+}
+function solids(w){return [...w.stage.floors,...w.stage.platforms,...movingPlatforms(w.stage,w.clock),...(w.gateOpen?[]:[w.stage.gate])];}
+function overlap(p,s){return p.x+RADIUS>s.x&&p.x-RADIUS<s.x+s.w&&p.y+RADIUS>s.y&&p.y-RADIUS<s.y+s.h;}
+function resolveMove(p,dt,blocks){
+ const ox=p.x,oy=p.y;p.x+=p.vx*dt;
+ for(const s of blocks)if(overlap(p,s)){
+  if(ox+RADIUS<=s.x+5&&p.vx>0){p.x=s.x-RADIUS;p.vx=0;}
+  else if(ox-RADIUS>=s.x+s.w-5&&p.vx<0){p.x=s.x+s.w+RADIUS;p.vx=0;}
  }
- q.x=clamp(q.x,R,W-R);
- q.y+=q.vy*dt;q.ground=false;
- for(const s of blocks)if(hit(q,s)){
-  if(oldY+R<=s.y+6&&q.vy>=0){q.y=s.y-R;q.vy=0;q.ground=true;q.squash=.5;}
-  else if(oldY-R>=s.y+s.h-6&&q.vy<0){q.y=s.y+s.h+R;q.vy=0;}
-  else if(s.y===0&&s.h>=GROUND){q.x=q.x<s.x+s.w/2?s.x-R:s.x+s.w+R;q.vx=0;}
-  else if(q.y<s.y+s.h/2){q.y=s.y-R;q.vy=0;q.ground=true;}
-  else {q.y=s.y+s.h+R;q.vy=0;}
+ p.x=clamp(p.x,RADIUS,WIDTH-RADIUS);p.y+=p.vy*dt;p.ground=false;
+ for(const s of blocks)if(overlap(p,s)){
+  if(oy+RADIUS<=s.y+9&&p.vy>=0){p.y=s.y-RADIUS;p.vy=0;p.ground=true;p.squash=Math.max(p.squash||0,.65);}
+  else if(oy-RADIUS>=s.y+s.h-6&&p.vy<0){p.y=s.y+s.h+RADIUS;p.vy=0;}
+  else if(s.y===0&&s.h>=FLOOR){p.x=p.x<s.x+s.w/2?s.x-RADIUS:s.x+s.w+RADIUS;p.vx=0;}
+  else if(p.y<s.y+s.h/2){p.y=s.y-RADIUS;p.vy=0;p.ground=true;}
+  else{p.y=s.y+s.h+RADIUS;p.vy=0;}
  }
- q.y=Math.max(R,q.y);
-}
-function rope(world,dt){
- const a=world.players;
- for(let j=0;j<a.length-1;j++){
-  const p=a[j],q=a[j+1],dx=q.x-p.x,dy=q.y-p.y,dist=Math.hypot(dx,dy)||1;
-  if(dist>170){
-   const stretch=dist-170;
-   const force=Math.min(1150,stretch*6.2);
-   const ax=dx/dist*force*dt,ay=dy/dist*force*dt;
-   p.vx+=ax;q.vx-=ax;p.vy+=ay;q.vy-=ay;
-   // Soft maximum extension, never teleport across a pit.
-   if(dist>335){const extra=(dist-335)*.2;p.x+=dx/dist*extra;q.x-=dx/dist*extra;}
+ p.y=Math.max(RADIUS,p.y);
+ // Keep resting contact sticky at exact floor height; otherwise an anchored
+ // character alternates between airborne and grounded every second substep.
+ if(!p.ground&&p.vy>=0)for(const s of blocks){
+  if(p.x+RADIUS>s.x&&p.x-RADIUS<s.x+s.w&&Math.abs(p.y+RADIUS-s.y)<2.7){
+   p.y=s.y-RADIUS;p.vy=0;p.ground=true;break;
   }
  }
 }
-function evaluate(world,dt){
- const s=world.stage,ps=world.players;
- world.pads=s.pads.map(b=>ps.some(q=>q.ground&&Math.abs(q.x-b.x)<31&&Math.abs(q.y+R-b.y)<12));
- for(let i=0;i<s.stars.length;i++)if(!world.stars[i]&&ps.some(q=>Math.hypot(q.x-s.stars[i].x,q.y-s.stars[i].y)<38))world.stars[i]=true;
- if(s.stretch&&!world.stretched){
-  const extent=Math.max(...ps.map(p=>p.x))-Math.min(...ps.map(p=>p.x));
-  const valid=extent>=s.stretch&&ps.filter(p=>p.ground).length>=2;
-  world.stretch=clamp(world.stretch+(valid?dt*1.9:-dt*.55),0,1);
-  if(world.stretch>=1)world.stretched=true;
+function resolveStatic(p,blocks){
+ p.x=clamp(p.x,RADIUS,WIDTH-RADIUS);p.y=Math.max(RADIUS,p.y);
+ for(const s of blocks)if(overlap(p,s)){
+  const l=p.x+RADIUS-s.x,r=s.x+s.w-p.x+RADIUS,t=p.y+RADIUS-s.y,b=s.y+s.h-p.y+RADIUS;
+  const min=Math.min(l,r,t,b);
+  if(s.y===0&&s.h>=FLOOR||min===l){p.x=s.x-RADIUS;p.vx=Math.min(0,p.vx);}
+  else if(min===r){p.x=s.x+s.w+RADIUS;p.vx=Math.max(0,p.vx);}
+  else if(min===t){p.y=s.y-RADIUS;p.vy=Math.min(0,p.vy);p.ground=true;}
+  else{p.y=s.y+s.h+RADIUS;p.vy=Math.max(0,p.vy);}
  }
- if(world.pads.every(Boolean)&&world.stars.every(Boolean)&&(!s.stretch||world.stretched))world.gateOpen=true;
- if(world.gateOpen&&ps.some(q=>q.x>s.finishX)&&ps.every(q=>q.x>s.finishX-133&&q.y<GROUND+R)){
-  if(world.level===LEVELS.length-1)world.finished=true;
-  else reset(world,world.level+1);
+ p.x=clamp(p.x,RADIUS,WIDTH-RADIUS);
+}
+export function constrainRope(players,blocks,dt){
+ // Taut rope: damp radial relative velocity and share force before projection.
+ for(let i=0;i<players.length-1;i++){
+  const a=players[i],b=players[i+1],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
+  if(d<=ROPE.slack)continue;
+  const nx=dx/d,ny=dy/d,relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+  const impulse=Math.max(0,(d-ROPE.slack)*ROPE.spring+relative*ROPE.damping)*dt;
+  const ma=a.anchor?0:1,mb=b.anchor?0:1,total=ma+mb||1;
+  a.vx+=nx*impulse*ma/total;a.vy+=ny*impulse*ma/total;
+  b.vx-=nx*impulse*mb/total;b.vy-=ny*impulse*mb/total;
+ }
+ // XPBD-style positional solve: hard finite maximum, no frame-scale spring loophole.
+ for(let pass=0;pass<9;pass++){
+  for(let i=0;i<players.length-1;i++){
+   const a=players[i],b=players[i+1],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
+   if(d<=ROPE.max+.002)continue;
+   const ma=a.anchor?0:1,mb=b.anchor?0:1,total=ma+mb;
+   if(total===0)continue;
+   const pull=(d-ROPE.max)/total,nx=dx/d,ny=dy/d;
+   a.x+=nx*pull*ma;a.y+=ny*pull*ma;
+   b.x-=nx*pull*mb;b.y-=ny*pull*mb;
+   resolveStatic(a,blocks);resolveStatic(b,blocks);
+  }
+ }
+}
+function respawn(w,p,i){
+ const falls=(p.falls||0)+1;
+ const ref=w.players[Math.max(0,i-1)]||w.players[Math.min(w.players.length-1,i+1)];
+ const side=p.checkpoint?790:90+i*42;
+ const x=ref&&Math.abs(ref.x-side)>ROPE.max?clamp(ref.x+(ref.x>side?-160:160),RADIUS,WIDTH-RADIUS):side;
+ // Respawn on a supported portion of the ground; all chapters have spawn floor.
+ const floor=w.stage.floors.find(f=>x>=f.x+RADIUS&&x<=f.x+f.w-RADIUS);
+ Object.assign(p,spawn(p,i),{x:floor?x:90+i*42,falls});w.falls++;
+}
+function updateGoals(w,dt){
+ const s=w.stage,ps=w.players;
+ w.pads=s.pads.map(p=>{const actor=ps[p.owner];return !!actor?.ground&&Math.abs(actor.x-p.x)<30&&Math.abs(actor.y+RADIUS-p.y)<13;});
+ w.plateCharge=clamp(w.plateCharge+(w.pads.length&&w.pads.every(Boolean)?dt*1.45:-dt*.9),0,1);
+ for(let i=0;i<s.stars.length;i++)if(!w.stars[i]&&ps.some(p=>Math.hypot(p.x-s.stars[i].x,p.y-s.stars[i].y)<34))w.stars[i]=true;
+ for(let i=0;i<(s.beacons||[]).length;i++)if(!w.beacons[i]){
+  const b=s.beacons[i];
+  for(let j=0;j<ps.length-1;j++){
+   const a=ps[j],p=ps[j+1],dx=p.x-a.x,dy=p.y-a.y;
+   if(!dx)continue;
+   const f=(b.x-a.x)/dx,yy=a.y+dy*f,dist=Math.hypot(dx,dy);
+   if(f>=0&&f<=1&&Math.abs(yy-b.y)<24&&dist>=ROPE.soft&&(a.anchor||p.anchor)){w.beacons[i]=true;break;}
+  }
+ }
+ if(s.tension&&!w.tensionDone){
+  let taut=0;
+  for(let i=0;i<ps.length-1;i++)if(Math.hypot(ps[i+1].x-ps[i].x,ps[i+1].y-ps[i].y)>=196)taut++;
+  const valid=taut>=s.requiredLinks&&ps.some(p=>p.anchor);
+  w.tensionCharge=clamp(w.tensionCharge+(valid?dt*.9:-dt*.75),0,1);
+  if(w.tensionCharge>=1)w.tensionDone=true;
+ }
+ const done=(!s.pads.length||w.plateCharge>=1)&&w.stars.every(Boolean)&&w.beacons.every(Boolean)&&(!s.tension||w.tensionDone);
+ if(done)w.gateOpen=true;
+ if(w.gateOpen&&ps.some(p=>p.x>s.finishX)&&ps.every(p=>p.x>s.finishX-136&&p.y<FLOOR+RADIUS)){
+  if(w.level===CHAPTERS.length-1)w.finished=true;else reset(w,w.level+1);
   return true;
  }
  return false;
 }
-export function simulate(world,seconds,now=Date.now()){
- let rest=clamp(seconds,0,.15);
- while(rest>0&&!world.finished){
-  const dt=Math.min(1/90,rest);rest-=dt;world.clock+=dt;world.ticks++;
-  const blocks=solids(world);
-  for(const q of world.players){
-   const raw=world.inputs[q.id]||{},fresh=now-(raw.at||0)<390;
-   const dir=fresh?clamp(Number(raw.dir)||0,-1,1):0,jump=fresh&&raw.jump===true;
-   q.squash=Math.max(0,q.squash-dt*3);
-   q.coyote=q.ground?.105:Math.max(0,q.coyote-dt);
-   if(jump&&!q.jumpHeld&&(q.ground||q.coyote>0)){
-    q.vy=-515;q.y-=2;q.ground=false;q.coyote=0;q.squash=.75;
+export function simulate(w,seconds,now=Date.now()){
+ let remaining=clamp(Number(seconds)||0,0,.16);
+ while(remaining>0&&!w.finished){
+  const dt=Math.min(1/90,remaining);remaining-=dt;w.clock+=dt;
+  const blocks=solids(w);
+  for(const p of w.players){
+   const raw=w.inputs[p.id]||{},fresh=now-(raw.at||0)<460;
+   const dir=fresh?clamp(Number(raw.dir)||0,-1,1):0,jump=fresh&&raw.jump===true,grab=fresh&&raw.anchor===true;
+   p.squash=Math.max(0,(p.squash||0)-dt*2.4);
+   p.coyote=p.ground?.11:Math.max(0,(p.coyote||0)-dt);
+   p.anchor=!!(grab&&p.ground);
+   if(jump&&!p.jumpHeld&&(p.ground||p.coyote>0)){
+    p.anchor=false;p.vy=-535;p.y-=2;p.ground=false;p.coyote=0;p.squash=.8;
    }
-   q.jumpHeld=jump;
-   if(dir)q.face=dir>0?1:-1;
-   const desired=dir*255,rate=dir?(q.ground?1800:1200):(q.ground?2050:390);
-   q.vx+=clamp(desired-q.vx,-rate*dt,rate*dt);
-   q.vy=clamp(q.vy+GRAVITY*dt,-890,760);
-  }
-  rope(world,dt);
-  for(const q of world.players){
-   q.vx=clamp(q.vx,-335,335);q.vy=clamp(q.vy,-850,760);
-   move(q,dt,blocks);
-   if(q.ground)for(const spring of world.stage.springs)if(Math.abs(q.x-spring.x)<33&&Math.abs(q.y+R-spring.y)<12){q.vy=-752;q.y-=3;q.ground=false;q.coyote=0;q.squash=1;break;}
-   if(q.y>H+72){
-    const idx=world.players.indexOf(q),falls=q.falls+1;
-    Object.assign(q,spawn(q,idx));q.falls=falls;
+   p.jumpHeld=jump;if(dir)p.face=dir>0?1:-1;
+   if(p.anchor){p.vx=0;p.vy=Math.max(0,p.vy);}
+   else{
+    const rate=dir?(p.ground?1830:1320):(p.ground?2150:360);
+    p.vx+=clamp(dir*254-p.vx,-rate*dt,rate*dt);
+    p.vy=clamp(p.vy+1060*dt,-850,750);
    }
   }
-  // Repulsive player bodies, but no stacking-based jump exploits are required for any puzzle.
-  for(let i=0;i<world.players.length;i++)for(let j=i+1;j<world.players.length;j++){
-   const a=world.players[i],b=world.players[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
-   if(d<2*R-3){const overlap=(2*R-3-d)*.5;a.x-=dx/d*overlap;b.x+=dx/d*overlap;}
+  constrainRope(w.players,blocks,dt);
+  for(let i=0;i<w.players.length;i++){
+   const p=w.players[i];p.vx=clamp(p.vx,-400,400);p.vy=clamp(p.vy,-850,760);
+   resolveMove(p,dt,blocks);
+   if(p.ground&&!p.anchor)for(const b of w.stage.springs)if(Math.abs(p.x-b.x)<31&&Math.abs(p.y+RADIUS-b.y)<12){
+    p.vy=-785;p.y-=3;p.ground=false;p.coyote=0;p.squash=1;break;
+   }
+   if(p.y>HEIGHT+62)respawn(w,p,i);
+   if(p.ground&&p.x>720&&w.stage.floors.some(f=>f.x>520&&p.x>f.x+25&&p.x<f.x+f.w-25))p.checkpoint=1;
   }
-  if(evaluate(world,dt))break;
+  // Collision correction runs again without applying a second spring impulse.
+  constrainRope(w.players,blocks,0);
+  for(let i=0;i<w.players.length;i++)for(let j=i+1;j<w.players.length;j++){
+   const a=w.players[i],b=w.players[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
+   if(d<2*RADIUS-2){const push=(2*RADIUS-2-d)*.5;if(!a.anchor)a.x-=dx/d*push;if(!b.anchor)b.x+=dx/d*push;}
+  }
+  for(const hazard of movingHazards(w.stage,w.clock))for(let i=0;i<w.players.length;i++){
+   const p=w.players[i];if(Math.hypot(p.x-hazard.x,p.y-hazard.y)<RADIUS+hazard.r-3)respawn(w,p,i);
+  }
+  if(updateGoals(w,dt))break;
  }
- world.revision++;
+ w.revision++;
 }
-export function screen(world){return {
- level:world.level,stage:world.stage,players:world.players.map(p=>({
- id:p.id,name:p.name,x:+p.x.toFixed(2),y:+p.y.toFixed(2),
- vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),face:p.face,ground:p.ground,squash:p.squash,falls:p.falls})),
- pads:world.pads,stars:world.stars,stretch:+world.stretch.toFixed(3),
- stretched:world.stretched,gateOpen:world.gateOpen,clock:+world.clock.toFixed(2),
- finished:world.finished,revision:world.revision};
-}
-const view=s=>({phase:s.phase,host:s.host,players:s.players,world:s.world?screen(s.world):null,levels:LEVELS.length});
-const broadcast=s=>[{type:'state',payload:view(s)}];
-function synchronize(s,players){
- s.players=players;
- if(s.world){
-  s.world.players=s.world.players.filter(p=>players.some(m=>m.id===p.id));
-  players.forEach((p,i)=>{if(!s.world.players.some(q=>q.id===p.id))s.world.players.push(spawn(p,i));});
+export const viewWorld=w=>({
+ level:w.level,stage:w.stage,players:w.players.map(p=>({id:p.id,name:p.name,x:+p.x.toFixed(2),y:+p.y.toFixed(2),
+ vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),ground:p.ground,anchor:p.anchor,face:p.face,squash:p.squash,falls:p.falls})),
+ pads:w.pads,stars:w.stars,beacons:w.beacons,tensionCharge:w.tensionCharge,tensionDone:w.tensionDone,
+ plateCharge:w.plateCharge,gateOpen:w.gateOpen,clock:w.clock,finished:w.finished,revision:w.revision,falls:w.falls
+});
+export function validateLayouts(){
+ const errors=[];
+ for(let n=2;n<=5;n++)for(let level=0;level<CHAPTERS.length;level++){
+  const s=stageFor(level,n),ground=s.floors.filter(f=>f.y===FLOOR);
+  if(s.pads.length&&s.pads.length!==n)errors.push([n,level,'pad count']);
+  for(let i=0;i<s.pads.length;i++){const p=s.pads[i];
+   if(!ground.some(f=>p.x>f.x+RADIUS+4&&p.x<f.x+f.w-RADIUS-4))errors.push([n,level,'pad unsupported',p.x]);
+   if(i&&p.x-s.pads[i-1].x<48)errors.push([n,level,'pad spacing']);
+   if(p.x>=s.gate.x-30)errors.push([n,level,'pad beyond gate']);
+  }
+  for(let i=1;i<ground.length;i++){const gap=ground[i].x-(ground[i-1].x+ground[i-1].w);if(gap>150)errors.push([n,level,'unreachable floor gap']);}
+  for(const star of s.stars){if(star.x>985||star.y<245||star.y>498)errors.push([n,level,'unreachable star']);}
+  for(const b of s.beacons)if(!ground.some(f=>b.x>f.x+130&&b.x<f.x+f.w-130))errors.push([n,level,'beacon has no standing room']);
+  if(s.tension&&s.requiredLinks>n-1)errors.push([n,level,'too many taut segments']);
  }
- if(!players.some(p=>p.id===s.host))s.host=players[0]?.id||'';
+ return errors;
+}
+
+
+const roomView=s=>({phase:s.phase,host:s.host,players:s.players,world:s.world?viewWorld(s.world):null,levels:CHAPTERS.length});
+const events=s=>[{type:'state',payload:roomView(s)}];
+function reconcile(state,players){
+ state.players=players;
+ if(!players.some(p=>p.id===state.host))state.host=players[0]?.id||'';
 }
 const game={
  protocolVersion:1,
@@ -148,41 +227,40 @@ const game={
  onJoin({state,players}){
   if(state.phase!=='lobby')throw Error('match_in_progress');
   if(players.length>MAX_PLAYERS)throw Error('room_full');
-  synchronize(state,players);return {state,events:broadcast(state)};
+  reconcile(state,players);return {state,events:events(state)};
  },
  onLeave({state,players}){
-  synchronize(state,players);
-  if(state.phase==='play'&&players.length<MIN_PLAYERS){state.phase='lobby';state.world=null;}
-  else if(state.phase==='play'&&state.world){
-   // Existing run remains solvable after a dropout: rebuild the stage for the new count.
-   const index=state.world.level;state.world=worldFor(state.players,index);state.lastTick=Date.now();
+  reconcile(state,players);
+  if(state.phase==='play'){
+   if(players.length<MIN_PLAYERS){state.phase='lobby';state.world=null;}
+   else{state.world=worldFor(players,state.world.level);state.lastTick=Date.now();state.lastInput={};}
   }
-  return {state,events:broadcast(state)};
+  return {state,events:events(state)};
  },
  onMessage({state,player,payload}){
   const a=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
-  if(a.type==='sync')return {state,events:[{type:'state',to:player.id,payload:view(state)}]};
+  if(a.type==='sync')return {state,events:[{type:'state',to:player.id,payload:roomView(state)}]};
   if(a.type==='start'&&player.id===state.host&&(state.phase==='lobby'||state.phase==='done')){
-   if(state.players.length<MIN_PLAYERS||state.players.length>MAX_PLAYERS)return {state,events:[{type:'notice',to:player.id,payload:'Нужно 2–5 игроков'}]};
+   if(state.players.length<MIN_PLAYERS||state.players.length>MAX_PLAYERS)
+    return {state,events:[{type:'notice',to:player.id,payload:'Нужно от двух до пяти игроков'}]};
    state.world=worldFor(state.players);state.phase='play';state.lastTick=Date.now();state.lastInput={};
-   return {state,events:broadcast(state)};
+   return {state,events:events(state)};
   }
-  if(a.type==='restart'&&player.id===state.host&&state.phase==='play'){
-   reset(state.world);state.lastTick=Date.now();return {state,events:broadcast(state)};
+  if(a.type==='restart'&&state.phase==='play'&&player.id===state.host){
+   reset(state.world);state.lastTick=Date.now();state.lastInput={};
+   return {state,events:events(state)};
   }
   if(a.type==='input'&&state.phase==='play'){
-   const now=Date.now(),last=state.lastInput[player.id]||0;
-   if(now-last<34)return {state,events:[]};
-   const dir=Number(a.dir);
+   const now=Date.now(),last=state.lastInput[player.id]||0,dir=Number(a.dir);
+   if(now-last<33)return {state,events:[]};
    if(!Number.isFinite(dir)||Math.abs(dir)>1)return {state,events:[]};
    state.lastInput[player.id]=now;
-   state.world.inputs[player.id]={dir,jump:a.jump===true,at:now};
-   const prevLevel=state.world.level;
-   const elapsed=clamp((now-state.lastTick)/1000,0,.15);state.lastTick=now;
-   simulate(state.world,elapsed,now);
+   state.world.inputs[player.id]={dir,jump:a.jump===true,anchor:a.anchor===true,at:now};
+   const oldLevel=state.world.level,elapsed=clamp((now-state.lastTick)/1000,0,.16);
+   state.lastTick=now;simulate(state.world,elapsed,now);
    if(state.world.finished)state.phase='done';
-   if(now-state.lastBroadcast>=55||prevLevel!==state.world.level||state.phase==='done'){
-    state.lastBroadcast=now;return {state,events:broadcast(state)};
+   if(now-state.lastBroadcast>=55||oldLevel!==state.world.level||state.phase==='done'){
+    state.lastBroadcast=now;return {state,events:events(state)};
    }
    return {state,events:[]};
   }
@@ -190,19 +268,3 @@ const game={
  }
 };
 export default game;
-// Geometry acceptance tests: every capacity must get unique reachable floor plates,
-// no gap larger than a normal jump, all exit gates accessible from the right.
-export function validateLayouts(){
- const issues=[];
- for(let count=MIN_PLAYERS;count<=MAX_PLAYERS;count++)for(let level=0;level<LEVELS.length;level++){
-  const s=stageFor(level,count);
-  if(s.pads.length!==count||s.pads.some((p,i)=>p.x<240||p.x>990||i&&p.x-s.pads[i-1].x<57))issues.push([count,level,'pads']);
-  if(s.pads.some(p=>!s.floors.some(f=>p.x>=f.x+24&&p.x<=f.x+f.w-24&&f.y===GROUND)))issues.push([count,level,'pad floor']);
-  const floors=s.floors.filter(f=>f.y===GROUND).sort((a,b)=>a.x-b.x);
-  for(let i=1;i<floors.length;i++)if(floors[i].x-(floors[i-1].x+floors[i-1].w)>155)issues.push([count,level,'gap']);
-  if(s.gate.x<s.pads.at(-1).x+28)issues.push([count,level,'gate']);
-  if(s.stretch&&s.stretch>s.pads.at(-1).x-s.pads[0].x)issues.push([count,level,'stretch']);
-  if(s.stars.some(st=>st.x>1000||st.y<240||st.y>510))issues.push([count,level,'star']);
- }
- return issues;
-}

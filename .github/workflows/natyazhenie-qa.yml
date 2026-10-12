@@ -1,0 +1,31 @@
+name: NATYAZHENIE Gameplay QA
+on:
+  pull_request:
+    paths:
+      - 'apps/natyazhenie/**'
+      - 'pocketnet/module-versions/natyazhenie/**'
+      - 'pocketnet/modules.lock.json'
+      - '.github/workflows/natyazhenie-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/natyazhenie/**'
+      - 'pocketnet/module-versions/natyazhenie/**'
+      - '.github/workflows/natyazhenie-qa.yml'
+jobs:
+  physics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate rope constraints, local and online playthroughs
+        run: node apps/natyazhenie/qa.mjs
+      - name: Check ES module syntax
+        run: |
+          node --check apps/natyazhenie/app.js
+          node --check apps/natyazhenie/art.js
+          node --check apps/natyazhenie/physics.js
+          node --check apps/natyazhenie/engine.js
+          node --check apps/natyazhenie/server/module.ts
