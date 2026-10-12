@@ -1,7 +1,9 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {pieceInfo,pieceSVG,CATALOGUE_SIZE} from './pieces.js';
 installMobileRuntime();
+createWorkshopMode({appName:'ЧУШЬ!',version:'1.0.0',cachePrefix: 'chush-',storageNamespace: 'pocket-works:chush'});
 
 const root=document.querySelector('#view'),statusNode=document.querySelector('#connection'),toast=document.querySelector('#toast'),modal=document.querySelector('#dialog');
 const SERVER=location.origin+'/pocketnet',STORE='pocket-works:chush:',params=new URLSearchParams(location.search);
