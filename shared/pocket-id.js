@@ -98,7 +98,7 @@ window.PocketID=Object.freeze({
 function display() {
   guestIntro.hidden=Boolean(user?.linkedGoogle)||!config.googleEnabled;
   activeSection.hidden=!user;
-  edit.hidden=!user?.complete&&(mode==='create'||mode==='onboarding');
+  edit.hidden=!(mode==='create'||mode==='onboarding');
   recoverSection.hidden=mode!=='recover';
   recoveryBox.hidden=mode!=='key';
   recoverToggle.hidden=Boolean(user)||mode==='recover';
@@ -222,10 +222,13 @@ nicknameInput.addEventListener('input',()=>{
     publish(null);mode='create';display();
   }
   const query=new URLSearchParams(location.search),result=query.get('pocket-id');
-  if(result==='welcome'||result==='error'||result==='login') {
+  if(result==='welcome'||result==='error'||result==='login'||result==='profile') {
     query.delete('pocket-id');const reason=query.get('reason');query.delete('reason');
     history.replaceState(history.state,'',location.pathname+(query.toString()?'?'+query:'')+location.hash);
-    openDialog();
+    if(result==='profile'&&user?.complete){
+      if(window.PocketSocial?.open)window.PocketSocial.open();
+      else window.addEventListener('load',()=>window.PocketSocial?.open?.(),{once:true});
+    }else openDialog();
     if(result==='error') message('Google sign-in was unsuccessful: '+(reason||'unknown error').replaceAll('_',' '),'error');
     else if(result==='welcome') message('Google account connected. Set your nickname and avatar to finish.','success');
   }
