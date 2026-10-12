@@ -10,6 +10,7 @@ async function openShelf(page: import('@playwright/test').Page) {
 
 test('iPhone launcher shows separate catalog and installed-app actions', async ({ page }) => {
   await openShelf(page);
+  await page.locator('#library-options > summary').click();
   await expect(page.locator('#refresh-button')).toBeVisible();
   await expect(page.locator('#update-installed-button')).toBeVisible();
   await expect(page.locator('#shelf-tools-button')).toBeVisible();
@@ -27,6 +28,7 @@ test('iPhone launcher shows separate catalog and installed-app actions', async (
 
 test('iPhone shelf tools show diagnostics and export a valid backup', async ({ page }) => {
   await openShelf(page);
+  await page.locator('#library-options > summary').click();
   await page.locator('#shelf-tools-button').click();
   await expect(page.locator('#shelf-tools')).toBeVisible();
   await expect(page.locator('#tools-facts')).toContainText('Launcher version');
