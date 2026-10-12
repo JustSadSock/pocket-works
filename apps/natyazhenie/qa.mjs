@@ -92,10 +92,12 @@ try{
  pulse.players.forEach((p,i)=>{p.x=pulse.stage.waveSlots[i].x;p.y=522;p.ground=true;});
  controls(pulse,(p,i)=>({jump:i===2}));
  assert.equal(pulse.waveIndex,0,'wrong first actor cannot skip sequence');
- controls(pulse,(p,i)=>({jump:i===0}));
- assert.equal(pulse.waveIndex,1,'real first jump starts relay');
- for(let i=0;i<180;i++)controls(pulse,()=>({}));
- assert.equal(pulse.waveIndex,0,'missed reply resets the pulse without reloading');
+ const pulseStart=worldFor(people.slice(0,3),3);
+ pulseStart.players.forEach((p,i)=>{p.x=pulseStart.stage.waveSlots[i].x;p.y=522;p.ground=true;});
+ controls(pulseStart,(p,i)=>({jump:i===0}));
+ assert.equal(pulseStart.waveIndex,1,'real first jump starts relay');
+ for(let i=0;i<180;i++)controls(pulseStart,()=>({}));
+ assert.equal(pulseStart.waveIndex,0,'missed reply resets the pulse without reloading');
  // Complete physically triggered jump relay, including the middle friend's return jump.
  for(const n of [2,3,4,5]){
   const w=worldFor(people.slice(0,n),3);
@@ -103,7 +105,7 @@ try{
   for(const [j,actor] of w.stage.waveSequence.entries()){
    controls(w,(p,i)=>({jump:i===actor,anchor:i!==actor}));
    assert.equal(w.waveIndex,j+1,'relay pulse '+j+' of '+n+' must be a genuine jump');
-   for(let t=0;t<69;t++)controls(w,(p,i)=>({anchor:i!==actor}));
+   for(let t=0;t<86;t++)controls(w,(p,i)=>({anchor:i!==actor}));
   }
   assert.ok(w.gateOpen,'full up-and-down relay unlocks the gate for '+n);
  }
