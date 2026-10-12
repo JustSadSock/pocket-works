@@ -2,6 +2,16 @@
 
 The launcher is a native-feeling **installed PWA**, not a replacement game runtime. Existing app manifests, Service Workers, game saves and scoped caches are unchanged.
 
+## Phone home and Pocket ID (0.10.16)
+
+The phone launcher Home now uses the available viewport rather than creating an unnecessary vertical feed. It features one actual playable application, a horizontally scrolling Quick play rail, a prominent Pocket ID action and a More from my shelf toggle that exposes the existing editable/persistent widgets in an independently scrollable area. Library and archive remain vertically scrollable.
+
+Touching a library game cover now **launches it**, matching Home. A separate Details action opens the existing detail drawer. Archive/organization selection is unchanged.
+
+Pocket ID avatar badges reflect **actual** friend requests plus pending game invitations. Pocket Social routes an account-icon tap directly to the relevant requests/invitations screen when needed. A Home Pocket ID action leads guests to account creation and members directly to avatar/profile customization.
+
+Available launcher Service Worker updates do not show a large multi-note banner/receipt. A small indicator on Settings opens an actionable Update now control. Apps keep their existing managed update semantics. No notification is invented when there is no account activity or pending update.
+
 ## Focus-first interaction (0.10.15)
 
 The launcher separates the next action from optional information without removing functionality:
