@@ -6,7 +6,7 @@ import {paint,coverWorld} from './art.js';
 import {advancePosition} from './engine.js';
 import {newLocal,tickLocal,verifyLocalLayouts,CHAPTERS} from './local.js';
 installMobileRuntime();
-createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'1.1.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
+createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'1.2.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
 const $=id=>document.getElementById(id);
 const localKey='pocket-works:natyazhenie:';
 const read=(key,fallback='')=>{try{return localStorage.getItem(localKey+key)??fallback;}catch{return fallback;}};
@@ -16,7 +16,7 @@ const errors={room_not_found:'Комната не найдена. Проверь
 const color=['#ff7282','#70c7f5','#8fdb8d','#ffc968','#b7a1f4'];
 let profile=null,screen='menu',connecting=false,roomAction='create',gameMode='online',state=null,world=null;
 let paused=false,keys=new Set(),touch=new Set(),touchPointers=new Map(),lastFrame=0,lastInput=0,lastInputSignature='',snapshotTime=0,localPrediction=null;
-let visual=new Map(),lastLevel=-1,shownFinish=false,lastFalls=new Map(),lastCover=0;
+let visual=new Map(),lastLevel=-1,shownFinish=false,lastFalls=new Map(),lastCover=0,lastPhase=0;
 let toastId=0,flashId=0,ctxAudio=null,sound=read('sound','on')!=='off';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 $('name').value=read('name','Игрок');
@@ -63,28 +63,36 @@ function updateLobby(){
 }
 function setState(next){
  if(!next||!['lobby','play','done'].includes(next.phase)||!Array.isArray(next.players)||next.players.length>5)return;
- const phase=state?.phase,previousLevel=state?.world?.level??-1;
+ const phase=state?.phase,previousLevel=state?.world?.level??-1,previousStagePhase=state?.world?.phase??-1;
  state=next;world=next.world||null;snapshotTime=performance.now();
  if(next.phase==='lobby'){lastLevel=-1;localPrediction=null;setScreen('lobby');updateLobby();return;}
  if(screen!=='game'){setScreen('game');shownFinish=false;lastLevel=-1;}
  const currentLevel=world?.level??0;
  if(lastLevel!==currentLevel){
   if(lastLevel>=0){flash('УРОВЕНЬ ПРОЙДЕН!');clickSound('win');}
-  localPrediction=null;visual.clear();lastFalls.clear();lastLevel=currentLevel;
+  localPrediction=null;visual.clear();lastFalls.clear();lastLevel=currentLevel;lastPhase=world?.phase??0;
  }
+ if(previousLevel===currentLevel&&world?.phase>previousStagePhase&&previousStagePhase>=0){flash(world?.stage?.kind==='lift'&&world?.phase===1?'МАЯТНИК УСКОРИЛСЯ!':world?.stage?.rescue&&world?.phase===1?'МОСТ ПОЯВИЛСЯ!':'ЭТАП ВЫПОЛНЕН!');clickSound('win');}
  if(next.phase==='play'&&phase==='done'){$('finish-sheet').hidden=true;shownFinish=false;paused=false;}
- if(next.phase==='done'){if(!shownFinish){clickSound('win');save('clears',Number(read('clears','0'))+1);}shownFinish=true;$('finish-sheet').hidden=false;$('again').hidden=next.host!==room.self?.id;$('finish-copy').textContent='Девять испытаний пройдены всей командой.';}
+ if(next.phase==='done'){if(!shownFinish){clickSound('win');save('clears',Number(read('clears','0'))+1);}shownFinish=true;$('finish-sheet').hidden=false;$('again').hidden=next.host!==room.self?.id;$('finish-copy').textContent='Все '+(next.levels||CHAPTERS.length)+' испытаний пройдены всей командой.';}
  updateGameUI();
 }
 function updateGameUI(){
  if(!world)return;
  $('chapter').textContent=world.stage.name;
+ const stage=world.stage,seq=stage.sequence||[],goal=seq[world.phase||0];
+ const names={wheels:'Заведи ленту на барабан',stars:'Собери искры',pads:'Займи кнопки и держи',
+  beacons:'Протяни ленту через кольцо',tension:'Натяни связь и удержи',rescue:'Вытащи сорвавшегося друга'};
  const done=world.pads.filter(Boolean).length+world.stars.filter(Boolean).length+
- (world.beacons||[]).filter(Boolean).length+(world.tensionDone?1:0);
- const total=world.pads.length+world.stars.length+(world.stage.beacons?.length||0)+(world.stage.tension?1:0);
- $('hint').textContent=world.gateOpen?'Выход открыт — все направо!':world.stage.hint+' · '+done+'/'+total+
- (world.stage.pads.length&&world.pads.every(Boolean)&&world.plateCharge<1?' · ДЕРЖИТЕ!':'');
- $('progress').textContent=String(world.level+1).padStart(2,'0')+' / '+String(CHAPTERS.length).padStart(2,'0');
+  (world.beacons||[]).filter(Boolean).length+(world.wheelDone||[]).filter(Boolean).length+
+  (world.tensionDone?1:0)+(world.saveCount>0?1:0);
+ const total=world.pads.length+world.stars.length+(stage.beacons?.length||0)+
+  (stage.wheels?.length||0)+(stage.tension?1:0)+(stage.rescue?1:0);
+ $('hint').textContent=world.gateOpen?'Все к выходу →':seq.length?
+  ((world.phase+1)+'/'+seq.length+' · '+(names[goal]||stage.hint)):
+  stage.hint+' · '+done+'/'+total;
+
+ $('progress').textContent=String(world.level+1).padStart(2,'0')+' / '+String(gameMode==='online'&&state?.levels?state.levels:CHAPTERS.length).padStart(2,'0');
  $('signal').classList.toggle('offline',gameMode==='online'&&!room.connected);
 }
 function startOnline(action,code=''){
@@ -95,7 +103,7 @@ function startOnline(action,code=''){
 }
 function leave(){room.close();state=null;world=null;localPrediction=null;visual.clear();connecting=false;gameMode='online';paused=false;updateUrl('');setScreen('menu');}
 function startLocal(){
- room.close();gameMode='local';state=null;world=newLocal();lastLevel=0;shownFinish=false;visual.clear();localPrediction=null;
+ room.close();gameMode='local';state=null;world=newLocal();lastLevel=0;lastPhase=0;shownFinish=false;visual.clear();localPrediction=null;
  setScreen('game');$('local-help').hidden=false;updateGameUI();flash('ИГРОК 1 — WASD · ИГРОК 2 — СТРЕЛКИ');
 }
 function togglePause(flag){
@@ -143,8 +151,9 @@ function frame(now){
  if(screen==='game'&&world){
   if(gameMode==='local'){
    if(!paused&&!world.finished){
-    const prior=world.level;tickLocal(world,[localControl(0),localControl(1)],dt);
-    if(prior!==world.level){lastLevel=world.level;flash('УРОВЕНЬ ПРОЙДЕН!');clickSound('win');updateGameUI();}
+    const prior=world.level,priorPhase=world.phase;tickLocal(world,[localControl(0),localControl(1)],dt);
+    if(prior!==world.level){lastLevel=world.level;lastPhase=0;flash('УРОВЕНЬ ПРОЙДЕН!');clickSound('win');updateGameUI();}
+    else if(priorPhase!==world.phase){lastPhase=world.phase;flash(world.stage.kind==='lift'&&world.phase===1?'МАЯТНИК УСКОРИЛСЯ!':world.stage.rescue&&world.phase===1?'МОСТ ПОЯВИЛСЯ!':'ЭТАП ВЫПОЛНЕН!');clickSound('win');updateGameUI();}
     else if(Math.floor(now/130)!==Math.floor((now-16)/130))updateGameUI();
     if(world.finished&&!shownFinish){shownFinish=true;$('finish-sheet').hidden=false;save('clears',Number(read('clears','0'))+1);clickSound('win');}
    }
@@ -178,11 +187,11 @@ $('resume').addEventListener('click',()=>togglePause(false));
 $('leave').addEventListener('click',leave);
 $('finish-menu').addEventListener('click',leave);
 $('restart').addEventListener('click',()=>{
- if(gameMode==='local'){world=newLocal(world.level);lastLevel=world.level;togglePause(false);updateGameUI();}
+ if(gameMode==='local'){world=newLocal(world.level);lastLevel=world.level;lastPhase=0;togglePause(false);updateGameUI();}
  else if(state?.host===room.self?.id){room.send({type:'restart'});togglePause(false);}
 });
 $('again').addEventListener('click',()=>{
- if(gameMode==='local'){world=newLocal();lastLevel=0;shownFinish=false;$('finish-sheet').hidden=true;updateGameUI();}
+ if(gameMode==='local'){world=newLocal();lastLevel=0;lastPhase=0;shownFinish=false;$('finish-sheet').hidden=true;updateGameUI();}
  else if(state?.host===room.self?.id)room.send({type:'start'});
 });
 document.addEventListener('keydown',e=>{
