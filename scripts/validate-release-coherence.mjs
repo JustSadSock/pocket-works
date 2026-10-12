@@ -23,7 +23,7 @@ requireToken('updater','installedTargets','installed app verification');
 requireToken('updater','updateInstalledApplication','installed app verification');
 requireToken('coordinator','releaseIdentity','installed app verification');
 requireToken('coordinator','getRegistrations()','installed app verification');
-requireToken('coordinator','registration.update()','installed app verification');
+if(files.coordinator.includes('await withTimeout(registration.update()'))errors.push('Bulk checks must not update workers while a game may be running');
 requireToken('coordinator','workerInfo','installed app verification');
 requireToken('coordinator','clearStaleAppRuntime','launcher release convergence');
 requireToken('updater','pw-update-progress','update progress');
