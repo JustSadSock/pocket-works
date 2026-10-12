@@ -91,3 +91,62 @@ body{overflow:hidden}button,input{font:inherit}button{cursor:pointer}button:disa
 .variant-item.target{background:#ffe59b;border:2px solid var(--ink)}
 .variant-item b{font-size:9px;letter-spacing:.08em;color:#a24831}
 @media(max-width:390px){.variant-peek{min-width:75px;font-size:10px;padding:5px}.prompt-strip{padding:9px 10px}}
+
+
+/* Modular decoding: a compact sentence-workbench rather than four answer cards. */
+.blocked-strip{display:flex;align-items:center;gap:6px;min-height:39px;border-top:1px solid #b6a78e;border-bottom:1px solid #b6a78e;padding:3px 0}
+.blocked-strip>span:first-child{font-size:9px;letter-spacing:.12em;font-weight:900;color:#a44531;margin-right:auto}
+.blocked-glyph{height:31px;width:31px;position:relative;display:grid;place-items:center;color:#94796c;background:#dfd1bc;opacity:.75}
+.blocked-glyph svg{width:26px;height:26px}
+.blocked-glyph:after{content:"";position:absolute;inset:0;background:linear-gradient(137deg,transparent 47%,#b94b38 49%,#b94b38 53%,transparent 55%)}
+.guess-options{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 4px 4px 0}
+.guess-card{border:2px solid var(--ink);background:#e7ddc9;padding:13px;box-shadow:3px 3px 0 #c9bba3}
+.guess-intro{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
+.guess-intro strong{font-size:16px;letter-spacing:-.03em}
+.guess-intro small{font-size:11px;color:var(--muted);line-height:1.3}
+.guess-cells{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.guess-cell{min-width:0;display:flex;flex-direction:column;gap:5px}
+.guess-cell:last-child{grid-column:1/-1}
+.guess-cell-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:850;display:flex;align-items:center;gap:6px}
+.guess-cell-label b{background:var(--ink);color:#fff9ea;width:23px;height:22px;display:grid;place-items:center;font-size:10px}
+.guess-select{width:100%;min-width:0;min-height:46px;border:1.5px solid #aa9d89;border-radius:2px;color:var(--ink);background:#fff9ed;padding:7px 8px;font-size:13px;font-weight:700;cursor:pointer;text-overflow:ellipsis}
+.guess-select.filled{border:2px solid #315c4d;background:#dcebdc}
+.guess-select:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.guess-select:disabled{opacity:.8;cursor:default}
+.guess-submit{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.guess-submit .btn{min-height:43px;font-size:12px}
+.review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.review-cell{background:#fff9eb;border:1.5px solid var(--ink);padding:9px;min-width:0;display:flex;flex-direction:column;gap:5px}
+.review-cell>span{font-size:9px;text-transform:uppercase;font-weight:900;letter-spacing:.1em;color:var(--muted)}
+.review-cell strong{font-size:16px;overflow-wrap:anywhere}
+.review-cell small{font-size:11px;overflow-wrap:anywhere}
+.review-cell small.hit{color:#316548}
+.review-cell small.miss{color:#ad4633;text-decoration:line-through}
+.view:has(.guess-layout){overflow:hidden;padding-bottom:max(9px,env(safe-area-inset-bottom))}
+.reveal-head strong{font-size:16px;min-width:90px;text-align:right}
+@media(max-width:720px){
+ .guess-layout{grid-template-columns:1fr;grid-template-rows:minmax(145px,.95fr) minmax(230px,1.15fr);overflow:hidden}
+ .guess-options{max-height:none;min-height:0}
+ .guess-card{padding:10px}
+ .guess-cells{gap:7px}
+ .guess-select{font-size:12px;min-height:42px}
+ .guess-cell-label{font-size:9px}
+ .guess-intro{margin-bottom:8px}
+ .guess-submit{margin-top:8px}
+ .guess-submit .btn{min-height:40px}
+ .reveal-head{padding:10px;gap:8px}
+ .reveal-head h2{font-size:19px}
+ .reveal-head strong{font-size:13px}
+ .blocked-strip{min-height:32px}
+ .blocked-glyph{height:25px;width:25px}
+ .blocked-glyph svg{width:21px;height:21px}
+}
+@media(max-height:660px) and (max-width:720px){
+ .game-shell{gap:6px}
+ .round-top{padding-bottom:3px}
+ .prompt-strip{padding:6px 9px;min-height:38px}
+ .round-top h1{font-size:21px}
+ .guess-layout{grid-template-rows:minmax(112px,.8fr) minmax(195px,1.25fr)}
+ .guess-select{min-height:38px}
+ .guess-intro small{display:none}
+}
