@@ -45,7 +45,7 @@ function showProgress({completed,total,label}){
   progressStage.textContent=label||'Syncing shelf';
   progressCount.textContent=`${completed} / ${total}`;
   progressBar.style.width=`${total?Math.min(100,completed/total*100):100}%`;
-  refreshButton.textContent=total?`${completed}/${total}` : 'Update apps';
+  refreshButton.textContent=total?`${completed}/${total}` : 'Check updates';
 }
 
 function summaryFor(results,onDemand){
@@ -139,7 +139,7 @@ async function runBulkUpdate(){
   }finally{
     bulkUpdateRunning=false;
     refreshButton.disabled=false;
-    refreshButton.textContent='Update apps';
+    refreshButton.textContent='Check updates';
     setTimeout(()=>{if(!bulkUpdateRunning)progressRoot.hidden=true;},2800);
   }
 }
