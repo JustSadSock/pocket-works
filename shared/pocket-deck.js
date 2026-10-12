@@ -103,12 +103,47 @@ export function installPocketDeck({
   function emptyWidget(title,copy,view=''){
     return `<div class="deck-widget__empty"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(copy)}</span>${view?`<button type="button" data-deck-view="${view}">Browse library →</button>`:''}</div>`;
   }
+  const focus=$('#deck-focus');
+  const accountButton=$('#deck-account-spotlight');
+  const moreWidgets=$('#deck-widgets-toggle');
+  let pendingSocial=0;
+  function refreshHomeIdentity(){
+    const identity=window.PocketID?.getUser?.();
+    const isMember=Boolean(identity?.complete);
+    const label=$('#deck-account-title'),subtitle=$('#deck-account-subtitle');
+    const portrait=$('#deck-account-portrait'),dot=$('#deck-account-dot');
+    accountButton.classList.toggle('is-member',isMember);
+    label.textContent=isMember?identity.nickname:'Create Pocket ID';
+    subtitle.textContent=isMember?(pendingSocial?pendingSocial+' new invites or requests':'Customize your player card'):'Your name and avatar in every game';
+    accountButton.setAttribute('aria-label',isMember?(pendingSocial?'Open '+pendingSocial+' notifications':'Customize your player card'):'Create your Pocket ID');
+    if(dot)dot.hidden=!pendingSocial||!isMember;
+    const avatarMarkup=$('#pocket-id-trigger')?.querySelector('.pw-social-personal-avatar, .pw-id-nav-avatar, .pw-id-avatar');
+    if(avatarMarkup){portrait.innerHTML=avatarMarkup.outerHTML;}
+    else if(isMember){portrait.textContent=(identity.nickname||'?').slice(0,1).toUpperCase();}
+    else portrait.textContent='◎';
+  }
+  function focusMarkup(){
+    const apps=sorted(),fav=favoriteSet(),fresh=recent();
+    const featured=fresh[0]||apps.find(app=>fav.has(app.slug))||apps[0];
+    if(!featured)return '<div class="deck-home-blank"><strong>No games yet</strong><button type="button" data-deck-view="library">Open Library</button></div>';
+    const quick=[...new Map([...fresh,...apps].filter(app=>app.slug!==featured.slug).map(app=>[app.slug,app])).values()].slice(0,6);
+    return `<div class="deck-focus__featured"><a class="deck-focus__play" data-deck-open="${escapeHtml(featured.slug)}" href="${escapeHtml(featured.path)}" aria-label="Play ${escapeHtml(featured.name)}">
+      ${artMarkup(featured)}<span class="deck-focus__hero-label"><span>CONTINUE PLAYING</span><strong>${escapeHtml(featured.name)}</strong></span>
+      <span class="deck-focus__play-mark" aria-hidden="true">▶</span></a>
+      <button type="button" class="deck-focus__info" data-deck-details="${escapeHtml(featured.slug)}" aria-label="Details for ${escapeHtml(featured.name)}">···</button></div>
+      <div class="deck-focus__bottom"><div class="deck-focus__recent-title"><strong>Quick play</strong><button type="button" data-deck-view="library">All games →</button></div>
+      <div class="deck-focus__recent" role="list">${quick.map(app=>`<div class="deck-focus__quick" role="listitem">
+        <a data-deck-open="${escapeHtml(app.slug)}" href="${escapeHtml(app.path)}" aria-label="Play ${escapeHtml(app.name)}">${artMarkup(app)}<span>${escapeHtml(app.name)}</span></a>
+        <button type="button" data-deck-details="${escapeHtml(app.slug)}" aria-label="Details for ${escapeHtml(app.name)}">···</button></div>`).join('')}</div></div>`;
+  }
   function renderHome(){
     const state=current();const apps=getApps();
     const signature=JSON.stringify({widgets:state.widgets,favs:getFavorites(),recents:getRecents(),
       apps:apps.map(a=>[a.slug,a.version,a.updatedAt,a.accent]),covers:[...covers],stages:state.projectStages,notes:state.projectNotes,archived:state.archived,seed:pendingSeed});
+    refreshHomeIdentity();
     if(signature===modelSignature)return;
     modelSignature=signature;
+    focus.innerHTML=focusMarkup();
     widgets.innerHTML=state.widgets.length?state.widgets.map(w=>`<section class="deck-widget deck-widget--${escapeHtml(w.size)}" data-widget-id="${escapeHtml(w.id)}">${widgetContent(w)}</section>`).join('')
       :`<div class="deck-home-blank"><strong>No games here yet</strong><button type="button" data-deck-edit>Add a widget</button></div>`;
     // A cached cover index can outlive an individual image. Restore the genuine
@@ -122,6 +157,11 @@ export function installPocketDeck({
     document.documentElement.dataset.deckView=state.view;
     document.documentElement.dataset.deckDensity=state.density;
     home.hidden=state.view!=='home';
+    if(state.view!=='home'&&home.classList.contains('deck-home--expanded')){
+      home.classList.remove('deck-home--expanded');
+      moreWidgets.setAttribute('aria-expanded','false');
+      moreWidgets.innerHTML='More from my shelf <span aria-hidden="true">⌄</span>';
+    }
     $('.deck-library-head').hidden=state.view==='home';
     $('.command-deck').hidden=state.view==='home';
     $('.shelf-workspace').hidden=state.view==='home';
@@ -324,6 +364,20 @@ export function installPocketDeck({
     const details=event.target.closest('[data-deck-details]');
     if(details){setView('library');onDetails(details.dataset.deckDetails);return;}
     if(event.target.closest('[data-deck-search]')){setView('library',{focus:true});return;}
+    if(event.target.closest('[data-deck-account]')){
+      const member=Boolean(window.PocketID?.getUser?.()?.complete);
+      if(member)window.PocketSocial?.openEditor?.()||window.PocketSocial?.open?.();
+      else window.PocketID?.openAccount?.()||$('#pocket-id-trigger')?.click();
+      return;
+    }
+    if(event.target.closest('#deck-widgets-toggle')){
+      const expanded=!home.classList.contains('deck-home--expanded');
+      home.classList.toggle('deck-home--expanded',expanded);
+      moreWidgets.setAttribute('aria-expanded',String(expanded));
+      moreWidgets.innerHTML=expanded?'Back to games <span aria-hidden="true">↑</span>':'More from my shelf <span aria-hidden="true">⌄</span>';
+      if(expanded)widgets.scrollTop=0;
+      return;
+    }
     const view=event.target.closest('button[data-deck-view], a[data-deck-view]');
     if(view){event.preventDefault();setView(view.dataset.deckView);return;}
     if(event.target.closest('[data-deck-edit]')){openEditor();return;}
@@ -456,6 +510,12 @@ export function installPocketDeck({
   if(returnView&&['home','library','archive'].includes(returnView)){
     store.update({view:returnView});try{sessionStorage.removeItem('pocket-works:return-deck-view');}catch{}
   }
+  document.addEventListener('pocket-id:changed',refreshHomeIdentity);
+  document.addEventListener('pocket-social:portrait',refreshHomeIdentity);
+  document.addEventListener('pocket-social:notifications',event=>{
+    pendingSocial=Number(event.detail?.count)||0;
+    refreshHomeIdentity();
+  });
   render();document.documentElement.classList.add('has-pocket-deck');void store.hydrate();void loadCovers();
   return {
     store, getView:()=>current().view, getState:current, setView,
