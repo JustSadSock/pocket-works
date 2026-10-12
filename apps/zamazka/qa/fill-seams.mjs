@@ -29,6 +29,11 @@ assert.ok(fill([12,4],[30,180,130])>15,'adjacent zone fills independently');
 assert.deepEqual(Array.from(output.slice(at(10,4),at(10,4)+4)),[30,180,130,255]);
 assert.deepEqual(Array.from(output.slice(at(7,4),at(7,4)+4)),[220,50,40,255],
   'second region does not overwrite the first through the contour');
+assert.ok(fill([4,4],[180,80,230])>20,'recolouring the same fill region remains possible');
+assert.deepEqual(Array.from(output.slice(at(2,4),at(2,4)+4)),[180,80,230,255],
+  'existing fill colour is not treated as another flood barrier');
+assert.deepEqual(Array.from(output.slice(at(10,4),at(10,4)+4)),[30,180,130,255],
+  'recolouring preserves the differently filled adjacent region');
 
 // Diagonal touching is never a valid 4-connected hole. Repair fringe may
 // underpaint wall pixels, but must not recolour another reachable pixel.
