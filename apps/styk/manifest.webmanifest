@@ -1,13 +1,19 @@
 {
   "id": "/apps/styk/",
-  "name": "СТЫК — живой фронт",
+  "name": "СТЫК · Живой фронт",
   "short_name": "СТЫК",
+  "description": "Тактильная средневековая тактика живых построений.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
-  "background_color": "#e4dbc4",
-  "theme_color": "#283a31",
+  "background_color": "#27362e",
+  "theme_color": "#242e28",
   "icons": [
     {
       "src": "./icons/icon.svg",
