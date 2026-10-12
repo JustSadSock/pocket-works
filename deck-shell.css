@@ -594,3 +594,12 @@ html.has-pocket-deck[data-deck-density=micro] .app-entry__more{display:none}
 .deck-update-ready button{min-height:42px;min-width:106px;padding:9px 10px;border:0;border-radius:6px;
   background:#e5ad8b;color:#1b282a;font-weight:750}
 .deck-update-ready button:disabled{opacity:.65}
+
+
+/* Short landscape devices may need a small internal scroll; never clip game actions. */
+@media(max-height:570px) and (max-width:980px){
+  html.has-pocket-deck[data-deck-view="home"] .deck-home{overflow-y:auto;overscroll-behavior-y:contain}
+  html.has-pocket-deck[data-deck-view="home"] .deck-focus{flex:0 0 auto;min-height:245px}
+  .deck-focus__featured{min-height:145px}
+  .deck-widgets-toggle{flex:none;min-height:42px}
+}
