@@ -1,3 +1,4 @@
+import {pocketAvatarMarkup} from './capabilities/identity.js';
 // Pocket Social shared UI. No dependency on a specific app runtime or framework.
 const q=(s,root=document)=>root.querySelector(s);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -22,7 +23,7 @@ const api=async(path,body)=>{
     throw error;
   }finally{clearTimeout(timeout)}
 };
-const avatar=p=>p.artwork?'<img src="'+esc(p.artwork)+'" alt="Нарисованный аватар">':esc((p.nickname||'?').slice(0,1).toUpperCase());
+const avatar=p=>p.artwork?'<img src="'+esc(p.artwork)+'" alt="Нарисованный аватар">':pocketAvatarMarkup(p.avatar,{accountId:p.id});
 const gameLabel=id=>state.catalog.find(g=>g.slug===id)?.name||id||'Не выбрана';
 function card(p){
   return '<div class="pws-card" data-background="'+esc(p.background)+'" data-frame="'+esc(p.frame)+'">'+
