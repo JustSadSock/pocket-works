@@ -48,6 +48,7 @@ test('Stage five: both launchers work and all coordinates stay finite',()=>{
  w.inputs.a={x:1};w.inputs.b={x:1};
  advance(w,75);
  assert.deepEqual(w.sigils,[true,true]);assert.equal(w.gateOpen,true);
+ w.inputs.a={x:0};w.inputs.b={x:0};
  advance(w,2800);
  assert.equal(w.level,4);
  assert.ok(w.players.every(q=>Number.isFinite(q.x)&&Number.isFinite(q.y)&&Number.isFinite(q.vx)));
