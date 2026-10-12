@@ -36,9 +36,13 @@ test('default rocket reaches the first Mars orbit mission without fictitious orb
   assert.ok(o.apoAlt<=MISSIONS[0].max);
   assert.ok(f.fuel.every(n=>n>=0));
 });
-test('larger first-stage design can deliver heavier payloads to their target corridors',()=>{
-  const stages=[{tanks:4,engine:'lift',fins:true},{tanks:2,engine:'vac',fins:false}];
-  for(const missionIndex of [1,2]){
+test('progressively stronger designs unlock the medium and heavy Mars contracts',()=>{
+  const missionCraft=[
+    [{tanks:4,engine:'lift',fins:true},{tanks:2,engine:'vac',fins:false}],
+    [{tanks:6,engine:'lift',fins:true},{tanks:3,engine:'vac',fins:false}]
+  ];
+  for(const [n,missionIndex] of [1,2].entries()){
+    const stages=missionCraft[n];
     const cost=craftStats(stages,MISSIONS[missionIndex].payload).cost;
     assert.ok(cost<=MISSIONS[missionIndex].budget);
     const f=createFlight(stages,missionIndex);
