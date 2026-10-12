@@ -138,3 +138,11 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 Переход в следующий раунд происходит только по `continue` от организатора, без таймера и без автоматического перехода. После последнего раунда эта кнопка открывает итоговую таблицу; «Новый матч» по-прежнему возвращает компанию в комнату ожидания.
 
 Регрессия сервера: `node apps/zamazka/qa/round-review.mjs` (нужна установленная зависимость `typescript`), включая ручное продолжение и финальный раунд.
+
+
+## 1.15.0 — Draft resilience and temporary picker
+
+- A local snapshot includes the *in-progress* stroke and is refreshed after each completed stroke, every ten seconds and when the app becomes hidden. A server-side `draft` packet contains the authorized player's current artwork, variation and round. The backend validates the exact geometry and only acknowledges to the author; the unfinished image is never exposed to other players.
+- When the drawing deadline elapses, the server finalizes the latest validated draft rather than substituting an empty canvas. The client additionally sends a final `submit` automatically roughly three seconds before expiration, if possible; losing the network still preserves the local copy. On rejoin, a local unfinished drawing takes precedence; otherwise the owner restores the server draft.
+- Holding Space temporarily activates the pipette. Moving the pointer and releasing Space picks at the hovered location without a click, restoring the previous tool. Clicking while holding also picks; release does not sample twice. The pipette reads the visible composed canvas, including fills and the user's own paint in the damaged region.
+- Regression: `node apps/zamazka/qa/draft-recovery.mjs` and `node apps/zamazka/qa/editor-input.mjs`.
