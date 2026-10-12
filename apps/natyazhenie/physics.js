@@ -224,7 +224,7 @@ function updateGoals(w,dt){
  }
  // Ribbon sensors activate only when the actual stretched band intersects
  // the lens. After the first pulse, the next lens must be caught promptly.
- if(goalActive(w,'signals')&&s.signals.length&&!w.signalDone){
+ if(goalActive(w,'signals')&&(s.signals||[]).length&&!w.signalDone){
   if(w.signalIndex>0){
    w.signalLeft=Math.max(0,w.signalLeft-dt);
    if(!w.signalLeft){w.signalIndex=0;}
@@ -250,12 +250,12 @@ function updateGoals(w,dt){
    const left=a.x<p.x?a:p,right=a.x<p.x?p:a;
    if(left.x>=b.x||right.x<=b.x)continue;
    const la=b.x-left.x,ra=right.x-b.x;
-   if(la<68||ra<68||la>164||ra>164)continue;
-   const error=la-ra+Math.sin(w.clock*2.8)*8;
+   if(la<85||ra<85||la>151||ra>151||ropeDistance(w,i)<185)continue;
+   const error=la-ra+Math.sin(w.clock*2.3)*22;
    if(Math.abs(error)<Math.abs(best))best=error;
   }
   w.balanceTilt=Number.isFinite(best)?clamp(best/80,-1,1):1;
-  const centered=Math.abs(best)<25;
+  const centered=Math.abs(best)<18;
   w.balanceCharge=clamp(w.balanceCharge+(centered?dt/b.hold:-dt/.65),0,1);
   if(w.balanceCharge>=1)w.balanceDone=true;
  }
