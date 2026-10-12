@@ -45,6 +45,7 @@ test('progressively stronger designs unlock the medium and heavy Mars contracts'
     const stages=missionCraft[n];
     const cost=craftStats(stages,MISSIONS[missionIndex].payload).cost;
     assert.ok(cost<=MISSIONS[missionIndex].budget);
+    assert.ok(craftStats(stages,MISSIONS[missionIndex].payload).twr>1.01);
     const f=createFlight(stages,missionIndex);
     for(let i=0;i<1900&&!f.outcome;i++)advanceFlight(f,1);
     const o=orbitalElements(f.x,f.y,f.vx,f.vy);
