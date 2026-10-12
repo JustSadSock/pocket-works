@@ -74,7 +74,7 @@ function getMaterials(scene) {
    if(i===0){c.fillStyle='#e5d1a5';c.beginPath();c.arc(186,73,33,0,7);c.fill();c.fillStyle='#8ea892';c.beginPath();c.moveTo(0,210);c.lineTo(80,110);c.lineTo(150,190);c.lineTo(210,132);c.lineTo(256,187);c.lineTo(256,256);c.lineTo(0,256);c.fill();}
    else if(i===1){c.fillStyle='#9b8ca6';c.beginPath();c.ellipse(128,150,62,94,.5,0,7);c.fill();c.strokeStyle='#f2ddbd';c.lineWidth=12;c.strokeRect(48,47,162,164);}
    else {for(let k=0;k<7;k++){const x=45+(k*57)%171,y=45+(k*63)%169;c.fillStyle=k%2?'#dfaa9d':'#edcf97';for(let f=0;f<5;f++){c.beginPath();c.ellipse(x+Math.cos(f*1.256)*15,y+Math.sin(f*1.256)*15,13,9,f*1.256,0,7);c.fill()}c.fillStyle='#8c997b';c.beginPath();c.arc(x,y,7,0,7);c.fill();}}});
-   const mat=makeMaterial(scene,'painting-'+kind,'#ffffff');mat.diffuseTexture=tx;mat.backFaceCulling=false;return mat;
+   const mat=new StandardMaterial('painting-'+kind,scene);mat.diffuseColor=Color3.White();mat.specularColor=new Color3(.03,.03,.03);mat.diffuseTexture=tx;mat.backFaceCulling=false;return mat;
  });
  cached.set(scene,m);return m;
 }
