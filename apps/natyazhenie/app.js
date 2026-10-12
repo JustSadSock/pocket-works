@@ -152,7 +152,8 @@ function control(){
 function renderOnline(dt,now){
  if(!world||!world.players?.length)return;
  const age=state?.phase==='briefing'?0:Math.min(.12,(now-snapshotTime)/1000),input=paused||state?.phase==='briefing'?{dir:0,jump:false,anchor:false}:control(),selfId=room.self?.id;
- const stage={...world.stage,open:world.gateOpen};
+ const stage={...world.stage,open:world.gateOpen,ferryX:world.ferryX,ferryDone:world.ferryDone,
+  beamTilt:world.beamTilt,wraps:world.wraps};
  const projected=world.players.map((p,i)=>{
   if(p.id===selfId){
    if(!localPrediction)localPrediction={...p,jumpHeld:input.jump&&!p.ground};

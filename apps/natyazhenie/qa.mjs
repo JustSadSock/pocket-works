@@ -245,5 +245,16 @@ try{
  const estimate=advancePosition(local.players[0],{dir:1,jump:false},1/60,{...local.stage,open:false},local.players);
  assert.ok(Number.isFinite(estimate.x));
  assert.equal(viewWorld(local).stage.kind,'balance');
+ // Network's local predictor must use the actual moving deck; using the
+ // start position of the raft produces ghost-falls even when the server is right.
+ const dock=worldFor(people.slice(0,3),1);
+ dock.ferryX=dock.stage.ferry.end;dock.ferryDone=true;
+ dock.players[0].x=425;dock.players[0].y=522;dock.players[0].ground=true;
+ dock.players[1].x=dock.ferryX+54;dock.players[1].y=dock.stage.ferry.y-18;dock.players[1].ground=true;
+ dock.players[2].x=dock.ferryX+108;dock.players[2].y=dock.stage.ferry.y-18;dock.players[2].ground=true;
+ const projected=advancePosition(dock.players[1],{dir:0,jump:false,anchor:false},1/60,
+   {...dock.stage,open:false,ferryX:dock.ferryX,ferryDone:true,beamTilt:dock.beamTilt,wraps:dock.wraps},dock.players);
+ assert.ok(projected.ground&&Math.abs(projected.y-(dock.stage.ferry.y-18))<2.5,
+  'online client prediction keeps the actual docked raft collider, not its spawn position');
  console.log('NATYAZHENIE acceptance passed: all 5 stages COMPLETE with real 2–5 player inputs, solid seesaws, docked raft, fragile cargo, jump chain, hook escape, and ready-gated network lifecycle.');
 }finally{Date.now=originalNow;}
