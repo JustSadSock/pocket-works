@@ -12,6 +12,23 @@
   let lastCheckAt=0;
   let checkPromise=null;
   let recovering=false;
+  // Updates are discovered while the app is open but installed at next entry.
+  const pendingKey=`pocket-works:pending-release:${slug}`;
+  function readPending(){
+    try{return JSON.parse(localStorage.getItem(pendingKey)||'null');}catch{return null;}
+  }
+  const pendingAtEntry=readPending();
+  function deferRelease(latest){
+    const pending={
+      version:latest?.version||declared,
+      fingerprint:latest?.fingerprint||fingerprint,
+      controller:controllerMismatch(),
+      at:Date.now()
+    };
+    try{localStorage.setItem(pendingKey,JSON.stringify(pending));}catch{}
+    if(globalThis.__POCKET_WORKS_RELEASE__)globalThis.__POCKET_WORKS_RELEASE__.pending=pending;
+    window.dispatchEvent(new CustomEvent('pocketworks:release-pending',{detail:pending}));
+  }
 
   function releaseUrl(version=declared,fp=fingerprint){
     const url=new URL(location.href);
@@ -166,11 +183,23 @@
           latest?.fingerprint&&fingerprint&&latest.fingerprint!==fingerprint||
           controllerMismatch()
         );
-        if(mismatch)await recover(latest);
+        if(mismatch)deferRelease(latest);
       }catch{}
       finally{checkPromise=null;}
     })();
     return checkPromise;
+  }
+
+  // A pending release is consumed only on a new page entry, never by a timer,
+  // visibility change or controller change in an already-running game.
+  if(pendingAtEntry && (
+    pendingAtEntry.version!==declared ||
+    (pendingAtEntry.fingerprint&&fingerprint&&pendingAtEntry.fingerprint!==fingerprint) ||
+    pendingAtEntry.controller
+  )){
+    setTimeout(()=>void recover(pendingAtEntry),0);
+  }else if(pendingAtEntry){
+    try{localStorage.removeItem(pendingKey);}catch{}
   }
 
   const expected=releaseUrl();
@@ -206,32 +235,16 @@
   },60000);
 
   if('serviceWorker'in navigator){
-    let hadController=Boolean(navigator.serviceWorker.controller);
+    // A controller swap must not cause a mid-session reload.
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      const replacesController=hadController;
-      hadController=Boolean(navigator.serviceWorker.controller);
-      if(recovering)return;
-      const controller=navigator.serviceWorker.controller;
-      if(!controller||!workerMatches(controller))return;
-      // A first installation claims an already coherent page. Reloading it
-      // interrupts startup, user input and unsaved games without an update.
-      if(!replacesController)return;
-      if(sessionStorage.getItem(reloadKey)==='1')return;
-      sessionStorage.setItem(reloadKey,'1');
-      const target=releaseUrl();
-      target.searchParams.set('pw_controller',Date.now().toString(36));
-      location.replace(target.href);
+      if(!recovering)void checkLatest({force:true});
     });
 
     window.addEventListener('load',()=>{
+      // Do not force an update check/activation inside an open game.
       const workerUrl=new URL('./sw.js',location.href);
-      navigator.serviceWorker.register(workerUrl.href,{updateViaCache:'none'})
-        .then(async registration=>{
-          await registration.update();
-          if(registration.waiting&&workerMatches(registration.waiting)){
-            registration.waiting.postMessage({type:'SKIP_WAITING'});
-          }
-        })
+      navigator.serviceWorker.getRegistration(workerUrl.href)
+        .then(registration=>registration||navigator.serviceWorker.register(workerUrl.href,{updateViaCache:'none'}))
         .catch(()=>{});
     },{once:true});
   }
