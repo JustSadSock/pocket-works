@@ -6,12 +6,13 @@ import {tabGuestName,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest}
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
+import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
 import {getSavedEmblem,storeEmblem,paintEmblem,exportEmblem,EMBLEM_SIZE,EMBLEM_COLORS,EMBLEM_LIMITS} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.13.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.14.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -128,7 +129,7 @@ function editEmblem(){
 }
 function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const ac=window.__zamazkaAudio||(window.__zamazkaAudio=new Audio());if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(f,ac.currentTime);o.frequency.exponentialRampToValueAtTime(f*.83,ac.currentTime+.09);g.gain.setValueAtTime(.025,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.11);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.12)}catch{}}
 let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
-function closeDialog(){dialog.classList.add('hidden');dialog.innerHTML=''}
+function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML=''}
 function modal(title,body,buttons){dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)})}
 function stopEditor(){if(editor){editor.dispose();editor=null}}
 function change(html,which){if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
@@ -340,6 +341,12 @@ function reveal(local=false){
   if(stage?.isConnected){requestAnimationFrame(()=>{if(stage.isConnected)stage.style.setProperty('--split','50%')});const range=screen.querySelector('#unveilRange');if(range)range.value='50';}
  });
 }
+function roundReview(){
+ if(!view?.gallery?.length)return;
+ const v=view;
+ change(roundReviewMarkup(v,me?.id,ARTS,esc),'round-review');
+ renderRoundThumbnails(screen,v,renderArtwork);
+}
 function results(){
  const rank=[...view.participants].sort((a,b)=>(view.scores[b.id].mask+view.scores[b.id].eye)-(view.scores[a.id].mask+view.scores[a.id].eye));
  change('<section class="page"><div class="section-label">ИТОГИ ВЫСТАВКИ</div><h2>Каталог разоблачений</h2><div class="notice">Обман и наблюдательность оцениваются отдельно. Побеждает самая высокая сумма.</div>'+rank.map((p,i)=>'<div class="result-item"><div class="result-rank"><div class="result-identity">'+memberSeal(p)+'<div><span class="section-label">№ '+(i+1)+'</span><h3>'+esc(p.name)+pocketPlayerBadge(p)+'</h3></div></div><div class="points">'+(view.scores[p.id].mask+view.scores[p.id].eye)+' очк.</div></div><div class="quiet">Маскировка '+view.scores[p.id].mask+' · Экспертиза '+view.scores[p.id].eye+'</div></div>').join('')+'<div class="stack" style="margin-top:20px">'+(me?.id===view.host?'<button class="btn primary" data-action="next">Новый матч с этой компанией</button>':'<div class="hint">Создатель комнаты может начать следующий матч.</div>')+'<button class="btn ghost" data-action="leave">Выйти из комнаты</button></div></section>','results')
@@ -364,6 +371,7 @@ function renderView(){
     screen.querySelectorAll('.waiting-person').forEach((el,i)=>{const p=view.participants[i],status=el.querySelector('strong');if(p&&status)status.textContent=(view.done||[]).includes(p.id)?'Готово':'Рисует'});
     return;
   }
+ if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
  if(page==='vote'&&view.phase==='voting'&&key===lastUiKey){
   const ready=screen.querySelector('#votesReady');if(ready)ready.textContent=(view.voted||[]).length+' / '+(view.participants.length-1);
   return;
@@ -375,6 +383,7 @@ function renderView(){
  else if(view.phase==='voting')vote();
  else if(view.phase==='verdict')verdict();
  else if(view.phase==='reveal')reveal();
+ else if(view.phase==='round-review')roundReview();
  else if(view.phase==='results')results();
  lastUiKey=key;
 }
@@ -478,7 +487,8 @@ document.querySelector('#settingsBtn').addEventListener('click',settings);
 document.querySelector('#profileBtn')?.addEventListener('click',editEmblem);
 syncIdentity();
 screen.addEventListener('click',e=>{
- const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub]');if(!b)return;
+ const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub],[data-review-open]');if(!b)return;
+ if(b.hasAttribute('data-review-open')){openRoundViewer({index:Number(b.dataset.reviewOpen),view,dialog,renderArtwork,arts:ARTS,esc,closeDialog});return}
  if(b.hasAttribute('data-magnify')){magnify(Number(b.dataset.magnify));return}
  if(b.hasAttribute('data-chipadd')){const i=Number(b.dataset.chipadd);if(chips.reduce((a,b)=>a+b,0)<3){chips[i]++;sound(450);updateChips()}return}
  if(b.hasAttribute('data-chipsub')){const i=Number(b.dataset.chipsub);if(chips[i]>0){chips[i]--;sound(360);updateChips()}return}
@@ -506,6 +516,7 @@ screen.addEventListener('click',e=>{
  else if(action==='submit')doSubmit();
  else if(action==='vote'&&chips.reduce((a,b)=>a+b,0)===3){try{net?.sendGame({type:'vote',chips:[...chips]});b.disabled=true;notify('Три фишки поставлены')}catch{notify('Потеряно соединение')}}
  else if(action==='advance')net?.sendGame({type:'advance'});
+ else if(action==='continue'&&view?.phase==='round-review'&&me?.id===view.host){b.disabled=true;try{net?.sendGame({type:'continue'})}catch{b.disabled=false;notify('Нет соединения с комнатой')}}
  else if(action==='next')net?.sendGame({type:'next'});
 });
 function tick(){
