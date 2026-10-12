@@ -155,6 +155,7 @@ function stoneShape(x,y,k,active,t) {
   circle(px,py-18,24,color);ctx.globalAlpha=1;
   stroke([[px-18,py-26],[px-9,py-32],[px+9,py-32],[px+18,py-26]],rgba(color,.7),2);
   stroke([[px-18,py-10],[px-9,py-4],[px+9,py-4],[px+18,py-10]],rgba(color,.7),2);
+  text((k.row===state.row?'−1':'−2')+' ◆',px,py-42,9,'#fff0d6');
  }
  if(k.kind==='ember'){
   rect(px-4,py-20,9,8,'#aa462e');rect(px-2,py-25,6,9,'#ffaf63');
@@ -531,7 +532,10 @@ function resize(){
 }
 window.addEventListener('resize',resize,{passive:true});
 window.addEventListener('orientationchange',()=>setTimeout(resize,250));
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing'&&!stride)showModal('paused')});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing'){
+ if(stride){const target=stride.target;stride=null;applyStep(target);}
+ if(mode==='playing')showModal('paused');
+}});
 try{reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches}catch{}
 const previous=read(), soundSetting=(()=>{try{return localStorage.getItem(soundKey)==='1'}catch{return false}})();
 state=previous?{...previous,sound:soundSetting}:newState();
