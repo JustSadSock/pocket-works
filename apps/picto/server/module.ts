@@ -205,7 +205,7 @@ function sanitized(glyphs:unknown,palette:string[]):Glyph[]|null{
  return output;
 }
 function validAnswer(raw:unknown):raw is Answer{
- return Array.isArray(raw)&&raw.length===5&&raw.every((v,i)=>v===null||(Number.isInteger(v)&&Number(v)>=0&&Number(v)<(i===3?8:10)));
+ return Array.isArray(raw)&&raw.length===5&&raw.every((v,i)=>v===null||(typeof v==='number'&&Number.isInteger(v)&&v>=0&&Number(v)<(i===3?8:10)));
 }
 const strip=(s:State,id:string)=>({
  host:s.host,players:s.players,phase:s.phase,round:s.round,maxRounds:s.maxRounds,author:s.author,deadline:s.deadline,
