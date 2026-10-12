@@ -163,7 +163,7 @@ function autoFinishOnDeadline(){
  const ass=view.mine;if(!ass)return;
  const token=[roomId,view.round,ass.art,ass.variation].join(':');
  if(autoSubmitted===token)return;
- const data=editor.getData();editor.saveSnapshot();backupDraft(true);
+ const data=editor.getData();editor.saveSnapshot();
  try{
   if(!net)throw Error('offline');
   sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:ass.art,variation:ass.variation,strokes:data});autoSubmitted=token;
@@ -515,7 +515,7 @@ async function connect(mode){
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
- const data=editor.getData();backupDraft(true);modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
+ const data=editor.getData();editor.saveSnapshot();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
  ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:a.art,variation:a.variation,strokes:data});autoSubmitted=[roomId,view.round,a.art,a.variation].join(':');notify('Передаём работу…')}catch{notify('Нет подключения — черновик сохранён, попробуй сдать ещё раз')}} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 async function copyText(value,success){
