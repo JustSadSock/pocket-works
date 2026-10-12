@@ -7,7 +7,7 @@ const frames=[['clean','Чистая'],['double','Двойная'],['corners','�
 const colors=['#1d3040','#d65b48','#edb55f','#529276','#8b65ab','#ffffff'];
 const errors={sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
-const state={tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0};
+const state={tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0};
 let dialog,content,entry,searchClock=0,pollClock=0,heartbeatClock=0;
 const api=async(path,body)=>{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
@@ -40,6 +40,76 @@ function person(p){
   button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"')+'</div>';
 }
 function listPeople(list,empty){return list?.length?'<div class="pws-list">'+list.map(person).join('')+'</div>':'<div class="pws-empty">'+empty+'</div>'}
+const cloudBytes=value=>{
+ const bytes=Math.max(0,Number(value)||0);
+ if(bytes<1000)return bytes+' Б';
+ const small=bytes<1_000_000;
+ return (bytes/(small?1000:1_000_000)).toLocaleString('ru-RU',{maximumFractionDigits:small?1:2})+(small?' КБ':' МБ');
+};
+const cloudAppLabel=app=>app==='folio'?'FOLIO':app==='zamazka'?'ЗАМАЗКА':app;
+function cloudPanel(){
+ const data=state.cloud;
+ const head='<div class="pws-cloud__heading"><div><span class="pws-cloud__kicker">ЛИЧНОЕ ХРАНИЛИЩЕ / POCKET CLOUD</span>'+
+  '<h3 id="pws-cloud-heading">Место в облаке</h3></div>'+
+  button('refresh-cloud',state.cloudLoading?'Обновление…':'↻ Обновить','quiet',state.cloudLoading?'disabled':'aria-label="Обновить статистику Pocket Cloud"')+'</div>';
+ let body='';
+ if(!data){
+  body=state.cloudLoading?'<p class="pws-cloud__message" role="status">Сверяем сохранения с облаком…</p>':
+   state.cloudError?'<p class="pws-cloud__message pws-cloud__message--error" role="alert">'+esc(state.cloudError)+'</p>':
+   '<p class="pws-cloud__message">Данные облака ещё не загружены.</p>';
+ }else{
+  const cap=Math.max(1,data.maxBytes||16_000_000),used=Math.max(0,data.usedBytes||0),left=Math.max(0,data.freeBytes??cap-used);
+  const percentage=Math.min(100,used/cap*100);
+  const apps=Array.isArray(data.byApp)?data.byApp:[];
+  const items=Array.isArray(data.items)?data.items:[];
+  const usedCount=Number(data.usedItems)||0,maxCount=Number(data.maxItems)||160;
+  const parts=apps.map(x=>'<span class="pws-cloud__fill pws-cloud__fill--'+(x.app==='folio'?'folio':'zamazka')+
+   '" style="width:'+Math.max(0,Math.min(100,Number(x.usedBytes||0)/cap*100))+'%" title="'+esc(cloudAppLabel(x.app))+'"></span>').join('');
+  body='<div class="pws-cloud__totals"><div><span>Занято</span><strong>'+cloudBytes(used)+'</strong></div>'+
+   '<div><span>Свободно</span><strong>'+cloudBytes(left)+'</strong></div>'+
+   '<div class="pws-cloud__capacity"><span>Всего</span><strong>'+cloudBytes(cap)+'</strong></div></div>'+
+   '<div class="pws-cloud__meter" role="progressbar" aria-label="Использовано облачное пространство" aria-valuemin="0" aria-valuemax="'+cap+'" aria-valuenow="'+used+'">'+parts+'</div>'+
+   '<div class="pws-cloud__under"><span>'+percentage.toLocaleString('ru-RU',{maximumFractionDigits:1})+'% занято</span>'+
+   '<span>'+usedCount+' из '+maxCount+' сохранений</span></div>'+
+   '<div class="pws-cloud__breakdown">'+apps.map(x=>
+    '<div class="pws-cloud__category"><span class="pws-cloud__dot pws-cloud__dot--'+(x.app==='folio'?'folio':'zamazka')+'"></span>'+
+    '<span class="pws-cloud__category-name">'+esc(cloudAppLabel(x.app))+'<small>'+x.items+' '+(x.items===1?'объект':'объектов')+'</small></span>'+
+    '<strong>'+cloudBytes(x.usedBytes)+'</strong></div>').join('')+'</div>'+
+   (items.length?'<details class="pws-cloud__details"><summary>Что занимает место · '+items.length+' файлов</summary>'+
+    '<div class="pws-cloud__files">'+items.map(item=>'<div class="pws-cloud__file"><div><strong>'+esc(item.title||item.id||'Без названия')+
+    '</strong><small>'+esc(cloudAppLabel(item.app))+'</small></div><span>'+cloudBytes(item.bytes)+'</span></div>').join('')+'</div></details>':
+    '<p class="pws-cloud__empty">Пока пусто. Рисунки FOLIO и сохранения ЗАМАЗКИ появятся здесь после синхронизации.</p>')+
+   '<p class="pws-cloud__limits">До '+cloudBytes(data.maxItemBytes||1_000_000)+' на объект · учитываются облачные данные, не локальные файлы'+
+   (state.cloudUpdated?' · проверено '+new Date(state.cloudUpdated).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'')+'</p>'+
+   (percentage>=90?'<p class="pws-cloud__warning">Облако почти заполнено. Новые сохранения могут не синхронизироваться.</p>':'');
+ }
+ if(state.cloudError&&data)body+='<p class="pws-cloud__message pws-cloud__message--error" role="alert">Не удалось обновить: '+esc(state.cloudError)+'. Показаны предыдущие данные.</p>';
+ return '<section class="pws-cloud" aria-labelledby="pws-cloud-heading">'+head+body+'</section>';
+}
+function resetCloud(){
+ state.cloudVersion++;state.cloud=null;state.cloudAccount=null;state.cloudLoading=false;state.cloudError='';state.cloudUpdated=0;
+}
+function renderCloud(){if(!state.edit&&state.tab==='profile')render()}
+async function loadCloudUsage(){
+ const account=state.me?.profile?.id;
+ if(!account)return;
+ if(state.cloudAccount!==account){resetCloud();state.cloudAccount=account}
+ const version=++state.cloudVersion;
+ state.cloudLoading=true;state.cloudError='';renderCloud();
+ try{
+  const response=await fetch('/pocket-cloud/usage',{credentials:'same-origin',cache:'no-store',headers:{'x-pw-expected-account':account}});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(response.status===401?'Сессия истекла. Войди в Pocket ID снова.':result.error==='account_changed'?'Аккаунт сменился. Открой профиль ещё раз.':'Облако недоступно. Проверь подключение и повтори запрос.');
+  if(version!==state.cloudVersion||state.me?.profile?.id!==account)return;
+  if(!Number.isFinite(result.usedBytes)||!Number.isFinite(result.maxBytes)||!Array.isArray(result.byApp)||!Array.isArray(result.items))throw Error('Некорректный ответ хранилища.');
+  state.cloud=result;state.cloudUpdated=Date.now();
+ }catch(error){
+  if(version!==state.cloudVersion||state.me?.profile?.id!==account)return;
+  state.cloudError=error.message||'Ошибка получения статистики.';
+ }finally{
+  if(version===state.cloudVersion){state.cloudLoading=false;renderCloud()}
+ }
+}
 function profilePanel(){
   const p=state.me?.profile;
   if(!p)return '<div class="pws-empty">Создай аккаунт Pocket ID, чтобы открыть профиль и список друзей.</div>'+
@@ -49,7 +119,7 @@ function profilePanel(){
     button('copy-id','Скопировать ID','quiet')+'</div></section><section class="pws-section">'+
     '<h3>Личный профиль</h3><div class="pws-muted">Рисунок, любимая игра и оформление видны другим игрокам. При желании можно скрыть присутствие и профиль из поиска.</div>'+
     '<p class="pws-muted">ID: <code>'+esc(p.id)+'</code></p>'+button('account','Аккаунт и безопасность')+'</section></div>'+
-    (state.edit?editor(): '');
+    (state.edit?editor():cloudPanel());
 }
 function editor(){
   const d=state.draft;
