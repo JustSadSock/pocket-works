@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=2;
+export const RULESET_VERSION=3;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 type Stroke={c:string;s:number;t:string;p:number[][]};
@@ -19,10 +19,10 @@ const strip=(s:State,id:string)=>({
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
- mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation}:null,
+ mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes}:null,
  author:members(s)[s.turn]||null,
  candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
- gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='results')?members(s).map(p=>({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}})):null
+ gallery:(s.phase==='reveal'||s.phase==='results')?members(s).map((p,i)=>s.phase==='results'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}}):null):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
@@ -54,19 +54,23 @@ function completeVotes(s:State){
   }
   s.scores[p.id].eye+=Math.round(100*eye/others);
  }
- s.phase='verdict';s.turn=0;s.deadline=now()+5600;s.revealed=true;
+ s.revealed=true;
 }
 function step(s:State){
  if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+105000;}
- else if(s.phase==='drawing'){for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=[];s.phase='voting';s.turn=0;s.deadline=now()+25500;}
- else if(s.phase==='voting'){
-   if(s.turn<members(s).length-1){s.turn++;s.deadline=now()+25500;}
-   else completeVotes(s);
- }else if(s.phase==='verdict'){s.phase='reveal';s.deadline=now()+11500;}
- else if(s.phase==='reveal'){
-   if(s.turn<members(s).length-1){s.turn++;s.phase='verdict';s.deadline=now()+5600;}
-   else if(s.round<s.rounds){s.round++;choose(s);}
+ else if(s.phase==='drawing'){
+  for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=[];
+  s.phase='voting';s.turn=0;s.deadline=now()+25500;
+ }else if(s.phase==='voting'){
+  // Every completed vote is immediately followed by its own answer.
+  s.phase='reveal';s.deadline=now()+19000;
+ }else if(s.phase==='reveal'){
+  if(s.turn<members(s).length-1){s.turn++;s.phase='voting';s.deadline=now()+25500;}
+  else {
+   completeVotes(s);
+   if(s.round<s.rounds){s.round++;choose(s);}
    else {s.phase='results';s.deadline=0;}
+  }
  }
 }
 function eligible(s:State,target:string,connected:string[]){return members(s).filter(p=>p.id!==target&&connected.includes(p.id))}
@@ -76,8 +80,8 @@ function normalize(raw:unknown):Stroke[]|null{
  for(const item of raw){
    if(!item||typeof item!=='object')return null;
    const o=item as Record<string,unknown>;
-   if(!/^#[0-9a-f]{6}$/i.test(String(o.c))||!Number.isFinite(o.s)||Number(o.s)<1||Number(o.s)>48||!['brush','pencil','spray','erase'].includes(String(o.t)))return null;
-   if(!Array.isArray(o.p)||o.p.length>45||o.p.length<1)return null;
+   if(!/^#[0-9a-f]{6}$/i.test(String(o.c))||!Number.isFinite(o.s)||Number(o.s)<1||Number(o.s)>48||!['brush','pencil','spray','erase','fill'].includes(String(o.t)))return null;
+   if(!Array.isArray(o.p)||o.p.length>(o.t==='fill'?1:45)||o.p.length<1)return null;
    const points:number[][]=[];
    for(const point of o.p){
      if(!Array.isArray(point)||point.length!==2||point.some(v=>!Number.isFinite(v))||point[0]<0||point[0]>600||point[1]<0||point[1]>450)return null;
@@ -178,9 +182,9 @@ const module: PocketModule<State>={
      if(id in state.votes[target])return {state,events:notice(id,'Фишки уже поставлены.')};
      state.votes[target][id]=[...chips] as Chips;
      if(eligible(state,target,players.map(p=>p.id)).every(p=>p.id in state.votes[target]))step(state);
-   }else if(a.type==='advance'&&id===state.host&&['verdict','reveal'].includes(state.phase)){
+   }else if(a.type==='advance'&&id===state.host&&state.phase==='reveal'){
      // Prevent accidental double-clicks from skipping two artworks.
-     const phaseMs=state.phase==='verdict'?5600:11500;
+     const phaseMs=19000;
      if(now()>state.deadline-phaseMs+2800)step(state);
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
      state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.votes={};state.selected=[];state.turn=0;
