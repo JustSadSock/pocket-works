@@ -107,7 +107,7 @@ export class PocketIdentity {
         if(!requester)return response({error:'sign_in_required'},401);
         if(!this.limit('directory:'+requester.id,150))return response({error:'too_many_attempts'},429);
         const q=(url.searchParams.get('q')||'').trim().normalize('NFKC').toLowerCase();
-        if(q.length<2||q.length>20||!/^[\\p{L}\\p{N}_-]+$/u.test(q))
+        if(q.length<2||q.length>20||!/^[\p{L}\p{N}_-]+$/u.test(q))
           return response({users:[]});
         const escaped=q.replace(/[\\%_]/g,c=>String.fromCharCode(92)+c);
         const rows=this.query("SELECT id,nickname,avatar FROM accounts WHERE nickname_key LIKE ? ESCAPE '\\' ORDER BY nickname_key LIMIT 12",escaped+'%').toArray();
