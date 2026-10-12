@@ -233,7 +233,7 @@ function notice(id,msg){return [{type:'notice',to:id,payload:msg}];}
 function members(s){return s.players;}
 function reconcile(s,players){s.players=players;if(s.world){s.world.players=s.world.players.filter(p=>players.some(q=>q.id===p.id));for(const p of players){if(!s.world.players.some(q=>q.id===p.id)){const fresh=initialize([p],s.world.level).players[0];fresh.x=80+s.world.players.length*49;s.world.players.push(fresh);}}}}
 const game={
- protocolVersion:2,
+ protocolVersion:1,
  createRoom({player}){const s={host:player.id,players:[player],phase:'lobby',world:null,lastTick:Date.now(),lastInput:{}};return {state:s};},
  onJoin({state,players}){
   if(state.phase!=='lobby')throw Error('match_in_progress');
