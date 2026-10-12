@@ -118,17 +118,18 @@ export function makeItem(scene,item){
  
  if(t==='coffee'||t==='shelf'||t==='stool'){
   const w=meta.size[0],d=meta.size[1],top=meta.top;
+  const accent=item.color===COLORS[2]?M.lightWood:cloth;
   if(t==='shelf'){
    box(scene,'closed-cabinet-body',root,M.lightWood,w,top-.17,d,0,(top-.17)/2+.08,0,.045);
    for(let i=-1;i<=1;i++){
-    box(scene,'drawer-front',root,M.wood,.48,.23,.022,i*.54,.78,d/2+.019,.018);
+    box(scene,'drawer-front',root,item.color===COLORS[2]?M.wood:accent,.48,.23,.022,i*.54,.78,d/2+.019,.018);
     orb(scene,'brass-knob',root,M.metal,i*.54,.78,d/2+.060,.055,.055,.035);
    }
    box(scene,'cabinet-top',root,M.lightWood,w+.06,.09,d+.06,0,top-.015,0,.04);
    for(const x of [-w/2+.14,w/2-.14])for(const z of [-d/2+.12,d/2-.12])
     cylinder(scene,'cabinet-foot',root,M.wood,x,.055,z,.12,.11);
   } else {
-   box(scene,'tabletop',root,M.lightWood,w,.15,d,0,top-.06,0,.075);
+   box(scene,'tabletop',root,accent,w,.15,d,0,top-.06,0,.075);
    // Feet flare out slightly: tiny turned wooden legs rather than vertical sticks.
    for(const x of [-1,1])for(const z of [-1,1]){
     const leg=cylinder(scene,'turned-tapered-leg',root,M.wood,x*(w/2-.16),(top-.19)/2,z*(d/2-.15),.18,top-.19,.32);
@@ -156,7 +157,7 @@ export function makeItem(scene,item){
    cylinder(scene,'round-base',root,M.metal,0,.065,0,tall?.52:.34,.13);
    cylinder(scene,'thin-stem',root,M.metal,0,h*.49,0,.075,h-.19);
    const shade=MeshBuilder.CreateCylinder('fabric-shade',{height:tall?.62:.33,diameterTop:tall?.45:.27,diameterBottom:tall?.88:.55,tessellation:24},scene);
-   shade.parent=root;shade.position.y=h;shade.material=M.cream;
+   shade.parent=root;shade.position.y=h;shade.material=item.color===COLORS[2]?M.cream:cloth;
    orb(scene,'warm-bulb',root,M.light,0,h-.27,0,.12,.12,.12);
  }
 
@@ -202,7 +203,7 @@ export function makeItem(scene,item){
  }
  if(t==='books'){
    const palette=['#c18d7d','#8ca18f','#d6bb82','#9b91a6'];
-   for(let i=0;i<4;i++){const m=makeMaterial(scene,'book-'+i,palette[i]);box(scene,'little-book',root,m,.10,.23+.035*(i%2),.32,-.19+i*.13,.16,0,.025);
+   for(let i=0;i<4;i++){const m=i===0&&item.color!==COLORS[2]?cloth:makeMaterial(scene,'book-'+i,palette[i]);box(scene,'little-book',root,m,.10,.23+.035*(i%2),.32,-.19+i*.13,.16,0,.025);
     box(scene,'pages',root,M.paper,.088,.012,.30,-.19+i*.13,.30+.035*(i%2),0,.006);}
  }
  if(t==='mug'){
@@ -212,7 +213,7 @@ export function makeItem(scene,item){
    cylinder(scene,'coffee',root,M.wood,0,.274,0,.19,.004);
  }
  if(t==='frame'){
-   box(scene,'picture-mat',root,M.wood,1.37,1.13,.095,0,0,0,.035);
+   box(scene,'picture-mat',root,item.color===COLORS[2]?M.wood:cloth,1.37,1.13,.095,0,0,0,.035);
    box(scene,'picture-paper',root,M.cream,1.23,1.00,.022,0,0,.057,.012);
    box(scene,'hand-painted-landscape',root,M.art[(item.variant||0)%3],1.10,.87,.014,0,0,.071,.006);
  }
