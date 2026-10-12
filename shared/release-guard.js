@@ -172,6 +172,10 @@
   async function recover(latest){
     if(recovering)return;
     if(navigator.onLine===false||await otherAppDocumentOpen())return;
+    try{
+      if(sessionStorage.getItem(reloadKey)==='1')return;
+      sessionStorage.setItem(reloadKey,'1');
+    }catch{}
     recovering=true;
     showRecovery(latest.version||declared);
 
@@ -234,13 +238,7 @@
     (pendingAtEntry.fingerprint&&fingerprint&&pendingAtEntry.fingerprint!==fingerprint) ||
     pendingAtEntry.controller
   )){
-    // Broken SW/CDN propagation must not create an infinite refresh loop.
-    let attempted=false;
-    try{
-      attempted=sessionStorage.getItem(reloadKey)==='1';
-      if(!attempted)sessionStorage.setItem(reloadKey,'1');
-    }catch{}
-    if(!attempted)setTimeout(()=>void recover(pendingAtEntry),0);
+    setTimeout(()=>void recover(pendingAtEntry),0);
   }else if(pendingAtEntry){
     try{localStorage.removeItem(pendingKey);}catch{}
   }
