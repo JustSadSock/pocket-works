@@ -27,6 +27,6 @@ The game now has twelve challenges: three additional skill puzzles are appended,
 
 Retains the expressive small character animations but improves the elastic ribbon's gravity-driven shape. The vertical sag is invariant to endpoint order; spline samples have an even midpoint and tense rubber does not visually hang upside down. The tautness cue smooths across frames.
 
-Seven formerly linear stages now use physical ribbon signals, reactive balancing, or time-limited crossings. A signal is only captured when an actually stretched band passes through its lens; the next different lens must be hit within the window or the pair resets. Balancing needs a straddling taut band with a narrow tolerance against oscillating wind; it is not a hidden floor switch. Several gates have visible timers and reset only their repeatable sensor challenge instead of wiping the level.
+Eight formerly linear stages now use physical ribbon signals, reactive balancing, or time-limited crossings. A signal is only captured when an actually stretched band passes through its lens; the next different lens must be hit within the window or the pair resets. Balancing needs a straddling taut band with a narrow tolerance against oscillating wind; it is not a hidden floor switch. Several gates have visible timers and reset only their repeatable sensor challenge instead of wiping the level.
 
 The new goals share the same physics and rules in local mode and in PocketNet v4. Immutable v1–v3 multiplayer room rules remain pinned.
