@@ -319,7 +319,8 @@ function install(){
     '<button type="button" class="pws-tab" data-pws-tab="profile">Профиль</button>'+
     '<button type="button" class="pws-tab" data-pws-tab="friends">Друзья</button>'+
     '<button type="button" class="pws-tab" data-pws-tab="invites">Приглашения</button></nav>'+
-    '<div class="pws-content" id="pws-content"></div></div>';
+    '<div class="pws-content" id="pws-content"></div>'+
+    '<footer class="pws-mobile-exit">'+button('close','Закрыть меню')+'</footer></div>';
   document.body.append(dialog);content=q('#pws-content',dialog);
   dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
   dialog.addEventListener('change',e=>{

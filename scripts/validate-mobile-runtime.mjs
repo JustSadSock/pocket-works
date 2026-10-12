@@ -40,6 +40,24 @@ requireIncludes(flagpostCss, ['height:calc(65px + var(--app-safe-top', 'padding:
 requireIncludes(folioCss, ['--safe-t:max(8px,var(--app-safe-top', 'padding:var(--safe-t)'], 'Folio safe toolbar');
 requireIncludes(tapeCss, ['padding:calc(8px + var(--app-safe-top'], 'Jam Tape safe masthead');
 
+// The Pocket ID/Social native dialogs live in the top layer rather than in the
+// safe-area-padded launcher. Verify the modal itself is anchored below the iOS
+// system bar, and its mobile fallback exit cannot scroll out of view.
+const socialDialogCss=await read('shared/pocket-social.css');
+const idDialogCss=await read('shared/pocket-id.css');
+const socialDialogJs=await read('shared/pocket-social.js');
+requireIncludes(socialDialogCss, [
+  'top:var(--pws-modal-top)', 'height:calc(100dvh - var(--pws-modal-top)',
+  '--app-safe-top', '.pws-mobile-exit', 'min-height:44px'
+], 'Pocket Social modal iOS safe exit');
+requireIncludes(idDialogCss, [
+  'top:var(--pw-id-modal-top)', 'max-height:calc(100dvh - var(--pw-id-modal-top)',
+  'pw-id-dialog__top{position:sticky', 'pw-id-dialog__close{width:44px'
+], 'Pocket ID account dialog iOS safe exit');
+requireIncludes(socialDialogJs, [
+  "button('close','Закрыть меню')", "action==='close'"
+], 'Pocket Social alternate exit');
+
 const runtimeJs = await read('shared/mobile-runtime.js');
 requireIncludes(runtimeJs, [
   'export function installMobileRuntime', 'export function bindPointerGesture', 'export function capturePointer',

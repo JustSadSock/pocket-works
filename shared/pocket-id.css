@@ -87,3 +87,22 @@ html.has-pocket-deck .shelf-footer .pw-id-privacy-link:hover {color:#fff0de;}
 
 /* Account/security dialog intentionally has no competing avatar presentation. */
 #pocket-id-active-avatar{display:none!important}
+
+/* Account/security uses another native dialog: apply the same iPhone safe
+   edge so the login/recovery close control is never in the status bar. */
+@media (max-width:650px), (max-height:540px) and (pointer:coarse){
+  .pw-id-dialog{
+    --pw-id-modal-top:var(--app-safe-top,calc(env(safe-area-inset-top,0px) + 12px));
+    position:fixed;
+    top:var(--pw-id-modal-top);
+    bottom:auto;
+    left:0;
+    right:0;
+    margin:0 auto;
+    width:calc(100vw - 12px);
+    max-height:calc(100dvh - var(--pw-id-modal-top) - env(safe-area-inset-bottom,0px) - 6px);
+    overflow-y:auto;
+  }
+  .pw-id-dialog__top{position:sticky;top:0;z-index:2;background:#162126;padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+  .pw-id-dialog__close{width:44px;height:44px;flex:0 0 44px}
+}

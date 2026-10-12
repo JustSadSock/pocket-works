@@ -29,3 +29,21 @@ The launcher applies it to its shelf container; Zamazka applies it to its museum
 ## Tests
 
 Run `npm run validate:mobile` and the normal release checks. Test manually on iPhone Safari and a Home Screen app, including cold start, portrait/landscape change, keyboard appearance and re-entering after backgrounding. Automated CSS-contract checks cannot replace a real iPhone/WebKit interaction test.
+
+## Native modal dialogs on iPhone
+
+A native `<dialog>` enters the browser's **top layer** and is not a descendant
+of the safe-area-padded page shell. Applying safe padding to the main launcher
+does **not** move a modal header below iOS's status indicators.
+
+Pocket ID/Social mobile dialogs therefore set:
+- `position: fixed` and explicit `top: var(--app-safe-top)`;
+- `height/max-height: calc(100dvh - top - safe-area-inset-bottom)`;
+- a 44 px close target in the top toolbar;
+- a second, non-scrolling `Закрыть меню` action at the bottom of the Social
+  dialog as a fallback if iOS chrome changes unexpectedly.
+
+Account/recovery forms keep their header sticky while the dialog content
+scrolls. Landscape notch side insets are respected. Do not regress to
+`height: 100dvh; margin:auto` on the full-bleed mobile social dialog, as this
+centers the close button behind the iPhone status bar in standalone mode.
