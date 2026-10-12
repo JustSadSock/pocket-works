@@ -180,7 +180,17 @@ export class Editor{
    try{const stored=JSON.parse(localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
    this.attach();this.setMode(this.inputMode,false);this.center();this.render();
  }
- center(){const w=this.viewport.clientWidth,h=this.viewport.clientHeight||w*.75,z=this.zone;this.tx=w/2-(z.x+z.w/2)*w/600*this.scale;this.ty=h/2-(z.y+z.h/2)*h/450*this.scale;this.transform();}
+ center(animate=false){
+  if(animate&&this.canvas.classList){
+    clearTimeout(this.recenterTimer);
+    this.canvas.classList.add('recentering');
+    this.recenterTimer=setTimeout(()=>this.canvas.classList.remove('recentering'),240);
+  }
+  const w=this.viewport.clientWidth,h=this.viewport.clientHeight||w*.75,z=this.zone;
+  this.tx=w/2-(z.x+z.w/2)*w/600*this.scale;
+  this.ty=h/2-(z.y+z.h/2)*h/450*this.scale;
+  this.transform();
+ }
  transform(){this.canvas.style.transform='translate('+this.tx+'px,'+this.ty+'px) scale('+this.scale+')';if(this.lastCursor)this.showCursor(this.lastCursor)}
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(4,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
@@ -480,7 +490,7 @@ export class Editor{
       }
       if(b.dataset.cmd==='in')this.zoom(1.3);
       if(b.dataset.cmd==='out')this.zoom(.77);
-      if(b.dataset.cmd==='center')this.center();
+      if(b.dataset.cmd==='center')this.center(true);
     };
     this.keyboardDown=e=>{
       if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
@@ -620,7 +630,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
- dispose(){this.closed=true;
+ dispose(){this.closed=true;clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
