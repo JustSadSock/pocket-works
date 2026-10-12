@@ -8,12 +8,12 @@ export function paint(canvas,world,{self='',time=0,cover=false,reduced=false}={}
  const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),dpr=Math.min(devicePixelRatio||1,2);
  const cw=Math.round(w*dpr),ch=Math.round(h*dpr);if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}
  c.setTransform(dpr,0,0,dpr,0,0);
- const s=world.stage,scale=cover?Math.max(w/900,h/620):w/h<1.46?Math.max(h/620,w/840):Math.min(w/1180,h/620);
+ const s=world.stage,scale=cover?Math.max(w/900,h/620):w/h<1.46?Math.max(h/620,w/840):Math.max(w/1180,h/620);
  const visible=w/scale,me=world.players?.find(p=>p.id===self);
  let target=590;if(w/h<1.46&&!cover)target=Math.max(visible/2,Math.min(1180-visible/2,(me?.x||world.players[0]?.x||590)+visible*.13));
  if(cover)target=550;cameraX+=(target-cameraX)*.18;if(w/h>=1.46&&!cover)cameraX=590;
  c.fillStyle=themes[s.theme||0];c.fillRect(0,0,w,h);
- c.save();c.translate(w/2-cameraX*scale,(h-620*scale)/2);c.scale(scale,scale);
+ c.save();c.translate(w/2-cameraX*scale,w/h>=1.46&&!cover?h-620*scale:(h-620*scale)/2);c.scale(scale,scale);
  for(let i=0;i<7;i++){let x=80+i*210,y=100+i%3*58;dot(c,x,y,24,'#ffffff95');dot(c,x+24,y-9,30,'#ffffff95');dot(c,x+53,y,20,'#ffffff95');}
  c.beginPath();c.moveTo(-200,620);for(let x=-200;x<=1380;x+=18)c.lineTo(x,478+Math.sin(x/125+s.theme)*24);c.lineTo(1380,620);c.closePath();c.fillStyle='#91dfc4';c.fill();
  c.beginPath();c.moveTo(-200,620);for(let x=-200;x<=1380;x+=18)c.lineTo(x,525+Math.sin(x/93)*15);c.lineTo(1380,620);c.closePath();c.fillStyle='#6fcbbd';c.fill();
