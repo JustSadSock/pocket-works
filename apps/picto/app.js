@@ -15,6 +15,7 @@ let savedName='Гость',profile=null,net=null,me=null,state=null,roomId='',co
 let connected=false,health=null,connecting=false,draft=[],selected=-1,undo=[],drag=null;
 let lastPhase='',lastAuthor='',pendingSend=0,toastTimer=0,confirmAction=null,requestSerial=0;
 let soundEnabled=true;
+let draftAnswer=[null,null,null,null,null],answerSending=false;
 try{savedName=localStorage.getItem(STORE+'name')||savedName;soundEnabled=localStorage.getItem(STORE+'sound')!=='off';}catch{}
 const memory=new Map();
 const adapter={
@@ -120,15 +121,21 @@ function renderLobby(){
 function phaseTop(title,subtitle){
  return '<div class="round-top"><div><span class="micro">РАУНД '+state.round+' / '+state.maxRounds+' · '+esc(subtitle)+'</span><h1>'+esc(title)+'</h1></div><div class="timer" id="timer">—</div></div>';
 }
+
 function renderCompose(){
  const author=state.author===me?.id;
  const authorName=state.players.find(p=>p.id===state.author)?.name||'Автор';
  const items=author?draft:state.board;
  const prompt=author?(state.prompt||'Получаем фразу…'):'Смотри, как рождается сообщение';
- const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div>'+(author?'<button class="variant-peek" data-action="variants">4 смысла ↗</button>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
- const palette=GLYPHS.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
- const toolbox=author?'<aside class="toolbox"><div class="toolbox-head"><span>АЛФАВИТ</span><span id="glyphHint">34 ЗНАКА</span></div>'+
-  '<div class="palette">'+palette+'</div><div class="tools-row">'+
+ const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div>'+
+  (author?'<span class="micro">НЕ ВСЕ ЗНАКИ ДОСТУПНЫ</span>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
+ const available=GLYPHS.filter(g=>state.palette?.includes(g[0]));
+ const palette=available.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
+ const blocked=GLYPHS.filter(g=>state.blocked?.includes(g[0]));
+ const blockedHTML=blocked.length?'<div class="blocked-strip"><span>ЗАПРЕЩЕНО</span>'+
+  blocked.map(g=>'<span class="blocked-glyph" title="'+esc(g[1])+'">'+glyphSVG(g[0])+'</span>').join('')+'</div>':'';
+ const toolbox=author?'<aside class="toolbox"><div class="toolbox-head"><span>АЛФАВИТ РАУНДА</span><span id="glyphHint">'+available.length+' ЗНАКОВ</span></div>'+
+  blockedHTML+'<div class="palette">'+palette+'</div><div class="tools-row">'+
   '<button class="btn" data-action="rotate-left" title="Повернуть влево" aria-label="Повернуть влево" '+(selected<0?'disabled':'')+'>↶</button>'+
   '<button class="btn" data-action="rotate-right" title="Повернуть вправо" aria-label="Повернуть вправо" '+(selected<0?'disabled':'')+'>↷</button>'+
   '<button class="btn" data-action="shrink" title="Уменьшить" aria-label="Уменьшить" '+(selected<0?'disabled':'')+'>−</button>'+
@@ -136,37 +143,74 @@ function renderCompose(){
   '<div class="toolbox-actions"><button class="btn quiet slim" data-action="undo" '+(!undo.length?'disabled':'')+'>Отменить</button>'+
   '<button class="btn quiet slim" data-action="delete" '+(selected<0?'disabled':'')+'>Убрать знак</button>'+
   '<button class="btn primary slim" data-action="publish" '+(!draft.length||!connected?'disabled':'')+'>Показать друзьям ↗</button></div></aside>':
-  '<aside class="toolbox"><div class="micro">СООБЩЕНИЕ В ПРОЦЕССЕ</div><p>Автор двигает символы вживую. Вскоре появятся четыре возможные расшифровки.</p>'+
+  '<aside class="toolbox"><div class="micro">СООБЩЕНИЕ В ПРОЦЕССЕ</div><p>Автор собирает картину из ограниченного набора знаков.</p>'+
   '<div class="wait-box">Автор: <b>'+esc(authorName)+'</b><br>Знаков сейчас: <b>'+items.length+'</b></div>'+
   '<button class="btn quiet slim" data-action="leave">Покинуть игру</button></aside>';
  root.innerHTML='<section class="game-shell">'+phaseTop(author?'Твоя очередь объяснять':'Скоро разгадываем','КОМПОЗИЦИЯ')+promptBar+
   '<div class="editor-layout">'+boardPanel(items,author)+toolbox+'</div></section>';
  updateClock();
 }
+const SLOT_LABELS=['Кто','Что делает','Что','Как / где','С чем / где'];
+function guessWords(slot,cells){
+ if(slot===4)return state.locationForms?.[cells[3]??0]||state.choices?.[4]||[];
+ return state.choices?.[slot]||[];
+}
+function renderSlot(slot,cells,locked){
+ const selected=cells[slot];
+ const options=guessWords(slot,cells);
+ return '<label class="guess-cell"><span class="guess-cell-label"><b>'+String(slot+1).padStart(2,'0')+'</b> '+SLOT_LABELS[slot]+'</span>'+
+  '<select class="guess-select '+(selected!==null?'filled':'')+'" data-guess-slot="'+slot+'" '+(locked||!connected?'disabled':'')+'>'+
+  '<option value="">— оставить пустым —</option>'+
+  options.map((word,i)=>'<option value="'+i+'" '+(selected===i?'selected':'')+'>'+esc(word)+'</option>').join('')+
+  '</select></label>';
+}
+function updateGuessDraft(){
+ const filled=draftAnswer.filter(v=>v!==null).length;
+ const info=document.querySelector('#guessProgress');if(info)info.textContent=filled+' / 5 ВЫБРАНО';
+ const submit=document.querySelector('[data-action="submit-guess"]');
+ if(submit)submit.disabled=!filled||!connected||answerSending;
+ document.querySelectorAll('[data-guess-slot]').forEach(el=>el.classList.toggle('filled',el.value!==''));
+}
+
 function renderGuess(){
  const author=state.author===me?.id;
  const did=state.answered.includes(me?.id);
- const options=state.options||[];
- const optionHtml=author?'<div class="wait-box">Ты автор этой работы. Друзья пытаются расшифровать твою мысль. Ответ появится после голосования.</div>':
- options.map((opt,i)=>'<button class="option '+(state.myAnswer===i?'selected':'')+'" data-choice="'+i+'" '+(did||!connected?'disabled':'')+'><small>'+(i+1)+'</small>'+esc(opt)+'</button>').join('');
- root.innerHTML='<section class="game-shell">'+phaseTop('Что это значит?','РАСШИФРОВКА')+
-  '<div class="prompt-strip"><b>'+(did?'Ответ принят — ждём остальных':author?'Твоё сообщение готово':'Выбери одну интерпретацию')+'</b><span class="micro">'+state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ</span></div>'+
-  '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+optionHtml+
+ const cells=did&&state.myAnswer?state.myAnswer:draftAnswer;
+ const panel=author?'<div class="wait-box">Ты передал сообщение. Друзья составляют свою расшифровку из пяти частей.</div>':
+  '<div class="guess-card"><div class="guess-intro"><strong>Собери смысл по частям</strong><small>Укажи только то, в чём уверен. Пустые ячейки не штрафуются.</small></div>'+
+  '<div class="guess-cells">'+SLOT_LABELS.map((_,i)=>renderSlot(i,cells,did)).join('')+'</div>'+
+  '<div class="guess-submit"><span class="micro" id="guessProgress">'+cells.filter(v=>v!==null).length+' / 5 ВЫБРАНО</span>'+
+  '<button class="btn primary" data-action="submit-guess" '+(did||!connected||answerSending||cells.every(v=>v===null)?'disabled':'')+'>'+(did?'Ответ принят ✓':'Отправить версию ↗')+'</button></div></div>';
+ root.innerHTML='<section class="game-shell">'+phaseTop('Расшифруй картину','ПЯТЬ ЯЧЕЕК')+
+  '<div class="prompt-strip"><b>'+(did?'Версия отправлена':author?'Ждём интерпретаций':'Можно оставить часть фразы пустой')+'</b><span class="micro">'+state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ</span></div>'+
+  '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+panel+
   '<button class="btn quiet slim" data-action="leave">Выйти из комнаты</button></div></div></section>';
  updateClock();
 }
+
 function renderReveal(){
  const result=state.history?.at(-1);
- const correct=state.correct;
+ const solution=state.solution||[];
+ const mine=state.myAnswer||[null,null,null,null,null];
+ const originalChoices=state.choices||[];
+ const targetPrep=originalChoices[3]?.indexOf(solution[3])??0;
  const peers=state.players.filter(p=>p.id!==state.author).map(p=>{
-  const answer=state.answers[p.id];const isRight=answer===correct;
-  return '<span class="answer-pill '+(answer===undefined?'':isRight?'yes':'no')+'">'+esc(p.name)+': '+(answer===undefined?'не ответил':isRight?'угадал':'другая версия')+'</span>';
+  const answer=state.answers[p.id];
+  const count=answer?answer.filter((n,i)=>n!==null&&(i===4?
+   state.locationForms?.[targetPrep]?.[n]===solution[4]:originalChoices[i]?.[n]===solution[i])).length:0;
+  return '<span class="answer-pill '+(!answer?'':count>=3?'yes':'no')+'">'+esc(p.name)+': '+(answer?count+' / 5':'не ответил')+'</span>';
  }).join('');
- root.innerHTML='<section class="game-shell">'+phaseTop('А вот что имелось в виду','РАСКРЫТИЕ')+
-  '<div class="reveal-head"><div><span class="micro">ЗАГАДАННАЯ ФРАЗА</span><h2>'+esc(state.options[correct]||'—')+'</h2></div><strong>'+(result?.correct||0)+' / '+(result?.total||0)+'</strong></div>'+
+ const review=solution.map((word,i)=>{
+  const selected=mine[i],own=i===4?state.locationForms?.[mine[3]??0]?.[selected]:originalChoices[i]?.[selected];
+  const right=i===4?state.locationForms?.[targetPrep]?.[selected]===word:own===word;
+  return '<div class="review-cell"><span>'+SLOT_LABELS[i]+'</span><strong>'+esc(word)+'</strong>'+
+    (state.author!==me?.id&&selected!==null?'<small class="'+(right?'hit':'miss')+'">'+(right?'✓ ':'✕ ')+esc(own||'—')+'</small>':'')+'</div>';
+ }).join('');
+ root.innerHTML='<section class="game-shell">'+phaseTop('Вот что было загадано','РАСКРЫТИЕ')+
+  '<div class="reveal-head"><div><span class="micro">ИСХОДНАЯ ФРАЗА</span><h2>'+esc(solution.join(' '))+'.</h2></div><strong>'+Number(result?.correct||0)+' / '+Number(result?.total||0)+' слов</strong></div>'+
   '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+
-  state.options.map((o,i)=>'<div class="option '+(i===correct?'correct':'wrong')+'"><small>'+(i+1)+'</small>'+esc(o)+'</div>').join('')+
-  '<div class="reveal-peers">'+peers+'</div>'+
+  '<div class="review-grid">'+review+'</div><div class="reveal-peers">'+peers+'</div>'+
+  '<p class="small-note">+2 за точное слово, −1 за ошибку, 0 за пропуск. Раунд: '+(result?.points||0)+' очков.</p>'+
   (state.host===me?.id?'<button class="btn primary" data-action="next">Следующий этап →</button>':'<p class="small-note">Следующий этап начнётся автоматически.</p>')+
   '</div></div></section>';
  updateClock();
