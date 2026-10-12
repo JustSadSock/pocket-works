@@ -96,7 +96,8 @@ async function validateServiceWorker(label, relativePath, expectedPrefix, runtim
     if (!source.includes(`addEventListener('${eventName}'`) && !source.includes(`addEventListener("${eventName}"`)) fail(`${label} must handle the ${eventName} event`);
   }
 
-  const cacheMatch = source.match(/(?:const|let)\s+CACHE_NAME\s*=\s*['"`]([^'"`]+)['"`]/);
+  const cacheMatch = source.match(/(?:const|let)\s+(?:CACHE_NAME|CACHE)\s*=\s*['"`]([^'"`]+)['"`]/)
+    || source.match(/,\s*(?:CACHE_NAME|CACHE)\s*=\s*['"`]([^'"`]+)['"`]/);
   if (!cacheMatch) { fail(`${label} must declare a static CACHE_NAME string`); return; }
   const cacheName = cacheMatch[1];
   if (!cacheName.startsWith(expectedPrefix)) fail(`${label} CACHE_NAME must start with ${expectedPrefix}`);
