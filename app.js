@@ -43,6 +43,29 @@ const filterStrip = document.querySelector('#filter-strip');
 const sortButton = document.querySelector('#sort-button');
 const refreshButton = document.querySelector('#refresh-button');
 const resetShelf = document.querySelector('#reset-shelf');
+const updateReady = document.querySelector('#deck-update-ready');
+const updateApply = document.querySelector('#deck-update-apply');
+const settingsAction = document.querySelector('[data-deck-tools]');
+let pendingLauncherUpdate = null;
+function showPendingLauncherUpdate(detail) {
+  if (!detail?.apply) return;
+  pendingLauncherUpdate = detail;
+  if (updateReady) updateReady.hidden = false;
+  settingsAction?.classList.add('has-pending-update');
+}
+window.addEventListener('appupdateavailable',event=>showPendingLauncherUpdate(event.detail));
+if(window.__pocketWorksPendingUpdate)showPendingLauncherUpdate(window.__pocketWorksPendingUpdate);
+updateApply?.addEventListener('click',async()=>{
+  if(!pendingLauncherUpdate)return;
+  updateApply.disabled=true;updateApply.textContent='Updating…';
+  try{
+    const success=await pendingLauncherUpdate.apply();
+    if(!success){updateApply.disabled=false;updateApply.textContent='Try again';}
+  }catch{
+    updateApply.disabled=false;updateApply.textContent='Try again';
+  }
+});
+
 
 const detailPanel = document.querySelector('#detail-panel');
 const detailBackdrop = document.querySelector('#detail-backdrop');
