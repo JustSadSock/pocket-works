@@ -118,7 +118,7 @@ export function simplifyPoints(points,limit){
  }
  return kept;
 }
-const MAX_STROKES=72,MAX_STROKE_POINTS=45,MAX_TOTAL_POINTS=1600;
+const MAX_STROKES=100,MAX_STROKE_POINTS=45,MAX_TOTAL_POINTS=2000;
 
 const key='pocket-works:zamazka:draft:';
 export class Editor{
@@ -144,8 +144,8 @@ export class Editor{
   saveSnapshot(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.getSnapshot()))}catch{}}
   adoptDraft(strokes){
     if(this.strokes.length||!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
-    const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:1601),0);
-    if(total>1600||strokes.some(s=>!['brush','pencil','spray','erase','fill'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<1||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
+    const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:MAX_TOTAL_POINTS+1),0);
+    if(total>MAX_TOTAL_POINTS||strokes.some(s=>!['brush','pencil','spray','erase','fill'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<1||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
     this.strokes=strokes.map(s=>({...s,p:s.p.map(p=>[...p])}));this.save();this.render();return true;
   }
   setTool(tool){
@@ -200,7 +200,8 @@ export class Editor{
     const effectiveSize=this.tool==='pencil'?Math.max(1,this.size*.4):this.size;
     const diameter=Math.max(2,effectiveSize*c.width/W);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
-    this.cursor.style.left=tip.clientX-v.left+'px';this.cursor.style.top=tip.clientY-v.top+'px';
+    // Absolutely positioned children start at the viewport padding edge, not its outer border.
+   this.cursor.style.left=tip.clientX-v.left-this.viewport.clientLeft+'px';this.cursor.style.top=tip.clientY-v.top-this.viewport.clientTop+'px';
     this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.color);
     this.cursor.hidden=false;
   }
@@ -343,8 +344,15 @@ export class Editor{
     this.viewport.addEventListener('auxclick',this.preventMiddle);
     this.wheel=e=>{
       e.preventDefault();
-      const bounds=this.viewport.getBoundingClientRect();
-      this.zoom(e.deltaY<0?1.12:.89,e.clientX-bounds.left,e.clientY-bounds.top);
+      if(e.altKey){
+        this.size=Math.max(1,Math.min(48,this.size+(e.deltaY<0?1:-1)*Math.max(1,Math.round(Math.abs(e.deltaY)/70))));
+        const slider=this.root.querySelector('#brushSize');
+        if(slider)slider.value=String(this.size);
+        if(this.lastCursor)this.showCursor(this.lastCursor);
+      }else{
+        const bounds=this.viewport.getBoundingClientRect();
+        this.zoom(e.deltaY<0?1.12:.89,e.clientX-bounds.left,e.clientY-bounds.top);
+      }
     };
     this.viewport.addEventListener('wheel',this.wheel,{passive:false});
     this.actions=e=>{
@@ -408,7 +416,15 @@ export class Editor{
     this.keyboardBlur=()=>{
       if(this.spaceTool!==null){const old=this.spaceTool;this.spaceTool=null;this.spacePicked=false;this.setTool(old)}
       if(this.armPointer!==null)this.armUp({pointerId:this.armPointer,preventDefault(){},stopPropagation(){}});
+      // Browsers may drop captured pointers when focus changes or touch scrolling
+      // is interrupted. A stale pointer would leave the studio in pinch mode.
+      this.finishStroke();this.pointers.clear();this.pinch=null;this.panStart=null;
+      this.aimPointer=null;this.aim=null;this.viewportCapturedPointer=null;
+      this.viewport.classList.remove('is-panning');
     };
+    this.lostCapture=e=>{if(this.pointers.has(e.pointerId))this.up({...e,type:'pointercancel'})};
+    this.canvas.addEventListener('lostpointercapture',this.lostCapture);
+    this.viewport.addEventListener('lostpointercapture',this.lostCapture);
     window.addEventListener('blur',this.keyboardBlur);
     window.addEventListener('keydown',this.keyboardDown);
     window.addEventListener('keyup',this.keyboardUp);
@@ -422,11 +438,17 @@ export class Editor{
       if(this.lastCursor)this.showCursor(this.lastCursor);
     };
     this.root.addEventListener('input',this.slider);
+    this.globalPointerUp=e=>{if(this.pointers.has(e.pointerId))this.up(e)};
+    window.addEventListener('pointerup',this.globalPointerUp);
+    window.addEventListener('pointercancel',this.globalPointerUp);
     this.resize=()=>{if(!this.pointers.size)this.center()};
     window.addEventListener('resize',this.resize);
   }
  async pick(p,temporary=false){
    try{
+     // Allow pending renders to finish before reading the composed painting.
+     // Sampling stale pixels was especially visible after undo or switching tools.
+     await this.render();
      const x=Math.max(0,Math.min(this.canvas.width-1,Math.floor(p[0]/W*this.canvas.width)));
      const y=Math.max(0,Math.min(this.canvas.height-1,Math.floor(p[1]/H*this.canvas.height)));
      let rgb;
@@ -446,12 +468,12 @@ export class Editor{
      this.root.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('active',b.dataset.color?.toLowerCase()===this.color));
      if(!temporary)this.setTool('brush');
      this.onChange(this.strokes.length);
-   }catch{}
+   }catch{this.root.querySelector('#drawingTip')?.setAttribute('title','Пипетка не смогла прочитать цвет. Попробуйте ещё раз.');}
  }
  async render(){if(this.closed)return;const c=this.canvas,version=this.renderVersion=(this.renderVersion||0)+1;const img=await loadArtwork(this.id).catch(()=>null);if(!img||this.closed||version!==this.renderVersion)return;
  const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);renderStrokes(x,[...this.strokes,...(this.working?[this.working]:[])],this.zone);x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;damagePath(x,this.zone);x.stroke();x.restore();
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
- dispose(){this.closed=true;this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
+ dispose(){this.closed=true;this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }
