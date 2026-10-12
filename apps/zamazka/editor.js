@@ -3,12 +3,12 @@ import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork} from './art
 // Keep stroke coordinates in the 600×450 logical world, but rasterize on a much
 // denser backing buffer. Previously both zoomed desktop editing and the reveal
 // stretched a literal 600px canvas; that was the second source of pixelation.
-function prepareCanvas(canvas,editor=false){
+function prepareCanvas(canvas,editor=false,thumbnail=false){
  const screenWidth=canvas.getBoundingClientRect().width||canvas.parentElement?.clientWidth||600;
  const dpr=typeof window==='undefined'?1:Math.max(1,Math.min(3,window.devicePixelRatio||1));
  const desktop=typeof window!=='undefined'&&window.matchMedia('(min-width:900px) and (pointer:fine)').matches;
  const needed=editor?Math.max(2.5,dpr*1.6):Math.max(2,dpr,desktop?2.5:2);
- const scale=Math.min(editor?3.5:3,needed,Math.max(2,3500/W));
+ const scale=thumbnail?0.8:Math.min(editor?3.5:3,needed,Math.max(2,3500/W));
  const w=Math.round(W*scale),h=Math.round(H*scale);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
  const ctx=canvas.getContext('2d');
@@ -125,8 +125,8 @@ function renderStrokes(ctx,strokes,zone){
  ctx.drawImage(lines.canvas,0,0,W,H);
 }
 
-export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false){
- const ctx=prepareCanvas(canvas);
+export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false){
+ const ctx=prepareCanvas(canvas,false,thumbnail);
  try{const image=await loadArtwork(id);if(!canvas.isConnected)return;ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id);
  if(damaged){
   const z=zoneFor(id,variation),overlay=document.createElement('canvas');
@@ -168,8 +168,8 @@ const MAX_STROKES=100,MAX_STROKE_POINTS=45,MAX_TOTAL_POINTS=2000;
 
 const key='pocket-works:zamazka:draft:';
 export class Editor{
- constructor(root,{id,variation=0,round=1,onChange=()=>{}}){
-   this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.zone=zoneFor(id,variation);
+ constructor(root,{id,variation=0,round=1,onChange=()=>{},onPersistenceError=()=>{}}){
+   this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onPersistenceError=onPersistenceError;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
    this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
     this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
@@ -180,14 +180,24 @@ export class Editor{
    try{const stored=JSON.parse(localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
    this.attach();this.setMode(this.inputMode,false);this.center();this.render();
  }
- center(){const w=this.viewport.clientWidth,h=this.viewport.clientHeight||w*.75,z=this.zone;this.tx=w/2-(z.x+z.w/2)*w/600*this.scale;this.ty=h/2-(z.y+z.h/2)*h/450*this.scale;this.transform();}
+ center(animate=false){
+  if(animate&&this.canvas.classList){
+    clearTimeout(this.recenterTimer);
+    this.canvas.classList.add('recentering');
+    this.recenterTimer=setTimeout(()=>this.canvas.classList.remove('recentering'),240);
+  }
+  const w=this.viewport.clientWidth,h=this.viewport.clientHeight||w*.75,z=this.zone;
+  this.tx=w/2-(z.x+z.w/2)*w/600*this.scale;
+  this.ty=h/2-(z.y+z.h/2)*h/450*this.scale;
+  this.transform();
+ }
  transform(){this.canvas.style.transform='translate('+this.tx+'px,'+this.ty+'px) scale('+this.scale+')';if(this.lastCursor)this.showCursor(this.lastCursor)}
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(4,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
  save(){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot();this.onChange(this.strokes.length)}
   getSnapshot(){return [...this.strokes,...(this.working?[this.working]:[])].map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[...p])}))}
-  saveSnapshot(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.getSnapshot()))}catch{}}
+  saveSnapshot(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.getSnapshot()));this.persistenceWarned=false;return true}catch{if(!this.persistenceWarned){this.persistenceWarned=true;this.onPersistenceError()}return false}}
   adoptDraft(strokes){
     if(this.strokes.length||!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
     const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:MAX_TOTAL_POINTS+1),0);
@@ -480,7 +490,7 @@ export class Editor{
       }
       if(b.dataset.cmd==='in')this.zoom(1.3);
       if(b.dataset.cmd==='out')this.zoom(.77);
-      if(b.dataset.cmd==='center')this.center();
+      if(b.dataset.cmd==='center')this.center(true);
     };
     this.keyboardDown=e=>{
       if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
@@ -620,7 +630,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
- dispose(){this.closed=true;
+ dispose(){this.closed=true;clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;

@@ -55,3 +55,40 @@
 @media(prefers-reduced-motion:reduce){
  .screen>.phase-page,.screen>.restore,.restore .timer.urgent,.phase-page .timer.urgent{animation:none}
 }
+
+
+/* Version 1.21: restrained status feedback and deliberate tactile controls. */
+.net-status{display:inline-flex;align-items:center;gap:6px;min-height:27px;padding:0 8px;
+ color:#ddcfb5;background:#29231d;border:1px solid #705d46;border-radius:2px;
+ font:650 10px system-ui,sans-serif;white-space:nowrap}
+.net-status[hidden]{display:none!important}
+.net-status::before{content:"";width:6px;height:6px;flex:none;border-radius:50%;background:#92b29a}
+.net-status[data-state="connecting"]::before{background:#c9a56d;animation:zamazkaTimerPulse 1.5s ease-in-out infinite}
+.net-status[data-state="offline"]::before{background:#bd806e}
+.art-preparing{min-height:60vh;justify-content:center;gap:12px}
+.art-preparing .busy{height:28px;width:28px}
+.art-preparing h2{margin:0;text-align:center}
+.art-preparing .hint{max-width:420px;text-align:center}
+.waiting-person{transition:background-color .24s ease,transform .2s ease,border-color .2s ease}
+.waiting-person.is-ready{background:#e8dfcf;border-color:#9ba78d;animation:zamazkaStatusSettle .22s ease-out}
+.waiting-person.is-ready strong{color:#466a4e}
+@keyframes zamazkaStatusSettle{from{transform:translateY(3px);opacity:.7}to{transform:translateY(0);opacity:1}}
+.restore .viewport canvas.recentering{transition:transform .22s cubic-bezier(.2,.75,.3,1)}
+.btn:active:not(:disabled),.stake-actions button:active:not(:disabled),
+.tools .tool:active:not(:disabled),.round-view-controls button:active:not(:disabled){
+ transform:scale(.975);filter:brightness(1.09)}
+.btn,.stake-actions button,.tools .tool,.round-view-controls button{
+ transition:transform .12s ease,filter .12s ease,background-color .16s ease}
+.dialog-box button:focus-visible,.restore button:focus-visible,.round-view-controls button:focus-visible{
+ outline:3px solid #ae8354;outline-offset:2px}
+@media (max-width:650px){
+ .net-status{position:relative;width:12px;min-width:12px;min-height:12px;height:12px;padding:0;overflow:hidden;
+ color:transparent;font-size:0;border-radius:50%;background:transparent}
+ .net-status::before{position:absolute;left:1px;top:1px;width:8px;height:8px}
+}
+@media (prefers-reduced-motion:reduce){
+ .waiting-person.is-ready{animation:none}
+ .restore .viewport canvas.recentering{transition:none}
+ .btn,.stake-actions button,.tools .tool,.round-view-controls button{transition:none}
+ .net-status::before{animation:none!important}
+}

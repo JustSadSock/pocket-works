@@ -53,7 +53,7 @@ async function connect(name){
 try {
  const health=await waitUntil(base+'/health');
  if(!health.ok||health.gameId!=='zamazka')throw Error('Bad /health');
- if(health.minPlayers!==2||health.rulesVersion!==2||!/^([0-9a-f]{12})$/.test(health.rulesHash))throw Error('Stale local game rules, expected minimum 2');
+ if(health.minPlayers!==2||health.rulesVersion!==10||!/^([0-9a-f]{12})$/.test(health.rulesHash))throw Error('Stale local game rules, expected minimum 2');
  const [a,b]=await Promise.all([connect('Alice'),connect('Bob')]);
  a.send('create_room',{gameId:'zamazka'});
  const {roomId}=await a.next('room_joined');

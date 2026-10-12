@@ -48,11 +48,11 @@ function Update-Game-Rules {
  try {
   Invoke-WebRequest -Uri $source -OutFile $temporary -UseBasicParsing -TimeoutSec 30
   $contents=Get-Content $temporary -Raw
-  if($contents -notmatch 'export\s+const\s+MIN_PLAYERS\s*=\s*2\s*;' -or $contents -notmatch 'export\s+const\s+RULESET_VERSION\s*=\s*2\s*;'){
+  if($contents -notmatch 'export\s+const\s+MIN_PLAYERS\s*=\s*2\s*;' -or $contents -notmatch 'export\s+const\s+RULESET_VERSION\s*=\s*10\s*;'){
    throw 'Downloaded game module does not advertise two-player support'
   }
   Move-Item -Path $temporary -Destination $destination -Force
-  Write-Host '  Current rules installed: minimum 2 players, protocol revision 2.' -ForegroundColor Green
+  Write-Host '  Current rules installed: minimum 2 players, protocol revision 10.' -ForegroundColor Green
  }catch {
   Remove-Item $temporary -ErrorAction SilentlyContinue
   if(-not $LocalOnly){throw ('Cannot download current multiplayer rules from GitHub. Check your internet: '+$_.Exception.Message)}
@@ -95,7 +95,7 @@ try {
   if($serverProcess.HasExited){break}
   try{
    $health=Invoke-RestMethod -Uri "http://127.0.0.1:$port/health" -TimeoutSec 2
-   if($health.ok -and $health.gameId -eq 'zamazka' -and $health.minPlayers -eq 2 -and $health.rulesVersion -eq 2){$healthy=$true;break}
+   if($health.ok -and $health.gameId -eq 'zamazka' -and $health.minPlayers -eq 2 -and $health.rulesVersion -eq 10){$healthy=$true;break}
   }catch{}
   Start-Sleep -Milliseconds 600
  }

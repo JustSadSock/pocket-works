@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=9;
+export const RULESET_VERSION=10;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 const DRAWING_TIMES=[60,90,120,160,240,300];
@@ -13,12 +13,12 @@ type Chips=number[];
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[]};
 type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
-type State={draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds||DEFAULT_DRAWING_SECONDS,deadline:s.deadline,
+ host:s.host,phase:s.phase,round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds||DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
@@ -35,7 +35,7 @@ function choose(s:State){
  s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.turn=0;s.revealed=false;
  const shuffledArt=shuffled(s.selected);
  members(s).forEach((p,i)=>s.assignments[p.id]={art:shuffledArt[i%5],variation:Math.floor(Math.random()*0xffffffff),strokes:null});
- s.phase='preview';s.deadline=now()+25000;
+ s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
 }
 function completeVotes(s:State){
  // Three brass tokens per target. Every token on the restored canvas pays
@@ -60,7 +60,8 @@ function completeVotes(s:State){
  s.revealed=true;
 }
 function step(s:State){
- if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+(s.drawingSeconds||DEFAULT_DRAWING_SECONDS)*1000;}
+ if(s.phase==='preparing'){s.phase='preview';s.deadline=now()+25000;}
+ else if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+(s.drawingSeconds||DEFAULT_DRAWING_SECONDS)*1000;}
  else if(s.phase==='drawing'){
   for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=s.drafts?.[p.id]??[];
   // In-flight chunks must not survive the deadline: their complete predecessor
@@ -144,6 +145,13 @@ const module: PocketModule<State>={
    if(state.deadline&&now()>=state.deadline&&state.phase!=='results')step(state);
    if(a.type==='pulse')return {state,events:emit(state)};
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
+   if(a.type==='art_ready'&&state.phase==='preparing'){
+     if(a.round!==state.round)return {state,events:notice(id,'Этот набор картин уже сменился.')};
+     state.readyPlayers||=[];
+     if(!state.readyPlayers.includes(id))state.readyPlayers.push(id);
+     if(members(state).every(p=>state.readyPlayers?.includes(p.id)))step(state);
+     return {state,events:emit(state)};
+   }
    if(a.type==='board_delta'&&state.phase==='lobby'){
      const board=state.board ||= {revision:0,segments:[]};
      if(a.revision!==board.revision)return {state,events:[{type:'board_reset',to:id,payload:board}]};
@@ -171,6 +179,7 @@ const module: PocketModule<State>={
      if(members(state).length<MIN_PLAYERS)return {state,events:notice(id,'Для онлайна нужны минимум два участника.')};
      state.round=1;state.rounds=[1,3,5].includes(Number(a.rounds))?Number(a.rounds):3;
      state.drawingSeconds=DRAWING_TIMES.includes(Number(a.drawingSeconds))?Number(a.drawingSeconds):DEFAULT_DRAWING_SECONDS;
+     state.artPreparationEnabled=a.preload===true;
      state.board={revision:(state.board?.revision||0)+1,segments:[]};
      members(state).forEach(p=>state.scores[p.id]={mask:0,eye:0});choose(state);
    }else if((a.type==='draft_chunk'||a.type==='submit_chunk')&&state.phase==='drawing'){
@@ -252,9 +261,11 @@ const module: PocketModule<State>={
      if(!Array.isArray(chips)||chips.length!==5||chips.some(n=>!Number.isInteger(n)||n<0||n>3)||chips.reduce((a,b)=>a+b,0)!==3)
       return {state,events:notice(id,'Распредели ровно три фишки между пятью полотнами.')};
      state.votes[target]||={};
-     if(id in state.votes[target])return {state,events:notice(id,'Фишки уже поставлены.')};
+     if(id in state.votes[target])return {state,events:[{type:'vote_saved',to:id,payload:{round:state.round,turn:state.turn}}]};
      state.votes[target][id]=[...chips] as Chips;
+     const acceptedTurn=state.turn;
      if(eligible(state,target,players.map(p=>p.id)).every(p=>p.id in state.votes[target]))step(state);
+     return {state,events:[...emit(state),{type:'vote_saved',to:id,payload:{round:state.round,turn:acceptedTurn}}]};
    }else if(a.type==='advance'&&id===state.host&&state.phase==='reveal'){
      // Prevent accidental double-clicks from skipping two artworks.
      const phaseMs=19000;

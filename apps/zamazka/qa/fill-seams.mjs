@@ -47,6 +47,30 @@ assert.equal(floodFillRaster({width:6,height:6,walls:narrowWall,zone:narrowZone,
  output:narrowOutput,point:[1,1],color:[10,20,30]}),1);
 assert.equal(narrowOutput[(2*6+2)*4+3],0,'no diagonal leakage into adjacent region');
 
+
+/* Jagged damaged mask and varying-width brush contour, sampled at 2x.
+   Adjacent basins must never exchange colours even after repeated recolouring. */
+for(const strokeWidth of [1,2,3]){
+ const w=64,h=48,wall=new Uint8ClampedArray(w*h*4),mask=new Uint8ClampedArray(w*h*4),result=new Uint8ClampedArray(w*h*4);
+ const line=y=>29+Math.floor(y/7),outer=y=>5+(y%5===0?1:0);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+   const i=(y*w+x)*4;
+   mask[i+3]=x<outer(y)?0:x===outer(y)?55:255;
+   const delta=Math.abs(x-line(y));
+   wall[i+3]=delta<strokeWidth?255:delta===strokeWidth?118:0;
+ }
+ const paint=(point,color)=>floodFillRaster({width:w,height:h,walls:wall,zone:mask,output:result,point,color});
+ assert.ok(paint([13,20],[205,55,45])>200,'left basin is reachable');
+ assert.ok(paint([47,20],[30,125,220])>200,'right basin is reachable');
+ assert.ok(paint([13,20],[80,190,65])>200,'repainting left basin is possible');
+ for(let y=0;y<h;y++){
+   const left=(y*w+12)*4,right=(y*w+48)*4,out=(y*w+Math.max(0,outer(y)-1))*4;
+   assert.deepEqual(Array.from(result.slice(left,left+3)),[80,190,65],'left pigment stays isolated');
+   assert.deepEqual(Array.from(result.slice(right,right+3)),[30,125,220],'right pigment stays isolated');
+   assert.equal(result[out+3],0,'no pigment outside the actual damage mask');
+ }
+}
+
 const source=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
 assert.match(source,/ctx\.save\(\);clipZone\(ctx,z\);ctx\.drawImage\(overlay,0,0,W,H\);ctx\.restore\(\)/,
  'final original comparison applies a single damage clip');
