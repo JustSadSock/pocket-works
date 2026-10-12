@@ -1,15 +1,17 @@
 // @ts-nocheck
-import { BASE_MATERIALS, CATEGORIES, STATE } from './materials.ts';
-import { MatterEngine, cloneRegion, pasteRegion, clamp, validateCustomMaterial, hexToRgb } from './core.ts';
-import { EXPERIMENTS, TASKS, loadExperiment, loadTask } from './scenes.ts';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, loadAutosave, saveAutosave, listWorlds, saveWorld, deleteWorld, loadCustomMaterials, saveCustomMaterials, downloadJson, readJsonFile, validateImport, dbDelete } from './storage.ts';
-import shard01 from './ui-shard-01.ts';
-import shard02 from './ui-shard-02.ts';
-import shard03 from './ui-shard-03.ts';
-
-const encoded=[shard01,shard02,shard03].join('');
-const compressed=Uint8Array.from(atob(encoded),character=>character.charCodeAt(0));
-const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
-const source=await new Response(stream).text();
-const start=new Function('BASE_MATERIALS','CATEGORIES','STATE','hexToRgb','MatterEngine','cloneRegion','pasteRegion','clamp','validateCustomMaterial','EXPERIMENTS','TASKS','loadExperiment','loadTask','DEFAULT_SETTINGS','loadSettings','saveSettings','loadAutosave','saveAutosave','listWorlds','saveWorld','deleteWorld','loadCustomMaterials','saveCustomMaterials','downloadJson','readJsonFile','validateImport','dbDelete',source);
-start(BASE_MATERIALS,CATEGORIES,STATE,hexToRgb,MatterEngine,cloneRegion,pasteRegion,clamp,validateCustomMaterial,EXPERIMENTS,TASKS,loadExperiment,loadTask,DEFAULT_SETTINGS,loadSettings,saveSettings,loadAutosave,saveAutosave,listWorlds,saveWorld,deleteWorld,loadCustomMaterials,saveCustomMaterials,downloadJson,readJsonFile,validateImport,dbDelete);
+import '../../../shared/mobile-runtime.css';
+import '../../../shared/workshop-mode.css';
+import './styles.css';
+import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../../shared/workshop-mode.js';
+import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
+const RELEASE_NOTES=[
+  "Исправлено автосохранение: состояние снова сохраняется каждые 15 секунд, при уходе в фон и после открытия или импорта мира.",
+  "Исправлены мультитач, pointercancel и скрытые инструменты: pinch больше не засоряет Undo и IndexedDB, а стёртые стены, генераторы и стоки действительно исчезают.",
+  "Исправлены задачи, перемотка, импорт датчиков и пользовательские вещества: контекст корректно сбрасывается, импорт не уничтожает личную библиотеку, коллизии ID больше не ломают материалы.",
+  "Исправлена физика газов и тестовая камера синтеза; подключены штатные Pocket Works Mobile Runtime, обновления и Workshop Mode."
+];
+installMobileRuntime();
+registerEnhancedUpdate({ appName: 'ВЕЩЕСТВО', version: '1.0.1', releaseNotes: RELEASE_NOTES });
+globalThis.__veshchestvoWorkshop=createWorkshopMode({ appName: 'ВЕЩЕСТВО', version: '1.0.1', cachePrefix: 'veshchestvo-', storageNamespace: 'pocket-works:veshchestvo', onReset: () => location.reload() });
+await import('./ui-runtime.ts');

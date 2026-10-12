@@ -25,6 +25,13 @@ describe('save format',()=>{
   it('fills regions without fringe cells',()=>{const e=new MatterEngine(30,30);for(let x=4;x<=25;x++){e.setCell(x,4,'glass',null,{anchor:true});e.setCell(x,25,'glass',null,{anchor:true});}for(let y=4;y<=25;y++){e.setCell(4,y,'glass',null,{anchor:true});e.setCell(25,y,'glass',null,{anchor:true});}const changed=e.fill(10,10,'water');expect(changed).toBe(20*20);for(let y=5;y<=24;y++)for(let x=5;x<=24;x++)expect(e.materialAt(e.idx(x,y)).key).toBe('water');});
 });
 
+describe('regressions',()=>{
+  it('clears invisible wall and device metadata when a cell is overwritten',()=>{const e=new MatterEngine(8,8);e.setCell(3,3,'stone',null,{anchor:true,source:true,sink:true});e.setCell(3,3,'empty');const i=e.idx(3,3);expect(e.anchor[i]).toBe(0);expect(e.source[i]).toBe(0);expect(e.sink[i]).toBe(0);});
+  it('lets lighter gas rise through denser gas',()=>{const e=new MatterEngine(6,6,[{key:'light-gas',name:'Light gas',state:'gas',density:.1},{key:'heavy-gas',name:'Heavy gas',state:'gas',density:2}]);e.setCell(2,3,'light-gas');e.setCell(2,2,'heavy-gas');expect(e.canDisplace(e.idx(2,3),e.idx(2,2))).toBe(true);expect(e.canDisplace(e.idx(2,2),e.idx(2,3))).toBe(false);});
+  it('allocates unique custom ids even when imported ids collide',()=>{const e=new MatterEngine(6,6,[{id:1000,key:'first-solid',name:'First',state:'solid'},{key:'second-solid',name:'Second',state:'solid'},{id:1000,key:'third-solid',name:'Third',state:'solid'}]);const ids=e.customMaterials.map(item=>item.id);expect(new Set(ids).size).toBe(ids.length);expect(e.materialByKey('first-solid').id).not.toBe(e.materialByKey('second-solid').id);expect(e.materialByKey('third-solid').id).not.toBe(0);});
+  it('rejects truncated or overlong RLE snapshots instead of silently filling cells',()=>{const e=new MatterEngine(5,5);const snap=e.snapshot();snap.arrays.mat=[0,24];expect(migrateSnapshot(snap)).toBeNull();snap.arrays.mat=[0,26];expect(migrateSnapshot(snap)).toBeNull();});
+});
+
 describe('product smoke',()=>{
   it('contains 15 experiments and 15 automatic tasks',()=>{expect(EXPERIMENTS).toHaveLength(15);expect(TASKS).toHaveLength(15);expect(TASKS.every(task=>typeof task.check==='function')).toBe(true);});
   it('builds every scene and evaluates every task safely',()=>{for(const scene of EXPERIMENTS){const e=new MatterEngine(120,180);scene.build(e);expect(()=>e.step(5)).not.toThrow();}for(const task of TASKS){const e=new MatterEngine(120,180);const loaded=loadExperiment(e,task.scene);task.setup?.(e);const result=task.check(e,{customMaterials:[]});expect(typeof result.done).toBe('boolean');expect(Number.isFinite(result.progress)).toBe(true);}});

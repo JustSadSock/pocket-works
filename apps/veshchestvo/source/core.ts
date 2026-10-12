@@ -21,6 +21,9 @@ export function validateCustomMaterial(input) {
   const state = input.state;
   if (![STATE.POWDER,STATE.LIQUID,STATE.GAS,STATE.SOLID,STATE.BIO].includes(state)) return {ok:false,error:'Неизвестное агрегатное состояние.'};
   if (!String(input.name || '').trim()) return {ok:false,error:'Материалу нужно имя.'};
+  const key=String(input.key||'').trim();
+  if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(key))return {ok:false,error:'Ключ материала повреждён.'};
+  if(MATERIAL_BY_KEY.has(key))return {ok:false,error:'Ключ занят базовым веществом.'};
   const rules = Array.isArray(input.rules) ? input.rules.slice(0,MAX_CUSTOM_RULES_PER_MATERIAL) : [];
   for (const rule of rules) {
     const sameA = rule.productA && rule.productA === input.key;
@@ -75,20 +78,10 @@ export class MatterEngine {
     this.setCustomMaterials(customMaterials);
   }
   setCustomMaterials(list=[]) {
-    this.customMaterials=[]; this.materials=new Map(MATERIAL_BY_ID); this.keyToMaterial=new Map(MATERIAL_BY_KEY);
-    let nextId=1000;
-    for (const raw of list.slice(0,64)) {
-      const checked=validateCustomMaterial(raw); if(!checked.ok) continue;
-      const item={...checked.value,id:raw.id>=1000?raw.id:nextId++,custom:true};
-      item.density=Number(item.density ?? 1); item.viscosity=Number(item.viscosity ?? .2);
-      item.conductivity=Number(item.conductivity ?? .15); item.electrical=Number(item.electrical ?? 0);
-      item.strength=Number(item.strength ?? (item.state===STATE.SOLID?0.5:0)); item.brittleness=Number(item.brittleness ?? .2);
-      item.flammability=Number(item.flammability ?? 0); item.burnRate=Number(item.burnRate ?? .2);
-      item.heatCapacity=Number(item.heatCapacity ?? 1); item.growth=Number(item.growth ?? 0);
-      item.acidity=Number(item.acidity ?? 0); item.toxicity=Number(item.toxicity ?? 0); item.glow=Number(item.glow ?? 0);
-      item.color=item.color || '#8d8f86'; item.rules=Array.isArray(item.rules)?item.rules:[];
-      this.customMaterials.push(item); this.materials.set(item.id,item); this.keyToMaterial.set(item.key,item);
-    }
+    this.customMaterials=[];this.materials=new Map(MATERIAL_BY_ID);this.keyToMaterial=new Map(MATERIAL_BY_KEY);
+    const usedIds=new Set(this.materials.keys()),usedKeys=new Set(this.keyToMaterial.keys());let nextId=1000;
+    const finite=(value,fallback,min=-Infinity,max=Infinity)=>{const parsed=Number(value);return Number.isFinite(parsed)?clamp(parsed,min,max):fallback;};
+    for(const raw of list.slice(0,64)){const checked=validateCustomMaterial(raw);if(!checked.ok)continue;const key=String(checked.value.key).trim();if(usedKeys.has(key))continue;const requested=Number(raw.id);let id;if(Number.isInteger(requested)&&requested>=1000&&!usedIds.has(requested))id=requested;else{while(usedIds.has(nextId))nextId+=1;id=nextId;nextId+=1;}usedIds.add(id);usedKeys.add(key);const item={...checked.value,key,id,custom:true};item.density=finite(item.density,1,.001,100);item.viscosity=finite(item.viscosity,.2,0,1);item.conductivity=finite(item.conductivity,.15,0,4);item.electrical=finite(item.electrical,0,0,4);item.strength=finite(item.strength,item.state===STATE.SOLID?.5:0,0,4);item.brittleness=finite(item.brittleness,.2,0,1);item.flammability=finite(item.flammability,0,0,4);item.burnRate=finite(item.burnRate,.2,0,4);item.heatCapacity=finite(item.heatCapacity,1,.05,20);item.growth=finite(item.growth,0,0,4);item.acidity=finite(item.acidity,0,-2,2);item.toxicity=finite(item.toxicity,0,0,4);item.glow=finite(item.glow,0,0,4);item.color=item.color||'#8d8f86';item.rules=Array.isArray(item.rules)?item.rules.slice(0,MAX_CUSTOM_RULES_PER_MATERIAL):[];this.customMaterials.push(item);this.materials.set(item.id,item);this.keyToMaterial.set(item.key,item);}
   }
   rand() { let x=this.randomState|0; x^=x<<13; x^=x>>>17; x^=x<<5; this.randomState=x|0; return (x>>>0)/4294967296; }
   idx(x,y){ return y*this.width+x; }
@@ -99,14 +92,8 @@ export class MatterEngine {
   gravityVector(){ const a=this.gravityAngle*Math.PI/180; return [Math.round(Math.cos(a)),Math.round(Math.sin(a))]; }
   clear(){ this.mat.fill(0); this.temp.fill(this.ambientTemperature); this.pressure.fill(0);this.charge.fill(0);this.vx.fill(0);this.vy.fill(0);this.life.fill(0);this.damage.fill(0);this.anchor.fill(0);this.source.fill(0);this.sink.fill(0);this.fanX.fill(0);this.fanY.fill(0);this.tick=0; }
   setCell(x,y,material,temp=null,options={}) {
-    x=Math.round(x);y=Math.round(y);
-    if(!this.inside(x,y)) return false; const i=this.idx(x,y);
-    const item=typeof material==='string'?this.materialByKey(material):this.materials.get(Number(material)); if(!item) return false;
-    this.mat[i]=item.id; this.temp[i]=temp ?? item.temperature ?? this.ambientTemperature; this.life[i]=item.state===STATE.ENERGY?40:0;
-    if(options.anchor!==undefined) this.anchor[i]=options.anchor?1:0;
-    if(options.source) this.source[i]=item.id; else if(options.source===false) this.source[i]=0;
-    if(options.sink!==undefined) this.sink[i]=options.sink?1:0;
-    return true;
+    x=Math.round(x);y=Math.round(y);if(!this.inside(x,y))return false;const i=this.idx(x,y);const item=typeof material==='string'?this.materialByKey(material):this.materials.get(Number(material));if(!item)return false;
+    this.mat[i]=item.id;this.temp[i]=temp??item.temperature??this.ambientTemperature;this.life[i]=item.state===STATE.ENERGY?40:0;this.damage[i]=0;this.anchor[i]=options.anchor?1:0;this.source[i]=options.source?item.id:0;this.sink[i]=options.sink?1:0;return true;
   }
   stamp(cx,cy,radius,material,options={}) {
     const r=Math.max(1,Math.round(radius)), r2=r*r;
@@ -143,7 +130,7 @@ export class MatterEngine {
   canDisplace(from,to){
     if(to<0||to>=this.size||this.anchor[to])return false; const a=this.materialAt(from),b=this.materialAt(to);
     if(b.state===STATE.EMPTY)return true;
-    if(a.state===STATE.GAS&&(b.state===STATE.GAS||b.state===STATE.EMPTY))return a.density>b.density;
+    if(a.state===STATE.GAS&&(b.state===STATE.GAS||b.state===STATE.EMPTY))return b.state===STATE.EMPTY||a.density<b.density-.01;
     if(a.state===STATE.LIQUID&&(b.state===STATE.GAS||b.state===STATE.LIQUID))return a.density>b.density+.02;
     if(a.state===STATE.POWDER&&(b.state===STATE.GAS||b.state===STATE.LIQUID||b.state===STATE.POWDER))return a.density>b.density+.05;
     return false;
@@ -236,7 +223,11 @@ export class MatterEngine {
 }
 
 export function migrateSnapshot(data){
-  if(!data||typeof data!=='object')return null;let out=structuredClone(data);if(!out.version)out.version=1;if(out.version===1){out.arrays.charge=out.arrays.charge||[0,out.width*out.height];out.arrays.damage=out.arrays.damage||[0,out.width*out.height];out.arrays.anchor=out.arrays.anchor||[0,out.width*out.height];out.arrays.source=out.arrays.source||[0,out.width*out.height];out.arrays.sink=out.arrays.sink||[0,out.width*out.height];out.arrays.fanX=out.arrays.fanX||[0,out.width*out.height];out.arrays.fanY=out.arrays.fanY||[0,out.width*out.height];out.version=2;}if(out.version!==FORMAT_VERSION||!Number.isInteger(out.width)||!Number.isInteger(out.height)||!out.arrays?.mat)return null;return out;
+  if(!data||typeof data!=='object')return null;let out;try{out=structuredClone(data);}catch{return null;}if(!out.version)out.version=1;
+  if(!Number.isInteger(out.width)||!Number.isInteger(out.height)||out.width<=0||out.height<=0||out.width*out.height>MAX_WORLD_CELLS||!out.arrays||typeof out.arrays!=='object')return null;
+  const length=out.width*out.height;if(out.version===1){out.arrays.charge=out.arrays.charge||[0,length];out.arrays.damage=out.arrays.damage||[0,length];out.arrays.anchor=out.arrays.anchor||[0,length];out.arrays.source=out.arrays.source||[0,length];out.arrays.sink=out.arrays.sink||[0,length];out.arrays.fanX=out.arrays.fanX||[0,length];out.arrays.fanY=out.arrays.fanY||[0,length];out.version=2;}if(out.version!==FORMAT_VERSION)return null;
+  const validRle=(encoded)=>{if(!Array.isArray(encoded)||encoded.length<2||encoded.length%2!==0)return false;let total=0;for(let i=0;i<encoded.length;i+=2){if(!Number.isFinite(Number(encoded[i])))return false;const count=Number(encoded[i+1]);if(!Number.isInteger(count)||count<=0)return false;total+=count;if(total>length)return false;}return total===length;};
+  return ['mat','temp','pressure','charge','life','damage','anchor','source','sink','fanX','fanY'].every(key=>validRle(out.arrays[key]))?out:null;
 }
 
 export function cloneRegion(engine,x0,y0,x1,y1){const minX=clamp(Math.min(x0,x1),0,engine.width-1),maxX=clamp(Math.max(x0,x1),0,engine.width-1),minY=clamp(Math.min(y0,y1),0,engine.height-1),maxY=clamp(Math.max(y0,y1),0,engine.height-1),width=maxX-minX+1,height=maxY-minY+1;const cells=[];for(let y=0;y<height;y+=1)for(let x=0;x<width;x+=1){const i=engine.idx(minX+x,minY+y);cells.push([engine.mat[i],engine.temp[i],engine.pressure[i],engine.charge[i],engine.damage[i],engine.anchor[i],engine.source[i],engine.sink[i],engine.fanX[i],engine.fanY[i]]);}return{width,height,cells};}
