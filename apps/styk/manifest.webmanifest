@@ -1,0 +1,19 @@
+{
+  "id": "/apps/styk/",
+  "name": "СТЫК — живой фронт",
+  "short_name": "СТЫК",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e4dbc4",
+  "theme_color": "#283a31",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
