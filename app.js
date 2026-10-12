@@ -481,7 +481,14 @@ function installInstruction() {
 }
 
 let lastDetailSignature = '';
+let lastDetailSlug = '';
 function renderDetail(app) {
+  const slug = app?.slug || '';
+  if (slug !== lastDetailSlug) {
+    const extras = document.querySelector('#detail-extras');
+    if (extras) extras.open = false;
+    lastDetailSlug = slug;
+  }
   const signature = app ? JSON.stringify([
     app.slug, app.version, app.description, app.updatedAt, app.status, app.preset,
     app.accent, app.tags, app.changelog, isFavorite(app.slug),
@@ -778,6 +785,7 @@ detailClose.addEventListener('click', () => closeDetailPanel());
 detailBackdrop.addEventListener('click', () => closeDetailPanel());
 
 resetShelf.addEventListener('click', () => {
+  if (!window.confirm('Reset saved games, recently opened games and library filters? Your game progress will stay intact.')) return;
   const selected = registry[0]?.slug || null;
   shelfState = { ...defaultShelfState(), selected };
   persistShelfState();
