@@ -61,14 +61,14 @@ export function installPocketDeck({
     if(widget.kind==='continue'){
       const app=recent()[0]||apps.find(a=>favorites.has(a.slug))||apps[0];
       return app?`<div class="deck-widget__heading"><span>CONTINUE</span><span class="deck-widget__counter">${formatAgo(getRecents()[app.slug])}</span></div>
-        <div class="deck-hero">${openTile(app,'hero',app.description?.slice(0,74)||'Open project')}
-          <span class="deck-hero__callout" aria-hidden="true"><b>▶</b> OPEN</span></div>`
+        <div class="deck-hero">${openTile(app,'hero')}
+          <span class="deck-hero__callout" aria-hidden="true"><b>▶</b> PLAY</span></div>`
         : emptyWidget('No projects yet','New creations will appear here.');
     }
     if(widget.kind==='spotlight'){
       const app=selected||apps[0];
-      return `<div class="deck-widget__heading"><span>SPOTLIGHT</span><span class="deck-widget__counter">Pinned project</span></div>`+
-        (app?openTile(app,widget.size==='half'?'small':'hero','Selected project'):emptyWidget('Pick a project','Choose one in Customize.'));
+      return `<div class="deck-widget__heading"><span>SPOTLIGHT</span></div>`+
+        (app?openTile(app,widget.size==='half'?'small':'hero'):emptyWidget('Pick a project','Choose one in Customize.'));
     }
     if(widget.kind==='saved'){
       const matching=apps.filter(a=>favorites.has(a.slug));
@@ -77,7 +77,7 @@ export function installPocketDeck({
          :emptyWidget('Nothing saved yet','Open a project and mark it as a favorite.', 'library'));
     }
     if(widget.kind==='new'){
-      return `<div class="deck-widget__heading"><span>JUST MADE</span><span class="deck-widget__counter">Latest releases</span></div>`+
+      return `<div class="deck-widget__heading"><span>JUST MADE</span></div>`+
         (apps.length?`<div class="deck-mini-grid">${apps.slice(0,widget.size==='half'?2:4).map(a=>openTile(a,'small')).join('')}</div>`
          :emptyWidget('No projects yet','New experiments will appear here.'));
     }
@@ -90,7 +90,7 @@ export function installPocketDeck({
     if(widget.kind==='random'){
       const app=apps.length?apps[pendingSeed%apps.length]:null;
       return `<div class="deck-widget__heading"><span>REDISCOVER</span><button type="button" class="deck-widget__reroll" data-deck-reroll aria-label="Choose another project">↻ Another</button></div>`+
-        (app?openTile(app,widget.size==='half'?'small':'hero','A project worth another look'):emptyWidget('Nothing to rediscover','Your library is empty.'));
+        (app?openTile(app,widget.size==='half'?'small':'hero'):emptyWidget('Nothing to rediscover','Your library is empty.'));
     }
     if(widget.kind==='collection'){
       const matching=apps.filter(a=>!widget.tag||(a.tags||[]).includes(widget.tag));
@@ -110,7 +110,7 @@ export function installPocketDeck({
     if(signature===modelSignature)return;
     modelSignature=signature;
     widgets.innerHTML=state.widgets.length?state.widgets.map(w=>`<section class="deck-widget deck-widget--${escapeHtml(w.size)}" data-widget-id="${escapeHtml(w.id)}">${widgetContent(w)}</section>`).join('')
-      :`<div class="deck-home-blank"><span>YOUR SPACE</span><strong>Make it yours.</strong><p>Add a widget to start building your home screen.</p><button type="button" data-deck-edit>Add a widget +</button></div>`;
+      :`<div class="deck-home-blank"><strong>No games here yet</strong><button type="button" data-deck-edit>Add a widget</button></div>`;
     // A cached cover index can outlive an individual image. Restore the genuine
     // app icon when its screenshot is unavailable, including offline visits.
     for(const photo of widgets.querySelectorAll('.deck-art__photo')){
@@ -221,7 +221,7 @@ export function installPocketDeck({
     const note=root.dataset.slug===slug ? ($('#deck-project-note')?.value ?? state.projectNotes[slug] ?? '') : (state.projectNotes[slug]||'');
     root.dataset.slug=slug;
     root.dataset.signature=signature;
-    root.innerHTML=`<div class="deck-project-detail__label">PROJECT JOURNEY</div>
+    root.innerHTML=`<div class="deck-project-detail__label">Project status</div>
       <div class="deck-project-detail__stages">
         ${[['trial','Trial'],['building','Developing'],['kept','Keep'],['archive','Archive']].map(([stage,label])=>`<button type="button" data-deck-stage="${stage}" aria-pressed="${stageOf(slug)===stage}">${label}</button>`).join('')}
       </div>
@@ -229,8 +229,8 @@ export function installPocketDeck({
       <button type="button" id="deck-note-save">Save project note</button>
       <span id="deck-note-feedback" role="status" aria-live="polite"></span>
       <div class="deck-project-detail__timeline">
-        <strong>Versions on this device</strong>
-        <p>Recorded from the first time you opened this project's details.</p>
+        <strong>Version history</strong>
+        
         <ol>${history.map(item=>`<li><b>v${escapeHtml(item.version)}</b><time>${new Date(item.seenAt||Date.now()).toLocaleDateString()}</time><span>${escapeHtml(item.note)}</span></li>`).join('')}</ol>
       </div>`;
   }
