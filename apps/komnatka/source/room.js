@@ -8,7 +8,7 @@ const hex=h=>Color3.FromHexString(h);
 function materialTexture(scene,name,draw) {
  const tex=new DynamicTexture(name,{width:512,height:512},scene,false,2);
  draw(tex.getContext());tex.update(false);
- const m=makeMaterial(scene,name,'#ffffff');m.diffuseTexture=tex;return m;
+ const m=new StandardMaterial(name,scene);m.diffuseColor=Color3.White();m.specularColor=new Color3(.04,.04,.04);m.specularPower=8;m.diffuseTexture=tex;return m;
 }
 function wood(scene,name,color) {
  return materialTexture(scene,name,c=>{
