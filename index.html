@@ -163,17 +163,22 @@
   </dialog>
   <dialog id="shelf-tools" class="shelf-tools" aria-labelledby="tools-title">
     <header class="shelf-tools__header"><div><h2 id="tools-title">Settings</h2></div><button type="button" id="tools-close" aria-label="Close tools">×</button></header>
-    <p class="shelf-tools__intro">Manage downloads and backups.</p>
-    <div class="shelf-tools__facts" id="tools-facts" aria-live="polite">Reading device information…</div>
-    <p class="shelf-tools__status" id="tools-status" role="status" aria-live="polite"></p>
+    <p class="shelf-tools__intro">Your saved and recently played games stay on this device.</p>
     <div class="shelf-tools__actions">
-      <button type="button" id="tools-recheck">Recheck device</button>
-      <button type="button" id="tools-copy">Copy diagnostics</button>
-      <button type="button" id="tools-export">Export my shelf</button>
-      <button type="button" id="tools-import">Import shelf backup</button>
-      <button type="button" id="tools-repair">Repair launcher cache</button>
-      <button id="reset-shelf" type="button" data-native-press>Reset personal shelf</button>
+      <button type="button" id="tools-export">Export library backup</button>
+      <button type="button" id="tools-import">Import library backup</button>
     </div>
+    <p class="shelf-tools__status" id="tools-status" role="status" aria-live="polite"></p>
+    <details class="shelf-tools__advanced">
+      <summary>Diagnostics &amp; recovery</summary>
+      <div class="shelf-tools__facts" id="tools-facts" aria-live="polite">Reading device information…</div>
+      <div class="shelf-tools__actions">
+        <button type="button" id="tools-recheck">Recheck device</button>
+        <button type="button" id="tools-copy">Copy diagnostics</button>
+        <button type="button" id="tools-repair">Repair launcher cache</button>
+        <button id="reset-shelf" type="button" data-native-press>Reset personal shelf</button>
+      </div>
+    </details>
     <input id="tools-import-file" type="file" accept=".json,application/json" hidden aria-label="Choose personal shelf backup file">
     <p class="shelf-tools__note">Your games and their saves are never deleted by these tools.</p>
     <a class="pw-id-privacy-link" href="/privacy">Privacy policy</a>
