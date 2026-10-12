@@ -226,8 +226,9 @@ async function reload(rerender=true){
   // Ignore an in-flight response from a previous account after sign-out/switch.
   const currentAccount=window.PocketID?.getUser?.();
   if(q('#pocket-id-trigger')&&(!currentAccount?.complete||data.profile.id!==currentAccount.id)){
-    state.me=null;updateNotification(0);if(rerender)render();return;
+    state.me=null;resetCloud();updateNotification(0);if(rerender)render();return;
   }
+  if(state.cloudAccount&&state.cloudAccount!==data.profile.id)resetCloud();
   state.me=data;
   const accountButton=q('#pocket-id-trigger');
   if(accountButton && data.profile?.artwork){
@@ -257,6 +258,7 @@ async function open(room=''){
   try{await Promise.all([reload(false),loadCatalog()])}
   catch(e){state.me=null;state.error=e.message}
   finally{state.loading=false;render()}
+  if(state.me&&state.tab==='profile')void loadCloudUsage();
 }
 async function showUser(id){
   state.tab='other';state.other=null;state.loading=true;resetNotice();render();
@@ -414,12 +416,13 @@ function install(){
   });
   dialog.addEventListener('click',async e=>{
     const tab=e.target.closest('[data-pws-tab]');
-    if(tab){resetNotice();state.tab=tab.dataset.pwsTab;state.edit=false;state.other=null;render();return}
+    if(tab){resetNotice();state.tab=tab.dataset.pwsTab;state.edit=false;state.other=null;render();if(state.tab==='profile'&&state.me)void loadCloudUsage();return}
     const target=e.target.closest('[data-pws]');
     if(!target||state.busy)return;
     const action=target.dataset.pws,id=target.dataset.id;
     if(action==='close'){dialog.close();return}
     if(action==='login'){dialog.close();if(window.PocketID?.openAccount)window.PocketID.openAccount();else location.assign('/?pocket-id=login');return}
+    if(action==='refresh-cloud'){void loadCloudUsage();return}
     if(action==='account'){dialog.close();if(window.PocketID?.openAccount)window.PocketID.openAccount();else location.assign('/?pocket-id=login');return}
     if(action==='copy-id'){try{await navigator.clipboard.writeText(state.me.profile.id);state.notice='ID скопирован.'}catch{state.error='Не удалось скопировать ID.'}render();return}
     if(action==='edit'){state.edit=true;state.draft={...state.me.profile};
@@ -467,9 +470,9 @@ function install(){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){pulse();reload(false).catch(()=>{})}});
   document.addEventListener('pocket-id:changed',event=>{
     if(!event.detail?.user?.complete){
-      state.me=null;state.other=null;state.edit=false;state.results=[];
+      state.me=null;state.other=null;state.edit=false;state.results=[];resetCloud();
       updateNotification(0);if(dialog.open)render();
-    }else reload(false).catch(()=>{});
+    }else{if(state.cloudAccount&&state.cloudAccount!==event.detail.user.id)resetCloud();reload(false).catch(()=>{});}
     pulse();
   });
   pulse();reload(false).catch(()=>{});
