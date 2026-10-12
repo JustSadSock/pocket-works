@@ -52,16 +52,18 @@ function summaryFor(results,onDemand){
   const changed=results.filter(result=>result.status==='updated').length;
   const current=results.filter(result=>result.status==='current').length;
   const checked=results.filter(result=>result.status==='checked').length;
+  const deferred=results.filter(result=>result.status==='deferred').length;
   const failed=results.filter(result=>result.status==='failed');
   const names=failed.slice(0,2).map(result=>result.app.name).join(', ');
   const pieces=[];
   if(changed)pieces.push(`${changed} updated`);
   if(current)pieces.push(`${current} current`);
   if(checked)pieces.push(`${checked} checked`);
+  if(deferred)pieces.push(`${deferred} on next launch`);
   if(onDemand)pieces.push(`${onDemand} on-demand`);
   if(failed.length)pieces.push(`${failed.length} failed${names?`: ${names}`:''}`);
   if(!pieces.length)pieces.push('Shelf synced');
-  return{changed,current,checked,failed,onDemand,main:pieces.join(' / ')};
+  return{changed,current,checked,deferred,failed,onDemand,main:pieces.join(' / ')};
 }
 
 async function runBulkUpdate(){
@@ -118,7 +120,9 @@ async function runBulkUpdate(){
             ?`${result.app.name} · updated`
             :result.status==='current'
               ?`${result.app.name} · current`
-              :`${result.app.name} · checked`;
+              :result.status==='deferred'
+                ?`${result.app.name} · next launch`
+                :`${result.app.name} · checked`;
         showProgress({completed,total,label});
         syncStatus.textContent=result.status==='failed'?`${result.app.name}: ${result.error}`:label;
       }
