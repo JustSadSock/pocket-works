@@ -20,9 +20,10 @@ const requireToken=(source,token,label)=>{if(!source.includes(token))errors.push
 for(const token of ['APP_TIMEOUT','withTimeout(\n        updateInstalledApplication','UPDATE_CONCURRENCY=3','pw-update-progress','installedTargets','on-demand','pocketworks:registry-snapshot',"source:'bulk-update'"]){
   requireToken(launcher,token,'launcher bulk update interface');
 }
-for(const token of ['CHECK_TIMEOUT','ACTIVATION_TIMEOUT','releaseIdentity','getVerifiedReleases','installedTargets','registration.update()','workerInfo','saveVerified','clearStaleAppRuntime']){
+for(const token of ['releaseIdentity','getVerifiedReleases','installedTargets','workerInfo','saveVerified','clearStaleAppRuntime']){
   requireToken(releaseCoordinator,token,'central release coordinator');
 }
+if(releaseCoordinator.includes('await withTimeout(registration.update()'))errors.push('Bulk update must be read-only for active app workers');
 if(launcher.includes('navigator.serviceWorker.register('))errors.push('launcher Sync must not register Service Workers for applications that are not already installed');
 if(launcher.includes("workerUrl.searchParams.set('pw_release'")||launcher.includes("workerUrl.searchParams.set('pw_fp'"))errors.push('launcher Sync must not encode release identity into Service Worker script URLs');
 for(const token of ['pocketworks:registry-snapshot','applyExternalRegistrySnapshot']){
