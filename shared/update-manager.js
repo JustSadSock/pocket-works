@@ -226,17 +226,9 @@ export async function registerManagedServiceWorker(options = {}) {
       return registration;
     };
 
-    const check = async () => {
-      const guardedRegistration = await resolveRegistration();
-      if (!guardedRegistration) return false;
-      try {
-        await guardedRegistration.update();
-        return true;
-      } catch (error) {
-        console.warn(`${appName} guarded update check failed`, error);
-        return false;
-      }
-    };
+    // The release guard owns discovery and defers activation to the next
+    // document entry. A manual check must not wake a live game's worker.
+    const check = async () => false;
 
     await resolveRegistration();
     return {
