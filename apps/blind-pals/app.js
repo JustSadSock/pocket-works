@@ -55,7 +55,7 @@ function soundMarkup(){return '<button class="button muted sound-toggle" data-do
 function identityMarkup(){
  return pocketIdentity?.complete?
   '<div class="identity-bar"><span class="identity-avatar">◉</span><div><small>POCKET ID</small><strong>'+esc(pocketIdentity.nickname)+'</strong></div><button class="identity-edit" data-do="profile" type="button">Друзья и профиль ↗</button></div>':
-  '<div class="identity-bar"><span class="identity-avatar">◌</span><div><small>ГОСТЕВОЙ ПРОФИЛЬ</small><label for="nick">Твоё имя</label></div><input id="nick" class="identity-nick" maxlength="24" autocomplete="nickname" value="'+esc(username)+'"></div>';
+  '<div class="identity-bar"><span class="identity-avatar">◌</span><div><small>ГОСТЕВОЙ ПРОФИЛЬ</small><label for="nick">Твоё имя</label></div><input id="nick" class="identity-nick" maxlength="24" autocomplete="nickname" value="'+esc(username)+'"><button class="identity-edit" type="button" data-do="profile">Pocket ID ↗</button></div>';
 }
 function playerMarkup(p,i){
  const live=p.id===me?.id||!disconnectedPeer;
@@ -73,7 +73,7 @@ function home(){
  '<div class="join-form-row"><input id="code" class="text-input" type="text" maxlength="180" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="8 символов" value="'+esc(incoming)+'" required>'+
  '<button class="button primary" type="submit" id="joinConfirm">Войти →</button></div><p class="hint">Код находится в комнате создателя. Пример: A3F92C10</p></form>':'')+
  '<div class="home-bottom">'+identityMarkup()+'<div class="home-bottom-row"><a class="more-about" href="../../">← В Pocket Works</a>'+soundMarkup()+'</div></div></div>';
- status('POCKET NET','online');
+ status('POCKET NET');
 }
 function entry(joining){
  joinExpanded=joining;phase='home';mode=joining?'join':'create';home();
@@ -235,6 +235,9 @@ async function connectRoom(action='create',withInvite=false){
   });
   session.on('room_joined',e=>{
    if(net!==session)return;
+   if(e.gameId!=='blind-pals'){
+    releaseNetwork(true);entry(true);toast('Этот код принадлежит другой игре.');return;
+   }
    roomId=e.roomId;connecting=false;disconnectedPeer=false;
    updateUrl(code());
    if(e.state)onState(e.state);
@@ -279,7 +282,7 @@ async function connectRoom(action='create',withInvite=false){
 function requestSocialInvite(){
  if(!roomId||view?.phase!=='lobby'){toast('Сначала создай игровую комнату.');return;}
  if(!pocketIdentity?.complete){
-  toast('Для приглашения друзей нужен Pocket ID. Ссылку можно отправить без аккаунта.');
+  toast('Чтобы пригласить через друзей, войди в Pocket ID. Ссылка скопирована для отправки вручную.');
   copy(roomLink());return;
  }
  if(window.PocketSocial?.open)window.PocketSocial.open(roomId,'blind-pals');
