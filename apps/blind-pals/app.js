@@ -378,7 +378,7 @@ function initialize(){
  home();requestAnimationFrame(frame);
  if(incoming){mode='join';entry(true);}
  else{
-  const saved=JSON.parse(sessionStorage.getItem('pocket-net:'+serverUrl)||'null');
+  let saved=null;try{saved=JSON.parse(sessionStorage.getItem('pocket-net:'+serverUrl)||'null');}catch{}
   if(saved?.roomId){mode='join';incoming=saved.roomId;entry(true);toast('Есть недавняя комната — можно вернуться по коду.');}
  }
 }
