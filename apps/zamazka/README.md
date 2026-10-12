@@ -154,3 +154,11 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - В `art-provenance.js` заданы художественные традиции для всех 54 реальных картин. Для ряда картин указаны подтверждённые места создания. Школа художника **не означает** место написания конкретной картины; в частности, Ван Гог — нидерландский художник, но «Звёздная ночь» и чикагская версия «Спальни» созданы во Франции. Город музея не подменяет город создания.
 - Источники для сверки отдельных мест создания: Mauritshuis (Вермеер), MoMA (Звёздная ночь), Rijksmuseum (Ночной дозор), National Gallery (Телега для сена), Musée Marmottan Monet (Впечатление), Art Institute of Chicago (Спальня). Если город не подтверждён для конкретного полотна, поле опускается.
 - Регрессия: `node apps/zamazka/qa/timing-provenance.mjs`.
+
+## 1.17.0 — Reliable long-form paintings and pointer alignment
+
+- PocketNet rejects any incoming WebSocket frame above 16 KiB. Former full-painting `draft` and `submit` packets routinely exceeded it. The new `draft-transfer.js` sends a versioned, ordered, size-capped set of `draft_chunk` or `submit_chunk` messages; the server validates each part and atomically commits only a COMPLETE revision. A partially received revision never overwrites the last completed backup. A final submit is also chunked, instead of falling back to an outdated draft.
+- Per-round revisions are private to their author. Only the matching most recent server acknowledgement shows `Копия в PocketNet ✓`. The browser keeps the full local draft on disconnect; re-sends on reconnect. Increased practical budget to 100 line segments and 2000 points. For an older room, create a new room to use the v8 rules.
+- Desktop shared board is rendered at its intrinsic 8:5 aspect ratio, without `object-fit:contain` letterboxing. Pointer coordinates map against the actual canvas bounds. Restoration editor cursor subtracts border offsets, matching the canvas coordinate system.
+- `Alt + wheel` adjusts brush diameter, while wheel without Alt still zooms. Losing pointer capture or focus clears stale pointers and pinch state rather than disabling drawing. Temporary Space eyedropper samples the fully rendered canvas.
+- Regression coverage: `node apps/zamazka/qa/large-painting.mjs`, `node apps/zamazka/qa/coordinate-input.mjs`, and existing picker, drawing and draft tests.
