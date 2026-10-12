@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=4;
+export const RULESET_VERSION=5;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 type Stroke={c:string;s:number;t:string;p:number[][]};
@@ -10,7 +10,7 @@ type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type Chips=number[];
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[]};
-type State={board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
@@ -19,7 +19,7 @@ const strip=(s:State,id:string)=>({
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
- mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes}:null,
+ mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes,draft:s.drafts?.[id]??null}:null,
  author:members(s)[s.turn]||null,
  candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
  gallery:(s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>s.phase!=='reveal'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}}):null):null
@@ -29,7 +29,7 @@ function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]
 function choose(s:State){
  s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1)).slice(0,5);
  // Pick different works for the first five participants; further participants repeat independently.
- s.assignments={};s.votes={};s.turn=0;s.revealed=false;
+ s.assignments={};s.drafts={};s.votes={};s.turn=0;s.revealed=false;
  const shuffledArt=shuffled(s.selected);
  members(s).forEach((p,i)=>s.assignments[p.id]={art:shuffledArt[i%5],variation:Math.floor(Math.random()*0xffffffff),strokes:null});
  s.phase='preview';s.deadline=now()+25000;
@@ -59,7 +59,7 @@ function completeVotes(s:State){
 function step(s:State){
  if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+105000;}
  else if(s.phase==='drawing'){
-  for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=[];
+  for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=s.drafts?.[p.id]??[];
   s.phase='voting';s.turn=0;s.deadline=now()+25500;
  }else if(s.phase==='voting'){
   // Every completed vote is immediately followed by its own answer.
@@ -119,7 +119,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,deadline:0,selected:[],participants:[player],assignments:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.phase==='lobby'&&!state.participants.some(p=>p.id===player.id)){
      state.participants.push(player);state.scores[player.id]={mask:0,eye:0};
@@ -166,11 +166,21 @@ const module: PocketModule<State>={
      state.round=1;state.rounds=[1,3,5].includes(Number(a.rounds))?Number(a.rounds):3;
      state.board={revision:(state.board?.revision||0)+1,segments:[]};
      members(state).forEach(p=>state.scores[p.id]={mask:0,eye:0});choose(state);
+   }else if(a.type==='draft'&&state.phase==='drawing'){
+     const item=state.assignments[id];
+     if(!item||item.strokes!==null||Number(a.round)!==state.round||a.art!==item.art||a.variation!==item.variation)
+      return {state,events:notice(id,'Черновик относится к другому раунду.')};
+     const strokes=normalize(a.strokes);
+     if(!strokes)return {state,events:notice(id,'Не удалось сохранить черновик: превышен размер рисунка.')};
+     (state.drafts||={})[id]=strokes;
+     // Only acknowledge its author, rather than broadcasting draft arrays.
+     return {state,events:[{type:'draft_saved',to:id,payload:{round:state.round,art:item.art,variation:item.variation,lines:strokes.length}}]};
    }else if(a.type==='submit'&&state.phase==='drawing'){
      const item=state.assignments[id];const strokes=normalize(a.strokes);
      if(!item||item.strokes!==null)return {state,events:notice(id,'Эта работа уже сдана.')};
      if(!strokes)return {state,events:notice(id,'Некорректные или слишком большие данные рисунка.')};
      item.strokes=strokes;
+     delete state.drafts?.[id];
      if(members(state).every(p=>state.assignments[p.id]?.strokes!==null))step(state);
    }else if(a.type==='vote'&&state.phase==='voting'){
      const target=members(state)[state.turn]?.id;
@@ -191,7 +201,7 @@ const module: PocketModule<State>={
      if(state.round<state.rounds){state.round++;choose(state);}
      else {state.phase='results';state.deadline=0;}
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
-     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.votes={};state.selected=[];state.turn=0;
+     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.votes={};state.selected=[];state.turn=0;
    }
    return {state,events:emit(state)};
  }
