@@ -1,5 +1,5 @@
 const APP_VERSION='1.0.0',RELEASE_DATE='2026-10-12';
-const RELEASE_NOTES=['Первая версия ЛИПКИ: 10 тканевых испытаний и физика липучек.','PocketNet, два героя в тренировке, мобильное управление.'];
+const RELEASE_NOTES=["Новый физический платформер в мире фетра: десять уровней, липучки, пружины, катушки и кнопки.","Тренировка с переключением двух героев и сохранением открытых уровней.","Комнаты PocketNet на 2–4 игроков, Pocket ID и управление с телефона."];
 const PREFIX='lipki-';
 const CACHE_NAME='lipki-v1.0.0';
 const FILES=["./","./index.html","./app.config.json","./app.js","./physics.js","./art.js","./styles.css","./icons/icon.svg","./manifest.webmanifest","../../shared/mobile-runtime.css","../../shared/mobile-runtime.js","../../shared/pwa-utils.js","../../shared/capabilities/net.js","../../shared/capabilities/identity.js","../../shared/update-manager.css","../../shared/update-manager.js","../../shared/workshop-mode.css","../../shared/workshop-mode.js","../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js"];
