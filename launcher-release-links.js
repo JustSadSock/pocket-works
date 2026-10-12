@@ -9,6 +9,8 @@ import { sameRelease, needsReleaseConvergence, clearStaleAppRuntime } from './sh
   let verified={};
   let observed={};
   const opening=new Set();
+  const OPEN_LINKS='a[data-action="open"][data-slug],#detail-open[data-slug],a[data-deck-open]';
+  const linkSlug=anchor=>anchor?.dataset?.slug||anchor?.dataset?.deckOpen;
 
   function readState(){
     try{
@@ -27,7 +29,7 @@ import { sameRelease, needsReleaseConvergence, clearStaleAppRuntime } from './sh
   }
 
   function versionedHref(anchor){
-    const slug=anchor?.dataset?.slug;
+    const slug=linkSlug(anchor);
     const release=releases.get(slug);
     if(!slug||!release)return;
     try{
@@ -60,7 +62,7 @@ import { sameRelease, needsReleaseConvergence, clearStaleAppRuntime } from './sh
   }
 
   function rewrite(root=document){
-    root.querySelectorAll?.('a[data-action="open"][data-slug],#detail-open[data-slug]').forEach(versionedHref);
+    root.querySelectorAll?.(OPEN_LINKS).forEach(versionedHref);
     root.querySelectorAll?.('.app-entry[data-slug]').forEach(annotateEntry);
   }
 
@@ -81,10 +83,13 @@ import { sameRelease, needsReleaseConvergence, clearStaleAppRuntime } from './sh
     if(root)observer.observe(root,{childList:true,subtree:true});
   }
 
-  document.addEventListener('pointerdown',event=>versionedHref(event.target.closest('a[data-action="open"],#detail-open')),{capture:true,passive:true});
+  document.addEventListener('pointerdown',event=>versionedHref(event.target.closest(OPEN_LINKS)),{capture:true,passive:true});
   document.addEventListener('click',event=>{
-    const anchor=event.target.closest?.('a[data-action="open"],#detail-open');
-    const slug=anchor?.dataset?.slug;
+    const anchor=event.target.closest?.(OPEN_LINKS);
+    const slug=linkSlug(anchor);
+    // Same-tab registry writes do not fire a storage event; use the latest
+    // published release before deciding whether a launch needs convergence.
+    readState();
     const release=releases.get(slug);
     if(!anchor||!slug||!release||!needsReleaseConvergence(slug,release)||opening.has(slug))return;
     if('button'in event&&event.button!==0)return;
@@ -107,6 +112,7 @@ import { sameRelease, needsReleaseConvergence, clearStaleAppRuntime } from './sh
     });
   },{capture:true});
   window.addEventListener('pocketworks:bulk-update-complete',()=>{readState();scheduleRewrite();});
+  window.addEventListener('pocketworks:registry-snapshot',()=>{readState();scheduleRewrite();});
   window.addEventListener('storage',event=>{
     if([REGISTRY_KEY,VERIFIED_KEY,OBSERVED_KEY].includes(event.key)){
       readState();
