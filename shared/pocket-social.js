@@ -33,7 +33,7 @@ function card(p){
 }
 const errorMarkup=()=>state.error?'<div class="pws-error" role="alert">'+esc(state.error)+'</div>':state.notice?'<div class="pws-notice" role="status">'+esc(state.notice)+'</div>':'';
 function person(p){
-  return '<div class="pws-person"><div class="pws-person__avatar">'+esc((p.nickname||'?')[0].toUpperCase())+'</div>'+
+  return '<div class="pws-person"><div class="pws-person__avatar">'+avatar(p)+'</div>'+
   '<div class="pws-person__name"><strong>'+esc(p.nickname)+'</strong><small>'+
   (p.online?'● В сети'+(p.gameId?' · '+esc(gameLabel(p.gameId)):''):'Не в сети')+'</small></div>'+
   button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"')+'</div>';
@@ -44,15 +44,18 @@ function profilePanel(){
   if(!p)return '<div class="pws-empty">Создай аккаунт Pocket ID, чтобы открыть профиль и список друзей.</div>'+
     '<div class="pws-actions">'+button('login','Открыть Pocket ID','primary')+'</div>';
   return '<h2>Твоя карточка</h2><div class="pws-profile-layout"><section>'+card(state.edit?{...p,...state.draft}:p)+
-    '<div class="pws-actions">'+(state.edit?'':button('edit','Настроить оформление','primary'))+
+    '<div class="pws-actions">'+(state.edit?'':button('edit','Изменить профиль','primary'))+
     button('copy-id','Скопировать ID','quiet')+'</div></section><section class="pws-section">'+
     '<h3>Личный профиль</h3><div class="pws-muted">Рисунок, любимая игра и оформление видны другим игрокам. При желании можно скрыть присутствие и профиль из поиска.</div>'+
-    '<p class="pws-muted">ID: <code>'+esc(p.id)+'</code></p></section></div>'+
+    '<p class="pws-muted">ID: <code>'+esc(p.id)+'</code></p>'+button('account','Аккаунт и безопасность')+'</section></div>'+
     (state.edit?editor(): '');
 }
 function editor(){
   const d=state.draft;
-  return '<section class="pws-editor"><h2>Оформление</h2>'+
+  return '<section class="pws-editor"><h2>Единый редактор профиля</h2>'+
+    '<div class="pws-field"><label for="pws-nickname">Никнейм Pocket ID</label>'+
+    '<input id="pws-nickname" type="text" maxlength="20" minlength="3" autocomplete="nickname" spellcheck="false" value="'+esc(d.nickname)+'">'+
+    '<div class="pws-muted">Уникальный никнейм для всех игр · 3–20 символов</div></div>'+
     '<div class="pws-field"><label>Нарисуй аватар</label><div class="pws-editor-tools">'+
     '<canvas class="pws-draw" width="160" height="160" aria-label="Редактор аватара"></canvas>'+
     '<div><div class="pws-muted">Проведи пальцем или мышью по холсту.</div>'+
@@ -136,8 +139,20 @@ function render(){
     state.tab==='invite'?invitePanel():otherPanel());
   if(state.edit&&state.tab==='profile')initCanvas();
 }
+function updateNotification(count){
+  if(!entry)return;
+  const badge=q('.pws-entry__count',entry);
+  if(!badge)return;
+  badge.textContent=String(Math.min(count,99));badge.hidden=!count;
+  entry.title=count?count+' новых запросов и приглашений':'Pocket ID · Профиль и друзья';
+}
 async function reload(rerender=true){
   const data=await api('me');
+  // Ignore an in-flight response from a previous account after sign-out/switch.
+  const currentAccount=window.PocketID?.getUser?.();
+  if(q('#pocket-id-trigger')&&(!currentAccount?.complete||data.profile.id!==currentAccount.id)){
+    state.me=null;updateNotification(0);if(rerender)render();return;
+  }
   state.me=data;
   const accountButton=q('#pocket-id-trigger');
   if(accountButton && data.profile?.artwork){
@@ -147,13 +162,8 @@ async function reload(rerender=true){
   }
   const pending=(data.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
   const requests=(data.incoming||[]).length;
-  const count=pending+requests;
-  if(entry){
-    const badge=q('.pws-entry__count',entry);
-    badge.textContent=String(Math.min(count,99));
-    badge.hidden=!count;
-    entry.title=count?count+' новых запросов и приглашений':'Pocket Social';
-  }
+  updateNotification(pending+requests);
+  document.dispatchEvent(new CustomEvent('pocket-social:portrait',{detail:{accountId:data.profile.id,artwork:data.profile.artwork||''}}));
   if(rerender)render();
 }
 async function loadCatalog(){
@@ -193,6 +203,37 @@ async function search(){
   }catch(e){if(generation!==state.searchVersion)return;state.results=[];state.error=e.message}
   const node=q('#pws-results',dialog);
   if(node)node.innerHTML=(state.error?'<div class="pws-error">'+esc(state.error)+'</div>':'')+searchResults();
+}
+async function updateIdentityNickname(nickname){
+  const current=window.PocketID?.getUser?.();
+  if(!current?.complete)throw Error('Для редактирования нужен Pocket ID.');
+  if(nickname===current.nickname)return;
+  if(nickname.length<3||nickname.length>20||!/^[\p{L}\p{N}_-]+$/u.test(nickname))
+    throw Error('Никнейм: от 3 до 20 символов, только буквы, цифры, _ и -.');
+  const response=await fetch('/pocket-id/profile',{method:'POST',credentials:'same-origin',
+    headers:{'content-type':'application/json'},body:JSON.stringify({nickname,avatar:current.avatar})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(({nickname_taken:'Этот никнейм уже занят.',invalid_profile:'Недопустимый никнейм.'})[data.error]||data.error||'Не удалось сменить никнейм.');
+  await window.PocketID.refresh();
+}
+async function saveUnifiedProfile(){
+  if(state.busy)return;
+  const draft={...state.draft},name=String(draft.nickname||'').trim();
+  if(!name){state.error='Введите никнейм.';render();return}
+  state.busy=true;resetNotice();
+  try{
+    // Identity is always canonical for the nickname. Appearance is stored in Pocket Social.
+    await updateIdentityNickname(name);
+    await api('profile',{background:draft.background,frame:draft.frame,
+      artwork:draft.artwork,favoriteGame:draft.favoriteGame,
+      discoverable:draft.discoverable,presenceVisible:draft.presenceVisible,
+      allowInvites:draft.allowInvites});
+    await reload(false);
+    state.edit=false;state.notice='Профиль сохранён.';
+  }catch(error){
+    // The nickname can be saved before an appearance request fails; retry is safe.
+    state.error=error.message+' Если никнейм уже изменился, повторное сохранение завершит настройку.';
+  }finally{state.busy=false;render()}
 }
 async function mutate(path,body,{tab,stay=false}={}){
   if(state.busy)return;
@@ -243,17 +284,24 @@ function initCanvas(){
 }
 function install(){
   if(!document.body||dialog)return;
-  const socialButton=q('#pocket-id-trigger')||q('#profileBtn');
-  if(socialButton){
-    entry=document.createElement('button');entry.id='pocket-social-trigger';entry.type='button';entry.className='pws-entry'+(socialButton.id==='profileBtn'?' round-control':'');
-    entry.setAttribute('aria-label','Открыть друзей и профиль');
-    entry.title='Pocket Social';
-    entry.innerHTML='<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2M17 7a3 3 0 0 1 0 6M18 16a4 4 0 0 1 3 3"/></svg><span class="pws-entry__count" hidden></span>';
-    socialButton.insertAdjacentElement('afterend',entry);
-    entry.addEventListener('click',()=>open());
+  const identityTrigger=q('#pocket-id-trigger');
+  if(identityTrigger){
+    // Launcher has one entry: Pocket ID opens this card. No second Social icon.
+    entry=identityTrigger;
+    entry.classList.add('pws-entry');
+    entry.insertAdjacentHTML('beforeend','<span class="pws-entry__count" hidden></span>');
+  }else{
+    // Standalone apps keep their own tools (e.g. Zamazka's personal seal).
+    const host=q('.nav-tools')||q('header.top');
+    if(host){
+      entry=document.createElement('button');entry.id='pocket-social-trigger';entry.type='button';
+      entry.className='pws-entry round-control';entry.setAttribute('aria-label','Pocket ID · Профиль и друзья');
+      entry.innerHTML='<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2M17 7a3 3 0 0 1 0 6M18 16a4 4 0 0 1 3 3"/></svg><span class="pws-entry__count" hidden></span>';
+      host.append(entry);entry.addEventListener('click',()=>open());
+    }
   }
   dialog=document.createElement('dialog');dialog.className='pws-dialog';dialog.setAttribute('aria-label','Pocket Social');
-  dialog.innerHTML='<div class="pws-shell"><header class="pws-top"><div class="pws-brand">POCKET / SOCIAL</div>'+
+  dialog.innerHTML='<div class="pws-shell"><header class="pws-top"><div class="pws-brand">POCKET / ID</div>'+
     '<button class="pws-close" type="button" data-pws="close" aria-label="Закрыть">✕</button></header>'+
     '<nav class="pws-tabs" id="pws-tabs" aria-label="Социальные разделы">'+
     '<button type="button" class="pws-tab" data-pws-tab="profile">Профиль</button>'+
@@ -269,8 +317,10 @@ function install(){
     if(t.id==='pws-discoverable')state.draft.discoverable=t.checked;
     if(t.id==='pws-presence')state.draft.presenceVisible=t.checked;
     if(t.id==='pws-invites')state.draft.allowInvites=t.checked;
+    if(t.id==='pws-nickname')state.draft.nickname=t.value;
   });
   dialog.addEventListener('input',e=>{
+    if(e.target.id==='pws-nickname'&&state.draft){state.draft.nickname=e.target.value;return}
     if(e.target.id!=='pws-search')return;
     state.query=e.target.value;clearTimeout(searchClock);
     searchClock=setTimeout(search,300);
@@ -286,9 +336,11 @@ function install(){
     if(!target||state.busy)return;
     const action=target.dataset.pws,id=target.dataset.id;
     if(action==='close'){dialog.close();return}
-    if(action==='login'){dialog.close();if(q('#pocket-id-trigger'))q('#pocket-id-trigger').click();else location.assign('/?pocket-id=login');return}
+    if(action==='login'){dialog.close();if(window.PocketID?.openAccount)window.PocketID.openAccount();else location.assign('/?pocket-id=login');return}
+    if(action==='account'){dialog.close();if(window.PocketID?.openAccount)window.PocketID.openAccount();else location.assign('/?pocket-id=login');return}
     if(action==='copy-id'){try{await navigator.clipboard.writeText(state.me.profile.id);state.notice='ID скопирован.'}catch{state.error='Не удалось скопировать ID.'}render();return}
-    if(action==='edit'){state.edit=true;state.draft={...state.me.profile};state.artHistory=[state.draft.artwork];resetNotice();render();return}
+    if(action==='edit'){state.edit=true;state.draft={...state.me.profile};
+      state.artHistory=[state.draft.artwork];resetNotice();render();return}
     if(action==='cancel-edit'){state.edit=false;render();return}
     if(action==='background'||action==='frame'){state.draft[action]=target.dataset.value;render();return}
     if(action==='ink'){state.ink=target.dataset.value;render();return}
@@ -297,14 +349,7 @@ function install(){
       state.draft.artwork=state.artHistory.at(-1)||'';render();return;
     }
     if(action==='clear-art'){state.draft.artwork='';state.artHistory.push('');render();return}
-    if(action==='save-profile'){
-      await mutate('profile',{background:state.draft.background,frame:state.draft.frame,
-        artwork:state.draft.artwork,favoriteGame:state.draft.favoriteGame,
-        discoverable:state.draft.discoverable,presenceVisible:state.draft.presenceVisible,
-        allowInvites:state.draft.allowInvites},{stay:true});
-      if(!state.error)state.edit=false;
-      render();return;
-    }
+    if(action==='save-profile'){await saveUnifiedProfile();return}
     if(action==='open-user'){await showUser(id);return}
     if(action==='back'){state.tab='friends';state.other=null;resetNotice();render();return}
     if(action==='send-request'){await mutate('friend-request',{id:state.other.id},{tab:'friends'});return}
@@ -337,7 +382,14 @@ function install(){
     try{await reload(dialog.open&&['friends','invites'].includes(state.tab))}catch{}
   },22000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){pulse();reload(false).catch(()=>{})}});
-  document.addEventListener('pocket-id:changed',()=>{reload(false).catch(()=>{});pulse()});
+  document.addEventListener('pocket-id:changed',event=>{
+    if(!event.detail?.user?.complete){
+      state.me=null;state.other=null;state.edit=false;state.results=[];
+      updateNotification(0);if(dialog.open)render();
+    }else reload(false).catch(()=>{});
+    pulse();
+  });
   pulse();reload(false).catch(()=>{});
 }
+window.PocketSocial=Object.freeze({open:(room='')=>open(room)});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
