@@ -189,7 +189,7 @@ const module={
   const x=Number(a.x);
   if(!Number.isFinite(x)||x< -1||x>1)return {state,events:[]};
   state.inputs[player.id]={x,jump:a.jump===true,grab:a.grab===true};
-  tickWorld(state.world,Math.min(.115,Math.max(.015,(now-state.lastTick)/1000)),state.inputs);
+  tickWorld(state.world,Math.min(.115,Math.max(0,(now-state.lastTick)/1000)),state.inputs);
   state.lastTick=now;
   if(state.world.phase==='cleared')state.phase=state.world.level===LEVELS.length-1?'finished':'cleared';
   return {state,events:emit(state)};
