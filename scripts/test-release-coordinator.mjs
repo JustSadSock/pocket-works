@@ -26,7 +26,7 @@ const oldWorker = { state: 'activated', postMessage(_message, ports) { ports[0].
 const newWorker = { state: 'activated', postMessage(_message, ports) { ports[0].notify({ version: '2.0', fingerprint: 'new-build' }); } };
 let registration = {
   scope, active: oldWorker, installing: null, waiting: null,
-  async update() { this.active = newWorker; },
+  async update() { throw new Error('Bulk check must not update an active worker'); },
   async unregister() { unregisterCalls++; return true; }
 };
 const sw = {
@@ -34,22 +34,26 @@ const sw = {
   register() { throw new Error('Bulk Sync must not install new Service Workers'); }
 };
 const targets = await installedTargets([app, { slug: 'beta', path: './apps/beta/' }], sw);
-assert.equal(targets.length, 1, 'only previously installed applications are targeted');
-
-const stages = [];
+assert.equal(targets.length, 1, 'only previously iconst stages = [];
 const first = await updateInstalledApplication(app, registration, {
   onStage: (label, phase) => stages.push(phase)
 });
-assert.equal(first.status, 'updated');
-assert.equal(getVerifiedReleases().alpha.fingerprint, 'new-build', 'only a verified worker can be recorded');
-assert.ok(stages.includes('checking') && stages.includes('verifying'));
+assert.equal(first.status, 'deferred', 'a stale worker waits for the next application entry');
+assert.ok(stages.includes('checking') && stages.includes('deferred'));
+assert.equal(getVerifiedReleases().alpha, undefined, 'a deferred update must not be marked verified');
+assert.equal(registration.active, oldWorker, 'live game remains controlled by original worker');
+
+registration.active = newWorker; // Simulate a fresh launch activating the new release.
 const second = await updateInstalledApplication(app, registration);
-assert.equal(second.status, 'current', 'matching active and recorded releases skip update');
+assert.equal(second.status, 'current', 'matching active release is verified after reopen');
+assert.equal(getVerifiedReleases().alpha.fingerprint, 'new-build');
 
 const incorrect = { ...app, fingerprint: 'wrong-build' };
-const failure = await updateInstalledApplication(incorrect, registration);
-assert.equal(failure.status, 'failed', 'incorrect active fingerprint is not accepted');
-assert.equal(getVerifiedReleases().alpha.fingerprint, 'new-build', 'failed verification cannot update receipt');
+const pending = await updateInstalledApplication(incorrect, registration);
+assert.equal(pending.status, 'deferred', 'fingerprint mismatch waits for next launch');
+assert.equal(getVerifiedReleases().alpha.fingerprint, 'new-build', 'stale receipt cannot be overwritten');
+
+ verification cannot update receipt');
 
 data.set('pocket-works:observed-releases:v1', JSON.stringify({
   alpha: { version: '1.0', fingerprint: 'old-build' }
@@ -65,4 +69,4 @@ assert.deepEqual(deleted, ['alpha-v1.0'], 'only stale caches belonging to this a
 assert.equal(unregisterCalls, 1, 'only this app registration is cleared');
 assert.equal(needsReleaseConvergence('alpha', releaseIdentity(app)), false);
 assert.equal(data.has('pocket-works:shelf:v1'), false, 'user data is never deleted');
-console.log('Release coordinator verification, installed-only updates and scoped cleanup passed.');
+console.log('Release coordinator defers live worker updates, verifies reopened apps and scopes cleanup.');
