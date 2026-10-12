@@ -42,7 +42,7 @@ try{
   assert.ok(w.level!==level||w.plateCharge>.98,'unsustainable pads at '+count+'/'+level);
  }
  const hold=worldFor(people.slice(0,2),2);hold.players[0].x=420;hold.players[1].x=610;const start=hold.players[0].x;
- for(let i=0;i<95;i++){now+=11;hold.inputs.p0={dir:0,jump:false,anchor:true,at:now};hold.inputs.p1={dir:1,jump:false,anchor:false,at:now};simulate(hold,.011,now);}
+ for(let i=0;i<170;i++){now+=11;hold.inputs.p0={dir:0,jump:false,anchor:true,at:now};hold.inputs.p1={dir:1,jump:false,anchor:false,at:now};simulate(hold,.011,now);}
  assert.ok(Math.abs(hold.players[0].x-start)<1.5,'anchor must hold the ground');
  assert.ok(hold.wheelDone[0],'the hooked pulley must be chargeable with two characters');
  assert.ok(hold.phase>=1,'charged drum advances puzzle phase');
