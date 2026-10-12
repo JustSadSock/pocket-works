@@ -201,8 +201,10 @@ function jumpPulse(w,i){
  const expected=order[w.waveIndex];
  if(i!==expected)return;
  if(w.waveIndex>0&&w.waveLeft<=0){w.waveIndex=0;w.waveLeft=0;return;}
- const mark=w.stage.waveSlots[i];
- if(Math.abs(w.players[i].x-mark.x)>58)return;
+ // Formation is checked once at launch. A real elastic impulse moves the group;
+ // requiring everyone to stay exactly on the marks mid-wave would punish physics.
+ if(w.waveIndex===0&&w.stage.waveSlots.some((slot,j)=>
+   Math.abs(w.players[j].x-slot.x)>58||!w.players[j].ground))return;
  // Positions and timing—not arbitrary minimum span—determine a valid relay.
  w.waveIndex++;
  w.waveLeft=1.55;
