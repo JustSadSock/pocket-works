@@ -10,7 +10,7 @@ const presets={
   plum:['#816181','#ebcfdf','M32 7l7 15 17 2-12 13 3 18-15-8-15 8 3-18L8 24l17-2z'],
   stone:['#7b7b6c','#efecde','M32 7 53 21v25L32 57 11 46V21zM11 21l21 14 21-14M32 35v22']
 };
-export const pocketIdProfileUrl='/?pocket-id=login';
+export const pocketIdProfileUrl='/?pocket-id=profile';
 export const escapeIdentityHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DRAWN=/^data:image\/(?:png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
