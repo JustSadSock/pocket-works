@@ -301,7 +301,10 @@ export function installPocketDeck({
   }
   function onClick(event){
     if(event.target.closest('[data-deck-organize]')){
-      organizing=!organizing;chosen.clear();renderOrganize();return;
+      organizing=!organizing;chosen.clear();
+      const options=$('#library-options');
+      if(options)options.open=false;
+      renderOrganize();return;
     }
     if(event.target.closest('[data-deck-organize-cancel]')){exitOrganize();return;}
     if(event.target.closest('[data-deck-select-unsaved]')){
