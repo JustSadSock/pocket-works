@@ -61,6 +61,9 @@ function step(s:State){
  if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+160000;}
  else if(s.phase==='drawing'){
   for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=s.drafts?.[p.id]??[];
+  // In-flight chunks must not survive the deadline: their complete predecessor
+  // is already installed, and keeping them can bloat a full eight-player room.
+  s.draftAssemblies={};s.drafts={};
   s.phase='voting';s.turn=0;s.deadline=now()+25500;
  }else if(s.phase==='voting'){
   // Every completed vote is immediately followed by its own answer.
