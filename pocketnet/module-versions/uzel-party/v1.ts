@@ -46,7 +46,7 @@ function view(s){
 const events=s=>[{type:'state',payload:view(s)}];
 const notice=(id,text)=>[{type:'notice',to:id,payload:text}];
 function reset(s){s.phase='play';s.level=0;s.lit=[];s.positions=positions(s.players);s.last={};s.dashes={};s.revision++;}
-function advance(s){s.level++;s.lit=[];s.positions=positions(s.players);s.last={};s.dashes={};if(s.level>=LEVELS.length){s.level=LEVELS.length-1;s.phase='done';}s.revision++;}
+function advance(s){if(s.level===LEVELS.length-1){s.phase='done';s.revision++;return;}s.level++;s.lit=[];s.positions=positions(s.players);s.last={};s.dashes={};s.revision++;}
 function update(s,id,v){
  const now=Date.now();
  if(now-(s.last[id]||0)<65)return false;
