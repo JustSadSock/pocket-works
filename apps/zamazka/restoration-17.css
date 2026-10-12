@@ -99,3 +99,56 @@
  .verdict-card{animation:none}
  .unveil-top,.unveil-ruler{transition:none}
 }
+
+
+/* ZAMAZKA 1.12 — five paintings, one restoration; calm working-gallery wait. */
+.expert-round{max-width:1560px}
+.expert-intro{display:flex;gap:20px;align-items:end;justify-content:space-between;border-bottom:1px solid #6e5b45;padding-bottom:14px}
+.expert-intro .expert-author{display:flex;align-items:center;gap:10px;margin:5px 0}
+.expert-intro .expert-author h3{margin:0}
+.expert-intro .expert-observers{white-space:nowrap}
+.expert-round .expert-ballot{min-width:0}
+.expert-round .suspect-gallery{align-items:stretch}
+.suspect-gallery .stake-card{min-height:0}
+.suspect-gallery .stake-frame img,.suspect-gallery .stake-frame canvas,.reveal-option-image img,.reveal-option-image canvas{
+ display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#241d16;border:4px ridge #91714c;
+}
+.suspect-gallery .stake-card:focus-within{outline:2px solid #ddb879;outline-offset:2px}
+.suspect-gallery .stake-details{min-height:60px}
+.suspect-gallery .stake-actions{margin-top:auto}
+.suspect-gallery .stake-locked{margin-top:auto}
+.reveal-answer-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:16px 0 22px}
+.reveal-option{min-width:0;padding:5px;background:#312820;border:1px solid #6f5a43;opacity:.58;transition:opacity .2s,border-color .2s}
+.reveal-option.is-answer{opacity:1;background:#594126;border-color:#f0c17e;box-shadow:0 0 0 2px #d6ad69,inset 0 0 0 1px #e8c18b}
+.reveal-option span{display:block;margin-top:6px;color:#bfa789;font:700 10px/1.4 system-ui,sans-serif;letter-spacing:.06em;text-align:center}
+.reveal-option.is-answer span{color:#f3d498}
+.waiting-phase{background:#26211d;color:#f1e2c9}
+.waiting-phase .phase-body{max-width:1430px;margin:auto}
+.waiting-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:26px}
+.waiting-work .step-stamp,.waiting-progress .step-stamp{font:750 10px system-ui,sans-serif;letter-spacing:.19em;color:#d3ad75}
+.waiting-work h3,.waiting-progress h3{font:italic 28px/1.15 Georgia,serif;margin:9px 0;color:#f1dfc1}
+.waiting-work p{font:13px/1.55 system-ui,sans-serif;color:#bfae95}
+.waiting-progress{background:#352a21;padding:21px;border:1px solid #806343;align-self:start}
+.waiting-progress #readyCount{display:block;font:italic 48px/1.3 Georgia,serif;color:#eed3a2;margin:15px 0 3px}
+.waiting-progress .hint{color:#bea991}
+.waiting-roster{display:grid;gap:0;margin-top:16px}
+.waiting-person{display:flex;gap:10px;align-items:center;min-width:0;padding:9px 0;border-top:1px solid #80634377;font:12px system-ui,sans-serif;color:#ead9c2}
+.waiting-person>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.waiting-person strong{font:700 10px system-ui,sans-serif;color:#d2a76d}
+@media(min-width:750px){
+ .waiting-layout{grid-template-columns:minmax(0,1.4fr) minmax(260px,.65fr)}
+ .suspect-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(min-width:1100px){
+ .suspect-gallery{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+ .expert-round .stake-details strong{font-size:14px}
+}
+@media(max-width:600px){
+ .expert-intro{flex-direction:column;align-items:start;gap:4px}
+ .reveal-answer-strip{gap:4px}
+ .reveal-option{padding:2px}
+ .reveal-option span{font-size:8px;letter-spacing:0}
+ .reveal-option-image img,.reveal-option-image canvas{border-width:2px}
+ .waiting-work .unveil-frame{border-width:6px}
+ .waiting-progress{padding:16px}
+}
