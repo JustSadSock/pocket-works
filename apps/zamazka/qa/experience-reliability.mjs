@@ -52,4 +52,34 @@ assert.match(app,/id="pickerPreview"/,'eyedropper preview mounted');
 const render=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
 assert.match(render,/paintCachedFrame/,'editor caches background and completed strokes');
 assert.match(render,/getCoalescedEvents/,'coalesced pointer events supported');
+// Render-cache test: a moving hand must never repaint 60 finished strokes.
+let createdLayers=0;
+function mockCanvas(){
+ const canvas={width:600,height:450,parentElement:{clientWidth:600},getBoundingClientRect(){return {width:600,height:450}}};
+ const state={lineCalls:0};
+ const ctx=new Proxy({canvas,state},{get(obj,key){
+   if(key in obj)return obj[key];
+   if(key==='lineTo')return ()=>{state.lineCalls++};
+   return ()=>{};
+ }});
+ canvas.getContext=()=>ctx;return canvas;
+}
+globalThis.window={devicePixelRatio:1,matchMedia:()=>({matches:false})};
+globalThis.document={createElement(type){assert.equal(type,'canvas');createdLayers++;return mockCanvas()}};
+const cached=Object.create(Editor.prototype);
+Object.assign(cached,{canvas:mockCanvas(),closed:false,zone:{x:150,y:100,w:200,h:200,kind:'round',seed:18},
+ strokes:[{c:'#123456',s:12,t:'brush',p:[[160,120],[180,150]]}],
+ working:null,paintRevision:1});
+const image={naturalWidth:800,naturalHeight:600};
+cached.paintCachedFrame(image);
+const firstLineCount=cached.inkCtx.state.lineCalls;
+const firstLayers=createdLayers;
+assert.ok(firstLineCount>0,'completed paint rendered at least once');
+cached.working={c:'#ff00aa',s:8,t:'brush',p:[[180,150],[200,180]]};
+cached.paintCachedFrame(image);
+assert.equal(createdLayers,firstLayers,'static buffers reused');
+assert.equal(cached.inkCtx.state.lineCalls,firstLineCount,'live pointer does not replay committed strokes');
+cached.paintRevision++;
+cached.paintCachedFrame(image);
+assert.ok(cached.inkCtx.state.lineCalls>firstLineCount,'changing committed painting invalidates ink cache');
 console.log('ZAMAZKA: atomic server receipt, persisted retry, room restoration, point fidelity and cached drawing OK');
