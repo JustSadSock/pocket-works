@@ -17,7 +17,9 @@ export default {
       return new Response(request.method === 'HEAD' ? null : asset.body, { status: asset.status, headers });
     }
     if (url.pathname.startsWith('/pocket-id/')) {
-      return env.POCKET_ID.get(env.POCKET_ID.idFromName('pocket-id-global-v1')).fetch(request);
+      const headers = new Headers(request.headers);
+      for(const key of [...headers.keys()])if(key.startsWith('x-pw-'))headers.delete(key);
+      return env.POCKET_ID.get(env.POCKET_ID.idFromName('pocket-id-global-v1')).fetch(new Request(request,{headers}));
     }
     if (url.pathname.startsWith('/pocket-cloud/')) {
       // The cookie is checked in Pocket ID, never in the browser.
@@ -66,7 +68,7 @@ export default {
       if (url.pathname === '/pocket-social/search' && request.method === 'GET') {
         const lookup = new URL('/pocket-id/directory', url);
         lookup.searchParams.set('q', url.searchParams.get('q') || '');
-        const result = await identity.fetch(new Request(lookup,{headers:{cookie:request.headers.get('cookie')||''}}));
+        const result = await identity.fetch(new Request(lookup,{headers:{cookie:request.headers.get('cookie')||'','x-pw-social-internal':'1'}}));
         if (!result.ok) return result;
         const rows = (await result.json()).users || [];
         headers.set('x-pw-directory', JSON.stringify(rows));
@@ -74,7 +76,7 @@ export default {
       if (url.pathname === '/pocket-social/user' && request.method === 'GET') {
         const lookup = new URL('/pocket-id/public', url);
         lookup.searchParams.set('id', url.searchParams.get('id')||'');
-        const result = await identity.fetch(new Request(lookup,{headers:{cookie:request.headers.get('cookie')||''}}));
+        const result = await identity.fetch(new Request(lookup,{headers:{cookie:request.headers.get('cookie')||'','x-pw-social-internal':'1'}}));
         if (!result.ok) return result;
         const target=(await result.json()).user;
         if (target) headers.set('x-pw-target-user', JSON.stringify(target));
