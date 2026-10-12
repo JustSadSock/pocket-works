@@ -40,7 +40,7 @@
 .commons-wipe{background:#ded0b8;border:1px solid #957b5c;color:#49372a;min-height:34px;font-size:11px;padding:7px 10px}
 .commons-wipe:active{transform:translateY(2px)}
 .commons-note{color:#927d63;font-size:10px}
-@media(min-width:1000px){.exhibition-lobby .commons-desk{grid-column:1/-1;grid-row:8;margin:8px 0 20px;max-width:100%}.exhibition-lobby .commons-frame{max-width:100%}.exhibition-lobby .commons-desk canvas{max-height:450px;object-fit:contain}}
+@media(min-width:1000px){.exhibition-lobby .commons-desk{grid-column:1/-1;grid-row:8;margin:8px 0 20px;max-width:100%}.exhibition-lobby .commons-frame{max-width:100%}.exhibition-lobby .commons-desk canvas{width:min(100%,720px);height:auto;max-height:none;object-fit:fill;margin-inline:auto}}
 @media(max-width:699px){.exhibition-lobby .commons-desk{margin:14px -8px 22px}.commons-frame{border-width:5px;padding:5px}.commons-controls{gap:10px}.commons-palette{justify-content:space-between}.commons-swatch{width:clamp(25px,6vw,34px);height:clamp(25px,6vw,34px)}}
 
 /* Override legacy desktop lobby grid placement; the canvas occupies its own row. */

@@ -1,141 +1,212 @@
-// LIPKI shared deterministic 2D simulation. Positions are logical canvas pixels.
+// LIPKI 1.2 — shared, fixed-step physics. World dimensions are canvas units.
+// Every level has a physical puzzle latch: running to the right is never sufficient.
 const W=1040,H=580,R=19;
 const COLORS=['#ed745b','#68b9ae','#d3aa50','#a49acb'];
-const rect=(x,y,w,h)=>({x,y,w,h});
-const p=(x,y,w,h)=>rect(x,y,w,h);
+const p=(x,y,w,h)=>({x,y,w,h});
+const gate=(x=847)=>p(x,-100,32,610);
+const pad=(x,y=510)=>({x,y});
 const LEVELS=[
- {name:'Первый стежок',hint:'Доберитесь до кармана вместе',floors:[p(0,510,1040,70)],platforms:[p(250,448,144,22),p(485,400,144,22),p(690,448,130,22)]},
- {name:'Врозь не уйти',hint:'Перепрыгните разрывы',floors:[p(0,510,290,70),p(410,510,240,70),p(760,510,280,70)],platforms:[p(300,450,95,22),p(660,456,90,22)]},
- {name:'Липучий подъём',hint:'Цепляйся, прыгай и помогай',floors:[p(0,510,1040,70)],platforms:[p(300,430,130,22),p(460,342,150,22),p(640,400,180,22)]},
- {name:'Две пуговицы',hint:'Встаньте на обе кнопки одновременно',floors:[p(0,510,1040,70)],platforms:[p(210,442,130,22),p(560,436,116,22)],pads:[{x:265,y:510},{x:602,y:510}],gate:rect(782,355,27,155)},
- {name:'Пружинный цех',hint:'Пружины подбросят вас выше',floors:[p(0,510,1040,70)],platforms:[p(310,372,160,22),p(560,284,160,22),p(735,386,110,22)],springs:[{x:220,y:510},{x:485,y:510},{x:675,y:284}]},
- {name:'Катушка',hint:'Толкните катушку на вышитый знак',floors:[p(0,510,1040,70)],platforms:[p(380,437,110,20),p(660,436,110,20)],ball:{x:300,y:466},target:{x:690,y:510},gate:rect(815,355,27,155)},
- {name:'Тканевые острова',hint:'Прыгай, цепляйся, страхуй',floors:[p(0,510,250,70),p(375,510,195,70),p(715,510,325,70)],platforms:[p(270,415,95,20),p(570,362,116,20),p(682,436,102,20)]},
- {name:'Одной командой',hint:'Держите кнопки и открывайте проход',floors:[p(0,510,1040,70)],platforms:[p(210,420,145,22),p(505,376,150,22),p(690,442,115,22)],pads:[{x:285,y:420},{x:575,y:376}],gate:rect(827,321,25,189)},
- {name:'Не упади',hint:'Пружины и липучки спасут',floors:[p(0,510,260,70),p(410,510,140,70),p(735,510,305,70)],platforms:[p(275,434,110,22),p(545,383,170,22)],springs:[{x:206,y:510},{x:485,y:510}]},
- {name:'Большая заплатка',hint:'Никого не оставляйте позади',floors:[p(0,510,1040,70)],platforms:[p(260,416,145,22),p(472,338,145,22),p(667,422,120,22)],pads:[{x:333,y:416},{x:542,y:338}],springs:[{x:184,y:510}],gate:rect(825,305,28,205)}
+ {name:'Первая пуговица',hint:'Нажмите на жёлтую пуговицу',floors:[p(0,510,1040,70)],platforms:[],pads:[pad(425)],gate:gate(800)},
+ {name:'Два стежка',hint:'Встаньте на две пуговицы вместе',floors:[p(0,510,1040,70)],platforms:[],pads:[pad(300),pad(600)],gate:gate()},
+ {name:'Катушка на метке',hint:'Прикатите катушку на кольцо',floors:[p(0,510,1040,70)],platforms:[],ball:{x:285,y:484},target:pad(675),gate:gate()},
+ {name:'Липкие заплатки',hint:'Прилипните к двум отмеченным местам',floors:[p(0,510,1040,70)],platforms:[p(295,430,125,22),p(540,430,150,22)],patches:[pad(350,411),pad(600,411)],gate:gate()},
+ {name:'Пружинный цех',hint:'На пружине меняйте направление в воздухе',floors:[p(0,510,1040,70)],platforms:[],springs:[pad(300),pad(580)],sigils:[pad(330,215),pad(610,215)],gate:gate()},
+ {name:'Один держит',hint:'Катушка на кольце, герой на кнопке',floors:[p(0,510,1040,70)],platforms:[],ball:{x:265,y:484},target:pad(683),pads:[pad(445)],gate:gate()},
+ {name:'Верхний шов',hint:'Прилипните к заплаткам по очереди',floors:[p(0,510,1040,70)],platforms:[p(298,431,142,22),p(515,415,92,22),p(565,350,142,22)],patches:[pad(365,412),pad(635,331)],relay:true,gate:gate()},
+ {name:'Мягкие острова',hint:'Перелетите разрывы и зажгите звёзды',floors:[p(0,510,275,70),p(405,510,154,70),p(695,510,345,70)],platforms:[p(302,435,88,22),p(584,432,94,22)],springs:[pad(237),pad(532)],sigils:[pad(335,295),pad(630,295)],gate:gate(849)},
+ {name:'Разные высоты',hint:'Удержите две кнопки одновременно',floors:[p(0,510,1040,70)],platforms:[p(283,438,135,22),p(445,420,91,22),p(593,394,145,22)],pads:[pad(350,438),pad(664,394)],gate:gate()},
+ {name:'Последний узор',hint:'Прилипните, поймайте звезду, прикатите катушку',floors:[p(0,510,1040,70)],platforms:[p(302,405,144,22)],patches:[pad(365,386)],springs:[pad(500)],sigils:[pad(575,270)],ball:{x:250,y:484},target:pad(735),gate:gate(868)}
 ];
-const clamp=(a,b,c)=>Math.max(b,Math.min(c,a));
-const boxHit=(x,y,r,o)=>x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const overlap=(x,y,r,s)=>x+r>s.x&&x-r<s.x+s.w&&y+r>s.y&&y-r<s.y+s.h;
+const isTouching=(q,x,y,nearX=41,nearY=30)=>Math.abs(q.x-x)<nearX&&Math.abs(q.y-y)<nearY;
+function spawnX(i){return 75+i*46}
 function createWorld(members,level=0){
- const ids=members.map((m,i)=>({id:m.id,name:m.name||'Игрок',x:80+i*49,y:470,vx:0,vy:0,ground:false,coyote:0,jumpHeld:false,stickHeld:false,stuck:null,squash:0,face:1,dead:0}));
- return {level:clamp(level|0,0,LEVELS.length-1),players:ids,inputs:{},pads:[],gateOpen:false,ball:null,clock:0,revision:0,won:false,finished:false,falls:0};
+ return {level:clamp(level|0,0,LEVELS.length-1),players:members.map((m,i)=>({
+  id:m.id,name:m.name||'Игрок',x:spawnX(i),y:460,vx:0,vy:0,ground:false,coyote:0,
+  jumpHeld:false,stickHeld:false,stuck:null,squash:0,face:1,dead:0,springWait:0
+ })),inputs:{},pads:[],patches:[],sigils:[],gateOpen:false,ball:null,targetDone:false,clock:0,revision:0,finished:false,falls:0};
 }
 function resetLevel(w,level=w.level){
- w.level=clamp(level|0,0,LEVELS.length-1);w.pads=[];w.gateOpen=false;w.clock=0;w.won=false;w.revision++;
- const d=LEVELS[w.level];w.ball=d.ball?{x:d.ball.x,y:d.ball.y,vx:0,vy:0,r:26}:null;
- w.players.forEach((q,i)=>{q.x=80+i*49;q.y=467;q.vx=0;q.vy=0;q.ground=false;q.coyote=0;q.jumpHeld=false;q.stickHeld=false;q.stuck=null;q.squash=0;q.dead=0;});
+ w.level=clamp(level|0,0,LEVELS.length-1);
+ const d=LEVELS[w.level];
+ w.pads=(d.pads||[]).map(()=>false);w.patches=(d.patches||[]).map(()=>false);
+ w.sigils=(d.sigils||[]).map(()=>false);
+ w.gateOpen=false;w.targetDone=false;w.clock=0;w.inputs={};w.finished=false;w.revision++;
+ w.ball=d.ball?{x:d.ball.x,y:d.ball.y,vx:0,vy:0,r:26}:null;
+ w.players.forEach((q,i)=>Object.assign(q,{x:spawnX(i),y:460,vx:0,vy:0,
+  ground:false,coyote:0,jumpHeld:false,stickHeld:false,stuck:null,squash:0,dead:0,springWait:0}));
 }
 function initialize(members,level=0){const w=createWorld(members,level);resetLevel(w,level);return w}
-function spawn(w,q){let n=w.players.indexOf(q);Object.assign(q,{x:80+n*49,y:467,vx:0,vy:0,stuck:null,coyote:0,ground:false,squash:1,dead:.4});w.falls++;}
-function getSolids(w){
- const d=LEVELS[w.level],all=[...d.floors,...d.platforms];
- if(d.gate&&!w.gateOpen)all.push(d.gate);
- return all;
+function spawn(w,q){
+ const i=w.players.indexOf(q);Object.assign(q,{x:spawnX(i),y:460,vx:0,vy:0,
+  ground:false,coyote:0,stuck:null,jumpHeld:false,stickHeld:false,squash:1,dead:.35,springWait:0});
+ w.falls++;
 }
+function solids(w){const d=LEVELS[w.level];return w.gateOpen?[...d.floors,...d.platforms]:[...d.floors,...d.platforms,d.gate]}
 function findGrip(w,q){
- const solids=getSolids(w);
- let best=null,dist=36;
- for(const o of solids){
-  const x=clamp(q.x,o.x,o.x+o.w),y=clamp(q.y,o.y,o.y+o.h),d=Math.hypot(q.x-x,q.y-y);
-  if(d<dist){dist=d;best={kind:'world',x:q.x,y:q.y};}
+ let best=null,bestDist=32;
+ for(const s of solids(w)){
+  const x=clamp(q.x,s.x,s.x+s.w),y=clamp(q.y,s.y,s.y+s.h),dist=Math.hypot(q.x-x,q.y-y);
+  if(dist<bestDist){best={kind:'world',x:q.x,y:q.y};bestDist=dist}
  }
- for(const o of w.players)if(o!==q&&(!o.stuck||o.stuck.id!==q.id)){
-  const d=Math.hypot(q.x-o.x,q.y-o.y);
-  if(d<55&&d<dist+19){best={kind:'player',id:o.id,dx:clamp(q.x-o.x,-50,50),dy:clamp(q.y-o.y,-50,50)};dist=d-19;}
+ for(const other of w.players){
+  if(other===q||other.stuck?.id===q.id)continue;
+  const dist=Math.hypot(q.x-other.x,q.y-other.y);
+  if(dist<48&&dist-17<bestDist){
+   best={kind:'player',id:other.id,dx:clamp(q.x-other.x,-43,43),dy:clamp(q.y-other.y,-43,43)};
+   bestDist=dist-17;
+  }
  }
  return best;
 }
-function resolvePlayer(q,ox,oy,solids){
- q.ground=false;
- // Resolve all static rectangles by axis, allowing landing, ceiling bounces and wall contact.
- for(const s of solids){
-  if(!boxHit(q.x,q.y,R,s))continue;
-  const wasAbove=oy+R<=s.y+8,wasBelow=oy-R>=s.y+s.h-8;
-  if(wasAbove&&q.vy>=0){q.y=s.y-R;q.vy=0;q.ground=true;q.squash=Math.max(q.squash,.33);}
-  else if(wasBelow&&q.vy<0){q.y=s.y+s.h+R;q.vy=0;}
-  else if(ox<=s.x){q.x=s.x-R;if(q.vx>0)q.vx=0;}
-  else if(ox>=s.x+s.w){q.x=s.x+s.w+R;if(q.vx<0)q.vx=0;}
-  else if(q.y<s.y+s.h/2){q.y=s.y-R;q.vy=0;q.ground=true;}
-  else {q.y=s.y+s.h+R;q.vy=0;}
+function moveTo(v,target,amount){
+ return target>v?Math.min(target,v+amount):Math.max(target,v-amount);
+}
+function movePlayer(q,step,all){
+ const ox=q.x,oy=q.y;
+ q.x+=q.vx*step;
+ for(const s of all){
+  if(!overlap(q.x,q.y,R,s))continue;
+  // Only obstruct horizontally if the player's vertical extent crosses
+  // the interior, not while resting directly above a platform.
+  if(q.y+R<=s.y+2||q.y-R>=s.y+s.h-2)continue;
+  if(ox+R<=s.x+5&&q.vx>0){q.x=s.x-R;q.vx=0}
+  else if(ox-R>=s.x+s.w-5&&q.vx<0){q.x=s.x+s.w+R;q.vx=0}
  }
+ q.x=clamp(q.x,R,W-R);
+ q.y+=q.vy*step;
+ q.ground=false;
+ for(const s of all){
+  if(!overlap(q.x,q.y,R,s))continue;
+  if(oy+R<=s.y+5&&q.vy>=0){
+   q.y=s.y-R;q.vy=0;q.ground=true;q.squash=Math.max(.3,q.squash);
+  }else if(oy-R>=s.y+s.h-5&&q.vy<0){q.y=s.y+s.h+R;q.vy=0}
+  else if(s.y<=-50){ // Solid gate spans the complete height; never teleport through.
+   if(q.x<s.x+s.w/2)q.x=s.x-R;else q.x=s.x+s.w+R;
+   q.vx=0;
+  }else if(q.y<s.y+s.h/2){
+   q.y=s.y-R;q.vy=0;q.ground=true;
+  }else{q.y=s.y+s.h+R;q.vy=0}
+ }
+ q.y=Math.max(R,q.y);
+}
+function moveBall(w,step,all){
+ const b=w.ball;if(!b)return;
+ const ox=b.x,oy=b.y;
+ b.vy=clamp(b.vy+980*step,-700,640);
+ b.vx=moveTo(b.vx,0,(Math.abs(b.vy)<12?105:45)*step);
+ b.x+=b.vx*step;
+ for(const s of all)if(overlap(b.x,b.y,b.r,s)){
+  if(ox+b.r<=s.x+5&&b.vx>=0){b.x=s.x-b.r;b.vx=0}
+  else if(ox-b.r>=s.x+s.w-5&&b.vx<=0){b.x=s.x+s.w+b.r;b.vx=0}
+ }
+ b.y+=b.vy*step;
+ for(const s of all)if(overlap(b.x,b.y,b.r,s)){
+  if(oy+b.r<=s.y+7&&b.vy>=0){b.y=s.y-b.r;b.vy=0}
+  else if(oy-b.r>=s.y+s.h-7&&b.vy<=0){b.y=s.y+s.h+b.r;b.vy=0}
+  else if(s.y<-50){b.x=b.x<s.x+s.w/2?s.x-b.r:s.x+s.w+b.r;b.vx=0}
+  else if(b.y<s.y+s.h/2){b.y=s.y-b.r;b.vy=0}
+  else{b.y=s.y+s.h+b.r;b.vy=0}
+ }
+ for(const q of w.players){
+  const dx=b.x-q.x,dy=b.y-q.y,dist=Math.hypot(dx,dy)||1,limit=b.r+R;
+  if(dist<limit&&Math.abs(dy)<35){
+   const side=dx>=0?1:-1;
+   b.x+=side*(limit-dist)*.88;
+   b.vx=clamp(b.vx+q.vx*.18+side*26*step,-155,155);
+   q.vx*=.86;
+  }
+ }
+ b.x=clamp(b.x,b.r,W-b.r);
+ if(b.y>H+70){const d=LEVELS[w.level];Object.assign(b,{x:d.ball.x,y:d.ball.y,vx:0,vy:0});}
+}
+function updateGoals(w){
+ const d=LEVELS[w.level];
+ if(d.pads)w.pads=d.pads.map(s=>w.players.some(q=>
+  Math.abs(q.x-s.x)<36&&Math.abs(q.y+R-s.y)<13&&q.ground));
+ if(d.patches)for(let i=0;i<d.patches.length;i++){
+  if(d.relay&&i>0&&!w.patches[i-1])continue;
+  if(w.patches[i])continue;
+  const s=d.patches[i];
+  if(w.players.some(q=>q.stuck?.kind==='world'&&isTouching(q,s.x,s.y,58,42)))w.patches[i]=true;
+ }
+ if(d.sigils)for(let i=0;i<d.sigils.length;i++){
+  if(w.sigils[i])continue;const s=d.sigils[i];
+  if(w.players.some(q=>isTouching(q,s.x,s.y,45,47)))w.sigils[i]=true;
+ }
+ if(d.target&&w.ball&&Math.abs(w.ball.x-d.target.x)<32&&Math.abs(w.ball.y-(d.target.y-w.ball.r))<13)
+  w.targetDone=true;
+ const buttons=!d.pads||w.pads.every(Boolean);
+ const tags=!d.patches||w.patches.every(Boolean);
+ const stars=!d.sigils||w.sigils.every(Boolean);
+ const ball=!d.target||w.targetDone;
+ if(buttons&&tags&&stars&&ball)w.gateOpen=true;
 }
 function simulate(w,dt){
  if(w.finished)return;
- dt=clamp(Number(dt)||0,0,.12);
+ dt=clamp(Number(dt)||0,0,.1);
  let remaining=dt;
  while(remaining>0){
-  const step=Math.min(.016,remaining);remaining-=step;w.clock+=step;
-  const solids=getSolids(w),d=LEVELS[w.level];
+  const step=Math.min(.0125,remaining);remaining-=step;w.clock+=step;
+  const d=LEVELS[w.level],all=solids(w);
   for(const q of w.players){
    const input=w.inputs[q.id]||{},dir=clamp(Number(input.x)||0,-1,1);
    const jump=input.jump===true,stick=input.stick===true;
-   q.dead=Math.max(0,q.dead-step);q.squash=Math.max(0,q.squash-step*3.6);
+   q.dead=Math.max(0,q.dead-step);q.squash=Math.max(0,q.squash-step*2.2);
+   q.springWait=Math.max(0,(q.springWait||0)-step);
    if(stick&&!q.stickHeld){
-    if(q.stuck){q.stuck=null;q.vy=Math.min(q.vy,-80);}
-    else {const grip=findGrip(w,q);if(grip){q.stuck=grip;q.vx=0;q.vy=0;q.squash=.8;}}
+    if(q.stuck){q.stuck=null;q.vy=Math.min(q.vy,-40)}
+    else{const grip=findGrip(w,q);if(grip){q.stuck=grip;q.vx=0;q.vy=0;q.squash=.7}}
    }
    q.stickHeld=stick;
    if(jump&&!q.jumpHeld&&(q.ground||q.coyote>0||q.stuck)){
-    q.stuck=null;q.vy=-535;q.y-=2;q.ground=false;q.coyote=0;q.squash=.65;
+    q.stuck=null;q.vy=-505;q.y-=2;q.ground=false;q.coyote=0;q.squash=.65;
    }
    q.jumpHeld=jump;
    if(q.stuck?.kind==='world'){
-    // Gentle crawling along a stuck surface: player can reposition while glued.
-    q.x+=dir*95*step;q.y-=Number(input.up===true)*68*step;
-    const s=findGrip(w,q);if(!s||s.kind!=='world')q.stuck=null;
-    q.vx=0;q.vy=0;continue;
+    q.x=clamp(q.x+dir*82*step,R,W-R);
+    if(input.up)q.y=Math.max(R,q.y-78*step);
+    if(findGrip(w,q)?.kind!=='world')q.stuck=null;
+    q.vx=0;q.vy=0;q.ground=false;
+    continue;
    }
    if(q.stuck?.kind==='player')continue;
-   q.face=dir>0.1?1:dir<-.1?-1:q.face;
-   const desired=dir*235,rate=q.ground?1900:930;
-   q.vx+=clamp(desired-q.vx,-rate*step,rate*step);
-   q.vy=clamp(q.vy+1150*step,-750,680);
-   const ox=q.x,oy=q.y;
-   q.x+=q.vx*step;resolvePlayer(q,ox,oy,solids);
-   const iy=q.y;q.y+=q.vy*step;resolvePlayer(q,q.x,iy,solids);
-   q.coyote=q.ground?.095:Math.max(0,q.coyote-step);
-   if(q.x<R){q.x=R;q.vx=0;}if(q.x>W-R){q.x=W-R;q.vx=0;}
-   if(q.y>H+80)spawn(w,q);
-   for(const s of d.springs||[]){
-    if(Math.abs(q.x-s.x)<41&&Math.abs(q.y+R-s.y)<16&&q.vy>=-20){q.vy=-790;q.ground=false;q.coyote=0;q.squash=1;}
+   if(dir)q.face=dir>0?1:-1;
+   // Soft inertia: smooth acceleration, a little air steering and gradual stop.
+   const speed=183,accel=q.ground?570:385,brake=q.ground?660:245;
+   if(dir)q.vx=moveTo(q.vx,dir*speed,accel*step);
+   else q.vx=moveTo(q.vx,0,brake*step);
+   q.vy=clamp(q.vy+1020*step,-810,685);
+   const prevGround=q.ground;
+   movePlayer(q,step,all);
+   q.coyote=q.ground?.115:prevGround?.115:Math.max(0,q.coyote-step);
+   if(q.ground&&q.springWait===0){
+    for(const spring of d.springs||[])if(Math.abs(q.x-spring.x)<41&&Math.abs(q.y+R-spring.y)<10){
+     q.vy=-760;q.y-=2;q.ground=false;q.coyote=0;q.squash=1;q.springWait=.24;
+     break;
+    }
    }
+   if(q.y>H+65)spawn(w,q);
   }
-  // Anchored bodies follow their partner while preserving the offset.
-  for(let i=0;i<2;i++)for(const q of w.players){
+  // Body-to-body attachments: the other player can carry a friend.
+  for(const q of w.players){
    if(q.stuck?.kind!=='player')continue;
    const anchor=w.players.find(a=>a.id===q.stuck.id);
-   if(!anchor||anchor===q){q.stuck=null;continue;}
-   const wantedX=anchor.x+q.stuck.dx,wantedY=anchor.y+q.stuck.dy;
-   q.vx=(wantedX-q.x)/Math.max(step,.001);q.vy=(wantedY-q.y)/Math.max(step,.001);
-   q.x=wantedX;q.y=wantedY;q.ground=false;q.coyote=0;
+   if(!anchor||anchor===q){q.stuck=null;continue}
+   const tx=anchor.x+q.stuck.dx,ty=anchor.y+q.stuck.dy;
+   q.vx=(tx-q.x)/step;q.vy=(ty-q.y)/step;
+   q.x=clamp(tx,R,W-R);q.y=Math.max(R,ty);q.ground=false;
   }
-  // Friendly bodies do not overlap; unattached characters push one another.
   for(let i=0;i<w.players.length;i++)for(let j=i+1;j<w.players.length;j++){
-   const a=w.players[i],b=w.players[j];if(a.stuck?.kind==='player'||b.stuck?.kind==='player')continue;
+   const a=w.players[i],b=w.players[j];
+   if(a.stuck?.kind==='player'||b.stuck?.kind==='player')continue;
    const dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||1;
-   if(dist<R*1.7){let n=(R*1.7-dist)*.5;a.x-=dx/dist*n;b.x+=dx/dist*n;}
+   if(dist<2*R-3){const n=(2*R-3-dist)*.5;a.x-=dx/dist*n;b.x+=dx/dist*n}
   }
-  if(w.ball){
-   const b=w.ball;const ox=b.x,oy=b.y;b.vy+=1060*step;b.x+=b.vx*step;b.y+=b.vy*step;b.vx*=Math.exp(-1.2*step);
-   for(const s of solids)if(boxHit(b.x,b.y,b.r,s)){
-    if(oy+b.r<=s.y+10&&b.vy>=0){b.y=s.y-b.r;b.vy=0;b.vx*=.97;}
-    else if(ox+b.r<=s.x){b.x=s.x-b.r;b.vx=-Math.abs(b.vx)*.3;}
-    else if(ox-b.r>=s.x+s.w){b.x=s.x+s.w+b.r;b.vx=Math.abs(b.vx)*.3;}
-   }
-   for(const q of w.players){
-    const dx=b.x-q.x,dy=b.y-q.y,dd=Math.hypot(dx,dy)||1,limit=b.r+R;
-    if(dd<limit&&dd>0){const f=(limit-dd)/dd;b.x+=dx*f*.9;b.y+=dy*f*.35;b.vx+=q.vx*.48+dx/dd*50; }
-   }
-   if(b.y>H+60){b.x=d.ball.x;b.y=d.ball.y;b.vx=0;b.vy=0;}
-  }
-  if(d.target&&w.ball&&Math.abs(w.ball.x-d.target.x)<45&&Math.abs(w.ball.y-(d.target.y-26))<24)w.gateOpen=true;
-  if(d.pads&&!w.gateOpen){
-   w.pads=d.pads.map(pad=>w.players.some(q=>Math.abs(q.x-pad.x)<39&&Math.abs((q.y+R)-pad.y)<22));
-   if(w.pads.every(Boolean))w.gateOpen=true;
-  }
-  if(w.players.length&&w.players.every(q=>q.x>955&&q.y<545)){
-   w.won=true; if(w.level===LEVELS.length-1){w.finished=true;}
+  moveBall(w,step,all);updateGoals(w);
+  if(w.gateOpen&&w.players.length&&w.players.every(q=>q.x>951&&q.y<550)){
+   if(w.level===LEVELS.length-1){w.finished=true;}
    else resetLevel(w,w.level+1);
    return;
   }
@@ -143,7 +214,15 @@ function simulate(w,dt){
  w.revision++;
 }
 function getView(w){
- return {level:w.level,players:w.players.map(q=>({id:q.id,name:q.name,x:+q.x.toFixed(1),y:+q.y.toFixed(1),vx:+q.vx.toFixed(1),vy:+q.vy.toFixed(1),face:q.face,stuck:q.stuck,squash:+q.squash.toFixed(2),dead:q.dead})),ball:w.ball?{x:w.ball.x,y:w.ball.y,r:w.ball.r}:null,pads:w.pads,gateOpen:w.gateOpen,clock:w.clock,falls:w.falls,finished:w.finished,revision:w.revision};
+ const d=LEVELS[w.level];
+ const done=(w.patches.filter(Boolean).length)+(w.sigils.filter(Boolean).length)+(w.targetDone?1:0)+
+  ((d.pads&&w.pads.every(Boolean))?d.pads.length:0);
+ const total=(d.pads?.length||0)+(d.patches?.length||0)+(d.sigils?.length||0)+(d.target?1:0);
+ return {level:w.level,players:w.players.map(q=>({id:q.id,name:q.name,x:+q.x.toFixed(1),y:+q.y.toFixed(1),
+  vx:+q.vx.toFixed(1),vy:+q.vy.toFixed(1),face:q.face,stuck:q.stuck,squash:+q.squash.toFixed(2),dead:q.dead})),
+  ball:w.ball?{x:+w.ball.x.toFixed(1),y:+w.ball.y.toFixed(1),r:w.ball.r}:null,
+  pads:w.pads,patches:w.patches,sigils:w.sigils,targetDone:w.targetDone,
+  completed:done,total,gateOpen:w.gateOpen,clock:w.clock,falls:w.falls,finished:w.finished,revision:w.revision};
 }
 
 export const MIN_PLAYERS=2,MAX_PLAYERS=4;

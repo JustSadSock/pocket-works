@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "current": "v7",
+    "current": "v8",
     "versions": [
       "v1",
       "v2",
@@ -8,7 +8,8 @@
       "v4",
       "v5",
       "v6",
-      "v7"
+      "v7",
+      "v8"
     ]
   },
   "flagpost": {
@@ -38,9 +39,10 @@
     ]
   },
   "lipki": {
-    "current": "v1",
+    "current": "v2",
     "versions": [
-      "v1"
+      "v1",
+      "v2"
     ]
   },
   "kromka-duel": {

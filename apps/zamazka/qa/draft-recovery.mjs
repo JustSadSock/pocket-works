@@ -36,5 +36,5 @@ send(friend,{type:'pulse'});
 assert.equal(state.phase,'voting','timeout advances without a confirm click');
 assert.deepEqual(JSON.stringify(state.assignments[host.id].strokes),JSON.stringify(line),'last server draft survives timeout');
 assert.deepEqual(JSON.stringify(state.assignments[friend.id].strokes),JSON.stringify([]),'truly blank artist stays blank');
-assert.equal(state.drafts[host.id].length,1,'backup persists through voting');
+assert.equal(Object.keys(state.drafts).length,0,'backup is folded into final assignment and duplicate room storage is released');
 console.log('ZAMAZKA: private draft, stale rejection, validation and timeout recovery OK');

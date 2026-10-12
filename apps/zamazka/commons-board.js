@@ -21,7 +21,14 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  let strokeNumber=0,seq=0,disposed=false;
  const point=event=>{
    const rect=canvas.getBoundingClientRect();
-   return [Math.max(0,Math.min(960,Math.round((event.clientX-rect.left)*960/rect.width))),Math.max(0,Math.min(600,Math.round((event.clientY-rect.top)*600/rect.height)))];
+   // Map the actual canvas bitmap, not a letterboxed object-fit frame.
+   // Account for CSS borders if a future theme adds them.
+   const style=getComputedStyle(canvas);
+   const left=Number.parseFloat(style.borderLeftWidth)||0,top=Number.parseFloat(style.borderTopWidth)||0;
+   const right=Number.parseFloat(style.borderRightWidth)||0,bottom=Number.parseFloat(style.borderBottomWidth)||0;
+   const width=Math.max(1,rect.width-left-right),height=Math.max(1,rect.height-top-bottom);
+   return [Math.max(0,Math.min(COMMONS_SIZE.width,Math.round((event.clientX-rect.left-left)*COMMONS_SIZE.width/width))),
+     Math.max(0,Math.min(COMMONS_SIZE.height,Math.round((event.clientY-rect.top-top)*COMMONS_SIZE.height/height)))];
  };
  const clearTimer=()=>{if(timer!==null){clearTimeout(timer);timer=null}};
  function flush(){
@@ -47,7 +54,7 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  }
  function down(event){
    if(disposed||pointer!==null||event.button>0)return;
-   event.preventDefault();pointer=event.pointerId;canvas.setPointerCapture(pointer);
+   event.preventDefault();pointer=event.pointerId;try{canvas.setPointerCapture(pointer)}catch{}
    active='s'+Date.now().toString(36).slice(-7)+(strokeNumber++).toString(36);
    seq=0;last=null;pending=[];const pt=point(event);pending.push(pt);
    paintBoardDelta(canvas,{k:active,q:seq,c:color,s:weight,p:[pt],revision});
@@ -68,6 +75,10 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  }
  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);
  canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+ const lost=e=>{if(pointer===e.pointerId)up(e)};
+ canvas.addEventListener('lostpointercapture',lost);
+ const release=e=>{if(pointer===e.pointerId)up(e)};
+ window.addEventListener('pointerup',release);window.addEventListener('pointercancel',release);
  palette.addEventListener('click',event=>{
    const b=event.target.closest('[data-commons-color]');if(!b)return;
    color=b.dataset.commonsColor;
@@ -76,5 +87,5 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  size.addEventListener('input',()=>{weight=Number(size.value)});
  if(!canClear)host.querySelector('[data-action="board-clear"]')?.remove();
  reset(snapshot);
- return {accept,reset,get revision(){return revision},dispose(){disposed=true;clearTimer();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up)}};
+ return {accept,reset,get revision(){return revision},dispose(){disposed=true;clearTimer();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);canvas.removeEventListener('lostpointercapture',lost);window.removeEventListener('pointerup',release);window.removeEventListener('pointercancel',release)}};
 }
