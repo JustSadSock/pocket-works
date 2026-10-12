@@ -2,17 +2,24 @@ import { expect, test } from '@playwright/test';
 import { attachCriticalScreenshot, assertNoHorizontalOverflow, monitorUnexpectedBrowserOutput } from './helpers';
 
 async function openDeck(page: import('@playwright/test').Page) {
-  // Static production-like preview has no Pocket ID / Pocket Social worker.
-  // Stub the two account discovery surfaces instead of logging spurious 404s.
-  await page.route('**/pocket-id/me',route=>route.fulfill({
-    status:200,contentType:'application/json',body:JSON.stringify({user:null})
-  }));
-  await page.route('**/pocket-id/config',route=>route.fulfill({
-    status:200,contentType:'application/json',body:JSON.stringify({googleEnabled:false,avatars:[]})
-  }));
-  await page.route('**/pocket-social/me',route=>route.fulfill({
-    status:200,contentType:'application/json',body:JSON.stringify({profile:null})
-  }));
+  // The static preview has no Cloudflare account endpoints. WebKit can send
+  // Service Worker-controlled fetches before Playwright's network routes,
+  // so intercept only these three bootstrap calls in the document itself.
+  await page.addInitScript(()=>{
+    const original=window.fetch.bind(window);
+    window.fetch=(input,init)=>{
+      const value=typeof input==='string'?input:input instanceof Request?input.url:String(input);
+      let pathname='';
+      try{pathname=new URL(value,location.href).pathname;}catch{return original(input,init);}
+      const response=pathname==='/pocket-id/me'?{user:null}:
+        pathname==='/pocket-id/config'?{googleEnabled:false,avatars:[]}:
+        pathname==='/pocket-social/me'?{profile:null}:null;
+      if(response!==null)return Promise.resolve(new Response(JSON.stringify(response),{
+        status:200,headers:{'content-type':'application/json'}
+      }));
+      return original(input,init);
+    };
+  });
   await page.goto('/', {waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveClass(/has-pocket-deck/);
   await expect(page.locator('#deck-bottom-nav')).toBeVisible();
