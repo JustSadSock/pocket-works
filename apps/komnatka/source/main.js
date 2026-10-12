@@ -8,7 +8,7 @@ import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.1.0',releaseNotes:['Первая кукольная комната: мебель, отделка, свет, сохранение и фотографии.']});
+registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.1.1',releaseNotes:['Исправлены сквозные поверхности мебели, обновлены листва, окно и подушки; цвет и поворот выбираются до установки.']});
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
@@ -94,32 +94,66 @@ function renderFinish(){
  ui.finish.querySelectorAll('[data-pattern]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.pattern=el.dataset.pattern);sound(500);}));
  ui.finish.querySelectorAll('[data-floor]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.floor=el.dataset.floor);sound(500);}));
 }
+function placementPalette(){
+ const container=$('placementControls');
+ container.hidden=!pending;
+ if(!pending)return;
+ const {proto,type}=pending;
+ $('placementTitle').textContent='Подготовить: '+byType[type].name.toLowerCase();
+ $('previewRotate').disabled=byType[type].layer==='wall';
+ $('placementColors').innerHTML=COLORS.map(c=>'<button type="button" class="color-dot '+(proto.color===c?'picked':'')+'" style="--paint:'+c+'" data-preview-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('');
+ $('placementColors').querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{
+  if(!pending)return;pending.proto.color=button.dataset.previewColor;
+  const enabled=pending.previewReady;
+  pending.ghost.dispose(false,false);
+  pending.ghost=makeItem(scene,pending.proto);
+  pending.ghost.getChildMeshes(false).forEach(mesh=>{mesh.isPickable=false;mesh.visibility=pending.valid?1:.5;});
+  pending.ghost.setEnabled(Boolean(enabled));
+  placementPalette();sound(540);
+ }));
+}
 function beginPlacement(type){
  if(!ready)return;
+ if(pending)cancelPending(false);
  selectedId=null;hideSelection();
  const proto={id:'preview',type,x:0,z:0,y:0,rot:0,color:type==='rug'?'#d9ad97':type==='plant'?'#c79078':COLORS[2],wall:'back',support:null,variant:0};
  if(byType[type].layer==='wall'){proto.z=-3.91;proto.y=2.58;}
- pending={type,proto,ghost:makeItem(scene,proto),valid:false};
- pending.ghost.getChildMeshes().forEach(mesh=>{mesh.isPickable=false;if(mesh.material&&mesh.material.alpha!==undefined){/* Keep original materials for readable silhouettes. */}});
- ui.hint.textContent=byType[type].layer==='wall'?'Нажми на стену, чтобы повесить':'Нажми на свободное место в комнате';
- ui.hint.classList.add('visible');showCatalog();sound(680,'sine',.06);
+ pending={type,proto,ghost:makeItem(scene,proto),valid:false,previewReady:false};
+ pending.ghost.getChildMeshes(false).forEach(mesh=>{mesh.isPickable=false;});
+ pending.ghost.setEnabled(false); // No ghost bleeding through the furnished room until a valid target is known.
+ ui.hint.textContent=byType[type].layer==='wall'?'Коснись стены, чтобы повесить':'Коснись места в комнате, чтобы поставить';
+ ui.hint.classList.add('visible');placementPalette();showCatalog();sound(680,'sine',.06);
 }
 function cancelPending(show=true){
- if(!pending)return;pending.ghost?.dispose(false,false);pending=null;
+ if(!pending)return;
+ pending.ghost?.dispose(false,false);pending=null;placementPalette();
  if(show)toast('Добавление отменено');
  ui.hint.classList.remove('visible');showCatalog();
 }
 function updateGhost(ev){
  if(!pending)return;
  const target=pickTarget(ev,pending.proto);
- if(target){Object.assign(pending.proto,target);pending.ghost.position.set(target.x,target.y,target.z);pending.ghost.rotation.y=target.rot*Math.PI/2;
-  pending.valid=valid(state,pending.proto,'preview');
-  pending.ghost.scaling.setAll(pending.valid?1.04:1);
-  const meshes=pending.ghost.getChildMeshes(false);
-  for(const mesh of meshes){mesh.visibility=pending.valid?.70:.35;}
- }else{pending.valid=false;pending.ghost.getChildMeshes(false).forEach(mesh=>mesh.visibility=.3);}
+ if(!target){
+  pending.valid=false;pending.previewReady=false;pending.ghost.setEnabled(false);
+  return;
+ }
+ Object.assign(pending.proto,target);
+ pending.valid=valid(state,pending.proto,'preview');
+ pending.previewReady=true;
+ pending.ghost.setEnabled(true);
+ pending.ghost.position.set(target.x,target.y,target.z);
+ pending.ghost.rotation.y=target.rot*Math.PI/2;
+ pending.ghost.scaling.setAll(pending.valid?1.025:1);
+ for(const mesh of pending.ghost.getChildMeshes(false))mesh.visibility=pending.valid?1:.46;
 }
-function hideSelection(){ui.selected.hidden=true;}
+function rotatePlacement(){
+ if(!pending||byType[pending.type].layer==='wall')return;
+ pending.proto.rot=(pending.proto.rot+1)%4;
+ pending.valid=pending.previewReady&&valid(state,pending.proto,'preview');
+ pending.ghost.rotation.y=pending.proto.rot*Math.PI/2;
+ pending.ghost.getChildMeshes(false).forEach(mesh=>mesh.visibility=pending.valid?1:.46);
+ sound(535,'triangle',.07);
+}
 function select(id) {
  if(pending)cancelPending(false);
  selectedId=state.items.some(x=>x.id===id)?id:null;
@@ -209,7 +243,7 @@ function endPointer(ev) {
    const proto={...pending.proto,id:nextId()};
    const before=JSON.stringify(state);
    state.items.push(proto);
-   pending.ghost.dispose(false,false);pending=null;
+   cancelPending(false);
    record(before);refresh();select(proto.id);ui.hint.classList.remove('visible');sound(720,'triangle',.12);
    toast('Предмет на месте');
   }else {sound(180,'triangle',.10);toast(byType[pending.type].tabletop?'Нужна свободная поверхность стола':'Выбери свободное место');}
@@ -267,11 +301,14 @@ function addEvents(){
  $('confirmReset').addEventListener('click',()=>{const before=JSON.stringify(state);state=starter();selectedId=null;cancelPending(false);hideSelection();record(before);refresh();$('resetDialog').hidden=true;toast('Комната восстановлена');sound(600);});
  $('cancelPlacement').addEventListener('click',()=>cancelPending(false));
  $('cancelPlacementMobile').addEventListener('click',()=>cancelPending(false));
+ $('closePlacement').addEventListener('click',()=>cancelPending(false));
+ $('previewRotate').addEventListener('click',rotatePlacement);
  document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'){if(!$('resetDialog').hidden)$('resetDialog').hidden=true;else if(pending)cancelPending(false);else{selectedId=null;hideSelection();}}
   if(ev.target instanceof HTMLInputElement)return;
   if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='z'){ev.preventDefault();ev.shiftKey?redo():undo();}
   else if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='y'){ev.preventDefault();redo();}
+  else if(ev.key.toLowerCase()==='r'&&pending)rotatePlacement();
   else if(ev.key.toLowerCase()==='r'&&selectedId)rotateSelected();
   else if((ev.key==='Delete'||ev.key==='Backspace')&&selectedId){ev.preventDefault();removeSelected();}
  });
