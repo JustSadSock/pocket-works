@@ -1,19 +1,22 @@
 // Shared deterministic gameplay for local co-op, prediction and the pinned PocketNet server.
 // 90 Hz substeps; no browser APIs. Hard rope constraints are solved after collisions.
 export const WIDTH=1180, HEIGHT=620, RADIUS=18, FLOOR=540;
-export const ROPE={slack:128,soft:162,max:242,spring:24,damping:8};
+export const ROPE={slack:118,soft:152,max:250,spring:34,damping:10,reel:174};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rect=(x,y,w,h)=>({x,y,w,h});
 export const CHAPTERS=[
  {name:'В одной связке',hint:'Каждый держит свою кнопку',type:'plates',x:330,spread:480,hold:.65,floors:[[0,540,1180,80]]},
  {name:'Не отпускай',hint:'Перепрыгните яму вместе и соберите искру',type:'gap',x:655,spread:330,hold:.75,floors:[[0,540,438,80],[570,540,610,80]],stars:[[501,413]]},
- {name:'Живой якорь',hint:'Shift / ЯКОРЬ: держись за землю. Натяни ленту через кольцо',type:'beam',floors:[[0,540,1180,80]],beacons:[[524,522]],anchor:true},
- {name:'Небесные пуговицы',hint:'Пружины подбросят к искрам, потом займитесь кнопками',type:'spring',x:655,spread:300,hold:.85,floors:[[0,540,1180,80]],platforms:[[430,424,124,20],[760,420,125,20]],springs:[308,580],stars:[[397,300],[665,320]]},
- {name:'Никого не бросим',hint:'Одновременно удержите свои места, обходя маятник',type:'sync',x:365,spread:490,hold:1.2,floors:[[0,540,1180,80]],hazards:[[288,492,55,1.65,21]]},
- {name:'Силовое поле',hint:'Держите ЯКОРЬ и натягивайте связь, пока не заполнится шкала',type:'tension',floors:[[0,540,1180,80]],tension:true,anchor:true,stars:[[684,404]]},
- {name:'Качели',hint:'Лифт и маятники: держите связку и достаньте искры',type:'lift',x:690,spread:290,hold:.85,floors:[[0,540,1180,80]],platforms:[[398,438,100,18],[810,424,113,18]],lifts:[[548,440,112,18,59,2.8]],hazards:[[705,440,75,2.1,19]],stars:[[600,293],[844,319]]},
+ {name:'Живой якорь',hint:'Перекиньте резинку через штырь. Один держит ЯКОРЬ, другой тянет',type:'beam',floors:[[0,540,1180,80]],hooks:[[524,508]],wheels:[0],beacons:[[524,522]],anchor:true,sequence:['wheels','beacons']},
+ {name:'Небесные пуговицы',hint:'Сначала достаньте искры. Затем вся команда должна одновременно удерживать кнопки',type:'spring',x:655,spread:300,hold:.85,floors:[[0,540,1180,80]],platforms:[[430,424,124,20],[760,420,125,20]],springs:[308,580],stars:[[397,300],[665,320]],sequence:['stars','pads']},
+ {name:'Никого не бросим',hint:'Маятник мешает занять места. Удержите все кнопки две секунды',type:'sync',x:365,spread:490,hold:2,floors:[[0,540,1180,80]],hazards:[[288,492,55,1.65,21]]},
+ {name:'Силовое поле',hint:'Зацепите резинку, раскрутите барабан. Только затем достаньте искру и натяните связь',type:'tension',floors:[[0,540,1180,80]],hooks:[[505,507]],wheels:[0],tension:true,anchor:true,stars:[[684,404]],sequence:['wheels','stars','tension']},
+ {name:'Качели',hint:'Вместе на лифте достаньте искры. Затем удержите кнопки',type:'lift',x:690,spread:290,hold:1.2,floors:[[0,540,1180,80]],platforms:[[398,438,100,18],[810,424,113,18]],lifts:[[548,440,112,18,59,2.8]],hazards:[[705,440,75,2.1,19]],stars:[[600,293],[844,319]],sequence:['stars','pads']},
  {name:'Подвесной мост',hint:'Прыгайте через островки. Связка удержит товарища',type:'islands',x:765,spread:214,hold:1,floors:[[0,540,306,80],[450,540,200,80],[738,540,442,80]],platforms:[[334,450,110,20],[682,438,96,20]],springs:[246,606],stars:[[372,331],[701,321]]},
- {name:'Последнее натяжение',hint:'Искры, кольцо, натяжение и все кнопки — одновременно',type:'finale',x:733,spread:235,hold:1.2,floors:[[0,540,436,80],[568,540,612,80]],platforms:[[463,431,116,18],[734,422,112,18]],springs:[325],beacons:[[780,522]],stars:[[375,318],[690,306]],tension:true,anchor:true}
+ {name:'Последнее натяжение',hint:'По очереди запустите барабан, соберите искры и зарядите резинку',type:'finale',x:733,spread:235,hold:1.2,floors:[[0,540,436,80],[568,540,612,80]],platforms:[[463,431,116,18],[734,422,112,18]],springs:[325],hooks:[[668,508]],wheels:[0],beacons:[[780,522]],stars:[[375,318],[690,306]],tension:true,anchor:true,sequence:['wheels','stars','pads','beacons','tension']},
+ {name:'На растяжке',hint:'Натяните ленту на штыре, а затем пролетите к верхним искрам',type:'sling',floors:[[0,540,1180,80]],platforms:[[436,410,130,18],[712,384,134,18]],hooks:[[525,507]],wheels:[0],stars:[[489,283],[766,277]],springs:[325],sequence:['wheels','stars']},
+ {name:'Друг в беде',hint:'Сорвитесь в пропасть и вытяните друга резинкой. Затем откройте ворота',type:'rescue',x:734,spread:220,hold:1.3,floors:[[0,540,439,80],[573,540,607,80]],platforms:[[468,434,96,18]],springs:[361],rescue:true,stars:[[520,323]],sequence:['rescue','stars','pads']},
+ {name:'Узел на память',hint:'Два барабана, две искры, общий заряд. Ошибки исправляются вместе',type:'master',x:731,spread:237,hold:1.5,floors:[[0,540,1180,80]],platforms:[[420,430,110,18],[702,413,110,18]],hooks:[[426,507],[640,507]],wheels:[0,1],stars:[[485,305],[751,293]],hazards:[[820,490,54,1.7,18]],tension:true,anchor:true,sequence:['wheels','stars','tension','pads']}
 ];
 export const MIN_PLAYERS=2,MAX_PLAYERS=5;
 export function stageFor(level,count){
@@ -26,17 +29,19 @@ export function stageFor(level,count){
  hazards:(spec.hazards||[]).map(a=>({x:a[0],y:a[1],amp:a[2],period:a[3],r:a[4]})),
  stars:(spec.stars||[]).map(([x,y])=>({x,y})),
  beacons:(spec.beacons||[]).map(([x,y])=>({x,y})),
+ hooks:(spec.hooks||[]).map(([x,y])=>({x,y})),wheels:spec.wheels||[],sequence:spec.sequence||[],rescue:!!spec.rescue,
  pads:spec.x?Array.from({length:n},(_,i)=>({x:spec.x+span*i/(n-1),y:FLOOR,owner:i})):[],
  hold:spec.hold||0,tension:!!spec.tension,anchor:!!spec.anchor,
  requiredLinks:spec.tension?Math.max(1,Math.ceil((n-1)*.5)):0,
  gate:rect(1036,0,31,FLOOR),finishX:1102};
 }
-const spawn=(p,i)=>({id:p.id,name:p.name||'Игрок',x:92+i*42,y:FLOOR-RADIUS,vx:0,vy:0,ground:true,anchor:false,coyote:.1,jumpHeld:false,face:1,falls:0,squash:0,checkpoint:0});
+const spawn=(p,i)=>({id:p.id,name:p.name||'Игрок',x:92+i*42,y:FLOOR-RADIUS,vx:0,vy:0,ground:true,anchor:false,coyote:.1,jumpHeld:false,face:1,falls:0,squash:0,checkpoint:0,hang:0,slingshot:0});
 export function worldFor(players,level=0){
  const stage=stageFor(level,players.length);
  return {level,stage,players:players.map(spawn),inputs:{},pads:stage.pads.map(()=>false),
  stars:stage.stars.map(()=>false),beacons:stage.beacons.map(()=>false),
- tensionCharge:0,tensionDone:false,plateCharge:0,gateOpen:false,clock:0,revision:0,finished:false,falls:0};
+ wraps:players.slice(1).map(()=>-1),wheelCharge:stage.wheels.map(()=>0),wheelDone:stage.wheels.map(()=>false),
+ phase:0,phaseTime:0,saveCount:0,tensionCharge:0,tensionDone:false,plateCharge:0,gateOpen:false,clock:0,revision:0,finished:false,falls:0};
 }
 export function reset(w,level=w.level){const v=worldFor(w.players.map(p=>({id:p.id,name:p.name})),level);Object.assign(w,v);}
 export function movingPlatforms(s,time){
@@ -82,31 +87,76 @@ function resolveStatic(p,blocks){
  }
  p.x=clamp(p.x,RADIUS,WIDTH-RADIUS);
 }
-export function constrainRope(players,blocks,dt){
- // Taut rope: damp radial relative velocity and share force before projection.
- for(let i=0;i<players.length-1;i++){
-  const a=players[i],b=players[i+1],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
-  if(d<=ROPE.slack)continue;
-  const nx=dx/d,ny=dy/d,relative=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
-  const impulse=Math.max(0,(d-ROPE.slack)*ROPE.spring+relative*ROPE.damping)*dt;
-  const ma=a.anchor?0:1,mb=b.anchor?0:1,total=ma+mb||1;
-  a.vx+=nx*impulse*ma/total;a.vy+=ny*impulse*ma/total;
-  b.vx-=nx*impulse*mb/total;b.vy-=ny*impulse*mb/total;
- }
- // XPBD-style positional solve: hard finite maximum, no frame-scale spring loophole.
- for(let pass=0;pass<9;pass++){
-  for(let i=0;i<players.length-1;i++){
-   const a=players[i],b=players[i+1],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
-   if(d<=ROPE.max+.002)continue;
-   const ma=a.anchor?0:1,mb=b.anchor?0:1,total=ma+mb;
-   if(total===0)continue;
-   const pull=(d-ROPE.max)/total,nx=dx/d,ny=dy/d;
-   a.x+=nx*pull*ma;a.y+=ny*pull*ma;
-   b.x-=nx*pull*mb;b.y-=ny*pull*mb;
-   resolveStatic(a,blocks);resolveStatic(b,blocks);
+// One hook per neighbouring rubber-band segment. Latching is contact-driven, not a button:
+// the band catches a peg only if the straight segment actually passes its head.
+const distanceToSegment=(x,y,a,b)=>{
+ const dx=b.x-a.x,dy=b.y-a.y,d=dx*dx+dy*dy||1;
+ const t=clamp(((x-a.x)*dx+(y-a.y)*dy)/d,0,1);
+ return {t,d:Math.hypot(a.x+t*dx-x,a.y+t*dy-y)};
+};
+export function ropePath(w,i){
+ const a=w.players[i],b=w.players[i+1],hook=w.stage.hooks?.[w.wraps?.[i]];
+ return hook?[a,hook,b]:[a,b];
+}
+export function ropeDistance(w,i){
+ const pts=ropePath(w,i);let d=0;
+ for(let j=1;j<pts.length;j++)d+=Math.hypot(pts[j].x-pts[j-1].x,pts[j].y-pts[j-1].y);
+ return d;
+}
+function updateWraps(w){
+ const hooks=w.stage.hooks||[];
+ if(!Array.isArray(w.wraps)||w.wraps.length!==w.players.length-1)w.wraps=w.players.slice(1).map(()=>-1);
+ for(let i=0;i<w.players.length-1;i++){
+  const a=w.players[i],b=w.players[i+1],current=w.wraps[i];
+  if(current>=0){
+   const h=hooks[current],near=distanceToSegment(h.x,h.y,a,b);
+   // Unhook once both bodies pass to the same side of the peg and the cord clears it.
+   if(!h||(a.x-h.x)*(b.x-h.x)>0&&near.d>35)w.wraps[i]=-1;
+  } else {
+   let closest=-1,delta=27;
+   for(let k=0;k<hooks.length;k++){
+    const h=hooks[k],hit=distanceToSegment(h.x,h.y,a,b);
+    if(hit.t>.14&&hit.t<.86&&hit.d<delta){
+     const ad=Math.hypot(a.x-h.x,a.y-h.y),bd=Math.hypot(b.x-h.x,b.y-h.y);
+     if(ad>40&&bd>40){delta=hit.d;closest=k;}
+    }
+   }
+   if(closest>=0)w.wraps[i]=closest;
   }
  }
 }
+export function constrainRope(w,blocks,dt){
+ const players=w.players;
+ for(let pass=0;pass<10;pass++){
+  for(let i=0;i<players.length-1;i++){
+   const a=players[i],b=players[i+1],path=ropePath(w,i),hook=path.length===3?path[1]:null;
+   const d=ropeDistance(w,i),limit=(a.anchor&&b.hang>0||b.anchor&&a.hang>0)?ROPE.reel:ROPE.max;
+   if(d<=ROPE.slack)continue;
+   // At a fixed peg, endpoint gradients point toward the peg, rather than toward
+   // the other player. This also makes the bend in the band physically meaningful.
+   const ax=hook?hook.x-a.x:b.x-a.x,ay=hook?hook.y-a.y:b.y-a.y;
+   const bx=hook?hook.x-b.x:a.x-b.x,by=hook?hook.y-b.y:a.y-b.y;
+   const al=Math.hypot(ax,ay)||1,bl=Math.hypot(bx,by)||1;
+   const ux=ax/al,uy=ay/al,vx=bx/bl,vy=by/bl;
+   const ma=a.anchor?0:1,mb=b.anchor?0:1,den=ma+mb||1;
+   // The elastic spring is applied once per integration step, not once per
+   // positional-constraint iteration.
+   if(pass===0&&dt>0){
+    const radial= -(a.vx*ux+a.vy*uy+b.vx*vx+b.vy*vy);
+    const impulse=Math.max(0,(d-ROPE.slack)*ROPE.spring+radial*ROPE.damping)*dt/den;
+    a.vx+=ux*impulse*ma;a.vy+=uy*impulse*ma;
+    b.vx+=vx*impulse*mb;b.vy+=vy*impulse*mb;
+   }
+   if(d>limit+.003){
+    const step=(d-limit)/den;
+    a.x+=ux*step*ma;a.y+=uy*step*ma;
+    b.x+=vx*step*mb;b.y+=vy*step*mb;
+    resolveStatic(a,blocks);resolveStatic(b,blocks);
+   }
+  }
+ }
+}
+
 function respawn(w,p,i){
  const falls=(p.falls||0)+1;
  const ref=w.players[Math.max(0,i-1)]||w.players[Math.min(w.players.length-1,i+1)];
