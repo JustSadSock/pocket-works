@@ -29,62 +29,98 @@ function drawStroke(ctx,stroke){
  }else{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();dab(ctx,pts[0][0],pts[0][1],ctx.lineWidth/2,color,ctx.globalAlpha)}
  ctx.restore();
 }
-// Fill tests only the hand-drawn line mask: previous fill colours are never
-// barriers. Render at 2x and underpaint edges to avoid jagged white seams.
+// Flood-filling uses only drawn contours as barriers: an earlier fill is not
+// a wall. Recover antialiased border pixels AFTER determining connectivity so
+// colour reaches right under the line without flooding into adjacent regions.
 const FILL_SCALE=2;
 function layer(){
  const canvas=document.createElement('canvas');
  canvas.width=W*FILL_SCALE;canvas.height=H*FILL_SCALE;
  const ctx=canvas.getContext('2d',{willReadFrequently:true});
  ctx.setTransform(FILL_SCALE,0,0,FILL_SCALE,0,0);
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
  return {canvas,ctx};
+}
+/** Pixel-space 4-way flood, plus one-pixel colour underlap beneath contour AA. */
+export function floodFillRaster({width,height,walls,zone,output,point,color}){
+ const total=width*height;
+ if(!total||!walls||!zone||!output||!Array.isArray(point)||!Array.isArray(color))return 0;
+ const wall=walls.data||walls,area=zone.data||zone,ink=output.data||output;
+ if(wall.length<total*4||area.length<total*4||ink.length<total*4)return 0;
+ const allowed=i=>area[i*4+3]>=120&&wall[i*4+3]<145;
+ let sx=Math.max(0,Math.min(width-1,Math.floor(point[0]))),sy=Math.max(0,Math.min(height-1,Math.floor(point[1])));
+ let start=sy*width+sx;
+ // A click a fraction inside an antialiased line should still find its own
+ // nearby enclosed region. Never search farther than three logical pixels.
+ if(!allowed(start)){
+   let closest=-1,dist=Infinity;
+   const radius=6;
+   for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
+     const x=sx+dx,y=sy+dy,d=dx*dx+dy*dy;
+     if(x<0||x>=width||y<0||y>=height||d>radius*radius||d>=dist)continue;
+     const i=y*width+x;if(allowed(i)){closest=i;dist=d}
+   }
+   if(closest<0)return 0;
+   start=closest;
+ }
+ const seen=new Uint8Array(total),queue=new Int32Array(total);
+ let head=0,tail=1;seen[start]=1;queue[0]=start;
+ while(head<tail){
+   const i=queue[head++],x=i%width,y=(i/width)|0;
+   if(x>0){const n=i-1;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
+   if(x<width-1){const n=i+1;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
+   if(y>0){const n=i-width;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
+   if(y<height-1){const n=i+width;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
+ }
+ const [r,g,b]=color;
+ const paint=i=>{
+   // Colour beyond the damaged mask is harmless with the final single clip,
+   // but skipping it avoids needless work and lets the border stay precise.
+   if(area[i*4+3]===0)return;
+   const k=i*4;ink[k]=r;ink[k+1]=g;ink[k+2]=b;ink[k+3]=255;
+ };
+ for(let n=0;n<tail;n++)paint(queue[n]);
+ // Pad up to two high-resolution pixels ONLY into a wall or the
+ // antialiased edge of the damage mask, never through them into another basin.
+ // This reaches the faint fringe at the outside of a torn edge and hides the
+ // seam below the drawn line even when a line lands between device pixels.
+ for(let n=0;n<tail;n++){
+   const i=queue[n],x=i%width,y=(i/width)|0;
+   for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+     if(!dx&&!dy||dx*dx+dy*dy>5)continue;
+     const xx=x+dx,yy=y+dy;if(xx<0||xx>=width||yy<0||yy>=height)continue;
+     const neighbour=yy*width+xx;
+     if(!seen[neighbour]&&!allowed(neighbour))paint(neighbour);
+   }
+ }
+ return tail;
 }
 function fillRegion(lines,fills,zoneMask,p,colour){
  const w=lines.canvas.width,h=lines.canvas.height;
- const x=Math.max(0,Math.min(w-1,Math.floor(p[0]*FILL_SCALE)));
- const y=Math.max(0,Math.min(h-1,Math.floor(p[1]*FILL_SCALE)));
- const walls=lines.ctx.getImageData(0,0,w,h).data;
- const mask=zoneMask.data,start=y*w+x;
- const allowed=i=>mask[i*4+3]>100&&walls[i*4+3]<92;
- if(!allowed(start))return;
- const queue=new Int32Array(w*h),seen=new Uint8Array(w*h);
- let head=0,tail=1;queue[0]=start;seen[start]=1;
- while(head<tail){
-  const i=queue[head++],cx=i%w,cy=(i/w)|0;
-  const tryAdd=n=>{if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}};
-  if(cx>0)tryAdd(i-1);
-  if(cx<w-1)tryAdd(i+1);
-  if(cy>0)tryAdd(i-w);
-  if(cy<h-1)tryAdd(i+w);
- }
- const image=fills.ctx.getImageData(0,0,w,h),data=image.data;
- const r=parseInt(colour.slice(1,3),16),g=parseInt(colour.slice(3,5),16),b=parseInt(colour.slice(5,7),16);
- // Paint the neighbouring contour pixels UNDER the lines, but never cross
- // those lines during region discovery.
- const paint=i=>{if(mask[i*4+3]<35)return;const k=i*4;data[k]=r;data[k+1]=g;data[k+2]=b;data[k+3]=255};
- for(let n=0;n<tail;n++){
-  const i=queue[n],cx=i%w,cy=(i/w)|0;paint(i);
-  if(cx>0)paint(i-1);if(cx<w-1)paint(i+1);
-  if(cy>0)paint(i-w);if(cy<h-1)paint(i+w);
- }
- fills.ctx.putImageData(image,0,0);
+ const walls=lines.ctx.getImageData(0,0,w,h);
+ const current=fills.ctx.getImageData(0,0,w,h);
+ const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
+ const filled=floodFillRaster({
+   width:w,height:h,walls,zone:zoneMask,output:current,
+   point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
+ });
+ if(filled)fills.ctx.putImageData(current,0,0);
 }
 function renderStrokes(ctx,strokes,zone){
  if(!strokes.some(s=>s.t==='fill')){strokes.forEach(s=>drawStroke(ctx,s));return}
  const lines=layer(),fills=layer(),area=layer();
  area.ctx.fillStyle='#fff';damagePath(area.ctx,zone);area.ctx.fill();
  const zoneMask=area.ctx.getImageData(0,0,area.canvas.width,area.canvas.height);
- lines.ctx.save();clipZone(lines.ctx,zone);
- fills.ctx.save();clipZone(fills.ctx,zone);
  for(const stroke of strokes){
-  if(stroke.t==='fill'){fillRegion(lines,fills,zoneMask,stroke.p[0],stroke.c);continue}
-  if(stroke.t==='erase'){
-   for(const target of [lines.ctx,fills.ctx]){
-    target.save();target.globalCompositeOperation='destination-out';drawStroke(target,stroke);target.restore();
-   }
-  }else drawStroke(lines.ctx,stroke);
+   if(stroke.t==='fill'){fillRegion(lines,fills,zoneMask,stroke.p[0],stroke.c);continue}
+   if(stroke.t==='erase'){
+     for(const target of [lines.ctx,fills.ctx]){
+       target.save();target.globalCompositeOperation='destination-out';drawStroke(target,stroke);target.restore();
+     }
+   }else drawStroke(lines.ctx,stroke);
  }
- lines.ctx.restore();fills.ctx.restore();
+ // Actual clipping is applied ONCE to the finished artwork, not independently
+ // to each colour layer: repeated translucent clips caused beige fringes.
  ctx.drawImage(fills.canvas,0,0,W,H);
  ctx.drawImage(lines.canvas,0,0,W,H);
 }
@@ -92,7 +128,17 @@ function renderStrokes(ctx,strokes,zone){
 export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false){
  const ctx=prepareCanvas(canvas);
  try{const image=await loadArtwork(id);if(!canvas.isConnected)return;ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id);
- if(damaged){const z=zoneFor(id,variation);ctx.save();clipZone(ctx,z);ctx.fillStyle='#e8ddc6';ctx.fillRect(z.x,z.y,z.w,z.h);renderStrokes(ctx,strokes||[],z);ctx.restore();
+ if(damaged){
+  const z=zoneFor(id,variation),overlay=document.createElement('canvas');
+  overlay.width=canvas.width;overlay.height=canvas.height;
+  const paint=overlay.getContext('2d');
+  paint.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
+  paint.imageSmoothingEnabled=true;paint.imageSmoothingQuality='high';
+  paint.fillStyle='#e8ddc6';paint.fillRect(0,0,W,H);
+  renderStrokes(paint,strokes||[],z);
+  // Render one opaque restoration surface, clip its irregular outer contour
+  // once. Previous beige+fill+stroke clipping multiplied edge alpha.
+  ctx.save();clipZone(ctx,z);ctx.drawImage(overlay,0,0,W,H);ctx.restore();
  }
  }catch{ctx.fillStyle='#ddc6aa';ctx.fillRect(0,0,W,H);ctx.fillStyle='#512d2a';ctx.fillText('Не удалось открыть картину',20,50);}
 }
@@ -552,22 +598,20 @@ export class Editor{
    if(resized){
      const base=makeLayer(),ink=makeLayer();this.baseLayer=base.canvas;this.inkLayer=ink.canvas;this.inkCtx=ink.ctx;
      drawArtwork(base.ctx,img,this.id);
-     base.ctx.save();clipZone(base.ctx,this.zone);
-     base.ctx.fillStyle='#e8ddc6';base.ctx.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);
-     base.ctx.restore();
      this.cachedRevision=-1;
    }
    const rev=this.paintRevision||0;
    if(this.cachedRevision!==rev){
      this.inkCtx.clearRect(0,0,W,H);
-     this.inkCtx.save();clipZone(this.inkCtx,this.zone);
+     this.inkCtx.fillStyle='#e8ddc6';this.inkCtx.fillRect(0,0,W,H);
      renderStrokes(this.inkCtx,this.strokes,this.zone);
-     this.inkCtx.restore();
      this.cachedRevision=rev;
    }
    ctx.clearRect(0,0,W,H);
    ctx.drawImage(this.baseLayer,0,0,W,H);
+   ctx.save();clipZone(ctx,this.zone);
    ctx.drawImage(this.inkLayer,0,0,W,H);
+   ctx.restore();
    if(this.working){
      ctx.save();clipZone(ctx,this.zone);drawStroke(ctx,this.working);ctx.restore();
    }

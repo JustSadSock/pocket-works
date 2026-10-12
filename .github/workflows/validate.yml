@@ -149,6 +149,9 @@ jobs:
       - name: Test ZAMAZKA cursor alignment and pointer recovery
         run: node apps/zamazka/qa/coordinate-input.mjs
 
+      - name: Test ZAMAZKA flood fill and contour edge quality
+        run: node apps/zamazka/qa/fill-seams.mjs
+
       - name: Build published Enhanced apps
         run: npm run build:enhanced
 
