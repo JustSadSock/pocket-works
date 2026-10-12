@@ -110,7 +110,7 @@ export class PocketIdentity {
         if(q.length<2||q.length>20||!/^[\\p{L}\\p{N}_-]+$/u.test(q))
           return response({users:[]});
         const escaped=q.replace(/[\\%_]/g,c=>String.fromCharCode(92)+c);
-        const rows=this.query("SELECT id,nickname,avatar FROM accounts WHERE nickname_key LIKE ? ESCAPE '\\\\' ORDER BY nickname_key LIMIT 12",escaped+'%').toArray();
+        const rows=this.query("SELECT id,nickname,avatar FROM accounts WHERE nickname_key LIKE ? ESCAPE '\\' ORDER BY nickname_key LIMIT 12",escaped+'%').toArray();
         return response({users:rows});
       }
       if(path==='/pocket-id/public'&&request.method==='GET') {
