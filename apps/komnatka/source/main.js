@@ -154,6 +154,7 @@ function rotatePlacement(){
  pending.ghost.getChildMeshes(false).forEach(mesh=>mesh.visibility=pending.valid?1:.46);
  sound(535,'triangle',.07);
 }
+function hideSelection(){ui.selected.hidden=true;}
 function select(id) {
  if(pending)cancelPending(false);
  selectedId=state.items.some(x=>x.id===id)?id:null;
