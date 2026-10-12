@@ -4,36 +4,41 @@ const box=(c,x,y,w,h,r,color,stroke=ink)=>{c.beginPath();c.roundRect(x,y,w,h,r);
 const dot=(c,x,y,r,color)=>{c.beginPath();c.arc(x,y,r,0,7);c.fillStyle=color;c.fill();};
 let cameraX=590,cameraY=0;
 const mix=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const tensionMemory=new Map();
 const active=(w,key)=>!w.stage.sequence?.length||w.stage.sequence[w.phase]===key;
-function rubber(c,start,end,time,tight,reduced,joined=false){
- const dx=end.x-start.x,dy=end.y-start.y,len=Math.hypot(dx,dy)||1,
- nx=-dy/len,ny=dx/len,segments=Math.max(8,Math.ceil(len/9));
- const sag=Math.max(0,1-tight)*Math.min(48,len*.21),wave=reduced?0:(1-tight)*3.6;
- const points=[];
+// Positive y is downward in Canvas world coordinates. Gravity therefore adds
+// positive y displacement regardless of which endpoint is left or right.
+export function rubberPoints(start,end,{time=0,tight=0,reduced=false}={}){
+ const dx=end.x-start.x,dy=end.y-start.y,len=Math.hypot(dx,dy)||1;
+ const segments=Math.max(8,Math.ceil(len/9));
+ const slack=Math.pow(1-clamp(tight,0,1),1.45);
+ const sag=slack*Math.min(43,len*.22);
+ const oscillation=reduced?0:slack*2.6;
+ const pts=[];
  for(let i=0;i<=segments;i++){
-  const t=i/segments,b=Math.sin(t*Math.PI);
-  const shift=sag*b+wave*Math.sin(t*3*Math.PI-time*7)*b;
-  points.push({x:start.x+dx*t+nx*shift,y:start.y+dy*t+ny*shift});
+  const t=i/segments,b=Math.sin(Math.PI*t);
+  const displacement=(sag+oscillation*Math.sin(t*Math.PI*3-time*5))*b;
+  pts.push({x:start.x+dx*t,y:start.y+dy*t+displacement});
  }
- const stroke=()=>{
-  c.beginPath();c.moveTo(points[0].x,points[0].y);
-  for(let i=1;i<points.length;i++)c.lineTo(points[i].x,points[i].y);
- };
+ return pts;
+}
+function rubber(c,start,end,time,tight,reduced){
+ const pts=rubberPoints(start,end,{time,tight,reduced});
+ const stroke=()=>{c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)c.lineTo(pts[i].x,pts[i].y);};
  c.lineJoin='round';c.lineCap='round';
  stroke();c.strokeStyle='#27314a';c.lineWidth=14-tight*4;c.stroke();
  const grad=c.createLinearGradient(start.x,start.y,end.x,end.y);
  grad.addColorStop(0,'#ffdfc7');grad.addColorStop(.45,tight>.72?'#ff8295':'#ffb5aa');grad.addColorStop(1,'#ffcecc');
  stroke();c.strokeStyle=grad;c.lineWidth=10-tight*4;c.stroke();
  stroke();c.strokeStyle='#fff1dbb8';c.lineWidth=2.2-tight*.8;c.stroke();
- // Short diagonal ridges visually distinguish elastic rubber from a plain cable.
  c.strokeStyle=tight>.8?'#ffdae0':'#dc829c';c.lineWidth=1.6;
- for(let i=3;i<points.length-3;i+=5){
-  const a=points[i],b=points[i+1],ddx=b.x-a.x,ddy=b.y-a.y,dd=Math.hypot(ddx,ddy)||1;
-  c.beginPath();c.moveTo(a.x-ddy/dd*4,a.y+ddx/dd*4);
-  c.lineTo(a.x+ddy/dd*4,a.y-ddx/dd*4);c.stroke();
+ for(let i=3;i<pts.length-3;i+=5){
+  const a=pts[i],b=pts[i+1],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
+  c.beginPath();c.moveTo(a.x-dy/d*4,a.y+dx/d*4);c.lineTo(a.x+dy/d*4,a.y-dx/d*4);c.stroke();
  }
  if(tight>.58&&!reduced){
-  const t=(time*2.5)%1,p=points[Math.floor(t*(points.length-1))];
+  const p=pts[Math.floor((time*2.5%1)*(pts.length-1))];
   dot(c,p.x,p.y,2.5+tight*1.5,'#fff8e4');
  }
 }
@@ -110,6 +115,45 @@ export function paint(canvas,world,{self='',time=0,cover=false,reduced=false}={}
   c.beginPath();c.arc(b.x,b.y,13,0,Math.PI*2);c.strokeStyle=on?'#36b976':'#f196c4';c.lineWidth=7;c.stroke();
   dot(c,b.x,b.y,5,on?'#36b976':'#fff0a1');c.restore();
  }
+ // Weighted beam: its real-time tilt communicates both the target and the wind.
+ if(s.balance){
+  const b=s.balance,charge=world.balanceCharge||0,tilt=clamp(world.balanceTilt||0,-1,1);
+  box(c,b.x-10,b.y+7,20,36,6,'#f1d2a0');
+  dot(c,b.x,b.y+6,11,'#fee8b8');
+  c.save();c.translate(b.x,b.y);c.rotate(tilt*.14);
+  box(c,-142,-10,284,20,9,charge>=1?'#8dddb2':'#fff0c8');
+  for(const side of [-1,1]){
+   box(c,side*103-25,-30,50,20,6,'#c7a7e3');
+   c.beginPath();c.arc(side*111,-12,3,0,7);c.fillStyle='#ffffff';c.fill();
+  }
+  c.restore();
+  box(c,b.x-83,b.y-65,166,16,8,'#fffdf4');
+  if(charge>0)box(c,b.x-78,b.y-61,156*charge,8,4,'#a2dcba',null);
+  if(active(world,'balance')&&charge<1){
+   c.font='900 12px system-ui';c.textAlign='center';c.fillStyle=ink;
+   c.fillText('ДЕРЖИ РАВНОВЕСИЕ',b.x,b.y-76);
+  }
+ }
+ for(let i=0;i<(s.signals||[]).length;i++){
+  const lens=s.signals[i],captured=i<(world.signalIndex||0)||(world.signalDone||false);
+  const shown=active(world,'signals'),radius=shown?23:17;
+  c.save();if(!shown&&!captured)c.globalAlpha=.3;
+  dot(c,lens.x,lens.y,radius+9,'#ffffff72');
+  c.beginPath();c.arc(lens.x,lens.y,radius,0,Math.PI*2);
+  c.strokeStyle=captured?'#40be96':'#cf81c5';c.lineWidth=7;c.stroke();
+  c.beginPath();c.arc(lens.x,lens.y,radius-8,0,Math.PI*2);
+  c.strokeStyle='#fffbea';c.lineWidth=3;c.stroke();
+  dot(c,lens.x,lens.y,captured?8:5,captured?'#4fceac':'#ffe69e');
+  if(shown&&!captured&&!reduced){
+   c.beginPath();c.arc(lens.x,lens.y,23+Math.sin(time*4+i)*2,0,Math.PI*2);
+   c.strokeStyle='#ffffffa0';c.lineWidth=2;c.stroke();
+  }
+  c.restore();
+ }
+ if(active(world,'signals')&&(world.signalIndex||0)>0&&!world.signalDone){
+  box(c,450,110,280,15,7,'#fffdf4');
+  box(c,455,114,270*clamp((world.signalLeft||0)/(s.signalWindow||5),0,1),7,4,'#f8b3c5',null);
+ }
  for(const hazard of s.hazards||[]){
   const speed=s.kind==='lift'&&(world.phase||0)>0?1.5:1;
   const x=hazard.x+Math.sin((world.clock||0)*speed*Math.PI*2/hazard.period)*hazard.amp,y=hazard.y;
@@ -128,9 +172,13 @@ export function paint(canvas,world,{self='',time=0,cover=false,reduced=false}={}
   const a=players[i],b=players[i+1],pin=s.hooks?.[world.wraps?.[i]];
   const path=pin?[a,pin,b]:[a,b];
   let length=0;for(let j=1;j<path.length;j++)length+=Math.hypot(path[j].x-path[j-1].x,path[j].y-path[j-1].y);
-  const tight=Math.max(0,Math.min(1,(length-118)/132));
+  const targetTight=clamp((length-118)/132,0,1);
+  const memoryKey=(s.index||0)+':'+a.id+'-'+b.id;
+  const previous=tensionMemory.get(memoryKey)??targetTight;
+  const tight=mix(previous,targetTight,reduced?1:.18);
+  tensionMemory.set(memoryKey,tight);
   c.save();
-  for(let j=1;j<path.length;j++)rubber(c,path[j-1],path[j],time,tight,reduced,j>1);
+  for(let j=1;j<path.length;j++)rubber(c,path[j-1],path[j],time,tight,reduced);
   c.restore();
  }
 
@@ -178,7 +226,8 @@ export function paint(canvas,world,{self='',time=0,cover=false,reduced=false}={}
  if(s.sequence?.length&&!world.gateOpen){
   const goal=s.sequence[Math.min(world.phase||0,s.sequence.length-1)];
   const names={wheels:'ЗАЦЕПИ ЛЕНТУ',stars:'СОБЕРИ ИСКРЫ',pads:'УДЕРЖИ КНОПКИ',
-   beacons:'ПРОВЕДИ ЧЕРЕЗ КОЛЬЦО',tension:'НАТЯГИВАЙ',rescue:'СПАСИ ДРУГА'};
+   beacons:'ПРОВЕДИ ЧЕРЕЗ КОЛЬЦО',tension:'НАТЯГИВАЙ',rescue:'СПАСИ ДРУГА',
+   signals:'ЛОВИ СИГНАЛЫ',balance:'УДЕРЖИ РАВНОВЕСИЕ'};
   box(c,382,16,416,34,14,'#fffdf2');
   c.font='900 16px system-ui';c.fillStyle=ink;c.textAlign='center';
   c.fillText((world.phase+1)+'/'+s.sequence.length+'  '+(names[goal]||''),590,38);
@@ -190,6 +239,11 @@ export function paint(canvas,world,{self='',time=0,cover=false,reduced=false}={}
   c.font='900 17px system-ui';c.fillStyle=ink;c.textAlign='center';
   c.fillText(world.tensionDone?'ЗАРЯЖЕНО!':'НАТЯНИ И ДЕРЖИ',590,73);
  }
+ if(s.escape&&world.gateOpen){
+  box(c,466,111,247,39,14,'#fffdf2');
+  c.font='900 20px system-ui';c.textAlign='center';c.fillStyle=ink;
+  c.fillText('УСПЕТЬ!  '+(world.escapeLeft||0).toFixed(1)+' с',590,138);
+ }
  if(s.hold&&!world.gateOpen&&s.pads.length&&world.plateCharge>0){
   box(c,470,99,240,17,8,'#ffffffc8');
   box(c,475,103,230*world.plateCharge,9,5,'#8fe3b0',null);
@@ -198,6 +252,6 @@ export function paint(canvas,world,{self='',time=0,cover=false,reduced=false}={}
  c.restore();
 }
 export function coverWorld(){
- return {stage:{theme:0,hooks:[],wheels:[],sequence:[],floors:[{x:0,y:540,w:480,h:80},{x:600,y:540,w:580,h:80}],platforms:[],lifts:[],hazards:[],beacons:[],springs:[],stars:[{x:585,y:310}],pads:[{x:455,y:540},{x:724,y:540}],gate:{x:1036,y:0,w:31,h:540},stretch:0},
+ return {stage:{theme:0,hooks:[],wheels:[],sequence:[],signals:[],balance:null,floors:[{x:0,y:540,w:480,h:80},{x:600,y:540,w:580,h:80}],platforms:[],lifts:[],hazards:[],beacons:[],springs:[],stars:[{x:585,y:310}],pads:[{x:455,y:540},{x:724,y:540}],gate:{x:1036,y:0,w:31,h:540},stretch:0},
  players:[{id:'a',name:'',x:355,y:455,vx:-20},{id:'b',name:'',x:747,y:390,vx:50}],pads:[false,true],stars:[false],gateOpen:false,stretch:0};
 }
