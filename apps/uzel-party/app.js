@@ -149,12 +149,12 @@ function tick(t){
  }
  requestAnimationFrame(tick);
 }
-function resetStick(){pointer=null;move={x:0,y:0};$('joystickKnob').style.transform='translate(0px,0px)'}
+function resetStick(){pointer=null;move={x:0,y:0};$('joystickKnob').style.transform='translate(-50%,-50%)'}
 function stick(e){
  const rect=$('joystick').getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,max=rect.width*.36;
  const dx=e.clientX-cx,dy=e.clientY-cy,d=Math.hypot(dx,dy)||1,f=Math.min(1,max/d);
  move={x:dx*f/max,y:dy*f/max};
- $('joystickKnob').style.transform='translate('+Math.round(dx*f)+'px,'+Math.round(dy*f)+'px)';
+ $('joystickKnob').style.transform='translate(calc(-50% + '+Math.round(dx*f)+'px),calc(-50% + '+Math.round(dy*f)+'px))';
 }
 $('joystick').addEventListener('pointerdown',e=>{e.preventDefault();pointer=e.pointerId;$('joystick').setPointerCapture(e.pointerId);stick(e)});
 $('joystick').addEventListener('pointermove',e=>{if(pointer===e.pointerId){e.preventDefault();stick(e)}});
