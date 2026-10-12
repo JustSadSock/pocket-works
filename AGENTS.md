@@ -1,3 +1,5 @@
+> **Multiplayer policy (2026-10-12):** Prefer PocketNet (Cloudflare Durable Objects) for all new multiplayer apps. PocketLAN is currently inactive/legacy: do not import, register, cache, or couple a new app to it. PocketNet game modules live under `apps/<slug>/server/` with pinned `pocketnet/module-versions/<slug>/` releases. Re-enabling PocketLAN requires an explicit future platform decision. See `docs/POCKETNET-CLOUDFLARE.md`.
+
 # AGENTS.md — Pocket Works
 
 Pocket Works is a collection of installable, offline-first mobile web applications. Every app is a real product and every application task must remain isolated from concurrent work.
@@ -261,9 +263,9 @@ Before delivering an application to the user or merging it into `main`:
 
 For Pocket Works game/application PRs, `.github/workflows/ai-mobile-gameplay-qa.yml` is the standard exploratory mobile screenshot pass when applicable. The broader Playwright matrix remains available through the repository browser-quality workflow and local `npm run test:e2e` after building the quality site.
 
-## 15. PocketLAN local networking
+## 15. Network policy: PocketNet active, PocketLAN inactive
 
-Local device-to-device features use `shared/capabilities/lan.js` and the contract in `docs/POCKET-LAN.md`.
+New multiplayer applications use `shared/capabilities/net.js` and PocketNet cloud rooms; the preferred server rules and versioning contract is in `docs/POCKETNET-CLOUDFLARE.md`. PocketLAN remains inactive/legacy, and this section's historical rules apply only to maintenance of pre-existing local-network apps.
 
 - Do not equate `navigator.onLine` with LAN reachability. A LAN may work with no WAN/internet route, and an internet-connected guest network may still isolate peers.
 - Prefer `getCapabilities().automaticDiscovery` plus `discoverRooms()` / `joinRoom()` when the PocketWorks native LAN provider is present.

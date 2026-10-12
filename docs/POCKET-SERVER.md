@@ -1,6 +1,8 @@
+> **Приоритет:** для новых игр использовать PocketNet на Cloudflare Durable Objects ([инструкция](./POCKETNET-CLOUDFLARE.md)). PocketLAN сейчас неактивен и не подключается к новым приложениям. Самостоятельный Node.js Pocket Server ниже описан как legacy-альтернатива.
+
 # Pocket Server
 
-Pocket Server is the legacy self-hosted Node.js process for internet play. **The default Cloudflare Durable Objects implementation is documented in [POCKETNET-CLOUDFLARE.md](./POCKETNET-CLOUDFLARE.md).** The existing PocketLAN capability remains the zero-server option for local play. The launcher and applications remain hosted through the existing Cloudflare production pipeline; only the online game backend needs a Node.js host. **For a permanent no-monthly-fee personal server**, follow [the Oracle Always Free guide](./POCKETNET-FREE-HOSTING.md). The original Lightsail instructions below remain an alternative for paid hosting.
+Pocket Server is the legacy self-hosted Node.js process for internet play. **The default Cloudflare Durable Objects implementation is documented in [POCKETNET-CLOUDFLARE.md](./POCKETNET-CLOUDFLARE.md).** PocketLAN is currently inactive/legacy and is not an option for newly authored apps. The launcher and applications remain hosted through the existing Cloudflare production pipeline; only the online game backend needs a Node.js host. **For a permanent no-monthly-fee personal server**, follow [the Oracle Always Free guide](./POCKETNET-FREE-HOSTING.md). The original Lightsail instructions below remain an alternative for paid hosting.
 
 ## Contract
 
@@ -29,7 +31,7 @@ const module: PocketModule<State> = {
 export default module;
 ```
 
-The game client imports `shared/capabilities/net.js`, creates `new PocketNet({ serverUrl, name })`, calls `connect()`, then `createRoom(gameId)` or `joinRoom(roomId)`. It listens for `room_joined`, `game_event`, `presence`, `room_closed`, `error`, and `disconnected`. The client can run PocketLAN as a separate local mode. The online endpoint is configured per application; never put the deployment token in browser code.
+The game client imports `shared/capabilities/net.js`, creates `new PocketNet({ serverUrl, name })`, calls `connect()`, then `createRoom(gameId)` or `joinRoom(roomId)`. It listens for `room_joined`, `game_event`, `presence`, `room_closed`, `error`, and `disconnected`. PocketLAN is inactive and must not be connected to new games. The online endpoint is configured per application; never put the deployment token in browser code.
 
 The server owns connections, guest session tokens, room membership, reconnect, version routing, snapshots, and JSON logs. A room keeps its module hash through reconnect and process restart. Publishing verifies the checksum and worker contract before switching the current version. New rooms use that version. Old workers remain until their rooms end. Abandoned rooms with no connected players expire after 30 minutes. Failed publication leaves the previous version active. Snapshot files under `POCKET_DATA_DIR` are the state source of truth; back this directory up. A module update does not migrate an active match.
 

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "uzel-party",
+  "name": "УЗЕЛ",
+  "shortName": "УЗЕЛ",
+  "description": "Кооперативная игра с общей верёвкой: натягивайте, огибайте столбики и активируйте светящиеся кольца вместе через PocketNet.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T15:33:00+03:00",
+  "changelog": [
+    "Новая тактильная кооперативная головоломка с общей верёвкой и четырьмя короткими аренами.",
+    "Интернет-комнаты PocketNet для 2–6 участников и офлайн-тренировка.",
+    "Pocket ID, мобильное управление, сохранение и автономная PWA."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#c66247",
+  "backgroundColor": "#efe8d7",
+  "themeColor": "#efe8d7",
+  "orientation": "portrait",
+  "cacheName": "uzel-party-v1.0.0",
+  "storageNamespace": "pocket-works:uzel-party",
+  "tags": [
+    "party",
+    "co-op",
+    "game",
+    "pocketnet",
+    "physics",
+    "puzzle"
+  ],
+  "order": 346
+}

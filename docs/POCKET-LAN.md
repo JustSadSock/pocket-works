@@ -1,3 +1,5 @@
+> **НЕАКТИВНО / LEGACY (12.10.2026).** Этот документ описывает исторический локальный транспорт и сохранён только для справки. **Не использовать PocketLAN в новых играх и приложениях и не привязывать к нему новые функции.** Основной сетевой транспорт Pocket Works — **PocketNet** с интернет-комнатами и серверной логикой на Cloudflare Durable Objects. Смотрите [PocketNet на Cloudflare](./POCKETNET-CLOUDFLARE.md). Повторная активация PocketLAN возможна лишь после явного решения о платформе.
+
 # PocketLAN - local device-to-device networking
 
 PocketLAN is the shared Pocket Works contract for multiplayer, collaboration, controller links and other device-to-device features that should work on a local network without a cloud backend.

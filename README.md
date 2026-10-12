@@ -138,11 +138,11 @@ Pocket Forge wires Workshop Mode into generated apps. Open it through the visibl
 
 The full API and dependency policy are documented in [`docs/SHARED-CAPABILITIES.md`](./docs/SHARED-CAPABILITIES.md).
 
-## PocketLAN local networking
+## Multiplayer: PocketNet by default
 
-`shared/capabilities/lan.js` is the shared device-to-device networking contract for local multiplayer, controllers, collaborative tools and similar peer features. It prefers an injected native LAN provider with automatic room discovery, and falls back in a normal PWA to direct WebRTC DataChannels with an offline pairing exchange and no STUN/TURN/signaling server.
+**PocketNet is the preferred, active multiplayer transport** for all new Pocket Works games. Internet rooms, join codes, reconnection and authoritative game modules run through Cloudflare Durable Objects on the existing Worker. Clients use `shared/capabilities/net.js`; each new networked game provides its own server rules under `apps/<slug>/server/` and pins the immutable version in `pocketnet/module-versions/`. Details: [PocketNet on Cloudflare](./docs/POCKETNET-CLOUDFLARE.md).
 
-Global internet is not required when peers can reach each other on the same local network or hotspot. LAN-enabled apps opt in and cache the module themselves. Architecture, integration examples, UX rules and the physical-network test matrix are documented in [`docs/POCKET-LAN.md`](./docs/POCKET-LAN.md).
+**PocketLAN is currently inactive (legacy).** The historical `shared/capabilities/lan.js` and [PocketLAN documentation](./docs/POCKET-LAN.md) are retained for old applications only. Do not import or cache PocketLAN in new applications, depend on local Wi-Fi pairing, or add a second network path unless the platform explicitly reactivates it.
 
 ## Registry
 
