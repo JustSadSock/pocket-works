@@ -20,6 +20,7 @@ let difficulty=Number(saved('difficulty')||1),typedCode=codeFromUrl.trim().toUpp
 let mode='menu',modal='',net=null,me=null,state=null,practice=null,visual=null,roomId='',connected=false;
 let loading=false,connectToken=0,netSeq=0,lastTransmit=0,lastSnapshot=0,display=null,displayTime=0;
 let input={...NO_INPUT},oneshot={jab:false,parry:false,dash:false},fingers=new Map(),keys=new Set();
+let mousePoint={x:0,y:0},mouseLive=false;
 let effects=[],flash=0,shake=0,lastEventId=0,lastPhase='',lastStructure='',toastTimer=0,ac=null;
 let resizeW=0,resizeH=0,pixelRatio=1,lastFrame=0,accum=0,wasWin=false;
 let demoOffset=0;
@@ -31,7 +32,7 @@ function emitSound(kind){
   ac ||=new AC();if(ac.state==='suspended')ac.resume();
   const t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain(),metal=kind==='parry';
   o.type=metal?'square':kind==='point'?'sawtooth':'triangle';
-  const pitch=kind==='point'?130:metal?810:kind==='dash'?185:370;
+  const pitch=kind==='point'?130:metal?810:kind==='shield'?480:kind==='bind'?690:kind==='dash'?185:370;
   o.frequency.setValueAtTime(pitch,t);o.frequency.exponentialRampToValueAtTime(pitch*(metal?.48:.63),t+.17);
   g.gain.setValueAtTime(metal?.028:kind==='point'?.042:.019,t);
   g.gain.exponentialRampToValueAtTime(.0001,t+.18);
@@ -86,14 +87,15 @@ function activeUI(){
  '<div class="control-group"><div class="pad-label">ДВИЖЕНИЕ</div><div class="pad" data-pad="move" aria-label="Управление шагом"><div class="rings"></div><div id="stepThumb" class="thumb"></div></div></div>'+
  '<div class="center-controls"><button class="dodge" data-action="dash" aria-label="Уклониться рывком">↝<small>РЫВОК</small></button><span class="hint">ШАГ / ВЫПАД</span></div>'+
  '<div class="control-group"><div class="pad-label">ОСТРИЁ</div><div class="pad foil-pad" data-pad="aim" aria-label="Провести рапирой и отпустить для выпада; коснуться для парирования"><div class="rings"></div><div id="aimThumb" class="thumb"></div></div></div>'+
- '</section><div class="gesture-hint">СПРАВА: СМАХНИ — ВЫПАД · КОСНИСЬ — ПАРИРУЙ</div>';
+ '</section><div class="gesture-hint">СПРАВА: СМАХНИ — ВЫПАД · КОСНИСЬ — ПАРИРУЙ</div>'+
+'<div class="pc-hint"><span><kbd>WASD</kbd> Шаг</span><span><kbd>МЫШЬ</kbd> Клинок</span><span><kbd>ЛКМ</kbd> Укол</span><span><kbd>ПКМ</kbd> Щит / парирование</span><span><kbd>SPACE</kbd> Рывок</span></div>';
 }
 function dialogs(){
  if(!modal)return '';
  let inner='';
  if(modal==='help')inner='<h2>Острие решает.</h2><p>Левым пальцем двигайся. Справа проведи и отпусти палец — быстрый выпад по направлению рапиры. Короткое касание справа — парирование. Центральная кнопка — уход с линии.</p>'+
  '<p>Увидел укол противника? Встречай его остриём вовремя или уходи рывком. После удачного парирования сразу отвечай.</p>'+
- '<p class="faint">На компьютере: WASD — шаг, мышь — направление, ЛКМ / Пробел — выпад, ПКМ / Q — парирование, Shift — рывок.</p>'+
+ '<p class="faint">ПК: WASD — движение, мышь — клинок, ЛКМ — укол, удерживай ПКМ — щит вперёд, начало удержания — парирование; пробел — рывок. Q — отдельное парирование, Shift — альтернативный рывок.</p>'+ 
  button('Звук: '+(sound?'включён':'выключен'),'sound','outline')+button('Продолжить','close','primary')+
  (mode==='practice'||mode==='online'?button('Покинуть дуэль','exit','quiet'):'');
  else if(modal==='exit')inner='<h2>Покинуть дуэль?</h2><p>В сети выход из активной партии засчитывает поражение.</p>'+button('Покинуть','confirm-exit','primary')+button('Остаться','close','outline');
@@ -111,6 +113,7 @@ function render(force=false){
  const content=mode==='menu'?menu():mode==='connecting'?'<section class="sheet"><h2>Соединяемся…</h2><p>Подключаем PocketNet.</p>'+button('Отмена','cancel','outline')+'</section>':
  mode==='online'&&state?.phase==='lobby'?lobby():activeUI();
  ui.innerHTML=top()+content+dialogs();
+ $('app').classList.toggle('pc-playing',(mode==='practice'||mode==='online')&&current()?.phase==='battle');
  updatePad();
 }
 function refreshHUD(){
@@ -135,16 +138,16 @@ function updatePad(){
 }
 function initialInput(){
  const flip=mode==='online'&&mySide()===1?-1:1;
- input={...NO_INPUT,ax:0,ay:-flip};
+ input={...NO_INPUT,ax:0,ay:-flip};mouseLive=false;
 }
 function eventFX(e){
  if(!e||e.id===lastEventId)return;
  lastEventId=e.id;
- if(['parry','point','dash','double'].includes(e.type)){
+ if(['parry','shield','bind','point','dash','double'].includes(e.type)){
   effects.push({...e,at:performance.now()});if(effects.length>18)effects.shift();
  }
  if(e.type==='point'||e.type==='double'){flash=.9;shake=7;emitSound('point');navigator.vibrate?.(e.type==='point'?[35,30,50]:35);}
- else if(e.type==='parry'){flash=.25;shake=2.9;emitSound('parry');navigator.vibrate?.(20);}
+ else if(e.type==='parry'||e.type==='shield'||e.type==='bind'){flash=e.type==='bind'?.08:.25;shake=e.type==='bind'?.8:2.9;emitSound(e.type);navigator.vibrate?.(e.type==='bind'?10:20);}
  else if(e.type==='thrust')emitSound('jab');
  else if(e.type==='dash')emitSound('dash');
 }
@@ -296,7 +299,7 @@ function endPointer(e){
   try{f.pad.releasePointerCapture(e.pointerId)}catch{}
   const duration=performance.now()-f.at;
   if(key==='move'){input.mx=0;input.my=0;}
-  else if(e.type==='pointerup'){pulse(f.moved<12&&duration<160?'parry':'jab');}
+  else {input.guard=false;if(e.type==='pointerup')pulse(f.moved<12&&duration<160?'parry':'jab');}
   fingers.delete(key);updatePad();break;
  }
 }
@@ -309,14 +312,15 @@ function refreshKeys(){
  if(!fingers.has('move')){input.mx=mx/l*flip;input.my=my/l*flip;updatePad();}
 }
 document.addEventListener('keydown',e=>{
- if(e.target?.tagName==='INPUT')return;
+ if(e.target?.closest('input,textarea,select,button,a,[contenteditable="true"]'))return;
  const k=e.key.toLowerCase();
  if(moveKeys[k]){keys.add(k);refreshKeys();e.preventDefault();}
- if(!e.repeat&&[' ','shift','q'].includes(k)){pulse(k==='shift'?'dash':k==='q'?'parry':'jab');e.preventDefault();}
+ if(!e.repeat&&[' ','shift','q'].includes(k)){pulse(k==='q'?'parry':'dash');e.preventDefault();}
  if(k==='escape'&&modal){modal='';render(true);}
 });
 document.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(moveKeys[k]){keys.delete(k);refreshKeys();}});
 document.addEventListener('mousemove',e=>{
+ mousePoint={x:e.clientX,y:e.clientY};mouseLive=true;
  if((mode!=='online'&&mode!=='practice')||fingers.has('aim'))return;
  if(e.target.closest('[data-pad]')||e.target.closest('.dialog'))return;
  const duel=current();if(!duel)return;
@@ -325,14 +329,24 @@ document.addEventListener('mousemove',e=>{
  if(l>12){input.ax=dx/l;input.ay=dy/l;updatePad();}
 });
 document.addEventListener('mousedown',e=>{
- if(e.target.closest('button,input,a,.dialog,[data-pad]'))return;
+ if(e.target.closest('button,input,a,.dialog,[data-pad],.sheet,.menu'))return;
  if(mode!=='online'&&mode!=='practice')return;
- if(e.button===0)pulse('jab');if(e.button===2)pulse('parry');
+ if(e.button===0){pulse('jab');e.preventDefault();}
+ if(e.button===2){input.guard=true;pulse('parry');transmit(true);e.preventDefault();}
+});
+window.addEventListener('mouseup',e=>{if(e.button===2&&input.guard){input.guard=false;transmit(true);}});
+window.addEventListener('blur',()=>{
+ keys.clear();fingers.clear();input.mx=0;input.my=0;input.guard=false;
+ oneshot={jab:false,parry:false,dash:false};updatePad();transmit(true);
 });
 document.addEventListener('contextmenu',e=>{if(mode==='online'||mode==='practice')e.preventDefault();});
 function loop(time){
  if(!lastFrame)lastFrame=time;
  const dt=Math.min(.042,(time-lastFrame)/1000);lastFrame=time;
+ if(fingers.has('aim')){
+  const f=fingers.get('aim');
+  input.guard=f.moved<12&&performance.now()-f.at>230;
+ }
  if(mode==='practice'&&practice?.phase==='battle'){
   accum+=dt;
   while(accum>=STEP){
@@ -365,8 +379,8 @@ function loop(time){
    const alpha=1-Math.exp(-dt*23);
    for(let i=0;i<2;i++){
     const target=d.fighters[i],out=display.fighters[i];
-    for(const k of ['x','y','a'])out[k]+=(target[k]-out[k])*alpha;
-    for(const k of ['jab','vx','vy','step','slash','parry','dash','stagger','riposte'])out[k]=target[k];
+    for(const k of ['x','y','a','sx','sy','shieldAngle'])out[k]+=(target[k]-out[k])*alpha;
+    for(const k of ['jab','vx','vy','step','slash','parry','dash','stagger','riposte','guard','bladeKick','shieldFlash'])out[k]=target[k];
    }
   }
  }else display=null;
@@ -378,7 +392,8 @@ function loop(time){
   canvas.width=Math.round(w*pixelRatio);canvas.height=Math.round(h*pixelRatio);
  }
  drawScene(ctx,w,h,time,display,{side:mode==='online'?Math.max(0,mySide()):0,
-  effects,shake,flash,pixelRatio});
+  effects,shake,flash,pixelRatio,
+  mouse:mouseLive&&['practice','online'].includes(mode)?mousePoint:null});
  refreshHUD();
  requestAnimationFrame(loop);
 }

@@ -82,3 +82,26 @@ a{color:inherit;text-decoration:none}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-height:715px){.menu{padding-top:calc(77px + env(safe-area-inset-top));padding-bottom:calc(16px + var(--safe))}.hero h1{font-size:48px}.hero p{font-size:9px}.menu-buttons{gap:6px}.menu-buttons .btn{min-height:39px}.scoreboard{top:calc(56px + env(safe-area-inset-top))}.stage-line{top:calc(123px + env(safe-area-inset-top))}.controls{padding-top:7px;min-height:174px}.control-group{gap:5px}.pad{width:95px;height:95px}.gesture-hint{font-size:7px}.dodge{width:55px;height:55px}}
 @media(min-width:700px){.menu{padding-top:112px}.controls{padding-bottom:26px}.pad{width:143px;height:143px}.menu-buttons{max-width:390px}}
+
+/* Desktop interaction is mouse-and-keyboard first, not two enormous touch joysticks. */
+.pc-hint{display:none}
+@media (hover:hover) and (pointer:fine){
+ #app.pc-playing{cursor:crosshair}
+ #app.pc-playing button,#app.pc-playing a{cursor:pointer}
+ .controls,.gesture-hint{display:none}
+ .pc-hint{position:absolute;left:50%;bottom:23px;transform:translateX(-50%);
+   width:max-content;max-width:calc(100% - 32px);display:flex;align-items:center;justify-content:center;
+   flex-wrap:wrap;gap:clamp(9px,1.6vw,23px);padding:12px 17px;
+   border:1px solid #bbc6b666;background:#12241dcf;
+   box-shadow:0 9px 24px #030c095e;backdrop-filter:blur(5px);
+   font-size:10px;letter-spacing:.045em;color:#c6d2c1}
+ .pc-hint span{white-space:nowrap}
+ .pc-hint kbd{font:600 10px system-ui,sans-serif;color:#f0e2bd;
+   border:1px solid #abbc9c69;border-radius:2px;padding:4px 5px;margin-right:4px}
+ .scoreboard{top:calc(79px + env(safe-area-inset-top,0px))}
+ .stage-line{top:calc(146px + env(safe-area-inset-top,0px))}
+}
+@media (hover:hover) and (pointer:fine) and (max-width:800px){
+ .pc-hint{font-size:9px;gap:8px;padding:9px}
+ .pc-hint kbd{font-size:9px}
+}

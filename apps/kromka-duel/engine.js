@@ -18,13 +18,15 @@ export function inputOf(raw){
   const r=length(o[x],o[y]);
   if(r>1){o[x]=Math.trunc(o[x]/r*100)/100;o[y]=Math.trunc(o[y]/r*100)/100;}
  }
- return {...o,jab:raw.jab===true,parry:raw.parry===true,dash:raw.dash===true};
+ return {...o,jab:raw.jab===true,parry:raw.parry===true,dash:raw.dash===true,guard:raw.guard===true};
 }
-export const NO_INPUT={mx:0,my:0,ax:0,ay:-1,jab:false,parry:false,dash:false};
+export const NO_INPUT={mx:0,my:0,ax:0,ay:-1,jab:false,parry:false,dash:false,guard:false};
 export function spawn(i){
  return {x:180,y:i?167:367,vx:0,vy:0,a:i?Math.PI/2:-Math.PI/2,
   jab:0,attackCd:0,parry:0,parryCd:0,dash:0,dashCd:0,stagger:0,riposte:0,
-  slash:0,step:0,immunity:0,hit:false};
+  slash:0,step:0,immunity:0,hit:false,guard:false,
+  sx:i?166:194,sy:i?185:349,svx:0,svy:0,shieldAngle:i?Math.PI/2:-Math.PI/2,
+  shieldFlash:0,bladeKick:0,clashCd:0};
 }
 export function createDuel(){
  return {phase:'battle',fighters:[spawn(0),spawn(1)],scores:[0,0],winner:null,
@@ -39,12 +41,33 @@ export function bound(f){
 }
 export function tip(f){
  const extend=f.jab>0&&f.jab<.215?19*Math.sin(Math.PI*clamp((.215-f.jab)/.215,0,1)):0;
- const reach=63+extend;
- return {x:f.x+Math.cos(f.a)*reach,y:f.y+Math.sin(f.a)*reach};
+ const reach=63+extend,bearing=f.a+(f.bladeKick||0);
+ return {x:f.x+Math.cos(bearing)*reach,y:f.y+Math.sin(bearing)*reach};
+}
+// The light off-hand buckler is physically tethered to the torso, never independently steered.
+export function shieldOf(f){
+ const bearing=f.shieldAngle??f.a,front=f.guard?24:17,side=f.guard?9:14;
+ return {x:Number.isFinite(f.sx)?f.sx:f.x+Math.cos(bearing)*front-Math.sin(bearing)*side,
+  y:Number.isFinite(f.sy)?f.sy:f.y+Math.sin(bearing)*front+Math.cos(bearing)*side,
+  r:f.guard?16:12,angle:bearing};
+}
+export function bladeOf(f){
+ const bearing=f.a+(f.bladeKick||0),end=tip(f);
+ return {ax:f.x+Math.cos(bearing)*13,ay:f.y+Math.sin(bearing)*13,
+         bx:end.x,by:end.y};
 }
 function pointSegment(px,py,ax,ay,bx,by){
  const vx=bx-ax,vy=by-ay,s=clamp(((px-ax)*vx+(py-ay)*vy)/(vx*vx+vy*vy||1),0,1);
  return length(px-(ax+vx*s),py-(ay+vy*s));
+}
+function segmentDistance(a,b){
+ const crossing=(x,y,u,v)=> (y.x-x.x)*(v.y-u.y)-(y.y-x.y)*(v.x-u.x);
+ const A={x:a.ax,y:a.ay},B={x:a.bx,y:a.by},C={x:b.ax,y:b.ay},D={x:b.bx,y:b.by};
+ const r1=crossing(A,B,A,C),r2=crossing(A,B,A,D),r3=crossing(C,D,C,A),r4=crossing(C,D,C,B);
+ if(r1*r2<=0&&r3*r4<=0)return 0;
+ return Math.min(pointSegment(A.x,A.y,C.x,C.y,D.x,D.y),
+  pointSegment(B.x,B.y,C.x,C.y,D.x,D.y),
+  pointSegment(C.x,C.y,A.x,A.y,B.x,B.y),pointSegment(D.x,D.y,A.x,A.y,B.x,B.y));
 }
 function event(s,type,who,x,y){
  s.eventId++;s.event={id:s.eventId,type,who,x:fixed(x),y:fixed(y)};
@@ -66,11 +89,13 @@ export function tick(s,raw,dt=STEP){
  }
  s.roundTime=Math.max(0,s.roundTime-dt);
  const before=s.fighters.map(f=>({x:f.x,y:f.y}));
- const bladesBefore=s.fighters.map(f=>tip(f));
+ const bladesBefore=s.fighters.map(f=>bladeOf(f));
  for(let i=0;i<2;i++){
   const f=s.fighters[i],v=ins[i];
-  for(const k of ['attackCd','parry','parryCd','dash','dashCd','stagger','riposte','immunity','slash'])f[k]=Math.max(0,f[k]-dt);
+  for(const k of ['attackCd','parry','parryCd','dash','dashCd','stagger','riposte','immunity','slash','shieldFlash','clashCd'])f[k]=Math.max(0,f[k]-dt);
   if(f.jab>0)f.jab=Math.max(0,f.jab-dt);
+  f.guard=v.guard;
+  f.bladeKick=(f.bladeKick||0)*Math.exp(-dt*4.2);
   if(length(v.ax,v.ay)>.14){
    const aim=angle(v.ax,v.ay);
    const turn=clamp(delta(f.a,aim),-18*dt,18*dt);
@@ -94,7 +119,7 @@ export function tick(s,raw,dt=STEP){
   }
   const attackActive=f.jab>.065&&f.jab<.225;
   const thrust=attackActive?155:0;
-  const moveSpeed=f.stagger>0?22:f.dash>0?0:f.jab>0?68:f.parry>0?72:186;
+  const moveSpeed=f.stagger>0?22:f.dash>0?0:f.jab>0?68:f.guard?115:f.parry>0?72:186;
   const wantX=dx*moveSpeed+(attackActive?Math.cos(f.a)*thrust:0);
   const wantY=dy*moveSpeed+(attackActive?Math.sin(f.a)*thrust:0);
   const smooth=f.dash>0?.10:Math.min(1,dt*18);
@@ -102,6 +127,16 @@ export function tick(s,raw,dt=STEP){
   f.x+=f.vx*dt;f.y+=f.vy*dt;
   f.step+=length(f.vx,f.vy)*dt;
   bound(f);
+  // Damped spring in world space: the off-hand stays attached while lagging under acceleration.
+  const shoulderX=f.x+Math.cos(f.a)*(f.guard?24:17)-Math.sin(f.a)*(f.guard?9:14);
+  const shoulderY=f.y+Math.sin(f.a)*(f.guard?24:17)+Math.cos(f.a)*(f.guard?9:14);
+  f.svx=clamp((f.svx+(shoulderX-f.sx)*210*dt)*Math.exp(-17*dt),-125,125);
+  f.svy=clamp((f.svy+(shoulderY-f.sy)*210*dt)*Math.exp(-17*dt),-125,125);
+  f.sx+=f.svx*dt;f.sy+=f.svy*dt;
+  const lag=length(f.sx-shoulderX,f.sy-shoulderY);
+  if(lag>6.5){f.sx=shoulderX+(f.sx-shoulderX)*6.5/lag;f.sy=shoulderY+(f.sy-shoulderY)*6.5/lag;
+   f.svx*=.52;f.svy*=.52;}
+  f.shieldAngle+=clamp(delta(f.shieldAngle,f.a),-8*dt,8*dt);
  }
  const [a,b]=s.fighters;
  const d=length(a.x-b.x,a.y-b.y);
@@ -111,23 +146,53 @@ export function tick(s,raw,dt=STEP){
   b.x-=ux*(27-d)*.5;b.y-=uy*(27-d)*.5;
   bound(a);bound(b);
  }
+ // Old-school blade contact is real geometry, not a timed button-only defence.
+ const swords=s.fighters.map(bladeOf);
  const candidates=[];
  for(let i=0;i<2;i++){
   const attacker=s.fighters[i],defender=s.fighters[1-i];
-  if(attacker.jab<=.065||attacker.jab>=.225||attacker.hit||attacker.stagger>0)continue;
-  const previous=bladesBefore[i],current=tip(attacker),old=before[1-i];
-  const hit=pointSegment(defender.x,defender.y,previous.x,previous.y,current.x,current.y)<15.5||
-    pointSegment(defender.x,defender.y,attacker.x,attacker.y,current.x,current.y)<15.5||
-    length(current.x-defender.x,current.y-defender.y)<15.5||
-    length(current.x-old.x,current.y-old.y)<15.5;
-  if(!hit||defender.immunity>0)continue;
+  const previous=bladesBefore[i],current=swords[i],other=swords[1-i];
+  const clash=segmentDistance(current,other)<5.4||
+    pointSegment(current.bx,current.by,other.ax,other.ay,other.bx,other.by)<5.4||
+    pointSegment(previous.bx,previous.by,other.ax,other.ay,other.bx,other.by)<5.4;
+  const active=attacker.jab>.065&&attacker.jab<.225&&!attacker.hit&&attacker.stagger<=0;
+  if(clash&&attacker.clashCd<=0&&defender.clashCd<=0&&
+   (active||defender.jab>.02||length(attacker.vx,attacker.vy)>75)){
+   const swing=delta(attacker.a,defender.a);
+   const beat=active&&defender.jab<=0&&defender.parry<=0&&!defender.guard;
+   const sign=Math.sin(swing)>=0?1:-1;
+   attacker.bladeKick=clamp(attacker.bladeKick+sign*(beat?-.08:.17),-.68,.68);
+   defender.bladeKick=clamp(defender.bladeKick-sign*(beat?.85:.2),-.96,.96);
+   attacker.clashCd=.2;defender.clashCd=.2;
+   event(s,'bind',i,(current.bx+other.bx)/2,(current.by+other.by)/2);
+  }
+  if(!active)continue;
+  const old=before[1-i],bladeTip=tip(attacker);
+  const bodyHit=pointSegment(defender.x,defender.y,previous.bx,previous.by,bladeTip.x,bladeTip.y)<15.5||
+    pointSegment(defender.x,defender.y,current.ax,current.ay,current.bx,current.by)<15.5||
+    length(bladeTip.x-defender.x,bladeTip.y-defender.y)<15.5||
+    length(bladeTip.x-old.x,bladeTip.y-old.y)<15.5;
   const incoming=angle(attacker.x-defender.x,attacker.y-defender.y);
-  const guarded=defender.parry>0&&defender.stagger<=0&&Math.abs(delta(defender.a,incoming))<.75;
-  if(guarded){
-   attacker.hit=true;attacker.jab=0;attacker.stagger=.30;attacker.vx=-Math.cos(attacker.a)*105;attacker.vy=-Math.sin(attacker.a)*105;
-   defender.riposte=.48;defender.parry=0;defender.attackCd=0;
-   event(s,'parry',1-i,defender.x,defender.y);
-  }else candidates.push(i);
+  const front=Math.abs(delta(defender.a,incoming));
+  const timedParry=defender.parry>0&&defender.stagger<=0&&front<1.02&&
+   length(attacker.x-defender.x,attacker.y-defender.y)<113;
+  const shield=shieldOf(defender);
+  const shieldContact=front<1.36&&(pointSegment(shield.x,shield.y,previous.bx,previous.by,current.bx,current.by)<shield.r+3||
+   pointSegment(shield.x,shield.y,current.ax,current.ay,current.bx,current.by)<shield.r+3);
+  const bladeContact=clash&&front<1.75&&(defender.guard||defender.parry>0||defender.jab>.03);
+  const protectedBy=timedParry?'parry':shieldContact?'shield':bladeContact?'bind':null;
+  if(protectedBy){
+   attacker.hit=true;attacker.jab=0;attacker.stagger=protectedBy==='parry'?.26:.13;
+   attacker.vx-=Math.cos(attacker.a)*70;attacker.vy-=Math.sin(attacker.a)*70;
+   attacker.bladeKick=clamp(attacker.bladeKick+(i===0?.31:-.31),-.58,.58);
+   if(protectedBy==='parry'){defender.riposte=.48;defender.parry=0;defender.attackCd=0;}
+   if(protectedBy==='shield'){
+    defender.shieldFlash=.21;
+    defender.svx+=(attacker.x-defender.x)*.18;
+    defender.svy+=(attacker.y-defender.y)*.18;
+   }
+   event(s,protectedBy,1-i,protectedBy==='shield'?shield.x:defender.x,protectedBy==='shield'?shield.y:defender.y);
+  }else if(bodyHit&&defender.immunity<=0)candidates.push(i);
  }
  if(candidates.length){
   const simultaneous=candidates.length===2;
