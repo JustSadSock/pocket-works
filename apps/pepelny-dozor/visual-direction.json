@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "pepelny-dozor",
+  "direction": {
+    "premise": "Last light in a collapsed medieval abbey: the player's sweeping flame reveals architecture and burns shadows.",
+    "composition": "Edge-to-edge moonlit floor and glowing center reliquary; thin status on stage and wooden bell console below.",
+    "shapeLanguage": "Pixel glyph creatures with sharp long cloaks, antlers and segmented wings; heavy architectural sides, angular standing stones.",
+    "surfaceAndMaterial": "Weathered lime masonry, carved stone circles, dark verdigris brass, warm analog glass flare over strict integer sprites.",
+    "paletteLogic": "Charcoal and muted jade for ground/enemies; ceramic off-white for information; isolated gold/terracotta for flame and real damage.",
+    "typography": "Narrow engraved serif game logo, restrained system captions for urgent status only.",
+    "signature": "A rotating cone of light physically cuts through the enemy silhouettes and reveals the forgotten abbey as the player drags.",
+    "distinction": "Not a side-view arena cabinet, not an all-over green garden miniature, and not a colorful tool tray.",
+    "spatialRationale": "Arena owns all remaining phone height. Control is direct within it; one large bell button in the bottom strip, no scrolling.",
+    "comparisons": [
+      {
+        "slug": "afterhours-arena",
+        "spatialDifference": "Full vertical top-down floor instead of landscape fighting cabinet.",
+        "interactionDifference": "One sweeping aim gesture and timed pulse instead of a set of individual fighter buttons."
+      },
+      {
+        "slug": "chush",
+        "spatialDifference": "Stone lit battlefield without brush tray or pastel stamps.",
+        "interactionDifference": "Drag changes the beam and battle rather than leaving image stamps."
+      },
+      {
+        "slug": "moss-marble",
+        "spatialDifference": "Dark lantern reliquary floor instead of golf greenery.",
+        "interactionDifference": "Survival wave pressure rather than physics putts."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Single 2D canvas with exact 32px pixel source, generated PNG atlas, vector engraved PWA seal and render-time luminous falloff.",
+    "focalAsset": "Deterministically authored creature frames with 14-color palette and fixed 32x32 cell and pivot."
+  },
+  "motion": {
+    "character": "Weighted imperceptible sprite rocking, clear impact flashes and candle drift; no endless bounce on UI.",
+    "action": "Pointer turns the lamp continuously; button sounds a bronze chime.",
+    "anticipation": "Warm beam makes hostile approach visible before they reach the reliquary.",
+    "response": "Exposure reduces enemy health every fixed-time update; bell instantly damages and knocks enemies outward.",
+    "followThrough": "Dying shadows shatter into embers; bell ring expands across the stone floor.",
+    "interruption": "Pause freezes enemy simulation; reduced-motion removes shake but preserves legible hits.",
+    "reducedMotion": "prefers-reduced-motion disables incidental camera shake and CSS transitions."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#primary"
+    },
+    "expectedChange": "The initial overlay closes, wave I spawns playable enemies and bell input becomes active.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  },
+  "architecture": {
+    "spatialLayout": "edge-to-edge circular defense floor",
+    "controlLocation": "direct-on-stage beam and one bottom physical bell",
+    "navigation": "arena phases replaced by a modal engraved altar",
+    "chromeTopology": "unframed top-down playfield with wood console",
+    "dominantMotion": "guided sweep and radial outward impulse",
+    "primaryVerb": "Aim the oil lamp by dragging a pointer, exposing and destroying oncoming shadows.",
+    "physicalFeedback": "Beam turns instantly, enemies flash, sparks shed and HP decreases; timed bell pushes enemies out in a visible ring.",
+    "spatialRationale": "Portrait mobile stage fills available height between tiny safe-area header and bell console; controls never need scrolling.",
+    "comparisons": [
+      {
+        "slug": "chush",
+        "spatialDifference": "Immersive textured circular battlefield replaces open square drawing canvas and tool row.",
+        "interactionDifference": "Continuous aiming affects moving attackers rather than adding stamps."
+      },
+      {
+        "slug": "klyatvy",
+        "spatialDifference": "Kinetic illuminated arena replaces any document-like ritual choices.",
+        "interactionDifference": "Realtime wave survival replaces sequential decisions."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "Physical tower and shadow floor replaces framed paintings.",
+        "interactionDifference": "Drag controls destructive light, not painting restoration."
+      },
+      {
+        "slug": "afterhours-arena",
+        "spatialDifference": "Portrait top-down world instead of wide two-character fighter cabinet.",
+        "interactionDifference": "Aim-and-bell replaces several attack and movement buttons."
+      },
+      {
+        "slug": "moss-marble",
+        "spatialDifference": "Cyclic stone arena instead of an irregular putting course.",
+        "interactionDifference": "Light damage over time replaces ball strike physics."
+      }
+    ]
+  }
+}
