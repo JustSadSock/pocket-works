@@ -8,14 +8,14 @@ export const CATALOG = [
   { type:'shelf', name:'Комод', group:'furniture', icon:'shelf', size:[1.75,0.72], top:1.02 },
   { type:'bed', name:'Кровать', group:'furniture', icon:'bed', size:[2.3,2.7] },
   { type:'stool', name:'Табурет', group:'furniture', icon:'stool', size:[0.72,0.72], top:0.52 },
-  { type:'floorlamp', name:'Торшер', group:'lights', icon:'lamp', size:[0.63,0.63] },
-  { type:'tablelamp', name:'Лампа', group:'lights', icon:'lamp', size:[0.48,0.48], tabletop:true },
-  { type:'plant', name:'Фикус', group:'decor', icon:'plant', size:[0.68,0.68] },
+  { type:'floorlamp', name:'Торшер', group:'lights', icon:'lamp', size:[0.92,0.92] },
+  { type:'tablelamp', name:'Лампа', group:'lights', icon:'lamp', size:[0.55,0.55], tabletop:true },
+  { type:'plant', name:'Фикус', group:'decor', icon:'plant', size:[0.96,0.96] },
   { type:'rug', name:'Ковёр', group:'decor', icon:'rug', size:[2.95,2.12], layer:'rug' },
   { type:'books', name:'Книги', group:'decor', icon:'books', size:[0.52,0.36], tabletop:true },
   { type:'mug', name:'Чашка', group:'decor', icon:'mug', size:[0.3,0.3], tabletop:true },
-  { type:'frame', name:'Картина', group:'walls', icon:'frame', size:[1.28,0.1], layer:'wall' },
-  { type:'window', name:'Окно', group:'walls', icon:'window', size:[1.68,0.1], layer:'wall' }
+  { type:'frame', name:'Картина', group:'walls', icon:'frame', size:[1.37,0.1], layer:'wall' },
+  { type:'window', name:'Окно', group:'walls', icon:'window', size:[1.94,0.1], layer:'wall' }
 ];
 export const byType = Object.fromEntries(CATALOG.map(x=>[x.type,x]));
 export const COLORS = ['#e8a58f','#d6bd80','#8eae99','#8baab8','#bc9bb5','#e8d8bf','#a58f77','#d2a993'];
