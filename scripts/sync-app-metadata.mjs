@@ -14,7 +14,8 @@ export function canonicalWorker(source, config) {
     source=source.replace(prefixMatch[0], prefixMatch[0].replace(prefixMatch[1],config.slug+'-'));
     source=source.replace(/(\b(?:const|let)\s+CACHE_NAME\s*=\s*)`\$\{CACHE_PREFIX\}[^`]+`/,(_,prefix)=>prefix+JSON.stringify(config.cacheName));
   }
-  const match=source.match(/\b(?:const|let)\s+(CACHE_NAME|CACHE)\s*=\s*(['"`])([^'"`]+)\2/);
+  const match=source.match(/\b(?:const|let)\s+(CACHE_NAME|CACHE)\s*=\s*(['"`])([^'"`]+)\2/)
+    || source.match(/,\s*(CACHE_NAME|CACHE)\s*=\s*(['"`])([^'"`]+)\2/);
   if(!match) {
     if(config.runtime !== 'enhanced' || !source.includes('setCacheNameDetails') || !source.includes(config.slug)) throw Error(`${config.slug}: no static owned cache declaration`);
     return source.replace(/(\b(?:const|let)\s+APP_VERSION\s*=\s*)(['"`])[^'"`]+\2/, (_, prefix) => prefix+JSON.stringify(config.version));
