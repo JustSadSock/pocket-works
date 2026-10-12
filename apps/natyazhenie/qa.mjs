@@ -64,6 +64,7 @@ try{
     targets.push(2*(beams[i].x-Math.sin(w.clock*2.3+i*1.9)*14)-targets[i]);
    controls(w,(p,i)=>({dir:Math.max(-1,Math.min(1,(targets[i]-p.x)*.13))}));
   }
+  if(!w.gateOpen)console.log('Balance trace',count,JSON.stringify({beams:w.stage.balances.map(b=>b.x),charge:w.beamCharge,tilt:w.beamTilt,players:w.players.map(p=>({x:p.x,y:p.y,ground:p.ground,vx:p.vx}))}));
   assert.ok(w.gateOpen,'balancing team '+count+' must be able to open the gate');
  }
  // Ferry: an actual grounded rider and anchored teammate, no virtual button.
