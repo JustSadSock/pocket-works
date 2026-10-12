@@ -2,11 +2,11 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {GameRoom,cleanRoomCode} from './room.js';
-import {paint,coverWorld} from './art.js';
+import {paint,coverWorld,paintBook} from './art.js';
 import {advancePosition} from './engine.js';
 import {newLocal,tickLocal,verifyLocalLayouts,CHAPTERS} from './local.js';
 installMobileRuntime();
-createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'1.3.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
+createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'2.0.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
 const $=id=>document.getElementById(id);
 const localKey='pocket-works:natyazhenie:';
 const read=(key,fallback='')=>{try{return localStorage.getItem(localKey+key)??fallback;}catch{return fallback;}};
@@ -17,6 +17,7 @@ const color=['#ff7282','#70c7f5','#8fdb8d','#ffc968','#b7a1f4'];
 let profile=null,screen='menu',connecting=false,roomAction='create',gameMode='online',state=null,world=null;
 let paused=false,keys=new Set(),touch=new Set(),touchPointers=new Map(),lastFrame=0,lastInput=0,lastInputSignature='',snapshotTime=0,localPrediction=null;
 let visual=new Map(),lastLevel=-1,shownFinish=false,lastFalls=new Map(),lastCover=0,lastPhase=0;
+let localBriefing=false,localReady=new Set(),lastBookLevel=-1;
 let toastId=0,flashId=0,ctxAudio=null,sound=read('sound','on')!=='off';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 $('name').value=read('name','Игрок');
@@ -62,7 +63,7 @@ function updateLobby(){
  $('start').disabled=team.length<2||!room.connected;
 }
 function setState(next){
- if(!next||!['lobby','play','done'].includes(next.phase)||!Array.isArray(next.players)||next.players.length>5)return;
+ if(!next||!['lobby','briefing','play','done'].includes(next.phase)||!Array.isArray(next.players)||next.players.length>5)return;
  const phase=state?.phase,previousLevel=state?.world?.level??-1,previousStagePhase=state?.world?.phase??-1;
  state=next;world=next.world||null;snapshotTime=performance.now();
  if(next.phase==='lobby'){lastLevel=-1;localPrediction=null;setScreen('lobby');updateLobby();return;}
@@ -72,43 +73,69 @@ function setState(next){
   if(lastLevel>=0){flash('УРОВЕНЬ ПРОЙДЕН!');clickSound('win');}
   localPrediction=null;visual.clear();lastFalls.clear();lastLevel=currentLevel;lastPhase=world?.phase??0;
  }
- if(previousLevel===currentLevel&&world?.phase>previousStagePhase&&previousStagePhase>=0){flash(world?.stage?.kind==='lift'&&world?.phase===1?'МАЯТНИК УСКОРИЛСЯ!':world?.stage?.rescue&&world?.phase===1?'МОСТ ПОЯВИЛСЯ!':'ЭТАП ВЫПОЛНЕН!');clickSound('win');}
+ if(previousLevel===currentLevel&&world?.phase>previousStagePhase&&previousStagePhase>=0)clickSound('win');
+ if(next.phase==='briefing'){clearInput();localPrediction=null;renderBook();}
+ else if(phase==='briefing'&&next.phase==='play'){$('book-sheet').hidden=true;lastBookLevel=-1;clearInput();}
  if(next.phase==='play'&&phase==='done'){$('finish-sheet').hidden=true;shownFinish=false;paused=false;}
- if(next.phase==='done'){if(!shownFinish){clickSound('win');save('clears',Number(read('clears','0'))+1);}shownFinish=true;$('finish-sheet').hidden=false;$('again').hidden=next.host!==room.self?.id;$('finish-copy').textContent='Все '+(next.levels||CHAPTERS.length)+' испытаний пройдены всей командой.';}
+ if(next.phase==='done'){$('book-sheet').hidden=true;if(!shownFinish){clickSound('win');save('clears',Number(read('clears','0'))+1);}shownFinish=true;$('finish-sheet').hidden=false;$('again').hidden=next.host!==room.self?.id;$('finish-copy').textContent='Все '+(next.levels||CHAPTERS.length)+' испытаний пройдены всей командой.';}
  updateGameUI();
 }
 function updateGameUI(){
  if(!world)return;
  $('chapter').textContent=world.stage.name;
- const stage=world.stage,seq=stage.sequence||[],goal=seq[world.phase||0];
- const names={wheels:'Заведи ленту на барабан',stars:'Собери искры',pads:'Займи кнопки и держи',
-  beacons:'Протяни ленту через кольцо',tension:'Натяни связь и удержи',rescue:'Вытащи сорвавшегося друга',
-  signals:'Проведи ленту через линзы',balance:'Удержи противовес'};
- const done=world.pads.filter(Boolean).length+world.stars.filter(Boolean).length+
-  (world.beacons||[]).filter(Boolean).length+(world.wheelDone||[]).filter(Boolean).length+
-  (world.tensionDone?1:0)+(world.saveCount>0?1:0);
- const total=world.pads.length+world.stars.length+(stage.beacons?.length||0)+
-  (stage.wheels?.length||0)+(stage.tension?1:0)+(stage.rescue?1:0);
- $('hint').textContent=world.gateOpen?'Все к выходу →':seq.length?
-  ((world.phase+1)+'/'+seq.length+' · '+(names[goal]||stage.hint)):
-  stage.hint+' · '+done+'/'+total;
-
- $('progress').textContent=String(world.level+1).padStart(2,'0')+' / '+String(gameMode==='online'&&state?.levels?state.levels:CHAPTERS.length).padStart(2,'0');
+ $('progress').textContent=String(world.level+1).padStart(2,'0')+' / '+
+  String(gameMode==='online'&&state?.levels?state.levels:CHAPTERS.length).padStart(2,'0');
  $('signal').classList.toggle('offline',gameMode==='online'&&!room.connected);
 }
+function isBriefing(){return screen==='game'&&(gameMode==='local'?localBriefing:state?.phase==='briefing');}
+function renderBook(){
+ if(!world||!isBriefing())return;
+ const stage=world.stage;
+ $('book-sheet').hidden=false;
+ $('book-number').textContent='ИСПЫТАНИЕ '+String(world.level+1).padStart(2,'0')+' / '+String(CHAPTERS.length).padStart(2,'0');
+ $('book-title').textContent=stage.name;
+ $('book-copy').textContent=stage.book||'Действуйте вместе.';
+ $('book-second').textContent=stage.second||'';
+ if(lastBookLevel!==world.level){lastBookLevel=world.level;requestAnimationFrame(()=>paintBook($('book-art'),stage));}
+ if(gameMode==='local'){
+  $('book-party').innerHTML='';$('book-online-button').hidden=true;$('book-local-buttons').hidden=false;
+  for(let i=0;i<2;i++){
+   const button=$('book-local-'+i);button.disabled=localReady.has(i);
+   button.textContent=localReady.has(i)?'✓ '+(i+1)+' ГОТОВ':'ИГРОК '+(i+1)+' · ГОТОВ';
+  }
+  $('book-status').textContent=localReady.size+'/2 готовы';
+ }else{
+  $('book-local-buttons').hidden=true;$('book-online-button').hidden=false;
+  const members=state?.players||[],readies=state?.ready||{},selfId=room.self?.id;
+  $('book-party').innerHTML=members.map((p,i)=>'<span class="book-player'+(readies[p.id]?' is-ready':'')+'" style="--dot:'+color[i%5]+'">'+escape(p.name)+(readies[p.id]?' ✓':' ·')+'</span>').join('');
+  const wasReady=!!readies[selfId];$('book-online-button').disabled=wasReady||!room.connected;
+  $('book-online-button').textContent=wasReady?'Готово · ждём друзей':'Я готов →';
+  $('book-status').textContent=members.filter(p=>readies[p.id]).length+' / '+members.length+' готовы';
+ }
+}
+function localStartBriefing(){
+ localBriefing=true;localReady.clear();lastBookLevel=-1;paused=false;
+ $('pause-sheet').hidden=true;clearInput();renderBook();
+}
+function localMarkReady(index){
+ if(!localBriefing||localReady.has(index))return;
+ localReady.add(index);clickSound('tap');renderBook();
+ if(localReady.size>=2){localBriefing=false;$('book-sheet').hidden=true;lastBookLevel=-1;clearInput();}
+}
+
 function startOnline(action,code=''){
  if(connecting)return;
  const name=nickname();roomAction=action;connecting=true;gameMode='online';state=null;world=null;$('local-help').hidden=true;
  showConnecting();
  room.open({name,identityKey:profile?.complete?profile.id:'guest',action,code});
 }
-function leave(){room.close();state=null;world=null;localPrediction=null;visual.clear();connecting=false;gameMode='online';paused=false;updateUrl('');setScreen('menu');}
+function leave(){room.close();state=null;world=null;localPrediction=null;visual.clear();connecting=false;gameMode='online';paused=false;localBriefing=false;$('book-sheet').hidden=true;updateUrl('');setScreen('menu');}
 function startLocal(){
  room.close();gameMode='local';state=null;world=newLocal();lastLevel=0;lastPhase=0;shownFinish=false;visual.clear();localPrediction=null;
- setScreen('game');$('local-help').hidden=false;updateGameUI();flash('ИГРОК 1 — WASD · ИГРОК 2 — СТРЕЛКИ');
+ setScreen('game');$('local-help').hidden=false;updateGameUI();localStartBriefing();
 }
 function togglePause(flag){
- if(screen!=='game'||(gameMode==='online'&&state?.phase==='done'))return;
+ if(screen!=='game'||isBriefing()||(gameMode==='online'&&state?.phase==='done'))return;
  paused=flag;$('pause-sheet').hidden=!flag;
  $('pause-description').textContent=gameMode==='online'?'У друзей игра продолжается.':'Оба персонажа остановлены.';
  $('restart').disabled=gameMode==='online'&&state?.host!==room.self?.id;
@@ -124,12 +151,12 @@ function control(){
 }
 function renderOnline(dt,now){
  if(!world||!world.players?.length)return;
- const age=Math.min(.12,(now-snapshotTime)/1000),input=paused?{dir:0,jump:false,anchor:false}:control(),selfId=room.self?.id;
+ const age=state?.phase==='briefing'?0:Math.min(.12,(now-snapshotTime)/1000),input=paused||state?.phase==='briefing'?{dir:0,jump:false,anchor:false}:control(),selfId=room.self?.id;
  const stage={...world.stage,open:world.gateOpen};
  const projected=world.players.map((p,i)=>{
   if(p.id===selfId){
    if(!localPrediction)localPrediction={...p,jumpHeld:input.jump&&!p.ground};
-   if(!paused&&room.connected)localPrediction=advancePosition(localPrediction,input,dt,stage,world.players);
+   if(!paused&&state?.phase==='play'&&room.connected)localPrediction=advancePosition(localPrediction,input,dt,stage,world.players);
    // Reconciliation uses a short server forward projection rather than snapping to an old sample.
    const serverFuture=advancePosition({...p,jumpHeld:localPrediction.jumpHeld},input,Math.min(.09,age+.04),stage,world.players);
    const gap=Math.hypot(localPrediction.x-serverFuture.x,localPrediction.y-serverFuture.y);
@@ -151,10 +178,10 @@ function frame(now){
  if(screen==='menu'&&now-lastCover>32){paint($('cover'),coverWorld(),{time:now/1000,cover:true,reduced});lastCover=now;}
  if(screen==='game'&&world){
   if(gameMode==='local'){
-   if(!paused&&!world.finished){
+   if(!paused&&!localBriefing&&!world.finished){
     const prior=world.level,priorPhase=world.phase;tickLocal(world,[localControl(0),localControl(1)],dt);
-    if(prior!==world.level){lastLevel=world.level;lastPhase=0;flash('УРОВЕНЬ ПРОЙДЕН!');clickSound('win');updateGameUI();}
-    else if(priorPhase!==world.phase){lastPhase=world.phase;flash(world.stage.kind==='lift'&&world.phase===1?'МАЯТНИК УСКОРИЛСЯ!':world.stage.rescue&&world.phase===1?'МОСТ ПОЯВИЛСЯ!':'ЭТАП ВЫПОЛНЕН!');clickSound('win');updateGameUI();}
+    if(prior!==world.level){lastLevel=world.level;lastPhase=0;clickSound('win');updateGameUI();localStartBriefing();}
+    else if(priorPhase!==world.phase){lastPhase=world.phase;updateGameUI();}
     else if(Math.floor(now/130)!==Math.floor((now-16)/130))updateGameUI();
     if(world.finished&&!shownFinish){shownFinish=true;$('finish-sheet').hidden=false;save('clears',Number(read('clears','0'))+1);clickSound('win');}
    }
@@ -172,6 +199,12 @@ function frame(now){
  }
  requestAnimationFrame(frame);
 }
+$('book-online-button').addEventListener('click',()=>{
+ if(gameMode==='online'&&state?.phase==='briefing'&&room.send({type:'ready'}))clickSound('tap');
+});
+$('book-local-0').addEventListener('click',()=>localMarkReady(0));
+$('book-local-1').addEventListener('click',()=>localMarkReady(1));
+window.addEventListener('resize',()=>{if(isBriefing())paintBook($('book-art'),world.stage);});
 $('sound').addEventListener('click',()=>{sound=!sound;save('sound',sound?'on':'off');$('sound').textContent='Звук: '+(sound?'вкл':'выкл');clickSound();});
 $('create').addEventListener('click',()=>{clickSound();startOnline('create');});
 $('join-open').addEventListener('click',()=>{clickSound();showJoin();});
@@ -188,17 +221,17 @@ $('resume').addEventListener('click',()=>togglePause(false));
 $('leave').addEventListener('click',leave);
 $('finish-menu').addEventListener('click',leave);
 $('restart').addEventListener('click',()=>{
- if(gameMode==='local'){world=newLocal(world.level);lastLevel=world.level;lastPhase=0;togglePause(false);updateGameUI();}
+ if(gameMode==='local'){world=newLocal(world.level);lastLevel=world.level;lastPhase=0;togglePause(false);updateGameUI();localStartBriefing();}
  else if(state?.host===room.self?.id){room.send({type:'restart'});togglePause(false);}
 });
 $('again').addEventListener('click',()=>{
- if(gameMode==='local'){world=newLocal();lastLevel=0;lastPhase=0;shownFinish=false;$('finish-sheet').hidden=true;updateGameUI();}
+ if(gameMode==='local'){world=newLocal();lastLevel=0;lastPhase=0;shownFinish=false;$('finish-sheet').hidden=true;updateGameUI();localStartBriefing();}
  else if(state?.host===room.self?.id)room.send({type:'start'});
 });
 document.addEventListener('keydown',e=>{
  if(e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.altKey||e.metaKey||e.ctrlKey)return;
  if(e.code==='Escape'&&screen==='game'){e.preventDefault();if(!e.repeat)togglePause(!paused);return;}
- if(screen!=='game')return;
+ if(screen!=='game'||isBriefing())return;
  const allowed=['KeyA','KeyD','KeyW','Space','ArrowLeft','ArrowRight','ArrowUp','ShiftLeft','ShiftRight','KeyE','Enter','Numpad0'];
  if(allowed.includes(e.code)){e.preventDefault();if(!keys.has(e.code)&&['Space','KeyW','ArrowUp'].includes(e.code))clickSound('jump');if(!keys.has(e.code)&&['ShiftLeft','ShiftRight','KeyE','Enter','Numpad0'].includes(e.code))clickSound('tap');keys.add(e.code);}
 });
@@ -211,7 +244,7 @@ for(const button of document.querySelectorAll('[data-key]')){
 window.addEventListener('blur',clearInput);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clearInput();lastFrame=performance.now();});
 window.addEventListener('pagehide',clearInput);
-window.__natyazhenieQA=()=>({screen,mode:gameMode,connected:room.connected,players:world?.players?.length||state?.players?.length||0,
+window.__natyazhenieQA=()=>({screen,mode:gameMode,connected:room.connected,briefing:isBriefing(),ready:gameMode==='local'?localReady.size:Object.values(state?.ready||{}).filter(Boolean).length,players:world?.players?.length||state?.players?.length||0,
  level:world?.level??-1,finished:!!world?.finished,issues:verifyLocalLayouts()});
 (async()=>{try{profile=await getPocketIdentity();if(profile?.complete){$('identity').textContent='Pocket ID · '+profile.nickname;$('name').value=profile.nickname;$('name').readOnly=true;}else $('identity').textContent='Гость';}catch{$('identity').textContent='Гостевой профиль';}
  if(fromUrl){const code=cleanRoomCode(fromUrl);if(code){$('room-input').value=code;showJoin();startOnline('join',code);}}

@@ -1,32 +1,29 @@
-# НАТЯЖЕНИЕ · v1.1
+# НАТЯЖЕНИЕ — 5 кооперативных испытаний
 
-Colorful 2D elastic platformer for 2–5 friends through PocketNet, plus local same-keyboard 2P mode.
+Полноценная игра Pocket Works (локально вдвоём на ПК; онлайн PocketNet для 2–5 человек). **Приоритет проектирования: три человека**.
 
-## Mechanics
-- Finite tether: spring resistance after 128 world units; a hard maximum of 242 units per adjacent pair. Velocity impulses and projected constraints are shared between the browser and authoritative server.
-- Anchor: hold Shift or E to brace on the ground; P2 locally holds Enter or Numpad0. Mobile has its own hold button; jumping releases anchor.
-- Nine chapters add distinct pressure plate holds, spring jumps, rescue over gaps, anchor-powered hoops, moving hazards, lift, and a combined finale.
-- Each plate belongs to one specific team member, not any passing avatar; its position scales with player count. Same mechanics apply to 2, 3, 4 and 5 people.
-- Reversible animations for plate presses, elastic ribbon under strain, pulsing stars, moving hazards, braced anchor pose, spring compression and hoop activation.
+## Основной сценарий
 
-## Rollout
-Shared rules live in apps/natyazhenie/physics.js, duplicated verbatim inside server/module.ts and immutable pocketnet/module-versions/natyazhenie/v2.ts for Cloudflare bundling. New rooms use v2; sessions from v1 remain locked to their original version. No forced room reset.
+1. Создать комнату и пригласить друзей или войти по коду. Хост начинает.
+2. Перед **каждым** уровнем все видят одинаковую иллюстрированную книжечку и подтверждают готовность индивидуально. Сервер не рассчитывает физику, пока не готовы все.
+3. В игре минимум текста. Физические объекты подсказывают, что меняется, без встроенных инструкций.
+4. После завершения испытания сервер замораживает игру и снова показывает книжечку следующего уровня. Отдельные состояния паузы, обрыва связи, восстановления комнаты и завершения.
 
-## Validation
-Run node apps/natyazhenie/qa.mjs to check rope length and stability, all 9 layouts at 2–5 players, anchor/beam/tension mechanics and local/online chapter transitions. The dedicated NATYAZHENIE Gameplay QA workflow runs on every related pull request and main publish.
+## Пять новых уровней
 
+- **По одной линии.** Удерживать одновременно несколько упругих рычагов: при трёх игроках средний уравновешивает сразу две балки. При четырёх или пяти число парных рычагов возрастает до трёх или четырёх.
+- **Последний на плоту.** Один или несколько игроков переправляют общий плот, пока кто-то на берегу удерживается якорем. Затем нужно поменять ответственность и забрать оставшегося.
+- **Не разбей!** Хрупкий шар подвешен на общей связке. Коллективными прыжками менять его высоту и аккуратно проводить через три препятствия. При ошибке недлинный перезапуск испытания.
+- **Волна.** Положение игроков и последовательность реальных прыжков формируют импульс по резинке туда и обратно; окно ответа ограничено.
+- **Распутайся!** Одновременно зацепить все соседние сегменты резинки за соответствующие штыри, удержать натяжение, а затем всей группой успеть до временного выхода.
 
-## v1.2 — Physical puzzles, not a new narrative layer
+## Управление
 
-The tether catches pegs automatically when a link crosses their head. Under tension its path goes via the peg and force derivatives follow each section; the peg releases once everyone goes round. Peg-driven drums charge only under real anchor-and-tension conditions. Spring-loaded launches amplify a jump against a braced friend. In gap puzzles an anchored friend can reel up a dangling teammate instead of immediately respawning.
+Каждый участник с телефона или собственного компьютера: влево/вправо, прыжок, зажим якоря. В локальном ПК режиме первая фигурка — A/D, W/пробел и Shift/E, вторая — стрелки, Up, Enter/Num0. Каждый из двух локальных игроков нажимает собственную кнопку «Готов» перед уровнем.
 
-The game now has twelve challenges: three additional skill puzzles are appended, and several earlier stages have ordered objectives (pulley, stars, pads, sensor). Earlier collectibles cannot bypass a later stage. The play-first HUD exposes only the currently active subtask, and the world renders the pulley fill, elastic ribbon ribs, squashed/stretching jelly bodies, blinks and danger reactions. There is no added story chapter or dialogue system in this release.
+## Архитектура
 
-
-## v1.3 — Cooperative puzzle redesign
-
-Retains the expressive small character animations but improves the elastic ribbon's gravity-driven shape. The vertical sag is invariant to endpoint order; spline samples have an even midpoint and tense rubber does not visually hang upside down. The tautness cue smooths across frames.
-
-Eight formerly linear stages now use physical ribbon signals, reactive balancing, or time-limited crossings. A signal is only captured when an actually stretched band passes through its lens; the next different lens must be hit within the window or the pair resets. Balancing needs a straddling taut band with a narrow tolerance against oscillating wind; it is not a hidden floor switch. Several gates have visible timers and reset only their repeatable sensor challenge instead of wiping the level.
-
-The new goals share the same physics and rules in local mode and in PocketNet v4. Immutable v1–v3 multiplayer room rules remain pinned.
+- `physics.js`: единая 90-Hz детерминированная физика, все пять головоломок и генерация разных конфигураций для 2–5 игроков.
+- `server/module.ts`, immutable `pocketnet/module-versions/natyazhenie/v5.ts`: серверные authoritative room state + индивидуальные подтверждения. Предыдущие пинованные версии комнат сохраняются.
+- `art.js`: характерные резиновые персонажи, физические индикаторы и отдельные иллюстрации для пяти книжных страниц.
+- `qa.mjs`: проверки all-ready, всех пяти испытаний, физики, соло-локальной игры, конфигураций 2–5, таймингов и рестартов.
