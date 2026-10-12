@@ -117,8 +117,34 @@ export async function updateInstalledApplication(app, registration, { verified =
   }
 }
 
+// Query live app documents rather than relying on a potentially stale
+// localStorage timestamp. Never evict caches while another tab holds the game.
+export async function hasActiveAppDocument(slug, { timeout = 250 } = {}) {
+  if(typeof BroadcastChannel !== 'function')return false;
+  const channel = new BroadcastChannel('pocket-works-release-presence');
+  const nonce = `${slug}:${Date.now()}:${Math.random()}`;
+  return new Promise(resolve => {
+    let finished = false;
+    const finish = active => {
+      if(finished)return;
+      finished = true;
+      clearTimeout(timer);
+      channel.close();
+      resolve(active);
+    };
+    const timer = setTimeout(() => finish(false), timeout);
+    channel.onmessage = event => {
+      if(event.data?.type === 'APP_OPEN' &&
+         event.data.slug === slug && event.data.nonce === nonce)finish(true);
+    };
+    try{channel.postMessage({ type: 'PROBE_APP', slug, nonce });}
+    catch{finish(false);}
+  });
+}
+
 export async function clearStaleAppRuntime(slug, release, { serviceWorkers = navigator.serviceWorker, cacheStorage = caches } = {}) {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) throw new TypeError('Invalid app slug');
+  if (await hasActiveAppDocument(slug)) return false;
   const scope = appScope({ path: `./apps/${slug}/` });
   if (serviceWorkers?.getRegistrations) {
     const registrations = await serviceWorkers.getRegistrations();
@@ -140,4 +166,5 @@ export async function clearStaleAppRuntime(slug, release, { serviceWorkers = nav
       catch (error) { console.warn('Pocket Works could not clear stale release receipt', error); }
     }
   }
+  return true;
 }
