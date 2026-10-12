@@ -99,7 +99,7 @@ function renderMenu(){
   '<h1>ПИК<b>ТО</b></h1><div class="hero-demo">'+glyphSVG('bird')+'</div>'+
   '<p>Ни одного слова на холсте. Сколько угодно способов понять друг друга.</p></div>'+
   '<div class="menu-pane"><div class="micro">PICK / PLACE / GUESS</div><h2>Собери смысл.<br>Пусть угадают.</h2>'+
-  '<p class="small-note">2–8 друзей · интернет-комнаты PocketNet · никакого PvP.</p>'+
+  '<p class="small-note">2–8 друзей · 6 видов загадок · смысл важнее совпадения значков.</p>'+
   '<div><label class="label" for="playerName">Твоё имя</label><input class="field" id="playerName" maxlength="22" autocomplete="nickname" value="'+esc(named)+'" '+(profile?'disabled':'')+'></div>'+profileLine+
   '<button class="btn primary full" data-action="create">Создать комнату ↗</button><div class="rule"></div>'+
   '<div><label class="label" for="roomCode">Код комнаты друга</label><input class="field field-code" id="roomCode" maxlength="36" placeholder="A17D0C9E" autocomplete="off" spellcheck="false" value="'+esc(typedCode)+'"></div>'+
@@ -125,9 +125,9 @@ function renderCompose(){
  const authorName=state.players.find(p=>p.id===state.author)?.name||'Автор';
  const items=author?draft:state.board;
  const prompt=author?(state.prompt||'Получаем фразу…'):'Смотри, как рождается сообщение';
- const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div><span class="micro">'+(author?'НЕ ПИШИ СЛОВА':'НАБЛЮДАЙ')+'</span></div>';
+ const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div>'+(author?'<button class="variant-peek" data-action="variants">4 смысла ↗</button>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
  const palette=GLYPHS.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
- const toolbox=author?'<aside class="toolbox"><div class="toolbox-head"><span>АЛФАВИТ</span><span>28 ЗНАКОВ</span></div>'+
+ const toolbox=author?'<aside class="toolbox"><div class="toolbox-head"><span>АЛФАВИТ</span><span id="glyphHint">34 ЗНАКА</span></div>'+
   '<div class="palette">'+palette+'</div><div class="tools-row">'+
   '<button class="btn" data-action="rotate-left" title="Повернуть влево" aria-label="Повернуть влево" '+(selected<0?'disabled':'')+'>↶</button>'+
   '<button class="btn" data-action="rotate-right" title="Повернуть вправо" aria-label="Повернуть вправо" '+(selected<0?'disabled':'')+'>↷</button>'+
@@ -199,7 +199,7 @@ function setState(next){
  if(!next||!Array.isArray(next.players)||!next.phase)return;
  const changed=state?.phase!==next.phase||state?.author!==next.author||state?.round!==next.round||state?.prompt!==next.prompt;
  state=next;
- if(changed){selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
+ if(changed){hideConfirm();selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
  if(next.phase==='compose'&&next.author===me?.id){
   // Never destroy the active pointer surface when server echoes an edit.
   updateClock();return;
@@ -283,13 +283,23 @@ function paintBoard(){
  const undoBtn=document.querySelector('[data-action="undo"]');if(undoBtn)undoBtn.disabled=!undo.length;
  const publish=document.querySelector('[data-action="publish"]');if(publish)publish.disabled=!draft.length||!connected;
 }
+function showVariants(){
+ if(state?.phase!=='compose'||state.author!==me?.id)return;
+ const options=state.authorOptions||[];
+ if(options.length!==4){notify('Варианты задания ещё загружаются.');return;}
+ modal.classList.remove('hidden');confirmAction=null;
+ modal.innerHTML='<div class="modal-box"><h2>Четыре смысла.</h2><p>Предметы здесь одинаковые. Покажи, какое именно действие произошло.</p>'+
+ '<div class="variant-list">'+options.map((phrase,i)=>'<div class="variant-item '+(phrase===state.prompt?'target':'')+'">'+
+ '<span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(phrase)+'</strong>'+(phrase===state.prompt?'<b>ТВОЁ</b>':'')+'</div>').join('')+
+ '</div><div class="modal-actions"><button class="btn primary full" data-modal-close>К композиции →</button></div></div>';
+}
 function addSymbol(id){
  if(state?.phase!=='compose'||state.author!==me?.id)return;
  if(draft.length>=26){notify('На доске может быть не больше 26 знаков.');return;}
  remember();
  const offset=(draft.length%7-3)*4;
  draft.push({id,x:Math.max(8,Math.min(92,50+offset)),y:Math.max(10,Math.min(90,50+(Math.floor(draft.length/7)-1)*9)),r:0,s:1});
- selected=draft.length-1;paintBoard();queueBoard();playTone(620);
+ selected=draft.length-1;paintBoard();const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=GLYPHS.find(g=>g[0]===id)?.[1]||'34 ЗНАКА';queueBoard();playTone(620);
 }
 function transform(type){
  if(selected<0||!draft[selected])return;
@@ -309,6 +319,7 @@ function confirmBox(title,body,callback){
 }
 function hideConfirm(){modal.classList.add('hidden');modal.textContent='';confirmAction=null;}
 modal.addEventListener('click',e=>{
+ if(e.target.closest('[data-modal-close]')){hideConfirm();return;}
  const b=e.target.closest('[data-confirm]');if(!b)return;
  const cb=confirmAction;hideConfirm();if(b.dataset.confirm==='yes')cb?.();
 });
@@ -329,6 +340,7 @@ root.addEventListener('click',e=>{
  const action=btn.dataset.action;
  if(action==='create'||action==='join'||action==='resume'){connect(action);return;}
  if(action==='retry'){checkHealth();return;}
+ if(action==='variants'){showVariants();return;}
  if(action==='sound'){soundEnabled=!soundEnabled;try{localStorage.setItem(STORE+'sound',soundEnabled?'on':'off');}catch{}render();return;}
  if(action==='copy-code'){copyText(code);return;}
  if(action==='copy-link'){copyText(new URL(location.pathname+'?room='+encodeURIComponent(code),location.origin).href);return;}
