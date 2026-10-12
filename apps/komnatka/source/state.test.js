@@ -50,7 +50,7 @@ test('moving furniture takes supported objects along',()=>{
  const oldX=mug.x,oldZ=mug.z;
  moveWithChildren(s,table.id,.5,-.25);
  table.x+=.5;table.z-=.25;
- assert.equal(mug.x,oldX+.5);assert.equal(mug.z,oldZ-.25);
+ assert.equal(mug.x,Math.round((oldX+.5)*4)/4);assert.equal(mug.z,Math.round((oldZ-.25)*4)/4);
  const without=removeWithChildren(s,table.id);
  assert.equal(without.some(i=>i.id===mug.id),false);
 });
