@@ -194,8 +194,8 @@ export class Editor{
     this.inputMode=mode==='precision'?'precision':'direct';
     if(persist)localStorage.setItem('pocket-works:zamazka:input-mode',this.inputMode);
     const precision=this.inputMode==='precision';
-    this.root.classList.toggle('precision-mode',precision);
-    this.root.classList.toggle('left-hand',this.hand==='left');
+    this.root.querySelector('.restore')?.classList.toggle('precision-mode',precision);
+    this.root.querySelector('.restore')?.classList.toggle('left-hand',this.hand==='left');
     if(this.armButton){this.armButton.hidden=!precision;this.armButton.classList.remove('is-armed')}
     if(this.sideButton)this.sideButton.hidden=!precision;
     const switcher=this.root.querySelector('[data-cmd="precision"]');
@@ -339,7 +339,7 @@ export class Editor{
       if(b.dataset.cmd==='handedness'){
         this.hand=this.hand==='right'?'left':'right';
         localStorage.setItem('pocket-works:zamazka:precision-hand',this.hand);
-        this.root.classList.toggle('left-hand',this.hand==='left');
+        this.root.querySelector('.restore')?.classList.toggle('left-hand',this.hand==='left');
         b.setAttribute('aria-label','Кнопка рисования '+(this.hand==='left'?'справа':'слева'));
         if(this.lastCursor)this.showCursor(this.lastCursor);
       }
