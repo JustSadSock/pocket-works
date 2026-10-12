@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "lipki",
+  "name": "ЛИПКИ",
+  "shortName": "ЛИПКИ",
+  "description": "Фетровый кооперативный физический платформер: прыгайте, прилипайте к друзьям, решайте головоломки и добирайтесь до кармана через PocketNet.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T19:29:00+03:00",
+  "changelog": [
+    "Новый физический платформер в мире фетра: десять уровней, липучки, пружины, катушки и кнопки.",
+    "Тренировка с переключением двух героев и сохранением открытых уровней.",
+    "Комнаты PocketNet на 2–4 игроков, Pocket ID и управление с телефона."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#d47a62",
+  "backgroundColor": "#e8dccb",
+  "themeColor": "#e8dccb",
+  "orientation": "landscape",
+  "cacheName": "lipki-v1.0.0",
+  "storageNamespace": "pocket-works:lipki",
+  "tags": [
+    "game",
+    "co-op",
+    "puzzle",
+    "physics",
+    "pocketnet",
+    "party"
+  ],
+  "order": 351
+}
