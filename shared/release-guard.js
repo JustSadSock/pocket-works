@@ -36,15 +36,25 @@
 
   // Other open documents of the same app retain their worker and cache.
   let presenceChannel=null;
-  try{
-    presenceChannel=new BroadcastChannel('pocket-works-release-presence');
-    presenceChannel.addEventListener('message',event=>{
-      const data=event.data;
-      if(data?.type==='PROBE_APP'&&data.slug===slug){
-        presenceChannel.postMessage({type:'APP_OPEN',slug,nonce:data.nonce});
-      }
-    });
-  }catch{}
+  function openPresenceChannel(){
+    if(presenceChannel)return;
+    try{
+      const channel=new BroadcastChannel('pocket-works-release-presence');
+      channel.addEventListener('message',event=>{
+        const data=event.data;
+        if(data?.type==='PROBE_APP'&&data.slug===slug){
+          channel.postMessage({type:'APP_OPEN',slug,nonce:data.nonce});
+        }
+      });
+      presenceChannel=channel;
+    }catch{}
+  }
+  openPresenceChannel();
+  window.addEventListener('pagehide',()=>{
+    presenceChannel?.close();
+    presenceChannel=null;
+  });
+  window.addEventListener('pageshow',openPresenceChannel);
   function otherAppDocumentOpen(){
     if(!presenceChannel)return Promise.resolve(false);
     return new Promise(resolve=>{
