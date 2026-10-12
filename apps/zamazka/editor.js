@@ -348,8 +348,12 @@ export class Editor{
       this.finishStroke();
       if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
       this.panStart=null;this.viewport.classList.remove('is-panning');
-      if(e.pointerType==='touch'){this.lastCursor=null;this.lastMousePoint=null;this.hideCursor();this.hidePickerPreview()}
-      else this.showCursor(e);
+      if(e.pointerType==='touch'||e.type==='pointercancel'||
+         !Number.isFinite(e.clientX)||!Number.isFinite(e.clientY)){
+        this.lastCursor=null;
+        if(e.pointerType==='touch')this.lastMousePoint=null;
+        this.hideCursor();this.hidePickerPreview();
+      }else this.showCursor(e);
     };
     this.canvas.addEventListener('pointerdown',this.down);
     this.canvas.addEventListener('pointermove',this.move);
