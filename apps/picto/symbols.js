@@ -1,4 +1,4 @@
-// Drawn icons: 28 original schematic pictograms; no external image dependencies.
+// Drawn icons: 34 original schematic pictograms; no external image dependencies.
 export const GLYPHS = [
  ['sun','Солнце'],['moon','Луна'],['star','Звезда'],['cloud','Облако'],
  ['rain','Дождь'],['wave','Вода'],['fire','Огонь'],['tree','Дерево'],
@@ -6,7 +6,9 @@ export const GLYPHS = [
  ['human','Человек'],['eye','Глаз'],['heart','Сердце'],['key','Ключ'],
  ['crown','Корона'],['house','Дом'],['door','Дверь'],['boat','Лодка'],
  ['mountain','Гора'],['arrow','Стрелка'],['clock','Часы'],['question','Вопрос'],
- ['hand','Рука'],['book','Книга'],['sword','Меч'],['dragon','Дракон']
+ ['hand','Рука'],['book','Книга'],['sword','Меч'],['dragon','Дракон'],
+ ['not','Нет / зачеркнуть'],['swap','Обмен'],['loop','Повтор'],
+ ['path','Путь'],['mask','Притворство'],['spark','Изменение']
 ];
 const SHAPES = {
  sun:'<circle cx="32" cy="32" r="12"/><path d="M32 5v11m0 32v11M5 32h11m32 0h11M13 13l8 8m22 22 8 8M51 13l-8 8M21 43l-8 8"/>',
@@ -18,7 +20,7 @@ const SHAPES = {
  fire:'<path d="M35 4c12 16-4 21 8 30 5-5 6-9 6-9 15 25-1 36-18 36C5 61 9 36 19 22c-1 14 6 15 16-18Z"/><path d="M31 39c8 8 5 16 0 16-9 0-7-11 0-16Z"/>',
  tree:'<path d="M30 59V37M32 8 12 38h12l-13 10h42L40 38h12L32 8Z"/>',
  flower:'<circle cx="32" cy="29" r="7"/><path d="M32 22C18 2 10 25 25 28 2 27 11 48 28 35c-6 22 18 23 9 0 18 14 27-9 3-7 17-9 2-28-8-6M32 38v22m0-9-12-6m12-1 12-6"/>',
- bird:'<path d="M5 40c10-1 15-8 20-15 9 5 12 9 16 7l16-6-9 11 7 7-18-4c-9 16-22 13-32 0Z"/><circle cx="29" cy="32" r="2"/>',
+ bird:'<path d="M14 42C7 29 14 16 28 15c13-1 21 7 23 18l10 3-10 5c-3 12-17 17-28 11-6-4-12-6-18-7l9-9Z"/><path d="M21 30c7 2 14 7 15 17M24 53l-3 7m16-8 2 7"/><circle cx="43" cy="27" r="2.5" fill="currentColor" stroke="none"/>',
  fish:'<path d="M10 32c11-18 25-22 39-9l12-9v36l-12-9C35 54 21 50 10 32Z"/><circle cx="25" cy="30" r="2.5"/><path d="M40 22v20"/>',
  cat:'<path d="m12 25 1-16 14 10h10L51 9l1 16c12 23 0 34-20 34S0 48 12 25Z"/><circle cx="23" cy="36" r="3"/><circle cx="41" cy="36" r="3"/><path d="m28 44 4 3 4-3m-4 3v5m-13-8-11 1m37-1 11 1"/>',
  human:'<circle cx="32" cy="11" r="7"/><path d="M32 20v24m-18-8 18-13 18 13M32 44 18 59m14-15 14 15"/>',
@@ -36,7 +38,13 @@ const SHAPES = {
  hand:'<path d="M17 36V15c0-7 9-8 9 0v16-23c0-7 9-7 9 0v23-19c0-7 9-7 9 0v23-11c0-7 9-7 9 0v17c0 26-36 25-42 5L5 35c-3-8 5-12 12 1Z"/>',
  book:'<path d="M32 14C20 7 10 6 4 10v41c10-4 19-3 28 4 9-7 18-8 28-4V10c-6-4-16-3-28 4Zm0 0v41"/>',
  sword:'<path d="M32 5 41 15 35 45l-3 5-3-5-6-30Z"/><path d="M14 44h36m-18 0v16"/>',
- dragon:'<path d="M9 54c-6-16 0-28 18-31L21 7l15 8 5-10 8 18 11 4-8 13-16-3c-6 17-16 20-27 17Z"/><path d="m10 39 10 3m26-13h2M20 31l-5-12"/>'
+ dragon:'<path d="M9 54c-6-16 0-28 18-31L21 7l15 8 5-10 8 18 11 4-8 13-16-3c-6 17-16 20-27 17Z"/><path d="m10 39 10 3m26-13h2M20 31l-5-12"/>',
+ not:'<circle cx="32" cy="32" r="24"/><path d="M14 50 50 14"/>',
+ swap:'<path d="M9 23h40l-9-10m9 10-9 10M55 41H15l9-10m-9 10 9 10"/>',
+ loop:'<path d="M16 20c16-20 43-6 43 13 0 24-36 35-49 10"/><path d="M10 27v16h16"/>',
+ path:'<path d="M8 53c2-18 23-3 22-22S46 5 56 15" stroke-dasharray="4 6"/><path d="m41 15 15 0-2 15"/>',
+ mask:'<path d="M9 11q23 10 46 0v20c0 18-12 26-23 29C20 56 9 49 9 31Z"/><path d="M16 30l12 3m20-3-12 3M24 44q8 9 16 0"/>',
+ spark:'<path d="m32 4 6 18 19 10-19 7-6 21-7-21-19-7 19-10Z"/><path d="M51 4v10M46 9h10M7 49v10M2 54h10"/>'
 };
 export function glyphSVG(id, cls='') {
  const shape=SHAPES[id]||SHAPES.question;
