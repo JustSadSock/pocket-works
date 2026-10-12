@@ -15,6 +15,7 @@ let savedName='Гость',profile=null,net=null,me=null,state=null,roomId='',co
 let connected=false,health=null,connecting=false,draft=[],selected=-1,undo=[],drag=null;
 let lastPhase='',lastAuthor='',pendingSend=0,toastTimer=0,confirmAction=null,requestSerial=0;
 let soundEnabled=true;
+let draftAnswer=[null,null,null,null,null],answerSending=false;
 try{savedName=localStorage.getItem(STORE+'name')||savedName;soundEnabled=localStorage.getItem(STORE+'sound')!=='off';}catch{}
 const memory=new Map();
 const adapter={
@@ -99,7 +100,7 @@ function renderMenu(){
   '<h1>ПИК<b>ТО</b></h1><div class="hero-demo">'+glyphSVG('bird')+'</div>'+
   '<p>Ни одного слова на холсте. Сколько угодно способов понять друг друга.</p></div>'+
   '<div class="menu-pane"><div class="micro">PICK / PLACE / GUESS</div><h2>Собери смысл.<br>Пусть угадают.</h2>'+
-  '<p class="small-note">2–8 друзей · 6 видов загадок · смысл важнее совпадения значков.</p>'+
+  '<p class="small-note">2–8 друзей · 5 частей фразы · ограниченный набор знаков.</p>'+
   '<div><label class="label" for="playerName">Твоё имя</label><input class="field" id="playerName" maxlength="22" autocomplete="nickname" value="'+esc(named)+'" '+(profile?'disabled':'')+'></div>'+profileLine+
   '<button class="btn primary full" data-action="create">Создать комнату ↗</button><div class="rule"></div>'+
   '<div><label class="label" for="roomCode">Код комнаты друга</label><input class="field field-code" id="roomCode" maxlength="36" placeholder="A17D0C9E" autocomplete="off" spellcheck="false" value="'+esc(typedCode)+'"></div>'+
@@ -120,15 +121,21 @@ function renderLobby(){
 function phaseTop(title,subtitle){
  return '<div class="round-top"><div><span class="micro">РАУНД '+state.round+' / '+state.maxRounds+' · '+esc(subtitle)+'</span><h1>'+esc(title)+'</h1></div><div class="timer" id="timer">—</div></div>';
 }
+
 function renderCompose(){
  const author=state.author===me?.id;
  const authorName=state.players.find(p=>p.id===state.author)?.name||'Автор';
  const items=author?draft:state.board;
  const prompt=author?(state.prompt||'Получаем фразу…'):'Смотри, как рождается сообщение';
- const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div>'+(author?'<button class="variant-peek" data-action="variants">4 смысла ↗</button>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
- const palette=GLYPHS.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
- const toolbox=author?'<aside class="toolbox"><div class="toolbox-head"><span>АЛФАВИТ</span><span id="glyphHint">34 ЗНАКА</span></div>'+
-  '<div class="palette">'+palette+'</div><div class="tools-row">'+
+ const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div>'+
+  (author?'<span class="micro">НЕ ВСЕ ЗНАКИ ДОСТУПНЫ</span>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
+ const available=GLYPHS.filter(g=>!state.palette?.length||state.palette.includes(g[0]));
+ const palette=available.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
+ const blocked=GLYPHS.filter(g=>state.blocked?.includes(g[0]));
+ const blockedHTML=blocked.length?'<div class="blocked-strip"><span>ЗАПРЕЩЕНО</span>'+
+  blocked.map(g=>'<span class="blocked-glyph" title="'+esc(g[1])+'">'+glyphSVG(g[0])+'</span>').join('')+'</div>':'';
+ const toolbox=author?'<aside class="toolbox"><div class="toolbox-head"><span>АЛФАВИТ РАУНДА</span><span id="glyphHint">'+available.length+' ЗНАКОВ</span></div>'+
+  blockedHTML+'<div class="palette">'+palette+'</div><div class="tools-row">'+
   '<button class="btn" data-action="rotate-left" title="Повернуть влево" aria-label="Повернуть влево" '+(selected<0?'disabled':'')+'>↶</button>'+
   '<button class="btn" data-action="rotate-right" title="Повернуть вправо" aria-label="Повернуть вправо" '+(selected<0?'disabled':'')+'>↷</button>'+
   '<button class="btn" data-action="shrink" title="Уменьшить" aria-label="Уменьшить" '+(selected<0?'disabled':'')+'>−</button>'+
@@ -136,47 +143,118 @@ function renderCompose(){
   '<div class="toolbox-actions"><button class="btn quiet slim" data-action="undo" '+(!undo.length?'disabled':'')+'>Отменить</button>'+
   '<button class="btn quiet slim" data-action="delete" '+(selected<0?'disabled':'')+'>Убрать знак</button>'+
   '<button class="btn primary slim" data-action="publish" '+(!draft.length||!connected?'disabled':'')+'>Показать друзьям ↗</button></div></aside>':
-  '<aside class="toolbox"><div class="micro">СООБЩЕНИЕ В ПРОЦЕССЕ</div><p>Автор двигает символы вживую. Вскоре появятся четыре возможные расшифровки.</p>'+
+  '<aside class="toolbox"><div class="micro">СООБЩЕНИЕ В ПРОЦЕССЕ</div><p>Автор собирает картину из ограниченного набора знаков.</p>'+
   '<div class="wait-box">Автор: <b>'+esc(authorName)+'</b><br>Знаков сейчас: <b>'+items.length+'</b></div>'+
   '<button class="btn quiet slim" data-action="leave">Покинуть игру</button></aside>';
  root.innerHTML='<section class="game-shell">'+phaseTop(author?'Твоя очередь объяснять':'Скоро разгадываем','КОМПОЗИЦИЯ')+promptBar+
   '<div class="editor-layout">'+boardPanel(items,author)+toolbox+'</div></section>';
  updateClock();
 }
+const SLOT_LABELS=['Кто','Что делает','Что','Как / где','С чем / где'];
+function guessWords(slot,cells){
+ if(slot===4)return state.locationForms?.[cells[3]??0]||state.choices?.[4]||[];
+ return state.choices?.[slot]||[];
+}
+function renderSlot(slot,cells,locked){
+ const selected=cells[slot];
+ const options=guessWords(slot,cells);
+ return '<label class="guess-cell"><span class="guess-cell-label"><b>'+String(slot+1).padStart(2,'0')+'</b> '+SLOT_LABELS[slot]+'</span>'+
+  '<select class="guess-select '+(selected!==null?'filled':'')+'" data-guess-slot="'+slot+'" '+(locked||!connected?'disabled':'')+'>'+
+  '<option value="">— оставить пустым —</option>'+
+  options.map((word,i)=>'<option value="'+i+'" '+(selected===i?'selected':'')+'>'+esc(word)+'</option>').join('')+
+  '</select></label>';
+}
+function updateGuessDraft(){
+ const filled=draftAnswer.filter(v=>v!==null).length;
+ const info=document.querySelector('#guessProgress');if(info)info.textContent=filled+' / 5 ВЫБРАНО';
+ const submit=document.querySelector('[data-action="submit-guess"]');
+ if(submit)submit.disabled=!filled||!connected||answerSending;
+ document.querySelectorAll('[data-guess-slot]').forEach(el=>el.classList.toggle('filled',el.value!==''));
+}
+
 function renderGuess(){
+ if(!state.choices?.length)return renderLegacyGuess();
  const author=state.author===me?.id;
  const did=state.answered.includes(me?.id);
- const options=state.options||[];
- const optionHtml=author?'<div class="wait-box">Ты автор этой работы. Друзья пытаются расшифровать твою мысль. Ответ появится после голосования.</div>':
- options.map((opt,i)=>'<button class="option '+(state.myAnswer===i?'selected':'')+'" data-choice="'+i+'" '+(did||!connected?'disabled':'')+'><small>'+(i+1)+'</small>'+esc(opt)+'</button>').join('');
- root.innerHTML='<section class="game-shell">'+phaseTop('Что это значит?','РАСШИФРОВКА')+
-  '<div class="prompt-strip"><b>'+(did?'Ответ принят — ждём остальных':author?'Твоё сообщение готово':'Выбери одну интерпретацию')+'</b><span class="micro">'+state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ</span></div>'+
-  '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+optionHtml+
+ const cells=did&&state.myAnswer?state.myAnswer:draftAnswer;
+ const panel=author?'<div class="wait-box">Ты передал сообщение. Друзья составляют свою расшифровку из пяти частей.</div>':
+  '<div class="guess-card"><div class="guess-intro"><strong>Собери смысл по частям</strong><small>Укажи только то, в чём уверен. Пустые ячейки не штрафуются.</small></div>'+
+  '<div class="guess-cells">'+SLOT_LABELS.map((_,i)=>renderSlot(i,cells,did)).join('')+'</div>'+
+  '<div class="guess-submit"><span class="micro" id="guessProgress">'+cells.filter(v=>v!==null).length+' / 5 ВЫБРАНО</span>'+
+  '<button class="btn primary" data-action="submit-guess" '+(did||!connected||answerSending||cells.every(v=>v===null)?'disabled':'')+'>'+(did?'Ответ принят ✓':'Отправить версию ↗')+'</button></div></div>';
+ root.innerHTML='<section class="game-shell">'+phaseTop('Расшифруй картину','ПЯТЬ ЯЧЕЕК')+
+  '<div class="prompt-strip"><b>'+(did?'Версия отправлена':author?'Ждём интерпретаций':'Можно оставить часть фразы пустой')+'</b><span class="micro">'+state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ</span></div>'+
+  '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+panel+
   '<button class="btn quiet slim" data-action="leave">Выйти из комнаты</button></div></div></section>';
  updateClock();
 }
+
 function renderReveal(){
+ if(!state.choices?.length)return renderLegacyReveal();
  const result=state.history?.at(-1);
- const correct=state.correct;
+ const solution=state.solution||[];
+ const mine=state.myAnswer||[null,null,null,null,null];
+ const originalChoices=state.choices||[];
+ const targetPrep=originalChoices[3]?.indexOf(solution[3])??0;
  const peers=state.players.filter(p=>p.id!==state.author).map(p=>{
-  const answer=state.answers[p.id];const isRight=answer===correct;
-  return '<span class="answer-pill '+(answer===undefined?'':isRight?'yes':'no')+'">'+esc(p.name)+': '+(answer===undefined?'не ответил':isRight?'угадал':'другая версия')+'</span>';
+  const answer=state.answers[p.id];
+  const count=answer?answer.filter((n,i)=>n!==null&&(i===4?
+   state.locationForms?.[targetPrep]?.[n]===solution[4]:originalChoices[i]?.[n]===solution[i])).length:0;
+  return '<span class="answer-pill '+(!answer?'':count>=3?'yes':'no')+'">'+esc(p.name)+': '+(answer?count+' / 5':'не ответил')+'</span>';
+ }).join('');
+ const review=solution.map((word,i)=>{
+  const selected=mine[i],own=i===4?state.locationForms?.[mine[3]??0]?.[selected]:originalChoices[i]?.[selected];
+  const right=i===4?state.locationForms?.[targetPrep]?.[selected]===word:own===word;
+  return '<div class="review-cell"><span>'+SLOT_LABELS[i]+'</span><strong>'+esc(word)+'</strong>'+
+    (state.author!==me?.id&&selected!==null?'<small class="'+(right?'hit':'miss')+'">'+(right?'✓ ':'✕ ')+esc(own||'—')+'</small>':'')+'</div>';
+ }).join('');
+ root.innerHTML='<section class="game-shell">'+phaseTop('Вот что было загадано','РАСКРЫТИЕ')+
+  '<div class="reveal-head"><div><span class="micro">ИСХОДНАЯ ФРАЗА</span><h2>'+esc(solution.join(' '))+'.</h2></div><strong>'+Number(result?.correct||0)+' / '+Number(result?.total||0)+' слов</strong></div>'+
+  '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+
+  '<div class="review-grid">'+review+'</div><div class="reveal-peers">'+peers+'</div>'+
+  '<p class="small-note">+2 за точное слово, −1 за ошибку, 0 за пропуск. Раунд: '+(result?.points||0)+' очков.</p>'+
+  (state.host===me?.id?'<button class="btn primary" data-action="next">Следующий этап →</button>':'<p class="small-note">Следующий этап начнётся автоматически.</p>')+
+  '</div></div></section>';
+ updateClock();
+}
+
+function renderLegacyGuess(){
+ const author=state.author===me?.id,did=state.answered.includes(me?.id);
+ const choices=state.options||[];
+ const options=author?'<div class="wait-box">Ты автор. Друзья выбирают смысл твоей композиции.</div>':
+  choices.map((phrase,i)=>'<button class="option '+(state.myAnswer===i?'selected':'')+'" data-choice="'+i+'" '+(did||!connected?'disabled':'')+'><small>'+(i+1)+'</small>'+esc(phrase)+'</button>').join('');
+ root.innerHTML='<section class="game-shell">'+phaseTop('Что это значит?','КЛАССИЧЕСКАЯ РАСШИФРОВКА')+
+  '<div class="prompt-strip"><b>'+(did?'Ответ принят':author?'Ждём друзей':'Выбери интерпретацию')+'</b><span class="micro">'+state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ</span></div>'+
+  '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+options+
+  '<button class="btn quiet slim" data-action="leave">Выйти из комнаты</button></div></div></section>';
+ updateClock();
+}
+function renderLegacyReveal(){
+ const result=state.history?.at(-1),correct=state.correct;
+ const peers=state.players.filter(p=>p.id!==state.author).map(p=>{
+  const answer=state.answers[p.id],right=answer===correct;
+  return '<span class="answer-pill '+(answer===undefined?'':right?'yes':'no')+'">'+esc(p.name)+': '+(answer===undefined?'не ответил':right?'угадал':'другая версия')+'</span>';
  }).join('');
  root.innerHTML='<section class="game-shell">'+phaseTop('А вот что имелось в виду','РАСКРЫТИЕ')+
-  '<div class="reveal-head"><div><span class="micro">ЗАГАДАННАЯ ФРАЗА</span><h2>'+esc(state.options[correct]||'—')+'</h2></div><strong>'+(result?.correct||0)+' / '+(result?.total||0)+'</strong></div>'+
+  '<div class="reveal-head"><div><span class="micro">ИСХОДНАЯ ФРАЗА</span><h2>'+esc(state.options[correct]||'—')+'</h2></div><strong>'+(result?.correct||0)+' / '+(result?.total||0)+'</strong></div>'+
   '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+
-  state.options.map((o,i)=>'<div class="option '+(i===correct?'correct':'wrong')+'"><small>'+(i+1)+'</small>'+esc(o)+'</div>').join('')+
+  state.options.map((phrase,i)=>'<div class="option '+(i===correct?'correct':'wrong')+'"><small>'+(i+1)+'</small>'+esc(phrase)+'</div>').join('')+
   '<div class="reveal-peers">'+peers+'</div>'+
   (state.host===me?.id?'<button class="btn primary" data-action="next">Следующий этап →</button>':'<p class="small-note">Следующий этап начнётся автоматически.</p>')+
   '</div></div></section>';
  updateClock();
 }
+
 function renderResults(){
  const gallery=(state.history||[]).map((g,i)=>'<article class="gallery-card"><span class="micro">№ '+String(i+1).padStart(2,'0')+'</span>'+
-  boardHTML(g.board,false,'gallery-'+i)+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+' поняли</small></article>').join('');
+  boardHTML(g.board,false,'gallery-'+i)+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+
+  (Number.isFinite(g.points)?' слов · '+g.points+' очков':' поняли')+'</small></article>').join('');
+ const score=Number.isFinite(state.wordsFound)?
+  'Угадано слов: '+state.wordsFound+' из '+state.attempts+' · '+state.score+' очков':
+  'Общих разгадок: '+state.score+' из '+state.attempts;
  root.innerHTML='<section class="screen finish"><span class="micro">АРХИВ / СЕАНС ЗАВЕРШЁН</span>'+
-  '<h1>Поняли.<br>Почти.</h1><div class="finish-score">Общих разгадок: '+state.score+' из '+state.attempts+'</div>'+
-  '<p>Посмотрите, как разные люди объясняли совершенно невозможные фразы одним и тем же алфавитом.</p>'+
+  '<h1>Поняли.<br>Почти.</h1><div class="finish-score">'+score+'</div>'+
+  '<p>Все композиции одной партии. Можно рассмотреть чужие расшифровки и начать новую игру.</p>'+
   '<div class="gallery">'+gallery+'</div><div class="room-footer">'+
   '<button class="btn primary" data-action="again" '+(state.host!==me?.id||!connected?'disabled':'')+'>'+(state.host===me?.id?'Играть ещё ↗':'Ждём ведущего')+'</button>'+
   '<button class="btn quiet" data-action="leave">Покинуть комнату</button></div></section>';
@@ -198,8 +276,14 @@ function updateClock(){
 function setState(next){
  if(!next||!Array.isArray(next.players)||!next.phase)return;
  const changed=state?.phase!==next.phase||state?.author!==next.author||state?.round!==next.round||state?.prompt!==next.prompt;
+ const wasAnswered=state?.answered?.includes(me?.id)||false;
  state=next;
- if(changed){hideConfirm();selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
+ if(changed){hideConfirm();selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
+ if(next.phase==='guess'&&!changed&&state.answered.includes(me?.id)===wasAnswered){
+  const counter=document.querySelector('.prompt-strip .micro');
+  if(counter)counter.textContent=state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ';
+  updateClock();return;
+ }
  if(next.phase==='compose'&&next.author===me?.id){
   // Never destroy the active pointer surface when server echoes an edit.
   updateClock();return;
@@ -246,9 +330,9 @@ async function connect(mode){
   net=client;
   client.on('connected',info=>{if(net!==client)return;me=info.player;connected=true;activeToken=client.token;status('В сети','ok');if(state)render();});
   client.on('room_joined',info=>{if(net!==client)return;connecting=false;syncRoom(info);});
-  client.on('game_event',packet=>{if(net!==client)return;if(packet.event?.type==='state')setState(packet.event.payload);else if(packet.event?.type==='notice')notify(String(packet.event.payload));});
+  client.on('game_event',packet=>{if(net!==client)return;if(packet.event?.type==='state')setState(packet.event.payload);else if(packet.event?.type==='notice'){answerSending=false;notify(String(packet.event.payload));if(state?.phase==='guess')render();}});
   client.on('presence',()=>{if(net===client&&state)try{client.sendGame({type:'sync'});}catch{}});
-  client.on('disconnected',()=>{if(net!==client)return;connected=false;status('Переподключение','bad');if(state)render();});
+  client.on('disconnected',()=>{if(net!==client)return;connected=false;answerSending=false;status('Переподключение','bad');if(state)render();});
   client.on('room_closed',()=>{if(net!==client)return;stop(false);notify('Комната закрыта. Можно создать новую.');});
   client.on('error',error=>{if(net!==client)return;notify(networkErrors[error?.code]||error?.code||error?.message||'Ошибка сети');if(connecting)stop(false);});
   await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Соединение не установлено за 12 секунд.')),12000))]);
@@ -283,23 +367,14 @@ function paintBoard(){
  const undoBtn=document.querySelector('[data-action="undo"]');if(undoBtn)undoBtn.disabled=!undo.length;
  const publish=document.querySelector('[data-action="publish"]');if(publish)publish.disabled=!draft.length||!connected;
 }
-function showVariants(){
- if(state?.phase!=='compose'||state.author!==me?.id)return;
- const options=state.authorOptions||[];
- if(options.length!==4){notify('Варианты задания ещё загружаются.');return;}
- modal.classList.remove('hidden');confirmAction=null;
- modal.innerHTML='<div class="modal-box"><h2>Четыре смысла.</h2><p>Предметы здесь одинаковые. Покажи, какое именно действие произошло.</p>'+
- '<div class="variant-list">'+options.map((phrase,i)=>'<div class="variant-item '+(phrase===state.prompt?'target':'')+'">'+
- '<span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(phrase)+'</strong>'+(phrase===state.prompt?'<b>ТВОЁ</b>':'')+'</div>').join('')+
- '</div><div class="modal-actions"><button class="btn primary full" data-modal-close>К композиции →</button></div></div>';
-}
 function addSymbol(id){
  if(state?.phase!=='compose'||state.author!==me?.id)return;
+ if(state.palette?.length&&!state.palette.includes(id)){notify('Этот знак недоступен в раунде.');return;}
  if(draft.length>=26){notify('На доске может быть не больше 26 знаков.');return;}
  remember();
  const offset=(draft.length%7-3)*4;
  draft.push({id,x:Math.max(8,Math.min(92,50+offset)),y:Math.max(10,Math.min(90,50+(Math.floor(draft.length/7)-1)*9)),r:0,s:1});
- selected=draft.length-1;paintBoard();const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=GLYPHS.find(g=>g[0]===id)?.[1]||'34 ЗНАКА';queueBoard();playTone(620);
+ selected=draft.length-1;paintBoard();const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=GLYPHS.find(g=>g[0]===id)?.[1]||'ЗНАК';queueBoard();playTone(620);
 }
 function transform(type){
  if(selected<0||!draft[selected])return;
@@ -334,24 +409,46 @@ async function copyText(value){
 }
 root.addEventListener('click',e=>{
  const glyph=e.target.closest('[data-glyph]');if(glyph&&!glyph.disabled){addSymbol(glyph.dataset.glyph);return;}
+ 
  const option=e.target.closest('[data-choice]');
- if(option&&!option.disabled){if(send({type:'answer',choice:Number(option.dataset.choice)})){option.disabled=true;option.classList.add('selected');playTone(740);}return;}
+ if(option&&!option.disabled){
+  if(send({type:'answer',choice:Number(option.dataset.choice)})){option.disabled=true;option.classList.add('selected');playTone(740);}return;
+ }
  const btn=e.target.closest('[data-action]');if(!btn||btn.disabled)return;
  const action=btn.dataset.action;
  if(action==='create'||action==='join'||action==='resume'){connect(action);return;}
  if(action==='retry'){checkHealth();return;}
- if(action==='variants'){showVariants();return;}
+ 
  if(action==='sound'){soundEnabled=!soundEnabled;try{localStorage.setItem(STORE+'sound',soundEnabled?'on':'off');}catch{}render();return;}
  if(action==='copy-code'){copyText(code);return;}
  if(action==='copy-link'){copyText(new URL(location.pathname+'?room='+encodeURIComponent(code),location.origin).href);return;}
  if(action==='start'||action==='again'||action==='next'){send({type:action});playTone(700);return;}
  if(action==='publish'){flushBoard();if(draft.length)send({type:'publish'});return;}
+  if(action==='submit-guess'){
+   if(state?.phase!=='guess'||state.author===me?.id||answerSending||draftAnswer.every(v=>v===null))return;
+   if(send({type:'answer',cells:[...draftAnswer]})){answerSending=true;updateGuessDraft();playTone(740);}return;
+  }
  if(action==='undo'){if(!undo.length)return;draft=undo.pop();selected=Math.min(selected,draft.length-1);paintBoard();queueBoard();return;}
  if(['rotate-left','rotate-right','grow','shrink','delete'].includes(action)){transform(action);return;}
  if(action==='leave')confirmBox('Покинуть комнату?','Твоя текущая композиция останется у остальных участников, но ты выйдешь из партии.',()=>stop(true));
 });
 root.addEventListener('input',e=>{
  if(e.target?.id==='roomCode'){typedCode=e.target.value=e.target.value.toUpperCase().replace(/\s/g,'');}
+});
+root.addEventListener('change',e=>{
+ const el=e.target.closest('[data-guess-slot]');
+ if(!el||state?.phase!=='guess'||state.author===me?.id||answerSending||state.answered.includes(me?.id))return;
+ const slot=Number(el.dataset.guessSlot);
+ draftAnswer[slot]=el.value===''?null:Number(el.value);
+ if(slot===3){
+  const place=document.querySelector('[data-guess-slot="4"]');
+  if(place){
+   const selected=draftAnswer[4],words=guessWords(4,draftAnswer);
+   place.innerHTML='<option value="">— оставить пустым —</option>'+
+    words.map((word,i)=>'<option value="'+i+'" '+(selected===i?'selected':'')+'>'+esc(word)+'</option>').join('');
+  }
+ }
+ updateGuessDraft();playTone(510);
 });
 root.addEventListener('pointerdown',e=>{
  if(state?.phase!=='compose'||state.author!==me?.id)return;
