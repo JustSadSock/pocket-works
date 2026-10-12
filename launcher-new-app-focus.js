@@ -62,7 +62,7 @@
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const entry = [...document.querySelectorAll('.app-entry[data-slug]')]
         .find((element) => element.dataset.slug === slug);
-      entry?.querySelector('.app-entry__select')?.click();
+      entry?.querySelector('.app-entry__more')?.click();
       entry?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }));
   }
