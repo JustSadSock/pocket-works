@@ -1,6 +1,6 @@
 {
   "name": "pocket-works",
-  "version": "0.10.9",
+  "version": "0.10.10",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -39,7 +39,7 @@
     "validate:creative:changed": "node scripts/validate-visual-direction.mjs --changed",
     "validate:launcher": "node scripts/test-deck-state.mjs && node scripts/test-shelf-state.mjs && node scripts/test-release-coordinator.mjs && node scripts/test-offline-readiness.mjs && node scripts/test-launcher-dom-reconcile.mjs && node scripts/test-launcher-registry.mjs && node scripts/validate-launcher.mjs && node scripts/validate-update-watchdog.mjs && node scripts/validate-release-coherence.mjs && node scripts/test-launcher-release-cursor.mjs",
     "validate:capabilities": "node scripts/validate-capabilities.mjs",
-    "validate:lan": "node scripts/validate-pocket-lan.mjs",
+    "validate:lan": "node scripts/validate-pocket-lan.mjs && node scripts/test-pocket-social.mjs",
     "validate:enhanced": "node scripts/validate-enhanced.mjs",
     "validate:godot": "node scripts/validate-godot.mjs",
     "validate:quality": "node scripts/validate-quality-gates.mjs",
