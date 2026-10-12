@@ -102,6 +102,26 @@ export class PocketIdentity {
         return response({ok:true,googleEnabled:Boolean(this.env.GOOGLE_CLIENT_ID&&this.env.GOOGLE_CLIENT_SECRET),avatars:AVATARS});
       if(path==='/pocket-id/me'&&request.method==='GET')
         return response({user:publicUser(await this.session(request))});
+      if(path==='/pocket-id/directory'&&request.method==='GET') {
+        if(request.headers.get('x-pw-social-internal')!=='1')return response({error:'not_found'},404);
+        const requester=await this.session(request);
+        if(!requester)return response({error:'sign_in_required'},401);
+        if(!this.limit('directory:'+requester.id,150))return response({error:'too_many_attempts'},429);
+        const q=(url.searchParams.get('q')||'').trim().normalize('NFKC').toLowerCase();
+        if(q.length<2||q.length>20||!/^[\p{L}\p{N}_-]+$/u.test(q))
+          return response({users:[]});
+        const escaped=q.replace(/[\\%_]/g,c=>String.fromCharCode(92)+c);
+        const rows=this.query("SELECT id,nickname,avatar FROM accounts WHERE nickname_key LIKE ? ESCAPE '\\' ORDER BY nickname_key LIMIT 12",escaped+'%').toArray();
+        return response({users:rows});
+      }
+      if(path==='/pocket-id/public'&&request.method==='GET') {
+        if(request.headers.get('x-pw-social-internal')!=='1')return response({error:'not_found'},404);
+        if(!await this.session(request))return response({error:'sign_in_required'},401);
+        const id=url.searchParams.get('id')||'';
+        if(!/^[0-9a-f-]{36}$/i.test(id))return response({user:null});
+        const row=this.one('SELECT id,nickname,avatar FROM accounts WHERE id=?',id);
+        return response({user:row||null});
+      }
       if(path==='/pocket-id/nickname'&&request.method==='GET') {
         const candidate=validateNickname(url.searchParams.get('value'));
         if(!candidate) return response({available:false,reason:'invalid_nickname'},400);

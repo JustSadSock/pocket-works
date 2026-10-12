@@ -1,0 +1,89 @@
+
+/* Pocket Social — a compact player identity ledger, not a second launcher. */
+.pws-entry{position:relative}
+.pws-entry__count{position:absolute;right:-5px;top:-5px;min-width:17px;height:17px;border-radius:9px;padding:0 4px;background:#e5a283;color:#142329;font:800 10px/17px system-ui;text-align:center}
+.pws-dialog{box-sizing:border-box;width:min(780px,calc(100vw - 20px));height:min(790px,calc(100dvh - 28px));max-height:none;margin:auto;padding:0;border:1px solid #54636a;border-radius:12px;background:#121d22;color:#f0eee7;box-shadow:0 25px 95px #000a;overflow:hidden;font:14px/1.45 system-ui,-apple-system,sans-serif;color-scheme:dark}
+.pws-dialog::backdrop{background:#061014df;backdrop-filter:blur(7px)}
+.pws-dialog *{box-sizing:border-box}
+.pws-dialog button,.pws-dialog input,.pws-dialog select{font:inherit}
+.pws-dialog button{cursor:pointer;touch-action:manipulation}
+.pws-dialog button:focus-visible,.pws-dialog input:focus-visible,.pws-dialog select:focus-visible{outline:2px solid #edba98;outline-offset:2px}
+.pws-dialog button:disabled{opacity:.5;cursor:wait}
+.pws-shell{display:flex;flex-direction:column;height:100%;min-height:0}
+.pws-top{padding:13px 17px;border-bottom:1px solid #36464b;display:flex;align-items:center;justify-content:space-between;gap:15px}
+.pws-brand{font-size:11px;font-weight:850;letter-spacing:.15em;color:#e1a78e}
+.pws-close{width:36px;height:36px;border:1px solid #435359;background:#233238;color:#fff;border-radius:7px}
+.pws-tabs{display:flex;border-bottom:1px solid #36464b;padding:0 16px;gap:7px}
+.pws-tab{padding:13px 10px;color:#abbcb7;background:none;border:0;border-bottom:2px solid transparent;font-size:13px!important}
+.pws-tab[aria-selected=true]{color:#fff;border-bottom-color:#e7aa87}
+.pws-content{padding:20px;overflow-y:auto;overscroll-behavior:contain;flex:1}
+.pws-content h2{font-size:clamp(21px,5vw,30px);letter-spacing:-.045em;line-height:1.12;margin:0 0 15px}
+.pws-content h3{font-size:15px;margin:22px 0 10px;color:#dfebe7}
+.pws-muted{color:#a6b9b7;font-size:12px}
+.pws-error{padding:11px 13px;background:#50352f;color:#ffe1d3;border:1px solid #996959;border-radius:7px;margin-bottom:14px}
+.pws-notice{padding:11px 13px;background:#263c39;color:#d9efdc;border:1px solid #426757;border-radius:7px;margin-bottom:14px}
+.pws-btn{border:1px solid #61736e;background:#30433f;color:#fff;border-radius:7px;padding:9px 13px;min-height:37px;font-size:12px!important;font-weight:650!important}
+.pws-btn--primary{background:#e4aa88;border-color:#e4aa88;color:#172126}
+.pws-btn--quiet{background:transparent;border-color:#415257;color:#b8d0c9}
+.pws-btn--danger{border-color:#8f605c;color:#ffd3cb;background:#442d30}
+.pws-btn:active{transform:scale(.98)}
+.pws-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.pws-card{--pws-accent:#c5d7b6;--pws-ink:#20352e;position:relative;overflow:hidden;isolation:isolate;max-width:560px;min-height:220px;padding:24px;border-radius:10px;background:#3e665a;color:#f9f4e7;border:3px solid transparent;box-shadow:0 12px 33px #0005}
+.pws-card[data-background=clay]{background:linear-gradient(130deg,#9a5844,#572e37 72%);--pws-accent:#f0c998;--pws-ink:#64382e}
+.pws-card[data-background=forest]{background:linear-gradient(132deg,#567968,#273e43 72%);--pws-accent:#b8d8c4;--pws-ink:#294c40}
+.pws-card[data-background=lilac]{background:linear-gradient(138deg,#7d6688,#363959 75%);--pws-accent:#e9d4ee;--pws-ink:#4e3c60}
+.pws-card[data-background=ocean]{background:linear-gradient(132deg,#2f7d8a,#233751 80%);--pws-accent:#b7e5e0;--pws-ink:#2a5b71}
+.pws-card[data-background=night]{background:linear-gradient(130deg,#292f39,#13191f 80%);--pws-accent:#e2b77e;--pws-ink:#222b39}
+.pws-card[data-background=paper]{background:linear-gradient(135deg,#d7c39e,#ae9879);color:#252f32;--pws-accent:#fff3d9;--pws-ink:#534b42}
+.pws-card:before{content:'';pointer-events:none;position:absolute;inset:-40%;z-index:-1;background:radial-gradient(ellipse at 25% 27%,#ffffff2a,transparent 40%);transform:rotate(-17deg)}
+.pws-card[data-frame=double]{border:3px double var(--pws-accent)}
+.pws-card[data-frame=corners]{border:3px solid transparent;outline:1px solid var(--pws-accent);outline-offset:-10px}
+.pws-card[data-frame=stamp]{border:4px dashed var(--pws-accent)}
+.pws-card__top{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}
+.pws-card__id{text-align:right;font:800 10px/1.6 ui-monospace,monospace;letter-spacing:.08em;opacity:.8}
+.pws-avatar{width:112px;height:112px;flex:0 0 auto;border-radius:9px;border:3px solid var(--pws-accent);background:var(--pws-accent);color:var(--pws-ink);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:56px;font-weight:800}
+.pws-avatar img{width:100%;height:100%;object-fit:contain}
+.pws-card__name{font-size:clamp(22px,6vw,36px);font-weight:800;letter-spacing:-.06em;overflow-wrap:anywhere;margin:16px 0 0}
+.pws-card__foot{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px;opacity:.9}
+.pws-dots{display:flex;gap:6px;align-items:center}
+.pws-dot{width:8px;height:8px;border-radius:50%;background:#6d777a;display:inline-block}
+.pws-dot--online{background:#9ed3a7;box-shadow:0 0 0 2px #9ed3a727}
+.pws-section{margin-bottom:24px}
+.pws-field{display:grid;gap:6px;margin:12px 0}
+.pws-field label{color:#d8e2dd;font-size:12px;font-weight:700}
+.pws-field input,.pws-field select{width:100%;min-height:41px;background:#17282c;color:#fff;border:1px solid #4d6264;border-radius:7px;padding:8px 12px}
+.pws-options{display:flex;flex-wrap:wrap;gap:8px}
+.pws-option{border:2px solid transparent;background:#293a3d;color:#f0e8dc;border-radius:6px;min-height:36px;padding:6px 11px}
+.pws-option[aria-pressed=true]{border-color:#f4bc98}
+.pws-option--theme{width:54px;height:48px;background:var(--sample)}
+.pws-profile-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.pws-editor{margin-top:24px;padding:17px;background:#1c2b30;border:1px solid #3e5053;border-radius:8px}
+.pws-draw{width:180px;height:180px;max-width:100%;border-radius:7px;border:1px solid #5f746f;background:repeating-conic-gradient(#e4e4df 0% 25%,#c8ceca 0% 50%) 50%/20px 20px;touch-action:none;cursor:crosshair}
+.pws-editor-tools{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.pws-swatches{display:flex;gap:5px;margin:9px 0}
+.pws-swatch{width:32px;height:32px;border:2px solid #7b8d84;border-radius:50%;background:var(--swatch)}
+.pws-swatch[aria-pressed=true]{outline:2px solid #edc59e;outline-offset:2px}
+.pws-list{display:grid;gap:8px}
+.pws-person{display:flex;align-items:center;gap:11px;padding:11px;background:#203137;border:1px solid #3a4d51;border-radius:8px}
+.pws-person__avatar{width:38px;height:38px;display:grid;place-items:center;background:#536b66;border-radius:6px;font-weight:800}
+.pws-person__name{flex:1;min-width:0}
+.pws-person__name strong{display:block;overflow:hidden;text-overflow:ellipsis}
+.pws-person__name small{font-size:11px;color:#a7beb8}
+.pws-person button{flex:0 0 auto}
+.pws-tag{font-size:10px;border:1px solid #537665;border-radius:5px;color:#b0dcc4;padding:3px 6px}
+.pws-line{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pws-empty{padding:22px;text-align:center;border:1px dashed #425759;border-radius:8px;color:#b4c6c0;font-size:13px}
+.pws-check{display:flex;gap:9px;margin:12px 0;align-items:center}
+.pws-check input{accent-color:#e5ac89;width:18px;height:18px}
+.pws-confirm{margin-top:16px;border:1px solid #946f66;border-radius:7px;padding:14px;background:#352d2e}
+.pws-loading{padding:35px 0;text-align:center;color:#b5c8c2}
+@media(min-width:650px){.pws-profile-layout{grid-template-columns:minmax(0,1fr) 205px;align-items:start}.pws-dialog{height:min(750px,calc(100dvh - 40px))}}
+@media(max-width:480px){.pws-dialog{width:100vw;height:100dvh;max-height:none;border-radius:0;border:0}.pws-content{padding:17px}.pws-card{padding:17px}.pws-avatar{width:88px;height:88px;font-size:44px}.pws-card__id{font-size:9px}.pws-person{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.pws-dialog *{transition:none!important;animation:none!important}}
+
+.pws-person__avatar img{display:block;width:100%;height:100%;object-fit:contain}
+.nav-tools .pws-entry{min-width:38px;min-height:38px;display:grid;place-items:center}
+
+#pocket-id-trigger .pw-social-personal-avatar{display:block;width:31px;height:31px;border-radius:6px;object-fit:contain;background:#d8d8ca}
+
+.ticket-actions [data-social-invite]{grid-column:1/-1}

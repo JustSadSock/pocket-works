@@ -1,10 +1,10 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.12.0';
-const ART_CACHE = 'zamazka-artworks-v1.12.0';
-const APP_VERSION = '1.12.0';
+const CACHE_NAME = 'zamazka-v1.12.1';
+const ART_CACHE = 'zamazka-artworks-v1.12.1';
+const APP_VERSION = '1.12.1';
 const RELEASE_DATE = '2026-10-12';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Новая заливка: гладкие границы без рваных пересечений, предыдущие заливки не блокируют цвет.","После сдачи работы — просмотр собственной картины с ползунком до/после.","В каждой экспертизе пять полотен; только одно было реставрировано.","Сразу после каждого голосования правильное полотно подсвечивается, открывается сравнение с оригиналом."];
+const RELEASE_NOTES = ["Pocket Social: приглашения из комнаты ожидания друзьям с подтверждённым Pocket ID.","Заливка по контуру штрихов с гладкими пересечениями, не зависящая от прошлых заливок.","После сдачи работы остаётся собственный холст с ползунком сравнения, пока рисуют остальные.","Во время экспертизы пять полотен показаны вместе; среди них ровно одна реставрация.","После каждого голосования подсвечивается верное полотно, затем доступен ползунок сравнения.","Судейская очередь переходит к следующей картине только после раскрытия ответа."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -30,6 +30,8 @@ const APP_SHELL = [
   '../../shared/capabilities/net.js',
   '../../shared/capabilities/identity.js',
   '../../shared/capabilities/identity.css',
+  '../../shared/pocket-social.css',
+  '../../shared/pocket-social.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

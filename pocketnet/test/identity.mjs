@@ -76,6 +76,36 @@ try{
  assert.equal(guestAuth.player.accountId,null);
  verified.send('create_room',{gameId:'zamazka'});
  const room=await verified.next('room_joined');
+ // Two real Pocket IDs: search, friend approval, validated live invite and join link.
+ const callSocial=async(cookie,path,body=null)=>{
+   const result=await fetch(base+'/pocket-social/'+path,{
+     method:body?'POST':'GET',
+     headers:{origin:base,cookie,...(body?{'content-type':'application/json'}:{})},
+     ...(body?{body:JSON.stringify(body)}:{})
+   });
+   return {status:result.status,data:await result.json()};
+ };
+ const bobID=(await (await fetch(base+'/pocket-id/me',{headers:{cookie:bob.cookie}})).json()).user.id;
+ const socialAlice=await callSocial(alice.cookie,'me');
+ assert.equal(socialAlice.status,200);
+ const findBob=await callSocial(alice.cookie,'search?q='+encodeURIComponent(nick2.slice(0,7)));
+ assert.equal(findBob.status,200,JSON.stringify(findBob.data));
+ assert.ok(findBob.data.users.some(p=>p.id===bobID),'Verified Pocket ID directory should find Bob');
+ const friendAsk=await callSocial(alice.cookie,'friend-request',{id:bobID});
+ assert.equal(friendAsk.status,201,JSON.stringify(friendAsk.data));
+ const friendAccept=await callSocial(bob.cookie,'friend-action',{id:auth.player.accountId,action:'accept'});
+ assert.equal(friendAccept.status,200,JSON.stringify(friendAccept.data));
+ assert.equal((await callSocial(alice.cookie,'friends')).data.friends.length,1);
+ const badInvite=await callSocial(bob.cookie,'invite',{toId:auth.player.accountId,gameId:'zamazka',roomId:room.roomId});
+ assert.equal(badInvite.status,403,'Cannot invite from a room you are not in');
+ const invitation=await callSocial(alice.cookie,'invite',{toId:bobID,gameId:'zamazka',roomId:room.roomId});
+ assert.equal(invitation.status,201,JSON.stringify(invitation.data));
+ const bobInbox=await callSocial(bob.cookie,'friends');
+ assert.ok(bobInbox.data.invites.some(i=>i.id===invitation.data.inviteId&&i.status==='pending'));
+ const acceptInvitation=await callSocial(bob.cookie,'invite-action',{id:invitation.data.inviteId,action:'accept'});
+ assert.equal(acceptInvitation.status,200,JSON.stringify(acceptInvitation.data));
+ assert.equal(acceptInvitation.data.url,'/apps/zamazka/?room='+room.roomId);
+
  assert.equal(room.players[0].name,nick1);
  assert.equal(room.players[0].verified,true);
  assert.equal(room.players[0].avatar,'plum');
