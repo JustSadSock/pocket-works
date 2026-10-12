@@ -242,8 +242,14 @@ function updateClock(){
 function setState(next){
  if(!next||!Array.isArray(next.players)||!next.phase)return;
  const changed=state?.phase!==next.phase||state?.author!==next.author||state?.round!==next.round||state?.prompt!==next.prompt;
+ const wasAnswered=state?.answered?.includes(me?.id)||false;
  state=next;
  if(changed){hideConfirm();selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
+ if(next.phase==='guess'&&!changed&&state.answered.includes(me?.id)===wasAnswered){
+  const counter=document.querySelector('.prompt-strip .micro');
+  if(counter)counter.textContent=state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ';
+  updateClock();return;
+ }
  if(next.phase==='compose'&&next.author===me?.id){
   // Never destroy the active pointer surface when server echoes an edit.
   updateClock();return;
