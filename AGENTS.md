@@ -1,3 +1,5 @@
+> **Multiplayer policy (2026-10-12):** Prefer PocketNet (Cloudflare Durable Objects) for all new multiplayer apps. PocketLAN is currently inactive/legacy: do not import, register, cache, or couple a new app to it. PocketNet game modules live under `apps/<slug>/server/` with pinned `pocketnet/module-versions/<slug>/` releases. Re-enabling PocketLAN requires an explicit future platform decision. See `docs/POCKETNET-CLOUDFLARE.md`.
+
 # AGENTS.md — Pocket Works
 
 Pocket Works is a collection of installable, offline-first mobile web applications. Every app is a real product and every application task must remain isolated from concurrent work.
