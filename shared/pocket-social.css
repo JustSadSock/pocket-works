@@ -87,3 +87,9 @@
 #pocket-id-trigger .pw-social-personal-avatar{display:block;width:31px;height:31px;border-radius:6px;object-fit:contain;background:#d8d8ca}
 
 .ticket-actions [data-social-invite]{grid-column:1/-1}
+
+/* One Pocket ID button for the launcher: artwork stays clipped locally, unread badges do not. */
+#pocket-id-trigger.pws-entry{overflow:visible}
+#pocket-id-trigger.pws-entry .pws-entry__count{right:-5px;top:-5px;z-index:2}
+.pws-editor .pws-field:first-of-type{margin-top:15px}
+.pws-profile-layout .pws-section .pws-btn{margin-top:10px}
