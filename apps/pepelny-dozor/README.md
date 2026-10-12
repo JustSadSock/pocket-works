@@ -12,7 +12,7 @@ A complete, solo, portrait-first five-wave survival arcade inside Pocket Works.
 
 ## Graphics pipeline
 - \`asset-forge/sprites.json\`: authentic 32×32 palette-locked indexed pixel frames with named tags, pivots and durations (editable source).
-- \`assets/creatures.png\` and \`assets/creatures.json\`: Universal Art Forge v2-generated texture atlas + animation record. Runtime loads the atlas; when unavailable it renders the SAME palette-indexed editable source once into an offscreen bitmap, never arbitrary substitute art.
+- \`assets/creatures.png\` and \`assets/creatures.json\`: Universal Art Forge v2-generated texture atlas + animation record. The runtime loads the exported PNG atlas directly from the published `assets/` directory. Editable `asset-forge/` sources are deliberately excluded from production by Pocket Works publishing rules. Unavailable/invalid atlases show a working retry action and never claim the game is ready.
 - \`asset-forge/emblem.svg\`: original geometric sigil, with \`assets/abbey-emblem.png\` and \`assets/abbey-emblem.svg\` exported through the vector adapter. \`icons/icon.svg\`: app-specific PWA icon.
 - \`assets/forge-index.json\`: provenance + verified hashes; output/source freshness checked by \`python3 tools/art-forge/forge.py check --app pepelny-dozor\`.
 - The 2D Canvas renderer makes contact shadows, stone floor, gothic arches, material details, flame penumbra and pulses. This is deliberate hybrid rendering, not blurred pixel-art pretending to be high resolution.
@@ -23,6 +23,8 @@ To rebuild exports on a machine with Pillow/Inkscape: \`python3 tools/art-forge/
 The game follows \`docs/agent-skills/AI-VISUAL-PRODUCTION.md\`, based on Aseprite docs, practitioners' solo pixel animation tradeoffs and constrained palette workflows. The Art Bible compares three materially different media and records why the pixel/light hybrid was selected.
 
 ## QA
+- Regression: ensure production `prepare:site` excludes `asset-forge/` but retains `assets/creatures.png`; preload only published URLs in the service worker. Start must work without fetching editable sources.
+- Simulate a missing atlas: error panel displays `ПОВТОРИТЬ` (not function source), retries load, and starts when atlas is restored.
 - Load \`/apps/pepelny-dozor/\`, start and sweep the beam; hit Space or tap the bell; survive wave I and select an upgrade; continue through wave V and replay.
 - Check iPhone 390×844, small phone ~320×620, and desktop narrow/large; portrait safe areas and bottom physical button.
 - Check refresh/restart, browser Back/exit link, mute, pause, game end and offline SW reload.
