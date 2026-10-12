@@ -1,1 +1,32 @@
-{"schemaVersion":1,"runtime":"quick","slug":"blind-pals","name":"СЛЕПАЯ СМЕНА","shortName":"СЛЕПАЯ СМЕНА","description":"Дуэт вслепую: каждый управляет невидимым для себя рабочим и видит только напарника. Шесть механических кооперативных комнат с физическими головоломками.","version":"1.0.0","releaseDate":"2026-10-12","releaseDateTime":"2026-10-12T23:35:00+03:00","changelog":["Первый выпуск: онлайн-комнаты PocketNet на двоих, шесть заводских головоломок, невидимость своего персонажа.","ПК-управление WASD, Space, E, F и Esc; предсказуемая камера и плавная физика.","Конвейеры, прессы, совместные нажимные плиты, перенос ящика и результат после прохождения."],"status":"experimental","preset":"game-2d","accent":"#ce795a","backgroundColor":"#252c26","themeColor":"#252b25","orientation":"any","cacheName":"blind-pals-v1.0.0","storageNamespace":"pocket-works:blind-pals","tags":["cooperative","puzzle","multiplayer","physics","desktop"],"order":302}
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "blind-pals",
+  "name": "СЛЕПАЯ СМЕНА",
+  "shortName": "СЛЕПАЯ СМЕНА",
+  "description": "Дуэт вслепую: каждый управляет невидимым для себя рабочим и видит только напарника. Шесть механических кооперативных комнат с физическими головоломками.",
+  "version": "1.1.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T23:55:00+03:00",
+  "changelog": [
+    "Полноценный стартовый экран: создать комнату, пригласить друга Pocket ID, войти по коду.",
+    "Устранены столкновения гостевых токенов при дублировании вкладок и улучшены сообщения об ошибках подключения.",
+    "Новый визуальный экран ожидания с копированием кода, отправкой ссылки, участниками и статусом связи."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#ce795a",
+  "backgroundColor": "#252c26",
+  "themeColor": "#252b25",
+  "orientation": "any",
+  "cacheName": "blind-pals-v1.1.0",
+  "storageNamespace": "pocket-works:blind-pals",
+  "tags": [
+    "cooperative",
+    "puzzle",
+    "multiplayer",
+    "physics",
+    "desktop"
+  ],
+  "order": 302
+}

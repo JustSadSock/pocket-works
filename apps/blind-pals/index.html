@@ -3,7 +3,7 @@
 <meta name="theme-color" content="#252b25"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>СЛЕПАЯ СМЕНА · кооператив вслепую</title>
 <link rel="icon" type="image/svg+xml" href="./icons/icon.svg"><link rel="manifest" href="./manifest.webmanifest">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="../../shared/capabilities/identity.css"><link rel="stylesheet" href="../../shared/pocket-social.css"><link rel="stylesheet" href="./lobby-v2.css">
 </head><body><main class="app-shell" data-app-shell data-fullscreen-app>
 <header class="masthead" data-ui><a href="../../" class="exit" data-native-press>← Pocket Works</a><div class="brand"><span class="brand-icon">◉</span><span>СЛЕПАЯ СМЕНА</span></div><div id="netStatus" class="connection">НЕТ СОЕДИНЕНИЯ</div></header>
 <section class="layout">
@@ -16,5 +16,5 @@
 <div id="pauseLayer" class="overlay hidden" role="dialog" aria-modal="true"><div class="overlay-body"><h2>ПАУЗА</h2><p>Ты не видишь себя. Напарник по-прежнему тебя видит.</p><button id="resumeBtn" class="button primary">Продолжить · Esc</button><button id="leaveBtn" class="button muted">Покинуть комнату</button><a class="button text-link" href="../../">Вернуться в Pocket Works</a></div></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СЛЕПАЯ СМЕНА" data-app-version="1.0.0"></script>
-<script type="module" src="./app.js"></script></body></html>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СЛЕПАЯ СМЕНА" data-app-version="1.1.0"></script>
+<script type="module" src="./app.js"></script><script type="module" src="../../shared/pocket-social.js"></script></body></html>
