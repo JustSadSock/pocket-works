@@ -1,6 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { PocketNet } from '../../shared/capabilities/net.js';
-import { getPocketIdentity, pocketIdentitySessionKey, preferredPocketName } from '../../shared/capabilities/identity.js';
+import { getPocketIdentity, pocketIdentitySessionKey, preferredPocketName, pocketAvatarMarkup } from '../../shared/capabilities/identity.js';
 import { prepareTabGuest, markTabGuest, clearTabGuest } from './tab-session.js';
 installMobileRuntime();
 
@@ -54,7 +54,7 @@ async function copy(value){
 function soundMarkup(){return '<button class="button muted sound-toggle" data-do="sound">Звук '+(soundOn?'включён':'выключен')+'</button>';}
 function identityMarkup(){
  return pocketIdentity?.complete?
-  '<div class="identity-bar"><span class="identity-avatar">◉</span><div><small>POCKET ID</small><strong>'+esc(pocketIdentity.nickname)+'</strong></div><button class="identity-edit" data-do="profile" type="button">Друзья и профиль ↗</button></div>':
+  '<div class="identity-bar"><span class="identity-avatar identity-avatar--profile">'+pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{accountId:pocketIdentity.id,small:true})+'</span><div><small>POCKET ID</small><strong>'+esc(pocketIdentity.nickname)+'</strong></div><button class="identity-edit" data-do="profile" type="button">Друзья и профиль ↗</button></div>':
   '<div class="identity-bar"><span class="identity-avatar">◌</span><div><small>ГОСТЕВОЙ ПРОФИЛЬ</small><label for="nick">Твоё имя</label></div><input id="nick" class="identity-nick" maxlength="24" autocomplete="nickname" value="'+esc(username)+'"><button class="identity-edit" type="button" data-do="profile">Pocket ID ↗</button></div>';
 }
 function playerMarkup(p,i){
