@@ -312,6 +312,7 @@ export async function registerManagedServiceWorker(options = {}) {
       apply
     };
 
+    if(!renderPrompt)window.__pocketWorksPendingUpdate=detail;
     window.dispatchEvent(new CustomEvent('appupdateavailable', { detail }));
 
     const alreadySeen = Boolean(
