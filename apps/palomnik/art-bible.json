@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "product": "palomnik",
+  "references": "Seven screenshots supplied by user showing low-resolution painterly gothic castles, floating ships and dramatic sculptural clouds. They serve as art-direction reference, not embedded assets.",
+  "thesis": "Pixel-dithered volumetric gothic wasteland with oversized architecture and pools of amber light.",
+  "composition": "Side-on cathedral walker fills left third; three stepping stones form a visible vertical choice on right; rich spiral storm and abandoned towers occupy horizon.",
+  "rendering": "Canvas 2D, 360 logical pixels, ordered 4x4 palette dithering for per-pixel clouds, low-resolution authored geometry for foreground.",
+  "focalAsset": "Four-legged bell tower with riveted feet, two side towers, chimneys, lit window arches and gears.",
+  "materials": [
+    "Weathered iron and stone",
+    "Limited-value stippled sky",
+    "Warm glass and ambient lightning",
+    "Layered cliff silhouettes"
+  ],
+  "palette": [
+    "#0c101b",
+    "#b26f58",
+    "#f4a06c",
+    "#755079",
+    "#e5a3e0",
+    "#183244",
+    "#c6d4cc"
+  ],
+  "rejected": [
+    "flat UI cards",
+    "neon gradients",
+    "procedural cubes pretending to be a fortress",
+    "UI-wide texture overlay"
+  ],
+  "authorship": "Original game code and procedural visuals. No embedded third-party image assets.",
+  "motion": "Tap sparks, leg lift, body swing, landing dust, resource readout; reduced-motion shortcut.",
+  "alternatives": [
+    {
+      "idea": "Runtime voxel 3D",
+      "reason": "Texture and mesh production would dominate instead of completing gameplay."
+    },
+    {
+      "idea": "Hand-painted fixed backgrounds",
+      "reason": "Would require multiple authored images and reduce atmosphere variation."
+    },
+    {
+      "idea": "Low-res Canvas diorama",
+      "reason": "Chosen to create a dynamic scene within app runtime."
+    }
+  ]
+}
