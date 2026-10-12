@@ -212,7 +212,14 @@ function invitePanel(){
 function render(){
   if(!dialog?.open)return;
   q('#pws-tabs',dialog).hidden=!state.me;
-  for(const t of dialog.querySelectorAll('[data-pws-tab]'))t.setAttribute('aria-selected',String(t.dataset.pwsTab===state.tab));
+  for(const t of dialog.querySelectorAll('[data-pws-tab]')){
+    t.setAttribute('aria-selected',String(t.dataset.pwsTab===state.tab));
+    const count=t.dataset.pwsTab==='friends'?(state.me?.incoming||[]).length:
+      t.dataset.pwsTab==='invites'?(state.me?.invites||[]).filter(i=>i.incoming&&i.status==='pending').length:0;
+    let dot=t.querySelector('.pws-tab__badge');
+    if(count&&!dot){dot=document.createElement('span');dot.className='pws-tab__badge';t.append(dot);}
+    if(dot){dot.textContent=String(Math.min(count,99));dot.hidden=!count;}
+  }
   content.innerHTML=errorMarkup()+(state.loading?'<div class="pws-loading">Загрузка…</div>':
     state.tab==='profile'?profilePanel():
     state.tab==='friends'?friendsPanel():
@@ -221,6 +228,9 @@ function render(){
   if(state.edit&&state.tab==='profile')initCanvas();
 }
 function updateNotification(count){
+  const invites=(state.me?.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
+  const requests=(state.me?.incoming||[]).length;
+  document.dispatchEvent(new CustomEvent('pocket-social:notifications',{detail:{count,invites,requests}}));
   if(!entry)return;
   let badge=q('.pws-entry__count',entry);
   if(!badge){
@@ -230,6 +240,7 @@ function updateNotification(count){
   }
   badge.textContent=String(Math.min(count,99));badge.hidden=!count;
   entry.title=count?count+' новых запросов и приглашений':'Pocket ID · Профиль и друзья';
+  entry.setAttribute('aria-label',count?('Pocket ID: '+count+' новых уведомлений'):'Pocket ID: Профиль и друзья');
 }
 async function reload(rerender=true){
   const data=await api('me');
@@ -261,14 +272,23 @@ async function loadCatalog(){
   }catch{}
 }
 function resetNotice(){state.notice='';state.error='';state.confirm=null}
-async function open(room=''){
+async function open(room='',editNow=false){
   if(!dialog.open)dialog.showModal();
   state.room=room||'';state.tab=room?'invite':'profile';state.edit=false;state.other=null;
   state.loading=true;resetNotice();render();
   try{await Promise.all([reload(false),loadCatalog()])}
   catch(e){state.me=null;state.error=e.message}
-  finally{state.loading=false;render()}
-  if(state.me&&state.tab==='profile')void loadCloudUsage();
+  finally{state.loading=false}
+  if(state.me&&editNow){
+    state.tab='profile';state.edit=true;state.draft={...state.me.profile};
+    state.artHistory=[state.draft.artwork];resetNotice();
+  }else if(state.me&&!room){
+    const incoming=(state.me.invites||[]).some(i=>i.incoming&&i.status==='pending');
+    if(incoming)state.tab='invites';
+    else if((state.me.incoming||[]).length)state.tab='friends';
+  }
+  render();
+  if(state.me&&state.tab==='profile'&&!state.edit)void loadCloudUsage();
 }
 async function showUser(id){
   state.tab='other';state.other=null;state.loading=true;resetNotice();render();
@@ -491,5 +511,5 @@ function install(){
   });
   pulse();reload(false).catch(()=>{});
 }
-window.PocketSocial=Object.freeze({open:(room='')=>open(room)});
+window.PocketSocial=Object.freeze({open:(room='')=>open(room),openEditor:()=>open('',true)});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
