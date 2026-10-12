@@ -155,7 +155,7 @@ export class Editor{
     if(!this.working||!this.inside(p))return;
     const pts=this.working.p,prev=pts[pts.length-1];
     if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<=1.1)return;
-    if(this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
+    if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0)){this.warnLimit();return}
     if(pts.length>=MAX_STROKE_POINTS){
       if(this.strokes.length+1>=MAX_STROKES){this.warnLimit();return}
       const old=this.working;
@@ -171,7 +171,7 @@ export class Editor{
   }
   // On touch, the precision nib is above the finger, as in Folio.
   tip(e){
-    const offset=this.inputMode==='precision'&&e.pointerType==='touch';
+    const offset=this.inputMode==='precision'&&e.pointerType==='touch'&&this.tool!=='picker'&&this.tool!=='fill';
     return {clientX:e.clientX+(offset?(this.hand==='left'?18:-18):0),
       clientY:e.clientY-(offset?50:0),pointerType:e.pointerType};
   }
