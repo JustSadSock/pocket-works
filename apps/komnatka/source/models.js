@@ -50,11 +50,50 @@ function texture(scene,label,draw) {
  const tex=new DynamicTexture(label,{width:256,height:256},scene,false);
  const c=tex.getContext();draw(c);tex.update();return tex;
 }
+
+const fabricCache=new WeakMap();
+export function fabricMaterial(scene,color){
+ let byColor=fabricCache.get(scene);
+ if(!byColor){byColor=new Map();fabricCache.set(scene,byColor);}
+ if(byColor.has(color))return byColor.get(color);
+ const tex=texture(scene,'weave-'+color,(c)=>{
+  c.fillStyle=color;c.fillRect(0,0,256,256);
+  for(let y=0;y<256;y+=4){
+   c.strokeStyle='rgba(255,255,255,.075)';c.lineWidth=1;
+   c.beginPath();c.moveTo(0,y+.5);c.lineTo(256,y+.5);c.stroke();
+  }
+  for(let x=0;x<256;x+=4){
+   c.strokeStyle='rgba(67,46,34,.045)';
+   c.beginPath();c.moveTo(x+.5,0);c.lineTo(x+.5,256);c.stroke();
+  }
+ });
+ const mat=new StandardMaterial('matte-woven-'+color,scene);
+ mat.diffuseColor=Color3.White();mat.specularColor=new Color3(.018,.018,.018);mat.specularPower=8;
+ mat.diffuseTexture=tex;mat.backFaceCulling=true;
+ byColor.set(color,mat);return mat;
+}
+function grainMaterial(scene,name,color){
+ const tx=texture(scene,'wood-fibres-'+name,c=>{
+  c.fillStyle=color;c.fillRect(0,0,256,256);
+  let seed=123;const rand=()=>((seed=seed*1664525+1013904223>>>0)/4294967296);
+  for(let i=0;i<80;i++){
+   const y=rand()*256,x=rand()*256;
+   c.strokeStyle=i%2?'rgba(73,46,30,.065)':'rgba(255,248,225,.085)';
+   c.lineWidth=.4+rand()*.7;c.beginPath();c.moveTo(x-50,y);
+   c.bezierCurveTo(x,y-3,x+40,y+2,x+150,y+rand()*2);c.stroke();
+  }
+ });
+ const m=new StandardMaterial('warm-wood-'+name,scene);
+ m.diffuseColor=Color3.White();m.specularColor=new Color3(.05,.045,.04);m.specularPower=9;
+ m.diffuseTexture=tx;return m;
+}
+
 const cached=new WeakMap();
 function getMaterials(scene) {
  if(cached.has(scene))return cached.get(scene);
  const colors={wood:'#ad8062',lightWood:'#c9a684',darkWood:'#785544',metal:'#9c876d',ink:'#644f43',cream:'#f1debc',paper:'#fff5e4',leaf:'#6d8f74',leaf2:'#a8b88b',soil:'#5e5342',light:'#fff0ba',sky:'#c2dce2',white:'#f9efe1',glass:'#badbe0'};
  const m={};for(const [k,v] of Object.entries(colors))m[k]=makeMaterial(scene,'material-'+k,v);
+ for(const key of ['wood','lightWood','darkWood'])m[key]=grainMaterial(scene,key,colors[key]);
  const art = ['landscape','abstract','flowers'];
  m.art=art.map((kind,i)=>{
   const tx=texture(scene,'paint-'+kind,(c)=>{
@@ -86,7 +125,7 @@ function windowViewMaterial(scene){
 export function makeItem(scene,item){
  const meta=byType[item.type];if(!meta)throw new Error('Unknown item: '+item.type);
  const M=getMaterials(scene), root=new TransformNode('item-'+item.id,scene);
- const cloth=makeMaterial(scene,'fabric-'+item.id,item.color||COLORS[2]), pastel=makeMaterial(scene,'detail-'+item.id,item.color||COLORS[2]);
+ const cloth=fabricMaterial(scene,item.color||COLORS[2]), pastel=fabricMaterial(scene,item.color||COLORS[2]);
  root.position.set(item.x||0,item.y||0,item.z||0);root.rotation.y=(item.rot||0)*Math.PI/2;
  const t=item.type;
  // Opaque materials only. The room renderer owns physical floor shadows;
