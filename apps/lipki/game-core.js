@@ -32,7 +32,7 @@ function terrain(w){
 }
 function makeWorld(ids=['solo'],lev=0){
  const level=clamp(Math.floor(lev)||0,0,LEVELS.length-1),def=LEVELS[level];
- return {level,phase:'play',time:0,revision:0,players:ids.map((id,i)=>({id,x:92+i*52,y:GROUND-R-2,vx:0,vy:0,grounded:false,coyote:0,jumpHeld:false,grabHeld:false,grab:null,face:1,squash:0})),
+ return {level,phase:'play',time:0,revision:0,players:ids.map((id,i)=>({id,x:92+i*52,y:GROUND-R-2,vx:0,vy:0,grounded:true,coyote:.105,jumpHeld:false,grabHeld:false,grab:null,face:1,squash:0})),
  balls:(def.balls||[]).map((b,i)=>({id:'b'+i,x:b.x,y:b.y,vx:0,vy:0,r:28})),pads:[],exit:{x:1114,y:GROUND-R-2},particles:0};
 }
 function rectHit(b,box){
@@ -58,7 +58,7 @@ function findGrab(w,p,solids){
   if(d<dist){dist=d;best={kind:'ball',id:o.id,dx:p.x-o.x,dy:p.y-o.y};}
  }
  for(const rect of solids){
-  if(rect.type==='floor'&&p.y<GROUND-45)continue;
+  if(rect.type==='floor')continue;
   const x=clamp(p.x,rect.x,rect.x+rect.w),y=clamp(p.y,rect.y,rect.y+rect.h),d=Math.hypot(x-p.x,y-p.y);
   if(d<dist){dist=d;best={kind:'wall',x:p.x,y:p.y};}
  }

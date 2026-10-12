@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {LEVELS,makeWorld,tickWorld,terrain,GROUND,R} from '../game-core.js';
+import {readFile} from 'node:fs/promises';
+import {test} from 'node:test';
+test('12 distinct levels have bounded terrain',()=>{assert.equal(LEVELS.length,12);for(let i=0;i<12;i++){const w=makeWorld(['a','b','c','d'],i);tickWorld(w,0.08,{});assert.ok(w.players.every(p=>Number.isFinite(p.x+p.y+p.vx+p.vy)));}});
+test('grounded character moves and jumps on the first input',()=>{const w=makeWorld(['a'],0);tickWorld(w,1/60,{a:{x:1,jump:true}});assert.ok(w.players[0].x>92);assert.ok(w.players[0].vy< -200);});
+test('sticky attachment can target teammate',()=>{const w=makeWorld(['a','b'],0);w.players[1].x=130;tickWorld(w,1/60,{a:{grab:true}});assert.equal(w.players[0].grab?.kind,'player');});
+test('ball and heroes operate two simultaneous pressure pads',()=>{const w=makeWorld(['a','b'],4);assert.ok(terrain(w).padActive.every(v=>!v));w.players[0].x=575;w.players[0].y=GROUND-R;w.balls[0].x=720;w.balls[0].y=GROUND-28;assert.ok(terrain(w).padActive.every(Boolean));assert.ok(!terrain(w).solids.some(x=>x.type==='gate'));});
+test('cooperative door requires the entire team',()=>{const w=makeWorld(['a','b'],0);w.players[0].x=w.exit.x;w.players[0].y=w.exit.y;tickWorld(w,.02,{});assert.equal(w.phase,'play');w.players[1].x=w.exit.x;w.players[1].y=w.exit.y;tickWorld(w,.02,{});assert.equal(w.phase,'cleared');});
+test('server source and immutable snapshot are identical',async()=>{const [src,snapshot]=await Promise.all([readFile(new URL('../server/module.ts',import.meta.url),'utf8'),readFile(new URL('../../../pocketnet/module-versions/lipki/v1.ts',import.meta.url),'utf8')]);assert.equal(src,snapshot);});
