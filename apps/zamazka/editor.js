@@ -128,7 +128,7 @@ export class Editor{
    this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
     this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
     this.hand=localStorage.getItem('pocket-works:zamazka:precision-hand')==='left'?'left':'right';
-    this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.limitWarned=false;
+    this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
     this.cursor=root.querySelector('#brushCursor');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
    this.draftKey=key+id+':'+variation+':'+round;
    try{const stored=JSON.parse(localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
@@ -139,7 +139,23 @@ export class Editor{
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(4,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
- save(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.strokes))}catch{}this.onChange(this.strokes.length)}
+ save(){this.saveSnapshot();this.onChange(this.strokes.length)}
+  getSnapshot(){return [...this.strokes,...(this.working?[this.working]:[])].map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[...p])}))}
+  saveSnapshot(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.getSnapshot()))}catch{}}
+  adoptDraft(strokes){
+    if(this.strokes.length||!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
+    const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:1601),0);
+    if(total>1600||strokes.some(s=>!['brush','pencil','spray','erase','fill'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<1||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
+    this.strokes=strokes.map(s=>({...s,p:s.p.map(p=>[...p])}));this.save();this.render();return true;
+  }
+  setTool(tool){
+    if(!['brush','fill','picker','erase','hand'].includes(tool))return;
+    this.finishStroke();this.tool=tool;
+    this.viewport.classList.toggle('hand-mode',tool==='hand');
+    this.viewport.classList.toggle('picker-mode',tool==='picker');
+    this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
+    if(this.lastCursor)this.showCursor(this.lastCursor);
+  }
 
   // The remote game accepts at most 45 points per segment, 72 segments and
   // 1600 points total. Segment *forward*; never retroactively simplify ink.
@@ -207,6 +223,7 @@ export class Editor{
   }
   attach(){
     this.down=e=>{
+      if(e.pointerType==='mouse'||e.pointerType==='pen')this.lastMousePoint={clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType};
       if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1)return;
       e.preventDefault();
       try{(e.target===this.canvas?this.canvas:this.viewport).setPointerCapture(e.pointerId)}catch{}
@@ -225,7 +242,7 @@ export class Editor{
       }
       this.showCursor(e);
       const p=this.pointAt(e);
-      if(this.tool==='picker'){this.pick(p);return}
+      if(this.tool==='picker'){if(this.spaceTool!==null)this.spacePicked=true;void this.pick(p,this.spaceTool!==null);return}
       if(this.tool==='fill'){
         if(!this.inside(p))return;
         if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
@@ -240,6 +257,7 @@ export class Editor{
       this.beginStroke(p);
     };
     this.move=e=>{
+      if(e.pointerType==='mouse'||e.pointerType==='pen')this.lastMousePoint={clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType};
       if(!this.pointers.has(e.pointerId)){
         if(e.pointerType==='mouse'||e.pointerType==='pen')this.showCursor(e);
         return;
@@ -279,7 +297,7 @@ export class Editor{
       this.finishStroke();
       if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
       this.panStart=null;this.viewport.classList.remove('is-panning');
-      if(e.pointerType==='touch'){this.lastCursor=null;this.hideCursor()}
+      if(e.pointerType==='touch'){this.lastCursor=null;this.lastMousePoint=null;this.hideCursor()}
       else this.showCursor(e);
     };
     this.canvas.addEventListener('pointerdown',this.down);
@@ -331,12 +349,7 @@ export class Editor{
     this.viewport.addEventListener('wheel',this.wheel,{passive:false});
     this.actions=e=>{
       const b=e.target.closest('[data-tool],[data-cmd],[data-color]');if(!b)return;
-      if(b.dataset.tool){
-        this.finishStroke();this.tool=b.dataset.tool;
-        this.viewport.classList.toggle('hand-mode',this.tool==='hand');
-        this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===this.tool));
-        if(this.lastCursor)this.showCursor(this.lastCursor);
-      }
+      if(b.dataset.tool)this.setTool(b.dataset.tool);
       if(b.dataset.color){this.color=b.dataset.color;this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.toggle('active',x===b));if(this.lastCursor)this.showCursor(this.lastCursor)}
       if(b.dataset.cmd==='precision')this.setMode(this.inputMode==='precision'?'direct':'precision');
       if(b.dataset.cmd==='handedness'){
@@ -365,28 +378,35 @@ export class Editor{
       if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
          document.querySelector('#dialog:not(.hidden)')||e.altKey||e.metaKey)return;
       const byCode={KeyB:'brush',KeyF:'fill',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
-      let target;
       if(e.ctrlKey){
-        if(e.code==='KeyZ')target=e.shiftKey?'redo':'undo';
-        else if(e.code==='KeyY')target='redo';
+        const target=e.code==='KeyZ'?(e.shiftKey?'redo':'undo'):e.code==='KeyY'?'redo':null;
         if(target){e.preventDefault();this.root.querySelector('[data-cmd="'+target+'"]')?.click()}
         return;
       }
-      if(e.code==='Space'&&!e.repeat){
-        e.preventDefault();this.spaceTool=this.tool;
-        this.root.querySelector('[data-tool="hand"]')?.click();
-      }else if(e.code==='Digit0'){e.preventDefault();this.root.querySelector('[data-cmd="center"]')?.click()}
+      if(e.code==='Space'){
+        e.preventDefault();
+        if(this.spaceTool===null){this.spaceTool=this.tool;this.spacePicked=false;this.setTool('picker')}
+        return;
+      }
+      if(e.code==='Digit0'){e.preventDefault();this.root.querySelector('[data-cmd="center"]')?.click()}
       else if(['Equal','NumpadAdd'].includes(e.code)){e.preventDefault();this.root.querySelector('[data-cmd="in"]')?.click()}
       else if(['Minus','NumpadSubtract'].includes(e.code)){e.preventDefault();this.root.querySelector('[data-cmd="out"]')?.click()}
-      else if(byCode[e.code]){e.preventDefault();this.root.querySelector('[data-tool="'+byCode[e.code]+'"]')?.click()}
+      else if(byCode[e.code]){e.preventDefault();this.setTool(byCode[e.code])}
     };
     this.keyboardUp=e=>{
-      if(e.code==='Space'&&this.spaceTool){
-        this.root.querySelector('[data-tool="'+this.spaceTool+'"]')?.click();this.spaceTool=null;
+      if(e.code==='Space'&&this.spaceTool!==null){
+        e.preventDefault?.();
+        const old=this.spaceTool,point=this.lastMousePoint,sample=!this.spacePicked&&point&&!this.closed;
+        this.spaceTool=null;this.spacePicked=false;this.setTool(old);
+        if(sample){
+          const rect=this.canvas.getBoundingClientRect();
+          if(point.clientX>=rect.left&&point.clientX<rect.right&&point.clientY>=rect.top&&point.clientY<rect.bottom)
+            void this.pick(this.point(point),true);
+        }
       }
     };
     this.keyboardBlur=()=>{
-      this.keyboardUp({code:'Space'});
+      if(this.spaceTool!==null){const old=this.spaceTool;this.spaceTool=null;this.spacePicked=false;this.setTool(old)}
       if(this.armPointer!==null)this.armUp({pointerId:this.armPointer,preventDefault(){},stopPropagation(){}});
     };
     window.addEventListener('blur',this.keyboardBlur);
@@ -405,7 +425,29 @@ export class Editor{
     this.resize=()=>{if(!this.pointers.size)this.center()};
     window.addEventListener('resize',this.resize);
   }
- async pick(p){if(this.inside(p))return;try{const image=await loadArtwork(this.id);const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');drawArtwork(x,image,this.id);const rgb=x.getImageData(p[0]|0,p[1]|0,1,1).data;this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.root.querySelector('#customColor').value=this.color;this.tool='brush';this.root.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='brush'));this.onChange(this.strokes.length)}catch{}}
+ async pick(p,temporary=false){
+   try{
+     const x=Math.max(0,Math.min(this.canvas.width-1,Math.floor(p[0]/W*this.canvas.width)));
+     const y=Math.max(0,Math.min(this.canvas.height-1,Math.floor(p[1]/H*this.canvas.height)));
+     let rgb;
+     try{rgb=this.canvas.getContext('2d').getImageData(x,y,1,1).data}catch{}
+     if(!rgb||!rgb[3]){
+       const img=await loadArtwork(this.id);if(this.closed)return;
+       const sample=document.createElement('canvas');sample.width=W*2;sample.height=H*2;
+       const ctx=sample.getContext('2d',{willReadFrequently:true});ctx.scale(2,2);
+       drawArtwork(ctx,img,this.id);ctx.save();clipZone(ctx,this.zone);
+       ctx.fillStyle='#e8ddc6';ctx.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);
+       renderStrokes(ctx,[...this.strokes,...(this.working?[this.working]:[])],this.zone);ctx.restore();
+       rgb=ctx.getImageData(Math.min(sample.width-1,Math.floor(p[0]*2)),Math.min(sample.height-1,Math.floor(p[1]*2)),1,1).data;
+     }
+     if(this.closed||!rgb||!rgb[3])return;
+     this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');
+     const input=this.root.querySelector('#customColor');if(input)input.value=this.color;
+     this.root.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('active',b.dataset.color?.toLowerCase()===this.color));
+     if(!temporary)this.setTool('brush');
+     this.onChange(this.strokes.length);
+   }catch{}
+ }
  async render(){if(this.closed)return;const c=this.canvas,version=this.renderVersion=(this.renderVersion||0)+1;const img=await loadArtwork(this.id).catch(()=>null);if(!img||this.closed||version!==this.renderVersion)return;
  const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);renderStrokes(x,[...this.strokes,...(this.working?[this.working]:[])],this.zone);x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;damagePath(x,this.zone);x.stroke();x.restore();
  }
