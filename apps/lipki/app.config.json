@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "lipki",
+  "name": "ЛИПКИ",
+  "shortName": "ЛИПКИ",
+  "description": "Мягкий физический платформер про живые липучки. Кооператив PocketNet на 2–4 игрока, 12 уровней и тренировка.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T18:00:00+03:00",
+  "changelog": [
+    "Новая физическая 2D-игра: прыжки, прилипающие герои, упругие шары, кнопки, двери и пружины.",
+    "12 коротких уровней, одиночная тренировка с сохранением прогресса и интернет-комнаты PocketNet на 2–4 игрока.",
+    "Авторский фетровый мир, сенсорное и клавиатурное управление, Pocket ID и offline-first PWA."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#db8563",
+  "backgroundColor": "#ecdcc1",
+  "themeColor": "#ecdcc1",
+  "orientation": "any",
+  "cacheName": "lipki-v1.0.0",
+  "storageNamespace": "pocket-works:lipki",
+  "tags": [
+    "game",
+    "co-op",
+    "physics",
+    "puzzle",
+    "platformer",
+    "pocketnet"
+  ],
+  "order": 347
+}

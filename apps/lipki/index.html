@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ecdcc1">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ЛИПКИ">
+<title>ЛИПКИ — кооперативные липучки</title>
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css">
+</head><body data-screen="menu">
+<main class="appShell" data-app-shell data-fullscreen-app>
+<header class="topNav" data-ui>
+ <a href="../../" class="libraryLink" data-app-control>← POCKET WORKS</a>
+ <div class="brandSmall" aria-hidden="true">L<span>И</span>PKИ</div>
+ <div class="navMark" aria-hidden="true"><i></i><i></i><i></i></div>
+</header>
+<div class="stageArea">
+ <canvas id="gameCanvas" aria-label="Двухмерный мир фетра, шариков и платформ" data-gesture-surface></canvas>
+ <div id="hud" class="stageHud" hidden data-ui>
+  <div><small id="stageNumber">01 / 12</small><strong id="stageName">ПЕРВЫЙ СТЕЖОК</strong><span id="stageHint"></span></div>
+ </div>
+ <button type="button" id="pauseTrigger" class="pauseTrigger" hidden data-native-press aria-label="Пауза">Ⅱ</button>
+ <section id="menuSheet" class="sheet menuSheet" aria-label="Главное меню" data-ui>
+  <div class="menuHero">
+   <div class="makerMark"><span class="makerHole"></span> МЯГКАЯ ИГРА ДЛЯ ДРУЗЕЙ</div>
+   <h1>ЛИП<span>КИ</span><i class="wordStitch" aria-hidden="true"></i></h1>
+   <p class="intro">Прыгай. Прилипай. Вытаскивай друзей из самых нелепых ситуаций.</p>
+  </div>
+  <div class="menuActions">
+   <label id="playerLabel" for="playerName" class="fieldLabel">ВАШЕ ИМЯ</label>
+   <input id="playerName" class="nameField" maxlength="22" placeholder="Ваш ник" autocomplete="nickname" aria-label="Имя игрока">
+   <button type="button" id="onlineButton" class="bigAction primary" data-native-press><span class="actionIcon">✳</span><span>ИГРАТЬ С ДРУЗЬЯМИ<small>POCKETNET · 2–4 ИГРОКА</small></span><span class="actionArrow">↗</span></button>
+   <button type="button" id="soloButton" class="bigAction secondary" data-native-press><span class="actionIcon secondaryIcon">↗</span><span>ТРЕНИРОВКА<small>12 УРОВНЕЙ · В ОДИНОЧКУ</small></span><span class="actionArrow">→</span></button>
+  </div>
+ </section>
+ <section id="onlineSheet" class="sheet modalSheet" hidden aria-label="Комната PocketNet" data-ui>
+  <div class="fabricPanel">
+   <div class="sheetTop"><span class="eyebrow">POCKETNET · ИНТЕРНЕТ</span><button type="button" id="onlineBack" class="textExit" data-native-press>НАЗАД ×</button></div>
+   <h2 id="onlineTitle">ИГРАЙТЕ ВМЕСТЕ</h2>
+   <span id="netStatus" class="netStatus">ГОТОВ К ПОДКЛЮЧЕНИЮ</span>
+   <div id="onlineMenu">
+    <button type="button" id="createButton" class="bigAction primary" data-native-press>СОЗДАТЬ КОМНАТУ <span class="actionArrow">↗</span></button>
+    <div class="joinLine"><input id="roomCodeInput" maxlength="36" placeholder="КОД КОМНАТЫ" aria-label="Код комнаты" autocomplete="off" spellcheck="false"><button type="button" id="joinButton" data-native-press>ВОЙТИ →</button></div>
+   </div>
+   <div id="lobby" hidden>
+    <div class="joinCode"><small>КОД ДЛЯ ДРУЗЕЙ</small><strong id="roomCode">--------</strong><div class="shareActions"><button type="button" id="copyCode">КОПИРОВАТЬ КОД</button><button type="button" id="copyLink">ССЫЛКА ↗</button></div></div>
+    <div class="rosterTop">КОМАНДА <span id="members">1 / 4</span></div>
+    <div id="roster" class="roster"></div>
+    <button type="button" id="startButton" class="bigAction primary" disabled>ЖДЁМ ДРУГА</button>
+   </div>
+  </div>
+ </section>
+ <section id="pauseSheet" class="sheet modalSheet" hidden aria-label="Пауза" data-ui>
+  <div class="fabricPanel">
+   <span class="eyebrow">КОРОТКАЯ ПЕРЕДЫШКА</span>
+   <h2>ПАУЗА</h2>
+   <p id="pauseCaption" class="subText"></p>
+   <button type="button" id="resumeButton" class="bigAction primary">ПРОДОЛЖИТЬ <span class="actionArrow">→</span></button>
+   <button type="button" id="restartButton" class="bigAction secondary">ЗАНОВО ЭТОТ УРОВЕНЬ <span class="actionArrow">↻</span></button>
+   <button type="button" id="soundButton" class="slimAction">ЗВУК: ВКЛ</button>
+   <button type="button" data-workshop-trigger class="slimAction">МАСТЕРСКАЯ</button>
+   <button type="button" id="quitButton" class="slimAction">В ГЛАВНОЕ МЕНЮ</button>
+   <a href="../../" class="slimAction backLibrary" data-app-control>← В POCKET WORKS</a>
+  </div>
+ </section>
+ <section id="resultSheet" class="sheet modalSheet" hidden aria-label="Уровень пройден" data-ui>
+  <div class="fabricPanel resultPanel">
+   <div class="successSeal" aria-hidden="true">✓</div>
+   <span class="eyebrow">КОМАНДА СПРАВИЛАСЬ</span>
+   <h2 id="resultTitle">СТЕЖОК ПРОЙДЕН</h2>
+   <p id="resultText" class="subText"></p>
+   <button type="button" id="nextButton" class="bigAction primary">СЛЕДУЮЩИЙ УРОВЕНЬ</button>
+   <span id="waitingHost" class="subText" hidden>ВЕДУЩИЙ ОТКРОЕТ СЛЕДУЮЩИЙ УРОВЕНЬ</span>
+   <button type="button" id="resultQuit" class="slimAction">В ГЛАВНОЕ МЕНЮ</button>
+   <a href="../../" class="slimAction backLibrary" data-app-control>← В POCKET WORKS</a>
+  </div>
+ </section>
+ <div id="controls" class="controls" hidden data-ui>
+  <div class="walkPad">
+   <button type="button" id="button-left" class="controlButton walk" aria-label="Двигаться влево">◀</button>
+   <button type="button" id="button-right" class="controlButton walk" aria-label="Двигаться вправо">▶</button>
+  </div>
+  <div class="actionPad">
+   <button type="button" id="button-grab" class="controlButton grab" aria-label="Прилипнуть или отпустить"><b>✳</b><span>ЛИПНУТЬ</span></button>
+   <button type="button" id="button-jump" class="controlButton jump" aria-label="Прыжок"><b>↑</b><span>ПРЫЖОК</span></button>
+  </div>
+ </div>
+ <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЛИПКИ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
