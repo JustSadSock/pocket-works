@@ -13,5 +13,5 @@ const RELEASE_NOTES=[
 ];
 installMobileRuntime();
 registerEnhancedUpdate({ appName: 'ВЕЩЕСТВО', version: '1.0.1', releaseNotes: RELEASE_NOTES });
-createWorkshopMode({ appName: 'ВЕЩЕСТВО', version: '1.0.1', cachePrefix: 'veshchestvo-', storageNamespace: 'pocket-works:veshchestvo', onReset: () => location.reload() });
+globalThis.__veshchestvoWorkshop=createWorkshopMode({ appName: 'ВЕЩЕСТВО', version: '1.0.1', cachePrefix: 'veshchestvo-', storageNamespace: 'pocket-works:veshchestvo', onReset: () => location.reload() });
 await import('./ui-runtime.ts');
