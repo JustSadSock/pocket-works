@@ -1,4 +1,5 @@
-const VERSION='1.0.0',PREFIX='pepelny-dozor-',CACHE_NAME='pepelny-dozor-v1.0.0';
+const CACHE_NAME='pepelny-dozor-v1.0.0';
+const VERSION='1.0.0',PREFIX='pepelny-dozor-';
 const FILES=['./','./index.html','./game.js','./styles.css','./manifest.webmanifest','./app.config.json','./asset-forge/sprites.json','./asset-forge/emblem.svg','./icons/icon.svg','./assets/creatures.png','./assets/creatures.json','./assets/abbey-emblem.png','./assets/abbey-emblem.svg','./assets/forge-index.json'];
 const APPROOT=new URL('./',self.registration.scope);
 const LIST=new Map(FILES.map(path=>{const u=new URL(path,APPROOT);return[u.pathname,u.href]}));
