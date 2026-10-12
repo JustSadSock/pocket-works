@@ -23,7 +23,7 @@ let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,c
 let personalEmblem=getSavedEmblem();
 let zamazkaCloud=null;
 let pocketIdentity=null;
-let pendingVote=null,preparedRound='',preparingError='',archiveObserver=null,dialogFocus=null;
+let pendingVote=null,preparedRound='',preparingError='',archiveObserver=null,dialogFocus=null,loadedRound='';
 const VOTE_KEY=NS+'pending-vote';
 try{pendingVote=JSON.parse(sessionStorage.getItem(VOTE_KEY)||'null')}catch{}
 function persistVote(){try{if(pendingVote)sessionStorage.setItem(VOTE_KEY,JSON.stringify(pendingVote));else sessionStorage.removeItem(VOTE_KEY)}catch{}}
@@ -232,7 +232,7 @@ function home(){
  if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
  clearTabGuest();
  if(net){try{net.leaveRoom()}catch{}net.close();net=null}
- view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';pendingVote=null;persistVote();connectionStatus('off');
+ view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;persistVote();connectionStatus('off');
  change('<section class="museum-home">'+
   
   '<div class="museum-headline"><h1>Искусство<br><em>подделки.</em></h1></div>'+
@@ -329,13 +329,14 @@ async function prepareRoundImages(local=false,retry=false){
  const v=local?practice:view;if(!v||v.phase!=='preparing')return;
  const token=(local?'local':roomId)+':'+v.round;
  if(preparedRound===token&&!retry)return;
- preparedRound=token;preparingError='';
+ preparedRound=token;preparingError='';loadedRound='';
  const status=screen.querySelector('#artPreparingStatus'),retryButton=screen.querySelector('[data-action="retry-art-preload"]');
  if(status)status.textContent='Загружаем пять картин…';
  if(retryButton)retryButton.hidden=true;
  try{
    await Promise.all(v.selected.flatMap(id=>[loadArtwork(id),preloadPreviewImage(id)]));
    if(preparedRound!==token)return;
+   loadedRound=token;
    if(local){
      if(practice!==v||v.phase!=='preparing')return;
      v.phase='preview';v.deadline=Date.now()+25000;persistPractice();preview(true);
@@ -563,7 +564,7 @@ function renderView(){
     return;
   }
  if(page==='preparing'&&view.phase==='preparing'&&key===lastUiKey){
-   const status=screen.querySelector('#artPreparingStatus');if(status&&!preparingError&&preparedRound!==''){const total=view.participants?.length||0;status.textContent='Картины готовы · '+(view.readyCount||0)+' / '+total+' игроков'}
+   const status=screen.querySelector('#artPreparingStatus');if(status&&!preparingError&&loadedRound===roomId+':'+view.round){const total=view.participants?.length||0;status.textContent='Картины готовы · '+(view.readyCount||0)+' / '+total+' игроков'}
    return;
  }
  if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
