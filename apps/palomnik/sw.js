@@ -1,7 +1,11 @@
 const CACHE_PREFIX='palomnik-';
 const CACHE_NAME='palomnik-v1.0.0';
 const APP_VERSION='1.0.0', RELEASE_DATE='2026-10-12',CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Шагающая крепость и 21 переход.','Три небосвода и пиксельная диорама.','Локальные сохранения, офлайн, звук.'];
+const RELEASE_NOTES=[
+  "Новая атмосферная одиночная экспедиция с тремя биомами, тремя типами риска, маршрутом из 21 шага и сохранением.",
+  "Авторская низкоразрешённая псевдообъёмная графика с упорядоченным дизерингом, шагающая крепость, анимированные опоры и погода.",
+  "Управление касанием по опорам, пауза, звук с отключением, офлайн-режим и полноценный исход экспедиции."
+];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/pwa-utils.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const ROOT=new URL('./',self.registration.scope);
 const TOKEN=APP_VERSION+'-p'+CACHE_PROTOCOL;
