@@ -422,7 +422,7 @@ export class Editor{
       this.aimPointer=null;this.aim=null;this.viewportCapturedPointer=null;
       this.viewport.classList.remove('is-panning');
     };
-    this.lostCapture=e=>{if(this.pointers.has(e.pointerId))this.up({...e,type:'pointercancel'})};
+    this.lostCapture=e=>{if(this.pointers.has(e.pointerId))this.up({pointerId:e.pointerId,type:'pointercancel',pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY})};
     this.canvas.addEventListener('lostpointercapture',this.lostCapture);
     this.viewport.addEventListener('lostpointercapture',this.lostCapture);
     window.addEventListener('blur',this.keyboardBlur);
