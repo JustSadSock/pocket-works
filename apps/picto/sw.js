@@ -1,6 +1,6 @@
-const APP_VERSION='1.0.0';
-const CACHE='picto-v1.0.0',PREFIX='picto-',VERSION=APP_VERSION,RELEASE_DATE='2026-10-12',CACHE_PROTOCOL=2;
-const RELEASE_NOTES=["Новая игра для компании: создавать и разгадывать композиции из 28 пиктограмм.","Настоящие интернет-комнаты PocketNet, короткий код, серверные раунды и восстановление после обрыва.","Ник из Pocket ID, сенсорный редактор символов, общая коллекция результатов."];
+const APP_VERSION='1.1.0';
+const CACHE='picto-v1.1.0',PREFIX='picto-',VERSION=APP_VERSION,RELEASE_DATE='2026-10-12',CACHE_PROTOCOL=2;
+const RELEASE_NOTES=["508 близких по смыслу заданий в шести категориях вместо очевидных случайных вариантов: теперь нужно передавать действия, роли и отношения.","Автор может посмотреть четыре трактовки до публикации, чтобы точнее составить сообщение; наборы в одной партии не повторяются.","Шесть новых смысловых символов, перерисованная птица и улучшенная мобильная панель подсказок."];
 const FILES=['./','./index.html','./app.js','./styles.css','./symbols.js','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/update-manager.js'];
 const SCOPE=new URL('./',self.registration.scope),MAP=new Map(FILES.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fresh(request){const u=new URL(request instanceof Request?request.url:request,SCOPE);u.searchParams.set('__pw_build',VERSION+'-p'+CACHE_PROTOCOL);const r=await fetch(u,{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw Error('Offline');return r;}
