@@ -127,6 +127,18 @@ export class PocketNetHub {
           [id, { version: entry.current, minPlayers: entry.versions[entry.current].MIN_PLAYERS ?? null,
             rulesVersion: entry.versions[entry.current].RULESET_VERSION ?? null }])) });
     }
+    // Internal-only room inspection: the public edge strips spoofed x-pw-* headers.
+    if ((endpoint === '/validate-invite' || endpoint === '/validate-join') && request.method === 'POST') {
+      if (request.headers.get('x-pw-internal') !== '1') return json({error:'not_allowed'},403);
+      const data = await request.json().catch(() => null);
+      if (!uuid.test(data?.roomId || '') || !GAME_ID.test(data?.gameId || '')) return json({error:'invalid_room'},400);
+      const room = this.readRoom(data.roomId);
+      if (!room || room.gameId !== data.gameId || room.state?.phase !== 'lobby' || room.players.length >= MAX_PLAYERS)
+        return json({error:'room_unavailable'},409);
+      if (endpoint === '/validate-invite' && !room.players.some(p=>p.accountId && p.accountId===request.headers.get('x-pw-account-id')))
+        return json({error:'not_room_member'},403);
+      return json({ok:true});
+    }
     if (endpoint === '/session' && request.method === 'POST') {
       const ip = request.headers.get('CF-Connecting-IP') || 'local';
       const prior = this.rates.get(ip);
