@@ -251,6 +251,11 @@ export class Editor{
       if(this.strokes.length+1>=MAX_STROKES){this.warnLimit();return}
       const old=this.working;
       this.strokes.push(old);
+      // A continuous gesture can span several PocketNet-sized segments.
+      // The completed piece is now in this.strokes rather than this.working:
+      // invalidate the committed-ink cache immediately, or earlier pieces
+      // vanish until pointerup saves the whole gesture.
+      this.paintRevision=(this.paintRevision||0)+1;
       this.working={c:old.c,s:old.s,t:old.t,g:old.g,p:[prev,p]};
     }else pts.push(p);
     this.render();
