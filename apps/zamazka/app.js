@@ -12,7 +12,7 @@ import {createMuseumMotion} from './museum-motion.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.14.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.15.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -131,7 +131,42 @@ function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext
 let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML=''}
 function modal(title,body,buttons){dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)})}
-function stopEditor(){if(editor){editor.dispose();editor=null}}
+let draftDelay=null,lastDraftPayload='',lastDraftRound='',autoSubmitted='',archiveAutoSaved='';
+function draftIndicator(message){const el=screen.querySelector('#draftStatus');if(el)el.textContent=message}
+function backupDraft(force=false){
+ if(!editor||page!=='drawing')return;
+ editor.saveSnapshot();
+ if(practice||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
+ const ass=view.mine;if(!ass)return;
+ const token=[roomId,view.round,ass.art,ass.variation].join(':');
+ const strokes=editor.getSnapshot(),serialized=JSON.stringify(strokes);
+ if(!force&&token===lastDraftRound&&serialized===lastDraftPayload)return;
+ try{
+  if(!net)throw Error('offline');
+  net.sendGame({type:'draft',round:view.round,art:ass.art,variation:ass.variation,strokes});
+  lastDraftRound=token;lastDraftPayload=serialized;draftIndicator('Сохраняем…');
+ }catch{draftIndicator('Черновик на устройстве')}
+}
+function queueDraft(){
+ if(practice)return;
+ draftIndicator('Черновик на устройстве');
+ clearTimeout(draftDelay);draftDelay=setTimeout(()=>backupDraft(),650);
+}
+function stopEditor(){clearTimeout(draftDelay);draftDelay=null;if(editor){editor.dispose();editor=null}}
+function autoFinishOnDeadline(){
+ if(!editor||practice||page!=='drawing'||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
+ if(Date.now()<view.deadline-3200)return;
+ const ass=view.mine;if(!ass)return;
+ const token=[roomId,view.round,ass.art,ass.variation].join(':');
+ if(autoSubmitted===token)return;
+ const data=editor.getData();editor.saveSnapshot();backupDraft(true);
+ try{
+  if(!net)throw Error('offline');
+  net.sendGame({type:'submit',strokes:data});autoSubmitted=token;
+  if(data.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,data)}
+  draftIndicator('Работа отправлена автоматически');
+ }catch{draftIndicator('Нет связи · черновик сохранён')}
+}
 function change(html,which){if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
 const head=(phase,title,until)=>'<div class="phase-head"><div><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2></div><div class="timer" id="clock">'+(until?'…':'')+'</div></div>';
 const picture=id=>'<div class="frame"><img src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'"></div>';
@@ -251,9 +286,11 @@ function drawing(local=false){
   const v=local?practice:view,ass=v.mine;
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
-  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="quiet" id="strokeCount">Линий: 0 / 72</div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
-  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 72'}});
+  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 72</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 72';if(n>=0)queueDraft()}});
+  if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
   const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Линий: '+editor.strokes.length+' / 72';
+  if(!local)backupDraft(true);
 }
 
 function waiting(){
@@ -364,6 +401,7 @@ function practiceStep(){if(!practice)return;if(practice.phase==='preview'){pract
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
 function renderView(){
  if(!view)return;
+ if(view.phase==='drawing'&&view.done?.includes(me?.id)&&editor)editor.clearDraft();
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
@@ -418,6 +456,7 @@ async function connect(mode){
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
+     if(page==='drawing')backupDraft(true);
      if(personalEmblem.image)client.sendGame({type:'emblem',image:personalEmblem.image});
      if(view)renderView();
      else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
@@ -426,6 +465,10 @@ async function connect(mode){
      if(client.closed)return;
      const event=msg.event;
      if(event?.type==='state'){view=event.payload;renderView()}
+     else if(event?.type==='draft_saved'){
+       if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art)
+         draftIndicator('Копия в PocketNet ✓');
+     }
      else if(event?.type==='board_delta'){if(page==='lobby'&&event.payload?.u!==me?.id)commonsBoard?.accept(event.payload)}
      else if(event?.type==='board_reset'){if(page==='lobby')commonsBoard?.reset(event.payload)}
      else if(event?.type==='notice')notify(String(event.payload||'Не удалось выполнить действие'));
@@ -459,8 +502,8 @@ async function connect(mode){
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
- const data=editor.getData();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
- ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.clearDraft();try{net.sendGame({type:'submit',strokes:data});notify('Работа отправлена')}catch{notify('Нет подключения — сохранили работу в личном фонде')}} ,'primary'],
+ const data=editor.getData();backupDraft(true);modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
+ ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{net.sendGame({type:'submit',strokes:data});autoSubmitted=[roomId,view.round,a.art,a.variation].join(':');notify('Работа отправлена')}catch{notify('Нет подключения — черновик и работа сохранены')}} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 async function copyText(value,success){
  try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);notify(success)}
@@ -521,6 +564,7 @@ screen.addEventListener('click',e=>{
 });
 function tick(){
  if(practice&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
+ autoFinishOnDeadline();
  const v=practice||view,clock=document.querySelector('#clock');
  if(clock&&v?.deadline){const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');clock.classList.toggle('urgent',s<=10)}
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}}
@@ -533,7 +577,10 @@ screen.addEventListener('wheel',e=>{if(page!=='home'||!e.target.closest('.museum
 document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();shiftMuseum(e.key==='ArrowRight'?1:-1)}});
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
-setInterval(tick,350);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+setInterval(tick,350);
+setInterval(()=>{if(page==='drawing')backupDraft()},10000);
+document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden)tick()});
+window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
 async function refreshPocketBadge(){
  const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
  const priorAccount=pocketIdentity?.id||null;

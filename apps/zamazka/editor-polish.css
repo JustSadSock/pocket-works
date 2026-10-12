@@ -98,3 +98,11 @@
 @media(prefers-reduced-motion:reduce){
  .restore .precision-arm,.restore .tool,.restore .mode-switch,.restore .swatch{transition:none}
 }
+
+/* Backup feedback lives in the existing footer; it does not steal drawing area. */
+.restore .work-save-info{display:flex;flex-direction:column;gap:2px;min-width:0;flex:0 1 42%;justify-content:center}
+.restore .work-save-info .quiet{flex:none;max-width:none!important;white-space:normal;line-height:1.2}
+.restore #draftStatus{color:#4f7760;font-size:10px;overflow-wrap:anywhere}
+.restore .viewport.picker-mode{cursor:crosshair}
+.restore .viewport.picker-mode canvas{cursor:crosshair}
+@media(max-width:440px){.restore .work-save-info{flex-basis:46%}.restore #draftStatus{font-size:9px}}
