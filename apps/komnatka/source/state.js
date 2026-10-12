@@ -53,11 +53,11 @@ export function findSupport(state,item,x,z){
 export function valid(state,item,excludeId=item.id){
  const meta=byType[item.type];if(!meta)return false;
  if(meta.layer==='wall'){
-  const dim=item.type==='window'?1.80:1.37;const coord=item.wall==='left'?item.z:item.x;
+  const dim=meta.size[0];const coord=item.wall==='left'?item.z:item.x;
   if(Math.abs(coord)>ROOM-dim/2||item.y<1||item.y>3.22)return false;
   return state.items.every(other=>{
    if(other.id===excludeId||byType[other.type]?.layer!=='wall'||other.wall!==item.wall)return true;
-   return Math.abs(coord-(item.wall==='left'?other.z:other.x))>(dim+(other.type==='window'?1.8:1.37))/2+.05||Math.abs(item.y-other.y)>1.65;
+   return Math.abs(coord-(item.wall==='left'?other.z:other.x))>(dim+byType[other.type].size[0])/2+.05||Math.abs(item.y-other.y)>1.65;
   });
  }
  const [w,d]=dimensions(item);if(Math.abs(item.x)+w/2>ROOM||Math.abs(item.z)+d/2>ROOM)return false;
