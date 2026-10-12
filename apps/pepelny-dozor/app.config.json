@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "pepelny-dozor",
+  "name": "ПЕПЕЛЬНЫЙ ДОЗОР",
+  "shortName": "Дозор",
+  "description": "Световая оборона заброшенного аббатства: вращай луч, отражай тварей колоколом и укрепляй огонь между пятью ночными волнами.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T20:12:00+03:00",
+  "changelog": [
+    "Первый дозор: пять волн с разными существами, колокольный импульс, шесть вариантов развития светильника и локальные рекорды.",
+    "Оригинальные 32×32 пиксельные спрайты с исходниками Universal Art Forge; векторная эмблема; освещение и звуковое сопровождение."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#e6a45c",
+  "backgroundColor": "#101b1e",
+  "themeColor": "#101b1e",
+  "orientation": "portrait",
+  "cacheName": "pepelny-dozor-v1.0.0",
+  "storageNamespace": "pocket-works:pepelny-dozor",
+  "tags": [
+    "game",
+    "arcade",
+    "pixel art",
+    "light",
+    "survival",
+    "offline",
+    "art-forge",
+    "portrait"
+  ],
+  "order": 369
+}
