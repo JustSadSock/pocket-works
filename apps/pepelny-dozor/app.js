@@ -66,27 +66,44 @@ function size(){
  W=390;H=390*r.height/r.width;
 }
 window.addEventListener('resize',size,{passive:true});size();
-function compile(source){
- const c=document.createElement('canvas');c.width=source.width*source.frames.length;c.height=source.height;
- const g=c.getContext('2d');const img=g.createImageData(c.width,c.height);
- const colors={};
- for(const [id,hex] of Object.entries(source.palette)){
- const h=hex.replace('#','');colors[id]=h.length===9?[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16),parseInt(h.slice(6,8),16)]:(h.length===8?[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16),parseInt(h.slice(6,8),16)]:[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16),255]);
- }
- source.frames.forEach((f,n)=>f.layers.forEach(layer=>layer.rows.forEach((row,y)=>{for(let x=0;x<source.width;x++){const col=colors[row[x]];if(!col)continue;const at=(y*c.width+n*source.width+x)*4;img.data[at]=col[0];img.data[at+1]=col[1];img.data[at+2]=col[2];img.data[at+3]=col[3]}})));
- g.putImageData(img,0,0);return c;
+// Art Forge sources live outside the published web root. The exported PNG
+// atlas under assets/ is the canonical runtime texture and the offline asset.
+function loadSpriteAtlas(){
+ return new Promise((resolve,reject)=>{
+  const image=new Image();
+  image.onload=()=>{
+   if(image.naturalWidth!==384||image.naturalHeight!==32){
+    reject(new Error('Wrong sprite atlas dimensions: '+image.naturalWidth+'×'+image.naturalHeight));return;
+   }
+   resolve(image);
+  };
+  image.onerror=()=>reject(new Error('Cannot load published atlas: assets/creatures.png'));
+  image.src='./assets/creatures.png';
+ });
 }
+let artAttempt=0;
 async function art(){
+ const attempt=++artAttempt;
+ ready=false;loadFailed=false;primary.disabled=true;
+ $('panelKicker').textContent='ПОДГОТОВКА АББАТСТВА';
+ $('panelTitle').textContent='ЗАЖИГАЕМ ОГОНЬ';
+ $('panelText').textContent='Загружаем игровые спрайты…';
  try{
- const r=await fetch('./asset-forge/sprites.json');if(!r.ok)throw Error('Sprites '+r.status);
- const source=await r.json();atlas=compile(source);ready=true;showMenu();
- const image=new Image();image.onload=()=>{if(image.width===source.width*source.frames.length&&image.height===source.height)atlas=image};
- image.src='./assets/creatures.png';
- }catch(e){loadFailed=true;showPanel('ОШИБКА ЗАГРУЗКИ','Не удалось прочитать локальные игровые спрайты. Проверь подключение и повтори.', 'ПОВТОРИТЬ',()=>{loadFailed=false;art()});}
+  const image=await loadSpriteAtlas();
+  if(attempt!==artAttempt)return;
+  atlas=image;ready=true;loadFailed=false;showMenu();
+ }catch(error){
+  if(attempt!==artAttempt)return;
+  loadFailed=true;
+  console.error('Пепельный дозор: ошибка графики',error);
+  showPanel('ОШИБКА ЗАГРУЗКИ','ОГОНЬ НЕ ЗАЖЁГСЯ',
+   'Готовые игровые спрайты недоступны. Проверь соединение или повтори загрузку.',
+   'ПОВТОРИТЬ',()=>art());
+ }
 }
 function showPanel(kicker,title,text,button,action){
  panel.hidden=false;$('panelKicker').textContent=kicker;$('panelTitle').textContent=title;$('panelText').textContent=text;
- choices.hidden=true;choices.innerHTML='';primary.hidden=false;primary.textContent=button;primary.onclick=action;
+ choices.hidden=true;choices.innerHTML='';primary.hidden=false;primary.disabled=false;primary.textContent=button;primary.onclick=action;
  secondary.hidden=true;primary.focus({preventScroll:true});
 }
 function showMenu(){
