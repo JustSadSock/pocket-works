@@ -201,7 +201,7 @@ export class PocketSocial {
         const inviteId=crypto.randomUUID(),now=Date.now();
         this.sql.exec("INSERT INTO invites(id,from_id,to_id,game_id,room_id,status,created_at,expires_at) VALUES(?,?,?,?,?,'pending',?,?)",
           inviteId,id,toId,gameId,roomId,now,now+30*60000);
-        return reply({ok:true,inviteId});
+        return reply({ok:true,inviteId},201);
       }
       if(path==='/pocket-social/invite-action'){
         const action=body.action,inviteId=body.id;
