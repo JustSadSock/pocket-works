@@ -138,7 +138,7 @@ function foil(ctx,f,i,t){
 }
 export function drawScene(ctx,w,h,t,duel,options={}){
  const side=options.side??0,cam=camera(w,h,side);
- ctx.setTransform(1,0,0,1,0,0);
+ ctx.setTransform(options.pixelRatio||1,0,0,options.pixelRatio||1,0,0);
  const backdrop=ctx.createLinearGradient(0,0,0,h);
  backdrop.addColorStop(0,'#182923');backdrop.addColorStop(.58,'#0f201c');backdrop.addColorStop(1,'#0c1815');
  ctx.fillStyle=backdrop;ctx.fillRect(0,0,w,h);
