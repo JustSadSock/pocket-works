@@ -8,8 +8,8 @@ const rect=(x,y,w,h)=>({x,y,w,h});
 // 2/4/5 have deliberate geometries and participation rules.
 export const CHAPTERS=[
  {name:'ПО ОДНОЙ ЛИНИИ',kind:'balance',theme:0,
-  book:'Не просто стойте на местах. Все участники должны удерживать общую конструкцию в равновесии — резинка постоянно тянет соседей друг к другу.',
-  second:'Следите за наклоном балок. Чем больше друзей, тем больше соединённых плеч.',image:'balance',
+  book:'Запрыгните НА качели. Каждый участник должен удержать свою часть конструкции в равновесии, пока резинка тянет соседей друг к другу.',
+  second:'Стоять под качелями бесполезно: важны ноги на доске. Чем больше друзей, тем больше связанных качелей.',image:'balance',
   floors:[[0,540,1180,80]]},
  {name:'ПОСЛЕДНИЙ НА ПЛОТУ',kind:'ferry',theme:3,
   book:'Плот движется, только когда один едет вперёд, а другой удерживается на берегу. Но якорному тоже нужно попасть на другой берег.',
@@ -299,8 +299,8 @@ function updatePrototype(w,dt){
  if(s.kind==='cargo'){
   const cargo=w.cargoBall,tx=ps.reduce((v,p)=>v+p.x,0)/n,
    ty=ps.reduce((v,p)=>v+p.y,0)/n-108;
-  cargo.vx+=(tx-cargo.x)*dt*19;cargo.vy+=(ty-cargo.y)*dt*20;
-  cargo.vx*=Math.max(0,1-dt*6.5);cargo.vy*=Math.max(0,1-dt*6.8);
+  cargo.vx+=(tx-cargo.x)*dt*65;cargo.vy+=(ty-cargo.y)*dt*80;
+  cargo.vx*=Math.max(0,1-dt*10);cargo.vy*=Math.max(0,1-dt*11);
   cargo.x+=cargo.vx*dt;cargo.y+=cargo.vy*dt;
   let struck=false;
   for(const wall of s.cargo.barriers){
