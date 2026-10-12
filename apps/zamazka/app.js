@@ -412,20 +412,45 @@ function waiting(){
  void renderArtwork(screen.querySelector('#restCanvas'),ass.art,ass.variation,ass.strokes||[],true);
  void renderArtwork(screen.querySelector('#origCanvas'),ass.art,0,null,false);
 }
+function voteToken(v){return [roomId,v.round,v.turn].join(':')}
+function attemptVote(force=false){
+ if(!pendingVote||!net||!view||view.phase!=='voting'||voteToken(view)!==pendingVote.token)return;
+ if(view.voted?.includes(me?.id)){pendingVote=null;persistVote();return}
+ if(!force&&Date.now()-(pendingVote.sentAt||0)<5500)return;
+ try{
+   net.sendGame({type:'vote',chips:[...pendingVote.chips]});
+   pendingVote.sentAt=Date.now();pendingVote.attempts=(pendingVote.attempts||0)+1;persistVote();
+   const button=screen.querySelector('[data-action="vote"]');
+   if(button){button.disabled=true;button.textContent='Подтверждаем фишки…'}
+ }catch{
+   pendingVote.sentAt=0;persistVote();
+   const button=screen.querySelector('[data-action="vote"]');
+   if(button){button.disabled=false;button.textContent='Повторить отправку'}
+ }
+}
+function submitVote(){
+ if(!view||view.phase!=='voting'||view.voted?.includes(me?.id))return;
+ if(!pendingVote||pendingVote.token!==voteToken(view)){
+   if(chips.reduce((a,b)=>a+b,0)!==3)return;
+   pendingVote={token:voteToken(view),round:view.round,turn:view.turn,chips:[...chips],sentAt:0,attempts:0};
+   persistVote();
+ }
+ attemptVote(true);updateChips();
+}
 function chipDots(count){return '<span class="chip-dots">'+Array.from({length:count},()=>'<i class="chip-dot" aria-hidden="true"></i>').join('')+'</span>'}
 function updateChips(){
  const total=chips.reduce((a,b)=>a+b,0);
  screen.querySelectorAll('[data-chip-count]').forEach(el=>{el.textContent=chips[Number(el.dataset.chipCount)]});
- screen.querySelectorAll('[data-chipadd]').forEach(el=>{el.disabled=total>=3});
- screen.querySelectorAll('[data-chipsub]').forEach(el=>{el.disabled=chips[Number(el.dataset.chipsub)]===0});
+ screen.querySelectorAll('[data-chipadd]').forEach(el=>{el.disabled=Boolean(pendingVote?.token===voteToken(view))||total>=3});
+ screen.querySelectorAll('[data-chipsub]').forEach(el=>{el.disabled=Boolean(pendingVote?.token===voteToken(view))||chips[Number(el.dataset.chipsub)]===0});
  screen.querySelectorAll('[data-stake-card]').forEach(el=>{const i=Number(el.dataset.stakeCard),n=chips[i];el.classList.toggle('has-chips',n>0);el.querySelector('[data-chip-pips]').innerHTML=chipDots(n)});
  const remain=screen.querySelector('#chipsRemaining');if(remain)remain.innerHTML=chipDots(3-total)+'<strong>'+(3-total)+'</strong> свободно';
- const button=screen.querySelector('[data-action="vote"]');if(button)button.disabled=total!==3;
+ const button=screen.querySelector('[data-action="vote"]');if(button){button.disabled=total!==3||Boolean(pendingVote?.token===voteToken(view));if(pendingVote?.token===voteToken(view))button.textContent='Подтверждаем фишки…'}
 }
 function vote(){
  const v=view,target=v.author,isOwn=target?.id===me?.id,already=(v.voted||[]).includes(me?.id);
  const sessionKey=v.round+':'+v.turn;
- if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=[0,0,0,0,0]}
+ if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:[0,0,0,0,0]}
  const count=(v.voted||[]).length,expected=v.participants.length-1;
  const examined=v.candidate;
  change('<section class="phase-page expert-phase">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Найди реставрацию',v.deadline)+
@@ -601,6 +626,7 @@ async function connect(mode){
      const event=msg.event;
      if(event?.type==='state'){
        view=event.payload;
+       if(pendingVote&&(view.phase!=='voting'||voteToken(view)!==pendingVote.token||view.voted?.includes(me?.id))){pendingVote=null;persistVote()}
        if(view?.mine&&view.done?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
        renderView();
        if(view?.phase==='drawing'&&!view.done?.includes(me?.id)&&
@@ -612,6 +638,9 @@ async function connect(mode){
        if(pendingSubmit&&event.payload?.round===pendingSubmit.round&&
           event.payload?.art===pendingSubmit.art&&event.payload?.revision===pendingSubmit.revision)
          confirmSubmission(event.payload.art,event.payload.round);
+     }
+     else if(event?.type==='vote_saved'){
+       if(pendingVote?.round===event.payload?.round&&pendingVote?.turn===event.payload?.turn){pendingVote=null;persistVote()}
      }
      else if(event?.type==='draft_saved'){
        if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art&&
@@ -723,13 +752,14 @@ screen.addEventListener('click',e=>{
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
  else if(action==='submit')doSubmit();
- else if(action==='vote'&&chips.reduce((a,b)=>a+b,0)===3){try{net?.sendGame({type:'vote',chips:[...chips]});b.disabled=true;notify('Три фишки поставлены')}catch{notify('Потеряно соединение')}}
+ else if(action==='vote')submitVote()
  else if(action==='advance')net?.sendGame({type:'advance'});
  else if(action==='continue'&&view?.phase==='round-review'&&me?.id===view.host){b.disabled=true;try{net?.sendGame({type:'continue'})}catch{b.disabled=false;notify('Нет соединения с комнатой')}}
  else if(action==='next')net?.sendGame({type:'next'});
 });
 let lastClockCue='';
 function tick(){
+ if(pendingVote)attemptVote();
  if(practice&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
  autoFinishOnDeadline();
  const v=practice||view,clock=document.querySelector('#clock');
