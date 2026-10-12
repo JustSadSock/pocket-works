@@ -241,7 +241,7 @@ function updatePrototype(w,dt){
    w.beamCharge[i]=clamp(w.beamCharge[i]+(valid?dt/beam.hold:-dt/2.2),0,1);
    if(w.beamCharge[i]<1)all=false;
   }
-  if(all)w.gateOpen=true;
+  if(all||(n>=5&&w.beamCharge.every(value=>value>=.65)))w.gateOpen=true;
  }
  if(s.kind==='pulse'){
   if(w.waveIndex>0&&!w.gateOpen){
