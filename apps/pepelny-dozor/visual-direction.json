@@ -14,6 +14,11 @@
     "spatialRationale": "Arena owns all remaining phone height. Control is direct within it; one large bell button in the bottom strip, no scrolling.",
     "comparisons": [
       {
+        "slug": "palomnik",
+        "spatialDifference": "Horizontal head/altar/bronze console composition contains an orthographic enclosed ground circle rather than a vertical open-air mechanical pilgrimage.",
+        "interactionDifference": "Moving light and a timed bell defend the tower against autonomous enemies rather than selecting walking supports."
+      },
+      {
         "slug": "afterhours-arena",
         "spatialDifference": "Full vertical top-down floor instead of landscape fighting cabinet.",
         "interactionDifference": "One sweeping aim gesture and timed pulse instead of a set of individual fighter buttons."
@@ -57,15 +62,20 @@
     ]
   },
   "architecture": {
-    "spatialLayout": "full-bleed-world",
+    "spatialLayout": "header-stage-footer",
     "controlLocation": "direct-on-object",
     "navigation": "overlay-list",
-    "chromeTopology": "unframed-scene",
+    "chromeTopology": "framed-stage",
     "dominantMotion": "rotational-inertia",
     "primaryVerb": "Aim the oil lamp by dragging a pointer, exposing and destroying oncoming shadows.",
     "physicalFeedback": "Beam turns instantly, enemies flash, sparks shed and HP decreases; timed bell pushes enemies out in a visible ring.",
     "spatialRationale": "Portrait mobile stage fills available height between tiny safe-area header and bell console; controls never need scrolling.",
     "comparisons": [
+      {
+        "slug": "palomnik",
+        "spatialDifference": "Two small fixed structural strips contain an interactive circular abbey floor and bronze bell; unlike PALOMNIK's unframed sky-filling side-view walking fortress and floating stepping stones.",
+        "interactionDifference": "Continuous thumb-controlled rotating lantern beam and timed area pulse burn enemies, rather than discrete taps to move a giant machine between rock supports."
+      },
       {
         "slug": "lipki",
         "spatialDifference": "Vertical medieval light-well with minimal header and physical bell slab, unlike horizontal plush platform scenery with an extensive motion pad.",
