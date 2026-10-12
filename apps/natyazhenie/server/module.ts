@@ -167,7 +167,7 @@ function respawn(w,p,i){
  Object.assign(p,spawn(p,i),{x:floor?x:90+i*42,falls});w.falls++;
 }
 export function currentGoal(w){return w.stage.sequence?.[w.phase]||null;}
-function goalActive(w,name){const goal=currentGoal(w);return !w.stage.sequence.length||goal===name;}
+function goalActive(w,name){const goal=currentGoal(w);return !w.stage.sequence?.length||goal===name;}
 function complete(w,name){
  if(name==='pads')return w.plateCharge>=1;
  if(name==='stars')return w.stars.every(Boolean);
@@ -198,7 +198,7 @@ function updateGoals(w,dt){
    }
   }
  }
- if(goalActive(w,'wheels'))for(let i=0;i<s.wheels.length;i++){
+ if(goalActive(w,'wheels'))for(let i=0;i<(s.wheels||[]).length;i++){
   if(w.wheelDone[i])continue;
   const pegIndex=s.wheels[i];
   const winding=w.wraps.some((hook,j)=>hook===pegIndex&&ropeDistance(w,j)>=ROPE.soft+20&&
@@ -213,7 +213,7 @@ function updateGoals(w,dt){
   w.tensionCharge=clamp(w.tensionCharge+(valid?dt/1.6:-dt/.6),0,1);
   if(w.tensionCharge>=1)w.tensionDone=true;
  }
- if(s.sequence.length){
+ if(s.sequence?.length){
   if(complete(w,goal)){
    w.phase++;w.phaseTime=0;
   }else w.phaseTime+=dt;
