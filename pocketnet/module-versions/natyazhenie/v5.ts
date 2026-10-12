@@ -28,7 +28,7 @@ export const CHAPTERS=[
   second:'Не оставляйте якорного позади. Когда лента освободится, не потеряйте друг друга.',image:'braid',
   floors:[[0,540,1180,80]]}
 ];
-const BALANCES={2:[580],3:[430,680],4:[350,560,770],5:[300,480,660,840]};
+const BALANCES={2:[580],3:[425,645],4:[350,560,770],5:[300,480,660,840]};
 const PULSE_SLOTS={2:[425,650],3:[320,535,750],4:[240,435,630,825],5:[220,390,560,730,900]};
 const BRAID_HOOKS={2:[585],3:[425,663],4:[325,520,715],5:[300,470,640,810]};
 export const MIN_PLAYERS=2,MAX_PLAYERS=5;
@@ -43,7 +43,7 @@ export function stageFor(level,count){
   book:spec.book,second:spec.second,image:spec.image,
   floors:spec.floors.map(v=>rect(...v)),platforms:[],lifts:[],springs:[],hazards:[],stars:[],
   pads:[],beacons:[],sequence:[],wheels:[],signals:[],
-  hooks:hookXs.map(x=>({x,y:508})),balances:balanceXs.map((x,i)=>({x,y:493,slot:i,hold:n===2?1.7:2.1})),
+  hooks:hookXs.map(x=>({x,y:508})),balances:balanceXs.map((x,i)=>({x,y:493,slot:i,hold:n===2?1.7:1.75})),
   ferry:ferry?{x:354,y:456,w:168,h:18,start:354,end:548}:null,
   cargo:cargo?{barriers:[rect(412,328,24,120),rect(618,320,24,111),rect(806,355,24,132)],end:914}:null,
   waveSlots:pulse?PULSE_SLOTS[n].map((x,i)=>({x,i})):[],
@@ -232,11 +232,11 @@ function updatePrototype(w,dt){
   for(let i=0;i<s.balances.length;i++){
    const beam=s.balances[i],a=ps[i],b=ps[i+1],mid=(a.x+b.x)/2;
    const gap=Math.hypot(b.x-a.x,b.y-a.y);
-   const wind=Math.sin(w.clock*2.3+i*1.9)*17;
+   const wind=Math.sin(w.clock*2.3+i*1.9)*14;
    const delta=mid-beam.x+wind;
    w.beamTilt[i]=clamp(delta/55,-1,1);
    const valid=a.ground&&b.ground&&Math.abs(a.y-b.y)<25&&
-    gap>=142&&gap<=ROPE.max+1&&Math.abs(delta)<15&&
+    gap>=142&&gap<=ROPE.max+1&&Math.abs(delta)<19&&
     Math.abs(a.x-beam.x)>65&&Math.abs(b.x-beam.x)>65;
    w.beamCharge[i]=clamp(w.beamCharge[i]+(valid?dt/beam.hold:-dt/.62),0,1);
    if(w.beamCharge[i]<1)all=false;
