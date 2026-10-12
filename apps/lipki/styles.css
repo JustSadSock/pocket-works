@@ -38,3 +38,14 @@
 @media (hover:hover) and (pointer:fine) and (min-width:650px) and (max-height:480px){
  .game-bottom{min-height:62px;padding-top:4px;padding-bottom:4px}.desktop-deck .pc-layout{gap:9px}
 }
+
+/* Widescreen layout: keep the stage wide rather than shrinking it to a tall strip. */
+@media (hover:hover) and (pointer:fine) and (min-width:1100px) and (min-height:780px){
+ .playfield-wrap canvas{
+  flex:none;
+  width:min(100%,1300px);
+  height:auto;
+  aspect-ratio:1040/580;
+  max-height:100%;
+ }
+}
