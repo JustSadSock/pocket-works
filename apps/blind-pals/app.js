@@ -1,5 +1,7 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { PocketNet } from '../../shared/capabilities/net.js';
+import { getPocketIdentity, pocketIdentitySessionKey, preferredPocketName, pocketIdProfileUrl } from '../../shared/capabilities/identity.js';
+import { prepareTabGuest, markTabGuest, clearTabGuest } from './tab-session.js';
 installMobileRuntime();
 
 const $=s=>document.querySelector(s);
@@ -7,7 +9,7 @@ const canvas=$('#scene'),ctx=canvas.getContext('2d'),panel=$('#panel');
 const localKey='pocket-works:blind-pals:';
 const serverUrl=location.origin+'/pocketnet';
 const params=new URLSearchParams(location.search);
-let username=localStorage.getItem(localKey+'name')||'Рабочий',soundOn=localStorage.getItem(localKey+'sound')!=='off';
+let username=localStorage.getItem(localKey+'name')||'Рабочий',pocketIdentity=null,inviteAfterRoom=false,sessionEpoch=0,joinExpanded=false,loadingSince=0,soundOn=localStorage.getItem(localKey+'sound')!=='off';
 let net=null,view=null,me=null,roomId='',phase='home',connected=false,connecting=false,disconnectedPeer=false;
 let mode='home',incoming=params.get('room')||'',message='',paused=false,pending=null,showKey='',lastLevel=-1,lastHits=0,lastPhase='';
 let remote={x:0,y:0},cameraT=0,canvasW=1,canvasH=1,flashTimer=0,toastTimer=0;
@@ -15,7 +17,8 @@ const keys=new Set(),touch={x:0,y:0,hold:false},pulse={jump:false,ping:false},cl
 const DEMO={name:'ПЕРВАЯ СМЕНА',brief:'Займите две плиты. Каждый видит только напарника.',pads:[[3,7],[15,7]],walls:[]};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
+const setMode=v=>{document.querySelector('.app-shell').dataset.mode=v;};
+const roomLink=()=>{const u=new URL(location.pathname,location.origin);u.searchParams.set('room',code());return u.toString();};
 const code=()=>roomId?.slice(0,8)?.toUpperCase()||'';
 const role=()=>view?.players?.findIndex(p=>p.id===me?.id)??-1;
 const mine=()=>view?.runners?.[me?.id];
@@ -39,62 +42,85 @@ function status(text,tone=''){const el=$('#netStatus');el.textContent=text;el.cl
 function resetInput(){keys.clear();touch.x=0;touch.y=0;touch.hold=false;pulse.jump=false;pulse.ping=false;safeSend({type:'input',x:0,y:0,hold:false});}
 function updateUrl(room){const u=new URL(location.href);if(room)u.searchParams.set('room',room);else u.searchParams.delete('room');history.replaceState(null,'',u.pathname+u.search);}
 function roomInput(raw){
- const s=String(raw||'').trim();
- try{const u=new URL(s);const r=u.searchParams.get('room');if(r)return roomInput(r);}catch{}
- const m=s.match(/[0-9a-f]{8}-[0-9a-f-]{27}|[0-9a-f]{8}/i);
- return m?.[0]||null;
+ const value=String(raw||'').trim();
+ try{const url=new URL(value);if(url.searchParams.has('room'))return roomInput(url.searchParams.get('room'));}catch{}
+ return /^[0-9a-f]{8}$/i.test(value)||/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)?value:null;
 }
 async function copy(value){
  try{await navigator.clipboard.writeText(value);toast('Скопировано');}
  catch{const field=document.createElement('textarea');field.value=value;field.style.position='fixed';field.style.opacity='0';document.body.append(field);field.select();const ok=document.execCommand('copy');field.remove();toast(ok?'Скопировано':'Скопируй код вручную: '+code());}
 }
-function soundMarkup(){return '<button class="button muted" data-do="sound">Звук: '+(soundOn?'ВКЛ':'ВЫКЛ')+'</button>';}
-function playerMarkup(p,i){return '<div class="pilot"><span class="bead '+(i?'blue':'red')+'"></span><span>'+esc(p.name)+'</span><small>'+(p.id===me?.id?'ТЫ':disconnectedPeer?'НЕТ СВЯЗИ':'НАПАРНИК')+'</small></div>';}
+
+function soundMarkup(){return '<button class="button muted sound-toggle" data-do="sound">Звук '+(soundOn?'включён':'выключен')+'</button>';}
+function identityMarkup(){
+ return pocketIdentity?.complete?
+  '<div class="identity-bar"><span class="identity-avatar">◉</span><div><small>POCKET ID</small><strong>'+esc(pocketIdentity.nickname)+'</strong></div><button class="identity-edit" data-do="profile" type="button">Друзья и профиль ↗</button></div>':
+  '<div class="identity-bar"><span class="identity-avatar">◌</span><div><small>ГОСТЕВОЙ ПРОФИЛЬ</small><label for="nick">Твоё имя</label></div><input id="nick" class="identity-nick" maxlength="24" autocomplete="nickname" value="'+esc(username)+'"></div>';
+}
+function playerMarkup(p,i){
+ const live=p.id===me?.id||!disconnectedPeer;
+ return '<div class="pilot '+(live?'':'pilot-offline')+'"><span class="bead '+(i?'blue':'red')+'"></span><span>'+esc(p.name)+'</span><small>'+(p.id===me?.id?'ТЫ':live?'ПОДКЛЮЧЕН':'НЕТ СВЯЗИ')+'</small></div>';
+}
 function home(){
- phase='home';showKey='';view=null;lastLevel=-1;lastHits=0;paused=false;togglePause(false);
- $('#stageTitle').textContent='ЦЕХ №1';$('#stageBrief').textContent='Твои глаза — у напарника';
- panel.innerHTML='<span class="overline">ИГРА ДЛЯ ДВОИХ · POCKET NET</span><h1 class="title">СЛЕПАЯ<br><em>СМЕНА.</em></h1><p class="deck">Ты видишь напарника. Он видит тебя. Но никто из вас не видит самого себя.</p>'+
- '<button id="primary-action" class="button primary" data-do="create">Создать комнату ↗</button><button class="button secondary" data-do="join-mode">Ввести код друга</button>'+
- '<hr class="divider"><span class="overline">КАК ИГРАТЬ</span><p class="tiny">Вдвоём встаньте на две плиты, откройте заслонку и дойдите до выхода. Направляйте друг друга голосом.</p>'+soundMarkup();
- status('POCKET NET');
+ phase='home';setMode('home');view=null;lastLevel=-1;lastHits=0;lastPhase='';showKey='';paused=false;togglePause(false);
+ $('#stageTitle').textContent='УЧЕБНЫЙ ЦЕХ';$('#stageBrief').textContent='Видишь напарника. Не видишь себя.';
+ panel.innerHTML='<div class="home-content"><div class="overline home-eyebrow">ДВА РАБОЧИХ. ОДНО ЗРЕНИЕ.</div>'+
+ '<h1 class="title home-title">СЛЕПАЯ<br><em>СМЕНА.</em></h1><p class="deck home-deck">Ты видишь только напарника, а он — только тебя. Доведите друг друга до выхода.</p>'+
+ '<div class="home-actions"><button id="primary-action" class="button primary" data-do="create">Создать комнату <span>↗</span></button>'+
+ '<button class="button secondary" data-do="invite-create">Позвать друга <span>◎</span></button>'+
+ '<button class="button muted join-toggle" data-do="join-mode" aria-expanded="'+String(joinExpanded)+'">Присоединиться по коду <span>⌄</span></button></div>'+
+ (joinExpanded?'<form id="joinForm" class="join-form"><label for="code" class="field">КОД КОМНАТЫ ИЛИ ССЫЛКА</label>'+
+ '<div class="join-form-row"><input id="code" class="text-input" type="text" maxlength="180" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="8 символов" value="'+esc(incoming)+'" required>'+
+ '<button class="button primary" type="submit" id="joinConfirm">Войти →</button></div><p class="hint">Код находится в комнате создателя. Пример: A3F92C10</p></form>':'')+
+ '<div class="home-bottom">'+identityMarkup()+'<div class="home-bottom-row"><a class="more-about" href="../../">← В Pocket Works</a>'+soundMarkup()+'</div></div></div>';
+ status('POCKET NET','online');
 }
 function entry(joining){
- phase='entry';mode=joining?'join':'create';showKey='';
- panel.innerHTML='<span class="overline">ПОДКЛЮЧЕНИЕ</span><h2 class="title">'+(joining?'ВХОД<br><em>ПО КОДУ.</em>':'ТВОЙ<br><em>ЦЕХ.</em>')+'</h2>'+
- '<label class="field" for="nick">ТВОЁ ИМЯ</label><input class="text-input" id="nick" type="text" maxlength="24" autocomplete="nickname" value="'+esc(username)+'">'+
- (joining?'<label class="field" for="code">КОД ИЛИ ССЫЛКА</label><input class="text-input" id="code" maxlength="160" autocapitalize="characters" spellcheck="false" placeholder="8 символов" value="'+esc(incoming)+'">':'<p class="hint">Создай комнату и отправь другу код. Начнёте, когда оба подключатся.</p>')+
- '<button id="primary-action" class="button primary" data-do="connect">'+(joining?'Присоединиться':'Создать комнату')+'</button><button class="button muted" data-do="home">Назад</button>';
+ joinExpanded=joining;phase='home';mode=joining?'join':'create';home();
+ if(joining)panel.querySelector('#code')?.focus();
+}
+function connectingPanel(){
+ phase='connecting';setMode('connecting');
+ $('#stageTitle').textContent='УСТАНАВЛИВАЕМ СВЯЗЬ';$('#stageBrief').textContent='PocketNet · комната для двоих';
+ panel.innerHTML='<div class="connecting-content"><span class="overline">POCKET NET / ПОДКЛЮЧЕНИЕ</span>'+
+ '<div class="signal-graphic" aria-hidden="true"><span></span><span></span><span></span></div>'+
+ '<h2 class="title">СОЗДАЁМ<br><em>СВЯЗЬ.</em></h2><p class="deck" id="connectStatus">'+(mode==='join'?'Ищем комнату и проверяем приглашение…':'Открываем игровую комнату…')+'</p>'+
+ '<button class="button muted" data-do="cancel">Отмена</button></div>';
 }
 function waitPanel(){
- const players=view?.players||[];
- const canStart=players.length===2&&isHost()&&!disconnectedPeer&&connected;
- phase='lobby';
- panel.innerHTML='<span class="overline">КОМНАТА · 2 ИГРОКА</span><h2 class="title">ЖДЁМ<br><em>ВТОРОГО.</em></h2>'+
- '<div class="ticket"><span class="ticket-label">КОД ПРИГЛАШЕНИЯ</span><strong class="ticket-code">'+esc(code())+'</strong><span class="ticket-label">СООБЩИ ДРУГУ</span></div>'+
- '<button class="button secondary" data-do="copy">Копировать приглашение</button><div style="margin-top:12px">'+players.map(playerMarkup).join('')+'</div>'+
- (isHost()?'<button id="primary-action" class="button primary" '+(canStart?'':'disabled')+' data-do="start">'+(canStart?'Начать смену ↗':'Ожидаем напарника')+'</button>':'<div class="objective"><strong>ЖДЁМ ОРГАНИЗАТОРА</strong>Начнёт игру создатель комнаты.</div>')+
- '<button class="button muted" data-do="leave">Покинуть комнату</button>';
+ const players=view?.players||[],host=isHost(),ready=players.length===2&&!disconnectedPeer&&connected;
+ phase='lobby';setMode('lobby');
+ $('#stageTitle').textContent='КОМНАТА ОТКРЫТА';$('#stageBrief').textContent=players.length===2?'Два рабочих на месте':'Пригласи второго рабочего';
+ panel.innerHTML='<div class="lobby-content"><span class="overline">СЛЕПАЯ СМЕНА / ЧАСТНАЯ КОМНАТА</span>'+
+ '<h2 class="title">'+(ready?'ВЫ<br><em>ГОТОВЫ.</em>':'ТВОЙ<br><em>ЦЕХ.</em>')+'</h2>'+
+ '<div class="ticket room-ticket"><span class="ticket-label">КОД ДЛЯ ВХОДА</span><strong class="ticket-code">'+esc(code())+'</strong>'+
+ '<span class="room-availability '+(ready?'complete':'')+'"><i></i> '+(ready?'2 / 2 РАБОЧИХ':'1 / 2 · ОЖИДАЕМ ДРУГА')+'</span></div>'+
+ '<div class="invite-actions"><button class="button secondary" data-do="copy-code">Скопировать код</button>'+
+ '<button class="button secondary" data-do="share">Поделиться ссылкой</button>'+
+ '<button class="button friend-action" data-do="invite" '+(!connected?'disabled':'')+'>Пригласить друга из Pocket ID ↗</button></div>'+
+ '<div class="lobby-roster">'+players.map(playerMarkup).join('')+(players.length===1?'<div class="pilot empty"><span class="bead"></span><span>Место для напарника</span><small>ОЖИДАЕТ</small></div>':'')+'</div>'+
+ (host?'<button id="primary-action" class="button primary lobby-start" '+(ready?'':'disabled')+' data-do="start">'+(ready?'Начать игру ↗':'Ждём второго игрока…')+'</button>':
+ '<div class="objective"><strong>ГОТОВЬСЯ К СМЕНЕ</strong>Начало запускает создатель комнаты.</div>')+
+ '<button class="button muted leave-lobby" data-do="leave">Покинуть комнату</button></div>';
 }
 function gamePanel(){
- phase='game';
+ phase='game';setMode('game');
  const level=view?.level||0,total=view?.levelCount||6,partnerName=other()?.name||'Напарник';
- const selfRole=role()===0?'КРАСНЫЙ':'СИНИЙ',partnerRole=role()===0?'СИНИЙ':'КРАСНЫЙ';
- const cargo=stage().cargoPad;
- panel.innerHTML='<span class="overline">СМЕНА / '+String(level+1).padStart(2,'0')+' ИЗ '+total+'</span><h2 class="title">'+esc(stage().name).replaceAll(' ','<br><em>')+'.</em></h2>'+
+ const selfRole=role()===0?'КРАСНЫЙ':'СИНИЙ',cargo=stage().cargoPad;
+ panel.innerHTML='<span class="overline">СМЕНА / '+String(level+1).padStart(2,'0')+' ИЗ '+total+'</span><h2 class="title">'+esc(stage().name).replace(' ','<br><em>')+'.</em></h2>'+
  '<div class="progress-track"><div style="width:'+Math.round((level+1)/total*100)+'%"></div></div>'+
  '<div class="pilot"><span class="bead '+(role()===0?'red':'blue')+'"></span><span>Ты · '+selfRole+'</span><small>НЕВИДИМ</small></div>'+
- '<div class="pilot"><span class="bead '+(role()===0?'blue':'red')+'"></span><span>'+esc(partnerName)+'</span><small>'+partnerRole+'</small></div>'+
- '<div class="objective"><strong>'+ (view.unlocked?'ЗАСЛОНКА ОТКРЫТА':'ЗАДАЧА')+'</strong>'+
- (view.unlocked?'Теперь оба подойдите к светящемуся выходу.':cargo?'Удерживайте плиты вдвоём и поставьте груз на ромб. E — толкать.':'Вдвоём одновременно встаньте на две плиты. Видно только друг друга.')+'</div>'+
+ '<div class="pilot"><span class="bead '+(role()===0?'blue':'red')+'"></span><span>'+esc(partnerName)+'</span><small>'+ (disconnectedPeer?'НЕТ СВЯЗИ':'НАПАРНИК')+'</small></div>'+
+ '<div class="objective"><strong>'+(view.unlocked?'ЗАСЛОНКА ОТКРЫТА':'ЗАДАЧА')+'</strong>'+
+ (view.unlocked?'Оба подойдите к выходу.':cargo?'Оба стойте на плитах и поставьте груз на ромб. E — толкать.':'Одновременно встаньте на две плиты. Друг видит тебя, ты — только его.')+'</div>'+
  '<p class="tiny">'+esc(stage().brief)+'</p><button class="button muted" data-do="pause">Пауза · Esc</button>'+soundMarkup();
 }
 function finishPanel(){
- phase='finish';
+ phase='finish';setMode('finish');
  const hits=view.totalHits||0;
- const prev=Number(localStorage.getItem(localKey+'best')||999999);
- const best=Math.min(prev,hits);
- try{localStorage.setItem(localKey+'best',String(best));}catch{}
- panel.innerHTML='<span class="overline">СМЕНА ЗАВЕРШЕНА</span><h2 class="title">ВЫ<br><em>СПРАВИЛИСЬ.</em></h2><p class="deck">Шесть механизмов пройдены. Даже не видя себя, вы нашли общий язык.</p>'+
+ let prev=999999;try{prev=Number(localStorage.getItem(localKey+'best')||999999);}catch{}
+ const best=Math.min(prev,hits);try{localStorage.setItem(localKey+'best',String(best));}catch{}
+ panel.innerHTML='<span class="overline">СМЕНА ЗАВЕРШЕНА</span><h2 class="title">ВЫ<br><em>СПРАВИЛИСЬ.</em></h2><p class="deck">Шесть механизмов пройдены. Каждый был глазами другого.</p>'+
  '<div class="ticket"><span class="ticket-label">ПОПАДАНИЙ ПОД ПРЕСС</span><strong class="ticket-code">'+hits+'</strong><span class="ticket-label">ЛУЧШИЙ РЕЗУЛЬТАТ · '+best+'</span></div>'+
  (isHost()?'<button id="primary-action" class="button primary" data-do="again">Ещё одна смена ↗</button>':'<div class="objective">Создатель комнаты может запустить новый забег.</div>')+
  '<button class="button muted" data-do="leave">В меню</button>';
@@ -107,6 +133,7 @@ function showPanel(force=false){
  else if(view?.phase==='playing')gamePanel();
  else if(view?.phase==='finished')finishPanel();
 }
+
 function onState(s){
  if(!s||typeof s!=='object')return;
  const prevLevel=lastLevel,prevPhase=lastPhase,prevHits=lastHits;
@@ -122,79 +149,194 @@ function onState(s){
  else if(s.phase==='lobby'){$('#stageTitle').textContent='ЗАЛ ОЖИДАНИЯ';$('#stageBrief').textContent='Один видит другого';}
  showPanel();
 }
+
 function handleError(code){
- const messages={room_not_found:'Комната не найдена',room_full:'В комнате уже двое',game_unavailable:'Игра ещё не опубликована на PocketNet',match_in_progress:'Партия уже началась',rate_limited:'Слишком много запросов, попробуй позже',server_at_capacity:'Сервер заполнен',account_already_in_room:'Этот аккаунт уже находится в комнате'};
- const description=messages[code]||'Ошибка сети: '+code;
+ const messages={
+  room_not_found:'Комната не найдена. Проверь восемь символов кода.',
+  room_full:'В комнате уже два человека. Попроси создателя открыть новую.',
+  account_already_in_room:'Этот Pocket ID уже занимает место. Используйте два разных аккаунта.',
+  match_in_progress:'Игра уже началась. Создайте новую комнату.',
+  game_unavailable:'Сетевая игра пока недоступна. Повтори попытку.',
+  room_version_unavailable:'Комната создана в несовместимой версии.',
+  invalid_token:'Сессия устарела. Попробуй подключиться снова.',
+  server_at_capacity:'Сервер переполнен. Попробуй ещё раз.',
+  rate_limited:'Слишком много запросов. Попробуй чуть позже.'
+ };
+ const description=messages[code]||'Сервер сообщил об ошибке: '+String(code);
  toast(description);
- if(!roomId&&connecting){connecting=false;connected=false;net?.close();net=null;entry(mode==='join');}
+ if(phase==='connecting'||!roomId){
+  const attempt=mode;
+  releaseNetwork(false);
+  mode=attempt;entry(mode==='join');
+  if(mode==='join')panel.querySelector('#code')?.setAttribute('aria-invalid','true');
+  const field=panel.querySelector('.join-form .hint');
+  if(field){field.textContent=description;field.classList.add('form-error');}
+ }
 }
-async function connectRoom(){
+function releaseNetwork(leave=false){
+ sessionEpoch++;
+ resetInput();
+ if(net){
+  if(leave&&roomId&&connected){try{net.leaveRoom()}catch{}}
+  net.close();net=null;
+ }
+ clearTabGuest();connected=false;connecting=false;pending=null;roomId='';disconnectedPeer=false;showKey='';inviteAfterRoom=false;me=null;
+}
+async function loadIdentity(){
+ try{
+  const identity=await getPocketIdentity({force:true});
+  if(identity?.complete)pocketIdentity=identity;
+  else pocketIdentity=null;
+  username=preferredPocketName(pocketIdentity,username);
+  if(phase==='home')home();
+ }catch{}
+}
+function currentName(){
+ if(pocketIdentity?.complete)return pocketIdentity.nickname;
+ const field=panel.querySelector('#nick');return (field?.value||username).trim();
+}
+function requestJoin(){
+ mode='join';
+ const typed=(panel.querySelector('#code')?.value||incoming).trim(),value=roomInput(typed);
+ if(!value){toast('Укажи правильный код из 8 символов или ссылку на комнату.');panel.querySelector('#code')?.focus();return;}
+ incoming=value;
+ void connectRoom('join');
+}
+async function connectRoom(action='create',withInvite=false){
  if(connecting)return;
- const nick=$('#nick')?.value.trim()||username;
- if(nick.length<1||nick.length>24){toast('Имя: от 1 до 24 символов');return;}
- username=nick;localStorage.setItem(localKey+'name',username);
- let target=null;
- if(mode==='join'){target=roomInput($('#code')?.value||'');if(!target){toast('Нужен код из 8 символов');return;}incoming=target;}
- connecting=true;status('ПОДКЛЮЧАЕМСЯ','warning');
- panel.innerHTML='<span class="overline">POCKET NET</span><h2 class="title">СВЯЗЫВАЕМ<br><em>ЦЕХА…</em></h2><p class="deck">Подключение к серверу и согласование комнаты.</p><button class="button muted" data-do="cancel">Отмена</button>';
- if(net){net.close();net=null;}
- const session=new PocketNet({serverUrl,name:username,storage:sessionStorage,identityKey:'blind-pals-guest'});
- // A fresh create or join must not reuse the room id persisted by an earlier tab session.
- session.roomId=null;session.persist();
- net=session;pending={type:mode,target};
- session.on('connected',result=>{
-  if(net!==session)return;
-  connected=true;status('НА СВЯЗИ','online');me=result.player;
-  if(pending?.type==='create'){session.createRoom('blind-pals',{});pending=null;}
-  else if(pending?.type==='join'){session.joinRoom(pending.target);pending=null;}
- });
- session.on('room_joined',e=>{
-  if(net!==session)return;
-  roomId=e.roomId;connecting=false;disconnectedPeer=false;updateUrl(code());
-  if(e.state)onState(e.state);
-  safeSend({type:'sync'});beep(540,.1);status('НА СВЯЗИ','online');
- });
- session.on('game_event',e=>{
-  if(net!==session||e.roomId!==roomId)return;
-  if(e.event?.type==='state')onState(e.event.payload);
-  else if(e.event?.type==='notice')toast(String(e.event.payload||'Сообщение сервера'));
- });
- session.on('presence',e=>{if(e.roomId!==roomId)return;disconnectedPeer=!!(e.disconnected&&e.disconnected!==me?.id);showPanel(true);});
- session.on('disconnected',()=>{if(net!==session)return;connected=false;status('СВЯЗЬ ПОТЕРЯНА','warning');resetInput();toast('Переподключение к PocketNet…');showPanel(true);});
- session.on('error',e=>{if(net!==session)return;handleError(e.code||e.message||'unknown');});
- session.on('room_closed',()=>{if(net!==session)return;toast('Комната закрыта');leave();});
- try{await session.connect();}
- catch(err){if(net!==session)return;connecting=false;connected=false;session.close();net=null;status('НЕТ СОЕДИНЕНИЯ','warning');message=String(err.message||err);entry(mode==='join');toast('Не удалось подключиться: '+message);}
+ const name=currentName();
+ if(!name||name.length>24){toast('Имя должно содержать от 1 до 24 символов.');panel.querySelector('#nick')?.focus();return;}
+ username=name;try{localStorage.setItem(localKey+'name',username);}catch{}
+ const target=action==='join'?roomInput(incoming):null;
+ if(action==='join'&&!target){toast('Код комнаты некорректен.');entry(true);return;}
+ mode=action;inviteAfterRoom=withInvite;releaseNetwork(false);
+ const current=++sessionEpoch;
+ connecting=true;loadingSince=Date.now();connectingPanel();
+ status('ПОДКЛЮЧАЕМСЯ','warning');
+ try{
+  // A second browser tab may inherit sessionStorage and its PocketNet bearer token.
+  // Negotiate active token ownership before authentication.
+  const storage=await prepareTabGuest(serverUrl,username);
+  if(current!==sessionEpoch)return;
+  const session=new PocketNet({serverUrl,name:username,storage,identityKey:pocketIdentitySessionKey(pocketIdentity)});
+  session.roomId=null;session.persist();
+  net=session;
+  let firstJoin=true;
+  session.on('connected',result=>{
+   if(net!==session)return;
+   connected=true;me=result.player;
+   markTabGuest(serverUrl,session.token);
+   status('НА СВЯЗИ','online');
+   if(firstJoin){
+    firstJoin=false;
+    try{if(mode==='create')session.createRoom('blind-pals',{});else session.joinRoom(target);}
+    catch(e){handleError(e.message||'network');}
+   }
+  });
+  session.on('room_joined',e=>{
+   if(net!==session)return;
+   roomId=e.roomId;connecting=false;disconnectedPeer=false;
+   updateUrl(code());
+   if(e.state)onState(e.state);
+   safeSend({type:'sync'});
+   status('КОМНАТА ОТКРЫТА','online');
+   flash('КОМНАТА ОТКРЫТА');
+   beep(570,.12);
+   if(inviteAfterRoom){
+    inviteAfterRoom=false;
+    requestSocialInvite();
+   }
+  });
+  session.on('game_event',e=>{
+   if(net!==session||e.roomId!==roomId)return;
+   if(e.event?.type==='state')onState(e.event.payload);
+   else if(e.event?.type==='notice')toast(String(e.event.payload||'Ответ сервера'));
+  });
+  session.on('presence',e=>{
+   if(net!==session||e.roomId!==roomId)return;
+   disconnectedPeer=!!(e.disconnected&&e.disconnected!==me?.id);
+   showPanel(true);
+   if(disconnectedPeer)toast('Напарник отключился. Его место сохранено.');
+  });
+  session.on('disconnected',()=>{
+   if(net!==session)return;
+   connected=false;status('ВОССТАНАВЛИВАЕМ СВЯЗЬ','warning');
+   resetInput();toast('Соединение прервалось. Переподключаемся…');showPanel(true);
+  });
+  session.on('error',error=>{if(net===session)handleError(error?.code||error?.message||'network');});
+  session.on('room_closed',()=>{if(net!==session)return;toast('Комната закрыта');leave();});
+  await Promise.race([
+   session.connect(),
+   new Promise((_,reject)=>setTimeout(()=>reject(new Error('Сервер не ответил на подключение.')),12000))
+  ]);
+ }catch(error){
+  if(current!==sessionEpoch)return;
+  const msg=error?.message||'Не удалось подключиться';
+  releaseNetwork(false);mode=action;entry(action==='join');
+  toast('Не удалось войти: '+msg);
+ }
+}
+function requestSocialInvite(){
+ if(!roomId||view?.phase!=='lobby'){toast('Сначала создай игровую комнату.');return;}
+ if(!pocketIdentity?.complete){
+  toast('Для приглашения друзей нужен Pocket ID. Ссылку можно отправить без аккаунта.');
+  copy(roomLink());return;
+ }
+ if(window.PocketSocial?.open)window.PocketSocial.open(roomId,'blind-pals');
+ else toast('Список друзей недоступен. Поделись ссылкой на комнату.');
+}
+async function shareLink(){
+ if(!roomId)return;
+ const url=roomLink();
+ if(navigator.share){
+  try{await navigator.share({title:'СЛЕПАЯ СМЕНА',text:'Заходи в комнату: '+code(),url});return;}
+  catch(error){if(error?.name==='AbortError')return;}
+ }
+ await copy(url);
 }
 function leave(){
- resetInput();
- if(net){try{if(roomId&&connected)net.leaveRoom();}catch{}net.close();net=null;}
- connected=false;connecting=false;pending=null;roomId='';me=null;disconnectedPeer=false;showKey='';updateUrl(null);home();
+ releaseNetwork(true);
+ updateUrl(null);home();
 }
 function togglePause(show){
- paused=show;const el=$('#pauseLayer');el.classList.toggle('hidden',!show);
+ paused=show;$('#pauseLayer').classList.toggle('hidden',!show);
  if(show)resetInput();
 }
 panel.addEventListener('click',e=>{
- const btn=e.target.closest('button[data-do]');if(!btn||btn.disabled)return;
+ const btn=e.target.closest('button[data-do]');
+ if(!btn||btn.disabled)return;
  beep(455,.07);
  switch(btn.dataset.do){
- case 'create':mode='create';entry(false);break;
- case 'join-mode':mode='join';entry(true);break;
- case 'home':home();break;
- case 'connect':connectRoom();break;
+ case 'create':void connectRoom('create');break;
+ case 'invite-create':void connectRoom('create',true);break;
+ case 'join-mode':
+  incoming=panel.querySelector('#code')?.value||incoming;
+  joinExpanded=!joinExpanded;entry(joinExpanded);break;
+ case 'home':entry(false);break;
+ case 'connect':void connectRoom(mode);break;
  case 'cancel':leave();break;
- case 'copy':copy(location.origin+location.pathname+'?room='+code());break;
+ case 'copy-code':void copy(code());break;
+ case 'share':void shareLink();break;
+ case 'invite':requestSocialInvite();break;
+ case 'profile':window.PocketSocial?.open?.();break;
  case 'start':safeSend({type:'start'});break;
  case 'again':safeSend({type:'again'});break;
  case 'pause':togglePause(true);break;
  case 'leave':leave();break;
- case 'sound':soundOn=!soundOn;localStorage.setItem(localKey+'sound',soundOn?'on':'off');showPanel(true);if(!view)home();break;
+ case 'sound':
+  soundOn=!soundOn;try{localStorage.setItem(localKey+'sound',soundOn?'on':'off');}catch{}
+  if(view)showPanel(true);else home();
+  break;
  }
 });
+panel.addEventListener('input',e=>{
+ if(e.target.id==='nick')username=e.target.value;
+ if(e.target.id==='code')incoming=e.target.value;
+});
+panel.addEventListener('submit',e=>{if(e.target.id==='joinForm'){e.preventDefault();requestJoin();}});
 $('#resumeBtn').addEventListener('click',()=>togglePause(false));
 $('#leaveBtn').addEventListener('click',leave);
-panel.addEventListener('keydown',e=>{if(e.key==='Enter'&&phase==='entry'){e.preventDefault();connectRoom();}});
+
 function inputVector(){
  let x=(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)+touch.x;
  let y=(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0)+touch.y;
@@ -375,11 +517,11 @@ function frame(now){
  if(!document.hidden)draw();requestAnimationFrame(frame);
 }
 function initialize(){
- home();requestAnimationFrame(frame);
- if(incoming){mode='join';entry(true);}
+ joinExpanded=!!incoming;home();requestAnimationFrame(frame);void loadIdentity();
+ if(incoming)entry(true);
  else{
   let saved=null;try{saved=JSON.parse(sessionStorage.getItem('pocket-net:'+serverUrl)||'null');}catch{}
-  if(saved?.roomId){mode='join';incoming=saved.roomId;entry(true);toast('Есть недавняя комната — можно вернуться по коду.');}
+  if(saved?.roomId){incoming=saved.roomId;entry(true);toast('Можно восстановить предыдущую комнату.');}
  }
 }
 initialize();
