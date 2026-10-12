@@ -1,14 +1,15 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
-import {pieceInfo,pieceSVG,CATALOGUE_SIZE} from './pieces.js';
+import {pieceInfo,pieceSVG,INKS} from './pieces.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЧУШЬ!',version:'1.0.0',cachePrefix: 'chush-',storageNamespace: 'pocket-works:chush'});
+createWorkshopMode({appName:'ЧУШЬ!',version:'1.1.0',cachePrefix: 'chush-',storageNamespace: 'pocket-works:chush'});
 
 const root=document.querySelector('#view'),statusNode=document.querySelector('#connection'),toast=document.querySelector('#toast'),modal=document.querySelector('#dialog');
 const SERVER=location.origin+'/pocketnet',STORE='pocket-works:chush:',params=new URLSearchParams(location.search);
 let roomCode=(params.get('room')||'').trim().toUpperCase(),net=null,me=null,state=null,roomId='',connected=false,connecting=false,health=null;
-let profile=null,name='Гость',sound=true,lastRound=0,lastPhase='',draft=[],selected=-1,history=[],drag=null,sendTimer=0,toastTimer=0,chosen=-1,stars=3,confirmCallback=null,serial=0;
+const MAX_MARKS=140;
+let profile=null,name='Гость',sound=true,lastRound=0,lastPhase='',draft=[],brush=-1,brushColor=0,brushSize=.65,eraser=false,history=[],drag=null,sendTimer=0,toastTimer=0,chosen=-1,stars=3,confirmCallback=null,serial=0;
 try{name=localStorage.getItem(STORE+'name')||name;sound=localStorage.getItem(STORE+'sound')!=='off';}catch{}
 const mem=new Map(),storage={
  getItem(k){try{return sessionStorage.getItem(STORE+k);}catch{return mem.get(k)||null;}},
@@ -47,39 +48,39 @@ async function checkHealth(){
  try{const r=await fetch(SERVER+'/health',{cache:'no-store',signal:AbortSignal.timeout(7000)});if(!r.ok)throw Error('Unreachable');const data=await r.json();health=Boolean(data.ok&&data.modules?.includes('chush'));status(health?'СЕТЬ ГОТОВА':'ЖДЁМ МОДУЛЬ',health?'good':'bad');}catch{health=false;status('НЕТ СВЯЗИ','bad');}
  if(!state&&!connecting)render();
 }
-function box(piece,i,interactive){
- const f=piece.f===1?-1:1;
- return '<div class="piece'+(interactive&&selected===i?' active':'')+'" data-piece="'+i+'" style="left:'+piece.x+'%;top:'+piece.y+'%;z-index:'+i+';transform:translate(-50%,-50%) rotate('+piece.r+'deg) scale('+piece.s+') scaleX('+f+')">'+pieceSVG(piece.t)+'</div>';
+function box(piece,i){
+ const flip=piece.f===1?-1:1;
+ return '<div class="piece" style="left:'+piece.x+'%;top:'+piece.y+'%;z-index:'+i+';transform:translate(-50%,-50%) rotate('+piece.r+'deg) scale('+piece.s+') scaleX('+flip+')">'+pieceSVG(piece.t,piece.c)+'</div>';
 }
 function artboard(items,editable=false,id=''){
- return '<div class="stage'+(editable?'':' readonly')+'" '+(id?'id="'+id+'"':'')+' aria-label="Коллаж из векторных предметов" '+(editable?'data-gesture-surface data-block-callout':'')+'>'+items.map((p,i)=>box(p,i,editable)).join('')+(!items.length?'<div class="empty-hint">'+(editable?'НАЖМИ НА ПРЕДМЕТ СПРАВА ИЛИ СНИЗУ':'ПУСТОЕ ПОЛОТНО')+'</div>':'')+'</div>';
+ return '<div class="stage'+(editable?' ink-surface':' readonly')+'" '+(id?'id="'+id+'"':'')+' aria-label="Рисунок из цветных отпечатков" '+(editable?'data-gesture-surface data-block-callout':'')+'>'+items.map((p,i)=>box(p,i)).join('')+(!items.length?'<div class="empty-hint">'+(editable?'ВЫБЕРИ КИСТЬ И РИСУЙ':'ПУСТОЙ ХОЛСТ')+'</div>':'')+'</div>';
 }
 function roundHead(phase){
- return '<div class="round-head"><div><div class="eyebrow">РАУНД '+state.round+' / '+state.maxRounds+' · '+phase+'</div><h1>'+(phase==='СБОРКА'?'Твоя версия абсурда.':phase==='ГОЛОСОВАНИЕ'?'Кто попал в точку?':'Разоблачение!')+'</h1></div><div class="clock" id="timer">—</div></div>';
+ return '<div class="round-head"><div><div class="eyebrow">РАУНД '+state.round+' / '+state.maxRounds+' · '+phase+'</div><h1>'+(phase==='РИСОВАНИЕ'?'Твоя версия абсурда.':phase==='ГОЛОСОВАНИЕ'?'Кто попал в точку?':'Разоблачение!')+'</h1></div><div class="clock" id="timer">—</div></div>';
 }
-function prompt(){return '<div class="prompt"><span class="eyebrow">СЦЕНА, КОТОРУЮ НАДО СОБРАТЬ</span><b>'+esc(state.prompt)+'</b></div>';}
+function prompt(){return '<div class="prompt"><span class="eyebrow">НАРИСУЙ ЭТО</span><b>'+esc(state.prompt)+'</b></div>';}
 function lobbyRoster(){
  return '<div class="roster"><h2>КТО ТУТ · '+state.players.length+'/8</h2>'+state.players.map((p,i)=>'<div class="person"><span class="num">'+String(i+1).padStart(2,'0')+'</span>'+esc(p.name)+(p.id===me?.id?' (ты)':'')+'<span class="tag">'+(p.id===state.host?'ВЕДУЩИЙ':'В ИГРЕ')+'</span></div>').join('')+'</div>';
 }
 function renderMenu(){
  const comeback=(()=>{try{return Boolean(JSON.parse(storage.getItem('pocket-net:'+SERVER)||'null')?.roomId);}catch{return false;}})();
- root.innerHTML='<section class="scene hero"><div class="hero-mark"><div class="eyebrow">ПОДПОЛЬНЫЙ ТЕАТР НЕВОЗМОЖНОГО</div><h1 class="hero-title">ЧУШЬ<b>!</b></h1><div class="hero-art"><span class="first">'+pieceSVG(1)+'</span><span class="second">'+pieceSVG(192)+'</span></div><div class="caption">320 НЕСУРАЗНЫХ ПРЕДМЕТОВ. НИ ОДИН ХОЛСТ НЕ В БЕЗОПАСНОСТИ.</div></div>'+
- '<div class="start-pane"><span class="eyebrow">2–8 ИГРОКОВ · POCKETNET</span><h2>Нелепость.<br>Состязание.<br>Смешные картинки.</h2><div class="instructions"><div><b>01</b>Всем одна безумная фраза</div><div><b>02</b>Каждому свои 18–22 фигуры</div><div><b>03</b>Собери, анонимно голосуй</div></div>'+
+ root.innerHTML='<section class="scene hero"><div class="hero-mark"><div class="eyebrow">ПОДПОЛЬНЫЙ ТЕАТР НЕВОЗМОЖНОГО</div><h1 class="hero-title">ЧУШЬ<b>!</b></h1><div class="hero-art"><span class="first">'+pieceSVG(1)+'</span><span class="second">'+pieceSVG(192)+'</span></div><div class="caption">64 СИЛУЭТА · 5 ЦВЕТОВ · 320 ШТАМПОВ.</div></div>'+
+ '<div class="start-pane"><span class="eyebrow">2–8 ИГРОКОВ · POCKETNET</span><h2>Нелепость.<br>Состязание.<br>Смешные картинки.</h2><div class="instructions"><div><b>01</b>Всем одна безумная фраза</div><div><b>02</b>Каждому свои 18–22 кисти</div><div><b>03</b>Рисуй, анонимно голосуй</div></div>'+
  '<div class="fields"><div><label class="label" for="playerName">ТВОЁ ИМЯ'+(profile?' · POCKET ID':'')+'</label><input class="field" id="playerName" value="'+esc(profile?.nickname||name)+'" maxlength="22" autocomplete="nickname" '+(profile?'disabled':'')+'></div><div><label class="label" for="roomCode">КОД КОМНАТЫ ДРУГА</label><input class="field" id="roomCode" value="'+esc(roomCode)+'" placeholder="A1B2C3D4" maxlength="36" autocomplete="off" autocapitalize="characters" spellcheck="false"></div></div>'+
- '<div class="actions"><button class="btn hot full" data-action="create">+ СОЗДАТЬ КОМНАТУ</button><button class="btn dark full" data-action="join">→ ВОЙТИ ПО КОДУ</button>'+(comeback?'<button class="btn blue full" data-action="resume">↻ ВЕРНУТЬСЯ В КОМНАТУ</button>':'')+(health===false?'<button class="btn full" data-action="retry">↻ ПОВТОРИТЬ ПРОВЕРКУ СЕТИ</button>':'')+'</div><div class="bar"></div><button class="btn plain tiny" data-action="sound">ЗВУК · '+(sound?'ВКЛ':'ВЫКЛ')+'</button><p class="subdued">Раунд длится 2,5 минуты. Можно вращать, отражать, увеличивать и складывать предметы слоями.</p></div></section>';
+ '<div class="actions"><button class="btn hot full" data-action="create">+ СОЗДАТЬ КОМНАТУ</button><button class="btn dark full" data-action="join">→ ВОЙТИ ПО КОДУ</button>'+(comeback?'<button class="btn blue full" data-action="resume">↻ ВЕРНУТЬСЯ В КОМНАТУ</button>':'')+(health===false?'<button class="btn full" data-action="retry">↻ ПОВТОРИТЬ ПРОВЕРКУ СЕТИ</button>':'')+'</div><div class="bar"></div><button class="btn plain tiny" data-action="sound">ЗВУК · '+(sound?'ВКЛ':'ВЫКЛ')+'</button><p class="subdued">Раунд — 2,5 минуты. Выбери штамп, проведи пальцем и получи рисунок из повторяющихся силуэтов.</p></div></section>';
 }
 function renderLobby(){
  const host=state.host===me?.id;
- root.innerHTML='<section class="scene"><div class="eyebrow">ЗАЛ ОЖИДАНИЯ / РАУНДЫ ЕЩЁ НЕ НАЧАЛИСЬ</div><h1 class="display">Публика собирается.</h1><p class="lede">Пригласи 1–7 человек. Каждый получит свои предметы. Пять раундов — пять невозможных сцен.</p><div class="ticket"><div><span class="eyebrow">БИЛЕТ В ТЕАТР · КОД</span><div class="ticket-code">'+esc(roomCode||'········')+'</div><div class="button-row"><button class="btn yellow" data-action="copy-code">СКОПИРОВАТЬ КОД</button><button class="btn" data-action="copy-link">ОТПРАВИТЬ ССЫЛКУ</button></div><p class="subdued">Друг откроет ссылку на телефоне или ПК. Всё работает через интернет без локальной сети.</p></div>'+lobbyRoster()+'</div><div class="lobby-bottom button-row"><button class="btn hot" data-action="start" '+(!host||state.players.length<2||!connected?'disabled':'')+'>'+(host?'НАЧАТЬ ПРЕДСТАВЛЕНИЕ ↗':'ЖДЁМ ВЕДУЩЕГО')+'</button><button class="btn" data-action="leave">ВЫЙТИ ИЗ КОМНАТЫ</button></div></section>';
+ root.innerHTML='<section class="scene"><div class="eyebrow">ЗАЛ ОЖИДАНИЯ / РАУНДЫ ЕЩЁ НЕ НАЧАЛИСЬ</div><h1 class="display">Публика собирается.</h1><p class="lede">Пригласи 1–7 человек. Каждый получит свои кисти. Пять раундов — пять невозможных сцен.</p><div class="ticket"><div><span class="eyebrow">БИЛЕТ В ТЕАТР · КОД</span><div class="ticket-code">'+esc(roomCode||'········')+'</div><div class="button-row"><button class="btn yellow" data-action="copy-code">СКОПИРОВАТЬ КОД</button><button class="btn" data-action="copy-link">ОТПРАВИТЬ ССЫЛКУ</button></div><p class="subdued">Друг откроет ссылку на телефоне или ПК. Всё работает через интернет без локальной сети.</p></div>'+lobbyRoster()+'</div><div class="lobby-bottom button-row"><button class="btn hot" data-action="start" '+(!host||state.players.length<2||!connected?'disabled':'')+'>'+(host?'НАЧАТЬ ПРЕДСТАВЛЕНИЕ ↗':'ЖДЁМ ВЕДУЩЕГО')+'</button><button class="btn" data-action="leave">ВЫЙТИ ИЗ КОМНАТЫ</button></div></section>';
 }
 function renderCompose(){
- const ready=state.ready.includes(me?.id),used=new Set(draft.map(x=>x.t));
- const items=(state.deck||[]).map(t=>'<button class="asset" data-add="'+t+'" title="'+esc(pieceInfo(t).name)+'" aria-label="Добавить '+esc(pieceInfo(t).name)+'" '+(ready||used.has(t)?'disabled':'')+'>'+pieceSVG(t)+'<span class="plus">'+(used.has(t)?'✓':'+')+'</span></button>').join('');
- const selectedText=draft[selected]?pieceInfo(draft[selected].t).name:'Выбери фигуру на холсте';
- const controls=['rotate-left','rotate-right','smaller','bigger','flip','behind','front','delete'].map((a,i)=>'<button class="btn tiny" data-action="'+a+'" '+(selected<0?'disabled':'')+' title="'+['Повернуть против часовой','Повернуть по часовой','Уменьшить','Увеличить','Отразить','Слой назад','Слой вперёд','Удалить'][i]+'">'+['↶ −15°','↷ +15°','−','+','⇋','↓ СЛОЙ','↑ СЛОЙ','×'][i]+'</button>').join('');
- root.innerHTML='<section class="scene">'+roundHead('СБОРКА')+prompt()+'<div class="editor-grid"><div class="workshop"><div class="stage-wrap'+(ready?' finished':'')+'">'+artboard(draft,!ready,'canvas')+'<div class="meta"><span>ТВОЙ ХОЛСТ · SVG</span><span id="pieceCount">'+draft.length+' / '+state.size+' ДЕТАЛЕЙ</span></div></div><div class="button-row"><button class="btn tiny" data-action="save">↓ СОХРАНИТЬ SVG</button>'+(ready?'<span class="eyebrow">ВЫСТАВЛЕНО И ЗАКРЫТО</span>':'<button class="btn tiny" data-action="undo" '+(!history.length?'disabled':'')+'>↶ ОТМЕНИТЬ</button>')+'</div></div>'+
- (ready?'<aside class="editor-tools"><div class="ready-figure"><h2>Картина сдана.</h2><p>Готовится галерея. Пока остальные сочиняют чушь, можно смотреть на собственный шедевр.</p><div class="ready-track">'+state.players.map(p=>'<span class="'+(state.ready.includes(p.id)?'done':'')+'" title="'+esc(p.name)+'"></span>').join('')+'</div><div class="eyebrow">'+state.ready.length+' / '+state.players.length+' РАБОТ ГОТОВО</div></div></aside>':
- '<aside class="editor-tools"><p class="tool-note">ТВОЙ СЛУЧАЙНЫЙ НАБОР · ТОЛЬКО ПО ОДНОЙ КОПИИ</p><div class="palette">'+items+'</div><div class="tools"><h3>РЕДАКТОР КУКОЛ</h3><div class="selected-name" id="selectedName">'+esc(selectedText)+'</div><div class="tool-group">'+controls+'</div><p class="subdued">Перетащи деталь пальцем или мышью. Меняй порядок, чтобы перекрывать другие.</p></div><div class="editor-action"><span class="eyebrow">ОДНА ПОПЫТКА · БЕЗ ПЕРЕРИСОВКИ ПОСЛЕ СДАЧИ</span><button class="btn hot" data-action="publish" '+(!draft.length||!connected?'disabled':'')+'>СДАТЬ КОЛЛАЖ →</button></div></aside>')+'</div></section>';
+ const ready=state.ready.includes(me?.id);
+ if(brush<0&&!ready&&state.deck?.length){brush=state.deck[0];brushColor=pieceInfo(brush).variant;}
+ const items=(state.deck||[]).map(t=>'<button class="asset'+(brush===t&&!eraser?' chosen':'')+'" data-brush="'+t+'" title="'+esc(pieceInfo(t).name)+'" aria-label="Кисть '+esc(pieceInfo(t).name)+'">'+pieceSVG(t)+'<span class="brush-dot" style="background:'+pieceInfo(t).color+'"></span></button>').join('');
+ const inks=INKS.map((hex,i)=>'<button type="button" class="ink'+(brushColor===i?' active':'')+'" data-ink="'+i+'" style="--swatch:'+hex+'" title="Цвет '+(i+1)+'" aria-label="Цвет '+(i+1)+'"></button>').join('');
+ root.innerHTML='<section class="scene">'+roundHead('РИСОВАНИЕ')+prompt()+'<div class="editor-grid"><div class="workshop"><div class="stage-wrap'+(ready?' finished':'')+'">'+artboard(draft,!ready,'canvas')+'<div class="meta"><span>ХОЛСТ · '+(ready?'СДАНО':'РИСУЙ ПАЛЬЦЕМ')+'</span><span id="pieceCount">'+draft.length+' / '+(state.maxMarks||MAX_MARKS)+' ОТПЕЧАТКОВ</span></div></div><div class="button-row"><button class="btn tiny" data-action="save">↓ SVG</button>'+(ready?'<span class="eyebrow">РИСУНОК ГОТОВ</span>':'<button class="btn tiny" data-action="undo" '+(!history.length?'disabled':'')+'>↶ ОТМЕНИТЬ МАЗОК</button><button class="btn tiny" data-action="clear" '+(!draft.length?'disabled':'')+'>ОЧИСТИТЬ</button>')+'</div></div>'+
+ (ready?'<aside class="editor-tools"><div class="ready-figure"><h2>Рисунок сдан.</h2><p>Он останется на экране до общего голосования.</p><div class="ready-track">'+state.players.map(p=>'<span class="'+(state.ready.includes(p.id)?'done':'')+'" title="'+esc(p.name)+'"></span>').join('')+'</div><div class="eyebrow">'+state.ready.length+' / '+state.players.length+' ГОТОВО</div></div></aside>':
+ '<aside class="editor-tools"><p class="tool-note">ТВОИ КИСТИ · КАЖДОЙ МОЖНО РИСОВАТЬ СКОЛЬКО УГОДНО</p><div class="palette" role="group" aria-label="Кисти">'+items+'</div><div class="tools"><div class="brush-controls"><div class="brush-active">'+(brush>=0?pieceSVG(brush,brushColor):'')+'</div><div class="brush-settings"><div class="selected-name" id="selectedName">'+(eraser?'Ластик':brush>=0?esc(pieceInfo(brush).name):'Выбери кисть')+'</div><label class="label" for="brushSize">РАЗМЕР <span id="brushSizeValue">'+Math.round(brushSize*100)+'%</span></label><input id="brushSize" class="brush-size" type="range" min="0.35" max="1.55" step="0.05" value="'+brushSize+'"></div></div><div class="ink-picker" role="group" aria-label="Цвет кисти">'+inks+'</div><div class="tool-group"><button class="btn tiny'+(eraser?' selected':'')+'" data-action="erase">⌫ ЛАСТИК</button><button class="btn tiny" data-action="paint">✦ РИСОВАТЬ</button></div></div><div class="editor-action"><span class="eyebrow">ДВИЖЕНИЕ — МАЗОК. ТАП — ОТПЕЧАТОК.</span><button class="btn hot" data-action="publish" '+(!draft.length||!connected?'disabled':'')+'>СДАТЬ РИСУНОК →</button></div></aside>')+'</div></section>';
  updateClock();
 }
 function galleryCard(g,reveal=false){
@@ -129,7 +130,7 @@ function setState(next){
  state=next;
  if(newScene){
   lastRound=next.round;lastPhase=next.phase;
-  selected=-1;history=[];drag=null;chosen=-1;stars=3;draft=cloneBoard(next.myBoard||[]);
+  brush=next.deck?.[0]??-1;brushColor=brush>=0?pieceInfo(brush).variant:0;brushSize=.65;eraser=false;history=[];drag=null;chosen=-1;stars=3;draft=cloneBoard(next.myBoard||[]);
   render();tone(next.phase==='reveal'?840:430);return;
  }
  if(next.phase==='compose'){
@@ -191,39 +192,51 @@ function send(payload){
  try{net.sendGame(payload);return true;}catch{notify('Не удалось отправить действие.');return false;}
 }
 function pushBoard(){clearTimeout(sendTimer);sendTimer=0;if(state?.phase==='compose'&&!state.ready.includes(me?.id))send({type:'edit',board:draft});}
-function queueBoard(){clearTimeout(sendTimer);sendTimer=setTimeout(pushBoard,260);}
-function checkpoint(){history.push(cloneBoard(draft));if(history.length>35)history.shift();}
+function queueBoard(){clearTimeout(sendTimer);sendTimer=setTimeout(pushBoard,480);}
+function checkpoint(){history.push(cloneBoard(draft));if(history.length>36)history.shift();}
+function pointFromEvent(e,bounds){
+ return {x:Math.round(Math.max(0,Math.min(100,(e.clientX-bounds.left)/bounds.width*100))*10)/10,y:Math.round(Math.max(0,Math.min(100,(e.clientY-bounds.top)/bounds.height*100))*10)/10};
+}
 function paint(){
  const stage=document.querySelector('#canvas');
- if(stage)stage.innerHTML=draft.map((p,i)=>box(p,i,true)).join('')+(!draft.length?'<div class="empty-hint">ВЫБЕРИ ПРЕДМЕТ ИЗ НАБОРА</div>':'');
- const counter=document.querySelector('#pieceCount');if(counter)counter.textContent=draft.length+' / '+state.size+' ДЕТАЛЕЙ';
- const label=document.querySelector('#selectedName');if(label)label.textContent=draft[selected]?pieceInfo(draft[selected].t).name:'Выбери фигуру на холсте';
- document.querySelectorAll('[data-add]').forEach(b=>{b.disabled=draft.some(p=>p.t===Number(b.dataset.add));const flag=b.querySelector('.plus');if(flag)flag.textContent=b.disabled?'✓':'+';});
- document.querySelectorAll('[data-action="rotate-left"],[data-action="rotate-right"],[data-action="smaller"],[data-action="bigger"],[data-action="flip"],[data-action="behind"],[data-action="front"],[data-action="delete"]').forEach(b=>b.disabled=selected<0);
+ if(stage)stage.innerHTML=draft.map((p,i)=>box(p,i)).join('')+(!draft.length?'<div class="empty-hint">РИСУЙ ПО ХОЛСТУ</div>':'');
+ const counter=document.querySelector('#pieceCount');if(counter)counter.textContent=draft.length+' / '+(state.maxMarks||MAX_MARKS)+' ОТПЕЧАТКОВ';
  const undo=document.querySelector('[data-action="undo"]');if(undo)undo.disabled=!history.length;
+ const clear=document.querySelector('[data-action="clear"]');if(clear)clear.disabled=!draft.length;
  const publish=document.querySelector('[data-action="publish"]');if(publish)publish.disabled=!draft.length||!connected;
 }
-function add(t){
- if(!state||state.phase!=='compose'||state.ready.includes(me?.id)||!(state.deck||[]).includes(t)||draft.some(p=>p.t===t)||draft.length>=state.size)return;
- checkpoint();const n=draft.length;
- draft.push({t,x:Math.max(16,Math.min(84,50+(n%5-2)*8)),y:Math.max(15,Math.min(85,46+Math.floor(n/5)*6)),r:0,s:1,f:0});
- selected=draft.length-1;paint();queueBoard();tone(560);
+function updateBrushUI(){
+ document.querySelectorAll('[data-brush]').forEach(el=>el.classList.toggle('chosen',Number(el.dataset.brush)===brush&&!eraser));
+ document.querySelectorAll('[data-ink]').forEach(el=>el.classList.toggle('active',Number(el.dataset.ink)===brushColor));
+ const node=document.querySelector('.brush-active');if(node)node.innerHTML=brush>=0?pieceSVG(brush,brushColor):'';
+ const label=document.querySelector('#selectedName');if(label)label.textContent=eraser?'Ластик':brush>=0?pieceInfo(brush).name:'Выбери кисть';
+ document.querySelector('[data-action="erase"]')?.classList.toggle('selected',eraser);
+ document.querySelector('[data-action="paint"]')?.classList.toggle('selected',!eraser);
+ const meter=document.querySelector('#brushSizeValue');if(meter)meter.textContent=Math.round(brushSize*100)+'%';
 }
-function mutate(action){
- if(!draft[selected])return;
- checkpoint();const p=draft[selected],i=selected;
- if(action==='rotate-left')p.r=p.r<=-165?p.r+345:p.r-15;
- if(action==='rotate-right')p.r=p.r>=165?p.r-345:p.r+15;
- if(action==='smaller')p.s=Math.max(.35,Math.round((p.s-.15)*100)/100);
- if(action==='bigger')p.s=Math.min(3,Math.round((p.s+.15)*100)/100);
- if(action==='flip')p.f=p.f?0:1;
- if(action==='behind'&&i>0){[draft[i-1],draft[i]]=[draft[i],draft[i-1]];selected=i-1;}
- if(action==='front'&&i<draft.length-1){[draft[i+1],draft[i]]=[draft[i],draft[i+1]];selected=i+1;}
- if(action==='delete'){draft.splice(i,1);selected=Math.min(i,draft.length-1);}
- paint();queueBoard();tone(370);
+function placeMark(x,y){
+ const max=state?.maxMarks||MAX_MARKS;
+ if(draft.length>=max){if(drag&&!drag.limitNotified){notify('Холст заполнен. Можно стереть или отменить мазок.');drag.limitNotified=true;}return false;}
+ if(brush<0)return false;
+ draft.push({t:brush,x,y,r:0,s:brushSize,f:0,c:brushColor});
+ return true;
+}
+function eraseAt(x,y){
+ const radius=Math.max(3.5,Math.min(12,brushSize*12));
+ let changed=false;
+ for(let i=draft.length-1;i>=0;i--){
+  const p=draft[i];
+  if(Math.hypot(p.x-x,p.y-y)<=radius){draft.splice(i,1);changed=true;}
+ }
+ return changed;
+}
+function strokePoint(x,y){
+ const changed=eraser?eraseAt(x,y):placeMark(x,y);
+ if(changed){paint();queueBoard();}
+ return changed;
 }
 function boardSVG(items){
- const parts=items.map(p=>{const flip=p.f===1?-1:1;return '<g transform="translate('+p.x*6+' '+p.y*6+') rotate('+p.r+') scale('+(p.s*flip)+' '+p.s+') translate(-72 -72)"><svg x="0" y="0" width="144" height="144" viewBox="0 0 100 100">'+pieceSVG(p.t)+'</svg></g>';}).join('');
+ const parts=items.map(p=>{const flip=p.f===1?-1:1;return '<g transform="translate('+p.x*6+' '+p.y*6+') rotate('+p.r+') scale('+(p.s*flip)+' '+p.s+') translate(-72 -72)"><svg x="0" y="0" width="144" height="144" viewBox="0 0 100 100">'+pieceSVG(p.t,p.c)+'</svg></g>';}).join('');
  return '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><rect width="600" height="600" fill="#fffef6"/>'+parts+'</svg>';
 }
 function downloadBoard(){
@@ -244,7 +257,8 @@ async function copy(value){
  notify('Скопировано.');tone(740);
 }
 root.addEventListener('click',e=>{
- const item=e.target.closest('[data-add]');if(item&&!item.disabled){add(Number(item.dataset.add));return;}
+ const item=e.target.closest('[data-brush]');if(item&&!item.disabled){brush=Number(item.dataset.brush);brushColor=pieceInfo(brush).variant;eraser=false;updateBrushUI();tone(500);return;}
+ const colorButton=e.target.closest('[data-ink]');if(colorButton){brushColor=Number(colorButton.dataset.ink);eraser=false;updateBrushUI();tone(480);return;}
  const card=e.target.closest('[data-entry]');if(card&&!card.disabled&&state.phase==='vote'&&!state.myVote){chosen=Number(card.dataset.entry);document.querySelectorAll('.art-entry').forEach(el=>el.classList.toggle('picked',Number(el.dataset.entry)===chosen));const voteBtn=document.querySelector('[data-action=vote]');if(voteBtn)voteBtn.disabled=false;const word=document.querySelector('.vote-footer b');if(word)word.textContent='ВЫБРАНО: №'+String(chosen+1).padStart(2,'0');tone(490);return;}
  const star=e.target.closest('[data-stars]');if(star){stars=Number(star.dataset.stars);document.querySelectorAll('[data-stars]').forEach(el=>el.classList.toggle('selected',Number(el.dataset.stars)===stars));tone(380+stars*75);return;}
  const btn=e.target.closest('[data-action]');if(!btn||btn.disabled)return;
@@ -257,7 +271,7 @@ root.addEventListener('click',e=>{
  if(action==='start'||action==='again'||action==='next'){send({type:action});tone(660);return;}
  if(action==='publish'){
   if(!draft.length)return;
-  confirmAction('Выставить работу?','После отправки фигуры больше нельзя перемещать. Галерея откроется после сдачи остальных.',()=>{clearTimeout(sendTimer);send({type:'publish',board:draft});});
+  confirmAction('Выставить работу?','После сдачи рисунок нельзя изменить. Галерея откроется после остальных работ.',()=>{clearTimeout(sendTimer);send({type:'publish',board:draft});});
   return;
  }
  if(action==='vote'){
@@ -266,34 +280,54 @@ root.addEventListener('click',e=>{
   return;
  }
  if(action==='save'||action==='save-voted'){downloadBoard();return;}
- if(action==='undo'){if(!history.length)return;draft=history.pop();selected=Math.min(selected,draft.length-1);paint();queueBoard();return;}
- if(['rotate-left','rotate-right','smaller','bigger','flip','behind','front','delete'].includes(action)){mutate(action);return;}
+ if(action==='undo'){if(!history.length)return;draft=history.pop();paint();queueBoard();tone(360);return;}
+ if(action==='clear'){if(!draft.length)return;confirmAction('Очистить рисунок?','Все отпечатки будут удалены. Это действие можно отменить.',()=>{checkpoint();draft=[];paint();queueBoard();tone(280);});return;}
+ if(action==='erase'){eraser=true;updateBrushUI();tone(340);return;}
+ if(action==='paint'){eraser=false;updateBrushUI();tone(520);return;}
  if(action==='leave'){confirmAction('Покинуть театр?','Ты выйдешь из партии. Остальные продолжат без тебя, если смогут.',()=>disconnect(true));}
 });
 root.addEventListener('input',e=>{if(e.target.id==='roomCode')roomCode=e.target.value=e.target.value.toUpperCase().replace(/\s/g,'');});
+root.addEventListener('change',e=>{
+ if(e.target?.id==='brushSize'){brushSize=Number(e.target.value);updateBrushUI();}
+});
+root.addEventListener('input',e=>{
+ if(e.target?.id==='brushSize'){brushSize=Number(e.target.value);updateBrushUI();}
+});
 root.addEventListener('pointerdown',e=>{
  if(state?.phase!=='compose'||state.ready.includes(me?.id))return;
- const token=e.target.closest('[data-piece]'),stage=e.target.closest('#canvas');if(!token||!stage)return;
- const i=Number(token.dataset.piece);if(!draft[i])return;
- e.preventDefault();selected=i;checkpoint();const bounds=stage.getBoundingClientRect();
- drag={pointer:e.pointerId,stage,i,bounds,moved:false};
- try{stage.setPointerCapture(e.pointerId);}catch{}paint();
+ const stage=e.target.closest('#canvas');if(!stage||e.button>0)return;
+ e.preventDefault();
+ const bounds=stage.getBoundingClientRect(),p=pointFromEvent(e,bounds);
+ checkpoint();drag={pointer:e.pointerId,stage,bounds,last:p,moved:false,modified:false,limitNotified:false};
+ try{stage.setPointerCapture(e.pointerId);}catch{}
+ if(strokePoint(p.x,p.y))drag.modified=true;
 });
 root.addEventListener('pointermove',e=>{
  if(!drag||e.pointerId!==drag.pointer)return;
- e.preventDefault();const p=draft[drag.i];if(!p)return;
- const x=Math.max(0,Math.min(100,(e.clientX-drag.bounds.left)/drag.bounds.width*100));
- const y=Math.max(0,Math.min(100,(e.clientY-drag.bounds.top)/drag.bounds.height*100));
- if(Math.abs(x-p.x)+Math.abs(y-p.y)<.15)return;
- p.x=Math.round(x*10)/10;p.y=Math.round(y*10)/10;drag.moved=true;paint();queueBoard();
+ e.preventDefault();
+ const pos=pointFromEvent(e,drag.bounds),start=drag.last;
+ const length=Math.hypot(pos.x-start.x,pos.y-start.y);
+ const spacing=eraser?Math.max(2,brushSize*5):Math.max(2.8,brushSize*6.7);
+ if(length<spacing)return;
+ const count=Math.floor(length/spacing);
+ for(let i=1;i<=count;i++){
+  const ratio=i*spacing/length;
+  const x=Math.round((start.x+(pos.x-start.x)*ratio)*10)/10,y=Math.round((start.y+(pos.y-start.y)*ratio)*10)/10;
+  if(strokePoint(x,y))drag.modified=true;
+ }
+ drag.last={x:Math.round((start.x+(pos.x-start.x)*(count*spacing/length))*10)/10,y:Math.round((start.y+(pos.y-start.y)*(count*spacing/length))*10)/10};
+ drag.moved=true;
 });
 function release(e){
  if(!drag||drag.pointer!==e.pointerId)return;
  try{drag.stage.releasePointerCapture(e.pointerId);}catch{}
- if(!drag.moved)history.pop();
- drag=null;paint();if(state?.phase==='compose')pushBoard();
+ const wasChanged=drag.modified;
+ if(!wasChanged)history.pop();
+ drag=null;
+ if(wasChanged)pushBoard();paint();
 }
 root.addEventListener('pointerup',release);root.addEventListener('pointercancel',release);
+
 window.addEventListener('pagehide',()=>{activeToken=null;clearTimeout(sendTimer);});
 window.addEventListener('focus',async()=>{if(state)return;await loadProfile();render();});
 setInterval(()=>{updateClock();if(connected&&state&&me?.id===state.host&&state.deadline)try{net.sendGame({type:'pulse'});}catch{}},1800);

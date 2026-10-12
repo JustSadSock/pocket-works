@@ -1,7 +1,8 @@
 import type { PocketModule } from '../../../pocket-server/module-contract.js';
 
-/** ЧУШЬ — authoritative PocketNet rules. Catalogue: 64 silhouettes × 5 mutations. */
+/** ЧУШЬ — authoritative PocketNet brush game. 64 flat stamps × 5 ink variants. */
 export const CATALOGUE_SIZE = 320;
+export const MAX_STAMPS = 140;
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 8;
 const PROMPTS = [
@@ -43,9 +44,9 @@ const PROMPTS = [
  'На этом корабле капитан — чайник','Последний фестиваль перед ледниковым периодом'
 ];
 type Player={id:string;name:string};
-type Piece={t:number;x:number;y:number;r:number;s:number;f:number};
+type Piece={t:number;x:number;y:number;r:number;s:number;f:number;c:number};
 type Vote={entry:number;stars:number};
-type Round={round:number;prompt:string;works:{id:string;name:string;board:Piece[];votes:number;points:number}[];winners:string[]};
+type Round={round:number;prompt:string;works:{id:string;name:string;votes:number;points:number}[];winners:string[]};
 type Phase='lobby'|'compose'|'vote'|'reveal'|'results';
 type State={host:string;players:Player[];phase:Phase;round:number;maxRounds:number;deadline:number;prompt:string;used:number[];size:number;decks:Record<string,number[]>;boards:Record<string,Piece[]>;ready:string[];order:string[];votes:Record<string,Vote>;scores:Record<string,number>;history:Round[];revision:number};
 const rand=(n:number)=>Math.floor(Math.random()*n);
@@ -87,7 +88,7 @@ function reveal(s:State){
  for(const [id,points] of Object.entries(pts))s.scores[id]=(s.scores[id]||0)+points;
  const max=Math.max(0,...Object.values(pts));
  const winners=max?Object.keys(pts).filter(k=>pts[k]===max):[];
- s.history.push({round:s.round,prompt:s.prompt,works:s.order.map(id=>({id,name:s.players.find(p=>p.id===id)?.name||'Участник',board:s.boards[id]||[],votes:wins[id]||0,points:pts[id]||0})),winners});
+ s.history.push({round:s.round,prompt:s.prompt,works:s.order.map(id=>({id,name:s.players.find(p=>p.id===id)?.name||'Участник',votes:wins[id]||0,points:pts[id]||0})),winners});
  s.phase='reveal';s.deadline=Date.now()+14500;s.revision++;
 }
 function next(s:State){
@@ -97,20 +98,20 @@ function next(s:State){
 }
 function step(s:State){let count=0;while(s.deadline&&Date.now()>=s.deadline&&count++<3){if(s.phase==='compose')startVote(s);else if(s.phase==='vote')reveal(s);else if(s.phase==='reveal')next(s);else break;}}
 function validBoard(s:State,id:string,unknown:unknown):Piece[]|null{
- if(!Array.isArray(unknown)||unknown.length>s.size)return null;
- const valid=new Set(s.decks[id]||[]),used=new Set<number>(),out:Piece[]=[];
+ if(!Array.isArray(unknown)||unknown.length>MAX_STAMPS)return null;
+ const valid=new Set(s.decks[id]||[]),out:Piece[]=[];
  for(const raw of unknown){
   if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
   const v=raw as Record<string,unknown>,t=Number(v.t);
-  if(!Number.isInteger(t)||!valid.has(t)||used.has(t))return null;
-  const x=Number(v.x),y=Number(v.y),r=Number(v.r),z=Number(v.s),f=Number(v.f);
-  if(![x,y,r,z,f].every(Number.isFinite)||x<0||x>100||y<0||y>100||r< -180||r>180||z<.35||z>3||![0,1].includes(f))return null;
-  used.add(t);out.push({t,x:Math.round(x*10)/10,y:Math.round(y*10)/10,r:Math.round(r),s:Math.round(z*100)/100,f});
+  if(!Number.isInteger(t)||!valid.has(t))return null;
+  const x=Number(v.x),y=Number(v.y),r=Number(v.r),z=Number(v.s),f=Number(v.f),c=Number(v.c);
+  if(![x,y,r,z,f].every(Number.isFinite)||x<0||x>100||y<0||y>100||r< -180||r>180||z<.35||z>3||![0,1].includes(f)||!Number.isInteger(c)||c<0||c>7)return null;
+  out.push({t,x:Math.round(x*10)/10,y:Math.round(y*10)/10,r:Math.round(r),s:Math.round(z*100)/100,f,c});
  }
  return out;
 }
 function strip(s:State,id:string){
- const basic={host:s.host,players:s.players,phase:s.phase,round:s.round,maxRounds:s.maxRounds,deadline:s.deadline,prompt:s.prompt,size:s.size,ready:s.ready,revision:s.revision,scores:s.scores};
+ const basic={host:s.host,players:s.players,phase:s.phase,round:s.round,maxRounds:s.maxRounds,deadline:s.deadline,prompt:s.prompt,size:s.size,maxMarks:MAX_STAMPS,ready:s.ready,revision:s.revision,scores:s.scores};
  if(s.phase==='lobby')return {...basic,deck:[],myBoard:[],gallery:[],myVote:null,history:[]};
  if(s.phase==='compose')return {...basic,deck:s.decks[id]||[],myBoard:s.boards[id]||[],gallery:[],myVote:null,history:[]};
  const gallery=s.order.map((author,index)=>({index,board:s.boards[author]||[],mine:author===id}));
@@ -153,7 +154,7 @@ const module: PocketModule<State>={
   if(v.type==='edit'||v.type==='publish'){
    if(state.phase!=='compose'||state.ready.includes(id))return {state,events:notice(id,'Работа уже сдана или время вышло.')};
    const board=validBoard(state,id,v.board);
-   if(!board)return {state,events:notice(id,'Недопустимый набор фигур.')};
+   if(!board)return {state,events:notice(id,'В наборе есть неподходящие штампы или достигнут лимит холста.')};
    state.boards[id]=board;
    if(v.type==='publish'){state.ready.push(id);if(state.ready.length===state.players.length)startVote(state);}
    state.revision++;return {state,events:v.type==='edit'?[{type:'state',to:id,payload:strip(state,id)}]:events(state)};
