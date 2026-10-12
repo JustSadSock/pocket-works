@@ -162,7 +162,9 @@ async function reload(rerender=true){
   if(accountButton && data.profile?.artwork){
     accountButton.innerHTML='<img class="pw-social-personal-avatar" src="'+esc(data.profile.artwork)+'" alt="">';
   } else if(accountButton?.querySelector('.pw-social-personal-avatar')){
-    accountButton.innerHTML='<span class="pw-id-nav-glyph" aria-hidden="true">◎</span>';
+    const fallback=q('#pocket-id-active-avatar .pw-id-avatar')?.outerHTML;
+    accountButton.innerHTML=fallback?fallback.replace('pw-id-avatar','pw-id-nav-avatar'):
+      '<span class="pw-id-nav-glyph" aria-hidden="true">◎</span>';
   }
   const pending=(data.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
   const requests=(data.incoming||[]).length;
