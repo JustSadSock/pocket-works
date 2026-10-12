@@ -29,10 +29,70 @@ function drawStroke(ctx,stroke){
  }else{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();dab(ctx,pts[0][0],pts[0][1],ctx.lineWidth/2,color,ctx.globalAlpha)}
  ctx.restore();
 }
+// Fill tests only the hand-drawn line mask: previous fill colours are never
+// barriers. Render at 2x and underpaint edges to avoid jagged white seams.
+const FILL_SCALE=2;
+function layer(){
+ const canvas=document.createElement('canvas');
+ canvas.width=W*FILL_SCALE;canvas.height=H*FILL_SCALE;
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});
+ ctx.setTransform(FILL_SCALE,0,0,FILL_SCALE,0,0);
+ return {canvas,ctx};
+}
+function fillRegion(lines,fills,zoneMask,p,colour){
+ const w=lines.canvas.width,h=lines.canvas.height;
+ const x=Math.max(0,Math.min(w-1,Math.floor(p[0]*FILL_SCALE)));
+ const y=Math.max(0,Math.min(h-1,Math.floor(p[1]*FILL_SCALE)));
+ const walls=lines.ctx.getImageData(0,0,w,h).data;
+ const mask=zoneMask.data,start=y*w+x;
+ const allowed=i=>mask[i*4+3]>100&&walls[i*4+3]<92;
+ if(!allowed(start))return;
+ const queue=new Int32Array(w*h),seen=new Uint8Array(w*h);
+ let head=0,tail=1;queue[0]=start;seen[start]=1;
+ while(head<tail){
+  const i=queue[head++],cx=i%w,cy=(i/w)|0;
+  const tryAdd=n=>{if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}};
+  if(cx>0)tryAdd(i-1);
+  if(cx<w-1)tryAdd(i+1);
+  if(cy>0)tryAdd(i-w);
+  if(cy<h-1)tryAdd(i+w);
+ }
+ const image=fills.ctx.getImageData(0,0,w,h),data=image.data;
+ const r=parseInt(colour.slice(1,3),16),g=parseInt(colour.slice(3,5),16),b=parseInt(colour.slice(5,7),16);
+ // Paint the neighbouring contour pixels UNDER the lines, but never cross
+ // those lines during region discovery.
+ const paint=i=>{if(mask[i*4+3]<35)return;const k=i*4;data[k]=r;data[k+1]=g;data[k+2]=b;data[k+3]=255};
+ for(let n=0;n<tail;n++){
+  const i=queue[n],cx=i%w,cy=(i/w)|0;paint(i);
+  if(cx>0)paint(i-1);if(cx<w-1)paint(i+1);
+  if(cy>0)paint(i-w);if(cy<h-1)paint(i+w);
+ }
+ fills.ctx.putImageData(image,0,0);
+}
+function renderStrokes(ctx,strokes,zone){
+ if(!strokes.some(s=>s.t==='fill')){strokes.forEach(s=>drawStroke(ctx,s));return}
+ const lines=layer(),fills=layer(),area=layer();
+ area.ctx.fillStyle='#fff';damagePath(area.ctx,zone);area.ctx.fill();
+ const zoneMask=area.ctx.getImageData(0,0,area.canvas.width,area.canvas.height);
+ lines.ctx.save();clipZone(lines.ctx,zone);
+ fills.ctx.save();clipZone(fills.ctx,zone);
+ for(const stroke of strokes){
+  if(stroke.t==='fill'){fillRegion(lines,fills,zoneMask,stroke.p[0],stroke.c);continue}
+  if(stroke.t==='erase'){
+   for(const target of [lines.ctx,fills.ctx]){
+    target.save();target.globalCompositeOperation='destination-out';drawStroke(target,stroke);target.restore();
+   }
+  }else drawStroke(lines.ctx,stroke);
+ }
+ lines.ctx.restore();fills.ctx.restore();
+ ctx.drawImage(fills.canvas,0,0,W,H);
+ ctx.drawImage(lines.canvas,0,0,W,H);
+}
+
 export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false){
  const ctx=prepareCanvas(canvas);
  try{const image=await loadArtwork(id);if(!canvas.isConnected)return;ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id);
- if(damaged){const z=zoneFor(id,variation);ctx.save();clipZone(ctx,z);ctx.fillStyle='#e8ddc6';ctx.fillRect(z.x,z.y,z.w,z.h);(strokes||[]).forEach(s=>drawStroke(ctx,s));ctx.restore();
+ if(damaged){const z=zoneFor(id,variation);ctx.save();clipZone(ctx,z);ctx.fillStyle='#e8ddc6';ctx.fillRect(z.x,z.y,z.w,z.h);renderStrokes(ctx,strokes||[],z);ctx.restore();
  }
  }catch{ctx.fillStyle='#ddc6aa';ctx.fillRect(0,0,W,H);ctx.fillStyle='#512d2a';ctx.fillText('Не удалось открыть картину',20,50);}
 }
@@ -109,7 +169,11 @@ export class Editor{
     if(this.tool==='picker'){this.pick(p);return}
     if(!this.inside(p))return;
     if(this.strokes.length>=MAX_STROKES){this.onChange(-1);return}
-    this.working={c:this.color,s:this.size,t:this.tool,p:[p]};this.redoStack=[];
+    if(this.tool==='fill'){
+       this.strokes.push({c:this.color,s:this.size,t:'fill',p:[p]});
+       this.redoStack=[];this.save();this.render();return;
+     }
+     this.working={c:this.color,s:this.size,t:this.tool,p:[p]};this.redoStack=[];
     this.render();
   };
   this.move=e=>{
@@ -171,7 +235,7 @@ export class Editor{
   this.keyboardDown=e=>{
    if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
       document.querySelector('#dialog:not(.hidden)')||e.altKey||e.metaKey)return;
-   const byCode={KeyB:'brush',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
+   const byCode={KeyB:'brush',KeyF:'fill',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
    let target;
    if(e.ctrlKey){
     if(e.code==='KeyZ')target=e.shiftKey?'redo':'undo';
@@ -205,7 +269,7 @@ export class Editor{
  }
  async pick(p){if(this.inside(p))return;try{const image=await loadArtwork(this.id);const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');drawArtwork(x,image,this.id);const rgb=x.getImageData(p[0]|0,p[1]|0,1,1).data;this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.root.querySelector('#customColor').value=this.color;this.tool='brush';this.root.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='brush'));this.onChange(this.strokes.length)}catch{}}
  async render(){if(this.closed)return;const c=this.canvas,version=this.renderVersion=(this.renderVersion||0)+1;const img=await loadArtwork(this.id).catch(()=>null);if(!img||this.closed||version!==this.renderVersion)return;
- const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);[...this.strokes,...(this.working?[this.working]:[])].forEach(s=>drawStroke(x,s));x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;damagePath(x,this.zone);x.stroke();x.restore();
+ const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);renderStrokes(x,[...this.strokes,...(this.working?[this.working]:[])],this.zone);x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;damagePath(x,this.zone);x.stroke();x.restore();
  }
  getData(){return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
