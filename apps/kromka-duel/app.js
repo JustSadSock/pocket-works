@@ -312,7 +312,7 @@ function refreshKeys(){
  if(!fingers.has('move')){input.mx=mx/l*flip;input.my=my/l*flip;updatePad();}
 }
 document.addEventListener('keydown',e=>{
- if(e.target?.tagName==='INPUT')return;
+ if(e.target?.closest('input,textarea,select,button,a,[contenteditable="true"]'))return;
  const k=e.key.toLowerCase();
  if(moveKeys[k]){keys.add(k);refreshKeys();e.preventDefault();}
  if(!e.repeat&&[' ','shift','q'].includes(k)){pulse(k==='q'?'parry':'dash');e.preventDefault();}
