@@ -1,6 +1,6 @@
-const APP_VERSION='1.1.0';
-const CACHE='picto-v1.1.0',PREFIX='picto-',VERSION=APP_VERSION,RELEASE_DATE='2026-10-12',CACHE_PROTOCOL=2;
-const RELEASE_NOTES=["508 близких по смыслу заданий в шести категориях вместо очевидных случайных вариантов: теперь нужно передавать действия, роли и отношения.","Автор может посмотреть четыре трактовки до публикации, чтобы точнее составить сообщение; наборы в одной партии не повторяются.","Шесть новых смысловых символов, перерисованная птица и улучшенная мобильная панель подсказок."];
+const APP_VERSION='1.2.0';
+const CACHE='picto-v1.2.0',PREFIX='picto-',VERSION=APP_VERSION,RELEASE_DATE='2026-10-13',CACHE_PROTOCOL=2;
+const RELEASE_NOTES=["Расшифровка из пяти независимых ячеек: выбирай из 8–10 слов, оставляй сомнительные поля пустыми и получай очки за точные совпадения.","В каждом раунде автору доступны только 18 символов. Часть буквальных изображений специально запрещена.","Новые многосоставные фразы, автоматическое склонение последнего слова при смене предлога и отдельный разбор каждой части ответа."];
 const FILES=['./','./index.html','./app.js','./styles.css','./symbols.js','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/update-manager.js'];
 const SCOPE=new URL('./',self.registration.scope),MAP=new Map(FILES.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fresh(request){const u=new URL(request instanceof Request?request.url:request,SCOPE);u.searchParams.set('__pw_build',VERSION+'-p'+CACHE_PROTOCOL);const r=await fetch(u,{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw Error('Offline');return r;}
