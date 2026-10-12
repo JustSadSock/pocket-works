@@ -218,14 +218,41 @@ function preview(local=false){
  const v=local?practice:view;
  change('<section class="phase-page">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+'<div class="phase-body"><p class="phase-directive">Запомни детали пяти картин.</p>'+galleryHtml(v.selected)+(local?'<button class="btn primary wide" data-action="skip">Перейти к реставрации</button>':'')+'</div></section>','preview');
 }
-function toolbar(){return '<div class="tools">'+[['brush','◉','Кисть'],['fill','▣','Заливка'],['picker','◈','Пипетка'],['erase','⌫','Ластик'],['hand','✥','Панорама']].map(([id,icon,label])=>'<button class="tool'+(id==='brush'?' active':'')+'" data-tool="'+id+'" aria-label="'+label+'"><strong>'+icon+'</strong><span>'+label+'</span></button>').join('')+'</div><div class="colors">'+['#304a43','#9d4c3c','#d6ae6f','#f1e4c5','#263d57','#637f68'].map((c,i)=>'<button class="swatch'+(i===0?' active':'')+'" data-color="'+c+'" aria-label="Цвет '+(i+1)+'" style="background:'+c+'"></button>').join('')+'<input type="color" class="color-input" id="customColor" value="#304a43" aria-label="Другой цвет"></div><div class="adjust"><label for="brushSize">Размер</label><input type="range" id="brushSize" min="1" max="48" value="12"><button class="tool" data-cmd="undo" aria-label="Отменить">↶</button><button class="tool" data-cmd="redo" aria-label="Вернуть">↷</button><button class="tool" data-cmd="out" aria-label="Отдалить">−</button><button class="tool" data-cmd="in" aria-label="Приблизить">+</button><button class="tool" data-cmd="center" aria-label="К повреждению">◎</button></div>'}
+function editorIcon(name){
+ const shapes={
+ brush:'<path d="m15 4 5 5-8 8-4-4zM7 14c-3 0-3 3-3 6 3 0 6-1 6-4"/>',
+ fill:'<path d="m4 11 8-8 8 8-8 8zM4 11h16M20 17c.7 1 1.5 2 1.5 2.7a1.5 1.5 0 0 1-3 0c0-.7.8-1.7 1.5-2.7Z"/>',
+ picker:'<path d="m12 4 2-2 8 8-2 2-2-2-10 10-4 1 1-4L14 6zM12 8l4 4"/>',
+ erase:'<path d="m4 13 8-9a2 2 0 0 1 3 0l6 6a2 2 0 0 1 0 3l-8 7H8l-4-4a2 2 0 0 1 0-3zM9 9l8 8M13 20h8"/>',
+ hand:'<path d="M9 13V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v6-3a1.5 1.5 0 0 1 3 0v6c0 5-3 7-7 7h-2c-3 0-5-2-6-4l-2-3a2 2 0 0 1 3-2z"/>',
+ undo:'<path d="M9 7 4 12l5 5M4 12h10a6 6 0 0 1 6 6"/>',
+ redo:'<path d="m15 7 5 5-5 5M20 12H10a6 6 0 0 0-6 6"/>',
+ out:'<path d="M5 12h14"/>',in:'<path d="M5 12h14M12 5v14"/>',
+ center:'<path d="M12 3v4m0 10v4M3 12h4m10 0h4"/><circle cx="12" cy="12" r="5"/>',
+ precision:'<circle cx="12" cy="12" r="7"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>',
+ swap:'<path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/>'
+ };
+ return '<svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">'+(shapes[name]||'')+'</svg>';
+}
+function toolbar(){
+ const tools=[['brush','Кисть'],['fill','Заливка'],['picker','Пипетка'],['erase','Ластик'],['hand','Панорама']];
+ const palette=['#304a43','#9d4c3c','#d6ae6f','#f1e4c5','#263d57','#637f68'];
+ const toolButton=(name,label,command=false)=>'<button type="button" class="tool'+(name==='brush'&&!command?' active':'')+'" '+(command?'data-cmd':'data-tool')+'="'+name+'" aria-label="'+label+'" title="'+label+'">'+editorIcon(name)+'<span>'+label+'</span></button>';
+ return '<div class="tools">'+tools.map(([name,label])=>toolButton(name,label)).join('')+'</div>'+
+ '<div class="colors" aria-label="Цвета кисти">'+palette.map((color,i)=>'<button type="button" class="swatch'+(i===0?' active':'')+'" data-color="'+color+'" aria-label="Цвет '+(i+1)+'" style="background:'+color+'"></button>').join('')+
+ '<input type="color" class="color-input" id="customColor" value="#304a43" aria-label="Свой цвет"></div>'+
+ '<div class="adjust"><label for="brushSize">Толщина</label><input type="range" id="brushSize" aria-label="Толщина кисти" min="1" max="48" value="12"><div class="adjust-actions">'+
+ toolButton('undo','Отменить',true)+toolButton('redo','Вернуть',true)+
+ '<button type="button" class="mode-switch" data-cmd="precision" aria-pressed="false" title="Переключить режим рисования">'+editorIcon('precision')+'<span>Прямое</span></button>'+
+ '</div></div><div class="zoom-actions">'+toolButton('out','Отдалить',true)+toolButton('in','Приблизить',true)+toolButton('center','К повреждению',true)+'</div>';
+}
 function drawing(local=false){
   const v=local?practice:view,ass=v.mine;
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
-  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas></div></div><div class="work-tip">Рисуй внутри повреждения. Выбери инструмент снизу.</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="quiet" id="strokeCount">Мазков: 0 / 72</div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
-  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит мазков, используй отмену':'Мазков: '+n+' / 72'}});
-  const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Мазков: '+editor.strokes.length+' / 72';
+  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="quiet" id="strokeCount">Линий: 0 / 72</div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 72'}});
+  const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Линий: '+editor.strokes.length+' / 72';
 }
 
 function waiting(){
