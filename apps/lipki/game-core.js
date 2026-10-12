@@ -13,7 +13,7 @@ const LEVELS=[
  {name:'ПУГОВИЧНАЯ ДВЕРЬ',hint:'Толкайте и держите',balls:[{x:270,y:520}],pads:[775],gate:952,springs:[{x:540,y:553}],blocks:[]},
  {name:'ДВА БЕРЕГА',hint:'Найди точку опоры',gaps:[[338,503],[708,858]],springs:[{x:275,y:553}],blocks:[{x:370,y:450,w:105,h:18},{x:770,y:441,w:96,h:18}]},
  {name:'ДВОЙНАЯ ЗАДВИЖКА',hint:'Две кнопки одновременно',balls:[{x:300,y:520},{x:455,y:520}],pads:[705,815],gate:979,blocks:[{x:530,y:446,w:105,h:18}]},
- {name:'ПОСЛЕДНИЙ УЗОР',hint:'Все должны добраться',gaps:[[338,498],[682,843]],balls:[{x:290,y:520}],pads:[905],gate:1018,springs:[{x:580,y:553}],blocks:[{x:379,y:451,w:105,h:18},{x:730,y:445,w:105,h:18}]}
+ {name:'ПОСЛЕДНИЙ УЗОР',hint:'Все должны добраться',gaps:[[338,498],[682,843]],balls:[{x:290,y:520}],pads:[190],gate:1018,springs:[{x:580,y:553}],blocks:[{x:379,y:451,w:105,h:18},{x:730,y:445,w:105,h:18}]}
 ];
 const COLORS=['#ef876e','#64b8ad','#e8bb59','#a28bcb'];
 function terrain(w){
@@ -27,13 +27,13 @@ function terrain(w){
  for(const b of def.blocks||[])solids.push({...b,type:'block'});
  const padActive=(def.pads||[]).map(x=>w.players.some(p=>Math.abs(p.x-x)<36&&Math.abs(p.y+R-GROUND)<34)||
  w.balls.some(b=>Math.abs(b.x-x)<40&&Math.abs(b.y+b.r-GROUND)<37));
- if(def.gate&&!padActive.every(Boolean))solids.push({x:def.gate,y:363,w:32,h:GROUND-363,type:'gate'});
+ if(def.gate&&!w.gateOpen&&!padActive.every(Boolean))solids.push({x:def.gate,y:363,w:32,h:GROUND-363,type:'gate'});
  return {solids,padActive,def};
 }
 function makeWorld(ids=['solo'],lev=0){
  const level=clamp(Math.floor(lev)||0,0,LEVELS.length-1),def=LEVELS[level];
  return {level,phase:'play',time:0,revision:0,players:ids.map((id,i)=>({id,x:92+i*52,y:GROUND-R-2,vx:0,vy:0,grounded:true,coyote:.105,jumpHeld:false,grabHeld:false,grab:null,face:1,squash:0})),
- balls:(def.balls||[]).map((b,i)=>({id:'b'+i,x:b.x,y:b.y,vx:0,vy:0,r:28})),pads:[],exit:{x:1114,y:GROUND-R-2},particles:0};
+ balls:(def.balls||[]).map((b,i)=>({id:'b'+i,x:b.x,y:b.y,vx:0,vy:0,r:28})),pads:[],gateOpen:false,exit:{x:1114,y:GROUND-R-2},particles:0};
 }
 function rectHit(b,box){
  const nx=clamp(b.x,box.x,box.x+box.w),ny=clamp(b.y,box.y,box.y+box.h),dx=b.x-nx,dy=b.y-ny,d=Math.hypot(dx,dy);
@@ -136,6 +136,7 @@ function simulateOne(w,dt,inputs){
   for(const b of w.balls)if(Math.abs(b.x-spring.x)<41&&Math.abs(b.y+b.r-spring.y)<22&&b.vy>=0)b.vy=-660;
  }
  w.pads=terrain(w).padActive;
+ if(def.gate&&w.pads.every(Boolean))w.gateOpen=true;
  const clear=w.players.length>0&&w.players.every(p=>Math.hypot(p.x-w.exit.x,p.y-w.exit.y)<76);
  if(clear){w.phase='cleared';w.revision++;}
  w.time+=dt;

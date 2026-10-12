@@ -129,7 +129,7 @@ export function drawWorld(canvas,world,focusId='',now=0,online=false){
  (def.pads||[]).forEach((x,i)=>drawButton(c,x,GROUND-9,!!padActive[i],i));
  (def.springs||[]).forEach(s=>drawSpring(c,s,now));
  (def.balls||[]).forEach((b,i)=>{if(world.balls[i])drawBall(c,world.balls[i],now)});
- if(def.gate)drawGate(c,def.gate,padActive.every(Boolean));
+ if(def.gate)drawGate(c,def.gate,world.gateOpen||padActive.every(Boolean));
  drawDoor(c,world.exit.x,GROUND-47,world.players.every(p=>Math.abs(p.x-world.exit.x)<105),now);
  world.players.forEach((p,i)=>{
   if(p.grab&&p.grab.kind!=='wall'){
