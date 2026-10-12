@@ -60,7 +60,8 @@ export function paint(canvas,world,{self='',time=0,cover=false,reduced=false}={}
   c.beginPath();c.moveTo(lift.x+lift.w/2,py+lift.h);c.lineTo(lift.x+lift.w/2,543);
   c.strokeStyle='#ffffffbc';c.lineWidth=5;c.setLineDash([8,8]);c.stroke();c.setLineDash([]);
  }
- const platforms=[...s.floors,...s.platforms,...(s.lifts||[]).map(l=>({...l,y:l.y+Math.sin((world.clock||0)*Math.PI*2/l.period)*l.amp}))];
+ const bridge=s.rescue&&(world.phase||0)>=1?[{x:439,y:530-22*Math.max(0,Math.min(1,(world.phaseTime||0)/.55)),w:136,h:18}]:[];
+ const platforms=[...s.floors,...s.platforms,...bridge,...(s.lifts||[]).map(l=>({...l,y:l.y+Math.sin((world.clock||0)*Math.PI*2/l.period)*l.amp}))];
  for(const p of platforms){
   box(c,p.x,p.y,p.w,p.h,8,'#ffe3a7');
   box(c,p.x+2,p.y+2,p.w-4,13,5,'#9ee6b2',null);
@@ -110,7 +111,8 @@ export function paint(canvas,world,{self='',time=0,cover=false,reduced=false}={}
   dot(c,b.x,b.y,5,on?'#36b976':'#fff0a1');c.restore();
  }
  for(const hazard of s.hazards||[]){
-  const x=hazard.x+Math.sin((world.clock||0)*Math.PI*2/hazard.period)*hazard.amp,y=hazard.y;
+  const speed=s.kind==='lift'&&(world.phase||0)>0?1.5:1;
+  const x=hazard.x+Math.sin((world.clock||0)*speed*Math.PI*2/hazard.period)*hazard.amp,y=hazard.y;
   dot(c,x,y,hazard.r+8,'#fff1ba85');dot(c,x,y,hazard.r,'#ffa1a6');
   c.save();c.translate(x,y);c.rotate(reduced?0:time*4);
   c.strokeStyle=ink;c.lineWidth=4;
