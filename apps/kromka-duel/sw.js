@@ -1,5 +1,5 @@
-const VERSION='2.0.0',CACHE='kromka-duel-v2.0.0',PREFIX='kromka-duel-',PROTOCOL=2;
-const NOTES=['Поединки в реальном времени вместо пошаговых команд.','Быстрые выпады рапирой, точные парирования, рывки и контратаки.','PocketNet v2 с локальным предсказанием, тренировка и новая арена.'];
+const VERSION='2.1.0',CACHE='kromka-duel-v2.1.0',PREFIX='kromka-duel-',PROTOCOL=2;
+const NOTES=['Удобная раскладка ПК: WASD, прицел мышью, ЛКМ выпад, ПКМ щит и парирование, пробел рывок.','Реальные столкновения клинков вместо защиты только по кнопке.','Новый физический щит в левой руке с инерцией и PocketNet v3.'];
 const FILES=['./','./index.html','./app.js','./engine.js','./art.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/update-manager.js','../../shared/capabilities/net.js'];
 const SCOPE=new URL('./',self.registration.scope),MAP=new Map(FILES.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fresh(value){const u=new URL(value instanceof Request?value.url:value,SCOPE);u.searchParams.set('__pw_build',VERSION+'-p'+PROTOCOL);const r=await fetch(u,{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw Error('offline');return r;}
