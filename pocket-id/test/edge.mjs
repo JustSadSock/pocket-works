@@ -45,7 +45,7 @@ assert.equal(mine.data.user.id,registered.data.user.id);
 // Pocket Social must query the real indexed nickname directory through authenticated Pocket ID.
 const directory=await request('directory?q='+encodeURIComponent(name.slice(0,5)),{cookie:registered.cookie});
 assert.equal(directory.status,200,JSON.stringify(directory.data));
-assert.ok(directory.data.users.some(u=>u.id===registered.data.user.id));
+assert.ok(directory.data.users.some(u=>u.id===registered.data.user.id),JSON.stringify({directory:directory.data,expected:registered.data.user}));
 const noDirectory=await request('directory?q='+encodeURIComponent(name.slice(0,5)));
 assert.equal(noDirectory.status,401);
 const publicAccount=await request('public?id='+registered.data.user.id,{cookie:registered.cookie});
