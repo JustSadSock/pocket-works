@@ -125,7 +125,7 @@ function updateClock(){
 function setState(next){
  if(!next||!Array.isArray(next.players)||!next.phase)return;
  const newScene=next.phase!==lastPhase||next.round!==lastRound;
- const wasReady=state?.ready?.includes(me?.id);
+ const wasReady=state?.ready?.includes(me?.id),previousReadyCount=state?.ready?.length??0;
  state=next;
  if(newScene){
   lastRound=next.round;lastPhase=next.phase;
@@ -134,7 +134,7 @@ function setState(next){
  }
  if(next.phase==='compose'){
   const ready=next.ready?.includes(me?.id);
-  if(ready!==wasReady)render();
+  if(ready!==wasReady||(ready&&(next.ready?.length??0)!==previousReadyCount))render();
   else updateClock(); // do not replace the canvas or lose pointer capture on echoed edits
   return;
  }
