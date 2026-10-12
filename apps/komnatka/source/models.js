@@ -122,6 +122,33 @@ function windowViewMaterial(scene){
  const m=new StandardMaterial('outside-scenery',scene);m.diffuseTexture=tx;m.specularColor=new Color3(.05,.06,.06);
  outdoorMaterials.set(scene,m);return m;
 }
+const rugMaterials=new WeakMap();
+function wovenRug(scene,color){
+ let set=rugMaterials.get(scene);
+ if(!set){set=new Map();rugMaterials.set(scene,set);}
+ if(set.has(color))return set.get(color);
+ const tx=texture(scene,'artisan-rug-'+color,c=>{
+  c.fillStyle=color;c.fillRect(0,0,256,256);
+  for(let y=0;y<256;y+=3)for(let x=0;x<256;x+=4){
+   c.fillStyle=(x+y)%3===0?'rgba(255,244,213,.11)':'rgba(76,57,49,.065)';
+   c.fillRect(x+(y%2),y,2,.7);
+  }
+  c.strokeStyle='#ecdcbf';c.lineWidth=9;c.strokeRect(14,12,228,232);
+  c.strokeStyle='rgba(92,71,56,.30)';c.lineWidth=2;c.strokeRect(22,20,212,216);
+  c.strokeStyle='#eedebf';c.lineWidth=4;
+  for(let i=0;i<4;i++){const xx=66+i*41;c.beginPath();c.moveTo(xx,63);c.lineTo(xx+18,128);c.lineTo(xx,193);c.stroke();}
+  c.strokeStyle='rgba(255,246,217,.7)';c.lineWidth=3;
+  for(let z=0;z<3;z++){const y=81+z*48;c.beginPath();c.moveTo(45,y);c.lineTo(211,y);c.stroke();}
+  c.fillStyle='#f0debf';
+  for(let x=38;x<223;x+=37)for(let y=47;y<220;y+=60){
+   c.beginPath();c.moveTo(x,y-8);c.lineTo(x+9,y);c.lineTo(x,y+8);c.lineTo(x-9,y);c.closePath();c.fill();
+  }
+ });
+ const mat=new StandardMaterial('loom-woven-'+color,scene);
+ mat.diffuseColor=Color3.White();mat.diffuseTexture=tx;
+ mat.specularColor=new Color3(.015,.015,.015);mat.specularPower=7;
+ set.set(color,mat);return mat;
+}
 export function makeItem(scene,item){
  const meta=byType[item.type];if(!meta)throw new Error('Unknown item: '+item.type);
  const M=getMaterials(scene), root=new TransformNode('item-'+item.id,scene);
@@ -235,10 +262,13 @@ export function makeItem(scene,item){
   }
  }
   if(t==='rug'){
-   box(scene,'carpet-edge',root,M.cream,3.02,.045,2.19,0,.035,0,.16);
-   box(scene,'carpet',root,cloth,2.88,.055,2.04,0,.068,0,.12);
-   box(scene,'carpet-medallion',root,M.paper,1.15,.015,.79,0,.107,0,.23);
-   for(const x of [-1.26,1.26])box(scene,'woven-lines',root,M.cream,.032,.012,1.8,x,.109,0,.008);
+  // The pile is only ~2 cm tall; chair/table legs remain in front in real depth.
+  box(scene,'woven-binding',root,M.cream,3.00,.012,2.17,0,.008,0,.055);
+  box(scene,'soft-flat-pile',root,wovenRug(scene,item.color||'#d6ab93'),2.91,.012,2.09,0,.019,0,.044);
+  const fringe=makeMaterial(scene,'rug-fringe','#ecdcc2');
+  for(const end of [-1,1])for(let j=0;j<18;j++){
+   box(scene,'cotton-tassel',root,fringe,.025,.006,.072,-1.40+j*.164,.006,end*1.113,.006);
+  }
  }
  if(t==='books'){
    const palette=['#c18d7d','#8ca18f','#d6bb82','#9b91a6'];
@@ -273,7 +303,7 @@ export function makeItem(scene,item){
    const x=side*.85;
    const fabric=box(scene,'linen-side-curtain',root,curtain,.15,1.73,.082,x,-.015,.22,.037);
    fabric.rotation.z=side*.055;
-   orb(scene,'curtain-tieback',root,M.wood,x,-.46,.285,.095,.06,.055);
+   box(scene,'stitched-curtain-band',root,M.cream,.16,.033,.088,x,-.46,.276,.012);
   }
  }
   for(const node of root.getChildMeshes(false)){node.metadata={itemId:item.id};node.isPickable=true;node.receiveShadows=false;}

@@ -4,30 +4,26 @@ import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { Engine, Scene, ArcRotateCamera, Vector3, Color3, TransformNode } from '@babylonjs/core';
 import { CATALOG, COLORS, byType, makeItem } from './models.js';
+import { createSoundscape } from './soundscape.js';
+import { buildFurnitureThumbnails } from './thumbnails.js';
 import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.1.1',releaseNotes:['Исправлены сквозные поверхности мебели, обновлены листва, окно и подушки; цвет и поворот выбираются до установки.']});
+registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.1.2',releaseNotes:['Мягкий день, тёмная ночь, стабильные модели, тканый ковёр, настоящие светильники и предметные миниатюры каталога.']});
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
-let state=load(),scene,engine,camera,room,ready=false,muted=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map(),lights=[],hintSeen=false;
+let state=load(),scene,engine,camera,room,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map(),lights=[],hintSeen=false;
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
 const GROUPS=[['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
-let activeGroup='furniture',savedTimer=0,toastTimer=0,audio;
+let activeGroup='furniture',savedTimer=0,toastTimer=0;
+const thumbnails=new Map();
 const clone=value=>JSON.parse(JSON.stringify(value));
-function sound(freq=450,kind='sine',duration=.085,volume=.045) {
- if(muted)return;
- try{
-  audio||=(new (window.AudioContext||window.webkitAudioContext)());
-  if(audio.state==='suspended')audio.resume();
-  const o=audio.createOscillator(),g=audio.createGain();
-  o.type=kind;o.frequency.setValueAtTime(freq,audio.currentTime);
-  o.frequency.exponentialRampToValueAtTime(Math.max(60,freq*.72),audio.currentTime+duration);
-  g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+duration);
-  o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+duration+.015);
- }catch{}
+const soundscape=createSoundscape();
+function sound(cue='select') {
+ const key=typeof cue==='string'?cue:cue>=690?'place':cue<240?'blocked':cue<320?'delete':cue<440?'select':cue<570?'rotate':'place';
+ soundscape.play(key);
 }
 function toast(message) {
  ui.toast.textContent=message;ui.toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>ui.toast.classList.remove('show'),2350);
@@ -44,18 +40,19 @@ function record(before) {
 function mutate(fn) {const before=JSON.stringify(state);fn();record(before);refresh();}
 function undo(){
  if(!history.length)return;
- future.push(JSON.stringify(state));state=sanitize(JSON.parse(history.pop()));selectedId=null;cancelPending(false);refresh();persist();sound(400);updateActions();
+ future.push(JSON.stringify(state));state=sanitize(JSON.parse(history.pop()));selectedId=null;cancelPending(false);refresh();persist();sound('undo');updateActions();
 }
 function redo(){
  if(!future.length)return;
- history.push(JSON.stringify(state));state=sanitize(JSON.parse(future.pop()));selectedId=null;cancelPending(false);refresh();persist();sound(500);updateActions();
+ history.push(JSON.stringify(state));state=sanitize(JSON.parse(future.pop()));selectedId=null;cancelPending(false);refresh();persist();sound('paint');updateActions();
 }
 function updateActions() {
  $('undoBtn').disabled=!history.length;$('redoBtn').disabled=!future.length;
  $('eveningBtn').classList.toggle('active',state.evening);
+ $('stage').classList.toggle('night',state.evening);
  $('eveningBtn').setAttribute('aria-pressed',String(state.evening));
- $('soundBtn').setAttribute('aria-pressed',String(!muted));
- $('soundBtn').title=muted?'Включить звук':'Выключить звук';
+ $('soundBtn').setAttribute('aria-pressed',String(!soundscape.muted));
+ $('soundBtn').title=soundscape.muted?'Включить звук':'Выключить звук';
 }
 function sprite(type){
  const d={
@@ -78,7 +75,7 @@ function sprite(type){
 }
 function showCatalog() {
  ui.categories.innerHTML=GROUPS.map(([key,name])=>'<button type="button" data-group="'+key+'" class="'+(key===activeGroup?'on':'')+'">'+name+'</button>').join('');
- ui.categories.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{activeGroup=b.dataset.group;cancelPending(false);showCatalog();sound(390);}));
+ ui.categories.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{activeGroup=b.dataset.group;cancelPending(false);showCatalog();sound('select');}));
  ui.catalog.hidden=activeGroup==='finish';ui.finish.hidden=activeGroup!=='finish';
  $('cancelPlacement').hidden=!pending;
  $('cancelPlacementMobile').hidden=!pending;
@@ -90,9 +87,9 @@ function renderFinish(){
  ui.finish.innerHTML='<div class="finish-row"><b>Стены</b><div class="color-row">'+WALLS.map((c,i)=>'<button class="paint-chip '+(state.wallColor===i?'picked':'')+'" style="--paint:'+c+'" data-wall="'+i+'" aria-label="Цвет стены '+(i+1)+'"></button>').join('')+'</div></div>'
  +'<div class="finish-row"><b>Обои</b><div class="pattern-row">'+PATTERNS.map((p,i)=>'<button class="'+(state.pattern===p?'picked':'')+'" data-pattern="'+p+'">'+['Краска','Полоска','Цветы'][i]+'</button>').join('')+'</div></div>'
  +'<div class="finish-row"><b>Пол</b><div class="floor-row">'+FLOORS.map((f,i)=>'<button class="'+(state.floor===f?'picked':'')+'" data-floor="'+f+'">'+['Мёд','Орех','Светлый','Плитка'][i]+'</button>').join('')+'</div></div>';
- ui.finish.querySelectorAll('[data-wall]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.wallColor=Number(el.dataset.wall));sound(500);}));
- ui.finish.querySelectorAll('[data-pattern]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.pattern=el.dataset.pattern);sound(500);}));
- ui.finish.querySelectorAll('[data-floor]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.floor=el.dataset.floor);sound(500);}));
+ ui.finish.querySelectorAll('[data-wall]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.wallColor=Number(el.dataset.wall));sound('paint');}));
+ ui.finish.querySelectorAll('[data-pattern]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.pattern=el.dataset.pattern);sound('paint');}));
+ ui.finish.querySelectorAll('[data-floor]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.floor=el.dataset.floor);sound('paint');}));
 }
 function placementPalette(){
  const container=$('placementControls');
@@ -109,7 +106,7 @@ function placementPalette(){
   pending.ghost=makeItem(scene,pending.proto);
   pending.ghost.getChildMeshes(false).forEach(mesh=>{mesh.isPickable=false;mesh.visibility=pending.valid?1:.5;});
   pending.ghost.setEnabled(Boolean(enabled));
-  placementPalette();sound(540);
+  placementPalette();sound('paint');
  }));
 }
 function beginPlacement(type){
@@ -122,7 +119,7 @@ function beginPlacement(type){
  pending.ghost.getChildMeshes(false).forEach(mesh=>{mesh.isPickable=false;});
  pending.ghost.setEnabled(false); // No ghost bleeding through the furnished room until a valid target is known.
  ui.hint.textContent=byType[type].layer==='wall'?'Коснись стены, чтобы повесить':'Коснись места в комнате, чтобы поставить';
- ui.hint.classList.add('visible');placementPalette();showCatalog();sound(680,'sine',.06);
+ ui.hint.classList.add('visible');placementPalette();showCatalog();sound('lift');
 }
 function cancelPending(show=true){
  if(!pending)return;
@@ -152,7 +149,7 @@ function rotatePlacement(){
  pending.valid=pending.previewReady&&valid(state,pending.proto,'preview');
  pending.ghost.rotation.y=pending.proto.rot*Math.PI/2;
  pending.ghost.getChildMeshes(false).forEach(mesh=>mesh.visibility=pending.valid?1:.46);
- sound(535,'triangle',.07);
+ sound('rotate');
 }
 function hideSelection(){ui.selected.hidden=true;}
 function select(id) {
@@ -163,7 +160,7 @@ function select(id) {
  ui.selectedName.textContent=byType[item.type].name;
  ui.selected.hidden=false;
  ui.swatches.innerHTML=COLORS.map(c=>'<button type="button" class="color-dot '+(item.color===c?'picked':'')+'" style="--paint:'+c+'" data-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('');
- ui.swatches.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{mutate(()=>{const found=state.items.find(i=>i.id===selectedId);if(found)found.color=button.dataset.color;});sound(540);}));
+ ui.swatches.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{mutate(()=>{const found=state.items.find(i=>i.id===selectedId);if(found)found.color=button.dataset.color;});sound('paint');}));
  $('rotateBtn').disabled=item.type==='window'||item.type==='frame';
  $('duplicateBtn').disabled=false;
  sound(340,'sine',.045,.022);
@@ -172,15 +169,32 @@ function refresh(){
  if(!ready)return;
  room.setFinish(state);
  room.setEvening(state.evening);
- room.clearLights();lights=[];
- for(const root of roots.values())root.dispose(false,false);
- roots.clear();
- for(const it of state.items){const root=makeItem(scene,it);roots.set(it.id,root);
-  if(it.type==='tablelamp'||it.type==='floorlamp')lights.push(room.addPracticalLight(new Vector3(it.x,it.y+(it.type==='floorlamp'?2.05:.55),it.z),it.type==='tablelamp'));
+ const present=new Set();
+ let changed=false;
+ for(const item of state.items){
+  present.add(item.id);
+  const signature=[item.type,item.color,item.variant].join('|');
+  let root=roots.get(item.id);
+  if(!root || root.metadata?.appearance!==signature){
+   if(root)root.dispose(false,false);
+   root=makeItem(scene,item);
+   root.metadata={appearance:signature};
+   roots.set(item.id,root);changed=true;
+  }
+  root.position.set(item.x,item.y,item.z);
+  root.rotation.y=item.rot*Math.PI/2;
+  root.scaling.setAll(1);
+  root.getChildMeshes(false).forEach(mesh=>mesh.visibility=1);
  }
- room.setShadowCasters(roots,state.items);
- room.setEvening(state.evening);
- if(selectedId){const s=state.items.find(i=>i.id===selectedId);if(s)select(s.id);else{selectedId=null;hideSelection();}}
+ for(const [id,root] of roots){
+  if(!present.has(id)){root.dispose(false,false);roots.delete(id);changed=true;}
+ }
+ if(changed)room.setShadowCasters(roots,state.items);
+ room.syncPracticalLights(state.items);
+ if(selectedId){
+  const item=state.items.find(i=>i.id===selectedId);
+  if(item)select(item.id);else{selectedId=null;hideSelection();}
+ }
  showCatalog();updateActions();
 }
 function pick(ev,predicate) {
@@ -208,6 +222,14 @@ function pickTarget(ev,item) {
  }
  return {x,z,y:0,rot:item.rot};
 }
+function trashHovered(ev){
+ const r=$('stage').getBoundingClientRect();
+ return ev.clientX>=r.right-102 && ev.clientX<=r.right+58 &&
+ ev.clientY>r.top+54 && ev.clientY<r.bottom-50;
+}
+function hideTrash(){
+ $('trashZone').hidden=true;$('trashZone').classList.remove('hover');
+}
 function startPointer(ev){
  if(!ready||ev.button>0)return;
  ui.canvas.setPointerCapture(ev.pointerId);
@@ -225,6 +247,11 @@ function movePointer(ev) {
  if(!drag||drag.kind!=='move')return;
  if(Math.hypot(ev.clientX-drag.startX,ev.clientY-drag.startY)<5&&!drag.moved)return;
  const item=state.items.find(i=>i.id===drag.id);if(!item)return;
+ drag.moved=true;
+ $('trashZone').hidden=false;
+ drag.trash=trashHovered(ev);
+ $('trashZone').classList.toggle('hover',Boolean(drag.trash));
+ if(drag.trash){drag.valid=false;return;}
  const target=pickTarget(ev,item);if(!target)return;
  drag.moved=true;const dx=target.x-item.x,dz=target.z-item.z;
  moveWithChildren(state,item.id,dx,dz);
@@ -238,7 +265,11 @@ function movePointer(ev) {
 }
 function endPointer(ev) {
  if(!drag)return;
- const d=drag;drag=null;
+ const d=drag;drag=null;hideTrash();
+ if(d.kind==='move'&&d.moved&&d.trash){
+  state.items=removeWithChildren(state,d.id);
+  selectedId=null;hideSelection();record(d.before);refresh();sound('delete');toast('Предмет убран — действие можно отменить');return;
+ }
  if(d.kind==='place'&&pending){
   updateGhost(ev);
   if(pending.valid){
@@ -246,12 +277,12 @@ function endPointer(ev) {
    const before=JSON.stringify(state);
    state.items.push(proto);
    cancelPending(false);
-   record(before);refresh();select(proto.id);ui.hint.classList.remove('visible');sound(720,'triangle',.12);
+   record(before);refresh();select(proto.id);ui.hint.classList.remove('visible');sound('place');
    toast('Предмет на месте');
-  }else {sound(180,'triangle',.10);toast(byType[pending.type].tabletop?'Нужна свободная поверхность стола':'Выбери свободное место');}
+  }else {sound('blocked');toast(byType[pending.type].tabletop?'Нужна свободная поверхность стола':'Выбери свободное место');}
  }else if(d.kind==='move'&&d.moved){
-  if(d.valid&&state.items.every(i=>i.id===d.id||i.support!==d.id||valid(state,i))){record(d.before);refresh();sound(510,'triangle',.11);}
-  else{state=sanitize(JSON.parse(d.before));refresh();sound(190,'sine',.10);toast('Здесь предмет не поместится');}
+  if(d.valid&&state.items.every(i=>i.id===d.id||i.support!==d.id||valid(state,i))){const root=roots.get(d.id);if(root){root.scaling.setAll(1);root.getChildMeshes(false).forEach(m=>m.visibility=1);}record(d.before);refresh();sound('place');}
+  else{state=sanitize(JSON.parse(d.before));refresh();sound('blocked');toast('Здесь предмет не поместится');}
  }
 }
 function rotateSelected() {
@@ -260,7 +291,7 @@ function rotateSelected() {
  moveWithChildren(state,item.id,0,0,1);item.rot=(item.rot+1)%4;
  if(!valid(state,item)||state.items.some(i=>i.support===item.id&&!valid(state,i))){
   Object.assign(item,prev);for(const old of children)Object.assign(state.items.find(x=>x.id===old.id),old);
-  toast('Нет места для поворота');sound(190);return;
+  toast('Нет места для поворота');sound('blocked');return;
  }
  record(before);refresh();sound(570,'triangle');
 }
@@ -270,7 +301,7 @@ function duplicateSelected(){
  const offsets=meta.layer==='wall'?[-2,-1.5,-1,.75,1,1.5,2,2.5,-2.5,3,-3].map(d=>it.wall==='back'?[d,0]:[0,d]):meta.tabletop?[[0,.35],[.35,0],[0,-.35],[-.35,0],[.35,.35],[-.35,-.35]]:[[2.8,0],[-2.8,0],[0,2.8],[0,-2.8],[2.8,1.5],[-2.8,1.5],[1.5,2.8],[-1.5,-2.8]];
  const free=offsets.find(([dx,dz])=>{next.x=Math.round((it.x+dx)*4)/4;next.z=Math.round((it.z+dz)*4)/4;return valid(state,next);});
  if(!free){toast('Для копии пока нет свободного места');return;}
- const before=JSON.stringify(state);state.items.push(next);record(before);refresh();select(next.id);sound(640);
+ const before=JSON.stringify(state);state.items.push(next);record(before);refresh();select(next.id);sound('place');
 }
 function removeSelected(){
  if(!selectedId)return;
@@ -282,17 +313,17 @@ function addEvents(){
  ui.canvas.addEventListener('pointerdown',startPointer);
  ui.canvas.addEventListener('pointermove',movePointer);
  ui.canvas.addEventListener('pointerup',endPointer);
- ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){state=sanitize(JSON.parse(drag.before));refresh();}drag=null;});
- window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){state=sanitize(JSON.parse(drag.before));refresh();}drag=null;persist();});
+ ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){state=sanitize(JSON.parse(drag.before));refresh();}drag=null;hideTrash();});
+ window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){state=sanitize(JSON.parse(drag.before));refresh();}drag=null;hideTrash();persist();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(savedTimer);save(state);status('Сохранено');}});
  window.addEventListener('pagehide',()=>{clearTimeout(savedTimer);save(state);});
  $('rotateBtn').addEventListener('click',rotateSelected);
  $('duplicateBtn').addEventListener('click',duplicateSelected);
  $('deleteBtn').addEventListener('click',removeSelected);
- $('doneBtn').addEventListener('click',()=>{selectedId=null;hideSelection();sound(420);});
+ $('doneBtn').addEventListener('click',()=>{selectedId=null;hideSelection();sound('select');});
  $('undoBtn').addEventListener('click',undo);$('redoBtn').addEventListener('click',redo);
- $('eveningBtn').addEventListener('click',()=>mutate(()=>{state.evening=!state.evening; sound(450);}));
- $('soundBtn').addEventListener('click',()=>{muted=!muted;updateActions();if(!muted)sound(570);});
+ $('eveningBtn').addEventListener('click',()=>mutate(()=>{state.evening=!state.evening; sound('light');}));
+ $('soundBtn').addEventListener('click',()=>{soundscape.toggle();updateActions();});
  $('photoBtn').addEventListener('click',()=>{
   try{const link=document.createElement('a');link.download='komnatka-'+new Date().toISOString().slice(0,10)+'.png';
    engine.renderEvenInBackground=true;scene.render();link.href=ui.canvas.toDataURL('image/png');link.click();toast('Снимок сохранён');sound(810,'triangle');}
@@ -300,7 +331,7 @@ function addEvents(){
  });
  $('resetBtn').addEventListener('click',()=>{$('resetDialog').hidden=false;});
  $('cancelReset').addEventListener('click',()=>{$('resetDialog').hidden=true;});
- $('confirmReset').addEventListener('click',()=>{const before=JSON.stringify(state);state=starter();selectedId=null;cancelPending(false);hideSelection();record(before);refresh();$('resetDialog').hidden=true;toast('Комната восстановлена');sound(600);});
+ $('confirmReset').addEventListener('click',()=>{const before=JSON.stringify(state);state=starter();selectedId=null;cancelPending(false);hideSelection();record(before);refresh();$('resetDialog').hidden=true;toast('Комната восстановлена');sound('place');});
  $('cancelPlacement').addEventListener('click',()=>cancelPending(false));
  $('cancelPlacementMobile').addEventListener('click',()=>cancelPending(false));
  $('closePlacement').addEventListener('click',()=>cancelPending(false));
@@ -331,6 +362,12 @@ function setup(){
  room=createRoom(scene);
  resize();
  addEvents();ready=true;refresh();ui.loading.classList.add('hidden');
+ setTimeout(()=>buildFurnitureThumbnails((type,src)=>{
+  thumbnails.set(type,src);
+  ui.catalog.querySelectorAll('[data-image-type]').forEach(el=>{
+   if(el.dataset.imageType===type)el.innerHTML='<img class="actual-thumbnail" src="'+src+'" alt="">';
+  });
+ }),500);
  if(!localStorage.getItem('pocket-works:komnatka:intro')){
   ui.hint.textContent='Выбери мебель справа или перетащи предмет в комнате';
   ui.hint.classList.add('visible');setTimeout(()=>ui.hint.classList.remove('visible'),4800);

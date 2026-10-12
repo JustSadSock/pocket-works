@@ -47,7 +47,8 @@ export function findSupport(state,item,x,z){
  if(!byType[item.type]?.tabletop)return null;
  const candidates=state.items.filter(it=>it.id!==item.id&&byType[it.type]?.top&&!byType[it.type]?.tabletop);
  return candidates.reverse().find(it=>{
-  const [w,d]=dimensions(it);return Math.abs(x-it.x)<w/2-.16&&Math.abs(z-it.z)<d/2-.14;
+  const [w,d]=dimensions(it),[pw,pd]=dimensions(item);
+  return Math.abs(x-it.x)<=(w-pw)/2-.005&&Math.abs(z-it.z)<=(d-pd)/2-.005;
  })||null;
 }
 export function valid(state,item,excludeId=item.id){
@@ -63,7 +64,7 @@ export function valid(state,item,excludeId=item.id){
  const [w,d]=dimensions(item);if(Math.abs(item.x)+w/2>ROOM||Math.abs(item.z)+d/2>ROOM)return false;
  if(meta.tabletop){
   const support=state.items.find(it=>it.id===item.support);if(!support||!byType[support.type]?.top)return false;
-  const [sw,sd]=dimensions(support);if(Math.abs(item.x-support.x)>sw/2-w/2-.065||Math.abs(item.z-support.z)>sd/2-d/2-.065)return false;
+  const [sw,sd]=dimensions(support);if(Math.abs(item.x-support.x)>(sw-w)/2-.005||Math.abs(item.z-support.z)>(sd-d)/2-.005)return false;
   return state.items.every(other=>{
    if(other.id===excludeId||other.support!==item.support)return true;
    const [ow,od]=dimensions(other);
