@@ -2,3 +2,39 @@
 @media (orientation:portrait){.menu-main{display:flex;flex-direction:column;justify-content:space-around;gap:3px;width:94%;overflow:hidden}.title-area{text-align:center}.title-area h1{font-size:clamp(48px,12vw,70px);margin:0 0 5px}.title-area p{max-width:340px;margin:0 auto 8px;font-size:12px}.title-area .thread{display:none}.info{justify-content:center}.menu-art{width:100%;min-height:0;flex:none;justify-content:center}.menu-art canvas{max-height:23dvh;max-width:95%;width:auto;min-width:75%}.sewn-caption{display:none}.menu-controls{width:100%;padding:0 4px 18px}.play-actions{grid-template-columns:1fr 1fr;gap:9px;margin:12px 0 10px}.big-action{font-size:15px;min-height:64px;padding:11px 12px}.big-action span{font-size:18px;right:10px;top:10px}.game-top{height:65px}.playfield-wrap{padding:2px 5px}.game-bottom{min-height:130px;padding:9px 8px}.direction,.abilities{gap:5px}.pad-button,.ability{width:57px;height:72px;font-size:23px}.ability{width:61px}.ability small{font-size:9px}.mode-stat{max-width:85px}.mode-stat strong{font-size:11px}.mode-stat button{font-size:10px;padding:4px}}
 @media(max-height:500px) and (orientation:landscape){.menu-top{height:43px}.menu-main{gap:1.4%}.title-area h1{font-size:clamp(38px,5.2vw,66px)}.title-area p{font-size:12px;margin-bottom:8px}.info span{font-size:9px}.menu-controls{padding:0}.field-row input{height:36px}.play-actions{margin:9px 0}.big-action{min-height:52px;padding:8px 12px;font-size:15px}.big-action span{top:8px}.sub-actions select{height:34px}.sub-actions button{min-height:34px}.game-top{height:44px}.game-bottom{min-height:84px;padding:4px 16px}.pad-button,.ability{height:63px;width:68px}.lobby-wrap h2{font-size:29px}.lobby-wrap{justify-content:flex-start}.stitched-emblem{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+
+/* Desktop control desk: keyboard hints replace touch keys without shrinking the playfield. */
+.desktop-deck,.desktop-duo-action{display:none}
+@media (hover:hover) and (pointer:fine) and (min-width:650px){
+ .desktop-duo-action{display:flex;align-items:center;gap:11px;width:100%;min-height:53px;margin:-3px 0 13px;padding:8px 13px;background:#e3ddc8;border:2px dashed #9aaf9c;border-radius:8px;color:#4f594f;font-size:14px;font-weight:900;text-align:left;box-shadow:0 4px 0 #b9b29b40;transition:transform .12s,background .12s}
+ .desktop-duo-action:hover{background:#d4e4d1}.desktop-duo-action:active{transform:translateY(2px)}.desktop-duo-action>span:nth-child(2){flex:1}
+ .desktop-duo-action small{display:block;font-size:11px;font-weight:600;color:#75816d;margin-top:2px}
+ .duo-avatars{width:47px;height:30px;position:relative;flex:none}.duo-avatars i{position:absolute;left:1px;top:5px;width:24px;height:24px;border-radius:10px 12px 11px 9px;background:#e47c64;border:2px solid #776158;box-shadow:0 3px 0 #a8725d33}
+ .duo-avatars i+ i{left:19px;top:2px;background:#78aea0}.duo-arrow{font-size:20px}
+ .game-bottom{min-height:77px;padding:9px 20px;justify-content:center;gap:26px}
+ .game-bottom .direction,.game-bottom .abilities{display:none}
+ .desktop-deck{display:flex;flex:1;align-items:center;justify-content:space-between;gap:17px;min-width:0}
+ .desktop-deck .pc-layout{display:none;align-items:center;gap:clamp(10px,1.8vw,27px);min-width:0;flex-wrap:wrap}
+ .desktop-deck[data-mode="solo"] .pc-solo,.desktop-deck[data-mode="duo"] .pc-duo,.desktop-deck[data-mode="online"] .pc-online{display:flex}
+ .keyboard-tip{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;font-weight:800;color:#71675e}
+ .keyboard-tip kbd{display:inline-grid;place-items:center;height:31px;min-width:30px;padding:0 6px;border:1px solid #aa9986;border-bottom:4px solid #a99780;background:#f7eddd;border-radius:6px;box-shadow:0 2px 0 #bba58d45;color:#514840;font:900 12px ui-monospace,SFMono-Regular,Consolas,monospace;transition:transform .07s,background .07s,border-color .07s}
+ .keyboard-tip kbd.key-wide{min-width:61px}
+ .keyboard-tip kbd.pressed{background:#e2b667;border-color:#ab8147;border-bottom-width:1px;transform:translateY(3px)}
+ .keyboard-esc{margin-left:auto}.keyboard-esc kbd{background:#ede0cd}
+ .keyboard-divider{width:1px;height:31px;background:#aa9b88}
+ .player-key-label{display:grid;place-items:center;width:24px;height:24px;border-radius:8px;background:#d78169;color:#fff9ea;font:900 13px system-ui}
+ .player-key-label--b{background:#70a9a1}
+ .game-bottom .mode-stat{max-width:none;flex-direction:row;align-items:center;gap:9px}
+ .game-bottom .mode-stat strong{font-size:12px;white-space:nowrap}
+ .game-bottom .mode-stat button{min-height:32px}
+ .playfield-wrap{padding:7px 18px 10px}
+ .playfield-wrap canvas{max-width:1300px}
+}
+@media (hover:hover) and (pointer:fine) and (min-width:650px) and (max-width:980px){
+ .game-bottom{padding:7px 12px;gap:10px}.desktop-deck{gap:10px}.desktop-deck .pc-layout{gap:8px}
+ .keyboard-tip{font-size:10px}.keyboard-tip kbd{min-width:26px;height:29px}
+}
+@media (hover:hover) and (pointer:fine) and (min-width:650px) and (max-height:480px){
+ .game-bottom{min-height:62px;padding-top:4px;padding-bottom:4px}.desktop-deck .pc-layout{gap:9px}
+}
