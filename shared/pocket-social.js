@@ -141,8 +141,12 @@ function render(){
 }
 function updateNotification(count){
   if(!entry)return;
-  const badge=q('.pws-entry__count',entry);
-  if(!badge)return;
+  let badge=q('.pws-entry__count',entry);
+  if(!badge){
+    badge=document.createElement('span');
+    badge.className='pws-entry__count';
+    entry.append(badge);
+  }
   badge.textContent=String(Math.min(count,99));badge.hidden=!count;
   entry.title=count?count+' новых запросов и приглашений':'Pocket ID · Профиль и друзья';
 }
@@ -205,7 +209,11 @@ async function search(){
   if(node)node.innerHTML=(state.error?'<div class="pws-error">'+esc(state.error)+'</div>':'')+searchResults();
 }
 async function updateIdentityNickname(nickname){
-  const current=window.PocketID?.getUser?.();
+  let current=window.PocketID?.getUser?.();
+  if(!current){
+    const reply=await fetch('/pocket-id/me',{credentials:'same-origin',cache:'no-store'});
+    current=(await reply.json()).user;
+  }
   if(!current?.complete)throw Error('Для редактирования нужен Pocket ID.');
   if(nickname===current.nickname)return;
   if(nickname.length<3||nickname.length>20||!/^[\p{L}\p{N}_-]+$/u.test(nickname))
@@ -214,7 +222,7 @@ async function updateIdentityNickname(nickname){
     headers:{'content-type':'application/json'},body:JSON.stringify({nickname,avatar:current.avatar})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw Error(({nickname_taken:'Этот никнейм уже занят.',invalid_profile:'Недопустимый никнейм.'})[data.error]||data.error||'Не удалось сменить никнейм.');
-  await window.PocketID.refresh();
+  if(window.PocketID?.refresh)await window.PocketID.refresh();
 }
 async function saveUnifiedProfile(){
   if(state.busy)return;
@@ -230,6 +238,7 @@ async function saveUnifiedProfile(){
       allowInvites:draft.allowInvites});
     await reload(false);
     state.edit=false;state.notice='Профиль сохранён.';
+    document.dispatchEvent(new CustomEvent('pocket-social:profile-updated',{detail:{accountId:state.me?.profile?.id}}));
   }catch(error){
     // The nickname can be saved before an appearance request fails; retry is safe.
     state.error=error.message+' Если никнейм уже изменился, повторное сохранение завершит настройку.';
