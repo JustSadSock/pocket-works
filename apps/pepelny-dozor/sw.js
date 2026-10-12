@@ -1,0 +1,11 @@
+const VERSION='1.0.0',PREFIX='pepelny-dozor-',CACHE=PREFIX+'v1.0.0';
+const FILES=['./','./index.html','./game.js','./styles.css','./manifest.webmanifest','./app.config.json','./asset-forge/sprites.json','./asset-forge/emblem.svg','./icons/icon.svg','./assets/creatures.png','./assets/creatures.json','./assets/abbey-emblem.png','./assets/abbey-emblem.svg','./assets/forge-index.json'];
+const APPROOT=new URL('./',self.registration.scope);
+const LIST=new Map(FILES.map(path=>{const u=new URL(path,APPROOT);return[u.pathname,u.href]}));
+self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);const failed=[];for(const url of new Set(LIST.values())){try{const response=await fetch(url,{cache:'reload'});if(!response.ok)throw Error(String(response.status));await cache.put(url,response)}catch(err){failed.push(url)}}if(failed.length)throw Error('Precache missing: '+failed.join(','));})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{await Promise.all((await caches.keys()).filter(x=>x.startsWith(PREFIX)&&x!==CACHE).map(x=>caches.delete(x)));await self.clients.claim()})()));
+self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:VERSION,releaseDate:'2026-10-12',releaseNotes:['Пять волн, арт-атлас и колокольный импульс.'],cacheProtocol:2,cacheName:CACHE})});
+self.addEventListener('fetch',event=>{const req=event.request;if(req.method!=='GET')return;const u=new URL(req.url);if(u.origin!==self.location.origin)return;const path=req.mode==='navigate'?APPROOT.pathname: u.pathname;if(req.mode!=='navigate'&&!LIST.has(path))return;
+ const key=req.mode==='navigate'?APPROOT.href:LIST.get(path);
+ event.respondWith((async()=>{const cache=await caches.open(CACHE);try{const network=await fetch(req);if(network.ok)await cache.put(key,network.clone());return network}catch{return(await cache.match(key))||Response.error()}})());
+});
