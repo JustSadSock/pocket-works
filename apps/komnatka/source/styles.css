@@ -69,3 +69,27 @@
  .toast{bottom:15px}
  .finish-row{display:block;margin-bottom:12px}
 }
+
+/* The placement tuner belongs to the room, not to a separate settings page. */
+.placement-tray{position:absolute;bottom:clamp(20px,4vh,44px);left:50%;transform:translateX(-50%);z-index:8;width:min(510px,calc(100% - 28px));background:#fffaf2;border:1px solid #f0e0ce;border-radius:18px;padding:12px 15px 11px;box-shadow:0 13px 42px #65483526;animation:tray-in .18s cubic-bezier(.19,.89,.45,1.12)}
+.placement-tray .selected-header{padding-bottom:9px}
+.placement-line{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.placement-line .selection-colors{flex:1;justify-content:flex-start;padding:0}
+.preview-rotate{display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;border-radius:10px;background:#e8dbc9;color:#785d49;padding:9px 12px;min-height:39px;font-size:12px;font-weight:900;transition:background .15s,transform .15s}
+.preview-rotate svg{width:17px;height:17px}
+.preview-rotate:not(:disabled):active{transform:scale(.95)}
+.placement-instruction{color:#9e8774;text-align:center;font-size:11px;font-weight:800;line-height:1.25;margin:11px 0 0}
+@media(max-width:840px){
+ .placement-tray{bottom:9px;padding:9px 11px 8px;width:min(470px,calc(100% - 15px));border-radius:15px}
+ .placement-tray .selected-header{padding-bottom:5px}
+ .placement-tray .selected-header b{font-size:12px}
+ .placement-line{gap:7px}.placement-line .selection-colors{gap:5px}.placement-line .color-dot{width:23px;height:23px}
+ .preview-rotate{min-height:33px;font-size:11px;padding:6px 8px}
+ .placement-instruction{margin-top:6px;font-size:10px}
+}
+@media(max-width:360px){.placement-line .color-dot{width:20px;height:20px}.preview-rotate{font-size:10px}}
+@media (max-width:840px) and (orientation:landscape) and (max-height:540px) {
+ .placement-tray{max-width:390px;bottom:7px}
+ .placement-line .color-dot{width:20px;height:20px}
+ .placement-instruction{margin-top:3px}
+}
