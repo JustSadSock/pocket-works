@@ -110,12 +110,16 @@ try{
  const balance=worldFor(people.slice(0,2),4),center=balance.stage.balance.x;
  balance.players[0].x=center-111;balance.players[1].x=center+111;
  balance.players.forEach(p=>{p.y=522;p.vx=0;p.vy=0;p.ground=true;});
- for(let tick=0;tick<610;tick++){
+ for(let tick=0;tick<900;tick++){
   now+=11;
-  const target=center+Math.sin(balance.clock*2.3)*11;
-  const middle=(balance.players[0].x+balance.players[1].x)/2;
-  const correction=target-middle,dir=Math.abs(correction)<2?0:Math.sign(correction);
-  balance.players.forEach(p=>{balance.inputs[p.id]={dir,jump:false,anchor:false,at:now};});
+  const offset=Math.sin(balance.clock*2.3)*11;
+  // A real two-input controller must resist the tether's inward pull while
+  // moving both ends slightly to counter the changing wind.
+  balance.players.forEach((p,i)=>{
+   const target=center+(i?114:-114)+offset;
+   const dir=Math.max(-1,Math.min(1,(target-p.x)*.14));
+   balance.inputs[p.id]={dir,jump:false,anchor:false,at:now};
+  });
   simulate(balance,.011,now);
   if(balance.balanceDone)break;
  }
