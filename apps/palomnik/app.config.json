@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "palomnik",
+  "name": "ПАЛОМНИК",
+  "shortName": "ПАЛОМНИК",
+  "description": "Проведи шагающую крепость сквозь три мёртвых неба. Выбирай опоры, береги жар и не дай ходоку разрушиться.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T19:28:00+03:00",
+  "changelog": [
+    "Новая атмосферная одиночная экспедиция с тремя биомами, тремя типами риска, маршрутом из 21 шага и сохранением.",
+    "Авторская низкоразрешённая псевдообъёмная графика с упорядоченным дизерингом, шагающая крепость, анимированные опоры и погода.",
+    "Управление касанием по опорам, пауза, звук с отключением, офлайн-режим и полноценный исход экспедиции."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#f1a36a",
+  "backgroundColor": "#10121c",
+  "themeColor": "#10121c",
+  "orientation": "portrait",
+  "cacheName": "palomnik-v1.0.0",
+  "storageNamespace": "pocket-works:palomnik",
+  "tags": [
+    "game",
+    "pixel art",
+    "dither",
+    "surreal",
+    "fantasy",
+    "walking fortress",
+    "strategy",
+    "choices",
+    "offline",
+    "portrait",
+    "single player"
+  ],
+  "order": 52
+}
