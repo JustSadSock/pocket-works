@@ -82,4 +82,30 @@ assert.equal(cached.inkCtx.state.lineCalls,firstLineCount,'live pointer does not
 cached.paintRevision++;
 cached.paintCachedFrame(image);
 assert.ok(cached.inkCtx.state.lineCalls>firstLineCount,'changing committed painting invalidates ink cache');
+
+// A long pointer gesture becomes several 45-point network segments BEFORE
+// pointerup. Each retired segment must already be visible in the ink cache;
+// the current live segment is rendered separately on every animation frame.
+const continuous=Object.create(Editor.prototype);
+Object.assign(continuous,{
+ canvas:mockCanvas(),closed:false,zone:{x:0,y:0,w:600,h:450},
+ strokes:[],working:null,paintRevision:0,size:12,tool:'brush',color:'#345678',
+ redoStack:[],limitWarned:false,inside(){return true},render(){},
+ save(){},saveSnapshot(){},onChange(){}
+});
+continuous.paintCachedFrame(image);
+assert.equal(continuous.inkCtx.state.lineCalls,0,'initially no permanent brush path');
+continuous.beginStroke([80,150]);
+for(let i=1;i<=46;i++)continuous.extendStroke([80+i*2,150+15*Math.sin(i/6)]);
+assert.equal(continuous.strokes.length,1,'the first network segment is retired mid-gesture');
+assert.ok(continuous.working?.p.length>1,'the pointer is still drawing the next segment');
+continuous.paintCachedFrame(image);
+const firstSegmentCalls=continuous.inkCtx.state.lineCalls;
+assert.ok(firstSegmentCalls>0,'the retired segment stays visible before pointerup');
+for(let i=47;i<=94;i++)continuous.extendStroke([80+i*2,150+15*Math.sin(i/6)]);
+assert.ok(continuous.strokes.length>=2,'the same gesture can retire another segment');
+continuous.paintCachedFrame(image);
+assert.ok(continuous.inkCtx.state.lineCalls>firstSegmentCalls,'second rollover also updates the visible completed ink');
+assert.equal(new Set(continuous.strokes.map(stroke=>stroke.g)).size,1,'all segments remain one undo gesture');
+
 console.log('ZAMAZKA: atomic server receipt, persisted retry, room restoration, point fidelity and cached drawing OK');
