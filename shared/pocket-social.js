@@ -47,6 +47,7 @@ const cloudBytes=value=>{
  return (bytes/(small?1000:1_000_000)).toLocaleString('ru-RU',{maximumFractionDigits:small?1:2})+(small?' КБ':' МБ');
 };
 const cloudAppLabel=app=>app==='folio'?'FOLIO':app==='zamazka'?'ЗАМАЗКА':app;
+const cloudPlural=(value,one,few,many)=>{const n=Math.abs(Number(value)||0)%100,d=n%10;return value+' '+(n>=11&&n<=14?many:d===1?one:d>=2&&d<=4?few:many)};
 function cloudPanel(){
  const data=state.cloud;
  const head='<div class="pws-cloud__heading"><div><span class="pws-cloud__kicker">ЛИЧНОЕ ХРАНИЛИЩЕ / POCKET CLOUD</span>'+
@@ -69,13 +70,13 @@ function cloudPanel(){
    '<div><span>Свободно</span><strong>'+cloudBytes(left)+'</strong></div>'+
    '<div class="pws-cloud__capacity"><span>Всего</span><strong>'+cloudBytes(cap)+'</strong></div></div>'+
    '<div class="pws-cloud__meter" role="progressbar" aria-label="Использовано облачное пространство" aria-valuemin="0" aria-valuemax="'+cap+'" aria-valuenow="'+used+'">'+parts+'</div>'+
-   '<div class="pws-cloud__under"><span>'+percentage.toLocaleString('ru-RU',{maximumFractionDigits:1})+'% занято</span>'+
-   '<span>'+usedCount+' из '+maxCount+' сохранений</span></div>'+
+   '<div class="pws-cloud__under"><span>'+(percentage>0&&percentage<0.1?'Менее 0,1%':percentage.toLocaleString('ru-RU',{maximumFractionDigits:1})+'%')+' занято</span>'+
+   '<span>'+cloudPlural(usedCount,'сохранение','сохранения','сохранений')+' из '+maxCount+'</span></div>'+
    '<div class="pws-cloud__breakdown">'+apps.map(x=>
     '<div class="pws-cloud__category"><span class="pws-cloud__dot pws-cloud__dot--'+(x.app==='folio'?'folio':'zamazka')+'"></span>'+
-    '<span class="pws-cloud__category-name">'+esc(cloudAppLabel(x.app))+'<small>'+x.items+' '+(x.items===1?'объект':'объектов')+'</small></span>'+
+    '<span class="pws-cloud__category-name">'+esc(cloudAppLabel(x.app))+'<small>'+cloudPlural(x.items,'объект','объекта','объектов')+'</small></span>'+
     '<strong>'+cloudBytes(x.usedBytes)+'</strong></div>').join('')+'</div>'+
-   (items.length?'<details class="pws-cloud__details"><summary>Что занимает место · '+items.length+' файлов</summary>'+
+   (items.length?'<details class="pws-cloud__details"><summary>Что занимает место · '+cloudPlural(items.length,'файл','файла','файлов')+'</summary>'+
     '<div class="pws-cloud__files">'+items.map(item=>'<div class="pws-cloud__file"><div><strong>'+esc(item.title||item.id||'Без названия')+
     '</strong><small>'+esc(cloudAppLabel(item.app))+'</small></div><span>'+cloudBytes(item.bytes)+'</span></div>').join('')+'</div></details>':
     '<p class="pws-cloud__empty">Пока пусто. Рисунки FOLIO и сохранения ЗАМАЗКИ появятся здесь после синхронизации.</p>')+
