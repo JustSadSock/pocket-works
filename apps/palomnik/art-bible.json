@@ -1,46 +1,151 @@
 {
   "schemaVersion": 1,
   "product": "palomnik",
-  "references": "Seven screenshots supplied by user showing low-resolution painterly gothic castles, floating ships and dramatic sculptural clouds. They serve as art-direction reference, not embedded assets.",
-  "thesis": "Pixel-dithered volumetric gothic wasteland with oversized architecture and pools of amber light.",
-  "composition": "Side-on cathedral walker fills left third; three stepping stones form a visible vertical choice on right; rich spiral storm and abandoned towers occupy horizon.",
-  "rendering": "Canvas 2D, 360 logical pixels, ordered 4x4 palette dithering for per-pixel clouds, low-resolution authored geometry for foreground.",
-  "focalAsset": "Four-legged bell tower with riveted feet, two side towers, chimneys, lit window arches and gears.",
-  "materials": [
-    "Weathered iron and stone",
-    "Limited-value stippled sky",
-    "Warm glass and ambient lightning",
-    "Layered cliff silhouettes"
-  ],
-  "palette": [
-    "#0c101b",
-    "#b26f58",
-    "#f4a06c",
-    "#755079",
-    "#e5a3e0",
-    "#183244",
-    "#c6d4cc"
-  ],
-  "rejected": [
-    "flat UI cards",
-    "neon gradients",
-    "procedural cubes pretending to be a fortress",
-    "UI-wide texture overlay"
-  ],
-  "authorship": "Original game code and procedural visuals. No embedded third-party image assets.",
-  "motion": "Tap sparks, leg lift, body swing, landing dust, resource readout; reduced-motion shortcut.",
-  "alternatives": [
+  "status": "ready",
+  "memoryReview": [
     {
-      "idea": "Runtime voxel 3D",
-      "reason": "Texture and mesh production would dominate instead of completing gameplay."
+      "slug": "pyad",
+      "evidence": "apps/pyad/visual-direction.json",
+      "lesson": "Миниатюрное царство держит читаемые отряды на 240-пиксельной сцене, но ПАЛОМНИК требует крупный объект и низкоракурсные каменные силуэты на весь экран."
     },
     {
-      "idea": "Hand-painted fixed backgrounds",
-      "reason": "Would require multiple authored images and reduce atmosphere variation."
-    },
-    {
-      "idea": "Low-res Canvas diorama",
-      "reason": "Chosen to create a dynamic scene within app runtime."
+      "slug": "stapel",
+      "evidence": "apps/stapel/visual-direction.json",
+      "lesson": "Ракетный корпус СТАПЕЛЯ заключён в измерительный монтажный прибор; ПАЛОМНИК оставляет приборы за кадром, а инженерная машина является частью пейзажа."
     }
-  ]
+  ],
+  "references": [
+    {
+      "url": "https://obradinn.com/media/prerelease.html",
+      "inspectedAt": "2026-10-12",
+      "observation": "Разработчик Return of the Obra Dinn подробно объясняет фиксированное внутреннее разрешение и техническую цену высококонтрастного упорядоченного дизеринга.",
+      "principle": "Тональная глубина возможна без градиентной мыльности, когда соседние тона различаются организованной пиксельной сеткой.",
+      "application": "Небо ПАЛОМНИКА рендерится заранее в ImageData с матрицей Bayer 4×4; интерфейс остаётся нормальным DOM-текстом.",
+      "avoid": "Не переносить однобитную палитру буквально на красочные фэнтезийные небеса и не ставить фильтр поверх букв."
+    },
+    {
+      "url": "https://studioghibli.jp/films/howls-moving-castle/",
+      "inspectedAt": "2026-10-12",
+      "observation": "Официальная страница описывает массивный паровой шагающий замок, идущий на механических ногах по пустошам.",
+      "principle": "Один большой ходячий дом способен совместить ощущение веса, человеческого убежища и необычной транспортной системы.",
+      "application": "Центр модели — средневековая каменная звонница над четырьмя шарнирными металлическими ногами и тёплыми окнами.",
+      "avoid": "Не копировать узнаваемую форму замка или персонажей фильма; используем собственную геометрию крепости и функцию движения."
+    },
+    {
+      "url": "https://www.mattgyver.com/tutorials/2021/3/1/howls-moving-castle-animated",
+      "inspectedAt": "2026-10-12",
+      "observation": "Автор анимационного разбора подчёркивает особенность переноса тяжести между птичьими суставами ног шагающего замка.",
+      "principle": "Зритель должен увидеть независимую постановку ног и короткую фазу поднятия корпуса, а не просто движение картинки вправо.",
+      "application": "В физическом ответе на тап ноги раздвигаются, корпус поднимается и оседает, поддерживая ощущение железного веса.",
+      "avoid": "Не превращать каждую ногу в бесконечный цикл без причинной связи с конкретным решением пользователя."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "voxel-walker",
+      "medium": "Полноценная небольшая трёхмерная WebGL-сцена из объёмной готической архитектуры и машинных суставов.",
+      "composition": "Низкая камера непрерывно преследует модель по широкой извилистой трёхмерной тропе с перспективными обрывами.",
+      "interaction": "Игрок держит газ и направляет тело крепости по узкому пути при помощи виртуального рулевого устройства.",
+      "motion": "Анимированные шарниры и вращение камеры связываются с непрерывным физическим расчётом соприкосновений.",
+      "rationale": "Хорошо передаёт объём, но масштаб ассетов, WebGL и управление усложняют первый качественный одиночный релиз."
+    },
+    {
+      "id": "sprite-diorama",
+      "medium": "Серия заранее нарисованных растровых покадровых панорам и отдельные спрайты камней и шагающих частей крепости.",
+      "composition": "Панорамные слайды занимают экран; крупный объект художника появляется по центру на каждом новом горизонте.",
+      "interaction": "Игрок выбирает одну из выделенных зон на иллюстрации и получает переход на следующий отдельный статичный экран.",
+      "motion": "Рисованная последовательность поз сменяется дискретно при выборе нового рисунка и коротко растворяется в новом.",
+      "rationale": "Позволило бы получить ручную живопись, но десятки состояний и повторная запись ассетов сделали бы экспедицию слишком статичной."
+    },
+    {
+      "id": "canvas-dither",
+      "medium": "Авторский низкоразрешённый Canvas с покомпонентной архитектурой и упорядоченным пиксельным небом Bayer 4×4.",
+      "composition": "Большая готическая машина занимает левую треть, справа висят три играбельных каменных уступа, сверху тянутся облака.",
+      "interaction": "Игрок непосредственно касается достижимой каменной опоры и мгновенно получает физическую реакцию тяжёлой машины.",
+      "motion": "Жёсткий суставной шаг с подъёмом, вспышкой пыли, изменением ресурсов и фиксацией выбора в сохранённом маршруте.",
+      "rationale": "Позволяет выполнить законченную игру и интерактивную многоцветную диораму без новых зависимостей и дорогого рендеринга."
+    }
+  ],
+  "selection": {
+    "concept": "canvas-dither",
+    "reason": "Выбран рендерер, который сохраняет композицию из пользовательских референсов, поддерживает полноценную маршрутную механику и работает автономно на мобильном устройстве.",
+    "rejected": [
+      {
+        "concept": "voxel-walker",
+        "reason": "Поток 3D-ассетов и шейдеров превратил бы компактную экспедицию в долгую технологическую подготовку до появления игрового цикла."
+      },
+      {
+        "concept": "sprite-diorama",
+        "reason": "Заранее запечённые панорамы не дадут свободно менять состояния облаков, положения суставов и геометрию опор без десятков изображений."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas-2d",
+      "availability": "available",
+      "reason": "Нативный Canvas 2D доступен в том же браузере, который является целевой средой Pocket Works и не требует дополнительных пакетов."
+    },
+    {
+      "id": "art-forge-blender",
+      "availability": "unverified",
+      "reason": "В текущем подключении GitHub доступно чтение исходников Asset Forge, но возможности локального запуска Blender пока не подтверждены.",
+      "fallback": "Фокусный объект целиком отрисован оригинальным процедурным Canvas, запланированным как основная технология релиза."
+    }
+  ],
+  "assets": [
+    {
+      "id": "cathedral-walker",
+      "tool": "canvas-2d",
+      "source": "app.js",
+      "output": "index.html",
+      "role": "Героический четырёхногий монастырь с каменными фасадами, оранжевыми витражами и движущимися сочленениями.",
+      "acceptance": "Силуэт узнаваем даже без текста; ноги различимы и после выбора опоры заметно меняют позу.",
+      "integration": "Функция building() отрисовывает крепость непосредственно в Canvas с синхронизацией фазы шага.",
+      "provenance": "Авторская процедурная геометрия без внешних авторских изображений и без случайных заимствованных спрайтов.",
+      "maxBytes": 180000
+    },
+    {
+      "id": "dithered-storm",
+      "tool": "canvas-2d",
+      "source": "app.js",
+      "output": "styles.css",
+      "role": "Три холодно-тёплых небосвода из многослойного облачного вихря и упорядоченного пиксельного смешивания.",
+      "acceptance": "Каждый небосвод контрастен, матрица дизеринга читается как материал, а не перекрывает интерфейс.",
+      "integration": "Функция buildSky() рендерит фон в offscreen ImageData и использует его под динамической сценой.",
+      "provenance": "Оригинальный шумовой алгоритм и таблицы палитр, все пиксели сгенерированы локально.",
+      "maxBytes": 250000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 30
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Пустые небо и центр кадра при слишком высокой сцене; требуется проверить вертикальный срез на мобильных разрешениях.",
+      "Верхние опоры могут располагаться ближе к HUD, чем удобно пальцу; нужна фактическая проверка hit area.",
+      "Долгая генерация ImageData на слабом телефоне может давать заметный стартовый скачок."
+    ],
+    "comparisons": [
+      {
+        "slug": "pyad",
+        "goal": "Проверить отличие масштаба и перспективного монументального объекта от верхнеплановой миниатюрной осады."
+      },
+      {
+        "slug": "stapel",
+        "goal": "Проверить отсутствие приборной вертикальной сборки и преобладание кинематографического мира."
+      }
+    ]
+  }
 }
