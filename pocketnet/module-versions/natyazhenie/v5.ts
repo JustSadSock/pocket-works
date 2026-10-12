@@ -238,7 +238,7 @@ function updatePrototype(w,dt){
    const valid=a.ground&&b.ground&&Math.abs(a.y-b.y)<25&&
     gap>=142&&gap<=ROPE.max+1&&Math.abs(delta)<19&&
     Math.abs(a.x-beam.x)>65&&Math.abs(b.x-beam.x)>65;
-   w.beamCharge[i]=clamp(w.beamCharge[i]+(valid?dt/beam.hold:-dt/.62),0,1);
+   w.beamCharge[i]=clamp(w.beamCharge[i]+(valid?dt/beam.hold:-dt/2.2),0,1);
    if(w.beamCharge[i]<1)all=false;
   }
   if(all)w.gateOpen=true;
