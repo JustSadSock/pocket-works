@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=8;
+export const RULESET_VERSION=9;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 const DRAWING_TIMES=[60,90,120,160,240,300];
@@ -223,6 +223,10 @@ const module: PocketModule<State>={
      item.strokes=completed;
      delete state.drafts[id];
      if(members(state).every(p=>state.assignments[p.id]?.strokes!==null))step(state);
+     // A WebSocket send is not a confirmed submission: only this durable
+     // server-side commit can acknowledge a full multi-packet restoration.
+     return {state,events:[...emit(state),{type:'submission_saved',to:id,
+       payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,lines:completed.length}}]};
    }else if(a.type==='draft'&&state.phase==='drawing'){
      const item=state.assignments[id];
      if(!item||item.strokes!==null||Number(a.round)!==state.round||a.art!==item.art||a.variation!==item.variation)
@@ -239,6 +243,8 @@ const module: PocketModule<State>={
      item.strokes=strokes;
      delete state.drafts?.[id];
      if(members(state).every(p=>state.assignments[p.id]?.strokes!==null))step(state);
+     return {state,events:[...emit(state),{type:'submission_saved',to:id,
+       payload:{round:state.round,art:item.art,variation:item.variation,revision:null,lines:strokes.length}}]};
    }else if(a.type==='vote'&&state.phase==='voting'){
      const target=members(state)[state.turn]?.id;
      if(!target||id===target)return {state,events:notice(id,'Автор не голосует за собственную работу.')};
