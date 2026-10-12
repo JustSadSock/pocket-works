@@ -40,9 +40,10 @@ function read(){
  soundOn=save.sound!==false;
 }
 function persist(clearRun=false){
- const run=(!clearRun&&(phase==='play'||phase==='paused'||phase==='upgrade'))?
- {wave,health,kills,buff:{...buff}}:null;
- try{localStorage.setItem(KEY,JSON.stringify({bestWave,wins,totalKills,sound:soundOn,run}))}catch{}
+ const run=clearRun?null:(phase==='play'||phase==='paused'||phase==='upgrade')?
+ {wave,health,kills,buff:{...buff}}:(phase==='menu'?save.run||null:null);
+ const next={bestWave,wins,totalKills,sound:soundOn,run};save=next;
+ try{localStorage.setItem(KEY,JSON.stringify(next))}catch{}
 }
 function setAudio(){sound.textContent=soundOn?'♪':'×';sound.setAttribute('aria-label',soundOn?'Выключить звук':'Включить звук')}
 function tone(f=440,len=.15,type='sine',vol=.08,slide=1){
