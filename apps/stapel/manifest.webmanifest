@@ -1,0 +1,25 @@
+{
+  "id": "/apps/stapel/",
+  "name": "СТАПЕЛЬ · Марсианское КБ",
+  "short_name": "СТАПЕЛЬ",
+  "description": "Инженерная игра о строительстве и испытании настоящих многоступенчатых ракет на Марсе: топливо, тяга, гравитация, орбиты и посадка не прощают ошибок.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#d7dcd6",
+  "theme_color": "#d7dcd6",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#d7dcd6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="СТАПЕЛЬ">
+  <title>СТАПЕЛЬ · Марсианское КБ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <header class="topbar" data-ui>
+      <a href="../../" class="back" data-app-control data-native-press>← <span>POCKET WORKS</span></a>
+      <div class="brand"><span class="brand-line"></span><strong>СТАПЕЛЬ</strong><small>ЭКСПЕДИЦИЯ / МАРС</small></div>
+      <div class="top-actions">
+        <button type="button" class="icon-button workshop-button" data-workshop-trigger data-native-press title="Диагностика" aria-label="Сервис и диагностика">⋮</button>
+        <button type="button" id="soundButton" class="icon-button" title="Звук" aria-label="Переключить звук" data-native-press>♪</button>
+      </div>
+    </header>
+
+    <section id="builder" class="view builder" aria-label="Конструктор ракеты">
+      <div class="mission-strip">
+        <button id="missionPrev" class="mission-arrow" type="button" aria-label="Предыдущая миссия" data-native-press>‹</button>
+        <div class="mission-copy">
+          <span class="eyebrow">ЗАДАНИЕ <span id="missionIndex">01 / 03</span></span>
+          <b id="missionName">Первый сигнал</b>
+          <span id="missionConditions">200 кг · орбита 110–260 км</span>
+        </div>
+        <button id="missionNext" class="mission-arrow" type="button" aria-label="Следующая миссия" data-native-press>›</button>
+      </div>
+
+      <div class="bay">
+        <canvas id="buildCanvas" aria-label="Схема ракеты; коснитесь ступени для редактирования" data-gesture-surface data-block-callout></canvas>
+        <div class="bay-index"><span>МОНТАЖНЫЙ СТАПЕЛЬ</span><span>КБ / 001</span></div>
+        <div class="bay-scale" aria-hidden="true">М<br>Е<br>Т<br>Р<br>Ы</div>
+        <div class="bay-help" id="bayHelp">Нажми на ступень ракеты</div>
+      </div>
+
+      <section class="bench" aria-label="Управление конструктором">
+        <div class="stage-row">
+          <div class="stage-tabs" id="stageTabs" aria-label="Ступени"></div>
+          <button id="addStage" class="stage-add" type="button" data-native-press>+ СТУПЕНЬ</button>
+        </div>
+        <div class="work-controls">
+          <div class="work-name"><span id="stageTitle">СТУПЕНЬ 1 · НИЖНЯЯ</span><button id="removeStage" type="button" class="remove" data-native-press>УБРАТЬ</button></div>
+          <div class="equipment-line">
+            <div class="param-title">ТОПЛИВНЫЕ БАКИ</div>
+            <div class="counter"><button id="tankMinus" aria-label="Убрать бак" type="button" data-native-press>−</button><output id="tankCount">3</output><button id="tankPlus" aria-label="Добавить бак" type="button" data-native-press>+</button></div>
+          </div>
+          <div class="equipment-line">
+            <div class="param-title">ДВИГАТЕЛЬ <small id="engineStats">48 кН · 334 с</small></div>
+            <button id="engineButton" class="engine-switch" type="button" data-native-press><b id="engineName">АТ-48</b><span>СМЕНИТЬ ↻</span></button>
+          </div>
+          <div class="equipment-line fin-row">
+            <div class="param-title">АЭРОДИНАМИКА</div>
+            <button id="finsButton" class="fins-button" type="button" aria-pressed="true" data-native-press>СТАБИЛИЗАТОРЫ <b id="finsValue">ДА</b></button>
+          </div>
+        </div>
+        <div class="stat-grid" aria-label="Расчётные характеристики">
+          <div><span>ΔV В ВАКУУМЕ</span><strong id="deltaV">0 м/с</strong></div>
+          <div><span>ТЯГОВООРУЖ.</span><strong id="twr">0,00</strong></div>
+          <div><span>БЮДЖЕТ</span><strong id="cost">0 / 53</strong></div>
+        </div>
+        <div class="action-line">
+          <button id="resetCraft" class="minor-action" type="button" data-native-press>СБРОСИТЬ</button>
+          <button id="launchButton" class="primary-action" type="button" data-native-press>НА ИСПЫТАНИЕ <span>↗</span></button>
+        </div>
+        <p id="buildMessage" class="build-message" role="status" aria-live="polite"></p>
+      </section>
+    </section>
+
+    <section id="flight" class="view flight" aria-label="Полёт" hidden>
+      <canvas id="flightCanvas" aria-label="Моделирование полёта над Марсом" data-gesture-surface></canvas>
+      <div class="flight-head" data-ui>
+        <button id="abortFlight" type="button" class="flight-exit" data-native-press>← СТАПЕЛЬ</button>
+        <div class="flight-phase"><span id="flightMode">НАБОР ВЫСОТЫ</span><b id="flightClock">T+ 00:00</b></div>
+        <button id="mapButton" class="map-button" type="button" data-native-press>ОРБИТА</button>
+      </div>
+      <div class="telemetry" data-ui>
+        <div><span>ВЫСОТА</span><b id="altitudeValue">0,0 км</b></div>
+        <div><span>СКОРОСТЬ</span><b id="velocityValue">0 м/с</b></div>
+        <div><span>АПОГЕЙ</span><b id="apoValue">—</b></div>
+        <div><span>ПЕРИГЕЙ</span><b id="periValue">—</b></div>
+      </div>
+      <div id="flightEvent" class="flight-event" role="status" aria-live="polite">ПОСЛЕДНИЙ ПРОГОН</div>
+      <div class="flight-console" data-ui>
+        <div class="console-top">
+          <button id="autoButton" class="auto-button on" aria-pressed="true" type="button" data-native-press>АВТОПИЛОТ <b>ВКЛ</b></button>
+          <button id="warpButton" type="button" data-native-press>ВРЕМЯ ×1</button>
+          <button id="pauseButton" type="button" data-native-press>ПАУЗА</button>
+        </div>
+        <div class="pilot-controls">
+          <div class="pitch-control"><span>ТАНГАЖ <b id="pitchValue">0°</b></span><div><button id="pitchMinus" aria-label="Уменьшить тангаж" type="button" data-native-press>−</button><button id="pitchPlus" aria-label="Увеличить тангаж" type="button" data-native-press>+</button></div></div>
+          <div class="throttle-control"><label for="throttleSlider">ТЯГА <b id="throttleValue">100%</b></label><input id="throttleSlider" type="range" min="0" max="100" value="100" step="5"></div>
+          <button id="stageButton" type="button" data-native-press>ОТДЕЛИТЬ<br><strong>СТУПЕНЬ</strong></button>
+        </div>
+        <div class="fuel-track"><div id="fuelBar"></div></div>
+        <div class="console-foot"><span id="stageDisplay">СТУПЕНЬ 1 / 2</span><span id="fuelValue">100% ТОПЛИВА</span></div>
+      </div>
+    </section>
+
+    <section id="result" class="result-screen" aria-label="Отчёт об испытании" hidden data-ui>
+      <div class="report">
+        <div class="report-overline">ПОСЛЕПОЛЁТНЫЙ ОТЧЁТ / КБ</div>
+        <div class="report-seal" id="resultSeal">○</div>
+        <h1 id="resultTitle">ИСПЫТАНИЕ</h1>
+        <p id="resultDescription"></p>
+        <div class="report-numbers"><div><span>МАКС. ВЫСОТА</span><b id="resultAltitude"></b></div><div><span>СКОРОСТЬ</span><b id="resultSpeed"></b></div><div><span>ВРЕМЯ</span><b id="resultTime"></b></div></div>
+        <button id="retryButton" class="primary-action" type="button" data-native-press>ПОВТОРИТЬ ПУСК ↗</button>
+        <button id="reviseButton" class="minor-action" type="button" data-native-press>ВЕРНУТЬСЯ К КОНСТРУКЦИИ</button>
+        <a href="../../" class="report-exit" data-shell-exit data-app-control data-native-press>В POCKET WORKS</a>
+      </div>
+    </section>
+
+    <div id="confirmOverlay" class="confirm-overlay" hidden data-ui><div class="confirm-panel"><h2 id="confirmTitle">Завершить испытание?</h2><p id="confirmText">Прогресс текущего полёта будет потерян. Конструкция сохранится.</p><div><button id="confirmCancel" type="button" data-native-press>ОСТАТЬСЯ</button><button id="confirmYes" type="button" data-native-press>ПОДТВЕРДИТЬ</button></div></div></div>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СТАПЕЛЬ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

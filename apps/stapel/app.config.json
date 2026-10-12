@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "stapel",
+  "name": "СТАПЕЛЬ · Марсианское КБ",
+  "shortName": "СТАПЕЛЬ",
+  "description": "Инженерная игра о строительстве и испытании настоящих многоступенчатых ракет на Марсе: топливо, тяга, гравитация, орбиты и посадка не прощают ошибок.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T15:22:00+03:00",
+  "changelog": [
+    "Новая марсианская инженерная песочница: 1–3 ступени, выбор двигателей, топливных баков и стабилизаторов.",
+    "Три контракта на доставку грузов на целевую орбиту; реалистичная динамика с притяжением Марса, атмосферным сопротивлением и расходом топлива.",
+    "Автопилот, ручной тангаж, тяга, разделение ступеней, ускорение времени, карта орбиты и отчёты по полётам."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#bc6242",
+  "backgroundColor": "#d7dcd6",
+  "themeColor": "#d7dcd6",
+  "orientation": "portrait",
+  "cacheName": "stapel-v1.0.0",
+  "storageNamespace": "pocket-works:stapel",
+  "tags": [
+    "space",
+    "rocket",
+    "construction",
+    "physics",
+    "simulation",
+    "offline",
+    "canvas",
+    "single player"
+  ],
+  "order": 352
+}
