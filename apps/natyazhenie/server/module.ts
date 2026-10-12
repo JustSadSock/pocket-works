@@ -267,7 +267,7 @@ export function simulate(w,seconds,now=Date.now()){
    p.hang=dangling?oldHang+dt:oldHang>0?oldHang:0;
    if(p.hang>0){
     const helper=[w.players[i-1],w.players[i+1]].find(q=>q?.anchor&&q.ground);
-    if(helper&&dangling){
+    if(helper){
      p.vy=Math.min(p.vy,-260);p.y-=Math.min(3.4,dt*165);
      // Reel inward: clear the ledge rather than hold the friend in place forever.
      const toward=helper.x-p.x;p.vx+=clamp(toward*.038,-11,11);
