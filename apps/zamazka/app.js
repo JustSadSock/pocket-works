@@ -308,6 +308,48 @@ function lobby(){
  boardResync=false;
 }
 function galleryHtml(list,select=false){return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+(ARTS[id]?.schoolCountry?' · '+esc(ARTS[id].schoolCountry):'')+'</span></button>').join('')+'</div>'}
+function preloadPreviewImage(id){
+ return new Promise((resolve,reject)=>{
+   const image=new Image();let fallback=false;
+   image.onload=()=>resolve();
+   image.onerror=()=>{
+     if(!fallback){fallback=true;const src=artworkFallbackURL(id,image.src);if(src){image.src=src;return}}
+     reject(Error('Не удалось загрузить полотно'));
+   };
+   image.src=artworkURL(id);
+ });
+}
+function preparing(local=false){
+ const v=local?practice:view;if(!v)return;
+ const progress=local?'Готовим оригиналы…':'Готовим оригиналы · '+(v.readyCount||0)+' / '+v.participants.length;
+ change('<section class="page center art-preparing"><span class="busy" aria-hidden="true"></span><h2>Готовим экспозицию</h2><p id="artPreparingStatus" class="hint">'+esc(progress)+'</p><button class="btn ghost" data-action="retry-art-preload" hidden>Повторить загрузку</button></section>','preparing');
+ void prepareRoundImages(local);
+}
+async function prepareRoundImages(local=false,retry=false){
+ const v=local?practice:view;if(!v||v.phase!=='preparing')return;
+ const token=(local?'local':roomId)+':'+v.round;
+ if(preparedRound===token&&!retry)return;
+ preparedRound=token;preparingError='';
+ const status=screen.querySelector('#artPreparingStatus'),retryButton=screen.querySelector('[data-action="retry-art-preload"]');
+ if(status)status.textContent='Загружаем пять картин…';
+ if(retryButton)retryButton.hidden=true;
+ try{
+   await Promise.all(v.selected.flatMap(id=>[loadArtwork(id),preloadPreviewImage(id)]));
+   if(preparedRound!==token)return;
+   if(local){
+     if(practice!==v||v.phase!=='preparing')return;
+     v.phase='preview';v.deadline=Date.now()+25000;persistPractice();preview(true);
+   }else if(view?.phase==='preparing'&&roomId&&net){
+     if(status?.isConnected)status.textContent='Картины готовы · ожидаем остальных';
+     net.sendGame({type:'art_ready',round:v.round});
+   }
+ }catch{
+   if(preparedRound!==token)return;
+   preparingError='Не удалось загрузить картины. Проверь соединение.';
+   if(status?.isConnected)status.textContent=preparingError;
+   if(retryButton?.isConnected)retryButton.hidden=false;
+ }
+}
 function preview(local=false){
  const v=local?practice:view;
  change('<section class="phase-page">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+'<div class="phase-body"><p class="phase-directive">Запомни детали пяти картин.</p>'+galleryHtml(v.selected)+(local?'<button class="btn primary wide" data-action="skip">Перейти к реставрации</button>':'')+'</div></section>','preview');
@@ -469,8 +511,8 @@ function openArchive(index){
 }
 function saveArtwork(art,variation,strokes){saved=[{art,variation,strokes,time:Date.now(),edition:3},...saved].slice(0,96);try{localStorage.setItem(GALLERY_KEY,JSON.stringify(saved));zamazkaCloud?.schedule();return true}catch{notify('Архив не сохранился: хранилище заполнено. Работа остаётся открытой во вкладке.');return false}}
 function persistPractice(){if(practice)try{localStorage.setItem(PRACTICE_KEY,JSON.stringify({phase:practice.phase,round:practice.round,rounds:practice.rounds,selected:practice.selected,deadline:practice.deadline,mine:practice.mine,strokes:practice.strokes,edition:3}))}catch{notify('Черновик тренировки не записан: проверь хранилище браузера')}}
-function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preview',round:1,rounds:1,selected,deadline:Date.now()+25000,mine:{art:selected[Math.floor(Math.random()*5)],variation:Math.floor(Math.random()*0xffffffff)},strokes:[]};persistPractice();preview(true)}
-function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;if(p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else preview(true)}catch{newPractice()}}
+function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preparing',round:1,rounds:1,selected,deadline:0,mine:{art:selected[Math.floor(Math.random()*5)],variation:Math.floor(Math.random()*0xffffffff)},strokes:[]};preparedRound='';persistPractice();preparing(true)}
+function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;if(p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=Date.now()+160000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
 let previousVisualPhase='',lastPhaseCue='';
@@ -495,6 +537,10 @@ function renderView(){
     screen.querySelectorAll('.waiting-person').forEach((el,i)=>{const p=view.participants[i],status=el.querySelector('strong');if(p&&status)status.textContent=(view.done||[]).includes(p.id)?'Готово':'Рисует'});
     return;
   }
+ if(page==='preparing'&&view.phase==='preparing'&&key===lastUiKey){
+   const status=screen.querySelector('#artPreparingStatus');if(status&&!preparingError&&preparedRound!==''){const total=view.participants?.length||0;status.textContent='Картины готовы · '+(view.readyCount||0)+' / '+total+' игроков'}
+   return;
+ }
  if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
  if(page==='vote'&&view.phase==='voting'&&key===lastUiKey){
   const ready=screen.querySelector('#votesReady');if(ready)ready.textContent=(view.voted||[]).length+' / '+(view.participants.length-1);
@@ -502,6 +548,7 @@ function renderView(){
  }
  lastUiKey=key;choice=null;
  if(view.phase==='lobby')lobby();
+ else if(view.phase==='preparing')preparing();
  else if(view.phase==='preview')preview();
  else if(view.phase==='drawing')drawing();
  else if(view.phase==='voting')vote();
@@ -664,6 +711,7 @@ screen.addEventListener('click',e=>{
  else if(action==='board-clear')modal('Очистить общий холст?','<p class="hint">Рисунки всех участников исчезнут без возможности восстановления.</p>',[['Очистить',()=>{closeDialog();try{net?.sendGame({type:'board_clear'})}catch{notify('Нет связи с комнатой')}},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='practice')newPractice();
  else if(action==='retry-gallery')home();
+ else if(action==='retry-art-preload')void prepareRoundImages(Boolean(practice),true);
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
  else if(action==='cloud-sync')void zamazkaCloud?.sync();
@@ -671,7 +719,7 @@ screen.addEventListener('click',e=>{
  else if(action==='connect')connect(b.dataset.mode);
  else if(action==='share')share();
  else if(action==='copy-code')copyText(inviteCode(roomId),'Код комнаты скопирован');
- else if(action==='start')net?.sendGame({type:'start',rounds:Number(screen.querySelector('#rounds')?.value||3),drawingSeconds:Number(screen.querySelector('#drawingSeconds')?.value||160)});
+ else if(action==='start')net?.sendGame({type:'start',preload:true,rounds:Number(screen.querySelector('#rounds')?.value||3),drawingSeconds:Number(screen.querySelector('#drawingSeconds')?.value||160)});
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
  else if(action==='submit')doSubmit();
