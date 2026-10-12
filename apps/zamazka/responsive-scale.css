@@ -150,6 +150,21 @@
   .dialog:has(.art-inspection) .art-inspection { max-height:58dvh;object-fit:contain; }
 }
 
+/* All museum verdict phases use ivory text: keep it on the dark
+   gallery wall instead of inheriting the pale paper phase-body surface. */
+.phase-page:is(.expert-phase,.verdict-phase,.reveal-phase,.waiting-phase)>.phase-body{
+  background:radial-gradient(ellipse at 45% 0%,#3c3128 0%,#29231d 60%,#221c18 100%);
+  color:#f0e7d7;
+}
+.phase-page:is(.expert-phase,.verdict-phase,.reveal-phase,.waiting-phase){
+  background:#28221d;
+}
+.reveal-phase .reveal-main>.hint,.waiting-phase .phase-directive {color:#cdbda9}
+@media (min-width:1100px) and (min-height:700px) {
+  .reveal-phase {min-height:100%;display:flex;flex-direction:column}
+  .reveal-phase>.phase-body {flex:1}
+}
+
 /* The editor keeps 1:1 hit-testing in its existing canvas; the cabinet and
    touch targets may grow without introducing a visual-only zoom. */
 @media (min-width:1200px) and (pointer:fine) {
