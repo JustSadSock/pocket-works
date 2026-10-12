@@ -84,7 +84,7 @@ export default {
       if (url.pathname === '/pocket-social/invite' && request.method === 'POST') {
         let payload;
         try { payload = await request.clone().json(); } catch { payload = null; }
-        if (!payload || payload.gameId !== 'zamazka' ||
+        if (!payload || !['zamazka','blind-pals'].includes(payload.gameId) ||
           !/^[0-9a-f-]{36}$/i.test(payload.roomId||'')) {
           return new Response(JSON.stringify({error:'invalid_room'}),{status:400,headers:{'content-type':'application/json'}});
         }

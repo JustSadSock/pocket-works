@@ -190,7 +190,7 @@ export class PocketSocial {
       }
       if(path==='/pocket-social/invite'){
         const {toId,gameId,roomId}=body;
-        if(!uuid.test(toId||'')||toId===id||gameId!=='zamazka'||!uuid.test(roomId||'')||
+        if(!uuid.test(toId||'')||toId===id||!['zamazka','blind-pals'].includes(gameId)||!uuid.test(roomId||'')||
           request.headers.get('x-pw-validated-room')!==roomId)return reply({error:'invalid_room'},400);
         if(!this.isFriend(id,toId))return reply({error:'friends_only'},403);
         if(!this.one('SELECT allow_invites FROM profiles WHERE id=?',toId)?.allow_invites)
