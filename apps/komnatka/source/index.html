@@ -31,6 +31,16 @@
       <canvas id="roomCanvas" data-gesture-surface data-block-callout aria-label="Кукольная комната. Выбирай мебель в каталоге и перемещай предметы пальцем или мышью."></canvas>
       <div class="scene-caption" data-ui><span class="caption-dot"></span> Твоя маленькая комната</div>
       <div class="scene-hint" id="hint" data-ui></div>
+      <div class="placement-tray" id="placementControls" hidden data-ui aria-label="Предварительная настройка предмета">
+        <div class="selected-header"><b id="placementTitle">Новый предмет</b><button id="closePlacement" type="button" aria-label="Отменить добавление" data-native-press>×</button></div>
+        <div class="placement-line">
+          <div class="selection-colors" id="placementColors" role="group" aria-label="Цвет до установки"></div>
+          <button id="previewRotate" class="preview-rotate" type="button" data-native-press aria-label="Повернуть до установки">
+            <svg viewBox="0 0 24 24"><path d="M20 9A8 8 0 1 0 20 15m0-11v5h-5"/></svg> Повернуть
+          </button>
+        </div>
+        <p class="placement-instruction">Выбери цвет и поворот, затем нажми на место в комнате</p>
+      </div>
       <div class="selection-tray" id="selection" hidden data-ui>
         <div class="selected-header"><b id="selectionName">Диван</b><button id="doneBtn" type="button" aria-label="Закрыть выбор" data-native-press>×</button></div>
         <div id="selectionColors" class="selection-colors" aria-label="Цвет предмета"></div>
