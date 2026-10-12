@@ -101,7 +101,7 @@ function onBeam(w,p,beam,index){
  return Math.abs(p.y+RADIUS-top)<11;
 }
 function solids(w){return [...w.stage.floors,...w.stage.platforms,...movingPlatforms(w.stage,w.clock),
- ...balanceBoards(w),...(w.stage.ferry?[{...w.stage.ferry,x:w.ferryX}]:[]),
+ ...balanceBoards(w),...(w.stage.ferry?[{...w.stage.ferry,x:w.ferryX,oneWay:true}]:[]),
  ...(w.gateOpen?[]:[w.stage.gate])];}
 function overlap(p,s){return p.x+RADIUS>s.x&&p.x-RADIUS<s.x+s.w&&p.y+RADIUS>s.y&&p.y-RADIUS<s.y+s.h;}
 function resolveMove(p,dt,blocks){
