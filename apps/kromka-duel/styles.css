@@ -1,7 +1,7 @@
 :root{color-scheme:dark;--paper:#eee9d8;--white:#faf3df;--ink:#11231e;--line:#aeb7a5;--muted:#aab9aa;--bronze:#ddbf93;--safe:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#132521;color:var(--paper);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;overscroll-behavior:none}
-body{touch-action:none}button,input{font:inherit}button{color:inherit;cursor:pointer;touch-action:manipulation}
+body{touch-action:auto}button,input{font:inherit}button{color:inherit;cursor:pointer;touch-action:manipulation}
 button:disabled{opacity:.42;cursor:default}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #e8d8a9;outline-offset:3px}
 a{color:inherit;text-decoration:none}
@@ -31,7 +31,7 @@ a{color:inherit;text-decoration:none}
 .btn.quiet{border-color:#83998454;background:#13251dc0;color:#b6c7b7;font-size:12px;min-height:38px}
 .btn.mini{border:0;padding:7px 10px;box-shadow:none;background:transparent;min-height:29px;color:#e8dfc5;font-size:10px;text-decoration:underline;text-underline-offset:3px}
 .footnote{display:flex;justify-content:center;align-items:center;gap:8px;font-size:9px;letter-spacing:.12em;color:#bacab9}
-.sheet{position:absolute;bottom:calc(18px + var(--safe));left:50%;transform:translateX(-50%);width:min(calc(100% - 30px),390px);padding:23px 22px 20px;background:#172b25f7;border:1px solid #c3c6ae82;box-shadow:0 20px 55px #020c08db;display:grid;gap:10px;max-height:calc(100dvh - 100px);overflow-y:auto}
+.sheet{position:absolute;bottom:calc(18px + var(--safe));left:50%;transform:translateX(-50%);width:min(calc(100% - 30px),390px);padding:23px 22px 20px;background:#172b25f7;border:1px solid #c3c6ae82;box-shadow:0 20px 55px #020c08db;display:grid;gap:10px;max-height:calc(100dvh - 100px);overflow-y:auto;touch-action:pan-y}
 .sheet:before,.sheet:after{content:"";position:absolute;width:17px;height:17px;top:9px;border-top:1px solid #d8c7a3}
 .sheet:before{left:9px;border-left:1px solid #d8c7a3}.sheet:after{right:9px;border-right:1px solid #d8c7a3}
 .sheet h2{font:400 30px/1.05 Georgia,serif;letter-spacing:-.035em;margin:6px 0 4px}
@@ -71,7 +71,7 @@ a{color:inherit;text-decoration:none}
 .hint{font-size:8px;letter-spacing:.11em;color:#a4b5a5;text-align:center;white-space:nowrap}
 .gesture-hint{position:absolute;bottom:calc(5px + var(--safe));left:0;right:0;text-align:center;color:#b4c3ab;font-size:8px;letter-spacing:.1em;pointer-events:none}
 .scrim{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:15px;background:#050e0bc4;backdrop-filter:blur(5px)}
-.dialog{position:relative;pointer-events:auto;width:min(100%,390px);max-height:min(85dvh,660px);overflow-y:auto;background:#1a2d25;border:1px solid #dac8a88d;padding:29px 22px 20px;box-shadow:0 24px 90px #020904d9;display:grid;gap:10px}
+.dialog{position:relative;pointer-events:auto;width:min(100%,390px);max-height:min(85dvh,660px);overflow-y:auto;background:#1a2d25;border:1px solid #dac8a88d;padding:29px 22px 20px;box-shadow:0 24px 90px #020904d9;display:grid;gap:10px;touch-action:pan-y}
 .dialog h2{font:400 31px/1.12 Georgia,serif;letter-spacing:-.03em;margin:0 0 8px}
 .dialog p{font-size:13px;line-height:1.55;color:#c3d0bd;margin:0 0 6px}
 .dialog .faint{color:#9da99a;font-size:11px}
