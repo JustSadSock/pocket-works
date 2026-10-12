@@ -167,7 +167,7 @@ function send(payload){if(!net||!connected)return false;try{net.sendGame(payload
 function transmit(immediate=false){
  if(mode!=='online'||state?.phase!=='battle'||!connected)return;
  const now=performance.now();
- if(!immediate&&now-lastTransmit<78)return;
+ if(!immediate&&now-lastTransmit<80)return;
  const normalized=inputOf({...input,...oneshot});
  if(!normalized)return;
  if(send({type:'input',seq:++netSeq,input:normalized})){
@@ -241,7 +241,13 @@ function pulse(type){
   oneshot[type]=true;emitSound(type==='parry'?'parry':'jab');
  }else if(mode==='online'){
   if(state?.phase!=='battle'||!connected){toast('Ожидаем связь.');return;}
-  oneshot[type]=true;transmit(true);
+  oneshot[type]=true;
+  if(visual?.phase==='battle'){
+   const packets=state.inputs?.map(v=>v||NO_INPUT)||[{...NO_INPUT},{...NO_INPUT,ay:1}];
+   packets[mySide()]=inputOf({...input,...oneshot})||NO_INPUT;
+   tick(visual,packets,STEP);
+  }
+  transmit(true);
  }
 }
 ui.addEventListener('click',e=>{
