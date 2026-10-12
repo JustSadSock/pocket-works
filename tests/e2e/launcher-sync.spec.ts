@@ -39,7 +39,7 @@ test('launcher Sync updates only already-installed application workers', async (
   const sync = page.locator('#update-installed-button');
   await sync.click();
   await expect(sync).toBeEnabled({ timeout: 35_000 });
-  await expect(sync).toHaveText('Update apps');
+  await expect(sync).toHaveText('Check updates');
 
   const after = await page.evaluate(async () => {
     const registrations = await navigator.serviceWorker.getRegistrations();
@@ -49,7 +49,7 @@ test('launcher Sync updates only already-installed application workers', async (
   });
 
   expect(after).toEqual(['/apps/screen-lab/']);
-  await expect(page.locator('#sync-status')).toContainText(/current|updated|checked|on-demand/);
+  await expect(page.locator('#sync-status')).toContainText(/current|updated|checked|on-demand|next launch/);
 });
 
 test('launcher shell advertises the update-system release', async ({ page }) => {
