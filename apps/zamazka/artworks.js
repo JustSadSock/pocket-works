@@ -38,6 +38,7 @@ export function artworkFallbackURL(id,failedUrl){
  if(index<0)return artworkURL(id,960);
  return MASTER_WIDTHS[index+1]?artworkURL(id,MASTER_WIDTHS[index+1]):'';
 }
+const MAX_DECODED_IMAGES=8;
 const pending=new Map();
 async function imageSource(id){
  if(!ARTS[id].isReal)return artworkURL(id);
@@ -59,17 +60,23 @@ async function imageSource(id){
  return artworkURL(id,960);
 }
 export function loadArtwork(id){
- if(pending.has(id))return pending.get(id);
+ if(pending.has(id)){
+   const cached=pending.get(id);
+   pending.delete(id);pending.set(id,cached);
+   return cached;
+ }
  if(!ARTS[id])return Promise.reject(Error('Произведение не найдено'));
  const task=imageSource(id).then(src=>new Promise((resolve,reject)=>{
    const image=new Image();
    if(ARTS[id].isReal)image.crossOrigin='anonymous';
    image.decoding='async';
-   image.onload=()=>resolve(image);
-   image.onerror=()=>reject(Error('Изображение недоступно. Подключи интернет для первого просмотра.'));
+   image.onload=()=>{if(src.startsWith('blob:'))URL.revokeObjectURL(src);resolve(image)};
+   image.onerror=()=>{if(src.startsWith('blob:'))URL.revokeObjectURL(src);reject(Error('Изображение недоступно. Подключи интернет для первого просмотра.'))};
    image.src=src;
  })).catch(error=>{pending.delete(id);throw error});
- pending.set(id,task);return task;
+ pending.set(id,task);
+ while(pending.size>MAX_DECODED_IMAGES)pending.delete(pending.keys().next().value);
+ return task;
 }
 /** Identical framing in the museum, editor, voting, and reveal: never distort a source. */
 export function drawArtwork(ctx,image,id){
