@@ -146,3 +146,11 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - When the drawing deadline elapses, the server finalizes the latest validated draft rather than substituting an empty canvas. The client additionally sends a final `submit` automatically roughly three seconds before expiration, if possible; losing the network still preserves the local copy. On rejoin, a local unfinished drawing takes precedence; otherwise the owner restores the server draft.
 - Holding Space temporarily activates the pipette. Moving the pointer and releasing Space picks at the hovered location without a click, restoring the previous tool. Clicking while holding also picks; release does not sample twice. The pipette reads the visible composed canvas, including fills and the user's own paint in the damaged region.
 - Regression: `node apps/zamazka/qa/draft-recovery.mjs` and `node apps/zamazka/qa/editor-input.mjs`.
+
+## 1.16.0 — Больше времени и происхождение полотен
+
+- Продолжительность фазы `drawing` в PocketNet и личной тренировке: **160 секунд (2:40)** вместо 105 секунд. Просмотр оригиналов и голосование не затронуты. Старые запущенные комнаты сохраняют свои правила.
+- Компактная атрибуция под названием картины в редакторе показывает художника, дату, художественную школу (регион или современная страна) и место **создания** только при достаточной уверенности. Метаданные видны также при просмотре оригинала и в итоговом детальном просмотре.
+- В `art-provenance.js` заданы художественные традиции для всех 54 реальных картин. Для ряда картин указаны подтверждённые места создания. Школа художника **не означает** место написания конкретной картины; в частности, Ван Гог — нидерландский художник, но «Звёздная ночь» и чикагская версия «Спальни» созданы во Франции. Город музея не подменяет город создания.
+- Источники для сверки отдельных мест создания: Mauritshuis (Вермеер), MoMA (Звёздная ночь), Rijksmuseum (Ночной дозор), National Gallery (Телега для сена), Musée Marmottan Monet (Впечатление), Art Institute of Chicago (Спальня). Если город не подтверждён для конкретного полотна, поле опускается.
+- Регрессия: `node apps/zamazka/qa/timing-provenance.mjs`.
