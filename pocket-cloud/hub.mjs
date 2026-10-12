@@ -40,6 +40,22 @@ export class PocketCloud {
       request.headers.get('content-type')?.split(';')[0]!=='application/json')
      return json({error:'origin_or_content_type_denied'},403);
   }
+  // One authenticated summary across every app; no client-provided account ID is trusted.
+  // Fetch only metadata, never the saved document payloads.
+  if(path==='/pocket-cloud/usage'){
+   if(request.method!=='GET')return json({error:'method_not_allowed'},405);
+   const rows=this.sql.exec('SELECT app,id,title,bytes FROM items WHERE deleted=0 ORDER BY bytes DESC,app,id').toArray();
+   const usedBytes=rows.reduce((total,row)=>total+row.bytes,0);
+   const byApp=[...allowedApps].map(app=>{
+    const own=rows.filter(row=>row.app===app);
+    return {app,usedBytes:own.reduce((total,row)=>total+row.bytes,0),items:own.length};
+   });
+   return json({
+    usedBytes,freeBytes:Math.max(0,MAX_USER_BYTES-usedBytes),maxBytes:MAX_USER_BYTES,
+    maxItemBytes:MAX_ITEM_BYTES,usedItems:rows.length,maxItems:MAX_ROWS,
+    byApp,items:rows.map(({app,id,title,bytes})=>({app,id,title,bytes}))
+   });
+  }
   const app=url.searchParams.get('app'),id=url.searchParams.get('id');
   if(!allowedApps.has(app))return json({error:'unsupported_app'},400);
   if(path==='/pocket-cloud/list'&&request.method==='GET'){
