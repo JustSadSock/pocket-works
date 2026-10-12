@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "product": "pepelny-dozor",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "afterhours-arena",
+      "evidence": "apps/afterhours-arena README and scene inspected; side-view fighter arcade",
+      "lesson": "Do not repeat the cabinet/fighting stage: use full-bleed circular defense with touch-directed lamp."
+    },
+    {
+      "slug": "moss-marble",
+      "evidence": "apps/moss-marble config and visual doctrine inspected; physical miniature",
+      "lesson": "Use charcoal stone night mood and one light cone, not lush putting greens."
+    },
+    {
+      "slug": "chush",
+      "evidence": "apps/chush art-bible and visual-direction inspected; colorful stamp painting",
+      "lesson": "Avoid flat multicolored stamp catalog and boxed drawing editor."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://community.aseprite.org/t/what-kinds-of-2d-pixel-animation-approaches-would-work-well-for-a-solo-developer/27932",
+      "inspectedAt": "2026-10-12",
+      "observation": "Solo artists emphasize reusable moving parts, small sprites, few key poses and fixed references.",
+      "principle": "Control per-frame redraw cost; use small pose families.",
+      "application": "32x32 fixed-origin two-pose creatures with motion conveyed by per-entity timing and contact glow.",
+      "avoid": "Do not borrow character art or claim a community post is a benchmark."
+    },
+    {
+      "url": "https://pixl.hackclub.com/docs/pixel-art",
+      "inspectedAt": "2026-10-12",
+      "observation": "Pixel workflows reward small palette, fixed light direction and exact integer cell resolution.",
+      "principle": "Palette lock and silhouette first.",
+      "application": "Single indexed creature atlas with 14 colors and integer dimensions, nearest-neighbor drawing.",
+      "avoid": "Do not copy pixel shapes or palette artwork."
+    },
+    {
+      "url": "https://aseprite.org/docs/basics/",
+      "inspectedAt": "2026-10-12",
+      "observation": "Sprites are layered frame timelines with fixed-size cels.",
+      "principle": "Use stable pivots, durations and frame roles.",
+      "application": "Editable Forge row layers record 12 independent poses and durations.",
+      "avoid": "No editor screenshots or imagery reused."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "ember-abbey",
+      "medium": "Indexed 32x32 pixel characters, hand-set SVG heraldic seal, vector glow lighting.",
+      "composition": "Full-bleed top-down ruined abbey arena under the right thumb; narrow masonry console above and bell below.",
+      "interaction": "Drag finger to turn destructive cone; strike a single accessible bell with cooldown.",
+      "motion": "Anticipated lamp rotation, contact sparks, radius shockwave, recoil and spatial fade.",
+      "rationale": "Reliable constrained assets; player action directly edits beautiful lighting and kills."
+    },
+    {
+      "id": "marble-diorama",
+      "medium": "Low-poly Blender GLBs with orthographic bake and full 3D lights.",
+      "composition": "Three-quarter view of a tiny lantern tower on a hill.",
+      "interaction": "Swipe perspective and slot physical barriers.",
+      "motion": "Articulated door gates and heavy stones.",
+      "rationale": "Strong visual potential but significantly higher modeling/QA risk for phone sessions."
+    },
+    {
+      "id": "woodcut-tactics",
+      "medium": "Large etched monochrome vector prints and painterly hatching.",
+      "composition": "Two-pane manuscript page and circular unit-command wheel.",
+      "interaction": "Issue orders to four stone sentries.",
+      "motion": "Animated ink crossings and delayed orders.",
+      "rationale": "Excellent editorial look but more UI decisions and less immediate one-thumb feedback."
+    }
+  ],
+  "selection": {
+    "concept": "ember-abbey",
+    "reason": "The moving light itself is gameplay and visual centerpiece; simple authorable silhouettes stay distinctive while physically meaningful light does the expensive work.",
+    "rejected": [
+      {
+        "concept": "marble-diorama",
+        "reason": "Full 3D character and scene complexity would dominate this small project."
+      },
+      {
+        "concept": "woodcut-tactics",
+        "reason": "Orders and split UI compete with direct spotlight interaction."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "universal-art-forge-pixel",
+      "availability": "available",
+      "reason": "Repository defines a Pillow-driven indexed-pixel v2 adapter and output validation; generated assets tracked by index."
+    },
+    {
+      "id": "universal-art-forge-vector",
+      "availability": "available",
+      "reason": "Repository vector adapter exports safe SVG with Inkscape; original emblem is editable and also used in PWA."
+    },
+    {
+      "id": "canvas-2d",
+      "availability": "available",
+      "reason": "Native browser Canvas2D composes atlas layers, beam penumbra, environment and effects."
+    },
+    {
+      "id": "webaudio",
+      "availability": "available",
+      "reason": "Native WebAudio with user-gesture activation and explicit mute."
+    }
+  ],
+  "assets": [
+    {
+      "id": "creatures",
+      "tool": "universal-art-forge-pixel",
+      "source": "asset-forge/sprites.json",
+      "output": "assets/creatures.png",
+      "role": "Player lamp, five enemy types, 12 indexed frames with consistent pivots.",
+      "acceptance": "Frames 32x32, transparent, readable at 28-57px and nearest-neighbor; no fractional/painterly pixels.",
+      "integration": "Game sprite() draws indexed atlas and regenerates exact source in a safe fallback.",
+      "provenance": "Original authored indexed silhouettes, no third-party assets.",
+      "maxBytes": 300000
+    },
+    {
+      "id": "abbey-emblem",
+      "tool": "universal-art-forge-vector",
+      "source": "asset-forge/emblem.svg",
+      "output": "assets/abbey-emblem.png",
+      "role": "Engraved lamp insignia and companion PWA artwork.",
+      "acceptance": "Shield and flame remain distinct at 48px.",
+      "integration": "SVG icon for PWA, Forge PNG for portable authored asset library.",
+      "provenance": "Original geometric SVG, no third-party artwork.",
+      "maxBytes": 200000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 500000,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "WebKit full-screen safe area and stage controls",
+      "Generated atlas and index must remain fresh",
+      "Beam clarity against low-contrast enemies at small phone size",
+      "Paused/resumed run must not corrupt upgrades",
+      "Offline replay requires versioned isolated cache"
+    ],
+    "comparisons": [
+      "afterhours-arena",
+      "moss-marble",
+      "chush"
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "/apps/pepelny-dozor/",
+  "name": "ПЕПЕЛЬНЫЙ ДОЗОР",
+  "short_name": "Дозор",
+  "description": "Световая оборона заброшенного аббатства: вращай луч, отражай тварей колоколом и укрепляй огонь между пятью ночными волнами.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101b1e",
+  "theme_color": "#101b1e",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

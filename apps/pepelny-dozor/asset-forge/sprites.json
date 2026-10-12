@@ -1,0 +1,586 @@
+{
+  "width": 32,
+  "height": 32,
+  "palette": {
+    ".": "#00000000",
+    "K": "#172326",
+    "S": "#2c3d41",
+    "T": "#526263",
+    "C": "#94b6b2",
+    "I": "#e7dac0",
+    "Y": "#ffda88",
+    "F": "#e79651",
+    "R": "#b9544b",
+    "V": "#756b8e",
+    "B": "#6e5649",
+    "W": "#c0dfbe",
+    "D": "#91a0a1",
+    "H": "#f7efd6"
+  },
+  "frames": [
+    {
+      "name": "lamp-0",
+      "tag": "lamp",
+      "durationMs": 180,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................F...............",
+            "..............FFFFF.............",
+            ".............FFFFFFF............",
+            ".............FFFFFFF............",
+            "............FFFFFFFFF...........",
+            "............FFFFFFFFF...........",
+            "............FFFFFFFFF...........",
+            "............FFFFFFFFF...........",
+            "............FIIIIIIIF...........",
+            "...........FFFYYYYYFFF..........",
+            "............KFYYHYYFK...........",
+            "............KYYHHHYYK...........",
+            "............KFYHHHYFK...........",
+            "............KFYHHHYFK...........",
+            "............KFYHHHYFK...........",
+            "............KFFHHHFFK...........",
+            "............KFFFHFFFK...........",
+            "............KKFFFFFKK...........",
+            "............KIIIIIIIK...........",
+            "............KKYHHHYKK...........",
+            "............KKYYYYYKK...........",
+            "............BKKKKKKKB...........",
+            "............BKKKKKKKB...........",
+            "............BBBBBBBBB...........",
+            "..........KKKKKKKKKKKKK.........",
+            "..........KKKKKKKKKKKKK.........",
+            "................K...............",
+            ".......KKKKKKKKKKKKKKKKKKK......",
+            ".....KKKKKKKKKKKKKKKKKKKKKKK....",
+            ".......KKKKKKKKKKKKKKKKKKK......",
+            "................K..............."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lamp-1",
+      "tag": "lamp",
+      "durationMs": 210,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            ".................F..............",
+            "...............FFFFF............",
+            "..............FFFFFFF...........",
+            "..............FFFFFFF...........",
+            ".............FFFFFFFFF..........",
+            ".............FFFFFFFFF..........",
+            ".............FFFFFFFFF..........",
+            ".............FFFFFYFFF..........",
+            ".............IIIIIIIFF..........",
+            "............FFFYYYYYFFF.........",
+            "............KFFYYHYYKF..........",
+            "............KFYYHHHYKF..........",
+            "............KFFYHHHYKF..........",
+            "............KFFYHHHYKF..........",
+            "............KFFYHHHYKF..........",
+            "............KKFFHHHFK...........",
+            "............KKFFFHFFK...........",
+            "............KKYFFFFFK...........",
+            "............KIIIIIIIK...........",
+            "............KKYHHHYKK...........",
+            "............KKYYYYYKK...........",
+            "............BKKKKKKKB...........",
+            "............BKKKKKKKB...........",
+            "............BBBBBBBBB...........",
+            "..........KKKKKKKKKKKKK.........",
+            "..........KKKKKKKKKKKKK.........",
+            "................K...............",
+            ".......KKKKKKKKKKKKKKKKKKK......",
+            ".....KKKKKKKKKKKKKKKKKKKKKKK....",
+            ".......KKKKKKKKKKKKKKKKKKK......",
+            "................K..............."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "hollow-0",
+      "tag": "hollow",
+      "durationMs": 180,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................K...............",
+            "............KKKKKKKKK...........",
+            "...........KKKKKKKKKKK..........",
+            "..........KKKKKKSKKKKKK.........",
+            ".........KKKKSSSSSSSKKKK........",
+            "........KKKKSSSSSSSSSKKKK.......",
+            "........KKKKWWWSSSWWWKKKK.......",
+            ".......KKSKSWWWSSSWWWSKSKK......",
+            ".......KKSKKSSSSSSSSSKKSKK......",
+            ".......KKSKKSSSSSSSSSKKSKK......",
+            ".......KKSSKKSSSSSSSKKSSKK......",
+            "......KKSSSSSKKKSKKKSSSSSKK.....",
+            ".......KKSSSSSSSKSSSSSSSKK......",
+            ".......KKSSSSSCCCCSSSSSSKK......",
+            ".......KKSSSSSSSSSSSSSSSKK......",
+            ".......KKKKKSSSSSSSSSKKKKK......",
+            "........KKKKSSSSSSSSSKKKK.......",
+            "........KKKKTTTTTTTTTKKKK.......",
+            ".........KTTTTTTTTTTTTKK........",
+            "..........TTTTTTTTTTTTK.........",
+            "..........KKKSSSSSSSKKK.........",
+            "........KKKKKKKKSKKKKKKKK.......",
+            "..........KKKKKKKKKKKKK.........",
+            "................K...............",
+            "................................"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "hollow-1",
+      "tag": "hollow",
+      "durationMs": 210,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................K...............",
+            "............KKKKKKKKK...........",
+            "...........KKKKKKKKKKK..........",
+            "..........KKKKKKKKKKKKK.........",
+            ".........KKKKKKKSKKKKKKK........",
+            "........KKKKKSSSSSSSKKKKK.......",
+            "........KKKKSSSSSSSSSKKKK.......",
+            ".......KKKKKWWWSSSWWWKKKKK......",
+            ".......KKSKSWWWSSSWWWSKSKK......",
+            ".......KKSKKSSSSSSSSSKKSKK......",
+            ".......KKSKKSSSSSSSSSKKSKK......",
+            "......KKSSSKKSSSSSSSKKSSSKK.....",
+            ".......KKSSSSKKKSKKKSSSSKK......",
+            ".......KKSSSSSCCCCSSSSSSKK......",
+            ".......KKSSSSSSSSSSSSSSSKK......",
+            ".......KKKKKSSSSSSSSSKKKKK......",
+            "........KKKKSSSSSSSSSKKKK.......",
+            "........KKKKTTTTTTTTTKKKK.......",
+            ".........KTTTTTTTTTTTTKK........",
+            "..........TTTTTTTTTTTTK.........",
+            "..........KKKSSSSSSSKKK.........",
+            "........KKKKKKKKSKKKKKKKK.......",
+            "..........KKKKKKKKKKKKK.........",
+            "................K...............",
+            "................................"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "hound-0",
+      "tag": "hound",
+      "durationMs": 180,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "...................K............",
+            "..................KKK.K...K.....",
+            ".................KKKKKKKKKKK....",
+            "................KKKKKKKKKKKKK...",
+            "...............KKKKKKKKKKKKKKK..",
+            "..............KKKKKKKKKKKKKKKKK.",
+            "...............RKKSSSSYYSSSKK...",
+            "...SSSSSSSKRRRRKKSSSSSYYSSSSKK..",
+            "...SSSSSSSRRRRRRKKSSSSSSSSSKK...",
+            "...SSSSSSSRRRRRRKKSSSSSSSSSKKKK.",
+            "......KKRRRRRRRRKKKSSSSSSSKKKKK.",
+            "......KRRRRRRRRRRKKKKKSKKKKK....",
+            ".....KKKRRRRRRRRRRRKKKKKKK......",
+            "......KKKRRRRRRRRRRRRKKKK.......",
+            "......KKKRRRRRRRRRRRRKKKK.......",
+            "......KKKKKRRRRRRRRRKKKK........",
+            "......KKKKKKKKKRKKKKKKKK........",
+            "......KKK.KKKKKKKKKKKKKK........",
+            "......KKKKKKKKKKKKKKKKKKKK......",
+            ".....KKKKKKKKKKKKKKKKKKKKKKK....",
+            ".......KKKKKKKKKKKKKKKKKKK......",
+            "................K...............",
+            "................................"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "hound-1",
+      "tag": "hound",
+      "durationMs": 210,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "...................K............",
+            "..................KKK.....K.....",
+            ".................KKKKKK..KKK....",
+            "................KKKKKKKKKKKKK...",
+            "...............KKKKKKKKKKKKKKK..",
+            "..............KKKKKKKKKKKKKKKKK.",
+            "................KKSSSSSSSSSKK...",
+            "...SSSSSSS.....RKKSSSSYYSSSKK...",
+            "...SSSSSSSKRRRRKKSSSSSYYSSSSKK..",
+            "...SSSSSSSRRRRRRKKSSSSSSSSSKKKK.",
+            ".......KRRRRRRRRKKSSSSSSSSSKKKK.",
+            "......KKRRRRRRRRKKKSSSSSSSKKK...",
+            "......KRRRRRRRRRRKKKKKSKKKKK....",
+            ".....KKKKRRRRRRRRRRKKKKKKK......",
+            "......KKKRRRRRRRRRRRRKKKK.......",
+            "......KKKRRRRRRRRRRRRKKKK.......",
+            "......KKKKKRRRRRRRRRKKKK........",
+            "......KKKKKKKKKRKKKKKKKK........",
+            "......KKKKKKKKKKKKKKKKKKKK......",
+            ".....KKKKKKKKKKKKKKKKKKKKKKK....",
+            ".......KKKKKKKKKKKKKKKKKKK......",
+            "................K...............",
+            "................................"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "warden-0",
+      "tag": "warden",
+      "durationMs": 180,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "...............KKK..............",
+            "...............III..............",
+            "...............III..............",
+            "............TTTIIITTT...........",
+            "..........KTTTTKKKTTTTK.........",
+            ".........KDDDDDCCCDDDDDK........",
+            "........KTDDSSSCCCSSSDDTK.......",
+            ".......KTTDDSSSCCCSSSDDTTK......",
+            "......KKTTDDSSSCCCSSSDDTTKK.....",
+            "......KKTTDDWWWCCCSWWWDTTKK.....",
+            ".....BBBBBDDWWWCCCSWWWDBBBBB....",
+            ".....BBBBBDDDDDCCCDDDDDBBBBB....",
+            ".....BBBBBTTTTTCCCTTTTTBBBBB....",
+            ".....BBBBBTTTTTCCCTTTTTBBBBB....",
+            ".....BBBBBTTTTTCCCTTTTTBBBBB....",
+            ".....BKKKKTTTTTCCCTTTTTBBBBB....",
+            ".....BKKKKTTTTTCCCTTTTTBBBBB....",
+            ".....BKKKKTTTTTCCCTTTTTBBBBB....",
+            ".....BBBBBKTTTTTTTTTTTKBBBBB....",
+            "........KKKKTTTTTTTTTKKK........",
+            "........KKKKKKKKTKKKKKKK........",
+            "........KKKKKKKKKKKKKKKKK.......",
+            "......KKKKKKKKKKKKKKKKKKKKK.....",
+            "........KKKKKKKKKKKKKKKKK.......",
+            "................K..............."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "warden-1",
+      "tag": "warden",
+      "durationMs": 210,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "...............KKK..............",
+            "...............III..............",
+            "............TTTIIITTT...........",
+            "..........KTTTTIIITTTTK.........",
+            ".........KDDDDDKKKDDDDDK........",
+            "........KTDDSSSCCCSSSDDTK.......",
+            ".......KTTDDSSSCCCSSSDDTTK......",
+            "......KKTTDDSSSCCCSSSDDTTKK.....",
+            "......KKTTDDWWWCCCSWWWDTTKK.....",
+            ".....BBBBBDDWWWCCCSWWWDBBBBB....",
+            ".....BBBBBDDDDDCCCDDDDDBBBBB....",
+            ".....BBBBBTTTTTCCCTTTTTBBBBB....",
+            ".....BBBBBTTTTTCCCTTTTTBBBBB....",
+            ".....BBBBBTTTTTCCCTTTTTBBBBB....",
+            ".....BKKKKTTTTTCCCTTTTTBBBBB....",
+            ".....BKKKKTTTTTCCCTTTTTBBBBB....",
+            ".....BKKKKTTTTTCCCTTTTTBBBBB....",
+            ".....BBBBBKTTTTTTTTTTTKBBBBB....",
+            "........KKKKTTTTTTTTTKKK........",
+            "........KKKKKKKKTKKKKKKK........",
+            "........KKKKKKKKKKKKKKKKK.......",
+            "......KKKKKKKKKKKKKKKKKKKKK.....",
+            "........KKKKKKKKKKKKKKKKK.......",
+            "................K..............."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "moth-0",
+      "tag": "moth",
+      "durationMs": 180,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            ".......V.................V......",
+            "....VVVVVVV...........VVVVVVV...",
+            "...VVVVVVVVV....K....VVVVVVVVV..",
+            "..VVVVVCVVVVV..KTK..VVVVVCVVVVV.",
+            "..VVVCCCCCVVV.KTTTK.VVVCCCCCVVV.",
+            ".VVVCCCCCCCVVVWWWWTVVVCCCCCCCVVV",
+            ".VVCCCCCCCCCVKWWWWTKVCCCCCCCCCVV",
+            ".VVCCCCCCCCCVKWTTWTKVCCCCCCCCCVV",
+            ".VVCCCCCCCCCVKWTTWTKVCCCCCCCCCVV",
+            "VVCCCCCCCCCCCKWTTWTKCCCCCCCCCCCV",
+            ".VVCCCCCCCCCVTTTTTTTVCCCCCCCCCVV",
+            ".VVCCCCCCCCCVKTTTTTKVCCCCCCCCCVV",
+            ".VVCCCCCCCCCKKTTTTTKKCCCCCCCCCVV",
+            ".VVVCCCCCCCVVKTTTTTKVVCCCCCCCVVV",
+            "..VVVCCCCCVVVKTTTTTKVVVCCCCCVVV.",
+            "..VVDDDDVVVVVKTTTTTKVVVVDDDDVVV.",
+            "...VDDDDVVVV.KKTTTKK.VVVDDDDVV..",
+            "....VVVVVVV..KKKTKKK..VVVVVVV...",
+            ".......V.....KKKKKKK.....V......",
+            "..............KKKKK.............",
+            "..............KKKKK.............",
+            "...............KKK..............",
+            ".............KKKKKKK............",
+            "............KKKKKKKKK...........",
+            ".............KKKKKKK............",
+            "................K...............",
+            "................................",
+            "................................"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "moth-1",
+      "tag": "moth",
+      "durationMs": 210,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            ".......V.................V......",
+            "....VVVVVVV.....K.....VVVVVVV...",
+            "...VVVVVVVVV...KTK...VVVVVVVVV..",
+            "..VVVVVCVVVVV.KTTTK.VVVVVCVVVVV.",
+            "..VVVCCCCCVVV.WWWWT.VVVCCCCCVVV.",
+            ".VVVCCCCCCCVVKWWWWTKVVCCCCCCCVVV",
+            ".VVCCCCCCCCCVKWTTWTKVCCCCCCCCCVV",
+            ".VVCCCCCCCCCVKWTTWTKVCCCCCCCCCVV",
+            ".VVCCCCCCCCCVKWTTWTKVCCCCCCCCCVV",
+            "VVCCCCCCCCCCCTTTTTTTCCCCCCCCCCCV",
+            ".VVCCCCCCCCCVKTTTTTKVCCCCCCCCCVV",
+            ".VVCCCCCCCCCKKTTTTTKKCCCCCCCCCVV",
+            ".VVCCCCCCCCCVKTTTTTKVCCCCCCCCCVV",
+            ".VVVCCCCCCCVVKTTTTTKVVCCCCCCCVVV",
+            "..VVDDDDCCVVVKTTTTTKVVVCDDDDVVV.",
+            "..VVDDDDVVVVVKKTTTKKVVVVDDDDVVV.",
+            "...VVVVVVVVV.KKKTKKK.VVVVVVVVV..",
+            "....VVVVVVV..KKKKKKK..VVVVVVV...",
+            ".......V......KKKKK......V......",
+            "..............KKKKK.............",
+            "...............KKK..............",
+            ".............KKKKKKK............",
+            "............KKKKKKKKK...........",
+            ".............KKKKKKK............",
+            "................K...............",
+            "................................",
+            "................................"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "abbot-0",
+      "tag": "abbot",
+      "durationMs": 180,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "......Y.........................",
+            "......Y.........................",
+            "...IIIYI........K...............",
+            "...IIIII.......KKK..............",
+            "...IIIII......KKKKK.............",
+            "...IIIII...KKKKKKKKKKK..........",
+            "....BBB..KKKKKKKVKKKKKKK........",
+            "....BBBKKKKVSSSSSSSSSVKKKK......",
+            "....BBBKKVVVSSSSSSSSSVVVKKK.....",
+            "....BBBKVVVVSYYYSSSYYYVVVKKK....",
+            "....BBBVVVVVSYYYSSSYYYVVVVKK....",
+            "....BBBVVVVVSYYYSSSYYYVVVVVKK...",
+            "....BBBVVVVVSSSSSSSSSVVVVVVKK...",
+            "....BBBVVVVVSSSSSSSSSVVVVKKKK...",
+            "...KBBBVVVVVSSSSSSSSSVVVVKKKKK..",
+            "....BBBVVVVVSSSSSSSSSVVVVKKKK...",
+            "....BBBVVVVVVVVRRRRRVVVVVKKKK...",
+            "....BBBVVVVVVVVRRRRRVVVVVKKKK...",
+            "....BBBVVVVVVVVVVVVVVVVVVKKK....",
+            "....BBBKVVVVVVVVVVVVVVVVVKKK....",
+            "....BBBKKVVVVVVVVVVVVVVVKKKK....",
+            ".......KKKKSSSVVVVVVSSSKKK......",
+            ".........KKSSSKKVKKKSSSK........",
+            "......KKKKKSSSKKKKKKSSSKKKK.....",
+            "....KKKKKKKKKKKKKKKKKKKKKKKKK...",
+            "......KKKKKKKKKKKKKKKKKKKKK.....",
+            "................K..............."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "abbot-1",
+      "tag": "abbot",
+      "durationMs": 210,
+      "pivot": [
+        16,
+        30
+      ],
+      "layers": [
+        {
+          "rows": [
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "................................",
+            "......Y.........................",
+            "......Y.........................",
+            "...IIIYI........................",
+            "...IIIII........K...............",
+            "...IIIII.......KKK..............",
+            "...IIIII...KKKKKKKKKKK..........",
+            "....BBB..KKKKKKKVKKKKKKK........",
+            "....BBBKKKKVVVVVVVVVVVKKKK......",
+            "....BBBKKVVVSSSSSSSSSVVVKKK.....",
+            "....BBBKVVVVSSSSSSSSSVVVVKKK....",
+            "....BBBVVVVVSYYYSSSYYYVVVVKK....",
+            "....BBBVVVVVSYYYSSSYYYVVVVVKK...",
+            "....BBBVVVVVSYYYSSSYYYVVVVVKK...",
+            "....BBBVVVVVSSSSSSSSSVVVVKKKK...",
+            "...KBBBVVVVVSSSSSSSSSVVVVKKKKK..",
+            "....BBBVVVVVSSSSSSSSSVVVVKKKK...",
+            "....BBBVVVVVSSSRRRRRSVVVVKKKK...",
+            "....BBBVVVVVVVVRRRRRVVVVVKKKK...",
+            "....BBBVVVVVVVVVVVVVVVVVVKKK....",
+            "....BBBKVVVVVVVVVVVVVVVVVKKK....",
+            "....BBBKKVVVVVVVVVVVVVVVKKKK....",
+            ".......KKKKSSSVVVVVVSSSKKK......",
+            ".........KKSSSKKVKKKSSSK........",
+            "......KKKKKSSSKKKKKKSSSKKKK.....",
+            "....KKKKKKKKKKKKKKKKKKKKKKKKK...",
+            "......KKKKKKKKKKKKKKKKKKKKK.....",
+            "................K..............."
+          ]
+        }
+      ]
+    }
+  ]
+}

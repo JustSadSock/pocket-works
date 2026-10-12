@@ -1,0 +1,54 @@
+{
+  "version": 2,
+  "runtimeRoot": ".",
+  "index": "assets/forge-index.json",
+  "jobs": [
+    {
+      "id": "night-creatures",
+      "adapter": "pixel",
+      "source": "asset-forge/sprites.json",
+      "dependsOn": [],
+      "seed": 7126,
+      "parameters": {},
+      "outputs": {
+        "image": "assets/creatures.png",
+        "atlas": "assets/creatures.json"
+      },
+      "budget": {
+        "maxBytes": 300000,
+        "maxWidth": 512,
+        "maxHeight": 512
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Hand-authored 32px palette-locked silhouette sprites"
+      }
+    },
+    {
+      "id": "abbey-emblem",
+      "adapter": "vector",
+      "source": "asset-forge/emblem.svg",
+      "dependsOn": [],
+      "seed": 7126,
+      "parameters": {
+        "width": 128,
+        "height": 128
+      },
+      "outputs": {
+        "image": "assets/abbey-emblem.png",
+        "vector": "assets/abbey-emblem.svg"
+      },
+      "budget": {
+        "maxBytes": 200000,
+        "maxWidth": 512,
+        "maxHeight": 512
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original geometric abbey sigil"
+      }
+    }
+  ]
+}

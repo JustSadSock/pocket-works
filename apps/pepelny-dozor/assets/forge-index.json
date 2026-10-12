@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "manifestSha256": "820eec204d27dbf7a724568c0b102c0161f6a3a301eadb219a4b2aba18e4a8ce",
+  "assets": [
+    {
+      "id": "night-creatures",
+      "adapter": "pixel",
+      "seed": 7126,
+      "parameters": {},
+      "inputs": {
+        "asset-forge/sprites.json": "054f3e3e07959cd2ba7a7d38032c34acbb28dd57050ce36490084a02be4ad0e4"
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Hand-authored 32px palette-locked silhouette sprites"
+      },
+      "tool": "pixel image export compatible with Pillow v2",
+      "outputs": {
+        "image": {
+          "url": "assets/creatures.png",
+          "bytes": 49252,
+          "sha256": "33d18b634c9a2497d90e75985ca4ae140bb6cde1ed8ddf95797f1a76afdb7e59",
+          "width": 384,
+          "height": 32
+        },
+        "atlas": {
+          "url": "assets/creatures.json",
+          "bytes": 2545,
+          "sha256": "ac561278f3b84e3ea58f366f009c8aed8a00f9b2b64e08471d48073e0e8b9035"
+        }
+      }
+    },
+    {
+      "id": "abbey-emblem",
+      "adapter": "vector",
+      "seed": 7126,
+      "parameters": {
+        "width": 128,
+        "height": 128
+      },
+      "inputs": {
+        "asset-forge/emblem.svg": "b76fd15cfe1e161b92cee22eb3fe7971ef8fc47a1b2580ac3b6bf3db1589191e"
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original geometric abbey sigil"
+      },
+      "tool": "vector raster export (authored source)",
+      "outputs": {
+        "image": {
+          "url": "assets/abbey-emblem.png",
+          "bytes": 65737,
+          "sha256": "183a48f302efe5f98b4ca4de66773b8d0d3452d517ee5b952c99515bc50f4dc6",
+          "width": 128,
+          "height": 128
+        },
+        "vector": {
+          "url": "assets/abbey-emblem.svg",
+          "bytes": 562,
+          "sha256": "b76fd15cfe1e161b92cee22eb3fe7971ef8fc47a1b2580ac3b6bf3db1589191e"
+        }
+      }
+    }
+  ]
+}
