@@ -34,7 +34,7 @@ try{
   const w=worldFor(people.slice(0,count),level);
   if(!w.stage.pads.length||w.stage.sequence.length&&w.stage.sequence[0]!=='pads')continue;
   w.players.forEach((p,i)=>{p.x=w.stage.pads[i].x;p.y=522;p.ground=true;p.vx=0;p.vy=0;});
-  for(let tick=0;tick<160;tick++){
+  for(let tick=0;tick<270;tick++){
    now+=11;for(const p of w.players)w.inputs[p.id]={dir:0,jump:false,anchor:true,at:now};
    simulate(w,.011,now);
    if(w.level!==level)break;
