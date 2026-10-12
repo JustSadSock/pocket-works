@@ -986,7 +986,7 @@ window.addEventListener('pagehide',()=>{
   if(state.doc){finishStroke();void persist();}
 });
 
-createWorkshopMode({appName:'FOLIO',version:'1.5.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
+createWorkshopMode({appName:'FOLIO',version:'1.5.1',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
   if(database)await txPromise('readwrite',s=>s.clear());else localStorage.removeItem(DB_NAME+':fallback');
   state.doc=null;await showHome();
 }});

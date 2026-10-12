@@ -5,7 +5,7 @@ import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPla
 
 installMobileRuntime();
 createWorkshopMode({
-  appName: 'ФЛАГПОСТ', version: '1.1.1',
+  appName: 'ФЛАГПОСТ', version: '1.1.2',
   cachePrefix: 'flagpost-', storageNamespace: 'pocket-works:flagpost',
   onReset() { try { sessionStorage.removeItem('pocket-works:flagpost:identity'); } catch {} }
 });
