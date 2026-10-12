@@ -4,7 +4,7 @@ import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPla
 import {inviteCode,parseRoomInput} from './room-code.js';
 import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
-import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery,loadArtwork} from './artworks.js';
+import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,loadArtwork} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
 import {getSavedEmblem,storeEmblem,paintEmblem,exportEmblem,EMBLEM_SIZE,EMBLEM_COLORS,EMBLEM_LIMITS} from './emblem.js';
@@ -242,7 +242,7 @@ function home(){
     '<div class="museum-wheel"><button data-action="museum-prev" aria-label="Предыдущая картина">‹</button><button data-action="museum-next" aria-label="Следующая картина">›</button></div><span class="museum-exhibit-number">01 / 54</span>'+
   '</div>'+
   '<div class="museum-control">'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(gameName())+'</strong><small>Изменить знак</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
-    '<button class="start-restoration" id="primary-action" data-action="practice" disabled><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Загружаем оригиналы…</strong><small>Загрузка картин</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
+    '<button class="start-restoration" id="primary-action" data-action="practice"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Начать реставрацию</strong><small>Пробный раунд</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
     '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
     (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
@@ -250,19 +250,7 @@ function home(){
  museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(id+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
  syncIdentity();
  zamazkaCloud?.render();
- primeGallery().then(results=>{
-   if(page!=='home')return;
-   const primary=screen.querySelector('#primary-action');
-   if(!primary)return;
-   const ready=results.every(r=>r.status==='fulfilled');
-   primary.disabled=!ready;
-   primary.querySelector('strong').textContent=ready?'Начать реставрацию':'Оригиналы пока недоступны';
-   primary.querySelector('small').textContent=ready?'Пробный раунд':'Нет доступа к изображениям';
-   if(!ready){
-     const foot=screen.querySelector('.museum-footer');
-     const retry=document.createElement('button');retry.dataset.action='retry-gallery';retry.textContent='ПОВТОРИТЬ ЗАГРУЗКУ ↗';foot?.append(retry);
-   }
- });
+
 }
 function setup(mode,error='',roomValue=invitedRoom){
  const creating=mode==='create';
