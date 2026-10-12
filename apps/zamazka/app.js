@@ -296,7 +296,8 @@ function reveal(local=false){
  const bonus=Math.round(wrong*50/others);
  change('<section class="phase-page reveal-phase">'+head(local?'УЧЕБНАЯ РЕСТАВРАЦИЯ · ГОТОВО':'РАЗОБЛАЧЕНИЕ · '+(index+1)+' / '+v.participants.length,'Подлинник найден',local?0:v.deadline)+
  '<div class="phase-body reveal-layout"><div class="reveal-main"><span class="step-stamp">II. СНЯТИЕ ПОДДЕЛКИ</span><h3>'+esc(g.name)+'</h3><p class="hint">Подлинник: <strong>'+esc(ARTS[g.art].title)+'</strong> · '+esc(ARTS[g.art].artist)+'</p>'+
- '<div class="unveil-frame" id="unveilStage" style="--split:100%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Подлинник"></canvas><span class="unveil-label left">РЕСТАВРАЦИЯ</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
+ (local?'':'<div class="reveal-answer-strip" aria-label="Итоги голосования — правильный вариант подсвечен">'+v.selected.map((id,i)=>'<div class="reveal-option'+(id===g.art?' is-answer':'')+'"><div class="reveal-option-image">'+(id===g.art?'<canvas id="correctCandidate" aria-label="Отреставрированное полотно"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'">')+'</div><span>№ '+(i+1)+(id===g.art?' · ВЕРНО':'')+'</span></div>').join('')+'</div>')+
+  '<div class="unveil-frame" id="unveilStage" style="--split:100%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Подлинник"></canvas><span class="unveil-label left">РЕСТАВРАЦИЯ</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
  '<label class="unveil-control" for="unveilRange">Сравнение: двигай разделитель <input id="unveilRange" type="range" min="0" max="100" value="100" aria-label="Показать фрагмент оригинала"></label>'+
  (g.source?'<p class="hint">'+esc(g.source)+'</p>':'')+'</div>'+
  '<div class="reveal-brief"><span class="step-stamp">III. ПРОТОКОЛ ЭКСПЕРТИЗЫ</span>'+
@@ -307,7 +308,9 @@ function reveal(local=false){
  '<p class="hint">За точную фишку — 100 очков в партии на двоих. Для большой компании очки нормируются по числу судей, чтобы партии оставались честными.</p>'+
  (local?'<div class="stack"><button class="btn primary" data-action="practice">Новая реставрация</button><button class="btn ghost" data-action="collection">Моя галерея</button><button class="btn ghost" data-action="menu">В главное меню</button></div>':(me?.id===v.host?'<button class="btn primary" data-action="advance">Следующий экспонат ↗</button>':'<div class="stake-wait">Ожидаем следующий экспонат…</div>'))+
  '</div></div></section>','reveal');
- const source=screen.querySelector('#restCanvas'),original=screen.querySelector('#origCanvas'),stage=screen.querySelector('#unveilStage');
+ const correctCanvas=screen.querySelector('#correctCandidate');
+  if(correctCanvas)void renderArtwork(correctCanvas,g.art,g.variation,g.strokes||[],true);
+  const source=screen.querySelector('#restCanvas'),original=screen.querySelector('#origCanvas'),stage=screen.querySelector('#unveilStage');
  Promise.all([renderArtwork(original,g.art,0,null,false),renderArtwork(source,g.art,g.variation,g.strokes||[],true)]).then(()=>{
   if(stage?.isConnected){requestAnimationFrame(()=>{if(stage.isConnected)stage.style.setProperty('--split','50%')});const range=screen.querySelector('#unveilRange');if(range)range.value='50';}
  });
