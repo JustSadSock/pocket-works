@@ -31,6 +31,9 @@ test('iPhone shelf tools show diagnostics and export a valid backup', async ({ p
   await page.locator('#library-options > summary').click();
   await page.locator('#shelf-tools-button').click();
   await expect(page.locator('#shelf-tools')).toBeVisible();
+  await expect(page.locator('#tools-facts')).toBeHidden();
+  await expect(page.locator('#tools-export')).toBeVisible();
+  await page.locator('.shelf-tools__advanced > summary').click();
   await expect(page.locator('#tools-facts')).toContainText('Launcher version');
   await expect(page.locator('#tools-facts')).toContainText('App workers');
   await expect(page.locator('#tools-facts')).toContainText('Personal shelf');
