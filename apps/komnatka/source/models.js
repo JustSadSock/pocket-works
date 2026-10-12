@@ -1,4 +1,5 @@
 import { MeshBuilder, Mesh, VertexData, Vector3, TransformNode, StandardMaterial, DynamicTexture, Color3 } from '@babylonjs/core';
+import { roundedGeometry } from './geometry.js';
 
 export const CATALOG = [
   { type:'sofa', name:'Диван', group:'furniture', icon:'sofa', size:[2.55,1.26] },
@@ -28,25 +29,13 @@ export function makeMaterial(scene, name, color, rough=0.92) {
  map.set(key,m);return m;
 }
 export function rounded(scene,name,w,h,d,r,material,parent,x=0,y=0,z=0) {
-  // Bevelled cuboid from a rounded-surface projection; consistent soft silhouette from every side.
-  const p=[], normals=[],uvs=[], indices=[], ext=[w/2,h/2,d/2],n=8;
-  for(let axis=0;axis<3;axis++)for(let sign of [-1,1]){
-    const a=(axis+1)%3,b=(axis+2)%3,base=p.length/3;
-    for(let j=0;j<=n;j++)for(let i=0;i<=n;i++){
-      const q=[0,0,0];q[axis]=sign*ext[axis];q[a]=(i/n*2-1)*ext[a];q[b]=(j/n*2-1)*ext[b];
-      const cl=q.map((v,k)=>Math.min(ext[k]-r,Math.max(-ext[k]+r,v)));
-      const dv=q.map((v,k)=>v-cl[k]), len=Math.hypot(...dv)||1;
-      const normal=dv.map(v=>v/len);
-      p.push(...cl.map((v,k)=>v+normal[k]*r));normals.push(...normal);uvs.push(i/n,j/n);
-    }
-    for(let j=0;j<n;j++)for(let i=0;i<n;i++){
-      const a0=base+j*(n+1)+i,b0=a0+1,c0=a0+n+1,d0=c0+1;
-      if(sign>0)indices.push(a0,b0,c0,b0,d0,c0);
-      else indices.push(a0,c0,b0,b0,c0,d0);
-    }
-  }
-  const mesh=new Mesh(name,scene),v=new VertexData();v.positions=p;v.indices=indices;v.normals=normals;v.uvs=uvs;v.applyToMesh(mesh);
-  mesh.material=material;mesh.parent=parent;mesh.position.set(x,y,z);return mesh;
+ const mesh=new Mesh(name,scene);
+ const geometry=roundedGeometry(w,h,d,r);
+ const vertex=new VertexData();
+ Object.assign(vertex,geometry);
+ vertex.applyToMesh(mesh);
+ mesh.material=material;mesh.parent=parent;mesh.position.set(x,y,z);
+ return mesh;
 }
 function orb(scene,name,parent,mat,x,y,z,sx,sy,sz,segments=12){
  const mesh=MeshBuilder.CreateSphere(name,{diameter:1,segments},scene);
