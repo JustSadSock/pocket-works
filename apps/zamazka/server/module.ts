@@ -35,7 +35,7 @@ function choose(s:State){
  s.phase='preview';s.deadline=now()+25000;
 }
 function completeVotes(s:State){
- // Three brass tokens per target. Every token on the correct original pays
+ // Three brass tokens per target. Every token on the restored canvas pays
  // 100 in a two-player match. Normalize by possible other voters so scores
  // stay comparable between duos and larger groups. Wrong tokens pay the
  // restorer instead; no explicit punishment for a wrong guess.
@@ -177,7 +177,7 @@ const module: PocketModule<State>={
      if(!target||id===target)return {state,events:notice(id,'Автор не голосует за собственную работу.')};
      const chips=a.chips;
      if(!Array.isArray(chips)||chips.length!==5||chips.some(n=>!Number.isInteger(n)||n<0||n>3)||chips.reduce((a,b)=>a+b,0)!==3)
-      return {state,events:notice(id,'Распредели ровно три фишки между пятью оригиналами.')};
+      return {state,events:notice(id,'Распредели ровно три фишки между пятью полотнами.')};
      state.votes[target]||={};
      if(id in state.votes[target])return {state,events:notice(id,'Фишки уже поставлены.')};
      state.votes[target][id]=[...chips] as Chips;
