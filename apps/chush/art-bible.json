@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "product": "chush",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "picto",
+      "evidence": "apps/picto/visual-direction.json and app.js inspected; shared typographic tray of pictograms.",
+      "lesson": "Do not reuse typewriter paper or pictographic grammar; use toy objects, color, personal handouts."
+    },
+    {
+      "slug": "zamazka",
+      "evidence": "apps/zamazka/app.config.json, index gallery concept inspected.",
+      "lesson": "Avoid paintings in ornate museum frames and any retouching metaphor."
+    },
+    {
+      "slug": "jam-tape",
+      "evidence": "apps/jam-tape/app.config.json inspected; multitrack music composition.",
+      "lesson": "Distinguish all color and spacing from tape-recorder workspaces."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://designmuseum.org/discover-design/all-stories/memphis-group-awful-or-awesome",
+      "inspectedAt": "2026-10-12",
+      "observation": "Memphis design uses contrasting bright colors and deliberately unexpected object configurations.",
+      "principle": "Clashing hues become playful when large silhouette blocks organize the composition.",
+      "application": "Large saturated orange and yellow stage elements with dark structural geometry.",
+      "avoid": "No direct reproductions of Memphis products or iconic designer patterns."
+    },
+    {
+      "url": "https://www.cooperhewitt.org/2016/11/12/a-miniature-playhouse/",
+      "inspectedAt": "2026-10-12",
+      "observation": "A small historical toy theatre builds scenes from moveable print elements at different depths.",
+      "principle": "The composition can be assembled from independently manipulated objects.",
+      "application": "Direct finger positioning of SVG silhouettes, deliberate stacking order and visible object tray.",
+      "avoid": "Do not replicate the museum's Cinderella illustration, wooden frame or staging."
+    },
+    {
+      "url": "https://www.jackboxgames.com/games/drawful",
+      "inspectedAt": "2026-10-12",
+      "observation": "Surreal descriptions create funny drawings that are judged by other players.",
+      "principle": "The fun lies in the interpretation, not merely dexterity of drawing.",
+      "application": "Curated varied absurd prompts, simultaneous creation and masked voting.",
+      "avoid": "No copies of Drawful visuals, drawing interface, prompts or answer-submission mechanic."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "plastic-puppet-cabaret",
+      "medium": "Original stroke-drawn SVG plastic toy silhouettes with eight category inks and five overlay mutations.",
+      "composition": "Large square free scene and a horizontal mobile prop tray; dark set-like header.",
+      "interaction": "Choose an item, place it, drag/flip/rotate/change layer, secretly publish then vote.",
+      "motion": "Firm physical depressions, a brief snap on creation, no idle visual effects.",
+      "rationale": "Fits online party tempo and differs materially from paper, museum and audio projects."
+    },
+    {
+      "id": "architectural-rotunda",
+      "medium": "Carved stone reliefs and monochrome contour plates.",
+      "composition": "Round gallery with radial inventory and central mosaic circles.",
+      "interaction": "Snapped placement into repeated concentric rings.",
+      "motion": "Slow carved-block slides with heavy dust clouds.",
+      "rationale": "Too constrained for arbitrary spatial jokes and tedious on touchscreens."
+    },
+    {
+      "id": "crt-scrapbook",
+      "medium": "VHS phosphor and halftone bitmap stickers.",
+      "composition": "Stacked wide cinematic frames and a video timeline.",
+      "interaction": "Animated looping stickers composited onto a clip.",
+      "motion": "Tape glitch playback, scrolling frames and audio scratches.",
+      "rationale": "Encourages distraction and another video concept instead of the direct collage mechanic."
+    }
+  ],
+  "selection": {
+    "concept": "plastic-puppet-cabaret",
+    "reason": "The grotesque physical objects and fast stacking mechanics are the actual game's identity, not cosmetic skin.",
+    "rejected": [
+      {
+        "concept": "architectural-rotunda",
+        "reason": "Fixed radial layout would limit jokes and make precise positioning difficult."
+      },
+      {
+        "concept": "crt-scrapbook",
+        "reason": "Video framing is too expensive and distracting for quick simultaneous rounds."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "inline-svg",
+      "availability": "available",
+      "reason": "All 64 original SVG silhouettes and their composite accessories are written by hand in pieces.js without a separate graphics tool."
+    }
+  ],
+  "assets": [
+    {
+      "id": "chush-props",
+      "tool": "inline-svg",
+      "source": "pieces.js",
+      "output": "pieces.js",
+      "role": "Main playable library: 64 hand-authored subjects, 5 variants each, 320 total.",
+      "acceptance": "At 64px tray size, objects are individually recognizable; categories are balanced by server.",
+      "integration": "The same pieceSVG renderer powers the tray, interactive stage, anonymous gallery and saved SVG export.",
+      "provenance": "Original geometric SVG paths, no third-party artwork.",
+      "maxBytes": 60000
+    },
+    {
+      "id": "chush-app-icon",
+      "tool": "inline-svg",
+      "source": "app.config.json",
+      "output": "icons/icon.svg",
+      "role": "App's own playful geometric identifier.",
+      "acceptance": "Three overlapping objects distinguish the icon at 48 pixels.",
+      "integration": "PWA and favicon use the same asset.",
+      "provenance": "Original author-drawn SVG.",
+      "maxBytes": 10000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 100000,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "iPhone safe area must never occlude exit",
+      "Pointer movement must survive incoming PocketNet state echo",
+      "Anonymous gallery must not leak author until reveal",
+      "Two-player voting must have meaningful grading"
+    ],
+    "comparisons": [
+      "picto",
+      "zamazka",
+      "jam-tape"
+    ]
+  }
+}
