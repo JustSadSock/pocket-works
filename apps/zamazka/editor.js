@@ -129,7 +129,7 @@ export class Editor{
     this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
     this.hand=localStorage.getItem('pocket-works:zamazka:precision-hand')==='left'?'left':'right';
     this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
-    this.cursor=root.querySelector('#brushCursor');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
+    this.cursor=root.querySelector('#brushCursor');this.pickerPreview=root.querySelector('#pickerPreview');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
    this.draftKey=key+id+':'+variation+':'+round;
    try{const stored=JSON.parse(localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
    this.attach();this.setMode(this.inputMode,false);this.center();this.render();
@@ -139,7 +139,7 @@ export class Editor{
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(4,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
- save(){this.saveSnapshot();this.onChange(this.strokes.length)}
+ save(){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot();this.onChange(this.strokes.length)}
   getSnapshot(){return [...this.strokes,...(this.working?[this.working]:[])].map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[...p])}))}
   saveSnapshot(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.getSnapshot()))}catch{}}
   adoptDraft(strokes){
@@ -157,11 +157,28 @@ export class Editor{
     if(this.lastCursor)this.showCursor(this.lastCursor);
   }
 
-  // The remote game accepts at most 45 points per segment, 72 segments and
-  // 1600 points total. Segment *forward*; never retroactively simplify ink.
+  // Compress only redundant bends to keep long drawing sessions flowing.
+  compactStrokeBudget(){
+    if(this.strokes.some(s=>s.t==='fill'))return false;
+    let changed=false;
+    for(const stroke of this.strokes){
+      if(stroke.p.length<12)continue;
+      const candidate=simplifyPoints(stroke.p,Math.max(8,Math.floor(stroke.p.length*.77)));
+      if(candidate.length<stroke.p.length){stroke.p=candidate;changed=true}
+    }
+    for(let i=1;i<this.strokes.length;i++){
+      const a=this.strokes[i-1],b=this.strokes[i];
+      if(a.g&&b.g===a.g&&a.t===b.t&&a.c===b.c&&a.s===b.s&&a.p.length+b.p.length-1<=MAX_STROKE_POINTS){
+        a.p.push(...b.p.slice(1));this.strokes.splice(i--,1);changed=true;
+      }
+    }
+    if(changed){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot()}
+    return changed;
+  }
   countPoints(){return this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)+(this.working?.p.length||0)}
   beginStroke(p){
     if(!this.inside(p))return;
+    if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS)this.compactStrokeBudget();
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
     this.working={c:this.color,s:this.size,t:this.tool,p:[p],g:'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
     this.redoStack=[];this.render();
@@ -170,9 +187,11 @@ export class Editor{
   extendStroke(p){
     if(!this.working||!this.inside(p))return;
     const pts=this.working.p,prev=pts[pts.length-1];
-    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<=1.1)return;
+    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<Math.min(3,1.35+this.countPoints()/1300))return;
+    if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0))this.compactStrokeBudget();
     if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0)){this.warnLimit();return}
     if(pts.length>=MAX_STROKE_POINTS){
+      if(this.strokes.length+1>=MAX_STROKES)this.compactStrokeBudget();
       if(this.strokes.length+1>=MAX_STROKES){this.warnLimit();return}
       const old=this.working;
       this.strokes.push(old);
@@ -194,18 +213,46 @@ export class Editor{
   pointAt(e){return this.point(this.tip(e))}
   showCursor(e){
     if(!this.cursor)return;
-    if(['hand','picker','fill'].includes(this.tool)||this.pinch||this.panStart){this.hideCursor();return}
+    if(this.pinch||this.panStart||this.tool==='hand'||this.tool==='fill'){
+      this.hideCursor();this.hidePickerPreview();return;
+    }
     this.lastCursor=e;
+    if(this.tool==='picker'){
+      this.hideCursor();this.showPickerPreview(e);return;
+    }
+    this.hidePickerPreview();
     const tip=this.tip(e),v=this.viewport.getBoundingClientRect(),c=this.canvas.getBoundingClientRect();
     const effectiveSize=this.tool==='pencil'?Math.max(1,this.size*.4):this.size;
     const diameter=Math.max(2,effectiveSize*c.width/W);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
     // Absolutely positioned children start at the viewport padding edge, not its outer border.
-   this.cursor.style.left=tip.clientX-v.left-this.viewport.clientLeft+'px';this.cursor.style.top=tip.clientY-v.top-this.viewport.clientTop+'px';
+   const drawn=this.point(tip);
+   this.cursor.style.left=c.left+drawn[0]/W*c.width-v.left-this.viewport.clientLeft+'px';
+   this.cursor.style.top=c.top+drawn[1]/H*c.height-v.top-this.viewport.clientTop+'px';
     this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.color);
     this.cursor.hidden=false;
   }
   hideCursor(){if(this.cursor)this.cursor.hidden=true}
+  hidePickerPreview(){if(this.pickerPreview)this.pickerPreview.hidden=true}
+  showPickerPreview(e){
+    const sample=this.pickerPreview;if(!sample)return;
+    const v=this.viewport.getBoundingClientRect(),
+      x=e.clientX-v.left-this.viewport.clientLeft,y=e.clientY-v.top-this.viewport.clientTop;
+    sample.style.left=Math.max(24,Math.min(this.viewport.clientWidth-24,x+19))+'px';
+    sample.style.top=Math.max(30,Math.min(this.viewport.clientHeight-18,y-29))+'px';
+    if(!this.lastPickerTick||Date.now()-this.lastPickerTick>45){
+      this.lastPickerTick=Date.now();
+      try{
+        const p=this.pointAt(e);
+        const px=Math.min(this.canvas.width-1,Math.floor(p[0]/W*this.canvas.width)),
+          py=Math.min(this.canvas.height-1,Math.floor(p[1]/H*this.canvas.height));
+        const rgba=this.canvas.getContext('2d').getImageData(px,py,1,1).data;
+        if(rgba[3])this.previewInk='#'+[rgba[0],rgba[1],rgba[2]].map(n=>n.toString(16).padStart(2,'0')).join('');
+      }catch{}
+    }
+    sample.style.setProperty('--sample-color',this.previewInk||this.color);
+    sample.hidden=false;
+  }
   setMode(mode,persist=true){
     this.finishStroke();
     this.inputMode=mode==='precision'?'precision':'direct';
@@ -287,7 +334,10 @@ export class Editor{
         return;
       }
       this.showCursor(e);
-      if(this.working)this.extendStroke(this.pointAt(e));
+      if(this.working){
+        const events=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
+        for(const sample of events.length?events:[e])this.extendStroke(this.pointAt(sample));
+      }
     };
     this.up=e=>{
       if(!this.pointers.has(e.pointerId))return;
@@ -298,8 +348,12 @@ export class Editor{
       this.finishStroke();
       if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
       this.panStart=null;this.viewport.classList.remove('is-panning');
-      if(e.pointerType==='touch'){this.lastCursor=null;this.lastMousePoint=null;this.hideCursor()}
-      else this.showCursor(e);
+      if(e.pointerType==='touch'||e.type==='pointercancel'||
+         !Number.isFinite(e.clientX)||!Number.isFinite(e.clientY)){
+        this.lastCursor=null;
+        if(e.pointerType==='touch')this.lastMousePoint=null;
+        this.hideCursor();this.hidePickerPreview();
+      }else this.showCursor(e);
     };
     this.canvas.addEventListener('pointerdown',this.down);
     this.canvas.addEventListener('pointermove',this.move);
@@ -312,7 +366,7 @@ export class Editor{
     this.viewport.addEventListener('pointermove',this.frameMove);
     this.viewport.addEventListener('pointerup',this.frameUp);
     this.viewport.addEventListener('pointercancel',this.frameUp);
-    this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor()}};
+    this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor();this.hidePickerPreview()}};
     this.viewport.addEventListener('pointerleave',this.cursorLeave);
     this.armDown=e=>{
       if(this.inputMode!=='precision'||this.armPointer!==null)return;
@@ -463,17 +517,72 @@ export class Editor{
        rgb=ctx.getImageData(Math.min(sample.width-1,Math.floor(p[0]*2)),Math.min(sample.height-1,Math.floor(p[1]*2)),1,1).data;
      }
      if(this.closed||!rgb||!rgb[3])return;
-     this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');
+     this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.previewInk=this.color;
      const input=this.root.querySelector('#customColor');if(input)input.value=this.color;
      this.root.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('active',b.dataset.color?.toLowerCase()===this.color));
      if(!temporary)this.setTool('brush');
      this.onChange(this.strokes.length);
    }catch{this.root.querySelector('#drawingTip')?.setAttribute('title','Пипетка не смогла прочитать цвет. Попробуйте ещё раз.');}
  }
- async render(){if(this.closed)return;const c=this.canvas,version=this.renderVersion=(this.renderVersion||0)+1;const img=await loadArtwork(this.id).catch(()=>null);if(!img||this.closed||version!==this.renderVersion)return;
- const x=prepareCanvas(c,true);drawArtwork(x,img,this.id);x.save();clipZone(x,this.zone);x.fillStyle='#e8ddc6';x.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);renderStrokes(x,[...this.strokes,...(this.working?[this.working]:[])],this.zone);x.restore();x.save();x.setLineDash([5,4]);x.strokeStyle='#806950';x.lineWidth=1.5;damagePath(x,this.zone);x.stroke();x.restore();
+ // Two immutable caches: artwork with damage, and committed strokes. A
+ // pointermove composites only these layers plus the live gesture. Flood-fill
+ // and old strokes never rerun 120 times/second while the mouse is moving.
+ async render(){
+   if(this.closed)return;
+   this.artPromise ||= loadArtwork(this.id).catch(()=>null);
+   const img=await this.artPromise;
+   if(!img||this.closed)return;
+   return new Promise(resolve=>{
+     (this.paintWaiters ||= []).push(resolve);
+     if(this.paintFrameId)return;
+     const frame=()=>{this.paintFrameId=null;this.paintCachedFrame(img);for(const cb of this.paintWaiters.splice(0))cb()};
+     this.paintFrameId=typeof requestAnimationFrame==='function'?requestAnimationFrame(frame):setTimeout(frame,16);
+   });
+ }
+ paintCachedFrame(img){
+   if(this.closed)return;
+   const c=this.canvas,ctx=prepareCanvas(c,true);
+   const resized=!this.baseLayer||this.baseLayer.width!==c.width||this.baseLayer.height!==c.height;
+   const makeLayer=()=>{
+     const layer=document.createElement('canvas');layer.width=c.width;layer.height=c.height;
+     const x=layer.getContext('2d');x.setTransform(c.width/W,0,0,c.height/H,0,0);
+     x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+     return {canvas:layer,ctx:x};
+   };
+   if(resized){
+     const base=makeLayer(),ink=makeLayer();this.baseLayer=base.canvas;this.inkLayer=ink.canvas;this.inkCtx=ink.ctx;
+     drawArtwork(base.ctx,img,this.id);
+     base.ctx.save();clipZone(base.ctx,this.zone);
+     base.ctx.fillStyle='#e8ddc6';base.ctx.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);
+     base.ctx.restore();
+     this.cachedRevision=-1;
+   }
+   const rev=this.paintRevision||0;
+   if(this.cachedRevision!==rev){
+     this.inkCtx.clearRect(0,0,W,H);
+     this.inkCtx.save();clipZone(this.inkCtx,this.zone);
+     renderStrokes(this.inkCtx,this.strokes,this.zone);
+     this.inkCtx.restore();
+     this.cachedRevision=rev;
+   }
+   ctx.clearRect(0,0,W,H);
+   ctx.drawImage(this.baseLayer,0,0,W,H);
+   ctx.drawImage(this.inkLayer,0,0,W,H);
+   if(this.working){
+     ctx.save();clipZone(ctx,this.zone);drawStroke(ctx,this.working);ctx.restore();
+   }
+   ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#806950';ctx.lineWidth=1.5;
+   damagePath(ctx,this.zone);ctx.stroke();ctx.restore();
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
- dispose(){this.closed=true;this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
+ dispose(){this.closed=true;
+ if(this.paintFrameId){
+   if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
+   this.paintFrameId=null;
+ }
+ for(const cb of this.paintWaiters||[])cb();
+ this.paintWaiters=[];
+ this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;
+ this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }

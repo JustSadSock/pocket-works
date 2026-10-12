@@ -140,6 +140,9 @@ jobs:
       - name: Test ZAMAZKA host-configured drawing time
         run: node apps/zamazka/qa/drawing-time.mjs
 
+      - name: Test ZAMAZKA rejoin, uploads, and canvas performance
+        run: node apps/zamazka/qa/experience-reliability.mjs
+
       - name: Test ZAMAZKA multipart paintings and PocketNet frame limit
         run: node apps/zamazka/qa/large-painting.mjs
 

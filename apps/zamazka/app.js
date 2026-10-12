@@ -2,7 +2,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPlayerBadge,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import {inviteCode,parseRoomInput} from './room-code.js';
-import {tabGuestName,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
+import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
@@ -13,7 +13,7 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPainting} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.18.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.19.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -129,10 +129,53 @@ function editEmblem(){
  dialog.querySelector('#emblemClear').addEventListener('click',e=>{if(!confirmClear){confirmClear=true;e.currentTarget.textContent='Точно очистить?';return}strokes=[];confirmClear=false;e.currentTarget.textContent='Очистить';paint()});
 }
 function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const ac=window.__zamazkaAudio||(window.__zamazkaAudio=new Audio());if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(f,ac.currentTime);o.frequency.exponentialRampToValueAtTime(f*.83,ac.currentTime+.09);g.gain.setValueAtTime(.025,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.11);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.12)}catch{}}
-let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
+let toastTimer,lastToast='',lastToastAt=0;
+function notify(t){const message=String(t||'');if(message===lastToast&&Date.now()-lastToastAt<5000)return;
+ lastToast=message;lastToastAt=Date.now();toast.textContent=message;toast.classList.add('show');
+ clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
+
 function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML=''}
 function modal(title,body,buttons){dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)})}
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
+const SUBMIT_KEY=NS+'pending-submission';
+let pendingSubmit=(()=>{try{return JSON.parse(localStorage.getItem(SUBMIT_KEY)||'null')}catch{return null}})();
+function persistPending(){try{if(pendingSubmit)localStorage.setItem(SUBMIT_KEY,JSON.stringify(pendingSubmit));else localStorage.removeItem(SUBMIT_KEY)}catch{}}
+function submissionToken(ass,round){return [roomId,round,ass.art,ass.variation].join(':')}
+function confirmSubmission(art,round){
+ if(!pendingSubmit||pendingSubmit.round!==round||pendingSubmit.art!==art||pendingSubmit.room!==roomId)return;
+ const committed=pendingSubmit;pendingSubmit=null;persistPending();autoSubmitted=committed.token;
+ screen.querySelector('.restore')?.classList.remove('is-submitting');
+ const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
+ draftIndicator('Принято сервером ✓');sound(700);
+}
+function attemptSubmission(force=false){
+ const p=pendingSubmit;
+ if(!p||p.room!==roomId||!net||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
+ if(!force&&Date.now()-(p.sentAt||0)<3600)return;
+ try{
+  const result=sendPainting(packet=>net.sendGame(packet),
+   {type:'submit_chunk',round:p.round,art:p.art,variation:p.variation,strokes:p.strokes});
+  p.revision=result.revision;p.sentAt=Date.now();p.attempts=(p.attempts||0)+1;persistPending();
+  const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
+  screen.querySelector('.restore')?.classList.add('is-submitting');
+  draftIndicator('Передаём работу…');
+ }catch{
+  p.sentAt=0;persistPending();
+  draftIndicator('Нет связи · работа сохранена на устройстве');
+ }
+}
+function submitArtwork({automatic=false}={}){
+ if(!editor||!view?.mine||!roomId)return;
+ const ass=view.mine,token=submissionToken(ass,view.round);
+ if(pendingSubmit?.token===token){attemptSubmission(true);return}
+ const strokes=editor.getData();editor.saveSnapshot();
+ pendingSubmit={token,room:roomId,round:view.round,art:ass.art,variation:ass.variation,strokes,revision:null,sentAt:0,attempts:0};
+ persistPending();
+ if(strokes.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,strokes)}
+ attemptSubmission(true);
+ if(!automatic)sound(550);
+}
+
 function draftIndicator(message){const el=screen.querySelector('#draftStatus');if(el)el.textContent=message}
 function backupDraft(force=false){
  if(!editor||page!=='drawing')return;
@@ -140,7 +183,7 @@ function backupDraft(force=false){
  if(practice||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
  const ass=view.mine;if(!ass)return;
  const token=[roomId,view.round,ass.art,ass.variation].join(':');
- if(autoSubmitted===token)return; // final transfer owns this revision
+ if(autoSubmitted===token||pendingSubmit?.token===token)return; // final transfer owns this revision
  const strokes=editor.getSnapshot(),serialized=JSON.stringify(strokes);
  if(!force&&token===lastDraftRound&&serialized===lastDraftPayload&&
     (lastDraftAckRevision===lastDraftRevision||Date.now()-lastDraftSentAt<6500))return;
@@ -160,17 +203,10 @@ function queueDraft(){
 function stopEditor(){clearTimeout(draftDelay);draftDelay=null;if(editor){editor.dispose();editor=null}}
 function autoFinishOnDeadline(){
  if(!editor||practice||page!=='drawing'||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
- if(Date.now()<view.deadline-3200)return;
- const ass=view.mine;if(!ass)return;
- const token=[roomId,view.round,ass.art,ass.variation].join(':');
- if(autoSubmitted===token)return;
- const data=editor.getData();editor.saveSnapshot();
- try{
-  if(!net)throw Error('offline');
-  sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:ass.art,variation:ass.variation,strokes:data});autoSubmitted=token;
-  if(data.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,data)}
-  draftIndicator('Работа отправлена автоматически');
- }catch{draftIndicator('Нет связи · черновик сохранён')}
+ if(Date.now()<view.deadline-1900)return;
+ const token=submissionToken(view.mine,view.round);
+ if(autoSubmitted===token||pendingSubmit?.token===token)return;
+ submitArtwork({automatic:true});
 }
 function change(html,which){if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
 const head=(phase,title,until,context='')=>'<div class="phase-head"><div><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2>'+(context?'<div class="art-head-context">'+context+'</div>':'')+'</div><div class="timer" id="clock">'+(until?'…':'')+'</div></div>';
@@ -183,6 +219,7 @@ function artFactsHtml(id){
 const picture=id=>'<div class="frame"><img src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'"></div>';
 function home(){
  connectionEpoch++;
+ pendingSubmit=null;persistPending();
  invitedRoom='';
  if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
  clearTabGuest();
@@ -299,11 +336,17 @@ function drawing(local=false){
   const v=local?practice:view,ass=v.mine;
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
-  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art))+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 100</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art))+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div><div class="picker-preview" id="pickerPreview" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 100</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
   editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 100';if(n>=0)queueDraft()}});
   if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
   const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Линий: '+editor.strokes.length+' / 100';
-  if(!local)backupDraft(true);
+  if(!local){
+   if(pendingSubmit?.room===roomId&&pendingSubmit.round===view.round&&
+      pendingSubmit.art===ass.art&&pendingSubmit.variation===ass.variation){
+     const submit=screen.querySelector('[data-action="submit"]');if(submit)submit.disabled=true;
+     draftIndicator('Восстанавливаем отправку…');
+   }else backupDraft(true);
+ }
 }
 
 function waiting(){
@@ -412,9 +455,21 @@ function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>
 function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;if(p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else preview(true)}catch{newPractice()}}
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=Date.now()+160000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
+let previousVisualPhase='',lastPhaseCue='';
 function renderView(){
  if(!view)return;
- if(view.phase==='drawing'&&view.done?.includes(me?.id)&&editor)editor.clearDraft();
+ const phaseToken=view.round+':'+view.phase;
+ if(previousVisualPhase&&previousVisualPhase!==phaseToken&&lastPhaseCue!==phaseToken){
+   lastPhaseCue=phaseToken;
+   if(view.phase==='voting')sound(560);
+   else if(view.phase==='reveal')sound(740);
+   else if(view.phase==='round-review')sound(490);
+ }
+ previousVisualPhase=phaseToken;
+ if(view.phase==='drawing'&&view.done?.includes(me?.id)){
+   if(view.mine)confirmSubmission(view.mine.art,view.round);
+   if(editor)editor.clearDraft();
+ }
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
@@ -440,7 +495,7 @@ function renderView(){
 }
 async function connect(mode){
  pocketIdentity=await getPocketIdentity({force:true});
- const name=isPocketMember()?pocketIdentity.nickname:(screen.querySelector('#who')?.value||'').trim();
+ const name=isPocketMember()?pocketIdentity.nickname:(mode==='resume'?tabGuestName():(screen.querySelector('#who')?.value||'').trim());
  const input=(screen.querySelector('#room')?.value||'').trim();
  const room=mode==='join'?parseRoomInput(input,location.href):'';
  if(!name||name.length>22){notify('Введи ник до 22 символов');return}
@@ -461,7 +516,8 @@ async function connect(mode){
    if(net)net.close();
    const client=new PocketNet({serverUrl:POCKETNET_URL,name,storage,identityKey:pocketIdentitySessionKey(pocketIdentity)});
    net=client;
-   client.roomId=null;client.persist();
+   if(mode!=='resume'){client.roomId=null;client.persist()}
+   if(mode==='resume'&&!client.roomId)throw Error('Предыдущая сессия завершена');
    client.on('connected',data=>{if(client.closed)return;me=data.player;markTabGuest(POCKETNET_URL,client.token)});
    client.on('room_joined',msg=>{
      if(client.closed)return;
@@ -469,7 +525,7 @@ async function connect(mode){
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
-     if(page==='drawing')backupDraft(true);
+     if(page==='drawing'&&!pendingSubmit)backupDraft(true);
      if(personalEmblem.image)client.sendGame({type:'emblem',image:personalEmblem.image});
      if(view)renderView();
      else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
@@ -477,7 +533,20 @@ async function connect(mode){
    client.on('game_event',msg=>{
      if(client.closed)return;
      const event=msg.event;
-     if(event?.type==='state'){view=event.payload;renderView()}
+     if(event?.type==='state'){
+       view=event.payload;
+       if(view?.mine&&view.done?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
+       renderView();
+       if(view?.phase==='drawing'&&!view.done?.includes(me?.id)&&
+          pendingSubmit?.room===roomId&&pendingSubmit.round===view.round){
+         if(!pendingSubmit.sentAt||Date.now()-pendingSubmit.sentAt>3600)attemptSubmission();
+       }
+     }
+     else if(event?.type==='submission_saved'){
+       if(pendingSubmit&&event.payload?.round===pendingSubmit.round&&
+          event.payload?.art===pendingSubmit.art&&event.payload?.revision===pendingSubmit.revision)
+         confirmSubmission(event.payload.art,event.payload.round);
+     }
      else if(event?.type==='draft_saved'){
        if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art&&
           event.payload.revision===lastDraftRevision){
@@ -495,31 +564,44 @@ async function connect(mode){
      try{client.sendGame({type:'sync'})}catch{}
    });
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
-   client.on('disconnected',()=>{if(!client.closed){lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';notify('Связь прервана. Переподключаемся…')}});
+   client.on('disconnected',()=>{
+     if(client.closed)return;
+     lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';
+     if(pendingSubmit){pendingSubmit.sentAt=0;persistPending();draftIndicator('Нет связи · работа на устройстве')}
+     else draftIndicator('Нет связи · черновик на устройстве');
+     notify('Связь прервана · восстанавливаем комнату');
+   });
    client.on('error',error=>{
      if(client.closed)return;
      const code=String(error?.code||error?.message||'');
-     const messages={room_not_found:'Комната не найдена. Проверь код и попробуй снова.',room_full:'В комнате уже восемь человек.',server_at_capacity:'Все игровые комнаты заняты.',game_unavailable:'Игра временно недоступна.',room_version_unavailable:'Эта комната создана в старой версии.'};
+     const messages={room_not_found:'Комната больше недоступна.',room_full:'В комнате уже восемь человек.',server_at_capacity:'Все игровые комнаты заняты.',game_unavailable:'Игра временно недоступна.',room_version_unavailable:'Эта версия комнаты недоступна.',message_too_large:'Сбой передачи · локальный рисунок сохранён',rate_limited:'Передаём слишком быстро · повторяем',not_in_room:'Восстанавливаем соединение с комнатой'};
+
      if(page==='connecting'&&messages[code]){
-       client.close();if(net===client)net=null;clearTabGuest();setup(mode,messages[code],input);
-     }else if(!client.closed)notify(messages[code]||'Ошибка подключения: '+code);
+       client.close();if(net===client)net=null;clearTabGuest();
+       if(mode==='resume'){client.roomId=null;client.persist();home();notify('Комната больше недоступна')}
+       else setup(mode,messages[code],input);
+     }else if(!client.closed){
+       if(pendingSubmit){pendingSubmit.sentAt=0;persistPending()}
+       notify(messages[code]||'Проблема соединения · повторим');
+     }
    });
    await client.connect();
    if(epoch!==connectionEpoch){client.close();return}
    if(mode==='create')client.createRoom('zamazka');
-   else client.joinRoom(room);
+   else if(mode==='join')client.joinRoom(room);
+   // Stored rooms are rejoined automatically after PocketNet authentication.
  }catch(error){
    if(epoch!==connectionEpoch)return;
    if(net){net.close();net=null}
    clearTabGuest();
    const message=error?.name==='TimeoutError'?'Сервер не ответил. Попробуй ещё раз.':error instanceof TypeError?'Нет соединения с интернетом. Проверь сеть.':error?.message||'Не удалось подключиться. Попробуй ещё раз.';
-   setup(mode,message,input);
+   if(mode==='resume'){home();notify('Не удалось восстановить комнату · проверь подключение')}else setup(mode,message,input);
  }
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
- const data=editor.getData();editor.saveSnapshot();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
- ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:a.art,variation:a.variation,strokes:data});autoSubmitted=[roomId,view.round,a.art,a.variation].join(':');notify('Передаём работу…')}catch{notify('Нет подключения — черновик сохранён, попробуй сдать ещё раз')}} ,'primary'],
+ editor.saveSnapshot();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
+ ['Сдать',()=>{closeDialog();submitArtwork()} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 async function copyText(value,success){
  try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);notify(success)}
@@ -578,11 +660,20 @@ screen.addEventListener('click',e=>{
  else if(action==='continue'&&view?.phase==='round-review'&&me?.id===view.host){b.disabled=true;try{net?.sendGame({type:'continue'})}catch{b.disabled=false;notify('Нет соединения с комнатой')}}
  else if(action==='next')net?.sendGame({type:'next'});
 });
+let lastClockCue='';
 function tick(){
  if(practice&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
  autoFinishOnDeadline();
  const v=practice||view,clock=document.querySelector('#clock');
- if(clock&&v?.deadline){const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');clock.classList.toggle('urgent',s<=10)}
+ if(clock&&v?.deadline){
+  const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));
+  clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  clock.classList.toggle('urgent',s<=10);
+  if(page==='drawing'&&s<=10&&s>0){
+    const cue=(practice?'practice':roomId)+':'+v.round+':'+(s<=3?'final':'ten');
+    if((s===10||s===3)&&cue!==lastClockCue){lastClockCue=cue;sound(s===3?670:450)}
+  }
+}
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}}
 }
 let museumSwipe=null;
@@ -594,14 +685,19 @@ document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=Number(e.target.value)||160});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
 setInterval(tick,350);
-setInterval(()=>{if(page==='drawing')backupDraft()},10000);
+setInterval(()=>{
+ if(page!=='drawing')return;
+ if(pendingSubmit?.room===roomId&&pendingSubmit.round===view?.round)attemptSubmission();
+ else backupDraft();
+},3600);
 document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden)tick()});
 window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
 async function refreshPocketBadge(){
  const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
+ const initialIdentityKnown=pocketIdentity!==null;
  const priorAccount=pocketIdentity?.id||null;
  pocketIdentity=await getPocketIdentity({force:true});
- if(net && priorAccount!==(pocketIdentity?.id||null)){
+ if(net && initialIdentityKnown && priorAccount!==(pocketIdentity?.id||null)){
   home();
   notify('Аккаунт Pocket ID изменился — подключись к комнате заново');
   return;
@@ -633,7 +729,12 @@ zamazkaCloud=createZamazkaCloud({
  },
  notify
 });
-if(q.has('room'))setup('join');else home();
+const savedRoom=(()=>{try{return JSON.parse(tabStorage().getItem('pocket-net:'+POCKETNET_URL)||'null')}catch{return null}})();
+if(q.has('room'))setup('join');
+else if(savedRoom?.roomId&&savedRoom?.token){
+ change('<section class="page center connecting-room"><span class="busy"></span><h2>Возвращаемся в зал…</h2><p class="hint">Восстанавливаем комнату.</p><button class="btn ghost wide" data-action="menu">Выйти</button></section>','connecting');
+ void connect('resume');
+}else home();
 zamazkaCloud.start();
 void refreshPocketBadge();
 window.addEventListener('pageshow',()=>void refreshPocketBadge());
