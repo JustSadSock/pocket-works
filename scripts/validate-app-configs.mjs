@@ -74,7 +74,8 @@ for (const config of configs) {
   const workerPath = runtime === 'enhanced' ? `${directory}/source/sw.ts` : `${directory}/sw.js`;
   try {
     const worker = await readFile(path.join(root, workerPath), 'utf8');
-    const cacheMatch = worker.match(/(?:const|let)\s+CACHE_NAME\s*=\s*['"`]([^'"`]+)['"`]/);
+    const cacheMatch = worker.match(/(?:const|let)\s+(?:CACHE_NAME|CACHE)\s*=\s*['"`]([^'"`]+)['"`]/)
+      || worker.match(/,\s*(?:CACHE_NAME|CACHE)\s*=\s*['"`]([^'"`]+)['"`]/);
     const workboxOwned = runtime === 'enhanced' && worker.includes('setCacheNameDetails') &&
       new RegExp(`prefix\\s*:\\s*['"]${config.slug}['"]`).test(worker) &&
       new RegExp(`APP_VERSION\\s*=\\s*['"]${config.version.replaceAll('.', '\\.') }['"]`).test(worker) &&
