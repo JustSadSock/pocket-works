@@ -4,7 +4,7 @@ import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPla
 import {inviteCode,parseRoomInput} from './room-code.js';
 import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
-import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
+import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery,loadArtwork} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
 import {getSavedEmblem,storeEmblem,paintEmblem,exportEmblem,EMBLEM_SIZE,EMBLEM_COLORS,EMBLEM_LIMITS} from './emblem.js';
@@ -13,7 +13,7 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPainting} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.19.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.21.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -23,6 +23,12 @@ let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,c
 let personalEmblem=getSavedEmblem();
 let zamazkaCloud=null;
 let pocketIdentity=null;
+let pendingVote=null,preparedRound='',preparingError='',archiveObserver=null,dialogFocus=null;
+const VOTE_KEY=NS+'pending-vote';
+try{pendingVote=JSON.parse(sessionStorage.getItem(VOTE_KEY)||'null')}catch{}
+function persistVote(){try{if(pendingVote)sessionStorage.setItem(VOTE_KEY,JSON.stringify(pendingVote));else sessionStorage.removeItem(VOTE_KEY)}catch{}}
+function connectionStatus(state){const node=document.querySelector('#netStatus');if(!node)return;node.hidden=state==='off';node.dataset.state=state;node.textContent=state==='ok'?'В сети':state==='connecting'?'Подключение…':'Нет связи';}
+
 const gameName=()=>preferredPocketName(pocketIdentity,tabGuestName());
 const isPocketMember=()=>Boolean(pocketIdentity?.complete);
 let museumMotion=null,commonsBoard=null,lastMuseumWheel=0,boardResync=false,roomModuleVersion='v3';
@@ -130,16 +136,18 @@ function editEmblem(){
 }
 function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const ac=window.__zamazkaAudio||(window.__zamazkaAudio=new Audio());if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(f,ac.currentTime);o.frequency.exponentialRampToValueAtTime(f*.83,ac.currentTime+.09);g.gain.setValueAtTime(.025,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.11);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.12)}catch{}}
 let toastTimer,lastToast='',lastToastAt=0;
+dialog.addEventListener('click',e=>{if(e.target===dialog&&!dialog.classList.contains('hidden'))closeDialog()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.classList.contains('hidden')){e.preventDefault();closeDialog()}});
 function notify(t){const message=String(t||'');if(message===lastToast&&Date.now()-lastToastAt<5000)return;
  lastToast=message;lastToastAt=Date.now();toast.textContent=message;toast.classList.add('show');
  clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 
-function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML=''}
-function modal(title,body,buttons){dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)})}
+function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
+function modal(title,body,buttons){dialogFocus=document.activeElement;dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)});(actionBox.querySelector('.ghost')||actionBox.querySelector('button'))?.focus({preventScroll:true})}
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 const SUBMIT_KEY=NS+'pending-submission';
 let pendingSubmit=(()=>{try{return JSON.parse(localStorage.getItem(SUBMIT_KEY)||'null')}catch{return null}})();
-function persistPending(){try{if(pendingSubmit)localStorage.setItem(SUBMIT_KEY,JSON.stringify(pendingSubmit));else localStorage.removeItem(SUBMIT_KEY)}catch{}}
+function persistPending(){try{if(pendingSubmit)localStorage.setItem(SUBMIT_KEY,JSON.stringify(pendingSubmit));else localStorage.removeItem(SUBMIT_KEY);return true}catch{notify('Хранилище заполнено: копия отправки осталась только во вкладке');return false}}
 function submissionToken(ass,round){return [roomId,round,ass.art,ass.variation].join(':')}
 function confirmSubmission(art,round){
  if(!pendingSubmit||pendingSubmit.round!==round||pendingSubmit.art!==art||pendingSubmit.room!==roomId)return;
@@ -208,7 +216,7 @@ function autoFinishOnDeadline(){
  if(autoSubmitted===token||pendingSubmit?.token===token)return;
  submitArtwork({automatic:true});
 }
-function change(html,which){if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
+function change(html,which){if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
 const head=(phase,title,until,context='')=>'<div class="phase-head"><div><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2>'+(context?'<div class="art-head-context">'+context+'</div>':'')+'</div><div class="timer" id="clock">'+(until?'…':'')+'</div></div>';
 function artFactsHtml(id){
  const art=ARTS[id];if(!art)return '';
@@ -219,12 +227,12 @@ function artFactsHtml(id){
 const picture=id=>'<div class="frame"><img src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'"></div>';
 function home(){
  connectionEpoch++;
- pendingSubmit=null;persistPending();
+ // Unconfirmed uploads remain on this device and can resume upon rejoining their room.
  invitedRoom='';
  if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
  clearTabGuest();
  if(net){try{net.leaveRoom()}catch{}net.close();net=null}
- view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';
+ view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';pendingVote=null;persistVote();connectionStatus('off');
  change('<section class="museum-home">'+
   
   '<div class="museum-headline"><h1>Искусство<br><em>подделки.</em></h1></div>'+
@@ -502,6 +510,7 @@ async function connect(mode){
  if(mode==='join'&&!room){notify('Введи код из 8 символов или ссылку');screen.querySelector('#room')?.focus();return}
  rememberTabName(name);
  const epoch=++connectionEpoch;
+ connectionStatus('connecting');
  me=null;view=null;roomId='';
  change('<section class="page center connecting-room"><span class="busy"></span><h2>Открываем зал…</h2><p class="hint">Соединяем с выставкой.</p><button class="btn ghost wide" data-action="menu">Отменить</button></section>','connecting');
  try{
@@ -518,7 +527,7 @@ async function connect(mode){
    net=client;
    if(mode!=='resume'){client.roomId=null;client.persist()}
    if(mode==='resume'&&!client.roomId)throw Error('Предыдущая сессия завершена');
-   client.on('connected',data=>{if(client.closed)return;me=data.player;markTabGuest(POCKETNET_URL,client.token)});
+   client.on('connected',data=>{if(client.closed)return;me=data.player;connectionStatus('ok');markTabGuest(POCKETNET_URL,client.token)});
    client.on('room_joined',msg=>{
      if(client.closed)return;
      roomId=msg.roomId;
