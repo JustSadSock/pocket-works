@@ -12,7 +12,7 @@ const presets={
 };
 export const pocketIdProfileUrl='/?pocket-id=login';
 export const escapeIdentityHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const DRAWN=/^data:image\\/(?:png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+const DRAWN=/^data:image\/(?:png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const safePortrait=value=>typeof value==='string'&&value.length<=24000&&DRAWN.test(value)?value:'';
 const portraits=new Map(),loadingPortraits=new Map();
