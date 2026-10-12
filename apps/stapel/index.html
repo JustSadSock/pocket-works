@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-fullscreen-app>
@@ -20,7 +21,10 @@
     <header class="topbar" data-ui>
       <a href="../../" class="back" data-app-control data-native-press>← <span>POCKET WORKS</span></a>
       <div class="brand"><span class="brand-line"></span><strong>СТАПЕЛЬ</strong><small>ЭКСПЕДИЦИЯ / МАРС</small></div>
-      <button type="button" id="soundButton" class="icon-button" title="Звук" aria-label="Переключить звук" data-native-press>♪</button>
+      <div class="top-actions">
+        <button type="button" class="icon-button workshop-button" data-workshop-trigger data-native-press title="Диагностика" aria-label="Сервис и диагностика">⋮</button>
+        <button type="button" id="soundButton" class="icon-button" title="Звук" aria-label="Переключить звук" data-native-press>♪</button>
+      </div>
     </header>
 
     <section id="builder" class="view builder" aria-label="Конструктор ракеты">
