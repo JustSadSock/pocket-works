@@ -67,7 +67,7 @@ function hero(c,q,index,time,localId){
  if(q.id===localId){c.strokeStyle='#fff6ca';c.lineWidth=3.2;c.setLineDash([7,7]);c.beginPath();c.arc(0,0,29,0,7);c.stroke();}
  c.restore();
 }
-export function draw(canvas,view,{me='',time=0}={}){
+export function draw(canvas,view,{me='',time=0,group=false}={}){
  if(!canvas||!view)return;
  const r=canvas.getBoundingClientRect(),scale=Math.min(2,window.devicePixelRatio||1);
  if(r.width<10||r.height<10)return;
@@ -77,18 +77,27 @@ export function draw(canvas,view,{me='',time=0}={}){
  // Preserve world-unit proportions on every viewport; the camera follows the
  // locally controlled hero instead of squeezing the full level into the phone.
  const portrait=r.height>r.width*1.05;
- const zoom=portrait?Math.max(1,Math.min(1.3,r.height/540)):Math.max(.82,Math.min(r.width/950,r.height/305));
+ let zoom=portrait?Math.max(1,Math.min(1.3,r.height/540)):Math.max(.82,Math.min(r.width/950,r.height/305));
+ const members=view.players||[];
+ if(group&&members.length>1){
+  const left=Math.min(...members.map(p=>p.x)),right=Math.max(...members.map(p=>p.x));
+  const top=Math.min(...members.map(p=>p.y)),bottom=Math.max(...members.map(p=>p.y));
+  // Show both locally controlled characters, even on opposite sides of a puzzle.
+  zoom=Math.min(zoom,r.width/Math.max(420,right-left+205),r.height/Math.max(290,bottom-top+155));
+ }
  const visibleWidth=r.width/zoom,visibleHeight=r.height/zoom;
- const focus=view.players.find(p=>p.id===me)||view.players[0]||{x:W/2};
+ const focus=group&&members.length>1
+  ?{x:members.reduce((n,p)=>n+p.x,0)/members.length,y:members.reduce((n,p)=>n+p.y,0)/members.length}
+  :members.find(p=>p.id===me)||members[0]||{x:W/2,y:H/2};
  const targetX=Math.max(0,Math.min(Math.max(0,W-visibleWidth),focus.x-visibleWidth*.43));
  const targetY=Math.max(0,Math.min(Math.max(0,H-visibleHeight),focus.y-visibleHeight*.68));
  const previous=cameras.get(canvas);
- const snap=!previous||previous.hero!==me||Math.abs(previous.zoom-zoom)>.08;
+ const snap=!previous||previous.hero!==me||previous.group!==group||Math.abs(previous.zoom-zoom)>.08;
  const cameraX=snap?targetX:previous.x+(targetX-previous.x)*.18;
  const cameraY=snap?targetY:previous.y+(targetY-previous.y)*.12;
- cameras.set(canvas,{hero:me,zoom,x:cameraX,y:cameraY});
+ cameras.set(canvas,{hero:me,group,zoom,x:cameraX,y:cameraY});
  c.setTransform(1,0,0,1,0,0);
- c.clearRect(0,0,dw,dh);
+ c.fillStyle='#d4d9c7';c.fillRect(0,0,dw,dh);
  const ds=scale*zoom;
  c.setTransform(ds,0,0,ds,-cameraX*ds,-cameraY*ds);
  const d=LEVELS[view.level]||LEVELS[0];

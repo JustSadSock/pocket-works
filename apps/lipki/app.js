@@ -4,8 +4,9 @@ import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {LEVELS,initialize,simulate,getView,resetLevel} from './physics.js';
 import {draw} from './art.js';
+import {readSoloControls,readDuoControls,isGameplayCode,isTypingTarget} from './desktop-controls.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЛИПКИ',version:'1.0.0',cachePrefix: 'lipki-',storageNamespace: 'pocket-works:lipki'});
+createWorkshopMode({appName:'ЛИПКИ',version:'1.1.0',cachePrefix: 'lipki-',storageNamespace: 'pocket-works:lipki'});
 const $=id=>document.getElementById(id),ORIGIN=location.origin+'/pocketnet',PREFIX='pocket-works:lipki:';
 const store=(k,v)=>{try{localStorage.setItem(PREFIX+k,String(v))}catch{}};
 const read=(k,d='')=>{try{return localStorage.getItem(PREFIX+k)??d}catch{return d}};
@@ -17,6 +18,7 @@ const memory=new Map(),socketStore={
 };
 let name=read('name','Игрок'),sound=read('sound','on')!=='off',unlocked=Math.min(LEVELS.length-1,Math.max(0,Number(read('level','0'))||0));
 let profile=null,screen='menu',mode='local',world=null,server=null,net=null,connected=false,connecting=false,me=null,room='',paused=false;
+let localDuo=false,blockedActionKeys=new Set();
 let activeId='hero-1',keys=new Set(),touch=new Set(),press=new Map(),lastFrame=0,lastNet=0,lastLevel=-1,audio=null,toastTimer=0,requestedRoom=new URLSearchParams(location.search).get('room')||'';
 const options=$('levelChoice');
 LEVELS.forEach((l,i)=>{const opt=document.createElement('option');opt.value=i;opt.textContent=(i+1)+'. '+l.name;options.append(opt)});
@@ -30,7 +32,18 @@ function tone(kind='tap'){
  }catch{}
 }
 function toast(s){$('toast').textContent=s;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),2500)}
-function show(s){screen=s;for(const id of ['menu','lobby','game'])$(id).hidden=id!==s;$('pauseSheet').hidden=true;$('endSheet').hidden=true;paused=false;keys.clear();touch.clear();press.clear();}
+function updateKeycaps(){
+ for(const cap of document.querySelectorAll('.desktop-deck kbd[data-codes]')){
+  const codes=cap.dataset.codes.split('|');
+  cap.classList.toggle('pressed',codes.some(code=>keys.has(code)));
+ }
+}
+function clearInputs(){keys.clear();touch.clear();press.clear();blockedActionKeys.clear();updateKeycaps()}
+function show(s){
+ screen=s;for(const id of ['menu','lobby','game'])$(id).hidden=id!==s;
+ $('pauseSheet').hidden=true;$('endSheet').hidden=true;paused=false;clearInputs();
+ if(s==='game'&&document.activeElement instanceof HTMLElement&&document.activeElement!==document.body)document.activeElement.blur();
+}
 function nickname(){if(profile?.complete)return profile.nickname;name=$('nickname').value.trim().slice(0,22)||'Игрок';store('name',name);return name}
 function netStatus(s,bad=false){$('netStatus').textContent=s;$('netStatus').classList.toggle('error',bad)}
 async function identity(){try{profile=await getPocketIdentity();if(profile?.complete){name=profile.nickname;$('nickname').value=name;$('nickname').readOnly=true;$('identity').textContent='Pocket ID · '+name;}else $('identity').textContent='Гостевой профиль'}catch{}}
@@ -40,14 +53,34 @@ function view(){return mode==='local'&&world?getView(world):server?.world||null}
 function updateGame(){
  const v=view();if(!v)return;const i=Math.min(v.level,LEVELS.length-1);
  $('levelIndex').textContent=(i+1)+' / '+LEVELS.length;$('levelName').textContent=LEVELS[i].name;$('levelHint').textContent=LEVELS[i].hint;
- $('roleLabel').textContent=mode==='local'?'Герой '+(v.players.findIndex(x=>x.id===activeId)+1):(v.players.find(x=>x.id===me?.id)?.name||'Игрок');
- $('switchBtn').hidden=mode!=='local';$('roomIndicator').hidden=mode!=='online';$('roomIndicator').textContent=connected?'PocketNet':'Переподключение…';
+ 
+ $('switchBtn').hidden=mode!=='local'||localDuo;
+ $('roleLabel').textContent=mode==='local'?(localDuo?'Два героя':('Герой '+(v.players.findIndex(x=>x.id===activeId)+1))):(v.players.find(x=>x.id===me?.id)?.name||'Игрок');
+ $('desktopDeck').dataset.mode=mode==='online'?'online':localDuo?'duo':'solo';
+ $('roomIndicator').hidden=mode!=='online';$('roomIndicator').textContent=connected?'PocketNet':'Переподключение…';
  if(v.level!==lastLevel){if(lastLevel>=0&&v.level>lastLevel){tone('win');toast('Уровень пройден!')}lastLevel=v.level;
   if(mode==='local'&&v.level>unlocked){unlocked=v.level;store('level',unlocked);[...options.options].forEach((op,i)=>op.disabled=i>unlocked);options.value=unlocked}}
  if(v.finished){$('endSheet').hidden=false;paused=true;$('againBtn').hidden=mode==='online'&&server?.host!==me?.id;}
 }
-function beginLocal(level=unlocked){exitRoom();mode='local';world=initialize([{id:'hero-1',name:nickname()},{id:'hero-2',name:'Напарник'}],level);activeId='hero-1';lastLevel=-1;show('game');updateGame();tone();}
-function switchHero(){if(mode!=='local'||!world||paused)return;const n=world.players.findIndex(p=>p.id===activeId);activeId=world.players[(n+1)%world.players.length].id;keys.clear();touch.clear();updateGame();tone()}
+function beginLocal(level=unlocked,duo=false){
+ exitRoom();mode='local';localDuo=duo;
+ world=initialize([{id:'hero-1',name:nickname()},{id:'hero-2',name:'Напарник'}],level);
+ activeId='hero-1';lastLevel=-1;show('game');updateGame();tone();
+}
+function selectHero(id){
+ if(mode!=='local'||localDuo||!world||paused||activeId===id)return;
+ // Movement remains held after switching, but jump/stick keys must be released
+ // before they can fire for the newly selected character.
+ for(const code of ['Space','KeyW','ArrowUp','KeyE','KeyS','ArrowDown','ShiftLeft','ShiftRight']){
+  if(keys.has(code))blockedActionKeys.add(code);
+ }
+ activeId=id;touch.clear();updateGame();tone();
+}
+function switchHero(){
+ if(mode!=='local'||localDuo||!world||paused)return;
+ const n=world.players.findIndex(p=>p.id===activeId);
+ selectHero(world.players[(n+1)%world.players.length].id);
+}
 function onState(state){if(!state||!['lobby','play','done'].includes(state.phase)||!Array.isArray(state.players)||state.players.length>4)return;
  const previousPhase=server?.phase;server=state;connecting=false;if(state.phase==='lobby'){show('lobby');updateLobby()}else{if(screen!=='game'){lastLevel=-1;show('game')}if(state.phase==='play'&&previousPhase==='done'){paused=false;lastLevel=-1;$('endSheet').hidden=true;$('pauseSheet').hidden=true;}updateGame()}}
 function wire(client){
@@ -83,24 +116,39 @@ function updateLobby(){
 }
 function join(){const code=$('joinInput').value.trim().toUpperCase();if(!/^(?:[0-9A-F]{8}|[0-9A-F-]{36})$/.test(code)){toast('Нужен код из 8 символов');return}if(connected){requestedRoom=code;try{net.joinRoom(code)}catch{toast('Не удалось войти')}}}
 function copy(text){if(!navigator.clipboard?.writeText){toast('Копирование недоступно');return}navigator.clipboard.writeText(text).then(()=>toast('Скопировано')).catch(()=>toast('Копирование недоступно'))}
-function control(){return {x:(keys.has('a')||keys.has('arrowleft')||touch.has('left')?-1:0)+(keys.has('d')||keys.has('arrowright')||touch.has('right')?1:0),jump:keys.has(' ')||keys.has('arrowup')||keys.has('w')||touch.has('jump'),stick:keys.has('e')||keys.has('s')||touch.has('stick'),up:keys.has('w')||keys.has('arrowup')}}
-function pauseGame(){if(screen!=='game')return;paused=!paused;$('pauseSheet').hidden=!paused;keys.clear();touch.clear();$('restartBtn').disabled=mode==='online'&&server?.host!==me?.id;$('pauseCaption').textContent=mode==='online'?'Игра у друзей продолжается':'Тренировка на паузе'}
-function restart(){if(mode==='local'){resetLevel(world);activeId='hero-1';paused=false;$('pauseSheet').hidden=true}else send({type:'restart'});tone()}
+function control(){return readSoloControls(new Set([...keys].filter(code=>!blockedActionKeys.has(code))),touch)}
+function duoControls(){return readDuoControls(keys,touch)}
+function pauseGame(){
+ if(screen!=='game')return;
+ paused=!paused;$('pauseSheet').hidden=!paused;clearInputs();
+ $('restartBtn').disabled=mode==='online'&&server?.host!==me?.id;
+ $('pauseCaption').textContent=mode==='online'?'Игра у друзей продолжается':'Тренировка на паузе';
+ if(paused)$('resumeBtn').focus();else document.activeElement?.blur?.();
+}
+function restart(){if(mode==='local'){resetLevel(world);activeId='hero-1';paused=false;$('pauseSheet').hidden=true;document.activeElement?.blur?.();clearInputs()}else send({type:'restart'});tone()}
 const preview=initialize([{id:'a',name:'Пух'},{id:'b',name:'Нить'}]);preview.players[0].x=390;preview.players[0].y=375;preview.players[1].x=515;preview.players[1].y=315;preview.players[1].stuck={kind:'world',x:515,y:315};
 function frame(now){
  const dt=Math.max(0,Math.min((now-lastFrame)/1000||0,.042));lastFrame=now;
  const live=screen==='game'&&!paused&&(mode!=='online'||connected);
  if(live&&mode==='local'&&world&&!world.finished){
-  world.inputs[activeId]=control();const other=world.players.find(p=>p.id!==activeId);if(other)world.inputs[other.id]={x:0,jump:false,stick:false};
+  if(localDuo){
+   const [first,second]=duoControls();
+   world.inputs['hero-1']=first;world.inputs['hero-2']=second;
+  }else{
+   world.inputs[activeId]=control();
+   const other=world.players.find(p=>p.id!==activeId);
+   if(other)world.inputs[other.id]={x:0,jump:false,stick:false};
+  }
   simulate(world,dt);updateGame();
  }else if(live&&mode==='online'&&server?.phase==='play'&&now-lastNet>73){send({type:'input',...control()});lastNet=now}
- if(screen==='game'){const v=view();if(v)draw($('canvas'),v,{me:mode==='local'?activeId:me?.id,time:now/1000})}
+ if(screen==='game'){const v=view();if(v)draw($('canvas'),v,{me:mode==='local'?(localDuo?'':activeId):me?.id,group:mode==='local'&&localDuo,time:now/1000})}
  else if(screen==='menu')draw($('preview'),getView(preview),{me:'a',time:now/1000});
  requestAnimationFrame(frame);
 }
 $('nickname').value=name;$('soundBtn').textContent=sound?'Звук: вкл':'Звук: выкл';
 $('soundBtn').addEventListener('click',()=>{sound=!sound;store('sound',sound?'on':'off');$('soundBtn').textContent=sound?'Звук: вкл':'Звук: выкл';tone()});
-$('soloBtn').addEventListener('click',()=>beginLocal(Number(options.value)||0));
+$('soloBtn').addEventListener('click',()=>beginLocal(Number(options.value)||0,false));
+$('duoBtn').addEventListener('click',()=>beginLocal(Number(options.value)||0,true));
 $('hostBtn').addEventListener('click',()=>connect('create'));
 $('onlineBtn').addEventListener('click',()=>connect('join'));
 $('joinBtn').addEventListener('click',join);
@@ -114,7 +162,7 @@ $('switchBtn').addEventListener('click',switchHero);
 $('startBtn').addEventListener('click',()=>send({type:'start'}));
 $('copyCode').addEventListener('click',()=>copy(room.slice(0,8).toUpperCase()));
 $('copyLink').addEventListener('click',()=>copy(location.origin+location.pathname+'?room='+room.slice(0,8).toUpperCase()));
-$('againBtn').addEventListener('click',()=>{if(mode==='local')beginLocal(0);else send({type:'start'});$('endSheet').hidden=true;paused=false});
+$('againBtn').addEventListener('click',()=>{if(mode==='local')beginLocal(0,localDuo);else send({type:'start'});$('endSheet').hidden=true;paused=false});
 $('endExit').addEventListener('click',()=>{exitRoom();show('menu')});
 $('levelChoice').addEventListener('change',e=>{if(Number(e.target.value)>unlocked){toast('Уровень пока закрыт');options.value=unlocked}});
 [...options.options].forEach((op,i)=>op.disabled=i>unlocked);options.value=unlocked;
@@ -123,13 +171,39 @@ for(const el of document.querySelectorAll('[data-hold]')){
  const up=e=>{const k=press.get(e.pointerId);press.delete(e.pointerId);if(k&&!Array.from(press.values()).includes(k))touch.delete(k);el.classList.remove('held')};
  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);el.addEventListener('lostpointercapture',up);
 }
-window.addEventListener('blur',()=>{keys.clear();touch.clear();press.clear()});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();touch.clear();press.clear()}});
-document.addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement||e.target instanceof HTMLSelectElement)return;
- if(['ArrowLeft','ArrowRight','ArrowUp',' ','Tab'].includes(e.key))e.preventDefault();
- const key=e.key.toLowerCase();if(key==='escape'&&screen==='game'){pauseGame();return}
- if((key==='q'||key==='tab')&&screen==='game'){if(!e.repeat)switchHero();return}keys.add(key)});
-document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+window.addEventListener('blur',clearInputs);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)clearInputs()});
+document.addEventListener('keydown',e=>{
+ if(e.isComposing||e.altKey||e.ctrlKey||e.metaKey||isTypingTarget(e.target))return;
+ const code=e.code;
+ if(screen!=='game')return;
+ if(code==='Escape'||code==='KeyP'){
+  e.preventDefault();if(!e.repeat)pauseGame();return;
+ }
+ if(paused){
+  if(code==='KeyR'&&(!$('restartBtn').disabled)){e.preventDefault();if(!e.repeat)restart()}
+  return;
+ }
+ if(mode==='local'&&!localDuo&&(code==='KeyQ'||code==='Digit1'||code==='Digit2')){
+  e.preventDefault();
+  if(!e.repeat){
+   if(code==='KeyQ')switchHero();
+   else selectHero(code==='Digit1'?'hero-1':'hero-2');
+  }
+  return;
+ }
+ if(isGameplayCode(code)){
+  e.preventDefault();
+  if(!keys.has(code)){
+   if(['Space','KeyW','ArrowUp'].includes(code))tone('jump');
+   if(['KeyE','KeyS','ArrowDown'].includes(code))tone('stick');
+  }
+  keys.add(code);updateKeycaps();
+ }
+});
+document.addEventListener('keyup',e=>{
+ keys.delete(e.code);blockedActionKeys.delete(e.code);updateKeycaps();
+});
 show('menu');identity();health();
 if(requestedRoom&&/^(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f-]{36})$/.test(requestedRoom)){$('joinInput').value=requestedRoom;connect('join')}
 requestAnimationFrame(frame);

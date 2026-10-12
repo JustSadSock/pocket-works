@@ -25,7 +25,8 @@
    <div class="menu-art"><canvas id="preview" aria-label="Два плюшевых существа в текстильном мире"></canvas><div class="sewn-caption">ИГРУШЕЧНАЯ МАСТЕРСКАЯ</div></div>
    <div class="menu-controls">
     <div class="field-row"><label for="nickname">ИМЯ</label><input id="nickname" maxlength="22" autocomplete="nickname" placeholder="Игрок"><span id="identity">Гостевой профиль</span></div>
-    <div class="play-actions"><button type="button" id="soloBtn" class="big-action" data-native-press>Играть <span>→</span><small>Два героя, один экран</small></button><button type="button" id="hostBtn" data-native-press class="big-action secondary" data-native-press>Создать комнату <span>↗</span><small>PocketNet · с друзьями</small></button></div>
+    <div class="play-actions"><button type="button" id="soloBtn" class="big-action" data-native-press>Играть <span>→</span><small>Два героя, один экран</small></button><button type="button" id="hostBtn" data-native-press class="big-action secondary">Создать комнату <span>↗</span><small>PocketNet · с друзьями</small></button></div>
+    <button id="duoBtn" type="button" class="desktop-duo-action" data-native-press><span class="duo-avatars" aria-hidden="true"><i></i><i></i></span><span>Вдвоём за одним ПК<small>WASD + стрелки · одна клавиатура</small></span><span class="duo-arrow" aria-hidden="true">↗</span></button>
     <div class="sub-actions"><label for="levelChoice">Уровень</label><select id="levelChoice" aria-label="Выбрать открытый уровень"></select><button type="button" id="onlineBtn" data-native-press>По коду →</button></div>
     <p id="netStatus" role="status">Проверка PocketNet…</p>
    </div>
@@ -60,6 +61,31 @@
      <button type="button" data-native-press data-hold="stick" class="ability stick" aria-label="Прилипнуть или отлипнуть"><b>ЛИП!</b><small>прилипнуть</small></button>
      <button type="button" data-native-press data-hold="jump" class="ability jump" aria-label="Прыгнуть"><b>↑</b><small>прыжок</small></button>
     </div>
+    <div id="desktopDeck" class="desktop-deck" data-mode="solo" aria-label="Управление с клавиатуры">
+      <div class="pc-layout pc-solo">
+        <span class="keyboard-tip"><kbd data-codes="KeyA|ArrowLeft">A</kbd><kbd data-codes="KeyD|ArrowRight">D</kbd><span>движение</span></span>
+        <span class="keyboard-tip"><kbd data-codes="Space|KeyW|ArrowUp" class="key-wide">Пробел</kbd><span>прыжок</span></span>
+        <span class="keyboard-tip"><kbd data-codes="KeyE|KeyS|ArrowDown|ShiftLeft|ShiftRight">E</kbd><span>липучка</span></span>
+        <span class="keyboard-tip"><kbd>Q</kbd><span>сменить</span></span>
+      </div>
+      <div class="pc-layout pc-duo">
+        <span class="player-key-label player-key-label--a">1</span>
+        <span class="keyboard-tip"><kbd data-codes="KeyA">A</kbd><kbd data-codes="KeyD">D</kbd><span>ход</span></span>
+        <span class="keyboard-tip"><kbd data-codes="KeyW|Space">W</kbd><span>прыжок</span></span>
+        <span class="keyboard-tip"><kbd data-codes="KeyE|KeyS">E</kbd><span>липучка</span></span>
+        <span class="keyboard-divider"></span>
+        <span class="player-key-label player-key-label--b">2</span>
+        <span class="keyboard-tip"><kbd data-codes="ArrowLeft">←</kbd><kbd data-codes="ArrowRight">→</kbd><span>ход</span></span>
+        <span class="keyboard-tip"><kbd data-codes="ArrowUp">↑</kbd><span>прыжок</span></span>
+        <span class="keyboard-tip"><kbd data-codes="ArrowDown">↓</kbd><span>липучка</span></span>
+      </div>
+      <div class="pc-layout pc-online">
+        <span class="keyboard-tip"><kbd data-codes="KeyA|ArrowLeft">A</kbd><kbd data-codes="KeyD|ArrowRight">D</kbd><span>ход</span></span>
+        <span class="keyboard-tip"><kbd data-codes="Space|KeyW|ArrowUp" class="key-wide">Пробел</kbd><span>прыжок</span></span>
+        <span class="keyboard-tip"><kbd data-codes="KeyE|KeyS|ArrowDown|ShiftLeft|ShiftRight">E</kbd><span>липучка</span></span>
+      </div>
+      <div class="keyboard-tip keyboard-esc"><kbd>Esc</kbd><span>пауза</span></div>
+    </div>
   </div>
   <div id="pauseSheet" class="overlay" hidden><div class="sewn-sheet">
     <span class="mini-label">ЛИПКИ</span><h2>Пауза</h2><p id="pauseCaption">Тренировка на паузе</p>
@@ -77,6 +103,6 @@
 </section>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЛИПКИ" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ЛИПКИ" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
