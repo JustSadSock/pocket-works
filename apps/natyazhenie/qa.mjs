@@ -84,6 +84,13 @@ try{
    const fy=(a.y+b.y)/2;
    assert.ok(m.y>=fy-1,'rubber cannot float upward under gravity');
    assert.ok(Math.abs(m.y-nr.y)<1.7,'reversing linked friends cannot invert sag');
+   for(const [source,dest] of [[a,b],[b,a]]){
+    for(const time of [0,.7,2.3]){
+     const pts=rubberPoints(source,dest,{time,tight:0,reduced:false});
+     pts.forEach((p,i)=>assert.ok(p.y>=(source.y+(dest.y-source.y)*i/(pts.length-1))-.01,
+      'animated loose rubber must hang downward, even if endpoints swap'));
+    }
+   }
   }
  }
  // Signals are actual geometric crossings of the physical cord, not pickups by a body.
