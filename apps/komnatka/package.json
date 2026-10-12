@@ -1,0 +1,14 @@
+{
+  "name": "@pocket-works/komnatka",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm test && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs komnatka",
+    "test": "node --test source/state.test.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.2.1"
+  }
+}

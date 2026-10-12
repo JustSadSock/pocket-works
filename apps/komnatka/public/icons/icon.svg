@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="КОМНАТКА — уголок кукольной комнаты">
+<defs><linearGradient id="w" x2="0" y2="1"><stop stop-color="#f7eddc"/><stop offset="1" stop-color="#e8d6c0"/></linearGradient><linearGradient id="f" x2="0" y2="1"><stop stop-color="#dfc2a0"/><stop offset="1" stop-color="#bc9777"/></linearGradient></defs>
+<rect width="512" height="512" rx="116" fill="#e7c3af"/>
+<path d="M72 162 258 55 439 160v209L257 475 72 369Z" fill="#9b6f5a"/>
+<path d="M82 163 258 63v190L82 355Z" fill="#e4dac4"/>
+<path d="M258 63 429 161v197L258 253Z" fill="url(#w)"/>
+<path d="m82 355 176-102 171 105-172 101Z" fill="url(#f)"/>
+<path d="m100 356 157-91 153 94-153 89Z" fill="#cfac87" opacity=".6"/>
+<path d="m130 310 77-42 99 53-82 47Z" fill="#f4dfc0"/>
+<path d="m144 296 67-36 92 50-73 41Z" fill="#93ad97"/>
+<path d="m144 296 0-51 68-36 92 51-1 50-92-50Z" fill="#8dab90"/>
+<path d="m145 247 66-35 93 51-73 41Z" fill="#afc4aa"/>
+<path d="m144 265-18 11v-50l18-10ZM304 260l19 11v52l-19-13Z" fill="#73967d"/>
+<path d="m207 390 43-25 64 38-43 24Z" fill="#f9e6d1"/>
+<path d="m207 365 43-25 64 39-44 25Z" fill="#b99872"/>
+<path d="m216 367 35-20 54 32-35 20Z" fill="#dfc198"/>
+<path d="m345 290 27-16 27 16-27 15Z" fill="#af8d6d"/>
+<path d="m372 273 1-67" stroke="#8e745f" stroke-width="8" stroke-linecap="round"/>
+<path d="m341 220 31-19 30 19-30 18Z" fill="#f5e2a9"/>
+<path d="m341 220-3-30 34-17 34 20-4 27-30-19Z" fill="#f6db9c"/>
+<path d="m124 180 75-44v84l-75 43Z" fill="#c49a75"/><path d="m134 184 56-32v61l-56 33Z" fill="#93b3ad"/>
+<circle cx="350" cy="155" r="10" fill="#fff6dc" opacity=".8"/>
+</svg>
