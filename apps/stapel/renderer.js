@@ -153,9 +153,12 @@ export function renderFlight(canvas,f,map,t){
   sky.addColorStop(1,alt<20000?'#8c5950':'#1b3037');
   rect(c,0,0,w,h,sky);
   for(const s of stars){c.fillStyle='rgba(235,243,241,'+(s.a*(1-atmos*.85))+')';c.beginPath();c.arc(s.x*w,s.y*h,s.r,0,TAU);c.fill();}
+  const activeStages=f.stages.slice(f.stageIndex);
+  const rocketHeight=activeStages.reduce((a,s)=>a+s.tanks*34+28,0)+52;
+  const scale=Math.min(.95, Math.max(.52,(h*.29)/rocketHeight));
   const rocketY=h*.54, pxScale=Math.max(32,alt/(h*.32));
   const worldR=WORLD.radius/pxScale;
-  const planetY=rocketY+(WORLD.radius+alt)/pxScale;
+  const planetY=rocketY+(WORLD.radius+alt)/pxScale+rocketHeight*.42*scale;
   if(planetY-worldR<h){
     if(worldR>1300){
       // On the ascent the globe has a radius of thousands of screen pixels.
@@ -184,9 +187,6 @@ export function renderFlight(canvas,f,map,t){
     }
   }
   // Vehicle camera locked to craft, not to the inertial world.
-  const activeStages=f.stages.slice(f.stageIndex);
-  const rocketHeight=activeStages.reduce((a,s)=>a+s.tanks*34+28,0)+52;
-  const scale=Math.min(.95, Math.max(.52,(h*.29)/rocketHeight));
   c.save();
   c.translate(w*.5,rocketY);
   c.rotate(f.pitch*Math.PI/180);
