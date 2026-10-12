@@ -5,7 +5,7 @@ import { resolve, dirname } from 'node:path';
 
 const base=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const original=readFileSync(resolve(base,'app.js'),'utf8');
-const source=('const createWorkshopMode=()=>({});\n'+original.replace(/^import[^\n]*\n/gm,'').replace(/^installMobileRuntime\(\);\s*/,'')
+const source='const createWorkshopMode=()=>({});\n'+original.replace(/^import[^\n]*\n/gm,'').replace(/^installMobileRuntime\(\);\s*/,'')
   + '\nreturn {get state(){return state},get mode(){return mode},get loaded(){return loaded},get targets(){return targets},tile,placeTargets,begin,showModal,applyStep,save,read};';
 
 function open(memory=new Map()) {
