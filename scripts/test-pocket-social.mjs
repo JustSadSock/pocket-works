@@ -47,6 +47,10 @@ assert.equal(inspect.invite.roomId,room);
 assert.equal((await call(1,'invite-action',{id:invite.inviteId,action:'accept'})).httpStatus,409);
 const accepted=await call(1,'invite-action',{id:invite.inviteId,action:'accept'},{'x-pw-validated-invite':invite.inviteId});
 assert.equal(accepted.ok,true);
+const blindInvite=await call(0,'invite',{toId:users[1].id,gameId:'blind-pals',roomId:room},{'x-pw-validated-room':room});
+assert.equal(blindInvite.ok,true,'blind-pals supports real friend invitations');
+const blindAccepted=await call(1,'invite-action',{id:blindInvite.inviteId,action:'accept'},{'x-pw-validated-invite':blindInvite.inviteId});
+assert.equal(blindAccepted.url,'/apps/blind-pals/?room='+encodeURIComponent(room));
 assert.match(accepted.url,/^\/apps\/zamazka\/\?room=/);
 assert.equal((await call(1,'profile',{background:'paper',frame:'double',artwork:'',
   favoriteGame:'zamazka',discoverable:false,presenceVisible:false,allowInvites:false})).ok,true);
