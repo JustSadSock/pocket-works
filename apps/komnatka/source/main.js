@@ -177,6 +177,7 @@ function refresh(){
  for(const it of state.items){const root=makeItem(scene,it);roots.set(it.id,root);
   if(it.type==='tablelamp'||it.type==='floorlamp')lights.push(room.addPracticalLight(new Vector3(it.x,it.y+(it.type==='floorlamp'?2.05:.55),it.z),it.type==='tablelamp'));
  }
+ room.setShadowCasters(roots,state.items);
  room.setEvening(state.evening);
  if(selectedId){const s=state.items.find(i=>i.id===selectedId);if(s)select(s.id);else{selectedId=null;hideSelection();}}
  showCatalog();updateActions();
