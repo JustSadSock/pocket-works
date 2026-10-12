@@ -479,3 +479,106 @@ html.has-pocket-deck .shelf-tools__advanced>summary:focus-visible{outline:2px so
 html.has-pocket-deck .shelf-tools__advanced .shelf-tools__facts{margin:6px 0 13px}
 html.has-pocket-deck .shelf-tools__advanced .shelf-tools__actions{margin-bottom:12px}
 html.has-pocket-deck .shelf-tools__advanced #reset-shelf{font-weight:680}
+
+
+/* Pocket Deck v0.10.16 — focus first. A phone home is a single viewport, not another feed. */
+.deck-account-spotlight{
+  display:flex;align-items:center;gap:12px;position:relative;width:100%;text-align:left;
+  border:1px solid rgba(230,173,143,.45);background:#2b2926;color:#f8f1e7;
+  padding:9px 13px;border-radius:8px;min-height:65px;cursor:pointer;transition:background .16s,transform .14s
+}
+.deck-account-spotlight:active{transform:scale(.987);background:#41372e}
+.deck-account-spotlight.is-member{border-color:#405957;background:#1d302f}
+.deck-account-portrait{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;overflow:hidden;
+  border-radius:9px;background:#b87554;color:#181f1f;font:700 26px/1 Georgia,serif}
+.deck-account-spotlight.is-member .deck-account-portrait{background:#587267;color:#f3eae2}
+.deck-account-portrait .pw-id-nav-avatar,.deck-account-portrait .pw-id-avatar,.deck-account-portrait .pw-social-personal-avatar{
+  width:100%;height:100%;display:grid;place-items:center;border-radius:6px;object-fit:cover
+}
+.deck-account-portrait .pw-id-nav-avatar svg,.deck-account-portrait .pw-id-avatar svg{width:70%;height:70%}
+.deck-account-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.deck-account-copy strong{font-size:.92rem;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deck-account-copy small{font-size:.72rem;color:#ddc9b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deck-account-spotlight.is-member .deck-account-copy small{color:#a9c6be}
+.deck-account-arrow{font-size:1.1rem;color:#e9ad8d}
+.deck-account-dot{position:absolute;right:9px;top:8px;width:10px;height:10px;background:#e9a076;border:2px solid #293630;border-radius:50%}
+.deck-account-dot[hidden]{display:none}
+.deck-account-spotlight:focus-visible{outline:2px solid #f3b496;outline-offset:2px}
+.deck-focus,.deck-widgets-toggle{display:none}
+.deck-focus__featured{position:relative;min-height:0;overflow:hidden;border:1px solid #475755;border-radius:7px;background:#203033}
+.deck-focus__play{display:block;position:relative;width:100%;height:100%;color:#fff;text-decoration:none}
+.deck-focus__featured .deck-art{position:absolute;inset:0;width:100%;height:100%}
+.deck-focus__featured .deck-art__icon{left:30%;width:40%;height:70%;top:8%}
+.deck-focus__featured .deck-art__photo{width:100%;height:100%}
+.deck-focus__featured .deck-art:after{background:linear-gradient(transparent 30%,#111d21ee 100%)}
+.deck-focus__hero-label{position:absolute;z-index:4;bottom:15px;left:16px;right:74px;display:grid;gap:5px}
+.deck-focus__hero-label>span{font-size:.6rem;font-weight:740;letter-spacing:.11em;color:#d0ddd3}
+.deck-focus__hero-label strong{font-size:clamp(1.65rem,6.5vw,2.55rem);line-height:1.02;letter-spacing:-.05em;word-break:break-word}
+.deck-focus__play-mark{position:absolute;z-index:5;bottom:14px;right:15px;width:43px;height:43px;
+  display:grid;place-items:center;background:#e9a98d;color:#1e2c2d;border-radius:50%;font-size:16px}
+.deck-focus__info{position:absolute;z-index:6;right:10px;top:10px;width:42px;height:42px;border:1px solid #e6ede448;
+  border-radius:6px;background:#152225b8;color:white;font-weight:850;font-size:19px}
+.deck-focus__info:focus-visible,.deck-focus__quick a:focus-visible{outline:2px solid #f0b69a;outline-offset:-2px}
+.deck-focus__bottom{display:grid;gap:8px;min-width:0}
+.deck-focus__recent-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.deck-focus__recent-title strong{font-size:.8rem;color:#e7eee7}
+.deck-focus__recent-title button{border:0;background:none;color:#e9ac91;min-height:29px;font-size:.74rem;font-weight:740}
+.deck-focus__recent{display:flex;gap:9px;overflow-x:auto;overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;scrollbar-width:none;padding:0 0 3px}
+.deck-focus__recent::-webkit-scrollbar{display:none}
+.deck-focus__quick{position:relative;flex:0 0 76px;width:76px;scroll-snap-align:start}
+.deck-focus__quick a{display:flex;flex-direction:column;gap:4px;color:#e3e8e2;text-decoration:none}
+.deck-focus__quick .deck-art{display:block;position:relative;height:65px;border-radius:5px;overflow:hidden}
+.deck-focus__quick .deck-art__icon{top:12%;height:76%;left:15%;width:70%}
+.deck-focus__quick a>span:last-child{display:block;max-width:100%;font-size:.67rem;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.deck-focus__quick button{position:absolute;right:2px;top:2px;z-index:6;width:25px;height:25px;border:0;border-radius:4px;background:#152528c9;color:#fff;font-size:13px}
+.deck-widgets-toggle{min-height:34px;border:0;background:transparent;color:#9db0a9;font-weight:650;font-size:.73rem;cursor:pointer}
+html.has-pocket-deck .app-entry__select{text-decoration:none;color:inherit}
+html.has-pocket-deck .app-entry__more{position:absolute;top:5px;right:5px;z-index:5;display:grid;place-items:center;
+  width:42px;height:42px;padding:0;border:0;border-radius:5px;background:rgba(9,18,22,.71);color:#e9eeea;
+  font-size:1.25rem;font-weight:800;cursor:pointer}
+html.has-pocket-deck .app-entry__more:focus-visible{outline:2px solid #efb298;outline-offset:-2px}
+html.has-pocket-deck .app-entry__select:focus-visible{outline:2px solid #efb298;outline-offset:-2px}
+html.has-pocket-deck[data-deck-density=micro] .app-entry__more{display:none}
+@media(min-width:981px){
+  .deck-account-spotlight{max-width:510px;margin:0 0 22px}
+}
+@media(max-width:980px){
+  html.has-pocket-deck[data-deck-view="home"],html.has-pocket-deck[data-deck-view="home"] body{height:100%;overflow:hidden;overscroll-behavior:none}
+  html.has-pocket-deck[data-deck-view="home"] .shelf-shell{
+    height:100dvh;max-height:100dvh;overflow:hidden;display:flex;flex-direction:column;
+    padding-bottom:calc(73px + env(safe-area-inset-bottom,0px))
+  }
+  html.has-pocket-deck[data-deck-view="home"] .masthead{flex:0 0 66px}
+  html.has-pocket-deck[data-deck-view="home"] .deck-home{display:flex;flex:1;min-height:0;min-width:0;flex-direction:column;gap:10px;margin:0}
+  html.has-pocket-deck .deck-home__intro{flex:0 0 auto;margin:0}
+  html.has-pocket-deck .deck-home__intro h2{font-size:clamp(1.35rem,4.3vw,1.9rem)}
+  html.has-pocket-deck #deck-customize{min-height:35px;font-size:.73rem;padding:0 10px}
+  .deck-account-spotlight{flex:0 0 auto;min-height:56px;padding:7px 10px;gap:9px}
+  .deck-account-portrait{width:39px;height:39px;flex-basis:39px}
+  .deck-focus{display:flex;flex:1;min-height:0;flex-direction:column;gap:10px}
+  .deck-focus__featured{flex:1;min-height:100px}
+  .deck-focus__bottom{flex:0 0 auto}
+  .deck-widgets-toggle{display:block;flex:0 0 32px}
+  html.has-pocket-deck .deck-home:not(.deck-home--expanded) #deck-widgets{display:none}
+  html.has-pocket-deck .deck-home--expanded .deck-focus{display:none}
+  html.has-pocket-deck .deck-home--expanded #deck-widgets{
+    flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;align-content:start;
+    padding-bottom:12px;scrollbar-width:thin
+  }
+  html.has-pocket-deck .deck-home--expanded .deck-widget{min-height:0}
+  html.has-pocket-deck .deck-home--expanded .deck-tile--hero .deck-art{min-height:175px;max-height:38dvh}
+  html.has-pocket-deck[data-deck-view="home"] .shelf-footer{display:none}
+}
+@media(max-width:375px),(max-height:690px) and (max-width:980px){
+  .deck-focus__recent{gap:7px}
+  .deck-focus__quick{width:66px;flex-basis:66px}
+  .deck-focus__quick .deck-art{height:52px}
+  .deck-focus__hero-label{bottom:9px}
+  .deck-focus__play-mark{width:38px;height:38px;bottom:11px}
+  .deck-focus__recent-title{height:20px}
+  html.has-pocket-deck .deck-home__intro h2{font-size:1.4rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .deck-account-spotlight,.deck-focus__play-mark{transition:none!important}
+}
