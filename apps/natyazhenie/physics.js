@@ -166,35 +166,68 @@ function respawn(w,p,i){
  const floor=w.stage.floors.find(f=>x>=f.x+RADIUS&&x<=f.x+f.w-RADIUS);
  Object.assign(p,spawn(p,i),{x:floor?x:90+i*42,falls});w.falls++;
 }
+export function currentGoal(w){return w.stage.sequence?.[w.phase]||null;}
+function goalActive(w,name){const goal=currentGoal(w);return !w.stage.sequence.length||goal===name;}
+function complete(w,name){
+ if(name==='pads')return w.plateCharge>=1;
+ if(name==='stars')return w.stars.every(Boolean);
+ if(name==='beacons')return w.beacons.every(Boolean);
+ if(name==='wheels')return w.wheelDone.every(Boolean);
+ if(name==='tension')return w.tensionDone;
+ if(name==='rescue')return w.saveCount>0;
+ return false;
+}
 function updateGoals(w,dt){
- const s=w.stage,ps=w.players;
+ const s=w.stage,ps=w.players,goal=currentGoal(w);
  w.pads=s.pads.map(p=>{const actor=ps[p.owner];return !!actor?.ground&&Math.abs(actor.x-p.x)<30&&Math.abs(actor.y+RADIUS-p.y)<13;});
- w.plateCharge=clamp(w.plateCharge+(w.pads.length&&w.pads.every(Boolean)?dt*1.45:-dt*.9),0,1);
- for(let i=0;i<s.stars.length;i++)if(!w.stars[i]&&ps.some(p=>Math.hypot(p.x-s.stars[i].x,p.y-s.stars[i].y)<34))w.stars[i]=true;
- for(let i=0;i<(s.beacons||[]).length;i++)if(!w.beacons[i]){
+ if(goalActive(w,'pads')&&s.pads.length){
+  const held=w.pads.every(Boolean);
+  w.plateCharge=clamp(w.plateCharge+(held?dt/(s.hold||.7):-dt/.48),0,1);
+ }
+ if(goalActive(w,'stars'))for(let i=0;i<s.stars.length;i++){
+  if(!w.stars[i]&&ps.some(p=>Math.hypot(p.x-s.stars[i].x,p.y-s.stars[i].y)<34))w.stars[i]=true;
+ }
+ if(goalActive(w,'beacons'))for(let i=0;i<s.beacons.length;i++)if(!w.beacons[i]){
   const b=s.beacons[i];
   for(let j=0;j<ps.length-1;j++){
    const a=ps[j],p=ps[j+1],dx=p.x-a.x,dy=p.y-a.y;
    if(!dx)continue;
-   const f=(b.x-a.x)/dx,yy=a.y+dy*f,dist=Math.hypot(dx,dy);
-   if(f>=0&&f<=1&&Math.abs(yy-b.y)<24&&dist>=ROPE.soft&&(a.anchor||p.anchor)){w.beacons[i]=true;break;}
+   const ratio=(b.x-a.x)/dx,y=a.y+dy*ratio;
+   if(ratio>=0&&ratio<=1&&Math.abs(y-b.y)<24&&ropeDistance(w,j)>=ROPE.soft&&(a.anchor||p.anchor)){
+    w.beacons[i]=true;break;
+   }
   }
  }
- if(s.tension&&!w.tensionDone){
+ if(goalActive(w,'wheels'))for(let i=0;i<s.wheels.length;i++){
+  if(w.wheelDone[i])continue;
+  const pegIndex=s.wheels[i];
+  const winding=w.wraps.some((hook,j)=>hook===pegIndex&&ropeDistance(w,j)>=ROPE.soft+20&&
+    (ps[j].anchor||ps[j+1].anchor));
+  w.wheelCharge[i]=clamp(w.wheelCharge[i]+(winding?dt/1.2:-dt/.65),0,1);
+  if(w.wheelCharge[i]>=1)w.wheelDone[i]=true;
+ }
+ if(goalActive(w,'tension')&&s.tension&&!w.tensionDone){
   let taut=0;
-  for(let i=0;i<ps.length-1;i++)if(Math.hypot(ps[i+1].x-ps[i].x,ps[i+1].y-ps[i].y)>=196)taut++;
+  for(let j=0;j<ps.length-1;j++)if(ropeDistance(w,j)>=ROPE.soft+35)taut++;
   const valid=taut>=s.requiredLinks&&ps.some(p=>p.anchor);
-  w.tensionCharge=clamp(w.tensionCharge+(valid?dt*.9:-dt*.75),0,1);
+  w.tensionCharge=clamp(w.tensionCharge+(valid?dt/1.6:-dt/.6),0,1);
   if(w.tensionCharge>=1)w.tensionDone=true;
  }
- const done=(!s.pads.length||w.plateCharge>=1)&&w.stars.every(Boolean)&&w.beacons.every(Boolean)&&(!s.tension||w.tensionDone);
- if(done)w.gateOpen=true;
+ if(s.sequence.length){
+  if(complete(w,goal)){
+   w.phase++;w.phaseTime=0;
+  }else w.phaseTime+=dt;
+  if(w.phase>=s.sequence.length)w.gateOpen=true;
+ }else if((!s.pads.length||w.plateCharge>=1)&&w.stars.every(Boolean)&&
+  w.beacons.every(Boolean)&&w.wheelDone.every(Boolean)&&(!s.tension||w.tensionDone)&&
+  (!s.rescue||w.saveCount>0))w.gateOpen=true;
  if(w.gateOpen&&ps.some(p=>p.x>s.finishX)&&ps.every(p=>p.x>s.finishX-136&&p.y<FLOOR+RADIUS)){
   if(w.level===CHAPTERS.length-1)w.finished=true;else reset(w,w.level+1);
   return true;
  }
  return false;
 }
+
 export function simulate(w,seconds,now=Date.now()){
  let remaining=clamp(Number(seconds)||0,0,.16);
  while(remaining>0&&!w.finished){
@@ -207,7 +240,9 @@ export function simulate(w,seconds,now=Date.now()){
    p.coyote=p.ground?.11:Math.max(0,(p.coyote||0)-dt);
    p.anchor=!!(grab&&p.ground);
    if(jump&&!p.jumpHeld&&(p.ground||p.coyote>0)){
-    p.anchor=false;p.vy=-535;p.y-=2;p.ground=false;p.coyote=0;p.squash=.8;
+    const spring=w.players.some(q=>q!==p&&q.anchor&&Math.hypot(q.x-p.x,q.y-p.y)>180);
+    p.anchor=false;p.vy=spring?-686:-535;p.vx+=spring?p.face*115:0;
+    p.y-=2;p.ground=false;p.coyote=0;p.squash=spring?1:.8;
    }
    p.jumpHeld=jump;if(dir)p.face=dir>0?1:-1;
    if(p.anchor){p.vx=0;p.vy=Math.max(0,p.vy);}
@@ -217,22 +252,40 @@ export function simulate(w,seconds,now=Date.now()){
     p.vy=clamp(p.vy+1060*dt,-850,750);
    }
   }
-  constrainRope(w.players,blocks,dt);
+  updateWraps(w);
+  constrainRope(w,blocks,dt);
   for(let i=0;i<w.players.length;i++){
    const p=w.players[i];p.vx=clamp(p.vx,-400,400);p.vy=clamp(p.vy,-850,760);
    resolveMove(p,dt,blocks);
    if(p.ground&&!p.anchor)for(const b of w.stage.springs)if(Math.abs(p.x-b.x)<31&&Math.abs(p.y+RADIUS-b.y)<12){
     p.vy=-785;p.y-=3;p.ground=false;p.coyote=0;p.squash=1;break;
    }
-   if(p.y>HEIGHT+62)respawn(w,p,i);
+   // Falling friends remain on the band; a grounded teammate can brace and reel
+   // the dangling body toward safety before the generous recovery timeout.
+   const oldHang=p.hang||0;
+   const dangling=p.y>FLOOR+40&&!p.ground;
+   p.hang=dangling?oldHang+dt:oldHang>0?oldHang:0;
+   if(p.hang>0){
+    const helper=[w.players[i-1],w.players[i+1]].find(q=>q?.anchor&&q.ground);
+    if(helper&&dangling){
+     p.vy=Math.min(p.vy,-260);p.y-=Math.min(3.4,dt*165);
+     // Reel inward: clear the ledge rather than hold the friend in place forever.
+     const toward=helper.x-p.x;p.vx+=clamp(toward*.038,-11,11);
+    }
+    if((p.ground||p.y<FLOOR-34)&&!dangling){w.saveCount++;p.hang=0;p.squash=1;}
+   }
+   if(p.y>HEIGHT+188||p.hang>7)respawn(w,p,i);
    if(p.ground&&p.x>720&&w.stage.floors.some(f=>f.x>520&&p.x>f.x+25&&p.x<f.x+f.w-25))p.checkpoint=1;
   }
   // Collision correction runs again without applying a second spring impulse.
-  constrainRope(w.players,blocks,0);
+  updateWraps(w);
+  constrainRope(w,blocks,0);
   for(let i=0;i<w.players.length;i++)for(let j=i+1;j<w.players.length;j++){
    const a=w.players[i],b=w.players[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
    if(d<2*RADIUS-2){const push=(2*RADIUS-2-d)*.5;if(!a.anchor)a.x-=dx/d*push;if(!b.anchor)b.x+=dx/d*push;}
   }
+  updateWraps(w);
+  constrainRope(w,blocks,0);
   for(const hazard of movingHazards(w.stage,w.clock))for(let i=0;i<w.players.length;i++){
    const p=w.players[i];if(Math.hypot(p.x-hazard.x,p.y-hazard.y)<RADIUS+hazard.r-3)respawn(w,p,i);
   }
@@ -242,9 +295,10 @@ export function simulate(w,seconds,now=Date.now()){
 }
 export const viewWorld=w=>({
  level:w.level,stage:w.stage,players:w.players.map(p=>({id:p.id,name:p.name,x:+p.x.toFixed(2),y:+p.y.toFixed(2),
- vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),ground:p.ground,anchor:p.anchor,face:p.face,squash:p.squash,falls:p.falls})),
+ vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),ground:p.ground,anchor:p.anchor,face:p.face,squash:p.squash,hang:p.hang,falls:p.falls})),
  pads:w.pads,stars:w.stars,beacons:w.beacons,tensionCharge:w.tensionCharge,tensionDone:w.tensionDone,
- plateCharge:w.plateCharge,gateOpen:w.gateOpen,clock:w.clock,finished:w.finished,revision:w.revision,falls:w.falls
+ plateCharge:w.plateCharge,wraps:w.wraps,wheelCharge:w.wheelCharge,wheelDone:w.wheelDone,
+ phase:w.phase,saveCount:w.saveCount,gateOpen:w.gateOpen,clock:w.clock,finished:w.finished,revision:w.revision,falls:w.falls
 });
 export function validateLayouts(){
  const errors=[];
@@ -259,6 +313,9 @@ export function validateLayouts(){
   for(let i=1;i<ground.length;i++){const gap=ground[i].x-(ground[i-1].x+ground[i-1].w);if(gap>150)errors.push([n,level,'unreachable floor gap']);}
   for(const star of s.stars){if(star.x>985||star.y<245||star.y>498)errors.push([n,level,'unreachable star']);}
   for(const b of s.beacons)if(!ground.some(f=>b.x>f.x+130&&b.x<f.x+f.w-130))errors.push([n,level,'beacon has no standing room']);
+  for(const h of s.hooks)if(!ground.some(f=>h.x>f.x+22&&h.x<f.x+f.w-22))errors.push([n,level,'hook unsupported']);
+  if(s.wheels.some(k=>k<0||k>=s.hooks.length))errors.push([n,level,'invalid wheel']);
+  if(s.sequence.some(g=>!['wheels','stars','pads','tension','beacons','rescue'].includes(g)))errors.push([n,level,'unknown goal']);
   if(s.tension&&s.requiredLinks>n-1)errors.push([n,level,'too many taut segments']);
  }
  return errors;
