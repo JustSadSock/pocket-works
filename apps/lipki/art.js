@@ -72,7 +72,19 @@ export function draw(canvas,view,{me='',time=0}={}){
  if(r.width<10||r.height<10)return;
  const dw=Math.round(r.width*scale),dh=Math.round(r.height*scale);
  if(canvas.width!==dw||canvas.height!==dh){canvas.width=dw;canvas.height=dh;}
- const c=canvas.getContext('2d');c.setTransform(dw/W,0,0,dh/H,0,0);c.clearRect(0,0,W,H);
+ const c=canvas.getContext('2d');
+ // Preserve world-unit proportions on every viewport; the camera follows the
+ // locally controlled hero instead of squeezing the full level into the phone.
+ const portrait=r.height>r.width*1.05;
+ const zoom=portrait?Math.max(1,Math.min(1.3,r.height/540)):Math.max(.82,Math.min(r.width/950,r.height/305));
+ const visibleWidth=r.width/zoom,visibleHeight=r.height/zoom;
+ const focus=view.players.find(p=>p.id===me)||view.players[0]||{x:W/2};
+ const cameraX=Math.max(0,Math.min(W-visibleWidth,focus.x-visibleWidth*.43));
+ const cameraY=Math.max(0,Math.min(H-visibleHeight,H-visibleHeight-5));
+ c.setTransform(1,0,0,1,0,0);
+ c.clearRect(0,0,dw,dh);
+ const ds=scale*zoom;
+ c.setTransform(ds,0,0,ds,-cameraX*ds,-cameraY*ds);
  const d=LEVELS[view.level]||LEVELS[0];
  // Deep textile stage: wall felt, oversized stitched patches, cabinets.
  c.fillStyle='#d4d9c7';c.fillRect(0,0,W,H);
