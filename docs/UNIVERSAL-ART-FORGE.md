@@ -105,7 +105,13 @@ animation orchestration or automatic aesthetic scoring.
 ## Integration and acceptance
 
 Enhanced apps load URLs from the index after Vite copies `public/`; Quick apps
-serve them directly. Godot imports the same committed GLB/PNG. Cache the index and
+serve the committed **runtime exports**, not editable inputs. Pocket Works
+`prepare-site` explicitly excludes every `asset-forge/` source directory from
+published files. Therefore never fetch or service-worker-precache an editable
+`asset-forge/sprites.json`, `asset-forge/*.svg`, `.blend` or other source URL from
+a shipped app. Runtime paths must point to the manifest's exported URLs such as
+`assets/creatures.png` and `assets/forge-index.json`. Test these paths in
+`dist-site` and test an offline boot before release. Godot imports the same committed GLB/PNG. Cache the index and
 every indexed URL in the app's own worker. The Forge does not rewrite workers or
 register demo apps. Existing v1 builds and production hosting stay unchanged.
 
