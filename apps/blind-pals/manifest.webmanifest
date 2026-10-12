@@ -1,0 +1,21 @@
+{
+  "name": "СЛЕПАЯ СМЕНА",
+  "short_name": "СЛЕПАЯ СМЕНА",
+  "id": "/apps/blind-pals/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#252c26",
+  "theme_color": "#252b25",
+  "orientation": "any",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "description": "Дуэт вслепую: каждый управляет невидимым для себя рабочим и видит только напарника. Шесть механических кооперативных комнат с физическими головоломками."
+}
