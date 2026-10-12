@@ -5,7 +5,7 @@ import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPla
 
 installMobileRuntime();
 createWorkshopMode({
-  appName: 'ФЛАГПОСТ', version: '1.1.0',
+  appName: 'ФЛАГПОСТ', version: '1.1.1',
   cachePrefix: 'flagpost-', storageNamespace: 'pocket-works:flagpost',
   onReset() { try { sessionStorage.removeItem('pocket-works:flagpost:identity'); } catch {} }
 });
@@ -162,7 +162,7 @@ function renderMenu() {
       <div class="kicker">01 / Штаб</div><h2 class="form-heading" id="enter-title">Открыть партию</h2>
       <label class="label" for="playerName">Твоё имя</label>
       <input id="playerName" class="text-field" maxlength="22" value="${esc(memberName())}" autocomplete="nickname" spellcheck="false" ${pocketIdentity?.complete?'readonly aria-readonly="true"':''}>
-       <p class="form-description pw-identity-notice">${pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.avatar,{small:true})+' Ник Pocket ID · <a href="'+pocketIdProfileUrl+'">изменить профиль</a>':'Гостевой вход · <a href="'+pocketIdProfileUrl+'">войти в Pocket ID</a>'}</p>
+       <p class="form-description pw-identity-notice">${pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' Ник Pocket ID · <a href="'+pocketIdProfileUrl+'">изменить профиль</a>':'Гостевой вход · <a href="'+pocketIdProfileUrl+'">войти в Pocket ID</a>'}</p>
       <div class="actions-stack">
         <button id="primary-action" class="action accent" data-action="create" type="button">Создать комнату →</button>
       </div>
