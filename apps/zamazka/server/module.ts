@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=6;
+export const RULESET_VERSION=7;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 type Stroke={c:string;s:number;t:string;p:number[][]};
@@ -10,7 +10,8 @@ type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type Chips=number[];
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[]};
-type State={board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;strokes:Stroke[]};
+type State={draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
@@ -29,7 +30,7 @@ function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]
 function choose(s:State){
  s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1)).slice(0,5);
  // Pick different works for the first five participants; further participants repeat independently.
- s.assignments={};s.drafts={};s.votes={};s.turn=0;s.revealed=false;
+ s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.turn=0;s.revealed=false;
  const shuffledArt=shuffled(s.selected);
  members(s).forEach((p,i)=>s.assignments[p.id]={art:shuffledArt[i%5],variation:Math.floor(Math.random()*0xffffffff),strokes:null});
  s.phase='preview';s.deadline=now()+25000;
@@ -119,7 +120,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.phase==='lobby'&&!state.participants.some(p=>p.id===player.id)){
      state.participants.push(player);state.scores[player.id]={mask:0,eye:0};
@@ -166,6 +167,45 @@ const module: PocketModule<State>={
      state.round=1;state.rounds=[1,3,5].includes(Number(a.rounds))?Number(a.rounds):3;
      state.board={revision:(state.board?.revision||0)+1,segments:[]};
      members(state).forEach(p=>state.scores[p.id]={mask:0,eye:0});choose(state);
+   }else if((a.type==='draft_chunk'||a.type==='submit_chunk')&&state.phase==='drawing'){
+     const item=state.assignments[id],kind=a.type;
+     if(!item||item.strokes!==null||a.round!==state.round||a.art!==item.art||a.variation!==item.variation)
+       return {state,events:notice(id,'Этот рисунок уже завершён или относится к другому раунду.')};
+     if(typeof a.revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(a.revision)||
+        !Number.isInteger(a.parts)||a.parts<1||a.parts>12||
+        !Number.isInteger(a.index)||a.index<0||a.index>=a.parts||
+        !Array.isArray(a.strokes)||a.strokes.length>8)
+       return {state,events:notice(id,'Некорректная часть рисунка.')};
+     const strokes=normalize(a.strokes);
+     if(!strokes)return {state,events:notice(id,'Недопустимые мазки в рисунке.')};
+     state.draftAssemblies||={};
+     let assembling=state.draftAssemblies[id];
+     if(a.index===0){
+       // A new revision replaces only an INCOMPLETE assembly. The committed
+       // draft remains available until every part has passed all checks.
+       assembling={revision:a.revision,kind,parts:a.parts,next:0,strokes:[]};
+       state.draftAssemblies[id]=assembling;
+     }
+     if(!assembling||assembling.revision!==a.revision||assembling.kind!==kind||
+        assembling.parts!==a.parts||assembling.next!==a.index)
+       return {state,events:notice(id,'Части рисунка пришли не по порядку. Повторяем сохранение.')};
+     assembling.strokes.push(...strokes);
+     if(assembling.strokes.length>72||assembling.strokes.reduce((n,stroke)=>n+stroke.p.length,0)>1600){
+       delete state.draftAssemblies[id];
+       return {state,events:notice(id,'Превышен лимит линий или точек.')};
+     }
+     assembling.next++;
+     if(assembling.next!==assembling.parts)return {state,events:[]};
+     const completed=normalize(assembling.strokes);
+     delete state.draftAssemblies[id];
+     if(!completed)return {state,events:notice(id,'Сохранение повреждено; предыдущая копия сохранена.')};
+     state.drafts||={};
+     state.drafts[id]=completed;
+     if(kind==='draft_chunk')
+       return {state,events:[{type:'draft_saved',to:id,payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,lines:completed.length}}]};
+     item.strokes=completed;
+     delete state.drafts[id];
+     if(members(state).every(p=>state.assignments[p.id]?.strokes!==null))step(state);
    }else if(a.type==='draft'&&state.phase==='drawing'){
      const item=state.assignments[id];
      if(!item||item.strokes!==null||Number(a.round)!==state.round||a.art!==item.art||a.variation!==item.variation)
@@ -201,7 +241,7 @@ const module: PocketModule<State>={
      if(state.round<state.rounds){state.round++;choose(state);}
      else {state.phase='results';state.deadline=0;}
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
-     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.votes={};state.selected=[];state.turn=0;
+     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.draftAssemblies={};state.votes={};state.selected=[];state.turn=0;
    }
    return {state,events:emit(state)};
  }
