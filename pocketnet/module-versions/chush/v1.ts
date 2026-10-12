@@ -156,7 +156,7 @@ const module: PocketModule<State>={
    if(!board)return {state,events:notice(id,'Недопустимый набор фигур.')};
    state.boards[id]=board;
    if(v.type==='publish'){state.ready.push(id);if(state.ready.length===state.players.length)startVote(state);}
-   state.revision++;return {state,events:events(state)};
+   state.revision++;return {state,events:v.type==='edit'?[{type:'state',to:id,payload:strip(state,id)}]:events(state)};
   }
   if(v.type==='vote'){
    if(state.phase!=='vote'||sHas(state.votes,id))return {state,events:notice(id,'Голос уже принят или голосование завершилось.')};
