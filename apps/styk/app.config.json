@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "slug": "styk",
+  "name": "СТЫК",
+  "shortName": "Стык",
+  "description": "Средневековая тактика живого фронта: гни строй, обходи фланги и ломай мораль врага.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T21:30:00+03:00",
+  "changelog": [
+    "Первый выпуск: три боя, пластичные формирования, приказы WEGO, мораль, ИИ и сохранения."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#ad7143",
+  "backgroundColor": "#e4dbc4",
+  "themeColor": "#283a31",
+  "orientation": "portrait",
+  "cacheName": "styk-v1.0.0",
+  "storageNamespace": "pocket-works:styk",
+  "runtime": "quick",
+  "tags": [
+    "game",
+    "strategy",
+    "medieval",
+    "tactics",
+    "canvas"
+  ],
+  "order": 18
+}
