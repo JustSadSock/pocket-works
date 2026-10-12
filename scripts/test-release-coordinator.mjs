@@ -13,7 +13,7 @@ globalThis.MessageChannel = class FakeMessageChannel {
 };
 const {
   releaseIdentity, sameRelease, installedTargets, getVerifiedReleases,
-  updateInstalledApplication, needsReleaseConvergence, clearStaleAppRuntime
+  updateInstalledApplication, needsReleaseConvergence, clearStaleAppRuntime, hasActiveAppDocument
 } = await import('../shared/release-coordinator.js');
 
 const app = { slug: 'alpha', name: 'Alpha', path: './apps/alpha/', version: '2.0', fingerprint: 'new-build' };
@@ -69,4 +69,23 @@ assert.deepEqual(deleted, ['alpha-v1.0'], 'only stale caches belonging to this a
 assert.equal(unregisterCalls, 1, 'only this app registration is cleared');
 assert.equal(needsReleaseConvergence('alpha', releaseIdentity(app)), false);
 assert.equal(data.has('pocket-works:shelf:v1'), false, 'user data is never deleted');
+
+// A second tab with a live app must prevent another release handoff from
+// unregistering the worker or deleting resources it is still using.
+const runningTab = new BroadcastChannel('pocket-works-release-presence');
+runningTab.onmessage = event => {
+  if(event.data?.type === 'PROBE_APP' && event.data.slug === 'alpha'){
+    runningTab.postMessage({type:'APP_OPEN',slug:'alpha',nonce:event.data.nonce});
+  }
+};
+assert.equal(await hasActiveAppDocument('alpha'), true, 'live app responds to presence probe');
+const untouched = [];
+const refused = await clearStaleAppRuntime('alpha', releaseIdentity(app), {
+  serviceWorkers: sw,
+  cacheStorage: {keys: async () => ['alpha-v1.0'], delete: async key => untouched.push(key)}
+});
+assert.equal(refused, false, 'handoff is deferred while another tab is active');
+assert.deepEqual(untouched, [], 'live app cache remains untouched');
+assert.equal(unregisterCalls, 1, 'live app worker remains installed');
+runningTab.close();
 console.log('Release coordinator defers live worker updates, verifies reopened apps and scopes cleanup.');
