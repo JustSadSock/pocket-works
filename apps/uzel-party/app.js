@@ -78,8 +78,9 @@ function formatTime(sec){return Math.floor(sec/60)+':'+String(Math.floor(sec%60)
 function nextLevel(restart=false){
  if(room&&!host)return;
  const level=restart?game.level:(game.level+1)%LEVELS.length;
- const members=game.solo?[who(),{id:'bot-1',name:'Лён'},{id:'bot-2',name:'Мак'}]:roster;
- game=newMatch(members,level,Boolean(!room));activeId=ownId;remoteState=null;visual=[];otherInputs=Object.create(null);
+ const soloNext=!room||roster.length<2;
+ const members=soloNext?[who(),{id:'bot-1',name:'Лён'},{id:'bot-2',name:'Мак'}]:roster;
+ game=newMatch(members,level,soloNext);activeId=ownId;remoteState=null;visual=[];otherInputs=Object.create(null);
  resetInputs();finishedShown=false;pausedLocal=false;hideOverlays();show('play');
  if(room)sendSnapshot(true);
 }
@@ -130,8 +131,14 @@ function attachRoom(next,isHost){
   if(host){
    roster=roster.filter(p=>p.id!==peer.id);delete otherInputs[peer.id];
    if(game&&game.phase==='play'){
-     const p=game.players.find(p=>p.id===peer.id);
-     if(p){p.name+=' · оффлайн';otherInputs[peer.id]={x:0,y:0}}
+     game.players=game.players.filter(p=>p.id!==peer.id);
+     if(game.players.length===1){
+       const p=game.players[0];game.solo=true;game.activeId=p.id;
+       game.players.push({id:'bot-1',name:'Лён',x:p.x+48,y:p.y+80,vx:0,vy:0,boost:0,cooldown:0,color:COLORS[1]},
+                         {id:'bot-2',name:'Мак',x:p.x-48,y:p.y+80,vx:0,vy:0,boost:0,cooldown:0,color:COLORS[2]});
+       note('Партнёр ушёл. Теперь помогут два спутника');
+     }
+     game.rev++;sendSnapshot(true);
    }
    sendLobby();renderPair();note('Игрок вышел из комнаты');
   }else{leaveRoom();note('Ведущий отключился. Проверь локальную сеть')}
