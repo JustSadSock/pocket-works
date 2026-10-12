@@ -103,7 +103,7 @@ async function connect(action){
  if(busy)return;
  saveName();if(net)endRoom(false);mode='net';busy=true;choose('pair');buildLobby();
  try{
-  if(action==='create')storage.removeItem('pocket-net:'+ORIGIN);
+  if(action!=='resume')storage.removeItem('pocket-net:'+ORIGIN);
   const client=new PocketNet({serverUrl:ORIGIN,name,storage,identityKey:profile?.id||'guest'});net=client;wire(client);
   await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Соединение не установлено')),12000))]);
   if(net!==client)return;
