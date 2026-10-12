@@ -1,4 +1,5 @@
-const VERSION='1.0.0',CACHE='chush-v1.0.0',PREFIX='chush-',RELEASE='2026-10-12',CACHE_PROTOCOL=2;
+const CACHE='chush-v1.0.0';
+const VERSION='1.0.0',PREFIX='chush-',RELEASE='2026-10-12',CACHE_PROTOCOL=2;
 const NOTES=['320 SVG-предметов, сбалансированные личные наборы и абсурдные сцены.','Сетевая игра для 2–8 человек: коллаж, голосование и результаты.','Сенсорные жесты, слои, отражение, отмена и экспорт SVG.'];
 const FILES=['./','./index.html','./app.js','./pieces.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/net.js','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope),ENTRIES=new Map(FILES.map(p=>{const url=new URL(p,ROOT);return[url.pathname,url.href]}));
