@@ -1,7 +1,7 @@
 // Shared deterministic gameplay for local co-op, prediction and the pinned PocketNet server.
 // 90 Hz substeps; no browser APIs. Hard rope constraints are solved after collisions.
 export const WIDTH=1180, HEIGHT=620, RADIUS=18, FLOOR=540;
-export const ROPE={slack:118,soft:152,max:250,spring:34,damping:10,reel:174};
+export const ROPE={slack:118,soft:152,max:250,spring:27,damping:9,reel:174};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rect=(x,y,w,h)=>({x,y,w,h});
 export const CHAPTERS=[
@@ -201,14 +201,14 @@ function updateGoals(w,dt){
  if(goalActive(w,'wheels'))for(let i=0;i<(s.wheels||[]).length;i++){
   if(w.wheelDone[i])continue;
   const pegIndex=s.wheels[i];
-  const winding=w.wraps.some((hook,j)=>hook===pegIndex&&ropeDistance(w,j)>=ROPE.soft+20&&
+  const winding=w.wraps.some((hook,j)=>hook===pegIndex&&ropeDistance(w,j)>=ROPE.soft&&
     (ps[j].anchor||ps[j+1].anchor));
   w.wheelCharge[i]=clamp(w.wheelCharge[i]+(winding?dt/1.2:-dt/.65),0,1);
   if(w.wheelCharge[i]>=1)w.wheelDone[i]=true;
  }
  if(goalActive(w,'tension')&&s.tension&&!w.tensionDone){
   let taut=0;
-  for(let j=0;j<ps.length-1;j++)if(ropeDistance(w,j)>=ROPE.soft+35)taut++;
+  for(let j=0;j<ps.length-1;j++)if(ropeDistance(w,j)>=ROPE.soft+20)taut++;
   const valid=taut>=s.requiredLinks&&ps.some(p=>p.anchor);
   w.tensionCharge=clamp(w.tensionCharge+(valid?dt/1.6:-dt/.6),0,1);
   if(w.tensionCharge>=1)w.tensionDone=true;
