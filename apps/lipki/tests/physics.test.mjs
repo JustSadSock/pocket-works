@@ -45,8 +45,8 @@ test('Stage five: both launchers work and all coordinates stay finite',()=>{
  const [a,b]=w.players;
  Object.assign(a,{x:300,y:479,vx:175,vy:160});
  Object.assign(b,{x:580,y:479,vx:175,vy:160});
- w.inputs.a={x:1};w.inputs.b={x:1};
- advance(w,75);
+ w.inputs.a={x:1};w.inputs.b={x:1};advance(w,10);
+ w.inputs.a={x:-1};w.inputs.b={x:-1};advance(w,40);
  assert.deepEqual(w.sigils,[true,true]);assert.equal(w.gateOpen,true);
  w.inputs.a={x:0};w.inputs.b={x:0};
  advance(w,2800);
