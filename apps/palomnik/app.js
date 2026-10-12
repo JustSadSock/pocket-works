@@ -1,4 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 installMobileRuntime();
 
 const canvas = document.getElementById('scene');
@@ -359,6 +360,7 @@ function animate(now){
   draw();
  }
  requestAnimationFrame(animate);
+createWorkshopMode({appName:'ПАЛОМНИК',version:'1.0.0',cachePrefix: 'palomnik-',storageNamespace:'pocket-works:palomnik',onReset:()=>{stride=null;particles=[];state=newState();state.sound=false;loaded=false;save();sky=null;buildSky();showModal('intro');}});
 }
 function burst(x,y,c){
  for(let i=0;i<28;i++){
