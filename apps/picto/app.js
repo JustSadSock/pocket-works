@@ -100,7 +100,7 @@ function renderMenu(){
   '<h1>ПИК<b>ТО</b></h1><div class="hero-demo">'+glyphSVG('bird')+'</div>'+
   '<p>Ни одного слова на холсте. Сколько угодно способов понять друг друга.</p></div>'+
   '<div class="menu-pane"><div class="micro">PICK / PLACE / GUESS</div><h2>Собери смысл.<br>Пусть угадают.</h2>'+
-  '<p class="small-note">2–8 друзей · 6 видов загадок · смысл важнее совпадения значков.</p>'+
+  '<p class="small-note">2–8 друзей · 5 частей фразы · ограниченный набор знаков.</p>'+
   '<div><label class="label" for="playerName">Твоё имя</label><input class="field" id="playerName" maxlength="22" autocomplete="nickname" value="'+esc(named)+'" '+(profile?'disabled':'')+'></div>'+profileLine+
   '<button class="btn primary full" data-action="create">Создать комнату ↗</button><div class="rule"></div>'+
   '<div><label class="label" for="roomCode">Код комнаты друга</label><input class="field field-code" id="roomCode" maxlength="36" placeholder="A17D0C9E" autocomplete="off" spellcheck="false" value="'+esc(typedCode)+'"></div>'+
@@ -217,9 +217,9 @@ function renderReveal(){
 }
 function renderResults(){
  const gallery=(state.history||[]).map((g,i)=>'<article class="gallery-card"><span class="micro">№ '+String(i+1).padStart(2,'0')+'</span>'+
-  boardHTML(g.board,false,'gallery-'+i)+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+' поняли</small></article>').join('');
+  boardHTML(g.board,false,'gallery-'+i)+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+' слов · '+g.points+' очков</small></article>').join('');
  root.innerHTML='<section class="screen finish"><span class="micro">АРХИВ / СЕАНС ЗАВЕРШЁН</span>'+
-  '<h1>Поняли.<br>Почти.</h1><div class="finish-score">Общих разгадок: '+state.score+' из '+state.attempts+'</div>'+
+  '<h1>Поняли.<br>Почти.</h1><div class="finish-score">Угадано слов: '+state.wordsFound+' из '+state.attempts+' · '+state.score+' очков</div>'+
   '<p>Посмотрите, как разные люди объясняли совершенно невозможные фразы одним и тем же алфавитом.</p>'+
   '<div class="gallery">'+gallery+'</div><div class="room-footer">'+
   '<button class="btn primary" data-action="again" '+(state.host!==me?.id||!connected?'disabled':'')+'>'+(state.host===me?.id?'Играть ещё ↗':'Ждём ведущего')+'</button>'+
@@ -243,7 +243,7 @@ function setState(next){
  if(!next||!Array.isArray(next.players)||!next.phase)return;
  const changed=state?.phase!==next.phase||state?.author!==next.author||state?.round!==next.round||state?.prompt!==next.prompt;
  state=next;
- if(changed){hideConfirm();selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
+ if(changed){hideConfirm();selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
  if(next.phase==='compose'&&next.author===me?.id){
   // Never destroy the active pointer surface when server echoes an edit.
   updateClock();return;
@@ -290,9 +290,9 @@ async function connect(mode){
   net=client;
   client.on('connected',info=>{if(net!==client)return;me=info.player;connected=true;activeToken=client.token;status('В сети','ok');if(state)render();});
   client.on('room_joined',info=>{if(net!==client)return;connecting=false;syncRoom(info);});
-  client.on('game_event',packet=>{if(net!==client)return;if(packet.event?.type==='state')setState(packet.event.payload);else if(packet.event?.type==='notice')notify(String(packet.event.payload));});
+  client.on('game_event',packet=>{if(net!==client)return;if(packet.event?.type==='state')setState(packet.event.payload);else if(packet.event?.type==='notice'){answerSending=false;notify(String(packet.event.payload));if(state?.phase==='guess')render();}});
   client.on('presence',()=>{if(net===client&&state)try{client.sendGame({type:'sync'});}catch{}});
-  client.on('disconnected',()=>{if(net!==client)return;connected=false;status('Переподключение','bad');if(state)render();});
+  client.on('disconnected',()=>{if(net!==client)return;connected=false;answerSending=false;status('Переподключение','bad');if(state)render();});
   client.on('room_closed',()=>{if(net!==client)return;stop(false);notify('Комната закрыта. Можно создать новую.');});
   client.on('error',error=>{if(net!==client)return;notify(networkErrors[error?.code]||error?.code||error?.message||'Ошибка сети');if(connecting)stop(false);});
   await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Соединение не установлено за 12 секунд.')),12000))]);
@@ -327,23 +327,14 @@ function paintBoard(){
  const undoBtn=document.querySelector('[data-action="undo"]');if(undoBtn)undoBtn.disabled=!undo.length;
  const publish=document.querySelector('[data-action="publish"]');if(publish)publish.disabled=!draft.length||!connected;
 }
-function showVariants(){
- if(state?.phase!=='compose'||state.author!==me?.id)return;
- const options=state.authorOptions||[];
- if(options.length!==4){notify('Варианты задания ещё загружаются.');return;}
- modal.classList.remove('hidden');confirmAction=null;
- modal.innerHTML='<div class="modal-box"><h2>Четыре смысла.</h2><p>Предметы здесь одинаковые. Покажи, какое именно действие произошло.</p>'+
- '<div class="variant-list">'+options.map((phrase,i)=>'<div class="variant-item '+(phrase===state.prompt?'target':'')+'">'+
- '<span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(phrase)+'</strong>'+(phrase===state.prompt?'<b>ТВОЁ</b>':'')+'</div>').join('')+
- '</div><div class="modal-actions"><button class="btn primary full" data-modal-close>К композиции →</button></div></div>';
-}
 function addSymbol(id){
  if(state?.phase!=='compose'||state.author!==me?.id)return;
+ if(!state.palette?.includes(id)){notify('Этот знак недоступен в раунде.');return;}
  if(draft.length>=26){notify('На доске может быть не больше 26 знаков.');return;}
  remember();
  const offset=(draft.length%7-3)*4;
  draft.push({id,x:Math.max(8,Math.min(92,50+offset)),y:Math.max(10,Math.min(90,50+(Math.floor(draft.length/7)-1)*9)),r:0,s:1});
- selected=draft.length-1;paintBoard();const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=GLYPHS.find(g=>g[0]===id)?.[1]||'34 ЗНАКА';queueBoard();playTone(620);
+ selected=draft.length-1;paintBoard();const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=GLYPHS.find(g=>g[0]===id)?.[1]||'ЗНАК';queueBoard();playTone(620);
 }
 function transform(type){
  if(selected<0||!draft[selected])return;
@@ -378,24 +369,42 @@ async function copyText(value){
 }
 root.addEventListener('click',e=>{
  const glyph=e.target.closest('[data-glyph]');if(glyph&&!glyph.disabled){addSymbol(glyph.dataset.glyph);return;}
- const option=e.target.closest('[data-choice]');
- if(option&&!option.disabled){if(send({type:'answer',choice:Number(option.dataset.choice)})){option.disabled=true;option.classList.add('selected');playTone(740);}return;}
+ 
  const btn=e.target.closest('[data-action]');if(!btn||btn.disabled)return;
  const action=btn.dataset.action;
  if(action==='create'||action==='join'||action==='resume'){connect(action);return;}
  if(action==='retry'){checkHealth();return;}
- if(action==='variants'){showVariants();return;}
+ 
  if(action==='sound'){soundEnabled=!soundEnabled;try{localStorage.setItem(STORE+'sound',soundEnabled?'on':'off');}catch{}render();return;}
  if(action==='copy-code'){copyText(code);return;}
  if(action==='copy-link'){copyText(new URL(location.pathname+'?room='+encodeURIComponent(code),location.origin).href);return;}
  if(action==='start'||action==='again'||action==='next'){send({type:action});playTone(700);return;}
  if(action==='publish'){flushBoard();if(draft.length)send({type:'publish'});return;}
+  if(action==='submit-guess'){
+   if(state?.phase!=='guess'||state.author===me?.id||answerSending||draftAnswer.every(v=>v===null))return;
+   if(send({type:'answer',cells:[...draftAnswer]})){answerSending=true;updateGuessDraft();playTone(740);}return;
+  }
  if(action==='undo'){if(!undo.length)return;draft=undo.pop();selected=Math.min(selected,draft.length-1);paintBoard();queueBoard();return;}
  if(['rotate-left','rotate-right','grow','shrink','delete'].includes(action)){transform(action);return;}
  if(action==='leave')confirmBox('Покинуть комнату?','Твоя текущая композиция останется у остальных участников, но ты выйдешь из партии.',()=>stop(true));
 });
 root.addEventListener('input',e=>{
  if(e.target?.id==='roomCode'){typedCode=e.target.value=e.target.value.toUpperCase().replace(/\s/g,'');}
+});
+root.addEventListener('change',e=>{
+ const el=e.target.closest('[data-guess-slot]');
+ if(!el||state?.phase!=='guess'||state.author===me?.id||answerSending||state.answered.includes(me?.id))return;
+ const slot=Number(el.dataset.guessSlot);
+ draftAnswer[slot]=el.value===''?null:Number(el.value);
+ if(slot===3){
+  const place=document.querySelector('[data-guess-slot="4"]');
+  if(place){
+   const selected=draftAnswer[4],words=guessWords(4,draftAnswer);
+   place.innerHTML='<option value="">— оставить пустым —</option>'+
+    words.map((word,i)=>'<option value="'+i+'" '+(selected===i?'selected':'')+'>'+esc(word)+'</option>').join('');
+  }
+ }
+ updateGuessDraft();playTone(510);
 });
 root.addEventListener('pointerdown',e=>{
  if(state?.phase!=='compose'||state.author!==me?.id)return;
