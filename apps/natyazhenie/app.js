@@ -4,9 +4,9 @@ import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {GameRoom,cleanRoomCode} from './room.js';
 import {paint,coverWorld} from './art.js';
 import {advancePosition} from './engine.js';
-import {newLocal,tickLocal,verifyLocalLayouts} from './local.js';
+import {newLocal,tickLocal,verifyLocalLayouts,CHAPTERS} from './local.js';
 installMobileRuntime();
-createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'1.0.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
+createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'1.1.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
 const $=id=>document.getElementById(id);
 const localKey='pocket-works:natyazhenie:';
 const read=(key,fallback='')=>{try{return localStorage.getItem(localKey+key)??fallback;}catch{return fallback;}};
@@ -44,7 +44,7 @@ function clickSound(kind='tap'){
 function toast(message){const el=$('toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastId);toastId=setTimeout(()=>el.classList.remove('visible'),2600);}
 function flash(message){const el=$('flash');el.textContent=message;el.classList.add('on');clearTimeout(flashId);flashId=setTimeout(()=>el.classList.remove('on'),1300);}
 function setScreen(name){screen=name;for(const id of ['menu','lobby','game'])$(id).hidden=id!==name;if(name!=='game'){$('pause-sheet').hidden=true;$('finish-sheet').hidden=true;paused=false;}clearInput();}
-function clearInput(){keys.clear();touch.clear();touchPointers.clear();lastInputSignature='';if(room.connected&&gameMode==='online')room.send({type:'input',dir:0,jump:false});}
+function clearInput(){keys.clear();touch.clear();touchPointers.clear();lastInputSignature='';if(room.connected&&gameMode==='online')room.send({type:'input',dir:0,jump:false,anchor:false});}
 function nickname(){const name=(profile?.complete?profile.nickname:$('name').value.trim()).slice(0,22)||'Игрок';save('name',name);return name;}
 function updateUrl(id){const u=new URL(location.href);if(id)u.searchParams.set('room',id.slice(0,8));else u.searchParams.delete('room');history.replaceState(null,'',u.pathname+u.search);}
 function showJoin(){roomAction='join';setScreen('lobby');$('join-section').hidden=false;$('room-section').hidden=true;$('lobby-title').textContent='Присоединиться';$('status').textContent='Введи код комнаты друга';$('room-input').focus();}
@@ -73,21 +73,23 @@ function setState(next){
   localPrediction=null;visual.clear();lastFalls.clear();lastLevel=currentLevel;
  }
  if(next.phase==='play'&&phase==='done'){$('finish-sheet').hidden=true;shownFinish=false;paused=false;}
- if(next.phase==='done'){if(!shownFinish){clickSound('win');save('clears',Number(read('clears','0'))+1);}shownFinish=true;$('finish-sheet').hidden=false;$('again').hidden=next.host!==room.self?.id;$('finish-copy').textContent='Шесть уровней пройдены всей командой.';}
+ if(next.phase==='done'){if(!shownFinish){clickSound('win');save('clears',Number(read('clears','0'))+1);}shownFinish=true;$('finish-sheet').hidden=false;$('again').hidden=next.host!==room.self?.id;$('finish-copy').textContent='Девять испытаний пройдены всей командой.';}
  updateGameUI();
 }
 function updateGameUI(){
  if(!world)return;
  $('chapter').textContent=world.stage.name;
- const done=world.pads.filter(Boolean).length+world.stars.filter(Boolean).length+(world.stretched?1:0);
- const total=world.pads.length+world.stars.length+(world.stage.stretch?1:0);
- $('hint').textContent=world.gateOpen?'Выход открыт — все направо!':world.stage.hint+' · '+done+'/'+total;
- $('progress').textContent=String(world.level+1).padStart(2,'0')+' / 06';
+ const done=world.pads.filter(Boolean).length+world.stars.filter(Boolean).length+
+ (world.beacons||[]).filter(Boolean).length+(world.tensionDone?1:0);
+ const total=world.pads.length+world.stars.length+(world.stage.beacons?.length||0)+(world.stage.tension?1:0);
+ $('hint').textContent=world.gateOpen?'Выход открыт — все направо!':world.stage.hint+' · '+done+'/'+total+
+ (world.stage.pads.length&&world.pads.every(Boolean)&&world.plateCharge<1?' · ДЕРЖИТЕ!':'');
+ $('progress').textContent=String(world.level+1).padStart(2,'0')+' / '+String(CHAPTERS.length).padStart(2,'0');
  $('signal').classList.toggle('offline',gameMode==='online'&&!room.connected);
 }
 function startOnline(action,code=''){
  if(connecting)return;
- const name=nickname();roomAction=action;connecting=true;gameMode='online';state=null;world=null;
+ const name=nickname();roomAction=action;connecting=true;gameMode='online';state=null;world=null;$('local-help').hidden=true;
  showConnecting();
  room.open({name,identityKey:profile?.complete?profile.id:'guest',action,code});
 }
@@ -104,16 +106,16 @@ function togglePause(flag){
  if(flag){clearInput();$('resume').focus();}else document.activeElement?.blur?.();
 }
 function localControl(index){
- if(index===0)return {dir:(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),jump:keys.has('KeyW')||keys.has('Space')};
- return {dir:(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),jump:keys.has('ArrowUp')};
+ if(index===0)return {dir:(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),jump:keys.has('KeyW')||keys.has('Space'),anchor:keys.has('ShiftLeft')||keys.has('KeyE')};
+ return {dir:(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),jump:keys.has('ArrowUp'),anchor:keys.has('Enter')||keys.has('Numpad0')};
 }
 function control(){
  const dir=((keys.has('KeyD')||keys.has('ArrowRight')||touch.has('right'))?1:0)-((keys.has('KeyA')||keys.has('ArrowLeft')||touch.has('left'))?1:0);
- return {dir,jump:keys.has('Space')||keys.has('KeyW')||keys.has('ArrowUp')||touch.has('jump')};
+ return {dir,jump:keys.has('Space')||keys.has('KeyW')||keys.has('ArrowUp')||touch.has('jump'),anchor:keys.has('ShiftLeft')||keys.has('ShiftRight')||keys.has('KeyE')||touch.has('anchor')};
 }
 function renderOnline(dt,now){
  if(!world||!world.players?.length)return;
- const age=Math.min(.12,(now-snapshotTime)/1000),input=paused?{dir:0,jump:false}:control(),selfId=room.self?.id;
+ const age=Math.min(.12,(now-snapshotTime)/1000),input=paused?{dir:0,jump:false,anchor:false}:control(),selfId=room.self?.id;
  const stage={...world.stage,open:world.gateOpen};
  const projected=world.players.map((p,i)=>{
   if(p.id===selfId){
@@ -133,7 +135,7 @@ function renderOnline(dt,now){
   else{q.x+=(tx-q.x)*k;q.y+=(ty-q.y)*k;}
   q.vx=p.vx;q.vy=p.vy;visual.set(p.id,q);return {...p,...q};
  });
- paint($('canvas'),{...world,players:projected},{self:selfId,time:now/1000,reduced});
+ paint($('canvas'),{...world,clock:(world.clock||0)+age,players:projected},{self:selfId,time:now/1000,reduced});
 }
 function frame(now){
  const dt=Math.min(.04,Math.max(0,(now-lastFrame)/1000||0));lastFrame=now;
@@ -149,7 +151,7 @@ function frame(now){
    paint($('canvas'),world,{self:'local-0',time:now/1000,reduced});
   }else{
    if(state?.phase==='play'&&room.connected){
-    const input=paused?{dir:0,jump:false}:control(),sig=input.dir+':'+input.jump;
+    const input=paused?{dir:0,jump:false,anchor:false}:control(),sig=input.dir+':'+input.jump+':'+input.anchor;
     const interval=paused?150:65;
     if(now-lastInput>interval||(sig!==lastInputSignature&&now-lastInput>26)){
      room.send({type:'input',...input});lastInput=now;lastInputSignature=sig;
@@ -176,19 +178,19 @@ $('resume').addEventListener('click',()=>togglePause(false));
 $('leave').addEventListener('click',leave);
 $('finish-menu').addEventListener('click',leave);
 $('restart').addEventListener('click',()=>{
- if(gameMode==='local'){world=newLocal(world.level);togglePause(false);updateGameUI();}
+ if(gameMode==='local'){world=newLocal(world.level);lastLevel=world.level;togglePause(false);updateGameUI();}
  else if(state?.host===room.self?.id){room.send({type:'restart'});togglePause(false);}
 });
 $('again').addEventListener('click',()=>{
- if(gameMode==='local'){world=newLocal();shownFinish=false;$('finish-sheet').hidden=true;updateGameUI();}
+ if(gameMode==='local'){world=newLocal();lastLevel=0;shownFinish=false;$('finish-sheet').hidden=true;updateGameUI();}
  else if(state?.host===room.self?.id)room.send({type:'start'});
 });
 document.addEventListener('keydown',e=>{
  if(e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.altKey||e.metaKey||e.ctrlKey)return;
  if(e.code==='Escape'&&screen==='game'){e.preventDefault();if(!e.repeat)togglePause(!paused);return;}
  if(screen!=='game')return;
- const allowed=['KeyA','KeyD','KeyW','Space','ArrowLeft','ArrowRight','ArrowUp'];
- if(allowed.includes(e.code)){e.preventDefault();if(!keys.has(e.code)&&['Space','KeyW','ArrowUp'].includes(e.code))clickSound('jump');keys.add(e.code);}
+ const allowed=['KeyA','KeyD','KeyW','Space','ArrowLeft','ArrowRight','ArrowUp','ShiftLeft','ShiftRight','KeyE','Enter','Numpad0'];
+ if(allowed.includes(e.code)){e.preventDefault();if(!keys.has(e.code)&&['Space','KeyW','ArrowUp'].includes(e.code))clickSound('jump');if(!keys.has(e.code)&&['ShiftLeft','ShiftRight','KeyE','Enter','Numpad0'].includes(e.code))clickSound('tap');keys.add(e.code);}
 });
 document.addEventListener('keyup',e=>keys.delete(e.code));
 for(const button of document.querySelectorAll('[data-key]')){

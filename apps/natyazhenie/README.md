@@ -1,20 +1,16 @@
-# НАТЯЖЕНИЕ
+# НАТЯЖЕНИЕ · v1.1
 
-Bright canvas-based PocketWorks co-op platformer for two to five players.
+Colorful 2D elastic platformer for 2–5 friends through PocketNet, plus local same-keyboard 2P mode.
 
-## Playing
-Create a PocketNet room, copy the eight-character code or invitation link, wait for at least one friend, and start. The host starts new runs and restarts the current stage. All six stages share the same authored chapter layout, with activation plates, stretch thresholds and team geometry adjusted for the current capacity. Every player must reach the exit after completing its puzzle.
+## Mechanics
+- Finite tether: spring resistance after 128 world units; a hard maximum of 242 units per adjacent pair. Velocity impulses and projected constraints are shared between the browser and authoritative server.
+- Anchor: hold Shift or E to brace on the ground; P2 locally holds Enter or Numpad0. Mobile has its own hold button; jumping releases anchor.
+- Nine chapters add distinct pressure plate holds, spring jumps, rescue over gaps, anchor-powered hoops, moving hazards, lift, and a combined finale.
+- Each plate belongs to one specific team member, not any passing avatar; its position scales with player count. Same mechanics apply to 2, 3, 4 and 5 people.
+- Reversible animations for plate presses, elastic ribbon under strain, pulsing stars, moving hazards, braced anchor pose, spring compression and hoop activation.
 
-PC: A/D or left/right to move; W, Space or up to jump. Mobile: on-screen left/right/jump. Same-keyboard local mode: P1 uses A/D + W/Space, P2 uses arrow keys. Escape pauses. Both local and online complete all six stages.
+## Rollout
+Shared rules live in apps/natyazhenie/physics.js, duplicated verbatim inside server/module.ts and immutable pocketnet/module-versions/natyazhenie/v2.ts for Cloudflare bundling. New rooms use v2; sessions from v1 remain locked to their original version. No forced room reset.
 
-## Realtime
-Server rules: server/module.ts (immutable PocketNet snapshot v1). The Durable Object performs fixed, bounded substeps on input heartbeats, validates action rate and sender, and broadcasts a throttle-limited authoritative state. Rendering stays on requestAnimationFrame independently of network packets. The local player uses speculative physics and convergence towards an ahead-of-snapshot authoritative estimate; peers use velocity extrapolation (up to 120 ms) with exponential settling. Dropouts fall back to a local connection indicator and PocketNet reconnects with the same room token.
-
-## Acceptance
-- Node tests: node apps/natyazhenie/qa.mjs
-- Levels checked independently for all 2, 3, 4, 5 player capacities: pad separation, floor support, gap width, gate clearance, and rope requirements.
-- First to sixth chapter require the intended plate/star/stretch task; merely running right does not unlock a gate.
-- Service Worker caches only app-owned files and required shared runtime; no PocketLAN imports.
-- The latest server snapshot must exactly match server/module.ts; publish together with the lock update.
-
-The game intentionally favors clear silhouettes, responsive controls and limited screen copy.
+## Validation
+Run node apps/natyazhenie/qa.mjs to check rope length and stability, all 9 layouts at 2–5 players, anchor/beam/tension mechanics and local/online chapter transitions. The dedicated NATYAZHENIE Gameplay QA workflow runs on every related pull request and main publish.
