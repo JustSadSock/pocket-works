@@ -47,10 +47,12 @@ export function reset(w,level=w.level){const v=worldFor(w.players.map(p=>({id:p.
 export function movingPlatforms(s,time){
  return (s.lifts||[]).map(l=>({x:l.x,y:l.y+Math.sin(time*Math.PI*2/l.period)*l.amp,w:l.w,h:l.h,moving:true}));
 }
-export function movingHazards(s,time){
- return (s.hazards||[]).map(h=>({x:h.x+Math.sin(time*Math.PI*2/h.period)*h.amp,y:h.y,r:h.r}));
+export function movingHazards(s,time,phase=0){
+ const rate=s.kind==='lift'&&phase>=1?1.5:1;
+ return (s.hazards||[]).map(h=>({x:h.x+Math.sin(time*rate*Math.PI*2/h.period)*h.amp,y:h.y,r:h.r}));
 }
-function solids(w){return [...w.stage.floors,...w.stage.platforms,...movingPlatforms(w.stage,w.clock),...(w.gateOpen?[]:[w.stage.gate])];}
+function rescueBridge(w){return w.stage.rescue&&w.phase>=1?rect(439,530-22*clamp(w.phaseTime/.55,0,1),136,18):null;}
+function solids(w){return [...w.stage.floors,...w.stage.platforms,...movingPlatforms(w.stage,w.clock),...(rescueBridge(w)?[rescueBridge(w)]:[]),...(w.gateOpen?[]:[w.stage.gate])];}
 function overlap(p,s){return p.x+RADIUS>s.x&&p.x-RADIUS<s.x+s.w&&p.y+RADIUS>s.y&&p.y-RADIUS<s.y+s.h;}
 function resolveMove(p,dt,blocks){
  const ox=p.x,oy=p.y;p.x+=p.vx*dt;
@@ -286,7 +288,7 @@ export function simulate(w,seconds,now=Date.now()){
   }
   updateWraps(w);
   constrainRope(w,blocks,0);
-  for(const hazard of movingHazards(w.stage,w.clock))for(let i=0;i<w.players.length;i++){
+  for(const hazard of movingHazards(w.stage,w.clock,w.phase))for(let i=0;i<w.players.length;i++){
    const p=w.players[i];if(Math.hypot(p.x-hazard.x,p.y-hazard.y)<RADIUS+hazard.r-3)respawn(w,p,i);
   }
   if(updateGoals(w,dt))break;
@@ -298,7 +300,7 @@ export const viewWorld=w=>({
  vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),ground:p.ground,anchor:p.anchor,face:p.face,squash:p.squash,hang:p.hang,falls:p.falls})),
  pads:w.pads,stars:w.stars,beacons:w.beacons,tensionCharge:w.tensionCharge,tensionDone:w.tensionDone,
  plateCharge:w.plateCharge,wraps:w.wraps,wheelCharge:w.wheelCharge,wheelDone:w.wheelDone,
- phase:w.phase,saveCount:w.saveCount,gateOpen:w.gateOpen,clock:w.clock,finished:w.finished,revision:w.revision,falls:w.falls
+ phase:w.phase,phaseTime:w.phaseTime,saveCount:w.saveCount,gateOpen:w.gateOpen,clock:w.clock,finished:w.finished,revision:w.revision,falls:w.falls
 });
 export function validateLayouts(){
  const errors=[];
