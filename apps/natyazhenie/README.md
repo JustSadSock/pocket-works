@@ -21,3 +21,12 @@ Run node apps/natyazhenie/qa.mjs to check rope length and stability, all 9 layou
 The tether catches pegs automatically when a link crosses their head. Under tension its path goes via the peg and force derivatives follow each section; the peg releases once everyone goes round. Peg-driven drums charge only under real anchor-and-tension conditions. Spring-loaded launches amplify a jump against a braced friend. In gap puzzles an anchored friend can reel up a dangling teammate instead of immediately respawning.
 
 The game now has twelve challenges: three additional skill puzzles are appended, and several earlier stages have ordered objectives (pulley, stars, pads, sensor). Earlier collectibles cannot bypass a later stage. The play-first HUD exposes only the currently active subtask, and the world renders the pulley fill, elastic ribbon ribs, squashed/stretching jelly bodies, blinks and danger reactions. There is no added story chapter or dialogue system in this release.
+
+
+## v1.3 — Cooperative puzzle redesign
+
+Retains the expressive small character animations but improves the elastic ribbon's gravity-driven shape. The vertical sag is invariant to endpoint order; spline samples have an even midpoint and tense rubber does not visually hang upside down. The tautness cue smooths across frames.
+
+Seven formerly linear stages now use physical ribbon signals, reactive balancing, or time-limited crossings. A signal is only captured when an actually stretched band passes through its lens; the next different lens must be hit within the window or the pair resets. Balancing needs a straddling taut band with a narrow tolerance against oscillating wind; it is not a hidden floor switch. Several gates have visible timers and reset only their repeatable sensor challenge instead of wiping the level.
+
+The new goals share the same physics and rules in local mode and in PocketNet v4. Immutable v1–v3 multiplayer room rules remain pinned.
