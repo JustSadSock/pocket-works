@@ -220,14 +220,28 @@ function preview(local=false){
  const v=local?practice:view;
  change('<section class="phase-page">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+'<div class="phase-body"><div class="notice">Пять настоящих произведений. Запомни их детали: повреждение появится в случайном месте и каждый раз будет другой формы.</div>'+galleryHtml(v.selected)+'<p class="hint">Оригиналы исчезнут после начала реставрации. Все работы — настоящие музейные произведения.</p>'+(local?'<button class="btn primary wide" data-action="skip">Перейти к реставрации</button>':'')+'</div></section>','preview');
 }
-function toolbar(){return '<div class="tools">'+[['brush','◉','Кисть'],['picker','◈','Пипетка'],['erase','⌫','Ластик'],['hand','✥','Панорама']].map(([id,icon,label])=>'<button class="tool'+(id==='brush'?' active':'')+'" data-tool="'+id+'" aria-label="'+label+'"><strong>'+icon+'</strong><span>'+label+'</span></button>').join('')+'</div><div class="colors">'+['#304a43','#9d4c3c','#d6ae6f','#f1e4c5','#263d57','#637f68'].map((c,i)=>'<button class="swatch'+(i===0?' active':'')+'" data-color="'+c+'" aria-label="Цвет '+(i+1)+'" style="background:'+c+'"></button>').join('')+'<input type="color" class="color-input" id="customColor" value="#304a43" aria-label="Другой цвет"></div><div class="adjust"><label for="brushSize">Размер</label><input type="range" id="brushSize" min="1" max="48" value="12"><button class="tool" data-cmd="undo" aria-label="Отменить">↶</button><button class="tool" data-cmd="redo" aria-label="Вернуть">↷</button><button class="tool" data-cmd="out" aria-label="Отдалить">−</button><button class="tool" data-cmd="in" aria-label="Приблизить">+</button><button class="tool" data-cmd="center" aria-label="К повреждению">◎</button></div>'}
+function toolbar(){return '<div class="tools">'+[['brush','◉','Кисть'],['fill','▣','Заливка'],['picker','◈','Пипетка'],['erase','⌫','Ластик'],['hand','✥','Панорама']].map(([id,icon,label])=>'<button class="tool'+(id==='brush'?' active':'')+'" data-tool="'+id+'" aria-label="'+label+'"><strong>'+icon+'</strong><span>'+label+'</span></button>').join('')+'</div><div class="colors">'+['#304a43','#9d4c3c','#d6ae6f','#f1e4c5','#263d57','#637f68'].map((c,i)=>'<button class="swatch'+(i===0?' active':'')+'" data-color="'+c+'" aria-label="Цвет '+(i+1)+'" style="background:'+c+'"></button>').join('')+'<input type="color" class="color-input" id="customColor" value="#304a43" aria-label="Другой цвет"></div><div class="adjust"><label for="brushSize">Размер</label><input type="range" id="brushSize" min="1" max="48" value="12"><button class="tool" data-cmd="undo" aria-label="Отменить">↶</button><button class="tool" data-cmd="redo" aria-label="Вернуть">↷</button><button class="tool" data-cmd="out" aria-label="Отдалить">−</button><button class="tool" data-cmd="in" aria-label="Приблизить">+</button><button class="tool" data-cmd="center" aria-label="К повреждению">◎</button></div>'}
 function drawing(local=false){
- const v=local?practice:view,ass=local?v.mine:v.mine;
- if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
- if(!local&&v.done?.includes(me?.id)){change('<section class="phase-page">'+head('РАУНД '+v.round,'Работа принята',v.deadline)+'<div class="phase-body"><div class="notice">Твоя реставрация сохранена. Ждём остальные работы: <strong id="readyCount">'+v.done.length+'/'+v.participants.length+'</strong>.</div><p class="hint">Ожидай остальных реставраторов. Результаты откроются после экспертизы.</p></div></section>','waiting');return}
- change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas></div></div><div class="work-tip">02 / РЕСТАВРАЦИЯ　·　Кисть внутри пробела · СКМ/Space — перемещение · колесо — масштаб</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="quiet" id="strokeCount">Мазков: 0 / 72</div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
- editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит мазков, используй отмену':'Мазков: '+n+' / 72'}});
- const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Мазков: '+editor.strokes.length+' / 72';
+  const v=local?practice:view,ass=v.mine;
+  if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
+  if(!local&&v.done?.includes(me?.id)){waiting();return}
+  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas></div></div><div class="work-tip">02 / РЕСТАВРАЦИЯ　·　Кисть или заливка внутри пробела · СКМ/Space — перемещение · колесо — масштаб</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="quiet" id="strokeCount">Мазков: 0 / 72</div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит мазков, используй отмену':'Мазков: '+n+' / 72'}});
+  const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Мазков: '+editor.strokes.length+' / 72';
+}
+
+function waiting(){
+ const v=view,ass=v?.mine;if(!v||!ass)return;
+ const finished=v.done||[],players=v.participants||[];
+ change('<section class="phase-page waiting-phase">'+head('РАУНД '+v.round+' · РАБОТА СДАНА','Твой шедевр в музее',v.deadline)+
+ '<div class="phase-body waiting-layout"><div class="waiting-work"><span class="step-stamp">РЕСТАВРАЦИЯ ПРИНЯТА · МОЖНО РАССМАТРИВАТЬ</span>'+
+ '<h3>'+esc(ARTS[ass.art]?.title||'Твоя работа')+'</h3><p>Пока остальные заканчивают, рассмотри свою реставрацию. Ползунок открывает оригинал.</p>'+
+ '<div class="unveil-frame" id="unveilStage" style="--split:50%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Моя реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Оригинальная картина"></canvas><span class="unveil-label left">МОЯ РАБОТА</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
+ '<label class="unveil-control" for="unveilRange">Сравнить до и после <input id="unveilRange" type="range" min="0" max="100" value="50" aria-label="Сравнить мою реставрацию и оригинал"></label></div>'+
+ '<aside class="waiting-progress"><span class="step-stamp">ЗА КУЛИСАМИ</span><h3>Мастерская заканчивает работу</h3><strong id="readyCount">'+finished.length+' / '+players.length+'</strong><p class="hint">Экспертиза начнётся, когда все сдадут рисунки или истечёт время.</p>'+
+ '<div id="readyList" class="waiting-roster">'+players.map(p=>'<div class="waiting-person">'+memberSeal(p)+'<span>'+esc(p.name)+'</span><strong>'+(finished.includes(p.id)?'Готово':'Рисует')+'</strong></div>').join('')+'</div></aside></div></section>','waiting');
+ void renderArtwork(screen.querySelector('#restCanvas'),ass.art,ass.variation,ass.strokes||[],true);
+ void renderArtwork(screen.querySelector('#origCanvas'),ass.art,0,null,false);
 }
 function chipDots(count){return '<span class="chip-dots">'+Array.from({length:count},()=>'<i class="chip-dot" aria-hidden="true"></i>').join('')+'</span>'}
 function updateChips(){
@@ -244,16 +258,20 @@ function vote(){
  const sessionKey=v.round+':'+v.turn;
  if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=[0,0,0,0,0]}
  const count=(v.voted||[]).length,expected=v.participants.length-1;
- change('<section class="phase-page expert-phase">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Суд реставраторов',v.deadline)+
- '<div class="phase-body expert-layout"><div class="expert-focus"><span class="step-stamp">I. ПОДОЗРИТЕЛЬНЫЙ ЭКСПОНАТ</span><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Неизвестный реставратор')+'</h3></div><p class="hint">Перед тобой восстановленная картина. Найди среди оригиналов ту, с которой она была создана.</p><div class="expert-focus-frame"><canvas id="examinedCanvas" aria-label="Восстановленная картина"></canvas></div><p class="expert-observers">Получено заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
- '<div class="expert-ballot"><span class="step-stamp">II. МУЗЕЙНЫЙ КАТАЛОГ</span><h3>Куда поставить фишки?</h3><p class="hint">'+(isOwn?'Это твоя работа. Остальные раздают свои три фишки.':already?'Твои фишки приняты. Ждём остальных реставраторов.':'Раздай ровно три фишки между любыми оригиналами. Каждая правильная приносит очки.')+'</p>'+
- '<div class="stake-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="stake-frame"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager"><span class="stake-number">'+String(i+1).padStart(2,'0')+'</span></div><div class="stake-details"><strong>'+esc(ARTS[id]?.title||'Картина')+'</strong><small>'+esc(ARTS[id]?.artist||'')+'</small></div>'+(!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с картины '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на картину '+(i+1)+'">＋</button></div>':'<span class="stake-locked">№ '+(i+1)+'</span>')+'</div>').join('')+'</div>'+
- (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div><button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button></div>':'<div class="stake-wait"><span class="busy"></span> Судейская коллегия рассматривает работу…</div>')+
+ const examined=v.candidate;
+ change('<section class="phase-page expert-phase">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Найди реставрацию',v.deadline)+
+ '<div class="phase-body expert-round"><div class="expert-intro"><div><span class="step-stamp">ОДНА ИЗ ПЯТИ КАРТИН ИЗМЕНЕНА</span><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="hint">Перед тобой пять полотен. Четыре настоящие, одно восстановил этот игрок. Найди изменённое изображение.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
+ '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':'Распредели ровно три фишки между пятью картинами. Можно положить все три на одну.')+'</p>'+
+ '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="stake-frame">'+
+ (examined?.art===id?'<canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
+ '<span class="stake-number">'+String(i+1).padStart(2,'0')+'</span></div><div class="stake-details"><strong>'+esc(ARTS[id]?.title||'Картина')+'</strong><small>'+esc(ARTS[id]?.artist||'')+'</small></div>'+
+ (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">№ '+(i+1)+'</span>')+'</div>').join('')+'</div>'+
+ (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div><button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button></div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
  '</div></div></section>','vote');
- const targetCanvas=screen.querySelector('#examinedCanvas');
- if(v.candidate&&targetCanvas)renderArtwork(targetCanvas,v.candidate.art,v.candidate.variation,v.candidate.strokes||[],true);
+ if(examined)void renderArtwork(screen.querySelector('#examinedCanvas'),examined.art,examined.variation,examined.strokes||[],true);
  if(!isOwn&&!already)updateChips();
 }
+
 function verdict(){
  const v=view,g=v.gallery?.[v.turn];if(!g)return;
  const people=v.participants||[];
@@ -313,6 +331,11 @@ function renderView(){
  if(!view)return;
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
+  if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
+    const count=screen.querySelector('#readyCount');if(count)count.textContent=(view.done||[]).length+' / '+view.participants.length;
+    screen.querySelectorAll('.waiting-person').forEach((el,i)=>{const p=view.participants[i],status=el.querySelector('strong');if(p&&status)status.textContent=(view.done||[]).includes(p.id)?'Готово':'Рисует'});
+    return;
+  }
  if(page==='vote'&&view.phase==='voting'&&key===lastUiKey){
   const ready=screen.querySelector('#votesReady');if(ready)ready.textContent=(view.voted||[]).length+' / '+(view.participants.length-1);
   return;
