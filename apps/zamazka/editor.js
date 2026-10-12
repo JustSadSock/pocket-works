@@ -139,7 +139,7 @@ export class Editor{
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(4,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
- save(){this.saveSnapshot();this.onChange(this.strokes.length)}
+ save(){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot();this.onChange(this.strokes.length)}
   getSnapshot(){return [...this.strokes,...(this.working?[this.working]:[])].map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[...p])}))}
   saveSnapshot(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.getSnapshot()))}catch{}}
   adoptDraft(strokes){
@@ -157,11 +157,28 @@ export class Editor{
     if(this.lastCursor)this.showCursor(this.lastCursor);
   }
 
-  // The remote game accepts at most 45 points per segment, 72 segments and
-  // 1600 points total. Segment *forward*; never retroactively simplify ink.
+  // Compress only redundant bends to keep long drawing sessions flowing.
+  compactStrokeBudget(){
+    if(this.strokes.some(s=>s.t==='fill'))return false;
+    let changed=false;
+    for(const stroke of this.strokes){
+      if(stroke.p.length<12)continue;
+      const candidate=simplifyPoints(stroke.p,Math.max(8,Math.floor(stroke.p.length*.77)));
+      if(candidate.length<stroke.p.length){stroke.p=candidate;changed=true}
+    }
+    for(let i=1;i<this.strokes.length;i++){
+      const a=this.strokes[i-1],b=this.strokes[i];
+      if(a.g&&b.g===a.g&&a.t===b.t&&a.c===b.c&&a.s===b.s&&a.p.length+b.p.length-1<=MAX_STROKE_POINTS){
+        a.p.push(...b.p.slice(1));this.strokes.splice(i--,1);changed=true;
+      }
+    }
+    if(changed){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot()}
+    return changed;
+  }
   countPoints(){return this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)+(this.working?.p.length||0)}
   beginStroke(p){
     if(!this.inside(p))return;
+    if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS)this.compactStrokeBudget();
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
     this.working={c:this.color,s:this.size,t:this.tool,p:[p],g:'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
     this.redoStack=[];this.render();
@@ -170,9 +187,11 @@ export class Editor{
   extendStroke(p){
     if(!this.working||!this.inside(p))return;
     const pts=this.working.p,prev=pts[pts.length-1];
-    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<=1.1)return;
+    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<Math.min(3,1.35+this.countPoints()/1300))return;
+    if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0))this.compactStrokeBudget();
     if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0)){this.warnLimit();return}
     if(pts.length>=MAX_STROKE_POINTS){
+      if(this.strokes.length+1>=MAX_STROKES)this.compactStrokeBudget();
       if(this.strokes.length+1>=MAX_STROKES){this.warnLimit();return}
       const old=this.working;
       this.strokes.push(old);
@@ -201,7 +220,9 @@ export class Editor{
     const diameter=Math.max(2,effectiveSize*c.width/W);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
     // Absolutely positioned children start at the viewport padding edge, not its outer border.
-   this.cursor.style.left=tip.clientX-v.left-this.viewport.clientLeft+'px';this.cursor.style.top=tip.clientY-v.top-this.viewport.clientTop+'px';
+   const drawn=this.point(tip);
+   this.cursor.style.left=c.left+drawn[0]/W*c.width-v.left-this.viewport.clientLeft+'px';
+   this.cursor.style.top=c.top+drawn[1]/H*c.height-v.top-this.viewport.clientTop+'px';
     this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.color);
     this.cursor.hidden=false;
   }
@@ -287,7 +308,10 @@ export class Editor{
         return;
       }
       this.showCursor(e);
-      if(this.working)this.extendStroke(this.pointAt(e));
+      if(this.working){
+        const events=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
+        for(const sample of events.length?events:[e])this.extendStroke(this.pointAt(sample));
+      }
     };
     this.up=e=>{
       if(!this.pointers.has(e.pointerId))return;
