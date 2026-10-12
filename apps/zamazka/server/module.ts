@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=3;
+export const RULESET_VERSION=4;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 type Stroke={c:string;s:number;t:string;p:number[][]};
@@ -22,7 +22,7 @@ const strip=(s:State,id:string)=>({
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes}:null,
  author:members(s)[s.turn]||null,
  candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
- gallery:(s.phase==='reveal'||s.phase==='results')?members(s).map((p,i)=>s.phase==='results'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}}):null):null
+ gallery:(s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>s.phase!=='reveal'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}}):null):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
@@ -68,8 +68,8 @@ function step(s:State){
   if(s.turn<members(s).length-1){s.turn++;s.phase='voting';s.deadline=now()+25500;}
   else {
    completeVotes(s);
-   if(s.round<s.rounds){s.round++;choose(s);}
-   else {s.phase='results';s.deadline=0;}
+   // Untimed shared exhibition, advancing only when the host chooses.
+   s.phase='round-review';s.deadline=0;
   }
  }
 }
@@ -186,6 +186,10 @@ const module: PocketModule<State>={
      // Prevent accidental double-clicks from skipping two artworks.
      const phaseMs=19000;
      if(now()>state.deadline-phaseMs+2800)step(state);
+   }else if(a.type==='continue'&&state.phase==='round-review'){
+     if(id!==state.host)return {state,events:notice(id,'Продолжить может только организатор комнаты.')};
+     if(state.round<state.rounds){state.round++;choose(state);}
+     else {state.phase='results';state.deadline=0;}
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
      state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.votes={};state.selected=[];state.turn=0;
    }
