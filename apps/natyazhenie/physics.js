@@ -203,8 +203,7 @@ function jumpPulse(w,i){
  if(w.waveIndex>0&&w.waveLeft<=0){w.waveIndex=0;w.waveLeft=0;return;}
  const mark=w.stage.waveSlots[i];
  if(Math.abs(w.players[i].x-mark.x)>58)return;
- for(let k=0;k<w.players.length-1;k++)
-  if(Math.hypot(w.players[k].x-w.players[k+1].x,w.players[k].y-w.players[k+1].y)<115)return;
+ // Positions and timing—not arbitrary minimum span—determine a valid relay.
  w.waveIndex++;
  w.waveLeft=1.55;
  w.waveGlow=.55;
