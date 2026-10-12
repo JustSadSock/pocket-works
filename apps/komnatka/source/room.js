@@ -1,4 +1,4 @@
-import { MeshBuilder, Vector3, Color3, Color4, StandardMaterial, HemisphericLight, DirectionalLight, DynamicTexture, PointLight } from '@babylonjs/core';
+import { MeshBuilder, Vector3, Color3, Color4, StandardMaterial, HemisphericLight, DirectionalLight, DynamicTexture, PointLight, ShadowGenerator } from '@babylonjs/core';
 import { makeMaterial, rounded } from './models.js';
 
 export const WALLS=['#efe0ca','#d5e0ce','#edc5b9','#cad7dc','#e6d8df','#e2cfae'];
@@ -65,6 +65,10 @@ export function createRoom(scene) {
  ambient.intensity=.91;ambient.groundColor=hex('#998977');ambient.diffuse=hex('#fff4e6');
  const sun=new DirectionalLight('soft-windowlight',new Vector3(-.7,-1,-.56),scene);
  sun.position=new Vector3(10,17,10);sun.intensity=.74;sun.diffuse=hex('#fff0d5');
+ const shadows=new ShadowGenerator(768,sun);
+ shadows.usePercentageCloserFiltering=true;
+ shadows.filteringQuality=ShadowGenerator.QUALITY_LOW;
+ shadows.bias=.0025;shadows.normalBias=.025;
  scene.clearColor=new Color4(0,0,0,0);
  scene.imageProcessingConfiguration.contrast=1.08;
  scene.imageProcessingConfiguration.exposure=1.12;
@@ -78,7 +82,20 @@ export function createRoom(scene) {
  rounded(scene,'left-skirting',.18,.18,8.2,.045,trim,null,-3.87,.09,0);
  rounded(scene,'back-crown',8.2,.10,.24,.04,trim,null,0,4.07,-3.98);
  rounded(scene,'left-crown',.24,.10,8.2,.04,trim,null,-3.98,4.07,0);
+ back.receiveShadows=true;left.receiveShadows=true;
  const softLights=[];
+ function setShadowCasters(roots,items){
+  const casts=[];
+  for(const item of items){
+   if(['rug','frame','window'].includes(item.type))continue;
+   const root=roots.get(item.id);
+   if(!root)continue;
+   for(const mesh of root.getChildMeshes(false)){
+    if(!mesh.isDisposed())casts.push(mesh);
+   }
+  }
+  const map=shadows.getShadowMap();if(map)map.renderList=casts;
+ }
  let lastWall='',lastFloor='honey';
  function setFinish(state) {
   const wallKey=state.wallColor+'/'+state.pattern;
@@ -104,5 +121,5 @@ export function createRoom(scene) {
   softLights.push(light);return light;
  }
  function clearLights(){for(const l of softLights)l.dispose();softLights.length=0;}
- return {floor,back,left,setFinish,setEvening,addPracticalLight,clearLights};
+ return {floor,back,left,setFinish,setEvening,addPracticalLight,clearLights,setShadowCasters};
 }
