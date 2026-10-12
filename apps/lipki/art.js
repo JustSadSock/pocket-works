@@ -1,4 +1,5 @@
 import {W,H,R,LEVELS,COLORS} from './physics.js';
+const cameras=new WeakMap();
 const rand=(n)=>{let x=Math.sin(n*127.17+55.4)*43758.55;return x-Math.floor(x);};
 const rounded=(c,x,y,w,h,r)=>{c.beginPath();c.roundRect(x,y,w,h,r);};
 const fill=(c,x,y,w,h,r,color)=>{rounded(c,x,y,w,h,r);c.fillStyle=color;c.fill();};
@@ -79,8 +80,13 @@ export function draw(canvas,view,{me='',time=0}={}){
  const zoom=portrait?Math.max(1,Math.min(1.3,r.height/540)):Math.max(.82,Math.min(r.width/950,r.height/305));
  const visibleWidth=r.width/zoom,visibleHeight=r.height/zoom;
  const focus=view.players.find(p=>p.id===me)||view.players[0]||{x:W/2};
- const cameraX=Math.max(0,Math.min(W-visibleWidth,focus.x-visibleWidth*.43));
- const cameraY=Math.max(0,Math.min(H-visibleHeight,H-visibleHeight-5));
+ const targetX=Math.max(0,Math.min(Math.max(0,W-visibleWidth),focus.x-visibleWidth*.43));
+ const targetY=Math.max(0,Math.min(Math.max(0,H-visibleHeight),focus.y-visibleHeight*.68));
+ const previous=cameras.get(canvas);
+ const snap=!previous||previous.hero!==me||Math.abs(previous.zoom-zoom)>.08;
+ const cameraX=snap?targetX:previous.x+(targetX-previous.x)*.18;
+ const cameraY=snap?targetY:previous.y+(targetY-previous.y)*.12;
+ cameras.set(canvas,{hero:me,zoom,x:cameraX,y:cameraY});
  c.setTransform(1,0,0,1,0,0);
  c.clearRect(0,0,dw,dh);
  const ds=scale*zoom;
