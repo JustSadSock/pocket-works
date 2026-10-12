@@ -144,7 +144,7 @@ function loading(message){root.innerHTML='<div class="loading">'+esc(message)+'<
 function joined(message){
  roomId=message.roomId;roomCode=(roomId||'').slice(0,8).toUpperCase();
  state=null;lastPhase='';lastRound=0;loading('ЗАХОДИМ В ТЕАТР…');
- const url=new URL(location.href);url.searchParams.set('room',roomCode);history.replaceState(null,'',url.pathname+url.search);
+ const url=new URL(location.href);url.searchParams.set('room',roomCode);window.history.replaceState(null,'',url.pathname+url.search);
  try{net.sendGame({type:'sync'});}catch{notify('Не получается получить состояние комнаты.');}
 }
 function disconnect(leave=true){
@@ -152,7 +152,7 @@ function disconnect(leave=true){
  if(net){if(leave&&state)try{net.leaveRoom();}catch{}net.close();}
  net=null;activeToken=null;me=null;state=null;roomId='';connected=false;connecting=false;drag=null;lastPhase='';lastRound=0;
  if(leave)storage.removeItem('pocket-net:'+SERVER);
- history.replaceState(null,'',location.pathname);
+ window.history.replaceState(null,'',location.pathname);
  status(health?'СЕТЬ ГОТОВА':'НЕТ СВЯЗИ',health?'good':'bad');render();
 }
 const netErrors={room_not_found:'Комната не найдена. Проверь код.',room_full:'Уже восемь игроков.',match_in_progress:'Игра уже идёт, присоединяйся в следующую партию.',game_unavailable:'Сетевая версия ЧУШИ ещё не опубликована.',room_version_unavailable:'Версия этой комнаты больше недоступна.',rate_limited:'Слишком часто. Попробуй ещё раз.',server_at_capacity:'Слишком много открытых комнат.',not_in_room:'Ты покинул комнату.',invalid_token:'Сессия истекла.'};
