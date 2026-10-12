@@ -338,7 +338,13 @@ function drawing(local=false){
   editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 100';if(n>=0)queueDraft()}});
   if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
   const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Линий: '+editor.strokes.length+' / 100';
-  if(!local)backupDraft(true);
+  if(!local){
+   if(pendingSubmit?.room===roomId&&pendingSubmit.round===view.round&&
+      pendingSubmit.art===ass.art&&pendingSubmit.variation===ass.variation){
+     const submit=screen.querySelector('[data-action="submit"]');if(submit)submit.disabled=true;
+     draftIndicator('Восстанавливаем отправку…');
+   }else backupDraft(true);
+ }
 }
 
 function waiting(){
@@ -449,7 +455,10 @@ function practiceStep(){if(!practice)return;if(practice.phase==='preview'){pract
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
 function renderView(){
  if(!view)return;
- if(view.phase==='drawing'&&view.done?.includes(me?.id)&&editor)editor.clearDraft();
+ if(view.phase==='drawing'&&view.done?.includes(me?.id)){
+   if(view.mine)confirmSubmission(view.mine.art,view.round);
+   if(editor)editor.clearDraft();
+ }
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
@@ -505,7 +514,7 @@ async function connect(mode){
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
-     if(page==='drawing')backupDraft(true);
+     if(page==='drawing'&&!pendingSubmit)backupDraft(true);
      if(personalEmblem.image)client.sendGame({type:'emblem',image:personalEmblem.image});
      if(view)renderView();
      else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
@@ -513,7 +522,20 @@ async function connect(mode){
    client.on('game_event',msg=>{
      if(client.closed)return;
      const event=msg.event;
-     if(event?.type==='state'){view=event.payload;renderView()}
+     if(event?.type==='state'){
+       view=event.payload;
+       if(view?.mine&&view.done?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
+       renderView();
+       if(view?.phase==='drawing'&&!view.done?.includes(me?.id)&&
+          pendingSubmit?.room===roomId&&pendingSubmit.round===view.round){
+         if(!pendingSubmit.sentAt||Date.now()-pendingSubmit.sentAt>3600)attemptSubmission();
+       }
+     }
+     else if(event?.type==='submission_saved'){
+       if(pendingSubmit&&event.payload?.round===pendingSubmit.round&&
+          event.payload?.art===pendingSubmit.art&&event.payload?.revision===pendingSubmit.revision)
+         confirmSubmission(event.payload.art,event.payload.round);
+     }
      else if(event?.type==='draft_saved'){
        if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art&&
           event.payload.revision===lastDraftRevision){
@@ -531,14 +553,26 @@ async function connect(mode){
      try{client.sendGame({type:'sync'})}catch{}
    });
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
-   client.on('disconnected',()=>{if(!client.closed){lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';notify('Связь прервана. Переподключаемся…')}});
+   client.on('disconnected',()=>{
+     if(client.closed)return;
+     lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';
+     if(pendingSubmit){pendingSubmit.sentAt=0;persistPending();draftIndicator('Нет связи · работа на устройстве')}
+     else draftIndicator('Нет связи · черновик на устройстве');
+     notify('Связь прервана · восстанавливаем комнату');
+   });
    client.on('error',error=>{
      if(client.closed)return;
      const code=String(error?.code||error?.message||'');
-     const messages={room_not_found:'Комната не найдена. Проверь код и попробуй снова.',room_full:'В комнате уже восемь человек.',server_at_capacity:'Все игровые комнаты заняты.',game_unavailable:'Игра временно недоступна.',room_version_unavailable:'Эта комната создана в старой версии.'};
+     const messages={room_not_found:'Комната больше недоступна.',room_full:'В комнате уже восемь человек.',server_at_capacity:'Все игровые комнаты заняты.',game_unavailable:'Игра временно недоступна.',room_version_unavailable:'Эта версия комнаты недоступна.',message_too_large:'Сбой передачи · локальный рисунок сохранён',rate_limited:'Передаём слишком быстро · повторяем',not_in_room:'Восстанавливаем соединение с комнатой'};
+
      if(page==='connecting'&&messages[code]){
-       client.close();if(net===client)net=null;clearTabGuest();setup(mode,messages[code],input);
-     }else if(!client.closed)notify(messages[code]||'Ошибка подключения: '+code);
+       client.close();if(net===client)net=null;clearTabGuest();
+       if(mode==='resume'){client.roomId=null;client.persist();home();notify('Комната больше недоступна')}
+       else setup(mode,messages[code],input);
+     }else if(!client.closed){
+       if(pendingSubmit){pendingSubmit.sentAt=0;persistPending()}
+       notify(messages[code]||'Проблема соединения · повторим');
+     }
    });
    await client.connect();
    if(epoch!==connectionEpoch){client.close();return}
@@ -555,7 +589,7 @@ async function connect(mode){
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
- const data=editor.getData();editor.saveSnapshot();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
+ editor.saveSnapshot();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
  ['Сдать',()=>{closeDialog();submitArtwork()} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 async function copyText(value,success){
