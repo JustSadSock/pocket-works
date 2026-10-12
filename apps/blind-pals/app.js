@@ -1,6 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { PocketNet } from '../../shared/capabilities/net.js';
-import { getPocketIdentity, pocketIdentitySessionKey, preferredPocketName, pocketIdProfileUrl } from '../../shared/capabilities/identity.js';
+import { getPocketIdentity, pocketIdentitySessionKey, preferredPocketName } from '../../shared/capabilities/identity.js';
 import { prepareTabGuest, markTabGuest, clearTabGuest } from './tab-session.js';
 installMobileRuntime();
 
@@ -209,7 +209,7 @@ async function connectRoom(action='create',withInvite=false){
  username=name;try{localStorage.setItem(localKey+'name',username);}catch{}
  const target=action==='join'?roomInput(incoming):null;
  if(action==='join'&&!target){toast('Код комнаты некорректен.');entry(true);return;}
- mode=action;inviteAfterRoom=withInvite;releaseNetwork(false);
+ mode=action;releaseNetwork(false);inviteAfterRoom=withInvite;
  const current=++sessionEpoch;
  connecting=true;loadingSince=Date.now();connectingPanel();
  status('ПОДКЛЮЧАЕМСЯ','warning');
