@@ -244,12 +244,17 @@ function renderLegacyReveal(){
   '</div></div></section>';
  updateClock();
 }
+
 function renderResults(){
  const gallery=(state.history||[]).map((g,i)=>'<article class="gallery-card"><span class="micro">№ '+String(i+1).padStart(2,'0')+'</span>'+
-  boardHTML(g.board,false,'gallery-'+i)+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+' слов · '+g.points+' очков</small></article>').join('');
+  boardHTML(g.board,false,'gallery-'+i)+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+
+  (Number.isFinite(g.points)?' слов · '+g.points+' очков':' поняли')+'</small></article>').join('');
+ const score=Number.isFinite(state.wordsFound)?
+  'Угадано слов: '+state.wordsFound+' из '+state.attempts+' · '+state.score+' очков':
+  'Общих разгадок: '+state.score+' из '+state.attempts;
  root.innerHTML='<section class="screen finish"><span class="micro">АРХИВ / СЕАНС ЗАВЕРШЁН</span>'+
-  '<h1>Поняли.<br>Почти.</h1><div class="finish-score">Угадано слов: '+state.wordsFound+' из '+state.attempts+' · '+state.score+' очков</div>'+
-  '<p>Посмотрите, как разные люди объясняли совершенно невозможные фразы одним и тем же алфавитом.</p>'+
+  '<h1>Поняли.<br>Почти.</h1><div class="finish-score">'+score+'</div>'+
+  '<p>Все композиции одной партии. Можно рассмотреть чужие расшифровки и начать новую игру.</p>'+
   '<div class="gallery">'+gallery+'</div><div class="room-footer">'+
   '<button class="btn primary" data-action="again" '+(state.host!==me?.id||!connected?'disabled':'')+'>'+(state.host===me?.id?'Играть ещё ↗':'Ждём ведущего')+'</button>'+
   '<button class="btn quiet" data-action="leave">Покинуть комнату</button></div></section>';
