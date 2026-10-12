@@ -263,7 +263,7 @@ export async function registerManagedServiceWorker(options = {}) {
   if (storedReceipt && Date.now() - storedReceipt.savedAt <= UPDATE_RECEIPT_MAX_AGE) {
     removeStoredValue(receiptKey);
     if (storedReceipt.info?.version) setStoredValue(seenKey, storedReceipt.info.version);
-    queueMicrotask(() => createUpdateReceipt({ appName, info: storedReceipt.info || {} }));
+    if(renderPrompt)queueMicrotask(() => createUpdateReceipt({ appName, info: storedReceipt.info || {} }));
   } else if (storedReceipt) {
     removeStoredValue(receiptKey);
   }
@@ -312,6 +312,7 @@ export async function registerManagedServiceWorker(options = {}) {
       apply
     };
 
+    if(!renderPrompt)window.__pocketWorksPendingUpdate=detail;
     window.dispatchEvent(new CustomEvent('appupdateavailable', { detail }));
 
     const alreadySeen = Boolean(
@@ -380,7 +381,8 @@ if (autoScript) {
   registerManagedServiceWorker({
     path: autoScript.dataset.serviceWorker || './sw.js',
     appName: autoScript.dataset.appName || document.title,
-    currentVersion: autoScript.dataset.appVersion || ''
+    currentVersion: autoScript.dataset.appVersion || '',
+    renderPrompt: autoScript.dataset.quietUpdates !== 'true'
   }).catch((error) => {
     console.warn(`${autoScript.dataset.appName || document.title} managed service worker registration failed`, error);
   });

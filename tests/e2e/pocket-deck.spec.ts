@@ -2,10 +2,29 @@ import { expect, test } from '@playwright/test';
 import { attachCriticalScreenshot, assertNoHorizontalOverflow, monitorUnexpectedBrowserOutput } from './helpers';
 
 async function openDeck(page: import('@playwright/test').Page) {
+  // The static preview has no Cloudflare account endpoints. WebKit can send
+  // Service Worker-controlled fetches before Playwright's network routes,
+  // so intercept only these three bootstrap calls in the document itself.
+  await page.addInitScript(()=>{
+    const original=window.fetch.bind(window);
+    window.fetch=(input,init)=>{
+      const value=typeof input==='string'?input:input instanceof Request?input.url:String(input);
+      let pathname='';
+      try{pathname=new URL(value,location.href).pathname;}catch{return original(input,init);}
+      const response=pathname==='/pocket-id/me'?{user:null}:
+        pathname==='/pocket-id/config'?{googleEnabled:false,avatars:[]}:
+        pathname==='/pocket-social/me'?{profile:null}:null;
+      if(response!==null)return Promise.resolve(new Response(JSON.stringify(response),{
+        status:200,headers:{'content-type':'application/json'}
+      }));
+      return original(input,init);
+    };
+  });
   await page.goto('/', {waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveClass(/has-pocket-deck/);
   await expect(page.locator('#deck-bottom-nav')).toBeVisible();
-  await expect(page.locator('#deck-widgets .deck-widget').first()).toBeVisible();
+  if((page.viewportSize()?.width||1000)<=980)await expect(page.locator('#deck-focus__featured, .deck-focus__featured').first()).toBeVisible();
+  else await expect(page.locator('#deck-widgets .deck-widget').first()).toBeVisible();
 }
 
 test('Pocket Deck boots into an authored home and switches to dense library',async({page},info)=>{
@@ -17,7 +36,8 @@ test('Pocket Deck boots into an authored home and switches to dense library',asy
   await openDeck(page);
   await expect(page.locator('[data-deck-view="home"]').last()).toHaveAttribute('aria-current','page');
   await expect(page.locator('#deck-home')).toBeVisible();
-  await expect(page.locator('#deck-widgets .deck-tile').first()).toBeVisible();
+  if((page.viewportSize()?.width||1000)<=980)await expect(page.locator('#deck-focus .deck-focus__play')).toBeVisible();
+  else await expect(page.locator('#deck-widgets .deck-tile').first()).toBeVisible();
   await attachCriticalScreenshot(page,info,'deck-first-frame',{fullPage:false});
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await expect(page.locator('#deck-view-title')).toHaveText('Library');
@@ -69,7 +89,7 @@ test('archive is reversible and project development notes persist independently 
   const target=page.locator('#app-list .app-entry').first();
   const slug=await target.getAttribute('data-slug');
   expect(slug).toBeTruthy();
-  await target.locator('.app-entry__select').click();
+  await target.locator('.app-entry__more').click();
   await page.locator('#detail-extras > summary').click();
   await expect(page.locator('#deck-project-detail')).toBeVisible();
   await page.locator('#deck-project-note').fill('Improve flight feel and landing transitions');
@@ -85,7 +105,7 @@ test('archive is reversible and project development notes persist independently 
   await expect(page.locator('#deck-view-title')).toHaveText('Archive');
   const archived=page.locator('.app-entry[data-slug="'+slug+'"]');
   await expect(archived).toBeVisible();
-  await archived.locator('.app-entry__select').click();
+  await archived.locator('.app-entry__more').click();
   await page.locator('#detail-extras > summary').click();
   await expect(page.locator('#deck-project-note')).toHaveValue('Improve flight feel and landing transitions');
   await page.locator('#deck-project-detail [data-deck-stage="trial"]').click();
@@ -151,7 +171,7 @@ test('bulk organization selects unkept projects and archives only after confirma
   // shell's release receipt before interacting with the underlying project.
   await expect(page.locator('[data-digest-close]')).toBeVisible();
   await page.locator('[data-digest-close]').click();
-  await page.locator('.app-entry[data-slug="'+first+'"] .app-entry__select').click();
+  await page.locator('.app-entry[data-slug="'+first+'"] .app-entry__more').click();
   await page.locator('#detail-extras > summary').click();
   await page.locator('[data-deck-stage="trial"]').click();
   await page.locator('#detail-close').click();
@@ -188,7 +208,7 @@ test('archiving a spotlight removes the project from home widgets',async({page})
   const slug=await picker.inputValue();
   await page.locator('#deck-editor-save').click();
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
-  await page.locator(`.app-entry[data-slug="${slug}"] .app-entry__select`).click();
+  await page.locator(`.app-entry[data-slug="${slug}"] .app-entry__more`).click();
   await page.locator('#detail-extras > summary').click();
   await page.locator('[data-deck-stage="archive"]').click();
   await page.locator('#detail-close').click();
@@ -234,9 +254,32 @@ test('focus-first library shows actions on demand without losing advanced filter
   await expect(page.locator('#library-options-label')).toHaveText('Offline');
   await page.locator('[data-filter="all"]').click();
   await expect(page.locator('#library-options-label')).toHaveText('More');
-  await page.locator('#app-list .app-entry').first().locator('.app-entry__select').click();
+  await page.locator('#app-list .app-entry').first().locator('.app-entry__more').click();
   await expect(page.locator('#detail-open')).toBeVisible();
   await expect(page.locator('#detail-changelog')).toBeHidden();
   await page.locator('#detail-extras > summary').click();
   await expect(page.locator('#detail-changelog')).toBeVisible();
+});
+
+test('phone home fits the viewport and keeps account and secondary widgets reachable',async({page})=>{
+  await openDeck(page);
+  if((page.viewportSize()?.width||1000)>980)return;
+  await expect(page.locator('#deck-account-spotlight')).toBeVisible();
+  await expect(page.locator('#deck-focus__featured, .deck-focus__featured').first()).toBeVisible();
+  const fits=await page.evaluate(()=>document.documentElement.scrollHeight<=window.innerHeight+3);
+  expect(fits).toBe(true);
+  await expect(page.locator('#deck-widgets .deck-widget').first()).toBeHidden();
+  await page.locator('#deck-widgets-toggle').click();
+  await expect(page.locator('#deck-widgets .deck-widget').first()).toBeVisible();
+  await page.locator('#deck-widgets-toggle').click();
+  await expect(page.locator('#deck-focus .deck-focus__play')).toBeVisible();
+});
+test('library primary card opens a game while details are separate',async({page})=>{
+  await openDeck(page);
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  const first=page.locator('#app-list .app-entry').first();
+  await expect(first.locator('.app-entry__select')).toHaveAttribute('data-action','open');
+  await expect(first.locator('.app-entry__more')).toHaveAttribute('data-action','details');
+  await first.locator('.app-entry__more').click();
+  await expect(page.locator('#detail-open')).toBeVisible();
 });

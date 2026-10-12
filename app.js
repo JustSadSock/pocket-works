@@ -43,6 +43,29 @@ const filterStrip = document.querySelector('#filter-strip');
 const sortButton = document.querySelector('#sort-button');
 const refreshButton = document.querySelector('#refresh-button');
 const resetShelf = document.querySelector('#reset-shelf');
+const updateReady = document.querySelector('#deck-update-ready');
+const updateApply = document.querySelector('#deck-update-apply');
+const settingsAction = document.querySelector('[data-deck-tools]');
+let pendingLauncherUpdate = null;
+function showPendingLauncherUpdate(detail) {
+  if (!detail?.apply) return;
+  pendingLauncherUpdate = detail;
+  if (updateReady) updateReady.hidden = false;
+  settingsAction?.classList.add('has-pending-update');
+}
+window.addEventListener('appupdateavailable',event=>showPendingLauncherUpdate(event.detail));
+if(window.__pocketWorksPendingUpdate)showPendingLauncherUpdate(window.__pocketWorksPendingUpdate);
+updateApply?.addEventListener('click',async()=>{
+  if(!pendingLauncherUpdate)return;
+  updateApply.disabled=true;updateApply.textContent='Updating…';
+  try{
+    const success=await pendingLauncherUpdate.apply();
+    if(!success){updateApply.disabled=false;updateApply.textContent='Try again';}
+  }catch{
+    updateApply.disabled=false;updateApply.textContent='Try again';
+  }
+});
+
 
 const detailPanel = document.querySelector('#detail-panel');
 const detailBackdrop = document.querySelector('#detail-backdrop');
@@ -407,7 +430,7 @@ function createAppEntry() {
   entry.pwParts = {
     select: entry.querySelector('.app-entry__select'),
     favorite: entry.querySelector('.app-entry__favorite'),
-    open: entry.querySelector('.app-entry__open'),
+    more: entry.querySelector('.app-entry__more'),
     preview: entry.querySelector('.app-preview'),
     name: entry.querySelector('.app-entry__name'),
     status: entry.querySelector('.app-entry__status'),
@@ -425,16 +448,15 @@ function patchAppEntry(entry, app, index) {
   entry.classList.toggle('is-selected', shelfState.selected === app.slug);
 
   p.select.dataset.slug = app.slug;
-  p.select.setAttribute('aria-label', `View ${app.name} details`);
+  p.select.setAttribute('aria-label', `Play ${app.name}`);
+  if (p.select.getAttribute('href') !== app.path) p.select.href = app.path;
+  p.more.dataset.slug = app.slug;
+  p.more.setAttribute('aria-label', `Details for ${app.name}`);
   p.favorite.dataset.slug = app.slug;
   p.favorite.setAttribute('aria-label', isFavorite(app.slug) ? `Remove ${app.name} from saved applications` : `Save ${app.name}`);
   p.favorite.setAttribute('aria-pressed', String(isFavorite(app.slug)));
   setText(p.favorite, isFavorite(app.slug) ? '★' : '☆');
-  p.open.dataset.slug = app.slug;
-  if (p.open.getAttribute('href') !== app.path) p.open.href = app.path;
-  p.open.setAttribute('aria-label', `Open ${app.name}`);
-
-  setText(p.name, app.name);
+   setText(p.name, app.name);
   setText(p.status, app.status === 'experimental' ? 'lab' : app.status);
   setText(p.description, app.description);
   const cacheState = offlineStates.get(app.slug)?.status;
