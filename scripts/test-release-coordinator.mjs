@@ -34,7 +34,8 @@ const sw = {
   register() { throw new Error('Bulk Sync must not install new Service Workers'); }
 };
 const targets = await installedTargets([app, { slug: 'beta', path: './apps/beta/' }], sw);
-assert.equal(targets.length, 1, 'only previously iconst stages = [];
+assert.equal(targets.length, 1, 'only previously installed apps are selected');
+const stages = [];
 const first = await updateInstalledApplication(app, registration, {
   onStage: (label, phase) => stages.push(phase)
 });
@@ -53,7 +54,6 @@ const pending = await updateInstalledApplication(incorrect, registration);
 assert.equal(pending.status, 'deferred', 'fingerprint mismatch waits for next launch');
 assert.equal(getVerifiedReleases().alpha.fingerprint, 'new-build', 'stale receipt cannot be overwritten');
 
- verification cannot update receipt');
 
 data.set('pocket-works:observed-releases:v1', JSON.stringify({
   alpha: { version: '1.0', fingerprint: 'old-build' }
