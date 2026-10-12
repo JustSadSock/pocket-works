@@ -445,7 +445,7 @@ function showModal(kind){
 function begin(fresh=false){
  if(fresh)state=newState();
  loaded=false;mode='playing';screen.hidden=true;
- save();sky=null;buildSky();updateHud();inform(state.step===0?'Выбери следующую опору':'Продолжай переход');
+ save();sky=null;buildSky();updateHud();
 }
 function applyStep(k){
  if(mode!=='playing')return;
