@@ -80,6 +80,8 @@ function showCatalog() {
  ui.categories.innerHTML=GROUPS.map(([key,name])=>'<button type="button" data-group="'+key+'" class="'+(key===activeGroup?'on':'')+'">'+name+'</button>').join('');
  ui.categories.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{activeGroup=b.dataset.group;cancelPending(false);showCatalog();sound(390);}));
  ui.catalog.hidden=activeGroup==='finish';ui.finish.hidden=activeGroup!=='finish';
+ $('cancelPlacement').hidden=!pending;
+ $('cancelPlacementMobile').hidden=!pending;
  if(activeGroup==='finish'){renderFinish();return;}
  ui.catalog.innerHTML=CATALOG.filter(it=>it.group===activeGroup).map(it=>'<button type="button" class="item-button '+(pending?.type===it.type?'choosing':'')+'" data-type="'+it.type+'"><span class="item-drawing '+it.type+'">'+sprite(it.type)+'</span><span>'+it.name+'</span></button>').join('');
  ui.catalog.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>beginPlacement(b.dataset.type)));
@@ -264,6 +266,7 @@ function addEvents(){
  $('cancelReset').addEventListener('click',()=>{$('resetDialog').hidden=true;});
  $('confirmReset').addEventListener('click',()=>{const before=JSON.stringify(state);state=starter();selectedId=null;cancelPending(false);hideSelection();record(before);refresh();$('resetDialog').hidden=true;toast('Комната восстановлена');sound(600);});
  $('cancelPlacement').addEventListener('click',()=>cancelPending(false));
+ $('cancelPlacementMobile').addEventListener('click',()=>cancelPending(false));
  document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'){if(!$('resetDialog').hidden)$('resetDialog').hidden=true;else if(pending)cancelPending(false);else{selectedId=null;hideSelection();}}
   if(ev.target instanceof HTMLInputElement)return;
