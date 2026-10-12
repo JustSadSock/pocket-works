@@ -75,10 +75,10 @@ function refreshBuild(){
   $('cost').classList.toggle('warn',stats.cost>m.budget);
   $('twr').classList.toggle('warn',stats.twr<=1.05);
   const budgetOK=stats.cost<=m.budget;
-  const liftOK=stats.twr>1.05;
+  const liftOK=stats.twr>1.01;
   $('launchButton').disabled=!budgetOK||!liftOK;
   if(!budgetOK)notify('Превышен бюджет. Уменьши число баков или смени двигатель.');
-  else if(!liftOK)notify('Тяги недостаточно для старта с Марса. Нужен TWR выше 1,05.');
+  else if(!liftOK)notify('Тяги недостаточно для старта с Марса. Нужен TWR выше 1,01.');
   else notify('Готово к испытанию. Расчёт ΔV — в вакууме, без потерь.');
   hitRects=renderBuild($('buildCanvas'),craft,selected);
 }
