@@ -6,7 +6,7 @@ import {paint,coverWorld,paintBook} from './art.js';
 import {advancePosition} from './engine.js';
 import {newLocal,tickLocal,verifyLocalLayouts,CHAPTERS} from './local.js';
 installMobileRuntime();
-createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'2.0.0',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
+createWorkshopMode({appName:'НАТЯЖЕНИЕ',version:'2.0.1',cachePrefix:'natyazhenie-',storageNamespace:'pocket-works:natyazhenie'});
 const $=id=>document.getElementById(id);
 const localKey='pocket-works:natyazhenie:';
 const read=(key,fallback='')=>{try{return localStorage.getItem(localKey+key)??fallback;}catch{return fallback;}};
