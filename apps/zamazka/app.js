@@ -10,9 +10,10 @@ import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer
 import {getSavedEmblem,storeEmblem,paintEmblem,exportEmblem,EMBLEM_SIZE,EMBLEM_COLORS,EMBLEM_LIMITS} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
+import {sendPainting} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.16.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.17.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -131,7 +132,7 @@ function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext
 let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML=''}
 function modal(title,body,buttons){dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)})}
-let draftDelay=null,lastDraftPayload='',lastDraftRound='',autoSubmitted='',archiveAutoSaved='';
+let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 function draftIndicator(message){const el=screen.querySelector('#draftStatus');if(el)el.textContent=message}
 function backupDraft(force=false){
  if(!editor||page!=='drawing')return;
@@ -139,13 +140,17 @@ function backupDraft(force=false){
  if(practice||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
  const ass=view.mine;if(!ass)return;
  const token=[roomId,view.round,ass.art,ass.variation].join(':');
+ if(autoSubmitted===token)return; // final transfer owns this revision
  const strokes=editor.getSnapshot(),serialized=JSON.stringify(strokes);
- if(!force&&token===lastDraftRound&&serialized===lastDraftPayload)return;
+ if(!force&&token===lastDraftRound&&serialized===lastDraftPayload&&
+    (lastDraftAckRevision===lastDraftRevision||Date.now()-lastDraftSentAt<6500))return;
  try{
   if(!net)throw Error('offline');
-  net.sendGame({type:'draft',round:view.round,art:ass.art,variation:ass.variation,strokes});
-  lastDraftRound=token;lastDraftPayload=serialized;draftIndicator('Сохраняем…');
- }catch{draftIndicator('Черновик на устройстве')}
+  const result=sendPainting(packet=>net.sendGame(packet),
+    {type:'draft_chunk',round:view.round,art:ass.art,variation:ass.variation,strokes});
+  lastDraftRound=token;lastDraftPayload=serialized;
+  lastDraftRevision=result.revision;lastDraftSentAt=Date.now();draftIndicator('Сохраняем…');
+ }catch{draftIndicator('Черновик на устройстве · повторим при подключении')}
 }
 function queueDraft(){
  if(practice)return;
@@ -159,10 +164,10 @@ function autoFinishOnDeadline(){
  const ass=view.mine;if(!ass)return;
  const token=[roomId,view.round,ass.art,ass.variation].join(':');
  if(autoSubmitted===token)return;
- const data=editor.getData();editor.saveSnapshot();backupDraft(true);
+ const data=editor.getData();editor.saveSnapshot();
  try{
   if(!net)throw Error('offline');
-  net.sendGame({type:'submit',strokes:data});autoSubmitted=token;
+  sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:ass.art,variation:ass.variation,strokes:data});autoSubmitted=token;
   if(data.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,data)}
   draftIndicator('Работа отправлена автоматически');
  }catch{draftIndicator('Нет связи · черновик сохранён')}
@@ -292,10 +297,10 @@ function drawing(local=false){
   const v=local?practice:view,ass=v.mine;
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
-  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art))+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 72</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
-  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 72';if(n>=0)queueDraft()}});
+  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art))+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 100</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 100';if(n>=0)queueDraft()}});
   if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
-  const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Линий: '+editor.strokes.length+' / 72';
+  const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Линий: '+editor.strokes.length+' / 100';
   if(!local)backupDraft(true);
 }
 
@@ -472,12 +477,15 @@ async function connect(mode){
      const event=msg.event;
      if(event?.type==='state'){view=event.payload;renderView()}
      else if(event?.type==='draft_saved'){
-       if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art)
+       if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art&&
+          event.payload.revision===lastDraftRevision){
+         lastDraftAckRevision=lastDraftRevision;
          draftIndicator('Копия в PocketNet ✓');
+       }
      }
      else if(event?.type==='board_delta'){if(page==='lobby'&&event.payload?.u!==me?.id)commonsBoard?.accept(event.payload)}
      else if(event?.type==='board_reset'){if(page==='lobby')commonsBoard?.reset(event.payload)}
-     else if(event?.type==='notice')notify(String(event.payload||'Не удалось выполнить действие'));
+     else if(event?.type==='notice'){lastDraftSentAt=0;lastDraftAckRevision='';notify(String(event.payload||'Не удалось выполнить действие'))}
    });
    client.on('presence',data=>{
      if(client.closed)return;
@@ -485,7 +493,7 @@ async function connect(mode){
      try{client.sendGame({type:'sync'})}catch{}
    });
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
-   client.on('disconnected',()=>{if(!client.closed)notify('Связь прервана. Переподключаемся…')});
+   client.on('disconnected',()=>{if(!client.closed){lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';notify('Связь прервана. Переподключаемся…')}});
    client.on('error',error=>{
      if(client.closed)return;
      const code=String(error?.code||error?.message||'');
@@ -508,8 +516,8 @@ async function connect(mode){
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
- const data=editor.getData();backupDraft(true);modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
- ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{net.sendGame({type:'submit',strokes:data});autoSubmitted=[roomId,view.round,a.art,a.variation].join(':');notify('Работа отправлена')}catch{notify('Нет подключения — черновик и работа сохранены')}} ,'primary'],
+ const data=editor.getData();editor.saveSnapshot();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
+ ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:a.art,variation:a.variation,strokes:data});autoSubmitted=[roomId,view.round,a.art,a.variation].join(':');notify('Передаём работу…')}catch{notify('Нет подключения — черновик сохранён, попробуй сдать ещё раз')}} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 async function copyText(value,success){
  try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);notify(success)}

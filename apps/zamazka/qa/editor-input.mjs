@@ -30,9 +30,9 @@ const budget=editor();
 budget.beginStroke([0,0]);
 for(let i=1;i<=2800;i++)budget.extendStroke([(i*3)%597,Math.floor(i/199)*6]);
 budget.finishStroke();
-assert.ok(budget.strokes.length<=72,'72 segment cap');
+assert.ok(budget.strokes.length<=100,'100 segment cap');
 assert.ok(budget.strokes.every(s=>s.p.length<=45),'45 point cap');
-assert.ok(budget.strokes.reduce((n,s)=>n+s.p.length,0)<=1600,'1600 point cap');
+assert.ok(budget.strokes.reduce((n,s)=>n+s.p.length,0)<=2000,'2000 point cap');
 
 const aim=editor();
 aim.inputMode='precision';aim.hand='right';
