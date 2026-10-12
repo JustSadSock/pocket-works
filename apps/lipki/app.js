@@ -6,7 +6,7 @@ import {PocketNet} from '../../shared/capabilities/net.js';
 import {LEVELS,makeWorld,tickWorld,clamp} from './game-core.js';
 import {drawWorld} from './render.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЛИПКИ',version:'1.0.0',cachePrefix:'lipki-',storageNamespace:'pocket-works:lipki'});
+createWorkshopMode({appName:'ЛИПКИ',version:'1.0.0',cachePrefix: 'lipki-',storageNamespace: 'pocket-works:lipki'});
 const $=id=>document.getElementById(id),k='pocket-works:lipki:';
 function load(key,fallback=''){try{return localStorage.getItem(k+key)??fallback}catch{return fallback}}
 function save(key,value){try{localStorage.setItem(k+key,String(value))}catch{}}
