@@ -467,3 +467,15 @@ html.has-pocket-deck .pw-id-dialog__bottom{padding:9px 15px}
 @media(prefers-reduced-motion:reduce){
   html.has-pocket-deck .library-options[open]>summary span:last-child,html.has-pocket-deck .detail-extras[open]>summary span{transition:none}
 }
+
+/* Backup first, recovery on demand. */
+html.has-pocket-deck .shelf-tools__advanced{border-top:1px solid #465558;margin-top:16px}
+html.has-pocket-deck .shelf-tools__advanced>summary{display:flex;justify-content:space-between;align-items:center;
+  min-height:48px;list-style:none;cursor:pointer;padding:10px 2px;color:#e1e8e0;font-size:.83rem;font-weight:720}
+html.has-pocket-deck .shelf-tools__advanced>summary::-webkit-details-marker{display:none}
+html.has-pocket-deck .shelf-tools__advanced>summary::after{content:'⌄';font-size:18px;font-weight:400}
+html.has-pocket-deck .shelf-tools__advanced[open]>summary::after{transform:rotate(180deg)}
+html.has-pocket-deck .shelf-tools__advanced>summary:focus-visible{outline:2px solid #e8a48c;outline-offset:3px}
+html.has-pocket-deck .shelf-tools__advanced .shelf-tools__facts{margin:6px 0 13px}
+html.has-pocket-deck .shelf-tools__advanced .shelf-tools__actions{margin-bottom:12px}
+html.has-pocket-deck .shelf-tools__advanced #reset-shelf{font-weight:680}
