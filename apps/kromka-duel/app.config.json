@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "kromka-duel",
+  "name": "КРОМКА · Дуэль",
+  "shortName": "КРОМКА: ДУЭЛЬ",
+  "description": "Top-down фехтовальная дуэль: точные клинки, одновременные команды, PocketNet и локальная тренировка.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-12",
+  "releaseDateTime": "2026-10-12T19:55:00+03:00",
+  "changelog": [
+    "Отдельная сетевая дуэль: топ-даун бойцы, точные клинки и авторская процедурная анимация.",
+    "PocketNet: два игрока, скрытые фиксированные команды, комнаты и восстановление соединения.",
+    "Практика против локального бота, адаптивное сенсорное управление и звуковые эффекты."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#bdc9b7",
+  "backgroundColor": "#101c1c",
+  "themeColor": "#101c1c",
+  "orientation": "portrait",
+  "cacheName": "kromka-duel-v1.0.0",
+  "storageNamespace": "pocket-works:kromka-duel",
+  "tags": [
+    "duel",
+    "multiplayer",
+    "online",
+    "tactics",
+    "skill"
+  ],
+  "order": 310
+}
