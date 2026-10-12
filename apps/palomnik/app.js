@@ -13,6 +13,7 @@ const W = 360;
 let H = 660, back = document.createElement('canvas'), sky = null;
 let mode = 'intro', state, loaded = false, audio = null;
 let motion = 0, stride = null, tick = 0, lastTime = 0;
+let confirmReturn = 'intro';
 let particles = [], targets = [], down = null, toastTimer = 0;
 let reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const regions = ['ПЕПЕЛЬНЫЙ ПЕРЕВАЛ', 'ФИОЛЕТОВЫЙ ШТОРМ', 'МЁРЗЛЫЙ РАЗЛОМ'];
@@ -86,7 +87,7 @@ function renderMountains(t) {
  for(let layer=0;layer<3;layer++) {
    const points=[[0,H]];
    for(let i=-1;i<=21;i++) {
-     const x=i*20, y=h+layer*55+Math.sin(i*.88+layer*2.7+state.seed)*21+Math.sin(i*.33+layer)*30+hash(i,layer,state.seed)*16;
+     const x=i*20, y=h+layer*55+Math.sin(i*.88+layer*2.7+state.seed+state.step*.53)*21+Math.sin(i*.33+layer)*30+hash(i,layer,state.seed+Math.floor(state.step/2))*16;
      points.push([x,y]);
    }
    points.push([W,H]);
@@ -102,7 +103,7 @@ function oldRuins(t){
  const z=zone(), s=schemes[z], base=H*.67;
  ctx.save();ctx.globalAlpha=.84;
  // Collapsed palace on the horizon, shifted against the storm.
- const drift=Math.sin(t*.08)*2;
+ const drift=Math.sin(t*.08)*2-(state.step%7)*3;
  const towers=[[-22,base-110,32,80],[20,base-66,18,41],[278,base-123,33,93],[322,base-82,24,59]];
  for(let i=0;i<towers.length;i++){
   const [xx,yy,w,h]=towers[i],x=xx+drift;
@@ -500,12 +501,12 @@ $('sound').addEventListener('click',()=>{
 primary.addEventListener('click',()=>{
  if(mode==='intro')begin(false);
  else if(mode==='paused')begin(false);
- else if(mode==='confirm')showModal(loaded?'intro':'paused');
+ else if(mode==='confirm')showModal(confirmReturn);
  else if(mode==='win'||mode==='dead')begin(true);
 });
 secondary.addEventListener('click',()=>{
  if(mode==='confirm')begin(true);
- else if(mode==='intro'||mode==='paused')showModal('confirm');
+ else if(mode==='intro'||mode==='paused'){confirmReturn=mode;showModal('confirm');}
 });
 document.addEventListener('keydown',event=>{
  if(['1','2','3'].includes(event.key)&&mode==='playing'){
