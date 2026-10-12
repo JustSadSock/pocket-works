@@ -84,7 +84,9 @@ async function api(path,options={}) {
 }
 function publish(userValue) {
   user=userValue;
+  const badge=trigger.querySelector('.pws-entry__count');
   trigger.innerHTML=user?.complete?avatar(user.avatar,'pw-id-nav-avatar'):'<span class="pw-id-nav-glyph" aria-hidden="true">◎</span>';
+  if(badge)trigger.append(badge);
   trigger.setAttribute('aria-label',user?.complete?'Pocket ID: '+user.nickname:'Open Pocket ID');
   trigger.title=user?.complete?user.nickname:'Pocket ID';
   document.dispatchEvent(new CustomEvent('pocket-id:changed',{detail:{user}}));
