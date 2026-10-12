@@ -2,7 +2,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPlayerBadge,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import {inviteCode,parseRoomInput} from './room-code.js';
-import {tabGuestName,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
+import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,primeGallery} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
@@ -129,7 +129,11 @@ function editEmblem(){
  dialog.querySelector('#emblemClear').addEventListener('click',e=>{if(!confirmClear){confirmClear=true;e.currentTarget.textContent='Точно очистить?';return}strokes=[];confirmClear=false;e.currentTarget.textContent='Очистить';paint()});
 }
 function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const ac=window.__zamazkaAudio||(window.__zamazkaAudio=new Audio());if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(f,ac.currentTime);o.frequency.exponentialRampToValueAtTime(f*.83,ac.currentTime+.09);g.gain.setValueAtTime(.025,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.11);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.12)}catch{}}
-let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
+let toastTimer,lastToast='',lastToastAt=0;
+function notify(t){const message=String(t||'');if(message===lastToast&&Date.now()-lastToastAt<5000)return;
+ lastToast=message;lastToastAt=Date.now();toast.textContent=message;toast.classList.add('show');
+ clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
+
 function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML=''}
 function modal(title,body,buttons){dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)})}
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
@@ -440,7 +444,7 @@ function renderView(){
 }
 async function connect(mode){
  pocketIdentity=await getPocketIdentity({force:true});
- const name=isPocketMember()?pocketIdentity.nickname:(screen.querySelector('#who')?.value||'').trim();
+ const name=isPocketMember()?pocketIdentity.nickname:(mode==='resume'?tabGuestName():(screen.querySelector('#who')?.value||'').trim());
  const input=(screen.querySelector('#room')?.value||'').trim();
  const room=mode==='join'?parseRoomInput(input,location.href):'';
  if(!name||name.length>22){notify('Введи ник до 22 символов');return}
@@ -461,7 +465,8 @@ async function connect(mode){
    if(net)net.close();
    const client=new PocketNet({serverUrl:POCKETNET_URL,name,storage,identityKey:pocketIdentitySessionKey(pocketIdentity)});
    net=client;
-   client.roomId=null;client.persist();
+   if(mode!=='resume'){client.roomId=null;client.persist()}
+   if(mode==='resume'&&!client.roomId)throw Error('Предыдущая сессия завершена');
    client.on('connected',data=>{if(client.closed)return;me=data.player;markTabGuest(POCKETNET_URL,client.token)});
    client.on('room_joined',msg=>{
      if(client.closed)return;
@@ -507,13 +512,14 @@ async function connect(mode){
    await client.connect();
    if(epoch!==connectionEpoch){client.close();return}
    if(mode==='create')client.createRoom('zamazka');
-   else client.joinRoom(room);
+   else if(mode==='join')client.joinRoom(room);
+   // Stored rooms are rejoined automatically after PocketNet authentication.
  }catch(error){
    if(epoch!==connectionEpoch)return;
    if(net){net.close();net=null}
    clearTabGuest();
    const message=error?.name==='TimeoutError'?'Сервер не ответил. Попробуй ещё раз.':error instanceof TypeError?'Нет соединения с интернетом. Проверь сеть.':error?.message||'Не удалось подключиться. Попробуй ещё раз.';
-   setup(mode,message,input);
+   if(mode==='resume'){home();notify('Не удалось восстановить комнату · проверь подключение')}else setup(mode,message,input);
  }
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
@@ -633,7 +639,12 @@ zamazkaCloud=createZamazkaCloud({
  },
  notify
 });
-if(q.has('room'))setup('join');else home();
+const savedRoom=(()=>{try{return JSON.parse(tabStorage().getItem('pocket-net:'+POCKETNET_URL)||'null')}catch{return null}})();
+if(q.has('room'))setup('join');
+else if(savedRoom?.roomId&&savedRoom?.token){
+ change('<section class="page center connecting-room"><span class="busy"></span><h2>Возвращаемся в зал…</h2><p class="hint">Восстанавливаем комнату.</p><button class="btn ghost wide" data-action="menu">Выйти</button></section>','connecting');
+ void connect('resume');
+}else home();
 zamazkaCloud.start();
 void refreshPocketBadge();
 window.addEventListener('pageshow',()=>void refreshPocketBadge());
