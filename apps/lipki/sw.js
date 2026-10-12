@@ -1,7 +1,7 @@
-const APP_VERSION='1.1.0',RELEASE_DATE='2026-10-12';
-const RELEASE_NOTES=["Полноценное управление с ПК: физические клавиши WASD и стрелки, пробел, E, Q и Esc.","Режим двух игроков за одной клавиатурой с независимым управлением и общей камерой.","Подсказки клавиш с подсветкой нажатий; сенсорное управление сохранено."];
+const APP_VERSION='1.2.0',RELEASE_DATE='2026-10-12';
+const RELEASE_NOTES=["Все десять уровней теперь имеют обязательные головоломки: пуговицы, катушки, липучки и пружинные звёзды.","Движение стало плавнее: мягкое ускорение, торможение, улучшенные столкновения и отзывчивый прыжок.","Исправлен пятый уровень, устранено пересечение пружин с платформами, прогресс целей виден в игре."];
 const PREFIX='lipki-';
-const CACHE_NAME='lipki-v1.1.0';
+const CACHE_NAME='lipki-v1.2.0';
 const FILES=["./","./index.html","./app.config.json","./app.js","./desktop-controls.js","./physics.js","./art.js","./styles.css","./icons/icon.svg","./manifest.webmanifest","../../shared/mobile-runtime.css","../../shared/mobile-runtime.js","../../shared/pwa-utils.js","../../shared/capabilities/net.js","../../shared/capabilities/identity.js","../../shared/update-manager.css","../../shared/update-manager.js","../../shared/workshop-mode.css","../../shared/workshop-mode.js","../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js"];
 const ROOT=new URL('./',self.registration.scope);
 const INDEX=new Map(FILES.map(p=>{const u=new URL(p,ROOT);return [u.pathname,u.href]}));

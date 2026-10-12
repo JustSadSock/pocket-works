@@ -6,7 +6,7 @@ import {LEVELS,initialize,simulate,getView,resetLevel} from './physics.js';
 import {draw} from './art.js';
 import {readSoloControls,readDuoControls,isGameplayCode,isTypingTarget} from './desktop-controls.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЛИПКИ',version:'1.1.0',cachePrefix: 'lipki-',storageNamespace: 'pocket-works:lipki'});
+createWorkshopMode({appName:'ЛИПКИ',version:'1.2.0',cachePrefix: 'lipki-',storageNamespace: 'pocket-works:lipki'});
 const $=id=>document.getElementById(id),ORIGIN=location.origin+'/pocketnet',PREFIX='pocket-works:lipki:';
 const store=(k,v)=>{try{localStorage.setItem(PREFIX+k,String(v))}catch{}};
 const read=(k,d='')=>{try{return localStorage.getItem(PREFIX+k)??d}catch{return d}};
@@ -19,6 +19,7 @@ const memory=new Map(),socketStore={
 let name=read('name','Игрок'),sound=read('sound','on')!=='off',unlocked=Math.min(LEVELS.length-1,Math.max(0,Number(read('level','0'))||0));
 let profile=null,screen='menu',mode='local',world=null,server=null,net=null,connected=false,connecting=false,me=null,room='',paused=false;
 let localDuo=false,blockedActionKeys=new Set();
+let lastCompleted=-1;
 let activeId='hero-1',keys=new Set(),touch=new Set(),press=new Map(),lastFrame=0,lastNet=0,lastLevel=-1,audio=null,toastTimer=0,requestedRoom=new URLSearchParams(location.search).get('room')||'';
 const options=$('levelChoice');
 LEVELS.forEach((l,i)=>{const opt=document.createElement('option');opt.value=i;opt.textContent=(i+1)+'. '+l.name;options.append(opt)});
@@ -52,14 +53,16 @@ function exitRoom(){const old=net;net=null;connected=false;connecting=false;serv
 function view(){return mode==='local'&&world?getView(world):server?.world||null}
 function updateGame(){
  const v=view();if(!v)return;const i=Math.min(v.level,LEVELS.length-1);
- $('levelIndex').textContent=(i+1)+' / '+LEVELS.length;$('levelName').textContent=LEVELS[i].name;$('levelHint').textContent=LEVELS[i].hint;
+ $('levelIndex').textContent=(i+1)+' / '+LEVELS.length;$('levelName').textContent=LEVELS[i].name;
+ $('levelHint').textContent=v.gateOpen?'Проход открыт — все к карману':LEVELS[i].hint+' · '+(v.completed||0)+'/'+(v.total||1);
  
  $('switchBtn').hidden=mode!=='local'||localDuo;
  $('roleLabel').textContent=mode==='local'?(localDuo?'Два героя':('Герой '+(v.players.findIndex(x=>x.id===activeId)+1))):(v.players.find(x=>x.id===me?.id)?.name||'Игрок');
  $('desktopDeck').dataset.mode=mode==='online'?'online':localDuo?'duo':'solo';
  $('roomIndicator').hidden=mode!=='online';$('roomIndicator').textContent=connected?'PocketNet':'Переподключение…';
- if(v.level!==lastLevel){if(lastLevel>=0&&v.level>lastLevel){tone('win');toast('Уровень пройден!')}lastLevel=v.level;
+ if(v.level!==lastLevel){lastCompleted=-1;if(lastLevel>=0&&v.level>lastLevel){tone('win');toast('Уровень пройден!')}lastLevel=v.level;
   if(mode==='local'&&v.level>unlocked){unlocked=v.level;store('level',unlocked);[...options.options].forEach((op,i)=>op.disabled=i>unlocked);options.value=unlocked}}
+ if(v.completed>lastCompleted&&lastCompleted>=0){tone('tap')}lastCompleted=v.completed||0;
  if(v.finished){$('endSheet').hidden=false;paused=true;$('againBtn').hidden=mode==='online'&&server?.host!==me?.id;}
 }
 function beginLocal(level=unlocked,duo=false){
