@@ -785,7 +785,6 @@ detailClose.addEventListener('click', () => closeDetailPanel());
 detailBackdrop.addEventListener('click', () => closeDetailPanel());
 
 resetShelf.addEventListener('click', () => {
-  if (!window.confirm('Clear favorites, recently opened games and library filters? Your game progress will stay intact.')) return;
   const selected = registry[0]?.slug || null;
   shelfState = { ...defaultShelfState(), selected };
   persistShelfState();
