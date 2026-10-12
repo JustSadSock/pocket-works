@@ -134,6 +134,9 @@ jobs:
       - name: Test ZAMAZKA own-paint picker and Space shortcut
         run: node apps/zamazka/qa/picker-snapshot.mjs
 
+      - name: Test ZAMAZKA extended drawing timer and artwork provenance
+        run: node apps/zamazka/qa/timing-provenance.mjs
+
       - name: Build published Enhanced apps
         run: npm run build:enhanced
 
