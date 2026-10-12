@@ -1,8 +1,10 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {LEVELS,COLORS,newMatch,activatePlayer,command,step,drawBoard} from './game.js';
 installMobileRuntime();
+createWorkshopMode({appName:'УЗЕЛ',version:'1.0.0',cachePrefix: 'uzel-party-',storageNamespace:'pocket-works:uzel-party'});
 const $=id=>document.getElementById(id);
 const ORIGIN=location.origin+'/pocketnet',PREFIX='pocket-works:uzel-party:';
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
