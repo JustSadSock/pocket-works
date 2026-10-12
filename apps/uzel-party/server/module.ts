@@ -2,16 +2,16 @@
 // No LAN transport, external services, timers, or client-owned victory flags.
 export const MIN_PLAYERS=2;
 export const MAX_PLAYERS=6;
-const WIDTH=760,HEIGHT=900,STEP=21,ROPE_LIMIT=340;
+const WIDTH=700,HEIGHT=900,STEP=23,ROPE_LIMIT=240;
 const LEVELS=[
- {name:'ПЕРВОЕ КАСАНИЕ',hint:'Заденьте светящиеся кольца общей верёвкой.',pins:[{x:365,y:428,r:52}],rings:[{x:350,y:275},{x:495,y:620}],exit:{x:660,y:765}},
- {name:'ЗМЕИНЫЙ ХОД',hint:'Обойдите колонны с разных сторон.',pins:[{x:265,y:410,r:52},{x:510,y:485,r:52}],rings:[{x:385,y:220},{x:380,y:545},{x:540,y:710}],exit:{x:675,y:790}},
- {name:'ПОСЛЕДНИЙ УЗЕЛ',hint:'Обведите верёвку вокруг столбов.',pins:[{x:350,y:250,r:44},{x:250,y:535,r:48},{x:535,y:560,r:49}],rings:[{x:530,y:260},{x:380,y:420},{x:425,y:690}],exit:{x:650,y:790}},
- {name:'ЗВЁЗДНЫЙ ШОВ',hint:'Работайте вместе, чтобы зажечь все кольца.',pins:[{x:228,y:260,r:44},{x:525,y:320,r:48},{x:360,y:565,r:61}],rings:[{x:365,y:185},{x:170,y:510},{x:565,y:570},{x:385,y:760}],exit:{x:665,y:785}}
+ {name:'ПЕРВЫЙ УЗЕЛ',hint:'Проведите натянутую верёвку сквозь огни.',pins:[{x:351,y:423,r:68}],rings:[{x:342,y:605},{x:216,y:347}],exit:{x:348,y:146}},
+ {name:'КАМЕННЫЙ ТАНЕЦ',hint:'Обойдите камни с разных сторон.',pins:[{x:220,y:469,r:72},{x:489,y:498,r:80},{x:360,y:286,r:60}],rings:[{x:360,y:600},{x:348,y:463},{x:361,y:294}],exit:{x:353,y:133}},
+ {name:'КРУТОЙ ПОВОРОТ',hint:'Натяните канат между островами.',pins:[{x:351,y:610,r:68},{x:213,y:412,r:72},{x:480,y:367,r:72}],rings:[{x:495,y:610},{x:210,y:590},{x:358,y:430},{x:348,y:217}],exit:{x:358,y:127}},
+ {name:'ОДИН ЗА ВСЕХ',hint:'Двигайтесь в одном ритме.',pins:[{x:355,y:622,r:61},{x:213,y:500,r:59},{x:482,y:500,r:59},{x:353,y:343,r:60}],rings:[{x:213,y:666},{x:483,y:661},{x:354,y:505},{x:213,y:293},{x:480,y:292}],exit:{x:351,y:119}}
 ];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const near=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-const positions=players=>Object.fromEntries(players.map((p,i)=>[p.id,{x:100+Math.floor(i/2)*40+(i%2)*80,y:765+Math.floor(i/2)*38}]));
+const positions=players=>Object.fromEntries(players.map((p,i)=>[p.id,{x:350+(i-(players.length-1)/2)*64,y:755+(i%2)*10}]));
 function distanceSegment(p,a,b){
  const dx=b.x-a.x,dy=b.y-a.y;
  const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);
@@ -100,6 +100,7 @@ const module={
    if(state.players.length<MIN_PLAYERS)return {state,events:notice(player.id,'Нужно минимум два игрока.')};
    reset(state);return {state,events:events(state)};
   }
+  if(v.type==='restart'&&player.id===state.host&&state.phase==='play'){state.lit=[];state.positions=positions(state.players);state.last={};state.dashes={};state.revision++;return {state,events:events(state)};}
   if(v.type==='move'&&state.phase==='play'&&update(state,player.id,v))return {state,events:events(state)};
   return {state,events:[]};
  }
