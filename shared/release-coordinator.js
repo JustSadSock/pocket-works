@@ -97,14 +97,19 @@ export async function updateInstalledApplication(app, registration, { verified =
     stage('checking', 'Reading installed release');
     const info = await workerInfo(registration.active);
     const versionMatches = info?.version === expected.version;
-    const fingerprintMatches = !expected.fingerprint ||
-      info?.fingerprint === expected.fingerprint ||
+    const verifiedFingerprint = info?.fingerprint === expected.fingerprint ||
       (!info?.fingerprint && sameRelease(verified[app.slug], expected));
-
-    if (versionMatches && fingerprintMatches) {
+    if (versionMatches && verifiedFingerprint) {
       saveVerified(app);
       stage('current', 'Current release verified');
       return { app, status: 'current' };
+    }
+
+    // Legacy workers sometimes provide a version but no fingerprint. Do not
+    // invent verification or label an unknown installation as outdated.
+    if(versionMatches && !info?.fingerprint && !verified[app.slug]) {
+      stage('checked', 'Version matches; fingerprint unavailable');
+      return { app, status: 'checked' };
     }
 
     // A deferred update is applied by the versioned launcher handoff, or by
