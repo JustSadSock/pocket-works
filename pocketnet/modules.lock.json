@@ -19,5 +19,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "chush": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
