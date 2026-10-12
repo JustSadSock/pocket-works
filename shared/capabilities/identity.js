@@ -20,7 +20,7 @@ export function pocketAvatarMarkup(value,{small=false,accountId=''}={}){
   const id=Object.hasOwn(presets,value)?value:'clay';
   const [bg,ink,path]=presets[id];
   const portrait=safePortrait(value)||portraits.get(accountId)||'';
-  const account=UUID.test(accountId)?' data-pw-account="'+accountId+'"':'';
+  const account=UUID.test(accountId)?' data-pw-account="'+accountId+'" data-pw-preset="'+id+'"':'';
   return '<span class="pw-identity-avatar'+(small?' pw-identity-avatar--small':'')+'"'+account+
     ' style="--pw-a-bg:'+bg+';--pw-a-ink:'+ink+'" aria-hidden="true">'+
     (portrait?'<img src="'+portrait+'" alt="">':'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="'+path+'"/></svg>')+'</span>';
@@ -28,8 +28,17 @@ export function pocketAvatarMarkup(value,{small=false,accountId=''}={}){
 function showPortrait(accountId,artwork){
   if(typeof document==='undefined')return;
   for(const el of document.querySelectorAll('[data-pw-account="'+accountId+'"]')){
-    if(!artwork)continue;
     let img=el.querySelector('img');
+    if(!artwork){
+      if(img){
+        const preset=Object.hasOwn(presets,el.dataset.pwPreset)?el.dataset.pwPreset:'clay';
+        const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+        svg.setAttribute('viewBox','0 0 64 64');
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',presets[preset][2]);svg.append(path);el.replaceChildren(svg);
+      }
+      continue;
+    }
     if(!img){el.replaceChildren();img=document.createElement('img');img.alt='';el.append(img)}
     if(img.src!==artwork)img.src=artwork;
   }
