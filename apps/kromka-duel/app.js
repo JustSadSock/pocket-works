@@ -113,6 +113,7 @@ function render(force=false){
  const content=mode==='menu'?menu():mode==='connecting'?'<section class="sheet"><h2>Соединяемся…</h2><p>Подключаем PocketNet.</p>'+button('Отмена','cancel','outline')+'</section>':
  mode==='online'&&state?.phase==='lobby'?lobby():activeUI();
  ui.innerHTML=top()+content+dialogs();
+ $('app').classList.toggle('pc-playing',(mode==='practice'||mode==='online')&&current()?.phase==='battle');
  updatePad();
 }
 function refreshHUD(){
