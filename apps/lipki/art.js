@@ -26,6 +26,25 @@ function button(c,s,active){
  c.fillStyle=active?'#5f7956':'#956e31';
  for(const dx of [-9,9])for(const dy of [-3,3]){c.beginPath();c.arc(s.x+dx,s.y-5+dy,2.8,0,7);c.fill();}
 }
+
+function patchBadge(c,s,on,t){
+ c.save();c.translate(s.x,s.y);c.scale(1+Math.sin(t*4+s.x)*.025,1+Math.sin(t*4+s.x)*.025);
+ c.shadowColor=on?'#9bd1a6':'#e9c37e';c.shadowBlur=on?15:8;
+ c.beginPath();c.arc(0,0,27,0,Math.PI*2);c.fillStyle=on?'#90bd89':'#e9bf72';c.fill();
+ c.shadowBlur=0;c.strokeStyle=on?'#47795b':'#926e4b';c.lineWidth=3;c.setLineDash([4,5]);c.stroke();c.setLineDash([]);
+ c.fillStyle='#fff9e7';c.font='900 12px system-ui';c.textAlign='center';c.textBaseline='middle';
+ c.fillText(on?'✓':'ЛИП',0,0);c.restore();
+}
+function starBadge(c,s,on,t){
+ c.save();c.translate(s.x,s.y);c.rotate(Math.sin(t*2+s.x)*.05);
+ const r=on?22:25+Math.sin(t*4+s.x)*2;c.beginPath();
+ for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,v=i%2?r*.46:r;
+ if(i===0)c.moveTo(v*Math.cos(a),v*Math.sin(a));else c.lineTo(v*Math.cos(a),v*Math.sin(a));}
+ c.closePath();c.shadowColor=on?'#8bcb92':'#eed57f';c.shadowBlur=14;
+ c.fillStyle=on?'#a5d49e':'#f5d575';c.fill();c.shadowBlur=0;
+ c.strokeStyle='#856750';c.lineWidth=3;c.stroke();c.restore();
+}
+
 function platform(c,r,index){textile(c,r.x,r.y,r.w,r.h,['#8ba8a2','#be998f','#b1a8ca','#bca58b'][index%4],index+3);}
 function spring(c,s,time){
  c.save();c.translate(s.x,s.y);
@@ -119,7 +138,7 @@ export function draw(canvas,view,{me='',time=0,group=false}={}){
  // Sewn pocket / exit is always the far-right focal object.
  c.save();c.shadowColor='rgba(45,43,42,.25)';c.shadowBlur=14;c.shadowOffsetY=9;
  fill(c,958,360,80,148,12,'#6d938b');c.restore();
- fill(c,972,376,52,120,14,view.finished?'#f6dc91':'#aac0a8');
+ fill(c,972,376,52,120,14,view.finished?'#f6dc91':view.gateOpen?'#aac0a8':'#b2b7a7');
  c.strokeStyle='#f5ead4';c.lineWidth=4;c.beginPath();c.moveTo(978,398);c.lineTo(1016,398);c.stroke();
  for(let i=0;i<5;i++)stitch(c,965,380+i*23,965,393+i*23);
  // Board floor and platform geometry.
@@ -127,8 +146,17 @@ export function draw(canvas,view,{me='',time=0,group=false}={}){
  d.platforms.forEach((s,i)=>platform(c,s,i+11));
  for(const s of d.springs||[])spring(c,s,time);
  for(const [i,s] of (d.pads||[]).entries())button(c,s,view.gateOpen||view.pads?.[i]);
- if(d.target){c.strokeStyle='#e3bb6b';c.lineWidth=5;c.beginPath();c.arc(d.target.x,d.target.y-5,37,0,7);c.stroke();c.lineWidth=2;stitch(c,d.target.x-18,d.target.y-5,d.target.x+18,d.target.y-5);}
- if(d.gate&&!view.gateOpen){textile(c,d.gate.x,d.gate.y,d.gate.w,d.gate.h,'#c87663',45);for(let y=d.gate.y+20;y<d.gate.y+d.gate.h-10;y+=25)stitch(c,d.gate.x+3,y,d.gate.x+24,y);}
+ for(const [i,s] of (d.patches||[]).entries())patchBadge(c,s,view.patches?.[i],time);
+ for(const [i,s] of (d.sigils||[]).entries())starBadge(c,s,view.sigils?.[i],time);
+ if(d.target){c.strokeStyle=view.targetDone?'#91b984':'#e3bb6b';c.lineWidth=5;
+ c.beginPath();c.arc(d.target.x,d.target.y-5,36,0,7);c.stroke();c.lineWidth=2;stitch(c,d.target.x-18,d.target.y-5,d.target.x+18,d.target.y-5);}
+ if(d.gate&&!view.gateOpen){
+  textile(c,d.gate.x,d.gate.y,d.gate.w,d.gate.h,'#bc7467',45);
+  for(let y=72;y<492;y+=31)stitch(c,d.gate.x+4,y,d.gate.x+d.gate.w-4,y);
+  fill(c,d.gate.x-15,230,d.gate.w+30,58,6,'#dfb56e');
+  c.fillStyle='#69533c';c.font='900 24px sans-serif';c.textAlign='center';
+  c.fillText('×',d.gate.x+d.gate.w/2,268);
+ }
  if(view.ball)ball(c,view.ball,time);
  // Soft elongated seams show the anchors between stuck players.
  for(const q of view.players)if(q.stuck?.kind==='player'){
