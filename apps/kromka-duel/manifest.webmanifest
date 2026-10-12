@@ -1,14 +1,14 @@
 {
   "id": "/apps/kromka-duel/",
-  "name": "КРОМКА — искусство дуэли",
+  "name": "КРОМКА · Рапира",
   "short_name": "КРОМКА ДУЭЛЬ",
-  "description": "Точная дуэль на двоих",
+  "description": "Скоростная дуэль рапир в реальном времени с PocketNet.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#101c1c",
-  "theme_color": "#101c1c",
+  "background_color": "#162922",
+  "theme_color": "#162922",
   "icons": [
     {
       "src": "./icons/icon.svg",
