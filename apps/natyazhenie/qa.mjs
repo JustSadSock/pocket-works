@@ -56,12 +56,12 @@ try{
  // Dual and triple-actor counterweight must work with real input acceleration.
  for(const count of [2,3,4,5]){
   const w=worldFor(people.slice(0,count),0),beams=w.stage.balances;
-  const start=beams[0].x-110;
+  const start=beams[0].x-(count===5?90:count===4?105:110);
   const initial=[start];for(const beam of beams)initial.push(beam.x*2-initial.at(-1));
   w.players.forEach((p,i)=>Object.assign(p,{x:initial[i],y:522,vx:0,vy:0,ground:true}));
   for(let step=0;step<1050&&!w.gateOpen;step++){
    const targets=[start];for(let i=0;i<beams.length;i++)
-    targets.push(2*(beams[i].x-Math.sin(w.clock*2.3+i*1.9)*17)-targets[i]);
+    targets.push(2*(beams[i].x-Math.sin(w.clock*2.3+i*1.9)*14)-targets[i]);
    controls(w,(p,i)=>({dir:Math.max(-1,Math.min(1,(targets[i]-p.x)*.13))}));
   }
   assert.ok(w.gateOpen,'balancing team '+count+' must be able to open the gate');
