@@ -11,7 +11,7 @@ const active=(w,key)=>!w.stage.sequence?.length||w.stage.sequence[w.phase]===key
 // positive y displacement regardless of which endpoint is left or right.
 export function rubberPoints(start,end,{time=0,tight=0,reduced=false}={}){
  const dx=end.x-start.x,dy=end.y-start.y,len=Math.hypot(dx,dy)||1;
- const segments=Math.max(8,Math.ceil(len/9));
+ const segments=Math.max(8,Math.ceil(len/18)*2);
  const slack=Math.pow(1-clamp(tight,0,1),1.45);
  const sag=slack*Math.min(43,len*.22);
  const oscillation=reduced?0:slack*2.6;
