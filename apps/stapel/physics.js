@@ -15,8 +15,8 @@ export const ENGINES = Object.freeze({
 });
 export const MISSIONS = Object.freeze([
   { name: 'Первый сигнал', payload: 200, min: 110000, max: 260000, target: 155000, budget: 53, reward: 'Сигнал с орбиты' },
-  { name: 'Ретранслятор', payload: 650, min: 140000, max: 330000, target: 195000, budget: 60, reward: 'Связь с колонией' },
-  { name: 'Тяжёлый зонд', payload: 1100, min: 170000, max: 410000, target: 245000, budget: 69, reward: 'Тяжёлый вывод' }
+  { name: 'Ретранслятор', payload: 950, min: 140000, max: 330000, target: 195000, budget: 60, reward: 'Связь с колонией' },
+  { name: 'Тяжёлый зонд', payload: 1500, min: 170000, max: 410000, target: 245000, budget: 69, reward: 'Тяжёлый вывод' }
 ]);
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const defaultCraft = () => [
