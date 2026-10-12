@@ -1,0 +1,20 @@
+{
+  "id": "/apps/chush/",
+  "name": "ЧУШЬ! — театр нелепиц",
+  "short_name": "ЧУШЬ!",
+  "description": "Анонимная игра в нелепые SVG-коллажи для компании",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3ddac",
+  "theme_color": "#142d2a",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
