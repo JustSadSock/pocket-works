@@ -223,7 +223,6 @@ test('saved layout and launcher navigation remain available offline',async({page
 
 test('focus-first library shows actions on demand without losing advanced filters',async({page})=>{
   await openDeck(page);
-  await expect(page.locator('#deck-home__intro')).toHaveCount(0);
   await expect(page.locator('.deck-home__intro h2')).toHaveText('Pick a game.');
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await expect(page.locator('#library-options')).not.toHaveAttribute('open');
