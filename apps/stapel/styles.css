@@ -5,3 +5,14 @@
 @media(min-width:700px){.app-shell{max-width:660px;margin:auto;box-shadow:0 0 0 9999px #23332f}.bay{min-height:230px}.bench{max-height:48%}.flight-console{max-width:660px;margin:auto}}
 @media(max-height:720px){.topbar{flex-basis:42px}.mission-strip{min-height:60px}.bench{max-height:57%}.work-controls{padding-top:4px;padding-bottom:2px}.equipment-line{min-height:37px}.stat-grid>div{min-height:49px}.action-line{padding-top:5px}.flight-console{padding-top:6px}.flight-event{bottom:225px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:0s!important;animation-duration:0s!important}}
+
+/* Integrated assembly gantry: one full-height working surface with controls docked
+   over it, not a web page stacked around an isolated centered canvas. */
+.builder{position:relative;display:block;--mission-h:76px}
+.builder .bay{position:absolute;inset:0;width:100%;height:100%;min-height:0;flex:none;z-index:0}
+.builder .mission-strip{position:absolute;top:0;left:0;right:0;z-index:3;height:var(--mission-h);min-height:var(--mission-h);box-shadow:0 6px 9px #344d4521}
+.builder .bench{position:absolute;bottom:0;left:0;right:0;z-index:3;max-height:min(55%,445px);box-shadow:0 -9px 22px #445f5633}
+.builder .bay-index{top:calc(var(--mission-h) + 12px)}
+.builder .bay-scale{top:calc(var(--mission-h) + 35px)}
+.builder .bay-help{display:none}
+@media(max-height:720px){.builder{--mission-h:60px}.builder .bench{max-height:57%}}
