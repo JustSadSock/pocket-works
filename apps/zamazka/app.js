@@ -10,6 +10,7 @@ import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer
 import {getSavedEmblem,storeEmblem,paintEmblem,exportEmblem,EMBLEM_SIZE,EMBLEM_COLORS,EMBLEM_LIMITS} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
+import {sendPainting} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
 createWorkshopMode({appName:'ЗАМАЗКА',version:'1.16.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
@@ -131,7 +132,7 @@ function sound(f=560){if(!beepEnabled)return;try{const Audio=window.AudioContext
 let toastTimer;function notify(t){toast.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML=''}
 function modal(title,body,buttons){dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound();fn()});actionBox.append(b)})}
-let draftDelay=null,lastDraftPayload='',lastDraftRound='',autoSubmitted='',archiveAutoSaved='';
+let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 function draftIndicator(message){const el=screen.querySelector('#draftStatus');if(el)el.textContent=message}
 function backupDraft(force=false){
  if(!editor||page!=='drawing')return;
@@ -140,12 +141,15 @@ function backupDraft(force=false){
  const ass=view.mine;if(!ass)return;
  const token=[roomId,view.round,ass.art,ass.variation].join(':');
  const strokes=editor.getSnapshot(),serialized=JSON.stringify(strokes);
- if(!force&&token===lastDraftRound&&serialized===lastDraftPayload)return;
+ if(!force&&token===lastDraftRound&&serialized===lastDraftPayload&&
+    (lastDraftAckRevision===lastDraftRevision||Date.now()-lastDraftSentAt<6500))return;
  try{
   if(!net)throw Error('offline');
-  net.sendGame({type:'draft',round:view.round,art:ass.art,variation:ass.variation,strokes});
-  lastDraftRound=token;lastDraftPayload=serialized;draftIndicator('Сохраняем…');
- }catch{draftIndicator('Черновик на устройстве')}
+  const result=sendPainting(packet=>net.sendGame(packet),
+    {type:'draft_chunk',round:view.round,art:ass.art,variation:ass.variation,strokes});
+  lastDraftRound=token;lastDraftPayload=serialized;
+  lastDraftRevision=result.revision;lastDraftSentAt=Date.now();draftIndicator('Сохраняем…');
+ }catch{draftIndicator('Черновик на устройстве · повторим при подключении')}
 }
 function queueDraft(){
  if(practice)return;
@@ -162,7 +166,7 @@ function autoFinishOnDeadline(){
  const data=editor.getData();editor.saveSnapshot();backupDraft(true);
  try{
   if(!net)throw Error('offline');
-  net.sendGame({type:'submit',strokes:data});autoSubmitted=token;
+  sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:ass.art,variation:ass.variation,strokes:data});autoSubmitted=token;
   if(data.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,data)}
   draftIndicator('Работа отправлена автоматически');
  }catch{draftIndicator('Нет связи · черновик сохранён')}
@@ -472,12 +476,14 @@ async function connect(mode){
      const event=msg.event;
      if(event?.type==='state'){view=event.payload;renderView()}
      else if(event?.type==='draft_saved'){
-       if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art)
+       if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art){
+         if(event.payload.revision===lastDraftRevision)lastDraftAckRevision=lastDraftRevision;
          draftIndicator('Копия в PocketNet ✓');
+       }
      }
      else if(event?.type==='board_delta'){if(page==='lobby'&&event.payload?.u!==me?.id)commonsBoard?.accept(event.payload)}
      else if(event?.type==='board_reset'){if(page==='lobby')commonsBoard?.reset(event.payload)}
-     else if(event?.type==='notice')notify(String(event.payload||'Не удалось выполнить действие'));
+     else if(event?.type==='notice'){lastDraftSentAt=0;lastDraftAckRevision='';notify(String(event.payload||'Не удалось выполнить действие'))}
    });
    client.on('presence',data=>{
      if(client.closed)return;
@@ -485,7 +491,7 @@ async function connect(mode){
      try{client.sendGame({type:'sync'})}catch{}
    });
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
-   client.on('disconnected',()=>{if(!client.closed)notify('Связь прервана. Переподключаемся…')});
+   client.on('disconnected',()=>{if(!client.closed){lastDraftSentAt=0;lastDraftAckRevision='';notify('Связь прервана. Переподключаемся…')}});
    client.on('error',error=>{
      if(client.closed)return;
      const code=String(error?.code||error?.message||'');
@@ -509,7 +515,7 @@ async function connect(mode){
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
  const data=editor.getData();backupDraft(true);modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
- ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{net.sendGame({type:'submit',strokes:data});autoSubmitted=[roomId,view.round,a.art,a.variation].join(':');notify('Работа отправлена')}catch{notify('Нет подключения — черновик и работа сохранены')}} ,'primary'],
+ ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{sendPainting(packet=>net.sendGame(packet),{type:'submit_chunk',round:view.round,art:a.art,variation:a.variation,strokes:data});autoSubmitted=[roomId,view.round,a.art,a.variation].join(':');notify('Передаём работу…')}catch{notify('Нет подключения — черновик сохранён, попробуй сдать ещё раз')}} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 async function copyText(value,success){
  try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);notify(success)}
