@@ -80,13 +80,14 @@ export function floodFillRaster({width,height,walls,zone,output,point,color}){
    const k=i*4;ink[k]=r;ink[k+1]=g;ink[k+2]=b;ink[k+3]=255;
  };
  for(let n=0;n<tail;n++)paint(queue[n]);
- // The classic 4-connected seed fill intentionally stops at the visible
- // contour. Pad its eight neighbouring AA/wall pixels underneath the line.
- // Do not expand into a different reachable basin: that would stain it.
+ // Pad up to two high-resolution pixels ONLY into a wall or the
+ // antialiased edge of the damage mask, never through them into another basin.
+ // This reaches the faint fringe at the outside of a torn edge and hides the
+ // seam below the drawn line even when a line lands between device pixels.
  for(let n=0;n<tail;n++){
    const i=queue[n],x=i%width,y=(i/width)|0;
-   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-     if(!dx&&!dy)continue;
+   for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+     if(!dx&&!dy||dx*dx+dy*dy>5)continue;
      const xx=x+dx,yy=y+dy;if(xx<0||xx>=width||yy<0||yy>=height)continue;
      const neighbour=yy*width+xx;
      if(!seen[neighbour]&&!allowed(neighbour))paint(neighbour);
