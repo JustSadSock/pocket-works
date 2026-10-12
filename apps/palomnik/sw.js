@@ -6,7 +6,7 @@ const RELEASE_NOTES=[
   "Авторская низкоразрешённая псевдообъёмная графика с упорядоченным дизерингом, шагающая крепость, анимированные опоры и погода.",
   "Управление касанием по опорам, пауза, звук с отключением, офлайн-режим и полноценный исход экспедиции."
 ];
-const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/pwa-utils.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
+const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.js','../../shared/workshop-mode.css','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/pwa-utils.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const ROOT=new URL('./',self.registration.scope);
 const TOKEN=APP_VERSION+'-p'+CACHE_PROTOCOL;
 const KNOWN=new Map(APP_SHELL.map(path=>{const url=new URL(path,ROOT);return [url.pathname,url.href]}));
