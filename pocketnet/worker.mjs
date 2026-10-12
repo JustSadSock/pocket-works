@@ -2,6 +2,7 @@
 export { PocketNetHub } from './hub.mjs';
 export { PocketIdentity } from '../pocket-id/hub.mjs';
 export { PocketCloud } from '../pocket-cloud/hub.mjs';
+export { PocketSocial } from '../pocket-social/hub.mjs';
 
 export default {
   async fetch(request, env) {
@@ -42,6 +43,78 @@ export default {
       headers.set('x-pw-account-id',user.id);
       const cloud=env.POCKET_CLOUD.get(env.POCKET_CLOUD.idFromName('account-v1:'+user.id));
       return cloud.fetch(new Request(request,{headers}));
+    }
+    if (url.pathname.startsWith('/pocket-social/')) {
+      // Credentials and directory entries are supplied only by this trusted edge.
+      const identity = env.POCKET_ID.get(env.POCKET_ID.idFromName('pocket-id-global-v1'));
+      let user;
+      try {
+        const result = await identity.fetch(new Request(new URL('/pocket-id/me', url), {
+          headers: { cookie: request.headers.get('cookie') || '' }
+        }));
+        if (!result.ok) throw Error('identity_not_ready');
+        user = (await result.json()).user;
+      } catch {
+        return new Response(JSON.stringify({error:'identity_unavailable'}), {status:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
+      }
+      if (!user?.complete) return new Response(JSON.stringify({error:'sign_in_required'}), {status:401,headers:{'content-type':'application/json','cache-control':'no-store'}});
+      const headers = new Headers(request.headers);
+      for (const key of [...headers.keys()]) if (key.startsWith('x-pw-')) headers.delete(key);
+      headers.set('x-pw-account-id', user.id);
+      headers.set('x-pw-account-name', user.nickname);
+      headers.set('x-pw-account-avatar', user.avatar);
+      if (url.pathname === '/pocket-social/search' && request.method === 'GET') {
+        const lookup = new URL('/pocket-id/directory', url);
+        lookup.searchParams.set('q', url.searchParams.get('q') || '');
+        const result = await identity.fetch(new Request(lookup,{headers:{cookie:request.headers.get('cookie')||''}}));
+        if (!result.ok) return result;
+        const rows = (await result.json()).users || [];
+        headers.set('x-pw-directory', JSON.stringify(rows));
+      }
+      if (url.pathname === '/pocket-social/user' && request.method === 'GET') {
+        const lookup = new URL('/pocket-id/public', url);
+        lookup.searchParams.set('id', url.searchParams.get('id')||'');
+        const result = await identity.fetch(new Request(lookup,{headers:{cookie:request.headers.get('cookie')||''}}));
+        if (!result.ok) return result;
+        const target=(await result.json()).user;
+        if (target) headers.set('x-pw-target-user', JSON.stringify(target));
+      }
+      if (url.pathname === '/pocket-social/invite' && request.method === 'POST') {
+        let payload;
+        try { payload = await request.clone().json(); } catch { payload = null; }
+        if (!payload || payload.gameId !== 'zamazka' ||
+          !/^[0-9a-f-]{36}$/i.test(payload.roomId||'')) {
+          return new Response(JSON.stringify({error:'invalid_room'}),{status:400,headers:{'content-type':'application/json'}});
+        }
+        const hub=env.POCKETNET.get(env.POCKETNET.idFromName('pocket-works-global-v1'));
+        const validation=await hub.fetch(new Request(new URL('/pocketnet/validate-invite',url),{
+          method:'POST',headers:{'content-type':'application/json','x-pw-internal':'1','x-pw-account-id':user.id},
+          body:JSON.stringify({roomId:payload.roomId,gameId:payload.gameId})
+        }));
+        if (!validation.ok) return validation;
+        headers.set('x-pw-validated-room',payload.roomId);
+      }
+      if (url.pathname === '/pocket-social/invite-action' && request.method === 'POST') {
+        let payload;
+        try { payload=await request.clone().json(); } catch { payload=null; }
+        if (payload?.action === 'accept') {
+          const social=env.POCKET_SOCIAL.get(env.POCKET_SOCIAL.idFromName('pocket-social-global-v1'));
+          const inspection=await social.fetch(new Request(new URL('/pocket-social/inspect-invite?id='+encodeURIComponent(payload.id||''),url),{
+            headers:{'x-pw-account-id':user.id,'x-pw-account-name':user.nickname,'x-pw-account-avatar':user.avatar}
+          }));
+          if (!inspection.ok) return inspection;
+          const invitation=(await inspection.json()).invite;
+          const hub=env.POCKETNET.get(env.POCKETNET.idFromName('pocket-works-global-v1'));
+          const validation=await hub.fetch(new Request(new URL('/pocketnet/validate-join',url),{
+            method:'POST',headers:{'content-type':'application/json','x-pw-internal':'1'},
+            body:JSON.stringify({roomId:invitation.roomId,gameId:invitation.gameId})
+          }));
+          if (!validation.ok) return validation;
+          headers.set('x-pw-validated-invite',invitation.id);
+        }
+      }
+      const social=env.POCKET_SOCIAL.get(env.POCKET_SOCIAL.idFromName('pocket-social-global-v1'));
+      return social.fetch(new Request(request,{headers}));
     }
     if (url.pathname.startsWith('/pocketnet/')) {
       // The edge worker, not the browser, vouches for account identity.
