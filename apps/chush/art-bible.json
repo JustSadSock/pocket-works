@@ -96,7 +96,7 @@
     {
       "id": "chush-props",
       "tool": "inline-svg",
-      "source": "pieces.js",
+      "source": "art-bible.json",
       "output": "pieces.js",
       "role": "Main playable library: 64 hand-authored subjects, 5 variants each, 320 total.",
       "acceptance": "At 64px tray size, objects are individually recognizable; categories are balanced by server.",
