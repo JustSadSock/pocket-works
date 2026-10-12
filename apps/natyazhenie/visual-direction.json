@@ -13,7 +13,7 @@
     "distinction": "В отличие от фетровых ЛИПКИ здесь главный объект — непрерывная лента между телами и камера, сопровождающая платформер на узком экране; от СЛЕПОЙ СМЕНЫ игру отличают открытые пастельные островки, видимость всех собственных тел и отсутствие заводского пульта."
   },
   "architecture": {
-    "spatialLayout": "full-bleed-world",
+    "spatialLayout": "header-stage-footer",
     "controlLocation": "bottom-deck",
     "navigation": "world-travel",
     "chromeTopology": "unframed-scene",
