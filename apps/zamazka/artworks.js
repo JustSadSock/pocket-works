@@ -1,5 +1,6 @@
 import { svgFor as legacySvg, ARTS as LEGACY } from './legacy-artworks.js';
 import { MUSEUM_ADDITIONS } from './museum-catalog.js';
+import {artworkOrigin} from './art-provenance.js';
 
 /** An entirely public-domain gallery. Descriptions and source links are kept beside the images. */
 export const W = 600, H = 450;
@@ -20,7 +21,7 @@ export const PLAYABLE_IDS=Array.from({length:REAL.length-1},(_,i)=>i+1);
 export const ARTS=[
  ...REAL.map((entry,id)=>({...entry,id,isReal:true})),
  ...LEGACY.map((entry,i)=>({...entry,id:i+REAL.length,artist:'Коллекция ЗАМАЗКИ 1.0',date:'2026',museum:'Личный архив',isReal:false}))
-];
+].map(art=>({...art,...(art.isReal?artworkOrigin(art.id):{})}));
 // Gallery previews use a mid-sized source. The brush/editor uses high-resolution
 // sources and gracefully falls back where the original master is smaller than 1920px.
 const PREVIEW_WIDTH=1280;

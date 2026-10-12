@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=5;
+export const RULESET_VERSION=6;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 type Stroke={c:string;s:number;t:string;p:number[][]};
@@ -57,7 +57,7 @@ function completeVotes(s:State){
  s.revealed=true;
 }
 function step(s:State){
- if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+105000;}
+ if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+160000;}
  else if(s.phase==='drawing'){
   for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=s.drafts?.[p.id]??[];
   s.phase='voting';s.turn=0;s.deadline=now()+25500;
