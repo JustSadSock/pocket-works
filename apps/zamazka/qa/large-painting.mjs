@@ -31,6 +31,8 @@ assert.deepEqual(JSON.stringify(state.drafts[a.id]),JSON.stringify(art),'no geom
 const invalid=paintPackets({...meta,type:'draft_chunk',revision:'rlarge-2'});
 const previous=JSON.stringify(state.drafts[a.id]);
 send(a,invalid[0]);
+assert.equal(state.draftAssemblies[a.id].prefix,invalid[0].strokes.length,'unchanged strokes share the committed prefix instead of duplicating data');
+assert.equal(state.draftAssemblies[a.id].strokes.length,0,'no duplicate full painting in room state');
 assert.equal(JSON.stringify(state.drafts[a.id]),previous,'incomplete replacement cannot overwrite last confirmed painting');
 time=state.deadline+1;send(a,{type:'pulse'});
 assert.equal(state.phase,'voting');
