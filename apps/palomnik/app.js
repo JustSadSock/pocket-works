@@ -171,7 +171,7 @@ function stoneShape(x,y,k,active,t) {
 }
 function tile(col,row){
  const r=hash(col*13+state.seed,row*17,10);
- let kind=r<.27?'ember':r<.63?'safe':r<.84?'crack':'void';
+ let kind=r<.20?'ember':r<.56?'safe':r<.84?'crack':'void';
  // Each step offers at least one stable way across.
  if(row===(col%3)&&r>.63) kind='safe';
  if(col===7||col===14)kind=row===1?'ember':kind;
@@ -202,6 +202,7 @@ function drawPath(t) {
  for(const k of targets) {
   stroke([[180,startY+16],[k.x-28,k.y+18]],rgba('#8a7487',k.active?.32:.10),1);
   stoneShape(k.x,k.y,k,k.active,t);
+  if(k.active)text(k.row===state.row?'−1':'−2',k.x,k.y+43,11,'#e1d3c7');
  }
  // Looming exit spire in far distance.
  if(state.step>=18) {
@@ -414,7 +415,7 @@ function showModal(kind){
  mode=kind;screen.hidden=false;secondary.hidden=true;
  if(kind==='intro') {
   eyebrow.textContent='ЭКСПЕДИЦИЯ · I';title.textContent='ПАЛОМНИК';
-  body.textContent='Последняя шагающая крепость идёт через три мёртвых неба. Коснись следующей опоры. Огонь — твоё время. Корпус — твоя жизнь.';
+  body.textContent='Проведи шагающую крепость через три мёртвых неба. Коснись опоры. Прямой шаг стоит 1 жар, боковой — 2. Береги корпус.';
   primary.firstChild.textContent=loaded?'ПРОДОЛЖИТЬ ПУТЬ ':'НАЧАТЬ ПУТЬ ';
   if(loaded){secondary.hidden=false;secondary.textContent='НАЧАТЬ ЗАНОВО';}
  }else if(kind==='paused'){
@@ -445,7 +446,8 @@ function begin(fresh=false){
 }
 function applyStep(k){
  if(mode!=='playing')return;
- state.step++;state.row=k.row;state.heat=clamp(state.heat-1,0,MAX_HEAT);
+ const movingSideways=k.row!==state.row;
+ state.step++;state.row=k.row;state.heat=clamp(state.heat-(movingSideways?2:1),0,MAX_HEAT);
  let message='Опора выдержала';
  if(k.kind==='ember'){state.heat=clamp(state.heat+3,0,MAX_HEAT);message='+3 жара';}
  if(k.kind==='crack'){state.hull=clamp(state.hull-1,0,MAX_HULL);message='−1 корпус';}
