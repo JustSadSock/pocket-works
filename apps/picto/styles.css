@@ -79,3 +79,15 @@ body{overflow:hidden}button,input{font:inherit}button{cursor:pointer}button:disa
 @media(max-width:390px){.top{gap:5px}.back{font-size:10px;padding:7px}.connection{font-size:9px}.section-head h1{font-size:34px}.stage-frame{padding:6px}.board-foot{font-size:9px}.toolbox{max-height:205px}.palette .glyph-btn{flex-basis:43px;height:43px}.tools-row .btn{height:36px;min-height:36px}}
 @media(max-height:650px){.round-top h1{font-size:21px}.timer{font-size:24px}.toolbox{max-height:180px}.stage-frame{min-height:120px}.stage{min-height:100px}.view:has(.editor-layout){padding-top:8px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+
+/* Optional semantic comparison: composer-only, without consuming canvas space. */
+.variant-peek{background:transparent;border:1.5px solid var(--ink);color:var(--ink);font-size:11px;letter-spacing:.04em;font-weight:900;text-transform:uppercase;white-space:nowrap;min-width:91px;min-height:44px;padding:7px 8px;transition:transform .12s,background .12s}
+.variant-peek:active{transform:translateY(2px);background:#efdc9d}
+.variant-list{display:grid;gap:7px;margin:13px 0;max-height:min(56dvh,360px);overflow:auto}
+.variant-item{display:flex;align-items:center;gap:9px;min-height:48px;padding:8px 9px;background:#fff9ed;border:1px solid var(--line);font-size:13px;line-height:1.32}
+.variant-item>span{font-size:11px;font-weight:900;color:var(--muted)}
+.variant-item strong{font-weight:800;flex:1}
+.variant-item.target{background:#ffe59b;border:2px solid var(--ink)}
+.variant-item b{font-size:9px;letter-spacing:.08em;color:#a24831}
+@media(max-width:390px){.variant-peek{min-width:75px;font-size:10px;padding:5px}.prompt-strip{padding:9px 10px}}
