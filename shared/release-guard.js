@@ -25,9 +25,45 @@
       controller:controllerMismatch(),
       at:Date.now()
     };
+    const earlier=readPending();
+    if(earlier?.version===pending.version &&
+       earlier?.fingerprint===pending.fingerprint &&
+       earlier?.controller===pending.controller)return;
     try{localStorage.setItem(pendingKey,JSON.stringify(pending));}catch{}
     if(globalThis.__POCKET_WORKS_RELEASE__)globalThis.__POCKET_WORKS_RELEASE__.pending=pending;
     window.dispatchEvent(new CustomEvent('pocketworks:release-pending',{detail:pending}));
+  }
+
+  // Other open documents of the same app retain their worker and cache.
+  let presenceChannel=null;
+  try{
+    presenceChannel=new BroadcastChannel('pocket-works-release-presence');
+    presenceChannel.addEventListener('message',event=>{
+      const data=event.data;
+      if(data?.type==='PROBE_APP'&&data.slug===slug){
+        presenceChannel.postMessage({type:'APP_OPEN',slug,nonce:data.nonce});
+      }
+    });
+  }catch{}
+  function otherAppDocumentOpen(){
+    if(!presenceChannel)return Promise.resolve(false);
+    return new Promise(resolve=>{
+      const nonce=`${slug}:${Date.now()}:${Math.random()}`;
+      let done=false;
+      const finish=open=>{
+        if(done)return;
+        done=true;
+        clearTimeout(timer);
+        presenceChannel.removeEventListener('message',onMessage);
+        resolve(open);
+      };
+      const onMessage=event=>{
+        if(event.data?.type==='APP_OPEN'&&event.data.slug===slug&&event.data.nonce===nonce)finish(true);
+      };
+      const timer=setTimeout(()=>finish(false),220);
+      presenceChannel.addEventListener('message',onMessage);
+      try{presenceChannel.postMessage({type:'PROBE_APP',slug,nonce});}catch{finish(false);}
+    });
   }
 
   function releaseUrl(version=declared,fp=fingerprint){
@@ -135,6 +171,7 @@
 
   async function recover(latest){
     if(recovering)return;
+    if(navigator.onLine===false||await otherAppDocumentOpen())return;
     recovering=true;
     showRecovery(latest.version||declared);
 
@@ -197,7 +234,13 @@
     (pendingAtEntry.fingerprint&&fingerprint&&pendingAtEntry.fingerprint!==fingerprint) ||
     pendingAtEntry.controller
   )){
-    setTimeout(()=>void recover(pendingAtEntry),0);
+    // Broken SW/CDN propagation must not create an infinite refresh loop.
+    let attempted=false;
+    try{
+      attempted=sessionStorage.getItem(reloadKey)==='1';
+      if(!attempted)sessionStorage.setItem(reloadKey,'1');
+    }catch{}
+    if(!attempted)setTimeout(()=>void recover(pendingAtEntry),0);
   }else if(pendingAtEntry){
     try{localStorage.removeItem(pendingKey);}catch{}
   }
