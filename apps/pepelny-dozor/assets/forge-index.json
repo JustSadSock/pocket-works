@@ -1,0 +1,67 @@
+{
+  "assets": [
+    {
+      "adapter": "pixel",
+      "id": "night-creatures",
+      "inputs": {
+        "asset-forge/sprites.json": "054f3e3e07959cd2ba7a7d38032c34acbb28dd57050ce36490084a02be4ad0e4"
+      },
+      "outputs": {
+        "atlas": {
+          "bytes": 2545,
+          "sha256": "bd6e72c0e76d988c87afd1a11ed9daf9e77d7306e7d8332844e328a40ce5f025",
+          "url": "assets/creatures.json"
+        },
+        "image": {
+          "bytes": 2474,
+          "height": 32,
+          "sha256": "2e99cc12fb168d013e5aee66fafa32f1054c7747f4ebb55a69901c0e366a8b1c",
+          "url": "assets/creatures.png",
+          "width": 384
+        }
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Hand-authored 32px palette-locked silhouette sprites"
+      },
+      "seed": 7126,
+      "tool": "10.2.0"
+    },
+    {
+      "adapter": "vector",
+      "id": "abbey-emblem",
+      "inputs": {
+        "asset-forge/emblem.svg": "b76fd15cfe1e161b92cee22eb3fe7971ef8fc47a1b2580ac3b6bf3db1589191e"
+      },
+      "outputs": {
+        "image": {
+          "bytes": 10506,
+          "height": 256,
+          "sha256": "179dcc0841df022c5d4900e87cbf8a409cbc7d72872d4a2939382fa7e42e5ce6",
+          "url": "assets/abbey-emblem.png",
+          "width": 256
+        },
+        "vector": {
+          "bytes": 562,
+          "sha256": "b76fd15cfe1e161b92cee22eb3fe7971ef8fc47a1b2580ac3b6bf3db1589191e",
+          "url": "assets/abbey-emblem.svg"
+        }
+      },
+      "parameters": {
+        "height": 256,
+        "width": 256
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original geometric abbey sigil"
+      },
+      "seed": 7126,
+      "tool": "Inkscape 1.2.2 (b0a8486541, 2022-12-01)"
+    }
+  ],
+  "manifestSha256": "5e93727576da363773fd21a38f7463c0c5eb9938796623c14bd0ceee6a0295b9",
+  "version": 1
+}
