@@ -72,7 +72,7 @@ function setState(next){
   if(lastLevel>=0){flash('УРОВЕНЬ ПРОЙДЕН!');clickSound('win');}
   localPrediction=null;visual.clear();lastFalls.clear();lastLevel=currentLevel;lastPhase=world?.phase??0;
  }
- if(previousLevel===currentLevel&&world?.phase>previousStagePhase&&previousStagePhase>=0){flash('ЭТАП ВЫПОЛНЕН!');clickSound('win');}
+ if(previousLevel===currentLevel&&world?.phase>previousStagePhase&&previousStagePhase>=0){flash(world?.stage?.kind==='lift'&&world?.phase===1?'МАЯТНИК УСКОРИЛСЯ!':world?.stage?.rescue&&world?.phase===1?'МОСТ ПОЯВИЛСЯ!':'ЭТАП ВЫПОЛНЕН!');clickSound('win');}
  if(next.phase==='play'&&phase==='done'){$('finish-sheet').hidden=true;shownFinish=false;paused=false;}
  if(next.phase==='done'){if(!shownFinish){clickSound('win');save('clears',Number(read('clears','0'))+1);}shownFinish=true;$('finish-sheet').hidden=false;$('again').hidden=next.host!==room.self?.id;$('finish-copy').textContent='Все '+(next.levels||CHAPTERS.length)+' испытаний пройдены всей командой.';}
  updateGameUI();
@@ -92,7 +92,7 @@ function updateGameUI(){
   ((world.phase+1)+'/'+seq.length+' · '+(names[goal]||stage.hint)):
   stage.hint+' · '+done+'/'+total;
 
- $('progress').textContent=String(world.level+1).padStart(2,'0')+' / '+String(CHAPTERS.length).padStart(2,'0');
+ $('progress').textContent=String(world.level+1).padStart(2,'0')+' / '+String(gameMode==='online'&&state?.levels?state.levels:CHAPTERS.length).padStart(2,'0');
  $('signal').classList.toggle('offline',gameMode==='online'&&!room.connected);
 }
 function startOnline(action,code=''){
@@ -153,7 +153,7 @@ function frame(now){
    if(!paused&&!world.finished){
     const prior=world.level,priorPhase=world.phase;tickLocal(world,[localControl(0),localControl(1)],dt);
     if(prior!==world.level){lastLevel=world.level;lastPhase=0;flash('УРОВЕНЬ ПРОЙДЕН!');clickSound('win');updateGameUI();}
-    else if(priorPhase!==world.phase){lastPhase=world.phase;flash('ЭТАП ВЫПОЛНЕН!');clickSound('win');updateGameUI();}
+    else if(priorPhase!==world.phase){lastPhase=world.phase;flash(world.stage.kind==='lift'&&world.phase===1?'МАЯТНИК УСКОРИЛСЯ!':world.stage.rescue&&world.phase===1?'МОСТ ПОЯВИЛСЯ!':'ЭТАП ВЫПОЛНЕН!');clickSound('win');updateGameUI();}
     else if(Math.floor(now/130)!==Math.floor((now-16)/130))updateGameUI();
     if(world.finished&&!shownFinish){shownFinish=true;$('finish-sheet').hidden=false;save('clears',Number(read('clears','0'))+1);clickSound('win');}
    }
