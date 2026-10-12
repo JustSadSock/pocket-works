@@ -93,3 +93,7 @@
 #pocket-id-trigger.pws-entry .pws-entry__count{right:-5px;top:-5px;z-index:2}
 .pws-editor .pws-field:first-of-type{margin-top:15px}
 .pws-profile-layout .pws-section .pws-btn{margin-top:10px}
+
+.pws-avatar .pw-identity-avatar,.pws-person__avatar .pw-identity-avatar{width:100%;height:100%;border-radius:inherit;box-shadow:none}
+.pws-avatar .pw-identity-avatar svg{width:70%;height:70%}
+.pws-person__avatar .pw-identity-avatar svg{width:70%;height:70%}
