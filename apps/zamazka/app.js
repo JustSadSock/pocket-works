@@ -401,6 +401,7 @@ function practiceStep(){if(!practice)return;if(practice.phase==='preview'){pract
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
 function renderView(){
  if(!view)return;
+ if(view.phase==='drawing'&&view.done?.includes(me?.id)&&editor)editor.clearDraft();
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
@@ -455,6 +456,7 @@ async function connect(mode){
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
+     if(page==='drawing')backupDraft(true);
      if(personalEmblem.image)client.sendGame({type:'emblem',image:personalEmblem.image});
      if(view)renderView();
      else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
@@ -463,6 +465,10 @@ async function connect(mode){
      if(client.closed)return;
      const event=msg.event;
      if(event?.type==='state'){view=event.payload;renderView()}
+     else if(event?.type==='draft_saved'){
+       if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art)
+         draftIndicator('Копия в PocketNet ✓');
+     }
      else if(event?.type==='board_delta'){if(page==='lobby'&&event.payload?.u!==me?.id)commonsBoard?.accept(event.payload)}
      else if(event?.type==='board_reset'){if(page==='lobby')commonsBoard?.reset(event.payload)}
      else if(event?.type==='notice')notify(String(event.payload||'Не удалось выполнить действие'));
@@ -496,8 +502,8 @@ async function connect(mode){
 }
 function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net)return;
- const data=editor.getData();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
- ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.clearDraft();try{net.sendGame({type:'submit',strokes:data});notify('Работа отправлена')}catch{notify('Нет подключения — сохранили работу в личном фонде')}} ,'primary'],
+ const data=editor.getData();backupDraft(true);modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
+ ['Сдать',()=>{closeDialog();const a=view.mine;saveArtwork(a.art,a.variation,data);editor?.saveSnapshot();try{net.sendGame({type:'submit',strokes:data});notify('Работа отправлена')}catch{notify('Нет подключения — черновик и работа сохранены')}} ,'primary'],
  ['Продолжить рисовать',closeDialog,'ghost']]);}
 async function copyText(value,success){
  try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);notify(success)}
@@ -558,6 +564,7 @@ screen.addEventListener('click',e=>{
 });
 function tick(){
  if(practice&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
+ autoFinishOnDeadline();
  const v=practice||view,clock=document.querySelector('#clock');
  if(clock&&v?.deadline){const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');clock.classList.toggle('urgent',s<=10)}
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}}
@@ -570,7 +577,10 @@ screen.addEventListener('wheel',e=>{if(page!=='home'||!e.target.closest('.museum
 document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();shiftMuseum(e.key==='ArrowRight'?1:-1)}});
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
-setInterval(tick,350);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+setInterval(tick,350);
+setInterval(()=>{if(page==='drawing')backupDraft()},10000);
+document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden)tick()});
+window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
 async function refreshPocketBadge(){
  const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
  const priorAccount=pocketIdentity?.id||null;
