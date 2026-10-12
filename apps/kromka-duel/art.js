@@ -204,4 +204,17 @@ export function drawScene(ctx,w,h,t,duel,options={}){
  edge.addColorStop(0,'#03090900');edge.addColorStop(1,'#030d0a79');
  ctx.fillStyle=edge;ctx.fillRect(0,0,w,h);
  if(options.flash>0){ctx.fillStyle='rgba(255,250,226,'+options.flash*.32+')';ctx.fillRect(0,0,w,h);}
+ // A fine targeting reticle follows the mouse over the arena, not the UI chrome.
+ if(options.mouse){
+  const {x,y}=options.mouse,p=toWorld(x,y,w,h,side);
+  if(Math.hypot((p.x-FIELD.cx)/FIELD.rx,(p.y-FIELD.cy)/FIELD.ry)<.95){
+   ctx.save();ctx.lineWidth=1.2;ctx.strokeStyle='#ede4bdc9';
+   ctx.beginPath();ctx.arc(x,y,7,0,TAU);ctx.stroke();
+   line(ctx,x-15,y,x-10,y,'#f6e9c8ba',1);
+   line(ctx,x+10,y,x+15,y,'#f6e9c8ba',1);
+   line(ctx,x,y-15,x,y-10,'#f6e9c8ba',1);
+   line(ctx,x,y+10,x,y+15,'#f6e9c8ba',1);
+   ctx.restore();
+  }
+ }
 }
