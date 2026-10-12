@@ -366,7 +366,7 @@ export function installPocketDeck({
     if(event.target.closest('[data-deck-search]')){setView('library',{focus:true});return;}
     if(event.target.closest('[data-deck-account]')){
       const member=Boolean(window.PocketID?.getUser?.()?.complete);
-      if(member)window.PocketSocial?.openEditor?.()||window.PocketSocial?.open?.();
+      if(member){if(typeof window.PocketSocial?.openEditor==='function')window.PocketSocial.openEditor();else window.PocketSocial?.open?.();}
       else window.PocketID?.openAccount?.()||$('#pocket-id-trigger')?.click();
       return;
     }
