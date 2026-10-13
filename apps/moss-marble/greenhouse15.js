@@ -64,21 +64,21 @@ export class LivingGreenhouseLayer {
     this.wind = 0;
     this.windTarget = 0;
     this.pulses = [];
-    this.pollen = Array.from({ length: 28 }, (_, index) => ({
+    this.pollen = Array.from({ length: 22 }, (_, index) => ({
       x: hashNoise(index, 11),
       y: hashNoise(index, 23),
       depth: .25 + hashNoise(index, 37) * .75,
       phase: hashNoise(index, 41) * TAU,
       speed: .035 + hashNoise(index, 53) * .07
     }));
-    this.condensation = Array.from({ length: 20 }, (_, index) => ({
+    this.condensation = Array.from({ length: 12 }, (_, index) => ({
       x: hashNoise(index, 67),
       y: hashNoise(index, 71),
       length: 18 + hashNoise(index, 73) * 72,
       speed: .008 + hashNoise(index, 79) * .018,
       alpha: .035 + hashNoise(index, 83) * .08
     }));
-    this.vines = Array.from({ length: 8 }, (_, index) => ({
+    this.vines = Array.from({ length: 6 }, (_, index) => ({
       x: .05 + hashNoise(index, 91) * .9,
       length: .12 + hashNoise(index, 97) * .22,
       phase: hashNoise(index, 101) * TAU,
@@ -170,9 +170,10 @@ export class LivingGreenhouseLayer {
     ctx.fillRect(0, 0, width, height * .86);
 
     this.drawGreenhouseFrame(ctx, time, theme);
-    this.drawThemeLandmark(ctx, time, theme);
+    // Exhibition motifs and glass droplets live behind the menu, never over active play.
+    if (mode === 'menu') this.drawThemeLandmark(ctx, time, theme);
     this.drawDistantPlants(ctx, time, theme);
-    if (this.quality > .55) this.drawCondensation(ctx, time);
+    if (mode === 'menu' && this.quality > .7) this.drawCondensation(ctx, time);
     this.drawFloorMist(ctx, time, mode, theme);
   }
 
@@ -388,7 +389,7 @@ export class LivingGreenhouseLayer {
     this.drawReadabilityCues(ctx, level, ball, aim, time, mode, speed, theme);
     this.drawFlag(ctx, level, time);
     this.drawVines(ctx, time, mode);
-    this.drawPollen(ctx, time, speed, theme);
+    this.drawPollen(ctx, time, speed, theme, mode);
     this.drawPulses(ctx, dt);
     this.drawVignette(ctx, mode);
   }
@@ -419,14 +420,14 @@ export class LivingGreenhouseLayer {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     if (holeOnScreen) {
-      const pulse = this.reducedMotion ? .5 : .5 + Math.sin(time * 1.25 + hole.x * .004) * .5;
+      const pulse = this.reducedMotion ? .5 : .45 + Math.sin(time * .48 + hole.x * .004) * .08;
       this.traceGroundRing(ctx, field, hole.x, hole.y, hole.r + 12 + pulse * 3, holeGround, 1.15);
       ctx.strokeStyle = 'rgba(4,16,10,.66)';
       ctx.lineWidth = 3.4;
       ctx.stroke();
       this.traceGroundRing(ctx, field, hole.x, hole.y, hole.r + 12 + pulse * 3, holeGround, 1.35);
-      ctx.setLineDash([4, 7]);
-      ctx.lineDashOffset = this.reducedMotion ? 0 : -time * 3.5;
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
       ctx.strokeStyle = tint(theme.beam, .58 + pulse * .16);
       ctx.lineWidth = 1.25;
       ctx.stroke();
@@ -434,8 +435,8 @@ export class LivingGreenhouseLayer {
 
       const beacon = ctx.createLinearGradient(holeBase.x, holeBase.y, holeTop.x, holeTop.y);
       beacon.addColorStop(0, tint(theme.beam, 0));
-      beacon.addColorStop(.35, tint(theme.beam, .18));
-      beacon.addColorStop(1, tint(theme.beam, .48 + pulse * .12));
+      beacon.addColorStop(.35, tint(theme.beam, .12));
+      beacon.addColorStop(1, tint(theme.beam, .34 + pulse * .08));
       ctx.strokeStyle = beacon;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -452,16 +453,16 @@ export class LivingGreenhouseLayer {
       const ground = Number.isFinite(ball.groundZ) ? ball.groundZ : (field?.heightAt?.(ball.x, ball.y) || 0);
       const steady = speed < 8 && !ball.airborne;
       const visibility = aim?.active ? .88 : steady ? .64 : .24;
-      const cueRadius = 35 + (steady && !this.reducedMotion ? Math.sin(time * 1.7) * 1.5 : 0);
+      const cueRadius = 35;
       this.traceGroundRing(ctx, field, ball.x, ball.y, cueRadius, ground, 1.1, 32);
       ctx.strokeStyle = `rgba(2,12,7,${visibility * .72})`;
       ctx.lineWidth = 3.2;
       ctx.stroke();
       this.traceGroundRing(ctx, field, ball.x, ball.y, cueRadius, ground, 1.35, 32);
-      ctx.setLineDash([3, 8]);
-      ctx.lineDashOffset = this.reducedMotion ? 0 : time * 2.2;
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
       ctx.strokeStyle = tint(theme.accent, visibility);
-      ctx.lineWidth = 1.15;
+      ctx.lineWidth = steady ? 1.45 : .85;
       ctx.stroke();
       ctx.setLineDash([]);
 
@@ -610,8 +611,15 @@ export class LivingGreenhouseLayer {
     const bottom = this.renderer.worldToScreen(poleX, poleY, 94);
     const wave = this.reducedMotion ? 0 : Math.sin(time * 2.15 + hole.x * .01) * 4 + this.wind * 5;
     ctx.save();
-    ctx.fillStyle = 'rgba(210,169,84,.92)';
-    ctx.strokeStyle = 'rgba(117,88,39,.64)';
+    // A slender metal mast gives the pennant its own volume.
+    ctx.strokeStyle = 'rgba(17,40,27,.88)';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(top.x + 1, top.y + 2); ctx.lineTo(bottom.x + 1, bottom.y + 13); ctx.stroke();
+    ctx.strokeStyle = 'rgba(238,216,157,.68)';
+    ctx.lineWidth = .8;
+    ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(bottom.x, bottom.y + 12); ctx.stroke();
+    ctx.fillStyle = 'rgba(211,172,91,.95)';
+    ctx.strokeStyle = 'rgba(95,70,35,.72)';
     ctx.lineWidth = .8;
     ctx.beginPath();
     ctx.moveTo(top.x, top.y);
@@ -619,6 +627,14 @@ export class LivingGreenhouseLayer {
     ctx.quadraticCurveTo(top.x + 32, bottom.y - wave * .35, bottom.x, bottom.y);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(top.x + 8, top.y + 2);
+    ctx.quadraticCurveTo(top.x + 34, top.y + 6 + wave, top.x + 47, middle.y + wave * .36);
+    ctx.quadraticCurveTo(top.x + 31, middle.y + 1, top.x + 8, top.y + 2);
+    ctx.fillStyle = 'rgba(246,216,147,.28)';
+    ctx.fill();
+    ctx.beginPath(); ctx.arc(top.x, top.y, 2.4, 0, TAU);
+    ctx.fillStyle = 'rgba(236,219,165,.95)'; ctx.fill();
     ctx.restore();
   }
 
@@ -626,7 +642,7 @@ export class LivingGreenhouseLayer {
     const { width, height } = this;
     ctx.save();
     for (let index = 0; index < this.vines.length; index += 1) {
-      if (this.quality < .7 && index % 2) continue;
+      if ((mode === 'playing' || this.quality < .7) && index % 2) continue;
       const vine = this.vines[index];
       const originX = vine.side < 0 ? -8 : vine.side > 0 ? width + 8 : vine.x * width;
       const originY = vine.side === 0 ? -12 : height * (.14 + vine.x * .58);
@@ -674,18 +690,18 @@ export class LivingGreenhouseLayer {
     ctx.restore();
   }
 
-  drawPollen(ctx, time, speed, theme) {
+  drawPollen(ctx, time, speed, theme, mode) {
     const { width, height } = this;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    const count = Math.floor(this.pollen.length * this.quality);
+    const count = Math.floor(this.pollen.length * this.quality * (mode === 'playing' ? .42 : 1));
     for (let index = 0; index < count; index += 1) {
       const mote = this.pollen[index];
       const motion = this.reducedMotion ? 0 : time * mote.speed;
       const x = ((mote.x + motion * .14 + this.wind * .025 * mote.depth) % 1) * width;
       const y = ((mote.y + motion + Math.sin(time * .31 + mote.phase) * .012) % 1) * height;
       const radius = .7 + mote.depth * 1.45;
-      const alpha = .08 + mote.depth * .16 + Math.min(.08, speed / 12000);
+      const alpha = (.08 + mote.depth * .16 + Math.min(.08, speed / 12000)) * (mode === 'playing' ? .52 : 1);
       ctx.fillStyle = tint(theme.pollen, alpha);
       ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU); ctx.fill();
     }
