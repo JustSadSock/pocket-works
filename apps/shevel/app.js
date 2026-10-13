@@ -157,8 +157,21 @@ function refreshTimeline(){const wide=Math.max(PX*project.frames,Math.ceil($('#t
  const row=document.createElement('div');row.className='track-row'+(o.id===selected?' selected':'');row.style.width=wide+'px';const range=document.createElement('div');range.className='rangebar';range.style.left=(o.start*PX+5)+'px';range.style.right='4px';row.append(range);
  function mark(f,type,label){const k=document.createElement('div');k.className='key '+type;k.style.left=(f*PX+6)+'px';k.title=label+' · кадр '+(f+1);k.addEventListener('click',e=>{e.stopPropagation();selected=o.id;setFrame(f);refreshTimeline()});row.append(k)}
  for(const k of o.keys)mark(k.f,'transform','Движение');for(const c of o.cels)mark(c.f,'cel','Рисунок');for(const n of o.nodes)for(const k of n.poses)mark(k.f,'joint','Сустав');row.addEventListener('click',e=>{selected=o.id;const r=row.getBoundingClientRect();setFrame((e.clientX-r.left)/PX);refreshTimeline()});$('#tracks').append(row)}
- const playhead=document.createElement('div');playhead.className='timeline-playhead';playhead.id='timelineHead';$('#tracks').append(playhead);updatePlayhead()}
-function updatePlayhead(){const left=(frame*PX+6)+'px';$('#rulerHead').style.left=left;const e=$('#timelineHead');if(e)e.style.left=left}
+ $('#trackRight').querySelector('#timelineHead')?.remove();const playhead=document.createElement('div');playhead.className='timeline-playhead';playhead.id='timelineHead';$('#trackRight').append(playhead);refreshFilmstrip();updatePlayhead()}
+function refreshFilmstrip(){
+ const strip=$('#filmstrip');if(!strip||getComputedStyle(strip).display==='none')return;
+ const scroll=strip.scrollLeft;strip.replaceChildren();
+ const step=Math.max(1,Math.ceil(project.frames/12));
+ for(let f=0;f<project.frames;f+=step){
+  const b=document.createElement('button');b.type='button';b.className='film-frame';b.dataset.frame=String(f);b.title='Перейти к кадру '+(f+1);b.setAttribute('aria-label','Кадр '+(f+1));
+  const thumb=document.createElement('canvas');thumb.width=144;thumb.height=89;renderScene(thumb.getContext('2d'),f,{guides:false});
+  const label=document.createElement('span');label.textContent=String(f+1).padStart(3,'0');
+  b.append(thumb,label);b.addEventListener('click',()=>{stop();setFrame(f)});
+  strip.append(b)
+ }
+ strip.scrollLeft=scroll
+}
+function updatePlayhead(){const left=(frame*PX+6)+'px';$('#rulerHead').style.left=left;const e=$('#timelineHead');if(e)e.style.left=left;const step=Math.max(1,Math.ceil(project.frames/12));const bucket=Math.floor(frame/step)*step;for(const b of document.querySelectorAll('#filmstrip .film-frame'))b.classList.toggle('active',+b.dataset.frame===bucket)}
 $('#ruler').addEventListener('pointerdown',e=>{if(playing)stop();const r=$('#ruler').getBoundingClientRect();setFrame((e.clientX-r.left)/PX);$('#ruler').setPointerCapture(e.pointerId)});$('#ruler').addEventListener('pointermove',e=>{if(e.buttons&&$('#ruler').hasPointerCapture(e.pointerId)){const r=$('#ruler').getBoundingClientRect();setFrame((e.clientX-r.left)/PX)}});
 $('#playBtn').addEventListener('click',play);$('#prevBtn').addEventListener('click',()=>{stop();setFrame(frame-1)});$('#nextBtn').addEventListener('click',()=>{stop();setFrame(frame+1)});$('#loopBtn').addEventListener('click',()=>{loop=!loop;$('#loopBtn').classList.toggle('active',loop);$('#loopBtn').setAttribute('aria-pressed',String(loop))});
 $('#undoBtn').addEventListener('click',()=>{if(!undo.length)return;stop();redo.push(JSON.stringify(project));project=validate(JSON.parse(undo.pop()));selected=project.objects.some(o=>o.id===selected)?selected:project.objects.at(-1)?.id||null;frame=clamp(frame,0,project.frames-1);changed({structure:true})});
