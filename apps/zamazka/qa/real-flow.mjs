@@ -34,6 +34,16 @@ try{
   }));
   await page.goto('http://127.0.0.1:'+port+'/apps/zamazka/',{waitUntil:'domcontentloaded'});
   await page.locator('.museum-home').waitFor({timeout:16000});
+  // Real settings: volume persists, and the slider value is reflected without reloading.
+  await page.locator('#settingsBtn').click();
+  await page.locator('#settingVolume').waitFor();
+  await page.locator('#settingVolume').fill('35');
+  await page.locator('#modalActions .btn.primary').click();
+  const storedVolume=await page.evaluate(()=>localStorage.getItem('pocket-works:zamazka:sound-volume'));
+  assert.equal(storedVolume,'35','Sound level was not persisted');
+  await page.locator('#settingsBtn').click();
+  assert.equal(await page.locator('#settingVolume').inputValue(),'35');
+  await page.locator('#modalActions .btn.ghost').click();
   const primary=page.locator('#primary-action');
   assert.equal(await primary.getAttribute('data-action'),'create','cooperative mode must be primary');
   await page.locator('[data-action="practice"]').click();
@@ -42,6 +52,15 @@ try{
   await page.locator('.mobile-preview .gallery .picture').first().waitFor({timeout:17000});
   assert.equal(await page.locator('.mobile-preview .gallery .picture').count(),5);
   await page.locator('[data-action="skip"]').click();
+  const brush=page.locator('[data-tool="brush"]');
+  await brush.waitFor();
+  await page.locator('[data-tool="hand"]').click();
+  assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'hand');
+  await brush.click();
+  assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'brush');
+  await page.locator('#brushSize').fill('20');
+  const sample=await page.locator('#sizeSample').boundingBox();
+  assert(sample?.width>=18,'Brush diameter preview did not react to tool size');
   const board=page.locator('#paintCanvas');
   await board.waitFor({timeout:10000});
   await page.waitForTimeout(450);
@@ -57,6 +76,9 @@ try{
   assert(/Мазков: [1-9]/.test(indicator), 'editor failed to record real pointer stroke: '+indicator);
   await page.locator('[data-action="submit"]').click();
   await page.locator('.reveal-phase').waitFor({timeout:11000});
+  await page.locator('.reveal-phase.is-composed').waitFor({timeout:12000});
+  await page.waitForTimeout(500);
+  assert.equal(await page.locator('.exhibition-exit-layer').count(),0,'Old phase was not cleaned up');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-reveal-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="menu"]').first().click();
   await page.locator('[data-action="collection"]').click();
