@@ -117,6 +117,7 @@ function tickGame(s,inputs,dt){
  b.x+=b.vx*dt;b.y+=b.vy*dt;
  b.vy+=b.spin*b.vx*.001*dt;b.spin*=Math.exp(-2*dt);
  const drag=Math.exp(-.94*dt);b.vx*=drag;b.vy*=drag;
+ const speed=Math.hypot(b.vx,b.vy);if(speed>840){b.vx*=840/speed;b.vy*=840/speed;}
  if(b.y<FIELD.top+12){b.y=FIELD.top+12;b.vy=Math.abs(b.vy)*.83;}
  if(b.y>FIELD.bottom-12){b.y=FIELD.bottom-12;b.vy=-Math.abs(b.vy)*.83;}
  const insideGoal=Math.abs(b.y-310)<FIELD.goal-12;
@@ -184,9 +185,10 @@ const module={
  },
  onLeave({state,player,players}){
   advanceServer(state);
+  const leaving=state.members.find(m=>m.id===player.id);
   state.members=state.members.filter(m=>m.id!==player.id);
   if(state.host===player.id)state.host=players[0]?.id||'';
-  delete state.inputs[state.members.find(m=>m.id===player.id)?.slot];
+  if(leaving)delete state.inputs[leaving.side*4+leaving.slot];
   if(state.phase==='play')refreshPlayers(state);
   if(!state.members.length)state.phase='lobby';
   state.revision++;return {state,events:events(state)};
@@ -207,6 +209,12 @@ const module={
     const seat=assign(others,{id:m.id,name:m.name},side);m.side=seat.side;m.slot=seat.slot;m.profile.kit=side;
    }
    state.revision++;return {state,events:events(state)};
+  }
+  if(v.type==='tactic'&&state.phase==='play'){
+   const tactic=Number(v.value);
+   if(!Number.isInteger(tactic)||tactic<-1||tactic>1)return {state,events:[]};
+   state.match.tactics[m.side]=tactic;state.revision++;
+   return {state,events:events(state)};
   }
   if(v.type==='start'&&state.phase!=='play'&&state.host===player.id){
    if(state.members.length<2||!countTeam(state.members,0)||!countTeam(state.members,1))

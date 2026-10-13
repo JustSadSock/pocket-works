@@ -83,7 +83,7 @@ function renderPicks(){
 }
 function edit(){
  $('nameField').value=profile.name;$('numberField').value=profile.number;
- renderPicks();show('editor');
+ show('editor');renderPicks();
 }
 $('editBtn').addEventListener('click',edit);
 $('editorBack').addEventListener('click',()=>{profile=safeProfile(pref('player',DEFAULT));updateMenu();show('home');});
@@ -238,7 +238,9 @@ function kick(kind,power=1,dir){
  audio('kick');
 }
 $('passBtn').addEventListener('pointerdown',()=>kick('pass',.83));
+$('passBtn').addEventListener('click',e=>{if(e.detail===0)kick('pass',.83);});
 const shotEl=$('shotBtn');
+shotEl.addEventListener('click',e=>{if(e.detail===0)kick('shot',.8);});
 shotEl.addEventListener('pointerdown',e=>{
  if(screen!=='game'||paused)return;shotPointer={id:e.pointerId,x:e.clientX,y:e.clientY};
  chargeAt=performance.now();shotEl.classList.add('charging');
@@ -514,8 +516,8 @@ function frame(t){
      const input=readStick(),slot=mySlot(),control={x:input.x,y:input.y,angle:shotAim(),power:1,...actionQueued};
      advanceGame(g,{[slot]:control},dt);actionQueued=null;
     }
-    if(mode==='online'&&connected&&!paused&&t-lastSend>140){
-     const v=readStick();lastSend=t;safeSend({type:'input',x:v.x,y:v.y,angle:shotAim(),power:1});
+    if(mode==='online'&&connected&&t-lastSend>140){
+     const v=paused?{x:0,y:0}:readStick();lastSend=t;safeSend({type:'input',x:v.x,y:v.y,angle:shotAim(),power:1});
     }
    }
    if(g){
@@ -532,7 +534,7 @@ function frame(t){
  }
  requestAnimationFrame(frame);
 }
-window.addEventListener('pagehide',()=>{if(screen==='editor')save('player',safeProfile(profile));});
+window.addEventListener('pagehide',()=>{if(screen==='game'&&mode==='solo'&&practice)save('lastMatch', {score:practice.score,remain:practice.remain});});
 updateMenu();show('home');checkServer();initProfileIdentity();
 if(code&&/^(?:[0-9A-F]{8}|[0-9A-F-]{36})$/.test(code.toUpperCase()))connectNet('link');
 requestAnimationFrame(frame);

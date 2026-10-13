@@ -117,6 +117,7 @@ function tickGame(s,inputs,dt){
  b.x+=b.vx*dt;b.y+=b.vy*dt;
  b.vy+=b.spin*b.vx*.001*dt;b.spin*=Math.exp(-2*dt);
  const drag=Math.exp(-.94*dt);b.vx*=drag;b.vy*=drag;
+ const speed=Math.hypot(b.vx,b.vy);if(speed>840){b.vx*=840/speed;b.vy*=840/speed;}
  if(b.y<FIELD.top+12){b.y=FIELD.top+12;b.vy=Math.abs(b.vy)*.83;}
  if(b.y>FIELD.bottom-12){b.y=FIELD.bottom-12;b.vy=-Math.abs(b.vy)*.83;}
  const insideGoal=Math.abs(b.y-310)<FIELD.goal-12;
