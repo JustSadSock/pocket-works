@@ -34,7 +34,7 @@ concurrency:
 jobs:
   real-app-screenshots:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,6 +47,10 @@ jobs:
         run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      - name: Synchronize game server snapshots for isolated preview
+        # Screenshot runs need a buildable site, but never publish snapshot
+        # changes back into the source repository.
+        run: node scripts/build-pocketnet-modules.mjs --snapshot
       - name: Assemble production-like site
         run: npm run build:quality-site
       - name: Check screenshot lifecycle tests and syntax
@@ -54,14 +58,24 @@ jobs:
           node --check scripts/capture-covers.mjs
           node --check scripts/cover-intelligence.mjs
           node --test scripts/cover-intelligence.test.mjs
-      - name: Capture actual application screens
+      - name: Refresh all existing game covers in batches
         env:
           PW_COVER_SLUGS: ${{ github.event.inputs.slugs || '' }}
-          PW_COVER_LIMIT: ${{ github.event.inputs.limit || '12' }}
-          # Optional repository secret. Never required for deterministic selection.
+          PW_COVER_LIMIT: "24"
+          # Backfill request: every app last photographed before this date.
+          # The manifest records new attempts, preventing infinite retries.
+          PW_COVER_REFRESH_BEFORE: "2026-10-13T12:30:00Z"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PW_COVER_VISION_MODEL: ${{ vars.PW_COVER_VISION_MODEL || 'gpt-4.1-mini' }}
-        run: node scripts/capture-covers.mjs
+        run: |
+          for batch in $(seq 1 12); do
+            echo "Capturing cover batch $batch"
+            node scripts/capture-covers.mjs | tee /tmp/pocket-cover-batch.json
+            remaining=$(node -e "const fs=require('fs'); const result=JSON.parse(fs.readFileSync('/tmp/pocket-cover-batch.json','utf8')); process.stdout.write(String(result.remaining));")
+            echo "Remaining covers to attempt: $remaining"
+            if [ "$remaining" -eq 0 ]; then break; fi
+            sleep 1
+          done
       - name: Commit only verified screenshot files
         run: |
           git add -A -- covers/ || true
@@ -72,6 +86,17 @@ jobs:
           git config user.name 'pocket-works-cover-bot'
           git config user.email 'pocket-works-cover-bot@users.noreply.github.com'
           git commit -m 'chore(covers): refresh genuine app screenshots'
-          # New app commits may arrive while capture runs; retry via the next
-          # scheduled run rather than force-overwriting any unrelated changes.
-          git push origin HEAD:main
+          # Snapshot scaffolding was generated only for preview. Discard those
+          # local changes before rebasing our covers-only commit.
+          git reset --hard HEAD
+          git clean -fd pocketnet/module-versions/
+          # Pocket Works changes frequently while the batch runs: integrate
+          # newer main commits without ever force-pushing unrelated code.
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            git rebase origin/main || exit 1
+            sleep 2
+          done
+          echo "Could not push captured covers after five attempts" >&2
+          exit 1
