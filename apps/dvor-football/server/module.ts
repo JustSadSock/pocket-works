@@ -18,7 +18,7 @@ function safeProfile(v){
   kit:limit(Math.floor(Number(raw.kit)||0),0,4),number:limit(Math.floor(Number(raw.number)||9),1,99),stats};
 }
 function spawn(side,index){
- const offsets=[-136,-42,58,143];return {x:side?786:294,y:310+offsets[index],vx:0,vy:0,fx:side?-1:1,fy:0,cd:0,stun:0};
+ const offsets=[-136,-42,58,143];return {x:side?786:294,y:310+offsets[index],vx:0,vy:0,fx:side?-1:1,fy:0,cd:0,stun:0,stamina:1};
 }
 function newGame(){
  const players=[];
@@ -78,7 +78,10 @@ function tickGame(s,inputs,dt){
     if(kickBall(s,p,action,aim,nearNet?.83:.7))p.cd=nearNet?.72:1.1;
    }
   }
-  const dir=norm(mx,my),moving=Math.hypot(mx,my)>.08,pace=115+p.stats.pace*12;
+  const dir=norm(mx,my),moving=Math.hypot(mx,my)>.08;
+  const sprint=!!ctl?.sprint&&moving&&(p.stamina??1)>.055;
+  p.stamina=limit((p.stamina??1)+dt*(sprint?-.30:.19),0,1);
+  const pace=(115+p.stats.pace*12)*(sprint?1.48:1);
   const blend=Math.min(1,dt*(p.stats.control+7));
   p.vx+=(dir.x*(moving?pace:0)-p.vx)*blend;
   p.vy+=(dir.y*(moving?pace:0)-p.vy)*blend;
@@ -232,7 +235,7 @@ const module={
    if(!Number.isFinite(x)||!Number.isFinite(y)||Math.hypot(x,y)>1.1||!Number.isFinite(angle)||Math.abs(angle)>30||!Number.isFinite(power)||power<.3||power>1.3)return {state,events:[]};
    const slot=m.side*4+m.slot;
    const old=state.inputs[slot]||{};
-   state.inputs[slot]={x,y,angle,power,action:v.action==='pass'||v.action==='shot'?v.action:old.action||null};
+   state.inputs[slot]={x,y,angle,power,sprint:v.sprint===true,action:v.action==='pass'||v.action==='shot'?v.action:old.action||null};
    advanceServer(state);state.revision++;
    return {state,events:events(state)};
   }
