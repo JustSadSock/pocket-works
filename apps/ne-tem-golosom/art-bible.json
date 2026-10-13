@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "project": "ne-tem-golosom",
+  "premise": "The analog re-dubbing workshop, with a cinema reel collage and tactile audio timeline.",
+  "references": [
+    {
+      "name": "Vintage film editor",
+      "reason": "Diagonal moving film strip, punched border, real mechanical material."
+    },
+    {
+      "name": "Screening theater",
+      "reason": "Video consumes visual attention; controls are limited to one recording action."
+    },
+    {
+      "name": "Mobile audio editor",
+      "reason": "Direct timeline scrubbing with waveform-sized clip segments."
+    }
+  ],
+  "explorations": [
+    {
+      "name": "Cel-animation theater",
+      "assessment": "Too close to generic cartoon landing pages."
+    },
+    {
+      "name": "Flat waveform DAW",
+      "assessment": "Too close to Jam Tape; media should be the focus."
+    },
+    {
+      "name": "Analog film assembly",
+      "assessment": "Chosen: projector stage and physical tape for asynchronous dubbing."
+    }
+  ],
+  "chosen": "Analog film assembly",
+  "assetProvenance": "Original manually authored SVG illustration and icon; external clips are licensed by Blender Foundation as CC BY and credited in the scene chooser.",
+  "status": "authored"
+}
