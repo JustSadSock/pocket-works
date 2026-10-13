@@ -5,7 +5,7 @@ import {Editor,MAX_STROKES,MAX_STROKE_POINTS,MAX_TOTAL_POINTS} from '../editor.j
 function editor(){
  const target=Object.create(Editor.prototype);
  Object.assign(target,{
-  color:'#304a43',size:12,tool:'brush',strokes:[],redoStack:[],
+  color:'#304a43',size:12,tool:'brush',strokes:[],redoStack:[],zone:{x:-100,y:-100,w:2000,h:2000},
   working:null,limitWarned:false,
   inside(){return true},render(){},save(){},onChange(message){this.notice=message}
  });
@@ -50,3 +50,6 @@ assert.ok(liveCanvas,'editor must retain its painting render path');
 assert.doesNotMatch(liveCanvas,/setLineDash|damagePath\(ctx,this\.zone\);ctx\.stroke\(\)/,'no dashed damage guide on active canvas');
 assert.match(liveCanvas,/clipZone\(ctx,this\.zone\)/,'brush and fill remain clipped to damaged geometry');
 console.log('ZAMAZKA stable drawing, network budgets and precision input: OK');
+
+// Includes a real 320-stroke paced upload and near-border paint hit testing.
+import './edge-and-pacing.mjs';
