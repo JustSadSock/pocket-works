@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=13;
+export const RULESET_VERSION=14;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 // 0 = untimed drawing; only committed submissions from every participant end it.
@@ -91,7 +91,7 @@ function normalize(raw:unknown):Stroke[]|null{
  for(const item of raw){
    if(!item||typeof item!=='object')return null;
    const o=item as Record<string,unknown>;
-   if(!/^#[0-9a-f]{6}$/i.test(String(o.c))||!Number.isFinite(o.s)||Number(o.s)<1||Number(o.s)>48||!['brush','pencil','spray','erase','fill','smudge'].includes(String(o.t)))return null;
+   if(!/^#[0-9a-f]{6}$/i.test(String(o.c))||!Number.isFinite(o.s)||Number(o.s)<.25||Number(o.s)>48||Math.round(Number(o.s)*4)!==Number(o.s)*4||!['brush','pencil','spray','erase','fill','smudge'].includes(String(o.t)))return null;
    if(!Array.isArray(o.p)||o.p.length>(o.t==='fill'?1:96)||o.p.length<1)return null;
    const points:number[][]=[];
    for(const point of o.p){
