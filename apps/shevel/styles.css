@@ -44,3 +44,7 @@
 
 /* Independent vertical track viewport, with synchronized drawing/object scroll. */
 #trackNames{height:calc(100% - 30px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none}#trackNames::-webkit-scrollbar{display:none}#tracks{height:calc(100% - 30px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#63716c transparent}#tracks .timeline-playhead{position:sticky;top:0;pointer-events:none;z-index:3;height:0;bottom:auto}#tracks .timeline-playhead::after{content:'';display:block;width:2px;height:max(140px,100%);background:#dc8056}
+
+.zoom-deck #zoomExpand{font-size:11px;font-weight:750;min-width:48px;padding:0 3px}
+@media(max-width:600px){.zoom-deck:not(.expanded) #zoomOut,.zoom-deck:not(.expanded) #zoomIn,.zoom-deck:not(.expanded) #zoomReset{display:none}.zoom-deck #zoomExpand{min-width:46px}.zoom-deck{gap:0}}
+@media(orientation:landscape) and (max-height:550px) and (pointer:coarse){.zoom-deck:not(.expanded) #zoomOut,.zoom-deck:not(.expanded) #zoomIn,.zoom-deck:not(.expanded) #zoomReset{display:none}}
