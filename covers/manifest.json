@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "a4b28496899de81b79c570c32474c19bb8188ba8",
+    "revision": "ecedb65c13cd8a864c7515fb1db518816aa38713",
     "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "f76c195d2e35655c663f9a43d93f36ab1ae3a713926e14da76d8acf4737e7d87",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "a4b28496899de81b79c570c32474c19bb8188ba8",
-    "lastAttemptAt": "2026-10-13T11:18:20.158Z"
+    "lastAttemptRevision": "ecedb65c13cd8a864c7515fb1db518816aa38713",
+    "lastAttemptAt": "2026-10-13T12:39:17.088Z"
   },
   "natyazhenie": {
     "revision": "a4ade66f82635dbe41b65bd2117147dd278cdc5f",
@@ -17,11 +17,11 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "f660849aa345a47e1fa698a1e13fbba5cde50f7ca58014f42ea418857425f184",
+    "sha256": "190bf1202430bb95be5a95b9b03fcd23e0701f444c39e0ff15834c79949217dd",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "a4ade66f82635dbe41b65bd2117147dd278cdc5f",
-    "lastAttemptAt": "2026-10-13T10:36:26.969Z"
+    "lastAttemptAt": "2026-10-13T12:40:00.907Z"
   },
   "komnatka": {
     "revision": "fc93c563390ee3f9ff8ca7c6d4e760ac78b1f049",
@@ -33,7 +33,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "fc93c563390ee3f9ff8ca7c6d4e760ac78b1f049",
-    "lastAttemptAt": "2026-10-13T10:36:45.699Z"
+    "lastAttemptAt": "2026-10-13T12:40:16.627Z"
   },
   "picto": {
     "revision": "c2ce788cae1840c0bb2d6449d9ed92f9cbc56c0e",
@@ -45,19 +45,19 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "c2ce788cae1840c0bb2d6449d9ed92f9cbc56c0e",
-    "lastAttemptAt": "2026-10-13T10:36:56.621Z"
+    "lastAttemptAt": "2026-10-13T12:40:27.523Z"
   },
   "blind-pals": {
     "note": "existing cover rated higher",
     "status": "preserved",
     "lastAttemptRevision": "88f06193d8743c63c34cd11011071d1456290ac0",
-    "lastAttemptAt": "2026-10-13T10:37:07.571Z"
+    "lastAttemptAt": "2026-10-13T12:40:38.472Z"
   },
   "lipki": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "6d28906ddefa8eeda71089cfe2505a209a3b4395",
-    "lastAttemptAt": "2026-10-13T10:37:18.476Z"
+    "lastAttemptAt": "2026-10-13T12:40:49.380Z"
   },
   "kromka-duel": {
     "revision": "3ad4b8370621901a924afe3d81364257ef283175",
@@ -65,11 +65,11 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "df4669d4caa15e5194ce7675316bf45154f3a97c4a2a14a87b71883fe82a8636",
+    "sha256": "8830bb570d07611683a49d930c9ecc9a546f91069615feb9e11dad04455fb520",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "3ad4b8370621901a924afe3d81364257ef283175",
-    "lastAttemptAt": "2026-10-13T10:37:29.475Z"
+    "lastAttemptAt": "2026-10-13T12:41:00.289Z"
   },
   "styk": {
     "revision": "7dd224b2e88fac1c1a9a34064c2b8f73b699ed00",
@@ -81,7 +81,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "7dd224b2e88fac1c1a9a34064c2b8f73b699ed00",
-    "lastAttemptAt": "2026-10-13T10:37:40.486Z"
+    "lastAttemptAt": "2026-10-13T12:41:11.225Z"
   },
   "pepelny-dozor": {
     "revision": "6acabc605b35543e8f034e4f04bfa0500c72797e",
@@ -93,25 +93,25 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "6acabc605b35543e8f034e4f04bfa0500c72797e",
-    "lastAttemptAt": "2026-10-13T10:37:51.402Z"
+    "lastAttemptAt": "2026-10-13T12:41:22.135Z"
   },
   "palomnik": {
     "revision": "8755a6fbb1fd2744811dadbcbd3397d3dc51e926",
-    "qualityScore": 67,
+    "qualityScore": 66,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "6a1fba1948d0334a6ac1b50e0527f82a416e7dde96fe7218fbb9d41e71afe16c",
+    "sha256": "5a3d002e16f993d27b0969d711882a424ac153b5f5f0fdd7a90254c9a07870d5",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "8755a6fbb1fd2744811dadbcbd3397d3dc51e926",
-    "lastAttemptAt": "2026-10-13T10:38:02.351Z"
+    "lastAttemptAt": "2026-10-13T12:41:33.121Z"
   },
   "uzel-party": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "f1970ded338c614d46d4b879fafca73babbce423",
-    "lastAttemptAt": "2026-10-13T10:38:13.191Z"
+    "lastAttemptAt": "2026-10-13T12:41:43.945Z"
   },
   "stapel": {
     "revision": "068746e7a244079a79b487c512e955f9f099a211",
@@ -123,7 +123,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "068746e7a244079a79b487c512e955f9f099a211",
-    "lastAttemptAt": "2026-10-13T10:38:24.015Z"
+    "lastAttemptAt": "2026-10-13T12:41:54.782Z"
   },
   "veshchestvo": {
     "revision": "46e46c58ac7ab6c35f6925ff4f60153d00407fbd",
@@ -131,11 +131,11 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "63e0bddb2fe4666cc3717192a5826c5f1cf70b28cc8ef401375ca01ef0464726",
+    "sha256": "da156c2a34ac5d189af05ce38553e48a8fe086169bb389fedc7aa4310de60388",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "46e46c58ac7ab6c35f6925ff4f60153d00407fbd",
-    "lastAttemptAt": "2026-10-13T10:45:15.555Z"
+    "lastAttemptAt": "2026-10-13T12:42:05.864Z"
   },
   "chush": {
     "revision": "48a10b11609fafea08535fba252b475e71809170",
@@ -147,19 +147,19 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "48a10b11609fafea08535fba252b475e71809170",
-    "lastAttemptAt": "2026-10-13T10:45:26.457Z"
+    "lastAttemptAt": "2026-10-13T12:42:16.782Z"
   },
   "folio": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "lastAttemptAt": "2026-10-13T10:45:37.242Z"
+    "lastAttemptAt": "2026-10-13T12:42:27.576Z"
   },
   "flagpost": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "lastAttemptAt": "2026-10-13T10:45:48.066Z"
+    "lastAttemptAt": "2026-10-13T12:42:38.393Z"
   },
   "jam-tape": {
     "revision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
@@ -171,7 +171,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "lastAttemptAt": "2026-10-13T10:45:58.938Z"
+    "lastAttemptAt": "2026-10-13T12:42:49.296Z"
   },
   "klyatvy": {
     "revision": "9c2ced319a4771dfe3e073907c528eff1099fe5c",
@@ -183,7 +183,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "9c2ced319a4771dfe3e073907c528eff1099fe5c",
-    "lastAttemptAt": "2026-10-13T10:46:09.738Z"
+    "lastAttemptAt": "2026-10-13T12:43:00.100Z"
   },
   "ne-moya-problema": {
     "revision": "1e1bf85d83537da7f37563aa3bdb4a2a4456c254",
@@ -195,13 +195,13 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "1e1bf85d83537da7f37563aa3bdb4a2a4456c254",
-    "lastAttemptAt": "2026-10-13T10:46:20.553Z"
+    "lastAttemptAt": "2026-10-13T12:43:10.919Z"
   },
   "last-raven": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "022e7495cf6585eed5466b81904bfafcdf8f1659",
-    "lastAttemptAt": "2026-10-13T10:46:34.915Z"
+    "lastAttemptAt": "2026-10-13T12:43:24.586Z"
   },
   "doctrina": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -213,7 +213,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T10:46:45.846Z"
+    "lastAttemptAt": "2026-10-13T12:43:35.468Z"
   },
   "gerbovnik": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -225,7 +225,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T10:46:56.694Z"
+    "lastAttemptAt": "2026-10-13T12:43:46.278Z"
   },
   "pyad": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -237,7 +237,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T10:47:07.619Z"
+    "lastAttemptAt": "2026-10-13T12:44:00.578Z"
   },
   "defixio": {
     "revision": "e7eefde739177d06760d215d009f54b54b06960c",
@@ -249,7 +249,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "e7eefde739177d06760d215d009f54b54b06960c",
-    "lastAttemptAt": "2026-10-13T10:47:18.549Z"
+    "lastAttemptAt": "2026-10-13T12:44:11.476Z"
   },
   "moss-marble": {
     "revision": "47246dc0c25d9e15dd964a937d43b814788d18aa",
@@ -257,11 +257,11 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "08d0e32010930ab28962f1d5b076d64d4bd585bbf53e87be192daf32454782fd",
+    "sha256": "4ce7b2337b35a9cfa633c34885124800f73432f77b85c2ecbcec4e0403f4d445",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "47246dc0c25d9e15dd964a937d43b814788d18aa",
-    "lastAttemptAt": "2026-10-13T11:09:52.205Z"
+    "lastAttemptAt": "2026-10-13T12:39:50.048Z"
   },
   "petlya-17": {
     "revision": "f677c4713bbbc38a27e2a679beac6e796aea0036",
@@ -269,11 +269,11 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "65e6fc552ac434d763cb37c9c3abb3e80fe287d922986584973f371a90c72bbe",
+    "sha256": "3b0c2edcbe68b8d2a2c2c43df98dc575d98c48921005c2d80324fe340794be24",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "f677c4713bbbc38a27e2a679beac6e796aea0036",
-    "lastAttemptAt": "2026-10-13T11:40:42.802Z"
+    "lastAttemptAt": "2026-10-13T12:39:37.922Z"
   },
   "mechanica": {
     "revision": "0967d606d71d887fbc3837cd34d7b0619b805e75",
@@ -285,7 +285,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "0967d606d71d887fbc3837cd34d7b0619b805e75",
-    "lastAttemptAt": "2026-10-13T11:10:14.248Z"
+    "lastAttemptAt": "2026-10-13T12:44:22.313Z"
   },
   "cantica-glass": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -297,7 +297,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:10:25.506Z"
+    "lastAttemptAt": "2026-10-13T12:44:33.605Z"
   },
   "horugvi": {
     "revision": "0792b670a624026f21fbc54e59c23cd831ccd1b8",
@@ -309,7 +309,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "0792b670a624026f21fbc54e59c23cd831ccd1b8",
-    "lastAttemptAt": "2026-10-13T11:10:36.406Z"
+    "lastAttemptAt": "2026-10-13T12:44:44.487Z"
   },
   "vitrum": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -321,7 +321,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:10:47.238Z"
+    "lastAttemptAt": "2026-10-13T12:44:55.306Z"
   },
   "perigee": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -329,11 +329,11 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "0c0dc09c78cb25c98fe04ad87a26a20ad9483fda5be03b7b934478bfb4d1eed7",
+    "sha256": "d4087620fca844ee75d6a2f5a46402d2b8f2cab21274a88957bf35d6dd0a30ef",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:10:58.169Z"
+    "lastAttemptAt": "2026-10-13T12:45:06.319Z"
   },
   "afterhours-arena": {
     "revision": "262dc1ad3b232ef62730a51e8aded2e7dcdbf310",
@@ -345,7 +345,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "262dc1ad3b232ef62730a51e8aded2e7dcdbf310",
-    "lastAttemptAt": "2026-10-13T11:11:09.203Z"
+    "lastAttemptAt": "2026-10-13T12:45:17.358Z"
   },
   "chronoscope": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -357,13 +357,13 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:11:20.042Z"
+    "lastAttemptAt": "2026-10-13T12:45:28.210Z"
   },
   "third-oath": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "b3475e4b44c74da1645a99b9fac6fccf5afc4ef9",
-    "lastAttemptAt": "2026-10-13T11:11:30.921Z"
+    "lastAttemptAt": "2026-10-13T12:45:39.085Z"
   },
   "inkfall": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -371,11 +371,11 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "118511b279542ccef4ae66e44039f9a3695921f0b8b953fdb772f28e340c61d2",
+    "sha256": "965bed746f06ede84891ba64b320deea0e0c5477a43da6a5922456f32bbd5f90",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:11:41.847Z"
+    "lastAttemptAt": "2026-10-13T12:45:50.014Z"
   },
   "rasklad": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -387,7 +387,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:11:52.668Z"
+    "lastAttemptAt": "2026-10-13T12:46:00.836Z"
   },
   "corvus-yard": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -395,11 +395,11 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "ada1976c65bcbc73906a12a6b64a87cb521003fa159960835e72aa5cff511440",
+    "sha256": "9d22a53e667e868de6d3e6860261618b7f374bc5b58b139674246e929d8dfa88",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:18:38.916Z"
+    "lastAttemptAt": "2026-10-13T12:46:17.284Z"
   },
   "morok": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -411,7 +411,7 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:18:49.898Z"
+    "lastAttemptAt": "2026-10-13T12:46:28.157Z"
   },
   "last-stone": {
     "revision": "209d02d14094b6e9622ea2a0fa7627def7d4ba7e",
@@ -423,19 +423,19 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "209d02d14094b6e9622ea2a0fa7627def7d4ba7e",
-    "lastAttemptAt": "2026-10-13T11:19:02.614Z"
+    "lastAttemptAt": "2026-10-13T12:46:40.425Z"
   },
   "polus": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:19:13.492Z"
+    "lastAttemptAt": "2026-10-13T12:46:51.282Z"
   },
   "zastava": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "5a63e5475078490d38f8f9cec169fe19d2e9b3ee",
-    "lastAttemptAt": "2026-10-13T11:19:36.914Z"
+    "lastAttemptAt": "2026-10-13T12:47:13.613Z"
   },
   "iron-swarm": {
     "revision": "96c1a39d2029e299345a0caae2b65cd653931f28",
@@ -447,31 +447,31 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "96c1a39d2029e299345a0caae2b65cd653931f28",
-    "lastAttemptAt": "2026-10-13T11:19:50.753Z"
+    "lastAttemptAt": "2026-10-13T12:47:26.842Z"
   },
   "mahjong-dojo": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:20:01.677Z"
+    "lastAttemptAt": "2026-10-13T12:47:37.736Z"
   },
   "n-space": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "660f87254e3eb0ead556787e22068a0a4cf45857",
-    "lastAttemptAt": "2026-10-13T11:20:12.523Z"
+    "lastAttemptAt": "2026-10-13T12:47:48.564Z"
   },
   "arena-shift": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "89e16261f32618a467e00cedcfd84eeb2857f4c2",
-    "lastAttemptAt": "2026-10-13T11:20:28.280Z"
+    "lastAttemptAt": "2026-10-13T12:48:04.338Z"
   },
   "rivet": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "89e16261f32618a467e00cedcfd84eeb2857f4c2",
-    "lastAttemptAt": "2026-10-13T11:20:42.939Z"
+    "lastAttemptAt": "2026-10-13T12:48:19.063Z"
   },
   "komok": {
     "revision": "17e54216119c505cb8dc84c4667b6b7816325631",
@@ -479,23 +479,23 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "89d8b3a4240a6d4e59c6e25a1739d897c18469b4852bc87d0f6d354f3e86c2aa",
+    "sha256": "5c99744b7f55a3ae1e8f95ebfb94b9288188c4a562e2ad2bf457e075845f41b8",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "17e54216119c505cb8dc84c4667b6b7816325631",
-    "lastAttemptAt": "2026-10-13T11:21:01.385Z"
+    "lastAttemptAt": "2026-10-13T12:48:36.447Z"
   },
   "dead-air-13": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "31809da807c350caa0ce5c877d09ebf3f3126caa",
-    "lastAttemptAt": "2026-10-13T11:40:53.876Z"
+    "lastAttemptAt": "2026-10-13T12:48:47.491Z"
   },
   "melt-crypt": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:41:04.952Z"
+    "lastAttemptAt": "2026-10-13T12:49:02.026Z"
   },
   "scenograph": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -507,25 +507,25 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:41:15.764Z"
+    "lastAttemptAt": "2026-10-13T12:49:12.854Z"
   },
   "zamkni": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:41:26.577Z"
+    "lastAttemptAt": "2026-10-13T12:49:23.699Z"
   },
   "crumple-yard": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "c1c58d0256bc5b7d134031f0488ed21da976f038",
-    "lastAttemptAt": "2026-10-13T11:41:40.897Z"
+    "lastAttemptAt": "2026-10-13T12:49:37.425Z"
   },
   "formica-colony": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:41:51.742Z"
+    "lastAttemptAt": "2026-10-13T12:49:48.273Z"
   },
   "veloria-mandate": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -537,19 +537,19 @@
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:42:02.589Z"
+    "lastAttemptAt": "2026-10-13T12:49:59.123Z"
   },
   "pit-loop": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "915244e418afdd50a9523b823db552485c84fb1f",
-    "lastAttemptAt": "2026-10-13T11:42:13.340Z"
+    "lastAttemptAt": "2026-10-13T12:50:09.922Z"
   },
   "kinema": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:42:31.163Z"
+    "lastAttemptAt": "2026-10-13T12:50:26.835Z"
   },
   "pelagos": {
     "revision": "3d6e72c110edbb4a925d6febb48b6e5308df7439",
@@ -557,16 +557,790 @@
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "c3b607dc1f4f45c93d1940b36f63c0bb43a622b26dab9e9a032953a0c53a61b9",
+    "sha256": "219f2c0d7b628964d529d79040f819fd2a7413fa84e7d7ebe1324f6896afcc0c",
     "imageVersion": 2,
     "status": "published",
     "lastAttemptRevision": "3d6e72c110edbb4a925d6febb48b6e5308df7439",
-    "lastAttemptAt": "2026-10-13T11:42:51.093Z"
+    "lastAttemptAt": "2026-10-13T12:50:45.656Z"
   },
   "aetherwing": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T11:43:06.955Z"
+    "lastAttemptAt": "2026-10-13T12:51:01.227Z"
+  },
+  "sirocco": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:51:17.341Z"
+  },
+  "gloamstep": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:51:28.220Z"
+  },
+  "sinew": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:51:45.210Z"
+  },
+  "bellforge-last-chime": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:52:26.549Z"
+  },
+  "colossus-inside": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:52:47.043Z"
+  },
+  "relic-siege": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 51,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "b3b914a3d06b2139356a7f9296e15e813b5888c8d5f90c00cee120138d906757",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:53:07.649Z"
+  },
+  "carapace-forge": {
+    "revision": "c8e7eb9176e3ed4520d1e75043d3179a8e64720e",
+    "qualityScore": 71,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "eea91dbf0bfb7251befb75a52ad5a4cb23de03cb7cdf1c08dcc36d3bfcd19862",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "c8e7eb9176e3ed4520d1e75043d3179a8e64720e",
+    "lastAttemptAt": "2026-10-13T12:53:29.102Z"
+  },
+  "firn": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:53:47.321Z"
+  },
+  "miniature-lab": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 77,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "6f462a523aed1b460658ff62af9aea3eb633b105f5977860e3c36c321efa6e74",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:53:58.323Z"
+  },
+  "toy-lens": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 77,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "c17601ac8abc147fcc14852359805349228436e9ed532d13cd08f821802c54db",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:54:09.155Z"
+  },
+  "power-anatomy": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "d9f86cfc2a92b488fcd6e0cad324ea6910de8768",
+    "lastAttemptAt": "2026-10-13T12:54:19.930Z"
+  },
+  "munchkin-level-forge": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 83,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "c98aa86cafcae354e5670fbc7a03079e385e2c60a9a103111085db90645b8e4a",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:54:30.877Z"
+  },
+  "iev-disput": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "f5a12abc3ef1d7651c92fa1df1b4dcb79b0bcab7",
+    "lastAttemptAt": "2026-10-13T12:54:41.613Z"
+  },
+  "scriptorium": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 82,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "c3d999d765c1f768d6039bcd3cd86659193e95ccbeba7fc87787e6390d1bb8c0",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:54:52.469Z"
+  },
+  "perelist": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:55:06.610Z"
+  },
+  "kvarta": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:55:17.399Z"
+  },
+  "rivals-roulette": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 81,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f1e4bc9964b62673690aa9502e9473ec272f0edcc122269d322c2c05ce754416",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:55:28.209Z"
+  },
+  "chancellery": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:55:39.046Z"
+  },
+  "rivals-fit-lab": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:55:49.815Z"
+  },
+  "witness-of-era": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:56:00.562Z"
+  },
+  "tempo": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:56:11.413Z"
+  },
+  "mazok": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "6f99ee31484e006f2d73d03069814ecc894f3f57",
+    "lastAttemptAt": "2026-10-13T12:56:22.197Z"
+  },
+  "rebro": {
+    "revision": "10043dfca7d7679711dca28413d0f06ffb37eae0",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "2e25db40d4be53b38f6bee4ef124c713d53b4292b99cf87d59d90d7eeefb6da3",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "10043dfca7d7679711dca28413d0f06ffb37eae0",
+    "lastAttemptAt": "2026-10-13T12:56:33.073Z"
+  },
+  "takt": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "4a4e398eebe4ef4c048c61951278750aa61769c7",
+    "lastAttemptAt": "2026-10-13T12:56:43.993Z"
+  },
+  "forma": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 73,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "5874971b8253a46214474a18bbe1833cf094245189352e66ff55b6070ce06309",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:56:54.841Z"
+  },
+  "rival-forge": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 70,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "b3bfac6c66e57d25f158931b7da47a0ea045a3b41f3ea9036222c81313a3ad6f",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:57:05.773Z"
+  },
+  "clada": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:57:16.695Z"
+  },
+  "kryazh": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:57:27.450Z"
+  },
+  "redline-vector": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 63,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "dfe4e2ba84ee0666d397d9c87f75dc4b6bc976b1867de19eaaa3d47a729168c0",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:57:38.323Z"
+  },
+  "facet-face-lab": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:57:49.121Z"
+  },
+  "bubble-bob": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 84,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "3d51df072a021ffd0649b1377737bf3dd8eedc1b0900e30d8492233bd0246cbd",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:58:00.152Z"
+  },
+  "kalibr": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:58:10.882Z"
+  },
+  "plast": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "394cdd9bf058ac22e351414f713a2e3c7c683fe4",
+    "lastAttemptAt": "2026-10-13T12:58:31.473Z"
+  },
+  "nulevoy-etazh": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:58:42.385Z"
+  },
+  "prelom": {
+    "revision": "26ee12b5df87b8d1191e7bb0417e1821e0ce8bfe",
+    "qualityScore": 69,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "c27dbe575fd1904aa79a0e13ace2b855c24878a0f711c6e06c2d0d7f2de0f113",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "26ee12b5df87b8d1191e7bb0417e1821e0ce8bfe",
+    "lastAttemptAt": "2026-10-13T12:58:53.219Z"
+  },
+  "sovpalo": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:59:04.070Z"
+  },
+  "poryadok": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "872e784281d0e2fc2107aba4a3da01678e42b48109fb4e1ae63862be6af22016",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:59:14.931Z"
+  },
+  "otklik": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:59:25.718Z"
+  },
+  "impuls": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:59:39.837Z"
+  },
+  "nomos-lab": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T12:59:50.649Z"
+  },
+  "causa": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:00:01.482Z"
+  },
+  "emergence-lab": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:00:12.339Z"
+  },
+  "regent": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 62,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "3c03a3ab846be22a16ee7aecea766bdb509388993cc2167c6405e86444ff4c9d",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:00:23.174Z"
+  },
+  "quorum": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 71,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "7ff85cf0d0ab1c063494edad32859c174ccd15643f276640cadd7c013e947add",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:00:33.980Z"
+  },
+  "karkas": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:00:44.766Z"
+  },
+  "palimpsest": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:00:55.557Z"
+  },
+  "false-atlas": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "acca44c74ec9cafb2868daf67977273d352320d54d3cffd12baff2cff4af5bb0",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:01:06.389Z"
+  },
+  "kaskad": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 80,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 3,
+    "sha256": "8bec408b7e3176f1f68072fe86ba08a1371c14e5e48704fefe226802f0c5a1f5",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:01:17.245Z"
+  },
+  "bastion-bolt": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 68,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "7a59c6d2740e617c57be532e0c689664a867700db5c079728bd25a43f2e2f9e4",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:01:30.608Z"
+  },
+  "parallax": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:01:41.466Z"
+  },
+  "petlya": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:01:52.266Z"
+  },
+  "chronatlas": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "7e8efdb0cc110d2bff676c849ebc4ee974ca3344",
+    "lastAttemptAt": "2026-10-13T13:02:03.130Z"
+  },
+  "ars-machina": {
+    "revision": "c57b9c95201380bd854feb340eb4533714d0f8b1",
+    "qualityScore": 69,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "3c1b2733ee26655809b9b8307eda1a47e7a73c8b28f095f2533a6471d44269c1",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "c57b9c95201380bd854feb340eb4533714d0f8b1",
+    "lastAttemptAt": "2026-10-13T13:02:14.081Z"
+  },
+  "iznanka": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 61,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f3a538eb58a87fab8027c1fcabd0c4361c888519875e8bca6219a17b2ca94152",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:02:24.916Z"
+  },
+  "moss-pocket": {
+    "revision": "bb8221f22dd2f93d2da84a34a9697ca9d159d038",
+    "qualityScore": 61,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "b1294ace7c69afd495379ba1e4f36d8bfa2039038a56dc7e27945af4deca2d2e",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "bb8221f22dd2f93d2da84a34a9697ca9d159d038",
+    "lastAttemptAt": "2026-10-13T13:02:35.733Z"
+  },
+  "ottisk": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:02:46.648Z"
+  },
+  "lipuchka": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:02:57.446Z"
+  },
+  "whistle-90": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 80,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "6fd6116d43c21657aebc93f00f380b79b691d4440d7df8fd1ea0bb88920e9a7e",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:03:08.389Z"
+  },
+  "blazon": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 62,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "4065f60b8dc5cdb3f72a1c342a49f9dec0c23fddaf7d8088e5148950c7a10733",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:03:19.170Z"
+  },
+  "rat": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 67,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "06399a5ad2d0659ccd9de2e5f214a886d7a7399a748d969d1b4f89971930b8e1",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:03:30.188Z"
+  },
+  "faza": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:03:40.975Z"
+  },
+  "vetrolom": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 75,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "9505e25e532bb4b4174f25b21a6d8650b3a481bb806c47e3b071e6d5a698635d",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:03:51.783Z"
+  },
+  "seam": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 73,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "700ce0b15afdd6c08a10bdf6ee1a55461e8c84dd9b1ac622f5b01367bd7a7d76",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:04:06.029Z"
+  },
+  "linii-vetra": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 71,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "aaccc41de8f2daef4dc37abdf1d5b4784e7cf87c0d5ac07a7cb9b36af6b4d3f9",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:04:17.044Z"
+  },
+  "kordon": {
+    "revision": "7bcbf0199d99d15eff48f1552aa9656049424d67",
+    "qualityScore": 65,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "c402137e491f4a926b5f0e9b7c794b7b35481d0ccffe18ea3f522f4aca95cb03",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "7bcbf0199d99d15eff48f1552aa9656049424d67",
+    "lastAttemptAt": "2026-10-13T13:04:27.947Z"
+  },
+  "hemline": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "bec1404feb037740369a26bc4cc6ca674d3e7a6c",
+    "lastAttemptAt": "2026-10-13T13:04:38.750Z"
+  },
+  "sled": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:04:49.474Z"
+  },
+  "pereplet": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b7035ef0af780478964aa107726c4e7c00a67ad",
+    "lastAttemptAt": "2026-10-13T13:05:00.254Z"
+  },
+  "orbita": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "6c465cdc5eca810f01fa9517aabe3cb1b05f3b6c",
+    "lastAttemptAt": "2026-10-13T13:05:11.042Z"
+  },
+  "turniket": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 72,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "7f43b628589c85282a535f86f088ac408df9eacd42f41de76280a5e56909e892",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:05:21.831Z"
+  },
+  "vektor": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:05:32.572Z"
+  },
+  "sdvig": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:05:43.403Z"
+  },
+  "messa": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "7bc56c31c5716280751e358c094c97271c77fd59",
+    "lastAttemptAt": "2026-10-13T13:05:55.578Z"
+  },
+  "pepelnick": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:06:06.486Z"
+  },
+  "khrebet": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 67,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "dcbbbc47d604a735e7f16dc41cd2fd5f2dd3a36d167f7b8335c58a5869aa743d",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:06:18.429Z"
+  },
+  "sgib": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "75a6122293c151b59f4fafe94b3912f9f1e08da0ecd83362d5327da1b03d728d",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:06:29.366Z"
+  },
+  "svod": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "0d43923304113463c5966bc26a517bffabaf5032",
+    "lastAttemptAt": "2026-10-13T13:06:40.225Z"
+  },
+  "shpilka": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:06:51.077Z"
+  },
+  "polevoy-shtab": {
+    "revision": "02f9f9060fb5f58772491da0dc8f2270f8c848f7",
+    "qualityScore": 79,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "ac02c2ba9781e6e61e3da08f09b7aeed4e5df63b3cb2bea30d81e4f0661ea1c2",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "02f9f9060fb5f58772491da0dc8f2270f8c848f7",
+    "lastAttemptAt": "2026-10-13T13:07:01.921Z"
+  },
+  "glubina-13": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:07:12.935Z"
+  },
+  "fifty-hz": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 79,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "9322963b966cfa356fa3ac40972309b1e4d3d092e5b65328a34b23eca43c1833",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:07:23.761Z"
+  },
+  "sfery": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:07:34.543Z"
+  },
+  "prosvet": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "1773b996600aa748bf9b5d5e014ff7ef195e279c",
+    "lastAttemptAt": "2026-10-13T13:07:45.465Z"
+  },
+  "udel": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "7abe0d2730f30bed1ec5d32b04c8de73db777a5c",
+    "lastAttemptAt": "2026-10-13T13:07:56.231Z"
+  },
+  "cherta": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "be40590ef43b4eccaded1704be44da501b3a86fe",
+    "lastAttemptAt": "2026-10-13T13:08:07.135Z"
+  },
+  "kontur": {
+    "revision": "f5df797c7c9976703a1cf7fc86097cab2d12d0f0",
+    "qualityScore": 79,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "0311516405bcfe1f9d3d72e0e4cedad218d45ee4d7a2bccd0f6b9a56e4b6f0af",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "f5df797c7c9976703a1cf7fc86097cab2d12d0f0",
+    "lastAttemptAt": "2026-10-13T13:08:18.114Z"
+  },
+  "myalo": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:08:34.625Z"
+  },
+  "sente": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "24d09f0fa4be2c7d2536ae46e6c54d9ecd5f11b9",
+    "lastAttemptAt": "2026-10-13T13:08:45.462Z"
+  },
+  "zero-frame": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "988034b2015e893e95d5ef53cf5301c950376f24",
+    "lastAttemptAt": "2026-10-13T13:08:56.337Z"
+  },
+  "otves": {
+    "revision": "92a29e8a19255aa615d2a2bc1ee50c24b8e25d9c",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "54eb398ac7bafd27fe2e89ee9af9efbf616f416c156595a06a84362419a3d5e7",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "92a29e8a19255aa615d2a2bc1ee50c24b8e25d9c",
+    "lastAttemptAt": "2026-10-13T13:09:07.301Z"
+  },
+  "kromka": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "e5d8df24dceda10dda4a2751174634eac1465f4e",
+    "lastAttemptAt": "2026-10-13T13:09:18.128Z"
+  },
+  "echoes": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "9f58bec8f3a01f71a82244c09c896a2cf242c33e",
+    "lastAttemptAt": "2026-10-13T13:09:32.363Z"
+  },
+  "screen-lab": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T13:09:43.345Z"
   }
 }
