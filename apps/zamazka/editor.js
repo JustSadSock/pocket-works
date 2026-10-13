@@ -337,7 +337,7 @@ export class Editor{
    this.cursor.style.left=c.left+drawn[0]/W*c.width-v.left-this.viewport.clientLeft+'px';
    this.cursor.style.top=c.top+drawn[1]/H*c.height-v.top-this.viewport.clientTop+'px';
     this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.tool==='smudge'?'#c6a36d':this.color);
-     this.cursor.classList.toggle('is-smudge',this.tool==='smudge');
+     this.cursor.classList?.toggle?.('is-smudge',this.tool==='smudge');
     this.cursor.hidden=false;
   }
   hideCursor(){if(this.cursor)this.cursor.hidden=true}
