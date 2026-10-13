@@ -19,6 +19,33 @@ const hash=async value=>{
  const sum=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
  return Array.from(sum,n=>n.toString(16).padStart(2,'0')).join('');
 };
+// Explicit choice instead of browser confirm(): Cancel never uploads or replaces art.
+function chooseArtVersion({title,description,options}){
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');
+  dialog.className='zamazka-cloud-choice';
+  dialog.setAttribute('aria-label',title);
+  const heading=document.createElement('h2');heading.textContent=title;
+  const info=document.createElement('p');info.textContent=description;
+  const buttons=document.createElement('div');buttons.className='cloud-choice-buttons';
+  dialog.append(heading,info,buttons);
+  let finished=false;
+  const finish=value=>{
+   if(finished)return;finished=true;dialog.close();dialog.remove();resolve(value);
+  };
+  for(const option of options){
+   const b=document.createElement('button');
+   b.type='button';b.textContent=option.label;b.className=option.primary?'cloud-choice-primary':'';
+   b.addEventListener('click',()=>finish(option.value));
+   buttons.append(b);
+  }
+  dialog.addEventListener('cancel',e=>{e.preventDefault();finish('cancel')});
+  document.body.append(dialog);
+  try{dialog.showModal();buttons.querySelector('button')?.focus()}
+  catch{finish('cancel')}
+ });
+}
+
 export function createZamazkaCloud({getArchive,setArchive,getEmblem,setEmblem,notify}){
  let user=null,client=null,working=false,enabled=false,timer=null;
  let status='Только на этом устройстве';
@@ -40,9 +67,12 @@ export function createZamazkaCloud({getArchive,setArchive,getEmblem,setEmblem,no
   const owner=localStorage.getItem(OWNER);
   if(owner&&owner!==user.id){
    if(!manual){enabled=false;update('Другой аккаунт · требуется подтверждение');return false}
-   if(!confirm('На устройстве есть работы другого Pocket ID. Добавить их копии в этот аккаунт? Исходные файлы останутся локально.')){
-    update('Синхронизация отменена');return false;
-   }
+   const allowed=await chooseArtVersion({
+    title:'Чужие работы на устройстве',
+    description:'Добавить локальные картины в этот Pocket ID? Оригиналы останутся на устройстве.',
+    options:[{label:'Добавить копии',value:'yes',primary:true},{label:'Отмена',value:'cancel'}]
+   });
+   if(allowed!=='yes'){update('Синхронизация отменена');return false}
   }
   try{localStorage.setItem(OWNER,user.id)}catch{}
   enabled=true;return true;
@@ -93,7 +123,17 @@ export function createZamazkaCloud({getArchive,setArchive,getEmblem,setEmblem,no
    update('Знаки на устройствах отличаются · выбери версию вручную');
    return 'conflict';
   }
-  const fromCloud=confirm('Личный знак отличается. OK — применить облачный знак. Отмена — оставить и загрузить текущий. Вторая версия будет сохранена в локальном резерве.');
+  const picked=await chooseArtVersion({
+   title:'Два разных личных знака',
+   description:'Выбери нужную версию. Другую сохраним в локальной резервной копии.',
+   options:[
+    {label:'Взять облачный знак',value:'cloud',primary:true},
+    {label:'Сохранить локальный',value:'local'},
+    {label:'Отмена',value:'cancel'}
+   ]
+  });
+  if(picked==='cancel'){update('Конфликт знаков · выбери версию для синхронизации');return 'conflict'}
+  const fromCloud=picked==='cloud';
   const backup=fromCloud?local:remote;
   try{localStorage.setItem('pocket-works:zamazka:emblem-cloud-backup:'+Date.now(),JSON.stringify(backup))}catch{}
   if(fromCloud){setEmblem(remote);saveMeta('emblem',{revision:found.revision,signature:rh})}
