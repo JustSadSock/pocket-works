@@ -5,6 +5,7 @@ const allowed=/^[\p{L}\p{N} .,!?:()_-]{1,35}$/u;
 const notice=(id,s)=>[{type:'notice',to:id,payload:s}];
 const emit=s=>[{type:'state',payload:s}];
 const validRole=v=>typeof v==='string'&&allowed.test(v.trim());
+const assignRoles=(players,roles)=>{const a=Object.fromEntries(players.map((p,i)=>[p.id,roles[i%roles.length]]));for(let i=players.length;i<roles.length;i++){const p=players[i%players.length];a[p.id]+=' + '+roles[i]}return a;};
 const serial=s=>({...s,players:s.players.map(p=>({id:p.id,name:p.name})),revision:s.revision});
 const module={
  protocolVersion:1,
@@ -17,7 +18,7 @@ const module={
   if(players.length>MAX_PLAYERS)throw Error('room_full');
   if(state.phase!=='lobby')throw Error('match_in_progress');
   state.players=players;
-  state.assignments[player.id]=state.scene.roles[(players.length-1)%state.scene.roles.length]||'Озвучка';
+  state.assignments=assignRoles(state.players,state.scene.roles);
   state.mediaReady[player.id]=!state.scene.custom;
   state.revision++;
   return {state,events:emit(serial(state))};
@@ -46,13 +47,13 @@ const module={
     if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<10||duration>90||start>3600)return {state,events:notice(player.id,'Длина сцены должна быть от 10 до 90 секунд.')};
     if(!Array.isArray(x.roles)||x.roles.length<1||x.roles.length>12||!x.roles.every(validRole))return {state,events:notice(player.id,'Добавь корректные роли.')};
     state.scene={id:x.id,title:x.title,start,duration,roles:x.roles.map(z=>z.trim()),custom:x.custom===true};
-    state.assignments=Object.fromEntries(state.players.map((p,i)=>[p.id,state.scene.roles[i%state.scene.roles.length]]));
+    state.assignments=assignRoles(state.players,state.scene.roles);
     state.mediaReady=Object.fromEntries(state.players.map(p=>[p.id,!state.scene.custom||p.id===state.host]));
     state.ready={};state.counts={};state.revision++;
     return {state,events:emit(serial(state))};
   }
   if(v.type==='assign'&&state.phase==='lobby'&&player.id===state.host){
-    if(typeof v.target!=='string'||!state.players.some(p=>p.id===v.target)||!state.scene.roles.includes(v.role))return {state,events:[]};
+    if(typeof v.target!=='string'||!state.players.some(p=>p.id===v.target)||!(typeof v.role==='string'&&(v.role==='Все роли'||(v.role.split(' + ').length<=state.scene.roles.length&&v.role.split(' + ').every(r=>state.scene.roles.includes(r))))))return {state,events:[]};
     state.assignments[v.target]=v.role;state.revision++;return {state,events:emit(serial(state))};
   }
   if(v.type==='media_ready'&&state.phase==='lobby'){
