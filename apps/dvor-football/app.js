@@ -135,7 +135,7 @@ function showResult(){
  audio('whistle');
 }
 function openMatch(type){
- mode=type;paused=false;completed=false;visual=null;lastEvent=null;lastScore=0;
+ mode=type;paused=false;completed=false;visual=null;lastEvent=null;lastScore=0;actionQueued=null;chargeAt=0;shotPointer=null;
  $('pauseVeil').classList.add('hidden');$('endVeil').classList.add('hidden');
  $('switchBtn').classList.toggle('hidden',mode==='online');
  $('pauseBtn').textContent='ПАУЗА Ⅱ';show('game');updateHUD();
@@ -436,7 +436,7 @@ function onState(value){
  if(!value||!['lobby','play','done'].includes(value.phase)||!Array.isArray(value.members))return;
  const previous=online?.match,wasScreen=screen;online=value;busy=false;
  if(value.phase==='lobby'){if(screen!=='lobby')show('lobby');renderLobby();return;}
- if(screen!=='game')openMatch('online');
+ if(screen!=='game'||previous?.phase==='done'&&value.phase==='play')openMatch('online');
  const g=value.match;
  if(previous&&g?.eventId!==previous.eventId){
   if(g.event==='ГОЛ!'){gameplayToast('ГОООЛ!');audio('goal');visual=null;}
@@ -448,8 +448,8 @@ function wireNet(client){
  client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;renderLobby();});
  client.on('room_joined',data=>{
   if(net!==client)return;room=data.roomId;busy=false;online=data.state;renderLobby();
-  safeSend({type:'profile',profile});
-  if(data.state?.phase!=='lobby')onState(data.state);
+  if(data.state?.phase==='lobby')safeSend({type:'profile',profile});
+  else onState(data.state);
  });
  client.on('game_event',data=>{
   if(net!==client)return;

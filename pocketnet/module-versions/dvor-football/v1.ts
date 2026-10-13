@@ -163,8 +163,13 @@ function start(s){
 }
 function advanceServer(s){
  if(s.phase!=='play')return;
- const t=Date.now(),dt=limit((t-s.clock)/1000,0,.24);s.clock=t;
- if(dt>0)advanceGame(s.match,s.inputs,dt);
+ const t=Date.now(),delta=limit((t-s.clock)/1000,0,1800),dt=Math.min(delta,.24);s.clock=t;
+ if(delta>dt&&s.match.phase==='play'){
+  s.match.elapsed=Math.min(300,s.match.elapsed+delta-dt);
+  s.match.remain=Math.max(0,300-s.match.elapsed);
+  if(s.match.remain===0){s.match.phase='done';s.match.event='ФИНАЛ';s.match.eventId++;s.phase='done';}
+ }
+ if(dt>0&&s.match.phase==='play')advanceGame(s.match,s.inputs,dt);
  for(const value of Object.values(s.inputs))if(value)value.action=null;
  if(s.match.phase==='done')s.phase='done';
 }
