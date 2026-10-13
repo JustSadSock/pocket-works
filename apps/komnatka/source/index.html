@@ -17,6 +17,7 @@
     <div class="brand"><span class="brand-icon" aria-hidden="true"><i></i><b></b><em></em></span><strong>комнатка<span class="period">.</span></strong></div>
     <div class="quick-tools" aria-label="Действия">
       <span id="saveStatus" class="save-status" aria-live="polite">Сохранено</span>
+      <button id="onlineBtn" class="online-top-button" type="button" data-native-press title="Играть с друзьями"><svg viewBox="0 0 24 24"><path d="M15 19a6 6 0 0 0-12 0m6-8a4 4 0 1 0 0-8 4 4 0 0 0 0 8m10 8v-3a4 4 0 0 0-3-3m-2-10a4 4 0 0 1 0 8"/></svg><span>Друзья</span></button>
       <button id="undoBtn" type="button" data-native-press title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled><svg viewBox="0 0 24 24"><path d="M8 7 3 12l5 5M3 12h11a6 6 0 1 1 0 12" transform="translate(0 -3)"/></svg></button>
       <button id="redoBtn" type="button" data-native-press title="Вернуть (Ctrl+Y)" aria-label="Повторить" disabled><svg viewBox="0 0 24 24"><path d="m16 7 5 5-5 5M21 12H10a6 6 0 1 0 0 12" transform="translate(0 -3)"/></svg></button>
       <button id="eveningBtn" type="button" data-native-press title="Вечерний свет" aria-label="Вечерний свет" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M19.5 17.5A8.5 8.5 0 0 1 8 4.5 8.5 8.5 0 1 0 19.5 17.5Z"/></svg></button>
@@ -31,6 +32,16 @@
       <canvas id="roomCanvas" data-gesture-surface data-block-callout aria-label="Кукольная комната. Выбирай мебель в каталоге и перемещай предметы пальцем или мышью."></canvas>
       <div class="scene-caption" data-ui><span class="caption-dot"></span> Твоя маленькая комната</div>
       <div class="scene-hint" id="hint" data-ui></div>
+      <div id="onlineHUD" class="online-hud" hidden data-ui>
+        <div class="online-hud-line">
+         <div><strong id="onlineMode">Новые жильцы</strong><span id="onlineState"></span></div>
+         <div class="online-clock" id="onlineClock"></div>
+         <button id="onlineCode" type="button" title="Скопировать код комнаты"></button>
+        </div>
+        <div class="online-people" id="onlineParticipants"></div>
+        <div class="online-objectives" id="onlineGoals"></div>
+        <div class="online-hud-actions"><button id="onlineCompare" type="button" hidden>Показать образец</button><button id="onlineFinish" type="button" hidden>Показать результат</button><button id="onlineNext" type="button" hidden>Следующий раунд</button></div>
+      </div><div id="onlineMarkers" class="online-markers" aria-hidden="true"></div>
       <div class="snap-pulse" id="snapPulse" aria-hidden="true"></div>
       <div class="drag-trash" id="trashZone" hidden aria-hidden="true" data-ui><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v6m4-6v6"/></svg><span>Убрать</span></div>
       <div class="placement-tray" id="placementControls" hidden data-ui aria-label="Предварительная настройка предмета">
@@ -66,6 +77,12 @@
       <p class="dock-foot">Выбирай предмет и ставь в комнату</p>
     </aside>
   </section>
+  <div id="onlineLayer" class="online-layer" data-ui hidden>
+   <section class="online-dialog" role="dialog" aria-modal="true" aria-label="Играть с друзьями">
+    <button id="onlineClose" class="online-close" aria-label="Закрыть" type="button">×</button>
+    <div id="onlinePanel"></div>
+   </section>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="resetDialog" class="modal-overlay" hidden data-ui>
     <section class="reset-modal" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
