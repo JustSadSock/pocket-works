@@ -685,7 +685,7 @@ async function achievements(){
    (earnedAchievementIds.has(a.id)?'Получено':'Не открыто')+'</b></div></article>').join('');
 }
 function collection(){
- change('<section class="page collection-page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button></div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
+ change('<section class="page collection-page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button>'+(saved.length?'<button class="btn ghost" data-action="export-archive">Экспорт архива ↓</button>':'')+'</div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
  zamazkaCloud?.render();
  const canvases=[...screen.querySelectorAll('[data-saved-canvas]')];
  const draw=canvas=>{if(!canvas.isConnected||canvas.dataset.loaded)return;canvas.dataset.loaded='1';const g=saved[Number(canvas.dataset.savedCanvas)];if(g)void renderArtwork(canvas,g.art,g.variation,g.strokes,true,true)};
@@ -693,6 +693,18 @@ function collection(){
    const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){observer.unobserve(entry.target);draw(entry.target)}},{root:null,rootMargin:'260px'});
    archiveObserver=observer;canvases.forEach(c=>observer.observe(c));
  }else canvases.forEach(draw);
+}
+function exportArchive(){
+ if(!saved.length){notify('Архив пуст');return}
+ try{
+  const payload=JSON.stringify({format:'zamazka-archive',version:1,exportedAt:new Date().toISOString(),works:saved},null,2);
+  const url=URL.createObjectURL(new Blob([payload],{type:'application/json;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;
+  a.download='zamazka-archive-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  notify('Архив подготовлен для сохранения');
+ }catch{notify('Не получилось экспортировать архив')}
 }
 function openArchive(index){
  const records=saved.map(g=>({...g,name:'Моя реставрация',votes:{}}));
@@ -1007,6 +1019,7 @@ screen.addEventListener('click',e=>{
  else if(action==='retry-art-preload')void prepareRoundImages(Boolean(practice),true);
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
+ else if(action==='export-archive')exportArchive();
  else if(action==='achievements')void achievements();
  else if(action==='achievements-back'){if(net&&view)renderView();else home();}
  else if(action==='cloud-sync')void zamazkaCloud?.sync();
