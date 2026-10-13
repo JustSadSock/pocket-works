@@ -219,7 +219,8 @@ function autoFinishOnDeadline(){
  submitArtwork({automatic:true});
 }
 function change(html,which){if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
-const head=(phase,title,until,context='',untimed=false)=>'<div class="phase-head"><div><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2>'+(context?'<div class="art-head-context">'+context+'</div>':'')+'</div><div class="timer" id="clock">'+(untimed?'Без лимита':until?'…':'')+'</div></div>';
+const phaseMenuButton=()=>'<button class="phase-menu" type="button" data-action="menu" aria-label="Вернуться в главное меню" title="В главное меню">← <span>Меню</span></button>';
+const head=(phase,title,until,context='',untimed=false)=>'<div class="phase-head"><div class="phase-intro"><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2>'+(context?'<div class="art-head-context">'+context+'</div>':'')+'</div><div class="phase-head-controls"><div class="timer" id="clock">'+(untimed?'Без лимита':until?'…':'')+'</div>'+phaseMenuButton()+'</div></div>';
 function artFactsHtml(id){
  const art=ARTS[id];if(!art)return '';
  const identity=[art.artist,art.date].filter(Boolean).map(esc).join(' · ');
@@ -288,7 +289,7 @@ function lobby(){
   '<div class="lobby-list-heading"><span class="section-label">ИГРОКИ · '+players.length+'/8</span><span>'+(leader?'Ты — куратор':'Ожидаем куратора')+'</span></div>'+
   '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+pocketPlayerBadge(p)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
   (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Эта комната создана до появления общего холста. Для совместного рисования открой новую комнату.</div>')+'<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+durationOptionsHtml(drawingSecondsChoice)+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
-  '<button class="btn ghost" data-action="leave">Покинуть комнату</button></div></section>';
+  '<button class="btn ghost" data-action="menu">← В главное меню</button></div></section>';
  if(page==='lobby'&&commonsBoard){
    const future=document.createElement('div');future.innerHTML=markup;
    for(const selector of ['.lobby-self','.lobby-list-heading','.players','.exhibition-lobby>.stack']){
@@ -322,7 +323,7 @@ function preloadPreviewImage(id){
 function preparing(local=false){
  const v=local?practice:view;if(!v)return;
  const progress=local?'Готовим оригиналы…':'Готовим оригиналы · '+(v.readyCount||0)+' / '+v.participants.length;
- change('<section class="page center art-preparing"><span class="busy" aria-hidden="true"></span><h2>Готовим экспозицию</h2><p id="artPreparingStatus" class="hint">'+esc(progress)+'</p><button class="btn ghost" data-action="retry-art-preload" hidden>Повторить загрузку</button></section>','preparing');
+ change('<section class="page center art-preparing"><span class="busy" aria-hidden="true"></span><h2>Готовим экспозицию</h2><p id="artPreparingStatus" class="hint">'+esc(progress)+'</p><button class="btn ghost" data-action="retry-art-preload" hidden>Повторить загрузку</button><button class="btn ghost preparing-menu" data-action="menu">← В главное меню</button></section>','preparing');
  void prepareRoundImages(local);
 }
 async function prepareRoundImages(local=false,retry=false){
@@ -519,7 +520,7 @@ function roundReview(){
 }
 function results(){
  const rank=[...view.participants].sort((a,b)=>(view.scores[b.id].mask+view.scores[b.id].eye)-(view.scores[a.id].mask+view.scores[a.id].eye));
- change('<section class="page"><div class="section-label">ИТОГИ ВЫСТАВКИ</div><h2>Каталог разоблачений</h2><div class="notice">Обман и наблюдательность оцениваются отдельно. Побеждает самая высокая сумма.</div>'+rank.map((p,i)=>'<div class="result-item"><div class="result-rank"><div class="result-identity">'+memberSeal(p)+'<div><span class="section-label">№ '+(i+1)+'</span><h3>'+esc(p.name)+pocketPlayerBadge(p)+'</h3></div></div><div class="points">'+(view.scores[p.id].mask+view.scores[p.id].eye)+' очк.</div></div><div class="quiet">Маскировка '+view.scores[p.id].mask+' · Экспертиза '+view.scores[p.id].eye+'</div></div>').join('')+'<div class="stack" style="margin-top:20px">'+(me?.id===view.host?'<button class="btn primary" data-action="next">Новый матч с этой компанией</button>':'<div class="hint">Создатель комнаты может начать следующий матч.</div>')+'<button class="btn ghost" data-action="leave">Выйти из комнаты</button></div></section>','results')
+ change('<section class="page"><div class="section-label">ИТОГИ ВЫСТАВКИ</div><h2>Каталог разоблачений</h2><div class="notice">Обман и наблюдательность оцениваются отдельно. Побеждает самая высокая сумма.</div>'+rank.map((p,i)=>'<div class="result-item"><div class="result-rank"><div class="result-identity">'+memberSeal(p)+'<div><span class="section-label">№ '+(i+1)+'</span><h3>'+esc(p.name)+pocketPlayerBadge(p)+'</h3></div></div><div class="points">'+(view.scores[p.id].mask+view.scores[p.id].eye)+' очк.</div></div><div class="quiet">Маскировка '+view.scores[p.id].mask+' · Экспертиза '+view.scores[p.id].eye+'</div></div>').join('')+'<div class="stack" style="margin-top:20px">'+(me?.id===view.host?'<button class="btn primary" data-action="next">Новый матч с этой компанией</button>':'<div class="hint">Создатель комнаты может начать следующий матч.</div>')+'<button class="btn ghost" data-action="menu">← В главное меню</button></div></section>','results')
 }
 function collection(){
  change('<section class="page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button></div>'+(saved.length?'<div class="gallery">'+saved.map((g,i)=>'<button class="picture" data-saved="'+i+'"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
@@ -748,7 +749,15 @@ screen.addEventListener('click',e=>{
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
  else if(action==='cloud-sync')void zamazkaCloud?.sync();
- else if(action==='menu'){if(net||practice&&practice.phase==='drawing'){modal('Покинуть выставку?','<p class="hint">Текущая партия будет покинута. Несданные мазки сохраняются на устройстве.</p>',[['Покинуть',()=>{closeDialog();home()},'primary'],['Остаться',closeDialog,'ghost']])}else home()}
+ else if(action==='menu'){
+    editor?.finishStroke();
+    if(net||practice&&['preparing','preview','drawing'].includes(practice.phase)){
+      modal('Вернуться в главное меню?','<p class="hint">Текущая партия будет покинута. Несданный рисунок останется на устройстве; одиночный черновик можно продолжить из главного меню.</p>',[
+        ['В меню',()=>{closeDialog();home()},'primary'],
+        ['Остаться',closeDialog,'ghost']
+      ]);
+    }else home();
+  }
  else if(action==='connect')connect(b.dataset.mode);
  else if(action==='share')share();
  else if(action==='copy-code')copyText(inviteCode(roomId),'Код комнаты скопирован');
