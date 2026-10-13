@@ -268,6 +268,7 @@ function startPointer(ev){
  const id=hit?.hit?hit.pickedMesh.metadata.itemId:null;
  if(id){
   if(selectedId!==id)select(id);
+  director?.lift(id);sound('lift');
   drag={kind:'move',id,startX:ev.clientX,startY:ev.clientY,moved:false,before:JSON.stringify(state),startPoint:pointOnGround(ev)};
  }else {selectedId=null;hideSelection();drag={kind:'tap'};}
 }
@@ -281,7 +282,7 @@ function movePointer(ev) {
  $('trashZone').hidden=false;
  drag.trash=trashHovered(ev);
  $('trashZone').classList.toggle('hover',Boolean(drag.trash));
- if(drag.trash){drag.valid=false;return;}
+ if(drag.trash){drag.valid=false;director?.drag(item.id,0,0,false);return;}
  const target=pickTarget(ev,item);if(!target)return;
  drag.moved=true;const dx=target.x-item.x,dz=target.z-item.z;
  moveWithChildren(state,item.id,dx,dz);
@@ -289,30 +290,45 @@ function movePointer(ev) {
  const root=roots.get(item.id);root?.position.set(item.x,item.y,item.z);if(root)root.rotation.y=item.rot*Math.PI/2;
  for(const child of state.items.filter(it=>it.support===item.id))roots.get(child.id)?.position.set(child.x,child.y,child.z);
  const ok=valid(state,item);
- if(root)root.scaling.setAll(ok?1.055:0.97);
- root?.getChildMeshes(false).forEach(mesh=>mesh.visibility=ok?1:.57);
+ director?.drag(item.id,dx,dz,ok);
  drag.valid=ok;
 }
 function endPointer(ev) {
  if(!drag)return;
  const d=drag;drag=null;hideTrash();
  if(d.kind==='move'&&d.moved&&d.trash){
+  const previous=state.items;
   state.items=removeWithChildren(state,d.id);
-  selectedId=null;hideSelection();record(d.before);refresh();sound('delete');toast('Предмет убран — действие можно отменить');return;
+  retireMissing(previous,state.items);
+  selectedId=null;hideSelection();record(d.before);refresh();
+  sound('delete');
+  return;
  }
  if(d.kind==='place'&&pending){
   updateGhost(ev);
   if(pending.valid){
    const proto={...pending.proto,id:nextId()};
    const before=JSON.stringify(state);
-   state.items.push(proto);
-   cancelPending(false);
-   record(before);refresh();select(proto.id);ui.hint.classList.remove('visible');sound('place');
-   toast('Предмет на месте');
-  }else {sound('blocked');toast(byType[pending.type].tabletop?'Нужна свободная поверхность стола':'Выбери свободное место');}
+   state.items.push(proto);cancelPending(false);
+   record(before);refresh();select(proto.id);
+   director?.appear(proto.id);
+   itemSound(proto);ui.hint.classList.remove('visible');
+  }else{
+   sound('blocked');
+   toast(byType[pending.type].tabletop?'Нужна свободная поверхность стола':'Выбери свободное место');
+  }
  }else if(d.kind==='move'&&d.moved){
-  if(d.valid&&state.items.every(i=>i.id===d.id||i.support!==d.id||valid(state,i))){const root=roots.get(d.id);if(root){root.scaling.setAll(1);root.getChildMeshes(false).forEach(m=>m.visibility=1);}record(d.before);refresh();sound('place');}
-  else{state=sanitize(JSON.parse(d.before));refresh();sound('blocked');toast('Здесь предмет не поместится');}
+  if(d.valid&&state.items.every(i=>i.id===d.id||i.support!==d.id||valid(state,i))){
+   record(d.before);refresh();
+   director?.land(d.id);
+   itemSound(state.items.find(i=>i.id===d.id));
+  }else{
+   state=sanitize(JSON.parse(d.before));refresh();
+   director?.refuse(d.id);sound('blocked');
+   toast('Здесь предмет не поместится');
+  }
+ }else if(d.kind==='move'&&!d.moved){
+  director?.touch(d.id);
  }
 }
 function rotateSelected() {
@@ -321,9 +337,12 @@ function rotateSelected() {
  moveWithChildren(state,item.id,0,0,1);item.rot=(item.rot+1)%4;
  if(!valid(state,item)||state.items.some(i=>i.support===item.id&&!valid(state,i))){
   Object.assign(item,prev);for(const old of children)Object.assign(state.items.find(x=>x.id===old.id),old);
-  toast('Нет места для поворота');sound('blocked');return;
+  director?.refuse(item.id);toast('Нет места для поворота');sound('blocked');return;
  }
- record(before);refresh();sound(570,'triangle');
+ record(before);refresh();
+ director?.rotate(item.id,(item.rot*Math.PI/2)-Math.PI/2);
+ for(const child of children)director?.rotate(child.id,child.rot*Math.PI/2,{x:child.x,z:child.z});
+ sound('rotate');
 }
 function duplicateSelected(){
  const it=state.items.find(i=>i.id===selectedId);if(!it)return;
@@ -331,20 +350,20 @@ function duplicateSelected(){
  const offsets=meta.layer==='wall'?[-2,-1.5,-1,.75,1,1.5,2,2.5,-2.5,3,-3].map(d=>it.wall==='back'?[d,0]:[0,d]):meta.tabletop?[[0,.35],[.35,0],[0,-.35],[-.35,0],[.35,.35],[-.35,-.35]]:[[2.8,0],[-2.8,0],[0,2.8],[0,-2.8],[2.8,1.5],[-2.8,1.5],[1.5,2.8],[-1.5,-2.8]];
  const free=offsets.find(([dx,dz])=>{next.x=Math.round((it.x+dx)*4)/4;next.z=Math.round((it.z+dz)*4)/4;return valid(state,next);});
  if(!free){toast('Для копии пока нет свободного места');return;}
- const before=JSON.stringify(state);state.items.push(next);record(before);refresh();select(next.id);sound('place');
+ const before=JSON.stringify(state);state.items.push(next);record(before);refresh();select(next.id);director?.appear(next.id);itemSound(next);
 }
 function removeSelected(){
  if(!selectedId)return;
- const before=JSON.stringify(state);
- state.items=removeWithChildren(state,selectedId);selectedId=null;hideSelection();
- record(before);refresh();sound(280,'sine');
+ const before=JSON.stringify(state),previous=state.items;
+ state.items=removeWithChildren(state,selectedId);retireMissing(previous,state.items);
+ selectedId=null;hideSelection();record(before);refresh();sound('delete');
 }
 function addEvents(){
  ui.canvas.addEventListener('pointerdown',startPointer);
  ui.canvas.addEventListener('pointermove',movePointer);
  ui.canvas.addEventListener('pointerup',endPointer);
- ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){state=sanitize(JSON.parse(drag.before));refresh();}drag=null;hideTrash();});
- window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){state=sanitize(JSON.parse(drag.before));refresh();}drag=null;hideTrash();persist();});
+ ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();});
+ window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();persist();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(savedTimer);save(state);status('Сохранено');}});
  window.addEventListener('pagehide',()=>{clearTimeout(savedTimer);save(state);});
  $('rotateBtn').addEventListener('click',rotateSelected);
@@ -352,7 +371,7 @@ function addEvents(){
  $('deleteBtn').addEventListener('click',removeSelected);
  $('doneBtn').addEventListener('click',()=>{selectedId=null;hideSelection();sound('select');});
  $('undoBtn').addEventListener('click',undo);$('redoBtn').addEventListener('click',redo);
- $('eveningBtn').addEventListener('click',()=>mutate(()=>{state.evening=!state.evening; sound('light');}));
+ $('eveningBtn').addEventListener('click',()=>mutate(()=>{state.evening=!state.evening;}));
  $('soundBtn').addEventListener('click',()=>{soundscape.toggle();updateActions();});
  $('photoBtn').addEventListener('click',()=>{
   try{const link=document.createElement('a');link.download='komnatka-'+new Date().toISOString().slice(0,10)+'.png';
@@ -361,7 +380,7 @@ function addEvents(){
  });
  $('resetBtn').addEventListener('click',()=>{$('resetDialog').hidden=false;});
  $('cancelReset').addEventListener('click',()=>{$('resetDialog').hidden=true;});
- $('confirmReset').addEventListener('click',()=>{const before=JSON.stringify(state);state=starter();selectedId=null;cancelPending(false);hideSelection();record(before);refresh();$('resetDialog').hidden=true;toast('Комната восстановлена');sound('place');});
+ $('confirmReset').addEventListener('click',()=>{const before=JSON.stringify(state),previous=state.items;state=starter();retireMissing(previous,state.items);selectedId=null;cancelPending(false);hideSelection();record(before);refresh();$('resetDialog').hidden=true;toast('Комната восстановлена');sound('place');});
  $('cancelPlacement').addEventListener('click',()=>cancelPending(false));
  $('cancelPlacementMobile').addEventListener('click',()=>cancelPending(false));
  $('closePlacement').addEventListener('click',()=>cancelPending(false));
@@ -390,6 +409,7 @@ function setup(){
  camera=new ArcRotateCamera('fixed-portrait',Math.PI/4,Math.PI/3.1,17,new Vector3(0,1.53,0),scene);
  camera.inputs.clear();camera.minZ=.1;camera.mode=1; // Orthographic, fixed toy-diorama camera.
  room=createRoom(scene);
+ director=createMotionDirector({getRoot:id=>roots.get(id),getItem:id=>state.items.find(i=>i.id===id),reducedMotion:()=>reduce.matches});
  resize();
  addEvents();ready=true;refresh();ui.loading.classList.add('hidden');
  setTimeout(()=>buildFurnitureThumbnails((type,src)=>{
@@ -406,8 +426,18 @@ function setup(){
  window.addEventListener('resize',resize);new ResizeObserver(resize).observe(ui.canvas);
  let last=0;engine.runRenderLoop(()=>{
   if(document.hidden)return;
-  const now=performance.now(),interval=drag||pending?16:50;
-  if(now-last<interval)return;last=now;scene.render();
+  const now=performance.now();
+  const lit=room.tickLighting(now),moving=director.tick(now);
+  const previewTurn=Boolean(pending?.rotAnim);
+  if(previewTurn){
+   const animation=pending.rotAnim;
+   const p=Math.max(0,Math.min(1,(now-animation.start)/190));
+   pending.ghost.rotation.y=animation.from+(animation.to-animation.from)*(1-Math.pow(1-p,3));
+   if(p>=1)pending.rotAnim=null;
+  }
+  const interval=drag||pending||lit||moving||previewTurn?16:50;
+  if(now-last<interval)return;
+  last=now;scene.render();
  });
 }
 function showError(error){console.error(error);ui.loadText.textContent='Не получилось открыть комнату';$('retryBtn').hidden=false;$('retryBtn').onclick=()=>location.reload();toast('Ошибка запуска 3D-сцены');}
