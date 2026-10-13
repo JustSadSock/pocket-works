@@ -134,11 +134,11 @@ function smudgeStamp(ctx,x,y,size,dx,dy){
  }
  ctx.putImageData(pixels,left,top);
 }
-export function smudgeStroke(ctx,stroke){
+export function smudgeStroke(ctx,stroke,from=0){
  const pts=stroke.p||[];if(!pts.length)return;
  const spacing=Math.max(1.4,Math.min(7,stroke.s*.23));
- smudgeStamp(ctx,pts[0][0],pts[0][1],stroke.s,0,0);
- for(let i=1;i<pts.length;i++){
+ if(from<=0)smudgeStamp(ctx,pts[0][0],pts[0][1],stroke.s,0,0);
+ for(let i=Math.max(1,from);i<pts.length;i++){
   const prev=pts[i-1],next=pts[i],dx=next[0]-prev[0],dy=next[1]-prev[1];
   const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/spacing));
   for(let j=1;j<=steps;j++)smudgeStamp(ctx,prev[0]+dx*j/steps,prev[1]+dy*j/steps,stroke.s,dx,dy);
@@ -661,6 +661,8 @@ export class Editor{
      const base=makeLayer(),ink=makeLayer();this.baseLayer=base.canvas;this.inkLayer=ink.canvas;this.inkCtx=ink.ctx;
      drawArtwork(base.ctx,img,this.id);
      this.cachedRevision=-1;
+     this.smudgePreviewLayer=null;
+     this.smudgePreviewWorking=null;
    }
    const rev=this.paintRevision||0;
    if(this.cachedRevision!==rev){
@@ -677,9 +679,22 @@ export class Editor{
    if(this.working){
      ctx.save();clipZone(ctx,this.zone);
      if(this.working.t==='smudge'){
-       const preview=makeLayer();
-       preview.ctx.drawImage(this.inkLayer,0,0,W,H);
-       smudgeStroke(preview.ctx,this.working);
+       // Reuse one backing surface; mix only new points as the nib moves.
+       let preview=this.smudgePreviewLayer;
+       if(!preview||preview.canvas.width!==c.width||preview.canvas.height!==c.height)
+         preview=this.smudgePreviewLayer=makeLayer();
+       if(this.smudgePreviewWorking!==this.working||this.smudgePreviewRevision!==rev){
+         preview.ctx.clearRect(0,0,W,H);
+         preview.ctx.drawImage(this.inkLayer,0,0,W,H);
+         this.smudgePreviewWorking=this.working;
+         this.smudgePreviewRevision=rev;
+         this.smudgePreviewPointCount=0;
+       }
+       const from=this.smudgePreviewPointCount||0;
+       if(this.working.p.length>from){
+         smudgeStroke(preview.ctx,this.working,from);
+         this.smudgePreviewPointCount=this.working.p.length;
+       }
        ctx.drawImage(preview.canvas,0,0,W,H);
      }else drawStroke(ctx,this.working);
      ctx.restore();
@@ -696,6 +711,6 @@ export class Editor{
  }
  for(const cb of this.paintWaiters||[])cb();
  this.paintWaiters=[];
- this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;
+ this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;this.smudgePreviewLayer=null;this.smudgePreviewWorking=null;
  this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }
