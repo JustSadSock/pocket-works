@@ -9,9 +9,9 @@ export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
-  const valid=(item,category,standard)=>standard.some(x=>x[0]===item)||
+  const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||
     ((category==='hat'?Object.values(mascotSecret).map(x=>x.hat):Object.values(mascotSecret).map(x=>x.clothes))
-      .includes(item)&&Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item));
+      .includes(item)&&Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item)));
   const src=input&&typeof input==='object'?input:{};
   return {
     animal:one(mascotAnimals,src.animal,'cat'),
