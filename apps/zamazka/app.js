@@ -263,7 +263,31 @@ function autoFinishOnDeadline(){
  if(autoSubmitted===token||pendingSubmit?.token===token)return;
  submitArtwork({automatic:true});
 }
-function change(html,which){if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
+function finishVoteTransition(){
+ if(!voteTransitionLayer)return;
+ const old=voteTransitionLayer;voteTransitionLayer=null;
+ clearTimeout(voteTransitionTimeout);voteTransitionTimeout=null;
+ old.classList.add('is-finished');
+ setTimeout(()=>old.remove(),260);
+}
+function change(html,which){
+ if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}
+ if(page!==which)closeDialog();
+ museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();
+ // Keep the complete, already painted ballot visible until the reveal's
+ // heavy restoration canvases finish rendering. Never flash an empty gallery.
+ const oldBallot=page==='vote'&&which==='reveal'?screen.firstElementChild:null;
+ if(voteTransitionLayer)finishVoteTransition();
+ if(oldBallot)oldBallot.remove();
+ page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0;
+ if(oldBallot){
+  oldBallot.classList.add('vote-transition-layer');
+  oldBallot.setAttribute('aria-hidden','true');
+  screen.appendChild(oldBallot);
+  voteTransitionLayer=oldBallot;
+  voteTransitionTimeout=setTimeout(finishVoteTransition,2500);
+ }
+}
 const phaseMenuButton=()=>'<button class="phase-menu" type="button" data-action="menu" aria-label="Вернуться в главное меню" title="В главное меню">← <span>Меню</span></button>';
 const head=(phase,title,until,context='',untimed=false)=>'<div class="phase-head"><div class="phase-intro"><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2>'+(context?'<div class="art-head-context">'+context+'</div>':'')+'</div><div class="phase-head-controls"><div class="timer" id="clock">'+(untimed?'Без лимита':until?'…':'')+'</div>'+phaseMenuButton()+'</div></div>';
 function artFactsHtml(id){
@@ -515,6 +539,7 @@ function vote(){
  if(autoVoteTimer!==null){clearTimeout(autoVoteTimer);autoVoteTimer=null}
  const v=view,target=v.author,isOwn=target?.id===me?.id,already=(v.voted||[]).includes(me?.id);
  const sessionKey=v.round+':'+v.turn;
+ voteScreenToken=sessionKey;
  if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:[0,0,0,0,0]}
  const count=(v.voted||[]).length,expected=v.participants.length-1;
  const examined=v.candidate;
@@ -572,7 +597,8 @@ function reveal(local=false){
   const source=screen.querySelector('#restCanvas'),original=screen.querySelector('#origCanvas'),stage=screen.querySelector('#unveilStage');
  Promise.all([renderArtwork(original,g.art,0,null,false),renderArtwork(source,g.art,g.variation,g.strokes||[],true)]).then(()=>{
   if(stage?.isConnected){requestAnimationFrame(()=>{if(stage.isConnected)stage.style.setProperty('--split','50%')});const range=screen.querySelector('#unveilRange');if(range)range.value='50';}
- });
+  finishVoteTransition();
+ }).catch(finishVoteTransition);
 }
 function roundReview(){
  if(!view?.gallery?.length)return;
@@ -629,7 +655,7 @@ function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>
 function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;practice.drawingSeconds=normalizedDuration(p.drawingSeconds??160);if(p.deadline>0&&p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=practice.drawingSeconds===0?0:Date.now()+practice.drawingSeconds*1000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
-let previousVisualPhase='',lastPhaseCue='';
+let previousVisualPhase='',lastPhaseCue='',voteScreenToken='',voteTransitionLayer=null,voteTransitionTimeout=null;
 function renderView(){
  if(!view)return;
  const phaseToken=view.round+':'+view.phase;
@@ -656,8 +682,24 @@ function renderView(){
    return;
  }
  if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
- if(page==='vote'&&view.phase==='voting'&&key===lastUiKey){
-  const ready=screen.querySelector('#votesReady');if(ready)ready.textContent=(view.voted||[]).length+' / '+(view.participants.length-1);
+ if(page==='vote'&&view.phase==='voting'&&voteScreenToken===view.round+':'+view.turn){
+  // Authoritative vote receipts can update dozens of times per round.
+  // Preserve the live gallery, five loaded originals, coin controls, scroll
+  // position and any animation instead of recreating the entire DOM.
+  const ready=screen.querySelector('#votesReady');
+  if(ready)ready.textContent=(view.voted||[]).length+' / '+(view.participants.length-1);
+  const hasVoted=(view.voted||[]).includes(me?.id);
+  if(hasVoted){
+   if(autoVoteTimer!==null){clearTimeout(autoVoteTimer);autoVoteTimer=null}
+   screen.querySelectorAll('[data-chipadd],[data-chipsub]').forEach(b=>{b.disabled=true});
+   const status=screen.querySelector('#coinVoteStatus');
+   if(status)status.textContent='Монеты приняты';
+   const tray=screen.querySelector('.stake-tray');
+   if(tray)tray.classList.add('is-vote-locked');
+   const note=screen.querySelector('.expert-ballot > p.hint');
+   if(note)note.textContent='Твои фишки приняты. Ожидаем остальных.';
+  }
+  lastUiKey=key;
   return;
  }
  lastUiKey=key;choice=null;
