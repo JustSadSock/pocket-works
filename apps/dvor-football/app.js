@@ -20,6 +20,7 @@ let profile=safeProfile(pref('player',{...DEFAULT,name:'Форвард'}));
 let soundOn=pref('sound',true),audioCtx=null,noise=null,identity=null;
 let screen='home',mode='solo',practice=null,demo=newGame(),net=null,me=null,room='',online=null,connected=false,busy=false;
 let netPhase='idle',code=new URLSearchParams(location.search).get('room')||'';
+demo.controlled={};
 let paused=false,keys=new Set(),stick={x:0,y:0},aimPoint=null,actionQueued=null,chargeAt=0,shotPointer=null;
 let lastFrame=0,sendAt=0,feedbackAt=0,toastTimer=0,visual=null,lastEvent=null,lastScore=0,lastClock='',completed=false;
 const getMatch=()=>mode==='online'?online?.match:practice;
@@ -511,7 +512,7 @@ function frame(t){
  if(!document.hidden){
   if(screen==='home'){
    advanceGame(demo,{},dt);
-   if(demo.phase==='done')demo=newGame();
+   if(demo.phase==='done'){demo=newGame();demo.controlled={};}
    drawMatch($('heroCanvas'),demo,t/1000,true,dt);
   }
   if(screen==='game'){
