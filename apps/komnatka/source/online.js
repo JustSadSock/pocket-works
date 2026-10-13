@@ -39,6 +39,8 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,toast})
   $('onlineMode').textContent=room.mode==='memory'?'Собери по памяти':'Новые жильцы';
   $('onlineState').textContent=connected?PHASE[room.phase]:'Переподключаемся…';
   $('onlineCode').textContent=code;
+  $('onlineCompare').hidden=room.phase!=='result'||room.mode!=='memory';
+  $('onlineCompare').textContent=reference?'Моя комната':'Показать образец';
   $('onlineFinish').hidden=room.phase!=='build'||room.host!==me?.id;
   $('onlineNext').hidden=!((room.phase==='preview'||room.phase==='result')&&room.host===me?.id);
   $('onlineNext').textContent=room.phase==='preview'?'Начать сборку':'Новый раунд';
@@ -92,6 +94,8 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,toast})
      '<button data-online-mode="tenants" class="'+(mode==='tenants'?'chosen':'')+'"><strong>Новые жильцы</strong><small>Собрать уют по пожеланиям</small></button>'+
      '<button data-online-mode="memory" class="'+(mode==='memory'?'chosen':'')+'"><strong>Собери по памяти</strong><small>Запомнить и повторить интерьер</small></button></div>':'')+
     (host&&['lobby','result'].includes(room.phase)?'<button id="onlineStart" class="online-primary" '+((room.players?.length||0)<2?'disabled':'')+'>Начать игру</button>':'')+
+    (room.phase==='result'?'<div class="online-result"><strong>'+Number(room.score||0)+'%</strong><span>'+(room.mode==='memory'?'Точность восстановления':'Пожелания выполнены')+'</span></div>':'')+
+    (room.phase==='result'&&room.mode==='memory'?'<button id="onlineCompareModal" class="online-primary">Сравнить с образцом</button>':'')+
     (host&&room.phase==='preview'?'<button id="onlineSkip" class="online-primary">Мы запомнили — начать</button>':'')+
     (room.phase==='build'?'<button id="onlineContinue" class="online-primary">Вернуться к комнате</button>':'')+
     '<button id="onlineLeave" class="online-secondary">Покинуть комнату</button>';
@@ -100,6 +104,7 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,toast})
    panel.querySelectorAll('[data-online-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.onlineMode;renderModal();}));
    $('onlineStart')?.addEventListener('click',()=>send({type:'start',mode}));
    $('onlineSkip')?.addEventListener('click',()=>send({type:'skip_preview'}));
+   $('onlineCompareModal')?.addEventListener('click',toggleReference);
    $('onlineContinue')?.addEventListener('click',close);
    $('onlineLeave')?.addEventListener('click',leave);
   }
@@ -171,6 +176,12 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,toast})
    toast(e.message||'Не получилось подключиться.');render();
   }
  }
+ function toggleReference(){
+  if(room?.phase!=='result'||room.mode!=='memory')return;
+  reference=!reference;
+  onRoom(room,{reference,phaseChanged:false});
+  modal=false;render();
+ }
  function leave(){
   if(net&&connected)try{net.leaveRoom();}catch{}
   net?.close();net=null;me=null;room=null;code='';connected=false;busy=false;modal=false;phase='';reference=false;
@@ -188,6 +199,7 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,toast})
  $('onlineClose').addEventListener('click',close);
  layer.addEventListener('pointerdown',e=>{if(e.target===layer)close();});
  $('onlineFinish').addEventListener('click',()=>send({type:'finish'}));
+ $('onlineCompare').addEventListener('click',toggleReference);
  $('onlineNext').addEventListener('click',()=>send(room?.phase==='preview'?{type:'skip_preview'}:{type:'start',mode}));
  $('onlineCode').addEventListener('click',()=>copy(code));
  render();
