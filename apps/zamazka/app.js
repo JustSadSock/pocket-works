@@ -15,13 +15,13 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.26.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.26.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
-const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice',CONFIRM_SUBMIT_KEY=NS+'confirm-submission';
+const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice',CONFIRM_VOTE_KEY=NS+'confirm-coins';
 const POCKETNET_URL=location.origin+'/pocketnet';
 const q=new URLSearchParams(location.search);
 let invitedRoom=q.get('room')||'';
-let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
+let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',autoVoteTimer=null,connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 const museumAudio=new MuseumAudio(beepEnabled);
 const sound=(event='press',gesture=false)=>museumAudio.play(event,gesture);
 let personalEmblem=getSavedEmblem();
@@ -477,6 +477,7 @@ function attemptVote(force=false){
  }
 }
 function submitVote(){
+ if(autoVoteTimer!==null){clearTimeout(autoVoteTimer);autoVoteTimer=null}
  if(!view||view.phase!=='voting'||view.voted?.includes(me?.id))return;
  if(!pendingVote||pendingVote.token!==voteToken(view)){
    if(chips.reduce((a,b)=>a+b,0)!==3)return;
@@ -494,8 +495,24 @@ function updateChips(){
  screen.querySelectorAll('[data-stake-card]').forEach(el=>{const i=Number(el.dataset.stakeCard),n=chips[i];el.classList.toggle('has-chips',n>0);el.querySelector('[data-chip-pips]').innerHTML=chipDots(n)});
  const remain=screen.querySelector('#chipsRemaining');if(remain)remain.innerHTML=chipDots(3-total)+'<strong>'+(3-total)+'</strong> свободно';
  const button=screen.querySelector('[data-action="vote"]');if(button){button.disabled=total!==3||Boolean(pendingVote?.token===voteToken(view));if(pendingVote?.token===voteToken(view))button.textContent='Подтверждаем фишки…'}
+ // In the default quick-voting mode the third coin is the final action.
+ // Give the player a brief correction window, then submit exactly once.
+ if(autoVoteTimer!==null){clearTimeout(autoVoteTimer);autoVoteTimer=null}
+ const automatic=localStorage.getItem(CONFIRM_VOTE_KEY)!=='on';
+ const pending=Boolean(pendingVote?.token===voteToken(view));
+ const status=screen.querySelector('#coinVoteStatus');
+ if(status)status.textContent=pending?'Передаём фишки…':total===3?'Голос уйдёт автоматически':total+' / 3 фишки';
+ if(automatic&&total===3&&!pending&&view?.phase==='voting'&&!view.voted?.includes(me?.id)){
+  const token=voteToken(view);
+  autoVoteTimer=setTimeout(()=>{
+   autoVoteTimer=null;
+   if(page==='vote'&&view?.phase==='voting'&&voteToken(view)===token&&
+      chips.reduce((a,b)=>a+b,0)===3&&!pendingVote)submitVote();
+  },850);
+ }
 }
 function vote(){
+ if(autoVoteTimer!==null){clearTimeout(autoVoteTimer);autoVoteTimer=null}
  const v=view,target=v.author,isOwn=target?.id===me?.id,already=(v.voted||[]).includes(me?.id);
  const sessionKey=v.round+':'+v.turn;
  if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:[0,0,0,0,0]}
@@ -508,7 +525,7 @@ function vote(){
  (examined?.art===id?'<canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
  '<span class="stake-number">'+String(i+1).padStart(2,'0')+'</span></div><div class="stake-details"><strong>'+esc(ARTS[id]?.title||'Картина')+'</strong><small>'+esc(ARTS[id]?.artist||'')+'</small></div>'+
  (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">№ '+(i+1)+'</span>')+'</div>').join('')+'</div>'+
- (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div><button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button></div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
+ (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div>'+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'<button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button>':'<span class="coin-auto-status" id="coinVoteStatus" role="status" aria-live="polite">3 фишки — и голос учтён</span>')+'</div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
  '</div></div></section>','vote');
  if(examined)void renderArtwork(screen.querySelector('#examinedCanvas'),examined.art,examined.variation,examined.strokes||[],true);
  if(!isOwn&&!already)updateChips();
@@ -787,7 +804,6 @@ function doSubmit(){
  if(page==='drawing'&&practice){finishPractice();return}
  if(!editor||!net||page!=='drawing'||pendingSubmit)return;
  editor.saveSnapshot();
- if(localStorage.getItem(CONFIRM_SUBMIT_KEY)!=='on'){submitArtwork();return}
  modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
   ['Сдать',()=>{closeDialog();submitArtwork()},'primary'],
   ['Продолжить рисовать',closeDialog,'ghost']]);
@@ -810,8 +826,8 @@ function share(){
 function inspect(id){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata"><div class="art-inspect-facts">'+artFactsHtml(id)+'</div><div>Хранится: '+esc(a.museum)+'</div></div><p class="hint">Запомни цвета и фактуру оригинала.</p>'+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
 function settings(){
- modal('Настройки','<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки мастерской и интерфейса</label><label class="field"><input type="checkbox" id="settingConfirmSubmit" '+(localStorage.getItem(CONFIRM_SUBMIT_KEY)==='on'?'checked':'')+'> Спрашивать перед сдачей рисунка</label><p class="hint">Новый ник применится при следующем подключении к комнате.</p>',[
-  ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');localStorage.setItem(CONFIRM_SUBMIT_KEY,dialog.querySelector('#settingConfirmSubmit').checked?'on':'off');museumAudio.setEnabled(beepEnabled);closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']]);
+ modal('Настройки','<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки мастерской и интерфейса</label><label class="field"><input type="checkbox" id="settingConfirmVote" '+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'checked':'')+'> Подтверждать распределение монет</label><p class="hint">Новый ник применится при следующем подключении к комнате.</p>',[
+  ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');localStorage.setItem(CONFIRM_VOTE_KEY,dialog.querySelector('#settingConfirmVote').checked?'on':'off');museumAudio.setEnabled(beepEnabled);closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']]);
 }
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 document.querySelector('#profileBtn')?.addEventListener('click',editEmblem);
