@@ -5,6 +5,7 @@ import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager'
 import { Engine, Scene, ArcRotateCamera, Vector3, Color3, TransformNode } from '@babylonjs/core';
 import { CATALOG, COLORS, byType, makeItem } from './models.js';
 import { createSoundscape } from './soundscape.js';
+import { sceneY } from './scene-position.js';
 import { createMotionDirector } from './motion.js';
 import { buildFurnitureThumbnails } from './thumbnails.js';
 import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
@@ -211,7 +212,7 @@ function refresh(){
    root.metadata={appearance:signature};
    roots.set(item.id,root);changed=true;
   }
-  root.position.set(item.x,item.y,item.z);
+  root.position.set(item.x,sceneY(item),item.z);
   root.rotation.y=item.rot*Math.PI/2;
   root.scaling.setAll(1);
   root.getChildMeshes(false).forEach(mesh=>mesh.visibility=1);
