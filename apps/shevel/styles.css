@@ -9,3 +9,5 @@
 @media(max-width:375px){.brand{font-size:11px}.tool{font-size:8px}.stagehead-right .divider-mark,.stagehead-right #stageInfo{display:none}.loop{display:none}}
 @media(max-height:570px) and (min-width:601px){.head{flex-basis:42px}.stagehead{flex-basis:32px}.contextbar{flex-basis:48px}.timeline{height:145px;flex-basis:145px}.inspector{bottom:150px}.tool{min-height:42px}.stagewell{padding:7px}.canvaswrap{width:min(100%,calc((100dvh - 275px)*1.616))}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+.zoom-deck{position:absolute;z-index:3;top:15px;right:16px;display:flex;align-items:center;gap:1px;background:#243132df;color:#f5e5ce;padding:3px;box-shadow:0 2px 8px #19221a33}.zoom-deck button{min-width:34px;height:34px;border:0;background:transparent;color:inherit;font-size:20px}.zoom-deck button:active{background:#47605c}.zoom-deck span{min-width:42px;text-align:center;font-size:10px;font-weight:750;font-variant-numeric:tabular-nums}@media(max-width:600px){.zoom-deck{top:9px;right:9px}.zoom-deck button{min-width:34px;height:34px}.zoom-deck span{min-width:36px;font-size:10px}}
