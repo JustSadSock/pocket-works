@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "f2d642f65629e86e03d83128beded70cfd1f3aa5",
+    "revision": "f578f5a1ba11b8e1fd0d9db1037c6d18f3b60cba",
     "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "ea13d999fe7747712faf4e7e667ab611df4cdfbb5d6a3d99d80e6f835dd0e8e1",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "f2d642f65629e86e03d83128beded70cfd1f3aa5",
-    "lastAttemptAt": "2026-10-13T20:34:28.668Z",
+    "lastAttemptRevision": "f578f5a1ba11b8e1fd0d9db1037c6d18f3b60cba",
+    "lastAttemptAt": "2026-10-13T21:06:32.662Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3073,5 +3073,21 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "60f172eec0cf8e5e797172d171653c32cb5d5e7c",
     "lastAttemptAt": "2026-10-13T15:42:17.315Z"
+  },
+  "last-tile-duel": {
+    "revision": "61a2eed9f592caa20c6866e8a56cf50ebfc4f6d4",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "bfcf16dea4dfd1221434927144782681a9e0d32685554a975a53e7a7e2ecddb9",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "61a2eed9f592caa20c6866e8a56cf50ebfc4f6d4",
+    "lastAttemptAt": "2026-10-13T21:06:43.421Z"
   }
 }
