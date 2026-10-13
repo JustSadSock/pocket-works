@@ -25,7 +25,7 @@ export const CATALOG = [
   {type:'teddy',name:'Медвежонок',group:'decor',icon:'plant',size:[.39,.34],tabletop:true},
   {type:'vase',name:'Ваза',group:'decor',icon:'mug',size:[.28,.28],tabletop:true},
   {type:'candle',name:'Свечка',group:'lights',icon:'tablelamp',size:[.22,.22],tabletop:true},
-  {type:'pillow',name:'Подушечка',group:'decor',icon:'rug',size:[.63,.43],layer:'rug'},
+  {type:'pillow',name:'Подушечка',group:'decor',icon:'rug',size:[.63,.43]},
   {type:'basket',name:'Корзинка',group:'decor',icon:'shelf',size:[.62,.52]},
   {type:'cactus',name:'Кактус',group:'decor',icon:'plant',size:[.56,.56]},
   {type:'mirror',name:'Зеркало',group:'walls',icon:'frame',size:[1.08,.10],layer:'wall'},
