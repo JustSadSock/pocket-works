@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "last-tile-duel",
+  "name": "ПОСЛЕДНЯЯ ПЛИТА",
+  "shortName": "ПЛИТА",
+  "description": "Минималистичная тактическая дуэль 1 на 1: падающие плиты, одновременные шаги и PocketNet с одним серверным тиком в секунду.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-13",
+  "releaseDateTime": "2026-10-13T22:51:00+03:00",
+  "changelog": [
+    "Первый релиз: онлайн-комнаты PocketNet на двух игроков, приглашение по коду и ссылке.",
+    "Строго один авторитетный игровой тик в секунду: шаг, прыжок, толчок, разрушение плит и матч до трёх побед.",
+    "Локальная тренировка против бота, управление с клавиатуры и телефона, локальные звук и статистика."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#426d91",
+  "backgroundColor": "#d3d0c7",
+  "themeColor": "#d3d0c7",
+  "orientation": "portrait",
+  "cacheName": "last-tile-duel-v1.0.0",
+  "storageNamespace": "pocket-works:last-tile-duel",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "2D",
+    "pvp",
+    "turn-based",
+    "PocketNet",
+    "strategy",
+    "duel"
+  ],
+  "order": 8
+}

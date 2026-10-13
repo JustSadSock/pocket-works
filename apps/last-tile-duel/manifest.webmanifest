@@ -1,0 +1,20 @@
+{
+  "id": "/apps/last-tile-duel/",
+  "name": "Последняя плита",
+  "short_name": "ПЛИТА",
+  "description": "Тихая тактическая PvP-дуэль на разрушающемся поле, один тик в секунду.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#d3d0c7",
+  "theme_color": "#d3d0c7",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
