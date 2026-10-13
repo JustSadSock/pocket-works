@@ -134,6 +134,7 @@ function placementPalette(){
   const enabled=pending.previewReady;
   pending.ghost.dispose(false,false);
   pending.ghost=makeItem(scene,pending.proto);
+  pending.rotAnim=null;
   pending.ghost.getChildMeshes(false).forEach(mesh=>{mesh.isPickable=false;mesh.visibility=pending.valid?1:.5;});
   pending.ghost.setEnabled(Boolean(enabled));
   placementPalette();sound('paint');
@@ -169,7 +170,7 @@ function updateGhost(ev){
  pending.previewReady=true;
  pending.ghost.setEnabled(true);
  pending.ghost.position.set(target.x,target.y,target.z);
- pending.ghost.rotation.y=target.rot*Math.PI/2;
+ if(!pending.rotAnim)pending.ghost.rotation.y=target.rot*Math.PI/2;
  pending.ghost.scaling.setAll(pending.valid?1.025:1);
  for(const mesh of pending.ghost.getChildMeshes(false))mesh.visibility=pending.valid?1:.46;
 }
@@ -177,7 +178,7 @@ function rotatePlacement(){
  if(!pending||byType[pending.type].layer==='wall')return;
  pending.proto.rot=(pending.proto.rot+1)%4;
  pending.valid=pending.previewReady&&valid(state,pending.proto,'preview');
- pending.ghost.rotation.y=pending.proto.rot*Math.PI/2;
+ pending.rotAnim={from:pending.ghost.rotation.y,to:pending.proto.rot*Math.PI/2,start:performance.now()};
  pending.ghost.getChildMeshes(false).forEach(mesh=>mesh.visibility=pending.valid?1:.46);
  sound('rotate');
 }
@@ -193,7 +194,6 @@ function select(id) {
  ui.swatches.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{mutate(()=>{const found=state.items.find(i=>i.id===selectedId);if(found)found.color=button.dataset.color;});sound('paint');}));
  $('rotateBtn').disabled=item.type==='window'||item.type==='frame';
  $('duplicateBtn').disabled=false;
- sound('select');
 }
 function refresh(){
  if(!ready)return;
@@ -260,6 +260,16 @@ function trashHovered(ev){
 function hideTrash(){
  $('trashZone').hidden=true;$('trashZone').classList.remove('hover');
 }
+function snapFeedback(ev){
+ if(reduce.matches)return;
+ const pulse=$('snapPulse'),rect=$('stage').getBoundingClientRect();
+ pulse.style.left=(ev.clientX-rect.left)+'px';
+ pulse.style.top=(ev.clientY-rect.top)+'px';
+ pulse.getAnimations?.().forEach(animation=>animation.cancel());
+ pulse.animate([{transform:'translate(-50%,-50%) scale(.4)',opacity:.36},
+   {transform:'translate(-50%,-50%) scale(1.35)',opacity:0}],
+   {duration:190,easing:'ease-out',fill:'both'});
+}
 function startPointer(ev){
  if(!ready||ev.button>0)return;
  ui.canvas.setPointerCapture(ev.pointerId);
@@ -269,7 +279,7 @@ function startPointer(ev){
  if(id){
   if(selectedId!==id)select(id);
   director?.lift(id);sound('lift');
-  drag={kind:'move',id,startX:ev.clientX,startY:ev.clientY,moved:false,before:JSON.stringify(state),startPoint:pointOnGround(ev)};
+  drag={kind:'move',id,startX:ev.clientX,startY:ev.clientY,moved:false,before:JSON.stringify(state),startPoint:pointOnGround(ev),cell:null};
  }else {selectedId=null;hideSelection();drag={kind:'tap'};}
 }
 function movePointer(ev) {
@@ -290,6 +300,10 @@ function movePointer(ev) {
  const root=roots.get(item.id);root?.position.set(item.x,item.y,item.z);if(root)root.rotation.y=item.rot*Math.PI/2;
  for(const child of state.items.filter(it=>it.support===item.id))roots.get(child.id)?.position.set(child.x,child.y,child.z);
  const ok=valid(state,item);
+ if(ok){
+  const cell=item.x+':'+item.z+':'+(item.support||'');
+  if(drag.cell!==cell){drag.cell=cell;snapFeedback(ev);}
+ }
  director?.drag(item.id,dx,dz,ok);
  drag.valid=ok;
 }
