@@ -6,10 +6,12 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'petlya-17-';
-const CACHE_NAME = 'petlya-17-v3.2.0';
-const APP_VERSION = '3.2.0';
+const CACHE_NAME = 'petlya-17-v3.2.1';
+const APP_VERSION = '3.2.1';
 const RELEASE_DATE = '2026-10-13';
 const RELEASE_NOTES = [
+  'Исправлена ошибка VertexData is not defined, мешавшая запуску гонки.',
+  'Добавлена обязательная проверка TypeScript при сборке.',
   'Прибрежный автодром полностью пересобран, дорога и ориентиры видны из кокпита.',
   'Новые 3D-болиды, компактный кокпит и кинематографичное главное меню.',
   'Мини-карта соперников, предупреждение перед поворотами и обновлённый HUD.',

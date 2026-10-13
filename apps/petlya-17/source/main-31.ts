@@ -6,7 +6,7 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { RaceGame } from './race-game';
 
-const version = '3.2.0';
+const version = '3.2.1';
 const appName = 'ПЕТЛЯ 17';
 const namespace = 'pocket-works:petlya-17';
 
@@ -15,6 +15,8 @@ registerEnhancedUpdate({
   appName,
   version,
   releaseNotes: [
+    'Исправлен сбой загрузки VertexData is not defined при создании 3D-кузовов.',
+    'Перед выпуском теперь выполняется строгая проверка TypeScript.',
     'Пересобран прибрежный автодром: дорожное полотно, разметка, поребрики, ограждения и порт.',
     'Болиды и кокпит детализированы, освобождён обзор трассы.',
     'Новая кинематографичная камера меню, карта и подсказки к поворотам.',
