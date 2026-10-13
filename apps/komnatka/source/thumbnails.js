@@ -27,7 +27,10 @@ export async function buildFurnitureThumbnails(onImage){
    const height={
     sofa:1.45,chair:1.45,coffee:.85,shelf:1.2,bed:1.2,stool:.68,
     floorlamp:2.65,tablelamp:1.0,plant:1.55,rug:.15,
-    books:.38,mug:.38,frame:1.25,window:2.08
+    books:.38,mug:.38,frame:1.25,window:2.08,
+    wardrobe:2.40,desk:.88,nightstand:.76,bookcase:2.17,loveseat:1.43,pouf:.65,
+    teddy:.76,vase:.79,candle:.49,pillow:.20,basket:.67,cactus:1.13,
+    mirror:1.44,clock:.88,deskclock:.55,teapot:.57
    }[entry.type]||1.2;
    const span=Math.max(1.06,entry.size[0]*.64,entry.size[1]*.65,height*.68);
    camera.alpha=wall?Math.PI/2:Math.PI/4;
