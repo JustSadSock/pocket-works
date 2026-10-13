@@ -409,7 +409,7 @@ export class Editor{
     const sample=this.root.querySelector('#sizeSample');
     if(sample){
       const d=Math.max(3,Math.min(26,this.size));
-      sample.style.width=d+'px';sample.style.height=d+'px';
+      sample.style.setProperty('--nib',d+'px');
       sample.setAttribute('aria-label','Кисть '+String(this.size));
     }
   }
