@@ -14,6 +14,7 @@ const root=process.cwd(),out=path.join(root,'covers');
 // Versioned entry logic permits one retry of previously failed games without
 // recapturing already accepted art every night.
 const CAPTURE_ENGINE='safe-gameplay-v3';
+const diagnosticFolder=process.env.PW_COVER_DIAGNOSTICS?path.join(root,'cover-diagnostics'):null;
 const limit=Math.max(1,Math.min(24,Number(process.env.PW_COVER_LIMIT)||12));
 const shots=Math.max(3,Math.min(8,Number(process.env.PW_COVER_SHOTS)||5));
 const slugArg=(process.env.PW_COVER_SLUGS||'').split(',').map(x=>x.trim()).filter(Boolean);
@@ -197,6 +198,10 @@ try{
           const available=frameList.filter(x=>x.quality.pass);
           if(!available.length){
             const best=frameList.slice().sort((a,b)=>b.quality.score-a.quality.score)[0];
+            if(diagnosticFolder&&best){
+              await mkdir(diagnosticFolder,{recursive:true});
+              await writeFile(path.join(diagnosticFolder,app.slug+'.jpg'),best.bytes);
+            }
             recordResult(app.slug,revision,'failed',{
               note:'No frame passed image-content checks',
               diagnostic:{
