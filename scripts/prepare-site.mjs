@@ -295,21 +295,30 @@ const coversDir=path.join(output,'covers');
 await mkdir(coversDir,{recursive:true});
 const coversIndex={};
 const sourceCovers=path.join(root,'covers');
+async function publishCover(slug,source,ext){
+  // Unique asset URLs invalidate old PWA/browser cover caches without deleting
+  // unrelated game saves or forcing every app's service worker to update.
+  const bytes=await readFile(source);
+  const fingerprint=createHash('sha256').update(bytes).digest('hex').slice(0,12);
+  const filename=slug+'-'+fingerprint+'.'+ext;
+  await cp(source,path.join(coversDir,filename));
+  coversIndex[slug]='./covers/'+filename;
+}
 try{
-  for(const file of (await readdir(sourceCovers)).sort()){
-    if(!/^[a-z0-9-]+\.(?:jpg|jpeg|png|webp)$/.test(file))continue;
-    await cp(path.join(sourceCovers,file),path.join(coversDir,file));
-    coversIndex[file.replace(/\.(?:jpg|jpeg|png|webp)$/,'')]='./covers/'+file;
+  for(const file of (await readdir(sourceCovers)).sort((a,b)=>{
+    const priority=file=>({png:0,webp:1,jpeg:2,jpg:3})[file.split('.').pop()]??-1;
+    return priority(a)-priority(b)||a.localeCompare(b);
+  })){
+    const match=/^([a-z0-9-]+)\.(jpg|jpeg|png|webp)$/.exec(file);
+    if(!match)continue;
+    await publishCover(match[1],path.join(sourceCovers,file),match[2]);
   }
 }catch(error){if(error.code!=='ENOENT')throw error;}
-// A verified gameplay frame from CORVUS exists in the repository already.
+// A real gameplay image from CORVUS is the original fallback, never synthetic art.
 if(!coversIndex['corvus-yard']){
   const screenshot=path.join(root,'apps/corvus-yard/qa/evidence/chromium-acceptance/chromium-flight.png');
-  try{
-    await access(screenshot);
-    await cp(screenshot,path.join(coversDir,'corvus-yard.png'));
-    coversIndex['corvus-yard']='./covers/corvus-yard.png';
-  }catch(error){if(error.code!=='ENOENT')throw error;}
+  try{await publishCover('corvus-yard',screenshot,'png');}
+  catch(error){if(error.code!=='ENOENT')throw error;}
 }
 await writeFile(path.join(coversDir,'index.json'),JSON.stringify(coversIndex,null,2)+'\n','utf8');
 

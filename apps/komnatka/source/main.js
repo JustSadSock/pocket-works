@@ -17,7 +17,9 @@ registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.2.1',releaseNotes:
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
-let state=load(),scene,engine,camera,room,director,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
+const coverCaptureMode=new URLSearchParams(location.search).has('pw-cover');
+if(coverCaptureMode)document.documentElement.classList.add('pw-cover-mode');
+let state=coverCaptureMode?starter():load(),scene,engine,camera,room,director,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
 const GROUPS=[['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
 let activeGroup='furniture',savedTimer=0,toastTimer=0;
@@ -567,13 +569,27 @@ function setup(){
    if(el.dataset.imageType===type)el.innerHTML='<img class="actual-thumbnail" src="'+src+'" alt="">';
   });
  }),500);
- if(!localStorage.getItem('pocket-works:komnatka:intro')){
+ if(!coverCaptureMode&&!localStorage.getItem('pocket-works:komnatka:intro')){
   ui.hint.textContent='Выбери мебель справа или перетащи предмет в комнате';
   ui.hint.classList.add('visible');setTimeout(()=>ui.hint.classList.remove('visible'),4800);
   try{localStorage.setItem('pocket-works:komnatka:intro','1');}catch{}
  }
  window.addEventListener('resize',resize);new ResizeObserver(resize).observe(ui.canvas);
- if(new URLSearchParams(location.search).has('room')){
+ if(coverCaptureMode){
+  // Headless cover mode never reads players' saved rooms or joins online sessions.
+  // Every image remains a genuine render of the live Babylon.js room.
+  hideHome();resize();
+  window.PocketWorksCover={
+   async prepare({index=0}={}){
+    camera.alpha=Math.PI/4+Math.sin(index*.9)*.045;
+    camera.beta=Math.PI/3.1+Math.cos(index*.85)*.018;
+    room.tickLighting(performance.now());
+    resize();scene.render();
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   }
+  };
+  document.documentElement.dataset.pwCoverReady='true';
+ }else if(new URLSearchParams(location.search).has('room')){
   hideHome();online.open();
  }else{
   // Render the real saved room before presenting the distinct home screen.

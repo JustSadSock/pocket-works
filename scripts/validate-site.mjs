@@ -55,7 +55,7 @@ catch(error){errors.push(`dist-site/covers/index.json missing or invalid: ${erro
 for(const [slug,cover] of Object.entries(coverIndex)){
   if(!/^[a-z0-9-]{1,96}$/.test(slug) ||
      typeof cover!=='string' ||
-     !/^\.\/covers\/[a-z0-9-]+\.(?:jpg|jpeg|png|webp)$/.test(cover)){
+     !/^\.\/covers\/[a-z0-9-]+-[a-f0-9]{12}\.(?:jpg|jpeg|png|webp)$/.test(cover)){
     errors.push(`invalid cover entry for ${slug}`);continue;
   }
   if(!(await exists(path.join(output,cover.replace(/^\.\//,'')))))errors.push(`missing screenshot cover for ${slug}`);
