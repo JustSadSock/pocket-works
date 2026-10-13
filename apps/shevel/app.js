@@ -87,7 +87,7 @@ function worldToLocal(x,y,o,f){const t=factors(o,f),a=-t.r*Math.PI/180,dx=x-t.x,
 function localToWorld(x,y,o,f){const t=factors(o,f),a=t.r*Math.PI/180,u=x*t.scale*t.sx,v=y*t.scale*t.sy;return [t.x+u*Math.cos(a)-v*Math.sin(a),t.y+u*Math.sin(a)+v*Math.cos(a)]}
 function trace(g,s,o,f){
  const pts=s.p;if(pts.length===0)return;
- const first=deform(pts[0],o,f);g.beginPath();g.moveTo(...first);
+ const first=deform(pts[0],o,f);g.beginPath();if(pts.length===1){g.arc(first[0],first[1],Math.max(.5,s.w/2),0,Math.PI*2);g.fillStyle=s.c;g.fill();return}g.moveTo(...first);
  for(let i=1;i<pts.length;i++){const q=deform(pts[i],o,f);g.lineTo(...q)}
  if(s.closed){g.closePath();if(s.fill){g.fillStyle=s.fill;g.fill()}}
  g.strokeStyle=s.c;g.lineWidth=s.w;g.lineJoin='round';g.lineCap='round';g.stroke();
@@ -103,7 +103,7 @@ function renderScene(g,f,{guides=true}={}){
  // stage tint and framing - stable photographic animation desk
  g.fillStyle='#f2e8d6';g.fillRect(16,16,W-32,H-32);
  g.strokeStyle='#dcd2bc';g.lineWidth=1;g.strokeRect(16.5,16.5,W-33,H-33);
- g.setLineDash([3,7]);g.strokeStyle='#d9d2c2';g.beginPath();g.moveTo(W/2,25);g.lineTo(W/2,H-25);g.moveTo(25,H/2);g.lineTo(W-25,H/2);g.stroke();g.setLineDash([]);
+ if(guides){g.setLineDash([3,7]);g.strokeStyle='#d9d2c2';g.beginPath();g.moveTo(W/2,25);g.lineTo(W/2,H-25);g.moveTo(25,H/2);g.lineTo(W-25,H/2);g.stroke();g.setLineDash([]);}
  if(guides&&tool==='draw'&&onion&&!playing){for(const o of project.objects){if(f>0)drawObject(g,o,f-1,.16,'#4497a7');if(f+1<project.frames)drawObject(g,o,f+1,.16,'#da794d')}}
  for(const o of project.objects)drawObject(g,o,f);
  if(guides&&!playing){const o=active();if(o&&f>=o.start){if(tool==='select'||tool==='draw')drawSelection(g,o,f);if(tool==='rig')drawRig(g,o,f)}}
@@ -215,5 +215,7 @@ $('#importFile').addEventListener('change',async e=>{const file=e.target.files?.
 window.addEventListener('keydown',e=>{const typing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);if(e.key==='Escape'&&modalOpen){closeModal();return}if(typing||modalOpen)return;const key=e.key.toLowerCase();if((e.ctrlKey||e.metaKey)&&key==='z'&&!e.shiftKey){e.preventDefault();$('#undoBtn').click()}else if((e.ctrlKey||e.metaKey)&&(key==='y'||key==='z'&&e.shiftKey)){e.preventDefault();$('#redoBtn').click()}else if(key===' '){e.preventDefault();play()}else if(key==='arrowleft'){e.preventDefault();stop();setFrame(frame-1)}else if(key==='arrowright'){e.preventDefault();stop();setFrame(frame+1)}else if(key==='v')setTool('select');else if(key==='d')setTool('draw');else if(key==='j')setTool('rig');else if(key==='e')setTool('erase');else if((e.ctrlKey||e.metaKey)&&(key==='+'||key==='=')){e.preventDefault();setZoom(view.zoom*1.25)}else if((e.ctrlKey||e.metaKey)&&key==='-'){e.preventDefault();setZoom(view.zoom/1.25)}else if((key==='delete'||key==='backspace')&&active())$('#deleteObjectBtn').click()});
 window.addEventListener('pagehide',()=>{clearTimeout(saveTimer);try{localStorage.setItem(STORAGE,JSON.stringify(project))}catch{}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();try{localStorage.setItem(STORAGE,JSON.stringify(project))}catch{}}});
+$('#trackNames').addEventListener('scroll',()=>{$('#tracks').scrollTop=$('#trackNames').scrollTop});
+$('#tracks').addEventListener('scroll',()=>{$('#trackNames').scrollTop=$('#tracks').scrollTop});
 window.addEventListener('resize',()=>{refreshTimeline();render()});
 refreshHeader();refreshTimeline();refreshInspector();setTool('select');render();save();
