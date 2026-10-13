@@ -245,6 +245,7 @@ requires explicit trust; never execute untrusted source with credentials.
 - Prefer procedural Web Audio/Tone layers for continuous/physical sounds and controlled randomization of pitch, gain, filtering, timing and layer selection for repeated events.
 - Use small app-local variation banks when a sampled sound is more convincing than synthesis.
 - Do not add a paid external audio-generation dependency unless the requested sound genuinely cannot be produced well with the existing browser/audio toolchain.
+- **Before implementing or changing a game's audio, read `docs/agent-skills/AUDIO-ORIGINALITY.md` and write its app-specific sound palette.** Every game must have its own material-based sound identity; never reuse a generic sine beep for all actions or clone the same palette across apps.
 
 ## 14. Playwright QA and visual sign-off
 
