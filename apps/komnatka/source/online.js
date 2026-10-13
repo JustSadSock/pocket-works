@@ -145,8 +145,12 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,toast})
    client.on('connected',m=>{
     if(client!==net)return;
     me=m.player;connected=true;busy=false;
-    if(kind==='create')client.createRoom('komnatka',{});
-    else client.joinRoom(joinCode);
+    // PocketNet restores the existing room itself after reconnect.
+    // Never create a second room or rejoin by invitation on a recovered socket.
+    if(!room&&!client.roomId){
+     if(kind==='create')client.createRoom('komnatka',{});
+     else client.joinRoom(joinCode);
+    }
     render();
    });
    client.on('room_joined',m=>{
