@@ -305,7 +305,10 @@ async function publishCover(slug,source,ext){
   coversIndex[slug]='./covers/'+filename;
 }
 try{
-  for(const file of (await readdir(sourceCovers)).sort()){
+  for(const file of (await readdir(sourceCovers)).sort((a,b)=>{
+    const priority=file=>({png:0,webp:1,jpeg:2,jpg:3})[file.split('.').pop()]??-1;
+    return priority(a)-priority(b)||a.localeCompare(b);
+  })){
     const match=/^([a-z0-9-]+)\.(jpg|jpeg|png|webp)$/.exec(file);
     if(!match)continue;
     await publishCover(match[1],path.join(sourceCovers,file),match[2]);
