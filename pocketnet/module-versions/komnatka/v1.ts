@@ -222,6 +222,14 @@ const module={
    return {state,events:announce(state)};
   }
   if(p.type==='finish'&&state.phase==='build'&&player.id===state.host){finish(state);return {state,events:announce(state)};}
+  if(p.type==='decorate'&&state.phase==='build'){
+   const patch=p.patch&&typeof p.patch==='object'?p.patch:{};
+   if(typeof patch.wallColor==='number'&&Number.isInteger(patch.wallColor)&&patch.wallColor>=0&&patch.wallColor<=5)state.finishes.wallColor=patch.wallColor;
+   if(['plain','stripe','flower'].includes(patch.pattern))state.finishes.pattern=patch.pattern;
+   if(['honey','walnut','painted','tile'].includes(patch.floor))state.finishes.floor=patch.floor;
+   if(typeof patch.evening==='boolean')state.finishes.evening=patch.evening;
+   state.revision++;return {state,events:announce(state)};
+  }
   if(p.type==='select'&&state.phase==='build'){
    const id=String(p.id||'').slice(0,80);
    const item=state.items.find(i=>i.id===id);
