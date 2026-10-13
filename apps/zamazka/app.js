@@ -319,7 +319,7 @@ function home(skipLeave=false){
     '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
     (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
   '</div></section>','home');
- museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(id+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
+ museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(museumOrder.indexOf(id)+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
  syncIdentity();
  zamazkaCloud?.render();
 
@@ -725,6 +725,7 @@ function renderView(){
    const status=screen.querySelector('#artPreparingStatus');if(status&&!preparingError&&loadedRound===roomId+':'+view.round){const total=view.participants?.length||0;status.textContent='Картины готовы · '+(view.readyCount||0)+' / '+total+' игроков'}
    return;
  }
+ if(page==='preview'&&view.phase==='preview'&&key===lastUiKey)return; // Do not reset the player's mobile swipe position on server updates.
  if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
  if(page==='vote'&&view.phase==='voting'&&voteScreenToken===view.round+':'+view.turn){
   // Authoritative vote receipts can update dozens of times per round.
