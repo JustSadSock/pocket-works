@@ -1,15 +1,17 @@
 import {pocketAvatarMarkup} from './capabilities/identity.js';
+import {mountCardCanvas} from './capabilities/card-studio.js';
 import {mascotSvg,safeMascot,mascotAnimals,mascotHats,mascotClothes,mascotFaces,mascotTitles} from './capabilities/maskot.js';
 // Pocket Social shared UI. No dependency on a specific app runtime or framework.
 const q=(s,root=document)=>root.querySelector(s);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#965545'],['lilac','Сирень','#776185'],['ocean','Океан','#347e8c'],['night','Ночь','#252d39'],['paper','Бумага','#d6bea1']];
 const frames=[['clean','Чистая'],['double','Двойная'],['corners','Углы'],['stamp','Марка']];
-const colors=['#1d3040','#d65b48','#edb55f','#529276','#8b65ab','#ffffff'];
+const portraitFrames=[['none','Без рамки'],['wood','Резное дерево'],['gilt','Позолоченная']];
+const colors=['#273d46','#fff8e6','#d75e55','#f2ad6c','#f2d478','#82aa73','#478d8c','#6092bd','#8865a3','#c87eac','#8a604d','#101c29'];
 const errors={invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
-const state={editorTab:'animal',reward:null,tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
-let dialog,content,entry,searchClock=0,pollClock=0,heartbeatClock=0;
+const state={editorTab:'animal',paintOpen:false,reward:null,tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
+let dialog,content,entry,paintSession=null,searchClock=0,pollClock=0,heartbeatClock=0;
 const api=async(path,body)=>{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
   try{
@@ -28,13 +30,19 @@ const avatar=p=>p.maskot?mascotSvg(p.maskot,{unlocks:p.unlocked||['astronaut','w
   p.artwork?'<img src="'+esc(p.artwork)+'" alt="Нарисованный аватар">':pocketAvatarMarkup(p.avatar,{accountId:p.id});
 const gameLabel=id=>state.catalog.find(g=>g.slug===id)?.name||id||'Не выбрана';
 function card(p){
-  return '<div class="pws-card" data-background="'+esc(p.background)+'" data-frame="'+esc(p.frame)+'">'+
-  (p.maskot&&p.artwork?'<img class="pws-card__paint" src="'+esc(p.artwork)+'" alt="">':'')+
-  '<div class="pws-card__top"><div class="pws-avatar">'+avatar(p)+'</div><div class="pws-card__id">POCKET / ID<br>PLAYER CARD</div></div>'+
-  '<div class="pws-card__name">'+esc(p.nickname)+'</div>'+
-  (p.title?'<div class="pws-card__title">'+esc(p.title)+'</div>':'')+
-  '<div class="pws-card__foot"><span>'+esc(p.favoriteGame?gameLabel(p.favoriteGame):'Участник PocketWorks')+'</span>'+
-  '<span>'+ (p.owned?'Мой профиль':p.online?'● В сети':'Не в сети')+'</span></div></div>';
+  const mode=p.backgroundMode==='drawing'?'drawing':'preset';
+  const portraitFrame=portraitFrames.some(f=>f[0]===p.portraitFrame)?p.portraitFrame:'wood';
+  const paint=(mode==='drawing'&&p.artwork)?'<img class="pws-card__paint" src="'+esc(p.artwork)+'" alt="">':'';
+  const portrait=p.maskot?'<div class="pws-portrait" data-portrait-frame="'+portraitFrame+
+    '"><div class="pws-avatar">'+avatar(p)+'</div></div>':
+    '<div class="pws-avatar">'+avatar(p)+'</div>';
+  return '<div class="pws-card" data-background="'+(mode==='drawing'?'drawing':esc(p.background))+
+    '" data-frame="'+esc(p.frame)+'">'+paint+
+    '<div class="pws-card__top">'+portrait+'<div class="pws-card__id">POCKET / ID<br>PLAYER CARD</div></div>'+
+    '<div class="pws-card__name">'+esc(p.nickname)+'</div>'+
+    (p.title?'<div class="pws-card__title">'+esc(p.title)+'</div>':'')+
+    '<div class="pws-card__foot"><span>'+esc(p.favoriteGame?gameLabel(p.favoriteGame):'Участник PocketWorks')+'</span>'+
+    '<span>'+ (p.owned?'Мой профиль':p.online?'● В сети':'Не в сети')+'</span></div></div>';
 }
 const errorMarkup=()=>state.error?'<div class="pws-error" role="alert">'+esc(state.error)+'</div>':state.notice?'<div class="pws-notice" role="status">'+esc(state.notice)+'</div>':'';
 // The compact identity card uses the same saved Pocket ID background, frame and art
@@ -125,9 +133,30 @@ async function loadCloudUsage(){
 }
 const maskotCategories=[
   ['animal','Зверь'],['hat','Голова'],['clothes','Одежда'],['face','Лицо'],
-  ['card','Фон и рамка'],['account','Профиль']
+  ['portrait','Рамка'],['background','Фон'],['account','Профиль']
 ];
+function paintingStudio(){
+  return '<section class="pws-studio" aria-label="Редактор нарисованного фона">'+
+    '<div class="pws-studio__header"><div><strong>Мой рисунок</strong><small>Фон карточки · рисуй пальцем или мышью</small></div>'+
+    '<div class="pws-studio__header-actions">'+button('paint-cancel','Назад')+
+    button('paint-done','Готово','primary')+'</div></div>'+
+    '<div class="pws-studio__body"><div class="pws-studio__workspace"><canvas class="pws-studio-canvas" width="480" height="320" aria-label="Холст для рисования фона"></canvas></div>'+
+    '<div class="pws-studio__controls"><div class="pws-studio__section-label">Цвет</div>'+
+    '<div class="pws-studio__palette">'+colors.map(c=>'<button type="button" data-paint-color="'+c+
+    '" style="--paint:'+c+'" aria-label="Цвет '+c+'"></button>').join('')+
+    '<label class="pws-studio__custom" title="Свой цвет"><input data-paint-custom type="color" value="#325f75" aria-label="Выбрать свой цвет"><span>+</span></label></div>'+
+    '<div class="pws-studio__section-label">Инструмент</div><div class="pws-studio__tools">'+
+    '<button type="button" data-paint-tool="brush">Кисть</button>'+
+    '<button type="button" data-paint-tool="eraser">Ластик</button></div>'+
+    '<label class="pws-studio__size">Размер <input data-paint-size type="range" min="3" max="48" step="1" value="10">'+
+    '<span data-paint-size-label>10</span></label>'+
+    '<div class="pws-studio__history"><button type="button" data-paint-undo disabled>↶ Отменить</button>'+
+    '<button type="button" data-paint-redo disabled>↷ Вернуть</button>'+
+    '<button type="button" data-paint-clear>Очистить</button></div>'+
+    '<div class="pws-studio__message" role="status" aria-live="polite"></div></div></div></section>';
+}
 function editor(){
+  if(state.paintOpen)return paintingStudio();
   const d=state.draft,m=d.maskot||safeMascot(null),unlocks=state.me?.profile?.unlocked||[];
   const secretHats=[...(unlocks.includes('astronaut')?[['helmet','Шлем космонавта']]:[]),
     ...(unlocks.includes('wedding')?[['veil','Фата']]:[])];
@@ -138,23 +167,31 @@ function editor(){
     '<button type="button" data-pws="maskot-item" data-field="'+field+'" data-value="'+id+
     '" aria-pressed="'+(m[field]===id)+'"><span class="pws-maskot-option__art">'+
     mascotSvg({...m,[field]:id},{unlocks,size:92})+'</span><span>'+esc(label)+'</span></button>').join('')+'</div>';
+  const frameOptions='<div class="pws-portrait-options">'+portraitFrames.map(([id,label])=>
+    '<button type="button" data-pws="portrait-frame" data-value="'+id+
+    '" aria-pressed="'+(d.portraitFrame===id)+'"><span class="pws-portrait-sample" data-portrait-frame="'+id+
+    '">'+mascotSvg(m,{unlocks,size:80})+'</span><span>'+esc(label)+'</span></button>').join('')+'</div>';
+  const presetControls='<div class="pws-field"><label>Цветовая тема карточки</label><div class="pws-options">'+backgrounds.map(t=>
+      '<button type="button" class="pws-option pws-option--theme" style="--sample:'+t[2]+
+      '" title="'+t[1]+'" aria-label="'+t[1]+'" data-pws="background" data-value="'+t[0]+
+      '" aria-pressed="'+(d.background===t[0])+'"></button>').join('')+'</div></div>'+
+      '<div class="pws-field"><label>Внешняя рамка карточки</label><div class="pws-options">'+frames.map(t=>
+      '<button type="button" class="pws-option" data-pws="frame" data-value="'+t[0]+
+      '" aria-pressed="'+(d.frame===t[0])+'">'+t[1]+'</button>').join('')+'</div></div>';
+  const backgroundControls='<div class="pws-background-choices"><button type="button" data-pws="background-mode" data-value="preset" aria-pressed="'+(d.backgroundMode!=='drawing')+'">Готовый фон</button>'+
+    '<button type="button" data-pws="background-mode" data-value="drawing" aria-pressed="'+(d.backgroundMode==='drawing')+'">Мой рисунок</button></div>'+
+    (d.backgroundMode==='drawing'?
+    '<div class="pws-drawing-choice"><div class="pws-drawing-choice__thumbnail">'+
+      (d.artwork?'<img alt="Мой рисунок" src="'+esc(d.artwork)+'">':'<span>Пустой холст</span>')+
+      '</div><div>'+button('paint-open',d.artwork?'Редактировать рисунок':'Нарисовать фон','primary')+
+      '<p>Рисунок заменяет готовую цветовую тему, а не смешивается с ней.</p></div></div>':
+    presetControls);
   const appearance=category==='animal'?options(mascotAnimals,'animal'):
     category==='hat'?options([...mascotHats,...secretHats],'hat'):
     category==='clothes'?options([...mascotClothes,...secretClothes],'clothes'):
     category==='face'?options(mascotFaces,'face'):
-    category==='card'?'<div class="pws-field"><label>Фон карточки</label><div class="pws-options">'+backgrounds.map(t=>
-      '<button type="button" class="pws-option pws-option--theme" style="--sample:'+t[2]+
-      '" title="'+t[1]+'" aria-label="'+t[1]+'" data-pws="background" data-value="'+t[0]+
-      '" aria-pressed="'+(d.background===t[0])+'"></button>').join('')+'</div></div>'+
-      '<div class="pws-field"><label>Рамка</label><div class="pws-options">'+frames.map(t=>
-      '<button type="button" class="pws-option" data-pws="frame" data-value="'+t[0]+
-      '" aria-pressed="'+(d.frame===t[0])+'">'+t[1]+'</button>').join('')+'</div></div>'+
-      '<div class="pws-field"><label>Рисунок на фоне</label><div class="pws-editor-tools">'+
-      '<canvas class="pws-draw" width="160" height="160" aria-label="Рисовать фон карточки"></canvas>'+
-      '<div><div class="pws-swatches">'+colors.map(c=>
-      '<button type="button" class="pws-swatch" style="--swatch:'+c+'" data-pws="ink" data-value="'+c+
-      '" aria-label="Цвет '+c+'" aria-pressed="'+(state.ink===c)+'"></button>').join('')+'</div>'+
-      '<div class="pws-actions">'+button('undo','Отменить')+button('clear-art','Очистить')+'</div></div></div></div>':
+    category==='portrait'?frameOptions:
+    category==='background'?backgroundControls:
       '<div class="pws-field"><label for="pws-nickname">Никнейм</label>'+
       '<input id="pws-nickname" type="text" maxlength="20" minlength="3" value="'+esc(d.nickname)+'"></div>'+
       '<div class="pws-field"><label for="pws-title">Титул</label><select id="pws-title">'+mascotTitles.map(t=>
@@ -162,7 +199,7 @@ function editor(){
       '<div class="pws-field"><label for="pws-favorite">Любимая игра</label><select id="pws-favorite">'+
       '<option value="">Не выбрана</option>'+state.catalog.map(g=>
       '<option value="'+esc(g.slug)+'" '+(g.slug===d.favoriteGame?'selected':'')+'>'+esc(g.name)+'</option>').join('')+
-      '</select></div>'+
+      '</select><small>Если игра не выбрана, карточка показывает «Участник PocketWorks» — это не титул.</small></div>'+
       '<label class="pws-check"><input type="checkbox" id="pws-discoverable" '+(d.discoverable?'checked':'')+'> Показывать профиль в поиске</label>'+
       '<label class="pws-check"><input type="checkbox" id="pws-presence" '+(d.presenceVisible?'checked':'')+'> Показывать онлайн</label>'+
       '<label class="pws-check"><input type="checkbox" id="pws-invites" '+(d.allowInvites?'checked':'')+'> Разрешать приглашения</label>'+
@@ -278,7 +315,10 @@ function render(){
     state.tab==='friends'?friendsPanel():
     state.tab==='invites'?invitesPanel():
     state.tab==='invite'?invitePanel():otherPanel());
-  if(state.edit&&state.tab==='profile'&&state.editorTab==='card')initCanvas();
+  if(state.edit&&state.tab==='profile'&&state.paintOpen){
+    paintSession=mountCardCanvas(content,{initial:state.draft.artwork,
+      onError:message=>{const label=q('.pws-studio__message',content);if(label)label.textContent=message;}});
+  }else paintSession=null;
 }
 function updateNotification(count){
   const invites=(state.me?.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
@@ -395,6 +435,7 @@ async function saveUnifiedProfile(){
     // Identity is always canonical for the nickname. Appearance is stored in Pocket Social.
     await updateIdentityNickname(name);
     await api('profile',{background:draft.background,frame:draft.frame,
+      backgroundMode:draft.backgroundMode||'preset',portraitFrame:draft.portraitFrame||'wood',
       artwork:draft.artwork,maskot:draft.maskot,title:draft.title||'',favoriteGame:draft.favoriteGame,
       discoverable:draft.discoverable,presenceVisible:draft.presenceVisible,
       allowInvites:draft.allowInvites});
@@ -418,40 +459,6 @@ async function mutate(path,body,{tab,stay=false}={}){
     if(!stay)state.other=null;
   }catch(e){state.error=e.message}
   finally{state.busy=false;render()}
-}
-function initCanvas(){
-  const canvas=q('.pws-draw',dialog);if(!canvas)return;
-  const ctx=canvas.getContext('2d');if(!ctx)return;
-  const restore=data=>{
-    ctx.clearRect(0,0,160,160);
-    if(!data)return;
-    const img=new Image();img.onload=()=>{if(canvas.isConnected)ctx.drawImage(img,0,0,160,160)};img.src=data;
-  };
-  restore(state.draft.artwork);
-  let active=false,last=null;
-  canvas.addEventListener('pointerdown',e=>{
-    if(state.busy)return;
-    active=true;canvas.setPointerCapture(e.pointerId);
-    const rect=canvas.getBoundingClientRect();last={x:(e.clientX-rect.left)*160/rect.width,y:(e.clientY-rect.top)*160/rect.height};
-    ctx.strokeStyle=state.ink;ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=6;
-    ctx.beginPath();ctx.arc(last.x,last.y,3,0,Math.PI*2);ctx.fillStyle=state.ink;ctx.fill();
-  });
-  canvas.addEventListener('pointermove',e=>{
-    if(!active)return;
-    const rect=canvas.getBoundingClientRect(),now={x:(e.clientX-rect.left)*160/rect.width,y:(e.clientY-rect.top)*160/rect.height};
-    ctx.beginPath();ctx.strokeStyle=state.ink;ctx.lineWidth=6;ctx.lineCap='round';ctx.lineJoin='round';
-    ctx.moveTo(last.x,last.y);ctx.lineTo(now.x,now.y);ctx.stroke();last=now;
-  });
-  const done=()=>{if(!active)return;active=false;
-    state.draft.artwork=canvas.toDataURL('image/webp',.78);
-    if(state.draft.artwork.length>24000){
-      state.draft.artwork=canvas.toDataURL('image/webp',.48);
-    }
-    if(state.draft.artwork.length>24000){state.error='Слишком большой рисунок. Упрости его.';state.draft.artwork=state.artHistory.at(-1)||'';restore(state.draft.artwork);render();return}
-    state.artHistory.push(state.draft.artwork);if(state.artHistory.length>25)state.artHistory.shift();
-    const avatarEl=q('.pws-card .pws-avatar',dialog);if(avatarEl)avatarEl.innerHTML=avatar({...state.me.profile,artwork:state.draft.artwork});
-  };
-  canvas.addEventListener('pointerup',done);canvas.addEventListener('pointercancel',done);
 }
 function install(){
   if(!document.body||dialog)return;
@@ -517,10 +524,25 @@ function install(){
     if(action==='refresh-cloud'){void loadCloudUsage();return}
     if(action==='account'){dialog.close();if(window.PocketID?.openAccount)window.PocketID.openAccount();else location.assign('/?pocket-id=login');return}
     if(action==='copy-id'){try{await navigator.clipboard.writeText(state.me.profile.id);state.notice='ID скопирован.'}catch{state.error='Не удалось скопировать ID.'}render();return}
-    if(action==='edit'){state.edit=true;state.draft={...state.me.profile,
+    if(action==='edit'){state.edit=true;state.paintOpen=false;state.draft={...state.me.profile,
+      backgroundMode:state.me.profile.backgroundMode||'preset',
+      portraitFrame:state.me.profile.portraitFrame||'wood',
       maskot:safeMascot(state.me.profile.maskot,state.me.profile.unlocked)};
       state.editorTab='animal';state.artHistory=[state.draft.artwork];resetNotice();render();return}
     if(action==='maskot-tab'){state.editorTab=target.dataset.value;render();return}
+    if(action==='portrait-frame'){state.draft.portraitFrame=target.dataset.value;render();return}
+    if(action==='background-mode'){state.draft.backgroundMode=target.dataset.value;render();return}
+    if(action==='paint-open'){state.paintOpen=true;render();return}
+    if(action==='paint-cancel'){
+      if(paintSession?.hasChanges()&&!window.confirm('Отменить несохранённые изменения рисунка?'))return;
+      state.paintOpen=false;paintSession=null;render();return;
+    }
+    if(action==='paint-done'){
+      const art=paintSession?.commit();
+      if(!art){const el=q('.pws-studio__message',content);if(el)el.textContent='Не удалось сохранить рисунок.';return;}
+      state.draft.artwork=art;state.draft.backgroundMode='drawing';
+      state.paintOpen=false;paintSession=null;render();return;
+    }
     if(action==='maskot-item'){
       if(!['animal','hat','clothes','face'].includes(target.dataset.field))return;
       state.draft.maskot={...state.draft.maskot,[target.dataset.field]:target.dataset.value};
@@ -544,14 +566,8 @@ function install(){
       finally{state.busy=false;render()}return;
     }
     if(action==='reward-close'){state.reward=null;render();return}
-    if(action==='cancel-edit'){state.edit=false;render();return}
+    if(action==='cancel-edit'){state.edit=false;state.paintOpen=false;render();return}
     if(action==='background'||action==='frame'){state.draft[action]=target.dataset.value;render();return}
-    if(action==='ink'){state.ink=target.dataset.value;render();return}
-    if(action==='undo'){
-      if(state.artHistory.length>1)state.artHistory.pop();
-      state.draft.artwork=state.artHistory.at(-1)||'';render();return;
-    }
-    if(action==='clear-art'){state.draft.artwork='';state.artHistory.push('');render();return}
     if(action==='save-profile'){await saveUnifiedProfile();return}
     if(action==='open-user'){await showUser(id);return}
     if(action==='back'){state.tab='friends';state.other=null;resetNotice();render();return}

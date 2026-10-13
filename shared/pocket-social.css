@@ -325,3 +325,91 @@
 /* Keep the launcher account button at its original icon footprint. */
 #pocket-id-trigger .pw-social-maskot-nav{display:block;width:31px;height:31px;border-radius:6px;overflow:hidden;background:#d8d8ca}
 #pocket-id-trigger .pw-social-maskot-nav>.pws-maskot-svg{display:block;width:100%;height:100%}
+
+/* Card Studio v2: draw mode replaces the preset background rather than tinting it. */
+.pws-card[data-background=drawing]{background:#eee5d3;color:#26363b;--pws-accent:#6e5642;--pws-ink:#483b32}
+.pws-card[data-background=drawing]::before{opacity:.22}
+.pws-card .pws-card__paint{inset:0;width:100%;height:100%;opacity:1;mix-blend-mode:normal;object-fit:cover;z-index:0}
+.pws-card[data-background=drawing] .pws-card__id,
+.pws-card[data-background=drawing] .pws-card__name,
+.pws-card[data-background=drawing] .pws-card__title,
+.pws-card[data-background=drawing] .pws-card__foot{color:#243439;text-shadow:0 1px 3px #fff8,0 0 8px #fff8}
+.pws-portrait{width:clamp(150px,39%,212px);aspect-ratio:1/1;flex:none;position:relative;display:grid;place-items:center;padding:10px;border:9px solid #644432;border-radius:2px;box-shadow:0 8px 17px #12191960,0 0 0 1px #190f0d,inset 0 0 0 3px #2f2421;
+  background:linear-gradient(132deg,#e7d6b4,#b5b39a 73%)}
+.pws-portrait[data-portrait-frame=wood]{
+  border-color:#725038;
+  background:radial-gradient(ellipse at 28% 22%,#f4e6c8,#bcb6a0 92%);
+  box-shadow:inset 0 0 0 3px #d4a36b,0 0 0 2px #493223,0 8px 17px #19140f55,0 0 0 7px #52372744}
+.pws-portrait[data-portrait-frame=gilt]{
+  border-color:#dab46a;
+  background:radial-gradient(ellipse at 35% 24%,#fff1cf,#cad4c2 92%);
+  box-shadow:inset 0 0 0 3px #fff1b9,0 0 0 2px #654b2f,0 8px 17px #161b195a,0 0 0 6px #efcf8a55}
+.pws-portrait[data-portrait-frame=none]{border:0;padding:0;border-radius:0;background:none;box-shadow:none}
+.pws-portrait:not([data-portrait-frame=none])::after{content:'';position:absolute;inset:0;border:2px solid #fff5;pointer-events:none;box-shadow:inset 0 0 10px #301c1550}
+.pws-card:has(.pws-maskot-svg) .pws-portrait .pws-avatar{width:100%;height:100%;aspect-ratio:1;background:none;filter:none;box-shadow:none;overflow:visible}
+.pws-card:has(.pws-maskot-svg) .pws-portrait .pws-avatar .pws-maskot-svg{width:100%;height:100%}
+.pws-portrait-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.pws-portrait-options>button{display:grid;justify-items:center;gap:10px;padding:12px 5px;background:#263c3f;color:#e3eae4;border:1px solid #506264;border-radius:10px;font-size:12px;font-weight:700}
+.pws-portrait-options>button[aria-pressed=true]{background:#3b5553;border-color:#ecc499;box-shadow:inset 0 0 0 1px #ecc499}
+.pws-portrait-sample{width:min(95%,98px);height:auto;aspect-ratio:1;display:grid;place-items:center;padding:5px;border:7px solid #75533c;background:radial-gradient(ellipse at 28% 19%,#ead6b2,#abb6a9);box-shadow:inset 0 0 0 2px #d2a674}
+.pws-portrait-sample[data-portrait-frame=none]{border:0;background:transparent;box-shadow:none}
+.pws-portrait-sample[data-portrait-frame=gilt]{border-color:#dcb66c;background:#f8ecd2;box-shadow:inset 0 0 0 2px #fff1b1}
+.pws-portrait-sample .pws-maskot-svg{width:100%;height:100%}
+.pws-background-choices{display:flex;gap:7px;margin:0 0 16px}
+.pws-background-choices button{flex:1;min-height:44px;border:1px solid #53686a;border-radius:9px;background:#263b40;color:#e6eae3;font-size:13px;font-weight:700}
+.pws-background-choices button[aria-pressed=true]{border-color:#eac097;background:#ba8664;color:#17272a}
+.pws-drawing-choice{display:grid;grid-template-columns:126px minmax(0,1fr);gap:14px;align-items:center;border:1px solid #536c6b;padding:13px;border-radius:11px}
+.pws-drawing-choice__thumbnail{width:126px;aspect-ratio:1;border:1px dashed #93a49a;border-radius:8px;display:grid;place-items:center;color:#acbdb6;font-size:12px;text-align:center;overflow:hidden;background:repeating-conic-gradient(#e8e6df 0% 25%,#c9cec6 0% 50%) 50%/20px 20px}
+.pws-drawing-choice__thumbnail img{width:100%;height:100%;object-fit:contain}
+.pws-drawing-choice p{color:#a8b8b1;font-size:12px;margin:12px 0 0}
+.pws-maskot-editor__picker .pws-field small{color:#b6c7bf;font-size:12px;line-height:1.35}
+.pws-studio{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:11px;background:#17272b;color:#eff2eb;padding:14px;border:1px solid #506363;border-radius:12px}
+.pws-studio__header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pws-studio__header strong{display:block;font:700 23px/1.1 Georgia,serif}
+.pws-studio__header small{display:block;color:#a3b6b1;font-size:11px;margin-top:4px}
+.pws-studio__header-actions{display:flex;gap:7px}
+.pws-studio__body{display:grid;grid-template-columns:minmax(0,1fr) 226px;gap:14px;min-height:0}
+.pws-studio__workspace{display:grid;place-items:center;min-height:0;min-width:0;background:radial-gradient(ellipse at 38% 28%,#334b4b,#1c3135);border:1px solid #496062;border-radius:11px;padding:12px}
+.pws-studio-canvas{width:min(100%,min(65dvh,550px));height:auto;aspect-ratio:3/2;max-height:100%;border:4px solid #d8c6a8;box-shadow:0 14px 25px #0006;display:block;touch-action:none;cursor:crosshair;image-rendering:auto;background:repeating-conic-gradient(#f6f3ec 0% 25%,#d9d9d3 0% 50%) 50%/20px 20px}
+.pws-studio__controls{display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;padding:3px 2px}
+.pws-studio__section-label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:750;color:#aec6bc}
+.pws-studio__palette{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.pws-studio__palette [data-paint-color],.pws-studio__custom{position:relative;aspect-ratio:1;border:2px solid #667d79;border-radius:9px;background:var(--paint);min-height:32px}
+.pws-studio__palette [aria-pressed=true]{outline:2px solid #fff3c9;outline-offset:1px}
+.pws-studio__custom{display:grid;place-items:center;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);overflow:hidden}
+.pws-studio__custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.pws-studio__custom span{pointer-events:none;color:#fff;font-size:22px;text-shadow:0 1px 4px #000;font-weight:800}
+.pws-studio__tools,.pws-studio__history{display:flex;gap:6px;flex-wrap:wrap}
+.pws-studio__tools button,.pws-studio__history button{border:1px solid #526e6b;border-radius:8px;background:#294044;color:#e4ede7;min-height:37px;padding:7px 11px;font-size:12px;font-weight:700}
+.pws-studio__tools button[aria-pressed=true]{background:#d7bd99;color:#1a302f;border-color:#e4ceaa}
+.pws-studio__history button:disabled{opacity:.4}
+.pws-studio__size{display:flex;align-items:center;gap:8px;font-size:12px;color:#d7e6dd}
+.pws-studio__size input{flex:1;min-width:90px;accent-color:#e4ba8b}
+.pws-studio__size span{width:24px;text-align:right;font-variant-numeric:tabular-nums}
+.pws-studio__message{font-size:12px;color:#ffd4bf;min-height:15px}
+.pws-content:has(.pws-studio){overflow:hidden;padding:8px}
+@media(min-width:900px){.pws-dialog:has(.pws-studio){width:min(1100px,calc(100vw - 30px))}}
+@media(max-width:700px){
+  .pws-maskot-editor__preview .pws-portrait{width:min(31%,120px);border-width:6px;padding:5px}
+  .pws-maskot-tabs{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;gap:2px}
+  .pws-maskot-tabs button{flex:1 0 auto;min-width:48px;padding:7px 3px;font-size:10px}
+  .pws-portrait-options{gap:5px}
+  .pws-portrait-options>button{font-size:10px;padding:8px 3px}
+  .pws-portrait-sample{border-width:5px}
+  .pws-drawing-choice{grid-template-columns:90px minmax(0,1fr);gap:10px;padding:9px}
+  .pws-drawing-choice__thumbnail{width:90px}
+  .pws-studio{padding:8px;gap:8px}
+  .pws-studio__header strong{font-size:18px}
+  .pws-studio__header small{font-size:10px}
+  .pws-studio__header-actions .pws-btn{min-height:35px;padding:7px 10px}
+  .pws-studio__body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:8px}
+  .pws-studio__workspace{padding:6px}
+  .pws-studio-canvas{width:min(100%,min(42dvh,430px));max-height:100%}
+  .pws-studio__controls{overflow:visible;gap:6px;padding:0 2px 3px}
+  .pws-studio__palette{grid-template-columns:repeat(13,minmax(20px,1fr));gap:3px}
+  .pws-studio__palette [data-paint-color],.pws-studio__custom{min-height:25px;border-radius:5px}
+  .pws-studio__section-label{display:none}
+  .pws-studio__tools button,.pws-studio__history button{min-height:32px;padding:6px 8px}
+  .pws-studio__history{justify-content:space-between}
+}
+@media(max-width:385px){.pws-studio__palette{grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.pws-studio-canvas{width:min(100%,37dvh)}}

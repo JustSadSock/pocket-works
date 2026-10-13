@@ -4,6 +4,8 @@ const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,heade
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper']);
 const frames=new Set(['clean','double','corners','stamp']);
+const backgroundModes=new Set(['preset','drawing']);
+const portraitFrames=new Set(['none','wood','gilt']);
 const maskotAnimals=new Set(['cat','rabbit','frog']);
 const maskotHats=new Set(['none','crown','beret','flower','helmet','veil']);
 const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding']);
@@ -34,7 +36,7 @@ export class PocketSocial {
     this.sql.exec("CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,nickname TEXT NOT NULL,avatar TEXT NOT NULL,background TEXT NOT NULL DEFAULT 'forest',frame TEXT NOT NULL DEFAULT 'clean',artwork TEXT NOT NULL DEFAULT '',favorite_game TEXT NOT NULL DEFAULT '',discoverable INTEGER NOT NULL DEFAULT 1,presence_visible INTEGER NOT NULL DEFAULT 1,allow_invites INTEGER NOT NULL DEFAULT 1,seen_at INTEGER NOT NULL DEFAULT 0,game_id TEXT NOT NULL DEFAULT '',updated_at INTEGER NOT NULL DEFAULT 0)");
     // Non-destructive migration: existing hand-drawn avatars remain available as card backgrounds.
     const columns=this.sql.exec('PRAGMA table_info(profiles)').toArray().map(x=>x.name);
-    for(const [name,spec] of [['maskot','TEXT NOT NULL DEFAULT \'\''],['unlocked','TEXT NOT NULL DEFAULT \'[]\''],['title','TEXT NOT NULL DEFAULT \'\'']]){
+    for(const [name,spec] of [['maskot','TEXT NOT NULL DEFAULT \'\''],['unlocked','TEXT NOT NULL DEFAULT \'[]\''],['title','TEXT NOT NULL DEFAULT \'\''],['background_mode',"TEXT NOT NULL DEFAULT 'preset'"],['portrait_frame',"TEXT NOT NULL DEFAULT 'wood'"]]){
       if(!columns.includes(name))this.sql.exec('ALTER TABLE profiles ADD COLUMN '+name+' '+spec);
     }
     this.sql.exec("CREATE TABLE IF NOT EXISTS friends(a TEXT NOT NULL,b TEXT NOT NULL,status TEXT NOT NULL,pending_by TEXT,updated_at INTEGER NOT NULL,PRIMARY KEY(a,b))");
@@ -62,7 +64,8 @@ export class PocketSocial {
     try{maskot=p.maskot?JSON.parse(p.maskot):null}catch{}
     try{unlocked=JSON.parse(p.unlocked||'[]');if(!Array.isArray(unlocked))unlocked=[]}catch{}
     return {id:p.id,nickname:p.nickname,avatar:p.avatar,background:p.background,frame:p.frame,
-      artwork:p.artwork,maskot:validMaskot(maskot,unlocked)?maskot:null,
+      artwork:p.artwork,backgroundMode:backgroundModes.has(p.background_mode)?p.background_mode:'preset',
+      portraitFrame:portraitFrames.has(p.portrait_frame)?p.portrait_frame:'wood',maskot:validMaskot(maskot,unlocked)?maskot:null,
       ...(own?{unlocked}:{}),title:p.title||'',favoriteGame:p.favorite_game,discoverable:!!p.discoverable,
       presenceVisible:!!p.presence_visible,allowInvites:!!p.allow_invites,
       online:visible,gameId:visible?p.game_id:'',
@@ -170,6 +173,8 @@ export class PocketSocial {
         const maskot=body.maskot===undefined?null:body.maskot;
         if(maskot!==null&&!validMaskot(maskot,unlocked))return reply({error:'invalid_profile'},400);
         if(body.title!==undefined&&!maskotTitles.has(body.title))return reply({error:'invalid_profile'},400);
+        if(body.backgroundMode!==undefined&&!backgroundModes.has(body.backgroundMode))return reply({error:'invalid_profile'},400);
+        if(body.portraitFrame!==undefined&&!portraitFrames.has(body.portraitFrame))return reply({error:'invalid_profile'},400);
         // Older clients keep the new cosmetics untouched. New clients store only validated IDs.
         if(maskot){
           this.sql.exec('UPDATE profiles SET background=?,frame=?,artwork=?,favorite_game=?,discoverable=?,presence_visible=?,allow_invites=?,maskot=?,title=?,updated_at=? WHERE id=?',
@@ -177,6 +182,11 @@ export class PocketSocial {
         }else{
           this.sql.exec('UPDATE profiles SET background=?,frame=?,artwork=?,favorite_game=?,discoverable=?,presence_visible=?,allow_invites=?,updated_at=? WHERE id=?',
             background,frame,artwork,favoriteGame,Number(discoverable),Number(presenceVisible),Number(allowInvites),Date.now(),id);
+        }
+        if(body.backgroundMode!==undefined||body.portraitFrame!==undefined){
+          const existing=this.one('SELECT background_mode,portrait_frame FROM profiles WHERE id=?',id);
+          this.sql.exec('UPDATE profiles SET background_mode=?,portrait_frame=? WHERE id=?',
+            body.backgroundMode??existing.background_mode,body.portraitFrame??existing.portrait_frame,id);
         }
         return reply({ok:true,profile:this.card(id,id)});
       }
