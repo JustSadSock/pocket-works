@@ -317,7 +317,7 @@ function home(skipLeave=false){
     '<button class="start-restoration" id="primary-action" data-action="practice"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Начать реставрацию</strong><small>Пробный раунд</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
     '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
-    (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
+    ((sessionStorage.getItem(PRACTICE_KEY)||localStorage.getItem(PRACTICE_KEY))?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
   '</div></section>','home');
  museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(museumOrder.indexOf(id)+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
  syncIdentity();
