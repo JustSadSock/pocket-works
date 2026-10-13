@@ -50,4 +50,6 @@
 @media(orientation:landscape) and (max-height:550px) and (pointer:coarse){.zoom-deck:not(.expanded) #zoomOut,.zoom-deck:not(.expanded) #zoomIn,.zoom-deck:not(.expanded) #zoomReset{display:none}}
 
 /* Portrait composition: the canvas begins immediately, remaining height belongs to real edit tracks. */
+@media(max-width:600px){.workspace{flex:0 0 auto}}
+
 @media(max-width:600px){.editing{flex:0 0 auto}.stagewell{flex:0 0 auto;min-height:0;height:auto;padding:8px}.canvaswrap{max-height:none}.timeline{height:auto;flex:1 1 auto;min-height:150px}.inspector{bottom:calc(8px + var(--safe-bottom));max-height:68dvh}}
