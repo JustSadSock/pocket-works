@@ -1,6 +1,8 @@
-import {ownedAchievementItem} from './zamazka-achievements.js';
+import {ownedAchievementItem,zamazkaAchievements} from './zamazka-achievements.js';
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
+// Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
+export const mascotPublicUnlocks=['astronaut','wedding','knight','herald',...zamazkaAchievements.map(a=>a.id)];
 export const mascotAnimals=[['cat','Кот'],['rabbit','Кролик'],['frog','Лягушка']];
 export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Берет'],['flower','Цветок']];
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
