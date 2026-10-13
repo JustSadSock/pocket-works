@@ -20,6 +20,7 @@ on:
       - 'deck-shell.css'
       - 'scripts/capture-covers.mjs'
       - 'scripts/cover-intelligence.mjs'
+      - 'scripts/cover-gameplay-entry.mjs'
       - '.github/workflows/capture-app-covers.yml'
   schedule:
     - cron: '17 3 * * *'
@@ -57,11 +58,13 @@ jobs:
         run: |
           node --check scripts/capture-covers.mjs
           node --check scripts/cover-intelligence.mjs
-          node --test scripts/cover-intelligence.test.mjs
+          node --check scripts/cover-gameplay-entry.mjs
+          node --test scripts/cover-intelligence.test.mjs scripts/cover-gameplay-entry.test.mjs
       - name: Refresh all existing game covers in batches
         env:
           PW_COVER_SLUGS: ${{ github.event.inputs.slugs || '' }}
           PW_COVER_LIMIT: "24"
+          PW_COVER_DIAGNOSTICS: "1"
           # Backfill request: every app last photographed before this date.
           # The manifest records new attempts, preventing infinite retries.
           PW_COVER_REFRESH_BEFORE: "2026-10-13T12:30:00Z"
@@ -76,6 +79,14 @@ jobs:
             if [ "$remaining" -eq 0 ]; then break; fi
             sleep 1
           done
+      - name: Upload rejected-frame diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cover-failure-diagnostics
+          path: cover-diagnostics/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Commit only verified screenshot files
         run: |
           git add -A -- covers/ || true
