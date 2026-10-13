@@ -91,6 +91,27 @@ async function transition(room, action, player, payload = null) {
       if (room.players.some(p => p.id === event.to) && target?.roomId === room.id) send(target.ws, 'game_event', { roomId: room.id, event });
     } else roomBroadcast(room, 'game_event', { roomId: room.id, event });
   }
+  if (action === 'message' && room.gameId === 'zamazka' &&
+      room.state?.phase === 'lobby' && player.id === room.state.host) {
+    let changed = false;
+    for (const event of result.events) {
+      const targetId = event?.to;
+      if (event?.type !== 'player_kicked' || typeof targetId !== 'string' ||
+          targetId === player.id || room.state.participants?.some(p => p.id === targetId) ||
+          !room.players.some(p => p.id === targetId)) continue;
+      const target = sockets.get(targetId);
+      if (target?.roomId === room.id) {
+        send(target.ws, 'room_kicked', { roomId: room.id, reason: 'curator' });
+        target.roomId = null;
+      }
+      room.players = room.players.filter(p => p.id !== targetId);
+      changed = true;
+    }
+    if (changed) {
+      await saveRoom(room);
+      roomBroadcast(room, 'presence', { roomId: room.id, players: room.players });
+    }
+  }
   if (result.finished) await closeRoom(room);
 }
 await mkdir(roomDir, { recursive: true });
@@ -188,7 +209,7 @@ wss.on('connection', ws => {
       }
       if (!player) throw new Error('authentication_required');
       if (message.type === 'create_room') {
-        if (roomId && rooms.has(roomId)) throw new Error('already_in_room');
+        if (roomId && rooms.has(roomId) && rooms.get(roomId).players.some(p => p.id === player.id)) throw new Error('already_in_room');
         roomId = null;
         if (!GAME_ID.test(message.gameId)) throw new Error('invalid_game');
         if (rooms.size >= maxRooms) throw new Error('server_at_capacity');
@@ -208,7 +229,7 @@ wss.on('connection', ws => {
         return send(ws, 'room_joined', { roomId: id, gameId: room.gameId, version: room.version, state: room.state, players });
       }
       if (message.type === 'join_room') {
-        if (roomId && rooms.has(roomId)) throw new Error('already_in_room');
+        if (roomId && rooms.has(roomId) && rooms.get(roomId).players.some(p => p.id === player.id)) throw new Error('already_in_room');
         roomId = null;
         const room = rooms.get(message.roomId);
         if (!room) throw new Error('room_not_found');
@@ -227,7 +248,10 @@ wss.on('connection', ws => {
       }
       const room = rooms.get(roomId);
       if (!room) throw new Error('not_in_room');
-      if (message.type === 'game_message') return await enqueue(room, () => transition(room, 'message', player, message.payload));
+      if (message.type === 'game_message') {
+         if (!room.players.some(p => p.id === player.id)) throw new Error('not_in_room');
+         return await enqueue(room, () => transition(room, 'message', player, message.payload));
+       }
       if (message.type === 'leave_room') {
         await enqueue(room, async () => {
           room.players = room.players.filter(p => p.id !== player.id);
