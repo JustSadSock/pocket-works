@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {Editor,MAX_STROKES,MAX_STROKE_POINTS,MAX_TOTAL_POINTS} from '../editor.js';
 
 function editor(){
@@ -43,4 +44,9 @@ aim.tool='brush';aim.hand='left';
 assert.equal(aim.tip({clientX:120,clientY:140,pointerType:'touch'}).clientX,138);
 aim.inputMode='direct';
 assert.equal(aim.tip({clientX:120,clientY:140,pointerType:'touch'}).clientY,140);
+const editorSource=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
+const liveCanvas=editorSource.split(' paintCachedFrame(img){')[1]?.split(' getData(){')[0];
+assert.ok(liveCanvas,'editor must retain its painting render path');
+assert.doesNotMatch(liveCanvas,/setLineDash|damagePath\(ctx,this\.zone\);ctx\.stroke\(\)/,'no dashed damage guide on active canvas');
+assert.match(liveCanvas,/clipZone\(ctx,this\.zone\)/,'brush and fill remain clipped to damaged geometry');
 console.log('ZAMAZKA stable drawing, network budgets and precision input: OK');
