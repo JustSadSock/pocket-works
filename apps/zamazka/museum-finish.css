@@ -1,0 +1,137 @@
+/* ЗАМАЗКА · material interaction system, 1.32.0
+   A museum, not a dashboard: artworks remain the focus. */
+:root{
+  --zam-ease:cubic-bezier(.22,.78,.18,1);
+  --zam-fast:125ms;
+  --zam-step:240ms;
+  --zam-ink:#49382b;
+  --zam-timber:#6e5036;
+  --zam-gilt:#c4a370;
+}
+.screen{position:relative;isolation:isolate}
+.exhibition-exit-layer{
+  position:absolute;inset:0 0 auto;min-height:100%;width:100%;z-index:8;
+  pointer-events:none!important;overflow:hidden;
+  animation:zam-gallery-depart 240ms ease forwards;
+  contain:paint;
+}
+.exhibition-exit-layer *{pointer-events:none!important}
+.screen>.exhibition-enter{
+  animation:zam-gallery-arrive 240ms var(--zam-ease) both;
+}
+@keyframes zam-gallery-arrive{
+  0%{opacity:.42;transform:translate3d(0,7px,0)}
+  100%{opacity:1;transform:translateZ(0)}
+}
+@keyframes zam-gallery-depart{
+  0%{opacity:1;filter:brightness(1)}
+  100%{opacity:0;filter:brightness(.9)}
+}
+/* Actions compress slightly like antique mechanical buttons, never spring wildly. */
+button:not(:disabled),a.return{transition:
+  transform var(--zam-fast) var(--zam-ease),
+  background-color 170ms ease,
+  border-color 170ms ease,
+  filter 170ms ease,
+  box-shadow 170ms ease}
+button:active:not(:disabled){filter:brightness(.94)}
+button:focus-visible,.screen button:focus-visible,input:focus-visible,
+.round-view-dialog button:focus-visible{outline:3px solid #bf8a4c;outline-offset:3px}
+.museum-slide[data-slot="0"]{filter:brightness(1);transition-timing-function:var(--zam-ease)}
+.museum-control .start-restoration{position:relative;overflow:hidden}
+.museum-control .start-restoration::after{
+  content:"";position:absolute;inset:-3px;pointer-events:none;
+  background:linear-gradient(100deg,transparent 20%,#fff5dc32 50%,transparent 80%);
+  transform:translateX(-125%);transition:transform 520ms var(--zam-ease);
+}
+@media(hover:hover){
+  .museum-control .start-restoration:hover::after{transform:translateX(125%)}
+  .gallery .picture:hover,.archive-gallery .archive-work:hover{
+    filter:brightness(1.035);box-shadow:0 9px 23px #281e1640;
+  }
+}
+/* A save state communicates exactly what has been acknowledged, never invents progress. */
+.work-save-info{min-width:0}
+#draftStatus{
+  font-size:clamp(11px,.9vw,13px);line-height:1.35;
+  min-height:21px;transition:color 180ms ease,opacity 180ms ease;
+}
+#draftStatus::before{
+  content:"";display:inline-block;width:7px;height:7px;margin-right:7px;
+  border-radius:50%;vertical-align:1px;background:#9c8b70;
+}
+#draftStatus[data-state="busy"]::before{background:#af8b42;animation:zam-pulse 950ms ease-in-out infinite alternate}
+#draftStatus[data-state="confirmed"]::before{background:#55735d}
+#draftStatus[data-state="offline"]::before{background:#ad8546}
+#draftStatus[data-state="error"]{color:#9b3428}
+#draftStatus[data-state="error"]::before{background:#ad3f30}
+@keyframes zam-pulse{to{opacity:.32;transform:scale(.75)}}
+/* Tool drawer only exposes parameters applicable to the selected instrument. */
+.restore[data-active-tool="hand"] .colors,
+.restore[data-active-tool="hand"] .adjust>label,
+.restore[data-active-tool="hand"] .adjust>input[type="range"],
+.restore[data-active-tool="picker"] .adjust>label,
+.restore[data-active-tool="picker"] .adjust>input[type="range"],
+.restore[data-active-tool="fill"] .adjust>label,
+.restore[data-active-tool="fill"] .adjust>input[type="range"]{display:none}
+.restore .tools>.tool.active{box-shadow:inset 0 0 0 2px #d6bb8c,0 2px 8px #1f170d3a}
+.restore .tools>.tool.active .draw-icon{transform:translateY(-1px)}
+.restore .swatch.active{box-shadow:0 0 0 2px #eee0ca,0 0 0 4px #6e573e;transform:translateY(-2px)}
+.restore .adjust input[type="range"]{cursor:ew-resize}
+.restore .brush-cursor{
+  box-shadow:0 0 0 1px #fff5e5ae,0 0 0 2px #4432206b;
+  transition:width 70ms linear,height 70ms linear,opacity 90ms linear;
+}
+.restore .work-stage .work-tip{transition:opacity 160ms ease}
+.restore .viewport.hand-mode{cursor:grab}
+.restore .viewport.is-panning{cursor:grabbing}
+.restore .work-tools{scrollbar-color:#a48a66 #e9dfce}
+.restore .tool:active:not(:disabled){transform:translateY(2px)}
+/* The shared drawing table retains a precise, immediate canvas surface. */
+.commons-frame:focus-within{border-color:#c6a270}
+.commons-controls .commons-swatch:active{transform:translateY(1px) scale(.95)}
+.exhibition-lobby .player.is-joining{
+ animation:zam-arrive-person 280ms var(--zam-ease) both;
+}
+@keyframes zam-arrive-person{from{opacity:.15;transform:translateY(9px)}to{opacity:1;transform:none}}
+/* Physical coin feedback, constrained to tiny elements to avoid reflow. */
+.chip-dot{display:inline-block;transform-origin:center bottom;animation:zam-token-seat 190ms var(--zam-ease) both}
+.chip-dot:nth-child(2){animation-delay:28ms}
+.chip-dot:nth-child(3){animation-delay:56ms}
+@keyframes zam-token-seat{0%{transform:translateY(-5px) scale(.83);opacity:.5}100%{transform:none;opacity:1}}
+[data-stake-card].has-chips{transition:border-color 160ms ease,box-shadow 180ms ease}
+.stake-tray.is-vote-locked{filter:saturate(.8);transition:filter 220ms ease}
+.waiting-person.is-ready{transition:background-color 180ms ease,border-color 180ms ease}
+.waiting-person.is-ready strong{color:#47654f}
+/* Reveal in layers only after painted canvases have finished drawing. */
+.reveal-phase .unveil-frame{transition:box-shadow 250ms ease}
+.reveal-phase.is-composed .unveil-frame{box-shadow:0 12px 28px #1e150f63}
+.reveal-phase .reveal-brief{opacity:.82;transform:translateY(4px);transition:opacity 260ms ease,transform 260ms var(--zam-ease)}
+.reveal-phase.is-composed .reveal-brief{opacity:1;transform:none}
+.reveal-phase.is-composed .audit-line{
+  animation:zam-gallery-arrive 220ms var(--zam-ease) both;
+}
+.reveal-phase.is-composed .audit-line:nth-child(2){animation-delay:45ms}
+.reveal-phase.is-composed .audit-line:nth-child(3){animation-delay:90ms}
+.reveal-phase.is-composed .audit-line:nth-child(4){animation-delay:135ms}
+/* A real volume slider without a second settings page. */
+.sound-volume-label{display:flex;align-items:center;justify-content:space-between;gap:15px}
+.sound-volume-label output{font-variant-numeric:tabular-nums;font-size:12px;color:#665039;letter-spacing:0}
+.sound-volume-range{display:block;width:100%;min-height:32px;margin:4px 0 13px;accent-color:#8b653e}
+@media (max-width:699px){
+  .exhibition-exit-layer{animation-duration:170ms}
+  .screen>.exhibition-enter{animation-duration:170ms}
+  .restore .work-foot{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+  .restore .work-tools{overscroll-behavior:contain}
+  #draftStatus{font-size:11px}
+  .reveal-phase .reveal-brief{transform:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .exhibition-exit-layer,.screen>.exhibition-enter,.chip-dot,
+  .waiting-person.is-ready,.exhibition-lobby .player.is-joining,
+  .reveal-phase.is-composed .audit-line,
+  #draftStatus[data-state="busy"]::before{animation:none!important}
+  .museum-control .start-restoration::after{display:none}
+  .reveal-phase .reveal-brief{opacity:1;transform:none}
+  button,.brush-cursor,.museum-slide{transition:none!important}
+}
