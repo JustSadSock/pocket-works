@@ -5,20 +5,24 @@ const cooldown={press:44,frame:100,paper:65,tool:75,brush:95,fill:125,token:55,u
 const vary=(n,range=.036)=>n*(1+(Math.random()*2-1)*range);
 export class MuseumAudio{
  constructor(enabled=true){
-  this.enabled=Boolean(enabled);this.context=null;this.previous=new Map();this.ends=[];
+  this.enabled=Boolean(enabled);this.volume=0.55;this.context=null;this.previous=new Map();this.ends=[];
   this.onVisibility=()=>{if(document.hidden&&this.context?.state==='running')void this.context.suspend().catch(()=>{})};
   if(typeof document!=='undefined')document.addEventListener('visibilitychange',this.onVisibility);
  }
  setEnabled(enabled){
   this.enabled=Boolean(enabled);
-  if(this.master&&this.context)this.master.gain.setTargetAtTime(this.enabled?.48:.0001,this.context.currentTime,.025);
+  if(this.master&&this.context)this.master.gain.setTargetAtTime(this.enabled?.48*this.volume:.0001,this.context.currentTime,.025);
+ }
+ setVolume(value){
+  this.volume=Math.max(0,Math.min(1,Number(value)||0));
+  if(this.master&&this.context)this.master.gain.setTargetAtTime(this.enabled?.48*this.volume:.0001,this.context.currentTime,.035);
  }
  ensure(gesture){
   if(!this.context){
    if(!gesture)return false; // Only create the audio context in response to a player gesture.
    const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return false;
    const ac=new C({latencyHint:'interactive'});this.context=ac;
-   this.master=ac.createGain();this.master.gain.value=this.enabled?.48:.0001;this.master.connect(ac.destination);
+   this.master=ac.createGain();this.master.gain.value=this.enabled?.48*this.volume:.0001;this.master.connect(ac.destination);
    const b=ac.createBuffer(1,Math.ceil(ac.sampleRate*.43),ac.sampleRate),d=b.getChannelData(0);let seed=0x749a21;
    for(let i=0;i<d.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;d[i]=(seed/2147483648-1)*.88}
    this.noise=b;
