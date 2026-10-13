@@ -12,7 +12,7 @@ test('four field players per team and five-minute full match',()=>{
  assert.deepEqual(state.players.map(p=>p.side),[0,0,0,0,1,1,1,1]);
  assert.equal(state.remain,300);
  state.controlled={};
- for(let i=0;i<15500;i++)advanceGame(state,{},.02);
+ for(let i=0;i<21000&&state.phase==='play';i++)advanceGame(state,{},.02);
  assert.equal(state.phase,'done');assert.equal(state.remain,0);
 });
 test('separate physical ball receives acceleration',()=>{
@@ -50,4 +50,40 @@ test('unauthenticated score payload cannot set result',()=>{
  s=game.onMessage({state:s,player:a,payload:{type:'start'}}).state;
  const next=game.onMessage({state:s,player:b,payload:{type:'score',score:[999,0]}}).state;
  assert.deepEqual(next.match.score,[0,0]);
+});
+
+test('shift sprint increases pace, consumes and recovers stamina',()=>{
+ const walk=newGame(),run=newGame();
+ walk.hold=0;run.hold=0;
+ walk.controlled={0:true};run.controlled={0:true};
+ for(let i=0;i<35;i++){
+  advanceGame(walk,{0:{x:1,y:0,sprint:false}},.02);
+  advanceGame(run,{0:{x:1,y:0,sprint:true}},.02);
+ }
+ assert.ok(run.players[0].x>walk.players[0].x+30,'sprint must move further');
+ assert.ok(run.players[0].stamina<.9,'stamina consumed');
+ const prev=run.players[0].stamina;
+ for(let i=0;i<100;i++)advanceGame(run,{0:{x:0,y:0,sprint:false}},.02);
+ assert.ok(run.players[0].stamina>prev,'stamina recovers');
+});
+test('authoritative sprint validates only a boolean, cannot set pace or stamina directly',()=>{
+ const a={id:'A',name:'Alice'},b={id:'B',name:'Bob'};
+ let s=game.createRoom({player:a}).state;
+ s=game.onJoin({state:s,player:b,players:[a,b]}).state;
+ s=game.onMessage({state:s,player:a,payload:{type:'start'}}).state;
+ s=game.onMessage({state:s,player:a,payload:{type:'input',x:1,y:0,angle:0,power:1,sprint:true,stamina:999,pace:999}}).state;
+ assert.equal(s.inputs[0].sprint,true);
+ assert.notEqual(s.match.players[0].stamina,999);
+ assert.ok(s.match.players[0].stats.pace<=7);
+});
+test('topdown coordinates preserve field aspect and mouse aim in letterbox',async()=>{
+ const {pitchTransform,toPitch}=await import('./visuals.js');
+ const {FIELD}=await import('./sim.js');
+ const rect={left:10,top:20,width:1600,height:850};
+ const transform=pitchTransform(rect);
+ const x=rect.left+transform.x+FIELD.w*.65*transform.scale;
+ const y=rect.top+transform.y+FIELD.h*.39*transform.scale;
+ const p=toPitch(rect,x,y);
+ assert.ok(Math.abs(p.x-FIELD.w*.65)<.001);
+ assert.ok(Math.abs(p.y-FIELD.h*.39)<.001);
 });
