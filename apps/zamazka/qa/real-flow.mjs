@@ -8,7 +8,7 @@ import {resolve,join,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {chromium} from '@playwright/test';
 const root=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
-const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==','base64');
+const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGOsS3BjYGBgYmBgYGBgAAAOEgEomIcOWQAAAABJRU5ErkJggg==','base64');
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const web=createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
