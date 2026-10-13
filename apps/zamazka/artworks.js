@@ -1,5 +1,6 @@
 import { svgFor as legacySvg, ARTS as LEGACY } from './legacy-artworks.js';
 import { MUSEUM_ADDITIONS } from './museum-catalog.js';
+import {PLAYFUL_ADDITIONS} from './museum-playful.js';
 import {artworkOrigin} from './art-provenance.js';
 
 /** An entirely public-domain gallery. Descriptions and source links are kept beside the images. */
@@ -14,10 +15,34 @@ const REAL=[
   {title:'Впечатление. Восход солнца',artist:'Клод Моне',date:'1872',style:'Импрессионизм',museum:'Музей Мармоттан-Моне · Париж',file:'Monet_-_Impression%2C_Sunrise.jpg',path:'5/59/',source:'https://commons.wikimedia.org/wiki/File:Monet_-_Impression,_Sunrise.jpg'},
   {title:'Спальня в Арле',artist:'Винсент ван Гог',date:'1889',style:'Постимпрессионизм',museum:'Институт искусств · Чикаго',file:'Vincent_van_Gogh_-_The_Bedroom_-_1926.417_-_Art_Institute_of_Chicago.jpg',path:'5/50/',source:'https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_The_Bedroom_-_1926.417_-_Art_Institute_of_Chicago.jpg'},
   {title:'Рождение Венеры',artist:'Сандро Боттичелли',date:'ок. 1485',style:'Раннее Возрождение',museum:'Галерея Уффици · Флоренция',file:'Birth_of_Venus_Botticelli.jpg',path:'1/14/',source:'https://commons.wikimedia.org/wiki/File:Birth_of_Venus_Botticelli.jpg'},
-  ...MUSEUM_ADDITIONS
+  ...MUSEUM_ADDITIONS,
+  ...PLAYFUL_ADDITIONS
 ];
 export const REAL_COUNT=REAL.length;
-export const PLAYABLE_IDS=Array.from({length:REAL.length-1},(_,i)=>i+1);
+// Retired from all new rounds and the main museum carousel; keep slot 17
+// intact to preserve pre-1.28 cloud archives, drafts and ongoing rooms.
+export const RETIRED_ARTWORK_IDS=Object.freeze([17]); // The Tower of Babel
+export const PRE_EXPANSION_REAL_COUNT=54;
+export const ARCHIVE_EDITION=4;
+export const PLAYABLE_IDS=Array.from({length:REAL.length-1},(_,i)=>i+1)
+ .filter(id=>!RETIRED_ARTWORK_IDS.includes(id));
+/** Rebase legacy (procedurally drawn) archive IDs after new real paintings.
+ *  Edition 3 used 54 real paintings, so stored legacy IDs from 54 onward
+ *  must move up without changing the content of the saved drawing.
+ */
+export function normalizeArchiveEntry(entry){
+ const id=Number(entry?.art);
+ if(!Number.isInteger(id)||id<0)return entry;
+ if(entry.edition===ARCHIVE_EDITION)return entry;
+ let art=id;
+ if(entry.edition===3){
+  if(id>=PRE_EXPANSION_REAL_COUNT)art+=REAL_COUNT-PRE_EXPANSION_REAL_COUNT;
+ }else if(entry.edition===2){
+  art=id>=8?id+46:id; // Historical 8-real-painting build
+  if(art>=PRE_EXPANSION_REAL_COUNT)art+=REAL_COUNT-PRE_EXPANSION_REAL_COUNT;
+ }else art+=REAL_COUNT; // Original synthetic-only gallery
+ return {...entry,art,edition:ARCHIVE_EDITION};
+}
 export const ARTS=[
  ...REAL.map((entry,id)=>({...entry,id,isReal:true})),
  ...LEGACY.map((entry,i)=>({...entry,id:i+REAL.length,artist:'Коллекция ЗАМАЗКИ 1.0',date:'2026',museum:'Личный архив',isReal:false}))
@@ -26,7 +51,9 @@ export const ARTS=[
 // provides a smaller raster, the existing fallback chain finds it safely.
 const PREVIEW_WIDTH=1920;
 const MASTER_WIDTHS=[1920,1280,960];
-const ART_CACHE='zamazka-artworks-v1.7.0';
+// Share the service worker's persistent artwork cache. Using a different
+// namespace caused two copies of large masters to compete for phone storage.
+const ART_CACHE='zamazka-artworks-v1.12.5';
 export function artworkURL(id,width=PREVIEW_WIDTH){
  const entry=ARTS[id];if(!entry)return '';
  return entry.isReal ? ROOT+entry.path+entry.file+'/'+width+'px-'+entry.file
