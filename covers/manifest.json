@@ -1,0 +1,128 @@
+{
+  "zamazka": {
+    "revision": "502222352bd2fba0b09d0d79fc8d5181cc3a58b8",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 3,
+    "sha256": "828ae56e2180f400ad257bc7fc8cf7b6c0c5be5169a9f74bead0c05f8f345bc2",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "502222352bd2fba0b09d0d79fc8d5181cc3a58b8",
+    "lastAttemptAt": "2026-10-13T10:36:16.113Z"
+  },
+  "natyazhenie": {
+    "revision": "a4ade66f82635dbe41b65bd2117147dd278cdc5f",
+    "qualityScore": 78,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f660849aa345a47e1fa698a1e13fbba5cde50f7ca58014f42ea418857425f184",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "a4ade66f82635dbe41b65bd2117147dd278cdc5f",
+    "lastAttemptAt": "2026-10-13T10:36:26.969Z"
+  },
+  "komnatka": {
+    "revision": "fc93c563390ee3f9ff8ca7c6d4e760ac78b1f049",
+    "qualityScore": 67,
+    "visionScore": null,
+    "prepared": true,
+    "shot": 1,
+    "sha256": "ac2f31a7bbe60f34ab044e091887010daf41a007b506e2e9b69ca5ea40ebcc35",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "fc93c563390ee3f9ff8ca7c6d4e760ac78b1f049",
+    "lastAttemptAt": "2026-10-13T10:36:45.699Z"
+  },
+  "picto": {
+    "revision": "c2ce788cae1840c0bb2d6449d9ed92f9cbc56c0e",
+    "qualityScore": 82,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "22284bfbd170735ec8b2b90a7e022e9aeeb46711cd7bd51799ddb69d65b5b7ea",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "c2ce788cae1840c0bb2d6449d9ed92f9cbc56c0e",
+    "lastAttemptAt": "2026-10-13T10:36:56.621Z"
+  },
+  "blind-pals": {
+    "note": "existing cover rated higher",
+    "status": "preserved",
+    "lastAttemptRevision": "88f06193d8743c63c34cd11011071d1456290ac0",
+    "lastAttemptAt": "2026-10-13T10:37:07.571Z"
+  },
+  "lipki": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "6d28906ddefa8eeda71089cfe2505a209a3b4395",
+    "lastAttemptAt": "2026-10-13T10:37:18.476Z"
+  },
+  "kromka-duel": {
+    "revision": "3ad4b8370621901a924afe3d81364257ef283175",
+    "qualityScore": 73,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "df4669d4caa15e5194ce7675316bf45154f3a97c4a2a14a87b71883fe82a8636",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "3ad4b8370621901a924afe3d81364257ef283175",
+    "lastAttemptAt": "2026-10-13T10:37:29.475Z"
+  },
+  "styk": {
+    "revision": "7dd224b2e88fac1c1a9a34064c2b8f73b699ed00",
+    "qualityScore": 60,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f80e684ba84e2c263c57dbd35b65d2a056ab20b5e96fdd89988ebf7564942a29",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "7dd224b2e88fac1c1a9a34064c2b8f73b699ed00",
+    "lastAttemptAt": "2026-10-13T10:37:40.486Z"
+  },
+  "pepelny-dozor": {
+    "revision": "6acabc605b35543e8f034e4f04bfa0500c72797e",
+    "qualityScore": 67,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "008ad21d21bdc6758c7904ad90c502354b859e34b21799a37aba139ba2b68dbd",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "6acabc605b35543e8f034e4f04bfa0500c72797e",
+    "lastAttemptAt": "2026-10-13T10:37:51.402Z"
+  },
+  "palomnik": {
+    "revision": "8755a6fbb1fd2744811dadbcbd3397d3dc51e926",
+    "qualityScore": 67,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "6a1fba1948d0334a6ac1b50e0527f82a416e7dde96fe7218fbb9d41e71afe16c",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "8755a6fbb1fd2744811dadbcbd3397d3dc51e926",
+    "lastAttemptAt": "2026-10-13T10:38:02.351Z"
+  },
+  "uzel-party": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "f1970ded338c614d46d4b879fafca73babbce423",
+    "lastAttemptAt": "2026-10-13T10:38:13.191Z"
+  },
+  "stapel": {
+    "revision": "068746e7a244079a79b487c512e955f9f099a211",
+    "qualityScore": 62,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "75259e85e579510ad6a674973fca093c5dbeb591740503907581b28127b73480",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "068746e7a244079a79b487c512e955f9f099a211",
+    "lastAttemptAt": "2026-10-13T10:38:24.015Z"
+  }
+}
