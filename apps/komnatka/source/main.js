@@ -358,8 +358,8 @@ function movePointer(ev) {
  drag.moved=true;const dx=target.x-item.x,dz=target.z-item.z;
  moveWithChildren(state,item.id,dx,dz);
  Object.assign(item,target);
- const root=roots.get(item.id);root?.position.set(item.x,item.y,item.z);if(root)root.rotation.y=item.rot*Math.PI/2;
- for(const child of state.items.filter(it=>it.support===item.id))roots.get(child.id)?.position.set(child.x,child.y,child.z);
+ const root=roots.get(item.id);root?.position.set(item.x,sceneY(item),item.z);if(root)root.rotation.y=item.rot*Math.PI/2;
+ for(const child of state.items.filter(it=>it.support===item.id))roots.get(child.id)?.position.set(child.x,sceneY(child),child.z);
  const ok=valid(state,item);
  if(ok){
   const cell=item.x+':'+item.z+':'+(item.support||'');
