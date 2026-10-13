@@ -194,3 +194,7 @@
  .online-hud{top:9px;left:10px;transform:none;width:min(340px,52%);padding:7px 10px}
  .online-dialog{max-height:92dvh}
 }
+
+.online-result{display:flex;align-items:center;gap:13px;padding:14px;border-radius:13px;background:#f0e8d7;margin:12px 0;color:#826a57}
+.online-result strong{font-size:33px;color:#798f74;font-weight:950;letter-spacing:-.06em}
+.online-result span{font-size:12px;font-weight:850}
