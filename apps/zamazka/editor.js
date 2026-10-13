@@ -1,4 +1,4 @@
-import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork} from './artworks.js';
+import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame} from './artworks.js';
 
 // Keep stroke coordinates in the 600×450 logical world, but rasterize on a much
 // denser backing buffer. Previously both zoomed desktop editing and the reveal
@@ -193,8 +193,13 @@ function renderStrokes(ctx,strokes,zone){
 }
 
 export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false){
- const ctx=prepareCanvas(canvas,false,thumbnail);
- try{const image=await loadArtwork(id);if(!canvas.isConnected)return;ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id);
+ let ctx;
+ try{
+  const image=await loadArtwork(id);
+  if(!canvas.isConnected)return;
+  setArtworkFrame(canvas,image);
+  ctx=prepareCanvas(canvas,false,thumbnail);
+  ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id);
  if(damaged){
   const z=zoneFor(id,variation),overlay=document.createElement('canvas');
   overlay.width=canvas.width;overlay.height=canvas.height;
@@ -207,7 +212,11 @@ export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=f
   // once. Previous beige+fill+stroke clipping multiplied edge alpha.
   ctx.save();clipZone(ctx,z);ctx.drawImage(overlay,0,0,W,H);ctx.restore();
  }
- }catch{ctx.fillStyle='#ddc6aa';ctx.fillRect(0,0,W,H);ctx.fillStyle='#512d2a';ctx.fillText('Не удалось открыть картину',20,50);}
+ }catch{
+  ctx ||= prepareCanvas(canvas,false,thumbnail);
+  ctx.fillStyle='#ddc6aa';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#512d2a';ctx.fillText('Не удалось открыть картину',20,50);
+ }
 }
 
 // A restoration stroke is a continuous gesture. Preserve
@@ -748,6 +757,11 @@ export class Editor{
    this.artPromise ||= loadArtwork(this.id).catch(()=>null);
    const img=await this.artPromise;
    if(!img||this.closed)return;
+   if(!this.nativeFrameReady){
+     this.nativeFrameReady=true;
+     setArtworkFrame(this.canvas,img);
+     this.center();
+   }
    return new Promise(resolve=>{
      (this.paintWaiters ||= []).push(resolve);
      if(this.paintFrameId)return;
