@@ -102,6 +102,22 @@ async function apply(room,action,player,payload={}){
    if(target?.roomId===room.id)send(target.ws,'game_event',{roomId:room.id,event});
   }else broadcast(room,'game_event',{roomId:room.id,event});
  }
+ if(action==='message'&&room.state.phase==='lobby'&&player.id===room.state.host){
+  let changed=false;
+  for(const event of output.events||[]){
+   const targetId=event?.to;
+   if(event?.type!=='player_kicked'||typeof targetId!=='string'||targetId===player.id||
+      room.state.participants?.some(p=>p.id===targetId)||!member(room,{id:targetId}))continue;
+   const target=connections.get(targetId);
+   if(target?.roomId===room.id){
+    send(target.ws,'room_kicked',{roomId:room.id,reason:'curator'});
+    target.roomId=null;
+   }
+   room.players=room.players.filter(p=>p.id!==targetId);
+   changed=true;
+  }
+  if(changed){await save();presence(room)}
+ }
 }
 function roomOf(connection){
  if(!connection?.roomId)return null;
