@@ -153,3 +153,16 @@
  .waiting-work .unveil-frame{border-width:6px}
  .waiting-progress{padding:16px}
 }
+
+/* Hold an already-rendered vote gallery above the incoming reveal until both
+   comparison canvases are ready. Only the outgoing layer fades; no flashing
+   or reflow of paintings when the vote timer reaches zero. */
+.screen{position:relative}
+.vote-transition-layer{
+ position:absolute!important;inset:0;z-index:9;pointer-events:none;
+ width:100%;min-height:100%;background:#26211d;
+ opacity:1;transition:opacity .24s ease-out;
+}
+.vote-transition-layer.is-finished{opacity:0}
+.stake-tray.is-vote-locked{opacity:.74;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.vote-transition-layer{transition:none}}
