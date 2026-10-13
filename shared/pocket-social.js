@@ -1,7 +1,7 @@
 import {pocketAvatarMarkup} from './capabilities/identity.js';
 import {zamazkaAchievements} from './capabilities/zamazka-achievements.js';
 import {mountCardCanvas} from './capabilities/card-studio.js';
-import {mascotSvg,safeMascot,mascotAnimals,mascotHats,mascotClothes,mascotFaces,mascotTitles} from './capabilities/maskot.js';
+import {mascotSvg,safeMascot,mascotPublicUnlocks,mascotAnimals,mascotHats,mascotClothes,mascotFaces,mascotTitles} from './capabilities/maskot.js';
 // Pocket Social shared UI. No dependency on a specific app runtime or framework.
 const q=(s,root=document)=>root.querySelector(s);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -27,7 +27,7 @@ const api=async(path,body)=>{
     throw error;
   }finally{clearTimeout(timeout)}
 };
-const avatar=p=>p.maskot?mascotSvg(p.maskot,{unlocks:p.unlocked||['astronaut','wedding']}):
+const avatar=p=>p.maskot?mascotSvg(p.maskot,{unlocks:p.unlocked||mascotPublicUnlocks}):
   p.artwork?'<img src="'+esc(p.artwork)+'" alt="Нарисованный аватар">':pocketAvatarMarkup(p.avatar,{accountId:p.id});
 const gameLabel=id=>state.catalog.find(g=>g.slug===id)?.name||id||'Не выбрана';
 function card(p){
