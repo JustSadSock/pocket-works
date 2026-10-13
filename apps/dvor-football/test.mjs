@@ -77,13 +77,32 @@ test('authoritative sprint validates only a boolean, cannot set pace or stamina 
  assert.ok(s.match.players[0].stats.pace<=7);
 });
 test('topdown coordinates preserve field aspect and mouse aim in letterbox',async()=>{
- const {pitchTransform,toPitch}=await import('./visuals.js');
+ const {pitchTransform,toPitch,CAMERA,PLAYER_SCALE}=await import('./visuals.js');
  const {FIELD}=await import('./sim.js');
  const rect={left:10,top:20,width:1600,height:850};
  const transform=pitchTransform(rect);
- const x=rect.left+transform.x+FIELD.w*.65*transform.scale;
- const y=rect.top+transform.y+FIELD.h*.39*transform.scale;
+ const x=rect.left+transform.x+CAMERA.width*.65*transform.scale;
+ const y=rect.top+transform.y+CAMERA.height*.39*transform.scale;
  const p=toPitch(rect,x,y);
- assert.ok(Math.abs(p.x-FIELD.w*.65)<.001);
- assert.ok(Math.abs(p.y-FIELD.h*.39)<.001);
+ assert.ok(Math.abs(p.x-(CAMERA.left+CAMERA.width*.65))<.001);
+ assert.ok(Math.abs(p.y-(CAMERA.top+CAMERA.height*.39))<.001);
+});
+
+test('miniature overhead scene preserves pitch and reduces avatar footprint',async()=>{
+ const {pitchTransform,CAMERA,PLAYER_SCALE,toPitch}=await import('./visuals.js');
+ assert.ok(PLAYER_SCALE<=.62 && PLAYER_SCALE>=.5,'players substantially smaller than previous version');
+ assert.ok(CAMERA.left<=18&&CAMERA.left+CAMERA.width>=1062,'both physical goal nets visible');
+ assert.ok(CAMERA.top<=56&&CAMERA.top+CAMERA.height>=564,'all lines visible');
+ const phone={left:0,top:0,width:844,height:390};
+ const projected=pitchTransform(phone);
+ assert.ok(projected.scale>390/620*1.1,'use more of mobile screen than original layout');
+ const mid=toPitch(phone,phone.width/2,phone.height/2);
+ assert.ok(Math.abs(mid.x-540)<.001&&Math.abs(mid.y-310)<.001,'center remains world center');
+});
+test('new contact distance requires an actual visible approach',()=>{
+ const s=newGame(),p=s.players[0];s.hold=0;
+ s.ball.x=p.x+41;s.ball.y=p.y;
+ assert.equal(kickBall(s,p,'shot',0),false,'too distant to kick');
+ s.ball.x=p.x+31;
+ assert.equal(kickBall(s,p,'shot',0),true,'close enough to touch');
 });

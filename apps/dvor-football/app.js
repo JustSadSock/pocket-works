@@ -5,7 +5,7 @@ import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {FIELD,limit,dist,DEFAULT,kits,skins,hairs,safeProfile,newGame,advanceGame} from './sim.js';
 import {TopdownFX,renderTopdown,renderPortrait,toPitch} from './visuals.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ДВОР',version:'1.1.0',cachePrefix:'dvor-football-',storageNamespace:'pocket-works:dvor-football'});
+createWorkshopMode({appName:'ДВОР',version:'1.2.0',cachePrefix:'dvor-football-',storageNamespace:'pocket-works:dvor-football'});
 const $=id=>document.getElementById(id);
 const PREFIX='pocket-works:dvor-football:',URL_NET=location.origin+'/pocketnet';
 const KEY_ORDER=['pace','shot','control','pass'],STAT_LABELS={pace:'СКОРОСТЬ',shot:'УДАР',control:'КОНТРОЛЬ',pass:'ПАС'};

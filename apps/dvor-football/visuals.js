@@ -2,8 +2,8 @@
 import {FIELD,limit,kits,skins,hairs} from './sim.js';
 const TAU=Math.PI*2;
 const INK='#1d3d3d',CHALK='#f2f4dc',YELLOW='#ffe4a2',BLUE='#2a84b5',RED='#dc7154';
-const CAMERA=Object.freeze({left:12,top:39,width:1056,height:542});
-const PLAYER_SCALE=.57;
+export const CAMERA=Object.freeze({left:12,top:39,width:1056,height:542});
+export const PLAYER_SCALE=.57;
 const circle=(c,x,y,r,color)=>{c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle=color;c.fill();};
 const oval=(c,x,y,a,b,color)=>{c.beginPath();c.ellipse(x,y,a,b,0,0,TAU);c.fillStyle=color;c.fill();};
 const rect=(c,x,y,w,h,r,color)=>{c.beginPath();c.roundRect(x,y,w,h,r);c.fillStyle=color;c.fill();};
