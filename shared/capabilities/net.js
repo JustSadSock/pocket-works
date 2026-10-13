@@ -69,7 +69,7 @@ export class PocketNet {
             reject(new Error(`PocketNet authentication failed: ${message.code || 'unknown'}`));
             return;
           }
-          if (message.type === 'room_closed') { this.roomId = null; this.persist(); }
+          if (message.type === 'room_closed' || message.type === 'room_kicked') { this.roomId = null; this.persist(); }
           if (message.type === 'error' && message.code === 'room_not_found') { this.roomId = null; this.persist(); }
           this.emit(message.type, message);
         }
