@@ -166,6 +166,7 @@ function editor(){
   const secretClothes=[...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
     ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[]),
     ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[]),
+    ...(unlocks.includes('groom')?[['groom','Свадебный мужской костюм']]:[]),
     ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[])];
   const rewardFace=[...mascotFaces,...(unlocks.includes('zamazka.sharp-eye')?[['monocle','Монокль']]:[])];
   const rewardTitles=mascotTitles.filter(t=>!['Подмастерье','Знаток подделок'].includes(t)||
@@ -234,7 +235,7 @@ function editor(){
     '<div class="pws-maskot-editor__picker">'+appearance+'</div></div></div>'+
     (state.reward?'<div class="pws-reward-shade"><div class="pws-reward" role="dialog" aria-label="Косметика получена">'+
       '<div class="pws-reward__gift"><div class="pws-reward__lid"></div><div class="pws-reward__bow"></div></div>'+
-      '<h3>Новая косметика!</h3><p>'+esc(({astronaut:'Шлем и скафандр',wedding:'Фата и свадебный наряд',knight:'Бацинет стража',herald:'Гербовая накидка герольда'})[state.reward]||'Награда получена')+
+      '<h3>Новая косметика!</h3><p>'+esc(({astronaut:'Шлем и скафандр',wedding:'Фата и свадебный наряд',knight:'Бацинет стража',herald:'Гербовая накидка герольда',groom:'Свадебный мужской костюм'})[state.reward]||'Награда получена')+
       '</p>'+button('reward-close','Примерить','primary')+'</div></div>':'');
 }
 function profilePanel(){
@@ -591,7 +592,8 @@ function install(){
             astronaut:{hat:'helmet',clothes:'spacesuit'},
             wedding:{hat:'veil',clothes:'wedding'},
             knight:{hat:'bascinet'},
-            herald:{clothes:'tabard'}
+            herald:{clothes:'tabard'},
+            groom:{clothes:'groom'}
           };
           state.draft.maskot={...state.draft.maskot,...(claims[response.reward]||{})};
         }else state.notice='Награда уже получена.';
