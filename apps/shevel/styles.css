@@ -41,3 +41,6 @@
  .shell.canvas-focus .canvaswrap{width:min(100%,calc((100dvh - 47px - var(--safe-top) - var(--safe-bottom))*1.616))}
  .zoom-deck{top:6px;right:6px}
 }
+
+/* Independent vertical track viewport, with synchronized drawing/object scroll. */
+#trackNames{height:calc(100% - 30px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none}#trackNames::-webkit-scrollbar{display:none}#tracks{height:calc(100% - 30px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#63716c transparent}#tracks .timeline-playhead{position:sticky;top:0;pointer-events:none;z-index:3;height:0;bottom:auto}#tracks .timeline-playhead::after{content:'';display:block;width:2px;height:max(140px,100%);background:#dc8056}
