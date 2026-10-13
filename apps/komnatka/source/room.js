@@ -3,8 +3,8 @@ import { makeMaterial, rounded, tintWindowView, setLampVisuals } from './models.
 import { lightingEnvelope, physicalLampEnabled } from './lighting-presets.js';
 
 export const WALLS=['#efe0ca','#d5e0ce','#edc5b9','#cad7dc','#e6d8df','#e2cfae'];
-export const FLOORS=['honey','walnut','painted','tile'];
-export const PATTERNS=['plain','stripe','flower'];
+export const FLOORS=['honey','walnut','painted','tile','blush','cherry'];
+export const PATTERNS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig'];
 const hex=h=>Color3.FromHexString(h);
 function materialTexture(scene,name,draw) {
  const tex=new DynamicTexture(name,{width:512,height:512},scene,false,2);
@@ -44,15 +44,39 @@ function wallpaper(scene,base,pattern) {
  return materialTexture(scene,'wallpaper-'+base+'-'+pattern,c=>{
   c.fillStyle=base;c.fillRect(0,0,512,512);
   if(pattern==='stripe'){
-   for(let x=0;x<512;x+=64){c.fillStyle='rgba(255,255,255,.19)';c.fillRect(x,0,21,512);c.fillStyle='rgba(105,84,71,.06)';c.fillRect(x+43,0,3,512);}
-  } else {
-   for(let y=25;y<530;y+=104)for(let x=28;x<530;x+=104){
-    const ox=(y/104|0)%2?25:0;
-    c.strokeStyle='rgba(81,111,83,.19)';c.lineWidth=4;c.beginPath();c.moveTo(x+ox,y+25);c.quadraticCurveTo(x-10+ox,y-1,x+ox,y-22);c.stroke();
-    for(let j=0;j<5;j++){
-     const a=j*6.283/5;c.fillStyle='rgba(255,250,232,.58)';c.beginPath();c.ellipse(x+ox+Math.cos(a)*12,y+Math.sin(a)*12,12,6,a,0,7);c.fill();
+   for(let x=0;x<512;x+=64){c.fillStyle='rgba(255,255,255,.20)';c.fillRect(x,0,21,512);c.fillStyle='rgba(105,84,71,.06)';c.fillRect(x+43,0,3,512);}
+  }else if(pattern==='flower'||pattern==='daisy'||pattern==='sprig'){
+   const step=pattern==='sprig'?82:104;
+   for(let y=20;y<520;y+=step)for(let x=25;x<520;x+=step){
+    const shift=((y/step)|0)%2?step*.34:0;
+    c.strokeStyle='rgba(84,119,83,.19)';c.lineWidth=3;
+    c.beginPath();c.moveTo(x+shift,y+23);c.quadraticCurveTo(x-12+shift,y,x+shift,y-17);c.stroke();
+    for(let p=0;p<(pattern==='sprig'?3:5);p++){
+     const a=p*6.283/(pattern==='sprig'?3:5);
+     c.fillStyle=pattern==='daisy'?'rgba(255,255,248,.78)':'rgba(255,250,232,.52)';
+     c.beginPath();c.ellipse(x+shift+Math.cos(a)*12,y+Math.sin(a)*12,pattern==='sprig'?7:12,pattern==='sprig'?4:6,a,0,7);c.fill();
     }
-    c.fillStyle='rgba(194,134,100,.34)';c.beginPath();c.arc(x+ox,y,5,0,7);c.fill();
+    c.fillStyle='rgba(196,121,92,.38)';c.beginPath();c.arc(x+shift,y,pattern==='sprig'?3:5,0,7);c.fill();
+   }
+  }else if(pattern==='gingham'){
+   for(let x=0;x<512;x+=44){c.fillStyle='rgba(120,96,99,.11)';c.fillRect(x,0,22,512);}
+   for(let y=0;y<512;y+=44){c.fillStyle='rgba(105,102,90,.12)';c.fillRect(0,y,512,22);}
+  }else if(pattern==='berries'){
+   for(let y=23;y<520;y+=79)for(let x=25;x<520;x+=93){
+    c.fillStyle='rgba(190,105,91,.42)';c.beginPath();c.ellipse(x,y,8,11,-.17,0,7);c.fill();
+    c.fillStyle='rgba(110,142,104,.40)';c.beginPath();c.ellipse(x-6,y-10,8,3,.45,0,7);c.fill();
+    c.beginPath();c.ellipse(x+7,y-10,8,3,-.45,0,7);c.fill();
+   }
+  }else if(pattern==='stars'){
+   for(let y=29;y<520;y+=76)for(let x=21;x<520;x+=84){
+    c.fillStyle='rgba(245,237,205,.68)';c.beginPath();
+    for(let k=0;k<10;k++){const a=k*Math.PI/5-Math.PI/2,r=k%2?4:10;
+     if(k===0)c.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));else c.lineTo(x+r*Math.cos(a),y+r*Math.sin(a));}
+    c.closePath();c.fill();
+   }
+  }else if(pattern==='dots'){
+   for(let y=22;y<520;y+=51)for(let x=20;x<520;x+=51){
+    c.fillStyle='rgba(255,252,235,.45)';c.beginPath();c.arc(x+(Math.floor(y/51)%2)*24,y,6,0,7);c.fill();
    }
   }
  });
@@ -118,18 +142,41 @@ export function createRoom(scene) {
   }
   const map=shadows.getShadowMap();if(map)map.renderList=casts;
  }
- let lastWall='',lastFloor='honey';
+ let lastWall='',lastFloor='',lastLayout='';
+ const floorPieces=[];
+ const floorStagePieces=[];
+ function clearLayout(){for(const mesh of [...floorPieces,...floorStagePieces])mesh.dispose(false,false);floorPieces.length=0;floorStagePieces.length=0;}
+ function addFloorPart(name,w,d,x,z,mat){const mesh=rounded(scene,name,w,.28,d,.063,mat,null,x,-.14,z);mesh.isPickable=true;mesh.metadata={ground:true};mesh.receiveShadows=true;floorPieces.push(mesh);return mesh;}
+ function setLayout(layout='classic'){
+  if(layout===lastLayout)return;
+  clearLayout();lastLayout=layout;
+  floor.setEnabled(layout==='classic');
+  back.scaling.x=layout==='narrow'?.78:1;
+  left.position.x=layout==='narrow'?-3.18:-4.04;
+  if(layout==='narrow'){
+   addFloorPart('narrow-dollhouse-floor',6.4,8.2,0,0,floor.material);
+  }else if(layout==='nook'){
+   addFloorPart('l-room-back-floor',8.2,5.35,0,-1.405,floor.material);
+   addFloorPart('l-room-side-floor',5.36,2.85,-1.32,2.64,floor.material);
+   const trim=makeMaterial(scene,'toy-inner-trim','#d8b79b');
+   const side=rounded(scene,'l-inner-cut-wall',.15,1.22,2.85,.045,trim,null,1.36,.60,2.64);
+   const front=rounded(scene,'l-front-cut-wall',2.75,1.22,.15,.045,trim,null,2.73,.60,1.26);
+   side.isPickable=false;front.isPickable=false;floorStagePieces.push(side,front);
+  }
+ }
  function setFinish(state) {
-  const wallKey=state.wallColor+'/'+state.pattern;
+  setLayout(state.layout);
+  const wallKey=state.wallColor+'/'+state.pattern+'/'+state.wallColorLeft+'/'+state.patternLeft;
   if(wallKey!==lastWall){
-   const cm=wallpaper(scene,WALLS[state.wallColor]||WALLS[0],PATTERNS[state.pattern]||'plain');
-   const old=back.material;back.material=cm;left.material=cm;
-   if(old!==cm&&old?.diffuseTexture)old.dispose(false,true);
+   // Independent wall palettes for playful two-tone dollhouses.
+   const backMat=wallpaper(scene,WALLS[state.wallColor]||WALLS[0],state.pattern||'plain');
+   const leftMat=wallpaper(scene,WALLS[state.wallColorLeft??state.wallColor]||WALLS[0],state.patternLeft||state.pattern||'plain');
+   back.material=backMat;left.material=leftMat;
    lastWall=wallKey;
   }
   if(state.floor!==lastFloor){
-   const newFloor=state.floor==='walnut'?wood(scene,'smoked-oak','#907661'):state.floor==='painted'?wood(scene,'pale-boards','#dfd2b8'):state.floor==='tile'?tiled(scene):wood(scene,'warm-oak','#c6a37b');
-   const old=floor.material;floor.material=newFloor;if(old!==newFloor&&old?.diffuseTexture)old.dispose(false,true);
+   const newFloor=state.floor==='walnut'?wood(scene,'smoked-oak','#907661'):state.floor==='painted'?wood(scene,'pale-boards','#dfd2b8'):state.floor==='tile'?tiled(scene):state.floor==='blush'?wood(scene,'rosy-boards','#d8b6ac'):state.floor==='cherry'?wood(scene,'cherry-planks','#b58a72'):wood(scene,'warm-oak','#c6a37b');
+   floor.material=newFloor;for(const piece of floorPieces)piece.material=newFloor;
    lastFloor=state.floor;
   }
  }

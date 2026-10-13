@@ -177,6 +177,34 @@
       <p class="dock-foot">Выбирай предмет и ставь в комнату</p>
     </aside>
   </section>
+  <section id="roomsLayer" class="rooms-layer" hidden aria-label="Мои комнатки">
+    <div class="rooms-head">
+      <button id="roomsBack" type="button" aria-label="Вернуться к главному меню">← Назад</button>
+      <div><span>МОЯ МАЛЕНЬКАЯ КОЛЛЕКЦИЯ</span><h2>Мои комнатки</h2></div>
+      <span id="roomsCounter"></span>
+    </div>
+    <div id="roomsGrid" class="rooms-grid"></div>
+    <div id="newRoomForm" class="room-create" hidden>
+      <h3>Новая комнатка</h3>
+      <label for="newRoomName">Название</label>
+      <input id="newRoomName" maxlength="32" value="Новая комнатка" />
+      <label for="newRoomLayout">Какую комнату соберём?</label>
+      <div class="new-layouts" id="newRoomLayouts">
+        <button data-layout="classic" class="chosen" type="button"><span>▣</span>Классическая</button>
+        <button data-layout="narrow" type="button"><span>▯</span>Узкая</button>
+        <button data-layout="nook" type="button"><span>◩</span>Уголок</button>
+      </div>
+      <div class="room-create-actions"><button id="roomCreateCancel" type="button">Отмена</button><button id="roomCreateConfirm" type="button">Создать комнатку</button></div>
+    </div>
+  </section>
+  <section id="photoLayer" class="photo-layer" hidden aria-label="Фото комнатки">
+    <div class="photo-panel">
+      <div class="photo-heading"><b>Снимок на память</b><button id="photoExit" type="button" aria-label="Закрыть">×</button></div>
+      <img id="photoPreview" alt="Фотография вашей кукольной комнаты" />
+      <div class="photo-angles"><button data-photo-angle="left" type="button">↶ Ракурс</button><button data-photo-angle="front" type="button">◈ Сверху</button><button data-photo-angle="right" type="button">Ракурс ↷</button></div>
+      <button id="photoSave" type="button">Сохранить PNG</button>
+    </div>
+  </section>
   <div id="onlineLayer" class="online-layer" data-ui hidden>
    <section class="online-dialog" role="dialog" aria-modal="true" aria-label="Играть с друзьями">
     <button id="onlineClose" class="online-close" aria-label="Закрыть" type="button">×</button>

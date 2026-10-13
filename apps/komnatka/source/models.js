@@ -15,7 +15,23 @@ export const CATALOG = [
   { type:'books', name:'Книги', group:'decor', icon:'books', size:[0.52,0.36], tabletop:true },
   { type:'mug', name:'Чашка', group:'decor', icon:'mug', size:[0.3,0.3], tabletop:true },
   { type:'frame', name:'Картина', group:'walls', icon:'frame', size:[1.37,0.1], layer:'wall' },
-  { type:'window', name:'Окно', group:'walls', icon:'window', size:[1.94,0.1], layer:'wall' }
+  { type:'window', name:'Окно', group:'walls', icon:'window', size:[1.94,0.1], layer:'wall' },
+  {type:'wardrobe',name:'Шкафчик',group:'furniture',icon:'shelf',size:[1.62,.86]},
+  {type:'desk',name:'Письменный стол',group:'furniture',icon:'table',size:[1.75,.92],top:.80},
+  {type:'nightstand',name:'Тумбочка',group:'furniture',icon:'shelf',size:[.79,.66],top:.65},
+  {type:'bookcase',name:'Этажерка',group:'furniture',icon:'shelf',size:[1.42,.66]},
+  {type:'loveseat',name:'Диванчик',group:'furniture',icon:'sofa',size:[1.87,1.21]},
+  {type:'pouf',name:'Пуфик',group:'furniture',icon:'stool',size:[.69,.69]},
+  {type:'teddy',name:'Медвежонок',group:'decor',icon:'plant',size:[.39,.34],tabletop:true},
+  {type:'vase',name:'Ваза',group:'decor',icon:'mug',size:[.28,.28],tabletop:true},
+  {type:'candle',name:'Свечка',group:'lights',icon:'tablelamp',size:[.22,.22],tabletop:true},
+  {type:'pillow',name:'Подушечка',group:'decor',icon:'rug',size:[.63,.43],layer:'rug'},
+  {type:'basket',name:'Корзинка',group:'decor',icon:'shelf',size:[.62,.52]},
+  {type:'cactus',name:'Кактус',group:'decor',icon:'plant',size:[.56,.56]},
+  {type:'mirror',name:'Зеркало',group:'walls',icon:'frame',size:[1.08,.10],layer:'wall'},
+  {type:'clock',name:'Часики',group:'walls',icon:'frame',size:[.79,.10],layer:'wall'},
+  {type:'deskclock',name:'Будильник',group:'decor',icon:'mug',size:[.28,.23],tabletop:true},
+  {type:'teapot',name:'Чайничек',group:'decor',icon:'mug',size:[.42,.38],tabletop:true}
 ];
 export const byType = Object.fromEntries(CATALOG.map(x=>[x.type,x]));
 export const COLORS = ['#e8a58f','#d6bd80','#8eae99','#8baab8','#bc9bb5','#e8d8bf','#a58f77','#d2a993'];
@@ -337,6 +353,130 @@ export function makeItem(scene,item){
    const x=j*.16,z=side*(1.052-.21*Math.pow(x/1.49,2));
    const fringe=box(scene,'woven-fringe',root,cream,.018,.007,.065,x,.011,z+side*.035,.005);
    fringe.rotation.y=(j/6)*side*.16;
+  }
+ }
+ // Toy-sized additional pieces — modeled from rounded wooden forms,
+ // stitched fabric and genuine silhouettes rather than placeholder primitives.
+ if(['wardrobe','bookcase','nightstand','desk'].includes(t)){
+  const heights={wardrobe:2.36,bookcase:2.12,nightstand:.65,desk:.80};
+  const h=heights[t],w=byType[t].size[0],d=byType[t].size[1];
+  if(t==='desk'){
+   box(scene,'desk-rounded-top',root,M.lightWood,w,.14,d,0,h-.075,0,.07);
+   for(const x of [-.73,.73])for(const z of [-.30,.30])cylinder(scene,'turned-desk-leg',root,M.wood,x,(h-.14)/2,z,.09,h-.14,.19);
+   box(scene,'tiny-desk-drawer',root,M.wood,.68,.20,.10,.44,.57,d/2-.10,.045);
+   orb(scene,'desk-drawer-knob',root,M.metal,.44,.56,d/2-.02,.045,.045,.03);
+  }else{
+   box(scene,'tiny-cabinet-shell',root,M.lightWood,w,h-.14,d,0,h/2+.01,0,.075);
+   box(scene,'cabinet-top',root,M.wood,w+.06,.09,d+.05,0,h-.035,0,.045);
+   for(const x of [-w/2+.14,w/2-.14])for(const z of [-d/2+.12,d/2-.12])
+    cylinder(scene,'mini-cabinet-foot',root,M.wood,x,.07,z,.12,.14);
+   if(t==='bookcase'){
+    for(let y=.36;y<h-.1;y+=.48){
+     box(scene,'shelf-plank',root,M.wood,w-.12,.055,d+.035,0,y,0,.024);
+     for(let j=0;j<5;j++){
+      const color=['#be8d82','#859e87','#d5b985','#97acbd','#c39f8e'][j];
+      box(scene,'mini-stacked-book',root,makeMaterial(scene,'storybook-'+j,color),.13,.28,.24,-w/2+.23+j*.18,y+.16,.035,.018);
+     }
+    }
+   }else{
+    const drawers=t==='wardrobe'?2:1;
+    for(let i=0;i<drawers;i++){
+     const x=drawers===2?(i? w*.25:-w*.25):0;
+     box(scene,'carved-cupboard-door',root,item.color===COLORS[2]?M.wood:cloth,w/drawers-.13,h-.3,.044,x,h/2+.06,d/2+.015,.07);
+     box(scene,'door-inlay',root,M.lightWood,w/drawers-.23,h-.48,.022,x,h/2+.06,d/2+.046,.045);
+     orb(scene,'little-brass-handle',root,M.metal,x+(i?-.10:.10),h*.55,d/2+.080,.045,.07,.045);
+    }
+   }
+  }
+ }
+ if(t==='loveseat'){
+  const w=1.85,d=1.20;
+  box(scene,'little-couch',root,cloth,w,.41,d,0,.45,0,.14);
+  box(scene,'little-sofa-back',root,cloth,w,.77,.22,0,.89,-.45,.10);
+  for(const x of [-.45,.45]){
+   box(scene,'soft-cushion',root,M.cream,.73,.15,.72,x,.74,.14,.095);
+   box(scene,'cushion-pillow',root,cloth,.45,.37,.19,x,.99,-.23,.08);
+  }
+  for(const x of [-.80,.80])box(scene,'padded-arm',root,cloth,.22,.54,.89,x,.75,.09,.12);
+  for(const x of [-.68,.68])for(const z of [-.35,.35])cylinder(scene,'little-turned-foot',root,M.wood,x,.13,z,.11,.25,.2);
+ }
+ if(t==='pouf'||t==='pillow'){
+  if(t==='pouf'){
+   cylinder(scene,'pouf-rounded-base',root,cloth,0,.27,0,.67,.50,.06);
+   orb(scene,'tufted-pouf-crown',root,cloth,0,.52,0,.58,.09,.58);
+   orb(scene,'pouf-center-button',root,M.cream,0,.575,0,.058,.025,.058);
+   for(let i=0;i<8;i++){const a=i*Math.PI/4;
+    box(scene,'pouf-stitched-rib',root,M.cream,.014,.015,.14,Math.cos(a)*.24,.55,Math.sin(a)*.24,.006).rotation.y=a;}
+  }else{
+   box(scene,'stitched-floor-pillow',root,cloth,.62,.11,.42,0,.066,0,.055);
+   for(const x of [-.24,.24])orb(scene,'hand-knotted-tassel',root,M.cream,x,.07,.13,.043,.034,.043);
+  }
+ }
+ if(t==='basket'){
+  cylinder(scene,'woven-basket-bottom',root,M.wood,0,.20,0,.52,.38,.26);
+  cylinder(scene,'basket-inner',root,M.darkWood,0,.397,0,.39,.018);
+  for(let i=0;i<3;i++)cylinder(scene,'basket-rattan-braid',root,M.lightWood,0,.16+i*.10,0,.52,.035);
+  for(const x of [-.22,.22]){const handle=cylinder(scene,'woven-loop',root,M.wood,x,.47,0,.08,.30);handle.rotation.z=x>0?.36:-.36;}
+ }
+ if(t==='cactus'){
+  cylinder(scene,'small-terracotta-pot',root,M.wood,0,.19,0,.37,.35,.22);
+  cylinder(scene,'cactus-soil',root,M.soil,0,.37,0,.32,.015);
+  orb(scene,'plump-cactus',root,M.leaf,0,.68,0,.31,.66,.31);
+  for(const dx of [-.18,.18])orb(scene,'cactus-side-shoot',root,M.leaf,dx,.60,0,.14,.32,.15);
+  for(let j=0;j<10;j++){const a=j*6.283/10;
+   box(scene,'soft-prickle',root,M.cream,.013,.075,.012,Math.cos(a)*.14,.83,Math.sin(a)*.14,.006);}
+ }
+ if(t==='teddy'){
+  orb(scene,'plush-teddy-body',root,cloth,0,.23,0,.30,.36,.26);
+  orb(scene,'teddy-head',root,cloth,0,.54,0,.30,.27,.27);
+  for(const x of [-.12,.12]){
+   orb(scene,'teddy-round-ear',root,cloth,x,.67,0,.13,.13,.11);
+   orb(scene,'teddy-paw',root,cloth,x,.18,.12,.13,.18,.13);
+   orb(scene,'button-eye',root,M.darkWood,x*.55,.56,.232,.032,.033,.02);
+  }
+  orb(scene,'teddy-snout',root,M.cream,0,.48,.22,.15,.11,.13);
+  orb(scene,'teddy-nose',root,M.darkWood,0,.49,.337,.047,.03,.02);
+ }
+ if(t==='vase'||t==='teapot'||t==='candle'||t==='deskclock'){
+  if(t==='vase'){
+   cylinder(scene,'tiny-ceramic-vase',root,cloth,0,.17,0,.25,.29,.42);
+   cylinder(scene,'vase-neck',root,cloth,0,.37,0,.13,.18);
+   for(let a=0;a<4;a++){const angle=a*Math.PI/2;
+    const stem=cylinder(scene,'flower-stem',root,M.leaf,Math.cos(angle)*.055,.53,Math.sin(angle)*.055,.022,.24);
+    stem.rotation.z=Math.sin(angle)*.16;
+    orb(scene,'flower-bloom',root,a%2?M.cream:M.art[1],Math.cos(angle)*.083,.67,Math.sin(angle)*.083,.10,.08,.10);
+   }
+  }else if(t==='teapot'){
+   orb(scene,'porcelain-teapot',root,cloth,0,.19,0,.36,.29,.34);
+   cylinder(scene,'teapot-lid',root,M.cream,0,.34,0,.22,.045);
+   orb(scene,'teapot-knob',root,M.wood,0,.39,0,.08,.06,.08);
+   const spout=cylinder(scene,'curved-porcelain-spout',root,cloth,.20,.21,0,.095,.22);spout.rotation.z=-.70;
+   orb(scene,'handle-loop',root,M.cream,-.22,.20,0,.095,.17,.12);
+  }else if(t==='candle'){
+   cylinder(scene,'wax-candle',root,M.cream,0,.17,0,.17,.31);
+   cylinder(scene,'candle-copper-holder',root,M.metal,0,.035,0,.26,.07);
+   orb(scene,'candle-flame',root,M.light,0,.38,0,.056,.13,.056);
+  }else{
+   box(scene,'little-alarm-clock',root,cloth,.29,.25,.11,0,.23,0,.07);
+   cylinder(scene,'clock-face',root,M.cream,0,.24,.068,.21,.02);
+   cylinder(scene,'clock-bell-left',root,M.metal,-.10,.39,0,.10,.055);
+   cylinder(scene,'clock-bell-right',root,M.metal,.10,.39,0,.10,.055);
+   box(scene,'hour-hand',root,M.darkWood,.012,.085,.01,0,.24,.084,.005);
+  }
+ }
+ if(t==='mirror'||t==='clock'){
+  if(t==='mirror'){
+   box(scene,'oval-wall-mirror-frame',root,M.wood,1.06,1.35,.075,0,0,0,.21);
+   box(scene,'gentle-mirror-glass',root,makeMaterial(scene,'silvery-mirror','#c4d6d3'),.87,1.13,.02,0,0,.065,.17);
+   box(scene,'mirror-light-reflection',root,M.cream,.075,.91,.006,-.23,0,.079,.037).rotation.z=-.23;
+  }else{
+   cylinder(scene,'carved-wall-clock',root,M.wood,0,0,0,.78,.08);
+   // Wall objects lie vertically in local XY; rotate face cylinder.
+   for(const node of root.getChildMeshes(false))node.rotation.x=Math.PI/2;
+   cylinder(scene,'clock-dial',root,M.cream,0,0,.064,.60,.020).rotation.x=Math.PI/2;
+   box(scene,'clock-hour-pointer',root,M.darkWood,.023,.23,.024,0,.09,.080,.008);
+   box(scene,'clock-minute-pointer',root,M.darkWood,.19,.017,.024,.075,0,.083,.007);
+   orb(scene,'clock-pivot',root,M.metal,0,0,.092,.044,.044,.032);
   }
  }
  if(t==='books'){

@@ -8,21 +8,24 @@ import { createSoundscape } from './soundscape.js';
 import { createMotionDirector } from './motion.js';
 import { buildFurnitureThumbnails } from './thumbnails.js';
 import { createOnlineController } from './online.js';
+import { roomList,activeRoomId,loadRoom,saveRoom,selectRoom,addRoom,renameRoom,deleteRoom,ROOM_CAP } from './rooms.js';
+import { LAYOUTS,leftWallX } from './layout.js';
+import { createStudioUI } from './studio-ui.js';
 import { sceneY } from './scene-position.js';
 import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.2.2',releaseNotes:['Переключение света больше не сбрасывает мебель; теперь лампы ярко светят ночью, а сцена остаётся пастельной.']});
+registerEnhancedUpdate({appName:'КОМНАТКА',version:'1.0.0',releaseNotes:['30 миниатюр, три формы комнат, расписные обои, галерея пяти комнат, фото и разнообразные совместные задания.']});
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
-let state=load(),scene,engine,camera,room,director,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
+let currentRoomId=activeRoomId(),state=loadRoom(currentRoomId),scene,engine,camera,room,director,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
 const GROUPS=[['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
 let activeGroup='furniture',savedTimer=0,toastTimer=0;
 const thumbnails=new Map();
-let online=null,offlineBackup=null,queuedSnapshot=null;
+let online=null,offlineBackup=null,queuedSnapshot=null,studio=null;
 const playerColors=['#93b3a0','#d89d81','#9f9ac8','#af9868','#7aadb6'];
 const clone=value=>JSON.parse(JSON.stringify(value));
 const soundscape=createSoundscape();
@@ -79,14 +82,50 @@ function showHome(){
  if(online?.active){online.open();return;}
  if(pending)cancelPending(false);
  selectedId=null;hideSelection();
- captureHome();
+ saveRoom(currentRoomId,state,thumbnail());captureHome();
  $('homeScreen').hidden=false;
 }
 function playHomeMode(mode){
  hideHome();
- if(mode==='solo'){sound('select');return;}
+ if(mode==='solo'){studio.gallery();sound('select');return;}
  online.open(mode,true);
  sound('select');
+}
+function thumbnail(){
+ if(!ready||!scene)return null;
+ try{scene.render();const canvas=document.createElement('canvas');canvas.width=220;canvas.height=164;
+  canvas.getContext('2d').drawImage(ui.canvas,0,0,220,164);
+  const result=canvas.toDataURL('image/jpeg',.52);return result.length<165000?result:null;}
+ catch{return null;}
+}
+function switchSavedRoom(id){
+ if(online?.active)return;
+ saveRoom(currentRoomId,state,thumbnail());
+ selectRoom(id);currentRoomId=id;state=loadRoom(id);
+ for(const root of roots.values())root.dispose(false,false);
+ roots.clear();history.length=0;future.length=0;
+ selectedId=null;cancelPending(false);hideSelection();refresh();hideHome();toast('Комнатка открыта');
+}
+function createGalleryUI(){
+ studio=createStudioUI({
+  getState:()=>({
+   records:roomList,rename:renameRoom,
+   delete:id=>{const was=id===currentRoomId,done=deleteRoom(id);
+    if(done&&was){currentRoomId=activeRoomId();state=loadRoom(currentRoomId);
+     for(const root of roots.values())root.dispose(false,false);
+     roots.clear();selectedId=null;history.length=0;future.length=0;refresh();}
+    return done;},
+   create:(name,layout)=>addRoom({name,layout})
+  }),
+  load:switchSavedRoom,
+  save:()=>saveRoom(currentRoomId,state,thumbnail()),
+  onClose:showHome,toast,
+  photo:{
+   angle:()=>({alpha:camera.alpha,beta:camera.beta}),
+   setAngle:({alpha,beta})=>{camera.alpha=alpha;camera.beta=beta;scene.render();},
+   capture:()=>{scene.render();return ui.canvas.toDataURL('image/png');}
+  }
+ });
 }
 function setupHome(){
  $('homeSolo').addEventListener('click',()=>playHomeMode('solo'));
@@ -97,7 +136,7 @@ function setupHome(){
 function persist() {
  if(online?.active)return;
  clearTimeout(savedTimer);status('Сохраняем…');
- savedTimer=setTimeout(()=>{status(save(state)?'Сохранено':'Не удалось сохранить');},240);
+ savedTimer=setTimeout(()=>{status(saveRoom(currentRoomId,state)?'Сохранено':'Не удалось сохранить');},240);
 }
 function record(before) {
  if(online?.active)return;
@@ -163,16 +202,33 @@ function showCatalog() {
  $('cancelPlacement').hidden=!pending;
  $('cancelPlacementMobile').hidden=!pending;
  if(activeGroup==='finish'){renderFinish();return;}
- ui.catalog.innerHTML=CATALOG.filter(it=>it.group===activeGroup).map(it=>'<button type="button" class="item-button '+(pending?.type===it.type?'choosing':'')+'" data-type="'+it.type+'"><span class="item-drawing '+it.type+'">'+sprite(it.type)+'</span><span>'+it.name+'</span></button>').join('');
+ ui.catalog.innerHTML=CATALOG.filter(it=>it.group===activeGroup).map(it=>'<button type="button" class="item-button '+(pending?.type===it.type?'choosing':'')+'" data-type="'+it.type+'"><span class="item-drawing '+it.type+'" data-image-type="'+it.type+'">'+(thumbnails.has(it.type)?'<img class="actual-thumbnail" src="'+thumbnails.get(it.type)+'" alt="">':sprite(it.type))+'</span><span>'+it.name+'</span></button>').join('');
  ui.catalog.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>beginPlacement(b.dataset.type)));
 }
 function renderFinish(){
- ui.finish.innerHTML='<div class="finish-row"><b>Стены</b><div class="color-row">'+WALLS.map((c,i)=>'<button class="paint-chip '+(state.wallColor===i?'picked':'')+'" style="--paint:'+c+'" data-wall="'+i+'" aria-label="Цвет стены '+(i+1)+'"></button>').join('')+'</div></div>'
- +'<div class="finish-row"><b>Обои</b><div class="pattern-row">'+PATTERNS.map((p,i)=>'<button class="'+(state.pattern===p?'picked':'')+'" data-pattern="'+p+'">'+['Краска','Полоска','Цветы'][i]+'</button>').join('')+'</div></div>'
- +'<div class="finish-row"><b>Пол</b><div class="floor-row">'+FLOORS.map((f,i)=>'<button class="'+(state.floor===f?'picked':'')+'" data-floor="'+f+'">'+['Мёд','Орех','Светлый','Плитка'][i]+'</button>').join('')+'</div></div>';
- ui.finish.querySelectorAll('[data-wall]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.wallColor=Number(el.dataset.wall));if(online?.active)online.send({type:'decorate',patch:{wallColor:state.wallColor}});sound('paint');}));
- ui.finish.querySelectorAll('[data-pattern]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.pattern=el.dataset.pattern);if(online?.active)online.send({type:'decorate',patch:{pattern:state.pattern}});sound('paint');}));
- ui.finish.querySelectorAll('[data-floor]').forEach(el=>el.addEventListener('click',()=>{mutate(()=>state.floor=el.dataset.floor);if(online?.active)online.send({type:'decorate',patch:{floor:state.floor}});sound('paint');}));
+ const PATTERN_NAMES=['Краска','Полоска','Цветы','Клетка','Ягодки','Звёзды','Ромашки','Горошек','Веточки'];
+ const FLOOR_NAMES=['Мёд','Орех','Светлый','Плитка','Розовый','Вишня'];
+ const chips=(key,attr)=>'<div class="color-row">'+WALLS.map((c,i)=>'<button class="paint-chip '+(state[key]===i?'picked':'')+'" style="--paint:'+c+'" data-'+attr+'="'+i+'" title="Цвет '+(i+1)+'"></button>').join('')+'</div>';
+ const patterns=(key,attr)=>'<div class="pattern-row">'+PATTERNS.map((p,i)=>'<button class="'+(state[key]===p?'picked':'')+'" data-'+attr+'="'+p+'">'+PATTERN_NAMES[i]+'</button>').join('')+'</div>';
+ ui.finish.innerHTML='<div class="finish-row"><b>Задняя стена</b>'+chips('wallColor','wall')+patterns('pattern','pattern')+'</div>'+
+ '<div class="finish-row"><b>Боковая стена</b>'+chips('wallColorLeft','wall-left')+patterns('patternLeft','pattern-left')+'</div>'+
+ '<div class="finish-row"><b>Пол</b><div class="floor-row">'+FLOORS.map((f,i)=>'<button class="'+(state.floor===f?'picked':'')+'" data-floor="'+f+'">'+FLOOR_NAMES[i]+'</button>').join('')+'</div></div>'+
+ '<div class="finish-row"><b>Планировка</b><div class="floor-row">'+LAYOUTS.map(l=>'<button data-layout="'+l.id+'" class="'+(state.layout===l.id?'picked':'')+'">'+l.name+'</button>').join('')+'</div></div>';
+ for(const [attr,key] of [['wall','wallColor'],['wall-left','wallColorLeft'],['pattern','pattern'],['pattern-left','patternLeft'],['floor','floor']])
+  ui.finish.querySelectorAll('[data-'+attr+']').forEach(el=>el.addEventListener('click',()=>{
+   const value=attr.startsWith('wall')?Number(el.getAttribute('data-'+attr)):el.getAttribute('data-'+attr);
+   mutate(()=>{state[key]=value;});if(online?.active)online.send({type:'decorate',patch:{[key]:value}});
+   sound('paint');
+  }));
+ ui.finish.querySelectorAll('[data-layout]').forEach(el=>el.addEventListener('click',()=>{
+  if(online?.active){toast('Планировку онлайн-раунда выбирает сервер');return;}
+  const next=el.dataset.layout;
+  if(next===state.layout)return;
+  if(state.items.some(item=>!valid({...state,layout:next},item))){
+   toast('Убери мебель за границами новой планировки');return;
+  }
+  mutate(()=>{state.layout=next;});toast('Комнатка поменяла форму');sound('place');
+ }));
 }
 function placementPalette(){
  const container=$('placementControls');
@@ -286,7 +342,7 @@ function onOnlineRoom(snapshot,{reference,phaseChanged}={}){
  if(!snapshot)return;
  if(drag?.kind==='move'){queuedSnapshot={snapshot,reference,phaseChanged};return;}
  const before=new Map(state.items.map(item=>[item.id,{...item}]));
- const finishes=snapshot.finishes||{wallColor:0,pattern:'plain',floor:'honey',evening:false};
+ const finishes={...(snapshot.finishes||{wallColor:0,pattern:'plain',floor:'honey',evening:false}),layout:snapshot.layout||'classic'};
  const items=(reference?snapshot.target:snapshot.items)||[];
  state=sanitize({...finishes,items});
  selectedId=state.items.some(i=>i.id===selectedId)?selectedId:null;
@@ -344,7 +400,7 @@ function pickTarget(ev,item) {
   const p=pick(ev,m=>Boolean(m.metadata?.wall));
   if(!p?.hit||!p.pickedPoint)return null;
   const wall=p.pickedMesh.metadata.wall,coord=wall==='back'?nearest(p.pickedPoint.x):nearest(p.pickedPoint.z);
-  return {x:wall==='left'?-3.91:coord,z:wall==='back'?-3.91:coord,y:Math.min(3.2,Math.max(1.03,nearest(p.pickedPoint.y))),wall,rot:wall==='left'?1:0};
+  return {x:wall==='left'?leftWallX(state.layout):coord,z:wall==='back'?-3.91:coord,y:Math.min(3.2,Math.max(1.03,nearest(p.pickedPoint.y))),wall,rot:wall==='left'?1:0};
  }
  const ground=pointOnGround(ev);if(!ground)return null;
  const x=nearest(ground.x),z=nearest(ground.z);
@@ -512,8 +568,8 @@ function addEvents(){
  });
  ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();});
  window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();persist();});
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&!online?.active){clearTimeout(savedTimer);save(state);status('Сохранено');}});
- window.addEventListener('pagehide',()=>{if(!online?.active){clearTimeout(savedTimer);save(state);}});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&!online?.active){clearTimeout(savedTimer);saveRoom(currentRoomId,state);status('Сохранено');}});
+ window.addEventListener('pagehide',()=>{if(!online?.active){clearTimeout(savedTimer);saveRoom(currentRoomId,state);}});
  $('rotateBtn').addEventListener('click',rotateSelected);
  $('duplicateBtn').addEventListener('click',duplicateSelected);
  $('deleteBtn').addEventListener('click',removeSelected);
@@ -521,11 +577,7 @@ function addEvents(){
  $('undoBtn').addEventListener('click',undo);$('redoBtn').addEventListener('click',redo);
  $('eveningBtn').addEventListener('click',switchDollhouseLighting);
  $('soundBtn').addEventListener('click',()=>{soundscape.toggle();updateActions();});
- $('photoBtn').addEventListener('click',()=>{
-  try{const link=document.createElement('a');link.download='komnatka-'+new Date().toISOString().slice(0,10)+'.png';
-   engine.renderEvenInBackground=true;scene.render();link.href=ui.canvas.toDataURL('image/png');link.click();toast('Снимок сохранён');sound(810,'triangle');}
-  catch{toast('Не удалось сохранить изображение');}
- });
+ $('photoBtn').addEventListener('click',()=>studio.photoOpen());
  $('resetBtn').addEventListener('click',()=>{if(online?.active){toast('Сброс недоступен в общей комнате');return;}$('resetDialog').hidden=false;});
  $('cancelReset').addEventListener('click',()=>{$('resetDialog').hidden=true;});
  $('confirmReset').addEventListener('click',()=>{const before=JSON.stringify(state),previous=state.items;state=starter();retireMissing(previous,state.items);selectedId=null;cancelPending(false);hideSelection();record(before);refresh();$('resetDialog').hidden=true;toast('Комната восстановлена');sound('place');});
@@ -576,7 +628,7 @@ function setup(){
  });
  director=createMotionDirector({getRoot:id=>roots.get(id),getItem:id=>state.items.find(i=>i.id===id),reducedMotion:()=>reduce.matches});
  resize();
- addEvents();setupHome();ready=true;refresh();ui.loading.classList.add('hidden');
+ addEvents();setupHome();createGalleryUI();ready=true;refresh();ui.loading.classList.add('hidden');
  setTimeout(()=>buildFurnitureThumbnails((type,src)=>{
   thumbnails.set(type,src);
   ui.catalog.querySelectorAll('[data-image-type]').forEach(el=>{
