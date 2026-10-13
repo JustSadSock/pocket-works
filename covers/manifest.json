@@ -250,5 +250,143 @@
     "status": "published",
     "lastAttemptRevision": "e7eefde739177d06760d215d009f54b54b06960c",
     "lastAttemptAt": "2026-10-13T10:47:18.549Z"
+  },
+  "moss-marble": {
+    "revision": "47246dc0c25d9e15dd964a937d43b814788d18aa",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "08d0e32010930ab28962f1d5b076d64d4bd585bbf53e87be192daf32454782fd",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "47246dc0c25d9e15dd964a937d43b814788d18aa",
+    "lastAttemptAt": "2026-10-13T11:09:52.205Z"
+  },
+  "petlya-17": {
+    "revision": "f46fd054cf3ad0d2d3a367623fade4f7f41b34f3",
+    "qualityScore": 54,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "b06ff09305496321ea89e9b6ace29bb78ab706a1cb23700c31b89576d6685ac3",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "f46fd054cf3ad0d2d3a367623fade4f7f41b34f3",
+    "lastAttemptAt": "2026-10-13T11:10:03.411Z"
+  },
+  "mechanica": {
+    "revision": "0967d606d71d887fbc3837cd34d7b0619b805e75",
+    "qualityScore": 61,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "6720dd67dac2965338cd5d0202b0643cafde66e283bdb068642ea0e32d662b7f",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "0967d606d71d887fbc3837cd34d7b0619b805e75",
+    "lastAttemptAt": "2026-10-13T11:10:14.248Z"
+  },
+  "cantica-glass": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 68,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f3f2a260a76ce4188da3111afb94624c369a20d6edd7fdb304490ede17a65483",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:10:25.506Z"
+  },
+  "horugvi": {
+    "revision": "0792b670a624026f21fbc54e59c23cd831ccd1b8",
+    "qualityScore": 80,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "b39f8a570617f5aca4c7cba1a7c11cafaf444dff00597db0a414b5fb01a367eb",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "0792b670a624026f21fbc54e59c23cd831ccd1b8",
+    "lastAttemptAt": "2026-10-13T11:10:36.406Z"
+  },
+  "vitrum": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 75,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f74ada6990a96f98f889a6e5f003517e70bbb96a55b66fa07d7cb2ae069a3a40",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:10:47.238Z"
+  },
+  "perigee": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 78,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "0c0dc09c78cb25c98fe04ad87a26a20ad9483fda5be03b7b934478bfb4d1eed7",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:10:58.169Z"
+  },
+  "afterhours-arena": {
+    "revision": "262dc1ad3b232ef62730a51e8aded2e7dcdbf310",
+    "qualityScore": 58,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "c54ed38f3d1b1657ee531e272f85a0c02c7a79619af38757f355f3412e640821",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "262dc1ad3b232ef62730a51e8aded2e7dcdbf310",
+    "lastAttemptAt": "2026-10-13T11:11:09.203Z"
+  },
+  "chronoscope": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 62,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "51a7d5e4acf4221b116c3dffaa864e471dc6def0bc44e08d2be31cc204c7050e",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:11:20.042Z"
+  },
+  "third-oath": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "b3475e4b44c74da1645a99b9fac6fccf5afc4ef9",
+    "lastAttemptAt": "2026-10-13T11:11:30.921Z"
+  },
+  "inkfall": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 75,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "118511b279542ccef4ae66e44039f9a3695921f0b8b953fdb772f28e340c61d2",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:11:41.847Z"
+  },
+  "rasklad": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 68,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f761d5583084d54f86a243ca0afb2fa32ddfa5cde7033dfd8cc3a9f2e9da4890",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:11:52.668Z"
   }
 }
