@@ -72,7 +72,7 @@ assert.equal(initial.ok, true);
 assert.equal(initial.transport, 'cloudflare-durable-objects');
 assert.ok(initial.modules.includes('zamazka'));
 assert.equal(initial.games.zamazka.minPlayers, 2);
-assert.equal(initial.games.zamazka.rulesVersion, 11);
+assert.equal(initial.games.zamazka.rulesVersion, 12);
 const firstToken = await session('Painter');
 const secondToken = await session('Observer');
 assert.notEqual(firstToken, secondToken);
@@ -85,7 +85,7 @@ try {
   first.send('create_room', { gameId: 'zamazka' });
   const created = await first.next('room_joined');
   assert.equal(created.state.phase, 'lobby');
-  assert.equal(created.version, 'v12');
+  assert.equal(created.version, 'v13');
   const roomId = created.roomId;
   const code = roomId.slice(0, 8).toUpperCase();
   second.send('join_room', { roomId: '00000000' });
