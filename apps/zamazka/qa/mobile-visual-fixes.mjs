@@ -24,7 +24,7 @@ assert.match(app,/storedPractice\|\|JSON\.parse\(localStorage\.getItem\(PRACTICE
 assert.match(app,/sessionStorage\.setItem\(PRACTICE_KEY,data\)/,'can temporarily save practice');
 assert.match(editor,/this\.armed=!this\.armed/,'precision button is a toggle, not second-finger hold');
 assert.match(editor,/this\.armButton\.querySelector\('strong'\)\.textContent=this\.armed\?'СТОП':'РИСОВАТЬ'/);
-assert.match(editor,/sessionStorage\.setItem\(this\.draftKey,payload\)/,'editor retains backup if local storage is full');
+assert.match(editor,/sessionStorage\.setItem\(this\.draftKey,JSON\.stringify\(strokes\)\)/,'editor writes a tab backup before IndexedDB');
 assert.match(editor,/try\{localStorage\.setItem\('pocket-works:zamazka:input-mode'/,'quota cannot interrupt mode UI');
 const section=editor.slice(editor.indexOf('this.armDown=e=>{'),editor.indexOf("this.armButton?.addEventListener('pointerdown'"));
 assert.ok(section.includes('this.armUp=e=>{'));
@@ -44,6 +44,7 @@ const tmp=new Map(),alerts=[];
 const fake={
  practice:{phase:'preview',round:1,rounds:1,selected:[1,2,3,4,5],deadline:10,drawingSeconds:160,mine:{art:1,variation:3},strokes:[]},
  ARCHIVE_EDITION:4,PRACTICE_KEY:'practice',screen:{querySelector:()=>null},
+ zamazkaStore:{set:()=>Promise.resolve()},Promise,
  localStorage:{setItem(){throw new Error('quota exceeded')}},
  sessionStorage:{setItem(k,v){tmp.set(k,v)}},
  notify:m=>alerts.push(m),JSON
