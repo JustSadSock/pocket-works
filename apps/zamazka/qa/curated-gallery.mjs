@@ -61,7 +61,7 @@ assert.match(cloud,/normalizeArchiveEntry\(original\)/,'cloud sync unifies old a
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 assert.match(sw,/\.\/museum-playful\.js/,'offline shell contains new catalogue');
 const data=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
-assert.equal(data.version,'1.29.1');
+assert.equal(data.version,sw.match(/const APP_VERSION = '([^']+)'/)?.[1], 'app manifest and offline runtime versions match');
 const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={},sandbox={exports,Date,Math,Number,Array,Object,JSON,Set,Map,Error,console};
