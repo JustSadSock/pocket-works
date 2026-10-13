@@ -60,7 +60,9 @@ try{
   assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'brush');
   await page.locator('#brushSize').evaluate(el=>{el.value='20';el.dispatchEvent(new Event('input',{bubbles:true}))});
   const sample=await page.locator('#sizeSample').boundingBox();
-  assert(sample?.width>=18,'Brush diameter preview did not react to tool size');
+  assert(sample?.width>=26,'Brush preview container was hidden');
+  const inkWidth=await page.locator('#sizeSample').evaluate(el=>getComputedStyle(el).getPropertyValue('--nib').trim());
+  assert.equal(inkWidth,'20px','Brush preview did not react to slider input');
   const board=page.locator('#paintCanvas');
   await board.waitFor({timeout:10000});
   await page.waitForTimeout(450);
