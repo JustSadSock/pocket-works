@@ -22,9 +22,9 @@ export const ARTS=[
  ...REAL.map((entry,id)=>({...entry,id,isReal:true})),
  ...LEGACY.map((entry,i)=>({...entry,id:i+REAL.length,artist:'Коллекция ЗАМАЗКИ 1.0',date:'2026',museum:'Личный архив',isReal:false}))
 ].map(art=>({...art,...(art.isReal?artworkOrigin(art.id):{})}));
-// Gallery previews use a mid-sized source. The brush/editor uses high-resolution
-// sources and gracefully falls back where the original master is smaller than 1920px.
-const PREVIEW_WIDTH=1280;
+// Preview and editor use the same high-resolution master. If Commons only
+// provides a smaller raster, the existing fallback chain finds it safely.
+const PREVIEW_WIDTH=1920;
 const MASTER_WIDTHS=[1920,1280,960];
 const ART_CACHE='zamazka-artworks-v1.7.0';
 export function artworkURL(id,width=PREVIEW_WIDTH){
@@ -78,20 +78,23 @@ export function loadArtwork(id){
  while(pending.size>MAX_DECODED_IMAGES)pending.delete(pending.keys().next().value);
  return task;
 }
-/** Identical framing in the museum, editor, voting, and reveal: never distort a source. */
+/** Keep the entire source painting inside the shared restoration canvas.
+ * Previously a forced 4:3 source crop silently removed edges, even though
+ * gallery thumbnails had different (also cropped) framing.
+ */
+export function artworkBounds(image){
+ const iw=image?.naturalWidth,ih=image?.naturalHeight;
+ if(!(iw>0&&ih>0))return null;
+ const scale=Math.min(W/iw,H/ih);
+ const w=iw*scale,h=ih*scale;
+ return {x:(W-w)/2,y:(H-h)/2,w,h};
+}
 export function drawArtwork(ctx,image,id){
- const ratio=W/H, natural=image.naturalWidth/image.naturalHeight;
- if(!Number.isFinite(natural)||!natural)return;
- const entry=ARTS[id];
+ const bounds=artworkBounds(image);
+ if(!bounds)return;
  ctx.fillStyle='#242621';ctx.fillRect(0,0,W,H);
- // The pearl portrait is featured on the cover but not used for 4:3 restoration rounds.
- if(entry?.native==='portrait'){
-   const width=H*natural;ctx.drawImage(image,(W-width)/2,0,width,H);return;
- }
- let sx=0,sy=0,sw=image.naturalWidth,sh=image.naturalHeight;
- if(natural>ratio){sw=Math.round(sh*ratio);sx=Math.round((image.naturalWidth-sw)/2)}
- else {sh=Math.round(sw/ratio);sy=Math.round((image.naturalHeight-sh)/2)}
- ctx.drawImage(image,sx,sy,sw,sh,0,0,W,H);
+ ctx.drawImage(image,0,0,image.naturalWidth,image.naturalHeight,
+   bounds.x,bounds.y,bounds.w,bounds.h);
 }
 function rand(seed){return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}}
 const SHAPES=['round','oval','star','torn','diamond','burst'];

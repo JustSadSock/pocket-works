@@ -16,7 +16,7 @@
 .stake-card{position:relative;min-width:0;background:#3a3128;border:1px solid #705940;box-shadow:0 4px #17120d,0 7px 12px #0004;display:flex;flex-direction:column;transition:background .2s,border-color .2s}
 .stake-card.has-chips{background:#4b3828;border-color:#ca9e5f;box-shadow:inset 0 0 0 1px #be975c,0 4px #17120d}
 .stake-frame{position:relative;padding:7px;background:#302821}
-.stake-frame img,.verdict-image img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#201d19;border:4px ridge #8f714b}
+.stake-frame img,.verdict-image img{width:100%;aspect-ratio:4/3;object-fit:contain;display:block;background:#201d19;border:4px ridge #8f714b}
 .stake-number{position:absolute;left:16px;top:15px;background:#201710e3;color:#f8deb0;padding:4px 7px;font:700 10px system-ui,sans-serif;letter-spacing:.1em}
 .stake-details{padding:7px 10px 6px;display:flex;flex-direction:column;gap:4px;min-height:54px}
 .stake-details strong{font:italic 15px/1.15 Georgia,serif;color:#f7e5c7}
@@ -33,6 +33,7 @@
 .stake-tray{position:sticky;bottom:0;background:#30251bf5;border-top:2px solid #b08c59;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(12px,env(safe-area-inset-right)) calc(13px + env(safe-area-inset-bottom));box-shadow:0 -12px 24px #1b120b90;z-index:3}
 .stake-tray #chipsRemaining{display:flex;align-items:center;gap:5px;font:11px system-ui,sans-serif;color:#dec8a8}
 .stake-tray .btn{font-size:12px;min-width:150px;min-height:49px}
+.coin-auto-status{display:inline-flex;align-items:center;justify-content:flex-end;min-height:44px;max-width:240px;text-align:right;color:#e6c594;font:650 12px/1.35 system-ui,-apple-system,sans-serif}
 .stake-wait{padding:18px;color:#e4c9a2;font:italic 15px Georgia,serif;text-align:center;border:1px dashed #806a50;margin:20px 0}
 .verdict-intro{max-width:780px}
 .verdict-intro p{font:15px/1.55 Georgia,serif;color:#c8b7a3}
@@ -111,7 +112,7 @@
 .expert-round .suspect-gallery{align-items:stretch}
 .suspect-gallery .stake-card{min-height:0}
 .suspect-gallery .stake-frame img,.suspect-gallery .stake-frame canvas,.reveal-option-image img,.reveal-option-image canvas{
- display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#241d16;border:4px ridge #91714c;
+ display:block;width:100%;aspect-ratio:4/3;object-fit:contain;background:#241d16;border:4px ridge #91714c;
 }
 .suspect-gallery .stake-card:focus-within{outline:2px solid #ddb879;outline-offset:2px}
 .suspect-gallery .stake-details{min-height:60px}
