@@ -15,11 +15,12 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css?v=1.14.0">
+  <link rel="stylesheet" href="./styles.css?v=1.15.0">
   <link rel="stylesheet" href="./styles14.css?v=1.4.0">
   <link rel="stylesheet" href="./styles15.css?v=1.5.0">
   <link rel="stylesheet" href="./styles16.css?v=1.6.0">
   <link rel="stylesheet" href="./styles161.css?v=1.14.0">
+  <link rel="stylesheet" href="./styles115.css?v=1.15.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" id="app" data-app-shell>
@@ -34,7 +35,6 @@
         <i></i>
         <div><span>Пар</span><strong id="parCount">6</strong></div>
       </div>
-      <button class="sound-control" type="button" id="soundBtn" data-native-press aria-label="Выключить звук" aria-pressed="true">Звук</button>
     </header>
 
     <button class="overview-control" type="button" id="overviewBtn" data-ui data-native-press aria-pressed="false" aria-label="Показать всю территорию">
@@ -48,9 +48,8 @@
     <section class="screen menu-screen is-visible" id="menuScreen" data-ui aria-labelledby="title">
       <div class="menu-wash"></div>
       <div class="menu-copy">
-        <p class="eyebrow">Оранжерея № 1 · Девять цельных маршрутов</p>
         <h1 id="title"><span>Moss</span><small>&amp;</small><span>Marble</span></h1>
-        <p class="lead">Проведи стеклянный шар через девять заросших маршрутов. Здесь склон помогает ровно до того момента, пока не решает иначе.</p>
+        <p class="lead">Девять лунок в старой оранжерее. Каждый удар решают рельеф, инерция и точность.</p>
       </div>
       <div class="menu-actions">
         <button class="primary-action" type="button" id="continueBtn" data-native-press>
@@ -62,8 +61,8 @@
           <small id="endlessMeta">Новый код · без конца</small>
         </button>
         <button class="paper-action" type="button" id="newEndlessBtn" data-native-press hidden>Начать новый бесконечный путь</button>
-        <button class="paper-action" type="button" id="codeBtn" data-native-press>Открыть путь по коду</button>
-        <button class="paper-action" type="button" id="holesBtn" data-native-press>Выбрать лунку</button>
+        <button class="paper-action" type="button" id="codeBtn" data-native-press>Играть по коду</button>
+        <button class="paper-action" type="button" id="holesBtn" data-native-press>Выбор лунки</button>
         <a class="paper-link" href="../../" id="menuHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
       </div>
       <p class="menu-best" id="courseBest">Лучший круг ещё не сыгран</p>
@@ -104,11 +103,12 @@
         <button class="primary-action compact" type="button" id="resumeBtn" data-native-press><span>Продолжить</span><small>Вернуться к удару</small></button>
         <button class="paper-action" type="button" id="restartBtn" data-native-press>Начать лунку заново</button>
         <div class="settings-row">
+          <button class="setting-toggle" type="button" id="soundBtn" data-native-press aria-label="Выключить звук" aria-pressed="true"><span>Звук</span><b>Вкл</b></button>
           <button class="setting-toggle" type="button" id="hapticsBtn" data-native-press aria-pressed="true"><span>Отдача</span><b>Вкл</b></button>
           <button class="setting-toggle" type="button" id="tiltBtn" data-native-press aria-pressed="false"><span>Глубина</span><b>Включить</b></button>
         </div>
         <button class="paper-action" type="button" id="quitBtn" data-native-press>В оранжерею</button>
-        <button class="paper-action workshop" type="button" data-workshop-trigger data-native-press>Workshop mode</button>
+        <details class="advanced-settings"><summary>Дополнительно</summary><button class="paper-action workshop" type="button" data-workshop-trigger data-native-press>Диагностика</button></details>
         <a class="paper-link" href="../../" id="pauseHomeLink" data-app-control data-native-press>Вернуться в Pocket Works</a>
       </div>
     </section>
@@ -154,8 +154,8 @@
     <div class="toast" id="toast" data-ui role="status"></div>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Moss & Marble" data-app-version="1.14.0"></script>
-  <script type="module" src="./camera-intro-guard.js?v=1.14.0"></script>
-  <script type="module" src="./app.js?v=1.14.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Moss & Marble" data-app-version="1.15.0"></script>
+  <script type="module" src="./camera-intro-guard.js?v=1.15.0"></script>
+  <script type="module" src="./app.js?v=1.15.0"></script>
 </body>
 </html>
