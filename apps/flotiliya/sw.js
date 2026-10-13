@@ -1,0 +1,11 @@
+const CACHE_PREFIX='flotiliya-';
+const CACHE_NAME='flotiliya-v0.1.0';
+const APP_VERSION='0.1.0';
+const RELEASE_DATE='2026-10-14';
+const NOTES=['Одновременные морские сражения, абордаж, ветераны, ремонт и улучшения.'];
+const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./mobile-init.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const scope=new URL('./',self.registration.scope);
+self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await Promise.all(SHELL.map(async entry=>{const url=new URL(entry,scope);try{const resp=await fetch(url.href,{cache:'reload'});if(resp.ok)await cache.put(url.href,resp);}catch{}}));await self.skipWaiting();})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim();})()));
+self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:NOTES,cacheProtocol:2,cacheName:CACHE_NAME});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const u=new URL(event.request.url);if(u.origin!==self.location.origin)return;const path=u.pathname;const local=SHELL.some(e=>new URL(e,scope).pathname===path);if(!local&&event.request.mode!=='navigate')return;event.respondWith((async()=>{const cache=await caches.open(CACHE_NAME);const key=event.request.mode==='navigate'?scope.href:u.href;try{const fresh=await fetch(event.request);if(fresh.ok){await cache.put(key,fresh.clone());return fresh;}}catch{}return await cache.match(key)||await cache.match(scope.href)||new Response('Offline',{status:503,headers:{'Content-Type':'text/plain'}});})());});

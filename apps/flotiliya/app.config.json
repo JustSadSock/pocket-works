@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "slug": "flotiliya",
+  "name": "ФЛОТИЛИЯ",
+  "shortName": "Флотилия",
+  "description": "Средневековые морские сражения 3 на 3 с одновременными приказами, абордажем и кораблями-ветеранами.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-14",
+  "releaseDateTime": "2026-10-14T00:10:00+03:00",
+  "changelog": [
+    "Первый играбельный морской тактический прототип: одновременные фазы приказов и ИИ.",
+    "Инерция, стрельба, таран, абордаж, захват судов, сохранение флота, ремонт и улучшения.",
+    "Адаптивный тактический интерфейс для телефона и компьютера."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#bc9461",
+  "backgroundColor": "#0f2932",
+  "themeColor": "#0f2932",
+  "orientation": "landscape",
+  "cacheName": "flotiliya-v0.1.0",
+  "storageNamespace": "pocket-works:flotiliya",
+  "runtime": "quick",
+  "tags": [
+    "game",
+    "strategy",
+    "medieval",
+    "naval",
+    "tactics",
+    "canvas",
+    "offline"
+  ],
+  "order": 15
+}

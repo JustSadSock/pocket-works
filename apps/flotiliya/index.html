@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2932">
+<title>Флотилия · морская тактика</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="game-2d">
+<main class="app" data-app-shell data-fullscreen-app>
+<header class="mast" data-ui><a class="back" href="../../" data-app-control>‹ Библиотека</a><div class="brand"><span class="mark">✦</span><span>ФЛОТИЛИЯ<small id="subtitle">Средиземное море · XIV век</small></span></div><span id="gold" class="gold"></span><button id="helpBtn" class="smallbtn" aria-label="Правила">?</button></header>
+<div class="workspace">
+<section class="board" id="board">
+<canvas id="sea" data-gesture-surface data-block-callout aria-label="Морское поле боя"></canvas>
+<div id="seaTop" class="sea-top" hidden><b id="turnLabel"></b><span id="shipsLeft"></span></div>
+<div id="harbor" class="harbor">
+<div class="intro"><span class="overline">МОРСКАЯ ТАКТИКА</span><h1>Корабли помнят<br>каждую битву.</h1><p>Три корабля против трёх. Маневрируй, бери на абордаж и береги ветеранов.</p><div class="port-stats"><span id="campaignLabel"></span><span id="harborCount"></span></div><button id="sailBtn" class="primary">Начать сражение <span>↗</span></button></div>
+<div class="fleet"><div class="fleet-heading">ТВОЯ ЭСКАДРА <span id="activeCount"></span></div><div id="fleetList" class="fleet-list"></div><p class="fine">Выбери до трёх кораблей. Ремонт и улучшения сохраняются между боями.</p></div>
+</div>
+<div id="help" class="help" hidden><button id="helpClose" class="smallbtn close" aria-label="Закрыть">×</button><h2>Как играть</h2><p>Выбери свой корабль на поле, затем укажи точку движения.</p><p>Приказ «Луки» держит дистанцию; «Абордаж» ведёт к сближению; «Курс» — манёвр без атаки.</p><p>Нажми «Исполнить приказы». Обе стороны действуют одновременно. Сохраняй суда и захватывай чужие.</p></div>
+<div id="toast" class="toast" hidden></div>
+</section>
+<aside id="command" class="command" hidden>
+<div class="command-title"><span id="commandCaption" class="overline">ПРИКАЗЫ</span><h2 id="selectedName">Выбери корабль</h2><p id="selectedInfo"></p></div>
+<div id="orderArea" class="order-area"><div class="modes"><button data-order="shoot" class="mode">Луки<small>Стрельба</small></button><button data-order="board" class="mode">Абордаж<small>Сближение</small></button><button data-order="hold" class="mode">Курс<small>Манёвр</small></button></div><p id="instruction">Выбери корабль, затем точку на воде.</p></div>
+<button id="resolveBtn" class="primary execute">Исполнить приказы <span>▶</span></button><div id="progress" class="progress" hidden><div id="progressFill"></div></div>
+<div id="endPanel" class="end" hidden><h2 id="endTitle"></h2><p id="endText"></p><button id="returnBtn" class="primary">В гавань <span>↗</span></button></div>
+</aside>
+</div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Флотилия" data-app-version="0.1.0"></script>
+<script src="./mobile-init.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "id": "/apps/flotiliya/",
+  "name": "ФЛОТИЛИЯ",
+  "short_name": "Флотилия",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0f2932",
+  "theme_color": "#0f2932",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
