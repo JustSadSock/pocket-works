@@ -135,7 +135,10 @@ for(const animal of ['cat','rabbit','frog']){
   const equipped={animal,hat:'bascinet',clothes:'tabard',face:'none'};
   const rendered=mascotSvg(equipped,{unlocks:['knight','herald']});
   assert.match(rendered,/full|Wide|skull|head|bascinet|helm|surcoat/i);
-  assert.match(rendered,/M16 255|M28 110|M32 110|M24 118/,'wide medieval art is used');
+  assert.match(rendered,/M16 255/,'tabard has full-width lower robe, not tiny overlay');
+  if(animal==='rabbit')assert.match(rendered,/Rabbit-fitted helm/,'rabbit ears stay visible');
+  else if(animal==='frog')assert.match(rendered,/Frog-fitted tournament bascinet/,'frog protruding eyes stay visible');
+  else assert.match(rendered,/full-size raised-visor bascinet/,'wide bascinet on cat');
   assert.doesNotMatch(rendered,/undefined|<script|foreignObject|onload=/i);
   const tux=mascotSvg({animal,hat:'none',clothes:'groom',face:'none'},{unlocks:['groom']});
   assert.match(tux,/Formal groom/,'new authored tuxedo layer');
