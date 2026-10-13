@@ -190,6 +190,9 @@ jobs:
             TESTS+=(tests/e2e/launcher-sync.spec.ts tests/e2e/pocket-deck.spec.ts)
           fi
           npx playwright test "${TESTS[@]}" --project="${{ matrix.project }}"
+          if [[ "${{ matrix.project }}" == "chromium-mobile-portrait" && ",${PW_APP_TARGETS:-}," == *",zamazka,"* ]]; then
+            node apps/zamazka/qa/real-flow.mjs
+          fi
 
       - name: Upload exploratory QA evidence
         if: always()

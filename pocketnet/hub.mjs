@@ -7,6 +7,8 @@ import {assessZamazkaAwards} from './zamazka-awards.mjs';
 const WIRE_VERSION = 1;
 const MAX_PAYLOAD = 16 * 1024;
 const MAX_EVENT_BYTES = 256 * 1024;
+const MAX_ZAMAZKA_STATE_EVENT = 5 * 1024 * 1024;
+const ZAMAZKA_ART_REF = '__zamazka_sqlite_art__';
 const MAX_STATE = 256 * 1024;
 const MAX_ROOMS = 32;
 const MAX_CONNECTIONS = 48;
@@ -42,6 +44,9 @@ export class PocketNetHub {
     if (!sessionColumns.has('account_id')) ctx.storage.sql.exec('ALTER TABLE sessions ADD COLUMN account_id TEXT');
     if (!sessionColumns.has('avatar')) ctx.storage.sql.exec('ALTER TABLE sessions ADD COLUMN avatar TEXT');
     ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS zamazka_award_stats(room_id TEXT PRIMARY KEY, data TEXT NOT NULL)");
+    // Large paintings live outside the 256 KiB room metadata snapshot.
+    // SQLite's transactionSync commits artwork and phase atomically.
+    ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS zamazka_art_payloads(room_id TEXT NOT NULL, pkey TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(room_id,pkey))");
     ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS achievement_outbox(key TEXT PRIMARY KEY, account_id TEXT NOT NULL, player_id TEXT NOT NULL, achievement_id TEXT NOT NULL, game_id TEXT NOT NULL, room_id TEXT NOT NULL, match_id TEXT NOT NULL, nickname TEXT NOT NULL, avatar TEXT NOT NULL)");
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS rooms (
       id TEXT PRIMARY KEY, game_id TEXT NOT NULL, version TEXT NOT NULL,
@@ -74,7 +79,22 @@ export class PocketNetHub {
     for (const event of events) {
       if (typeof event?.type !== 'string' || event.type.length > 64) continue;
       const packet = { roomId: room.id, event };
-      if (bytes(packet) > MAX_EVENT_BYTES) throw new Error('event_too_large');
+      const size=bytes(packet);
+      if (size > MAX_EVENT_BYTES) {
+        if(room.gameId!=='zamazka'||event.type!=='state'||!event.to||
+           size>MAX_ZAMAZKA_STATE_EVENT)throw new Error('event_too_large');
+        const target=this.connected(event.to,room.id);
+        if(!target)continue;
+        // Transparent per-player stream: other PocketNet games retain their
+        // original event format. Split only at Unicode codepoint boundaries.
+        const text=JSON.stringify(event),parts=text.match(/[\s\S]{1,12000}/gu)||[];
+        if(parts.length>512)throw new Error('event_too_large');
+        const stream=crypto.randomUUID();
+        parts.forEach((part,index)=>message(target,'game_event',{
+          roomId:room.id,event:{type:'state_stream',payload:{stream,index,total:parts.length,part}}
+        }));
+        continue;
+      }
       if (event.to) {
         if (!room.players.some(p => p.id === event.to)) continue;
         const target = this.connected(event.to, room.id);
@@ -111,21 +131,73 @@ export class PocketNetHub {
   }
   readRoom(id) {
     const row = this.sql('SELECT * FROM rooms WHERE id = ?', id).toArray()[0];
-    return row && {
-      id: row.id, gameId: row.game_id, version: row.version,
-      state: JSON.parse(row.state), players: JSON.parse(row.players),
-      createdAt: row.created_at, updatedAt: row.updated_at
-    };
+    if(!row)return null;
+    const state=JSON.parse(row.state);
+    if(row.game_id==='zamazka'){
+      const payloads=this.sql('SELECT pkey,payload FROM zamazka_art_payloads WHERE room_id=?',id).toArray();
+      for(const {pkey,payload} of payloads){
+        const [kind,user]=pkey.split(':');
+        const art=JSON.parse(payload);
+        if(kind==='final'&&state.assignments?.[user]?.strokes===ZAMAZKA_ART_REF)state.assignments[user].strokes=art;
+        else if(kind==='draft'&&state.drafts?.[user]===ZAMAZKA_ART_REF)state.drafts[user]=art;
+        else if(kind==='assembly'&&state.draftAssemblies?.[user]?.strokes===ZAMAZKA_ART_REF)state.draftAssemblies[user].strokes=art;
+      }
+      for(const item of Object.values(state.assignments||{}))if(item.strokes===ZAMAZKA_ART_REF)throw Error('room_art_missing');
+      for(const item of Object.values(state.drafts||{}))if(item===ZAMAZKA_ART_REF)throw Error('room_art_missing');
+      for(const item of Object.values(state.draftAssemblies||{}))if(item.strokes===ZAMAZKA_ART_REF)throw Error('room_art_missing');
+    }
+    return {id:row.id,gameId:row.game_id,version:row.version,
+      state,players:JSON.parse(row.players),createdAt:row.created_at,updatedAt:row.updated_at};
   }
   persist(room) {
-    const state = JSON.stringify(room.state);
-    if (bytes(state) > MAX_STATE) throw new Error('room_state_too_large');
-    const players = JSON.stringify(room.players);
-    room.updatedAt = Date.now();
-    this.sql(`INSERT INTO rooms (id, game_id, version, state, players, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET state=excluded.state, players=excluded.players, updated_at=excluded.updated_at`,
-    room.id, room.gameId, room.version, state, players, room.createdAt, room.updatedAt);
+    const pieces=[];
+    let state=room.state;
+    if(room.gameId==='zamazka'){
+      state={...state,assignments:{...state.assignments},drafts:{...state.drafts},
+        draftAssemblies:{...state.draftAssemblies}};
+      for(const [id,item] of Object.entries(state.assignments||{})){
+        if(!Array.isArray(item?.strokes))continue;
+        pieces.push(['final:'+id,JSON.stringify(item.strokes)]);
+        state.assignments[id]={...item,strokes:ZAMAZKA_ART_REF};
+      }
+      for(const [id,art] of Object.entries(state.drafts||{})){
+        if(!Array.isArray(art))continue;
+        pieces.push(['draft:'+id,JSON.stringify(art)]);
+        state.drafts[id]=ZAMAZKA_ART_REF;
+      }
+      for(const [id,item] of Object.entries(state.draftAssemblies||{})){
+        if(!Array.isArray(item?.strokes))continue;
+        pieces.push(['assembly:'+id,JSON.stringify(item.strokes)]);
+        state.draftAssemblies[id]={...item,strokes:ZAMAZKA_ART_REF};
+      }
+    }
+    const encoded=JSON.stringify(state);
+    if(bytes(encoded)>MAX_STATE)throw Error('room_state_too_large');
+    const players=JSON.stringify(room.players);
+    room.updatedAt=Date.now();
+    // One transaction avoids a room pointing to incomplete artwork after power loss.
+    this.ctx.storage.transactionSync(()=>{
+      if(room.gameId==='zamazka'){
+        // PocketNet can receive dozens of incremental strokes per second.
+        // Touch only changed vectors; never rewrite eight complete paintings
+        // just because a deadline pulse or someone else's brush arrived.
+        const existing=new Map(this.sql('SELECT pkey,payload FROM zamazka_art_payloads WHERE room_id=?',room.id)
+          .toArray().map(row=>[row.pkey,row.payload]));
+        for(const [pkey,payload] of pieces){
+          if(bytes(payload)>MAX_ZAMAZKA_STATE_EVENT)throw Error('artwork_too_large');
+          if(existing.get(pkey)!==payload)
+            this.sql('INSERT INTO zamazka_art_payloads(room_id,pkey,payload) VALUES(?,?,?) ON CONFLICT(room_id,pkey) DO UPDATE SET payload=excluded.payload',
+              room.id,pkey,payload);
+          existing.delete(pkey);
+        }
+        for(const pkey of existing.keys())
+          this.sql('DELETE FROM zamazka_art_payloads WHERE room_id=? AND pkey=?',room.id,pkey);
+      }
+      this.sql(`INSERT INTO rooms (id, game_id, version, state, players, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET state=excluded.state, players=excluded.players, updated_at=excluded.updated_at`,
+        room.id,room.gameId,room.version,encoded,players,room.createdAt,room.updatedAt);
+    });
     this.ensureAlarm();
   }
   ensureAlarm() {
@@ -184,6 +256,7 @@ export class PocketNetHub {
   }
   async closeRoom(room) {
     this.sql('DELETE FROM rooms WHERE id = ?', room.id);
+    this.sql('DELETE FROM zamazka_art_payloads WHERE room_id=?',room.id);
     this.sql('DELETE FROM zamazka_award_stats WHERE room_id=?',room.id);
     this.broadcast(room, 'room_closed', { roomId: room.id });
     for (const ws of this.sockets(room.id)) this.setRoom(ws, null);
@@ -387,7 +460,7 @@ export class PocketNetHub {
           if (!result || !('state' in result)) throw new Error('invalid_module_state');
           if (!Array.isArray(result.events ?? []) || result.events.length > 32) throw new Error('invalid_module_events');
           // Validate event payloads before modifying persistent game state.
-          for (const event of result.events ?? []) if (bytes({ roomId: room.id, event }) > MAX_EVENT_BYTES) throw new Error('event_too_large');
+          for (const event of result.events ?? []) if (bytes({ roomId: room.id, event }) > (room.gameId==='zamazka'&&event?.type==='state'&&event?.to?MAX_ZAMAZKA_STATE_EVENT:MAX_EVENT_BYTES)) throw new Error('event_too_large');
           const prior=room.state;
           room.state = result.state;
           this.persist(room);

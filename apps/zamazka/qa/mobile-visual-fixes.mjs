@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-const css=readFileSync(new URL('../mobile-repair.css',import.meta.url),'utf8');
+const css=readFileSync(new URL('../adaptive-layout.css',import.meta.url),'utf8');
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const editor=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
-assert.ok(html.indexOf('href="./mobile-touch.css"')<html.indexOf('href="./mobile-repair.css"'));
-assert.match(sw,/\.\/mobile-repair\.css/,'offline CSS cache includes hotfix');
+assert.ok(html.indexOf('href="./native-art.css"')<html.indexOf('href="./adaptive-layout.css"'));
+assert.match(sw,/\.\/adaptive-layout\.css/,'offline CSS cache includes hotfix');
 assert.match(css,/\.screen>\.mobile-preview \.gallery\.exhibition-grid\{\s*display:flex!important/,'preview is flex, not WebKit grid');
 assert.match(css,/flex:0 0 calc\(100% - 42px\)!important/,'preview exposes a single broad painting');
 assert.match(css,/\.gallery\.exhibition-grid>\.picture img\{[\s\S]*?object-fit:contain!important/,'full original without crop');
@@ -20,11 +20,11 @@ assert.match(app,/class="page collection-page"/,'archive uses new responsive lay
 assert.match(app,/class="gallery archive-gallery"/,'restorations are not big empty cards');
 assert.match(app,/class="picture-image archive-art-frame"/,'correct painting aspect passed through image parent');
 assert.match(app,/id="precisionHelp"/,'precision explanation always exists in editor');
-assert.match(app,/sessionStorage\.getItem\(PRACTICE_KEY\)\|\|localStorage\.getItem/,'can resume temporary practice');
+assert.match(app,/storedPractice\|\|JSON\.parse\(localStorage\.getItem\(PRACTICE_KEY\)/,'can resume temporary practice from IndexedDB or fallback');
 assert.match(app,/sessionStorage\.setItem\(PRACTICE_KEY,data\)/,'can temporarily save practice');
 assert.match(editor,/this\.armed=!this\.armed/,'precision button is a toggle, not second-finger hold');
 assert.match(editor,/this\.armButton\.querySelector\('strong'\)\.textContent=this\.armed\?'СТОП':'РИСОВАТЬ'/);
-assert.match(editor,/sessionStorage\.setItem\(this\.draftKey,payload\)/,'editor retains backup if local storage is full');
+assert.match(editor,/sessionStorage\.setItem\(this\.draftKey,JSON\.stringify\(strokes\)\)/,'editor writes a tab backup before IndexedDB');
 assert.match(editor,/try\{localStorage\.setItem\('pocket-works:zamazka:input-mode'/,'quota cannot interrupt mode UI');
 const section=editor.slice(editor.indexOf('this.armDown=e=>{'),editor.indexOf("this.armButton?.addEventListener('pointerdown'"));
 assert.ok(section.includes('this.armUp=e=>{'));
@@ -44,6 +44,7 @@ const tmp=new Map(),alerts=[];
 const fake={
  practice:{phase:'preview',round:1,rounds:1,selected:[1,2,3,4,5],deadline:10,drawingSeconds:160,mine:{art:1,variation:3},strokes:[]},
  ARCHIVE_EDITION:4,PRACTICE_KEY:'practice',screen:{querySelector:()=>null},
+ zamazkaStore:{set:()=>Promise.resolve()},Promise,
  localStorage:{setItem(){throw new Error('quota exceeded')}},
  sessionStorage:{setItem(k,v){tmp.set(k,v)}},
  notify:m=>alerts.push(m),JSON

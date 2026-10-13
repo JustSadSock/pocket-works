@@ -57,7 +57,7 @@ try {
    isMobile:width<700,hasTouch:width<700});
   const page=await context.newPage();
   await page.goto(url,{waitUntil:'load'});
-  const ready=await page.evaluate(()=>[...document.styleSheets].some(s=>s.href?.includes('desktop-refinement.css')));
+  const ready=await page.evaluate(()=>[...document.styleSheets].some(s=>s.href?.includes('adaptive-layout.css')));
   assert(ready,'Desktop CSS is not wired into the production entrypoint');
   const inject=markup=>page.evaluate(html=>{document.querySelector('#screen').innerHTML=html},markup);
   const noOverflow=async name=>{

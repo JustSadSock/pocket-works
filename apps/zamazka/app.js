@@ -14,8 +14,9 @@ import {MuseumAudio} from './museum-audio.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
+import {zamazkaStore} from './storage.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.30.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.31.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice',CONFIRM_VOTE_KEY=NS+'confirm-coins';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -150,8 +151,18 @@ function modal(title,body,buttons){dialogFocus=document.activeElement;dialog.cla
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 let activeSubmitTransfer=null,activeDraftTransfer=null,submissionBackoffUntil=0,draftSendAfter=0;
 const SUBMIT_KEY=NS+'pending-submission';
-let pendingSubmit=(()=>{try{return JSON.parse(localStorage.getItem(SUBMIT_KEY)||'null')}catch{return null}})();
-function persistPending(){try{if(pendingSubmit)localStorage.setItem(SUBMIT_KEY,JSON.stringify(pendingSubmit));else localStorage.removeItem(SUBMIT_KEY);return true}catch{notify('Хранилище заполнено: копия отправки осталась только во вкладке');return false}}
+let pendingSubmit=(()=>{try{return JSON.parse(sessionStorage.getItem(SUBMIT_KEY)||localStorage.getItem(SUBMIT_KEY)||'null')}catch{return null}})();
+function persistPending(){
+ const copy=pendingSubmit?structuredClone(pendingSubmit):null;
+ try{if(copy)sessionStorage.setItem(SUBMIT_KEY,JSON.stringify(copy));else sessionStorage.removeItem(SUBMIT_KEY)}catch{}
+ void (copy?zamazkaStore.set('pending',copy):zamazkaStore.remove('pending')).then(()=>{
+   try{if(JSON.stringify(pendingSubmit)===JSON.stringify(copy))sessionStorage.removeItem(SUBMIT_KEY);localStorage.removeItem(SUBMIT_KEY)}catch{}
+ }).catch(()=>{
+   try{if(copy)localStorage.setItem(SUBMIT_KEY,JSON.stringify(copy));else localStorage.removeItem(SUBMIT_KEY)}
+   catch{notify('Не удалось сохранить отправку: проверь хранилище устройства')}
+ });
+ return true;
+}
 function submissionToken(ass,round){return [roomId,round,ass.art,ass.variation].join(':')}
 function confirmSubmission(art,round){
  if(!pendingSubmit||pendingSubmit.round!==round||pendingSubmit.art!==art||pendingSubmit.room!==roomId)return;
@@ -314,10 +325,10 @@ function home(skipLeave=false){
     '<div class="museum-wheel"><button data-action="museum-prev" aria-label="Предыдущая картина">‹</button><button data-action="museum-next" aria-label="Следующая картина">›</button></div><span class="museum-exhibit-number">01 / '+museumOrder.length+'</span>'+
   '</div>'+
   '<div class="museum-control">'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(gameName())+'</strong><small>Изменить знак</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
-    '<button class="start-restoration" id="primary-action" data-action="practice"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Начать реставрацию</strong><small>Пробный раунд</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
-    '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
+    '<button class="start-restoration" id="primary-action" data-action="create"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Играть с друзьями</strong><small>Создать совместную выставку</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
+    '<div class="museum-lower"><button data-action="practice"><span>✳</span> Одиночная реставрация</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
     '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
-    ((sessionStorage.getItem(PRACTICE_KEY)||localStorage.getItem(PRACTICE_KEY))?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
+    ((storedPractice||sessionStorage.getItem(PRACTICE_KEY)||localStorage.getItem(PRACTICE_KEY))?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
   '</div></section>','home');
  museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(museumOrder.indexOf(id)+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
  syncIdentity();
@@ -674,7 +685,7 @@ async function achievements(){
    (earnedAchievementIds.has(a.id)?'Получено':'Не открыто')+'</b></div></article>').join('');
 }
 function collection(){
- change('<section class="page collection-page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button></div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
+ change('<section class="page collection-page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button>'+(saved.length?'<button class="btn ghost" data-action="export-archive">Экспорт архива ↓</button>':'')+'</div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
  zamazkaCloud?.render();
  const canvases=[...screen.querySelectorAll('[data-saved-canvas]')];
  const draw=canvas=>{if(!canvas.isConnected||canvas.dataset.loaded)return;canvas.dataset.loaded='1';const g=saved[Number(canvas.dataset.savedCanvas)];if(g)void renderArtwork(canvas,g.art,g.variation,g.strokes,true,true)};
@@ -683,37 +694,56 @@ function collection(){
    archiveObserver=observer;canvases.forEach(c=>observer.observe(c));
  }else canvases.forEach(draw);
 }
+function exportArchive(){
+ if(!saved.length){notify('Архив пуст');return}
+ try{
+  const payload=JSON.stringify({format:'zamazka-archive',version:1,exportedAt:new Date().toISOString(),works:saved},null,2);
+  const url=URL.createObjectURL(new Blob([payload],{type:'application/json;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;
+  a.download='zamazka-archive-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  notify('Архив подготовлен для сохранения');
+ }catch{notify('Не получилось экспортировать архив')}
+}
 function openArchive(index){
  const records=saved.map(g=>({...g,name:'Моя реставрация',votes:{}}));
  const archived={phase:'archive',gallery:records,selected:[],round:1};
  openRoundViewer({index,view:archived,dialog,renderArtwork,arts:ARTS,esc,closeDialog,onNavigate:next=>openArchive(next)});
 }
-function saveArtwork(art,variation,strokes){saved=[{art,variation,strokes,time:Date.now(),edition:ARCHIVE_EDITION},...saved].slice(0,96);try{localStorage.setItem(GALLERY_KEY,JSON.stringify(saved));zamazkaCloud?.schedule();return true}catch{notify('Архив не сохранился: хранилище заполнено. Работа остаётся открытой во вкладке.');return false}}
+function saveArtwork(art,variation,strokes){
+ saved=[{art,variation,strokes,time:Date.now(),edition:ARCHIVE_EDITION},...saved].slice(0,96);
+ const copy=structuredClone(saved);
+ void zamazkaStore.set('archive',copy).then(()=>{
+   try{localStorage.removeItem(GALLERY_KEY)}catch{}
+   zamazkaCloud?.schedule();
+ }).catch(()=>{
+   try{localStorage.setItem(GALLERY_KEY,JSON.stringify(copy));zamazkaCloud?.schedule()}
+   catch{notify('Архив не сохранился: в браузере закончилось место.')}
+ });
+ return true;
+}
+let storedPractice=null;
 function persistPractice(){
  if(!practice)return;
  const data=JSON.stringify({phase:practice.phase,round:practice.round,rounds:practice.rounds,
   selected:practice.selected,deadline:practice.deadline,drawingSeconds:practice.drawingSeconds,
   mine:practice.mine,strokes:practice.strokes,edition:ARCHIVE_EDITION});
- try{
-  localStorage.setItem(PRACTICE_KEY,data);
-  try{sessionStorage.removeItem(PRACTICE_KEY)}catch{}
- }catch{
-  try{
-   sessionStorage.setItem(PRACTICE_KEY,data);
-   const status=screen.querySelector('#draftStatus');
-   if(status)status.textContent='Черновик только в этой вкладке';
-  }catch{notify('Недостаточно места для черновика. Работа останется открытой до выхода.')}
- }
+ storedPractice=JSON.parse(data);
+ try{sessionStorage.setItem(PRACTICE_KEY,data)}catch{}
+ void zamazkaStore.set('practice',storedPractice).then(()=>{
+   try{if(sessionStorage.getItem(PRACTICE_KEY)===data)sessionStorage.removeItem(PRACTICE_KEY);localStorage.removeItem(PRACTICE_KEY)}catch{}
+ }).catch(()=>{try{localStorage.setItem(PRACTICE_KEY,data)}catch{notify('Недостаточно места для черновика.')}});
 }
 function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preparing',round:1,rounds:1,selected,deadline:0,drawingSeconds:soloDrawingSecondsChoice,mine:{art:selected[Math.floor(Math.random()*5)],variation:Math.floor(Math.random()*0xffffffff)},strokes:[]};preparedRound='';persistPractice();preparing(true)}
-function resumePractice(){try{const p=JSON.parse(sessionStorage.getItem(PRACTICE_KEY)||localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition!==ARCHIVE_EDITION){
+function resumePractice(){try{const p=JSON.parse(sessionStorage.getItem(PRACTICE_KEY)||'null')||storedPractice||JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition!==ARCHIVE_EDITION){
  p.mine.art=normalizeArchiveEntry({art:p.mine.art,edition:p.edition}).art;
  p.selected=p.selected.map(art=>normalizeArchiveEntry({art,edition:p.edition}).art);
  p.edition=ARCHIVE_EDITION;
  }
  practice=p;practice.drawingSeconds=normalizedDuration(p.drawingSeconds??160);if(p.deadline>0&&p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=practice.drawingSeconds===0?0:Date.now()+practice.drawingSeconds*1000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
-function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;try{localStorage.removeItem(PRACTICE_KEY)}catch{}try{sessionStorage.removeItem(PRACTICE_KEY)}catch{}reveal(true)}
+function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;try{localStorage.removeItem(PRACTICE_KEY)}catch{}try{sessionStorage.removeItem(PRACTICE_KEY)}catch{}storedPractice=null;void zamazkaStore.remove('practice').catch(()=>{});reveal(true)}
 let previousVisualPhase='',lastPhaseCue='',voteScreenToken='',voteTransitionLayer=null,voteTransitionTimeout=null;
 function renderView(){
  if(!view)return;
@@ -812,9 +842,28 @@ async function connect(mode){
      if(view)renderView();
      else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
    });
+   // Big eight-player galleries arrive in ordered, bounded PocketNet frames.
+   // Reconstruct only complete authoritative snapshots; never show partial art.
+   const stateStreams=new Map();
    client.on('game_event',msg=>{
      if(client.closed)return;
-     const event=msg.event;
+     let event=msg.event;
+     if(event?.type==='state_stream'){
+       const p=event.payload;
+       if(!p||typeof p.stream!=='string'||!Array.isArray(stateStreams.get(p.stream)?.parts)&&
+          (!Number.isInteger(p.total)||p.total<1||p.total>512))return;
+       if(!Number.isInteger(p.index)||p.index<0||p.index>=p.total||
+          typeof p.part!=='string'||p.part.length>15000)return;
+       const now=Date.now();
+       for(const [id,s] of stateStreams)if(now-s.created>15000)stateStreams.delete(id);
+       let entry=stateStreams.get(p.stream);
+       if(!entry){entry={created:now,total:p.total,parts:new Array(p.total),count:0};stateStreams.set(p.stream,entry)}
+       if(entry.total!==p.total)return;
+       if(entry.parts[p.index]===undefined){entry.parts[p.index]=p.part;entry.count++}
+       if(entry.count!==entry.total)return;
+       stateStreams.delete(p.stream);
+       try{event=JSON.parse(entry.parts.join(''))}catch{notify('Не удалось собрать данные выставки. Повторяем…');client.sendGame({type:'sync'});return}
+     }
      if(event?.type==='achievement_awarded'){
       const item=zamazkaAchievements.find(a=>a.id===event.payload?.id);
       if(item){earnedAchievementIds.add(item.id);sound('confirm');notify('Достижение: '+item.name+' · '+item.reward);}
@@ -970,6 +1019,7 @@ screen.addEventListener('click',e=>{
  else if(action==='retry-art-preload')void prepareRoundImages(Boolean(practice),true);
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
+ else if(action==='export-archive')exportArchive();
  else if(action==='achievements')void achievements();
  else if(action==='achievements-back'){if(net&&view)renderView();else home();}
  else if(action==='cloud-sync')void zamazkaCloud?.sync();
@@ -1052,7 +1102,7 @@ zamazkaCloud=createZamazkaCloud({
  getArchive:()=>saved,
  setArchive(items){
   saved=items.map(normalizeArchiveEntry);
-  localStorage.setItem(GALLERY_KEY,JSON.stringify(saved));
+  void zamazkaStore.set('archive',saved).catch(()=>{try{localStorage.setItem(GALLERY_KEY,JSON.stringify(saved))}catch{}});
   if(page==='collection')collection();
   if(page==='home'){const number=screen.querySelector('.museum-footer [data-action="collection"] span');if(number)number.textContent=String(saved.length).padStart(2,'0');}
  },
@@ -1070,7 +1120,26 @@ else if(savedRoom?.roomId&&savedRoom?.token){
  change('<section class="page center connecting-room"><span class="busy"></span><h2>Возвращаемся в зал…</h2><p class="hint">Восстанавливаем комнату.</p><button class="btn ghost wide" data-action="menu">Выйти</button></section>','connecting');
  void connect('resume');
 }else home();
-zamazkaCloud.start();
+// Hydrate the local archive before cloud reconciliation to prevent lost works.
+void Promise.all([
+ zamazkaStore.migrate('archive',GALLERY_KEY),
+ zamazkaStore.migrate('pending',SUBMIT_KEY),
+ zamazkaStore.migrate('practice',PRACTICE_KEY)
+]).then(([archive,pending,solo])=>{
+ if(Array.isArray(archive)){
+  const seen=new Set();
+  saved=[...saved,...archive].filter(item=>{
+   const k=[item.time,item.art,item.variation].join(':');
+   if(seen.has(k))return false;seen.add(k);return true;
+  }).sort((a,b)=>b.time-a.time).slice(0,96).map(normalizeArchiveEntry);
+  if(page==='collection')collection();
+  const count=screen.querySelector('.museum-footer [data-action="collection"] span');
+  if(count)count.textContent=String(saved.length).padStart(2,'0');
+ }
+ if(!pendingSubmit&&pending?.room)pendingSubmit=pending;
+ if(solo?.mine)storedPractice=solo;
+ if(storedPractice&&page==='home'&&!screen.querySelector('[data-action="resume"]'))home(true);
+}).catch(()=>{}).finally(()=>zamazkaCloud.start());
 void refreshPocketBadge();
 window.addEventListener('pageshow',()=>void refreshPocketBadge());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshPocketBadge()});

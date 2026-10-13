@@ -1,4 +1,5 @@
 import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame} from './artworks.js';
+import {zamazkaStore} from './storage.js';
 
 // Keep stroke coordinates in the 600×450 logical world, but rasterize on a much
 // denser backing buffer. Previously both zoomed desktop editing and the reveal
@@ -317,6 +318,13 @@ export class Editor{
    this.draftKey=key+id+':'+variation+':'+round;
    try{const stored=JSON.parse(sessionStorage.getItem(this.draftKey)||localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
    this.attach();this.setMode(this.inputMode,false);this.center();this.render();
+   // Restore only while the editor is untouched: never replace newly drawn strokes.
+   void zamazkaStore.migrate('draft:'+this.draftKey,this.draftKey).then(stored=>{
+     if(this.closed||this.strokes.length||this.working||!Array.isArray(stored)||stored.length>MAX_STROKES)return;
+     if(!this.adoptDraft(stored))return;
+     this.render();
+   }).catch(()=>{});
+
  }
  center(animate=false){
   if(animate&&this.canvas.classList){
@@ -336,29 +344,24 @@ export class Editor{
  save(){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot();this.onChange(this.strokes.length)}
   getSnapshot(){return [...this.strokes,...(this.working?[this.working]:[])].map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[...p])}))}
   saveSnapshot(){
-  const payload=JSON.stringify(this.getSnapshot());
-  try{
-   localStorage.setItem(this.draftKey,payload);
-   try{sessionStorage.removeItem(this.draftKey)}catch{}
-   this.persistenceWarned=false;return true;
-  }catch{
-   // Retain drafts in the open tab if iOS localStorage quota is exhausted.
-   try{
-    sessionStorage.setItem(this.draftKey,payload);
-    this.persistenceWarned=false;
-    const status=this.root.querySelector('#draftStatus');
-    if(status)status.textContent='Черновик сохранён в этой вкладке';
-    return true;
-   }catch{
-    if(!this.persistenceWarned){this.persistenceWarned=true;this.onPersistenceError()}
-    return false;
-   }
+   const strokes=this.getSnapshot();
+   // Small tab-local recovery first, durable large recovery through IndexedDB.
+   try{sessionStorage.setItem(this.draftKey,JSON.stringify(strokes))}catch{}
+   void zamazkaStore.set('draft:'+this.draftKey,strokes).then(()=>{
+     // Only discard the fallback if it still describes the committed version.
+     try{if(sessionStorage.getItem(this.draftKey)===JSON.stringify(strokes))sessionStorage.removeItem(this.draftKey)}catch{}
+     this.persistenceWarned=false;
+   }).catch(()=>{
+     try{localStorage.setItem(this.draftKey,JSON.stringify(strokes))}catch{
+       if(!this.persistenceWarned){this.persistenceWarned=true;this.onPersistenceError()}
+     }
+   });
+   return true;
   }
- }
   adoptDraft(strokes){
     if(this.strokes.length||!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
     const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:MAX_TOTAL_POINTS+1),0);
-    if(total>MAX_TOTAL_POINTS||strokes.some(s=>!['brush','pencil','spray','erase','fill','smudge'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<1||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
+    if(total>MAX_TOTAL_POINTS||strokes.some(s=>!['brush','pencil','spray','erase','fill','smudge'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<MIN_BRUSH_SIZE||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
     this.strokes=strokes.map(s=>({...s,p:s.p.map(p=>[...p])}));this.save();this.render();return true;
   }
   setTool(tool){
@@ -375,7 +378,7 @@ export class Editor{
   updateDrawingTip(){
     const tip=this.root.querySelector('#drawingTip');if(!tip)return;
     tip.textContent=this.tool==='smudge'?'Води по мазкам, чтобы мягко смешивать цвета':
-      this.inputMode==='precision'?'Один палец наводит перо · вторым удерживай «РИСОВАТЬ»':'Рисуй в повреждённой части';
+      this.inputMode==='precision'?'Наведи кончик и нажми «РИСОВАТЬ», чтобы начать · «СТОП», чтобы закончить':'Рисуй в повреждённой части';
   }
 
   // Compress only redundant bends to keep long drawing sessions flowing.
@@ -884,7 +887,7 @@ export class Editor{
    // Keep clipZone above so tools still affect only the damage mask.
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
- clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}}
+ clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
  dispose(){this.closed=true;clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
