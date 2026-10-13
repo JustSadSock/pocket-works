@@ -7,7 +7,7 @@ import { VisualRig } from './world-visuals';
 
 describe('Petlya 17 car mesh startup', () => {
   it('builds actual opponent geometry without undefined Babylon helpers', () => {
-    const engine = new NullEngine({ renderWidth: 640, renderHeight: 360 });
+    const engine = new NullEngine();
     const scene = new Scene(engine);
     try {
       // createCar only depends on the scene; avoid constructing camera render
