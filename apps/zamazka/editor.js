@@ -4,7 +4,7 @@ import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFr
 // denser backing buffer. Previously both zoomed desktop editing and the reveal
 // stretched a literal 600px canvas; that was the second source of pixelation.
 function prepareCanvas(canvas,editor=false,thumbnail=false){
- const screenWidth=canvas.getBoundingClientRect().width||canvas.parentElement?.clientWidth||600;
+ const screenWidth=canvas.clientWidth||canvas.parentElement?.clientWidth||600;
  const dpr=typeof window==='undefined'?1:Math.max(1,Math.min(3,window.devicePixelRatio||1));
  const desktop=typeof window!=='undefined'&&window.matchMedia('(min-width:900px) and (pointer:fine)').matches;
  const needed=editor?Math.max(2.5,dpr*1.6):Math.max(2.7,dpr*1.3,desktop?3.25:2.7);
@@ -45,7 +45,7 @@ function layer(){
  return {canvas,ctx};
 }
 /** Pixel-space 4-way flood, plus one-pixel colour underlap beneath contour AA. */
-export function floodFillRaster({width,height,walls,zone,output,point,color}){
+export function floodFillRaster({width,height,walls,zone,output,point,color,mergeOpenRegions=false}){
  const total=width*height;
  if(!total||!walls||!zone||!output||!Array.isArray(point)||!Array.isArray(color))return 0;
  const wall=walls.data||walls,area=zone.data||zone,ink=output.data||output;
@@ -75,6 +75,15 @@ export function floodFillRaster({width,height,walls,zone,output,point,color}){
    if(y>0){const n=i-width;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
    if(y<height-1){const n=i+width;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
  }
+ // An open line joining two sides of the irregular cutout is not an
+ // enclosed colour area. Fill the complete damage, keeping line pigment.
+ let openToEdge=false;
+ if(mergeOpenRegions)for(let n=0;n<tail&&!openToEdge;n++){
+  const i=queue[n],x=i%width,y=(i/width)|0;
+  if(x===0||x===width-1||y===0||y===height-1||
+     area[(i-1)*4+3]<120||area[(i+1)*4+3]<120||
+     area[(i-width)*4+3]<120||area[(i+width)*4+3]<120)openToEdge=true;
+ }
  const [r,g,b]=color;
  const paint=i=>{
    // Colour beyond the damaged mask is harmless with the final single clip,
@@ -82,6 +91,10 @@ export function floodFillRaster({width,height,walls,zone,output,point,color}){
    if(area[i*4+3]===0)return;
    const k=i*4;ink[k]=r;ink[k+1]=g;ink[k+2]=b;ink[k+3]=255;
  };
+ if(mergeOpenRegions&&openToEdge){
+  for(let i=0;i<total;i++)if(area[i*4+3])paint(i);
+  return tail;
+ }
  for(let n=0;n<tail;n++)paint(queue[n]);
  // Pad up to two high-resolution pixels ONLY into a wall or the
  // antialiased edge of the damage mask, never through them into another basin.
@@ -117,7 +130,7 @@ function fillRegion(lines,paint,zoneMask,p,colour){
  const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
  const filled=floodFillRaster({
    width:w,height:h,walls,zone:zoneMask,output:current,
-   point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
+   point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color,mergeOpenRegions:true
  });
  if(filled){
    // Keep existing, potentially blended contour pigment instead of painting
@@ -357,7 +370,9 @@ export class Editor{
     }
     for(let i=1;i<this.strokes.length;i++){
       const a=this.strokes[i-1],b=this.strokes[i];
-      if(a.g&&b.g===a.g&&a.t===b.t&&a.c===b.c&&a.s===b.s&&a.p.length+b.p.length-1<=MAX_STROKE_POINTS){
+      if(a.g&&b.g===a.g&&a.t===b.t&&a.c===b.c&&a.s===b.s&&
+         Math.hypot(a.p.at(-1)[0]-b.p[0][0],a.p.at(-1)[1]-b.p[0][1])<.15&&
+         a.p.length+b.p.length-1<=MAX_STROKE_POINTS){
         a.p.push(...b.p.slice(1));this.strokes.splice(i--,1);changed=true;
       }
     }
@@ -383,7 +398,7 @@ export class Editor{
     this.redoStack=[];this.onSound?.('brush');this.render();
   }
   warnLimit(){if(!this.limitWarned){this.onChange(-1);this.limitWarned=true}}
-  extendStroke(p){
+  extendStroke(p,drawNow=true){
     if(!this.working)return;
     const snapped=pointOnDamageEdge(this.zone,p,Math.min(25,Math.max(2,this.size*.65)));
     if(!snapped){
@@ -393,7 +408,7 @@ export class Editor{
     }
     p=snapped;
     const pts=this.working.p,prev=pts[pts.length-1];
-    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<Math.min(3,1.35+this.countPoints()/1300))return;
+    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<.4)return;
     if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0))this.compactStrokeBudget();
     if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0)){this.warnLimit();return}
     if(pts.length>=MAX_STROKE_POINTS){
@@ -408,7 +423,7 @@ export class Editor{
       this.paintRevision=(this.paintRevision||0)+1;
       this.working={c:old.c,s:old.s,t:old.t,g:old.g,p:[prev,p]};
     }else pts.push(p);
-    this.render();
+    if(drawNow)this.render();
   }
   finishStroke(){
     if(!this.working)return;
@@ -515,6 +530,7 @@ export class Editor{
         if(this.armed)this.beginStroke(p);
         return;
       }
+      this.lastGesturePoint=p;
       this.beginStroke(p);
     };
     this.move=e=>{
@@ -549,11 +565,21 @@ export class Editor{
       this.showCursor(e);
       if(this.working||this.edgePaused){
         const events=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
-        for(const sample of events.length?events:[e]){
-         const point=this.pointAt(sample);
-         if(this.working)this.extendStroke(point);
-         else if(this.edgePaused)this.beginStroke(point);
+        let previous=this.lastGesturePoint,changed=false;
+        for(const sample of (events.length?events.slice(-24):[e])){
+         const end=this.pointAt(sample);
+         const crossesEdge=previous&&(!this.inside(previous)||!this.inside(end));
+         const length=previous?Math.hypot(end[0]-previous[0],end[1]-previous[1]):0;
+         const steps=crossesEdge?Math.min(70,Math.max(1,Math.ceil(length/2))):1;
+         for(let i=1;i<=steps;i++){
+          const point=previous?[previous[0]+(end[0]-previous[0])*i/steps,previous[1]+(end[1]-previous[1])*i/steps]:end;
+          if(this.working){this.extendStroke(point,false);changed=true}
+          else if(this.edgePaused){this.beginStroke(point);changed=true}
+         }
+         previous=end;
         }
+        this.lastGesturePoint=previous;
+        if(changed)this.render();
       }
     };
     this.up=e=>{
@@ -562,7 +588,7 @@ export class Editor{
       this.pointers.delete(e.pointerId);
       if(this.viewportCapturedPointer===e.pointerId)this.viewportCapturedPointer=null;
       if(this.pointers.size<2)this.pinch=null;
-      this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
+      this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.lastGesturePoint=null;
       if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
       this.panStart=null;this.viewport.classList.remove('is-panning');
       if(e.pointerType==='touch'||e.type==='pointercancel'||
