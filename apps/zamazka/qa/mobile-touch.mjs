@@ -7,7 +7,7 @@ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const config=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
-assert.equal(config.version,'1.29.0');
+assert.equal(config.version,'1.29.1');
 assert.match(html,/href="\.\/mobile-touch\.css"/,'responsive styles loaded last');
 assert.ok(html.indexOf('href="./native-art.css"')<html.indexOf('href="./mobile-touch.css"'),'native dimensions resolve before mobile overrides');
 assert.match(sw,/\.\/mobile-touch\.css/,'mobile layout available offline after PWA install');
