@@ -95,34 +95,74 @@ export function floodFillRaster({width,height,walls,zone,output,point,color}){
  }
  return tail;
 }
-function fillRegion(lines,fills,zoneMask,p,colour){
+function fillRegion(lines,paint,zoneMask,p,colour){
  const w=lines.canvas.width,h=lines.canvas.height;
  const walls=lines.ctx.getImageData(0,0,w,h);
- const current=fills.ctx.getImageData(0,0,w,h);
+ const current=paint.ctx.getImageData(0,0,w,h);
  const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
  const filled=floodFillRaster({
    width:w,height:h,walls,zone:zoneMask,output:current,
    point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
  });
- if(filled)fills.ctx.putImageData(current,0,0);
+ if(filled){paint.ctx.putImageData(current,0,0);paint.ctx.drawImage(lines.canvas,0,0,W,H)}
+}
+// Drag colour behind the nib, mixing it with neighbouring pigment.
+// Stored strokes stay as compact vectors and replay deterministically.
+function smudgeStamp(ctx,x,y,size,dx,dy){
+ const scale=ctx.canvas.width/W;
+ const radius=Math.min(75,Math.max(3,Math.round(size*scale*.56)));
+ const pull=Math.max(2,Math.round(radius*.34)),blur=Math.max(1,Math.round(radius*.10));
+ const cx=Math.round(x*scale),cy=Math.round(y*scale),pad=pull+blur+2;
+ const left=Math.max(0,cx-radius-pad),top=Math.max(0,cy-radius-pad);
+ const right=Math.min(ctx.canvas.width,cx+radius+pad+1),bottom=Math.min(ctx.canvas.height,cy+radius+pad+1);
+ if(left>=right||top>=bottom)return;
+ const width=right-left,height=bottom-top,pixels=ctx.getImageData(left,top,width,height);
+ const src=new Uint8ClampedArray(pixels.data),dst=pixels.data,len=Math.hypot(dx,dy);
+ const sx=len?Math.round(dx/len*pull):0,sy=len?Math.round(dy/len*pull):0;
+ const at=(px,py)=>(Math.max(0,Math.min(height-1,py))*width+Math.max(0,Math.min(width-1,px)))*4;
+ for(let py=Math.max(0,cy-radius-top);py<Math.min(height,cy+radius+1-top);py++){
+  for(let px=Math.max(0,cx-radius-left);px<Math.min(width,cx+radius+1-left);px++){
+   const dist=Math.hypot(px+left-cx,py+top-cy)/radius;if(dist>=1)continue;
+   const weight=.72*Math.pow(1-dist,1.45),i=at(px,py);
+   const a=at(px-sx,py-sy),b=at(px-sx+blur,py-sy),c=at(px-sx-blur,py-sy),
+         d=at(px-sx,py-sy+blur),e=at(px-sx,py-sy-blur);
+   for(let ch=0;ch<3;ch++){
+    const pigment=(src[a+ch]*3+src[b+ch]+src[c+ch]+src[d+ch]+src[e+ch])/7;
+    dst[i+ch]=src[i+ch]*(1-weight)+pigment*weight;
+   }
+  }
+ }
+ ctx.putImageData(pixels,left,top);
+}
+export function smudgeStroke(ctx,stroke,from=0){
+ const pts=stroke.p||[];if(!pts.length)return;
+ const spacing=Math.max(1.4,Math.min(7,stroke.s*.23));
+ if(from<=0)smudgeStamp(ctx,pts[0][0],pts[0][1],stroke.s,0,0);
+ for(let i=Math.max(1,from);i<pts.length;i++){
+  const prev=pts[i-1],next=pts[i],dx=next[0]-prev[0],dy=next[1]-prev[1];
+  const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/spacing));
+  for(let j=1;j<=steps;j++)smudgeStamp(ctx,prev[0]+dx*j/steps,prev[1]+dy*j/steps,stroke.s,dx,dy);
+ }
 }
 function renderStrokes(ctx,strokes,zone){
- if(!strokes.some(s=>s.t==='fill')){strokes.forEach(s=>drawStroke(ctx,s));return}
- const lines=layer(),fills=layer(),area=layer();
+ if(!strokes.some(s=>s.t==='fill'||s.t==='smudge')){strokes.forEach(s=>drawStroke(ctx,s));return}
+ // Chronological raster pass: paint added after a smudge must remain sharp.
+ // A separate contour mask still bounds region fills.
+ const lines=layer(),paint=layer(),area=layer();
+ paint.ctx.fillStyle='#e8ddc6';paint.ctx.fillRect(0,0,W,H);
  area.ctx.fillStyle='#fff';damagePath(area.ctx,zone);area.ctx.fill();
  const zoneMask=area.ctx.getImageData(0,0,area.canvas.width,area.canvas.height);
  for(const stroke of strokes){
-   if(stroke.t==='fill'){fillRegion(lines,fills,zoneMask,stroke.p[0],stroke.c);continue}
-   if(stroke.t==='erase'){
-     for(const target of [lines.ctx,fills.ctx]){
-       target.save();target.globalCompositeOperation='destination-out';drawStroke(target,stroke);target.restore();
-     }
-   }else drawStroke(lines.ctx,stroke);
+  if(stroke.t==='fill'){fillRegion(lines,paint,zoneMask,stroke.p[0],stroke.c);continue}
+  if(stroke.t==='smudge'){smudgeStroke(paint.ctx,stroke);continue}
+  if(stroke.t==='erase'){
+   drawStroke(paint.ctx,stroke);
+   lines.ctx.save();lines.ctx.globalCompositeOperation='destination-out';
+   drawStroke(lines.ctx,stroke);lines.ctx.restore();
+  }else{drawStroke(paint.ctx,stroke);drawStroke(lines.ctx,stroke)}
  }
- // Actual clipping is applied ONCE to the finished artwork, not independently
- // to each colour layer: repeated translucent clips caused beige fringes.
- ctx.drawImage(fills.canvas,0,0,W,H);
- ctx.drawImage(lines.canvas,0,0,W,H);
+ // The damage edge is clipped once on the final artwork.
+ ctx.drawImage(paint.canvas,0,0,W,H);
 }
 
 export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false){
@@ -143,8 +183,7 @@ export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=f
  }catch{ctx.fillStyle='#ddc6aa';ctx.fillRect(0,0,W,H);ctx.fillStyle='#512d2a';ctx.fillText('Не удалось открыть картину',20,50);}
 }
 
-// A restoration stroke is a continuous gesture. The network format still
-// limits each polyline to 45 points / the whole picture to 1600, so preserve
+// A restoration stroke is a continuous gesture. Preserve
 // the important bends instead of silently stopping once the buffer fills.
 // Endpoints remain untouched, making very long mouse/finger drags uninterrupted.
 export function simplifyPoints(points,limit){
@@ -164,7 +203,7 @@ export function simplifyPoints(points,limit){
  }
  return kept;
 }
-const MAX_STROKES=100,MAX_STROKE_POINTS=45,MAX_TOTAL_POINTS=2000;
+export const MAX_STROKES=400,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=12000;
 
 const key='pocket-works:zamazka:draft:';
 export class Editor{
@@ -201,16 +240,23 @@ export class Editor{
   adoptDraft(strokes){
     if(this.strokes.length||!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
     const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:MAX_TOTAL_POINTS+1),0);
-    if(total>MAX_TOTAL_POINTS||strokes.some(s=>!['brush','pencil','spray','erase','fill'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<1||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
+    if(total>MAX_TOTAL_POINTS||strokes.some(s=>!['brush','pencil','spray','erase','fill','smudge'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<1||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
     this.strokes=strokes.map(s=>({...s,p:s.p.map(p=>[...p])}));this.save();this.render();return true;
   }
   setTool(tool){
-    if(!['brush','fill','picker','erase','hand'].includes(tool))return;
+    if(!['brush','fill','picker','erase','smudge','hand'].includes(tool))return;
     this.finishStroke();if(this.tool!==tool)this.onSound?.('tool');this.tool=tool;
     this.viewport.classList.toggle('hand-mode',tool==='hand');
     this.viewport.classList.toggle('picker-mode',tool==='picker');
     this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
+     this.updateDrawingTip();
     if(this.lastCursor)this.showCursor(this.lastCursor);
+  }
+
+  updateDrawingTip(){
+    const tip=this.root.querySelector('#drawingTip');if(!tip)return;
+    tip.textContent=this.tool==='smudge'?'Води по мазкам, чтобы мягко смешивать цвета':
+      this.inputMode==='precision'?'Один палец наводит перо · вторым удерживай «РИСОВАТЬ»':'Рисуй в повреждённой части';
   }
 
   // Compress only redundant bends to keep long drawing sessions flowing.
@@ -290,7 +336,8 @@ export class Editor{
    const drawn=this.point(tip);
    this.cursor.style.left=c.left+drawn[0]/W*c.width-v.left-this.viewport.clientLeft+'px';
    this.cursor.style.top=c.top+drawn[1]/H*c.height-v.top-this.viewport.clientTop+'px';
-    this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.color);
+    this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.tool==='smudge'?'#c6a36d':this.color);
+     this.cursor.classList?.toggle?.('is-smudge',this.tool==='smudge');
     this.cursor.hidden=false;
   }
   hideCursor(){if(this.cursor)this.cursor.hidden=true}
@@ -326,7 +373,7 @@ export class Editor{
     const switcher=this.root.querySelector('[data-cmd="precision"]');
     if(switcher){switcher.setAttribute('aria-pressed',String(precision));switcher.setAttribute('title',precision?'Обычное рисование':'Точное перо: двумя пальцами');switcher.querySelector('span').textContent=precision?'Точное':'Прямое'}
     const tip=this.root.querySelector('#drawingTip');
-    if(tip)tip.textContent=precision?'Один палец наводит перо · вторым удерживай «РИСОВАТЬ»':'Рисуй в повреждённой части';
+    if(tip)this.updateDrawingTip();
     if(!precision){this.armed=false;this.armPointer=null;this.aimPointer=null;this.aim=null}
     if(this.lastCursor)this.showCursor(this.lastCursor);
   }
@@ -500,7 +547,7 @@ export class Editor{
     this.keyboardDown=e=>{
       if(this.closed||e.target?.matches?.('input,textarea,select,[contenteditable]')||
          document.querySelector('#dialog:not(.hidden)')||e.altKey||e.metaKey)return;
-      const byCode={KeyB:'brush',KeyF:'fill',KeyI:'picker',KeyE:'erase',KeyH:'hand'};
+      const byCode={KeyB:'brush',KeyF:'fill',KeyI:'picker',KeyE:'erase',KeyS:'smudge',KeyH:'hand'};
       if(e.ctrlKey){
         const target=e.code==='KeyZ'?(e.shiftKey?'redo':'undo'):e.code==='KeyY'?'redo':null;
         if(target){e.preventDefault();this.root.querySelector('[data-cmd="'+target+'"]')?.click()}
@@ -614,6 +661,8 @@ export class Editor{
      const base=makeLayer(),ink=makeLayer();this.baseLayer=base.canvas;this.inkLayer=ink.canvas;this.inkCtx=ink.ctx;
      drawArtwork(base.ctx,img,this.id);
      this.cachedRevision=-1;
+     this.smudgePreviewLayer=null;
+     this.smudgePreviewWorking=null;
    }
    const rev=this.paintRevision||0;
    if(this.cachedRevision!==rev){
@@ -628,7 +677,27 @@ export class Editor{
    ctx.drawImage(this.inkLayer,0,0,W,H);
    ctx.restore();
    if(this.working){
-     ctx.save();clipZone(ctx,this.zone);drawStroke(ctx,this.working);ctx.restore();
+     ctx.save();clipZone(ctx,this.zone);
+     if(this.working.t==='smudge'){
+       // Reuse one backing surface; mix only new points as the nib moves.
+       let preview=this.smudgePreviewLayer;
+       if(!preview||preview.canvas.width!==c.width||preview.canvas.height!==c.height)
+         preview=this.smudgePreviewLayer=makeLayer();
+       if(this.smudgePreviewWorking!==this.working||this.smudgePreviewRevision!==rev){
+         preview.ctx.clearRect(0,0,W,H);
+         preview.ctx.drawImage(this.inkLayer,0,0,W,H);
+         this.smudgePreviewWorking=this.working;
+         this.smudgePreviewRevision=rev;
+         this.smudgePreviewPointCount=0;
+       }
+       const from=this.smudgePreviewPointCount||0;
+       if(this.working.p.length>from){
+         smudgeStroke(preview.ctx,this.working,from);
+         this.smudgePreviewPointCount=this.working.p.length;
+       }
+       ctx.drawImage(preview.canvas,0,0,W,H);
+     }else drawStroke(ctx,this.working);
+     ctx.restore();
    }
    ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#806950';ctx.lineWidth=1.5;
    damagePath(ctx,this.zone);ctx.stroke();ctx.restore();
@@ -642,6 +711,6 @@ export class Editor{
  }
  for(const cb of this.paintWaiters||[])cb();
  this.paintWaiters=[];
- this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;
+ this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;this.smudgePreviewLayer=null;this.smudgePreviewWorking=null;
  this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }
