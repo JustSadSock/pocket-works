@@ -51,7 +51,9 @@ export const ARTS=[
 // provides a smaller raster, the existing fallback chain finds it safely.
 const PREVIEW_WIDTH=1920;
 const MASTER_WIDTHS=[1920,1280,960];
-const ART_CACHE='zamazka-artworks-v1.7.0';
+// Share the service worker's persistent artwork cache. Using a different
+// namespace caused two copies of large masters to compete for phone storage.
+const ART_CACHE='zamazka-artworks-v1.12.5';
 export function artworkURL(id,width=PREVIEW_WIDTH){
  const entry=ARTS[id];if(!entry)return '';
  return entry.isReal ? ROOT+entry.path+entry.file+'/'+width+'px-'+entry.file
