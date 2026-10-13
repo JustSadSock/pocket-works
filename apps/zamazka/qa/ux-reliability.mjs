@@ -51,7 +51,7 @@ assert.match(app,/preload:true/);
 assert.match(app,/type:'art_ready'/);
 assert.match(app,/type==='vote_saved'/);
 assert.match(app,/IntersectionObserver/,'archive thumbnails load lazily');
-assert.match(editor,/thumbnail\?0\.8/,'archive previews use smaller buffers');
+assert.match(editor,/thumbnail\?Math\.min\(2,Math\.max\(1,screenWidth\*dpr\/W\*1\.2\)\)/,'archive previews size the canvas to actual display density');
 assert.match(archive,/phase==='archive'/,'archive retains full-detail navigation');
 const voteBody=app.split('function vote(){')[1]?.split('function verdict(){')[0]||'';
 assert.ok(!voteBody.includes('data-magnify'),'voting intentionally has no magnification');
@@ -59,3 +59,6 @@ console.log('ZAMAZKA UX: synchronized art, complete voting receipts, legacy star
 
 // Run the curator-only kick and network seat regression in the existing UX gate.
 import './kick-player.mjs';
+
+// Coin autovote and artwork-aspect regression shares the stable UX gate.
+import './coins-and-aspect.mjs';
