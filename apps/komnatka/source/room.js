@@ -62,19 +62,35 @@ function wall(scene,mat,w,h,d,x,y,z,name) {
 }
 export function createRoom(scene) {
  const ambient=new HemisphericLight('cream-bounce',new Vector3(.35,1,.45),scene);
- ambient.intensity=.59;ambient.groundColor=hex('#998977');ambient.diffuse=hex('#eedeca');
+ ambient.intensity=.44;ambient.groundColor=hex('#9c8478');ambient.diffuse=hex('#e7d5c5');
  const sun=new DirectionalLight('soft-windowlight',new Vector3(-.7,-1,-.56),scene);
- sun.position=new Vector3(10,17,10);sun.intensity=.43;sun.diffuse=hex('#fff0d5');
+ sun.position=new Vector3(10,17,10);sun.intensity=.27;sun.diffuse=hex('#ffe4c0');
+ // Miniature-stage illumination: two soft side lights bring out tiny rounded
+ // edges, like a handmade dollhouse on a table rather than daylight in a house.
+ const key=new PointLight('toybox-softbox',new Vector3(-3.2,6.6,5.4),scene);
+ key.diffuse=hex('#ffdec2');key.specular=hex('#e4b692');key.range=18;key.intensity=.54;
+ const rim=new DirectionalLight('toybox-side-rim',new Vector3(.68,-.55,.40),scene);
+ rim.diffuse=hex('#e0d7c9');rim.intensity=.24;
  const shadows=new ShadowGenerator(768,sun);
  shadows.usePercentageCloserFiltering=true;
  shadows.filteringQuality=ShadowGenerator.QUALITY_LOW;
  shadows.bias=.0025;shadows.normalBias=.025;
  scene.clearColor=new Color4(0,0,0,0);
- scene.imageProcessingConfiguration.contrast=1.03;
- scene.imageProcessingConfiguration.exposure=.87;
+ scene.imageProcessingConfiguration.contrast=1.05;
+ scene.imageProcessingConfiguration.exposure=.85;
  const floorMat=wood(scene,'warm-oak','#c6a37b');
  const floor=rounded(scene,'floor',8.2,.28,8.2,.095,floorMat,null,0,-.14,0);
  floor.isPickable=true;floor.metadata={ground:true};floor.receiveShadows=true;
+ // Deliberately visible cutaway construction: a little wooden toy plinth and
+ // wall-frame joins signal dollhouse scale without obstructing furniture.
+ const frameWood=makeMaterial(scene,'dollhouse-framing','#bd9475');
+ const frameEdge=makeMaterial(scene,'dollhouse-cut-edge','#e5c5a3');
+ rounded(scene,'toy-display-plinth',8.38,.16,8.38,.065,frameWood,null,0,-.355,0);
+ rounded(scene,'front-cut-edge',8.35,.065,.15,.026,frameEdge,null,0,-.265,4.12);
+ rounded(scene,'right-cut-edge',.15,.065,8.34,.026,frameEdge,null,4.12,-.265,0);
+ for(const x of [-3.35,3.35])for(const z of [-3.35,3.35])
+  rounded(scene,'miniature-plinth-foot',.35,.13,.35,.035,frameWood,null,x,-.49,z);
+
  const trim=makeMaterial(scene,'skirting','#d7bea1');
  const back=wall(scene,wallpaper(scene,WALLS[0],'plain'),8.2,4.1,.21,0,2.03,-4.04,'back');
  const left=wall(scene,wallpaper(scene,WALLS[0],'plain'),.21,4.1,8.2,-4.04,2.03,0,'left');
@@ -82,6 +98,10 @@ export function createRoom(scene) {
  rounded(scene,'left-skirting',.18,.18,8.2,.045,trim,null,-3.87,.09,0);
  rounded(scene,'back-crown',8.2,.10,.24,.04,trim,null,0,4.07,-3.98);
  rounded(scene,'left-crown',.24,.10,8.2,.04,trim,null,-3.98,4.07,0);
+ rounded(scene,'back-cutaway-cap',8.32,.13,.27,.047,frameEdge,null,0,4.11,-4.025);
+ rounded(scene,'left-cutaway-cap',.27,.13,8.32,.047,frameEdge,null,-4.025,4.11,0);
+ rounded(scene,'left-front-endgrain',.27,4.04,.28,.048,frameWood,null,-4.02,2.01,4.035);
+ rounded(scene,'back-right-endgrain',.27,4.04,.28,.048,frameWood,null,4.035,2.01,-4.02);
  back.receiveShadows=true;left.receiveShadows=true;
  const practicalLights=new Map();
  let nightMode=false;
@@ -114,11 +134,13 @@ export function createRoom(scene) {
  }
  let firstLight=true,nightFraction=0,lastLightTime=null;
  function applyLightBlend(t){
-  ambient.intensity=.59+(.105-.59)*t;
-  sun.intensity=.43+(.035-.43)*t;
-  scene.imageProcessingConfiguration.exposure=.93+(.75-.93)*t;
+  ambient.intensity=.44+(.07-.44)*t;
+  sun.intensity=.27+(.012-.27)*t;
+  key.intensity=.54+(.075-.54)*t;
+  rim.intensity=.24+(.018-.24)*t;
+  scene.imageProcessingConfiguration.exposure=.85+(.77-.85)*t;
   for(const light of practicalLights.values())
-   light.intensity=.35+(1.65-.35)*t;
+   light.intensity=.12+(1.38-.12)*t;
   // The outside view dims rather than visibly switching material or rebuilding the window.
   tintWindowView(scene,t);
   const bulb=scene.getMaterialByName('material-light');
@@ -150,12 +172,13 @@ export function createRoom(scene) {
    let light=practicalLights.get(item.id);
    if(!light){
     light=new PointLight('warm-lamp-'+item.id,Vector3.Zero(),scene);
-    light.diffuse=hex('#ffcf94');light.specular=hex('#e3af7d');
-    light.range=item.type==='tablelamp'?3.8:5.0;
+    light.diffuse=hex('#ffd4a3');light.specular=hex('#eabf90');
+    // Short, warm pools of light give the impression of toy-sized lamps.
+    light.range=item.type==='tablelamp'?2.65:3.55;
     practicalLights.set(item.id,light);
    }
    light.position.set(item.x,(Number.isFinite(item.y)?item.y:0)+(item.type==='floorlamp'?2.0:.62),item.z);
-   light.intensity=.35+(1.65-.35)*nightFraction;
+   light.intensity=.12+(1.38-.12)*nightFraction;
   }
   for(const [id,light] of practicalLights)if(!wanted.has(id)){
    light.dispose();practicalLights.delete(id);
