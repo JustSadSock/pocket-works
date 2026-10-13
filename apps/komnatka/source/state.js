@@ -1,9 +1,13 @@
+import { layoutId, fitsLayout, leftWallX } from './layout.js';
 import { byType, COLORS } from './models.js';
 export const STORAGE='pocket-works:komnatka:scene-v1';
 export const ROOM=3.77;
+export const PATTERN_KEYS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig'];
+export const FLOOR_KEYS=['honey','walnut','painted','tile','blush','cherry'];
+export function emptyRoom(layout='classic'){return {...starter(),layout:layoutId(layout),items:[]};}
 const item=(id,type,x,z,rot=0,more={})=>({id,type,x,z,rot,color:COLORS[2],...more});
 export function starter() {
- return { wallColor:0,pattern:'plain',floor:'honey',evening:false,items:[
+ return { layout:'classic',wallColor:0,wallColorLeft:0,pattern:'plain',patternLeft:'plain',floor:'honey',evening:false,items:[
   item('welcome-rug','rug',.35,.85,0,{color:'#d6ab93'}),
   item('welcome-sofa','sofa',.10,-2.38,0,{color:'#a3b5a1'}),
   item('welcome-coffee','coffee',.20,-.48,0),
@@ -26,14 +30,17 @@ export function sanitize(input){
   ids.add(raw.id);
   const meta=byType[raw.type], color=/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:COLORS[2];
   const next={id:raw.id,type:raw.type,x:finite(raw.x),z:finite(raw.z),y:finite(raw.y),rot:((integer(raw.rot)%4)+4)%4,color,variant:integer(raw.variant),wall:raw.wall==='left'?'left':'back',support:typeof raw.support==='string'?raw.support:null};
-  if(meta.layer==='wall'){next.y=Math.min(3.50,Math.max(.85,next.y));next.x=next.wall==='left'?-3.91:Math.max(-3,Math.min(3,next.x));next.z=next.wall==='back'?-3.91:Math.max(-3,Math.min(3,next.z));next.rot=next.wall==='left'?1:0;}
+  if(meta.layer==='wall'){next.y=Math.min(3.50,Math.max(.85,next.y));next.x=next.wall==='left'?leftWallX(input.layout):Math.max(-3,Math.min(3,next.x));next.z=next.wall==='back'?-3.91:Math.max(-3,Math.min(3,next.z));next.rot=next.wall==='left'?1:0;}
   else {next.x=Math.max(-ROOM,Math.min(ROOM,next.x));next.z=Math.max(-ROOM,Math.min(ROOM,next.z));}
   items.push(next);
  }
  return {
+  layout:layoutId(input.layout),
   wallColor:Math.max(0,Math.min(5,integer(input.wallColor))),
-  pattern:['plain','stripe','flower'].includes(input.pattern)?input.pattern:'plain',
-  floor:['honey','walnut','painted','tile'].includes(input.floor)?input.floor:'honey',
+  wallColorLeft:Math.max(0,Math.min(5,integer(input.wallColorLeft,input.wallColor))),
+  pattern:PATTERN_KEYS.includes(input.pattern)?input.pattern:'plain',
+  patternLeft:PATTERN_KEYS.includes(input.patternLeft)?input.patternLeft:(PATTERN_KEYS.includes(input.pattern)?input.pattern:'plain'),
+  floor:FLOOR_KEYS.includes(input.floor)?input.floor:'honey',
   evening:Boolean(input.evening),items
  };
 }
@@ -56,12 +63,13 @@ export function valid(state,item,excludeId=item.id){
  if(meta.layer==='wall'){
   const dim=meta.size[0];const coord=item.wall==='left'?item.z:item.x;
   if(Math.abs(coord)>ROOM-dim/2||item.y<1||item.y>3.22)return false;
+  if(!fitsLayout(state.layout,item,dim,.1))return false;
   return state.items.every(other=>{
    if(other.id===excludeId||byType[other.type]?.layer!=='wall'||other.wall!==item.wall)return true;
    return Math.abs(coord-(item.wall==='left'?other.z:other.x))>(dim+byType[other.type].size[0])/2+.05||Math.abs(item.y-other.y)>1.65;
   });
  }
- const [w,d]=dimensions(item);if(Math.abs(item.x)+w/2>ROOM||Math.abs(item.z)+d/2>ROOM)return false;
+ const [w,d]=dimensions(item);if(!fitsLayout(state.layout,item,w,d))return false;
  if(meta.tabletop){
   const support=state.items.find(it=>it.id===item.support);if(!support||!byType[support.type]?.top)return false;
   const [sw,sd]=dimensions(support);if(Math.abs(item.x-support.x)>(sw-w)/2-.005||Math.abs(item.z-support.z)>(sd-d)/2-.005)return false;

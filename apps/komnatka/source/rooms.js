@@ -1,0 +1,57 @@
+// Local multi-room studio. Old single-room saves remain untouched and migrate
+// into the first slot on first use. Gallery thumbnails have strict storage caps.
+import { STORAGE,starter,emptyRoom,sanitize } from './state.js';
+const INDEX='pocket-works:komnatka:rooms-v1';
+const ACTIVE='pocket-works:komnatka:active-room-v1';
+const PREFIX='pocket-works:komnatka:room:';
+export const ROOM_CAP=5;
+const get=k=>{try{return localStorage.getItem(k);}catch{return null;}};
+const put=(k,v)=>{try{localStorage.setItem(k,v);return true;}catch{return false;}};
+const parse=v=>{try{return JSON.parse(v);}catch{return null;}};
+export function roomList(){
+ let entries=parse(get(INDEX));
+ if(!Array.isArray(entries)||!entries.length){
+  const seed=parse(get(STORAGE))||starter();
+  entries=[{id:'first',name:'Моя комнатка',layout:sanitize(seed).layout,updated:Date.now(),preview:null}];
+  put(PREFIX+'first',JSON.stringify(sanitize(seed)));put(INDEX,JSON.stringify(entries));
+ }
+ return entries.filter(x=>x&&typeof x.id==='string').slice(0,ROOM_CAP);
+}
+export function activeRoomId(){
+ const id=get(ACTIVE)||'first';
+ return roomList().some(r=>r.id===id)?id:roomList()[0].id;
+}
+export function loadRoom(id=activeRoomId()){
+ const record=roomList().find(x=>x.id===id);
+ const state=parse(get(PREFIX+(record?.id||'first')));
+ return sanitize(state||starter());
+}
+export function selectRoom(id){if(roomList().some(r=>r.id===id)){put(ACTIVE,id);return true;}return false;}
+export function saveRoom(id,state,preview){
+ const list=roomList(),index=list.findIndex(x=>x.id===id);if(index<0)return false;
+ if(!put(PREFIX+id,JSON.stringify(sanitize(state))))return false;
+ list[index]={...list[index],layout:sanitize(state).layout,updated:Date.now()};
+ if(typeof preview==='string'&&preview.length<165000)list[index].preview=preview;
+ put(INDEX,JSON.stringify(list));return true;
+}
+export function addRoom({name='Новая комнатка',layout='classic'}={}){
+ const list=roomList();if(list.length>=ROOM_CAP)return null;
+ const id='room-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);
+ const record={id,name:String(name).trim().slice(0,32)||'Новая комнатка',layout,updated:Date.now(),preview:null};
+ if(!put(PREFIX+id,JSON.stringify(emptyRoom(layout))))return null;
+ list.unshift(record);if(!put(INDEX,JSON.stringify(list)))return null;
+ selectRoom(id);return record;
+}
+export function renameRoom(id,name){
+ const list=roomList(),entry=list.find(x=>x.id===id);if(!entry)return false;
+ entry.name=String(name).trim().slice(0,32)||entry.name;
+ return put(INDEX,JSON.stringify(list));
+}
+export function deleteRoom(id){
+ let list=roomList();if(list.length<2||!list.some(x=>x.id===id))return false;
+ list=list.filter(x=>x.id!==id);
+ if(!put(INDEX,JSON.stringify(list)))return false;
+ try{localStorage.removeItem(PREFIX+id);}catch{}
+ if(activeRoomId()===id)selectRoom(list[0].id);
+ return true;
+}
