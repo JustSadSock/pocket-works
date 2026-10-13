@@ -525,6 +525,7 @@ function results(){
 }
 let earnedAchievementIds=new Set();
 async function achievements(){
+ earnedAchievementIds=new Set(); // Never retain another account's cached achievements.
  change('<section class="page zamazka-achievements"><div class="section-label">КОЛЛЕКЦИЯ</div><h2>Достижения</h2>'+
   '<div id="zamAchievements" class="achievement-grid"><div class="notice">Проверяем награды Pocket ID…</div></div>'+
   '<button class="btn ghost wide" data-action="achievements-back">← Назад</button></section>','achievements');
