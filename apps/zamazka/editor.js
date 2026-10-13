@@ -609,6 +609,7 @@ export class Editor{
         this.size=Math.max(minSize,Math.min(48,Math.round((this.size+delta)*4)/4));
         const slider=this.root.querySelector('#brushSize');
         if(slider)slider.value=String(this.size);
+        const sizeLabel=this.root.querySelector('#brushSizeValue');if(sizeLabel)sizeLabel.textContent=String(this.size).replace('.',',');
         if(this.lastCursor)this.showCursor(this.lastCursor);
       }else{
         const bounds=this.viewport.getBoundingClientRect();
@@ -692,7 +693,11 @@ export class Editor{
     window.addEventListener('keyup',this.keyboardUp);
     this.root.addEventListener('click',this.actions);
     this.slider=e=>{
-      if(e.target.id==='brushSize')this.size=Number(e.target.value);
+      if(e.target.id==='brushSize'){
+        const value=Number(e.target.value),min=Number(e.target.min)||1;
+        this.size=Math.min(48,Math.max(min,Math.round(value*4)/4));
+        const sizeLabel=this.root.querySelector('#brushSizeValue');if(sizeLabel)sizeLabel.textContent=String(this.size).replace('.',',');
+      }
       if(e.target.id==='customColor'){
         this.color=e.target.value;
         this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.remove('active'));
