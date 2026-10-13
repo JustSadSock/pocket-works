@@ -47,3 +47,27 @@ export function createExhibitionDirector(screen,{duration=STAGE_DURATION}={}){
  }
  return {replace,clear};
 }
+
+/* A coin flies from the remaining tray to the painting that was actually tapped.
+   Visual only: the authoritative chip count is updated immediately by app.js. */
+export function animateCoinDeposit(button){
+ if(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const end=button?.closest('[data-stake-card]')?.querySelector('.stake-amount');
+ const tray=document.querySelector('#chipsRemaining');
+ if(!end||!tray||!document.body||typeof Element==='undefined')return;
+ const from=tray.getBoundingClientRect(),to=end.getBoundingClientRect();
+ if(!from.width||!to.width)return;
+ const coin=document.createElement('i');
+ coin.className='zam-moving-token';coin.setAttribute('aria-hidden','true');
+ const x=from.left+from.width*.3,y=from.top+from.height*.5;
+ coin.style.left=x+'px';coin.style.top=y+'px';document.body.append(coin);
+ const dx=to.left+to.width*.48-x,dy=to.top+to.height*.55-y;
+ try{
+  const motion=coin.animate([
+   {transform:'translate3d(0,0,0) scale(.85)',opacity:.65},
+   {transform:'translate3d('+dx*.56+'px,'+(dy*.45-17)+'px,0) scale(1.12)',opacity:1,offset:.56},
+   {transform:'translate3d('+dx+'px,'+dy+'px,0) scale(.85)',opacity:0}
+  ],{duration:260,easing:'cubic-bezier(.25,.75,.2,1)'});
+  void motion.finished.catch(()=>{}).finally(()=>coin.remove());
+ }catch{coin.remove()}
+}
