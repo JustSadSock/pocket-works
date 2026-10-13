@@ -1,6 +1,6 @@
 import {strict as assert} from 'node:assert';
 import {W,H,ARTS,PLAYABLE_IDS,REAL_COUNT,zoneFor,insideDamage,artworkURL} from '../../artworks.js';
-assert.equal(REAL_COUNT,54);
+assert.equal(REAL_COUNT,72);
 assert.equal(PLAYABLE_IDS.length,53);
 assert(ARTS.slice(0,REAL_COUNT).every(a=>a.isReal&&a.source));
 assert.equal(PLAYABLE_IDS[0],1);
