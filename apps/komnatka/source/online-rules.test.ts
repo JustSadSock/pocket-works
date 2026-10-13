@@ -50,7 +50,8 @@ describe('КOMHATKA two genuine online modes',()=>{
   expect(building.phase).toBe('build');
   expect('target' in building).toBe(false);
   expect(building.items).toEqual([]);
-  expect(act(s,guest,{type:'finish'}).events[0].type).toBe('notice');
+  act(s,guest,{type:'finish'});
+  expect(s.phase).toBe('build'); // Guests cannot end the host's round.
   act(s,host,{type:'finish'});
   const result=act(s,guest,{type:'sync'}).events[0].payload;
   expect(result.phase).toBe('result');
