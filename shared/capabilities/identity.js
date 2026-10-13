@@ -39,7 +39,16 @@ function showPortrait(accountId,artwork){
       }
       continue;
     }
-    if(el.dataset.pwMaskot){el.dataset.pwMaskot='';el.replaceChildren();}
+    if(el.dataset.pwMaskot){
+      el.dataset.pwMaskot='';el.replaceChildren();
+      if(!artwork){
+        const preset=Object.hasOwn(presets,el.dataset.pwPreset)?el.dataset.pwPreset:'clay';
+        const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+        svg.setAttribute('viewBox','0 0 64 64');
+        const shape=document.createElementNS('http://www.w3.org/2000/svg','path');
+        shape.setAttribute('d',presets[preset][2]);svg.append(shape);el.replaceChildren(svg);
+      }
+    }
     let img=el.querySelector('img');
     if(!artwork){
       if(img){
