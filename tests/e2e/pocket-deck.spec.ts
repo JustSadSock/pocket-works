@@ -283,3 +283,95 @@ test('library primary card opens a game while details are separate',async({page}
   await first.locator('.app-entry__more').click();
   await expect(page.locator('#detail-open')).toBeVisible();
 });
+
+test('Home can batch-select any catalogue game, save and archive several at once',async({page},info)=>{
+  await openDeck(page);
+  await page.locator('#deck-batch-trigger').click();
+  const picker=page.locator('#deck-batch-picker');
+  await expect(picker).toBeVisible();
+  const tiles=page.locator('#deck-batch-grid [data-batch-slug]');
+  expect(await tiles.count()).toBeGreaterThan(30);
+  const slug1=await tiles.first().getAttribute('data-batch-slug');
+  const slug2=await tiles.nth(1).getAttribute('data-batch-slug');
+  expect(slug1).toBeTruthy();expect(slug2).toBeTruthy();
+  await tiles.first().click();
+  await tiles.nth(1).click();
+  await expect(page.locator('#deck-batch-count')).toHaveText('2 выбрано');
+  await expect(page.locator('#deck-batch-save')).toBeEnabled();
+  await page.locator('#deck-batch-save').click();
+  await expect(page.locator('#deck-batch-status')).toContainText('сохранены');
+  await expect(page.locator('#deck-batch-count')).toHaveText('0 выбрано');
+  await page.locator('[data-batch-slug="'+slug1+'"]').click();
+  await page.locator('[data-batch-slug="'+slug2+'"]').click();
+  await expect(page.locator('#deck-batch-unsave')).toBeEnabled();
+  await page.locator('#deck-batch-personal').click();
+  await expect(page.locator('#deck-batch-personal-confirm')).toBeVisible();
+  await page.locator('#deck-batch-confirm-cancel').click();
+  await expect(page.locator('[data-batch-slug="'+slug1+'"]')).toBeVisible();
+  await page.locator('#deck-batch-personal').click();
+  await page.locator('#deck-batch-confirm-accept').click();
+  await expect(page.locator('[data-batch-slug="'+slug1+'"]')).toHaveCount(0);
+  await page.locator('[data-batch-tab="archive"]').click();
+  await expect(page.locator('[data-batch-slug="'+slug1+'"]')).toBeVisible();
+  await expect(page.locator('[data-batch-slug="'+slug2+'"]')).toBeVisible();
+  await attachCriticalScreenshot(page,info,'deck-home-batch-archive',{fullPage:false});
+  await page.locator('[data-batch-slug="'+slug1+'"]').click();
+  await page.locator('[data-batch-slug="'+slug2+'"]').click();
+  await page.locator('#deck-batch-personal').click();
+  await page.locator('#deck-batch-confirm-accept').click();
+  await page.locator('[data-batch-tab="active"]').click();
+  await expect(page.locator('[data-batch-slug="'+slug1+'"]')).toBeVisible();
+  await page.locator('#deck-batch-close').click();
+  await expect(picker).toBeHidden();
+  if((page.viewportSize()?.width||1000)<=980)await expect(page.locator('#deck-focus .deck-focus__play')).toBeVisible();
+  else await expect(page.locator('#deck-widgets .deck-tile').first()).toBeVisible();
+});
+
+test('Home batch administrator action sends one verified bulk request and can restore globally',async({page})=>{
+  await page.addInitScript(()=>{
+    const existing=window.fetch.bind(window);
+    const globalArchive=new Set<string>();
+    (window as any).__batchWrites=[];
+    window.fetch=(input,init)=>{
+      const url=typeof input==='string'?input:input instanceof Request?input.url:String(input);
+      let path;
+      try{path=new URL(url,location.href).pathname}catch{return existing(input,init)}
+      if(path!=='/pocket-id/global-archive')return existing(input,init);
+      const method=init?.method|| (input instanceof Request?input.method:'GET');
+      if(method==='POST'){
+        const body=JSON.parse(String(init?.body||'{}'));
+        (window as any).__batchWrites.push(body);
+        for(const slug of body.slugs||[]){
+          if(body.archived)globalArchive.add(slug);else globalArchive.delete(slug);
+        }
+      }
+      return Promise.resolve(new Response(JSON.stringify({archived:[...globalArchive],canManage:true}),{
+        status:200,headers:{'content-type':'application/json'}
+      }));
+    };
+  });
+  await openDeck(page);
+  await page.locator('#deck-batch-trigger').click();
+  await expect(page.locator('#deck-batch-global')).toBeVisible();
+  const tiles=page.locator('#deck-batch-grid [data-batch-slug]');
+  const slugs=[await tiles.first().getAttribute('data-batch-slug'),await tiles.nth(1).getAttribute('data-batch-slug')];
+  await tiles.first().click();
+  await tiles.nth(1).click();
+  await expect(page.locator('#deck-batch-global')).toBeEnabled();
+  await page.locator('#deck-batch-global').click();
+  await expect(page.locator('#deck-global-confirm')).toBeVisible();
+  await page.locator('#deck-global-confirm-accept').click();
+  await expect(page.locator('#deck-batch-status')).toContainText('общий архив');
+  await page.locator('[data-batch-tab="archive"]').click();
+  for(const slug of slugs)await expect(page.locator('[data-batch-slug="'+slug+'"]')).toBeVisible();
+  for(const slug of slugs)await page.locator('[data-batch-slug="'+slug+'"]').click();
+  await page.locator('#deck-batch-global').click();
+  await page.locator('#deck-global-confirm-accept').click();
+  const writes=await page.evaluate(()=>(window as any).__batchWrites);
+  expect(writes).toHaveLength(2);
+  expect(writes[0].archived).toBe(true);
+  expect(writes[0].slugs).toEqual(slugs);
+  expect(writes[1].archived).toBe(false);
+  await page.locator('[data-batch-tab="active"]').click();
+  for(const slug of slugs)await expect(page.locator('[data-batch-slug="'+slug+'"]')).toBeVisible();
+});

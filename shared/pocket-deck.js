@@ -1,4 +1,5 @@
 import { createDeckStateStore, DECK_WIDGET_KINDS } from './deck-state.js';
+import { installDeckBatchPicker } from './deck-batch.js';
 
 const $ = selector => document.querySelector(selector);
 const escapeHtml = v => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -15,7 +16,7 @@ function formatAgo(timestamp) {
 
 export function installPocketDeck({
   getApps, getFavorites, getRecents, getSelected, onViewChanged,
-  onOpen, onDetails, onFavorite, onRefresh, onTools
+  onOpen, onDetails, onFavorite, onBulkFavorite, onRefresh, onTools
 }) {
   const home=$('#deck-home'), widgets=$('#deck-widgets'), editor=$('#deck-editor');
   const nav=$('#deck-bottom-nav'), panel=$('#detail-panel');
@@ -29,6 +30,7 @@ export function installPocketDeck({
   let previewSignature='';
   let organizing=false;
   let chosen=new Set();
+  let batchPicker=null;
   const GLOBAL_CACHE_KEY='pocket-works:global-archive-cache:v1';
   const validSlug=slug=>typeof slug==='string'&&/^[a-z0-9-]{1,96}$/.test(slug);
   let globalArchived=new Set(),canManageGlobal=false,globalReady=false,globalBusy=false;
@@ -289,9 +291,12 @@ export function installPocketDeck({
       if(!res.ok)throw Error(res.status===403?'Administrator access denied. Sign in again.':'Server could not save the change.');
       adoptGlobalArchive(payload);
       if(action.archived)exitOrganize();
+      if(batchPicker?.isOpen())batchPicker.complete(action.archived
+        ?'Игры перенесены в общий архив.':'Игры возвращены в общую библиотеку.');
       globalMessage=action.archived?'Moved to the global archive.':'Restored to the global library.';
     }catch(error){
       globalMessage=error.message||'Could not update the global archive.';
+      if(batchPicker?.isOpen())batchPicker.report(globalMessage,'error');
       void refreshGlobalArchive();
     }finally{
       globalBusy=false;
@@ -306,6 +311,7 @@ export function installPocketDeck({
     paintCovers();
     renderProjectDetails();
     renderOrganize();
+    batchPicker?.refresh();
   }
   function setView(view,{focus=false}={}){
     if(!['home','library','archive'].includes(view))return;
@@ -618,6 +624,30 @@ export function installPocketDeck({
   document.addEventListener('pocket-social:notifications',event=>{
     pendingSocial=Number(event.detail?.count)||0;
     refreshHomeIdentity();
+  });
+  batchPicker=installDeckBatchPicker({
+    getApps, isArchived,
+    isPersonalArchived:slug=>current().archived.includes(slug),
+    isGlobalArchived:slug=>globalArchived.has(slug),
+    getFavorites, canManageGlobal:()=>canManageGlobal&&globalReady,
+    isGlobalBusy:()=>globalBusy, artwork:app=>artMarkup(app),
+    onPersonalArchive:(slugs,archived)=>{
+      const state=current(),set=new Set(state.archived),stages={...state.projectStages};
+      for(const slug of slugs){
+        if(!appBySlug(slug))continue;
+        if(archived){set.add(slug);stages[slug]='archive';}
+        else {
+          set.delete(slug);
+          if(stages[slug]==='archive')stages[slug]='trial';
+        }
+      }
+      store.update({archived:[...set],projectStages:stages});
+    },
+    onGlobalArchive:(slugs,archived)=>askGlobalArchive(slugs,archived),
+    onFavorites:(slugs,save)=>{
+      if(typeof onBulkFavorite==='function')onBulkFavorite(slugs,save);
+      else for(const slug of slugs){if(favoriteSet().has(slug)!==save)onFavorite(slug);}
+    }
   });
   render();document.documentElement.classList.add('has-pocket-deck');void store.hydrate();void loadCovers();void refreshGlobalArchive();
   return {

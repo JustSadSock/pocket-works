@@ -130,3 +130,27 @@ profile, expand **Аккаунт и безопасность**, select **Нас�
 expand **Код активации**. The redeemed role persists on the account and enables
 bulk **Archive for everyone** and per-game **Restore for everyone** after
 server verification. The existing UUID allowlist remains an optional alternative.
+
+
+## Home bulk organizer (0.10.19)
+
+Home now has a **Выбрать** action beside Edit. It opens an independent modal
+catalogue without scrolling or replacing the ordinary mobile Home. The catalogue
+is searchable and includes every game, not just the highlighted Home tiles.
+Users can select up to 100 games, select all matching search results, clear the
+selection and switch between Library and Archive. Switching sections clears the
+selection, preventing invisible games from being changed accidentally.
+
+Actions apply to exactly the selected games: save/unsave favorites (one shelf
+write for the batch); move into/restore from the personal archive (with a
+reversible confirmation); and for a server-verified Pocket ID administrator,
+archive/restore games **for everyone** via the existing confirmed POST API.
+Shared archive changes must be acknowledged by the server. Users can cancel
+both kinds of confirmation without altering games. The archive view includes
+globally and locally archived titles. A personal restore never overrides a
+shared archival decision. The selection dialogue scrolls internally and shows
+live counts and status without altering the focus-first Home layout.
+
+Browser QA: `tests/e2e/pocket-deck.spec.ts` exercises saving, cancelling,
+personal bulk archive/restore and an authenticated-like mocked global batch
+request with a single list of game slugs.

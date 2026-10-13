@@ -304,6 +304,22 @@ function toggleFavorite(slug) {
   renderShelf({ transition: true });
 }
 
+function setFavoritesBulk(slugs, save) {
+  const existing = new Set(shelfState.favorites);
+  const entries = [...new Set(slugs)].filter(slug=>registry.some(app=>app.slug===slug));
+  if(!entries.length)return;
+  for(const slug of entries){
+    if(save)existing.add(slug);
+    else existing.delete(slug);
+  }
+  const updated=[...existing];
+  if(updated.length===shelfState.favorites.length&&updated.every(slug=>shelfState.favorites.includes(slug)))return;
+  shelfState.favorites=updated;
+  persistShelfState();
+  navigator.vibrate?.(8);
+  renderShelf();
+}
+
 function getDisplayMode() {
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) return 'standalone';
   if (window.matchMedia('(display-mode: fullscreen)').matches) return 'fullscreen';
@@ -887,6 +903,7 @@ deck = installPocketDeck({
   onOpen: (event, slug, link) => launchApp(event, slug, link),
   onDetails: slug => selectApp(slug),
   onFavorite: slug => toggleFavorite(slug),
+  onBulkFavorite: (slugs,save) => setFavoritesBulk(slugs,save),
   onRefresh: () => loadRegistry({ manual: true }),
   onTools: () => document.querySelector('#shelf-tools-button')?.click()
 });
