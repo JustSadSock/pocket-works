@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ПЕТЛЯ 17">
-  <meta name="pocket-works-build" content="3.1.1">
+  <meta name="pocket-works-build" content="3.2.0">
   <title>ПЕТЛЯ 17 — Pocket Works</title>
 </head>
 <body data-fullscreen-app>
@@ -31,6 +31,8 @@
       <i id="rpmBar"></i>
     </div>
 
+    <aside id="minimap" class="minimap hidden" data-ui aria-label="Схема трассы и положение машин"><svg id="trackMap" viewBox="0 0 148 100" role="img" aria-label="Положение на трассе"><path id="mapRoad" fill="none" stroke="#dae5d6" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round"/><path id="mapRoadOver" fill="none" stroke="#445b57" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle id="mapStart" r="3.3" fill="#e8bd71"/><g id="mapBots" fill="#eba25b"></g><circle id="mapPlayer" r="4.3" fill="#f1eee0" stroke="#db643b" stroke-width="2"/></svg><span>КОНТУР 17</span></aside>
+    <div id="cornerCue" class="corner-cue" data-ui aria-live="off"><b id="cornerDirection">↷</b><span id="cornerLabel">ПОВОРОТ ВПЕРЕДИ</span></div>
     <div id="draft" class="draft hidden" data-ui>ВОЗДУШНЫЙ СЛЕД <b>+0</b></div>
     <div id="message" class="message" data-ui aria-live="polite"></div>
 
@@ -42,10 +44,10 @@
 
     <section id="loading" class="screen loading" data-ui>
       <div class="loading-mark"><span></span><span></span><span></span></div>
-      <p>ПЕТЛЯ 17 / HANDLING 3.1.1</p>
+      <p>ПЕТЛЯ 17 / COAST RUN 3.2</p>
       <h1>СБОРКА КОКПИТА</h1>
       <div class="loading-track"><i id="loadingBar"></i></div>
-      <small id="loadingText">Геометрия трассы</small>
+      <small id="loadingText">Геометрия трассы</small><button id="retryBoot" type="button" class="metal retry-boot hidden">ПОВТОРИТЬ ЗАПУСК</button>
     </section>
 
     <section id="menu" class="screen menu hidden" data-ui>
@@ -53,12 +55,12 @@
       <div class="menu-copy">
         <p>ЗАКРЫТАЯ ЛИГА / СЕКТОР 17</p>
         <h1>ПЕТЛЯ<br><em>17</em></h1>
-        <div>Настоящая 3D-трасса и simcade-физика сцепления. Тормози до апекса, держи машину на пределе и не надейся, что соперники уступят линию.</div>
+        <div>Три круга вдоль побережья. Пять соперников. Каждый поворот — на твоей ответственности.</div>
       </div>
       <div class="menu-rig">
         <div class="records"><span>ЛУЧШИЙ ФИНИШ<b id="bestFinish">—</b></span><span>ЛУЧШИЙ КРУГ<b id="bestLap">—</b></span></div>
-        <button id="start" class="ignition" type="button"><b>ЗАПУСТИТЬ ДВИГАТЕЛЬ</b><small>НАКЛОН ТЕЛЕФОНА</small></button>
-        <div class="menu-row"><button id="practice" class="metal" type="button">ПАЛЬЦЕМ</button><button id="settingsButton" class="metal" type="button">НАСТРОЙКИ</button></div>
+        <button id="start" class="ignition" type="button"><b>НА ТРАССУ</b><small>РУЛЬ НАКЛОНОМ</small></button>
+        <div class="menu-row"><button id="practice" class="metal" type="button">РУЛЬ / КЛАВИШИ</button><button id="settingsButton" class="metal" type="button">НАСТРОЙКИ</button></div>
       </div>
     </section>
 
@@ -84,7 +86,7 @@
       <h2 id="resultTitle">Финиш</h2>
       <div id="resultText" class="copy"></div>
       <div class="result-grid"><span><b id="resultPosition">—</b><small>ПОЗИЦИЯ</small></span><span><b id="resultTime">—</b><small>ВРЕМЯ</small></span><span><b id="resultLap">—</b><small>ЛУЧШИЙ КРУГ</small></span><span><b id="resultPasses">0</b><small>ОБГОНЫ</small></span></div>
-      <div class="stack"><button id="again" class="ignition compact" type="button"><b>ЕЩЁ ЗАЕЗД</b><small>ТЕКУЩЕЕ УПРАВЛЕНИЕ</small></button><button id="resultsMenu" class="metal wide" type="button">В ГЛАВНОЕ МЕНЮ</button></div>
+      <div class="stack"><button id="again" class="ignition compact" type="button"><b>ЕЩЁ ЗАЕЗД</b><small>ТЕКУЩЕЕ УПРАВЛЕНИЕ</small></button><button id="resultsMenu" class="metal wide" type="button">В ГЛАВНОЕ МЕНЮ</button><a class="metal wide link" href="../../" data-app-control>В POCKET WORKS</a></div>
     </section>
 
     <section class="rotate" data-ui><div></div><b>Поверни телефон горизонтально</b><span>Кокпит не обязан помещаться в вертикальную щель.</span><a href="../../" data-app-control>Вернуться в Pocket Works</a></section>

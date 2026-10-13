@@ -88,6 +88,7 @@ export class RaceGame {
   private resetArmed = false;
   private resetTimer = 0;
   private keys = new Set<string>();
+  private mapBounds = { minX: -200, minZ: -200, sx: 0.3, sz: 0.2 };
   private bots: Bot[] = [];
 
   private player = {
@@ -259,6 +260,48 @@ export class RaceGame {
     return clamp(strength, 0, 1);
   }
 
+
+  private initializeMap(): void {
+    const samples = this.world.track.samples;
+    const xs = samples.map((s) => s.position.x);
+    const zs = samples.map((s) => s.position.z);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minZ = Math.min(...zs), maxZ = Math.max(...zs);
+    const sx = 124 / Math.max(1, maxX - minX);
+    const sz = 80 / Math.max(1, maxZ - minZ);
+    this.mapBounds = { minX, minZ, sx, sz };
+    const points = samples.filter((_, index) => index % 7 === 0);
+    const path = points.map((s, index) => (index === 0 ? 'M' : 'L') +
+      (12 + (s.position.x - minX) * sx).toFixed(1) + ' ' +
+      (9 + (s.position.z - minZ) * sz).toFixed(1)).join(' ') + ' Z';
+    document.getElementById('mapRoad')?.setAttribute('d', path);
+    document.getElementById('mapRoadOver')?.setAttribute('d', path);
+    document.getElementById('mapStart')?.setAttribute('cx', String(12 + (samples[0].position.x - minX) * sx));
+    document.getElementById('mapStart')?.setAttribute('cy', String(9 + (samples[0].position.z - minZ) * sz));
+    const dots = document.getElementById('mapBots');
+    if (dots) {
+      dots.replaceChildren();
+      for (let i = 0; i < BOT_TEMPLATES.length; i++) {
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.id = 'mapBot' + i;
+        circle.setAttribute('r', '2.2');
+        dots.append(circle);
+      }
+    }
+  }
+
+  private updateMap(): void {
+    const draw = (id: string, distance: number) => {
+      const dot = document.getElementById(id);
+      if (!dot) return;
+      const p = this.world.track.sample(distance).position;
+      dot.setAttribute('cx', (12 + (p.x - this.mapBounds.minX) * this.mapBounds.sx).toFixed(1));
+      dot.setAttribute('cy', (9 + (p.z - this.mapBounds.minZ) * this.mapBounds.sz).toFixed(1));
+    };
+    draw('mapPlayer', this.player.totalDistance);
+    for (let i = 0; i < this.bots.length; i++) draw('mapBot' + i, this.bots[i].totalDistance);
+  }
+
   private updateHud(): void {
     $('#position').textContent = String(this.position());
     $('#lap').textContent = `${Math.min(this.player.lap, LAPS)}/${LAPS}`;
@@ -268,6 +311,17 @@ export class RaceGame {
     const gear = clamp(Math.floor(this.player.speed / 50) + 1, 1, 6);
     $('#gear').textContent = String(gear);
     $('#rpmBar').style.width = `${clamp((this.player.speed % 50) / 50 * 100, 4, 100)}%`;
+    this.updateMap();
+    const bend = this.world.track.maximumCurvature(this.player.totalDistance + 20, [16, 34, 52]);
+    const cue = document.getElementById('cornerCue');
+    if (cue) {
+      const approaching = this.player.speed > 55 && Math.abs(bend) > 0.010;
+      cue.classList.toggle('visible', approaching);
+      if (approaching) {
+        $('#cornerDirection').textContent = bend > 0 ? '↶' : '↷';
+        $('#cornerLabel').textContent = Math.abs(bend) > 0.019 ? 'КРУТОЙ ПОВОРОТ' : 'ПОВОРОТ ВПЕРЕДИ';
+      }
+    }
   }
 
   private updateBots(delta: number): void {
@@ -360,6 +414,7 @@ export class RaceGame {
     this.hud.classList.add('hidden');
     this.speedPanel.classList.add('hidden');
     this.draftBadge.classList.add('hidden');
+    document.getElementById('minimap')?.classList.add('hidden');
     this.audio.update(0, MAX_SPEED, false, 0, 0, 0, 0);
     this.audio.beep(840, 0.32, 0.16);
     this.haptic([35, 35, 70]);
@@ -484,6 +539,10 @@ export class RaceGame {
   }
 
   private updatePresentation(delta: number): void {
+    if (this.mode === 'menu' || (this.mode === 'settings' && this.settingsReturn === 'menu')) {
+      this.world.updatePreview(delta);
+      return;
+    }
     this.world.updateCockpit({
       speed: this.player.speed,
       maxSpeed: MAX_SPEED,
@@ -545,10 +604,12 @@ export class RaceGame {
     }
     try { await lockOrientation('landscape'); } catch {}
     this.resetRace();
+    this.world.setRacingView();
     this.showScreen(null);
     this.controls.classList.remove('hidden');
     this.hud.classList.remove('hidden');
     this.speedPanel.classList.remove('hidden');
+    document.getElementById('minimap')?.classList.remove('hidden');
     this.mode = 'countdown';
     this.countdown = 3.7;
     this.countdownMark = 4;
@@ -562,12 +623,15 @@ export class RaceGame {
     this.controls.classList.add('hidden');
     this.hud.classList.add('hidden');
     this.speedPanel.classList.add('hidden');
+    document.getElementById('minimap')?.classList.add('hidden');
     this.draftBadge.classList.add('hidden');
+    document.getElementById('cornerCue')?.classList.remove('visible');
     this.message.textContent = '';
     this.throttle = false;
     this.braking = false;
     this.audio.mute();
     this.updateRecords();
+    this.world.setMenuView();
     this.showScreen(this.menu);
   };
 
@@ -579,6 +643,8 @@ export class RaceGame {
     this.controls.classList.add('hidden');
     this.hud.classList.add('hidden');
     this.speedPanel.classList.add('hidden');
+    document.getElementById('minimap')?.classList.add('hidden');
+    document.getElementById('cornerCue')?.classList.remove('visible');
     this.audio.mute();
     this.showScreen(this.pauseScreen);
   };
@@ -590,6 +656,7 @@ export class RaceGame {
     this.controls.classList.remove('hidden');
     this.hud.classList.remove('hidden');
     this.speedPanel.classList.remove('hidden');
+    document.getElementById('minimap')?.classList.remove('hidden');
   };
 
   private openSettings(from: 'menu' | 'pause'): void {
@@ -756,31 +823,39 @@ export class RaceGame {
 
   async boot(): Promise<void> {
     this.loadingBar.style.width = '18%';
-    this.loadingText.textContent = 'Банки и геометрия кольца';
+    this.loadingText.textContent = 'Собираем прибрежный автодром';
     this.world.build();
-    await new Promise((resolve) => window.setTimeout(resolve, 30));
-    this.loadingBar.style.width = '64%';
-    this.loadingText.textContent = 'Кокпит, зеркала и пелотон';
+    this.loadingBar.style.width = '62%';
+    this.loadingText.textContent = 'Болиды и гоночная линия';
     this.bots = this.createBots();
     for (const bot of this.bots) this.world.placeCar(bot.visual, bot.totalDistance, bot.lane, 0, 0, 0, 0);
-    await new Promise((resolve) => window.setTimeout(resolve, 30));
-    this.loadingBar.style.width = '88%';
-    this.loadingText.textContent = 'Сцепление и телеметрия';
-    this.world.scene.executeWhenReady(() => {
+    this.initializeMap();
+    this.loadingBar.style.width = '89%';
+    this.loadingText.textContent = 'Первый кадр';
+
+    // executeWhenReady used to wait forever on some WebKit devices when
+    // a mirror render target was pending. A successfully rendered frame is
+    // the real readiness criterion; show the garage after two frames.
+    let goodFrames = 0;
+    let bootCompleted = false;
+    const reveal = () => {
+      if (bootCompleted) return;
+      bootCompleted = true;
       this.loadingBar.style.width = '100%';
       this.loadingText.textContent = 'Готово';
-      window.setTimeout(() => {
-        this.mode = 'menu';
-        this.showScreen(this.menu);
-      }, 260);
-    });
-
+      this.mode = 'menu';
+      this.world.setMenuView();
+      this.showScreen(this.menu);
+      document.documentElement.dataset.trackReady = String(Boolean(this.world.scene.getMeshByName('race-asphalt') || this.world.scene.getMeshByName('road')));
+    };
     this.world.engine.runRenderLoop(() => {
       const delta = clamp(this.world.engine.getDeltaTime() / 1000, 0, 0.05);
       this.updateRace(delta);
       this.updatePresentation(delta);
       this.world.adaptQuality(delta, this.settings.quality);
       this.world.scene.render();
+      if (!bootCompleted && ++goodFrames >= 2) reveal();
     });
   }
+}
 }

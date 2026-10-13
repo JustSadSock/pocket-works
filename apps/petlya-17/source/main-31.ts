@@ -6,7 +6,7 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { RaceGame } from './race-game';
 
-const version = '3.1.1';
+const version = '3.2.0';
 const appName = 'ПЕТЛЯ 17';
 const namespace = 'pocket-works:petlya-17';
 
@@ -15,10 +15,10 @@ registerEnhancedUpdate({
   appName,
   version,
   releaseNotes: [
-    'Исправлена остановка загрузки на этапе сборки банков и геометрии кольца в iOS WebKit.',
-    'Процедурная фактура асфальта теперь имеет безопасный резервный материал, если 2D Canvas-контекст недоступен.',
-    'Декоративные блоки мира изолированы: ошибка одного элемента больше не блокирует всю трассу.',
-    'Добавлен резервный контур и явная диагностика вместо бесконечной полосы загрузки.'
+    'Пересобран прибрежный автодром: дорожное полотно, разметка, поребрики, ограждения и порт.',
+    'Болиды и кокпит детализированы, освобождён обзор трассы.',
+    'Новая кинематографичная камера меню, карта и подсказки к поворотам.',
+    'Загрузка завершается по готовности двух отрисованных кадров.'
   ]
 });
 
@@ -39,6 +39,11 @@ if (canvas) {
     const loadingTitle = document.querySelector<HTMLElement>('#loading h1');
     if (loadingBar) loadingBar.style.width = '100%';
     if (loadingTitle) loadingTitle.textContent = 'СБОЙ СБОРКИ';
+    const retry = document.querySelector<HTMLButtonElement>('#retryBoot');
+    if (retry) {
+      retry.classList.remove('hidden');
+      retry.addEventListener('click', () => window.location.reload(), { once: true });
+    }
     if (loadingText) {
       const details = error instanceof Error ? error.message : String(error);
       loadingText.textContent = `Перезапусти приложение · ${details.slice(0, 90)}`;

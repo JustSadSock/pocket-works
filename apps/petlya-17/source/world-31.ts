@@ -7,7 +7,8 @@ import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
 import { TrackModel } from './track-model';
-import { buildFallbackTrackWorld, buildTrackWorld } from './world-track';
+import { buildFallbackTrackWorld } from './world-track';
+import { buildCircuit32 } from './circuit-32';
 import { VisualRig, type CarVisual, type CockpitMotion } from './world-visuals';
 
 export class RaceWorld {
@@ -19,6 +20,7 @@ export class RaceWorld {
   readonly shadows: ShadowGenerator;
   readonly visuals: VisualRig;
 
+  private previewCar: CarVisual | null = null;
   private frameCounter = 0;
   private fpsAccumulator = 0;
   private fpsTimer = 0;
@@ -34,12 +36,12 @@ export class RaceWorld {
     this.setQuality(quality);
 
     this.scene = new Scene(this.engine);
-    this.scene.clearColor = new Color4(0.075, 0.1, 0.09, 1);
+    this.scene.clearColor = new Color4(0.66, 0.76, 0.73, 1);
     this.scene.fogMode = Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = 0.0038;
-    this.scene.fogColor = new Color3(0.46, 0.56, 0.54);
-    this.scene.imageProcessingConfiguration.contrast = 1.2;
-    this.scene.imageProcessingConfiguration.exposure = 1.03;
+    this.scene.fogDensity = 0.0018;
+    this.scene.fogColor = new Color3(0.69, 0.78, 0.75);
+    this.scene.imageProcessingConfiguration.contrast = 1.12;
+    this.scene.imageProcessingConfiguration.exposure = 1.04;
 
     this.camera = new UniversalCamera('cockpit-camera', new Vector3(), this.scene);
     this.camera.inputs.clear();
@@ -57,17 +59,17 @@ export class RaceWorld {
     this.rearCamera.layerMask = 0x1;
 
     const sky = new HemisphericLight('sky-light', new Vector3(0.2, 1, 0.15), this.scene);
-    sky.intensity = 0.7;
-    sky.diffuse = new Color3(0.78, 0.85, 0.82);
-    sky.groundColor = new Color3(0.14, 0.12, 0.1);
+    sky.intensity = 0.93;
+    sky.diffuse = new Color3(0.85, 0.93, 0.98);
+    sky.groundColor = new Color3(0.3, 0.27, 0.22);
 
     const sun = new DirectionalLight('sun', new Vector3(-0.45, -1, 0.28), this.scene);
     sun.position = new Vector3(120, 180, -120);
-    sun.intensity = 1.7;
-    sun.diffuse = new Color3(1, 0.87, 0.65);
+    sun.intensity = 1.18;
+    sun.diffuse = new Color3(1, 0.89, 0.71);
     this.shadows = new ShadowGenerator(1024, sun);
     this.shadows.useBlurExponentialShadowMap = true;
-    this.shadows.blurKernel = 18;
+    this.shadows.blurKernel = 6;
     this.shadows.bias = 0.0008;
     this.shadows.normalBias = 0.03;
 
@@ -76,7 +78,7 @@ export class RaceWorld {
 
   build(): void {
     try {
-      buildTrackWorld(this.scene, this.track, this.shadows);
+      buildCircuit32(this.scene, this.track);
     } catch (error) {
       console.error('[ПЕТЛЯ 17] Сборка мира завершилась ошибкой; включён резервный контур.', error);
       buildFallbackTrackWorld(this.scene, this.track);
@@ -95,6 +97,26 @@ export class RaceWorld {
     }
 
     this.visuals.initializeCamera();
+    try {
+      this.previewCar = this.visuals.createCar('cover-car', new Color3(0.90, 0.31, 0.14), new Color3(0.99, 0.86, 0.58), 17, this.shadows);
+      this.visuals.placeCar(this.previewCar, 23, -0.3, 0, 0, 0, 0);
+      this.previewCar.root.setEnabled(false);
+    } catch (error) {
+      console.warn('[ПЕТЛЯ 17] Preview car unavailable.', error);
+    }
+  }
+
+  setMenuView(): void {
+    this.previewCar?.root.setEnabled(true);
+  }
+
+  updatePreview(delta: number): void {
+    this.visuals.updatePreview(delta);
+  }
+
+  setRacingView(): void {
+    this.previewCar?.root.setEnabled(false);
+    this.visuals.setRacingView();
   }
 
   createCar(name: string, color: Color3, stripe: Color3, index: number): CarVisual {

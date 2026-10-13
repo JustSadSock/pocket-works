@@ -13,6 +13,8 @@ test('ПЕТЛЯ 17 loads WebGL, accelerates and exposes live handling state', a
   await openStablePage(page, '/apps/petlya-17/', '#practice');
   await expect(page.locator('#loading')).toHaveClass(/hidden/, { timeout: 25_000 });
   await expect(page.locator('#menu')).toBeVisible();
+  await expect.poll(() => page.locator('html').getAttribute('data-track-ready')).toBe('true');
+  await expect(page.locator('path#mapRoad')).toHaveAttribute('d', /M[\d.]+/);
 
   const renderer = await page.locator('#renderCanvas').evaluate((canvas: HTMLCanvasElement) => {
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
@@ -44,6 +46,7 @@ test('ПЕТЛЯ 17 loads WebGL, accelerates and exposes live handling state', a
   await expect(page.locator('#controls')).toBeVisible();
   await expect(page.locator('#pauseButton')).toBeVisible();
   await expect(page.locator('#renderCanvas')).toBeVisible();
+  await expect(page.locator('#minimap')).toBeVisible();
 
   await page.waitForTimeout(4200);
   await page.keyboard.down('KeyW');
