@@ -1,0 +1,20 @@
+{
+  "id": "/apps/dvor-football/",
+  "name": "ДВОР",
+  "short_name": "ДВОР",
+  "description": "Мультяшный футбольный симулятор 4×4: пятиминутные матчи, физика мяча, собственный футболист и интернет-комнаты PocketNet до 8 игроков.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e9e2c9",
+  "theme_color": "#e9e2c9",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
