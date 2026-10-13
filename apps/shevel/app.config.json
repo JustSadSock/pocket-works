@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "slug": "shevel",
+  "name": "ШЕВЕЛЬ",
+  "shortName": "ШЕВЕЛЬ",
+  "description": "Карманная анимационная мастерская: рисуй кадры, задавай движение ключами и сгибай рисунки вручную расставленными суставами.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-14",
+  "releaseDateTime": "2026-10-14T00:00:00+03:00",
+  "changelog": [
+    "Первая версия мастерской: покадровые рисунки и интерполяция ключевых кадров.",
+    "Универсальные управляющие суставы, сжатие, растяжение и настройка движения.",
+    "Адаптивный редактор для телефона и компьютера, локальные проекты, экспорт GIF и PNG."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#cf683a",
+  "backgroundColor": "#20282a",
+  "themeColor": "#20282a",
+  "orientation": "any",
+  "cacheName": "shevel-v1.0.0",
+  "storageNamespace": "pocket-works:shevel",
+  "tags": [
+    "PWA",
+    "offline",
+    "creative",
+    "animation",
+    "drawing",
+    "timeline",
+    "keyframes",
+    "rigging",
+    "canvas"
+  ],
+  "order": 96
+}

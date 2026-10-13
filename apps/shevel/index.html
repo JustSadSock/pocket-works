@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#20282a"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="ШЕВЕЛЬ">
+<title>ШЕВЕЛЬ — анимационная мастерская</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main class="shell app-shell" data-app-shell data-keyboard-aware>
+<header class="head" data-ui>
+  <a href="../../" class="back" data-app-control data-native-press aria-label="В Pocket Works">‹ <span>POCKET WORKS</span></a>
+  <div class="brand"><div class="brandmark"><span></span><span></span><span></span></div><strong>ШЕВЕЛЬ</strong></div>
+  <div class="head-actions"><span id="saveState" class="save-state" aria-live="polite">Сохранено</span><button type="button" class="iconbtn" id="undoBtn" aria-label="Отменить" title="Отменить (Ctrl+Z)">↶</button><button type="button" class="iconbtn" id="redoBtn" aria-label="Повторить" title="Повторить (Ctrl+Y)">↷</button><button type="button" class="export-btn" id="exportBtn">Экспорт <span>↗</span></button></div>
+</header>
+<div class="workspace">
+  <nav class="tools" aria-label="Режим редактора" data-ui>
+    <button data-tool="select" class="tool active" aria-pressed="true" title="Выделить / двигать (V)"><span class="glyph">⌖</span><span>Двигать</span></button>
+    <button data-tool="draw" class="tool" aria-pressed="false" title="Рисовать (D)"><span class="glyph">✎</span><span>Рисовать</span></button>
+    <button data-tool="rig" class="tool" aria-pressed="false" title="Суставы (J)"><span class="glyph">⌁</span><span>Суставы</span></button>
+    <button data-tool="erase" class="tool" aria-pressed="false" title="Ластик (E)"><span class="glyph">⌫</span><span>Ластик</span></button>
+    <span class="tool-gap"></span>
+    <button class="tool utility" id="newObjectBtn" title="Добавить пустой объект"><span class="glyph">＋</span><span>Объект</span></button>
+    <button class="tool utility" id="duplicateBtn" title="Дублировать выбранный объект"><span class="glyph">⧉</span><span>Копия</span></button>
+  </nav>
+  <section class="editing" aria-label="Холст анимации">
+    <div class="stagehead" data-ui>
+      <div class="scene-title"><span class="stage-led"></span><input id="projectName" maxlength="46" aria-label="Название проекта" value="Гусь и мяч" spellcheck="false"></div>
+      <div class="stagehead-right"><span id="objectLabel">Гусь</span><span class="divider-mark">/</span><span id="stageInfo">12 FPS</span></div>
+    </div>
+    <div class="stagewell">
+      <div class="canvaswrap" id="canvasWrap" data-gesture-surface data-block-callout>
+        <canvas id="stage" aria-label="Редактор анимации: выберите рисунок, нарисуйте штрих или добавьте сустав"></canvas>
+        <div class="zoom-deck" data-ui><button id="zoomOut" title="Уменьшить" aria-label="Уменьшить масштаб">−</button><button id="zoomExpand" title="Показать управление масштабом" aria-label="Показать управление масштабом" aria-expanded="false"><span id="zoomText">100%</span></button><button id="zoomIn" title="Увеличить" aria-label="Увеличить масштаб">＋</button><button id="zoomReset" title="Масштаб 100%" aria-label="Сброс масштаба">⊙</button><button id="focusBtn" title="Развернуть холст" aria-label="Развернуть холст" aria-pressed="false">⤢</button></div><div class="stage-corner top-left"></div><div class="stage-corner top-right"></div><div class="stage-corner bottom-left"></div><div class="stage-corner bottom-right"></div>
+        <div class="mode-hint" id="modeHint">Перетащи рисунок, чтобы создать ключ</div>
+      </div>
+    </div>
+    <div class="contextbar" data-ui>
+      <div class="mode-data"><span class="mode-dot"></span><strong id="modeTitle">ПЕРЕМЕЩЕНИЕ</strong><small id="modeSubtitle">На выбранном кадре</small></div>
+      <div class="mode-controls" id="drawControls" hidden>
+        <label class="color-label" title="Цвет карандаша">Цвет <input id="drawColor" type="color" value="#303c3d"></label>
+        <label class="compact-field">Толщина <input id="drawSize" type="range" min="2" max="30" value="8"></label>
+        <button class="smallbutton" id="onionBtn" aria-pressed="true">Контуры: вкл</button>
+      </div>
+      <div class="mode-controls" id="selectControls"><button class="primary-compact" id="actionBtn">→ Действие</button><button class="smallbutton" id="rotationBtn">Повернуть +15°</button></div>
+      <div class="mode-controls" id="rigControls" hidden><button class="smallbutton" id="resetRigBtn">Сбросить позу</button><button class="smallbutton" id="deleteRigBtn">Удалить сустав</button></div>
+      <div class="mode-controls" id="eraseControls" hidden><span class="control-note">Коснись линии, чтобы удалить её</span></div>
+    </div>
+  </section>
+  <aside class="inspector" data-ui aria-label="Параметры">
+    <div class="inspector-head"><span>ПАРАМЕТРЫ</span><button id="closeInspector" type="button" class="inspector-x" aria-label="Закрыть параметры">×</button></div>
+    <div class="properties" id="properties">
+      <div class="property-title"><strong id="selectedName">Гусь</strong><span id="keyState">Ключ · 1</span></div>
+      <div class="prop-group"><div class="section-label">Трансформация</div>
+        <div class="prop-grid"><label>X <input data-prop="x" type="number" step="1"></label><label>Y <input data-prop="y" type="number" step="1"></label><label>Угол <input data-prop="r" type="number" step="1"></label><label>Масштаб <input data-prop="scale" type="number" min="10" max="400" step="1"></label></div>
+        <label class="prop-line">Переход <select id="easeSelect"><option value="smooth">Плавный</option><option value="linear">Ровный</option><option value="snap">Рывок</option><option value="hold">Без интерполяции</option></select></label>
+      </div>
+      <div class="prop-group"><div class="section-label">Мультяшная пластика</div>
+        <label class="range-line"><span>Сжатие / растяжение</span><output id="squashValue">0%</output><input id="squashInput" type="range" min="0" max="100" step="5" value="0"></label>
+        <p class="inspector-note">Реагирует на скорость, не меняя исходный рисунок.</p>
+      </div>
+      <div class="prop-group"><div class="section-label">Покадровка</div><div class="two-buttons"><button id="copyCelBtn">Копия кадра</button><button id="blankCelBtn">Чистый кадр</button></div></div>
+      <button class="danger-line" id="deleteObjectBtn">Удалить объект</button>
+    </div>
+  </aside>
+</div>
+<section class="timeline" aria-label="Монтажная шкала" data-ui>
+  <div class="playbar">
+    <div class="transport"><button id="prevBtn" aria-label="Предыдущий кадр" title="←">|‹</button><button id="playBtn" class="playkey" aria-label="Воспроизвести">▶</button><button id="nextBtn" aria-label="Следующий кадр" title="→">›|</button></div>
+    <div class="time-readout"><strong id="timeValue">00:00.00</strong><span id="frameValue">001 / 072</span></div>
+    <button id="loopBtn" class="loop active" aria-pressed="true" title="Зациклить">↻ <span>Цикл</span></button>
+    <button id="framesBtn" class="timeline-settings" title="Параметры проекта">12 FPS · 72 К</button>
+    <button id="mobileProperties" class="properties-mobile">Параметры ↑</button>
+  </div>
+  <div class="timeline-body">
+    <div class="track-names"><div class="ruler-name">ОБЪЕКТЫ</div><div id="trackNames"></div></div>
+    <div class="track-right" id="trackRight"><div class="ruler" id="ruler"><div id="rulerTicks"></div><i id="rulerHead" class="ruler-head"></i></div><div id="tracks"></div></div>
+  </div>
+</section>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="veil" id="veil" hidden>
+  <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+    <div class="dialog-header"><strong id="dialogTitle">Действие</strong><button id="modalClose" aria-label="Закрыть">×</button></div>
+    <div id="modalBody"></div>
+  </section>
+</div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ШЕВЕЛЬ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
