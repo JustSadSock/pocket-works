@@ -9,7 +9,7 @@ const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8')
 const transpiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={};
 runInNewContext(transpiled,{exports,Date:ControlledDate,Math,Array,Number,Object,Error,JSON,Set,Map,console});
-assert.equal(exports.RULESET_VERSION,10);
+assert.equal(exports.RULESET_VERSION,11);
 const module=exports.default,host={id:'host',name:'Host'},guest={id:'guest',name:'Guest'},players=[host,guest];
 function setup(){
  const state=module.createRoom({player:host}).state;
@@ -47,7 +47,7 @@ for(const seconds of [60,90,120,160,240,300]){
  assert.equal(state.phase,'drawing');
  assert.equal(state.deadline-current,seconds*1000,'second round keeps same duration');
 }
-for(const invalid of [0,-1,45,360,600,NaN,'invalid']){
+for(const invalid of [-1,45,360,600,NaN,'invalid',null]){
  const {state,message}=setup();message(host,{type:'start',rounds:1,drawingSeconds:invalid});
  assert.equal(state.drawingSeconds,160,'invalid duration falls back to 2:40');
 }
@@ -56,7 +56,38 @@ defaultMessage(guest,{type:'start',rounds:1,drawingSeconds:300});
 assert.equal(defaultState.phase,'lobby','guest cannot change the rules or start');
 defaultMessage(host,{type:'start',rounds:1});
 assert.equal(defaultState.drawingSeconds,160,'legacy client falls back to 2:40');
+// Zero is an intentional rule, not a missing setting or 2:40 fallback.
+current=10_000;
+const untimed=setup(),U=untimed.state,M=untimed.message;
+M(host,{type:'start',rounds:3,drawingSeconds:0});
+assert.equal(U.drawingSeconds,0,'curator chose unlimited');
+current=U.deadline+1;M(host,{type:'pulse'});
+assert.equal(U.phase,'drawing');assert.equal(U.deadline,0,'no drawing deadline is installed');
+const uv=M(guest,{type:'sync'}).events[0].payload;
+assert.equal(uv.drawingSeconds,0,'unlimited duration survives server view serialization');
+current+=86_400_000;M(host,{type:'pulse'});
+assert.equal(U.phase,'drawing','no timeout after an entire day');
+M(host,{type:'submit',strokes:[]});
+assert.equal(U.phase,'drawing','the first player cannot finish the round alone');
+assert.deepEqual(JSON.stringify(M(host,{type:'sync'}).events[0].payload.done),JSON.stringify(['host']));
+M(host,{type:'submit',strokes:[]});
+assert.equal(U.phase,'drawing','duplicate confirmation does not advance');
+M(guest,{type:'submit',strokes:[]});
+assert.equal(U.phase,'voting','last confirmed submission advances immediately');
+for(let i=0;i<players.length;i++){
+ current=U.deadline+1;M(host,{type:'pulse'});
+ current=U.deadline+1;M(host,{type:'pulse'});
+}
+assert.equal(U.phase,'round-review');
+M(host,{type:'continue'});
+assert.equal(U.round,2);
+current=U.deadline+1;M(host,{type:'pulse'});
+assert.equal(U.phase,'drawing');assert.equal(U.deadline,0,'unlimited duration persists for all rounds');
+
 const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 assert.match(ui,/id="drawingSeconds"/,'curator has a drawing duration control');
+assert.match(ui,/id="soloDrawingSeconds"/,'solo duration setting exists');
+assert.match(ui,/practice\.deadline>0/,'zero-deadline solo mode never advances from a timer');
+assert.match(ui,/view\.phase!=='drawing'\|\|!view\.deadline/,'zero-deadline online mode cannot auto-submit');
 assert.match(ui,/drawingSeconds:Number\(screen\.querySelector\('#drawingSeconds'\)/,'client sends selected duration');
-console.log('ZAMAZKA: six host duration presets, guest guard, invalid fallback, reconnect and multi-round timing OK');
+console.log('ZAMAZKA: six timed presets, untimed all-player confirmation, solo duration, invalid fallback, and multi-round rules OK');

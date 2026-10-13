@@ -212,14 +212,14 @@ function queueDraft(){
 }
 function stopEditor(){clearTimeout(draftDelay);draftDelay=null;if(editor){editor.dispose();editor=null}}
 function autoFinishOnDeadline(){
- if(!editor||practice||page!=='drawing'||!view||view.phase!=='drawing'||view.done?.includes(me?.id))return;
+ if(!editor||practice||page!=='drawing'||!view||view.phase!=='drawing'||!view.deadline||view.done?.includes(me?.id))return;
  if(Date.now()<view.deadline-1900)return;
  const token=submissionToken(view.mine,view.round);
  if(autoSubmitted===token||pendingSubmit?.token===token)return;
  submitArtwork({automatic:true});
 }
 function change(html,which){if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}if(page!==which)closeDialog();museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();page=which;lastUiKey='';screen.innerHTML=html;screen.scrollTop=0}
-const head=(phase,title,until,context='')=>'<div class="phase-head"><div><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2>'+(context?'<div class="art-head-context">'+context+'</div>':'')+'</div><div class="timer" id="clock">'+(until?'…':'')+'</div></div>';
+const head=(phase,title,until,context='',untimed=false)=>'<div class="phase-head"><div><div class="eyebrow">'+esc(phase)+'</div><h2>'+esc(title)+'</h2>'+(context?'<div class="art-head-context">'+context+'</div>':'')+'</div><div class="timer" id="clock">'+(untimed?'Без лимита':until?'…':'')+'</div></div>';
 function artFactsHtml(id){
  const art=ARTS[id];if(!art)return '';
  const identity=[art.artist,art.date].filter(Boolean).map(esc).join(' · ');
@@ -267,7 +267,17 @@ function setup(mode,error='',roomValue=invitedRoom){
 }
 let roundsChoice=3;
 let drawingSecondsChoice=160;
-const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут']];
+const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[0,'Без ограничения']];
+const DURATION_VALUES=DRAWING_TIME_OPTIONS.map(([seconds])=>seconds);
+const SOLO_DURATION_KEY=NS+'solo-drawing-seconds';
+const normalizedDuration=value=>value!==''&&value!=null&&DURATION_VALUES.includes(Number(value))?Number(value):160;
+let soloDrawingSecondsChoice=normalizedDuration(localStorage.getItem(SOLO_DURATION_KEY)??160);
+const durationOptionsHtml=selected=>DRAWING_TIME_OPTIONS.map(([seconds,label])=>'<option value="'+seconds+'" '+(selected===seconds?'selected':'')+'>'+label+'</option>').join('');
+function practiceSettings(){
+ modal('Одиночная реставрация','<label class="field" for="soloDrawingSeconds">Время рисования</label><select class="input" id="soloDrawingSeconds">'+durationOptionsHtml(soloDrawingSecondsChoice)+'</select><p class="hint">Без ограничения: закончи реставрацию кнопкой «Сдать работу».</p>',[
+  ['Начать',()=>{soloDrawingSecondsChoice=normalizedDuration(dialog.querySelector('#soloDrawingSeconds')?.value);try{localStorage.setItem(SOLO_DURATION_KEY,String(soloDrawingSecondsChoice))}catch{}closeDialog();newPractice()},'primary'],
+  ['Отмена',closeDialog,'ghost']]);
+}
 function lobby(){
  if(!view||!roomId)return;
  const players=view.participants||[],leader=view.host===me?.id,code=inviteCode(roomId);
@@ -277,7 +287,7 @@ function lobby(){
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Отправить ссылку ↗</button>'+(isPocketMember()?'<button class="btn ghost" type="button" data-social-invite data-room-id="'+esc(roomId)+'">Позвать друзей Pocket ID</button>':'')+'</div></div>'+
   '<div class="lobby-list-heading"><span class="section-label">ИГРОКИ · '+players.length+'/8</span><span>'+(leader?'Ты — куратор':'Ожидаем куратора')+'</span></div>'+
   '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+pocketPlayerBadge(p)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
-  (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Эта комната создана до появления общего холста. Для совместного рисования открой новую комнату.</div>')+'<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+DRAWING_TIME_OPTIONS.map(([seconds,label])=>'<option value="'+seconds+'" '+(drawingSecondsChoice===seconds?'selected':'')+'>'+label+'</option>').join('')+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
+  (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Эта комната создана до появления общего холста. Для совместного рисования открой новую комнату.</div>')+'<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+durationOptionsHtml(drawingSecondsChoice)+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
   '<button class="btn ghost" data-action="leave">Покинуть комнату</button></div></section>';
  if(page==='lobby'&&commonsBoard){
    const future=document.createElement('div');future.innerHTML=markup;
@@ -377,7 +387,7 @@ function drawing(local=false){
   const v=local?practice:view,ass=v.mine;
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
-  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art))+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div><div class="picker-preview" id="pickerPreview" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 100</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art),v.drawingSeconds===0)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div><div class="picker-preview" id="pickerPreview" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Линий: 0 / 100</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
   editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onPersistenceError:()=>notify('Не удалось сохранить черновик: проверь место в браузере.'),onSound:event=>sound(event,true),onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Лимит точек или линий · отмените штрих':'Линий: '+n+' / 100';if(n>=0)queueDraft()}});
   if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
   const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Линий: '+editor.strokes.length+' / 100';
@@ -393,7 +403,7 @@ function drawing(local=false){
 function waiting(){
  const v=view,ass=v?.mine;if(!v||!ass)return;
  const finished=v.done||[],players=v.participants||[];
- change('<section class="phase-page waiting-phase">'+head('РАУНД '+v.round+' · РАБОТА СДАНА','Твой шедевр в музее',v.deadline,artFactsHtml(ass.art))+
+ change('<section class="phase-page waiting-phase">'+head('РАУНД '+v.round+' · РАБОТА СДАНА','Твой шедевр в музее',v.deadline,artFactsHtml(ass.art),v.drawingSeconds===0)+
  '<div class="phase-body waiting-layout"><div class="waiting-work">'+
  '<h3>'+esc(ARTS[ass.art]?.title||'Твоя работа')+'</h3><p class="phase-directive">Двигай ползунок, чтобы сравнить с оригиналом.</p>'+
  '<div class="unveil-frame" id="unveilStage" style="--split:50%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Моя реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Оригинальная картина"></canvas><span class="unveil-label left">МОЯ РАБОТА</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
@@ -526,10 +536,10 @@ function openArchive(index){
  openRoundViewer({index,view:archived,dialog,renderArtwork,arts:ARTS,esc,closeDialog,onNavigate:next=>openArchive(next)});
 }
 function saveArtwork(art,variation,strokes){saved=[{art,variation,strokes,time:Date.now(),edition:3},...saved].slice(0,96);try{localStorage.setItem(GALLERY_KEY,JSON.stringify(saved));zamazkaCloud?.schedule();return true}catch{notify('Архив не сохранился: хранилище заполнено. Работа остаётся открытой во вкладке.');return false}}
-function persistPractice(){if(practice)try{localStorage.setItem(PRACTICE_KEY,JSON.stringify({phase:practice.phase,round:practice.round,rounds:practice.rounds,selected:practice.selected,deadline:practice.deadline,mine:practice.mine,strokes:practice.strokes,edition:3}))}catch{notify('Черновик тренировки не записан: проверь хранилище браузера')}}
-function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preparing',round:1,rounds:1,selected,deadline:0,mine:{art:selected[Math.floor(Math.random()*5)],variation:Math.floor(Math.random()*0xffffffff)},strokes:[]};preparedRound='';persistPractice();preparing(true)}
-function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;if(p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
-function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=Date.now()+160000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
+function persistPractice(){if(practice)try{localStorage.setItem(PRACTICE_KEY,JSON.stringify({phase:practice.phase,round:practice.round,rounds:practice.rounds,selected:practice.selected,deadline:practice.deadline,drawingSeconds:practice.drawingSeconds,mine:practice.mine,strokes:practice.strokes,edition:3}))}catch{notify('Черновик тренировки не записан: проверь хранилище браузера')}}
+function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preparing',round:1,rounds:1,selected,deadline:0,drawingSeconds:soloDrawingSecondsChoice,mine:{art:selected[Math.floor(Math.random()*5)],variation:Math.floor(Math.random()*0xffffffff)},strokes:[]};preparedRound='';persistPractice();preparing(true)}
+function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;practice.drawingSeconds=normalizedDuration(p.drawingSeconds??160);if(p.deadline>0&&p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
+function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=practice.drawingSeconds===0?0:Date.now()+practice.drawingSeconds*1000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
 let previousVisualPhase='',lastPhaseCue='';
 function renderView(){
@@ -731,7 +741,7 @@ screen.addEventListener('click',e=>{
  else if(action==='museum-next')shiftMuseum(1);
  else if(action==='museum-prev')shiftMuseum(-1);
  else if(action==='board-clear')modal('Очистить общий холст?','<p class="hint">Рисунки всех участников исчезнут без возможности восстановления.</p>',[['Очистить',()=>{closeDialog();try{net?.sendGame({type:'board_clear'})}catch{notify('Нет связи с комнатой')}},'primary'],['Отмена',closeDialog,'ghost']]);
- else if(action==='practice')newPractice();
+ else if(action==='practice')practiceSettings();
  else if(action==='retry-gallery')home();
  else if(action==='retry-art-preload')void prepareRoundImages(Boolean(practice),true);
  else if(action==='resume')resumePractice();
@@ -741,7 +751,7 @@ screen.addEventListener('click',e=>{
  else if(action==='connect')connect(b.dataset.mode);
  else if(action==='share')share();
  else if(action==='copy-code')copyText(inviteCode(roomId),'Код комнаты скопирован');
- else if(action==='start')net?.sendGame({type:'start',preload:true,rounds:Number(screen.querySelector('#rounds')?.value||3),drawingSeconds:Number(screen.querySelector('#drawingSeconds')?.value||160)});
+ else if(action==='start')net?.sendGame({type:'start',preload:true,rounds:Number(screen.querySelector('#rounds')?.value||3),drawingSeconds:Number(screen.querySelector('#drawingSeconds')?.value??160)});
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
  else if(action==='submit')doSubmit();
@@ -753,7 +763,7 @@ screen.addEventListener('click',e=>{
 let lastClockCue='';
 function tick(){
  if(pendingVote)attemptVote();
- if(practice&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
+ if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
  autoFinishOnDeadline();
  const v=practice||view,clock=document.querySelector('#clock');
  if(clock&&v?.deadline){
@@ -773,7 +783,7 @@ screen.addEventListener('pointerup',e=>{if(!museumSwipe||e.pointerId!==museumSwi
 screen.addEventListener('pointercancel',()=>museumSwipe=null);
 screen.addEventListener('wheel',e=>{if(page!=='home'||!e.target.closest('.museum-display'))return;e.preventDefault();if(Math.abs(e.deltaY)<4&&Math.abs(e.deltaX)<4)return;if(Date.now()-lastMuseumWheel<85)return;lastMuseumWheel=Date.now();shiftMuseum((Math.abs(e.deltaY)>Math.abs(e.deltaX)?e.deltaY:e.deltaX)>0?1:-1)},{passive:false});
 document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();shiftMuseum(e.key==='ArrowRight'?1:-1)}});
-screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=Number(e.target.value)||160});
+screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=normalizedDuration(e.target.value)});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
 setInterval(tick,350);
 setInterval(()=>{
