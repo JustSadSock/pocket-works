@@ -26,3 +26,22 @@ export function sendPainting(send,meta){
  for(const packet of packets)send(packet);
  return {revision:packets[0].revision,parts:packets.length};
 }
+
+// PocketNet throttles WebSocket messages at 30/second. Paintings of 300+
+// strokes require dozens of chunks: blasting them synchronously deterministically
+// trips the limit, and repeating the burst cannot succeed. Leave headroom for
+// presence, sync and timer traffic. The caller owns cancellation / retries.
+export function sendPaintingPaced(send,meta,{intervalMs=95,signal,onProgress=()=>{}}={}){
+ const packets=paintPackets(meta);
+ const delay=Math.max(80,Number(intervalMs)||95);
+ const completion=(async()=>{
+  for(let i=0;i<packets.length;i++){
+   if(signal?.aborted)throw new Error('paint_transfer_cancelled');
+   if(i)await new Promise(resolve=>setTimeout(resolve,delay));
+   if(signal?.aborted)throw new Error('paint_transfer_cancelled');
+   send(packets[i]);
+   onProgress(i+1,packets.length);
+  }
+ })();
+ return {revision:packets[0].revision,parts:packets.length,completion};
+}
