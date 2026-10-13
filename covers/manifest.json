@@ -124,5 +124,131 @@
     "status": "published",
     "lastAttemptRevision": "068746e7a244079a79b487c512e955f9f099a211",
     "lastAttemptAt": "2026-10-13T10:38:24.015Z"
+  },
+  "veshchestvo": {
+    "revision": "46e46c58ac7ab6c35f6925ff4f60153d00407fbd",
+    "qualityScore": 82,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "63e0bddb2fe4666cc3717192a5826c5f1cf70b28cc8ef401375ca01ef0464726",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "46e46c58ac7ab6c35f6925ff4f60153d00407fbd",
+    "lastAttemptAt": "2026-10-13T10:45:15.555Z"
+  },
+  "chush": {
+    "revision": "48a10b11609fafea08535fba252b475e71809170",
+    "qualityScore": 83,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "73ef1e669c9ee064e4e4d1d5c08a95900263af25547b12d4a441341f2dbeea0b",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "48a10b11609fafea08535fba252b475e71809170",
+    "lastAttemptAt": "2026-10-13T10:45:26.457Z"
+  },
+  "folio": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
+    "lastAttemptAt": "2026-10-13T10:45:37.242Z"
+  },
+  "flagpost": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
+    "lastAttemptAt": "2026-10-13T10:45:48.066Z"
+  },
+  "jam-tape": {
+    "revision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
+    "qualityScore": 75,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "5f7f1628d35eee89c5700a24b8c3335d38fbc0e5c71d5208516c032cde8061a5",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
+    "lastAttemptAt": "2026-10-13T10:45:58.938Z"
+  },
+  "klyatvy": {
+    "revision": "9c2ced319a4771dfe3e073907c528eff1099fe5c",
+    "qualityScore": 66,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "bfa580b4f0114cc3d37b4cf1cc227b25f80bc606dfe3b08fe4b73e5b98eac768",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "9c2ced319a4771dfe3e073907c528eff1099fe5c",
+    "lastAttemptAt": "2026-10-13T10:46:09.738Z"
+  },
+  "ne-moya-problema": {
+    "revision": "1e1bf85d83537da7f37563aa3bdb4a2a4456c254",
+    "qualityScore": 84,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "05362401644170f2e6118d92d575ac6734ebca6706f2f649c7373c00ac14f3dd",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "1e1bf85d83537da7f37563aa3bdb4a2a4456c254",
+    "lastAttemptAt": "2026-10-13T10:46:20.553Z"
+  },
+  "last-raven": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "022e7495cf6585eed5466b81904bfafcdf8f1659",
+    "lastAttemptAt": "2026-10-13T10:46:34.915Z"
+  },
+  "doctrina": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 71,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "56820e093f11094daa961136fa08723d49d53124423c29250f64d804f88d2d69",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T10:46:45.846Z"
+  },
+  "gerbovnik": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "90c0c447bec9a473658ca77362db56f1c901ad3364aa6f636a7c6b032ce095f9",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T10:46:56.694Z"
+  },
+  "pyad": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 80,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f8163656154037ea4ac5e5503266637521249cbce30a54977e8a9a55df9f56c8",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T10:47:07.619Z"
+  },
+  "defixio": {
+    "revision": "e7eefde739177d06760d215d009f54b54b06960c",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "f2a3f3341bebe36c85e995c311ace9a650a0899ce73960a1390982bbc4267fb1",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "e7eefde739177d06760d215d009f54b54b06960c",
+    "lastAttemptAt": "2026-10-13T10:47:18.549Z"
   }
 }
