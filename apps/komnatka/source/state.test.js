@@ -59,3 +59,23 @@ test('wall decor remains on a back or left surface',()=>{
  assert.equal(valid(s,frame),true);
  assert.equal(valid(s,{...frame,x:3.8}),false);
 });
+
+test('desk lamps fit in tabletop corners without requiring the centre',()=>{
+ const state={items:[{id:'table',type:'coffee',x:0,z:0,rot:0}]};
+ const lamp={id:'lamp',type:'tablelamp',x:.5,z:.25,rot:0,support:'table',y:.72};
+ assert.equal(findSupport(state,lamp,lamp.x,lamp.z)?.id,'table');
+ assert.equal(valid(state,lamp),true);
+ const cup={id:'cup',type:'mug',x:-.625,z:-.375,rot:0,support:'table',y:.72};
+ assert.equal(valid(state,cup),true);
+ state.items.push(lamp);
+ assert.equal(valid(state,{...lamp,id:'second',x:.5,z:.25}),false,'overlapping lamps must still be rejected');
+});
+test('thin rugs remain valid below furniture and furniture blocks furniture',()=>{
+ const state={items:[
+  {id:'carpet',type:'rug',x:0,z:0,rot:0},
+  {id:'chair',type:'chair',x:.25,z:.25,rot:0}
+ ]};
+ assert.equal(valid(state,state.items[0]),true);
+ assert.equal(valid(state,state.items[1]),true);
+ assert.equal(valid(state,{id:'duplicate-chair',type:'chair',x:.25,z:.25,rot:0}),false);
+});

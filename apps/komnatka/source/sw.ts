@@ -4,9 +4,9 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX='komnatka-';
-const APP_VERSION='0.1.1';
+const APP_VERSION='0.1.2';
 const RELEASE_DATE='2026-10-13';
-const RELEASE_NOTES=['Исправлены непрозрачность мебели и тени, улучшены листья, окно и обивка; цвет и поворот до размещения.'];
+const RELEASE_NOTES=['Мягкий день и настоящая ночь, устойчивые модели, тканый ковёр, освещающие лампы и фотографии мебели в каталоге.'];
 setCacheNameDetails({prefix:'komnatka',suffix:`v${APP_VERSION}`,precache:'precache',runtime:'runtime'});
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();

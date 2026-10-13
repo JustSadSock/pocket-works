@@ -93,3 +93,18 @@
  .placement-line .color-dot{width:20px;height:20px}
  .placement-instruction{margin-top:3px}
 }
+
+/* Light belongs to the diorama: overbright wash removed in both states. */
+.scene-stage{background:radial-gradient(ellipse 70% 68% at 53% 48%,#eadfd0 0%,#d8c9b9 72%,#c6b5a6 100%);transition:background .45s ease}
+.scene-stage.night{background:radial-gradient(ellipse 72% 75% at 54% 54%,#62576a 0%,#403b52 74%,#302e42 100%)}
+.sun-disc{opacity:.36;transition:opacity .45s}
+.scene-stage.night .sun-disc{opacity:0}
+.scene-stage.night .little-star{color:#d7bb9c;opacity:.28}
+.scene-stage.night .scene-caption{color:#f1d8be}
+.item-drawing{overflow:hidden}
+.item-drawing .actual-thumbnail{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;filter:drop-shadow(0 3px 2px #604c3930);image-rendering:auto}
+
+.drag-trash{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:86px;height:130px;color:#925d51;background:#f6e1d5e8;border:2px dashed #c89b8e;border-radius:17px;box-shadow:0 10px 30px #5e36321c;font-size:12px;font-weight:900;pointer-events:none;transition:transform .13s,background .13s,color .13s}
+.drag-trash svg{height:25px;width:25px}
+.drag-trash.hover{background:#b97768;color:#fff9ee;border-color:#b97768;transform:translateY(-50%) scale(1.06)}
+@media(max-width:840px){.drag-trash{right:8px;width:69px;height:112px;font-size:11px}}

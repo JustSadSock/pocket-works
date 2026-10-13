@@ -62,16 +62,16 @@ function wall(scene,mat,w,h,d,x,y,z,name) {
 }
 export function createRoom(scene) {
  const ambient=new HemisphericLight('cream-bounce',new Vector3(.35,1,.45),scene);
- ambient.intensity=.91;ambient.groundColor=hex('#998977');ambient.diffuse=hex('#fff4e6');
+ ambient.intensity=.59;ambient.groundColor=hex('#998977');ambient.diffuse=hex('#eedeca');
  const sun=new DirectionalLight('soft-windowlight',new Vector3(-.7,-1,-.56),scene);
- sun.position=new Vector3(10,17,10);sun.intensity=.74;sun.diffuse=hex('#fff0d5');
+ sun.position=new Vector3(10,17,10);sun.intensity=.43;sun.diffuse=hex('#fff0d5');
  const shadows=new ShadowGenerator(768,sun);
  shadows.usePercentageCloserFiltering=true;
  shadows.filteringQuality=ShadowGenerator.QUALITY_LOW;
  shadows.bias=.0025;shadows.normalBias=.025;
  scene.clearColor=new Color4(0,0,0,0);
- scene.imageProcessingConfiguration.contrast=1.08;
- scene.imageProcessingConfiguration.exposure=1.12;
+ scene.imageProcessingConfiguration.contrast=1.03;
+ scene.imageProcessingConfiguration.exposure=.87;
  const floorMat=wood(scene,'warm-oak','#c6a37b');
  const floor=rounded(scene,'floor',8.2,.28,8.2,.095,floorMat,null,0,-.14,0);
  floor.isPickable=true;floor.metadata={ground:true};floor.receiveShadows=true;
@@ -83,7 +83,8 @@ export function createRoom(scene) {
  rounded(scene,'back-crown',8.2,.10,.24,.04,trim,null,0,4.07,-3.98);
  rounded(scene,'left-crown',.24,.10,8.2,.04,trim,null,-3.98,4.07,0);
  back.receiveShadows=true;left.receiveShadows=true;
- const softLights=[];
+ const practicalLights=new Map();
+ let nightMode=false;
  function setShadowCasters(roots,items){
   const casts=[];
   for(const item of items){
@@ -112,14 +113,30 @@ export function createRoom(scene) {
   }
  }
  function setEvening(on) {
-  ambient.intensity=on?.56:.91;sun.intensity=on?.30:.74;
-  for(const l of softLights)l.intensity=on?l.metadata?.lit??0:0;
+  nightMode=Boolean(on);
+  ambient.intensity=nightMode?.105:.59;
+  sun.intensity=nightMode?.035:.43;
+  scene.imageProcessingConfiguration.exposure=nightMode?.75:.93;
+  for(const light of practicalLights.values())light.intensity=nightMode?1.65:.35;
  }
- function addPracticalLight(position,tabletop=false) {
-  const light=new PointLight('lamp-glow',position,scene);
-  light.diffuse=hex('#ffd9a1');light.range=tabletop?3.8:5.3;light.intensity=0;light.metadata={lit:tabletop?.38:.55};
-  softLights.push(light);return light;
+ function syncPracticalLights(items) {
+  const wanted=new Set();
+  for(const item of items){
+   if(item.type!=='floorlamp'&&item.type!=='tablelamp')continue;
+   wanted.add(item.id);
+   let light=practicalLights.get(item.id);
+   if(!light){
+    light=new PointLight('warm-lamp-'+item.id,Vector3.Zero(),scene);
+    light.diffuse=hex('#ffcf94');light.specular=hex('#e3af7d');
+    light.range=item.type==='tablelamp'?3.8:5.0;
+    practicalLights.set(item.id,light);
+   }
+   light.position.set(item.x,item.y+(item.type==='floorlamp'?2.0:.62),item.z);
+   light.intensity=nightMode?1.65:.35;
+  }
+  for(const [id,light] of practicalLights)if(!wanted.has(id)){
+   light.dispose();practicalLights.delete(id);
+  }
  }
- function clearLights(){for(const l of softLights)l.dispose();softLights.length=0;}
- return {floor,back,left,setFinish,setEvening,addPracticalLight,clearLights,setShadowCasters};
+ return {floor,back,left,setFinish,setEvening,syncPracticalLights,setShadowCasters};
 }
