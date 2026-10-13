@@ -91,6 +91,33 @@ h1,h2,p{margin:0}.home-content h1{font-family:ui-rounded,system-ui,sans-serif;fo
 @media (orientation: landscape) and (max-height: 620px) and (pointer: coarse),
        (orientation: landscape) and (max-height: 620px) and (hover: none) {
  .app-shell[data-keyboard-aware]{padding-bottom:0!important;height:100dvh;min-height:0;}
+ .menu .bar,.lobby .bar{height:38px;padding-top:2px;padding-bottom:2px;}
+ .menu .home-grid{
+  grid-template-columns:minmax(270px,.95fr) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  height:calc(100% - 38px);
+  padding:3px 11px 8px;
+  gap:13px;
+ }
+ .menu .home-content{gap:5px;justify-content:center;}
+ .menu .mark{display:none;}
+ .menu .home-content h1{font-size:clamp(38px,9.5vh,60px);}
+ .menu .tagline{font-size:11px;line-height:1.2;}
+ .menu .home-actions{gap:6px;}
+ .menu .home-actions .primary{min-height:37px;padding:6px 12px;font-size:13px;box-shadow:0 3px 0 var(--ink);}
+ .menu .home-actions .secondary{min-height:33px;padding:5px 12px;font-size:12px;}
+ .menu .home-actions .local{padding:4px;min-height:25px;font-size:11px;}
+ .menu .name-row{gap:5px;}
+ .menu .name-row label{font-size:10px;}
+ .menu .name-row input{font-size:16px;padding:5px 8px;}
+ .menu .menu-bottom{font-size:9px;}
+ .menu .cover-wrap{height:88%;min-height:0;}
+ .lobby .lobby-inner{max-height:calc(100% - 45px);overflow-y:auto;overflow-x:hidden;padding:7px 5px;}
+ .lobby .lobby-illustration{display:none;}
+ .lobby .lobby-inner h2{font-size:23px;}
+ .lobby .ticket{gap:5px;padding:6px;}
+ .lobby .ticket strong{font-size:26px;}
+
  .game{position:relative;display:block;height:100%;overflow:hidden;isolation:isolate;}
  .game .viewport{position:absolute;inset:0;width:100%;height:100%;min-height:0;display:block;z-index:0;}
  .game .viewport canvas{width:100%;height:100%;display:block;}
