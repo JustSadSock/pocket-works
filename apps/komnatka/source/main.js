@@ -13,13 +13,11 @@ import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.2.1',releaseNotes:['Главное меню трёх режимов, заново сплетённый овальный ковёр и освещение кукольной диорамы.']});
+registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.2.2',releaseNotes:['Переключение света больше не сбрасывает мебель; теперь лампы ярко светят ночью, а сцена остаётся пастельной.']});
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
-const coverCaptureMode=new URLSearchParams(location.search).has('pw-cover');
-if(coverCaptureMode)document.documentElement.classList.add('pw-cover-mode');
-let state=coverCaptureMode?starter():load(),scene,engine,camera,room,director,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
+let state=load(),scene,engine,camera,room,director,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
 const GROUPS=[['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
 let activeGroup='furniture',savedTimer=0,toastTimer=0;
@@ -487,6 +485,22 @@ function removeSelected(){
  state.items=removeWithChildren(state,selectedId);retireMissing(previous,state.items);
  selectedId=null;hideSelection();record(before);refresh();sound('delete');
 }
+function switchDollhouseLighting(){
+ if(online?.active&&!online.canEdit){
+  toast('Свет можно менять во время обустройства');
+  return;
+ }
+ // Important regression guard: an atmosphere change NEVER calls refresh(),
+ // reassigns item transforms, recreates meshes or resets pointer selection.
+ // All light animation is owned by room.tickLighting().
+ const before=JSON.stringify(state);
+ state.evening=!state.evening;
+ room.setEvening(state.evening);
+ record(before);
+ updateActions();
+ sound('light');
+ if(online?.active)online.send({type:'decorate',patch:{evening:state.evening}});
+}
 function addEvents(){
  ui.canvas.addEventListener('pointerdown',startPointer);
  ui.canvas.addEventListener('pointermove',movePointer);
@@ -505,7 +519,7 @@ function addEvents(){
  $('deleteBtn').addEventListener('click',removeSelected);
  $('doneBtn').addEventListener('click',()=>{selectedId=null;hideSelection();sound('select');});
  $('undoBtn').addEventListener('click',undo);$('redoBtn').addEventListener('click',redo);
- $('eveningBtn').addEventListener('click',()=>{mutate(()=>{state.evening=!state.evening;});if(online?.active&&online.canEdit)online.send({type:'decorate',patch:{evening:state.evening}});});
+ $('eveningBtn').addEventListener('click',switchDollhouseLighting);
  $('soundBtn').addEventListener('click',()=>{soundscape.toggle();updateActions();});
  $('photoBtn').addEventListener('click',()=>{
   try{const link=document.createElement('a');link.download='komnatka-'+new Date().toISOString().slice(0,10)+'.png';
@@ -569,27 +583,13 @@ function setup(){
    if(el.dataset.imageType===type)el.innerHTML='<img class="actual-thumbnail" src="'+src+'" alt="">';
   });
  }),500);
- if(!coverCaptureMode&&!localStorage.getItem('pocket-works:komnatka:intro')){
+ if(!localStorage.getItem('pocket-works:komnatka:intro')){
   ui.hint.textContent='Выбери мебель справа или перетащи предмет в комнате';
   ui.hint.classList.add('visible');setTimeout(()=>ui.hint.classList.remove('visible'),4800);
   try{localStorage.setItem('pocket-works:komnatka:intro','1');}catch{}
  }
  window.addEventListener('resize',resize);new ResizeObserver(resize).observe(ui.canvas);
- if(coverCaptureMode){
-  // Headless cover mode never reads players' saved rooms or joins online sessions.
-  // Every image remains a genuine render of the live Babylon.js room.
-  hideHome();resize();
-  window.PocketWorksCover={
-   async prepare({index=0}={}){
-    camera.alpha=Math.PI/4+Math.sin(index*.9)*.045;
-    camera.beta=Math.PI/3.1+Math.cos(index*.85)*.018;
-    room.tickLighting(performance.now());
-    resize();scene.render();
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-   }
-  };
-  document.documentElement.dataset.pwCoverReady='true';
- }else if(new URLSearchParams(location.search).has('room')){
+ if(new URLSearchParams(location.search).has('room')){
   hideHome();online.open();
  }else{
   // Render the real saved room before presenting the distinct home screen.
@@ -611,6 +611,33 @@ function setup(){
   last=now;scene.render();
   if(online?.active)drawOnlineMarkers();
  });
+}
+// Read-only browser QA bridge, enabled exclusively via ?qa=1. It projects a
+// real pickable mesh into CSS pixels, allowing touch tests to reproduce
+// day -> night -> move -> day without relying on arbitrary screenshot offsets.
+if(new URLSearchParams(location.search).get('qa')==='1'){
+ window.__KOMNATKA_TEST__={
+  get stageReady(){return Boolean(ready&&scene&&roots.size);},
+  get selection(){return selectedId;},
+  get lighting(){return room?.lightingDiagnostics()??null;},
+  item(id){return state.items.find(x=>x.id===id)?{...state.items.find(x=>x.id===id)}:null;},
+  point(id){
+   if(!ready)return null;
+   const root=roots.get(id);if(!root)return null;
+   const rect=ui.canvas.getBoundingClientRect(),viewport=camera.viewport.toGlobal(ui.canvas.width,ui.canvas.height);
+   for(const mesh of root.getChildMeshes(false)){
+    if(!mesh.isPickable||mesh.isDisposed())continue;
+    mesh.computeWorldMatrix(true);
+    const center=mesh.getBoundingInfo().boundingSphere.centerWorld;
+    const position=Vector3.Project(center,Matrix.Identity(),scene.getTransformMatrix(),viewport);
+    const px=position.x*rect.width/ui.canvas.width;
+    const py=position.y*rect.height/ui.canvas.height;
+    const hit=scene.pick(px,py,m=>Boolean(m.metadata?.itemId),false,camera);
+    if(hit?.pickedMesh?.metadata?.itemId===id)return {x:rect.x+px,y:rect.y+py};
+   }
+   return null;
+  }
+ };
 }
 function showError(error){$('homeScreen').hidden=true;console.error(error);ui.loadText.textContent='Не получилось открыть комнату';$('retryBtn').hidden=false;$('retryBtn').onclick=()=>location.reload();toast('Ошибка запуска 3D-сцены');}
 showCatalog();updateActions();

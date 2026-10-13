@@ -390,6 +390,45 @@ async function runZastavaJourney(page: Page, testInfo: TestInfo) {
   await attachCriticalScreenshot(page, testInfo, 'zastava-after-decision', { fullPage: false });
 }
 
+async function runKomnatkaLightingJourney(page: Page, testInfo: TestInfo) {
+  const solo=page.locator('#homeSolo');
+  await expect(solo).toBeVisible({timeout:10_000});
+  await solo.click();
+  await expect(page.locator('#homeScreen')).toBeHidden();
+  await page.waitForFunction(()=>(window as any).__KOMNATKA_TEST__?.stageReady===true,
+    undefined,{timeout:15_000});
+  const qa=()=>page.evaluate(()=>(window as any).__KOMNATKA_TEST__);
+  async function sofaPoint() {
+    const point=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__?.point('welcome-sofa'));
+    expect(point,'Sofa must remain pickable before and after light transitions').not.toBeNull();
+    return point as {x:number;y:number};
+  }
+  let target=await sofaPoint();
+  await page.mouse.click(target.x,target.y);
+  expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.selection)).toBe('welcome-sofa');
+  await page.locator('#eveningBtn').click();
+  await page.waitForFunction(()=>{
+    const s=(window as any).__KOMNATKA_TEST__?.lighting;
+    return s?.nightFraction>.93&&s.lamps.some((l:any)=>l.enabled&&l.intensity>1.8&&l.floorVisibility>.70);
+  },undefined,{timeout:9_000});
+  await attachCriticalScreenshot(page,testInfo,'komnatka-night-lamps-on',{fullPage:false});
+  target=await sofaPoint();
+  await page.mouse.move(target.x,target.y);
+  await page.mouse.down();
+  await page.mouse.move(target.x+26,target.y+16,{steps:5});
+  await expect(page.locator('#trashZone')).toBeVisible();
+  await page.mouse.up();
+  expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.selection)).toBe('welcome-sofa');
+  await page.locator('#eveningBtn').click();
+  await page.waitForFunction(()=>{
+    const s=(window as any).__KOMNATKA_TEST__?.lighting;
+    return s?.nightFraction<.07&&s.lamps.every((l:any)=>l.intensity<.30);
+  },undefined,{timeout:9_000});
+  target=await sofaPoint();
+  await page.mouse.click(target.x,target.y);
+  expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.selection)).toBe('welcome-sofa');
+  await attachCriticalScreenshot(page,testInfo,'komnatka-day-furniture-still-pickable',{fullPage:false});
+}
 async function clickLikelyStartControl(page: Page) {
   const label = /start|play|begin|enter|continue|resume|launch|new game|начать|играть|старт|продолжить|войти|почати|грати|увійти/i;
   const candidates = page.getByRole('button', { name: label });
@@ -421,7 +460,7 @@ test.describe('AI exploratory mobile gameplay', () => {
       // Heavy Babylon/WebGL scenes can take tens of seconds per interaction sequence on
       // GitHub-hosted software rendering. Keep assertions strict but allow the browser
       // enough wall-clock time to finish the same real input sequence.
-      test.setTimeout(app.slug === 'relic-siege' ? 110_000 : app.slug === 'zastava' ? 120_000 : 60_000);
+      test.setTimeout(app.slug === 'relic-siege'||app.slug === 'komnatka' ? 110_000 : app.slug === 'zastava' ? 120_000 : 60_000);
 
       const consoleErrors: string[] = [];
       const pageErrors: string[] = [];
@@ -435,7 +474,7 @@ test.describe('AI exploratory mobile gameplay', () => {
         failedRequests.push(`${request.method()} ${request.url()} :: ${failure?.errorText || 'unknown failure'}`);
       });
 
-      const response = await page.goto(`/apps/${app.slug}/`, { waitUntil: 'domcontentloaded' });
+      const response = await page.goto(`/apps/${app.slug}/${app.slug==='komnatka'?'?qa=1':''}`, { waitUntil: 'domcontentloaded' });
       expect(response, `No navigation response for ${app.slug}`).not.toBeNull();
       expect(response?.status(), `Unexpected HTTP status for ${app.slug}`).toBeLessThan(400);
       await expect(page.locator('body')).toBeVisible();
@@ -443,7 +482,9 @@ test.describe('AI exploratory mobile gameplay', () => {
 
       await attachCriticalScreenshot(page, testInfo, 'before-touch', { fullPage: false });
 
-      if (app.slug === 'relic-siege') {
+      if (app.slug === 'komnatka') {
+        await runKomnatkaLightingJourney(page, testInfo);
+      } else if (app.slug === 'relic-siege') {
         await runRelicSiegeJourney(page, testInfo);
       } else if (app.slug === 'zastava') {
         await runZastavaJourney(page, testInfo);

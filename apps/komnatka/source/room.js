@@ -1,5 +1,6 @@
 import { MeshBuilder, Vector3, Color3, Color4, StandardMaterial, HemisphericLight, DirectionalLight, DynamicTexture, PointLight, ShadowGenerator } from '@babylonjs/core';
-import { makeMaterial, rounded, tintWindowView } from './models.js';
+import { makeMaterial, rounded, tintWindowView, setLampVisuals } from './models.js';
+import { lightingEnvelope, physicalLampEnabled } from './lighting-presets.js';
 
 export const WALLS=['#efe0ca','#d5e0ce','#edc5b9','#cad7dc','#e6d8df','#e2cfae'];
 export const FLOORS=['honey','walnut','painted','tile'];
@@ -8,7 +9,7 @@ const hex=h=>Color3.FromHexString(h);
 function materialTexture(scene,name,draw) {
  const tex=new DynamicTexture(name,{width:512,height:512},scene,false,2);
  draw(tex.getContext());tex.update(false);
- const m=new StandardMaterial(name,scene);m.diffuseColor=Color3.White();m.specularColor=new Color3(.04,.04,.04);m.specularPower=8;m.diffuseTexture=tex;return m;
+ const m=new StandardMaterial(name,scene);m.diffuseColor=Color3.White();m.specularColor=new Color3(.04,.04,.04);m.specularPower=8;m.diffuseTexture=tex;m.maxSimultaneousLights=6;return m;
 }
 function wood(scene,name,color) {
  return materialTexture(scene,name,c=>{
@@ -61,16 +62,16 @@ function wall(scene,mat,w,h,d,x,y,z,name) {
  mesh.isPickable=true;mesh.metadata={wall:name};return mesh;
 }
 export function createRoom(scene) {
- const ambient=new HemisphericLight('cream-bounce',new Vector3(.35,1,.45),scene);
- ambient.intensity=.44;ambient.groundColor=hex('#9c8478');ambient.diffuse=hex('#e7d5c5');
- const sun=new DirectionalLight('soft-windowlight',new Vector3(-.7,-1,-.56),scene);
- sun.position=new Vector3(10,17,10);sun.intensity=.27;sun.diffuse=hex('#ffe4c0');
- // Miniature-stage illumination: two soft side lights bring out tiny rounded
- // edges, like a handmade dollhouse on a table rather than daylight in a house.
- const key=new PointLight('toybox-softbox',new Vector3(-3.2,6.6,5.4),scene);
- key.diffuse=hex('#ffdec2');key.specular=hex('#e4b692');key.range=18;key.intensity=.54;
- const rim=new DirectionalLight('toybox-side-rim',new Vector3(.68,-.55,.40),scene);
- rim.diffuse=hex('#e0d7c9');rim.intensity=.24;
+ // Two always-on studio lights leave real shader slots for miniature lamps.
+ // Day: peach daylight on hand-painted toy furniture. Night: blueberry
+ // moonlight with distinctly warm pools from the individual lamps.
+ const ambient=new HemisphericLight('dollhouse-sky-bounce',new Vector3(.25,1,.25),scene);
+ ambient.diffuse=hex('#f9e4d5');
+ ambient.groundColor=hex('#b3a2ad');
+ ambient.intensity=.53;
+ const sun=new DirectionalLight('pastel-window-key',new Vector3(-.7,-1,-.48),scene);
+ sun.position=new Vector3(8,14,9);
+ sun.diffuse=hex('#ffe3bc');sun.intensity=.48;
  const shadows=new ShadowGenerator(768,sun);
  shadows.usePercentageCloserFiltering=true;
  shadows.filteringQuality=ShadowGenerator.QUALITY_LOW;
@@ -132,19 +133,43 @@ export function createRoom(scene) {
    lastFloor=state.floor;
   }
  }
+ const glowTexture=new DynamicTexture('glow-brush', {width:128,height:128},scene,false,2);
+ const gc=glowTexture.getContext();
+ gc.clearRect(0,0,128,128);
+ const gradient=gc.createRadialGradient(64,64,1,64,64,64);
+ gradient.addColorStop(0,'rgba(255,216,156,0.44)');
+ gradient.addColorStop(.2,'rgba(255,194,130,0.29)');
+ gradient.addColorStop(.52,'rgba(255,166,111,0.11)');
+ gradient.addColorStop(1,'rgba(255,145,110,0)');
+ gc.fillStyle=gradient;gc.fillRect(0,0,128,128);
+ glowTexture.hasAlpha=true;glowTexture.update(false);
+ const glowMaterial=new StandardMaterial('painted-pool-of-lamplight',scene);
+ glowMaterial.diffuseTexture=glowTexture;
+ glowMaterial.useAlphaFromDiffuseTexture=true;
+ glowMaterial.disableLighting=true;
+ glowMaterial.emissiveColor=new Color3(1,.83,.68);
+ glowMaterial.specularColor=Color3.Black();
+ glowMaterial.backFaceCulling=false;
+ glowMaterial.disableDepthWrite=true;
+ glowMaterial.maxSimultaneousLights=0;
+ glowMaterial.alpha=1;
  let firstLight=true,nightFraction=0,lastLightTime=null;
  function applyLightBlend(t){
-  ambient.intensity=.44+(.07-.44)*t;
-  sun.intensity=.27+(.012-.27)*t;
-  key.intensity=.54+(.075-.54)*t;
-  rim.intensity=.24+(.018-.24)*t;
-  scene.imageProcessingConfiguration.exposure=.85+(.77-.85)*t;
-  for(const light of practicalLights.values())
-   light.intensity=.12+(1.38-.12)*t;
-  // The outside view dims rather than visibly switching material or rebuilding the window.
+  // Night must remain legible, not a nearly black designer's room.
+  const mood=lightingEnvelope(t);
+  ambient.intensity=mood.ambient;
+  ambient.diffuse=Color3.Lerp(hex('#f9e4d5'),hex('#c5c6ed'),t);
+  ambient.groundColor=Color3.Lerp(hex('#b3a2ad'),hex('#66647f'),t);
+  sun.intensity=mood.sun;
+  sun.diffuse=Color3.Lerp(hex('#ffe3bc'),hex('#a6b0de'),t);
+  scene.imageProcessingConfiguration.exposure=mood.exposure;
+  for(const fixture of practicalLights.values()){
+   fixture.light.intensity=mood.lamp;
+   fixture.floor.visibility=mood.floorGlow;
+   if(fixture.wall)fixture.wall.visibility=mood.wallGlow;
+  }
+  setLampVisuals(scene,t);
   tintWindowView(scene,t);
-  const bulb=scene.getMaterialByName('material-light');
-  if(bulb?.emissiveColor)bulb.emissiveColor.set(.085+.36*t,.071+.26*t,.035+.13*t);
  }
  function setEvening(on) {
   nightMode=Boolean(on);
@@ -164,25 +189,74 @@ export function createRoom(scene) {
   applyLightBlend(nightFraction);
   return true;
  }
- function syncPracticalLights(items) {
-  const wanted=new Set();
-  for(const item of items){
-   if(item.type!=='floorlamp'&&item.type!=='tablelamp')continue;
-   wanted.add(item.id);
-   let light=practicalLights.get(item.id);
-   if(!light){
-    light=new PointLight('warm-lamp-'+item.id,Vector3.Zero(),scene);
-    light.diffuse=hex('#ffd4a3');light.specular=hex('#eabf90');
-    // Short, warm pools of light give the impression of toy-sized lamps.
-    light.range=item.type==='tablelamp'?2.65:3.55;
-    practicalLights.set(item.id,light);
-   }
-   light.position.set(item.x,(Number.isFinite(item.y)?item.y:0)+(item.type==='floorlamp'?2.0:.62),item.z);
-   light.intensity=.12+(1.38-.12)*nightFraction;
+ function makePool(name,width,height,kind){
+  // The glow itself can never intercept clicks or cast a shadow.
+  let mesh;
+  if(kind==='floor'){
+   mesh=MeshBuilder.CreateGround(name,{width,height},scene);
+   mesh.position.y=.043;
+  }else{
+   mesh=MeshBuilder.CreatePlane(name,{width,height,sideOrientation:2},scene);
+   if(kind==='left')mesh.rotation.y=Math.PI/2;
   }
-  for(const [id,light] of practicalLights)if(!wanted.has(id)){
-   light.dispose();practicalLights.delete(id);
+  mesh.material=glowMaterial;mesh.isPickable=false;mesh.receiveShadows=false;
+  mesh.visibility=0;
+  mesh.renderingGroupId=1;
+  mesh.alwaysSelectAsActiveMesh=true;
+  return mesh;
+ }
+ function syncPracticalLights(items) {
+  const wanted=new Set(),lamps=items.filter(item=>item.type==='floorlamp'||item.type==='tablelamp');
+  for(const item of lamps){
+   wanted.add(item.id);
+   const tall=item.type==='floorlamp';
+   let fixture=practicalLights.get(item.id);
+   if(!fixture){
+    const light=new PointLight('toy-lamp-'+item.id,Vector3.Zero(),scene);
+    light.diffuse=hex('#ffd09a');
+    light.specular=hex('#ffbd81');
+    light.range=tall?5.4:3.5;
+    light.radius=tall?.38:.20;
+    light.intensity=0;
+    const floorPool=makePool('soft-light-on-floor-'+item.id,tall?3.5:2.6,tall?3.5:2.6,'floor');
+    const wallPool=makePool('soft-light-on-wall-'+item.id,tall?3.7:2.6,tall?3.5:2.6,'back');
+    fixture={light,floor:floorPool,wall:wallPool};
+    practicalLights.set(item.id,fixture);
+   }
+   const y=Number.isFinite(item.y)?item.y:0;
+   const h=tall?2.12:.64;
+   fixture.light.position.set(item.x,y+h,item.z);
+   // Keep first four light sources physically lit to stay below the six-light
+   // WebGL shader budget (two studio lights plus up to four toy lamps).
+   const active=physicalLampEnabled(lamps.indexOf(item));
+   fixture.light.setEnabled(active);
+   const mood=lightingEnvelope(nightFraction);
+   fixture.light.intensity=active?mood.lamp:0;
+   fixture.floor.position.set(item.x,.042,item.z);
+   fixture.floor.visibility=mood.floorGlow;
+   if(item.z<-.35){
+    fixture.wall.position.set(item.x,Math.min(3.0,y+h),-3.922);
+    fixture.wall.rotation.y=0;
+   }else if(item.x<-.35){
+    fixture.wall.position.set(-3.922,Math.min(3.0,y+h),item.z);
+    fixture.wall.rotation.y=Math.PI/2;
+   }else{
+    fixture.wall.position.set(item.x,Math.min(3.0,y+h),-3.922);
+    fixture.wall.rotation.y=0;
+   }
+   fixture.wall.visibility=mood.wallGlow;
+  }
+  for(const [id,fixture] of practicalLights)if(!wanted.has(id)){
+   fixture.light.dispose();fixture.floor.dispose(false,false);fixture.wall.dispose(false,false);
+   practicalLights.delete(id);
   }
  }
- return {floor,back,left,setFinish,setEvening,tickLighting,syncPracticalLights,setShadowCasters};
+ function lightingDiagnostics(){
+  return {nightMode,nightFraction,studioLights:2,
+   lamps:[...practicalLights.values()].map(f=>({
+    enabled:f.light.isEnabled(),intensity:f.light.intensity,
+    floorVisibility:f.floor.visibility,wallVisibility:f.wall.visibility
+   }))};
+ }
+ return {floor,back,left,setFinish,setEvening,tickLighting,syncPracticalLights,setShadowCasters,lightingDiagnostics};
 }
