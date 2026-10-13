@@ -224,10 +224,13 @@ function renderFinish(){
   if(online?.active){toast('Планировку онлайн-раунда выбирает сервер');return;}
   const next=el.dataset.layout;
   if(next===state.layout)return;
-  if(state.items.some(item=>!valid({...state,layout:next},item))){
-   toast('Убери мебель за границами новой планировки');return;
+  const draft={...state,layout:next,items:state.items.map(item=>
+   byType[item.type]?.layer==='wall'&&item.wall==='left'?{...item,x:leftWallX(next)}:{...item})};
+  if(draft.items.some(item=>!valid(draft,item))){
+   toast('Некоторые вещи не помещаются. Убери их или создай новую комнатку.');return;
   }
-  mutate(()=>{state.layout=next;});toast('Комнатка поменяла форму');sound('place');
+  mutate(()=>{state.layout=next;state.items=draft.items;});
+  toast('Комнатка поменяла форму');sound('place');
  }));
 }
 function placementPalette(){
