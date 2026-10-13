@@ -384,7 +384,7 @@ export function installLivingTerrain(renderer, canvas, getState) {
     const key = level.renderId ?? level.id;
     if (camera.levelKey !== key) {
       camera.levelKey = key;
-      camera.introUntil = performance.now() + (level.endless ? 1050 : 1750);
+      camera.introUntil = performance.now() + 1050;
       camera.x = (bounds.minX + bounds.maxX) * .5;
       camera.y = (bounds.minY + bounds.maxY) * .5;
       camera.scale = Math.min((width - 34) / boardWidth, (height - 148) / (boardHeight * .82));
@@ -577,11 +577,6 @@ export function installLivingTerrain(renderer, canvas, getState) {
     for (let index = 0; index < (level.zones || []).length; index += 1) drawZoneTexture(level.zones[index], index, time, fallback);
     drawAirborne(ball, level);
     if (mode === 'playing' && camera.overviewProgress < .7) drawOffscreenHole(level);
-    if (camera.overviewProgress > .5) {
-      ctx.fillStyle = `rgba(238,233,211,${(camera.overviewProgress - .5) * .22})`;
-      ctx.font = '700 10px "Avenir Next", sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('ВСЯ ТЕРРИТОРИЯ', size.width * .5, size.height - 34);
-    }
   }
 
   return {
@@ -590,7 +585,7 @@ export function installLivingTerrain(renderer, canvas, getState) {
     toggleOverview() { camera.overview = !camera.overview; return camera.overview; },
     isOverview() { return camera.overview; },
     cancelOverview() { camera.overview = false; },
-    beginLevel() { camera.introUntil = performance.now() + 1750; },
+    beginLevel() { camera.introUntil = performance.now() + 1050; },
     get progress() { return camera.overviewProgress; }
   };
 }
