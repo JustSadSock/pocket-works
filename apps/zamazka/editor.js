@@ -249,7 +249,14 @@ export class Editor{
     this.viewport.classList.toggle('hand-mode',tool==='hand');
     this.viewport.classList.toggle('picker-mode',tool==='picker');
     this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
+     this.updateDrawingTip();
     if(this.lastCursor)this.showCursor(this.lastCursor);
+  }
+
+  updateDrawingTip(){
+    const tip=this.root.querySelector('#drawingTip');if(!tip)return;
+    tip.textContent=this.tool==='smudge'?'Води по мазкам, чтобы мягко смешивать цвета':
+      this.inputMode==='precision'?'Один палец наводит перо · вторым удерживай «РИСОВАТЬ»':'Рисуй в повреждённой части';
   }
 
   // Compress only redundant bends to keep long drawing sessions flowing.
@@ -366,7 +373,7 @@ export class Editor{
     const switcher=this.root.querySelector('[data-cmd="precision"]');
     if(switcher){switcher.setAttribute('aria-pressed',String(precision));switcher.setAttribute('title',precision?'Обычное рисование':'Точное перо: двумя пальцами');switcher.querySelector('span').textContent=precision?'Точное':'Прямое'}
     const tip=this.root.querySelector('#drawingTip');
-    if(tip)tip.textContent=precision?'Один палец наводит перо · вторым удерживай «РИСОВАТЬ»':'Рисуй в повреждённой части';
+    if(tip)this.updateDrawingTip();
     if(!precision){this.armed=false;this.armPointer=null;this.aimPointer=null;this.aim=null}
     if(this.lastCursor)this.showCursor(this.lastCursor);
   }
