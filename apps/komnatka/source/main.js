@@ -87,7 +87,7 @@ function showHome(){
 }
 function playHomeMode(mode){
  hideHome();
- if(mode==='solo'){studio.gallery();sound('select');return;}
+ if(mode==='solo'){sound('select');return;}
  online.open(mode,true);
  sound('select');
 }
@@ -129,6 +129,7 @@ function createGalleryUI(){
 }
 function setupHome(){
  $('homeSolo').addEventListener('click',()=>playHomeMode('solo'));
+ $('homeLibrary').addEventListener('click',()=>{hideHome();studio.gallery();sound('select');});
  $('homeTenants').addEventListener('click',()=>playHomeMode('tenants'));
  $('homeMemory').addEventListener('click',()=>playHomeMode('memory'));
  $('menuBtn').addEventListener('click',showHome);
