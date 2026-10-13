@@ -134,7 +134,7 @@ function smudgeStamp(ctx,x,y,size,dx,dy){
  }
  ctx.putImageData(pixels,left,top);
 }
-function smudgeStroke(ctx,stroke){
+export function smudgeStroke(ctx,stroke){
  const pts=stroke.p||[];if(!pts.length)return;
  const spacing=Math.max(1.4,Math.min(7,stroke.s*.23));
  smudgeStamp(ctx,pts[0][0],pts[0][1],stroke.s,0,0);
