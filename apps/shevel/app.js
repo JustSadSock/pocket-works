@@ -143,6 +143,7 @@ canvas.addEventListener('pointermove',e=>{if(touches.has(e.pointerId))touches.se
 const release=e=>{if(pinch){touches.delete(e.pointerId);if(touches.size<2){pinch=null;pointer=null}return}onPointerUp(e);touches.delete(e.pointerId)};
 canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
 canvas.addEventListener('lostpointercapture',()=>{if(pointer){const ch=pointer.changed;pointer=null;if(ch)changed({structure:true})}});
+$('#focusBtn').addEventListener('click',()=>{const focus=$('.shell').classList.toggle('canvas-focus');$('#focusBtn').setAttribute('aria-pressed',String(focus));$('#focusBtn').setAttribute('aria-label',focus?'Закрыть увеличенный холст':'Развернуть холст');$('#focusBtn').textContent=focus?'⤡':'⤢';requestAnimationFrame(()=>{resizeObserver.observe(canvas);render()})});
 $('#zoomIn').addEventListener('click',()=>setZoom(view.zoom*1.25));
 $('#zoomOut').addEventListener('click',()=>setZoom(view.zoom/1.25));
 $('#zoomReset').addEventListener('click',()=>{view.zoom=1;view.panX=0;view.panY=0;clampView()});
