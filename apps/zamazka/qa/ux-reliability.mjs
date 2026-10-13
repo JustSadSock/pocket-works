@@ -56,3 +56,6 @@ assert.match(archive,/phase==='archive'/,'archive retains full-detail navigation
 const voteBody=app.split('function vote(){')[1]?.split('function verdict(){')[0]||'';
 assert.ok(!voteBody.includes('data-magnify'),'voting intentionally has no magnification');
 console.log('ZAMAZKA UX: synchronized art, complete voting receipts, legacy start, compact archive, no vote zoom: OK');
+
+// Run the curator-only kick and network seat regression in the existing UX gate.
+import './kick-player.mjs';
