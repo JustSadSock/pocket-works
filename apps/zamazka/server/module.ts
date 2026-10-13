@@ -2,9 +2,10 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=15;
+export const RULESET_VERSION=16;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
-const CATALOG_COUNT=54;
+const CATALOG_COUNT=72; // 54 historical IDs + 18 new public-domain originals
+const EXCLUDED_PAINTINGS=new Set([17]); // The Tower of Babel is permanently retired from new rounds.
 // 0 = untimed drawing; only committed submissions from every participant end it.
 const DRAWING_TIMES=[0,60,90,120,160,240,300];
 const DEFAULT_DRAWING_SECONDS=160;
@@ -31,7 +32,7 @@ const strip=(s:State,id:string)=>({
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
 function choose(s:State){
- s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1)).slice(0,5);
+ s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1).filter(id=>!EXCLUDED_PAINTINGS.has(id))).slice(0,5);
  // Assign each restorer independently from the same five previewed originals.
  // Two players may receive one painting but different damaged fragments.
  s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.turn=0;s.revealed=false;
