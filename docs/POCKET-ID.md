@@ -153,3 +153,16 @@ account functionality does not break the existing multiplayer backend.
 ## Stage C — one profile interface (PocketWorks 0.10.11)
 
 For signed-in players, the existing Pocket ID launcher button opens the Pocket Social card, which is now the single profile editor. It edits the nickname, drawn avatar, background, frame, favorite game and privacy settings, and offers Friends and Invitations as neighboring tabs. Pocket ID's separate dialog handles **authentication and account security only** (Google, recovery key, sign-out, and first-time account creation). The older editable badge grid and signed-in Pocket ID appearance editor have been removed from the user flow. Older badge presets remain secure fallbacks; they are not a second customization surface. Direct links from games use `/?pocket-id=profile` to open the unified card.
+
+
+## Global library administrator
+
+The optional Worker setting `POCKET_ADMIN_ACCOUNT_IDS` lists trusted **Pocket ID
+UUIDs**, not nicknames, email addresses or GitHub usernames. A logged-in
+allowlisted user can change `/pocket-id/global-archive` by same-origin JSON
+POST, including an atomic batch; all users can read it with GET. The backend
+checks the HttpOnly account session for each write and stores changes in the
+existing SQLite-backed `PocketIdentity` Durable Object. Client `isAdmin`
+flags and impersonated headers are never accepted. Read `/pocket-id/me`
+while signed in to find the exact UUID and configure the Worker variable
+on Cloudflare; a Worker redeploy may be required.

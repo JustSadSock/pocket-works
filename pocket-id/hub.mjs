@@ -28,9 +28,9 @@ function allowWrite(request,url) {
   return request.headers.get('origin')===url.origin &&
     (request.headers.get('content-type')||'').split(';')[0].trim().toLowerCase()==='application/json';
 }
-async function readBody(request) {
-  if(Number(request.headers.get('content-length')||0)>2048) return null;
-  try { const str=await request.text(); return str.length<=2048?JSON.parse(str):null; } catch { return null; }
+async function readBody(request,maxLength=2048) {
+  if(Number(request.headers.get('content-length')||0)>maxLength) return null;
+  try { const str=await request.text(); return str.length<=maxLength?JSON.parse(str):null; } catch { return null; }
 }
 export class PocketIdentity {
   constructor(ctx,env) {
@@ -55,9 +55,26 @@ export class PocketIdentity {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS recovery_limits (
       source TEXT PRIMARY KEY, attempts INTEGER NOT NULL, reset_at INTEGER NOT NULL
     )`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS global_archive (
+      slug TEXT PRIMARY KEY, changed_at INTEGER NOT NULL, changed_by TEXT NOT NULL
+    )`);
   }
   query(sql,...params) { return this.sql.exec(sql,...params); }
   one(sql,...params) { return this.query(sql,...params).toArray()[0]||null; }
+  canManageGlobalArchive(user) {
+    if(!user?.id) return false;
+    // Exact Pocket ID UUIDs configured on the server only.
+    // Nicknames, emails and browser-provided headers are not admin credentials.
+    const allowed=[this.env.POCKET_ADMIN_ACCOUNT_IDS,this.env.POCKET_ADMIN_ACCOUNT_ID]
+      .filter(value=>typeof value==='string').join(',');
+    return allowed.split(/[,;\s]+/).some(id=>id && id.toLowerCase()===user.id.toLowerCase());
+  }
+  globalArchiveSnapshot(canManage=false) {
+    return {
+      archived:this.query('SELECT slug FROM global_archive ORDER BY slug').toArray().map(row=>row.slug),
+      canManage
+    };
+  }
   cleanup() {
     const now=Date.now();
     this.query('DELETE FROM oauth_states WHERE expires_at < ?',now);
@@ -97,6 +114,30 @@ export class PocketIdentity {
       if(!this.lastCleanup||Date.now()-this.lastCleanup>5*60_000) {
         this.lastCleanup=Date.now();
         this.cleanup();
+      }
+      if(path==='/pocket-id/global-archive'&&request.method==='GET') {
+        const user=await this.session(request);
+        return response(this.globalArchiveSnapshot(this.canManageGlobalArchive(user)));
+      }
+      if(path==='/pocket-id/global-archive'&&request.method==='POST') {
+        const user=await this.session(request);
+        if(!user) return response({error:'sign_in_required'},401);
+        if(!this.canManageGlobalArchive(user)) return response({error:'admin_required'},403);
+        const body=await readBody(request,16384);
+        const slugs=Array.isArray(body?.slugs)?body.slugs:[body?.slug];
+        if(typeof body?.archived!=='boolean'||!slugs.length||slugs.length>100||
+           slugs.some(slug=>typeof slug!=='string'||!/^[a-z0-9-]{1,96}$/.test(slug)))
+          return response({error:'invalid_archive_action'},400);
+        const unique=[...new Set(slugs)], changedAt=Date.now();
+        this.ctx.storage.transactionSync(()=>{
+          for(const slug of unique) {
+            if(body.archived) this.query(`INSERT INTO global_archive(slug,changed_at,changed_by) VALUES(?,?,?)
+              ON CONFLICT(slug) DO UPDATE SET changed_at=excluded.changed_at,changed_by=excluded.changed_by`,
+              slug,changedAt,user.id);
+            else this.query('DELETE FROM global_archive WHERE slug=?',slug);
+          }
+        });
+        return response(this.globalArchiveSnapshot(true));
       }
       if(path==='/pocket-id/config'&&request.method==='GET')
         return response({ok:true,googleEnabled:Boolean(this.env.GOOGLE_CLIENT_ID&&this.env.GOOGLE_CLIENT_SECRET),avatars:AVATARS});

@@ -29,9 +29,18 @@ export function installPocketDeck({
   let previewSignature='';
   let organizing=false;
   let chosen=new Set();
+  const GLOBAL_CACHE_KEY='pocket-works:global-archive-cache:v1';
+  const validSlug=slug=>typeof slug==='string'&&/^[a-z0-9-]{1,96}$/.test(slug);
+  let globalArchived=new Set(),canManageGlobal=false,globalReady=false,globalBusy=false;
+  let globalRevision=0,globalRequest=0,globalMessage='',pendingGlobalAction=null;
+  try{
+    const saved=JSON.parse(localStorage.getItem(GLOBAL_CACHE_KEY)||'null');
+    if(Array.isArray(saved?.archived))globalArchived=new Set(saved.archived.filter(validSlug));
+  }catch{/* The cache provides offline presentation only, never administrator authority. */}
   const current=()=>store.get();
+  const isArchived=slug=>globalArchived.has(slug)||current().archived.includes(slug);
   const favoriteSet=()=>new Set(getFavorites());
-  const available=()=>getApps().filter(app=>!current().archived.includes(app.slug));
+  const available=()=>getApps().filter(app=>!isArchived(app.slug));
   const sorted=()=>available().sort(byRelease);
   const recent=()=>Object.entries(getRecents()).sort((a,b)=>b[1]-a[1]).map(([slug])=>available().find(app=>app.slug===slug)).filter(Boolean);
   const appBySlug=slug=>getApps().find(app=>app.slug===slug);
@@ -139,7 +148,7 @@ export function installPocketDeck({
   function renderHome(){
     const state=current();const apps=getApps();
     const signature=JSON.stringify({widgets:state.widgets,favs:getFavorites(),recents:getRecents(),
-      apps:apps.map(a=>[a.slug,a.version,a.updatedAt,a.accent]),covers:[...covers],stages:state.projectStages,notes:state.projectNotes,archived:state.archived,seed:pendingSeed});
+      apps:apps.map(a=>[a.slug,a.version,a.updatedAt,a.accent]),covers:[...covers],stages:state.projectStages,notes:state.projectNotes,archived:state.archived,globalRevision,seed:pendingSeed});
     refreshHomeIdentity();
     if(signature===modelSignature)return;
     modelSignature=signature;
@@ -199,6 +208,11 @@ export function installPocketDeck({
     $('#deck-organize-count').textContent=`${chosen.size} selected`;
     const action=bar.querySelector('[data-deck-organize-archive]');
     action.disabled=chosen.size===0;
+    const globalAction=bar.querySelector('[data-deck-organize-global]');
+    if(globalAction){
+      globalAction.hidden=!canManageGlobal;
+      globalAction.disabled=!globalReady||globalBusy||chosen.size===0;
+    }
     for(const card of document.querySelectorAll('#app-list .app-entry[data-slug]')){
       const selected=chosen.has(card.dataset.slug);
       card.classList.toggle('deck-is-chosen',selected);
@@ -218,6 +232,73 @@ export function installPocketDeck({
     exitOrganize();
     $('#deck-archive-confirm').close();
     store.update({archived,projectStages});
+  }
+  function adoptGlobalArchive(data){
+    if(!data||!Array.isArray(data.archived)||data.archived.some(slug=>!validSlug(slug)))
+      throw new Error('Invalid server archive response');
+    globalArchived=new Set(data.archived);
+    canManageGlobal=data.canManage===true;
+    globalReady=true;
+    globalRevision++;
+    try{localStorage.setItem(GLOBAL_CACHE_KEY,JSON.stringify({archived:[...globalArchived],savedAt:Date.now()}));}catch{}
+    render();
+    onViewChanged?.();
+  }
+  async function refreshGlobalArchive(){
+    const requestId=++globalRequest;
+    try{
+      const res=await fetch('/pocket-id/global-archive',{credentials:'same-origin',cache:'no-store'});
+      if(!res.ok)throw new Error('Archive service unavailable');
+      const payload=await res.json();
+      if(requestId===globalRequest)adoptGlobalArchive(payload);
+    }catch{
+      if(requestId===globalRequest){
+        canManageGlobal=false;
+        globalReady=false;
+        render();
+      }
+    }
+  }
+  function askGlobalArchive(slugs,archived){
+    if(!canManageGlobal||!globalReady||globalBusy)return;
+    slugs=[...new Set(slugs)].filter(slug=>appBySlug(slug));
+    if(!slugs.length)return;
+    pendingGlobalAction={slugs,archived};
+    $('#deck-global-confirm-description').textContent=archived
+      ? `Move ${slugs.length} game${slugs.length===1?'':'s'} into the archive for EVERY user? Games and saves will not be deleted.`
+      : `Restore ${slugs.length} game${slugs.length===1?'':'s'} to the main library for EVERY user?`;
+    $('#deck-global-confirm-accept').textContent=archived?'Archive for everyone':'Restore for everyone';
+    $('#deck-global-confirm').showModal();
+  }
+  async function commitGlobalArchive(){
+    const action=pendingGlobalAction;
+    pendingGlobalAction=null;
+    $('#deck-global-confirm').close();
+    if(!action||!globalReady||!canManageGlobal||globalBusy)return;
+    globalBusy=true;
+    globalMessage='Updating the archive for everyone…';
+    $('#deck-global-status').textContent=globalMessage;
+    render();
+    try{
+      const res=await fetch('/pocket-id/global-archive',{
+        method:'POST',credentials:'same-origin',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify(action)
+      });
+      const payload=await res.json().catch(()=>null);
+      if(!res.ok)throw Error(res.status===403?'Administrator access denied. Sign in again.':'Server could not save the change.');
+      adoptGlobalArchive(payload);
+      if(action.archived)exitOrganize();
+      globalMessage=action.archived?'Moved to the global archive.':'Restored to the global library.';
+    }catch(error){
+      globalMessage=error.message||'Could not update the global archive.';
+      void refreshGlobalArchive();
+    }finally{
+      globalBusy=false;
+      $('#deck-global-status').textContent=globalMessage;
+      render();
+      onViewChanged?.();
+    }
   }
   function render(){
     renderNavigation();
@@ -253,7 +334,7 @@ export function installPocketDeck({
       store.update({releaseHistory:{...state.releaseHistory,[slug]:[entry,...history].slice(0,10)}});
       return;
     }
-    const signature=[slug,stageOf(slug),history.map(h=>h.version).join('|')].join(':');
+    const signature=[slug,stageOf(slug),globalArchived.has(slug),canManageGlobal,globalBusy,history.map(h=>h.version).join('|')].join(':');
     if(root.dataset.signature===signature)return;
     // Stage and release-history updates must not erase a note being edited.
     // Only carry the draft within the same project; switching projects loads
@@ -265,6 +346,8 @@ export function installPocketDeck({
       <div class="deck-project-detail__stages">
         ${[['trial','Trial'],['building','Developing'],['kept','Keep'],['archive','Archive']].map(([stage,label])=>`<button type="button" data-deck-stage="${stage}" aria-pressed="${stageOf(slug)===stage}">${label}</button>`).join('')}
       </div>
+      ${globalArchived.has(slug)?'<p class="deck-global-note">In the archive for everyone. Personal labels do not override it.</p>':''}
+      ${canManageGlobal?`<button type="button" class="deck-global-action" data-deck-global-archive="${escapeHtml(slug)}" ${globalBusy?'disabled':''}>${globalArchived.has(slug)?'Restore for everyone':'Archive for everyone'}</button>`:''}
       <label class="deck-project-detail__note">Next improvement <textarea id="deck-project-note" rows="2" maxlength="750" placeholder="The one thing that would make this project worth returning to…">${escapeHtml(note)}</textarea></label>
       <button type="button" id="deck-note-save">Save project note</button>
       <span id="deck-note-feedback" role="status" aria-live="polite"></span>
@@ -357,12 +440,23 @@ export function installPocketDeck({
       $('#deck-archive-summary').textContent=`Move ${chosen.size} selected projects into your archive? You can restore them any time. Apps, saves and source files are not deleted.`;
       $('#deck-archive-confirm').showModal();return;
     }
+    if(event.target.closest('[data-deck-organize-global]')){
+      askGlobalArchive([...chosen],true);return;
+    }
+    if(event.target.closest('[data-deck-global-archive]')){
+      const slug=event.target.closest('[data-deck-global-archive]').dataset.deckGlobalArchive;
+      askGlobalArchive([slug],!globalArchived.has(slug));return;
+    }
+    if(event.target.id==='deck-global-confirm-cancel'){
+      pendingGlobalAction=null;$('#deck-global-confirm').close();return;
+    }
+    if(event.target.id==='deck-global-confirm-accept'){void commitGlobalArchive();return;}
     if(event.target.id==='deck-archive-cancel'){$('#deck-archive-confirm').close();return;}
     if(event.target.id==='deck-archive-accept'){archiveChosen();return;}
     const open=event.target.closest('[data-deck-open]');
     if(open){onOpen(event,open.dataset.deckOpen,open);return;}
     const details=event.target.closest('[data-deck-details]');
-    if(details){setView('library');onDetails(details.dataset.deckDetails);return;}
+    if(details){if(current().view==='home')setView('library');onDetails(details.dataset.deckDetails);return;}
     if(event.target.closest('[data-deck-search]')){setView('library',{focus:true});return;}
     if(event.target.closest('[data-deck-account]')){
       const member=Boolean(window.PocketID?.getUser?.()?.complete);
@@ -442,6 +536,7 @@ export function installPocketDeck({
   }
   document.addEventListener('click',onClick);
   $('#deck-archive-confirm').addEventListener('cancel',()=>{ /* closing by Escape is non-destructive */ });
+  $('#deck-global-confirm').addEventListener('close',()=>{pendingGlobalAction=null;});
   editor.addEventListener('cancel',e=>{e.preventDefault();closeEditor(false);});
   editor.addEventListener('click',e=>{if(e.target===editor)closeEditor(false);});
   editor.addEventListener('change',e=>{
@@ -510,22 +605,30 @@ export function installPocketDeck({
   if(returnView&&['home','library','archive'].includes(returnView)){
     store.update({view:returnView});try{sessionStorage.removeItem('pocket-works:return-deck-view');}catch{}
   }
-  document.addEventListener('pocket-id:changed',refreshHomeIdentity);
+  document.addEventListener('pocket-id:changed',()=>{
+    refreshHomeIdentity();
+    canManageGlobal=false;globalReady=false;globalRequest++;
+    render();
+    void refreshGlobalArchive();
+  });
+  window.addEventListener('online',()=>void refreshGlobalArchive());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshGlobalArchive();});
+  window.setInterval(()=>{if(!document.hidden)void refreshGlobalArchive();},90_000);
   document.addEventListener('pocket-social:portrait',refreshHomeIdentity);
   document.addEventListener('pocket-social:notifications',event=>{
     pendingSocial=Number(event.detail?.count)||0;
     refreshHomeIdentity();
   });
-  render();document.documentElement.classList.add('has-pocket-deck');void store.hydrate();void loadCovers();
+  render();document.documentElement.classList.add('has-pocket-deck');void store.hydrate();void loadCovers();void refreshGlobalArchive();
   return {
     store, getView:()=>current().view, getState:current, setView,
     getVisibleList:()=>{
       const state=current();
-      return state.view==='archive'?getApps().filter(app=>state.archived.includes(app.slug)):
-        state.view==='library'?getApps().filter(app=>!state.archived.includes(app.slug)):[];
+      return state.view==='archive'?getApps().filter(app=>isArchived(app.slug)):
+        state.view==='library'?getApps().filter(app=>!isArchived(app.slug)):[];
     },
     refresh:render,
-    showNew:slug=>{if(current().archived.includes(slug))setStage(slug,'trial');setView('library');onDetails(slug);},
+    showNew:slug=>{if(globalArchived.has(slug)){setView('archive');onDetails(slug);return;}if(current().archived.includes(slug))setStage(slug,'trial');setView('library');onDetails(slug);},
     setStage
   };
 }

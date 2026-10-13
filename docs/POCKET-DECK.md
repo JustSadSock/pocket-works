@@ -72,3 +72,29 @@ Installing PocketWorks with Safari **Add to Home Screen** removes normal browser
 - Existing launcher stage-two/stage-three tests now intentionally enter Library before exercising legacy interactions.
 
 Captured screenshot images cannot prove visual taste. The first launch, contact sheet, editor and detail sheet should be inspected at phone size in the Playwright artifacts before merging.
+
+
+## Global archive (administrator-controlled)
+
+The personal archive remains per-device. In addition, `GET /pocket-id/global-archive`
+returns the authoritative globally archived game slugs to all visitors, including
+guests. The launcher displays the union of global and personal archive entries.
+Personal restore never overrides global archive; global restore never undoes a
+user's personal archive. Games, saves and source files remain intact.
+
+The global list persists in the SQLite-backed `PocketIdentity` Durable Object.
+A server-authorized administrator sees **Archive for everyone** in game details
+and bulk organization, and **Restore for everyone** on archived games.
+Both actions require confirmation and call `POST /pocket-id/global-archive`
+with the current HttpOnly session. Authorization is checked server-side using
+the Pocket ID UUID allowlist and matching Origin. Changes reach other online
+users on next refresh/focus (at most around 90 seconds while the launcher is
+visible). The last successful archive snapshot is cached for offline display;
+the cache cannot grant write access.
+
+One-time permission grant: sign into the intended Pocket ID account, read
+its `user.id` from `GET /pocket-id/me`, and set `POCKET_ADMIN_ACCOUNT_IDS`
+in the Cloudflare Worker configuration to that UUID (or comma-separated UUIDs).
+Redeploy the Worker after configuration changes. Neither the public repository
+nor browser code contains the administrator UUID or any recovery credentials.
+Without a configured UUID, no account can manage the global archive.

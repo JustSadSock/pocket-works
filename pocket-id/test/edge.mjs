@@ -43,6 +43,17 @@ assert.equal(duplicate.data.error,'nickname_taken');
 const mine=await request('me',{cookie:registered.cookie});
 assert.equal(mine.data.user.id,registered.data.user.id);
 // Pocket Social must query the real indexed nickname directory through authenticated Pocket ID.
+const archiveGuest=await request('global-archive');
+assert.equal(archiveGuest.status,200);
+assert.ok(Array.isArray(archiveGuest.data.archived));
+assert.equal(archiveGuest.data.canManage,false);
+const archiveMember=await request('global-archive',{cookie:registered.cookie});
+assert.equal(archiveMember.status,200);
+assert.equal(archiveMember.data.canManage,false);
+const guestArchiveWrite=await request('global-archive',{method:'POST',body:{slugs:['test-project'],archived:true}});
+assert.equal(guestArchiveWrite.status,401);
+const unauthorizedArchiveWrite=await request('global-archive',{method:'POST',cookie:registered.cookie,body:{slugs:['test-project'],archived:true}});
+assert.equal(unauthorizedArchiveWrite.status,403);
 const directory=await request('directory?q='+encodeURIComponent(name.slice(0,5)),{cookie:registered.cookie});
 assert.equal(directory.status,404,'Internal directory is not a public API');
 const publicAccount=await request('public?id='+registered.data.user.id,{cookie:registered.cookie});

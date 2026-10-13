@@ -603,3 +603,11 @@ html.has-pocket-deck[data-deck-density=micro] .app-entry__more{display:none}
   .deck-focus__featured{min-height:145px}
   .deck-widgets-toggle{flex:none;min-height:42px}
 }
+
+/* Server-controlled shared archive. Edit controls only appear for signed-in administrators. */
+.deck-global-status:empty { display:none; }
+.deck-global-status { margin:0 20px 6px; font-size:12px; color:var(--muted, #849296); }
+.deck-global-action { width:100%; min-height:42px; padding:10px 14px; border:1px solid currentColor; border-radius:8px; cursor:pointer; background:transparent; font:inherit; font-weight:650; }
+.deck-global-action:disabled { opacity:.52; cursor:wait; }
+.deck-global-note { font-size:12px; line-height:1.45; margin:8px 0; opacity:.82; }
+#deck-organize-bar [data-deck-organize-global] { font-weight:700; }
