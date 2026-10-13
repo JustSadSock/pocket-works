@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=12;
+export const RULESET_VERSION=13;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 // 0 = untimed drawing; only committed submissions from every participant end it.
@@ -149,6 +149,28 @@ const module: PocketModule<State>={
    if(state.deadline&&now()>=state.deadline&&state.phase!=='results')step(state);
    if(a.type==='pulse')return {state,events:emit(state)};
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
+   if(a.type==='kick_player'){
+     if(state.phase!=='lobby')return {state,events:notice(id,'Исключать игроков можно только до начала выставки.')};
+     if(state.host!==id)return {state,events:notice(id,'Исключать игроков может только куратор.')};
+     const target=typeof a.targetId==='string'?a.targetId:'';
+     if(!target||target===id||!players.some(p=>p.id===target)||!members(state).some(p=>p.id===target))
+       return {state,events:notice(id,'Этот участник уже вышел или его нельзя исключить.')};
+     state.participants=members(state).filter(p=>p.id!==target);
+     delete state.scores[target];
+     delete state.emblems?.[target];
+     delete state.assignments[target];
+     delete state.drafts?.[target];
+     delete state.draftAssemblies?.[target];
+     state.readyPlayers=state.readyPlayers?.filter(p=>p!==target);
+     // Remove their marks from the collaborative lobby canvas, too.
+     if(state.board){
+       state.board.segments=state.board.segments.filter(s=>s.u!==target);
+       state.board.revision++;
+     }
+     // PocketNet sees this authenticated, host-only event and forcibly
+     // releases the target's network seat after notifying their socket.
+     return {state,events:[...emit(state),{type:'player_kicked',to:target,payload:{reason:'curator'}}]};
+   }
    if(a.type==='art_ready'&&state.phase==='preparing'){
      if(a.round!==state.round)return {state,events:notice(id,'Этот набор картин уже сменился.')};
      state.readyPlayers||=[];

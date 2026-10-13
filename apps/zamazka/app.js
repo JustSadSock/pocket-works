@@ -14,7 +14,7 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPainting} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.23.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.24.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -228,13 +228,13 @@ function artFactsHtml(id){
  return '<span class="art-head-identity">'+identity+'</span>'+(facts?'<span class="art-head-origin">'+facts+'</span>':'');
 }
 const picture=id=>'<div class="frame"><img src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'"></div>';
-function home(){
+function home(skipLeave=false){
  connectionEpoch++;
  // Unconfirmed uploads remain on this device and can resume upon rejoining their room.
  invitedRoom='';
  if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
  clearTabGuest();
- if(net){try{net.leaveRoom()}catch{}net.close();net=null}
+ if(net){if(!skipLeave)try{net.leaveRoom()}catch{}net.close();net=null}
  view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;persistVote();connectionStatus('off');
  change('<section class="museum-home">'+
   
@@ -287,7 +287,7 @@ function lobby(){
   '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div>'+
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Отправить ссылку ↗</button>'+(isPocketMember()?'<button class="btn ghost" type="button" data-social-invite data-room-id="'+esc(roomId)+'">Позвать друзей Pocket ID</button>':'')+'</div></div>'+
   '<div class="lobby-list-heading"><span class="section-label">ИГРОКИ · '+players.length+'/8</span><span>'+(leader?'Ты — куратор':'Ожидаем куратора')+'</span></div>'+
-  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+pocketPlayerBadge(p)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span></div>').join('')+'</div>'+
+  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+pocketPlayerBadge(p)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span>'+(leader&&p.id!==me?.id&&Number(roomModuleVersion.slice(1))>=14?'<button type="button" class="lobby-kick" data-action="kick-player" data-player-id="'+esc(p.id)+'" aria-label="Исключить '+esc(p.name)+' из комнаты">Исключить</button>':'')+'</div>').join('')+'</div>'+
   (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Эта комната создана до появления общего холста. Для совместного рисования открой новую комнату.</div>')+'<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+durationOptionsHtml(drawingSecondsChoice)+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
   '<button class="btn ghost" data-action="menu">← В главное меню</button></div></section>';
  if(page==='lobby'&&commonsBoard){
@@ -661,6 +661,7 @@ async function connect(mode){
      if(data.disconnected)notify('Один из гостей потерял соединение');
      try{client.sendGame({type:'sync'})}catch{}
    });
+   client.on('room_kicked',()=>{if(net!==client||client.closed)return;home(true);notify('Куратор исключил тебя из комнаты')});
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
    client.on('disconnected',()=>{
      if(client.closed)return;connectionStatus('offline');
@@ -742,6 +743,18 @@ screen.addEventListener('click',e=>{
  else if(action==='emblem')editEmblem();
  else if(action==='museum-next')shiftMuseum(1);
  else if(action==='museum-prev')shiftMuseum(-1);
+ else if(action==='kick-player'){
+  const targetId=b.dataset.playerId;
+  const player=view?.participants?.find(p=>p.id===targetId);
+  if(page!=='lobby'||view?.host!==me?.id||Number(roomModuleVersion.slice(1))<14||!player||player.id===me.id)return;
+  modal('Исключить реставратора?','<p class="hint"><strong>'+esc(player.name)+'</strong> будет удалён из комнаты. При необходимости его можно пригласить снова.</p>',[
+   ['Исключить',()=>{
+    closeDialog();
+    if(!net||view?.phase!=='lobby'||view.host!==me?.id||!view.participants.some(p=>p.id===targetId))return;
+    try{net.sendGame({type:'kick_player',targetId})}catch{notify('Нет связи с комнатой')}
+   },'primary'],['Отмена',closeDialog,'ghost']
+  ]);
+ }
  else if(action==='board-clear')modal('Очистить общий холст?','<p class="hint">Рисунки всех участников исчезнут без возможности восстановления.</p>',[['Очистить',()=>{closeDialog();try{net?.sendGame({type:'board_clear'})}catch{notify('Нет связи с комнатой')}},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='practice')practiceSettings();
  else if(action==='retry-gallery')home();

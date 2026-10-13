@@ -48,8 +48,12 @@ function Update-Game-Rules {
  try {
   Invoke-WebRequest -Uri $source -OutFile $temporary -UseBasicParsing -TimeoutSec 30
   $contents=Get-Content $temporary -Raw
-  if($contents -notmatch 'export\s+const\s+MIN_PLAYERS\s*=\s*2\s*;' -or $contents -notmatch 'export\s+const\s+RULESET_VERSION\s*=\s*10\s*;'){
+  if($contents -notmatch 'export\s+const\s+MIN_PLAYERS\s*=\s*2\s*;'){
    throw 'Downloaded game module does not advertise two-player support'
+  }
+  $rules=[regex]::Match($contents,'export\s+const\s+RULESET_VERSION\s*=\s*(\d+)\s*;')
+  if(-not $rules.Success -or [int]$rules.Groups[1].Value -lt 13){
+   throw 'Downloaded game module is too old for curator moderation'
   }
   Move-Item -Path $temporary -Destination $destination -Force
   Write-Host '  Current rules installed: minimum 2 players, protocol revision 10.' -ForegroundColor Green

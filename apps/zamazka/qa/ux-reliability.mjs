@@ -10,7 +10,7 @@ const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES20
 const exports={};
 runInNewContext(js,{exports,Date:Clock,Math,Number,Array,Set,Map,JSON,Object,Error,console});
 const game=exports.default;
-assert.equal(exports.RULESET_VERSION,12);
+assert.equal(exports.RULESET_VERSION,13);
 const host={id:'host',name:'Host'},b={id:'b',name:'B'},c={id:'c',name:'C'};
 const players=[host,b,c],state=game.createRoom({player:host}).state;
 game.onJoin({state,player:b,players});game.onJoin({state,player:c,players});
@@ -56,3 +56,6 @@ assert.match(archive,/phase==='archive'/,'archive retains full-detail navigation
 const voteBody=app.split('function vote(){')[1]?.split('function verdict(){')[0]||'';
 assert.ok(!voteBody.includes('data-magnify'),'voting intentionally has no magnification');
 console.log('ZAMAZKA UX: synchronized art, complete voting receipts, legacy start, compact archive, no vote zoom: OK');
+
+// Run the curator-only kick and network seat regression in the existing UX gate.
+import './kick-player.mjs';
