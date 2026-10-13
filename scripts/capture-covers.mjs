@@ -158,6 +158,12 @@ try{
           // unrelated buttons or join public multiplayer rooms.
           const prepared=await page.evaluate(()=>Boolean(window.PocketWorksCover ||
             document.documentElement.dataset.pwCoverReady==='true'));
+          // Games without a custom scene can offer a safe, local-only start action.
+          // Never infer a click from an arbitrary visible Play/Online button.
+          if(!prepared){
+            const start=page.locator('[data-pw-cover-start]').first();
+            if(await start.count())await start.click({timeout:2000}).catch(()=>{});
+          }
           const frameList=[];
           for(let index=0;index<shots;index++){
             if(prepared){
@@ -200,12 +206,12 @@ try{
           const review=await reviewWithVision(app,available,oldFrame);
           if(review){
             available.forEach((frame,index)=>{
-              frame.visionScore=review.scores[index];
+              frame.visionScore=review.scores[index]+(review.best===index?3:0);
               frame.aiRejected=review.rejected.includes(index);
             });
           }
           const previousScore=review&&oldFrame?
-            review.scores[available.length]:
+            (review.rejected.includes(available.length)?null:review.scores[available.length]):
             (oldFrame?.quality?.pass?oldFrame.quality.score:null);
           const {chosen,reason}=chooseCover(available,{previousScore,allowedRegression:7});
           const olderWins=Boolean(review&&oldFrame&&review.best===available.length);
