@@ -2,10 +2,11 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=10;
+export const RULESET_VERSION=11;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
-const DRAWING_TIMES=[60,90,120,160,240,300];
+// 0 = untimed drawing; only committed submissions from every participant end it.
+const DRAWING_TIMES=[0,60,90,120,160,240,300];
 const DEFAULT_DRAWING_SECONDS=160;
 type Stroke={c:string;s:number;t:string;p:number[][]};
 type Assignment={art:number;variation:number;strokes:Stroke[]|null};
@@ -18,7 +19,7 @@ const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds||DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
+ host:s.host,phase:s.phase,round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
@@ -61,7 +62,10 @@ function completeVotes(s:State){
 }
 function step(s:State){
  if(s.phase==='preparing'){s.phase='preview';s.deadline=now()+25000;}
- else if(s.phase==='preview'){s.phase='drawing';s.deadline=now()+(s.drawingSeconds||DEFAULT_DRAWING_SECONDS)*1000;}
+ else if(s.phase==='preview'){
+   s.phase='drawing';
+   s.deadline=s.drawingSeconds===0?0:now()+(s.drawingSeconds??DEFAULT_DRAWING_SECONDS)*1000;
+  }
  else if(s.phase==='drawing'){
   for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=s.drafts?.[p.id]??[];
   // In-flight chunks must not survive the deadline: their complete predecessor
@@ -178,7 +182,7 @@ const module: PocketModule<State>={
      if(state.host!==id)return {state,events:notice(id,'Запустить матч может создатель комнаты.')};
      if(members(state).length<MIN_PLAYERS)return {state,events:notice(id,'Для онлайна нужны минимум два участника.')};
      state.round=1;state.rounds=[1,3,5].includes(Number(a.rounds))?Number(a.rounds):3;
-     state.drawingSeconds=DRAWING_TIMES.includes(Number(a.drawingSeconds))?Number(a.drawingSeconds):DEFAULT_DRAWING_SECONDS;
+     state.drawingSeconds=typeof a.drawingSeconds==='number'&&DRAWING_TIMES.includes(a.drawingSeconds)?a.drawingSeconds:DEFAULT_DRAWING_SECONDS;
      state.artPreparationEnabled=a.preload===true;
      state.board={revision:(state.board?.revision||0)+1,segments:[]};
      members(state).forEach(p=>state.scores[p.id]={mask:0,eye:0});choose(state);

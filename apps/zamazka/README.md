@@ -215,3 +215,10 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - Carousel gilded frames now follow real decoded painting ratios; portrait, square and landscape artworks no longer crop to a shared ratio. ResizeObserver updates artwork geometry when the viewport changes. The restoration canvas stays 4:3 intentionally.
 - The original offline acoustic palette of bristles, timber, paper, porcelain voting tokens and curator seals uses Web Audio layers instead of stock sine beeps. Setting-controlled, gesture-activated and rate-limited. See AUDIO.md.
 - Test: `node apps/zamazka/qa/museum-aspect-audio.mjs`.
+
+
+## 1.22.0 — Duration control and untimed confirmations
+
+- Solo play offers the same six timed presets as the room, and **Без ограничения**. Choice is persisted locally, applied on each new solo round and remains accessible from the finished restoration. Older drafts retain a default 160-second limit.
+- Hosts can choose unlimited drawing time (0 seconds). The server preserves this explicit rule and gives no drawing deadline; drawing only ends when all participants' complete submissions are confirmed by PocketNet. All rounds retain the chosen rule, while image study, voting and reveals retain their own phase timers.
+- QA: `node apps/zamazka/qa/drawing-time.mjs` and `node apps/zamazka/qa/timing-provenance.mjs`.
