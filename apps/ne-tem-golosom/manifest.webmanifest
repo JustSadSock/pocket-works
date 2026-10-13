@@ -1,0 +1,20 @@
+{
+  "id": "/apps/ne-tem-golosom/",
+  "name": "НЕ ТЕМ ГОЛОСОМ — слепая переозвучка",
+  "short_name": "ДУБЛЬ",
+  "description": "Совместно озвучивайте сцены, не слыша чужих дублей до премьеры.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2ebdc",
+  "theme_color": "#f2ebdc",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

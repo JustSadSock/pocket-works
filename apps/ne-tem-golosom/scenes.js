@@ -1,0 +1,9 @@
+// Licensed source films. We stream the original file directly from Wikimedia Commons.
+// Their source metadata and attribution links remain visible in the library.
+export const SCENES=[
+ {id:'sprite-forest',title:'Sprite Fright · В лесу',film:'Sprite Fright (2021)',duration:55,offset:90,roles:['Подросток','Подруга','Гриб'],custom:false,source:'Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm',author:'Blender Studio',license:'CC BY 4.0',licenseURL:'https://creativecommons.org/licenses/by/4.0/',sourceURL:'https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm',color:'#3d5254'},
+ {id:'sprite-panic',title:'Sprite Fright · Паника',film:'Sprite Fright (2021)',duration:55,offset:300,roles:['Первый','Второй','Гриб','Голос за кадром'],custom:false,source:'Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm',author:'Blender Studio',license:'CC BY 4.0',licenseURL:'https://creativecommons.org/licenses/by/4.0/',sourceURL:'https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm',color:'#59424e'},
+ {id:'bunny',title:'Big Buck Bunny · Лес',film:'Big Buck Bunny (2008)',duration:50,offset:100,roles:['Кролик','Белка','Птица'],custom:false,source:'Big_Buck_Bunny_alt.webm',author:'Blender Foundation',license:'CC BY 3.0',licenseURL:'https://creativecommons.org/licenses/by/3.0/',sourceURL:'https://commons.wikimedia.org/wiki/File:Big_Buck_Bunny_alt.webm',color:'#6d674f'},
+ {id:'sintel',title:'Sintel · Встреча',film:'Sintel (2010)',duration:54,offset:150,roles:['Синтел','Незнакомец'],custom:false,source:'Sintel_movie_4K.webm',author:'Blender Foundation',license:'CC BY 3.0',licenseURL:'https://creativecommons.org/licenses/by/3.0/',sourceURL:'https://commons.wikimedia.org/wiki/File:Sintel_movie_4K.webm',color:'#79615d'}
+];
+export const sceneUrl=x=>x.custom?'':'https://commons.wikimedia.org/wiki/Special:Redirect/file/'+encodeURIComponent(x.source||'');

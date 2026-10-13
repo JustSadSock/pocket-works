@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2ebdc"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>НЕ ТЕМ ГОЛОСОМ — PocketWorks</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="./styles.css">
+</head><body>
+<main id="app">
+  <section id="screen-home" class="screen home">
+    <header class="masthead"><a class="back-link" href="../../" aria-label="PocketWorks">← PocketWorks</a><span class="brand-mark">NTG · STUDIO</span></header>
+    <div class="home-art" aria-hidden="true"><div class="reel reel-a"></div><div class="reel reel-b"></div><div class="film-frame"><svg viewBox="0 0 360 200"><rect width="360" height="200" fill="#292d2f"/><circle cx="95" cy="80" r="42" fill="#e6b981"/><path d="M55 72 Q95 20 135 70" fill="none" stroke="#151719" stroke-width="12"/><circle cx="84" cy="85" r="5" fill="#1d2122"/><circle cx="107" cy="85" r="5" fill="#1d2122"/><path d="M84 107 Q96 119 109 105" fill="none" stroke="#1d2122" stroke-width="5"/><circle cx="264" cy="85" r="45" fill="#c96b53"/><path d="M233 71 Q261 44 292 72" fill="none" stroke="#192123" stroke-width="8"/><circle cx="252" cy="89" r="5" fill="#1d2122"/><circle cx="276" cy="89" r="5" fill="#1d2122"/><path d="M246 117 Q267 98 286 116" fill="none" stroke="#1d2122" stroke-width="5"/><path d="M158 119 C195 88 213 149 234 111" stroke="#efd6a7" stroke-width="5" stroke-dasharray="9 10" fill="none"/></svg></div></div>
+    <div class="home-copy"><p class="tiny-overline">СЛЕПОЙ КООПЕРАТИВНЫЙ ДУБЛЯЖ</p><h1>НЕ ТЕМ<br><em>ГОЛОСОМ</em></h1><p>Одна сцена. У каждого своя роль.<br>Что наговорили другие — узнаешь на премьере.</p></div>
+    <div class="home-actions"><button id="solo-btn" class="action main-action"><span>Начать озвучку</span><span class="arrow">↗</span></button><div class="home-secondary"><button id="create-btn" class="action secondary-action">Создать комнату</button><button id="join-btn" class="action secondary-action">Войти по коду</button></div></div>
+    <div class="home-foot"><span>2–6 игроков · микрофон · 30–90 сек</span><button id="sound-btn" aria-label="Переключить звуки" class="icon-link">Звуки: <span id="sound-label">вкл.</span></button></div>
+  </section>
+  <section id="screen-library" class="screen library hidden">
+    <header class="topbar"><button class="nav-back" data-back="home">←</button><h2>Выбери сцену</h2><span class="small-cap">01 / 03</span></header>
+    <p class="section-intro">Готовые фильмы с открытой лицензией или собственное видео.</p>
+    <div id="scene-grid" class="scene-grid"></div>
+    <label class="upload-card"><input type="file" id="video-file" accept="video/mp4,video/webm,video/quicktime,video/*" hidden><span class="upload-icon">＋</span><span><b>Своё видео</b><small>MP4 / MOV / WebM · до 32 МБ для комнаты</small></span><span class="arrow">↗</span></label>
+    <div id="scene-license" class="license-note">Исходные фильмы: <a href="https://studio.blender.org/projects/wing-it/" target="_blank" rel="noopener noreferrer">Wing It! · Blender Studio</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>); <a href="https://peach.blender.org/" target="_blank" rel="noopener noreferrer">Big Buck Bunny · Blender Foundation</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a>). Отрывки обрезаются и получают новую озвучку. Для собственных файлов нужны права на использование.</div>
+  </section>
+  <section id="screen-trim" class="screen trim hidden">
+    <header class="topbar"><button class="nav-back" data-back="library">←</button><h2>Подготовить сцену</h2><span class="small-cap">02 / 03</span></header>
+    <div class="trim-preview"><video id="trim-video" controls playsinline preload="metadata"></video></div>
+    <div class="trim-info"><label>Название <input id="scene-title" maxlength="55" placeholder="Название сцены"></label><div class="two-inputs"><label>От (сек.)<input id="trim-start" type="number" min="0" step="1" value="0"></label><label>Длина (сек.)<input id="trim-length" type="number" min="10" max="90" step="1" value="60"></label></div></div>
+    <div class="role-builder"><div class="row-between"><h3>Персонажи</h3><button id="add-role" class="text-action">+ Добавить</button></div><div id="role-tags" class="role-tags"></div></div>
+    <button id="confirm-scene" class="action main-action bottom-action">Продолжить <span class="arrow">→</span></button>
+  </section>
+  <section id="screen-room" class="screen room hidden">
+    <header class="topbar"><button class="nav-back" data-back="home">←</button><h2 id="room-heading">Комната</h2><span id="net-pill" class="network-pill">PocketNet</span></header>
+    <div id="room-ticket" class="room-ticket"><span class="tiny-overline">КОД КОМНАТЫ</span><strong id="room-code">········</strong><button id="copy-invite" class="text-action">Скопировать приглашение ↗</button></div>
+    <div id="join-panel" class="join-panel hidden"><label>Код приглашения <input id="join-code" maxlength="36" autocapitalize="characters" placeholder="8 символов"></label><button id="enter-room" class="action main-action">Подключиться →</button></div>
+    <div class="row-between"><h3>Актёры <span id="player-count"></span></h3><span id="room-phase-note" class="quiet"></span></div>
+    <div id="room-players" class="room-players"></div>
+    <p class="room-help" id="room-help">У каждого своя роль; чужие записи нельзя услышать до премьеры.</p>
+    <button id="room-start" class="action main-action bottom-action hidden">Начать озвучку →</button>
+  </section>
+  <section id="screen-editor" class="screen editor hidden">
+    <header class="editor-head"><button id="editor-leave" class="nav-back" aria-label="Выйти">←</button><div class="editor-title"><b id="editor-scene">Сцена</b><small id="editor-role">Роль</small></div><button id="mute-film" class="film-mute" aria-label="Оригинальный звук">Звук фильма: выкл.</button></header>
+    <div class="stage-wrap"><video id="stage-video" playsinline preload="auto" disablepictureinpicture></video><div class="stage-vignette"></div><div id="record-badge" class="record-badge hidden">● ЗАПИСЬ</div><div id="countdown" class="countdown hidden">3</div><div id="stage-placeholder" class="stage-placeholder hidden">Ожидаем видео от ведущего…</div></div>
+    <div class="editor-desk"><div class="time-row"><span id="stage-time">00:00 / 01:00</span><span id="editor-indicator">Твой дубль</span></div><div class="timeline"><div class="ruler" id="time-ruler"></div><div id="clip-lane" class="clip-lane"></div><input type="range" id="scrubber" min="0" max="600" step="1" value="0" aria-label="Таймлайн"><div id="playhead" class="playhead"></div></div><div class="edit-controls"><button id="play-toggle" class="transport-btn" aria-label="Воспроизвести">▶</button><button id="record-btn" class="record-btn"><span class="record-dot"></span><span id="record-label">Записать</span></button><button id="undo-btn" class="transport-btn" aria-label="Отменить последний дубль">↶</button></div><div class="editor-bottom"><button id="erase-btn" class="text-action">Удалить отрывок</button><span id="clip-total" class="quiet">Пока нет записей</span><button id="finish-btn" class="done-btn">Готово →</button></div></div>
+  </section>
+  <section id="screen-wait" class="screen wait hidden"><button class="nav-back waiting-back" data-back="editor">←</button><div class="waiting-record"><span></span><span></span><span></span><div class="waiting-label">ПРЕМЬЕРА</div></div><h2>Дубль принят.</h2><p>Твои записи скрыты от остальных. Премьера откроется, когда все закончат.</p><div id="wait-roster" class="wait-roster"></div><button id="reveal-btn" class="action main-action bottom-action hidden">Открыть премьеру →</button><button id="unready-btn" class="quiet-button">Вернуться к записи</button></section>
+  <section id="screen-premiere" class="screen premiere hidden"><header class="topbar"><button class="nav-back" data-back="home">←</button><h2>Премьера</h2><span class="small-cap">03 / 03</span></header><div class="premiere-viewport"><video id="premiere-video" playsinline preload="auto"></video><div id="premiere-loading" class="premiere-loading">Сводим дорожки…</div></div><div class="premiere-credits" id="premiere-credits"></div><input id="premiere-scrub" type="range" min="0" max="600" value="0" aria-label="Перемотка премьеры"><div class="premiere-buttons"><button id="premiere-play" class="action main-action">▶ Смотреть премьеру</button><button id="premiere-repeat" class="action secondary-action">↺ С начала</button></div><button id="premiere-back" class="quiet-button">Вернуться к проекту</button></section>
+</main><div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="./app.js"></script>
+</body></html>

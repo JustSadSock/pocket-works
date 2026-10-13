@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "ne-tem-golosom",
+  "name": "НЕ ТЕМ ГОЛОСОМ",
+  "shortName": "ДУБЛЬ",
+  "description": "Совместная слепая переозвучка кино: каждый записывает свои реплики на таймлайне, а голоса встречаются на премьере.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-14",
+  "releaseDateTime": "2026-10-14T00:00:00+03:00",
+  "changelog": [
+    "Независимая покадрово-точная запись голоса короткими дублями с трёхсекундным отсчётом.",
+    "Кооперативные комнаты PocketNet, роли и слепая премьера; передача видео и дублей напрямую между участниками.",
+    "Готовые открытые мультфильмы, импорт видео и сохранение локального проекта."
+  ],
+  "status": "experimental",
+  "preset": "audio",
+  "accent": "#d85a3b",
+  "backgroundColor": "#f2ebdc",
+  "themeColor": "#f2ebdc",
+  "orientation": "any",
+  "cacheName": "ne-tem-golosom-v1.0.0",
+  "storageNamespace": "pocket-works:ne-tem-golosom",
+  "tags": [
+    "game",
+    "party",
+    "co-op",
+    "pocketnet",
+    "audio",
+    "video",
+    "creative"
+  ],
+  "order": 354
+}
