@@ -11,3 +11,33 @@
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 
 .zoom-deck{position:absolute;z-index:3;top:15px;right:16px;display:flex;align-items:center;gap:1px;background:#243132df;color:#f5e5ce;padding:3px;box-shadow:0 2px 8px #19221a33}.zoom-deck button{min-width:34px;height:34px;border:0;background:transparent;color:inherit;font-size:20px}.zoom-deck button:active{background:#47605c}.zoom-deck span{min-width:42px;text-align:center;font-size:10px;font-weight:750;font-variant-numeric:tabular-nums}@media(max-width:600px){.zoom-deck{top:9px;right:9px}.zoom-deck button{min-width:34px;height:34px}.zoom-deck span{min-width:36px;font-size:10px}}
+
+/* The worktable can clear its outer rails without discarding the editor state. */
+.shell.canvas-focus .workspace{display:block;flex:1;min-height:0}
+.shell.canvas-focus .editing{height:100%;width:100%;display:flex}
+.shell.canvas-focus .tools,.shell.canvas-focus .timeline,.shell.canvas-focus .inspector,.shell.canvas-focus .stagehead,.shell.canvas-focus .contextbar{display:none!important}
+.shell.canvas-focus .stagewell{height:100%;padding:8px}
+.shell.canvas-focus .canvaswrap{width:min(100%,calc((100dvh - 84px)*1.616));max-height:100%}
+.shell.canvas-focus #focusBtn{background:#d87a50;color:#182625}
+@media(max-width:600px){.shell.canvas-focus .canvaswrap{width:min(100%,calc((100dvh - 62px - var(--safe-top) - var(--safe-bottom))*1.616))}}
+@media(orientation:landscape) and (max-height:550px) and (pointer:coarse){
+ .head{flex-basis:38px;height:38px}
+ .workspace{display:grid;grid-template-columns:58px minmax(0,1fr)}
+ .tools{order:initial;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px}
+ .tool{flex:0 0 44px;min-height:44px;font-size:8px}
+ .tool .glyph{font-size:19px}
+ .tool-gap{display:none}
+ .editing{order:initial}
+ .stagehead{flex-basis:26px}
+ .contextbar{flex-basis:36px}
+ .timeline{height:99px;flex-basis:99px}
+ .playbar{height:42px;flex-basis:42px}
+ .track-names button,.track-row{height:28px}
+ .stagewell{padding:4px}
+ .canvaswrap{width:min(100%,calc((100dvh - 210px)*1.616))}
+ .inspector{display:none;top:45px;bottom:101px}
+ .shell.canvas-focus .workspace{display:block}
+ .shell.canvas-focus .stagewell{padding:4px}
+ .shell.canvas-focus .canvaswrap{width:min(100%,calc((100dvh - 47px - var(--safe-top) - var(--safe-bottom))*1.616))}
+ .zoom-deck{top:6px;right:6px}
+}
