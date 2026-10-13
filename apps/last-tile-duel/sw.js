@@ -1,6 +1,6 @@
 const VERSION='1.0.0',PREFIX='pw-last-tile-duel-',CACHE=PREFIX+VERSION;
 const FILES=['./','./index.html','./app.js','./engine.js','./styles.css','./manifest.webmanifest','./icons/icon.svg',
-  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/capabilities/net.js'];
+  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/capabilities/net.js','../../shared/update-manager.js'];
 const BASE=new URL('./',self.registration.scope);
 const MAP=new Map(FILES.map(path=>{const url=new URL(path,BASE);return [url.pathname,url.href]}));
 self.addEventListener('install',e=>e.waitUntil((async()=>{

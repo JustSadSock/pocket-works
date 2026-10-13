@@ -12,7 +12,7 @@ test('the board and spawns are symmetric and reproducible',()=>{
  assert.equal(x.tiles.length,49);assert.ok(x.tiles[x.pos[0]]>0);
 });
 test('standing still breaks a tile after three ticks',()=>{
- const x=createGame();advance(x,[a('stay'),a('stay')]);advance(x,[a('stay'),a('stay')]);
+ const x=createGame();advance(x,[a('stay'),a('stay')]);advance(x,[a('stay'),a('stay')]);advance(x,[a('stay'),a('stay')]);
  assert.equal(x.phase,'between');assert.equal(x.last,'Оба упали');
 });
 test('a jump crosses a hole but cannot land on one',()=>{
@@ -26,9 +26,9 @@ test('a push into the void awards the other player a round',()=>{
  assert.equal(x.scores[0],1);assert.equal(x.phase,'between');
 });
 test('both players contesting the same square are blocked',()=>{
- const x=createGame();x.pos=[23,25];x.tiles[24]=3;
+ const x=createGame();x.pos=[15,17];x.tiles[16]=3;
  advance(x,[a('right'),a('left')]);
- assert.deepEqual(x.pos,[23,25]);
+ assert.deepEqual(x.pos,[15,17]);
 });
 test('bot always selects allowed commands, series ends at three wins',()=>{
  const x=createGame();for(let i=0;i<300&&x.phase!=='finished';i++)

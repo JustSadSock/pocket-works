@@ -230,7 +230,7 @@ async function connectNet(intent,code=''){
  net=new PocketNet({serverUrl:SERVER,name:nickname,storage:store});
  const active=()=>attempt===connectGeneration;
  net.on('connected',info=>{
-  if(!active())return;connected=true;
+  if(!active())return;connected=true;me=info?.player||me;
   if(pending==='create'){pending='';net.createRoom('last-tile-duel');}
   else if(pending==='join'){pending='';net.joinRoom(code);}
   else if(pending==='resume'){pending='';if(!net.roomId){backToMenu();showToast('Комната уже закрыта');}}
@@ -275,7 +275,6 @@ async function connectNet(intent,code=''){
  net.on('room_kicked',()=>{
   if(!active())return;backToMenu();showToast('Комната недоступна');
  });
- net.on('connected',()=>{});
  try{
   await net.connect();
   if(!active())return;
