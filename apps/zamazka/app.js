@@ -15,9 +15,9 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.25.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.26.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
-const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
+const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice',CONFIRM_SUBMIT_KEY=NS+'confirm-submission';
 const POCKETNET_URL=location.origin+'/pocketnet';
 const q=new URLSearchParams(location.search);
 let invitedRoom=q.get('room')||'';
@@ -418,14 +418,14 @@ function editorIcon(name){
  };
  return '<svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">'+(shapes[name]||'')+'</svg>';
 }
-function toolbar(){
+function toolbar(local=false){
  const tools=[['brush','Кисть'],['fill','Заливка'],['picker','Пипетка'],['erase','Ластик'],['smudge','Растушёвка'],['hand','Панорама']];
  const palette=['#304a43','#9d4c3c','#d6ae6f','#f1e4c5','#263d57','#637f68'];
  const toolButton=(name,label,command=false)=>'<button type="button" class="tool'+(name==='brush'&&!command?' active':'')+'" '+(command?'data-cmd':'data-tool')+'="'+name+'" aria-label="'+label+'" title="'+label+'">'+editorIcon(name)+'<span>'+label+'</span></button>';
  return '<div class="tools">'+tools.map(([name,label])=>toolButton(name,label)).join('')+'</div>'+
  '<div class="colors" aria-label="Цвета кисти">'+palette.map((color,i)=>'<button type="button" class="swatch'+(i===0?' active':'')+'" data-color="'+color+'" aria-label="Цвет '+(i+1)+'" style="background:'+color+'"></button>').join('')+
  '<input type="color" class="color-input" id="customColor" value="#304a43" aria-label="Свой цвет"></div>'+
- '<div class="adjust"><label for="brushSize">Толщина</label><input type="range" id="brushSize" aria-label="Толщина кисти" min="1" max="48" value="12"><div class="adjust-actions">'+
+ '<div class="adjust"><label for="brushSize">Толщина <output id="brushSizeValue">12</output></label><input type="range" id="brushSize" aria-label="Толщина кисти" min="'+(local||Number(roomModuleVersion.slice(1))>=15?'.25':'1')+'" max="48" step=".25" value="12"><div class="adjust-actions">'+
  toolButton('undo','Отменить',true)+toolButton('redo','Вернуть',true)+
  '<button type="button" class="mode-switch" data-cmd="precision" aria-pressed="false" title="Переключить режим рисования">'+editorIcon('precision')+'<span>Прямое</span></button>'+
  '</div></div><div class="zoom-actions">'+toolButton('out','Отдалить',true)+toolButton('in','Приблизить',true)+toolButton('center','К повреждению',true)+'</div>';
@@ -434,7 +434,7 @@ function drawing(local=false){
   const v=local?practice:view,ass=v.mine;
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
-  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art),v.drawingSeconds===0)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div><div class="picker-preview" id="pickerPreview" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar()+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Мазков: 0</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art),v.drawingSeconds===0)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div><div class="picker-preview" id="pickerPreview" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай вторым пальцем, чтобы рисовать" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar(local)+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Мазков: 0</div><div class="quiet" id="draftStatus">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
   editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onPersistenceError:()=>notify('Не удалось сохранить черновик: проверь место в браузере.'),onSound:event=>sound(event,true),onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Предел рисунка · отмените мазок':'Мазков: '+n;if(n>=0)queueDraft()}});
   if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
   const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Мазков: '+editor.strokes.length;
@@ -783,11 +783,15 @@ async function connect(mode){
    if(mode==='resume'){home();notify('Не удалось восстановить комнату · проверь подключение')}else setup(mode,message,input);
  }
 }
-function doSubmit(){if(page==='drawing'&&practice){finishPractice();return}
- if(!editor||!net)return;
- editor.saveSnapshot();modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
- ['Сдать',()=>{closeDialog();submitArtwork()} ,'primary'],
- ['Продолжить рисовать',closeDialog,'ghost']]);}
+function doSubmit(){
+ if(page==='drawing'&&practice){finishPractice();return}
+ if(!editor||!net||page!=='drawing'||pendingSubmit)return;
+ editor.saveSnapshot();
+ if(localStorage.getItem(CONFIRM_SUBMIT_KEY)!=='on'){submitArtwork();return}
+ modal('Сдать реставрацию?','<p class="hint">После отправки изменять мазки нельзя. Работа будет доступна остальным на экспертизе.</p>',[
+  ['Сдать',()=>{closeDialog();submitArtwork()},'primary'],
+  ['Продолжить рисовать',closeDialog,'ghost']]);
+}
 async function copyText(value,success){
  try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);notify(success)}
  catch{
@@ -806,8 +810,8 @@ function share(){
 function inspect(id){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata"><div class="art-inspect-facts">'+artFactsHtml(id)+'</div><div>Хранится: '+esc(a.museum)+'</div></div><p class="hint">Запомни цвета и фактуру оригинала.</p>'+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
 function settings(){
- modal('Настройки','<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки мастерской и интерфейса</label><p class="hint">Новый ник применится при следующем подключении к комнате.</p>',[
-  ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');museumAudio.setEnabled(beepEnabled);closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']]);
+ modal('Настройки','<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки мастерской и интерфейса</label><label class="field"><input type="checkbox" id="settingConfirmSubmit" '+(localStorage.getItem(CONFIRM_SUBMIT_KEY)==='on'?'checked':'')+'> Спрашивать перед сдачей рисунка</label><p class="hint">Новый ник применится при следующем подключении к комнате.</p>',[
+  ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');localStorage.setItem(CONFIRM_SUBMIT_KEY,dialog.querySelector('#settingConfirmSubmit').checked?'on':'off');museumAudio.setEnabled(beepEnabled);closeDialog();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']]);
 }
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 document.querySelector('#profileBtn')?.addEventListener('click',editEmblem);

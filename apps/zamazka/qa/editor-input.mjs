@@ -53,3 +53,6 @@ console.log('ZAMAZKA stable drawing, network budgets and precision input: OK');
 
 // Includes a real 320-stroke paced upload and near-border paint hit testing.
 import './edge-and-pacing.mjs';
+
+// Run the super-zoom, fractional-brush and outside-mask gesture regression.
+import './outside-stroke-fine-brush.mjs';

@@ -8,7 +8,7 @@ function prepareCanvas(canvas,editor=false,thumbnail=false){
  const dpr=typeof window==='undefined'?1:Math.max(1,Math.min(3,window.devicePixelRatio||1));
  const desktop=typeof window!=='undefined'&&window.matchMedia('(min-width:900px) and (pointer:fine)').matches;
  const needed=editor?Math.max(2.5,dpr*1.6):Math.max(2,dpr,desktop?2.5:2);
- const scale=thumbnail?0.8:Math.min(editor?3.5:3,needed,Math.max(2,3500/W));
+ const scale=thumbnail?0.8:Math.min(editor?4:3,needed,Math.max(2,3500/W));
  const w=Math.round(W*scale),h=Math.round(H*scale);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
  const ctx=canvas.getContext('2d');
@@ -18,11 +18,11 @@ function prepareCanvas(canvas,editor=false,thumbnail=false){
  return ctx;
 }
 function clipZone(ctx,z){damagePath(ctx,z);ctx.clip();}
-function dab(ctx,x,y,r,color,alpha=1){ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,Math.max(.5,r),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
+function dab(ctx,x,y,r,color,alpha=1){ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,Math.max(.12,r),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
 function drawStroke(ctx,stroke){
  const pts=stroke.p||[];if(!pts.length)return;
  const size=Number(stroke.s)||8,color=stroke.t==='erase'?'#e8ddc6':stroke.c;
- ctx.save();ctx.strokeStyle=color;ctx.lineWidth=stroke.t==='pencil'?Math.max(1,size*.4):size;ctx.lineCap='round';ctx.lineJoin='round';
+ ctx.save();ctx.strokeStyle=color;ctx.lineWidth=stroke.t==='pencil'?Math.max(.15,size*.4):size;ctx.lineCap='round';ctx.lineJoin='round';
  ctx.globalAlpha=stroke.t==='pencil'?.82:stroke.t==='spray'?.44:1;
  if(stroke.t==='spray'){
   for(let i=0;i<pts.length;i++){const pt=pts[i];for(let j=0;j<6;j++){const angle=((i*13+j*83)%360)*Math.PI/180,rad=(i+j*7)%11/11*size;dab(ctx,pt[0]+Math.cos(angle)*rad,pt[1]+Math.sin(angle)*rad,size*.13,color,.34)}}
@@ -252,6 +252,31 @@ export function pointOnDamageEdge(zone,point,tolerance=0){
  }
  return null;
 }
+// Use the first inner point along an outside-to-inside gesture so the stroke
+// starts at the cutout border even when touch events jump several pixels.
+export function firstDamageEntry(zone,from,to){
+ if(!zone||!from||!to||!insideDamage(zone,to))return null;
+ if(insideDamage(zone,from))return from;
+ const dx=to[0]-from[0],dy=to[1]-from[1];
+ const steps=Math.max(1,Math.min(350,Math.ceil(Math.hypot(dx,dy)/2)));
+ let last=0;
+ for(let i=1;i<=steps;i++){
+  const t=i/steps,p=[from[0]+dx*t,from[1]+dy*t];
+  if(insideDamage(zone,p)){
+   let lo=last,hi=t;
+   for(let j=0;j<10;j++){
+    const mid=(lo+hi)/2;
+    if(insideDamage(zone,[from[0]+dx*mid,from[1]+dy*mid]))hi=mid;
+    else lo=mid;
+   }
+   const inward=Math.min(1,hi+.7/Math.max(1,Math.hypot(dx,dy)));
+   return [from[0]+dx*inward,from[1]+dy*inward];
+  }
+  last=t;
+ }
+ return to;
+}
+export const MIN_BRUSH_SIZE=.25,MAX_EDITOR_ZOOM=8;
 export const MAX_STROKES=400,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=12000;
 
 const key='pocket-works:zamazka:draft:';
@@ -259,7 +284,7 @@ export class Editor{
  constructor(root,{id,variation=0,round=1,onChange=()=>{},onSound=()=>{},onPersistenceError=()=>{}}){
    this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onSound=onSound;this.onPersistenceError=onPersistenceError;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
-   this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.edgePaused=false;this.edgeGestureGroup=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
+   this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
     this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
     this.hand=localStorage.getItem('pocket-works:zamazka:precision-hand')==='left'?'left':'right';
     this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
@@ -280,7 +305,7 @@ export class Editor{
   this.transform();
  }
  transform(){this.canvas.style.transform='translate('+this.tx+'px,'+this.ty+'px) scale('+this.scale+')';if(this.lastCursor)this.showCursor(this.lastCursor)}
- zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(4,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
+ zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(MAX_EDITOR_ZOOM,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
  save(){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot();this.onChange(this.strokes.length)}
@@ -294,7 +319,7 @@ export class Editor{
   }
   setTool(tool){
     if(!['brush','fill','picker','erase','smudge','hand'].includes(tool))return;
-    this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;
+    this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
     if(this.tool!==tool)this.onSound?.('tool');this.tool=tool;
     this.viewport.classList.toggle('hand-mode',tool==='hand');
     this.viewport.classList.toggle('picker-mode',tool==='picker');
@@ -329,12 +354,20 @@ export class Editor{
   }
   countPoints(){return this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)+(this.working?.p.length||0)}
   beginStroke(p){
-    p=pointOnDamageEdge(this.zone,p,Math.min(25,Math.max(2,this.size*.65)));
-    if(!p)return;
+    const snapped=pointOnDamageEdge(this.zone,p,Math.min(25,Math.max(2,this.size*.65)));
+    if(!snapped){
+      // Capture a drag that begins on the unpaintable part of the picture.
+      // No mark is stored until the cursor first enters the damage mask.
+      this.outsidePoint=p;this.edgePaused=true;
+      this.edgeGestureGroup||='gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7);
+      return;
+    }
+    const entry=this.outsidePoint?firstDamageEntry(this.zone,this.outsidePoint,snapped):null;
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS)this.compactStrokeBudget();
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
-    this.working={c:this.color,s:this.size,t:this.tool,p:[p],g:this.edgeGestureGroup||'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
-    this.edgePaused=false;
+    const pts=entry&&Math.hypot(entry[0]-snapped[0],entry[1]-snapped[1])>.1?[entry,snapped]:[snapped];
+    this.working={c:this.color,s:this.size,t:this.tool,p:pts,g:this.edgeGestureGroup||'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
+    this.edgePaused=false;this.outsidePoint=null;
     this.redoStack=[];this.onSound?.('brush');this.render();
   }
   warnLimit(){if(!this.limitWarned){this.onChange(-1);this.limitWarned=true}}
@@ -344,7 +377,7 @@ export class Editor{
     if(!snapped){
      // Lifting the pen outside the damaged fragment must not create an
      // unintended straight line when it re-enters a different border.
-     this.edgeGestureGroup=this.working.g;this.finishStroke();this.edgePaused=true;return;
+     this.edgeGestureGroup=this.working.g;this.finishStroke();this.edgePaused=true;this.outsidePoint=p;return;
     }
     p=snapped;
     const pts=this.working.p,prev=pts[pts.length-1];
@@ -388,7 +421,7 @@ export class Editor{
     }
     this.hidePickerPreview();
     const tip=this.tip(e),v=this.viewport.getBoundingClientRect(),c=this.canvas.getBoundingClientRect();
-    const effectiveSize=this.tool==='pencil'?Math.max(1,this.size*.4):this.size;
+    const effectiveSize=this.tool==='pencil'?Math.max(.15,this.size*.4):this.size;
     const diameter=Math.max(2,effectiveSize*c.width/W);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
     // Absolutely positioned children start at the viewport padding edge, not its outer border.
@@ -445,7 +478,7 @@ export class Editor{
       this.pointers.set(e.pointerId,[e.clientX,e.clientY]);
       if(e.target===this.viewport)this.viewportCapturedPointer=e.pointerId;
       if(this.pointers.size>1){
-        this.finishStroke();this.aimPointer=null;this.aim=null;
+        this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.aimPointer=null;this.aim=null;
         this.moving=true;const pp=[...this.pointers.values()];
         this.pinch={d:Math.hypot(pp[0][0]-pp[1][0],pp[0][1]-pp[1][1]),z:this.scale,x:this.tx,y:this.ty,
           mid:[(pp[0][0]+pp[1][0])/2,(pp[0][1]+pp[1][1])/2]};
@@ -481,7 +514,7 @@ export class Editor{
       e.preventDefault();this.pointers.set(e.pointerId,[e.clientX,e.clientY]);
       if(this.pointers.size>1&&this.pinch){
         const pp=[...this.pointers.values()],dist=Math.hypot(pp[0][0]-pp[1][0],pp[0][1]-pp[1][1])||1;
-        this.scale=Math.max(1,Math.min(4,this.pinch.z*dist/Math.max(10,this.pinch.d)));
+        this.scale=Math.max(1,Math.min(MAX_EDITOR_ZOOM,this.pinch.z*dist/Math.max(10,this.pinch.d)));
         const mid=[(pp[0][0]+pp[1][0])/2,(pp[0][1]+pp[1][1])/2];
         this.tx=this.pinch.x+(mid[0]-this.pinch.mid[0])+(this.viewport.clientWidth/2-this.pinch.x)*(1-this.scale/this.pinch.z);
         this.ty=this.pinch.y+(mid[1]-this.pinch.mid[1])+(this.viewport.clientHeight/2-this.pinch.y)*(1-this.scale/this.pinch.z);
@@ -517,7 +550,7 @@ export class Editor{
       this.pointers.delete(e.pointerId);
       if(this.viewportCapturedPointer===e.pointerId)this.viewportCapturedPointer=null;
       if(this.pointers.size<2)this.pinch=null;
-      this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;
+      this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
       if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
       this.panStart=null;this.viewport.classList.remove('is-panning');
       if(e.pointerType==='touch'||e.type==='pointercancel'||
@@ -571,9 +604,12 @@ export class Editor{
     this.wheel=e=>{
       e.preventDefault();
       if(e.altKey){
-        this.size=Math.max(1,Math.min(48,this.size+(e.deltaY<0?1:-1)*Math.max(1,Math.round(Math.abs(e.deltaY)/70))));
+        const minSize=Number(this.root.querySelector('#brushSize')?.min)||1;
+        const delta=(this.size<=2?.25:this.size<=5?.5:1)*Math.max(1,Math.round(Math.abs(e.deltaY)/70))*(e.deltaY<0?1:-1);
+        this.size=Math.max(minSize,Math.min(48,Math.round((this.size+delta)*4)/4));
         const slider=this.root.querySelector('#brushSize');
         if(slider)slider.value=String(this.size);
+        const sizeLabel=this.root.querySelector('#brushSizeValue');if(sizeLabel)sizeLabel.textContent=String(this.size).replace('.',',');
         if(this.lastCursor)this.showCursor(this.lastCursor);
       }else{
         const bounds=this.viewport.getBoundingClientRect();
@@ -644,7 +680,7 @@ export class Editor{
       if(this.armPointer!==null)this.armUp({pointerId:this.armPointer,preventDefault(){},stopPropagation(){}});
       // Browsers may drop captured pointers when focus changes or touch scrolling
       // is interrupted. A stale pointer would leave the studio in pinch mode.
-      this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;
+      this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
       this.pointers.clear();this.pinch=null;this.panStart=null;
       this.aimPointer=null;this.aim=null;this.viewportCapturedPointer=null;
       this.viewport.classList.remove('is-panning');
@@ -657,7 +693,11 @@ export class Editor{
     window.addEventListener('keyup',this.keyboardUp);
     this.root.addEventListener('click',this.actions);
     this.slider=e=>{
-      if(e.target.id==='brushSize')this.size=Number(e.target.value);
+      if(e.target.id==='brushSize'){
+        const value=Number(e.target.value),min=Number(e.target.min)||1;
+        this.size=Math.min(48,Math.max(min,Math.round(value*4)/4));
+        const sizeLabel=this.root.querySelector('#brushSizeValue');if(sizeLabel)sizeLabel.textContent=String(this.size).replace('.',',');
+      }
       if(e.target.id==='customColor'){
         this.color=e.target.value;
         this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.remove('active'));
