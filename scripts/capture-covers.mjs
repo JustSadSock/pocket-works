@@ -8,8 +8,12 @@ import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {shouldCaptureCover, scoreCoverMetrics, chooseCover, parseVisionDecision} from './cover-intelligence.mjs';
+import {enterCoverGameplay} from './cover-gameplay-entry.mjs';
 
 const root=process.cwd(),out=path.join(root,'covers');
+// Versioned entry logic permits one retry of previously failed games without
+// recapturing already accepted art every night.
+const CAPTURE_ENGINE='safe-gameplay-v3';
 const limit=Math.max(1,Math.min(24,Number(process.env.PW_COVER_LIMIT)||12));
 const shots=Math.max(3,Math.min(8,Number(process.env.PW_COVER_SHOTS)||5));
 const slugArg=(process.env.PW_COVER_SLUGS||'').split(',').map(x=>x.trim()).filter(Boolean);
@@ -47,8 +51,10 @@ for(const app of candidates){
   const record=manifest[app.slug];
   const needsLibraryRefresh=Number.isFinite(refreshBefore)&&refreshBefore>0 &&
     !record?.pinned && !(Date.parse(record?.lastAttemptAt||'')>=refreshBefore);
+  const upgradedFailed=record?.status==='failed' &&
+    record?.captureEngine!==CAPTURE_ENGINE && !record?.pinned;
   if(shouldCaptureCover({record,revision,exists:present,
-    forced:slugArg.includes(app.slug)||needsLibraryRefresh})){
+    forced:slugArg.includes(app.slug)||needsLibraryRefresh||upgradedFailed})){
     updates.push({app,revision,present});
   }
 }
@@ -134,7 +140,7 @@ async function reviewWithVision(app,frames,oldFrame){
 
 const recordResult=(slug,revision,status,detail={})=>{
   const prior=manifest[slug]||{};
-  manifest[slug]={...prior,...detail,status,lastAttemptRevision:revision,lastAttemptAt:new Date().toISOString()};
+  manifest[slug]={...prior,...detail,status,captureEngine:CAPTURE_ENGINE,lastAttemptRevision:revision,lastAttemptAt:new Date().toISOString()};
 };
 
 try{
@@ -171,12 +177,9 @@ try{
           // unrelated buttons or join public multiplayer rooms.
           const prepared=await page.evaluate(()=>Boolean(window.PocketWorksCover ||
             document.documentElement.dataset.pwCoverReady==='true'));
-          // Games without a custom scene can offer a safe, local-only start action.
-          // Never infer a click from an arbitrary visible Play/Online button.
-          if(!prepared){
-            const start=page.locator('[data-pw-cover-start]').first();
-            if(await start.count())await start.click({timeout:2000}).catch(()=>{});
-          }
+          // The game itself has priority. Older apps without a capture hook
+          // enter only explicit/local solo gameplay, never PocketNet sessions.
+          const entry=prepared?{started:false,actions:[]}:await enterCoverGameplay(page);
           const frameList=[];
           for(let index=0;index<shots;index++){
             if(prepared){
@@ -189,10 +192,25 @@ try{
             const bytes=await page.screenshot({type:'jpeg',quality:83,animations:'disabled',timeout:20000});
             const metrics=await frameMetrics(page,bytes);
             const quality=scoreCoverMetrics(metrics);
-            frameList.push({index,bytes,metrics,quality,prepared});
+            frameList.push({index,bytes,metrics,quality,prepared,started:entry.started});
           }
           const available=frameList.filter(x=>x.quality.pass);
-          if(!available.length)throw Error('No frame passed image-content checks');
+          if(!available.length){
+            const best=frameList.slice().sort((a,b)=>b.quality.score-a.quality.score)[0];
+            recordResult(app.slug,revision,'failed',{
+              note:'No frame passed image-content checks',
+              diagnostic:{
+                bestScore:best?.quality.score??0,
+                qualityReasons:best?.quality.reasons||[],
+                metrics:best?.metrics||null,
+                gameplayEntry:entry,
+                url:page.url()
+              }
+            });
+            failures.push({slug:app.slug,error:'No frame passed image-content checks',
+              reasons:best?.quality.reasons||[],entry:entry.actions});
+            continue;
+          }
           let oldFrame=null;
           if(present){
             for(const ext of ['jpg','png','webp','jpeg']){
@@ -236,11 +254,12 @@ try{
           await writeFile(path.join(out,app.slug+'.jpg'),chosen.bytes);
           recordResult(app.slug,revision,'published',{
             revision,qualityScore:chosen.quality.score,visionScore:chosen.visionScore??null,
-            prepared:chosen.prepared,shot:chosen.index,
+            prepared:chosen.prepared,started:entry.started,gameplayEntry:entry.actions,
+            diagnostic:null,shot:chosen.index,
             sha256:createHash('sha256').update(chosen.bytes).digest('hex'),
             imageVersion:2
           });
-          captured.push({slug:app.slug,shot:chosen.index,prepared,score:chosen.quality.score,
+          captured.push({slug:app.slug,shot:chosen.index,prepared,started:entry.started,score:chosen.quality.score,
             aiReviewed:Boolean(review),bytes:chosen.bytes.length});
         }catch(error){
           recordResult(app.slug,revision,'failed',{note:String(error.message).slice(0,160)});
