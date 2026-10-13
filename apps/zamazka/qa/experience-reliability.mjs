@@ -35,7 +35,7 @@ assert.equal(receipt?.payload.revision,'rconfirmed-1','receipt linked to submitt
 assert.equal(receipt?.payload.lines,strokes.length);
 assert.ok(saved.events.some(e=>e.type==='state'&&e.to===host.id&&e.payload.done.includes(host.id)),'state independently confirms receipt');
 const editor=Object.create(Editor.prototype);
-Object.assign(editor,{strokes:[],working:null,size:12,tool:'brush',color:'#123456',limitWarned:false,redoStack:[],render(){},save(){},saveSnapshot(){},inside(){return true},onChange(){}});
+Object.assign(editor,{zone:{x:0,y:0,w:600,h:450},strokes:[],working:null,size:12,tool:'brush',color:'#123456',limitWarned:false,redoStack:[],render(){},save(){},saveSnapshot(){},inside(){return true},onChange(){}});
 editor.beginStroke([2,2]);
 for(let i=0;i<190;i++)editor.extendStroke([2+i*2,30+Math.sin(i/12)*7]);
 editor.finishStroke();
