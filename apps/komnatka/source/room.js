@@ -110,22 +110,23 @@ export function createRoom(scene) {
  // wall-frame joins signal dollhouse scale without obstructing furniture.
  const frameWood=makeMaterial(scene,'dollhouse-framing','#bd9475');
  const frameEdge=makeMaterial(scene,'dollhouse-cut-edge','#e5c5a3');
- rounded(scene,'toy-display-plinth',8.38,.16,8.38,.065,frameWood,null,0,-.355,0);
- rounded(scene,'front-cut-edge',8.35,.065,.15,.026,frameEdge,null,0,-.265,4.12);
- rounded(scene,'right-cut-edge',.15,.065,8.34,.026,frameEdge,null,4.12,-.265,0);
+ const plinth=rounded(scene,'toy-display-plinth',8.38,.16,8.38,.065,frameWood,null,0,-.355,0);
+ const frontEdge=rounded(scene,'front-cut-edge',8.35,.065,.15,.026,frameEdge,null,0,-.265,4.12);
+ const rightEdge=rounded(scene,'right-cut-edge',.15,.065,8.34,.026,frameEdge,null,4.12,-.265,0);
+ const plinthFeet=[];
  for(const x of [-3.35,3.35])for(const z of [-3.35,3.35])
-  rounded(scene,'miniature-plinth-foot',.35,.13,.35,.035,frameWood,null,x,-.49,z);
+  plinthFeet.push(rounded(scene,'miniature-plinth-foot',.35,.13,.35,.035,frameWood,null,x,-.49,z));
 
  const trim=makeMaterial(scene,'skirting','#d7bea1');
  const back=wall(scene,wallpaper(scene,WALLS[0],'plain'),8.2,4.1,.21,0,2.03,-4.04,'back');
  const left=wall(scene,wallpaper(scene,WALLS[0],'plain'),.21,4.1,8.2,-4.04,2.03,0,'left');
- rounded(scene,'back-skirting',8.2,.18,.18,.045,trim,null,0,.09,-3.87);
- rounded(scene,'left-skirting',.18,.18,8.2,.045,trim,null,-3.87,.09,0);
- rounded(scene,'back-crown',8.2,.10,.24,.04,trim,null,0,4.07,-3.98);
- rounded(scene,'left-crown',.24,.10,8.2,.04,trim,null,-3.98,4.07,0);
- rounded(scene,'back-cutaway-cap',8.32,.13,.27,.047,frameEdge,null,0,4.11,-4.025);
- rounded(scene,'left-cutaway-cap',.27,.13,8.32,.047,frameEdge,null,-4.025,4.11,0);
- rounded(scene,'left-front-endgrain',.27,4.04,.28,.048,frameWood,null,-4.02,2.01,4.035);
+ const backSkirting=rounded(scene,'back-skirting',8.2,.18,.18,.045,trim,null,0,.09,-3.87);
+ const leftSkirting=rounded(scene,'left-skirting',.18,.18,8.2,.045,trim,null,-3.87,.09,0);
+ const backCrown=rounded(scene,'back-crown',8.2,.10,.24,.04,trim,null,0,4.07,-3.98);
+ const leftCrown=rounded(scene,'left-crown',.24,.10,8.2,.04,trim,null,-3.98,4.07,0);
+ const backCap=rounded(scene,'back-cutaway-cap',8.32,.13,.27,.047,frameEdge,null,0,4.11,-4.025);
+ const leftCap=rounded(scene,'left-cutaway-cap',.27,.13,8.32,.047,frameEdge,null,-4.025,4.11,0);
+ const leftPost=rounded(scene,'left-front-endgrain',.27,4.04,.28,.048,frameWood,null,-4.02,2.01,4.035);
  rounded(scene,'back-right-endgrain',.27,4.04,.28,.048,frameWood,null,4.035,2.01,-4.02);
  back.receiveShadows=true;left.receiveShadows=true;
  const practicalLights=new Map();
@@ -151,16 +152,39 @@ export function createRoom(scene) {
   if(layout===lastLayout)return;
   clearLayout();lastLayout=layout;
   floor.setEnabled(layout==='classic');
-  back.scaling.x=layout==='narrow'?.78:1;
-  left.position.x=layout==='narrow'?-3.18:-4.04;
+  const narrow=layout==='narrow',nook=layout==='nook';
+  const ratio=narrow?6.4/8.2:1,edgeRatio=narrow?6.57/8.35:1;
+  back.scaling.x=ratio;
+  left.position.x=narrow?-3.18:-4.04;
+  backSkirting.scaling.x=ratio;backCrown.scaling.x=ratio;backCap.scaling.x=ratio;
+  leftSkirting.position.x=narrow?-3.02:-3.87;
+  leftCrown.position.x=narrow?-3.12:-3.98;
+  leftCap.position.x=narrow?-3.17:-4.025;
+  leftPost.position.x=narrow?-3.17:-4.02;
+  frontEdge.setEnabled(!nook);frontEdge.scaling.x=edgeRatio;
+  rightEdge.position.x=narrow?3.27:4.12;
+  rightEdge.scaling.z=nook?5.39/8.34:1;rightEdge.position.z=nook?-1.405:0;
+  plinth.setEnabled(!nook);plinth.scaling.x=narrow?6.58/8.38:1;
+  // Legs belong to the current base, not an invisible full-size square.
+  for(let i=0;i<plinthFeet.length;i++){
+   const mesh=plinthFeet[i];mesh.setEnabled(!nook);
+   mesh.position.x=(i<2?-1:1)*(narrow?2.59:3.35);
+  }
+  if(nook){
+   floorStagePieces.push(rounded(scene,'l-shaped-stage-back',8.38,.16,5.46,.063,frameWood,null,0,-.355,-1.405));
+   floorStagePieces.push(rounded(scene,'l-shaped-stage-wing',5.52,.16,2.96,.063,frameWood,null,-1.32,-.355,2.64));
+   floorStagePieces.push(rounded(scene,'l-shaped-front-edge',5.52,.065,.15,.026,frameEdge,null,-1.32,-.265,4.12));
+   floorStagePieces.push(rounded(scene,'l-shaped-inward-edge',.15,.065,2.88,.026,frameEdge,null,1.38,-.265,2.65));
+   floorStagePieces.push(rounded(scene,'l-shaped-return-edge',2.78,.065,.15,.026,frameEdge,null,2.72,-.265,1.23));
+  }
   if(layout==='narrow'){
    addFloorPart('narrow-dollhouse-floor',6.4,8.2,0,0,floor.material);
   }else if(layout==='nook'){
    addFloorPart('l-room-back-floor',8.2,5.35,0,-1.405,floor.material);
    addFloorPart('l-room-side-floor',5.36,2.85,-1.32,2.64,floor.material);
    const trim=makeMaterial(scene,'toy-inner-trim','#d8b79b');
-   const side=rounded(scene,'l-inner-cut-wall',.15,1.22,2.85,.045,trim,null,1.36,.60,2.64);
-   const front=rounded(scene,'l-front-cut-wall',2.75,1.22,.15,.045,trim,null,2.73,.60,1.26);
+   const side=rounded(scene,'l-inner-cut-wall',.15,.17,2.85,.045,trim,null,1.36,.075,2.64);
+   const front=rounded(scene,'l-front-cut-wall',2.75,.17,.15,.045,trim,null,2.73,.075,1.26);
    side.isPickable=false;front.isPickable=false;floorStagePieces.push(side,front);
   }
  }
