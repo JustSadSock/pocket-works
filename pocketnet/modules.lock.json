@@ -73,5 +73,11 @@
       "v5",
       "v6"
     ]
+  },
+  "komnatka": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
