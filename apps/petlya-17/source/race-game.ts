@@ -858,4 +858,3 @@ export class RaceGame {
     });
   }
 }
-}

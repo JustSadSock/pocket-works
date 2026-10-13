@@ -152,7 +152,9 @@ export class VisualRig {
     const root = new TransformNode(name + '-rig-' + index, this.scene);
     const shell = makeMaterial(this.scene, name + '-enamel-' + index, bodyColor, 0.34);
     shell.roughness = 0.44;
+    shell.backFaceCulling = false;
     const stripe = makeMaterial(this.scene, name + '-livery-' + index, stripeColor, 0.22);
+    stripe.backFaceCulling = false;
     const carbon = makeMaterial(this.scene, name + '-carbon-' + index, new Color3(.035,.051,.055), .12);
     const tyre = makeMaterial(this.scene, name + '-tyres-' + index, new Color3(.026,.032,.034), .035);
     const alloy = makeMaterial(this.scene, name + '-alloy-' + index, new Color3(.5,.56,.54), .32);
