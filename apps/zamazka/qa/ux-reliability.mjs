@@ -65,3 +65,6 @@ import './coins-and-aspect.mjs';
 
 // Phone-sized touch controls, swipe navigation, and safe-area regressions.
 import './mobile-touch.mjs';
+
+// Gallery, compact archive and precision-on-iPhone failure cases.
+import './mobile-visual-fixes.mjs';

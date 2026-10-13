@@ -1,0 +1,162 @@
+/* Mobile corrective layer: shipped after the museum and phone styles.
+   Avoid intrinsic CSS Grid columns for the five-art swipe rail in iOS WebKit. */
+@media(max-width:900px), (pointer:coarse){
+ .screen>.mobile-preview{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
+ .screen>.mobile-preview>.phase-body{min-width:0;flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+ .screen>.mobile-preview .gallery.exhibition-grid{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  grid-template-columns:none!important;grid-auto-columns:auto!important;
+  flex:1 1 0;min-width:0;min-height:0;max-width:100%;
+  width:100%;gap:11px;align-items:stretch;justify-content:flex-start;
+  overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
+  scroll-padding-inline:12px;touch-action:pan-x;overscroll-behavior-x:contain;
+  padding:5px 12px 10px;margin:0;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid::-webkit-scrollbar{display:none}
+ .screen>.mobile-preview .gallery.exhibition-grid>.picture{
+  display:flex!important;flex:0 0 calc(100% - 42px)!important;
+  width:calc(100% - 42px)!important;max-width:calc(100% - 42px)!important;
+  min-width:0;min-height:0;align-self:stretch;grid-column:auto!important;
+  justify-self:auto!important;transform:none!important;
+  scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;
+  padding:8px!important;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid>.picture .picture-image{
+  flex:1 1 0;min-height:0;max-width:100%;width:100%;
+  display:flex;align-items:center;justify-content:center;background:#2d241d;
+  padding:4px;border:4px ridge #9e7d4f;overflow:hidden;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid>.picture img{
+  display:block;width:auto!important;height:auto!important;
+  max-height:100%!important;max-width:100%!important;
+  aspect-ratio:auto!important;object-fit:contain!important;
+  background:transparent!important;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid>.picture .caption{
+  font-size:clamp(16px,4.1vw,21px);line-height:1.15;margin:6px 0 3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;flex:none;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid>.picture .style{
+  font-size:11px;line-height:1.25;flex:none;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid>.picture .picture-index{
+  margin:6px 0 0;flex:none;
+ }
+ .screen>.mobile-preview .mobile-gallery-nav{
+  display:flex;flex:none;align-items:center;justify-content:center;gap:18px;
+  height:52px;min-height:52px;margin:0;
+ }
+ .screen>.mobile-preview .mobile-gallery-nav button{
+  width:48px;min-width:48px;height:44px;min-height:44px;
+ }
+ /* Portrait work must not be a full-screen wallpaper: keep the comparison
+    above the fold while honouring each source painting's actual aspect. */
+ .screen .reveal-phase .unveil-frame,
+ .screen .waiting-phase .unveil-frame{
+  aspect-ratio:var(--art-aspect,1.3333333)!important;
+  width:min(100%,calc(min(38dvh,310px) * var(--art-aspect,1.3333333)))!important;
+  max-height:min(38dvh,310px)!important;
+  margin:8px auto 12px;border:6px ridge #b39762;
+  box-shadow:0 9px 25px #08060480;
+ }
+ .screen .reveal-phase .unveil-control,
+ .screen .waiting-phase .unveil-control{
+  display:grid;grid-template-columns:1fr;gap:4px;
+  font-size:12px;max-width:min(100%,520px);
+  margin-inline:auto;
+ }
+ .screen .reveal-phase .unveil-control input,
+ .screen .waiting-phase .unveil-control input{
+  width:100%;min-width:0;min-height:44px;
+ }
+ .screen .reveal-phase .reveal-layout,
+ .screen .waiting-phase .waiting-layout{gap:13px}
+ .screen .reveal-phase .reveal-main>h3{font-size:clamp(22px,6vw,29px);margin:5px 0}
+ .screen .reveal-phase .reveal-main>.hint{margin:6px 0 8px;font-size:12px}
+ .screen .reveal-phase .reveal-brief{padding-top:11px}
+ .screen .reveal-phase .reveal-brief>h3{font-size:23px}
+ .screen .reveal-phase .reveal-brief>.stack .btn{min-height:48px}
+ /* Archival records are compact exhibition labels with a real-sized
+    thumbnail; no tall matched-height tiles or wasteful beige padding. */
+ .screen>.collection-page{min-height:100%;max-width:100%;padding:13px 12px calc(20px + env(safe-area-inset-bottom))}
+ .collection-page>.section-label{font-size:10px}
+ .collection-page>h2{font-size:clamp(26px,7vw,36px);margin:6px 0 12px}
+ .collection-page .zamazka-cloud-row{
+  margin:10px 0 13px;padding:7px 9px;gap:7px;
+  color:#4a3829;background:#dac8ad;border-color:#b9a07e;
+  font-size:11px;line-height:1.35;
+ }
+ .collection-page .zamazka-cloud-row span{color:#4a3829}
+ .collection-page .zamazka-cloud-row .btn{min-height:44px;flex:none;font-size:11px}
+ .collection-page>.archive-gallery{
+  display:flex!important;flex-direction:column!important;
+  flex-wrap:nowrap!important;align-items:stretch!important;
+  gap:9px!important;padding:0!important;margin:0!important;
+ }
+ .collection-page .archive-gallery>.archive-work{
+  display:grid!important;
+  grid-template-columns:minmax(105px,35%) minmax(0,1fr)!important;
+  grid-template-rows:112px!important;align-items:center!important;
+  gap:12px!important;min-width:0;width:100%!important;
+  min-height:128px!important;max-height:138px!important;
+  padding:8px!important;transform:none!important;
+  background:#efe5d5;border:1px solid #bda888;box-shadow:0 2px 0 #d0bea1;
+  text-align:left;
+ }
+ .collection-page .archive-work>.archive-art-frame{
+  display:flex!important;align-items:center;justify-content:center;
+  overflow:hidden!important;min-width:0;width:100%!important;height:110px!important;
+  padding:3px;border:3px ridge #9a7849;background:#2d251d;
+ }
+ .collection-page .archive-work>.archive-art-frame canvas{
+  display:block!important;
+  width:min(100%,calc(110px * var(--art-aspect,1.333333)))!important;
+  height:auto!important;max-height:100%!important;max-width:100%!important;
+  aspect-ratio:var(--art-aspect,1.333333)!important;
+  object-fit:fill!important;background:transparent!important;
+ }
+ .collection-page .archive-work>.archive-caption{display:flex;min-width:0;flex-direction:column;gap:6px;justify-content:center}
+ .collection-page .archive-work .caption{
+  margin:0;font:normal clamp(16px,4.4vw,21px)/1.15 Georgia,serif;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+  overflow:hidden;overflow-wrap:anywhere;
+ }
+ .collection-page .archive-work .style{font-size:11px}
+ .collection-page .archive-work:nth-child(2n){transform:none!important}
+ /* Precise stylus stays a one-finger action: latch toggle is outside the
+    drawing area and intentionally does not need simultaneous iOS touches. */
+ .restore.precision-mode .precision-arm{
+  width:74px;height:74px;bottom:15px;
+  touch-action:manipulation;z-index:12;
+ }
+ .restore.precision-mode .precision-arm strong{font-size:10px}
+ .restore.precision-mode .precision-side{
+  width:42px;height:40px;min-height:40px;
+  bottom:3px;left:26px;z-index:12;
+ }
+ .restore.precision-mode.left-hand .precision-side{left:auto;right:26px}
+ .restore.precision-mode .work-stage{position:relative}
+ .restore.precision-mode .precision-help{
+  position:absolute;z-index:7;top:7px;left:7px;right:150px;
+  max-width:220px;padding:6px 8px;
+  font:600 11px/1.25 system-ui,sans-serif;
+  color:#f4e5c8;background:#2b241edb;border:1px solid #8d7049;
+  pointer-events:none;
+ }
+ .restore:not(.precision-mode) .precision-help{display:none}
+}
+@media(max-width:375px){
+ .collection-page .archive-gallery>.archive-work{
+  grid-template-columns:minmax(93px,32%) minmax(0,1fr)!important;
+  gap:8px!important;
+ }
+ .collection-page .archive-work .caption{font-size:16px}
+ .screen>.mobile-preview .gallery.exhibition-grid>.picture{flex-basis:calc(100% - 32px)!important;width:calc(100% - 32px)!important;max-width:calc(100% - 32px)!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .screen>.mobile-preview .gallery.exhibition-grid{scroll-behavior:auto!important}
+}

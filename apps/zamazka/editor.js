@@ -310,12 +310,12 @@ export class Editor{
    this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onSound=onSound;this.onPersistenceError=onPersistenceError;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
    this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
-    this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
-    this.hand=localStorage.getItem('pocket-works:zamazka:precision-hand')==='left'?'left':'right';
+    this.inputMode=(sessionStorage.getItem('pocket-works:zamazka:input-mode')||localStorage.getItem('pocket-works:zamazka:input-mode'))==='precision'?'precision':'direct';
+    this.hand=(sessionStorage.getItem('pocket-works:zamazka:precision-hand')||localStorage.getItem('pocket-works:zamazka:precision-hand'))==='left'?'left':'right';
     this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
     this.cursor=root.querySelector('#brushCursor');this.pickerPreview=root.querySelector('#pickerPreview');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
    this.draftKey=key+id+':'+variation+':'+round;
-   try{const stored=JSON.parse(localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
+   try{const stored=JSON.parse(sessionStorage.getItem(this.draftKey)||localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
    this.attach();this.setMode(this.inputMode,false);this.center();this.render();
  }
  center(animate=false){
@@ -335,7 +335,26 @@ export class Editor{
  inside(p){return insideDamage(this.zone,p)}
  save(){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot();this.onChange(this.strokes.length)}
   getSnapshot(){return [...this.strokes,...(this.working?[this.working]:[])].map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[...p])}))}
-  saveSnapshot(){try{localStorage.setItem(this.draftKey,JSON.stringify(this.getSnapshot()));this.persistenceWarned=false;return true}catch{if(!this.persistenceWarned){this.persistenceWarned=true;this.onPersistenceError()}return false}}
+  saveSnapshot(){
+  const payload=JSON.stringify(this.getSnapshot());
+  try{
+   localStorage.setItem(this.draftKey,payload);
+   try{sessionStorage.removeItem(this.draftKey)}catch{}
+   this.persistenceWarned=false;return true;
+  }catch{
+   // Retain drafts in the open tab if iOS localStorage quota is exhausted.
+   try{
+    sessionStorage.setItem(this.draftKey,payload);
+    this.persistenceWarned=false;
+    const status=this.root.querySelector('#draftStatus');
+    if(status)status.textContent='Черновик сохранён в этой вкладке';
+    return true;
+   }catch{
+    if(!this.persistenceWarned){this.persistenceWarned=true;this.onPersistenceError()}
+    return false;
+   }
+  }
+ }
   adoptDraft(strokes){
     if(this.strokes.length||!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
     const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:MAX_TOTAL_POINTS+1),0);
@@ -483,18 +502,30 @@ export class Editor{
   setMode(mode,persist=true){
     this.finishStroke();
     this.inputMode=mode==='precision'?'precision':'direct';
-    if(persist)localStorage.setItem('pocket-works:zamazka:input-mode',this.inputMode);
+    if(persist){try{localStorage.setItem('pocket-works:zamazka:input-mode',this.inputMode);sessionStorage.removeItem('pocket-works:zamazka:input-mode')}catch{try{sessionStorage.setItem('pocket-works:zamazka:input-mode',this.inputMode)}catch{}}}
     const precision=this.inputMode==='precision';
     this.root.querySelector('.restore')?.classList.toggle('precision-mode',precision);
     this.root.querySelector('.restore')?.classList.toggle('left-hand',this.hand==='left');
-    if(this.armButton){this.armButton.hidden=!precision;this.armButton.classList.remove('is-armed')}
+    this.armed=false;this.armPointer=null;
+    if(this.armButton){
+     this.armButton.hidden=!precision;this.armButton.classList.remove('is-armed');
+     this.armButton.setAttribute('aria-pressed','false');
+     this.armButton.querySelector('strong').textContent='РИСОВАТЬ';
+    }
     if(this.sideButton)this.sideButton.hidden=!precision;
     const switcher=this.root.querySelector('[data-cmd="precision"]');
-    if(switcher){switcher.setAttribute('aria-pressed',String(precision));switcher.setAttribute('title',precision?'Обычное рисование':'Точное перо: двумя пальцами');switcher.querySelector('span').textContent=precision?'Точное':'Прямое'}
+    if(switcher){switcher.setAttribute('aria-pressed',String(precision));switcher.setAttribute('aria-label',precision?'Выключить точное перо':'Включить точное перо');switcher.setAttribute('title',precision?'Обычное рисование':'Точное перо: смещённый кончик');switcher.querySelector('span').textContent=precision?'Точное':'Прямое'}
     const tip=this.root.querySelector('#drawingTip');
     if(tip)this.updateDrawingTip();
-    if(!precision){this.armed=false;this.armPointer=null;this.aimPointer=null;this.aim=null}
+    if(!precision){this.aimPointer=null;this.aim=null}
+    this.updatePrecisionHelp();
     if(this.lastCursor)this.showCursor(this.lastCursor);
+  }
+  updatePrecisionHelp(){
+    const help=this.root.querySelector('#precisionHelp');
+    if(help)help.textContent=this.armed
+     ?'Перо включено · рисуй одним пальцем, кончик выше пальца. Нажми СТОП для наведения.'
+     :'Веди палец, чтобы навести кончик. Нажми РИСОВАТЬ, чтобы оставлять мазки.';
   }
   attach(){
     this.down=e=>{
@@ -611,23 +642,25 @@ export class Editor{
     this.viewport.addEventListener('pointercancel',this.frameUp);
     this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor();this.hidePickerPreview()}};
     this.viewport.addEventListener('pointerleave',this.cursorLeave);
+    // iOS single-finger latch; no simultaneous hold-and-drag needed.
     this.armDown=e=>{
       if(this.inputMode!=='precision'||this.armPointer!==null)return;
       e.preventDefault();e.stopPropagation();
-      this.armPointer=e.pointerId;this.armed=true;this.armButton.classList.add('is-armed');
-      this.armButton.setAttribute('aria-pressed','true');
+      this.armPointer=e.pointerId;
+      this.armed=!this.armed;
+      this.armButton.classList.toggle('is-armed',this.armed);
+      this.armButton.setAttribute('aria-pressed',String(this.armed));
+      this.armButton.querySelector('strong').textContent=this.armed?'СТОП':'РИСОВАТЬ';
+      this.updatePrecisionHelp();
       try{this.armButton.setPointerCapture(e.pointerId)}catch{}
-      if(this.aim&&this.aimPointer!==null&&this.pointers.size===1&&!this.working){
+      if(this.armed&&this.aim&&this.aimPointer!==null&&this.pointers.size===1&&!this.working)
         this.beginStroke(this.pointAt(this.aim));
-      }
+      if(!this.armed)this.finishStroke();
     };
     this.armUp=e=>{
       if(this.armPointer!==e.pointerId)return;
       e.preventDefault();e.stopPropagation();
-      this.armPointer=null;this.armed=false;
-      this.armButton.classList.remove('is-armed');this.armButton.setAttribute('aria-pressed','false');
-      this.finishStroke();
-      if(this.aim)this.showCursor(this.aim);
+      this.armPointer=null;
     };
     this.armButton?.addEventListener('pointerdown',this.armDown);
     this.armButton?.addEventListener('pointerup',this.armUp);
@@ -662,7 +695,7 @@ export class Editor{
       if(b.dataset.cmd==='precision')this.setMode(this.inputMode==='precision'?'direct':'precision');
       if(b.dataset.cmd==='handedness'){
         this.hand=this.hand==='right'?'left':'right';
-        localStorage.setItem('pocket-works:zamazka:precision-hand',this.hand);
+        try{localStorage.setItem('pocket-works:zamazka:precision-hand',this.hand);sessionStorage.removeItem('pocket-works:zamazka:precision-hand')}catch{try{sessionStorage.setItem('pocket-works:zamazka:precision-hand',this.hand)}catch{}}
         this.root.querySelector('.restore')?.classList.toggle('left-hand',this.hand==='left');
         b.setAttribute('aria-label','Кнопка рисования '+(this.hand==='left'?'справа':'слева'));
         if(this.lastCursor)this.showCursor(this.lastCursor);
@@ -851,7 +884,7 @@ export class Editor{
    // Keep clipZone above so tools still affect only the damage mask.
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
- clearDraft(){localStorage.removeItem(this.draftKey)}
+ clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}}
  dispose(){this.closed=true;clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
