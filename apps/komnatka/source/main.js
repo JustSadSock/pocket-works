@@ -5,6 +5,7 @@ import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager'
 import { Engine, Scene, ArcRotateCamera, Vector3, Color3, TransformNode } from '@babylonjs/core';
 import { CATALOG, COLORS, byType, makeItem } from './models.js';
 import { createSoundscape } from './soundscape.js';
+import { createMotionDirector } from './motion.js';
 import { buildFurnitureThumbnails } from './thumbnails.js';
 import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
@@ -14,7 +15,7 @@ registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.1.2',releaseNotes:
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
-let state=load(),scene,engine,camera,room,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map(),lights=[],hintSeen=false;
+let state=load(),scene,engine,camera,room,director,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
 const GROUPS=[['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
 let activeGroup='furniture',savedTimer=0,toastTimer=0;
@@ -24,6 +25,23 @@ const soundscape=createSoundscape();
 function sound(cue='select') {
  const key=typeof cue==='string'?cue:cue>=690?'place':cue<240?'blocked':cue<320?'delete':cue<440?'select':cue<570?'rotate':'place';
  soundscape.play(key);
+}
+function itemSound(item,action='place'){
+ if(!item)return sound(action);
+ const type=item.type;
+ const cue=type==='mug'?'ceramic':type==='books'||type==='frame'?'paper':
+   type==='plant'?'leaves':type==='rug'?'textile':
+   type==='sofa'||type==='chair'||type==='bed'?'fabric':
+   type==='floorlamp'||type==='tablelamp'?'glass':'wood';
+ sound(action==='place'?cue:action);
+}
+function retireMissing(previous,next){
+ if(!director)return;
+ const kept=new Set(next.map(x=>x.id));
+ for(const old of previous)if(!kept.has(old.id)){
+  const root=roots.get(old.id);
+  if(root){roots.delete(old.id);director.retire(old.id,root);}
+ }
 }
 function toast(message) {
  ui.toast.textContent=message;ui.toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>ui.toast.classList.remove('show'),2350);
@@ -37,14 +55,26 @@ function record(before) {
  if(before===JSON.stringify(state))return;
  history.push(before);if(history.length>55)history.shift();future.length=0;persist();updateActions();
 }
-function mutate(fn) {const before=JSON.stringify(state);fn();record(before);refresh();}
+function mutate(fn) {
+ const before=JSON.stringify(state),previousEvening=state.evening;
+ fn();record(before);refresh();
+ if(previousEvening!==state.evening)sound('light');
+}
 function undo(){
  if(!history.length)return;
- future.push(JSON.stringify(state));state=sanitize(JSON.parse(history.pop()));selectedId=null;cancelPending(false);refresh();persist();sound('undo');updateActions();
+ const previous=state.items;
+ future.push(JSON.stringify(state));state=sanitize(JSON.parse(history.pop()));
+ retireMissing(previous,state.items);
+ selectedId=null;cancelPending(false);refresh();persist();sound('undo');updateActions();
+ for(const item of state.items)if(!previous.some(prev=>prev.id===item.id))director?.appear(item.id);
 }
 function redo(){
  if(!future.length)return;
- history.push(JSON.stringify(state));state=sanitize(JSON.parse(future.pop()));selectedId=null;cancelPending(false);refresh();persist();sound('paint');updateActions();
+ const previous=state.items;
+ history.push(JSON.stringify(state));state=sanitize(JSON.parse(future.pop()));
+ retireMissing(previous,state.items);
+ selectedId=null;cancelPending(false);refresh();persist();sound('undo');updateActions();
+ for(const item of state.items)if(!previous.some(prev=>prev.id===item.id))director?.appear(item.id);
 }
 function updateActions() {
  $('undoBtn').disabled=!history.length;$('redoBtn').disabled=!future.length;
@@ -163,7 +193,7 @@ function select(id) {
  ui.swatches.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{mutate(()=>{const found=state.items.find(i=>i.id===selectedId);if(found)found.color=button.dataset.color;});sound('paint');}));
  $('rotateBtn').disabled=item.type==='window'||item.type==='frame';
  $('duplicateBtn').disabled=false;
- sound(340,'sine',.045,.022);
+ sound('select');
 }
 function refresh(){
  if(!ready)return;
