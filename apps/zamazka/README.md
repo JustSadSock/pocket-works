@@ -208,3 +208,10 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 ## 1.21.1 — Непрерывная видимость длинных линий
 
 При достижении 45 точек редактор переносит активный сегмент в сохранённую часть того же жеста. Теперь этот перенос немедленно инвалидирует кэш постоянного слоя, поэтому уже нарисованная часть остаётся видимой, пока указатель рисует следующий сегмент. Ранее кэш обновлялся только после отпускания указателя, вызывая краткое исчезновение части линии. Формат штрихов, лимиты, единая отмена жеста и передача в PocketNet не меняются. Тест `qa/experience-reliability.mjs` проверяет отрисовку после двух последовательных переносов без завершения жеста.
+
+
+## 1.21.2 — Natural museum frames and atelier sound
+
+- Carousel gilded frames now follow real decoded painting ratios; portrait, square and landscape artworks no longer crop to a shared ratio. ResizeObserver updates artwork geometry when the viewport changes. The restoration canvas stays 4:3 intentionally.
+- The original offline acoustic palette of bristles, timber, paper, porcelain voting tokens and curator seals uses Web Audio layers instead of stock sine beeps. Setting-controlled, gesture-activated and rate-limited. See AUDIO.md.
+- Test: `node apps/zamazka/qa/museum-aspect-audio.mjs`.

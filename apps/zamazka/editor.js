@@ -168,8 +168,8 @@ const MAX_STROKES=100,MAX_STROKE_POINTS=45,MAX_TOTAL_POINTS=2000;
 
 const key='pocket-works:zamazka:draft:';
 export class Editor{
- constructor(root,{id,variation=0,round=1,onChange=()=>{},onPersistenceError=()=>{}}){
-   this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onPersistenceError=onPersistenceError;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
+ constructor(root,{id,variation=0,round=1,onChange=()=>{},onSound=()=>{},onPersistenceError=()=>{}}){
+   this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onSound=onSound;this.onPersistenceError=onPersistenceError;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
    this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
     this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
@@ -206,7 +206,7 @@ export class Editor{
   }
   setTool(tool){
     if(!['brush','fill','picker','erase','hand'].includes(tool))return;
-    this.finishStroke();this.tool=tool;
+    this.finishStroke();if(this.tool!==tool)this.onSound?.('tool');this.tool=tool;
     this.viewport.classList.toggle('hand-mode',tool==='hand');
     this.viewport.classList.toggle('picker-mode',tool==='picker');
     this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
@@ -237,7 +237,7 @@ export class Editor{
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS)this.compactStrokeBudget();
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
     this.working={c:this.color,s:this.size,t:this.tool,p:[p],g:'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
-    this.redoStack=[];this.render();
+    this.redoStack=[];this.onSound?.('brush');this.render();
   }
   warnLimit(){if(!this.limitWarned){this.onChange(-1);this.limitWarned=true}}
   extendStroke(p){
@@ -355,7 +355,7 @@ export class Editor{
       if(this.tool==='fill'){
         if(!this.inside(p))return;
         if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
-        this.strokes.push({c:this.color,s:this.size,t:'fill',p:[p]});
+        this.strokes.push({c:this.color,s:this.size,t:'fill',p:[p]});this.onSound?.('fill');
         this.redoStack=[];this.save();this.render();return;
       }
       if(this.inputMode==='precision'&&e.pointerType==='touch'){
@@ -473,7 +473,7 @@ export class Editor{
     this.actions=e=>{
       const b=e.target.closest('[data-tool],[data-cmd],[data-color]');if(!b)return;
       if(b.dataset.tool)this.setTool(b.dataset.tool);
-      if(b.dataset.color){this.color=b.dataset.color;this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.toggle('active',x===b));if(this.lastCursor)this.showCursor(this.lastCursor)}
+      if(b.dataset.color){this.onSound?.('tool');this.color=b.dataset.color;this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.toggle('active',x===b));if(this.lastCursor)this.showCursor(this.lastCursor)}
       if(b.dataset.cmd==='precision')this.setMode(this.inputMode==='precision'?'direct':'precision');
       if(b.dataset.cmd==='handedness'){
         this.hand=this.hand==='right'?'left':'right';
@@ -486,12 +486,12 @@ export class Editor{
         this.finishStroke();
         const tail=this.strokes.pop(),group=[tail];
         if(tail.g)while(this.strokes.length&&this.strokes[this.strokes.length-1].g===tail.g)group.unshift(this.strokes.pop());
-        this.redoStack.push(group);this.save();this.render();
+        this.redoStack.push(group);this.onSound?.('undo');this.save();this.render();
       }
       if(b.dataset.cmd==='redo'&&this.redoStack.length){
         this.finishStroke();
         const group=this.redoStack.pop();
-        this.strokes.push(...group);this.save();this.render();
+        this.strokes.push(...group);this.onSound?.('tool');this.save();this.render();
       }
       if(b.dataset.cmd==='in')this.zoom(1.3);
       if(b.dataset.cmd==='out')this.zoom(.77);
