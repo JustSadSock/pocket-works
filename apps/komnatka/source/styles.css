@@ -108,3 +108,18 @@
 .drag-trash svg{height:25px;width:25px}
 .drag-trash.hover{background:#b97768;color:#fff9ee;border-color:#b97768;transform:translateY(-50%) scale(1.06)}
 @media(max-width:840px){.drag-trash{right:8px;width:69px;height:112px;font-size:11px}}
+
+/* Tactile effects are brief and restrained: the diorama stays visually calm. */
+.snap-pulse{position:absolute;left:-40px;top:-40px;width:34px;height:34px;z-index:5;border:1.5px solid #c39b78;border-radius:50%;background:#fff7e51c;pointer-events:none;opacity:0}
+.item-button .item-drawing{transition:transform .17s cubic-bezier(.18,.86,.28,1.18),box-shadow .17s ease}
+.item-button:active .item-drawing{transform:translateY(-5px) rotate(-2deg);box-shadow:0 8px 11px #765d4628}
+.item-button.choosing .item-drawing{transform:translateY(-3px);box-shadow:0 6px 10px #765d4624}
+.color-dot,.paint-chip{transition:transform .16s cubic-bezier(.16,.87,.35,1.25),box-shadow .16s}
+.color-dot:active,.paint-chip:active{transform:scale(.84)}
+.selection-actions button:active,.preview-rotate:not(:disabled):active{transform:scale(.95) translateY(1px)}
+.category-strip button:active{transform:translateY(1px) scale(.96)}
+.drag-trash{transition:transform .2s cubic-bezier(.2,.85,.3,1.2),background .18s,color .18s}
+.drag-trash.hover{animation:trash-ready .38s ease-out}
+@keyframes trash-ready{0%{transform:translateY(-50%) scale(.93)}65%{transform:translateY(-50%) scale(1.085)}100%{transform:translateY(-50%) scale(1.06)}}
+.scene-stage{transition:background .7s ease}
+@media(prefers-reduced-motion:reduce){.item-button .item-drawing,.drag-trash,.scene-stage{transition:none!important;animation:none!important}}

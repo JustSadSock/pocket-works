@@ -122,6 +122,12 @@ function windowViewMaterial(scene){
  const m=new StandardMaterial('outside-scenery',scene);m.diffuseTexture=tx;m.specularColor=new Color3(.05,.06,.06);
  outdoorMaterials.set(scene,m);return m;
 }
+export function tintWindowView(scene,nightFraction){
+ const material=outdoorMaterials.get(scene);
+ if(!material||material.isDisposed())return;
+ const t=Math.max(0,Math.min(1,nightFraction));
+ material.diffuseColor.set(1-.63*t,1-.59*t,1-.48*t);
+}
 const rugMaterials=new WeakMap();
 function wovenRug(scene,color){
  let set=rugMaterials.get(scene);

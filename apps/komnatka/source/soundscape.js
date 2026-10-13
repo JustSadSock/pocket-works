@@ -2,7 +2,7 @@
 // The same waveform is never reused for every action: wood, textile and ceramics
 // use distinct transient, resonance and noise envelopes. No external audio assets.
 export function createSoundscape(){
- let context=null,noise=null,muted=false;
+ let context=null,noise=null,muted=false,lastSound=-100; 
  function ctx(){
   const Ctor=window.AudioContext||window.webkitAudioContext;
   if(!Ctor)return null;
@@ -42,6 +42,12 @@ export function createSoundscape(){
  }
  const cues={
   place(c,t){grain(c,t,.12,.065,500,.55);tone(c,t,103,.19,.065,'sine',.52);tone(c,t+.023,188,.12,.022,'triangle',.68);},
+  wood(c,t){grain(c,t,.105,.052,470,.62);tone(c,t,138,.17,.052,'sine',.49);tone(c,t+.018,239,.10,.012,'triangle',.63);},
+  fabric(c,t){grain(c,t,.19,.036,380,.58);tone(c,t,101,.21,.038,'sine',.54);grain(c,t+.042,.105,.014,740,.9);},
+  ceramic(c,t){tone(c,t,602,.24,.019,'sine',.94);tone(c,t+.029,917,.19,.008,'sine',.91);grain(c,t,.055,.011,990,1.4);},
+  paper(c,t){grain(c,t,.16,.035,1120,.67);tone(c,t+.025,240,.085,.010,'triangle',.77);},
+  textile(c,t){grain(c,t,.24,.041,610,.5);grain(c,t+.055,.14,.019,1250,.74);},
+  leaves(c,t){grain(c,t,.20,.028,840,.40);grain(c,t+.07,.12,.010,1740,.75);},
   rotate(c,t){grain(c,t,.085,.032,320,.9);tone(c,t,172,.10,.048,'triangle',.78);},
   lift(c,t){grain(c,t,.14,.039,340,.58);tone(c,t,125,.12,.026,'sine',1.24);},
   paint(c,t){grain(c,t,.19,.032,950,.52);tone(c,t,235,.14,.025,'triangle',.85);},
@@ -55,7 +61,13 @@ export function createSoundscape(){
  return {
   play(name='select'){
    if(muted)return;
-   try{const c=ctx();if(!c)return;cues[name]?.(c,c.currentTime+.006);}catch{}
+   try{
+    const c=ctx();if(!c||!cues[name])return;
+    // Cap transients during rapid interactions to avoid volume spikes.
+    if(c.currentTime-lastSound<.035)return;
+    lastSound=c.currentTime;
+    cues[name](c,c.currentTime+.006);
+   }catch{}
   },
   toggle(){muted=!muted;if(!muted)this.play('light');return !muted;},
   get muted(){return muted;},

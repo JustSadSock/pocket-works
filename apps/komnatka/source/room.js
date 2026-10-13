@@ -1,5 +1,5 @@
 import { MeshBuilder, Vector3, Color3, Color4, StandardMaterial, HemisphericLight, DirectionalLight, DynamicTexture, PointLight, ShadowGenerator } from '@babylonjs/core';
-import { makeMaterial, rounded } from './models.js';
+import { makeMaterial, rounded, tintWindowView } from './models.js';
 
 export const WALLS=['#efe0ca','#d5e0ce','#edc5b9','#cad7dc','#e6d8df','#e2cfae'];
 export const FLOORS=['honey','walnut','painted','tile'];
@@ -112,12 +112,35 @@ export function createRoom(scene) {
    lastFloor=state.floor;
   }
  }
+ let firstLight=true,nightFraction=0,lastLightTime=null;
+ function applyLightBlend(t){
+  ambient.intensity=.59+(.105-.59)*t;
+  sun.intensity=.43+(.035-.43)*t;
+  scene.imageProcessingConfiguration.exposure=.93+(.75-.93)*t;
+  for(const light of practicalLights.values())
+   light.intensity=.35+(1.65-.35)*t;
+  // The outside view dims rather than visibly switching material or rebuilding the window.
+  tintWindowView(scene,t);
+  const bulb=scene.getMaterialByName('material-light');
+  if(bulb?.emissiveColor)bulb.emissiveColor.set(.085+.36*t,.071+.26*t,.035+.13*t);
+ }
  function setEvening(on) {
   nightMode=Boolean(on);
-  ambient.intensity=nightMode?.105:.59;
-  sun.intensity=nightMode?.035:.43;
-  scene.imageProcessingConfiguration.exposure=nightMode?.75:.93;
-  for(const light of practicalLights.values())light.intensity=nightMode?1.65:.35;
+  if(firstLight){nightFraction=nightMode?1:0;firstLight=false;applyLightBlend(nightFraction);}
+ }
+ function tickLighting(time){
+  if(lastLightTime===null)lastLightTime=time;
+  const dt=Math.max(0,Math.min(80,time-lastLightTime));
+  lastLightTime=time;
+  const target=nightMode?1:0,diff=target-nightFraction;
+  if(Math.abs(diff)<.002){
+   if(nightFraction!==target){nightFraction=target;applyLightBlend(target);}
+   return false;
+  }
+  // Frame-rate independent, ~700 ms to settle, even on a throttled mobile device.
+  nightFraction+=diff*(1-Math.exp(-dt/235));
+  applyLightBlend(nightFraction);
+  return true;
  }
  function syncPracticalLights(items) {
   const wanted=new Set();
@@ -132,11 +155,11 @@ export function createRoom(scene) {
     practicalLights.set(item.id,light);
    }
    light.position.set(item.x,item.y+(item.type==='floorlamp'?2.0:.62),item.z);
-   light.intensity=nightMode?1.65:.35;
+   light.intensity=.35+(1.65-.35)*nightFraction;
   }
   for(const [id,light] of practicalLights)if(!wanted.has(id)){
    light.dispose();practicalLights.delete(id);
   }
  }
- return {floor,back,left,setFinish,setEvening,syncPracticalLights,setShadowCasters};
+ return {floor,back,left,setFinish,setEvening,tickLighting,syncPracticalLights,setShadowCasters};
 }
