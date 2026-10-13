@@ -24,6 +24,8 @@
 .restore .color-input{cursor:pointer}
 .restore .brush-cursor{position:absolute;z-index:7;box-sizing:border-box;border:1.5px solid #faf7ee;outline:1px solid #182c24;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;background:color-mix(in srgb,var(--brush-ink,#304a43) 12%,transparent);box-shadow:0 1px 7px #0006;will-change:top,left,width,height}
 .restore .brush-cursor:after{content:"";position:absolute;left:50%;top:50%;width:3px;height:3px;border-radius:50%;background:#ffffff;box-shadow:0 0 0 1px #20332c;transform:translate(-50%,-50%);opacity:.85}
+.restore .brush-cursor.is-smudge{border:2px dashed #fff4da;outline-color:#80603f;background:radial-gradient(circle,#d1b18b42 0%,#d1b18b13 55%,transparent 80%)}
+.restore .brush-cursor.is-smudge:after{width:5px;height:5px;background:#d1b18b}
 .restore .brush-cursor[hidden],.restore .precision-arm[hidden],.restore .precision-side[hidden]{display:none!important}
 .restore.precision-mode .viewport canvas{cursor:none}
 .restore .precision-arm{position:absolute;z-index:8;left:clamp(9px,2vw,26px);bottom:35px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:79px;height:79px;border-radius:50%;border:1px solid #ead7ba;background:#293d34e9;color:#f7edda;box-shadow:0 6px 16px #0006,inset 0 0 0 4px #8e9d8066;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer;transition:transform .12s,background .12s,box-shadow .12s}
@@ -42,7 +44,7 @@
  .restore .work-stage{min-height:0}
  .restore .viewport{border:3px solid #866f53;outline:1px solid #423625;box-shadow:0 5px 20px #2119116b;max-height:100%;width:min(100%,calc((100dvh - 265px)*1.3333))}
  .restore .work-tools{padding:7px 9px calc(6px + env(safe-area-inset-bottom));border-top:1px solid #c0b29b;box-shadow:0 -3px 12px #261d1726;gap:6px}
- .restore .tools{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;overflow:visible}
+ .restore .tools{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;overflow:visible}
  .restore .tools .tool{min-width:0;min-height:42px;height:42px;padding:0;border-radius:6px;border-bottom-width:1px}
  .restore .tools .tool span{display:none}
  .restore .tool .draw-icon{width:23px;height:23px}
