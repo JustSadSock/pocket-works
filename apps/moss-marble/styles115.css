@@ -216,3 +216,33 @@ body[data-mode="playing"] .moss-greenhouse-foreground { opacity:.86; }
 @media (prefers-reduced-motion:reduce) {
   .moss-course-polish,.moss-greenhouse-foreground { transition:none; }
 }
+
+/* Diagnostics remain reachable without competing with normal pause actions. */
+.advanced-settings {
+  margin-top:2px;
+  border-top:1px solid rgba(46,68,48,.20);
+  color:#536451;
+}
+.advanced-settings summary {
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  cursor:pointer;
+  font-size:.72rem;
+  font-weight:650;
+  list-style:none;
+}
+.advanced-settings summary::after {
+  content:"+";
+  font:500 1.2rem/1 Georgia,serif;
+  margin-left:auto;
+}
+.advanced-settings[open] summary::after { content:"−"; }
+.advanced-settings summary::-webkit-details-marker { display:none; }
+.advanced-settings .workshop { min-height:44px; }
+.advanced-settings summary:focus-visible { outline:2px solid #7e925e;outline-offset:2px; }
+button:disabled { cursor:default; }
+@media (hover:hover) {
+  .menu-actions > .primary-action:hover { filter:brightness(1.045); }
+  .menu-actions > .paper-action:hover { background:rgba(235,225,193,.12); }
+}
