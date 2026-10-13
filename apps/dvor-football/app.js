@@ -534,7 +534,7 @@ function frame(t){
  }
  requestAnimationFrame(frame);
 }
-window.addEventListener('pagehide',()=>{if(screen==='game'&&mode==='solo'&&practice)save('lastMatch', {score:practice.score,remain:practice.remain});});
+
 updateMenu();show('home');checkServer();initProfileIdentity();
 if(code&&/^(?:[0-9A-F]{8}|[0-9A-F-]{36})$/.test(code.toUpperCase()))connectNet('link');
 requestAnimationFrame(frame);

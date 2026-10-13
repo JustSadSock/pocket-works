@@ -73,7 +73,7 @@ function tickGame(s,inputs,dt){
     const goalX=p.side?FIELD.left:FIELD.right;
     const nearNet=Math.abs(goalX-p.x)<390;
     const action=nearNet?'shot':'pass';
-    const aim=nearNet?Math.atan2((310-b.y)*.37,goalX-p.x):Math.atan2((b.y-310)*-.26,goalX-p.x);
+    const aim=nearNet?Math.atan2((310+(p.id%4%2?72:-72)-b.y)*.75,goalX-p.x):Math.atan2((b.y-310)*-.26,goalX-p.x);
     if(kickBall(s,p,action,aim,nearNet?.83:.7))p.cd=nearNet?.72:1.1;
    }
   }
@@ -107,8 +107,8 @@ function tickGame(s,inputs,dt){
  }
  for(let i=0;i<2;i++){
   const k=s.keepers[i],x=i?998:82;
-  k.y+=limit(b.y-k.y,-190*dt,190*dt);k.y=limit(k.y,235,385);
-  if(Math.abs(b.x-x)<30&&Math.abs(b.y-k.y)<38){
+  k.y+=limit(b.y-k.y,-115*dt,115*dt);k.y=limit(k.y,235,385);
+  if(Math.abs(b.x-x)<30&&Math.abs(b.y-k.y)<25){
    const sign=i?-1:1;b.x=x+sign*31;
    b.vx=sign*Math.max(245,Math.abs(b.vx)*.8);b.vy=(b.y-k.y)*6;
    s.event='СЕЙВ!';s.eventId++;
