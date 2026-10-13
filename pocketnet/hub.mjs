@@ -178,11 +178,20 @@ export class PocketNetHub {
     // One transaction avoids a room pointing to incomplete artwork after power loss.
     this.ctx.storage.transactionSync(()=>{
       if(room.gameId==='zamazka'){
-        this.sql('DELETE FROM zamazka_art_payloads WHERE room_id=?',room.id);
+        // PocketNet can receive dozens of incremental strokes per second.
+        // Touch only changed vectors; never rewrite eight complete paintings
+        // just because a deadline pulse or someone else's brush arrived.
+        const existing=new Map(this.sql('SELECT pkey,payload FROM zamazka_art_payloads WHERE room_id=?',room.id)
+          .toArray().map(row=>[row.pkey,row.payload]));
         for(const [pkey,payload] of pieces){
           if(bytes(payload)>MAX_ZAMAZKA_STATE_EVENT)throw Error('artwork_too_large');
-          this.sql('INSERT INTO zamazka_art_payloads(room_id,pkey,payload) VALUES(?,?,?)',room.id,pkey,payload);
+          if(existing.get(pkey)!==payload)
+            this.sql('INSERT INTO zamazka_art_payloads(room_id,pkey,payload) VALUES(?,?,?) ON CONFLICT(room_id,pkey) DO UPDATE SET payload=excluded.payload',
+              room.id,pkey,payload);
+          existing.delete(pkey);
         }
+        for(const pkey of existing.keys())
+          this.sql('DELETE FROM zamazka_art_payloads WHERE room_id=? AND pkey=?',room.id,pkey);
       }
       this.sql(`INSERT INTO rooms (id, game_id, version, state, players, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
