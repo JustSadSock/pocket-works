@@ -40,19 +40,6 @@ const module={
     if(!v.signal||typeof v.signal!=='object'||JSON.stringify(v.signal).length>10000)return {state,events:[]};
     return {state,events:[{type:'signal',to:v.to,payload:{from:player.id,signal:v.signal}}]};
   }
-  if(v.type==='relay'&&state.phase==='premiere'){
-    if(typeof v.to!=='string'||v.to===player.id||!state.players.some(p=>p.id===v.to))return {state,events:[]};
-    const data=v.data;
-    if(!data||typeof data!=='object'||Array.isArray(data)||!['begin','part','end'].includes(data.action)||typeof data.token!=='string'||data.token.length>55||data.token.length<6)return {state,events:[]};
-    if(JSON.stringify(data).length>8500)return {state,events:[]};
-    if(data.action==='begin'){
-      const meta=data.meta;
-      if(data.kind!=='audio'||!Number.isInteger(data.size)||data.size<1||data.size>3000000||!meta||typeof meta!=='object'||!state.players.some(p=>p.id===meta.owner))return {state,events:[]};
-      if(player.id!==state.host&&meta.owner!==player.id)return {state,events:[]};
-    }
-    if(data.action==='part'&&(typeof data.body!=='string'||data.body.length>6400||!Number.isInteger(data.part)||data.part<0||data.part>900))return {state,events:[]};
-    return {state,events:[{type:'relay',to:v.to,payload:{from:player.id,data}}]};
-  }
   if(v.type==='scene'&&state.phase==='lobby'&&player.id===state.host){
     const x=v.scene;
     if(!x||typeof x!=='object'||typeof x.id!=='string'||x.id.length>48||typeof x.title!=='string'||x.title.length>55)return {state,events:notice(player.id,'Неверная сцена.')};
