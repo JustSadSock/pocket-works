@@ -209,6 +209,22 @@
   .round-review-grid {gap:clamp(14px,1.4vw,25px)}
   .round-art-meta>strong {font-size:clamp(18px,1.3vw,24px)}
 
+  /* Pocket ID invite popup: compact only while choosing friends to invite.
+     The shared social modal keeps its normal dimensions for profile editing. */
+  dialog.pws-dialog:has(.pws-list [data-pws="send-invite"]) {
+    width:min(720px,calc(100vw - 42px));
+    height:fit-content;max-height:min(78dvh,740px);
+  }
+  dialog.pws-dialog:has(.pws-list [data-pws="send-invite"]) .pws-shell {
+    height:auto;max-height:min(78dvh,740px);
+  }
+  dialog.pws-dialog:has(.pws-list [data-pws="send-invite"]) .pws-content {
+    flex:0 1 auto;min-height:0;overflow-y:auto;
+  }
+  dialog.pws-dialog:has(.pws-list [data-pws="send-invite"]) .pws-person {
+    min-height:66px;
+  }
+
   /* Crisp, consistent press feedback throughout the desktop app. */
   .exhibition-lobby button,.lobby-entry button,.gallery .picture {
     transition:transform .15s ease,filter .15s ease,box-shadow .15s ease;
