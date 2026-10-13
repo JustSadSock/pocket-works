@@ -57,7 +57,7 @@
     --museum-step:clamp(190px,19vw,354px);
   }
   .museum-stage { inset:0 0 73px; }
-  .museum-slide { width:clamp(230px,22vw,390px);max-width:54%;height:96%; }
+  .museum-slide { max-width:none; } /* Each frame's CSS dimensions come from its decoded artwork. */
   .museum-stage-caption { bottom:42px; }
   .museum-stage-caption strong { font-size:clamp(18px,1.25vw,23px); }
   .museum-stage-caption span { font-size:12px; }
