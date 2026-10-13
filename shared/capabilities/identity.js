@@ -1,3 +1,4 @@
+import {mascotSvg} from './maskot.js';
 // Pocket ID capability for standalone Pocket Works apps.
 // Client values are display hints; authorization is always checked server-side.
 const presets={
@@ -15,19 +16,30 @@ export const escapeIdentityHTML=value=>String(value??'').replace(/[&<>"']/g,c=>(
 const DRAWN=/^data:image\/(?:png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const safePortrait=value=>typeof value==='string'&&value.length<=24000&&DRAWN.test(value)?value:'';
-const portraits=new Map(),loadingPortraits=new Map();
+const portraits=new Map(),characters=new Map(),loadingPortraits=new Map();
 export function pocketAvatarMarkup(value,{small=false,accountId=''}={}){
   const id=Object.hasOwn(presets,value)?value:'clay';
   const [bg,ink,path]=presets[id];
   const portrait=safePortrait(value)||portraits.get(accountId)||'';
+  const character=characters.get(accountId);
   const account=UUID.test(accountId)?' data-pw-account="'+accountId+'" data-pw-preset="'+id+'"':'';
   return '<span class="pw-identity-avatar'+(small?' pw-identity-avatar--small':'')+'"'+account+
     ' style="--pw-a-bg:'+bg+';--pw-a-ink:'+ink+'" aria-hidden="true">'+
-    (portrait?'<img src="'+portrait+'" alt="">':'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="'+path+'"/></svg>')+'</span>';
+    (character?mascotSvg(character,{unlocks:['astronaut','wedding']}):portrait?'<img src="'+portrait+'" alt="">':'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="'+path+'"/></svg>')+'</span>';
 }
 function showPortrait(accountId,artwork){
   if(typeof document==='undefined')return;
   for(const el of document.querySelectorAll('[data-pw-account="'+accountId+'"]')){
+    const character=characters.get(accountId);
+    if(character){
+      const signature=JSON.stringify(character);
+      if(el.dataset.pwMaskot!==signature){
+        el.innerHTML=mascotSvg(character,{unlocks:['astronaut','wedding']});
+        el.dataset.pwMaskot=signature;
+      }
+      continue;
+    }
+    if(el.dataset.pwMaskot){el.dataset.pwMaskot='';el.replaceChildren();}
     let img=el.querySelector('img');
     if(!artwork){
       if(img){
@@ -54,6 +66,7 @@ async function fetchPortrait(accountId){
       const data=await reply.json();
       const artwork=safePortrait(data.profile?.artwork);
       portraits.set(accountId,artwork);
+      characters.set(accountId,data.profile?.maskot||null);
       showPortrait(accountId,artwork);
     }catch{}finally{loadingPortraits.delete(accountId)}
   })();
@@ -76,7 +89,7 @@ if(typeof document!=='undefined'){
     observer.observe(document.body,{subtree:true,childList:true});
     document.addEventListener('pocket-social:portrait',e=>{
       const id=e.detail?.accountId,art=safePortrait(e.detail?.artwork);
-      if(UUID.test(id)){portraits.set(id,art);showPortrait(id,art)}
+      if(UUID.test(id)){portraits.set(id,art);characters.set(id,e.detail?.maskot||null);showPortrait(id,art)}
     });
     hydratePortraits();
   };
@@ -110,6 +123,7 @@ export async function getPocketIdentity({force=false}={}){
             if(social.profile?.id===cached.id){
               cached.artwork=safePortrait(social.profile.artwork);
               portraits.set(cached.id,cached.artwork);
+              characters.set(cached.id,social.profile.maskot||null);
             }
           }
         }catch{}

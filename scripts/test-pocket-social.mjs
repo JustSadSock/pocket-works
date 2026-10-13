@@ -64,4 +64,24 @@ assert.equal((await call(0,'friend-action',{id:users[1].id,action:'unblock'})).o
 assert.equal((await call(1,'friend-request',{id:users[0].id})).httpStatus,201);
 assert.equal((await call(0,'friend-action',{id:users[1].id,action:'decline'})).ok,true);
 assert.equal((await call(0,'friends')).friends.length,0);
+// MASKOT cosmetics are account-bound and server-validated.
+const plainMaskot={animal:'frog',hat:'flower',clothes:'mantle',face:'glasses'};
+const aliceCard={background:'forest',frame:'clean',artwork:'',favoriteGame:'',
+  discoverable:true,presenceVisible:true,allowInvites:true};
+assert.equal((await call(0,'profile',{...aliceCard,maskot:plainMaskot,title:'Первопроходец'})).ok,true);
+assert.deepEqual((await call(0,'me')).profile.maskot,plainMaskot);
+assert.equal((await call(0,'me')).profile.title,'Первопроходец');
+assert.equal((await call(1,'user?id='+users[0].id)).profile.maskot.animal,'frog');
+assert.equal((await call(1,'user?id='+users[0].id)).profile.unlocked,undefined);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'helmet'},title:''})).httpStatus,400);
+assert.equal((await call(0,'redeem',{code:'ORBIT-BAD'})).httpStatus,400);
+assert.equal((await call(0,'redeem',{code:'ORBIT-7'})).reward,'astronaut');
+assert.equal((await call(0,'redeem',{code:'ORBIT-7'})).already,true);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'helmet',clothes:'spacesuit'},title:''})).ok,true);
+assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'veil'}})).httpStatus,400);
+assert.equal((await call(1,'redeem',{code:'WHITE-ROSE'})).reward,'wedding');
+assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'veil',clothes:'wedding'}})).ok,true);
+assert.equal((await call(1,'me')).profile.unlocked.includes('wedding'),true);
+assert.equal((await call(0,'profile',{...aliceCard})).ok,true,'old clients preserve cosmetics');
+assert.equal((await call(0,'me')).profile.maskot.hat,'helmet','legacy update keeps new layers');
 console.log('Pocket Social: '+calls+' SQLite API assertions passed.');
