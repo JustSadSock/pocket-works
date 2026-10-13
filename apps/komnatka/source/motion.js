@@ -3,7 +3,7 @@
 export const clamp01 = n => Math.max(0, Math.min(1, n));
 export const easeOut = t => 1 - Math.pow(1-clamp01(t), 3);
 export const smooth = t => { const n=clamp01(t); return n*n*(3-2*n); };
-export const settleWave = t => Math.sin(clamp01(t)*Math.PI*2.8)*Math.exp(-clamp01(t)*6);
+export const settleWave = t => Math.sin(clamp01(t)*Math.PI*3)*Math.exp(-clamp01(t)*6);
 export const MOTION = Object.freeze({
   sofa:{lift:.105,settle:370,squash:.062,wobble:0},
   chair:{lift:.13,settle:330,squash:.056,wobble:0},
