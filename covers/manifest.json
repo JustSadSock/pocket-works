@@ -1,15 +1,15 @@
 {
   "zamazka": {
-    "revision": "502222352bd2fba0b09d0d79fc8d5181cc3a58b8",
-    "qualityScore": 74,
+    "revision": "a4b28496899de81b79c570c32474c19bb8188ba8",
+    "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
-    "shot": 3,
-    "sha256": "828ae56e2180f400ad257bc7fc8cf7b6c0c5be5169a9f74bead0c05f8f345bc2",
+    "shot": 0,
+    "sha256": "f76c195d2e35655c663f9a43d93f36ab1ae3a713926e14da76d8acf4737e7d87",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "502222352bd2fba0b09d0d79fc8d5181cc3a58b8",
-    "lastAttemptAt": "2026-10-13T10:36:16.113Z"
+    "lastAttemptRevision": "a4b28496899de81b79c570c32474c19bb8188ba8",
+    "lastAttemptAt": "2026-10-13T11:18:20.158Z"
   },
   "natyazhenie": {
     "revision": "a4ade66f82635dbe41b65bd2117147dd278cdc5f",
@@ -388,5 +388,101 @@
     "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
     "lastAttemptAt": "2026-10-13T11:11:52.668Z"
+  },
+  "corvus-yard": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 68,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "ada1976c65bcbc73906a12a6b64a87cb521003fa159960835e72aa5cff511440",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:18:38.916Z"
+  },
+  "morok": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 50,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "4eaf5d55e7caa7d2628713a6a40cfcb469aab5e00b1a2468c125cb8ac3b1a2e0",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:18:49.898Z"
+  },
+  "last-stone": {
+    "revision": "209d02d14094b6e9622ea2a0fa7627def7d4ba7e",
+    "qualityScore": 60,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "c863309af6deb6e7b3ea41a03546dea14069b9634e3aa3c868d26799cf7d7de8",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "209d02d14094b6e9622ea2a0fa7627def7d4ba7e",
+    "lastAttemptAt": "2026-10-13T11:19:02.614Z"
+  },
+  "polus": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:19:13.492Z"
+  },
+  "zastava": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "5a63e5475078490d38f8f9cec169fe19d2e9b3ee",
+    "lastAttemptAt": "2026-10-13T11:19:36.914Z"
+  },
+  "iron-swarm": {
+    "revision": "96c1a39d2029e299345a0caae2b65cd653931f28",
+    "qualityScore": 79,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "3ed8ddbc65f023d16c9d142fad1ccf5e52a23106830613fde92ad4778ecf0b66",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "96c1a39d2029e299345a0caae2b65cd653931f28",
+    "lastAttemptAt": "2026-10-13T11:19:50.753Z"
+  },
+  "mahjong-dojo": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:20:01.677Z"
+  },
+  "n-space": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "660f87254e3eb0ead556787e22068a0a4cf45857",
+    "lastAttemptAt": "2026-10-13T11:20:12.523Z"
+  },
+  "arena-shift": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "89e16261f32618a467e00cedcfd84eeb2857f4c2",
+    "lastAttemptAt": "2026-10-13T11:20:28.280Z"
+  },
+  "rivet": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "89e16261f32618a467e00cedcfd84eeb2857f4c2",
+    "lastAttemptAt": "2026-10-13T11:20:42.939Z"
+  },
+  "komok": {
+    "revision": "17e54216119c505cb8dc84c4667b6b7816325631",
+    "qualityScore": 62,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "89d8b3a4240a6d4e59c6e25a1739d897c18469b4852bc87d0f6d354f3e86c2aa",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "17e54216119c505cb8dc84c4667b6b7816325631",
+    "lastAttemptAt": "2026-10-13T11:21:01.385Z"
   }
 }
