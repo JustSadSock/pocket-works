@@ -5,7 +5,7 @@ import {zamazkaAchievements} from '../../shared/capabilities/zamazka-achievement
 import {inviteCode,parseRoomInput} from './room-code.js';
 import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
-import {ARTS,REAL_COUNT,PLAYABLE_IDS,artworkURL,artworkFallbackURL,loadArtwork} from './artworks.js';
+import {ARTS,REAL_COUNT,PLAYABLE_IDS,ARCHIVE_EDITION,normalizeArchiveEntry,artworkURL,artworkFallbackURL,loadArtwork} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
 import {getSavedEmblem,storeEmblem,paintEmblem,exportEmblem,EMBLEM_SIZE,EMBLEM_COLORS,EMBLEM_LIMITS} from './emblem.js';
@@ -15,7 +15,7 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.27.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.28.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice',CONFIRM_VOTE_KEY=NS+'confirm-coins';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -37,7 +37,7 @@ const gameName=()=>preferredPocketName(pocketIdentity,tabGuestName());
 const isPocketMember=()=>Boolean(pocketIdentity?.complete);
 let museumMotion=null,commonsBoard=null,lastMuseumWheel=0,boardResync=false,roomModuleVersion='v3';
 const museumOrder=[0,...PLAYABLE_IDS.filter(id=>id!==3),3];
-let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,96).map(g=>({...g,art:g.edition===3?g.art:g.edition===2?(g.art>=8?g.art+46:g.art):Number(g.art)+REAL_COUNT,edition:3})):[]}catch{return[]}})();
+let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,96).map(normalizeArchiveEntry):[]}catch{return[]}})();
 
 // Retry a smaller Wikimedia thumbnail when the original master is too small.
 document.addEventListener('error',e=>{
@@ -311,7 +311,7 @@ function home(skipLeave=false){
   '<div class="museum-display">'+
     '<div class="museum-stage" id="museumStage" aria-label="Перелистываемая музейная экспозиция"></div>'+
     '<div class="museum-stage-caption" id="museumCaption" aria-live="polite"><strong>Девушка с жемчужной серёжкой</strong><span>Ян Вермеер · ок. 1665</span></div>'+
-    '<div class="museum-wheel"><button data-action="museum-prev" aria-label="Предыдущая картина">‹</button><button data-action="museum-next" aria-label="Следующая картина">›</button></div><span class="museum-exhibit-number">01 / 54</span>'+
+    '<div class="museum-wheel"><button data-action="museum-prev" aria-label="Предыдущая картина">‹</button><button data-action="museum-next" aria-label="Следующая картина">›</button></div><span class="museum-exhibit-number">01 / '+museumOrder.length+'</span>'+
   '</div>'+
   '<div class="museum-control">'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(gameName())+'</strong><small>Изменить знак</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
     '<button class="start-restoration" id="primary-action" data-action="practice"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Начать реставрацию</strong><small>Пробный раунд</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
@@ -649,10 +649,15 @@ function openArchive(index){
  const archived={phase:'archive',gallery:records,selected:[],round:1};
  openRoundViewer({index,view:archived,dialog,renderArtwork,arts:ARTS,esc,closeDialog,onNavigate:next=>openArchive(next)});
 }
-function saveArtwork(art,variation,strokes){saved=[{art,variation,strokes,time:Date.now(),edition:3},...saved].slice(0,96);try{localStorage.setItem(GALLERY_KEY,JSON.stringify(saved));zamazkaCloud?.schedule();return true}catch{notify('Архив не сохранился: хранилище заполнено. Работа остаётся открытой во вкладке.');return false}}
-function persistPractice(){if(practice)try{localStorage.setItem(PRACTICE_KEY,JSON.stringify({phase:practice.phase,round:practice.round,rounds:practice.rounds,selected:practice.selected,deadline:practice.deadline,drawingSeconds:practice.drawingSeconds,mine:practice.mine,strokes:practice.strokes,edition:3}))}catch{notify('Черновик тренировки не записан: проверь хранилище браузера')}}
+function saveArtwork(art,variation,strokes){saved=[{art,variation,strokes,time:Date.now(),edition:ARCHIVE_EDITION},...saved].slice(0,96);try{localStorage.setItem(GALLERY_KEY,JSON.stringify(saved));zamazkaCloud?.schedule();return true}catch{notify('Архив не сохранился: хранилище заполнено. Работа остаётся открытой во вкладке.');return false}}
+function persistPractice(){if(practice)try{localStorage.setItem(PRACTICE_KEY,JSON.stringify({phase:practice.phase,round:practice.round,rounds:practice.rounds,selected:practice.selected,deadline:practice.deadline,drawingSeconds:practice.drawingSeconds,mine:practice.mine,strokes:practice.strokes,edition:ARCHIVE_EDITION}))}catch{notify('Черновик тренировки не записан: проверь хранилище браузера')}}
 function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preparing',round:1,rounds:1,selected,deadline:0,drawingSeconds:soloDrawingSecondsChoice,mine:{art:selected[Math.floor(Math.random()*5)],variation:Math.floor(Math.random()*0xffffffff)},strokes:[]};preparedRound='';persistPractice();preparing(true)}
-function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition===2){p.mine.art=p.mine.art>=8?p.mine.art+46:p.mine.art;p.selected=p.selected.map(i=>i>=8?i+46:i)}else if(p.edition!==3){p.mine.art+=REAL_COUNT;p.selected=p.selected.map(i=>i+REAL_COUNT)}practice=p;practice.drawingSeconds=normalizedDuration(p.drawingSeconds??160);if(p.deadline>0&&p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
+function resumePractice(){try{const p=JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition!==ARCHIVE_EDITION){
+ p.mine.art=normalizeArchiveEntry({art:p.mine.art,edition:p.edition}).art;
+ p.selected=p.selected.map(art=>normalizeArchiveEntry({art,edition:p.edition}).art);
+ p.edition=ARCHIVE_EDITION;
+ }
+ practice=p;practice.drawingSeconds=normalizedDuration(p.drawingSeconds??160);if(p.deadline>0&&p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=practice.drawingSeconds===0?0:Date.now()+practice.drawingSeconds*1000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;localStorage.removeItem(PRACTICE_KEY);reveal(true)}
 let previousVisualPhase='',lastPhaseCue='',voteScreenToken='',voteTransitionLayer=null,voteTransitionTimeout=null;
@@ -989,7 +994,7 @@ async function refreshPocketBadge(){
 zamazkaCloud=createZamazkaCloud({
  getArchive:()=>saved,
  setArchive(items){
-  saved=items;
+  saved=items.map(normalizeArchiveEntry);
   localStorage.setItem(GALLERY_KEY,JSON.stringify(saved));
   if(page==='collection')collection();
   if(page==='home'){const number=screen.querySelector('.museum-footer [data-action="collection"] span');if(number)number.textContent=String(saved.length).padStart(2,'0');}
