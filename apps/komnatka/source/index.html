@@ -12,10 +12,54 @@
 </head>
 <body>
 <main class="app-shell" data-app-shell data-fullscreen-app>
+  <section id="homeScreen" class="dollhouse-home" aria-labelledby="homeTitle" hidden>
+    <div class="home-grain" aria-hidden="true"></div>
+    <header class="home-topline">
+      <div class="home-atelier"><span class="home-atelier-mark" aria-hidden="true">⌂</span><span>МАЛЕНЬКАЯ МАСТЕРСКАЯ</span></div>
+      <a href="../../" class="home-exit" data-app-control data-native-press>← Pocket Works</a>
+    </header>
+    <div class="home-composition">
+      <div class="home-choices">
+        <p class="home-eyebrow">МАЛЕНЬКИЙ МИР В ТВОИХ РУКАХ</p>
+        <h1 id="homeTitle">Комнатка<span>.</span></h1>
+        <p class="home-tagline">У каждого уголка своя история.</p>
+        <button class="home-solo home-action" id="homeSolo" type="button" data-native-press>
+          <span class="home-solo-art" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M9 24 24 11l15 13v16H9Z"/><path d="M16 40V27h15v13M7 25l17-15 17 15"/></svg></span>
+          <span class="home-action-copy"><strong>Свободная сборка</strong><small>Просто создавай свою комнатку</small></span>
+          <span class="home-arrow" aria-hidden="true">↗</span>
+        </button>
+        <div class="home-divider"><span>ВМЕСТЕ С ДРУЗЬЯМИ</span><i></i></div>
+        <button class="home-game home-action" id="homeTenants" type="button" data-native-press>
+          <span class="home-mode-art home-mode-tenant" aria-hidden="true"><svg viewBox="0 0 46 46"><rect x="7" y="20" width="32" height="17" rx="5"/><path d="M12 21v-5a11 11 0 0 1 22 0v5M12 32h22M12 38v3m22-3v3"/><path d="M34 10h7m-3.5-3.5v7"/></svg></span>
+          <span class="home-action-copy"><strong>Новые жильцы</strong><small>Вместе выполняйте пожелания</small></span>
+          <span class="home-arrow" aria-hidden="true">↗</span>
+        </button>
+        <button class="home-game home-action" id="homeMemory" type="button" data-native-press>
+          <span class="home-mode-art home-mode-memory" aria-hidden="true"><svg viewBox="0 0 46 46"><rect x="11" y="9" width="25" height="30" rx="3"/><path d="M16 9V5h15v4M16 18h15M16 24h12M16 30h8"/><circle cx="32" cy="31" r="7"/><path d="m37 36 5 5"/></svg></span>
+          <span class="home-action-copy"><strong>Собери по памяти</strong><small>Запомни интерьер и воссоздай</small></span>
+          <span class="home-arrow" aria-hidden="true">↗</span>
+        </button>
+        <p class="home-footnote">Совместные комнаты — для 2–5 человек</p>
+      </div>
+      <div class="home-showcase" aria-hidden="true">
+        <div class="home-paper-arch">
+          <div class="home-label-stamp">МИР В МИНИАТЮРЕ</div>
+          <div class="home-preview-back">
+            <img id="homeRoomImage" class="home-preview-image" alt="" />
+          </div>
+          <div class="home-plinth"></div>
+          <span class="home-tiny-flower flower-one">✿</span>
+          <span class="home-tiny-flower flower-two">✿</span>
+        </div>
+        <div class="home-picture-label"><span>ручная работа</span><span class="home-picture-line"></span><span>маленькое чудо</span></div>
+      </div>
+    </div>
+  </section>
   <header class="topbar" data-ui>
     <a class="back" href="../../" data-app-control data-native-press><span aria-hidden="true">←</span><span> Pocket Works</span></a>
     <div class="brand"><span class="brand-icon" aria-hidden="true"><i></i><b></b><em></em></span><strong>комнатка<span class="period">.</span></strong></div>
     <div class="quick-tools" aria-label="Действия">
+      <button id="menuBtn" class="menu-return" type="button" data-native-press title="Главное меню"><svg viewBox="0 0 24 24"><path d="m3 12 9-8 9 8M6 10v10h12V10M10 20v-6h4v6"/></svg><span>Меню</span></button>
       <span id="saveStatus" class="save-status" aria-live="polite">Сохранено</span>
       <button id="onlineBtn" class="online-top-button" type="button" data-native-press title="Играть с друзьями"><svg viewBox="0 0 24 24"><path d="M15 19a6 6 0 0 0-12 0m6-8a4 4 0 1 0 0-8 4 4 0 0 0 0 8m10 8v-3a4 4 0 0 0-3-3m-2-10a4 4 0 0 1 0 8"/></svg><span>Друзья</span></button>
       <button id="undoBtn" type="button" data-native-press title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled><svg viewBox="0 0 24 24"><path d="M8 7 3 12l5 5M3 12h11a6 6 0 1 1 0 12" transform="translate(0 -3)"/></svg></button>
