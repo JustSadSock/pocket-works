@@ -13,12 +13,12 @@ const storage={
 const palette=['#93b3a0','#d89d81','#9f9ac8','#af9868','#7aadb6'];
 const mmss=secs=>Math.floor(Math.max(0,secs)/60)+':'+String(Math.max(0,secs)%60).padStart(2,'0');
 const PHASE={lobby:'Ожидаем друзей',preview:'Запомните комнату',build:'Обустраиваем вместе',result:'Наш результат'};
-export function createOnlineController({onEnter,onExit,onRoom,onPresence,toast}){
+export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismiss,toast}){
  const $=id=>document.getElementById(id);
  const layer=$('onlineLayer'),panel=$('onlinePanel'),hud=$('onlineHUD');
  let net=null,me=null,room=null,code='',connected=false,busy=false,modal=false;
  let mode='tenants',name='Гость',joinCode=new URLSearchParams(location.search).get('room')||'';
- let reference=false,phase='',syncAt=0,awaiting=false;
+ let reference=false,phase='',syncAt=0,awaiting=false,returnToHome=false;
  let identity=null;
  const send=payload=>{
   if(!connected||!net)return false;
@@ -189,17 +189,20 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,toast})
  function leave(){
   if(net&&connected)try{net.leaveRoom();}catch{}
   net?.close();net=null;me=null;room=null;code='';connected=false;busy=false;modal=false;phase='';reference=false;
-  onExit();render();
+  returnToHome=false;onExit();render();
  }
- function open(){modal=true;render();}
- function close(){modal=false;render();}
+ function open(requestedMode=null,fromHome=false){
+  if(['tenants','memory'].includes(requestedMode)&&!room)mode=requestedMode;
+  returnToHome=Boolean(fromHome);modal=true;render();
+ }
+ function close(){modal=false;render();if(!room&&returnToHome){returnToHome=false;onDismiss?.();}}
  let prev=null;
  const interval=setInterval(()=>{
   if(room){timer();if(connected&&['build','preview'].includes(room.phase)&&Date.now()-(prev||0)>5000){
    prev=Date.now();send({type:'sync'});
   }}
  },1000);
- $('onlineBtn').addEventListener('click',open);
+ $('onlineBtn').addEventListener('click',()=>open());
  $('onlineClose').addEventListener('click',close);
  layer.addEventListener('pointerdown',e=>{if(e.target===layer)close();});
  $('onlineFinish').addEventListener('click',()=>send({type:'finish'}));
