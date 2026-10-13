@@ -258,3 +258,70 @@
   .pws-person__actions .pws-btn{padding:8px 10px}
 }
 @media(prefers-reduced-motion:reduce){.pws-person[data-background]{transition:none}}
+
+
+/* MASKOT collection studio — the profile card is always the focus. */
+.pws-maskot-svg{display:block;width:100%;height:100%;overflow:visible}
+.pws-card .pws-card__paint{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.28;pointer-events:none;mix-blend-mode:screen}
+.pws-card__top,.pws-card__name,.pws-card__title,.pws-card__foot{position:relative;z-index:1}
+.pws-card__title{display:inline-block;margin-top:5px;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--pws-accent)}
+.pws-card:has(.pws-maskot-svg){min-height:260px;padding:18px 22px}
+.pws-card:has(.pws-maskot-svg) .pws-avatar{width:clamp(128px,37%,204px);height:auto;aspect-ratio:1;overflow:visible;border:0;border-radius:0;background:none;flex:none;filter:drop-shadow(0 9px 6px #0003)}
+.pws-card .pws-avatar .pws-maskot-svg{width:100%;height:100%}
+.pws-person__avatar:has(.pws-maskot-svg){overflow:hidden;background:transparent}
+.pws-person__avatar .pws-maskot-svg{width:100%;height:100%}
+.pws-maskot-editor{display:grid;grid-template-columns:minmax(250px,.9fr) minmax(320px,1.1fr);gap:15px;align-items:stretch;min-height:470px}
+.pws-maskot-editor__preview{display:flex;flex-direction:column;min-width:0;gap:12px}
+.pws-maskot-editor__preview .pws-card{width:100%;max-width:none;margin:0}
+.pws-maskot-editor__actions{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.pws-maskot-editor__actions .pws-btn{flex:1;min-width:96px}
+.pws-maskot-editor__work{border:1px solid #41575a;background:#1b2a2e;border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.pws-maskot-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:9px;background:#172427;border-bottom:1px solid #42565a}
+.pws-maskot-tabs button{background:transparent;color:#aabfbb;border:0;border-radius:7px;padding:9px 4px;min-height:39px;font-size:11px;font-weight:750;line-height:1.2}
+.pws-maskot-tabs button[aria-pressed=true]{color:#17262a;background:#e9b58d}
+.pws-maskot-editor__picker{padding:12px;overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0;max-height:480px}
+.pws-maskot-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.pws-maskot-options>button{display:flex;align-items:center;gap:8px;min-height:78px;padding:6px;background:#253a3e;color:#e7ede6;border:1px solid #405557;border-radius:9px;text-align:left;font-size:12px;font-weight:700}
+.pws-maskot-options>button[aria-pressed=true]{border-color:#efba91;background:#385552;box-shadow:inset 0 0 0 1px #efba91}
+.pws-maskot-option__art{display:block;overflow:hidden;flex:0 0 60px;width:60px;height:60px;border-radius:6px;background:#d5cebd}
+.pws-maskot-option__art svg{display:block;width:100%;height:100%}
+.pws-maskot-editor__picker .pws-field:first-child{margin-top:0}
+.pws-maskot-redeem{margin-top:15px}
+.pws-maskot-redeem__row{display:flex;gap:7px}
+.pws-maskot-redeem__row input{min-width:0;flex:1;max-width:100%;border:1px solid #596f70;background:#182b31;color:#fff;padding:8px;border-radius:7px}
+.pws-reward-shade{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:#071013d9;backdrop-filter:blur(5px);padding:18px}
+.pws-reward{display:grid;place-items:center;gap:12px;text-align:center;padding:32px 22px;width:min(320px,100%);background:radial-gradient(circle at 50% 15%,#fff3d1,#ccaa82 120%);color:#273238;border:1px solid #eacc94;border-radius:18px;box-shadow:0 25px 80px #0008;animation:pws-reward-in .45s cubic-bezier(.2,.8,.2,1) both}
+.pws-reward h3{color:#273238;font:750 25px Georgia,serif;margin:0}
+.pws-reward p{margin:0 0 8px;font-size:13px}
+.pws-reward__gift{position:relative;width:88px;height:76px;margin:24px 0 16px;background:linear-gradient(90deg,#b75b6a 0 40%,#e7c67d 40% 60%,#b75b6a 60%);border:3px solid #753f49;border-radius:5px;box-shadow:0 8px 20px #513b3655;animation:pws-gift-bounce .65s ease-in-out 2}
+.pws-reward__lid{position:absolute;top:-17px;left:-10px;right:-10px;height:23px;border-radius:4px;background:linear-gradient(90deg,#c76b76 0 42%,#eacb7e 42% 58%,#c76b76 58%);border:3px solid #753f49;animation:pws-gift-open .8s 1s ease forwards}
+.pws-reward__bow{position:absolute;left:31px;top:-37px;width:23px;height:21px;background:#f6dd94;transform:rotate(45deg);border:3px solid #b3914d;border-radius:3px}
+@keyframes pws-reward-in{from{transform:translateY(30px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+@keyframes pws-gift-bounce{50%{transform:translateY(-7px) rotate(-3deg)}}
+@keyframes pws-gift-open{to{transform:translateY(-30px) rotate(-18deg)}}
+@media(min-width:900px){.pws-dialog:has(.pws-maskot-editor){width:min(990px,calc(100vw - 24px))}}
+@media(max-width:700px){
+  .pws-content:has(.pws-maskot-editor){padding:9px;overflow:hidden;min-height:0}
+  .pws-maskot-editor{display:flex;flex-direction:column;height:100%;min-height:0;gap:8px}
+  .pws-maskot-editor__preview{flex:0 0 auto;gap:7px;align-items:stretch}
+  .pws-maskot-editor__preview .pws-card{min-height:0;max-height:30dvh;padding:11px 13px}
+  .pws-maskot-editor__preview .pws-card__name{margin-top:2px;font-size:19px}
+  .pws-maskot-editor__preview .pws-card__title{font-size:10px}
+  .pws-maskot-editor__preview .pws-card__foot{font-size:10px}
+  .pws-maskot-editor__preview .pws-avatar{width:min(33%,130px);height:auto}
+  .pws-maskot-editor__preview .pws-card__id{font-size:8px}
+  .pws-maskot-editor__actions{gap:6px}
+  .pws-maskot-editor__actions .pws-btn{min-height:35px;padding:6px 12px}
+  .pws-maskot-editor__work{flex:1;min-height:0}
+  .pws-maskot-tabs{grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;padding:5px}
+  .pws-maskot-tabs button{font-size:10px;padding:7px 2px;min-height:35px}
+  .pws-maskot-editor__picker{max-height:none;padding:8px;overflow-y:auto}
+  .pws-maskot-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .pws-maskot-options>button{min-height:64px;padding:5px;gap:5px;font-size:11px}
+  .pws-maskot-option__art{flex-basis:52px;width:52px;height:52px}
+}
+@media(prefers-reduced-motion:reduce){.pws-reward,.pws-reward__gift,.pws-reward__lid{animation:none!important}}
+
+/* Keep the launcher account button at its original icon footprint. */
+#pocket-id-trigger .pw-social-maskot-nav{display:block;width:31px;height:31px;border-radius:6px;overflow:hidden;background:#d8d8ca}
+#pocket-id-trigger .pw-social-maskot-nav>.pws-maskot-svg{display:block;width:100%;height:100%}

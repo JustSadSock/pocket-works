@@ -1,13 +1,14 @@
 import {pocketAvatarMarkup} from './capabilities/identity.js';
+import {mascotSvg,safeMascot,mascotAnimals,mascotHats,mascotClothes,mascotFaces,mascotTitles} from './capabilities/maskot.js';
 // Pocket Social shared UI. No dependency on a specific app runtime or framework.
 const q=(s,root=document)=>root.querySelector(s);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#965545'],['lilac','Сирень','#776185'],['ocean','Океан','#347e8c'],['night','Ночь','#252d39'],['paper','Бумага','#d6bea1']];
 const frames=[['clean','Чистая'],['double','Двойная'],['corners','Углы'],['stamp','Марка']];
 const colors=['#1d3040','#d65b48','#edb55f','#529276','#8b65ab','#ffffff'];
-const errors={sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
+const errors={invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
-const state={tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
+const state={editorTab:'animal',reward:null,tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
 let dialog,content,entry,searchClock=0,pollClock=0,heartbeatClock=0;
 const api=async(path,body)=>{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
@@ -23,12 +24,15 @@ const api=async(path,body)=>{
     throw error;
   }finally{clearTimeout(timeout)}
 };
-const avatar=p=>p.artwork?'<img src="'+esc(p.artwork)+'" alt="Нарисованный аватар">':pocketAvatarMarkup(p.avatar,{accountId:p.id});
+const avatar=p=>p.maskot?mascotSvg(p.maskot,{unlocks:p.unlocked||['astronaut','wedding']}):
+  p.artwork?'<img src="'+esc(p.artwork)+'" alt="Нарисованный аватар">':pocketAvatarMarkup(p.avatar,{accountId:p.id});
 const gameLabel=id=>state.catalog.find(g=>g.slug===id)?.name||id||'Не выбрана';
 function card(p){
   return '<div class="pws-card" data-background="'+esc(p.background)+'" data-frame="'+esc(p.frame)+'">'+
+  (p.maskot&&p.artwork?'<img class="pws-card__paint" src="'+esc(p.artwork)+'" alt="">':'')+
   '<div class="pws-card__top"><div class="pws-avatar">'+avatar(p)+'</div><div class="pws-card__id">POCKET / ID<br>PLAYER CARD</div></div>'+
   '<div class="pws-card__name">'+esc(p.nickname)+'</div>'+
+  (p.title?'<div class="pws-card__title">'+esc(p.title)+'</div>':'')+
   '<div class="pws-card__foot"><span>'+esc(p.favoriteGame?gameLabel(p.favoriteGame):'Участник PocketWorks')+'</span>'+
   '<span>'+ (p.owned?'Мой профиль':p.online?'● В сети':'Не в сети')+'</span></div></div>';
 }
@@ -119,41 +123,79 @@ async function loadCloudUsage(){
   if(version===state.cloudVersion){state.cloudLoading=false;renderCloud()}
  }
 }
+const maskotCategories=[
+  ['animal','Зверь'],['hat','Голова'],['clothes','Одежда'],['face','Лицо'],
+  ['card','Фон и рамка'],['account','Профиль']
+];
+function editor(){
+  const d=state.draft,m=d.maskot||safeMascot(null),unlocks=state.me?.profile?.unlocked||[];
+  const secretHats=[...(unlocks.includes('astronaut')?[['helmet','Шлем космонавта']]:[]),
+    ...(unlocks.includes('wedding')?[['veil','Фата']]:[])];
+  const secretClothes=[...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
+    ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[])];
+  const category=state.editorTab;
+  const options=(rows,field)=>'<div class="pws-maskot-options">'+rows.map(([id,label])=>
+    '<button type="button" data-pws="maskot-item" data-field="'+field+'" data-value="'+id+
+    '" aria-pressed="'+(m[field]===id)+'"><span class="pws-maskot-option__art">'+
+    mascotSvg({...m,[field]:id},{unlocks,size:92})+'</span><span>'+esc(label)+'</span></button>').join('')+'</div>';
+  const appearance=category==='animal'?options(mascotAnimals,'animal'):
+    category==='hat'?options([...mascotHats,...secretHats],'hat'):
+    category==='clothes'?options([...mascotClothes,...secretClothes],'clothes'):
+    category==='face'?options(mascotFaces,'face'):
+    category==='card'?'<div class="pws-field"><label>Фон карточки</label><div class="pws-options">'+backgrounds.map(t=>
+      '<button type="button" class="pws-option pws-option--theme" style="--sample:'+t[2]+
+      '" title="'+t[1]+'" aria-label="'+t[1]+'" data-pws="background" data-value="'+t[0]+
+      '" aria-pressed="'+(d.background===t[0])+'"></button>').join('')+'</div></div>'+
+      '<div class="pws-field"><label>Рамка</label><div class="pws-options">'+frames.map(t=>
+      '<button type="button" class="pws-option" data-pws="frame" data-value="'+t[0]+
+      '" aria-pressed="'+(d.frame===t[0])+'">'+t[1]+'</button>').join('')+'</div></div>'+
+      '<div class="pws-field"><label>Рисунок на фоне</label><div class="pws-editor-tools">'+
+      '<canvas class="pws-draw" width="160" height="160" aria-label="Рисовать фон карточки"></canvas>'+
+      '<div><div class="pws-swatches">'+colors.map(c=>
+      '<button type="button" class="pws-swatch" style="--swatch:'+c+'" data-pws="ink" data-value="'+c+
+      '" aria-label="Цвет '+c+'" aria-pressed="'+(state.ink===c)+'"></button>').join('')+'</div>'+
+      '<div class="pws-actions">'+button('undo','Отменить')+button('clear-art','Очистить')+'</div></div></div></div>':
+      '<div class="pws-field"><label for="pws-nickname">Никнейм</label>'+
+      '<input id="pws-nickname" type="text" maxlength="20" minlength="3" value="'+esc(d.nickname)+'"></div>'+
+      '<div class="pws-field"><label for="pws-title">Титул</label><select id="pws-title">'+mascotTitles.map(t=>
+      '<option value="'+esc(t)+'" '+(d.title===t?'selected':'')+'>'+esc(t||'Без титула')+'</option>').join('')+'</select></div>'+
+      '<div class="pws-field"><label for="pws-favorite">Любимая игра</label><select id="pws-favorite">'+
+      '<option value="">Не выбрана</option>'+state.catalog.map(g=>
+      '<option value="'+esc(g.slug)+'" '+(g.slug===d.favoriteGame?'selected':'')+'>'+esc(g.name)+'</option>').join('')+
+      '</select></div>'+
+      '<label class="pws-check"><input type="checkbox" id="pws-discoverable" '+(d.discoverable?'checked':'')+'> Показывать профиль в поиске</label>'+
+      '<label class="pws-check"><input type="checkbox" id="pws-presence" '+(d.presenceVisible?'checked':'')+'> Показывать онлайн</label>'+
+      '<label class="pws-check"><input type="checkbox" id="pws-invites" '+(d.allowInvites?'checked':'')+'> Разрешать приглашения</label>'+
+      '<details class="pws-fold pws-maskot-redeem"><summary>Активировать код</summary><div class="pws-fold__body">'+
+      '<div class="pws-maskot-redeem__row"><input id="pws-cosmetic-code" placeholder="Код награды" maxlength="60" autocomplete="off" spellcheck="false">'+
+      button('redeem','Получить','primary')+'</div></div></details>';
+  return '<div class="pws-maskot-editor"><div class="pws-maskot-editor__preview">'+
+    card({...state.me.profile,...d})+
+    '<div class="pws-maskot-editor__actions">'+button('cancel-edit','Отмена')+
+    button('save-profile',state.busy?'Сохранение…':'Сохранить','primary')+'</div></div>'+
+    '<div class="pws-maskot-editor__work"><div class="pws-maskot-tabs">'+maskotCategories.map(([id,label])=>
+    '<button type="button" data-pws="maskot-tab" data-value="'+id+
+    '" aria-pressed="'+(category===id)+'">'+label+'</button>').join('')+'</div>'+
+    '<div class="pws-maskot-editor__picker">'+appearance+'</div></div></div>'+
+    (state.reward?'<div class="pws-reward-shade"><div class="pws-reward" role="dialog" aria-label="Косметика получена">'+
+      '<div class="pws-reward__gift"><div class="pws-reward__lid"></div><div class="pws-reward__bow"></div></div>'+
+      '<h3>Новый образ!</h3><p>'+esc(state.reward==='astronaut'?'Шлем и скафандр':'Фата и свадебный наряд')+
+      '</p>'+button('reward-close','Примерить','primary')+'</div></div>':'');
+}
 function profilePanel(){
   const p=state.me?.profile;
   if(!p)return '<div class="pws-empty">Создай Pocket ID, чтобы добавить друзей.</div>'+
     '<div class="pws-actions">'+button('login','Открыть Pocket ID','primary')+'</div>';
-  return '<h2>Профиль</h2><div class="pws-profile-layout"><section>'+card(state.edit?{...p,...state.draft}:p)+
-    '<div class="pws-actions">'+(state.edit?'':button('edit','Изменить профиль','primary'))+
+  if(state.edit)return editor();
+  return '<h2>Профиль</h2><div class="pws-profile-layout"><section>'+card(p)+
+    '<div class="pws-actions">'+button('edit','Изменить профиль','primary')+
     button('copy-id','Скопировать ID','quiet')+'</div></section>'+
     '<details class="pws-fold pws-fold--aside" data-pws-fold="account"'+(state.expanded.account?' open':'')+'>'+
     '<summary>Аккаунт и безопасность</summary><div class="pws-fold__body"><p class="pws-muted">ID: <code>'+esc(p.id)+'</code></p>'+
     button('account','Настройки Pocket ID')+'</div></details></div>'+
-    (state.edit?editor():
-      '<details class="pws-fold pws-cloud-fold" data-pws-fold="cloud"'+(state.expanded.cloud?' open':'')+'>'+
-      '<summary>Облако'+(state.cloud?' · '+cloudBytes(state.cloud.usedBytes)+' / '+cloudBytes(state.cloud.maxBytes):'')+'</summary>'+
-      cloudPanel()+'</details>');
-}
-function editor(){
-  const d=state.draft;
-  return '<section class="pws-editor"><h2>Единый редактор профиля</h2>'+
-    '<div class="pws-field"><label for="pws-nickname">Никнейм Pocket ID</label>'+
-    '<input id="pws-nickname" type="text" maxlength="20" minlength="3" autocomplete="nickname" spellcheck="false" value="'+esc(d.nickname)+'">'+
-    '<div class="pws-muted">Уникальный никнейм для всех игр · 3–20 символов</div></div>'+
-    '<div class="pws-field"><label>Нарисуй аватар</label><div class="pws-editor-tools">'+
-    '<canvas class="pws-draw" width="160" height="160" aria-label="Редактор аватара"></canvas>'+
-    '<div><div class="pws-muted">Проведи пальцем или мышью по холсту.</div>'+
-    '<div class="pws-swatches">'+colors.map(c=>'<button type="button" class="pws-swatch" style="--swatch:'+c+'" data-pws="ink" data-value="'+c+'" aria-label="Цвет '+c+'" aria-pressed="'+(state.ink===c)+'"></button>').join('')+'</div>'+
-    '<div class="pws-actions">'+button('undo','Отменить')+button('clear-art','Очистить')+'</div></div></div></div>'+
-    '<div class="pws-field"><label>Фон карточки</label><div class="pws-options">'+
-    backgrounds.map(t=>'<button type="button" class="pws-option pws-option--theme" style="--sample:'+t[2]+'" title="'+t[1]+'" aria-label="'+t[1]+'" data-pws="background" data-value="'+t[0]+'" aria-pressed="'+(d.background===t[0])+'"></button>').join('')+'</div></div>'+
-    '<div class="pws-field"><label>Рамка</label><div class="pws-options">'+frames.map(t=>'<button type="button" class="pws-option" data-pws="frame" data-value="'+t[0]+'" aria-pressed="'+(d.frame===t[0])+'">'+t[1]+'</button>').join('')+'</div></div>'+
-    '<div class="pws-field"><label for="pws-favorite">Любимая игра</label><select id="pws-favorite"><option value="">Не выбрана</option>'+
-    state.catalog.map(g=>'<option value="'+esc(g.slug)+'" '+(g.slug===d.favoriteGame?'selected':'')+'>'+esc(g.name)+'</option>').join('')+'</select></div>'+
-    '<label class="pws-check"><input type="checkbox" id="pws-discoverable" '+(d.discoverable?'checked':'')+'> Показывать профиль в поиске</label>'+
-    '<label class="pws-check"><input type="checkbox" id="pws-presence" '+(d.presenceVisible?'checked':'')+'> Показывать, когда я в сети</label>'+
-    '<label class="pws-check"><input type="checkbox" id="pws-invites" '+(d.allowInvites?'checked':'')+'> Разрешать игровые приглашения</label>'+
-    '<div class="pws-actions">'+button('save-profile','Сохранить','primary')+button('cancel-edit','Отмена')+'</div></section>';
+    '<details class="pws-fold pws-cloud-fold" data-pws-fold="cloud"'+(state.expanded.cloud?' open':'')+'>'+
+    '<summary>Облако'+(state.cloud?' · '+cloudBytes(state.cloud.usedBytes)+' / '+cloudBytes(state.cloud.maxBytes):'')+'</summary>'+
+    cloudPanel()+'</details>';
 }
 function otherPanel(){
   const p=state.other;
@@ -236,7 +278,7 @@ function render(){
     state.tab==='friends'?friendsPanel():
     state.tab==='invites'?invitesPanel():
     state.tab==='invite'?invitePanel():otherPanel());
-  if(state.edit&&state.tab==='profile')initCanvas();
+  if(state.edit&&state.tab==='profile'&&state.editorTab==='card')initCanvas();
 }
 function updateNotification(count){
   const invites=(state.me?.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
@@ -263,9 +305,11 @@ async function reload(rerender=true){
   if(state.cloudAccount&&state.cloudAccount!==data.profile.id)resetCloud();
   state.me=data;
   const accountButton=q('#pocket-id-trigger');
-  if(accountButton && data.profile?.artwork){
+  if(accountButton && data.profile?.maskot){
+    accountButton.innerHTML='<span class="pw-social-maskot-nav">'+mascotSvg(data.profile.maskot,{unlocks:data.profile.unlocked||[]})+'</span>';
+  } else if(accountButton && data.profile?.artwork){
     accountButton.innerHTML='<img class="pw-social-personal-avatar" src="'+esc(data.profile.artwork)+'" alt="">';
-  } else if(accountButton?.querySelector('.pw-social-personal-avatar')){
+  } else if(accountButton?.querySelector('.pw-social-personal-avatar,.pw-social-maskot-nav')){
     const fallback=q('#pocket-id-active-avatar .pw-id-avatar')?.outerHTML;
     accountButton.innerHTML=fallback?fallback.replace('pw-id-avatar','pw-id-nav-avatar'):
       '<span class="pw-id-nav-glyph" aria-hidden="true">◎</span>';
@@ -273,7 +317,7 @@ async function reload(rerender=true){
   const pending=(data.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
   const requests=(data.incoming||[]).length;
   updateNotification(pending+requests);
-  document.dispatchEvent(new CustomEvent('pocket-social:portrait',{detail:{accountId:data.profile.id,artwork:data.profile.artwork||''}}));
+  document.dispatchEvent(new CustomEvent('pocket-social:portrait',{detail:{accountId:data.profile.id,artwork:data.profile.artwork||'',maskot:data.profile.maskot||null}}));
   if(rerender)render();
 }
 async function loadCatalog(){
@@ -293,7 +337,8 @@ async function open(room='',editNow=false,gameId='zamazka'){
   finally{state.loading=false}
   if(state.me&&editNow){
     state.tab='profile';state.edit=true;state.draft={...state.me.profile};
-    state.artHistory=[state.draft.artwork];resetNotice();
+    state.draft.maskot=safeMascot(state.draft.maskot,state.draft.unlocked);
+    state.editorTab='animal';state.artHistory=[state.draft.artwork];resetNotice();
   }else if(state.me&&!room){
     const incoming=(state.me.invites||[]).some(i=>i.incoming&&i.status==='pending');
     if(incoming)state.tab='invites';
@@ -350,7 +395,7 @@ async function saveUnifiedProfile(){
     // Identity is always canonical for the nickname. Appearance is stored in Pocket Social.
     await updateIdentityNickname(name);
     await api('profile',{background:draft.background,frame:draft.frame,
-      artwork:draft.artwork,favoriteGame:draft.favoriteGame,
+      artwork:draft.artwork,maskot:draft.maskot,title:draft.title||'',favoriteGame:draft.favoriteGame,
       discoverable:draft.discoverable,presenceVisible:draft.presenceVisible,
       allowInvites:draft.allowInvites});
     await reload(false);
@@ -445,6 +490,7 @@ function install(){
     if(t.id==='pws-presence')state.draft.presenceVisible=t.checked;
     if(t.id==='pws-invites')state.draft.allowInvites=t.checked;
     if(t.id==='pws-nickname')state.draft.nickname=t.value;
+    if(t.id==='pws-title')state.draft.title=t.value;
   });
   dialog.addEventListener('toggle',event=>{
     const key=event.target?.dataset?.pwsFold;
@@ -471,8 +517,33 @@ function install(){
     if(action==='refresh-cloud'){void loadCloudUsage();return}
     if(action==='account'){dialog.close();if(window.PocketID?.openAccount)window.PocketID.openAccount();else location.assign('/?pocket-id=login');return}
     if(action==='copy-id'){try{await navigator.clipboard.writeText(state.me.profile.id);state.notice='ID скопирован.'}catch{state.error='Не удалось скопировать ID.'}render();return}
-    if(action==='edit'){state.edit=true;state.draft={...state.me.profile};
-      state.artHistory=[state.draft.artwork];resetNotice();render();return}
+    if(action==='edit'){state.edit=true;state.draft={...state.me.profile,
+      maskot:safeMascot(state.me.profile.maskot,state.me.profile.unlocked)};
+      state.editorTab='animal';state.artHistory=[state.draft.artwork];resetNotice();render();return}
+    if(action==='maskot-tab'){state.editorTab=target.dataset.value;render();return}
+    if(action==='maskot-item'){
+      if(!['animal','hat','clothes','face'].includes(target.dataset.field))return;
+      state.draft.maskot={...state.draft.maskot,[target.dataset.field]:target.dataset.value};
+      render();return;
+    }
+    if(action==='redeem'){
+      const input=q('#pws-cosmetic-code',dialog),code=input?.value.trim();
+      if(!code){state.error='Введите код.';render();return}
+      state.busy=true;resetNotice();
+      try{
+        const response=await api('redeem',{code});
+        state.me.profile=response.profile;
+        state.draft.unlocked=response.profile.unlocked;
+        if(!response.already){
+          state.reward=response.reward;
+          state.draft.maskot=response.reward==='astronaut'
+            ?{...state.draft.maskot,hat:'helmet',clothes:'spacesuit'}
+            :{...state.draft.maskot,hat:'veil',clothes:'wedding'};
+        }else state.notice='Награда уже получена.';
+      }catch(e){state.error=e.message==='invalid_code'?'Неверный код.':e.message}
+      finally{state.busy=false;render()}return;
+    }
+    if(action==='reward-close'){state.reward=null;render();return}
     if(action==='cancel-edit'){state.edit=false;render();return}
     if(action==='background'||action==='frame'){state.draft[action]=target.dataset.value;render();return}
     if(action==='ink'){state.ink=target.dataset.value;render();return}

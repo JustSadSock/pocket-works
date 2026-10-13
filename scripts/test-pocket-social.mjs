@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {PocketSocial} from '../pocket-social/hub.mjs';
+import {mascotSvg,safeMascot} from '../shared/capabilities/maskot.js';
 
+for(const animal of ['cat','rabbit','frog']){
+  for(const outfit of ['tunic','vest','mantle']){
+    const art=mascotSvg({animal,hat:'crown',clothes:outfit,face:'glasses'});
+    assert.match(art,/<svg /);assert.match(art,/<path /);
+    assert.doesNotMatch(art,/<script|foreignObject|onload=/i);
+  }
+}
+assert.equal(safeMascot({animal:'cat',hat:'helmet',clothes:'spacesuit',face:'none'}).hat,'none');
+assert.equal(safeMascot({animal:'cat',hat:'veil',clothes:'wedding',face:'none'},['wedding']).hat,'veil');
 const db=new DatabaseSync(':memory:');
 const sql={exec(query,...args){
   const stmt=db.prepare(query);
@@ -64,4 +74,24 @@ assert.equal((await call(0,'friend-action',{id:users[1].id,action:'unblock'})).o
 assert.equal((await call(1,'friend-request',{id:users[0].id})).httpStatus,201);
 assert.equal((await call(0,'friend-action',{id:users[1].id,action:'decline'})).ok,true);
 assert.equal((await call(0,'friends')).friends.length,0);
+// MASKOT cosmetics are account-bound and server-validated.
+const plainMaskot={animal:'frog',hat:'flower',clothes:'mantle',face:'glasses'};
+const aliceCard={background:'forest',frame:'clean',artwork:'',favoriteGame:'',
+  discoverable:true,presenceVisible:true,allowInvites:true};
+assert.equal((await call(0,'profile',{...aliceCard,maskot:plainMaskot,title:'Первопроходец'})).ok,true);
+assert.deepEqual((await call(0,'me')).profile.maskot,plainMaskot);
+assert.equal((await call(0,'me')).profile.title,'Первопроходец');
+assert.equal((await call(1,'user?id='+users[0].id)).profile.maskot.animal,'frog');
+assert.equal((await call(1,'user?id='+users[0].id)).profile.unlocked,undefined);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'helmet'},title:''})).httpStatus,400);
+assert.equal((await call(0,'redeem',{code:'ORBIT-BAD'})).httpStatus,400);
+assert.equal((await call(0,'redeem',{code:'ORBIT-7'})).reward,'astronaut');
+assert.equal((await call(0,'redeem',{code:'ORBIT-7'})).already,true);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'helmet',clothes:'spacesuit'},title:''})).ok,true);
+assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'veil'}})).httpStatus,400);
+assert.equal((await call(1,'redeem',{code:'WHITE-ROSE'})).reward,'wedding');
+assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'veil',clothes:'wedding'}})).ok,true);
+assert.equal((await call(1,'me')).profile.unlocked.includes('wedding'),true);
+assert.equal((await call(0,'profile',{...aliceCard})).ok,true,'old clients preserve cosmetics');
+assert.equal((await call(0,'me')).profile.maskot.hat,'helmet','legacy update keeps new layers');
 console.log('Pocket Social: '+calls+' SQLite API assertions passed.');

@@ -4,6 +4,19 @@ const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,heade
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper']);
 const frames=new Set(['clean','double','corners','stamp']);
+const maskotAnimals=new Set(['cat','rabbit','frog']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil']);
+const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding']);
+const maskotFaces=new Set(['none','glasses','stars']);
+const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса']);
+const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding']]);
+function validMaskot(value,unlocked){
+  if(!value||typeof value!=='object'||Array.isArray(value))return false;
+  if(!maskotAnimals.has(value.animal)||!maskotHats.has(value.hat)||!maskotClothes.has(value.clothes)||!maskotFaces.has(value.face))return false;
+  if((value.hat==='helmet'||value.clothes==='spacesuit')&&!unlocked.includes('astronaut'))return false;
+  if((value.hat==='veil'||value.clothes==='wedding')&&!unlocked.includes('wedding'))return false;
+  return true;
+}
 const goodArt=x=>typeof x==='string'&&(x===''||x.length<=24000&&/^data:image\/(?:png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/.test(x));
 const goodGame=x=>typeof x==='string'&&x.length<=50&&(!x||/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(x));
 const cleanUser=x=>x&&uuid.test(x.id||'')&&typeof x.nickname==='string'&&x.nickname.length<=20
@@ -19,6 +32,11 @@ export class PocketSocial {
     this.sql=ctx.storage.sql;
     this.rates=new Map();
     this.sql.exec("CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,nickname TEXT NOT NULL,avatar TEXT NOT NULL,background TEXT NOT NULL DEFAULT 'forest',frame TEXT NOT NULL DEFAULT 'clean',artwork TEXT NOT NULL DEFAULT '',favorite_game TEXT NOT NULL DEFAULT '',discoverable INTEGER NOT NULL DEFAULT 1,presence_visible INTEGER NOT NULL DEFAULT 1,allow_invites INTEGER NOT NULL DEFAULT 1,seen_at INTEGER NOT NULL DEFAULT 0,game_id TEXT NOT NULL DEFAULT '',updated_at INTEGER NOT NULL DEFAULT 0)");
+    // Non-destructive migration: existing hand-drawn avatars remain available as card backgrounds.
+    const columns=this.sql.exec('PRAGMA table_info(profiles)').toArray().map(x=>x.name);
+    for(const [name,spec] of [['maskot','TEXT NOT NULL DEFAULT \'\''],['unlocked','TEXT NOT NULL DEFAULT \'[]\''],['title','TEXT NOT NULL DEFAULT \'\'']]){
+      if(!columns.includes(name))this.sql.exec('ALTER TABLE profiles ADD COLUMN '+name+' '+spec);
+    }
     this.sql.exec("CREATE TABLE IF NOT EXISTS friends(a TEXT NOT NULL,b TEXT NOT NULL,status TEXT NOT NULL,pending_by TEXT,updated_at INTEGER NOT NULL,PRIMARY KEY(a,b))");
     this.sql.exec("CREATE INDEX IF NOT EXISTS friends_by_b ON friends(b,status)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS blocks(blocker TEXT NOT NULL,blocked TEXT NOT NULL,PRIMARY KEY(blocker,blocked))");
@@ -40,8 +58,12 @@ export class PocketSocial {
     const p=this.one('SELECT * FROM profiles WHERE id=?',id);if(!p)return null;
     const own=id===viewer,blocked=this.blocked(viewer,id),r=own?null:this.relation(viewer,id);
     const visible=!!p.presence_visible&&!blocked&&p.seen_at>Date.now()-95000;
+    let maskot=null,unlocked=[];
+    try{maskot=p.maskot?JSON.parse(p.maskot):null}catch{}
+    try{unlocked=JSON.parse(p.unlocked||'[]');if(!Array.isArray(unlocked))unlocked=[]}catch{}
     return {id:p.id,nickname:p.nickname,avatar:p.avatar,background:p.background,frame:p.frame,
-      artwork:p.artwork,favoriteGame:p.favorite_game,discoverable:!!p.discoverable,
+      artwork:p.artwork,maskot:validMaskot(maskot,unlocked)?maskot:null,
+      ...(own?{unlocked}:{}),title:p.title||'',favoriteGame:p.favorite_game,discoverable:!!p.discoverable,
       presenceVisible:!!p.presence_visible,allowInvites:!!p.allow_invites,
       online:visible,gameId:visible?p.game_id:'',
       friendship:own?'self':blocked?'blocked':r?.status==='accepted'?'friends':
@@ -124,13 +146,38 @@ export class PocketSocial {
       if(request.method!=='POST')return reply({error:'not_found'},404);
       const body=await bodyJson(request);
       if(!body||typeof body!=='object')return reply({error:'invalid_request'},400);
+      if(path==='/pocket-social/redeem'){
+        if(!this.rate(id,'cosmetic-code',10,3600000))return reply({error:'rate_limited'},429);
+        if(typeof body.code!=='string'||body.code.length>60)return reply({error:'invalid_code'},400);
+        const reward=codeRewards.get(body.code.trim().toUpperCase());
+        if(!reward)return reply({error:'invalid_code'},400);
+        let unlocked=[];try{unlocked=JSON.parse(this.one('SELECT unlocked FROM profiles WHERE id=?',id)?.unlocked||'[]')}catch{}
+        if(!Array.isArray(unlocked))unlocked=[];
+        const already=unlocked.includes(reward);
+        if(!already){
+          unlocked.push(reward);
+          this.sql.exec('UPDATE profiles SET unlocked=?,updated_at=? WHERE id=?',JSON.stringify(unlocked),Date.now(),id);
+        }
+        return reply({ok:true,reward,already,profile:this.card(id,id)});
+      }
       if(path==='/pocket-social/profile'){
         const {background,frame,artwork,favoriteGame,discoverable,presenceVisible,allowInvites}=body;
         if(!backgrounds.has(background)||!frames.has(frame)||!goodArt(artwork)||!goodGame(favoriteGame)||
           [discoverable,presenceVisible,allowInvites].some(v=>typeof v!=='boolean'))
           return reply({error:'invalid_profile'},400);
-        this.sql.exec('UPDATE profiles SET background=?,frame=?,artwork=?,favorite_game=?,discoverable=?,presence_visible=?,allow_invites=?,updated_at=? WHERE id=?',
-          background,frame,artwork,favoriteGame,Number(discoverable),Number(presenceVisible),Number(allowInvites),Date.now(),id);
+        let unlocked=[];try{unlocked=JSON.parse(this.one('SELECT unlocked FROM profiles WHERE id=?',id)?.unlocked||'[]')}catch{}
+        if(!Array.isArray(unlocked))unlocked=[];
+        const maskot=body.maskot===undefined?null:body.maskot;
+        if(maskot!==null&&!validMaskot(maskot,unlocked))return reply({error:'invalid_profile'},400);
+        if(body.title!==undefined&&!maskotTitles.has(body.title))return reply({error:'invalid_profile'},400);
+        // Older clients keep the new cosmetics untouched. New clients store only validated IDs.
+        if(maskot){
+          this.sql.exec('UPDATE profiles SET background=?,frame=?,artwork=?,favorite_game=?,discoverable=?,presence_visible=?,allow_invites=?,maskot=?,title=?,updated_at=? WHERE id=?',
+            background,frame,artwork,favoriteGame,Number(discoverable),Number(presenceVisible),Number(allowInvites),JSON.stringify(maskot),body.title||'',Date.now(),id);
+        }else{
+          this.sql.exec('UPDATE profiles SET background=?,frame=?,artwork=?,favorite_game=?,discoverable=?,presence_visible=?,allow_invites=?,updated_at=? WHERE id=?',
+            background,frame,artwork,favoriteGame,Number(discoverable),Number(presenceVisible),Number(allowInvites),Date.now(),id);
+        }
         return reply({ok:true,profile:this.card(id,id)});
       }
       if(path==='/pocket-social/presence'){
