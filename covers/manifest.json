@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "778b925a3de9167c44046becdc0486ee572f4242",
+    "revision": "04f4fb5771c6b302bee80ba5e0ffaf6c7027e7e8",
     "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "04573559a43599725fa627060d8896aa8d3d274eab040a4fbac4df1c568016af",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "778b925a3de9167c44046becdc0486ee572f4242",
-    "lastAttemptAt": "2026-10-13T15:30:16.228Z",
+    "lastAttemptRevision": "04f4fb5771c6b302bee80ba5e0ffaf6c7027e7e8",
+    "lastAttemptAt": "2026-10-13T15:42:06.406Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3059,7 +3059,7 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "dvor-football": {
-    "revision": "bbce4c0218c88e3db05d2b61cdb09df6404770b9",
+    "revision": "60f172eec0cf8e5e797172d171653c32cb5d5e7c",
     "qualityScore": 84,
     "visionScore": null,
     "prepared": false,
@@ -3067,11 +3067,11 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "40a371a303d2958fe5251a128f4d0d50a0f37dcf74a6dbc0094f9b64e3f7bc11",
+    "sha256": "ff27e2d9b2ba10ac1b16d6149bc9ded009c8f92357057985c231d77234e8406b",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "bbce4c0218c88e3db05d2b61cdb09df6404770b9",
-    "lastAttemptAt": "2026-10-13T13:47:42.292Z"
+    "lastAttemptRevision": "60f172eec0cf8e5e797172d171653c32cb5d5e7c",
+    "lastAttemptAt": "2026-10-13T15:42:17.315Z"
   }
 }
