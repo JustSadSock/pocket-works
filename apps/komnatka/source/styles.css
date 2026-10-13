@@ -314,3 +314,12 @@
  .home-footnote{display:none}
 }
 @media(prefers-reduced-motion:reduce){.home-action,.menu-return{transition:none!important}}
+
+/* The display must never become an empty frame on iOS WebGL capture failures. */
+.home-preview-back{isolation:isolate}
+.home-preview-illustration{position:absolute;inset:0;width:100%;height:100%;z-index:1;
+ transform:scale(.98) translateY(3%);transition:opacity .24s ease;pointer-events:none}
+.home-preview-image{position:absolute;inset:0;z-index:2;opacity:0;transition:opacity .24s ease}
+.home-preview-image.ready{opacity:1}
+.home-preview-image.ready + .home-preview-illustration{opacity:0}
+@media(prefers-reduced-motion:reduce){.home-preview-image,.home-preview-illustration{transition:none}}
