@@ -191,7 +191,7 @@ function select(id) {
  ui.selectedName.textContent=byType[item.type].name;
  ui.selected.hidden=false;
  ui.swatches.innerHTML=COLORS.map(c=>'<button type="button" class="color-dot '+(item.color===c?'picked':'')+'" style="--paint:'+c+'" data-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('');
- ui.swatches.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{mutate(()=>{const found=state.items.find(i=>i.id===selectedId);if(found)found.color=button.dataset.color;});sound('paint');}));
+ ui.swatches.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{mutate(()=>{const found=state.items.find(i=>i.id===selectedId);if(found)found.color=button.dataset.color;});director?.touch(selectedId);sound('paint');}));
  $('rotateBtn').disabled=item.type==='window'||item.type==='frame';
  $('duplicateBtn').disabled=false;
 }
