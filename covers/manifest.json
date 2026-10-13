@@ -1,15 +1,25 @@
 {
   "zamazka": {
-    "revision": "ecedb65c13cd8a864c7515fb1db518816aa38713",
-    "qualityScore": 72,
+    "revision": "457295b7369fedf7f39d9bae0a8979a629434e67",
+    "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "f76c195d2e35655c663f9a43d93f36ab1ae3a713926e14da76d8acf4737e7d87",
+    "sha256": "04573559a43599725fa627060d8896aa8d3d274eab040a4fbac4df1c568016af",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "ecedb65c13cd8a864c7515fb1db518816aa38713",
-    "lastAttemptAt": "2026-10-13T12:39:17.088Z"
+    "lastAttemptRevision": "457295b7369fedf7f39d9bae0a8979a629434e67",
+    "lastAttemptAt": "2026-10-13T13:47:31.377Z",
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "✎ Реставратор Изменить знак ✎",
+        "id": "",
+        "score": 92
+      }
+    ],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "natyazhenie": {
     "revision": "a4ade66f82635dbe41b65bd2117147dd278cdc5f",
@@ -57,7 +67,34 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "6d28906ddefa8eeda71089cfe2505a209a3b4395",
-    "lastAttemptAt": "2026-10-13T12:40:49.380Z"
+    "lastAttemptAt": "2026-10-13T13:47:54.237Z",
+    "diagnostic": {
+      "bestScore": 48,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 23165,
+        "variance": 25.48620188223541,
+        "entropy": 1.97608006388125,
+        "edgeDensity": 0.11507936507936507,
+        "colorfulness": 27.168701171875,
+        "centerDetail": 18.950193478545927,
+        "meanLight": 206.25855336914282
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Играть → Два героя, один экран",
+            "id": "soloBtn",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/lipki/?pw-cover=1&pw_release=1.2.1&pw_fp=183885b630f1872ae8e8afe2"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "kromka-duel": {
     "revision": "3ad4b8370621901a924afe3d81364257ef283175",
@@ -111,7 +148,34 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "f1970ded338c614d46d4b879fafca73babbce423",
-    "lastAttemptAt": "2026-10-13T12:41:43.945Z"
+    "lastAttemptAt": "2026-10-13T13:48:06.023Z",
+    "diagnostic": {
+      "bestScore": 50,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 36923,
+        "variance": 30.337751602400928,
+        "entropy": 1.8404500546943432,
+        "edgeDensity": 0.1277281746031746,
+        "colorfulness": 24.938232421875,
+        "centerDetail": 24.415721466285998,
+        "meanLight": 217.53213178711144
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Начать тренировку ↗",
+            "id": "soloButton",
+            "score": 104
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/uzel-party/?pw-cover=1&pw_release=1.0.0&pw_fp=81cae157376bc49275b8e35e"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "stapel": {
     "revision": "068746e7a244079a79b487c512e955f9f099a211",
@@ -153,13 +217,61 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "lastAttemptAt": "2026-10-13T12:42:27.576Z"
+    "lastAttemptAt": "2026-10-13T13:48:17.738Z",
+    "diagnostic": {
+      "bestScore": 72,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 46791,
+        "variance": 50.51650948625923,
+        "entropy": 1.9003222772295545,
+        "edgeDensity": 0.2119295634920635,
+        "colorfulness": 46.45361328125,
+        "centerDetail": 52.37460534794021,
+        "meanLight": 208.0756771972629
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Нарисовать ↗",
+            "id": "new-work",
+            "score": 92
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/folio/?pw-cover=1&pw_release=1.5.1&pw_fp=8b85b639a8863da0b122656f"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "flagpost": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "lastAttemptAt": "2026-10-13T12:42:38.393Z"
+    "lastAttemptAt": "2026-10-13T13:48:28.555Z",
+    "diagnostic": {
+      "bestScore": 64,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 47775,
+        "variance": 43.99507010996074,
+        "entropy": 2.0937103577110787,
+        "edgeDensity": 0.2095734126984127,
+        "colorfulness": 21.138427734375,
+        "centerDetail": 49.6532422642229,
+        "meanLight": 215.89319316406574
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/flagpost/?pw-cover=1&pw_release=1.1.2&pw_fp=9d8c3e0d8275ab04a61031cf"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "jam-tape": {
     "revision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
@@ -199,9 +311,26 @@
   },
   "last-raven": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "022e7495cf6585eed5466b81904bfafcdf8f1659",
-    "lastAttemptAt": "2026-10-13T12:43:24.586Z"
+    "lastAttemptAt": "2026-10-13T13:48:44.834Z",
+    "revision": "022e7495cf6585eed5466b81904bfafcdf8f1659",
+    "qualityScore": 60,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "ПРИНЯТЬ КЛЮЧИ ОТ ЗАМКА",
+        "id": "new-game",
+        "score": 92
+      }
+    ],
+    "diagnostic": null,
+    "shot": 2,
+    "sha256": "fc3e32d558b4100b39e605123126e54c282849fb19bb84a59789563e427ec263",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "doctrina": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -363,7 +492,28 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "b3475e4b44c74da1645a99b9fac6fccf5afc4ef9",
-    "lastAttemptAt": "2026-10-13T12:45:39.085Z"
+    "lastAttemptAt": "2026-10-13T13:48:55.784Z",
+    "diagnostic": {
+      "bestScore": 47,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 26052,
+        "variance": 30.570969685157102,
+        "entropy": 1.3514123609425102,
+        "edgeDensity": 0.07043650793650794,
+        "colorfulness": 4.61767578125,
+        "centerDetail": 46.03108001413408,
+        "meanLight": 20.939177001952565
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/third-oath/?pw-cover=1&pw_release=0.2.2&pw_fp=7862ee75532e9b09ea4b3206"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "inkfall": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -429,13 +579,61 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:46:51.282Z"
+    "lastAttemptAt": "2026-10-13T13:49:07.525Z",
+    "diagnostic": {
+      "bestScore": 64,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 44242,
+        "variance": 51.076490886177794,
+        "entropy": 1.4159573126804195,
+        "edgeDensity": 0.19928075396825398,
+        "colorfulness": 8.15380859375,
+        "centerDetail": 62.076871361534636,
+        "meanLight": 224.03543515625907
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Начать профиль →",
+            "id": "startBtn",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/polus/?pw-cover=1&pw_release=1.0.0&pw_fp=35fdafcf184a3537287247d1#quiz"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "zastava": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "5a63e5475078490d38f8f9cec169fe19d2e9b3ee",
-    "lastAttemptAt": "2026-10-13T12:47:13.613Z"
+    "lastAttemptAt": "2026-10-13T13:49:29.499Z",
+    "diagnostic": {
+      "bestScore": 49,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 20878,
+        "variance": 26.097278754401984,
+        "entropy": 2.00832963425245,
+        "edgeDensity": 0.10677083333333333,
+        "colorfulness": 9.3427734375,
+        "centerDetail": 32.52070551216674,
+        "meanLight": 42.81817622070279
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/zastava/?pw-cover=1&pw_release=1.2.0&pw_fp=1b69e4e5e00e97a37c3b48c6"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "iron-swarm": {
     "revision": "96c1a39d2029e299345a0caae2b65cd653931f28",
@@ -453,25 +651,116 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:47:37.736Z"
+    "lastAttemptAt": "2026-10-13T13:49:41.425Z",
+    "diagnostic": {
+      "bestScore": 60,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 39290,
+        "variance": 39.86881622862949,
+        "entropy": 1.7891971766193595,
+        "edgeDensity": 0.11557539682539683,
+        "colorfulness": 13.351318359375,
+        "centerDetail": 51.526608835319195,
+        "meanLight": 35.49101025390667
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "РЕКОМЕНДУЕТСЯ СЕЙЧАС Научиться играть с нуля →",
+            "id": "continue-button",
+            "score": 92
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/mahjong-dojo/?pw-cover=1&pw_release=0.2.0&pw_fp=d2f828a8fadb78f0cf465041"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "n-space": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "660f87254e3eb0ead556787e22068a0a4cf45857",
-    "lastAttemptAt": "2026-10-13T12:47:48.564Z"
+    "lastAttemptAt": "2026-10-13T13:49:52.251Z",
+    "diagnostic": {
+      "bestScore": 57,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 41249,
+        "variance": 38.2271795818212,
+        "entropy": 1.4069524188105713,
+        "edgeDensity": 0.10664682539682539,
+        "colorfulness": 10.778564453125,
+        "centerDetail": 50.7048274061307,
+        "meanLight": 222.69623559570633
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/n-space/?pw-cover=1&pw_release=1.0.0&pw_fp=0049c34ecbd06b0394d25325"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "arena-shift": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "89e16261f32618a467e00cedcfd84eeb2857f4c2",
-    "lastAttemptAt": "2026-10-13T12:48:04.338Z"
+    "lastAttemptAt": "2026-10-13T13:50:07.947Z",
+    "diagnostic": {
+      "bestScore": 39,
+      "qualityReasons": [
+        "image too small",
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 6960,
+        "variance": 34.34182379724313,
+        "entropy": 0.9528768379675253,
+        "edgeDensity": 0.028025793650793652,
+        "colorfulness": 1.818359375,
+        "centerDetail": 45.25039591036613,
+        "meanLight": 18.721954882812163
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/arena-shift/?pw-cover=1&pw_release=1.0.1&pw_fp=949b5654bd568377c98d1b6c"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "rivet": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "89e16261f32618a467e00cedcfd84eeb2857f4c2",
-    "lastAttemptAt": "2026-10-13T12:48:19.063Z"
+    "lastAttemptAt": "2026-10-13T13:50:22.553Z",
+    "diagnostic": {
+      "bestScore": 59,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 10354,
+        "variance": 51.29797119503407,
+        "entropy": 1.4754290031076465,
+        "edgeDensity": 0.06634424603174603,
+        "colorfulness": 3.6552734375,
+        "centerDetail": 81.78293812554017,
+        "meanLight": 24.67231210937508
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/rivet/?pw-cover=1&pw_release=1.0.0&pw_fp=f9d7e4e7d1810c2c86da7c22"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "komok": {
     "revision": "17e54216119c505cb8dc84c4667b6b7816325631",
@@ -489,13 +778,70 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "31809da807c350caa0ce5c877d09ebf3f3126caa",
-    "lastAttemptAt": "2026-10-13T12:48:47.491Z"
+    "lastAttemptAt": "2026-10-13T13:50:34.496Z",
+    "diagnostic": {
+      "bestScore": 2,
+      "qualityReasons": [
+        "image too small",
+        "flat frame",
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 4305,
+        "variance": 0.3517557152569681,
+        "entropy": 0,
+        "edgeDensity": 0,
+        "colorfulness": 3.01513671875,
+        "centerDetail": 0.000004197792258658173,
+        "meanLight": 23.884853076173044
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "ПРОДОЛЖИТЬ Новый эфир",
+            "id": "continueButton",
+            "score": 81
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/dead-air-13/?pw-cover=1&pw_release=1.1.0&pw_fp=04d84883eff2d2903ff57f5d"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "melt-crypt": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:49:02.026Z"
+    "lastAttemptAt": "2026-10-13T13:50:49.112Z",
+    "diagnostic": {
+      "bestScore": 18,
+      "qualityReasons": [
+        "image too small",
+        "low visual detail",
+        "over/underexposed"
+      ],
+      "metrics": {
+        "bytes": 5518,
+        "variance": 11.333360556326165,
+        "entropy": 0.14425044473880894,
+        "edgeDensity": 0.017361111111111112,
+        "colorfulness": 10.49365234375,
+        "centerDetail": 20.798580536677445,
+        "meanLight": 11.246823095702581
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": [
+          {
+            "label": "NEW RUN →",
+            "error": "locator.click: Timeout 3500ms exceeded.\nCall log:\n  - waiting for locator('button, input[type=\"butto"
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/melt-crypt/?pw-cover=1&pw_release=3.0.0&pw_fp=12b3c82ef266e88e9957b14f"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "scenograph": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -513,19 +859,64 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:49:23.699Z"
+    "lastAttemptAt": "2026-10-13T13:51:00.872Z",
+    "diagnostic": {
+      "bestScore": 29,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 27198,
+        "variance": 17.81939533262004,
+        "entropy": 0.6476854790620681,
+        "edgeDensity": 0.06349206349206349,
+        "colorfulness": 14.9755859375,
+        "centerDetail": 12.969780113474792,
+        "meanLight": 234.9095969726508
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "1 Против ИИ быстрая одиночная партия →",
+            "id": "",
+            "score": 92
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/zamkni/?pw-cover=1&pw_release=1.1.0&pw_fp=80917a2890bdd6334f9839bd"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "crumple-yard": {
-    "note": "No frame passed image-content checks",
-    "status": "failed",
+    "note": "existing cover rated higher",
+    "status": "preserved",
     "lastAttemptRevision": "c1c58d0256bc5b7d134031f0488ed21da976f038",
-    "lastAttemptAt": "2026-10-13T12:49:37.425Z"
+    "lastAttemptAt": "2026-10-13T13:51:16.811Z",
+    "captureEngine": "safe-gameplay-v3"
   },
   "formica-colony": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:49:48.273Z"
+    "lastAttemptAt": "2026-10-13T13:51:29.046Z",
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 65,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Новая колония королева + 9 рабочих",
+        "id": "newButton",
+        "score": 92
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "18b249fb04a8d633b607e026fe164ade5912ee192414c5c15b3ed076b8b2cc9f",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "veloria-mandate": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -543,13 +934,55 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "915244e418afdd50a9523b823db552485c84fb1f",
-    "lastAttemptAt": "2026-10-13T12:50:09.922Z"
+    "lastAttemptAt": "2026-10-13T13:51:39.810Z",
+    "diagnostic": {
+      "bestScore": 29,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 14222,
+        "variance": 19.18508187819057,
+        "entropy": 0.3500479049590372,
+        "edgeDensity": 0.03459821428571429,
+        "colorfulness": 22.548095703125,
+        "centerDetail": 24.6651377338796,
+        "meanLight": 224.86282080077783
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/pit-loop/?pw-cover=1&pw_release=1.0.0&pw_fp=46d7a14fa5e9bd02feb5eb0c"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "kinema": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:50:26.835Z"
+    "lastAttemptAt": "2026-10-13T13:51:56.522Z",
+    "diagnostic": {
+      "bestScore": 66,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 22993,
+        "variance": 51.21271436420509,
+        "entropy": 1.8314553193053784,
+        "edgeDensity": 0.08209325396825397,
+        "colorfulness": 11.166015625,
+        "centerDetail": 69.85187249788858,
+        "meanLight": 176.83492919922
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/kinema/?pw-cover=1&pw_release=1.7.0&pw_fp=fb87ff5c5cef3a333cc4870c"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "pelagos": {
     "revision": "3d6e72c110edbb4a925d6febb48b6e5308df7439",
@@ -567,37 +1000,178 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:51:01.227Z"
+    "lastAttemptAt": "2026-10-13T13:52:15.287Z",
+    "diagnostic": {
+      "bestScore": 23,
+      "qualityReasons": [
+        "image too small",
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 7446,
+        "variance": 12.394818639983749,
+        "entropy": 0.18209028381204367,
+        "edgeDensity": 0.022321428571428572,
+        "colorfulness": 17.955810546875,
+        "centerDetail": 22.15321979187156,
+        "meanLight": 51.5451822753876
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": [
+          {
+            "label": "В НЕБО",
+            "error": "locator.click: Timeout 3500ms exceeded.\nCall log:\n  - waiting for locator('button, input[type=\"butto"
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/aetherwing/?pw-cover=1&pw_release=1.1.0&pw_fp=754b3f0b36107fc6269928df"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "sirocco": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:51:17.341Z"
+    "lastAttemptAt": "2026-10-13T13:52:31.197Z",
+    "diagnostic": {
+      "bestScore": 30,
+      "qualityReasons": [
+        "image too small",
+        "flat frame",
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 6731,
+        "variance": 7.117179887113332,
+        "entropy": 0.15391333740088364,
+        "edgeDensity": 0.018353174603174604,
+        "colorfulness": 125.484619140625,
+        "centerDetail": 13.402905011045606,
+        "meanLight": 121.44477729491429
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/sirocco/?pw-cover=1&pw_release=1.6.0&pw_fp=24fa665f28f33e96d6a4afe4"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "gloamstep": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:51:28.220Z"
+    "lastAttemptAt": "2026-10-13T13:52:42.991Z",
+    "diagnostic": {
+      "bestScore": 74,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 25990,
+        "variance": 88.19767566987429,
+        "entropy": 1.9438636345315712,
+        "edgeDensity": 0.09908234126984126,
+        "colorfulness": 18.98486328125,
+        "centerDetail": 56.96402386490174,
+        "meanLight": 113.7421991699234
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Начать новый забег",
+            "id": "newRunButton",
+            "score": 104
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/gloamstep/?pw-cover=1&pw_release=1.0.0&pw_fp=a2b061c4c9d5cadf4bd998e9"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "sinew": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:51:45.210Z"
+    "lastAttemptAt": "2026-10-13T13:53:03.384Z",
+    "diagnostic": {
+      "bestScore": 26,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 15223,
+        "variance": 16.91229033393887,
+        "entropy": 0.35246755651504613,
+        "edgeDensity": 0.02418154761904762,
+        "colorfulness": 10.298828125,
+        "centerDetail": 28.969807460773872,
+        "meanLight": 27.271171093749338
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/sinew/?pw-cover=1&pw_release=1.8.0&pw_fp=937574265ba9a8ae771f7133"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "bellforge-last-chime": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:52:26.549Z"
+    "lastAttemptAt": "2026-10-13T13:53:44.493Z",
+    "diagnostic": {
+      "bestScore": 42,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 17072,
+        "variance": 24.831204867568758,
+        "entropy": 1.7575924535011873,
+        "edgeDensity": 0.04625496031746032,
+        "colorfulness": 17.279052734375,
+        "centerDetail": 36.19343409176259,
+        "meanLight": 38.030310107424434
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/bellforge-last-chime/?pw-cover=1&pw_release=1.2.0&pw_fp=d947a9e7cd7dac060eaf6abb"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "colossus-inside": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:52:47.043Z"
+    "lastAttemptAt": "2026-10-13T13:54:04.521Z",
+    "diagnostic": {
+      "bestScore": 21,
+      "qualityReasons": [
+        "image too small",
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 8093,
+        "variance": 13.968425168501534,
+        "entropy": 0.1987941856369947,
+        "edgeDensity": 0.015625,
+        "colorfulness": 8.1484375,
+        "centerDetail": 27.0648150822146,
+        "meanLight": 16.413813134765
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/colossus-inside/?pw-cover=1&pw_release=1.5.0&pw_fp=aa4ba6778d685fbe25144ab2"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "relic-siege": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -627,7 +1201,29 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:53:47.321Z"
+    "lastAttemptAt": "2026-10-13T13:54:22.472Z",
+    "diagnostic": {
+      "bestScore": 17,
+      "qualityReasons": [
+        "image too small",
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 6746,
+        "variance": 10.400512543172029,
+        "entropy": 0.08200501636989488,
+        "edgeDensity": 0.009424603174603174,
+        "colorfulness": 17.126220703125,
+        "centerDetail": 20.62049242591435,
+        "meanLight": 232.45289838867217
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/firn/?pw-cover=1&pw_release=1.2.0&pw_fp=6a94e8df77aa3ce07664ad88"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "miniature-lab": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -657,7 +1253,28 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "d9f86cfc2a92b488fcd6e0cad324ea6910de8768",
-    "lastAttemptAt": "2026-10-13T12:54:19.930Z"
+    "lastAttemptAt": "2026-10-13T13:54:33.357Z",
+    "diagnostic": {
+      "bestScore": 57,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 41825,
+        "variance": 42.90520235864192,
+        "entropy": 1.182772938258223,
+        "edgeDensity": 0.10788690476190477,
+        "colorfulness": 18.33984375,
+        "centerDetail": 40.166222691988374,
+        "meanLight": 218.96894111329217
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/power-anatomy/?pw-cover=1&pw_release=1.0.0&pw_fp=4f75ac108c8cdc79a4354567"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "munchkin-level-forge": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -675,7 +1292,28 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "f5a12abc3ef1d7651c92fa1df1b4dcb79b0bcab7",
-    "lastAttemptAt": "2026-10-13T12:54:41.613Z"
+    "lastAttemptAt": "2026-10-13T13:54:44.075Z",
+    "diagnostic": {
+      "bestScore": 44,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 42539,
+        "variance": 25.75864644208934,
+        "entropy": 0.9651859632686735,
+        "edgeDensity": 0.09375,
+        "colorfulness": 24.89794921875,
+        "centerDetail": 23.10002889475697,
+        "meanLight": 227.01785122070157
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/iev-disput/?pw-cover=1&pw_release=1.4.0&pw_fp=33d07c648dd41081d6a98d5b"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "scriptorium": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -693,13 +1331,61 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:55:06.610Z"
+    "lastAttemptAt": "2026-10-13T13:54:54.884Z",
+    "diagnostic": {
+      "bestScore": 32,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 21247,
+        "variance": 16.522521523017634,
+        "entropy": 1.7199377836853118,
+        "edgeDensity": 0.06398809523809523,
+        "colorfulness": 22.957763671875,
+        "centerDetail": 5.613762416997337,
+        "meanLight": 229.43819252929293
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/perelist/?pw-cover=1&pw_release=1.1.0&pw_fp=4336e2746353fe07a00ff07e"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "kvarta": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:55:17.399Z"
+    "lastAttemptAt": "2026-10-13T13:55:06.592Z",
+    "diagnostic": {
+      "bestScore": 72,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 43017,
+        "variance": 56.084244389287214,
+        "entropy": 1.587645313019446,
+        "edgeDensity": 0.15178571428571427,
+        "colorfulness": 36.131591796875,
+        "centerDetail": 75.16328352349886,
+        "meanLight": 209.24495234375712
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Начать с листа 01",
+            "id": "continue-button",
+            "score": 92
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/kvarta/?pw-cover=1&pw_release=1.1.0&pw_fp=70e547be97245fc1e7745e4c"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "rivals-roulette": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -717,31 +1403,144 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:55:39.046Z"
+    "lastAttemptAt": "2026-10-13T13:55:17.422Z",
+    "diagnostic": {
+      "bestScore": 62,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 49869,
+        "variance": 43.35061728509891,
+        "entropy": 1.8587957683588234,
+        "edgeDensity": 0.16455853174603174,
+        "colorfulness": 26.1953125,
+        "centerDetail": 40.957969508029336,
+        "meanLight": 211.55133012695399
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/chancellery/?pw-cover=1&pw_release=0.3.0&pw_fp=1e7a7ad8351ca10a2fba08a2"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "rivals-fit-lab": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:55:49.815Z"
+    "lastAttemptAt": "2026-10-13T13:55:29.120Z",
+    "diagnostic": {
+      "bestScore": 66,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 40966,
+        "variance": 51.41337762720125,
+        "entropy": 1.8039608238185325,
+        "edgeDensity": 0.19419642857142858,
+        "colorfulness": 13.2119140625,
+        "centerDetail": 67.5444997307256,
+        "meanLight": 221.95384995117143
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Запустить калибровку",
+            "id": "startBtn",
+            "score": 62
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/rivals-fit-lab/?pw-cover=1&pw_release=1.1.0&pw_fp=67690aba60e237ddabcb8595"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "witness-of-era": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:56:00.562Z"
+    "lastAttemptAt": "2026-10-13T13:55:39.853Z",
+    "diagnostic": {
+      "bestScore": 72,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 41168,
+        "variance": 82.70513415771038,
+        "entropy": 2.005241262303949,
+        "edgeDensity": 0.19308035714285715,
+        "colorfulness": 15.322509765625,
+        "centerDetail": 88.83016626868195,
+        "meanLight": 162.30949462890342
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/witness-of-era/?pw-cover=1&pw_release=1.0.1&pw_fp=0696efb026bde58d724914af"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "tempo": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:56:11.413Z"
+    "lastAttemptAt": "2026-10-13T13:55:51.703Z",
+    "diagnostic": {
+      "bestScore": 55,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 44640,
+        "variance": 35.59080339671374,
+        "entropy": 1.1403590415403777,
+        "edgeDensity": 0.16865079365079366,
+        "colorfulness": 19.400146484375,
+        "centerDetail": 43.65749377078624,
+        "meanLight": 220.7230025878886
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "03 Начать практику пошаговый режим без экзамена ↗",
+            "id": "",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/tempo/?pw-cover=1&pw_release=1.3.0&pw_fp=6771b166af8c38363fb0fcb7"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "mazok": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "6f99ee31484e006f2d73d03069814ecc894f3f57",
-    "lastAttemptAt": "2026-10-13T12:56:22.197Z"
+    "lastAttemptAt": "2026-10-13T13:56:03.510Z",
+    "revision": "6f99ee31484e006f2d73d03069814ecc894f3f57",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начать рисовать",
+        "id": "emptyNewButton",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "e928d8b2d7c1255d67f00016946dd40d8ee8ae80daa92f692aff916b98d2b253",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "rebro": {
     "revision": "10043dfca7d7679711dca28413d0f06ffb37eae0",
@@ -759,7 +1558,28 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "4a4e398eebe4ef4c048c61951278750aa61769c7",
-    "lastAttemptAt": "2026-10-13T12:56:43.993Z"
+    "lastAttemptAt": "2026-10-13T13:56:14.418Z",
+    "diagnostic": {
+      "bestScore": 40,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 29807,
+        "variance": 33.91303769604936,
+        "entropy": 1.5628456140442335,
+        "edgeDensity": 0.07552083333333333,
+        "colorfulness": 16.999755859375,
+        "centerDetail": 4.948751226043227,
+        "meanLight": 29.033999511719177
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/takt/?pw-cover=1&pw_release=1.1.0&pw_fp=7aa478b7849d392735e15dc0"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "forma": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -789,13 +1609,61 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:57:16.695Z"
+    "lastAttemptAt": "2026-10-13T13:56:25.337Z",
+    "diagnostic": {
+      "bestScore": 69,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 32725,
+        "variance": 55.22229703601717,
+        "entropy": 1.5729106433623605,
+        "edgeDensity": 0.12686011904761904,
+        "colorfulness": 21.925537109375,
+        "centerDetail": 52.462186248310786,
+        "meanLight": 202.6850864257824
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/clada/?pw-cover=1&pw_release=5.1.0&pw_fp=1213c5320f69875ae2634d53"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "kryazh": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:57:27.450Z"
+    "lastAttemptAt": "2026-10-13T13:56:39.561Z",
+    "diagnostic": {
+      "bestScore": 39,
+      "qualityReasons": [
+        "image too small",
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 7981,
+        "variance": 41.37537841184314,
+        "entropy": 1.067421270774461,
+        "edgeDensity": 0.026041666666666668,
+        "colorfulness": 18.432373046875,
+        "centerDetail": 12.36093968147292,
+        "meanLight": 78.53311875000215
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": [
+          {
+            "label": "PLAY",
+            "error": "locator.click: Timeout 3500ms exceeded.\nCall log:\n  - waiting for locator('button, input[type=\"butto"
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/kryazh/?pw-cover=1&pw_release=1.0.0&pw_fp=f695b263aa52e4abbcc895a9"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "redline-vector": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -813,7 +1681,28 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:57:49.121Z"
+    "lastAttemptAt": "2026-10-13T13:56:50.349Z",
+    "diagnostic": {
+      "bestScore": 44,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 29077,
+        "variance": 29.076340970439457,
+        "entropy": 1.2545555901911187,
+        "edgeDensity": 0.09672619047619048,
+        "colorfulness": 12.803955078125,
+        "centerDetail": 24.636675015101808,
+        "meanLight": 232.47983916014658
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/facet-face-lab/?pw-cover=1&pw_release=2.1.0&pw_fp=7d6fea4202c93d11d0884976"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "bubble-bob": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -831,19 +1720,83 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:58:10.882Z"
+    "lastAttemptAt": "2026-10-13T13:57:01.077Z",
+    "diagnostic": {
+      "bestScore": 24,
+      "qualityReasons": [
+        "image too small",
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 8284,
+        "variance": 16.222182900189207,
+        "entropy": 0.20766757711737802,
+        "edgeDensity": 0.021701388888888888,
+        "colorfulness": 11.30517578125,
+        "centerDetail": 29.918218583156143,
+        "meanLight": 20.221170166014637
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/kalibr/?pw-cover=1&pw_release=2.0.0&pw_fp=1ee3d45581ec52607b9249c4"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "plast": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "394cdd9bf058ac22e351414f713a2e3c7c683fe4",
-    "lastAttemptAt": "2026-10-13T12:58:31.473Z"
+    "lastAttemptAt": "2026-10-13T13:57:17.709Z",
+    "diagnostic": {
+      "bestScore": 30,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 10945,
+        "variance": 20.241554296184873,
+        "entropy": 0.3174935176649524,
+        "edgeDensity": 0.03422619047619048,
+        "colorfulness": 8.4384765625,
+        "centerDetail": 34.53094003599634,
+        "meanLight": 32.71705913086113
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/plast/?pw-cover=1&pw_release=1.1.1&pw_fp=c38b1ff52ec0da3d37e88b83"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "nulevoy-etazh": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:58:42.385Z"
+    "lastAttemptAt": "2026-10-13T13:57:28.579Z",
+    "diagnostic": {
+      "bestScore": 65,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 29447,
+        "variance": 45.689822349537984,
+        "entropy": 1.9052485126317515,
+        "edgeDensity": 0.11011904761904762,
+        "colorfulness": 12.489990234375,
+        "centerDetail": 60.7481350938386,
+        "meanLight": 43.1069872558601
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/nulevoy-etazh/?pw-cover=1&pw_release=1.0.0&pw_fp=774e849a0033c956a6183050"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "prelom": {
     "revision": "26ee12b5df87b8d1191e7bb0417e1821e0ce8bfe",
@@ -861,7 +1814,28 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:59:04.070Z"
+    "lastAttemptAt": "2026-10-13T13:57:39.399Z",
+    "diagnostic": {
+      "bestScore": 70,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 44302,
+        "variance": 60.31507560263565,
+        "entropy": 1.871251711321065,
+        "edgeDensity": 0.15860615079365079,
+        "colorfulness": 22.637939453125,
+        "centerDetail": 76.46511567413128,
+        "meanLight": 215.82145546874682
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/sovpalo/?pw-cover=1&pw_release=1.0.0&pw_fp=84f6bd85ca60e57e4cf9abb5"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "poryadok": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -879,31 +1853,132 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:59:25.718Z"
+    "lastAttemptAt": "2026-10-13T13:57:50.170Z",
+    "diagnostic": {
+      "bestScore": 54,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 41823,
+        "variance": 39.30380798531271,
+        "entropy": 1.8258419108165633,
+        "edgeDensity": 0.14608134920634921,
+        "colorfulness": 17.1171875,
+        "centerDetail": 27.096731651270527,
+        "meanLight": 212.5836138671805
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/otklik/?pw-cover=1&pw_release=1.1.0&pw_fp=88714dcb926db9662924f213"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "impuls": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:59:39.837Z"
+    "lastAttemptAt": "2026-10-13T13:58:00.964Z",
+    "diagnostic": {
+      "bestScore": 72,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 42379,
+        "variance": 68.79679814956943,
+        "entropy": 1.605933351466288,
+        "edgeDensity": 0.16158234126984128,
+        "colorfulness": 29.626708984375,
+        "centerDetail": 67.20663371453945,
+        "meanLight": 195.55562919922127
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/impuls/?pw-cover=1&pw_release=1.1.0&pw_fp=0a5031bbe51d30bf173c07c0"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "nomos-lab": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T12:59:50.649Z"
+    "lastAttemptAt": "2026-10-13T13:58:12.749Z",
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 66,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начать эксперимент",
+        "id": "start",
+        "score": 92
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "c2bd8c27c9c42b34f991870358a5d31b7e6a247cb1173187c6d204dff5989473",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "causa": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:00:01.482Z"
+    "lastAttemptAt": "2026-10-13T13:58:26.844Z",
+    "diagnostic": {
+      "bestScore": 60,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 31897,
+        "variance": 66.64301259510104,
+        "entropy": 1.1585031433058544,
+        "edgeDensity": 0.1284722222222222,
+        "colorfulness": 14.73779296875,
+        "centerDetail": 33.82574391007456,
+        "meanLight": 206.5254040039163
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/causa/?pw-cover=1&pw_release=1.0.0&pw_fp=fd1e21b63ea759df5ac8cf73"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "emergence-lab": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:00:12.339Z"
+    "lastAttemptAt": "2026-10-13T13:58:37.687Z",
+    "diagnostic": {
+      "bestScore": 60,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 44150,
+        "variance": 42.79105089367418,
+        "entropy": 1.6207409645744206,
+        "edgeDensity": 0.1484375,
+        "colorfulness": 30.258056640625,
+        "centerDetail": 36.58789208888703,
+        "meanLight": 215.70115004883652
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/emergence-lab/?pw-cover=1&pw_release=1.1.0&pw_fp=f106b107897dae4b9db2839c"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "regent": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -933,13 +2008,61 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:00:44.766Z"
+    "lastAttemptAt": "2026-10-13T13:58:49.562Z",
+    "diagnostic": {
+      "bestScore": 60,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 42496,
+        "variance": 47.55928784307343,
+        "entropy": 1.4544442310094603,
+        "edgeDensity": 0.1470734126984127,
+        "colorfulness": 19.10986328125,
+        "centerDetail": 40.20894294525701,
+        "meanLight": 215.7050054199205
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "НАЧАТЬ НА БУМАГЕ →",
+            "id": "startButton",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/karkas/?pw-cover=1&pw_release=1.0.0&pw_fp=bfe27e83dc37b024f6e1a062"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "palimpsest": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:00:55.557Z"
+    "lastAttemptAt": "2026-10-13T13:59:00.344Z",
+    "diagnostic": {
+      "bestScore": 62,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 36463,
+        "variance": 66.90665406267877,
+        "entropy": 1.981954675963936,
+        "edgeDensity": 0.14955357142857142,
+        "colorfulness": 22.688232421875,
+        "centerDetail": 23.399007772287117,
+        "meanLight": 191.94077099608978
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/palimpsest/?pw-cover=1&pw_release=1.0.0&pw_fp=14078c47028c17cdad00556f"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "false-atlas": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -981,19 +2104,94 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:01:41.466Z"
+    "lastAttemptAt": "2026-10-13T13:59:12.039Z",
+    "diagnostic": {
+      "bestScore": 69,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 46672,
+        "variance": 68.64708407575819,
+        "entropy": 1.61182986629635,
+        "edgeDensity": 0.15749007936507936,
+        "colorfulness": 17.403076171875,
+        "centerDetail": 80.89285183555938,
+        "meanLight": 198.67872231445338
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "НАЧАТЬ НАБЛЮДЕНИЕ",
+            "id": "continue-button",
+            "score": 92
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/parallax/?pw-cover=1&pw_release=1.0.0&pw_fp=fa7640eb70ebc8b7871fbfad"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "petlya": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:01:52.266Z"
+    "lastAttemptAt": "2026-10-13T13:59:23.761Z",
+    "diagnostic": {
+      "bestScore": 73,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 28755,
+        "variance": 75.22139883171276,
+        "entropy": 1.851212042793186,
+        "edgeDensity": 0.10379464285714286,
+        "colorfulness": 28.4990234375,
+        "centerDetail": 86.52135595065371,
+        "meanLight": 185.07079423827898
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "НАЧАТЬ ЗАПИСЬ ↻",
+            "id": "continue-button",
+            "score": 92
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/petlya/?pw-cover=1&pw_release=1.0.0&pw_fp=8c7084f217ef9cdc522cb3a1"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "chronatlas": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7e8efdb0cc110d2bff676c849ebc4ee974ca3344",
-    "lastAttemptAt": "2026-10-13T13:02:03.130Z"
+    "lastAttemptAt": "2026-10-13T13:59:34.612Z",
+    "diagnostic": {
+      "bestScore": 57,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 22741,
+        "variance": 41.875787807166226,
+        "entropy": 1.4341894147162448,
+        "edgeDensity": 0.09424603174603174,
+        "colorfulness": 27.333740234375,
+        "centerDetail": 30.949250725032066,
+        "meanLight": 198.4830451171835
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/chronatlas/?pw-cover=1&pw_release=2.1.0&pw_fp=f16091eb44c1e06077c91ee1"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "ars-machina": {
     "revision": "c57b9c95201380bd854feb340eb4533714d0f8b1",
@@ -1035,13 +2233,55 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:02:46.648Z"
+    "lastAttemptAt": "2026-10-13T13:59:45.516Z",
+    "diagnostic": {
+      "bestScore": 67,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 33962,
+        "variance": 50.59090100000373,
+        "entropy": 1.2344382154106692,
+        "edgeDensity": 0.13355654761904762,
+        "colorfulness": 33.07568359375,
+        "centerDetail": 50.22777113051373,
+        "meanLight": 209.17929165038845
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/ottisk/?pw-cover=1&pw_release=1.0.0&pw_fp=d3c149353af891d075876a05"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "lipuchka": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:02:57.446Z"
+    "lastAttemptAt": "2026-10-13T13:59:56.312Z",
+    "diagnostic": {
+      "bestScore": 57,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 45314,
+        "variance": 34.37021047362703,
+        "entropy": 1.6740943039637957,
+        "edgeDensity": 0.1359126984126984,
+        "colorfulness": 38.078369140625,
+        "centerDetail": 33.377079892723216,
+        "meanLight": 196.89571523437596
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/lipuchka/?pw-cover=1&pw_release=1.0.0&pw_fp=66d852a3d9e9d069dbbd50c9"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "whistle-90": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -1083,7 +2323,28 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:03:40.975Z"
+    "lastAttemptAt": "2026-10-13T14:00:07.109Z",
+    "diagnostic": {
+      "bestScore": 69,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 45108,
+        "variance": 63.378002978031866,
+        "entropy": 1.5819601924901106,
+        "edgeDensity": 0.1579861111111111,
+        "colorfulness": 18.833984375,
+        "centerDetail": 77.67972419209258,
+        "meanLight": 199.30987431640142
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/faza/?pw-cover=1&pw_release=1.3.0&pw_fp=dffc20cda39dabb65dfe4e9e"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "vetrolom": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -1137,25 +2398,115 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "bec1404feb037740369a26bc4cc6ca674d3e7a6c",
-    "lastAttemptAt": "2026-10-13T13:04:38.750Z"
+    "lastAttemptAt": "2026-10-13T14:00:17.928Z",
+    "diagnostic": {
+      "bestScore": 72,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 45091,
+        "variance": 61.4989764204021,
+        "entropy": 2.017213437837968,
+        "edgeDensity": 0.16108630952380953,
+        "colorfulness": 25.7451171875,
+        "centerDetail": 80.69991973152987,
+        "meanLight": 197.77552680664803
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/hemline/?pw-cover=1&pw_release=1.0.0&pw_fp=63174804d5b9c57b384b3f15"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "sled": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:04:49.474Z"
+    "lastAttemptAt": "2026-10-13T14:00:28.636Z",
+    "diagnostic": {
+      "bestScore": 22,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 12598,
+        "variance": 20.693175740853547,
+        "entropy": 0.43555285568999846,
+        "edgeDensity": 0.030753968253968252,
+        "colorfulness": 24.8095703125,
+        "centerDetail": 0.00005132150286511883,
+        "meanLight": 221.40656909179185
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/sled/?pw-cover=1&pw_release=3.0.0&pw_fp=c6815b8ec2c1e32d9b914140"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "pereplet": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b7035ef0af780478964aa107726c4e7c00a67ad",
-    "lastAttemptAt": "2026-10-13T13:05:00.254Z"
+    "lastAttemptAt": "2026-10-13T14:00:39.401Z",
+    "diagnostic": {
+      "bestScore": 70,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 50783,
+        "variance": 53.746993732222975,
+        "entropy": 1.4992288920837444,
+        "edgeDensity": 0.16517857142857142,
+        "colorfulness": 27.40576171875,
+        "centerDetail": 70.31667073775772,
+        "meanLight": 197.7549952636771
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/pereplet/?pw-cover=1&pw_release=1.0.0&pw_fp=fcc1345c4d748ec544cb92a2"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "orbita": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "6c465cdc5eca810f01fa9517aabe3cb1b05f3b6c",
-    "lastAttemptAt": "2026-10-13T13:05:11.042Z"
+    "lastAttemptAt": "2026-10-13T14:00:51.212Z",
+    "diagnostic": {
+      "bestScore": 60,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 49984,
+        "variance": 49.835146995217414,
+        "entropy": 2.087188255472137,
+        "edgeDensity": 0.15773809523809523,
+        "colorfulness": 13.857421875,
+        "centerDetail": 31.82613252229012,
+        "meanLight": 214.698117724604
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "КАК ИГРАТЬ",
+            "id": "rulesButton",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/orbita/?pw-cover=1&pw_release=1.3.0&pw_fp=7e7214e38d7f8bdf70dc1b7d"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "turniket": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -1173,25 +2524,110 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:05:32.572Z"
+    "lastAttemptAt": "2026-10-13T14:01:01.930Z",
+    "diagnostic": {
+      "bestScore": 65,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 27820,
+        "variance": 61.32929949628237,
+        "entropy": 1.033989334094207,
+        "edgeDensity": 0.11879960317460317,
+        "colorfulness": 11.71826171875,
+        "centerDetail": 85.35578186028239,
+        "meanLight": 214.69437304688165
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/vektor/?pw-cover=1&pw_release=1.0.0&pw_fp=b52807ebe7d914ca4fc6d912"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "sdvig": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:05:43.403Z"
+    "lastAttemptAt": "2026-10-13T14:01:13.743Z",
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 75,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "НАЧАТЬ МАТЧ →",
+        "id": "startButton",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "8e0216a324375522bad796bd03c09670e2a07e5fad8e59c0bb1fdcc413e36bf8",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "messa": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7bc56c31c5716280751e358c094c97271c77fd59",
-    "lastAttemptAt": "2026-10-13T13:05:55.578Z"
+    "lastAttemptAt": "2026-10-13T14:01:29.149Z",
+    "diagnostic": {
+      "bestScore": 43,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 12754,
+        "variance": 30.307694237621874,
+        "entropy": 0.3765558712547088,
+        "edgeDensity": 0.04898313492063492,
+        "colorfulness": 14.19091796875,
+        "centerDetail": 53.16563842569788,
+        "meanLight": 232.16173217773303
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": [
+          {
+            "label": "ЗАПУСТИТЬ КОМЕТУ новая небесная машина →",
+            "error": "locator.click: Timeout 3500ms exceeded.\nCall log:\n  - waiting for locator('button, input[type=\"butto"
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/messa/?pw-cover=1&pw_release=1.0.0&pw_fp=40972364a01709dadb2486b1"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "pepelnick": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:06:06.486Z"
+    "lastAttemptAt": "2026-10-13T14:01:39.955Z",
+    "diagnostic": {
+      "bestScore": 49,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 38315,
+        "variance": 32.92729334658712,
+        "entropy": 1.9321739328875143,
+        "edgeDensity": 0.1359126984126984,
+        "colorfulness": 18.286865234375,
+        "centerDetail": 22.081681213189242,
+        "meanLight": 28.995941210937737
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/pepelnick/?pw-cover=1&pw_release=1.0.0&pw_fp=119b0482d8fc345828e352a9"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "khrebet": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -1221,13 +2657,51 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "0d43923304113463c5966bc26a517bffabaf5032",
-    "lastAttemptAt": "2026-10-13T13:06:40.225Z"
+    "lastAttemptAt": "2026-10-13T14:01:50.828Z",
+    "diagnostic": {
+      "bestScore": 66,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 50377,
+        "variance": 51.890930564775935,
+        "entropy": 1.631774118818008,
+        "edgeDensity": 0.16604662698412698,
+        "colorfulness": 26.64306640625,
+        "centerDetail": 46.19455054132795,
+        "meanLight": 210.70553735352215
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/svod/?pw-cover=1&pw_release=0.2.0&pw_fp=c230109add9f86dac452b7d8"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "shpilka": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:06:51.077Z"
+    "lastAttemptAt": "2026-10-13T14:02:02.705Z",
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 81,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "НАЧАТЬ КУБОК",
+        "id": "championshipButton",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "89ad43eb3f1c1abd9fd41d3ed9533a351d7a5506eb81fe54d407dc4ae06c889a",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "polevoy-shtab": {
     "revision": "02f9f9060fb5f58772491da0dc8f2270f8c848f7",
@@ -1245,7 +2719,34 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:07:12.935Z"
+    "lastAttemptAt": "2026-10-13T14:02:15.334Z",
+    "diagnostic": {
+      "bestScore": 68,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 34013,
+        "variance": 54.291751423846605,
+        "entropy": 1.94725511923622,
+        "edgeDensity": 0.1576140873015873,
+        "colorfulness": 16.635009765625,
+        "centerDetail": 49.804544050794284,
+        "meanLight": 36.53708466796811
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Начать экспедицию первая реликвия гарантирована",
+            "id": "startButton",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/glubina-13/?pw-cover=1&pw_release=2.1.0&pw_fp=cc773b59cec4f37eeeb2a44f"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "fifty-hz": {
     "revision": "2b3ec76686e637b691596b9439826e384f894d46",
@@ -1261,27 +2762,109 @@
   },
   "sfery": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:07:34.543Z"
+    "lastAttemptAt": "2026-10-13T14:02:27.151Z",
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 66,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Как играть",
+        "id": "rulesButton",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "59970da4bfae95db533a8f5a6c0e97e23f9526f9b4a674f05403a2b437c59009",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "prosvet": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "1773b996600aa748bf9b5d5e014ff7ef195e279c",
-    "lastAttemptAt": "2026-10-13T13:07:45.465Z"
+    "lastAttemptAt": "2026-10-13T14:02:39.060Z",
+    "revision": "1773b996600aa748bf9b5d5e014ff7ef195e279c",
+    "qualityScore": 75,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начатьновый забег",
+        "id": "startButton",
+        "score": 110
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "b58f7c15dfb27e2c7b504b97c840a2d32d543f783d2e33845a128995a3203fdc",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "udel": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "7abe0d2730f30bed1ec5d32b04c8de73db777a5c",
-    "lastAttemptAt": "2026-10-13T13:07:56.231Z"
+    "lastAttemptAt": "2026-10-13T14:02:49.804Z",
+    "diagnostic": {
+      "bestScore": 48,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 26939,
+        "variance": 26.83597570287708,
+        "entropy": 2.067674943754321,
+        "edgeDensity": 0.08494543650793651,
+        "colorfulness": 13.49755859375,
+        "centerDetail": 31.036640133542303,
+        "meanLight": 39.93078271484146
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/udel/?pw-cover=1&pw_release=2.6.0&pw_fp=516ea08db43edac47de4dd1b"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "cherta": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "be40590ef43b4eccaded1704be44da501b3a86fe",
-    "lastAttemptAt": "2026-10-13T13:08:07.135Z"
+    "lastAttemptAt": "2026-10-13T14:03:05.094Z",
+    "diagnostic": {
+      "bestScore": 29,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 42837,
+        "variance": 13.492754525828262,
+        "entropy": 1.038746838173935,
+        "edgeDensity": 0.03844246031746032,
+        "colorfulness": 25.154052734375,
+        "centerDetail": 19.82672618172804,
+        "meanLight": 222.41711591796354
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "НАЧАТЬ РЕЗНЮ ОДИН ПАЛЕЦ →",
+            "id": "play",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/cherta/?pw-cover=1&pw_release=1.1.2&pw_fp=7ae812ecb62eb908fecf3109"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "kontur": {
     "revision": "f5df797c7c9976703a1cf7fc86097cab2d12d0f0",
@@ -1299,19 +2882,84 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:08:34.625Z"
+    "lastAttemptAt": "2026-10-13T14:03:18.235Z",
+    "diagnostic": {
+      "bestScore": 67,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 32867,
+        "variance": 65.03291478019443,
+        "entropy": 1.2307696635465264,
+        "edgeDensity": 0.15240575396825398,
+        "colorfulness": 14.03466796875,
+        "centerDetail": 67.53726054084319,
+        "meanLight": 47.963974316407125
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/myalo/?pw-cover=1&pw_release=1.4.0&pw_fp=130ce614764998bdb8ed42bf"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "sente": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
+    "status": "published",
     "lastAttemptRevision": "24d09f0fa4be2c7d2536ae46e6c54d9ecd5f11b9",
-    "lastAttemptAt": "2026-10-13T13:08:45.462Z"
+    "lastAttemptAt": "2026-10-13T14:03:30.038Z",
+    "revision": "24d09f0fa4be2c7d2536ae46e6c54d9ecd5f11b9",
+    "qualityScore": 63,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начать партию Чёрные ходят первыми",
+        "id": "startGameButton",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "ea63b76be352345e0b57b9b54a575c903fff875e656bdb2c880f02ae61b43c70",
+    "imageVersion": 2,
+    "captureEngine": "safe-gameplay-v3"
   },
   "zero-frame": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "988034b2015e893e95d5ef53cf5301c950376f24",
-    "lastAttemptAt": "2026-10-13T13:08:56.337Z"
+    "lastAttemptAt": "2026-10-13T14:03:41.894Z",
+    "diagnostic": {
+      "bestScore": 31,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 26742,
+        "variance": 18.74624127870905,
+        "entropy": 1.8122144059992509,
+        "edgeDensity": 0.05766369047619048,
+        "colorfulness": 5.11083984375,
+        "centerDetail": 14.285082130111556,
+        "meanLight": 22.91134946288999
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "ВЗЯТЬ КАМЕРУ",
+            "id": "continueButton",
+            "score": 92
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/zero-frame/?pw-cover=1&pw_release=1.0.0&pw_fp=b4c37b6158feaad186b2e95a"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "otves": {
     "revision": "92a29e8a19255aa615d2a2bc1ee50c24b8e25d9c",
@@ -1329,18 +2977,97 @@
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "e5d8df24dceda10dda4a2751174634eac1465f4e",
-    "lastAttemptAt": "2026-10-13T13:09:18.128Z"
+    "lastAttemptAt": "2026-10-13T14:03:52.683Z",
+    "diagnostic": {
+      "bestScore": 71,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 32951,
+        "variance": 67.14086437169428,
+        "entropy": 1.1680341328055268,
+        "edgeDensity": 0.1324404761904762,
+        "colorfulness": 34.56787109375,
+        "centerDetail": 91.9584202563233,
+        "meanLight": 198.43327465820138
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/kromka/?pw-cover=1&pw_release=1.1.3&pw_fp=e9bcab827ac929f1a9e93532"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "echoes": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "9f58bec8f3a01f71a82244c09c896a2cf242c33e",
-    "lastAttemptAt": "2026-10-13T13:09:32.363Z"
+    "lastAttemptAt": "2026-10-13T14:04:06.791Z",
+    "diagnostic": {
+      "bestScore": 55,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 23825,
+        "variance": 37.82156887891842,
+        "entropy": 1.5654296380579356,
+        "edgeDensity": 0.07366071428571429,
+        "colorfulness": 11.4833984375,
+        "centerDetail": 65.910339384462,
+        "meanLight": 22.57840283203169
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/echoes/?pw-cover=1&pw_release=1.0.3&pw_fp=bad3749b427939f1b82c2287"
+    },
+    "captureEngine": "safe-gameplay-v3"
   },
   "screen-lab": {
     "note": "No frame passed image-content checks",
     "status": "failed",
     "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-13T13:09:43.345Z"
+    "lastAttemptAt": "2026-10-13T14:04:17.787Z",
+    "diagnostic": {
+      "bestScore": 66,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 48538,
+        "variance": 58.2650642221196,
+        "entropy": 1.1816144015981367,
+        "edgeDensity": 0.12996031746031747,
+        "colorfulness": 13.96875,
+        "centerDetail": 82.43817424220579,
+        "meanLight": 217.12422597657036
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/screen-lab/?pw-cover=1&pw_release=1.4.2&pw_fp=0644fda9cb8d2189385c7af1"
+    },
+    "captureEngine": "safe-gameplay-v3"
+  },
+  "dvor-football": {
+    "revision": "bbce4c0218c88e3db05d2b61cdb09df6404770b9",
+    "qualityScore": 84,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "40a371a303d2958fe5251a128f4d0d50a0f37dcf74a6dbc0094f9b64e3f7bc11",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "bbce4c0218c88e3db05d2b61cdb09df6404770b9",
+    "lastAttemptAt": "2026-10-13T13:47:42.292Z"
   }
 }
