@@ -135,6 +135,12 @@ export class PocketNetHub {
   }
   recordZamazkaRewards(room, previous, next, events, actor) {
     if(room.gameId!=='zamazka')return;
+    const changed=previous?.phase!==next?.phase;
+    const board=previous?.phase==='lobby'&&next?.phase==='lobby'&&
+      events.some(e=>e?.type==='board_delta'&&e.payload?.u===actor);
+    const checkpoint=changed&&(next?.phase==='round-review'||next?.phase==='results'||
+      previous?.phase==='results'&&next?.phase==='lobby'||previous?.phase==='lobby'&&next?.phase!=='lobby');
+    if(!board&&!checkpoint)return; // Most pulses and drawing/voting packets have no award-side effects.
     const row=this.sql('SELECT data FROM zamazka_award_stats WHERE room_id=?',room.id).toArray()[0];
     let stats=null;try{stats=row?JSON.parse(row.data):null}catch{}
     const {data,awards}=assessZamazkaAwards(previous,next,events,actor,stats,crypto.randomUUID());
