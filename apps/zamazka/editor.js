@@ -605,7 +605,7 @@ export class Editor{
       e.preventDefault();
       if(e.altKey){
         const minSize=Number(this.root.querySelector('#brushSize')?.min)||1;
-        const delta=(this.size<=2?.25:this.size<=5?.5:1)*(e.deltaY<0?1:-1);
+        const delta=(this.size<=2?.25:this.size<=5?.5:1)*Math.max(1,Math.round(Math.abs(e.deltaY)/70))*(e.deltaY<0?1:-1);
         this.size=Math.max(minSize,Math.min(48,Math.round((this.size+delta)*4)/4));
         const slider=this.root.querySelector('#brushSize');
         if(slider)slider.value=String(this.size);
