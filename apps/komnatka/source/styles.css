@@ -377,3 +377,5 @@
 .room-album-add{min-height:174px}.room-album input{font-size:13px}
 }
 
+
+.home-nav-buttons{display:flex;align-items:center;gap:7px}.home-nav-buttons button.home-exit{background:#e9dac5;font-family:inherit;cursor:pointer}@media(max-width:460px){.home-nav-buttons{gap:4px}.home-nav-buttons .home-exit{font-size:10px;padding:7px}.home-atelier{font-size:8px;letter-spacing:.07em}}
