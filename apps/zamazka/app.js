@@ -527,7 +527,7 @@ let earnedAchievementIds=new Set();
 async function achievements(){
  change('<section class="page zamazka-achievements"><div class="section-label">КОЛЛЕКЦИЯ</div><h2>Достижения</h2>'+
   '<div id="zamAchievements" class="achievement-grid"><div class="notice">Проверяем награды Pocket ID…</div></div>'+
-  '<button class="btn ghost wide" data-action="menu">← В главное меню</button></section>','achievements');
+  '<button class="btn ghost wide" data-action="achievements-back">← Назад</button></section>','achievements');
  const mount=screen.querySelector('#zamAchievements');
  let message='';
  if(isPocketMember()){
@@ -791,6 +791,7 @@ screen.addEventListener('click',e=>{
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
  else if(action==='achievements')void achievements();
+ else if(action==='achievements-back'){if(net&&view)renderView();else home();}
  else if(action==='cloud-sync')void zamazkaCloud?.sync();
  else if(action==='menu'){
     editor?.finishStroke();
