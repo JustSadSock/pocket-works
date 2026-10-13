@@ -1,16 +1,17 @@
+import {zamazkaAchievements,zamazkaAwardById,ownedAchievementItem} from '../shared/capabilities/zamazka-achievements.js';
 // Pocket Social. Only trusted Worker headers identify users; room checks stay in PocketNet.
 const HEAD={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:HEAD});
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper']);
+const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper','gallery']);
 const frames=new Set(['clean','double','corners','stamp']);
 const backgroundModes=new Set(['preset','drawing']);
-const portraitFrames=new Set(['none','wood','gilt']);
+const portraitFrames=new Set(['none','wood','gilt','worn-gilt']);
 const maskotAnimals=new Set(['cat','rabbit','frog']);
-const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet']);
-const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard']);
-const maskotFaces=new Set(['none','glasses','stars']);
-const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush']);
+const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer']);
+const maskotFaces=new Set(['none','glasses','stars','monocle']);
+const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок']);
 const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald']]);
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -19,6 +20,8 @@ function validMaskot(value,unlocked){
   if((value.hat==='veil'||value.clothes==='wedding')&&!unlocked.includes('wedding'))return false;
   if(value.hat==='bascinet'&&!unlocked.includes('knight'))return false;
   if(value.clothes==='tabard'&&!unlocked.includes('herald'))return false;
+  for(const category of ['hat','clothes','face'])
+    if(zamazkaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!ownedAchievementItem(value[category],unlocked))return false;
   return true;
 }
 const goodArt=x=>typeof x==='string'&&(x===''||x.length<=24000&&/^data:image\/(?:png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/.test(x));
@@ -46,6 +49,8 @@ export class PocketSocial {
     this.sql.exec("CREATE TABLE IF NOT EXISTS blocks(blocker TEXT NOT NULL,blocked TEXT NOT NULL,PRIMARY KEY(blocker,blocked))");
     this.sql.exec("CREATE TABLE IF NOT EXISTS invites(id TEXT PRIMARY KEY,from_id TEXT NOT NULL,to_id TEXT NOT NULL,game_id TEXT NOT NULL,room_id TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL)");
     this.sql.exec("CREATE INDEX IF NOT EXISTS invites_receiver ON invites(to_id,status,created_at)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS achievements(account_id TEXT NOT NULL,achievement_id TEXT NOT NULL,game_id TEXT NOT NULL,room_id TEXT NOT NULL,match_id TEXT NOT NULL,earned_at INTEGER NOT NULL,PRIMARY KEY(account_id,achievement_id))");
+    this.sql.exec("CREATE INDEX IF NOT EXISTS achievements_by_account ON achievements(account_id,earned_at)");
   }
   rows(sql,...args){return this.sql.exec(sql,...args).toArray()}
   one(sql,...args){return this.rows(sql,...args)[0]||null}
@@ -65,10 +70,12 @@ export class PocketSocial {
     let maskot=null,unlocked=[];
     try{maskot=p.maskot?JSON.parse(p.maskot):null}catch{}
     try{unlocked=JSON.parse(p.unlocked||'[]');if(!Array.isArray(unlocked))unlocked=[]}catch{}
+    const earned=this.rows('SELECT achievement_id,earned_at FROM achievements WHERE account_id=? ORDER BY earned_at DESC',id);
+    unlocked=[...unlocked,...earned.map(x=>x.achievement_id)];
     return {id:p.id,nickname:p.nickname,avatar:p.avatar,background:p.background,frame:p.frame,
       artwork:p.artwork,backgroundMode:backgroundModes.has(p.background_mode)?p.background_mode:'preset',
       portraitFrame:portraitFrames.has(p.portrait_frame)?p.portrait_frame:'wood',maskot:validMaskot(maskot,unlocked)?maskot:null,
-      ...(own?{unlocked}:{}),title:p.title||'',favoriteGame:p.favorite_game,discoverable:!!p.discoverable,
+      ...(own?{unlocked,achievements:earned.map(x=>({id:x.achievement_id,earnedAt:x.earned_at}))}:{}),title:p.title||'',favoriteGame:p.favorite_game,discoverable:!!p.discoverable,
       presenceVisible:!!p.presence_visible,allowInvites:!!p.allow_invites,
       online:visible,gameId:visible?p.game_id:'',
       friendship:own?'self':blocked?'blocked':r?.status==='accepted'?'friends':
@@ -106,7 +113,23 @@ export class PocketSocial {
       roomId:r.room_id,gameId:r.game_id,status:r.status,createdAt:r.created_at,incoming:r.to_id===id}));
   }
   async fetch(request){
-    const url=new URL(request.url),path=url.pathname,id=request.headers.get('x-pw-account-id');
+    const url=new URL(request.url),path=url.pathname;
+    // DO-to-DO only: the edge removes all client x-pw-* headers before forwarding.
+    if(path==='/pocket-social/award'){
+      if(request.method!=='POST'||request.headers.get('x-pw-internal')!=='1')return reply({error:'forbidden'},403);
+      const body=await bodyJson(request);
+      if(!body||!uuid.test(body.accountId||'')||!uuid.test(body.roomId||'')||
+         !uuid.test(body.matchId||'')||body.gameId!=='zamazka'||
+         !zamazkaAwardById.has(body.achievementId)||typeof body.nickname!=='string'||!body.nickname||
+         body.nickname.length>20)return reply({error:'invalid_award'},400);
+      const current=this.one('SELECT id FROM profiles WHERE id=?',body.accountId);
+      if(!current)this.seed({id:body.accountId,nickname:body.nickname,avatar:body.avatar||'clay'});
+      const existing=this.one('SELECT 1 FROM achievements WHERE account_id=? AND achievement_id=?',body.accountId,body.achievementId);
+      if(!existing)this.sql.exec('INSERT INTO achievements(account_id,achievement_id,game_id,room_id,match_id,earned_at) VALUES(?,?,?,?,?,?)',
+        body.accountId,body.achievementId,body.gameId,body.roomId,body.matchId,Date.now());
+      return reply({ok:true,already:!!existing});
+    }
+    const id=request.headers.get('x-pw-account-id');
     if(!id||!uuid.test(id))return reply({error:'sign_in_required'},401);
     const name=request.headers.get('x-pw-account-name'),avatar=request.headers.get('x-pw-account-avatar');
     if(!name||name.length>20)return reply({error:'identity_unavailable'},503);
@@ -119,6 +142,8 @@ export class PocketSocial {
       this.lastCleanup=Date.now();
     }
     try{
+      if(path==='/pocket-social/achievements'&&request.method==='GET')
+        return reply({achievements:this.rows('SELECT achievement_id AS id,earned_at AS earnedAt FROM achievements WHERE account_id=? ORDER BY earned_at DESC',id)});
       if(path==='/pocket-social/me'&&request.method==='GET')
         return reply({profile:this.card(id,id),...this.connections(id),invites:this.invitations(id),blocked:this.blockedUsers(id)});
       if(path==='/pocket-social/user'&&request.method==='GET'){
@@ -172,9 +197,13 @@ export class PocketSocial {
           return reply({error:'invalid_profile'},400);
         let unlocked=[];try{unlocked=JSON.parse(this.one('SELECT unlocked FROM profiles WHERE id=?',id)?.unlocked||'[]')}catch{}
         if(!Array.isArray(unlocked))unlocked=[];
+        unlocked=[...unlocked,...this.rows('SELECT achievement_id FROM achievements WHERE account_id=?',id).map(x=>x.achievement_id)];
         const maskot=body.maskot===undefined?null:body.maskot;
         if(maskot!==null&&!validMaskot(maskot,unlocked))return reply({error:'invalid_profile'},400);
-        if(body.title!==undefined&&!maskotTitles.has(body.title))return reply({error:'invalid_profile'},400);
+        if(body.title!==undefined&&(!maskotTitles.has(body.title)||
+           (zamazkaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedAchievementItem(body.title,unlocked))))return reply({error:'invalid_profile'},400);
+        if(background==='gallery'&&!ownedAchievementItem('gallery',unlocked))return reply({error:'invalid_profile'},400);
+        if(body.portraitFrame==='worn-gilt'&&!ownedAchievementItem('worn-gilt',unlocked))return reply({error:'invalid_profile'},400);
         if(body.backgroundMode!==undefined&&!backgroundModes.has(body.backgroundMode))return reply({error:'invalid_profile'},400);
         if(body.portraitFrame!==undefined&&!portraitFrames.has(body.portraitFrame))return reply({error:'invalid_profile'},400);
         // Older clients keep the new cosmetics untouched. New clients store only validated IDs.
