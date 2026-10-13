@@ -271,7 +271,7 @@ wss.on('connection', ws => {
     if (player && sockets.get(player.id)?.ws === ws) {
       sockets.delete(player.id);
       const room = rooms.get(roomId);
-      if (room) roomBroadcast(room, 'presence', { roomId, players: room.players, disconnected: player.id });
+      if (room?.players.some(p => p.id === player.id)) roomBroadcast(room, 'presence', { roomId, players: room.players, disconnected: player.id });
     }
   });
 });
