@@ -3,3 +3,42 @@
 @media (max-width:900px) and (orientation:landscape){.bar{height:40px;min-height:40px}.brand{font-size:19px}.brand-ball{height:24px;width:24px}.brand-small{display:none}.action-dock{gap:6px;padding:12px 20px}.action{min-height:40px;font-size:11px!important}.showcase-message h1{font-size:clamp(28px,4vw,48px)}.showcase-message p{font-size:11px}.showcase-label{top:4%}.edit-shortcut{padding:5px;margin-top:0}.net-status{font-size:10px}.editor-layout{padding:10px 20px;gap:15px;grid-template-columns:minmax(170px,.7fr) minmax(300px,1.3fr)}.player-card{min-height:305px;max-height:70dvh}.player-settings{gap:6px}.editor-page{overflow:auto}.editor-top{padding:7px 15px}.lobby-main{padding:10px 18px;gap:15px}.invite-panel h2{font-size:38px;margin:9px 0}.team-members{gap:4px;padding:5px}.team-members div{padding:5px}.team-column{margin-bottom:5px}.scoreboard{height:34px}.score-number{font-size:23px}.score-team,.clock{padding:0 8px;font-size:10px}.game-left{left:max(8px,env(safe-area-inset-left))}.game-right{right:max(8px,env(safe-area-inset-right))}.stick{width:88px;height:88px}.pass-btn{width:54px;height:54px}.shot-btn{width:75px;height:75px}.shot-btn span{font-size:12px}.switch-control{font-size:9px}.tactic-strip button{padding:6px;font-size:9px}}
 @media (max-height:450px){.scoreboard{top:4px}.pause-control{top:4px}.tactic-strip{bottom:8px}.game-left,.game-right{bottom:8px}.dialog{padding:10px;gap:7px}.dialog h2{font-size:25px}.dialog .action{min-height:37px}.final-score{font-size:35px}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+
+
+/* Fixed orthographic pitch: mouse is the aim instrument; touch HUD only on touch devices. */
+.pitch-stage canvas{cursor:crosshair;touch-action:none}
+.game-page{background:#244d43}
+.game-page:before{content:"";position:absolute;inset:0;box-shadow:inset 0 0 30px #102c30a8;pointer-events:none;z-index:2}
+.mobile-actions{display:flex;flex-direction:column;gap:8px;justify-content:flex-end;align-items:flex-start;padding-bottom:8px}
+.sprint-control{min-width:70px;min-height:42px;padding:7px 10px;background:#f6d078;color:#173c43;border:2px solid #173c43;font-size:11px;font-weight:1000;box-shadow:0 3px 0 #143b3a9c;touch-action:none;user-select:none;-webkit-user-select:none}
+.sprint-control:active,.sprint-control.held{transform:translateY(3px);background:#fbedb8;box-shadow:0 0 0 #173c43}
+.mobile-actions .switch-control{min-width:70px;margin:0;font-size:10px;min-height:37px;touch-action:manipulation}
+.stamina-meter{height:7px;width:95px;background:#123f44b8;border:1px solid #fdf4d1b8;overflow:hidden;transform:skewX(-14deg)}
+.stamina-meter>div{background:#ffd479;height:100%;width:100%;transition:width .12s linear,background .2s;transform-origin:left}
+.stamina-meter.low>div{background:#e37b5d}
+.tactic-strip{display:flex;flex-direction:column;align-items:center;gap:5px}
+.pc-hints{display:none;position:absolute;z-index:3;left:max(15px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));gap:8px;align-items:center;background:#163e43dc;border:1px solid #e3dbc161;color:#f7edca;padding:9px 13px;font-weight:1000;font-size:11px;letter-spacing:.3px;pointer-events:none}
+.pc-hints span{font-weight:700;color:#bdd1c8;font-size:9px;letter-spacing:0}
+.pc-hints i{height:13px;width:1px;background:#f5e9c555;display:block}
+.scoreboard{transition:filter .15s,transform .15s}
+.scoreboard.goal-pulse{animation:dvor-goal .54s ease-out}
+@keyframes dvor-goal{0%{filter:brightness(1.8);transform:translateX(-50%) scale(1.19)}45%{filter:brightness(1.2)}100%{filter:none;transform:translateX(-50%) scale(1)}}
+.game-toast{letter-spacing:-.04em;transition:opacity .18s,transform .24s cubic-bezier(.16,1.35,.35,1)}
+.shot-btn.charging{box-shadow:0 0 0 4px #fff1b0a8,0 5px 0 #102f3b8c}
+@media (hover:hover) and (pointer:fine){
+ .game-page .game-left,.game-page .game-right{display:none}
+ .game-page .pc-hints{display:flex}
+}
+@media (max-width:930px) and (orientation:landscape){
+ .game-left{gap:5px}.mobile-actions{gap:5px}.sprint-control{min-height:35px;min-width:62px;padding:5px 7px;font-size:10px}
+ .mobile-actions .switch-control{min-height:32px;min-width:62px;padding:5px;font-size:9px}
+ .pc-hints{font-size:9px;gap:5px;padding:7px}.pc-hints span{font-size:8px}
+ .stamina-meter{height:5px;width:75px}
+}
+@media (max-height:390px){
+ .pc-hints{font-size:9px;bottom:5px}.pc-hints span{font-size:8px}
+ .stamina-meter{display:none}.tactic-strip{bottom:5px}
+}
+@media (prefers-reduced-motion:reduce){
+ .scoreboard.goal-pulse{animation:none;filter:brightness(1.12)}
+}
