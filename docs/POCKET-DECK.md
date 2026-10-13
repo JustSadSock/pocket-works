@@ -50,13 +50,35 @@ The default is useful without configuration. An empty widget displays a meaningf
 
 Export **both** the existing Shelf tools backup and the new Layout export before transferring to another device. Full account-based cross-device sync is not included.
 
-## Authentic screenshot covers
+## Authentic screenshot covers: Pocket Covers Studio
 
-The launcher never invents screenshots. `scripts/prepare-site.mjs` copies `covers/<slug>.jpg/png/webp` into `dist-site/covers` and produces `covers/index.json` referencing only files that exist. A curated CORVUS screenshot already in its repository QA evidence is included as an initial genuine cover.
+All covers remain **actual screenshots from each game**; no neural image synthesis or promotional fiction.
 
-`scripts/capture-covers.mjs` opens the actual production-like app in Chromium on a phone viewport, captures a JPEG after startup and rejects obvious blank/flat screens. The separately scheduled/triggered `.github/workflows/capture-app-covers.yml` incrementally captures missing apps and commits only the screenshot files, never app code. A failed/not-yet-captured app shows its own original icon, not generated cover art. Captured covers are lazily used by the Home and Library and cached on demand by the launcher Service Worker for offline viewing.
+The `scripts/capture-covers.mjs` GitHub workflow uses isolated mobile Chromium contexts with blocked service workers and no player authentication. It takes five frames by default (configurable 3–8), scores contrast, entropy, edge density, exposure, and focal detail, and publishes only screenshots passing the content gate. It does not click arbitrary buttons or enter online lobbies. If none passes, it keeps the previous image or authentic icon.
 
-Some interactive scenes need a better manually selected frame rather than an automatic first screen. Re-run the workflow for chosen app slugs after staging the desired scene, or replace the existing cover with a genuinely captured frame. Assets are never presented as game screenshots unless actually captured from that game.
+A game can expose a **staged gameplay composition** by detecting `?pw-cover=1` and installing the optional API below. Each frame can use a different representative camera/scene configuration:
+
+```js
+if (new URLSearchParams(location.search).has('pw-cover')) {
+  // Never mutate real saves or interact with a public multiplayer session.
+  window.PocketWorksCover = {
+    async prepare({index}) {
+      await prepareRealPlayableScene(index); // Game-owned, deterministic.
+      await waitForSceneToRender();
+    }
+  };
+}
+```
+
+The capture runner calls `prepare({index})` for each candidate and captures the real rendered game. A game can set `document.documentElement.dataset.pwCoverReady = 'true'` to indicate it is in a capture-specific composition. **КОМНАТКА** implements the actual Babylon.js room rather than photographing its launcher. Existing games with no staged hook still run through timed candidate sampling.
+
+The automatically committed `covers/manifest.json` records each app's last captured Git revision, attempts, evaluation results, and SHA-256. Capture runs after app changes, on the nightly schedule, and through manual workflow dispatch; changed revisions are recaptured even if a previous cover exists. Failed frames and regressions keep the existing published image; rejected revisions retry after a 48-hour cooldown. No manual gallery or extra launcher management screen is necessary.
+
+When `OPENAI_API_KEY` is supplied as an optional GitHub Actions secret, a vision model (`PW_COVER_VISION_MODEL`, default `gpt-4.1-mini`) compares the genuine candidates to the existing cover, penalizes non-gameplay/title/error frames, and chooses the best. Without a secret or when AI review fails, deterministic local image analysis remains functional. AI may **rank/reject** screenshots only; it never generates fictional artwork.
+
+The assembler copies `covers/<slug>.(jpg|png|webp)` to `dist-site/covers/<slug>-<content-sha12>.<ext>`. `covers/index.json` references these immutable paths, so browser and PWA caches cannot return the previous image when the underlying art changes. The Home, Library, and game detail cover loads continue to fall back to the original icon. The cover manifest is metadata, not exposed as user-facing UI.
+
+Quality checks: `npm run test:covers`, `npm run deploy:site`, and mobile Pocket Deck Playwright tests. Optional review decisions are not treated as guarantees of artistic quality.
 
 ## Native feel and limitations
 
