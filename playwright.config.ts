@@ -40,7 +40,7 @@ export default defineConfig({
     { name: 'webkit-mobile-portrait', use: { ...iphone } },
     {
       name: 'chromium-mobile-landscape',
-      testMatch: /(orientation|petlya-17|ai-gameplay|sirocco|sinew|godot-runtime|pocket-deck|launcher-sync)\.spec\.ts/,
+      testMatch: /(orientation|natyazhenie-landscape|petlya-17|ai-gameplay|sirocco|sinew|godot-runtime|pocket-deck|launcher-sync)\.spec\.ts/,
       use: { ...pixel, viewport: { width: 851, height: 393 }, screen: { width: 851, height: 393 } }
     },
     {
