@@ -784,6 +784,7 @@ export class Editor{
         const value=Number(e.target.value),min=Number(e.target.min)||1;
         this.size=Math.min(48,Math.max(min,Math.round(value*4)/4));
         const sizeLabel=this.root.querySelector('#brushSizeValue');if(sizeLabel)sizeLabel.textContent=String(this.size).replace('.',',');
+        this.updateSizeSample();
       }
       if(e.target.id==='customColor'){
         this.color=e.target.value;
