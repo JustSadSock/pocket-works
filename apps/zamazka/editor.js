@@ -307,8 +307,8 @@ export const MAX_STROKES=400,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=12000;
 
 const key='pocket-works:zamazka:draft:';
 export class Editor{
- constructor(root,{id,variation=0,round=1,onChange=()=>{},onSound=()=>{},onPersistenceError=()=>{}}){
-   this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onSound=onSound;this.onPersistenceError=onPersistenceError;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
+ constructor(root,{id,variation=0,round=1,onChange=()=>{},onSound=()=>{},onPersistenceError=()=>{},onPersistenceStatus=()=>{}}){
+   this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onSound=onSound;this.onPersistenceError=onPersistenceError;this.onPersistenceStatus=onPersistenceStatus;this.saveGeneration=0;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
    this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
     this.inputMode=(sessionStorage.getItem('pocket-works:zamazka:input-mode')||localStorage.getItem('pocket-works:zamazka:input-mode'))==='precision'?'precision':'direct';
@@ -347,13 +347,16 @@ export class Editor{
    const strokes=this.getSnapshot();
    // Small tab-local recovery first, durable large recovery through IndexedDB.
    try{sessionStorage.setItem(this.draftKey,JSON.stringify(strokes))}catch{}
+   const generation=++this.saveGeneration;
    void zamazkaStore.set('draft:'+this.draftKey,strokes).then(()=>{
      // Only discard the fallback if it still describes the committed version.
      try{if(sessionStorage.getItem(this.draftKey)===JSON.stringify(strokes))sessionStorage.removeItem(this.draftKey)}catch{}
      this.persistenceWarned=false;
+     if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('local');
    }).catch(()=>{
-     try{localStorage.setItem(this.draftKey,JSON.stringify(strokes))}catch{
+     try{localStorage.setItem(this.draftKey,JSON.stringify(strokes));if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('offline')}catch{
        if(!this.persistenceWarned){this.persistenceWarned=true;this.onPersistenceError()}
+       if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('error');
      }
    });
    return true;
@@ -368,6 +371,7 @@ export class Editor{
     if(!['brush','fill','picker','erase','smudge','hand'].includes(tool))return;
     this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
     if(this.tool!==tool)this.onSound?.('tool');this.tool=tool;
+    this.root.querySelector('.restore')?.setAttribute('data-active-tool',tool);
     this.viewport.classList.toggle('hand-mode',tool==='hand');
     this.viewport.classList.toggle('picker-mode',tool==='picker');
     this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
@@ -400,6 +404,14 @@ export class Editor{
     }
     if(changed){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot()}
     return changed;
+  }
+  updateSizeSample(){
+    const sample=this.root.querySelector('#sizeSample');
+    if(sample){
+      const d=Math.max(3,Math.min(26,this.size));
+      sample.style.width=d+'px';sample.style.height=d+'px';
+      sample.setAttribute('aria-label','Кисть '+String(this.size));
+    }
   }
   countPoints(){return this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)+(this.working?.p.length||0)}
   beginStroke(p){
@@ -684,6 +696,7 @@ export class Editor{
         const slider=this.root.querySelector('#brushSize');
         if(slider)slider.value=String(this.size);
         const sizeLabel=this.root.querySelector('#brushSizeValue');if(sizeLabel)sizeLabel.textContent=String(this.size).replace('.',',');
+        this.updateSizeSample();
         if(this.lastCursor)this.showCursor(this.lastCursor);
       }else{
         const bounds=this.viewport.getBoundingClientRect();
