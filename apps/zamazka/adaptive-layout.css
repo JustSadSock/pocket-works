@@ -749,3 +749,8 @@
 @media (prefers-reduced-motion:reduce) {
   .exhibition-lobby button,.lobby-entry button,.gallery .picture {transition:none!important}
 }
+
+/* Gallery backup is a real third action. Wrap gracefully at phone widths. */
+.collection-page .zamazka-cloud-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.collection-page .zamazka-cloud-row [data-cloud-status]{flex:1 1 190px;min-width:0}
+.collection-page .zamazka-cloud-row .btn{flex:1 1 128px;min-height:42px;white-space:normal}
