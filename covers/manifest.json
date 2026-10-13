@@ -264,16 +264,16 @@
     "lastAttemptAt": "2026-10-13T11:09:52.205Z"
   },
   "petlya-17": {
-    "revision": "f46fd054cf3ad0d2d3a367623fade4f7f41b34f3",
-    "qualityScore": 54,
+    "revision": "f677c4713bbbc38a27e2a679beac6e796aea0036",
+    "qualityScore": 82,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "b06ff09305496321ea89e9b6ace29bb78ab706a1cb23700c31b89576d6685ac3",
+    "sha256": "65e6fc552ac434d763cb37c9c3abb3e80fe287d922986584973f371a90c72bbe",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "f46fd054cf3ad0d2d3a367623fade4f7f41b34f3",
-    "lastAttemptAt": "2026-10-13T11:10:03.411Z"
+    "lastAttemptRevision": "f677c4713bbbc38a27e2a679beac6e796aea0036",
+    "lastAttemptAt": "2026-10-13T11:40:42.802Z"
   },
   "mechanica": {
     "revision": "0967d606d71d887fbc3837cd34d7b0619b805e75",
@@ -484,5 +484,89 @@
     "status": "published",
     "lastAttemptRevision": "17e54216119c505cb8dc84c4667b6b7816325631",
     "lastAttemptAt": "2026-10-13T11:21:01.385Z"
+  },
+  "dead-air-13": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "31809da807c350caa0ce5c877d09ebf3f3126caa",
+    "lastAttemptAt": "2026-10-13T11:40:53.876Z"
+  },
+  "melt-crypt": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:41:04.952Z"
+  },
+  "scenograph": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 71,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "5f0d6f6f0eadf267ad41684905620c589e2e1beb5ce7e94d0205cd034bdb69dd",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:41:15.764Z"
+  },
+  "zamkni": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:41:26.577Z"
+  },
+  "crumple-yard": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "c1c58d0256bc5b7d134031f0488ed21da976f038",
+    "lastAttemptAt": "2026-10-13T11:41:40.897Z"
+  },
+  "formica-colony": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:41:51.742Z"
+  },
+  "veloria-mandate": {
+    "revision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "qualityScore": 68,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "8bdf9f4727db15672c2dbf93e24a62696e01870851530438159e93541723acbe",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:42:02.589Z"
+  },
+  "pit-loop": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "915244e418afdd50a9523b823db552485c84fb1f",
+    "lastAttemptAt": "2026-10-13T11:42:13.340Z"
+  },
+  "kinema": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:42:31.163Z"
+  },
+  "pelagos": {
+    "revision": "3d6e72c110edbb4a925d6febb48b6e5308df7439",
+    "qualityScore": 77,
+    "visionScore": null,
+    "prepared": false,
+    "shot": 0,
+    "sha256": "c3b607dc1f4f45c93d1940b36f63c0bb43a622b26dab9e9a032953a0c53a61b9",
+    "imageVersion": 2,
+    "status": "published",
+    "lastAttemptRevision": "3d6e72c110edbb4a925d6febb48b6e5308df7439",
+    "lastAttemptAt": "2026-10-13T11:42:51.093Z"
+  },
+  "aetherwing": {
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
+    "lastAttemptAt": "2026-10-13T11:43:06.955Z"
   }
 }
