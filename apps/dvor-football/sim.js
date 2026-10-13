@@ -30,7 +30,7 @@ function resetKickoff(s){
  s.ball={x:540,y:310,vx:0,vy:0,spin:0};s.keepers=[{x:82,y:310},{x:998,y:310}];s.hold=1.25;
 }
 function kickBall(s,p,kind,angle,power=1){
- if(dist(p,s.ball)>48)return false;
+ if(dist(p,s.ball)>36)return false;
  const b=s.ball,guide=norm(Math.cos(angle),Math.sin(angle));
  let dx=guide.x,dy=guide.y,force=0;
  if(kind==='pass'){
@@ -70,7 +70,7 @@ function tickGame(s,inputs,dt){
    const u=norm(target.x-p.x,target.y-p.y),mag=Math.hypot(target.x-p.x,target.y-p.y);
    if(mag>13){mx=u.x;my=u.y;}
    p.cd=Math.max(0,p.cd-dt);
-   if(p.cd<=0&&dist(p,b)<39){
+   if(p.cd<=0&&dist(p,b)<35){
     const goalX=p.side?FIELD.left:FIELD.right;
     const nearNet=Math.abs(goalX-p.x)<390;
     const action=nearNet?'shot':'pass';
@@ -93,8 +93,8 @@ function tickGame(s,inputs,dt){
    kickBall(s,p,ctl.action==='pass'?'pass':'shot',theta,Number(ctl.power)||1);
    ctl.action=null;
   }
-  const d=dist(p,b),min=27;
-  if(d<min+7){
+  const d=dist(p,b),min=23;
+  if(d<min+5){
    const u=norm(b.x-p.x,b.y-p.y);
    const push=Math.max(0,min-d)*6;
    b.vx+=u.x*push*dt*10+p.vx*(.07+p.stats.control*.012);

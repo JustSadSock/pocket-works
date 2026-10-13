@@ -5,7 +5,7 @@ import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {FIELD,limit,dist,DEFAULT,kits,skins,hairs,safeProfile,newGame,advanceGame} from './sim.js';
 import {TopdownFX,renderTopdown,renderPortrait,toPitch} from './visuals.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ДВОР',version:'1.1.0',cachePrefix:'dvor-football-',storageNamespace:'pocket-works:dvor-football'});
+createWorkshopMode({appName:'ДВОР',version:'1.2.0',cachePrefix:'dvor-football-',storageNamespace:'pocket-works:dvor-football'});
 const $=id=>document.getElementById(id);
 const PREFIX='pocket-works:dvor-football:',URL_NET=location.origin+'/pocketnet';
 const KEY_ORDER=['pace','shot','control','pass'],STAT_LABELS={pace:'СКОРОСТЬ',shot:'УДАР',control:'КОНТРОЛЬ',pass:'ПАС'};
@@ -257,7 +257,7 @@ function kick(kind,power=1,dir){
  if(screen!=='game'||paused)return;
  const g=getMatch(),p=g?.players?.[mySlot()];
  if(!g||g.phase!=='play'||g.hold>0)return;
- if(dist(p,g.ball)>55){if(mode==='solo')gameplayToast('ДОТЯНИСЬ ДО МЯЧА');return;}
+ if(dist(p,g.ball)>36){if(mode==='solo')gameplayToast('ДОТЯНИСЬ ДО МЯЧА');return;}
  const c=readStick(),angle=shotAim(dir);
  if(mode==='online')safeSend({type:'input',x:c.x,y:c.y,sprint:sprintHeld(),action:kind,angle,power});
  else actionQueued={action:kind,angle,power};
