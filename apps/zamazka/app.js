@@ -15,7 +15,7 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.28.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.29.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice',CONFIRM_VOTE_KEY=NS+'confirm-coins';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -319,7 +319,7 @@ function home(skipLeave=false){
     '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
     (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
   '</div></section>','home');
- museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(id+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
+ museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(museumOrder.indexOf(id)+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
  syncIdentity();
  zamazkaCloud?.render();
 
@@ -421,9 +421,48 @@ async function prepareRoundImages(local=false,retry=false){
    if(retryButton?.isConnected)retryButton.hidden=false;
  }
 }
+function updateMobileGalleryNav(rail){
+ const nav=rail?.parentElement?.querySelector('.mobile-gallery-nav');
+ if(!nav)return;
+ const cards=[...rail.children],first=cards[0];
+ if(!first)return;
+ const index=Math.max(0,Math.min(cards.length-1,
+  cards.reduce((closest,card,i)=>Math.abs(card.offsetLeft-first.offsetLeft-rail.scrollLeft)<
+   Math.abs(cards[closest].offsetLeft-first.offsetLeft-rail.scrollLeft)?i:closest,0)));
+ const count=nav.querySelector('output');if(count)count.textContent=(index+1)+' / '+cards.length;
+ nav.querySelector('[data-action="preview-previous"]').disabled=index===0;
+ nav.querySelector('[data-action="preview-next"]').disabled=index===cards.length-1;
+}
+function moveMobileGallery(direction){
+ if(page!=='preview')return;
+ const rail=screen.querySelector('.mobile-preview .gallery.exhibition-grid');
+ if(!rail)return;
+ const cards=[...rail.children],first=cards[0];
+ if(!first)return;
+ const current=cards.reduce((closest,card,i)=>Math.abs(card.offsetLeft-first.offsetLeft-rail.scrollLeft)<
+  Math.abs(cards[closest].offsetLeft-first.offsetLeft-rail.scrollLeft)?i:closest,0);
+ const next=Math.max(0,Math.min(cards.length-1,current+direction));
+ rail.scrollTo({left:cards[next].offsetLeft-first.offsetLeft,behavior:'smooth'});
+}
 function preview(local=false){
  const v=local?practice:view;
- change('<section class="phase-page">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+'<div class="phase-body"><p class="phase-directive">Запомни детали пяти картин.</p>'+galleryHtml(v.selected)+(local?'<button class="btn primary wide" data-action="skip">Перейти к реставрации</button>':'')+'</div></section>','preview');
+ change('<section class="phase-page mobile-preview">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+
+ '<div class="phase-body"><p class="phase-directive">Запомни детали пяти картин.</p>'+galleryHtml(v.selected)+
+ '<nav class="mobile-gallery-nav" aria-label="Перелистывание картин">'+
+ '<button type="button" data-action="preview-previous" aria-label="Предыдущая картина" disabled>‹</button>'+
+ '<output aria-live="polite">1 / '+v.selected.length+'</output>'+
+ '<button type="button" data-action="preview-next" aria-label="Следующая картина">›</button></nav>'+
+ (local?'<button class="btn primary wide" data-action="skip">Перейти к реставрации</button>':'')+
+ '</div></section>','preview');
+ const rail=screen.querySelector('.mobile-preview .gallery.exhibition-grid');
+ if(rail){
+  let scheduled=false;
+  rail.addEventListener('scroll',()=>{
+   if(scheduled)return;scheduled=true;
+   requestAnimationFrame(()=>{scheduled=false;if(rail.isConnected)updateMobileGalleryNav(rail)});
+  },{passive:true});
+  updateMobileGalleryNav(rail);
+ }
 }
 function editorIcon(name){
  const shapes={
@@ -686,6 +725,7 @@ function renderView(){
    const status=screen.querySelector('#artPreparingStatus');if(status&&!preparingError&&loadedRound===roomId+':'+view.round){const total=view.participants?.length||0;status.textContent='Картины готовы · '+(view.readyCount||0)+' / '+total+' игроков'}
    return;
  }
+ if(page==='preview'&&view.phase==='preview'&&key===lastUiKey)return; // Do not reset the player's mobile swipe position on server updates.
  if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
  if(page==='vote'&&view.phase==='voting'&&voteScreenToken===view.round+':'+view.turn){
   // Authoritative vote receipts can update dozens of times per round.
@@ -895,6 +935,8 @@ screen.addEventListener('click',e=>{
  else if(action==='emblem')editEmblem();
  else if(action==='museum-next')shiftMuseum(1);
  else if(action==='museum-prev')shiftMuseum(-1);
+ else if(action==='preview-previous')moveMobileGallery(-1);
+ else if(action==='preview-next')moveMobileGallery(1);
  else if(action==='kick-player'){
   const targetId=b.dataset.playerId;
   const player=view?.participants?.find(p=>p.id===targetId);
