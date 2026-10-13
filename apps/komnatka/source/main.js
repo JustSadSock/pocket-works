@@ -58,11 +58,22 @@ function hideHome(){
 function captureHome(){
  if(!ready||!scene||!engine)return;
  try{
-  // Snapshot only the real miniature, not a second 3D renderer or a fake picture.
-  // Reused when returning to the start screen after decorating the room.
+  // WebKit can return a fully transparent canvas after a hidden WebGL frame.
+  // Reject empty captures: keep the hand-painted dollhouse illustration instead.
   scene.render();
-  $('homeRoomImage').src=ui.canvas.toDataURL('image/png');
- }catch(error){console.warn('Dollhouse preview unavailable',error);}
+  const sample=document.createElement('canvas');
+  sample.width=64;sample.height=64;
+  const ctx=sample.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(ui.canvas,0,0,64,64);
+  const pixels=ctx.getImageData(0,0,64,64).data;
+  let opaque=0;
+  for(let i=3;i<pixels.length;i+=4)if(pixels[i]>110)opaque++;
+  if(opaque<90)return;
+  const image=$('homeRoomImage');
+  image.onload=()=>{if(image.naturalWidth>1)image.classList.add('ready');};
+  image.onerror=()=>image.classList.remove('ready');
+  image.src=ui.canvas.toDataURL('image/png');
+ }catch(error){console.warn('Dollhouse preview unavailable; using painted illustration',error);}
 }
 function showHome(){
  if(online?.active){online.open();return;}
