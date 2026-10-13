@@ -25,7 +25,28 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   const paths={
     cat:`<path d="M63 96 58 27Q59 17 68 24L102 55 155 55 187 24Q196 17 197 29L191 96" fill="url(#fur)" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/><path d="M74 59 69 38 94 60M170 60 187 37 181 65" fill="#f0ada6"/><path d="M51 99Q56 57 127 56Q198 57 204 101L197 143Q182 185 128 186Q72 185 56 143Z" fill="url(#fur)" stroke="#34434a" stroke-width="5"/><path d="M60 133Q79 111 103 137L127 151 151 137Q177 112 196 132Q188 178 128 182Q68 178 60 133" fill="#fff0d5"/><path d="M80 110Q91 101 101 109M155 109Q165 101 176 109" stroke="#664941" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="92" cy="122" rx="7" ry="10" fill="#313e40"/><ellipse cx="164" cy="122" rx="7" ry="10" fill="#313e40"/><circle cx="90" cy="118" r="2.8" fill="#fff"/><circle cx="162" cy="118" r="2.8" fill="#fff"/><path d="M118 151 137 151 127 162Z" fill="#665054"/><path d="M127 162Q122 171 115 167M128 162Q134 171 141 167" stroke="#795a50" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M78 143 61 138M78 150 59 151M177 142 195 138M177 150 196 150" stroke="#c89275" stroke-width="2.5" stroke-linecap="round"/>`,
     rabbit:`<path d="M87 94 87 18Q90 -4 106 20L116 73 138 73 149 20Q166 -4 168 18L169 94" fill="#e3cfbd" stroke="#34434a" stroke-width="5"/><path d="M99 64 98 25 109 64M156 64 157 25 145 64" fill="#e8abae"/><path d="M55 102Q61 56 127 58Q193 57 200 103L193 150Q178 187 128 187Q77 187 61 150Z" fill="#ead8c6" stroke="#34434a" stroke-width="5"/><path d="M70 139Q93 119 108 142Q128 158 148 142Q165 119 186 140Q178 178 128 179Q80 178 70 139" fill="#fff5e6"/><path d="M81 112Q90 105 102 111M153 111Q164 105 174 112" stroke="#77665b" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="93" cy="126" rx="7" ry="10" fill="#384447"/><ellipse cx="161" cy="126" rx="7" ry="10" fill="#384447"/><circle cx="91" cy="122" r="3" fill="#fff"/><circle cx="159" cy="122" r="3" fill="#fff"/><ellipse cx="128" cy="154" rx="9" ry="6" fill="#d99e9d"/><path d="M128 160Q122 171 114 166M128 160Q135 171 143 166" stroke="#77655d" stroke-width="2.5" fill="none" stroke-linecap="round"/><ellipse cx="79" cy="144" rx="9" ry="5" fill="#efc3bd"/><ellipse cx="177" cy="144" rx="9" ry="5" fill="#efc3bd"/>`,
-    frog:`<ellipse cx="91" cy="71" rx="22" ry="25" fill="#a3d479" stroke="#34434a" stroke-width="5"/><ellipse cx="165" cy="71" rx="22" ry="25" fill="#a3d479" stroke="#34434a" stroke-width="5"/><path d="M55 107Q60 69 128 68Q196 68 201 107L193 154Q174 186 128 186Q82 186 62 154Z" fill="url(#green)" stroke="#34434a" stroke-width="5"/><path d="M71 151Q93 128 110 146Q128 159 145 146Q166 127 185 151Q173 180 128 181Q84 179 71 151" fill="#dceebd"/><ellipse cx="91" cy="71" rx="12" ry="14" fill="#fcf5db"/><ellipse cx="165" cy="71" rx="12" ry="14" fill="#fcf5db"/><ellipse cx="92" cy="75" rx="7" ry="8" fill="#334246"/><ellipse cx="164" cy="75" rx="7" ry="8" fill="#334246"/><circle cx="90" cy="71" r="2.5" fill="#fff"/><circle cx="162" cy="71" r="2.5" fill="#fff"/><path d="M85 119Q91 113 100 118M157 118Q166 113 172 119" fill="none" stroke="#477b4c" stroke-width="4" stroke-linecap="round"/><ellipse cx="114" cy="153" rx="6" ry="4" fill="#679f59"/><ellipse cx="142" cy="153" rx="6" ry="4" fill="#679f59"/><path d="M104 165Q128 178 152 165" stroke="#34434a" stroke-width="3" stroke-linecap="round" fill="none"/>`
+    frog:`<!-- round frog face with protruding eye domes, short cheeks, no reptile muzzle -->
+<path d="M64 109Q62 80 77 62Q92 46 112 57L143 60Q171 41 190 69Q202 86 194 111" fill="url(#green)" stroke="#34434a" stroke-width="5"/>
+<ellipse cx="91" cy="74" rx="26" ry="27" fill="#9ccd76" stroke="#34434a" stroke-width="5"/>
+<ellipse cx="165" cy="74" rx="26" ry="27" fill="#9ccd76" stroke="#34434a" stroke-width="5"/>
+<path d="M54 118Q51 92 76 86Q97 79 114 91Q128 97 141 91Q160 79 181 86Q205 95 202 120Q207 176 167 189Q128 203 88 189Q51 175 54 118Z" fill="url(#green)" stroke="#34434a" stroke-width="5"/>
+<path d="M71 156Q88 179 127 182Q170 181 185 155Q181 194 128 194Q73 192 71 156" fill="#c6e7a5" opacity=".82"/>
+<ellipse cx="91" cy="74" rx="15" ry="16" fill="#fff8df"/>
+<ellipse cx="165" cy="74" rx="15" ry="16" fill="#fff8df"/>
+<ellipse cx="93" cy="75" rx="8" ry="10" fill="#354a42"/>
+<ellipse cx="163" cy="75" rx="8" ry="10" fill="#354a42"/>
+<circle cx="89" cy="70" r="3.3" fill="#fff"/>
+<circle cx="160" cy="70" r="3.3" fill="#fff"/>
+<path d="M79 111Q90 106 102 110M153 110Q165 106 177 111" fill="none" stroke="#619955" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="112" cy="139" rx="3.8" ry="2.5" fill="#639555"/>
+<ellipse cx="144" cy="139" rx="3.8" ry="2.5" fill="#639555"/>
+<path d="M82 148Q102 174 128 172Q155 171 176 147" fill="none" stroke="#355147" stroke-width="4.5" stroke-linecap="round"/>
+<path d="M82 147Q79 149 76 146M176 147Q179 149 182 146" fill="none" stroke="#355147" stroke-width="3" stroke-linecap="round"/>
+<ellipse cx="78" cy="137" rx="13" ry="7" fill="#e4a6a7" opacity=".32"/>
+<ellipse cx="178" cy="137" rx="13" ry="7" fill="#e4a6a7" opacity=".32"/>
+<circle cx="68" cy="115" r="3" fill="#71ac67" opacity=".9"/>
+<circle cx="188" cy="115" r="3" fill="#71ac67" opacity=".9"/>
+`
   };
   const outfits={
     tunic:`<path d="M47 254Q49 182 106 173L127 190 150 173Q208 182 209 254Z" fill="url(#cloth)" stroke="#34434a" stroke-width="5"/><path d="M102 179Q113 193 128 195Q143 193 153 179" fill="none" stroke="#fff2d8" stroke-width="9" stroke-linecap="round"/><circle cx="128" cy="197" r="7" fill="#e9bf68" stroke="#34434a" stroke-width="2.5"/>`,
