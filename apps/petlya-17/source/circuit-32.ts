@@ -188,7 +188,7 @@ function signTexture(scene: Scene, title: string): StandardMaterial {
   const m = material(scene, 'painted-' + title, '#e9a749');
   try {
     const tex = new DynamicTexture('paint-' + title, { width: 512, height: 128 }, scene, false);
-    const ctx = tex.getContext();
+    const ctx = tex.getContext() as CanvasRenderingContext2D;
     ctx.fillStyle = '#eacb87';
     ctx.fillRect(0, 0, 512, 128);
     ctx.fillStyle = '#183a3c';
