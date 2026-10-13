@@ -80,3 +80,112 @@ h1,h2,p{margin:0}.home-content h1{font-family:ui-rounded,system-ui,sans-serif;fo
  .book-ready{min-height:42px;}
 }
 @media(prefers-reduced-motion:reduce){.book-spread{animation:none}}
+
+
+/* Mobile-first game view: landscape on a phone is a full-bleed playfield.
+ * Keyboard help belongs to a keyboard device, not the bottom third of iOS.
+ * Corner touch pads float independently; the playable centre stays unobstructed. */
+@media (pointer: coarse), (hover: none) {
+ #pc-help{display:none!important}
+}
+@media (orientation: landscape) and (max-height: 620px) and (pointer: coarse),
+       (orientation: landscape) and (max-height: 620px) and (hover: none) {
+ .app-shell[data-keyboard-aware]{padding-bottom:0!important;height:100dvh;min-height:0;}
+ .menu .bar,.lobby .bar{height:38px;padding-top:2px;padding-bottom:2px;}
+ .menu .home-grid{
+  grid-template-columns:minmax(270px,.95fr) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  height:calc(100% - 38px);
+  padding:3px 11px 8px;
+  gap:13px;
+ }
+ .menu .home-content{gap:5px;justify-content:center;}
+ .menu .mark{display:none;}
+ .menu .home-content h1{font-size:clamp(38px,9.5vh,60px);}
+ .menu .tagline{font-size:11px;line-height:1.2;}
+ .menu .home-actions{gap:6px;}
+ .menu .home-actions .primary{min-height:37px;padding:6px 12px;font-size:13px;box-shadow:0 3px 0 var(--ink);}
+ .menu .home-actions .secondary{min-height:33px;padding:5px 12px;font-size:12px;}
+ .menu .home-actions .local{padding:4px;min-height:25px;font-size:11px;}
+ .menu .name-row{gap:5px;}
+ .menu .name-row label{font-size:10px;}
+ .menu .name-row input{font-size:16px;padding:5px 8px;}
+ .menu .menu-bottom{font-size:9px;}
+ .menu .cover-wrap{height:88%;min-height:0;}
+ .lobby .lobby-inner{max-height:calc(100% - 45px);overflow-y:auto;overflow-x:hidden;padding:7px 5px;}
+ .lobby .lobby-illustration{display:none;}
+ .lobby .lobby-inner h2{font-size:23px;}
+ .lobby .ticket{gap:5px;padding:6px;}
+ .lobby .ticket strong{font-size:26px;}
+
+ .game{position:relative;display:block;height:100%;overflow:hidden;isolation:isolate;}
+ .game .viewport{position:absolute;inset:0;width:100%;height:100%;min-height:0;display:block;z-index:0;}
+ .game .viewport canvas{width:100%;height:100%;display:block;}
+ .game .game-bar{
+  position:absolute;z-index:4;top:0;left:0;right:0;
+  width:100%;height:calc(33px + env(safe-area-inset-top,0px));
+  min-height:33px;
+  padding:env(safe-area-inset-top,0px) max(12px,env(safe-area-inset-right,0px)) 2px max(12px,env(safe-area-inset-left,0px));
+  gap:9px;background:#fff7d9ed;border-bottom:2px solid #25304b;
+ }
+ .game .game-bar .pause-button{height:28px;width:33px;min-width:33px;font-size:14px;border-width:2px;border-radius:7px;}
+ .game .game-bar .chapter strong{font-size:12px;line-height:1.2;}
+ .game .game-bar #progress{font-size:12px;}
+ .game .game-bar #signal{font-size:10px;}
+ .game .controls{
+  position:absolute;z-index:5;bottom:0;left:0;right:0;width:100%;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  min-height:0;height:auto;
+  padding:4px max(10px,env(safe-area-inset-right,0px)) calc(5px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));
+  border:0;background:transparent;box-shadow:none;pointer-events:none;
+ }
+ .game .controls #pc-help{display:none!important;}
+ .game .controls .dpad,.game .controls .action-pad{display:flex;align-items:flex-end;gap:7px;min-width:0;pointer-events:none;}
+ .game .controls .key{
+  pointer-events:auto;touch-action:none;
+  height:clamp(42px,12.4dvh,57px);
+  min-width:clamp(49px,7.1vw,69px);
+  padding:4px 8px;border-width:2px;border-radius:13px;
+  box-shadow:0 3px 0 #25304b,0 4px 14px #25304b25;
+  font-size:clamp(20px,3vw,28px);
+ }
+ .game .controls .key.anchor{min-width:clamp(67px,10.8vw,91px);font-size:clamp(10px,1.5vw,13px);letter-spacing:0;}
+ .game .controls .key.jump{min-width:clamp(70px,11vw,100px);font-size:clamp(12px,1.7vw,16px);}
+ .game .controls .key.held{filter:brightness(1.04) saturate(1.13);}
+ .game #toast{bottom:calc(58px + env(safe-area-inset-bottom,0px));max-width:65vw;}
+ /* The chapter book must be readable in landscape even on a 667x375 viewport. */
+ .game .book-overlay{padding:8px max(9px,env(safe-area-inset-right,0px)) 8px max(9px,env(safe-area-inset-left,0px));}
+ .game .book-spread{
+  display:grid;grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);
+  grid-template-rows:minmax(0,1fr);width:min(100%,960px);
+  height:100%;min-height:0;max-height:100%;
+ }
+ .game .book-illustration{
+  border-right:3px solid #c99d70;border-bottom:0;
+  padding:12px 11px 8px;min-height:0;
+ }
+ .game .book-illustration canvas{min-height:0;max-height:100%;flex:1;}
+ .game .book-page-label{font-size:9px;}
+ .game .book-folio{display:none;}
+ .game .book-instructions{
+  min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;justify-content:flex-start;
+  gap:8px;padding:clamp(12px,2.2vw,24px);
+ }
+ .game .book-instructions h2{font-size:clamp(21px,3.6vw,34px);line-height:1;}
+ .game .book-instructions>p{font-size:clamp(12px,1.8vw,16px);line-height:1.3;}
+ .game .book-instructions .book-second{font-size:clamp(11px,1.5vw,13px);}
+ .game .book-player{font-size:10px;padding:4px 7px;}
+ .game .book-ready{min-height:40px;font-size:14px;flex-shrink:0;}
+ .game .book-local-buttons{flex-direction:row;}
+ .game .book-local-buttons .book-ready{font-size:11px;min-width:0;padding:6px;}
+ .game .book-footnote{font-size:10px;}
+}
+@media (orientation: landscape) and (max-height: 360px) and (pointer: coarse),
+       (orientation: landscape) and (max-height: 360px) and (hover: none) {
+ .game .game-bar{height:calc(29px + env(safe-area-inset-top,0px));min-height:29px;}
+ .game .game-bar .pause-button{height:25px;}
+ .game .controls .key{height:40px;min-width:46px;border-radius:10px;}
+ .game .controls .key.anchor{min-width:64px;}
+ .game .controls .key.jump{min-width:68px;}
+}
