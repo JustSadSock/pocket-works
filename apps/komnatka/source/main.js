@@ -51,6 +51,38 @@ function toast(message) {
  ui.toast.textContent=message;ui.toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>ui.toast.classList.remove('show'),2350);
 }
 function status(message='Сохранено'){ui.status.textContent=message;}
+function hideHome(){
+ $('homeScreen').hidden=true;
+ $('menuBtn').setAttribute('aria-label','Открыть главное меню');
+}
+function captureHome(){
+ if(!ready||!scene||!engine)return;
+ try{
+  // Snapshot only the real miniature, not a second 3D renderer or a fake picture.
+  // Reused when returning to the start screen after decorating the room.
+  scene.render();
+  $('homeRoomImage').src=ui.canvas.toDataURL('image/png');
+ }catch(error){console.warn('Dollhouse preview unavailable',error);}
+}
+function showHome(){
+ if(online?.active){online.open();return;}
+ if(pending)cancelPending(false);
+ selectedId=null;hideSelection();
+ captureHome();
+ $('homeScreen').hidden=false;
+}
+function playHomeMode(mode){
+ hideHome();
+ if(mode==='solo'){sound('select');return;}
+ online.open(mode,true);
+ sound('select');
+}
+function setupHome(){
+ $('homeSolo').addEventListener('click',()=>playHomeMode('solo'));
+ $('homeTenants').addEventListener('click',()=>playHomeMode('tenants'));
+ $('homeMemory').addEventListener('click',()=>playHomeMode('memory'));
+ $('menuBtn').addEventListener('click',showHome);
+}
 function persist() {
  if(online?.active)return;
  clearTimeout(savedTimer);status('Сохраняем…');
@@ -509,14 +541,15 @@ function setup(){
   },
   onExit(){
    if(offlineBackup){state=offlineBackup;offlineBackup=null;}
-   selectedId=null;cancelPending(false);hideSelection();refresh();
+   selectedId=null;cancelPending(false);hideSelection();refresh();showHome();
   },
+  onDismiss:showHome,
   onRoom:onOnlineRoom,
   onPresence:updateOnlinePresence
  });
  director=createMotionDirector({getRoot:id=>roots.get(id),getItem:id=>state.items.find(i=>i.id===id),reducedMotion:()=>reduce.matches});
  resize();
- addEvents();ready=true;refresh();ui.loading.classList.add('hidden');
+ addEvents();setupHome();ready=true;refresh();ui.loading.classList.add('hidden');
  setTimeout(()=>buildFurnitureThumbnails((type,src)=>{
   thumbnails.set(type,src);
   ui.catalog.querySelectorAll('[data-image-type]').forEach(el=>{
@@ -529,7 +562,12 @@ function setup(){
   try{localStorage.setItem('pocket-works:komnatka:intro','1');}catch{}
  }
  window.addEventListener('resize',resize);new ResizeObserver(resize).observe(ui.canvas);
- if(new URLSearchParams(location.search).has('room'))online.open();
+ if(new URLSearchParams(location.search).has('room')){
+  hideHome();online.open();
+ }else{
+  // Render the real saved room before presenting the distinct home screen.
+  requestAnimationFrame(()=>captureHome());
+ }
  let last=0;engine.runRenderLoop(()=>{
   if(document.hidden)return;
   const now=performance.now();
@@ -547,6 +585,6 @@ function setup(){
   if(online?.active)drawOnlineMarkers();
  });
 }
-function showError(error){console.error(error);ui.loadText.textContent='Не получилось открыть комнату';$('retryBtn').hidden=false;$('retryBtn').onclick=()=>location.reload();toast('Ошибка запуска 3D-сцены');}
+function showError(error){$('homeScreen').hidden=true;console.error(error);ui.loadText.textContent='Не получилось открыть комнату';$('retryBtn').hidden=false;$('retryBtn').onclick=()=>location.reload();toast('Ошибка запуска 3D-сцены');}
 showCatalog();updateActions();
 try{setup();}catch(error){showError(error);}
