@@ -171,7 +171,7 @@ function refreshFilmstrip(){
  }
  strip.scrollLeft=scroll
 }
-function updatePlayhead(){const left=(frame*PX+6)+'px';$('#rulerHead').style.left=left;const e=$('#timelineHead');if(e)e.style.left=left;const step=Math.max(1,Math.ceil(project.frames/12));const bucket=Math.floor(frame/step)*step;for(const b of $('#filmstrip .film-frame'))b.classList.toggle('active',+b.dataset.frame===bucket)}
+function updatePlayhead(){const left=(frame*PX+6)+'px';$('#rulerHead').style.left=left;const e=$('#timelineHead');if(e)e.style.left=left;const step=Math.max(1,Math.ceil(project.frames/12));const bucket=Math.floor(frame/step)*step;for(const b of document.querySelectorAll('#filmstrip .film-frame'))b.classList.toggle('active',+b.dataset.frame===bucket)}
 $('#ruler').addEventListener('pointerdown',e=>{if(playing)stop();const r=$('#ruler').getBoundingClientRect();setFrame((e.clientX-r.left)/PX);$('#ruler').setPointerCapture(e.pointerId)});$('#ruler').addEventListener('pointermove',e=>{if(e.buttons&&$('#ruler').hasPointerCapture(e.pointerId)){const r=$('#ruler').getBoundingClientRect();setFrame((e.clientX-r.left)/PX)}});
 $('#playBtn').addEventListener('click',play);$('#prevBtn').addEventListener('click',()=>{stop();setFrame(frame-1)});$('#nextBtn').addEventListener('click',()=>{stop();setFrame(frame+1)});$('#loopBtn').addEventListener('click',()=>{loop=!loop;$('#loopBtn').classList.toggle('active',loop);$('#loopBtn').setAttribute('aria-pressed',String(loop))});
 $('#undoBtn').addEventListener('click',()=>{if(!undo.length)return;stop();redo.push(JSON.stringify(project));project=validate(JSON.parse(undo.pop()));selected=project.objects.some(o=>o.id===selected)?selected:project.objects.at(-1)?.id||null;frame=clamp(frame,0,project.frames-1);changed({structure:true})});
