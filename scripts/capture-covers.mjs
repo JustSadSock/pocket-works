@@ -154,6 +154,11 @@ try{
           const url='http://127.0.0.1:4173/apps/'+encodeURIComponent(app.slug)+'/?pw-cover=1';
           await page.goto(url,{waitUntil:'domcontentloaded',timeout:25000});
           await page.waitForTimeout(app.runtime==='godot'?6000:1600);
+          // Give slow-rendering game engines a bounded opportunity to announce
+          // a staged scene before falling back to regular timed screenshots.
+          await page.waitForFunction(()=>Boolean(window.PocketWorksCover ||
+            document.documentElement.dataset.pwCoverReady==='true'),null,
+            {timeout:app.runtime==='godot'?2500:3500}).catch(()=>{});
           // Only game-authored hooks may enter a demonstration scene. Never automate
           // unrelated buttons or join public multiplayer rooms.
           const prepared=await page.evaluate(()=>Boolean(window.PocketWorksCover ||
