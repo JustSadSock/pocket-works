@@ -140,8 +140,12 @@ button:focus-visible,.screen button:focus-visible,input:focus-visible,
 .restore .adjust label:has(.size-sample){display:flex;align-items:center;gap:9px}
 .restore .adjust #brushSizeValue{font-variant-numeric:tabular-nums}
 .size-sample{
- width:12px;height:12px;flex:none;display:inline-block;border-radius:50%;
- background:#364d45;box-shadow:0 0 0 2px #e8ddca,0 0 0 3px #8e7960;
+ width:29px;height:29px;flex:0 0 29px;display:inline-grid;place-items:center;
+ border:1px solid #a79374;border-radius:50%;background:#e8ddca;
+}
+.size-sample::after{
+ content:"";display:block;width:var(--nib,12px);height:var(--nib,12px);
+ background:#364d45;border:1px solid #62766b;border-radius:50%;
  transition:width 90ms ease,height 90ms ease;
 }
 .archive-local-status{
@@ -162,7 +166,7 @@ button:focus-visible,.screen button:focus-visible,input:focus-visible,
 }
 @media (prefers-reduced-motion:reduce){
  .archive-local-status[data-state="saving"]::before{animation:none}
- .size-sample{transition:none}
+ .size-sample::after{transition:none}
 }
 
 /* Short-lived medal transfer: never catches pointers or steals focus. */
