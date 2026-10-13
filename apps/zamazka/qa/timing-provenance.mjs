@@ -5,7 +5,7 @@ import ts from 'typescript';
 import {ARTS,REAL_COUNT} from '../artworks.js';
 import {ART_SCHOOLS,CREATION_PLACES} from '../art-provenance.js';
 
-assert.equal(REAL_COUNT,54,'all 54 real artworks are present');
+assert.equal(REAL_COUNT,72,'all 72 real artworks are present');
 assert.equal(ART_SCHOOLS.length,REAL_COUNT,'every real painting has curated origin information');
 for(let id=0;id<REAL_COUNT;id++){
  assert.equal(typeof ARTS[id].schoolCountry,'string','painting '+id+' school country');
@@ -26,7 +26,7 @@ const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8')
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={};
 runInNewContext(compiled,{exports,Date:Clock,Math,Array,Number,Object,Error,JSON,Set,Map,console});
-assert.equal(exports.RULESET_VERSION,15,'new server rules version');
+assert.equal(exports.RULESET_VERSION,16,'new server rules version');
 const player={id:'author',name:'Restorer'},guest={id:'peer',name:'Observer'},players=[player,guest];
 const game=exports.default,state=game.createRoom({player}).state;
 game.onJoin({state,player:guest,players});
@@ -37,4 +37,4 @@ game.onMessage({state,player,players,payload:{type:'pulse'}});
 assert.equal(state.phase,'drawing');
 assert.equal(state.deadline-now,160000,'drawing time must be 2:40');
 assert.ok(readFileSync(new URL('../app.js',import.meta.url),'utf8').includes('practice.deadline=practice.drawingSeconds===0?0:Date.now()+practice.drawingSeconds*1000'),'practice follows selected duration, including unlimited');
-console.log('ZAMAZKA: 160s online/practice, 54 origins, and independently labeled creation cities OK');
+console.log('ZAMAZKA: 160s online/practice, 72 origins, and independently labeled creation cities OK');
