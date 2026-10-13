@@ -94,7 +94,8 @@ function playHomeMode(mode){
 function thumbnail(){
  if(!ready||!scene)return null;
  try{scene.render();const canvas=document.createElement('canvas');canvas.width=220;canvas.height=164;
-  canvas.getContext('2d').drawImage(ui.canvas,0,0,220,164);
+  const ctx=canvas.getContext('2d');ctx.fillStyle='#f6e9d8';ctx.fillRect(0,0,220,164);
+  ctx.drawImage(ui.canvas,0,0,220,164);
   const result=canvas.toDataURL('image/jpeg',.52);return result.length<165000?result:null;}
  catch{return null;}
 }
