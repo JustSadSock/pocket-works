@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-const css=readFileSync(new URL('../mobile-repair.css',import.meta.url),'utf8');
+const css=readFileSync(new URL('../adaptive-layout.css',import.meta.url),'utf8');
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const editor=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
-assert.ok(html.indexOf('href="./mobile-touch.css"')<html.indexOf('href="./mobile-repair.css"'));
-assert.match(sw,/\.\/mobile-repair\.css/,'offline CSS cache includes hotfix');
+assert.ok(html.indexOf('href="./native-art.css"')<html.indexOf('href="./adaptive-layout.css"'));
+assert.match(sw,/\.\/adaptive-layout\.css/,'offline CSS cache includes hotfix');
 assert.match(css,/\.screen>\.mobile-preview \.gallery\.exhibition-grid\{\s*display:flex!important/,'preview is flex, not WebKit grid');
 assert.match(css,/flex:0 0 calc\(100% - 42px\)!important/,'preview exposes a single broad painting');
 assert.match(css,/\.gallery\.exhibition-grid>\.picture img\{[\s\S]*?object-fit:contain!important/,'full original without crop');
