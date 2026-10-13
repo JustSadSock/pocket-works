@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.23';
-const APP_VERSION = '0.10.23';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.24';
+const APP_VERSION = '0.10.24';
 const RELEASE_DATE = '2026-10-13';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
+  'MASKOT: refitted full-size medieval bascinet and herald outfit, improved waistcoat; secret GROOM-2026 wedding tuxedo.',
   'ZAMAZKA: seven server-verified achievements and real collectible profile rewards.',
   'MASKOT: hand-drawn medieval bascinet and embroidered heraldic tabard, available through two verified gift codes.',
   'Profile Card Studio: separate painted and preset backgrounds, framed mascots, large touch canvas with undo, eraser and adjustable brush.',

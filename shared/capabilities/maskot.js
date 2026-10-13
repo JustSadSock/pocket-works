@@ -2,13 +2,13 @@ import {ownedAchievementItem,zamazkaAchievements} from './zamazka-achievements.j
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
 // Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
-export const mascotPublicUnlocks=['astronaut','wedding','knight','herald',...zamazkaAchievements.map(a=>a.id)];
+export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom',...zamazkaAchievements.map(a=>a.id)];
 export const mascotAnimals=[['cat','Кот'],['rabbit','Кролик'],['frog','Лягушка']];
 export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Берет'],['flower','Цветок']];
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
 export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок'];
-export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'}};
+export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
@@ -53,7 +53,17 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   };
   const outfits={
     tunic:`<path d="M47 254Q49 182 106 173L127 190 150 173Q208 182 209 254Z" fill="url(#cloth)" stroke="#34434a" stroke-width="5"/><path d="M102 179Q113 193 128 195Q143 193 153 179" fill="none" stroke="#fff2d8" stroke-width="9" stroke-linecap="round"/><circle cx="128" cy="197" r="7" fill="#e9bf68" stroke="#34434a" stroke-width="2.5"/>`,
-    vest:`<path d="M46 254Q51 180 102 171L128 191 154 171Q207 181 210 254Z" fill="#f7eee0" stroke="#34434a" stroke-width="5"/><path d="M55 247 90 182 112 192 127 229 127 254 53 254ZM201 247 166 182 144 192 129 229 129 254 203 254Z" fill="#477a78" stroke="#34434a" stroke-width="4"/><path d="M117 196 128 215 139 196" fill="none" stroke="#ddbb73" stroke-width="6"/><circle cx="128" cy="236" r="5" fill="#e6c27c"/>`,
+    vest:`<!-- Wide-cut waistcoat with full shoulders, replacing the entire base garment rather than floating over it -->
+<path d="M24 255Q26 199 58 183Q81 171 102 170L128 190 154 170Q194 175 218 194Q232 220 234 255Z" fill="#e5d5bd" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/>
+<path d="M29 252Q32 209 56 190L87 182 104 198 106 254H25Z" fill="#476f76" stroke="#34434a" stroke-width="4"/>
+<path d="M227 252Q224 209 200 190L169 182 152 198 150 254H231Z" fill="#476f76" stroke="#34434a" stroke-width="4"/>
+<path d="M85 179Q107 186 128 209Q149 186 171 179L182 255H74Z" fill="#f4eee0" stroke="#34434a" stroke-width="3.5"/>
+<path d="M86 178 111 196 127 227 121 255 71 255ZM170 178 145 196 129 227 135 255 185 255Z" fill="#467e7e" stroke="#34434a" stroke-width="4" stroke-linejoin="round"/>
+<path d="M103 198 114 211M153 198 142 211" stroke="#b5d0bb" stroke-width="4" stroke-linecap="round"/>
+<path d="M122 227 128 232 134 227" stroke="#deb775" stroke-width="5" fill="none"/>
+<circle cx="128" cy="242" r="4.5" fill="#f0c978" stroke="#34434a" stroke-width="1.6"/>
+<path d="M30 242 39 221M226 242 217 221" fill="none" stroke="#94b6b4" stroke-width="4" stroke-linecap="round"/>
+`,
     mantle:`<path d="M48 254Q53 188 100 176L128 189 155 176Q202 188 207 254Z" fill="#416a71" stroke="#34434a" stroke-width="5"/><path d="M94 175Q54 183 35 254H103L119 197ZM162 175Q202 183 221 254H153L138 197Z" fill="#af5871" stroke="#34434a" stroke-width="5"/><path d="M94 179Q128 213 163 179" fill="none" stroke="#faead4" stroke-width="11" stroke-linecap="round"/><circle cx="128" cy="202" r="10" fill="#e8c16e" stroke="#34434a" stroke-width="3"/>`,
     spacesuit:`<path d="M43 254Q44 177 103 170L128 189 153 170Q212 177 213 254Z" fill="#ebf4f7" stroke="#34434a" stroke-width="5"/><path d="M80 182Q128 205 176 182" stroke="#afc9d3" stroke-width="11" fill="none"/><rect x="106" y="194" width="44" height="30" rx="6" fill="#6fa8b5" stroke="#34434a" stroke-width="3"/><circle cx="90" cy="212" r="7" fill="#e9bd61" stroke="#34434a" stroke-width="3"/><circle cx="166" cy="212" r="7" fill="#e9bd61" stroke="#34434a" stroke-width="3"/><path d="M104 244H152" stroke="#afc9d3" stroke-width="5"/>`,
     restorer:`<!-- The master's coat: embroidered gold stretcher, carefully folded velvet -->
@@ -68,18 +78,43 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <path d="M73 220 64 235M184 220 191 235" stroke="#c0a0ba" stroke-width="4" stroke-linecap="round"/>
 <circle cx="128" cy="207" r="6" fill="#e9c678" stroke="#34434a" stroke-width="2"/>
 `,
-    tabard:`<!-- 14th-century herald's embroidered surcoat and contrasting sleeves -->
-<path d="M52 254Q52 192 94 175L128 191 162 175Q205 190 206 254Z" fill="#e6d7ac" stroke="#34434a" stroke-width="5"/>
-<path d="M56 237Q64 198 95 187L89 254H51Z" fill="#a33d4f" stroke="#34434a" stroke-width="3.5"/>
-<path d="M201 237Q192 198 161 187L168 254H206Z" fill="#a33d4f" stroke="#34434a" stroke-width="3.5"/>
-<path d="M93 183Q126 205 163 183L171 254H85Z" fill="#bd4657" stroke="#34434a" stroke-width="4"/>
-<path d="M99 190Q112 203 127 204Q144 203 158 190" fill="none" stroke="#f3dd9b" stroke-width="8" stroke-linecap="round"/>
-<path d="M105 208H152V252H105Z" fill="#e8c477" stroke="#34434a" stroke-width="3.5"/>
-<path d="M127 209V251M106 230H151" stroke="#bd4657" stroke-width="3.5"/>
-<path d="M111 214 117 218 111 222 116 226 107 227 110 219Z" fill="#a73f50"/>
-<path d="M142 214 148 218 142 222 147 226 138 227 141 219Z" fill="#a73f50"/>
-<path d="M114 235 120 240 114 245M140 235 134 240 140 245" fill="none" stroke="#a73f50" stroke-width="3" stroke-linecap="round"/>
-<path d="M98 186 85 212M157 186 170 212" fill="none" stroke="#f7e4b4" stroke-width="4" stroke-linecap="round"/>
+    tabard:`<!-- Full-bodied medieval herald's surcoat: wide flared sleeves, full hem, woven gold quartering. -->
+<path d="M16 255Q20 201 49 183Q74 171 99 168L128 188 157 168Q192 171 213 187Q238 207 241 255Z" fill="#ead5a6" stroke="#34434a" stroke-width="6" stroke-linejoin="round"/>
+<!-- Dramatic scarlet hanging sleeves extend beyond the shoulder, hiding all undergarments. -->
+<path d="M38 192Q18 211 15 255L82 255 96 186Z" fill="#a94050" stroke="#34434a" stroke-width="4.5"/>
+<path d="M218 192Q238 211 241 255L174 255 160 186Z" fill="#a94050" stroke="#34434a" stroke-width="4.5"/>
+<path d="M26 248Q27 224 44 204M230 248Q229 224 212 204" fill="none" stroke="#da7d6d" stroke-width="6" stroke-linecap="round"/>
+<path d="M79 180Q100 173 128 193Q156 173 177 180L199 255H57Z" fill="#f5e4b9" stroke="#34434a" stroke-width="4.5" stroke-linejoin="round"/>
+<!-- The surcoat covers the chest rather than being a tiny appliqué. -->
+<path d="M89 184Q108 201 128 202Q149 201 166 184L182 255H73Z" fill="#bd4858" stroke="#34434a" stroke-width="4.5" stroke-linejoin="round"/>
+<path d="M104 192Q115 205 128 209Q143 205 154 192" fill="none" stroke="#fff0c8" stroke-width="7" stroke-linecap="round"/>
+<path d="M91 216H165V255H91Z" fill="#eac77e" stroke="#34434a" stroke-width="3.5"/>
+<path d="M128 218V255M93 237H163" fill="none" stroke="#b74a55" stroke-width="5"/>
+<path d="M100 225 108 230 101 235 107 242 98 245 101 234Z M154 225 147 230 155 235 148 242 158 245 154 234Z" fill="#ae3d52"/>
+<path d="M113 243L128 250 142 243" fill="none" stroke="#ae3d52" stroke-width="4" stroke-linecap="round"/>
+<path d="M72 247 70 254M184 247 186 254" stroke="#f8edcd" stroke-width="6"/>
+`,
+    groom:`<!-- Formal groom's tuxedo, broad tailored shoulders, ivory shirt, velvet lapels and boutonniere -->
+<path d="M14 255Q19 207 47 186Q67 174 104 170L128 191 152 170Q189 174 210 185Q238 207 242 255Z" fill="#263747" stroke="#34434a" stroke-width="6" stroke-linejoin="round"/>
+<path d="M24 246Q27 210 59 191M232 246Q229 210 197 191" stroke="#577080" stroke-width="5" fill="none" stroke-linecap="round"/>
+<!-- Continuous ivory shirt behind suit lapels, extending all the way to the bottom. -->
+<path d="M92 173Q106 187 128 199Q150 187 164 173L174 255H82Z" fill="#fff7e9" stroke="#34434a" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M88 175 106 194 128 230 115 255 42 255 65 189Z" fill="#31475a" stroke="#34434a" stroke-width="4.5"/>
+<path d="M168 175 150 194 128 230 141 255 214 255 191 189Z" fill="#31475a" stroke="#34434a" stroke-width="4.5"/>
+<!-- Satin peaked lapels -->
+<path d="M91 178 72 197 102 213 128 238 108 204 113 195Z" fill="#1f2e3b" stroke="#758898" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M165 178 184 197 154 213 128 238 148 204 143 195Z" fill="#1f2e3b" stroke="#758898" stroke-width="2.4" stroke-linejoin="round"/>
+<!-- White collar + bowtie at the base of the chin -->
+<path d="M102 178 126 201 113 211 93 194Z M154 178 130 201 143 211 163 194Z" fill="#fffdfa" stroke="#34434a" stroke-width="2"/>
+<path d="M128 210 107 204 109 222 128 214 147 222 149 204Z" fill="#1b2932" stroke="#34434a" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="128" cy="212" r="5" fill="#526874"/>
+<path d="M128 218V255" stroke="#d6d9cf" stroke-width="3"/>
+<circle cx="128" cy="237" r="2.9" fill="#c1a46e"/><circle cx="128" cy="250" r="2.9" fill="#c1a46e"/>
+<!-- Pocket square + small ivory boutonniere -->
+<path d="M167 227 188 227 185 235 170 235Z" fill="#fff8e8" stroke="#8a98a0" stroke-width="2"/>
+<path d="M172 209 179 221" stroke="#6e9975" stroke-width="3" stroke-linecap="round"/>
+<g fill="#f8f1e9" stroke="#b7a49c" stroke-width="1.8"><circle cx="169" cy="203" r="5.5"/><circle cx="179" cy="203" r="5.5"/><circle cx="174" cy="196" r="5.5"/><circle cx="174" cy="209" r="5.5"/></g>
+<circle cx="174" cy="203" r="4" fill="#dfc17d"/>
 `,
     wedding:`<path d="M44 254Q49 177 102 171L128 190 154 171Q208 177 212 254Z" fill="#fff9f6" stroke="#34434a" stroke-width="5"/><path d="M99 178 127 213 156 178" fill="none" stroke="#e4bed1" stroke-width="7"/><path d="M128 213V253" stroke="#e4bed1" stroke-width="4"/><circle cx="128" cy="201" r="8" fill="#f4d98c" stroke="#34434a" stroke-width="2"/><path d="M80 243Q128 231 177 243" fill="none" stroke="#eadbe3" stroke-width="4"/>`
   };
@@ -89,19 +124,27 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
     beret:`<path d="M72 76Q79 40 135 40Q182 40 187 76Q150 93 102 85L75 92Z" fill="#82738e" stroke="#34434a" stroke-width="5"/><path d="M128 41Q134 25 141 34" stroke="#34434a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M92 66Q122 54 160 63" stroke="#b6a1c4" stroke-width="5" fill="none" stroke-linecap="round"/>`,
     flower:`<path d="M183 72Q201 58 204 81" fill="none" stroke="#567f62" stroke-width="5"/><g fill="#f6efe9" stroke="#34434a" stroke-width="2.4"><circle cx="184" cy="60" r="12"/><circle cx="206" cy="61" r="12"/><circle cx="195" cy="47" r="12"/><circle cx="195" cy="72" r="12"/></g><circle cx="195" cy="60" r="9" fill="#e9c36c" stroke="#34434a" stroke-width="2"/>`,
     helmet:`<ellipse cx="128" cy="120" rx="94" ry="100" fill="#cfecf3" fill-opacity=".18" stroke="#6f9da9" stroke-width="7"/><path d="M49 174Q128 200 207 174L213 192Q128 218 42 192Z" fill="#d4eaf0" stroke="#34434a" stroke-width="5"/><ellipse cx="91" cy="71" rx="24" ry="11" fill="#fff" opacity=".4"/><circle cx="66" cy="189" r="5" fill="#e3c371"/><circle cx="190" cy="189" r="5" fill="#e3c371"/>`,
-    bascinet:`<!-- 14th-century open-faced bascinet with raised visor and chainmail aventail -->
-<path d="M68 107Q66 52 127 40Q185 52 188 107L180 123Q173 80 127 72Q83 81 75 124Z" fill="#879ba4" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/>
-<path d="M81 84Q96 47 127 48Q160 47 177 84" fill="none" stroke="#d7e1da" stroke-width="8" opacity=".7" stroke-linecap="round"/>
-<path d="M73 112L67 155Q75 180 92 185L102 168 87 142 87 112Z" fill="#9eafb3" stroke="#34434a" stroke-width="4"/>
-<path d="M182 112L188 155Q180 180 162 185L152 168 169 142 169 112Z" fill="#9eafb3" stroke="#34434a" stroke-width="4"/>
-<path d="M75 157 83 170M83 149 95 164M181 157 173 170M173 149 161 164" stroke="#51666d" stroke-width="3" stroke-linecap="round" fill="none"/>
-<path d="M87 80Q128 66 170 80L180 103Q128 91 76 103Z" fill="#a6b8bc" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/>
-<path d="M95 84Q128 78 160 84" stroke="#eef5ed" stroke-width="4.5" fill="none" stroke-linecap="round"/>
-<path d="M84 113Q127 103 173 113" fill="none" stroke="#445963" stroke-width="7" stroke-linecap="round"/>
-<path d="M113 75 128 52 143 75" stroke="#cfa96b" stroke-width="5" fill="none" stroke-linecap="round"/>
-<circle cx="82" cy="118" r="5.5" fill="#e5ba72" stroke="#34434a" stroke-width="2"/>
-<circle cx="174" cy="118" r="5.5" fill="#e5ba72" stroke="#34434a" stroke-width="2"/>
-<path d="M91 176 100 183M165 176 156 183" stroke="#b4c2bf" stroke-width="3" stroke-linecap="round"/>
+    bascinet:`<!-- A full-size raised-visor bascinet. Opaque shell and aventail FRAME the face, no tiny hat floating above it. -->
+<!-- Wide steel skull cap: 211px width. -->
+<path d="M28 110Q23 46 78 20Q99 10 128 7Q170 9 195 30Q230 64 227 113
+ L201 118Q198 70 171 58Q130 40 87 58Q57 78 54 121Z"
+ fill="#839aa3" stroke="#34434a" stroke-width="6.5" stroke-linejoin="round"/>
+<path d="M43 89Q44 51 80 34Q103 20 130 21Q178 24 201 63" fill="none" stroke="#d6e4e2" stroke-width="10" stroke-linecap="round" opacity=".75"/>
+<path d="M125 17Q131 24 129 49" stroke="#576b74" stroke-width="4.5" stroke-linecap="round"/>
+<!-- Raised visor (over forehead) with articulation and seven breathing slots. -->
+<path d="M53 83Q122 54 203 82L204 106Q131 92 51 109Z" fill="#b1c4c6" stroke="#34434a" stroke-width="5.5" stroke-linejoin="round"/>
+<path d="M61 88Q124 69 195 89" fill="none" stroke="#f1f5df" stroke-width="5.5" stroke-linecap="round" opacity=".9"/>
+<g stroke="#5a6d70" stroke-width="3.5" stroke-linecap="round"><path d="M76 98 83 96M95 94 102 93M115 91 122 90M136 90 143 91M156 92 163 93M176 95 183 97"/></g>
+<!-- Solid cheek guards broaden to the animal cheeks; gaps stay between eyes and central muzzle. -->
+<path d="M38 99Q31 139 41 172L58 198 82 191Q69 160 78 130L67 112Z" fill="#8da1a8" stroke="#34434a" stroke-width="5.5" stroke-linejoin="round"/>
+<path d="M218 99Q225 139 215 172L198 198 174 191Q187 160 178 130L189 112Z" fill="#8da1a8" stroke="#34434a" stroke-width="5.5" stroke-linejoin="round"/>
+<!-- Aventail chain rings have a deliberate matte-metal rhythm. -->
+<path d="M44 135 51 143 44 150 51 157 44 164M61 147 68 154 61 162 68 170 61 177M212 135 205 143 212 150 205 157 212 164M195 147 188 154 195 162 188 170 195 177" fill="none" stroke="#d9e4dd" stroke-width="3.3" stroke-linecap="round" opacity=".85"/>
+<path d="M48 119 65 125M208 119 191 125" stroke="#435864" stroke-width="7" stroke-linecap="round"/>
+<circle cx="53" cy="114" r="8" fill="#d9b679" stroke="#34434a" stroke-width="3"/>
+<circle cx="203" cy="114" r="8" fill="#d9b679" stroke="#34434a" stroke-width="3"/>
+<circle cx="53" cy="114" r="2.8" fill="#fff2c0"/><circle cx="203" cy="114" r="2.8" fill="#fff2c0"/>
+<path d="M91 51Q129 29 166 51" fill="none" stroke="#edf3de" stroke-width="4" opacity=".5" stroke-linecap="round"/>
 `,
     brush:`<!-- A miniature lacquered painter's brush clipped behind one ear -->
 <path d="M181 90 207 29" stroke="#604238" stroke-width="8" stroke-linecap="round"/>
@@ -118,5 +161,8 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
     monocle:`<circle cx="164" cy="124" r="24" fill="#e6f7f1" fill-opacity=".12" stroke="#ca9b4d" stroke-width="5"/><circle cx="164" cy="124" r="20" fill="none" stroke="#fff0ba" stroke-width="1.7"/><path d="M182 141Q197 159 178 186Q168 200 173 211" stroke="#cb9d4f" stroke-width="3.5" fill="none" stroke-linecap="round"/><circle cx="173" cy="212" r="4" fill="#d5b070" stroke="#34434a" stroke-width="1.5"/>`,
     stars:`<path d="M75 143 79 152 88 153 81 160 82 169 75 165 67 169 68 160 61 153 71 152ZM183 143 187 152 195 153 189 160 190 169 183 165 175 169 176 160 169 153 179 152Z" fill="#e9c36c" stroke="#34434a" stroke-width="2"/>`
   };
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="'+s+'" height="'+s+'" class="pws-maskot-svg" aria-hidden="true"><defs><linearGradient id="fur" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ffdea1"/><stop offset="1" stop-color="#d78b5b"/></linearGradient><linearGradient id="green"><stop stop-color="#a9d77f"/><stop offset="1" stop-color="#5b9f61"/></linearGradient><linearGradient id="cloth"><stop stop-color="#709ba0"/><stop offset="1" stop-color="#365c69"/></linearGradient></defs>'+outfits[m.clothes]+paths[m.animal]+faces[m.face]+hats[m.hat]+'</svg>';
+  // Helmet uses species-specific openings so rabbit ears and frog eye domes remain recognizable.
+  const equippedHat=m.hat==='bascinet'&&m.animal==='frog'?"<!-- Frog-fitted tournament bascinet; leaves raised eye domes visible. -->\n<path d=\"M32 110Q25 73 47 36Q76 8 127 5Q182 8 209 36Q230 76 224 110\n L198 120Q194 90 184 78Q166 55 149 51L128 54L106 51Q85 56 73 79Q62 91 57 120Z\"\n fill=\"#91a5a9\" stroke=\"#34434a\" stroke-width=\"6\" fill-rule=\"evenodd\"/>\n<!-- Helmet has open raised eye ports so amphibian eye silhouette is not swallowed. -->\n<path d=\"M53 78Q59 48 93 43Q117 43 124 67Q128 40 151 43Q188 46 197 78\" fill=\"none\" stroke=\"#354b51\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<path d=\"M64 68Q77 47 101 54M154 54Q180 47 191 69\" fill=\"none\" stroke=\"#edf5e4\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n<path d=\"M119 48Q128 36 137 48L147 102Q128 110 109 102Z\" fill=\"#aabdc0\" stroke=\"#34434a\" stroke-width=\"4.5\"/>\n<path d=\"M115 85H141M117 94H139\" stroke=\"#5b6e72\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M39 103Q30 144 41 177L61 198 82 184Q70 154 74 129L66 106Z\" fill=\"#8ea3aa\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M216 103Q225 144 214 177L194 198 173 184Q185 154 181 129L189 106Z\" fill=\"#8ea3aa\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M44 143 51 150 44 158 51 167M211 143 204 150 211 158 204 167\" stroke=\"#e2e8df\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/>\n<circle cx=\"53\" cy=\"113\" r=\"8\" fill=\"#dbb87b\" stroke=\"#34434a\" stroke-width=\"3\"/>\n<circle cx=\"203\" cy=\"113\" r=\"8\" fill=\"#dbb87b\" stroke=\"#34434a\" stroke-width=\"3\"/>\n":
+    m.hat==='bascinet'&&m.animal==='rabbit'?"<!-- Rabbit-fitted helm: tall ears pass through two visible slotted openings. -->\n<path d=\"M24 118Q21 71 62 40Q87 22 128 20Q177 21 201 46Q237 78 231 118\n L199 117Q197 91 180 75L173 67 167 86Q149 99 128 99Q106 99 89 85L82 67 75 75Q57 91 55 117Z\"\n fill=\"#8fa5ab\" stroke=\"#34434a\" stroke-width=\"6\" stroke-linejoin=\"round\"/>\n<path d=\"M55 67Q82 38 100 45M156 45Q178 36 203 68\" fill=\"none\" stroke=\"#e0eee7\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<path d=\"M70 85Q128 106 186 85L193 107Q126 116 63 108Z\" fill=\"#adc2c4\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M78 96Q127 107 178 96\" stroke=\"#f6f2d9\" stroke-width=\"4.5\" fill=\"none\" stroke-linecap=\"round\"/>\n<path d=\"M38 102Q27 140 42 169L60 193 84 185 69 145 71 119Z\" fill=\"#8c9fa8\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M218 102Q229 140 214 169L196 193 172 185 187 145 185 119Z\" fill=\"#8c9fa8\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M45 140 54 147 46 154 57 162M211 140 202 147 210 154 199 162\" fill=\"none\" stroke=\"#d6e3db\" stroke-width=\"3.5\"/>\n<circle cx=\"63\" cy=\"119\" r=\"7\" fill=\"#eacb8a\" stroke=\"#34434a\" stroke-width=\"3\"/>\n<circle cx=\"193\" cy=\"119\" r=\"7\" fill=\"#eacb8a\" stroke=\"#34434a\" stroke-width=\"3\"/>\n":hats[m.hat];
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="'+s+'" height="'+s+'" class="pws-maskot-svg" aria-hidden="true"><defs><linearGradient id="fur" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ffdea1"/><stop offset="1" stop-color="#d78b5b"/></linearGradient><linearGradient id="green"><stop stop-color="#a9d77f"/><stop offset="1" stop-color="#5b9f61"/></linearGradient><linearGradient id="cloth"><stop stop-color="#709ba0"/><stop offset="1" stop-color="#365c69"/></linearGradient></defs>'+outfits[m.clothes]+paths[m.animal]+faces[m.face]+equippedHat+'</svg>';
 }

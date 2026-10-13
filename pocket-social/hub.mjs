@@ -9,10 +9,10 @@ const backgroundModes=new Set(['preset','drawing']);
 const portraitFrames=new Set(['none','wood','gilt','worn-gilt']);
 const maskotAnimals=new Set(['cat','rabbit','frog']);
 const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush']);
-const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer']);
+const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom']);
 const maskotFaces=new Set(['none','glasses','stars','monocle']);
 const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок']);
-const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald']]);
+const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom']]);
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
   if(!maskotAnimals.has(value.animal)||!maskotHats.has(value.hat)||!maskotClothes.has(value.clothes)||!maskotFaces.has(value.face))return false;
@@ -20,6 +20,7 @@ function validMaskot(value,unlocked){
   if((value.hat==='veil'||value.clothes==='wedding')&&!unlocked.includes('wedding'))return false;
   if(value.hat==='bascinet'&&!unlocked.includes('knight'))return false;
   if(value.clothes==='tabard'&&!unlocked.includes('herald'))return false;
+  if(value.clothes==='groom'&&!unlocked.includes('groom'))return false;
   for(const category of ['hat','clothes','face'])
     if(zamazkaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!ownedAchievementItem(value[category],unlocked))return false;
   return true;

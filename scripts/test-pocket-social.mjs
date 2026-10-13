@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {PocketSocial} from '../pocket-social/hub.mjs';
-import {mascotSvg,safeMascot} from '../shared/capabilities/maskot.js';
+import {mascotSvg,safeMascot,mascotPublicUnlocks} from '../shared/capabilities/maskot.js';
 
 for(const animal of ['cat','rabbit','frog']){
   for(const outfit of ['tunic','vest','mantle']){
@@ -120,6 +120,33 @@ assert.equal((await call(0,'me')).profile.unlocked.includes('herald'),true);
 assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'bascinet'}})).httpStatus,400);
 assert.equal(safeMascot({animal:'cat',hat:'bascinet',clothes:'tabard',face:'none'},['knight']).clothes,'tunic');
 assert.equal(safeMascot({animal:'cat',hat:'bascinet',clothes:'tabard',face:'none'},['knight','herald']).hat,'bascinet');
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'groom'}})).httpStatus,400,'unearned wedding tuxedo denied');
+assert.equal((await call(0,'redeem',{code:'GROOM-INVALID'})).httpStatus,400);
+const weddingSuit=(await call(0,'redeem',{code:'groom-2026'}));
+assert.equal(weddingSuit.reward,'groom');
+assert.equal(weddingSuit.already,false);
+assert.equal((await call(0,'redeem',{code:'GROOM-2026'})).already,true,'groom code is repeat-safe');
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'groom'}})).ok,true);
+assert.equal((await call(0,'me')).profile.maskot.clothes,'groom');
+assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'groom'}})).httpStatus,400,'groom cosmetic cannot be used by another account');
+assert.equal((await call(1,'user?id='+users[0].id)).profile.maskot.clothes,'groom','other users can see validated wedding tuxedo');
+assert.ok(mascotPublicUnlocks.includes('groom'),'public portrait renderer must preserve verified groom garment');
+for(const animal of ['cat','rabbit','frog']){
+  const equipped={animal,hat:'bascinet',clothes:'tabard',face:'none'};
+  const rendered=mascotSvg(equipped,{unlocks:['knight','herald']});
+  assert.match(rendered,/full|Wide|skull|head|bascinet|helm|surcoat/i);
+  assert.match(rendered,/M16 255/,'tabard has full-width lower robe, not tiny overlay');
+  if(animal==='rabbit')assert.match(rendered,/Rabbit-fitted helm/,'rabbit ears stay visible');
+  else if(animal==='frog')assert.match(rendered,/Frog-fitted tournament bascinet/,'frog protruding eyes stay visible');
+  else assert.match(rendered,/full-size raised-visor bascinet/,'wide bascinet on cat');
+  assert.doesNotMatch(rendered,/undefined|<script|foreignObject|onload=/i);
+  const tux=mascotSvg({animal,hat:'none',clothes:'groom',face:'none'},{unlocks:['groom']});
+  assert.match(tux,/Formal groom/,'new authored tuxedo layer');
+  assert.match(tux,/M14 255/,'full body wedding jacket, not undersized vest');
+  assert.equal(safeMascot({animal,hat:'none',clothes:'groom',face:'none'},[]).clothes,'tunic','locked cosmetics fallback safely');
+  assert.equal(safeMascot({animal,hat:'none',clothes:'groom',face:'none'},['groom']).clothes,'groom');
+}
+
 for(const animal of ['cat','rabbit','frog']){
   for(const kind of [{hat:'bascinet',clothes:'tunic',unlocks:['knight']},{hat:'none',clothes:'tabard',unlocks:['herald']}]){
     const svg=mascotSvg({animal,hat:kind.hat,clothes:kind.clothes,face:'none'},{unlocks:kind.unlocks});
