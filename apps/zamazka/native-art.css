@@ -1,0 +1,111 @@
+/* Each museum frame follows the physical dimensions of its painting.
+   The canvas still speaks 600x450 to PocketNet, but paints the FULL original:
+   these presentation ratios undo its logical raster stretch. No letterbox. */
+:root{--zamazka-fallback-aspect:1.3333333}
+
+/* Museum wall: gilded trim hugs the actual painting, including portraits. */
+.gallery .picture-image{
+ display:flex;align-items:center;justify-content:center;
+ width:max-content;max-width:100%;margin-inline:auto;
+ background:transparent;
+}
+.gallery .picture-image img{
+ display:block;width:auto!important;height:auto!important;
+ max-width:100%;max-height:min(35dvh,390px);
+ aspect-ratio:auto!important;object-fit:contain!important;
+ background:transparent!important;
+}
+
+/* The two-frame comparison is physically as tall or wide as the original. */
+.screen .unveil-frame,
+.reveal-main .unveil-frame,.waiting-work .unveil-frame{
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+ width:min(100%,calc(66dvh * var(--art-aspect,var(--zamazka-fallback-aspect))),1050px)!important;
+ max-width:100%;max-height:66dvh;
+}
+.screen .unveil-frame canvas{
+ width:100%!important;height:100%!important;
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+ object-fit:fill!important;
+}
+
+/* Stable 600x450 world mapping with a natural physical editor frame.
+   Both x and y input coordinates still follow the DOM dimensions. */
+.restore .viewport{
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+ width:min(100%,calc((100dvh - 235px) * var(--art-aspect,var(--zamazka-fallback-aspect))),1400px)!important;
+ max-height:calc(100dvh - 185px);
+}
+.restore .viewport canvas{
+ width:100%;height:100%;object-fit:fill!important;
+}
+
+/* The voting wall keeps all five original silhouettes without a false
+   4:3 canvas, horizontal cropping, or painted padding inside the border. */
+.stake-gallery .stake-frame{
+ display:flex;align-items:center;justify-content:center;
+ min-width:0;min-height:0;
+}
+.suspect-gallery .stake-frame img,
+.stake-frame img,.verdict-image img,
+.reveal-option-image img{
+ width:auto!important;height:auto!important;max-width:100%;
+ max-height:min(31dvh,340px);
+ aspect-ratio:auto!important;object-fit:contain!important;
+ background:transparent!important;margin-inline:auto;
+}
+.suspect-gallery .stake-frame canvas,
+.stake-frame canvas,.reveal-option-image canvas{
+ display:block;
+ width:min(100%,calc(31dvh * var(--art-aspect,var(--zamazka-fallback-aspect))))!important;
+ height:auto!important;max-width:100%;
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+ object-fit:fill!important;background:transparent!important;margin-inline:auto;
+}
+.verdict-image,.reveal-option-image{
+ display:flex;align-items:center;justify-content:center;
+ min-width:0;
+}
+.reveal-option-image img,.reveal-option-image canvas{
+ max-height:min(19dvh,170px);
+}
+.reveal-option-image canvas{
+ width:min(100%,calc(19dvh * var(--art-aspect,var(--zamazka-fallback-aspect))))!important;
+}
+
+/* Catalog cards and the full-resolution lightbox are also true-sized. */
+.round-review-grid .round-art-image{
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+ width:min(100%,calc(270px * var(--art-aspect,var(--zamazka-fallback-aspect))))!important;
+ height:auto;max-height:270px;align-self:center;
+}
+.round-art-image canvas{
+ object-fit:fill!important;
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+}
+.round-view-window{
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+ width:min(100%,calc(min(64dvh,550px,100dvh - 240px) * var(--art-aspect,var(--zamazka-fallback-aspect))))!important;
+ max-height:min(64dvh,550px);
+}
+.round-view-image canvas{object-fit:fill!important;}
+#largeCandidate{
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+ width:min(100%,calc(55dvh * var(--art-aspect,var(--zamazka-fallback-aspect))))!important;
+ height:auto!important;margin-inline:auto;
+ object-fit:fill!important;
+}
+.screen .compare img{aspect-ratio:auto!important;width:100%;height:auto;object-fit:contain;}
+.screen .compare canvas{
+ aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
+ width:100%;height:auto;object-fit:fill!important;
+}
+@media(max-width:700px){
+ .gallery .picture-image img{max-height:30dvh}
+ .stake-frame img,.verdict-image img{max-height:26dvh}
+ .stake-frame canvas{width:min(100%,calc(26dvh * var(--art-aspect,1.3333)))!important}
+ .reveal-option-image img,.reveal-option-image canvas{max-height:15dvh}
+ .reveal-option-image canvas{width:min(100%,calc(15dvh * var(--art-aspect,1.3333)))!important}
+ .restore .viewport{width:min(100%,calc((100dvh - 245px) * var(--art-aspect,1.3333)))!important;max-height:calc(100dvh - 205px)}
+ .round-view-window{width:min(100%,calc(min(58dvh,100dvh - 220px) * var(--art-aspect,1.3333)))!important;max-height:58dvh}
+}
