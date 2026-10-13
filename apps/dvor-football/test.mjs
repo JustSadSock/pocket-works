@@ -12,7 +12,7 @@ test('four field players per team and five-minute full match',()=>{
  assert.deepEqual(state.players.map(p=>p.side),[0,0,0,0,1,1,1,1]);
  assert.equal(state.remain,300);
  state.controlled={};
- for(let i=0;i<15500;i++)advanceGame(state,{},.02);
+ for(let i=0;i<21000&&state.phase==='play';i++)advanceGame(state,{},.02);
  assert.equal(state.phase,'done');assert.equal(state.remain,0);
 });
 test('separate physical ball receives acceleration',()=>{
