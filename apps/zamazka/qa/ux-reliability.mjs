@@ -62,3 +62,6 @@ import './kick-player.mjs';
 
 // Coin autovote and artwork-aspect regression shares the stable UX gate.
 import './coins-and-aspect.mjs';
+
+// Phone-sized touch controls, swipe navigation, and safe-area regressions.
+import './mobile-touch.mjs';
