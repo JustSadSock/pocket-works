@@ -132,8 +132,8 @@
     background:#d3c2a6;
   }
   .mobile-preview .gallery .picture-image img {
-    display:block;width:100%;height:100%;max-width:100%;max-height:100%;
-    aspect-ratio:auto;object-fit:contain;
+    display:block;width:100%!important;height:100%!important;max-width:100%;max-height:100%;
+    aspect-ratio:auto!important;object-fit:contain!important;
   }
   .mobile-preview .gallery .picture-index {margin-top:8px;font-size:10px}
   .mobile-preview .gallery .picture .caption {
@@ -155,7 +155,7 @@
   .restore>.work-area {padding:clamp(10px,1.3vh,17px) 19px}
   .restore .viewport {
     aspect-ratio:var(--art-aspect,1.3333);
-    width:min(100%,calc((100dvh - 153px)*var(--art-aspect,1.3333)),1550px);
+    width:min(100%,calc((100dvh - 153px)*var(--art-aspect,1.3333)),1550px)!important;
     max-height:calc(100dvh - 153px);
     border-width:7px;
   }
@@ -199,8 +199,8 @@
   }
   .reveal-main {min-width:0}
   .reveal-main .unveil-frame {
-    width:min(100%,calc((100dvh - 270px)*1.33333),1150px);
-    max-width:100%;margin:10px auto 12px;
+    width:min(100%,calc((100dvh - 245px)*var(--art-aspect,1.3333)),1150px)!important;
+    max-width:100%;max-height:calc(100dvh - 225px);margin:10px auto 12px;
   }
   .reveal-brief {align-self:start;padding-left:clamp(18px,2vw,36px)}
   .reveal-brief>.stack .btn {min-height:48px;font-size:14px}
@@ -277,7 +277,7 @@
   .reveal-phase>.phase-body {min-height:0}
   .restore .viewport {
     max-height:calc(100dvh - 130px);
-    width:min(100%,calc((100dvh - 130px)*var(--art-aspect,1.3333)));
+    width:min(100%,calc((100dvh - 130px)*var(--art-aspect,1.3333)))!important;
   }
   .restore>.work-tools {gap:7px;padding-top:9px;padding-bottom:9px}
   .restore .tools>.tool {min-height:51px}
