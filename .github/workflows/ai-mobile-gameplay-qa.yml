@@ -100,10 +100,12 @@ jobs:
             const changedAppSlugs = files
               .map((file) => /^apps\/([^/]+)\//.exec(file)?.[1])
               .filter((slug) => slug && !slug.startsWith('_'));
+            const natyazhenieQaChange = files.includes('tests/e2e/natyazhenie-landscape.spec.ts');
             // Exercise real CANTICA and MECHANICA screenshots when changing the
             // anti-clone QA itself, not only when an application changes.
             const targets = [...new Set([
               ...changedAppSlugs,
+              ...(natyazhenieQaChange ? ['natyazhenie'] : []),
               ...(isVisualGateChange ? ['mechanica', 'cantica-glass'] : [])
             ])].sort();
             const godotTransportFiles = new Set([
