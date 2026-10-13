@@ -56,7 +56,13 @@ export const ART_SCHOOLS = [
  "Италия",
  "Италия",
  "Италия",
- "Италия"
+ "Италия",
+ // Curated comic, grotesque and mythological classics — catalogue IDs 54–71.
+ "Фландрия", "Фландрия", "Фландрия", "Фландрия",
+ "Нидерланды", "Нидерланды", "Нидерланды",
+ "Италия", "Италия", "Италия",
+ "Нидерланды", "Франция", "Фландрия", "Франция",
+ "Испания", "Нидерланды", "Испания", "Италия"
 ];
 
 // Work-specific production places. In particular, the Chicago version of
