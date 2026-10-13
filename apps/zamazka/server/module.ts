@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=11;
+export const RULESET_VERSION=12;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 // 0 = untimed drawing; only committed submissions from every participant end it.
@@ -86,19 +86,19 @@ function step(s:State){
 }
 function eligible(s:State,target:string,connected:string[]){return members(s).filter(p=>p.id!==target&&connected.includes(p.id))}
 function normalize(raw:unknown):Stroke[]|null{
- if(!Array.isArray(raw)||raw.length>100)return null;
+ if(!Array.isArray(raw)||raw.length>400)return null;
  let total=0;const out:Stroke[]=[];
  for(const item of raw){
    if(!item||typeof item!=='object')return null;
    const o=item as Record<string,unknown>;
-   if(!/^#[0-9a-f]{6}$/i.test(String(o.c))||!Number.isFinite(o.s)||Number(o.s)<1||Number(o.s)>48||!['brush','pencil','spray','erase','fill'].includes(String(o.t)))return null;
-   if(!Array.isArray(o.p)||o.p.length>(o.t==='fill'?1:45)||o.p.length<1)return null;
+   if(!/^#[0-9a-f]{6}$/i.test(String(o.c))||!Number.isFinite(o.s)||Number(o.s)<1||Number(o.s)>48||!['brush','pencil','spray','erase','fill','smudge'].includes(String(o.t)))return null;
+   if(!Array.isArray(o.p)||o.p.length>(o.t==='fill'?1:96)||o.p.length<1)return null;
    const points:number[][]=[];
    for(const point of o.p){
      if(!Array.isArray(point)||point.length!==2||point.some(v=>!Number.isFinite(v))||point[0]<0||point[0]>600||point[1]<0||point[1]>450)return null;
      points.push([Math.round(point[0]*10)/10,Math.round(point[1]*10)/10]);
    }
-   total+=points.length;if(total>2000)return null;
+   total+=points.length;if(total>12000)return null;
    out.push({c:String(o.c),s:Number(o.s),t:String(o.t),p:points});
  }
  return out;
@@ -191,7 +191,7 @@ const module: PocketModule<State>={
      if(!item||item.strokes!==null||a.round!==state.round||a.art!==item.art||a.variation!==item.variation)
        return {state,events:notice(id,'Этот рисунок уже завершён или относится к другому раунду.')};
      if(typeof a.revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(a.revision)||
-        !Number.isInteger(a.parts)||a.parts<1||a.parts>16||
+        !Number.isInteger(a.parts)||a.parts<1||a.parts>64||
         !Number.isInteger(a.index)||a.index<0||a.index>=a.parts||
         !Array.isArray(a.strokes)||a.strokes.length>8)
        return {state,events:notice(id,'Некорректная часть рисунка.')};
@@ -210,7 +210,7 @@ const module: PocketModule<State>={
        return {state,events:notice(id,'Части рисунка пришли не по порядку. Повторяем сохранение.')};
      // Most saves differ only by their last few strokes. Keep the unchanged
      // prefix by reference to the committed backup instead of duplicating a
-     // 2000-point painting in the persistent room state for every player.
+     // a large painting in the persistent room state for every player.
      const previous=state.drafts?.[id]||[];
      for(const stroke of strokes){
        if(!assembling.strokes.length&&assembling.prefix<previous.length&&
@@ -220,7 +220,7 @@ const module: PocketModule<State>={
      const totalStrokes=assembling.prefix+assembling.strokes.length;
      const totalPoints=previous.slice(0,assembling.prefix).reduce((n,stroke)=>n+stroke.p.length,0)+
        assembling.strokes.reduce((n,stroke)=>n+stroke.p.length,0);
-     if(totalStrokes>100||totalPoints>2000){
+     if(totalStrokes>400||totalPoints>12000){
        delete state.draftAssemblies[id];
        return {state,events:notice(id,'Превышен лимит линий или точек.')};
      }
