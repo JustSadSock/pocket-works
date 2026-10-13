@@ -95,20 +95,37 @@ export function floodFillRaster({width,height,walls,zone,output,point,color}){
  }
  return tail;
 }
+// The alpha of the current (possibly smudged) contour protects its visible
+// pigment from the bucket while antialiased edges blend with the new colour.
+export function preservePaintContours(output,original,walls){
+ for(let i=0;i<output.length;i+=4){
+  const alpha=walls[i+3]/255;
+  if(!alpha)continue;
+  const keep=alpha*alpha*(3-2*alpha);
+  for(let ch=0;ch<3;ch++)
+   output[i+ch]=Math.round(output[i+ch]*(1-keep)+original[i+ch]*keep);
+ }
+}
 function fillRegion(lines,paint,zoneMask,p,colour){
  const w=lines.canvas.width,h=lines.canvas.height;
  const walls=lines.ctx.getImageData(0,0,w,h);
  const current=paint.ctx.getImageData(0,0,w,h);
+ const inkBefore=new Uint8ClampedArray(current.data);
  const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
  const filled=floodFillRaster({
    width:w,height:h,walls,zone:zoneMask,output:current,
    point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
  });
- if(filled){paint.ctx.putImageData(current,0,0);paint.ctx.drawImage(lines.canvas,0,0,W,H)}
+ if(filled){
+   // Keep existing, potentially blended contour pigment instead of painting
+   // the old, un-smudged line layer back over the bucket fill.
+   preservePaintContours(current.data,inkBefore,walls.data);
+   paint.ctx.putImageData(current,0,0);
+ }
 }
 // Drag colour behind the nib, mixing it with neighbouring pigment.
 // Stored strokes stay as compact vectors and replay deterministically.
-function smudgeStamp(ctx,x,y,size,dx,dy){
+function smudgeStamp(ctx,x,y,size,dx,dy,mask=false){
  const scale=ctx.canvas.width/W;
  const radius=Math.min(75,Math.max(3,Math.round(size*scale*.56)));
  const pull=Math.max(2,Math.round(radius*.34)),blur=Math.max(1,Math.round(radius*.10));
@@ -126,7 +143,10 @@ function smudgeStamp(ctx,x,y,size,dx,dy){
    const weight=.72*Math.pow(1-dist,1.45),i=at(px,py);
    const a=at(px-sx,py-sy),b=at(px-sx+blur,py-sy),c=at(px-sx-blur,py-sy),
          d=at(px-sx,py-sy+blur),e=at(px-sx,py-sy-blur);
-   for(let ch=0;ch<3;ch++){
+   // The flood barrier has transparent pixels. Smudge its alpha only,
+   // so a softened contour no longer leaves an invisible hard wall.
+   const start=mask?3:0,end=mask?4:3;
+   for(let ch=start;ch<end;ch++){
     const pigment=(src[a+ch]*3+src[b+ch]+src[c+ch]+src[d+ch]+src[e+ch])/7;
     dst[i+ch]=src[i+ch]*(1-weight)+pigment*weight;
    }
@@ -134,14 +154,14 @@ function smudgeStamp(ctx,x,y,size,dx,dy){
  }
  ctx.putImageData(pixels,left,top);
 }
-export function smudgeStroke(ctx,stroke,from=0){
+export function smudgeStroke(ctx,stroke,from=0,mask=false){
  const pts=stroke.p||[];if(!pts.length)return;
  const spacing=Math.max(1.4,Math.min(7,stroke.s*.23));
- if(from<=0)smudgeStamp(ctx,pts[0][0],pts[0][1],stroke.s,0,0);
+ if(from<=0)smudgeStamp(ctx,pts[0][0],pts[0][1],stroke.s,0,0,mask);
  for(let i=Math.max(1,from);i<pts.length;i++){
   const prev=pts[i-1],next=pts[i],dx=next[0]-prev[0],dy=next[1]-prev[1];
   const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/spacing));
-  for(let j=1;j<=steps;j++)smudgeStamp(ctx,prev[0]+dx*j/steps,prev[1]+dy*j/steps,stroke.s,dx,dy);
+  for(let j=1;j<=steps;j++)smudgeStamp(ctx,prev[0]+dx*j/steps,prev[1]+dy*j/steps,stroke.s,dx,dy,mask);
  }
 }
 function renderStrokes(ctx,strokes,zone){
@@ -154,7 +174,11 @@ function renderStrokes(ctx,strokes,zone){
  const zoneMask=area.ctx.getImageData(0,0,area.canvas.width,area.canvas.height);
  for(const stroke of strokes){
   if(stroke.t==='fill'){fillRegion(lines,paint,zoneMask,stroke.p[0],stroke.c);continue}
-  if(stroke.t==='smudge'){smudgeStroke(paint.ctx,stroke);continue}
+  if(stroke.t==='smudge'){
+   smudgeStroke(paint.ctx,stroke);
+   smudgeStroke(lines.ctx,stroke,0,true);
+   continue;
+  }
   if(stroke.t==='erase'){
    drawStroke(paint.ctx,stroke);
    lines.ctx.save();lines.ctx.globalCompositeOperation='destination-out';
