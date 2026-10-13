@@ -105,6 +105,28 @@ assert.equal((await call(0,'profile',{...aliceCard})).ok,true,'old clients prese
 assert.equal((await call(0,'me')).profile.maskot.hat,'helmet','legacy update keeps new layers');
 assert.equal((await call(0,'me')).profile.backgroundMode,'preset');
 assert.equal((await call(0,'me')).profile.portraitFrame,'wood');
+
+const beforeMedieval={...plainMaskot,hat:'bascinet'};
+assert.equal((await call(0,'profile',{...aliceCard,maskot:beforeMedieval})).httpStatus,400,'locked bascinet denied');
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'tabard'}})).httpStatus,400,'locked herald tabard denied');
+assert.equal((await call(0,'redeem',{code:'VIGIL-BAD'})).httpStatus,400);
+assert.equal((await call(0,'redeem',{code:'VIGIL-1347'})).reward,'knight');
+assert.equal((await call(0,'redeem',{code:'VIGIL-1347'})).already,true);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:beforeMedieval})).ok,true);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'tabard'}})).httpStatus,400);
+assert.equal((await call(0,'redeem',{code:'HERALD-1415'})).reward,'herald');
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'bascinet',clothes:'tabard'}})).ok,true);
+assert.equal((await call(0,'me')).profile.unlocked.includes('herald'),true);
+assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'bascinet'}})).httpStatus,400);
+assert.equal(safeMascot({animal:'cat',hat:'bascinet',clothes:'tabard',face:'none'},['knight']).clothes,'tunic');
+assert.equal(safeMascot({animal:'cat',hat:'bascinet',clothes:'tabard',face:'none'},['knight','herald']).hat,'bascinet');
+for(const animal of ['cat','rabbit','frog']){
+  for(const kind of [{hat:'bascinet',clothes:'tunic',unlocks:['knight']},{hat:'none',clothes:'tabard',unlocks:['herald']}]){
+    const svg=mascotSvg({animal,hat:kind.hat,clothes:kind.clothes,face:'none'},{unlocks:kind.unlocks});
+    assert.match(svg,/stroke=/);assert.doesNotMatch(svg,/undefined|<script|foreignObject/i);
+  }
+}
+
 const paint='data:image/webp;base64,AAAA';
 assert.equal((await call(0,'profile',{...aliceCard,artwork:paint,backgroundMode:'drawing',portraitFrame:'gilt'})).ok,true);
 let drawn=(await call(0,'me')).profile;
