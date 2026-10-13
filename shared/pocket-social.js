@@ -1,12 +1,13 @@
 import {pocketAvatarMarkup} from './capabilities/identity.js';
+import {zamazkaAchievements} from './capabilities/zamazka-achievements.js';
 import {mountCardCanvas} from './capabilities/card-studio.js';
 import {mascotSvg,safeMascot,mascotAnimals,mascotHats,mascotClothes,mascotFaces,mascotTitles} from './capabilities/maskot.js';
 // Pocket Social shared UI. No dependency on a specific app runtime or framework.
 const q=(s,root=document)=>root.querySelector(s);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#965545'],['lilac','Сирень','#776185'],['ocean','Океан','#347e8c'],['night','Ночь','#252d39'],['paper','Бумага','#d6bea1']];
+const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#965545'],['lilac','Сирень','#776185'],['ocean','Океан','#347e8c'],['night','Ночь','#252d39'],['paper','Бумага','#d6bea1'],['gallery','Галерея при свечах','#846142']];
 const frames=[['clean','Чистая'],['double','Двойная'],['corners','Углы'],['stamp','Марка']];
-const portraitFrames=[['none','Без рамки'],['wood','Резное дерево'],['gilt','Позолоченная']];
+const portraitFrames=[['none','Без рамки'],['wood','Резное дерево'],['gilt','Позолоченная'],['worn-gilt','Потёртая позолота']];
 const colors=['#273d46','#fff8e6','#d75e55','#f2ad6c','#f2d478','#82aa73','#478d8c','#6092bd','#8865a3','#c87eac','#8a604d','#101c29'];
 const errors={invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
@@ -133,7 +134,7 @@ async function loadCloudUsage(){
 }
 const maskotCategories=[
   ['animal','Зверь'],['hat','Голова'],['clothes','Одежда'],['face','Лицо'],
-  ['portrait','Рамка'],['background','Фон'],['account','Профиль']
+  ['portrait','Рамка'],['background','Фон'],['achievements','Награды'],['account','Профиль']
 ];
 function paintingStudio(){
   return '<section class="pws-studio" aria-label="Редактор нарисованного фона">'+
@@ -160,20 +161,27 @@ function editor(){
   const d=state.draft,m=d.maskot||safeMascot(null),unlocks=state.me?.profile?.unlocked||[];
   const secretHats=[...(unlocks.includes('astronaut')?[['helmet','Шлем космонавта']]:[]),
     ...(unlocks.includes('wedding')?[['veil','Фата']]:[]),
-    ...(unlocks.includes('knight')?[['bascinet','Бацинет стража']]:[])];
+    ...(unlocks.includes('knight')?[['bascinet','Бацинет стража']]:[]),
+    ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[])];
   const secretClothes=[...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
     ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[]),
-    ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[])];
+    ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[]),
+    ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[])];
+  const rewardFace=[...mascotFaces,...(unlocks.includes('zamazka.sharp-eye')?[['monocle','Монокль']]:[])];
+  const rewardTitles=mascotTitles.filter(t=>!['Подмастерье','Знаток подделок'].includes(t)||
+    zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)));
+  const rewardBg=backgrounds.filter(([id])=>id!=='gallery'||unlocks.includes('zamazka.five-works'));
+  const rewardFrames=portraitFrames.filter(([id])=>id!=='worn-gilt'||unlocks.includes('zamazka.perfect-forgery'));
   const category=state.editorTab;
   const options=(rows,field)=>'<div class="pws-maskot-options">'+rows.map(([id,label])=>
     '<button type="button" data-pws="maskot-item" data-field="'+field+'" data-value="'+id+
     '" aria-pressed="'+(m[field]===id)+'"><span class="pws-maskot-option__art">'+
     mascotSvg({...m,[field]:id},{unlocks,size:92})+'</span><span>'+esc(label)+'</span></button>').join('')+'</div>';
-  const frameOptions='<div class="pws-portrait-options">'+portraitFrames.map(([id,label])=>
+  const frameOptions='<div class="pws-portrait-options">'+rewardFrames.map(([id,label])=>
     '<button type="button" data-pws="portrait-frame" data-value="'+id+
     '" aria-pressed="'+(d.portraitFrame===id)+'"><span class="pws-portrait-sample" data-portrait-frame="'+id+
     '">'+mascotSvg(m,{unlocks,size:80})+'</span><span>'+esc(label)+'</span></button>').join('')+'</div>';
-  const presetControls='<div class="pws-field"><label>Цветовая тема карточки</label><div class="pws-options">'+backgrounds.map(t=>
+  const presetControls='<div class="pws-field"><label>Цветовая тема карточки</label><div class="pws-options">'+rewardBg.map(t=>
       '<button type="button" class="pws-option pws-option--theme" style="--sample:'+t[2]+
       '" title="'+t[1]+'" aria-label="'+t[1]+'" data-pws="background" data-value="'+t[0]+
       '" aria-pressed="'+(d.background===t[0])+'"></button>').join('')+'</div></div>'+
@@ -191,12 +199,20 @@ function editor(){
   const appearance=category==='animal'?options(mascotAnimals,'animal'):
     category==='hat'?options([...mascotHats,...secretHats],'hat'):
     category==='clothes'?options([...mascotClothes,...secretClothes],'clothes'):
-    category==='face'?options(mascotFaces,'face'):
+    category==='face'?options(rewardFace,'face'):
     category==='portrait'?frameOptions:
     category==='background'?backgroundControls:
+    category==='achievements'?'<div class="pws-achievement-list"><div class="pws-achievement-count">'+
+    zamazkaAchievements.filter(a=>unlocks.includes(a.id)).length+' / '+zamazkaAchievements.length+' получено</div>'+
+    zamazkaAchievements.map(a=>{
+      const earned=unlocks.includes(a.id);
+      return '<div class="pws-achievement" data-earned="'+earned+'"><div class="pws-achievement__head"><b>'+esc(a.name)+'</b><span>'+esc(a.tier)+'</span></div>'+
+        '<p>'+esc(a.detail)+'</p><small>'+esc(a.reward)+'</small>'+
+        (earned?'<button type="button" data-pws="equip-achievement" data-value="'+a.id+'">Примерить</button>':'')+'</div>';
+    }).join('')+'</div>':
       '<div class="pws-field"><label for="pws-nickname">Никнейм</label>'+
       '<input id="pws-nickname" type="text" maxlength="20" minlength="3" value="'+esc(d.nickname)+'"></div>'+
-      '<div class="pws-field"><label for="pws-title">Титул</label><select id="pws-title">'+mascotTitles.map(t=>
+      '<div class="pws-field"><label for="pws-title">Титул</label><select id="pws-title">'+rewardTitles.map(t=>
       '<option value="'+esc(t)+'" '+(d.title===t?'selected':'')+'>'+esc(t||'Без титула')+'</option>').join('')+'</select></div>'+
       '<div class="pws-field"><label for="pws-favorite">Любимая игра</label><select id="pws-favorite">'+
       '<option value="">Не выбрана</option>'+state.catalog.map(g=>
@@ -533,6 +549,17 @@ function install(){
       state.editorTab='animal';state.artHistory=[state.draft.artwork];resetNotice();render();return}
     if(action==='maskot-tab'){state.editorTab=target.dataset.value;render();return}
     if(action==='portrait-frame'){state.draft.portraitFrame=target.dataset.value;render();return}
+    if(action==='equip-achievement'){
+      const item=zamazkaAchievements.find(a=>a.id===target.dataset.value);
+      if(!item||!(state.me.profile.unlocked||[]).includes(item.id))return;
+      if(['hat','clothes','face'].includes(item.slot))state.draft.maskot={...state.draft.maskot,[item.slot]:item.item};
+      else if(item.slot==='title')state.draft.title=item.item;
+      else if(item.slot==='background'){state.draft.background=item.item;state.draft.backgroundMode='preset'}
+      else if(item.slot==='portraitFrame')state.draft.portraitFrame=item.item;
+      state.editorTab=item.slot==='portraitFrame'?'portrait':item.slot==='background'?'background':
+        item.slot==='title'?'account':item.slot;
+      render();return;
+    }
     if(action==='background-mode'){state.draft.backgroundMode=target.dataset.value;render();return}
     if(action==='paint-open'){state.paintOpen=true;render();return}
     if(action==='paint-cancel'){
