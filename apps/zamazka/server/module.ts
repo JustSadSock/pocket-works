@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=14;
+export const RULESET_VERSION=15;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=54;
 // 0 = untimed drawing; only committed submissions from every participant end it.
@@ -32,10 +32,11 @@ function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:s
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
 function choose(s:State){
  s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1)).slice(0,5);
- // Pick different works for the first five participants; further participants repeat independently.
+ // Assign each restorer independently from the same five previewed originals.
+ // Two players may receive one painting but different damaged fragments.
  s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.turn=0;s.revealed=false;
- const shuffledArt=shuffled(s.selected);
- members(s).forEach((p,i)=>s.assignments[p.id]={art:shuffledArt[i%5],variation:Math.floor(Math.random()*0xffffffff),strokes:null});
+ members(s).forEach(p=>s.assignments[p.id]={art:s.selected[Math.floor(Math.random()*s.selected.length)],
+  variation:Math.floor(Math.random()*0xffffffff),strokes:null});
  s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
 }
 function completeVotes(s:State){
