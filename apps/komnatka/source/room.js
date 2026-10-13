@@ -6,10 +6,14 @@ export const WALLS=['#efe0ca','#d5e0ce','#edc5b9','#cad7dc','#e6d8df','#e2cfae']
 export const FLOORS=['honey','walnut','painted','tile','blush','cherry'];
 export const PATTERNS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig'];
 const hex=h=>Color3.FromHexString(h);
+const textureMaterialCache=new WeakMap();
 function materialTexture(scene,name,draw) {
+ let existing=textureMaterialCache.get(scene);
+ if(!existing){existing=new Map();textureMaterialCache.set(scene,existing);}
+ if(existing.has(name))return existing.get(name);
  const tex=new DynamicTexture(name,{width:512,height:512},scene,false,2);
  draw(tex.getContext());tex.update(false);
- const m=new StandardMaterial(name,scene);m.diffuseColor=Color3.White();m.specularColor=new Color3(.04,.04,.04);m.specularPower=8;m.diffuseTexture=tex;m.maxSimultaneousLights=6;return m;
+ const m=new StandardMaterial(name,scene);m.diffuseColor=Color3.White();m.specularColor=new Color3(.04,.04,.04);m.specularPower=8;m.diffuseTexture=tex;m.maxSimultaneousLights=6;existing.set(name,m);return m;
 }
 function wood(scene,name,color) {
  return materialTexture(scene,name,c=>{
