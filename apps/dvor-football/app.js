@@ -61,10 +61,15 @@ function show(target){
  if(target!=='game'){aimPoint=null;visual=null;chargeAt=0;shotPointer=null;}
 }
 function updateMenu(){
- const sum=Object.values(profile.stats).reduce((a,b)=>a+b,0);
+ const attributes=Object.entries(profile.stats);
+ const peak=Math.max(...attributes.map(([,value])=>value));
+ const role=attributes.find(([,value])=>value===peak)?.[0]||'control';
+ const roles={pace:'СПРИНТЕР',shot:'БОМБАРДИР',control:'ТЕХНАРЬ',pass:'ПЛЕЙМЕЙКЕР'};
+ const rating=72+peak*3;
  $('menuName').textContent=profile.name||'Форвард';
- $('menuRating').textContent='МОЯ КАРТОЧКА · '+(50+Math.round(sum*2))+' ОБЩ';
- $('cardRating').textContent=50+Math.round(sum*2);
+ $('menuRating').textContent='МОЯ КАРТОЧКА · '+rating+' ОБЩ';
+ $('cardRating').textContent=rating;
+ document.querySelector('.card-position').textContent=attributes.every(([,value])=>value===peak)?'УНИВЕРСАЛ':roles[role];
  $('cardName').textContent=(profile.name||'ФОРВАРД').toUpperCase();
  $('cardNumber').textContent='№ '+String(profile.number).padStart(2,'0');
 }
@@ -338,7 +343,7 @@ function drawPlayer(ctx,p,selected,time){
  ctx.fillStyle='#223a45';roundRect(ctx,-13,8+swing,9,8,3);ctx.fill();roundRect(ctx,4,8-swing,9,8,3);ctx.fill();
  ctx.fillStyle=skin;roundRect(ctx,-17,-13,8,20,4);ctx.fill();roundRect(ctx,9,-13,8,20,4);ctx.fill();
  ctx.fillStyle=jersey;roundRect(ctx,-12,-16,24,28,7);ctx.fill();
- ctx.fillStyle=stripe;ctx.fillRect(-3,-14,6,22);
+ ctx.fillStyle=stripe;roundRect(ctx,-9,-12,18,20,4);ctx.fill();
  ctx.fillStyle='#ffffffbb';ctx.fillRect(-9,-9,3,10);
  ctx.fillStyle='#163d47';roundRect(ctx,-11,5,22,10,3);ctx.fill();
  ctx.fillStyle=skin;ctx.beginPath();ctx.arc(0,-17,12,0,7);ctx.fill();
