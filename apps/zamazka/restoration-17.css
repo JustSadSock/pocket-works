@@ -16,7 +16,7 @@
 .stake-card{position:relative;min-width:0;background:#3a3128;border:1px solid #705940;box-shadow:0 4px #17120d,0 7px 12px #0004;display:flex;flex-direction:column;transition:background .2s,border-color .2s}
 .stake-card.has-chips{background:#4b3828;border-color:#ca9e5f;box-shadow:inset 0 0 0 1px #be975c,0 4px #17120d}
 .stake-frame{position:relative;padding:7px;background:#302821}
-.stake-frame img,.verdict-image img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#201d19;border:4px ridge #8f714b}
+.stake-frame img,.verdict-image img{width:100%;aspect-ratio:4/3;object-fit:contain;display:block;background:#201d19;border:4px ridge #8f714b}
 .stake-number{position:absolute;left:16px;top:15px;background:#201710e3;color:#f8deb0;padding:4px 7px;font:700 10px system-ui,sans-serif;letter-spacing:.1em}
 .stake-details{padding:7px 10px 6px;display:flex;flex-direction:column;gap:4px;min-height:54px}
 .stake-details strong{font:italic 15px/1.15 Georgia,serif;color:#f7e5c7}
@@ -111,7 +111,7 @@
 .expert-round .suspect-gallery{align-items:stretch}
 .suspect-gallery .stake-card{min-height:0}
 .suspect-gallery .stake-frame img,.suspect-gallery .stake-frame canvas,.reveal-option-image img,.reveal-option-image canvas{
- display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#241d16;border:4px ridge #91714c;
+ display:block;width:100%;aspect-ratio:4/3;object-fit:contain;background:#241d16;border:4px ridge #91714c;
 }
 .suspect-gallery .stake-card:focus-within{outline:2px solid #ddb879;outline-offset:2px}
 .suspect-gallery .stake-details{min-height:60px}
