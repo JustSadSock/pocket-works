@@ -504,7 +504,7 @@ function toolbar(local=false){
  return '<div class="tools">'+tools.map(([name,label])=>toolButton(name,label)).join('')+'</div>'+
  '<div class="colors" aria-label="Цвета кисти">'+palette.map((color,i)=>'<button type="button" class="swatch'+(i===0?' active':'')+'" data-color="'+color+'" aria-label="Цвет '+(i+1)+'" style="background:'+color+'"></button>').join('')+
  '<input type="color" class="color-input" id="customColor" value="#304a43" aria-label="Свой цвет"></div>'+
- '<div class="adjust"><label for="brushSize">Толщина <output id="brushSizeValue">12</output></label><input type="range" id="brushSize" aria-label="Толщина кисти" min="'+(local||Number(roomModuleVersion.slice(1))>=15?'.25':'1')+'" max="48" step=".25" value="12"><div class="adjust-actions">'+
+ '<div class="adjust"><label for="brushSize">Толщина <output id="brushSizeValue">12</output><span class="size-sample" id="sizeSample" aria-hidden="true"></span></label><input type="range" id="brushSize" aria-label="Толщина кисти" min="'+(local||Number(roomModuleVersion.slice(1))>=15?'.25':'1')+'" max="48" step=".25" value="12"><div class="adjust-actions">'+
  toolButton('undo','Отменить',true)+toolButton('redo','Вернуть',true)+
  '<button type="button" class="mode-switch" data-cmd="precision" aria-pressed="false" title="Переключить режим рисования">'+editorIcon('precision')+'<span>Прямое</span></button>'+
  '</div></div><div class="zoom-actions">'+toolButton('out','Отдалить',true)+toolButton('in','Приблизить',true)+toolButton('center','К повреждению',true)+'</div>';
@@ -514,8 +514,9 @@ function drawing(local=false){
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
   change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art),v.drawingSeconds===0)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div><div class="picker-preview" id="pickerPreview" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Включить или остановить точное перо" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>РИСОВАТЬ</strong></button><div class="precision-help" id="precisionHelp" aria-live="polite" role="status"></div><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar(local)+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Мазков: 0</div><div class="quiet" id="draftStatus" data-state="idle" role="status">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
-  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onPersistenceError:()=>notify('Не удалось сохранить черновик: проверь место в браузере.'),onSound:event=>sound(event,true),onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Предел рисунка · отмените мазок':'Мазков: '+n;if(n>=0)queueDraft()}});
+  editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onPersistenceError:()=>notify('Не удалось сохранить черновик: проверь место в браузере.'),onPersistenceStatus:state=>{if(practice||!net){draftIndicator(state==='local'?'На устройстве':state==='error'?'Не удалось сохранить':'Копия на устройстве')}},onSound:event=>sound(event,true),onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Предел рисунка · отмените мазок':'Мазков: '+n;if(n>=0)queueDraft()}});
   if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
+  editor.updateSizeSample();
   const counter=document.querySelector('#strokeCount');if(counter)counter.textContent='Мазков: '+editor.strokes.length;
   if(!local){
    if(pendingSubmit?.room===roomId&&pendingSubmit.round===view.round&&
@@ -691,8 +692,8 @@ async function achievements(){
    (earnedAchievementIds.has(a.id)?'Получено':'Не открыто')+'</b></div></article>').join('');
 }
 function collection(){
- change('<section class="page collection-page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button>'+(saved.length?'<button class="btn ghost" data-action="export-archive">Экспорт архива ↓</button>':'')+'</div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
- zamazkaCloud?.render();
+ change('<section class="page collection-page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button>'+(saved.length?'<button class="btn ghost" data-action="export-archive">Экспорт архива ↓</button>':'')+'</div><div id="archiveLocalStatus" class="archive-local-status" role="status"></div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
+ zamazkaCloud?.render();archiveWriteIndicator();
  const canvases=[...screen.querySelectorAll('[data-saved-canvas]')];
  const draw=canvas=>{if(!canvas.isConnected||canvas.dataset.loaded)return;canvas.dataset.loaded='1';const g=saved[Number(canvas.dataset.savedCanvas)];if(g)void renderArtwork(canvas,g.art,g.variation,g.strokes,true,true)};
  if('IntersectionObserver'in window){
@@ -717,17 +718,22 @@ function openArchive(index){
  const archived={phase:'archive',gallery:records,selected:[],round:1};
  openRoundViewer({index,view:archived,dialog,renderArtwork,arts:ARTS,esc,closeDialog,onNavigate:next=>openArchive(next)});
 }
+let archiveSavePromise=Promise.resolve(),archiveWriteState='ready';
+function archiveWriteIndicator(){const node=screen.querySelector('#archiveLocalStatus');if(!node)return;node.dataset.state=archiveWriteState;node.textContent=archiveWriteState==='saving'?'Сохраняем в фонде…':archiveWriteState==='error'?'Не удалось сохранить в фонд':'Фонд сохранён на устройстве'}
 function saveArtwork(art,variation,strokes){
  saved=[{art,variation,strokes,time:Date.now(),edition:ARCHIVE_EDITION},...saved].slice(0,96);
  const copy=structuredClone(saved);
- void zamazkaStore.set('archive',copy).then(()=>{
+ archiveWriteState='saving';archiveWriteIndicator();
+ // Serial writes prevent an older artwork snapshot from overwriting a newer one.
+ archiveSavePromise=archiveSavePromise.catch(()=>{}).then(()=>zamazkaStore.set('archive',copy)).then(()=>{
    try{localStorage.removeItem(GALLERY_KEY)}catch{}
-   zamazkaCloud?.schedule();
+   archiveWriteState='ready';archiveWriteIndicator();zamazkaCloud?.schedule();
+   return true;
  }).catch(()=>{
-   try{localStorage.setItem(GALLERY_KEY,JSON.stringify(copy));zamazkaCloud?.schedule()}
-   catch{notify('Архив не сохранился: в браузере закончилось место.')}
+   try{localStorage.setItem(GALLERY_KEY,JSON.stringify(copy));archiveWriteState='ready';archiveWriteIndicator();zamazkaCloud?.schedule();return true}
+   catch{archiveWriteState='error';archiveWriteIndicator();notify('Архив не сохранился: в браузере закончилось место.');return false}
  });
- return true;
+ return archiveSavePromise;
 }
 let storedPractice=null;
 function persistPractice(){
