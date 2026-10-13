@@ -109,7 +109,7 @@ export class CoursePolishLayer {
     const field = level.course18?.field;
     const seed = Number(level.id) || 19;
     const details = [];
-    for (let index = 0; index < 72; index += 1) {
+    for (let index = 0; index < 48; index += 1) {
       const t = .025 + hashNoise(index, seed, 11) * .95;
       const sample = routeSample(level.centerline, t);
       const side = index % 2 ? 1 : -1;
@@ -127,7 +127,7 @@ export class CoursePolishLayer {
     const waterMasks = (field.masks || []).filter((mask) => mask.type === 'water');
     const sandMasks = (field.masks || []).filter((mask) => mask.type === 'sand');
     const mossMasks = (field.masks || []).filter((mask) => mask.type === 'moss');
-    const landmarks = [.18, .55, .84].map((t, index) => {
+    const landmarks = [.28, .76].map((t, index) => {
       const sample = routeSample(level.centerline, t);
       const side = index % 2 ? 1 : -1;
       const offset = 150 + hashNoise(index, seed, 43) * 52;
@@ -243,20 +243,20 @@ export class CoursePolishLayer {
     const routeOutline = level.outline || [];
     if (routeOutline.length > 2) {
       this.pathWorld([...routeOutline, routeOutline[0]], field, 13.2);
-      ctx.strokeStyle = 'rgba(3,13,8,.48)';
-      ctx.lineWidth = 2.7;
+      ctx.strokeStyle = 'rgba(3,13,8,.52)';
+      ctx.lineWidth = 3.2;
       ctx.stroke();
       this.pathWorld([...routeOutline, routeOutline[0]], field, 14.2);
-      ctx.strokeStyle = terrainTint(level.visual?.materials?.stoneLight, 'rgba(224,218,184,.42)', .44);
-      ctx.lineWidth = .9;
+      ctx.strokeStyle = terrainTint(level.visual?.materials?.stoneLight, 'rgba(224,218,184,.50)', .51);
+      ctx.lineWidth = 1.25;
       ctx.stroke();
     }
 
     for (let maskIndex = 0; maskIndex < cache.waterMasks.length; maskIndex += 1) {
       const mask = cache.waterMasks[maskIndex];
-      for (let ring = 0; ring < 4; ring += 1) {
-        const pulse = this.reducedMotion ? 0 : Math.sin(time * 1.35 + maskIndex * 1.7 + ring) * .012;
-        const scale = .34 + ring * .14 + pulse;
+      for (let ring = 0; ring < 2; ring += 1) {
+        const pulse = 0;
+        const scale = .47 + ring * .29 + pulse;
         this.pathWorld(maskWorldPoints(mask, scale, 30), field, .72);
         ctx.globalAlpha = .74 + ring * .09;
         ctx.strokeStyle = waterAccent;
@@ -264,8 +264,8 @@ export class CoursePolishLayer {
         ctx.stroke();
       }
       this.pathWorld(maskWorldPoints(mask, .91, 38), field, .78);
-      ctx.setLineDash([5, 8]);
-      ctx.lineDashOffset = this.reducedMotion ? 0 : -time * 5;
+      ctx.setLineDash([6, 12]);
+      ctx.lineDashOffset = 0;
       ctx.strokeStyle = terrainTint(terrain.waterLight, 'rgba(176,226,214,.28)', .30);
       ctx.lineWidth = 1.25;
       ctx.stroke();
@@ -299,12 +299,12 @@ export class CoursePolishLayer {
 
     for (let maskIndex = 0; maskIndex < cache.mossMasks.length; maskIndex += 1) {
       const mask = cache.mossMasks[maskIndex];
-      for (let contour = 0; contour < 3; contour += 1) {
-        this.pathWorld(maskWorldPoints(mask, .44 + contour * .21, 34), field, .66);
-        ctx.setLineDash(contour === 2 ? [1.5, 5.5] : [3, 7]);
-        ctx.lineDashOffset = this.reducedMotion ? contour * 2 : time * (contour % 2 ? 1.2 : -.8);
+      for (let contour = 0; contour < 2; contour += 1) {
+        this.pathWorld(maskWorldPoints(mask, .54 + contour * .28, 34), field, .66);
+        ctx.setLineDash(contour === 0 ? [4, 12] : [2, 8]);
+        ctx.lineDashOffset = 0;
         ctx.strokeStyle = terrainTint(terrain.mossLight, 'rgba(117,166,96,.28)', .30 + contour * .035);
-        ctx.lineWidth = contour === 2 ? 1.25 : .8;
+        ctx.lineWidth = contour === 1 ? 1.1 : .7;
         ctx.stroke();
       }
       ctx.setLineDash([]);
@@ -317,7 +317,7 @@ export class CoursePolishLayer {
       if (ball && Math.hypot(detail.x - ball.x, detail.y - ball.y) < 58) continue;
       const z = field.heightAt(detail.x, detail.y) + .42;
       const point = this.renderer.worldToScreen(detail.x, detail.y, z);
-      const sway = this.reducedMotion ? 0 : Math.sin(time * 1.25 + detail.phase) * 1.7;
+      const sway = this.reducedMotion ? 0 : Math.sin(time * .46 + detail.phase) * .85;
       const size = detail.size * this.renderer.scale * 7;
       if (size < .7 || point.x < -20 || point.x > this.width + 20 || point.y < -20 || point.y > this.height + 20) continue;
       if (detail.surface === 'water') continue;
