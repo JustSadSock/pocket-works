@@ -79,3 +79,6 @@ assert.match(source,/ctx\.save\(\);clipZone\(ctx,this\.zone\);\s*ctx\.drawImage\
 assert.doesNotMatch(source,/lines\.ctx\.save\(\);clipZone\(lines\.ctx,zone\)/,
  'inside layer is not clipped a second time');
 console.log('ZAMAZKA: connected region fill, two-pixel edge underlap, no leakage and one antialiased contour OK');
+
+// Keep fill/smudge and menu regressions in the established validation gate.
+import './fill-smudge.mjs';
