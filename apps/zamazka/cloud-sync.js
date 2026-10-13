@@ -1,14 +1,16 @@
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {PocketCloudClient} from '../../shared/capabilities/cloud.js';
+import {normalizeArchiveEntry} from './artworks.js';
 const OWNER='pocket-works:zamazka:cloud-owner';
 const META=id=>'pocket-works:zamazka:cloud-meta:'+id;
 const SIGNATURE=data=>JSON.stringify(data);
 const keyOf=g=>String(g.time)+'/'+g.art+'/'+g.variation+'/'+JSON.stringify(g.strokes||[]).length;
 function combine(local,remote){
  const byKey=new Map();
- for(const g of [...remote,...local]){
-  if(!g||!Number.isFinite(g.time)||!Number.isFinite(g.art)||!Array.isArray(g.strokes))continue;
-  byKey.set(keyOf(g),g);
+ for(const original of [...remote,...local]){
+  if(!original||!Number.isFinite(original.time)||!Number.isFinite(original.art)||!Array.isArray(original.strokes))continue;
+  const g=normalizeArchiveEntry(original);
+  byKey.set(keyOf(g),g); // Old and migrated copies resolve to one archive item.
  }
  return [...byKey.values()].sort((a,b)=>b.time-a.time).slice(0,96);
 }
