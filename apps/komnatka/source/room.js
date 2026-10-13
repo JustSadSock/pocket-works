@@ -154,7 +154,7 @@ export function createRoom(scene) {
     light.range=item.type==='tablelamp'?3.8:5.0;
     practicalLights.set(item.id,light);
    }
-   light.position.set(item.x,item.y+(item.type==='floorlamp'?2.0:.62),item.z);
+   light.position.set(item.x,(Number.isFinite(item.y)?item.y:0)+(item.type==='floorlamp'?2.0:.62),item.z);
    light.intensity=.35+(1.65-.35)*nightFraction;
   }
   for(const [id,light] of practicalLights)if(!wanted.has(id)){
