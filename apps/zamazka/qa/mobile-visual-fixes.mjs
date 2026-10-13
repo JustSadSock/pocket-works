@@ -20,7 +20,7 @@ assert.match(app,/class="page collection-page"/,'archive uses new responsive lay
 assert.match(app,/class="gallery archive-gallery"/,'restorations are not big empty cards');
 assert.match(app,/class="picture-image archive-art-frame"/,'correct painting aspect passed through image parent');
 assert.match(app,/id="precisionHelp"/,'precision explanation always exists in editor');
-assert.match(app,/sessionStorage\.getItem\(PRACTICE_KEY\)\|\|localStorage\.getItem/,'can resume temporary practice');
+assert.match(app,/storedPractice\|\|JSON\.parse\(localStorage\.getItem\(PRACTICE_KEY\)/,'can resume temporary practice from IndexedDB or fallback');
 assert.match(app,/sessionStorage\.setItem\(PRACTICE_KEY,data\)/,'can temporarily save practice');
 assert.match(editor,/this\.armed=!this\.armed/,'precision button is a toggle, not second-finger hold');
 assert.match(editor,/this\.armButton\.querySelector\('strong'\)\.textContent=this\.armed\?'СТОП':'РИСОВАТЬ'/);
