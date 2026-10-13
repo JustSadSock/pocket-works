@@ -72,7 +72,7 @@ assert.equal(initial.ok, true);
 assert.equal(initial.transport, 'cloudflare-durable-objects');
 assert.ok(initial.modules.includes('zamazka'));
 assert.equal(initial.games.zamazka.minPlayers, 2);
-assert.equal(initial.games.zamazka.rulesVersion, 12);
+assert.equal(initial.games.zamazka.rulesVersion, 13);
 const firstToken = await session('Painter');
 const secondToken = await session('Observer');
 assert.notEqual(firstToken, secondToken);
@@ -85,7 +85,7 @@ try {
   first.send('create_room', { gameId: 'zamazka' });
   const created = await first.next('room_joined');
   assert.equal(created.state.phase, 'lobby');
-  assert.equal(created.version, 'v13');
+  assert.equal(created.version, 'v14');
   const roomId = created.roomId;
   const code = roomId.slice(0, 8).toUpperCase();
   second.send('join_room', { roomId: '00000000' });
@@ -117,6 +117,23 @@ try {
   const cleared=await second.next('game_event',m=>m.event?.type==='board_reset');
   assert.equal(cleared.event.payload.segments.length,0);
   assert.equal(cleared.event.payload.revision,1);
+  // Only the curator may forcibly release a guest's network room seat.
+  const guestId=fresh.event.payload.participants.find(p=>p.id!==created.players[0].id).id;
+  second.send('game_message',{payload:{type:'kick_player',targetId:created.players[0].id}});
+  assert.match((await second.next('game_event',m=>m.event?.type==='notice')).event.payload,/куратор/i);
+  first.send('game_message',{payload:{type:'kick_player',targetId:created.players[0].id}});
+  assert.match((await first.next('game_event',m=>m.event?.type==='notice')).event.payload,/нельзя/i);
+  first.send('game_message',{payload:{type:'kick_player',targetId:guestId}});
+  const removed=await second.next('room_kicked');
+  assert.equal(removed.roomId,roomId);
+  first.send('game_message',{payload:{type:'sync'}});
+  const afterKick=await first.next('game_event',m=>m.event?.type==='state'&&m.event.payload.participants.length===1);
+  assert.equal(afterKick.event.payload.board.segments.length,0);
+  second.send('game_message',{payload:{type:'sync'}});
+  assert.equal((await second.next('error')).code,'not_in_room');
+  // Kick does not permanently ban the player: a new invite still works.
+  second.send('join_room',{roomId:code});
+  assert.equal((await second.next('room_joined')).roomId,roomId);
   first.send('game_message',{payload:{type:'start',rounds:1}});
 
   const started = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.phase === 'preview');
