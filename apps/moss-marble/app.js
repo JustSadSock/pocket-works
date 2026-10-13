@@ -22,7 +22,7 @@ import {
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.14.0';
+const APP_VERSION = '1.15.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 
@@ -187,7 +187,7 @@ function syncHeader() {
   $('holeNumber').textContent = endlessActive ? String(level.section) : `${levelIndex + 1} / ${LEVELS.length}`;
   $('strokeCount').textContent = String(strokes);
   $('parCount').textContent = String(level.par);
-  $('soundBtn').textContent = save.sound ? 'Звук' : 'Тихо';
+  $('soundBtn').querySelector('b').textContent = save.sound ? 'Вкл' : 'Выкл';
   $('soundBtn').setAttribute('aria-pressed', String(save.sound));
   $('soundBtn').setAttribute('aria-label', save.sound ? 'Выключить звук' : 'Включить звук');
   $('hapticsBtn').setAttribute('aria-pressed', String(save.haptics));
@@ -213,6 +213,7 @@ function syncMenu() {
     ? `Лунка ${current.id} · ${campaign.currentStrokes} ${strokeWord(campaign.currentStrokes)}`
     : `Лунка ${current.id} · пар ${current.par}`;
   const collected = save.best.every((value) => Number.isFinite(value)) ? save.best.reduce((sum, value) => sum + value, 0) : null;
+  $('courseBest').hidden = !Number.isFinite(save.roundBest) && collected == null;
   $('courseBest').textContent = Number.isFinite(save.roundBest)
     ? `Лучший полный круг · ${save.roundBest} ${strokeWord(save.roundBest)}`
     : collected == null
@@ -227,6 +228,7 @@ function syncMenu() {
       ? `Новый код · рекорд ${save.endlessBest} ${sectionWord(save.endlessBest)}`
       : 'Новый код · без конца';
   $('newEndlessBtn').hidden = !run;
+  $('endlessBest').hidden = !(save.endlessBest > 0);
   $('endlessBest').textContent = save.endlessBest > 0
     ? `Глубже всего · ${save.endlessBest} ${sectionWord(save.endlessBest)}${Number.isFinite(save.endlessBestStrokes) ? ` · ${save.endlessBestStrokes} ${strokeWord(save.endlessBestStrokes)}` : ''}`
     : 'Бесконечный путь ещё не начат';
@@ -353,7 +355,7 @@ function preparePlayingLevel({ checkpoint = null, checkpointStrokes = 0 } = {}) 
   setMode('playing');
   livingTerrain.beginLevel();
   syncHeader();
-  showSurface(level.note);
+  // The permanent aim hint explains the first gesture; level flavour text stays off the field.
 }
 
 function startHole(index, { round = false, preserveRound = false, checkpoint = null, checkpointStrokes = 0 } = {}) {
@@ -572,6 +574,7 @@ function pointerLocal(event) {
 }
 
 function beginAim(event) {
+  if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
   if (aim.active || mode !== 'playing' || livingTerrain.isOverview() || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
   const point = pointerLocal(event);
   const ballPoint = renderer.ballScreenPoint(ball);
@@ -642,7 +645,11 @@ function finishAim(event, cancelled = false) {
   if (!aim.active || event.pointerId !== aim.pointerId) return;
   if (event.cancelable) event.preventDefault();
   const pointerId = aim.pointerId;
-  if (!cancelled) takeShot();
+  if (!cancelled) {
+    // Touch browsers may coalesce the last move into pointerup.
+    moveAim(event);
+    takeShot();
+  }
   cancelAim();
   try { if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId); } catch {}
   syncHeader();
@@ -686,7 +693,6 @@ function handlePhysicsEvent(event) {
     audio.tunnel();
     vibrate(12);
     renderer.emit(ball.x, ball.y, 'dust', 10);
-    showSurface('Тихий туннель');
   } else if (event.type === 'tunnel-blocked') {
     audio.collision('stone', Math.max(90, event.speed));
     vibrate(7);
@@ -694,7 +700,6 @@ function handlePhysicsEvent(event) {
   } else if (event.type === 'jump') {
     audio.collision('wood', Math.min(420, event.speed * .34));
     vibrate(8);
-    showSurface('Мяч оторвался от поверхности');
   } else if (event.type === 'land') {
     audio.collision('stone', Math.min(620, event.speed));
     if (event.speed > 260) vibrate(10);
@@ -702,7 +707,6 @@ function handlePhysicsEvent(event) {
   } else if (event.type === 'lip-out') {
     audio.collision('cup', Math.max(110, event.speed));
     vibrate([7, 20, 7]);
-    showSurface('Кромка вернула мяч');
   } else if (event.type === 'cup-bottom') {
     audio.collision('cup', Math.max(120, event.speed));
     vibrate(10);
@@ -868,11 +872,12 @@ function attachTilt() {
 }
 
 function toggleOverview() {
-  if (!canAimNow()) return;
+  // A second press must be able to leave overview; canAimNow() excludes overview by design.
+  if (mode !== 'playing' || !isBallStopped(ball) || ball.sunk || waterResetTimer > 0) return;
   cancelAim();
-  const active = livingTerrain.toggleOverview();
+  livingTerrain.toggleOverview();
   audio.ui();
-  showToast(active ? 'Показана вся территория' : 'Камера вернулась к мячу');
+  overviewUiKey = '';
   syncOverviewControl();
 }
 
