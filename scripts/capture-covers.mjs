@@ -13,6 +13,10 @@ const root=process.cwd(),out=path.join(root,'covers');
 const limit=Math.max(1,Math.min(24,Number(process.env.PW_COVER_LIMIT)||12));
 const shots=Math.max(3,Math.min(8,Number(process.env.PW_COVER_SHOTS)||5));
 const slugArg=(process.env.PW_COVER_SLUGS||'').split(',').map(x=>x.trim()).filter(Boolean);
+// A one-time library refresh attempts each existing app once, even if its
+// current revision already has a cover. New attempts are timestamped, so
+// later batches never recapture the same app endlessly.
+const refreshBefore=Date.parse(process.env.PW_COVER_REFRESH_BEFORE||'');
 const registry=JSON.parse(await readFile(path.join(root,'dist-site/apps.json'),'utf8'));
 const candidates=registry.filter(a=>/^[a-z0-9-]+$/.test(a.slug));
 await mkdir(out,{recursive:true});
@@ -40,7 +44,11 @@ const updates=[];
 for(const app of candidates){
   const revision=revisionFor(app);
   const present=await exists(app.slug);
-  if(shouldCaptureCover({record:manifest[app.slug],revision,exists:present,forced:slugArg.includes(app.slug)})){
+  const record=manifest[app.slug];
+  const needsLibraryRefresh=Number.isFinite(refreshBefore)&&refreshBefore>0 &&
+    !record?.pinned && !(Date.parse(record?.lastAttemptAt||'')>=refreshBefore);
+  if(shouldCaptureCover({record,revision,exists:present,
+    forced:slugArg.includes(app.slug)||needsLibraryRefresh})){
     updates.push({app,revision,present});
   }
 }
