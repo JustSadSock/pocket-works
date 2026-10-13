@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "f578f5a1ba11b8e1fd0d9db1037c6d18f3b60cba",
+    "revision": "e7e31d6656e0f2e7736d27d5086785c6be4f7a8a",
     "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "ea13d999fe7747712faf4e7e667ab611df4cdfbb5d6a3d99d80e6f835dd0e8e1",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "f578f5a1ba11b8e1fd0d9db1037c6d18f3b60cba",
-    "lastAttemptAt": "2026-10-13T21:06:32.662Z",
+    "lastAttemptRevision": "e7e31d6656e0f2e7736d27d5086785c6be4f7a8a",
+    "lastAttemptAt": "2026-10-13T21:56:33.132Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3105,5 +3105,60 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "ee7e89a73727a89b48a76b96c6a4504732e67c69",
     "lastAttemptAt": "2026-10-13T21:35:33.893Z"
+  },
+  "flotiliya": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 55,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 33773,
+        "variance": 34.15351270042896,
+        "entropy": 1.8043692826024762,
+        "edgeDensity": 0.11049107142857142,
+        "colorfulness": 41.8388671875,
+        "centerDetail": 20.16680094220225,
+        "meanLight": 56.69553837890606
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Начать сражение ↗",
+            "id": "sailBtn",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/flotiliya/?pw-cover=1&pw_release=0.1.0&pw_fp=607bf82c6ddc6ed97b63c8c1"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "66e88a5fc9c29ae56521e9a47b75e96bcc432ebf",
+    "lastAttemptAt": "2026-10-13T21:56:21.148Z"
+  },
+  "ne-tem-golosom": {
+    "revision": "ef608e8ed42b729c9f15986bc4c81f540dd64b79",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начать озвучку ↗",
+        "id": "solo-btn",
+        "score": 92
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "a2aa822e794c479ab295e6fabe90e8ad1735f38e5f6d598000e1719b61f6df37",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "ef608e8ed42b729c9f15986bc4c81f540dd64b79",
+    "lastAttemptAt": "2026-10-13T21:56:44.978Z"
   }
 }
