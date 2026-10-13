@@ -324,14 +324,9 @@
 .home-preview-image.ready + .home-preview-illustration{opacity:0}
 @media(prefers-reduced-motion:reduce){.home-preview-image,.home-preview-illustration{transition:none}}
 
-
-/* Isolated screenshot-only presentation, enabled by ?pw-cover=1. */
-html.pw-cover-mode .topbar,
-html.pw-cover-mode .catalog-dock,
-html.pw-cover-mode .scene-caption,
-html.pw-cover-mode .scene-hint,
-html.pw-cover-mode .online-hud,
-html.pw-cover-mode #toast,
-html.pw-cover-mode #homeScreen{display:none!important}
-html.pw-cover-mode .workspace{display:grid!important;grid-template-columns:minmax(0,1fr)!important}
-html.pw-cover-mode .scene-stage{width:100%;height:100%;min-height:0}
+/* The stage is a warm little toy on a table, not a dark interior planner.
+   These are background papers only. Real light comes from Babylon lamps. */
+.scene-stage{background:radial-gradient(ellipse 73% 69% at 51% 47%,#f7ecdb 0%,#ead9c7 64%,#dec6b8 100%)}
+.scene-stage.night{background:radial-gradient(ellipse 75% 80% at 50% 50%,#877d9e 0%,#68647e 68%,#554e69 100%)}
+.scene-stage.night .little-star{color:#e9dbc4;opacity:.6}
+.scene-stage.night .caption-dot{background:#e5b58d;box-shadow:0 0 0 3px #e5b58d48}

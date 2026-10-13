@@ -1,11 +1,11 @@
 {
   "name": "@pocket-works/komnatka",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "npm test && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs komnatka",
-    "test": "node --test source/state.test.js source/scene-position.test.js && vitest run source/core.test.ts source/geometry.test.ts source/motion.test.ts source/online-rules.test.ts --config vite.config.ts",
+    "test": "node --test source/state.test.js source/scene-position.test.js && vitest run source/core.test.ts source/geometry.test.ts source/motion.test.ts source/lighting-presets.test.ts source/online-rules.test.ts --config vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

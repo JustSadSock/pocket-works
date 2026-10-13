@@ -26,6 +26,8 @@ export function makeMaterial(scene, name, color, rough=0.92) {
  const key=color+'/'+rough;
  if(map.has(key))return map.get(key);
  const m=new StandardMaterial(name,scene);m.diffuseColor=hex(color);m.specularColor=new Color3(0.055,0.052,0.047);m.specularPower=28*(1-rough)+8;
+ // Two stage lights + up to four real lamps must fit the material shader.
+ m.maxSimultaneousLights=6;
  map.set(key,m);return m;
 }
 export function rounded(scene,name,w,h,d,r,material,parent,x=0,y=0,z=0) {
@@ -69,7 +71,7 @@ export function fabricMaterial(scene,color){
  });
  const mat=new StandardMaterial('matte-woven-'+color,scene);
  mat.diffuseColor=Color3.White();mat.specularColor=new Color3(.018,.018,.018);mat.specularPower=8;
- mat.diffuseTexture=tex;mat.backFaceCulling=true;
+ mat.diffuseTexture=tex;mat.backFaceCulling=true;mat.maxSimultaneousLights=6;
  byColor.set(color,mat);return mat;
 }
 function grainMaterial(scene,name,color){
@@ -85,7 +87,7 @@ function grainMaterial(scene,name,color){
  });
  const m=new StandardMaterial('warm-wood-'+name,scene);
  m.diffuseColor=Color3.White();m.specularColor=new Color3(.05,.045,.04);m.specularPower=9;
- m.diffuseTexture=tx;return m;
+ m.diffuseTexture=tx;m.maxSimultaneousLights=6;return m;
 }
 
 const cached=new WeakMap();
@@ -124,13 +126,39 @@ function windowViewMaterial(scene){
 }
 export function tintWindowView(scene,nightFraction){
  const material=outdoorMaterials.get(scene);
- if(!material||material.isDisposed())return;
+ if(!material||material.isDisposed===true)return;
  const t=Math.max(0,Math.min(1,nightFraction));
  material.diffuseColor.set(1-.63*t,1-.59*t,1-.48*t);
 }
 // Handmade oval braided dollhouse rug. Texture follows the yarn's material,
 // while short 3D braid cords, binding and embroidered flowers establish relief.
 // All details sit below 3cm so furniture feet remain visible.
+// Fabric lampshades visibly illuminate from within, independently of room
+// exposure. Materials are cached per scene and never rebuilt on mode changes.
+const lampShadeCache=new WeakMap();
+function lampShade(scene,color){
+ let map=lampShadeCache.get(scene);
+ if(!map){map=new Map();lampShadeCache.set(scene,map);}
+ if(map.has(color))return map.get(color);
+ const material=new StandardMaterial('dollhouse-shade-'+color,scene);
+ material.diffuseColor=hex(color);material.specularColor=new Color3(.018,.013,.011);
+ material.specularPower=8;material.backFaceCulling=false;
+ material.maxSimultaneousLights=6;
+ material.emissiveColor=new Color3(.012,.008,.004);
+ map.set(color,material);
+ return material;
+}
+export function setLampVisuals(scene,night){
+ const t=Math.max(0,Math.min(1,night));
+ const materials=lampShadeCache.get(scene);
+ if(materials)for(const mat of materials.values()){
+  if(mat.isDisposed===true)continue;
+  mat.emissiveColor.set(.017+.63*t,.013+.37*t,.010+.16*t);
+ }
+ // These small glowing bulbs are physically inside the solid fabric shades.
+ const bulb=getMaterials(scene).light;
+ bulb.emissiveColor.set(.06+.91*t,.043+.59*t,.020+.29*t);
+}
 const rugMaterials=new WeakMap();
 function yarn(scene,color){
  let set=rugMaterials.get(scene);if(!set){set=new Map();rugMaterials.set(scene,set);}
@@ -249,8 +277,10 @@ export function makeItem(scene,item){
    cylinder(scene,'round-base',root,M.metal,0,.065,0,tall?.52:.34,.13);
    cylinder(scene,'thin-stem',root,M.metal,0,h*.49,0,.075,h-.19);
    const shade=MeshBuilder.CreateCylinder('fabric-shade',{height:tall?.62:.33,diameterTop:tall?.45:.27,diameterBottom:tall?.88:.55,tessellation:24},scene);
-   shade.parent=root;shade.position.y=h;shade.material=item.color===COLORS[2]?M.cream:cloth;
-   orb(scene,'warm-bulb',root,M.light,0,h-.27,0,.12,.12,.12);
+   shade.parent=root;shade.position.y=h;
+   shade.material=lampShade(scene,item.color===COLORS[2]?'#f3ddb9':item.color);
+   // Visible diffused light at the underside of the shade, like a toy bulb.
+   orb(scene,'warm-bulb',root,M.light,0,h-.27,0,tall?.15:.11,tall?.15:.11,tall?.15:.11);
  }
 
  if(t==='plant'){
