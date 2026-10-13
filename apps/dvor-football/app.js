@@ -257,7 +257,7 @@ function kick(kind,power=1,dir){
  if(screen!=='game'||paused)return;
  const g=getMatch(),p=g?.players?.[mySlot()];
  if(!g||g.phase!=='play'||g.hold>0)return;
- if(dist(p,g.ball)>55){if(mode==='solo')gameplayToast('ДОТЯНИСЬ ДО МЯЧА');return;}
+ if(dist(p,g.ball)>36){if(mode==='solo')gameplayToast('ДОТЯНИСЬ ДО МЯЧА');return;}
  const c=readStick(),angle=shotAim(dir);
  if(mode==='online')safeSend({type:'input',x:c.x,y:c.y,sprint:sprintHeld(),action:kind,angle,power});
  else actionQueued={action:kind,angle,power};
