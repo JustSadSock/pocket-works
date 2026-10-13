@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {PocketSocial} from '../pocket-social/hub.mjs';
 import {mascotSvg,safeMascot} from '../shared/capabilities/maskot.js';
@@ -12,6 +13,14 @@ for(const animal of ['cat','rabbit','frog']){
 }
 assert.equal(safeMascot({animal:'cat',hat:'helmet',clothes:'spacesuit',face:'none'}).hat,'none');
 assert.equal(safeMascot({animal:'cat',hat:'veil',clothes:'wedding',face:'none'},['wedding']).hat,'veil');
+const rootHtml=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const rootSw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const rootVersion=rootHtml.match(/<meta name="pocket-works-build" content="([^"]+)"/)?.[1];
+assert.ok(rootVersion,'launcher must declare build version');
+assert.match(rootHtml,new RegExp('shared/pocket-social\\\\.js\\\\?v='+rootVersion.replaceAll('.','\\\\.')));
+assert.match(rootSw,new RegExp("const APP_VERSION = '"+rootVersion.replaceAll('.','\\\\.')+"'"));
+assert.ok(rootSw.includes("'./shared/capabilities/maskot.js'"),
+  'offline shell must precache the mascot asset imported by identity and social modules');
 const db=new DatabaseSync(':memory:');
 const sql={exec(query,...args){
   const stmt=db.prepare(query);
