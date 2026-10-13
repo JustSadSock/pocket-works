@@ -26,6 +26,11 @@ const activeCaption = $('#pocket-id-active-caption');
 const activeAvatar = $('#pocket-id-active-avatar');
 const resetKey = $('#pocket-id-reset-key');
 const signout = $('#pocket-id-signout');
+const activationDetails = $('#pocket-id-activation');
+const activationForm = $('#pocket-id-activation-form');
+const activationInput = $('#pocket-id-activation-code');
+const activationStatus = $('#pocket-id-activation-status');
+const activationOwned = $('#pocket-id-activation-entitlements');
 let user=null;
 let config={googleEnabled:false,avatars:['clay','moss','ink','sun','wave','ember','plum','stone']};
 let mode='create',busy=false,validationClock=0,validationGeneration=0;
@@ -76,6 +81,10 @@ async function api(path,options={}) {
       too_many_attempts:'Too many attempts. Try again in 15 minutes.',
       invalid_recovery_code:'Recovery key is invalid.',sign_in_required:'Session expired. Sign in again.',
       google_not_configured:'Google sign-in has not been configured by the site owner.',
+      invalid_activation_code:'Код не найден или введён неверно.',
+      code_already_used:'Этот код уже использован другим аккаунтом.',
+      code_already_redeemed:'Этот код уже активирован на твоём аккаунте.',
+      profile_incomplete:'Сначала заверши создание Pocket ID.',
       internal_error:'Server error. Try again.',origin_or_content_type_denied:'Request not accepted.'
     };
     throw new Error(messages[data.error]||data.error||'Unable to complete request.');
@@ -122,6 +131,11 @@ function display() {
   $('#pocket-id-edit-action').hidden=!user?.complete;
   $('#pocket-id-recovery-action').hidden=!user||mode==='key';
   signout.hidden=!user;
+  activationDetails.hidden=!user?.complete||mode!=='view';
+  const owned=user?.entitlements||[];
+  const names=owned.filter(x=>typeof x==='string').map(x=>x==='role:administrator'?'Администратор':x);
+  activationOwned.hidden=!names.length;
+  activationOwned.textContent=names.length?'Активировано: '+names.join(', '):'';
 }
 function openDialog() {
   if(!dialog.open) dialog.showModal();
@@ -176,9 +190,32 @@ $('#pocket-id-recovery-done').addEventListener('click',()=>{
   mode='view';display();message('Профиль создан.','success');
   if(user?.complete){dialog.close();window.PocketSocial?.open?.()}
 });
+activationForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(busy||!user?.complete)return;
+  const code=activationInput.value.trim();
+  if(!code){activationStatus.textContent='Введи код активации.';return;}
+  setBusy(true);
+  activationStatus.textContent='Проверяем код…';
+  activationStatus.dataset.kind='info';
+  try{
+    const result=await api('redeem',{method:'POST',body:JSON.stringify({code})});
+    publish(result.user);
+    mode='view';
+    activationInput.value='';
+    display();
+    activationStatus.textContent=result.entitlement==='role:administrator'
+      ?'Права администратора закреплены за Pocket ID.'
+      :'Код активирован. Награда сохранена в Pocket ID.';
+    activationStatus.dataset.kind='success';
+  }catch(error){
+    activationStatus.textContent=error.message;
+    activationStatus.dataset.kind='error';
+  }finally{setBusy(false);}
+});
 signout.addEventListener('click',async()=>{
   setBusy(true);
-  try {await api('logout',{method:'POST',body:'{}'});publish(null);mode='create';display();message('Signed out. Local game data was not removed.','success');}
+  try {await api('logout',{method:'POST',body:'{}'});activationInput.value='';activationStatus.textContent='';activationDetails.open=false;publish(null);mode='create';display();message('Signed out. Local game data was not removed.','success');}
   catch(error){message(error.message,'error');}finally{setBusy(false);}
 });
 recoverButton.addEventListener('click',async()=>{

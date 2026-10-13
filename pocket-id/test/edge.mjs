@@ -43,6 +43,17 @@ assert.equal(duplicate.data.error,'nickname_taken');
 const mine=await request('me',{cookie:registered.cookie});
 assert.equal(mine.data.user.id,registered.data.user.id);
 // Pocket Social must query the real indexed nickname directory through authenticated Pocket ID.
+const codeGuest=await request('redeem',{method:'POST',body:{code:'PW-NOT-A-VALID-CODE'}});
+assert.equal(codeGuest.status,401,'Redeeming requires a Pocket ID session');
+const codeUntrustedOrigin=await fetch(base+'/pocket-id/redeem',{
+  method:'POST',headers:{cookie:registered.cookie,'content-type':'application/json',origin:'https://example.invalid'},
+  body:JSON.stringify({code:'PW-NOT-A-VALID-CODE'})
+});
+assert.equal(codeUntrustedOrigin.status,403,'Cross-origin redemption must be denied');
+const codeInvalid=await request('redeem',{method:'POST',cookie:registered.cookie,body:{code:'PW-NOT-A-VALID-CODE'}});
+assert.equal(codeInvalid.status,400,'Unknown codes must not be activated');
+const codeAfterInvalid=await request('me',{cookie:registered.cookie});
+assert.deepEqual(codeAfterInvalid.data.user.entitlements,[],'Invalid codes must not grant privileges');
 const archiveGuest=await request('global-archive');
 assert.equal(archiveGuest.status,200);
 assert.ok(Array.isArray(archiveGuest.data.archived));
@@ -88,4 +99,26 @@ assert.equal(restored.data.user.nickname,name+'X');
 const editedAfterRecovery=await request('profile',{method:'POST',cookie:restored.cookie,body:{nickname:name+'Z',avatar:'moss'}});
 assert.equal(editedAfterRecovery.status,200);
 assert.equal(editedAfterRecovery.data.user.avatar,'moss');
-console.log('PASS: Pocket ID registration, unique nickname, profile, key rotation, sign out, recovery');
+// Positive smoke test for an isolated local Wrangler DB. Never hardcode the
+// plaintext code or run this against production: redemption is intentionally one-time.
+if(process.env.POCKET_ID_TEST_ACTIVATION_CODE){
+  if(!base.startsWith('http://127.0.0.1:')&&!base.startsWith('http://localhost:'))
+    throw Error('Positive redemption smoke test is restricted to localhost');
+  const code=process.env.POCKET_ID_TEST_ACTIVATION_CODE;
+  const redeemed=await request('redeem',{method:'POST',cookie:restored.cookie,body:{code}});
+  assert.equal(redeemed.status,200,JSON.stringify(redeemed.data));
+  assert.equal(redeemed.data.entitlement,'role:administrator');
+  assert.ok(redeemed.data.user.entitlements.includes('role:administrator'));
+  const again=await request('redeem',{method:'POST',cookie:restored.cookie,body:{code}});
+  assert.equal(again.status,409,'Code must be single-use, even for the same account');
+  const adminList=await request('global-archive',{cookie:restored.cookie});
+  assert.equal(adminList.data.canManage,true);
+  const changed=await request('global-archive',{method:'POST',cookie:restored.cookie,
+    body:{slugs:['pocket-id-test-archive'],archived:true}});
+  assert.equal(changed.status,200,'Redeemed admin must manage global archive');
+  assert.ok(changed.data.archived.includes('pocket-id-test-archive'));
+  await request('global-archive',{method:'POST',cookie:restored.cookie,
+    body:{slugs:['pocket-id-test-archive'],archived:false}});
+  console.log('PASS: Single-use activation, persisted admin rights and global archive writes');
+}
+console.log('PASS: Pocket ID registration, unique nickname, profile, key rotation, sign out, recovery and code security');

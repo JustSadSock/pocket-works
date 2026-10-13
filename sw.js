@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.17';
-const APP_VERSION = '0.10.17';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.18';
+const APP_VERSION = '0.10.18';
 const RELEASE_DATE = '2026-10-13';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
@@ -16,7 +16,8 @@ const RELEASE_NOTES = [
   'Pocket Cloud storage meter: live per-account usage, available space, FOLIO/Zamazka breakdown and saved-item inventory.',
   'Focus-first UI: quiet Home, concise game details, compact library filters and friend screens.',
   'Compact one-screen mobile home, prominent Pocket ID, actual notification dots and tap-to-play library.',
-  'Server-authorized global archiving for Pocket ID administrators; all users see the same shared archive.'
+  'Server-authorized global archiving for Pocket ID administrators; all users see the same shared archive.',
+  'Single-use Pocket ID activation codes grant persistent server-side account entitlements.'
 ];
 const APP_SHELL = [
   './', './index.html', './privacy.html', './styles.css', './deck-shell.css', './covers/index.json', './launcher-performance.css', './launcher-sync.css', './app.js',

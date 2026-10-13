@@ -6,6 +6,12 @@ const SESSION_MS = 30 * 86400_000;
 const OAUTH_MS = 10 * 60_000;
 const encoder = new TextEncoder();
 const AVATARS = Object.freeze(['clay','moss','ink','sun','wave','ember','plum','stone']);
+// Activation codes are 192-bit random values distributed privately.
+// Only their SHA-256 digests are deployed; each digest is redeemable once.
+// More cosmetic/role rewards can be added here without changing the API.
+const ACTIVATION_REWARDS = Object.freeze({
+  'd21c8a7ded46033524792a31a84a71ddd050d0725a5790bc9cbeb659f7738ad5': 'role:administrator'
+});
 const h = { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store', 'x-content-type-options':'nosniff' };
 const response = (data, status=200, headers={}) => new Response(JSON.stringify(data), {status, headers:{...h,...headers}});
 const random = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), x=>x.toString(16).padStart(2,'0')).join('');
@@ -58,12 +64,30 @@ export class PocketIdentity {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS global_archive (
       slug TEXT PRIMARY KEY, changed_at INTEGER NOT NULL, changed_by TEXT NOT NULL
     )`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS account_entitlements (
+      account_id TEXT NOT NULL, entitlement TEXT NOT NULL, granted_at INTEGER NOT NULL,
+      PRIMARY KEY(account_id,entitlement)
+    )`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS code_redemptions (
+      code_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL,
+      entitlement TEXT NOT NULL, redeemed_at INTEGER NOT NULL
+    )`);
   }
   query(sql,...params) { return this.sql.exec(sql,...params); }
   one(sql,...params) { return this.query(sql,...params).toArray()[0]||null; }
+  userEntitlements(accountId) {
+    if(!accountId) return [];
+    return this.query('SELECT entitlement FROM account_entitlements WHERE account_id=? ORDER BY entitlement',
+      accountId).toArray().map(row=>row.entitlement);
+  }
+  describeUser(row) {
+    return row ? {...publicUser(row),entitlements:this.userEntitlements(row.id)} : null;
+  }
   canManageGlobalArchive(user) {
     if(!user?.id) return false;
-    // Exact Pocket ID UUIDs configured on the server only.
+    if(this.one('SELECT 1 AS present FROM account_entitlements WHERE account_id=? AND entitlement=?',
+      user.id,'role:administrator')) return true;
+    // Existing allowlisted Pocket ID UUIDs remain supported.
     // Nicknames, emails and browser-provided headers are not admin credentials.
     const allowed=[this.env.POCKET_ADMIN_ACCOUNT_IDS,this.env.POCKET_ADMIN_ACCOUNT_ID]
       .filter(value=>typeof value==='string').join(',');
@@ -115,6 +139,36 @@ export class PocketIdentity {
         this.lastCleanup=Date.now();
         this.cleanup();
       }
+      if(path==='/pocket-id/redeem'&&request.method==='POST') {
+        const user=await this.session(request);
+        if(!user) return response({error:'sign_in_required'},401);
+        if(!user.nickname) return response({error:'profile_incomplete'},409);
+        // Limit guessing both by account and by IP; all success/invalid attempts count.
+        const ip=request.headers.get('CF-Connecting-IP')||'unknown';
+        if(!this.limit('redeem-user:'+user.id,12)||!this.limit('redeem-ip:'+ip,50))
+          return response({error:'too_many_attempts'},429);
+        const body=await readBody(request);
+        const code=typeof body?.code==='string'?body.code.trim().toUpperCase():'';
+        if(!/^PW-[A-Z0-9-]{16,96}$/.test(code)) return response({error:'invalid_activation_code'},400);
+        const codeHash=await digest(code);
+        const entitlement=ACTIVATION_REWARDS[codeHash];
+        if(!entitlement) return response({error:'invalid_activation_code'},400);
+        const prior=this.one('SELECT account_id FROM code_redemptions WHERE code_hash=?',codeHash);
+        if(prior)return response({error:prior.account_id===user.id?'code_already_redeemed':'code_already_used'},409);
+        const now=Date.now();
+        try{
+          this.ctx.storage.transactionSync(()=>{
+            this.query('INSERT INTO code_redemptions(code_hash,account_id,entitlement,redeemed_at) VALUES(?,?,?,?)',
+              codeHash,user.id,entitlement,now);
+            this.query('INSERT INTO account_entitlements(account_id,entitlement,granted_at) VALUES(?,?,?) ON CONFLICT(account_id,entitlement) DO NOTHING',
+              user.id,entitlement,now);
+          });
+        }catch(error){
+          if(codeError(error))return response({error:'code_already_used'},409);
+          throw error;
+        }
+        return response({ok:true,entitlement,user:this.describeUser(user)});
+      }
       if(path==='/pocket-id/global-archive'&&request.method==='GET') {
         const user=await this.session(request);
         return response(this.globalArchiveSnapshot(this.canManageGlobalArchive(user)));
@@ -142,7 +196,7 @@ export class PocketIdentity {
       if(path==='/pocket-id/config'&&request.method==='GET')
         return response({ok:true,googleEnabled:Boolean(this.env.GOOGLE_CLIENT_ID&&this.env.GOOGLE_CLIENT_SECRET),avatars:AVATARS});
       if(path==='/pocket-id/me'&&request.method==='GET')
-        return response({user:publicUser(await this.session(request))});
+        return response({user:this.describeUser(await this.session(request))});
       if(path==='/pocket-id/directory'&&request.method==='GET') {
         if(request.headers.get('x-pw-social-internal')!=='1')return response({error:'not_found'},404);
         const requester=await this.session(request);
@@ -184,7 +238,7 @@ export class PocketIdentity {
         } catch(e) { if(codeError(e)) return response({error:'nickname_taken'},409); throw e; }
         const sessionCookie=await this.issueSession(id);
         const user=this.one('SELECT * FROM accounts WHERE id=?',id);
-        return response({user:publicUser(user),recoveryCode:'PW1-'+id+'.'+secret},201,{'set-cookie':sessionCookie});
+        return response({user:this.describeUser(user),recoveryCode:'PW1-'+id+'.'+secret},201,{'set-cookie':sessionCookie});
       }
       if(path==='/pocket-id/recover'&&request.method==='POST') {
         const body=await readBody(request);
@@ -195,7 +249,7 @@ export class PocketIdentity {
         const user=this.one('SELECT * FROM accounts WHERE id=? AND recovery_hash=?',match[1],await digest(match[1]+'.'+match[2].toLowerCase()));
         if(!user) return response({error:'invalid_recovery_code'},401);
         const sessionCookie=await this.issueSession(user.id);
-        return response({user:publicUser(user)},200,{'set-cookie':sessionCookie});
+        return response({user:this.describeUser(user)},200,{'set-cookie':sessionCookie});
       }
       if(path==='/pocket-id/profile'&&request.method==='POST') {
         const user=await this.session(request);
@@ -206,7 +260,7 @@ export class PocketIdentity {
           this.query('UPDATE accounts SET nickname=?,nickname_key=?,avatar=?,updated_at=? WHERE id=?',
             candidate.name,candidate.normalized,avatar,Date.now(),user.id);
         } catch(e) { if(codeError(e)) return response({error:'nickname_taken'},409); throw e; }
-        return response({user:publicUser(this.one('SELECT * FROM accounts WHERE id=?',user.id))});
+        return response({user:this.describeUser(this.one('SELECT * FROM accounts WHERE id=?',user.id))});
       }
       if(path==='/pocket-id/new-key'&&request.method==='POST') {
         const user=await this.session(request);

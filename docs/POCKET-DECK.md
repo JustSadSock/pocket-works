@@ -98,3 +98,13 @@ in the Cloudflare Worker configuration to that UUID (or comma-separated UUIDs).
 Redeploy the Worker after configuration changes. Neither the public repository
 nor browser code contains the administrator UUID or any recovery credentials.
 Without a configured UUID, no account can manage the global archive.
+
+
+### Redeemable administrator role
+
+The owner can now activate a single-use administrator entitlement without
+manually configuring `POCKET_ADMIN_ACCOUNT_IDS`. In Pocket Social open the
+profile, expand **Аккаунт и безопасность**, select **Настройки Pocket ID**, then
+expand **Код активации**. The redeemed role persists on the account and enables
+bulk **Archive for everyone** and per-game **Restore for everyone** after
+server verification. The existing UUID allowlist remains an optional alternative.

@@ -166,3 +166,34 @@ existing SQLite-backed `PocketIdentity` Durable Object. Client `isAdmin`
 flags and impersonated headers are never accepted. Read `/pocket-id/me`
 while signed in to find the exact UUID and configure the Worker variable
 on Cloudflare; a Worker redeploy may be required.
+
+
+## Activation codes (Pocket ID)
+
+The profile security dialog has a collapsed **Код активации** section visible
+only to signed-in members. Submit a code to `POST /pocket-id/redeem` with a
+same-origin JSON body `{ "code": "PW-..." }`. The server verifies the current
+HttpOnly session, rate-limits per account and IP, normalizes the submitted
+value, hashes it with SHA-256 and looks up only the hash in its issued-code
+catalogue. **Never check in or display the plaintext activation secret.**
+
+The issued administrator code has 192 bits of randomness. Its hash alone is
+kept in `ACTIVATION_REWARDS` in `pocket-id/hub.mjs`. Every code is single-use
+across the entire service: `code_redemptions.code_hash` is unique, and
+`account_entitlements` permanently assigns a reward to the redeeming Pocket ID
+UUID. Both writes are atomic in the same existing SQLite Durable Object. The
+`role:administrator` entitlement grants exactly the shared library archive
+permission currently checked by `canManageGlobalArchive`. It does not grant
+Cloudflare, GitHub, or account-management privileges. Login, recovery, and
+profile responses include the current user's own entitlement names.
+
+Future cosmetic codes can use the same mechanism by mapping a different
+cryptographically random code hash to another entitlement ID and implementing
+its visual reward. Never use predictable, short, shared or permanent plaintext
+codes for privileged roles. Failed attempts and replays do not alter ownership.
+
+To verify the real success path on a disposable **local** Wrangler database,
+run the identity smoke test with `POCKET_ID_TEST_ACTIVATION_CODE` provided in
+the shell environment; the test refuses non-localhost endpoints. Do not paste
+that secret into any test file, logs or issue. Local redemption consumes the
+code only in that local database, not in Cloudflare production.
