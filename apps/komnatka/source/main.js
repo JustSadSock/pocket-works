@@ -11,7 +11,7 @@ import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.1.2',releaseNotes:['Мягкий день, тёмная ночь, стабильные модели, тканый ковёр, настоящие светильники и предметные миниатюры каталога.']});
+registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.1.3',releaseNotes:['Тактильные анимации предметов, мягкие повороты и постановка, отклик сетки, плавный свет и материалные звуки.']});
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
