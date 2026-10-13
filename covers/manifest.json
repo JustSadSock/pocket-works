@@ -34,7 +34,7 @@
     "lastAttemptAt": "2026-10-13T12:40:00.907Z"
   },
   "komnatka": {
-    "revision": "2517e421f24f0a729b88c90484be32177bd35c44",
+    "revision": "be290ffbd02c1c73a991ca59a5acd609c0a92dc5",
     "qualityScore": 65,
     "visionScore": null,
     "prepared": false,
@@ -42,8 +42,8 @@
     "sha256": "667aba2611daa2a3cbb064bca790b22eb53072b022dc842b00761ea9592ef97e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "2517e421f24f0a729b88c90484be32177bd35c44",
-    "lastAttemptAt": "2026-10-13T14:58:49.746Z",
+    "lastAttemptRevision": "be290ffbd02c1c73a991ca59a5acd609c0a92dc5",
+    "lastAttemptAt": "2026-10-13T15:13:36.858Z",
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
