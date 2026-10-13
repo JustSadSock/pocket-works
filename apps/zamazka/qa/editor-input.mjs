@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {Editor} from '../editor.js';
+import {Editor,MAX_STROKES,MAX_STROKE_POINTS,MAX_TOTAL_POINTS} from '../editor.js';
 
 function editor(){
  const target=Object.create(Editor.prototype);
@@ -20,7 +20,7 @@ for(let i=1;i<=300;i++){
 }
 art.finishStroke();
 assert.ok(art.strokes.length>1,'Long gesture is segmented');
-assert.ok(art.strokes.every(s=>s.p.length<=45),'Each segment fits PocketNet');
+assert.ok(art.strokes.every(s=>s.p.length<=MAX_STROKE_POINTS),'Each segment fits PocketNet');
 assert.deepEqual(art.strokes[0].p.slice(0,fixed.length),fixed,'Existing geometry stays unchanged');
 assert.equal(new Set(art.strokes.map(s=>s.g)).size,1,'One gesture has one undo group');
 for(let i=1;i<art.strokes.length;i++)
@@ -30,9 +30,9 @@ const budget=editor();
 budget.beginStroke([0,0]);
 for(let i=1;i<=2800;i++)budget.extendStroke([(i*3)%597,Math.floor(i/199)*6]);
 budget.finishStroke();
-assert.ok(budget.strokes.length<=100,'100 segment cap');
-assert.ok(budget.strokes.every(s=>s.p.length<=45),'45 point cap');
-assert.ok(budget.strokes.reduce((n,s)=>n+s.p.length,0)<=2000,'2000 point cap');
+assert.ok(budget.strokes.length<=MAX_STROKES,'expanded stroke cap');
+assert.ok(budget.strokes.every(s=>s.p.length<=MAX_STROKE_POINTS),'network point cap');
+assert.ok(budget.strokes.reduce((n,s)=>n+s.p.length,0)<=MAX_TOTAL_POINTS,'expanded point cap');
 
 const aim=editor();
 aim.inputMode='precision';aim.hand='right';
