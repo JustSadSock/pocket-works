@@ -1,164 +1,188 @@
-// DVOR pitch illustration. All geometry is drawn looking STRAIGHT DOWN.
-// The camera never tilts, rotates, follows players, or crops the field.
+// ДВОР v1.2 — an actual overhead view, not a sideways person rotated on a flat pitch.
 import {FIELD,limit,kits,skins,hairs} from './sim.js';
 const TAU=Math.PI*2;
-const ink='#173e43',ivory='#f8efd5',blue='#268ab4',coral='#e57655';
-const centered=(ctx,x,y,r,fill)=>{ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fillStyle=fill;ctx.fill();};
-const line=(ctx,pts,color,width)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();};
-const ellipse=(ctx,x,y,w,h,fill)=>{ctx.beginPath();ctx.ellipse(x,y,w,h,0,0,TAU);ctx.fillStyle=fill;ctx.fill();};
-const rounded=(ctx,x,y,w,h,r,fill)=>{ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();};
-const palette={grass:'#518758',mow:'#66996c',track:'#234a47',chalk:'#f6f1d9',gold:'#f2c85a'};
-export function pitchTransform(rect){
- const scale=Math.min(rect.width/FIELD.w,rect.height/FIELD.h);
- return {scale,x:(rect.width-FIELD.w*scale)/2,y:(rect.height-FIELD.h*scale)/2};
+const INK='#1d3d3d',CHALK='#f2f4dc',YELLOW='#ffe4a2',BLUE='#2a84b5',RED='#dc7154';
+const CAMERA=Object.freeze({left:12,top:39,width:1056,height:542});
+const PLAYER_SCALE=.57;
+const circle=(c,x,y,r,color)=>{c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle=color;c.fill();};
+const oval=(c,x,y,a,b,color)=>{c.beginPath();c.ellipse(x,y,a,b,0,0,TAU);c.fillStyle=color;c.fill();};
+const rect=(c,x,y,w,h,r,color)=>{c.beginPath();c.roundRect(x,y,w,h,r);c.fillStyle=color;c.fill();};
+const stroke=(c,a,b,color,width)=>{c.beginPath();c.moveTo(...a);c.lineTo(...b);c.strokeStyle=color;c.lineWidth=width;c.stroke();};
+const gradient=(c,x,y,r,light,dark)=>{
+ const g=c.createRadialGradient(x-r*.35,y-r*.4,r*.06,x,y,r);
+ g.addColorStop(0,light);g.addColorStop(1,dark);return g;
+};
+export function pitchTransform(view){
+ const scale=Math.min(view.width/CAMERA.width,view.height/CAMERA.height);
+ return {scale,x:(view.width-CAMERA.width*scale)/2,y:(view.height-CAMERA.height*scale)/2};
 }
-export function toPitch(rect,x,y){
- const {scale,x:ox,y:oy}=pitchTransform(rect);
- return {x:(x-rect.left-ox)/scale,y:(y-rect.top-oy)/scale};
+export function toPitch(rect,clientX,clientY){
+ const {scale,x,y}=pitchTransform(rect);
+ return {x:CAMERA.left+(clientX-rect.left-x)/scale,y:CAMERA.top+(clientY-rect.top-y)/scale};
 }
-function paintPitch(ctx){
- ctx.fillStyle=palette.track;ctx.fillRect(0,0,FIELD.w,FIELD.h);
- // Spectator booths viewed from above: colored little blocks, no horizon or fake perspective.
- for(let side=0;side<2;side++){
-  const upper=side===0,cy=upper?28:592;
-  ctx.fillStyle='#143b3e';ctx.fillRect(22,upper?8:577,FIELD.w-44,34);
-  for(let i=0;i<94;i++){
-   const x=36+i*10.7,seed=(i*53+side*71)%13;
-   rounded(ctx,x,cy-7,8,10,2,['#e0b45c','#e7d8b6','#cd7556','#79a2a0','#98ac74'][seed%5]);
-   if(i%8===0)rounded(ctx,x,cy+7,5,5,1,'#365453');
+function stadium(c){
+ // The visible area is mostly grass. No false isometric walls, horizon or tilted stands.
+ c.fillStyle='#2d5a50';c.fillRect(0,0,FIELD.w,FIELD.h);
+ c.fillStyle='#345f50';c.fillRect(42,42,996,535);
+ // Above/below the touchline: a narrow handcrafted miniature running border.
+ for(const top of [true,false]){
+  c.fillStyle='#27463e';c.fillRect(17,top?39:570,1046,11);
+  for(let i=0;i<96;i++){
+   const x=28+i*10.7,y=top?45:575,col=['#e1b56e','#e2d7ad','#ca795f','#6b978e','#9fb175'][i%5];
+   rect(c,x,y,7,5,1,col);
   }
  }
- // Touchline buffer and soft pitch perimeter.
- ctx.fillStyle='#396850';ctx.fillRect(42,44,996,532);
- for(let i=0;i<12;i++){
-  ctx.fillStyle=i%2?'#5f9967':'#569160';ctx.fillRect(54+i*81,56,81,508);
+ c.fillStyle='#366e50';c.fillRect(48,50,984,520);
+ c.save();c.beginPath();c.rect(FIELD.left,FIELD.top,FIELD.right-FIELD.left,FIELD.bottom-FIELD.top);c.clip();
+ for(let j=0;j<12;j++){c.fillStyle=j%2?'#589767':'#619e6b';c.fillRect(54+j*81,56,81,508);}
+ // Very fine diagonal grass streaks, never distracting repeating grid/soccer texture.
+ for(let i=0;i<510;i++){
+  const x=54+(i*119)%973,y=56+(i*213)%509;
+  stroke(c,[x,y],[x+3,y-1],i%3?'#183f3410':'#f6ebc111',.7);
  }
- // A restrained pattern of cut grass, fixed in world coordinates (no per-frame noise).
- for(let i=0;i<360;i++){
-  const x=63+(i*97%956),y=68+(i*163%485);
-  ctx.strokeStyle=i%4?'#ffffff0a':'#133f3015';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+5,y-2);ctx.stroke();
- }
- ctx.strokeStyle=palette.chalk;ctx.lineWidth=2.8;
- ctx.strokeRect(FIELD.left,FIELD.top,FIELD.right-FIELD.left,FIELD.bottom-FIELD.top);
- line(ctx,[[540,56],[540,564]],palette.chalk,2.8);
- ctx.beginPath();ctx.arc(540,310,83,0,TAU);ctx.stroke();
- centered(ctx,540,310,4,palette.chalk);
+ // Stylized ambient turf shadows around the edges of the field, still pure top-down.
+ const ambient=c.createLinearGradient(54,56,54,564);
+ ambient.addColorStop(0,'#102c2c16');ambient.addColorStop(.25,'#102c2c00');
+ ambient.addColorStop(.75,'#102c2c00');ambient.addColorStop(1,'#102c2c19');
+ c.fillStyle=ambient;c.fillRect(54,56,972,508);
+ c.restore();
+ c.strokeStyle=CHALK;c.lineWidth=2.5;c.strokeRect(54,56,972,508);
+ stroke(c,[540,56],[540,564],CHALK,2.2);
+ c.strokeStyle=CHALK;c.lineWidth=2.5;c.beginPath();c.arc(540,310,75,0,TAU);c.stroke();
+ circle(c,540,310,3,CHALK);
  for(const side of [0,1]){
-  const left=!side,x=left?54:1026,dir=left?1:-1;
-  ctx.strokeRect(left?54:884,171,142,278);
-  ctx.strokeRect(left?54:964,225,62,170);
-  centered(ctx,x+dir*154,310,3,palette.chalk);
-  // Two dimensional goal mouth with mesh threads and thick white posts.
-  ctx.fillStyle='#ece8d1';ctx.fillRect(left?18:1026,204,36,212);
-  ctx.strokeStyle='#a3b6ac';ctx.lineWidth=1;
-  for(let n=1;n<7;n++){const u=left?18+n*6:1026+n*6;line(ctx,[[u,206],[u,416]],'#a3b6ac',.85);}
-  for(let v=207;v<416;v+=12)line(ctx,[[left?18:1026,v],[left?54:1062,v]],'#a3b6ac',.85);
-  line(ctx,[[x,204],[x,416]],palette.chalk,8);
-  centered(ctx,x,204,4.5,ivory);centered(ctx,x,416,4.5,ivory);
-  // Corner flags and small world-anchored line details.
-  const cornerX=x;
-  for(const y of [56,564]){
-   centered(ctx,cornerX,y,5,'#f4cd6a');
-   line(ctx,[[cornerX,y],[cornerX+dir*9,y+(y<310?9:-9)]],'#203d44',2);
+  const left=side===0,x=left?54:1026,dir=left?1:-1;
+  c.strokeStyle=CHALK;c.lineWidth=2.4;c.strokeRect(left?54:892,187,134,246);
+  c.lineWidth=2;c.strokeRect(left?54:969,245,57,130);
+  circle(c,x+dir*147,310,3,CHALK);
+  // A clear little net UNDER the fixed overhead camera.
+  c.fillStyle='#e5ebd9';c.fillRect(left?18:1026,216,36,188);
+  for(let q=0;q<=6;q++){
+   const n=(left?18:1026)+q*6;
+   stroke(c,[n,217],[n,404],'#9ab4a5',.8);
   }
+  for(let yy=218;yy<=404;yy+=13)stroke(c,[left?18:1026,yy],[left?54:1062,yy],'#9ab4a5',.8);
+  stroke(c,[x,216],[x,404],'#fef7de',6);
+  for(const yy of [216,404])circle(c,x,yy,4,'#fff7d5');
  }
- // Crisp overhead painted team initials outside the touchline.
- ctx.save();ctx.globalAlpha=.16;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='1000 12px system-ui';
- ctx.fillStyle=ivory;ctx.fillText('Д В О Р',540,51);ctx.restore();
 }
-export function drawOverheadPlayer(ctx,p,selected=false,time=0,size=1){
- const team=p.side===1?coral:blue;
- const skin=skins[limit(p.skin??1,0,3)],hair=hairs[limit(p.hair??0,0,3)],stripe=kits[limit(p.kit??0,0,4)];
- const angle=Math.atan2(p.fy||0,p.fx||1)+Math.PI/2;
- const moving=limit(Math.hypot(p.vx||0,p.vy||0)/190,0,1);
- const leg=Math.sin(time*18+p.id*2.3)*moving*5;
- ctx.save();ctx.translate(p.x,p.y);ctx.scale(size,size);
- ellipse(ctx,2,7,21,19,'#113e3860');
+let pitchCache=null;
+function paintPitch(ctx){
+ if(!pitchCache){
+  pitchCache=document.createElement('canvas');
+  pitchCache.width=FIELD.w;pitchCache.height=FIELD.h;
+  stadium(pitchCache.getContext('2d'));
+ }
+ ctx.drawImage(pitchCache,0,0);
+}
+function overheadHair(c,style,color){
+ // Only the TOP of the hairstyle is visible: no eyes, mouths or profile-facing faces.
+ if(style===1){
+  for(let i=0;i<8;i++){
+   const t=i*2.37;
+   circle(c,Math.cos(t)*7.2,Math.sin(t)*7.2-8,3.8,color);
+  }
+ }else if(style===2){
+  circle(c,0,-8,10,color);
+  stroke(c,[-7,-12],[6,-8],'#eee1bd99',1.4);
+ }else if(style===3){
+  circle(c,0,-8,10.6,color);
+  c.beginPath();c.moveTo(-9,-10);c.quadraticCurveTo(-2,-22,11,-14);
+  c.quadraticCurveTo(14,-5,5,3);c.lineTo(1,-7);c.quadraticCurveTo(-5,-6,-9,-10);
+  c.fillStyle=color;c.fill();
+ }else{
+  circle(c,0,-8,10.5,color);
+  c.beginPath();c.moveTo(-9,-11);c.quadraticCurveTo(0,-19,10,-12);c.lineTo(6,-9);c.quadraticCurveTo(-5,-12,-9,-7);c.fillStyle='#ffffff28';c.fill();
+ }
+ // Crown shine: a small reflected patch conveys round volume from directly overhead.
+ oval(c,-3,-12,4,2.5,'#ffffff24');
+}
+export function drawOverheadPlayer(ctx,p,selected=false,t=0,size=1){
+ const side=p.side===1,team=side?RED:BLUE,kit=kits[limit(p.kit??(side?1:0),0,4)];
+ const skin=skins[limit(p.skin??1,0,3)],hair=hairs[limit(p.hair??0,0,3)];
+ const angle=Math.atan2(p.fy??0,p.fx??(side?-1:1))+Math.PI/2;
+ const moving=limit(Math.hypot(p.vx||0,p.vy||0)/220,0,1);
+ const gait=Math.sin(t*15+(p.id||0)*2.3)*moving*3.4;
+ ctx.save();ctx.translate(p.x,p.y);
+ // Small shadow on turf anchors the head-sized figurine to the pitch without perspective.
+ const r=15*size,ground=ctx.createRadialGradient(1,3,1,2,4,r);
+ ground.addColorStop(0,'#0e35375c');ground.addColorStop(1,'#0e353700');
+ ctx.fillStyle=ground;ctx.beginPath();ctx.ellipse(2,4,r*1.35,r*1.1,0,0,TAU);ctx.fill();
  if(selected){
-  ctx.beginPath();ctx.arc(0,0,30,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='#ffea94';ctx.stroke();
-  ctx.beginPath();ctx.arc(0,0,35,-Math.PI*.6,-Math.PI*.39);ctx.lineWidth=6;ctx.strokeStyle='#fff7d2';ctx.stroke();
-  ctx.save();ctx.rotate(angle);ctx.fillStyle='#ffe69c';ctx.beginPath();ctx.moveTo(0,-44);ctx.lineTo(-8,-33);ctx.lineTo(8,-33);ctx.closePath();ctx.fill();ctx.restore();
+  const R=18.4*size;
+  ctx.strokeStyle='#ffed98';ctx.lineWidth=2.3;ctx.beginPath();ctx.arc(0,0,R,0,TAU);ctx.stroke();
+  ctx.strokeStyle='#133d3acc';ctx.lineWidth=.8;ctx.beginPath();ctx.arc(0,0,R+2,0,TAU);ctx.stroke();
+  ctx.fillStyle='#ffeaa6';ctx.beginPath();ctx.moveTo(-4,-R-10);ctx.lineTo(4,-R-10);ctx.lineTo(0,-R-4);ctx.fill();
  }
- ctx.rotate(angle);
- // Shoes and both planted feet extend BEHIND the overhead shoulders.
- rounded(ctx,-13,12+leg,10,16,4,'#f4e8cf');
- rounded(ctx,3,12-leg,10,16,4,'#f4e8cf');
- rounded(ctx,-14,23+leg,12,8,3,'#223e46');
- rounded(ctx,3,23-leg,12,8,3,'#223e46');
- rounded(ctx,-14,9,28,13,5,'#1d3d47');
- // Wide horizontal shoulder axis and arms are always visible from the ceiling.
- ctx.save();ctx.rotate(-leg*.009);
- rounded(ctx,-23,-13,11,29,6,skin);rounded(ctx,12,-13,11,29,6,skin);
- rounded(ctx,-22,-14,9,13,4,team);rounded(ctx,13,-14,9,13,4,team);
- ctx.restore();
- rounded(ctx,-16,-18,32,35,11,'#1b4751');
- rounded(ctx,-14,-17,28,31,10,team);
- rounded(ctx,-11,-15,7,25,3,stripe);rounded(ctx,5,-15,6,25,3,stripe);
- rounded(ctx,-10,-9,20,14,4,'#ffffff15');
- // Jersey number on the BACK, not on the face.
- ctx.fillStyle='#f8edd8';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='1000 13px system-ui';
- ctx.shadowColor='#153f49';ctx.shadowBlur=2;ctx.fillText(String(p.number||9),0,4);ctx.shadowBlur=0;
- // Crown of the head in front of the collar. This is a top-of-head silhouette.
- centered(ctx,0,-23,13.3,skin);
- centered(ctx,0,-23,10.7,hair);
- switch(p.hair|0){
-  case 0: // swept hair wedge
-   ctx.fillStyle=hair;ctx.beginPath();ctx.moveTo(-11,-25);ctx.quadraticCurveTo(2,-42,12,-27);ctx.lineTo(8,-19);ctx.quadraticCurveTo(0,-24,-11,-21);ctx.fill();break;
-  case 1: // warm curly crown
-   for(let i=0;i<7;i++)centered(ctx,Math.sin(i*2.4)*8,-24+Math.cos(i*1.7)*7,4.2,hair);
-   break;
-  case 2: // short flat crown stripe
-   rounded(ctx,-11,-29,21,5,3,'#5b6265');break;
-  case 3: // long side swept
-   ctx.fillStyle=hair;ctx.beginPath();ctx.moveTo(-12,-23);ctx.quadraticCurveTo(-8,-37,8,-34);ctx.quadraticCurveTo(14,-31,12,-18);ctx.lineTo(5,-25);ctx.closePath();ctx.fill();break;
- }
- // Rim light and small side ears help silhouette at half phone resolution.
- centered(ctx,-13,-22,2.3,skin);centered(ctx,13,-22,2.3,skin);
+ ctx.rotate(angle);ctx.scale(PLAYER_SCALE*size,PLAYER_SCALE*size);
+ // Both shins are separate short pieces under an overhead torso, not long cartoon legs.
+ rect(ctx,-11,9+gait,8.5,16,3,'#e6e5dc');
+ rect(ctx,2.5,9-gait,8.5,16,3,'#e6e5dc');
+ rect(ctx,-12,19+gait,10.5,6,2,'#193a42');rect(ctx,2,19-gait,10.5,6,2,'#193a42');
+ // Shoulder pads are curved ovals at left and right; bent forearms trail below them.
+ oval(ctx,-15,0,7,10,team);oval(ctx,15,0,7,10,team);
+ oval(ctx,-18,6+gait*.35,4.7,7.4,skin);oval(ctx,18,6-gait*.35,4.7,7.4,skin);
+ // Overhead upper back, narrowing near waist, partly occluded by the spherical hair crown.
+ ctx.beginPath();ctx.moveTo(-13,-8);ctx.quadraticCurveTo(0,-16,13,-8);
+ ctx.lineTo(11,13);ctx.quadraticCurveTo(0,18,-11,13);ctx.closePath();
+ ctx.fillStyle=gradient(ctx,-5,-7,24,kit,side?'#b85742':'#16628c');ctx.fill();
+ ctx.strokeStyle='#153d46';ctx.lineWidth=1.35;ctx.stroke();
+ // Shirt's central stripe and real shirt collar, not a flat full-body colored rectangle.
+ rect(ctx,-2,-3,4,14,1,'#fff6d569');
+ oval(ctx,0,-6,6,3.5,'#153d4588');
+ ctx.font='1000 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.fillStyle='#fff5d5';ctx.fillText(String(p.number??9),0,8);
+ // Head is foremost and ROUND, viewed from ABOVE: hair dominates, ears only peep out.
+ circle(ctx,-11,-7,2.7,skin);circle(ctx,11,-7,2.7,skin);
+ circle(ctx,0,-8,12.6,gradient(ctx,-3,-12,13,'#ffdfb2',skin));
+ overheadHair(ctx,p.hair|0,hair);
  ctx.restore();
 }
-function drawKeeper(ctx,p,side,t){
- const f=side? -1:1,keeper={...p,side,kit:2,hair:0,number:1,skin:1,id:side?92:91,fx:f,fy:0,vx:0,vy:0};
- ctx.save();ctx.translate(p.x,p.y);
- ellipse(ctx,1,5,23,21,'#103e3a88');
- ctx.rotate(side?-Math.PI/2:Math.PI/2);
- // Long sleeves and goalkeeper gloves create a visible T-shaped top-down body.
- rounded(ctx,-30,-7,60,13,6,'#f9d37b');
- rounded(ctx,-33,-8,10,15,4,'#223e43');rounded(ctx,23,-8,10,15,4,'#223e43');
- rounded(ctx,-11,14,9,16,4,'#24414a');rounded(ctx,3,14,9,16,4,'#24414a');
- rounded(ctx,-12,-10,24,24,8,'#e9bc60');
- centered(ctx,0,-13,12,skins[1]);centered(ctx,0,-15,9,hairs[0]);
- ctx.fillStyle='#203e44';ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillText('1',0,9);
+function overheadKeeper(ctx,g,side,time){
+ // Same physical top-down language as outfield players, small yellow shirt and outstretched gloves.
+ const k={x:g.x,y:g.y,fx:side?-1:1,fy:0,vx:0,vy:0,side,kit:2,skin:1,hair:2,number:1,id:80+side};
+ ctx.save();ctx.translate(k.x,k.y);
+ const theta=Math.atan2(k.fy,k.fx)+Math.PI/2;
+ ctx.rotate(theta);ctx.scale(PLAYER_SCALE*.87,PLAYER_SCALE*.87);
+ oval(ctx,2,7,20,16,'#173d3947');
+ rect(ctx,-28,-9,56,10,5,'#e9b96b');
+ rect(ctx,-31,-12,9,15,3,'#294b4c');rect(ctx,22,-12,9,15,3,'#294b4c');
+ rect(ctx,-8,12,7,14,3,'#f4e7ca');rect(ctx,2,12,7,14,3,'#f4e7ca');
+ oval(ctx,0,3,13,16,'#e6b04e');
+ circle(ctx,0,-9,12,gradient(ctx,-4,-12,14,'#ffdfb2','#c88d65'));
+ circle(ctx,0,-10,9,'#504037');oval(ctx,-2,-14,3,2,'#ffffff22');
  ctx.restore();
 }
-function drawFootball(ctx,ball,time){
- ctx.save();ctx.translate(ball.x,ball.y);
- const velocity=Math.hypot(ball.vx||0,ball.vy||0);
- ellipse(ctx,3+limit(velocity/150,0,3),8,13,7,'#163d3a90');
- ctx.rotate(time*(.65+velocity*.0025)+(ball.spin||0)*2.5);
- centered(ctx,0,0,12,'#fff8e7');
- ctx.strokeStyle='#163d47';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,12,0,TAU);ctx.stroke();
- ctx.fillStyle='#253f47';ctx.beginPath();
- for(let i=0;i<5;i++){const a=i*TAU/5-.3;const x=Math.cos(a)*6,y=Math.sin(a)*6;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+function overheadBall(ctx,b,time){
+ const speed=Math.hypot(b.vx||0,b.vy||0);
+ ctx.save();ctx.translate(b.x,b.y);
+ oval(ctx,1.3,3.3,9.8,5.6,'#123d3d70');
+ ctx.rotate(time*(.6+speed*.003)+(b.spin||0)*3);
+ circle(ctx,0,0,8.8,'#fff9e9');
+ ctx.lineWidth=1.1;ctx.strokeStyle='#263d40';ctx.beginPath();ctx.arc(0,0,8.8,0,TAU);ctx.stroke();
+ ctx.fillStyle='#284145';ctx.beginPath();
+ for(let i=0;i<5;i++){
+  const a=-Math.PI/2+i*TAU/5;const x=Math.cos(a)*4.4,y=Math.sin(a)*4.4;
+  i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+ }
  ctx.closePath();ctx.fill();
- for(let i=0;i<5;i++){const a=i*TAU/5+.5;line(ctx,[[Math.cos(a)*7,Math.sin(a)*7],[Math.cos(a)*11,Math.sin(a)*11]],'#253f47',1.5);}
- ctx.restore();
+ for(let i=0;i<5;i++){
+  const a=i*TAU/5;
+  stroke(ctx,[Math.cos(a)*5.6,Math.sin(a)*5.6],[Math.cos(a)*8,Math.sin(a)*8],'#284145',1);
+ }
+ circle(ctx,-3,-3,1.7,'#ffffff88');ctx.restore();
 }
-function drawAim(ctx,p,g,angle,power,pass){
- if(!p||!g||g.phase!=='play'||g.hold>0)return;
+function aimGuide(ctx,p,g,angle,power){
+ if(!p||g.hold>0||g.phase!=='play')return;
+ const near=Math.hypot(p.x-g.ball.x,p.y-g.ball.y)<39;
+ const dx=Math.cos(angle),dy=Math.sin(angle),start=22,length=near?105+power*60:65;
  ctx.save();ctx.translate(p.x,p.y);
- const distance=Math.hypot(p.x-g.ball.x,p.y-g.ball.y);
- const ready=distance<55;
- const length=ready?150+power*70:85;
- const dx=Math.cos(angle),dy=Math.sin(angle);
- ctx.lineWidth=ready?3:1.8;ctx.lineCap='round';ctx.setLineDash([7,7]);
- ctx.strokeStyle=ready?(pass?'#dff2ef':'#fbea9d'):'#edf2e97a';
- ctx.beginPath();ctx.moveTo(dx*30,dy*30);ctx.lineTo(dx*length,dy*length);ctx.stroke();
+ ctx.setLineDash([4,6]);ctx.lineWidth=1.6;ctx.strokeStyle=near?'#ffe9a5c9':'#fdf3d46b';
+ ctx.beginPath();ctx.moveTo(dx*start,dy*start);ctx.lineTo(dx*length,dy*length);ctx.stroke();
  ctx.setLineDash([]);
- const end=length+5;ctx.fillStyle=ready?'#ffe49b':'#e0e8e3aa';
- ctx.beginPath();ctx.moveTo(dx*end,dy*end);ctx.lineTo(dx*(end-14)-dy*6,dy*(end-14)+dx*6);ctx.lineTo(dx*(end-14)+dy*6,dy*(end-14)-dx*6);ctx.closePath();ctx.fill();
- if(ready&&power>0){
-  ctx.strokeStyle='#f5d477';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,37,-Math.PI/2,-Math.PI/2+TAU*limit(power/1.2,0,1));ctx.stroke();
+ if(near&&power>0){
+  ctx.lineWidth=2.2;ctx.strokeStyle=YELLOW;ctx.beginPath();
+  ctx.arc(0,0,23,-Math.PI/2,-Math.PI/2+TAU*limit(power/1.2,0,1));ctx.stroke();
  }
  ctx.restore();
 }
@@ -169,145 +193,109 @@ export class TopdownFX{
   this.lastBall=null;this.lastScore=null;this.lastEvent=null;this.visualPlayers={};this.visualBall=null;
  }
  impact(x,y,intensity=1,color='#f8e6a2'){
-  this.rings.push({x,y,r:13,life:.4,full:.4,power:intensity,color});
-  this.cameraEnergy=Math.max(this.cameraEnergy,Math.min(1,intensity)*2.5);
+  this.rings.push({x,y,r:9,life:.36,full:.36,power:intensity,color});
+  this.cameraEnergy=Math.max(this.cameraEnergy,Math.min(1,intensity)*1.5);
  }
  burst(x,y,count,color='#f5d47c'){
   for(let i=0;i<count;i++){
-   const a=i*2.399+(.37*i*i),speed=38+(i*31%135);
-   this.dust.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:.35+i%3*.14,full:.35+i%3*.14,color,size:2+i%4});
+   const a=i*2.399+(i*i*.37),speed=27+(i*31%110);
+   const d=.23+i%3*.1;
+   this.dust.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:d,full:d,color,size:1.2+i%3});
   }
-  if(this.dust.length>125)this.dust.splice(0,this.dust.length-125);
+  this.dust=this.dust.slice(-110);
  }
- observe(g,dt,online=false){
+ observe(g,dt){
   if(!g)return;
-  const b=g.ball;
-  const score=g.score.join(':');
+  const b=g.ball,score=g.score.join(':');
   if(this.lastScore!==null&&score!==this.lastScore){
-   this.goalTeam=g.score[0]!==+(this.lastScore.split(':')[0])?0:1;
-   this.flash=.5;this.cameraEnergy=6;this.burst(this.goalTeam===0?1004:76,310,34,this.goalTeam===0?'#9bd6e6':'#ffd4a0');
-   this.rings.push({x:540,y:310,r:12,life:.95,full:.95,power:2,color:'#fff2ba'});
+   this.goalTeam=g.score[0]!==+this.lastScore.split(':')[0]?0:1;
+   this.flash=.47;this.burst(this.goalTeam===0?1010:70,310,30,this.goalTeam===0?'#a1dce9':'#f0bc94');
+   this.rings.push({x:540,y:310,r:18,life:.78,full:.78,power:1.8,color:'#fff3c3'});
    this.trail=[];
   }else if(this.lastBall&&!g.hold){
    const prev=this.lastBall,delta=Math.hypot(b.vx-prev.vx,b.vy-prev.vy);
    if(delta>155&&Math.hypot(b.vx,b.vy)>180&&Math.hypot(b.x-prev.x,b.y-prev.y)<55){
-    this.impact(b.x,b.y,limit(delta/600,.35,1), '#f7e7b6');
-    this.burst(b.x,b.y,6,'#e6ddaa');
+    this.impact(b.x,b.y,limit(delta/700,.27,1),'#f7e7b6');
+    this.burst(b.x,b.y,5,'#e6ddaa');
    }
   }
   if(this.lastEvent!==null&&this.lastEvent!==g.eventId&&g.event==='СЕЙВ!'){
-   const k=g.keepers.reduce((a,c)=>Math.hypot(c.x-b.x,c.y-b.y)<Math.hypot(a.x-b.x,a.y-b.y)?c:a,g.keepers[0]);
-   this.rings.push({x:k.x,y:k.y,r:11,life:.45,full:.45,power:.8,color:'#fff4d2'});
+   this.rings.push({x:b.x,y:b.y,r:9,life:.42,full:.42,power:.75,color:'#fff4d2'});
   }
   this.lastScore=score;this.lastEvent=g.eventId;
   this.lastBall={x:b.x,y:b.y,vx:b.vx,vy:b.vy};
-  const speed=Math.hypot(b.vx,b.vy);
-  if(speed>150&&this.trail.length<28){
-   this.trail.push({x:b.x,y:b.y,life:.23,full:.23,size:limit(speed/115,2,5)});
-  }
-  if(speed<=150)this.trail.length=Math.max(0,this.trail.length-1);
-  for(const p of g.players){
-   if(Math.hypot(p.vx||0,p.vy||0)>185&&Math.random()<.22){
-    this.dust.push({x:p.x-p.vx*.03,y:p.y-p.vy*.03,vx:-p.vx*.18,vy:-p.vy*.18,life:.24,full:.24,color:'#d4ddaa',size:2});
-   }
-  }
+  if(Math.hypot(b.vx,b.vy)>180)this.trail.push({x:b.x,y:b.y,life:.15,full:.15,size:2.3});
   const step=Math.min(dt,.07);
-  for(const r of this.rings){r.r+=160*step*(r.power||1);r.life-=step;}
-  for(const d of this.dust){d.x+=d.vx*step;d.y+=d.vy*step;d.vx*=Math.exp(-8*step);d.vy*=Math.exp(-8*step);d.life-=step;}
+  for(const r of this.rings){r.r+=125*step*(r.power||1);r.life-=step;}
+  for(const d of this.dust){d.x+=d.vx*step;d.y+=d.vy*step;d.life-=step;}
   for(const p of this.trail)p.life-=step;
-  this.rings=this.rings.filter(e=>e.life>0).slice(-20);
-  this.dust=this.dust.filter(e=>e.life>0).slice(-110);
-  this.trail=this.trail.filter(e=>e.life>0).slice(-24);
+  this.rings=this.rings.filter(e=>e.life>0).slice(-14);
+  this.dust=this.dust.filter(e=>e.life>0).slice(-85);
+  this.trail=this.trail.filter(e=>e.life>0).slice(-18);
   this.cameraEnergy=Math.max(0,this.cameraEnergy-step*13);
   this.flash=Math.max(0,this.flash-step);
  }
  drawUnder(ctx){
-  for(const p of this.trail){ctx.globalAlpha=.23*p.life/p.full;centered(ctx,p.x,p.y,p.size,'#fff6d7');}
-  ctx.globalAlpha=1;
-  for(const p of this.dust){
-   ctx.globalAlpha=.63*p.life/p.full;
-   centered(ctx,p.x,p.y,p.size*p.life/p.full,p.color);
-  }
+  for(const p of this.trail){ctx.globalAlpha=.25*p.life/p.full;circle(ctx,p.x,p.y,p.size,'#fff6e3');}
+  for(const p of this.dust){ctx.globalAlpha=.52*p.life/p.full;circle(ctx,p.x,p.y,p.size*p.life/p.full,p.color);}
   ctx.globalAlpha=1;
  }
  drawOver(ctx){
-  for(const e of this.rings){
-   ctx.globalAlpha=.8*Math.pow(e.life/e.full,1.2);
-   ctx.lineWidth=2.7*e.power;ctx.strokeStyle=e.color;
-   ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,TAU);ctx.stroke();
+  for(const p of this.rings){
+   ctx.globalAlpha=.58*p.life/p.full;
+   ctx.strokeStyle=p.color;ctx.lineWidth=1.8*p.power;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,TAU);ctx.stroke();
   }
   ctx.globalAlpha=1;
-  if(this.flash>0){
-   ctx.fillStyle='rgba(255,243,193,'+(this.flash*.16)+')';ctx.fillRect(55,56,970,508);
+  if(this.flash){
+   ctx.fillStyle='rgba(255,245,205,'+(this.flash*.12)+')';ctx.fillRect(54,56,972,508);
   }
  }
-}
-let fieldCache=null;
-function paintCachedPitch(ctx){
- if(!fieldCache){
-  fieldCache=document.createElement('canvas');fieldCache.width=FIELD.w;fieldCache.height=FIELD.h;
-  paintPitch(fieldCache.getContext('2d'));
- }
- ctx.drawImage(fieldCache,0,0);
 }
 function fit(canvas){
  const rect=canvas.getBoundingClientRect(),dpr=Math.min(globalThis.devicePixelRatio||1,2);
- const ww=Math.max(1,Math.round(rect.width*dpr)),hh=Math.max(1,Math.round(rect.height*dpr));
- if(canvas.width!==ww||canvas.height!==hh){canvas.width=ww;canvas.height=hh;}
+ const w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
+ if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
  return {ctx,w:rect.width,h:rect.height};
 }
-export function renderTopdown(canvas,g,time,{selected=-1,aim=null,charge=0,pass=false,fx=null,online=false,dt=.016}={}){
+export function renderTopdown(canvas,g,time,{selected=-1,aim=null,charge=0,fx=null,online=false,dt=.016}={}){
  if(!g)return;
  const {ctx,w,h}=fit(canvas);
- ctx.clearRect(0,0,w,h);ctx.fillStyle=palette.track;ctx.fillRect(0,0,w,h);
+ ctx.clearRect(0,0,w,h);ctx.fillStyle='#2d5a50';ctx.fillRect(0,0,w,h);
  const {scale,x,y}=pitchTransform({width:w,height:h});
- // Camera position and orientation are immutable: only micro-impulses occur on the fixed overhead rig.
- const kick=fx?.cameraEnergy||0;
- const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
- const shake=reduced?0:kick;
- const zoom=1+(reduced?0:Math.min(.011,kick*.002));
- ctx.save();
- ctx.translate(x+FIELD.w*scale/2+Math.sin(time*37)*shake,y+FIELD.h*scale/2+Math.cos(time*29)*shake*.58);
- ctx.scale(scale*zoom,scale*zoom);ctx.translate(-FIELD.w/2,-FIELD.h/2);
- paintCachedPitch(ctx);
- fx?.drawUnder(ctx);
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.translate(-CAMERA.left,-CAMERA.top);
+ paintPitch(ctx);fx?.drawUnder(ctx);
  for(const p of g.players){
   let q=p;
   if(online&&fx){
-   const vis=fx.visualPlayers[p.id]||(fx.visualPlayers[p.id]={x:p.x,y:p.y});
-   const blend=limit(dt*11,0,1);
-   vis.x+=(p.x-vis.x)*blend;vis.y+=(p.y-vis.y)*blend;
-   q={...p,x:vis.x,y:vis.y};
+   const prev=fx.visualPlayers[p.id]||(fx.visualPlayers[p.id]={x:p.x,y:p.y});
+   const blend=limit(dt*11,0,1);prev.x+=(p.x-prev.x)*blend;prev.y+=(p.y-prev.y)*blend;
+   q={...p,x:prev.x,y:prev.y};
   }
   drawOverheadPlayer(ctx,q,p.id===selected,time);
  }
- for(let side=0;side<2;side++)drawKeeper(ctx,g.keepers[side],side,time);
+ for(let side=0;side<2;side++)overheadKeeper(ctx,g.keepers[side],side,time);
  let ball=g.ball;
  if(online&&fx){
-  const vis=fx.visualBall||(fx.visualBall={x:ball.x,y:ball.y});
-  const blend=limit(dt*17,0,1);vis.x+=(ball.x-vis.x)*blend;vis.y+=(ball.y-vis.y)*blend;
-  ball={...ball,x:vis.x,y:vis.y};
+  const prev=fx.visualBall||(fx.visualBall={x:ball.x,y:ball.y});
+  const blend=limit(dt*17,0,1);prev.x+=(ball.x-prev.x)*blend;prev.y+=(ball.y-prev.y)*blend;
+  ball={...ball,x:prev.x,y:prev.y};
  }
- drawFootball(ctx,ball,time);
- if(aim!==null&&Number.isFinite(aim)){
-  const p=g.players.find(p=>p.id===selected);
-  drawAim(ctx,p,g,aim,charge,pass);
- }
+ overheadBall(ctx,ball,time);
+ if(aim!==null&&Number.isFinite(aim))aimGuide(ctx,g.players.find(p=>p.id===selected),g,aim,charge);
  fx?.drawOver(ctx);
  if(g.hold>0){
-  rounded(ctx,433,266,214,48,10,'#fff0c9');
-  ctx.font='950 23px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=ink;
-  ctx.fillText(g.event==='ГОЛ!'?'В ЦЕНТР ПОЛЯ':'К СВИСТКУ!',540,290);
+  ctx.save();ctx.fillStyle='#fdf0c9ef';ctx.beginPath();ctx.roundRect(459,277,162,40,8);ctx.fill();
+  ctx.fillStyle=INK;ctx.font='900 17px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(g.event==='ГОЛ!'?'К ЦЕНТРУ':'ИГРАЕМ!',540,296);ctx.restore();
  }
  ctx.restore();
 }
 export function renderPortrait(canvas,profile){
- const {ctx,w,h}=fit(canvas);
- ctx.clearRect(0,0,w,h);
- const sc=Math.min(w/104,h/113),p={...profile,id:9,side:0,x:0,y:0,fx:0,fy:-1,vx:0,vy:0};
- ctx.save();ctx.translate(w/2,h*.55);ctx.scale(sc,sc);
- ellipse(ctx,0,6,41,49,'#e8ad5860');
- drawOverheadPlayer(ctx,p,false,0,2.05);
+ const {ctx,w,h}=fit(canvas);ctx.clearRect(0,0,w,h);
+ const s=Math.min(w/104,h/120);
+ ctx.save();ctx.translate(w/2,h*.54);ctx.scale(s,s);
+ oval(ctx,0,2,42,43,'#e8ad5840');
+ drawOverheadPlayer(ctx,{...profile,id:3,side:0,x:0,y:0,fx:0,fy:-1,vx:0,vy:0},false,0,3.1);
  ctx.restore();
 }
