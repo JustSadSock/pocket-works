@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {PocketSocial} from '../pocket-social/hub.mjs';
+import {mascotSvg,safeMascot} from '../shared/capabilities/maskot.js';
 
+for(const animal of ['cat','rabbit','frog']){
+  for(const outfit of ['tunic','vest','mantle']){
+    const art=mascotSvg({animal,hat:'crown',clothes:outfit,face:'glasses'});
+    assert.match(art,/<svg /);assert.match(art,/<path /);
+    assert.doesNotMatch(art,/<script|foreignObject|onload=/i);
+  }
+}
+assert.equal(safeMascot({animal:'cat',hat:'helmet',clothes:'spacesuit',face:'none'}).hat,'none');
+assert.equal(safeMascot({animal:'cat',hat:'veil',clothes:'wedding',face:'none'},['wedding']).hat,'veil');
 const db=new DatabaseSync(':memory:');
 const sql={exec(query,...args){
   const stmt=db.prepare(query);
