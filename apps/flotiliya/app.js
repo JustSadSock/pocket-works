@@ -1,3 +1,5 @@
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+installMobileRuntime();
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('sea'), ctx = canvas.getContext('2d', {alpha:false});
