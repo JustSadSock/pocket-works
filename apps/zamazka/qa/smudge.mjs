@@ -26,10 +26,17 @@ const raster={
   }
  }
 };
-const untouched=get(450,225),before=get(304,225);
+const untouched=get(450,225),before=get(304,225),original=new Uint8ClampedArray(pixels);
 smudgeStroke(raster,{t:'smudge',s:22,c:'#304a43',p:[[294,225],[298,225],[302,225],[306,225],[311,225]]});
 const after=get(304,225);
 assert.ok(after[0]>before[0]&&after[2]<before[2],'smudging carries warm pigment into cold pigment');
 assert.deepEqual(get(450,225),untouched,'raster changes remain local to the nib');
 assert.deepEqual(get(304,225),after,'smudge output remains a stable painted pixel');
+const completed=new Uint8ClampedArray(pixels);
+const p=[[294,225],[298,225],[302,225],[306,225],[311,225]];
+pixels.set(original);
+smudgeStroke(raster,{t:'smudge',s:22,p:p.slice(0,2)});
+smudgeStroke(raster,{t:'smudge',s:22,p:p.slice(0,4)},2);
+smudgeStroke(raster,{t:'smudge',s:22,p},4);
+assert.deepEqual(pixels,completed,'incremental preview must exactly match replayed saved artwork');
 console.log('ZAMAZKA: smudging mixes existing pixels without affecting distant paint OK');
