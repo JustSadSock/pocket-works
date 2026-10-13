@@ -13,7 +13,7 @@ import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.2.0',releaseNotes:['Два сетевых режима: Новые жильцы и Собери по памяти. Комнаты друзей на 2–5 игроков с общей расстановкой мебели и видимыми действиями.']});
+registerEnhancedUpdate({appName:'КОМНАТКА',version:'0.2.1',releaseNotes:['Главное меню трёх режимов, заново сплетённый овальный ковёр и освещение кукольной диорамы.']});
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
