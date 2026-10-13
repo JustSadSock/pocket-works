@@ -55,7 +55,8 @@ function tickGame(s,inputs,dt){
  s.elapsed+=dt;s.remain=Math.max(0,300-s.elapsed);
  if(s.remain===0){s.phase='done';s.event='ФИНАЛ';s.eventId++;return;}
  const b=s.ball;
- for(const p of s.players){
+ // Alternate per-frame priority prevents the left-side AI from winning ties every tick.
+ for(const p of (Math.floor(s.elapsed*8)%2?s.players.slice().reverse():s.players)){
   const team=s.players.filter(q=>q.side===p.side);
   const chaser=team.reduce((a,q)=>dist(q,b)<dist(a,b)?q:a,team[0]);
   const ctl=s.controlled[p.id]?inputs?.[p.id]:null;
