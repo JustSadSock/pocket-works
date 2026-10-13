@@ -86,8 +86,8 @@ export function floodFillRaster({width,height,walls,zone,output,point,color}){
  // seam below the drawn line even when a line lands between device pixels.
  for(let n=0;n<tail;n++){
    const i=queue[n],x=i%width,y=(i/width)|0;
-   for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
-     if(!dx&&!dy||dx*dx+dy*dy>5)continue;
+   for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){
+     if(!dx&&!dy||dx*dx+dy*dy>10)continue;
      const xx=x+dx,yy=y+dy;if(xx<0||xx>=width||yy<0||yy>=height)continue;
      const neighbour=yy*width+xx;
      if(!seen[neighbour]&&!allowed(neighbour))paint(neighbour);
@@ -227,6 +227,31 @@ export function simplifyPoints(points,limit){
  }
  return kept;
 }
+// Snapping a nib just outside an irregular cutout to the nearest inner edge
+// lets an opaque stroke cover the antialiased perimeter without changing the
+// damage mask or permitting painting on the surrounding original.
+export function pointOnDamageEdge(zone,point,tolerance=0){
+ if(insideDamage(zone,point))return point;
+ if(!zone?.points?.length||!Number.isFinite(tolerance)||tolerance<=0)return null;
+ let closest=null,best=tolerance*tolerance;
+ for(let i=0;i<zone.points.length;i++){
+  const a=zone.points[i],b=zone.points[(i+1)%zone.points.length],dx=b[0]-a[0],dy=b[1]-a[1];
+  const den=dx*dx+dy*dy;
+  if(!den)continue;
+  const t=Math.max(0,Math.min(1,((point[0]-a[0])*dx+(point[1]-a[1])*dy)/den));
+  const x=a[0]+dx*t,y=a[1]+dy*t,d=(point[0]-x)**2+(point[1]-y)**2;
+  if(d<=best){best=d;closest={x,y,dx,dy,den}}
+ }
+ if(!closest)return null;
+ const n=Math.sqrt(closest.den);
+ for(const inset of [.45,1,2]){
+  for(const side of [1,-1]){
+   const p=[closest.x+side*closest.dy/n*inset,closest.y-side*closest.dx/n*inset];
+   if(insideDamage(zone,p))return p;
+  }
+ }
+ return null;
+}
 export const MAX_STROKES=400,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=12000;
 
 const key='pocket-works:zamazka:draft:';
@@ -234,7 +259,7 @@ export class Editor{
  constructor(root,{id,variation=0,round=1,onChange=()=>{},onSound=()=>{},onPersistenceError=()=>{}}){
    this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onSound=onSound;this.onPersistenceError=onPersistenceError;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
-   this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
+   this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.edgePaused=false;this.edgeGestureGroup=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
     this.inputMode=localStorage.getItem('pocket-works:zamazka:input-mode')==='precision'?'precision':'direct';
     this.hand=localStorage.getItem('pocket-works:zamazka:precision-hand')==='left'?'left':'right';
     this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
@@ -269,7 +294,8 @@ export class Editor{
   }
   setTool(tool){
     if(!['brush','fill','picker','erase','smudge','hand'].includes(tool))return;
-    this.finishStroke();if(this.tool!==tool)this.onSound?.('tool');this.tool=tool;
+    this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;
+    if(this.tool!==tool)this.onSound?.('tool');this.tool=tool;
     this.viewport.classList.toggle('hand-mode',tool==='hand');
     this.viewport.classList.toggle('picker-mode',tool==='picker');
     this.root.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
@@ -303,15 +329,24 @@ export class Editor{
   }
   countPoints(){return this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)+(this.working?.p.length||0)}
   beginStroke(p){
-    if(!this.inside(p))return;
+    p=pointOnDamageEdge(this.zone,p,Math.min(25,Math.max(2,this.size*.65)));
+    if(!p)return;
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS)this.compactStrokeBudget();
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
-    this.working={c:this.color,s:this.size,t:this.tool,p:[p],g:'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
+    this.working={c:this.color,s:this.size,t:this.tool,p:[p],g:this.edgeGestureGroup||'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
+    this.edgePaused=false;
     this.redoStack=[];this.onSound?.('brush');this.render();
   }
   warnLimit(){if(!this.limitWarned){this.onChange(-1);this.limitWarned=true}}
   extendStroke(p){
-    if(!this.working||!this.inside(p))return;
+    if(!this.working)return;
+    const snapped=pointOnDamageEdge(this.zone,p,Math.min(25,Math.max(2,this.size*.65)));
+    if(!snapped){
+     // Lifting the pen outside the damaged fragment must not create an
+     // unintended straight line when it re-enters a different border.
+     this.edgeGestureGroup=this.working.g;this.finishStroke();this.edgePaused=true;return;
+    }
+    p=snapped;
     const pts=this.working.p,prev=pts[pts.length-1];
     if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<Math.min(3,1.35+this.countPoints()/1300))return;
     if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0))this.compactStrokeBudget();
@@ -424,9 +459,10 @@ export class Editor{
       const p=this.pointAt(e);
       if(this.tool==='picker'){if(this.spaceTool!==null)this.spacePicked=true;void this.pick(p,this.spaceTool!==null);return}
       if(this.tool==='fill'){
-        if(!this.inside(p))return;
+        const target=pointOnDamageEdge(this.zone,p,3);
+        if(!target)return;
         if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
-        this.strokes.push({c:this.color,s:this.size,t:'fill',p:[p]});this.onSound?.('fill');
+        this.strokes.push({c:this.color,s:this.size,t:'fill',p:[target]});this.onSound?.('fill');
         this.redoStack=[];this.save();this.render();return;
       }
       if(this.inputMode==='precision'&&e.pointerType==='touch'){
@@ -466,9 +502,13 @@ export class Editor{
         return;
       }
       this.showCursor(e);
-      if(this.working){
+      if(this.working||this.edgePaused){
         const events=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
-        for(const sample of events.length?events:[e])this.extendStroke(this.pointAt(sample));
+        for(const sample of events.length?events:[e]){
+         const point=this.pointAt(sample);
+         if(this.working)this.extendStroke(point);
+         else if(this.edgePaused)this.beginStroke(point);
+        }
       }
     };
     this.up=e=>{
@@ -477,7 +517,7 @@ export class Editor{
       this.pointers.delete(e.pointerId);
       if(this.viewportCapturedPointer===e.pointerId)this.viewportCapturedPointer=null;
       if(this.pointers.size<2)this.pinch=null;
-      this.finishStroke();
+      this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;
       if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
       this.panStart=null;this.viewport.classList.remove('is-panning');
       if(e.pointerType==='touch'||e.type==='pointercancel'||
@@ -604,7 +644,8 @@ export class Editor{
       if(this.armPointer!==null)this.armUp({pointerId:this.armPointer,preventDefault(){},stopPropagation(){}});
       // Browsers may drop captured pointers when focus changes or touch scrolling
       // is interrupted. A stale pointer would leave the studio in pinch mode.
-      this.finishStroke();this.pointers.clear();this.pinch=null;this.panStart=null;
+      this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;
+      this.pointers.clear();this.pinch=null;this.panStart=null;
       this.aimPointer=null;this.aim=null;this.viewportCapturedPointer=null;
       this.viewport.classList.remove('is-panning');
     };
