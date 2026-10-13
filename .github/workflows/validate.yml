@@ -52,6 +52,7 @@ jobs:
       - name: Validate launcher modules and release regressions without dependencies
         run: |
           npm run validate:scripts
+          npm run test:covers
           npm run validate:launcher
           node scripts/test-publish-policy.mjs
 
