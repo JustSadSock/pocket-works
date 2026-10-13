@@ -94,5 +94,11 @@
       "v2",
       "v3"
     ]
+  },
+  "last-tile-duel": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }

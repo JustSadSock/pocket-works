@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#d3d0c7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>ПОСЛЕДНЯЯ ПЛИТА — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app" data-app-shell data-fullscreen-app data-ui>
+    <header class="topbar">
+      <a class="exit-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
+      <div class="identity" aria-label="Последняя плита">ПЛИТА<span class="brand-mark"></span></div>
+      <button id="sound" class="tool-button" type="button" aria-label="Отключить звук" data-native-press>ЗВУК: ВКЛ</button>
+    </header>
+    <section class="stage" id="stage">
+      <div id="score" class="score" hidden>
+        <div class="score-player blue"><span id="name0">Ты</span><strong id="score0">0</strong></div>
+        <div class="score-center"><small id="round">РАУНД 1</small><span id="netstate">1 ТИК / С</span></div>
+        <div class="score-player orange"><strong id="score1">0</strong><span id="name1">Соперник</span></div>
+      </div>
+      <div class="board-space">
+        <div class="board-surround">
+          <div id="board" class="board" aria-label="Поле семь на семь клеток. Синие и оранжевые жетоны обозначают игроков.">
+            <div id="tiles" class="tiles"></div>
+            <div id="player0" class="chip chip-blue" aria-label="Синий игрок"><span>1</span></div>
+            <div id="player1" class="chip chip-orange" aria-label="Оранжевый игрок"><span>2</span></div>
+          </div>
+        </div>
+        <div id="roundToast" class="round-toast" aria-live="polite"></div>
+      </div>
+      <section class="front-panel" id="menu">
+        <p class="kicker">ТАКТИЧЕСКАЯ ДУЭЛЬ · 1 НА 1</p>
+        <h1>Последняя<br>плита<span class="period">.</span></h1>
+        <p class="tagline">Каждый шаг ломает пол.<br>Останься последним.</p>
+        <div class="menu-actions">
+          <button id="create" class="button button-primary" type="button" data-native-press>ВЫЗВАТЬ ДРУГА <span>↗</span></button>
+          <div class="action-row">
+            <button id="join" class="button button-secondary" type="button" data-native-press>ВОЙТИ ПО КОДУ</button>
+            <button id="practice" class="button button-secondary" type="button" data-native-press>ПРОТИВ БОТА</button>
+          </div>
+          <button id="resume" class="return-room" type="button" hidden>Вернуться в комнату →</button>
+        </div>
+      </section>
+      <section class="front-panel room-panel" id="lobby" hidden>
+        <p class="kicker">СЕТЕВАЯ ДУЭЛЬ</p>
+        <h2>Комната открыта</h2>
+        <div class="code-header">КОД ДЛЯ ДРУГА</div>
+        <button class="room-code" id="roomCode" type="button" title="Скопировать код" data-native-press>••••••••</button>
+        <div class="action-row">
+          <button id="copy" class="button button-secondary" type="button" data-native-press>КОПИРОВАТЬ</button>
+          <button id="share" class="button button-secondary" type="button" data-native-press>ССЫЛКА ↗</button>
+        </div>
+        <div class="room-seats"><div><i class="seat blue-seat">1</i><span id="seat0">Хозяин</span></div><div><i class="seat orange-seat">2</i><span id="seat1">Ожидание…</span></div></div>
+        <button id="start" class="button button-primary" type="button" disabled data-native-press>ЖДЁМ СОПЕРНИКА</button>
+        <button id="leaveLobby" class="text-link" type="button">Покинуть комнату</button>
+      </section>
+      <section id="controls" class="controls" hidden>
+        <div class="command-bar"><span id="event">Выбери направление</span><span id="command">СТОЙ</span></div>
+        <div class="tick-track"><span id="tickProgress"></span></div>
+        <div class="control-body">
+          <div class="dpad" role="group" aria-label="Направление">
+            <button class="direction dir-up" data-dir="up" aria-label="Вверх" type="button" data-native-press>↑</button>
+            <button class="direction dir-left" data-dir="left" aria-label="Влево" type="button" data-native-press>←</button>
+            <button class="direction dir-stay" data-dir="stay" aria-label="Стоять" type="button" data-native-press>•</button>
+            <button class="direction dir-right" data-dir="right" aria-label="Вправо" type="button" data-native-press>→</button>
+            <button class="direction dir-down" data-dir="down" aria-label="Вниз" type="button" data-native-press>↓</button>
+          </div>
+          <div class="ability-stack" role="group" aria-label="Способности">
+            <button id="jump" class="ability" type="button" data-native-press><b>↟</b><span>ПРЫЖОК</span><small id="jumpCd">2 клетки</small></button>
+            <button id="push" class="ability" type="button" data-native-press><b>↣</b><span>ТОЛЧОК</span><small id="pushCd">Соседняя клетка</small></button>
+          </div>
+        </div>
+        <div class="control-bottom"><span>WASD / СТРЕЛКИ · ПРОБЕЛ · E</span><button id="quit" type="button">ВЫЙТИ</button></div>
+      </section>
+      <section id="finished" class="front-panel finish-panel" hidden>
+        <p class="kicker">МАТЧ ЗАВЕРШЁН</p>
+        <h2 id="finishTitle">Победа</h2>
+        <p id="finishScore" class="finish-score">3 : 0</p>
+        <button id="again" class="button button-primary" type="button" data-native-press>РЕВАНШ <span>↗</span></button>
+        <button id="finishExit" class="button button-secondary" type="button" data-native-press>В МЕНЮ</button>
+      </section>
+      <div id="loading" class="blocking-panel" hidden><span class="spinner"></span><b>Подключение к PocketNet…</b><button id="cancelConnection" type="button">Отмена</button></div>
+    </section>
+    <div id="modal" class="modal" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+        <h2 id="dialogTitle">Создать комнату</h2>
+        <label id="nameLabel" for="nickname">ТВОЁ ИМЯ</label>
+        <input id="nickname" maxlength="22" autocomplete="nickname" spellcheck="false" value="Игрок">
+        <label id="codeLabel" for="invite">КОД КОМНАТЫ</label>
+        <input id="invite" maxlength="36" spellcheck="false" autocomplete="off" placeholder="8 символов">
+        <p id="dialogHelp"></p>
+        <button id="dialogOk" class="button button-primary" type="button">ПРОДОЛЖИТЬ</button>
+        <button id="dialogCancel" class="button button-secondary" type="button">ОТМЕНА</button>
+      </div>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Последняя плита" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
