@@ -125,6 +125,7 @@ function drawKeeper(ctx,p,side,t){
  // Long sleeves and goalkeeper gloves create a visible T-shaped top-down body.
  rounded(ctx,-30,-7,60,13,6,'#f9d37b');
  rounded(ctx,-33,-8,10,15,4,'#223e43');rounded(ctx,23,-8,10,15,4,'#223e43');
+ rounded(ctx,-11,14,9,16,4,'#24414a');rounded(ctx,3,14,9,16,4,'#24414a');
  rounded(ctx,-12,-10,24,24,8,'#e9bc60');
  centered(ctx,0,-13,12,skins[1]);centered(ctx,0,-15,9,hairs[0]);
  ctx.fillStyle='#203e44';ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillText('1',0,9);
@@ -241,7 +242,14 @@ export class TopdownFX{
   }
  }
 }
-const frames=new WeakMap();
+let fieldCache=null;
+function paintCachedPitch(ctx){
+ if(!fieldCache){
+  fieldCache=document.createElement('canvas');fieldCache.width=FIELD.w;fieldCache.height=FIELD.h;
+  paintPitch(fieldCache.getContext('2d'));
+ }
+ ctx.drawImage(fieldCache,0,0);
+}
 function fit(canvas){
  const rect=canvas.getBoundingClientRect(),dpr=Math.min(globalThis.devicePixelRatio||1,2);
  const ww=Math.max(1,Math.round(rect.width*dpr)),hh=Math.max(1,Math.round(rect.height*dpr));
@@ -262,7 +270,7 @@ export function renderTopdown(canvas,g,time,{selected=-1,aim=null,charge=0,pass=
  ctx.save();
  ctx.translate(x+FIELD.w*scale/2+Math.sin(time*37)*shake,y+FIELD.h*scale/2+Math.cos(time*29)*shake*.58);
  ctx.scale(scale*zoom,scale*zoom);ctx.translate(-FIELD.w/2,-FIELD.h/2);
- paintPitch(ctx);
+ paintCachedPitch(ctx);
  fx?.drawUnder(ctx);
  for(const p of g.players){
   let q=p;
@@ -282,7 +290,7 @@ export function renderTopdown(canvas,g,time,{selected=-1,aim=null,charge=0,pass=
   ball={...ball,x:vis.x,y:vis.y};
  }
  drawFootball(ctx,ball,time);
- if(aim){
+ if(aim!==null&&Number.isFinite(aim)){
   const p=g.players.find(p=>p.id===selected);
   drawAim(ctx,p,g,aim,charge,pass);
  }

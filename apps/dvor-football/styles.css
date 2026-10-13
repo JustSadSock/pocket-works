@@ -42,3 +42,5 @@
 @media (prefers-reduced-motion:reduce){
  .scoreboard.goal-pulse{animation:none;filter:brightness(1.12)}
 }
+
+@media (hover:hover) and (pointer:fine) and (max-width:1040px){.pc-hints span,.pc-hints i{display:none}.pc-hints{letter-spacing:0;gap:7px}}
