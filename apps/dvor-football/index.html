@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#e9e2c9"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="ДВОР">
+<title>ДВОР — футбол 4×4</title><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon.svg"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css"></head>
+<body><main class="app-shell" data-app-shell data-fullscreen-app data-keyboard-aware>
+<header id="shellBar" class="bar" data-ui><a class="back-shell" href="../../" data-app-control>← Pocket Works</a><div class="brand"><span class="brand-ball">●</span> ДВОР <span class="brand-small">ФУТБОЛ 4×4</span></div><button id="soundBtn" class="subtle" type="button" aria-label="Переключить звук">Звук: вкл</button></header>
+<section class="page home-page" id="homeScreen">
+ <div class="showcase"><canvas id="heroCanvas" aria-hidden="true"></canvas><div class="showcase-label">АРКАДНЫЙ ФУТБОЛ · 4 НА 4</div><div class="showcase-message"><h1>Собирай <i>команду.</i><br>Забивай голы.</h1><p>Пять минут, один мяч, никакой лишней возни.</p></div></div>
+ <div class="action-dock"><div class="menu-label">НА ПОЛЕ</div><button class="action primary" id="soloBtn" type="button">БЫСТРЫЙ МАТЧ <span>↗</span></button><div class="action-row"><button class="action secondary" id="hostBtn" type="button">Создать комнату</button><button class="action secondary" id="joinBtn" type="button">По коду</button></div><button class="edit-shortcut" id="editBtn" type="button"><span class="mini-shirt">09</span><span><b id="menuName">Мой футболист</b><small id="menuRating">МОЯ КАРТОЧКА · 87 ОБЩ</small></span><strong>ИЗМЕНИТЬ ↗</strong></button><div id="networkStatus" class="net-status" role="status" aria-live="polite">PocketNet · проверка соединения</div></div>
+</section>
+<section class="page editor-page hidden" id="editorScreen">
+ <div class="editor-top"><button id="editorBack" class="flat-btn" type="button">← Назад</button><b>РАЗДЕВАЛКА</b><span>МОЙ ФУТБОЛИСТ</span></div>
+ <div class="editor-layout">
+  <div class="player-card"><div class="card-stars">DVOR · PLAYER EDITION</div><div class="card-number" id="cardRating">87</div><div class="card-position">УНИВЕРСАЛ</div><canvas id="playerCanvas" aria-label="Внешний вид футболиста"></canvas><div class="card-footer"><strong id="cardName">ФОРВАРД</strong><span id="cardNumber">№ 09</span></div></div>
+  <div class="player-settings"><div class="settings-title">СВОЙ СТИЛЬ</div><div class="edit-line"><label for="nameField">Имя</label><input id="nameField" maxlength="18" spellcheck="false" autocomplete="nickname"></div><div class="edit-line"><label for="numberField">Номер</label><input id="numberField" type="number" min="1" max="99" inputmode="numeric"></div>
+   <div class="pick-line"><span>Форма</span><div class="swatches" id="kitPicks"></div></div><div class="pick-line"><span>Кожа</span><div class="swatches" id="skinPicks"></div></div><div class="pick-line"><span>Волосы</span><div class="swatches" id="hairPicks"></div></div>
+   <div class="stat-heading"><b>ХАРАКТЕРИСТИКИ</b><span id="skillLeft">0 ОЧКОВ</span></div><div class="stat-list" id="statRows"></div>
+   <p class="stat-note">20 очков на четыре навыка. У каждого навыка есть реальный эффект на поле.</p><button id="savePlayer" class="action primary save-btn" type="button">СОХРАНИТЬ ФУТБОЛИСТА <span>✓</span></button>
+  </div>
+ </div>
+</section>
+<section class="page lobby-page hidden" id="lobbyScreen">
+ <div class="lobby-heading"><button id="lobbyBack" type="button" class="flat-btn">← В меню</button><div class="lobby-status" id="lobbyStatus">СОЕДИНЯЕМСЯ…</div></div>
+ <div class="lobby-main"><div class="invite-panel"><div class="menu-label">КАРМАННЫЙ СТАДИОН</div><h2>Играем<br><em>вместе.</em></h2><div id="joinArea"><label for="codeInput">КОД КОМНАТЫ</label><input id="codeInput" type="text" maxlength="36" autocomplete="off" placeholder="8 символов" spellcheck="false"><button id="enterCode" class="action primary" type="button">ВОЙТИ ↗</button></div><div id="hostArea" class="hidden"><div class="room-code" id="roomCode" data-selectable>--------</div><div class="action-row"><button id="copyCode" type="button" class="action secondary">Код</button><button id="copyLink" type="button" class="action secondary">Ссылка</button></div></div></div>
+ <div class="teams-panel"><div class="sides-head">КОМАНДЫ <span id="playerCount">0 / 8</span></div><div class="team-column east"><header><span class="team-mark"></span> СИНИЕ <button type="button" id="joinBlue">ЗАНЯТЬ МЕСТО</button></header><div id="blueList" class="team-members"></div></div><div class="team-column west"><header><span class="team-mark"></span> КРАСНЫЕ <button type="button" id="joinRed">ЗАНЯТЬ МЕСТО</button></header><div id="redList" class="team-members"></div></div><button id="startOnline" class="action primary" type="button">НАЧАТЬ МАТЧ <span>↗</span></button><div class="lobby-note" id="lobbyNote">Минимум два игрока, по одному с каждой стороны. Остальные позиции займут боты.</div></div></div>
+</section>
+<section class="page game-page hidden" id="gameScreen">
+ <div class="pitch-stage" id="pitchStage" data-gesture-surface data-block-callout><canvas id="pitch" aria-label="Футбольное поле, матч четыре на четыре"></canvas></div>
+ <div class="scoreboard" data-ui><div class="score-team blue">СИНИЕ</div><div class="score-number" id="scoreNumber">0 <span>:</span> 0</div><div class="score-team red">КРАСНЫЕ</div><div class="clock" id="clock">05:00</div></div>
+ <button id="pauseBtn" type="button" class="pause-control" data-ui>ПАУЗА Ⅱ</button>
+ <div id="gameToast" class="game-toast" aria-live="polite"></div>
+ <div class="game-left" data-ui><div id="stick" class="stick" data-gesture-surface data-block-callout aria-label="Джойстик движения"><div id="stickThumb"></div></div><button id="switchBtn" type="button" class="switch-control">СМЕНИТЬ ↻</button></div>
+ <div class="game-right" data-ui><button id="passBtn" type="button" class="pass-btn">ПАС</button><button id="shotBtn" type="button" class="shot-btn"><span>УДАР</span><small id="chargeText"></small></button></div>
+ <div class="tactic-strip" data-ui><button id="tacticBtn" type="button">ТАКТИКА · БАЛАНС</button></div>
+ <div class="veil hidden" id="pauseVeil"><div class="dialog"><div class="dialog-label">ПЕРЕРЫВ</div><h2 id="pauseTitle">Пауза.</h2><p id="pauseText">Матч продолжится, когда ты вернёшься.</p><button id="resumeBtn" class="action primary">ПРОДОЛЖИТЬ ↗</button><button id="quitBtn" class="action secondary">ЗАВЕРШИТЬ МАТЧ</button><a href="../../" data-app-control class="quit-shell">В Pocket Works</a></div></div>
+ <div class="veil hidden" id="endVeil"><div class="dialog final"><div class="dialog-label">ФИНАЛЬНЫЙ СВИСТОК</div><h2 id="endTitle">Матч окончен</h2><div id="endScore" class="final-score">0 : 0</div><button id="againBtn" class="action primary">ИГРАТЬ ЕЩЁ ↗</button><button id="endMenuBtn" class="action secondary">ГЛАВНОЕ МЕНЮ</button><a href="../../" data-app-control class="quit-shell">В Pocket Works</a></div></div>
+ </section>
+<div class="status-pop" id="toast" role="status" aria-live="polite"></div>
+<button class="workshop-only" data-workshop-trigger type="button" aria-label="Инструменты Workshop">Workshop</button>
+</main><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ДВОР" data-app-version="1.0.0"></script><script type="module" src="./app.js"></script></body></html>
