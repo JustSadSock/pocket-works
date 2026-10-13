@@ -85,7 +85,7 @@
 }
 .round-view-window{
  aspect-ratio:var(--art-aspect,var(--zamazka-fallback-aspect))!important;
- width:min(100%,calc((100dvh - 240px) * var(--art-aspect,var(--zamazka-fallback-aspect))))!important;
+ width:min(100%,calc(min(64dvh,550px,100dvh - 240px) * var(--art-aspect,var(--zamazka-fallback-aspect))))!important;
  max-height:min(64dvh,550px);
 }
 .round-view-image canvas{object-fit:fill!important;}
@@ -107,5 +107,5 @@
  .reveal-option-image img,.reveal-option-image canvas{max-height:15dvh}
  .reveal-option-image canvas{width:min(100%,calc(15dvh * var(--art-aspect,1.3333)))!important}
  .restore .viewport{width:min(100%,calc((100dvh - 245px) * var(--art-aspect,1.3333)))!important;max-height:calc(100dvh - 205px)}
- .round-view-window{width:min(100%,calc((100dvh - 220px) * var(--art-aspect,1.3333)))!important;max-height:58dvh}
+ .round-view-window{width:min(100%,calc(min(58dvh,100dvh - 220px) * var(--art-aspect,1.3333)))!important;max-height:58dvh}
 }
