@@ -78,7 +78,7 @@ async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show(
  try{await conn.connect();if(action==='create')conn.createRoom('ne-tem-golosom');else conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());}catch(e){toast('PocketNet недоступен: '+e.message);$('net-pill').textContent='Нет связи';roomUI()}}
 function leaveNetwork(){for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
 function resetRuntime(){cancelCountdown();stopAllPlayback();if(record)finishRecording();cleanAudios();localClips=[];remoteClips=[];if(liveUrl){URL.revokeObjectURL(liveUrl);liveUrl=null}sourceBlob=null;scene=null;}
-function closePeer(id){const p=peers.get(id);if(!p)return;try{p.dc?.close();p.pc.close()}catch{}peers.delete(id)}
+function closePeer(id){const p=peers.get(id);if(!p)return;try{p.dc?.close();p.pc.close()}catch{}peers.delete(id);for(const key of videoSent)if(key.startsWith(id+':'))videoSent.delete(key)}
 function peer(id,initiator){if(!window.RTCPeerConnection)return toast('WebRTC недоступен в этом браузере.'),null;if(peers.has(id))return peers.get(id);const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}]});const p={id,pc,dc:null,remoteReady:false,pending:[],rx:null,queued:[],busy:false};peers.set(id,p);
  pc.onicecandidate=e=>{if(e.candidate)sendGame({type:'signal',to:id,signal:{kind:'ice',candidate:e.candidate.toJSON()}})};
  pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed'){closePeer(id);toast('Прямая передача не удалась. Возможна блокировка WebRTC сетью.');if(meHost()&&state?.players.some(x=>x.id===id))setTimeout(()=>{if(!peers.has(id))peer(id,true)},1800)}};
@@ -170,7 +170,7 @@ $('stage-video').onpause=()=>{if(!record){playing=false;$('play-toggle').textCon
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelCountdown();if(record)finishRecording();stopAllPlayback();pausePremiere()}});
 window.addEventListener('pagehide',()=>{if(record)finishRecording();draftWrite()});
 document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea')||view!=='editor')return;if(e.code==='Space'){e.preventDefault();playStage()}else if(e.key.toLowerCase()==='r'){e.preventDefault();startRecord()}else if(e.key==='Escape'&&(record||preroll)){cancelCountdown();finishRecording()}});
-getPocketIdentity().then(p=>{identity=p;name=p?.complete?p.nickname:(session.getItem('name')||'Гость');}).catch(()=>{name=session.getItem('name')||'Гость'});
+getPocketIdentity().then(p=>{identity=p;name=p?.complete?p.nickname:(session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900))));if(!p?.complete)session.setItem('name',name);}).catch(()=>{name=session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900)));session.setItem('name',name)});
 const incoming=new URLSearchParams(location.search).get('room');
 if(incoming){mode='guest';$('join-code').value=incoming.toUpperCase();roomUI();connectRoom('join')}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
