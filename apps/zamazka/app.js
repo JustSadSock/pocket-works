@@ -830,9 +830,28 @@ async function connect(mode){
      if(view)renderView();
      else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
    });
+   // Big eight-player galleries arrive in ordered, bounded PocketNet frames.
+   // Reconstruct only complete authoritative snapshots; never show partial art.
+   const stateStreams=new Map();
    client.on('game_event',msg=>{
      if(client.closed)return;
-     const event=msg.event;
+     let event=msg.event;
+     if(event?.type==='state_stream'){
+       const p=event.payload;
+       if(!p||typeof p.stream!=='string'||!Array.isArray(stateStreams.get(p.stream)?.parts)&&
+          (!Number.isInteger(p.total)||p.total<1||p.total>512))return;
+       if(!Number.isInteger(p.index)||p.index<0||p.index>=p.total||
+          typeof p.part!=='string'||p.part.length>15000)return;
+       const now=Date.now();
+       for(const [id,s] of stateStreams)if(now-s.created>15000)stateStreams.delete(id);
+       let entry=stateStreams.get(p.stream);
+       if(!entry){entry={created:now,total:p.total,parts:new Array(p.total),count:0};stateStreams.set(p.stream,entry)}
+       if(entry.total!==p.total)return;
+       if(entry.parts[p.index]===undefined){entry.parts[p.index]=p.part;entry.count++}
+       if(entry.count!==entry.total)return;
+       stateStreams.delete(p.stream);
+       try{event=JSON.parse(entry.parts.join(''))}catch{notify('Не удалось собрать данные выставки. Повторяем…');client.sendGame({type:'sync'});return}
+     }
      if(event?.type==='achievement_awarded'){
       const item=zamazkaAchievements.find(a=>a.id===event.payload?.id);
       if(item){earnedAchievementIds.add(item.id);sound('confirm');notify('Достижение: '+item.name+' · '+item.reward);}
