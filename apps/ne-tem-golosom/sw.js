@@ -1,8 +1,8 @@
 const CACHE_PREFIX='ne-tem-golosom-';
-const CACHE='ne-tem-golosom-v1.0.0';
-const APP_VERSION='1.0.0';
+const CACHE='ne-tem-golosom-v1.0.1';
+const APP_VERSION='1.0.1';
 const RELEASE_DATE='2026-10-14';
-const RELEASE_NOTES=['Слепой дубляж с монтажной лентой и онлайн-премьерой','Фрагментарная запись на мобильных устройствах и компьютерах','PocketNet-комнаты, прямой обмен файлами, локальные черновики'];
+const RELEASE_NOTES=['Фрагментарная озвучка и монтаж на киноленте; улучшенная кооперативная премьера','Фрагментарная запись на мобильных устройствах и компьютерах','PocketNet-комнаты, прямой обмен файлами, локальные черновики'];
 const OWN=['./','./index.html','./app.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/net.js','../../shared/capabilities/identity.js'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
