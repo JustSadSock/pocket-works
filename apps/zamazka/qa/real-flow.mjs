@@ -37,7 +37,7 @@ try{
   // Real settings: volume persists, and the slider value is reflected without reloading.
   await page.locator('#settingsBtn').click();
   await page.locator('#settingVolume').waitFor();
-  await page.locator('#settingVolume').fill('35');
+  await page.locator('#settingVolume').evaluate(el=>{el.value='35';el.dispatchEvent(new Event('input',{bubbles:true}))});
   await page.locator('#modalActions .btn.primary').click();
   const storedVolume=await page.evaluate(()=>localStorage.getItem('pocket-works:zamazka:sound-volume'));
   assert.equal(storedVolume,'35','Sound level was not persisted');
@@ -58,7 +58,7 @@ try{
   assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'hand');
   await brush.click();
   assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'brush');
-  await page.locator('#brushSize').fill('20');
+  await page.locator('#brushSize').evaluate(el=>{el.value='20';el.dispatchEvent(new Event('input',{bubbles:true}))});
   const sample=await page.locator('#sizeSample').boundingBox();
   assert(sample?.width>=18,'Brush diameter preview did not react to tool size');
   const board=page.locator('#paintCanvas');
