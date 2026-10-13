@@ -28,6 +28,12 @@ export function createExhibitionDirector(screen,{duration=STAGE_DURATION}={}){
   // Respect the old phase's dedicated verdict transition in app.js.
   const shouldAnimate=Boolean(animate&&old&&!reduced()&&!document.hidden);
   if(shouldAnimate){
+   // This is a visual fossil, not a second interactive copy of the page.
+   // Strip delegated actions so neither Playwright nor event delegation can
+   // address controls on the outgoing canvas while it fades away.
+   const controls=old.querySelectorAll('[data-action],[data-choice],[data-saved],[data-inspect],[data-magnify],[data-review-open],[data-tool],[data-cmd],[data-chipadd],[data-chipsub]');
+   const names=['data-action','data-choice','data-saved','data-inspect','data-magnify','data-review-open','data-tool','data-cmd','data-chipadd','data-chipsub'];
+   for(const node of controls)for(const name of names)if(node.hasAttribute(name))node.removeAttribute(name);
    exit=document.createElement('div');
    exit.className='exhibition-exit-layer';
    exit.setAttribute('aria-hidden','true');
