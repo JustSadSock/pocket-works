@@ -18,14 +18,14 @@ function release() {
 }
 
 function beginIntro() {
-  activeUntil = performance.now() + 1800;
+  activeUntil = performance.now() + 1050;
   document.body.dataset.cameraIntro = 'true';
   if (overviewButton) {
     overviewButton.style.pointerEvents = 'none';
     overviewButton.style.opacity = '.28';
   }
   clearTimeout(releaseTimer);
-  releaseTimer = window.setTimeout(release, 1840);
+  releaseTimer = window.setTimeout(release, 1110);
 }
 
 function syncMode() {
