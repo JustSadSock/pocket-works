@@ -135,3 +135,32 @@ button:focus-visible,.screen button:focus-visible,input:focus-visible,
   .reveal-phase .reveal-brief{opacity:1;transform:none}
   button,.brush-cursor,.museum-slide{transition:none!important}
 }
+
+/* Scale sample is inline with the size control; no canvas overlay can steal input. */
+.restore .adjust label:has(.size-sample){display:flex;align-items:center;gap:9px}
+.restore .adjust #brushSizeValue{font-variant-numeric:tabular-nums}
+.size-sample{
+ width:12px;height:12px;flex:none;display:inline-block;border-radius:50%;
+ background:#364d45;box-shadow:0 0 0 2px #e8ddca,0 0 0 3px #8e7960;
+ transition:width 90ms ease,height 90ms ease;
+}
+.archive-local-status{
+ min-height:17px;font-size:11px;color:#66705d;
+ margin:6px 0 11px;display:flex;align-items:center;gap:7px;
+}
+.archive-local-status::before{
+ content:"";display:block;width:7px;height:7px;border-radius:50%;background:#5e8167;flex:none;
+}
+.archive-local-status[data-state="saving"]::before{
+ background:#ad8449;animation:zam-pulse 900ms ease-in-out infinite alternate;
+}
+.archive-local-status[data-state="error"]{color:#9b3428}
+.archive-local-status[data-state="error"]::before{background:#aa402e}
+@media (max-width:699px){
+ .archive-local-status{margin:2px 0 9px}
+ .restore .adjust label:has(.size-sample){justify-content:space-between}
+}
+@media (prefers-reduced-motion:reduce){
+ .archive-local-status[data-state="saving"]::before{animation:none}
+ .size-sample{transition:none}
+}
