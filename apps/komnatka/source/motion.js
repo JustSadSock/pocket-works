@@ -73,6 +73,7 @@ export function createMotionDirector({getRoot,getItem,reducedMotion=()=>false}){
   function appear(id){begin(id,'appear',{initial:true});}
   function rotate(id,previousAngle,from=null){begin(id,'rotate',{angle:previousAngle,from});}
   function refuse(id){begin(id,'refuse');}
+  function touch(id){begin(id,'touch');}
   function retire(id,root){
     actions.delete(id);
     if(!root||root.isDisposed())return;
@@ -90,7 +91,7 @@ export function createMotionDirector({getRoot,getItem,reducedMotion=()=>false}){
       if(!root||root.isDisposed()||!item){actions.delete(id);continue;}
       if(reduced){reset(id);continue;}
       const p=motionProfile(item.type),elapsed=Math.max(0,timestamp-a.t);
-      const duration=a.kind==='rotate'?215:a.kind==='refuse'?170:p.settle;
+      const duration=a.kind==='rotate'?215:a.kind==='refuse'?170:a.kind==='touch'?160:p.settle;
       const t=clamp01(elapsed/duration),e=easeOut(t),wave=settleWave(t);
       root.position.set(item.x,item.y||0,item.z);
       root.rotation.set(0,(item.rot||0)*Math.PI/2,0);
@@ -123,6 +124,8 @@ export function createMotionDirector({getRoot,getItem,reducedMotion=()=>false}){
           root.position.z=(a.from.z??item.z)*(1-e)+item.z*e;
         }
         root.scaling.setAll(1+.013*Math.sin(Math.PI*t));
+      }else if(a.kind==='touch'){
+        root.scaling.setAll(1+.028*Math.sin(Math.PI*t)*(1-t));
       }else if(a.kind==='refuse'){
         root.position.x+=.055*Math.sin(t*Math.PI*3)*(1-t);
         root.rotation.z=.017*Math.sin(t*Math.PI*3)*(1-t);
@@ -154,5 +157,5 @@ export function createMotionDirector({getRoot,getItem,reducedMotion=()=>false}){
     }
     return active || actions.size>0 || retired.length>0;
   }
-  return {lift,drag,land,appear,rotate,refuse,retire,forget,tick,reset,hasMotion:()=>actions.size>0||retired.length>0};
+  return {lift,drag,land,appear,rotate,refuse,touch,retire,forget,tick,reset,hasMotion:()=>actions.size>0||retired.length>0};
 }
