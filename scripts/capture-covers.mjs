@@ -176,34 +176,25 @@ try{
           if(!available.length)throw Error('No frame passed image-content checks');
           let oldFrame=null;
           if(present){
-            for(const ext of ['jpg','png','jpeg','webp']){
+            for(const ext of ['jpg','png','webp','jpeg']){
               try{
-                const oldBytes=await readFile(path.join(out,app.slug+'.'+ext));
-                // Chromium's bitmap decoder supports png/webp; supply the actual MIME.
-                const oldMetrics=await page.evaluate(async({base64,mime})=>{
-                  const binary=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
+                const original=await readFile(path.join(out,app.slug+'.'+ext));
+                // Always convert the older image to JPEG before a side-by-side
+                // evaluation, including genuine png/webp covers.
+                const base64=await page.evaluate(async({image,mime})=>{
+                  const binary=Uint8Array.from(atob(image),c=>c.charCodeAt(0));
                   const bitmap=await createImageBitmap(new Blob([binary],{type:mime}));
-                  const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;
-                  const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0,64,64);
+                  const canvas=document.createElement('canvas');
+                  canvas.width=bitmap.width;canvas.height=bitmap.height;
+                  canvas.getContext('2d').drawImage(bitmap,0,0);
                   bitmap.close?.();
-                  const rgba=ctx.getImageData(0,0,64,64).data;
-                  let sum=0,sq=0;const hist=new Array(16).fill(0);
-                  for(let p=0;p<rgba.length;p+=4){
-                    const lum=.2126*rgba[p]+.7152*rgba[p+1]+.0722*rgba[p+2];
-                    sum+=lum;sq+=lum*lum;hist[Math.min(15,Math.floor(lum/16))]++;
-                  }
-                  const mean=sum/4096,variance=Math.sqrt(Math.max(0,sq/4096-mean*mean));
-                  const entropy=-hist.reduce((t,n)=>{const p=n/4096;return t+(p?p*Math.log2(p):0);},0);
-                  return {bytes:binary.length,variance,entropy,edgeDensity:.04,colorfulness:30,
-                    centerDetail:variance,meanLight:mean};
-                },{base64:oldBytes.toString('base64'),mime:ext==='jpg'||ext==='jpeg'?'image/jpeg':'image/'+ext});
-                oldFrame={bytes:oldBytes,quality:scoreCoverMetrics(oldMetrics),existing:true};
-                if(ext!=='jpg'){
-                  // The vision reviewer always receives a JPEG for consistency.
-                  oldFrame=null;
-                }
+                  return canvas.toDataURL('image/jpeg',.83).split(',')[1];
+                },{image:original.toString('base64'),
+                    mime:ext==='jpg'||ext==='jpeg'?'image/jpeg':'image/'+ext});
+                const bytes=Buffer.from(base64,'base64');
+                oldFrame={bytes,quality:scoreCoverMetrics(await frameMetrics(page,bytes)),existing:true};
                 break;
-              }catch{}
+              }catch(error){console.warn('Prior cover comparison: '+String(error.message).slice(0,110));}
             }
           }
           const review=await reviewWithVision(app,available,oldFrame);
