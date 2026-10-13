@@ -122,13 +122,16 @@ const view=state=>[{type:'state',payload:state}];
 const note=(to,text)=>[{type:'notice',to,payload:text}];
 function start(s) {
   s.game=createGame();s.phase='playing';s.queued=[{...EMPTY},{...EMPTY}];
-  s.seq=[-1,-1];s.lastSeen=[0,0];s.nextAt=Date.now()+1000;s.revision++;
+  s.seq=[-1,-1];s.lastSeen=[0,0];s.submitted=[false,false];s.nextAt=Date.now()+1000;s.revision++;
 }
 function heartbeat(s,now) {
   if(s.phase!=='playing'||now<s.nextAt)return false;
+  // Await both commands briefly. Missing/disconnected peers become a stationary action.
+  if(!s.submitted.every(Boolean)&&now<s.nextAt+500)return false;
   const commands=s.queued.map((a,i)=>now-s.lastSeen[i]<2500?a:EMPTY);
   advance(s.game,commands);
   s.queued=s.queued.map(a=>({...a,kind:'step'})); // abilities are one-shot
+  s.submitted=[false,false];
   s.nextAt=now+1000; // never catch up with extra ticks after a sleeping client
   if(s.game.phase==='finished')s.phase='finished';
   s.revision++;
@@ -138,7 +141,7 @@ const module={
   protocolVersion:1,
   createRoom({player}) {
     return {state:{phase:'lobby',host:player.id,players:[player],game:null,
-      revision:0,queued:[{...EMPTY},{...EMPTY}],seq:[-1,-1],lastSeen:[0,0],nextAt:0}};
+      revision:0,queued:[{...EMPTY},{...EMPTY}],seq:[-1,-1],lastSeen:[0,0],submitted:[false,false],nextAt:0}};
   },
   onJoin({state,players}) {
     if(players.length>2)throw Error('room_full');
@@ -174,6 +177,7 @@ const module={
       const clean=actionOf(raw.action);
       if(clean&&Number.isSafeInteger(raw.seq)&&raw.seq>state.seq[side]&&raw.seq<1e9) {
         state.queued[side]=clean;state.seq[side]=raw.seq;state.lastSeen[side]=now;
+        state.submitted[side]=true;
       }
       const stepped=heartbeat(state,now);
       return {state,events:stepped?view(state):[]};

@@ -158,7 +158,7 @@ function send(type,action){
  try{net.sendGame({type,seq:++seq,action});return true;}catch{return false;}
 }
 function queueInput(){
- if(mode==='online'&&state?.phase==='playing')send('input',{dir:direction,kind:ability});
+ // Direction changes are held client-side; one packet per second keeps PocketNet cheap.
  updateLocalSelection();
 }
 function updateLocalSelection(){
