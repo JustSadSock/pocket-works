@@ -33,6 +33,7 @@
 .stake-tray{position:sticky;bottom:0;background:#30251bf5;border-top:2px solid #b08c59;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(12px,env(safe-area-inset-right)) calc(13px + env(safe-area-inset-bottom));box-shadow:0 -12px 24px #1b120b90;z-index:3}
 .stake-tray #chipsRemaining{display:flex;align-items:center;gap:5px;font:11px system-ui,sans-serif;color:#dec8a8}
 .stake-tray .btn{font-size:12px;min-width:150px;min-height:49px}
+.coin-auto-status{display:inline-flex;align-items:center;justify-content:flex-end;min-height:44px;max-width:240px;text-align:right;color:#e6c594;font:650 12px/1.35 system-ui,-apple-system,sans-serif}
 .stake-wait{padding:18px;color:#e4c9a2;font:italic 15px Georgia,serif;text-align:center;border:1px dashed #806a50;margin:20px 0}
 .verdict-intro{max-width:780px}
 .verdict-intro p{font:15px/1.55 Georgia,serif;color:#c8b7a3}
