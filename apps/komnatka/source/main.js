@@ -445,7 +445,12 @@ function removeSelected(){
 function addEvents(){
  ui.canvas.addEventListener('pointerdown',startPointer);
  ui.canvas.addEventListener('pointermove',movePointer);
- ui.canvas.addEventListener('pointerup',endPointer);
+ ui.canvas.addEventListener('pointerup',ev=>{
+  endPointer(ev);
+  // Remote edits received mid-drag are delayed so they cannot steal the pointer.
+  // Apply the newest authoritative snapshot as soon as the gesture ends.
+  if(queuedSnapshot){const latest=queuedSnapshot;queuedSnapshot=null;onOnlineRoom(latest.snapshot,latest);}
+ });
  ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();});
  window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();persist();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&!online?.active){clearTimeout(savedTimer);save(state);status('Сохранено');}});
