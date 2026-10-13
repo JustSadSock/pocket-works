@@ -159,9 +159,11 @@ function editor(){
   if(state.paintOpen)return paintingStudio();
   const d=state.draft,m=d.maskot||safeMascot(null),unlocks=state.me?.profile?.unlocked||[];
   const secretHats=[...(unlocks.includes('astronaut')?[['helmet','Шлем космонавта']]:[]),
-    ...(unlocks.includes('wedding')?[['veil','Фата']]:[])];
+    ...(unlocks.includes('wedding')?[['veil','Фата']]:[]),
+    ...(unlocks.includes('knight')?[['bascinet','Бацинет стража']]:[])];
   const secretClothes=[...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
-    ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[])];
+    ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[]),
+    ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[])];
   const category=state.editorTab;
   const options=(rows,field)=>'<div class="pws-maskot-options">'+rows.map(([id,label])=>
     '<button type="button" data-pws="maskot-item" data-field="'+field+'" data-value="'+id+
@@ -216,7 +218,7 @@ function editor(){
     '<div class="pws-maskot-editor__picker">'+appearance+'</div></div></div>'+
     (state.reward?'<div class="pws-reward-shade"><div class="pws-reward" role="dialog" aria-label="Косметика получена">'+
       '<div class="pws-reward__gift"><div class="pws-reward__lid"></div><div class="pws-reward__bow"></div></div>'+
-      '<h3>Новый образ!</h3><p>'+esc(state.reward==='astronaut'?'Шлем и скафандр':'Фата и свадебный наряд')+
+      '<h3>Новая косметика!</h3><p>'+esc(({astronaut:'Шлем и скафандр',wedding:'Фата и свадебный наряд',knight:'Бацинет стража',herald:'Гербовая накидка герольда'})[state.reward]||'Награда получена')+
       '</p>'+button('reward-close','Примерить','primary')+'</div></div>':'');
 }
 function profilePanel(){
@@ -558,9 +560,13 @@ function install(){
         state.draft.unlocked=response.profile.unlocked;
         if(!response.already){
           state.reward=response.reward;
-          state.draft.maskot=response.reward==='astronaut'
-            ?{...state.draft.maskot,hat:'helmet',clothes:'spacesuit'}
-            :{...state.draft.maskot,hat:'veil',clothes:'wedding'};
+          const claims={
+            astronaut:{hat:'helmet',clothes:'spacesuit'},
+            wedding:{hat:'veil',clothes:'wedding'},
+            knight:{hat:'bascinet'},
+            herald:{clothes:'tabard'}
+          };
+          state.draft.maskot={...state.draft.maskot,...(claims[response.reward]||{})};
         }else state.notice='Награда уже получена.';
       }catch(e){state.error=e.message==='invalid_code'?'Неверный код.':e.message}
       finally{state.busy=false;render()}return;

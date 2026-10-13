@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.10.21';
-const APP_VERSION = '0.10.21';
+const CACHE_NAME = 'pocket-works-launcher-v0.10.22';
+const APP_VERSION = '0.10.22';
 const RELEASE_DATE = '2026-10-13';
 const CACHE_PROTOCOL = 7;
 const RELEASE_NOTES = [
+  'MASKOT: hand-drawn medieval bascinet and embroidered heraldic tabard, available through two verified gift codes.',
   'Profile Card Studio: separate painted and preset backgrounds, framed mascots, large touch canvas with undo, eraser and adjustable brush.',
   'A collectible MASKOT profile editor with animal characters, outfits, and server-verified secret cosmetics.',
   'A redesigned Pocket Deck home screen with movable and configurable widgets.',

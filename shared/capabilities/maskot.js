@@ -5,13 +5,13 @@ export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Б
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
 export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса'];
-export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'}};
+export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
-  const valid=(item,category,standard)=>standard.some(x=>x[0]===item)||
+  const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||
     ((category==='hat'?Object.values(mascotSecret).map(x=>x.hat):Object.values(mascotSecret).map(x=>x.clothes))
-      .includes(item)&&Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item));
+      .includes(item)&&Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item)));
   const src=input&&typeof input==='object'?input:{};
   return {
     animal:one(mascotAnimals,src.animal,'cat'),
@@ -53,6 +53,19 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
     vest:`<path d="M46 254Q51 180 102 171L128 191 154 171Q207 181 210 254Z" fill="#f7eee0" stroke="#34434a" stroke-width="5"/><path d="M55 247 90 182 112 192 127 229 127 254 53 254ZM201 247 166 182 144 192 129 229 129 254 203 254Z" fill="#477a78" stroke="#34434a" stroke-width="4"/><path d="M117 196 128 215 139 196" fill="none" stroke="#ddbb73" stroke-width="6"/><circle cx="128" cy="236" r="5" fill="#e6c27c"/>`,
     mantle:`<path d="M48 254Q53 188 100 176L128 189 155 176Q202 188 207 254Z" fill="#416a71" stroke="#34434a" stroke-width="5"/><path d="M94 175Q54 183 35 254H103L119 197ZM162 175Q202 183 221 254H153L138 197Z" fill="#af5871" stroke="#34434a" stroke-width="5"/><path d="M94 179Q128 213 163 179" fill="none" stroke="#faead4" stroke-width="11" stroke-linecap="round"/><circle cx="128" cy="202" r="10" fill="#e8c16e" stroke="#34434a" stroke-width="3"/>`,
     spacesuit:`<path d="M43 254Q44 177 103 170L128 189 153 170Q212 177 213 254Z" fill="#ebf4f7" stroke="#34434a" stroke-width="5"/><path d="M80 182Q128 205 176 182" stroke="#afc9d3" stroke-width="11" fill="none"/><rect x="106" y="194" width="44" height="30" rx="6" fill="#6fa8b5" stroke="#34434a" stroke-width="3"/><circle cx="90" cy="212" r="7" fill="#e9bd61" stroke="#34434a" stroke-width="3"/><circle cx="166" cy="212" r="7" fill="#e9bd61" stroke="#34434a" stroke-width="3"/><path d="M104 244H152" stroke="#afc9d3" stroke-width="5"/>`,
+    tabard:`<!-- 14th-century herald's embroidered surcoat and contrasting sleeves -->
+<path d="M52 254Q52 192 94 175L128 191 162 175Q205 190 206 254Z" fill="#e6d7ac" stroke="#34434a" stroke-width="5"/>
+<path d="M56 237Q64 198 95 187L89 254H51Z" fill="#a33d4f" stroke="#34434a" stroke-width="3.5"/>
+<path d="M201 237Q192 198 161 187L168 254H206Z" fill="#a33d4f" stroke="#34434a" stroke-width="3.5"/>
+<path d="M93 183Q126 205 163 183L171 254H85Z" fill="#bd4657" stroke="#34434a" stroke-width="4"/>
+<path d="M99 190Q112 203 127 204Q144 203 158 190" fill="none" stroke="#f3dd9b" stroke-width="8" stroke-linecap="round"/>
+<path d="M105 208H152V252H105Z" fill="#e8c477" stroke="#34434a" stroke-width="3.5"/>
+<path d="M127 209V251M106 230H151" stroke="#bd4657" stroke-width="3.5"/>
+<path d="M111 214 117 218 111 222 116 226 107 227 110 219Z" fill="#a73f50"/>
+<path d="M142 214 148 218 142 222 147 226 138 227 141 219Z" fill="#a73f50"/>
+<path d="M114 235 120 240 114 245M140 235 134 240 140 245" fill="none" stroke="#a73f50" stroke-width="3" stroke-linecap="round"/>
+<path d="M98 186 85 212M157 186 170 212" fill="none" stroke="#f7e4b4" stroke-width="4" stroke-linecap="round"/>
+`,
     wedding:`<path d="M44 254Q49 177 102 171L128 190 154 171Q208 177 212 254Z" fill="#fff9f6" stroke="#34434a" stroke-width="5"/><path d="M99 178 127 213 156 178" fill="none" stroke="#e4bed1" stroke-width="7"/><path d="M128 213V253" stroke="#e4bed1" stroke-width="4"/><circle cx="128" cy="201" r="8" fill="#f4d98c" stroke="#34434a" stroke-width="2"/><path d="M80 243Q128 231 177 243" fill="none" stroke="#eadbe3" stroke-width="4"/>`
   };
   const hats={
@@ -61,6 +74,20 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
     beret:`<path d="M72 76Q79 40 135 40Q182 40 187 76Q150 93 102 85L75 92Z" fill="#82738e" stroke="#34434a" stroke-width="5"/><path d="M128 41Q134 25 141 34" stroke="#34434a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M92 66Q122 54 160 63" stroke="#b6a1c4" stroke-width="5" fill="none" stroke-linecap="round"/>`,
     flower:`<path d="M183 72Q201 58 204 81" fill="none" stroke="#567f62" stroke-width="5"/><g fill="#f6efe9" stroke="#34434a" stroke-width="2.4"><circle cx="184" cy="60" r="12"/><circle cx="206" cy="61" r="12"/><circle cx="195" cy="47" r="12"/><circle cx="195" cy="72" r="12"/></g><circle cx="195" cy="60" r="9" fill="#e9c36c" stroke="#34434a" stroke-width="2"/>`,
     helmet:`<ellipse cx="128" cy="120" rx="94" ry="100" fill="#cfecf3" fill-opacity=".18" stroke="#6f9da9" stroke-width="7"/><path d="M49 174Q128 200 207 174L213 192Q128 218 42 192Z" fill="#d4eaf0" stroke="#34434a" stroke-width="5"/><ellipse cx="91" cy="71" rx="24" ry="11" fill="#fff" opacity=".4"/><circle cx="66" cy="189" r="5" fill="#e3c371"/><circle cx="190" cy="189" r="5" fill="#e3c371"/>`,
+    bascinet:`<!-- 14th-century open-faced bascinet with raised visor and chainmail aventail -->
+<path d="M68 107Q66 52 127 40Q185 52 188 107L180 123Q173 80 127 72Q83 81 75 124Z" fill="#879ba4" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/>
+<path d="M81 84Q96 47 127 48Q160 47 177 84" fill="none" stroke="#d7e1da" stroke-width="8" opacity=".7" stroke-linecap="round"/>
+<path d="M73 112L67 155Q75 180 92 185L102 168 87 142 87 112Z" fill="#9eafb3" stroke="#34434a" stroke-width="4"/>
+<path d="M182 112L188 155Q180 180 162 185L152 168 169 142 169 112Z" fill="#9eafb3" stroke="#34434a" stroke-width="4"/>
+<path d="M75 157 83 170M83 149 95 164M181 157 173 170M173 149 161 164" stroke="#51666d" stroke-width="3" stroke-linecap="round" fill="none"/>
+<path d="M87 80Q128 66 170 80L180 103Q128 91 76 103Z" fill="#a6b8bc" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/>
+<path d="M95 84Q128 78 160 84" stroke="#eef5ed" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+<path d="M84 113Q127 103 173 113" fill="none" stroke="#445963" stroke-width="7" stroke-linecap="round"/>
+<path d="M113 75 128 52 143 75" stroke="#cfa96b" stroke-width="5" fill="none" stroke-linecap="round"/>
+<circle cx="82" cy="118" r="5.5" fill="#e5ba72" stroke="#34434a" stroke-width="2"/>
+<circle cx="174" cy="118" r="5.5" fill="#e5ba72" stroke="#34434a" stroke-width="2"/>
+<path d="M91 176 100 183M165 176 156 183" stroke="#b4c2bf" stroke-width="3" stroke-linecap="round"/>
+`,
     veil:`<path d="M67 74Q128 27 189 74L204 202Q171 222 128 219Q85 221 51 202Z" fill="#fff" fill-opacity=".35" stroke="#efdae5" stroke-width="4"/><path d="M85 72Q128 50 171 72" fill="none" stroke="#f8f6f1" stroke-width="10" stroke-linecap="round"/><circle cx="128" cy="61" r="7" fill="#e9bf6d" stroke="#34434a" stroke-width="2"/>`
   };
   const faces={

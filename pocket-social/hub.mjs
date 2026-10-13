@@ -7,16 +7,18 @@ const frames=new Set(['clean','double','corners','stamp']);
 const backgroundModes=new Set(['preset','drawing']);
 const portraitFrames=new Set(['none','wood','gilt']);
 const maskotAnimals=new Set(['cat','rabbit','frog']);
-const maskotHats=new Set(['none','crown','beret','flower','helmet','veil']);
-const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet']);
+const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard']);
 const maskotFaces=new Set(['none','glasses','stars']);
 const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса']);
-const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding']]);
+const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald']]);
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
   if(!maskotAnimals.has(value.animal)||!maskotHats.has(value.hat)||!maskotClothes.has(value.clothes)||!maskotFaces.has(value.face))return false;
   if((value.hat==='helmet'||value.clothes==='spacesuit')&&!unlocked.includes('astronaut'))return false;
   if((value.hat==='veil'||value.clothes==='wedding')&&!unlocked.includes('wedding'))return false;
+  if(value.hat==='bascinet'&&!unlocked.includes('knight'))return false;
+  if(value.clothes==='tabard'&&!unlocked.includes('herald'))return false;
   return true;
 }
 const goodArt=x=>typeof x==='string'&&(x===''||x.length<=24000&&/^data:image\/(?:png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/.test(x));
