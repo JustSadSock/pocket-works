@@ -128,32 +128,52 @@ export function tintWindowView(scene,nightFraction){
  const t=Math.max(0,Math.min(1,nightFraction));
  material.diffuseColor.set(1-.63*t,1-.59*t,1-.48*t);
 }
+// Handmade oval braided dollhouse rug. Texture follows the yarn's material,
+// while short 3D braid cords, binding and embroidered flowers establish relief.
+// All details sit below 3cm so furniture feet remain visible.
 const rugMaterials=new WeakMap();
-function wovenRug(scene,color){
- let set=rugMaterials.get(scene);
- if(!set){set=new Map();rugMaterials.set(scene,set);}
+function yarn(scene,color){
+ let set=rugMaterials.get(scene);if(!set){set=new Map();rugMaterials.set(scene,set);}
  if(set.has(color))return set.get(color);
- const tx=texture(scene,'artisan-rug-'+color,c=>{
+ const tx=texture(scene,'braided-wool-'+color,c=>{
   c.fillStyle=color;c.fillRect(0,0,256,256);
-  for(let y=0;y<256;y+=3)for(let x=0;x<256;x+=4){
-   c.fillStyle=(x+y)%3===0?'rgba(255,244,213,.11)':'rgba(76,57,49,.065)';
-   c.fillRect(x+(y%2),y,2,.7);
-  }
-  c.strokeStyle='#ecdcbf';c.lineWidth=9;c.strokeRect(14,12,228,232);
-  c.strokeStyle='rgba(92,71,56,.30)';c.lineWidth=2;c.strokeRect(22,20,212,216);
-  c.strokeStyle='#eedebf';c.lineWidth=4;
-  for(let i=0;i<4;i++){const xx=66+i*41;c.beginPath();c.moveTo(xx,63);c.lineTo(xx+18,128);c.lineTo(xx,193);c.stroke();}
-  c.strokeStyle='rgba(255,246,217,.7)';c.lineWidth=3;
-  for(let z=0;z<3;z++){const y=81+z*48;c.beginPath();c.moveTo(45,y);c.lineTo(211,y);c.stroke();}
-  c.fillStyle='#f0debf';
-  for(let x=38;x<223;x+=37)for(let y=47;y<220;y+=60){
-   c.beginPath();c.moveTo(x,y-8);c.lineTo(x+9,y);c.lineTo(x,y+8);c.lineTo(x-9,y);c.closePath();c.fill();
+  let seed=92;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+  // Individual fibrous stitches: irregular and fine, never a flat geometric print.
+  for(let row=0;row<256;row+=6)for(let col=0;col<256;col+=9){
+   const x=col+(row%12?3:0)+rand()*2,y=row+rand()*2;
+   c.strokeStyle=rand()>.55?'rgba(255,247,222,.24)':'rgba(90,64,53,.13)';
+   c.lineWidth=1.1;c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+4,y-2,x+7,y+1);c.stroke();
   }
  });
- const mat=new StandardMaterial('loom-woven-'+color,scene);
- mat.diffuseColor=Color3.White();mat.diffuseTexture=tx;
- mat.specularColor=new Color3(.015,.015,.015);mat.specularPower=7;
+ const mat=new StandardMaterial('mini-woven-yarn-'+color,scene);
+ mat.diffuseTexture=tx;mat.diffuseColor=Color3.White();
+ mat.specularColor=new Color3(.011,.011,.009);mat.specularPower=5;
  set.set(color,mat);return mat;
+}
+function ovalCord(scene,root,material,rx,rz,height=.028,radius=.012){
+ const path=[];
+ for(let i=0;i<=64;i++){
+  const angle=i*Math.PI*2/64;
+  path.push(new Vector3(Math.cos(angle)*rx,height+.0015*Math.sin(angle*12),Math.sin(angle)*rz));
+ }
+ const mesh=MeshBuilder.CreateTube('woven-oval-cord',{path,radius,tessellation:5,cap:0},scene);
+ mesh.parent=root;mesh.material=material;return mesh;
+}
+function ovalLayer(scene,root,name,material,width,depth,height,y){
+ const mesh=MeshBuilder.CreateCylinder(name,{height,diameter:width,tessellation:64},scene);
+ mesh.scaling.z=depth/width;mesh.position.y=y;mesh.material=material;mesh.parent=root;
+ return mesh;
+}
+function littleEmbroidery(scene,root,x,z,floret,center){
+ for(let j=0;j<5;j++){
+  const a=j*Math.PI*2/5;
+  const petal=MeshBuilder.CreateSphere('stitched-petal',{diameter:1,segments:6},scene);
+  petal.parent=root;petal.position.set(x+Math.cos(a)*.069,.037,z+Math.sin(a)*.069);
+  petal.scaling.set(.067,.006,.037);petal.rotation.y=-a;
+  petal.material=floret;
+ }
+ const dot=MeshBuilder.CreateSphere('thread-knot',{diameter:1,segments:6},scene);
+ dot.parent=root;dot.position.set(x,.040,z);dot.scaling.set(.032,.007,.032);dot.material=center;
 }
 export function makeItem(scene,item){
  const meta=byType[item.type];if(!meta)throw new Error('Unknown item: '+item.type);
@@ -268,12 +288,25 @@ export function makeItem(scene,item){
   }
  }
   if(t==='rug'){
-  // The pile is only ~2 cm tall; chair/table legs remain in front in real depth.
-  box(scene,'woven-binding',root,M.cream,3.00,.012,2.17,0,.008,0,.055);
-  box(scene,'soft-flat-pile',root,wovenRug(scene,item.color||'#d6ab93'),2.91,.012,2.09,0,.019,0,.044);
-  const fringe=makeMaterial(scene,'rug-fringe','#ecdcc2');
-  for(const end of [-1,1])for(let j=0;j<18;j++){
-   box(scene,'cotton-tassel',root,fringe,.025,.006,.072,-1.40+j*.164,.006,end*1.113,.006);
+  // A small oval woven keeps the floor visible at its corners and feels like
+  // cloth made for dolls, not a printed rectangle / a thick platform.
+  const backing=makeMaterial(scene,'rug-binding','#e1caab');
+  const cream=makeMaterial(scene,'rug-cotton','#f0dfc4');
+  const dark=makeMaterial(scene,'rug-warm-edge','#b98476');
+  ovalLayer(scene,root,'hand-bound-edge',backing,2.99,2.15,.012,.007);
+  ovalLayer(scene,root,'wool-pile',yarn(scene,item.color||'#d6ab93'),2.89,2.07,.013,.016);
+  ovalCord(scene,root,cream,1.432,1.027,.028,.013);
+  ovalCord(scene,root,dark,1.314,.939,.031,.014);
+  ovalCord(scene,root,cream,1.201,.847,.032,.011);
+  // One restrained embroidered rosette motif; stays legible at a toy scale.
+  littleEmbroidery(scene,root,0,0,cream,dark);
+  for(const [x,z] of [[-.62,0],[.62,0]])
+   littleEmbroidery(scene,root,x,z,makeMaterial(scene,'rug-rose','#e7c3ae'),cream);
+  // Loose short cotton ends, following the oval rather than a rectangular fringe.
+  for(const side of [-1,1])for(let j=-6;j<=6;j++){
+   const x=j*.16,z=side*(1.052-.21*Math.pow(x/1.49,2));
+   const fringe=box(scene,'woven-fringe',root,cream,.018,.007,.065,x,.011,z+side*.035,.005);
+   fringe.rotation.y=(j/6)*side*.16;
   }
  }
  if(t==='books'){
