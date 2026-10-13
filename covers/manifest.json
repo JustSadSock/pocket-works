@@ -3089,5 +3089,21 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "61a2eed9f592caa20c6866e8a56cf50ebfc4f6d4",
     "lastAttemptAt": "2026-10-13T21:06:43.421Z"
+  },
+  "shevel": {
+    "revision": "ee7e89a73727a89b48a76b96c6a4504732e67c69",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "4e344e4179b4ff7a2f68ddb7bbeb6daa461e9cf67dd2df45191046e70fcb6cc0",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "ee7e89a73727a89b48a76b96c6a4504732e67c69",
+    "lastAttemptAt": "2026-10-13T21:35:33.893Z"
   }
 }
