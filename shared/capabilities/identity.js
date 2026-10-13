@@ -1,4 +1,4 @@
-import {mascotSvg} from './maskot.js';
+import {mascotSvg,mascotPublicUnlocks} from './maskot.js';
 // Pocket ID capability for standalone Pocket Works apps.
 // Client values are display hints; authorization is always checked server-side.
 const presets={
@@ -25,7 +25,7 @@ export function pocketAvatarMarkup(value,{small=false,accountId=''}={}){
   const account=UUID.test(accountId)?' data-pw-account="'+accountId+'" data-pw-preset="'+id+'"':'';
   return '<span class="pw-identity-avatar'+(small?' pw-identity-avatar--small':'')+'"'+account+
     ' style="--pw-a-bg:'+bg+';--pw-a-ink:'+ink+'" aria-hidden="true">'+
-    (character?mascotSvg(character,{unlocks:['astronaut','wedding']}):portrait?'<img src="'+portrait+'" alt="">':'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="'+path+'"/></svg>')+'</span>';
+    (character?mascotSvg(character,{unlocks:mascotPublicUnlocks}):portrait?'<img src="'+portrait+'" alt="">':'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="'+path+'"/></svg>')+'</span>';
 }
 function showPortrait(accountId,artwork){
   if(typeof document==='undefined')return;
@@ -34,7 +34,7 @@ function showPortrait(accountId,artwork){
     if(character){
       const signature=JSON.stringify(character);
       if(el.dataset.pwMaskot!==signature){
-        el.innerHTML=mascotSvg(character,{unlocks:['astronaut','wedding']});
+        el.innerHTML=mascotSvg(character,{unlocks:mascotPublicUnlocks});
         el.dataset.pwMaskot=signature;
       }
       continue;
