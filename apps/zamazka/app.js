@@ -1,6 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPlayerBadge,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
+import {zamazkaAchievements} from '../../shared/capabilities/zamazka-achievements.js';
 import {inviteCode,parseRoomInput} from './room-code.js';
 import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
@@ -14,7 +15,7 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPainting} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.24.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.25.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -247,7 +248,7 @@ function home(skipLeave=false){
   '<div class="museum-control">'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(gameName())+'</strong><small>Изменить знак</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
     '<button class="start-restoration" id="primary-action" data-action="practice"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Начать реставрацию</strong><small>Пробный раунд</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="create"><span>＋</span> Создать комнату</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
-    '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
+    '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
     (localStorage.getItem(PRACTICE_KEY)?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
   '</div></section>','home');
  museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(id+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
@@ -520,7 +521,31 @@ function roundReview(){
 }
 function results(){
  const rank=[...view.participants].sort((a,b)=>(view.scores[b.id].mask+view.scores[b.id].eye)-(view.scores[a.id].mask+view.scores[a.id].eye));
- change('<section class="page"><div class="section-label">ИТОГИ ВЫСТАВКИ</div><h2>Каталог разоблачений</h2><div class="notice">Обман и наблюдательность оцениваются отдельно. Побеждает самая высокая сумма.</div>'+rank.map((p,i)=>'<div class="result-item"><div class="result-rank"><div class="result-identity">'+memberSeal(p)+'<div><span class="section-label">№ '+(i+1)+'</span><h3>'+esc(p.name)+pocketPlayerBadge(p)+'</h3></div></div><div class="points">'+(view.scores[p.id].mask+view.scores[p.id].eye)+' очк.</div></div><div class="quiet">Маскировка '+view.scores[p.id].mask+' · Экспертиза '+view.scores[p.id].eye+'</div></div>').join('')+'<div class="stack" style="margin-top:20px">'+(me?.id===view.host?'<button class="btn primary" data-action="next">Новый матч с этой компанией</button>':'<div class="hint">Создатель комнаты может начать следующий матч.</div>')+'<button class="btn ghost" data-action="menu">← В главное меню</button></div></section>','results')
+ change('<section class="page"><div class="section-label">ИТОГИ ВЫСТАВКИ</div><h2>Каталог разоблачений</h2><div class="notice">Обман и наблюдательность оцениваются отдельно. Побеждает самая высокая сумма.</div>'+rank.map((p,i)=>'<div class="result-item"><div class="result-rank"><div class="result-identity">'+memberSeal(p)+'<div><span class="section-label">№ '+(i+1)+'</span><h3>'+esc(p.name)+pocketPlayerBadge(p)+'</h3></div></div><div class="points">'+(view.scores[p.id].mask+view.scores[p.id].eye)+' очк.</div></div><div class="quiet">Маскировка '+view.scores[p.id].mask+' · Экспертиза '+view.scores[p.id].eye+'</div></div>').join('')+'<div class="stack" style="margin-top:20px">'+(me?.id===view.host?'<button class="btn primary" data-action="next">Новый матч с этой компанией</button>':'<div class="hint">Создатель комнаты может начать следующий матч.</div>')+'<button class="btn ghost" data-action="achievements">Достижения и награды</button><button class="btn ghost" data-action="menu">← В главное меню</button></div></section>','results')
+}
+let earnedAchievementIds=new Set();
+async function achievements(){
+ earnedAchievementIds=new Set(); // Never retain another account's cached achievements.
+ change('<section class="page zamazka-achievements"><div class="section-label">КОЛЛЕКЦИЯ</div><h2>Достижения</h2>'+
+  '<div id="zamAchievements" class="achievement-grid"><div class="notice">Проверяем награды Pocket ID…</div></div>'+
+  '<button class="btn ghost wide" data-action="achievements-back">← Назад</button></section>','achievements');
+ const mount=screen.querySelector('#zamAchievements');
+ let message='';
+ if(isPocketMember()){
+  try{
+   const response=await fetch('/pocket-social/achievements',{credentials:'same-origin',cache:'no-store'});
+   if(!response.ok)throw Error('Не удалось получить награды. Попробуй открыть страницу снова.');
+   const data=await response.json();
+   earnedAchievementIds=new Set((data.achievements||[]).map(a=>a.id));
+  }catch(e){message=e.message||'Нет связи с Pocket ID.'}
+ }else message='Войди в Pocket ID, чтобы получать косметику в сетевых матчах.';
+ if(!mount.isConnected)return;
+ mount.innerHTML=(message?'<div class="notice">'+esc(message)+'</div>':'')+
+  '<div class="achievement-progress">'+zamazkaAchievements.filter(a=>earnedAchievementIds.has(a.id)).length+' / 7 получено</div>'+
+  zamazkaAchievements.map(a=>'<article class="achievement-entry" data-earned="'+earnedAchievementIds.has(a.id)+'">'+
+   '<div class="achievement-entry__heading"><strong>'+esc(a.name)+'</strong><span>'+esc(a.tier)+'</span></div>'+
+   '<p>'+esc(a.detail)+'</p><div class="achievement-entry__foot"><span>'+esc(a.reward)+'</span><b>'+
+   (earnedAchievementIds.has(a.id)?'Получено':'Не открыто')+'</b></div></article>').join('');
 }
 function collection(){
  change('<section class="page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button></div>'+(saved.length?'<div class="gallery">'+saved.map((g,i)=>'<button class="picture" data-saved="'+i+'"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
@@ -627,6 +652,11 @@ async function connect(mode){
    client.on('game_event',msg=>{
      if(client.closed)return;
      const event=msg.event;
+     if(event?.type==='achievement_awarded'){
+      const item=zamazkaAchievements.find(a=>a.id===event.payload?.id);
+      if(item){earnedAchievementIds.add(item.id);sound('confirm');notify('Достижение: '+item.name+' · '+item.reward);}
+      return;
+     }
      if(event?.type==='state'){
        view=event.payload;
        if(pendingVote&&(view.phase!=='voting'||voteToken(view)!==pendingVote.token||view.voted?.includes(me?.id))){pendingVote=null;persistVote()}
@@ -761,6 +791,8 @@ screen.addEventListener('click',e=>{
  else if(action==='retry-art-preload')void prepareRoundImages(Boolean(practice),true);
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
+ else if(action==='achievements')void achievements();
+ else if(action==='achievements-back'){if(net&&view)renderView();else home();}
  else if(action==='cloud-sync')void zamazkaCloud?.sync();
  else if(action==='menu'){
     editor?.finishStroke();

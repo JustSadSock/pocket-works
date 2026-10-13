@@ -144,4 +144,32 @@ drawn=(await call(0,'me')).profile;
 assert.equal(drawn.backgroundMode,'preset');
 assert.equal(drawn.portraitFrame,'wood');
 assert.equal((await call(1,'user?id='+users[0].id)).profile.portraitFrame,'wood');
+// Only internal PocketNet messages may mint achievements. Browser calls fail.
+assert.equal((await call(0,'award',{accountId:users[0].id,achievementId:'zamazka.first-stroke'})).httpStatus,403);
+const grant=async achievementId=>{
+ const req=new Request('https://example.com/pocket-social/award',{method:'POST',
+   headers:{'content-type':'application/json','x-pw-internal':'1'},
+   body:JSON.stringify({accountId:users[0].id,nickname:'Alice',avatar:'clay',
+     achievementId,gameId:'zamazka',roomId:room,matchId:room})});
+ const res=await hub.fetch(req),data=await res.json();calls++;return {status:res.status,...data};
+};
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,face:'monocle'}})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'brush'}})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'restorer'}})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,background:'gallery'})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,portraitFrame:'worn-gilt'})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,title:'Подмастерье'})).httpStatus,400);
+const ids=['first-stroke','sharp-eye','shared-canvas','three-rounds','five-works','perfect-forgery','maestro'];
+for(const id of ids)assert.equal((await grant('zamazka.'+id)).ok,true);
+assert.equal((await grant('zamazka.first-stroke')).already,true,'repeated award delivery idempotent');
+assert.equal((await call(0,'achievements')).achievements.length,7);
+assert.equal((await call(1,'achievements')).achievements.length,0);
+assert.equal((await call(1,'user?id='+users[0].id)).profile.unlocked,undefined,'privacy: no inventory in public profiles');
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'brush',face:'monocle',clothes:'restorer'},
+  title:'Подмастерье',backgroundMode:'preset',portraitFrame:'worn-gilt'})).ok,true);
+assert.equal((await call(0,'profile',{...aliceCard,background:'gallery',maskot:{...plainMaskot,hat:'brush',face:'monocle',clothes:'restorer'},
+  title:'Знаток подделок',backgroundMode:'preset',portraitFrame:'worn-gilt'})).ok,true);
+assert.equal((await call(0,'me')).profile.background,'gallery');
+assert.equal((await call(1,'profile',{...aliceCard,background:'gallery'})).httpStatus,400);
+assert.equal((await call(0,'me')).profile.achievements.length,7);
 console.log('Pocket Social: '+calls+' SQLite API assertions passed.');

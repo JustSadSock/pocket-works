@@ -243,3 +243,21 @@
  .round-review-head-actions{flex-direction:column;align-items:flex-end;gap:5px}
  .round-review-heading .phase-menu{min-height:33px}
 }
+
+/* Zamazka achievements: quiet archival collection; no false claim buttons. */
+.zamazka-achievements{display:grid;gap:14px;max-width:780px;margin:0 auto;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+.zamazka-achievements>h2{margin:0}
+.achievement-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.achievement-progress{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;letter-spacing:.12em;font-size:11px;font-weight:800;color:#a79880;text-transform:uppercase}
+.achievement-entry{display:grid;align-content:start;gap:8px;min-height:142px;padding:15px;border:1px solid #5a5042;border-radius:5px;
+ background:linear-gradient(160deg,#292c2c,#262323);box-shadow:0 4px 10px #15120f29}
+.achievement-entry[data-earned=true]{border-color:#c2a56c;background:linear-gradient(160deg,#38352e,#252926)}
+.achievement-entry__heading{display:flex;align-items:start;justify-content:space-between;gap:8px}
+.achievement-entry__heading strong{font:700 18px/1.12 Georgia,serif;color:#f4e6c9}
+.achievement-entry__heading span{white-space:nowrap;font:700 10px system-ui;color:#d0b07a;letter-spacing:.04em}
+.achievement-entry p{margin:0;color:#b8b4a8;font-size:12px;line-height:1.45}
+.achievement-entry__foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:auto;padding-top:9px;border-top:1px solid #6b5d4a55}
+.achievement-entry__foot span{font-size:11px;color:#ddbf83}
+.achievement-entry__foot b{font-size:10px;font-weight:800;color:#9b978b}
+.achievement-entry[data-earned=true] .achievement-entry__foot b{color:#f1d793}
+@media(max-width:560px){.achievement-grid{grid-template-columns:1fr}.achievement-entry{min-height:unset;padding:12px}}

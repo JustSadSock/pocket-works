@@ -1,4 +1,5 @@
 import { POCKET_MODULES } from './generated-modules.mjs';
+import {assessZamazkaAwards} from './zamazka-awards.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -40,6 +41,8 @@ export class PocketNetHub {
     const sessionColumns = new Set(ctx.storage.sql.exec('PRAGMA table_info(sessions)').toArray().map(c => c.name));
     if (!sessionColumns.has('account_id')) ctx.storage.sql.exec('ALTER TABLE sessions ADD COLUMN account_id TEXT');
     if (!sessionColumns.has('avatar')) ctx.storage.sql.exec('ALTER TABLE sessions ADD COLUMN avatar TEXT');
+    ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS zamazka_award_stats(room_id TEXT PRIMARY KEY, data TEXT NOT NULL)");
+    ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS achievement_outbox(key TEXT PRIMARY KEY, account_id TEXT NOT NULL, player_id TEXT NOT NULL, achievement_id TEXT NOT NULL, game_id TEXT NOT NULL, room_id TEXT NOT NULL, match_id TEXT NOT NULL, nickname TEXT NOT NULL, avatar TEXT NOT NULL)");
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS rooms (
       id TEXT PRIMARY KEY, game_id TEXT NOT NULL, version TEXT NOT NULL,
       state TEXT NOT NULL, players TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
@@ -126,8 +129,53 @@ export class PocketNetHub {
     this.ensureAlarm();
   }
   ensureAlarm() {
-    // Alarm wakes the object to retire disconnected abandoned rooms.
-    if (this.countRooms()) this.ctx.storage.setAlarm(Date.now() + ROOM_TTL).catch(e => console.error('pocketnet_alarm', String(e)));
+    // Pending grants survive room closure and are retried until Pocket Social confirms them.
+    const waiting=this.sql('SELECT 1 FROM achievement_outbox LIMIT 1').toArray().length>0;
+    if (this.countRooms()||waiting) this.ctx.storage.setAlarm(Date.now() + (waiting?20_000:ROOM_TTL)).catch(e=>console.error('pocketnet_alarm',String(e)));
+  }
+  recordZamazkaRewards(room, previous, next, events, actor) {
+    if(room.gameId!=='zamazka')return;
+    const changed=previous?.phase!==next?.phase;
+    const board=previous?.phase==='lobby'&&next?.phase==='lobby'&&
+      events.some(e=>e?.type==='board_delta'&&e.payload?.u===actor);
+    const checkpoint=changed&&(next?.phase==='round-review'||next?.phase==='results'||
+      previous?.phase==='results'&&next?.phase==='lobby'||previous?.phase==='lobby'&&next?.phase!=='lobby');
+    if(!board&&!checkpoint)return; // Most pulses and drawing/voting packets have no award-side effects.
+    const row=this.sql('SELECT data FROM zamazka_award_stats WHERE room_id=?',room.id).toArray()[0];
+    let stats=null;try{stats=row?JSON.parse(row.data):null}catch{}
+    const {data,awards}=assessZamazkaAwards(previous,next,events,actor,stats,crypto.randomUUID());
+    this.sql('INSERT INTO zamazka_award_stats(room_id,data) VALUES(?,?) ON CONFLICT(room_id) DO UPDATE SET data=excluded.data',
+      room.id,JSON.stringify(data));
+    for(const award of awards){
+      const member=room.players.find(p=>p.id===award.playerId&&p.accountId&&uuid.test(p.accountId));
+      if(!member)continue; // Guest sessions cannot earn account cosmetics.
+      const key=[room.id,award.matchId,member.accountId,award.achievementId].join(':');
+      this.sql('INSERT OR IGNORE INTO achievement_outbox(key,account_id,player_id,achievement_id,game_id,room_id,match_id,nickname,avatar) VALUES(?,?,?,?,?,?,?,?,?)',
+        key,member.accountId,member.id,award.achievementId,'zamazka',room.id,award.matchId,member.name,member.avatar||'clay');
+    }
+    this.ensureAlarm();
+  }
+  async flushAwards(){
+    if(!this.env?.POCKET_SOCIAL)return;
+    const items=this.sql('SELECT * FROM achievement_outbox LIMIT 32').toArray();
+    if(!items.length)return;
+    const social=this.env.POCKET_SOCIAL.get(this.env.POCKET_SOCIAL.idFromName('pocket-social-global-v1'));
+    for(const item of items){
+      try{
+        const result=await social.fetch(new Request('https://internal.invalid/pocket-social/award',{
+          method:'POST',headers:{'content-type':'application/json','x-pw-internal':'1'},
+          body:JSON.stringify({accountId:item.account_id,nickname:item.nickname,avatar:item.avatar,achievementId:item.achievement_id,gameId:item.game_id,roomId:item.room_id,matchId:item.match_id})
+        }));
+        if(!result.ok)break;
+        const payload=await result.json();
+        this.sql('DELETE FROM achievement_outbox WHERE key=?',item.key);
+        if(!payload.already){
+          const target=this.connected(item.player_id,item.room_id);
+          if(target)message(target,'game_event',{roomId:item.room_id,event:{type:'achievement_awarded',to:item.player_id,payload:{id:item.achievement_id}}});
+        }
+      }catch(e){console.error('zamazka_reward_delivery',String(e));break}
+    }
+    this.ensureAlarm();
   }
   attachment(ws, value) { ws.serializeAttachment(value); }
   setRoom(ws, roomId) {
@@ -136,6 +184,7 @@ export class PocketNetHub {
   }
   async closeRoom(room) {
     this.sql('DELETE FROM rooms WHERE id = ?', room.id);
+    this.sql('DELETE FROM zamazka_award_stats WHERE room_id=?',room.id);
     this.broadcast(room, 'room_closed', { roomId: room.id });
     for (const ws of this.sockets(room.id)) this.setRoom(ws, null);
   }
@@ -339,10 +388,13 @@ export class PocketNetHub {
           if (!Array.isArray(result.events ?? []) || result.events.length > 32) throw new Error('invalid_module_events');
           // Validate event payloads before modifying persistent game state.
           for (const event of result.events ?? []) if (bytes({ roomId: room.id, event }) > MAX_EVENT_BYTES) throw new Error('event_too_large');
+          const prior=room.state;
           room.state = result.state;
           this.persist(room);
+          this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
           this.applyKicks(room, result.events ?? [], player.id);
+          await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
         }
@@ -381,6 +433,7 @@ export class PocketNetHub {
   }
 
   async alarm() {
+    await this.flushAwards();
     const now = Date.now();
     this.sql('DELETE FROM sessions WHERE expires < ?', now);
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
@@ -389,6 +442,6 @@ export class PocketNetHub {
       const room = this.readRoom(row.id);
       if (room) await this.closeRoom(room);
     }
-    if (this.countRooms()) await this.ctx.storage.setAlarm(Date.now() + ROOM_TTL);
+    this.ensureAlarm();
   }
 }

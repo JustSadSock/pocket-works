@@ -413,3 +413,26 @@
   .pws-studio__history{justify-content:space-between}
 }
 @media(max-width:385px){.pws-studio__palette{grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.pws-studio-canvas{width:min(100%,37dvh)}}
+
+/* Zamazka collection rewards. Each slot is an authored, useful style instead of a badge overlay. */
+.pws-card[data-background=gallery]{background:radial-gradient(ellipse at 45% 15%,#98734e 0,#533c35 60%,#242c30 120%);color:#ffeed5;--pws-accent:#f2c97e;--pws-ink:#fff1d2}
+.pws-card[data-background=gallery]::before{content:'';position:absolute;inset:7px;border:2px solid #c5a17c88;box-shadow:inset 0 0 0 4px #362c28,inset 0 0 0 6px #c49b6a70;pointer-events:none;opacity:1}
+.pws-card[data-background=gallery]::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 27% 7%,#ffdc8f70,transparent 42%),radial-gradient(ellipse at 75% 10%,#ffcc8755,transparent 37%);mix-blend-mode:screen}
+.pws-card[data-background=gallery] .pws-card__top,.pws-card[data-background=gallery] .pws-card__name,.pws-card[data-background=gallery] .pws-card__foot,.pws-card[data-background=gallery] .pws-card__title{position:relative;z-index:2}
+.pws-portrait[data-portrait-frame=worn-gilt]{border:8px ridge #b79453;background:#e7dbc1;
+ box-shadow:inset 0 0 0 4px #fff0c1,0 0 0 2px #453222,0 0 0 6px #b4986280,0 10px 20px #0006;
+ outline:1px dashed #69533d;outline-offset:-6px}
+.pws-portrait[data-portrait-frame=worn-gilt]::before{content:'';position:absolute;inset:-7px;pointer-events:none;border:4px dashed #73503d99;opacity:.45}
+.pws-portrait-sample[data-portrait-frame=worn-gilt]{border:7px ridge #bd985d;background:#eee0bd;box-shadow:inset 0 0 0 3px #fff0c6,0 0 0 1px #654e36}
+.pws-achievement-list{display:grid;gap:8px}
+.pws-achievement-count{font-weight:800;color:#efcfa4;font-size:13px;letter-spacing:.04em}
+.pws-achievement{display:grid;gap:5px;padding:12px;border:1px solid #546568;background:#26383d;border-radius:10px;color:#dfe5df}
+.pws-achievement[data-earned=true]{background:linear-gradient(110deg,#3e4a44,#354a4e);border-color:#bd9c65}
+.pws-achievement__head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pws-achievement__head b{font-size:13px}
+.pws-achievement__head span{font-size:10px;font-weight:700;color:#cbb18b}
+.pws-achievement p{font-size:12px;line-height:1.35;color:#b5c5be;margin:0}
+.pws-achievement small{font-size:11px;color:#dbc292}
+.pws-achievement button{justify-self:start;background:#daba83;color:#25363b;border:0;border-radius:7px;font-weight:800;font-size:11px;padding:7px 13px;margin-top:4px}
+.pws-maskot-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:700px){.pws-maskot-tabs{display:flex;grid-template-columns:none}}
