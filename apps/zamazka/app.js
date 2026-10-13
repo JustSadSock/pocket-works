@@ -151,7 +151,7 @@ function notify(t){const message=String(t||'');if(message===lastToast&&Date.now(
  lastToast=message;lastToastAt=Date.now();toast.textContent=message;toast.classList.add('show');
  clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 
-function closeDialog(){closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
+function closeDialog(){if(settingsPreviewVolume!==null){museumAudio.setVolume(soundVolume/100);settingsPreviewVolume=null}closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
 function modal(title,body,buttons){dialogFocus=document.activeElement;dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound('press',true);fn()});actionBox.append(b)});(actionBox.querySelector('.ghost')||actionBox.querySelector('button'))?.focus({preventScroll:true})}
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 let activeSubmitTransfer=null,activeDraftTransfer=null,submissionBackoffUntil=0,draftSendAfter=0;
@@ -982,10 +982,40 @@ function share(){
 }
 function inspect(id){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata"><div class="art-inspect-facts">'+artFactsHtml(id)+'</div><div>Хранится: '+esc(a.museum)+'</div></div><p class="hint">Запомни цвета и фактуру оригинала.</p>'+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
+let settingsPreviewVolume=null;
 function settings(){
- modal('Настройки','<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'"><label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки мастерской и интерфейса</label><label class="field"><input type="checkbox" id="settingConfirmVote" '+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'checked':'')+'> Подтверждать распределение монет</label><p class="hint">Новый ник применится при следующем подключении к комнате.</p>',[
-  ['Сохранить',()=>{rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');beepEnabled=dialog.querySelector('#settingSound').checked;localStorage.setItem(NS+'sound',beepEnabled?'on':'off');localStorage.setItem(CONFIRM_VOTE_KEY,dialog.querySelector('#settingConfirmVote').checked?'on':'off');museumAudio.setEnabled(beepEnabled);closeDialog();if(page==='vote'&&view?.phase==='voting')vote();notify('Настройки сохранены')},'primary'],['Отмена',closeDialog,'ghost']]);
+ const oldVolume=soundVolume;
+ modal('Настройки',
+  '<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'">'+
+  '<label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки мастерской</label>'+
+  '<label class="field sound-volume-label" for="settingVolume"><span>Громкость эффектов</span><output id="settingVolumeValue">'+soundVolume+'%</output></label>'+
+  '<input class="sound-volume-range" id="settingVolume" type="range" min="0" max="100" step="5" value="'+soundVolume+'" aria-label="Громкость эффектов">'+
+  '<label class="field"><input type="checkbox" id="settingConfirmVote" '+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'checked':'')+'> Подтверждать распределение монет</label>'+
+  '<p class="hint">Новый ник применится при следующем подключении.</p>',[
+  ['Сохранить',()=>{
+   rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');
+   beepEnabled=dialog.querySelector('#settingSound').checked;
+   soundVolume=Math.max(0,Math.min(100,Number(dialog.querySelector('#settingVolume').value)||0));
+   try{
+    localStorage.setItem(NS+'sound',beepEnabled?'on':'off');
+    localStorage.setItem(SOUND_VOLUME_KEY,String(soundVolume));
+    localStorage.setItem(CONFIRM_VOTE_KEY,dialog.querySelector('#settingConfirmVote').checked?'on':'off');
+   }catch{}
+   museumAudio.setEnabled(beepEnabled);museumAudio.setVolume(soundVolume/100);
+   settingsPreviewVolume=null;closeDialog();
+   if(page==='vote'&&view?.phase==='voting')vote();
+   notify('Настройки сохранены');
+  },'primary'],
+  ['Отмена',()=>{museumAudio.setVolume(oldVolume/100);settingsPreviewVolume=null;closeDialog()},'ghost']
+ ]);
+ const volume=dialog.querySelector('#settingVolume'),value=dialog.querySelector('#settingVolumeValue');
+ volume?.addEventListener('input',()=>{
+  value.textContent=volume.value+'%';
+  settingsPreviewVolume=Number(volume.value);museumAudio.setVolume(settingsPreviewVolume/100);
+ });
+ volume?.addEventListener('change',()=>{if(dialog.querySelector('#settingSound')?.checked)museumAudio.play('tool',true)});
 }
+
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 document.querySelector('#profileBtn')?.addEventListener('click',editEmblem);
 syncIdentity();
