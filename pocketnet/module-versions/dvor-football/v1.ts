@@ -204,7 +204,7 @@ const module={
   const m=state.members.find(item=>item.id===player.id);if(!m)return {state,events:[]};
   if(v.type==='sync')return {state,events:[{type:'state',to:player.id,payload:payloadState(state)}]};
   if(v.type==='profile'&&state.phase==='lobby'){
-   m.profile=safeProfile(v.profile);m.profile.name=player.name.replace(/^Гость · /,'').slice(0,18);state.revision++;
+   m.profile=safeProfile(v.profile);state.revision++;
    return {state,events:events(state)};
   }
   if(v.type==='team'&&state.phase==='lobby'){
