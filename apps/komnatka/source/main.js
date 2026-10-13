@@ -193,7 +193,7 @@ function sprite(type){
  frame:'<rect x="4" y="4" width="24" height="24" rx="1"/><path d="m7 23 7-10 4 5 3-4 4 9zM20 10h.01"/>',
  window:'<rect x="5" y="3" width="22" height="26" rx="1"/><path d="M16 3v26M5 16h22"/>'
  };
- return '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(d[type]||d.sofa)+'</svg>';
+ return '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(d[type]||d[({table:'coffee',lamp:'floorlamp',shelf:'shelf',plant:'plant',mug:'mug',rug:'rug',frame:'frame'})[byType[type]?.icon]]||d.sofa)+'</svg>';
 }
 function showCatalog() {
  ui.categories.innerHTML=GROUPS.map(([key,name])=>'<button type="button" data-group="'+key+'" class="'+(key===activeGroup?'on':'')+'">'+name+'</button>').join('');
