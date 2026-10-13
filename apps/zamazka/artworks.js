@@ -78,23 +78,36 @@ export function loadArtwork(id){
  while(pending.size>MAX_DECODED_IMAGES)pending.delete(pending.keys().next().value);
  return task;
 }
-/** Keep the entire source painting inside the shared restoration canvas.
- * Previously a forced 4:3 source crop silently removed edges, even though
- * gallery thumbnails had different (also cropped) framing.
+/** The network and brush protocol intentionally use a stable 600×450
+ * coordinate space. The artwork fills that entire space; the DOM canvas/frame
+ * adopts the natural aspect ratio, cancelling the logical raster stretch.
+ * This avoids letterbox strips, including inside the editable damage mask,
+ * without invalidating old multiplayer drawings or changing their positions.
  */
+export function artworkAspect(image){
+ const w=image?.naturalWidth,h=image?.naturalHeight;
+ return w>0&&h>0&&Number.isFinite(w/h)?w/h:W/H;
+}
 export function artworkBounds(image){
- const iw=image?.naturalWidth,ih=image?.naturalHeight;
- if(!(iw>0&&ih>0))return null;
- const scale=Math.min(W/iw,H/ih);
- const w=iw*scale,h=ih*scale;
- return {x:(W-w)/2,y:(H-h)/2,w,h};
+ if(!(image?.naturalWidth>0&&image?.naturalHeight>0))return null;
+ return {x:0,y:0,w:W,h:H};
+}
+export function setArtworkFrame(canvas,image){
+ const ratio=artworkAspect(image);
+ if(canvas?.style){
+   canvas.style.aspectRatio=String(ratio);
+   canvas.style.setProperty?.('--art-aspect',String(ratio));
+ }
+ const parent=canvas?.closest?.('.viewport,.unveil-frame,.round-view-window,.round-art-image,.stake-frame,.reveal-option-image,.picture-image,.verdict-image,.compare');
+ parent?.style?.setProperty?.('--art-aspect',String(ratio));
+ return ratio;
 }
 export function drawArtwork(ctx,image,id){
- const bounds=artworkBounds(image);
- if(!bounds)return;
- ctx.fillStyle='#242621';ctx.fillRect(0,0,W,H);
- ctx.drawImage(image,0,0,image.naturalWidth,image.naturalHeight,
-   bounds.x,bounds.y,bounds.w,bounds.h);
+ if(!artworkBounds(image))return;
+ // No surrounding fill: every logical pixel corresponds to actual paint.
+ // The presentation element is scaled to natural dimensions, so the result
+ // remains geometrically correct on screen despite the fixed game coordinates.
+ ctx.drawImage(image,0,0,image.naturalWidth,image.naturalHeight,0,0,W,H);
 }
 function rand(seed){return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}}
 const SHAPES=['round','oval','star','torn','diamond','burst'];
