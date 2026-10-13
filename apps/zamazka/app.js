@@ -267,10 +267,10 @@ function setup(mode,error='',roomValue=invitedRoom){
 }
 let roundsChoice=3;
 let drawingSecondsChoice=160;
-const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[0,'Без ограничения · до сдачи всеми']];
+const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[0,'Без ограничения']];
 const DURATION_VALUES=DRAWING_TIME_OPTIONS.map(([seconds])=>seconds);
 const SOLO_DURATION_KEY=NS+'solo-drawing-seconds';
-const normalizedDuration=value=>DURATION_VALUES.includes(Number(value))?Number(value):160;
+const normalizedDuration=value=>value!==''&&value!=null&&DURATION_VALUES.includes(Number(value))?Number(value):160;
 let soloDrawingSecondsChoice=normalizedDuration(localStorage.getItem(SOLO_DURATION_KEY)??160);
 const durationOptionsHtml=selected=>DRAWING_TIME_OPTIONS.map(([seconds,label])=>'<option value="'+seconds+'" '+(selected===seconds?'selected':'')+'>'+label+'</option>').join('');
 function practiceSettings(){
@@ -783,7 +783,7 @@ screen.addEventListener('pointerup',e=>{if(!museumSwipe||e.pointerId!==museumSwi
 screen.addEventListener('pointercancel',()=>museumSwipe=null);
 screen.addEventListener('wheel',e=>{if(page!=='home'||!e.target.closest('.museum-display'))return;e.preventDefault();if(Math.abs(e.deltaY)<4&&Math.abs(e.deltaX)<4)return;if(Date.now()-lastMuseumWheel<85)return;lastMuseumWheel=Date.now();shiftMuseum((Math.abs(e.deltaY)>Math.abs(e.deltaX)?e.deltaY:e.deltaX)>0?1:-1)},{passive:false});
 document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();shiftMuseum(e.key==='ArrowRight'?1:-1)}});
-screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=Number(e.target.value)||160});
+screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=normalizedDuration(e.target.value)});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
 setInterval(tick,350);
 setInterval(()=>{
