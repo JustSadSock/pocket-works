@@ -173,7 +173,7 @@ jobs:
             TESTS+=(tests/e2e/sinew.spec.ts)
           fi
           if [[ ",${PW_APP_TARGETS:-}," == *",natyazhenie,"* ]]; then
-            TESTS+=(tests/e2e/orientation.spec.ts)
+            TESTS+=(tests/e2e/natyazhenie-landscape.spec.ts)
           fi
           if [[ ",${PW_APP_TARGETS:-}," == *",zamkni,"* ]]; then
             TESTS+=(tests/e2e/zamkni.spec.ts)
