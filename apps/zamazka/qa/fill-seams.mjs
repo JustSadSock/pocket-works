@@ -82,3 +82,6 @@ console.log('ZAMAZKA: connected region fill, two-pixel edge underlap, no leakage
 
 // Keep fill/smudge and menu regressions in the established validation gate.
 import './fill-smudge.mjs';
+
+// End-to-end bucket, input, spectator and server lottery regressions.
+import './fill-stroke-vote.mjs';
