@@ -566,7 +566,7 @@ export class Editor{
       if(this.working||this.edgePaused){
         const events=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
         let previous=this.lastGesturePoint,changed=false;
-        for(const sample of (events.length?events.slice(-24):[e])){
+        for(const sample of (events.length?[...events.slice(-23),e]:[e])){
          const end=this.pointAt(sample);
          const crossesEdge=previous&&(!this.inside(previous)||!this.inside(end));
          const length=previous?Math.hypot(end[0]-previous[0],end[1]-previous[1]):0;
