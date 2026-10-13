@@ -156,6 +156,9 @@ jobs:
       - name: Test ZAMAZKA flood fill and contour edge quality
         run: node apps/zamazka/qa/fill-seams.mjs
 
+      - name: Test ZAMAZKA smudge-flood interaction and safe menu navigation
+        run: node apps/zamazka/qa/fill-smudge.mjs
+
       - name: Test ZAMAZKA art readiness, vote receipts and archive constraints
         run: node apps/zamazka/qa/ux-reliability.mjs
 
