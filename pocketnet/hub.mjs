@@ -79,6 +79,30 @@ export class PocketNetHub {
       } else this.broadcast(room, 'game_event', packet);
     }
   }
+  // A module may request a network-level eviction only after validating the
+  // curator and removing the guest from its own lobby state. Transport removes
+  // the seat even if the kicked browser ignores the notification.
+  applyKicks(room, events, actorId) {
+    if (room.gameId !== 'zamazka' || room.state?.phase !== 'lobby' || room.state?.host !== actorId) return;
+    let changed = false;
+    for (const event of events ?? []) {
+      if (event?.type !== 'player_kicked' || typeof event.to !== 'string') continue;
+      const targetId = event.to;
+      if (targetId === actorId || room.state.participants?.some(p => p.id === targetId) ||
+          !room.players.some(p => p.id === targetId)) continue;
+      const socket = this.connected(targetId, room.id);
+      if (socket) {
+        message(socket, 'room_kicked', { roomId: room.id, reason: 'curator' });
+        this.setRoom(socket, null);
+      }
+      room.players = room.players.filter(p => p.id !== targetId);
+      changed = true;
+    }
+    if (changed) {
+      this.persist(room);
+      this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
+    }
+  }
   broadcast(room, type, payload) {
     for (const ws of this.sockets(room.id)) message(ws, type, payload);
   }
@@ -318,6 +342,7 @@ export class PocketNetHub {
           room.state = result.state;
           this.persist(room);
           this.emit(room, result.events ?? []);
+          this.applyKicks(room, result.events ?? [], player.id);
           if (result.finished) await this.closeRoom(room);
           return;
         }
