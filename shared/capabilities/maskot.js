@@ -18,7 +18,7 @@ export function safeMascot(input,unlocks=[]){
     animal:one(mascotAnimals,src.animal,'cat'),
     hat:valid(src.hat,'hat',mascotHats)?src.hat:'none',
     clothes:valid(src.clothes,'clothes',mascotClothes)?src.clothes:'tunic',
-    face:one(mascotFaces,src.face,'none')
+    face:valid(src.face,'face',mascotFaces)?src.face:'none'
   };
 }
 export function mascotSvg(raw,{unlocks=[],size=256}={}){
