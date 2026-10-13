@@ -17,8 +17,8 @@ const rootHtml=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const rootSw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const rootVersion=rootHtml.match(/<meta name="pocket-works-build" content="([^"]+)"/)?.[1];
 assert.ok(rootVersion,'launcher must declare build version');
-assert.match(rootHtml,new RegExp('shared/pocket-social\\\\.js\\\\?v='+rootVersion.replaceAll('.','\\\\.')));
-assert.match(rootSw,new RegExp("const APP_VERSION = '"+rootVersion.replaceAll('.','\\\\.')+"'"));
+assert.ok(rootHtml.includes('shared/pocket-social.js?v='+rootVersion),'social script must use current launcher version');
+assert.ok(rootSw.includes("const APP_VERSION = '"+rootVersion+"'"),'service worker must match launcher version');
 assert.ok(rootSw.includes("'./shared/capabilities/maskot.js'"),
   'offline shell must precache the mascot asset imported by identity and social modules');
 const db=new DatabaseSync(':memory:');
