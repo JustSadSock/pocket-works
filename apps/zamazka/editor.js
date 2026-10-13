@@ -723,8 +723,8 @@ export class Editor{
      }else drawStroke(ctx,this.working);
      ctx.restore();
    }
-   ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#806950';ctx.lineWidth=1.5;
-   damagePath(ctx,this.zone);ctx.stroke();ctx.restore();
+   // No dashed guide: the parchment cutout itself shows the editable area.
+   // Keep clipZone above so tools still affect only the damage mask.
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){localStorage.removeItem(this.draftKey)}
