@@ -1,0 +1,74 @@
+name: Local Compute (Living History)
+
+# Only owner-created Issues or explicit manual dispatch may reach the home machine.
+# NEVER add pull_request, pull_request_target, or untrusted branches here.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Test suite'
+        type: choice
+        required: true
+        default: regression
+        options: [regression, audit, calibration]
+      worlds:
+        description: 'Independent worlds (audit only; 1-8)'
+        type: number
+        default: 4
+      years:
+        description: 'Years simulated per world (audit only; 10-100)'
+        type: number
+        default: 50
+      period:
+        description: 'Years between snapshots (audit only; must divide years)'
+        type: number
+        default: 10
+      scenario:
+        description: 'Calibration scenario (calibration only)'
+        type: choice
+        default: normal
+        options: [normal, drought, isolated, uplands, all, century]
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: local-compute-home
+  cancel-in-progress: false
+
+jobs:
+  compute:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       github.event.action == 'opened' &&
+       github.event.issue.user.login == 'JustSadSock' &&
+       github.event.issue.title == '[compute] living-history')
+    runs-on: [self-hosted, pocketworks-compute]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout trusted default-branch code without saved credentials
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+      - name: Prepare Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify request controller
+        run: node --test scripts/local-compute.test.mjs
+      - name: Run allowlisted compute job
+        run: node scripts/local-compute.mjs
+      - name: Upload reports even on test failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: living-history-compute-${{ github.run_id }}
+          path: local-compute-output/
+          retention-days: 7
+          if-no-files-found: warn
