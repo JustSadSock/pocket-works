@@ -1,6 +1,7 @@
 // Local Compute controller. All remotely requested work is selected from a fixed allowlist.
 // Never evaluate issue text or pass user-controlled strings to a shell.
-import { spawn, availableParallelism } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { availableParallelism } from 'node:os';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
