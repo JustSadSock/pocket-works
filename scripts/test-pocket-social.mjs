@@ -239,10 +239,34 @@ const publicFriends=await call(0,'me');
 assert.equal(publicFriends.friends.find(p=>p.id===users[2].id)?.activity?.roomId,room);
 const verifiedJoin=await call(0,'join-friend',{id:users[2].id});
 assert.equal(verifiedJoin.url,'/apps/lipki/?room='+room);
+assert.equal((await call(2,'profile',{background:'forest',frame:'clean',artwork:'',
+  favoriteGame:'',discoverable:true,presenceVisible:false,allowInvites:true})).ok,true);
+assert.equal((await call(0,'me')).friends.find(p=>p.id===users[2].id).activity,null,
+  'private presence hides the active room even from friends');
+assert.equal((await call(0,'join-friend',{id:users[2].id})).httpStatus,409);
+assert.equal((await call(2,'profile',{background:'forest',frame:'clean',artwork:'',
+  favoriteGame:'',discoverable:true,presenceVisible:true,allowInvites:true})).ok,true);
 assert.equal((await call(1,'join-friend',{id:users[2].id})).httpStatus,403,'strangers may not resolve a room');
 const revisionJoined=(await call(0,'sync')).revision;
 activityEnabled=false;
 assert.notEqual((await call(0,'sync')).revision,revisionJoined,'friend activity changes invalidates sync');
 assert.equal((await call(0,'join-friend',{id:users[2].id})).httpStatus,409,'stale room cannot be joined');
-assert.equal((await call(0,'party',{action:'remove',id:users[2].id})).party.length,0);
+// Company enforces three saved friends, even if the user has more friendships.
+for(const [number,newId] of [
+ [3,'dddddddd-dddd-4ddd-dddd-eeeeeeeeeeee'],
+ [4,'dddddddd-dddd-4ddd-dddd-ffffffffffff'],
+ [5,'dddddddd-dddd-4ddd-dddd-000000000000']
+]){
+ users[number]={id:newId,nickname:'Friend'+number,avatar:'clay'};
+ await call(number,'me');
+ assert.equal((await call(number,'friend-request',{id:users[0].id})).httpStatus,201);
+ assert.equal((await call(0,'friend-action',{id:newId,action:'accept'})).ok,true);
+}
+assert.equal((await call(0,'party',{action:'add',id:users[3].id})).party.length,2);
+assert.equal((await call(0,'party',{action:'add',id:users[4].id})).party.length,3);
+assert.equal((await call(0,'party',{action:'add',id:users[5].id})).httpStatus,409);
+assert.equal((await call(0,'party',{action:'remove',id:users[2].id})).party.length,2);
+assert.equal((await call(0,'friend-action',{id:users[3].id,action:'remove'})).ok,true);
+assert.equal((await call(0,'me')).party.includes(users[3].id),false,
+ 'removing a friend also removes their saved company membership');
 console.log('Pocket Social: '+calls+' SQLite API assertions passed.');
