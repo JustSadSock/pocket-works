@@ -22,11 +22,13 @@ assert.deepEqual(Array.from(output.slice(at(0,4),at(0,4)+4)),[220,50,40,255],
 assert.deepEqual(Array.from(output.slice(at(1,4),at(1,4)+4)),[220,50,40,255],
   'the inner exterior antialias fringe is underpainted');
 assert.equal(output[at(8,4)+3],255,'fill reaches beneath thick line');
-assert.equal(output[at(9,4)+3],255,'second line pixel is also underpainted');
+assert.equal(output[at(9,4)+3],0,'far side of the contour belongs to the other basin');
 assert.equal(output[at(10,4)+3],0,'fill does not cross to adjacent interior');
 assert.equal(output[at(14,4)+3],0,'never paint fully outside the damaged region');
 assert.ok(fill([12,4],[30,180,130])>15,'adjacent zone fills independently');
 assert.deepEqual(Array.from(output.slice(at(10,4),at(10,4)+4)),[30,180,130,255]);
+assert.deepEqual(Array.from(output.slice(at(9,4),at(9,4)+4)),[30,180,130,255],
+ 'the neighbouring fill underpaints its own half of the contour');
 assert.deepEqual(Array.from(output.slice(at(7,4),at(7,4)+4)),[220,50,40,255],
   'second region does not overwrite the first through the contour');
 assert.ok(fill([4,4],[180,80,230])>20,'recolouring the same fill region remains possible');
@@ -85,3 +87,6 @@ import './fill-smudge.mjs';
 
 // End-to-end bucket, input, spectator and server lottery regressions.
 import './fill-stroke-vote.mjs';
+
+// Structural region stress suite is part of the same CI regression gate.
+import './fill-integrity.mjs';
