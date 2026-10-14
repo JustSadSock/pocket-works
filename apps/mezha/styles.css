@@ -3,3 +3,7 @@
 .doctrine-choices{display:flex;gap:5px;min-width:0}
 .doctrine-choices button{flex:1;min-width:0;min-height:40px;line-height:1.3;padding:5px 3px;background:#394d40;color:#dacdaa;border:1px solid #6d7864;font:800 9px ui-monospace,Consolas,monospace}
 .doctrine-choices button.active{background:#e0bb7e;color:#30382d;border-color:#f6dfa6}
+
+/* Field-console switches sink instantly on contact and spring back on release. */
+.command-dock button,.recruit-panel button,.dialog button,.menu-plaque button{transition:transform .16s cubic-bezier(.17,1.75,.32,1),filter .10s linear;transform:translateY(0)}
+.command-dock button:active,.recruit-panel button:active,.dialog button:active,.menu-plaque button:active{transform:translateY(3px) scale(.987);filter:brightness(1.13)}
