@@ -317,8 +317,8 @@ function growForest(s){
 }
 // Periodic commons grazing: the biomass is spatial, finite and shared by all herds.
 function grazingSpots(s,h){
- if(!h._grazingSpots){const cells=[];for(let y=Math.max(2,h.y-20);y<=Math.min(SIZE-3,h.y+20);y++)for(let x=Math.max(2,h.x-20);x<=Math.min(SIZE-3,h.x+20);x++){
-   const i=idx(x,y);if(s.terrain[i]!==0)continue;const d=Math.hypot(x-h.x,y-h.y);cells.push({i,d});
+ if(!h._grazingSpots){const cells=[],reachable=walkingDistances(s,h);for(let y=Math.max(2,h.y-20);y<=Math.min(SIZE-3,h.y+20);y++)for(let x=Math.max(2,h.x-20);x<=Math.min(SIZE-3,h.x+20);x++){
+   const i=idx(x,y);if(s.terrain[i]!==0||reachable[i]<0||reachable[i]>90)continue;const d=reachable[i];cells.push({i,d});
   }cells.sort((a,b)=>a.d-b.d||a.i-b.i);
   Object.defineProperty(h,'_grazingSpots',{value:cells.slice(0,240).map(x=>x.i),enumerable:false,configurable:true});
  }
