@@ -137,6 +137,10 @@ function advance(u,t,dt){
  u.walk+=dt*speed/6;
 }
 function hit(s,from,to,amount){
+ // Defenders that hold their assigned flag trade mobility and the ability to
+ // capture territory for a real local defensive advantage.
+ const stance=s.orders[to.captain];
+ if(stance?.mode==='defend'&&distance(to,stance)<58)amount*=.78;
  to.hp=Math.max(0,to.hp-amount);to.hit=.22;to.morale=Math.max(0,to.morale-amount*.37);
  s.events.push({type:'impact',x:to.x,y:to.y,side:from.side,age:0});
  if(to.hp===0){
@@ -165,13 +169,21 @@ function siteTick(s,z,dt){
  }
  const sides=[0,1].map(side=>s.squads.filter(u=>u.side===side&&!u.retreat&&u.hp>0&&s.orders[u.captain]?.mode!=='raid'&&distance(u,z)<60)
  .reduce((n,u)=>n+(u.type==='knight'?1.4:1),0));
- const attacker=sides[0]>sides[1]?0:sides[1]>sides[0]?1:-1;
+ // Defending troops secure an area and resist attacks but cannot annex it.
+ // At least one squad explicitly ordered to capture must be present to change ownership.
+ const claiming=[0,1].map(side=>s.squads.some(u=>u.side===side&&!u.retreat&&u.hp>0&&s.orders[u.captain]?.mode==='capture'&&distance(u,z)<60));
+ const attacker=sides[0]>sides[1]&&claiming[0]?0:sides[1]>sides[0]&&claiming[1]?1:-1;
  if(attacker>=0&&attacker!==z.owner){
   if(z.attacker!==attacker){z.attacker=attacker;z.capture=Math.max(0,z.capture*.55)}
   z.capture+=dt*(3.0+Math.min(3,sides[attacker]-sides[1-attacker])*.9)/(1+z.fort*.48);
   if(z.capture>=100){z.owner=attacker;z.capture=0;z.fort=Math.max(0,z.fort-1);s.events.push({type:'capture',x:z.x,y:z.y,side:attacker,age:0});log(s,(attacker===0?'Ваши войска':'Противник')+' заняли '+z.name,attacker)}
- }else if(attacker===z.owner){z.capture=Math.max(0,z.capture-dt*5);z.attacker=-1}
- else {z.capture=Math.max(0,z.capture-dt*2)}
+ }else if(z.owner>=0&&sides[z.owner]>0){
+  // Friendly defenders actively restore control of an attacked position.
+  z.capture=Math.max(0,z.capture-dt*5);z.attacker=-1;
+ }else {
+  z.capture=Math.max(0,z.capture-dt*2);
+  if(z.capture===0)z.attacker=-1;
+ }
  if(z.fort>0&&z.owner>=0){
   z.shot=(z.shot||0)-dt;
   if(z.shot<=0){
