@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "fill",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/fill-seams.mjs",
+      "install": true
+    },
+    {
+      "id": "smudge",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/smudge.mjs"
+    },
+    {
+      "id": "timer",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/drawing-time.mjs",
+      "install": true
+    },
+    {
+      "id": "deadline",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/deadline-integrity.mjs",
+      "install": true
+    },
+    {
+      "id": "draft",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/draft-recovery.mjs",
+      "install": true
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": ".museum-home",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#settingsBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#dialog"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "real-flow",
+      "kind": "browser-node",
+      "tier": "deep",
+      "entry": "qa/real-flow.mjs"
+    },
+    {
+      "id": "responsive",
+      "kind": "browser-node",
+      "tier": "deep",
+      "entry": "qa/responsive-viewports.mjs"
+    }
+  ]
+}
