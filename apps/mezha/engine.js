@@ -165,7 +165,10 @@ function siteTick(s,z,dt){
  }
  const sides=[0,1].map(side=>s.squads.filter(u=>u.side===side&&!u.retreat&&u.hp>0&&s.orders[u.captain]?.mode!=='raid'&&distance(u,z)<60)
  .reduce((n,u)=>n+(u.type==='knight'?1.4:1),0));
- const attacker=sides[0]>sides[1]?0:sides[1]>sides[0]?1:-1;
+ // Defending troops secure an area and resist attacks but cannot annex it.
+ // At least one squad explicitly ordered to capture must be present to change ownership.
+ const claiming=[0,1].map(side=>s.squads.some(u=>u.side===side&&!u.retreat&&u.hp>0&&s.orders[u.captain]?.mode==='capture'&&distance(u,z)<60));
+ const attacker=sides[0]>sides[1]&&claiming[0]?0:sides[1]>sides[0]&&claiming[1]?1:-1;
  if(attacker>=0&&attacker!==z.owner){
   if(z.attacker!==attacker){z.attacker=attacker;z.capture=Math.max(0,z.capture*.55)}
   z.capture+=dt*(3.0+Math.min(3,sides[attacker]-sides[1-attacker])*.9)/(1+z.fort*.48);
