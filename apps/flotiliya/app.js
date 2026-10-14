@@ -352,10 +352,26 @@ function hitShip(p){
  return game.ships.filter(s=>s.alive).map(s=>({s,d:distance(s,p)})).sort((a,b)=>a.d-b.d).find(o=>o.d<Math.max(31,21/view.scale))?.s||null;
 }
 function addRoutePoint(s,point){
- if(!s||withinIsland(point.x,point.y,.95))return;
- const order=instruction(s,game.stage),route=order.route;
- if(!route.length||distance(route[route.length-1],point)>13)route.push({x:point.x,y:point.y});
- if(route.length>32)route.splice(1,1);
+ if(!s||withinIsland(point.x,point.y,.95))return false;
+ const stage=game.stage,order=instruction(s,stage),route=order.route;
+ const previous=route.length?route[route.length-1]:(stage===0?{x:s.x,y:s.y}:(instruction(s,0).route.slice(-1)[0]||{x:s.x,y:s.y}));
+ if(distance(previous,point)<10)return false;
+ const oldLength=route.length;
+ const tryPoint=(p)=>{
+  route.push({x:p.x,y:p.y});
+  const ok=canPlan(s,s.orders);if(!ok)route.pop();
+  return ok;
+ };
+ if(tryPoint(point)){if(route.length>36)route.splice(1,1);return true;}
+ // Keep the maximal affordable segment, rather than silently discarding the stroke.
+ let lo=0,hi=1;
+ for(let k=0;k<12;k++){const mid=(lo+hi)/2,p={x:previous.x+(point.x-previous.x)*mid,y:previous.y+(point.y-previous.y)*mid};
+  if(tryPoint(p)){route.pop();lo=mid;}else hi=mid;
+ }
+ if(lo>.02){const p={x:previous.x+(point.x-previous.x)*lo,y:previous.y+(point.y-previous.y)*lo};
+  if(distance(previous,p)>3&&tryPoint(p))return true;
+ }
+ return oldLength!==route.length;
 }
 function onPointerDown(e){
  if(game.phase!=='orders')return;
@@ -363,13 +379,22 @@ function onPointerDown(e){
  const chosen=hitShip(p);
  if(chosen){
   if(chosen.side==='ally'){selectShip(chosen.id);return;}
-  const s=game.ships.find(x=>x.id===game.selected&&x.alive);
-  if(s){const order=instruction(s,game.stage);order.targetId=chosen.id;order.route=[];if(order.kind==='hold')order.kind='board';selectShip(s.id);notify('Цель назначена для выбранной половины');}return;
+  const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;
+  const order=instruction(s,game.stage),old={kind:order.kind,targetId:order.targetId,route:order.route};
+  order.targetId=chosen.id;order.route=[];
+  if(order.kind==='hold')order.kind='board';
+  if(!canPlan(s,s.orders)){
+   Object.assign(order,old);notify('Недостаточно ОД: очисти часть пути или выбери другое действие.');return;
+  }
+  selectShip(s.id);notify('Цель выбрана для половины '+(game.stage+1));return;
  }
  const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;
- const order=instruction(s,game.stage);order.targetId=null;order.route=[];
- if(withinIsland(p.x,p.y)){notify('Скалы непроходимы — проведи путь вокруг острова');return;}
- addRoutePoint(s,p);game.drag={id:s.id,pointerId:e.pointerId,start:p,length:0};
+ if(withinIsland(p.x,p.y)){notify('Скалы непроходимы: проведи путь вокруг острова.');return;}
+ const order=instruction(s,game.stage),oldRoute=order.route,oldTarget=order.targetId;
+ order.route=[];order.targetId=null;
+ const accepted=addRoutePoint(s,p);
+ if(!accepted){order.route=oldRoute;order.targetId=oldTarget;notify('На этот манёвр не хватает очков движения.');selectShip(s.id);return;}
+ game.drag={id:s.id,pointerId:e.pointerId,start:p,length:0,budgetHit:false};
  try{canvas.setPointerCapture?.(e.pointerId);}catch{}
  selectShip(s.id);
 }
@@ -378,14 +403,16 @@ function onPointerMove(e){
  const p=pointFromEvent(e);if(!p)return;
  const s=game.ships.find(x=>x.id===game.drag.id&&x.alive);if(!s)return;
  if(distance(game.drag.start,p)>6)game.drag.length++;
- addRoutePoint(s,p);$('routeCounter').textContent=readoutRoute(instruction(s,game.stage));
+ const added=addRoutePoint(s,p);
+ if(!added)game.drag.budgetHit=true;
+ if(added)selectShip(s.id);
 }
 function onPointerUp(e){
  if(!game.drag||game.drag.pointerId!==e.pointerId)return;
  const s=game.ships.find(x=>x.id===game.drag.id&&x.alive);
  game.drag=null;
  try{canvas.releasePointerCapture?.(e.pointerId);}catch{}
- if(s){selectShip(s.id);if(game.stage===0&&instruction(s,0).route.length>0)notify('Путь готов. Вторая половина может быть абордажем.');}
+ if(s){selectShip(s.id);const b=getBudget(s);notify('Осталось '+b.remaining+' из '+b.total+' ОД на весь ход.');}
 }
 function seaBackground(now){renderSea(ctx,now,game.islands||[],game.weather,W,H);}
 function drawShip(s,now,ghost=false){renderGalley(ctx,s,now,!ghost&&s.id===game.selected&&game.phase==='orders');}
@@ -446,7 +473,12 @@ document.querySelectorAll('[data-stage]').forEach(btn=>btn.addEventListener('cli
 $('clearRouteBtn').addEventListener('click',()=>{const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;const o=instruction(s,game.stage);o.route=[];o.targetId=null;selectShip(s.id);});
 document.querySelectorAll('[data-order]').forEach(btn=>btn.addEventListener('click',()=>{
  const s=game.ships.find(s=>s.id===game.selected&&s.alive);
- if(s&&game.phase==='orders'){instruction(s,game.stage).kind=btn.dataset.order;selectShip(s.id);}
+ if(s&&game.phase==='orders'){
+  const order=instruction(s,game.stage),previous=order.kind;
+  order.kind=btn.dataset.order;
+  if(!canPlan(s,s.orders)){order.kind=previous;notify('Недостаточно очков движения на этот приказ.');return;}
+  selectShip(s.id);
+ }
 }));
 $('sailBtn').addEventListener('click',startBattle);
 $('resolveBtn').addEventListener('click',startResolve);
