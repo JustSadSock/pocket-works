@@ -13,15 +13,30 @@ import {createMuseumMotion} from './museum-motion.js';
 import {installGalleryLighting} from './museum-lighting.js';
 import {MuseumAudio} from './museum-audio.js';
 import {createExhibitionDirector,saveTone,animateCoinDeposit} from './exhibition-director.js';
+import {setDressScene} from './scenography.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.34.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.35.0',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
+function appearance(){return window.ZamazkaAppearance?.get()||'classic'}
+function applyAppearance(mode,persist=false){
+ const selected=window.ZamazkaAppearance?.apply(mode,persist)||'classic';
+ const node=screen.firstElementChild;
+ if(!node)return selected;
+ if(selected==='new'){
+  if(!node.classList.contains('has-scenography'))setDressScene(node,page);
+ }else if(node.classList.contains('has-scenography')){
+  node.querySelectorAll(':scope > .set-furniture,.museum-plinth').forEach(el=>el.remove());
+  node.classList.remove('has-scenography');
+  delete node.dataset.set;
+ }
+ return selected;
+}
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice',CONFIRM_VOTE_KEY=NS+'confirm-coins';
 const POCKETNET_URL=location.origin+'/pocketnet';
 const q=new URLSearchParams(location.search);
@@ -153,7 +168,7 @@ function notify(t){const message=String(t||'');if(message===lastToast&&Date.now(
  lastToast=message;lastToastAt=Date.now();toast.textContent=message;toast.classList.add('show');
  clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 
-function closeDialog(){if(settingsPreviewVolume!==null){museumAudio.setVolume(soundVolume/100);settingsPreviewVolume=null}closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
+function closeDialog(){if(settingsPreviewAppearance!==null){applyAppearance(settingsOriginalAppearance||'classic');settingsPreviewAppearance=null;settingsOriginalAppearance=null}if(settingsPreviewVolume!==null){museumAudio.setVolume(soundVolume/100);settingsPreviewVolume=null}closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
 function modal(title,body,buttons){dialogFocus=document.activeElement;dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound('press',true);fn()});actionBox.append(b)});(actionBox.querySelector('.ghost')||actionBox.querySelector('button'))?.focus({preventScroll:true})}
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 let activeSubmitTransfer=null,activeDraftTransfer=null,submissionBackoffUntil=0,draftSendAfter=0;
@@ -299,7 +314,8 @@ function change(html,which){
  if(oldBallot)oldBallot.remove();
  const previousRoom=screen.dataset.museumRoom;
  page=which;lastUiKey='';exhibitionDirector.replace(html,{animate:!oldBallot&&which!=='connecting',scene:which});
- if(previousRoom&&previousRoom!==screen.dataset.museumRoom&&!oldBallot&&which!=='connecting')sound('frame');
+ if(appearance()==='new')applyAppearance('new');
+ if(appearance()==='new'&&previousRoom&&previousRoom!==screen.dataset.museumRoom&&!oldBallot&&which!=='connecting')sound('frame');
  if(oldBallot){
   oldBallot.classList.add('vote-transition-layer');
   oldBallot.setAttribute('aria-hidden','true');
@@ -992,15 +1008,17 @@ function share(){
 }
 function inspect(id,fromHome=false){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata"><div class="art-inspect-facts">'+artFactsHtml(id)+'</div><div>Хранится: '+esc(a.museum)+'</div></div>'+(fromHome?'<p class="hint">Рассмотри картину до начала реставрации.</p>':'<p class="hint">Запомни цвета и фактуру оригинала.</p>')+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
-let settingsPreviewVolume=null;
+let settingsPreviewVolume=null,settingsPreviewAppearance=null,settingsOriginalAppearance=null;
 function settings(){
  const oldVolume=soundVolume;
+ const oldAppearance=appearance();settingsOriginalAppearance=oldAppearance;
  modal('Настройки',
   '<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'">'+
   '<label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки мастерской</label>'+
   '<label class="field sound-volume-label" for="settingVolume"><span>Громкость эффектов</span><output id="settingVolumeValue">'+soundVolume+'%</output></label>'+
   '<input class="sound-volume-range" id="settingVolume" type="range" min="0" max="100" step="5" value="'+soundVolume+'" aria-label="Громкость эффектов">'+
   '<label class="field"><input type="checkbox" id="settingConfirmVote" '+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'checked':'')+'> Подтверждать распределение монет</label>'+
+  '<label class="field appearance-choice" for="settingNewAppearance"><span class="appearance-choice-text"><strong>Новый внешний вид</strong><small>Экспериментальная музейная мастерская</small></span><input type="checkbox" role="switch" id="settingNewAppearance" '+(appearance()==='new'?'checked':'')+'><span class="appearance-track" aria-hidden="true"></span></label>'+
   '<p class="hint">Новый ник применится при следующем подключении.</p>',[
   ['Сохранить',()=>{
    rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');
@@ -1012,6 +1030,8 @@ function settings(){
     localStorage.setItem(CONFIRM_VOTE_KEY,dialog.querySelector('#settingConfirmVote').checked?'on':'off');
    }catch{}
    museumAudio.setEnabled(beepEnabled);museumAudio.setVolume(soundVolume/100);
+   applyAppearance(dialog.querySelector('#settingNewAppearance').checked?'new':'classic',true);
+   settingsPreviewAppearance=null;settingsOriginalAppearance=null;
    settingsPreviewVolume=null;closeDialog();
    if(page==='vote'&&view?.phase==='voting')vote();
    notify('Настройки сохранены');
@@ -1024,6 +1044,10 @@ function settings(){
   settingsPreviewVolume=Number(volume.value);museumAudio.setVolume(settingsPreviewVolume/100);
  });
  volume?.addEventListener('change',()=>{if(dialog.querySelector('#settingSound')?.checked)museumAudio.play('tool',true)});
+ dialog.querySelector('#settingNewAppearance')?.addEventListener('change',event=>{
+  settingsPreviewAppearance=event.target.checked?'new':'classic';
+  applyAppearance(settingsPreviewAppearance);
+ });
 }
 
 document.querySelector('#settingsBtn').addEventListener('click',settings);
