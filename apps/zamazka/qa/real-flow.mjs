@@ -101,6 +101,16 @@ try{
   }
   assert(homeGeometry.center.width>80&&homeGeometry.center.height>80,'Real center artwork needs usable geometry');
   assert(!homeGeometry.bodyOverflow,'Home must not overflow horizontally');
+  const captionClearance=await page.evaluate(()=>{
+    const caption=document.querySelector('.museum-stage-caption').getBoundingClientRect();
+    const arrows=document.querySelector('.museum-wheel').getBoundingClientRect();
+    return arrows.top-caption.bottom;
+  });
+  assert(captionClearance>=3,'Painting title overlaps carousel arrows');
+  if(mobile){
+    const returnFont=await page.locator('.top .return').evaluate(el=>Number.parseFloat(getComputedStyle(el).fontSize));
+    assert(returnFont>=16,'Pocket Works mobile back arrow is not visible');
+  }
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-afterhours-home-'+viewport.width+'.png'),fullPage:false});
   await page.locator('#settingsBtn').click();
   await page.locator('#settingNewAppearance').uncheck();
@@ -126,6 +136,14 @@ try{
   await page.locator('.mobile-preview .gallery .picture').first().waitFor({timeout:17000});
   assert.equal(await page.locator('.mobile-preview .gallery .picture').count(),5);
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
+  if(mobile){
+    const frame=await page.locator('.mobile-preview .gallery .picture .picture-image').first().evaluate(el=>({
+      matBorder:parseFloat(getComputedStyle(el).borderTopWidth),
+      actualFrame:parseFloat(getComputedStyle(el.querySelector('img')).borderTopWidth)
+    }));
+    assert(frame.matBorder===0&&frame.actualFrame>=5,'Art frame must fit the real image, not its swipe cell');
+  }
+  await page.waitForTimeout(2900); // Let the real transient settings toast finish before evidence capture.
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-gallery-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="skip"]').click();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
@@ -181,12 +199,16 @@ try{
   assert.equal(await page.locator('.museum-passage').count(),0,'Obsolete transition returned');
   assert.equal(await page.locator('.museum-art-flight').count(),0,'Obsolete image transition was not removed');
   assert.equal(await page.locator('.exhibition-exit-layer').count(),0,'Old phase was not cleaned up');
+  const contrast=await page.locator('.reveal-main > h3').evaluate(el=>getComputedStyle(el).color);
+  assert.equal(contrast,'rgb(73, 56, 43)','Restoration title must contrast with archival paper');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-reveal-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="menu"]').first().click();
   await page.locator('[data-action="collection"]').click();
   await page.locator('.archive-work').first().waitFor({timeout:7500});
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
   assert.equal(await page.locator('.collection-page .set-furniture').count(),1,'Opt-in theme must persist through archive');
+  await page.locator('.exhibition-exit-layer').waitFor({state:'detached',timeout:4000});
+  await page.waitForTimeout(360);
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-archive-'+viewport.width+'.png'),fullPage:false});
   const dl=page.waitForEvent('download',{timeout:8000});
   await page.locator('[data-action="export-archive"]').click();
