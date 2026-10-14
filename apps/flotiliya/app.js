@@ -142,34 +142,63 @@ function setStage(stage){if(game.phase!=='orders')return;game.stage=stage;select
 
 function normalize(a){while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;return a}
 function maneuver(s,dt){
- const t=getTarget(s);
+ const stage=game.phase==='resolve'?Math.min(1,Math.floor(game.elapsed/HALF)):0;
+ if(s._activeStage!==stage){s._activeStage=stage;s._cursor[stage]=0;}
+ const ins=instruction(s,stage),t=game.ships.find(v=>v.id===ins.targetId&&v.alive&&v.side!==s.side)||nearest(s);
  let goal=null,stop=false;
- if(s.tx!==null&&s.ty!==null){
-  goal={x:s.tx,y:s.ty};
-  if(distance(s,goal)<26){s.tx=null;s.ty=null;goal=null;}
- }
- if(!goal&&s.order==='hold'){stop=true;goal={x:s.x+Math.cos(s.angle)*12,y:s.y+Math.sin(s.angle)*12};}
+ const points=ins.route||[];
+ let index=s._cursor[stage]||0;
+ while(index<points.length&&distance(s,points[index])<18)index++;
+ s._cursor[stage]=index;
+ if(index<points.length)goal=points[index];
+ if(!goal&&ins.kind==='evade'&&t)goal={x:s.x+(s.x-t.x)*2,y:s.y+(s.y-t.y)*2};
+ if(!goal&&ins.kind==='hold'){stop=true;goal={x:s.x+Math.cos(s.angle)*12,y:s.y+Math.sin(s.angle)*12};}
  if(!goal&&t){
   const d=distance(s,t);
-  if(s.order==='shoot'){
-    const preferred=s.range*.73;
-    if(d>preferred+15)goal={x:t.x,y:t.y};
-    else if(d<preferred-55)goal={x:s.x+(s.x-t.x),y:s.y+(s.y-t.y)};
-    else {const side=s.side==='ally'?1:-1;goal={x:s.x+Math.cos(s.angle+side*.22)*120,y:s.y+Math.sin(s.angle+side*.22)*120};}
+  if(ins.kind==='shoot'){
+   const preferred=s.range*.72;
+   if(d>preferred+20)goal={x:t.x,y:t.y};
+   else if(d<preferred-50)goal={x:s.x+(s.x-t.x)*1.1,y:s.y+(s.y-t.y)*1.1};
+   else goal={x:s.x+Math.cos(s.angle)*80,y:s.y+Math.sin(s.angle)*80};
   }else goal={x:t.x,y:t.y};
  }
- if(!goal){s.velocity*=Math.max(0,1-dt*1.4);return;}
- const desired=Math.atan2(goal.y-s.y,goal.x-s.x),turn=clamp(normalize(desired-s.angle),-s.turn*dt,s.turn*dt);
+ if(!goal){s.velocity*=Math.max(0,1-dt*.8);return;}
+ let dx=goal.x-s.x,dy=goal.y-s.y;
+ // Reactive avoidance handles islands for both player and AI.
+ for(const isl of game.islands){
+  const ex=(s.x-isl.x)/(isl.rx+35),ey=(s.y-isl.y)/(isl.ry+34),r=Math.hypot(ex,ey);
+  if(r<1.8){
+   const aheadX=s.x+dx/Math.max(1,Math.hypot(dx,dy))*48,aheadY=s.y+dy/Math.max(1,Math.hypot(dx,dy))*48;
+   if(terrainDistance(isl,aheadX,aheadY)<1.36||r<1.12){
+    const awayX=(s.x-isl.x)/((isl.rx+35)**2),awayY=(s.y-isl.y)/((isl.ry+35)**2),mag=Math.hypot(awayX,awayY)||1;
+    const sign=Math.sign(awayX*dy-awayY*dx)||1;
+    dx+=(awayX/mag)*120+(-awayY/mag)*sign*90;
+    dy+=(awayY/mag)*120+(awayX/mag)*sign*90;
+   }
+  }
+ }
+ const desired=Math.atan2(dy,dx),turn=clamp(normalize(desired-s.angle),-s.turn*dt*1.15,s.turn*dt*1.15);
  s.angle=normalize(s.angle+turn);
- let desiredSpeed=stop?0:s.speed;
- if(s.order==='board'&&t&&distance(s,t)<46)desiredSpeed=Math.min(desiredSpeed,18);
- if(s.tx!==null&&distance(s,goal)<60)desiredSpeed*=.75;
- s.velocity+=(desiredSpeed-s.velocity)*Math.min(1,dt*1.2);
+ let speed=stop?9:s.speed*1.15;
+ if(game.weather?.kind==='gust')speed*=1.14;
+ if(ins.kind==='evade')speed*=1.2;
+ if(ins.kind==='board'&&t&&distance(s,t)<50)speed=Math.min(speed,19);
+ if(index<points.length&&distance(s,goal)<35)speed*=.78;
+ s.velocity+=(speed-s.velocity)*Math.min(1,dt*.92);
  s.x+=Math.cos(s.angle)*s.velocity*dt;s.y+=Math.sin(s.angle)*s.velocity*dt;
- if(s.x<31||s.x>W-31||s.y<33||s.y>H-33){
-  s.x=clamp(s.x,31,W-31);s.y=clamp(s.y,33,H-33);
-  s.angle=normalize(s.angle+Math.PI*.35*dt);
-  s.velocity*=.82;
+ if(s.x<38||s.x>W-38||s.y<40||s.y>H-40){
+  s.x=clamp(s.x,38,W-38);s.y=clamp(s.y,40,H-40);
+  s.angle=normalize(s.angle+Math.PI*.46*dt);s.velocity*=.62;
+ }
+ for(const isl of game.islands){
+  if(terrainDistance(isl,s.x,s.y)<1){
+   const dx=s.x-isl.x,dy=s.y-isl.y,ang=Math.atan2(dy,dx),ratio=terrainDistance(isl,s.x,s.y)||.01;
+   s.x+=Math.cos(ang)*(1-ratio)*24;s.y+=Math.sin(ang)*(1-ratio)*24;s.velocity*=-.13;
+   if(s.landTimer<=0){
+    damage(s,2.7,0,null);burst(s.x,s.y,'#d4d4b5',8);s.landTimer=1.8;
+    logEvent(s.name+' на мели!');
+   }
+  }
  }
 }
 function damage(s,hp,crew,from){
