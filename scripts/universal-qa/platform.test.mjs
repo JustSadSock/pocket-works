@@ -84,7 +84,7 @@ test('only owner-issued requests may start agent dispatch', () => {
 test('aggregate fails closed when reports are missing or failed', () => {
   const f = createFixture();
   try {
-    const good = join(f.root, 'qa-x', 'x');
+    const good = join(f.root, 'qa-x');
     mkdirSync(good, { recursive: true });
     writeFileSync(join(good, 'result.json'), '{"app":"test-app","suite":"visual","success":true,"durationMs":25}');
     const complete = summarize(f.root, ['x']);
