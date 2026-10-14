@@ -42,8 +42,10 @@ function resize(){
 }
 function computeView(){
  const rect=canvas.getBoundingClientRect(),aspect=Math.max(.38,rect.width/Math.max(1,rect.height));
- let w=(rect.width<700?610:1040)/camera.zoom,h=w/aspect;
- if(h>790){h=790;w=h*aspect}
+ // Zoom follows world-height, not phone width. Otherwise portrait devices
+ // would be clamped permanently at one magnification level.
+ let h=800/camera.zoom,w=h*aspect;
+ if(h>1300){h=1300;w=h*aspect}
  if(w>1120){w=1120;h=w/aspect}
  if(w<240){w=240;h=w/aspect}
  camera.x=clamp(camera.x,Math.min(W/2,w/2),Math.max(W/2,W-w/2));
@@ -92,7 +94,7 @@ function syncHUD(){
 }
 function enterGame(s){
  game=s;hasPlayed=true;paused=false;pendingReset=false;hidePanels();root.classList.remove('game-idle');root.classList.add('game-active');
- camera={x:325,y:310,zoom:1.1};mode='capture';captain=0;site=null;last=performance.now();acc=0;computeView();syncHUD();
+ camera={x:250,y:310,zoom:1.1};mode='capture';captain=0;site=null;last=performance.now();acc=0;computeView();syncHUD();
  notify('Выбери капитана, затем коснись цели на карте');playSound(410,.16,.04);
  storageWrite();
 }
@@ -168,7 +170,7 @@ $('minimap').addEventListener('pointerdown',e=>{
  e.preventDefault();const b=$('minimap').getBoundingClientRect();
  focusAt((e.clientX-b.left)/b.width*W,(e.clientY-b.top)/b.height*H);playSound(450,.04,.012);
 });
-$('fitBtn').onclick=()=>{camera.zoom=.63;camera.x=W/2;camera.y=H/2;computeView();notify('Обзор всей границы');playSound(400,.05,.012)};
+$('fitBtn').onclick=()=>{camera.zoom=.63;camera.x=W/2;camera.y=H/2;computeView();notify('Камера по центру карты');playSound(400,.05,.012)};
 $('zoomPlus').onclick=()=>{zoomBy(1.27);playSound(450,.05,.012)};
 $('zoomMinus').onclick=()=>{zoomBy(.79);playSound(370,.05,.012)};
 for(let i=0;i<2;i++)$('cap'+i).onclick=()=>{
