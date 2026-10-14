@@ -247,6 +247,8 @@ requires explicit trust; never execute untrusted source with credentials.
 - Do not add a paid external audio-generation dependency unless the requested sound genuinely cannot be produced well with the existing browser/audio toolchain.
 - **Before implementing or changing a game's audio, read `docs/agent-skills/AUDIO-ORIGINALITY.md` and write its app-specific sound palette.** Every game must have its own material-based sound identity; never reuse a generic sine beep for all actions or clone the same palette across apps.
 
+**Mandatory evidence rule for all visual agents:** before claiming a visible redesign is finished, run Playwright on the changed build, open and inspect real captured desktop/mobile screenshots, identify the biggest structural issue and rerun after changes. A passing test or merely uploading screenshots is not visual sign-off. Read `docs/agent-skills/VISUAL-QA.md` for the exact loop and `docs/UNIVERSAL-QA.md` for GitHub-hosted execution. If unavailable, report the limitation rather than implying the frames were reviewed.
+
 ## 14. Playwright QA and visual sign-off
 
 Pocket Works has Playwright browser testing available in the repository and through GitHub Actions. Treat it as a required production tool, not an optional debugging aid.
