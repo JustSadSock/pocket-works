@@ -37,3 +37,14 @@
 @media(prefers-reduced-motion:reduce){
  .dialog-box .appearance-track,.dialog-box .appearance-track::before{transition:none}
 }
+
+/* The 1.33 artwork interaction was accidentally enabled only by its theme CSS.
+   Keep genuine painting navigation accessible in both appearances. */
+.museum-slide[data-slot="-1"],
+.museum-slide[data-slot="0"],
+.museum-slide[data-slot="1"]{
+ pointer-events:auto;cursor:pointer;
+}
+.museum-slide:focus-visible{
+ outline:3px solid #b68e54;outline-offset:4px;
+}
