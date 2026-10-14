@@ -1,15 +1,15 @@
 {
   "zamazka": {
-    "revision": "1e2c3d7e80331e82ed31a7d96f6dd3cb085beb49",
-    "qualityScore": 79,
+    "revision": "cb93262bd79e114a5727e4e2f63273165ae6abc3",
+    "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "94f7bc895f2a7b9ae558d83d2132eb72507d62ec241f282c06ab53568890840d",
+    "sha256": "488288c9ee6091ba4f8c8501d07794db610ff4691c8a4b5c6688ebaa251503e8",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "1e2c3d7e80331e82ed31a7d96f6dd3cb085beb49",
-    "lastAttemptAt": "2026-10-14T10:00:42.655Z",
+    "lastAttemptRevision": "cb93262bd79e114a5727e4e2f63273165ae6abc3",
+    "lastAttemptAt": "2026-10-14T15:00:23.059Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3171,5 +3171,32 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "81130dc8ce32b939482c55a77ec71df02aeffdae",
     "lastAttemptAt": "2026-10-14T12:21:40.798Z"
+  },
+  "mezha": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 61,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 25990,
+        "variance": 38.372844011890656,
+        "entropy": 1.7235976294124562,
+        "edgeDensity": 0.07899305555555555,
+        "colorfulness": 28.97412109375,
+        "centerDetail": 50.76863523893522,
+        "meanLight": 66.44843749999998
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.0.0&pw_fp=96d8f0e3f3d3a349235d52a9"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "c00ce78fe4ec514f13c1351afe8be2f7ff556e28",
+    "lastAttemptAt": "2026-10-14T15:00:34.022Z"
   }
 }
