@@ -272,7 +272,7 @@ export function tick(s,dt){
  // Fort and keep volleys take place after normal combat. A unit killed in
  // those phases must not remain selectable or be saved with 0 HP.
  s.squads=s.squads.filter(u=>u.hp>0);
- if(s.time>=LIMIT&&s.phase==='battle'){
+ if(s.time>=LIMIT-1e-6&&s.phase==='battle'){s.time=LIMIT;
   s.phase='end';const a=stats(s,0).score,b=stats(s,1).score;s.winner=a===b?-1:a>b?0:1;
  }
 }
