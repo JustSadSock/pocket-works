@@ -77,7 +77,7 @@ export class PocketSocial {
       artwork:p.artwork,backgroundMode:backgroundModes.has(p.background_mode)?p.background_mode:'preset',
       portraitFrame:portraitFrames.has(p.portrait_frame)?p.portrait_frame:'wood',maskot:validMaskot(maskot,unlocked)?maskot:null,
       ...(own?{unlocked,achievements:earned.map(x=>({id:x.achievement_id,earnedAt:x.earned_at}))}:{}),title:p.title||'',favoriteGame:p.favorite_game,discoverable:!!p.discoverable,
-      presenceVisible:!!p.presence_visible,allowInvites:!!p.allow_invites,
+      owned:own,presenceVisible:!!p.presence_visible,allowInvites:!!p.allow_invites,
       online:visible,gameId:visible?p.game_id:'',
       friendship:own?'self':blocked?'blocked':r?.status==='accepted'?'friends':
         r?.status==='pending'?(r.pending_by===viewer?'outgoing':'incoming'):'none',
@@ -111,7 +111,30 @@ export class PocketSocial {
     return rows.map(r=>({id:r.id,fromId:r.from_id,toId:r.to_id,
       fromName:this.one('SELECT nickname FROM profiles WHERE id=?',r.from_id)?.nickname||'Игрок',
       toName:this.one('SELECT nickname FROM profiles WHERE id=?',r.to_id)?.nickname||'Игрок',
-      roomId:r.room_id,gameId:r.game_id,status:r.status,createdAt:r.created_at,incoming:r.to_id===id}));
+      roomId:r.room_id,gameId:r.game_id,status:r.status,createdAt:r.created_at,expiresAt:r.expires_at,incoming:r.to_id===id}));
+  }
+  // Cheap active-menu revision: no portraits, drawings, or achievement inventories.
+  socialRevision(id){
+    const now=Date.now(),limit=now-95000;
+    const owner=this.one('SELECT nickname,avatar,updated_at FROM profiles WHERE id=?',id);
+    const peers=this.rows(
+      'SELECT f.a,f.b,f.status,f.pending_by,f.updated_at,p.id AS peer_id,p.nickname,p.avatar,'+
+      'p.updated_at AS profile_updated,p.seen_at,p.game_id,p.presence_visible '+
+      'FROM friends f JOIN profiles p ON p.id=CASE WHEN f.a=? THEN f.b ELSE f.a END '+
+      'WHERE f.a=? OR f.b=? ORDER BY f.updated_at DESC LIMIT 240',id,id,id);
+    const friends=peers.map(p=>[
+      p.peer_id,p.status,p.pending_by,p.updated_at,p.profile_updated,p.nickname,p.avatar,
+      !!p.presence_visible&&p.seen_at>limit?(p.game_id||'online'):'offline'
+    ]);
+    const invitations=this.rows(
+      'SELECT id,from_id,to_id,game_id,room_id,status,expires_at FROM invites '+
+      'WHERE (to_id=? OR from_id=?) AND expires_at>? ORDER BY created_at DESC LIMIT 50',id,id,now);
+    const blocked=this.rows('SELECT blocked FROM blocks WHERE blocker=? ORDER BY blocked LIMIT 100',id);
+    const awards=this.one('SELECT COUNT(*) AS count,MAX(earned_at) AS latest FROM achievements WHERE account_id=?',id);
+    const snapshot=JSON.stringify([owner,friends,invitations,blocked,awards]);
+    let h=2166136261;
+    for(let i=0;i<snapshot.length;i++){h^=snapshot.charCodeAt(i);h=Math.imul(h,16777619)}
+    return {revision:(h>>>0).toString(36)+':'+snapshot.length};
   }
   async fetch(request){
     const url=new URL(request.url),path=url.pathname;
@@ -145,6 +168,7 @@ export class PocketSocial {
     try{
       if(path==='/pocket-social/achievements'&&request.method==='GET')
         return reply({achievements:this.rows('SELECT achievement_id AS id,earned_at AS earnedAt FROM achievements WHERE account_id=? ORDER BY earned_at DESC',id)});
+      if(path==='/pocket-social/sync'&&request.method==='GET')return reply(this.socialRevision(id));
       if(path==='/pocket-social/me'&&request.method==='GET')
         return reply({profile:this.card(id,id),...this.connections(id),invites:this.invitations(id),blocked:this.blockedUsers(id)});
       if(path==='/pocket-social/user'&&request.method==='GET'){
