@@ -325,7 +325,10 @@ function change(html,which){
  if(voteTransitionLayer)finishVoteTransition();
  if(oldBallot)oldBallot.remove();
  const previousRoom=screen.dataset.museumRoom;
- page=which;lastUiKey='';exhibitionDirector.replace(html,{animate:!oldBallot&&which!=='connecting',scene:which});
+ page=which;lastUiKey='';
+ const freshScene=appearance()==='new'&&!oldBallot&&which!=='connecting';
+ exhibitionDirector.replace(html,{animate:!freshScene&&!oldBallot&&which!=='connecting',scene:which});
+ if(freshScene&&screen.firstElementChild)screen.firstElementChild.classList.add('atelier-scene-arrive');
  if(appearance()==='new')applyAppearance('new');
  if(appearance()==='new'&&previousRoom&&previousRoom!==screen.dataset.museumRoom&&!oldBallot&&which!=='connecting')sound('frame');
  if(oldBallot){
