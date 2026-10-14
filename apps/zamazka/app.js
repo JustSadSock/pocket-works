@@ -354,11 +354,12 @@ function home(skipLeave=false){
   
   '<div class="museum-headline"><h1>Искусство<br><em>подделки.</em></h1></div>'+
   '<div class="museum-display">'+
+    '<div class="museum-luminaire" aria-hidden="true"><span class="museum-luminaire-stem"></span><span class="museum-luminaire-housing"></span><span class="museum-luminaire-lens"></span></div>'+
     '<div class="museum-stage" id="museumStage" aria-label="Перелистываемая музейная экспозиция"></div>'+
     '<div class="museum-stage-caption" id="museumCaption" aria-live="polite"><strong>Девушка с жемчужной серёжкой</strong><span>Ян Вермеер · ок. 1665</span></div>'+
     '<div class="museum-wheel"><button data-action="museum-prev" aria-label="Предыдущая картина">‹</button><button data-action="museum-next" aria-label="Следующая картина">›</button></div><span class="museum-exhibit-number">01 / '+museumOrder.length+'</span>'+
   '</div>'+
-  '<div class="museum-control">'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(gameName())+'</strong><small>Изменить знак</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
+  '<div class="museum-control">'+'<div class="museum-console-structure" aria-hidden="true"><span class="museum-console-deck"></span><span class="museum-console-rail museum-console-rail-left"></span><span class="museum-console-rail museum-console-rail-right"></span><span class="museum-console-foot"></span></div>'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(gameName())+'</strong><small>Изменить знак</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
     '<button class="start-restoration" id="primary-action" data-action="create"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Играть с друзьями</strong><small>Создать совместную выставку</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="practice"><span>✳</span> Одиночная реставрация</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
     '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
