@@ -117,19 +117,39 @@ function startBattle(){
 function alive(side){return game.ships.filter(s=>s.alive&&s.side===side)}
 function nearest(s){return alive(s.side==='ally'?'enemy':'ally').sort((a,b)=>distance(s,a)-distance(s,b))[0]||null}
 function getTarget(s){return game.ships.find(t=>t.id===s.targetId&&t.alive&&t.side!==s.side)||nearest(s)}
+function updateBudgetUI(s){
+ const b=s?getBudget(s):null;
+ $('apRemaining').textContent=b?String(Math.max(0,b.remaining)):'—';
+ $('apTotal').textContent=b?'/ '+b.total:' / —';
+ $('apSpent0').textContent=b?String(b.stages[0].spent):'0';
+ $('apSpent1').textContent=b?String(b.stages[1].spent):'0';
+ $('apState').textContent=b?(b.valid?(b.remaining===0?'ВСЁ РАСПРЕДЕЛЕНО':'ОСТАЛОСЬ '+b.remaining+' ОД'):'ПЕРЕРАСХОД'):'ВЫБЕРИ КОРАБЛЬ';
+ $('apFormula').textContent=b?('Манёвренность: '+(Math.round(s.turn*100)/100)+' · 1 ОД ≈ '+MOVE_STEP+' ед. пути'):'Общий запас на оба приказа';
+ $('apGauge').classList.toggle('ap-full',Boolean(b&&b.remaining===0));
+ const pips=$('apPips');pips.replaceChildren();
+ if(b){for(let i=0;i<b.total;i++){
+   const dot=document.createElement('i');dot.className='ap-pip '+(i<b.stages[0].spent?'stage-one':i<b.spent?'stage-two':'available');
+   dot.setAttribute('aria-label',i<b.spent?'Израсходовано':'Доступно');pips.append(dot);
+ }}
+}
 function selectShip(id){
  const s=game.ships.find(x=>x.id===id&&x.side==='ally'&&x.alive);
  game.selected=s?.id||null;
  $('selectedName').textContent=s?s.name:'Выбери судно';
  $('selectedInfo').textContent=s?('Корпус '+Math.ceil(s.hp)+'/'+Math.ceil(s.maxHp)+' · Экипаж '+Math.ceil(s.crew)+'/'+Math.ceil(s.maxCrew)):'Нажми на корабль своего флота';
  const order=s?instruction(s,game.stage):null;
- $('instruction').textContent=s?(order.route.length?'Путь построен. Можно нарисовать другой.':'Нарисуй путь на воде или коснись врага.'):'Выбери судно на поле';
+ $('instruction').textContent=s?(order.route.length?'Маршрут записан. Можно нарисовать новый.':'Проведи по воде или выбери цель для атаки.'):'Выбери судно на поле';
  $('routeCounter').textContent=order?readoutRoute(order):'НЕТ МАРШРУТА';
  $('crewReadout').textContent=s?('ЭКИПАЖ '+Math.ceil(s.crew)):'';
  $('maneuverReadout').textContent=order?({hold:'МАНЁВР',shoot:'СТРЕЛЬБА',board:'АБОРДАЖ',evade:'УКЛОНЕНИЕ'}[order.kind]||'ПРИКАЗ'):'ОЖИДАНИЕ';
- document.querySelectorAll('[data-order]').forEach(btn=>btn.classList.toggle('on',Boolean(order&&btn.dataset.order===order.kind)));
+ const allowed=s?availableActions(s,game.stage):{};
+ document.querySelectorAll('[data-order]').forEach(btn=>{
+  btn.classList.toggle('on',Boolean(order&&btn.dataset.order===order.kind));
+  btn.disabled=game.phase!=='orders'||!s||!allowed[btn.dataset.order];
+ });
  document.querySelectorAll('[data-stage]').forEach(btn=>btn.classList.toggle('on',Number(btn.dataset.stage)===game.stage));
  $('clearRouteBtn').disabled=!order||(order.route.length===0&&!order.targetId);
+ updateBudgetUI(s);
 }
 function updateBattleUI(){
  $('turnLabel').textContent='ХОД '+String(game.round).padStart(2,'0')+' / '+MAX_ROUNDS;
