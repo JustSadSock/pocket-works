@@ -212,6 +212,18 @@ export function renderBattle(ctx,s,view,ui,t){
     ctx.fillStyle='#f4deb4';ctx.fillText(({capture:'ЗАНЯТЬ',defend:'ОБОРОНА',raid:'НАБЕГ'})[o.mode],o.x,o.y-33);
   }
  }
+ // Enemy standards become legible only when a friendly patrol can see
+ // the destination. This makes enemy manoeuvres readable, not omniscient.
+ for(const o of s.orders.filter(o=>o.side===1)){
+  if(!(o.changed>0))continue;
+  const spot={x:o.x,y:o.y};
+  const sighted=s.squads.some(u=>u.side===0&&u.hp>0&&distance(u,spot)<130);
+  if(!sighted)continue;
+  const shade=o.mode==='raid'?'#bf8a80':o.mode==='defend'?'#86bba7':'#8bbfc5';
+  flag(ctx,o.x+3,o.y,shade,t*3+o.id);
+  pix(ctx,o.x-12,o.y+6,26,3,'#25373b');
+  pix(ctx,o.x-10,o.y+7,22,1,'#9ec8cb');
+ }
  for(const u of [...s.squads].sort((a,b)=>a.y-b.y))squad(ctx,u,t,u.captain===ui.captain&&u.side===0);
  for(const e of s.events){
   const v=1-e.age/.75;
