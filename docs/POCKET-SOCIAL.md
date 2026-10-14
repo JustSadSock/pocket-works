@@ -51,3 +51,11 @@ No achievements, global statistics, public art uploads, profile mottos, group ch
 Pocket ID remains the authoritative account UUID, nickname, recovery and Google sign-in service. Pocket Social owns public card art, visual presets, favorite game, visibility and friend/invite metadata. Their UI is **one** profile editor. The client saves a changed nickname to Pocket ID and appearance to Pocket Social, with retryable partial-failure feedback. It never attempts to duplicate or synchronize two different avatar choices.
 
 Supported games render the small user-painted raster portrait from Pocket Social (with a preset fallback). Verified PocketNet badges hydrate a remote player portrait by confirmed `accountId`; they do not trust user-provided image URLs or client-provided verified flags. Old preset avatars are preserved as fallback assets and for backwards compatibility with rooms and LAN peers.
+
+## Live social refresh / cards
+
+- While the modal is open, a compact `/pocket-social/sync` revision is polled every 2 seconds. Changed social metadata triggers a full refresh, including an open friend's profile. The 22-second background notification check remains in place.
+- Offline periods retain the last known cards and show a small warning. Searching removes stale results immediately, shows progress/errors, and ignores superseded responses.
+- Pending new friend requests and invitations receive a badge per browser session. Friends are sorted online-first on entry, and remain in the same order during a visit to avoid mid-tap jumps.
+- Friend cards can be opened from any free area and are keyboard accessible. Returning from a friend's profile restores the originating tab and scroll position. Invitations show game titles and expiry times.
+- The game catalog is fetched without stale cache and checked periodically while the menu is open.
