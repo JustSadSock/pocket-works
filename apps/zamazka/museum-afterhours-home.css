@@ -73,7 +73,7 @@ html[data-zamazka-appearance="new"] #screen > .museum-home .museum-headline h1 {
  text-wrap:balance;
 }
 html[data-zamazka-appearance="new"] #screen > .museum-home .museum-headline h1 em {
- font:italic 400 1em Georgia,serif;color:#d8b98f;text-shadow:none;
+ font:400 1em Georgia,"Times New Roman","Noto Serif",serif;font-style:oblique 11deg;font-synthesis:style;color:#d8b98f;text-shadow:none;
 }
 html[data-zamazka-appearance="new"] #screen > .museum-home .museum-control {
  grid-column:1;grid-row:2;z-index:3;
