@@ -3,8 +3,9 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHousehold, SIZE} from './model.js';
 import {diagnoseWorld} from './laboratory.js';
 import {fieldAppearance,personPosition,cattlePosition} from './visual-land.js';
+import {walkPath} from './navigation.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.3.2',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.3.3',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -51,12 +52,20 @@ function drawFrame(){if(!sim)return;
   }
   if(cam.z>.36){for(const hom of sim.households){if(!(hom.cattle>0))continue;
    for(let i=0;i<Math.min(5,hom.cattle);i++){
-    const place=cattlePosition(hom,sim.day+movementFraction*7,i),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const place=cattlePosition(hom,sim.day+movementFraction,i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const scale=Math.max(2,cam.z*4);ctx.fillStyle='#604c39';ctx.fillRect(Math.round(x),Math.round(y),scale*1.7,scale);
     ctx.fillStyle='#aa967c';ctx.fillRect(Math.round(x+scale*1.2),Math.round(y-scale*.22),scale*.65,scale*.73);
    }
   }}
+ }
+ // Selecting a person explains their current destination and actual dry-land access.
+ if(selectedPerson){const who=sim.people.find(p=>p.id===selectedPerson&&p.alive);const home=who&&sim.households.find(h=>h.id===who.houseId);
+  if(home&&who&&who.job!=='home'){
+   const route=walkPath(sim,home,who);
+   if(route.length>1){ctx.save();ctx.strokeStyle='#e6cb8caa';ctx.lineWidth=1.4;ctx.setLineDash([3,4]);ctx.beginPath();
+    for(let i=0;i<route.length;i++){const x=cam.x+(route[i].x*PX+4)*cam.z,y=cam.y+(route[i].y*PX+4)*cam.z;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.restore();}
+  }
  }
  if(selected){const household=sim.households.find(k=>k.id===selected);if(household){const x=cam.x+(household.x*PX+4)*cam.z,y=cam.y+(household.y*PX+4)*cam.z;ctx.strokeStyle='#ffe3a4';ctx.lineWidth=2;ctx.strokeRect(x-8,y-8,16,16);}}
  if(cam.z>.5){ctx.font='700 12px Georgia';ctx.textAlign='center';for(const c of sim.communities){const x=cam.x+c.x*PX*cam.z,y=cam.y+c.y*PX*cam.z-14;if(x<15||x>w-15||y<60||y>h-10)continue;ctx.fillStyle='#16271dc9';const name=c.name,tw=ctx.measureText(name).width;ctx.fillRect(x-tw/2-8,y-13,tw+16,20);ctx.fillStyle='#f2e5c2';ctx.fillText(name,x,y+1);}}
@@ -80,7 +89,7 @@ if(mode==='household'){
  if(!h){el.innerHTML='<div class="house-name">Выберите дом на карте</div><p class="note">Приблизьте карту и коснитесь крыши.</p>';return;}
  const current=selectedPerson?sim.people.find(p=>p.id===selectedPerson):null;
  const originalPosition=el.scrollTop;
- const residents=h.people.map(p=>`<button class="member ${p.id===selectedPerson?'selected':''}" data-person="${p.id}"><b>${escapeHTML(p.name)}</b> ${Math.floor(p.age)} · ${p.job==='wood'?'лес':p.job==='farm'?'поля':p.job==='haul'?'в дороге':p.job==='build'?'стройка':'дом'}</button>`).join('')||'<span class="member">Дом пустует</span>';
+ const residents=h.people.map(p=>`<button class="member ${p.id===selectedPerson?'selected':''}" data-person="${p.id}"><b>${escapeHTML(p.name)}</b> ${Math.floor(p.age)} · ${p.job==='wood'?'лес':p.job==='farm'?'поля':p.job==='haul'?'в дороге':p.job==='build'?'стройка':p.job==='herd'?'пастбище':p.job==='hired'?'наём':'дом'}</button>`).join('')||'<span class="member">Дом пустует</span>';
  const deceased=h.members.map(id=>sim.people.find(p=>p.id===id)).filter(p=>p&&!p.alive).slice(-5);
  let personInfo='';
  if(current&&h.members.includes(current.id)){
