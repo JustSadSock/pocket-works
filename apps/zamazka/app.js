@@ -298,7 +298,7 @@ function home(skipLeave=false){
   '</div>'+
   '<div class="museum-control">'+'<button class="start-restoration" id="primary-action" data-action="create"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Играть с друзьями</strong><small>Создать совместную выставку</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="practice"><span>✳</span> Одиночная реставрация</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
-    '<div class="museum-footer"><a class="home-pocket-identity" href="'+pocketIdProfileUrl+'"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(gameName())+'</strong><small>Профиль Pocket ID</small></span></a><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">Синхронизация</button>'+
+    '<div class="museum-footer"><button type="button" class="home-pocket-identity" data-action="pocket-profile"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(gameName())+'</strong><small>Профиль Pocket ID</small></span></button><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">Синхронизация</button>'+
     ((storedPractice||sessionStorage.getItem(PRACTICE_KEY)||localStorage.getItem(PRACTICE_KEY))?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
   '</div></section>','home');
  museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onExhibit(id){sound('frame',true);inspect(id,true)},onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(museumOrder.indexOf(id)+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
@@ -309,7 +309,7 @@ function home(skipLeave=false){
 function setup(mode,error='',roomValue=invitedRoom){
  const creating=mode==='create';
  const display=creating?'Создать комнату':'Присоединиться';
- const identity='<a class="entry-profile" href="'+pocketIdProfileUrl+'"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(gameName())+'</strong><small>'+(isPocketMember()?'Профиль Pocket ID':'Гостевой игрок · открыть Pocket ID')+'</small></span><span aria-hidden="true">↗</span></a>';
+ const identity='<button type="button" class="entry-profile" data-action="pocket-profile"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(gameName())+'</strong><small>'+(isPocketMember()?'Профиль Pocket ID':'Гостевой игрок · открыть Pocket ID')+'</small></span><span aria-hidden="true">↗</span></button>';
  change('<section class="page lobby-entry">'+
   '<header class="entry-heading"><span class="section-label">ИГРА С ДРУЗЬЯМИ</span><h2>'+display+'</h2></header>'+
   '<div class="entry-content">'+identity+
@@ -338,7 +338,7 @@ function lobby(){
  const players=view.participants||[],leader=view.host===me?.id,code=inviteCode(roomId);
  const markup='<section class="page exhibition-lobby">'+
   '<header class="lobby-mast"><div><span class="section-label">СОВМЕСТНАЯ ВЫСТАВКА</span><h2>Комната ожидания</h2></div>'+
-  '<a class="lobby-self" href="'+pocketIdProfileUrl+'" title="Открыть профиль Pocket ID"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(me?.name||gameName())+'</strong><small>Профиль Pocket ID</small></span></a></header>'+
+  '<button type="button" class="lobby-self" data-action="pocket-profile" title="Открыть профиль Pocket ID"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(me?.name||gameName())+'</strong><small>Профиль Pocket ID</small></span></button><button class="lobby-exit" type="button" data-action="menu">← Выйти</button></header>'+
   '<div class="lobby-invite"><div class="room-ticket"><div class="ticket-top"><span class="section-label">ПРИГЛАСИТЬ В КОМНАТУ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
   '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div>'+
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Ссылка ↗</button>'+
@@ -352,7 +352,7 @@ function lobby(){
    '<label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+durationOptionsHtml(drawingSecondsChoice)+'</select>'+
    '<button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':
    '<p class="lobby-guest-wait">Ведущий запустит игру, когда все будут готовы.</p>')+
-   '<button class="btn ghost lobby-leave" data-action="menu">В главное меню</button></div></section>';
+   '</div></section>';
  if(page==='lobby'&&commonsBoard){
    const future=document.createElement('div');future.innerHTML=markup;
    for(const selector of ['.lobby-self','.lobby-list-heading','.players','.lobby-controls']){
@@ -372,7 +372,10 @@ function lobby(){
  boardResync=false;
 }
 
-function galleryHtml(list,select=false){return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+(ARTS[id]?.schoolCountry?' · '+esc(ARTS[id].schoolCountry):'')+'</span></button>').join('')+'</div>'}
+function galleryHtml(list,select=false){
+ const facets='<i class="picture-bevel picture-bevel-top" aria-hidden="true"></i><i class="picture-bevel picture-bevel-bottom" aria-hidden="true"></i><i class="picture-bevel picture-bevel-left" aria-hidden="true"></i><i class="picture-bevel picture-bevel-right" aria-hidden="true"></i>';
+ return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><span class="picture-mat">'+facets+'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+(ARTS[id]?.schoolCountry?' · '+esc(ARTS[id].schoolCountry):'')+'</span></button>').join('')+'</div>';
+}
 function preloadPreviewImage(id){
  return new Promise((resolve,reject)=>{
    const image=new Image();let fallback=false;
@@ -967,7 +970,16 @@ function share(){
  if(navigator.share)navigator.share({title:'ЗАМАЗКА — приглашение',text:'Код комнаты: '+inviteCode(roomId),url:href}).catch(error=>{if(error?.name!=='AbortError')copyText(href,'Ссылка скопирована')});
  else copyText(href,'Ссылка скопирована');
 }
-function inspect(id,fromHome=false){const a=ARTS[id];modal(esc(a.title),'<img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(a.title)+'"><div class="art-metadata"><div class="art-inspect-facts">'+artFactsHtml(id)+'</div><div>Хранится: '+esc(a.museum)+'</div></div>'+(fromHome?'<p class="hint">Рассмотри картину до начала реставрации.</p>':'<p class="hint">Запомни цвета и фактуру оригинала.</p>')+(a.isReal?'<a class="art-source" href="'+esc(a.source)+'" target="_blank" rel="noopener noreferrer">Происхождение изображения ↗</a>':''),[['Закрыть',closeDialog,'primary']])}
+function inspect(id,fromHome=false){
+ const art=ARTS[id];
+ modal(esc(art.title),
+  '<div class="inspection-stage"><img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(art.title)+'"></div>'+
+  '<div class="inspection-details"><div class="art-metadata"><div class="art-inspect-facts">'+artFactsHtml(id)+'</div><div>Хранится: '+esc(art.museum)+'</div></div>'+
+  (art.isReal?'<a class="art-source" href="'+esc(art.source)+'" target="_blank" rel="noopener noreferrer">Источник изображения ↗</a>':'')+'</div>',
+  [['Закрыть',closeDialog,'primary']]
+ );
+}
+
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
 let settingsPreviewVolume=null,settingsPreviewAppearance=null,settingsOriginalAppearance=null;
 function settings(){
@@ -1025,7 +1037,11 @@ screen.addEventListener('click',e=>{
 
  const action=b.dataset.action;
  if(action!=='museum-next'&&action!=='museum-prev')sound(['submit','vote','advance','next','continue','start'].includes(action)?'confirm':['collection','resume','menu','skip'].includes(action)?'paper':'press',true);
- if(action==='create'||action==='join')setup(action);
+ if(action==='pocket-profile'){
+  if(window.PocketSocial?.open)void window.PocketSocial.open();
+  else notify('Профиль Pocket ID пока загружается. Попробуй ещё раз.');
+ }
+ else if(action==='create'||action==='join')setup(action);
   else if(action==='museum-next')shiftMuseum(1);
  else if(action==='museum-prev')shiftMuseum(-1);
  else if(action==='preview-previous')moveMobileGallery(-1);
