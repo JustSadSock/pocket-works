@@ -24,7 +24,8 @@
 .restore .timer.urgent,.phase-page .timer.urgent{animation:zamazkaTimerPulse 1.4s ease-in-out infinite}
 @keyframes zamazkaTimerPulse{0%,100%{opacity:1}50%{opacity:.7}}
 @keyframes zamazkaSceneIn{from{opacity:.82;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.screen>.phase-page,.screen>.restore{animation:zamazkaSceneIn .22s ease-out both}
+/* Static phase transitions: no whole-screen movement when time expires. */
+.screen>.phase-page,.screen>.restore{animation:none}
 .screen .gallery .picture img{object-fit:contain;object-position:center;aspect-ratio:4/3}
 .screen .compare canvas,.screen .unveil-frame canvas,.screen .expert-focus-frame canvas{aspect-ratio:4/3}
 @media(min-width:1050px) and (pointer:fine){
