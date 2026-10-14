@@ -3158,20 +3158,20 @@
     "lastAttemptAt": "2026-10-13T22:04:38.310Z"
   },
   "living-history": {
-    "revision": "a9d00d276b74ef29c33a197553ea82595faa2fc7",
-    "qualityScore": 76,
+    "revision": "26f1e7975df36ad81dd98d9025491e33bd014162",
+    "qualityScore": 75,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "527365e48c27601acd0085a688dd3bc197c2e9f9e7cfc272c49f4eb55f7e6583",
+    "sha256": "060c2e7bbd51bed1cd23d389425e69ce460276e7142c75c2e302f069a6dcea53",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a9d00d276b74ef29c33a197553ea82595faa2fc7",
-    "lastAttemptAt": "2026-10-14T21:40:15.868Z"
+    "lastAttemptRevision": "26f1e7975df36ad81dd98d9025491e33bd014162",
+    "lastAttemptAt": "2026-10-14T22:24:19.875Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
