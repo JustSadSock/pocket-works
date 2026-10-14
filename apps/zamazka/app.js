@@ -8,7 +8,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,ARCHIVE_EDITION,normalizeArchiveEntry,artworkURL,artworkFallbackURL,loadArtwork} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
-import {getSavedEmblem,storeEmblem,paintEmblem,exportEmblem,EMBLEM_SIZE,EMBLEM_COLORS,EMBLEM_LIMITS} from './emblem.js';
+import {getSavedEmblem,storeEmblem} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
 import {installGalleryLighting} from './museum-lighting.js';
 import {MuseumAudio} from './museum-audio.js';
@@ -94,75 +94,11 @@ function syncIdentity(){
 function shiftMuseum(step){if(page!=='home'||!museumMotion)return;museumMotion.shift(step);sound('frame',true)}
 function commonsHtml(leader){
  return '<section class="commons-desk" aria-label="Общий холст выставки">'+
- '<div class="commons-topline"><div><span class="section-label">ОБЩАЯ МАСТЕРСКАЯ</span><h3>Порисуем вместе?</h3><p>Рисуйте одновременно — мазки видны всем участникам комнаты.</p></div><span class="commons-online"><i></i> ВМЕСТЕ</span></div>'+
+ '<div class="commons-topline"><div><h3>Общий холст</h3></div><span class="commons-online"><i></i> ВМЕСТЕ</span></div>'+
  '<div class="commons-frame"><canvas id="commonsCanvas" width="960" height="600" aria-label="Общий холст для свободного рисования"></canvas><span class="commons-corner" aria-hidden="true">✳</span></div>'+
  '<div class="commons-controls"><div class="commons-palette" aria-label="Цвет кисти">'+COMMONS_COLORS.map((c,i)=>'<button class="commons-swatch'+(i===0?' selected':'')+'" data-commons-color="'+c+'" aria-label="Цвет '+(i+1)+'" style="--swatch:'+c+'"></button>').join('')+'</div>'+
  '<label class="commons-width">Толщина <input id="commonsSize" type="range" min="2" max="36" value="9"></label>'+
  (leader?'<button class="commons-wipe" data-action="board-clear">Очистить холст</button>':'<span class="commons-note">Очистка доступна куратору</span>')+'</div></section>';
-}
-function editEmblem(){
- const current=personalEmblem.strokes.map(s=>({c:s.c,s:s.s,p:s.p.map(p=>[...p])}));
- let strokes=current,ink=EMBLEM_COLORS[0],size=7,drawing=null,pointer=null;
- let backupKey='';
- try{backupKey=Object.keys(localStorage).filter(k=>k.startsWith('pocket-works:zamazka:emblem-cloud-backup:')).sort().at(-1)||''}catch{}
- const markup='<p class="emblem-explainer">Твоя нарисованная подпись. Она появится рядом с ником у остальных игроков.</p>'+
-  '<div class="emblem-board"><canvas id="emblemCanvas" width="'+EMBLEM_SIZE.w+'" height="'+EMBLEM_SIZE.h+'" aria-label="Холст личного знака"></canvas><span class="emblem-board-caption">ЛИЧНАЯ ПЕЧАТЬ · 240 × 144</span></div>'+
-  '<div class="emblem-palette" aria-label="Цвет кисти">'+EMBLEM_COLORS.map((c,i)=>'<button type="button" class="emblem-ink'+(i===0?' selected':'')+'" data-emblem-ink="'+c+'" style="--ink-color:'+c+'" aria-label="Цвет '+(i+1)+'"></button>').join('')+'</div>'+
-  '<div class="emblem-tools"><label>Толщина <input id="emblemSize" type="range" min="2" max="24" value="7"></label><button type="button" id="emblemUndo">↶ Отмена</button><button type="button" id="emblemClear">Очистить</button></div>';
- modal('Твой личный знак',markup,[['Сохранить',()=>{
-   const image=exportEmblem(strokes);
-   if(!image){notify('Слишком сложный рисунок. Уменьши количество деталей.');return}
-   if(!storeEmblem(strokes,image)){notify('Не удалось сохранить знак на устройстве.');return}
-   personalEmblem={strokes,image};
-   zamazkaCloud?.schedule();
-   if(net&&roomId&&view?.participants?.some(p=>p.id===me?.id)){try{net.sendGame({type:'emblem',image})}catch{notify('Знак сохранён. В комнате обновится после подключения.')}}
-   closeDialog();syncIdentity();
-   if(page==='lobby')lobby();
-   notify('Личный знак сохранён');
- },'primary'],['Отмена',closeDialog,'ghost']]);
- const canvas=dialog.querySelector('#emblemCanvas'),palette=dialog.querySelector('.emblem-palette');
- const paint=()=>paintEmblem(canvas,strokes);
- paint();
- const point=e=>{
-  const r=canvas.getBoundingClientRect();
-  return [Math.round(Math.max(0,Math.min(EMBLEM_SIZE.w,(e.clientX-r.left)*EMBLEM_SIZE.w/r.width))),Math.round(Math.max(0,Math.min(EMBLEM_SIZE.h,(e.clientY-r.top)*EMBLEM_SIZE.h/r.height)))];
- };
- canvas.addEventListener('pointerdown',e=>{
-  if(pointer!==null||strokes.length>=EMBLEM_LIMITS.strokes){if(strokes.length>=EMBLEM_LIMITS.strokes)notify('Лимит мазков. Отмени последний штрих.');return}
-  e.preventDefault();pointer=e.pointerId;canvas.setPointerCapture(pointer);drawing={c:ink,s:size,p:[point(e)]};strokes.push(drawing);paint();
- });
- canvas.addEventListener('pointermove',e=>{
-  if(pointer!==e.pointerId||!drawing)return;
-  e.preventDefault();const p=point(e),q=drawing.p.at(-1);
-  if(Math.hypot(p[0]-q[0],p[1]-q[1])<1.5)return;
-  if(drawing.p.length>=300||strokes.reduce((n,s)=>n+s.p.length,0)>=EMBLEM_LIMITS.points)return;
-  drawing.p.push(p);paint();
- });
- const stop=e=>{if(pointer===e.pointerId){pointer=null;drawing=null}};
- canvas.addEventListener('pointerup',stop);canvas.addEventListener('pointercancel',stop);
- palette.addEventListener('click',e=>{
-  const button=e.target.closest('[data-emblem-ink]');if(!button)return;
-  ink=button.dataset.emblemInk;palette.querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b===button));
- });
- dialog.querySelector('#emblemSize').addEventListener('input',e=>size=Number(e.target.value));
- dialog.querySelector('#emblemUndo').addEventListener('click',()=>{strokes.pop();paint()});
- if(backupKey){
-  const button=document.createElement('button');
-  button.type='button';button.textContent='Вернуть предыдущую версию знака';button.className='emblem-restore-backup';
-  dialog.querySelector('.emblem-tools').after(button);
-  button.addEventListener('click',()=>{
-   if(!confirm('Заменить текущий знак сохранённой локальной версией?'))return;
-   try{
-    const backup=JSON.parse(localStorage.getItem(backupKey));
-    if(!storeEmblem(backup.strokes,backup.image))throw Error('Не удалось сохранить знак');
-    personalEmblem=getSavedEmblem();zamazkaCloud?.schedule();
-    closeDialog();syncIdentity();if(page==='lobby')lobby();
-    notify('Предыдущий знак восстановлен');
-   }catch{notify('Резервная копия не открывается')}
-  });
- }
- let confirmClear=false;
- dialog.querySelector('#emblemClear').addEventListener('click',e=>{if(!confirmClear){confirmClear=true;e.currentTarget.textContent='Точно очистить?';return}strokes=[];confirmClear=false;e.currentTarget.textContent='Очистить';paint()});
 }
 let toastTimer,lastToast='',lastToastAt=0;
 dialog.addEventListener('click',e=>{if(e.target===dialog&&!dialog.classList.contains('hidden'))closeDialog()});
@@ -899,7 +835,7 @@ async function connect(mode){
      boardResync=true;
      client.sendGame({type:'sync'});
      if(page==='drawing'&&!pendingSubmit)backupDraft(true);
-     if(personalEmblem.image)client.sendGame({type:'emblem',image:personalEmblem.image});
+     // Legacy room emblems are read only for backwards compatibility; Pocket ID is the visible identity.
      if(view)renderView();
      else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
    });
