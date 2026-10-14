@@ -35,6 +35,10 @@
         {
           "action": "screenshot"
         }
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
       ]
     },
     {
