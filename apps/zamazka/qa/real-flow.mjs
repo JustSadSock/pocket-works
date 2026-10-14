@@ -169,6 +169,8 @@ try{
   await page.locator('.lobby-entry .entry-profile').waitFor({timeout:6000});
   assert.equal(await page.locator('.lobby-entry [data-action="emblem"]').count(),0,'No custom seal in setup');
   assert.equal(await page.locator('.lobby-entry #who').count(),1,'Player name remains editable for guests');
+  await page.waitForFunction(()=>!document.querySelector('#toast')?.classList.contains('show'),null,{timeout:6000});
+  await page.waitForTimeout(360); // Capture the settled scene, not its 275ms entrance opacity.
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-create-room-'+viewport.width+'.png'),fullPage:false});
   await page.locator('.lobby-entry [data-action="connect"]').click();
   await page.locator('.exhibition-lobby #commonsCanvas').waitFor({timeout:12000});
@@ -178,6 +180,7 @@ try{
   const boardBox=await page.locator('#commonsCanvas').boundingBox();
   assert(boardBox&&boardBox.width>100&&boardBox.height>60,'Interactive shared canvas must occupy meaningful space');
   assert(boardBox.x>=0&&boardBox.x+boardBox.width<=viewport.width+2,'Shared canvas overflow');
+  await page.waitForTimeout(380);
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-lobby-'+viewport.width+'.png'),fullPage:false});
   await page.mouse.move(boardBox.x+boardBox.width*.3,boardBox.y+boardBox.height*.4);await page.mouse.down();
   await page.mouse.move(boardBox.x+boardBox.width*.5,boardBox.y+boardBox.height*.6,{steps:5});await page.mouse.up();
