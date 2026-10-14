@@ -111,3 +111,6 @@ assert.equal(normalizeClient('600'),600,'solo saved choice of 10 minutes survive
 assert.equal(normalizeClient(601),160,'unsupported times still fall back to 2:40');
 
 console.log('ZAMAZKA: seven timed presets including 10 minutes, untimed all-player confirmation, solo duration, invalid fallback, and multi-round rules OK');
+
+// Deadline and final transfer regressions are part of the main timer gate.
+import './deadline-integrity.mjs';
