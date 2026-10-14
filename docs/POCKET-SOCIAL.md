@@ -59,3 +59,14 @@ Supported games render the small user-painted raster portrait from Pocket Social
 - Pending new friend requests and invitations receive a badge per browser session. Friends are sorted online-first on entry, and remain in the same order during a visit to avoid mid-tap jumps.
 - Friend cards can be opened from any free area and are keyboard accessible. Returning from a friend's profile restores the originating tab and scroll position. Invitations show game titles and expiry times.
 - The game catalog is fetched without stale cache and checked periodically while the menu is open.
+
+## Pocket Social 0.11 · Play together
+
+- Friend activity comes from the **authoritative PocketNet hub**. `/pocketnet/social-rooms` is a **trusted Durable Object-only POST** endpoint; the public Worker always strips spoofed `x-pw-*` headers. The hub checks live verified account sockets, lobby phase, game version and real player caps. Non-lobby rooms reveal only the game title and occupied-seat counts, never a reusable room ID.
+- `/pocket-social/me`, `/friends`, and `/user?id=` enrich confirmed friends with activity only when their presence is visible. `/sync` hashes this activity to drive the same unobtrusive two-second update. Nonfriends and blocked users cannot enumerate rooms.
+- **Join a friend:** `POST /pocket-social/join-friend` verifies the friendship, privacy settings and *current* room availability server-side just before returning the game link. Outdated or full rooms return a recoverable error rather than a fake action.
+- **Any registered PocketNet game** may send invitations: `POST /pocket-social/invite` and `/invite-party` go through the Worker, which validates the caller's actual room membership via `/pocketnet/validate-invite` and verifies the game module. Games with deep-link auto-join enter directly; other games open the game's room-entry flow with its code prefilled.
+- **Saved company:** each player can save up to three confirmed friends server-side and invite the current company from a PocketNet lobby. Company is a persistent invitation shortlist, **not** a cross-game live party/voice channel. Changes to friendships and blocks remove saved membership. Receiver `allowInvites` privacy is respected.
+- **Game integration:** `shared/capabilities/net.js` lazily installs the shared Pocket Social dialog and shows a small invitation entry only for verified player lobbies in games that do not already have one. The entry disappears on network disconnect, leave or room closure.
+- The launcher includes an unobtrusive online-friends row beneath the account shortcut; it opens the friends tab, not an activity feed.
+- Regression coverage: `node scripts/test-pocket-social.mjs` and PocketNet integration suite `pocketnet/test/identity.mjs`. A production Cloudflare build and real mobile browser inspection are separate verification steps.
