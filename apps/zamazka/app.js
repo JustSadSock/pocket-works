@@ -317,7 +317,7 @@ function setup(mode,error='',roomValue=invitedRoom){
    (creating?'':'<label class="field" for="room">Код или ссылка на комнату</label><input class="input room-entry-input" id="room" maxlength="250" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Код из восьми символов" value="'+esc(roomValue)+'">')+
    (error?'<div class="notice entry-error" role="alert">'+esc(error)+'</div>':'')+
    '</div><div class="entry-actions"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+display+' ↗</button><button class="btn ghost" data-action="menu">Назад</button></div>'+
-  '</div></section>','setup');
+  '</div><aside class="entry-art" aria-hidden="true"><span class="entry-art-frame"><img src="'+artworkURL(0)+'" alt="" loading="eager"></span></aside></section>','setup');
 }
 
 let roundsChoice=3;
