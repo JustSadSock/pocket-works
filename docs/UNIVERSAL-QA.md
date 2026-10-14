@@ -73,3 +73,50 @@ Outputs:
 5. Read raw data and screenshots; fix defects; rerun. Passing browser smoke does not imply visual sign-off.
 
 For larger experiments, run multiple batches of up to 20 independent shards. Scheduling overhead and service quotas may limit acceleration.
+
+
+## Agent protocol: immediately announce the expected completion time
+
+**Mandatory after every agent-initiated Universal QA run, including deep sweeps and UI tests.** Do not silently start an action and wait for it to complete. Once GitHub has created the actual workflow run, post a compact message **in the user's current chat** with its link, start time, approximate local completion clock time and uncertainty. This is a forecast, not a promise or an automatically scheduled message.
+
+### How to obtain the estimate
+
+1. **Trigger and identify the real workflow run.** Record its numeric GitHub Actions run ID from the new run (not the Issue number or job ID). Distinguish a run on main from a PR-branch run.
+2. **Read authoritative timestamps.** GitHub Actions run \`created_at\` indicates when the request entered GitHub's queue. \`jobs[].started_at\` indicates actual runner execution; do not conflate the two. A job is not started merely because the run's status says \`queued\`. For an exact ETA inspect the REST API run and run-job endpoint, not just the shell script's execution log.
+3. **Estimate duration using evidence.** Prefer 2–8 prior successful runs of the **same app + suite + job kind + installation requirements** and, when possible, the same number of shards. Use an upper historical percentile (about P80), not the fastest run. Account for runner startup, optional dependency installs, Playwright browser startup, upload and summary time. For *parallel* batches the workflow ends when the slowest shard and aggregation finish: **do not multiply one shard's duration by 16 or 20**. If no comparable data is available, label the estimate rough and use the test-kind fallback.
+4. **Calculate a clock time.** Base the forecast on the actual run request/queue timestamp and observed job start times, then format it in the **user's current local timezone** (default for the Ukrainian workflow: \`Europe/Kyiv\`, with DST). Use an explicit calendar date when the predicted finish is after midnight. Never present a past clock time for an unfinished test; if the previous forecast has expired, recalculate using the current running/queued jobs.
+5. **Report in chat immediately** after the run can be identified and its task matrix becomes visible. Include both the central ETA and a reasonable interval, or state clearly that GitHub has not exposed enough information yet. Do not misrepresent the request timestamp as the moment all 16 jobs actually started. If a check fails early, report failure rather than an ETA.
+6. **On the next interaction or when explicitly asked**, refresh the status/ETA. Chat messages cannot be delivered later without a separate, explicitly requested scheduling/notification mechanism; neither the GitHub workflow nor these instructions autonomously send a later ChatGPT message.
+
+### Built-in estimator for agents with a shell
+
+Use the zero-dependency, read-only tool in the repository after acquiring the **actual run ID**:
+
+~~~bash
+node scripts/universal-qa/eta.mjs --run=38641936470 --tz=Europe/Kyiv
+~~~
+
+For structured output:
+
+~~~bash
+node scripts/universal-qa/eta.mjs --run=38641936470 --tz=Europe/Kyiv --json
+~~~
+
+The script queries GitHub Actions REST API for the workflow's run, tasks and recent comparable successful runs. It uses actual \`created_at\`, \`started_at\`, \`completed_at\` timestamps. The current workflow state determines whether it reports a predicted finish, the actual completion time, or **"awaiting-job-matrix"**. It returns a wider interval when estimates are based on fallbacks. It does not submit any write requests to GitHub and does not start tests. Public repositories work without a token within GitHub's anonymous rate limit; \`GITHUB_TOKEN\` can be provided for authenticated read access. If GitHub rate-limits or fails to return timestamps, say so rather than invent a completion time.
+
+Agents without terminal access can use the connected GitHub repository reader / read-only REST endpoints:
+- \`GET /repos/JustSadSock/pocket-works/actions/runs/{run_id}\`
+- \`GET /repos/JustSadSock/pocket-works/actions/runs/{run_id}/jobs?per_page=100\`
+- \`GET /repos/JustSadSock/pocket-works/actions/workflows/universal-qa.yml/runs?status=completed&per_page=20\`
+
+Use the same estimation logic and report in the chat. **An ETA in a GitHub job summary is not a chat notification; the agent itself must write to the current conversation.**
+
+### Example chat update (illustrative times, not live measurements)
+
+> Запустил Universal QA для «Живой истории»: 16 параллельных симуляций по 100 лет.
+> 
+> Заявка создана в 01:32, выполнение началось в 01:33 (Киев). **Ожидаемое окончание — около 01:45**, возможный диапазон 01:42–01:51. Это оценка по предыдущим похожим прогонам.
+> 
+> GitHub Actions: ссылка на конкретный запуск.
+
+If the run is not started, say “в очереди GitHub” and only give an approximate completion range if there is credible historical evidence. If the history is sparse, state explicitly that confidence is low. A falsified precise time is worse than a clearly stated wide range.
