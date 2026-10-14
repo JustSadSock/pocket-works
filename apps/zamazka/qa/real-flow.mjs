@@ -35,6 +35,9 @@ try{
   await page.goto('http://127.0.0.1:'+port+'/apps/zamazka/',{waitUntil:'domcontentloaded'});
   await page.locator('.museum-home').waitFor({timeout:16000});
   assert.equal(await page.locator('#screen').getAttribute('data-museum-room'),'atrium');
+  assert.equal(await page.locator('.museum-home .museum-plinth').count(),1,'Physical foreground pedestal missing');
+  assert.equal(await page.locator('.museum-home .set-pilaster').count(),2,'Structural relief missing');
+  assert.equal(await page.locator('.museum-home .set-furniture').getAttribute('aria-hidden'),'true','Scenography must not enter the accessibility tree');
   assert.equal(await page.locator('.museum-architecture').count(),1,'Museum backdrop must persist outside the phase DOM');
   await page.locator('.museum-architecture').evaluate(el=>el.dataset.persistenceCheck='yes');
   const shellTheme=await page.locator('.museum-home').evaluate(el=>getComputedStyle(el).backgroundImage);
@@ -68,10 +71,18 @@ try{
   await page.locator('[data-action="skip"]').click();
   assert.equal(await page.locator('#screen').getAttribute('data-museum-room'),'atelier');
   assert.equal(await page.locator('.museum-architecture').getAttribute('data-persistence-check'),'yes');
-  assert.equal(await page.locator('.museum-passage .museum-passage-wing').count(),2,'A gallery-to-atelier doorway is missing');
+  assert.equal(await page.locator('.museum-passage').count(),0,'Obsolete sliding-door animation must not be created');
+  assert.equal(await page.locator('.restore .set-furniture').count(),1,'Working atelier lacks foreground scenography');
   assert.equal(await page.locator('.exhibition-exit-layer [data-action]').count(),0,'Outgoing room must not have active controls');
   const brush=page.locator('[data-tool="brush"]');
   await brush.waitFor();
+  await page.locator('.exhibition-exit-layer').waitFor({state:'detached',timeout:3000});
+  const handVisible=await page.locator('[data-tool="hand"]').evaluate(button=>{
+    const r=button.getBoundingClientRect();
+    const target=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+    return Boolean(target?.closest?.('[data-tool="hand"]'));
+  });
+  assert(handVisible,'Panorama button is covered by the zoom overlay or set dressing');
   await page.locator('[data-tool="hand"]').click();
   assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'hand');
   await brush.click();
@@ -98,13 +109,15 @@ try{
   await page.locator('.reveal-phase').waitFor({timeout:11000});
   await page.locator('.reveal-phase.is-composed').waitFor({timeout:12000});
   await page.waitForTimeout(720);
-  assert.equal(await page.locator('.museum-passage').count(),0,'Doors were not removed');
+  assert.equal(await page.locator('.museum-passage').count(),0,'Obsolete transition returned');
+  assert.equal(await page.locator('.museum-art-flight').count(),0,'Flying artwork snapshot was not cleared');
   assert.equal(await page.locator('.exhibition-exit-layer').count(),0,'Old phase was not cleaned up');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-reveal-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="menu"]').first().click();
   await page.locator('[data-action="collection"]').click();
   await page.locator('.archive-work').first().waitFor({timeout:7500});
   assert.equal(await page.locator('#screen').getAttribute('data-museum-room'),'archive');
+  assert.equal(await page.locator('.collection-page .set-furniture').count(),1);
   assert.equal(await page.locator('.museum-architecture').getAttribute('data-persistence-check'),'yes');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-archive-'+viewport.width+'.png'),fullPage:false});
   const dl=page.waitForEvent('download',{timeout:8000});

@@ -1,6 +1,7 @@
 // Shared exhibition transitions and truthful save-state labels.
 // This module owns presentation only; game phases remain authoritative.
-export const STAGE_DURATION=560;
+import {setDressScene} from './scenography.js';
+export const STAGE_DURATION=370;
 export const SAVE_LABELS=Object.freeze({
  local:'На устройстве',pending:'Сохраняем…',transmitting:'Передаём работу…',
  server:'Копия в PocketNet',confirmed:'Работа принята',offline:'Нет связи · копия на устройстве',
@@ -22,52 +23,66 @@ const SPACE={
  archive:'archive',achievements:'archive'
 };
 export function createExhibitionDirector(screen,{duration=STAGE_DURATION}={}){
- let exit=null,passage=null,clock=null,token=0;
+ let exit=null,clock=null,flight=null,token=0;
  const shell=screen.closest('.app-shell');
  const reduced=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
  function clear(){
   clearTimeout(clock);clock=null;
-  exit?.remove();exit=null;
-  passage?.remove();passage=null;
+  exit?.remove();exit=null;flight?.remove();flight=null;
   screen.firstElementChild?.classList.remove('exhibition-enter','rehang');
   shell?.classList.remove('is-room-crossing');
  }
+ function artworkAnchor(root){
+  return root?.querySelector('.museum-slide[data-slot="0"] img[data-art-id],.gallery .picture.selected img[data-art-id],.picture-image img[data-art-id],.stake-frame img[data-art-id],.verdict-image img[data-art-id],.round-art-image img[data-art-id]');
+ }
+ function animateArtworkTravel(from,to){
+  if(!from||!to||from.dataset.artId!==to.dataset.artId||!from.getBoundingClientRect||reduced())return;
+  const a=from.getBoundingClientRect(),b=to.getBoundingClientRect(),sr=screen.getBoundingClientRect();
+  if(!a.width||!a.height||!b.width||!b.height||Math.abs(a.width-b.width)<1&&Math.abs(a.left-b.left)<1)return;
+  const clip=document.createElement('div');
+  clip.className='museum-art-flight';
+  clip.setAttribute('aria-hidden','true');clip.inert=true;
+  const img=from.cloneNode(false);img.removeAttribute('data-art-id');img.alt='';
+  clip.append(img);
+  Object.assign(clip.style,{left:(a.left-sr.left)+'px',top:(a.top-sr.top)+'px',width:a.width+'px',height:a.height+'px'});
+  screen.append(clip);flight=clip;
+  to.classList.add('museum-art-arrival');
+  const keyframes=[{transform:'translate3d(0,0,0) scale(1)',opacity:1},
+    {transform:`translate3d(${b.left-a.left}px,${b.top-a.top}px,0) scale(${b.width/a.width},${b.height/a.height})`,opacity:.05}];
+  try{void clip.animate(keyframes,{duration:duration,easing:'cubic-bezier(.2,.75,.2,1)',fill:'forwards'}).finished.catch(()=>{}).finally(()=>{clip.remove();to.classList.remove('museum-art-arrival')})}
+  catch{clip.remove();to.classList.remove('museum-art-arrival')}
+ }
  function replace(html,{animate=true,scene='gallery'}={}){
-  const current=screen.dataset.museumRoom||'';
-  const nextRoom=SPACE[scene]||'gallery';
   clear();token++;
   const generation=token;
+  const previous=screen.dataset.museumRoom||'';
+  const room=SPACE[scene]||'gallery';
+  const roomChanged=room!==previous;
   const old=screen.firstElementChild;
-  const roomChanged=current!==nextRoom;
-  const shouldAnimate=Boolean(animate&&old&&!reduced()&&!document.hidden);
-  if(shouldAnimate){
-   // Old canvases stay alive for the passage, while their hit targets do not.
-   const controls=old.querySelectorAll('[data-action],[data-choice],[data-saved],[data-inspect],[data-magnify],[data-review-open],[data-tool],[data-cmd],[data-chipadd],[data-chipsub]');
-   const names=['data-action','data-choice','data-saved','data-inspect','data-magnify','data-review-open','data-tool','data-cmd','data-chipadd','data-chipsub'];
-   for(const node of controls)for(const name of names)if(node.hasAttribute(name))node.removeAttribute(name);
+  const moving=Boolean(old&&animate&&!reduced()&&!document.hidden);
+  const oldArtwork=moving?artworkAnchor(old):null;
+  if(moving){
+   // No fullscreen shutters: the actual previous scene lingers below the
+   // incoming one. All delegated controls on that scene become inert.
+   const targets=old.querySelectorAll('[data-action],[data-choice],[data-saved],[data-inspect],[data-magnify],[data-review-open],[data-tool],[data-cmd],[data-chipadd],[data-chipsub]');
+   const attrs=['data-action','data-choice','data-saved','data-inspect','data-magnify','data-review-open','data-tool','data-cmd','data-chipadd','data-chipsub'];
+   for(const node of targets)for(const name of attrs)node.removeAttribute(name);
    exit=document.createElement('div');
-   exit.className='exhibition-exit-layer'+(roomChanged?'':' rehang');
-   exit.setAttribute('aria-hidden','true');
-   exit.inert=true;exit.append(old);
+   exit.className='exhibition-exit-layer'+(roomChanged?' gallery-exit':' rehang');
+   exit.setAttribute('aria-hidden','true');exit.inert=true;exit.append(old);
   }
   screen.innerHTML=html;
   screen.scrollTop=0;
-  screen.dataset.museumRoom=nextRoom;
-  if(shell)shell.dataset.museumRoom=nextRoom;
+  screen.dataset.museumRoom=room;if(shell)shell.dataset.museumRoom=room;
   const next=screen.firstElementChild;
-  if(next&&shouldAnimate){
-   next.classList.add('exhibition-enter');
-   if(!roomChanged)next.classList.add('rehang');
+  setDressScene(next,scene);
+  if(next&&moving){
+   next.classList.add('exhibition-enter',roomChanged?'gallery-arrival':'rehang');
    screen.append(exit);
-   if(roomChanged){
-     passage=document.createElement('div');
-     passage.className='museum-passage';
-     passage.setAttribute('aria-hidden','true');
-     passage.innerHTML='<span class="museum-passage-wing left"></span><span class="museum-passage-wing right"></span><span class="museum-passage-key"></span>';
-     screen.append(passage);
-     shell?.classList.add('is-room-crossing');
-   }
-   clock=setTimeout(()=>{if(token===generation)clear()},(roomChanged?duration:260)+75);
+   shell?.classList.add('is-room-crossing');
+   if(oldArtwork)animateArtworkTravel(oldArtwork,artworkAnchor(next));
+   const max=roomChanged?duration:240;
+   clock=setTimeout(()=>{if(token===generation)clear()},max+60);
   }
   return next;
  }

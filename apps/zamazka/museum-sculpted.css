@@ -1,0 +1,652 @@
+/* ZAMAZKA 1.34 — THE SCULPTED MUSEUM
+   Not a recolor: actual stage objects, structural relief, inset controls,
+   shaped paper, metal bezels and tactile material geometry.
+   Existing interaction locations, canvas pixels and grid proportions are kept. */
+:root{
+ --zm-walnut:#34251e;--zm-walnut-dark:#160f0c;--zm-gilt-1:#f8d99d;
+ --zm-gilt-2:#ba9056;--zm-gilt-3:#73502c;
+ --zm-marble:#ebe9df;--zm-engraving:#705a3c;
+ --zm-motion:cubic-bezier(.17,.8,.24,1);
+}
+.screen>section{position:relative;isolation:isolate}
+.screen>section.has-scenography{--edge-light:#bba273;--edge-shadow:#101811}
+.set-furniture{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden;user-select:none}
+.set-pilaster{
+ position:absolute;top:0;bottom:0;width:clamp(14px,2.1vw,39px);
+ background:
+ linear-gradient(90deg,#070d0bc0 0 7%,#cbb982 7% 12%,#736b52 13% 19%,#223931 25% 72%,#d4b879 84% 91%,#1a281f 94%),
+ repeating-linear-gradient(180deg,transparent 0 18px,#c9a97315 19px,#101b1880 20px,transparent 21px 38px);
+ box-shadow:3px 0 8px #040e0c9c,inset -2px 0 3px #f4e0ae4a;
+ opacity:.88;
+}
+.set-pilaster-left{left:0}
+.set-pilaster-right{right:0;transform:scaleX(-1)}
+.set-pilaster i{position:absolute;top:0;bottom:0;left:30%;width:2px;background:#dfcc9566;box-shadow:6px 0 #010d0c75}
+.set-pediment{position:absolute;left:12%;right:12%;top:1px;height:59px;opacity:.76}
+.set-carving{position:absolute;top:0;width:clamp(118px,22vw,330px);height:66px;object-fit:contain;filter:drop-shadow(0 4px 3px #06140cc7)}
+.set-carving-left{left:0}
+.set-carving-right{right:0;transform:scaleX(-1)}
+.set-lamp{position:absolute;top:clamp(80px,17vh,196px);width:58px;height:31px;filter:drop-shadow(0 6px 4px #060e0d);opacity:.84}
+.set-lamp-left{left:clamp(1px,2.4vw,42px)}
+.set-lamp-right{right:clamp(1px,2.4vw,42px);transform:scaleX(-1)}
+.set-lamp::before{
+ content:"";position:absolute;inset:0;
+ border-radius:50% 12% 45% 12%;
+ background:
+ radial-gradient(circle at 26% 42%,#fae8b0 0 2px,#b48b4c 3px 9px,#5f4829 10px 12px,transparent 13px),
+ linear-gradient(140deg,#d4ba7e,#6f512e 38%,#e1c388 45%,#413522 80%);
+ clip-path:polygon(4% 0,89% 8%,99% 33%,80% 56%,48% 56%,32% 99%,26% 99%,39% 47%,2% 37%);
+}
+.set-lamp i{
+ position:absolute;top:24px;left:10px;width:110px;height:134px;
+ background:conic-gradient(from 178deg at 4% 0,transparent 0deg,#f3d99925 18deg,transparent 63deg);
+ opacity:.65;filter:blur(5px);
+}
+.set-foreground{
+ position:absolute;bottom:0;left:0;right:0;height:17px;
+ background:
+ linear-gradient(180deg,#eed6a3 0,#745737 9%,#1d2b22 18%,#334c3c 46%,#10231d 100%);
+ border-top:1px solid #edc786;
+ box-shadow:0 -5px 13px #0a18128c,inset 0 2px #edce9c52;
+}
+.set-foreground-edge{
+ position:absolute;inset:3px 5% auto;height:2px;
+ background:repeating-linear-gradient(90deg,#d5b98191 0 2px,transparent 2px 14px);
+ opacity:.45;
+}
+.screen>section>.set-furniture+.nothing{display:none}
+.screen>.restore .set-furniture{z-index:2}
+.screen>.restore>.work-area,.screen>.restore>.rest-head{position:relative;z-index:3}
+/* Zoom controls remain anchored to the editor, not inside the tool drawer. */
+.screen>.restore>.work-tools{z-index:3;position:static}
+.screen>.museum-home>.museum-control,.screen>.museum-home>.museum-display,
+.screen>.museum-home>.museum-headline{position:relative;z-index:7}
+.screen>.phase-page>.phase-head,.screen>.phase-page>.phase-body,
+.screen>.page> :not(.set-furniture){position:relative;z-index:6}
+/* Depth only at the perimeter. The center remains the actual app, not scenery. */
+.screen>.page .set-pediment,.screen>.phase-page .set-pediment{top:2px}
+.screen>.page .set-foreground,.screen>.phase-page .set-foreground{height:13px}
+.screen>.page .set-pilaster,.screen>.phase-page .set-pilaster{opacity:.5}
+.screen>.museum-home .set-pilaster{width:clamp(19px,3.5vw,65px)}
+.screen>.museum-home .set-lamp{top:17%;opacity:1}
+
+/* Floating stone pedestal: separate DOM object, with raised lip, inclined face,
+   a large cast shadow and low foreground footing. */
+.museum-plinth{
+ position:absolute;left:50%;bottom:48px;z-index:3;
+ transform:translateX(-50%);
+ width:clamp(150px,58%,500px);height:53px;
+ pointer-events:none;filter:drop-shadow(0 16px 13px #030d0cc7);
+ perspective:380px;
+}
+.museum-plinth-lip{
+ position:absolute;top:0;left:-5%;right:-5%;height:18px;
+ transform:rotateX(48deg);transform-origin:50% 100%;
+ background:
+ linear-gradient(180deg,#fff5d7 0,#c9ba92 13%,#7c715a 48%,#425346 78%,#1b352b);
+ border:1px solid #cfba8c;
+ box-shadow:0 2px 0 #14241b,0 5px 6px #0a1811;
+}
+.museum-plinth-panel{
+ position:absolute;inset:16px 5% 7px;
+ background:
+ repeating-linear-gradient(90deg,transparent 0 5%,#63706040 5.2% 5.45%,transparent 5.6% 20%),
+ linear-gradient(150deg,#3b5549,#1a3027 73%);
+ border:1px solid #9e906e;box-shadow:inset 0 0 0 3px #152c25,inset 0 2px 11px #101c1ba6;
+}
+.museum-plinth-panel::after{
+ content:"";position:absolute;left:15%;right:15%;top:10px;height:1px;
+ background:linear-gradient(90deg,transparent,#cfb67d8c,transparent);
+}
+.museum-plinth-foot{
+ position:absolute;bottom:0;left:0;right:0;height:8px;
+ background:linear-gradient(180deg,#957c56,#2b3b2f 52%,#0b1b18);
+ border-radius:2px;
+}
+.museum-home .museum-slide-rim{
+ position:relative;padding:clamp(6px,.9vw,12px)!important;
+ border:clamp(8px,1.3vw,17px) ridge #bd985d!important;
+ outline:3px solid #372a1c;
+ background:
+ repeating-linear-gradient(50deg,#aa7d3b 0 3px,#d7b76d 4px 5px,#6c4928 6px 7px),
+ linear-gradient(90deg,#bfa065,#e9c88f);
+ box-shadow:0 0 0 2px #f3dba8 inset,0 0 0 5px #2b291e inset,
+ 0 0 0 1px #100e0c,0 24px 35px #030b0bc2,0 4px 2px #e9d6a35c!important;
+}
+.museum-home .museum-slide-rim::before{
+ content:"";position:absolute;inset:2px;pointer-events:none;
+ border:2px solid #f7dda592;box-shadow:inset 0 0 0 2px #513b1d9c,0 0 0 2px #72522b;
+}
+.museum-home .museum-slide-rim::after{
+ content:"";position:absolute;top:50%;left:0;right:0;height:1px;
+ box-shadow:0 0 14px 4px #edc98d28;pointer-events:none;
+}
+.museum-home .museum-stage{perspective:1100px}
+.museum-home .museum-slide[data-slot="-1"]{transform:translate(-50%,-50%) translateX(calc(-1 * var(--museum-step))) scale(.68) rotateY(12deg) rotate(-4deg)}
+.museum-home .museum-slide[data-slot="1"]{transform:translate(-50%,-50%) translateX(var(--museum-step)) scale(.68) rotateY(-12deg) rotate(4deg)}
+.museum-home .museum-stage-caption{
+ bottom:31px!important;padding:5px 22px;
+ background:linear-gradient(90deg,transparent,#152b28b3 15%,#152b28b3 85%,transparent);
+ border-top:1px solid #c5ad6f58;
+}
+.museum-home .museum-wheel button{
+ border:2px outset #c2a875;
+ background:linear-gradient(145deg,#786347,#34291f 48%,#1b251e);
+ color:#f2deaf;border-radius:50%;
+ box-shadow:inset 0 2px 2px #f3db9d70,0 4px 8px #040b09c9;
+ text-shadow:0 2px #120e0c;
+}
+.museum-home .museum-wheel button:active{transform:translateY(2px) scale(.97);box-shadow:inset 0 3px 7px #0b1611a9}
+
+/* Architectural typography: title is an engraved inscription, not a website H1. */
+.museum-home .museum-headline::before{
+ content:"";display:block;width:64px;height:8px;margin:0 auto 9px;
+ border-top:2px solid #d0af70;border-bottom:1px solid #b79559;
+ border-radius:50%;filter:drop-shadow(0 2px 1px #111b14);
+}
+.museum-home .museum-headline h1{
+ font-weight:400!important;
+ text-shadow:0 1px 0 #ffe5ae68,0 4px 2px #04110eb5,0 12px 25px #030b0c9e;
+}
+.museum-home .museum-headline em{
+ text-shadow:0 1px #f6d9a765,0 5px 7px #071210;
+}
+/* Solid museum objects replace flat calls-to-action while positions stay put. */
+.museum-home .start-restoration{
+ border:3px solid #a88b57!important;
+ border-bottom:7px solid #584024!important;
+ border-radius:3px 3px 7px 7px;
+ background:
+ linear-gradient(90deg,transparent 0 22%,#fff8d72e 22.3% 23.5%,transparent 24% 76%,#50391e1e 78%),
+ linear-gradient(157deg,#f2daa6 0,#c6a16a 30%,#8f693b 85%,#72522f 100%)!important;
+ box-shadow:
+ inset 0 2px 1px #fff4be,inset 0 -4px 3px #35261780,
+ inset 0 0 0 5px #e8c68b50,
+ 0 3px 0 #271c13,0 8px 0 #162721,0 16px 26px #020b0bba!important;
+ clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 9px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 9px);
+}
+.museum-home .start-restoration::before{
+ content:"";position:absolute;inset:7px 7px 11px;
+ border:1px solid #fff4bb77;pointer-events:none;
+}
+.museum-home .start-restoration:active{transform:translateY(5px)!important;box-shadow:inset 0 5px 10px #38251892,0 3px 0 #101e17!important}
+.museum-home .museum-lower button{
+ border:2px outset #6e755d;
+ border-bottom:4px solid #19291e;
+ border-radius:4px;box-shadow:inset 0 1px #b7bc9366,0 5px 10px #0007;
+ background:linear-gradient(#52624c,#26392f 38%,#182a23)!important;
+}
+.museum-home .museum-lower button:active{transform:translateY(2px);border-bottom-width:2px}
+/* The miniature identity is a wax-seal plate rather than a website account card. */
+.museum-home .museum-persona{
+ border:1px solid #d4b98180!important;border-bottom:4px ridge #7a593b!important;
+ border-radius:3px;
+ background:
+ repeating-linear-gradient(90deg,transparent 0 24px,#f8d8a309 25px 26px),
+ linear-gradient(160deg,#435046,#26332f 64%,#1c2826)!important;
+ box-shadow:inset 0 1px #d8c08d82,inset 0 0 0 3px #162a25,0 4px 9px #040f0c94;
+}
+.museum-home .museum-persona .personal-seal{
+ border-radius:50%;box-shadow:0 0 0 3px #ae8852,0 0 0 5px #3a2c1f,0 3px 6px #060e0c9c;
+}
+.museum-home .museum-footer{border-top:1px solid #c6a56a8c}
+
+/* Every heading becomes a carved nameplate sitting slightly in front of
+   the actual wall. No movement of the heading grid or timer. */
+.screen .phase-head,.screen .rest-head .phase-head{
+ border-bottom:6px ridge #85734f!important;
+ box-shadow:inset 0 1px #e5c28a6b,0 5px 0 #14271e,0 15px 20px #0008;
+ position:relative;
+}
+.screen .phase-head::before{
+ content:"";position:absolute;left:clamp(5px,1.2vw,20px);top:7px;bottom:7px;width:4px;
+ background:linear-gradient(90deg,#3a2b1c,#dbbc83,#5e4d30);
+ box-shadow:2px 0 #101c18a6;pointer-events:none;
+}
+.screen .phase-head .phase-intro{
+ border-left:1px solid #d5b6795e;
+ padding-left:clamp(7px,1.1vw,17px);
+}
+.screen .phase-head h2{
+ text-shadow:0 1px 0 #ead39a45,0 3px 5px #080e0daa;
+}
+/* Metal inlay for real inputs and physical levers for real controls. */
+.screen .btn,.dialog-box .btn,.screen .tool{
+ position:relative;
+ border-radius:5px 5px 3px 3px!important;
+ border:1px solid #a69671;
+ border-bottom:4px solid #564936;
+ background:
+ linear-gradient(145deg,#fbf4e7 0,#d8d5c5 35%,#bcc2ae 100%);
+ color:#283c33;
+ box-shadow:inset 0 1px 0 #fffbed,inset 0 0 0 2px #e9e3cc65,0 2px 4px #111f1a61;
+ text-shadow:0 1px 0 #f6f2e58a;
+}
+.screen .btn.primary,.screen .tool.active{
+ border:1px solid #9c986f;border-bottom:5px solid #10291d!important;
+ background:linear-gradient(155deg,#789179,#345748 38%,#213b32 100%)!important;
+ color:#f5e9cf;
+ text-shadow:0 1px 0 #0e281e;
+ box-shadow:inset 0 2px 0 #bfceaa8a,inset 0 0 0 3px #142e254b,0 4px 0 #11231e,0 7px 9px #08181073!important;
+}
+.screen .btn:active:not(:disabled),.screen .tool:active:not(:disabled){
+ transform:translateY(3px);
+ border-bottom-width:1px!important;
+ box-shadow:inset 0 3px 8px #101b185a,0 1px 2px #111e188c!important;
+}
+.screen .btn.ghost,.screen .tool:not(.active){
+ background:linear-gradient(145deg,#f8f4e8,#cfd5c4 57%,#b6bfac);
+ color:#294036;
+}
+.screen .input,.dialog-box .input,.screen select.input{
+ border:2px inset #b1a889;
+ border-bottom:3px solid #afa384;
+ border-radius:3px!important;
+ background:linear-gradient(180deg,#d1d5c7,#f6f4e8 18% 83%,#e6e7d8)!important;
+ color:#29362e;
+ box-shadow:inset 0 2px 4px #25362931,0 1px #fffff0;
+}
+.screen .input:focus-visible{outline:2px solid #c9a76e;outline-offset:2px}
+.screen .phase-menu{
+ border:1px solid #bca476;border-bottom:3px solid #59482d;
+ border-radius:4px;
+ background:linear-gradient(180deg,#a79778,#76664d 55%,#58482e);
+ color:#fff5de;box-shadow:inset 0 1px #f5dcad75,0 4px 8px #0006;
+}
+
+/* The invite is a die-cut ticket with edge notches, perforations and embossing.
+   No change to its buttons, field, or grid position. */
+.screen .room-ticket{
+ position:relative;overflow:visible!important;
+ clip-path:polygon(0 0,calc(100% - 19px) 0,100% 18px,100% calc(100% - 18px),calc(100% - 19px) 100%,0 100%,0 64%,12px 59%,0 54%);
+ border:2px solid #c3aa78!important;border-left:9px solid #7b5730!important;
+ background:
+ repeating-linear-gradient(0deg,transparent 0 18px,#745d3221 19px 20px),
+ linear-gradient(148deg,#fbf1d9,#d6c7a9 85%)!important;
+ box-shadow:inset 0 2px #fffae7,inset 0 0 0 5px #b3955936,0 7px 20px #010f0e9c;
+ filter:drop-shadow(3px 8px 3px #09191085);
+}
+.screen .room-ticket::before{
+ content:"";position:absolute;top:0;bottom:0;right:13px;width:2px;
+ background:repeating-linear-gradient(180deg,#8d745142 0 4px,transparent 4px 9px);pointer-events:none;
+}
+.screen .room-code{font-variant-numeric:tabular-nums;text-shadow:0 1px #fff9e8,0 -1px #ad9b80}
+.screen .entry-stamp{border-radius:7px 12px 4px 11px!important;box-shadow:inset 0 0 0 4px #e7d7ad34,0 7px 8px #060f0c86!important}
+.screen .lobby-self{
+ border:2px ridge #a99a70!important;border-bottom:5px solid #283526!important;
+ box-shadow:inset 0 2px #c7b68d82,0 4px 11px #020e0985!important;
+ clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px);
+}
+.screen .exhibition-lobby .player{
+ border:2px outset #a4aa93;border-radius:4px 4px 2px 2px;
+ background:linear-gradient(130deg,#f1f1dc,#c7d1be 85%)!important;
+ box-shadow:inset 0 1px #fffbe7,0 3px 0 #1c352a,0 7px 12px #071a1382!important;
+}
+.screen .exhibition-lobby .player .personal-seal{
+ box-shadow:0 0 0 2px #c4a56e,0 3px 7px #19312269;
+}
+.screen .exhibition-lobby>.stack{
+ border:8px ridge #baa67a!important;
+ background:linear-gradient(140deg,#e2e4d6,#bbcaba)!important;
+ box-shadow:inset 0 0 0 3px #eef0e3,0 12px 18px #051810a3!important;
+}
+.screen .exhibition-lobby .commons-desk{
+ position:relative;border:12px ridge #a47d4b!important;
+ border-radius:5px;
+ background:linear-gradient(110deg,#d6c19e,#eee1c1 27%,#bcaa88)!important;
+ box-shadow:inset 0 0 0 4px #ecd6af,0 7px 0 #37251b,0 18px 25px #040e0ca3!important;
+}
+.screen .exhibition-lobby .commons-frame{
+ border:9px ridge #704c31!important;
+ box-shadow:0 0 0 3px #2a261d,0 10px 17px #0b140daa!important;
+}
+/* A framed masterpiece — gilded wood rather than a shopping product card. */
+.screen .picture,.screen .archive-work{position:relative}
+.screen .picture-image,.screen .stake-frame,.screen .verdict-image,
+.screen .unveil-frame,.screen .round-view-window,.screen .archive-art-frame{
+ position:relative;
+ border:clamp(6px,1vw,13px) ridge #b99b67!important;
+ border-radius:2px!important;
+ background:
+ repeating-linear-gradient(35deg,#a88654 0 3px,#e6c588 4px 5px,#574028 7px 8px)!important;
+ outline:2px solid #4e3925;
+ box-shadow:inset 0 0 0 2px #fbe2a2,inset 0 0 0 7px #4e3a23,
+ 0 0 0 3px #1a271f,0 6px 0 #211b16,0 17px 22px #00150f80!important;
+}
+.screen .picture-image::before,.screen .stake-frame::before,
+.screen .verdict-image::before,.screen .unveil-frame::before,
+.screen .archive-art-frame::before{
+ content:"";position:absolute;inset:1px;z-index:5;
+ border:1px solid #f7e4ae98;box-shadow:inset 0 0 0 3px #57432685;
+ pointer-events:none;
+}
+.screen .picture-image img,.screen .picture-image canvas,
+.screen .stake-frame img,.screen .stake-frame canvas,
+.screen .archive-art-frame canvas{
+ position:relative;z-index:1;background:#1c211b;
+}
+.screen .gallery .picture{
+ border:0!important;
+ background:none!important;
+ box-shadow:none!important;
+ padding-inline:clamp(4px,1vw,14px);
+}
+.screen .gallery .picture::before{
+ content:"";position:absolute;top:1px;left:50%;transform:translateX(-50%);
+ width:8px;height:8px;border-radius:50%;
+ background:radial-gradient(circle at 30% 25%,#f4df99,#b28c4a 58%,#392918);
+ box-shadow:0 1px 2px #15251e,0 4px 0 #3b4b394d;
+}
+.screen .picture .caption{
+ display:block;
+ color:#2d3c30;
+ font-family:Georgia,serif;
+}
+.screen .picture .style,.screen .picture .picture-index{
+ letter-spacing:.06em;
+}
+.screen .picture .archive-caption,.screen .picture .caption{
+ text-shadow:0 1px #fff8e356;
+}
+.screen .gallery .picture.selected{outline:2px solid #edbe78!important;outline-offset:5px}
+/* Museum labels become ceramic nameplates; the picture stays foreground. */
+.screen .gallery.exhibition-grid .picture .caption{
+ align-self:stretch;margin:11px 5% 1px;padding:6px 9px;
+ border:1px solid #b09a75;border-bottom:3px solid #907a56;
+ background:linear-gradient(#efeee0,#d9d8c5);
+ box-shadow:inset 0 1px #ffffffa0,0 3px 4px #152a2033;
+ text-align:center;
+}
+.screen .gallery.exhibition-grid .picture .style{text-align:center}
+
+/* Restoration station is a physical tool chest with inset sockets. */
+.screen>.restore>.work-tools{
+ border:7px ridge #9e7d50!important;
+ border-radius:3px 0 0 3px;
+ background:
+ repeating-linear-gradient(100deg,#242f2411 0 1px,transparent 2px 16px),
+ linear-gradient(115deg,#b3baa7,#f0ead8 25%,#d4d6c5 71%,#b1b8a5)!important;
+ box-shadow:inset 3px 0 10px #42391f40,0 -4px 0 #e4cb9688,-9px 0 25px #08170f9c!important;
+}
+.screen .restore .tools{
+ border:3px inset #a99c7b;border-radius:6px;padding:clamp(4px,.6vw,9px);
+ background:linear-gradient(180deg,#829181,#586b5c 6%,#34483d 100%);
+ box-shadow:inset 0 4px 9px #152b1fbc,0 2px 2px #f9f0d5bf;
+}
+.screen .restore .tool{
+ border:2px outset #c7c2a4!important;
+ border-bottom:4px solid #54664f!important;
+ background:linear-gradient(145deg,#fff6e5,#c9d4bd 59%,#a8b49c)!important;
+ box-shadow:inset 0 2px 0 #fff9e9,0 2px 0 #213829,0 4px 6px #04150c93!important;
+}
+.screen .restore .tool.active{
+ border:2px inset #ad9163!important;
+ border-bottom:3px solid #876d43!important;
+ color:#f9e8cb;
+ background:linear-gradient(140deg,#705637,#345448 57%,#263d35)!important;
+ box-shadow:inset 0 3px 8px #0e211b88,0 1px #d7bf8a!important;
+}
+.screen .restore .colors{
+ border:5px inset #9e9777!important;border-radius:4px;
+ background:linear-gradient(125deg,#859383,#d5d9c8 9%,#e4e3d2 91%,#a6ae96);
+ box-shadow:inset 0 4px 11px #30433160,0 2px #fcf4db9c;
+}
+.screen .restore .swatch,.screen .commons-swatch{
+ border:4px ridge #cabd99!important;border-radius:50%;
+ box-shadow:inset 0 2px 4px #0c1b165e,0 3px 1px #354a38,0 5px 5px #1a311b6e!important;
+}
+.screen .restore .swatch.active{
+ outline:3px solid #d8ba73;outline-offset:2px;
+ box-shadow:0 0 0 1px #324735,0 4px 6px #152b206b!important;
+}
+.screen .restore .color-input{
+ border:3px ridge #b9aa86;border-radius:4px;
+ box-shadow:inset 0 2px 4px #14231e52,0 2px 3px #52644e8a;
+}
+.screen .restore .adjust{
+ padding:6px;border:1px solid #89937a;background:#d3d8c8;
+ box-shadow:inset 0 2px 3px #42503c42;
+ border-radius:3px;
+}
+.screen .restore .size-sample{
+ border:3px ridge #a78f67;
+ background:linear-gradient(145deg,#f5efda,#bcc4b4);
+ box-shadow:inset 0 2px 4px #0003;
+}
+.screen .restore .work-foot{
+ border-top:5px ridge #9e8b6a;
+ background:linear-gradient(#e3e5d4,#c1cab8);
+ padding:clamp(6px,.8vw,11px);
+ box-shadow:inset 0 1px #fff9e98f;
+}
+.screen .restore .work-foot .btn.primary{
+ background:linear-gradient(145deg,#ad925b,#60502c 60%,#343223)!important;
+ border:2px outset #cab182!important;border-bottom:5px solid #392d1e!important;
+ color:#f8ead0;
+}
+/* Voting: counters and tray behave like tangible metal tokens. */
+.screen .stake-card,.screen .verdict-card{
+ border:5px ridge #98815d!important;
+ border-radius:4px;
+ background:linear-gradient(130deg,#e8e6d9,#c8cbbd)!important;
+ box-shadow:inset 0 0 0 3px #fff9e790,0 5px 0 #213227,0 13px 17px #08191080!important;
+}
+.screen .stake-actions{
+ border:3px inset #998b67;border-radius:8px;
+ background:linear-gradient(160deg,#a69c80,#d9d1b6);
+ padding:4px;box-shadow:inset 0 4px 6px #3d33294d;
+}
+.screen .stake-actions button{
+ border:2px outset #bfad81;border-radius:50%;
+ background:linear-gradient(145deg,#e1c994,#8f7444);
+ color:#30251c;box-shadow:inset 0 1px #fff0c2,0 3px 5px #281e1680;
+}
+.screen .stake-actions button:active{transform:translateY(2px)}
+.screen .stake-amount{
+ border-radius:50%;background:radial-gradient(circle,#f5e9cb,#d9c59c 75%,#ad9369);
+ border:2px solid #98794b;box-shadow:inset 0 1px #fff5ce,0 2px 5px #55412557;
+}
+.screen .stake-tray{
+ border:5px ridge #8b744b!important;border-radius:4px;
+ background:linear-gradient(125deg,#d7c199,#9f845c)!important;
+ box-shadow:inset 0 3px 6px #5540215c,0 5px 11px #07191080;
+}
+.screen .stake-tray .chip-dot,.screen .audit-chips .chip-dot{
+ background:radial-gradient(circle at 30% 25%,#fff1b9,#d5aa60 55%,#866132)!important;
+ border:2px solid #805b35;
+ box-shadow:inset 0 1px #fff6ca,0 2px 3px #4c382060;
+}
+.screen .reveal-brief{
+ border:7px ridge #9b8660;
+ background:linear-gradient(140deg,#e8e7db,#c7cab8)!important;
+ box-shadow:inset 0 0 0 4px #f0ecd9,0 9px 16px #060e0f8c;
+}
+.screen .reveal-main .unveil-frame{
+ border-width:clamp(6px,1vw,14px)!important;
+ box-shadow:inset 0 0 0 3px #d8c294,0 0 0 3px #19251c,0 15px 28px #05110c91!important;
+}
+/* Collection: paintings on a dark wall, no fake ecommerce tile. */
+.screen .archive-gallery .archive-work{
+ background:transparent!important;
+ border:0!important;box-shadow:none!important;
+}
+.screen .archive-gallery .archive-art-frame{
+ border:clamp(7px,1vw,14px) ridge #a88a57!important;
+}
+.screen .archive-gallery .archive-caption{
+ margin:10px 9% 0;
+ border:2px ridge #8c8061;
+ background:linear-gradient(150deg,#efebe0,#c4c6b5);
+ color:#28382e;padding:7px 9px;
+ text-align:center;box-shadow:0 5px 8px #0005;
+}
+.screen .archive-gallery .archive-caption .caption{color:#283a30!important}
+.screen .archive-gallery .archive-caption .style{color:#556657!important}
+.screen .result-item{
+ clip-path:polygon(0 7px,7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px));
+ border:5px ridge #a9a083!important;
+ box-shadow:inset 0 1px #fff6d7,0 5px 0 #142c23,0 12px 17px #0318117f!important;
+}
+.screen .achievement-entry{
+ border:4px ridge #a99c7d;border-radius:3px;
+ background:linear-gradient(140deg,#e8eade,#c5d0bf)!important;
+ box-shadow:inset 0 1px #fffce5,0 7px 12px #09170f82;
+}
+/* Cinematic continuity: not a fake sliding shutter. The previous visual
+   stays underneath; the next scene settles forwards as light adjusts. */
+.screen>.exhibition-enter.gallery-arrival,
+.screen>.exhibition-enter.rehang{
+ animation:zm-material-arrive 370ms cubic-bezier(.14,.78,.22,1) both!important;
+}
+.screen>.exhibition-exit-layer.gallery-exit,
+.screen>.exhibition-exit-layer.rehang{
+ animation:zm-material-depart 370ms ease both!important;
+ z-index:2!important;
+}
+.screen>.exhibition-enter{position:relative;z-index:3;transform-origin:50% 50%}
+.screen>.museum-art-flight{
+ position:absolute;z-index:30;
+ border:6px ridge #c4a16a;background:#241f16;
+ box-shadow:0 8px 24px #000a;
+ pointer-events:none;transform-origin:top left;
+ will-change:transform,opacity;
+}
+.museum-art-flight img{width:100%;height:100%;object-fit:contain;display:block}
+.museum-art-arrival{opacity:.42}
+.museum-passage{display:none!important}
+@keyframes zm-material-arrive{
+ 0%{opacity:.3;transform:translate3d(0,14px,0) scale(.983);filter:brightness(.75)}
+ 58%{opacity:.88;filter:brightness(.96)}
+ 100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:brightness(1)}
+}
+@keyframes zm-material-depart{
+ 0%{opacity:1;transform:scale(1)}
+ 100%{opacity:0;transform:scale(1.014)}
+}
+@media(max-width:699px){
+ .set-pilaster{width:7px!important;opacity:.46!important}
+ .set-pediment{display:none}
+ .set-lamp{display:none}
+ .set-foreground{height:6px!important;opacity:.65}
+ .museum-plinth{bottom:29px;height:25px;width:63%}
+ .museum-plinth-lip{height:9px}
+ .museum-plinth-panel{inset:8px 5% 4px}
+ .museum-plinth-foot{height:4px}
+ .museum-home .museum-stage-caption{bottom:26px!important;padding:3px 6px}
+ .museum-home .museum-slide-rim{
+  border-width:clamp(5px,1.3vw,9px)!important;padding:4px!important;
+ }
+ .museum-home .start-restoration{border-width:2px!important;border-bottom-width:5px!important}
+ .screen .phase-head{border-bottom-width:3px!important}
+ .screen .phase-head::before{display:none}
+ .screen .phase-head .phase-intro{padding-left:6px}
+ .screen .phase-page .phase-body{box-shadow:none}
+ .screen .picture-image,.screen .stake-frame,.screen .verdict-image,.screen .unveil-frame,.screen .archive-art-frame{border-width:6px!important}
+ .screen .gallery.exhibition-grid .picture .caption{margin:6px 1% 0;padding:4px;font-size:clamp(13px,4vw,18px)}
+ .screen .restore>.work-tools{
+  border-width:0!important;border-top:5px ridge #8e7652!important;border-radius:0;
+ }
+ .screen .restore .tools{padding:3px;border-width:2px}
+ .screen .restore .tool{border-width:1px!important;border-bottom-width:3px!important}
+ .screen .restore .colors{border-width:2px!important}
+ .screen .restore .adjust{padding:2px 5px}
+ .screen .restore .work-foot{padding:3px 5px;border-top-width:2px}
+ .screen .stake-card{border-width:3px!important}
+ .screen .stake-actions{padding:2px;border-width:2px}
+ .screen>.exhibition-enter.gallery-arrival,
+ .screen>.exhibition-enter.rehang{animation-duration:260ms!important}
+ .screen>.exhibition-exit-layer.gallery-exit,
+ .screen>.exhibition-exit-layer.rehang{animation-duration:260ms!important}
+}
+@media(max-height:610px) and (orientation:landscape){
+ .set-lamp,.set-pediment{display:none}
+ .set-foreground{height:3px}
+ .museum-plinth{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .screen>.exhibition-enter.gallery-arrival,.screen>.exhibition-enter.rehang,
+ .screen>.exhibition-exit-layer.gallery-exit,.screen>.exhibition-exit-layer.rehang{animation:none!important}
+ .screen>.museum-art-flight{display:none}
+ .museum-art-arrival{opacity:1}
+}
+
+/* Permanent façade, like a cast-metal museum sign, not a SaaS navbar. */
+.app-shell>.top{
+ background:
+ linear-gradient(90deg,#ead39b27 0 2px,transparent 3px calc(100% - 3px),#ead39b23 calc(100% - 2px)),
+ repeating-linear-gradient(93deg,#d8ac6130 0 1px,transparent 2px 49px),
+ linear-gradient(180deg,#314239 0,#24362e 18%,#172b26 55%,#111f1d 100%);
+ border-top:2px solid #b39459;
+ border-bottom:6px ridge #97754d!important;
+ box-shadow:inset 0 1px #e5cf9b83,inset 0 -2px #0d211a,0 5px 11px #030d0b9c!important;
+}
+.app-shell>.top .wordmark{
+ display:flex;align-items:center;gap:8px;min-width:0;
+ color:#f6e9cd;text-shadow:0 2px #0c1b15,0 -1px #ddc99e7b;
+}
+.app-shell>.top .wordmark .mark{
+ display:grid;place-items:center;
+ width:27px;height:29px;margin-right:0;
+ color:#ead19d;border:3px ridge #b99b61;
+ background:radial-gradient(circle,#4a5b45,#172923);
+ box-shadow:inset 0 2px 4px #071a15,0 3px 4px #03110ac2;
+ transform:none;border-radius:5px;
+}
+.app-shell>.top .round-control,.app-shell>.top .diagnostic-control,
+.app-shell>.top .profile-control{
+ border:3px outset #b3a37a;
+ border-radius:50%;
+ background:radial-gradient(circle at 40% 26%,#68765e,#344e42 55%,#172924)!important;
+ color:#f5e2b9;
+ box-shadow:inset 0 1px #e8d9b083,0 3px 0 #0d2017,0 5px 9px #020e0d9c;
+}
+.app-shell>.top .round-control:active,.app-shell>.top .diagnostic-control:active,
+.app-shell>.top .profile-control:active{
+ transform:translateY(2px);border-style:inset;box-shadow:inset 0 3px 6px #112820ad;
+}
+.app-shell>.top .return{
+ border-bottom:1px solid #bea5775c;
+ text-shadow:0 1px #06130e;
+}
+/* Modals open as a raised conservation drawer. The overlay still traps focus
+   through the existing dialog controls; no new dismissal assumptions. */
+.app-shell>.dialog{backdrop-filter:blur(6px) saturate(.7)!important;background:#07140ecb}
+.app-shell .dialog-box{
+ position:relative;
+ border:clamp(5px,.9vw,11px) ridge #ab915e!important;
+ border-radius:3px!important;
+ background:
+ radial-gradient(ellipse at 50% 0,#f6efdd,#dedfce 80%)!important;
+ box-shadow:inset 0 0 0 5px #f8f3e2,0 8px 0 #473923,0 22px 55px #000c!important;
+}
+.app-shell .dialog-box::before{
+ content:"";position:absolute;left:15px;right:15px;top:5px;height:5px;
+ background:linear-gradient(90deg,transparent,#c4a46c 19%,#ffebbc 50%,#b59059 81%,transparent);
+ pointer-events:none;
+}
+.app-shell .dialog-box h2{
+ font-family:Georgia,serif!important;
+ color:#314638;letter-spacing:-.04em;
+ text-shadow:0 1px #fffbe5,0 2px #c5bf9c94;
+ border-bottom:1px solid #baa57d;padding-bottom:12px;
+}
+.app-shell .dialog-box .art-inspection{
+ border:clamp(5px,1vw,12px) ridge #bd9d66!important;
+ box-shadow:0 0 0 2px #382a1b,0 12px 16px #16251a8c;
+}
+.app-shell .dialog-box .art-metadata{
+ background:#eef0e4;border:2px inset #bdac84;
+ padding:9px;box-shadow:inset 0 2px 4px #46513c2d;
+}
+.app-shell .dialog-box .btn.primary{
+ background:linear-gradient(145deg,#587361,#26493d 80%)!important;
+ border-bottom:5px solid #172c24;
+ box-shadow:inset 0 1px #e4efc8,0 4px 6px #1d342a88;
+}
+@media(max-width:699px){
+ .app-shell>.top{border-top-width:1px;border-bottom-width:3px!important}
+ .app-shell>.top .wordmark .mark{width:21px;height:23px;border-width:2px}
+ .app-shell>.top .round-control,.app-shell>.top .diagnostic-control,
+ .app-shell>.top .profile-control{border-width:2px}
+ .app-shell .dialog-box{border-width:5px!important;box-shadow:0 10px 23px #000b!important}
+}
