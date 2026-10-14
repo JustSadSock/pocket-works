@@ -20,7 +20,7 @@ test('visual movement interpolates actual worker position without changing seria
  const a=personPosition(p,s,prior,0,true),b=personPosition(p,s,prior,1,true);
  assert.ok(Number.isFinite(a.x)&&Number.isFinite(b.y));
  assert.equal(serialize(s),before);
- assert.ok(cattlePosition(s.households[0],17,0).x!==cattlePosition(s.households[0],18,0).x);
+ assert.deepEqual(cattlePosition(s.households[0],17,0),cattlePosition(s.households[0],18,0)); // no artificial circles
 });
 
 test('grazing and haymaking consume finite shared meadow, cattle can perish, all physical accounts reconcile',()=>{
