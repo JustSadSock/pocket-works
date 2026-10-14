@@ -7,8 +7,8 @@ import {floodFillRaster,Editor} from '../editor.js';
 const w=48,h=30,area=new Uint8ClampedArray(w*h*4),walls=new Uint8ClampedArray(w*h*4);
 const at=(x,y)=>(y*w+x)*4;
 for(let y=3;y<27;y++)for(let x=3;x<45;x++)area[at(x,y)+3]=255;
-// An incomplete pen separator stretches between the cutout boundaries,
-// previously splitting the apparently single damaged patch into two halves.
+// A pen separator touching two damage-mask edges must close BOTH paint basins.
+// The previous mergeOpenRegions mode incorrectly erased adjacent fills.
 for(let y=3;y<27;y++)walls[at(23,y)+3]=255;
 let out=new Uint8ClampedArray(w*h*4);
 const run=(point,mergeOpenRegions)=>floodFillRaster({
@@ -18,10 +18,16 @@ assert.ok(run([12,15],false)>100);
 assert.equal(out[at(30,15)+3],0,'legacy connected basin contains only one side');
 out=new Uint8ClampedArray(w*h*4);
 assert.ok(run([12,15],true)>100);
-for(const [x,y] of [[4,4],[12,15],[23,15],[30,15],[44,26]]){
+for(const [x,y] of [[4,4],[12,15]]){
  assert.deepEqual(Array.from(out.slice(at(x,y),at(x,y)+4)),[220,30,70,255],
-  'one bucket fills every part of the open damage, including across a false barrier');
+  'the clicked basin is painted up to its own boundary');
 }
+for(const [x,y] of [[30,15],[44,26]]){
+ assert.equal(out[at(x,y)+3],0,
+  'a cutout-edge separator must not flood a neighbouring basin');
+}
+assert.ok(run([30,15],true)>100,'other basin can be filled independently');
+assert.equal(out[at(12,15)],220,'the new fill must not replace its neighbour');
 assert.equal(out[at(2,15)+3],0,'even full-region fill never leaves damaged mask');
 
 // A genuinely enclosed pocket is still independently colourable.
