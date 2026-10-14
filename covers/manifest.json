@@ -3108,36 +3108,31 @@
   },
   "flotiliya": {
     "note": "No frame passed image-content checks",
-    "diagnostic": {
-      "bestScore": 55,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 33773,
-        "variance": 34.15351270042896,
-        "entropy": 1.8043692826024762,
-        "edgeDensity": 0.11049107142857142,
-        "colorfulness": 41.8388671875,
-        "centerDetail": 20.16680094220225,
-        "meanLight": 56.69553837890606
-      },
-      "gameplayEntry": {
-        "started": true,
-        "actions": [
-          {
-            "label": "Начать сражение ↗",
-            "id": "sailBtn",
-            "score": 74
-          }
-        ]
-      },
-      "url": "http://127.0.0.1:4173/apps/flotiliya/?pw-cover=1&pw_release=0.1.0&pw_fp=607bf82c6ddc6ed97b63c8c1"
-    },
-    "status": "failed",
+    "diagnostic": null,
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "66e88a5fc9c29ae56521e9a47b75e96bcc432ebf",
-    "lastAttemptAt": "2026-10-13T21:56:21.148Z"
+    "lastAttemptRevision": "244df852205ea3afeff68792cdcf971ae4915a15",
+    "lastAttemptAt": "2026-10-14T08:33:26.554Z",
+    "revision": "244df852205ea3afeff68792cdcf971ae4915a15",
+    "qualityScore": 66,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начать сражение ↗",
+        "id": "sailBtn",
+        "score": 74
+      },
+      {
+        "label": "Начать фазу · 4,5 c ▶",
+        "id": "resolveBtn",
+        "score": 74
+      }
+    ],
+    "shot": 3,
+    "sha256": "c8266605355b66209dae28836d95ddd53de5782a34540b1329c81f93f7786ba2",
+    "imageVersion": 2
   },
   "ne-tem-golosom": {
     "revision": "48571f9b43c34268004356e64a6116de3932d8bc",
