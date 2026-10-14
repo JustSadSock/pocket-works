@@ -99,6 +99,14 @@ function testDistinctOrders(){
  assert.equal(occupancy('capture'),0,'explicit capture must annex objective');
  assert.equal(occupancy('defend'),-1,'defensive stance must not annex neutral objective');
  assert.equal(occupancy('raid'),-1,'raid must not annex objective');
+ const guard=createGame(994,false);
+ guard.squads=guard.squads.filter(u=>u.side===0&&u.captain===0);
+ const orchard=guard.sites.find(z=>z.id==='orchard');
+ orchard.capture=60;orchard.attacker=1;
+ for(const u of guard.squads){u.x=orchard.x;u.y=orchard.y}
+ action(guard,0,{kind:'order',captain:0,mode:'defend',x:orchard.x,y:orchard.y});
+ play(guard,3);
+ assert.ok(orchard.owner===0&&orchard.capture<46,'guard should clear contested progress at defended site');
  function incoming(mode){
   const s=createGame(77,false);
   const defender=s.squads.find(u=>u.side===0&&u.captain===0);
