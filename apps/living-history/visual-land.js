@@ -25,9 +25,8 @@ export function personPosition(p,s,previous,progress,active=true){
  let x=from.x+(now.x-from.x)*ease,y=from.y+(now.y-from.y)*ease;
  if(active){
   if(p.job==='home'){
-   const h=s.households.find(h=>h.id===p.houseId);
-   if(h){const a=(s.day*.71+p.id*2.4)+t*Math.PI*2;
-    x=h.x+Math.sin(a)*.56;y=h.y+Math.cos(a*.77)*.42;}
+   const a=(s.day+t)*1.4+p.id*2.4,r=1.45+(p.id%3)*.22;
+   x+=Math.sin(a)*r;y+=Math.cos(a)*r*.74;
   }else if(p.job==='farm'||p.job==='wood'||p.job==='herd'){
    const k=t*Math.PI*3+p.id*1.73;x+=Math.sin(k)*.2;y+=Math.cos(k)*.15;
   }
