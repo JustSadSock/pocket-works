@@ -1,38 +1,35 @@
-// Physical stage dressing: semantic controls keep their exact positions.
-// All scenery is aria-hidden, inert, and cannot intercept painting gestures.
+// Stage furniture is optional. Never touches the game canvas or interactive controls.
+// Refinement intentionally uses just a cornice and a low foreground shelf.
 const SPACES={
  home:'rotunda',setup:'foyer',connecting:'foyer',lobby:'salon',preparing:'salon',
  preview:'gallery',drawing:'workshop',waiting:'workshop',vote:'tribunal',
  verdict:'tribunal',reveal:'tribunal','round-review':'gallery',
  collection:'archive',archive:'archive',achievements:'archive',results:'salon'
 };
-const ORNAMENT='./scenography/ornament.svg';
-const ornament=side=>'<img class="set-carving set-carving-'+side+'" src="'+ORNAMENT+'" alt="" draggable="false">';
+export function clearDressScene(root){
+ if(!root)return;
+ root.querySelector(':scope > .set-furniture')?.remove();
+ root.querySelector('.museum-display > .museum-plinth')?.remove();
+ root.classList.remove('has-scenography');
+ delete root.dataset.set;
+}
 export function setDressScene(root,scene){
  if(!root)return;
- const room=SPACES[scene]||'gallery';
- root.dataset.set=room;
+ clearDressScene(root);
+ root.dataset.set=SPACES[scene]||'gallery';
  const furniture=document.createElement('div');
  furniture.className='set-furniture';
- furniture.setAttribute('aria-hidden','true');
- furniture.inert=true;
- furniture.innerHTML=
-  '<div class="set-pilaster set-pilaster-left"><i></i></div>'+
-  '<div class="set-pilaster set-pilaster-right"><i></i></div>'+
-  '<div class="set-lamp set-lamp-left"><i></i></div>'+
-  '<div class="set-lamp set-lamp-right"><i></i></div>'+
-  '<div class="set-pediment">'+ornament('left')+ornament('right')+'</div>'+
-  '<div class="set-foreground"><div class="set-foreground-edge"></div></div>';
+ furniture.setAttribute('aria-hidden','true');furniture.inert=true;
+ furniture.innerHTML='<span class="set-cornice"></span><span class="set-foreground"></span>';
  root.append(furniture);
  if(scene==='home'){
   const display=root.querySelector('.museum-display');
   if(display){
-   const plinth=document.createElement('div');
-   plinth.className='museum-plinth';plinth.setAttribute('aria-hidden','true');
-   plinth.innerHTML='<div class="museum-plinth-lip"></div><div class="museum-plinth-panel"></div><div class="museum-plinth-foot"></div>';
-   display.append(plinth);
+   const sill=document.createElement('div');
+   sill.className='museum-plinth';sill.setAttribute('aria-hidden','true');sill.inert=true;
+   sill.innerHTML='<span class="museum-plinth-lip"></span><span class="museum-plinth-face"></span>';
+   display.append(sill);
   }
  }
- // Room category also styles forms, pictures, controls, and material treatments.
  root.classList.add('has-scenography');
 }
