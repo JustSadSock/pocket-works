@@ -1,15 +1,16 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { renderSea, renderGalley } from './sea-art.js';
+import { ACTION_COST, MOVE_STEP, getBudget, canPlan, stagePathLength, stageRange, availableActions } from './turn-budget.js';
 installMobileRuntime();
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('sea'), ctx = canvas.getContext('2d', {alpha:false});
-const W=1000,H=620,TAU=Math.PI*2,KEY='pocket-works:flotiliya:v1';
+const W=660,H=1000,TAU=Math.PI*2,KEY='pocket-works:flotiliya:v1';
 const PHASE_SECONDS=4.5,HALF=2.25,MAX_ROUNDS=22;
 const ISLAND_MAPS=[
- [{x:448,y:223,rx:51,ry:38,rotation:.4,seed:3},{x:602,y:430,rx:60,ry:43,rotation:-.6,seed:5},{x:545,y:78,rx:29,ry:24,rotation:.1,seed:9,rock:true}],
- [{x:490,y:140,rx:63,ry:36,rotation:.5,seed:13},{x:502,y:424,rx:47,ry:57,rotation:-.3,seed:18},{x:690,y:316,rx:30,ry:26,rotation:.5,seed:26,rock:true}],
- [{x:390,y:341,rx:47,ry:42,rotation:.3,seed:41},{x:617,y:247,rx:55,ry:38,rotation:-.1,seed:45},{x:535,y:504,rx:33,ry:25,rotation:.9,seed:48,rock:true}]
+ [{x:213,y:433,rx:72,ry:54,rotation:.45,seed:3},{x:477,y:611,rx:67,ry:72,rotation:-.57,seed:5},{x:462,y:254,rx:31,ry:35,rotation:.17,seed:9,rock:true}],
+ [{x:176,y:337,rx:68,ry:54,rotation:.21,seed:13},{x:445,y:538,rx:78,ry:60,rotation:-.38,seed:18},{x:271,y:708,rx:34,ry:28,rotation:.5,seed:26,rock:true}],
+ [{x:433,y:401,rx:83,ry:48,rotation:.59,seed:41},{x:229,y:592,rx:68,ry:57,rotation:-.14,seed:45},{x:492,y:735,rx:37,ry:30,rotation:.9,seed:48,rock:true}]
 ];
 const WEATHER=[{kind:'calm',name:'Попутный бриз'},{kind:'gust',name:'Порывистый ветер'},{kind:'fog',name:'Полоса тумана'}];
 function freshOrder(kind='hold'){return {kind,route:[],targetId:null};}
@@ -99,13 +100,13 @@ function startBattle(){
  game.ships=[];game.captured=[];game.events=[];game.particles=[];game.round=1;game.elapsed=0;game.selected=null;game.stage=0;game.drag=null;
  game.islands=ISLAND_MAPS[(game.battleIndex-1)%ISLAND_MAPS.length].map(i=>({...i}));
  game.weather=WEATHER[(game.battleIndex-1)%WEATHER.length];
- const ys=[136,311,487];
- activeFleet().forEach((s,i)=>game.ships.push(battleShip(s,'ally',190,ys[i],0)));
+ const xs=[142,330,519];
+ activeFleet().forEach((s,i)=>game.ships.push(battleShip(s,'ally',xs[i],852+(i%2)*24,-Math.PI/2)));
  const aiTypes=['swift','bow','heavy'];
  aiTypes.forEach((type,i)=>{
   const s=makeShip('enemy-'+game.battleIndex+'-'+i,namePool[(game.battleIndex+i*2)%namePool.length],type,{active:false});
   const mult=1+Math.min(.22,(game.battleIndex-1)*.025);s.hp*=mult;s.maxHp*=mult;s.crew*=mult;s.maxCrew*=mult;s.damage*=mult;
-  game.ships.push(battleShip(s,'enemy',809,ys[i],Math.PI));
+  game.ships.push(battleShip(s,'enemy',xs[i],148-(i%2)*24,Math.PI/2));
  });
  game.phase='orders';$('harbor').hidden=true;$('command').hidden=false;$('seaTop').hidden=false;$('endPanel').hidden=true;
  $('orderArea').hidden=false;$('orderArea').style.opacity='1';$('resolveBtn').hidden=false;$('progress').hidden=true;
@@ -393,7 +394,7 @@ function render(now){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#0f313d';ctx.fillRect(0,0,w,h);
  ctx.translate(ox,oy);ctx.scale(scale,scale);seaBackground(now);
  if(game.phase==='harbor'){
-  const ghost=[{...makeShip('g1','', 'heavy'),x:320,y:285,angle:-.33,side:'ally'}, {...makeShip('g2','','bow'),x:590,y:420,angle:-.42,side:'ally'}, {...makeShip('g3','','swift'),x:710,y:180,angle:2.9,side:'enemy'}];
+  const ghost=[{...makeShip('g1','', 'heavy'),x:200,y:740,angle:-1.7,side:'ally',velocity:0}, {...makeShip('g2','','bow'),x:452,y:625,angle:-1.45,side:'ally',velocity:0}, {...makeShip('g3','','swift'),x:410,y:290,angle:1.6,side:'enemy',velocity:0}];
   for(const s of ghost)drawShip(s,now,true);
  }else{
   const ss=game.ships.filter(s=>s.alive);
