@@ -749,3 +749,87 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-exhibit-number 
   inset:-22px 0 112px;
  }
 }
+
+
+/* 1.37.2 — Painting-led gallery. The content, not ornamental furniture,
+   receives the room's space. Keep the user-approved mitred picture frames. */
+@media (min-width:1050px) and (min-height:560px) {
+ html[data-zamazka-appearance="new"] #screen>.museum-home {
+  grid-template-columns:minmax(330px,.74fr) minmax(0,1.26fr)!important;
+  grid-template-rows:minmax(0,1fr) auto minmax(0,1fr)!important;
+  align-content:stretch!important;
+  align-items:stretch!important;
+  column-gap:clamp(35px,4.7vw,95px)!important;
+  background:linear-gradient(106deg,#252a25 0%,#292d28 49%,#303129 100%)!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline {
+  grid-row:1!important;grid-column:1;align-self:end!important;
+  margin:0 0 12px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
+  grid-column:1;grid-row:2!important;align-self:start!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display {
+  grid-column:2;grid-row:1/4!important;
+  height:100%!important;width:100%;min-height:0!important;
+  margin:0!important;align-self:stretch!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage {
+  inset:12px 0 116px!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-1"] {
+  transform:translate(-50%,-50%) translateX(calc(-1 * var(--museum-step))) scale(.74) rotateY(9deg)!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="1"] {
+  transform:translate(-50%,-50%) translateX(var(--museum-step)) scale(.74) rotateY(-9deg)!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display {
+  --museum-step:clamp(205px,20vw,350px);
+ }
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption {
+ left:50%!important;right:auto!important;bottom:65px!important;
+ max-width:calc(100% - 100px);width:max-content;
+ min-width:min(330px,70%);
+ transform:translateX(-50%);
+ padding:9px 18px 10px!important;
+ background:#242923ea!important;
+ border:1px solid #af976c55!important;
+ border-bottom:1px solid #bda77b8a!important;
+ border-radius:2px;
+ box-shadow:0 6px 17px #0d130d65!important;
+ text-shadow:none!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption strong {
+ font:italic clamp(15px,1.4vw,21px)/1.15 Georgia,serif!important;
+ color:#f1e7d7;
+ text-align:center;letter-spacing:-.014em;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption span {
+ font:11px/1.25 system-ui,sans-serif;color:#c7bba5!important;
+ text-align:center;letter-spacing:.015em;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel {bottom:2px}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption::before {
+ content:"";display:block;width:28px;height:2px;margin:0 auto 5px;
+ background:#a98b5e;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {
+ border-color:#ab957357!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display .museum-slide[data-slot="0"] .museum-slide-rim {
+ box-shadow:inset 0 0 0 2px #c9aa7f,inset 0 0 0 4px #493624,
+  0 3px 0 #281f17,0 24px 46px #080e0bdf!important;
+}
+@media (max-width:699px) {
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption {
+  bottom:58px!important;max-width:calc(100% - 104px);
+  min-width:0;padding:6px 10px 7px!important;
+  background:#242923b9!important;border-color:#b6a17a38!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption::before {display:none}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption strong {
+  font-size:13px!important;white-space:normal;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption span {font-size:9px!important}
+}
