@@ -33,7 +33,9 @@ send(host,{type:'draft',round:state.round,art:assignment.art,variation:assignmen
 assert.equal(state.drafts[host.id].length,1,'malformed packet cannot overwrite valid draft');
 time=state.deadline+1;
 send(friend,{type:'pulse'});
-assert.equal(state.phase,'voting','timeout advances without a confirm click');
+assert.equal(state.phase,'drawing','finalizing grace holds painting without opening voting');
+time+=exports.FINAL_SUBMISSION_GRACE_MS;send(friend,{type:'pulse'});
+assert.equal(state.phase,'voting','timeout advances after allowing final upload');
 assert.deepEqual(JSON.stringify(state.assignments[host.id].strokes),JSON.stringify(line),'last server draft survives timeout');
 assert.deepEqual(JSON.stringify(state.assignments[friend.id].strokes),JSON.stringify([]),'truly blank artist stays blank');
 assert.equal(Object.keys(state.drafts).length,0,'backup is folded into final assignment and duplicate room storage is released');
