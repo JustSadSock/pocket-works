@@ -1,0 +1,632 @@
+{
+  "version": "0.2.1",
+  "executedAt": "2026-10-14T17:29:35.409644+00:00",
+  "method": {
+    "scenarioSeeds": [
+      11,
+      29,
+      413,
+      7777,
+      43821,
+      9001,
+      12345,
+      21773,
+      51291,
+      71331
+    ],
+    "scenarios": [
+      "normal",
+      "drought",
+      "isolated",
+      "uplands"
+    ],
+    "scenarioYears": 25,
+    "centurySeeds": [
+      413,
+      7777,
+      43821,
+      9001
+    ],
+    "centuryYears": 100,
+    "checks": "audit() every game year; 28 independent Node tests"
+  },
+  "calibration": {
+    "adultGrainKgPerDay": 0.68,
+    "seedKgPerHa": 125,
+    "baseGrainYieldKgPerHa": 680,
+    "skillYieldMaxBonus": 0.25,
+    "fallowSoilRecovery": 4.5,
+    "cropSoilLoss": 2.15,
+    "droughtHarvestMultiplier": 0.72
+  },
+  "summary": {
+    "normal": {
+      "population": {
+        "min": 89,
+        "median": 162.5,
+        "max": 195
+      },
+      "grainPerCapitaKg": {
+        "min": 421.4,
+        "median": 467.20000000000005,
+        "max": 504.9
+      },
+      "starvationDeaths": {
+        "min": 9,
+        "median": 19.0,
+        "max": 66
+      },
+      "seedReturn": {
+        "min": 4.35,
+        "median": 5.805,
+        "max": 6.58
+      },
+      "extinctCommunities": {
+        "min": 0,
+        "median": 0.0,
+        "max": 1
+      },
+      "shipments": {
+        "min": 383,
+        "median": 533.0,
+        "max": 656
+      },
+      "extinctWorlds": 0
+    },
+    "drought": {
+      "population": {
+        "min": 17,
+        "median": 107.0,
+        "max": 180
+      },
+      "grainPerCapitaKg": {
+        "min": 474.7,
+        "median": 571.3499999999999,
+        "max": 771.7
+      },
+      "starvationDeaths": {
+        "min": 25,
+        "median": 64.5,
+        "max": 116
+      },
+      "seedReturn": {
+        "min": 4.53,
+        "median": 5.725,
+        "max": 6.21
+      },
+      "extinctCommunities": {
+        "min": 0,
+        "median": 0.5,
+        "max": 2
+      },
+      "shipments": {
+        "min": 214,
+        "median": 522.0,
+        "max": 669
+      },
+      "extinctWorlds": 0
+    },
+    "isolated": {
+      "population": {
+        "min": 104,
+        "median": 164.5,
+        "max": 185
+      },
+      "grainPerCapitaKg": {
+        "min": 400.1,
+        "median": 465.9,
+        "max": 500.8
+      },
+      "starvationDeaths": {
+        "min": 8,
+        "median": 20.5,
+        "max": 74
+      },
+      "seedReturn": {
+        "min": 4.43,
+        "median": 5.885,
+        "max": 6.53
+      },
+      "extinctCommunities": {
+        "min": 0,
+        "median": 0.0,
+        "max": 2
+      },
+      "shipments": {
+        "min": 368,
+        "median": 521.0,
+        "max": 586
+      },
+      "extinctWorlds": 0
+    },
+    "uplands": {
+      "population": {
+        "min": 5,
+        "median": 86.0,
+        "max": 126
+      },
+      "grainPerCapitaKg": {
+        "min": 415.9,
+        "median": 477.35,
+        "max": 562.6
+      },
+      "starvationDeaths": {
+        "min": 48,
+        "median": 71.5,
+        "max": 122
+      },
+      "seedReturn": {
+        "min": 3.78,
+        "median": 4.955,
+        "max": 5.59
+      },
+      "extinctCommunities": {
+        "min": 0,
+        "median": 0.5,
+        "max": 3
+      },
+      "shipments": {
+        "min": 126,
+        "median": 357.5,
+        "max": 471
+      },
+      "extinctWorlds": 0
+    }
+  },
+  "centuries": [
+    {
+      "seed": 413,
+      "population": 783,
+      "born": 1763,
+      "died": 1091,
+      "starvationDeaths": 177,
+      "grainPerCapitaKg": 444.5,
+      "seedReturn": 6.83,
+      "householdsTotal": 210,
+      "trades": 3460,
+      "transportOnlyHouseholds": 0,
+      "woodHouseholds": 11
+    },
+    {
+      "seed": 7777,
+      "population": 526,
+      "born": 1071,
+      "died": 657,
+      "starvationDeaths": 50,
+      "grainPerCapitaKg": 472.2,
+      "seedReturn": 6.0,
+      "householdsTotal": 183,
+      "trades": 2911,
+      "transportOnlyHouseholds": 0,
+      "woodHouseholds": 17
+    },
+    {
+      "seed": 43821,
+      "population": 353,
+      "born": 769,
+      "died": 527,
+      "starvationDeaths": 87,
+      "grainPerCapitaKg": 355.6,
+      "seedReturn": 4.82,
+      "householdsTotal": 133,
+      "trades": 2206,
+      "transportOnlyHouseholds": 0,
+      "woodHouseholds": 3
+    },
+    {
+      "seed": 9001,
+      "population": 723,
+      "born": 1468,
+      "died": 852,
+      "starvationDeaths": 38,
+      "grainPerCapitaKg": 448.7,
+      "seedReturn": 6.02,
+      "householdsTotal": 228,
+      "trades": 3468,
+      "transportOnlyHouseholds": 0,
+      "woodHouseholds": 22
+    }
+  ],
+  "scenarioRuns": [
+    {
+      "scenario": "normal",
+      "seed": 11,
+      "years": 25,
+      "population": 162,
+      "grainPerCapitaKg": 421.4,
+      "starvationDeaths": 16,
+      "seedReturn": 4.35,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "normal",
+      "seed": 29,
+      "years": 25,
+      "population": 168,
+      "grainPerCapitaKg": 460.6,
+      "starvationDeaths": 10,
+      "seedReturn": 5.85,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "normal",
+      "seed": 413,
+      "years": 25,
+      "population": 195,
+      "grainPerCapitaKg": 487.7,
+      "starvationDeaths": 17,
+      "seedReturn": 5.67,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "normal",
+      "seed": 7777,
+      "years": 25,
+      "population": 134,
+      "grainPerCapitaKg": 504.9,
+      "starvationDeaths": 40,
+      "seedReturn": 5.76,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "normal",
+      "seed": 43821,
+      "years": 25,
+      "population": 89,
+      "grainPerCapitaKg": 478.8,
+      "starvationDeaths": 66,
+      "seedReturn": 6.06,
+      "extinctCommunities": 1
+    },
+    {
+      "scenario": "normal",
+      "seed": 9001,
+      "years": 25,
+      "population": 163,
+      "grainPerCapitaKg": 425.4,
+      "starvationDeaths": 19,
+      "seedReturn": 5.62,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "normal",
+      "seed": 12345,
+      "years": 25,
+      "population": 151,
+      "grainPerCapitaKg": 453.8,
+      "starvationDeaths": 19,
+      "seedReturn": 5.29,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "normal",
+      "seed": 21773,
+      "years": 25,
+      "population": 174,
+      "grainPerCapitaKg": 462.1,
+      "starvationDeaths": 9,
+      "seedReturn": 6.58,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "normal",
+      "seed": 51291,
+      "years": 25,
+      "population": 187,
+      "grainPerCapitaKg": 498.9,
+      "starvationDeaths": 20,
+      "seedReturn": 6.41,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "normal",
+      "seed": 71331,
+      "years": 25,
+      "population": 161,
+      "grainPerCapitaKg": 472.3,
+      "starvationDeaths": 20,
+      "seedReturn": 6.3,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "drought",
+      "seed": 11,
+      "years": 25,
+      "population": 17,
+      "grainPerCapitaKg": 771.7,
+      "starvationDeaths": 116,
+      "seedReturn": 4.53,
+      "extinctCommunities": 2
+    },
+    {
+      "scenario": "drought",
+      "seed": 29,
+      "years": 25,
+      "population": 126,
+      "grainPerCapitaKg": 514,
+      "starvationDeaths": 48,
+      "seedReturn": 5.75,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "drought",
+      "seed": 413,
+      "years": 25,
+      "population": 162,
+      "grainPerCapitaKg": 554.2,
+      "starvationDeaths": 37,
+      "seedReturn": 5.7,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "drought",
+      "seed": 7777,
+      "years": 25,
+      "population": 93,
+      "grainPerCapitaKg": 578.9,
+      "starvationDeaths": 68,
+      "seedReturn": 5.7,
+      "extinctCommunities": 1
+    },
+    {
+      "scenario": "drought",
+      "seed": 43821,
+      "years": 25,
+      "population": 66,
+      "grainPerCapitaKg": 598.2,
+      "starvationDeaths": 79,
+      "seedReturn": 5.79,
+      "extinctCommunities": 2
+    },
+    {
+      "scenario": "drought",
+      "seed": 9001,
+      "years": 25,
+      "population": 36,
+      "grainPerCapitaKg": 628.6,
+      "starvationDeaths": 107,
+      "seedReturn": 5.37,
+      "extinctCommunities": 2
+    },
+    {
+      "scenario": "drought",
+      "seed": 12345,
+      "years": 25,
+      "population": 121,
+      "grainPerCapitaKg": 503.3,
+      "starvationDeaths": 61,
+      "seedReturn": 4.84,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "drought",
+      "seed": 21773,
+      "years": 25,
+      "population": 66,
+      "grainPerCapitaKg": 608.1,
+      "starvationDeaths": 97,
+      "seedReturn": 6.19,
+      "extinctCommunities": 1
+    },
+    {
+      "scenario": "drought",
+      "seed": 51291,
+      "years": 25,
+      "population": 153,
+      "grainPerCapitaKg": 563.8,
+      "starvationDeaths": 40,
+      "seedReturn": 6.21,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "drought",
+      "seed": 71331,
+      "years": 25,
+      "population": 180,
+      "grainPerCapitaKg": 474.7,
+      "starvationDeaths": 25,
+      "seedReturn": 5.82,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 11,
+      "years": 25,
+      "population": 167,
+      "grainPerCapitaKg": 404.4,
+      "starvationDeaths": 18,
+      "seedReturn": 4.43,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 29,
+      "years": 25,
+      "population": 162,
+      "grainPerCapitaKg": 449.3,
+      "starvationDeaths": 17,
+      "seedReturn": 5.86,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 413,
+      "years": 25,
+      "population": 165,
+      "grainPerCapitaKg": 471.3,
+      "starvationDeaths": 26,
+      "seedReturn": 5.98,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 7777,
+      "years": 25,
+      "population": 146,
+      "grainPerCapitaKg": 494.5,
+      "starvationDeaths": 34,
+      "seedReturn": 5.7,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 43821,
+      "years": 25,
+      "population": 104,
+      "grainPerCapitaKg": 474.5,
+      "starvationDeaths": 74,
+      "seedReturn": 5.91,
+      "extinctCommunities": 2
+    },
+    {
+      "scenario": "isolated",
+      "seed": 9001,
+      "years": 25,
+      "population": 164,
+      "grainPerCapitaKg": 443.2,
+      "starvationDeaths": 13,
+      "seedReturn": 5.72,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 12345,
+      "years": 25,
+      "population": 180,
+      "grainPerCapitaKg": 400.1,
+      "starvationDeaths": 8,
+      "seedReturn": 5.2,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 21773,
+      "years": 25,
+      "population": 146,
+      "grainPerCapitaKg": 464.3,
+      "starvationDeaths": 39,
+      "seedReturn": 6.53,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 51291,
+      "years": 25,
+      "population": 185,
+      "grainPerCapitaKg": 500.8,
+      "starvationDeaths": 19,
+      "seedReturn": 6.52,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "isolated",
+      "seed": 71331,
+      "years": 25,
+      "population": 175,
+      "grainPerCapitaKg": 467.5,
+      "starvationDeaths": 22,
+      "seedReturn": 6,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "uplands",
+      "seed": 11,
+      "years": 25,
+      "population": 107,
+      "grainPerCapitaKg": 418.7,
+      "starvationDeaths": 48,
+      "seedReturn": 3.78,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "uplands",
+      "seed": 29,
+      "years": 25,
+      "population": 101,
+      "grainPerCapitaKg": 415.9,
+      "starvationDeaths": 59,
+      "seedReturn": 5.12,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "uplands",
+      "seed": 413,
+      "years": 25,
+      "population": 61,
+      "grainPerCapitaKg": 560,
+      "starvationDeaths": 92,
+      "seedReturn": 4.89,
+      "extinctCommunities": 1
+    },
+    {
+      "scenario": "uplands",
+      "seed": 7777,
+      "years": 25,
+      "population": 55,
+      "grainPerCapitaKg": 516.9,
+      "starvationDeaths": 89,
+      "seedReturn": 4.99,
+      "extinctCommunities": 1
+    },
+    {
+      "scenario": "uplands",
+      "seed": 43821,
+      "years": 25,
+      "population": 5,
+      "grainPerCapitaKg": 562.6,
+      "starvationDeaths": 122,
+      "seedReturn": 4.69,
+      "extinctCommunities": 3
+    },
+    {
+      "scenario": "uplands",
+      "seed": 9001,
+      "years": 25,
+      "population": 103,
+      "grainPerCapitaKg": 432.1,
+      "starvationDeaths": 62,
+      "seedReturn": 4.86,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "uplands",
+      "seed": 12345,
+      "years": 25,
+      "population": 49,
+      "grainPerCapitaKg": 450.3,
+      "starvationDeaths": 86,
+      "seedReturn": 4.92,
+      "extinctCommunities": 2
+    },
+    {
+      "scenario": "uplands",
+      "seed": 21773,
+      "years": 25,
+      "population": 77,
+      "grainPerCapitaKg": 504.4,
+      "starvationDeaths": 77,
+      "seedReturn": 5.58,
+      "extinctCommunities": 1
+    },
+    {
+      "scenario": "uplands",
+      "seed": 51291,
+      "years": 25,
+      "population": 95,
+      "grainPerCapitaKg": 506.9,
+      "starvationDeaths": 66,
+      "seedReturn": 5.59,
+      "extinctCommunities": 0
+    },
+    {
+      "scenario": "uplands",
+      "seed": 71331,
+      "years": 25,
+      "population": 126,
+      "grainPerCapitaKg": 433.2,
+      "starvationDeaths": 56,
+      "seedReturn": 5.01,
+      "extinctCommunities": 0
+    }
+  ]
+}
