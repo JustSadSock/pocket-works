@@ -207,6 +207,36 @@ html,body{background:#242822}
  .screen>.page.lobby-entry,.screen>.page.exhibition-lobby,
  .screen>.page.collection-page,.screen>.page:has(.result-item){box-shadow:none!important}
 }
+/* Comparison sits on light archival paper: headings and slider must remain legible. */
+.screen > .reveal-phase .reveal-main > h3,
+.screen > .reveal-phase .reveal-brief > h3,
+.screen > .reveal-phase .unveil-control {
+ color:#49382b!important;text-shadow:none!important;
+}
+.screen > .reveal-phase .unveil-control input[type="range"] {
+ accent-color:#94704c!important;
+}
+.screen > .reveal-phase .reveal-main > .hint {color:#75604d!important}
+
+/* A painting's frame must follow its own proportions. The tall swipe cell is
+   just a layout rail, never a pretend tall picture frame around a short image. */
+@media(max-width:900px), (pointer:coarse){
+ .screen > .mobile-preview .gallery.exhibition-grid > .picture .picture-image{
+  background:transparent!important;border:0!important;
+  padding:8px!important;box-shadow:none!important;outline:0!important;
+ }
+ .screen > .mobile-preview .gallery.exhibition-grid > .picture .picture-image img{
+  width:auto!important;height:auto!important;
+  max-width:100%!important;max-height:100%!important;
+  object-fit:contain!important;aspect-ratio:auto!important;
+  border:7px solid #7b5c40!important;
+  outline:1px solid #34291e!important;
+  padding:3px!important;
+  background:#35281f!important;
+  box-shadow:inset 0 0 0 1px #cbb389,0 12px 23px #12191083!important;
+ }
+}
+
 @media(prefers-reduced-motion:reduce){
  .screen>.exhibition-enter,.screen>.exhibition-exit-layer{animation:none!important}
 }
