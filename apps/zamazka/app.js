@@ -73,11 +73,6 @@ document.addEventListener('error',e=>{
 },true);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function imageTag(src,alt='Личный знак'){
- return typeof src==='string'&&src.length<=EMBLEM_LIMITS.encoded&&/^data:image\/(?:png|webp);base64,/.test(src)
-   ?'<img src="'+esc(src)+'" alt="'+esc(alt)+'" loading="eager">'
-   :'<span class="empty-seal" aria-hidden="true">✎</span>';
-}
 function pocketPortrait(identity=pocketIdentity){
  return pocketAvatarMarkup(identity?.artwork||identity?.avatar,{accountId:identity?.id||''});
 }
