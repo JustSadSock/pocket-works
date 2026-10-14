@@ -1,4 +1,4 @@
-import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame} from './artworks.js';
+import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame,artworkAspect} from './artworks.js';
 import {zamazkaStore} from './storage.js';
 import {floodFillRaster} from './fill-core.js';
 export {floodFillRaster};
@@ -25,14 +25,17 @@ function prepareCanvas(canvas,editor=false,thumbnail=false){
 }
 function clipZone(ctx,z){damagePath(ctx,z);ctx.clip();}
 function dab(ctx,x,y,r,color,alpha=1){ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,Math.max(.12,r),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
-function drawStroke(ctx,stroke){
+export function drawStroke(ctx,stroke,aspect=W/H){
  const pts=stroke.p||[];if(!pts.length)return;
  const size=Number(stroke.s)||8,color=stroke.t==='erase'?'#e8ddc6':stroke.c;
- ctx.save();ctx.strokeStyle=color;ctx.lineWidth=stroke.t==='pencil'?Math.max(.15,size*.4):size;ctx.lineCap='round';ctx.lineJoin='round';
+ // Saved points stay in the immutable 600×450 world. Correct pen geometry
+ // in presentation space: a round nib must stay round on a portrait painting.
+ const correction=(W/H)/Math.max(.1,aspect);
+ ctx.save();ctx.scale(correction,1);ctx.strokeStyle=color;ctx.lineWidth=stroke.t==='pencil'?Math.max(.15,size*.4):size;ctx.lineCap='round';ctx.lineJoin='round';
  ctx.globalAlpha=stroke.t==='pencil'?.82:stroke.t==='spray'?.44:1;
  if(stroke.t==='spray'){
-  for(let i=0;i<pts.length;i++){const pt=pts[i];for(let j=0;j<6;j++){const angle=((i*13+j*83)%360)*Math.PI/180,rad=(i+j*7)%11/11*size;dab(ctx,pt[0]+Math.cos(angle)*rad,pt[1]+Math.sin(angle)*rad,size*.13,color,.34)}}
- }else{ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();dab(ctx,pts[0][0],pts[0][1],ctx.lineWidth/2,color,ctx.globalAlpha)}
+  for(let i=0;i<pts.length;i++){const pt=pts[i];for(let j=0;j<6;j++){const angle=((i*13+j*83)%360)*Math.PI/180,rad=(i+j*7)%11/11*size;dab(ctx,pt[0]/correction+Math.cos(angle)*rad,pt[1]+Math.sin(angle)*rad,size*.13,color,.34)}}
+ }else{ctx.beginPath();ctx.moveTo(pts[0][0]/correction,pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0]/correction,pts[i][1]);ctx.stroke();dab(ctx,pts[0][0]/correction,pts[0][1],ctx.lineWidth/2,color,ctx.globalAlpha)}
  ctx.restore();
 }
 // Flood-filling uses only drawn contours as barriers: an earlier fill is not
@@ -77,47 +80,67 @@ function fillRegion(lines,paint,zoneMask,p,colour){
 }
 // Drag colour behind the nib, mixing it with neighbouring pigment.
 // Stored strokes stay as compact vectors and replay deterministically.
-function smudgeStamp(ctx,x,y,size,dx,dy,mask=false){
- const scale=ctx.canvas.width/W;
- const radius=Math.min(75,Math.max(3,Math.round(size*scale*.56)));
- const pull=Math.max(2,Math.round(radius*.34)),blur=Math.max(1,Math.round(radius*.10));
- const cx=Math.round(x*scale),cy=Math.round(y*scale),pad=pull+blur+2;
- const left=Math.max(0,cx-radius-pad),top=Math.max(0,cy-radius-pad);
- const right=Math.min(ctx.canvas.width,cx+radius+pad+1),bottom=Math.min(ctx.canvas.height,cy+radius+pad+1);
+// Smudge only samples colour from the actual editable cutout. The original
+// implementation sampled beige/white pixels outside its irregular boundary,
+// then pulled them inside the painting. Mask coverage is held in raster space.
+function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W/H){
+ const widthFull=ctx.canvas.width,heightFull=ctx.canvas.height,scale=heightFull/H;
+ const correction=(W/H)/Math.max(.1,aspect);
+ const radiusY=Math.min(75,Math.max(3,Math.round(size*scale*.56)));
+ const radiusX=Math.max(2,Math.round(radiusY*correction));
+ const pullY=Math.max(2,Math.round(radiusY*.34)),pullX=Math.max(1,Math.round(pullY*correction));
+ const blurY=Math.max(1,Math.round(radiusY*.10)),blurX=Math.max(1,Math.round(blurY*correction));
+ const cx=Math.round(x*widthFull/W),cy=Math.round(y*scale);
+ const left=Math.max(0,cx-radiusX-pullX-blurX-2),top=Math.max(0,cy-radiusY-pullY-blurY-2);
+ const right=Math.min(widthFull,cx+radiusX+pullX+blurX+3),bottom=Math.min(heightFull,cy+radiusY+pullY+blurY+3);
  if(left>=right||top>=bottom)return;
  const width=right-left,height=bottom-top,pixels=ctx.getImageData(left,top,width,height);
- const src=new Uint8ClampedArray(pixels.data),dst=pixels.data,len=Math.hypot(dx,dy);
- const sx=len?Math.round(dx/len*pull):0,sy=len?Math.round(dy/len*pull):0;
- const at=(px,py)=>(Math.max(0,Math.min(height-1,py))*width+Math.max(0,Math.min(width-1,px)))*4;
- for(let py=Math.max(0,cy-radius-top);py<Math.min(height,cy+radius+1-top);py++){
-  for(let px=Math.max(0,cx-radius-left);px<Math.min(width,cx+radius+1-left);px++){
-   const dist=Math.hypot(px+left-cx,py+top-cy)/radius;if(dist>=1)continue;
+ const src=new Uint8ClampedArray(pixels.data),dst=pixels.data;
+ const len=Math.hypot(dx/correction,dy);
+ const sx=len?Math.round(dx/correction/len*pullX):0,sy=len?Math.round(dy/len*pullY):0;
+ const region=zoneMask?.data||zoneMask;
+ const valid=(px,py)=>{
+  if(px<0||py<0||px>=widthFull||py>=heightFull)return false;
+  return !region||region[(py*widthFull+px)*4+3]>=120;
+ };
+ const at=(px,py)=>(py*width+px)*4;
+ for(let py=Math.max(0,cy-radiusY-top);py<Math.min(height,cy+radiusY+1-top);py++){
+  for(let px=Math.max(0,cx-radiusX-left);px<Math.min(width,cx+radiusX+1-left);px++){
+   const absX=px+left,absY=py+top;
+   if(!valid(absX,absY))continue; // Never smear pigment outside the restored area.
+   const dist=Math.hypot((absX-cx)/radiusX,(absY-cy)/radiusY);
+   if(dist>=1)continue;
    const weight=.72*Math.pow(1-dist,1.45),i=at(px,py);
-   const a=at(px-sx,py-sy),b=at(px-sx+blur,py-sy),c=at(px-sx-blur,py-sy),
-         d=at(px-sx,py-sy+blur),e=at(px-sx,py-sy-blur);
-   // The flood barrier has transparent pixels. Smudge its alpha only,
-   // so a softened contour no longer leaves an invisible hard wall.
-   const start=mask?3:0,end=mask?4:3;
-   for(let ch=start;ch<end;ch++){
-    const pigment=(src[a+ch]*3+src[b+ch]+src[c+ch]+src[d+ch]+src[e+ch])/7;
-    dst[i+ch]=src[i+ch]*(1-weight)+pigment*weight;
+   // Ignore invalid taps and renormalize the remaining samples. Never use a
+   // fake white/transparent pixel to complete a sample near the cutout edge.
+   let sum=0,parts=[0,0,0,0];
+   for(const [ox,oy,k] of [[-sx,-sy,3],[-sx+blurX,-sy,1],[-sx-blurX,-sy,1],
+                           [-sx,-sy+blurY,1],[-sx,-sy-blurY,1]]){
+    const xx=absX+ox,yy=absY+oy;
+    if(!valid(xx,yy)||xx<left||xx>=right||yy<top||yy>=bottom)continue;
+    const a=at(xx-left,yy-top);
+    for(let ch=mask?3:0;ch<(mask?4:3);ch++)parts[ch]+=src[a+ch]*k;
+    sum+=k;
    }
+   if(!sum)continue; // Keep the existing pigment if no valid source exists.
+   for(let ch=mask?3:0;ch<(mask?4:3);ch++)
+    dst[i+ch]=src[i+ch]*(1-weight)+parts[ch]/sum*weight;
   }
  }
  ctx.putImageData(pixels,left,top);
 }
-export function smudgeStroke(ctx,stroke,from=0,mask=false){
+export function smudgeStroke(ctx,stroke,from=0,mask=false,zoneMask=null,aspect=W/H){
  const pts=stroke.p||[];if(!pts.length)return;
  const spacing=Math.max(1.4,Math.min(7,stroke.s*.23));
- if(from<=0)smudgeStamp(ctx,pts[0][0],pts[0][1],stroke.s,0,0,mask);
+ if(from<=0)smudgeStamp(ctx,pts[0][0],pts[0][1],stroke.s,0,0,mask,zoneMask,aspect);
  for(let i=Math.max(1,from);i<pts.length;i++){
   const prev=pts[i-1],next=pts[i],dx=next[0]-prev[0],dy=next[1]-prev[1];
   const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/spacing));
-  for(let j=1;j<=steps;j++)smudgeStamp(ctx,prev[0]+dx*j/steps,prev[1]+dy*j/steps,stroke.s,dx,dy,mask);
+  for(let j=1;j<=steps;j++)smudgeStamp(ctx,prev[0]+dx*j/steps,prev[1]+dy*j/steps,stroke.s,dx,dy,mask,zoneMask,aspect);
  }
 }
-function renderStrokes(ctx,strokes,zone){
- if(!strokes.some(s=>s.t==='fill'||s.t==='smudge')){strokes.forEach(s=>drawStroke(ctx,s));return}
+function renderStrokes(ctx,strokes,zone,aspect=W/H){
+ if(!strokes.some(s=>s.t==='fill'||s.t==='smudge')){strokes.forEach(s=>drawStroke(ctx,s,aspect));return}
  // Chronological raster pass: paint added after a smudge must remain sharp.
  // A separate contour mask still bounds region fills.
  const lines=layer(),paint=layer(),area=layer();
@@ -127,28 +150,28 @@ function renderStrokes(ctx,strokes,zone){
  for(const stroke of strokes){
   if(stroke.t==='fill'){fillRegion(lines,paint,zoneMask,stroke.p[0],stroke.c);continue}
   if(stroke.t==='smudge'){
-   smudgeStroke(paint.ctx,stroke);
-   smudgeStroke(lines.ctx,stroke,0,true);
+   smudgeStroke(paint.ctx,stroke,0,false,zoneMask,aspect);
+   smudgeStroke(lines.ctx,stroke,0,true,zoneMask,aspect);
    continue;
   }
   if(stroke.t==='erase'){
-   drawStroke(paint.ctx,stroke);
+   drawStroke(paint.ctx,stroke,aspect);
    lines.ctx.save();lines.ctx.globalCompositeOperation='destination-out';
-   drawStroke(lines.ctx,stroke);lines.ctx.restore();
-  }else{drawStroke(paint.ctx,stroke);drawStroke(lines.ctx,stroke)}
+   drawStroke(lines.ctx,stroke,aspect);lines.ctx.restore();
+  }else{drawStroke(paint.ctx,stroke,aspect);drawStroke(lines.ctx,stroke,aspect)}
  }
  // The damage edge is clipped once on the final artwork.
  ctx.drawImage(paint.canvas,0,0,W,H);
 }
 
-export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false){
+export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false,legacyFrame=false){
  let ctx;
  try{
   const image=await loadArtwork(id);
   if(!canvas.isConnected)return;
-  setArtworkFrame(canvas,image);
+  setArtworkFrame(canvas,image,legacyFrame);
   ctx=prepareCanvas(canvas,false,thumbnail);
-  ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id);
+  ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id,legacyFrame);
  if(damaged){
   const z=zoneFor(id,variation),overlay=document.createElement('canvas');
   overlay.width=canvas.width;overlay.height=canvas.height;
@@ -156,7 +179,7 @@ export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=f
   paint.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
   paint.imageSmoothingEnabled=true;paint.imageSmoothingQuality='high';
   paint.fillStyle='#e8ddc6';paint.fillRect(0,0,W,H);
-  renderStrokes(paint,strokes||[],z);
+  renderStrokes(paint,strokes||[],z,legacyFrame?W/H:artworkAspect(image));
   // Render one opaque restoration surface, clip its irregular outer contour
   // once. Previous beige+fill+stroke clipping multiplied edge alpha.
   ctx.save();clipZone(ctx,z);ctx.drawImage(overlay,0,0,W,H);ctx.restore();
@@ -260,6 +283,24 @@ export class Editor{
      this.render();
    }).catch(()=>{});
 
+ }
+ // Fit the *actual* painting into the available stage instead of relying on
+ // overlapping 4:3 desktop/mobile width formulas. The viewport is never
+ // taller than the stage or wider than its safe touch area.
+ fitViewport(aspect=this.frameAspect||W/H){
+  const stage=this.root?.querySelector?.('.work-stage');
+  if(!stage||!this.viewport||!Number.isFinite(aspect)||aspect<=0)return false;
+  const availableWidth=stage.clientWidth-4,availableHeight=stage.clientHeight-4;
+  if(availableWidth<20||availableHeight<20)return false;
+  const width=Math.max(20,Math.min(availableWidth,availableHeight*aspect));
+  const height=width/aspect;
+  const oldWidth=parseFloat(this.viewport.style.width),oldHeight=parseFloat(this.viewport.style.height);
+  if(Math.abs(oldWidth-width)<.5&&Math.abs(oldHeight-height)<.5)return false;
+  this.viewport.style.setProperty('width',width+'px','important');
+  this.viewport.style.setProperty('height',height+'px','important');
+  this.viewport.style.setProperty('max-height','100%','important');
+  this.viewport.style.setProperty('aspect-ratio',String(aspect),'important');
+  return true;
  }
  center(animate=false){
   if(animate&&this.canvas.classList){
@@ -418,7 +459,7 @@ export class Editor{
     this.hidePickerPreview();
     const tip=this.tip(e),v=this.viewport.getBoundingClientRect(),c=this.canvas.getBoundingClientRect();
     const effectiveSize=this.tool==='pencil'?Math.max(.15,this.size*.4):this.size;
-    const diameter=Math.max(2,effectiveSize*c.width/W);
+    const diameter=Math.max(2,effectiveSize*c.height/H);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
     // Absolutely positioned children start at the viewport padding edge, not its outer border.
    const drawn=this.point(tip);
@@ -731,8 +772,15 @@ export class Editor{
     this.globalPointerUp=e=>{if(this.pointers.has(e.pointerId))this.up(e)};
     window.addEventListener('pointerup',this.globalPointerUp);
     window.addEventListener('pointercancel',this.globalPointerUp);
-    this.resize=()=>{if(!this.pointers.size)this.center()};
+    this.resize=()=>{if(!this.pointers.size){this.fitViewport();this.center()}};
     window.addEventListener('resize',this.resize);
+    if(typeof ResizeObserver!=='undefined'){
+      this.frameObserver=new ResizeObserver(()=>{
+        if(!this.closed&&this.frameAspect&&!this.pointers.size&&this.fitViewport())this.center();
+      });
+      const stage=this.root.querySelector('.work-stage');
+      if(stage)this.frameObserver.observe(stage);
+    }
   }
  async pick(p,temporary=false){
    try{
@@ -749,7 +797,7 @@ export class Editor{
        const ctx=sample.getContext('2d',{willReadFrequently:true});ctx.scale(2,2);
        drawArtwork(ctx,img,this.id);ctx.save();clipZone(ctx,this.zone);
        ctx.fillStyle='#e8ddc6';ctx.fillRect(this.zone.x,this.zone.y,this.zone.w,this.zone.h);
-       renderStrokes(ctx,[...this.strokes,...(this.working?[this.working]:[])],this.zone);ctx.restore();
+       renderStrokes(ctx,[...this.strokes,...(this.working?[this.working]:[])],this.zone,artworkAspect(img));ctx.restore();
        rgb=ctx.getImageData(Math.min(sample.width-1,Math.floor(p[0]*2)),Math.min(sample.height-1,Math.floor(p[1]*2)),1,1).data;
      }
      if(this.closed||!rgb||!rgb[3])return;
@@ -771,6 +819,8 @@ export class Editor{
    if(!this.nativeFrameReady){
      this.nativeFrameReady=true;
      setArtworkFrame(this.canvas,img);
+     this.frameAspect=artworkAspect(img);
+     this.fitViewport(this.frameAspect);
      this.center();
    }
    return new Promise(resolve=>{
@@ -796,12 +846,13 @@ export class Editor{
      this.cachedRevision=-1;
      this.smudgePreviewLayer=null;
      this.smudgePreviewWorking=null;
+     this.smudgeZoneMask=null;
    }
    const rev=this.paintRevision||0;
    if(this.cachedRevision!==rev){
      this.inkCtx.clearRect(0,0,W,H);
      this.inkCtx.fillStyle='#e8ddc6';this.inkCtx.fillRect(0,0,W,H);
-     renderStrokes(this.inkCtx,this.strokes,this.zone);
+     renderStrokes(this.inkCtx,this.strokes,this.zone,artworkAspect(img));
      this.cachedRevision=rev;
    }
    ctx.clearRect(0,0,W,H);
@@ -823,13 +874,17 @@ export class Editor{
          this.smudgePreviewRevision=rev;
          this.smudgePreviewPointCount=0;
        }
+       if(!this.smudgeZoneMask){
+         const zoneLayer=makeLayer();zoneLayer.ctx.fillStyle='#fff';damagePath(zoneLayer.ctx,this.zone);zoneLayer.ctx.fill();
+         this.smudgeZoneMask=zoneLayer.ctx.getImageData(0,0,c.width,c.height);
+       }
        const from=this.smudgePreviewPointCount||0;
        if(this.working.p.length>from){
-         smudgeStroke(preview.ctx,this.working,from);
+         smudgeStroke(preview.ctx,this.working,from,false,this.smudgeZoneMask,artworkAspect(img));
          this.smudgePreviewPointCount=this.working.p.length;
        }
        ctx.drawImage(preview.canvas,0,0,W,H);
-     }else drawStroke(ctx,this.working);
+     }else drawStroke(ctx,this.working,artworkAspect(img));
      ctx.restore();
    }
    // No dashed guide: the parchment cutout itself shows the editable area.
@@ -837,13 +892,13 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.closed=true;clearTimeout(this.recenterTimer);
+ dispose(){this.closed=true;this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
  }
  for(const cb of this.paintWaiters||[])cb();
  this.paintWaiters=[];
- this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;this.smudgePreviewLayer=null;this.smudgePreviewWorking=null;
+ this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;this.smudgePreviewLayer=null;this.smudgePreviewWorking=null;this.smudgeZoneMask=null;
  this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }

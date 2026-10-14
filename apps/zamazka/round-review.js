@@ -1,7 +1,7 @@
 // The round review is intentionally a distinct, untimed stage.
 // All artwork is available only after the server has finished revealing every vote.
 let viewerCleanup=null;
-const archiveViewState={scale:1,dx:0,dy:0};
+const archiveViewState={scale:1,dx:0,dy:0,legacyFrame:false};
 export function closeRoundViewer(){
  if(viewerCleanup){const stop=viewerCleanup;viewerCleanup=null;stop();}
 }
@@ -27,12 +27,13 @@ export function openRoundViewer({index,view,dialog,renderArtwork,arts,esc,closeD
  if(!['round-review','results','archive'].includes(view?.phase))return;
  const works=view.gallery||[],work=works[index],archived=view.phase==='archive';
  if(!work||!arts[work.art])return;
+ let legacyFrame=archived&&archiveViewState.legacyFrame;
  closeDialog();
  const voteList=Object.values(work.votes||{}).filter(Array.isArray),answer=view.selected.indexOf(work.art);
  const correct=voteList.reduce((n,bet)=>n+(bet[answer]||0),0);
  const wrong=voteList.reduce((n,bet)=>n+bet.reduce((a,b)=>a+b,0)-(bet[answer]||0),0);
  dialog.classList.remove('hidden');dialog.classList.add('round-view-dialog');
- dialog.innerHTML='<div class="dialog-box round-viewer" role="document"><header class="round-view-header"><div><span>'+(archived?'АРХИВ':'ЭКСПОНАТ')+' '+(index+1)+' / '+works.length+'</span><h2>'+esc(work.name)+'</h2><p>'+esc(arts[work.art].title)+'</p><p class="round-art-provenance">'+esc([arts[work.art].artist,arts[work.art].date,arts[work.art].schoolCountry?'Школа: '+arts[work.art].schoolCountry:null,arts[work.art].creationPlace?'Создано: '+arts[work.art].creationPlace.city+', '+arts[work.art].creationPlace.country:null].filter(Boolean).join(' · '))+'</p></div><button type="button" class="round-view-close" data-round-close aria-label="Закрыть картину">×</button></header><div class="round-view-window" id="roundViewWindow" aria-label="Масштабируемая картина"><div class="round-view-image" id="roundViewImage" style="--split:50%"><canvas id="roundRestoration" aria-label="Реставрация"></canvas><canvas class="round-view-original" id="roundOriginal" aria-label="Подлинник"></canvas><span class="round-view-split"></span></div></div><div class="round-view-legend"><span>Реставрация</span><span>Подлинник</span></div><input id="roundCompare" class="round-view-range" type="range" min="0" max="100" value="50" aria-label="Сравнить с подлинником"><div class="round-view-controls"><div>'+(archived&&works.length>1?'<button type="button" data-round-nav="prev" aria-label="Предыдущая работа">‹</button>':'')+'<button type="button" data-round-zoom="out" aria-label="Отдалить">−</button><output id="roundZoom">100%</output><button type="button" data-round-zoom="in" aria-label="Приблизить">+</button><button type="button" data-round-zoom="reset">Сброс</button>'+(archived&&works.length>1?'<button type="button" data-round-nav="next" aria-label="Следующая работа">›</button>':'')+'</div>'+(archived?'':'<small>'+correct+' верно · '+wrong+' мимо</small>')+'</div></div>';
+ dialog.innerHTML='<div class="dialog-box round-viewer" role="document"><header class="round-view-header"><div><span>'+(archived?'АРХИВ':'ЭКСПОНАТ')+' '+(index+1)+' / '+works.length+'</span><h2>'+esc(work.name)+'</h2><p>'+esc(arts[work.art].title)+'</p><p class="round-art-provenance">'+esc([arts[work.art].artist,arts[work.art].date,arts[work.art].schoolCountry?'Школа: '+arts[work.art].schoolCountry:null,arts[work.art].creationPlace?'Создано: '+arts[work.art].creationPlace.city+', '+arts[work.art].creationPlace.country:null].filter(Boolean).join(' · '))+'</p></div><button type="button" class="round-view-close" data-round-close aria-label="Закрыть картину">×</button></header><div class="round-view-window" id="roundViewWindow" aria-label="Масштабируемая картина"><div class="round-view-image" id="roundViewImage" style="--split:50%"><canvas id="roundRestoration" aria-label="Реставрация"></canvas><canvas class="round-view-original" id="roundOriginal" aria-label="Подлинник"></canvas><span class="round-view-split"></span></div></div><div class="round-view-legend"><span>Реставрация</span><span>Подлинник</span></div><input id="roundCompare" class="round-view-range" type="range" min="0" max="100" value="50" aria-label="Сравнить с подлинником"><div class="round-view-controls"><div>'+(archived&&works.length>1?'<button type="button" data-round-nav="prev" aria-label="Предыдущая работа">‹</button>':'')+'<button type="button" data-round-zoom="out" aria-label="Отдалить">−</button><output id="roundZoom">100%</output><button type="button" data-round-zoom="in" aria-label="Приблизить">+</button><button type="button" data-round-zoom="reset">Сброс</button>'+(archived?'<button type="button" data-archive-geometry aria-pressed="'+legacyFrame+'" aria-label="'+(legacyFrame?'Вернуть естественные пропорции':'Показать старый формат 4:3')+'" title="Переключить пропорции архивной картины">'+(legacyFrame?'Ориг.':'4:3')+'</button>':'')+(archived&&works.length>1?'<button type="button" data-round-nav="next" aria-label="Следующая работа">›</button>':'')+'</div>'+(archived?'':'<small>'+correct+' верно · '+wrong+' мимо</small>')+'</div></div>';
  const pane=dialog.querySelector('#roundViewWindow'),image=dialog.querySelector('#roundViewImage'),range=dialog.querySelector('#roundCompare'),meter=dialog.querySelector('#roundZoom');
  const pointers=new Map(),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
  let scale=archived?archiveViewState.scale:1,dx=archived?archiveViewState.dx:0,dy=archived?archiveViewState.dy:0,pinch=null;
@@ -68,6 +69,16 @@ export function openRoundViewer({index,view,dialog,renderArtwork,arts,esc,closeD
  function slide(){image.style.setProperty('--split',range.value+'%')}
  function click(e){
   if(e.target.closest('[data-round-close]')){closeDialog();return}
+  const geometry=e.target.closest('[data-archive-geometry]');
+  if(archived&&geometry){
+   legacyFrame=!legacyFrame;archiveViewState.legacyFrame=legacyFrame;
+   geometry.setAttribute('aria-pressed',String(legacyFrame));
+   geometry.textContent=legacyFrame?'Ориг.':'4:3';
+   geometry.setAttribute('aria-label',legacyFrame?'Вернуть естественные пропорции':'Показать старый формат 4:3');
+   scale=1;dx=0;dy=0;
+   void paintArchivePair().then(draw);
+   return;
+  }
   const nav=e.target.closest('[data-round-nav]')?.dataset.roundNav;
   if(nav&&onNavigate){onNavigate((index+(nav==='next'?1:-1)+works.length)%works.length);return}
   const command=e.target.closest('[data-round-zoom]')?.dataset.roundZoom;
@@ -90,6 +101,11 @@ export function openRoundViewer({index,view,dialog,renderArtwork,arts,esc,closeD
  };
  draw();
  dialog.querySelector('[data-round-close]')?.focus();
- void renderArtwork(dialog.querySelector('#roundRestoration'),work.art,work.variation,work.strokes||[],true);
- void renderArtwork(dialog.querySelector('#roundOriginal'),work.art,0,null,false);
+ function paintArchivePair(){
+  return Promise.all([
+   renderArtwork(dialog.querySelector('#roundRestoration'),work.art,work.variation,work.strokes||[],true,false,legacyFrame),
+   renderArtwork(dialog.querySelector('#roundOriginal'),work.art,0,null,false,false,legacyFrame)
+  ]);
+ }
+ void paintArchivePair();
 }
