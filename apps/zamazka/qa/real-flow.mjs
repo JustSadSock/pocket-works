@@ -36,6 +36,7 @@ try{
   await page.locator('.museum-home').waitFor({timeout:16000});
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'classic','Classic beige theme must be default');
   assert.equal(await page.locator('#zamazka-experimental-style').getAttribute('media'),'not all');
+  assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),'not all','Classic mode must not load the new home CSS');
   assert.equal(await page.locator('.set-furniture').count(),0,'Classic style must not mount decorative scenery');
   assert.equal(await page.locator('.museum-plinth').count(),0,'Classic style must not mount museum plinth');
   assert.equal(await page.locator('.museum-architecture').count(),0,'Classic mode must restore original DOM architecture');
@@ -70,6 +71,31 @@ try{
   await page.locator('.museum-home').waitFor({timeout:17000});
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new','New look must survive reload');
   assert.equal(await page.locator('.museum-home .museum-plinth').count(),1);
+  assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),'all','After-hours art direction must only load in the opt-in theme');
+  const homeGeometry=await page.evaluate(()=>{
+    const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}};
+    return {mode:getComputedStyle(document.querySelector('.museum-home')).display,
+      heading:rect('.museum-headline'),display:rect('.museum-display'),
+      control:rect('.museum-control'),play:rect('#primary-action'),
+      screen:rect('#screen'),center:rect('.museum-slide[data-slot="0"]'),
+      footer:rect('.museum-footer'),
+      bodyOverflow:document.documentElement.scrollWidth>window.innerWidth+2};
+  });
+  if(mobile){
+    assert.equal(homeGeometry.mode,'flex','Phone appearance needs its own stacked composition');
+    assert(homeGeometry.heading.bottom<=homeGeometry.display.y+6,'Painting must follow title on phone');
+    assert(homeGeometry.display.bottom<=homeGeometry.control.y+6,'Game actions must follow painting on phone');
+    assert(homeGeometry.play.bottom<=homeGeometry.screen.bottom+4,'Play button is clipped on phone');
+    assert(homeGeometry.footer.bottom<=homeGeometry.screen.bottom+5,'Home footer should fit without required scrolling');
+  }else{
+    assert.equal(homeGeometry.mode,'grid','Desktop appearance must use a two-column composition');
+    assert(homeGeometry.display.x>=homeGeometry.heading.right+10,'Museum display must stand to the right of heading');
+    assert(homeGeometry.display.x>=homeGeometry.control.right+10,'Art must not overlap navigation column');
+    assert(homeGeometry.display.height>350,'Desktop artwork space is not large enough');
+  }
+  assert(homeGeometry.center.width>80&&homeGeometry.center.height>80,'Real center artwork needs usable geometry');
+  assert(!homeGeometry.bodyOverflow,'Home must not overflow horizontally');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-afterhours-home-'+viewport.width+'.png'),fullPage:false});
   await page.locator('#settingsBtn').click();
   await page.locator('#settingNewAppearance').uncheck();
   await page.locator('#modalActions .btn.primary').click();

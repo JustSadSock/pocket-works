@@ -71,7 +71,7 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
    onCenter(order[center],center);
    if(queued){const d=Math.sign(queued);queued-=d;requestAnimationFrame(()=>shift(d))}
   };
-  done=setTimeout(finish,reduced?20:590);
+  done=setTimeout(finish,reduced?20:(document.documentElement.dataset.zamazkaAppearance==='new'?420:590));
  }
  return {shift,dispose(){removed=true;stage.removeEventListener('pointerdown',onPointerDown);stage.removeEventListener('pointerup',onPointerUp);stage.removeEventListener('pointercancel',onPointerCancel);clearTimeout(done);observer?.disconnect();if(!observer)window.removeEventListener('resize',relayout);nodes.clear()},getCenter(){return order[center]}};
 }
