@@ -741,3 +741,11 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-exhibit-number 
  html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration {min-height:62px}
  html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {margin-top:10px;padding-top:8px}
 }
+
+
+/* The lower mitred corner must stay above the painting's own caption. */
+@media (min-width:700px) and (min-height:521px) {
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage {
+  inset:-22px 0 112px;
+ }
+}
