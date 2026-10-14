@@ -199,4 +199,17 @@ assert.equal((await call(0,'profile',{...aliceCard,background:'gallery',maskot:{
 assert.equal((await call(0,'me')).profile.background,'gallery');
 assert.equal((await call(1,'profile',{...aliceCard,background:'gallery'})).httpStatus,400);
 assert.equal((await call(0,'me')).profile.achievements.length,7);
+// Fast sync returns only a revision and changes when relationships or cosmetics change.
+const revisionBefore=await call(0,'sync');
+assert.match(revisionBefore.revision,/^[0-9a-z]+:\\d+$/);
+assert.equal(Object.hasOwn(revisionBefore,'friends'),false,'sync must not transmit full player cards');
+assert.equal((await call(0,'sync')).revision,revisionBefore.revision,'stable state keeps the same revision');
+assert.equal((await call(0,'me')).profile.owned,true,'own card gets the correct identity label');
+assert.equal((await call(1,'me')).profile.owned,true);
+await call(2,'me');
+assert.equal((await call(2,'friend-request',{id:users[0].id})).httpStatus,201);
+assert.notEqual((await call(0,'sync')).revision,revisionBefore.revision,'new friend request invalidates revision');
+const revisionNewRequest=(await call(0,'sync')).revision;
+assert.equal((await call(0,'friend-action',{id:users[2].id,action:'accept'})).ok,true);
+assert.notEqual((await call(0,'sync')).revision,revisionNewRequest,'accepted request invalidates revision');
 console.log('Pocket Social: '+calls+' SQLite API assertions passed.');
