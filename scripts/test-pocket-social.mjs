@@ -212,4 +212,37 @@ assert.notEqual((await call(0,'sync')).revision,revisionBefore.revision,'new fri
 const revisionNewRequest=(await call(0,'sync')).revision;
 assert.equal((await call(0,'friend-action',{id:users[2].id,action:'accept'})).ok,true);
 assert.notEqual((await call(0,'sync')).revision,revisionNewRequest,'accepted request invalidates revision');
+// Social 0.11: party roster, authenticated friend room lookup and live join.
+const companyAdd=await call(0,'party',{action:'add',id:users[2].id});
+assert.deepEqual(companyAdd.party,[users[2].id],'saved company contains selected friend');
+assert.deepEqual((await call(0,'me')).party,[users[2].id],'company survives another request');
+assert.equal((await call(0,'party',{action:'add',id:users[1].id})).httpStatus,403,'not a friend');
+assert.equal((await call(0,'invite-party',{gameId:'lipki',roomId:room})).httpStatus,400,'cannot spoof hosting a room');
+const invitationGroup=await call(0,'invite-party',{gameId:'lipki',roomId:room},{'x-pw-validated-room':room});
+assert.equal(invitationGroup.sent,1);
+assert.equal((await call(2,'me')).invites.some(i=>i.gameId==='lipki'&&i.fromId===users[0].id),true);
+const groupAgain=await call(0,'invite-party',{gameId:'lipki',roomId:room},{'x-pw-validated-room':room});
+assert.equal(groupAgain.sent,0,'do not create duplicate group invites');
+const liveRoom={gameId:'lipki',roomId:room,joinable:true,players:1,maxPlayers:4};
+let activityEnabled=true;
+hub.env={POCKETNET:{
+  idFromName:()=> 'test-global-pocketnet',
+  get:()=>({fetch:async(request)=>{
+    assert.equal(request.headers.get('x-pw-internal'),'1','only trusted DO room lookup');
+    const {accountIds}=await request.json();
+    const rooms={};
+    if(activityEnabled&&accountIds.includes(users[2].id))rooms[users[2].id]=liveRoom;
+    return Response.json({rooms});
+  }})
+}};
+const publicFriends=await call(0,'me');
+assert.equal(publicFriends.friends.find(p=>p.id===users[2].id)?.activity?.roomId,room);
+const verifiedJoin=await call(0,'join-friend',{id:users[2].id});
+assert.equal(verifiedJoin.url,'/apps/lipki/?room='+room);
+assert.equal((await call(1,'join-friend',{id:users[2].id})).httpStatus,403,'strangers may not resolve a room');
+const revisionJoined=(await call(0,'sync')).revision;
+activityEnabled=false;
+assert.notEqual((await call(0,'sync')).revision,revisionJoined,'friend activity changes invalidates sync');
+assert.equal((await call(0,'join-friend',{id:users[2].id})).httpStatus,409,'stale room cannot be joined');
+assert.equal((await call(0,'party',{action:'remove',id:users[2].id})).party.length,0);
 console.log('Pocket Social: '+calls+' SQLite API assertions passed.');
