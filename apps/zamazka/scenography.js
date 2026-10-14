@@ -16,13 +16,7 @@ export function setDressScene(root,scene){
  furniture.className='set-furniture';
  furniture.setAttribute('aria-hidden','true');
  furniture.inert=true;
- furniture.innerHTML=
-  '<div class="set-pilaster set-pilaster-left"><i></i></div>'+
-  '<div class="set-pilaster set-pilaster-right"><i></i></div>'+
-  '<div class="set-lamp set-lamp-left"><i></i></div>'+
-  '<div class="set-lamp set-lamp-right"><i></i></div>'+
-  '<div class="set-pediment">'+ornament('left')+ornament('right')+'</div>'+
-  '<div class="set-foreground"><div class="set-foreground-edge"></div></div>';
+ furniture.innerHTML='<div class="set-foreground" aria-hidden="true"></div>';
  root.append(furniture);
  if(scene==='home'){
   const display=root.querySelector('.museum-display');
