@@ -9,7 +9,7 @@ Pocket Social adds optional identity cards and social play to the existing Pocke
 - Bidirectional friends, pending incoming/outgoing requests, mutual-request acceptance, removal, block/unblock, public discoverability and online-visibility switches.
 - Account-aware presence with a 95-second expiry. Online state and the current game are descriptive; only PocketNet is authoritative about active room membership.
 - Private in-app room invitations for Zamazka and Blind Pals, delivered to authenticated friends. The server validates sender membership and room phase before dispatch, and validates room availability again before accepting. Invitations expire in 30 minutes.
-- A shared, mobile-friendly social overlay for the launcher and Zamazka; badge notification refreshes approximately every 22 seconds while visible.
+- A shared, mobile-friendly social overlay for the launcher and Zamazka; notifications and player cards refresh silently every 2 seconds while the dialog is open (only changes trigger a redraw); background notification polling remains at approximately 22 seconds.
 
 ## Architecture
 
