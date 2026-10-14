@@ -402,24 +402,33 @@ function practiceSettings(){
 function lobby(){
  if(!view||!roomId)return;
  const players=view.participants||[],leader=view.host===me?.id,code=inviteCode(roomId);
- const markup='<section class="page exhibition-lobby"><div class="section-label">ЧАСТНАЯ ЭКСПОЗИЦИЯ / ЗАЛ ОЖИДАНИЯ</div><h2>Ждём гостей.</h2>'+
-  '<button class="lobby-self" data-action="emblem"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span><strong>'+esc(me?.name||tabGuestName())+'</strong><small>Твоя эмблема · изменить рисунок</small></span><span class="lobby-self-arrow">✎</span></button>'+'<div class="room-ticket"><div class="ticket-top"><span class="section-label">КОД КОМНАТЫ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
+ const markup='<section class="page exhibition-lobby">'+
+  '<header class="lobby-mast"><div><span class="section-label">СОВМЕСТНАЯ ВЫСТАВКА</span><h2>Комната ожидания</h2></div>'+
+  '<a class="lobby-self" href="'+pocketIdProfileUrl+'" title="Открыть профиль Pocket ID"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(me?.name||gameName())+'</strong><small>Профиль Pocket ID</small></span></a></header>'+
+  '<div class="lobby-invite"><div class="room-ticket"><div class="ticket-top"><span class="section-label">ПРИГЛАСИТЬ В КОМНАТУ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
   '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div>'+
-  '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Отправить ссылку ↗</button>'+(isPocketMember()?'<button class="btn ghost" type="button" data-social-invite data-room-id="'+esc(roomId)+'">Позвать друзей Pocket ID</button>':'')+'</div></div>'+
-  '<div class="lobby-list-heading"><span class="section-label">ИГРОКИ · '+players.length+'/8</span><span>'+(leader?'Ты — куратор':'Ожидаем куратора')+'</span></div>'+
-  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+pocketPlayerBadge(p)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Куратор':'Реставратор')+'</span>'+(leader&&p.id!==me?.id&&Number(roomModuleVersion.slice(1))>=14?'<button type="button" class="lobby-kick" data-action="kick-player" data-player-id="'+esc(p.id)+'" aria-label="Исключить '+esc(p.name)+' из комнаты">Исключить</button>':'')+'</div>').join('')+'</div>'+
-  (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Эта комната создана до появления общего холста. Для совместного рисования открой новую комнату.</div>')+'<div class="stack">'+(leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select><label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+durationOptionsHtml(drawingSecondsChoice)+'</select><button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':'<div class="notice">Когда куратор начнёт выставку, игра запустится автоматически.</div>')+
-  '<button class="btn ghost" data-action="menu">← В главное меню</button></div></section>';
+  '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Ссылка ↗</button>'+
+  (isPocketMember()?'<button class="btn ghost pocket-invite" type="button" data-social-invite data-room-id="'+esc(roomId)+'">Пригласить друзей</button>':'')+'</div></div>'+
+  '<div class="lobby-list-heading"><span class="section-label">УЧАСТНИКИ · '+players.length+'/8</span><span>'+(leader?'Ты — ведущий':'Ожидаем ведущего')+'</span></div>'+
+  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+pocketPlayerBadge(p)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Ведущий':'Игрок')+'</span>'+
+  (leader&&p.id!==me?.id&&Number(roomModuleVersion.slice(1))>=14?'<button type="button" class="lobby-kick" data-action="kick-player" data-player-id="'+esc(p.id)+'" aria-label="Исключить '+esc(p.name)+' из комнаты">Исключить</button>':'')+'</div>').join('')+'</div></div>'+
+  (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Общий холст недоступен в старой комнате. Для совместного рисования открой новую комнату.</div>')+
+  '<div class="stack lobby-controls"><div class="lobby-controls-title">Настройки выставки</div>'+
+  (leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select>'+
+   '<label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+durationOptionsHtml(drawingSecondsChoice)+'</select>'+
+   '<button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':
+   '<p class="lobby-guest-wait">Ведущий запустит игру, когда все будут готовы.</p>')+
+   '<button class="btn ghost lobby-leave" data-action="menu">В главное меню</button></div></section>';
  if(page==='lobby'&&commonsBoard){
    const future=document.createElement('div');future.innerHTML=markup;
-   for(const selector of ['.lobby-self','.lobby-list-heading','.players','.exhibition-lobby>.stack']){
+   for(const selector of ['.lobby-self','.lobby-list-heading','.players','.lobby-controls']){
      const old=screen.querySelector(selector),newer=future.querySelector(selector);if(old&&newer)old.replaceWith(newer);
    }
    const controls=screen.querySelector('.commons-controls');
    if(controls){
      const wipe=controls.querySelector('[data-action="board-clear"]'),note=controls.querySelector('.commons-note');
      if(leader&&!wipe){note?.remove();controls.insertAdjacentHTML('beforeend','<button class="commons-wipe" data-action="board-clear">Очистить холст</button>')}
-     if(!leader&&wipe){wipe.remove();controls.insertAdjacentHTML('beforeend','<span class="commons-note">Очистка доступна куратору</span>')}
+     if(!leader&&wipe){wipe.remove();controls.insertAdjacentHTML('beforeend','<span class="commons-note">Очистка доступна ведущему</span>')}
    }
    if(view?.board&&(boardResync||commonsBoard.revision!==view.board.revision)){commonsBoard.reset(view.board);boardResync=false}
    return;
@@ -428,6 +437,7 @@ function lobby(){
  if(Number(roomModuleVersion.slice(1))>=3)commonsBoard=createCommonsBoard(screen.querySelector('.commons-desk'),{send:packet=>net?.sendGame(packet),onError:notify,canClear:leader,snapshot:view?.board||{revision:0,segments:[]}});
  boardResync=false;
 }
+
 function galleryHtml(list,select=false){return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+(ARTS[id]?.schoolCountry?' · '+esc(ARTS[id].schoolCountry):'')+'</span></button>').join('')+'</div>'}
 function preloadPreviewImage(id){
  return new Promise((resolve,reject)=>{
