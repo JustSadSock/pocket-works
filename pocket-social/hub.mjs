@@ -36,7 +36,8 @@ async function bodyJson(req){
   try{return JSON.parse(raw)}catch{return null}
 }
 export class PocketSocial {
-  constructor(ctx){
+  constructor(ctx,env){
+    this.env=env;
     this.sql=ctx.storage.sql;
     this.rates=new Map();
     this.sql.exec("CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,nickname TEXT NOT NULL,avatar TEXT NOT NULL,background TEXT NOT NULL DEFAULT 'forest',frame TEXT NOT NULL DEFAULT 'clean',artwork TEXT NOT NULL DEFAULT '',favorite_game TEXT NOT NULL DEFAULT '',discoverable INTEGER NOT NULL DEFAULT 1,presence_visible INTEGER NOT NULL DEFAULT 1,allow_invites INTEGER NOT NULL DEFAULT 1,seen_at INTEGER NOT NULL DEFAULT 0,game_id TEXT NOT NULL DEFAULT '',updated_at INTEGER NOT NULL DEFAULT 0)");
@@ -50,6 +51,8 @@ export class PocketSocial {
     this.sql.exec("CREATE TABLE IF NOT EXISTS blocks(blocker TEXT NOT NULL,blocked TEXT NOT NULL,PRIMARY KEY(blocker,blocked))");
     this.sql.exec("CREATE TABLE IF NOT EXISTS invites(id TEXT PRIMARY KEY,from_id TEXT NOT NULL,to_id TEXT NOT NULL,game_id TEXT NOT NULL,room_id TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL)");
     this.sql.exec("CREATE INDEX IF NOT EXISTS invites_receiver ON invites(to_id,status,created_at)");
+    // One persistent company per account: up to three chosen friends plus its owner.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS social_party(owner_id TEXT NOT NULL,friend_id TEXT NOT NULL,added_at INTEGER NOT NULL,PRIMARY KEY(owner_id,friend_id))");
     this.sql.exec("CREATE TABLE IF NOT EXISTS achievements(account_id TEXT NOT NULL,achievement_id TEXT NOT NULL,game_id TEXT NOT NULL,room_id TEXT NOT NULL,match_id TEXT NOT NULL,earned_at INTEGER NOT NULL,PRIMARY KEY(account_id,achievement_id))");
     this.sql.exec("CREATE INDEX IF NOT EXISTS achievements_by_account ON achievements(account_id,earned_at)");
   }
@@ -113,8 +116,31 @@ export class PocketSocial {
       toName:this.one('SELECT nickname FROM profiles WHERE id=?',r.to_id)?.nickname||'Игрок',
       roomId:r.room_id,gameId:r.game_id,status:r.status,createdAt:r.created_at,expiresAt:r.expires_at,incoming:r.to_id===id}));
   }
+  partyMembers(id){
+    return this.rows('SELECT friend_id AS id FROM social_party WHERE owner_id=? ORDER BY added_at ASC LIMIT 3',id)
+      .map(p=>p.id).filter(other=>this.isFriend(id,other));
+  }
+  async activeRooms(ids){
+    if(!this.env?.POCKETNET||!ids.length)return {};
+    try{
+      const hub=this.env.POCKETNET.get(this.env.POCKETNET.idFromName('pocket-works-global-v1'));
+      const result=await hub.fetch(new Request('https://internal.invalid/pocketnet/social-rooms',{
+        method:'POST',headers:{'content-type':'application/json','x-pw-internal':'1'},
+        body:JSON.stringify({accountIds:[...new Set(ids)].slice(0,240)})
+      }));
+      return result.ok?(await result.json()).rooms||{}:{};
+    }catch(error){console.error('pocket_social_room_discovery',String(error));return {}}
+  }
+  async friendSnapshot(id){
+    const relations=this.connections(id);
+    // Private rooms are exposed ONLY to verified friends with visible presence.
+    const visible=relations.friends.filter(p=>p.presenceVisible&&!this.blocked(id,p.id));
+    const active=await this.activeRooms(visible.map(p=>p.id));
+    relations.friends=relations.friends.map(p=>({...p,activity:active[p.id]||null}));
+    return relations;
+  }
   // Cheap active-menu revision: no portraits, drawings, or achievement inventories.
-  socialRevision(id){
+  async socialRevision(id){
     const now=Date.now(),limit=now-95000;
     const owner=this.one('SELECT nickname,avatar,updated_at FROM profiles WHERE id=?',id);
     const peers=this.rows(
@@ -131,7 +157,11 @@ export class PocketSocial {
       'WHERE (to_id=? OR from_id=?) AND expires_at>? ORDER BY created_at DESC LIMIT 50',id,id,now);
     const blocked=this.rows('SELECT blocked FROM blocks WHERE blocker=? ORDER BY blocked LIMIT 100',id);
     const awards=this.one('SELECT COUNT(*) AS count,MAX(earned_at) AS latest FROM achievements WHERE account_id=?',id);
-    const snapshot=JSON.stringify([owner,friends,invitations,blocked,awards]);
+    const friendIds=peers.filter(p=>p.status==='accepted'&&p.presence_visible&&
+      !this.blocked(id,p.peer_id)).map(p=>p.peer_id);
+    const roomStatuses=await this.activeRooms(friendIds);
+    const company=this.partyMembers(id);
+    const snapshot=JSON.stringify([owner,friends,invitations,blocked,awards,roomStatuses,company]);
     let h=2166136261;
     for(let i=0;i<snapshot.length;i++){h^=snapshot.charCodeAt(i);h=Math.imul(h,16777619)}
     return {revision:(h>>>0).toString(36)+':'+snapshot.length};
@@ -168,9 +198,11 @@ export class PocketSocial {
     try{
       if(path==='/pocket-social/achievements'&&request.method==='GET')
         return reply({achievements:this.rows('SELECT achievement_id AS id,earned_at AS earnedAt FROM achievements WHERE account_id=? ORDER BY earned_at DESC',id)});
-      if(path==='/pocket-social/sync'&&request.method==='GET')return reply(this.socialRevision(id));
+      if(path==='/pocket-social/sync'&&request.method==='GET')
+        return reply(await this.socialRevision(id));
       if(path==='/pocket-social/me'&&request.method==='GET')
-        return reply({profile:this.card(id,id),...this.connections(id),invites:this.invitations(id),blocked:this.blockedUsers(id)});
+        return reply({profile:this.card(id,id),...await this.friendSnapshot(id),
+          party:this.partyMembers(id),invites:this.invitations(id),blocked:this.blockedUsers(id)});
       if(path==='/pocket-social/user'&&request.method==='GET'){
         const other=url.searchParams.get('id')||'';
         if(!uuid.test(other))return reply({error:'invalid_account'},400);
@@ -178,6 +210,10 @@ export class PocketSocial {
         if(u?.id===other)this.seed(u);
         const card=this.card(other,id);
         if(!card)return reply({error:'user_not_found'},404);
+        if(card.friendship==='friends'&&card.presenceVisible){
+          const active=await this.activeRooms([other]);
+          card.activity=active[other]||null;
+        }
         return reply({profile:card.friendship==='blocked'?{...card,artwork:'',gameId:'',online:false}:card});
       }
       if(path==='/pocket-social/search'&&request.method==='GET'){
@@ -192,7 +228,7 @@ export class PocketSocial {
         return reply({users});
       }
       if(path==='/pocket-social/friends'&&request.method==='GET')
-        return reply({...this.connections(id),invites:this.invitations(id),blocked:this.blockedUsers(id)});
+        return reply({...await this.friendSnapshot(id),party:this.partyMembers(id),invites:this.invitations(id),blocked:this.blockedUsers(id)});
       if(path==='/pocket-social/inspect-invite'&&request.method==='GET'){
         const invite=this.one("SELECT * FROM invites WHERE id=? AND to_id=? AND status='pending' AND expires_at>?",url.searchParams.get('id')||'',id,Date.now());
         if(!invite||!this.isFriend(id,invite.from_id))return reply({error:'invite_expired'},404);
@@ -201,6 +237,44 @@ export class PocketSocial {
       if(request.method!=='POST')return reply({error:'not_found'},404);
       const body=await bodyJson(request);
       if(!body||typeof body!=='object')return reply({error:'invalid_request'},400);
+      if(path==='/pocket-social/join-friend'){
+        const other=body.id;
+        if(!uuid.test(other||'')||!this.isFriend(id,other))return reply({error:'friends_only'},403);
+        if(!this.one('SELECT presence_visible FROM profiles WHERE id=?',other)?.presence_visible)
+          return reply({error:'room_unavailable'},409);
+        const room=(await this.activeRooms([other]))[other];
+        if(!room?.joinable||!uuid.test(room.roomId)||!goodGame(room.gameId))
+          return reply({error:'room_unavailable'},409);
+        return reply({ok:true,url:'/apps/'+room.gameId+'/?room='+encodeURIComponent(room.roomId)});
+      }
+      if(path==='/pocket-social/party'){
+        if(!['add','remove'].includes(body.action)||!uuid.test(body.id||'')||body.id===id)
+          return reply({error:'invalid_request'},400);
+        if(body.action==='add'){
+          if(!this.isFriend(id,body.id))return reply({error:'friends_only'},403);
+          const current=this.partyMembers(id);
+          if(!current.includes(body.id)&&current.length>=3)return reply({error:'party_full'},409);
+          this.sql.exec('INSERT OR IGNORE INTO social_party(owner_id,friend_id,added_at) VALUES(?,?,?)',id,body.id,Date.now());
+        }else this.sql.exec('DELETE FROM social_party WHERE owner_id=? AND friend_id=?',id,body.id);
+        return reply({ok:true,party:this.partyMembers(id)});
+      }
+      if(path==='/pocket-social/invite-party'){
+        if(!goodGame(body.gameId)||!uuid.test(body.roomId||'')||
+           request.headers.get('x-pw-validated-room')!==body.roomId)
+          return reply({error:'invalid_room'},400);
+        if(!this.rate(id,'invite-party',5,60000))return reply({error:'rate_limited'},429);
+        let sent=0,skipped=0;
+        for(const other of this.partyMembers(id)){
+          if(!this.one('SELECT allow_invites FROM profiles WHERE id=?',other)?.allow_invites){skipped++;continue}
+          const existing=this.one("SELECT id FROM invites WHERE from_id=? AND to_id=? AND room_id=? AND status='pending' AND expires_at>?",id,other,body.roomId,Date.now());
+          if(existing){skipped++;continue}
+          const now=Date.now();
+          this.sql.exec("INSERT INTO invites(id,from_id,to_id,game_id,room_id,status,created_at,expires_at) VALUES(?,?,?,?,?,'pending',?,?)",
+            crypto.randomUUID(),id,other,body.gameId,body.roomId,now,now+30*60000);
+          sent++;
+        }
+        return reply({ok:true,sent,skipped});
+      }
       if(path==='/pocket-social/redeem'){
         if(!this.rate(id,'cosmetic-code',10,3600000))return reply({error:'rate_limited'},429);
         if(typeof body.code!=='string'||body.code.length>60)return reply({error:'invalid_code'},400);
@@ -303,7 +377,7 @@ export class PocketSocial {
       }
       if(path==='/pocket-social/invite'){
         const {toId,gameId,roomId}=body;
-        if(!uuid.test(toId||'')||toId===id||!['zamazka','blind-pals'].includes(gameId)||!uuid.test(roomId||'')||
+        if(!uuid.test(toId||'')||toId===id||!goodGame(gameId)||!uuid.test(roomId||'')||
           request.headers.get('x-pw-validated-room')!==roomId)return reply({error:'invalid_room'},400);
         if(!this.isFriend(id,toId))return reply({error:'friends_only'},403);
         if(!this.one('SELECT allow_invites FROM profiles WHERE id=?',toId)?.allow_invites)
