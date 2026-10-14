@@ -46,7 +46,7 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
   const interact=()=>{if(Date.now()<suppressClickUntil)return;const at=Number(node.dataset.slot);if(at===-1||at===1)shift(at);else if(at===0)onExhibit(order[center])};
   node.addEventListener('click',interact);
   node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();interact()}});
-  node.innerHTML='<div class="museum-slide-rim"><img loading="eager" decoding="async" alt=""></div>';
+  node.innerHTML='<div class="museum-slide-rim"><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-top"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-left"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-right"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-bottom"></span><img loading="eager" decoding="async" alt=""></div>';
   node.querySelector('img').addEventListener('load',()=>layout(node));
   applyArt(node,slot);nodes.set(slot,node);stage.append(node);
  }
