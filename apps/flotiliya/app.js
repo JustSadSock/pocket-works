@@ -366,61 +366,27 @@ function onPointerUp(e){
  try{canvas.releasePointerCapture?.(e.pointerId);}catch{}
  if(s){selectShip(s.id);if(game.stage===0&&instruction(s,0).route.length>0)notify('Путь готов. Вторая половина может быть абордажем.');}
 }
-function seaBackground(now){
- const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,'#335e64');grad.addColorStop(.55,'#23515c');grad.addColorStop(1,'#173d48');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
- const t=now*.0003;
- for(let i=0;i<210;i++){
-  const x=rand(i+13)*W,y=rand(i+431)*H;
-  ctx.beginPath();ctx.strokeStyle=i%4===0?'rgba(173,212,204,.15)':'rgba(13,51,66,.18)';ctx.lineWidth=1+rand(i+93)*1.4;
-  const off=Math.sin(t+i*.29)*2;ctx.moveTo(x+off,y);ctx.quadraticCurveTo(x+9,y-3+off,x+20+rand(i)*24,y);
-  ctx.stroke();
+function seaBackground(now){renderSea(ctx,now,game.islands||[],game.weather,W,H);}
+function drawShip(s,now,ghost=false){renderGalley(ctx,s,now,!ghost&&s.id===game.selected&&game.phase==='orders');}
+function drawOrders(s){
+ if(s.side!=='ally'||!s.alive)return;
+ for(let stage=0;stage<2;stage++){
+  const o=instruction(s,stage),route=o.route||[],t=game.ships.find(x=>x.id===o.targetId&&x.alive);
+  if(!route.length&&!t)continue;
+  const prev=instruction(s,0).route;
+  const start=stage===0?{x:s.x,y:s.y}:(prev.length?prev[prev.length-1]:{x:s.x+Math.cos(s.angle)*s.velocity*HALF,y:s.y+Math.sin(s.angle)*s.velocity*HALF});
+  ctx.save();ctx.strokeStyle=stage?'#e9a480':'#f4d6a1';ctx.fillStyle=ctx.strokeStyle;
+  ctx.lineWidth=s.id===game.selected?2.7:1.5;ctx.globalAlpha=s.id===game.selected?1:.42;
+  ctx.setLineDash(stage?[9,5]:[4,4]);ctx.beginPath();ctx.moveTo(start.x,start.y);
+  for(const p of route)ctx.lineTo(p.x,p.y);
+  if(t)ctx.lineTo(t.x,t.y);
+  ctx.stroke();ctx.setLineDash([]);
+  for(let i=0;i<route.length;i++){const p=route[i];ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,TAU);ctx.fill();}
+  const end=t||route[route.length-1];
+  if(end){ctx.beginPath();ctx.arc(end.x,end.y,8,0,TAU);ctx.stroke();
+    ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(String(stage+1),end.x,end.y-13);}
+  ctx.restore();
  }
- ctx.lineWidth=2;ctx.strokeStyle='rgba(225,220,185,.16)';
- for(let i=1;i<8;i++){const xx=i*W/8;ctx.beginPath();ctx.moveTo(xx,0);ctx.lineTo(xx,H);ctx.stroke();}
- for(let i=1;i<6;i++){const yy=i*H/6;ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(W,yy);ctx.stroke();}
- for(const reef of [{x:42,y:30,r:45},{x:936,y:565,r:72},{x:955,y:51,r:36},{x:33,y:564,r:52}]){
-  ctx.fillStyle='#4b7270';ctx.beginPath();ctx.ellipse(reef.x,reef.y,reef.r,reef.r*.57,.34,0,TAU);ctx.fill();
-  ctx.fillStyle='#b7ad8b';ctx.beginPath();ctx.ellipse(reef.x,reef.y,reef.r*.72,reef.r*.38,.34,0,TAU);ctx.fill();
- }
- // Compass: a functional, subtle north mark.
- ctx.save();ctx.translate(915,90);ctx.strokeStyle='rgba(223,205,160,.65)';ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(0,0,22,0,TAU);ctx.moveTo(0,-29);ctx.lineTo(0,28);ctx.moveTo(-28,0);ctx.lineTo(28,0);ctx.stroke();
- ctx.fillStyle='#dec79e';ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(-6,5);ctx.lineTo(0,0);ctx.closePath();ctx.fill();ctx.font='14px Georgia';ctx.textAlign='center';ctx.fillText('N',0,-34);ctx.restore();
-}
-function drawShip(s,now,ghost=false){
- ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.angle);
- const len=s.length,beam=s.beam,c=s.side==='enemy'?'#a85f4c':'#648b76',dark='#4c3a30';
- const bob=Math.sin(now*.0019+s.x*.03)*.6;ctx.translate(0,bob);
- ctx.fillStyle='rgba(6,31,40,.32)';ctx.beginPath();ctx.ellipse(-2,7,len*.55,beam*.95,0,0,TAU);ctx.fill();
- ctx.fillStyle='#533f32';ctx.strokeStyle='#372d27';ctx.lineWidth=2;
- ctx.beginPath();ctx.moveTo(len*.54,0);ctx.quadraticCurveTo(len*.36,beam*.76,-len*.34,beam*.70);ctx.quadraticCurveTo(-len*.58,0,-len*.34,-beam*.70);ctx.quadraticCurveTo(len*.36,-beam*.76,len*.54,0);ctx.closePath();ctx.fill();ctx.stroke();
- ctx.fillStyle='#9c7a56';ctx.beginPath();ctx.moveTo(len*.39,0);ctx.quadraticCurveTo(len*.25,beam*.52,-len*.32,beam*.52);ctx.lineTo(-len*.38,0);ctx.lineTo(-len*.32,-beam*.52);ctx.quadraticCurveTo(len*.25,-beam*.52,len*.39,0);ctx.fill();
- ctx.strokeStyle='rgba(70,52,40,.75)';ctx.lineWidth=1;for(let x=-len*.29;x<len*.26;x+=6){ctx.beginPath();ctx.moveTo(x,-beam*.45);ctx.lineTo(x,beam*.45);ctx.stroke();}
- // Visible oars; rotation is tied to the simulated phase.
- const oarMotion=Math.sin(now*.009+s.x)*2;
- ctx.strokeStyle='#bda57f';ctx.lineWidth=2;
- for(let x=-len*.23;x<len*.29;x+=10)for(const side of [-1,1]){
-  ctx.beginPath();ctx.moveTo(x,side*beam*.42);ctx.lineTo(x-4+oarMotion,side*(beam*.9+7));ctx.stroke();
- }
- ctx.strokeStyle='#e6d5b0';ctx.lineWidth=2;
- ctx.beginPath();ctx.moveTo(-len*.12,0);ctx.lineTo(len*.30,0);ctx.stroke();
- ctx.fillStyle=s.side==='enemy'?'#c57862':'#e4d6b4';
- ctx.beginPath();ctx.moveTo(len*.18,-beam*.6);ctx.lineTo(len*.08,beam*.6);ctx.lineTo(-len*.14,beam*.42);ctx.lineTo(-len*.19,-beam*.38);ctx.closePath();ctx.fill();
- ctx.strokeStyle='#79634a';ctx.lineWidth=1;ctx.stroke();
- ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(-len*.35,-2);ctx.lineTo(-len*.35,-beam*.38);ctx.lineTo(-len*.58,-beam*.38);ctx.lineTo(-len*.49,0);ctx.closePath();ctx.fill();
- ctx.fillStyle=dark;ctx.beginPath();ctx.arc(0,0,3.6,0,TAU);ctx.fill();
- ctx.restore();
- if(ghost)return;
- if(s.id===game.selected&&game.phase==='orders'){
-  ctx.strokeStyle='#e9d5a4';ctx.lineWidth=2.3;ctx.setLineDash([5,6]);ctx.beginPath();ctx.arc(s.x,s.y,36,0,TAU);ctx.stroke();ctx.setLineDash([]);
- }
- if(s.tx!==null&&game.phase==='orders'&&s.side==='ally'){
-  ctx.strokeStyle='rgba(235,218,171,.68)';ctx.lineWidth=1.8;ctx.setLineDash([5,7]);ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.tx,s.ty);ctx.stroke();ctx.setLineDash([]);
-  ctx.beginPath();ctx.arc(s.tx,s.ty,6,0,TAU);ctx.stroke();
- }
- ctx.textAlign='center';ctx.font='12px Georgia';ctx.fillStyle=s.side==='enemy'?'#f0d0c1':'#e6e4d3';
- ctx.shadowColor='#061c23';ctx.shadowBlur=5;ctx.fillText(s.name,s.x,s.y-31);ctx.shadowBlur=0;
- ctx.fillStyle='#1a3438';ctx.fillRect(s.x-25,s.y+29,50,4);
- ctx.fillStyle=s.side==='enemy'?'#bc7563':'#88ba9f';ctx.fillRect(s.x-25,s.y+29,50*clamp(s.hp/s.maxHp,0,1),4);
 }
 function render(now){
  const {dpr,w,h,scale,ox,oy}=view;if(!w||!h)return;
@@ -431,7 +397,7 @@ function render(now){
   for(const s of ghost)drawShip(s,now,true);
  }else{
   const ss=game.ships.filter(s=>s.alive);
-  for(const s of ss)drawShip(s,now);
+  for(const s of ss){drawShip(s,now);if(game.phase==='orders')drawOrders(s);}
   for(const p of game.particles){
    ctx.globalAlpha=clamp(p.life/.7,0,1);ctx.strokeStyle=p.color;ctx.fillStyle=p.color;
    ctx.lineWidth=p.arrow?2:1;ctx.beginPath();
