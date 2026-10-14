@@ -126,6 +126,7 @@ function testDistinctOrders(){
 function testTerritorialVictory(){
  const s=createGame(599,false),desired=s.sites.slice(0,DOMINATION_SITES);
  for(const z of desired)z.owner=0;
+ s.squads=[]; // isolate the territorial rule from autonomous recapture
  play(s,DOMINATION_SECONDS-16);
  assert.equal(s.phase,'battle','domination must require a sustained hold');
  assert.ok(s.progress[0]>DOMINATION_SECONDS-19,'territorial progress did not advance');
