@@ -1,0 +1,684 @@
+/* ЗАМАЗКА / AFTER HOURS
+   Experimental HOME only. Classic remains bit-for-bit unchanged.
+   Material hierarchy: plaster wall, walnut trim, a single framed artwork,
+   archival label, one tactile invitation. No ornamental borders on every item. */
+html[data-zamazka-appearance="new"] {
+  --after-wall:#282b29;
+  --after-deep:#171e1a;
+  --after-ivory:#eee5d5;
+  --after-warm:#dec5a2;
+  --after-metal:#958367;
+  --after-ease:cubic-bezier(.2,.73,.18,1);
+}
+html[data-zamazka-appearance="new"] .app-shell:has(#screen>.museum-home)>.top {
+  background:linear-gradient(180deg,#302f2b,#282a27)!important;
+  border-bottom:1px solid #77716475;
+  box-shadow:0 4px 18px #1015106b;
+}
+html[data-zamazka-appearance="new"] .app-shell:has(#screen>.museum-home) .top .wordmark {
+  font-family:Georgia,serif;
+  font-weight:400;
+  font-size:clamp(15px,1.3vw,18px);
+  letter-spacing:.16em;
+  color:#efe7dc;
+}
+html[data-zamazka-appearance="new"] .app-shell:has(#screen>.museum-home) .top .mark {
+  width:27px;height:27px;display:grid;place-items:center;
+  border:1px solid #90826b;
+  border-radius:4px;background:#383932;
+  box-shadow:inset 0 1px #ffffff18;
+}
+html[data-zamazka-appearance="new"] .app-shell:has(#screen>.museum-home) .top .nav-tools button {
+  border:1px solid #736f65!important;
+  border-radius:6px!important;
+  background:#3a3b36!important;
+  color:#e9ddcb!important;
+  box-shadow:0 2px 5px #11161163!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home {
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  min-height:100%;
+  height:100%;
+  overflow:hidden;
+  position:relative;
+  isolation:isolate;
+  border:0;
+  background:
+    radial-gradient(ellipse 70% 58% at 78% 19%,#aba18e14,transparent 78%),
+    linear-gradient(108deg,#2d302d 0%,#353530 44%,#242a27 100%)!important;
+  color:var(--after-ivory);
+}
+/* Architectural depth comes from light falling on wall junctions, not stripes. */
+html[data-zamazka-appearance="new"] #screen>.museum-home::before {
+  content:"";
+  position:absolute;z-index:0;inset:0;
+  opacity:1!important;mix-blend-mode:normal!important;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,#1219159e 0,transparent 3.1% 96.9%,#12191591 100%),
+    linear-gradient(180deg,#ffffff08 0,transparent 25% 89%,#101710ab 100%);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home::after {
+  content:"";position:absolute;z-index:0;inset:auto 0 0;
+  height:clamp(12px,2.5vh,25px);
+  display:block;
+  border-top:1px solid #a69a8063;
+  background:linear-gradient(#494a40,#252a26 23%,#151c18);
+  box-shadow:0 -8px 20px #10161150;
+  pointer-events:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .set-furniture {
+  pointer-events:none;z-index:0;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .set-foreground {
+  display:none!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline {
+  z-index:2;
+  position:relative;
+  text-align:left;
+  min-width:0;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline::before {
+  content:"";
+  display:block;
+  width:40px;height:2px;
+  margin-bottom:clamp(14px,2vh,27px);
+  background:#d7b98b;
+  opacity:.85;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline h1 {
+  color:#f2ede4;
+  font:400 clamp(58px,5.8vw,112px)/.91 Georgia,"Times New Roman",serif!important;
+  letter-spacing:-.068em;
+  text-shadow:0 2px 12px #1017119c;
+  text-wrap:balance;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline h1 em {
+  color:#d0b38d;
+  font-family:Georgia,serif;
+  font-style:italic;
+  font-weight:400;
+  text-shadow:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display {
+  z-index:1;
+  position:relative;
+  overflow:visible;
+  width:100%;
+  min-width:0;
+  max-height:none;
+  isolation:isolate;
+  margin:0;
+  touch-action:pan-y;
+  cursor:grab;
+  --museum-step:clamp(142px,20vw,315px);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display::before {
+  content:"";
+  position:absolute;z-index:-1!important;
+  inset:3% 4% 9%;
+  width:auto;height:auto;
+  border:1px solid #9d97824a;
+  border-radius:49% 49% 5px 5px / 20% 20% 5px 5px;
+  background:
+    radial-gradient(ellipse 53% 28% at 51% 8%,#dfc49b2a,transparent 95%),
+    linear-gradient(145deg,#333832,#222824);
+  box-shadow:
+    inset 0 25px 48px #111a1591,
+    inset 0 -8px 25px #11191383,
+    0 1px 0 #cfc4a222,
+    0 13px 30px #141c164d;
+  filter:none!important;
+  pointer-events:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display::after {
+  content:"";
+  position:absolute;z-index:0;
+  pointer-events:none;
+  left:11%;right:11%;top:12%;
+  height:42%;
+  background:radial-gradient(ellipse 58% 76% at 50% 5%,#d9bd8d20,transparent 88%);
+  opacity:.65;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage {
+  z-index:2;
+  inset:0 0 82px;
+  perspective:1050px;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide {
+  transition:
+    transform 420ms var(--after-ease),
+    opacity 330ms ease,
+    filter 390ms ease;
+  will-change:transform,opacity;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-rim {
+  padding:5px!important;
+  border:clamp(5px,.64vw,9px) solid #9f875f!important;
+  border-radius:1px;
+  outline:1px solid #453828;
+  background:linear-gradient(130deg,#c4ab82,#785f3c);
+  box-shadow:
+    inset 0 0 0 1px #e1d0ad,
+    inset 0 0 0 3px #514027,
+    0 2px 0 #322719,
+    0 17px 27px #07120dcc!important;
+  transform:translateZ(0);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-rim::before {
+  border:1px solid #d8c29c65;
+  inset:1px;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide img {
+  border:0;
+  background:#1a211b;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-1"] {
+  transform:translate(-50%,-50%) translateX(calc(-1 * var(--museum-step))) scale(.73) rotateY(5deg) rotate(-1.5deg);
+  filter:brightness(.84) saturate(.82);
+  opacity:.85;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="1"] {
+  transform:translate(-50%,-50%) translateX(var(--museum-step)) scale(.73) rotateY(-5deg) rotate(1.5deg);
+  filter:brightness(.84) saturate(.82);
+  opacity:.85;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="0"] {
+  transform:translate(-50%,-50%);
+  opacity:1;filter:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="0"]:hover .museum-slide-rim {
+  box-shadow:inset 0 0 0 1px #e1d0ad,inset 0 0 0 3px #514027,0 2px #322719,0 22px 38px #030e0cdd!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption {
+  z-index:5;
+  bottom:33px;
+  left:10%;right:10%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  padding:9px 18px 8px!important;
+  border:1px solid #b2a48770;
+  border-radius:1px;
+  background:linear-gradient(180deg,#e8e0d1,#d1c6b4)!important;
+  box-shadow:0 4px 0 #24271f,0 9px 18px #131a14ab;
+  color:#292c25;
+  text-shadow:none;
+  pointer-events:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption strong {
+  font:italic 18px/1.2 Georgia,serif;
+  color:#33362c;
+  max-width:100%;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption span {
+  font:11px/1.3 system-ui,sans-serif;
+  color:#716b5d;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel {
+  display:flex;
+  gap:clamp(25px,4vw,58px);
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  padding:0;
+  background:none;
+  border:0;
+  box-shadow:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel button {
+  display:grid;place-items:center;
+  min-width:44px;min-height:44px;
+  border:1px solid #a89a8070!important;
+  border-radius:3px;
+  background:#333832e0;
+  color:#e3d4ba;
+  font:25px/1 Georgia,serif;
+  box-shadow:0 3px 7px #0b140e80;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel button:hover {
+  background:#52594c;
+  border-color:#c2ad87!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-exhibit-number {
+  z-index:6;
+  position:absolute;
+  bottom:11px;
+  right:clamp(18px,5vw,45px);
+  background:none;
+  border:0;
+  padding:0;
+  color:#c8b69b;
+  font:italic 13px Georgia,serif;
+  letter-spacing:.05em;
+}
+/* Navigation occupies the remaining left column without boxing everything. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
+  z-index:3;
+  width:100%;
+  max-width:none;
+  min-width:0;
+  margin:0;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-persona {
+  display:grid;
+  grid-template-columns:53px minmax(0,1fr) 24px;
+  gap:12px;align-items:center;
+  min-height:62px;
+  margin-bottom:clamp(13px,2vh,22px);
+  padding:6px 2px 10px;
+  border:0!important;
+  border-bottom:1px solid #aaa58a53!important;
+  border-radius:0;
+  background:none!important;
+  box-shadow:none!important;
+  color:#f0e7d7;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-persona .personal-seal {
+  width:51px;height:48px;
+  border:1px solid #a49170;
+  border-radius:3px;
+  background:#dfd4c0;
+  box-shadow:0 3px 8px #111911aa;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .persona-caption strong {
+  font:italic clamp(17px,1.5vw,21px) Georgia,serif;
+  color:#f2e8d6;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .persona-caption small {
+  color:#adaf9f;
+  font:11px system-ui,sans-serif;
+  margin-top:4px;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .persona-edit {
+  color:#c1a77e;
+  font:20px Georgia,serif;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration {
+  display:grid;
+  grid-template-columns:clamp(39px,4vw,52px) minmax(0,1fr) 26px;
+  align-items:center;
+  text-align:left;
+  min-height:clamp(72px,9vh,93px);
+  width:100%;
+  padding:14px clamp(14px,1.6vw,25px);
+  border:1px solid #e7d7ba!important;
+  border-bottom:3px solid #9f8c71!important;
+  border-radius:4px!important;
+  clip-path:none!important;
+  background:linear-gradient(135deg,#ede4d4,#ddc8a8 100%)!important;
+  box-shadow:inset 0 1px #fffaf0,0 8px 16px #1019118f!important;
+  color:#2c2f28;
+  transition:transform 140ms var(--after-ease),box-shadow 140ms ease,background-color 170ms ease;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration::before {
+  display:none!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration strong {
+  font:400 clamp(19px,1.63vw,26px)/1.16 Georgia,serif!important;
+  color:#262c27;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration small {
+  font:11px/1.3 system-ui,sans-serif;
+  color:#786e5c;
+  opacity:1;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-emblem {
+  font-size:clamp(27px,2.8vw,37px);
+  font-weight:400;
+  color:#846d4f;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-arrow {
+  justify-self:end;font-size:23px;color:#6b6354;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration:hover {
+  background:linear-gradient(135deg,#f6ebd9,#e6d0ac)!important;
+  box-shadow:inset 0 1px #fffaf0,0 11px 24px #101911a9!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration:active {
+  transform:translateY(2px);
+  box-shadow:inset 0 2px 4px #91795555,0 4px 10px #1019116a!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;margin-top:10px;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button {
+  min-width:0;
+  min-height:clamp(49px,6vh,58px);
+  padding:9px 8px;
+  border:1px solid #747668!important;
+  border-radius:4px;
+  background:#42463f!important;
+  color:#eee5d6;
+  font:600 clamp(11px,1.0vw,14px)/1.2 system-ui,sans-serif;
+  box-shadow:inset 0 1px #ffffff0d,0 3px 8px #121b1590!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button span {
+  font-size:17px;color:#bfaa87;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button:hover {
+  background:#565a50!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {
+  margin-top:clamp(10px,2vh,19px);
+  padding:9px 0 0;
+  gap:clamp(8px,1.8vw,18px);
+  border-top:1px solid #948b7555;
+  justify-content:flex-start;
+  flex-wrap:wrap;
+  background:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer button,
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer .cloud-control {
+  min-height:35px;
+  flex:none;
+  padding:6px 1px;
+  background:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:#c7c1b3!important;
+  font:500 11px/1.4 system-ui,sans-serif!important;
+  letter-spacing:0!important;
+  text-align:left;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer button:hover {
+  color:#f8ead4!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer button span {
+  display:inline-block;border:0;border-radius:0;
+  padding:0 2px;color:#bda682;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home button:focus-visible,
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide:focus-visible {
+  outline:3px solid #e3ba7c;
+  outline-offset:3px;
+}
+/* Desktop: two intentional visual planes, one large exhibition. */
+@media(min-width:900px){
+ html[data-zamazka-appearance="new"] .screen:has(>.museum-home) {
+   overflow:hidden;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home {
+   display:grid!important;
+   grid-template-columns:minmax(330px,.79fr) minmax(0,1.21fr);
+   grid-template-rows:minmax(0,1fr) auto;
+   column-gap:clamp(30px,5vw,98px);
+   row-gap:clamp(15px,2.1vh,30px);
+   align-content:center;
+   align-items:end;
+   padding:clamp(22px,5vh,67px) clamp(32px,5vw,105px);
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline {
+   grid-column:1;grid-row:1;
+   align-self:end;justify-self:stretch;
+   max-width:none;width:100%;margin:0;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
+   grid-column:1;grid-row:2;align-self:start;
+   justify-self:stretch;
+   width:100%;max-width:600px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display {
+   grid-column:2;grid-row:1/3;
+   justify-self:stretch;align-self:stretch;
+   height:clamp(440px,calc(100dvh - 168px),790px);
+   min-height:0;
+   max-height:none;
+   width:100%;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption {
+   max-width:440px;
+   margin-inline:auto;
+ }
+}
+/* Narrow desktop and tablets: maintain home functionality rather than clipping. */
+@media(min-width:700px) and (max-width:899px){
+ html[data-zamazka-appearance="new"] #screen>.museum-home {
+   display:grid!important;
+   grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);
+   grid-template-rows:auto 1fr;
+   gap:15px 20px;
+   height:100%;
+   padding:21px 24px;
+   align-items:center;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline {
+   grid-column:1;grid-row:1;margin:0;max-width:none;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline h1 {
+   font-size:clamp(40px,5.4vw,62px)!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
+   grid-column:1;grid-row:2;align-self:start;width:100%;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display {
+   grid-column:2;grid-row:1/3;
+   height:clamp(340px,70dvh,590px);
+   min-height:0;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption {
+   bottom:37px;
+   left:1%;right:1%;padding:6px 7px!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption strong{font-size:14px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-persona{min-height:51px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration{min-height:68px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {gap:7px}
+}
+/* Phone is its own composition: title, painting, personal stamp, play, quiet links. */
+@media(max-width:699px){
+ html[data-zamazka-appearance="new"] .screen:has(>.museum-home) {
+   overflow:hidden!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home {
+   display:flex!important;
+   flex-direction:column;
+   min-width:0;
+   height:100%!important;
+   min-height:0!important;
+   padding:clamp(7px,1.35vh,12px) 13px calc(9px + env(safe-area-inset-bottom));
+   overflow:hidden!important;
+   gap:0;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline {
+   flex:none;
+   width:100%;
+   text-align:center;
+   margin:0 auto 1px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline::before{
+   margin:0 auto 7px;width:24px;height:1px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline h1 {
+   font-size:clamp(34px,10.8vw,51px)!important;
+   line-height:.88!important;
+   letter-spacing:-.064em;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display {
+   flex:1 1 auto;
+   min-height:135px;
+   max-height:none;
+   height:auto;
+   margin:3px -13px 7px;
+   width:calc(100% + 26px);
+   --museum-step:clamp(112px,37vw,176px);
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display::before {
+   inset:3% 7% 13%;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage {
+   inset:0 0 73px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-rim {
+   padding:3px!important;
+   border-width:5px!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-1"] {
+   transform:translate(-50%,-50%) translateX(calc(-1 * var(--museum-step))) scale(.62) rotate(-1deg);
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="1"] {
+   transform:translate(-50%,-50%) translateX(var(--museum-step)) scale(.62) rotate(1deg);
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption {
+   bottom:34px;
+   left:16%;right:16%;
+   padding:5px 8px!important;
+   gap:1px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption strong {
+   font-size:clamp(12px,3.7vw,16px);
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption span {
+   font-size:10px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel {
+   bottom:0;gap:24px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel button {
+   min-width:44px;min-height:44px;
+   font-size:23px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-exhibit-number {
+   right:12px;bottom:14px;font-size:11px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
+   flex:none;
+   width:100%;
+   max-width:none;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-persona {
+   min-height:46px;
+   grid-template-columns:42px minmax(0,1fr) 21px;
+   gap:10px;
+   padding:1px 0 7px;
+   margin-bottom:8px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-persona .personal-seal {
+   width:40px;height:37px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .persona-caption strong {
+   font-size:16px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .persona-caption small {
+   font-size:10px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration {
+   min-height:clamp(58px,8vh,72px);
+   padding:9px 11px;
+   grid-template-columns:37px 1fr 21px;
+   gap:7px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration strong {
+   font-size:19px!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration small {
+   font-size:10px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-emblem {
+   font-size:28px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower {
+   gap:7px;margin-top:7px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button {
+   min-height:45px;
+   padding:8px 5px;
+   font-size:11px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {
+   display:flex;
+   flex-wrap:nowrap!important;
+   gap:12px!important;
+   margin-top:8px;
+   padding-top:3px;
+   overflow-x:auto;overflow-y:hidden;
+   scrollbar-width:none;
+   -webkit-overflow-scrolling:touch;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer button,
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer .cloud-control {
+   min-height:36px!important;
+   white-space:nowrap;
+   padding:5px 1px;
+   font-size:10px!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer::-webkit-scrollbar{display:none}
+}
+/* A short phone can scroll. Touch targets never shrink below 44px. */
+@media(max-width:699px) and (max-height:650px){
+ html[data-zamazka-appearance="new"] .screen:has(>.museum-home) {
+   overflow-y:auto!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home {
+   height:auto!important;min-height:100%!important;overflow:visible!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline h1 {
+   font-size:clamp(30px,9.5vw,42px)!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display {
+   flex:none;height:220px;min-height:195px;max-height:245px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-persona{min-height:44px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration{min-height:56px}
+}
+/* Landscape phone: horizontal gallery with controls available alongside it. */
+@media(max-height:540px) and (orientation:landscape){
+ html[data-zamazka-appearance="new"] .screen:has(>.museum-home){overflow-y:auto!important}
+ html[data-zamazka-appearance="new"] #screen>.museum-home {
+   display:grid!important;
+   grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);
+   grid-template-rows:auto 1fr;
+   gap:7px 17px;
+   height:auto!important;
+   min-height:100%!important;
+   overflow:visible!important;
+   padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline{
+   grid-column:1;grid-row:1;text-align:left;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline::before{margin:0 0 7px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-headline h1{font-size:clamp(29px,4vw,42px)!important}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control{
+   grid-column:1;grid-row:2;align-self:start;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display{
+   grid-column:2;grid-row:1/3;
+   height:clamp(220px,calc(100dvh - 90px),390px);
+   min-height:220px;max-height:none;
+   width:100%;margin:0;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display::before{inset:2% 5% 8%}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage{inset:0 0 58px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption {
+   bottom:29px;left:5%;right:5%;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button {min-height:44px}
+}
+/* Motion applies to real objects only. Reduced-motion removes all exhibition choreography. */
+@media(prefers-reduced-motion:reduce){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide,
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration,
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel button {
+   animation:none!important;transition:none!important;
+ }
+}
+
+/* The original small pedestal remains a faint architectural joint rather
+   than an extra bar competing with the painting's museum label. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-plinth {
+  z-index:0;left:18%;width:64%;
+  bottom:60px;height:5px;
+  opacity:.42;
+  background:linear-gradient(180deg,#9c8a6c,#353d33);
+  border-color:#b4a08060;
+  box-shadow:0 4px 13px #0d1711aa;
+}
+@media(max-width:699px){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-plinth {display:none}
+}
