@@ -199,7 +199,7 @@ function bot(s,dt){
  s.botClock-=dt;
  if(s.botClock>0)return;
  const skill=s.botSkill||'regular';
- const rates={casual:{interval:17,cap:6,commit:38,smart:.7},regular:{interval:12,cap:8,commit:28,smart:1},veteran:{interval:9,cap:10,commit:22,smart:1.22}};
+ const rates={casual:{interval:17,cap:6,commit:38,smart:.7},regular:{interval:15,cap:7,commit:31,smart:.9},veteran:{interval:9,cap:10,commit:22,smart:1.22}};
  const cfg=rates[skill]||rates.regular;
  s.botClock=cfg.interval+(rng(s)-.5)*3.5;
  const side=1,enemy=0,p=s.players[side],home=nearHome(side),foe=nearHome(enemy);
@@ -233,7 +233,7 @@ function bot(s,dt){
   if(centerHeld&&friendly.length>=6&&s.time>140){
    choices.push({mode:'raid',x:foe.x,y:foe.y,site:null,score:56+Math.min(35,ours.length*6)+Math.max(0,3-hostile.filter(u=>distance(u,foe)<110).length)*7-distance(origin,foe)*.09-(issued.some(a=>a.site===null)?40:0),why:'Осада замка'});
   }
-  if(skill!=='casual'&&ours.length>=2&&p.food>60){
+  if(skill!=='casual'&&(skill==='veteran'||s.time>190)&&ours.length>=2&&p.food>60){
    const prey=theirs.filter(z=>z.type==='mine'||z.type==='wood'||z.type==='farm').sort((a,b)=>distance(origin,a)-distance(origin,b))[0];
    if(prey)choices.push({mode:'raid',x:prey.x,y:prey.y,site:prey.id,score:(o.id===3?65:45)+(p.gold<80?10:0)-distance(origin,prey)*.08,why:'Рейд '+prey.name});
   }
@@ -254,7 +254,7 @@ function bot(s,dt){
   const type=p.gold>=104&&p.wood>=24&&knights<Math.ceil(cfg.cap*.40)?'knight':p.gold>=70&&p.wood>=16&&bows<Math.ceil(cfg.cap*.36)?'bow':'levy';
   action(s,side,{kind:'recruit',type});
  }
- if(p.gold>140&&p.wood>110&&skill!=='casual'){
+ if(p.gold>140&&p.wood>110&&(skill==='veteran'||s.time>220)){
   const z=ours.filter(z=>z.fort<2).sort((a,b)=>Math.abs(a.x-480)-Math.abs(b.x-480))[0];
   if(z)action(s,side,{kind:'fort',site:z.id});
  }
