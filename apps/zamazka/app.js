@@ -19,7 +19,7 @@ import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.36.4',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.37.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -78,15 +78,18 @@ function imageTag(src,alt='Личный знак'){
    ?'<img src="'+esc(src)+'" alt="'+esc(alt)+'" loading="eager">'
    :'<span class="empty-seal" aria-hidden="true">✎</span>';
 }
-function mySealMarkup(){return '<span class="personal-seal">'+imageTag(personalEmblem.image)+'</span>'}
+function pocketPortrait(identity=pocketIdentity){
+ return pocketAvatarMarkup(identity?.artwork||identity?.avatar,{accountId:identity?.id||''});
+}
 function memberSeal(p){
- const source=view?.emblems?.[p.id]||(p.id===me?.id?personalEmblem.image:'');
- return '<span class="member-seal">'+imageTag(source,'Личный знак '+p.name)+'</span>';
+ const verified=Boolean(p?.verified&&p?.accountId);
+ return '<span class="member-seal member-avatar'+(verified?' is-verified':'')+'">'+
+   (verified?pocketAvatarMarkup(p.avatar,{accountId:p.accountId}):'<span class="guest-initial" aria-hidden="true">'+esc(String(p?.name||'?').charAt(0).toLocaleUpperCase())+'</span>')+'</span>';
 }
 function syncIdentity(){
  const btn=document.querySelector('#profileBtn');
- if(btn){btn.innerHTML=imageTag(personalEmblem.image);btn.title='Редактировать свой знак';}
- screen.querySelectorAll('[data-personal-seal]').forEach(el=>el.innerHTML=imageTag(personalEmblem.image));
+ if(btn){btn.innerHTML=pocketPortrait();btn.title='Профиль Pocket ID';}
+ screen.querySelectorAll('[data-pocket-identity]').forEach(el=>el.innerHTML=pocketPortrait());
 }
 function shiftMuseum(step){if(page!=='home'||!museumMotion)return;museumMotion.shift(step);sound('frame',true)}
 function commonsHtml(leader){
@@ -352,17 +355,16 @@ function home(skipLeave=false){
  view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;persistVote();connectionStatus('off');
  change('<section class="museum-home">'+
   
-  '<div class="museum-headline"><h1>Искусство<br><em>подделки.</em></h1></div>'+
+  '<div class="museum-headline"><h1>Подделай<br><em>шедевр.</em></h1></div>'+
   '<div class="museum-display">'+
     '<div class="museum-luminaire" aria-hidden="true"><span class="museum-luminaire-stem"></span><span class="museum-luminaire-housing"></span><span class="museum-luminaire-lens"></span></div>'+
     '<div class="museum-stage" id="museumStage" aria-label="Перелистываемая музейная экспозиция"></div>'+
     '<div class="museum-stage-caption" id="museumCaption" aria-live="polite"><strong>Девушка с жемчужной серёжкой</strong><span>Ян Вермеер · ок. 1665</span></div>'+
     '<div class="museum-wheel"><button data-action="museum-prev" aria-label="Предыдущая картина">‹</button><button data-action="museum-next" aria-label="Следующая картина">›</button></div><span class="museum-exhibit-number">01 / '+museumOrder.length+'</span>'+
   '</div>'+
-  '<div class="museum-control">'+'<div class="museum-console-structure" aria-hidden="true"><span class="museum-console-deck"></span><span class="museum-console-rail museum-console-rail-left"></span><span class="museum-console-rail museum-console-rail-right"></span><span class="museum-console-foot"></span></div>'+'<button class="museum-persona" data-action="emblem" aria-label="Нарисовать или изменить свой личный знак"><span data-personal-seal class="personal-seal">'+imageTag(personalEmblem.image)+'</span><span class="persona-caption"><strong>'+esc(gameName())+'</strong><small>Изменить знак</small></span><span class="persona-edit" aria-hidden="true">✎</span></button>'+
-    '<button class="start-restoration" id="primary-action" data-action="create"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Играть с друзьями</strong><small>Создать совместную выставку</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
+  '<div class="museum-control">'+'<button class="start-restoration" id="primary-action" data-action="create"><span class="start-emblem" aria-hidden="true">✳</span><span><strong>Играть с друзьями</strong><small>Создать совместную выставку</small></span><span class="start-arrow" aria-hidden="true">↗</span></button>'+
     '<div class="museum-lower"><button data-action="practice"><span>✳</span> Одиночная реставрация</button><button data-action="join"><span>↗</span> Ввести код</button></div>'+
-    '<div class="museum-footer"><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">☁ Облако</button>'+
+    '<div class="museum-footer"><a class="home-pocket-identity" href="'+pocketIdProfileUrl+'"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(gameName())+'</strong><small>Профиль Pocket ID</small></span></a><button data-action="collection">Мой архив <span>'+String(saved.length).padStart(2,'0')+'</span></button><button data-action="achievements">Достижения</button><button data-action="cloud-sync" class="cloud-control">Синхронизация</button>'+
     ((storedPractice||sessionStorage.getItem(PRACTICE_KEY)||localStorage.getItem(PRACTICE_KEY))?'<button data-action="resume">ПРОДОЛЖИТЬ ЧЕРНОВИК ↗</button>':'')+'</div>'+
   '</div></section>','home');
  museumMotion=createMuseumMotion(screen.querySelector('#museumStage'),{order:museumOrder,url:artworkURL,arts:ARTS,onExhibit(id){sound('frame',true);inspect(id,true)},onCenter(id){const caption=screen.querySelector('#museumCaption');if(caption)caption.innerHTML='<strong>'+esc(ARTS[id].title)+'</strong><span>'+esc(ARTS[id].artist)+' · '+esc(ARTS[id].date||'')+'</span>';const number=screen.querySelector('.museum-exhibit-number');if(number)number.textContent=String(museumOrder.indexOf(id)+1).padStart(2,'0')+' / '+String(museumOrder.length).padStart(2,'0')}});
@@ -372,15 +374,18 @@ function home(skipLeave=false){
 }
 function setup(mode,error='',roomValue=invitedRoom){
  const creating=mode==='create';
+ const display=creating?'Создать комнату':'Присоединиться';
+ const identity='<a class="entry-profile" href="'+pocketIdProfileUrl+'"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(gameName())+'</strong><small>'+(isPocketMember()?'Профиль Pocket ID':'Гостевой игрок · открыть Pocket ID')+'</small></span><span aria-hidden="true">↗</span></a>';
  change('<section class="page lobby-entry">'+
-  '<div class="entry-heading"><div><h2>'+(creating?'Создать комнату':'Войти по коду')+'</h2></div><div class="entry-stamp" aria-hidden="true">З<br>М</div></div>'+
-  '<div class="entry-identity"><button class="identity-seal-button" data-action="emblem" aria-label="Нарисовать свой знак">'+mySealMarkup()+'<span>✎</span></button><div class="identity-label"><strong>Твой знак</strong></div></div>'+ '<label class="field" for="who">Твой ник</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Имя реставратора" value="'+esc(gameName())+'" '+(isPocketMember()?'readonly aria-readonly="true"':'')+'>'+
-   '<p class="hint pw-room-identity">'+(isPocketMember()?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' Ник подтверждён Pocket ID · <a href="'+pocketIdProfileUrl+'">Изменить профиль</a>':'Гостевой режим · <a href="'+pocketIdProfileUrl+'">Войти через Pocket ID</a>')+'</p>'+
-  (creating?'':
-   '<label class="field" for="room">Код комнаты или ссылка</label><input class="input room-entry-input" id="room" maxlength="250" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Например, A3F92C10" value="'+esc(roomValue)+'"><p class="hint">Восемь символов. Ссылку тоже можно вставить целиком.</p>')+
-  (error?'<div class="notice entry-error" role="alert">'+esc(error)+'</div>':'')+
-  '<div class="subtle-rule"></div><div class="stack"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+(creating?'Создать комнату ↗':'Присоединиться ↗')+'</button><button class="btn ghost" data-action="menu">В главное меню</button></div></section>','setup');
+  '<header class="entry-heading"><span class="section-label">ИГРА С ДРУЗЬЯМИ</span><h2>'+display+'</h2></header>'+
+  '<div class="entry-content">'+identity+
+   '<div class="entry-fields"><label class="field" for="who">Имя игрока</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Как тебя зовут?" value="'+esc(gameName())+'" '+(isPocketMember()?'readonly aria-readonly="true"':'')+'>'+
+   (creating?'':'<label class="field" for="room">Код или ссылка на комнату</label><input class="input room-entry-input" id="room" maxlength="250" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Код из восьми символов" value="'+esc(roomValue)+'">')+
+   (error?'<div class="notice entry-error" role="alert">'+esc(error)+'</div>':'')+
+   '</div><div class="entry-actions"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+display+' ↗</button><button class="btn ghost" data-action="menu">Назад</button></div>'+
+  '</div></section>','setup');
 }
+
 let roundsChoice=3;
 let drawingSecondsChoice=160;
 const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[600,'10 минут'],[0,'Без ограничения']];
@@ -1063,7 +1068,6 @@ function settings(){
 }
 
 document.querySelector('#settingsBtn').addEventListener('click',settings);
-document.querySelector('#profileBtn')?.addEventListener('click',editEmblem);
 syncIdentity();
 screen.addEventListener('click',e=>{
  const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub],[data-review-open]');if(!b)return;
@@ -1078,8 +1082,7 @@ screen.addEventListener('click',e=>{
  const action=b.dataset.action;
  if(action!=='museum-next'&&action!=='museum-prev')sound(['submit','vote','advance','next','continue','start'].includes(action)?'confirm':['collection','resume','menu','skip'].includes(action)?'paper':'press',true);
  if(action==='create'||action==='join')setup(action);
- else if(action==='emblem')editEmblem();
- else if(action==='museum-next')shiftMuseum(1);
+  else if(action==='museum-next')shiftMuseum(1);
  else if(action==='museum-prev')shiftMuseum(-1);
  else if(action==='preview-previous')moveMobileGallery(-1);
  else if(action==='preview-next')moveMobileGallery(1);
