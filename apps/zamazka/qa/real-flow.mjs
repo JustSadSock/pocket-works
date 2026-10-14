@@ -92,7 +92,7 @@ try{
       frameMaterial:getComputedStyle(el.querySelector('.museum-slide-rim')).backgroundColor};
   });
   assert.equal(constructed.panel,'block','Workbench must have real constructed planes');
-  assert.equal(constructed.lamp,'block','Gallery lighting must have a physical source');
+  assert.equal(constructed.lamp,mobile?'none':'block','Gallery light source must clear artwork on narrow phones');
   assert.equal(constructed.visibleFacets,4,'Painting should have four real bevel faces');
 
   const homeGeometry=await page.evaluate(()=>{
