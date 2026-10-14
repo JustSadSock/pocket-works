@@ -214,7 +214,26 @@ html,body{background:#242822}
  color:#49382b!important;text-shadow:none!important;
 }
 .screen > .reveal-phase .unveil-control input[type="range"] {
+ flex:1;min-width:80px;min-height:36px;
+ -webkit-appearance:none;appearance:none;
  accent-color:#94704c!important;
+ background:transparent!important;cursor:ew-resize;
+}
+.screen > .reveal-phase .unveil-control input[type="range"]::-webkit-slider-runnable-track {
+ height:4px;background:#ac9578;border:0;border-radius:4px;
+}
+.screen > .reveal-phase .unveil-control input[type="range"]::-webkit-slider-thumb {
+ -webkit-appearance:none;appearance:none;
+ height:21px;width:21px;margin-top:-9px;
+ border:3px solid #e8d7bc;border-radius:50%;
+ background:#75583d;box-shadow:0 2px 5px #30261c55;
+}
+.screen > .reveal-phase .unveil-control input[type="range"]::-moz-range-track {
+ height:4px;background:#ac9578;border:0;border-radius:4px;
+}
+.screen > .reveal-phase .unveil-control input[type="range"]::-moz-range-thumb {
+ height:15px;width:15px;border:3px solid #e8d7bc;border-radius:50%;
+ background:#75583d;box-shadow:0 2px 5px #30261c55;
 }
 .screen > .reveal-phase .reveal-main > .hint {color:#75604d!important}
 
