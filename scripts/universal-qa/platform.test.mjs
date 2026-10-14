@@ -43,6 +43,7 @@ test('agent-owned deep profiles fan out multiple seeds with no shell command', (
   try {
     manifest(f);
     const smoke = resolveTasks(f.root, { apps: ['test-app'], profile: 'smoke' });
+    assert.equal(smoke[0].install, false);
     assert.deepEqual(smoke.map(t => t.suite), ['regression', 'visual']);
     const full = resolveTasks(f.root, { apps: ['test-app'], profile: 'deep' });
     assert.equal(full.length, 6);
