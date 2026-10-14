@@ -322,18 +322,49 @@ function resize(){
  view.ox=(rect.width-W*view.scale)/2;view.oy=(rect.height-H*view.scale)/2;
  canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
 }
-function pick(event){
+function pointFromEvent(event){
+ const r=canvas.getBoundingClientRect();const x=(event.clientX-r.left-view.ox)/view.scale,y=(event.clientY-r.top-view.oy)/view.scale;
+ if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+ return {x:clamp(x,32,W-32),y:clamp(y,32,H-32)};
+}
+function hitShip(p){
+ return game.ships.filter(s=>s.alive).map(s=>({s,d:distance(s,p)})).sort((a,b)=>a.d-b.d).find(o=>o.d<Math.max(31,21/view.scale))?.s||null;
+}
+function addRoutePoint(s,point){
+ if(!s||withinIsland(point.x,point.y,.95))return;
+ const order=instruction(s,game.stage),route=order.route;
+ if(!route.length||distance(route[route.length-1],point)>13)route.push({x:point.x,y:point.y});
+ if(route.length>32)route.splice(1,1);
+}
+function onPointerDown(e){
  if(game.phase!=='orders')return;
- const r=canvas.getBoundingClientRect(),x=(event.clientX-r.left-view.ox)/view.scale,y=(event.clientY-r.top-view.oy)/view.scale;
- if(x<0||x>W||y<0||y>H)return;
- const candidate=game.ships.filter(s=>s.alive).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y))[0];
- if(candidate&&Math.hypot(candidate.x-x,candidate.y-y)<32){
-  if(candidate.side==='ally'){selectShip(candidate.id);return;}
-  if(game.selected){const s=game.ships.find(v=>v.id===game.selected);s.targetId=candidate.id;s.tx=null;s.ty=null;selectShip(s.id);notify('Цель: '+candidate.name);}
-  return;
+ const p=pointFromEvent(e);if(!p)return;
+ const chosen=hitShip(p);
+ if(chosen){
+  if(chosen.side==='ally'){selectShip(chosen.id);return;}
+  const s=game.ships.find(x=>x.id===game.selected&&x.alive);
+  if(s){const order=instruction(s,game.stage);order.targetId=chosen.id;order.route=[];if(order.kind==='hold')order.kind='board';selectShip(s.id);notify('Цель назначена для выбранной половины');}return;
  }
- const s=game.ships.find(v=>v.id===game.selected&&v.alive);
- if(s){s.tx=clamp(x,32,W-32);s.ty=clamp(y,32,H-32);s.targetId=null;selectShip(s.id);}
+ const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;
+ const order=instruction(s,game.stage);order.targetId=null;order.route=[];
+ if(withinIsland(p.x,p.y)){notify('Скалы непроходимы — проведи путь вокруг острова');return;}
+ addRoutePoint(s,p);game.drag={id:s.id,pointerId:e.pointerId,start:p,length:0};
+ try{canvas.setPointerCapture?.(e.pointerId);}catch{}
+ selectShip(s.id);
+}
+function onPointerMove(e){
+ if(game.phase!=='orders'||!game.drag||game.drag.pointerId!==e.pointerId)return;
+ const p=pointFromEvent(e);if(!p)return;
+ const s=game.ships.find(x=>x.id===game.drag.id&&x.alive);if(!s)return;
+ if(distance(game.drag.start,p)>6)game.drag.length++;
+ addRoutePoint(s,p);$('routeCounter').textContent=readoutRoute(instruction(s,game.stage));
+}
+function onPointerUp(e){
+ if(!game.drag||game.drag.pointerId!==e.pointerId)return;
+ const s=game.ships.find(x=>x.id===game.drag.id&&x.alive);
+ game.drag=null;
+ try{canvas.releasePointerCapture?.(e.pointerId);}catch{}
+ if(s){selectShip(s.id);if(game.stage===0&&instruction(s,0).route.length>0)notify('Путь готов. Вторая половина может быть абордажем.');}
 }
 function seaBackground(now){
  const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,'#335e64');grad.addColorStop(.55,'#23515c');grad.addColorStop(1,'#173d48');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
@@ -420,10 +451,15 @@ function loop(now){
  }
  render(now);requestAnimationFrame(loop);
 }
-canvas.addEventListener('pointerdown',pick);
+canvas.addEventListener('pointerdown',onPointerDown);
+canvas.addEventListener('pointermove',onPointerMove);
+canvas.addEventListener('pointerup',onPointerUp);
+canvas.addEventListener('pointercancel',onPointerUp);
+document.querySelectorAll('[data-stage]').forEach(btn=>btn.addEventListener('click',()=>setStage(Number(btn.dataset.stage))));
+$('clearRouteBtn').addEventListener('click',()=>{const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;const o=instruction(s,game.stage);o.route=[];o.targetId=null;selectShip(s.id);});
 document.querySelectorAll('[data-order]').forEach(btn=>btn.addEventListener('click',()=>{
  const s=game.ships.find(s=>s.id===game.selected&&s.alive);
- if(s&&game.phase==='orders'){s.order=btn.dataset.order;selectShip(s.id);}
+ if(s&&game.phase==='orders'){instruction(s,game.stage).kind=btn.dataset.order;selectShip(s.id);}
 }));
 $('sailBtn').addEventListener('click',startBattle);
 $('resolveBtn').addEventListener('click',startResolve);
