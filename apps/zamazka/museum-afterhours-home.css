@@ -374,3 +374,195 @@ html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide:focus-v
  html[data-zamazka-appearance="new"] #screen > .museum-home .start-restoration,
  html[data-zamazka-appearance="new"] #screen > .museum-home .museum-wheel button {animation:none!important;transition:none!important}
 }
+
+
+/* NIGHT GALLERY / CARPENTRY
+   Separate parts represent actual joint planes; not a generic bevel filter.
+   Source pictures and all game controls remain real DOM nodes. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
+ isolation:isolate;
+ padding:clamp(13px,1.4vw,20px) clamp(13px,1.7vw,23px) 19px;
+ border:1px solid #79614b;
+ border-bottom:0;
+ border-radius:1px;
+ background:#302b24;
+ box-shadow:0 13px 28px #0a120cd4,0 2px 0 #a38b69 inset;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-structure {
+ position:absolute;inset:0;
+ z-index:-1;pointer-events:none;overflow:hidden;
+ background:linear-gradient(106deg,#493727 0%,#48382a 12%,#3a2f25 54%,#342a22 100%);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-deck {
+ position:absolute;inset:0 0 auto;height:9px;
+ background:linear-gradient(#aa8964 0%,#715338 25%,#3e3024 100%);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-rail {
+ position:absolute;top:9px;bottom:0;width:11px;
+ background:#4b3827;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-rail-left {
+ left:0;border-right:2px solid #281f17;
+ box-shadow:inset 3px 0 #876a4c;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-rail-right {
+ right:0;border-left:2px solid #241c16;
+ box-shadow:inset -2px 0 #74553a;
+ background:#3b2b21;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-foot {
+ position:absolute;bottom:0;left:0;right:0;height:11px;
+ border-top:2px solid #8e7050;
+ background:linear-gradient(#39291d,#231c17);
+ box-shadow:0 -2px 0 #201a15;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control > .museum-persona {
+ display:grid;position:relative;z-index:1;
+ border:1px solid #705a44!important;
+ border-bottom:1px solid #4a382a!important;
+ background:#382d23!important;
+ padding:6px 10px!important;margin:0 0 12px!important;
+ box-shadow:inset 0 1px #bba17c33,0 3px 5px #201a14a6!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .persona-caption strong {color:#efe4d2}
+html[data-zamazka-appearance="new"] #screen>.museum-home .persona-caption small {color:#b8a993}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration {
+ min-height:clamp(80px,9.2vh,102px);
+ border:1px solid #f3e2c9!important;
+ border-bottom:4px solid #9b774d!important;
+ border-radius:2px!important;
+ background:linear-gradient(95deg,#f4e7d3 0%,#e6d1b2 76%,#ddc7a5 100%)!important;
+ box-shadow:inset 0 2px #fffdf2,0 4px 0 #21190f,0 11px 16px #18160e9e!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration .start-emblem {
+ display:grid;place-items:center;width:38px;height:38px;
+ border:1px solid #9a8064;border-radius:50%;
+ background:#e1ceb1;box-shadow:inset 0 1px #fef0d8,0 1px 0 #bda27b;
+ color:#6a4d2f;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button {
+ border:1px solid #80694f!important;
+ border-bottom:3px solid #1c1813!important;
+ background:linear-gradient(#4c3c2d,#392e24)!important;
+ box-shadow:inset 0 1px #bba17a3b,0 3px 4px #1d170fc0!important;
+ color:#efe2d1;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button span {color:#e5c18e}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button:hover:not(:disabled) {background:#554434!important}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {
+ border-top:1px solid #9e826257;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer button,
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer .cloud-control {color:#d2c4ac!important}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-persona:focus-visible,
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration:focus-visible {
+ outline-offset:4px;
+}
+/* A physical slim picture lamp gives the painting's warm wall wash its source. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-luminaire {
+ position:absolute;top:0;left:50%;transform:translateX(-50%);
+ width:90px;height:25px;z-index:6;pointer-events:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-luminaire-stem {
+ position:absolute;left:42px;top:0;width:6px;height:7px;
+ border:1px solid #a18e70;background:#4c4537;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-luminaire-housing {
+ position:absolute;left:16px;right:16px;top:7px;height:10px;
+ border:1px solid #957d5d;border-radius:4px 4px 2px 2px;
+ background:linear-gradient(#776447,#3f372b 60%,#25261f);
+ box-shadow:0 4px 9px #0e130ec7;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-luminaire-lens {
+ position:absolute;left:23px;right:23px;top:17px;height:3px;
+ background:#ead19c;box-shadow:0 1px 5px #e5c28b79;
+}
+/* Four distinct trapezoidal wood facets model the actual picture-frame cross-section. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-rim {
+ position:relative;transform-style:preserve-3d;overflow:visible;
+ border:0!important;padding:17px!important;
+ background:#3e2c1e;outline:1px solid #30251b;
+ box-shadow:0 3px 0 #23190f,0 24px 31px #090f0dbb!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet {
+ display:block;position:absolute;z-index:3;pointer-events:none;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-top {
+ left:0;right:0;top:0;height:17px;
+ clip-path:polygon(0 0,100% 0,calc(100% - 17px) 100%,17px 100%);
+ background:linear-gradient(#a7875a,#745535 60%,#3e2e1f);
+ border-top:2px solid #d0b18b;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-left {
+ top:0;bottom:0;left:0;width:17px;
+ clip-path:polygon(0 0,100% 17px,100% calc(100% - 17px),0 100%);
+ background:linear-gradient(90deg,#634728,#c3a073 50%,#503923);
+ border-left:2px solid #ac875d;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-right {
+ top:0;bottom:0;right:0;width:17px;
+ clip-path:polygon(100% 0,0 17px,0 calc(100% - 17px),100% 100%);
+ background:linear-gradient(90deg,#36271a,#856342 70%,#4a3524);
+ border-right:2px solid #2d2017;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-bottom {
+ left:0;right:0;bottom:0;height:17px;
+ clip-path:polygon(0 100%,17px 0,calc(100% - 17px) 0,100% 100%);
+ background:linear-gradient(#3f2f20,#92714c 75%,#3e2e20);
+ border-bottom:3px solid #2c2018;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-rim > img {
+ position:relative;z-index:1;
+ border:2px solid #261c14;box-shadow:0 0 0 1px #bc9b6d;
+ background:#2d251f;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="0"] {
+ transform:translate(-50%,-50%) translateZ(28px);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-1"] {
+ transform:translate(-50%,-50%) translateX(calc(-1 * var(--museum-step))) translateZ(-50px) scale(.69) rotateY(13deg);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="1"] {
+ transform:translate(-50%,-50%) translateX(var(--museum-step)) translateZ(-50px) scale(.69) rotateY(-13deg);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel button {
+ background:linear-gradient(#66513a,#3c3025)!important;
+ color:#f7e4c8;
+ border:1px solid #9d7e55!important;border-bottom:3px solid #201912!important;
+ box-shadow:inset 0 1px #c6a87a55,0 4px 8px #0e140fb0!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel button:hover:not(:disabled) {
+ background:#765a3d!important;
+}
+@media(max-width:699px){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
+  padding:9px 11px 12px;
+  box-shadow:0 -4px 20px #0d130cb0;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-deck {height:6px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-rail {top:6px;width:7px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-foot {height:6px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-persona {
+  padding:2px 6px!important;min-height:39px!important;margin-bottom:7px!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration {
+  min-height:62px;padding:7px 10px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration .start-emblem {width:32px;height:32px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower {margin-top:7px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button {min-height:45px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {margin-top:6px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-luminaire {top:-4px;transform:translateX(-50%) scale(.75)}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-rim {padding:11px!important}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-top,
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-bottom {height:11px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-left,
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-right {width:11px}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-top {clip-path:polygon(0 0,100% 0,calc(100% - 11px) 100%,11px 100%)}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-bottom {clip-path:polygon(0 100%,11px 0,calc(100% - 11px) 0,100% 100%)}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-left {clip-path:polygon(0 0,100% 11px,100% calc(100% - 11px),0 100%)}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-frame-facet-right {clip-path:polygon(100% 0,0 11px,0 calc(100% - 11px),100% 100%)}
+}
+@media(prefers-reduced-motion:reduce) {
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide {transition:none!important}
+}
