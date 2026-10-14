@@ -16,14 +16,16 @@ function rng(s){s.seed=(Math.imul(1664525,s.seed)+1013904223)>>>0;return s.seed/
 const captainNames=[['Бертран','Мартен'],['Райнер','Сиверт']];
 const captainTraits=[['Лобовой штурм','Лесные манёвры'],['Лобовой штурм','Лесные манёвры']];
 function makeSquad(s,side,captain,type,x,y){
- return {id:s.next++,side,captain,type,x,y,hp:type==='knight'?145:type==='bow'?82:108,maxHp:type==='knight'?145:type==='bow'?82:108,
+ const unit={id:s.next++,side,captain,type,x,y,hp:type==='knight'?145:type==='bow'?82:108,maxHp:type==='knight'?145:type==='bow'?82:108,
  morale:100,attack:0,walk:rng(s)*6,hit:0,retreat:false,kills:0,targetX:x,targetY:y};
+ s.squads.push(unit);
+ return unit;
 }
 export function createGame(seed=Date.now(),bot=true){
- const s={version:1,seed:seed>>>0,next:1,time:0,phase:'battle',winner:null,bot,log:[],events:[],progress:[0,0],
+ const s={version:1,revision:2,seed:seed>>>0,next:1,time:0,phase:'battle',winner:null,bot,log:[],events:[],progress:[0,0],
  players:[{gold:142,wood:100,food:120,base:480,doctrine:'balanced',kills:0},{gold:142,wood:100,food:120,base:480,doctrine:'balanced',kills:0}],
  sites:SITE_DEFS.map((p,i)=>({...p,owner:i===0||i===1?0:i===5||i===6?1:-1,fort:0,capture:0,attacker:-1})),
- orders:[],squads:[],botClock:3,economyClock:0,
+ orders:[],squads:[],botClock:3,economyClock:0,keepShots:[0,0],
  selection:0};
  for(let side=0;side<2;side++){
   const x=side===0?108:852;
@@ -166,7 +168,7 @@ function siteTick(s,z,dt){
  const attacker=sides[0]>sides[1]?0:sides[1]>sides[0]?1:-1;
  if(attacker>=0&&attacker!==z.owner){
   if(z.attacker!==attacker){z.attacker=attacker;z.capture=Math.max(0,z.capture*.55)}
-  z.capture+=dt*(4.4+Math.min(3,sides[attacker]-sides[1-attacker])*.9)/(1+z.fort*.48);
+  z.capture+=dt*(3.0+Math.min(3,sides[attacker]-sides[1-attacker])*.9)/(1+z.fort*.48);
   if(z.capture>=100){z.owner=attacker;z.capture=0;z.fort=Math.max(0,z.fort-1);s.events.push({type:'capture',x:z.x,y:z.y,side:attacker,age:0});log(s,(attacker===0?'Ваши войска':'Противник')+' заняли '+z.name,attacker)}
  }else if(attacker===z.owner){z.capture=Math.max(0,z.capture-dt*5);z.attacker=-1}
  else {z.capture=Math.max(0,z.capture-dt*2)}
@@ -182,7 +184,7 @@ function siteTick(s,z,dt){
  }
 }
 function bot(s,dt){
- s.botClock-=dt;if(s.botClock>0)return;s.botClock=5+rng(s)*2;
+ s.botClock-=dt;if(s.botClock>0)return;s.botClock=10+rng(s)*4;
  const p=s.players[1];
  for(const o of s.orders.filter(c=>c.side===1)){
   const candidates=s.sites.filter(z=>z.owner!==1);
@@ -194,7 +196,7 @@ function bot(s,dt){
   const choose=candidatesSorted[o.id%2&&candidatesSorted[1]?1:0].z;
   o.x=choose.x;o.y=choose.y;o.site=choose.id;o.mode='capture';
  }
- if(p.gold>75&&p.food>24&&s.squads.filter(u=>u.side===1).length<10){
+ if(p.gold>75&&p.food>24&&s.squads.filter(u=>u.side===1).length<8){
   const t=p.gold>155?'knight':p.wood>25?'bow':'levy';action(s,1,{kind:'recruit',type:t});
  }
  if(p.gold>120&&p.wood>90){
@@ -243,16 +245,36 @@ export function tick(s,dt){
  for(const z of s.sites)siteTick(s,z,dt);
  for(let side=0;side<2;side++){
   const home=nearHome(side),enemy=1-side;
-  const attackers=s.squads.filter(u=>u.side===enemy&&distance(u,home)<75&&u.hp>0);
+  // A castle is dangerous even when its field army has left. Every exposed
+  // assault is met by a defensive volley from the permanent garrison.
+  s.keepShots ??= [0,0];
+  s.keepShots[side]=Math.max(0,s.keepShots[side]-dt);
+  const nearby=s.squads.filter(u=>u.side===enemy&&u.hp>0&&distance(u,home)<110);
+  if(nearby.length&&s.keepShots[side]===0){
+   nearby.sort((a,b)=>distance(a,home)-distance(b,home));
+   hit(s,{side,kills:0},nearby[0],14);
+   s.keepShots[side]=1.1;
+  }
+  // Resolve defender volleys before counting living siege strength.
+  const attackers=s.squads.filter(u=>u.side===enemy&&u.hp>0&&distance(u,home)<75);
   if(attackers.length){
+   // A bridge, mine or riverside farm held across the frontier creates a
+   // viable supply line. Unsupported deep raids can chip at fortifications,
+   // but cannot demolish a castle in a single fast rush.
+   const supplied=s.sites.some(z=>z.owner===enemy&&['silver','ford','fen'].includes(z.id));
+   const defenders=s.squads.filter(u=>u.side===side&&u.hp>0&&distance(u,home)<75).length;
    const pressure=attackers.reduce((n,u)=>n+(u.type==='knight'?1.5:1),0);
-   s.players[side].base=Math.max(0,s.players[side].base-dt*pressure*2.4);
+   const damage=dt*Math.max(0,pressure-defenders*.8)*1.3*(supplied?1:.14);
+   s.players[side].base=Math.max(0,s.players[side].base-damage);
    if(s.players[side].base===0){s.phase='end';s.winner=enemy;log(s,enemy===0?'Вражеский замок пал':'Ваша крепость пала',enemy)}
   }
  }
- if(s.time>=LIMIT&&s.phase==='battle'){
+ // Fort and keep volleys take place after normal combat. A unit killed in
+ // those phases must not remain selectable or be saved with 0 HP.
+ s.squads=s.squads.filter(u=>u.hp>0);
+ if(s.time>=LIMIT-1e-6&&s.phase==='battle'){s.time=LIMIT;
   s.phase='end';const a=stats(s,0).score,b=stats(s,1).score;s.winner=a===b?-1:a>b?0:1;
  }
 }
 export function save(s){return JSON.stringify(s)}
-export function load(raw){try{const s=JSON.parse(raw);if(s?.version===1&&s?.players?.length===2&&s?.sites?.length===7&&Array.isArray(s.orders)&&Array.isArray(s.squads)&&Number.isFinite(s.time)&&s.time<LIMIT+1)return s}catch{}return null}
+export function load(raw){try{const s=JSON.parse(raw);if(s?.version===1&&s?.revision===2&&s?.players?.length===2&&s?.sites?.length===7&&Array.isArray(s.orders)&&Array.isArray(s.squads)&&Number.isFinite(s.time)&&s.time<LIMIT+1)return s}catch{}return null}
