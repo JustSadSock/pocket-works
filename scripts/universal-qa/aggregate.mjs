@@ -7,7 +7,7 @@ export function summarize(dir, expected) {
   const results = [];
   const missing = [];
   for (const key of expected) {
-    const file = join(dir, 'qa-' + key, key, 'result.json');
+    const file = join(dir, 'qa-' + key, 'result.json');
     // In upload-artifact v4, an artifact contains its own root qa-artifacts/<key>.
     if (!existsSync(file)) {
       missing.push(key);
