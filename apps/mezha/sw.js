@@ -1,7 +1,7 @@
 const CACHE_PREFIX='mezha-';
-const CACHE_NAME='mezha-v1.0.2';
-const APP_VERSION='1.0.2',RELEASE_DATE='2026-10-14',CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Оборона больше не захватывает чужие земли.','Отряды возле оборонительного знамени получают на 22% меньше урона.','Защитники сбивают прогресс вражеского захвата; повторены 64 игровые симуляции.'];
+const CACHE_NAME='mezha-v1.1.0';
+const APP_VERSION='1.1.0',RELEASE_DATE='2026-10-14',CACHE_PROTOCOL=2;
+const RELEASE_NOTES=['Три уровня ИИ: самостоятельные планы капитанов, реагирование на нападение и осмысленные набеги.','Победа при удержании шести владений 165 секунд, индикатор территориального преимущества.','Сохранены предыдущие партии и проведены 64 полных симуляции.'];
 const FILES=['./','./index.html','./app.js','./engine.js','./render.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const scope=new URL('./',self.registration.scope),build=APP_VERSION+'-p'+CACHE_PROTOCOL;
 const paths=new Map(FILES.map(f=>{const url=new URL(f,scope);return[url.pathname,url.href]}));
