@@ -55,7 +55,8 @@ function drawFrame(){if(!sim)return;
     const place=cattlePosition(hom,sim.day+movementFraction,i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const scale=Math.max(2,cam.z*4);ctx.fillStyle='#604c39';ctx.fillRect(Math.round(x),Math.round(y),scale*1.7,scale);
-    ctx.fillStyle='#aa967c';ctx.fillRect(Math.round(x+scale*1.2),Math.round(y-scale*.22),scale*.65,scale*.73);
+    const grazingMotion=Math.sin((sim.day+movementFraction)*1.9+i*1.7+hom.id*.29);const headDip=(.5+.5*grazingMotion)*scale*.35;
+    ctx.fillStyle='#aa967c';ctx.fillRect(Math.round(x+scale*1.2),Math.round(y-scale*.22+headDip),scale*.65,scale*.73);
    }
   }}
  }
@@ -132,7 +133,7 @@ $('#zoom-minus').addEventListener('click',()=>zoom(.74,canvas.getBoundingClientR
 document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>{speed=Number(b.dataset.speed);updateHUD();}));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
 $('#sheet-content').addEventListener('click',e=>{const person=e.target.closest('[data-person]');if(person){selectedPerson=Number(person.dataset.person);renderSheet();return;}if(e.target.closest('[data-person-back]')){selectedPerson=null;renderSheet();return;}const eventButton=e.target.closest('[data-event]');if(eventButton){const item=sim.events.find(v=>v.id===Number(eventButton.dataset.event));const h=item?.subjects.map(id=>sim.households.find(x=>x.id===id)).find(Boolean);if(h){selected=h.id;selectedPerson=null;economyOpen=false;setTab('household');centerOn(h.x,h.y);}else if(item)toast(item.cause);return;}const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case'econ-detail':economyOpen=!economyOpen;renderSheet();break;case'lab-open':speed=0;setTab('laboratory');break;case'lab-back':setTab('tools');break;case'lab-export':exportLab();break;case'save':save().then(()=>toast('Мир записан в IndexedDB')).catch(err=>toast(err.message));break;case'export':exportSave();break;case'import':$('#import-file').click();break;case'reset':speed=0;$('#modal').hidden=false;break;}});
 $('#cancel-reset').addEventListener('click',()=>$('#modal').hidden=true);$('#confirm-reset').addEventListener('click',()=>{const seedText=$('#world-seed').value.trim();const seedNumber=seedText===''?((Date.now()&0xffffffff)>>>0):Number(seedText);if(!Number.isInteger(seedNumber)||seedNumber<0||seedNumber>4294967295){toast('Seed должен быть целым числом от 0 до 4294967295');return;}sim=createWorld(seedNumber,{scenario:$('#world-scenario').value,tuning:experimentPreset($('#world-experiment').value)});selected=null;selectedPerson=null;economyOpen=false;speed=0;previousPeople=null;dirty=true;fitView();lastSavedDay=-1;$('#modal').hidden=true;setTab('overview');save().then(()=>toast('Создана новая долина с выбранными условиями')).catch(err=>toast(err.message));});
-function centerOn(x,y){const r=worldNode.getBoundingClientRect();cam.z=Math.max(cam.z,.9);cam.x=r.width/2-x*PX*cam.z;cam.y=r.height/2-y*PX*cam.z;}
+function centerOn(x,y){const r=worldNode.getBoundingClientRect();cam.z=Math.max(cam.z,1.28);cam.x=r.width/2-x*PX*cam.z;cam.y=r.height/2-y*PX*cam.z;}
 $('#import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{const value=deserialize(await file.text());sim=value;speed=0;selected=null;selectedPerson=null;previousPeople=null;dirty=true;fitView();updateHUD();await save();toast('Мир успешно импортирован');}catch(err){toast(`Импорт не удался: ${err.message}`);}});
 function experimentPreset(name){
  const items={normal:{},yieldLow:{yield:.85},storageLow:{storage:.75},plantingHigh:{planting:1.2},transportHigh:{transport:1.5},weatherHigh:{weather:1.5}};
