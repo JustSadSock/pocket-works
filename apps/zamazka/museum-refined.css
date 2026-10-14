@@ -17,6 +17,7 @@ html[data-zamazka-theme="atelier"] .museum-architecture{
  linear-gradient(125deg,#3d3933 0,#272925 73%,#202421);
 }
 html[data-zamazka-theme="atelier"] .screen{position:relative;background:transparent;z-index:1}
+html[data-zamazka-theme="atelier"] .screen>section{position:relative;isolation:isolate}
 html[data-zamazka-theme="atelier"] .top{
  position:relative;z-index:5;
  min-height:57px;
