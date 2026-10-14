@@ -96,6 +96,17 @@ try{
  const friendAccept=await callSocial(bob.cookie,'friend-action',{id:auth.player.accountId,action:'accept'});
  assert.equal(friendAccept.status,200,JSON.stringify(friendAccept.data));
  assert.equal((await callSocial(alice.cookie,'friends')).data.friends.length,1);
+ const bobVisible=(await callSocial(bob.cookie,'me')).data.friends.find(p=>p.id===auth.player.accountId);
+ assert.equal(bobVisible?.activity?.gameId,'zamazka','friends see a real active PocketNet room');
+ assert.equal(bobVisible?.activity?.joinable,true,'only a lobby with space can be joined');
+ const oneTap=await callSocial(bob.cookie,'join-friend',{id:auth.player.accountId});
+ assert.equal(oneTap.status,200,JSON.stringify(oneTap.data));
+ assert.equal(oneTap.data.url,'/apps/zamazka/?room='+room.roomId);
+ const leaked=await fetch(base+'/pocketnet/social-rooms',{
+   method:'POST',headers:{origin:base,'x-pw-internal':'1','content-type':'application/json'},
+   body:JSON.stringify({accountIds:[auth.player.accountId]})
+ });
+ assert.equal(leaked.status,403,'the public edge strips privileged room lookup headers');
  const badInvite=await callSocial(bob.cookie,'invite',{toId:auth.player.accountId,gameId:'zamazka',roomId:room.roomId});
  assert.equal(badInvite.status,403,'Cannot invite from a room you are not in');
  const invitation=await callSocial(alice.cookie,'invite',{toId:bobID,gameId:'zamazka',roomId:room.roomId});
@@ -105,6 +116,11 @@ try{
  const acceptInvitation=await callSocial(bob.cookie,'invite-action',{id:invitation.data.inviteId,action:'accept'});
  assert.equal(acceptInvitation.status,200,JSON.stringify(acceptInvitation.data));
  assert.equal(acceptInvitation.data.url,'/apps/zamazka/?room='+room.roomId);
+ assert.equal((await callSocial(alice.cookie,'party',{action:'add',id:bobID})).data.party[0],bobID);
+ const companyInvite=await callSocial(alice.cookie,'invite-party',{gameId:'zamazka',roomId:room.roomId});
+ assert.equal(companyInvite.status,200,JSON.stringify(companyInvite.data));
+ assert.equal(companyInvite.data.sent,1,'verified host can invite saved company');
+ assert.equal((await callSocial(alice.cookie,'me')).data.party[0],bobID);
 
  assert.equal(room.players[0].name,nick1);
  assert.equal(room.players[0].verified,true);
