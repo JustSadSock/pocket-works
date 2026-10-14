@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "model.test.mjs",
+        "model.integration.test.mjs",
+        "model.v02.test.mjs",
+        "model.calibration.test.mjs",
+        "model.economy.test.mjs",
+        "laboratory.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#population",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "button[data-tab=\"chronicle\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#sheet-content"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "century",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/calibration-runner.mjs",
+      "args": [
+        "--group=century",
+        "--seed={seed}",
+        "--output={output}/century.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001,
+        11,
+        29,
+        12345,
+        21773,
+        51291,
+        71331,
+        101,
+        202,
+        303,
+        404,
+        505,
+        606
+      ]
+    },
+    {
+      "id": "parameter-lab",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/parameter-lab.mjs",
+      "args": [
+        "--years=5",
+        "--seeds={seed}",
+        "--out={output}/parameter-lab.json"
+      ],
+      "seeds": [
+        413,
+        7777
+      ]
+    }
+  ]
+}
