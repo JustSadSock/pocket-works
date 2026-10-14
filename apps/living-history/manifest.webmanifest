@@ -1,0 +1,1 @@
+{"id":"/apps/living-history/","name":"Живая история","short_name":"История","description":"Автономная историческая симуляция долины","start_url":"./","scope":"./","display":"standalone","orientation":"any","background_color":"#263a31","theme_color":"#263a31","icons":[{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}

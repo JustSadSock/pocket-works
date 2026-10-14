@@ -1,0 +1,14 @@
+const CACHE_PREFIX='living-history-';
+const CACHE_NAME='living-history-v0.1.0';
+const APP_VERSION='0.1.0';
+const RELEASE_DATE='2026-10-14';
+const CACHE_PROTOCOL=2;
+const RELEASE_NOTES=['Первая симуляция четырёх общин и семей','Пиксельная карта, хроника, автономная экономика','IndexedDB, импорт и экспорт сохранений'];
+const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./model.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
+const SCOPE_URL=new URL('./',self.registration.scope);const BUILD_TOKEN=`${APP_VERSION}-p${CACHE_PROTOCOL}`;const SHELL_KEYS=new Map(APP_SHELL.map(e=>{const u=new URL(e,SCOPE_URL);return[u.pathname,u.href];}));
+function urlWithVersion(input){const u=new URL(input instanceof Request?input.url:input,SCOPE_URL);u.searchParams.set('__pw_build',BUILD_TOKEN);return u;}
+async function fetchFresh(input){const r=await fetch(urlWithVersion(input),{cache:'no-store',credentials:'same-origin',redirect:'follow'});if(!r||!r.ok)throw Error(`Fetch failed ${r?.status}`);return r;}
+self.addEventListener('install',e=>e.waitUntil((async()=>{const c=await caches.open(CACHE_NAME);await Promise.all([...new Set(SHELL_KEYS.values())].map(async u=>c.put(u,await fetchFresh(u))));})()));
+self.addEventListener('message',e=>{if(e.data?.type==='GET_UPDATE_INFO')e.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:CACHE_PROTOCOL,cacheName:CACHE_NAME});if(e.data?.type==='SKIP_WAITING')self.skipWaiting();});
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==self.location.origin)return;const canonical=e.request.mode==='navigate'?SCOPE_URL.href:SHELL_KEYS.get(u.pathname);if(!canonical)return;e.respondWith((async()=>{try{const r=await fetchFresh(e.request);const c=await caches.open(CACHE_NAME);await c.put(canonical,r.clone());return r;}catch{return await caches.match(canonical)||await caches.match(SCOPE_URL.href)||Response.error();}})());});

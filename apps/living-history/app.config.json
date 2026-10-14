@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "living-history",
+  "name": "ЖИВАЯ ИСТОРИЯ",
+  "shortName": "История",
+  "description": "Автономная пиксельная симуляция средневековой долины: семьи, зерно, древесина, торговля, рождения и причины событий.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-14",
+  "releaseDateTime": "2026-10-14T14:41:00+03:00",
+  "changelog": ["Первая автономная модель четырёх общин, семей, посевов, урожая, рождаемости и рыночных поставок.", "Пиксельная карта с приближением, выбором домов и причинной хроникой.", "Воспроизводимые миры по seed, сохранения в IndexedDB, экспорт и импорт JSON."],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#b99766",
+  "backgroundColor": "#263a31",
+  "themeColor": "#263a31",
+  "orientation": "any",
+  "cacheName": "living-history-v0.1.0",
+  "storageNamespace": "pocket-works:living-history",
+  "tags": ["simulation", "medieval", "history", "pixel-art", "society", "economy", "sandbox", "offline"],
+  "order": 35
+}
