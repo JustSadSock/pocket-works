@@ -96,4 +96,16 @@ assert.match(ui,/const DURATION_VALUES=DRAWING_TIME_OPTIONS\.map/,'solo validati
 assert.match(ui,/practice\.deadline>0/,'zero-deadline solo mode never advances from a timer');
 assert.match(ui,/view\.phase!=='drawing'\|\|!view\.deadline/,'zero-deadline online mode cannot auto-submit');
 assert.match(ui,/drawingSeconds:Number\(screen\.querySelector\('#drawingSeconds'\)/,'client sends selected duration');
+
+// Execute the actual UI duration table and normalization expression, not a copied test list.
+// Both room dropdown and solo modal build their options from the same table.
+const displayed=ui.match(/^const DRAWING_TIME_OPTIONS=(\[[^\n]+\]);$/m)?.[1];
+const normalizeExpression=ui.match(/^const normalizedDuration=(.+);$/m)?.[1];
+assert.ok(displayed&&normalizeExpression,'client exposes the duration choices and normalizer');
+const normalizeClient=runInNewContext('(()=>{const DRAWING_TIME_OPTIONS='+displayed+
+ ';const DURATION_VALUES=DRAWING_TIME_OPTIONS.map(([seconds])=>seconds);return '+normalizeExpression+';})()');
+assert.equal(normalizeClient(600),600,'solo selection keeps a 10-minute numeric choice');
+assert.equal(normalizeClient('600'),600,'solo saved choice of 10 minutes survives storage reload');
+assert.equal(normalizeClient(601),160,'unsupported times still fall back to 2:40');
+
 console.log('ZAMAZKA: seven timed presets including 10 minutes, untimed all-player confirmation, solo duration, invalid fallback, and multi-round rules OK');
