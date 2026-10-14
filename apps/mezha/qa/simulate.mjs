@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createGame,action,tick,stats,save,load,W,H,LIMIT} from '../engine.js';
+import {createGame,action,tick,stats,save,load,W,H,LIMIT,DOMINATION_SITES,DOMINATION_SECONDS} from '../engine.js';
 const dt=.05;
 function play(s,secs,turn=()=>{}) {
  for(let i=0;i<secs/dt&&s.phase==='battle';i++){
@@ -123,7 +123,48 @@ function testDistinctOrders(){
  assert.ok(inDefend<inCapture*.85,'defensive stance must reduce local incoming damage');
  return {captureIncoming:+inCapture.toFixed(2),defendIncoming:+inDefend.toFixed(2)};
 }
-const distinctOrders=testDistinctOrders();
+function testTerritorialVictory(){
+ const s=createGame(599,false),desired=s.sites.slice(0,DOMINATION_SITES);
+ for(const z of desired)z.owner=0;
+ s.squads=[]; // isolate the territorial rule from autonomous recapture
+ play(s,DOMINATION_SECONDS-16);
+ assert.equal(s.phase,'battle','domination must require a sustained hold');
+ assert.ok(s.progress[0]>DOMINATION_SECONDS-19,'territorial progress did not advance');
+ desired[3].owner=1;
+ const before=s.progress[0];
+ play(s,12);
+ assert.ok(s.progress[0]<before,'losing the territory must reverse domination');
+ desired[3].owner=0;
+ play(s,44);
+ assert.equal(s.phase,'end','holding six territories must decide battle');
+ assert.equal(s.winner,0);
+ assert.equal(s.victory,'domination');
+ return {threshold:DOMINATION_SITES,holdSeconds:DOMINATION_SECONDS};
+}
+function testAutonomousRival(){
+ const s=createGame(816,true,'regular');
+ s.botClock=0;
+ tick(s,.05);
+ assert.ok(s.botPlans.length>0,'AI must plan from the opening, not sit idle on starting farms');
+ assert.ok(s.orders.some(o=>o.side===1&&['silver','ford','fen'].includes(o.site)),'AI must contest central objectives');
+ const danger=createGame(817,true,'regular');
+ const attackers=danger.squads.filter(u=>u.side===0);
+ for(const u of attackers){u.x=842+(u.id%2)*8;u.y=310;u.hp=1000;u.maxHp=1000}
+ danger.botClock=0;
+ tick(danger,.05);
+ assert.equal(danger.orders[2].mode,'defend','one captain must respond to a direct castle threat');
+ assert.ok(danger.botPlans.some(p=>p.mode==='defend'));
+ const choices=['casual','regular','veteran'].map(skill=>createGame(900,true,skill));
+ for(const choice of choices)play(choice,45);
+ assert.ok(choices[2].next>choices[0].next,'veteran must recruit more actively than casual');
+ const snapshot=JSON.parse(save(s));snapshot.revision=2;delete snapshot.botSkill;delete snapshot.botPlans;
+ const migrated=load(JSON.stringify(snapshot));
+ assert.ok(migrated&&migrated.revision===3&&migrated.botSkill==='regular','older save must migrate');
+ assert.equal(migrated.squads.length,s.squads.length,'migrating must preserve all units');
+ tick(migrated,.05);
+ return {initialPlans:s.botPlans.length,defendPlan:danger.botPlans.length,casualUnits:choices[0].next-9,veteranUnits:choices[2].next-9};
+}
+const domination=testTerritorialVictory(),rival=testAutonomousRival(),distinctOrders=testDistinctOrders();
 testCore();testRaidAndTowers();const siege=testSiege(),simulations={};
 for(const strategy of ['passive','rush','control','frontier']){
  const outcomes=Array.from({length:16},(_,i)=>run(421+i,strategy));
@@ -132,4 +173,4 @@ for(const strategy of ['passive','rush','control','frontier']){
 assert.equal(simulations.passive.wins,0);
 assert.ok(simulations.rush.wins<16,'castle rush exploit still guaranteed');
 assert.ok(simulations.frontier.wins>0,'frontier policy never wins');
-console.log(JSON.stringify({tests:'PASS',distinctOrders,siege,simulations},null,2));
+console.log(JSON.stringify({tests:'PASS',domination,rival,distinctOrders,siege,simulations},null,2));
