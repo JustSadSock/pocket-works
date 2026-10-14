@@ -1,0 +1,1445 @@
+{
+  "release": "0.3.0",
+  "seedPolicy": "paired deterministic",
+  "scenarios": [
+    "normal",
+    "drought",
+    "isolated",
+    "uplands"
+  ],
+  "seeds": [
+    413,
+    7777,
+    43821
+  ],
+  "years": 20,
+  "runs": [
+    {
+      "seed": 413,
+      "scenario": "normal",
+      "years": 20,
+      "timeMs": 2435,
+      "last": {
+        "year": 20,
+        "population": 169,
+        "hungry": 0,
+        "grainKg": 56364.68,
+        "occupiedGrainKg": 56364.7,
+        "grainKgPerCapita": 333.5,
+        "occupiedHomes": 60,
+        "storagesUpgraded": 55,
+        "occupation": {
+          "farm": 52,
+          "wood": 8,
+          "trade": 0
+        },
+        "paidHiringCoin": 1974
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 118,
+          "hungry": 0,
+          "grainKg": 31183.61,
+          "occupiedGrainKg": 31110.6,
+          "grainKgPerCapita": 264.3,
+          "occupiedHomes": 38,
+          "storagesUpgraded": 15,
+          "occupation": {
+            "farm": 23,
+            "wood": 15,
+            "trade": 0
+          },
+          "paidHiringCoin": 201
+        },
+        {
+          "year": 5,
+          "population": 148,
+          "hungry": 0,
+          "grainKg": 47925.72,
+          "occupiedGrainKg": 47474.9,
+          "grainKgPerCapita": 323.8,
+          "occupiedHomes": 49,
+          "storagesUpgraded": 34,
+          "occupation": {
+            "farm": 38,
+            "wood": 11,
+            "trade": 0
+          },
+          "paidHiringCoin": 6429
+        },
+        {
+          "year": 10,
+          "population": 154,
+          "hungry": 0,
+          "grainKg": 47888.49,
+          "occupiedGrainKg": 47050.1,
+          "grainKgPerCapita": 311,
+          "occupiedHomes": 54,
+          "storagesUpgraded": 49,
+          "occupation": {
+            "farm": 40,
+            "wood": 14,
+            "trade": 0
+          },
+          "paidHiringCoin": 14904
+        },
+        {
+          "year": 15,
+          "population": 156,
+          "hungry": 0,
+          "grainKg": 45557.02,
+          "occupiedGrainKg": 44255.2,
+          "grainKgPerCapita": 292,
+          "occupiedHomes": 53,
+          "storagesUpgraded": 49,
+          "occupation": {
+            "farm": 45,
+            "wood": 8,
+            "trade": 0
+          },
+          "paidHiringCoin": 9021
+        },
+        {
+          "year": 20,
+          "population": 169,
+          "hungry": 0,
+          "grainKg": 56364.68,
+          "occupiedGrainKg": 56364.7,
+          "grainKgPerCapita": 333.5,
+          "occupiedHomes": 60,
+          "storagesUpgraded": 55,
+          "occupation": {
+            "farm": 52,
+            "wood": 8,
+            "trade": 0
+          },
+          "paidHiringCoin": 1974
+        }
+      ],
+      "stats": {
+        "born": 130,
+        "died": 72,
+        "trades": 844,
+        "built": 24,
+        "delivered": 888,
+        "produced": 867417.73,
+        "consumed": 725284.6,
+        "harvest": 809346.34,
+        "spoiled": 68227.06,
+        "storageWood": 17655,
+        "aid": 1732.99
+      },
+      "persons": 241,
+      "homes": 60
+    },
+    {
+      "seed": 413,
+      "scenario": "drought",
+      "years": 20,
+      "timeMs": 2070,
+      "last": {
+        "year": 20,
+        "population": 136,
+        "hungry": 0,
+        "grainKg": 49579.61,
+        "occupiedGrainKg": 48433.4,
+        "grainKgPerCapita": 364.6,
+        "occupiedHomes": 51,
+        "storagesUpgraded": 49,
+        "occupation": {
+          "farm": 47,
+          "wood": 4,
+          "trade": 0
+        },
+        "paidHiringCoin": 3978
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 118,
+          "hungry": 0,
+          "grainKg": 31183.61,
+          "occupiedGrainKg": 31110.6,
+          "grainKgPerCapita": 264.3,
+          "occupiedHomes": 38,
+          "storagesUpgraded": 15,
+          "occupation": {
+            "farm": 23,
+            "wood": 15,
+            "trade": 0
+          },
+          "paidHiringCoin": 201
+        },
+        {
+          "year": 5,
+          "population": 148,
+          "hungry": 0,
+          "grainKg": 47925.72,
+          "occupiedGrainKg": 47474.9,
+          "grainKgPerCapita": 323.8,
+          "occupiedHomes": 49,
+          "storagesUpgraded": 34,
+          "occupation": {
+            "farm": 38,
+            "wood": 11,
+            "trade": 0
+          },
+          "paidHiringCoin": 6429
+        },
+        {
+          "year": 10,
+          "population": 126,
+          "hungry": 1,
+          "grainKg": 44273.37,
+          "occupiedGrainKg": 41342.2,
+          "grainKgPerCapita": 351.4,
+          "occupiedHomes": 45,
+          "storagesUpgraded": 40,
+          "occupation": {
+            "farm": 45,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 11436
+        },
+        {
+          "year": 15,
+          "population": 133,
+          "hungry": 0,
+          "grainKg": 39706.81,
+          "occupiedGrainKg": 37299.2,
+          "grainKgPerCapita": 298.5,
+          "occupiedHomes": 45,
+          "storagesUpgraded": 43,
+          "occupation": {
+            "farm": 44,
+            "wood": 1,
+            "trade": 0
+          },
+          "paidHiringCoin": 4059
+        },
+        {
+          "year": 20,
+          "population": 136,
+          "hungry": 0,
+          "grainKg": 49579.61,
+          "occupiedGrainKg": 48433.4,
+          "grainKgPerCapita": 364.6,
+          "occupiedHomes": 51,
+          "storagesUpgraded": 49,
+          "occupation": {
+            "farm": 47,
+            "wood": 4,
+            "trade": 0
+          },
+          "paidHiringCoin": 3978
+        }
+      ],
+      "stats": {
+        "born": 121,
+        "died": 96,
+        "trades": 887,
+        "built": 20,
+        "delivered": 927,
+        "produced": 769677.53,
+        "consumed": 654917.3,
+        "harvest": 722829.15,
+        "spoiled": 58862.24,
+        "storageWood": 16335,
+        "aid": 1620.12
+      },
+      "persons": 232,
+      "homes": 56
+    },
+    {
+      "seed": 413,
+      "scenario": "isolated",
+      "years": 20,
+      "timeMs": 2015,
+      "last": {
+        "year": 20,
+        "population": 146,
+        "hungry": 1,
+        "grainKg": 53670.24,
+        "occupiedGrainKg": 53670.2,
+        "grainKgPerCapita": 367.6,
+        "occupiedHomes": 55,
+        "storagesUpgraded": 46,
+        "occupation": {
+          "farm": 43,
+          "wood": 12,
+          "trade": 0
+        },
+        "paidHiringCoin": 6387
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 116,
+          "hungry": 0,
+          "grainKg": 31346.62,
+          "occupiedGrainKg": 31235.6,
+          "grainKgPerCapita": 270.2,
+          "occupiedHomes": 38,
+          "storagesUpgraded": 15,
+          "occupation": {
+            "farm": 23,
+            "wood": 15,
+            "trade": 0
+          },
+          "paidHiringCoin": 129
+        },
+        {
+          "year": 5,
+          "population": 140,
+          "hungry": 1,
+          "grainKg": 46326.02,
+          "occupiedGrainKg": 45789.7,
+          "grainKgPerCapita": 330.9,
+          "occupiedHomes": 46,
+          "storagesUpgraded": 34,
+          "occupation": {
+            "farm": 32,
+            "wood": 14,
+            "trade": 0
+          },
+          "paidHiringCoin": 8403
+        },
+        {
+          "year": 10,
+          "population": 153,
+          "hungry": 0,
+          "grainKg": 43721.09,
+          "occupiedGrainKg": 43492.8,
+          "grainKgPerCapita": 285.8,
+          "occupiedHomes": 50,
+          "storagesUpgraded": 41,
+          "occupation": {
+            "farm": 33,
+            "wood": 17,
+            "trade": 0
+          },
+          "paidHiringCoin": 9981
+        },
+        {
+          "year": 15,
+          "population": 151,
+          "hungry": 0,
+          "grainKg": 43328.26,
+          "occupiedGrainKg": 42903,
+          "grainKgPerCapita": 286.9,
+          "occupiedHomes": 49,
+          "storagesUpgraded": 42,
+          "occupation": {
+            "farm": 38,
+            "wood": 11,
+            "trade": 0
+          },
+          "paidHiringCoin": 7110
+        },
+        {
+          "year": 20,
+          "population": 146,
+          "hungry": 1,
+          "grainKg": 53670.24,
+          "occupiedGrainKg": 53670.2,
+          "grainKgPerCapita": 367.6,
+          "occupiedHomes": 55,
+          "storagesUpgraded": 46,
+          "occupation": {
+            "farm": 43,
+            "wood": 12,
+            "trade": 0
+          },
+          "paidHiringCoin": 6387
+        }
+      ],
+      "stats": {
+        "born": 123,
+        "died": 88,
+        "trades": 759,
+        "built": 20,
+        "delivered": 788,
+        "produced": 834301.27,
+        "consumed": 699173.04,
+        "harvest": 785481.03,
+        "spoiled": 73167.75,
+        "storageWood": 15015,
+        "aid": 876.57
+      },
+      "persons": 234,
+      "homes": 56
+    },
+    {
+      "seed": 413,
+      "scenario": "uplands",
+      "years": 20,
+      "timeMs": 1867,
+      "last": {
+        "year": 20,
+        "population": 138,
+        "hungry": 0,
+        "grainKg": 47053.73,
+        "occupiedGrainKg": 46154.3,
+        "grainKgPerCapita": 341,
+        "occupiedHomes": 49,
+        "storagesUpgraded": 45,
+        "occupation": {
+          "farm": 48,
+          "wood": 1,
+          "trade": 0
+        },
+        "paidHiringCoin": 2568
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 118,
+          "hungry": 0,
+          "grainKg": 30232.31,
+          "occupiedGrainKg": 30051.3,
+          "grainKgPerCapita": 256.2,
+          "occupiedHomes": 38,
+          "storagesUpgraded": 29,
+          "occupation": {
+            "farm": 9,
+            "wood": 29,
+            "trade": 0
+          },
+          "paidHiringCoin": 198
+        },
+        {
+          "year": 5,
+          "population": 125,
+          "hungry": 0,
+          "grainKg": 40446.99,
+          "occupiedGrainKg": 39337.8,
+          "grainKgPerCapita": 323.6,
+          "occupiedHomes": 43,
+          "storagesUpgraded": 30,
+          "occupation": {
+            "farm": 43,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 9897
+        },
+        {
+          "year": 10,
+          "population": 137,
+          "hungry": 0,
+          "grainKg": 38823.09,
+          "occupiedGrainKg": 37530,
+          "grainKgPerCapita": 283.4,
+          "occupiedHomes": 45,
+          "storagesUpgraded": 41,
+          "occupation": {
+            "farm": 39,
+            "wood": 6,
+            "trade": 0
+          },
+          "paidHiringCoin": 8796
+        },
+        {
+          "year": 15,
+          "population": 134,
+          "hungry": 0,
+          "grainKg": 40549.1,
+          "occupiedGrainKg": 38757.3,
+          "grainKgPerCapita": 302.6,
+          "occupiedHomes": 45,
+          "storagesUpgraded": 42,
+          "occupation": {
+            "farm": 40,
+            "wood": 5,
+            "trade": 0
+          },
+          "paidHiringCoin": 7974
+        },
+        {
+          "year": 20,
+          "population": 138,
+          "hungry": 0,
+          "grainKg": 47053.73,
+          "occupiedGrainKg": 46154.3,
+          "grainKgPerCapita": 341,
+          "occupiedHomes": 49,
+          "storagesUpgraded": 45,
+          "occupation": {
+            "farm": 48,
+            "wood": 1,
+            "trade": 0
+          },
+          "paidHiringCoin": 2568
+        }
+      ],
+      "stats": {
+        "born": 116,
+        "died": 89,
+        "trades": 620,
+        "built": 20,
+        "delivered": 638,
+        "produced": 743915.61,
+        "consumed": 651487.68,
+        "harvest": 700107.84,
+        "spoiled": 42096.43,
+        "storageWood": 14520,
+        "aid": 728.38
+      },
+      "persons": 227,
+      "homes": 56
+    },
+    {
+      "seed": 7777,
+      "scenario": "normal",
+      "years": 20,
+      "timeMs": 1977,
+      "last": {
+        "year": 20,
+        "population": 160,
+        "hungry": 0,
+        "grainKg": 58175.69,
+        "occupiedGrainKg": 57800,
+        "grainKgPerCapita": 363.6,
+        "occupiedHomes": 53,
+        "storagesUpgraded": 47,
+        "occupation": {
+          "farm": 49,
+          "wood": 4,
+          "trade": 0
+        },
+        "paidHiringCoin": 4494
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 111,
+          "hungry": 0,
+          "grainKg": 30962.17,
+          "occupiedGrainKg": 30758.2,
+          "grainKgPerCapita": 278.9,
+          "occupiedHomes": 37,
+          "storagesUpgraded": 17,
+          "occupation": {
+            "farm": 19,
+            "wood": 18,
+            "trade": 0
+          },
+          "paidHiringCoin": 459
+        },
+        {
+          "year": 5,
+          "population": 135,
+          "hungry": 0,
+          "grainKg": 35545.83,
+          "occupiedGrainKg": 34901.3,
+          "grainKgPerCapita": 263.3,
+          "occupiedHomes": 40,
+          "storagesUpgraded": 26,
+          "occupation": {
+            "farm": 32,
+            "wood": 8,
+            "trade": 0
+          },
+          "paidHiringCoin": 6102
+        },
+        {
+          "year": 10,
+          "population": 144,
+          "hungry": 0,
+          "grainKg": 45260.69,
+          "occupiedGrainKg": 43995.6,
+          "grainKgPerCapita": 314.3,
+          "occupiedHomes": 45,
+          "storagesUpgraded": 34,
+          "occupation": {
+            "farm": 35,
+            "wood": 10,
+            "trade": 0
+          },
+          "paidHiringCoin": 10884
+        },
+        {
+          "year": 15,
+          "population": 150,
+          "hungry": 0,
+          "grainKg": 51698.38,
+          "occupiedGrainKg": 50569.9,
+          "grainKgPerCapita": 344.7,
+          "occupiedHomes": 49,
+          "storagesUpgraded": 41,
+          "occupation": {
+            "farm": 42,
+            "wood": 7,
+            "trade": 0
+          },
+          "paidHiringCoin": 4515
+        },
+        {
+          "year": 20,
+          "population": 160,
+          "hungry": 0,
+          "grainKg": 58175.69,
+          "occupiedGrainKg": 57800,
+          "grainKgPerCapita": 363.6,
+          "occupiedHomes": 53,
+          "storagesUpgraded": 47,
+          "occupation": {
+            "farm": 49,
+            "wood": 4,
+            "trade": 0
+          },
+          "paidHiringCoin": 4494
+        }
+      ],
+      "stats": {
+        "born": 127,
+        "died": 79,
+        "trades": 1020,
+        "built": 18,
+        "delivered": 1056,
+        "produced": 830585.76,
+        "consumed": 696043.46,
+        "harvest": 784760.51,
+        "spoiled": 71154.36,
+        "storageWood": 14850,
+        "aid": 982.49
+      },
+      "persons": 239,
+      "homes": 54
+    },
+    {
+      "seed": 7777,
+      "scenario": "drought",
+      "years": 20,
+      "timeMs": 1549,
+      "last": {
+        "year": 20,
+        "population": 95,
+        "hungry": 0,
+        "grainKg": 37768.51,
+        "occupiedGrainKg": 35854.3,
+        "grainKgPerCapita": 397.6,
+        "occupiedHomes": 33,
+        "storagesUpgraded": 31,
+        "occupation": {
+          "farm": 32,
+          "wood": 1,
+          "trade": 0
+        },
+        "paidHiringCoin": 4656
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 111,
+          "hungry": 0,
+          "grainKg": 30962.17,
+          "occupiedGrainKg": 30758.2,
+          "grainKgPerCapita": 278.9,
+          "occupiedHomes": 37,
+          "storagesUpgraded": 17,
+          "occupation": {
+            "farm": 19,
+            "wood": 18,
+            "trade": 0
+          },
+          "paidHiringCoin": 459
+        },
+        {
+          "year": 5,
+          "population": 135,
+          "hungry": 0,
+          "grainKg": 35545.83,
+          "occupiedGrainKg": 34901.3,
+          "grainKgPerCapita": 263.3,
+          "occupiedHomes": 40,
+          "storagesUpgraded": 26,
+          "occupation": {
+            "farm": 32,
+            "wood": 8,
+            "trade": 0
+          },
+          "paidHiringCoin": 6102
+        },
+        {
+          "year": 10,
+          "population": 92,
+          "hungry": 0,
+          "grainKg": 29088.45,
+          "occupiedGrainKg": 27754.2,
+          "grainKgPerCapita": 316.2,
+          "occupiedHomes": 30,
+          "storagesUpgraded": 24,
+          "occupation": {
+            "farm": 30,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 7314
+        },
+        {
+          "year": 15,
+          "population": 94,
+          "hungry": 0,
+          "grainKg": 33239.85,
+          "occupiedGrainKg": 31651.3,
+          "grainKgPerCapita": 353.6,
+          "occupiedHomes": 31,
+          "storagesUpgraded": 30,
+          "occupation": {
+            "farm": 31,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 4758
+        },
+        {
+          "year": 20,
+          "population": 95,
+          "hungry": 0,
+          "grainKg": 37768.51,
+          "occupiedGrainKg": 35854.3,
+          "grainKgPerCapita": 397.6,
+          "occupiedHomes": 33,
+          "storagesUpgraded": 31,
+          "occupation": {
+            "farm": 32,
+            "wood": 1,
+            "trade": 0
+          },
+          "paidHiringCoin": 4656
+        }
+      ],
+      "stats": {
+        "born": 97,
+        "died": 114,
+        "trades": 679,
+        "built": 12,
+        "delivered": 691,
+        "produced": 603739.68,
+        "consumed": 527419.25,
+        "harvest": 570457.16,
+        "spoiled": 45882.4,
+        "storageWood": 12705,
+        "aid": 398.66
+      },
+      "persons": 209,
+      "homes": 48
+    },
+    {
+      "seed": 7777,
+      "scenario": "isolated",
+      "years": 20,
+      "timeMs": 1909,
+      "last": {
+        "year": 20,
+        "population": 140,
+        "hungry": 0,
+        "grainKg": 55052.03,
+        "occupiedGrainKg": 55052,
+        "grainKgPerCapita": 393.2,
+        "occupiedHomes": 52,
+        "storagesUpgraded": 47,
+        "occupation": {
+          "farm": 43,
+          "wood": 9,
+          "trade": 0
+        },
+        "paidHiringCoin": 4857
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 112,
+          "hungry": 0,
+          "grainKg": 31001.49,
+          "occupiedGrainKg": 30995.5,
+          "grainKgPerCapita": 276.8,
+          "occupiedHomes": 37,
+          "storagesUpgraded": 18,
+          "occupation": {
+            "farm": 19,
+            "wood": 18,
+            "trade": 0
+          },
+          "paidHiringCoin": 336
+        },
+        {
+          "year": 5,
+          "population": 140,
+          "hungry": 0,
+          "grainKg": 33936.72,
+          "occupiedGrainKg": 33702.2,
+          "grainKgPerCapita": 242.4,
+          "occupiedHomes": 45,
+          "storagesUpgraded": 36,
+          "occupation": {
+            "farm": 38,
+            "wood": 7,
+            "trade": 0
+          },
+          "paidHiringCoin": 6087
+        },
+        {
+          "year": 10,
+          "population": 139,
+          "hungry": 0,
+          "grainKg": 44485.42,
+          "occupiedGrainKg": 43711.9,
+          "grainKgPerCapita": 320,
+          "occupiedHomes": 46,
+          "storagesUpgraded": 42,
+          "occupation": {
+            "farm": 38,
+            "wood": 8,
+            "trade": 0
+          },
+          "paidHiringCoin": 8436
+        },
+        {
+          "year": 15,
+          "population": 140,
+          "hungry": 0,
+          "grainKg": 49702.15,
+          "occupiedGrainKg": 48966.5,
+          "grainKgPerCapita": 355,
+          "occupiedHomes": 47,
+          "storagesUpgraded": 45,
+          "occupation": {
+            "farm": 37,
+            "wood": 10,
+            "trade": 0
+          },
+          "paidHiringCoin": 6204
+        },
+        {
+          "year": 20,
+          "population": 140,
+          "hungry": 0,
+          "grainKg": 55052.03,
+          "occupiedGrainKg": 55052,
+          "grainKgPerCapita": 393.2,
+          "occupiedHomes": 52,
+          "storagesUpgraded": 47,
+          "occupation": {
+            "farm": 43,
+            "wood": 9,
+            "trade": 0
+          },
+          "paidHiringCoin": 4857
+        }
+      ],
+      "stats": {
+        "born": 116,
+        "died": 88,
+        "trades": 892,
+        "built": 17,
+        "delivered": 910,
+        "produced": 765162.24,
+        "consumed": 652830.02,
+        "harvest": 719071.95,
+        "spoiled": 51802.9,
+        "storageWood": 15345,
+        "aid": 717.33
+      },
+      "persons": 228,
+      "homes": 53
+    },
+    {
+      "seed": 7777,
+      "scenario": "uplands",
+      "years": 20,
+      "timeMs": 1248,
+      "last": {
+        "year": 20,
+        "population": 78,
+        "hungry": 0,
+        "grainKg": 30910.8,
+        "occupiedGrainKg": 29468,
+        "grainKgPerCapita": 396.3,
+        "occupiedHomes": 29,
+        "storagesUpgraded": 26,
+        "occupation": {
+          "farm": 28,
+          "wood": 1,
+          "trade": 0
+        },
+        "paidHiringCoin": 2358
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 113,
+          "hungry": 0,
+          "grainKg": 29236.23,
+          "occupiedGrainKg": 28767.7,
+          "grainKgPerCapita": 258.7,
+          "occupiedHomes": 36,
+          "storagesUpgraded": 25,
+          "occupation": {
+            "farm": 10,
+            "wood": 26,
+            "trade": 0
+          },
+          "paidHiringCoin": 420
+        },
+        {
+          "year": 5,
+          "population": 86,
+          "hungry": 0,
+          "grainKg": 22262.84,
+          "occupiedGrainKg": 22262.8,
+          "grainKgPerCapita": 258.9,
+          "occupiedHomes": 30,
+          "storagesUpgraded": 22,
+          "occupation": {
+            "farm": 30,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 5556
+        },
+        {
+          "year": 10,
+          "population": 82,
+          "hungry": 0,
+          "grainKg": 28343.74,
+          "occupiedGrainKg": 25908.7,
+          "grainKgPerCapita": 345.7,
+          "occupiedHomes": 26,
+          "storagesUpgraded": 24,
+          "occupation": {
+            "farm": 26,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 5067
+        },
+        {
+          "year": 15,
+          "population": 77,
+          "hungry": 0,
+          "grainKg": 29365.47,
+          "occupiedGrainKg": 27388.5,
+          "grainKgPerCapita": 381.4,
+          "occupiedHomes": 27,
+          "storagesUpgraded": 26,
+          "occupation": {
+            "farm": 27,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 4122
+        },
+        {
+          "year": 20,
+          "population": 78,
+          "hungry": 0,
+          "grainKg": 30910.8,
+          "occupiedGrainKg": 29468,
+          "grainKgPerCapita": 396.3,
+          "occupiedHomes": 29,
+          "storagesUpgraded": 26,
+          "occupation": {
+            "farm": 28,
+            "wood": 1,
+            "trade": 0
+          },
+          "paidHiringCoin": 2358
+        }
+      ],
+      "stats": {
+        "born": 74,
+        "died": 108,
+        "trades": 1009,
+        "built": 8,
+        "delivered": 1014,
+        "produced": 491899.6,
+        "consumed": 446641.31,
+        "harvest": 467947.8,
+        "spoiled": 31008.69,
+        "storageWood": 10230,
+        "aid": 174.72
+      },
+      "persons": 186,
+      "homes": 44
+    },
+    {
+      "seed": 43821,
+      "scenario": "normal",
+      "years": 20,
+      "timeMs": 1638,
+      "last": {
+        "year": 20,
+        "population": 126,
+        "hungry": 0,
+        "grainKg": 49400.92,
+        "occupiedGrainKg": 49160.1,
+        "grainKgPerCapita": 392.1,
+        "occupiedHomes": 46,
+        "storagesUpgraded": 41,
+        "occupation": {
+          "farm": 43,
+          "wood": 3,
+          "trade": 0
+        },
+        "paidHiringCoin": 4770
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 110,
+          "hungry": 0,
+          "grainKg": 28761.97,
+          "occupiedGrainKg": 28762,
+          "grainKgPerCapita": 261.5,
+          "occupiedHomes": 36,
+          "storagesUpgraded": 21,
+          "occupation": {            "farm": 13,
+            "wood": 23,
+            "trade": 0
+          },
+          "paidHiringCoin": 663
+        },
+        {
+          "year": 5,
+          "population": 100,
+          "hungry": 0,
+          "grainKg": 29201.85,
+          "occupiedGrainKg": 28024.1,
+          "grainKgPerCapita": 292,
+          "occupiedHomes": 31,
+          "storagesUpgraded": 24,
+          "occupation": {
+            "farm": 31,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 3756
+        },
+        {
+          "year": 10,
+          "population": 113,
+          "hungry": 0,
+          "grainKg": 36880.99,
+          "occupiedGrainKg": 36382.3,
+          "grainKgPerCapita": 326.4,
+          "occupiedHomes": 37,
+          "storagesUpgraded": 31,
+          "occupation": {
+            "farm": 33,
+            "wood": 4,
+            "trade": 0
+          },
+          "paidHiringCoin": 5655
+        },
+        {
+          "year": 15,
+          "population": 127,
+          "hungry": 0,
+          "grainKg": 41195.34,
+          "occupiedGrainKg": 40952.9,
+          "grainKgPerCapita": 324.4,
+          "occupiedHomes": 42,
+          "storagesUpgraded": 37,
+          "occupation": {
+            "farm": 40,
+            "wood": 2,
+            "trade": 0
+          },
+          "paidHiringCoin": 8316
+        },
+        {
+          "year": 20,
+          "population": 126,
+          "hungry": 0,
+          "grainKg": 49400.92,
+          "occupiedGrainKg": 49160.1,
+          "grainKgPerCapita": 392.1,
+          "occupiedHomes": 46,
+          "storagesUpgraded": 41,
+          "occupation": {
+            "farm": 43,
+            "wood": 3,
+            "trade": 0
+          },
+          "paidHiringCoin": 4770
+        }
+      ],
+      "stats": {
+        "born": 107,
+        "died": 92,
+        "trades": 704,
+        "built": 16,
+        "delivered": 746,
+        "produced": 657621.45,
+        "consumed": 558998.17,
+        "harvest": 622368.32,
+        "spoiled": 53542.23,
+        "storageWood": 12870,
+        "aid": 1883.54
+      },
+      "persons": 218,
+      "homes": 52
+    },
+    {
+      "seed": 43821,
+      "scenario": "drought",
+      "years": 20,
+      "timeMs": 1298,
+      "last": {
+        "year": 20,
+        "population": 84,
+        "hungry": 0,
+        "grainKg": 33297.82,
+        "occupiedGrainKg": 32788.1,
+        "grainKgPerCapita": 396.4,
+        "occupiedHomes": 30,
+        "storagesUpgraded": 25,
+        "occupation": {
+          "farm": 30,
+          "wood": 0,
+          "trade": 0
+        },
+        "paidHiringCoin": 2862
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 110,
+          "hungry": 0,
+          "grainKg": 28761.97,
+          "occupiedGrainKg": 28762,
+          "grainKgPerCapita": 261.5,
+          "occupiedHomes": 36,
+          "storagesUpgraded": 21,
+          "occupation": {
+            "farm": 13,
+            "wood": 23,
+            "trade": 0
+          },
+          "paidHiringCoin": 663
+        },
+        {
+          "year": 5,
+          "population": 100,
+          "hungry": 0,
+          "grainKg": 29201.85,
+          "occupiedGrainKg": 28024.1,
+          "grainKgPerCapita": 292,
+          "occupiedHomes": 31,
+          "storagesUpgraded": 24,
+          "occupation": {
+            "farm": 31,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 3756
+        },
+        {
+          "year": 10,
+          "population": 74,
+          "hungry": 0,
+          "grainKg": 24634.96,
+          "occupiedGrainKg": 23909.6,
+          "grainKgPerCapita": 332.9,
+          "occupiedHomes": 25,
+          "storagesUpgraded": 21,
+          "occupation": {
+            "farm": 25,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 3855
+        },
+        {
+          "year": 15,
+          "population": 79,
+          "hungry": 0,
+          "grainKg": 28926.6,
+          "occupiedGrainKg": 27866.6,
+          "grainKgPerCapita": 366.2,
+          "occupiedHomes": 28,
+          "storagesUpgraded": 23,
+          "occupation": {
+            "farm": 28,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 4431
+        },
+        {
+          "year": 20,
+          "population": 84,
+          "hungry": 0,
+          "grainKg": 33297.82,
+          "occupiedGrainKg": 32788.1,
+          "grainKgPerCapita": 396.4,
+          "occupiedHomes": 30,
+          "storagesUpgraded": 25,
+          "occupation": {
+            "farm": 30,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 2862
+        }
+      ],
+      "stats": {
+        "born": 92,
+        "died": 119,
+        "trades": 651,
+        "built": 11,
+        "delivered": 676,
+        "produced": 477713.37,
+        "consumed": 426850.85,
+        "harvest": 451938.3,
+        "spoiled": 31362.63,
+        "storageWood": 9900,
+        "aid": 1004.44
+      },
+      "persons": 203,
+      "homes": 47
+    },
+    {
+      "seed": 43821,
+      "scenario": "isolated",
+      "years": 20,
+      "timeMs": 1656,
+      "last": {
+        "year": 20,
+        "population": 143,
+        "hungry": 0,
+        "grainKg": 56069.51,
+        "occupiedGrainKg": 55616.9,
+        "grainKgPerCapita": 392.1,
+        "occupiedHomes": 51,
+        "storagesUpgraded": 48,
+        "occupation": {
+          "farm": 28,
+          "wood": 23,
+          "trade": 0
+        },
+        "paidHiringCoin": 5724
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 109,
+          "hungry": 0,
+          "grainKg": 28928.5,
+          "occupiedGrainKg": 28928.5,
+          "grainKgPerCapita": 265.4,
+          "occupiedHomes": 36,
+          "storagesUpgraded": 22,
+          "occupation": {
+            "farm": 13,
+            "wood": 23,
+            "trade": 0
+          },
+          "paidHiringCoin": 450
+        },
+        {
+          "year": 5,
+          "population": 103,
+          "hungry": 0,
+          "grainKg": 31645.3,
+          "occupiedGrainKg": 30622,
+          "grainKgPerCapita": 307.2,
+          "occupiedHomes": 33,
+          "storagesUpgraded": 26,
+          "occupation": {
+            "farm": 33,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 6252
+        },
+        {
+          "year": 10,
+          "population": 116,
+          "hungry": 0,
+          "grainKg": 36856.96,
+          "occupiedGrainKg": 34916.3,
+          "grainKgPerCapita": 317.7,
+          "occupiedHomes": 37,
+          "storagesUpgraded": 31,
+          "occupation": {
+            "farm": 33,
+            "wood": 4,
+            "trade": 0
+          },
+          "paidHiringCoin": 6309
+        },
+        {
+          "year": 15,
+          "population": 132,
+          "hungry": 0,
+          "grainKg": 42808.49,
+          "occupiedGrainKg": 42607.7,
+          "grainKgPerCapita": 324.3,
+          "occupiedHomes": 44,
+          "storagesUpgraded": 36,
+          "occupation": {
+            "farm": 38,
+            "wood": 6,
+            "trade": 0
+          },
+          "paidHiringCoin": 6045
+        },
+        {
+          "year": 20,
+          "population": 143,
+          "hungry": 0,
+          "grainKg": 56069.51,
+          "occupiedGrainKg": 55616.9,
+          "grainKgPerCapita": 392.1,
+          "occupiedHomes": 51,
+          "storagesUpgraded": 48,
+          "occupation": {
+            "farm": 28,
+            "wood": 23,
+            "trade": 0
+          },
+          "paidHiringCoin": 5724
+        }
+      ],
+      "stats": {
+        "born": 115,
+        "died": 83,
+        "trades": 573,
+        "built": 21,
+        "delivered": 611,
+        "produced": 705022.17,
+        "consumed": 585089.29,
+        "harvest": 654449.79,
+        "spoiled": 52863.99,
+        "storageWood": 15015,
+        "aid": 1261.48
+      },
+      "persons": 226,
+      "homes": 57
+    },
+    {
+      "seed": 43821,
+      "scenario": "uplands",
+      "years": 20,
+      "timeMs": 675,
+      "last": {
+        "year": 20,
+        "population": 25,
+        "hungry": 0,
+        "grainKg": 9449.18,
+        "occupiedGrainKg": 8504.5,
+        "grainKgPerCapita": 378,
+        "occupiedHomes": 8,
+        "storagesUpgraded": 8,
+        "occupation": {
+          "farm": 8,
+          "wood": 0,
+          "trade": 0
+        },
+        "paidHiringCoin": 1680
+      },
+      "samples": [
+        {
+          "year": 1,
+          "population": 111,
+          "hungry": 0,
+          "grainKg": 26839.37,
+          "occupiedGrainKg": 26839.4,
+          "grainKgPerCapita": 241.8,
+          "occupiedHomes": 36,
+          "storagesUpgraded": 30,
+          "occupation": {
+            "farm": 2,
+            "wood": 34,
+            "trade": 0
+          },
+          "paidHiringCoin": 564
+        },
+        {
+          "year": 5,
+          "population": 26,
+          "hungry": 0,
+          "grainKg": 8010.43,
+          "occupiedGrainKg": 6981.3,
+          "grainKgPerCapita": 308.1,
+          "occupiedHomes": 9,
+          "storagesUpgraded": 8,
+          "occupation": {
+            "farm": 9,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 1833
+        },
+        {
+          "year": 10,
+          "population": 26,
+          "hungry": 0,
+          "grainKg": 8543.23,
+          "occupiedGrainKg": 7258.3,
+          "grainKgPerCapita": 328.6,
+          "occupiedHomes": 7,
+          "storagesUpgraded": 7,
+          "occupation": {
+            "farm": 7,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 1056
+        },
+        {
+          "year": 15,
+          "population": 22,
+          "hungry": 0,
+          "grainKg": 7623.47,
+          "occupiedGrainKg": 6594.4,
+          "grainKgPerCapita": 346.5,
+          "occupiedHomes": 7,
+          "storagesUpgraded": 7,
+          "occupation": {
+            "farm": 7,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 855
+        },
+        {
+          "year": 20,
+          "population": 25,
+          "hungry": 0,
+          "grainKg": 9449.18,
+          "occupiedGrainKg": 8504.5,
+          "grainKgPerCapita": 378,
+          "occupiedHomes": 8,
+          "storagesUpgraded": 8,
+          "occupation": {
+            "farm": 8,
+            "wood": 0,
+            "trade": 0
+          },
+          "paidHiringCoin": 1680
+        }
+      ],
+      "stats": {
+        "born": 46,
+        "died": 132,
+        "trades": 252,
+        "built": 4,
+        "delivered": 257,
+        "produced": 198755.01,
+        "consumed": 193329.44,
+        "harvest": 172764.3,
+        "spoiled": 9558.68,
+        "storageWood": 7095,
+        "aid": 286.11
+      },
+      "persons": 157,
+      "homes": 40
+    }
+  ]
+}
