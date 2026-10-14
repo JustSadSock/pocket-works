@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "4eb766bd6b862b690bf3246e513be1284600416e",
+    "revision": "32f95982b9064a798679971a98e7f49c0356c5b9",
     "qualityScore": 75,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "125736fb8c68b3398d52ec5981207c542de05071b205fcbe45db960ee7a973c8",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "4eb766bd6b862b690bf3246e513be1284600416e",
-    "lastAttemptAt": "2026-10-14T23:40:15.922Z",
+    "lastAttemptRevision": "32f95982b9064a798679971a98e7f49c0356c5b9",
+    "lastAttemptAt": "2026-10-14T23:49:57.838Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3158,7 +3158,7 @@
     "lastAttemptAt": "2026-10-13T22:04:38.310Z"
   },
   "living-history": {
-    "revision": "9ca4699efa6f734e20092236a709cde0043da2a7",
+    "revision": "b684f6693fcac09e927daff6a4a328f851673010",
     "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
@@ -3170,8 +3170,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "9ca4699efa6f734e20092236a709cde0043da2a7",
-    "lastAttemptAt": "2026-10-14T23:12:32.900Z"
+    "lastAttemptRevision": "b684f6693fcac09e927daff6a4a328f851673010",
+    "lastAttemptAt": "2026-10-14T23:50:08.732Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
