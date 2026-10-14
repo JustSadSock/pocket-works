@@ -119,8 +119,10 @@ export function artworkBounds(image){
  if(!(image?.naturalWidth>0&&image?.naturalHeight>0))return null;
  return {x:0,y:0,w:W,h:H};
 }
-export function setArtworkFrame(canvas,image){
- const ratio=artworkAspect(image);
+// Older restored collections could use a letterboxed, fixed 4:3 master.
+// Keep that presentation available for damaged historical archive entries.
+export function setArtworkFrame(canvas,image,legacyFrame=false){
+ const ratio=legacyFrame?W/H:artworkAspect(image);
  if(canvas?.style){
    canvas.style.aspectRatio=String(ratio);
    canvas.style.setProperty?.('--art-aspect',String(ratio));
@@ -129,11 +131,17 @@ export function setArtworkFrame(canvas,image){
  parent?.style?.setProperty?.('--art-aspect',String(ratio));
  return ratio;
 }
-export function drawArtwork(ctx,image,id){
+export function drawArtwork(ctx,image,id,legacyFrame=false){
  if(!artworkBounds(image))return;
- // No surrounding fill: every logical pixel corresponds to actual paint.
- // The presentation element is scaled to natural dimensions, so the result
- // remains geometrically correct on screen despite the fixed game coordinates.
+ if(legacyFrame){
+  // Recover the 1.26.1-era placement without ever rewriting archived strokes.
+  const aspect=artworkAspect(image),width=Math.min(W,H*aspect),
+    height=Math.min(H,W/aspect);
+  ctx.drawImage(image,0,0,image.naturalWidth,image.naturalHeight,
+    (W-width)/2,(H-height)/2,width,height);
+  return;
+ }
+ // Live multiplayer protocol remains a full-frame logical 600×450 painting.
  ctx.drawImage(image,0,0,image.naturalWidth,image.naturalHeight,0,0,W,H);
 }
 function rand(seed){return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}}
