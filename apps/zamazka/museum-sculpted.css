@@ -56,7 +56,9 @@
 }
 .screen>section>.set-furniture+.nothing{display:none}
 .screen>.restore .set-furniture{z-index:2}
-.screen>.restore>.work-area,.screen>.restore>.work-tools,.screen>.restore>.rest-head{position:relative;z-index:3}
+.screen>.restore>.work-area,.screen>.restore>.rest-head{position:relative;z-index:3}
+/* Zoom controls remain anchored to the editor, not inside the tool drawer. */
+.screen>.restore>.work-tools{z-index:3;position:static}
 .screen>.museum-home>.museum-control,.screen>.museum-home>.museum-display,
 .screen>.museum-home>.museum-headline{position:relative;z-index:7}
 .screen>.phase-page>.phase-head,.screen>.phase-page>.phase-body,
