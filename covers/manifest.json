@@ -1,19 +1,19 @@
 {
   "zamazka": {
-    "revision": "ed9a084e5c9d3c780753e1d1ba073953f9892449",
-    "qualityScore": 80,
+    "revision": "20057ade6af5f20dfe7b627d6c5ce0a1d72812f2",
+    "qualityScore": 75,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "b27840ff7f482726d3294773a4d1bc136c3a4c464ea0869a4650d711769a4a85",
+    "sha256": "125736fb8c68b3398d52ec5981207c542de05071b205fcbe45db960ee7a973c8",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "ed9a084e5c9d3c780753e1d1ba073953f9892449",
-    "lastAttemptAt": "2026-10-14T23:12:21.954Z",
+    "lastAttemptRevision": "20057ade6af5f20dfe7b627d6c5ce0a1d72812f2",
+    "lastAttemptAt": "2026-10-14T23:27:20.860Z",
     "started": true,
     "gameplayEntry": [
       {
-        "label": "✎ Реставратор Изменить знак ✎",
+        "label": "✳ Одиночная реставрация",
         "id": "",
         "score": 92
       }
