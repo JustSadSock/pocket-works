@@ -55,6 +55,8 @@ try{
   assert.equal(await nextSwitch.isChecked(),false,'New style must start disabled');
   await nextSwitch.check();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new','Toggle must preview new look immediately');
+  const previewBackground=await page.locator('.museum-home').evaluate(el=>getComputedStyle(el).backgroundImage);
+  assert.notEqual(previewBackground,shellTheme,'Appearance switch must visibly change actual surface styling');
   assert.equal(await page.locator('.museum-home .museum-plinth').count(),1,'New style must add its physical picture ledge');
   await page.locator('#modalActions .btn.ghost').click();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'classic','Cancel must revert theme');
@@ -129,6 +131,17 @@ try{
   await page.waitForTimeout(150);
   const indicator=await page.locator('#strokeCount').textContent();
   assert(/Мазков: [1-9]/.test(indicator), 'editor failed to record real pointer stroke: '+indicator);
+  await board.evaluate(el=>el.dataset.themeContinuity='intact');
+  await page.locator('#settingsBtn').click();
+  await page.locator('#settingNewAppearance').uncheck();
+  await page.locator('#modalActions .btn.primary').click();
+  assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Switching off must preserve mounted drawing canvas');
+  assert.equal(await page.locator('#strokeCount').textContent(),indicator,'Switching off must retain brush strokes');
+  await page.locator('#settingsBtn').click();
+  await page.locator('#settingNewAppearance').check();
+  await page.locator('#modalActions .btn.primary').click();
+  assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Switching on must preserve mounted drawing canvas');
+  assert.equal(await page.locator('#strokeCount').textContent(),indicator,'Switching on must retain brush strokes');
   await page.locator('[data-action="submit"]').click();
   await page.locator('.reveal-phase').waitFor({timeout:11000});
   await page.locator('.reveal-phase.is-composed').waitFor({timeout:12000});
