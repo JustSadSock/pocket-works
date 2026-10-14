@@ -19,7 +19,7 @@ import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.36.1',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.36.2',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -373,7 +373,7 @@ function setup(mode,error='',roomValue=invitedRoom){
 }
 let roundsChoice=3;
 let drawingSecondsChoice=160;
-const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[0,'Без ограничения']];
+const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[600,'10 минут'],[0,'Без ограничения']];
 const DURATION_VALUES=DRAWING_TIME_OPTIONS.map(([seconds])=>seconds);
 const SOLO_DURATION_KEY=NS+'solo-drawing-seconds';
 const normalizedDuration=value=>value!==''&&value!=null&&DURATION_VALUES.includes(Number(value))?Number(value):160;
