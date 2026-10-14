@@ -292,7 +292,7 @@ export class PocketNetHub {
         .map(ws=>ws.deserializeAttachment()).filter(v=>v?.accountId&&v.roomId&&ids.has(v.accountId));
       if(!live.length)return json({rooms});
       const wanted=new Set(live.map(v=>v.roomId));
-      const candidates=this.sql("SELECT id,game_id,players,json_extract(state,'$.phase') AS phase FROM rooms").toArray();
+      const candidates=this.sql("SELECT id,game_id,version,players,json_extract(state,'$.phase') AS phase FROM rooms").toArray();
       for(const room of candidates){
         if(!wanted.has(room.id))continue;
         const mod=this.module(room.game_id,room.version);
