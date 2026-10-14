@@ -38,6 +38,11 @@ try{
   assert.equal(await page.locator('#zamazka-experimental-style').getAttribute('media'),'not all');
   assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),'not all','Classic mode must not load the new home CSS');
   assert.equal(await page.locator('.set-furniture').count(),0,'Classic style must not mount decorative scenery');
+  const classicConstruction=await page.locator('.museum-home').evaluate(el=>[
+    '.museum-luminaire','.museum-console-structure','.museum-frame-facet'
+  ].map(selector=>getComputedStyle(el.querySelector(selector)).display));
+  assert.deepEqual(classicConstruction,['none','none','none'],'Physical construction must be isolated from classic mode');
+
   assert.equal(await page.locator('.museum-plinth').count(),0,'Classic style must not mount museum plinth');
   assert.equal(await page.locator('.museum-architecture').count(),0,'Classic mode must restore original DOM architecture');
   const shellTheme=await page.locator('.museum-home').evaluate(el=>getComputedStyle(el).backgroundImage);
@@ -78,6 +83,18 @@ try{
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new','New look must survive reload');
   assert.equal(await page.locator('.museum-home .museum-plinth').count(),1);
   assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),'all','After-hours art direction must only load in the opt-in theme');
+  const constructed=await page.locator('.museum-home').evaluate(el=>{
+    const panel=el.querySelector('.museum-console-structure');
+    const lamp=el.querySelector('.museum-luminaire');
+    const facets=[...el.querySelectorAll('.museum-slide[data-slot="0"] .museum-frame-facet')];
+    return {panel:getComputedStyle(panel).display,lamp:getComputedStyle(lamp).display,
+      facetCount:facets.length,visibleFacets:facets.filter(f=>getComputedStyle(f).display!=='none').length,
+      frameMaterial:getComputedStyle(el.querySelector('.museum-slide-rim')).backgroundColor};
+  });
+  assert.equal(constructed.panel,'block','Workbench must have real constructed planes');
+  assert.equal(constructed.lamp,'block','Gallery lighting must have a physical source');
+  assert.equal(constructed.visibleFacets,4,'Painting should have four real bevel faces');
+
   const homeGeometry=await page.evaluate(()=>{
     const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}};
     return {mode:getComputedStyle(document.querySelector('.museum-home')).display,
