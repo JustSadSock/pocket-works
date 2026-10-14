@@ -378,3 +378,11 @@ Visible product work uses the **production pipeline** in `docs/CREATIVE-PRODUCTI
 ## Visual Intelligence production foundation
 
 Before new app art production, follow `docs/VISUAL-INTELLIGENCE.md`: inspect visual memory, research references, explore three materially different concepts and complete the app-local `art-bible.json`. Preserve reviewed frames/video and separately attributed feedback. Image diagnostics support inspection and never replace artistic judgment. Stages II–IV remain separate platform tasks in `docs/ART-PRODUCTION-ROADMAP.md`.
+
+
+## Universal QA and app-owned experiments
+
+Pocket Works has GitHub-hosted Universal QA, documented at docs/UNIVERSAL-QA.md.
+For any app change, add or update apps/<slug>/qa.plan.json inside the same app when deeper checking is useful. Use its allowlisted node-test, node (per-seed fan-out), browser-node, playwright and visual suites; all executed on hosted runners, with aggregate artifacts and screenshots. An app agent may customize these suites and test code without modifying shared scripts or GitHub workflows.
+
+PRs automatically run the app's smoke tier. Deep profiles must be explicitly launched with GitHub workflow_dispatch or an owner-authored [qa] pocket-works Issue. Run meaningful real flows, not only synthetic fixtures; inspect actual browser screenshots before sign-off. Do not add secrets to QA jobs. Never retarget PR QA to the user's home self-hosted runner in this public repository.
