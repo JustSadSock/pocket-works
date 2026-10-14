@@ -389,7 +389,7 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
  box-shadow:0 13px 28px #0a120cd4,0 2px 0 #a38b69 inset;
 }
 html[data-zamazka-appearance="new"] #screen>.museum-home .museum-console-structure {
- position:absolute;inset:0;
+ display:block;position:absolute;inset:0;
  z-index:-1;pointer-events:none;overflow:hidden;
  background:linear-gradient(106deg,#493727 0%,#48382a 12%,#3a2f25 54%,#342a22 100%);
 }
@@ -460,7 +460,7 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration:focu
 }
 /* A physical slim picture lamp gives the painting's warm wall wash its source. */
 html[data-zamazka-appearance="new"] #screen>.museum-home .museum-luminaire {
- position:absolute;top:0;left:50%;transform:translateX(-50%);
+ display:block;position:absolute;top:0;left:50%;transform:translateX(-50%);
  width:90px;height:25px;z-index:6;pointer-events:none;
 }
 html[data-zamazka-appearance="new"] #screen>.museum-home .museum-luminaire-stem {
