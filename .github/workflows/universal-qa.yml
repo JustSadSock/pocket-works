@@ -134,7 +134,7 @@ jobs:
           if-no-files-found: warn
 
   summary:
-    if: always() && needs.plan.result == 'success'
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.expected != '[]'
     needs: [plan, cpu, browser]
     runs-on: ubuntu-latest
     timeout-minutes: 10
