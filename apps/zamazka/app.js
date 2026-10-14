@@ -1189,15 +1189,15 @@ async function refreshPocketBadge(){
   return;
  }
  if(prior===(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||''))return;
- if(page==='home'){
-  const caption=screen.querySelector('.persona-caption strong');
-  if(caption)caption.textContent=gameName();
- } else if(page==='setup') {
+ syncIdentity();
+ screen.querySelectorAll('.home-pocket-identity strong,.entry-profile strong,.lobby-self strong').forEach(el=>el.textContent=gameName());
+ if(page==='setup'){
   const field=screen.querySelector('#who');
-  if(field){field.value=gameName();field.readOnly=isPocketMember();}
-  const note=screen.querySelector('.pw-room-identity');
-  if(note)note.innerHTML=isPocketMember()?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' Ник подтверждён Pocket ID · <a href="'+pocketIdProfileUrl+'">Изменить профиль</a>':'Гостевой режим · <a href="'+pocketIdProfileUrl+'">Войти через Pocket ID</a>';
+  if(field){field.value=gameName();field.readOnly=isPocketMember()}
+  const note=screen.querySelector('.entry-profile small');
+  if(note)note.textContent=isPocketMember()?'Профиль Pocket ID':'Гостевой игрок · открыть Pocket ID';
  }
+
 }
 zamazkaCloud=createZamazkaCloud({
  getArchive:()=>saved,
