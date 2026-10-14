@@ -1,5 +1,7 @@
 import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame} from './artworks.js';
 import {zamazkaStore} from './storage.js';
+import {floodFillRaster} from './fill-core.js';
+export {floodFillRaster};
 
 // Keep stroke coordinates in the 600×450 logical world, but rasterize on a much
 // denser backing buffer. Previously both zoomed desktop editing and the reveal
@@ -45,73 +47,6 @@ function layer(){
  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
  return {canvas,ctx};
 }
-/** Pixel-space 4-way flood, plus one-pixel colour underlap beneath contour AA. */
-export function floodFillRaster({width,height,walls,zone,output,point,color,mergeOpenRegions=false}){
- const total=width*height;
- if(!total||!walls||!zone||!output||!Array.isArray(point)||!Array.isArray(color))return 0;
- const wall=walls.data||walls,area=zone.data||zone,ink=output.data||output;
- if(wall.length<total*4||area.length<total*4||ink.length<total*4)return 0;
- const allowed=i=>area[i*4+3]>=120&&wall[i*4+3]<145;
- let sx=Math.max(0,Math.min(width-1,Math.floor(point[0]))),sy=Math.max(0,Math.min(height-1,Math.floor(point[1])));
- let start=sy*width+sx;
- // A click a fraction inside an antialiased line should still find its own
- // nearby enclosed region. Never search farther than three logical pixels.
- if(!allowed(start)){
-   let closest=-1,dist=Infinity;
-   const radius=6;
-   for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
-     const x=sx+dx,y=sy+dy,d=dx*dx+dy*dy;
-     if(x<0||x>=width||y<0||y>=height||d>radius*radius||d>=dist)continue;
-     const i=y*width+x;if(allowed(i)){closest=i;dist=d}
-   }
-   if(closest<0)return 0;
-   start=closest;
- }
- const seen=new Uint8Array(total),queue=new Int32Array(total);
- let head=0,tail=1;seen[start]=1;queue[0]=start;
- while(head<tail){
-   const i=queue[head++],x=i%width,y=(i/width)|0;
-   if(x>0){const n=i-1;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
-   if(x<width-1){const n=i+1;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
-   if(y>0){const n=i-width;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
-   if(y<height-1){const n=i+width;if(!seen[n]&&allowed(n)){seen[n]=1;queue[tail++]=n}}
- }
- // An open line joining two sides of the irregular cutout is not an
- // enclosed colour area. Fill the complete damage, keeping line pigment.
- let openToEdge=false;
- if(mergeOpenRegions)for(let n=0;n<tail&&!openToEdge;n++){
-  const i=queue[n],x=i%width,y=(i/width)|0;
-  if(x===0||x===width-1||y===0||y===height-1||
-     area[(i-1)*4+3]<120||area[(i+1)*4+3]<120||
-     area[(i-width)*4+3]<120||area[(i+width)*4+3]<120)openToEdge=true;
- }
- const [r,g,b]=color;
- const paint=i=>{
-   // Colour beyond the damaged mask is harmless with the final single clip,
-   // but skipping it avoids needless work and lets the border stay precise.
-   if(area[i*4+3]===0)return;
-   const k=i*4;ink[k]=r;ink[k+1]=g;ink[k+2]=b;ink[k+3]=255;
- };
- if(mergeOpenRegions&&openToEdge){
-  for(let i=0;i<total;i++)if(area[i*4+3])paint(i);
-  return tail;
- }
- for(let n=0;n<tail;n++)paint(queue[n]);
- // Pad up to two high-resolution pixels ONLY into a wall or the
- // antialiased edge of the damage mask, never through them into another basin.
- // This reaches the faint fringe at the outside of a torn edge and hides the
- // seam below the drawn line even when a line lands between device pixels.
- for(let n=0;n<tail;n++){
-   const i=queue[n],x=i%width,y=(i/width)|0;
-   for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){
-     if(!dx&&!dy||dx*dx+dy*dy>10)continue;
-     const xx=x+dx,yy=y+dy;if(xx<0||xx>=width||yy<0||yy>=height)continue;
-     const neighbour=yy*width+xx;
-     if(!seen[neighbour]&&!allowed(neighbour))paint(neighbour);
-   }
- }
- return tail;
-}
 // The alpha of the current (possibly smudged) contour protects its visible
 // pigment from the bucket while antialiased edges blend with the new colour.
 export function preservePaintContours(output,original,walls){
@@ -131,7 +66,7 @@ function fillRegion(lines,paint,zoneMask,p,colour){
  const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
  const filled=floodFillRaster({
    width:w,height:h,walls,zone:zoneMask,output:current,
-   point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color,mergeOpenRegions:true
+   point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
  });
  if(filled){
    // Keep existing, potentially blended contour pigment instead of painting
