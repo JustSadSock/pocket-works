@@ -64,6 +64,12 @@ Outputs:
 - Artifacts retained for seven days, publicly accessible where GitHub makes them available.
 - Keep PR checks fast. Do not automatically launch a large seed sweep after every code change.
 
+## Required visual review by app/visual agents
+
+Visual agents must use **Playwright to see what they actually built**. For any visible change, capture a baseline, render the changed commit, download/open the screenshots from the `qa-<app>-<suite>` artifact and visually compare at least desktop and mobile. Inspect the first frame, active interaction and result; check actual geometry, lighting/materials, clipping, contrast and visual noise. Record concrete defects, fix them and rerun. A successful GitHub Actions job is not enough. Check `docs/agent-skills/VISUAL-QA.md` for the full mandatory protocol.
+
+An app-owned `visual` suite captures entry states and scripted clicks; an app-owned `browser-node` Playwright script can switch the experimental theme, execute a full scenario and save meaningful screenshots with `PW_QA_OUTPUT_DIR` or an app-specific artifact directory. **A visual suite that captures only the classic/default appearance cannot validate an experimental redesign.** Issue-triggered runs check `main`, while `workflow_dispatch` can check an intended branch. Always check the run's head SHA and read screenshots rather than relying on job success.
+
 ## Workflow for agents
 
 1. Modify one application inside apps/<slug>/.
