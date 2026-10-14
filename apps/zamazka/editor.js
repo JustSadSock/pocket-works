@@ -25,7 +25,7 @@ function prepareCanvas(canvas,editor=false,thumbnail=false){
 }
 function clipZone(ctx,z){damagePath(ctx,z);ctx.clip();}
 function dab(ctx,x,y,r,color,alpha=1){ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,Math.max(.12,r),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
-function drawStroke(ctx,stroke,aspect=W/H){
+export function drawStroke(ctx,stroke,aspect=W/H){
  const pts=stroke.p||[];if(!pts.length)return;
  const size=Number(stroke.s)||8,color=stroke.t==='erase'?'#e8ddc6':stroke.c;
  // Saved points stay in the immutable 600×450 world. Correct pen geometry
@@ -283,6 +283,24 @@ export class Editor{
      this.render();
    }).catch(()=>{});
 
+ }
+ // Fit the *actual* painting into the available stage instead of relying on
+ // overlapping 4:3 desktop/mobile width formulas. The viewport is never
+ // taller than the stage or wider than its safe touch area.
+ fitViewport(aspect=this.frameAspect||W/H){
+  const stage=this.root?.querySelector?.('.work-stage');
+  if(!stage||!this.viewport||!Number.isFinite(aspect)||aspect<=0)return false;
+  const availableWidth=stage.clientWidth-4,availableHeight=stage.clientHeight-4;
+  if(availableWidth<20||availableHeight<20)return false;
+  const width=Math.max(20,Math.min(availableWidth,availableHeight*aspect));
+  const height=width/aspect;
+  const oldWidth=parseFloat(this.viewport.style.width),oldHeight=parseFloat(this.viewport.style.height);
+  if(Math.abs(oldWidth-width)<.5&&Math.abs(oldHeight-height)<.5)return false;
+  this.viewport.style.setProperty('width',width+'px','important');
+  this.viewport.style.setProperty('height',height+'px','important');
+  this.viewport.style.setProperty('max-height','100%','important');
+  this.viewport.style.setProperty('aspect-ratio',String(aspect),'important');
+  return true;
  }
  center(animate=false){
   if(animate&&this.canvas.classList){
@@ -754,8 +772,15 @@ export class Editor{
     this.globalPointerUp=e=>{if(this.pointers.has(e.pointerId))this.up(e)};
     window.addEventListener('pointerup',this.globalPointerUp);
     window.addEventListener('pointercancel',this.globalPointerUp);
-    this.resize=()=>{if(!this.pointers.size)this.center()};
+    this.resize=()=>{if(!this.pointers.size){this.fitViewport();this.center()}};
     window.addEventListener('resize',this.resize);
+    if(typeof ResizeObserver!=='undefined'){
+      this.frameObserver=new ResizeObserver(()=>{
+        if(!this.closed&&this.frameAspect&&!this.pointers.size&&this.fitViewport())this.center();
+      });
+      const stage=this.root.querySelector('.work-stage');
+      if(stage)this.frameObserver.observe(stage);
+    }
   }
  async pick(p,temporary=false){
    try{
@@ -794,6 +819,8 @@ export class Editor{
    if(!this.nativeFrameReady){
      this.nativeFrameReady=true;
      setArtworkFrame(this.canvas,img);
+     this.frameAspect=artworkAspect(img);
+     this.fitViewport(this.frameAspect);
      this.center();
    }
    return new Promise(resolve=>{
@@ -865,7 +892,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.closed=true;clearTimeout(this.recenterTimer);
+ dispose(){this.closed=true;this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
