@@ -3155,5 +3155,21 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "48571f9b43c34268004356e64a6116de3932d8bc",
     "lastAttemptAt": "2026-10-13T22:04:38.310Z"
+  },
+  "living-history": {
+    "revision": "81130dc8ce32b939482c55a77ec71df02aeffdae",
+    "qualityScore": 73,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "612658c838e56ba2ecb0f05d9416840b136e34856ef976232ca60d73aefebb37",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "81130dc8ce32b939482c55a77ec71df02aeffdae",
+    "lastAttemptAt": "2026-10-14T12:21:40.798Z"
   }
 }
