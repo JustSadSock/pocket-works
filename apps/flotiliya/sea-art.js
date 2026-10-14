@@ -60,7 +60,7 @@ export function renderSea(ctx,now,islands,weather,W,H){
   ctx.restore();
  }
  // The compass is an instrument rather than a thick map grid.
- ctx.save();ctx.translate(947,69);ctx.strokeStyle='rgba(231,222,188,.58)';ctx.lineWidth=1;
+ ctx.save();ctx.translate(W-55,69);ctx.strokeStyle='rgba(231,222,188,.58)';ctx.lineWidth=1;
  ctx.beginPath();ctx.arc(0,0,18,0,TAU);ctx.moveTo(0,-26);ctx.lineTo(0,26);ctx.moveTo(-26,0);ctx.lineTo(26,0);ctx.stroke();
  ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(-4,3);ctx.lineTo(0,-3);ctx.closePath();ctx.fillStyle='#e1c997';ctx.fill();
  ctx.fillStyle='#f0deb2';ctx.textAlign='center';ctx.font='13px Georgia';ctx.fillText('N',0,-31);ctx.restore();
@@ -141,7 +141,7 @@ export function renderGalley(ctx,s,now,selected=false){
  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
  if(selected){ctx.strokeStyle='#f5d69b';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(s.x,s.y,Math.max(36,len*.78),0,TAU);ctx.stroke();ctx.setLineDash([]);}
  ctx.shadowColor='rgba(3,20,25,.92)';ctx.shadowBlur=7;
- ctx.font='600 12px Georgia, serif';ctx.fillStyle=side?'#f7e9c9':'#f6d3bf';ctx.fillText(s.name,s.x,s.y-35);
+ ctx.font='600 20px Georgia, serif';ctx.fillStyle=side?'#f7e9c9':'#f6d3bf';ctx.fillText(s.name,s.x,s.y-35);
  ctx.shadowBlur=0;ctx.fillStyle='rgba(12,31,35,.7)';ctx.fillRect(s.x-28,s.y+31,56,5);
  ctx.fillStyle=side?'#82b29a':'#c7836b';ctx.fillRect(s.x-28,s.y+31,56*hp,5);
  ctx.fillStyle='rgba(225,229,210,.55)';ctx.fillRect(s.x-28,s.y+37,56*Math.max(0,s.crew/s.maxCrew),2);
