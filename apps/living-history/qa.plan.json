@@ -7,11 +7,8 @@
       "tier": "smoke",
       "files": [
         "model.test.mjs",
-        "model.integration.test.mjs",
-        "model.v02.test.mjs",
-        "model.calibration.test.mjs",
-        "model.economy.test.mjs",
-        "laboratory.test.mjs"
+        "laboratory.test.mjs",
+        "visual-land.test.mjs"
       ]
     },
     {
@@ -83,6 +80,65 @@
       "seeds": [
         413,
         7777
+      ]
+    },
+    {
+      "id": "village-motion",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#map",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#village-view"
+        },
+        {
+          "action": "click",
+          "selector": "[data-speed=\"1\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#world"
+        },
+        {
+          "action": "screenshot"
+        }
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ]
+    },
+    {
+      "id": "livestock-long",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/livestock-study.mjs",
+      "args": [
+        "--seed={seed}",
+        "--years=20",
+        "--output={output}/study.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001
+      ]
+    },
+    {
+      "id": "historic-regression",
+      "kind": "node-test",
+      "tier": "deep",
+      "files": [
+        "model.integration.test.mjs",
+        "model.v02.test.mjs",
+        "model.calibration.test.mjs",
+        "model.economy.test.mjs"
       ]
     }
   ]
