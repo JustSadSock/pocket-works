@@ -61,7 +61,7 @@
     {
       "id": "real-flow",
       "kind": "browser-node",
-      "tier": "smoke",
+      "tier": "deep",
       "entry": "qa/real-flow.mjs"
     },
     {
