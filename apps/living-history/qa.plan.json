@@ -9,7 +9,8 @@
         "model.test.mjs",
         "laboratory.test.mjs",
         "visual-land.test.mjs",
-        "movement-realism.test.mjs"
+        "movement-realism.test.mjs",
+        "land-tenure.test.mjs"
       ]
     },
     {
@@ -151,6 +152,23 @@
         "--seed={seed}",
         "--years=20",
         "--output={output}/commute.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001
+      ]
+    },
+    {
+      "id": "tenure-long",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/tenure-study.mjs",
+      "args": [
+        "--seed={seed}",
+        "--years=20",
+        "--output={output}/tenure.json"
       ],
       "seeds": [
         413,
