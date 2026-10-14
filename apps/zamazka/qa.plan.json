@@ -55,6 +55,32 @@
         },
         {
           "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": ".appearance-choice"
+        },
+        {
+          "action": "click",
+          "selector": "#modalActions .btn.primary"
+        },
+        {
+          "action": "visible",
+          "selector": ".museum-home .museum-console-structure"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='collection']"
+        },
+        {
+          "action": "visible",
+          "selector": ".collection-page"
+        },
+        {
+          "action": "screenshot"
         }
       ]
     },
