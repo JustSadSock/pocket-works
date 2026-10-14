@@ -84,6 +84,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install optional Node dependencies
+        if: matrix.install == true
+        run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Run app-owned CPU QA
         env:
           PW_QA_TASK: ${{ toJSON(matrix) }}

@@ -28,6 +28,7 @@ export default defineConfig({
   webServer: {
     command: 'node scripts/serve-site.mjs',
     cwd: root,
+    env: { POCKET_WORKS_SITE_ROOT: process.env.PW_QA_SITE_ROOT || root },
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: false,
     timeout: 120000

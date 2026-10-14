@@ -77,9 +77,14 @@ async function main() {
   try {
     if (suite.kind === 'visual' || suite.kind === 'playwright' || suite.kind === 'browser-node') {
       const config = JSON.parse(readFileSync(join(ROOT, 'apps', task.app, 'app.config.json'), 'utf8'));
-      const build = config.runtime === 'quick' ? ['run', 'prepare:site'] : ['run', 'deploy:site'];
-      const before = await execute('npm', build, { output, task, timeoutMs: 420_000 });
-      if (!before.success) throw Error('Site build failed: ' + JSON.stringify(before));
+      // Quick PWAs are self-contained. Preview source directly so another app's
+      // broken packaging cannot prevent this app from receiving browser QA.
+      process.env.PW_QA_SITE_ROOT = ROOT;
+      if (config.runtime !== 'quick') {
+        const before = await execute('npm', ['run', 'deploy:site'], { output, task, timeoutMs: 420_000 });
+        if (!before.success) throw Error('Enhanced site build failed: ' + JSON.stringify(before));
+        process.env.PW_QA_SITE_ROOT = join(ROOT, 'dist-site');
+      }
     }
     const [binary, args] = jobArgs(task, suite, output);
     const run = await execute(binary, args, { output, task, timeoutMs: suite.kind === 'node' ? 2_100_000 : 1_200_000 });

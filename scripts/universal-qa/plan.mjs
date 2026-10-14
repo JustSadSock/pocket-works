@@ -50,6 +50,7 @@ function validateSuite(dir, suite) {
   if (!suite || typeof suite !== 'object' || Array.isArray(suite) || !IDENT.test(suite.id)) throw Error('QA suite needs a kebab-case id');
   if (!['node-test', 'node', 'browser-node', 'visual', 'playwright'].includes(suite.kind)) throw Error('Unknown QA kind in ' + suite.id);
   if (!['smoke', 'deep'].includes(suite.tier ?? 'smoke')) throw Error('QA tier must be smoke or deep');
+  if (suite.install !== undefined && typeof suite.install !== 'boolean') throw Error('install must be boolean');
   const normalized = { ...suite, tier: suite.tier ?? 'smoke' };
   if (suite.kind === 'node-test') {
     if (!Array.isArray(suite.files) || !suite.files.length || suite.files.length > 40)
@@ -120,7 +121,7 @@ export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke' }) {
       const seeds = ['node', 'browser-node'].includes(selected.kind) && selected.seeds?.length ? selected.seeds : [null];
       for (const seed of seeds) {
         const key = [app, selected.id, ...(seed === null ? [] : [String(seed)])].join('-');
-        tasks.push({ key, app, suite: selected.id, kind: selected.kind, seed });
+        tasks.push({ key, app, suite: selected.id, kind: selected.kind, seed, install: selected.install === true });
       }
     }
   }

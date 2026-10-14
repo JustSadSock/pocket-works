@@ -37,8 +37,10 @@ Kinds:
 - **node-test:** Node native tests, files inside app ending .test.mjs.
 - **node:** one app-local .mjs script per seed (or one if no seeds). Scripts should be deterministic and validate CLI flags. Output folder is supplied as {output} plus PW_QA_OUTPUT_DIR; files there become artifacts.
 - **browser-node:** .mjs requiring browser runtime, same entry/args/seeds as node, executes in browser container. Works with existing authored Playwright scripts.
-- **visual:** captures actual rendered screenshots on mobile/tablet/desktop in Chromium/WebKit, detects HTTP failure, unhandled errors, horizontal overflow. Supports click/fill/visible/screenshot interactions. Screenshots are not automatic aesthetic judgments.
+- **visual:** captures actual rendered screenshots on mobile/tablet/desktop; Quick apps are served directly from their isolated source directory, enhanced apps require their production build in Chromium/WebKit, detects HTTP failure, unhandled errors, horizontal overflow. Supports click/fill/visible/screenshot interactions. Screenshots are not automatic aesthetic judgments.
 - **playwright:** app-local qa/*.spec.ts or .spec.js with Playwright tests. Shared config starts a preview server and runs Chromium mobile, WebKit mobile, Chromium desktop. Traces, screenshots and videos are uploaded on failure.
+
+Node suites that import npm packages can opt into dependency installation with install: true; dependency-free suites skip npm install for speed.
 
 QA details stay inside the app: test code, selectors, thresholds, experiment seeds and parameters. No shared workflow edit is needed. Without qa.plan.json, discovery uses *.test.mjs files up to two subfolders deep and generic visual capture for apps with index.html.
 

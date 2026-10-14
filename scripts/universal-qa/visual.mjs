@@ -21,7 +21,7 @@ if (!Array.isArray(engines) || !engines.length || engines.length > 2 ||
 mkdirSync(out, { recursive: true });
 const report = { app: task.app, suite: suite.id, screens: [], failures: [] };
 const server = spawn(process.execPath, ['scripts/serve-site.mjs'], {
-  cwd: ROOT, env: { ...process.env, PORT: '4173' }, stdio: 'ignore', shell: false
+  cwd: ROOT, env: { ...process.env, PORT: '4173', POCKET_WORKS_SITE_ROOT: process.env.PW_QA_SITE_ROOT || ROOT }, stdio: 'ignore', shell: false
 });
 const browsers = [];
 
