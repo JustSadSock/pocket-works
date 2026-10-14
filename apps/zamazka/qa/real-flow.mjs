@@ -145,6 +145,26 @@ try{
     assert(returnFont>=16,'Pocket Works mobile back arrow is not visible');
   }
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-afterhours-home-'+viewport.width+'.png'),fullPage:false});
+  const startingUrl=page.url();
+  await page.locator('#profileBtn').click();
+  await page.locator('.pws-dialog[open]').waitFor({timeout:5000});
+  assert.equal(page.url(),startingUrl,'Pocket ID opening must not navigate outside the game');
+  await page.locator('.pws-dialog .pws-close').click();
+  await page.locator('.pws-dialog[open]').waitFor({state:'hidden',timeout:3000});
+  // One burst must settle on the last requested painting, without autoplay.
+  const expectedAfter=await page.evaluate(()=>{
+    const current=document.querySelector('.museum-exhibit-number').textContent;
+    const index=Number(current.split('/')[0].trim())-1;
+    document.querySelectorAll('[data-action="museum-next"]').forEach(button=>{for(let i=0;i<5;i++)button.click()});
+    return (index+5)%71;
+  });
+  await page.waitForTimeout(780);
+  const settled=await page.evaluate(()=>Number(document.querySelector('.museum-exhibit-number').textContent.split('/')[0].trim())-1);
+  assert.equal(settled,expectedAfter,'Rapid inputs should land on the last requested picture');
+  await page.waitForTimeout(650);
+  assert.equal(await page.evaluate(()=>Number(document.querySelector('.museum-exhibit-number').textContent.split('/')[0].trim())-1),settled,
+    'Carousel must not continue turning on its own');
+
   await page.locator('#settingsBtn').click();
   await page.locator('#settingNewAppearance').uncheck();
   await page.locator('#modalActions .btn.primary').click();
@@ -160,10 +180,19 @@ try{
   assert.equal(await centerFrame.getAttribute('role'),'button','Paintings should be keyboard accessible');
   await centerFrame.click();
   await page.locator('.dialog:not(.hidden) .art-inspection').waitFor({timeout:6000});
+  const inspection=await page.evaluate(()=>{
+    const dlg=document.querySelector('.dialog-box'),close=document.querySelector('#modalActions .btn.primary');
+    const box=dlg.getBoundingClientRect(),r=close.getBoundingClientRect();
+    return {closeBottom:r.bottom,screenHeight:innerHeight,overflow:dlg.scrollHeight-dlg.clientHeight,top:box.top};
+  });
+  assert(inspection.closeBottom<inspection.screenHeight&&inspection.overflow<=3&&inspection.top>=0,
+    'Tall painting inspection must fit viewport and keep close visible');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-inspect-'+viewport.width+'.png'),fullPage:false});
+
   await page.locator('#modalActions .btn.primary').click();
   const primary=page.locator('#primary-action');
   assert.equal(await primary.getAttribute('data-action'),'create','cooperative mode must be primary');
-  assert.equal(await page.locator('#profileBtn').evaluate(el=>el.tagName),'A','Pocket ID navigation must be a working link');
+  assert.equal(await page.locator('#profileBtn').evaluate(el=>el.tagName),'BUTTON','Pocket ID stays in the app');
   assert.equal(await page.locator('.museum-home .personal-seal').count(),0,'No personal sign in menu');
   await primary.click();
   await page.locator('.lobby-entry .entry-profile').waitFor({timeout:6000});
@@ -190,7 +219,7 @@ try{
     return false;
   });
   assert(boardInk,'Waiting room canvas must truly accept brush strokes');
-  await page.locator('.lobby-controls [data-action="menu"]').click();
+  await page.locator('.lobby-mast .lobby-exit').click();
   await page.locator('#modalActions .btn.primary').click();
   await page.locator('.museum-home').waitFor();
   await page.locator('[data-action="practice"]').click();
@@ -201,10 +230,12 @@ try{
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
   if(mobile){
     const frame=await page.locator('.mobile-preview .gallery .picture .picture-image').first().evaluate(el=>({
-      matBorder:parseFloat(getComputedStyle(el).borderTopWidth),
-      actualFrame:parseFloat(getComputedStyle(el.querySelector('img')).borderTopWidth)
+      outerBorder:parseFloat(getComputedStyle(el).borderTopWidth),
+      artworkBorder:parseFloat(getComputedStyle(el.querySelector('.picture-mat')).borderTopWidth),
+      bezelHeight:el.querySelector('.picture-bevel-top').getBoundingClientRect().height
     }));
-    assert(frame.matBorder===0&&frame.actualFrame>=5,'Art frame must fit the real image, not its swipe cell');
+    assert(frame.outerBorder===0&&frame.artworkBorder>=1&&frame.bezelHeight>=5,
+      'Art frame must wrap only the decoded image, with four real bevel faces');
   }
   await page.waitForTimeout(2900); // Let the real transient settings toast finish before evidence capture.
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-gallery-'+viewport.width+'.png'),fullPage:false});
