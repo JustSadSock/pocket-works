@@ -201,7 +201,7 @@ assert.equal((await call(1,'profile',{...aliceCard,background:'gallery'})).httpS
 assert.equal((await call(0,'me')).profile.achievements.length,7);
 // Fast sync returns only a revision and changes when relationships or cosmetics change.
 const revisionBefore=await call(0,'sync');
-assert.match(revisionBefore.revision,/^[0-9a-z]+:\\d+$/);
+assert.match(revisionBefore.revision,/^[0-9a-z]+:\d+$/);
 assert.equal(Object.hasOwn(revisionBefore,'friends'),false,'sync must not transmit full player cards');
 assert.equal((await call(0,'sync')).revision,revisionBefore.revision,'stable state keeps the same revision');
 assert.equal((await call(0,'me')).profile.owned,true,'own card gets the correct identity label');
