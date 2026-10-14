@@ -1,9 +1,26 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { renderSea, renderGalley } from './sea-art.js';
 installMobileRuntime();
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('sea'), ctx = canvas.getContext('2d', {alpha:false});
 const W=1000,H=620,TAU=Math.PI*2,KEY='pocket-works:flotiliya:v1';
+const PHASE_SECONDS=4.5,HALF=2.25,MAX_ROUNDS=22;
+const ISLAND_MAPS=[
+ [{x:448,y:223,rx:51,ry:38,rotation:.4,seed:3},{x:602,y:430,rx:60,ry:43,rotation:-.6,seed:5},{x:545,y:78,rx:29,ry:24,rotation:.1,seed:9,rock:true}],
+ [{x:490,y:140,rx:63,ry:36,rotation:.5,seed:13},{x:502,y:424,rx:47,ry:57,rotation:-.3,seed:18},{x:690,y:316,rx:30,ry:26,rotation:.5,seed:26,rock:true}],
+ [{x:390,y:341,rx:47,ry:42,rotation:.3,seed:41},{x:617,y:247,rx:55,ry:38,rotation:-.1,seed:45},{x:535,y:504,rx:33,ry:25,rotation:.9,seed:48,rock:true}]
+];
+const WEATHER=[{kind:'calm',name:'Попутный бриз'},{kind:'gust',name:'Порывистый ветер'},{kind:'fog',name:'Полоса тумана'}];
+function freshOrder(kind='hold'){return {kind,route:[],targetId:null};}
+function instruction(s,stage){return s.orders?.[stage]||freshOrder(s.order||'shoot');}
+function terrainDistance(isl,x,y){
+ const a=-(isl.rotation||0),dx=x-isl.x,dy=y-isl.y;
+ const lx=dx*Math.cos(a)-dy*Math.sin(a),ly=dx*Math.sin(a)+dy*Math.cos(a);
+ return Math.hypot(lx/(isl.rx+16),ly/(isl.ry+14));
+}
+function withinIsland(x,y,pad=1){return (game.islands||[]).some(isl=>terrainDistance(isl,x,y)<pad);}
+function readoutRoute(order){return order.route?.length?order.route.length+' ТОЧЕК':order.targetId?'ЦЕЛЬ НАЗНАЧЕНА':'СВОБОДНЫЙ КУРС';}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const rand=(s)=>{const x=Math.sin(s*157.317+37.2)*43758.5453;return x-Math.floor(x)};
@@ -13,7 +30,7 @@ swift:{kind:'Лёгкая галера',maxHp:70,maxCrew:27,speed:59,turn:1.26,r
 heavy:{kind:'Тяжёлая галера',maxHp:108,maxCrew:42,speed:39,turn:.78,range:155,damage:3.8,board:4.1,length:62,beam:21},
 bow:{kind:'Стрелковая галера',maxHp:78,maxCrew:29,speed:49,turn:1.04,range:218,damage:5,board:2.5,length:55,beam:17}
 };
-let store, game={phase:'harbor',round:0,elapsed:0,fleet:[],ships:[],captured:[],events:[],particles:[],battleIndex:1,gold:130,selected:null,endVictory:false};
+let store, game={phase:'harbor',round:0,elapsed:0,fleet:[],ships:[],captured:[],events:[],particles:[],battleIndex:1,gold:130,selected:null,endVictory:false,stage:0,islands:[],weather:WEATHER[0],drag:null};
 let view={scale:1,ox:0,oy:0,dpr:1,w:0,h:0},frameTime=0,acc=0,elapsedSound=0;
 function makeShip(id,name,type,extra={}) {
  const t=TYPE[type];return {...t,id,name,type,hp:t.maxHp,crew:t.maxCrew,xp:0,level:0,active:true,scars:0,...extra};
