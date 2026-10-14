@@ -341,4 +341,17 @@ export function tick(s,dt){
  }
 }
 export function save(s){return JSON.stringify(s)}
-export function load(raw){try{const s=JSON.parse(raw);if(s?.version===1&&s?.revision===3&&s?.players?.length===2&&s?.sites?.length===7&&Array.isArray(s.orders)&&Array.isArray(s.squads)&&Number.isFinite(s.time)&&s.time<LIMIT+1)return s}catch{}return null}
+export function load(raw){
+ try{
+  const s=JSON.parse(raw);
+  if(s?.version!==1||![2,3].includes(s.revision)||s.players?.length!==2||s.sites?.length!==7||
+     !Array.isArray(s.orders)||s.orders.length!==4||!Array.isArray(s.squads)||
+     !Number.isFinite(s.time)||s.time<0||s.time>LIMIT||s.phase!=='battle')return null;
+  // v1.0.2 saves remain fully playable after the richer strategic update.
+  s.revision=3;
+  s.botSkill=['casual','regular','veteran'].includes(s.botSkill)?s.botSkill:'regular';
+  s.botPlans??=[];
+  s.progress=Array.isArray(s.progress)&&s.progress.length===2?s.progress:[0,0];
+  return s;
+ }catch{return null}
+}
