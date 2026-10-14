@@ -17,7 +17,7 @@ function setup(){
  const message=(player,payload)=>module.onMessage({state,player,players,payload});
  return {state,message};
 }
-for(const seconds of [60,90,120,160,240,300]){
+for(const seconds of [60,90,120,160,240,300,600]){
  current=10_000;
  const {state,message}=setup();
  message(host,{type:'start',rounds:3,drawingSeconds:seconds});
@@ -30,6 +30,10 @@ for(const seconds of [60,90,120,160,240,300]){
  const guestView=message(guest,{type:'sync'}).events[0].payload;
  assert.equal(ownerView.drawingSeconds,seconds);
  assert.equal(guestView.drawingSeconds,seconds);
+ if(seconds===600){
+  current=state.deadline-1;message(host,{type:'pulse'});
+  assert.equal(state.phase,'drawing','ten-minute round must stay open until deadline');
+ }
  current=state.deadline+1;message(host,{type:'pulse'});
  assert.equal(state.phase,'voting');
  for(let i=0;i<players.length;i++){
@@ -47,7 +51,7 @@ for(const seconds of [60,90,120,160,240,300]){
  assert.equal(state.phase,'drawing');
  assert.equal(state.deadline-current,seconds*1000,'second round keeps same duration');
 }
-for(const invalid of [-1,45,360,600,NaN,'invalid',null]){
+for(const invalid of [-1,45,360,601,NaN,'invalid',null]){
  const {state,message}=setup();message(host,{type:'start',rounds:1,drawingSeconds:invalid});
  assert.equal(state.drawingSeconds,160,'invalid duration falls back to 2:40');
 }
@@ -87,7 +91,9 @@ assert.equal(U.phase,'drawing');assert.equal(U.deadline,0,'unlimited duration pe
 const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 assert.match(ui,/id="drawingSeconds"/,'curator has a drawing duration control');
 assert.match(ui,/id="soloDrawingSeconds"/,'solo duration setting exists');
+assert.match(ui,/\[600,'10 минут'\]/,'ten minutes appears in shared online and solo duration choices');
+assert.match(ui,/const DURATION_VALUES=DRAWING_TIME_OPTIONS\.map/,'solo validation derives from displayed timer options');
 assert.match(ui,/practice\.deadline>0/,'zero-deadline solo mode never advances from a timer');
 assert.match(ui,/view\.phase!=='drawing'\|\|!view\.deadline/,'zero-deadline online mode cannot auto-submit');
 assert.match(ui,/drawingSeconds:Number\(screen\.querySelector\('#drawingSeconds'\)/,'client sends selected duration');
-console.log('ZAMAZKA: six timed presets, untimed all-player confirmation, solo duration, invalid fallback, and multi-round rules OK');
+console.log('ZAMAZKA: seven timed presets including 10 minutes, untimed all-player confirmation, solo duration, invalid fallback, and multi-round rules OK');
