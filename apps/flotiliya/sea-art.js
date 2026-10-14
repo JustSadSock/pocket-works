@@ -60,7 +60,7 @@ export function renderSea(ctx,now,islands,weather,W,H){
   ctx.restore();
  }
  // The compass is an instrument rather than a thick map grid.
- ctx.save();ctx.translate(947,69);ctx.strokeStyle='rgba(231,222,188,.58)';ctx.lineWidth=1;
+ ctx.save();ctx.translate(W-55,69);ctx.strokeStyle='rgba(231,222,188,.58)';ctx.lineWidth=1;
  ctx.beginPath();ctx.arc(0,0,18,0,TAU);ctx.moveTo(0,-26);ctx.lineTo(0,26);ctx.moveTo(-26,0);ctx.lineTo(26,0);ctx.stroke();
  ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(-4,3);ctx.lineTo(0,-3);ctx.closePath();ctx.fillStyle='#e1c997';ctx.fill();
  ctx.fillStyle='#f0deb2';ctx.textAlign='center';ctx.font='13px Georgia';ctx.fillText('N',0,-31);ctx.restore();
