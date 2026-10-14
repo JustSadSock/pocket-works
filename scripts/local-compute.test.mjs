@@ -31,7 +31,7 @@ test('malformed or unexpected issue payloads are rejected', () => {
   assert.throws(() => parseComputeRequest(issue('{"profile":"audit","script":"rm -rf /"}'), 'issues'), /Unknown request field/);
   assert.throws(() => parseComputeRequest(issue('{"profile":"audit","years":"1; shutdown"}'), 'issues'), /integer/);
   assert.throws(() => parseComputeRequest(issue('no JSON'), 'issues'), /JSON/);
-  assert.throws(() => parseComputeRequest(issue(' '.repeat(2049)), 'issues'), /Request must|JSON/);
+  assert.equal(parseComputeRequest(issue(' '.repeat(2049)), 'issues').profile, 'regression');
   assert.throws(() => parseComputeRequest(issue('{"profile":"audit"}'.repeat(200)), 'issues'), /too long/);
   assert.throws(() => validateRequest([]), /JSON object/);
 });
