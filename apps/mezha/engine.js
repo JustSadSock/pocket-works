@@ -137,6 +137,10 @@ function advance(u,t,dt){
  u.walk+=dt*speed/6;
 }
 function hit(s,from,to,amount){
+ // Defenders that hold their assigned flag trade mobility and the ability to
+ // capture territory for a real local defensive advantage.
+ const stance=s.orders[to.captain];
+ if(stance?.mode==='defend'&&distance(to,stance)<58)amount*=.78;
  to.hp=Math.max(0,to.hp-amount);to.hit=.22;to.morale=Math.max(0,to.morale-amount*.37);
  s.events.push({type:'impact',x:to.x,y:to.y,side:from.side,age:0});
  if(to.hp===0){
