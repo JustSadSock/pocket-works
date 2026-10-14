@@ -110,4 +110,40 @@ assert.match(editorSource,/renderStrokes\(paint,strokes\|\|\[\],z,legacyFrame\?W
  'archive/reveal replays all strokes with aspect correction');
 assert.match(editorSource,/renderStrokes\(this\.inkCtx,this\.strokes,this\.zone,artworkAspect\(img\)\)/,
  'live editor and archived render use the same aspect correction');
+
+// Exercise the real archive viewer event flow, not only presence of the button.
+const rendered=[];
+const listeners=new Map();
+const element=()=>({addEventListener(){},removeEventListener(){},style:{setProperty(){}},
+ getBoundingClientRect(){return {left:0,top:0,width:360,height:220}},clientWidth:360,clientHeight:220,focus(){}});
+const pane=element(),image=element(),range=Object.assign(element(),{value:'50'}),meter=element();
+const canvases={ '#roundViewWindow':pane,'#roundViewImage':image,'#roundCompare':range,
+ '#roundZoom':meter,'#roundRestoration':element(),'#roundOriginal':element(),
+ '[data-round-close]':element() };
+const dialog={classList:{add(){},remove(){}},innerHTML:'',
+ querySelector(selector){return canvases[selector]||null},
+ addEventListener(name,handler){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(handler)},
+ removeEventListener(){}};
+const windowStub={addEventListener(){},removeEventListener(){}};
+const documentStub={activeElement:{tagName:'BUTTON'}};
+const viewerApi=Function('window','document',viewer.replaceAll('export function','function')+
+ ';return {openRoundViewer,closeRoundViewer};')(windowStub,documentStub);
+const archival={art:1,variation:27,strokes:[{t:'brush',c:'#124578',s:5,p:[[12,32],[100,340]]}],
+ name:'Историческая работа',votes:{}};
+viewerApi.openRoundViewer({index:0,view:{phase:'archive',gallery:[archival],selected:[]},
+ dialog,renderArtwork:(...args)=>{rendered.push(args);return Promise.resolve();},
+ arts:{1:{title:'Портрет',artist:'Автор',date:'1900'}},esc:s=>s,closeDialog(){}});
+assert.ok(dialog.innerHTML.includes('data-archive-geometry'),'real archive viewer exposes recovery control');
+assert.equal(rendered.length,2);
+assert.equal(rendered[0][6],false,'natural projection initially selected');
+const geometry={textContent:'',setAttribute(){}};
+const click={target:{closest(selector){return selector==='[data-archive-geometry]'?geometry:null}}};
+listeners.get('click')[0](click);
+assert.equal(rendered.length,4,'legacy switch repaints BOTH the restoration and original');
+assert.equal(rendered[2][6],true,'legacy 4:3 aspect is passed into the renderer');
+assert.equal(rendered[2][3],archival.strokes,'archive vectors are reused rather than modified');
+listeners.get('click')[0](click);
+assert.equal(rendered[4][6],false,'return to the natural aspect remains reversible');
+viewerApi.closeRoundViewer();
+
 console.log('ZAMAZKA: portrait/panorama aspect, stable archive vectors and no smudge edge contamination OK');
