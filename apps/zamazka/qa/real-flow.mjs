@@ -56,6 +56,12 @@ try{
   assert.equal(await nextSwitch.isChecked(),false,'New style must start disabled');
   await nextSwitch.check();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new','Toggle must preview new look immediately');
+  // Switching the opt-in CSS media may load the stylesheet asynchronously.
+  // Verify the *computed* visual change, but allow the browser to finish CSS loading.
+  await page.waitForFunction(original => {
+    const el=document.querySelector('.museum-home');
+    return el && getComputedStyle(el).backgroundImage!==original;
+  },shellTheme,{timeout:5000});
   const previewBackground=await page.locator('.museum-home').evaluate(el=>getComputedStyle(el).backgroundImage);
   assert.notEqual(previewBackground,shellTheme,'Appearance switch must visibly change actual surface styling');
   assert.equal(await page.locator('.museum-home .museum-plinth').count(),1,'New style must add its physical picture ledge');
