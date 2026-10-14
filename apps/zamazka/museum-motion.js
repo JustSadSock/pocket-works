@@ -6,7 +6,8 @@ export function galleryWindow(order,center){
 export function fitMuseumArtwork(stageWidth,stageHeight,ratio){
  const r=Number.isFinite(ratio)&&ratio>0?ratio:4/3;
  const chrome=32;
- const maxWidth=Math.max(110,Math.min(stageWidth*.68,stageWidth<700?330:480));
+ const enlarged=stageWidth>=700&&document.documentElement.dataset.zamazkaAppearance==='new';
+ const maxWidth=Math.max(110,Math.min(stageWidth*(enlarged?.79:.68),stageWidth<700?330:enlarged?620:480));
  const maxHeight=Math.max(86,stageHeight*.91);
  const width=Math.max(20,Math.min(maxWidth-chrome,(maxHeight-chrome)*r));
  return {width:Math.round(width),height:Math.round(width/r)};
@@ -57,7 +58,9 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
  function shift(direction){
   if(removed)return;
   const step=Math.sign(direction);if(!step)return;
-  if(busy){queued=Math.max(-5,Math.min(5,queued+step));return}
+  // Multiple deliberate inputs during a transition target the final painting.
+  // Coalesce the burst rather than replaying a delayed chain of animations.
+  if(busy){queued=Math.max(-12,Math.min(12,queued+step));return}
   busy=true;center=wrap(center+step,order.length);
   const gone=step>0?-2:2,fresh=step>0?2:-2,exiting=nodes.get(gone),next=new Map();
   for(const [slot,node] of nodes){const target=slot-step;configureSlot(node,target);next.set(target,node)}
@@ -68,8 +71,13 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
    applyArt(exiting,center+fresh);nodes.delete(gone-step);nodes.set(fresh,exiting);
    void exiting.offsetWidth;
    requestAnimationFrame(()=>exiting.classList.remove('instant'));
+   if(queued){
+    center=wrap(center+queued,order.length);
+    queued=0;
+    for(const [slot,node] of nodes){node.classList.add('instant');applyArt(node,center+slot)}
+    requestAnimationFrame(()=>{for(const node of nodes.values())node.classList.remove('instant')});
+   }
    onCenter(order[center],center);
-   if(queued){const d=Math.sign(queued);queued-=d;requestAnimationFrame(()=>shift(d))}
   };
   done=setTimeout(finish,reduced?20:(document.documentElement.dataset.zamazkaAppearance==='new'?420:590));
  }
