@@ -11,9 +11,9 @@ const portraitFrames=[['none','Без рамки'],['wood','Резное дер�
 const colors=['#273d46','#fff8e6','#d75e55','#f2ad6c','#f2d478','#82aa73','#478d8c','#6092bd','#8865a3','#c87eac','#8a604d','#101c29'];
 const errors={invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
-const state={editorTab:'animal',paintOpen:false,reward:null,tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
+const state={editorTab:'animal',paintOpen:false,reward:null,tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,searchLoading:false,searchError:'',unseenIncoming:[],unseenInvites:[],friendOrder:[],otherReturn:null,syncOffline:false,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
 let dialog,content,entry,paintSession=null,searchClock=0,pollClock=0,heartbeatClock=0;
-let livePollClock=0,livePollBusy=false,reloadVersion=0,lastPortraitKey='',lastNotificationKey='';
+let livePollClock=0,livePollBusy=false,reloadVersion=0,lastPortraitKey='',lastNotificationKey='',liveRevision=null,lastCatalogCheck=0;
 const api=async(path,body)=>{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
   try{
@@ -50,21 +50,59 @@ const errorMarkup=()=>state.error?'<div class="pws-error" role="alert">'+esc(sta
 // The compact identity card uses the same saved Pocket ID background, frame and art
 // as the full player card. All social surfaces share this renderer.
 const presenceLabel=p=>p.online?'● В сети'+(p.gameId?' · '+gameLabel(p.gameId):''):'Не в сети';
-function personRow(p,actions,subtitle=presenceLabel(p)){
+function personRow(p,actions,subtitle=presenceLabel(p),isNew=false){
   const background=backgrounds.some(t=>t[0]===p.background)?p.background:'forest';
   const frame=frames.some(t=>t[0]===p.frame)?p.frame:'clean';
   const painting=p.backgroundMode==='drawing'&&p.artwork?
     '<img class="pws-person__paint" src="'+esc(p.artwork)+'" alt="">':'';
-  return '<article class="pws-person" data-background="'+background+'" data-frame="'+frame+'">'+painting+
+  return '<article class="pws-person" data-background="'+background+'" data-frame="'+frame+
+    '" data-new="'+isNew+'">'+painting+
+    '<button type="button" class="pws-person__hit" data-pws="open-user" data-id="'+esc(p.id)+
+    '" aria-label="Открыть профиль '+esc(p.nickname)+'"></button>'+
     '<div class="pws-person__top"><div class="pws-person__avatar">'+avatar(p)+'</div>'+
     '<span class="pws-person__stamp">POCKET / ID<br>PLAYER CARD</span></div>'+
     '<div class="pws-person__name"><strong>'+esc(p.nickname)+'</strong><small>'+esc(subtitle)+'</small></div>'+
+    (isNew?'<span class="pws-person__new">НОВОЕ</span>':'')+
     '<div class="pws-person__actions">'+actions+'</div></article>';
 }
 function person(p){
   return personRow(p,button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"'));
 }
-function listPeople(list,empty){return list?.length?'<div class="pws-list">'+list.map(person).join('')+'</div>':'<div class="pws-empty">'+empty+'</div>'}
+function listPeople(list,empty,newIds=[]){
+  return list?.length?'<div class="pws-list">'+list.map(p=>
+    personRow(p,button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"'),
+      presenceLabel(p),newIds.includes(p.id))).join('')+'</div>':'<div class="pws-empty">'+empty+'</div>';
+}
+function orderFriends(friends){
+  // Stable order throughout the current visit prevents buttons moving under a finger.
+  if(!state.friendOrder.length){
+    state.friendOrder=[...friends].sort((a,b)=>Number(!!b.online)-Number(!!a.online)||
+      a.nickname.localeCompare(b.nickname,'ru')).map(p=>p.id);
+  }
+  const ranks=new Map(state.friendOrder.map((id,i)=>[id,i]));
+  return [...friends].sort((a,b)=>(ranks.get(a.id)??(a.online?1e6:2e6))-
+    (ranks.get(b.id)??(b.online?1e6:2e6))||a.nickname.localeCompare(b.nickname,'ru'));
+}
+const noticeStorageKey=account=>'pws-seen-notices:'+account;
+function seenNotices(account){
+  try{return JSON.parse(sessionStorage.getItem(noticeStorageKey(account))||'{}')}
+  catch{return {}}
+}
+function rememberNotices(kind){
+  const account=state.me?.profile?.id;if(!account)return;
+  const seen=seenNotices(account);
+  seen[kind]=kind==='incoming'?(state.me.incoming||[]).map(p=>p.id):
+    (state.me.invites||[]).filter(i=>i.incoming&&i.status==='pending').map(i=>i.id);
+  try{sessionStorage.setItem(noticeStorageKey(account),JSON.stringify(seen))}catch{}
+  if(kind==='incoming')state.unseenIncoming=[];
+  else state.unseenInvites=[];
+}
+function refreshUnseen(data){
+  const seen=seenNotices(data.profile.id);
+  state.unseenIncoming=(data.incoming||[]).filter(p=>!(seen.incoming||[]).includes(p.id)).map(p=>p.id);
+  state.unseenInvites=(data.invites||[]).filter(i=>i.incoming&&i.status==='pending'&&
+    !(seen.invites||[]).includes(i.id)).map(i=>i.id);
+}
 const cloudBytes=value=>{
  const bytes=Math.max(0,Number(value)||0);
  if(bytes<1000)return bytes+' Б';
@@ -282,19 +320,24 @@ function friendsPanel(){
   const m=state.me, fold=(key,label,items)=>{
     if(!items?.length)return '';
     return '<details class="pws-fold" data-pws-fold="'+key+'"'+(state.expanded[key]?' open':'')+'>'+
-      '<summary>'+label+' · '+items.length+'</summary><div class="pws-fold__body">'+listPeople(items,'')+'</div></details>';
+      '<summary>'+label+' · '+items.length+'</summary><div class="pws-fold__body">'+
+      listPeople(items,'',key==='incoming'?state.unseenIncoming:[])+'</div></details>';
   };
   return '<h2>Друзья</h2><div class="pws-field">'+
     '<input id="pws-search" type="search" aria-label="Поиск игрока" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Найти игрока по нику или ID" value="'+esc(state.query)+'"></div>'+
-    '<div id="pws-results">'+searchResults()+'</div>'+
+    '<div id="pws-results" aria-live="polite">'+searchResults()+'</div>'+
     (m.incoming.length?fold('incoming','Заявки',m.incoming):'')+
-    '<h3>Мои друзья · '+m.friends.length+'</h3>'+listPeople(m.friends,'Пока нет друзей. Найди игрока по нику.')+
+    '<h3>Мои друзья · '+m.friends.length+' <span class="pws-online-count">В сети: '+
+      m.friends.filter(p=>p.online).length+'</span></h3>'+
+    listPeople(orderFriends(m.friends),'Пока нет друзей. Найди игрока по нику.')+
     fold('outgoing','Отправленные заявки',m.outgoing)+
     fold('blocked','Заблокированные',m.blocked||[]);
 }
 function searchResults(){
   if(!state.query.trim())return '';
   if(state.query.trim().length<2)return '<div class="pws-muted">Введите хотя бы 2 символа.</div>';
+  if(state.searchLoading)return '<div class="pws-search-status">Ищем игроков…</div>';
+  if(state.searchError)return '<div class="pws-search-status pws-search-status--error">'+esc(state.searchError)+'</div>';
   return state.results.length?'<h3>Результаты поиска</h3>'+listPeople(state.results,'Игроки не найдены.'):'<div class="pws-muted">Нет совпадений.</div>';
 }
 function invitesPanel(){
@@ -311,7 +354,10 @@ function invitesPanel(){
         button('accept-invite','Войти','primary','data-id="'+esc(i.id)+'"')+
         button('decline-invite','Отклонить','quiet','data-id="'+esc(i.id)+'"'):
         button('cancel-invite','Отозвать','quiet','data-id="'+esc(i.id)+'"');
-      return personRow(peer,actions,gameLabel(i.gameId)+' · '+(i.incoming?'приглашает тебя':'ожидает ответа'));
+      const validUntil=i.expiresAt?' · до '+new Date(i.expiresAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'';
+      return personRow(peer,actions,gameLabel(i.gameId)+' · '+
+        (i.incoming?'приглашает тебя':'ожидает ответа')+validUntil,
+        i.incoming&&state.unseenInvites.includes(i.id));
     }).join('')+'</div>':'<div class="pws-empty">Нет ожидающих приглашений.</div>');
 }
 function invitePanel(){
@@ -374,7 +420,9 @@ async function reload(rerender=true){
     return false;
   }
   if(state.cloudAccount&&state.cloudAccount!==data.profile.id)resetCloud();
-  state.me=data;
+  const accountChanged=state.me?.profile?.id!==data.profile.id;
+  if(accountChanged){state.friendOrder=[];liveRevision=null;}
+  state.me=data;refreshUnseen(data);
   const portraitKey=JSON.stringify([data.profile.id,data.profile.avatar,data.profile.artwork,data.profile.maskot,data.profile.unlocked]);
   // Polling must not replace the nav avatar DOM every two seconds.
   if(portraitKey!==lastPortraitKey){
@@ -475,21 +523,24 @@ async function showUser(id){
   finally{state.loading=false;render()}
 }
 async function search(){
-  const query=state.query.trim(),generation=++state.searchVersion;
-  if(query.length<2){state.results=[];q('#pws-results',dialog)?.replaceChildren();return}
+  const query=state.query.trim(),generation=state.searchVersion;
+  if(query.length<2){state.results=[];state.searchLoading=false;state.searchError='';return}
   try{
-    if(/^[0-9a-f-]{36}$/i.test(query)){
-      const data=await api('user?id='+encodeURIComponent(query));
-      if(generation!==state.searchVersion)return;
-      state.results=[data.profile];
-    }else{
-      const data=await api('search?q='+encodeURIComponent(query));
-      if(generation!==state.searchVersion)return;
-      state.results=data.users;
+    const data=/^[0-9a-f-]{36}$/i.test(query)?
+      await api('user?id='+encodeURIComponent(query)):
+      await api('search?q='+encodeURIComponent(query));
+    if(generation!==state.searchVersion||state.tab!=='friends')return;
+    state.results=data.profile?[data.profile]:(data.users||[]);
+  }catch(e){
+    if(generation!==state.searchVersion||state.tab!=='friends')return;
+    state.results=[];state.searchError=e.message||'Поиск недоступен.';
+  }finally{
+    if(generation===state.searchVersion){
+      state.searchLoading=false;
+      const node=q('#pws-results',dialog);
+      if(node)node.innerHTML=searchResults();
     }
-  }catch(e){if(generation!==state.searchVersion)return;state.results=[];state.error=e.message}
-  const node=q('#pws-results',dialog);
-  if(node)node.innerHTML=(state.error?'<div class="pws-error">'+esc(state.error)+'</div>':'')+searchResults();
+  }
 }
 async function updateIdentityNickname(nickname){
   let current=window.PocketID?.getUser?.();
