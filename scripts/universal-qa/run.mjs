@@ -14,7 +14,7 @@ function jobArgs(task, suite, output) {
   if (suite.kind === 'node-test') {
     return [process.execPath, ['--test', ...suite.files.map(absolute)]];
   }
-  if (suite.kind === 'node') {
+  if (suite.kind === 'node' || suite.kind === 'browser-node') {
     const args = (suite.args ?? []).map(value => value.replaceAll('{seed}', String(task.seed ?? ''))
       .replaceAll('{output}', output));
     return [process.execPath, [absolute(suite.entry), ...args]];
@@ -31,7 +31,7 @@ function execute(command, args, { output, task, timeoutMs }) {
     const stream = [];
     const child = spawn(command, args, {
       cwd: ROOT, shell: false, windowsHide: true,
-      env: { ...process.env, PW_QA_OUTPUT_DIR: output, PW_QA_TASK: JSON.stringify(task),
+      env: { ...process.env, PW_QA_OUTPUT_DIR: output, ZAMAZKA_QA_ARTIFACT_DIR: output, PW_QA_TASK: JSON.stringify(task),
         PLAYWRIGHT_HTML_OPEN: 'never' },
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -75,7 +75,7 @@ async function main() {
     writeFileSync(join(output, 'result.json'), JSON.stringify(result, null, 2));
   };
   try {
-    if (suite.kind === 'visual' || suite.kind === 'playwright') {
+    if (suite.kind === 'visual' || suite.kind === 'playwright' || suite.kind === 'browser-node') {
       const config = JSON.parse(readFileSync(join(ROOT, 'apps', task.app, 'app.config.json'), 'utf8'));
       const build = config.runtime === 'quick' ? ['run', 'prepare:site'] : ['run', 'deploy:site'];
       const before = await execute('npm', build, { output, task, timeoutMs: 420_000 });
