@@ -34,6 +34,12 @@ try{
   }));
   await page.goto('http://127.0.0.1:'+port+'/apps/zamazka/',{waitUntil:'domcontentloaded'});
   await page.locator('.museum-home').waitFor({timeout:16000});
+  assert.equal(await page.locator('#screen').getAttribute('data-museum-room'),'atrium');
+  assert.equal(await page.locator('.museum-architecture').count(),1,'Museum backdrop must persist outside the phase DOM');
+  await page.locator('.museum-architecture').evaluate(el=>el.dataset.persistenceCheck='yes');
+  const shellTheme=await page.locator('.museum-home').evaluate(el=>getComputedStyle(el).backgroundImage);
+  assert(shellTheme.includes('gradient'),'Stage world must paint without external image downloads');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-atrium-'+viewport.width+'.png'),fullPage:false});
   // Real settings: volume persists, and the slider value is reflected without reloading.
   await page.locator('#settingsBtn').click();
   await page.locator('#settingVolume').waitFor();
@@ -44,6 +50,12 @@ try{
   await page.locator('#settingsBtn').click();
   assert.equal(await page.locator('#settingVolume').inputValue(),'35');
   await page.locator('#modalActions .btn.ghost').click();
+  const centerFrame=page.locator('.museum-slide[data-slot="0"]');
+  await centerFrame.waitFor();
+  assert.equal(await centerFrame.getAttribute('role'),'button','Paintings should be keyboard accessible');
+  await centerFrame.click();
+  await page.locator('.dialog:not(.hidden) .art-inspection').waitFor({timeout:6000});
+  await page.locator('#modalActions .btn.primary').click();
   const primary=page.locator('#primary-action');
   assert.equal(await primary.getAttribute('data-action'),'create','cooperative mode must be primary');
   await page.locator('[data-action="practice"]').click();
@@ -51,7 +63,13 @@ try{
   await page.locator('#modalActions .btn.primary').click();
   await page.locator('.mobile-preview .gallery .picture').first().waitFor({timeout:17000});
   assert.equal(await page.locator('.mobile-preview .gallery .picture').count(),5);
+  assert.equal(await page.locator('#screen').getAttribute('data-museum-room'),'gallery');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-gallery-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="skip"]').click();
+  assert.equal(await page.locator('#screen').getAttribute('data-museum-room'),'atelier');
+  assert.equal(await page.locator('.museum-architecture').getAttribute('data-persistence-check'),'yes');
+  assert.equal(await page.locator('.museum-passage .museum-passage-wing').count(),2,'A gallery-to-atelier doorway is missing');
+  assert.equal(await page.locator('.exhibition-exit-layer [data-action]').count(),0,'Outgoing room must not have active controls');
   const brush=page.locator('[data-tool="brush"]');
   await brush.waitFor();
   await page.locator('[data-tool="hand"]').click();
@@ -65,7 +83,7 @@ try{
   assert.equal(inkWidth,'20px','Brush preview did not react to slider input');
   const board=page.locator('#paintCanvas');
   await board.waitFor({timeout:10000});
-  await page.waitForTimeout(450);
+  await page.waitForTimeout(720);
   const viewportRect=await page.locator('.restore .viewport').boundingBox();
   assert(viewportRect?.width>100&&viewportRect?.height>100,'working canvas visible');
   // Drag on the center of the damage-centered viewport. The gesture must
@@ -79,12 +97,16 @@ try{
   await page.locator('[data-action="submit"]').click();
   await page.locator('.reveal-phase').waitFor({timeout:11000});
   await page.locator('.reveal-phase.is-composed').waitFor({timeout:12000});
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(720);
+  assert.equal(await page.locator('.museum-passage').count(),0,'Doors were not removed');
   assert.equal(await page.locator('.exhibition-exit-layer').count(),0,'Old phase was not cleaned up');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-reveal-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="menu"]').first().click();
   await page.locator('[data-action="collection"]').click();
   await page.locator('.archive-work').first().waitFor({timeout:7500});
+  assert.equal(await page.locator('#screen').getAttribute('data-museum-room'),'archive');
+  assert.equal(await page.locator('.museum-architecture').getAttribute('data-persistence-check'),'yes');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-archive-'+viewport.width+'.png'),fullPage:false});
   const dl=page.waitForEvent('download',{timeout:8000});
   await page.locator('[data-action="export-archive"]').click();
   const file=await dl;

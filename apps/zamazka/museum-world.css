@@ -1,0 +1,557 @@
+/* ZAMAZKA 1.33 — THE LIVING MUSEUM
+   Spatial art direction, one material environment. No floating website cards.
+   The architecture persists between phases, paintings remain real artworks. */
+:root{
+ --zm-forest:#1a302e;--zm-forest-deep:#0e2222;
+ --zm-gold:#bc9764;--zm-gold-light:#e4d2a8;
+ --zm-stone:#dfe1d5;--zm-stone-mid:#c4c8b9;
+ --zm-ink:#263733;--zm-wine:#602e35;
+ --zm-serif:"Iowan Old Style","Baskerville","Palatino Linotype",Georgia,serif;
+ --zm-walk:560ms;
+}
+html,body{background:var(--zm-forest-deep)}
+.app-shell{position:relative;isolation:isolate;background:var(--zm-forest-deep);color:var(--zm-ink)}
+/* Architectural floor and hanging light do not remount with each game screen. */
+.museum-architecture{
+ position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;
+ background:
+ radial-gradient(ellipse 57% 32% at 52% 12%,#c4a66c2a,transparent 85%),
+ radial-gradient(ellipse 96% 105% at 52% 5%,#354e44 0,#1d3532 49%,#0b1c1d 100%);
+ transition:background-color 650ms ease;
+}
+.museum-architecture::before{
+ content:"";position:absolute;inset:61px 0 0;
+ opacity:.48;
+ background:
+ linear-gradient(90deg,#070d0c99 0 1.5%,transparent 7% 93%,#070d0c99 98.5% 100%),
+ repeating-linear-gradient(90deg,transparent 0 11.4%,#d5bc7840 11.48%,#152725c7 11.59%,transparent 11.85%),
+ linear-gradient(180deg,transparent 0 72%,#bca67820 72.1%,#18242170 73.3%,transparent 74%,transparent 94%,#080f0dc0 100%);
+}
+.museum-architecture::after{
+ content:"";position:absolute;inset:54px 0 0;
+ background:radial-gradient(ellipse 24% 55% at 50% 0,#f7d69b20,transparent 100%);
+ opacity:.8;
+}
+.app-shell[data-museum-room="tribunal"] .museum-architecture{
+ background:
+ radial-gradient(ellipse 56% 55% at 50% 4%,#b3664c33,transparent 75%),
+ linear-gradient(180deg,#453238,#221e27 65%,#131b1b);
+}
+.app-shell[data-museum-room="atelier"] .museum-architecture{
+ background:
+ radial-gradient(ellipse 60% 45% at 40% 0%,#d8b96e32,transparent 70%),
+ linear-gradient(140deg,#3c4436,#202e2d 75%,#101b1c);
+}
+.app-shell[data-museum-room="archive"] .museum-architecture{
+ background:radial-gradient(ellipse 54% 55% at 50% 0%,#88968c20,transparent 80%),#152423;
+}
+.top{
+ position:relative;z-index:5;
+ background:linear-gradient(180deg,#122422,#192e2b 85%,#152623);
+ color:#eae1cf;
+ border-bottom:1px solid #ba985b8a;
+ box-shadow:0 2px 0 #0e1f1a,0 10px 24px #0004;
+}
+.top::after{
+ content:"";position:absolute;bottom:2px;left:clamp(14px,4vw,70px);right:clamp(14px,4vw,70px);
+ height:1px;background:linear-gradient(90deg,transparent,#b89b676b 20%,#b89b676b 80%,transparent);
+ pointer-events:none;
+}
+.top .wordmark{font-family:var(--zm-serif);letter-spacing:.18em;color:#eee6d5}
+.top .wordmark .mark{color:#d3ad70}
+.top .round-control{border-color:#6a755c;background:#293e36;color:#e4d0a5}
+.top .diagnostic-control{background:transparent;color:#b9a887}
+.screen{
+ position:relative;z-index:2;background:transparent;
+ scrollbar-color:#928768 #1b2d2b;
+}
+.screen[data-museum-room="atrium"]{background:transparent}
+.screen[data-museum-room="atelier"]{background:#192927b8}
+.screen[data-museum-room="gallery"],
+.screen[data-museum-room="salon"]{background:transparent}
+.screen[data-museum-room="tribunal"]{background:#211c22a3}
+.screen[data-museum-room="archive"]{background:transparent}
+
+/* Entrance / rotunda: a pool of gold light falls on the artwork,
+   not on an abstract beige background. */
+.screen>.museum-home{
+ background:
+ radial-gradient(ellipse 35% 56% at 58% 26%,#f0c88a29,transparent 92%),
+ linear-gradient(180deg,#1a3531dd 0%,#122926b8 70%,#132322f4);
+ color:#f3e9d4;
+ isolation:isolate;
+}
+.screen>.museum-home::before{
+ opacity:.42;background:
+ repeating-linear-gradient(90deg,transparent 0 20%,#e3c38d10 20.08% 20.2%,transparent 20.3%),
+ linear-gradient(180deg,transparent 0 76%,#b49b6760 76.2%,#1a2922 77.3%,transparent 78%);
+ mix-blend-mode:normal;
+}
+.screen>.museum-home::after{
+ position:absolute;inset:auto 12% 17%;height:20%;
+ background:radial-gradient(ellipse 50% 65% at 50% 20%,#e2c07a21,transparent);
+}
+.museum-home .museum-headline h1,
+.museum-home .museum-headline h1 em{
+ font-family:var(--zm-serif)!important;
+ font-weight:400;
+ letter-spacing:-.065em;
+}
+.museum-home .museum-headline h1{color:#f4e9d7;text-shadow:0 4px 18px #061914}
+.museum-home .museum-headline h1 em{color:#e0b87c}
+.museum-home .museum-headline{
+ position:relative;
+}
+.museum-home .museum-display{isolation:isolate}
+.museum-home .museum-display::after{
+ content:"";position:absolute;left:50%;top:5%;bottom:5%;
+ width:min(82%,560px);transform:translateX(-50%);
+ border:1px solid #bb9c6080;
+ border-radius:48% 48% 6px 6px / 23% 23% 6px 6px;
+ box-shadow:
+ inset 0 0 0 5px #1a302e, inset 0 0 0 7px #96845873,
+ inset 0 35px 85px #050d0c8c,0 0 0 2px #0b1b19;
+ background:
+ radial-gradient(ellipse 55% 60% at 50% 21%,#c1a77865,transparent 84%),
+ linear-gradient(180deg,#314b3e,#1b2c28 68%,#112321);
+ pointer-events:none;z-index:-1;
+}
+.museum-home .museum-stage{z-index:2}
+.museum-home .museum-slide-rim{
+ border-color:#d3b77e;outline:1px solid #4c3828;
+ box-shadow:inset 0 0 0 2px #f1dca4,0 10px 30px #040d0aba,0 0 24px #d9ac6b26;
+}
+.museum-home .museum-stage-caption{color:#f3e5cb;text-shadow:0 2px 12px #010808}
+.museum-home .museum-stage-caption strong{font:italic clamp(15px,2vw,21px) var(--zm-serif)}
+.museum-home .museum-control{filter:drop-shadow(0 10px 25px #05131288)}
+.museum-home .start-restoration{
+ background:linear-gradient(112deg,#ead0a2 0%,#cba675 65%,#bf9660 100%);
+ border:1px solid #f5dfa9;border-bottom:4px solid #795639;
+ box-shadow:0 1px 0 #fff5d2 inset,0 7px 20px #0007;
+}
+.museum-home .start-restoration strong{font-family:var(--zm-serif)!important;color:#2a2e26;font-weight:600}
+.museum-home .start-emblem{color:#62402f}
+.museum-home .museum-lower button{
+ background:#1d3531d9;border-color:#77836d;color:#f1e4c9;
+ box-shadow:inset 0 1px 0 #bbc58c30;
+}
+.museum-home .museum-lower button:hover{background:#315048}
+.museum-home .museum-footer{border-top-color:#a99b6a6b}
+.museum-home .museum-footer button{color:#e2cfac}
+
+/* Each page occupies an actual museum surface instead of a full beige website. */
+.screen>.page.lobby-entry{
+ background:
+ radial-gradient(ellipse 80% 40% at 50% 0,#50624b54,transparent),
+ linear-gradient(140deg,#293e36,#192b2a 84%)!important;
+ color:#ede8da;
+ border:1px solid #b99c6b80;
+ border-top:4px solid #c6ae77;
+ box-shadow:0 22px 45px #050e0d8c,inset 0 0 0 6px #e0c48a0d;
+ margin:clamp(13px,4vh,40px) auto!important;
+ min-height:0;
+}
+.screen>.page.lobby-entry h2{font-family:var(--zm-serif)!important;color:#f7edda}
+.screen>.page.lobby-entry .field,.screen>.page.lobby-entry .section-label{color:#e2c38f}
+.screen>.page.lobby-entry .entry-identity{
+ border:1px solid #bba77a7a;padding:10px 12px;
+ background:linear-gradient(110deg,#ecdec5,#d9c5a5);color:#30291d;
+}
+.screen>.page.lobby-entry .entry-stamp{
+ color:#d9b577;border-color:#d2b47e;background:#24392f;
+ transform:rotate(6deg);box-shadow:3px 5px 0 #071a1573;
+}
+.screen>.page.lobby-entry .hint{color:#d4cbb9}
+.screen>.page.lobby-entry .hint a{color:#f3d19a;text-underline-offset:3px}
+.screen>.page.lobby-entry .subtle-rule{background:#c4a9786e}
+.screen>.page.lobby-entry .btn.ghost{color:#eadecc;border-color:#af986d;background:#1b302b}
+.screen>.page.lobby-entry .btn.primary{background:#c5a477;color:#26362f;border-bottom:3px solid #7b6341}
+.screen>.page.lobby-entry .input{
+ background:#f4eee1;color:#2b342d;border:1px solid #ae9c80;border-bottom:3px solid #bd9c6e;
+}
+.screen>.page.lobby-entry .input:focus{border-color:#d2ad70;outline:2px solid #d7ad6f}
+
+/* Social salon: broad jade walls, actual paper invitation and shared art table. */
+.screen>.page.exhibition-lobby{
+ background:
+ radial-gradient(ellipse 90% 30% at 50% 0%,#7a875d25,transparent),
+ linear-gradient(125deg,#273d36,#1b302e 80%)!important;
+ color:#ede6d4;
+ border:1px solid #9c8d6270;border-top:4px solid #c8ae70;
+ box-shadow:0 25px 55px #07130f8a;
+ margin:clamp(11px,2vh,26px) auto!important;
+ min-height:0;
+}
+.screen>.exhibition-lobby>h2{color:#f0e8d5;font-family:var(--zm-serif)!important}
+.screen>.exhibition-lobby>.section-label{color:#d7b77a}
+.screen>.exhibition-lobby .lobby-list-heading{color:#e9d9bd;border-color:#ad946a80}
+.screen>.exhibition-lobby .lobby-list-heading .section-label{color:#e4c58d}
+.screen>.exhibition-lobby .room-ticket{
+ background:linear-gradient(130deg,#f0e5d2,#dfccaa 62%,#d2b88f);
+ border:1px solid #f6dfb2;border-left:9px solid #9a7347;
+ box-shadow:0 1px 0 #fff7df inset,6px 8px 0 #0c221aa8,0 18px 27px #091a1747;
+}
+.screen>.exhibition-lobby .player{
+ background:linear-gradient(140deg,#e5dfcd,#cfceb9);
+ border:1px solid #afaf91;box-shadow:inset 0 1px #faf2d9;
+ color:#30443a;
+}
+.screen>.exhibition-lobby .player-name{color:#30453a}
+.screen>.exhibition-lobby .player .status{color:#647768}
+.screen>.exhibition-lobby .lobby-self{background:#142a27;border-color:#9f966f}
+.screen>.exhibition-lobby>.stack{
+ background:linear-gradient(135deg,#e9e1d0,#d3d5c5);
+ border:1px solid #b4b39d;
+ box-shadow:inset 0 2px 0 #fff3d6,5px 7px 0 #0d211ca8;
+ color:#2f3d32;
+}
+.screen>.exhibition-lobby .commons-desk{
+ border:2px solid #a7986d;background:linear-gradient(132deg,#e7e5d7,#d4dbc9 45%,#b9c9b5);
+ box-shadow:0 4px 0 #0d241cb8,0 14px 28px #0a16145e;
+}
+.screen>.exhibition-lobby .commons-topline h3{color:#304b40}
+.screen>.exhibition-lobby .commons-frame{border-color:#927e56}
+
+/* The paintings hang on dark, illuminated walls, not in beige shopping cards. */
+.screen>.phase-page{
+ background:
+ radial-gradient(ellipse 78% 45% at 50% 0%,#6a84683a,transparent 70%),
+ linear-gradient(140deg,#254039,#182e2c 66%,#152a28)!important;
+ color:#eae2d3;
+ min-height:100%;
+}
+.screen>.phase-page .phase-head{
+ background:linear-gradient(90deg,#172b29,#29433a 55%,#1b302c);
+ border-bottom:3px double #af9363;
+ box-shadow:0 6px 20px #071e1a78;
+}
+.screen>.phase-page .phase-head h2{font-family:var(--zm-serif)!important;color:#f5e9d2}
+.screen>.phase-page .phase-head .eyebrow{color:#d1b47c}
+.screen>.phase-page .phase-body{
+ background:
+ linear-gradient(90deg,#bdc6b5 0,#eef0e5 2.5%,#e9eee1 97.5%,#b4bdaf 100%)!important;
+ color:#2c3b32;
+ border:1px solid #abaf9c;
+ border-top:0;
+ box-shadow:0 18px 40px #08191566;
+ margin-inline:auto;
+}
+.screen>.phase-page .phase-directive{color:#536558}
+.screen>.phase-page .phase-body>.notice{background:#d6ded1;color:#3b4a40;border-left-color:#7f947c}
+.screen>.phase-page .phase-body .hint{color:#637264}
+.screen>.phase-page .phase-body .gallery .picture{
+ background:transparent;border:0;box-shadow:none!important;
+ padding:9px 7px 11px;position:relative;
+}
+.screen>.phase-page .gallery .picture:nth-child(2n){transform:none}
+.screen>.phase-page .gallery .picture .picture-image{
+ border:9px ridge #a98c56;outline:1px solid #443c25;
+ box-shadow:0 0 0 3px #37483a,0 10px 21px #14282280,inset 0 0 0 2px #eed7a1;
+}
+.screen>.phase-page .gallery .picture .picture-index{
+ color:#96754d;font-size:9px;
+}
+.screen>.phase-page .gallery .picture .caption{
+ font-family:var(--zm-serif)!important;font-size:clamp(16px,1.35vw,22px);
+ color:#29392e;letter-spacing:-.025em;
+}
+.screen>.phase-page .gallery .picture .style{color:#667468}
+.screen>.phase-page .gallery .picture:focus-visible{outline:3px solid #bd9256;outline-offset:2px}
+
+/* Preview is a full gallery wall, no pale product-grid backing. */
+.screen>.phase-page.mobile-preview .phase-body{
+ background:transparent!important;
+ border:0;box-shadow:none;color:#ebe3d0;
+}
+.screen>.phase-page.mobile-preview .phase-directive{color:#d3c5a6}
+.screen>.phase-page.mobile-preview .gallery .picture .caption{color:#eadecb}
+.screen>.phase-page.mobile-preview .gallery .picture .style{color:#a7b9a9}
+.screen>.phase-page.mobile-preview .gallery .picture .picture-index{color:#c3a979}
+.screen>.phase-page.mobile-preview .gallery .picture .picture-image{
+ border-color:#b99a64;box-shadow:0 0 0 2px #8f9b86,0 16px 32px #021311b5;
+}
+.screen>.phase-page.mobile-preview .mobile-gallery-nav{color:#e9dbc4}
+.screen>.phase-page.mobile-preview .mobile-gallery-nav button{background:#e7d6b6;color:#2b342b}
+.screen>.phase-page.mobile-preview [data-action="skip"]{background:#d1b184;color:#172c27;border-bottom:3px solid #876743}
+
+/* The atelier is its own material world: varnished wood, green iron, brass. */
+.screen>.restore{
+ background:linear-gradient(140deg,#243a33,#182d2a 72%,#162625);
+}
+.restore .rest-head .phase-head{
+ background:linear-gradient(95deg,#1e302c,#3b4434 65%,#26362b);
+ border-bottom:3px solid #a9946b;
+}
+.restore .work-area{
+ background:
+ radial-gradient(ellipse 56% 65% at 50% 0,#e6c58229,transparent 84%),
+ repeating-linear-gradient(90deg,transparent 0 110px,#ffffff04 111px,transparent 113px),
+ linear-gradient(140deg,#3b5345,#253e37 68%,#152a28)!important;
+ border-top:1px solid #bda67866;
+}
+.restore .viewport{
+ border:clamp(5px,1vw,12px) ridge #bda16b;
+ outline:2px solid #172620;
+ box-shadow:0 0 0 4px #354735,0 18px 42px #020d0abb,0 0 40px #e8c2851c;
+}
+.restore>.work-tools{
+ background:linear-gradient(160deg,#e2e5d8,#cfd8c9 70%,#bfcabd)!important;
+ border-left:4px ridge #a79b6d;
+ color:#28392f;
+ box-shadow:-10px 0 35px #0a17156b;
+}
+.restore .tool{background:#eff0e7;color:#344438;border-color:#a1ac94}
+.restore .tool.active{background:#344d40;color:#f8f0df;border-color:#a6b99a}
+.restore .colors{border-color:#a6b5a4}
+.restore .work-foot .btn.primary{background:#294a41;color:#f0e8d7;border-color:#c4a875}
+
+/* The tribunal is darker, anticipating the actual deception reveal. */
+.screen>.phase-page.expert-phase,
+.screen>.phase-page.verdict-phase,
+.screen>.phase-page.reveal-phase{
+ background:linear-gradient(135deg,#433138,#261f28 64%,#1c2727)!important;
+}
+.screen>.phase-page.expert-phase .phase-head,
+.screen>.phase-page.verdict-phase .phase-head,
+.screen>.phase-page.reveal-phase .phase-head{
+ background:linear-gradient(95deg,#402c32,#25252c 72%,#332c31);
+ border-bottom-color:#bd986b;
+}
+.screen>.phase-page.expert-phase .phase-body,
+.screen>.phase-page.verdict-phase .phase-body,
+.screen>.phase-page.reveal-phase .phase-body{
+ background:linear-gradient(90deg,#b8c0b6,#e8ece4 2.5%,#f1ece3 97.5%,#c1bbb1)!important;
+}
+.reveal-phase .reveal-brief{
+ border-color:#a69b86;
+}
+.screen>.phase-page.round-review-phase{
+ background:#172a28!important;
+}
+.screen>.phase-page.round-review-phase .round-review-body{
+ background:linear-gradient(140deg,#263934,#172925)!important;
+ color:#eee7d7;
+ border:0;
+}
+.screen>.phase-page.round-review-phase .round-review-description{color:#d0cfbb}
+.screen>.phase-page.round-review-phase .round-review-bottom{background:#cfd6c8;color:#293a32}
+
+/* Private collection: subdued night gallery, never another beige page. */
+.screen>.page.collection-page,
+.screen>.page.zamazka-achievements,
+.screen>.page:has(.result-item){
+ background:
+ radial-gradient(ellipse 70% 40% at 50% 0%,#879c7950,transparent 85%),
+ linear-gradient(165deg,#263e34,#172a27 86%)!important;
+ color:#e9e4d4;
+ border:1px solid #9f9c7b8f;
+ border-top:4px solid #bcaa7c;
+ margin:clamp(12px,2vw,36px) auto!important;
+ box-shadow:0 20px 55px #061411a1;
+}
+.screen>.page.collection-page h2,.screen>.page.zamazka-achievements h2,
+.screen>.page:has(.result-item) h2{color:#f2e6cf;font-family:var(--zm-serif)!important}
+.screen>.page.collection-page>.section-label,
+.screen>.page.zamazka-achievements>.section-label,
+.screen>.page:has(.result-item)>.section-label{color:#d6bd89}
+.screen>.page.collection-page .archive-work{
+ background:#1d2d29;border:1px solid #887954;
+ box-shadow:0 9px 22px #0006!important;
+}
+.screen>.page.collection-page .archive-work .caption{color:#f2e1c5}
+.screen>.page.collection-page .archive-work .style{color:#c0bcab}
+.screen>.page.collection-page .archive-local-status{color:#b9d1bc}
+.screen>.page.collection-page .zamazka-cloud-row,
+.screen>.page.collection-page .zamazka-cloud-row [data-cloud-status]{color:#d8d0bd}
+.screen>.page.collection-page .btn.ghost{background:#243d34;color:#eadac1;border-color:#a58b62}
+.screen>.page:has(.result-item) .result-item{
+ color:#293a32;
+ background:linear-gradient(112deg,#e5e4d4,#c9d3c5);
+ border:1px solid #9f9a7b;
+ box-shadow:0 4px 0 #13281e,0 12px 18px #061b155c;
+}
+.screen>.page:has(.result-item) .result-item h3{color:#2c4438}
+.screen>.page:has(.result-item) .result-item:first-of-type{
+ background:linear-gradient(115deg,#f4e6bf,#d6c399);
+ border:2px solid #d6bd82;
+}
+.screen>.page:has(.result-item)>.notice{background:#d6ded0;color:#2c4034}
+.screen>.page.zamazka-achievements .achievement-entry{background:#dfe5d7;color:#2c4136;border-color:#b5b79b}
+.screen>.page.zamazka-achievements .achievement-entry p{color:#5b7061}
+.screen>.page.zamazka-achievements .btn.ghost,
+.screen>.page:has(.result-item) .btn.ghost{background:#29473c;color:#f0e2cd;border-color:#9c926f}
+
+/* Doorway traversal: the scene does not fade like an HTML page.
+   Green-patinated panels part at the midpoint, revealing the new room. */
+.screen>.exhibition-enter{
+ animation:zm-portal-arrive var(--zm-walk) cubic-bezier(.16,.8,.18,1) both!important;
+}
+.screen>.exhibition-exit-layer{
+ z-index:9;inset:0 0 auto;min-height:100%;
+ animation:zm-portal-depart var(--zm-walk) ease both!important;
+}
+.museum-passage{
+ position:absolute;inset:0;z-index:10;pointer-events:none;overflow:hidden;
+ display:flex;isolation:isolate;
+}
+.museum-passage-wing{
+ display:block;position:relative;width:50%;height:100%;flex:0 0 50%;
+ background:
+ linear-gradient(90deg,#070e0ca0,transparent 4% 96%,#050f0de5),
+ repeating-linear-gradient(90deg,#7084631d 0 1px,transparent 1px 38px),
+ radial-gradient(ellipse at 50% 25%,#4e6350,#1a3230 75%);
+ border-block:2px solid #b39c69;
+ box-shadow:inset 0 0 0 7px #172825,inset 0 0 0 9px #8e835a77,0 0 30px #000a;
+ will-change:transform;
+}
+.museum-passage-wing.left{
+ border-right:4px ridge #d8b579;
+ animation:zm-left-door var(--zm-walk) cubic-bezier(.21,.62,.15,1) both;
+}
+.museum-passage-wing.right{
+ border-left:4px ridge #d8b579;
+ animation:zm-right-door var(--zm-walk) cubic-bezier(.21,.62,.15,1) both;
+}
+.museum-passage-key{
+ position:absolute;left:50%;top:8%;bottom:8%;width:1px;
+ background:#f0db9b;box-shadow:0 0 14px #e0bc78;
+ animation:zm-key var(--zm-walk) ease both;
+}
+@keyframes zm-left-door{0%,12%{transform:translateX(0)}100%{transform:translateX(-104%)}}
+@keyframes zm-right-door{0%,12%{transform:translateX(0)}100%{transform:translateX(104%)}}
+@keyframes zm-key{0%,24%{opacity:1}78%,100%{opacity:0}}
+@keyframes zm-portal-depart{
+ 0%{filter:brightness(1);opacity:1}
+ 30%{filter:brightness(.6);opacity:.9}
+ 70%,100%{opacity:0;filter:brightness(.35)}
+}
+@keyframes zm-portal-arrive{
+ 0%{opacity:.75;filter:brightness(.72)}
+ 60%{opacity:.93;filter:brightness(.9)}
+ 100%{opacity:1;filter:brightness(1)}
+}
+
+/* Optical feedback, focus and clean mobile ergonomics. */
+.screen .btn,.screen button{
+ -webkit-tap-highlight-color:transparent;
+}
+.screen button:focus-visible{outline:3px solid #d4b071;outline-offset:2px}
+.screen .btn:active:not(:disabled){transform:translateY(1px);filter:brightness(.96)}
+.screen .btn.primary{
+ background:linear-gradient(115deg,#294c40,#214037);
+ color:#f0e7d8;border-color:#bdac7b;border-bottom:3px solid #112d27;
+}
+.screen .notice{font-family:var(--zm-serif)!important}
+.screen .phase-body .btn.ghost{border-color:#7d9c83;background:#dce5d6;color:#2a4a3d}
+.screen .round-review-bottom .btn.primary{color:#f6e4ce}
+@media(min-width:1100px){
+ .screen>.phase-page .phase-body{
+  max-width:min(1520px,calc(100% - 56px));
+ }
+ .screen>.page.lobby-entry{max-width:640px}
+ .screen>.page.exhibition-lobby{max-width:1470px}
+ .screen>.page.collection-page,.screen>.page:has(.result-item){max-width:1180px}
+ .museum-home .museum-display::after{width:min(76%,560px)}
+}
+@media(max-width:699px){
+ .museum-architecture::before{opacity:.22}
+ .museum-architecture::after{opacity:.35}
+ .screen>.museum-home{
+  background:radial-gradient(ellipse 62% 37% at 50% 28%,#d8a45b30,transparent 85%),linear-gradient(#23423a,#152d2b);
+ }
+ .museum-home .museum-display::after{
+  top:7%;bottom:7%;width:min(84%,390px);
+  border-radius:45% 45% 5px 5px / 20% 20% 5px 5px;
+ }
+ .screen>.page.lobby-entry,.screen>.page.exhibition-lobby{
+  margin:0 auto!important;
+  border-inline:0;border-top-width:2px;box-shadow:none;
+  min-height:100%;
+ }
+ .screen>.phase-page .phase-head{
+  border-bottom-width:2px;
+ }
+ .screen>.phase-page .phase-body{
+  border-inline:0;box-shadow:none;
+  background:#e6e9df!important;
+ }
+ .screen>.phase-page.mobile-preview .phase-body{background:transparent!important}
+ .screen>.page.collection-page,.screen>.page.zamazka-achievements,.screen>.page:has(.result-item){
+  margin:0 auto!important;border-inline:0;min-height:100%;box-shadow:none;
+ }
+ .restore>.work-tools{
+  border-left:0;
+  border-top:3px ridge #a8a47b;
+  box-shadow:0 -7px 25px #0619118c;
+ }
+ .screen>.restore .work-area{min-height:0}
+ .museum-passage-wing{box-shadow:inset 0 0 0 3px #172825,inset 0 0 0 4px #8e835a77}
+ .museum-passage-wing.left,.museum-passage-wing.right{border-width:2px}
+ .screen>.exhibition-enter{animation-duration:400ms!important}
+ .screen>.exhibition-exit-layer{animation-duration:400ms!important}
+ .museum-passage-wing,.museum-passage-key{animation-duration:400ms!important}
+}
+@media(max-height:570px) and (orientation:landscape){
+ .screen>.page.lobby-entry,.screen>.page.exhibition-lobby{min-height:0}
+ .museum-home .museum-display::after{top:0;bottom:0}
+ .screen>.phase-page .phase-body{padding-block:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ .museum-architecture,.screen>.exhibition-enter,.screen>.exhibition-exit-layer,
+ .museum-passage-wing,.museum-passage-key{animation:none!important;transition:none!important}
+ .museum-passage{display:none}
+ .screen>.exhibition-enter{filter:none!important;opacity:1!important}
+}
+
+/* Directional museum lighting follows mouse/pen over the existing image.
+   It never touches a canvas bitmap, image orientation or drawing coordinates. */
+@media(hover:hover) and (pointer:fine){
+ .screen .picture-image,.screen .stake-frame,.screen .verdict-image,
+ .screen .round-art-image,.screen .museum-slide-rim,.screen .unveil-frame{
+  isolation:isolate;position:relative;
+ }
+ .screen .picture-image::after,.screen .stake-frame::after,.screen .verdict-image::after,
+ .screen .round-art-image::after,.screen .museum-slide-rim::after,.screen .unveil-frame::after{
+  content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+  background:radial-gradient(ellipse 54% 52% at var(--museum-light-x,50%) var(--museum-light-y,30%),#ffebc52c,transparent 90%);
+  mix-blend-mode:screen;opacity:0;transition:opacity 180ms ease;
+ }
+ .screen .picture-image:hover::after,.screen .stake-frame:hover::after,
+ .screen .verdict-image:hover::after,.screen .round-art-image:hover::after,
+ .screen .museum-slide-rim:hover::after,.screen .unveil-frame:hover::after{opacity:1}
+}
+/* A work is 'rehung' without taking the player to a different room. */
+.screen>.exhibition-enter.rehang{
+ animation:zm-rehang-in 260ms cubic-bezier(.2,.7,.2,1) both!important;
+}
+.screen>.exhibition-exit-layer.rehang{
+ animation:zm-rehang-out 260ms ease both!important;
+}
+@keyframes zm-rehang-in{
+ from{opacity:.45;filter:brightness(.75);clip-path:inset(8px 0 0)}
+ to{opacity:1;filter:brightness(1);clip-path:inset(0)}
+}
+@keyframes zm-rehang-out{
+ from{opacity:1;filter:brightness(1)}
+ to{opacity:0;filter:brightness(.82)}
+}
+@media(prefers-reduced-motion:reduce){
+ .screen>.exhibition-enter.rehang,.screen>.exhibition-exit-layer.rehang{animation:none!important}
+}
+
+/* The frame itself is the navigation control. Side paintings advance the
+   gallery; the central one opens its provenance. Swipe remains available. */
+.museum-home .museum-slide[data-slot="-1"],
+.museum-home .museum-slide[data-slot="0"],
+.museum-home .museum-slide[data-slot="1"]{
+ pointer-events:auto;cursor:pointer;
+}
+.museum-home .museum-slide:focus-visible{
+ outline:3px solid #e2bd78;outline-offset:6px;
+}
+.museum-home .museum-slide[data-slot="0"] .museum-slide-rim{transition:box-shadow 200ms ease}
+@media(hover:hover){
+ .museum-home .museum-slide[data-slot="0"]:hover .museum-slide-rim{
+  box-shadow:inset 0 0 0 2px #f1dca4,0 11px 36px #040d0acc,0 0 33px #d8b87e56;
+ }
+}
