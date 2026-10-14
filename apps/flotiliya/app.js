@@ -218,53 +218,68 @@ function burst(x,y,color,n){for(let i=0;i<n;i++){let a=rand(x+i*17+y)*TAU;let sp
 function advance(dt){
  game.elapsed+=dt;
  const live=game.ships.filter(s=>s.alive);
- for(const s of live){s.fireTimer=Math.max(0,s.fireTimer-dt);s.ramTimer=Math.max(0,s.ramTimer-dt);maneuver(s,dt);}
+ for(const s of live){s.fireTimer=Math.max(0,s.fireTimer-dt);s.ramTimer=Math.max(0,s.ramTimer-dt);s.landTimer=Math.max(0,s.landTimer-dt);maneuver(s,dt);}
  for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){
   const a=live[i],b=live[j];if(!a.alive||!b.alive)continue;
-  const d=distance(a,b),sep=(a.length+b.length)*.38;
-  if(d>=sep||d<.001)continue;
+  const d=distance(a,b),sep=(a.length+b.length)*.45;if(d>=sep||d<.001)continue;
   const dx=(b.x-a.x)/d,dy=(b.y-a.y)/d,penetration=sep-d;
-  a.x-=dx*penetration*.32;a.y-=dy*penetration*.32;b.x+=dx*penetration*.32;b.y+=dy*penetration*.32;
+  a.x-=dx*penetration*.36;a.y-=dy*penetration*.36;b.x+=dx*penetration*.36;b.y+=dy*penetration*.36;
   if(a.side!==b.side){
-   const impact=(a.velocity+b.velocity)*.07;
+   const impact=(Math.abs(a.velocity)+Math.abs(b.velocity))*.065;
    if(a.ramTimer<=0&&b.ramTimer<=0&&impact>3){
-    damage(a,impact*.65,.4,b);damage(b,impact,.7,a);
-    a.ramTimer=b.ramTimer=2.5;burst((a.x+b.x)/2,(a.y+b.y)/2,'#d5c69f',10);
+    damage(a,impact*.6,.6,b);damage(b,impact,.8,a);
+    a.ramTimer=b.ramTimer=2.5;burst((a.x+b.x)/2,(a.y+b.y)/2,'#e2c6a3',12);
    }
-   a.velocity*=.8;b.velocity*=.8;
-  }else{a.velocity*=.89;b.velocity*=.89;}
+   a.velocity*=.76;b.velocity*=.76;
+  }else{a.velocity*=.85;b.velocity*=.85;}
  }
  for(const s of live){
   if(!s.alive)continue;
-  const t=getTarget(s);if(!t||!t.alive)continue;
+  const stage=Math.min(1,Math.floor(game.elapsed/HALF)),ins=instruction(s,stage);
+  const t=game.ships.find(v=>v.id===ins.targetId&&v.alive&&v.side!==s.side)||nearest(s);
+  if(!t||!t.alive)continue;
   const d=distance(s,t),bearing=Math.abs(normalize(Math.atan2(t.y-s.y,t.x-s.x)-s.angle));
-  if(s.order!=='hold'&&d<s.range&&s.fireTimer<=0&&bearing<2.6){
-   const shots=s.order==='shoot'?1.0:.57;
-   damage(t,s.damage*shots,.32*shots,s);s.fireTimer=1.25+rand(game.elapsed+s.x)*.55;
-   game.particles.push({x:s.x,y:s.y,vx:(t.x-s.x)/Math.max(d,1)*160,vy:(t.y-s.y)/Math.max(d,1)*160,life:Math.min(.55,d/160),color:s.side==='ally'?'#e6d4ae':'#dca28c',arrow:true});
+  const precision=game.weather?.kind==='fog'? .72:1;
+  if(ins.kind!=='hold'&&ins.kind!=='evade'&&d<s.range*precision&&s.fireTimer<=0&&bearing<2.6){
+   const shots=ins.kind==='shoot'?1:.43;
+   damage(t,s.damage*shots,.38*shots,s);s.fireTimer=1.1+rand(game.elapsed+s.x)*.42;
+   game.particles.push({x:s.x,y:s.y,vx:(t.x-s.x)/Math.max(d,1)*185,vy:(t.y-s.y)/Math.max(d,1)*185,life:Math.min(.6,d/185),color:s.side==='ally'?'#f0dab0':'#e2b1a0',arrow:true});
   }
-  if(s.order==='board'&&d<44&&Math.abs(s.velocity-t.velocity)<31){
-   damage(t,.2*dt,s.board*dt,s);
-   damage(s,.12*dt,t.board*dt*.58,t);
-   if(rand(Math.floor(game.elapsed*4)+s.x)<.08)burst((s.x+t.x)/2,(s.y+t.y)/2,'#e4c69b',1);
+  if(ins.kind==='board'&&d<49&&Math.abs(s.velocity-t.velocity)<37){
+   damage(t,.16*dt,s.board*dt*1.8,s);
+   damage(s,.1*dt,t.board*dt*.53,t);
+   if(rand(Math.floor(game.elapsed*5)+s.x)<.1)burst((s.x+t.x)/2,(s.y+t.y)/2,'#e9cda2',2);
   }
  }
  for(const p of game.particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;}
- game.particles=game.particles.filter(p=>p.life>0).slice(-120);
+ game.particles=game.particles.filter(p=>p.life>0).slice(-160);
 }
 function startResolve(){
  if(game.phase!=='orders')return;
  game.phase='resolve';game.elapsed=0;acc=0;
- $('subtitle').textContent='Сражение · исполнение';
- $('commandCaption').textContent='ПРИКАЗЫ ИСПОЛНЯЮТСЯ';
- $('resolveBtn').hidden=true;$('orderArea').style.opacity='.45';
+ for(const s of game.ships){s._cursor=[0,0];s._activeStage=-1;}
+ $('subtitle').textContent='Бой · исполнение';$('commandCaption').textContent='СУДА ИСПОЛНЯЮТ ПРИКАЗЫ';
+ $('resolveBtn').hidden=true;$('orderArea').style.opacity='.42';
  $('progress').hidden=false;$('progressFill').style.width='0%';
 }
 function finishPhase(){
  $('progress').hidden=true;$('orderArea').style.opacity='1';
  const good=alive('ally').length,bad=alive('enemy').length;
- if(!good||!bad||game.round>=10){finishBattle();return;}
- game.round++;game.phase='orders';$('resolveBtn').hidden=false;
+ if(!good||!bad||game.round>=MAX_ROUNDS){finishBattle();return;}
+ game.round++;game.phase='orders';game.stage=0;
+ if(game.round===4||game.round===8){
+  game.weather=WEATHER[(WEATHER.indexOf(game.weather)+1)%WEATHER.length];
+  logEvent('Погода меняется: '+game.weather.name);
+ }
+ for(const s of game.ships.filter(s=>s.alive)){
+  s._cursor=[0,0];s._activeStage=-1;
+  if(s.side==='ally'){s.orders=[freshOrder('hold'),freshOrder(s.type==='heavy'?'board':'shoot')];}
+  else{
+   const foe=nearest(s);s.orders=[freshOrder(s.type==='swift'?'evade':'shoot'),freshOrder(s.type==='heavy'?'board':'shoot')];
+   if(foe){s.orders[0].targetId=foe.id;s.orders[1].targetId=foe.id;}
+  }
+ }
+$('resolveBtn').hidden=false;
  $('subtitle').textContent='Сражение · фаза приказов';
  updateBattleUI();notify('Новая фаза: скорректируй приказы');
 }
@@ -400,8 +415,8 @@ function loop(now){
  if(game.phase==='resolve'){
   acc+=delta;let count=0;
   while(acc>=1/30&&count<4){advance(1/30);acc-=1/30;count++;}
-  $('progressFill').style.width=clamp(game.elapsed/9*100,0,100)+'%';
-  if(!alive('ally').length||!alive('enemy').length||game.elapsed>=9)finishPhase();
+  $('progressFill').style.width=clamp(game.elapsed/PHASE_SECONDS*100,0,100)+'%';
+  if(!alive('ally').length||!alive('enemy').length||game.elapsed>=PHASE_SECONDS)finishPhase();
  }
  render(now);requestAnimationFrame(loop);
 }
