@@ -1,6 +1,7 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { renderSea, renderGalley } from './sea-art.js';
 import { ACTION_COST, MOVE_STEP, getBudget, canPlan, stagePathLength, stageRange, availableActions } from './turn-budget.js';
+import { condition, attackSector, attackPacket, contest, nearbySupport, rangeBlocked, oarFraction } from './naval-combat.js';
 installMobileRuntime();
 
 const $ = (id) => document.getElementById(id);
@@ -31,10 +32,10 @@ swift:{kind:'Лёгкая галера',maxHp:70,maxCrew:27,speed:59,turn:1.26,r
 heavy:{kind:'Тяжёлая галера',maxHp:108,maxCrew:42,speed:39,turn:.78,range:155,damage:3.8,board:4.1,length:62,beam:21},
 bow:{kind:'Стрелковая галера',maxHp:78,maxCrew:29,speed:49,turn:1.04,range:218,damage:5,board:2.5,length:55,beam:17}
 };
-let store, game={phase:'harbor',round:0,elapsed:0,fleet:[],ships:[],captured:[],events:[],particles:[],battleIndex:1,gold:130,selected:null,endVictory:false,stage:0,islands:[],weather:WEATHER[0],drag:null};
+let store, game={phase:'harbor',round:0,elapsed:0,fleet:[],ships:[],captured:[],events:[],particles:[],battleIndex:1,gold:130,selected:null,endVictory:false,stage:0,islands:[],weather:WEATHER[0],drag:null,grapples:[],eventClock:0};
 let view={scale:1,ox:0,oy:0,dpr:1,w:0,h:0},frameTime=0,acc=0,elapsedSound=0;
 function makeShip(id,name,type,extra={}) {
- const t=TYPE[type];return {...t,id,name,type,hp:t.maxHp,crew:t.maxCrew,xp:0,level:0,active:true,scars:0,...extra};
+ const t=TYPE[type];return {...t,id,name,type,hp:t.maxHp,crew:t.maxCrew,xp:0,level:0,active:true,scars:0,oars:100,maxOars:100,morale:100,...extra};
 }
 function initialFleet(){return [
  makeShip('ship-1','Святая Маргарита','heavy',{active:true}),
@@ -46,7 +47,7 @@ function load(){
  if(p&&Array.isArray(p.fleet)&&Number.isFinite(p.gold)&&Number.isFinite(p.battleIndex)){
    const fleet=p.fleet.filter(s=>s&&TYPE[s.type]&&typeof s.id==='string').slice(0,6)
     .map(s=>({...makeShip(s.id,String(s.name).slice(0,42),s.type),...s,hp:clamp(+s.hp||0,0,TYPE[s.type].maxHp+(+s.level||0)*10),crew:clamp(+s.crew||0,0,TYPE[s.type].maxCrew+(+s.level||0)*3)}));
-   game.fleet=fleet.length?fleet:initialFleet();game.gold=Math.max(0,Math.floor(p.gold));game.battleIndex=Math.max(1,Math.floor(p.battleIndex));
+   game.fleet=fleet.length?fleet:initialFleet();game.fleet.forEach(s=>{s.maxOars=100;s.oars=clamp(Number.isFinite(s.oars)?s.oars:100,0,100);});game.gold=Math.max(0,Math.floor(p.gold));game.battleIndex=Math.max(1,Math.floor(p.battleIndex));
  }else{game.fleet=initialFleet();}
  }catch{game.fleet=initialFleet();}
  ensureFleet();
@@ -76,15 +77,15 @@ function renderHarbor(){
   choose.onclick=()=>{if(s.active&&activeFleet().length<=1){notify('В бою должен остаться хотя бы один корабль');return;}if(!s.active&&activeFleet().length>=3){notify('В бою максимум три корабля');return;}s.active=!s.active;save();renderHarbor();};
   const data=document.createElement('div');data.className='ship-data';
   const title=document.createElement('span');title.className='ship-name';title.textContent=s.name;
-  const sub=document.createElement('span');sub.className='ship-sub';sub.textContent=s.kind+' · '+(s.xp?'Опыт '+s.xp:'Новое судно')+(s.level?' · Усиление '+s.level:'');
+  const sub=document.createElement('span');sub.className='ship-sub';sub.textContent=s.kind+' · '+(s.xp?'Опыт '+s.xp:'Новое судно')+(s.level?' · Усиление '+s.level:'')+' · Вёсла '+Math.round(s.oars)+'%';
   data.append(title,sub);
   const hp=document.createElement('div');hp.className='ship-health';hp.title='Корпус '+Math.ceil(s.hp)+'/'+s.maxHp;
   const fill=document.createElement('i');fill.style.width=(100*s.hp/s.maxHp)+'%';hp.append(fill);
   top.append(choose,data,hp);row.append(top);
   const actions=document.createElement('div');actions.className='ship-actions';
-  const repair=document.createElement('button');const missing=(s.maxHp-s.hp)+(s.maxCrew-s.crew)*.6;const cost=Math.ceil(missing*.7);
+  const repair=document.createElement('button');const missing=(s.maxHp-s.hp)+(s.maxCrew-s.crew)*.6+(s.maxOars-s.oars)*.55;const cost=Math.ceil(missing*.7);
   repair.textContent='Ремонт '+(cost?'· '+cost+' ◈':'· готов');repair.disabled=!cost||game.gold<cost;
-  repair.onclick=()=>{if(game.gold<cost)return;game.gold-=cost;s.hp=s.maxHp;s.crew=s.maxCrew;save();renderHarbor();};
+  repair.onclick=()=>{if(game.gold<cost)return;game.gold-=cost;s.hp=s.maxHp;s.crew=s.maxCrew;s.oars=s.maxOars;save();renderHarbor();};
   const upgrade=document.createElement('button');const upgradeCost=65+s.level*55;
   upgrade.textContent='Усилить · '+upgradeCost+' ◈';upgrade.disabled=game.gold<upgradeCost||s.level>=4;
   upgrade.onclick=()=>{if(game.gold<upgradeCost)return;game.gold-=upgradeCost;s.level++;s.maxHp+=10;s.hp+=10;s.maxCrew+=3;s.crew+=3;s.damage+=.45;s.board+=.25;s.speed+=1.2;save();renderHarbor();};
@@ -95,10 +96,41 @@ function roman(n){const a=['I','II','III','IV','V','VI','VII','VIII','IX','X'];r
 function battleShip(s,side,x,y,angle){
  return {...s,side,x,y,angle,velocity:0,orders:[freshOrder(side==='ally'?'hold':'shoot'),freshOrder(side==='ally'?'shoot':(s.type==='heavy'?'board':'shoot'))],
  order:side==='ally'?'hold':'shoot',_cursor:[0,0],_activeStage:-1,fireTimer:.2+rand(x+y)*.9,ramTimer:0,landTimer:0,
- boarding:false,dealt:0,kills:0,alive:true};
+ boarding:false,grappleId:null,grappleCooldown:0,sinkingTimer:0,surrendered:false,retreating:false,dealt:0,kills:0,alive:true,morale:100,oars:clamp(s.oars??100,0,100),maxOars:100};
+}
+function planEnemyOrders(s){
+ if(!s.alive||s.side!=='enemy')return;
+ const foes=alive('ally');
+ if(!foes.length){s.orders=[freshOrder('evade'),freshOrder('evade')];return;}
+ foes.sort((a,b)=>{
+  const score=t=>distance(s,t)+
+    (s.type==='heavy'?t.hp/t.maxHp*32:t.oars*.4)+
+    (t.grappleId?(-45):0);
+  return score(a)-score(b);
+ });
+ const t=foes[0],d=distance(s,t);
+ if(s.morale<26||s.retreating){
+  s.retreating=true;s.orders=[freshOrder('evade'),freshOrder('evade')];return;
+ }
+ let first='shoot',second='shoot';
+ if(s.type==='heavy'){
+  first=d<155?'board':'shoot';second='board';
+ }else if(s.type==='swift'){
+  first=d<180?'hold':'shoot';second=d<75&&t.oars<55?'board':'shoot';
+ }
+ s.orders=[freshOrder(first),freshOrder(second)];
+ s.orders[0].targetId=t.id;s.orders[1].targetId=t.id;
+ if(s.type==='swift'&&d<210&&!s.grappleId){
+  // A fast galley tries to approach the enemy's exposed quarter, not its bow.
+  const flank=Math.atan2(s.y-t.y,s.x-t.x)>t.angle?-1:1;
+  const goal={x:t.x+Math.cos(t.angle+flank*Math.PI*.56)*85,y:t.y+Math.sin(t.angle+flank*Math.PI*.56)*85};
+  const theta=Math.atan2(goal.y-s.y,goal.x-s.x),travel=Math.min(67,distance(s,goal));
+  s.orders[0].route=[{x:clamp(s.x+Math.cos(theta)*travel,40,W-40),y:clamp(s.y+Math.sin(theta)*travel,45,H-45)}];
+  if(!canPlan(s,s.orders))s.orders[0].route=[];
+ }
 }
 function startBattle(){
- game.ships=[];game.captured=[];game.events=[];game.particles=[];game.round=1;game.elapsed=0;game.selected=null;game.stage=0;game.drag=null;
+ game.ships=[];game.captured=[];game.events=[];game.particles=[];game.grapples=[];game.eventClock=0;game.round=1;game.elapsed=0;game.selected=null;game.stage=0;game.drag=null;
  game.islands=ISLAND_MAPS[(game.battleIndex-1)%ISLAND_MAPS.length].map(i=>({...i}));
  game.weather=WEATHER[(game.battleIndex-1)%WEATHER.length];
  const xs=[142,330,519];
@@ -109,6 +141,7 @@ function startBattle(){
   const mult=1+Math.min(.22,(game.battleIndex-1)*.025);s.hp*=mult;s.maxHp*=mult;s.crew*=mult;s.maxCrew*=mult;s.damage*=mult;
   game.ships.push(battleShip(s,'enemy',xs[i],148-(i%2)*24,Math.PI/2));
  });
+ game.ships.filter(s=>s.side==='enemy').forEach(planEnemyOrders);
  game.phase='orders';$('harbor').hidden=true;$('command').hidden=false;$('seaTop').hidden=false;$('endPanel').hidden=true;
  $('orderArea').hidden=false;$('orderArea').style.opacity='1';$('resolveBtn').hidden=false;$('progress').hidden=true;
  $('subtitle').textContent='Боевой порядок · подготовка';$('gold').textContent='◈ '+game.gold;
@@ -138,6 +171,18 @@ function selectShip(id){
  game.selected=s?.id||null;
  $('selectedName').textContent=s?s.name:'Выбери судно';
  $('selectedInfo').textContent=s?('Корпус '+Math.ceil(s.hp)+'/'+Math.ceil(s.maxHp)+' · Экипаж '+Math.ceil(s.crew)+'/'+Math.ceil(s.maxCrew)):'Нажми на корабль своего флота';
+ const state=s?condition(s):null,g=s?getGrapple(s):null;
+ $('hullMeter').style.width=(s?100*s.hp/s.maxHp:0)+'%';
+ $('oarMeter').style.width=(s?100*state.oars:0)+'%';
+ $('moraleMeter').style.width=(s?100*state.morale:0)+'%';
+ $('hullValue').textContent=s?Math.round(100*s.hp/s.maxHp)+'%':'—';
+ $('oarValue').textContent=s?Math.round(100*state.oars)+'%':'—';
+ $('moraleValue').textContent=s?Math.round(100*state.morale)+'%':'—';
+ $('combatState').textContent=!s?'Выбери корабль':s.sinkingTimer>0?'ПРОБОИНА · '+s.sinkingTimer.toFixed(1)+' с до затопления':
+  g?'СЦЕПЛЕНИЕ · '+Math.round(Math.abs(g.progress))+'%':
+  s.retreating?'ОТСТУПАЕТ':state.oars<.45?'ПОВРЕЖДЕНЫ ВЁСЛА':
+  state.morale<.35?'ЭКИПАЖ КОЛЕБЛЕТСЯ':'ГОТОВ К БОЮ';
+ $('combatState').classList.toggle('danger',Boolean(s&&(s.sinkingTimer>0||s.retreating||g)));
  const order=s?instruction(s,game.stage):null;
  $('instruction').textContent=s?(order.route.length?'Маршрут записан. Можно нарисовать новый.':'Проведи по воде или выбери цель для атаки.'):'Выбери судно на поле';
  $('routeCounter').textContent=order?readoutRoute(order):'НЕТ МАРШРУТА';
@@ -164,15 +209,18 @@ function setStage(stage){if(game.phase!=='orders')return;game.stage=stage;select
 
 function normalize(a){while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;return a}
 function maneuver(s,dt){
+ if(s.grappleId){s.velocity*=Math.max(0,1-dt*4);return;}
  const stage=game.phase==='resolve'?Math.min(1,Math.floor(game.elapsed/HALF)):0;
  if(s._activeStage!==stage){s._activeStage=stage;s._cursor[stage]=0;}
- const ins=instruction(s,stage),t=game.ships.find(v=>v.id===ins.targetId&&v.alive&&v.side!==s.side)||nearest(s);
+ const ins=instruction(s,stage);s.order=ins.kind;
+ const t=game.ships.find(v=>v.id===ins.targetId&&v.alive&&v.side!==s.side)||nearest(s);
  let goal=null,stop=false;
  const points=ins.route||[];
  let index=s._cursor[stage]||0;
  while(index<points.length&&distance(s,points[index])<18)index++;
  s._cursor[stage]=index;
  if(index<points.length)goal=points[index];
+ if(s.retreating)goal={x:s.x,y:s.side==='ally'?H+60:-60};
  if(!goal&&ins.kind==='evade'&&t)goal={x:s.x+(s.x-t.x)*2,y:s.y+(s.y-t.y)*2};
  if(!goal&&ins.kind==='hold'){stop=true;goal={x:s.x+Math.cos(s.angle)*12,y:s.y+Math.sin(s.angle)*12};}
  if(!goal&&t){
@@ -199,15 +247,21 @@ function maneuver(s,dt){
    }
   }
  }
- const desired=Math.atan2(dy,dx),turn=clamp(normalize(desired-s.angle),-s.turn*dt*1.15,s.turn*dt*1.15);
+ const state=condition(s),desired=Math.atan2(dy,dx),turn=clamp(normalize(desired-s.angle),-s.turn*state.turn*dt*1.15,s.turn*state.turn*dt*1.15);
  s.angle=normalize(s.angle+turn);
- let speed=stop?9:s.speed*1.15;
+ let speed=stop?9:s.speed*condition(s).speed*1.15;
  if(game.weather?.kind==='gust')speed*=1.14;
  if(ins.kind==='evade')speed*=1.2;
  if(ins.kind==='board'&&t&&distance(s,t)<50)speed=Math.min(speed,19);
+ if(s.sinkingTimer>0)speed*=.28;
  if(index<points.length&&distance(s,goal)<35)speed*=.78;
  s.velocity+=(speed-s.velocity)*Math.min(1,dt*.92);
  s.x+=Math.cos(s.angle)*s.velocity*dt;s.y+=Math.sin(s.angle)*s.velocity*dt;
+ if(s.retreating&&(s.y<49||s.y>H-49)){
+   s.alive=false;s.escaped=true;s.hp=Math.max(1,s.hp);
+   logEvent(s.name+' вышел из боя!');
+   return;
+ }
  if(s.x<38||s.x>W-38||s.y<40||s.y>H-40){
   s.x=clamp(s.x,38,W-38);s.y=clamp(s.y,40,H-40);
   s.angle=normalize(s.angle+Math.PI*.46*dt);s.velocity*=.62;
@@ -223,58 +277,159 @@ function maneuver(s,dt){
   }
  }
 }
-function damage(s,hp,crew,from){
+function endGrapple(g,reason){
+ const a=game.ships.find(s=>s.id===g.a),b=game.ships.find(s=>s.id===g.b);
+ if(a){a.grappleId=null;a.grappleCooldown=2.4;}if(b){b.grappleId=null;b.grappleCooldown=2.4;}
+ if(reason&&a&&b){const d=Math.max(.001,distance(a,b)),ux=(b.x-a.x)/d,uy=(b.y-a.y)/d;a.x-=ux*12;a.y-=uy*12;b.x+=ux*12;b.y+=uy*12;}
+ game.grapples=game.grapples.filter(x=>x.id!==g.id);
+ if(reason)logEvent(reason);
+}
+function getGrapple(ship){return game.grapples.find(g=>g.id===ship.grappleId);}
+function beginGrapple(attacker,defender){
+ if(!attacker?.alive||!defender?.alive||attacker.grappleId||defender.grappleId||attacker.grappleCooldown>0||defender.grappleCooldown>0)return false;
+ const id=[attacker.id,defender.id].sort().join('::');
+ game.grapples.push({id,a:attacker.id,b:defender.id,initiator:attacker.id,progress:0,escape:0,age:0});
+ attacker.grappleId=id;defender.grappleId=id;attacker.velocity*=.16;defender.velocity*=.16;
+ burst((attacker.x+defender.x)/2,(attacker.y+defender.y)/2,'#e5cca0',14);
+ logEvent(attacker.name+' зацепил '+defender.name+'!');
+ return true;
+}
+function captureShip(victim,aggressor){
+ if(!victim.alive)return;
+ victim.alive=false;victim.surrendered=true;victim.hp=Math.max(1,victim.hp);
+ const g=getGrapple(victim);if(g)endGrapple(g);
+ if(aggressor){aggressor.kills++;aggressor.morale=clamp(aggressor.morale+9,0,100);}
+ if(victim.side==='enemy'&&aggressor?.side==='ally')game.captured.push(victim);
+ burst(victim.x,victim.y,'#f0d89a',20);
+ logEvent(victim.name+' спустил флаг — '+(aggressor?.side==='ally'?'трофей!':'судно потеряно.'));
+}
+function sinkShip(s){
  if(!s.alive)return;
- s.hp-=hp;s.crew-=crew;
- if(from&&from.side!==s.side)from.dealt+=Math.max(0,hp)+Math.max(0,crew)*.5;
- if(s.hp<=0){s.alive=false;s.hp=0;burst(s.x,s.y,'#d5a16a',22);logEvent(s.name+' тонет!');if(from)from.kills++;}
- else if(s.crew<=0){
-  s.alive=false;s.crew=0;
-  if(from&&from.side==='ally'&&s.side==='enemy'){game.captured.push(s);logEvent(s.name+' захвачен!');}
-  else logEvent(s.name+' захвачен противником!');
-  if(from)from.kills++;burst(s.x,s.y,'#d6c99d',16);
+ s.alive=false;s.hp=0;s.sinkingTimer=0;
+ const g=getGrapple(s);if(g)endGrapple(g);
+ burst(s.x,s.y,'#bfcabd',30);logEvent(s.name+' ушёл под воду!');
+}
+function damage(s,hp,crew,from,extra={}){
+ if(!s.alive)return;
+ hp=Math.max(0,hp||0);crew=Math.max(0,crew||0);
+ s.hp=Math.max(0,s.hp-hp);s.crew=Math.max(0,s.crew-crew);
+ s.oars=clamp(s.oars-(extra.oars||0),0,100);
+ s.morale=clamp(s.morale-(extra.morale||0)-crew*.6,0,100);
+ if(from&&from.side!==s.side)from.dealt+=hp+crew*.5+(extra.oars||0)*.3;
+ if(s.hp<=0&&!s.sinkingTimer){
+  s.sinkingTimer=4.5;s.velocity*=.25;
+  logEvent('Пробоина у '+s.name+' — корабль тонет!');
+ }
+ if(s.morale<18&&!s.grappleId&&!s.sinkingTimer)s.retreating=true;
+ if(s.grappleId&&(s.crew<=0||s.morale<=0)){
+  captureShip(s,from||game.ships.find(v=>v.id===getGrapple(s)?.initiator&&v.id!==s.id));
+ }else if(s.crew<=0){
+  s.alive=false;s.surrendered=true;
+  logEvent(s.name+' остался без экипажа!');
  }
 }
-function logEvent(t){game.events.push(t);if(game.events.length>5)game.events.shift();notify(t);}
-function burst(x,y,color,n){for(let i=0;i<n;i++){let a=rand(x+i*17+y)*TAU;let sp=20+rand(y+i*73)*72;game.particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:.6+rand(i+x)*.6,color});}}
+function logEvent(t){
+ // Last real encounter remains visible until a newer event replaces it.
+ game.events.push(t);if(game.events.length>6)game.events.shift();notify(t);
+ const feed=$('combatFeed');if(feed){feed.textContent=t;feed.classList.remove('flash');void feed.offsetWidth;feed.classList.add('flash');}
+}
+function burst(x,y,color,n){
+ for(let i=0;i<n;i++){let a=rand(x+i*17+y)*TAU,sp=20+rand(y+i*73)*72;
+  game.particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:.6+rand(i+x)*.6,color});}
+}
+function resolveGrapples(dt){
+ for(const g of [...game.grapples]){
+  const a=game.ships.find(s=>s.id===g.a),b=game.ships.find(s=>s.id===g.b);
+  if(!a?.alive||!b?.alive){endGrapple(g);continue;}
+  g.age+=dt;
+  // Hulls remain beside one another throughout the boarding contest.
+  const d=Math.max(.001,distance(a,b)),desired=(a.beam+b.beam)*.92+18,ux=(b.x-a.x)/d,uy=(b.y-a.y)/d;
+  const correction=(d-desired)*Math.min(.38,dt*5);
+  a.x+=ux*correction;a.y+=uy*correction;b.x-=ux*correction;b.y-=uy*correction;
+  a.velocity*=.64;b.velocity*=.64;
+  const sa=Math.min(1,Math.floor(game.elapsed/HALF));
+  const oa=instruction(a,sa),ob=instruction(b,sa);
+  const flee=oa.kind==='evade'||ob.kind==='evade';
+  if(flee){
+   const escapeShip=oa.kind==='evade'?a:b,esc=condition(escapeShip);
+   g.escape+=dt*(21+escapeShip.turn*22)*esc.oars;
+   if(g.escape>=44){endGrapple(g,escapeShip.name+' разорвал сцепление!');continue;}
+  }else g.escape=Math.max(0,g.escape-dt*7);
+  const attacker=game.ships.find(s=>s.id===g.initiator)||a,defender=attacker.id===a.id?b:a;
+  const saCount=nearbySupport(game.ships,attacker,defender);
+  const sbCount=nearbySupport(game.ships,defender,attacker);
+  const clash=contest(attacker,defender,saCount,sbCount);
+  const aggressive=instruction(attacker,sa).kind==='board';
+  const defending=instruction(defender,sa).kind==='board';
+  const pressure=clash.pressure*(aggressive?1:.37)-(defending?clash.defense*2.1:0);
+  g.progress=clamp(g.progress+pressure*dt,-110,110);
+  damage(attacker,0,clash.attackerCrewDamage*dt,defender,{morale:clash.attackerMoraleDamage*dt});
+  damage(defender,0,clash.defenderCrewDamage*dt,attacker,{morale:clash.defenderMoraleDamage*dt});
+  if(!attacker.alive||!defender.alive)continue;
+  if(g.progress>=100)captureShip(defender,attacker);
+  else if(g.progress<=-100)captureShip(attacker,defender);
+ }
+}
 function advance(dt){
  game.elapsed+=dt;
  const live=game.ships.filter(s=>s.alive);
- for(const s of live){s.fireTimer=Math.max(0,s.fireTimer-dt);s.ramTimer=Math.max(0,s.ramTimer-dt);s.landTimer=Math.max(0,s.landTimer-dt);maneuver(s,dt);}
+ for(const s of live){
+  s.fireTimer=Math.max(0,s.fireTimer-dt);s.ramTimer=Math.max(0,s.ramTimer-dt);s.landTimer=Math.max(0,s.landTimer-dt);s.grappleCooldown=Math.max(0,(s.grappleCooldown||0)-dt);
+  if(s.sinkingTimer>0){s.sinkingTimer-=dt;if(s.sinkingTimer<=.017){sinkShip(s);continue;}}
+  maneuver(s,dt);
+ }
  for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){
   const a=live[i],b=live[j];if(!a.alive||!b.alive)continue;
-  const d=distance(a,b),sep=(a.length+b.length)*.45;if(d>=sep||d<.001)continue;
+  const d=distance(a,b),sep=(a.length+b.length)*.45;
+  if(d>=sep||d<.001)continue;
+  if(a.grappleId&&a.grappleId===b.grappleId)continue;
   const dx=(b.x-a.x)/d,dy=(b.y-a.y)/d,penetration=sep-d;
-  a.x-=dx*penetration*.36;a.y-=dy*penetration*.36;b.x+=dx*penetration*.36;b.y+=dy*penetration*.36;
-  if(a.side!==b.side){
-   const impact=(Math.abs(a.velocity)+Math.abs(b.velocity))*.065;
-   if(a.ramTimer<=0&&b.ramTimer<=0&&impact>3){
-    damage(a,impact*.6,.6,b);damage(b,impact,.8,a);
-    a.ramTimer=b.ramTimer=2.5;burst((a.x+b.x)/2,(a.y+b.y)/2,'#e2c6a3',12);
+  const approach=Math.max(0,
+   (Math.cos(a.angle)*a.velocity-Math.cos(b.angle)*b.velocity)*dx+
+   (Math.sin(a.angle)*a.velocity-Math.sin(b.angle)*b.velocity)*dy);
+  a.x-=dx*penetration*.35;a.y-=dy*penetration*.35;b.x+=dx*penetration*.35;b.y+=dy*penetration*.35;
+  if(a.side===b.side){a.velocity*=.84;b.velocity*=.84;continue;}
+  const stage=Math.min(1,Math.floor(game.elapsed/HALF));
+  const ao=instruction(a,stage),bo=instruction(b,stage);
+  if(ao.kind==='board'||bo.kind==='board'){
+   // Engagement is possible only when oared ships have sufficiently slowed.
+   const closer=ao.kind==='board'?a:b,opponent=closer===a?b:a;
+   if(distance(a,b)<sep+10&&approach<42)beginGrapple(closer,opponent);
+  }
+  if(a.ramTimer<=0&&b.ramTimer<=0){
+   const force=approach*.092;
+   if(force>2.3){
+    const toB=attackPacket(a,b,'ram',approach),toA=attackPacket(b,a,'ram',approach);
+    damage(b,toB.hull,toB.crew,a,{oars:toB.oars,morale:toB.morale});
+    damage(a,toA.hull,toA.crew,b,{oars:toA.oars,morale:toA.morale});
+    a.ramTimer=b.ramTimer=2.5;
+    burst((a.x+b.x)/2,(a.y+b.y)/2,'#e2c6a3',12);
+    if(toB.oars>5||toA.oars>5)logEvent('Сломаны вёсла при столкновении!');
    }
-   a.velocity*=.76;b.velocity*=.76;
-  }else{a.velocity*=.85;b.velocity*=.85;}
+  }
+  a.velocity*=.78;b.velocity*=.78;
  }
+ // A volley requires a firing arc, line of sight and a target not locked to a friendly ship.
  for(const s of live){
-  if(!s.alive)continue;
+  if(!s.alive||s.grappleId||s.sinkingTimer>0)continue;
   const stage=Math.min(1,Math.floor(game.elapsed/HALF)),ins=instruction(s,stage);
+  if(ins.kind!=='shoot')continue;
   const t=game.ships.find(v=>v.id===ins.targetId&&v.alive&&v.side!==s.side)||nearest(s);
-  if(!t||!t.alive)continue;
+  if(!t||!t.alive||t.grappleId||s.fireTimer>0)continue;
   const d=distance(s,t),bearing=Math.abs(normalize(Math.atan2(t.y-s.y,t.x-s.x)-s.angle));
-  const precision=game.weather?.kind==='fog'? .72:1;
-  if(ins.kind!=='hold'&&ins.kind!=='evade'&&d<s.range*precision&&s.fireTimer<=0&&bearing<2.6){
-   const shots=ins.kind==='shoot'?1:.43;
-   damage(t,s.damage*shots,.38*shots,s);s.fireTimer=1.1+rand(game.elapsed+s.x)*.42;
-   game.particles.push({x:s.x,y:s.y,vx:(t.x-s.x)/Math.max(d,1)*185,vy:(t.y-s.y)/Math.max(d,1)*185,life:Math.min(.6,d/185),color:s.side==='ally'?'#f0dab0':'#e2b1a0',arrow:true});
-  }
-  if(ins.kind==='board'&&d<49&&Math.abs(s.velocity-t.velocity)<37){
-   damage(t,.16*dt,s.board*dt*1.8,s);
-   damage(s,.1*dt,t.board*dt*.53,t);
-   if(rand(Math.floor(game.elapsed*5)+s.x)<.1)burst((s.x+t.x)/2,(s.y+t.y)/2,'#e9cda2',2);
-  }
+  const precision=game.weather?.kind==='fog'?.72:1;
+  if(d>s.range*precision||bearing>2.7||rangeBlocked(s,t,game.islands,terrainDistance))continue;
+  const packet=attackPacket(s,t,'arrows');
+  damage(t,packet.hull,packet.crew,s,{oars:packet.oars,morale:packet.morale});
+  s.fireTimer=1.15+rand(game.elapsed+s.x)*.35;
+  game.particles.push({x:s.x,y:s.y,vx:(t.x-s.x)/Math.max(d,1)*190,vy:(t.y-s.y)/Math.max(d,1)*190,
+    life:Math.min(.56,d/190),color:s.side==='ally'?'#f0dab0':'#e2b1a0',arrow:true});
+  if(t.oars<43&&t.oars+packet.oars>=43)logEvent('Гребцы '+t.name+' теряют ход!');
  }
+ resolveGrapples(dt);
  for(const p of game.particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;}
  game.particles=game.particles.filter(p=>p.life>0).slice(-160);
+ if(game.selected&&Math.floor(game.elapsed*3)!==Math.floor((game.elapsed-dt)*3))selectShip(game.selected);
 }
 function startResolve(){
  if(game.phase!=='orders')return;
@@ -295,11 +450,11 @@ function finishPhase(){
  }
  for(const s of game.ships.filter(s=>s.alive)){
   s._cursor=[0,0];s._activeStage=-1;
-  if(s.side==='ally'){s.orders=[freshOrder('hold'),freshOrder(s.type==='heavy'?'board':'shoot')];}
-  else{
-   const foe=nearest(s);s.orders=[freshOrder(s.type==='swift'?'evade':'shoot'),freshOrder(s.type==='heavy'?'board':'shoot')];
-   if(foe){s.orders[0].targetId=foe.id;s.orders[1].targetId=foe.id;}
+  if(s.side==='ally'){
+   s.orders=[freshOrder('hold'),freshOrder(s.type==='heavy'?'board':'shoot')];
+   if(!canPlan(s,s.orders))s.orders[1]=freshOrder('shoot');
   }
+  else planEnemyOrders(s);
  }
 $('resolveBtn').hidden=false;
  $('subtitle').textContent='Сражение · фаза приказов';
@@ -307,20 +462,20 @@ $('resolveBtn').hidden=false;
 }
 function finishBattle(){
  const score=s=>alive(s).reduce((a,v)=>a+v.hp/v.maxHp+v.crew/v.maxCrew*.5,0);
- const win=score('ally')>=score('enemy');game.endVictory=win;game.phase='result';
- const survivors=alive('ally');
- const dead=game.ships.filter(s=>s.side==='ally'&&!s.alive).length;
+ const win=alive('enemy').length===0||score('ally')>=score('enemy')&&alive('ally').length>0;game.endVictory=win;game.phase='result';
+ const survivors=game.ships.filter(s=>s.side==='ally'&&(s.alive||s.escaped));
+ const dead=game.ships.filter(s=>s.side==='ally'&&!s.alive&&!s.escaped).length;
  for(const s of game.ships.filter(s=>s.side==='ally')){
   const original=game.fleet.find(f=>f.id===s.id);
   if(!original)continue;
-  if(!s.alive){game.fleet=game.fleet.filter(f=>f.id!==s.id);continue;}
-  original.hp=clamp(s.hp,1,s.maxHp);original.crew=clamp(s.crew,1,s.maxCrew);
+  if(!s.alive&&!s.escaped){game.fleet=game.fleet.filter(f=>f.id!==s.id);continue;}
+  original.hp=clamp(s.hp,1,s.maxHp);original.crew=clamp(s.crew,1,s.maxCrew);original.oars=clamp(s.oars,0,100);
   original.xp+=(win?16:7)+Math.round(s.dealt*.3);original.kills=(original.kills||0)+s.kills;
  }
  let prizes=0;
  for(const c of game.captured){
   if(game.fleet.length>=6)break;
-  const copy=makeShip('prize-'+game.battleIndex+'-'+prizes+'-'+Date.now(),c.name,c.type,{hp:Math.max(25,c.hp*.7),crew:Math.max(8,Math.round(c.maxCrew*.35)),xp:3,active:false});
+  const copy=makeShip('prize-'+game.battleIndex+'-'+prizes+'-'+Date.now(),c.name,c.type,{hp:Math.max(25,c.hp*.7),crew:Math.max(8,Math.round(c.maxCrew*.35)),oars:Math.max(22,Math.round(c.oars*.72)),xp:3,active:false});
   game.fleet.push(copy);prizes++;
  }
  const goldEarned=(win?85:32)+Math.round(game.ships.filter(s=>s.side==='ally').reduce((n,s)=>n+s.dealt,0)*.15);
@@ -463,6 +618,17 @@ function render(now){
   for(const s of ghost)drawShip(s,now,true);
  }else{
   const ss=game.ships.filter(s=>s.alive);
+  // Ropes and the balance of boarding progress stay on the chart.
+  for(const g of game.grapples){
+   const a=game.ships.find(s=>s.id===g.a),b=game.ships.find(s=>s.id===g.b);
+   if(!a?.alive||!b?.alive)continue;
+   ctx.save();ctx.strokeStyle='#ebca95';ctx.lineWidth=3;ctx.setLineDash([3,3]);
+   ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
+   const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,progress=clamp((g.progress+100)/200,0,1);
+   ctx.fillStyle='#102f35ed';ctx.fillRect(mx-27,my-27,54,8);
+   ctx.fillStyle='#d8b37f';ctx.fillRect(mx-25,my-25,50*progress,4);
+   ctx.restore();
+  }
   for(const s of ss){drawShip(s,now);if(game.phase==='orders')drawOrders(s);}
   for(const s of ss)drawMovementBadge(s);
   for(const p of game.particles){

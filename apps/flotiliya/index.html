@@ -22,8 +22,8 @@
 <div class="intro"><span class="overline">МОРСКАЯ ТАКТИКА</span><h1>Корабли помнят<br>каждую битву.</h1><p>Три корабля. Один запас очков движения на оба приказа. Манёвренные суда успевают больше — используй это.</p><div class="port-stats"><span id="campaignLabel"></span><span id="harborCount"></span></div><button data-native-press id="sailBtn" class="primary">Начать сражение <span>↗</span></button></div>
 <div class="fleet"><div class="fleet-heading">ТВОЯ ЭСКАДРА <span id="activeCount"></span></div><div id="fleetList" class="fleet-list"></div><p class="fine">Выбери до трёх кораблей. Ремонт и улучшения сохраняются между боями.</p></div>
 </div>
-<div id="help" class="help" hidden><button data-native-press id="helpClose" class="smallbtn close" aria-label="Закрыть">×</button><span class="overline">КОМАНДНАЯ ПАМЯТКА</span><h2>Два приказа на одну фазу</h2><p><b>Очки движения.</b> Манёвр — 1 ОД, обстрел и уклонение — 2, абордаж — 3. Каждый участок нарисованного пути расходует ещё 1 ОД примерно за 35 единиц расстояния. Общий запас один на обе половины фазы.</p><p><b>01 — первая половина.</b> Выбери корабль, зажми и проведи пальцем по воде или мышью, чтобы нарисовать ломаный маршрут. Простое касание задаёт точку.</p><p><b>02 — вторая половина.</b> Переключи половину фазы, выбери «Абордаж» и нажми на вражеский корабль — или продолжи рисовать путь обхода. Для каждой половины приказы отдельные.</p><p>Внизу карты — твой флот, сверху — противник. Оба флота исполняют короткую фазу одновременно. Учитывай поворот, рифы, острова, ветер и ограниченную скорость. Каждый корабль сохраняет опыт и повреждения.</p></div>
-<div id="toast" class="toast" hidden></div>
+<div id="help" class="help" hidden><button data-native-press id="helpClose" class="smallbtn close" aria-label="Закрыть">×</button><span class="overline">КОМАНДНАЯ ПАМЯТКА</span><h2>Два приказа на одну фазу</h2><p><b>Очки движения.</b> Манёвр — 1 ОД, обстрел и уклонение — 2, абордаж — 3. Каждый участок нарисованного пути расходует ещё 1 ОД примерно за 35 единиц расстояния. Общий запас один на обе половины фазы.</p><p><b>Настоящий бой.</b> Позиция относительно носа и бортов влияет на урон; удары по бортам ломают вёсла и ухудшают скорость с манёвренностью. При абордаже корпуса сцепляются, обе стороны теряют бойцов, а поддержка третьего корабля может изменить исход. «Уклонение» помогает разорвать сцепление. Экипаж с низким боевым духом может отступить.</p><p><b>01 — первая половина.</b> Выбери корабль, зажми и проведи пальцем по воде или мышью, чтобы нарисовать ломаный маршрут. Простое касание задаёт точку.</p><p><b>02 — вторая половина.</b> Переключи половину фазы, выбери «Абордаж» и нажми на вражеский корабль — или продолжи рисовать путь обхода. Для каждой половины приказы отдельные.</p><p>Внизу карты — твой флот, сверху — противник. Оба флота исполняют короткую фазу одновременно. Учитывай поворот, рифы, острова, ветер и ограниченную скорость. Каждый корабль сохраняет опыт и повреждения.</p></div>
+<div id="combatFeed" class="combat-feed" role="status" aria-live="polite">Бой ещё не начался</div><div id="toast" class="toast" hidden></div>
 </section>
 <aside id="command" class="command" hidden>
 <div class="command-title"><span id="commandCaption" class="overline">ПРИКАЗЫ</span><h2 id="selectedName">Выбери корабль</h2><p id="selectedInfo"></p></div>
@@ -31,6 +31,12 @@
  <div class="ap-top"><div><span class="overline">ОЧКИ ДВИЖЕНИЯ</span><small id="apFormula">Общий запас на весь ход</small></div><div class="ap-numbers"><strong id="apRemaining">—</strong><span id="apTotal">/ —</span></div></div>
  <div class="ap-pips" id="apPips" aria-label="Запас очков движения"></div>
  <div class="ap-costs"><span>01 <b id="apSpent0">0</b> ОД</span><span>02 <b id="apSpent1">0</b> ОД</span><span id="apState">Не назначено</span></div>
+</div>
+<div class="battle-condition" id="battleCondition" aria-live="polite">
+ <div class="condition-line"><span>КОРПУС</span><div class="condition-track"><i id="hullMeter"></i></div><b id="hullValue">—</b></div>
+ <div class="condition-line"><span>ВЁСЛА</span><div class="condition-track"><i id="oarMeter"></i></div><b id="oarValue">—</b></div>
+ <div class="condition-line"><span>МОРАЛЬ</span><div class="condition-track"><i id="moraleMeter"></i></div><b id="moraleValue">—</b></div>
+ <div class="combat-state" id="combatState">Готов к бою</div>
 </div>
 <div id="orderArea" class="order-area">
 <div class="phase-tabs" role="group" aria-label="Половина фазы">
@@ -52,7 +58,7 @@
 </aside>
 </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Флотилия" data-app-version="0.3.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Флотилия" data-app-version="0.4.0"></script>
 <script src="./app.js" type="module"></script>
 </body>
 </html>
