@@ -96,8 +96,11 @@ export function renderGalley(ctx,s,now,selected=false){
  // Oars: individually spaced and animated with slight independent offsets.
  for(const d of [-1,1])for(let i=0;i<6;i++){
    const ax=-len*.31+i*len*.105,beat=Math.sin(animation*(2.5+Math.abs(s.velocity)*.025)+i*.4)*2;
-   ctx.lineWidth=2;ctx.strokeStyle='#94734f';ctx.beginPath();ctx.moveTo(ax,d*half*.65);ctx.lineTo(ax-3+beat,d*(half+12));ctx.stroke();
-   ctx.strokeStyle='#d2b58a';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(ax-3+beat,d*(half+12));ctx.lineTo(ax-6+beat,d*(half+17));ctx.stroke();
+   const intact=(s.oars??100)/100,broken=(i*2+(d===1?0:1))/12>intact;
+   ctx.lineWidth=2;ctx.strokeStyle=broken?'#644e42':'#94734f';ctx.beginPath();ctx.moveTo(ax,d*half*.65);
+   ctx.lineTo(ax-3+beat,d*(half+(broken?5:12)));ctx.stroke();
+   if(!broken){ctx.strokeStyle='#d2b58a';ctx.lineWidth=3;ctx.beginPath();
+     ctx.moveTo(ax-3+beat,d*(half+12));ctx.lineTo(ax-6+beat,d*(half+17));ctx.stroke();}
  }
  // Distinct hull outline and chine.
  const hull=ctx.createLinearGradient(0,-half,0,half);hull.addColorStop(0,'#4d352b');hull.addColorStop(.28,'#906b4d');hull.addColorStop(.56,'#b08c66');hull.addColorStop(1,'#513c32');
@@ -145,5 +148,12 @@ export function renderGalley(ctx,s,now,selected=false){
  ctx.shadowBlur=0;ctx.fillStyle='rgba(12,31,35,.7)';ctx.fillRect(s.x-28,s.y+31,56,5);
  ctx.fillStyle=side?'#82b29a':'#c7836b';ctx.fillRect(s.x-28,s.y+31,56*hp,5);
  ctx.fillStyle='rgba(225,229,210,.55)';ctx.fillRect(s.x-28,s.y+37,56*Math.max(0,s.crew/s.maxCrew),2);
+ if(s.grappleId){ctx.font='bold 15px system-ui,sans-serif';ctx.fillStyle='#f2b77b';
+   ctx.fillText('⚓',s.x,s.y-56);}
+ else if(s.sinkingTimer>0){ctx.font='bold 13px system-ui,sans-serif';ctx.fillStyle='#f1aaa0';
+   ctx.fillText('ПРОБОИНА',s.x,s.y-56);}
+ else if((s.oars??100)<42){ctx.font='bold 11px system-ui,sans-serif';ctx.fillStyle='#ecb783';
+   ctx.fillText('ВЁСЛА',s.x,s.y-54);}
+
  ctx.restore();
 }

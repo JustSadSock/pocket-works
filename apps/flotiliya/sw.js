@@ -1,9 +1,9 @@
 const CACHE_PREFIX='flotiliya-';
-const CACHE_NAME='flotiliya-v0.3.0';
-const APP_VERSION='0.3.0';
+const CACHE_NAME='flotiliya-v0.4.0';
+const APP_VERSION='0.4.0';
 const RELEASE_DATE='2026-10-14';
-const NOTES=['Вертикальная карта: флот игрока снизу, враг сверху.','Очки движения для каждого корабля и двух приказов с проверкой расходов.'];
-const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./sea-art.js','./turn-budget.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const NOTES=['Позиционные атаки повреждают корпус и вёсла, изменяя ход и манёвренность.','Многоходовой абордаж: сцепление, борьба за палубу, поддержка, мораль и отступление.'];
+const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./sea-art.js','./turn-budget.js','./naval-combat.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const scope=new URL('./',self.registration.scope);
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await Promise.all(SHELL.map(async entry=>{const url=new URL(entry,scope);try{const resp=await fetch(url.href,{cache:'reload'});if(resp.ok)await cache.put(url.href,resp);}catch{}}));await self.skipWaiting();})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim();})()));

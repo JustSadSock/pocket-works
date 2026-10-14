@@ -8,7 +8,12 @@ export const MOVE_STEP=35;
 export const PHASE_HALF=2.25;
 export const MAX_ROUTE_NODES=36;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-export function maxPoints(ship){return Math.max(5,Math.min(11,Math.round(2.3+Number(ship.turn||.8)*4.9)));}
+export function maxPoints(ship){
+ const base=Math.max(5,Math.min(11,Math.round(2.3+Number(ship.turn||.8)*4.9)));
+ const oars=Math.max(0,Math.min(100,Number.isFinite(ship.oars)?ship.oars:100));
+ // Lost rows of oars lower how many maneuvers can be carried out per phase.
+ return Math.max(3,base-Math.ceil((100-oars)/34));
+}
 export function routeOrigin(ship,orders,index){
  if(index===0)return {x:ship.x,y:ship.y};
  const first=orders[0]?.route||[];
