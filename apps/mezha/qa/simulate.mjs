@@ -1,0 +1,82 @@
+import assert from 'node:assert/strict';
+import {createGame,action,tick,stats,save,load,W,H,LIMIT} from '../engine.js';
+const dt=.05;
+function play(s,secs,turn=()=>{}) {
+ for(let i=0;i<secs/dt&&s.phase==='battle';i++){
+  turn(s,i);tick(s,dt);
+  if(i%20===0){
+   for(const p of s.players)for(const k of ['base','food','wood','gold'])assert.ok(Number.isFinite(p[k])&&p[k]>=0&&p[k]<=999,k);
+   for(const u of s.squads)assert.ok(u.hp>0&&u.hp<=u.maxHp&&u.morale>=0&&u.morale<=100&&u.x>=0&&u.x<=W&&u.y>=0&&u.y<=H,'unit invariant');
+  }
+ }
+ return s;
+}
+function testCore(){
+ const s=createGame(42,false);
+ assert.equal(s.squads.length,8,'missing initial armies');
+ assert.deepEqual([stats(s,0).troops,stats(s,1).troops],[4,4]);
+ assert.equal(action(s,0,{kind:'order',captain:2,mode:'capture',x:450,y:300}).ok,false);
+ assert.equal(action(s,0,{kind:'order',captain:0,mode:'raid',x:479,y:306}).ok,true);
+ assert.equal(action(s,0,{kind:'recruit',type:'levy'}).ok,true);
+ assert.equal(stats(s,0).troops,5);
+ assert.equal(action(s,0,{kind:'fort',site:'orchard'}).ok,true);
+ assert.equal(s.sites[0].fort,1);
+ s.players[0].gold=999;s.players[0].wood=999;s.players[0].food=999;
+ for(let i=0;i<20;i++)action(s,0,{kind:'recruit',type:'levy'});
+ assert.equal(stats(s,0).troops,12,'recruit cap');
+ const a=createGame(711,false);
+ action(a,0,{kind:'order',captain:0,mode:'capture',x:850,y:310});
+ play(a,90);
+ assert.ok(a.squads.some(u=>u.side===0&&u.x>540),'river crossing');
+ const b=createGame(121,true);
+ play(b,10);const restored=load(save(b));
+ assert.deepEqual(restored,b,'snapshot mismatch');
+ play(b,10);play(restored,10);
+ assert.deepEqual(restored,b,'deterministic resume');
+}
+function testSiege(){
+ function siege(supplied){
+  const s=createGame(900,false);s.squads=s.squads.filter(u=>u.side===0);
+  for(const u of s.squads){u.x=836;u.y=309;u.maxHp=u.hp=1000;u.morale=100}
+  for(const c of s.orders.filter(c=>c.side===0)){c.x=850;c.y=310;c.site=null}
+  if(supplied)s.sites.find(z=>z.id==='ford').owner=0;
+  play(s,5);return {loss:480-s.players[1].base,damage:1000-s.squads[0].hp};
+ }
+ const dry=siege(false),wet=siege(true);
+ assert.ok(dry.loss>0&&wet.loss>dry.loss*4,'supply must matter');
+ assert.ok(dry.damage>0,'garrison should shoot');
+ return {unsupported:+dry.loss.toFixed(1),supplied:+wet.loss.toFixed(1)};
+}
+function run(seed,strategy){
+ const s=createGame(seed,true);
+ play(s,LIMIT,(s,i)=>{
+  if(i%300===0&&strategy!=='passive'){
+   const p=s.players[0];const type=p.gold>=104&&p.wood>=24?'knight':p.gold>=70&&p.wood>=16?'bow':'levy';
+   action(s,0,{kind:'recruit',type});
+  }
+  if(i%700!==0)return;
+  if(strategy==='rush')for(let c=0;c<2;c++)action(s,0,{kind:'order',captain:c,mode:'capture',x:842,y:310});
+  if(strategy==='frontier'||strategy==='control'){
+   if(i===0){
+    action(s,0,{kind:'order',captain:0,mode:'capture',x:482,y:122});
+    action(s,0,{kind:'order',captain:1,mode:'capture',x:strategy==='control'?478:485,y:strategy==='control'?306:516});
+   }else if(strategy==='frontier'){
+    for(let c=0;c<2;c++){
+     const o=s.orders[c],remaining=s.sites.filter(z=>z.owner!==0).sort((a,b)=>Math.hypot(a.x-o.x,a.y-o.y)-Math.hypot(b.x-o.x,b.y-o.y));
+     const z=remaining[Math.min(c,remaining.length-1)];if(z)action(s,0,{kind:'order',captain:c,mode:'capture',x:z.x,y:z.y});
+    }
+   }
+  }
+ });
+ assert.equal(s.phase,'end','match must finish');
+ return {winner:s.winner,t:s.time,sites:stats(s,0).sites};
+}
+testCore();const siege=testSiege(),simulations={};
+for(const strategy of ['passive','rush','control','frontier']){
+ const outcomes=Array.from({length:16},(_,i)=>run(421+i,strategy));
+ simulations[strategy]={count:outcomes.length,wins:outcomes.filter(o=>o.winner===0).length,losses:outcomes.filter(o=>o.winner===1).length,draws:outcomes.filter(o=>o.winner===-1).length,meanSeconds:Math.round(outcomes.reduce((a,b)=>a+b.t,0)/16)};
+}
+assert.equal(simulations.passive.wins,0);
+assert.ok(simulations.rush.wins<16,'castle rush exploit still guaranteed');
+assert.ok(simulations.frontier.wins>0,'frontier policy never wins');
+console.log(JSON.stringify({tests:'PASS',siege,simulations},null,2));
