@@ -353,6 +353,7 @@ export class PocketSocial {
           this.sql.exec('INSERT OR IGNORE INTO blocks(blocker,blocked) VALUES(?,?)',id,other);
           const [a,b]=this.pair(id,other);
           this.sql.exec('DELETE FROM friends WHERE a=? AND b=?',a,b);
+          this.sql.exec('DELETE FROM social_party WHERE (owner_id=? AND friend_id=?) OR (owner_id=? AND friend_id=?)',id,other,other,id);
           this.sql.exec("UPDATE invites SET status='cancelled' WHERE status='pending' AND ((from_id=? AND to_id=?) OR (from_id=? AND to_id=?))",id,other,other,id);
           return reply({ok:true});
         }
@@ -371,6 +372,7 @@ export class PocketSocial {
             action==='decline'&&(r.status!=='pending'||r.pending_by===id)||
             action==='remove'&&r.status!=='accepted')return reply({error:'invalid_action'},409);
           this.sql.exec('DELETE FROM friends WHERE a=? AND b=?',a,b);
+          this.sql.exec('DELETE FROM social_party WHERE (owner_id=? AND friend_id=?) OR (owner_id=? AND friend_id=?)',id,other,other,id);
           if(action==='remove')this.sql.exec("UPDATE invites SET status='cancelled' WHERE status='pending' AND ((from_id=? AND to_id=?) OR (from_id=? AND to_id=?))",id,other,other,id);
         }
         return reply({ok:true});
