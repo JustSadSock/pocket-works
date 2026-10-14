@@ -378,7 +378,7 @@ function invitesPanel(){
       const peer=state.me.friends.find(p=>p.id===peerId)||
         {id:peerId,nickname:i.incoming?i.fromName:i.toName,avatar:'clay'};
       const actions=i.incoming?
-        button('accept-invite','Войти','primary','data-id="'+esc(i.id)+'"')+
+        button('accept-invite',['zamazka','blind-pals','lipki'].includes(i.gameId)?'Войти':'Открыть игру','primary','data-id="'+esc(i.id)+'"')+
         button('decline-invite','Отклонить','quiet','data-id="'+esc(i.id)+'"'):
         button('cancel-invite','Отозвать','quiet','data-id="'+esc(i.id)+'"');
       const validUntil=i.expiresAt?' · до '+new Date(i.expiresAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'';
@@ -588,7 +588,7 @@ async function loadCatalog(){
 }
 function resetNotice(){state.notice='';state.error='';state.confirm=null}
 async function open(room='',editNow=false,gameId='zamazka'){
-  state.game=['zamazka','blind-pals'].includes(gameId)?gameId:'zamazka';
+  state.game=/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(gameId)?gameId:'zamazka';
   if(!dialog.open)dialog.showModal();
   startLivePolling();liveRevision=null;state.friendOrder=[];state.otherReturn=null;
   state.query='';state.results=[];state.searchVersion++;state.searchLoading=false;state.searchError='';
@@ -892,7 +892,7 @@ function install(){
     try{
       const u=await fetch('/pocket-id/me',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json());
       if(!u.user?.complete)return;
-      const gameId=location.pathname.startsWith('/apps/zamazka/')?'zamazka':location.pathname.startsWith('/apps/blind-pals/')?'blind-pals':'';
+      const gameId=location.pathname.match(/^\/apps\/([a-z0-9-]+)\//)?.[1]||'';
       await api('presence',{gameId});
     }catch{}
   }
