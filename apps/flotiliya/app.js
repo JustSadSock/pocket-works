@@ -125,7 +125,7 @@ function updateBudgetUI(s){
  $('apSpent0').textContent=b?String(b.stages[0].spent):'0';
  $('apSpent1').textContent=b?String(b.stages[1].spent):'0';
  $('apState').textContent=b?(b.valid?(b.remaining===0?'ВСЁ РАСПРЕДЕЛЕНО':'ОСТАЛОСЬ '+b.remaining+' ОД'):'ПЕРЕРАСХОД'):'ВЫБЕРИ КОРАБЛЬ';
- $('apFormula').textContent=b?('Манёвренность: '+(Math.round(s.turn*100)/100)+' · 1 ОД ≈ '+MOVE_STEP+' ед. пути'):'Общий запас на оба приказа';
+ $('apFormula').textContent=b?('Манёвренность '+(s.turn>1.15?'высокая':s.turn>.9?'средняя':'низкая')+' · '+MOVE_STEP+' ед./ОД'):'Общий запас на оба приказа';
  $('apGauge').classList.toggle('ap-full',Boolean(b&&b.remaining===0));
  const pips=$('apPips');pips.replaceChildren();
  if(b){for(let i=0;i<b.total;i++){
@@ -449,7 +449,7 @@ function drawMovementBadge(s){
  ctx.beginPath();ctx.roundRect(x-bw/2,y-bh/2,bw,bh,6);ctx.fill();ctx.stroke();
  ctx.font='800 17px system-ui,sans-serif';ctx.textBaseline='middle';ctx.textAlign='center';
  ctx.fillStyle=selected?'#283632':'#f7eed6';
- ctx.fillText((own?Math.max(0,b.remaining):b.total)+' / '+b.total,x,y+1);
+ ctx.fillText(Math.max(0,b.remaining)+' / '+b.total,x,y+1);
  ctx.font='700 10px system-ui,sans-serif';ctx.fillStyle='#e0dbc9';
  if(selected)ctx.fillText('ОД',x,y+bh/2+12);
  ctx.restore();
