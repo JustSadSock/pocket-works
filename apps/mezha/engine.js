@@ -22,7 +22,7 @@ function makeSquad(s,side,captain,type,x,y){
  return unit;
 }
 export function createGame(seed=Date.now(),bot=true){
- const s={version:1,seed:seed>>>0,next:1,time:0,phase:'battle',winner:null,bot,log:[],events:[],progress:[0,0],
+ const s={version:1,revision:2,seed:seed>>>0,next:1,time:0,phase:'battle',winner:null,bot,log:[],events:[],progress:[0,0],
  players:[{gold:142,wood:100,food:120,base:480,doctrine:'balanced',kills:0},{gold:142,wood:100,food:120,base:480,doctrine:'balanced',kills:0}],
  sites:SITE_DEFS.map((p,i)=>({...p,owner:i===0||i===1?0:i===5||i===6?1:-1,fort:0,capture:0,attacker:-1})),
  orders:[],squads:[],botClock:3,economyClock:0,keepShots:[0,0],
@@ -277,4 +277,4 @@ export function tick(s,dt){
  }
 }
 export function save(s){return JSON.stringify(s)}
-export function load(raw){try{const s=JSON.parse(raw);if(s?.version===1&&s?.players?.length===2&&s?.sites?.length===7&&Array.isArray(s.orders)&&Array.isArray(s.squads)&&Number.isFinite(s.time)&&s.time<LIMIT+1)return s}catch{}return null}
+export function load(raw){try{const s=JSON.parse(raw);if(s?.version===1&&s?.revision===2&&s?.players?.length===2&&s?.sites?.length===7&&Array.isArray(s.orders)&&Array.isArray(s.squads)&&Number.isFinite(s.time)&&s.time<LIMIT+1)return s}catch{}return null}
