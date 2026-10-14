@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 116" role="img" aria-label="Резная декоративная накладка">
+<defs>
+<linearGradient id="metal" x1="0" y1="0" x2=".2" y2="1"><stop stop-color="#faf2c7"/><stop offset=".16" stop-color="#a37a38"/><stop offset=".31" stop-color="#eccd84"/><stop offset=".55" stop-color="#574524"/><stop offset=".78" stop-color="#c7a563"/><stop offset="1" stop-color="#3c311f"/></linearGradient>
+<radialGradient id="patina"><stop stop-color="#66876d"/><stop offset=".75" stop-color="#314d43"/><stop offset="1" stop-color="#152d28"/></radialGradient>
+<filter id="relief" x="-30%" y="-55%" width="160%" height="210%"><feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#030d0a" flood-opacity=".85"/></filter>
+</defs>
+<g filter="url(#relief)" stroke="url(#metal)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M180 89C148 48 122 16 80 19c-25 2-37 24-26 41 9 14 31 15 43 2 9-10 3-25-7-27-10-3-16 5-15 10M180 89c32-41 58-73 100-70 25 2 37 24 26 41-9 14-31 15-43 2-9-10-3-25 7-27 10-3 16 5 15 10"/>
+<path d="M177 79C139 34 112 55 94 91M183 79c38-45 65-24 83 12M94 90c-14-35-49-34-70-20M266 90c14-35 49-34 70-20" stroke-width="3"/>
+<path d="M122 43c-18-28-48-29-64-18M238 43c18-28 48-29 64-18" stroke-width="3"/>
+<path d="M179 40c-10-18-9-25 1-36 10 11 11 18 1 36" fill="url(#patina)"/>
+<path d="M181 39c18-9 29-5 35 10-16 8-29 5-35-10M179 39c-18-9-29-5-35 10 16 8 29 5 35-10" fill="url(#patina)"/>
+<path d="M181 49l19 23-19 39-19-39z" fill="url(#patina)"/>
+<path d="M181 57l10 16-10 22-10-22z" fill="url(#metal)" stroke-width="1"/>
+<path d="M49 79c-18-13-35-9-42 3M311 79c18-13 35-9 42 3" stroke-width="3"/>
+</g>
+<g fill="url(#metal)" stroke="#352c18" stroke-width="1"><circle cx="22" cy="71" r="4"/><circle cx="338" cy="71" r="4"/><circle cx="95" cy="90" r="4"/><circle cx="265" cy="90" r="4"/></g>
+</svg>
