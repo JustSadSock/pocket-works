@@ -32,6 +32,26 @@ try{
   await page.route(/upload\.wikimedia\.org|\.wikimedia\.org\//,route=>route.fulfill({
    status:200,contentType:'image/png',headers:{'access-control-allow-origin':'*'},body:png
   }));
+
+  // Real app UI, deterministic PocketNet transport: no fake markup or stub canvas.
+  await page.route('**/pocketnet/health',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,modules:['zamazka']})}));
+  await page.route('**/pocketnet/session',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({token:'qa-token'})}));
+  await page.addInitScript(()=>{
+    const players=[{id:'qa-owner',name:'Реставратор',verified:false},{id:'qa-b',name:'Другой участник',verified:false},{id:'qa-c',name:'Третий художник',verified:false}];
+    class PlaywrightPocketSocket {
+      static OPEN=1;
+      constructor(){this.readyState=0;queueMicrotask(()=>{this.readyState=1;this.onopen?.()})}
+      dispatch(message){queueMicrotask(()=>{if(this.readyState===1)this.onmessage?.({data:JSON.stringify(message)})})}
+      send(data){
+        const p=JSON.parse(data);
+        if(p.type==='auth')this.dispatch({type:'authenticated',player:players[0]});
+        if(p.type==='create_room')this.dispatch({type:'room_joined',roomId:'a3f92c10-1234-4567-890a-bcdef0123456',version:'v17',gameId:'zamazka',state:{phase:'lobby'}});
+        if(p.type==='game_message'&&p.payload?.type==='sync')this.dispatch({type:'game_event',event:{type:'state',payload:{phase:'lobby',round:0,turn:0,host:'qa-owner',participants:players,board:{revision:0,segments:[]},done:[],voted:[]}}});
+      }
+      close(){this.readyState=3;this.onclose?.({})}
+    }
+    window.WebSocket=PlaywrightPocketSocket;
+  });
   await page.goto('http://127.0.0.1:'+port+'/apps/zamazka/',{waitUntil:'domcontentloaded'});
   await page.locator('.museum-home').waitFor({timeout:16000});
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'classic','Classic beige theme must be default');
@@ -150,7 +170,25 @@ try{
   assert.equal(await page.locator('.lobby-entry [data-action="emblem"]').count(),0,'No custom seal in setup');
   assert.equal(await page.locator('.lobby-entry #who').count(),1,'Player name remains editable for guests');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-create-room-'+viewport.width+'.png'),fullPage:false});
-  await page.locator('.lobby-entry [data-action="menu"]').click();
+  await page.locator('.lobby-entry [data-action="connect"]').click();
+  await page.locator('.exhibition-lobby #commonsCanvas').waitFor({timeout:12000});
+  assert.equal(await page.locator('.exhibition-lobby .player').count(),3,'Room roster must render from authoritative state');
+  assert.equal(await page.locator('.exhibition-lobby [data-action="start"]').count(),1,'Host must have start action');
+  assert.equal(await page.locator('.exhibition-lobby [data-action="emblem"]').count(),0,'Custom sign must be gone from waiting room');
+  const boardBox=await page.locator('#commonsCanvas').boundingBox();
+  assert(boardBox&&boardBox.width>100&&boardBox.height>60,'Interactive shared canvas must occupy meaningful space');
+  assert(boardBox.x>=0&&boardBox.x+boardBox.width<=viewport.width+2,'Shared canvas overflow');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-lobby-'+viewport.width+'.png'),fullPage:false});
+  await page.mouse.move(boardBox.x+boardBox.width*.3,boardBox.y+boardBox.height*.4);await page.mouse.down();
+  await page.mouse.move(boardBox.x+boardBox.width*.5,boardBox.y+boardBox.height*.6,{steps:5});await page.mouse.up();
+  const boardInk=await page.locator('#commonsCanvas').evaluate(el=>{
+    const data=el.getContext('2d').getImageData(0,0,960,600).data;
+    for(let i=3;i<data.length;i+=4)if(data[i]>0)return true;
+    return false;
+  });
+  assert(boardInk,'Waiting room canvas must truly accept brush strokes');
+  await page.locator('.lobby-controls [data-action="menu"]').click();
+  await page.locator('#modalActions .btn.primary').click();
   await page.locator('.museum-home').waitFor();
   await page.locator('[data-action="practice"]').click();
   await page.locator('#soloDrawingSeconds').selectOption('0');
