@@ -61,7 +61,7 @@ export class PocketSocial {
   isFriend(a,b){return this.relation(a,b)?.status==='accepted'&&!this.blocked(a,b)}
   seed(value){
     const u=cleanUser(value);if(!u)return null;
-    this.sql.exec('INSERT INTO profiles(id,nickname,avatar) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET nickname=excluded.nickname,avatar=excluded.avatar',u.id,u.nickname,u.avatar);
+    this.sql.exec('INSERT INTO profiles(id,nickname,avatar) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET nickname=excluded.nickname,avatar=excluded.avatar WHERE profiles.nickname<>excluded.nickname OR profiles.avatar<>excluded.avatar',u.id,u.nickname,u.avatar);
     return u;
   }
   card(id,viewer){
