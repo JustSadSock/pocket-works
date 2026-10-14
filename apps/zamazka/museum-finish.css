@@ -221,3 +221,14 @@ html[data-zamazka-theme="atelier"] .visual-mode-control{
 @media(prefers-reduced-motion:reduce){
  .visual-mode-switch span,.visual-mode-switch span::before{transition:none}
 }
+
+/* The interactive art frames existed after the original beige CSS was written.
+   They must remain clickable in BOTH themes, not only in the newer skin. */
+.museum-stage .museum-slide[data-slot="-1"],
+.museum-stage .museum-slide[data-slot="0"],
+.museum-stage .museum-slide[data-slot="1"]{
+ pointer-events:auto;cursor:pointer;
+}
+.museum-stage .museum-slide:focus-visible{
+ outline:3px solid #c2a171;outline-offset:4px;
+}
