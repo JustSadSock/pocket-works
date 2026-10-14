@@ -291,7 +291,7 @@ export class PocketNetHub {
       const candidates=this.sql("SELECT id,game_id,players,json_extract(state,'$.phase') AS phase FROM rooms").toArray();
       for(const room of candidates){
         if(!wanted.has(room.id))continue;
-        const mod=this.module(room.game_id);
+        const mod=this.module(room.game_id,room.version);
         if(!mod)continue;
         const players=JSON.parse(room.players);
         const max=Math.min(MAX_PLAYERS,Number(mod.MAX_PLAYERS)||
@@ -313,7 +313,11 @@ export class PocketNetHub {
       const data = await request.json().catch(() => null);
       if (!uuid.test(data?.roomId || '') || !GAME_ID.test(data?.gameId || '')) return json({error:'invalid_room'},400);
       const room = this.readRoom(data.roomId);
-      if (!room || room.gameId !== data.gameId || room.state?.phase !== 'lobby' || room.players.length >= MAX_PLAYERS)
+      const module=room&&this.module(room.gameId,room.version);
+      const maxSeats=module?Math.min(MAX_PLAYERS,Number(module.MAX_PLAYERS)||
+        (room.gameId==='blind-pals'?2:MAX_PLAYERS)):0;
+      if (!room || room.gameId !== data.gameId || room.state?.phase !== 'lobby' ||
+          !module || room.players.length>=maxSeats)
         return json({error:'room_unavailable'},409);
       if (endpoint === '/validate-invite' && !room.players.some(p=>p.accountId && p.accountId===request.headers.get('x-pw-account-id')))
         return json({error:'not_room_member'},403);
