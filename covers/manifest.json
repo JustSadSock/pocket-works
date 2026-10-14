@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "1ca3c932419517eb8486d8a5bd75e7572a43f9fa",
+    "revision": "11cbde4e57017ad275872efeec77de435b3b9c7c",
     "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "488288c9ee6091ba4f8c8501d07794db610ff4691c8a4b5c6688ebaa251503e8",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "1ca3c932419517eb8486d8a5bd75e7572a43f9fa",
-    "lastAttemptAt": "2026-10-14T21:47:59.398Z",
+    "lastAttemptRevision": "11cbde4e57017ad275872efeec77de435b3b9c7c",
+    "lastAttemptAt": "2026-10-14T22:40:07.236Z",
     "started": true,
     "gameplayEntry": [
       {
