@@ -164,14 +164,14 @@ function renderStrokes(ctx,strokes,zone,aspect=W/H){
  ctx.drawImage(paint.canvas,0,0,W,H);
 }
 
-export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false){
+export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false,legacyFrame=false){
  let ctx;
  try{
   const image=await loadArtwork(id);
   if(!canvas.isConnected)return;
-  setArtworkFrame(canvas,image);
+  setArtworkFrame(canvas,image,legacyFrame);
   ctx=prepareCanvas(canvas,false,thumbnail);
-  ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id);
+  ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id,legacyFrame);
  if(damaged){
   const z=zoneFor(id,variation),overlay=document.createElement('canvas');
   overlay.width=canvas.width;overlay.height=canvas.height;
@@ -179,7 +179,7 @@ export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=f
   paint.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
   paint.imageSmoothingEnabled=true;paint.imageSmoothingQuality='high';
   paint.fillStyle='#e8ddc6';paint.fillRect(0,0,W,H);
-  renderStrokes(paint,strokes||[],z,artworkAspect(image));
+  renderStrokes(paint,strokes||[],z,legacyFrame?W/H:artworkAspect(image));
   // Render one opaque restoration surface, clip its irregular outer contour
   // once. Previous beige+fill+stroke clipping multiplied edge alpha.
   ctx.save();clipZone(ctx,z);ctx.drawImage(overlay,0,0,W,H);ctx.restore();
