@@ -1,3 +1,39 @@
+// Verified PocketNet lobbies can invite friends using one shared Pocket Social UI.
+let inviteShortcut=null;
+const removeInviteShortcut=client=>{
+  if(inviteShortcut?.client===client){inviteShortcut.node.remove();inviteShortcut=null;}
+};
+async function showInviteShortcut(client,room){
+  if(!client.accountId||room.state?.phase!=='lobby'||!room.roomId||!room.gameId)return;
+  if(['zamazka','blind-pals'].includes(room.gameId))return; // Existing game buttons.
+  try{
+    if(!window.PocketSocial){
+      for(const file of ['identity.css','../pocket-id.css','../pocket-social.css']){
+        const href=new URL(file,import.meta.url).href;
+        if(![...document.querySelectorAll('link[rel=stylesheet]')].some(link=>link.href===href)){
+          const link=document.createElement('link');link.rel='stylesheet';link.href=href;
+          link.dataset.pocketSocialAuto='';document.head.append(link);
+        }
+      }
+      await import('../pocket-social.js');
+    }
+    if(client.closed||client.roomId!==room.roomId||!window.PocketSocial)return;
+    if(document.querySelector('[data-social-invite]'))return;
+    removeInviteShortcut(client);
+    const button=document.createElement('button');button.type='button';
+    button.className='pw-net-social-invite';button.textContent='Позвать друзей';
+    button.setAttribute('aria-label','Пригласить друзей Pocket ID в игровую комнату');
+    Object.assign(button.style,{
+      position:'fixed',zIndex:'1550',right:'max(14px, env(safe-area-inset-right))',
+      bottom:'max(72px, calc(env(safe-area-inset-bottom) + 64px))',
+      padding:'10px 14px',borderRadius:'10px',border:'1px solid #79664f',
+      color:'#312920',background:'#f0dfbf',font:'650 12px/1.2 system-ui',
+      boxShadow:'0 3px 12px #0003',cursor:'pointer'
+    });
+    button.addEventListener('click',()=>window.PocketSocial.open(client.roomId,room.gameId));
+    document.body.append(button);inviteShortcut={node:button,client};
+  }catch(error){console.warn('pocket_social_shortcut_unavailable',String(error))}
+}
 // PocketNet is for internet rooms. PocketLAN remains the offline local transport.
 export class PocketNet {
   constructor({ serverUrl, name, token, identityKey = 'guest', storage = globalThis.localStorage } = {}) {
@@ -54,6 +90,7 @@ export class PocketNet {
         try { message = JSON.parse(event.data); } catch { return; }
         if (message.type === 'authenticated') {
           authenticated = true;
+          this.accountId = message.player?.accountId||null;
           this.retry = 0;
           if (this.roomId) this.send('join_room', { roomId: this.roomId });
           this.emit('connected', message);
@@ -62,6 +99,7 @@ export class PocketNet {
           this.roomId = message.roomId;
           this.persist();
           this.emit('room_joined', message);
+          void showInviteShortcut(this,message);
         } else {
           if (message.type === 'error' && !authenticated) {
             if (message.code === 'invalid_token') { this.token = null; this.persist(); }
@@ -69,7 +107,14 @@ export class PocketNet {
             reject(new Error(`PocketNet authentication failed: ${message.code || 'unknown'}`));
             return;
           }
-          if (message.type === 'room_closed' || message.type === 'room_kicked') { this.roomId = null; this.persist(); }
+          if (message.type === 'room_closed' || message.type === 'room_kicked') {
+            this.roomId = null;this.persist();removeInviteShortcut(this);
+          }
+          if(message.type==='game_event'){
+            const phase=message.event?.payload?.phase||message.event?.payload?.state?.phase||
+              message.event?.payload?.view?.phase;
+            if(phase&&phase!=='lobby')removeInviteShortcut(this);
+          }
           if (message.type === 'error' && message.code === 'room_not_found') { this.roomId = null; this.persist(); }
           this.emit(message.type, message);
         }
@@ -90,6 +135,6 @@ export class PocketNet {
   createRoom(gameId, payload) { this.send('create_room', { gameId, payload }); }
   joinRoom(roomId) { this.send('join_room', { roomId }); }
   sendGame(payload) { this.send('game_message', { payload }); }
-  leaveRoom() { this.send('leave_room'); this.roomId = null; this.persist(); }
-  close() { this.closed = true; this.socket?.close(); }
+  leaveRoom() { this.send('leave_room'); this.roomId = null; this.persist(); removeInviteShortcut(this); }
+  close() { this.closed = true; this.socket?.close(); removeInviteShortcut(this); }
 }
