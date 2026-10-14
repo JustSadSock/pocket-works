@@ -1,5 +1,5 @@
 /* МЕЖА — deterministic, serializable match simulation. No DOM or network dependencies. */
-export const W=960,H=620,LIMIT=1200;
+export const W=960,H=620,LIMIT=1200,DOMINATION_SECONDS=165,DOMINATION_SITES=6;
 export const SITE_DEFS=[
   {id:'orchard',name:'Яблоневый хутор',type:'farm',x:236,y:146},
   {id:'westwood',name:'Западная делянка',type:'wood',x:241,y:454},
@@ -21,11 +21,11 @@ function makeSquad(s,side,captain,type,x,y){
  s.squads.push(unit);
  return unit;
 }
-export function createGame(seed=Date.now(),bot=true){
- const s={version:1,revision:2,seed:seed>>>0,next:1,time:0,phase:'battle',winner:null,bot,log:[],events:[],progress:[0,0],
+export function createGame(seed=Date.now(),bot=true,skill='regular'){
+ const s={version:1,revision:3,botSkill:['casual','regular','veteran'].includes(skill)?skill:'regular',seed:seed>>>0,next:1,time:0,phase:'battle',winner:null,bot,log:[],events:[],progress:[0,0],
  players:[{gold:142,wood:100,food:120,base:480,doctrine:'balanced',kills:0},{gold:142,wood:100,food:120,base:480,doctrine:'balanced',kills:0}],
  sites:SITE_DEFS.map((p,i)=>({...p,owner:i===0||i===1?0:i===5||i===6?1:-1,fort:0,capture:0,attacker:-1})),
- orders:[],squads:[],botClock:3,economyClock:0,keepShots:[0,0],
+ orders:[],squads:[],botClock:3,botPlans:[],economyClock:0,keepShots:[0,0],
  selection:0};
  for(let side=0;side<2;side++){
   const x=side===0?108:852;
@@ -44,7 +44,7 @@ const nearHome=(side)=>({x:side===0?118:842,y:310});
 function nearbySite(s,x,y){let best=null,bd=1e9;for(const z of s.sites){let d=Math.hypot(x-z.x,y-z.y);if(d<bd){best=z;bd=d}}return bd<68?best:null}
 function owned(s,side){return s.sites.filter(z=>z.owner===side).length}
 export function stats(s,side){
- const p=s.players[side];return{...p,sites:owned(s,side),troops:s.squads.filter(u=>u.side===side).length,score:owned(s,side)*100+Math.round(p.base/8)+p.kills*5};
+ const p=s.players[side];return{...p,sites:owned(s,side),domination:Math.min(DOMINATION_SECONDS,s.progress[side]),troops:s.squads.filter(u=>u.side===side).length,score:owned(s,side)*100+Math.round(p.base/8)+p.kills*5};
 }
 export function log(s,text,side=0){s.log.unshift({time:Math.floor(s.time),side,text});s.log.length=Math.min(s.log.length,14)}
 export function action(s,side,req){
@@ -196,24 +196,67 @@ function siteTick(s,z,dt){
  }
 }
 function bot(s,dt){
- s.botClock-=dt;if(s.botClock>0)return;s.botClock=10+rng(s)*4;
- const p=s.players[1];
- for(const o of s.orders.filter(c=>c.side===1)){
-  const candidates=s.sites.filter(z=>z.owner!==1);
-  if(!candidates.length){o.x=110;o.y=310;o.mode='raid';continue}
-  const candidatesSorted=candidates.map(z=>{const threat=s.squads.filter(u=>u.side===0&&distance(u,z)<125).length;
-   const g=Math.hypot(o.x-z.x,o.y-z.y);
-   return{z,score:(z.type==='mine'?22:z.type==='bridge'?27:12)+(z.owner===0?12:0)-Math.hypot(z.x-850,z.y-310)*.045-threat*10-g*.038+rng(s)*18}})
-   .sort((a,b)=>b.score-a.score);
-  const choose=candidatesSorted[o.id%2&&candidatesSorted[1]?1:0].z;
-  o.x=choose.x;o.y=choose.y;o.site=choose.id;o.mode='capture';
+ s.botClock-=dt;
+ if(s.botClock>0)return;
+ const skill=s.botSkill||'regular';
+ const rates={casual:{interval:17,cap:6,commit:38,smart:.7},regular:{interval:12,cap:8,commit:28,smart:1},veteran:{interval:9,cap:10,commit:22,smart:1.22}};
+ const cfg=rates[skill]||rates.regular;
+ s.botClock=cfg.interval+(rng(s)-.5)*3.5;
+ const side=1,enemy=0,p=s.players[side],home=nearHome(side),foe=nearHome(enemy);
+ const hostile=s.squads.filter(u=>u.side===enemy&&u.hp>0);
+ const friendly=s.squads.filter(u=>u.side===side&&u.hp>0);
+ const incoming=hostile.filter(u=>distance(u,home)<155).length;
+ const ours=s.sites.filter(z=>z.owner===side);
+ const theirs=s.sites.filter(z=>z.owner===enemy);
+ const centerHeld=ours.some(z=>['silver','ford','fen'].includes(z.id));
+ let issued=[];
+ for(const o of s.orders.filter(c=>c.side===side)){
+  const company=friendly.filter(u=>u.captain===o.id);
+  const origin=company.length?{x:company.reduce((a,u)=>a+u.x,0)/company.length,y:company.reduce((a,u)=>a+u.y,0)/company.length}:home;
+  const urgent=incoming>=2&&o.id===2;
+  if(!urgent&&o.changed>0&&s.time-o.changed<cfg.commit)continue;
+  const choices=[];
+  if(urgent)choices.push({mode:'defend',x:home.x,y:home.y,site:null,score:450,why:'Оборона замка'});
+  for(const z of ours.filter(z=>hostile.some(u=>distance(u,z)<98)))
+   choices.push({mode:'defend',x:z.x,y:z.y,site:z.id,score:74+z.fort*12+(z.type==='bridge'?27:0)+Math.min(47,hostile.filter(u=>distance(u,z)<90).length*12)-distance(origin,z)*.105,why:'Оборона '+z.name});
+  for(const z of s.sites.filter(q=>q.owner!==side)){
+   const enemyLocal=hostile.filter(u=>distance(u,z)<100).length;
+   const ownLocal=friendly.filter(u=>distance(u,z)<110).length;
+   const value=z.type==='bridge'?72:z.type==='mine'?67:z.type==='farm'?47:44;
+   const near=distance(origin,z);
+   const stagger=issued.some(a=>a.site===z.id)?48:0;
+   const risk=Math.max(0,enemyLocal-ownLocal)*12*cfg.smart;
+   const enemyOwned=z.owner===enemy?18:10;
+   const centralBonus=z.x>425&&z.x<535?20:0;
+   choices.push({mode:'capture',x:z.x,y:z.y,site:z.id,score:value+centralBonus+enemyOwned-near*.105-risk-stagger+(rng(s)-.5)*8,why:'Захват '+z.name});
+  }
+  if(centerHeld&&friendly.length>=6&&s.time>140){
+   choices.push({mode:'raid',x:foe.x,y:foe.y,site:null,score:56+Math.min(35,ours.length*6)+Math.max(0,3-hostile.filter(u=>distance(u,foe)<110).length)*7-distance(origin,foe)*.09-(issued.some(a=>a.site===null)?40:0),why:'Осада замка'});
+  }
+  if(skill!=='casual'&&ours.length>=2&&p.food>60){
+   const prey=theirs.filter(z=>z.type==='mine'||z.type==='wood'||z.type==='farm').sort((a,b)=>distance(origin,a)-distance(origin,b))[0];
+   if(prey)choices.push({mode:'raid',x:prey.x,y:prey.y,site:prey.id,score:(o.id===3?65:45)+(p.gold<80?10:0)-distance(origin,prey)*.08,why:'Рейд '+prey.name});
+  }
+  choices.sort((a,b)=>b.score-a.score);
+  const choice=choices[0];
+  if(choice){
+   if(choice.mode!==o.mode||choice.site!==o.site||distance(choice,o)>20){
+    o.mode=choice.mode;o.x=choice.x;o.y=choice.y;o.site=choice.site;o.changed=s.time;
+    s.botPlans.push({time:Math.round(s.time),captain:o.id,mode:choice.mode,site:choice.site,why:choice.why});
+    if(s.botPlans.length>25)s.botPlans.shift();
+   }else{o.changed=s.time-cfg.commit*.6}
+   issued.push(choice);
+  }
  }
- if(p.gold>75&&p.food>24&&s.squads.filter(u=>u.side===1).length<8){
-  const t=p.gold>155?'knight':p.wood>25?'bow':'levy';action(s,1,{kind:'recruit',type:t});
+ if(p.gold>=52&&p.food>=17&&friendly.length<cfg.cap){
+  const bows=friendly.filter(u=>u.type==='bow').length;
+  const knights=friendly.filter(u=>u.type==='knight').length;
+  const type=p.gold>=104&&p.wood>=24&&knights<Math.ceil(cfg.cap*.40)?'knight':p.gold>=70&&p.wood>=16&&bows<Math.ceil(cfg.cap*.36)?'bow':'levy';
+  action(s,side,{kind:'recruit',type});
  }
- if(p.gold>120&&p.wood>90){
-  const z=s.sites.filter(z=>z.owner===1&&z.fort<2).sort((a,b)=>Math.abs(a.x-470)-Math.abs(b.x-470))[0];
-  if(z)action(s,1,{kind:'fort',site:z.id});
+ if(p.gold>140&&p.wood>110&&skill!=='casual'){
+  const z=ours.filter(z=>z.fort<2).sort((a,b)=>Math.abs(a.x-480)-Math.abs(b.x-480))[0];
+  if(z)action(s,side,{kind:'fort',site:z.id});
  }
 }
 export function tick(s,dt){
@@ -284,9 +327,18 @@ export function tick(s,dt){
  // Fort and keep volleys take place after normal combat. A unit killed in
  // those phases must not remain selectable or be saved with 0 HP.
  s.squads=s.squads.filter(u=>u.hp>0);
+ for(let side=0;side<2;side++){
+  if(owned(s,side)>=DOMINATION_SITES)s.progress[side]=Math.min(DOMINATION_SECONDS,s.progress[side]+dt);
+  else s.progress[side]=Math.max(0,s.progress[side]-dt*1.5);
+  if(s.progress[side]>=DOMINATION_SECONDS-1e-6&&s.phase==='battle'){
+   s.phase='end';s.winner=side;s.victory='domination';
+   log(s,side===0?'Ваше королевство объединило пограничье':'Враг овладел пограничьем',side);
+  }
+ }
+ if(s.phase==='end'&&!s.victory)s.victory='siege';
  if(s.time>=LIMIT-1e-6&&s.phase==='battle'){s.time=LIMIT;
-  s.phase='end';const a=stats(s,0).score,b=stats(s,1).score;s.winner=a===b?-1:a>b?0:1;
+  s.phase='end';s.victory='score';const a=stats(s,0).score,b=stats(s,1).score;s.winner=a===b?-1:a>b?0:1;
  }
 }
 export function save(s){return JSON.stringify(s)}
-export function load(raw){try{const s=JSON.parse(raw);if(s?.version===1&&s?.revision===2&&s?.players?.length===2&&s?.sites?.length===7&&Array.isArray(s.orders)&&Array.isArray(s.squads)&&Number.isFinite(s.time)&&s.time<LIMIT+1)return s}catch{}return null}
+export function load(raw){try{const s=JSON.parse(raw);if(s?.version===1&&s?.revision===3&&s?.players?.length===2&&s?.sites?.length===7&&Array.isArray(s.orders)&&Array.isArray(s.squads)&&Number.isFinite(s.time)&&s.time<LIMIT+1)return s}catch{}return null}
