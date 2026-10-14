@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "slug": "mezha",
+  "name": "МЕЖА",
+  "shortName": "МЕЖА",
+  "description": "Пиксельная средневековая RTS с непрямыми приказами, автономными капитанами, захватом владений и осадами.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-14",
+  "releaseDateTime": "2026-10-14T14:41:00+03:00",
+  "changelog": [
+    "Первая полностью игровая дуэль против ИИ: два капитана, автономные отряды, семь стратегических точек и осады замков.",
+    "Три вида приказов, набор трёх типов войск, укрепления, экономика золота, дерева и пищи, местность и переправы.",
+    "Управление пальцами и мышью, миникарта, сохранение матча, процедурные звуки и автономный офлайн-режим."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#e5bc7a",
+  "backgroundColor": "#253d38",
+  "themeColor": "#253d38",
+  "orientation": "any",
+  "cacheName": "mezha-v1.0.0",
+  "storageNamespace": "pocket-works:mezha",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "strategy",
+    "RTS",
+    "pixel art",
+    "medieval",
+    "indirect control",
+    "single player",
+    "canvas",
+    "touch"
+  ],
+  "order": 222
+}

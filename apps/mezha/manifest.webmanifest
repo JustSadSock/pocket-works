@@ -1,0 +1,25 @@
+{
+  "id": "/apps/mezha/",
+  "name": "МЕЖА",
+  "short_name": "МЕЖА",
+  "description": "Пиксельная средневековая RTS с непрямыми приказами, автономными капитанами, захватом владений и осадами.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#253d38",
+  "theme_color": "#253d38",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
