@@ -1,0 +1,362 @@
+/* ЗАМАЗКА — "Тихая галерея", opt-in only.
+   No old green / sculpted CSS is loaded. The beige 1.32 cascade remains
+   untouched when data-zamazka-theme=classic (also the initial default). */
+html[data-zamazka-theme="atelier"]{
+ --za-night:#292725;--za-night-low:#1d201f;
+ --za-wall:#3a3731;--za-matte:#d9cbb7;--za-paper:#f1e9db;
+ --za-dark:#292620;--za-metal:#a18a6c;--za-red:#884f47;
+ --za-shadow:0 12px 34px #11100e59;
+ background:var(--za-night-low);color:var(--za-dark);
+}
+html[data-zamazka-theme="atelier"] body,
+html[data-zamazka-theme="atelier"] .app-shell{background:var(--za-night-low)}
+html[data-zamazka-theme="atelier"] .app-shell{isolation:isolate}
+html[data-zamazka-theme="atelier"] .museum-architecture{
+ position:absolute;inset:0;z-index:0;pointer-events:none;
+ background:radial-gradient(ellipse 70% 38% at 50% 4%,#a6907130,transparent 76%),
+ linear-gradient(125deg,#3d3933 0,#272925 73%,#202421);
+}
+html[data-zamazka-theme="atelier"] .screen{position:relative;background:transparent;z-index:1}
+html[data-zamazka-theme="atelier"] .top{
+ position:relative;z-index:5;
+ min-height:57px;
+ background:#292825;border:0;border-bottom:1px solid #b4a18265;
+ box-shadow:0 4px 13px #15120f50;
+ color:#eee7db;
+}
+html[data-zamazka-theme="atelier"] .top .wordmark{
+ color:#e9e1d2;letter-spacing:.18em;
+ text-shadow:none;font-size:clamp(13px,1.5vw,16px);
+}
+html[data-zamazka-theme="atelier"] .top .wordmark .mark{
+ background:none;color:#c7aa84;border:0;box-shadow:none;transform:none;
+}
+html[data-zamazka-theme="atelier"] .top .profile-control{
+ border:1px solid #a69881;
+ background:#d6ccb9;border-radius:3px;
+ box-shadow:0 2px 5px #0004;
+}
+html[data-zamazka-theme="atelier"] .top .round-control,
+html[data-zamazka-theme="atelier"] .top .diagnostic-control{
+ border:1px solid #6d665a;border-radius:3px;
+ background:#34332d;color:#e6ddce;
+ box-shadow:none;min-width:36px;
+}
+html[data-zamazka-theme="atelier"] .top .round-control:hover,
+html[data-zamazka-theme="atelier"] .top .diagnostic-control:hover{background:#4c4941}
+html[data-zamazka-theme="atelier"] .top .return{
+ border:0;background:transparent;color:#d6c9b6;opacity:.88;
+}
+
+/* One recessed architectural bay, never a wallpaper of lines and medallions. */
+html[data-zamazka-theme="atelier"] .museum-home{
+ background:radial-gradient(ellipse 58% 43% at 50% 36%,#70635171,transparent 85%),
+ linear-gradient(150deg,#464137,#2b2c28 71%,#222522);
+ border:0;color:#eee7dc;
+}
+html[data-zamazka-theme="atelier"] .museum-home::before{
+ background:linear-gradient(90deg,#0002,transparent 12% 88%,#0002);
+ mix-blend-mode:normal;opacity:.36;
+}
+html[data-zamazka-theme="atelier"] .museum-home::after{
+ background:radial-gradient(ellipse 55% 40%,#e1bd7924,transparent 78%);
+ opacity:.5;
+}
+html[data-zamazka-theme="atelier"] .museum-headline h1{
+ color:#eee6d9;letter-spacing:-.062em;font-weight:400;
+ text-shadow:0 2px 12px #13120f7a;
+}
+html[data-zamazka-theme="atelier"] .museum-headline h1 em{color:#ddbea0}
+html[data-zamazka-theme="atelier"] .museum-headline::before{display:none}
+html[data-zamazka-theme="atelier"] .museum-display{
+ position:relative;isolation:isolate;
+}
+/* Recess belongs behind the artworks; its edge is just one slim stone lip. */
+html[data-zamazka-theme="atelier"] .museum-display::after{
+ content:"";position:absolute;z-index:-2;pointer-events:none;
+ inset:5% 9% 14%;border:0;border-radius:44% 44% 5px 5px / 20% 20% 5px 5px;
+ background:radial-gradient(ellipse 72% 44% at 50% 22%,#b6a18447,transparent 90%),
+ linear-gradient(90deg,#2b2b27,#3b3b32 16% 84%,#252925);
+ box-shadow:inset 0 9px 30px #141815af,inset 5px 0 14px #131717a6,
+ 0 0 0 1px #bba78250;
+}
+html[data-zamazka-theme="atelier"] .museum-plinth{
+ position:absolute;bottom:33px;left:50%;transform:translateX(-50%);
+ width:clamp(160px,62%,430px);height:18px;
+ z-index:0;pointer-events:none;filter:drop-shadow(0 8px 8px #070b0ac2);
+}
+html[data-zamazka-theme="atelier"] .museum-plinth-lip{
+ display:block;height:7px;background:linear-gradient(180deg,#b6a58a,#655e50 75%,#292b27);
+ border-top:1px solid #e6d2ac6c;
+}
+html[data-zamazka-theme="atelier"] .museum-plinth-face{
+ display:block;height:11px;margin:0 7px;
+ background:linear-gradient(90deg,#262923,#515044 50%,#282b26);
+}
+html[data-zamazka-theme="atelier"] .museum-home .museum-stage{z-index:2}
+html[data-zamazka-theme="atelier"] .museum-slide-rim{
+ border:7px solid #896b49!important;
+ outline:1px solid #3a2e23;
+ padding:3px!important;
+ background:linear-gradient(133deg,#b09a78,#685236 28%,#977b56 70%,#4b3c2c);
+ box-shadow:inset 0 0 0 2px #d4b18b,0 1px 0 #f8dcb192,
+ 0 13px 27px #10130fbd!important;
+}
+html[data-zamazka-theme="atelier"] .museum-slide-rim::before{
+ content:"";position:absolute;inset:2px;
+ border:1px solid #d5bfa07d;pointer-events:none;
+}
+html[data-zamazka-theme="atelier"] .museum-stage-caption{
+ background:linear-gradient(90deg,transparent,#282b28b8 18% 82%,transparent);
+ color:#f5eddd;padding:8px 12px;
+ text-shadow:0 1px 6px #12120d;
+}
+html[data-zamazka-theme="atelier"] .museum-stage-caption strong{
+ color:#f1e5d5;font-family:Georgia,serif;
+}
+html[data-zamazka-theme="atelier"] .museum-wheel{
+ background:#282724b8;border:1px solid #7f7666;
+ box-shadow:0 4px 10px #0005;
+}
+html[data-zamazka-theme="atelier"] .museum-wheel button{
+ background:transparent;border:0;border-radius:0;box-shadow:none;
+ color:#e1cead;text-shadow:none;
+}
+html[data-zamazka-theme="atelier"] .museum-wheel button:hover{background:#74634a44}
+html[data-zamazka-theme="atelier"] .museum-exhibit-number{color:#ddcab2;background:#292923a8}
+/* A single primary object with quiet elevation. Small actions recede. */
+html[data-zamazka-theme="atelier"] .start-restoration{
+ background:linear-gradient(165deg,#eddec8,#d6c1a4)!important;
+ color:#302b26;border:1px solid #f2e3c9!important;
+ border-bottom:3px solid #ad9275!important;
+ border-radius:5px;clip-path:none;
+ box-shadow:inset 0 1px #fffcf1,0 9px 16px #14100b6b!important;
+ text-shadow:none;
+}
+html[data-zamazka-theme="atelier"] .start-restoration::before,
+html[data-zamazka-theme="atelier"] .start-restoration::after{display:none}
+html[data-zamazka-theme="atelier"] .start-restoration strong{color:#2d2c28;letter-spacing:-.025em}
+html[data-zamazka-theme="atelier"] .start-emblem{color:#7a6554;border-right:1px solid #b6a18a}
+html[data-zamazka-theme="atelier"] .start-restoration:active{transform:translateY(2px)!important;box-shadow:inset 0 2px 5px #5e4c3b30,0 3px 9px #14100b73!important}
+html[data-zamazka-theme="atelier"] .museum-persona{
+ background:#363630c4!important;
+ border:1px solid #777366!important;border-radius:4px;
+ box-shadow:0 5px 14px #11151355!important;
+}
+html[data-zamazka-theme="atelier"] .museum-persona .personal-seal{
+ border:2px solid #9e8a70;box-shadow:none;border-radius:3px;
+}
+html[data-zamazka-theme="atelier"] .museum-lower button{
+ background:#353933b8!important;border:1px solid #817e70!important;
+ border-radius:4px;box-shadow:none!important;color:#ece5da;
+}
+html[data-zamazka-theme="atelier"] .museum-lower button:active{transform:translateY(2px)}
+html[data-zamazka-theme="atelier"] .museum-footer{
+ border-color:#d1bc976b;
+}
+html[data-zamazka-theme="atelier"] .museum-footer button{color:#dbceba}
+/* Intentional foreground: thin rail/cornice, not rows of decorations. */
+html[data-zamazka-theme="atelier"] .set-furniture{
+ position:absolute;inset:0;pointer-events:none;z-index:5;
+ overflow:hidden;user-select:none;
+}
+html[data-zamazka-theme="atelier"] .set-cornice{
+ position:absolute;top:0;left:0;right:0;height:4px;
+ background:linear-gradient(180deg,#c6b69c69,#51483a44,transparent);
+}
+html[data-zamazka-theme="atelier"] .set-foreground{
+ position:absolute;bottom:0;left:0;right:0;height:10px;
+ background:linear-gradient(180deg,#bb9b7380,#534c3d 36%,#232825 100%);
+ box-shadow:0 -4px 12px #0e11104b;
+}
+html[data-zamazka-theme="atelier"] .page,
+html[data-zamazka-theme="atelier"] .phase-page{background-color:transparent}
+/* Different rooms have a meaningful atmosphere, but share a quiet typographic
+   hierarchy and the SAME grid positions as classic. */
+html[data-zamazka-theme="atelier"] .page.lobby-entry,
+html[data-zamazka-theme="atelier"] .page.exhibition-lobby,
+html[data-zamazka-theme="atelier"] .page.collection-page,
+html[data-zamazka-theme="atelier"] .page.zamazka-achievements,
+html[data-zamazka-theme="atelier"] .page:has(.result-item){
+ background:linear-gradient(105deg,#e5dfd2,#f3ecde 48%,#ded6c8)!important;
+ color:#302e29;border:1px solid #c1b29f;
+ box-shadow:var(--za-shadow);
+}
+html[data-zamazka-theme="atelier"] .page h2,
+html[data-zamazka-theme="atelier"] .phase-head h2{
+ font-family:Georgia,serif!important;font-weight:400;
+}
+html[data-zamazka-theme="atelier"] .page .section-label{color:#82654c}
+html[data-zamazka-theme="atelier"] .room-ticket{
+ background:#e7d5b9!important;
+ border:1px solid #aa9170!important;border-left:4px solid #846c52!important;
+ clip-path:none;filter:none;
+ box-shadow:0 5px 0 #bba990,0 11px 20px #17140f2d!important;
+}
+html[data-zamazka-theme="atelier"] .room-ticket::before{display:none}
+html[data-zamazka-theme="atelier"] .exhibition-lobby .lobby-self{
+ border:1px solid #766a59;color:#e8e0d4;background:#49453d!important;
+ box-shadow:none;
+}
+html[data-zamazka-theme="atelier"] .exhibition-lobby .player{
+ border:1px solid #cabca5!important;background:#eee6d9!important;
+ box-shadow:0 3px 9px #2b22111f!important;
+}
+html[data-zamazka-theme="atelier"] .exhibition-lobby>.stack{
+ border:1px solid #bead95;background:#e1d8c9;
+ box-shadow:0 6px 15px #1e19162b;
+}
+html[data-zamazka-theme="atelier"] .exhibition-lobby .commons-desk{
+ background:#cfc4b1!important;border:5px solid #705d4a!important;
+ box-shadow:0 12px 18px #18130d36!important;
+}
+/* Workshop: one darker working table, soft finish tools; canvas coordinates stay
+   unchanged (no transforms, padding changes or new containing blocks). */
+html[data-zamazka-theme="atelier"] .restore{background:#393833}
+html[data-zamazka-theme="atelier"] .work-area{
+ background:radial-gradient(ellipse at 50% 0,#807362,#45463d 75%)!important;
+ border-top:2px solid #776752;
+}
+html[data-zamazka-theme="atelier"] .viewport{
+ border:7px solid #9b8260;outline:2px solid #342a21;
+ box-shadow:0 12px 27px #16151193,inset 0 0 0 2px #d4b38d;
+}
+html[data-zamazka-theme="atelier"] .work-tools{
+ background:linear-gradient(145deg,#e8e4d9,#d6d3c6)!important;
+ border-top:3px solid #8c7d67;
+ box-shadow:0 -4px 14px #10100e3d;
+}
+html[data-zamazka-theme="atelier"] .tools{background:#d8d4c8;border:1px solid #bbab94;border-radius:5px}
+html[data-zamazka-theme="atelier"] .tool{
+ border:1px solid #b7aa98!important;border-bottom:2px solid #a5947f!important;
+ background:#f2ede3!important;color:#3a3730;
+ border-radius:3px;box-shadow:none!important;
+}
+html[data-zamazka-theme="atelier"] .tool.active{
+ background:#4a4840!important;color:#f1e7d9;border-color:#6d5a43!important;
+ box-shadow:inset 0 0 0 1px #b09a7c!important;
+}
+html[data-zamazka-theme="atelier"] .colors{background:none;border:0!important;box-shadow:none}
+html[data-zamazka-theme="atelier"] .swatch{border:2px solid #eee9dc!important;border-radius:50%;box-shadow:none!important}
+html[data-zamazka-theme="atelier"] .swatch.active{outline:2px solid #62574b;outline-offset:2px}
+html[data-zamazka-theme="atelier"] .work-foot{
+ background:transparent;border-top:1px solid #b7a994;padding-top:8px;box-shadow:none;
+}
+html[data-zamazka-theme="atelier"] .work-foot .btn.primary{
+ background:#49453d!important;color:#f2e7d9;border-color:#666056;
+ box-shadow:0 3px 8px #1e171233!important;
+}
+/* Frames have a profile, not 4 stacked glowing outlines. */
+html[data-zamazka-theme="atelier"] .picture-image,
+html[data-zamazka-theme="atelier"] .stake-frame,
+html[data-zamazka-theme="atelier"] .verdict-image,
+html[data-zamazka-theme="atelier"] .unveil-frame,
+html[data-zamazka-theme="atelier"] .archive-art-frame{
+ border:6px solid #977b58!important;outline:1px solid #433526!important;
+ background:#2b241f!important;border-radius:2px;
+ box-shadow:inset 0 0 0 1px #dfb983,0 7px 16px #241b1638!important;
+}
+html[data-zamazka-theme="atelier"] .gallery .picture{
+ background:#eee7d9!important;border:1px solid #cec1ad!important;
+ box-shadow:0 4px 10px #29201625!important;border-radius:3px;
+}
+html[data-zamazka-theme="atelier"] .gallery .picture.selected{outline:2px solid #9c6c48;outline-offset:3px}
+html[data-zamazka-theme="atelier"] .picture .caption{color:#302a24}
+html[data-zamazka-theme="atelier"] .picture .style{color:#6b6053}
+html[data-zamazka-theme="atelier"] .archive-gallery .archive-work{
+ background:#e5dccd!important;border:1px solid #c3b59e!important;
+ box-shadow:0 6px 11px #18130e30!important;
+}
+html[data-zamazka-theme="atelier"] .stake-card{
+ background:#e7dfcf!important;border:1px solid #bcae99!important;
+ box-shadow:0 5px 13px #211b152a!important;
+}
+html[data-zamazka-theme="atelier"] .stake-tray{
+ background:#d3bda0!important;border:1px solid #a48b6b!important;
+ box-shadow:inset 0 1px 4px #54402d25;
+}
+html[data-zamazka-theme="atelier"] .result-item{
+ background:#eee5d7!important;border:1px solid #bcb09f!important;
+ box-shadow:0 5px 13px #16131026!important;
+}
+/* Rectangular tactile controls with one quiet shadow, not neon or 2012 bevel. */
+html[data-zamazka-theme="atelier"] .screen .btn,
+html[data-zamazka-theme="atelier"] .dialog-box .btn{
+ border-radius:4px;border:1px solid #bdac95;border-bottom:2px solid #a9977f;
+ background:#e8ddcb;color:#302e29;
+ box-shadow:0 2px 5px #31291f20;
+ text-shadow:none;clip-path:none;
+}
+html[data-zamazka-theme="atelier"] .screen .btn.primary,
+html[data-zamazka-theme="atelier"] .dialog-box .btn.primary{
+ background:#4e4840!important;color:#f2e8d8;
+ border-color:#695a4b;border-bottom:2px solid #352c23!important;
+ box-shadow:0 3px 9px #19140e38!important;
+}
+html[data-zamazka-theme="atelier"] .screen .btn:active:not(:disabled){
+ transform:translateY(1px);box-shadow:inset 0 2px 5px #16110f38!important;
+}
+html[data-zamazka-theme="atelier"] .screen .phase-head{
+ background:#38352f;border-bottom:2px solid #9d8565;
+ box-shadow:0 3px 7px #1b17143a;
+}
+html[data-zamazka-theme="atelier"] .screen .phase-body{
+ background:#ece5d9;border:1px solid #c1b7a7;
+}
+html[data-zamazka-theme="atelier"] .phase-page.expert-phase .phase-head,
+html[data-zamazka-theme="atelier"] .phase-page.verdict-phase .phase-head,
+html[data-zamazka-theme="atelier"] .phase-page.reveal-phase .phase-head{
+ background:#513f40;border-bottom-color:#aa8581;
+}
+html[data-zamazka-theme="atelier"] .dialog{
+ background:#151413bb;backdrop-filter:blur(5px);
+}
+html[data-zamazka-theme="atelier"] .dialog-box{
+ background:#ece4d6!important;border:1px solid #b9a78b!important;border-radius:7px!important;
+ box-shadow:0 20px 55px #0808088e!important;
+}
+html[data-zamazka-theme="atelier"] .dialog-box h2{color:#3f352c}
+/* Crossing rooms: settle the image into focus, never cover the screen with doors. */
+html[data-zamazka-theme="atelier"] .screen>.exhibition-enter.gallery-arrival{
+ animation:za-quiet-arrive 350ms cubic-bezier(.17,.77,.2,1) both;
+}
+html[data-zamazka-theme="atelier"] .screen>.exhibition-exit-layer.gallery-exit{
+ animation:za-quiet-depart 350ms ease both;
+}
+html[data-zamazka-theme="atelier"] .screen>.exhibition-enter.rehang{
+ animation:za-quiet-arrive 240ms cubic-bezier(.17,.77,.2,1) both;
+}
+html[data-zamazka-theme="atelier"] .screen>.exhibition-exit-layer.rehang{
+ animation:za-quiet-depart 240ms ease both;
+}
+@keyframes za-quiet-arrive{
+ from{opacity:.5;transform:translate3d(0,7px,0);filter:brightness(.87)}
+ to{opacity:1;transform:translate3d(0,0,0);filter:brightness(1)}
+}
+@keyframes za-quiet-depart{from{opacity:1}to{opacity:0}}
+html[data-zamazka-theme="atelier"] .museum-passage{display:none!important}
+html[data-zamazka-theme="atelier"] .museum-art-flight{
+ position:absolute;z-index:20;pointer-events:none;
+ border:4px solid #947650;transform-origin:top left;
+ box-shadow:0 6px 14px #1119;
+}
+html[data-zamazka-theme="atelier"] .museum-art-flight img{width:100%;height:100%;object-fit:contain}
+html[data-zamazka-theme="atelier"] .museum-art-arrival{opacity:.52}
+@media(max-width:699px){
+ html[data-zamazka-theme="atelier"] .museum-display::after{inset:5% 6% 13%}
+ html[data-zamazka-theme="atelier"] .museum-plinth{height:11px;bottom:27px;width:67%}
+ html[data-zamazka-theme="atelier"] .museum-plinth-lip{height:5px}
+ html[data-zamazka-theme="atelier"] .museum-plinth-face{height:6px}
+ html[data-zamazka-theme="atelier"] .set-cornice{height:2px}
+ html[data-zamazka-theme="atelier"] .set-foreground{height:5px}
+ html[data-zamazka-theme="atelier"] .museum-slide-rim{border-width:5px!important}
+ html[data-zamazka-theme="atelier"] .start-restoration{border-bottom-width:2px!important}
+ html[data-zamazka-theme="atelier"] .gallery .picture{box-shadow:none!important}
+ html[data-zamazka-theme="atelier"] .phase-body{border-inline:0!important}
+ html[data-zamazka-theme="atelier"] .page{box-shadow:none}
+}
+@media(prefers-reduced-motion:reduce){
+ html[data-zamazka-theme="atelier"] .screen>.exhibition-enter,
+ html[data-zamazka-theme="atelier"] .screen>.exhibition-exit-layer{animation:none!important}
+ html[data-zamazka-theme="atelier"] .museum-art-flight{display:none!important}
+}
