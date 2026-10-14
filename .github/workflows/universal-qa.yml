@@ -1,0 +1,170 @@
+name: Universal Pocket Works QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Application slug (or all, up to 20 total tasks)'
+        required: true
+        type: string
+        default: living-history
+      suite:
+        description: 'Suite ID from app qa.plan.json or all'
+        required: true
+        type: string
+        default: all
+      profile:
+        description: 'Smoke or deep testing'
+        required: true
+        type: choice
+        options: [smoke, deep]
+        default: smoke
+  issues:
+    types: [opened]
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'scripts/universal-qa/**'
+      - '.github/workflows/universal-qa.yml'
+      - 'docs/UNIVERSAL-QA.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: universal-qa-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    if: >-
+      github.event_name != 'issues' ||
+      (github.event.action == 'opened' &&
+       github.event.issue.title == '[qa] pocket-works' &&
+       github.event.issue.user.login == 'JustSadSock' &&
+       github.actor == 'JustSadSock')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      cpu_matrix: ${{ steps.plan.outputs.cpu_matrix }}
+      browser_matrix: ${{ steps.plan.outputs.browser_matrix }}
+      has_cpu: ${{ steps.plan.outputs.has_cpu }}
+      has_browser: ${{ steps.plan.outputs.has_browser }}
+      expected: ${{ steps.plan.outputs.expected }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test planning and reporting infrastructure
+        run: node --test scripts/universal-qa/platform.test.mjs
+      - name: Prepare application QA matrix
+        id: plan
+        env:
+          QA_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          QA_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/universal-qa/plan.mjs
+
+  cpu:
+    needs: plan
+    if: needs.plan.outputs.has_cpu == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJSON(needs.plan.outputs.cpu_matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run app-owned CPU QA
+        env:
+          PW_QA_TASK: ${{ toJSON(matrix) }}
+        run: node scripts/universal-qa/run.mjs
+      - name: Upload raw CPU results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-${{ matrix.key }}
+          path: qa-artifacts/${{ matrix.key }}/
+          retention-days: 7
+          if-no-files-found: warn
+
+  browser:
+    needs: plan
+    if: needs.plan.outputs.has_browser == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.plan.outputs.browser_matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install build tools and pinned Playwright runtime
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
+      - name: Capture application browser QA
+        env:
+          PW_QA_TASK: ${{ toJSON(matrix) }}
+        run: node scripts/universal-qa/run.mjs
+      - name: Upload screenshots, traces and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-${{ matrix.key }}
+          path: qa-artifacts/${{ matrix.key }}/
+          retention-days: 7
+          if-no-files-found: warn
+
+  summary:
+    if: always() && needs.plan.result == 'success'
+    needs: [plan, cpu, browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Collect all QA artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: qa-*
+          path: qa-collected
+          merge-multiple: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Summarize all results including missing shards
+        env:
+          QA_EXPECTED: ${{ needs.plan.outputs.expected }}
+          QA_COLLECTED_DIR: qa-collected
+        run: node scripts/universal-qa/aggregate.mjs
+      - name: Upload consolidated report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-summary-${{ github.run_id }}
+          path: |
+            qa-collected/summary.json
+            qa-collected/SUMMARY.md
+          if-no-files-found: warn
+          retention-days: 7
