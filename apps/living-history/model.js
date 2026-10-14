@@ -1,3 +1,4 @@
+import {walkingDistances,walkingSteps,workdayFraction,walkPath} from './navigation.js';
 // Living History: deterministic, renderer-independent regional society simulation.
 export const SIZE = 160;
 const T = SIZE * SIZE;
@@ -16,7 +17,7 @@ export function normalizeTuning(value={}){
  }return out;
 }
 const tuning=(s,k)=>s.tuning?.[k]??1;
-const ACCOUNT_FIELDS=['harvestKg','seedKg','foodKg','spoilKg','woodKg','salesKg','purchasesKg','revenue','spending','wagesEarned','wagesPaid','haulEarned','aidReceived','aidGiven'];
+const ACCOUNT_FIELDS=['harvestKg','seedKg','foodKg','spoilKg','woodKg','salesKg','purchasesKg','revenue','spending','wagesEarned','wagesPaid','haulEarned','aidReceived','aidGiven','travelHours'];
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const round = x => Math.round(x * 100) / 100;
 const roundSkill = x => Math.round(x * 10000) / 10000;
@@ -30,28 +31,47 @@ function event(s, type, message, cause, subjects=[], facts={}) { const e = {id:s
 function nearestFree(s,x,y,predicate=()=>true) { for(let r=0;r<22;r++) for(let k=0;k<Math.max(1,r*8);k++){const a=k/Math.max(1,r*8)*Math.PI*2;const nx=Math.round(x+Math.cos(a)*r),ny=Math.round(y+Math.sin(a)*r);if(nx<3||ny<3||nx>=SIZE-3||ny>=SIZE-3)continue;const p=idx(nx,ny);if(s.terrain[p]!==0||s.usage[p]||!predicate(nx,ny))continue;return {x:nx,y:ny};}return null; }
 function createPerson(s,house,age,sex,parentIds=[]) { const names=sex==='f'?['Ада','Марта','Эльза','Грета','Ингрид','Роза','Анна','Лина','Бруна','Агнес']:['Мартин','Ханс','Оскар','Конрад','Эрик','Петер','Лукас','Генрих','Берн','Фридрих']; const p={id:s.nextId++,name:choice(s,names),sex,age,health:100,foodDebt:0,houseId:house.id,parents:parentIds,spouse:null,lastBirthDay:-999,pregnantUntil:-1,skill:{farm:round(rand(s)*.5),wood:round(rand(s)*.4),trade:round(rand(s)*.4)},alive:true,x:house.x,y:house.y,job:'home',aptitude:0.8+rand(s)*.4,workDays:{farm:0,wood:0,haul:0,build:0},lifeLog:[{day:s.day,type:'origin',text:parentIds.length?'Родился в семье':'Жил в долине с основания мира'}]};s.people.push(p);house.members.push(p.id);return p; }
 function allocFields(s,h,count) {
- // Farm plots form short, individually-owned strips, not concentric circles.
- // Neighbouring families can hold interleaved strips in the same open-field block.
- const axis=(h.communityId%2),candidates=[];
- for(let y=Math.max(2,h.y-24);y<=Math.min(SIZE-3,h.y+24);y++)for(let x=Math.max(2,h.x-24);x<=Math.min(SIZE-3,h.x+24);x++){
-  const i=idx(x,y);if(s.terrain[i]!==0||s.usage[i]||s.soil[i]<45)continue;
-  const along=axis?y:x,cross=axis?x:y;
-  const strip=Math.floor((cross+2*(h.communityId%3))/3);
-  // Prefer already-started strips over disconnected plots; deterministic order.
-  const near=Math.hypot((x-h.x)*.95,(y-h.y)*1.05);
-  const score=near+.15*(Math.abs(along%7-3))+.35*(strip%3)+hash(s.seed+h.id,x,y)*.18;
+ // A planned open-field settlement has several larger furlong blocks beyond the
+ // crofts. Strips belonging to different households are interleaved inside blocks.
+ const village=s.communities.find(c=>c.id===h.communityId)||h;
+ const distances=walkingDistances(s,h);
+ const homeBlock=h.id%4,candidates=[];
+ for(let y=Math.max(2,village.y-56);y<=Math.min(SIZE-3,village.y+56);y++)for(let x=Math.max(2,village.x-56);x<=Math.min(SIZE-3,village.x+56);x++){
+  const i=idx(x,y),dx=x-village.x,dy=y-village.y,ax=Math.abs(dx),ay=Math.abs(dy);
+  if(s.terrain[i]!==0||s.usage[i]||s.soil[i]<45||distances[i]<0||distances[i]>105)continue;
+  // Two long east-west and two north-south field blocks, clear of residential plots.
+  const blocks=[dx>=14&&dx<=52&&ay<=13,dx<=-14&&dx>=-52&&ay<=13,dy>=14&&dy<=52&&ax<=13,dy<=-14&&dy>=-52&&ax<=13];
+  if(!blocks.some(Boolean))continue;
+  const block=blocks.findIndex(Boolean),primary=(block===homeBlock)?-4:0;
+  const cross=(block<2?y:x),along=(block<2?x:y);
+  // Prefer alternating long strips, not a radial disk around a single roof.
+  const strip= Math.abs((cross+3*h.communityId)%7-3)*.47;
+  const score=distances[i]*.23+Math.abs(along-(block===0?village.x+22:block===1?village.x-22:block===2?village.y+22:village.y-22))*.17
+    +strip+primary+(99-s.soil[i])*.025+hash(s.seed+h.id,x,y)*.2;
   candidates.push({i,score});
  }
- candidates.sort((a,b)=>a.score-b.score);
- let n=0;for(const {i} of candidates){if(n===count)break;if(s.usage[i])continue;
+ candidates.sort((a,b)=>a.score-b.score||a.i-b.i);
+ let n=0;for(const {i} of candidates){if(n>=count)break;if(s.usage[i])continue;
   if(s.pasture){s.stats.forageConverted=round((s.stats.forageConverted||0)+s.pasture[i]);s.pasture[i]=0;}
   s.usage[i]=2;h.fields.push(i);n++;
  }
  return n;
 }
-function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130) { const spot=nearestFree(s,x,y);if(!spot)return null;const h={id:s.nextId++,communityId:c.id,x:spot.x,y:spot.y,members:[],grain,wood,coin:wealth,fields:[],sown:0,soilRest:0,needsHouse:false,capacity:5,shortage:0,lastTrade:null,work:'farm',focus:'farm',farmYear:null,landValue:0,wealthOrigin:'initial',builtDay:s.day,courierUntil:0,cattle:s.day===0?(rand(s)<.55?0:1+Math.floor(rand(s)*1.35)):0,fodder:0,livestockHealth:85};h.fodder=h.cattle*(700+Math.floor(rand(s)*180));if(s.pasture){const footprint=idx(h.x,h.y);s.stats.forageConverted=round((s.stats.forageConverted||0)+s.pasture[footprint]);s.pasture[footprint]=0;}s.usage[idx(h.x,h.y)]=1;s.households.push(h);allocFields(s,h,30);return h; }
+function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130) { const reachable=walkingDistances(s,c);const spot=nearestFree(s,x,y,(nx,ny)=>reachable[idx(nx,ny)]>=0);if(!spot)return null;const h={id:s.nextId++,communityId:c.id,x:spot.x,y:spot.y,members:[],grain,wood,coin:wealth,fields:[],sown:0,soilRest:0,needsHouse:false,capacity:5,shortage:0,lastTrade:null,work:'farm',focus:'farm',farmYear:null,landValue:0,wealthOrigin:'initial',builtDay:s.day,courierUntil:0,cattle:s.day===0?(rand(s)<.55?0:1+Math.floor(rand(s)*1.35)):0,fodder:0,livestockHealth:85};h.fodder=h.cattle*(700+Math.floor(rand(s)*180));if(s.pasture){const footprint=idx(h.x,h.y);s.stats.forageConverted=round((s.stats.forageConverted||0)+s.pasture[footprint]);s.pasture[footprint]=0;}s.usage[idx(h.x,h.y)]=1;s.households.push(h);allocFields(s,h,30);return h; }
 function terrainAt(s) { s.terrain=new Array(T);s.soil=new Array(T);s.forest=new Array(T);s.stone=new Array(T);s.usage=new Array(T).fill(0);s.traffic=new Array(T).fill(0);s.pasture=new Array(T).fill(0); for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){const i=idx(x,y), ridge=Math.sin(x*.043+Math.cos(y*.036)*2)+Math.sin(y*.061-x*.021)*.6;const river=Math.abs(x-(SIZE*.47+Math.sin(y*.075)*11+Math.sin(y*.026)*7));const lake= Math.hypot(x-123,y-114)<8;const water=river<2.3||lake;const high=ridge+hash(s.seed,x>>3,y>>3)*.34;const rock=high>1.05; const forest=(hash(s.seed,x>>2,y>>2)*.65+hash(s.seed,x,y)*.25+Math.cos(y*.047)*.12)>.52; s.terrain[i]=water?1:rock?2:0;s.soil[i]=water?0:clamp(Math.round(73+hash(s.seed+3,x>>2,y>>2)*25-high*18),27,99);s.forest[i]=!water&&!rock&&forest?Math.round(150+hash(s.seed+9,x,y)*270):0;s.stone[i]=rock?Math.round(600+hash(s.seed+4,x,y)*550):0;s.pasture[i]=water||rock?0:Math.round(85+hash(s.seed+11,x,y)*130); } }
-export function createWorld(seed=43821, options={}){const scenario=MODES.includes(options.scenario)?options.scenario:'normal';const s={version:1,scenario,tuning:normalizeTuning(options.tuning),seed:seed>>>0,rng:seed|0,day:0,nextId:1,terrain:[],soil:[],forest:[],stone:[],usage:[],traffic:[],communities:[],households:[],people:[],shipments:[],events:[],stats:{born:0,died:0,trades:0,built:0,delivered:0,produced:0,consumed:0,harvest:0,cattleBorn:0,cattleDied:0,forageGrown:0,forageConsumed:0,forageConverted:0},economy:{coinsInitial:0},weather:1}; terrainAt(s);for(const fordY of [40,119]){const fordX=Math.round(riverX(fordY));for(let y=fordY-1;y<=fordY+1;y++)for(let x=fordX-3;x<=fordX+3;x++){const i=idx(x,y);if(s.terrain[i]===1){s.terrain[i]=0;s.soil[i]=45;s.forest[i]=0;}}}if(s.scenario==='uplands'){for(let i=0;i<T;i++)if(s.terrain[i]===0)s.soil[i]=Math.max(29,Math.round(s.soil[i]*.82));};const settlements=[{x:37,y:43,name:'Ольховая долина'},{x:112,y:40,name:'Каменный брод'},{x:40,y:120,name:'Тихая низина'},{x:111,y:119,name:'Сосновый мыс'}];for(const pt of settlements){const c={id:s.nextId++,name:pt.name,x:pt.x,y:pt.y,prices:{grain:1.1,wood:2.8},volume:0};s.communities.push(c);for(let k=0;k<9;k++){const h=newHousehold(s,c,c.x+(rand(s)-.5)*19,c.y+(rand(s)-.5)*18,Math.round(850+rand(s)*1400),Math.round(950+rand(s)*330),Math.round(90+rand(s)*100));if(!h)continue;const father=createPerson(s,h,19+Math.floor(rand(s)*24),'m');const mother=createPerson(s,h,18+Math.floor(rand(s)*24),'f');father.spouse=mother.id;mother.spouse=father.id;for(let j=0,n=Math.floor(rand(s)*3);j<n;j++){const eldest=Math.max(0,Math.floor(Math.min(father.age,mother.age)-17));if(eldest>0)createPerson(s,h,Math.floor(rand(s)*Math.min(15,eldest+1)),rand(s)<.5?'m':'f',[father.id,mother.id]);}}}
+function viableVillage(s,pt){
+ const sufficient=(p)=>{const d=walkingDistances(s,p);let cells=0;for(const v of d)if(v>=0&&v<=95)cells++;return cells>=450;};
+ if(s.terrain[idx(pt.x,pt.y)]===0&&sufficient(pt))return pt;
+ // A settlement cannot be founded on a tiny, inaccessible island. Reposition the
+ // initial village to the closest connected fertile plain, preserving its name.
+ for(let r=1;r<=35;r++)for(let k=0;k<r*8;k++){
+  const x=Math.round(pt.x+r*Math.cos(k*Math.PI*2/(r*8))),y=Math.round(pt.y+r*Math.sin(k*Math.PI*2/(r*8)));
+  if(x<7||y<7||x>SIZE-8||y>SIZE-8||s.terrain[idx(x,y)]!==0||s.soil[idx(x,y)]<47)continue;
+  if(sufficient({x,y}))return {...pt,x,y};
+ }
+ return pt;
+}
+export function createWorld(seed=43821, options={}){const scenario=MODES.includes(options.scenario)?options.scenario:'normal';const s={version:1,scenario,tuning:normalizeTuning(options.tuning),seed:seed>>>0,rng:seed|0,day:0,nextId:1,terrain:[],soil:[],forest:[],stone:[],usage:[],traffic:[],communities:[],households:[],people:[],shipments:[],events:[],stats:{born:0,died:0,trades:0,built:0,delivered:0,produced:0,consumed:0,harvest:0,cattleBorn:0,cattleDied:0,forageGrown:0,forageConsumed:0,forageConverted:0},economy:{coinsInitial:0},weather:1}; terrainAt(s);for(const fordY of [40,119]){const fordX=Math.round(riverX(fordY));for(let y=fordY-1;y<=fordY+1;y++)for(let x=fordX-3;x<=fordX+3;x++){const i=idx(x,y);if(s.terrain[i]===1){s.terrain[i]=0;s.soil[i]=45;s.forest[i]=0;}}}if(s.scenario==='uplands'){for(let i=0;i<T;i++)if(s.terrain[i]===0)s.soil[i]=Math.max(29,Math.round(s.soil[i]*.82));};const settlements=[{x:37,y:43,name:'Ольховая долина'},{x:112,y:40,name:'Каменный брод'},{x:40,y:120,name:'Тихая низина'},{x:111,y:119,name:'Сосновый мыс'}];for(const original of settlements){const pt=viableVillage(s,original);const c={id:s.nextId++,name:pt.name,x:pt.x,y:pt.y,prices:{grain:1.1,wood:2.8},volume:0};s.communities.push(c);for(let k=0;k<9;k++){const h=newHousehold(s,c,c.x+(rand(s)-.5)*19,c.y+(rand(s)-.5)*18,Math.round(850+rand(s)*1400),Math.round(950+rand(s)*330),Math.round(90+rand(s)*100));if(!h)continue;const father=createPerson(s,h,19+Math.floor(rand(s)*24),'m');const mother=createPerson(s,h,18+Math.floor(rand(s)*24),'f');father.spouse=mother.id;mother.spouse=father.id;for(let j=0,n=Math.floor(rand(s)*3);j<n;j++){const eldest=Math.max(0,Math.floor(Math.min(father.age,mother.age)-17));if(eldest>0)createPerson(s,h,Math.floor(rand(s)*Math.min(15,eldest+1)),rand(s)<.5?'m':'f',[father.id,mother.id]);}}}
  s.economy.cattleInitial=s.households.reduce((n,h)=>n+h.cattle,0);s.economy.forageInitial=round(s.pasture.reduce((n,v)=>n+v,0)+s.households.reduce((n,h)=>n+h.fodder,0)+s.stats.forageConverted);s.economy.coinsInitial=s.households.reduce((a,h)=>a+h.coin,0);s.economy.grainInitial=round(s.households.reduce((a,h)=>a+h.grain,0));s.economy.woodInitial=round(s.households.reduce((a,h)=>a+h.wood,0));event(s,'foundation','В долине образовались четыре независимые общины','Первоначальное расселение',s.communities.map(c=>c.id));return s; }
 function personById(s,id){
  if(!s._peopleIndex){Object.defineProperty(s,'_peopleIndex',{value:new Map(),enumerable:false,writable:true,configurable:true});}
@@ -193,17 +213,27 @@ function cropUpdate(s,h,adults,guests=[]){
  const workers=[...adults.filter(p=>p.job==='home').slice(0,Math.max(1,Math.ceil(adults.length*share))),...guests];
  if(!workers.length)return;
  const availableArea=Math.min(crop.active.length*LAND_HA,crop.plannedArea??crop.active.length*LAND_HA);
+ // The active strip is the actual worksite; travel consumes the same daily work budget.
+ const spotIndex=Math.min(crop.active.length-1,Math.floor((doy>=238?crop.harvestedArea:crop.sownArea)/LAND_HA));
+ const workCell=crop.active[spotIndex];
+ const workPos={x:workCell%SIZE,y:Math.floor(workCell/SIZE)};
+ const walking=walkingSteps(s,h,workPos),workFraction=workdayFraction(walking);
+ if(!workFraction)return;
+ const arriving=workers.filter(p=>p.job==='home'||p.job==='hired');
+ const productiveWorkers=arriving.length*workFraction;
+ const markWork=()=>{for(const p of arriving){p.x=workPos.x;p.y=workPos.y;}
+  earn(s,h,'travelHours',round(arriving.length*(1-workFraction)*8.5));};
  if(doy>=65&&doy<=145&&crop.sownArea<availableArea-.001){
-  const draftTeams=Math.floor((h.cattle||0)/2);const traction=draftTeams>0&&h.livestockHealth>35?1+Math.min(.36,draftTeams*.18):1;const step=Math.min(availableArea-crop.sownArea,workers.length*.09*traction,h.grain/CALIBRATION.seedKgPerHa);
+  const draftTeams=Math.floor((h.cattle||0)/2);const traction=draftTeams>0&&h.livestockHealth>35?1+Math.min(.36,draftTeams*.18):1;const step=Math.min(availableArea-crop.sownArea,productiveWorkers*.09*traction,h.grain/CALIBRATION.seedKgPerHa);
   if(step>.001){const seed=round(step*CALIBRATION.seedKgPerHa);h.grain=round(h.grain-seed);s.stats.consumed=round(s.stats.consumed+seed);
    crop.sownArea=roundSkill(crop.sownArea+step);crop.seedKg=round(crop.seedKg+seed);crop.labourSow+=workers.length;earn(s,h,'seedKg',seed);
-   for(const p of workers)laborDay(p,'farm',.003);
+   for(const p of arriving)laborDay(p,'farm',.003);markWork();
    if(crop.sownArea>=availableArea-.001||doy===145)event(s,'sowing',`Семья ${familyName(s,h)} засеяла ${crop.sownArea.toFixed(2)} га`,'Посев потребовал семян и рабочих дней',[h.id],{seedKg:crop.seedKg,workDays:crop.labourSow});
   }
  }
- if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const p of workers)laborDay(p,'farm',.002);crop.tended+=workers.length;crop.labourTend+=workers.length;}
+ if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const p of arriving)laborDay(p,'farm',.002);markWork();crop.tended+=productiveWorkers;crop.labourTend+=arriving.length;}
  if(doy>=238&&doy<=295&&crop.harvestedArea<crop.sownArea-.001){
-  const step=Math.min(crop.sownArea-crop.harvestedArea,workers.length*.065);
+  const step=Math.min(crop.sownArea-crop.harvestedArea,productiveWorkers*.065);
   if(step>.001){
    const soil=crop.active.reduce((v,i)=>v+s.soil[i],0)/crop.active.length;
    const avgSkill=workers.reduce((v,p)=>v+p.skill.farm,0)/workers.length;
@@ -212,7 +242,7 @@ function cropUpdate(s,h,adults,guests=[]){
    const output=round(step*CALIBRATION.baseGrainYieldKgPerHa*tuning(s,'yield')*soil/82*weather*tendingFactor*(1+Math.min(.25,avgSkill*.07)));
    h.grain=round(h.grain+output);s.stats.harvest=round(s.stats.harvest+output);s.stats.produced=round(s.stats.produced+output);
    crop.harvestedArea=roundSkill(crop.harvestedArea+step);crop.yieldKg=round(crop.yieldKg+output);earn(s,h,'harvestKg',output);crop.labourHarvest+=workers.length;
-   for(const p of workers)laborDay(p,'farm',.004);
+   for(const p of arriving)laborDay(p,'farm',.004);markWork();
    if(crop.harvestedArea>=crop.sownArea-.001||doy===295){
      h.lastHarvest={day:s.day,kg:crop.yieldKg,ha:round(crop.harvestedArea),workDays:crop.labourHarvest+crop.labourSow+crop.labourTend};
      event(s,'harvest',`Семья ${familyName(s,h)} собрала ${Math.round(crop.yieldKg)} кг зерна`,'Посев, уход, своевременная уборка, погода, почва и навыки',[h.id,...workers.map(p=>p.id)],{yieldKg:crop.yieldKg,areaHa:round(crop.harvestedArea),soil:round(soil),weather:round(weather),workDays:h.lastHarvest.workDays});
@@ -287,8 +317,8 @@ function growForest(s){
 }
 // Periodic commons grazing: the biomass is spatial, finite and shared by all herds.
 function grazingSpots(s,h){
- if(!h._grazingSpots){const cells=[];for(let y=Math.max(2,h.y-20);y<=Math.min(SIZE-3,h.y+20);y++)for(let x=Math.max(2,h.x-20);x<=Math.min(SIZE-3,h.x+20);x++){
-   const i=idx(x,y);if(s.terrain[i]!==0)continue;const d=Math.hypot(x-h.x,y-h.y);cells.push({i,d});
+ if(!h._grazingSpots){const cells=[],reachable=walkingDistances(s,h);for(let y=Math.max(2,h.y-20);y<=Math.min(SIZE-3,h.y+20);y++)for(let x=Math.max(2,h.x-20);x<=Math.min(SIZE-3,h.x+20);x++){
+   const i=idx(x,y);if(s.terrain[i]!==0||reachable[i]<0||reachable[i]>90)continue;const d=reachable[i];cells.push({i,d});
   }cells.sort((a,b)=>a.d-b.d||a.i-b.i);
   Object.defineProperty(h,'_grazingSpots',{value:cells.slice(0,240).map(x=>x.i),enumerable:false,configurable:true});
  }
@@ -326,7 +356,7 @@ function tendCattle(s,h,adults){
   if(fraction<.65&&h.livestockHealth<9){h.cattle--;s.stats.cattleDied++;h.livestockHealth=45;
    event(s,'cattle-death',`Хозяйство ${familyName(s,h)} потеряло скот`,`Недостаток пастбищ и зимнего корма`,[h.id],{remaining:h.cattle});}
   // Actual livestock work is only shown when an available adult accompanies the herd.
-  if(site>=0){h.lastPastureCell=site;const shepherd=adults.find(p=>p.job==='home');if(shepherd){shepherd.job='herd';shepherd.x=site%SIZE;shepherd.y=Math.floor(site/SIZE);recordWork(shepherd,'herd');}}
+  if(site>=0){if(site!==h.lastPastureCell){h.prevPastureCell=h.lastPastureCell??site;h.lastPastureCell=site;h.pastureMovedDay=s.day;}const shepherd=adults.find(p=>p.job==='home');if(shepherd){shepherd.job='herd';shepherd.x=site%SIZE;shepherd.y=Math.floor(site/SIZE);recordWork(shepherd,'herd');}}
  }
  if(day===340&&h.cattle>=1&&h.cattle<5&&h.livestockHealth>68&&rand(s)<.18*Math.min(2,h.cattle)){
   h.cattle++;s.stats.cattleBorn++;
@@ -403,7 +433,7 @@ function moveHouseResidents(s,h){
    const ratio=clamp(departing?(s.day-t.start)/Math.max(1,t.arrival-t.start):(s.day-t.arrival)/Math.max(1,t.end-t.arrival),0,1);
    p.job='haul';const route=t.points&&t.points.length>1?(departing?t.points:[...t.points].reverse()):[origin,dest];const pos=moveOnRoute(route,ratio);p.x=pos.x;p.y=pos.y;
   }else if(p.job==='home'){p.x=h.x;p.y=h.y;}
-  else if(p.job==='farm'&&h.fields.length){const q=h.fields[(s.day+p.id)%h.fields.length];p.x=q%SIZE;p.y=Math.floor(q/SIZE);}
+  else if(p.job==='farm'&&h.fields.length){/* position assigned by actual sowing/harvesting task */}
   else if(p.job==='market'){const c=s.communities.find(x=>x.id===h.communityId);p.x=c.x;p.y=c.y;}
  }
 }
@@ -478,15 +508,8 @@ function supply(s,h,good){const living=liveMembers(s,h);if(!living.length)return
 }
 function riverX(y){return SIZE*.47+Math.sin(y*.075)*11+Math.sin(y*.026)*7;}
 function routeBetween(s,a,b){
- const xa=a.x-riverX(a.y),xb=b.x-riverX(b.y);
- const points=[{x:a.x,y:a.y}];
- if(xa*xb<0){
-  const fords=[40,119];let crossing=null,shortest=Infinity;
-  for(const y of fords){const x=riverX(y);const p={x:round(x),y};const d=dist(a,p)+dist(p,b);if(d<shortest){shortest=d;crossing=p;}}
-  points.push(crossing);
- }
- points.push({x:b.x,y:b.y});
- return {points,length:points.slice(1).reduce((v,p,i)=>v+dist(points[i],p),0)};
+ const points=walkPath(s,a,b);return {points,length:points.length?points.length-1:Infinity};
+
 }
 function moveOnRoute(points,ratio){
  const legs=points.slice(1).map((p,i)=>dist(points[i],p));const total=legs.reduce((v,n)=>v+n,0)||1;
@@ -513,16 +536,18 @@ function market(s){
        !s.shipments.some(t=>t.seller===a.id&&t.buyer===buyer.id&&t.good===good));
     if(!seller)continue;
     const route=routeBetween(s,seller,buyer),distance=route.length,haulPrice=1+distance*.009*tuning(s,'transport');
-    const haulers=nearby.filter(h=>h.focus==='trade'||h.id===seller.id);
+    if(!Number.isFinite(distance)||!route.points.length)continue;
+     const haulers=nearby.filter(h=>h.focus==='trade'||h.id===seller.id);
     let carrier=null,carrierHome=null,bestTransport=Infinity;
     for(const home of haulers){const worker=liveMembers(s,home).find(p=>p.age>=15&&p.health>25&&p.job==='home'&&!p.travel);if(!worker)continue;const travel=dist(home,seller);const score=travel+(home.focus==='trade'?-8:0);if(score<bestTransport){carrier=worker;carrierHome=home;bestTransport=score;}}
     if(!carrier)continue;
+    const approach=routeBetween(s,carrierHome,seller).length;if(!Number.isFinite(approach))continue;
     const price=round(c.prices[good]*haulPrice*(.97+rand(s)*.06));
     const quantity=Math.min(160,supply(s,seller,good),demand(s,buyer,good),Math.floor(buyer.coin/Math.max(.1,price)));
     if(quantity<5)continue;
     const cost=Math.ceil(quantity*price);if(cost>buyer.coin)continue;
     seller[good]=round(seller[good]-quantity);buyer.coin-=cost;earn(s,seller,'salesKg',quantity);earn(s,buyer,'purchasesKg',quantity);earn(s,buyer,'spending',cost);
-    const duration=Math.max(1,Math.ceil((distance+routeBetween(s,carrierHome,seller).length)/(s.scenario==='isolated'?5:10)));
+    const duration=Math.max(1,Math.ceil((distance+approach)/(s.scenario==='isolated'?5:10)));
     const shipment={id:s.nextId++,good,amount:quantity,seller:seller.id,buyer:buyer.id,cost,
        carrierId:carrier.id,route:route.points,carrierHouseId:carrierHome.id,haulFee:Math.min(cost-1,Math.floor(cost*.1+distance*.03*tuning(s,'transport'))),departure:s.day,day:s.day+duration,origin:{x:seller.x,y:seller.y},destination:{x:buyer.x,y:buyer.y},
        reason:`У покупателя дефицит, у продавца избыток; ставка зависит от местного рынка`};
@@ -571,7 +596,7 @@ function mutualAid(s){
   const quantity=round(Math.min(120,donor.grain-protectedReserve,foodNeed(s,target)*45-target.grain));
   if(quantity<=0)continue;
   const worker=liveMembers(s,donor).find(p=>p.age>=15&&p.health>25&&p.job==='home'&&!p.travel);
-  const route=routeBetween(s,donor,target),duration=Math.max(1,Math.ceil(route.length/10));
+  const route=routeBetween(s,donor,target);if(!Number.isFinite(route.length)||!route.points.length)continue;const duration=Math.max(1,Math.ceil(route.length/10));
   donor.grain=round(donor.grain-quantity);earn(s,donor,'aidGiven',quantity);
   const shipment={id:s.nextId++,kind:'aid',good:'grain',amount:quantity,seller:donor.id,buyer:target.id,cost:0,carrierId:worker.id,carrierHouseId:donor.id,haulFee:0,departure:s.day,day:s.day+duration,route:route.points};
   s.shipments.push(shipment);

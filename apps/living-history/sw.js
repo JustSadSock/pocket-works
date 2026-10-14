@@ -1,10 +1,10 @@
 const CACHE_PREFIX='living-history-';
-const CACHE_NAME='living-history-v0.3.2';
-const APP_VERSION='0.3.2';
-const RELEASE_DATE='2026-10-14';
+const CACHE_NAME='living-history-v0.3.3';
+const APP_VERSION='0.3.3';
+const RELEASE_DATE='2026-10-15';
 const CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Полевые полосы, выпас, сено и видимое движение жителей','Посев, уборка, плодородие и реалистичное хранение урожая','Экономическая специализация семей и география перевозок','Парные миры, профилирование подсистем и экспорт метрик'];
-const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./model.js','./laboratory.js','./visual-land.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
+const RELEASE_NOTES=['Жители идут к реальным местам работы и не пересекают воду','Сельские поля собраны в полосные массивы вне деревень','Путь от дома до поля влияет на длительность работы','Стада перемещаются между кормовыми участками, без искусственных кругов'];
+const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./model.js','./laboratory.js','./visual-land.js','./navigation.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const SCOPE_URL=new URL('./',self.registration.scope);const BUILD_TOKEN=`${APP_VERSION}-p${CACHE_PROTOCOL}`;const SHELL_KEYS=new Map(APP_SHELL.map(e=>{const u=new URL(e,SCOPE_URL);return[u.pathname,u.href];}));
 function urlWithVersion(input){const u=new URL(input instanceof Request?input.url:input,SCOPE_URL);u.searchParams.set('__pw_build',BUILD_TOKEN);return u;}
 async function fetchFresh(input){const r=await fetch(urlWithVersion(input),{cache:'no-store',credentials:'same-origin',redirect:'follow'});if(!r||!r.ok)throw Error(`Fetch failed ${r?.status}`);return r;}
