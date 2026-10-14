@@ -197,6 +197,34 @@ html,body{background:#242822}
  .screen>.restore .viewport::before {border-width:2px}
 }
 
+/* Native range widgets differed drastically between WebKit and Chromium.
+   The brush size control is one instrument of the same wooden cabinet. */
+.screen>.restore .adjust input[type="range"] {
+ -webkit-appearance:none!important;appearance:none!important;
+ min-width:60px;min-height:36px;height:36px;
+ padding:0;margin:0;
+ background:transparent!important;accent-color:#826345!important;
+ cursor:ew-resize;
+}
+.screen>.restore .adjust input[type="range"]::-webkit-slider-runnable-track {
+ height:5px;border:0;border-radius:2px;background:#b6a38a;
+ box-shadow:inset 0 1px 2px #4d3b2a55;
+}
+.screen>.restore .adjust input[type="range"]::-webkit-slider-thumb {
+ -webkit-appearance:none!important;appearance:none!important;
+ width:20px;height:20px;margin-top:-8px;border-radius:50%;
+ border:3px solid #e8d7b9;background:#735237;
+ box-shadow:0 2px 4px #2a201952;
+}
+.screen>.restore .adjust input[type="range"]::-moz-range-track {
+ height:5px;border-radius:2px;background:#b6a38a;
+}
+.screen>.restore .adjust input[type="range"]::-moz-range-thumb {
+ width:15px;height:15px;border-radius:50%;
+ border:3px solid #e8d7b9;background:#735237;
+}
+.screen>.restore .work-tip {color:#d0c0a8;text-shadow:0 1px 1px #1b221c}
+
 /* Secondary rooms use matte material depth, without faux gilded boxes. */
 .screen>.page.lobby-entry,.screen>.page.exhibition-lobby,
 .screen>.page.collection-page,.screen>.page:has(.result-item){
