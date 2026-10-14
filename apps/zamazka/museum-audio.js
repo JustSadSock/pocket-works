@@ -1,7 +1,7 @@
 // ZAMAZKA · original, offline foley for a conservation atelier.
 // Bristles, timber, paper and ceramic: separate attacks, noise filtering and decays.
-export const MUSEUM_SOUND_EVENTS=Object.freeze(['press','frame','paper','tool','brush','fill','token','undo','confirm','reveal','warning','final-warning','error']);
-const cooldown={press:44,frame:100,paper:65,tool:75,brush:95,fill:125,token:55,undo:90,confirm:190,reveal:230,warning:450,'final-warning':450,error:190};
+export const MUSEUM_SOUND_EVENTS=Object.freeze(['press','frame','paper','tool','brush','fill','token','undo','confirm','reveal','door','warning','final-warning','error']);
+const cooldown={press:44,frame:100,paper:65,tool:75,brush:95,fill:125,token:55,undo:90,confirm:190,reveal:230,door:520,warning:450,'final-warning':450,error:190};
 const vary=(n,range=.036)=>n*(1+(Math.random()*2-1)*range);
 export class MuseumAudio{
  constructor(enabled=true){
@@ -55,6 +55,7 @@ export class MuseumAudio{
    this.previous.set(kind,t);this.ends.push(t+.5);
    const at=t+.007;
    switch(kind){
+    case 'door':this.grain(at,.33,260,.053,.28);this.grain(at+.12,.19,105,.047,.48);this.ring(at+.13,118,.23,.021);break;
     case 'frame':this.grain(at,.19,490,.076,.48);this.grain(at+.12,.07,200,.046,.85);this.ring(at+.13,173,.085,.033);break;
     case 'paper':this.grain(at,.17,1150,.068,.38);this.grain(at+.07,.11,1920,.037,.51);break;
     case 'tool':this.grain(at,.06,680,.073,1.15);this.ring(at+.008,264,.07,.023);break;

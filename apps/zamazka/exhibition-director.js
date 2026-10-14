@@ -1,6 +1,6 @@
 // Shared exhibition transitions and truthful save-state labels.
 // This module owns presentation only; game phases remain authoritative.
-export const STAGE_DURATION=240;
+export const STAGE_DURATION=560;
 export const SAVE_LABELS=Object.freeze({
  local:'На устройстве',pending:'Сохраняем…',transmitting:'Передаём работу…',
  server:'Копия в PocketNet',confirmed:'Работа принята',offline:'Нет связи · копия на устройстве',
@@ -14,41 +14,61 @@ export function saveTone(value=''){
  if(/переда|отправ|проверя|сохраня|восстанавлива/.test(s))return 'busy';
  return 'idle';
 }
+const SPACE={
+ home:'atrium',setup:'vestibule',connecting:'vestibule',lobby:'salon',
+ preparing:'salon',preview:'gallery',drawing:'atelier',waiting:'atelier',
+ vote:'tribunal',verdict:'tribunal',reveal:'tribunal',
+ 'round-review':'gallery',results:'salon',collection:'archive',
+ archive:'archive',achievements:'archive'
+};
 export function createExhibitionDirector(screen,{duration=STAGE_DURATION}={}){
- let exit=null,clock=null;
+ let exit=null,passage=null,clock=null,token=0;
+ const shell=screen.closest('.app-shell');
  const reduced=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
  function clear(){
   clearTimeout(clock);clock=null;
   exit?.remove();exit=null;
-  screen.firstElementChild?.classList.remove('exhibition-enter');
+  passage?.remove();passage=null;
+  screen.firstElementChild?.classList.remove('exhibition-enter','rehang');
+  shell?.classList.remove('is-room-crossing');
  }
- function replace(html,{animate=true}={}){
-  clear();
+ function replace(html,{animate=true,scene='gallery'}={}){
+  const current=screen.dataset.museumRoom||'';
+  const nextRoom=SPACE[scene]||'gallery';
+  clear();token++;
+  const generation=token;
   const old=screen.firstElementChild;
-  // Respect the old phase's dedicated verdict transition in app.js.
+  const roomChanged=current!==nextRoom;
   const shouldAnimate=Boolean(animate&&old&&!reduced()&&!document.hidden);
   if(shouldAnimate){
-   // This is a visual fossil, not a second interactive copy of the page.
-   // Strip delegated actions so neither Playwright nor event delegation can
-   // address controls on the outgoing canvas while it fades away.
+   // Old canvases stay alive for the passage, while their hit targets do not.
    const controls=old.querySelectorAll('[data-action],[data-choice],[data-saved],[data-inspect],[data-magnify],[data-review-open],[data-tool],[data-cmd],[data-chipadd],[data-chipsub]');
    const names=['data-action','data-choice','data-saved','data-inspect','data-magnify','data-review-open','data-tool','data-cmd','data-chipadd','data-chipsub'];
    for(const node of controls)for(const name of names)if(node.hasAttribute(name))node.removeAttribute(name);
    exit=document.createElement('div');
-   exit.className='exhibition-exit-layer';
+   exit.className='exhibition-exit-layer'+(roomChanged?'':' rehang');
    exit.setAttribute('aria-hidden','true');
-   exit.inert=true;
-   // Moving a live canvas preserves its bitmap (cloning it would not).
-   exit.append(old);
+   exit.inert=true;exit.append(old);
   }
   screen.innerHTML=html;
   screen.scrollTop=0;
+  screen.dataset.museumRoom=nextRoom;
+  if(shell)shell.dataset.museumRoom=nextRoom;
   const next=screen.firstElementChild;
   if(next&&shouldAnimate){
    next.classList.add('exhibition-enter');
+   if(!roomChanged)next.classList.add('rehang');
    screen.append(exit);
-   clock=setTimeout(clear,duration+60);
-  }else clear();
+   if(roomChanged){
+     passage=document.createElement('div');
+     passage.className='museum-passage';
+     passage.setAttribute('aria-hidden','true');
+     passage.innerHTML='<span class="museum-passage-wing left"></span><span class="museum-passage-wing right"></span><span class="museum-passage-key"></span>';
+     screen.append(passage);
+     shell?.classList.add('is-room-crossing');
+   }
+   clock=setTimeout(()=>{if(token===generation)clear()},(roomChanged?duration:260)+75);
+  }
   return next;
  }
  return {replace,clear};

@@ -11,8 +11,15 @@ export function fitMuseumArtwork(stageWidth,stageHeight,ratio){
  const width=Math.max(20,Math.min(maxWidth-chrome,(maxHeight-chrome)*r));
  return {width:Math.round(width),height:Math.round(width/r)};
 }
-export function createMuseumMotion(stage,{order,url,arts,onCenter}){
+export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>{}}){
  let center=0,busy=false,queued=0,done=null,removed=false;
+ let pointerStart=null,suppressClickUntil=0;
+ const onPointerDown=e=>{pointerStart={id:e.pointerId,x:e.clientX,y:e.clientY}};
+ const onPointerUp=e=>{if(pointerStart?.id===e.pointerId&&Math.abs(e.clientX-pointerStart.x)>20)suppressClickUntil=Date.now()+500;pointerStart=null};
+ const onPointerCancel=()=>{pointerStart=null};
+ stage.addEventListener('pointerdown',onPointerDown);
+ stage.addEventListener('pointerup',onPointerUp);
+ stage.addEventListener('pointercancel',onPointerCancel);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const nodes=new Map(),ratios=new Map();
  const layout=node=>{
@@ -24,13 +31,21 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter}){
   node.style.setProperty('--art-width',size.width+'px');
   node.style.setProperty('--art-height',size.height+'px');
  };
+ const configureSlot=(node,slot)=>{
+  node.dataset.slot=String(slot);
+  node.tabIndex=Math.abs(slot)<=1?0:-1;
+  node.setAttribute('aria-label',slot<0?'Предыдущая картина':slot>0?'Следующая картина':'Рассмотреть картину');
+ };
  const applyArt=(node,index)=>{
   const id=order[wrap(index,order.length)],img=node.querySelector('img');
   img.dataset.artId=String(id);img.src=url(id);img.alt=arts[id]?.title||'Картина';
   layout(node);
  };
  for(const {slot} of galleryWindow(order,0)){
-  const node=document.createElement('figure');node.className='museum-slide';node.dataset.slot=String(slot);
+  const node=document.createElement('figure');node.className='museum-slide';node.setAttribute('role','button');configureSlot(node,slot);
+  const interact=()=>{if(Date.now()<suppressClickUntil)return;const at=Number(node.dataset.slot);if(at===-1||at===1)shift(at);else if(at===0)onExhibit(order[center])};
+  node.addEventListener('click',interact);
+  node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();interact()}});
   node.innerHTML='<div class="museum-slide-rim"><img loading="eager" decoding="async" alt=""></div>';
   node.querySelector('img').addEventListener('load',()=>layout(node));
   applyArt(node,slot);nodes.set(slot,node);stage.append(node);
@@ -45,11 +60,11 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter}){
   if(busy){queued=Math.max(-5,Math.min(5,queued+step));return}
   busy=true;center=wrap(center+step,order.length);
   const gone=step>0?-2:2,fresh=step>0?2:-2,exiting=nodes.get(gone),next=new Map();
-  for(const [slot,node] of nodes){const target=slot-step;node.dataset.slot=String(target);next.set(target,node)}
+  for(const [slot,node] of nodes){const target=slot-step;configureSlot(node,target);next.set(target,node)}
   nodes.clear();for(const [slot,node] of next)nodes.set(slot,node);
   const finish=()=>{
    if(removed)return;
-   busy=false;exiting.classList.add('instant');exiting.dataset.slot=String(fresh);
+   busy=false;exiting.classList.add('instant');configureSlot(exiting,fresh);
    applyArt(exiting,center+fresh);nodes.delete(gone-step);nodes.set(fresh,exiting);
    void exiting.offsetWidth;
    requestAnimationFrame(()=>exiting.classList.remove('instant'));
@@ -58,5 +73,5 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter}){
   };
   done=setTimeout(finish,reduced?20:590);
  }
- return {shift,dispose(){removed=true;clearTimeout(done);observer?.disconnect();if(!observer)window.removeEventListener('resize',relayout);nodes.clear()},getCenter(){return order[center]}};
+ return {shift,dispose(){removed=true;stage.removeEventListener('pointerdown',onPointerDown);stage.removeEventListener('pointerup',onPointerUp);stage.removeEventListener('pointercancel',onPointerCancel);clearTimeout(done);observer?.disconnect();if(!observer)window.removeEventListener('resize',relayout);nodes.clear()},getCenter(){return order[center]}};
 }
