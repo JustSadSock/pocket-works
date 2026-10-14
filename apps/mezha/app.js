@@ -132,7 +132,9 @@ function pointAction(x,y){
  const selected=nearestSite(game,x,y,58);
  site=selected?.id||null;
  const order=action(game,0,{kind:'order',captain,mode,x:clamp(x,35,W-35),y:clamp(y,35,H-35)});
- notify(order.message,!order.ok);
+ const supply=game.sites.some(z=>z.owner===0&&['silver','ford','fen'].includes(z.id));
+ const triesKeep=Math.hypot(x-842,y-310)<78;
+ notify(order.ok&&triesKeep&&!supply?'Для сильной осады сначала удерживай центральное владение':order.message,!order.ok);
  if(order.ok){playSound(mode==='raid'?330:mode==='defend'?430:590,.12,.036);buzz();storageWrite()}
  syncHUD();
 }
