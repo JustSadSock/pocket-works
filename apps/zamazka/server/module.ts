@@ -9,6 +9,9 @@ const EXCLUDED_PAINTINGS=new Set([17]); // The Tower of Babel is permanently ret
 // 0 = untimed drawing; only committed submissions from every participant end it.
 const DRAWING_TIMES=[0,60,90,120,160,240,300,600];
 const DEFAULT_DRAWING_SECONDS=160;
+// At 0:00 freeze client painting, then accept in-flight multipart submissions.
+// This is transport grace, not extra drawing time; never expose early results.
+export const FINAL_SUBMISSION_GRACE_MS=12000;
 type Stroke={c:string;s:number;t:string;p:number[][]};
 type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type Chips=number[];
@@ -148,7 +151,12 @@ const module: PocketModule<State>={
    const a=(payload&&typeof payload==='object'?payload:{}) as Record<string,unknown>;
    const id=player.id;const isMember=state.participants.some(p=>p.id===id);
    if(a.type==='sync')return {state,events:[{type:'state',to:id,payload:strip(state,id)}]};
-   if(state.deadline&&now()>=state.deadline&&state.phase!=='results')step(state);
+   // Preview and voting advance at their normal deadlines. During drawing,
+   // the timer expires at precisely 0:00, but buffered network chunks must
+   // still have time to complete. Do not render voting before that window.
+   if(state.deadline&&state.phase!=='results'&&now()>=
+      (state.phase==='drawing'&&state.drawingSeconds>0
+       ?state.deadline+FINAL_SUBMISSION_GRACE_MS:state.deadline))step(state);
    if(a.type==='pulse')return {state,events:emit(state)};
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
    if(a.type==='kick_player'){
@@ -259,7 +267,8 @@ const module: PocketModule<State>={
        return {state,events:[{type:'draft_saved',to:id,payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,lines:completed.length}}]};
      item.strokes=completed;
      delete state.drafts[id];
-     if(members(state).every(p=>state.assignments[p.id]?.strokes!==null))step(state);
+     if(members(state).every(p=>state.assignments[p.id]?.strokes!==null)&&
+        (state.drawingSeconds===0||now()>=state.deadline))step(state);
      // A WebSocket send is not a confirmed submission: only this durable
      // server-side commit can acknowledge a full multi-packet restoration.
      return {state,events:[...emit(state),{type:'submission_saved',to:id,
@@ -279,7 +288,8 @@ const module: PocketModule<State>={
      if(!strokes)return {state,events:notice(id,'Некорректные или слишком большие данные рисунка.')};
      item.strokes=strokes;
      delete state.drafts?.[id];
-     if(members(state).every(p=>state.assignments[p.id]?.strokes!==null))step(state);
+     if(members(state).every(p=>state.assignments[p.id]?.strokes!==null)&&
+        (state.drawingSeconds===0||now()>=state.deadline))step(state);
      return {state,events:[...emit(state),{type:'submission_saved',to:id,
        payload:{round:state.round,art:item.art,variation:item.variation,revision:null,lines:strokes.length}}]};
    }else if(a.type==='vote'&&state.phase==='voting'){
