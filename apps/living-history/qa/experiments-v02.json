@@ -1,0 +1,880 @@
+{
+  "years": 30,
+  "seeds": [
+    413,
+    43821,
+    7777
+  ],
+  "scenarios": [
+    "normal",
+    "drought",
+    "isolated",
+    "uplands"
+  ],
+  "data": [
+    {
+      "scenario": "normal",
+      "seed": 413,
+      "elapsedMs": 3178,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 147,
+          "grain": 48784,
+          "wood": 26557,
+          "households": 48,
+          "trades": 167,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 157,
+          "grain": 49183,
+          "wood": 32463,
+          "households": 53,
+          "trades": 203,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 163,
+          "grain": 57741,
+          "wood": 38089,
+          "households": 53,
+          "trades": 227,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 173,
+          "grain": 57939,
+          "wood": 40141,
+          "households": 54,
+          "trades": 285,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 182,
+          "grain": 71508,
+          "wood": 39726,
+          "households": 65,
+          "trades": 506,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 226,
+          "grain": 93742,
+          "wood": 55851,
+          "households": 67,
+          "trades": 836,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 37,
+        "wood": 30,
+        "trade": 0
+      },
+      "born": 246,
+      "died": 131,
+      "harvest": 1932978,
+      "spoiled": 501163,
+      "construction": 45,
+      "delivered": 836
+    },
+    {
+      "scenario": "normal",
+      "seed": 43821,
+      "elapsedMs": 2570,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 123,
+          "grain": 43632,
+          "wood": 25603,
+          "households": 43,
+          "trades": 130,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 137,
+          "grain": 44925,
+          "wood": 31226,
+          "households": 47,
+          "trades": 166,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 140,
+          "grain": 47729,
+          "wood": 33962,
+          "households": 47,
+          "trades": 190,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 162,
+          "grain": 56714,
+          "wood": 39709,
+          "households": 55,
+          "trades": 246,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 172,
+          "grain": 69330,
+          "wood": 42080,
+          "households": 58,
+          "trades": 387,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 195,
+          "grain": 82381,
+          "wood": 44092,
+          "households": 65,
+          "trades": 707,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 33,
+        "wood": 32,
+        "trade": 0
+      },
+      "born": 196,
+      "died": 112,
+      "harvest": 1747899,
+      "spoiled": 442639,
+      "construction": 37,
+      "delivered": 706
+    },
+    {
+      "scenario": "normal",
+      "seed": 7777,
+      "elapsedMs": 2302,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 137,
+          "grain": 42876,
+          "wood": 22888,
+          "households": 44,
+          "trades": 126,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 144,
+          "grain": 43083,
+          "wood": 32438,
+          "households": 50,
+          "trades": 198,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 145,
+          "grain": 50615,
+          "wood": 33949,
+          "households": 49,
+          "trades": 217,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 151,
+          "grain": 50655,
+          "wood": 36095,
+          "households": 49,
+          "trades": 289,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 142,
+          "grain": 57250,
+          "wood": 37998,
+          "households": 47,
+          "trades": 433,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 167,
+          "grain": 77184,
+          "wood": 42306,
+          "households": 57,
+          "trades": 891,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 29,
+        "wood": 28,
+        "trade": 0
+      },
+      "born": 187,
+      "died": 132,
+      "harvest": 1602540,
+      "spoiled": 396958,
+      "construction": 31,
+      "delivered": 891
+    },
+    {
+      "scenario": "drought",
+      "seed": 413,
+      "elapsedMs": 1039,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 147,
+          "grain": 48784,
+          "wood": 26557,
+          "households": 48,
+          "trades": 167,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 111,
+          "grain": 21859,
+          "wood": 30598,
+          "households": 34,
+          "trades": 220,
+          "shortages": 1
+        },
+        {
+          "year": 10,
+          "population": 18,
+          "grain": 14454,
+          "wood": 30603,
+          "households": 7,
+          "trades": 239,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 20,
+          "grain": 15842,
+          "wood": 30603,
+          "households": 7,
+          "trades": 244,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 19,
+          "grain": 18126,
+          "wood": 30603,
+          "households": 8,
+          "trades": 274,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 19,
+          "grain": 19626,
+          "wood": 30603,
+          "households": 7,
+          "trades": 274,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 7,
+        "wood": 0,
+        "trade": 0
+      },
+      "born": 84,
+      "died": 176,
+      "harvest": 594489,
+      "spoiled": 182196,
+      "construction": 16,
+      "delivered": 274
+    },
+    {
+      "scenario": "drought",
+      "seed": 43821,
+      "elapsedMs": 905,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 123,
+          "grain": 43632,
+          "wood": 25603,
+          "households": 43,
+          "trades": 130,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 108,
+          "grain": 21703,
+          "wood": 29116,
+          "households": 37,
+          "trades": 189,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 23,
+          "grain": 15953,
+          "wood": 29116,
+          "households": 7,
+          "trades": 206,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 21,
+          "grain": 17019,
+          "wood": 29116,
+          "households": 7,
+          "trades": 222,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 22,
+          "grain": 19800,
+          "wood": 29116,
+          "households": 7,
+          "trades": 228,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 22,
+          "grain": 20182,
+          "wood": 29327,
+          "households": 8,
+          "trades": 265,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 8,
+        "wood": 0,
+        "trade": 0
+      },
+      "born": 75,
+      "died": 164,
+      "harvest": 514923,
+      "spoiled": 137718,
+      "construction": 11,
+      "delivered": 265
+    },
+    {
+      "scenario": "drought",
+      "seed": 7777,
+      "elapsedMs": 829,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 137,
+          "grain": 42876,
+          "wood": 22888,
+          "households": 44,
+          "trades": 126,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 84,
+          "grain": 15990,
+          "wood": 28089,
+          "households": 28,
+          "trades": 196,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 14,
+          "grain": 7030,
+          "wood": 28089,
+          "households": 5,
+          "trades": 199,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 15,
+          "grain": 8683,
+          "wood": 28089,
+          "households": 5,
+          "trades": 207,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 15,
+          "grain": 8480,
+          "wood": 28089,
+          "households": 5,
+          "trades": 212,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 16,
+          "grain": 13931,
+          "wood": 28101,
+          "households": 7,
+          "trades": 240,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 7,
+        "wood": 0,
+        "trade": 0
+      },
+      "born": 75,
+      "died": 171,
+      "harvest": 438649,
+      "spoiled": 109821,
+      "construction": 12,
+      "delivered": 240
+    },
+    {
+      "scenario": "isolated",
+      "seed": 413,
+      "elapsedMs": 2095,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 132,
+          "grain": 47056,
+          "wood": 28658,
+          "households": 46,
+          "trades": 108,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 149,
+          "grain": 45830,
+          "wood": 32789,
+          "households": 49,
+          "trades": 148,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 140,
+          "grain": 51612,
+          "wood": 33881,
+          "households": 48,
+          "trades": 161,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 137,
+          "grain": 48327,
+          "wood": 36006,
+          "households": 44,
+          "trades": 241,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 138,
+          "grain": 57624,
+          "wood": 37504,
+          "households": 50,
+          "trades": 434,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 174,
+          "grain": 77892,
+          "wood": 44435,
+          "households": 56,
+          "trades": 867,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 29,
+        "wood": 27,
+        "trade": 0
+      },
+      "born": 196,
+      "died": 133,
+      "harvest": 1637411,
+      "spoiled": 440513,
+      "construction": 31,
+      "delivered": 865
+    },
+    {
+      "scenario": "isolated",
+      "seed": 43821,
+      "elapsedMs": 2223,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 118,
+          "grain": 41838,
+          "wood": 30213,
+          "households": 40,
+          "trades": 101,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 133,
+          "grain": 45221,
+          "wood": 32475,
+          "households": 45,
+          "trades": 122,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 142,
+          "grain": 46188,
+          "wood": 35162,
+          "households": 47,
+          "trades": 134,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 140,
+          "grain": 48347,
+          "wood": 37871,
+          "households": 48,
+          "trades": 216,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 146,
+          "grain": 64063,
+          "wood": 41702,
+          "households": 53,
+          "trades": 319,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 183,
+          "grain": 80908,
+          "wood": 50200,
+          "households": 60,
+          "trades": 685,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 28,
+        "wood": 32,
+        "trade": 0
+      },
+      "born": 201,
+      "died": 129,
+      "harvest": 1615803,
+      "spoiled": 414258,
+      "construction": 41,
+      "delivered": 685
+    },
+    {
+      "scenario": "isolated",
+      "seed": 7777,
+      "elapsedMs": 2330,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 139,
+          "grain": 49381,
+          "wood": 29231,
+          "households": 46,
+          "trades": 101,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 148,
+          "grain": 47184,
+          "wood": 33855,
+          "households": 50,
+          "trades": 149,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 152,
+          "grain": 53554,
+          "wood": 36864,
+          "households": 50,
+          "trades": 167,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 152,
+          "grain": 53253,
+          "wood": 39470,
+          "households": 52,
+          "trades": 269,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 158,
+          "grain": 62085,
+          "wood": 40803,
+          "households": 58,
+          "trades": 403,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 192,
+          "grain": 79442,
+          "wood": 49246,
+          "households": 57,
+          "trades": 716,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 29,
+        "wood": 28,
+        "trade": 0
+      },
+      "born": 218,
+      "died": 138,
+      "harvest": 1726332,
+      "spoiled": 447414,
+      "construction": 32,
+      "delivered": 716
+    },
+    {
+      "scenario": "uplands",
+      "seed": 413,
+      "elapsedMs": 840,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 41,
+          "grain": 15225,
+          "wood": 26161,
+          "households": 15,
+          "trades": 145,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 33,
+          "grain": 14114,
+          "wood": 26624,
+          "households": 12,
+          "trades": 145,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 35,
+          "grain": 15623,
+          "wood": 26624,
+          "households": 12,
+          "trades": 145,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 36,
+          "grain": 14401,
+          "wood": 26624,
+          "households": 12,
+          "trades": 180,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 35,
+          "grain": 15519,
+          "wood": 26749,
+          "households": 13,
+          "trades": 215,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 40,
+          "grain": 18647,
+          "wood": 27506,
+          "households": 11,
+          "trades": 272,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 8,
+        "wood": 3,
+        "trade": 0
+      },
+      "born": 68,
+      "died": 139,
+      "harvest": 439324,
+      "spoiled": 77912,
+      "construction": 10,
+      "delivered": 272
+    },
+    {
+      "scenario": "uplands",
+      "seed": 43821,
+      "elapsedMs": 809,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 41,
+          "grain": 13335,
+          "wood": 24887,
+          "households": 12,
+          "trades": 89,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 44,
+          "grain": 13947,
+          "wood": 25089,
+          "households": 15,
+          "trades": 96,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 39,
+          "grain": 13516,
+          "wood": 25145,
+          "households": 13,
+          "trades": 98,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 40,
+          "grain": 14358,
+          "wood": 25266,
+          "households": 12,
+          "trades": 103,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 42,
+          "grain": 17192,
+          "wood": 25413,
+          "households": 12,
+          "trades": 119,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 24,
+          "grain": 13069,
+          "wood": 25748,
+          "households": 10,
+          "trades": 216,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 8,
+        "wood": 2,
+        "trade": 0
+      },
+      "born": 65,
+      "died": 152,
+      "harvest": 441375,
+      "spoiled": 74045,
+      "construction": 4,
+      "delivered": 216
+    },
+    {
+      "scenario": "uplands",
+      "seed": 7777,
+      "elapsedMs": 786,
+      "snapshots": [
+        {
+          "year": 5,
+          "population": 40,
+          "grain": 15971,
+          "wood": 27320,
+          "households": 13,
+          "trades": 92,
+          "shortages": 0
+        },
+        {
+          "year": 8,
+          "population": 35,
+          "grain": 14928,
+          "wood": 27779,
+          "households": 12,
+          "trades": 98,
+          "shortages": 0
+        },
+        {
+          "year": 10,
+          "population": 30,
+          "grain": 16117,
+          "wood": 27779,
+          "households": 11,
+          "trades": 101,
+          "shortages": 0
+        },
+        {
+          "year": 15,
+          "population": 31,
+          "grain": 15595,
+          "wood": 27779,
+          "households": 11,
+          "trades": 111,
+          "shortages": 0
+        },
+        {
+          "year": 20,
+          "population": 33,
+          "grain": 16883,
+          "wood": 28024,
+          "households": 12,
+          "trades": 155,
+          "shortages": 0
+        },
+        {
+          "year": 30,
+          "population": 24,
+          "grain": 15458,
+          "wood": 28757,
+          "households": 9,
+          "trades": 203,
+          "shortages": 0
+        }
+      ],
+      "occupations": {
+        "farm": 7,
+        "wood": 2,
+        "trade": 0
+      },
+      "born": 54,
+      "died": 142,
+      "harvest": 374548,
+      "spoiled": 66674,
+      "construction": 6,
+      "delivered": 203
+    }
+  ]
+}

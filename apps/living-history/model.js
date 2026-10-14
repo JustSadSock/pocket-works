@@ -3,6 +3,8 @@ export const SIZE = 160;
 const T = SIZE * SIZE;
 const GOODS = ['grain', 'wood'];
 const DAY = 24;
+const LAND_HA = 0.0625;
+const MODES = ['normal','drought','isolated','uplands'];
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const round = x => Math.round(x * 100) / 100;
 const roundSkill = x => Math.round(x * 10000) / 10000;
@@ -16,9 +18,9 @@ function event(s, type, message, cause, subjects=[], facts={}) { const e = {id:s
 function nearestFree(s,x,y,predicate=()=>true) { for(let r=0;r<22;r++) for(let k=0;k<Math.max(1,r*8);k++){const a=k/Math.max(1,r*8)*Math.PI*2;const nx=Math.round(x+Math.cos(a)*r),ny=Math.round(y+Math.sin(a)*r);if(nx<3||ny<3||nx>=SIZE-3||ny>=SIZE-3)continue;const p=idx(nx,ny);if(s.terrain[p]!==0||s.usage[p]||!predicate(nx,ny))continue;return {x:nx,y:ny};}return null; }
 function createPerson(s,house,age,sex,parentIds=[]) { const names=sex==='f'?['Ада','Марта','Эльза','Грета','Ингрид','Роза','Анна','Лина','Бруна','Агнес']:['Мартин','Ханс','Оскар','Конрад','Эрик','Петер','Лукас','Генрих','Берн','Фридрих']; const p={id:s.nextId++,name:choice(s,names),sex,age,health:100,foodDebt:0,houseId:house.id,parents:parentIds,spouse:null,lastBirthDay:-999,pregnantUntil:-1,skill:{farm:round(rand(s)*.5),wood:round(rand(s)*.4),trade:round(rand(s)*.4)},alive:true,x:house.x,y:house.y,job:'home',aptitude:0.8+rand(s)*.4,workDays:{farm:0,wood:0,haul:0,build:0},lifeLog:[{day:s.day,type:'origin',text:parentIds.length?'Родился в семье':'Жил в долине с основания мира'}]};s.people.push(p);house.members.push(p.id);return p; }
 function allocFields(s,h,count) { let n=0;for(let r=2;r<28&&n<count;r++)for(let j=0;j<r*9&&n<count;j++){const a=j/(r*9)*Math.PI*2, x=Math.round(h.x+Math.cos(a)*r),y=Math.round(h.y+Math.sin(a)*r);if(x<1||y<1||x>=SIZE-1||y>=SIZE-1)continue;const i=idx(x,y);if(s.terrain[i]!==0||s.usage[i]||s.soil[i]<45)continue;s.usage[i]=2;h.fields.push(i);n++;}return n; }
-function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130) { const spot=nearestFree(s,x,y);if(!spot)return null;const h={id:s.nextId++,communityId:c.id,x:spot.x,y:spot.y,members:[],grain,wood,coin:wealth,fields:[],sown:0,soilRest:0,needsHouse:false,capacity:5,shortage:0,lastTrade:null,work:'farm',wealthOrigin:'initial',builtDay:s.day,courierUntil:0};s.usage[idx(h.x,h.y)]=1;s.households.push(h);allocFields(s,h,30);return h; }
+function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130) { const spot=nearestFree(s,x,y);if(!spot)return null;const h={id:s.nextId++,communityId:c.id,x:spot.x,y:spot.y,members:[],grain,wood,coin:wealth,fields:[],sown:0,soilRest:0,needsHouse:false,capacity:5,shortage:0,lastTrade:null,work:'farm',focus:'farm',farmYear:null,landValue:0,wealthOrigin:'initial',builtDay:s.day,courierUntil:0};s.usage[idx(h.x,h.y)]=1;s.households.push(h);allocFields(s,h,30);return h; }
 function terrainAt(s) { s.terrain=new Array(T);s.soil=new Array(T);s.forest=new Array(T);s.stone=new Array(T);s.usage=new Array(T).fill(0);s.traffic=new Array(T).fill(0); for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){const i=idx(x,y), ridge=Math.sin(x*.043+Math.cos(y*.036)*2)+Math.sin(y*.061-x*.021)*.6;const river=Math.abs(x-(SIZE*.47+Math.sin(y*.075)*11+Math.sin(y*.026)*7));const lake= Math.hypot(x-123,y-114)<8;const water=river<2.3||lake;const high=ridge+hash(s.seed,x>>3,y>>3)*.34;const rock=high>1.05; const forest=(hash(s.seed,x>>2,y>>2)*.65+hash(s.seed,x,y)*.25+Math.cos(y*.047)*.12)>.52; s.terrain[i]=water?1:rock?2:0;s.soil[i]=water?0:clamp(Math.round(73+hash(s.seed+3,x>>2,y>>2)*25-high*18),27,99);s.forest[i]=!water&&!rock&&forest?Math.round(150+hash(s.seed+9,x,y)*270):0;s.stone[i]=rock?Math.round(600+hash(s.seed+4,x,y)*550):0; } }
-export function createWorld(seed=43821){const s={version:1,seed:seed>>>0,rng:seed|0,day:0,nextId:1,terrain:[],soil:[],forest:[],stone:[],usage:[],traffic:[],communities:[],households:[],people:[],shipments:[],events:[],stats:{born:0,died:0,trades:0,built:0,delivered:0,produced:0,consumed:0,harvest:0},economy:{coinsInitial:0},weather:1}; terrainAt(s);const settlements=[{x:37,y:43,name:'Ольховая долина'},{x:112,y:40,name:'Каменный брод'},{x:40,y:120,name:'Тихая низина'},{x:111,y:119,name:'Сосновый мыс'}];for(const pt of settlements){const c={id:s.nextId++,name:pt.name,x:pt.x,y:pt.y,prices:{grain:1.1,wood:2.8},volume:0};s.communities.push(c);for(let k=0;k<9;k++){const h=newHousehold(s,c,c.x+(rand(s)-.5)*19,c.y+(rand(s)-.5)*18,Math.round(850+rand(s)*1400),Math.round(950+rand(s)*330),Math.round(90+rand(s)*100));if(!h)continue;const father=createPerson(s,h,19+Math.floor(rand(s)*24),'m');const mother=createPerson(s,h,18+Math.floor(rand(s)*24),'f');father.spouse=mother.id;mother.spouse=father.id;for(let j=0,n=Math.floor(rand(s)*3);j<n;j++){const eldest=Math.max(0,Math.floor(Math.min(father.age,mother.age)-17));if(eldest>0)createPerson(s,h,Math.floor(rand(s)*Math.min(15,eldest+1)),rand(s)<.5?'m':'f',[father.id,mother.id]);}}}
+export function createWorld(seed=43821, options={}){const scenario=MODES.includes(options.scenario)?options.scenario:'normal';const s={version:1,scenario,seed:seed>>>0,rng:seed|0,day:0,nextId:1,terrain:[],soil:[],forest:[],stone:[],usage:[],traffic:[],communities:[],households:[],people:[],shipments:[],events:[],stats:{born:0,died:0,trades:0,built:0,delivered:0,produced:0,consumed:0,harvest:0},economy:{coinsInitial:0},weather:1}; terrainAt(s);if(s.scenario==='uplands'){for(let i=0;i<T;i++)if(s.terrain[i]===0)s.soil[i]=Math.max(29,Math.round(s.soil[i]*.7));};const settlements=[{x:37,y:43,name:'Ольховая долина'},{x:112,y:40,name:'Каменный брод'},{x:40,y:120,name:'Тихая низина'},{x:111,y:119,name:'Сосновый мыс'}];for(const pt of settlements){const c={id:s.nextId++,name:pt.name,x:pt.x,y:pt.y,prices:{grain:1.1,wood:2.8},volume:0};s.communities.push(c);for(let k=0;k<9;k++){const h=newHousehold(s,c,c.x+(rand(s)-.5)*19,c.y+(rand(s)-.5)*18,Math.round(850+rand(s)*1400),Math.round(950+rand(s)*330),Math.round(90+rand(s)*100));if(!h)continue;const father=createPerson(s,h,19+Math.floor(rand(s)*24),'m');const mother=createPerson(s,h,18+Math.floor(rand(s)*24),'f');father.spouse=mother.id;mother.spouse=father.id;for(let j=0,n=Math.floor(rand(s)*3);j<n;j++){const eldest=Math.max(0,Math.floor(Math.min(father.age,mother.age)-17));if(eldest>0)createPerson(s,h,Math.floor(rand(s)*Math.min(15,eldest+1)),rand(s)<.5?'m':'f',[father.id,mother.id]);}}}
  s.economy.coinsInitial=s.households.reduce((a,h)=>a+h.coin,0);s.economy.grainInitial=round(s.households.reduce((a,h)=>a+h.grain,0));s.economy.woodInitial=round(s.households.reduce((a,h)=>a+h.wood,0));event(s,'foundation','В долине образовались четыре независимые общины','Первоначальное расселение',s.communities.map(c=>c.id));return s; }
 function personById(s,id){
  if(!s._peopleIndex){Object.defineProperty(s,'_peopleIndex',{value:new Map(),enumerable:false,writable:true,configurable:true});}
@@ -28,38 +30,96 @@ function personById(s,id){
 const liveMembers=(s,h)=>h.members.map(id=>personById(s,id)).filter(p=>p?.alive);
 const activeAdults=(s,h)=>liveMembers(s,h).filter(p=>p.age>=15&&p.health>25&&(!p.travel||p.travel.end<=s.day));
 const foodNeed=(s,h)=>liveMembers(s,h).reduce((v,p)=>v+(p.age<4?.35:p.age<10?.55:p.age<15?.77:1)*.68,0);
-function localWeather(s) { const v=Math.sin(s.day*.0027+Math.sin(s.seed)*3)*.18+(rand(s)-.5)*.09;s.weather=clamp(1+v,.66,1.27); }
-function spendFood(s,h){let need=foodNeed(s,h);let eaten=Math.min(need,h.grain);h.grain=round(h.grain-eaten);if(h.grain>1100){const lost=round((h.grain-1100)*.0009);h.grain=round(h.grain-lost);s.stats.spoiled=round((s.stats.spoiled||0)+lost);}s.stats.consumed=round(s.stats.consumed+eaten);const hungry=need>0?1-eaten/need:0;for(const p of liveMembers(s,h)){p.foodDebt=clamp(p.foodDebt+hungry*.9-(hungry<.01?.1:0),0,100);if(p.health>0)p.health=clamp(p.health-(hungry*.9+p.foodDebt*.009)+(!hungry?.036:0),0,100);}h.shortage=hungry>.12?h.shortage+1:Math.max(0,h.shortage-1); if(h.shortage===22)event(s,'crisis',`У семьи ${familyName(s,h)} закончились запасы`,`Ежедневное потребление превысило доходы`,[h.id],{need:round(need),grain:h.grain});}
+function localWeather(s) {
+ const year=Math.floor((s.day-1)/365)+1;
+ const base=1+Math.sin(s.day*.0027+Math.sin(s.seed)*3)*.13+(rand(s)-.5)*.07;
+ const drought=s.scenario==='drought'&&year>=6&&year<=8;
+ s.weather=clamp(base*(drought?.64:1),.25,1.3);
+ if(drought&&s.day%365===1)event(s,'drought',`В долине началась засуха — ${year}-й год`,'Повторный недостаток осадков снижает реальные урожаи',[],{weather:s.weather});
+}
+function annualNeed(s,h){return foodNeed(s,h)*365;}
+function nearbyTrees(s,h){let total=0;for(let y=Math.max(1,h.y-8);y<=Math.min(SIZE-2,h.y+8);y+=2)for(let x=Math.max(1,h.x-8);x<=Math.min(SIZE-2,h.x+8);x+=2)total+=s.forest[idx(x,y)];return total;}
+function fieldSoil(s,h){return h.fields.length?h.fields.reduce((a,i)=>a+s.soil[i],0)/h.fields.length:35;}
+function chooseLivelihood(s,h){
+ const c=s.communities.find(c=>c.id===h.communityId);
+ const area=h.fields.length*LAND_HA,food=annualNeed(s,h);
+ const fertility=fieldSoil(s,h),trees=nearbyTrees(s,h);
+ const farmValue=area*.68*700*fertility/82*(c?.prices.grain||1);
+ const woodValue=Math.min(trees*.08,530)*(.4+c.prices.wood*.65);
+ const haulers=s.households.filter(k=>k.communityId===c.id&&k.focus==='trade'&&liveMembers(s,k).length).length;
+ const haulValue=(c.recentVolume||0)*Math.max(.7,c.prices.grain)*.11/(haulers+1);
+ // Supply opportunities are local; a household with hungry children takes subsistence farming first.
+ const reserve=h.grain/Math.max(1,food);
+ const skill=liveMembers(s,h).reduce((v,p)=>v+p.skill.farm,0)/Math.max(1,liveMembers(s,h).length);
+ const woodSkill=liveMembers(s,h).reduce((v,p)=>v+p.skill.wood,0)/Math.max(1,liveMembers(s,h).length);
+ let focus='farm';
+ if(trees>420&&woodValue*(1+woodSkill*.08)>farmValue*(1+skill*.09)*(reserve<.7?1.6:1.03))focus='wood';
+ if(reserve>.95&&haulValue>farmValue*.52&&(c.recentVolume||0)>900&&haulers<Math.max(1,Math.floor(s.households.filter(k=>k.communityId===c.id).length*.18)))focus='trade';
+ if(h.focus!==focus&&liveMembers(s,h).length){event(s,'occupation',`Семья ${familyName(s,h)} изменила занятие: ${focus==='farm'?'земледелие':focus==='wood'?'лесное хозяйство':'перевозки'}`,'Сравнение цен, плодородия, древесины, транспорта и семейных запасов',[h.id],{focus,soil:round(fertility),reserve:round(reserve)});}
+ h.focus=focus;
+}
+function newFarmYear(s,h){
+ if(h.farmYear?.year===Math.floor((s.day-1)/365))return h.farmYear;
+ const year=Math.floor((s.day-1)/365);
+ const previous=h.farmYear;
+ // Households rotate parcels: each plot is cultivated in two of three years.
+ const active=h.fields.filter((p,i)=>((i+year)%3!==0));
+ const crop={year,active,sownArea:0,tended:0,harvestedArea:0,seedKg:0,yieldKg:0,labourSow:0,labourTend:0,labourHarvest:0};
+ if(h.sown>0&&s.day%365>130&&s.day%365<296){crop.sownArea=roundSkill(Math.min(active.length*LAND_HA,h.sown/140));crop.seedKg=h.sown;h.sown=0;}
+ h.farmYear=crop;
+ if(previous?.sownArea>0&&previous.harvestedArea<previous.sownArea*.6)event(s,'crop-loss',`Поля семьи ${familyName(s,h)} остались неубранными`,'Не хватило рабочих дней до зимы',[h.id],{areaHa:round(previous.sownArea-previous.harvestedArea)});
+ return crop;
+}
+function laborDay(p,kind,boost){p.job=kind==='farm'?'farm':kind;p.skill[kind]=roundSkill(p.skill[kind]+boost*p.aptitude);recordWork(p,kind);}
+function cropUpdate(s,h,adults){
+ const doy=s.day%365,crop=newFarmYear(s,h);
+ if(!adults.length||!crop.active.length)return;
+ const c=s.communities.find(c=>c.id===h.communityId);
+ const vulnerable=h.grain<annualNeed(s,h)*.75;
+ const share=h.focus==='farm'||vulnerable?1:h.focus==='wood'?.62:.52;
+ const workers=adults.filter(p=>p.job==='home').slice(0,Math.max(1,Math.ceil(adults.length*share)));
+ if(!workers.length)return;
+ const availableArea=crop.active.length*LAND_HA;
+ if(doy>=65&&doy<=145&&crop.sownArea<availableArea-.001){
+  const step=Math.min(availableArea-crop.sownArea,workers.length*.09,h.grain/125);
+  if(step>.001){const seed=round(step*125);h.grain=round(h.grain-seed);s.stats.consumed=round(s.stats.consumed+seed);
+   crop.sownArea=roundSkill(crop.sownArea+step);crop.seedKg=round(crop.seedKg+seed);crop.labourSow+=workers.length;
+   for(const p of workers)laborDay(p,'farm',.003);
+   if(crop.sownArea>=availableArea-.001||doy===145)event(s,'sowing',`Семья ${familyName(s,h)} засеяла ${crop.sownArea.toFixed(2)} га`,'Посев потребовал семян и рабочих дней',[h.id],{seedKg:crop.seedKg,workDays:crop.labourSow});
+  }
+ }
+ if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const p of workers)laborDay(p,'farm',.002);crop.tended+=workers.length;crop.labourTend+=workers.length;}
+ if(doy>=238&&doy<=295&&crop.harvestedArea<crop.sownArea-.001){
+  const step=Math.min(crop.sownArea-crop.harvestedArea,workers.length*.065);
+  if(step>.001){
+   const soil=crop.active.reduce((v,i)=>v+s.soil[i],0)/crop.active.length;
+   const avgSkill=workers.reduce((v,p)=>v+p.skill.farm,0)/workers.length;
+   const weather=s.weather;
+   const tendingFactor=clamp(.57+crop.tended/Math.max(2,crop.sownArea*32)*.43,.57,1.04);
+   const output=round(step*735*soil/82*weather*tendingFactor*(1+Math.min(.5,avgSkill*.1)));
+   h.grain=round(h.grain+output);s.stats.harvest=round(s.stats.harvest+output);s.stats.produced=round(s.stats.produced+output);
+   crop.harvestedArea=roundSkill(crop.harvestedArea+step);crop.yieldKg=round(crop.yieldKg+output);crop.labourHarvest+=workers.length;
+   for(const p of workers)laborDay(p,'farm',.004);
+   if(crop.harvestedArea>=crop.sownArea-.001||doy===295){
+     const active=new Set(crop.active);for(const i of h.fields){if(active.has(i))s.soil[i]=round(Math.max(30,s.soil[i]-2.5));else s.soil[i]=round(Math.min(99,s.soil[i]+2.8));}
+     h.lastHarvest={day:s.day,kg:crop.yieldKg,ha:round(crop.harvestedArea),workDays:crop.labourHarvest+crop.labourSow+crop.labourTend};
+     event(s,'harvest',`Семья ${familyName(s,h)} собрала ${Math.round(crop.yieldKg)} кг зерна`,'Посев, уход, своевременная уборка, погода, почва и навыки',[h.id,...workers.map(p=>p.id)],{yieldKg:crop.yieldKg,areaHa:round(crop.harvestedArea),soil:round(soil),weather:round(weather),workDays:h.lastHarvest.workDays});
+     for(const p of workers)recordLife(p,s.day,'harvest',`Работал на уборке ${crop.yieldKg} кг урожая`);
+   }
+  }
+ }
+}
+
+function spendFood(s,h){let need=foodNeed(s,h);let eaten=Math.min(need,h.grain);h.grain=round(h.grain-eaten);if(h.grain>annualNeed(s,h)*1.4){const lost=round((h.grain-annualNeed(s,h)*1.4)*.004);h.grain=round(h.grain-lost);s.stats.spoiled=round((s.stats.spoiled||0)+lost);}s.stats.consumed=round(s.stats.consumed+eaten);const hungry=need>0?1-eaten/need:0;for(const p of liveMembers(s,h)){p.foodDebt=clamp(p.foodDebt+hungry*.9-(hungry<.01?.1:0),0,100);if(p.health>0)p.health=clamp(p.health-(hungry*.9+p.foodDebt*.009)+(!hungry?.036:0),0,100);}h.shortage=hungry>.12?h.shortage+1:Math.max(0,h.shortage-1); if(h.shortage===22)event(s,'crisis',`У семьи ${familyName(s,h)} закончились запасы`,`Ежедневное потребление превысило доходы`,[h.id],{need:round(need),grain:h.grain});}
 function familyName(s,h){const p=personById(s,h.members[0]);return p?p.name:'Неизвестная';}
 function recordWork(p,kind,days=1){
  p.workDays ??={farm:0,wood:0,haul:0,build:0};
  p.workDays[kind]=(p.workDays[kind]||0)+days;
 }
 function recordLife(p,day,type,text){p.lifeLog??=[];p.lifeLog.push({day,type,text});if(p.lifeLog.length>240)p.lifeLog.splice(1,p.lifeLog.length-240);}
-function seasonalWork(s,h,adults){
- const doy=s.day%365,fields=h.fields.length,area=fields*.0625;
- if(!adults.length||!fields)return;
- const sowing=doy>=73&&doy<=134&&h.sown===0&&h.grain>=area*140;
- const harvesting=doy===260&&h.sown>0;
- const tending=doy>=137&&doy<=249&&doy%11===0&&h.sown>0;
- if(!sowing&&!harvesting&&!tending)return;
- // Farm activities occupy people's day: the same worker cannot harvest and chop wood simultaneously.
- for(const p of adults){p.job='farm';p.skill.farm=roundSkill(p.skill.farm+.004*p.aptitude);recordWork(p,'farm');}
- if(sowing){const seed=round(area*140);h.grain=round(h.grain-seed);s.stats.consumed=round(s.stats.consumed+seed);h.sown=seed;
- event(s,'sowing',`Семья ${familyName(s,h)} засеяла ${fields} участков`,'Весенняя посевная и наличие семян',[h.id],{seedKg:seed,areaHa:area});}
- if(harvesting){const avgSoil=h.fields.reduce((a,i)=>a+s.soil[i],0)/fields;
- const mastery=adults.reduce((sum,p)=>sum+p.skill.farm,0)/adults.length;
- const laborFactor=clamp(adults.length/(Math.max(.7,area*.75)),.45,1.1);
- const yieldKg=round(area*800*avgSoil/85*s.weather*laborFactor*(1+Math.min(.48,mastery*.12)));
- h.grain=round(h.grain+yieldKg);s.stats.produced=round(s.stats.produced+yieldKg);s.stats.harvest=round(s.stats.harvest+yieldKg);h.sown=0;
- for(const i of h.fields)s.soil[i]=Math.max(36,s.soil[i]-1.7);
- event(s,'harvest',`Семья ${familyName(s,h)} собрала ${Math.round(yieldKg)} кг зерна`,'Урожай определяется почвой, погодой, рабочими руками и навыком',[h.id,...adults.map(p=>p.id)],{yieldKg,soil:round(avgSoil),skill:round(mastery)});
- for(const p of adults)recordLife(p,s.day,'harvest',`Собрал урожай на семейной земле (${yieldKg} кг всей семьёй)`);
- }
- if(doy===310)for(const i of h.fields)s.soil[i]=Math.min(98,s.soil[i]+1.4);
-}
+// Farming is now cropUpdate: labour, seed, weather and rotation are accounted daily.
 function gatherWood(s,h,adults){
- const need=h.wood<120||(h.needsHouse&&h.wood<490);if(!need||!adults.length||(h.nextWoodSearch||0)>s.day)return;
+ const need=h.wood<120||(h.needsHouse&&h.wood<490)||(h.focus==='wood'&&h.wood<650);if(!need||!adults.length||(h.nextWoodSearch||0)>s.day)return;
  let target=-1,best=999;for(let y=Math.max(1,h.y-11);y<Math.min(SIZE-1,h.y+12);y++)for(let x=Math.max(1,h.x-11);x<Math.min(SIZE-1,h.x+12);x++){
  const i=idx(x,y),d=Math.abs(x-h.x)+Math.abs(y-h.y);if(s.forest[i]>30&&d<best){best=d;target=i;}}
  if(target<0){h.nextWoodSearch=s.day+21;return;}h.nextWoodSearch=0;
@@ -91,6 +151,18 @@ function availableMovers(s,h){
  candidates.sort((a,b)=>(a.some(p=>p.age>=35)?-1:0)-(b.some(p=>p.age>=35)?-1:0));
  return candidates.find(group=>group.length<members.length)||null;
 }
+function chooseBuildingSite(s,h,c){
+ // A new household compares access to fields, existing paths and the local market.
+ let best=null,score=-Infinity;
+ for(let y=Math.max(3,h.y-13);y<Math.min(SIZE-3,h.y+14);y+=2)for(let x=Math.max(3,h.x-13);x<Math.min(SIZE-3,h.x+14);x+=2){
+ const k=idx(x,y);if(s.terrain[k]||s.usage[k])continue;
+ let field=0,road=0;
+ for(let yy=Math.max(1,y-3);yy<=Math.min(SIZE-2,y+3);yy+=2)for(let xx=Math.max(1,x-3);xx<=Math.min(SIZE-2,x+3);xx+=2){const i=idx(xx,yy);if(s.terrain[i]===0&&!s.usage[i])field+=s.soil[i];road+=s.traffic[i];}
+ const rating=field*.04+Math.min(70,road)*.3-dist({x,y},c)*1.2-dist({x,y},h)*.24;
+ if(rating>score){score=rating;best={x,y};}
+ }
+ return best;
+}
 function planConstruction(s,h,adults){
  const members=liveMembers(s,h);h.needsHouse=members.length>=h.capacity;
  if(!h.needsHouse||!adults.length)return;
@@ -100,7 +172,7 @@ function planConstruction(s,h,adults){
  if(newHome){relocate(s,movers,h,newHome);event(s,'resettlement',`${familyName(s,h)} заселила пустующий дом`,'Перенаселённость, семейные связи и доступное жильё',[h.id,newHome.id,...movers.map(p=>p.id)]);h.needsHouse=liveMembers(s,h).length>h.capacity;return;}
  if(h.wood<490||h.coin<85||(h.nextBuildAttempt||0)>s.day)return;
  const builders=adults.filter(p=>p.job==='home');if(!builders.length)return;
- newHome=newHousehold(s,c,h.x+3,h.y+3,0,0,0);if(!newHome){h.nextBuildAttempt=s.day+45;return;}h.nextBuildAttempt=0;
+ const site=chooseBuildingSite(s,h,c);newHome=site?newHousehold(s,c,site.x,site.y,0,0,0):null;if(!newHome){h.nextBuildAttempt=s.day+45;return;}h.nextBuildAttempt=0;
  h.wood=round(h.wood-490);h.coin=round(h.coin-85);newHome.coin=85;
  for(const p of builders){p.job='build';recordWork(p,'build');}
  relocate(s,movers,h,newHome);h.needsHouse=liveMembers(s,h).length>h.capacity;
@@ -112,7 +184,7 @@ function moveHouseResidents(s,h){
   if(p.travel){const t=p.travel,departing=s.day<=t.arrival;
    const origin=departing?t.from:t.to,dest=departing?t.to:t.from;
    const ratio=clamp(departing?(s.day-t.start)/Math.max(1,t.arrival-t.start):(s.day-t.arrival)/Math.max(1,t.end-t.arrival),0,1);
-   p.job='haul';p.x=round(origin.x+(dest.x-origin.x)*ratio);p.y=round(origin.y+(dest.y-origin.y)*ratio);
+   p.job='haul';const route=t.points&&t.points.length>1?(departing?t.points:[...t.points].reverse()):[origin,dest];const pos=moveOnRoute(route,ratio);p.x=pos.x;p.y=pos.y;
   }else if(p.job==='home'){p.x=h.x;p.y=h.y;}
   else if(p.job==='farm'&&h.fields.length){const q=h.fields[(s.day+p.id)%h.fields.length];p.x=q%SIZE;p.y=Math.floor(q/SIZE);}
   else if(p.job==='market'){const c=s.communities.find(x=>x.id===h.communityId);p.x=c.x;p.y=c.y;}
@@ -177,15 +249,33 @@ function lifeCycle(s){
 }
 function demand(s,h,good){const living=liveMembers(s,h);if(!living.length)return 0;
  if(good==='grain'){const reserve=foodNeed(s,h)*270;return h.grain<reserve?Math.ceil(reserve-h.grain):0;}
- return h.wood<120?Math.ceil(120-h.wood):0;
+ return h.wood<(h.needsHouse?510:150)?Math.ceil((h.needsHouse?510:150)-h.wood):0;
 }
 function supply(s,h,good){const living=liveMembers(s,h);if(!living.length)return 0;
  if(good==='grain')return Math.max(0,Math.floor(h.grain-foodNeed(s,h)*420));
- return Math.max(0,Math.floor(h.wood-230));
+ return Math.max(0,Math.floor(h.wood-(h.focus==='wood'?160:260)));
+}
+function riverX(y){return SIZE*.47+Math.sin(y*.075)*11+Math.sin(y*.026)*7;}
+function routeBetween(s,a,b){
+ const xa=a.x-riverX(a.y),xb=b.x-riverX(b.y);
+ const points=[{x:a.x,y:a.y}];
+ if(xa*xb<0){
+  const fords=[40,119];let crossing=null,shortest=Infinity;
+  for(const y of fords){const x=riverX(y);const p={x:round(x),y};const d=dist(a,p)+dist(p,b);if(d<shortest){shortest=d;crossing=p;}}
+  points.push(crossing);
+ }
+ points.push({x:b.x,y:b.y});
+ return {points,length:points.slice(1).reduce((v,p,i)=>v+dist(points[i],p),0)};
+}
+function moveOnRoute(points,ratio){
+ const legs=points.slice(1).map((p,i)=>dist(points[i],p));const total=legs.reduce((v,n)=>v+n,0)||1;
+ let remain=clamp(ratio,0,1)*total;
+ for(let i=0;i<legs.length;i++)if(remain<=legs[i]||i===legs.length-1){const t=clamp(remain/Math.max(1e-6,legs[i]),0,1);return{x:round(points[i].x+(points[i+1].x-points[i].x)*t),y:round(points[i].y+(points[i+1].y-points[i].y)*t)};}else remain-=legs[i];
+ return points.at(-1);
 }
 function market(s){
  for(const c of s.communities){
-  const nearby=s.households.filter(h=>dist(h,c)<68&&liveMembers(s,h).length>0);
+  const nearby=s.households.filter(h=>(s.scenario==='isolated'?h.communityId===c.id:dist(h,c)<68)&&liveMembers(s,h).length>0);
   for(const good of GOODS){
    const sellers=nearby.filter(h=>supply(s,h,good)>5).sort((a,b)=>supply(s,b,good)-supply(s,a,good));
    const buyers=nearby.filter(h=>demand(s,h,good)>5&&h.coin>2).sort((a,b)=>demand(s,b,good)-demand(s,a,good));
@@ -201,31 +291,40 @@ function market(s){
     const seller=sellers.find(a=>a.id!==buyer.id&&supply(s,a,good)>5&&
        !s.shipments.some(t=>t.seller===a.id&&t.buyer===buyer.id&&t.good===good));
     if(!seller)continue;
-    const carrier=liveMembers(s,seller).find(p=>p.age>=15&&p.health>25&&p.job==='home'&&!p.travel);
+    const route=routeBetween(s,seller,buyer),distance=route.length,haulPrice=1+distance*.009;
+    const haulers=nearby.filter(h=>h.focus==='trade'||h.id===seller.id);
+    let carrier=null,carrierHome=null,bestTransport=Infinity;
+    for(const home of haulers){const worker=liveMembers(s,home).find(p=>p.age>=15&&p.health>25&&p.job==='home'&&!p.travel);if(!worker)continue;const travel=dist(home,seller);const score=travel+(home.focus==='trade'?-8:0);if(score<bestTransport){carrier=worker;carrierHome=home;bestTransport=score;}}
     if(!carrier)continue;
-    const distance=dist(seller,buyer),haulPrice=1+distance*.004;
     const price=round(c.prices[good]*haulPrice*(.97+rand(s)*.06));
     const quantity=Math.min(160,supply(s,seller,good),demand(s,buyer,good),Math.floor(buyer.coin/Math.max(.1,price)));
     if(quantity<5)continue;
     const cost=Math.ceil(quantity*price);if(cost>buyer.coin)continue;
     seller[good]=round(seller[good]-quantity);buyer.coin-=cost;
-    const duration=Math.max(1,Math.ceil(distance/12));
+    const duration=Math.max(1,Math.ceil((distance+routeBetween(s,carrierHome,seller).length)/(s.scenario==='isolated'?5:10)));
     const shipment={id:s.nextId++,good,amount:quantity,seller:seller.id,buyer:buyer.id,cost,
-       carrierId:carrier.id,departure:s.day,day:s.day+duration,origin:{x:seller.x,y:seller.y},destination:{x:buyer.x,y:buyer.y},
+       carrierId:carrier.id,route:route.points,carrierHouseId:carrierHome.id,haulFee:Math.min(cost-1,Math.floor(cost*.1+distance*.03)),departure:s.day,day:s.day+duration,origin:{x:seller.x,y:seller.y},destination:{x:buyer.x,y:buyer.y},
        reason:`У покупателя дефицит, у продавца избыток; ставка зависит от местного рынка`};
     s.shipments.push(shipment);
-    carrier.travel={from:{x:seller.x,y:seller.y},to:{x:buyer.x,y:buyer.y},start:s.day,arrival:s.day+duration,end:s.day+duration*2};
+    carrier.travel={from:{x:seller.x,y:seller.y},to:{x:buyer.x,y:buyer.y},points:route.points,start:s.day,arrival:s.day+duration,end:s.day+duration*2};
     carrier.job='haul';recordWork(carrier,'haul',duration*2);
-    recordLife(carrier,s.day,'haul',`Повёз ${quantity} кг товара из дома ${seller.id} в дом ${buyer.id}`);
+    recordLife(carrier,s.day,'haul',`Повёз ${quantity} кг товара из дома ${seller.id} в дом ${buyer.id}; путь ${Math.round(distance)} участков`);
     event(s,'trade',`${familyName(s,seller)} отправляет ${Math.round(quantity)} кг ${good==='grain'?'зерна':'древесины'} семье ${familyName(s,buyer)}`,
        'Спрос и предложение на локальном рынке; труд перевозчика',[seller.id,buyer.id,shipment.id,carrier.id],{quantity,price,cost,travelDays:duration});
-    traded++;c.volume+=quantity;s.stats.trades++;markRoad(s,seller,buyer);
+    traded++;c.volume+=quantity;s.stats.trades++;markRoad(s,route.points);
    }
   }
  }
 }
-function markRoad(s,a,b){let x=Math.round(a.x),y=Math.round(a.y),steps=Math.ceil(dist(a,b)*2);for(let k=0;k<=steps;k++){const f=k/Math.max(1,steps);const nx=clamp(Math.round(x+(b.x-x)*f),0,SIZE-1),ny=clamp(Math.round(y+(b.y-y)*f),0,SIZE-1);const i=idx(nx,ny);if(s.terrain[i]!==1)s.traffic[i]=Math.min(255,s.traffic[i]+2);}}
-function deliver(s){for(let i=s.shipments.length-1;i>=0;i--){const t=s.shipments[i];if(t.day>s.day)continue;const a=s.households.find(h=>h.id===t.seller),b=s.households.find(h=>h.id===t.buyer);if(a&&b){b[t.good]=round(b[t.good]+t.amount);a.coin+=t.cost;s.stats.delivered++;const carrier=personById(s,t.carrierId);if(carrier)recordLife(carrier,s.day,'delivery',`Доставил ${t.amount} кг товара в дом ${b.id}`);b.lastTrade={day:s.day,good:t.good,quantity:t.amount,from:a.id};event(s,'delivery',`${familyName(s,b)} получила ${Math.round(t.amount)} кг ${t.good==='grain'?'зерна':'древесины'}`,'Физическая доставка ранее заключённой сделки',[a.id,b.id,t.id],{quantity:t.amount,coin:t.cost});}else if(a){a[t.good]=round(a[t.good]+t.amount);a.coin+=t.cost;}s.shipments.splice(i,1);}}
+function markRoad(s,points){
+ for(let leg=1;leg<points.length;leg++){
+  const a=points[leg-1],b=points[leg],steps=Math.max(1,Math.ceil(dist(a,b)*2));
+  for(let k=0;k<=steps;k++){const f=k/steps,nx=clamp(Math.round(a.x+(b.x-a.x)*f),0,SIZE-1),ny=clamp(Math.round(a.y+(b.y-a.y)*f),0,SIZE-1),i=idx(nx,ny);
+   if(s.terrain[i]!==1)s.traffic[i]=Math.min(255,s.traffic[i]+2);
+  }
+ }
+}
+function deliver(s){for(let i=s.shipments.length-1;i>=0;i--){const t=s.shipments[i];if(t.day>s.day)continue;const a=s.households.find(h=>h.id===t.seller),b=s.households.find(h=>h.id===t.buyer);if(a&&b){b[t.good]=round(b[t.good]+t.amount);const recipient=s.households.find(h=>h.id===t.carrierHouseId);const wage=recipient&&recipient.id!==a.id?Math.min(t.haulFee||0,t.cost):0;a.coin+=t.cost-wage;if(recipient)recipient.coin+=wage;s.stats.delivered++;const carrier=personById(s,t.carrierId);if(carrier)recordLife(carrier,s.day,'delivery',`Доставил ${t.amount} кг товара в дом ${b.id}`);b.lastTrade={day:s.day,good:t.good,quantity:t.amount,from:a.id};event(s,'delivery',`${familyName(s,b)} получила ${Math.round(t.amount)} кг ${t.good==='grain'?'зерна':'древесины'}`,'Физическая доставка ранее заключённой сделки',[a.id,b.id,t.id],{quantity:t.amount,coin:t.cost});}else if(a){a[t.good]=round(a[t.good]+t.amount);a.coin+=t.cost;}s.shipments.splice(i,1);}}
 function fosterOrphans(s){
  for(const home of s.households){const members=liveMembers(s,home);
  if(!members.length||members.some(p=>p.age>=15))continue;
@@ -257,10 +356,23 @@ function mutualAid(s){
     [donor.id,target.id],{quantity});
  }
 }
-function updateHouse(s,h){const members=liveMembers(s,h);if(!members.length)return;for(const p of members)if(!p.travel||p.travel.end<=s.day)p.job='home';spendFood(s,h);const adults=activeAdults(s,h);if(s.day%365>=310&&s.day%365<=335&&s.day%5===0&&h.fields.length<72&&h.grain<foodNeed(s,h)*550&&(h.nextFieldAttempt||0)<=s.day){const n=allocFields(s,h,6);if(n===0)h.nextFieldAttempt=s.day+365;}seasonalWork(s,h,adults);gatherWood(s,h,adults.filter(p=>p.job==='home'));planConstruction(s,h,adults);moveHouseResidents(s,h);}
-export function advanceDays(s,days=1){for(let d=0;d<days;d++){s.day++;localWeather(s);deliver(s);for(const h of [...s.households])updateHouse(s,h);lifeCycle(s);if(s.day%30===0)fosterOrphans(s);if(s.day%7===0){market(s);mutualAid(s);}if(s.day%25===0)growForest(s);if(s.day%365===310)for(const h of s.households)for(const i of h.fields)s.soil[i]=Math.min(98,s.soil[i]+1.4);if(s.day%365===0){event(s,'year',`Прошёл ${Math.floor(s.day/365)}-й год`,`Календарь`,[],{population:population(s),houses:s.households.length,trades:s.stats.trades});} }return s;}
+function updateHouse(s,h){
+ const members=liveMembers(s,h);if(!members.length)return;
+ for(const p of members)if(!p.travel||p.travel.end<=s.day)p.job='home';
+ spendFood(s,h);
+ const adults=activeAdults(s,h);
+ if(s.day%365===1)chooseLivelihood(s,h);
+ if(s.day%365>=310&&s.day%365<=335&&s.day%5===0&&h.fields.length<68&&h.grain<annualNeed(s,h)*1.25&&(h.nextFieldAttempt||0)<=s.day){const n=allocFields(s,h,3);if(!n)h.nextFieldAttempt=s.day+365;}
+ cropUpdate(s,h,adults);
+ const available=adults.filter(p=>p.job==='home');
+ if(available.length)gatherWood(s,h,available);
+ planConstruction(s,h,adults);
+ moveHouseResidents(s,h);
+}
+
+export function advanceDays(s,days=1){for(let d=0;d<days;d++){s.day++;localWeather(s);if(s.day%365===1)for(const c of s.communities){c.recentVolume=c.volume;c.volume=0;}deliver(s);for(const h of [...s.households])updateHouse(s,h);lifeCycle(s);if(s.day%30===0)fosterOrphans(s);if(s.day%7===0){market(s);mutualAid(s);}if(s.day%25===0)growForest(s);if(s.day%365===0){event(s,'year',`Прошёл ${Math.floor(s.day/365)}-й год`,`Календарь`,[],{population:population(s),houses:s.households.length,trades:s.stats.trades});} }return s;}
 export const population=s=>s.people.reduce((n,p)=>n+(p.alive?1:0),0);
-export function overview(s){const h=s.households.filter(h=>liveMembers(s,h).length),grain=round(s.households.reduce((a,h)=>a+h.grain,0)+s.shipments.filter(t=>t.good==='grain').reduce((a,t)=>a+t.amount,0)),wood=round(s.households.reduce((a,h)=>a+h.wood,0)+s.shipments.filter(t=>t.good==='wood').reduce((a,t)=>a+t.amount,0));return {population:population(s),households:h.length,grain,wood,coin:s.households.reduce((a,h)=>a+h.coin,0)+s.shipments.reduce((a,t)=>a+t.cost,0),trade:s.stats.trades,born:s.stats.born,died:s.stats.died,hungry:h.filter(h=>h.shortage>7).length,year:Math.floor(s.day/365)+1,day:s.day%365+1};}
+export function overview(s){const h=s.households.filter(h=>liveMembers(s,h).length),grain=round(s.households.reduce((a,h)=>a+h.grain,0)+s.shipments.filter(t=>t.good==='grain').reduce((a,t)=>a+t.amount,0)),wood=round(s.households.reduce((a,h)=>a+h.wood,0)+s.shipments.filter(t=>t.good==='wood').reduce((a,t)=>a+t.amount,0));return {population:population(s),households:h.length,grain,wood,scenario:s.scenario||'normal',coin:s.households.reduce((a,h)=>a+h.coin,0)+s.shipments.reduce((a,t)=>a+t.cost,0),trade:s.stats.trades,born:s.stats.born,died:s.stats.died,hungry:h.filter(h=>h.shortage>7).length,year:Math.floor(s.day/365)+1,day:s.day%365+1};}
 export function audit(s){
  const o=overview(s),issues=[];
  if(Math.abs(o.coin-s.economy.coinsInitial)>.011)issues.push(`Монеты: ${o.coin} вместо ${s.economy.coinsInitial}`);
@@ -276,6 +388,7 @@ export function audit(s){
  for(const h of s.households){
   for(const good of [...GOODS,'coin'])if(!Number.isFinite(h[good])||h[good]<-.001)issues.push(`Неверный ресурс ${good} у ${h.id}`);
   const houseCell=idx(h.x,h.y);if(homes.has(houseCell)||s.usage[houseCell]!==1)issues.push(`Неверное положение дома ${h.id}`);homes.add(houseCell);
+  if(h.farmYear&&(h.farmYear.sownArea<-.001||h.farmYear.harvestedArea>h.farmYear.sownArea+.002||h.farmYear.seedKg<0))issues.push(`Неверный посев у ${h.id}`);
   for(const field of h.fields){if(plots.has(field)||s.usage[field]!==2)issues.push(`Неверные права на поле ${field}`);plots.add(field);}
   for(const id of h.members){const p=personById(s,id);if(!p||p.houseId!==h.id||owner.has(id))issues.push(`Неверное членство в семье ${id}`);owner.set(id,h.id);}
  }
@@ -289,5 +402,5 @@ export function audit(s){
  return {ok:issues.length===0,issues,...o};
 }
 export function serialize(s){return JSON.stringify(s);}
-export function deserialize(raw){const s=typeof raw==='string'?JSON.parse(raw):raw;if(s.version!==1||s.terrain?.length!==T||!Array.isArray(s.people)||!Array.isArray(s.households)||!Array.isArray(s.shipments))throw Error('Сохранение несовместимо с моделью v0.1');const v=audit(s);if(!v.ok)throw Error(`Повреждённые данные: ${v.issues[0]}`);return s;}
-export function getHousehold(s,id){const h=s.households.find(h=>h.id===id);if(!h)return null;return {...h,people:liveMembers(s,h),name:familyName(s,h),community:s.communities.find(c=>c.id===h.communityId)?.name};}
+export function deserialize(raw){const s=typeof raw==='string'?JSON.parse(raw):raw;if(!s.scenario)s.scenario='normal';if(s.version!==1||s.terrain?.length!==T||!Array.isArray(s.people)||!Array.isArray(s.households)||!Array.isArray(s.shipments))throw Error('Сохранение несовместимо с моделью v0.1');const v=audit(s);if(!v.ok)throw Error(`Повреждённые данные: ${v.issues[0]}`);return s;}
+export function getHousehold(s,id){const h=s.households.find(h=>h.id===id);if(!h)return null;return {...h,people:liveMembers(s,h),name:familyName(s,h),community:s.communities.find(c=>c.id===h.communityId)?.name,soil:round(fieldSoil(s,h)),annualFood:round(annualNeed(s,h))};}

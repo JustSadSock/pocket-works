@@ -1,9 +1,9 @@
 const CACHE_PREFIX='living-history-';
-const CACHE_NAME='living-history-v0.1.1';
-const APP_VERSION='0.1.1';
+const CACHE_NAME='living-history-v0.2.0';
+const APP_VERSION='0.2.0';
 const RELEASE_DATE='2026-10-14';
 const CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Демография и расселение: вдовство, сироты, новые семьи','Действующие навыки труда, перевозчики и взаимопомощь','Усиленный аудит ресурсов и индивидуальные биографии'];
+const RELEASE_NOTES=['Посев, уборка, плодородие и реалистичное хранение урожая','Экономическая специализация семей и география перевозок','Эксперименты: засуха, изоляция и бедные почвы'];
 const APP_SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./model.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const SCOPE_URL=new URL('./',self.registration.scope);const BUILD_TOKEN=`${APP_VERSION}-p${CACHE_PROTOCOL}`;const SHELL_KEYS=new Map(APP_SHELL.map(e=>{const u=new URL(e,SCOPE_URL);return[u.pathname,u.href];}));
 function urlWithVersion(input){const u=new URL(input instanceof Request?input.url:input,SCOPE_URL);u.searchParams.set('__pw_build',BUILD_TOKEN);return u;}
