@@ -187,3 +187,48 @@ button:focus-visible,.screen button:focus-visible,input:focus-visible,
 .result-item:first-of-type .result-rank{border-color:#c5a269}
 .result-item:first-of-type .points{font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){.waiting-person.just-ready{animation:none}}
+
+/* Explicit opt-in visual design. Safe and discoverable in both appearances. */
+.visual-mode-control{
+ display:flex;gap:14px;align-items:center;justify-content:space-between;
+ padding:14px 13px;margin:7px 0 15px;
+ background:#e3d8c6;border:1px solid #bda98e;border-radius:5px;
+}
+.visual-mode-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.visual-mode-copy strong{font:600 15px/1.2 Georgia,serif;color:#392e26}
+.visual-mode-copy small{font:11px/1.45 system-ui,sans-serif;color:#756857;max-width:290px}
+.visual-mode-switch{position:relative;display:block;width:50px;height:30px;flex:0 0 50px;cursor:pointer}
+.visual-mode-switch input{
+ position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;
+ cursor:pointer;z-index:1;
+}
+.visual-mode-switch span{
+ position:absolute;inset:0;border-radius:18px;background:#958a7b;
+ border:1px solid #897e6e;box-shadow:inset 0 1px 3px #0002;
+ transition:background .18s ease,border-color .18s ease;
+}
+.visual-mode-switch span::before{
+ content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;
+ border-radius:50%;background:#fffaf0;box-shadow:0 1px 3px #31251d5b;
+ transition:transform .18s cubic-bezier(.25,.7,.25,1);
+}
+.visual-mode-switch input:checked+span{background:#66584a;border-color:#66584a}
+.visual-mode-switch input:checked+span::before{transform:translateX(20px)}
+.visual-mode-switch input:focus-visible+span{outline:3px solid #b18b54;outline-offset:3px}
+html[data-zamazka-theme="atelier"] .visual-mode-control{
+ background:#e8dfd1;border-color:#b9ab98;
+}
+@media(prefers-reduced-motion:reduce){
+ .visual-mode-switch span,.visual-mode-switch span::before{transition:none}
+}
+
+/* The interactive art frames existed after the original beige CSS was written.
+   They must remain clickable in BOTH themes, not only in the newer skin. */
+.museum-stage .museum-slide[data-slot="-1"],
+.museum-stage .museum-slide[data-slot="0"],
+.museum-stage .museum-slide[data-slot="1"]{
+ pointer-events:auto;cursor:pointer;
+}
+.museum-stage .museum-slide:focus-visible{
+ outline:3px solid #c2a171;outline-offset:4px;
+}

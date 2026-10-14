@@ -1,6 +1,7 @@
 // Shared exhibition transitions and truthful save-state labels.
 // This module owns presentation only; game phases remain authoritative.
 import {setDressScene} from './scenography.js';
+import {activeVisualStyle,ATELIER} from './visual-style.js';
 export const STAGE_DURATION=370;
 export const SAVE_LABELS=Object.freeze({
  local:'На устройстве',pending:'Сохраняем…',transmitting:'Передаём работу…',
@@ -59,8 +60,9 @@ export function createExhibitionDirector(screen,{duration=STAGE_DURATION}={}){
   const room=SPACE[scene]||'gallery';
   const roomChanged=room!==previous;
   const old=screen.firstElementChild;
+  const modern=activeVisualStyle()===ATELIER;
   const moving=Boolean(old&&animate&&!reduced()&&!document.hidden);
-  const oldArtwork=moving?artworkAnchor(old):null;
+  const oldArtwork=moving&&modern?artworkAnchor(old):null;
   if(moving){
    // No fullscreen shutters: the actual previous scene lingers below the
    // incoming one. All delegated controls on that scene become inert.
@@ -75,13 +77,14 @@ export function createExhibitionDirector(screen,{duration=STAGE_DURATION}={}){
   screen.scrollTop=0;
   screen.dataset.museumRoom=room;if(shell)shell.dataset.museumRoom=room;
   const next=screen.firstElementChild;
-  setDressScene(next,scene);
+  if(next)next.dataset.visualScene=scene;
+  if(modern)setDressScene(next,scene);
   if(next&&moving){
-   next.classList.add('exhibition-enter',roomChanged?'gallery-arrival':'rehang');
+   next.classList.add('exhibition-enter',...(modern?[roomChanged?'gallery-arrival':'rehang']:[]));
    screen.append(exit);
    shell?.classList.add('is-room-crossing');
    if(oldArtwork)animateArtworkTravel(oldArtwork,artworkAnchor(next));
-   const max=roomChanged?duration:240;
+   const max=modern?(roomChanged?duration:240):240;
    clock=setTimeout(()=>{if(token===generation)clear()},max+60);
   }
   return next;
