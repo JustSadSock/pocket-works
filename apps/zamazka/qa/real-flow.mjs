@@ -76,6 +76,13 @@ try{
   assert.equal(await page.locator('.exhibition-exit-layer [data-action]').count(),0,'Outgoing room must not have active controls');
   const brush=page.locator('[data-tool="brush"]');
   await brush.waitFor();
+  await page.locator('.exhibition-exit-layer').waitFor({state:'detached',timeout:3000});
+  const handVisible=await page.locator('[data-tool="hand"]').evaluate(button=>{
+    const r=button.getBoundingClientRect();
+    const target=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+    return Boolean(target?.closest?.('[data-tool="hand"]'));
+  });
+  assert(handVisible,'Panorama button is covered by the zoom overlay or set dressing');
   await page.locator('[data-tool="hand"]').click();
   assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'hand');
   await brush.click();
