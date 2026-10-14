@@ -5,7 +5,8 @@
       "id": "fill",
       "kind": "node",
       "tier": "smoke",
-      "entry": "qa/fill-seams.mjs"
+      "entry": "qa/fill-seams.mjs",
+      "install": true
     },
     {
       "id": "smudge",
@@ -17,19 +18,22 @@
       "id": "timer",
       "kind": "node",
       "tier": "smoke",
-      "entry": "qa/drawing-time.mjs"
+      "entry": "qa/drawing-time.mjs",
+      "install": true
     },
     {
       "id": "deadline",
       "kind": "node",
       "tier": "smoke",
-      "entry": "qa/deadline-integrity.mjs"
+      "entry": "qa/deadline-integrity.mjs",
+      "install": true
     },
     {
       "id": "draft",
       "kind": "node",
       "tier": "smoke",
-      "entry": "qa/draft-recovery.mjs"
+      "entry": "qa/draft-recovery.mjs",
+      "install": true
     },
     {
       "id": "visual",
