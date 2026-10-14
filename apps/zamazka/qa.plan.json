@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "fill",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/fill-seams.mjs"
+    },
+    {
+      "id": "smudge",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/smudge.mjs"
+    },
+    {
+      "id": "timer",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/drawing-time.mjs"
+    },
+    {
+      "id": "deadline",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/deadline-integrity.mjs"
+    },
+    {
+      "id": "draft",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/draft-recovery.mjs"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": ".museum-home",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#settingsBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#dialog"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "real-flow",
+      "kind": "browser-node",
+      "tier": "deep",
+      "entry": "qa/real-flow.mjs"
+    },
+    {
+      "id": "responsive",
+      "kind": "browser-node",
+      "tier": "deep",
+      "entry": "qa/responsive-viewports.mjs"
+    }
+  ]
+}
