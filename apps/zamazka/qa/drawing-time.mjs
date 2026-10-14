@@ -35,6 +35,8 @@ for(const seconds of [60,90,120,160,240,300,600]){
   assert.equal(state.phase,'drawing','ten-minute round must stay open until deadline');
  }
  current=state.deadline+1;message(host,{type:'pulse'});
+ assert.equal(state.phase,'drawing','do not process at 0:00 while the last upload is in flight');
+ current=state.deadline+exports.FINAL_SUBMISSION_GRACE_MS+1;message(host,{type:'pulse'});
  assert.equal(state.phase,'voting');
  for(let i=0;i<players.length;i++){
   current=state.deadline+1;message(host,{type:'pulse'});
@@ -109,3 +111,6 @@ assert.equal(normalizeClient('600'),600,'solo saved choice of 10 minutes survive
 assert.equal(normalizeClient(601),160,'unsupported times still fall back to 2:40');
 
 console.log('ZAMAZKA: seven timed presets including 10 minutes, untimed all-player confirmation, solo duration, invalid fallback, and multi-round rules OK');
+
+// Deadline and final transfer regressions are part of the main timer gate.
+import './deadline-integrity.mjs';

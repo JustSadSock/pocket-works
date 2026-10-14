@@ -19,7 +19,7 @@ import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.36.3',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+createWorkshopMode({appName:'ЗАМАЗКА',version:'1.36.4',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -200,7 +200,10 @@ function attemptSubmission(force=false){
     activeSubmitTransfer||Date.now()<submissionBackoffUntil)return;
  // One complete upload at a time. Allow time for server persistence and its
  // authoritative acknowledgement before retransmitting a new revision.
- if(!force&&p.sentAt&&Date.now()-p.sentAt<15000)return;
+ // When the drawing timer has ended the server only has a short upload
+ // acceptance window. Retry lost receipts promptly instead of waiting 15s.
+ const retryMs=view.deadline&&Date.now()>=view.deadline?3500:15000;
+ if(!force&&p.sentAt&&Date.now()-p.sentAt<retryMs)return;
  activeDraftTransfer?.abort();activeDraftTransfer=null;
  clearTimeout(draftDelay);
  const controller=new AbortController();activeSubmitTransfer=controller;
@@ -238,6 +241,10 @@ function submitArtwork({automatic=false}={}){
  activeDraftTransfer?.abort();activeDraftTransfer=null;clearTimeout(draftDelay);
  const strokes=editor.getData();editor.saveSnapshot();
  pendingSubmit={token,room:roomId,round:view.round,art:ass.art,variation:ass.variation,strokes,revision:null,sentAt:0,attempts:0};
+ // Seal the canvas immediately, even when the network is disconnected.
+ screen.querySelector('.restore')?.classList.add('is-submitting');
+ const submitButton=screen.querySelector('[data-action="submit"]');if(submitButton)submitButton.disabled=true;
+ draftIndicator('Время зафиксировано · передаём рисунок…');
  persistPending();
  if(strokes.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,strokes)}
  attemptSubmission(true);
@@ -291,7 +298,9 @@ function stopEditor(){
 }
 function autoFinishOnDeadline(){
  if(!editor||practice||page!=='drawing'||!view||view.phase!=='drawing'||!view.deadline||view.done?.includes(me?.id))return;
- if(Date.now()<view.deadline-1900)return;
+ // Freeze at the actual deadline, not 1.9 seconds before it. getData()
+ // commits the finger/mouse stroke in progress before the final snapshot.
+ if(Date.now()<view.deadline)return;
  const token=submissionToken(view.mine,view.round);
  if(autoSubmitted===token||pendingSubmit?.token===token)return;
  submitArtwork({automatic:true});
@@ -542,6 +551,7 @@ function drawing(local=false){
    if(pendingSubmit?.room===roomId&&pendingSubmit.round===view.round&&
       pendingSubmit.art===ass.art&&pendingSubmit.variation===ass.variation){
      const submit=screen.querySelector('[data-action="submit"]');if(submit)submit.disabled=true;
+     screen.querySelector('.restore')?.classList.add('is-submitting');
      draftIndicator('Восстанавливаем отправку…');
    }else backupDraft(true);
  }
@@ -908,7 +918,8 @@ async function connect(mode){
        renderView();
        if(view?.phase==='drawing'&&!view.done?.includes(me?.id)&&
           pendingSubmit?.room===roomId&&pendingSubmit.round===view.round){
-         if(!pendingSubmit.sentAt||Date.now()-pendingSubmit.sentAt>15000)attemptSubmission();
+         const retryMs=view.deadline&&Date.now()>=view.deadline?3500:15000;
+         if(!pendingSubmit.sentAt||Date.now()-pendingSubmit.sentAt>retryMs)attemptSubmission();
        }
      }
      else if(event?.type==='submission_saved'){
@@ -1114,22 +1125,28 @@ screen.addEventListener('click',e=>{
  else if(action==='continue'&&view?.phase==='round-review'&&me?.id===view.host){b.disabled=true;try{net?.sendGame({type:'continue'})}catch{b.disabled=false;notify('Нет соединения с комнатой')}}
  else if(action==='next')net?.sendGame({type:'next'});
 });
+// Quiet, tactile clock ticks are only for the two timed creation stages.
+// Never sound alarms on voting, revealing, waiting or result screens.
 let lastClockCue='';
 function tick(){
  if(pendingVote)attemptVote();
  if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
  autoFinishOnDeadline();
  const v=practice||view,clock=document.querySelector('#clock');
+ const clockStage=(page==='preview'||page==='drawing')&&
+                  (v?.phase==='preview'||v?.phase==='drawing');
  if(clock&&v?.deadline){
   const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));
   clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-  clock.classList.toggle('urgent',s<=10);
-  if(page==='drawing'&&s<=10&&s>0){
-    const cue=(practice?'practice':roomId)+':'+v.round+':'+(s<=3?'final':'ten');
-    if((s===10||s===3)&&cue!==lastClockCue){lastClockCue=cue;sound(s===3?'final-warning':'warning')}
+  clock.classList.toggle('urgent',Boolean(clockStage&&s<=10));
+  if(clockStage&&s>0&&s<=10){
+   const cue=(practice?'practice':roomId)+':'+v.round+':'+v.phase+':'+s;
+   if(cue!==lastClockCue){lastClockCue=cue;sound('clock-tick')}
   }
-}
- if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}}
+ }
+ if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
+  lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}
+ }
 }
 let museumSwipe=null;
 screen.addEventListener('pointerdown',e=>{if(page==='home'&&e.target.closest('.museum-display'))museumSwipe={x:e.clientX,y:e.clientY,id:e.pointerId}});

@@ -8,6 +8,7 @@
  border:1px solid #f4e7ce;box-shadow:0 0 0 1px #2229;transform:translate(-50%,-50%)}
 .restore .picker-preview[hidden]{display:none!important}
 .restore.is-submitting .viewport canvas{pointer-events:none;cursor:progress}
+.restore.is-submitting .viewport,.restore.is-submitting .precision-arm,.restore.is-submitting .precision-side{pointer-events:none}
 .restore.is-submitting .work-foot [data-action="submit"]{opacity:.65}
 .restore.is-submitting #draftStatus{color:#735c35}
 .restore .work-stage{flex:1;min-height:0}
@@ -24,7 +25,8 @@
 .restore .timer.urgent,.phase-page .timer.urgent{animation:zamazkaTimerPulse 1.4s ease-in-out infinite}
 @keyframes zamazkaTimerPulse{0%,100%{opacity:1}50%{opacity:.7}}
 @keyframes zamazkaSceneIn{from{opacity:.82;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.screen>.phase-page,.screen>.restore{animation:zamazkaSceneIn .22s ease-out both}
+/* Static phase transitions: no whole-screen movement when time expires. */
+.screen>.phase-page,.screen>.restore{animation:none}
 .screen .gallery .picture img{object-fit:contain;object-position:center;aspect-ratio:4/3}
 .screen .compare canvas,.screen .unveil-frame canvas,.screen .expert-focus-frame canvas{aspect-ratio:4/3}
 @media(min-width:1050px) and (pointer:fine){

@@ -35,6 +35,8 @@ assert.equal(state.draftAssemblies[a.id].prefix,invalid[0].strokes.length,'uncha
 assert.equal(state.draftAssemblies[a.id].strokes.length,0,'no duplicate full painting in room state');
 assert.equal(JSON.stringify(state.drafts[a.id]),previous,'incomplete replacement cannot overwrite last confirmed painting');
 time=state.deadline+1;send(a,{type:'pulse'});
+assert.equal(state.phase,'drawing','multipart grace prevents premature reveal');
+time+=exports.FINAL_SUBMISSION_GRACE_MS;send(a,{type:'pulse'});
 assert.equal(state.phase,'voting');
 assert.equal(JSON.stringify(state.assignments[a.id].strokes),previous,'deadline uses last FULL image');
 
