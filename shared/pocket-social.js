@@ -368,7 +368,7 @@ function invitePanel(){
     ).join('')||
     '<div class="pws-empty">Нет друзей, которым можно отправить приглашение. Добавь их в разделе «Друзья».</div>')+'</div>';
 }
-function render(){
+function refreshTabBadges(){
   if(!dialog?.open)return;
   q('#pws-tabs',dialog).hidden=!state.me;
   for(const t of dialog.querySelectorAll('[data-pws-tab]')){
@@ -379,6 +379,10 @@ function render(){
     if(count&&!dot){dot=document.createElement('span');dot.className='pws-tab__badge';t.append(dot);}
     if(dot){dot.textContent=String(Math.min(count,99));dot.hidden=!count;}
   }
+}
+function render(){
+  if(!dialog?.open)return;
+  refreshTabBadges();
   content.innerHTML=errorMarkup()+(state.loading?'<div class="pws-loading">Загрузка…</div>':
     state.tab==='profile'?profilePanel():
     state.tab==='friends'?friendsPanel():
@@ -442,6 +446,7 @@ async function reload(rerender=true){
   const pending=(data.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
   const requests=(data.incoming||[]).length;
   updateNotification(pending+requests);
+  refreshTabBadges();
   if(rerender)render();
   return true;
 }
@@ -479,7 +484,7 @@ function renderLiveChanges(){
   }
 }
 async function pollOpenSocial(){
-  if(!dialog?.open||document.hidden||state.busy||state.loading||state.edit||livePollBusy)return;
+  if(!dialog?.open||document.hidden||state.busy||state.loading||livePollBusy)return;
   if(!navigator.onLine){updateConnectionStatus(true);return;}
   livePollBusy=true;
   const tab=state.tab,before=visibleSocialSignature(state.me,tab),peerId=state.other?.id;
@@ -536,6 +541,7 @@ async function open(room='',editNow=false,gameId='zamazka'){
   state.game=['zamazka','blind-pals'].includes(gameId)?gameId:'zamazka';
   if(!dialog.open)dialog.showModal();
   startLivePolling();liveRevision=null;state.friendOrder=[];state.otherReturn=null;
+  state.query='';state.results=[];state.searchVersion++;state.searchLoading=false;state.searchError='';
   state.room=room||'';state.tab=room?'invite':'profile';state.edit=false;state.other=null;
   state.loading=true;resetNotice();render();
   try{await Promise.all([reload(false),loadCatalog()]);updateConnectionStatus(false);lastCatalogCheck=Date.now()}
