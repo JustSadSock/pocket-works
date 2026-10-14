@@ -138,7 +138,7 @@ function showEnd(){
  const win=game.winner;
  $('outcome').textContent=win===0?'ПОБЕДА':win===1?'ПОРАЖЕНИЕ':'НИЧЬЯ';
  const reason=game.victory;
- $('outcomeDetail').textContent=reason==='domination'?'ПОБЕДА ЗА КОНТРОЛЬ ШЕСТИ ВЛАДЕНИЙ':reason==='score'?'РЕШЕНИЕ ПО ИТОГАМ ДВАДЦАТИ МИНУТ':win===0?'ВРАЖЕСКАЯ КРЕПОСТЬ ПАЛА':win===1?'НАША КРЕПОСТЬ ПАЛА':'ВОЙНА БЕЗ ПОБЕДИТЕЛЯ';
+ $('outcomeDetail').textContent=reason==='domination'?(win===0?'ВЫ УДЕРЖАЛИ ШЕСТЬ ВЛАДЕНИЙ':'ВРАГ УДЕРЖАЛ ШЕСТЬ ВЛАДЕНИЙ'):reason==='score'?'РЕШЕНИЕ ПО ИТОГАМ ДВАДЦАТИ МИНУТ':win===0?'ВРАЖЕСКАЯ КРЕПОСТЬ ПАЛА':win===1?'НАША КРЕПОСТЬ ПАЛА':'ВОЙНА БЕЗ ПОБЕДИТЕЛЯ';
  $('endSites').textContent=stats(game,0).sites+'/7';$('endKills').textContent=game.players[0].kills;
  $('endTime').textContent=Math.floor(game.time/60)+':'+String(Math.floor(game.time%60)).padStart(2,'0');
  screen.end.hidden=false;playSound(win===0?640:160,.36,.037,'triangle');
