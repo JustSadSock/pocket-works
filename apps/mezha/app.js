@@ -70,6 +70,10 @@ function syncHUD(){
   const b=o.querySelector('small');b.textContent=squadCount+' ОТР. · '+({capture:'ЦЕЛЬ',defend:'ОБОРОНА',raid:'НАБЕГ'})[order.mode];
  }
  for(const btn of document.querySelectorAll('[data-mode]'))btn.classList.toggle('active',btn.dataset.mode===mode);
+ for(const btn of document.querySelectorAll('[data-doctrine]')){
+  const active=btn.dataset.doctrine===s.players[0].doctrine;
+  btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));
+ }
  if(site){
   const z=s.sites.find(q=>q.id===site);
   if(!z)site=null;
@@ -183,6 +187,13 @@ document.querySelectorAll('[data-recruit]').forEach(b=>b.onclick=()=>{
  if(!game)return;
  const result=action(game,0,{kind:'recruit',type:b.dataset.recruit});notify(result.message,!result.ok);
  if(result.ok){playSound(330,.12,.033);buzz();storageWrite();$('recruitPanel').hidden=true}
+ syncHUD();
+});
+document.querySelectorAll('[data-doctrine]').forEach(btn=>btn.onclick=()=>{
+ if(!game||paused)return;
+ const result=action(game,0,{kind:'doctrine',value:btn.dataset.doctrine});
+ notify(result.message,!result.ok);
+ if(result.ok){playSound(495,.11,.027);storageWrite()}
  syncHUD();
 });
 $('fortify').onclick=()=>{
