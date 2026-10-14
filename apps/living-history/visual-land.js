@@ -10,7 +10,7 @@ export function fieldAppearance(s){
   const sown=crop?Math.min(active.length,Math.ceil(crop.sownArea/.0625)):0;
   const harvested=crop?Math.min(active.length,Math.floor(crop.harvestedArea/.0625)):0;
   for(const cell of h.fields)stages[cell]=1; // protected but resting/uncultivated
-  for(const cell of owned)stages[cell]=2; // ploughed, pending sowing
+  for(const cell of owned)stages[cell]=1; // allocated for cultivation, not ploughed until actual work
   for(let i=0;i<sown;i++)stages[active[i]]=doy>=145?3:2; // living crop
   for(let i=0;i<harvested;i++)stages[active[i]]=4; // stubble
  }
