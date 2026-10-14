@@ -108,7 +108,9 @@ function squadGoal(s,u){
  const order=s.orders[u.captain],side=u.side,p=s.players[side];
  const home=nearHome(side);
  if(!order)return home;
- if(u.hp/u.maxHp<(p.doctrine==='bold'?.22:p.doctrine==='cautious'?.53:.36)||u.morale<18){
+ // Bertrand's vanguard presses longer; Marten protects ranged veterans.
+ const captainRisk=u.captain%2===0?-.07:.05;
+ if(u.hp/u.maxHp<(p.doctrine==='bold'?.22:p.doctrine==='cautious'?.53:.36)+captainRisk||u.morale<18){
   u.retreat=true;
  }
  if(u.retreat){
@@ -141,7 +143,25 @@ function hit(s,from,to,amount){
  }
 }
 function siteTick(s,z,dt){
- const sides=[0,1].map(side=>s.squads.filter(u=>u.side===side&&!u.retreat&&u.hp>0&&distance(u,z)<60)
+ z.raided=Math.max(0,(z.raided||0)-dt);
+ // Raiding squads harass income instead of capturing ground. The effect is
+ // opposed by local defenders; players can raid without winning a siege.
+ if(z.owner>=0){
+  const enemy=1-z.owner;
+  const raiders=s.squads.filter(u=>u.side===enemy&&!u.retreat&&u.hp>0&&s.orders[u.captain]?.mode==='raid'&&distance(u,z)<66);
+  if(raiders.length){
+   const guards=s.squads.filter(u=>u.side===z.owner&&u.hp>0&&distance(u,z)<74).length;
+   const pressure=Math.max(0,raiders.length*1.1-guards*.8);
+   if(pressure>0){
+    const amount=dt*pressure*(z.type==='mine'?1.7:z.type==='wood'?1.2:1.0);
+    const stat=z.type==='wood'?'wood':z.type==='farm'?'food':'gold';
+    const taken=Math.min(s.players[z.owner][stat],amount);
+    s.players[z.owner][stat]-=taken;s.players[enemy][stat]=clamp(s.players[enemy][stat]+taken*.65,0,999);
+    z.raided=.45;
+   }
+  }
+ }
+ const sides=[0,1].map(side=>s.squads.filter(u=>u.side===side&&!u.retreat&&u.hp>0&&s.orders[u.captain]?.mode!=='raid'&&distance(u,z)<60)
  .reduce((n,u)=>n+(u.type==='knight'?1.4:1),0));
  const attacker=sides[0]>sides[1]?0:sides[1]>sides[0]?1:-1;
  if(attacker>=0&&attacker!==z.owner){
@@ -201,14 +221,16 @@ export function tick(s,dt){
  for(const u of s.squads){
   if(u.hp<=0)continue;
   u.attack=Math.max(0,u.attack-dt);u.hit=Math.max(0,u.hit-dt);
-  const p=s.players[u.side];const enemies=s.squads.filter(e=>e.side!==u.side&&e.hp>0&&distance(u,e)<(u.type==='bow'?86:36));
+  const p=s.players[u.side];const order=s.orders[u.captain];
+  const sight=u.type==='bow'?(u.captain%2?104:86):order?.mode==='defend'?31:40;
+  const enemies=s.squads.filter(e=>e.side!==u.side&&e.hp>0&&distance(u,e)<sight);
   const target=enemies.sort((a,b)=>distance(u,a)-distance(u,b))[0];
   const goal=squadGoal(s,u);
   if(target&&!u.retreat){
-   const range=u.type==='bow'?72:u.type==='knight'?28:24;
+   const range=u.type==='bow'?(u.captain%2?90:72):u.type==='knight'?28:24;
    if(distance(u,target)>range)advance(u,target,dt);
    if(u.attack<=0&&distance(u,target)<=range+5){
-    const dmg=(u.type==='knight'?15:u.type==='bow'?9:10)*(u.hp/u.maxHp*.48+.52)*(u.morale/200+.5);
+    const dmg=(u.type==='knight'?15:u.type==='bow'?9:10)*(u.hp/u.maxHp*.48+.52)*(u.morale/200+.5)*(u.captain%2===0&&u.type==='knight'?1.15:1);
     hit(s,u,target,dmg);u.attack=u.type==='bow'?1.35:u.type==='knight'?.96:1.15;
    }
   }else{
