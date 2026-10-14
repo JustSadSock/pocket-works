@@ -46,9 +46,21 @@ test('drought depresses crops and population, without declaring an artificial en
  assert.ok(dry.people.some(p=>p.foodDebt>0));
 });
 
+function isolationTrades(s,lookup){
+ return s.events.filter(e=>e.type==='trade' && e.subjects.length>=2).filter(e=>{
+  const a=lookup.get(e.subjects[0]),b=lookup.get(e.subjects[1]);
+  return a&&b&&a.communityId!==b.communityId;
+ }).map(e=>e.id);
+}
+
 test('isolated scenario limits exchange; region and scenario persist on save',()=>{
  const open=sim(43821,'normal',10),isolated=sim(43821,'isolated',10);
- assert.ok(isolated.stats.trades<open.stats.trades);
+ // Isolation prohibits *cross-community* transactions; the count of purely local
+ // trades need not decrease monotonically because markets and shortages adapt.
+ const homeById=new Map(isolated.households.map(h=>[h.id,h]));
+ const illegal=isolationTrades(isolated,homeById);
+ assert.deepEqual(illegal,[],'isolated worlds cannot transact across community borders');
+ assert.ok(isolated.stats.trades>0,'isolation does not eliminate local trade');
  const loaded=deserialize(serialize(isolated));assert.equal(loaded.scenario,'isolated');
  advanceDays(isolated,200);advanceDays(loaded,200);assert.equal(serialize(isolated),serialize(loaded));
 });

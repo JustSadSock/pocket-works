@@ -1,6 +1,6 @@
 const CACHE_PREFIX='living-history-';
-const CACHE_NAME='living-history-v0.2.0';
-const APP_VERSION='0.2.0';
+const CACHE_NAME='living-history-v0.2.1';
+const APP_VERSION='0.2.1';
 const RELEASE_DATE='2026-10-14';
 const CACHE_PROTOCOL=2;
 const RELEASE_NOTES=['Посев, уборка, плодородие и реалистичное хранение урожая','Экономическая специализация семей и география перевозок','Эксперименты: засуха, изоляция и бедные почвы'];
