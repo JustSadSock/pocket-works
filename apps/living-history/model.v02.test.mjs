@@ -69,13 +69,13 @@ test('isolated scenario limits exchange; region and scenario persist on save',()
 
 test('transport routes across the river pass through a ford and carrier earns a conserved wage',()=>{
  const s=createWorld(112);advanceDays(s,365*4);
- const bridge=s.shipments.find(t=>t.route?.length===3);
- // Not every seed has live cross-bank freight during a checkpoint; force a published
- // trade route by requiring at least some bridge-crossing or leave it as a density observation.
- assert.ok(s.shipments.every(t=>!t.route||t.route.length===2||t.route.length===3));
+ // Cargo follows genuine traversable steps, including dry river fords.
+ assert.ok(s.shipments.every(t=>!t.route||t.route.every((p,i,arr)=>{
+  const x=Math.round(p.x),y=Math.round(p.y);
+  return s.terrain[y*160+x]===0&&(i===0||Math.abs(arr[i-1].x-p.x)+Math.abs(arr[i-1].y-p.y)<=1.01);
+ })));
  assert.ok(s.stats.trades>0);assert.ok(audit(s).ok);
  assert.ok(s.shipments.every(t=>t.haulFee<=t.cost));
- if(bridge)assert.ok(bridge.route[1].y===40||bridge.route[1].y===119);
 });
 
 test('historic mid-season saves retain prepaid seed and upcoming crop',()=>{
