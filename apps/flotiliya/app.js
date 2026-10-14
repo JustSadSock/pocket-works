@@ -436,6 +436,23 @@ function drawOrders(s){
   ctx.restore();
  }
 }
+function drawMovementBadge(s){
+ if(!s.alive)return;
+ const b=getBudget(s),own=s.side==='ally',selected=s.id===game.selected&&game.phase==='orders';
+ const x=Math.min(W-55,s.x+47),y=Math.max(53,Math.min(H-53,s.y+9));
+ ctx.save();
+ ctx.fillStyle=selected?'#e7c88c':own?'#193f3c':'#653d3a';
+ ctx.strokeStyle=selected?'#fff0c1':own?'#91beab':'#d5a293';
+ ctx.lineWidth=selected?2.1:1.4;
+ const bw=selected?65:54,bh=30;
+ ctx.beginPath();ctx.roundRect(x-bw/2,y-bh/2,bw,bh,6);ctx.fill();ctx.stroke();
+ ctx.font='800 17px system-ui,sans-serif';ctx.textBaseline='middle';ctx.textAlign='center';
+ ctx.fillStyle=selected?'#283632':'#f7eed6';
+ ctx.fillText((own?Math.max(0,b.remaining):b.total)+' / '+b.total,x,y+1);
+ ctx.font='700 10px system-ui,sans-serif';ctx.fillStyle='#e0dbc9';
+ if(selected)ctx.fillText('ОД',x,y+bh/2+12);
+ ctx.restore();
+}
 function render(now){
  const {dpr,w,h,scale,ox,oy}=view;if(!w||!h)return;
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#0f313d';ctx.fillRect(0,0,w,h);
@@ -446,6 +463,7 @@ function render(now){
  }else{
   const ss=game.ships.filter(s=>s.alive);
   for(const s of ss){drawShip(s,now);if(game.phase==='orders')drawOrders(s);}
+  for(const s of ss)drawMovementBadge(s);
   for(const p of game.particles){
    ctx.globalAlpha=clamp(p.life/.7,0,1);ctx.strokeStyle=p.color;ctx.fillStyle=p.color;
    ctx.lineWidth=p.arrow?2:1;ctx.beginPath();
