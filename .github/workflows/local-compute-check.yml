@@ -1,0 +1,32 @@
+name: Validate Local Compute Controller
+
+# Hosted CI only. NEVER point this PR-facing workflow at a self-hosted runner.
+on:
+  pull_request:
+    paths:
+      - 'scripts/local-compute*.mjs'
+      - '.github/workflows/local-compute*.yml'
+      - 'docs/LOCAL-COMPUTE.md'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/local-compute*.mjs'
+      - '.github/workflows/local-compute*.yml'
+      - 'docs/LOCAL-COMPUTE.md'
+
+permissions:
+  contents: read
+
+jobs:
+  controller:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check controller syntax
+        run: node --check scripts/local-compute.mjs
+      - name: Validate authorization, payload limits, and default requests
+        run: node --test scripts/local-compute.test.mjs
