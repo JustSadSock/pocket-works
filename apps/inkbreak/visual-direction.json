@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "status": "ready",
+  "product": "inkbreak",
+  "direction": {
+    "premise": "A stolen newspaper becomes a fistfight on the roofs of its own printed city. Every strike rewrites the page.",
+    "composition": "Full-bleed oblique 3D rooftop surrounded by descending city blocks. Hero red coat anchors the pale field; portrait HUD and thumb controls occupy edges.",
+    "shapeLanguage": "Angular hood, long ivory nib mask and triangular red cape. Crooked rectangular captions and sharp-cut buildings use thick ink outlines.",
+    "surfaceAndMaterial": "Three-value toon lighting, faceted skin, printed window strips and restrained halftone dots beneath a paper-grain overlay.",
+    "paletteLogic": "Warm cream paper dominates; blue-grey architecture recedes; black ink provides contours and shadows; vermilion belongs to protagonist and danger.",
+    "typography": "Condensed heavy comic masthead and bold utility captions, with italic serif narration. No rounded dashboard font or pill navigation.",
+    "signature": "A red nib-masked courier tears through multiple ink gang members; the perspective roof receives ink marks and a crooked onomatopoeia interrupts the print.",
+    "distinction": "Arena Shift uses fantasy arena volumes; Perigee uses sparse flat orbital diagrams; Cantica Glass uses church manuscripts. This product instead prints a dense oblique city behind a skewed newspaper masthead and real skeletal comic combat."
+  },
+  "production": {
+    "renderer": "App-local Three.js WebGL2 renders real 3D perspective and skinning; DOM provides crisp comic captions and controls. Offline engine is bundled, not loaded from a CDN.",
+    "focalAsset": "Original courier built from authored tapered cloth rings, a nib mask, hood, eye slashes and cape in asset-forge/author.py. A committed eight-bone skinned mesh supports named clips without separate floating limbs."
+  },
+  "motion": {
+    "character": "Quick springy courier locomotion versus heavy telegraphed ink enemies. Cape rotation trails body twists and dash produces planar slash rings.",
+    "action": "Press the strike control near an enemy or dash through a cluster to restore the stolen print and increase the combo.",
+    "anticipation": "Enemies draw red floor rings for 0.7 to 1 second before contact; the courier shoulder winds back at the start of the Attack clip.",
+    "response": "Strike immediately plays the arm clip and expanding ink arc. Contact applies damage, recoil, a short hit-stop and a red print burst.",
+    "followThrough": "The arm returns across 0.38 seconds, burst chips settle, defeated enemies leave floor ink and surviving enemies stagger.",
+    "interruption": "Cooldown rejects repeated actions without queue debt. Pointer cancellation clears the stick, hidden tabs pause simulation and pause removes active input.",
+    "reducedMotion": "Camera shake and hit-stop are omitted; attack rings, animations, damage and captions retain all gameplay meaning."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#start"
+    },
+    "expectedChange": "Opening the first print reveals the health bar and two thumb action controls while the first ink gang wave enters the volume-lit rooftop.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
