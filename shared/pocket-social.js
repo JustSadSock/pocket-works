@@ -9,11 +9,11 @@ const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#
 const frames=[['clean','Чистая'],['double','Двойная'],['corners','Углы'],['stamp','Марка']];
 const portraitFrames=[['none','Без рамки'],['wood','Резное дерево'],['gilt','Позолоченная'],['worn-gilt','Потёртая позолота']];
 const colors=['#273d46','#fff8e6','#d75e55','#f2ad6c','#f2d478','#82aa73','#478d8c','#6092bd','#8865a3','#c87eac','#8a604d','#101c29'];
-const errors={invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
+const errors={party_full:'В компании уже три друга.',invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
 const state={editorTab:'animal',paintOpen:false,reward:null,tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,searchLoading:false,searchError:'',unseenIncoming:[],unseenInvites:[],friendOrder:[],otherReturn:null,syncOffline:false,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
 let dialog,content,entry,paintSession=null,searchClock=0,pollClock=0,heartbeatClock=0;
-let livePollClock=0,livePollBusy=false,reloadVersion=0,lastPortraitKey='',lastNotificationKey='',liveRevision=null,lastCatalogCheck=0;
+let livePollClock=0,livePollBusy=false,reloadVersion=0,lastPortraitKey='',lastNotificationKey='',lastHomeKey='',liveRevision=null,lastCatalogCheck=0;
 const api=async(path,body)=>{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
   try{
@@ -49,7 +49,15 @@ function card(p){
 const errorMarkup=()=>state.error?'<div class="pws-error" role="alert">'+esc(state.error)+'</div>':state.notice?'<div class="pws-notice" role="status">'+esc(state.notice)+'</div>':'';
 // The compact identity card uses the same saved Pocket ID background, frame and art
 // as the full player card. All social surfaces share this renderer.
-const presenceLabel=p=>p.online?'● В сети'+(p.gameId?' · '+gameLabel(p.gameId):''):'Не в сети';
+const presenceLabel=p=>p.activity?
+  '● '+gameLabel(p.activity.gameId)+(p.activity.joinable?
+    ' · '+p.activity.players+'/'+p.activity.maxPlayers+' в комнате':' · играет'):
+  p.online?'● В сети'+(p.gameId?' · '+gameLabel(p.gameId):''):'Не в сети';
+const joinButton=p=>p.activity?.joinable?
+  button('join-friend','Присоединиться','primary','data-id="'+esc(p.id)+'"'):'';
+function friendActions(p){
+  return joinButton(p)+button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"');
+}
 function personRow(p,actions,subtitle=presenceLabel(p),isNew=false){
   const background=backgrounds.some(t=>t[0]===p.background)?p.background:'forest';
   const frame=frames.some(t=>t[0]===p.frame)?p.frame:'clean';
@@ -66,12 +74,11 @@ function personRow(p,actions,subtitle=presenceLabel(p),isNew=false){
     '<div class="pws-person__actions">'+actions+'</div></article>';
 }
 function person(p){
-  return personRow(p,button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"'));
+  return personRow(p,friendActions(p));
 }
 function listPeople(list,empty,newIds=[]){
   return list?.length?'<div class="pws-list">'+list.map(p=>
-    personRow(p,button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"'),
-      presenceLabel(p),newIds.includes(p.id))).join('')+'</div>':'<div class="pws-empty">'+empty+'</div>';
+    personRow(p,friendActions(p),presenceLabel(p),newIds.includes(p.id))).join('')+'</div>':'<div class="pws-empty">'+empty+'</div>';
 }
 function orderFriends(friends){
   // Stable order throughout the current visit prevents buttons moving under a finger.
@@ -304,8 +311,14 @@ function otherPanel(){
     status==='incoming'?button('accept-friend','Принять','primary')+button('decline-friend','Отклонить'):
     status==='friends'?button('remove-friend','Удалить из друзей'):
     p.blockedByMe?button('unblock-friend','Разблокировать'):'';
+  const saved=(state.me?.party||[]).includes(p.id);
+  const companyButton=status==='friends'?
+    saved?button('remove-party','Убрать из компании','quiet'):
+    (state.me?.party||[]).length<3?button('add-party','В компанию','quiet'):'':'';
+  const join= status==='friends'?joinButton(p):'';
   return button('back','← Назад')+'<h2 style="margin-top:15px">'+esc(p.nickname)+'</h2>'+card(p)+
-    '<div class="pws-actions">'+controls+
+    (p.activity?'<p class="pws-playing">'+esc(presenceLabel(p))+'</p>':'')+
+    '<div class="pws-actions">'+join+companyButton+controls+
     (p.blockedByMe?'':button('block-friend','Заблокировать','danger'))+'</div>'+
     (state.confirm?confirmPanel():'');
 }
@@ -314,6 +327,19 @@ function confirmPanel(){
   return '<section class="pws-confirm"><strong>'+ (action==='block'?'Заблокировать игрока?':'Удалить из друзей?')+'</strong>'+
     '<div class="pws-muted">Действие изменит доступ к приглашениям и заявкам.</div><div class="pws-actions">'+
     button('confirm-action','Подтвердить','danger')+button('cancel-confirm','Отмена')+'</div></section>';
+}
+function partyPanel(){
+  const members=state.me?.party||[],friends=state.me?.friends||[];
+  return '<details class="pws-fold pws-company" data-pws-fold="party"'+(state.expanded.party?' open':'')+'>'+
+    '<summary>Моя компания · '+(members.length+1)+'/4</summary>'+
+    '<div class="pws-fold__body"><p class="pws-muted">Сохрани до трёх друзей, чтобы приглашать всех из игровой комнаты.</p>'+
+    (members.length?'<div class="pws-company__members">'+members.map(id=>{
+      const p=friends.find(x=>x.id===id);
+      return p?'<button type="button" class="pws-company__member" data-pws="open-user" data-id="'+esc(p.id)+'">'+
+        '<span class="pws-company__avatar">'+avatar(p)+'</span><span>'+esc(p.nickname)+'</span></button>':'';
+    }).join('')+'</div>':
+    '<div class="pws-muted">Открой профиль друга и нажми «В компанию».</div>')+
+    '</div></details>';
 }
 function friendsPanel(){
   if(!state.me)return profilePanel();
@@ -330,6 +356,7 @@ function friendsPanel(){
     '<h3>Мои друзья · '+m.friends.length+' <span class="pws-online-count">В сети: '+
       m.friends.filter(p=>p.online).length+'</span></h3>'+
     listPeople(orderFriends(m.friends),'Пока нет друзей. Найди игрока по нику.')+
+    partyPanel()+
     fold('outgoing','Отправленные заявки',m.outgoing)+
     fold('blocked','Заблокированные',m.blocked||[]);
 }
@@ -363,6 +390,9 @@ function invitesPanel(){
 function invitePanel(){
   if(!state.me)return profilePanel();
   return '<h2>Позвать в '+esc(gameLabel(state.game))+'</h2><p class="pws-muted">Приглашение получит друг, который сможет войти в эту комнату одним нажатием.</p>'+
+    ((state.me.party||[]).length?'<div class="pws-company__invite">'+
+      button('invite-party','Пригласить компанию · '+state.me.party.length,'primary')+
+      '</div>':'')+
     '<div class="pws-list">'+(state.me.friends.filter(p=>p.allowInvites).map(p=>
       personRow(p,button('send-invite','Пригласить','primary','data-id="'+esc(p.id)+'"'))
     ).join('')||
@@ -426,7 +456,7 @@ async function reload(rerender=true){
   if(state.cloudAccount&&state.cloudAccount!==data.profile.id)resetCloud();
   const accountChanged=state.me?.profile?.id!==data.profile.id;
   if(accountChanged){state.friendOrder=[];liveRevision=null;}
-  state.me=data;refreshUnseen(data);
+  state.me=data;refreshUnseen(data);updateHomeActivity();
   const portraitKey=JSON.stringify([data.profile.id,data.profile.avatar,data.profile.artwork,data.profile.maskot,data.profile.unlocked]);
   // Polling must not replace the nav avatar DOM every two seconds.
   if(portraitKey!==lastPortraitKey){
@@ -451,11 +481,31 @@ async function reload(rerender=true){
   return true;
 }
 // Track user-visible data, not request timestamps or heartbeat activity.
+function updateHomeActivity(){
+  const home=q('#deck-home');
+  if(!home)return;
+  let quick=q('#pws-home-activity',home);
+  const online=(state.me?.friends||[]).filter(p=>p.online||p.activity);
+  const key=JSON.stringify([state.me?.profile?.id,online.map(p=>[p.id,p.nickname,p.avatar,p.activity?.gameId])]);
+  if(key===lastHomeKey&&quick)return;
+  lastHomeKey=key;
+  if(!online.length){quick?.remove();return}
+  if(!quick){
+    quick=document.createElement('button');quick.id='pws-home-activity';quick.type='button';
+    quick.className='pws-home-activity';quick.setAttribute('aria-label','Друзья в сети');
+    const account=q('#deck-account-spotlight',home);
+    account?.insertAdjacentElement('afterend',quick);
+  }
+  quick.innerHTML='<span class="pws-home-activity__faces">'+online.slice(0,3).map(p=>
+    '<span>'+avatar(p)+'</span>').join('')+'</span><span><strong>'+online.length+
+    ' '+(online.length===1?'друг в сети':online.length<5?'друга в сети':'друзей в сети')+
+    '</strong><small>Посмотреть друзей и присоединиться</small></span><span aria-hidden="true">↗</span>';
+}
 function visibleSocialSignature(data,tab){
   if(!data)return 'signed-out';
   return JSON.stringify(tab==='profile'?[data.profile]:
     tab==='other'?[data.profile?.id,state.other]:
-    [data.profile?.id,data.friends,data.incoming,data.outgoing,data.blocked,data.invites]);
+    [data.profile?.id,data.friends,data.incoming,data.outgoing,data.blocked,data.invites,data.party]);
 }
 function updateConnectionStatus(offline){
   state.syncOffline=offline;
@@ -699,6 +749,11 @@ function install(){
     if(state.searchLoading)searchClock=setTimeout(search,300);
   });
   document.addEventListener('click',e=>{
+    if(e.target.closest?.('#pws-home-activity')){
+      e.preventDefault();
+      void open().then(()=>{if(dialog.open){state.tab='friends';render();rememberNotices('incoming')}});
+      return;
+    }
     const target=e.target.closest?.('[data-social-invite]');
     if(target){e.preventDefault();open(target.dataset.roomId||'',false,target.dataset.gameId||'zamazka')}
   });
@@ -795,6 +850,39 @@ function install(){
     }
     if(action==='unblock-friend'){await mutate('friend-action',{id:state.other.id,action:'unblock'},{tab:'friends'});return}
     if(action==='send-invite'){await mutate('invite',{toId:id,roomId:state.room,gameId:state.game},{tab:'invite',stay:true});return}
+    if(action==='invite-party'){
+      if(state.busy)return;
+      state.busy=true;resetNotice();
+      try{
+        const result=await api('invite-party',{roomId:state.room,gameId:state.game});
+        state.notice=result.sent?result.sent+' приглашений отправлено'+(result.skipped?' · '+result.skipped+' пропущено':''):
+          'Все участники уже приглашены или запретили приглашения.';
+        await reload(false);
+      }catch(error){state.error=error.message}
+      finally{state.busy=false;render()}
+      return;
+    }
+    if(action==='join-friend'){
+      if(state.busy)return;
+      state.busy=true;resetNotice();
+      try{
+        const result=await api('join-friend',{id});
+        if(!result.url||!/^\/apps\/[a-z0-9-]+\/\?room=[0-9a-f-]+$/.test(result.url))
+          throw Error('Ссылка на комнату недействительна.');
+        location.assign(new URL(result.url,location.origin).href);
+        return;
+      }catch(error){
+        state.error=error.message||'Комната недоступна. Попроси друга создать новую.';
+        await reload(false).catch(()=>{});
+      }finally{state.busy=false;render()}
+      return;
+    }
+    if(action==='add-party'||action==='remove-party'){
+      if(!state.other)return;
+      await mutate('party',{action:action==='add-party'?'add':'remove',id:state.other.id},{tab:'other',stay:true});
+      // Keep the peer profile visible after adjusting the saved company.
+      return;
+    }
     if(action==='accept-invite'){await mutate('invite-action',{id,action:'accept'},{tab:'invites'});return}
     if(action==='decline-invite'){await mutate('invite-action',{id,action:'decline'},{tab:'invites'});return}
     if(action==='cancel-invite'){await mutate('invite-action',{id,action:'cancel'},{tab:'invites'});return}
@@ -824,7 +912,7 @@ function install(){
     if(!event.detail?.user?.complete){
       reloadVersion++;lastPortraitKey='';
       liveRevision=null;state.friendOrder=[];state.otherReturn=null;
-      state.me=null;state.other=null;state.edit=false;state.results=[];resetCloud();
+      state.me=null;state.other=null;state.edit=false;state.results=[];resetCloud();updateHomeActivity();
       updateNotification(0);if(dialog.open)render();
     }else{
       if(state.cloudAccount&&state.cloudAccount!==event.detail.user.id)resetCloud();
