@@ -126,6 +126,77 @@ html,body{background:#242822}
  border:1px solid #5d4833;background:#6b543e!important;color:#faf1df;
  box-shadow:0 3px 8px #1f342552!important;
 }
+/* A single physical restoration cabinet, not a stack of unrelated tool cards. */
+.screen>.restore>.work-area {
+ background:radial-gradient(ellipse 60% 55% at 50% 10%,#95887331,transparent 100%),#333630!important;
+}
+.screen>.restore .viewport {
+ position:relative;
+ border:10px solid #6b4f37!important;
+ outline:2px solid #33261d!important;
+ box-shadow:inset 0 0 0 3px #bda37e,0 3px 0 #312216,0 23px 44px #101510a5!important;
+}
+.screen>.restore .viewport::before {
+ content:"";position:absolute;inset:0;z-index:6;pointer-events:none;
+ border:3px solid #b99a6c;
+ box-shadow:inset 0 0 0 3px #302318;
+}
+.screen>.restore>.work-tools {
+ position:relative;
+ background:#e3d8c7!important;color:#3c3429;
+ border-left:9px solid #75563b!important;
+ box-shadow:inset 3px 0 #b08c60,-8px 0 20px #11191372!important;
+}
+.screen>.restore>.work-tools::before {
+ content:"";position:absolute;z-index:0;pointer-events:none;
+ left:0;top:0;bottom:0;width:2px;background:#574330;
+}
+.screen>.restore>.work-tools > * {position:relative;z-index:1}
+.screen>.restore .tools {
+ padding:6px;gap:5px;
+ background:#b7a58c!important;
+ border:1px solid #968064;border-radius:2px;
+ box-shadow:inset 0 3px 4px #49362547,0 1px #fff5e566;
+}
+.screen>.restore .tool {
+ border:1px solid #bda88c!important;
+ border-bottom:3px solid #aa9170!important;
+ border-radius:2px!important;
+ background:#f2e8d6!important;color:#51412f!important;
+ box-shadow:inset 0 1px #fffaf1,0 2px 4px #4b382e21!important;
+ transition:transform 120ms ease,background-color 120ms ease,box-shadow 120ms ease;
+}
+.screen>.restore .tool.active {
+ border-color:#75573c!important;
+ border-bottom:1px solid #49321f!important;
+ background:#6c5139!important;color:#f9e9d0!important;
+ box-shadow:inset 0 3px 5px #21191194,0 1px #d5b991!important;
+ transform:translateY(2px);
+}
+.screen>.restore .tool:active:not(:disabled) {transform:translateY(2px)}
+.screen>.restore .swatch {
+ border:4px solid #e6d8c4!important;
+ outline:1px solid #987f61;
+ box-shadow:inset 0 3px 5px #1f180f83,0 2px 3px #55452e44!important;
+}
+.screen>.restore .swatch.active {
+ outline:2px solid #6e4926;outline-offset:2px;
+}
+.screen>.restore .work-foot .btn.primary {
+ background:#70553c!important;
+ border:1px solid #4f3b27!important;
+ border-bottom:3px solid #302318!important;
+ box-shadow:inset 0 1px #bea17b55,0 4px 8px #39302445!important;
+}
+@media(max-width:699px){
+ .screen>.restore>.work-tools {
+  border-left:0!important;border-top:7px solid #765a3e!important;
+  box-shadow:inset 0 2px #ba9973,0 -8px 16px #12170f42!important;
+ }
+ .screen>.restore .viewport {border-width:7px!important}
+ .screen>.restore .viewport::before {border-width:2px}
+}
+
 /* Secondary rooms use matte material depth, without faux gilded boxes. */
 .screen>.page.lobby-entry,.screen>.page.exhibition-lobby,
 .screen>.page.collection-page,.screen>.page:has(.result-item){
