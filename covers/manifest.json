@@ -3180,23 +3180,23 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 25990,
-        "variance": 38.372844011890656,
-        "entropy": 1.7235976294124562,
-        "edgeDensity": 0.07899305555555555,
-        "colorfulness": 28.97412109375,
-        "centerDetail": 50.76863523893522,
-        "meanLight": 66.44843749999998
+        "bytes": 26300,
+        "variance": 38.37476334940839,
+        "entropy": 1.7305093381846874,
+        "edgeDensity": 0.0794890873015873,
+        "colorfulness": 28.974365234375,
+        "centerDetail": 50.76221992251096,
+        "meanLight": 66.47028510742184
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.0.0&pw_fp=96d8f0e3f3d3a349235d52a9"
+      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.0.1&pw_fp=1d06fa6925c08c3acdd1a9c3"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "c00ce78fe4ec514f13c1351afe8be2f7ff556e28",
-    "lastAttemptAt": "2026-10-14T15:00:34.022Z"
+    "lastAttemptRevision": "2a1f1fac15647de679e08bea0a8e6ecdf63f5360",
+    "lastAttemptAt": "2026-10-14T15:09:01.783Z"
   }
 }
