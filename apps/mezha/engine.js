@@ -89,13 +89,20 @@ export function action(s,side,req){
  return{ok:false,message:'Неизвестное действие'};
 }
 function pickBridge(u,target){
+ // Crossing is a stateful journey. Without a locked destination squads turn
+ // around after reaching the near bank and can oscillate there forever.
+ if(u.crossing){
+   const exit={x:u.crossing.exit,y:u.crossing.y};
+   if(distance(u,exit)<7){u.crossing=null;return target}
+   return exit;
+ }
  if((u.x-480)*(target.x-480)>=0)return target;
  const near=[310,515].sort((a,b)=>(Math.abs(u.y-a)+Math.abs(target.y-a))-(Math.abs(u.y-b)+Math.abs(target.y-b)))[0];
- if(Math.abs(u.x-480)>25){
-  const side=u.x<480?-1:1;
-  return{x:480+side*33,y:near};
- }
- return{x:480,y:near};
+ const side=u.x<480?-1:1;
+ const entry={x:480+side*35,y:near};
+ if(distance(u,entry)>7)return entry;
+ u.crossing={exit:480-side*48,y:near};
+ return{x:u.crossing.exit,y:near};
 }
 function squadGoal(s,u){
  const order=s.orders[u.captain],side=u.side,p=s.players[side];
