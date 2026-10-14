@@ -1,12 +1,13 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
-import {createGame,action,tick,stats,save,load,W,H,SITE_DEFS,clamp} from './engine.js';
+import {createGame,action,tick,stats,save,load,W,H,DOMINATION_SECONDS,DOMINATION_SITES,clamp} from './engine.js';
 import {renderBattle,renderMinimap,nearestSite} from './render.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id);
 const root=$('app'),canvas=$('field'),ctx=canvas.getContext('2d',{alpha:false});
 const storedKey='pocket-works:mezha:match-v1',optionsKey='pocket-works:mezha:options';
 const screen={menu:$('startScreen'),pause:$('pauseScreen'),end:$('endScreen'),confirm:$('confirm')};
-let opts={sound:true};try{opts={...opts,...JSON.parse(localStorage.getItem(optionsKey)||'{}')}}catch{}
+let opts={sound:true,skill:'regular'};try{opts={...opts,...JSON.parse(localStorage.getItem(optionsKey)||'{}')}}catch{}
+if(!['casual','regular','veteran'].includes(opts.skill))opts.skill='regular';
 let game=null,preview=createGame(20261014,true),mode='capture',captain=0,site=null,view={x:0,y:0,w:960,h:620};
 let camera={x:325,y:310,zoom:1},pendingReset=false,paused=false,audio=null,last=0,acc=0,raf=0,lastHud=0,lastMinimap=0,lastSave=0,toastTimer=null,hasPlayed=false;
 const pointers=new Map();let pinch=null,down=null;
@@ -66,6 +67,15 @@ function syncHUD(){
  $('clock').textContent=[Math.floor(s.time/60),Math.floor(s.time%60)].map(v=>String(v).padStart(2,'0')).join(':');
  $('blueKeep').innerHTML='НАШ ЗАМОК <b>'+Math.ceil(p.base)+'</b>';
  $('redKeep').innerHTML='ВРАГ <b>'+Math.ceil(q.base)+'</b>';
+ $('controlCount').textContent='⚑ '+p.sites+' : '+q.sites+' ⚑';
+ $('dominationMine').style.width=(100*p.domination/DOMINATION_SECONDS).toFixed(1)+'%';
+ $('dominationEnemy').style.width=(100*q.domination/DOMINATION_SECONDS).toFixed(1)+'%';
+ const ruling=p.domination>0?0:q.domination>0?1:-1;
+ const count=ruling===0?p.domination:ruling===1?q.domination:0;
+ const remain=Math.max(0,Math.ceil(DOMINATION_SECONDS-count));
+ $('controlTime').textContent=ruling<0?'6 ДЛЯ ПОБЕДЫ':(ruling===0?'НАША ВЛАСТЬ ':'УГРОЗА ')+Math.floor(remain/60)+':'+String(remain%60).padStart(2,'0');
+ $('matchStrip').classList.toggle('under-pressure',ruling===1);
+ $('matchStrip').classList.toggle('holding-ground',ruling===0);
  for(let i=0;i<2;i++){
   const o=$('cap'+i);o.classList.toggle('current',i===captain);o.setAttribute('aria-pressed',String(i===captain));
   const order=s.orders[i];const squadCount=s.squads.filter(u=>u.captain===i).length;
@@ -93,23 +103,29 @@ function syncHUD(){
  $('orderHint').textContent='Коснись карты: '+({capture:'занять',defend:'защитить',raid:'набег на'})[mode]+' цель для '+label;
 }
 function enterGame(s){
- game=s;hasPlayed=true;paused=false;pendingReset=false;hidePanels();root.classList.remove('game-idle');root.classList.add('game-active');
+ game=s;hasPlayed=true;paused=false;pendingReset=false;opts.skill=s.botSkill||'regular';syncDifficulty();hidePanels();root.classList.remove('game-idle');root.classList.add('game-active');
  camera={x:250,y:310,zoom:1.1};mode='capture';captain=0;site=null;last=performance.now();acc=0;computeView();syncHUD();
  notify('Выбери капитана, затем коснись цели на карте');playSound(410,.16,.04);
  storageWrite();
 }
-function startNew(){storageClear();enterGame(createGame(Date.now(),true))}
+function startNew(){storageClear();enterGame(createGame(Date.now(),true,opts.skill))}
+function syncDifficulty(){
+ for(const b of document.querySelectorAll('[data-skill]')){
+  const active=b.dataset.skill===opts.skill;
+  b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));
+ }
+}
 function openMenu(){
  if(game?.phase==='battle')storageWrite();
  game=null;site=null;paused=false;hidePanels();root.classList.add('game-idle');root.classList.remove('game-active');
  camera={x:510,y:310,zoom:.90};computeView();
  try{stored=load(localStorage.getItem(storedKey))}catch{stored=null}
- $('continueBtn').hidden=!stored;screen.menu.hidden=false;
+ $('continueBtn').hidden=!stored;syncDifficulty();screen.menu.hidden=false;
 }
 function pauseGame(){
  if(!game||game.phase!=='battle')return;
  paused=true;storageWrite();hidePanels();screen.pause.hidden=false;
- $('pauseDetail').textContent='День '+(Math.floor(game.time/80)+1)+' · '+stats(game,0).sites+' из 7 владений под нашим знаменем.';
+ $('pauseDetail').textContent='Наши владения: '+stats(game,0).sites+'/7 · Соперник: '+({casual:'спокойный',regular:'равный',veteran:'суровый'}[game.botSkill]||'равный')+'.';
  $('soundBtn').textContent='ЗВУК: '+(opts.sound?'ВКЛ.':'ВЫКЛ.');
  playSound(330,.08,.021);
 }
@@ -121,7 +137,8 @@ function showEnd(){
  paused=true;storageClear();hidePanels();
  const win=game.winner;
  $('outcome').textContent=win===0?'ПОБЕДА':win===1?'ПОРАЖЕНИЕ':'НИЧЬЯ';
- $('outcomeDetail').textContent=win===0?'ВРАЖЕСКИЕ ЗНАМЁНА СЛОМЛЕНЫ':win===1?'НАШИ ВЛАДЕНИЯ ПАЛИ':'ВОЙНА БЕЗ ПОБЕДИТЕЛЯ';
+ const reason=game.victory;
+ $('outcomeDetail').textContent=reason==='domination'?(win===0?'ВЫ УДЕРЖАЛИ ШЕСТЬ ВЛАДЕНИЙ':'ВРАГ УДЕРЖАЛ ШЕСТЬ ВЛАДЕНИЙ'):reason==='score'?'РЕШЕНИЕ ПО ИТОГАМ ДВАДЦАТИ МИНУТ':win===0?'ВРАЖЕСКАЯ КРЕПОСТЬ ПАЛА':win===1?'НАША КРЕПОСТЬ ПАЛА':'ВОЙНА БЕЗ ПОБЕДИТЕЛЯ';
  $('endSites').textContent=stats(game,0).sites+'/7';$('endKills').textContent=game.players[0].kills;
  $('endTime').textContent=Math.floor(game.time/60)+':'+String(Math.floor(game.time%60)).padStart(2,'0');
  screen.end.hidden=false;playSound(win===0?640:160,.36,.037,'triangle');
@@ -206,6 +223,10 @@ $('fortify').onclick=()=>{
  if(res.ok){playSound(220,.22,.034);storageWrite()}syncHUD();
 };
 $('siteClose').onclick=()=>{site=null;syncHUD()};
+document.querySelectorAll('[data-skill]').forEach(btn=>btn.onclick=()=>{
+ opts.skill=btn.dataset.skill;syncDifficulty();playSound(opts.skill==='veteran'?630:opts.skill==='casual'?360:500,.07,.02);
+ try{localStorage.setItem(optionsKey,JSON.stringify(opts))}catch{}
+});
 $('startBtn').onclick=startNew;
 $('continueBtn').onclick=()=>{if(stored)enterGame(stored);else notify('Сохранение не найдено',true)};
 $('pauseBtn').onclick=()=>{if(game&&!paused)pauseGame();else if(paused)resumeGame()};

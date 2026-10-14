@@ -7,3 +7,30 @@
 /* Field-console switches sink instantly on contact and spring back on release. */
 .command-dock button,.recruit-panel button,.dialog button,.menu-plaque button{transition:transform .16s cubic-bezier(.17,1.75,.32,1),filter .10s linear;transform:translateY(0)}
 .command-dock button:active,.recruit-panel button:active,.dialog button:active,.menu-plaque button:active{transform:translateY(3px) scale(.987);filter:brightness(1.13)}
+
+/* V1.1 tactical territory dial — a single slim battlefield indicator, not a second HUD. */
+.match-strip{flex-direction:column;align-items:stretch;gap:4px;padding:7px 10px 6px;width:min(335px,calc(100% - 20px));}
+.match-numbers{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.match-numbers span:first-child b{color:#e4b776}
+.match-numbers span:last-child b{color:#8ec4cc}
+.control-line{display:flex;align-items:center;justify-content:space-between;gap:7px;color:#d9ccb1;white-space:nowrap;font:800 9px/1.3 ui-monospace,Consolas,monospace;letter-spacing:.2px}
+.control-line #controlCount{min-width:66px;color:#e8d9b5}
+.control-line #controlTime{min-width:88px;text-align:right;font-size:8px}
+.control-progress{position:relative;height:6px;flex:1;min-width:35px;background:#182c2a;border:1px solid #777962;box-shadow:inset 0 1px #0b211d;}
+.control-progress i{position:absolute;top:0;bottom:0;width:0;max-width:100%;transition:width .25s linear}
+#dominationMine{left:0;background:#e7bd7e}
+#dominationEnemy{right:0;background:#83bdcb}
+.match-strip.under-pressure{border-color:#89b9c6}
+.match-strip.under-pressure #controlTime{color:#b3e1ec}
+.match-strip.holding-ground{border-color:#dfb974}
+.match-strip.holding-ground #controlTime{color:#f4d59a}
+.challenge-select{display:flex;flex-direction:column;gap:6px;margin:0 0 15px}
+.challenge-select>span{font:800 10px/1.3 ui-monospace,Consolas,monospace;letter-spacing:1.5px;color:#c2b89b}
+.challenge-options{display:flex;gap:5px}
+.challenge-options button{flex:1;min-width:0;min-height:40px;padding:5px 3px;border:1px solid #79826c;color:#c9cdb4;background:#394e40;font:800 10px ui-monospace,Consolas,monospace;letter-spacing:.2px}
+.challenge-options button.selected{background:#e5c18a;color:#24362f;border-color:#fff0b7;box-shadow:inset 0 2px #fbdfae,0 2px #152622}
+.menu-illustration{margin:12px 0 13px}
+.mapbox{top:calc(env(safe-area-inset-top,0px) + 128px)}
+.zoom{top:calc(env(safe-area-inset-top,0px) + 128px)}
+@media(max-height:680px){.challenge-select{margin-bottom:8px;gap:3px}.challenge-options button{min-height:33px;font-size:9px}.mapbox,.zoom{top:calc(env(safe-area-inset-top,0px) + 107px)}.menu-plaque .howto{margin-top:12px}}
+@media(max-width:380px){.match-strip{width:min(306px,calc(100% - 20px));padding:6px}.control-line{gap:3px;font-size:8px}.control-line #controlCount{min-width:62px}.control-line #controlTime{min-width:74px;font-size:8px}}

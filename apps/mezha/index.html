@@ -19,7 +19,8 @@
     <button id="pauseBtn" class="icon-action" title="Пауза" aria-label="Пауза" data-native-press>Ⅱ</button>
   </header>
   <div class="match-strip" id="matchStrip" data-ui>
-    <span id="blueKeep">ЗАМОК <b>480</b></span><span id="clock">00:00</span><span id="redKeep">ВРАГ <b>480</b></span>
+    <div class="match-numbers"><span id="blueKeep">ЗАМОК <b>480</b></span><span id="clock">00:00</span><span id="redKeep">ВРАГ <b>480</b></span></div>
+    <div class="control-line"><span id="controlCount">ВЛАДЕНИЯ 2 : 2</span><div class="control-progress"><i id="dominationMine"></i><i id="dominationEnemy"></i></div><span id="controlTime">6 ДЛЯ ПОБЕДЫ</span></div>
   </div>
   <div class="mapbox" id="mapbox" data-ui><canvas id="minimap" aria-label="Миникарта, нажмите для перемещения камеры" data-pressable></canvas><button type="button" id="fitBtn" data-native-press title="В центр карты">◎</button></div>
   <div class="zoom" data-ui><button id="zoomPlus" aria-label="Приблизить" data-native-press>+</button><button id="zoomMinus" aria-label="Отдалить" data-native-press>−</button></div>
@@ -58,9 +59,10 @@
       <h1>МЕЖА<span class="period">.</span></h1>
       <p class="menu-description">Два замка. Семь владений. Капитаны исполняют твои намерения — но сражаются по-своему.</p>
       <div class="menu-illustration"><span class="drawn-keep">♜</span><span class="tiny-track">──────── ⚑ ────────</span><span class="drawn-keep enemy">♜</span></div>
+      <div class="challenge-select"><span>СОПЕРНИК</span><div class="challenge-options" role="group" aria-label="Сложность противника"><button type="button" data-skill="casual" data-native-press aria-pressed="false">СПОКОЙНО</button><button type="button" data-skill="regular" class="selected" data-native-press aria-pressed="true">РАВНО</button><button type="button" data-skill="veteran" data-native-press aria-pressed="false">СУРОВО</button></div></div>
       <button id="startBtn" class="major-btn" data-native-press>БИТВА ПРОТИВ БОТА <span>→</span></button>
       <button id="continueBtn" class="minor-btn" data-native-press hidden>ПРОДОЛЖИТЬ СОХРАНЁННЫЙ МАТЧ</button>
-      <div class="howto"><span>Выбирай капитана</span><span>Ставь знамя</span><span>Захвати переправу перед осадой</span></div>
+      <div class="howto"><span>Выбирай капитана</span><span>Ставь знамя</span><span>Шесть владений дают победу при удержании</span></div>
       <a href="../../" class="library-link" data-app-control>← В Pocket Works</a>
     </div>
   </section>
@@ -72,7 +74,7 @@
   </section>
   <div class="confirm" id="confirm" data-ui hidden><div><h2>Начать заново?</h2><p>Текущий матч будет завершён без сохранения.</p><div><button id="cancelReset" data-native-press>ОТМЕНА</button><button id="acceptReset" data-native-press>ЗАНОВО</button></div></div></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МЕЖА" data-app-version="1.0.2"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МЕЖА" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
