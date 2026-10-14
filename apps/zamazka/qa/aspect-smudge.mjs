@@ -90,8 +90,23 @@ assert.equal(migrated.edition,ARCHIVE_EDITION);
 assert.equal(migrated.variation,old.variation);
 assert.equal(JSON.stringify(migrated.strokes),before,'old archive vector coordinates remain unchanged');
 assert.equal(artworkAspect({naturalWidth:500,naturalHeight:1000}),.5);
+const restoredFrames=[];
+const geometryContext={drawImage(...args){restoredFrames.push(args)}};
+const {drawArtwork,setArtworkFrame}=await import('../artworks.js');
+const portrait={naturalWidth:800,naturalHeight:1600};
+drawArtwork(geometryContext,portrait,1,true);
+assert.deepEqual(restoredFrames[0].slice(5),[187.5,0,225,450],
+ 'legacy portrait uses centered 4:3 letterbox without rewriting old coordinates');
+const fake={style:{aspectRatio:'',setProperty(){}},closest(){return {style:{setProperty(){}}}}};
+assert.equal(setArtworkFrame(fake,portrait,true),4/3,'legacy archive can recover the historic 4:3 frame');
+assert.equal(setArtworkFrame(fake,portrait,false),.5,'current archive remains natural aspect by default');
+const viewer=readFileSync(new URL('../round-review.js',import.meta.url),'utf8');
+assert.match(viewer,/data-archive-geometry/,'archive includes manual compatibility format switch');
+assert.match(viewer,/paintArchivePair\(\)\.then\(draw\)/,
+ 'archive aspect toggle re-renders the saved strokes and original together');
+
 const editorSource=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
-assert.match(editorSource,/renderStrokes\(paint,strokes\|\|\[\],z,artworkAspect\(image\)\)/,
+assert.match(editorSource,/renderStrokes\(paint,strokes\|\|\[\],z,legacyFrame\?W\/H:artworkAspect\(image\)\)/,
  'archive/reveal replays all strokes with aspect correction');
 assert.match(editorSource,/renderStrokes\(this\.inkCtx,this\.strokes,this\.zone,artworkAspect\(img\)\)/,
  'live editor and archived render use the same aspect correction');
