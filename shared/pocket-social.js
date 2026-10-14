@@ -484,7 +484,7 @@ function renderLiveChanges(){
   }
 }
 async function pollOpenSocial(){
-  if(!dialog?.open||document.hidden||state.busy||state.loading||livePollBusy)return;
+  if(!dialog?.open||!state.me||document.hidden||state.busy||state.loading||livePollBusy)return;
   if(!navigator.onLine){updateConnectionStatus(true);return;}
   livePollBusy=true;
   const tab=state.tab,before=visibleSocialSignature(state.me,tab),peerId=state.other?.id;
@@ -545,7 +545,7 @@ async function open(room='',editNow=false,gameId='zamazka'){
   state.room=room||'';state.tab=room?'invite':'profile';state.edit=false;state.other=null;
   state.loading=true;resetNotice();render();
   try{await Promise.all([reload(false),loadCatalog()]);updateConnectionStatus(false);lastCatalogCheck=Date.now()}
-  catch(e){state.me=null;state.error=e.message;updateConnectionStatus(true)}
+  catch(e){state.me=null;state.error=e.message;updateConnectionStatus(e.message===errors.network||!navigator.onLine)}
   finally{state.loading=false}
   if(state.me&&editNow){
     state.tab='profile';state.edit=true;state.draft={...state.me.profile};
@@ -828,8 +828,10 @@ function install(){
       updateNotification(0);if(dialog.open)render();
     }else{
       if(state.cloudAccount&&state.cloudAccount!==event.detail.user.id)resetCloud();
-      if(dialog.open)void pollOpenSocial();
-      else reload(false).catch(()=>{});
+      liveRevision=null;
+      if(dialog.open){
+        reload(false).then(applied=>{if(applied){updateConnectionStatus(false);render()}}).catch(()=>{});
+      }else reload(false).catch(()=>{});
     }
     pulse();
   });
