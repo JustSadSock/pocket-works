@@ -156,7 +156,8 @@ const module: PocketModule<State>={
    // still have time to complete. Do not render voting before that window.
    if(state.deadline&&state.phase!=='results'&&now()>=
       (state.phase==='drawing'&&state.drawingSeconds>0
-       ?state.deadline+FINAL_SUBMISSION_GRACE_MS:state.deadline))step(state);
+       ?state.deadline+(members(state).every(p=>state.assignments[p.id]?.strokes!==null)
+          ?0:FINAL_SUBMISSION_GRACE_MS):state.deadline))step(state);
    if(a.type==='pulse')return {state,events:emit(state)};
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
    if(a.type==='kick_player'){
