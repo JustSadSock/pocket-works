@@ -1,9 +1,9 @@
 const CACHE_PREFIX='flotiliya-';
 const CACHE_NAME='flotiliya-v0.1.0';
-const APP_VERSION='0.1.0';
+const APP_VERSION='0.2.0';
 const RELEASE_DATE='2026-10-14';
-const NOTES=['Одновременные морские сражения, абордаж, ветераны, ремонт и улучшения.'];
-const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const NOTES=['Два приказа за ход, нарисованные маршруты, острова и новые модели кораблей.','Обновлён интерфейс, добавлены варианты погоды и динамические эффекты.'];
+const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./sea-art.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const scope=new URL('./',self.registration.scope);
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await Promise.all(SHELL.map(async entry=>{const url=new URL(entry,scope);try{const resp=await fetch(url.href,{cache:'reload'});if(resp.ok)await cache.put(url.href,resp);}catch{}}));await self.skipWaiting();})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim();})()));
