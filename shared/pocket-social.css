@@ -436,3 +436,56 @@
 .pws-achievement button{justify-self:start;background:#daba83;color:#25363b;border:0;border-radius:7px;font-weight:800;font-size:11px;padding:7px 13px;margin-top:4px}
 .pws-maskot-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:700px){.pws-maskot-tabs{display:flex;grid-template-columns:none}}
+
+/* Friend and invitation cards are scaled identity cards, not full-width banners. */
+.pws-list{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,265px),1fr));
+  gap:12px;
+  align-items:stretch;
+}
+.pws-person[data-background]{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  align-items:stretch;
+  min-width:0;
+  min-height:184px;
+  aspect-ratio:1.7;
+  padding:13px 15px;
+  gap:8px;
+  border-radius:9px;
+}
+.pws-person__paint{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  opacity:.25;pointer-events:none;z-index:0;mix-blend-mode:screen;
+}
+.pws-person__top,.pws-person__name,.pws-person__actions{position:relative;z-index:1;min-width:0}
+.pws-person__top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pws-person[data-background] .pws-person__avatar{
+  width:64px;height:64px;flex:none;min-width:0;min-height:0;
+  border-radius:8px;
+}
+.pws-person__stamp{
+  flex:0 0 auto;font:750 9px/1.5 ui-monospace,monospace;
+  letter-spacing:.075em;text-align:right;opacity:.76;
+}
+.pws-person__name{align-self:end}
+.pws-person__name strong{
+  display:block;font-size:clamp(16px,2.4vw,21px);font-weight:800;
+  letter-spacing:-.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.pws-person__name small{
+  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:11px;line-height:1.35;
+}
+.pws-person__actions{
+  display:flex;flex:0 0 auto;flex-wrap:nowrap;
+  align-items:center;justify-content:flex-start;gap:7px;margin:0;
+}
+.pws-person__actions .pws-btn{
+  flex:0 1 auto;min-width:0;min-height:34px;
+  padding:7px 12px;white-space:nowrap;
+}
+@media(max-width:380px){
+  .pws-person[data-background]{aspect-ratio:auto;min-height:185px}
+}
