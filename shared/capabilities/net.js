@@ -123,6 +123,7 @@ export class PocketNet {
       socket.onclose = () => {
         if (!authenticated) reject(new Error('PocketNet connection closed'));
         if (this.socket !== socket) return;
+        removeInviteShortcut(this);
         this.emit('disconnected', {});
         if (!this.closed) setTimeout(() => this.connect().catch(error => this.emit('error', error)), Math.min(1000 * 2 ** this.retry++, 15000));
       };
