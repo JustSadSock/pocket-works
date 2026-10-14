@@ -177,8 +177,13 @@ function siteTick(s,z,dt){
   if(z.attacker!==attacker){z.attacker=attacker;z.capture=Math.max(0,z.capture*.55)}
   z.capture+=dt*(3.0+Math.min(3,sides[attacker]-sides[1-attacker])*.9)/(1+z.fort*.48);
   if(z.capture>=100){z.owner=attacker;z.capture=0;z.fort=Math.max(0,z.fort-1);s.events.push({type:'capture',x:z.x,y:z.y,side:attacker,age:0});log(s,(attacker===0?'Ваши войска':'Противник')+' заняли '+z.name,attacker)}
- }else if(attacker===z.owner){z.capture=Math.max(0,z.capture-dt*5);z.attacker=-1}
- else {z.capture=Math.max(0,z.capture-dt*2)}
+ }else if(z.owner>=0&&sides[z.owner]>0){
+  // Friendly defenders actively restore control of an attacked position.
+  z.capture=Math.max(0,z.capture-dt*5);z.attacker=-1;
+ }else {
+  z.capture=Math.max(0,z.capture-dt*2);
+  if(z.capture===0)z.attacker=-1;
+ }
  if(z.fort>0&&z.owner>=0){
   z.shot=(z.shot||0)-dt;
   if(z.shot<=0){
