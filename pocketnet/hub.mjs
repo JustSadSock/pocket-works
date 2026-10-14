@@ -13,6 +13,10 @@ const MAX_STATE = 256 * 1024;
 const MAX_ROOMS = 32;
 const MAX_CONNECTIONS = 48;
 const MAX_PLAYERS = 8;
+// Versioned game modules enforce these caps in onJoin; mirror them for accurate
+// discoverability before a player follows an invitation link.
+const GAME_SEATS=Object.freeze({'blind-pals':2,flagpost:2,'last-tile-duel':2,'kromka-duel':2,
+  lipki:4,natyazhenie:5,komnatka:5,'uzel-party':6,'ne-tem-golosom':6});
 const ROOM_TTL = 30 * 60_000;
 const SESSION_TTL = 7 * 86400_000;
 const GAME_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -294,8 +298,7 @@ export class PocketNetHub {
         const mod=this.module(room.game_id,room.version);
         if(!mod)continue;
         const players=JSON.parse(room.players);
-        const max=Math.min(MAX_PLAYERS,Number(mod.MAX_PLAYERS)||
-          (room.game_id==='blind-pals'?2:MAX_PLAYERS));
+        const max=Math.min(MAX_PLAYERS,GAME_SEATS[room.game_id]||Number(mod.MAX_PLAYERS)||MAX_PLAYERS);
         const lobby=room.phase==='lobby',count=players.length;
         for(const who of live){
           if(who.roomId!==room.id||!players.some(p=>p.accountId===who.accountId))continue;
@@ -314,8 +317,8 @@ export class PocketNetHub {
       if (!uuid.test(data?.roomId || '') || !GAME_ID.test(data?.gameId || '')) return json({error:'invalid_room'},400);
       const room = this.readRoom(data.roomId);
       const module=room&&this.module(room.gameId,room.version);
-      const maxSeats=module?Math.min(MAX_PLAYERS,Number(module.MAX_PLAYERS)||
-        (room.gameId==='blind-pals'?2:MAX_PLAYERS)):0;
+      const maxSeats=module?Math.min(MAX_PLAYERS,GAME_SEATS[room.gameId]||
+        Number(module.MAX_PLAYERS)||MAX_PLAYERS):0;
       if (!room || room.gameId !== data.gameId || room.state?.phase !== 'lobby' ||
           !module || room.players.length>=maxSeats)
         return json({error:'room_unavailable'},409);
