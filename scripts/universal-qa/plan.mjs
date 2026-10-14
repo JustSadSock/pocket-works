@@ -48,14 +48,14 @@ function localTests(dir) {
 
 function validateSuite(dir, suite) {
   if (!suite || typeof suite !== 'object' || Array.isArray(suite) || !IDENT.test(suite.id)) throw Error('QA suite needs a kebab-case id');
-  if (!['node-test', 'node', 'visual', 'playwright'].includes(suite.kind)) throw Error('Unknown QA kind in ' + suite.id);
+  if (!['node-test', 'node', 'browser-node', 'visual', 'playwright'].includes(suite.kind)) throw Error('Unknown QA kind in ' + suite.id);
   if (!['smoke', 'deep'].includes(suite.tier ?? 'smoke')) throw Error('QA tier must be smoke or deep');
   const normalized = { ...suite, tier: suite.tier ?? 'smoke' };
   if (suite.kind === 'node-test') {
     if (!Array.isArray(suite.files) || !suite.files.length || suite.files.length > 40)
       throw Error('node-test requires 1-40 files');
     suite.files.forEach(file => scopedFile(dir, file, ['.test.mjs']));
-  } else if (suite.kind === 'node') {
+  } else if (suite.kind === 'node' || suite.kind === 'browser-node') {
     scopedFile(dir, suite.entry, ['.mjs']);
     if (suite.args !== undefined && (!Array.isArray(suite.args) || suite.args.length > 20 ||
       suite.args.some(a => typeof a !== 'string' || a.length > 300))) throw Error('Invalid node arguments');
@@ -117,7 +117,7 @@ export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke' }) {
       (profile === 'deep' || s.tier === 'smoke'));
     if (suite !== 'all' && !chosen.length) throw Error('Suite not available for ' + app + ': ' + suite);
     for (const selected of chosen) {
-      const seeds = selected.kind === 'node' && selected.seeds?.length ? selected.seeds : [null];
+      const seeds = ['node', 'browser-node'].includes(selected.kind) && selected.seeds?.length ? selected.seeds : [null];
       for (const seed of seeds) {
         const key = [app, selected.id, ...(seed === null ? [] : [String(seed)])].join('-');
         tasks.push({ key, app, suite: selected.id, kind: selected.kind, seed });
@@ -164,7 +164,7 @@ export function changedApps(root, base, head) {
 export function partition(tasks) {
   return {
     cpu: { include: tasks.filter(t => ['node', 'node-test'].includes(t.kind)) },
-    browser: { include: tasks.filter(t => ['visual', 'playwright'].includes(t.kind)) }
+    browser: { include: tasks.filter(t => ['visual', 'playwright', 'browser-node'].includes(t.kind)) }
   };
 }
 
