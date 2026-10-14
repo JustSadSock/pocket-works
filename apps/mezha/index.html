@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#263c38">
+<meta name="description" content="МЕЖА — пиксельная RTS непрямого управления с живыми капитанами и осадами.">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="МЕЖА">
+<title>МЕЖА · Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main class="app-shell" data-app-shell id="app">
+  <canvas id="field" data-gesture-surface data-block-callout aria-label="Карта сражения. Проведите пальцем для перемещения, коснитесь цели для приказа."></canvas>
+  <header class="hud" id="hud" data-ui>
+    <div class="hud-brand"><span class="little-shield"></span><b>МЕЖА</b></div>
+    <div class="hud-economy"><span aria-label="Золото"><i class="coin"></i><b id="gold">142</b></span><span aria-label="Дерево"><i class="wood"></i><b id="wood">100</b></span><span aria-label="Пища"><i class="food"></i><b id="food">120</b></span></div>
+    <button id="pauseBtn" class="icon-action" title="Пауза" aria-label="Пауза" data-native-press>Ⅱ</button>
+  </header>
+  <div class="match-strip" id="matchStrip" data-ui>
+    <span id="blueKeep">ЗАМОК <b>480</b></span><span id="clock">00:00</span><span id="redKeep">ВРАГ <b>480</b></span>
+  </div>
+  <div class="mapbox" id="mapbox" data-ui><canvas id="minimap" aria-label="Миникарта, нажмите для перемещения камеры" data-pressable></canvas><button type="button" id="fitBtn" data-native-press title="Вся карта">◎</button></div>
+  <div class="zoom" data-ui><button id="zoomPlus" aria-label="Приблизить" data-native-press>+</button><button id="zoomMinus" aria-label="Отдалить" data-native-press>−</button></div>
+  <div class="message" id="toast" aria-live="polite"></div>
+  <aside id="siteCard" class="site-card" data-ui hidden><div><b id="siteName"></b><small id="siteDetails"></small></div><button id="fortify" data-native-press>СТРОИТЬ БАШНЮ</button><button id="siteClose" aria-label="Закрыть" data-native-press>×</button></aside>
+  <section id="commandDock" class="command-dock" data-ui>
+    <div class="command-top">
+      <div class="captains"><button id="cap0" class="captain current" data-native-press aria-pressed="true"><span class="portrait sword">♜</span><span><b>БЕРТРАН</b><small>НАТИСК</small></span></button><button id="cap1" class="captain" data-native-press aria-pressed="false"><span class="portrait bow">⌁</span><span><b>МАРТЕН</b><small>МАНЁВР</small></span></button></div>
+      <button id="recruitBtn" class="troop-button" data-native-press><span class="troop-symbol">⚒</span><b>ВОЙСКА</b><small id="troopCount">4 / 12</small></button>
+    </div>
+    <div class="orders">
+      <button class="order-button active" id="capture" data-mode="capture" data-native-press><span class="stamp">⚑</span><b>ЗАНЯТЬ</b></button>
+      <button class="order-button" id="defend" data-mode="defend" data-native-press><span class="stamp">▣</span><b>ЗАЩИТА</b></button>
+      <button class="order-button" id="raid" data-mode="raid" data-native-press><span class="stamp">➶</span><b>НАБЕГ</b></button>
+    </div>
+    <div class="order-hint" id="orderHint">Выбери цель на карте для Бертрана</div>
+  </section>
+  <section id="recruitPanel" class="recruit-panel" data-ui hidden>
+    <div class="drawer-title"><b>СОЗВАТЬ ВОЙСКО</b><button id="recruitClose" aria-label="Закрыть набор" data-native-press>×</button></div>
+    <div class="unit-options">
+      <button data-recruit="levy" data-native-press><span class="unit-art levy"></span><b>Ополчение</b><small>52 зол. · 12 пищи</small></button>
+      <button data-recruit="bow" data-native-press><span class="unit-art archer"></span><b>Лучники</b><small>70 зол. · 16 дер. · 13 пищи</small></button>
+      <button data-recruit="knight" data-native-press><span class="unit-art knight"></span><b>Латники</b><small>104 зол. · 24 дер. · 18 пищи</small></button>
+    </div>
+  </section>
+  <section id="startScreen" class="veil start-screen" data-ui>
+    <div class="menu-plaque">
+      <div class="tiny-standard"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="eyebrow">СТРАТЕГИЯ НЕПРЯМОГО УПРАВЛЕНИЯ</p>
+      <h1>МЕЖА<span class="period">.</span></h1>
+      <p class="menu-description">Два замка. Семь владений. Капитаны исполняют твои намерения — но сражаются по-своему.</p>
+      <div class="menu-illustration"><span class="drawn-keep">♜</span><span class="tiny-track">──────── ⚑ ────────</span><span class="drawn-keep enemy">♜</span></div>
+      <button id="startBtn" class="major-btn" data-native-press>БИТВА ПРОТИВ БОТА <span>→</span></button>
+      <button id="continueBtn" class="minor-btn" data-native-press hidden>ПРОДОЛЖИТЬ СОХРАНЁННЫЙ МАТЧ</button>
+      <div class="howto"><span>Выбирай капитана</span><span>Ставь знамя</span><span>Наблюдай за исполнением</span></div>
+      <a href="../../" class="library-link" data-app-control>← В Pocket Works</a>
+    </div>
+  </section>
+  <section id="pauseScreen" class="veil panel-veil" data-ui hidden>
+    <div class="dialog"><h2>ПЕРЕДЫШКА</h2><p id="pauseDetail">Войска ждут твоего возвращения.</p><button id="resumeBtn" class="major-btn" data-native-press>ПРОДОЛЖИТЬ <span>→</span></button><button id="soundBtn" class="minor-btn" data-native-press>ЗВУК: ВКЛ.</button><button id="restartBtn" class="minor-btn" data-native-press>НОВАЯ БИТВА</button><button id="menuBtn" class="minor-btn" data-native-press>В ГЛАВНОЕ МЕНЮ</button><a href="../../" class="library-link" data-app-control>← В Pocket Works</a></div>
+  </section>
+  <section id="endScreen" class="veil panel-veil" data-ui hidden>
+    <div class="dialog"><p class="eyebrow" id="outcomeDetail">ВОЙНА ОКОНЧЕНА</p><h2 id="outcome">ПОБЕДА</h2><div class="end-numbers"><span>Владений <b id="endSites"></b></span><span>Потерь врага <b id="endKills"></b></span><span>Время <b id="endTime"></b></span></div><button id="againBtn" class="major-btn" data-native-press>НОВАЯ БИТВА <span>→</span></button><button id="endMenuBtn" class="minor-btn" data-native-press>В МЕНЮ</button><a href="../../" class="library-link" data-app-control>← В Pocket Works</a></div>
+  </section>
+  <div class="confirm" id="confirm" data-ui hidden><div><h2>Начать заново?</h2><p>Текущий матч будет завершён без сохранения.</p><div><button id="cancelReset" data-native-press>ОТМЕНА</button><button id="acceptReset" data-native-press>ЗАНОВО</button></div></div></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МЕЖА" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
