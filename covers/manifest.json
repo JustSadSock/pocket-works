@@ -3192,11 +3192,11 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.0.1&pw_fp=1d06fa6925c08c3acdd1a9c3"
+      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.0.2&pw_fp=74ac842ebf23961d4fd03b12"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "2a1f1fac15647de679e08bea0a8e6ecdf63f5360",
-    "lastAttemptAt": "2026-10-14T15:09:01.783Z"
+    "lastAttemptRevision": "a2a361bac177c16e13bd7de1e282bdcc062de751",
+    "lastAttemptAt": "2026-10-14T15:22:23.169Z"
   }
 }
