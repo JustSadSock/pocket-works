@@ -40,3 +40,6 @@ smudgeStroke(raster,{t:'smudge',s:22,p:p.slice(0,4)},2);
 smudgeStroke(raster,{t:'smudge',s:22,p},4);
 assert.deepEqual(pixels,completed,'incremental preview must exactly match replayed saved artwork');
 console.log('ZAMAZKA: smudging mixes existing pixels without affecting distant paint OK');
+
+// Protect wide/portrait editor coordinates, legacy archives and smudge edges.
+import './aspect-smudge.mjs';
