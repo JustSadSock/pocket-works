@@ -13,6 +13,7 @@ const errors={invalid_code:'Неверный код.',sign_in_required:'Войд
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
 const state={editorTab:'animal',paintOpen:false,reward:null,tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,appearance:false}};
 let dialog,content,entry,paintSession=null,searchClock=0,pollClock=0,heartbeatClock=0;
+let livePollClock=0,livePollBusy=false,reloadVersion=0,lastPortraitKey='',lastNotificationKey='';
 const api=async(path,body)=>{
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
   try{
@@ -52,10 +53,13 @@ const presenceLabel=p=>p.online?'● В сети'+(p.gameId?' · '+gameLabel(p.g
 function personRow(p,actions,subtitle=presenceLabel(p)){
   const background=backgrounds.some(t=>t[0]===p.background)?p.background:'forest';
   const frame=frames.some(t=>t[0]===p.frame)?p.frame:'clean';
-  return '<div class="pws-person" data-background="'+background+'" data-frame="'+frame+'">'+
-    '<div class="pws-person__avatar">'+avatar(p)+'</div>'+
+  const painting=p.backgroundMode==='drawing'&&p.artwork?
+    '<img class="pws-person__paint" src="'+esc(p.artwork)+'" alt="">':'';
+  return '<article class="pws-person" data-background="'+background+'" data-frame="'+frame+'">'+painting+
+    '<div class="pws-person__top"><div class="pws-person__avatar">'+avatar(p)+'</div>'+
+    '<span class="pws-person__stamp">POCKET / ID<br>PLAYER CARD</span></div>'+
     '<div class="pws-person__name"><strong>'+esc(p.nickname)+'</strong><small>'+esc(subtitle)+'</small></div>'+
-    '<div class="pws-person__actions">'+actions+'</div></div>';
+    '<div class="pws-person__actions">'+actions+'</div></article>';
 }
 function person(p){
   return personRow(p,button('open-user','Профиль','quiet','data-id="'+esc(p.id)+'"'));
@@ -342,7 +346,11 @@ function render(){
 function updateNotification(count){
   const invites=(state.me?.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
   const requests=(state.me?.incoming||[]).length;
-  document.dispatchEvent(new CustomEvent('pocket-social:notifications',{detail:{count,invites,requests}}));
+  const notificationKey=JSON.stringify([count,invites,requests]);
+  if(notificationKey!==lastNotificationKey){
+    lastNotificationKey=notificationKey;
+    document.dispatchEvent(new CustomEvent('pocket-social:notifications',{detail:{count,invites,requests}}));
+  }
   if(!entry)return;
   let badge=q('.pws-entry__count',entry);
   if(!badge){
@@ -355,30 +363,83 @@ function updateNotification(count){
   entry.setAttribute('aria-label',count?('Pocket ID: '+count+' новых уведомлений'):'Pocket ID: Профиль и друзья');
 }
 async function reload(rerender=true){
+  const requestVersion=++reloadVersion;
   const data=await api('me');
+  if(requestVersion!==reloadVersion)return false;
   // Ignore an in-flight response from a previous account after sign-out/switch.
   const currentAccount=window.PocketID?.getUser?.();
   if(q('#pocket-id-trigger')&&(!currentAccount?.complete||data.profile.id!==currentAccount.id)){
-    state.me=null;resetCloud();updateNotification(0);if(rerender)render();return;
+    state.me=null;lastPortraitKey='';resetCloud();updateNotification(0);
+    if(rerender)render();
+    return false;
   }
   if(state.cloudAccount&&state.cloudAccount!==data.profile.id)resetCloud();
   state.me=data;
-  const accountButton=q('#pocket-id-trigger');
-  if(accountButton && data.profile?.maskot){
-    accountButton.innerHTML='<span class="pw-social-maskot-nav">'+mascotSvg(data.profile.maskot,{unlocks:data.profile.unlocked||[]})+'</span>';
-  } else if(accountButton && data.profile?.artwork){
-    accountButton.innerHTML='<img class="pw-social-personal-avatar" src="'+esc(data.profile.artwork)+'" alt="">';
-  } else if(accountButton?.querySelector('.pw-social-personal-avatar,.pw-social-maskot-nav')){
-    const fallback=q('#pocket-id-active-avatar .pw-id-avatar')?.outerHTML;
-    accountButton.innerHTML=fallback?fallback.replace('pw-id-avatar','pw-id-nav-avatar'):
-      '<span class="pw-id-nav-glyph" aria-hidden="true">◎</span>';
+  const portraitKey=JSON.stringify([data.profile.id,data.profile.avatar,data.profile.artwork,data.profile.maskot,data.profile.unlocked]);
+  // Polling must not replace the nav avatar DOM every two seconds.
+  if(portraitKey!==lastPortraitKey){
+    const accountButton=q('#pocket-id-trigger');
+    if(accountButton && data.profile?.maskot){
+      accountButton.innerHTML='<span class="pw-social-maskot-nav">'+mascotSvg(data.profile.maskot,{unlocks:data.profile.unlocked||[]})+'</span>';
+    } else if(accountButton && data.profile?.artwork){
+      accountButton.innerHTML='<img class="pw-social-personal-avatar" src="'+esc(data.profile.artwork)+'" alt="">';
+    } else if(accountButton?.querySelector('.pw-social-personal-avatar,.pw-social-maskot-nav')){
+      const fallback=q('#pocket-id-active-avatar .pw-id-avatar')?.outerHTML;
+      accountButton.innerHTML=fallback?fallback.replace('pw-id-avatar','pw-id-nav-avatar'):
+        '<span class="pw-id-nav-glyph" aria-hidden="true">◎</span>';
+    }
+    lastPortraitKey=portraitKey;
+    document.dispatchEvent(new CustomEvent('pocket-social:portrait',{detail:{accountId:data.profile.id,artwork:data.profile.artwork||'',maskot:data.profile.maskot||null}}));
   }
   const pending=(data.invites||[]).filter(i=>i.incoming&&i.status==='pending').length;
   const requests=(data.incoming||[]).length;
   updateNotification(pending+requests);
-  document.dispatchEvent(new CustomEvent('pocket-social:portrait',{detail:{accountId:data.profile.id,artwork:data.profile.artwork||'',maskot:data.profile.maskot||null}}));
   if(rerender)render();
+  return true;
 }
+// Track user-visible data, not request timestamps or heartbeat activity.
+function visibleSocialSignature(data,tab){
+  if(!data)return 'signed-out';
+  return JSON.stringify(tab==='profile'?[data.profile]:
+    [data.profile?.id,data.friends,data.incoming,data.outgoing,data.blocked,data.invites]);
+}
+function renderLiveChanges(){
+  const y=content.scrollTop,active=document.activeElement;
+  const searchFocused=active?.id==='pws-search';
+  const start=searchFocused?active.selectionStart:null;
+  const end=searchFocused?active.selectionEnd:null;
+  const focusedAction=content.contains(active)?active?.dataset?.pws:null;
+  const focusedId=content.contains(active)?active?.dataset?.id:null;
+  render();
+  content.scrollTop=y;
+  if(searchFocused){
+    const field=q('#pws-search',dialog);
+    if(field){
+      field.focus({preventScroll:true});
+      if(start!==null&&end!==null)field.setSelectionRange(start,end);
+    }
+  }else if(focusedAction){
+    const next=[...content.querySelectorAll('[data-pws]')].find(node=>
+      node.dataset.pws===focusedAction&&node.dataset.id===focusedId);
+    next?.focus({preventScroll:true});
+  }
+}
+async function pollOpenSocial(){
+  if(!dialog?.open||document.hidden||!navigator.onLine||state.busy||state.loading||livePollBusy)return;
+  livePollBusy=true;
+  const tab=state.tab,before=visibleSocialSignature(state.me,tab);
+  try{
+    const applied=await reload(false);
+    if(applied&&dialog.open&&!state.busy&&!state.loading&&!state.edit&&tab===state.tab&&
+       before!==visibleSocialSignature(state.me,tab))renderLiveChanges();
+  }catch{
+    // Transient failures stay invisible. Existing content remains usable.
+  }finally{livePollBusy=false}
+}
+function startLivePolling(){
+  if(!livePollClock)livePollClock=setInterval(()=>{void pollOpenSocial()},2000);
+}
+
 async function loadCatalog(){
   try{
     const r=await fetch('/apps.json',{cache:'force-cache'});
@@ -389,6 +450,7 @@ function resetNotice(){state.notice='';state.error='';state.confirm=null}
 async function open(room='',editNow=false,gameId='zamazka'){
   state.game=['zamazka','blind-pals'].includes(gameId)?gameId:'zamazka';
   if(!dialog.open)dialog.showModal();
+  startLivePolling();
   state.room=room||'';state.tab=room?'invite':'profile';state.edit=false;state.other=null;
   state.loading=true;resetNotice();render();
   try{await Promise.all([reload(false),loadCatalog()])}
@@ -508,6 +570,7 @@ function install(){
     '<footer class="pws-mobile-exit">'+button('close','Закрыть меню')+'</footer></div>';
   document.body.append(dialog);content=q('#pws-content',dialog);
   dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
+  dialog.addEventListener('close',()=>{clearInterval(livePollClock);livePollClock=0;});
   dialog.addEventListener('change',e=>{
     if(!state.draft)return;
     const t=e.target;
@@ -632,15 +695,26 @@ function install(){
   }
   heartbeatClock=setInterval(pulse,32000);
   pollClock=setInterval(async()=>{
-    if(document.visibilityState==='hidden'||!navigator.onLine||state.edit)return;
-    try{await reload(dialog.open&&['friends','invites'].includes(state.tab))}catch{}
+    if(dialog.open||document.visibilityState==='hidden'||!navigator.onLine)return;
+    try{await reload(false)}catch{}
   },22000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){pulse();reload(false).catch(()=>{})}});
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden){
+      pulse();
+      if(dialog.open)void pollOpenSocial();
+      else reload(false).catch(()=>{});
+    }
+  });
   document.addEventListener('pocket-id:changed',event=>{
     if(!event.detail?.user?.complete){
+      reloadVersion++;lastPortraitKey='';
       state.me=null;state.other=null;state.edit=false;state.results=[];resetCloud();
       updateNotification(0);if(dialog.open)render();
-    }else{if(state.cloudAccount&&state.cloudAccount!==event.detail.user.id)resetCloud();reload(false).catch(()=>{});}
+    }else{
+      if(state.cloudAccount&&state.cloudAccount!==event.detail.user.id)resetCloud();
+      if(dialog.open)void pollOpenSocial();
+      else reload(false).catch(()=>{});
+    }
     pulse();
   });
   pulse();reload(false).catch(()=>{});
