@@ -1185,7 +1185,15 @@ zamazkaCloud=createZamazkaCloud({
  notify
 });
 const savedRoom=(()=>{try{return JSON.parse(tabStorage().getItem('pocket-net:'+POCKETNET_URL)||'null')}catch{return null}})();
-if(q.has('room'))setup('join');
+if(q.has('room')){
+ setup('join');
+ // A verified Pocket ID may enter a valid invitation without pressing Join again.
+ // Guests keep the explicit name form, rather than silently creating an identity.
+ void getPocketIdentity({force:true}).then(identity=>{
+  if(identity?.complete&&page==='setup'&&invitedRoom&&q.get('room')===invitedRoom)
+   void connect('join');
+ }).catch(()=>{});
+}
 else if(savedRoom?.roomId&&savedRoom?.token){
  change('<section class="page center connecting-room"><span class="busy"></span><h2>Возвращаемся в зал…</h2><p class="hint">Восстанавливаем комнату.</p><button class="btn ghost wide" data-action="menu">Выйти</button></section>','connecting');
  void connect('resume');
