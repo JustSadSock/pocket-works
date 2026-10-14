@@ -207,7 +207,7 @@ html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide-rim {
 }
 html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide-rim::before {display:none}
 html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide img {
- border:1px solid #261e17;background:#302920;object-fit:fill;
+ border:1px solid #261e17;background:#302920;object-fit:contain;
 }
 html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide[data-slot="0"] {
  transform:translate(-50%,-50%);filter:none;opacity:1;
@@ -221,7 +221,7 @@ html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide[data-sl
  filter:brightness(.72) saturate(.78);opacity:.75;
 }
 html[data-zamazka-appearance="new"] #screen > .museum-home .museum-stage-caption {
- position:absolute;z-index:6;left:8%;right:8%;bottom:40px;
+ position:absolute;z-index:6;left:8%;right:8%;bottom:72px;
  display:flex;align-items:center;flex-direction:column;gap:5px;
  margin:0;padding:0!important;
  border:0;border-radius:0;background:none!important;box-shadow:none;
@@ -297,7 +297,7 @@ html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide:focus-v
  html[data-zamazka-appearance="new"] #screen > .museum-home .museum-display::before {
   left:0;right:0;inset:0;
  }
- html[data-zamazka-appearance="new"] #screen > .museum-home .museum-stage {inset:0 0 73px}
+ html[data-zamazka-appearance="new"] #screen > .museum-home .museum-stage {inset:-3px 0 87px}
  html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide-rim {border-width:7px!important;padding:3px!important}
  html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide[data-slot="-1"] {
   transform:translate(-50%,-50%) translateX(calc(-1 * var(--museum-step))) scale(.57) rotateY(5deg)
@@ -306,7 +306,7 @@ html[data-zamazka-appearance="new"] #screen > .museum-home .museum-slide:focus-v
   transform:translate(-50%,-50%) translateX(var(--museum-step)) scale(.57) rotateY(-5deg)
  }
  html[data-zamazka-appearance="new"] #screen > .museum-home .museum-stage-caption {
-  bottom:35px;left:13%;right:13%;gap:2px;
+  bottom:61px;left:13%;right:13%;gap:2px;
  }
  html[data-zamazka-appearance="new"] #screen > .museum-home .museum-stage-caption strong {font-size:14px}
  html[data-zamazka-appearance="new"] #screen > .museum-home .museum-stage-caption span {font-size:10px}
