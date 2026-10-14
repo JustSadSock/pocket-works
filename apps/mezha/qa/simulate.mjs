@@ -71,7 +71,23 @@ function run(seed,strategy){
  assert.equal(s.phase,'end','match must finish');
  return {winner:s.winner,t:s.time,sites:stats(s,0).sites};
 }
-testCore();const siege=testSiege(),simulations={};
+function testRaidAndTowers(){
+ const s=createGame(501,false),target=s.sites.find(z=>z.id==='eastwood');
+ s.squads=s.squads.filter(u=>u.side===0);
+ for(const u of s.squads){u.x=target.x;u.y=target.y;u.morale=100}
+ for(const o of s.orders.filter(o=>o.side===0)){o.mode='raid';o.x=target.x;o.y=target.y}
+ s.players[0].wood=10;s.players[1].wood=100;
+ tick(s,.05);
+ assert.ok(s.players[1].wood<100&&s.players[0].wood>10,'raid did not steal resources');
+ assert.ok(target.raided>0,'raiding sprite not flagged');
+ const t=createGame(502,false),loc=t.sites.find(z=>z.id==='orchard');
+ loc.fort=2;t.squads=t.squads.filter(u=>u.side===1);
+ const victim=t.squads[0];victim.x=loc.x+30;victim.y=loc.y;
+ const before=victim.hp;tick(t,.05);
+ assert.ok(victim.hp<before,'fort tower did not shoot nearby opponent');
+}
+
+testCore();testRaidAndTowers();const siege=testSiege(),simulations={};
 for(const strategy of ['passive','rush','control','frontier']){
  const outcomes=Array.from({length:16},(_,i)=>run(421+i,strategy));
  simulations[strategy]={count:outcomes.length,wins:outcomes.filter(o=>o.winner===0).length,losses:outcomes.filter(o=>o.winner===1).length,draws:outcomes.filter(o=>o.winner===-1).length,meanSeconds:Math.round(outcomes.reduce((a,b)=>a+b.t,0)/16)};
