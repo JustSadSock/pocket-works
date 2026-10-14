@@ -1143,8 +1143,6 @@ function tick(){
    const cue=(practice?'practice':roomId)+':'+v.round+':'+v.phase+':'+s;
    if(cue!==lastClockCue){lastClockCue=cue;sound('clock-tick')}
   }
-  if(page==='drawing'&&v.phase==='drawing'&&s===0&&pendingSubmit?.room===roomId)
-   draftIndicator('Время вышло · сохраняем последние мазки…');
  }
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
   lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}
