@@ -1023,6 +1023,11 @@ function settings(){
  });
 }
 
+function openPocketProfile(){
+ if(window.PocketSocial?.open)void window.PocketSocial.open();
+ else notify('Профиль Pocket ID пока загружается. Попробуй ещё раз.');
+}
+document.querySelector('#profileBtn')?.addEventListener('click',openPocketProfile);
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 syncIdentity();
 screen.addEventListener('click',e=>{
@@ -1037,10 +1042,7 @@ screen.addEventListener('click',e=>{
 
  const action=b.dataset.action;
  if(action!=='museum-next'&&action!=='museum-prev')sound(['submit','vote','advance','next','continue','start'].includes(action)?'confirm':['collection','resume','menu','skip'].includes(action)?'paper':'press',true);
- if(action==='pocket-profile'){
-  if(window.PocketSocial?.open)void window.PocketSocial.open();
-  else notify('Профиль Pocket ID пока загружается. Попробуй ещё раз.');
- }
+ if(action==='pocket-profile')openPocketProfile();
  else if(action==='create'||action==='join')setup(action);
   else if(action==='museum-next')shiftMuseum(1);
  else if(action==='museum-prev')shiftMuseum(-1);
