@@ -1,6 +1,6 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
-import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHousehold, SIZE} from './model.mjs';
+import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHousehold, SIZE} from './model.js';
 installMobileRuntime();
 createWorkshopMode({appName:'Живая история',version:'0.1.0',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
