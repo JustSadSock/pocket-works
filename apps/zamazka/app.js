@@ -373,7 +373,7 @@ function setup(mode,error='',roomValue=invitedRoom){
 }
 let roundsChoice=3;
 let drawingSecondsChoice=160;
-const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[0,'Без ограничения']];
+const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[600,'10 минут'],[0,'Без ограничения']];
 const DURATION_VALUES=DRAWING_TIME_OPTIONS.map(([seconds])=>seconds);
 const SOLO_DURATION_KEY=NS+'solo-drawing-seconds';
 const normalizedDuration=value=>value!==''&&value!=null&&DURATION_VALUES.includes(Number(value))?Number(value):160;
