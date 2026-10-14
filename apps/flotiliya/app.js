@@ -90,20 +90,28 @@ function renderHarbor(){
  }
 }
 function roman(n){const a=['I','II','III','IV','V','VI','VII','VIII','IX','X'];return a[n-1]||String(n)}
-function battleShip(s,side,x,y,angle){return {...s,side,x,y,angle,velocity:0,order:side==='ally'?'shoot':(s.type==='heavy'?'board':'shoot'),tx:null,ty:null,targetId:null,fireTimer:.3+rand(x+y)*.8,ramTimer:0,boarding:false,dealt:0,kills:0,alive:true};}
+function battleShip(s,side,x,y,angle){
+ return {...s,side,x,y,angle,velocity:0,orders:[freshOrder(side==='ally'?'hold':'shoot'),freshOrder(side==='ally'?'shoot':(s.type==='heavy'?'board':'shoot'))],
+ order:side==='ally'?'hold':'shoot',_cursor:[0,0],_activeStage:-1,fireTimer:.2+rand(x+y)*.9,ramTimer:0,landTimer:0,
+ boarding:false,dealt:0,kills:0,alive:true};
+}
 function startBattle(){
- game.ships=[];game.captured=[];game.events=[];game.particles=[];game.round=1;game.elapsed=0;game.selected=null;
- activeFleet().forEach((s,i)=>game.ships.push(battleShip(s,'ally',200,160+i*150,0)));
+ game.ships=[];game.captured=[];game.events=[];game.particles=[];game.round=1;game.elapsed=0;game.selected=null;game.stage=0;game.drag=null;
+ game.islands=ISLAND_MAPS[(game.battleIndex-1)%ISLAND_MAPS.length].map(i=>({...i}));
+ game.weather=WEATHER[(game.battleIndex-1)%WEATHER.length];
+ const ys=[136,311,487];
+ activeFleet().forEach((s,i)=>game.ships.push(battleShip(s,'ally',190,ys[i],0)));
  const aiTypes=['swift','bow','heavy'];
  aiTypes.forEach((type,i)=>{
-   const s=makeShip('enemy-'+game.battleIndex+'-'+i,namePool[(game.battleIndex+i*2)%namePool.length],type,{active:false});
-   const mult=1+Math.min(.22,(game.battleIndex-1)*.025);s.hp*=mult;s.maxHp*=mult;s.crew*=mult;s.maxCrew*=mult;s.damage*=mult;
-   game.ships.push(battleShip(s,'enemy',790,160+i*150,Math.PI));
+  const s=makeShip('enemy-'+game.battleIndex+'-'+i,namePool[(game.battleIndex+i*2)%namePool.length],type,{active:false});
+  const mult=1+Math.min(.22,(game.battleIndex-1)*.025);s.hp*=mult;s.maxHp*=mult;s.crew*=mult;s.maxCrew*=mult;s.damage*=mult;
+  game.ships.push(battleShip(s,'enemy',809,ys[i],Math.PI));
  });
- game.phase='orders';$('harbor').hidden=true;$('command').hidden=false;$('seaTop').hidden=false;$('endPanel').hidden=true;$('orderArea').hidden=false;$('resolveBtn').hidden=false;$('progress').hidden=true;
- $('subtitle').textContent='Сражение · фаза приказов';$('gold').textContent='◈ '+game.gold;
- selectShip(game.ships.find(s=>s.side==='ally')?.id||null);
- updateBattleUI();notify('Выбери корабль и задай манёвр');
+ game.phase='orders';$('harbor').hidden=true;$('command').hidden=false;$('seaTop').hidden=false;$('endPanel').hidden=true;
+ $('orderArea').hidden=false;$('orderArea').style.opacity='1';$('resolveBtn').hidden=false;$('progress').hidden=true;
+ $('subtitle').textContent='Боевой порядок · подготовка';$('gold').textContent='◈ '+game.gold;
+ selectShip(game.ships.find(s=>s.side==='ally')?.id||null);updateBattleUI();
+ notify('Выбери судно. Нарисуй путь, затем укажи вторую команду.');
 }
 function alive(side){return game.ships.filter(s=>s.alive&&s.side===side)}
 function nearest(s){return alive(s.side==='ally'?'enemy':'ally').sort((a,b)=>distance(s,a)-distance(s,b))[0]||null}
@@ -111,17 +119,27 @@ function getTarget(s){return game.ships.find(t=>t.id===s.targetId&&t.alive&&t.si
 function selectShip(id){
  const s=game.ships.find(x=>x.id===id&&x.side==='ally'&&x.alive);
  game.selected=s?.id||null;
- $('selectedName').textContent=s?s.name:'Выбери корабль';
- $('selectedInfo').textContent=s?('Корпус '+Math.ceil(s.hp)+'/'+Math.ceil(s.maxHp)+' · Экипаж '+Math.ceil(s.crew)+'/'+Math.ceil(s.maxCrew)):'Нажми на дружественное судно';
- $('instruction').textContent=s?(s.tx!==null?'Манёвр назначен — можно изменить':'Нажми на воду для назначения манёвра'):'Выбери корабль на поле';
- document.querySelectorAll('[data-order]').forEach(btn=>btn.classList.toggle('on',Boolean(s&&btn.dataset.order===s.order)));
+ $('selectedName').textContent=s?s.name:'Выбери судно';
+ $('selectedInfo').textContent=s?('Корпус '+Math.ceil(s.hp)+'/'+Math.ceil(s.maxHp)+' · Экипаж '+Math.ceil(s.crew)+'/'+Math.ceil(s.maxCrew)):'Нажми на корабль своего флота';
+ const order=s?instruction(s,game.stage):null;
+ $('instruction').textContent=s?(order.route.length?'Путь построен. Можно нарисовать другой.':'Нарисуй путь на воде или коснись врага.'):'Выбери судно на поле';
+ $('routeCounter').textContent=order?readoutRoute(order):'НЕТ МАРШРУТА';
+ $('crewReadout').textContent=s?('ЭКИПАЖ '+Math.ceil(s.crew)):'';
+ $('maneuverReadout').textContent=order?({hold:'МАНЁВР',shoot:'СТРЕЛЬБА',board:'АБОРДАЖ',evade:'УКЛОНЕНИЕ'}[order.kind]||'ПРИКАЗ'):'ОЖИДАНИЕ';
+ document.querySelectorAll('[data-order]').forEach(btn=>btn.classList.toggle('on',Boolean(order&&btn.dataset.order===order.kind)));
+ document.querySelectorAll('[data-stage]').forEach(btn=>btn.classList.toggle('on',Number(btn.dataset.stage)===game.stage));
+ $('clearRouteBtn').disabled=!order||(order.route.length===0&&!order.targetId);
 }
 function updateBattleUI(){
- $('turnLabel').textContent='ФАЗА '+game.round+'/10';
- $('shipsLeft').textContent=alive('ally').length+' СВОИХ  ·  '+alive('enemy').length+' ПРОТИВНИКОВ';
- if(game.phase==='orders')$('commandCaption').textContent='НАЗНАЧЕНИЕ ПРИКАЗОВ';
+ $('turnLabel').textContent='ХОД '+String(game.round).padStart(2,'0')+' / '+MAX_ROUNDS;
+ $('shipsLeft').textContent=alive('ally').length+' СВОИХ · '+alive('enemy').length+' ЧУЖИХ';
+ $('weatherLabel').textContent=game.weather?.name||'Ясная погода';
+ $('scenarioLabel').textContent='4,5 СЕК / ХОД';
+ if(game.phase==='orders')$('commandCaption').textContent='ПРИКАЗЫ ЭСКАДРЕ';
  if(game.selected)selectShip(game.selected);
 }
+function setStage(stage){if(game.phase!=='orders')return;game.stage=stage;selectShip(game.selected);}
+
 function normalize(a){while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;return a}
 function maneuver(s,dt){
  const t=getTarget(s);
