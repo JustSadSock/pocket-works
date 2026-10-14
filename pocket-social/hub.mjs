@@ -77,7 +77,7 @@ export class PocketSocial {
       artwork:p.artwork,backgroundMode:backgroundModes.has(p.background_mode)?p.background_mode:'preset',
       portraitFrame:portraitFrames.has(p.portrait_frame)?p.portrait_frame:'wood',maskot:validMaskot(maskot,unlocked)?maskot:null,
       ...(own?{unlocked,achievements:earned.map(x=>({id:x.achievement_id,earnedAt:x.earned_at}))}:{}),title:p.title||'',favoriteGame:p.favorite_game,discoverable:!!p.discoverable,
-      owned:own,presenceVisible:!!p.presence_visible,allowInvites:!!p.allow_invites,
+      presenceVisible:!!p.presence_visible,allowInvites:!!p.allow_invites,
       online:visible,gameId:visible?p.game_id:'',
       friendship:own?'self':blocked?'blocked':r?.status==='accepted'?'friends':
         r?.status==='pending'?(r.pending_by===viewer?'outgoing':'incoming'):'none',
