@@ -1,3 +1,6 @@
+/* Physical experimental scene components have zero footprint in the classic theme. */
+.museum-frame-facet,.museum-luminaire,.museum-console-structure{display:none}
+
 /* Always-loaded, accessible appearance toggle.
    Does not change any other classic screen styles. */
 .dialog-box .appearance-choice{
