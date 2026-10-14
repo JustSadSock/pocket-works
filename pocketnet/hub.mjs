@@ -273,6 +273,40 @@ export class PocketNetHub {
           [id, { version: entry.current, minPlayers: entry.versions[entry.current].MIN_PLAYERS ?? null,
             rulesVersion: entry.versions[entry.current].RULESET_VERSION ?? null }])) });
     }
+    // Internal-only social activity: confirmed Pocket Social friends are passed from
+    // the Social Durable Object, never from the public browser. Only actual active
+    // PocketNet sockets count as playing, so stale guest sessions cannot advertise rooms.
+    if(endpoint==='/social-rooms'&&request.method==='POST'){
+      if(request.headers.get('x-pw-internal')!=='1')return json({error:'not_allowed'},403);
+      const payload=await request.json().catch(()=>null);
+      if(!Array.isArray(payload?.accountIds)||payload.accountIds.length>240||
+         payload.accountIds.some(id=>typeof id!=='string'||!uuid.test(id)))
+        return json({error:'invalid_request'},400);
+      const ids=new Set(payload.accountIds),rooms={};
+      if(!ids.size)return json({rooms});
+      const live=this.ctx.getWebSockets().filter(ws=>ws.readyState===1)
+        .map(ws=>ws.deserializeAttachment()).filter(v=>v?.accountId&&v.roomId&&ids.has(v.accountId));
+      if(!live.length)return json({rooms});
+      const wanted=new Set(live.map(v=>v.roomId));
+      const candidates=this.sql("SELECT id,game_id,players,json_extract(state,'$.phase') AS phase FROM rooms").toArray();
+      for(const room of candidates){
+        if(!wanted.has(room.id))continue;
+        const mod=this.module(room.game_id);
+        if(!mod)continue;
+        const players=JSON.parse(room.players);
+        const max=Math.min(MAX_PLAYERS,Number(mod.MAX_PLAYERS)||
+          (room.game_id==='blind-pals'?2:MAX_PLAYERS));
+        const lobby=room.phase==='lobby',count=players.length;
+        for(const who of live){
+          if(who.roomId!==room.id||!players.some(p=>p.accountId===who.accountId))continue;
+          const joinable=lobby&&count<max;
+          const candidate={gameId:room.game_id,players:count,maxPlayers:max,joinable,
+            ...(joinable?{roomId:room.id}:{})};
+          if(!rooms[who.accountId]||joinable)rooms[who.accountId]=candidate;
+        }
+      }
+      return json({rooms});
+    }
     // Internal-only room inspection: the public edge strips spoofed x-pw-* headers.
     if ((endpoint === '/validate-invite' || endpoint === '/validate-join') && request.method === 'POST') {
       if (request.headers.get('x-pw-internal') !== '1') return json({error:'not_allowed'},403);
