@@ -245,7 +245,6 @@ export function tick(s,dt){
  for(const z of s.sites)siteTick(s,z,dt);
  for(let side=0;side<2;side++){
   const home=nearHome(side),enemy=1-side;
-  const attackers=s.squads.filter(u=>u.side===enemy&&distance(u,home)<75&&u.hp>0);
   // A castle is dangerous even when its field army has left. Every exposed
   // assault is met by a defensive volley from the permanent garrison.
   s.keepShots ??= [0,0];
@@ -256,6 +255,8 @@ export function tick(s,dt){
    hit(s,{side,kills:0},nearby[0],14);
    s.keepShots[side]=1.1;
   }
+  // Resolve defender volleys before counting living siege strength.
+  const attackers=s.squads.filter(u=>u.side===enemy&&u.hp>0&&distance(u,home)<75);
   if(attackers.length){
    // A bridge, mine or riverside farm held across the frontier creates a
    // viable supply line. Unsupported deep raids can chip at fortifications,
@@ -268,6 +269,9 @@ export function tick(s,dt){
    if(s.players[side].base===0){s.phase='end';s.winner=enemy;log(s,enemy===0?'Вражеский замок пал':'Ваша крепость пала',enemy)}
   }
  }
+ // Fort and keep volleys take place after normal combat. A unit killed in
+ // those phases must not remain selectable or be saved with 0 HP.
+ s.squads=s.squads.filter(u=>u.hp>0);
  if(s.time>=LIMIT&&s.phase==='battle'){
   s.phase='end';const a=stats(s,0).score,b=stats(s,1).score;s.winner=a===b?-1:a>b?0:1;
  }
