@@ -38,11 +38,9 @@ try{
   assert.equal(await page.locator('#zamazka-experimental-style').getAttribute('media'),'not all');
   assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),'not all','Classic mode must not load the new home CSS');
   assert.equal(await page.locator('.set-furniture').count(),0,'Classic style must not mount decorative scenery');
-  const classicConstruction=await page.locator('.museum-home').evaluate(el=>[
-    '.museum-luminaire','.museum-console-structure','.museum-frame-facet'
-  ].map(selector=>getComputedStyle(el.querySelector(selector)).display));
-  assert.deepEqual(classicConstruction,['none','none','none'],'Physical construction must be isolated from classic mode');
-
+  assert.equal(await page.locator('.museum-console-structure').count(),0,'Cabinet is not part of either screen');
+  assert.equal(await page.locator('.museum-luminaire').evaluate(el=>getComputedStyle(el).display),'none');
+  assert.equal(await page.locator('.museum-frame-facet').first().evaluate(el=>getComputedStyle(el).display),'none');
   assert.equal(await page.locator('.museum-plinth').count(),0,'Classic style must not mount museum plinth');
   assert.equal(await page.locator('.museum-architecture').count(),0,'Classic mode must restore original DOM architecture');
   const shellTheme=await page.locator('.museum-home').evaluate(el=>getComputedStyle(el).backgroundImage);
@@ -84,17 +82,15 @@ try{
   assert.equal(await page.locator('.museum-home .museum-plinth').count(),1);
   assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),'all','After-hours art direction must only load in the opt-in theme');
   const constructed=await page.locator('.museum-home').evaluate(el=>{
-    const panel=el.querySelector('.museum-console-structure');
     const lamp=el.querySelector('.museum-luminaire');
     const facets=[...el.querySelectorAll('.museum-slide[data-slot="0"] .museum-frame-facet')];
-    return {panel:getComputedStyle(panel).display,lamp:getComputedStyle(lamp).display,
-      facetCount:facets.length,visibleFacets:facets.filter(f=>getComputedStyle(f).display!=='none').length,
-      frameMaterial:getComputedStyle(el.querySelector('.museum-slide-rim')).backgroundColor};
+    return {cabinet:el.querySelectorAll('.museum-console-structure').length,
+     lamp:getComputedStyle(lamp).display,
+     facets:facets.filter(f=>getComputedStyle(f).display!=='none').length};
   });
-  assert.equal(constructed.panel,'block','Workbench must have real constructed planes');
-  assert.equal(constructed.lamp,mobile?'none':'block','Gallery light source must clear artwork on narrow phones');
-  assert.equal(constructed.visibleFacets,4,'Painting should have four real bevel faces');
-
+  assert.equal(constructed.cabinet,0,'Do not restore fake wood cabinet');
+  assert.equal(constructed.lamp,'none','Picture fixture must not visually clip composition');
+  assert.equal(constructed.facets,4,'Keep physical frame cross-sections');
   const homeGeometry=await page.evaluate(()=>{
     const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}};
     return {mode:getComputedStyle(document.querySelector('.museum-home')).display,
@@ -147,6 +143,15 @@ try{
   await page.locator('#modalActions .btn.primary').click();
   const primary=page.locator('#primary-action');
   assert.equal(await primary.getAttribute('data-action'),'create','cooperative mode must be primary');
+  assert.equal(await page.locator('#profileBtn').evaluate(el=>el.tagName),'A','Pocket ID navigation must be a working link');
+  assert.equal(await page.locator('.museum-home .personal-seal').count(),0,'No personal sign in menu');
+  await primary.click();
+  await page.locator('.lobby-entry .entry-profile').waitFor({timeout:6000});
+  assert.equal(await page.locator('.lobby-entry [data-action="emblem"]').count(),0,'No custom seal in setup');
+  assert.equal(await page.locator('.lobby-entry #who').count(),1,'Player name remains editable for guests');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-create-room-'+viewport.width+'.png'),fullPage:false});
+  await page.locator('.lobby-entry [data-action="menu"]').click();
+  await page.locator('.museum-home').waitFor();
   await page.locator('[data-action="practice"]').click();
   await page.locator('#soloDrawingSeconds').selectOption('0');
   await page.locator('#modalActions .btn.primary').click();
