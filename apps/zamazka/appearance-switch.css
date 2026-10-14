@@ -11,10 +11,11 @@
 .dialog-box .appearance-choice-text strong{font:600 14px/1.3 system-ui,sans-serif}
 .dialog-box .appearance-choice-text small{font:12px/1.35 system-ui,sans-serif;color:#746959}
 .dialog-box #settingNewAppearance{
-  position:absolute;opacity:0;inline-size:1px;block-size:1px;
+  position:absolute;right:13px;top:calc(50% - 14px);z-index:2;
+  inline-size:48px;block-size:28px;opacity:0;cursor:pointer;
 }
 .dialog-box .appearance-track{
-  display:block;flex:none;width:48px;height:28px;border-radius:18px;
+  display:block;flex:none;width:48px;height:28px;border-radius:18px;pointer-events:none;
   background:#b4a58d;border:1px solid #98856b;
   box-shadow:inset 0 1px 3px #2d241c3b;
   transition:background .17s ease,border-color .17s ease;
