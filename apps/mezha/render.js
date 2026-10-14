@@ -132,6 +132,13 @@ function buildings(c,z,t){
   pix(c,x-38,y+18,16,7,'#9d7954');pix(c,x-35,y+13,11,5,'#e1c081');
  }
  if(owner>=0)flag(c,x+17,y-18,owner===0?'#e9bd77':'#84becf',t*2+x);
+ if(z.raided>0){
+  // Scattered burning supplies identify an actual economic raid.
+  pix(c,x-31,y+18,7,5,'#80523b');
+  pix(c,x-29,y+13,4,6,'#e9a858');
+  pix(c,x-28,y+8,3,5,'#f6d38a');
+  pix(c,x-21,y+6,4,4,'#5b6054');
+ }
  if(z.fort>0){
   const bx=x+43,by=y-3;
   pix(c,bx-13,by-17,26,36,'#77725e');pix(c,bx-10,by-18,20,33,'#c8bba0');
