@@ -81,11 +81,11 @@ export default {
         const target=(await result.json()).user;
         if (target) headers.set('x-pw-target-user', JSON.stringify(target));
       }
-      if (url.pathname === '/pocket-social/invite' && request.method === 'POST') {
+      if ((url.pathname === '/pocket-social/invite' || url.pathname === '/pocket-social/invite-party') && request.method === 'POST') {
         let payload;
         try { payload = await request.clone().json(); } catch { payload = null; }
-        if (!payload || !['zamazka','blind-pals'].includes(payload.gameId) ||
-          !/^[0-9a-f-]{36}$/i.test(payload.roomId||'')) {
+        if (!payload || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(payload.gameId||'') ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.roomId||'')) {
           return new Response(JSON.stringify({error:'invalid_room'}),{status:400,headers:{'content-type':'application/json'}});
         }
         const hub=env.POCKETNET.get(env.POCKETNET.idFromName('pocket-works-global-v1'));
