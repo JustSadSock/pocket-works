@@ -87,6 +87,35 @@ function testRaidAndTowers(){
  assert.ok(victim.hp<before,'fort tower did not shoot nearby opponent');
 }
 
+function testDistinctOrders(){
+ function occupancy(mode){
+  const s=createGame(937,false);
+  s.squads=s.squads.filter(u=>u.side===0&&u.captain===0);
+  for(const u of s.squads){u.x=478;u.y=306;u.retreat=false}
+  action(s,0,{kind:'order',captain:0,mode,x:478,y:306});
+  play(s,40);
+  return s.sites.find(z=>z.id==='ford').owner;
+ }
+ assert.equal(occupancy('capture'),0,'explicit capture must annex objective');
+ assert.equal(occupancy('defend'),-1,'defensive stance must not annex neutral objective');
+ assert.equal(occupancy('raid'),-1,'raid must not annex objective');
+ function incoming(mode){
+  const s=createGame(77,false);
+  const defender=s.squads.find(u=>u.side===0&&u.captain===0);
+  const attacker=s.squads.find(u=>u.side===1&&u.captain===2);
+  s.squads=[defender,attacker];
+  defender.x=236;defender.y=146;defender.attack=100;
+  attacker.x=250;attacker.y=146;attacker.attack=0;
+  action(s,0,{kind:'order',captain:0,mode,x:236,y:146});
+  action(s,1,{kind:'order',captain:2,mode:'capture',x:236,y:146});
+  const hp=defender.hp;tick(s,.05);return hp-defender.hp;
+ }
+ const inCapture=incoming('capture'),inDefend=incoming('defend');
+ assert.ok(inCapture>0&&inDefend>0,'melee matchup should inflict damage');
+ assert.ok(inDefend<inCapture*.85,'defensive stance must reduce local incoming damage');
+ return {captureIncoming:+inCapture.toFixed(2),defendIncoming:+inDefend.toFixed(2)};
+}
+const distinctOrders=testDistinctOrders();
 testCore();testRaidAndTowers();const siege=testSiege(),simulations={};
 for(const strategy of ['passive','rush','control','frontier']){
  const outcomes=Array.from({length:16},(_,i)=>run(421+i,strategy));
@@ -95,4 +124,4 @@ for(const strategy of ['passive','rush','control','frontier']){
 assert.equal(simulations.passive.wins,0);
 assert.ok(simulations.rush.wins<16,'castle rush exploit still guaranteed');
 assert.ok(simulations.frontier.wins>0,'frontier policy never wins');
-console.log(JSON.stringify({tests:'PASS',siege,simulations},null,2));
+console.log(JSON.stringify({tests:'PASS',distinctOrders,siege,simulations},null,2));
