@@ -190,6 +190,7 @@ try{
   await page.waitForTimeout(720);
   const viewportRect=await page.locator('.restore .viewport').boundingBox();
   assert(viewportRect?.width>100&&viewportRect?.height>100,'working canvas visible');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-workstation-'+viewport.width+'.png'),fullPage:false});
   // Drag on the center of the damage-centered viewport. The gesture must
   // affect a real Editor instance rather than a decorative preview.
   const cx=viewportRect.x+viewportRect.width/2,cy=viewportRect.y+viewportRect.height/2;
