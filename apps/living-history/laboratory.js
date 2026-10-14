@@ -30,7 +30,7 @@ export function diagnoseWorld(s){
   const report=h.lastAccounting||h.accounting||{};
   return {id,communityId:h.communityId,people:info.people,grainKg:rounded(h.grain),coin:rounded(h.coin),
    foodDays:rounded(foodDays,1),storageUse:rounded(h.grain/Math.max(1,storageCapacity(h,s))),unhealthy:info.unhealthy,
-   occupation:h.focus||h.work||'farm',workDays:info.workDays,
+   occupation:h.focus||h.work||'farm',workDays:info.workDays,cattle:h.cattle||0,hayKg:rounded(h.fodder||0),
    harvestKg:report.harvestKg||0,spoilKg:report.spoilKg||0,wagesEarned:report.wagesEarned||0,wagesPaid:report.wagesPaid||0};
  }).filter(Boolean);
  const byCommunity=s.communities.map(c=>{
@@ -47,7 +47,7 @@ export function diagnoseWorld(s){
  const deceased=s.people.filter(p=>!p.alive);
  const hungerDeaths=deceased.filter(p=>p.lifeLog?.some(e=>e.type==='death'&&e.text?.includes('истощение'))).length;
  return {day:s.day,year:Math.floor(s.day/365)+1,seed:s.seed,scenario:s.scenario,tuning:{...BASE_TUNING,...s.tuning},
-  population:members,homes:rows.length,peopleEver:s.people.length,deaths:stats.died||0,births:stats.born||0,hungerDeaths,
+  population:members,homes:rows.length,cattle:rows.reduce((n,h)=>n+h.cattle,0),fodderKg:rounded(rows.reduce((n,h)=>n+h.hayKg,0)),peopleEver:s.people.length,deaths:stats.died||0,births:stats.born||0,hungerDeaths,
   meanGrainKgPerPerson:rounded(members?grains.reduce((a,b)=>a+b,0)/members:0),
   grainGini:gini(grains),coinGini:gini(cash),coinP10:quantile(cash,.1),coinMedian:quantile(cash,.5),coinP90:quantile(cash,.9),
   foodDaysP10:quantile(foodDays,.1),foodDaysMedian:quantile(foodDays,.5),foodDaysP90:quantile(foodDays,.9),
