@@ -449,7 +449,13 @@ async function reload(rerender=true){
 function visibleSocialSignature(data,tab){
   if(!data)return 'signed-out';
   return JSON.stringify(tab==='profile'?[data.profile]:
+    tab==='other'?[data.profile?.id,state.other]:
     [data.profile?.id,data.friends,data.incoming,data.outgoing,data.blocked,data.invites]);
+}
+function updateConnectionStatus(offline){
+  state.syncOffline=offline;
+  const node=q('#pws-connection',dialog);
+  if(node){node.hidden=!offline;node.textContent=offline?'Нет соединения · показаны последние данные':'';}
 }
 function renderLiveChanges(){
   const y=content.scrollTop,active=document.activeElement;
@@ -473,16 +479,33 @@ function renderLiveChanges(){
   }
 }
 async function pollOpenSocial(){
-  if(!dialog?.open||document.hidden||!navigator.onLine||state.busy||state.loading||livePollBusy)return;
+  if(!dialog?.open||document.hidden||state.busy||state.loading||state.edit||livePollBusy)return;
+  if(!navigator.onLine){updateConnectionStatus(true);return;}
   livePollBusy=true;
-  const tab=state.tab,before=visibleSocialSignature(state.me,tab);
+  const tab=state.tab,before=visibleSocialSignature(state.me,tab),peerId=state.other?.id;
   try{
-    const applied=await reload(false);
-    if(applied&&dialog.open&&!state.busy&&!state.loading&&!state.edit&&tab===state.tab&&
-       before!==visibleSocialSignature(state.me,tab))renderLiveChanges();
-  }catch{
-    // Transient failures stay invisible. Existing content remains usable.
-  }finally{livePollBusy=false}
+    const sync=await api('sync');
+    updateConnectionStatus(false);
+    if(!dialog.open||state.tab!==tab)return;
+    if(sync.revision!==liveRevision){
+      const applied=await reload(false);
+      if(!applied)return;
+      liveRevision=sync.revision;
+      if(tab==='other'&&peerId===state.other?.id){
+        try{
+          const peer=(await api('user?id='+encodeURIComponent(peerId))).profile;
+          if(state.tab==='other'&&state.other?.id===peerId)state.other=peer;
+        }catch{} // Keep the last profile if a transient read fails.
+      }
+      if(!state.busy&&!state.loading&&!state.edit&&tab===state.tab&&
+          before!==visibleSocialSignature(state.me,tab))renderLiveChanges();
+    }
+    if(Date.now()-lastCatalogCheck>60000){
+      lastCatalogCheck=Date.now();
+      void loadCatalog();
+    }
+  }catch{updateConnectionStatus(true)}
+  finally{livePollBusy=false}
 }
 function startLivePolling(){
   if(!livePollClock)livePollClock=setInterval(()=>{void pollOpenSocial()},2000);
@@ -490,19 +513,33 @@ function startLivePolling(){
 
 async function loadCatalog(){
   try{
-    const r=await fetch('/apps.json',{cache:'force-cache'});
-    if(r.ok){const apps=await r.json();state.catalog=Array.isArray(apps)?apps.filter(x=>x&&x.slug&&x.name).map(x=>({slug:x.slug,name:x.name})).sort((a,b)=>a.name.localeCompare(b.name)):[]}
+    const r=await fetch('/apps.json',{cache:'no-store'});
+    if(r.ok){
+      const apps=await r.json();
+      const list=Array.isArray(apps)?apps.filter(x=>x&&x.slug&&x.name).map(x=>({slug:x.slug,name:x.name})).sort((a,b)=>a.name.localeCompare(b.name)):[];
+      const changed=JSON.stringify(list)!==JSON.stringify(state.catalog);
+      state.catalog=list;
+      if(changed&&dialog?.open&&state.edit&&state.tab==='profile'){
+        const select=q('#pws-favorite',dialog);
+        if(select){
+          const selected=select.value;
+          select.innerHTML='<option value="">Не выбрана</option>'+list.map(g=>
+            '<option value="'+esc(g.slug)+'">'+esc(g.name)+'</option>').join('');
+          select.value=selected;
+        }
+      }
+    }
   }catch{}
 }
 function resetNotice(){state.notice='';state.error='';state.confirm=null}
 async function open(room='',editNow=false,gameId='zamazka'){
   state.game=['zamazka','blind-pals'].includes(gameId)?gameId:'zamazka';
   if(!dialog.open)dialog.showModal();
-  startLivePolling();
+  startLivePolling();liveRevision=null;state.friendOrder=[];state.otherReturn=null;
   state.room=room||'';state.tab=room?'invite':'profile';state.edit=false;state.other=null;
   state.loading=true;resetNotice();render();
-  try{await Promise.all([reload(false),loadCatalog()])}
-  catch(e){state.me=null;state.error=e.message}
+  try{await Promise.all([reload(false),loadCatalog()]);updateConnectionStatus(false);lastCatalogCheck=Date.now()}
+  catch(e){state.me=null;state.error=e.message;updateConnectionStatus(true)}
   finally{state.loading=false}
   if(state.me&&editNow){
     state.tab='profile';state.edit=true;state.draft={...state.me.profile};
@@ -517,10 +554,17 @@ async function open(room='',editNow=false,gameId='zamazka'){
   if(state.me&&state.tab==='profile'&&!state.edit)void loadCloudUsage();
 }
 async function showUser(id){
-  state.tab='other';state.other=null;state.loading=true;resetNotice();render();
+  if(!id)return;
+  state.otherReturn={tab:state.tab,scroll:content.scrollTop};
+  state.tab='other';state.other=null;state.loading=true;resetNotice();render();content.scrollTop=0;
   try{state.other=(await api('user?id='+encodeURIComponent(id))).profile}
   catch(e){state.error=e.message}
-  finally{state.loading=false;render()}
+  finally{state.loading=false;render();content.scrollTop=0}
+}
+function returnFromUser(){
+  const previous=state.otherReturn||{tab:'friends',scroll:0};
+  state.tab=previous.tab;state.other=null;state.otherReturn=null;resetNotice();render();
+  content.scrollTop=previous.scroll;
 }
 async function search(){
   const query=state.query.trim(),generation=state.searchVersion;
@@ -581,7 +625,7 @@ async function saveUnifiedProfile(){
 }
 async function mutate(path,body,{tab,stay=false}={}){
   if(state.busy)return;
-  state.busy=true;resetNotice();
+  state.busy=true;resetNotice();liveRevision=null;
   try{
     const value=await api(path,body);
     if(value.url){location.assign(new URL(value.url,location.origin).href);return}
@@ -617,11 +661,15 @@ function install(){
     '<button type="button" class="pws-tab" data-pws-tab="profile">Профиль</button>'+
     '<button type="button" class="pws-tab" data-pws-tab="friends">Друзья</button>'+
     '<button type="button" class="pws-tab" data-pws-tab="invites">Приглашения</button></nav>'+
+    '<div class="pws-connection" id="pws-connection" role="status" hidden></div>'+
     '<div class="pws-content" id="pws-content"></div>'+
     '<footer class="pws-mobile-exit">'+button('close','Закрыть меню')+'</footer></div>';
   document.body.append(dialog);content=q('#pws-content',dialog);
   dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
-  dialog.addEventListener('close',()=>{clearInterval(livePollClock);livePollClock=0;});
+  dialog.addEventListener('close',()=>{
+    clearInterval(livePollClock);livePollClock=0;clearTimeout(searchClock);
+    state.searchVersion++;updateConnectionStatus(false);
+  });
   dialog.addEventListener('change',e=>{
     if(!state.draft)return;
     const t=e.target;
@@ -639,8 +687,10 @@ function install(){
   dialog.addEventListener('input',e=>{
     if(e.target.id==='pws-nickname'&&state.draft){state.draft.nickname=e.target.value;return}
     if(e.target.id!=='pws-search')return;
-    state.query=e.target.value;clearTimeout(searchClock);
-    searchClock=setTimeout(search,300);
+    state.query=e.target.value;state.searchVersion++;clearTimeout(searchClock);
+    state.results=[];state.searchError='';state.searchLoading=state.query.trim().length>=2;
+    const results=q('#pws-results',dialog);if(results)results.innerHTML=searchResults();
+    if(state.searchLoading)searchClock=setTimeout(search,300);
   });
   document.addEventListener('click',e=>{
     const target=e.target.closest?.('[data-social-invite]');
@@ -648,7 +698,15 @@ function install(){
   });
   dialog.addEventListener('click',async e=>{
     const tab=e.target.closest('[data-pws-tab]');
-    if(tab){resetNotice();state.tab=tab.dataset.pwsTab;state.edit=false;state.other=null;render();if(state.tab==='profile'&&state.me)void loadCloudUsage();return}
+    if(tab){
+      resetNotice();state.tab=tab.dataset.pwsTab;state.edit=false;state.other=null;
+      state.otherReturn=null;state.friendOrder=[];
+      render();
+      if(state.tab==='friends')rememberNotices('incoming');
+      if(state.tab==='invites')rememberNotices('invites');
+      if(state.tab==='profile'&&state.me)void loadCloudUsage();
+      return;
+    }
     const target=e.target.closest('[data-pws]');
     if(!target||state.busy)return;
     const action=target.dataset.pws,id=target.dataset.id;
@@ -719,7 +777,7 @@ function install(){
     if(action==='background'||action==='frame'){state.draft[action]=target.dataset.value;render();return}
     if(action==='save-profile'){await saveUnifiedProfile();return}
     if(action==='open-user'){await showUser(id);return}
-    if(action==='back'){state.tab='friends';state.other=null;resetNotice();render();return}
+    if(action==='back'){returnFromUser();return}
     if(action==='send-request'){await mutate('friend-request',{id:state.other.id},{tab:'friends'});return}
     if(action==='cancel-friend'){await mutate('friend-action',{id:state.other.id,action:'cancel'},{tab:'friends'});return}
     if(action==='accept-friend'){await mutate('friend-action',{id:state.other.id,action:'accept'},{tab:'friends'});return}
@@ -759,6 +817,7 @@ function install(){
   document.addEventListener('pocket-id:changed',event=>{
     if(!event.detail?.user?.complete){
       reloadVersion++;lastPortraitKey='';
+      liveRevision=null;state.friendOrder=[];state.otherReturn=null;
       state.me=null;state.other=null;state.edit=false;state.results=[];resetCloud();
       updateNotification(0);if(dialog.open)render();
     }else{
