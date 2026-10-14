@@ -64,8 +64,9 @@
   "blind-pals": {
     "note": "existing cover rated higher",
     "status": "preserved",
-    "lastAttemptRevision": "88f06193d8743c63c34cd11011071d1456290ac0",
-    "lastAttemptAt": "2026-10-13T12:40:38.472Z"
+    "lastAttemptRevision": "12252b96c0defcbbd8df4fdec54f00ee336c4928",
+    "lastAttemptAt": "2026-10-14T17:44:23.379Z",
+    "captureEngine": "safe-gameplay-v3"
   },
   "lipki": {
     "note": "No frame passed image-content checks",
@@ -3157,7 +3158,7 @@
     "lastAttemptAt": "2026-10-13T22:04:38.310Z"
   },
   "living-history": {
-    "revision": "4c50cc01f8b115c97ad8a5bf0de501e4022de422",
+    "revision": "d06340cdbee3eafdc52433897527e9543e261fe6",
     "qualityScore": 76,
     "visionScore": null,
     "prepared": false,
@@ -3165,12 +3166,12 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "54a59bf1a16723fd7577268b805e507cc7d4d03ac4504a20d4b57a5dbed45372",
+    "sha256": "527365e48c27601acd0085a688dd3bc197c2e9f9e7cfc272c49f4eb55f7e6583",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4c50cc01f8b115c97ad8a5bf0de501e4022de422",
-    "lastAttemptAt": "2026-10-14T16:41:23.633Z"
+    "lastAttemptRevision": "d06340cdbee3eafdc52433897527e9543e261fe6",
+    "lastAttemptAt": "2026-10-14T17:44:12.420Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
