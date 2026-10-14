@@ -66,6 +66,7 @@ function renderHarbor(){
  $('harborCount').textContent=game.fleet.length+' СУДНА';
  $('activeCount').textContent=activeFleet().length+'/3 В БОЮ';
  $('sailBtn').disabled=!activeFleet().length;
+ resize();
  $('fleetList').replaceChildren();
  for(const s of game.fleet){
   const row=document.createElement('div');row.className='ship-row';
@@ -111,7 +112,7 @@ function startBattle(){
  game.phase='orders';$('harbor').hidden=true;$('command').hidden=false;$('seaTop').hidden=false;$('endPanel').hidden=true;
  $('orderArea').hidden=false;$('orderArea').style.opacity='1';$('resolveBtn').hidden=false;$('progress').hidden=true;
  $('subtitle').textContent='Боевой порядок · подготовка';$('gold').textContent='◈ '+game.gold;
- selectShip(game.ships.find(s=>s.side==='ally')?.id||null);updateBattleUI();
+ selectShip(game.ships.find(s=>s.side==='ally')?.id||null);updateBattleUI();resize();
  notify('Выбери судно. Нарисуй путь, затем укажи вторую команду.');
 }
 function alive(side){return game.ships.filter(s=>s.alive&&s.side===side)}
@@ -330,7 +331,7 @@ function finishBattle(){
  $('endTitle').textContent=win?'Море за тобой':'Флот возвращается';
  $('endText').textContent='Вернулось '+survivors.length+' из '+(survivors.length+dead)+' судов. Потеряно '+dead+'. Захвачено '+prizes+'. Награда: '+goldEarned+' монет. Корабли сохранили повреждения и опыт.';
  $('subtitle').textContent='Сражение · итог';
- updateBattleUI();
+ updateBattleUI();resize();
 }
 function notify(message){
  $('toast').textContent=message;$('toast').hidden=false;
@@ -505,5 +506,9 @@ $('helpBtn').addEventListener('click',()=>{$('help').hidden=false;});
 $('helpClose').addEventListener('click',()=>{$('help').hidden=true;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('help').hidden=true;if(e.key===' '&&game.phase==='orders'&&!e.repeat){e.preventDefault();startResolve();}});
 window.addEventListener('resize',resize);
+if(typeof ResizeObserver==='function'){
+ const canvasObserver=new ResizeObserver(()=>resize());
+ canvasObserver.observe(canvas);
+}
 document.addEventListener('visibilitychange',()=>{frameTime=0;});
 load();renderHarbor();resize();requestAnimationFrame(loop);
