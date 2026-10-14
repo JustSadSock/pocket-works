@@ -8,7 +8,8 @@
       "files": [
         "model.test.mjs",
         "laboratory.test.mjs",
-        "visual-land.test.mjs"
+        "visual-land.test.mjs",
+        "movement-realism.test.mjs"
       ]
     },
     {
@@ -139,6 +140,23 @@
         "model.v02.test.mjs",
         "model.calibration.test.mjs",
         "model.economy.test.mjs"
+      ]
+    },
+    {
+      "id": "commute-long",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/commute-study.mjs",
+      "args": [
+        "--seed={seed}",
+        "--years=20",
+        "--output={output}/commute.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001
       ]
     }
   ]
