@@ -241,6 +241,10 @@ function submitArtwork({automatic=false}={}){
  activeDraftTransfer?.abort();activeDraftTransfer=null;clearTimeout(draftDelay);
  const strokes=editor.getData();editor.saveSnapshot();
  pendingSubmit={token,room:roomId,round:view.round,art:ass.art,variation:ass.variation,strokes,revision:null,sentAt:0,attempts:0};
+ // Seal the canvas immediately, even when the network is disconnected.
+ screen.querySelector('.restore')?.classList.add('is-submitting');
+ const submitButton=screen.querySelector('[data-action="submit"]');if(submitButton)submitButton.disabled=true;
+ draftIndicator('Время зафиксировано · передаём рисунок…');
  persistPending();
  if(strokes.length&&archiveAutoSaved!==token){archiveAutoSaved=token;saveArtwork(ass.art,ass.variation,strokes)}
  attemptSubmission(true);
@@ -547,6 +551,7 @@ function drawing(local=false){
    if(pendingSubmit?.room===roomId&&pendingSubmit.round===view.round&&
       pendingSubmit.art===ass.art&&pendingSubmit.variation===ass.variation){
      const submit=screen.querySelector('[data-action="submit"]');if(submit)submit.disabled=true;
+     screen.querySelector('.restore')?.classList.add('is-submitting');
      draftIndicator('Восстанавливаем отправку…');
    }else backupDraft(true);
  }
