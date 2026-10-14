@@ -521,8 +521,15 @@ function frame(now){
  if(!document.hidden)draw();requestAnimationFrame(frame);
 }
 function initialize(){
- joinExpanded=!!incoming;home();requestAnimationFrame(frame);void loadIdentity();
- if(incoming)entry(true);
+ joinExpanded=!!incoming;home();requestAnimationFrame(frame);
+ const identityReady=loadIdentity();
+ if(incoming){
+  entry(true);
+  void identityReady.then(()=>{
+   // Deep links are one-tap for verified Pocket ID, while guests choose their name.
+   if(pocketIdentity?.complete&&phase==='home'&&!connecting&&incoming)void connectRoom('join');
+  }).catch(()=>{});
+ }
  else{
   let saved=null;try{saved=JSON.parse(sessionStorage.getItem('pocket-net:'+serverUrl)||'null');}catch{}
   if(saved?.roomId){incoming=saved.roomId;entry(true);toast('Можно восстановить предыдущую комнату.');}
