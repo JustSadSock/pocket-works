@@ -225,6 +225,8 @@ These rules apply when app.config.json declares runtime godot.
 - Do not add a remote Godot loader, CDN dependency, alternate host or app-specific CI installation script.
 - A Godot app is still an offline-first iOS/browser PWA product. Test the generated build in WebKit and Chromium, including orientation, touch cancellation, suspension/resume, offline reload and the explicit launcher return path.
 
+**Visual implementation requires viewing actual output:** use Playwright browser screenshots or the app's GitHub-hosted Universal QA visual flow, inspect the PNGs yourself on phone and desktop, and repeat after design changes. Do not accept a CSS-only recolor, run success or uninspected artifact as proof of improved geometry. See `docs/agent-skills/VISUAL-QA.md`.
+
 ## 11. Authored visual identity before release
 
 Before a new product or visible redesign is delivered, follow `docs/CREATIVE-PRODUCTION.md` and complete `apps/<slug>/visual-direction.json`. This file identifies the real composition, rendering medium, distinctive material/shape system and a user action with anticipation, immediate feedback and settling. For new apps and visible redesigns, schema v2 also requires a distinct interaction architecture; the build rejects a repeated header-stage-footer/control layout even if the artistic material differs. Generate browser screenshots and interaction video, **open and inspect** them, and compare against visually adjacent apps. A green functional test does not constitute visual approval.
