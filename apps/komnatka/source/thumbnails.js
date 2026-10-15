@@ -24,22 +24,41 @@ export async function buildFurnitureThumbnails(onImage){
    const entry=CATALOG[n],wall=entry.layer==='wall';
    const color=entry.type==='rug'?'#d6ab93':entry.type==='plant'?'#c79078':COLORS[2];
    const root=makeItem(scene,{id:'thumb-'+entry.type,type:entry.type,x:0,y:0,z:0,rot:0,color,variant:0});
-   const height={
-    sofa:1.45,chair:1.45,coffee:.85,shelf:1.2,bed:1.2,stool:.68,
-    floorlamp:2.65,tablelamp:1.0,plant:1.55,rug:.15,
-    books:.38,mug:.38,frame:1.25,window:2.08,
-    wardrobe:2.40,desk:.88,nightstand:.76,bookcase:2.17,loveseat:1.43,pouf:.65,
-    teddy:.76,vase:.79,candle:.49,pillow:.20,basket:.67,cactus:1.13,
-    mirror:1.44,clock:.88,deskclock:.55,teapot:.57
-   }[entry.type]||1.2;
-   const span=Math.max(1.06,entry.size[0]*.64,entry.size[1]*.65,height*.68);
+   // Frame the *geometry*, not a hardcoded room-sized box. A pillow should
+   // occupy as much of its catalog tile as a sofa does of its own.
+   root.computeWorldMatrix(true);
+   const low={x:Infinity,y:Infinity,z:Infinity},high={x:-Infinity,y:-Infinity,z:-Infinity};
+   for(const mesh of root.getChildMeshes(false)){
+    mesh.computeWorldMatrix(true);
+    const bounds=mesh.getBoundingInfo().boundingBox;
+    for(const axis of ['x','y','z']){
+     low[axis]=Math.min(low[axis],bounds.minimumWorld[axis]);
+     high[axis]=Math.max(high[axis],bounds.maximumWorld[axis]);
+    }
+   }
+   const width=high.x-low.x,depth=high.z-low.z,height=high.y-low.y;
+   const center={x:(low.x+high.x)/2,y:(low.y+high.y)/2,z:(low.z+high.z)/2};
+   const span=Math.max(.22,width*.48+depth*.34,height*.67)*1.12;
    camera.alpha=wall?Math.PI/2:Math.PI/4;
    camera.beta=wall?Math.PI/2:Math.PI/3.1;
-   camera.target.set(0,wall?0:height*.48,0);
+   camera.target.set(center.x,center.y,center.z);
    camera.orthoLeft=-span;camera.orthoRight=span;camera.orthoTop=span;camera.orthoBottom=-span;
-   scene.render();
-   const src=canvas.toDataURL('image/png');
-   if(src.length>80)onImage(entry.type,src);
+   await scene.whenReadyAsync();
+   // The first object (sofa) previously photographed an uncompiled shader.
+   scene.render();scene.render();
+   const gl=canvas.getContext('webgl2')||canvas.getContext('webgl');
+   let visible=!gl;
+   if(gl){
+    const pixel=new Uint8Array(4);
+    for(let y=25;y<=155&&!visible;y+=13)for(let x=25;x<=155;x+=13){
+     gl.readPixels(x,y,1,1,gl.RGBA,gl.UNSIGNED_BYTE,pixel);
+     if(pixel[3]>20){visible=true;break;}
+    }
+   }
+   if(visible){
+    const src=canvas.toDataURL('image/png');
+    if(src.length>200)onImage(entry.type,src);
+   }
    root.dispose(false,false);
    // Yield so catalogue rendering cannot stall placement on a mobile device.
    await new Promise(resolve=>setTimeout(resolve,15));
