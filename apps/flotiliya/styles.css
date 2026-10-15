@@ -197,3 +197,162 @@ button:focus-visible,a:focus-visible{outline:2px solid #f3d29a;outline-offset:3p
  .command{max-height:53dvh}
  .combat-feed{bottom:4px;left:4px}
 }
+
+/* 0.5 — chart-table composition. Naval material rather than nested generic cards. */
+:root{--ink:#f0e6d1;--brass:#ddbf84;--muted:#b7c6c0;--ocean:#133d43}
+body{background:#0c292f}
+.app{background:#102e34}
+.mast{background:#122f35;box-shadow:none;border-bottom:1px solid #ac936859}
+.brand{letter-spacing:.2em}
+.workspace{
+ grid-template-columns:minmax(0,660px) minmax(294px,326px);
+ max-width:1180px;
+ justify-content:center;
+ margin-inline:auto;
+ background:repeating-linear-gradient(112deg,#12353e 0,#12353e 84px,#143841 85px,#12353e 174px);
+}
+.board{background:#16414a;box-shadow:-10px 0 35px #071a1e88,10px 0 45px #071a1e99}
+.board:after{box-shadow:inset 0 0 65px #092f3980;outline:1px solid #bdac844a;outline-offset:-1px}
+.command{
+ background:linear-gradient(148deg,#213f42 0%,#152e33 68%,#152c30 100%);
+ border-left:1px solid #bdad835c;
+ box-shadow:12px 0 38px #091e24a3;
+}
+.command:before{height:2px;background:#d4bc8d;opacity:.55}
+.command-title{border-color:#ddc69839}
+.command-title h2{font-size:21px}
+.ap-gauge{background:#193a3e;border:0;border-top:1px solid #dac28a55;border-bottom:1px solid #dac28a45;padding:12px 8px}
+.ap-gauge.ap-full{border-color:#d6ae76}
+.battle-condition{background:transparent;border:0;border-bottom:1px solid #d1b78740;padding:8px 4px}
+.phase-tab{background:#204046;border-color:#567476;color:#c7d7cb}
+.phase-tab.on{background:#776346;border-color:#e1bd82;color:#fff0d2}
+.mode{background:#22434a;border-color:#688079;border-radius:1px}
+.mode.on{background:#685e46;border-color:#e4c28b}
+.primary{background:#e3c18a;border:0;color:#172e32;box-shadow:0 3px 0 #0b21259a;letter-spacing:.06em}
+.primary:hover{background:#f2d9a9}
+.harbor{
+ background:linear-gradient(90deg,rgba(6,31,36,.89) 0%,rgba(9,33,39,.68) 38%,rgba(8,33,39,.8) 100%);
+ backdrop-filter:none;
+}
+.intro{padding:2px 0}
+.intro h1{font-family:Georgia,serif;font-size:clamp(37px,3.7vw,54px);letter-spacing:-.045em;line-height:1.03}
+.intro:before{width:58px;height:3px}
+.mission-card{border-left:2px solid #dfbd83;padding:9px 12px;margin:14px 0 18px;background:#112e37ae}
+.mission-eyebrow{font:800 10px system-ui;letter-spacing:.16em;color:#ebc990}
+.mission-card p{margin:6px 0 0;line-height:1.5;font-size:13px;color:#ece5d2}
+.fleet{background:#102c31e5;border-color:#aa9a714c;box-shadow:inset 3px 0 #b6a07931}
+.ship-row{border-color:#e3d5a82d}
+.ship-row:hover{background:#28494943}
+.ship-choose.on{background:#6d8976}
+.sea-top{padding:12px 15px}
+.combat-feed{background:#102f35d4;border-left:2px solid #c3a776;font-weight:600;font-size:11px}
+.toast{font-size:11px;min-width:0;max-width:65%;bottom:auto;top:88px;background:#122f38e8}
+@media(min-width:1100px){
+ .workspace{grid-template-columns:minmax(0,690px) minmax(320px,350px)}
+ .board canvas{filter:contrast(1.035) saturate(1.05)}
+ .harbor{grid-template-columns:minmax(0,1fr) minmax(220px,300px);gap:16px}
+}
+@media(max-width:720px) and (orientation:portrait){
+ .app{grid-template-rows:42px minmax(0,1fr)}
+ .mast{padding-inline:8px}
+ .brand{font-size:13px;letter-spacing:.12em}
+ .workspace{display:grid;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;width:100%;height:100%;max-width:none}
+ .board{min-height:0}
+ .sea-top{padding:7px 9px}
+ .round-stamp .overline{font-size:8px}
+ .round-stamp b{font-size:16px}
+ .round-stamp small{font-size:10px}
+ .opposition{font-size:8px;max-width:55%;text-align:right}
+ .command{
+  height:auto;max-height:none;min-height:0;overflow:visible;
+  padding:5px 9px max(7px,env(safe-area-inset-bottom));
+  gap:4px;background:#17343a;box-shadow:0 -6px 22px #09232b8c;
+ }
+ .command:before{display:none}
+ .command-title{display:flex;align-items:baseline;gap:6px;border:0;padding:0}
+ .command-title .overline,.command-title p{display:none}
+ .command-title h2{font:17px Georgia,serif;margin:0}
+ .ap-gauge{padding:3px 7px;gap:2px;border:0;background:#214148;display:flex;align-items:center;justify-content:space-between}
+ .ap-top{flex:1}
+ .ap-top .overline{font-size:8px}
+ .ap-top small,.ap-costs{display:none}
+ .ap-numbers strong{font-size:25px}
+ .ap-numbers span{font-size:11px}
+ .ap-pips{flex:1.25;margin-left:5px;gap:3px}
+ .ap-pip{height:8px;max-width:none}
+ .battle-condition{padding:2px 3px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;border:0}
+ .condition-line{display:flex;flex-direction:column;gap:3px;font-size:8px}
+ .condition-line b{display:none}
+ .condition-line .condition-track{width:100%;height:4px}
+ .battle-condition .combat-state{display:none}
+ .order-area{gap:3px}
+ .dock-label,.route-actions #instruction,.ship-state-row{display:none}
+ .phase-tabs{gap:4px}
+ .phase-tab{min-height:32px;padding:3px 6px;grid-template-columns:25px 1fr}
+ .phase-tab span{font-size:15px}
+ .phase-tab strong{font-size:10px}
+ .phase-tab small{display:none}
+ .modes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+ .mode{min-height:43px;padding:3px 1px;gap:1px;font-size:10px;display:flex;align-items:center;justify-content:center;flex-direction:column}
+ .mode span{font-size:18px}
+ .mode small{display:none}
+ .route-actions{min-height:20px}
+ .quiet-btn{padding:2px 7px;font-size:9px}
+ .execute{min-height:46px;padding:8px 12px;font-size:12px;margin:0}
+ .harbor{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:12px;padding:20px 16px;overflow:auto}
+ .intro h1{font-size:39px}
+ .intro .primary{width:100%}
+ .mission-card{margin:12px 0}
+ .fleet{max-height:none;min-height:0;flex:0 0 auto;padding:10px 12px}
+ .fleet-list{max-height:210px}
+ .fine{display:none}
+ .toast{top:72px;bottom:auto;max-width:75%;font-size:10px;padding:6px 8px}
+ .combat-feed{bottom:5px;left:5px;font-size:9px;max-width:65%;padding:4px 6px}
+}
+@media(max-width:720px) and (orientation:portrait) and (max-height:710px){
+ .command{gap:2px;padding-top:2px}
+ .battle-condition{display:none}
+ .command-title{display:none}
+ .route-actions{display:none}
+ .phase-tab{min-height:29px}
+ .mode{min-height:39px}
+ .execute{min-height:41px}
+ .harbor{padding:12px}
+ .intro h1{font-size:32px}
+}
+@media(max-width:980px) and (orientation:landscape){
+ .workspace{grid-template-columns:minmax(0,1fr) 247px;max-width:none}
+ .command{gap:3px;padding:4px 7px}
+ .command-title h2{font-size:15px}
+ .ap-gauge{padding:4px}
+ .battle-condition{padding:2px 3px}
+ .route-actions #instruction,.ship-state-row{display:none}
+ .mode{min-height:35px}
+ .execute{min-height:38px}
+}
+
+/* Fleet plan is a decision, not a hidden autopilot. Reset remains reachable on short phones. */
+.route-actions{justify-content:flex-start;gap:6px}
+.plan-btn{background:#38524a;color:#f7ddaf;border-color:#cbb27e;font-weight:800;letter-spacing:.01em}
+.plan-btn:hover{background:#4b6957}
+@media(max-width:720px) and (orientation:portrait){
+ .route-actions{display:flex!important;min-height:22px;gap:5px;flex-wrap:nowrap}
+ .route-actions .quiet-btn{display:inline-flex!important;align-items:center;white-space:nowrap;min-height:21px;padding:3px 8px;font-size:10px}
+ .plan-btn{flex:1;justify-content:center}
+ #clearRouteBtn{flex:none}
+}
+@media(max-width:720px) and (orientation:portrait) and (max-height:710px){
+ .route-actions{display:flex!important;min-height:21px}
+}
+
+@media(max-width:720px) and (orientation:portrait){
+ .harbor .fleet-list{max-height:none;overflow:visible}
+ .harbor .fleet{flex-shrink:0}
+ .harbor .ship-row{padding:9px 0}
+ .harbor{background:linear-gradient(180deg,#092832e8 0%,#092e36d1 58%,#0b343ba8 100%)}
+}
+
+/* HTML hidden must win over authored display:grid/flex and avoid an invisible
+   second CSS-grid row consuming the entire desktop harbor height. */
+#harbor[hidden],#command[hidden],#seaTop[hidden],#endPanel[hidden],
+#help[hidden],#progress[hidden],#toast[hidden] {display:none!important}

@@ -5,7 +5,8 @@
       "id": "regression",
       "kind": "node-test",
       "files": [
-        "combat.test.mjs"
+        "combat.test.mjs",
+        "squadron-plan.test.mjs"
       ],
       "tier": "smoke"
     },

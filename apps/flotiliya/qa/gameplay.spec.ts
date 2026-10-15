@@ -36,6 +36,16 @@ test('real controls, mobile/desktop geometry, opening battle evidence', async ({
   await page.locator('#sailBtn').click();
   await expect(page.locator('#resolveBtn')).toBeVisible();
   await page.screenshot({ path: info.outputPath('02-orders.png'), fullPage: true });
+  await page.locator('#planBtn').click();
+  const planned = await page.evaluate(() => {
+    const api = (window as any).__FLOT_QA__;
+    const allies = api.game.ships.filter((s: any) => s.side === 'ally' && s.alive);
+    return allies.map((s: any) => ({valid:api.getBudget(s).valid,
+      waypoints:s.orders.reduce((n: number,o: any) => n + o.route.length,0)}));
+  });
+  expect(planned.every((ship: any) => ship.valid)).toBe(true);
+  expect(planned.some((ship: any) => ship.waypoints>0)).toBe(true);
+  await page.screenshot({ path: info.outputPath('02b-fleet-plan.png'), fullPage: true });
 
   const state = await page.evaluate(() => {
     const q = (window as any).__FLOT_QA__, game = q.game;
@@ -115,6 +125,9 @@ test('full-battle policy matrix: default, idle, shooting, focus fire and boardin
             s.orders = Array.from({length:2}, () => ({
               kind, route: [], targetId: policy === 'focus' ? (focus?.id || null) : null
             }));
+            // Real players cannot schedule two expensive actions after oar damage.
+            if (!api.getBudget(s).valid) s.orders[1].kind = 'hold';
+            if (!api.getBudget(s).valid) s.orders[0].kind = 'hold';
           }
         }
         overspentEnemyPhases += g.ships.filter((s: any) => s.side === 'enemy' && s.alive && !api.getBudget(s).valid).length;
@@ -122,6 +135,10 @@ test('full-battle policy matrix: default, idle, shooting, focus fire and boardin
         const starting = allies.map((s: any) => ({ ship:s, x:s.x, y:s.y,
           noRoute:s.orders.every((o: any) => !o.route?.length) }));
         api.startResolve();
+        if (g.phase !== 'resolve') {
+          invalid.push(`${scenario}/${policy}: rejected an expected legal order at round ${roundCount}`);
+          break;
+        }
         for (let i = 0; i < 135; i++) {
           api.advance(1 / 30);
           if (!g.ships.some((s: any) => s.side === 'ally' && s.alive) ||
@@ -165,6 +182,7 @@ test('full-battle policy matrix: default, idle, shooting, focus fire and boardin
   console.log('FLOTILIYA_AUDIT_MATRIX ' + JSON.stringify(results));
   expect(results.report).toHaveLength(20);
   expect(results.invalid).toEqual([]);
+  expect(results.report.every((row: any) => row.overspentEnemyPhases === 0)).toBe(true);
   expect(errors).toEqual([]);
   // Audit-only: No arbitrary win-rate threshold is treated as a correctness gate.
   // Compare outcomes to diagnose the value of orders, pacing and engagement.

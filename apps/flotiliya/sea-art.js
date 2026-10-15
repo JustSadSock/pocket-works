@@ -22,6 +22,12 @@ export function renderSea(ctx,now,islands,weather,W,H){
   ctx.strokeStyle=i%4?'rgba(166,203,195,.075)':'rgba(228,214,166,.18)';
   ctx.lineWidth=.7+(i%3)*.4;ctx.stroke();
  }
+ // Wide refracted undercurrents, sparse enough to keep hull silhouettes clear.
+ for(let band=0;band<9;band++){
+  const y=90+band*100+Math.sin(t*.3+band)*7;
+  ctx.strokeStyle='rgba(9,46,51,.12)';ctx.lineWidth=14;ctx.beginPath();
+  ctx.moveTo(-40,y);ctx.bezierCurveTo(W*.25,y+20,W*.65,y-16,W+40,y+17);ctx.stroke();
+ }
  for(let i=0;i<56;i++){
   const cx=(seeded(50+i*11)*W+Math.sin(t*.2+i)*3),cy=seeded(i*19+90)*H;
   ctx.beginPath();ctx.ellipse(cx,cy,9+seeded(i)*26,1.3,Math.sin(i)*.1,0,TAU);
@@ -85,6 +91,8 @@ export function renderGalley(ctx,s,now,selected=false){
  ctx.save();ctx.translate(s.x,s.y);
  const animation=now*.001;
  ctx.rotate(s.angle);
+ // The ship — not UI labels — is the focal object at phone scale.
+ ctx.scale(1.43,1.43);
  // Wake ribbons respond to velocity; no movement = nearly still water.
  ctx.save();ctx.globalAlpha=Math.max(.12,Math.min(.85,Math.abs(s.velocity)/70));
  ctx.strokeStyle='rgba(204,227,211,.4)';ctx.lineWidth=2;
@@ -92,7 +100,18 @@ export function renderGalley(ctx,s,now,selected=false){
   ctx.beginPath();ctx.moveTo(-len*.3,a*half*.7);ctx.bezierCurveTo(-len*.68,a*(half+3),-len*.95-wake,a*(half+10),-len*1.4-wake,a*(half+10+Math.sin(animation*4)*3));ctx.stroke();
   ctx.beginPath();ctx.moveTo(-len*.51,a*(half*.8));ctx.lineTo(-len*.98-wake,a*(half+3));ctx.stroke();
  }ctx.restore();
- ctx.fillStyle='rgba(4,25,32,.32)';ctx.beginPath();ctx.ellipse(-4,4,len*.68,half*1.5,0,0,TAU);ctx.fill();
+ ctx.fillStyle='rgba(3,21,25,.45)';ctx.beginPath();ctx.ellipse(-4,5,len*.75,half*1.8,0,0,TAU);ctx.fill();
+ // Whitewater lapping against the chine, animated independently of selection.
+ const foam=Math.max(.1,Math.min(.74,Math.abs(s.velocity)/45));
+ ctx.globalAlpha=foam;
+ for(const dir of [-1,1]){
+  ctx.strokeStyle='#d3e4d3';ctx.lineWidth=1.1;
+  for(let i=0;i<4;i++){
+   const xx=-len*.32+i*len*.21,yy=dir*(half+4)+Math.sin(animation*3+i)*1.2;
+   ctx.beginPath();ctx.moveTo(xx-5,yy);ctx.quadraticCurveTo(xx,yy+dir*2,xx+8,yy);ctx.stroke();
+  }
+ }
+ ctx.globalAlpha=1;
  // Oars: individually spaced and animated with slight independent offsets.
  for(const d of [-1,1])for(let i=0;i<6;i++){
    const ax=-len*.31+i*len*.105,beat=Math.sin(animation*(2.5+Math.abs(s.velocity)*.025)+i*.4)*2;
@@ -114,6 +133,10 @@ export function renderGalley(ctx,s,now,selected=false){
  for(const y of [-half*.34,half*.34]){ctx.beginPath();ctx.moveTo(-len*.44,y);ctx.lineTo(len*.3,y);ctx.stroke();}
  // Forecastle, boarding prow, stern platform.
  ctx.fillStyle='#78513d';narrow(ctx,[[len*.35,-half*.4],[len*.61,0],[len*.35,half*.4]]);ctx.fill();
+ // Reinforced ram and carved forward deck, readable at 390px wide.
+ ctx.strokeStyle='#e1bc86';ctx.lineWidth=1.6;ctx.beginPath();
+ ctx.moveTo(len*.36,-half*.34);ctx.lineTo(len*.62,0);ctx.lineTo(len*.36,half*.34);ctx.stroke();
+ ctx.fillStyle=accent;ctx.fillRect(len*.19,-half*.23,len*.13,half*.46);
  ctx.strokeStyle='#d2b38c';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(len*.58,0);ctx.lineTo(len*.76,0);ctx.stroke();
  ctx.fillStyle='#71513d';ctx.fillRect(-len*.53,-half*.42,len*.17,half*.84);
  ctx.fillStyle='#be9a6e';ctx.fillRect(-len*.49,-half*.34,len*.11,half*.68);
@@ -126,6 +149,18 @@ export function renderGalley(ctx,s,now,selected=false){
  narrow(ctx,[[len*.33,-half*.30],[len*.08,half*.54],[-len*.34,half*.36],[-len*.21,-half*.41]]);
  ctx.fillStyle=sail;ctx.globalAlpha=.92;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle='#a18e70';ctx.lineWidth=.8;ctx.stroke();
  ctx.strokeStyle='rgba(104,75,57,.32)';ctx.beginPath();ctx.moveTo(-len*.21,-half*.41);ctx.lineTo(len*.08,half*.54);ctx.stroke();
+ // Artillery and rigging distinct for each class.
+ if(s.type==='bow'){
+  ctx.fillStyle='#594534';ctx.fillRect(len*.13,-half*.4,7,half*.8);
+  ctx.strokeStyle='#e0c69b';ctx.lineWidth=1;ctx.beginPath();
+  ctx.moveTo(len*.22,-half*.43);ctx.lineTo(len*.36,-half*.33);
+  ctx.moveTo(len*.22,half*.43);ctx.lineTo(len*.36,half*.33);ctx.stroke();
+ }
+ if(s.type==='swift'){
+  ctx.strokeStyle='#c9af8c';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-len*.4,-half*.56);ctx.lineTo(len*.48,-half*.52);
+  ctx.moveTo(-len*.4,half*.56);ctx.lineTo(len*.48,half*.52);ctx.stroke();
+ }
  // A few visible crew; size/ranks vary by vessel.
  for(let k=0;k<(s.type==='heavy'?5:3);k++){
    let x=-len*.30+k*7,y=k%2?-half*.19:half*.2;
@@ -142,18 +177,20 @@ export function renderGalley(ctx,s,now,selected=false){
  ctx.restore();
  // Floating readable labels and functional status indicators.
  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
- if(selected){ctx.strokeStyle='#f5d69b';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(s.x,s.y,Math.max(36,len*.78),0,TAU);ctx.stroke();ctx.setLineDash([]);}
+ if(selected){ctx.strokeStyle='#f5d69b';ctx.lineWidth=1.7;ctx.setLineDash([5,7]);ctx.beginPath();
+ ctx.arc(s.x,s.y,Math.max(48,len*1.04),0,TAU);ctx.stroke();ctx.setLineDash([]);}
  ctx.shadowColor='rgba(3,20,25,.92)';ctx.shadowBlur=7;
- ctx.font='600 20px Georgia, serif';ctx.fillStyle=side?'#f7e9c9':'#f6d3bf';ctx.fillText(s.name,s.x,s.y-35);
- ctx.shadowBlur=0;ctx.fillStyle='rgba(12,31,35,.7)';ctx.fillRect(s.x-28,s.y+31,56,5);
- ctx.fillStyle=side?'#82b29a':'#c7836b';ctx.fillRect(s.x-28,s.y+31,56*hp,5);
- ctx.fillStyle='rgba(225,229,210,.55)';ctx.fillRect(s.x-28,s.y+37,56*Math.max(0,s.crew/s.maxCrew),2);
+ ctx.font='600 14px Georgia, serif';ctx.fillStyle=side?'#f7e9c9':'#f2d7c5';
+ if(s.name)ctx.fillText(s.name,s.x,s.y-47);
+ ctx.shadowBlur=0;ctx.fillStyle='rgba(12,31,35,.7)';ctx.fillRect(s.x-23,s.y+45,46,4);
+ ctx.fillStyle=side?'#82b29a':'#c7836b';ctx.fillRect(s.x-23,s.y+45,46*hp,4);
+ ctx.fillStyle='rgba(225,229,210,.55)';ctx.fillRect(s.x-23,s.y+50,46*Math.max(0,s.crew/s.maxCrew),2);
  if(s.grappleId){ctx.font='bold 15px system-ui,sans-serif';ctx.fillStyle='#f2b77b';
-   ctx.fillText('⚓',s.x,s.y-56);}
+   ctx.fillText('⚓',s.x,s.y-63);}
  else if(s.sinkingTimer>0){ctx.font='bold 13px system-ui,sans-serif';ctx.fillStyle='#f1aaa0';
-   ctx.fillText('ПРОБОИНА',s.x,s.y-56);}
+   ctx.fillText('ПРОБОИНА',s.x,s.y-63);}
  else if((s.oars??100)<42){ctx.font='bold 11px system-ui,sans-serif';ctx.fillStyle='#ecb783';
-   ctx.fillText('ВЁСЛА',s.x,s.y-54);}
+   ctx.fillText('ВЁСЛА',s.x,s.y-62);}
 
  ctx.restore();
 }
