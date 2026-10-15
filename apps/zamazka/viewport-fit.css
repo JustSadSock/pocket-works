@@ -274,3 +274,10 @@ html,body{min-width:0;max-width:100%;overscroll-behavior-y:none}
 .dialog{padding-top:calc(8px + env(safe-area-inset-top));
         padding-bottom:calc(8px + env(safe-area-inset-bottom))}
 .dialog-box{min-height:0;max-height:calc(var(--app-viewport-height,100dvh) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto}
+
+/* grid-area must be declared LAST: it is a shorthand for grid-row/column.
+   Declaring grid-column:auto after it silently destroyed the named layout. */
+#screen>.exhibition-lobby>.lobby-mast{grid-area:mast!important}
+#screen>.exhibition-lobby>.lobby-invite{grid-area:invite!important}
+#screen>.exhibition-lobby>.commons-desk{grid-area:canvas!important}
+#screen>.exhibition-lobby>.lobby-attendance{grid-area:roster!important}
