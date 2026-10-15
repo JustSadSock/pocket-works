@@ -19,7 +19,7 @@ function inspect(s){
  const homes=s.households.filter(h=>h.members.some(id=>lookup.get(id)?.alive));
  const dailyNeed=h=>h.members.map(id=>lookup.get(id)).filter(p=>p?.alive)
   .reduce((n,p)=>n+(p.age<4?.35:p.age<10?.55:p.age<15?.77:1)*.68,0);
- const foodDays=h=>(h.grain+(h.garden||0)+(h.dairy||0))/Math.max(.01,dailyNeed(h));
+ const foodDays=h=>(h.grain+(h.oats||0)+(h.pulses||0)+(h.garden||0)+(h.dairy||0))/Math.max(.01,dailyNeed(h));
  const foodSorted=[...homes].sort((a,b)=>b.grain-a.grain);
  const nTop=Math.max(1,Math.ceil(foodSorted.length*.2));
  const total=homes.reduce((n,h)=>n+h.grain,0);
@@ -28,6 +28,7 @@ function inspect(s){
  return {
   day:s.day,population:overview(s).population,weather:round(s.weather),
   grainKg:round(overview(s).grain),households:homes.length,
+  edibleStockKg:round(homes.reduce((n,h)=>n+h.grain+(h.oats||0)+(h.pulses||0)+(h.garden||0)+(h.dairy||0),0)),
   hungryUnder14:homes.filter(h=>foodDays(h)<14).length,
   hungryUnder30:low.length,foodDaysUnder90:homes.filter(h=>foodDays(h)<90).length,
   grainTop20PercentShare:round(foodSorted.slice(0,nTop).reduce((n,h)=>n+h.grain,0)/Math.max(1,total)),

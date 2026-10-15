@@ -1138,6 +1138,15 @@ function supply(s,h,good,emergency=false){const living=liveMembers(s,h);if(!livi
 // seeds, and delayed shipments distinguish "grain exists" from "food is accessible".
 export function foodAccess(s,h){
  const need=foodNeed(s,h),days=need>0?round((h.grain+(h.garden||0)+(h.dairy||0)+(h.pulses||0)+(h.oats||0))/need):0;
+ // An inventory can contain many nominal food-days but fail to feed a family:
+ // pulse/garden/dairy dietary caps and seed protection also matter.
+ const breakSeed=h.shortage>18;
+ const gardenToday=Math.min(h.garden||0,need*.22);
+ const dairyToday=Math.min(h.dairy||0,need*.16);
+ const pulsesToday=Math.min(Math.max(0,(h.pulses||0)-(breakSeed?0:cropSeedReserve(s,h,'pulses'))),need*.38);
+ const oatsToday=Math.min(Math.max(0,(h.oats||0)-(breakSeed?0:cropSeedReserve(s,h,'oats'))),
+   Math.max(0,need-gardenToday-dairyToday-pulsesToday));
+ const rationCoverageToday=need>0?round(Math.min(1,(h.grain+gardenToday+dairyToday+pulsesToday+oatsToday)/need)):0;
  const homes=s.households.filter(k=>k.id!==h.id&&liveMembers(s,k).length&&dist(k,h)<=68);
  const paths=walkingDistances(s,h);
  let localGrain=0,marketSurplus=0,possibleAid=0,connected=0,creditCeiling=0,workOffers=0;
@@ -1164,14 +1173,15 @@ export function foodAccess(s,h){
  }
  const inbound=s.shipments.filter(t=>t.good==='grain'&&t.buyer===h.id).reduce((n,t)=>n+t.amount,0);
  return {houseId:h.id,communityId:h.communityId,day:s.day,people:liveMembers(s,h).length,
-  foodKg:round(h.grain),gardenEquivalentKg:round(h.garden||0),dairyEquivalentKg:round(h.dairy||0),
+  foodKg:round(h.grain),oatsKg:round(h.oats||0),pulsesKg:round(h.pulses||0),gardenEquivalentKg:round(h.garden||0),dairyEquivalentKg:round(h.dairy||0),
+  rationCoverageToday,foodDaysInterpretation:'raw-inventory; not guaranteed edible days',
   dailyNeedKg:round(need),foodDays:days,coin:h.coin,
   outstandingLoanKg:round((s.loans||[]).filter(l=>l.borrowerId===h.id&&['active','in-transit'].includes(l.status)).reduce((n,l)=>n+l.owed,0)),
   creditsDueKg:round((s.loans||[]).filter(l=>l.lenderId===h.id&&['active','in-transit'].includes(l.status)).reduce((n,l)=>n+l.owed,0)),
   connectedSellers:connected,reachableGrainKg:round(localGrain),
   offeredEmergencyKg:Math.floor(marketSurplus),affordableKg:Math.floor(Math.min(marketSurplus,unspent/Math.max(.45,price*1.3))),
   potentialAidKg:round(possibleAid),potentialCreditKg:round(Math.min(creditCeiling,Math.max(0,attainableHarvest(s,h)*.32))),potentialGrainWorkplaces:workOffers,grainInTransitKg:round(inbound),
-  reason:days>=14?'supplied':inbound>need*7?'delivery-pending':marketSurplus===0?
+  reason:days>=14&&rationCoverageToday>=.99?'supplied':inbound>need*7?'delivery-pending':marketSurplus===0?
    (creditCeiling>7?'credit-possible':workOffers?'paid-work-possible':'no-saleable-surplus'):
    h.coin<5?'no-cash':unspent/Math.max(.45,price*1.3)<need*7?'not-affordable':'market-or-carrier-delay'};
 }

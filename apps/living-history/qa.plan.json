@@ -16,7 +16,8 @@
         "rural-resilience.test.mjs",
         "historic-village.test.mjs",
         "medieval-economy.test.mjs",
-        "historical-calibration.test.mjs"
+        "historical-calibration.test.mjs",
+        "causality-audit.test.mjs"
       ]
     },
     {
