@@ -266,10 +266,12 @@ try{
   if(mobile){
     const state=await page.evaluate(()=>{
       const root=document.querySelector('#screen'),scene=document.querySelector('.exhibition-lobby');
+      root.scrollTop=100;const actualScroll=root.scrollTop;root.scrollTop=0;
       return {root:root.scrollHeight-root.clientHeight,scene:scene.scrollHeight-scene.clientHeight,
+        overflow:getComputedStyle(root).overflowY,actualScroll,
         action:(()=>{const r=scene.querySelector('[data-action="start"]').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()};
     });
-    assert(state.root<=3&&state.scene<=3&&state.action,
+    assert(state.root<=8&&state.scene<=3&&state.actualScroll===0&&state.overflow==='clip'&&state.action,
       'Lobby must fit portrait without vertical scroll or hidden Start: '+JSON.stringify(state));
   }
   const boardBox=await page.locator('#commonsCanvas').boundingBox();
