@@ -109,8 +109,8 @@ function trackView(p,i){
  return '<section class="track '+(!audible?'off-air':'')+'" style="--track-color:'+colors[i%colors.length]+'">'+
  '<div class="track-head"><div class="track-name">'+(p.avatar?pocketAvatarMarkup(owns&&pocketIdentity?.artwork?pocketIdentity.artwork:p.avatar,{small:true,accountId:owns?pocketIdentity?.id:''}):'')+safe(p.name)+(owns?' · ТЫ':'')+
  '<small>'+safe(labels[p.inst])+' · '+(p.air?'В ЭФИРЕ':'НЕ В ЭФИРЕ')+(p.online?'':' · ОФЛАЙН')+'</small></div>'+
- '<span class="track-count">'+track.length+' / 6 ДУБЛЕЙ</span></div>'+
- '<div class="track-lane">'+(clips||'<div class="track-empty">Пока тишина</div>')+'</div></section>';
+ '<span class="track-count">'+track.length+' / 6</span></div>'+
+ '<div class="track-lane">'+(clips||'<div class="track-empty">Здесь появятся записи</div>')+'</div></section>';
 }
 function padsView(){
  const current=INSTRUMENTS.find(i=>i.id===instrument);
@@ -121,26 +121,26 @@ function renderStudio(){
  if(!session)return;
  const owner=room&&isHost,canChange=!room||owner;
  view.innerHTML='<section class="studio '+(session.playing?'playing':'')+'">'+
- '<div class="studio-head"><div><p class="eyebrow">МАГНИТНАЯ ЗАПИСЬ / '+(room?'POCKETLAN':'SOLO')+'</p><h1>Одна лента.<br>Разные руки.</h1></div><div class="mini-reels"><i></i><i></i></div></div>'+
+ '<div class="studio-head"><div><p class="eyebrow">МУЗЫКАЛЬНАЯ СТУДИЯ / '+(room?'POCKETNET':'СОЛО')+'</p><h1>Твоя музыка.</h1></div><div class="mini-reels"><i></i><i></i></div></div>'+
  '<div class="transport"><button id="playButton" class="'+(session.playing?'active':'')+'" data-action="play" aria-label="Воспроизвести">▶</button>'+
  '<button data-action="stop" aria-label="Остановить">■</button><button id="recordButton" class="record-button '+(recording?'recording':'')+'" data-action="record">● <span>'+(recording?'СТОП REC':'ЗАПИСЬ')+'</span></button>'+
  '<div class="transport-info"><strong id="beatReadout">01 : 01</strong><small id="transportState">'+(recording?'ИДЁТ ЗАПИСЬ':session.playing?'ИГРАЕТ':'ГОТОВО')+'</small></div>'+
  '<div class="tempo"><label for="tempoInput">BPM</label><input id="tempoInput" type="number" min="60" max="180" value="'+session.bpm+'" '+(!canChange?'disabled':'')+'></div></div>'+
  '<div class="meter"><div class="meter-grid" id="meterGrid">'+Array.from({length:64},(_,i)=>'<span class="meter-cell '+(i%16===0?'bar':'')+'" data-step="'+i+'"></span>').join('')+'</div>'+
- '<div class="meter-head"><span>4 ТАКТА · 64 ШАГА</span><span id="recHint" class="'+(recording?'armed':'')+'">'+(recording?'● ЗАПИСЫВАЕМ ТВОИ НОТЫ':'СНАЧАЛА REC, ПОТОМ ИГРАЙ')+'</span></div></div>'+
- '<div class="console"><div class="section-title"><div><span class="index">01</span><h2>Инструмент</h2></div><span class="micro">A S D F G H J K</span></div>'+
+ '<div class="meter-head"><span>4 ТАКТА · 64 ШАГА</span><span id="recHint" class="'+(recording?'armed':'')+'">'+(recording?'● ЗАПИСЫВАЕМ ТВОИ НОТЫ':'Нажми запись и играй')+'</span></div></div>'+
+ '<div class="console"><div class="section-title"><div><h2>Выбери инструмент</h2></div><span class="micro">Клавиши A–K</span></div>'+
  '<div class="instruments">'+INSTRUMENTS.map(i=>'<button class="instrument '+(instrument===i.id?'active':'')+'" data-action="inst" data-inst="'+i.id+'"><b>'+
- (i.id==='keys'?'⌁':i.id==='bass'?'≋':'◉')+'</b><span>'+i.name+'<small>'+i.sub+'</small></span></button>').join('')+'</div>'+
- '<div class="sound-routing"><label class="route '+(air?'on':'')+'"><span class="route-led"></span><span><b>В эфир</b><small>Другие слышат меня</small></span><input id="airToggle" type="checkbox" '+(air?'checked':'')+'><i class="switch"></i></label>'+
- '<label class="route '+(hearOthers?'on':'')+'"><span class="route-led"></span><span><b>Слушать остальных</b><small>Я слышу их партии</small></span><input id="hearToggle" type="checkbox" '+(hearOthers?'checked':'')+'><i class="switch"></i></label></div>'+
+ (i.id==='keys'?'⌁':i.id==='bass'?'≋':i.id==='drums'?'◉':i.id==='lead'?'∿':'◇')+'</b><span>'+i.name+'<small>'+i.sub+'</small></span></button>').join('')+'</div>'+
+ '<details class="mix-controls"><summary>Настройки звука</summary><div class="sound-routing"><label class="route '+(air?'on':'')+'"><span class="route-led"></span><span><b>В эфир</b><small>Другие слышат меня</small></span><input id="airToggle" type="checkbox" '+(air?'checked':'')+'><i class="switch"></i></label>'+
+ '<label class="route '+(hearOthers?'on':'')+'"><span class="route-led"></span><span><b>Слушать остальных</b><small>Я слышу их партии</small></span><input id="hearToggle" type="checkbox" '+(hearOthers?'checked':'')+'><i class="switch"></i></label></div></details>'+
  '<div class="pads" id="pads" data-gesture-surface data-touch-action="none">'+padsView()+'</div>'+
- '<p class="pad-instruction">Касайся площадок или используй A–K. Настоящий микрофон не нужен: инструменты синтезируются на устройстве.</p></div>'+
- '<div class="tracks-block"><div class="section-title"><div><span class="index">02</span><h2>Дорожки</h2></div>'+
- '<div class="track-actions"><label class="solo-toggle"><input id="soloToggle" type="checkbox" '+(onlyMine?'checked':'')+'> Только мои</label>'+
+ '<p class="pad-instruction">Касайся площадок или играй клавишами A–K.</p></div>'+
+ '<div class="tracks-block"><div class="section-title"><div><h2>Ваши записи</h2></div>'+
+ '<div class="track-actions"><button class="action primary pattern-create" data-action="new-pattern">+ Ноты по шагам</button><label class="solo-toggle"><input id="soloToggle" type="checkbox" '+(onlyMine?'checked':'')+'> Только мои</label>'+
  '<button class="text-action" data-action="export">↓ WAV</button></div></div>'+
  '<div class="track-list">'+session.players.map(trackView).join('')+
  (recording?'<div class="record-take" id="recordTake">● НОВЫЙ ДУБЛЬ · '+recording.notes.length+' НОТ</div>':'')+'</div></div>'+
- '<div class="studio-footer">'+(room?'<button class="action secondary" data-action="invite">+ Пригласить</button>':'<button class="action secondary" data-action="host-from-solo">+ LAN-студия</button>')+
+ '<div class="studio-footer">'+(room?'<button class="action secondary" data-action="invite">Пригласить друзей</button>':'<button class="action secondary" data-action="host-from-solo">Создать онлайн-комнату</button>')+
  (canChange?'<button class="action secondary danger" data-action="reset">Новый проект</button>':'')+
  '<button class="action secondary" data-action="leave">← Меню</button></div></section>';
  updateMeter(true);
