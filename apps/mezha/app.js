@@ -104,7 +104,7 @@ function syncHUD(){
 }
 function enterGame(s){
  game=s;hasPlayed=true;paused=false;pendingReset=false;opts.skill=s.botSkill||'regular';syncDifficulty();hidePanels();root.classList.remove('game-idle');root.classList.add('game-active');
- camera={x:W*.28,y:H*.50,zoom:1.1};mode='capture';captain=0;site=null;last=performance.now();acc=0;computeView();syncHUD();
+ camera={x:W*.145,y:H*.50,zoom:1.1};mode='capture';captain=0;site=null;last=performance.now();acc=0;computeView();syncHUD();
  notify('Выбери капитана, затем коснись цели на карте');playSound(410,.16,.04);
  storageWrite();
 }
