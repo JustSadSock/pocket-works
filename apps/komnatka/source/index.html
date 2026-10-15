@@ -95,6 +95,7 @@
         <div class="selected-header"><b id="placementTitle">Новый предмет</b><button id="closePlacement" type="button" aria-label="Отменить добавление" data-native-press>×</button></div>
         <div class="placement-line">
           <div class="selection-colors" id="placementColors" role="group" aria-label="Цвет до установки"></div>
+          <div class="material-options" id="placementMaterials" role="group" aria-label="Материал до установки"></div>
           <button id="previewRotate" class="preview-rotate" type="button" data-native-press aria-label="Повернуть до установки">
             <svg viewBox="0 0 24 24"><path d="M20 9A8 8 0 1 0 20 15m0-11v5h-5"/></svg> Повернуть
           </button>
@@ -104,6 +105,7 @@
       <div class="selection-tray" id="selection" hidden data-ui>
         <div class="selected-header"><b id="selectionName">Диван</b><button id="doneBtn" type="button" aria-label="Закрыть выбор" data-native-press>×</button></div>
         <div id="selectionColors" class="selection-colors" aria-label="Цвет предмета"></div>
+        <div class="material-options" id="selectionMaterials" role="group" aria-label="Материал предмета"></div>
         <div class="selection-actions">
           <button id="rotateBtn" type="button" data-native-press><svg viewBox="0 0 24 24"><path d="M20 9A8 8 0 1 0 20 15m0-11v5h-5"/></svg> Повернуть</button>
           <button id="duplicateBtn" type="button" data-native-press><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg> Копия</button>
@@ -135,7 +137,15 @@
       <h3>Новая комнатка</h3>
       <label for="newRoomName">Название</label>
       <input id="newRoomName" maxlength="32" value="Новая комнатка" />
-      <label for="newRoomLayout">Какую комнату соберём?</label>
+      <span class="room-field-heading">Назначение комнаты</span>
+      <div class="room-purpose-picker" id="newRoomPurposes">
+        <button type="button" data-purpose="living" class="chosen"><b>Гостиная</b><small>Общение</small></button>
+        <button type="button" data-purpose="bedroom"><b>Спальня</b><small>Отдых</small></button>
+        <button type="button" data-purpose="kitchen"><b>Кухня</b><small>Вместе</small></button>
+        <button type="button" data-purpose="nursery"><b>Детская</b><small>Игры</small></button>
+        <button type="button" data-purpose="study"><b>Кабинет</b><small>Идеи</small></button>
+      </div>
+      <span class="room-field-heading">Форма комнаты</span>
       <div class="new-layouts" id="newRoomLayouts">
         <button data-layout="classic" class="chosen" type="button"><span>▣</span>Классическая</button>
         <button data-layout="narrow" type="button"><span>▯</span>Узкая</button>
