@@ -131,6 +131,14 @@ try{
     assert(homeGeometry.display.x>=homeGeometry.heading.right+10,'Museum display must stand to the right of heading');
     assert(homeGeometry.display.x>=homeGeometry.control.right+10,'Art must not overlap navigation column');
     assert(homeGeometry.display.height>350,'Desktop artwork space is not large enough');
+    const sideContainment=await page.evaluate(()=>{
+      const stage=document.querySelector('.museum-stage').getBoundingClientRect();
+      const left=document.querySelector('.museum-slide[data-slot="-1"]').getBoundingClientRect();
+      const right=document.querySelector('.museum-slide[data-slot="1"]').getBoundingClientRect();
+      return {leftVisible:left.left-stage.left,rightVisible:stage.right-right.right};
+    });
+    assert(sideContainment.leftVisible>=-12&&sideContainment.rightVisible>=-12,
+      'Side canvases must remain whole, not cut by the home gallery rail');
   }
   assert(homeGeometry.center.width>80&&homeGeometry.center.height>80,'Real center artwork needs usable geometry');
   assert(!homeGeometry.bodyOverflow,'Home must not overflow horizontally');
@@ -151,6 +159,20 @@ try{
   assert.equal(page.url(),startingUrl,'Pocket ID opening must not navigate outside the game');
   await page.locator('.pws-dialog .pws-close').click();
   await page.locator('.pws-dialog[open]').waitFor({state:'hidden',timeout:3000});
+  // Explicit portrait coverage: close must always be visible without scrolling.
+  await page.locator('.museum-slide[data-slot="0"]').click();
+  await page.locator('.inspection-stage.is-ready').waitFor({timeout:17000});
+  const portraitGeometry=await page.evaluate(()=>{
+    const img=document.querySelector('.inspection-stage .art-inspection'),box=document.querySelector('.dialog-box'),
+      close=document.querySelector('#modalActions .btn.primary').getBoundingClientRect();
+    return {ratio:img.naturalWidth/img.naturalHeight,scroll:box.scrollHeight-box.clientHeight,
+      closeBottom:close.bottom,viewport:innerHeight};
+  });
+  assert(portraitGeometry.ratio<.94,'Portrait reference must have a vertical image ratio');
+  assert(portraitGeometry.scroll<=3&&portraitGeometry.closeBottom<portraitGeometry.viewport,
+    'Vertical work should never require scrolling to close its inspection');
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-portrait-inspect-'+viewport.width+'.png'),fullPage:false});
+  await page.locator('#modalActions .btn.primary').click();
   // One burst must settle on the last requested painting, without autoplay.
   const expectedAfter=await page.evaluate(()=>{
     const current=document.querySelector('.museum-exhibit-number').textContent;
