@@ -21,10 +21,11 @@ test('a poor household can receive physical aid without money or invented grain'
  assert.ok(audit(s).ok,audit(s).issues.join('; '));
 });
 test('physically disconnected plenty does not feed a household automatically',()=>{
- const s=createWorld(413),target=s.households[0];
+ const s=createWorld(413),target=s.households[0];s.scenario='isolated';
  const far=s.households.filter(h=>walkingSteps(s,target,h)>100).sort((a,b)=>walkingSteps(s,target,b)-walkingSteps(s,target,a))[0];
  assert.ok(far);
- for(const h of s.households)h.grain=0;
+ for(const h of s.households){h.grain=0;h.oats=0;h.pulses=0;}
+ s.economy.oatsInitial=0;s.economy.pulsesInitial=0;
  far.grain=10000;target.coin=0;balances(s);
  const before=foodAccess(s,target);
  assert.ok(before.reachableGrainKg<10000,'distant stored grain is not local food');
