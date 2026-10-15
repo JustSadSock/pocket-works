@@ -143,6 +143,29 @@ test('ship courses move continuously across BOTH action stages at paid, route-de
   expect(errors).toEqual([]);
 });
 
+test('course cannot pass through an island even when manually set to intersect land', async ({page}) => {
+  const errors = await openAuditedGame(page);
+  const result = await page.evaluate(() => {
+    const api=(window as any).__FLOT_QA__,g=api.game;
+    g.fleet=api.initialFleet();g.battleIndex=1;api.startBattle();
+    const island=g.islands[0];
+    const ship=g.ships.find((s:any)=>s.side==='ally'&&s.type==='swift');
+    ship.x=island.x-135;ship.y=island.y;ship.angle=0;
+    ship.orders=[{kind:'hold',route:[{x:island.x+40,y:island.y}],targetId:null},
+      {kind:'hold',route:[],targetId:null}];
+    const allowed=api.getBudget(ship).valid;
+    api.startResolve();
+    for(let tick=0;tick<135;tick++)api.advance(1/30);
+    return {allowed,blocked:ship._courseBlocked,shipX:ship.x,islandX:island.x,
+      alive:ship.alive};
+  });
+  expect(result.allowed).toBe(true);
+  expect(result.blocked).toBe(true);
+  expect(result.shipX).toBeLessThan(result.islandX-80);
+  expect(result.alive).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('full-battle policy matrix: default, idle, shooting, focus fire and boarding', async ({ page }, info) => {
   test.setTimeout(120000);
   const errors = await openAuditedGame(page);
