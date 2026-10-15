@@ -7,6 +7,7 @@ import { CATALOG, COLORS, byType, makeItem } from './models.js';
 import { createSoundscape } from './soundscape.js';
 import { createMotionDirector } from './motion.js';
 import { buildFurnitureThumbnails } from './thumbnails.js';
+import { createPlacementGuide } from './placement-guide.js';
 import { createOnlineController } from './online.js';
 import { roomList,activeRoomId,loadRoom,saveRoom,selectRoom,addRoom,renameRoom,deleteRoom,ROOM_CAP } from './rooms.js';
 import { LAYOUTS,leftWallX } from './layout.js';
@@ -20,11 +21,12 @@ registerEnhancedUpdate({appName:'КОМНАТКА',version:'1.0.0',releaseNotes:
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
-let currentRoomId=activeRoomId(),state=loadRoom(currentRoomId),scene,engine,camera,room,director,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
+let currentRoomId=activeRoomId(),state=loadRoom(currentRoomId),scene,engine,camera,room,director,guide,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
 const GROUPS=[['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
 let activeGroup='furniture',savedTimer=0,toastTimer=0;
 const thumbnails=new Map();
+let catalogGesture=null;
 let online=null,offlineBackup=null,queuedSnapshot=null,studio=null;
 const playerColors=['#93b3a0','#d89d81','#9f9ac8','#af9868','#7aadb6'];
 const clone=value=>JSON.parse(JSON.stringify(value));
@@ -205,7 +207,11 @@ function showCatalog() {
  $('cancelPlacementMobile').hidden=!pending;
  if(activeGroup==='finish'){renderFinish();return;}
  ui.catalog.innerHTML=CATALOG.filter(it=>it.group===activeGroup).map(it=>'<button type="button" class="item-button '+(pending?.type===it.type?'choosing':'')+'" data-type="'+it.type+'"><span class="item-drawing '+it.type+'" data-image-type="'+it.type+'">'+(thumbnails.has(it.type)?'<img class="actual-thumbnail" src="'+thumbnails.get(it.type)+'" alt="">':sprite(it.type))+'</span><span>'+it.name+'</span></button>').join('');
- ui.catalog.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>beginPlacement(b.dataset.type)));
+ ui.catalog.querySelectorAll('button').forEach(b=>{
+  b.addEventListener('pointerdown',catalogPointerDown);
+  // A pointer release is handled by catalogPointerUp, not a synthetic click.
+  b.addEventListener('click',ev=>{if(ev.detail===0)beginPlacement(b.dataset.type);});
+ });
 }
 function renderFinish(){
  const PATTERN_NAMES=['Краска','Полоска','Цветы','Клетка','Ягодки','Звёзды','Ромашки','Горошек','Веточки'];
@@ -254,7 +260,7 @@ function placementPalette(){
   placementPalette();sound('paint');
  }));
 }
-function beginPlacement(type){
+function beginPlacement(type,fromCatalogDrag=false){
  if(!ready)return;
  if(online?.active&&!online.canEdit){toast('Редактор доступен после начала раунда');return;}
  if(pending)cancelPending(false);
@@ -265,11 +271,11 @@ function beginPlacement(type){
  pending.ghost.getChildMeshes(false).forEach(mesh=>{mesh.isPickable=false;});
  pending.ghost.setEnabled(false); // No ghost bleeding through the furnished room until a valid target is known.
  ui.hint.textContent=byType[type].layer==='wall'?'Коснись стены, чтобы повесить':'Коснись места в комнате, чтобы поставить';
- ui.hint.classList.add('visible');placementPalette();showCatalog();sound('lift');
+ ui.hint.classList.add('visible');placementPalette();if(!fromCatalogDrag)showCatalog();sound('lift');
 }
 function cancelPending(show=true){
  if(!pending)return;
- pending.ghost?.dispose(false,false);pending=null;placementPalette();
+ pending.ghost?.dispose(false,false);pending=null;hideGuide();placementPalette();
  if(show)toast('Добавление отменено');
  ui.hint.classList.remove('visible');showCatalog();
 }
@@ -277,7 +283,7 @@ function updateGhost(ev){
  if(!pending)return;
  const target=pickTarget(ev,pending.proto);
  if(!target){
-  pending.valid=false;pending.previewReady=false;pending.ghost.setEnabled(false);
+  pending.valid=false;pending.previewReady=false;pending.ghost.setEnabled(false);hideGuide();
   return;
  }
  Object.assign(pending.proto,target);
@@ -288,6 +294,7 @@ function updateGhost(ev){
  if(!pending.rotAnim)pending.ghost.rotation.y=target.rot*Math.PI/2;
  pending.ghost.scaling.setAll(pending.valid?1.025:1);
  for(const mesh of pending.ghost.getChildMeshes(false))mesh.visibility=pending.valid?1:.46;
+  showGuide(pending.proto,pending.valid);
 }
 function rotatePlacement(){
  if(!pending||byType[pending.type].layer==='wall')return;
@@ -295,6 +302,7 @@ function rotatePlacement(){
  pending.valid=pending.previewReady&&valid(state,pending.proto,'preview');
  pending.rotAnim={from:pending.ghost.rotation.y,to:pending.proto.rot*Math.PI/2,start:performance.now()};
  pending.ghost.getChildMeshes(false).forEach(mesh=>mesh.visibility=pending.valid?1:.46);
+  if(pending.previewReady)showGuide(pending.proto,pending.valid);
  sound('rotate');
 }
 function hideSelection(){ui.selected.hidden=true;}
@@ -433,6 +441,53 @@ function snapFeedback(ev){
    {transform:'translate(-50%,-50%) scale(1.35)',opacity:0}],
    {duration:190,easing:'ease-out',fill:'both'});
 }
+function showGuide(item,allowed){
+ if(!guide)return;
+ const meta=byType[item.type],[width,depth]=dimensions(item);
+ guide.show({x:item.x,z:item.z,y:meta.tabletop?item.y:0,width,depth,valid:allowed,wall:meta.layer==='wall'});
+ ui.hint.textContent=allowed?'Отпусти, чтобы поставить':'Здесь предмет не поместится';
+ ui.hint.classList.toggle('invalid',!allowed);
+ ui.hint.classList.add('visible');
+}
+function hideGuide(){
+ guide?.hide();ui.hint.classList.remove('invalid');
+ if(!pending)ui.hint.classList.remove('visible');
+}
+function catalogPointerDown(ev){
+ if(!ready||ev.button>0||activeGroup==='finish')return;
+ if(online?.active&&!online.canEdit){toast('Ждём начала обустройства');return;}
+ catalogGesture={pointerId:ev.pointerId,type:ev.currentTarget.dataset.type,startX:ev.clientX,startY:ev.clientY,lastX:ev.clientX,dragging:false,scrolling:false};
+}
+function catalogPointerMove(ev){
+ const g=catalogGesture;if(!g||g.pointerId!==ev.pointerId)return;
+ const dx=ev.clientX-g.startX,dy=ev.clientY-g.startY;
+ if(!g.dragging&&!g.scrolling&&Math.abs(dx)>11&&Math.abs(dx)>Math.abs(dy)*1.2)g.scrolling=true;
+ if(g.scrolling){
+  ui.catalog.scrollLeft-=ev.clientX-g.lastX;
+  g.lastX=ev.clientX;return;
+ }
+ if(!g.dragging&&Math.hypot(dx,dy)>9){
+  g.dragging=true;beginPlacement(g.type,true);
+  if(!pending){catalogGesture=null;return;}
+  drag={kind:'place',fromCatalog:true,startX:g.startX,startY:g.startY};
+ }
+ if(g.dragging)updateGhost(ev);
+}
+function catalogPointerUp(ev){
+ const g=catalogGesture;if(!g||g.pointerId!==ev.pointerId)return;
+ catalogGesture=null;
+ if(g.scrolling)return;
+ if(!g.dragging){beginPlacement(g.type);return;}
+ const bounds=ui.canvas.getBoundingClientRect();
+ const overStage=ev.clientX>=bounds.left&&ev.clientX<=bounds.right&&ev.clientY>=bounds.top&&ev.clientY<=bounds.bottom;
+ if(overStage)endPointer(ev);
+ else{drag=null;cancelPending(false);}
+}
+function catalogPointerCancel(ev){
+ if(!catalogGesture||ev.pointerId!==catalogGesture.pointerId)return;
+ catalogGesture=null;
+ if(drag?.fromCatalog){drag=null;cancelPending(false);}
+}
 function startPointer(ev){
  if(!ready||ev.button>0)return;
  if(online?.active&&!online.canEdit){toast('Ждём начала обустройства');return;}
@@ -563,7 +618,10 @@ function switchDollhouseLighting(){
  if(online?.active)online.send({type:'decorate',patch:{evening:state.evening}});
 }
 function addEvents(){
- ui.canvas.addEventListener('pointerdown',startPointer);
+ document.addEventListener('pointermove',catalogPointerMove);
+  document.addEventListener('pointerup',catalogPointerUp);
+  document.addEventListener('pointercancel',catalogPointerCancel);
+  ui.canvas.addEventListener('pointerdown',startPointer);
  ui.canvas.addEventListener('pointermove',movePointer);
  ui.canvas.addEventListener('pointerup',ev=>{
   endPointer(ev);
@@ -615,6 +673,7 @@ function setup(){
  camera=new ArcRotateCamera('fixed-portrait',Math.PI/4,Math.PI/3.1,17,new Vector3(0,1.53,0),scene);
  camera.inputs.clear();camera.minZ=.1;camera.mode=1; // Orthographic, fixed toy-diorama camera.
  room=createRoom(scene);
+  guide=createPlacementGuide(scene);
  online=createOnlineController({
   toast,
   onEnter(){
@@ -631,7 +690,7 @@ function setup(){
   onRoom:onOnlineRoom,
   onPresence:updateOnlinePresence
  });
- director=createMotionDirector({getRoot:id=>roots.get(id),getItem:id=>state.items.find(i=>i.id===id),reducedMotion:()=>reduce.matches});
+ director=createMotionDirector({getRoot:id=>roots.get(id),getItem:id=>state.items.find(i=>i.id===id),getItems:()=>state.items,reducedMotion:()=>reduce.matches});
  resize();
  addEvents();setupHome();createGalleryUI();ready=true;refresh();ui.loading.classList.add('hidden');
  setTimeout(()=>buildFurnitureThumbnails((type,src)=>{
@@ -676,6 +735,8 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
  window.__KOMNATKA_TEST__={
   get stageReady(){return Boolean(ready&&scene&&roots.size);},
   get selection(){return selectedId;},
+   get placement(){return pending?{type:pending.type,valid:pending.valid,ready:pending.previewReady}:null;},
+   get dragging(){return drag?.kind||null;},
   get lighting(){return room?.lightingDiagnostics()??null;},
   item(id){return state.items.find(x=>x.id===id)?{...state.items.find(x=>x.id===id)}:null;},
   point(id){
