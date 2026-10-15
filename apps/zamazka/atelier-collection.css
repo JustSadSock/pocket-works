@@ -1,0 +1,251 @@
+/* ЗАМАЗКА 1.39.2 — the private restorer's cabinet.
+   Medal cabinet is a furniture-like composition. The tool test is a usable
+   miniature worktable, not an inert SVG showcase. */
+/* Medal cabinet */
+#screen>.cabinet-scene{--cab-ink:#332e29;--cab-bronze:#ae8e60;
+ display:flex!important;flex-direction:column!important;width:100%;max-width:1600px!important;
+ height:100%;min-height:0!important;max-height:100%;margin:auto!important;
+ padding:clamp(10px,1.8vh,22px) clamp(12px,2.5vw,36px)
+ calc(9px + env(safe-area-inset-bottom))!important;gap:clamp(8px,1.3vh,16px);
+ background:radial-gradient(ellipse at 55% 22%,#4d4539,#292722 64%,#24221f)!important;
+ color:#e8d8bc!important;overflow:hidden!important}
+#screen>.cabinet-scene .cabinet-header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+ align-items:center;gap:clamp(10px,2vw,28px);flex:0 0 auto;
+ border-bottom:1px solid #867657;padding-bottom:clamp(7px,1.2vh,14px)}
+.cabinet-kicker{font:700 clamp(9px,.85vw,11px)/1.4 system-ui;letter-spacing:.15em;color:#d3b487}
+#screen>.cabinet-scene .cabinet-header h2{margin:3px 0 0!important;
+ font:normal clamp(26px,3.4vw,53px)/1.04 Georgia,serif;letter-spacing:-.05em;color:#f0dfc3!important}
+.cabinet-count{display:flex;align-items:baseline;gap:5px;color:#e3c89e;white-space:nowrap}
+.cabinet-count strong{font:normal clamp(27px,3vw,46px) Georgia,serif}
+.cabinet-count span{font:11px system-ui;color:#b5a488}
+.cabinet-back{background:#3a332a;border:1px solid #907650;color:#e6cda7;padding:9px 15px;
+ font:650 12px system-ui;min-height:40px;cursor:pointer}
+.cabinet-back:focus-visible,.cabinet-medal:focus-visible,#dialog .atelier-settings button:focus-visible{
+ outline:2px solid #e1bb7b;outline-offset:2px}
+.cabinet-notice-line{flex:0 0 auto}
+.cabinet-notice{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ border-left:3px solid #bca06b;background:#494135;padding:7px 11px;color:#e9d8b9;
+ font:12px/1.3 system-ui}
+.cabinet-notice.is-error{border-left-color:#d58c65}
+.cabinet-notice button{background:#dbc59b;border:1px solid #a98c62;color:#3b362c;
+ padding:7px 10px;font:650 11px system-ui;cursor:pointer;min-height:31px}
+#screen>.cabinet-scene .cabinet-composition{display:grid;grid-template-columns:minmax(0,1.36fr) minmax(260px,.86fr);
+ flex:1 1 auto;min-width:0;min-height:0;gap:clamp(11px,1.6vw,25px);overflow:hidden}
+#screen>.cabinet-scene .cabinet-tray{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ grid-template-rows:repeat(2,minmax(0,1fr));gap:clamp(6px,.9vw,14px);
+ min-width:0;min-height:0;overflow:hidden;padding:clamp(10px,1.4vw,22px);
+ background:repeating-linear-gradient(90deg,transparent 0 38px,#180f0910 38px 41px),
+  linear-gradient(140deg,#6e5038,#4c372b 53%,#77573d);
+ box-shadow:inset 0 0 0 6px #2f271e,inset 0 0 0 9px #9f7d54,inset 0 10px 25px #0f0a076f}
+#screen>.cabinet-scene .cabinet-medal{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:clamp(3px,.7vh,8px);min-width:0;min-height:0;
+ background:#2f2c29;border:1px solid #8b6b48;box-shadow:inset 0 0 0 3px #4e4436,0 5px 10px #170f0aa8;
+ padding:clamp(4px,.8vw,12px);cursor:pointer;color:#d5c5a6;
+ transition:transform .15s ease,border-color .17s ease,background .17s ease;
+ animation:cabinet-reveal .35s ease both;animation-delay:calc(var(--medal-order)*50ms)}
+#screen>.cabinet-scene .cabinet-medal:hover{background:#3c3931;transform:translateY(-2px)}
+#screen>.cabinet-scene .cabinet-medal.is-selected{border-color:#e6c282;
+ background:#413a2f;box-shadow:inset 0 0 0 2px #7d6850,0 0 0 2px #d1a969,0 8px 15px #100906b0}
+#screen>.cabinet-scene .cabinet-medal.is-owned{background:#39362d}
+.cabinet-medal-figure{display:flex;flex:1 1 auto;align-items:center;justify-content:center;
+ min-height:0;width:100%;filter:drop-shadow(0 6px 5px #0009)}
+.cabinet-medal-svg{display:block;width:auto;height:auto;max-width:100%;
+ max-height:clamp(64px,16vh,165px);aspect-ratio:96/100;overflow:visible}
+.cabinet-medal:not(.is-owned) .cabinet-medal-svg{filter:grayscale(.7) brightness(.77)}
+.cabinet-medal-name{display:block;max-width:100%;
+ font:normal clamp(11px,1.1vw,17px)/1.1 Georgia,serif;text-align:center;color:#e5d4b8;
+ overflow-wrap:anywhere}
+.cabinet-medal-state{font:700 9px/1.2 system-ui;letter-spacing:.04em;color:#a3a097;text-align:center}
+.cabinet-medal.is-owned .cabinet-medal-state{color:#e6bf7c}
+#screen>.cabinet-scene .cabinet-detail{display:flex;align-items:stretch;justify-content:center;
+ min-height:0;min-width:0;overflow:hidden;
+ background:linear-gradient(105deg,#cbb994,#ebdfc7 25%,#e3d4b8 79%,#c3ae88);
+ border:clamp(5px,.6vw,9px) ridge #b39463;box-shadow:0 8px 21px #100a0888;color:#433a2e}
+.cabinet-detail-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:clamp(9px,2vh,21px);width:100%;height:100%;min-height:0;
+ padding:clamp(12px,2vw,33px)}
+.cabinet-detail-hero{width:min(62%,180px);max-height:36%;display:flex;justify-content:center;
+ align-items:center;filter:drop-shadow(0 9px 6px #76553366)}
+.cabinet-detail-hero .cabinet-medal-svg{max-height:min(27vh,185px);height:100%}
+.cabinet-detail-content{min-width:0;text-align:center;display:flex;flex-direction:column;
+ align-items:center;gap:clamp(7px,1.1vh,15px)}
+.cabinet-detail-content .cabinet-kicker{color:#8c704c}
+.cabinet-detail-content h3{font:normal clamp(23px,2.5vw,39px)/1.08 Georgia,serif;
+ letter-spacing:-.03em;color:#3f453a!important;margin:0;overflow-wrap:anywhere}
+.cabinet-detail-content p{font:clamp(11px,1.05vw,14px)/1.45 system-ui;
+ color:#6c604e;margin:0;max-width:370px}
+.cabinet-prize{display:flex;flex-direction:column;gap:6px;
+ padding:clamp(9px,1.4vh,18px) 12px 0;border-top:1px solid #b19e80;max-width:100%}
+.cabinet-prize span{font:700 9px system-ui;letter-spacing:.12em;color:#927858}
+.cabinet-prize strong{font:normal clamp(15px,1.6vw,23px)/1.2 Georgia,serif;color:#4d5b49}
+@keyframes cabinet-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(max-width:900px) and (min-width:701px){
+ #screen>.cabinet-scene .cabinet-composition{grid-template-columns:minmax(0,1.25fr) minmax(225px,.8fr);gap:9px}
+ #screen>.cabinet-scene .cabinet-tray{padding:10px;gap:5px}
+ #screen>.cabinet-scene .cabinet-medal-name{font-size:11px}
+}
+@media(max-width:700px){
+ #screen>.cabinet-scene{padding:7px 9px calc(7px + env(safe-area-inset-bottom))!important;gap:7px!important}
+ #screen>.cabinet-scene .cabinet-header{gap:7px;padding-bottom:6px}
+ #screen>.cabinet-scene .cabinet-header h2{font-size:clamp(23px,6.5vw,30px)!important}
+ #screen>.cabinet-scene .cabinet-kicker{font-size:8px}
+ #screen>.cabinet-scene .cabinet-count strong{font-size:26px}
+ #screen>.cabinet-scene .cabinet-back{padding:6px;min-height:35px;font-size:10px}
+ #screen>.cabinet-scene .cabinet-composition{display:flex!important;flex-direction:column!important;
+  gap:7px;min-height:0;overflow:hidden}
+ #screen>.cabinet-scene .cabinet-tray{display:grid!important;flex:1 1 auto;grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));gap:5px;padding:8px;min-height:0;
+  overflow:hidden!important}
+ #screen>.cabinet-scene .cabinet-medal{width:auto!important;min-height:0!important;
+  height:auto!important;flex:none!important;padding:3px;gap:2px}
+ #screen>.cabinet-scene .cabinet-medal-svg{max-height:clamp(33px,10vh,78px)}
+ #screen>.cabinet-scene .cabinet-medal-name{font-size:clamp(9px,2.5vw,12px);line-height:1.06}
+ #screen>.cabinet-scene .cabinet-medal-state{font-size:8px}
+ #screen>.cabinet-scene .cabinet-detail{flex:0 0 34%;min-height:0}
+ #screen>.cabinet-scene .cabinet-detail-inner{display:grid;grid-template-columns:clamp(65px,22vw,105px) minmax(0,1fr);
+  gap:8px;padding:7px 10px}
+ #screen>.cabinet-scene .cabinet-detail-hero{width:100%;max-height:100%;align-self:center}
+ #screen>.cabinet-scene .cabinet-detail-hero .cabinet-medal-svg{max-height:120px}
+ #screen>.cabinet-scene .cabinet-detail-content{align-items:flex-start;text-align:left;gap:3px}
+ #screen>.cabinet-scene .cabinet-detail-content h3{font-size:clamp(16px,4.6vw,23px)!important}
+ #screen>.cabinet-scene .cabinet-detail-content p{font-size:clamp(10px,2.65vw,12px);line-height:1.24}
+ #screen>.cabinet-scene .cabinet-prize{padding:4px 0 0}
+ #screen>.cabinet-scene .cabinet-prize span{font-size:8px}
+ #screen>.cabinet-scene .cabinet-prize strong{font-size:12px}
+ #screen>.cabinet-scene .cabinet-notice{font-size:10px;padding:4px 7px}
+}
+@media(max-width:700px) and (max-height:650px){
+ #screen>.cabinet-scene .cabinet-detail{flex-basis:30%}
+ #screen>.cabinet-scene .cabinet-detail-inner{grid-template-columns:60px minmax(0,1fr)}
+ #screen>.cabinet-scene .cabinet-detail-hero .cabinet-medal-svg{max-height:65px}
+ #screen>.cabinet-scene .cabinet-medal-svg{max-height:43px}
+ #screen>.cabinet-scene .cabinet-prize{gap:2px}
+}
+/* Brush maker's desk: retain modal footer and proper save/cancel semantics. */
+.app-shell #dialog .dialog-box.atelier-settings-dialog:has(#settingBrushStyle){
+ box-sizing:border-box;display:flex!important;flex-direction:column!important;
+ align-items:stretch!important;justify-content:flex-start!important;
+ width:min(96vw,860px)!important;max-width:860px!important;
+ max-height:calc(100dvh - 26px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
+ height:min(720px,calc(100dvh - 26px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+ min-height:0!important;gap:clamp(7px,1.4vh,14px)!important;
+ overflow:hidden!important;padding:clamp(12px,1.5vw,23px)!important;
+ background:#e8dbc4;color:#39382e}
+.app-shell #dialog .atelier-settings-dialog>h2{font:normal clamp(26px,2.9vw,39px)/1 Georgia,serif!important;
+ color:#393c32!important;margin:0!important;flex:none}
+.app-shell #dialog .atelier-settings-dialog>.atelier-settings{flex:1 1 auto;
+ display:flex;flex-direction:column;gap:9px;min-width:0;min-height:0;overflow:hidden}
+.app-shell #dialog .atelier-settings-dialog>.stack#modalActions{display:grid!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;
+ flex:none;margin:0!important;padding-top:8px;border-top:1px solid #baa98b}
+.app-shell #dialog .atelier-settings-dialog>.stack#modalActions .btn{min-height:43px!important}
+.atelier-settings-tabs{display:flex;align-items:stretch;gap:5px;border-bottom:1px solid #af9a7a;flex:none}
+.atelier-settings-tabs button{min-height:39px;min-width:110px;flex:0 1 190px;border:1px solid transparent;
+ background:transparent;color:#776752;font:600 13px system-ui;cursor:pointer}
+.atelier-settings-tabs button.is-active{color:#3d4f42;border-color:#ac9673;border-bottom-color:#eee1ca;
+ background:#f2e5ce;font-weight:750}
+.atelier-settings-panel{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden;gap:9px}
+.atelier-settings-panel[hidden]{display:none!important}
+.atelier-brush-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none}
+.atelier-brush-head>div{min-width:0}
+.atelier-brush-head>div>span{font:700 9px system-ui;letter-spacing:.12em;color:#8a724f}
+.atelier-brush-head h3{font:normal clamp(20px,2vw,29px) Georgia,serif;margin:2px 0;color:#3d4338}
+.atelier-brush-head select{flex:0 1 200px;min-width:130px;min-height:36px!important;
+ background:#faf3e6;color:#4b4030;border:1px solid #ad946d}
+.atelier-brush-desk{flex:1 1 auto;position:relative;min-height:85px;overflow:hidden;
+ border:1px solid #b29a74;background:
+ repeating-linear-gradient(0deg,transparent 0 30px,#a48c6c15 31px 32px),
+ linear-gradient(120deg,#f5e9d5,#e2cda9);box-shadow:inset 0 0 0 7px #f7eddc,inset 0 0 0 8px #cbb897}
+#dialog .atelier-brush-desk #settingStrokeCanvas{display:block;position:absolute;inset:0;
+ width:100%;height:100%;object-fit:fill;cursor:crosshair;touch-action:none;z-index:2}
+#dialog .atelier-brush-preview{position:absolute;right:clamp(40px,14vw,155px);top:8%;z-index:0;
+ height:60%;aspect-ratio:1;opacity:.63;transform:rotate(17deg);pointer-events:none}
+#dialog .atelier-brush-preview img{display:block;width:100%;height:100%;object-fit:contain}
+.atelier-paper-prompt{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);
+ white-space:nowrap;font:italic clamp(12px,1.4vw,18px) Georgia,serif;color:#9e876a;pointer-events:none}
+.atelier-paper-prompt[hidden]{display:none!important}
+#dialog .atelier-stroke-reset{position:absolute;z-index:4;right:12px;bottom:11px;min-height:32px;
+ padding:6px 11px;background:#eee0c9;border:1px solid #aa926e;color:#6f5237;
+ font:600 11px system-ui;cursor:pointer}
+.atelier-tool-pointer{position:absolute;z-index:3;width:74px;height:74px;
+ transform:translate(-19%,-16%) rotate(-8deg);pointer-events:none;display:none;
+ filter:drop-shadow(2px 3px 2px #4531244f)}
+.atelier-tool-pointer.is-visible{display:block}
+.atelier-tool-pointer.is-touching{transform:translate(-19%,-16%) rotate(-21deg) scale(.92)}
+.atelier-tool-pointer img{height:100%;width:100%;object-fit:contain}
+.atelier-brush-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(4px,.8vw,11px);
+ flex:none;min-height:0}
+.atelier-brush-options button{display:flex;align-items:center;gap:clamp(4px,.6vw,9px);
+ min-width:0;min-height:clamp(45px,6vh,62px);padding:4px;
+ background:#e4d4b7;border:1px solid #c3ae8a;color:#5a4b37;text-align:left;cursor:pointer}
+.atelier-brush-options button.is-selected{background:#384c41;border-color:#76927b;color:#f5e5c9;
+ box-shadow:inset 0 0 0 1px #8f9e83}
+.atelier-brush-options button:active{transform:translateY(1px)}
+.atelier-brush-mini{display:flex;align-items:center;justify-content:center;width:clamp(28px,3vw,46px);
+ height:clamp(32px,4vw,48px);flex:none}
+.atelier-brush-mini img{height:100%;width:100%;object-fit:contain}
+.atelier-brush-options strong{font:600 clamp(9px,.9vw,12px)/1.1 system-ui;
+ overflow-wrap:anywhere}
+.atelier-settings-note{font:11px/1.35 system-ui;color:#776951!important;margin:0!important;flex:none}
+.atelier-preferences{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ grid-template-rows:auto auto;gap:clamp(8px,1.6vw,19px);min-height:0;overflow-y:auto;align-content:start;
+ padding:3px}
+.atelier-preferences-group{display:flex;flex-direction:column;gap:clamp(8px,1.2vh,14px);
+ min-height:0;border-top:2px solid #ae9875;padding:clamp(9px,1.4vh,16px);
+ background:#efe3cf}
+.atelier-preferences-group:last-child{grid-column:1/-1}
+.atelier-group-title{font:700 10px system-ui;letter-spacing:.13em;color:#8e7651}
+.atelier-preferences-group .field{font:12px/1.3 system-ui;color:#564836!important;margin:0!important}
+.atelier-preferences-group .input{min-height:40px!important;background:#faf2e4;color:#39332b}
+.atelier-switch-line{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px}
+.atelier-switch-line input{width:20px;height:20px;accent-color:#59715c}
+.atelier-preferences-group .sound-volume-label{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.atelier-preferences-group input[type="range"]{width:100%;min-height:31px;accent-color:#9b7854}
+.atelier-preferences-group .appearance-choice{display:flex;align-items:center;gap:10px;
+ min-height:52px;margin:0!important;padding:8px!important;border:1px solid #bbaa8b}
+.atelier-preferences-group .appearance-choice-text{flex:1}
+.atelier-preferences-group .appearance-choice-text strong{color:#453d2e}
+@media(max-width:700px){
+ .app-shell #dialog .dialog-box.atelier-settings-dialog:has(#settingBrushStyle){
+  width:calc(100vw - 18px)!important;max-width:calc(100vw - 18px)!important;
+  height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
+  max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
+  padding:10px!important;gap:6px!important}
+ .app-shell #dialog .atelier-settings-dialog>h2{font-size:26px!important}
+ .atelier-settings-tabs button{min-height:39px;flex:1}
+ .atelier-brush-head h3{font-size:21px}
+ .atelier-brush-head select{min-width:116px;flex:0 0 130px;font-size:12px}
+ .atelier-brush-desk{min-height:100px}
+ #dialog .atelier-brush-preview{right:12%;top:10%;height:70%}
+ .atelier-paper-prompt{font-size:12px}
+ .atelier-brush-options{gap:3px}
+ .atelier-brush-options button{display:flex;flex-direction:column;align-items:center;
+  min-height:clamp(73px,13vh,98px);justify-content:center;gap:1px;padding:3px}
+ .atelier-brush-mini{width:30px;height:42px}
+ .atelier-brush-options strong{font-size:clamp(8px,2.2vw,10px);text-align:center}
+ .atelier-settings-note{font-size:10px}
+ .atelier-preferences{display:flex;flex-direction:column;gap:9px}
+ .atelier-preferences-group{padding:8px;gap:7px}
+ .atelier-preferences-group .field{font-size:12px!important}
+ .app-shell #dialog .atelier-settings-dialog>.stack#modalActions{padding-top:5px;gap:6px!important}
+ .app-shell #dialog .atelier-settings-dialog>.stack#modalActions .btn{min-height:43px!important}
+}
+@media(max-width:700px) and (max-height:670px){
+ .atelier-brush-options button{min-height:64px}
+ .atelier-brush-mini{height:32px}
+ .atelier-brush-desk{min-height:80px}
+ .atelier-paper-prompt{top:72%}
+}
+@media(min-width:701px) and (max-height:550px){
+ .app-shell #dialog .dialog-box.atelier-settings-dialog:has(#settingBrushStyle){
+  padding:9px!important;gap:5px!important}
+ .app-shell #dialog .atelier-settings-dialog>h2{font-size:24px!important}
+ .atelier-brush-head h3{font-size:21px}
+ .atelier-brush-options button{min-height:42px}
+ .atelier-brush-mini{height:35px}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen>.cabinet-scene *,#screen>.cabinet-scene *:before,
+ #dialog .atelier-settings *,#dialog .atelier-settings *:before{
+ animation:none!important;transition:none!important}
+}
