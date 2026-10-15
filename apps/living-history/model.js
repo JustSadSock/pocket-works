@@ -1463,9 +1463,10 @@ export function aidAssessment(s,target){
  };
 }
 function mutualAid(s){
- // No grants, no teleports: the selected donor must pass the same predicate
- // shown by aidAssessment. Every kg travels from an actual donor.
- for(const target of s.households){
+ // Snapshot which households are needy BEFORE any donor ships food, matching
+ // the original weekly processing order exactly.
+ const needy=s.households.filter(h=>liveMembers(s,h).length>0&&h.grain<foodNeed(s,h)*35);
+ for(const target of needy){
   const decision=aidDecision(s,target),offer=decision.offer;
   if(!offer)continue;
   const {donor,worker,route,kin,quantity,duration}=offer;
