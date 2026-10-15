@@ -178,11 +178,11 @@ try{
     const current=document.querySelector('.museum-exhibit-number').textContent;
     const index=Number(current.split('/')[0].trim())-1;
     document.querySelectorAll('[data-action="museum-next"]').forEach(button=>{for(let i=0;i<5;i++)button.click()});
-    return (index+5)%71;
+    return (index+1)%71;
   });
   await page.waitForFunction(()=>!document.querySelector('#museumStage')?.dataset.galleryAnimating,null,{timeout:4000});
   const settled=await page.evaluate(()=>Number(document.querySelector('.museum-exhibit-number').textContent.split('/')[0].trim())-1);
-  assert.equal(settled,expectedAfter,'Rapid inputs should land on the last requested picture');
+  assert.equal(settled,expectedAfter,'Rapid inputs must advance at most one painting per transition');
   await page.waitForTimeout(650);
   assert.equal(await page.evaluate(()=>Number(document.querySelector('.museum-exhibit-number').textContent.split('/')[0].trim())-1),settled,
     'Carousel must not continue turning on its own');
@@ -245,6 +245,13 @@ try{
   await page.locator('.lobby-entry [data-action="connect"]').click();
   await page.locator('.exhibition-lobby #commonsCanvas').waitFor({timeout:12000});
   assert.equal(await page.locator('.exhibition-lobby .player').count(),3,'Room roster must render from authoritative state');
+  assert.equal(await page.locator('.exhibition-lobby .lobby-self').count(),0,
+    'Lobby must not duplicate Pocket ID in the masthead');
+  assert.equal(await page.locator('.exhibition-lobby .lobby-invite .lobby-controls').count(),1,
+    'Invitation and exhibition settings should share one functional left desk');
+  assert.equal(await page.locator('.exhibition-lobby .lobby-attendance .player').count(),3,
+    'Player roster should be independent of the invitation desk');
+
   assert.equal(await page.locator('.exhibition-lobby [data-action="start"]').count(),1,'Host must have start action');
   assert.equal(await page.locator('.exhibition-lobby [data-action="emblem"]').count(),0,'Custom sign must be gone from waiting room');
   const boardBox=await page.locator('#commonsCanvas').boundingBox();
@@ -314,16 +321,23 @@ try{
   const brush=page.locator('[data-tool="brush"]');
   await brush.waitFor();
   await page.locator('.exhibition-exit-layer').waitFor({state:'detached',timeout:3000});
-  const handVisible=await page.locator('[data-tool="hand"]').evaluate(button=>{
-    const r=button.getBoundingClientRect();
-    const target=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
-    return Boolean(target?.closest?.('[data-tool="hand"]'));
-  });
-  assert(handVisible,'Panorama button is covered by the zoom overlay or set dressing');
-  await page.locator('[data-tool="hand"]').click();
-  assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'hand');
-  await brush.click();
-  assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'brush');
+  if(!mobile){
+    assert.equal(await page.locator('[data-tool="hand"]').isVisible(),false,
+      'Redundant desktop panorama must be hidden in the compact workstation');
+    assert.equal(await page.locator('.restore .zoom-actions').isVisible(),false,
+      'Redundant desktop zoom buttons must be hidden');
+  }else{
+    const handVisible=await page.locator('[data-tool="hand"]').evaluate(button=>{
+      const r=button.getBoundingClientRect();
+      const target=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      return Boolean(target?.closest?.('[data-tool="hand"]'));
+    });
+    assert(handVisible,'Mobile panorama must remain accessible');
+    await page.locator('[data-tool="hand"]').click();
+    assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'hand');
+    await brush.click();
+    assert.equal(await page.locator('.restore').getAttribute('data-active-tool'),'brush');
+  }
   await page.locator('#brushSize').evaluate(el=>{el.value='20';el.dispatchEvent(new Event('input',{bubbles:true}))});
   const sample=await page.locator('#sizeSample').boundingBox();
   assert(sample?.width>=26,'Brush preview container was hidden');
@@ -367,6 +381,11 @@ try{
   await page.locator('[data-action="menu"]').first().click();
   await page.locator('[data-action="collection"]').click();
   await page.locator('.archive-work').first().waitFor({timeout:7500});
+  assert.equal(await page.locator('.collection-page [data-action="menu"]').count(),1,
+    'Archive exit must be unique and inside the header, not after the gallery');
+  assert(await page.locator('.collection-mast .collection-back').isVisible(),
+    'Archive back action must be immediately visible before scrolling');
+
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
   assert.equal(await page.locator('.collection-page .set-furniture').count(),1,'Opt-in theme must persist through archive');
   await page.locator('.exhibition-exit-layer').waitFor({state:'detached',timeout:4000});
