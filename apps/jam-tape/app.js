@@ -1,22 +1,28 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
-import { createPocketLan } from '../../shared/capabilities/lan.js';
+import { PocketNet } from '../../shared/capabilities/net.js';
 import {getPocketIdentity,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import { STEPS, INSTRUMENTS, stepMs, loopMs, unlockAudio, audioContext, playNote, canHearTrack, renderWav } from './audio.js';
 installMobileRuntime();
 const STORAGE='pocket-works:jam-tape:session-v1', PROFILE='pocket-works:jam-tape:profile-v1';
 const view=document.querySelector('#view'), toastEl=document.querySelector('#toast');
 const clipDialog=document.querySelector('#clipDialog'), confirmDialog=document.querySelector('#confirmDialog');
-const ownId=(()=>{try{let id=sessionStorage.getItem(PROFILE+':id');if(!id){id=crypto.randomUUID();sessionStorage.setItem(PROFILE+':id',id)}return id}catch{return crypto.randomUUID()}})();
+const localId=(()=>{try{let id=sessionStorage.getItem(PROFILE+':id');if(!id){id=crypto.randomUUID();sessionStorage.setItem(PROFILE+':id',id)}return id}catch{return crypto.randomUUID()}})();
 let saved=(()=>{try{return JSON.parse(localStorage.getItem(STORAGE)||'null')}catch{return null}})();
 let name=(()=>{try{return localStorage.getItem(PROFILE+':name')||'Музыкант'}catch{return 'Музыкант'}})();
 let pocketIdentity=null;
-let instrument='keys', air=true, hearOthers=true, onlyMine=false;
-let screen='welcome', lan=null, room=null, isHost=false, pairingMode='', inviteSignal='', replySignal='', offerText='', answerText='', nearbyRooms=[];
-let session=null, recording=null, editClip=null, held=new Map(), remoteVoices=new Map(), busy=false, timer=null, probeTimer=null, toastTimer=null;
+let instrument='keys', air=true, hearOthers=true, onlyMine=false, settingsOpen=false;
+let ownId=localId, screen='welcome', netClient=null, connected=false, room=null, isHost=false, pairingMode='', joinCode='', initialClips=[];
+let session=null, recording=null, editClip=null, editNotes=[], editInst='keys', editBar=0, editHalf=0, editLength=1, editVelocity=88, held=new Map(), remoteVoices=new Map(), busy=false, timer=null, probeTimer=null, toastTimer=null;
 let clockOffset=0,lastScheduledMs=0, displayedStep=-1;
 const noteKeys=['a','s','d','f','g','h','j','k'];
 const colors=['#e8663b','#519289','#d1a24d','#8595b3'];
-const labels={keys:'Клавиши',bass:'Бас',drums:'Ударные'};
+const labels=Object.fromEntries(INSTRUMENTS.map(i=>[i.id,i.name]));
+const ORIGIN=location.origin+'/pocketnet';
+const netStorage={
+ getItem:key=>sessionStorage.getItem('jam-tape:'+key),
+ setItem:(key,value)=>sessionStorage.setItem('jam-tape:'+key,value),
+ removeItem:key=>sessionStorage.removeItem('jam-tape:'+key)
+};
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const self=()=>session?.players.find(p=>p.id===ownId);
@@ -30,7 +36,7 @@ function emptySession(){
  return {bpm:108,playing:false,anchor:0,players:[p],tracks:{[ownId]:[]},rev:1};
 }
 function tidyClip(raw){
- if(!raw||typeof raw!=='object'||!['keys','bass','drums'].includes(raw.inst)||!Array.isArray(raw.notes))return null;
+ if(!raw||typeof raw!=='object'||!labels[raw.inst]||!Array.isArray(raw.notes))return null;
  const notes=raw.notes.slice(0,96).filter(n=>Array.isArray(n)&&n.length===4&&n.every(Number.isFinite)&&
   Number.isInteger(n[0])&&n[0]>=0&&n[0]<64&&Number.isInteger(n[1])&&n[1]>=0&&n[1]<8)
   .map(n=>[n[0],n[1],clamp(Math.round(n[2]),1,16),clamp(Math.round(n[3]),10,100)]);
@@ -40,12 +46,12 @@ function tidyClip(raw){
 function tidySession(s){
  if(!s||typeof s!=='object'||!Array.isArray(s.players)||s.players.length>4||!s.tracks)return null;
  const players=s.players.filter(p=>typeof p?.id==='string'&&p.id.length<80&&typeof p?.name==='string').map(p=>({
-  id:p.id,name:p.name.slice(0,24),avatar:typeof p.avatar==='string'&&['clay','moss','ink','sun','wave','ember','plum','stone'].includes(p.avatar)?p.avatar:null,inst:['keys','bass','drums'].includes(p.inst)?p.inst:'keys',air:p.air!==false,online:p.online!==false
+  id:p.id,name:p.name.slice(0,24),avatar:typeof p.avatar==='string'&&['clay','moss','ink','sun','wave','ember','plum','stone'].includes(p.avatar)?p.avatar:null,inst:labels[p.inst]?p.inst:'keys',air:p.air!==false,online:p.online!==false
  }));
  if(!players.length)return null;
  const tracks={};
  for(const p of players){tracks[p.id]=(Array.isArray(s.tracks[p.id])?s.tracks[p.id]:[]).slice(0,6).map(tidyClip).filter(Boolean)}
- return {players,tracks,bpm:clamp(Math.round(Number(s.bpm)||108),60,180),playing:s.playing===true,anchor:Number.isFinite(s.anchor)?s.anchor:0,rev:Math.max(0,Math.round(Number(s.rev)||0))};
+ return {players,tracks,bpm:clamp(Math.round(Number(s.bpm)||108),60,180),playing:s.playing===true,anchor:Number.isFinite(s.anchor)?s.anchor:0,rev:Math.max(0,Math.round(Number(s.rev)||0)),host:typeof s.host==='string'?s.host:players[0]?.id};
 }
 function loadSketch(){
  const prior=tidySession(saved?.project);
@@ -64,47 +70,35 @@ function saveSketch(){
  saved={project:session,savedAt:Date.now()};
  try{localStorage.setItem(STORAGE,JSON.stringify(saved))}catch{inform('Место в памяти браузера закончилось — экспортируй микс')}
 }
-function createLan(){
- return createPocketLan({applicationId:'jam-tape',protocolVersion:1,displayName:name,player:{id:ownId,name,metadata:{app:'jam-tape',avatar:pocketIdentity?.complete?pocketIdentity.avatar:null}}});
-}
 function setScreen(next){screen=next;render()}
 function render(){document.querySelector('#roomButton').hidden=!(room&&screen==='studio');document.querySelector('#peerCount').textContent=String(session?.players.filter(p=>p.online).length||1);if(screen==='welcome')renderWelcome();if(screen==='pair')renderPair();if(screen==='studio')renderStudio()}
 function renderWelcome(){
- view.innerHTML='<section class="welcome"><div class="cover"><div class="cover-stamp">ЖИВАЯ ЛУП-СТУДИЯ / ВЫПУСК 001</div>'+
+ view.innerHTML='<section class="welcome"><div class="cover"><div class="cover-stamp">МУЗЫКАЛЬНАЯ СТУДИЯ</div>'+
  '<div class="tape-art"><div class="tape-label">PLAY<br>TOGETHER</div><div class="reel left"><b></b></div><div class="reel right"><b></b></div><div class="tape-stripe"></div></div>'+
- '<h1>Вместе<br><em>звучим.</em></h1><p>Придумай мелодию, запиши свой кусочек и передай ритм друзьям. Каждый играет на своём инструменте, а лента собирает всё вместе.</p></div>'+
- '<div class="entry"><label for="nameInput">ТВОЙ ПСЕВДОНИМ</label><input id="nameInput" type="text" maxlength="24" autocomplete="nickname" value="'+safe(name)+'" placeholder="Музыкант" '+(pocketIdentity?.complete?'readonly aria-readonly="true"':'')+'>'+
- '<p class="small-note pw-identity-notice">'+(pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' '+safe(pocketIdentity.nickname)+' · Pocket ID':'Гостевой музыкант')+' · <a href="'+pocketIdProfileUrl+'">'+(pocketIdentity?.complete?'Профиль':'Войти')+'</a></p>'+
- '<div class="entry-actions"><button class="action primary" data-action="solo">Открыть свою студию <span>↗</span></button>'+
- '<button class="action" data-action="host">Создать LAN-студию <span>↗</span></button>'+
- '<button class="action" data-action="join">Присоединиться <span>→</span></button></div>'+
- '<p class="small-note">Один Wi-Fi или точка доступа. PocketLAN работает напрямую между устройствами без сервера. В браузере участники обмениваются приглашением и ответом.</p></div></section>';
+ '<h1>Создавай.<br><em>Записывай.</em></h1><p>Играй на инструментах, собирай ритмы по шагам и сочиняй вместе с друзьями.</p></div>'+
+ '<div class="entry"><label for="nameInput">ИМЯ МУЗЫКАНТА</label><input id="nameInput" type="text" maxlength="24" autocomplete="nickname" value="'+safe(name)+'" '+(pocketIdentity?.complete?'readonly aria-readonly="true"':'')+'>'+
+ '<p class="small-note pw-identity-notice">'+(pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' '+safe(pocketIdentity.nickname)+' · Pocket ID':'Гостевой режим')+' · <a href="'+pocketIdProfileUrl+'">'+(pocketIdentity?.complete?'Профиль':'Войти')+'</a></p>'+
+ '<div class="entry-actions"><button class="action primary" data-action="solo">Моя студия <span>→</span></button>'+
+ '<button class="action" data-action="host">Создать комнату <span>↗</span></button>'+
+ '<button class="action" data-action="join">Войти по коду <span>→</span></button></div>'+
+ '<p class="small-note">Комнаты PocketNet работают через интернет. Достаточно восьмизначного кода или ссылки.</p></div></section>';
 }
-function statusLine(){return room?'В комнате: '+session.players.filter(p=>p.online).map(p=>p.name).join(', '):'Подготовка прямого соединения'}
+function statusLine(){return connected?'PocketNet · соединение активно':busy?'Подключаемся к PocketNet…':'Проверь подключение к интернету'}
 function renderPair(){
- const host=pairingMode==='host',native=Boolean(lan?.mode==='native-lan'||room&&typeof room.createInvite!=='function');
- view.innerHTML='<section class="pairing"><button class="back" data-action="back">← '+(room?'В студию':'В меню')+'</button>'+
- '<p class="eyebrow">POCKETLAN / ЛОКАЛЬНОЕ ПОДКЛЮЧЕНИЕ</p>'+
- '<h2>'+(host?'Пригласи музыкантов.':'Присоединись к ленте.')+'</h2>'+
- '<p>'+(host?'В студии может играть до четырёх человек. На устройствах должна быть одна локальная сеть.':'В браузере скопируй приглашение хоста, а потом отправь ему ответ. На совместимых устройствах можно найти комнату автоматически.')+'</p>'+
- (host?'<div class="pair-row"><button class="small-button" data-action="studio">Открыть студию →</button></div>':'')+
- (native&&host?'<p class="small-note">Комната готова для автоматического поиска на устройствах с PocketLAN.</p>':'')+
- (!host?'<div class="pair-row"><button class="small-button" data-action="discover">Найти рядом</button></div>'+
- (nearbyRooms.length?'<div class="native-list">'+nearbyRooms.map((x,i)=>'<button data-action="native" data-index="'+i+'">'+safe(x.name||'LAN-студия')+' →</button>').join('')+'</div>':''):'')+
- (host&&!native?'<label class="field-label" for="inviteOutput">1 / Приглашение другу</label>'+
- '<textarea id="inviteOutput" readonly spellcheck="false" aria-label="Приглашение">'+safe(inviteSignal)+'</textarea>'+
- '<div class="pair-row"><button data-action="copy-invite" '+(!inviteSignal?'disabled':'')+'>Копировать</button>'+
- '<button data-action="share-invite" '+(!inviteSignal?'disabled':'')+'>Поделиться</button>'+
- '<button data-action="new-invite">Новый код</button></div>'+
- '<label class="field-label" for="answerInput">2 / Ответ друга</label><textarea id="answerInput" placeholder="PWL1.…" spellcheck="false">'+safe(answerText)+'</textarea>'+
- '<button class="action primary" data-action="accept-answer">Подключить музыканта →</button>':'')+
- (!host?'<label class="field-label" for="offerInput">1 / Приглашение от друга</label>'+
- '<textarea id="offerInput" placeholder="PWL1.…" spellcheck="false">'+safe(offerText)+'</textarea>'+
- '<button class="action primary" data-action="make-answer">Создать ответ →</button>'+
- (replySignal?'<label class="field-label" for="replyOutput">2 / Верни этот ответ создателю</label>'+
- '<textarea id="replyOutput" readonly spellcheck="false">'+safe(replySignal)+'</textarea>'+
- '<div class="pair-row"><button data-action="copy-reply">Копировать</button><button data-action="share-reply">Поделиться</button></div>'+
- '<p class="small-note">Останься на этой странице: как только создатель подключит тебя, студия откроется сама.</p>':''):'')+
+ const joined=Boolean(room),host=isHost,code=room?.roomId?.slice(0,8).toUpperCase()||'';
+ const roster=(session?.players||[]).map(p=>'<div class="roster-member">'+(p.avatar?pocketAvatarMarkup(p.avatar,{small:true}):'<span class="roster-mark">♪</span>')+
+ '<span><b>'+safe(p.name)+'</b><small>'+(p.id===ownId?'Вы · ':'')+(p.id===session?.host?'ведущий':'музыкант')+(p.online?'':' · не в сети')+'</small></span></div>').join('');
+ view.innerHTML='<section class="pairing"><button class="back" data-action="back">← '+(joined?'В студию':'Назад')+'</button>'+
+ '<p class="eyebrow">POCKETNET / ИНТЕРНЕТ-КОМНАТА</p><h2>'+(joined?'Студия открыта':pairingMode==='host'?'Создаём комнату':'Войти в студию')+'</h2>'+
+ (joined?'<div class="room-access"><span class="field-label">КОД КОМНАТЫ</span><strong class="room-code">'+code+'</strong>'+
+ '<div class="pair-row"><button data-action="copy-code">Копировать код</button><button data-action="share-link">Отправить ссылку</button></div></div>'+
+ '<div class="roster"><h3>Музыканты · '+(session?.players.filter(p=>p.online).length||1)+'/4</h3>'+roster+'</div>'+
+ '<button class="action primary" data-action="studio">Играть вместе →</button>':
+ (pairingMode==='host'||pairingMode==='resume')?'<p class="connect-hint">'+(busy?'Подготавливаем комнату…':'Ожидаем ответ PocketNet. При необходимости вернись и создай комнату заново.')+'</p>':
+ '<p>Вставь код из приглашения друга. Устройства могут находиться в разных сетях.</p>'+
+ '<label class="field-label" for="joinCodeField">КОД ИЗ 8 СИМВОЛОВ</label>'+
+ '<input id="joinCodeField" maxlength="36" autocomplete="off" spellcheck="false" placeholder="Например, 12AB34CD" value="'+safe(joinCode)+'">'+
+ '<button class="action primary" data-action="enter-code" '+(!connected||busy?'disabled':'')+'>Присоединиться →</button>')+
  '<div id="pairStatus" role="status">'+safe(statusLine())+'</div></section>';
 }
 function waveFor(clip){
@@ -121,8 +115,8 @@ function trackView(p,i){
  return '<section class="track '+(!audible?'off-air':'')+'" style="--track-color:'+colors[i%colors.length]+'">'+
  '<div class="track-head"><div class="track-name">'+(p.avatar?pocketAvatarMarkup(owns&&pocketIdentity?.artwork?pocketIdentity.artwork:p.avatar,{small:true,accountId:owns?pocketIdentity?.id:''}):'')+safe(p.name)+(owns?' · ТЫ':'')+
  '<small>'+safe(labels[p.inst])+' · '+(p.air?'В ЭФИРЕ':'НЕ В ЭФИРЕ')+(p.online?'':' · ОФЛАЙН')+'</small></div>'+
- '<span class="track-count">'+track.length+' / 6 ДУБЛЕЙ</span></div>'+
- '<div class="track-lane">'+(clips||'<div class="track-empty">Пока тишина</div>')+'</div></section>';
+ '<span class="track-count">'+track.length+' / 6</span></div>'+
+ '<div class="track-lane">'+(clips||'<div class="track-empty">Здесь появятся записи</div>')+'</div></section>';
 }
 function padsView(){
  const current=INSTRUMENTS.find(i=>i.id===instrument);
@@ -133,26 +127,26 @@ function renderStudio(){
  if(!session)return;
  const owner=room&&isHost,canChange=!room||owner;
  view.innerHTML='<section class="studio '+(session.playing?'playing':'')+'">'+
- '<div class="studio-head"><div><p class="eyebrow">МАГНИТНАЯ ЗАПИСЬ / '+(room?'POCKETLAN':'SOLO')+'</p><h1>Одна лента.<br>Разные руки.</h1></div><div class="mini-reels"><i></i><i></i></div></div>'+
+ '<div class="studio-head"><div><p class="eyebrow">МУЗЫКАЛЬНАЯ СТУДИЯ / '+(room?'POCKETNET':'СОЛО')+'</p><h1>Твоя музыка.</h1></div><div class="mini-reels"><i></i><i></i></div></div>'+
  '<div class="transport"><button id="playButton" class="'+(session.playing?'active':'')+'" data-action="play" aria-label="Воспроизвести">▶</button>'+
  '<button data-action="stop" aria-label="Остановить">■</button><button id="recordButton" class="record-button '+(recording?'recording':'')+'" data-action="record">● <span>'+(recording?'СТОП REC':'ЗАПИСЬ')+'</span></button>'+
  '<div class="transport-info"><strong id="beatReadout">01 : 01</strong><small id="transportState">'+(recording?'ИДЁТ ЗАПИСЬ':session.playing?'ИГРАЕТ':'ГОТОВО')+'</small></div>'+
  '<div class="tempo"><label for="tempoInput">BPM</label><input id="tempoInput" type="number" min="60" max="180" value="'+session.bpm+'" '+(!canChange?'disabled':'')+'></div></div>'+
  '<div class="meter"><div class="meter-grid" id="meterGrid">'+Array.from({length:64},(_,i)=>'<span class="meter-cell '+(i%16===0?'bar':'')+'" data-step="'+i+'"></span>').join('')+'</div>'+
- '<div class="meter-head"><span>4 ТАКТА · 64 ШАГА</span><span id="recHint" class="'+(recording?'armed':'')+'">'+(recording?'● ЗАПИСЫВАЕМ ТВОИ НОТЫ':'СНАЧАЛА REC, ПОТОМ ИГРАЙ')+'</span></div></div>'+
- '<div class="console"><div class="section-title"><div><span class="index">01</span><h2>Инструмент</h2></div><span class="micro">A S D F G H J K</span></div>'+
+ '<div class="meter-head"><span>4 ТАКТА · 64 ШАГА</span><span id="recHint" class="'+(recording?'armed':'')+'">'+(recording?'● ЗАПИСЫВАЕМ ТВОИ НОТЫ':'Нажми запись и играй')+'</span></div></div>'+
+ '<div class="console"><div class="section-title"><div><h2>Выбери инструмент</h2></div><span class="micro">5 тембров · листай →</span></div>'+
  '<div class="instruments">'+INSTRUMENTS.map(i=>'<button class="instrument '+(instrument===i.id?'active':'')+'" data-action="inst" data-inst="'+i.id+'"><b>'+
- (i.id==='keys'?'⌁':i.id==='bass'?'≋':'◉')+'</b><span>'+i.name+'<small>'+i.sub+'</small></span></button>').join('')+'</div>'+
- '<div class="sound-routing"><label class="route '+(air?'on':'')+'"><span class="route-led"></span><span><b>В эфир</b><small>Другие слышат меня</small></span><input id="airToggle" type="checkbox" '+(air?'checked':'')+'><i class="switch"></i></label>'+
- '<label class="route '+(hearOthers?'on':'')+'"><span class="route-led"></span><span><b>Слушать остальных</b><small>Я слышу их партии</small></span><input id="hearToggle" type="checkbox" '+(hearOthers?'checked':'')+'><i class="switch"></i></label></div>'+
+ (i.id==='keys'?'⌁':i.id==='bass'?'≋':i.id==='drums'?'◉':i.id==='lead'?'∿':'◇')+'</b><span>'+i.name+'<small>'+i.sub+'</small></span></button>').join('')+'</div>'+
+ '<details class="mix-controls" '+(settingsOpen?'open':'')+'><summary>Настройки звука</summary><div class="sound-routing"><label class="route '+(air?'on':'')+'"><span class="route-led"></span><span><b>В эфир</b><small>Другие слышат меня</small></span><input id="airToggle" type="checkbox" '+(air?'checked':'')+'><i class="switch"></i></label>'+
+ '<label class="route '+(hearOthers?'on':'')+'"><span class="route-led"></span><span><b>Слушать остальных</b><small>Я слышу их партии</small></span><input id="hearToggle" type="checkbox" '+(hearOthers?'checked':'')+'><i class="switch"></i></label></div></details>'+
  '<div class="pads" id="pads" data-gesture-surface data-touch-action="none">'+padsView()+'</div>'+
- '<p class="pad-instruction">Касайся площадок или используй A–K. Настоящий микрофон не нужен: инструменты синтезируются на устройстве.</p></div>'+
- '<div class="tracks-block"><div class="section-title"><div><span class="index">02</span><h2>Дорожки</h2></div>'+
- '<div class="track-actions"><label class="solo-toggle"><input id="soloToggle" type="checkbox" '+(onlyMine?'checked':'')+'> Только мои</label>'+
+ '<p class="pad-instruction">Касайся площадок или играй клавишами A–K.</p></div>'+
+ '<div class="tracks-block"><div class="section-title"><div><h2>Ваши записи</h2></div>'+
+ '<div class="track-actions"><button class="action primary pattern-create" data-action="new-pattern">+ Ноты по шагам</button><label class="solo-toggle"><input id="soloToggle" type="checkbox" '+(onlyMine?'checked':'')+'> Только мои</label>'+
  '<button class="text-action" data-action="export">↓ WAV</button></div></div>'+
  '<div class="track-list">'+session.players.map(trackView).join('')+
  (recording?'<div class="record-take" id="recordTake">● НОВЫЙ ДУБЛЬ · '+recording.notes.length+' НОТ</div>':'')+'</div></div>'+
- '<div class="studio-footer">'+(room?'<button class="action secondary" data-action="invite">+ Пригласить</button>':'<button class="action secondary" data-action="host-from-solo">+ LAN-студия</button>')+
+ '<div class="studio-footer">'+(room?'<button class="action secondary" data-action="invite">Пригласить друзей</button>':'<button class="action secondary" data-action="host-from-solo">Создать онлайн-комнату</button>')+
  (canChange?'<button class="action secondary danger" data-action="reset">Новый проект</button>':'')+
  '<button class="action secondary" data-action="leave">← Меню</button></div></section>';
  updateMeter(true);
@@ -230,7 +224,7 @@ function playRemote(data,owner){
  if(!hearOthers||onlyMine||owner===ownId)return;
  const performer=session.players.find(p=>p.id===owner);if(!performer?.air)return;
  if(data.uid&&typeof data.uid==='string'&&data.uid.length<64&&
- ['keys','bass','drums'].includes(data.inst)&&Number.isInteger(data.pitch)&&data.pitch>=0&&data.pitch<=7){
+ labels[data.inst]&&Number.isInteger(data.pitch)&&data.pitch>=0&&data.pitch<=7){
   unlockAudio().then(ctx=>{
    if(!hearOthers||onlyMine||!self())return;
    const voice=playNote(ctx,data.inst,data.pitch,ctx.currentTime,2.5,clamp((data.vel||85)/100,.1,1));
@@ -245,28 +239,21 @@ function stopLive(data,owner){
  if(item){item.voice.release();remoteVoices.delete(key)}
 }
 function sendLive(type,payload){
- if(!room)return;
- try{room.broadcast(type,payload,{reliability:type==='live-on'?'realtime':'reliable'})}catch{ /* audio remains local */ }
+ if(!room||!connected||!netClient)return;
+ try{netClient.sendGame({type,data:payload})}catch{ /* Local playing remains available */ }
 }
-function validLive(payload){
- return payload&&typeof payload.uid==='string'&&payload.uid.length<64&&
- ['keys','bass','drums'].includes(payload.inst)&&Number.isInteger(payload.pitch)&&payload.pitch>=0&&payload.pitch<8;
-}
-function receiveLive(peer,type,data){
- const owner=peer?.id;if(!owner||!session.players.some(p=>p.id===owner&&p.air))return;
- if(type==='live-on'&&!validLive(data))return;
- if(type==='live-off'&&(!data||typeof data.uid!=='string'||data.uid.length>=64))return;
- if(type==='live-on')playRemote(data,owner);else stopLive(data,owner);
- if(isHost&&room){
-  for(const other of room.listPeers())if(other.id!==owner)try{room.send(other.id,type,{...data,owner},{reliability:type==='live-on'?'realtime':'reliable'})}catch{}
- }
+function receiveLive(type,payload){
+ const owner=payload?.owner;
+ if(!owner||owner===ownId||!session?.players.some(p=>p.id===owner&&p.air))return;
+ if(type==='live-on')playRemote(payload,owner);
+ if(type==='live-off')stopLive(payload,owner);
 }
 function applyEdit(owner,data){
  if(!data||typeof data!=='object'||!session)return false;
  const player=session.players.find(p=>p.id===owner);if(!player)return false;
  const list=session.tracks[owner]||[];
  if(data.kind==='inst'){
-  if(!['keys','bass','drums'].includes(data.inst))return false;
+  if(!labels[data.inst])return false;
   player.inst=data.inst;
  }else if(data.kind==='air'){
   if(typeof data.air!=='boolean')return false;
@@ -286,158 +273,139 @@ function applyEdit(owner,data){
   if(data.playing&&!session.playing)session.anchor=hostTime()+180;
   session.playing=data.playing;
  }else if(data.kind==='tempo'){
-  if(owner!==session.players[0].id||!Number.isInteger(data.bpm)||data.bpm<60||data.bpm>180)return false;
+  if(owner!==(session.host||session.players[0].id)||!Number.isInteger(data.bpm)||data.bpm<60||data.bpm>180)return false;
   // Keep a stable shared phase when tempo changes.
   if(session.playing){const ratio=loopMs(data.bpm)/loopMs(session.bpm);session.anchor=hostTime()-(hostTime()-session.anchor)*ratio}
   session.bpm=data.bpm;
  }else if(data.kind==='reset'){
-  if(owner!==session.players[0].id)return false;
+  if(owner!==(session.host||session.players[0].id))return false;
   for(const p of session.players)session.tracks[p.id]=[];
   session.playing=false;session.anchor=0;
  }else return false;
  session.rev++;return true;
 }
-function broadcastState(){
- if(!session)return;saveSketch();
- if(room&&isHost)try{room.broadcast('snapshot',session)}catch{inform('Не удалось синхронизировать дорожки')}
- render();
-}
+function broadcastState(){if(!session)return;saveSketch();render();}
 function sendEdit(action){
  if(!session)return;
- if(room&&!isHost){try{room.broadcast('edit',action)}catch{inform('Связь потеряна — попробуй снова')}return}
- if(!applyEdit(ownId,action)){inform('Нельзя выполнить действие — дорожка заполнена или недоступна');return}
+ if(room){
+  if(!connected||!netClient){inform('Соединение восстанавливается. Повтори действие позже.');return}
+  try{netClient.sendGame({type:'edit',action})}catch{inform('Изменение не отправлено — нет связи')}
+  return;
+ }
+ if(!applyEdit(ownId,action)){inform('Не удалось изменить дорожку: проверь свободное место.');return}
  broadcastState();
 }
-function peerList(){
- if(!room)return [ownId];
- return room.listPeers().map(p=>p.id).concat(ownId);
+function applyNetworkState(raw){
+ const state=tidySession(raw);if(!state)return;
+ const oldPlaying=session?.playing,oldAnchor=session?.anchor;
+ session=state;isHost=session.host===ownId;
+ const me=self();if(me){air=me.air;instrument=me.inst}
+ for(const p of state.players)if(!p.air||!p.online)stopRemote(p.id);
+ if(!state.playing&&recording)finishRecord();
+ if(oldPlaying!==state.playing||oldAnchor!==state.anchor)resetSchedule();
+ if(screen==='studio')renderStudio();else if(screen==='pair')renderPair();
 }
-function attachRoom(next,host){
- room=next;isHost=host;clockOffset=0;resetSchedule();
- const reference=next;
- next.on('peerjoin',({peer})=>{
-  if(room!==reference)return;
-  if(isHost){
-   let member=session.players.find(p=>p.id===peer.id);
-   if(!member&&session.players.length>=4){inform('Студия заполнена');return}
-   const peerAvatar=['clay','moss','ink','sun','wave','ember','plum','stone'].includes(peer.metadata?.avatar)?peer.metadata.avatar:null;
-   if(member){member.online=true;member.name=peer.name.slice(0,24);member.avatar=peerAvatar}
-   else{session.players.push({id:peer.id,name:peer.name.slice(0,24),avatar:peerAvatar,inst:'keys',air:true,online:true});session.tracks[peer.id]=[]}
-   session.rev++;broadcastState();
-   inform(peer.name+' подключился к ленте');
-  }else{
-   try{room.send(peer.id,'request-state',{})}catch{}
-   pairingMode='';setScreen('studio');inform('Соединение с ведущим установлено');
-   probeClock();
-  }
- });
- next.on('peerleave',({peer})=>{
-  if(room!==reference)return;
-  stopRemote(peer.id);
-  if(isHost){
-   const member=session.players.find(p=>p.id===peer.id);if(member)member.online=false;
-   broadcastState();
-  }else{
-   inform('Ведущий отключился. Композиция осталась на устройстве');
-   leaveNetwork(true);
-  }
- });
- next.on('message',({peer,type,payload})=>{
-  if(room!==reference)return;
-  if(isHost){
-   if(type==='request-state'){try{room.send(peer.id,'snapshot',session)}catch{}}
-   else if(type==='edit'){if(applyEdit(peer.id,payload))broadcastState()}
-   else if(type==='clock-probe'){try{room.send(peer.id,'clock-reply',{t:payload?.t,server:Date.now()})}catch{}}
-   else if(type==='live-on'||type==='live-off')receiveLive(peer,type,payload);
-  }else{
-   if(type==='snapshot'){
-    const state=tidySession(payload);
-    if(state){
-     const previouslyPlaying=session?.playing,oldAnchor=session?.anchor;
-     session=state;for(const p of state.players)if(!p.air)stopRemote(p.id);const own=self();if(own){air=own.air;instrument=own.inst}
-     if(!state.playing&&recording)finishRecord();
-     if(previouslyPlaying!==state.playing||oldAnchor!==state.anchor)resetSchedule();
-     saveSketch();if(screen==='studio')renderStudio();
-    }
-   }else if(type==='clock-reply'&&Number.isFinite(payload?.t)&&Number.isFinite(payload?.server)){
-    const rtt=Date.now()-payload.t;if(rtt>=0&&rtt<3000)clockOffset=payload.server+rtt/2-Date.now();
-   }else if(type==='live-on'||type==='live-off'){
-    const owner=payload?.owner||peer?.id;
-    if(type==='live-on')playRemote(payload,owner);else stopLive(payload,owner);
-   }
-  }
- });
- next.on('error',()=>inform('PocketLAN: ошибка передачи. Проверь локальную сеть.'));
- next.on('close',()=>{if(room===reference)leaveNetwork(true)});
+function probeClock(){
+ if(!room||!connected||!netClient)return;
+ try{netClient.sendGame({type:'clock-probe',t:Date.now()})}catch{}
 }
-function probeClock(){if(!room||isHost)return;try{room.broadcast('clock-probe',{t:Date.now()})}catch{}}
+function wireNet(client){
+ client.on('connected',data=>{
+  if(netClient!==client)return;
+  connected=true;ownId=data.player.id;
+  if(screen==='pair')renderPair();
+ });
+ client.on('room_joined',data=>{
+  if(netClient!==client||data.gameId!=='jam-tape')return;
+  room={roomId:data.roomId};busy=false;
+  applyNetworkState(data.state);
+  if(pairingMode==='join')setScreen('studio');else setScreen('pair');
+  try{client.sendGame({type:'profile',avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:instrument})}catch{}
+  probeClock();inform('PocketNet · студия подключена');
+ });
+ client.on('game_event',data=>{
+  if(netClient!==client)return;
+  const event=data.event;
+  if(event?.type==='state')applyNetworkState(event.payload);
+  if(event?.type==='notice')inform(String(event.payload));
+  if(event?.type==='live-on'||event?.type==='live-off')receiveLive(event.type,event.payload);
+  if(event?.type==='clock-reply'){
+   const p=event.payload,rtt=Date.now()-p?.t;
+   if(Number.isFinite(rtt)&&rtt>=0&&rtt<3000&&Number.isFinite(p.server))
+    clockOffset=p.server+rtt/2-Date.now();
+  }
+ });
+ client.on('presence',()=>{if(netClient===client&&connected&&room)try{client.sendGame({type:'sync'})}catch{}});
+ client.on('disconnected',()=>{if(netClient===client){connected=false;inform('Связь прервана. PocketNet переподключается…');if(screen==='pair')renderPair()}});
+ client.on('room_closed',()=>{if(netClient===client){leaveNetwork(true);inform('Комната закрыта. Музыка сохранена локально.')}});
+ client.on('room_kicked',()=>{if(netClient===client){leaveNetwork(true);inform('Вы вышли из комнаты.')}});
+ client.on('error',error=>{
+  if(netClient!==client)return;
+  busy=false;
+  const dict={room_not_found:'Комната не найдена или закрыта',room_full:'Комната заполнена (до 4 участников)',game_unavailable:'Модуль ЛЕНТА ещё не опубликован',server_at_capacity:'Сервер перегружен'};
+  inform(dict[error?.code]||error?.message||'Ошибка PocketNet');
+  if(screen==='pair')renderPair();
+ });
+}
 function leaveNetwork(keepMusic=false){
- const old=room;room=null;lan=null;isHost=false;pairingMode='';inviteSignal='';replySignal='';nearbyRooms=[];
- if(old)try{old.close()}catch{}
- stopRemote();clockOffset=0;
- if(keepMusic){if(session){session.playing=false;session.players=session.players.map(p=>({...p,online:p.id===ownId}));saveSketch()}setScreen('studio')}
- else setScreen('welcome');
+ const old=netClient,wasRoom=Boolean(room),onlineId=ownId;
+ netClient=null;connected=false;room=null;isHost=false;pairingMode='';busy=false;clockOffset=0;joinCode='';
+ if(old){try{if(old.roomId)old.leaveRoom()}catch{}try{old.close()}catch{}}
+ stopRemote();releaseAll();
+ if(wasRoom&&session){
+  const user=session.players.find(p=>p.id===onlineId);
+  const myClips=(session.tracks[onlineId]||[]).map(tidyClip).filter(Boolean);
+  session.players=[{id:localId,name,avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:user?.inst||instrument,air:user?.air!==false,online:true},
+   ...session.players.filter(p=>p.id!==onlineId).slice(0,3).map(p=>({...p,online:false}))];
+  session.tracks[localId]=myClips;
+  if(onlineId!==localId)delete session.tracks[onlineId];
+  session.host=localId;session.playing=false;session.anchor=0;
+ }
+ ownId=localId;resetSchedule();
+ if(session&&wasRoom)saveSketch();
+ setScreen(keepMusic&&session?'studio':'welcome');
+ if(location.search.includes('room='))history.replaceState(null,'',location.pathname);
+}
+async function connectNet(mode){
+ if(busy)return;
+ busy=true;pairingMode=mode;room=null;connected=false;setScreen('pair');
+ try{
+  if(mode!=='resume')try{netStorage.removeItem('pocket-net:'+ORIGIN)}catch{}
+  const client=new PocketNet({serverUrl:ORIGIN,name,storage:netStorage,identityKey:pocketIdentity?.id||'guest'});
+  netClient=client;wireNet(client);
+  await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Не удалось соединиться с сервером')),12000))]);
+  if(netClient!==client)return;
+  busy=false;
+  if(mode==='host')client.createRoom('jam-tape',{avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:instrument,bpm:session?.bpm||108,clips:initialClips});
+  else{
+   renderPair();
+   if(mode==='join'&&joinCode)joinByCode();
+  }
+ }catch(e){
+  if(netClient){netClient.close();netClient=null}
+  connected=false;busy=false;ownId=localId;setScreen('welcome');inform(e.message||'PocketNet недоступен');
+ }
 }
 async function hostRoom(fromStudio=false){
- if(busy)return;busy=true;
- try{
-  const ownClips=fromStudio?mine():[];
-  session=emptySession();session.tracks[ownId]=ownClips.map(c=>tidyClip(c)).filter(Boolean);
-  lan=createLan();const capabilities=await lan.getCapabilities();
-  if(!capabilities.supported)throw Error('WebRTC не поддерживается этим браузером');
-  const next=await lan.hostRoom({name:'ЛЕНТА · '+name,maxPlayers:4});
-  attachRoom(next,true);pairingMode='host';setScreen('pair');
-  if(typeof next.createInvite==='function')await newInvite();
- }catch(e){inform('Не удалось создать студию: '+(e.message||'ошибка сети'));if(!room)setScreen('welcome')}
- finally{busy=false}
+ if(busy)return;
+ saveName();initialClips=fromStudio?mine().map(tidyClip).filter(Boolean):[];
+ if(!fromStudio)session=null;
+ await connectNet('host');
 }
 async function joinMode(){
- if(busy)return;busy=true;
- try{
-  lan=createLan();const cap=await lan.getCapabilities();if(!cap.supported)throw Error('WebRTC недоступен');
-  session=emptySession();pairingMode='join';setScreen('pair');
-  if(cap.automaticDiscovery)await discover();
- }catch(e){inform(e.message||'PocketLAN недоступен');setScreen('welcome')}
- finally{busy=false}
+ if(busy)return;
+ saveName();joinCode=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();
+ await connectNet('join');
 }
-async function discover(){
- if(!lan)return;
- try{nearbyRooms=await lan.discoverRooms({timeoutMs:1600})||[];if(screen==='pair')renderPair();
-  if(!nearbyRooms.length)inform('Комнат рядом нет. Проверь Wi-Fi или используй приглашение.')
- }catch{inform('Автоматический поиск недоступен. Введи приглашение вручную.')}
+function joinByCode(){
+ if(!netClient||!connected)return;
+ const value=(view.querySelector('#joinCodeField')?.value||joinCode).trim().toUpperCase();
+ if(!/^(?:[A-F0-9]{8}|[A-F0-9-]{36})$/.test(value)){inform('Нужен код из восьми символов.');return}
+ joinCode=value;busy=true;renderPair();
+ try{netClient.joinRoom(value)}catch{busy=false;renderPair();inform('Не удалось отправить код')}
 }
-async function joinNative(ix){
- try{const descriptor=nearbyRooms[ix];if(!descriptor)return;
-  const next=await lan.joinRoom(descriptor);attachRoom(next,false);setScreen('studio');probeClock()
- }catch(e){inform('Не удалось войти: '+e.message)}
-}
-async function newInvite(){
- if(!room||typeof room.createInvite!=='function')return;
- try{
-  if(inviteSignal)try{room.cancelInvite?.(inviteSignal)}catch{}
-  inviteSignal='';renderPair();
-  inform('Готовим приглашение для нового музыканта…');
-  inviteSignal=await room.createInvite();
-  if(screen==='pair')renderPair();
- }catch(e){inform('Новый код недоступен: '+e.message)}
-}
-async function joinOffer(){
- if(!lan||room)return;
- offerText=view.querySelector('#offerInput')?.value.trim()||'';
- if(!offerText.startsWith('PWL1.')){inform('Нужно полное приглашение формата PWL1.');return}
- try{
-  inform('Создаём ответ…');
-  const result=await lan.joinInvite(offerText);
-  attachRoom(result.room,false);replySignal=result.answer;renderPair();
- }catch(e){inform('Приглашение не принято. Проверь сеть и код.');}
-}
-async function acceptAnswer(){
- if(!room?.completeInvite)return;
- answerText=view.querySelector('#answerInput')?.value.trim()||'';
- if(!answerText.startsWith('PWL1.')){inform('Вставь полный ответ PWL1.');return}
- try{
-  await room.completeInvite(answerText);answerText='';inviteSignal='';renderPair();inform('Ответ принят, соединяем устройства…')
- }catch{inform('Неверный или устаревший ответ. Создай новый код приглашения.')}
+function roomLink(){
+ const u=new URL(location.pathname,location.origin);u.searchParams.set('room',room.roomId.slice(0,8).toUpperCase());return u.toString();
 }
 function saveName(){
  if(pocketIdentity?.complete){name=pocketIdentity.nickname;return}
@@ -453,7 +421,7 @@ async function copy(text){
 }
 async function share(text){
  if(!text)return;
- if(navigator.share){try{await navigator.share({title:'ЛЕНТА / PocketLAN',text});return}catch{}}
+ if(navigator.share){try{await navigator.share({title:'ЛЕНТА / PocketNet',text});return}catch{}}
  await copy(text);
 }
 async function startRecord(){
@@ -465,23 +433,53 @@ async function startRecord(){
  recording={inst:instrument,notes:[]};renderStudio();inform('Игра записывается только на твою дорожку');
 }
 function openEditor(id){
- const clip=mine().find(c=>c.id===id);if(!clip)return;
- editClip=clip.id;
- document.querySelector('#clipTitle').textContent=labels[clip.inst]+' · дубль '+(mine().indexOf(clip)+1);
- const start=document.querySelector('#trimStart'),end=document.querySelector('#trimEnd');
- start.value=clip.a;end.value=clip.b;updateClipPreview();clipDialog.showModal();
+ const source=id==='new'?null:mine().find(c=>c.id===id);
+ if(id!=='new'&&!source)return;
+ if(id==='new'&&mine().length>=6){inform('Можно записать максимум 6 фрагментов.');return}
+ editClip=source?.id||'new';editInst=source?.inst||instrument;
+ editNotes=source?source.notes.map(n=>n.slice()):[];
+ editBar=0;editHalf=0;editLength=1;editVelocity=80;
+ document.querySelector('#clipTitle').textContent=source?labels[editInst]+' · фрагмент '+(mine().indexOf(source)+1):'Новый ритм · '+labels[editInst];
+ document.querySelector('#trimStart').value=source?.a??0;
+ document.querySelector('#trimEnd').value=source?.b??64;
+ document.querySelector('#noteLength').value='1';
+ document.querySelector('#noteVelocity').value='80';
+ document.querySelector('#deleteClip').hidden=!source;
+ document.querySelector('#duplicateClip').hidden=!source;
+ document.querySelector('#saveClip').textContent=source?'Сохранить изменения':'Добавить фрагмент';
+ updateClipPreview();renderPattern();clipDialog.showModal();
+}
+function renderPattern(){
+ if(!clipDialog.open&&editClip===null)return;
+ const sounds=INSTRUMENTS.find(i=>i.id===editInst)?.labels||[];
+ const bar=editBar*16,from=bar+editHalf*8;
+ document.querySelector('#patternBars').innerHTML=Array.from({length:4},(_,i)=>
+ '<button type="button" class="'+(editBar===i?'active':'')+'" data-bar="'+i+'" aria-pressed="'+(editBar===i)+'">Такт '+(i+1)+'</button>').join('');
+ document.querySelector('#patternHalves').innerHTML=[0,1].map(i=>'<button type="button" class="'+(editHalf===i?'active':'')+'" data-half="'+i+'" aria-pressed="'+(editHalf===i)+'">Шаги '+(i*8+1)+'–'+(i*8+8)+'</button>').join('');
+ let html='<div class="pattern-corner">Звук</div>'+Array.from({length:8},(_,i)=>'<span class="pattern-tick">'+(editHalf*8+i+1)+'</span>').join('');
+ for(let pitch=0;pitch<8;pitch++){
+  html+='<span class="pattern-sound" title="'+safe(sounds[pitch]||String(pitch+1))+'">'+safe(sounds[pitch]||String(pitch+1))+'</span>';
+  for(let step=from;step<from+8;step++){
+   const active=editNotes.some(n=>n[0]===step&&n[1]===pitch);
+   html+='<button type="button" class="pattern-step '+(active?'selected':'')+'" data-seq-step="'+step+'" data-seq-pitch="'+pitch+'" aria-pressed="'+active+'" aria-label="'+safe(sounds[pitch]||'Нота')+', шаг '+(step+1)+'">'+(active?'●':'')+'</button>';
+  }
+ }
+ document.querySelector('#patternGrid').innerHTML=html;
+ updateClipPreview();
 }
 function updateClipPreview(){
- const clip=mine().find(c=>c.id===editClip);if(!clip)return;
  const start=document.querySelector('#trimStart'),end=document.querySelector('#trimEnd');
  let a=Number(start.value),b=Number(end.value);
  if(a>=b){if(document.activeElement===start){b=Math.min(64,a+1);end.value=b}else{a=Math.max(0,b-1);start.value=a}}
  document.querySelector('#trimStartLabel').textContent=String(a+1);
  document.querySelector('#trimEndLabel').textContent=String(b);
- const notes=clip.notes.map(n=>'<i class="preview-mark" style="left:'+(n[0]/64*100)+'%;--h:'+(20+n[1]*10)+'%"></i>').join('');
- document.querySelector('#clipPreview').innerHTML=notes+
+ const marks=editNotes.map(n=>'<i class="preview-mark" style="left:'+(n[0]/64*100)+'%;--h:'+(20+n[1]*10)+'%"></i>').join('');
+ document.querySelector('#clipPreview').innerHTML=marks+
  '<div class="preview-mask" style="left:0;width:'+(a/64*100)+'%"></div>'+
  '<div class="preview-mask" style="right:0;width:'+((64-b)/64*100)+'%"></div>';
+}
+function editedClip(id){
+ return tidyClip({id,inst:editInst,a:Number(document.querySelector('#trimStart').value),b:Number(document.querySelector('#trimEnd').value),notes:editNotes});
 }
 function makeDownload(blob,filename){
  const url=URL.createObjectURL(blob),anchor=document.createElement('a');anchor.href=url;anchor.download=filename;document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),12000);
@@ -497,17 +495,11 @@ async function action(nameAction,el){
  if(nameAction==='solo'){saveName();session=loadSketch();room=null;isHost=false;setScreen('studio');startTicker();return}
  if(nameAction==='host'){saveName();await hostRoom();return}
  if(nameAction==='join'){saveName();await joinMode();return}
- if(nameAction==='back'){if(room)setScreen('studio');else setScreen('welcome');return}
+ if(nameAction==='back'){if(room)setScreen('studio');else if(netClient)leaveNetwork(false);else setScreen('welcome');return}
  if(nameAction==='studio'){setScreen('studio');startTicker();return}
- if(nameAction==='discover'){await discover();return}
- if(nameAction==='native'){await joinNative(Number(el.dataset.index));return}
- if(nameAction==='new-invite'){await newInvite();return}
- if(nameAction==='copy-invite'){await copy(inviteSignal);return}
- if(nameAction==='share-invite'){await share(inviteSignal);return}
- if(nameAction==='make-answer'){await joinOffer();return}
- if(nameAction==='copy-reply'){await copy(replySignal);return}
- if(nameAction==='share-reply'){await share(replySignal);return}
- if(nameAction==='accept-answer'){await acceptAnswer();return}
+ if(nameAction==='enter-code'){joinByCode();return}
+ if(nameAction==='copy-code'){if(room)await copy(room.roomId.slice(0,8).toUpperCase());return}
+ if(nameAction==='share-link'){if(room)await share(roomLink());return}
  if(nameAction==='play'){await unlockAudio().catch(()=>{});sendEdit({kind:'transport',playing:true});return}
  if(nameAction==='stop'){if(recording)finishRecord();sendEdit({kind:'transport',playing:false});return}
  if(nameAction==='record'){await startRecord();return}
@@ -516,13 +508,15 @@ async function action(nameAction,el){
   if(recording)finishRecord();releaseAll();instrument=next;sendEdit({kind:'inst',inst:next});renderStudio();return;
  }
  if(nameAction==='clip'){openEditor(el.dataset.clip);return}
+ if(nameAction==='new-pattern'){openEditor('new');return}
  if(nameAction==='export'){await exportMix();return}
- if(nameAction==='invite'){pairingMode='host';setScreen('pair');if(room?.createInvite&&!inviteSignal)await newInvite();return}
+ if(nameAction==='invite'){if(recording)finishRecord();pairingMode=isHost?'host':'join';setScreen('pair');return}
  if(nameAction==='host-from-solo'){if(recording)finishRecord();await hostRoom(true);return}
  if(nameAction==='reset'){confirmDialog.showModal();return}
  if(nameAction==='leave'){if(recording)finishRecord();releaseAll();if(room)leaveNetwork(false);else{saveSketch();setScreen('welcome')}return}
 }
 view.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button&&!button.disabled){action(button.dataset.action,button).catch(e=>inform(e.message||'Ошибка действия'))}});
+view.addEventListener('toggle',event=>{if(event.target.matches('.mix-controls'))settingsOpen=event.target.open},true);
 view.addEventListener('change',event=>{
  const target=event.target;
  if(target.id==='airToggle'){if(!target.checked)releaseAll();air=target.checked;sendEdit({kind:'air',air});renderStudio()}
@@ -550,16 +544,46 @@ window.addEventListener('keydown',event=>{
 window.addEventListener('keyup',event=>release('key-'+event.code));
 window.addEventListener('blur',releaseAll);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();else resetSchedule()});
-document.querySelector('#roomButton').addEventListener('click',()=>{if(room){pairingMode=isHost?'host':'join';setScreen('pair')}});
+document.querySelector('#roomButton').addEventListener('click',()=>{if(room){if(recording)finishRecord();pairingMode=isHost?'host':'join';setScreen('pair')}});
 document.querySelector('#trimStart').addEventListener('input',updateClipPreview);
 document.querySelector('#trimEnd').addEventListener('input',updateClipPreview);
 document.querySelector('#closeClip').addEventListener('click',()=>clipDialog.close());
+clipDialog.addEventListener('click',event=>{
+ const bar=event.target.closest('[data-bar]');
+ if(bar){editBar=Number(bar.dataset.bar);renderPattern();return}
+ const half=event.target.closest('[data-half]');
+ if(half){editHalf=Number(half.dataset.half);renderPattern();return}
+ const cell=event.target.closest('[data-seq-step]');
+ if(cell){
+  const step=Number(cell.dataset.seqStep),pitch=Number(cell.dataset.seqPitch);
+  const index=editNotes.findIndex(n=>n[0]===step&&n[1]===pitch);
+  if(index>=0)editNotes.splice(index,1);
+  else if(editNotes.length<96){
+   editNotes.push([step,pitch,editLength,editVelocity]);
+   unlockAudio().then(ctx=>playNote(ctx,editInst,pitch,ctx.currentTime,.16,editVelocity/100)).catch(()=>{});
+  }else{inform('В одном фрагменте максимум 96 нот');return}
+  renderPattern();
+ }
+});
+document.querySelector('#noteLength').addEventListener('change',e=>{editLength=Number(e.target.value)||1});
+document.querySelector('#noteVelocity').addEventListener('input',e=>{editVelocity=Number(e.target.value)||80});
 document.querySelector('#saveClip').addEventListener('click',()=>{
- const a=Number(document.querySelector('#trimStart').value),b=Number(document.querySelector('#trimEnd').value);
- sendEdit({kind:'clip-trim',id:editClip,a,b});clipDialog.close();inform('Границы дубля сохранены');
+ if(!editNotes.length){inform('Добавь хотя бы одну ноту на сетку');return}
+ const id=editClip==='new'?'c-'+Date.now().toString(36)+'-'+rand():editClip;
+ const clip=editedClip(id);if(!clip)return;
+ sendEdit(editClip==='new'?{kind:'clip-add',clip}:{kind:'clip-update',id,clip});
+ clipDialog.close();inform('Фрагмент отправлен на дорожку');
+});
+document.querySelector('#duplicateClip').addEventListener('click',()=>{
+ if(editClip==='new')return;
+ if(mine().length>=6){inform('Дорожка заполнена: максимум 6 фрагментов');return}
+ const clip=editedClip('c-'+Date.now().toString(36)+'-'+rand());
+ if(!clip?.notes.length){inform('Нет нот для копирования');return}
+ sendEdit({kind:'clip-add',clip});clipDialog.close();inform('Копия добавлена');
 });
 document.querySelector('#deleteClip').addEventListener('click',()=>{
- sendEdit({kind:'clip-delete',id:editClip});clipDialog.close();inform('Дубль удалён');
+ if(editClip==='new')return;
+ sendEdit({kind:'clip-delete',id:editClip});clipDialog.close();inform('Фрагмент удалён');
 });
 document.querySelector('#cancelReset').addEventListener('click',()=>confirmDialog.close());
 document.querySelector('#confirmReset').addEventListener('click',()=>{
@@ -587,6 +611,11 @@ async function refreshIdentity(){
  if(screen==='welcome')renderWelcome();
  else if(screen==='studio'&&!room)renderStudio();
 }
-void refreshIdentity();
+void refreshIdentity().then(()=>{
+ const code=new URLSearchParams(location.search).get('room')||'';
+ if(/^[a-f0-9]{8}$/i.test(code)&&!room&&!netClient){void joinMode();return}
+ try{const previous=JSON.parse(netStorage.getItem('pocket-net:'+ORIGIN)||'null');
+  if(previous?.roomId&&!room&&!netClient)void connectNet('resume');}catch{}
+});
 window.addEventListener('pageshow',()=>void refreshIdentity());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshIdentity()});

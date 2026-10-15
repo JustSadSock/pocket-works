@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "music-rules",
+      "kind": "node-test",
+      "files": [
+        "music-rules.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": ".entry-actions [data-action='solo']",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-action='solo']"
+        },
+        {
+          "action": "visible",
+          "selector": ".studio"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='new-pattern']"
+        },
+        {
+          "action": "visible",
+          "selector": "#patternGrid"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-seq-step='0'][data-seq-pitch='0']"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}

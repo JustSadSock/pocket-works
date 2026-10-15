@@ -3,7 +3,9 @@ export const STEPS=64;
 export const INSTRUMENTS=[
  {id:'keys',name:'Клавиши',sub:'МЕЛОДИЯ',labels:['До','Ре','Ми','Фа','Соль','Ля','Си','До+']},
  {id:'bass',name:'Бас',sub:'НИЗКИЕ ЧАСТОТЫ',labels:['До','Ре','Ми','Фа','Соль','Ля','Си','До+']},
- {id:'drums',name:'Ударные',sub:'РИТМ',labels:['Бочка','Малый','Хэт','Хлопок','Том','Рим','Шейкер','Крэш']}
+ {id:'drums',name:'Ударные',sub:'РИТМ',labels:['Бочка','Малый','Хэт','Хлопок','Том','Рим','Шейкер','Крэш']},
+ {id:'lead',name:'Синт',sub:'СОЛО',labels:['До','Ре','Ми','Фа','Соль','Ля','Си','До+']},
+ {id:'bell',name:'Колокола',sub:'ЗВОН',labels:['До','Ре','Ми','Фа','Соль','Ля','Си','До+']}
 ];
 export const stepMs=bpm=>60000/Math.max(60,Math.min(180,bpm))/4;
 export const loopMs=bpm=>STEPS*stepMs(bpm);
@@ -60,17 +62,19 @@ function drum(ctx,pad,when,velocity){
 }
 /** Returns a release handle for live keyboard notes; notes in clips use a finite duration. */
 export function playNote(ctx,inst,pitch,when=ctx.currentTime,seconds=.28,velocity=.8){
- if(!ctx||!['keys','bass','drums'].includes(inst)||!Number.isInteger(pitch)||pitch<0||pitch>7)return {release(){}};
+ if(!ctx||!INSTRUMENTS.some(i=>i.id===inst)||!Number.isInteger(pitch)||pitch<0||pitch>7)return {release(){}};
  when=Math.max(when,ctx.currentTime);velocity=Math.max(.05,Math.min(1,velocity));
  if(inst==='drums')return drum(ctx,pitch,when,velocity);
  const freq=hz(inst,pitch),out=ctx.createGain(),filter=ctx.createBiquadFilter();
  const sustain=Math.max(.07,Math.min(4,seconds)),end=when+sustain+.3;
- filter.type='lowpass';filter.frequency.setValueAtTime(inst==='bass'?750:2600,when);
+ filter.type='lowpass';filter.frequency.setValueAtTime(inst==='bass'?750:inst==='lead'?4400:inst==='bell'?6000:2600,when);
  if(inst==='bass')filter.frequency.exponentialRampToValueAtTime(260,when+.23);
- envelope(ctx,when,out,(inst==='bass'?.32:.18)*velocity,sustain,inst==='bass'?.12:.16);
+ envelope(ctx,when,out,(inst==='bass'?.32:inst==='bell'?.24:inst==='lead'?.14:.18)*velocity,inst==='bell'?.11:sustain,inst==='bell'?.5:inst==='bass'?.12:.16);
  out.connect(ctx.destination);filter.connect(out);
  const os=[];
  if(inst==='keys'){os.push(oscillator(ctx,'triangle',freq,filter,when,end,.8));os.push(oscillator(ctx,'sine',freq*2,filter,when,end,.17,3))}
+ else if(inst==='bell'){os.push(oscillator(ctx,'sine',freq,filter,when,end,.9));os.push(oscillator(ctx,'sine',freq*2.01,filter,when,end,.28));os.push(oscillator(ctx,'sine',freq*3.91,filter,when,end,.14))}
+ else if(inst==='lead'){os.push(oscillator(ctx,'sawtooth',freq,filter,when,end,.36));os.push(oscillator(ctx,'square',freq,filter,when,end,.22,5))}
  else{os.push(oscillator(ctx,'sawtooth',freq,filter,when,end,.68));os.push(oscillator(ctx,'sine',freq/2,filter,when,end,.55))}
  let released=false;
  return{release(at=ctx.currentTime){if(released)return;released=true;at=Math.max(when+.012,at);if(at>=end)return;out.gain.cancelScheduledValues(at);out.gain.setValueAtTime(Math.max(.0002,out.gain.value),at);out.gain.setTargetAtTime(.0001,at,.065);for(const o of os){try{o.stop(at+.24)}catch{}}}};
