@@ -24,7 +24,7 @@ const browser=await chromium.launch({headless:true});
 const screenshotDir=process.env.ZAMAZKA_QA_ARTIFACT_DIR;
 let cases=0;
 try{
- for(const viewport of [{width:1755,height:864},{width:390,height:844}]){
+ for(const viewport of [{width:1755,height:864},{width:390,height:844},{width:360,height:640}]){
   const mobile=viewport.width<700;
   const context=await browser.newContext({viewport,isMobile:mobile,hasTouch:mobile,acceptDownloads:true});
   const page=await context.newPage();const errors=[];
@@ -520,4 +520,4 @@ try{
   await context.close();
  }
 }finally{await browser.close();await new Promise(resolve=>web.close(resolve))}
-assert.equal(cases,2);
+assert.equal(cases,3);
