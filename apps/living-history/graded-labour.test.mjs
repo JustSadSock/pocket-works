@@ -82,3 +82,20 @@ test('graded labour saves and resumes with identical trajectories and fractional
  assert.equal(serialize(original),serialize(loaded));
  assert.ok(audit(original).ok);
 });
+
+test('customary obligations credit only whole days while retaining fractional physical effort',()=>{
+ const s=createWorld(413);
+ advanceDays(s,365);
+ let seen=false;
+ for(const h of s.households){
+  const a=h.manorAgreement;
+  if(!a)continue;
+  seen=true;
+  assert.ok(Number.isInteger(a.served),'tenure credits must be whole days');
+  assert.ok(a.served>=0&&a.served<=a.dueDays);
+  assert.ok(Number.isFinite(a.serviceProgress||0));
+  assert.ok((a.serviceProgress||0)>=0&&(a.serviceProgress||0)<1,'incomplete fractions carry over');
+ }
+ assert.ok(seen,'sample has customary tenants');
+ const result=audit(s);assert.ok(result.ok,result.issues.join('; '));
+});
