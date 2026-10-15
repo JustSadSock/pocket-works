@@ -757,6 +757,7 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
    get itemCount(){return state.items.length;},
    get gridVisible(){return Boolean(scene?.getMeshByName('placement-grid')?.isEnabled());},
    meshY(id){return roots.get(id)?.position.y??null;},
+   meshRotation(id,name){return roots.get(id)?.getChildMeshes(false).find(mesh=>mesh.name===name)?.rotation.x??null;},
    groundPoint(x,z,y=0){
     if(!ready)return null;
     const rect=ui.canvas.getBoundingClientRect(),viewport=camera.viewport.toGlobal(ui.canvas.width,ui.canvas.height);
