@@ -9,7 +9,7 @@ const RELEASE_NOTES = [
   'Локальное сохранение и повтор ошибочных заданий.'
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './app.js', './puzzle-core.mjs',
+  './', './index.html', './app.config.json', './styles.css', './app.js', './puzzle-core.js',
   './manifest.webmanifest', './icons/icon.svg',
   '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js',
   '../../shared/pwa-utils.js',
