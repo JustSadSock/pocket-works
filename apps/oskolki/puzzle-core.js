@@ -52,7 +52,7 @@ export function fragmentText(text) {
   const { units, separator } = segmentsFor(text);
   if (!units.length) return [];
   if (units.length === 1) return [units[0]];
-  const target = Math.min(units.length, 8, Math.max(2, Math.ceil(units.length / 2.2)));
+  const target = Math.min(units.length, 10, Math.max(2, Math.ceil(units.length / 1.3)));
   const output = [];
   let offset = 0;
   for (let i = 0; i < target; i++) {
