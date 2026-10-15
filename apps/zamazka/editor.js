@@ -393,6 +393,16 @@ export class Editor{
     if(changed){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot()}
     return changed;
   }
+  setBrushSize(next){
+    const slider=this.root.querySelector('#brushSize');
+    const minimum=Number(slider?.min)||.25;
+    this.size=Math.max(minimum,Math.min(48,Math.round(next*4)/4));
+    if(slider)slider.value=String(this.size);
+    const output=this.root.querySelector('#brushSizeValue');
+    if(output)output.textContent=String(this.size).replace('.',',');
+    this.updateSizeSample();
+    if(this.lastCursor)this.showCursor(this.lastCursor);
+  }
   updateSizeSample(){
     const sample=this.root.querySelector('#sizeSample');
     if(sample){
@@ -495,11 +505,11 @@ export class Editor{
   }
   showCursor(e){
     if(!this.cursor)return;
-    if(this.pinch||this.panStart||this.tool==='hand'||this.tool==='fill'){
+    if(this.pinch||this.panStart||((this.tool==='hand'||this.tool==='fill')&&!this.sizeDrag)){
       this.hideCursor();this.hidePickerPreview();return;
     }
     this.lastCursor=e;
-    if(this.tool==='picker'){
+    if(this.tool==='picker'&&!this.sizeDrag){
       this.hideCursor();this.showPickerPreview(e);return;
     }
     this.hidePickerPreview();
@@ -583,8 +593,17 @@ export class Editor{
   attach(){
     this.down=e=>{
       if(e.pointerType==='mouse'||e.pointerType==='pen')this.lastMousePoint={clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType};
-      if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1)return;
+      if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1&&e.button!==2)return;
       e.preventDefault();
+      if(e.pointerType==='mouse'&&e.button===2){
+        this.finishStroke();
+        this.sizeDrag={pointerId:e.pointerId,startX:e.clientX,startSize:this.size};
+        try{(e.target===this.canvas?this.canvas:this.viewport).setPointerCapture(e.pointerId)}catch{}
+        if(e.target===this.viewport)this.viewportCapturedPointer=e.pointerId;
+        this.cursor?.classList?.add?.('is-sizing');
+        this.showCursor(e);
+        return;
+      }
       try{(e.target===this.canvas?this.canvas:this.viewport).setPointerCapture(e.pointerId)}catch{}
       this.pointers.set(e.pointerId,[e.clientX,e.clientY]);
       if(e.target===this.viewport)this.viewportCapturedPointer=e.pointerId;
@@ -618,6 +637,12 @@ export class Editor{
       this.beginStroke(p);
     };
     this.move=e=>{
+      if(this.sizeDrag?.pointerId===e.pointerId){
+        e.preventDefault?.();
+        this.setBrushSize(this.sizeDrag.startSize+(e.clientX-this.sizeDrag.startX)*.16);
+        this.showCursor(e);
+        return;
+      }
       if(e.pointerType==='mouse'||e.pointerType==='pen')this.lastMousePoint={clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType};
       if(!this.pointers.has(e.pointerId)){
         if(e.pointerType==='mouse'||e.pointerType==='pen')this.showCursor(e);
@@ -667,6 +692,14 @@ export class Editor{
       }
     };
     this.up=e=>{
+      if(this.sizeDrag?.pointerId===e.pointerId){
+        this.sizeDrag=null;
+        if(this.viewportCapturedPointer===e.pointerId)this.viewportCapturedPointer=null;
+        this.cursor?.classList?.remove?.('is-sizing');
+        if(e.type==='pointercancel')this.hideCursor();
+        else this.showCursor(e);
+        return;
+      }
       if(!this.pointers.has(e.pointerId))return;
       if(e.type==='pointerup'&&this.working&&this.pointers.size===1&&this.inputMode!=='precision')this.extendStroke(this.pointAt(e));
       this.pointers.delete(e.pointerId);
@@ -686,7 +719,7 @@ export class Editor{
     this.canvas.addEventListener('pointermove',this.move);
     this.canvas.addEventListener('pointerup',this.up);
     this.canvas.addEventListener('pointercancel',this.up);
-    this.frameDown=e=>{if(e.target===this.viewport&&e.pointerType==='mouse'&&e.button===1)this.down(e)};
+    this.frameDown=e=>{if(e.target===this.viewport&&e.pointerType==='mouse'&&(e.button===1||e.button===2))this.down(e)};
     this.frameMove=e=>{if(this.viewportCapturedPointer===e.pointerId)this.move(e);else if(e.target===this.viewport&&(e.pointerType==='mouse'||e.pointerType==='pen'))this.showCursor(e)};
     this.frameUp=e=>{if(this.viewportCapturedPointer===e.pointerId)this.up(e)};
     this.viewport.addEventListener('pointerdown',this.frameDown);
@@ -736,7 +769,9 @@ export class Editor{
     this.armGlobalUp=e=>{if(this.armPointer===e.pointerId)this.armUp(e)};
     window.addEventListener('pointerup',this.armGlobalUp);
     window.addEventListener('pointercancel',this.armGlobalUp);
-    this.preventMiddle=e=>{if(e.button===1)e.preventDefault()};
+    this.preventMiddle=e=>{if(e.button===1||e.button===2)e.preventDefault()};
+    this.preventRightMenu=e=>e.preventDefault();
+    this.viewport.addEventListener('contextmenu',this.preventRightMenu);
     this.viewport.addEventListener('mousedown',this.preventMiddle);
     this.viewport.addEventListener('auxclick',this.preventMiddle);
     this.wheel=e=>{
@@ -820,11 +855,12 @@ export class Editor{
       // Browsers may drop captured pointers when focus changes or touch scrolling
       // is interrupted. A stale pointer would leave the studio in pinch mode.
       this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
-      this.pointers.clear();this.pinch=null;this.panStart=null;
+      this.pointers.clear();this.pinch=null;this.panStart=null;this.sizeDrag=null;
+      this.cursor?.classList?.remove?.('is-sizing');
       this.aimPointer=null;this.aim=null;this.viewportCapturedPointer=null;
       this.viewport.classList.remove('is-panning');
     };
-    this.lostCapture=e=>{if(this.pointers.has(e.pointerId))this.up({pointerId:e.pointerId,type:'pointercancel',pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY})};
+    this.lostCapture=e=>{if(this.pointers.has(e.pointerId)||this.sizeDrag?.pointerId===e.pointerId)this.up({pointerId:e.pointerId,type:'pointercancel',pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY})};
     this.canvas.addEventListener('lostpointercapture',this.lostCapture);
     this.viewport.addEventListener('lostpointercapture',this.lostCapture);
     window.addEventListener('blur',this.keyboardBlur);
@@ -846,7 +882,7 @@ export class Editor{
       if(this.lastCursor)this.showCursor(this.lastCursor);
     };
     this.root.addEventListener('input',this.slider);
-    this.globalPointerUp=e=>{if(this.pointers.has(e.pointerId))this.up(e)};
+    this.globalPointerUp=e=>{if(this.pointers.has(e.pointerId)||this.sizeDrag?.pointerId===e.pointerId)this.up(e)};
     window.addEventListener('pointerup',this.globalPointerUp);
     window.addEventListener('pointercancel',this.globalPointerUp);
     this.resize=()=>{if(!this.pointers.size){this.fitViewport();this.center()}};
@@ -977,5 +1013,5 @@ export class Editor{
  for(const cb of this.paintWaiters||[])cb();
  this.paintWaiters=[];
  this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;this.smudgePreviewLayer=null;this.smudgePreviewWorking=null;this.smudgeZoneMask=null;
- this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);this.armButton?.removeEventListener('contextmenu',this.armContext);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
+ this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);this.armButton?.removeEventListener('contextmenu',this.armContext);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('contextmenu',this.preventRightMenu);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }
