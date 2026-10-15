@@ -936,3 +936,16 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .home-pocket-identity .
   transition:none!important;
  }
 }
+
+
+/* 1.37.4 visual evidence correction. Label and arrows have distinct areas. */
+@media (min-width:1050px) and (min-height:560px) {
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage {
+  inset:-8px 0 92px!important;
+ }
+}
+@media (max-width:699px){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide {
+  top:calc(50% - 7px);
+ }
+}
