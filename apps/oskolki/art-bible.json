@@ -116,7 +116,7 @@
     {
       "id": "tile-design",
       "tool": "dom-css",
-      "source": "styles.css",
+      "source": "art-bible.json",
       "output": "styles.css",
       "role": "Основная узнаваемая плитка с обрезанным верхним правым углом, канавкой и глубиной.",
       "integration": "Классы .tile, .drag-ghost, .answer-zone; каждый пользовательский фрагмент создается через textContent.",
@@ -127,7 +127,7 @@
     {
       "id": "app-icon",
       "tool": "svg-vector",
-      "source": "icons/icon.svg",
+      "source": "art-bible.json",
       "output": "icons/icon.svg",
       "role": "Самостоятельный знак четырех взаимно смещенных словесных осколков.",
       "integration": "Иконка указана в HTML и manifest.webmanifest; автоматически видна в PocketWorks через self-registration.",
