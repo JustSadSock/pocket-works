@@ -508,7 +508,9 @@ export class Editor{
    const vy=prev?(tip.clientY-prev.y)/elapsed:0;
    this.cursorMotion={x:tip.clientX,y:tip.clientY,time:timestamp};
    this.cursor.style.setProperty('--brush-angle',Math.max(-14,Math.min(14,vx*13+vy*3)).toFixed(2)+'deg');
-   this.cursor.classList.toggle('is-fast',Boolean(this.working)&&Math.hypot(vx,vy)>1.7);
+   this.cursor.classList.toggle('is-fast',(Boolean(this.working)&&Math.hypot(vx,vy)>1.7)||(this.cursor.classList.contains('is-lifted')&&this.cursor.classList.contains('is-fast')));
+   const pressure=Number.isFinite(e.pressure)?e.pressure:(this.working?.5:0);
+   this.cursor.style.setProperty('--brush-pressure',String(Math.max(.92,1-Math.max(0,pressure)*.08)));
    this.cursor.classList.remove('is-idle');
    clearTimeout(this.cursorIdleTimer);
    if(!this.working)this.cursorIdleTimer=setTimeout(()=>{if(!this.closed&&!this.working)this.cursor?.classList.add('is-idle')},190);
