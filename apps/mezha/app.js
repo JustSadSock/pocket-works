@@ -1,5 +1,5 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
-import {createGame,action,tick,stats,save,load,W,H,DOMINATION_SECONDS,DOMINATION_SITES,clamp} from './engine.js';
+import {createGame,action,tick,stats,save,load,W,H,nearHome,DOMINATION_SECONDS,DOMINATION_SITES,clamp} from './engine.js';
 import {renderBattle,renderMinimap,nearestSite} from './render.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -8,8 +8,8 @@ const storedKey='pocket-works:mezha:match-v1',optionsKey='pocket-works:mezha:opt
 const screen={menu:$('startScreen'),pause:$('pauseScreen'),end:$('endScreen'),confirm:$('confirm')};
 let opts={sound:true,skill:'regular'};try{opts={...opts,...JSON.parse(localStorage.getItem(optionsKey)||'{}')}}catch{}
 if(!['casual','regular','veteran'].includes(opts.skill))opts.skill='regular';
-let game=null,preview=createGame(20261014,true),mode='capture',captain=0,site=null,view={x:0,y:0,w:960,h:620};
-let camera={x:325,y:310,zoom:1},pendingReset=false,paused=false,audio=null,last=0,acc=0,raf=0,lastHud=0,lastMinimap=0,lastSave=0,toastTimer=null,hasPlayed=false;
+let game=null,preview=createGame(20261014,true),mode='capture',captain=0,site=null,view={x:0,y:0,w:W,h:H};
+let camera={x:W*.34,y:H*.50,zoom:1},pendingReset=false,paused=false,audio=null,last=0,acc=0,raf=0,lastHud=0,lastMinimap=0,lastSave=0,toastTimer=null,hasPlayed=false;
 const pointers=new Map();let pinch=null,down=null;
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let stored=null;try{stored=load(localStorage.getItem(storedKey))}catch{}
@@ -104,7 +104,7 @@ function syncHUD(){
 }
 function enterGame(s){
  game=s;hasPlayed=true;paused=false;pendingReset=false;opts.skill=s.botSkill||'regular';syncDifficulty();hidePanels();root.classList.remove('game-idle');root.classList.add('game-active');
- camera={x:250,y:310,zoom:1.1};mode='capture';captain=0;site=null;last=performance.now();acc=0;computeView();syncHUD();
+ camera={x:W*.28,y:H*.50,zoom:1.1};mode='capture';captain=0;site=null;last=performance.now();acc=0;computeView();syncHUD();
  notify('Выбери капитана, затем коснись цели на карте');playSound(410,.16,.04);
  storageWrite();
 }
@@ -118,7 +118,7 @@ function syncDifficulty(){
 function openMenu(){
  if(game?.phase==='battle')storageWrite();
  game=null;site=null;paused=false;hidePanels();root.classList.add('game-idle');root.classList.remove('game-active');
- camera={x:510,y:310,zoom:.90};computeView();
+ camera={x:W*.50,y:H*.50,zoom:.90};computeView();
  try{stored=load(localStorage.getItem(storedKey))}catch{stored=null}
  $('continueBtn').hidden=!stored;syncDifficulty();screen.menu.hidden=false;
 }
@@ -148,9 +148,9 @@ function pointAction(x,y){
  if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>W||y<0||y>H)return;
  const selected=nearestSite(game,x,y,58);
  site=selected?.id||null;
- const order=action(game,0,{kind:'order',captain,mode,x:clamp(x,35,W-35),y:clamp(y,35,H-35)});
+ const order=action(game,0,{kind:'order',captain,mode,x:clamp(x,52.5,W-52.5),y:clamp(y,52.5,H-52.5)});
  const supply=game.sites.some(z=>z.owner===0&&['silver','ford','fen'].includes(z.id));
- const triesKeep=Math.hypot(x-842,y-310)<78;
+ const enemyKeep=nearHome(1);const triesKeep=Math.hypot(x-enemyKeep.x,y-enemyKeep.y)<78*1.5;
  notify(order.ok&&triesKeep&&!supply?'Для сильной осады сначала удерживай центральное владение':order.message,!order.ok);
  if(order.ok){playSound(mode==='raid'?330:mode==='defend'?430:590,.12,.036);buzz();storageWrite()}
  syncHUD();
