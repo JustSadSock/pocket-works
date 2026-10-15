@@ -101,6 +101,12 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/fill-visual-playwright.mjs"
+    },
+    {
+      "id": "fill-topology-visual",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/fill-topology-playwright.mjs"
     }
   ]
 }
