@@ -30,7 +30,7 @@ test('a steward grows a real demesne crop, obligations use tenant workdays and c
    'demesnes grow a real crop rather than collect fictional income');
  const served=s.households.filter(h=>h.tenure!=='demesne').reduce((n,h)=>n+(h.manorAgreement?.served||0),0);
  assert.equal(served,s.stats.manorServiceDays);
- assert.equal(overview(s).coin,before.coin,'rent does not mint currency');
+ assert.equal(overview(s).coin,before.coin+(s.stats.outsideCoinIn||0)-(s.stats.outsideCoinOut||0),'rent does not mint currency; external payments are real');
  assert.ok(s.people.some(p=>p.lifeLog?.some(l=>l.type==='manor-work')),'named people perform days');
  check(s);
 });
