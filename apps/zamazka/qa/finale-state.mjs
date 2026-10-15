@@ -32,3 +32,6 @@ assert.doesNotMatch(results,/data-action="next"/);
 const audit=finaleRevealAuditMarkup({breakdown:[{name:'Игрок <2>',correct:2,wrong:1,points:50}],wrong:1,bonus:10,escapeText:esc,chipDots:dots});
 assert.match(audit,/\+50/);assert.match(audit,/\+10/);assert.match(audit,/Игрок &lt;2&gt;/);
 console.log('ZAMAZKA finale: actual totals, 5 artworks, 8 players, tie, host, guest, escaped labels, and score audit OK');
+
+// Room admission / handshakes / restoration waits share the same QA batch.
+import './passage-state.mjs';
