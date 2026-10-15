@@ -339,24 +339,22 @@ function lobby(){
  const players=view.participants||[],leader=view.host===me?.id,code=inviteCode(roomId);
  const markup='<section class="page exhibition-lobby">'+
   '<header class="lobby-mast"><div><span class="section-label">СОВМЕСТНАЯ ВЫСТАВКА</span><h2>Комната ожидания</h2></div>'+
-  '<button type="button" class="lobby-self" data-action="pocket-profile" title="Открыть профиль Pocket ID"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(me?.name||gameName())+'</strong><small>Профиль Pocket ID</small></span></button><button class="lobby-exit" type="button" data-action="menu">← Выйти</button></header>'+
+  '<button class="lobby-exit" type="button" data-action="menu">← Выйти</button></header>'+
   '<div class="lobby-invite"><div class="room-ticket"><div class="ticket-top"><span class="section-label">ПРИГЛАСИТЬ В КОМНАТУ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
   '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div>'+
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Ссылка ↗</button>'+
-  (isPocketMember()?'<button class="btn ghost pocket-invite" type="button" data-social-invite data-room-id="'+esc(roomId)+'">Пригласить друзей</button>':'')+'</div></div>'+
-  '<div class="lobby-list-heading"><span class="section-label">УЧАСТНИКИ · '+players.length+'/8</span><span>'+(leader?'Ты — ведущий':'Ожидаем ведущего')+'</span></div>'+
-  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+pocketPlayerBadge(p)+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Ведущий':'Игрок')+'</span>'+
-  (leader&&p.id!==me?.id&&Number(roomModuleVersion.slice(1))>=14?'<button type="button" class="lobby-kick" data-action="kick-player" data-player-id="'+esc(p.id)+'" aria-label="Исключить '+esc(p.name)+' из комнаты">Исключить</button>':'')+'</div>').join('')+'</div></div>'+
-  (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Общий холст недоступен в старой комнате. Для совместного рисования открой новую комнату.</div>')+
-  '<div class="stack lobby-controls"><div class="lobby-controls-title">Настройки выставки</div>'+
+  (isPocketMember()?'<button class="btn ghost pocket-invite" type="button" data-social-invite data-room-id="'+esc(roomId)+'">Пригласить друзей</button>':'')+'</div>'+  '<div class="stack lobby-controls"><div class="lobby-controls-title">Настройки выставки</div>'+
   (leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select>'+
    '<label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+durationOptionsHtml(drawingSecondsChoice)+'</select>'+
    '<button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':
    '<p class="lobby-guest-wait">Ведущий запустит игру, когда все будут готовы.</p>')+
-   '</div></section>';
- if(page==='lobby'&&commonsBoard){
+   '</div></div>'+
+  (Number(roomModuleVersion.slice(1))>=3?commonsHtml(leader):'<div class="notice legacy-room">Общий холст недоступен в старой комнате. Для совместного рисования открой новую комнату.</div>')+
+  '<aside class="lobby-attendance">'+  '<div class="lobby-list-heading"><span class="section-label">УЧАСТНИКИ · '+players.length+'/8</span></div>'+
+  '<div class="players">'+players.map(p=>'<div class="player">'+memberSeal(p)+'<div class="player-name">'+esc(p.name)+(p.verified?'<span class="player-verified" title="Подтверждённый Pocket ID">✓</span>':'')+(p.id===me?.id?' <span class="me-tag">ты</span>':'')+'</div><span class="status">'+(p.id===view.host?'Ведущий':'Игрок')+'</span>'+
+  (leader&&p.id!==me?.id&&Number(roomModuleVersion.slice(1))>=14?'<button type="button" class="lobby-kick" data-action="kick-player" data-player-id="'+esc(p.id)+'" aria-label="Исключить '+esc(p.name)+' из комнаты">Исключить</button>':'')+'</div>').join('')+'</div></aside></section>'; if(page==='lobby'&&commonsBoard){
    const future=document.createElement('div');future.innerHTML=markup;
-   for(const selector of ['.lobby-self','.lobby-list-heading','.players','.lobby-controls']){
+   for(const selector of ['.lobby-list-heading','.players','.lobby-controls']){
      const old=screen.querySelector(selector),newer=future.querySelector(selector);if(old&&newer)old.replaceWith(newer);
    }
    const controls=screen.querySelector('.commons-controls');
@@ -718,7 +716,7 @@ async function achievements(){
    (earnedAchievementIds.has(a.id)?'Получено':'Не открыто')+'</b></div></article>').join('');
 }
 function collection(){
- change('<section class="page collection-page"><div class="section-label">ЛИЧНЫЙ ФОНД</div><h2>Мои реставрации</h2><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button>'+(saved.length?'<button class="btn ghost" data-action="export-archive">Экспорт архива ↓</button>':'')+'</div><div id="archiveLocalStatus" class="archive-local-status" role="status"></div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'<div class="subtle-rule"></div><button class="btn ghost wide" data-action="menu">В главное меню</button></section>','collection');
+ change('<section class="page collection-page"><header class="collection-mast"><div><div class="section-label">ЛИЧНЫЙ ФОНД · '+saved.length+' работ</div><h2>Мои реставрации</h2></div><button class="collection-back" data-action="menu">← В главное меню</button></header><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button>'+(saved.length?'<button class="btn ghost" data-action="export-archive">Экспорт архива ↓</button>':'')+'</div><div id="archiveLocalStatus" class="archive-local-status" role="status"></div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="notice">Фонд пуст. Сделай первую реставрацию в тренировке, и она появится здесь.</div>')+'</section>','collection');
  zamazkaCloud?.render();archiveWriteIndicator();
  const canvases=[...screen.querySelectorAll('[data-saved-canvas]')];
  const draw=canvas=>{if(!canvas.isConnected||canvas.dataset.loaded)return;canvas.dataset.loaded='1';const g=saved[Number(canvas.dataset.savedCanvas)];if(g)void renderArtwork(canvas,g.art,g.variation,g.strokes,true,true)};
