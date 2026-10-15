@@ -1,0 +1,380 @@
+/* ZAMAZKA 1.38 / Pocket atelier. Portrait mobile screens are scenes,
+   not long documents. Any overflow that represents more works is horizontal. */
+@media (max-width:699px) and (orientation:portrait) {
+ html,body,.app-shell {overflow:hidden!important;overscroll-behavior:none!important}
+ .app-shell {height:var(--app-viewport-height,100dvh)!important;max-height:100dvh!important}
+ .app-shell>.top {flex:0 0 auto;min-height:46px!important;
+   padding:calc(1px + var(--app-safe-top,env(safe-area-inset-top))) 7px 3px!important}
+ .top .return,.top .profile-control,.top .round-control {height:40px!important;min-height:40px!important}
+ .top .diagnostic-control {display:none!important}
+ #screen.screen {flex:1 1 0!important;min-height:0!important;overflow:hidden!important;
+   overscroll-behavior:none!important;touch-action:pan-x}
+ #screen > .page,#screen > .phase-page {
+   box-sizing:border-box;max-height:100%!important;min-height:0!important;
+   height:100%!important;overflow:hidden!important
+ }
+ #screen .phase-head {flex:0 0 auto;min-height:0!important;
+   padding:5px 10px!important;border-bottom-width:1px!important}
+ #screen .phase-head h2 {margin:2px 0 0!important;font-size:clamp(16px,4.8vw,21px)!important}
+ #screen .phase-head .timer {font-size:clamp(17px,5vw,23px)!important}
+ #screen .phase-head .eyebrow {font-size:9px!important;letter-spacing:.04em!important}
+ #screen .phase-menu {height:38px!important;min-height:38px!important}
+ #screen .phase-body {flex:1 1 0;min-height:0!important;max-height:none!important;
+   overflow:hidden!important;padding:7px 9px calc(6px + env(safe-area-inset-bottom))!important}
+ /* Home uses the full stage; the console must not grow at the artwork's cost. */
+ html[data-zamazka-appearance="new"] #screen>.museum-home,
+ #screen>.museum-home {height:100%!important;min-height:0!important;
+   overflow:hidden!important;padding-top:5px!important;padding-bottom:calc(5px + env(safe-area-inset-bottom))!important}
+ #screen>.museum-home .museum-headline h1 {font-size:clamp(29px,8vw,40px)!important}
+ #screen>.museum-home .museum-headline::before {margin-bottom:3px!important}
+ #screen>.museum-home .museum-display {min-height:105px!important;flex:1 1 0!important;
+   margin-top:0!important;margin-bottom:2px!important}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control {
+   padding:8px 10px 10px!important;flex:0 0 auto!important;margin:0!important}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration {
+   min-height:59px!important;padding:7px 9px!important}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower {
+   margin-top:5px!important}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button {
+   min-height:40px!important;padding:4px 5px!important}
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {
+   margin-top:5px!important;padding-top:3px!important}
+ /* Room entry: the single action is visible above the keyboard, not at
+    the end of a decorative tall invitation sheet. */
+ .screen:has(>.lobby-entry) {overflow:hidden!important;display:flex!important;
+   align-items:center!important;padding:7px 10px!important}
+ #screen>.page.lobby-entry {
+   flex:0 1 auto!important;min-height:0!important;height:auto!important;
+   max-height:100%!important;width:100%!important;margin:auto!important;
+   padding:clamp(12px,2.4vh,22px) 15px!important;overflow:hidden!important}
+ #screen>.lobby-entry .entry-heading {margin-bottom:9px!important}
+ #screen>.lobby-entry .entry-heading h2 {font-size:clamp(24px,7vw,32px)!important}
+ #screen>.lobby-entry .entry-profile {padding:4px 0 6px!important;margin:0!important}
+ #screen>.lobby-entry .entry-fields {gap:4px!important}
+ #screen>.lobby-entry .entry-fields .field {margin:7px 0 3px!important}
+ #screen>.lobby-entry .entry-fields .input {min-height:42px!important}
+ #screen>.lobby-entry .entry-actions {margin-top:10px!important}
+ #screen>.lobby-entry .entry-actions .btn {min-height:44px!important}
+ /* Multiplayer: invite and settings in one short row, paint in the middle,
+    roster a horizontal strip. No page scroll or nested vertical scrolling. */
+ #screen>.page.exhibition-lobby {
+   display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+   grid-template-rows:auto auto minmax(0,1fr) auto!important;
+   grid-template-areas:"mast" "invite" "canvas" "roster"!important;
+   align-content:stretch!important;gap:7px!important;
+   padding:8px 9px calc(7px + env(safe-area-inset-bottom))!important;
+   overflow:hidden!important}
+ #screen>.exhibition-lobby .lobby-mast {
+   grid-area:mast!important;padding:0 0 5px!important;margin:0!important;
+   min-height:37px!important}
+ #screen>.exhibition-lobby .lobby-mast h2 {font-size:clamp(21px,5.8vw,26px)!important;
+   margin:2px 0 0!important}
+ #screen>.exhibition-lobby .lobby-mast .section-label {font-size:8px!important}
+ #screen>.exhibition-lobby .lobby-mast .lobby-exit {min-height:37px!important;padding:6px 9px!important}
+ #screen>.exhibition-lobby .lobby-invite {
+   grid-area:invite!important;order:0!important;display:grid!important;
+   grid-template-columns:minmax(0,.93fr) minmax(0,1.07fr)!important;
+   gap:7px!important;align-items:stretch!important;padding:0!important;
+   min-height:0!important;width:100%!important}
+ #screen>.exhibition-lobby .room-ticket {
+   box-sizing:border-box;grid-column:1!important;order:initial!important;
+   width:100%!important;min-width:0!important;padding:10px 8px!important;
+   margin:0!important}
+ #screen>.exhibition-lobby .ticket-top {gap:2px!important}
+ #screen>.exhibition-lobby .ticket-top .section-label {font-size:8px!important;letter-spacing:0!important}
+ #screen>.exhibition-lobby .ticket-live {display:none!important}
+ #screen>.exhibition-lobby .room-code {font-size:clamp(15px,4.3vw,19px)!important;
+   letter-spacing:0!important;margin:9px 0!important;white-space:nowrap!important}
+ #screen>.exhibition-lobby .ticket-actions {grid-template-columns:1fr!important;gap:4px!important}
+ #screen>.exhibition-lobby .ticket-actions .btn {
+   grid-column:1!important;min-height:32px!important;padding:3px 4px!important;
+   font-size:10px!important}
+ #screen>.exhibition-lobby .lobby-invite>.lobby-controls {
+   box-sizing:border-box;display:flex!important;grid-column:2!important;
+   order:initial!important;width:100%!important;min-height:0!important;
+   align-self:stretch!important;padding:9px!important;gap:3px!important;
+   overflow:hidden!important}
+ #screen>.exhibition-lobby .lobby-controls-title {
+   font-size:clamp(14px,4vw,17px)!important;padding-bottom:4px!important;
+   margin-bottom:1px!important}
+ #screen>.exhibition-lobby .lobby-controls .field {
+   margin:2px 0 0!important;font-size:9px!important}
+ #screen>.exhibition-lobby .lobby-controls .input {
+   min-height:29px!important;height:29px!important;padding:2px 5px!important;font-size:12px!important}
+ #screen>.exhibition-lobby .lobby-controls [data-action="start"] {
+   margin-top:auto!important;min-height:36px!important;font-size:11px!important;
+   padding:4px!important}
+ #screen>.exhibition-lobby .commons-desk {
+   grid-area:canvas!important;order:initial!important;
+   align-self:stretch!important;display:flex!important;flex-direction:column!important;
+   justify-content:center!important;width:100%!important;height:100%!important;
+   min-height:0!important;overflow:hidden!important}
+ #screen>.exhibition-lobby .commons-topline {flex:0 0 auto;margin:0 0 5px!important}
+ #screen>.exhibition-lobby .commons-topline h3 {font-size:18px!important}
+ #screen>.exhibition-lobby .commons-frame {
+   box-sizing:border-box!important;flex:0 1 auto;min-height:0!important;
+   padding:5px!important;margin:0!important;overflow:hidden!important;
+   max-height:calc(100% - 76px)!important}
+ #screen>.exhibition-lobby .commons-frame canvas {
+   display:block!important;width:100%!important;height:auto!important;
+   max-height:100%!important;aspect-ratio:8/5!important;object-fit:contain!important}
+ #screen>.exhibition-lobby .commons-controls {
+   flex:0 0 auto;gap:5px!important;padding:6px 0 0!important;min-height:0!important}
+ #screen>.exhibition-lobby .commons-palette {min-height:30px!important;gap:4px!important}
+ #screen>.exhibition-lobby .commons-swatch {width:28px!important;height:28px!important;flex-basis:28px!important}
+ #screen>.exhibition-lobby .commons-width {font-size:10px!important}
+ #screen>.exhibition-lobby .commons-wipe {min-height:32px!important}
+ #screen>.exhibition-lobby .lobby-attendance {
+   grid-area:roster!important;order:initial!important;display:flex!important;
+   flex-direction:column!important;min-height:0!important;
+   width:100%!important;padding:0!important;gap:2px!important}
+ #screen>.exhibition-lobby .lobby-list-heading {
+   padding:2px 0 3px!important;margin:0!important;border:0!important}
+ #screen>.exhibition-lobby .players {
+   display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+   overflow-x:auto!important;overflow-y:hidden!important;min-height:46px!important;
+   max-height:48px!important;gap:6px!important;scroll-snap-type:x proximity}
+ #screen>.exhibition-lobby .player {
+   flex:0 0 auto!important;min-width:148px!important;max-width:185px!important;
+   min-height:42px!important;padding:4px 8px!important;border:1px solid #86877655!important;
+   border-radius:2px;background:#ffffff09!important;scroll-snap-align:start;
+   flex-wrap:nowrap!important}
+ #screen>.exhibition-lobby .member-avatar {width:28px!important;height:28px!important;flex:none}
+ #screen>.exhibition-lobby .player-name {font-size:11px!important}
+ #screen>.exhibition-lobby .player .status {font-size:9px!important}
+ /* Editor: drawing remains the flexing surface; controls are a shallow
+    thumb dock. Precision hold button stays above the paint, never above Submit. */
+ #screen>.restore {height:100%!important;max-height:100%!important;overflow:hidden!important}
+ #screen>.restore .rest-head .phase-head {padding:4px 8px!important}
+ #screen>.restore .work-area {min-height:0!important;flex:1 1 0!important;padding:3px 4px!important}
+ #screen>.restore .work-stage {min-height:0!important}
+ #screen>.restore .work-tools {
+   flex:0 0 auto!important;min-height:0!important;gap:3px!important;
+   padding:4px 7px calc(4px + env(safe-area-inset-bottom))!important;
+   overflow:hidden!important;border-top-width:1px!important}
+ #screen>.restore .tools .tool {height:39px!important;min-height:39px!important}
+ #screen>.restore .tools .draw-icon {width:20px!important;height:20px!important}
+ #screen>.restore .colors {height:30px!important;min-height:30px!important}
+ #screen>.restore .colors .swatch {height:29px!important;width:29px!important}
+ #screen>.restore .colors .color-input {height:30px!important;width:32px!important}
+ #screen>.restore .adjust {min-height:38px!important}
+ #screen>.restore .adjust input[type="range"] {height:38px!important}
+ #screen>.restore .adjust-actions .tool,#screen>.restore .adjust-actions .mode-switch {
+   min-height:38px!important;height:38px!important}
+ #screen>.restore .work-foot {gap:6px!important}
+ #screen>.restore .work-foot .btn {min-height:43px!important}
+ #screen>.restore .zoom-actions {top:5px!important;right:5px!important}
+ #screen>.restore .zoom-actions .tool {width:37px!important;min-width:37px!important;
+   height:37px!important;min-height:37px!important}
+ #screen>.restore .viewport {max-height:100%!important}
+ /* The precision trigger is an ink press: physically-held at the canvas's
+    lower edge. No persistent on/off, no enormous floating colored orb. */
+ #screen>.restore.precision-mode .work-stage {position:relative!important}
+ #screen>.restore .precision-arm {
+   box-sizing:border-box!important;position:absolute!important;
+   left:10px!important;bottom:10px!important;
+   width:94px!important;height:52px!important;min-height:0!important;
+   display:flex!important;flex-direction:row!important;gap:7px!important;
+   border:1px solid #ac9775!important;border-bottom:3px solid #6e563e!important;
+   border-radius:5px!important;background:#e3d5bded!important;
+   color:#483c30!important;box-shadow:0 3px 12px #10160e7a,inset 0 1px #fff5df!important;
+   transform:none!important;transition:background .12s ease,box-shadow .12s ease!important;
+   touch-action:none!important;user-select:none!important;
+   -webkit-touch-callout:none!important;z-index:13!important}
+ #screen>.restore .precision-arm[hidden] {display:none!important}
+ #screen>.restore .precision-arm-circle {
+   flex:0 0 17px!important;width:17px!important;height:17px!important;
+   border:2px solid #826549!important;box-shadow:inset 0 0 0 4px #e3d5bd!important;
+   background:#e3d5bd!important;transition:background .12s ease!important}
+ #screen>.restore .precision-arm strong {
+   color:inherit!important;font:700 9px/1.1 system-ui,sans-serif!important;
+   letter-spacing:.02em!important}
+ #screen>.restore .precision-arm.is-armed {
+   background:#57725a!important;color:#fff1d5!important;
+   border-color:#9cc099!important;border-bottom-color:#304b35!important;
+   box-shadow:0 2px 7px #0c150da8,inset 0 1px #b3d4ae70!important}
+ #screen>.restore .precision-arm.is-armed .precision-arm-circle {
+   background:#e9efc6!important;border-color:#ddeabd!important;box-shadow:inset 0 0 0 3px #5b795c!important}
+ #screen>.restore.left-hand .precision-arm {left:auto!important;right:10px!important}
+ #screen>.restore .precision-side {
+   left:108px!important;bottom:16px!important;width:34px!important;height:34px!important;
+   min-height:34px!important;padding:5px!important;z-index:14!important;
+   border-radius:3px!important;background:#e1d4bfec!important}
+ #screen>.restore.left-hand .precision-side {left:auto!important;right:108px!important}
+ #screen>.restore .precision-help {display:none!important}
+ /* Preview and comparison: one painting at a time, no vertical card scroll. */
+ #screen>.mobile-preview {display:flex!important;flex-direction:column!important}
+ #screen>.mobile-preview .gallery.exhibition-grid {
+   min-height:0!important;overflow-y:hidden!important;padding-top:2px!important;padding-bottom:3px!important}
+ #screen>.mobile-preview .gallery.exhibition-grid>.picture {
+   overflow:hidden!important;padding:5px!important;border-width:1px!important}
+ #screen>.mobile-preview .gallery .picture .caption {font-size:clamp(14px,3.8vw,17px)!important;margin:3px 0!important}
+ #screen>.mobile-preview .gallery .picture .style {font-size:10px!important;line-height:1.1!important}
+ #screen>.mobile-preview .gallery .picture-index {margin:2px 0!important}
+ #screen>.mobile-preview .mobile-gallery-nav {height:43px!important;min-height:43px!important}
+ #screen>.mobile-preview .mobile-gallery-nav button {height:40px!important;min-height:40px!important}
+ #screen>.mobile-preview .phase-body>.btn {min-height:42px!important}
+ /* Voting: five meaningful sized cards in a horizontal, scroll-snapped
+    inspection shelf instead of a tall two-column page. */
+ #screen>.expert-phase {display:flex!important;flex-direction:column!important}
+ #screen>.expert-phase .expert-round {
+   display:flex!important;flex-direction:column!important;gap:4px!important;
+   min-height:0!important;width:100%!important}
+ #screen>.expert-phase .expert-intro {flex:0 0 auto!important;padding:0!important}
+ #screen>.expert-phase .expert-intro .phase-directive {display:none!important}
+ #screen>.expert-phase .expert-ballot {flex:1 1 0!important;display:flex!important;
+   flex-direction:column!important;min-height:0!important;overflow:hidden!important}
+ #screen>.expert-phase .expert-ballot>p.hint {flex:none;margin:0 0 5px!important;font-size:11px!important}
+ #screen>.expert-phase .suspect-gallery {
+   display:flex!important;flex:1 1 0!important;flex-direction:row!important;
+   flex-wrap:nowrap!important;min-height:0!important;
+   overflow-x:auto!important;overflow-y:hidden!important;
+   scroll-snap-type:x mandatory;align-items:stretch!important;
+   gap:9px!important;padding:2px 11px 5px!important;margin:0 -9px!important}
+ #screen>.expert-phase .suspect-gallery .stake-card {
+   display:flex!important;flex:0 0 calc(100% - 52px)!important;
+   width:calc(100% - 52px)!important;min-height:0!important;
+   flex-direction:column!important;overflow:hidden!important;
+   scroll-snap-align:start!important}
+ #screen>.expert-phase .suspect-gallery .stake-frame {
+   flex:1 1 0!important;min-height:0!important;display:flex!important;
+   align-items:center;justify-content:center;overflow:hidden!important}
+ #screen>.expert-phase .suspect-gallery .stake-frame :is(img,canvas) {
+   max-width:100%!important;max-height:100%!important;
+   height:auto!important;object-fit:contain!important}
+ #screen>.expert-phase .suspect-gallery .stake-details {
+   flex:0 0 auto!important;min-height:44px!important;padding:5px 8px!important}
+ #screen>.expert-phase .suspect-gallery .stake-actions {flex:0 0 44px!important;min-height:44px!important}
+ #screen>.expert-phase .stake-tray {
+   position:relative!important;bottom:auto!important;flex:0 0 auto!important;
+   min-height:50px!important;padding:5px 7px!important;margin:3px 0 0!important}
+ /* Waiting and reveal are two-pane actions, not scrollable essays. */
+ #screen>.waiting-phase,#screen>.reveal-phase {display:flex!important;flex-direction:column!important}
+ #screen>.waiting-phase .waiting-layout,#screen>.reveal-phase .reveal-layout {
+   display:flex!important;flex-direction:column!important;justify-content:flex-start!important;
+   gap:8px!important;overflow:hidden!important}
+ #screen>.waiting-phase .waiting-work,#screen>.reveal-phase .reveal-main {
+   min-height:0!important;display:flex!important;flex-direction:column!important;
+   align-items:stretch!important;flex:1 1 0!important;overflow:hidden!important}
+ #screen>.waiting-phase .waiting-work>h3,#screen>.reveal-phase .reveal-main>h3 {font-size:18px!important;margin:0 0 2px!important}
+ #screen>.waiting-phase .waiting-work>.phase-directive,
+ #screen>.reveal-phase .reveal-main>.hint {margin:0 0 4px!important;font-size:10px!important}
+ #screen>.waiting-phase .unveil-frame,#screen>.reveal-phase .unveil-frame {
+   flex:1 1 0!important;min-height:0!important;
+   width:auto!important;max-width:100%!important;height:auto!important;
+   max-height:min(36dvh,270px)!important;align-self:center!important;
+   margin:2px auto!important;aspect-ratio:var(--art-aspect,1.333333)!important}
+ #screen>.waiting-phase .unveil-control,#screen>.reveal-phase .unveil-control {
+   flex:0 0 auto!important;margin:2px auto!important;font-size:10px!important}
+ #screen>.waiting-phase .waiting-progress {flex:0 0 auto!important;min-height:0!important;
+   padding:7px!important}
+ #screen>.waiting-phase .waiting-progress h3 {font-size:14px!important;margin:0!important}
+ #screen>.waiting-phase .waiting-players[open] .waiting-roster {max-height:20dvh;overflow-x:auto;overflow-y:hidden;display:flex}
+ #screen>.reveal-phase .reveal-brief {flex:0 0 auto!important;padding:4px 0!important;min-height:0!important}
+ #screen>.reveal-phase .reveal-brief h3 {font-size:18px!important;margin:2px 0!important}
+ #screen>.reveal-phase .reveal-brief>p {font-size:11px!important;margin:0 0 5px!important}
+ #screen>.reveal-phase .reveal-brief>.stack {display:grid!important;
+   grid-template-columns:repeat(3,minmax(0,1fr));gap:4px!important}
+ #screen>.reveal-phase .reveal-brief>.stack .btn {min-height:43px!important;font-size:10px!important;padding:5px 2px!important}
+ #screen>.reveal-phase .reveal-answer-strip {flex:0 0 auto!important;max-height:53px!important;
+   overflow:hidden!important;margin:0 0 3px!important}
+ #screen>.reveal-phase .audit-lines {display:flex!important;flex-direction:row!important;
+   gap:5px!important;max-height:59px!important;overflow-x:auto!important;overflow-y:hidden!important}
+ #screen>.reveal-phase .audit-line {flex:0 0 170px!important}
+ /* Post-round collection and verdict cards: swipe between works horizontally. */
+ #screen>.round-review-phase {display:flex!important;flex-direction:column!important}
+ #screen>.round-review-phase .round-review-body {display:flex!important;
+   flex-direction:column!important;min-height:0!important;overflow:hidden!important}
+ #screen>.round-review-phase .round-review-description {flex:0 0 auto;margin:0 0 5px!important}
+ #screen>.round-review-phase .round-review-grid {
+   display:flex!important;flex:1 1 0!important;flex-direction:row!important;
+   flex-wrap:nowrap!important;min-height:0!important;overflow-x:auto!important;
+   overflow-y:hidden!important;scroll-snap-type:x mandatory;gap:10px!important;
+   align-items:stretch!important;padding:3px 8px!important}
+ #screen>.round-review-phase .round-art-card {flex:0 0 73%!important;
+   min-width:0!important;scroll-snap-align:start}
+ #screen>.round-review-phase .round-review-bottom {flex:0 0 auto;padding:6px 10px calc(6px + env(safe-area-inset-bottom))!important}
+ #screen>.verdict-phase .phase-body {display:flex!important;flex-direction:column!important}
+ #screen>.verdict-phase .verdict-intro {flex:none}
+ #screen>.verdict-phase .verdict-gallery {display:flex!important;flex:1 1 0!important;
+   flex-direction:row!important;flex-wrap:nowrap!important;min-height:0!important;
+   overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory}
+ #screen>.verdict-phase .verdict-card {flex:0 0 76%!important;scroll-snap-align:start}
+ #screen>.verdict-phase .verdict-footer {flex:none}
+ /* Archive and achievements may contain dozens of items. Horizontal shelves
+    preserve all records and the return action without any vertical scrolling. */
+ #screen>.collection-page {display:flex!important;flex-direction:column!important;
+   gap:5px!important;padding:7px 10px calc(7px + env(safe-area-inset-bottom))!important}
+ #screen>.collection-page .collection-mast {position:relative!important;top:0!important;
+   flex:0 0 auto!important;min-height:0!important;gap:6px!important;
+   margin:0!important;padding:4px 0 8px!important}
+ #screen>.collection-page .collection-mast h2 {font-size:23px!important}
+ #screen>.collection-page .collection-back {min-height:38px!important;
+   max-width:120px!important;padding:5px 8px!important;font-size:10px!important}
+ #screen>.collection-page .zamazka-cloud-row {flex:0 0 auto!important;display:flex!important;
+   gap:5px!important;padding:5px!important;margin:0!important}
+ #screen>.collection-page .zamazka-cloud-row [data-cloud-status] {
+   flex:1 1 0!important;min-width:35px!important;font-size:9px!important}
+ #screen>.collection-page .zamazka-cloud-row .btn {flex:0 1 auto!important;
+   min-height:33px!important;padding:4px!important;font-size:10px!important}
+ #screen>.collection-page #archiveLocalStatus {flex:0 0 auto!important;min-height:0!important;
+   margin:0!important;font-size:10px!important}
+ #screen>.collection-page .archive-gallery {
+   display:flex!important;flex:1 1 0!important;flex-direction:row!important;
+   flex-wrap:nowrap!important;align-items:stretch!important;
+   min-height:0!important;max-height:none!important;width:100%!important;
+   margin:0!important;padding:6px 6px 10px!important;gap:10px!important;
+   overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory}
+ #screen>.collection-page .archive-gallery>.archive-work {
+   display:flex!important;flex:0 0 80%!important;flex-direction:column!important;
+   width:80%!important;max-width:80%!important;height:100%!important;
+   max-height:100%!important;min-height:0!important;gap:5px!important;
+   margin:0!important;padding:9px!important;
+   scroll-snap-align:start!important;overflow:hidden!important}
+ #screen>.collection-page .archive-art-frame {display:flex!important;flex:1 1 0!important;
+   align-items:center!important;justify-content:center!important;
+   height:auto!important;min-height:0!important;max-height:none!important;
+   width:100%!important;padding:4px!important;overflow:hidden!important}
+ #screen>.collection-page .archive-art-frame canvas {
+   display:block!important;max-width:100%!important;max-height:100%!important;
+   width:auto!important;height:auto!important;object-fit:contain!important;
+   aspect-ratio:var(--art-aspect,4/3)!important}
+ #screen>.collection-page .archive-caption {display:flex!important;flex:0 0 auto!important;
+   flex-direction:column!important;gap:2px!important}
+ #screen>.collection-page .archive-caption .caption {font-size:clamp(16px,5vw,21px)!important}
+ #screen>.collection-page .archive-empty {flex:1;min-height:0;display:flex;
+   flex-direction:column;align-items:center;justify-content:center;text-align:center}
+ #screen>.zamazka-achievements {display:flex!important;flex-direction:column!important;
+   gap:7px!important;padding:10px!important}
+ #screen>.zamazka-achievements>.section-label {flex:none}
+ #screen>.zamazka-achievements>h2 {flex:none;font-size:25px!important;margin:0!important}
+ #screen>.zamazka-achievements .achievement-grid {display:flex!important;flex:1 1 0!important;
+   flex-direction:row!important;align-items:stretch!important;flex-wrap:nowrap!important;
+   gap:9px!important;overflow-x:auto!important;overflow-y:hidden!important;min-height:0!important}
+ #screen>.zamazka-achievements .achievement-entry {flex:0 0 79%!important;
+   width:79%!important;overflow:hidden!important;scroll-snap-align:start!important}
+ #screen>.zamazka-achievements>[data-action="achievements-back"] {flex:none;min-height:43px!important}
+ #screen>.page:has(.result-item) {display:flex!important;flex-direction:column!important;
+   gap:6px!important;padding:10px!important}
+ #screen>.page:has(.result-item)>.notice {margin:0!important;padding:5px!important;font-size:10px!important}
+ #screen>.page:has(.result-item)>.result-item {
+   flex:0 0 auto;min-height:0!important;padding:8px!important}
+ #screen>.page:has(.result-item)>.stack {margin-top:auto!important;gap:5px!important}
+ #screen>.page:has(.result-item)>.stack .btn {min-height:39px!important}
+}
+@media (max-width:699px) and (max-height:650px) and (orientation:portrait){
+ #screen>.page.exhibition-lobby {gap:4px!important;padding-top:4px!important}
+ #screen>.exhibition-lobby .room-ticket {padding:6px!important}
+ #screen>.exhibition-lobby .ticket-actions .btn {min-height:28px!important}
+ #screen>.exhibition-lobby .lobby-controls-title {font-size:14px!important}
+ #screen>.exhibition-lobby .lobby-list-heading {display:none!important}
+ #screen>.exhibition-lobby .players {min-height:40px!important;max-height:40px!important}
+ #screen>.restore .colors {height:25px!important;min-height:25px!important}
+ #screen>.restore .colors .swatch {height:25px!important}
+ #screen>.restore .work-foot .btn {min-height:39px!important}
+ #screen>.restore .precision-arm {height:46px!important;bottom:8px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen>.collection-page .archive-gallery,
+ #screen>.expert-phase .suspect-gallery {scroll-behavior:auto!important}
+}
