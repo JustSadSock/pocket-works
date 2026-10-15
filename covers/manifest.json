@@ -3238,5 +3238,32 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "5bd6b125d60059beca391659370485e7681bb4a4",
     "lastAttemptAt": "2026-10-15T16:54:14.106Z"
+  },
+  "art-cabinet": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 41,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 18270,
+        "variance": 44.931172172160075,
+        "entropy": 0.7910069497742617,
+        "edgeDensity": 0.06138392857142857,
+        "colorfulness": 19.26318359375,
+        "centerDetail": 7.473548374436844,
+        "meanLight": 217.27286479492327
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/art-cabinet/?pw-cover=1&pw_release=1.0.0&pw_fp=2ca7a6429d3df821f02e8877"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "2869b19994ed8d6723ae33f5a865eb7bdbc28d24",
+    "lastAttemptAt": "2026-10-15T23:37:01.912Z"
   }
 }
