@@ -69,7 +69,7 @@ function ensureFleet(){
 }
 function activeFleet(){return game.fleet.filter(s=>s.active).slice(0,3)}
 function renderHarbor(){
- game.phase='harbor';$('harbor').hidden=false;$('command').hidden=true;$('seaTop').hidden=true;$('toast').hidden=true;
+ game.phase='harbor';$('harbor').hidden=false;$('command').hidden=true;$('command').classList.remove('show-status');$('statusBtn').setAttribute('aria-expanded','false');$('seaTop').hidden=true;$('toast').hidden=true;
  $('gold').textContent='◈ '+game.gold;$('subtitle').textContent='Гавань · твоя эскадра';
  $('campaignLabel').textContent='ПОХОД '+roman(game.battleIndex)+' · '+missionFor(game.battleIndex).name;
  $('missionBrief').textContent=missionFor(game.battleIndex).brief;
@@ -237,7 +237,7 @@ function selectShip(id){
   state.morale<.35?'ЭКИПАЖ КОЛЕБЛЕТСЯ':'ГОТОВ К БОЮ';
  $('combatState').classList.toggle('danger',Boolean(s&&(s.sinkingTimer>0||s.retreating||g)));
  const order=s?instruction(s,game.stage):null;
- $('instruction').textContent=s?(order.route.length?'Маршрут записан. Можно нарисовать новый.':'Проведи по воде или выбери цель для атаки.'):'Выбери судно на поле';
+ $('instruction').textContent=s?(order.route.length?'Курс на весь ход записан. Можно изменить.':'Нарисуй курс на 4,5 секунды или укажи цель.'):'Выбери судно на поле';
  $('routeCounter').textContent=order?readoutRoute(order):'НЕТ МАРШРУТА';
  $('crewReadout').textContent=s?('ЭКИПАЖ '+Math.ceil(s.crew)):'';
  $('maneuverReadout').textContent=order?({hold:'МАНЁВР',shoot:'СТРЕЛЬБА',board:'АБОРДАЖ',evade:'УКЛОНЕНИЕ'}[order.kind]||'ПРИКАЗ'):'ОЖИДАНИЕ';
@@ -476,7 +476,7 @@ function startResolve(){
  }
  game.phase='resolve';game.elapsed=0;acc=0;
  for(const s of game.ships){s._cursor=[0,0];s._activeStage=-1;s._course=buildCourse(s);}
- $('subtitle').textContent='Бой · исполнение';$('commandCaption').textContent='СУДА ИСПОЛНЯЮТ ПРИКАЗЫ';
+ $('subtitle').textContent='Бой · исполнение';$('commandCaption').textContent='ОДИН КУРС · 4,5 СЕКУНДЫ';
  $('resolveBtn').hidden=true;$('orderArea').style.opacity='.42';
  $('progress').hidden=false;$('progressFill').style.width='0%';
 }
@@ -605,7 +605,7 @@ function onPointerDown(e){
   if(!canPlan(s,s.orders)){
    Object.assign(order,old);notify('Недостаточно ОД: очисти часть пути или выбери другое действие.');return;
   }
-  selectShip(s.id);notify('Цель выбрана для половины '+(game.stage+1));return;
+  selectShip(s.id);notify('Цель назначена для приказа '+(game.stage+1));return;
  }
  const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;
  if(withinIsland(p.x,p.y)){notify('Скалы непроходимы: проведи путь вокруг острова.');return;}
@@ -631,7 +631,7 @@ function onPointerUp(e){
  const s=game.ships.find(x=>x.id===game.drag.id&&x.alive);
  game.drag=null;
  try{canvas.releasePointerCapture?.(e.pointerId);}catch{}
- if(s){selectShip(s.id);const b=getBudget(s);notify('Осталось '+b.remaining+' из '+b.total+' ОД на весь ход.');}
+ if(s){selectShip(s.id);const b=getBudget(s);notify('Курс на весь ход. Осталось '+b.remaining+' из '+b.total+' ОД.');}
 }
 function seaBackground(now){renderSea(ctx,now,game.islands||[],game.weather,W,H);}
 function drawShip(s,now,ghost=false){renderGalley(ctx,s,now,!ghost&&s.id===game.selected&&game.phase==='orders');}
@@ -753,6 +753,10 @@ document.querySelectorAll('[data-order]').forEach(btn=>btn.addEventListener('cli
 $('sailBtn').addEventListener('click',startBattle);
 $('resolveBtn').addEventListener('click',startResolve);
 $('returnBtn').addEventListener('click',()=>{renderHarbor();});
+$('statusBtn').addEventListener('click',()=>{
+ const expanded=$('command').classList.toggle('show-status');
+ $('statusBtn').setAttribute('aria-expanded',String(expanded));
+});
 $('helpBtn').addEventListener('click',()=>{$('help').hidden=false;});
 $('helpClose').addEventListener('click',()=>{$('help').hidden=true;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('help').hidden=true;if(e.key===' '&&game.phase==='orders'&&!e.repeat){e.preventDefault();startResolve();}});
