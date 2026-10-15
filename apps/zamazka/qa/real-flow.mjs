@@ -491,6 +491,17 @@ try{
     });
     assert(noVertical.root<=9&&noVertical.archive<=3&&noVertical.overflow==='clip'&&noVertical.afterForcedScroll===0,
       'Archive must be genuinely unscrollable vertically: '+JSON.stringify(noVertical));
+    await page.waitForFunction(()=>document.querySelector('.archive-work canvas')?.style.getPropertyValue('--art-aspect'),null,{timeout:5000});
+    const frameMeasure=await page.locator('.archive-work').first().evaluate(card=>{
+      const frame=card.querySelector('.archive-art-frame'),image=card.querySelector('canvas');
+      const f=frame.getBoundingClientRect(),r=image.getBoundingClientRect();
+      return {frameHeight:f.height,imageHeight:r.height,frameWidth:f.width,imageWidth:r.width,
+        shownRatio:r.width/r.height,sourceRatio:Number(image.style.getPropertyValue('--art-aspect'))};
+    });
+    assert(frameMeasure.frameHeight-frameMeasure.imageHeight<50&&
+      Math.abs(frameMeasure.shownRatio-frameMeasure.sourceRatio)<.025,
+      'Archive frame should snugly wrap the artwork, never house empty vertical strips: '+JSON.stringify(frameMeasure));
+
   }
   assert.equal(await page.locator('.collection-page [data-action="menu"]').count(),1,
     'Archive exit must be unique and inside the header, not after the gallery');
