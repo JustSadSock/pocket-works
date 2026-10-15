@@ -327,7 +327,7 @@ export class Editor{
  }
  transform(){this.canvas.style.transform='translate('+this.tx+'px,'+this.ty+'px) scale('+this.scale+')';if(this.lastCursor)this.showCursor(this.lastCursor)}
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(MAX_EDITOR_ZOOM,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
- point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
+ point(e,b=this.canvas.getBoundingClientRect()){return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
  save(){this.schedulePersistence();this.onChange(this.strokes.length)}
   schedulePersistence(){
@@ -499,7 +499,7 @@ export class Editor{
     return {clientX:e.clientX+(offset?(this.hand==='left'?18:-18):0),
       clientY:e.clientY-(offset?50:0),pointerType:e.pointerType};
   }
-  pointAt(e){return this.point(this.tip(e))}
+  pointAt(e,bounds){return this.point(this.tip(e),bounds)}
 
   initCursorGraphic(){
     if(!this.cursor)return;
@@ -550,7 +550,7 @@ export class Editor{
     const diameter=Math.max(2,effectiveSize*c.height/H);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
     // Absolutely positioned children start at the viewport padding edge, not its outer border.
-   const drawn=this.point(tip);
+   const drawn=this.point(tip,c);
    this.cursor.classList?.toggle?.('is-blocked',Boolean(this.zone)&&!this.inside(drawn));
    const timestamp=typeof performance==='undefined'?Date.now():performance.now();
    const prev=this.cursorMotion;
@@ -704,9 +704,10 @@ export class Editor{
       this.showCursor(e);
       if(this.working||this.edgePaused){
         const events=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
+        const canvasBounds=this.canvas.getBoundingClientRect();
         let previous=this.lastGesturePoint,changed=false;
         for(const sample of (events.length?[...events.slice(-23),e]:[e])){
-         const end=this.pointAt(sample);
+         const end=this.pointAt(sample,canvasBounds);
          const crossesEdge=previous&&(!this.inside(previous)||!this.inside(end));
          const length=previous?Math.hypot(end[0]-previous[0],end[1]-previous[1]):0;
          const steps=crossesEdge?Math.min(70,Math.max(1,Math.ceil(length/2))):1;
