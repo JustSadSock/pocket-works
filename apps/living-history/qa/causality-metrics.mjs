@@ -1,7 +1,7 @@
 // Read-only causality instruments for v0.7.1. These never call RNG and never
 // alter the simulated world. The daily ring retains evidence BEFORE it is lost
 // to the model's capped foodCases array.
-import {CALIBRATION,foodAccess,overview} from '../model.js';
+import {CALIBRATION,foodAccess,overview,workCapacity} from '../model.js';
 
 const round=(n)=>Math.round(n*100)/100;
 const ageWeight=(age)=>age<4?.35:age<10?.55:age<15?.77:1;
@@ -29,7 +29,8 @@ export function householdFoodSnapshot(s,h,people=[]) {
  const dailyPulses=Math.min(stocks.pulses,need*.38);
  const dailyOats=Math.min(stocks.oats,Math.max(0,need-dailyGarden-dailyDairy-dailyPulses));
  const possibleToday=Math.min(need,dailyGarden+dailyDairy+dailyPulses+dailyOats+stocks.grain);
- const productive=people.filter(p=>p.age>=15&&p.health>25);
+ const productive=people.filter(p=>workCapacity(p,'farm')>0);
+ const farmLabour=people.reduce((n,p)=>n+workCapacity(p,'farm'),0);
  const loanOutstanding=(s.loans||[]).filter(l=>l.borrowerId===h.id&&['active','in-transit'].includes(l.status))
    .reduce((sum,l)=>sum+l.owed,0);
  const inbound=s.shipments.filter(t=>t.good==='grain'&&t.buyer===h.id).reduce((sum,t)=>sum+t.amount,0);
@@ -42,7 +43,9 @@ export function householdFoodSnapshot(s,h,people=[]) {
   coin:round(h.coin||0),ownedFields:h.fields.length,leasedIn:h.leaseIn?.length||0,leasedOut:h.leaseOut?.length||0,
   adultResidents:people.filter(p=>p.age>=15).length,
   capableAdults:productive.length,
-  nonWorkingAdults:people.filter(p=>p.age>=15&&p.health<=25).length,
+  capableFarmDayEquivalents:round(farmLabour),
+  availableFarmDayEquivalents:round(productive.filter(p=>!p.travel||p.travel.end<=s.day).reduce((n,p)=>n+workCapacity(p,'farm'),0)),
+  nonWorkingAdults:people.filter(p=>p.age>=15&&workCapacity(p,'farm')===0).length,
   maxAdultHealth:people.some(p=>p.age>=15)?round(Math.max(...people.filter(p=>p.age>=15).map(p=>p.health))):null,
   availableAdults:productive.filter(p=>!p.travel||p.travel.end<=s.day).length,
   workersTraveling:productive.filter(p=>p.travel&&p.travel.end>s.day).length,
@@ -66,8 +69,8 @@ export function detectCausalFlags(snapshot,foodAccessAtDeath=null,preDeathDays=[
  const prior=preDeathDays.filter(row=>row.day<foodAccessAtDeath?.day || !foodAccessAtDeath).slice(-30);
  if(prior.length>=14 && prior.filter(x=>x.ownedFields>0 && x.availableAdults===0).length>=14)
   flags.push('persistent-labour-shortage-before-death');
- if(prior.length>=14 && prior.filter(x=>x.adultResidents>0&&x.capableAdults===0).length>=14)
-  flags.push('persistent-adult-incapacity-before-death');
+ if(prior.length>=14 && prior.filter(x=>x.adultResidents>0&&x.capableFarmDayEquivalents<=.15).length>=14)
+  flags.push('persistent-severe-labour-impairment-before-death');
  if(prior.length>=14 && prior.filter(x=>x.adultResidents===0).length>=14)
   flags.push('persistent-no-adult-residents-before-death');
  if(prior.length>=14 && prior.filter(x=>x.shortageDays>0 && x.outstandingLoansKg>0).length>=14)
