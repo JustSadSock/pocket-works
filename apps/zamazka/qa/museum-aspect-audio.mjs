@@ -12,7 +12,7 @@ for(const [w,h,r] of [[390,260,.7],[390,260,1],[390,260,1.8],[390,260,3.2],[1240
 }
 assert.deepEqual(galleryWindow([0,1,2,3,4,5,6],0).map(x=>x.id),[5,6,0,1,2]);
 assert.equal(new Set(MUSEUM_SOUND_EVENTS).size,MUSEUM_SOUND_EVENTS.length);
-for(const event of ['brush','frame','paper','tool','token','confirm','reveal','warning','final-warning','clock-tick']){
+for(const event of ['brush','frame','paper','tool','token','confirm','reveal','warning','final-warning','clock-tick','time-up']){
  assert(MUSEUM_SOUND_EVENTS.includes(event));
 }
 const muted=new MuseumAudio(false);
