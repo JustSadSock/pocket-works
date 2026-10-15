@@ -10,6 +10,7 @@ import { buildFurnitureThumbnails } from './thumbnails.js';
 import { createPlacementGuide } from './placement-guide.js';
 import { catalogGestureIntent } from './catalog-gesture.js';
 import { findSurfaceTarget } from './support-target.js';
+import { hardwareScale } from './render-quality.js';
 import { createOnlineController } from './online.js';
 import { roomList,activeRoomId,loadRoom,saveRoom,selectRoom,addRoom,renameRoom,deleteRoom,ROOM_CAP } from './rooms.js';
 import { LAYOUTS,leftWallX } from './layout.js';
@@ -30,6 +31,7 @@ let activeGroup='furniture',savedTimer=0,toastTimer=0;
 const thumbnails=new Map();
 let catalogGesture=null;
 let online=null,offlineBackup=null,queuedSnapshot=null,studio=null;
+let currentQuality=0,lastHomeCapture=0,homeCaptureAttempts=0;
 const playerColors=['#93b3a0','#d89d81','#9f9ac8','#af9868','#7aadb6'];
 const clone=value=>JSON.parse(JSON.stringify(value));
 const soundscape=createSoundscape();
@@ -63,30 +65,45 @@ function hideHome(){
  $('menuBtn').setAttribute('aria-label','Открыть главное меню');
 }
 function captureHome(){
- if(!ready||!scene||!engine)return;
+ if(!ready||!scene||!engine)return false;
  try{
-  // WebKit can return a fully transparent canvas after a hidden WebGL frame.
-  // Reject empty captures: keep the hand-painted dollhouse illustration instead.
   scene.render();
+  const canvas=ui.canvas;
+  // Test non-uniformity rather than transparency: transparent WebGL buffers
+  // can still contain a real 3D model, and empty ones can be fully opaque.
   const sample=document.createElement('canvas');
   sample.width=64;sample.height=64;
   const ctx=sample.getContext('2d',{willReadFrequently:true});
-  ctx.drawImage(ui.canvas,0,0,64,64);
-  const pixels=ctx.getImageData(0,0,64,64).data;
-  let opaque=0;
-  for(let i=3;i<pixels.length;i+=4)if(pixels[i]>110)opaque++;
-  if(opaque<90)return;
+  ctx.drawImage(canvas,0,0,64,64);
+  const data=ctx.getImageData(0,0,64,64).data;
+  let covered=0,min=255,max=0;
+  for(let i=0;i<data.length;i+=4){
+   if(data[i+3]>12){covered++;const light=(data[i]+data[i+1]+data[i+2])/3;min=Math.min(min,light);max=Math.max(max,light);}
+  }
+  if(covered<64||max-min<12)return false;
   const image=$('homeRoomImage');
   image.onload=()=>{if(image.naturalWidth>1)image.classList.add('ready');};
   image.onerror=()=>image.classList.remove('ready');
-  image.src=ui.canvas.toDataURL('image/png');
- }catch(error){console.warn('Dollhouse preview unavailable; using painted illustration',error);}
+  image.src=canvas.toDataURL('image/png');
+  image.dataset.source='live-room';
+  homeCaptureAttempts=0;
+  return true;
+ }catch(error){console.warn('Live room preview unavailable',error);return false;}
+}
+function updateHomePreview(){
+ if(captureHome())return;
+ // Saved gallery covers are photographs of the same real room too.
+ const saved=roomList().find(entry=>entry.id===currentRoomId)?.preview;
+ if(saved?.startsWith('data:image/')){
+  const image=$('homeRoomImage');image.onload=()=>image.classList.add('ready');
+  image.src=saved;image.dataset.source='saved-room';
+ }
 }
 function showHome(){
  if(online?.active){online.open();return;}
  if(pending)cancelPending(false);
  selectedId=null;hideSelection();
- saveRoom(currentRoomId,state,thumbnail());captureHome();
+ saveRoom(currentRoomId,state,thumbnail());updateHomePreview();
  $('homeScreen').hidden=false;
 }
 function playHomeMode(mode){
@@ -678,6 +695,9 @@ function addEvents(){
 }
 function resize(){
  if(!engine||!camera)return;
+ const bounds=ui.canvas.getBoundingClientRect();
+ const nextQuality=hardwareScale({width:bounds.width,height:bounds.height,dpr:window.devicePixelRatio||1});
+ if(nextQuality!==currentQuality){engine.setHardwareScalingLevel(nextQuality);currentQuality=nextQuality;}
  engine.resize();
  const w=ui.canvas.clientWidth||1,h=ui.canvas.clientHeight||1,aspect=w/h;
  const top=Math.max(6.35,6.4/aspect);
@@ -685,7 +705,7 @@ function resize(){
 }
 function setup(){
  engine=new Engine(ui.canvas,true,{preserveDrawingBuffer:true,stencil:true,alpha:true,antialias:true});
- engine.setHardwareScalingLevel(Math.max(1,Math.min(1.7,window.devicePixelRatio>2?1.3:1)));
+ // Retina native framebuffer quality is selected by resize(), not downsampled by device class.
  scene=new Scene(engine);
  camera=new ArcRotateCamera('fixed-portrait',Math.PI/4,Math.PI/3.1,17,new Vector3(0,1.53,0),scene);
  camera.inputs.clear();camera.minZ=.1;camera.mode=1; // Orthographic, fixed toy-diorama camera.
@@ -726,7 +746,7 @@ function setup(){
   hideHome();online.open();
  }else{
   // Render the real saved room before presenting the distinct home screen.
-  requestAnimationFrame(()=>captureHome());
+  requestAnimationFrame(()=>updateHomePreview());
  }
  let last=0;engine.runRenderLoop(()=>{
   if(document.hidden)return;
@@ -742,6 +762,9 @@ function setup(){
   const interval=drag||pending||lit||moving||previewTurn?16:50;
   if(now-last<interval)return;
   last=now;scene.render();
+  if(!$('homeScreen').hidden && !$('homeRoomImage').classList.contains('ready') && homeCaptureAttempts<7 && now-lastHomeCapture>650){
+   lastHomeCapture=now;homeCaptureAttempts++;updateHomePreview();
+  }
   if(online?.active)drawOnlineMarkers();
  });
 }
@@ -765,6 +788,7 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
     return {x:rect.x+position.x*rect.width/ui.canvas.width,y:rect.y+position.y*rect.height/ui.canvas.height};
    },
   get lighting(){return room?.lightingDiagnostics()??null;},
+  get quality(){return {scale:engine?.getHardwareScalingLevel(),dpr:devicePixelRatio,pixels:[ui.canvas.width,ui.canvas.height],preview:$('homeRoomImage').dataset.source||null};},
   item(id){return state.items.find(x=>x.id===id)?{...state.items.find(x=>x.id===id)}:null;},
   point(id){
    if(!ready)return null;
