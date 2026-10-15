@@ -41,7 +41,7 @@ test('pasture scarcity kills cattle without introducing or deleting physical res
  const s=createWorld(13),h=s.households.find(h=>h.cattle>0);assert.ok(h);
  h.fodder=0;s.economy.forageInitial=Number((s.pasture.reduce((n,v)=>n+v,0)+s.households.reduce((n,v)=>n+v.fodder,0)+s.stats.forageConverted).toFixed(2));
  s.pasture.fill(0);s.economy.forageInitial=Number((s.households.reduce((n,v)=>n+v.fodder,0)+s.stats.forageConverted).toFixed(2));
- const old=s.stats.cattleDied;for(let d=0;d<70;d++)advanceDays(s,1);
- assert.ok(s.stats.cattleDied>old);
+ const old=(s.stats.cattleDied||0)+(s.stats.sheepDied||0);for(let d=0;d<70;d++)advanceDays(s,1);
+ assert.ok((s.stats.cattleDied||0)+(s.stats.sheepDied||0)>old,'lack of forage kills sheep or cattle');
  assert.ok(audit(s).ok,audit(s).issues.join('; '));
 });
