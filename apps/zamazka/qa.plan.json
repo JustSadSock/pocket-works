@@ -95,6 +95,12 @@
       "kind": "browser-node",
       "tier": "deep",
       "entry": "qa/responsive-viewports.mjs"
+    },
+    {
+      "id": "fill-visual-audit",
+      "kind": "browser-node",
+      "tier": "deep",
+      "entry": "qa/fill-visual-playwright.mjs"
     }
   ]
 }
