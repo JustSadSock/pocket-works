@@ -1,9 +1,10 @@
+import {ROOM_KINDS,roomKind} from './room-kinds.js';
 // Small UI coordinator for the dollhouse albums and dedicated photography.
 // All commands use live room state from the editor; no fake or empty controls.
 export function createStudioUI({getState,load,save,render,photo,onClose,toast}){
  const $=id=>document.getElementById(id);
  const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- let newLayout='classic';
+ let newLayout='classic',newPurpose='living';
  function gallery(){
   save();
   const records=getState().records(),limit=5;
@@ -12,7 +13,7 @@ export function createStudioUI({getState,load,save,render,photo,onClose,toast}){
    '<article class="room-album"><div class="room-album-preview">'+
    (r.preview?'<img alt="" src="'+r.preview+'">':'<span>⌂</span>')+'</div>'+
    '<input maxlength="32" data-name="'+safe(r.id)+'" aria-label="Название" value="'+safe(r.name)+'">'+
-   '<small>'+({classic:'Классическая',narrow:'Узкая',nook:'Уголок'}[r.layout]||'Классическая')+'</small>'+
+   '<small>'+((ROOM_KINDS.find(kind=>kind.id===r.purpose)?.name)||'Гостиная')+' · '+({classic:'Классическая',narrow:'Узкая',nook:'Уголок'}[r.layout]||'Классическая')+'</small>'+
    '<div class="room-album-actions"><button data-open="'+safe(r.id)+'">Открыть</button>'+
    (records.length>1?'<button class="delete" data-delete="'+safe(r.id)+'">Удалить</button>':'')+
    '</div></article>').join('')+
@@ -33,8 +34,12 @@ export function createStudioUI({getState,load,save,render,photo,onClose,toast}){
   newLayout=b.dataset.layout;
   for(const x of $('newRoomLayouts').querySelectorAll('button'))x.classList.toggle('chosen',x===b);
  };
+ for(const b of $('newRoomPurposes').querySelectorAll('[data-purpose]'))b.onclick=()=>{
+  newPurpose=roomKind(b.dataset.purpose);
+  for(const x of $('newRoomPurposes').querySelectorAll('button'))x.classList.toggle('chosen',x===b);
+ };
  $('roomCreateConfirm').onclick=()=>{
-  const created=getState().create($('newRoomName').value,newLayout);
+  const created=getState().create($('newRoomName').value,newLayout,newPurpose);
   if(!created){toast('Не получилось создать комнатку');return;}
   load(created.id);$('roomsLayer').hidden=true;$('newRoomForm').hidden=true;
  };
