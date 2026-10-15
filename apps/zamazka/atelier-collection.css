@@ -249,3 +249,58 @@
  #dialog .atelier-settings *,#dialog .atelier-settings *:before{
  animation:none!important;transition:none!important}
 }
+
+/* Seven actual awards should fill the cabinet, not leave a dead eighth slot.
+   The lower three places are wider niches, like a real museum display. */
+#screen>.cabinet-scene .cabinet-tray{
+ grid-template-columns:repeat(12,minmax(0,1fr))!important
+}
+#screen>.cabinet-scene .cabinet-medal:nth-child(-n+4){grid-column:span 3}
+#screen>.cabinet-scene .cabinet-medal:nth-child(n+5){grid-column:span 4}
+@media(max-width:700px){
+ #screen>.cabinet-scene .cabinet-tray{
+  grid-template-columns:repeat(12,minmax(0,1fr))!important}
+}
+/* A scrollable preferences dossier stays between the tab strip and fixed
+   Save/Cancel footer. Never let a large native switch overlay the next row. */
+#dialog .atelier-settings-panel[data-settings-panel="preferences"]{
+ overflow:hidden!important
+}
+#dialog .atelier-settings-panel[data-settings-panel="preferences"] .atelier-preferences{
+ flex:1 1 auto!important;min-height:0!important;max-height:100%!important;
+ overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior:contain;scrollbar-width:thin
+}
+#dialog .atelier-settings-panel .atelier-appearance{
+ box-sizing:border-box;max-width:100%;min-height:52px;gap:7px
+}
+#dialog .atelier-settings-panel .atelier-appearance .appearance-choice-text{
+ flex:1 1 auto;min-width:0;overflow-wrap:anywhere
+}
+#dialog .atelier-settings-panel .atelier-appearance .appearance-track{
+ flex:0 0 auto
+}
+@media(max-width:700px){
+ #dialog .atelier-settings-panel .atelier-appearance{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  min-height:50px!important;padding:6px!important;margin:0!important
+ }
+ #dialog .atelier-settings-panel .atelier-appearance .appearance-choice-text strong{
+  font-size:12px!important;line-height:1.2!important
+ }
+ #dialog .atelier-settings-panel .atelier-appearance .appearance-choice-text small{
+  font-size:9px!important;line-height:1.15!important;display:block
+ }
+ #dialog .atelier-settings-panel .atelier-appearance .appearance-track{
+  transform:scale(.85);transform-origin:center
+ }
+}
+@media(max-width:700px) and (max-height:670px){
+ #dialog .atelier-settings-panel .atelier-preferences{gap:5px!important}
+ #dialog .atelier-settings-panel .atelier-preferences-group{gap:3px!important;padding:5px 7px!important}
+ #dialog .atelier-settings-panel .atelier-group-title{font-size:8px}
+ #dialog .atelier-settings-panel .atelier-preferences-group .input{min-height:34px!important}
+ #dialog .atelier-settings-panel .atelier-switch-line{min-height:28px!important}
+ #dialog .atelier-settings-panel .atelier-preferences-group input[type="range"]{min-height:22px}
+ #dialog .atelier-settings-panel .atelier-settings-note{font-size:9px!important}
+}
