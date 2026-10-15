@@ -65,9 +65,9 @@ test('real controls, mobile/desktop geometry, opening battle evidence', async ({
   expect(selected).toBe(state.ship.id);
   await page.locator('[data-stage="0"]').click();
   await page.locator('[data-order="hold"]').click();
-  await page.mouse.move(state.point.x + 10, state.point.y - 18);
+  await page.mouse.move(state.point.x + 22, state.point.y - 12);
   await page.mouse.down();
-  await page.mouse.move(state.point.x + 24, state.point.y - 44, { steps: 7 });
+  await page.mouse.move(state.point.x + 30, state.point.y - 20, { steps: 7 });
   await page.mouse.up();
   const routeLength = await page.evaluate(() => {
     const game = (window as any).__FLOT_QA__.game;
