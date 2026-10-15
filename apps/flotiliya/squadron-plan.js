@@ -11,6 +11,14 @@ function seaObstacle(point,islands,margin=1){
   return Math.hypot(x/(land.rx+16),y/(land.ry+14))<margin;
  });
 }
+function seaSegmentBlocked(start,end,islands){
+ const n=Math.max(1,Math.ceil(dist(start,end)/10));
+ for(let i=0;i<=n;i++){
+  const t=i/n;
+  if(seaObstacle({x:start.x+(end.x-start.x)*t,y:start.y+(end.y-start.y)*t},islands,1.09))return true;
+ }
+ return false;
+}
 // Explicit tactical assistant. Every proposed waypoint passes exactly the
 // same point and stage-range validation as hand-drawn player routes.
 export function planSquadronShip(ship,target,{mission='battle',islands=[],world={width:660,height:1000}}={}){
@@ -39,7 +47,7 @@ export function planSquadronShip(ship,target,{mission='battle',islands=[],world=
    p={x:clamp(origin.x+Math.cos(theta)*length*.75,43,617),
       y:clamp(origin.y+Math.sin(theta)*length*.75,43,957)};
   }
-  if(!seaObstacle(p,islands,1.09)){
+  if(!seaObstacle(p,islands,1.09)&&!seaSegmentBlocked(origin,p,islands)){
    orders[stage].route=[p];
    if(canPlan(ship,orders))origin=p;
    else orders[stage].route=[];
