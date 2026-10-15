@@ -14,7 +14,7 @@ export function finaleVerdictMarkup({view:v,artworks,artworkURL,escapeText,head,
  const label=s=>safe(escapeText,s);
  const cards=v.selected.map((id,i)=>{
   const art=artworks[id]||{},voters=votesFor(i),count=totals[i];
-  return '<article class="verdict-card finale-ballot-card'+(count===largest&&count>0?' has-majority':'')+'" style="--case-index:'+i+';--vote-ratio:'+(100*count/largest).toFixed(1)+'%">'+
+  return '<article class="verdict-card finale-ballot-card'+(count===largest&&count>0?' has-majority':'')+(i===tagged.i?' is-featured':'')+'" style="--case-index:'+i+';--vote-ratio:'+(100*count/largest).toFixed(1)+'%">'+
    '<div class="finale-ballot-index"><span>ЭКСПОНАТ</span><b>'+String(i+1).padStart(2,'0')+'</b></div>'+
    '<div class="verdict-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+label(art.title||'Полотно')+'"></div>'+
    '<div class="finale-card-caption"><strong>'+label(art.title||'Картина')+'</strong><small>'+label(art.artist||'')+'</small></div>'+
