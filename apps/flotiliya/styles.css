@@ -344,3 +344,23 @@ body{background:#0c292f}
 @media(max-width:720px) and (orientation:portrait) and (max-height:710px){
  .route-actions{display:flex!important;min-height:21px}
 }
+
+/* Harbor takes over the full table; no dead command column on desktop. */
+@media(min-width:721px){
+ .workspace:has(#harbor:not([hidden])){grid-template-columns:minmax(0,1fr)}
+ .workspace:has(#harbor:not([hidden])) .board{width:100%}
+ .workspace:has(#harbor:not([hidden])) .harbor{
+  grid-template-columns:minmax(0,1fr) minmax(290px,325px);
+  gap:clamp(28px,5vw,80px);
+  padding:clamp(18px,5vw,55px) clamp(32px,10vw,115px);
+  background:linear-gradient(90deg,#09282edc 0%,#082b31b8 48%,#09272ddb 100%);
+ }
+ .workspace:has(#harbor:not([hidden])) .intro{max-width:460px}
+ .workspace:has(#harbor:not([hidden])) .fleet{width:100%;margin-left:auto}
+}
+@media(max-width:720px) and (orientation:portrait){
+ .harbor .fleet-list{max-height:none;overflow:visible}
+ .harbor .fleet{flex-shrink:0}
+ .harbor .ship-row{padding:9px 0}
+ .harbor{background:linear-gradient(180deg,#092832e8 0%,#092e36d1 58%,#0b343ba8 100%)}
+}
