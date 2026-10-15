@@ -462,8 +462,10 @@ function fitPreviewFrames(rail){
    const limitH=host.clientHeight-12-2*thickness-2;
    if(limitW<28||limitH<28)continue;
    const width=Math.floor(Math.min(limitW,limitH*ratio));
-   const height=Math.floor(width/ratio);
-   const aw=Math.max(1,width)+'px',ah=Math.max(1,height)+'px';
+   // Keep a fractional CSS height. Rounding 100.5px to 100px distorts
+   // very wide paintings enough to visibly skew the snug frame.
+   const height=width/ratio;
+   const aw=Math.max(1,width)+'px',ah=Math.max(1,height).toFixed(3)+'px';
    if(mat.style.getPropertyValue('--preview-art-w')!==aw)mat.style.setProperty('--preview-art-w',aw);
    if(mat.style.getPropertyValue('--preview-art-h')!==ah)mat.style.setProperty('--preview-art-h',ah);
    mat.dataset.ratioReady='true';
