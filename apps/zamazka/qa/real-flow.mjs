@@ -180,6 +180,8 @@ try{
   assert.equal(await centerFrame.getAttribute('role'),'button','Paintings should be keyboard accessible');
   await centerFrame.click();
   await page.locator('.dialog:not(.hidden) .art-inspection').waitFor({timeout:6000});
+  await page.locator('.inspection-stage.is-ready').waitFor({timeout:17000});
+  assert.equal(await page.locator('.inspection-loading').isVisible(),false,'Only decoded artwork should be revealed');
   const inspection=await page.evaluate(()=>{
     const dlg=document.querySelector('.dialog-box'),close=document.querySelector('#modalActions .btn.primary');
     const box=dlg.getBoundingClientRect(),r=close.getBoundingClientRect();
@@ -187,6 +189,7 @@ try{
   });
   assert(inspection.closeBottom<inspection.screenHeight&&inspection.overflow<=3&&inspection.top>=0,
     'Tall painting inspection must fit viewport and keep close visible');
+  await page.waitForFunction(()=>!document.querySelector('#toast')?.classList.contains('show'),null,{timeout:6500});
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-inspect-'+viewport.width+'.png'),fullPage:false});
 
   await page.locator('#modalActions .btn.primary').click();
