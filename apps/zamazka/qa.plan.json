@@ -58,6 +58,10 @@
         },
         {
           "action": "click",
+          "selector": "[data-settings-tab='preferences']"
+        },
+        {
+          "action": "click",
           "selector": ".appearance-choice"
         },
         {
@@ -87,7 +91,7 @@
     {
       "id": "real-flow",
       "kind": "browser-node",
-      "tier": "deep",
+      "tier": "smoke",
       "entry": "qa/real-flow.mjs"
     },
     {
@@ -121,15 +125,15 @@
       "entry": "qa/finale-state.mjs"
     },
     {
-      "id": "finale-visual",
+      "id": "atelier-visual",
       "kind": "browser-node",
       "tier": "smoke",
-      "entry": "qa/finale-visual.mjs"
+      "entry": "qa/atelier-visual.mjs"
     },
     {
       "id": "passage-visual",
       "kind": "browser-node",
-      "tier": "smoke",
+      "tier": "deep",
       "entry": "qa/passage-visual.mjs"
     }
   ]

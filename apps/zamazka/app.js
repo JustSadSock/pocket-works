@@ -10,6 +10,7 @@ import {Editor,renderArtwork} from './editor.js';
 import {BRUSH_CURSOR_NAMES,brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
 import {finaleVerdictMarkup,finaleResultsMarkup,finaleRevealAuditMarkup} from './finale-ui.js';
 import {admissionMarkup,connectionMarkup,setConnectionStep,preparingMarkup,updateArtLoad,updateReady,waitingMarkup,updateWaiting} from './passage-ui.js';
+import {cabinetMarkup,achievementDetailMarkup,settingsMarkup,setSettingsTab} from './atelier-collection.js';
 import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
 import {getSavedEmblem,storeEmblem} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
@@ -105,7 +106,7 @@ function notify(t){const message=String(t||'');if(message===lastToast&&Date.now(
  lastToast=message;lastToastAt=Date.now();toast.textContent=message;toast.classList.add('show');
  clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 
-function closeDialog(){if(settingsPreviewAppearance!==null){applyAppearance(settingsOriginalAppearance||'classic');settingsPreviewAppearance=null;settingsOriginalAppearance=null}if(settingsPreviewVolume!==null){museumAudio.setVolume(soundVolume/100);settingsPreviewVolume=null}closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
+function closeDialog(){settingsPreviewAbort?.();settingsPreviewAbort=null;if(settingsPreviewAppearance!==null){applyAppearance(settingsOriginalAppearance||'classic');settingsPreviewAppearance=null;settingsOriginalAppearance=null}if(settingsPreviewVolume!==null){museumAudio.setVolume(soundVolume/100);settingsPreviewVolume=null}closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
 function modal(title,body,buttons){dialogFocus=document.activeElement;dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound('press',true);fn()});actionBox.append(b)});(actionBox.querySelector('.ghost')||actionBox.querySelector('button'))?.focus({preventScroll:true})}
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 let activeSubmitTransfer=null,activeDraftTransfer=null,submissionBackoffUntil=0,draftSendAfter=0;
@@ -689,30 +690,50 @@ function results(){
  if(!view?.participants||!view?.scores)return;
  change(finaleResultsMarkup({view,escapeText:esc,memberSeal,pocketPlayerBadge,hostId:me?.id}),'results');
 }
-let earnedAchievementIds=new Set();
-async function achievements(){
- earnedAchievementIds=new Set(); // Never retain another account's cached achievements.
- change('<section class="page zamazka-achievements"><div class="section-label">КОЛЛЕКЦИЯ</div><h2>Достижения</h2>'+
-  '<div id="zamAchievements" class="achievement-grid"><div class="notice">Проверяем награды Pocket ID…</div></div>'+
-  '<button class="btn ghost wide" data-action="achievements-back">← Назад</button></section>','achievements');
- const mount=screen.querySelector('#zamAchievements');
- let message='';
- if(isPocketMember()){
+let earnedAchievementIds=new Set(),achievementStatus='loading',achievementError='';
+let achievementSelection=zamazkaAchievements[0]?.id||'';
+function showAchievementDetail(id){
+ const selected=zamazkaAchievements.find(a=>a.id===id);if(!selected)return;
+ achievementSelection=id;
+ const root=screen.querySelector('.cabinet-scene'),detail=root?.querySelector('#cabinetDetail');
+ if(!detail)return;
+ detail.innerHTML=achievementDetailMarkup(selected,earnedAchievementIds.has(id)&&achievementStatus==='ready',achievementStatus==='ready');
+ root.querySelectorAll('[data-achievement-select]').forEach(button=>{
+  const active=button.dataset.achievementSelect===id;
+  button.classList.toggle('is-selected',active);button.setAttribute('aria-pressed',String(active));
+ });
+}
+async function fetchAchievements(mount){
+ const requestMount=mount;
+ earnedAchievementIds=new Set();achievementStatus='loading';achievementError='';
+ const guest=!isPocketMember();
+ if(guest){achievementStatus='guest'}
+ else{
   try{
    const response=await fetch('/pocket-social/achievements',{credentials:'same-origin',cache:'no-store'});
-   if(!response.ok)throw Error('Не удалось получить награды. Попробуй открыть страницу снова.');
+   if(!response.ok)throw Error('Сервер наград не ответил.');
    const data=await response.json();
-   earnedAchievementIds=new Set((data.achievements||[]).map(a=>a.id));
-  }catch(e){message=e.message||'Нет связи с Pocket ID.'}
- }else message='Войди в Pocket ID, чтобы получать косметику в сетевых матчах.';
- if(!mount.isConnected)return;
- mount.innerHTML=(message?'<div class="notice">'+esc(message)+'</div>':'')+
-  '<div class="achievement-progress">'+zamazkaAchievements.filter(a=>earnedAchievementIds.has(a.id)).length+' / 7 получено</div>'+
-  zamazkaAchievements.map(a=>'<article class="achievement-entry" data-earned="'+earnedAchievementIds.has(a.id)+'">'+
-   '<div class="achievement-entry__heading"><strong>'+esc(a.name)+'</strong><span>'+esc(a.tier)+'</span></div>'+
-   '<p>'+esc(a.detail)+'</p><div class="achievement-entry__foot"><span>'+esc(a.reward)+'</span><b>'+
-   (earnedAchievementIds.has(a.id)?'Получено':'Не открыто')+'</b></div></article>').join('');
+   if(!Array.isArray(data.achievements))throw Error('Некорректные данные наград.');
+   earnedAchievementIds=new Set(data.achievements.map(a=>a.id));
+   achievementStatus='ready';
+  }catch(error){achievementStatus='error';achievementError=error?.message||'Не удалось загрузить награды.'}
+ }
+ if(!requestMount.isConnected||screen.querySelector('#zamAchievements')!==requestMount)return;
+ const result=cabinetMarkup(zamazkaAchievements,earnedAchievementIds,{status:achievementStatus,error:achievementError,
+  guest,selectedId:achievementSelection});
+ const scene=document.createElement('template');scene.innerHTML=result;
+ const newScene=scene.content.firstElementChild,oldScene=screen.querySelector('.cabinet-scene');
+ if(!oldScene)return;
+ oldScene.replaceWith(newScene);
+ // Keep the medal currently inspected if its status was refreshed.
+ showAchievementDetail(achievementSelection);
 }
+async function achievements(){
+ earnedAchievementIds=new Set();achievementStatus='loading';achievementError='';
+ change(cabinetMarkup(zamazkaAchievements,[],{status:'loading',selectedId:achievementSelection}),'achievements');
+ await fetchAchievements(screen.querySelector('#zamAchievements'));
+}
+
 function collection(){
  change('<section class="page collection-page"><header class="collection-mast"><div><div class="section-label">ЛИЧНЫЙ ФОНД · '+saved.length+' работ</div><h2>Мои реставрации</h2></div><button class="collection-back" data-action="menu">← В главное меню</button></header><div class="zamazka-cloud-row"><span data-cloud-status>Только на этом устройстве</span><button class="btn ghost" data-action="cloud-sync">☁ Синхронизировать</button>'+(saved.length?'<button class="btn ghost" data-action="export-archive">Экспорт архива ↓</button>':'')+'</div><div id="archiveLocalStatus" class="archive-local-status" role="status"></div>'+(saved.length?'<div class="gallery archive-gallery">'+saved.map((g,i)=>'<button class="picture archive-work" data-saved="'+i+'"><span class="picture-image archive-art-frame"><canvas data-saved-canvas="'+i+'" width="480" height="360"></canvas></span><span class="archive-caption"><span class="caption">'+esc(ARTS[g.art]?.title||'Работа')+'</span><span class="style">'+new Date(g.time).toLocaleDateString('ru-RU')+'</span></span></button>').join('')+'</div>':'<div class="archive-empty"><strong>Здесь появятся твои картины</strong><p>Попробуй первую реставрацию — готовое произведение сохранится в фонде.</p><button class="btn primary" data-action="practice">Начать реставрацию</button></div>')+'</section>','collection');
  zamazkaCloud?.render();archiveWriteIndicator();
@@ -1037,57 +1058,123 @@ function inspect(id,fromHome=false){
 
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
 let settingsPreviewVolume=null,settingsPreviewAppearance=null,settingsOriginalAppearance=null;
+let settingsPreviewAbort=null;
+function mountBrushTest(root){
+ const canvas=root.querySelector('#settingStrokeCanvas'),pointer=root.querySelector('#settingBrushPointer');
+ if(!canvas||!pointer)return;
+ let drawing=false,last=null;const ctx=canvas.getContext('2d');
+ const width=canvas.width,height=canvas.height;
+ let strokes=0;
+ function clear(){ctx.clearRect(0,0,width,height);strokes=0;root.querySelector('#settingStrokePrompt')?.removeAttribute('hidden')}
+ function position(event){
+  const r=canvas.getBoundingClientRect();
+  return {x:Math.max(0,Math.min(width,(event.clientX-r.left)/r.width*width)),
+   y:Math.max(0,Math.min(height,(event.clientY-r.top)/r.height*height))};
+ }
+ function stroke(from,to){
+  const brush=Number(root.querySelector('#settingBrushStyle')?.value)||0;
+  const widths=[8,5,24,13,22],size=widths[brush]||8;
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.globalAlpha=brush===3?.47:.85;
+  ctx.strokeStyle=brush===2?'#835d40':'#815247';
+  ctx.lineWidth=size;ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.stroke();
+  ctx.globalAlpha=1;
+ }
+ function cursor(e){
+  const rect=canvas.getBoundingClientRect(),parent=canvas.parentElement.getBoundingClientRect();
+  pointer.style.left=(e.clientX-parent.left)+'px';pointer.style.top=(e.clientY-parent.top)+'px';
+  pointer.classList.add('is-visible');pointer.classList.toggle('is-touching',drawing);
+ }
+ const down=e=>{
+  if(e.button!==0)return;e.preventDefault();drawing=true;
+  canvas.setPointerCapture(e.pointerId);last=position(e);stroke(last,last);strokes++;
+  root.querySelector('#settingStrokePrompt')?.setAttribute('hidden','');
+  cursor(e);
+ };
+ const move=e=>{
+  cursor(e);
+  if(!drawing||!last)return;
+  const to=position(e);stroke(last,to);last=to;
+ };
+ const up=e=>{drawing=false;last=null;pointer.classList.remove('is-touching')};
+ const leave=()=>{if(!drawing)pointer.classList.remove('is-visible')};
+ canvas.addEventListener('pointerdown',down);
+ canvas.addEventListener('pointermove',move);
+ canvas.addEventListener('pointerup',up);
+ canvas.addEventListener('pointercancel',up);
+ canvas.addEventListener('lostpointercapture',up);
+ canvas.addEventListener('pointerleave',leave);
+ root.querySelector('[data-setting-clear-preview]')?.addEventListener('click',clear);
+ settingsPreviewAbort=()=>{drawing=false;pointer.classList.remove('is-visible')};
+}
 function settings(){
- const oldVolume=soundVolume;
- const oldAppearance=appearance();settingsOriginalAppearance=oldAppearance;
- modal('Настройки',
-  '<label class="field" for="settingName">Мой ник</label><input class="input" id="settingName" maxlength="22" value="'+esc(tabGuestName())+'">'+
-  '<label class="field"><input type="checkbox" id="settingSound" '+(beepEnabled?'checked':'')+'> Звуки мастерской</label>'+
-  '<label class="field sound-volume-label" for="settingVolume"><span>Громкость эффектов</span><output id="settingVolumeValue">'+soundVolume+'%</output></label>'+
-  '<input class="sound-volume-range" id="settingVolume" type="range" min="0" max="100" step="5" value="'+soundVolume+'" aria-label="Громкость эффектов">'+
-  '<label class="field"><input type="checkbox" id="settingConfirmVote" '+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'checked':'')+'> Подтверждать распределение монет</label>'+
-  '<label class="field appearance-choice" for="settingNewAppearance"><span class="appearance-choice-text"><strong>Новый внешний вид</strong><small>Экспериментальная музейная мастерская</small></span><input type="checkbox" role="switch" id="settingNewAppearance" '+(appearance()==='new'?'checked':'')+'><span class="appearance-track" aria-hidden="true"></span></label>'+
-  '<div class="field cursor-style-choice"><label for="settingBrushStyle">Курсор-кисть</label><select id="settingBrushStyle" class="input" aria-label="Стиль курсора">'+BRUSH_CURSOR_NAMES.map((label,index)=>'<option value="'+index+'"'+(getBrushCursorStyle()===index?' selected':'')+'>'+label+'</option>').join('')+'</select></div>'+
-  '<div class="cursor-style-preview" id="settingBrushPreview" aria-live="polite"></div>'+
-  '<p class="hint">Новый ник применится при следующем подключении.</p>',[
+ const oldVolume=soundVolume,oldAppearance=appearance();
+ settingsOriginalAppearance=oldAppearance;
+ const content=settingsMarkup({name:tabGuestName(),member:isPocketMember(),sound:beepEnabled,volume:soundVolume,
+  confirmVote:localStorage.getItem(CONFIRM_VOTE_KEY)==='on',appearance:oldAppearance,
+  brushStyle:getBrushCursorStyle(),brushNames:BRUSH_CURSOR_NAMES});
+ modal('Мастерская',content,[
   ['Сохранить',()=>{
-   rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');
-   beepEnabled=dialog.querySelector('#settingSound').checked;
-   soundVolume=Math.max(0,Math.min(100,Number(dialog.querySelector('#settingVolume').value)||0));
+   const input=dialog.querySelector('#settingName');
+   if(!isPocketMember())rememberTabName(input?.value.trim().slice(0,22)||'Реставратор');
+   beepEnabled=Boolean(dialog.querySelector('#settingSound')?.checked);
+   soundVolume=Math.max(0,Math.min(100,Number(dialog.querySelector('#settingVolume')?.value)||0));
    try{
     localStorage.setItem(NS+'sound',beepEnabled?'on':'off');
     localStorage.setItem(SOUND_VOLUME_KEY,String(soundVolume));
-    localStorage.setItem(CONFIRM_VOTE_KEY,dialog.querySelector('#settingConfirmVote').checked?'on':'off');
+    localStorage.setItem(CONFIRM_VOTE_KEY,dialog.querySelector('#settingConfirmVote')?.checked?'on':'off');
    }catch{}
    museumAudio.setEnabled(beepEnabled);museumAudio.setVolume(soundVolume/100);
-   const brushStyle=setBrushCursorStyle(dialog.querySelector('#settingBrushStyle').value);
+   const brushStyle=setBrushCursorStyle(dialog.querySelector('#settingBrushStyle')?.value);
    editor?.setCursorStyle(brushStyle);
-   applyAppearance(dialog.querySelector('#settingNewAppearance').checked?'new':'classic',true);
+   applyAppearance(dialog.querySelector('#settingNewAppearance')?.checked?'new':'classic',true);
    settingsPreviewAppearance=null;settingsOriginalAppearance=null;
-   settingsPreviewVolume=null;closeDialog();
+   settingsPreviewVolume=null;settingsPreviewAbort?.();settingsPreviewAbort=null;
+   closeDialog();
    if(page==='vote'&&view?.phase==='voting')vote();
    notify('Настройки сохранены');
   },'primary'],
-  ['Отмена',()=>{museumAudio.setVolume(oldVolume/100);settingsPreviewVolume=null;closeDialog()},'ghost']
+  ['Отмена',()=>{museumAudio.setVolume(oldVolume/100);settingsPreviewVolume=null;
+   settingsPreviewAbort?.();settingsPreviewAbort=null;closeDialog()},'ghost']
  ]);
- const brushSelect=dialog.querySelector('#settingBrushStyle');
+ const box=dialog.querySelector('.dialog-box');box?.classList.add('atelier-settings-dialog');
+ const root=dialog.querySelector('[data-settings-view]'),brushSelect=root?.querySelector('#settingBrushStyle');
  const updateBrushPreview=()=>{
-   const style=Number(brushSelect?.value)||0;
-   const preview=dialog.querySelector('#settingBrushPreview');
-   if(!preview)return;
-   const img=new Image();img.alt='Курсор '+BRUSH_CURSOR_NAMES[style];img.width=49;img.height=49;
-   img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(brushCursorSVG(style,'#9d4c3c'));
-   preview.replaceChildren(img,document.createTextNode('Внешний вид курсора; на точность рисования не влияет.'));
+  const style=Number(brushSelect?.value)||0;
+  root.querySelectorAll('[data-brush-choice]').forEach(btn=>{
+   const active=Number(btn.dataset.brushChoice)===style;
+   btn.classList.toggle('is-selected',active);btn.setAttribute('aria-pressed',String(active));
+  });
+  const preview=root.querySelector('#settingBrushPreview'),pointer=root.querySelector('#settingBrushPointer');
+  const img=document.createElement('img');
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(brushCursorSVG(style,'#815247'));
+  img.alt='Кисть '+BRUSH_CURSOR_NAMES[style];img.width=100;img.height=100;
+  if(preview)preview.replaceChildren(img);
+  if(pointer){const tool=document.createElement('img');tool.alt='';tool.src=img.src;pointer.replaceChildren(tool)}
  };
+ root.querySelectorAll('[data-brush-mini]').forEach(node=>{
+  const style=Number(node.dataset.brushMini);
+  const img=document.createElement('img');img.alt='';img.src='data:image/svg+xml;charset=utf-8,'+
+   encodeURIComponent(brushCursorSVG(style,'#815247'));node.replaceChildren(img);
+ });
+ root.querySelectorAll('[data-brush-choice]').forEach(btn=>btn.addEventListener('click',()=>{
+  if(brushSelect){brushSelect.value=btn.dataset.brushChoice;updateBrushPreview()}
+  sound('tool',true);
+ }));
  brushSelect?.addEventListener('change',updateBrushPreview);
- updateBrushPreview();
- const volume=dialog.querySelector('#settingVolume'),value=dialog.querySelector('#settingVolumeValue');
+ updateBrushPreview();mountBrushTest(root);
+ root.querySelectorAll('[data-settings-tab]').forEach(tab=>tab.addEventListener('click',()=>{
+  setSettingsTab(root,tab.dataset.settingsTab);
+ }));
+ const volume=root.querySelector('#settingVolume'),value=root.querySelector('#settingVolumeValue');
  volume?.addEventListener('input',()=>{
   value.textContent=volume.value+'%';
   settingsPreviewVolume=Number(volume.value);museumAudio.setVolume(settingsPreviewVolume/100);
  });
- volume?.addEventListener('change',()=>{if(dialog.querySelector('#settingSound')?.checked)museumAudio.play('tool',true)});
- dialog.querySelector('#settingNewAppearance')?.addEventListener('change',event=>{
+ volume?.addEventListener('change',()=>{
+  if(root.querySelector('#settingSound')?.checked)museumAudio.play('tool',true);
+ });
+ root.querySelector('#settingNewAppearance')?.addEventListener('change',event=>{
   settingsPreviewAppearance=event.target.checked?'new':'classic';
   applyAppearance(settingsPreviewAppearance);
  });
@@ -1107,7 +1194,8 @@ screen.addEventListener('submit',e=>{
  if(button&&!button.disabled)void connect(button.dataset.mode);
 });
 screen.addEventListener('click',e=>{
- const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub],[data-review-open]');if(!b)return;
+ const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub],[data-review-open],[data-achievement-select]');if(!b)return;
+ if(b.hasAttribute('data-achievement-select')){showAchievementDetail(b.dataset.achievementSelect);sound('paper',true);return}
  if(b.hasAttribute('data-review-open')){openRoundViewer({index:Number(b.dataset.reviewOpen),view,dialog,renderArtwork,arts:ARTS,esc,closeDialog});return}
  if(b.hasAttribute('data-magnify')){magnify(Number(b.dataset.magnify));return}
  if(b.hasAttribute('data-chipadd')){const i=Number(b.dataset.chipadd);if(chips.reduce((a,b)=>a+b,0)<3){animateCoinDeposit(b);chips[i]++;sound('token',true);updateChips()}return}
@@ -1146,6 +1234,7 @@ screen.addEventListener('click',e=>{
  else if(action==='collection')collection();
  else if(action==='export-archive')exportArchive();
  else if(action==='achievements')void achievements();
+ else if(action==='retry-achievements'){const mount=screen.querySelector('#zamAchievements');if(mount)void fetchAchievements(mount)}
  else if(action==='achievements-back'){if(net&&view)renderView();else home();}
  else if(action==='cloud-sync')void zamazkaCloud?.sync();
  else if(action==='menu'){

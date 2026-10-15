@@ -35,3 +35,5 @@ console.log('ZAMAZKA finale: actual totals, 5 artworks, 8 players, tie, host, gu
 
 // Room admission / handshakes / restoration waits share the same QA batch.
 import './passage-state.mjs';
+
+import './atelier-state.mjs';

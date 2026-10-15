@@ -470,3 +470,10 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - Round preparation loads all five real artworks and their preview thumbnails. As each pair decodes, a corresponding numbered frame completes; success and retry are backed by loading results and authoritative art_ready/readyCount events.
 - Submitted paintings are shown next to their original via an actual canvas split control; the roster and ready bar update from authoritative multiplayer snapshots without remounting and losing the split position.
 - CSS confines scroll to an eight-player roster if needed and adapts on desktop, phone browser, phone PWA and short landscape. Visual regression: `node apps/zamazka/qa/passage-visual.mjs`, functional regression: `node apps/zamazka/qa/passage-state.mjs`.
+
+## 1.39.2 — The personal cabinet and live brush settings
+
+- Museum medal cabinet uses seven authored SVG insignias and canonical `zamazkaAchievements` server catalogue. It never mints rewards: unlocked IDs are fetched only from Pocket Social when signed in. Network failure means “unverified” (not “locked”); guest mode explains the account requirement and opens the real profile.
+- A medal can be selected to reveal its *real* server condition and the exact Pocket ID cosmetic reward. Desktop arranges the cabinet as seven physical medals with a large archival plate; portrait phones show two compact rows and a selected detail panel, without document scrolling.
+- Settings use working, mutually exclusive Brushes / Preferences tabs. Brushes offer all five authored cursors, an interactive pointer-driven canvas, resettable sample strokes and transient brush selection until Save. Volume and appearance preview live but Cancel reverts; saved preferences are unchanged in behavior.
+- Visual QA: `node apps/zamazka/qa/atelier-visual.mjs`; functional assertions `qa/atelier-state.mjs` are included in existing `finale-state` smoke batch; ordinary real-flow also checks saved/cancelled preferences and actual test strokes.
