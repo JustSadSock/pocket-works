@@ -833,3 +833,20 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display .museum
  }
  html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption span {font-size:9px!important}
 }
+
+
+/* 1.37.2 / Review: keep flanking paintings whole; do not collide with plaque. */
+@media (min-width:1050px) and (min-height:560px){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display {
+  --museum-step:clamp(190px,17.1vw,300px)!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage {
+  inset:-8px 0 148px!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-1"] {
+  transform:translate(-50%,-50%) translateX(calc(-1 * var(--museum-step))) scale(.64) rotateY(9deg)!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="1"] {
+  transform:translate(-50%,-50%) translateX(var(--museum-step)) scale(.64) rotateY(-9deg)!important;
+ }
+}
