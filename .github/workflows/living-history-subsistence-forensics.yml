@@ -1,0 +1,95 @@
+name: Living History subsistence forensics
+
+on:
+  pull_request:
+    paths:
+      - 'apps/living-history/qa/subsistence-forensics.mjs'
+      - 'apps/living-history/qa/causality-metrics.mjs'
+      - '.github/workflows/living-history-subsistence-forensics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: living-history-subsistence-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  forensic:
+    name: family forensic (seed ${{ matrix.seed }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        seed: [10061, 43821, 413, 202, 7777, 51291, 10009, 9001]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute daily household autopsy
+        run: node apps/living-history/qa/subsistence-forensics.mjs --mode=forensic --seed=${{ matrix.seed }} --years=30 --output=out/report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: subsistence-forensic-${{ matrix.seed }}
+          path: out/report.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  threshold:
+    name: work threshold (seed ${{ matrix.seed }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        seed: [10061, 43821, 413, 202, 7777, 51291, 10009, 9001, 29, 101, 505, 71331]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute source-isolated, three-arm causal sensitivity test
+        run: node apps/living-history/qa/subsistence-forensics.mjs --mode=threshold --seed=${{ matrix.seed }} --years=25 --output=out/report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: subsistence-threshold-${{ matrix.seed }}
+          path: out/report.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  summary:
+    if: always()
+    needs: [forensic, threshold]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: subsistence-*
+          path: raw
+      - name: Require all 20 shards and synthesize comparative findings
+        run: node apps/living-history/qa/subsistence-summarize.mjs --input=raw --output=summary
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: subsistence-forensics-summary-${{ github.run_id }}
+          path: summary/
+          retention-days: 7
+          if-no-files-found: warn
