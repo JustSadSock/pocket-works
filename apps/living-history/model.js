@@ -1940,8 +1940,8 @@ export function audit(s){
   }
   if(h.foundingStoreKg!==undefined&&(!Number.isFinite(h.foundingStoreKg)||h.foundingStoreKg<0))issues.push(`Поврежден исторический амбар ${h.id}`);
   if(h.storeLevel!==undefined&&(!Number.isInteger(h.storeLevel)||h.storeLevel<0||h.storeLevel>2))issues.push(`Неверный амбар ${h.id}`);
-  if(h.storeProject&&(!Number.isInteger(h.storeProject.workDays)||h.storeProject.workDays<0||h.storeProject.workDays>=16))issues.push(`Неверная стройка амбара ${h.id}`);
-  if(h.buildProject&&(!Number.isInteger(h.buildProject.days)||h.buildProject.days<0||h.buildProject.days>=50))issues.push(`Неверная постройка дома ${h.id}`);
+  if(h.storeProject&&(!Number.isFinite(h.storeProject.workDays)||h.storeProject.workDays<0||h.storeProject.workDays>=16))issues.push(`Неверная стройка амбара ${h.id}`);
+  if(h.buildProject&&(!Number.isFinite(h.buildProject.days)||h.buildProject.days<0||h.buildProject.days>=50))issues.push(`Неверная постройка дома ${h.id}`);
   if(h.farmYear&&(h.farmYear.sownArea<-.001||h.farmYear.harvestedArea>h.farmYear.sownArea+.002||h.farmYear.seedKg<0))issues.push(`Неверный посев у ${h.id}`);
   for(const field of h.fields){if(!Number.isInteger(field)||field<0||field>=T)issues.push(`Неверный индекс владения: ${field}`);if(plots.has(field)||s.usage[field]!==2)issues.push(`Неверные права на поле ${field}`);plots.add(field);}
   for(const id of h.members){const p=personById(s,id);if(!p||p.houseId!==h.id||owner.has(id))issues.push(`Неверное членство в семье ${id}`);owner.set(id,h.id);}
