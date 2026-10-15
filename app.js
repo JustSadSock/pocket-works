@@ -386,6 +386,10 @@ function appMatchesFilter(app) {
 }
 
 function compareApps(left, right) {
+  if (deck?.getView() === 'library') {
+    const pinDifference = Number(deck.isPinned(right.slug)) - Number(deck.isPinned(left.slug));
+    if (pinDifference) return pinDifference;
+  }
   if (shelfState.sort === 'name') return left.name.localeCompare(right.name);
 
   if (shelfState.sort === 'recent') {
@@ -462,9 +466,10 @@ function patchAppEntry(entry, app, index) {
   entry.style.setProperty('--entry-accent', app.accent || '#c8a460');
   entry.style.setProperty('--delay', `${Math.min(index, 10) * 34}ms`);
   entry.classList.toggle('is-selected', shelfState.selected === app.slug);
+  entry.classList.toggle('is-globally-pinned', Boolean(deck?.isPinned(app.slug)));
 
   p.select.dataset.slug = app.slug;
-  p.select.setAttribute('aria-label', `Play ${app.name}`);
+  p.select.setAttribute('aria-label', `Play ${app.name}${deck?.isPinned(app.slug)?' — pinned for everyone':''}`);
   if (p.select.getAttribute('href') !== app.path) p.select.href = app.path;
   p.more.dataset.slug = app.slug;
   p.more.setAttribute('aria-label', `Details for ${app.name}`);
