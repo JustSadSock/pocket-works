@@ -321,7 +321,7 @@
  transform:scale(.98) translateY(3%);transition:opacity .24s ease;pointer-events:none}
 .home-preview-image{position:absolute;inset:0;z-index:2;opacity:0;transition:opacity .24s ease}
 .home-preview-image.ready{opacity:1}
-.home-preview-image.ready + .home-preview-illustration{opacity:0}
+.home-preview-image.ready + .home-real-room-placeholder{opacity:0;visibility:hidden}
 @media(prefers-reduced-motion:reduce){.home-preview-image,.home-preview-illustration{transition:none}}
 
 /* The stage is a warm little toy on a table, not a dark interior planner.
@@ -410,3 +410,43 @@
 .scene-hint.invalid{color:#8d7467;background:#f8f1e7e8;border:1px solid #d8c8b5;box-shadow:0 5px 17px #66513d19}
 .scene-hint{font-weight:800;letter-spacing:0}
 .item-button:active .item-drawing{transform:translateY(-2px) scale(1.015)}
+
+
+/* v1.1: The home hero is a genuine frame of the current Babylon room.
+   A restrained workshop showcase replaces the faux ornate illustration. */
+.home-composition{grid-template-columns:minmax(330px,.87fr) minmax(390px,1.13fr);gap:clamp(24px,5vw,76px)}
+.home-showcase{height:min(67vh,630px);max-width:740px}
+.home-paper-arch{border:9px solid #e9dac4;border-radius:20px;background:#e8d7c0;
+ box-shadow:0 28px 64px #75523d29,0 0 0 1px #b99470,9px 11px 0 #d0b497}
+.home-paper-arch:before{inset:7px;border:1px solid #ffffff8c;border-radius:10px}
+.home-preview-back{background:radial-gradient(ellipse at 45% 40%,#fff7ec,#e7d2b9)}
+.home-preview-image{transform:none;object-fit:contain;filter:none}
+.home-label-stamp{top:15px;font-size:9px;letter-spacing:.1em;background:#fff7e8e9;padding:7px 13px;border-radius:4px;color:#91715b}
+.home-tiny-flower,.home-plinth{display:none}
+.home-picture-label{bottom:-27px;font-style:normal;letter-spacing:.08em;text-transform:uppercase;font-size:9px}
+.home-real-room-placeholder{position:absolute;inset:0;z-index:1;display:flex;align-items:center;
+ justify-content:center;flex-direction:column;gap:14px;color:#99806e;font-size:12px;font-weight:800;
+ transition:opacity .2s ease,visibility .2s ease}
+.home-preview-spinner{width:42px;height:42px;border:3px solid #e0cdb7;border-top-color:#aa8870;
+ border-radius:50%;animation:online-spin 1.4s linear infinite}
+.home-solo{box-shadow:0 6px 0 #7e6553}
+.home-action:focus-visible{outline-offset:4px}
+@media(max-width:900px){
+ .home-composition{grid-template-columns:minmax(0,1fr) minmax(0,1.03fr)}
+ .home-showcase{height:min(65vh,570px)}
+}
+@media(max-width:690px){
+ .home-composition{display:flex;gap:4px}
+ .home-showcase{order:4;flex:1;min-height:120px;height:auto;max-height:42vh;width:min(100%,510px);margin:5px auto 6px}
+ .home-paper-arch{border-width:6px;border-radius:12px;box-shadow:0 7px 20px #99765a28}
+ .home-preview-image{transform:none}
+ .home-label-stamp{top:8px;font-size:8px;padding:4px 9px}
+ .home-choices h1{font-size:clamp(49px,12vw,69px)}
+ .home-solo{order:5}
+}
+@media(max-width:690px) and (max-height:720px){
+ .home-showcase{max-height:32vh}
+}
+@media(max-width:900px) and (orientation:landscape) and (max-height:560px){
+ .home-showcase{height:84%;width:100%;max-height:360px}
+}
