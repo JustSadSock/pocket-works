@@ -33,15 +33,15 @@ export function historicalObservation(s){
  const maleAges=s.people.filter(p=>p.sex==='m'&&Number.isFinite(p.firstMarriageAge)).map(p=>p.firstMarriageAge);
  const allCustomary=s.households.filter(h=>h.tenure==='customary'&&h.tenureOrigin==='initial-settlement');
  const customaryLarge=allCustomary.filter(h=>h.fields.length*LAND_STRIP_HA/ACRE>10).length;
- const marriage=femaleAges.length&&maleAges.length;
  return {
   seed:s.seed,year:Math.floor(s.day/365),scenario:s.scenario,population:alive.length,
   totalPeople:s.people.length,inhabitedHomes:inhabited.length,
   householdSize:inhabited.length?round(alive.length/inhabited.length):null,
   householdSizeDistribution:quantiles(inhabited.map(h=>livingPerHome.get(h.id))),
-  femaleFirstMarriage:marriage?round(femaleAges.reduce((a,b)=>a+b,0)/femaleAges.length):null,
-  maleFirstMarriage:marriage?round(maleAges.reduce((a,b)=>a+b,0)/maleAges.length):null,
+  femaleFirstMarriage:femaleAges.length?round(femaleAges.reduce((a,b)=>a+b,0)/femaleAges.length):null,
+  maleFirstMarriage:maleAges.length?round(maleAges.reduce((a,b)=>a+b,0)/maleAges.length):null,
   firstMarriagesObserved:Math.min(femaleAges.length,maleAges.length),
+  femaleFirstMarriagesObserved:femaleAges.length,maleFirstMarriagesObserved:maleAges.length,
   femaleFirstMarriageDistribution:quantiles(femaleAges),
   maleFirstMarriageDistribution:quantiles(maleAges),
   customaryTenementsAbove10Acres:allCustomary.length?round(customaryLarge/allCustomary.length):null,
@@ -63,7 +63,8 @@ function gini(values){
 }
 export function historicalComparison(observation){
  return Object.entries(REFERENCE_POINTS).map(([metric,benchmark])=>{
-  const observed=observation[metric],sample=metric.includes('Marriage')?observation.firstMarriagesObserved:
+  const observed=observation[metric],sample=metric==='femaleFirstMarriage'?observation.femaleFirstMarriagesObserved:
+   metric==='maleFirstMarriage'?observation.maleFirstMarriagesObserved:
    metric.includes('customary')?observation.customarySampleSize:observation.inhabitedHomes;
   return {metric,observed,reference:benchmark.value,unit:benchmark.unit,source:benchmark.source,
    sampleSize:sample,delta:observed===null?null:round(observed-benchmark.value),
