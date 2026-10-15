@@ -336,6 +336,10 @@ function newFarmYear(s,h){
 function laborDay(p,kind,boost){p.job=kind==='farm'?'farm':kind;p.skill[kind]=roundSkill(p.skill[kind]+boost*p.aptitude);recordWork(p,kind);}
 function cropUpdate(s,h,adults,guests=[]){
  const doy=s.day%365,crop=newFarmYear(s,h);
+ // Historical/hand-authored midseason save records may predate crop-specific
+ // accounting; preserve their physical sown area and initialize only counters.
+ crop.cropYields??={grain:0,oats:0,pulses:0};
+ crop.cropSeeds??={grain:0,oats:0,pulses:0};
  if(doy===0)finishAgriculturalYear(s,h,crop);
  if(!(adults.length||guests.length)||!crop.active.length)return;
  const c=s.communities.find(c=>c.id===h.communityId);
