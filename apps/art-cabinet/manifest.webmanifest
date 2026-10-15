@@ -1,0 +1,19 @@
+{
+  "name": "КАРТОТЕКА — отбор картин",
+  "short_name": "Картотека",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eee9dc",
+  "theme_color": "#282f28",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

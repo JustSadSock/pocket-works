@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#282f28"><meta name="description" content="100 произведений для отбора в Замазку. Отметь понравившиеся и передай их номера.">
+<title>КАРТОТЕКА · Отбор картин</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"></head>
+<body><main class="shell" data-app-shell>
+<header class="topbar">
+<a class="back" href="../../" aria-label="Вернуться в Pocket Works"><span aria-hidden="true">↶</span><span class="back-word">Pocket Works</span></a>
+<div class="brand"><span class="brand-icon" aria-hidden="true">▤</span><span>КАРТОТЕКА</span></div>
+<div class="top-count"><strong id="selectedCount">1</strong><span>выбрано</span></div>
+</header>
+<section class="workspace">
+<aside class="feature">
+<div class="feature-heading"><span class="eyebrow">АРХИВ · ВЫПУСК 01</span><span class="volume">№ 001 — 100</span></div>
+<div class="feature-title"><h1>Отбор<br>полотен<span>.</span></h1><p>Сто картин. Один взгляд — и сразу понятно, годится ли.</p></div>
+<button class="hero-art" id="heroArt" type="button" aria-label="Открыть рекомендованную картину">
+<span class="hero-image" id="heroImage" aria-hidden="true"><span class="placeholder-mark">III</span></span>
+<span class="hero-caption"><span class="hero-number">03 / 100</span><strong>Смерть Марата</strong><span class="hero-arrow">↗</span></span>
+</button>
+<div class="feature-foot"><span class="dot"></span><span>Первый одобренный оригинал</span></div>
+<div class="shortlist"><div class="shortlist-head"><span>МОЙ ОТБОР</span><strong id="shortCount">01</strong></div><p id="shortNumbers">03</p><div class="short-actions"><button id="copySelection" class="action-primary" type="button">Скопировать номера <span>↗</span></button><button id="downloadSelection" class="action-secondary" type="button" aria-label="Экспорт списка" title="Скачать список">↓</button></div></div>
+</aside>
+<section class="collection" aria-label="Каталог картин">
+<div class="collection-head"><div><span class="eyebrow">КОМНАТА ОТБОРА</span><h2>Все полотна <span id="visibleTotal">100</span></h2></div><div class="collection-tools"><button id="retryAll" type="button" hidden>↻ Повторить загрузку</button><span id="imageStatus" aria-live="polite">Загрузка изображений…</span></div></div>
+<div class="filters"><div class="filter-rail" id="filters" role="group" aria-label="Фильтр сюжетов">
+<button class="filter active" type="button" data-filter="all" aria-pressed="true">Все</button><button class="filter" type="button" data-filter="picked" aria-pressed="false">Выбранные</button><button class="filter" type="button" data-filter="Истории" aria-pressed="false">Истории</button><button class="filter" type="button" data-filter="Повседневность" aria-pressed="false">Быт</button><button class="filter" type="button" data-filter="Люди и пары" aria-pressed="false">Люди</button><button class="filter" type="button" data-filter="Образы и животные" aria-pressed="false">Образы</button><button class="filter" type="button" data-filter="Предметы и символы" aria-pressed="false">Предметы</button></div><label class="find"><span aria-hidden="true">⌕</span><input id="search" type="search" autocomplete="off" placeholder="№ или название" aria-label="Поиск по номеру или названию"></label></div>
+<div class="gallery-scroll" id="galleryScroll"><div class="grid" id="grid" aria-live="polite"></div><div id="empty" class="empty" hidden><strong>Ничего не найдено</strong><p>Измени фильтр или строку поиска.</p><button type="button" id="resetFilters">Показать все</button></div></div>
+<div class="pagination"><button id="prevPage" type="button" aria-label="Предыдущая страница">←</button><span id="pageStatus">1 / 5</span><button id="nextPage" type="button" aria-label="Следующая страница">→</button></div>
+</section></section>
+<div class="modal" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="viewerTitle">
+<div class="viewer-scrim" id="viewerBackdrop"></div>
+<div class="viewer-inner"><div class="viewer-toolbar"><span id="viewerIndex">03 / 100</span><button id="viewerClose" type="button" aria-label="Закрыть просмотр">✕</button></div><div class="viewer-art"><button id="viewerPrev" class="viewer-navigate" type="button" aria-label="Предыдущая картина">←</button><div class="viewer-image" id="viewerImage"></div><button id="viewerNext" class="viewer-navigate" type="button" aria-label="Следующая картина">→</button></div><div class="viewer-info"><div><p id="viewerGroup"></p><h3 id="viewerTitle"></h3><a id="viewerSource" target="_blank" rel="noopener noreferrer">Посмотреть подлинник ↗</a></div><button id="viewerPick" class="viewer-pick" type="button"></button></div></div>
+</div>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<div id="copyFallback" class="copy-fallback" hidden role="dialog" aria-modal="true" aria-labelledby="copyTitle"><div><h3 id="copyTitle">Скопировать список</h3><p>Выдели текст и скопируй его вручную.</p><textarea id="copyText" readonly></textarea><button id="copyClose" type="button">Закрыть</button></div></div>
+</main><script type="module" src="./app.js"></script>
+</body></html>
