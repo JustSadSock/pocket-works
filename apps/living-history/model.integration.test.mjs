@@ -67,7 +67,7 @@ test('conservation of grain, wood and money, and traceability of families across
  for(const seed of [1,413,43821,71331]){
   const s=createWorld(seed),first=overview(s);advanceDays(s,365*24);const o=overview(s),report=audit(s);
   assert.ok(report.ok,`${seed}: ${report.issues.join('; ')}`);
-  assert.equal(o.coin,first.coin);
+  assert.equal(o.coin,first.coin+(s.stats.outsideCoinIn||0)-(s.stats.outsideCoinOut||0),'outside purchases/sales are visible monetary transfers');
   assert.ok(s.stats.harvest>0&&s.stats.trades>0&&s.stats.delivered>0);
   assert.equal(populationByCommunity(s).reduce((a,c)=>a+c.pop,0),o.population);
   assert.ok(s.households.length>=36);
