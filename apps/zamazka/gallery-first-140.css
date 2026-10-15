@@ -1,0 +1,533 @@
+
+/* ЗАМАЗКА 1.40 · Gallery first.
+ * Desktop critique: real artworks, framed objects and a single dark museum wall.
+ * Loaded after every legacy theme; preserves handset's finite-height stages. */
+#screen>.finale-scene,
+#screen>.round-review-phase,
+#screen>.passage-waiting,
+#screen>.mobile-preview,
+#screen>.expert-phase {
+ --quiet-wall:#273c33;
+ --quiet-shadow:#172820;
+ --quiet-wood:#745638;
+ --quiet-brass:#bd9760;
+}
+#screen>.finale-scene .phase-head,
+#screen>.round-review-phase>.phase-head {
+ background:#28372f!important;color:#f3e6ca!important;border-bottom:1px solid #8b7656!important;
+}
+#screen>.finale-scene .phase-head :is(h2,.eyebrow),
+#screen>.round-review-phase>.phase-head :is(h2,.eyebrow) {color:#f3e6ca!important}
+#screen>.finale-scene .phase-menu,
+#screen>.round-review-phase .phase-menu {color:#f4e6ce!important}
+
+/* Admissions: one compact curator's invitation, not a full-height form slab. */
+@media(min-width:900px){
+ #screen>.passage-entry{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  max-width:none!important;gap:0!important;padding:clamp(10px,2.3vh,32px)!important;
+  background:radial-gradient(ellipse at 51% 24%,#465447,#22352d 78%)!important;
+ }
+ #screen>.passage-entry .passage-art{display:none!important}
+ #screen>.passage-entry .passage-document{
+  flex:0 1 680px;box-sizing:border-box;width:min(90vw,680px);max-width:680px!important;
+  height:auto!important;max-height:100%;align-self:center!important;
+  padding:clamp(22px,3.1vh,36px) clamp(23px,2.8vw,43px)!important;
+  gap:clamp(12px,1.6vh,20px)!important;justify-content:center!important;
+  background:linear-gradient(142deg,#f1e5d0,#e5d4b8)!important;
+  border:2px solid #a98a5f;
+  box-shadow:0 0 0 8px #342a20,0 20px 75px #101b16ab!important;
+ }
+ #screen>.passage-entry .passage-heading h2{font-size:clamp(27px,2.7vw,41px)!important}
+ #screen>.passage-entry .passage-entry-content{gap:clamp(10px,1.7vh,16px)!important}
+ #screen>.passage-entry .passage-identity{padding:9px 13px!important;min-height:0!important}
+ #screen>.passage-entry .entry-fields{gap:6px!important}
+ #screen>.passage-entry .entry-actions{margin-top:clamp(6px,1vh,12px)!important}
+ /* The home menu was already successful: modestly enlarge its working column. */
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control{
+  width:calc(100% + clamp(18px,2.5vw,46px))!important;
+  max-width:none!important;
+ }
+}
+/* Single loading seal: use the actual museum portrait instead of a letter Z. */
+#screen>.passage-connection{
+ background:radial-gradient(ellipse at center,#415a4a,#20342c 75%)!important;
+}
+#screen>.passage-connection .passage-connection-panel{
+ width:min(88vw,290px)!important;min-height:0!important;gap:15px!important;
+ padding:0!important;border:0!important;background:transparent!important;
+ box-shadow:none!important;color:#f1e6cf!important;
+}
+#screen>.passage-connection .passage-connection-seal{
+ position:relative;display:block!important;
+ width:clamp(104px,17vh,158px)!important;height:clamp(104px,17vh,158px)!important;
+ background:#35291e!important;border:6px ridge #a98a5d!important;
+ box-shadow:0 14px 39px #0b140eaa!important;overflow:visible;
+ animation:quiet-portrait-entry .55s cubic-bezier(.18,.75,.24,1) both!important;
+}
+#screen>.passage-connection .passage-connection-seal img{
+ width:100%;height:100%;object-fit:cover;object-position:center 35%;
+ border-radius:50%;display:block;
+}
+#screen>.passage-connection .passage-connection-seal::after{
+ content:"";position:absolute;inset:-17px;border:2px solid #cfb281;
+ border-left-color:transparent;border-bottom-color:#cfb28138;border-radius:50%;
+ animation:quiet-portrait-spin 1.7s linear infinite;
+}
+#screen>.passage-connection :is(.section-label,h2,.passage-steps){display:none!important}
+#screen>.passage-connection .passage-connection-status{
+ position:absolute!important;width:1px!important;height:1px!important;
+ clip:rect(0 0 0 0)!important;overflow:hidden!important;padding:0!important;margin:0!important;
+}
+#screen>.passage-connection .btn{
+ width:auto!important;align-self:center!important;padding:5px 12px!important;
+ min-height:30px!important;background:transparent!important;color:#d3c5a9!important;
+ border:1px solid #70846e!important;font-size:11px!important;
+}
+@keyframes quiet-portrait-entry{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:scale(1)}}
+@keyframes quiet-portrait-spin{to{transform:rotate(360deg)}}
+
+/* Loading paintings behave like framed artworks being set on hooks. */
+#screen>.passage-preparing{
+ justify-content:center!important;gap:clamp(12px,2vh,28px)!important;
+ background:radial-gradient(ellipse at center,#3d5547,#20332b 78%)!important;
+}
+#screen>.passage-preparing .passage-prep-header{
+ display:none!important;
+}
+#screen>.passage-preparing .passage-prep-workspace{
+ background:transparent!important;box-shadow:none!important;border:0!important;
+ max-width:680px!important;padding:0!important;gap:9px!important;
+}
+#screen>.passage-preparing .passage-image-strip{
+ display:flex!important;justify-content:center;gap:clamp(7px,1.2vw,16px);
+ height:min(28dvh,180px);align-items:center;
+}
+#screen>.passage-preparing .passage-image-slot{
+ flex:0 1 clamp(40px,8vw,98px);aspect-ratio:3/4!important;
+ background:#3c2f22!important;border:5px ridge #b59563!important;
+ box-shadow:0 9px 17px #131f18a6!important;
+ transform-origin:center 20%;opacity:.48;
+ animation:quiet-painting-rise 1.6s ease-in-out infinite!important;
+}
+#screen>.passage-preparing .passage-image-slot:nth-child(2){animation-delay:.12s!important}
+#screen>.passage-preparing .passage-image-slot:nth-child(3){animation-delay:.24s!important}
+#screen>.passage-preparing .passage-image-slot:nth-child(4){animation-delay:.36s!important}
+#screen>.passage-preparing .passage-image-slot:nth-child(5){animation-delay:.48s!important}
+#screen>.passage-preparing .passage-image-slot.is-loaded{opacity:1!important}
+#screen>.passage-preparing .passage-image-slot b{color:#eacb91!important}
+#screen>.passage-preparing .passage-image-slot i{background:#baa27d!important}
+#screen>.passage-preparing .passage-prep-progress{
+ max-width:250px;width:100%;margin:auto;color:#e7d5b9!important;
+}
+#screen>.passage-preparing .passage-prep-progress :is(span,strong){color:#e7d5b9!important}
+#screen>.passage-preparing .passage-prep-peer{
+ max-width:250px;width:100%;align-self:center;color:#d6c9ad!important;
+ border-top-color:#698071!important;
+}
+#screen>.passage-preparing .passage-prep-peer :is(span,strong){color:#d6c9ad!important}
+#screen>.passage-preparing .passage-prep-status{color:#d6c9ad!important;text-align:center}
+#screen>.passage-preparing .passage-prep-actions{
+ width:auto!important;flex:none!important;min-height:35px;
+}
+#screen>.passage-preparing .preparing-menu{
+ background:transparent!important;border-color:#657c6a!important;color:#e3d6bd!important;
+}
+@keyframes quiet-painting-rise{
+ 0%,100%{transform:translateY(3px) rotate(-1deg)}
+ 50%{transform:translateY(-8px) rotate(1deg)}
+}
+
+/* The submitted painting lives in a dark display room: no white side panel. */
+#screen>.passage-waiting>.passage-waiting-layout{
+ background:radial-gradient(ellipse at 45% 38%,#405a49,#23372f 78%)!important;
+ max-width:none!important;
+}
+#screen>.passage-waiting .passage-waiting-work{justify-content:center!important}
+#screen>.passage-waiting .passage-waiting-status{
+ background:#23372fc9!important;color:#f1e3ca!important;border:1px solid #66806a!important;
+ box-shadow:inset 0 0 0 4px #1b2b2566!important;
+}
+#screen>.passage-waiting .passage-waiting-status :is(h3,strong,span){color:#edddbe}
+#screen>.passage-waiting .passage-waiting-status header{border-bottom-color:#67816b!important}
+#screen>.passage-waiting .passage-ready-track{background:#5b6f5e!important}
+#screen>.passage-waiting .passage-roster .waiting-person{
+ background:#34483b!important;border-color:#5e745f!important;color:#f4e8d1!important;
+}
+#screen>.passage-waiting .passage-compare-control{color:#eddcbb!important}
+
+/* Verdict: paintings and real coin piles, nothing resembling paperwork. */
+#screen>.verdict-phase>.finale-verdict-body{
+ background:radial-gradient(ellipse at 50% 18%,#3d5546,#23392f 82%)!important;
+}
+#screen>.verdict-phase .finale-overview{display:none!important}
+#screen>.verdict-phase .finale-ballot-grid{align-items:stretch!important;gap:clamp(9px,1.3vw,24px)!important}
+#screen>.verdict-phase .finale-ballot-card,
+#screen>.verdict-phase .finale-ballot-card.has-majority{
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ padding:0 2px!important;justify-content:flex-end!important;
+}
+#screen>.verdict-phase .finale-ballot-index{
+ border:0!important;padding:0 2px 5px!important;justify-content:center;
+}
+#screen>.verdict-phase .finale-ballot-index span{display:none!important}
+#screen>.verdict-phase .finale-ballot-index b{color:#dfc79b!important;font-size:clamp(12px,1.1vw,17px)!important}
+#screen>.verdict-phase .verdict-image{
+ min-height:0!important;flex:1 1 auto;
+ background:#34291f!important;
+ border:clamp(5px,.6vw,10px) ridge #9f7c4e!important;
+ box-shadow:0 12px 24px #101c15a1!important;
+ transform:scale(var(--vote-scale,1));transform-origin:center bottom;
+ transition:transform .4s ease;
+}
+#screen>.verdict-phase .verdict-image img{
+ object-fit:contain!important;object-position:center;
+ background:#2b251f!important;
+}
+#screen>.verdict-phase .finale-ballot-votes{
+ display:flex;flex-direction:column;justify-content:flex-start;align-items:center;
+ border:0!important;min-height:65px!important;max-height:92px;
+ padding:12px 0 0!important;
+}
+#screen>.verdict-phase .finale-vote-tally span,
+#screen>.verdict-phase .finale-vote-bar,
+#screen>.verdict-phase .finale-voters,
+#screen>.verdict-phase .finale-card-caption{display:none!important}
+#screen>.verdict-phase .finale-vote-tally strong{color:#e4c28a!important;font-size:clamp(17px,1.6vw,25px)!important}
+#screen>.verdict-phase .verdict-tokens{align-items:center!important;justify-content:center!important}
+#screen>.verdict-phase .chip-dot{box-shadow:inset 0 0 0 1px #f4d6a7,0 2px 3px #101b148a!important}
+#screen>.verdict-phase .finale-verdict-footer{
+ color:#eadabc!important;border-top-color:#7d9078!important;
+}
+#screen>.verdict-phase .finale-verdict-footer>span:first-child{visibility:hidden}
+#screen>.verdict-phase .finale-wait-label{color:#eadabc!important}
+#screen>.verdict-phase .finale-verdict-footer .btn{margin-left:auto}
+
+/* Reveal: one large work on the left, sparse vote accounting on the right. */
+#screen>.finale-reveal>.reveal-layout{
+ background:radial-gradient(ellipse at 42% 33%,#415c4a,#24392f 80%)!important;
+ grid-template-columns:minmax(0,3.6fr) minmax(200px,1fr)!important;
+ gap:clamp(12px,1.8vw,30px)!important;
+}
+#screen>.finale-reveal .reveal-main{
+ justify-content:center!important;gap:clamp(6px,1vh,13px)!important;
+}
+#screen>.finale-reveal .finale-reveal-provenance{color:#f2e3c6!important;gap:2px}
+#screen>.finale-reveal .finale-reveal-provenance :is(h3,p,p strong){color:#f2e3c6!important}
+#screen>.finale-reveal .finale-reveal-provenance .finale-overline{display:none}
+#screen>.finale-reveal .reveal-answer-strip{display:none!important}
+#screen>.finale-reveal .finale-inspection-label{color:#e7ce9f!important}
+#screen>.finale-reveal .finale-inspection-label i{background:#9b8664!important}
+#screen>.finale-reveal .unveil-frame,
+#screen>.passage-waiting .unveil-frame{
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ background:#33281e!important;overflow:hidden!important;
+}
+#screen>.finale-reveal .unveil-frame{
+ width:auto!important;max-width:100%!important;max-height:calc(100% - 90px)!important;
+ flex:1 1 auto;align-self:center;
+ border:clamp(6px,.9vw,13px) ridge #ae8856!important;
+ box-shadow:0 17px 36px #0a1812b8!important;
+}
+#screen>.finale-reveal .unveil-frame canvas,
+#screen>.passage-waiting .unveil-frame canvas{
+ width:100%!important;height:100%!important;object-fit:fill!important;
+}
+#screen>.finale-reveal .unveil-control{color:#e2cca4!important}
+#screen>.finale-reveal .reveal-brief{
+ background:transparent!important;color:#f2e3c8!important;
+ border:0!important;padding:0!important;
+}
+#screen>.finale-reveal .finale-reveal-brief .outcome-head{
+ background:transparent!important;border:0!important;
+ border-bottom:1px solid #718572!important;padding:0 0 clamp(6px,1.2vh,12px)!important;
+}
+#screen>.finale-reveal .finale-reveal-brief :is(.outcome-head h3,.outcome-head strong,.outcome-head span){
+ color:#efe0c3!important;
+}
+#screen>.finale-reveal .finale-reveal-brief .finale-audit-heading{
+ color:#e7d4b1!important;border-bottom-color:#738a75!important;
+}
+#screen>.finale-reveal .finale-reveal-brief .finale-audit-heading .finale-overline,
+#screen>.finale-reveal .finale-reveal-brief .finale-audit-heading>span:last-child{color:#dcc8a3!important}
+#screen>.finale-reveal .finale-reveal-brief .audit-line{
+ background:transparent!important;color:#eddec2!important;
+ border-bottom:1px solid #6c806c!important;
+}
+#screen>.finale-reveal .finale-reveal-brief .audit-line>span:first-child,
+#screen>.finale-reveal .finale-reveal-brief .audit-line>strong,
+#screen>.finale-reveal .finale-reveal-brief .audit-chips small{
+ color:#eddec2!important;
+}
+#screen>.finale-reveal .finale-reveal-brief .finale-bonus{
+ background:#314638!important;color:#eedcc0!important;
+ border-color:#758b75!important;
+}
+#screen>.finale-reveal .finale-reveal-brief .finale-bonus :is(span,strong){color:#eedcc0!important}
+#screen>.finale-reveal .finale-reveal-brief .stake-wait{color:#ebdbbd!important}
+
+/* Exhibition review: five works on the wall with museum plaques, no white slabs. */
+#screen>.round-review-phase{background:radial-gradient(ellipse at 50% 18%,#425947,#21372e 90%)!important}
+#screen>.round-review-phase .round-review-body{
+ display:flex!important;flex-direction:column;max-width:1800px!important;
+ overflow:hidden!important;padding:clamp(8px,1.5vh,20px) clamp(9px,2vw,29px)!important;
+}
+#screen>.round-review-phase .round-review-description{display:none!important}
+#screen>.round-review-phase .round-review-grid{
+ flex:1 1 auto;min-height:0;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+ gap:clamp(8px,1vw,22px)!important;align-items:center!important;
+}
+#screen>.round-review-phase .round-art-card{
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ height:100%;justify-content:center;padding:4px!important;
+}
+#screen>.round-review-phase .round-art-image{
+ height:auto!important;min-height:0;max-height:min(55dvh,420px);
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ background:#352d22!important;border:clamp(5px,.7vw,10px) ridge #a68659!important;
+ box-shadow:0 12px 30px #0c1b14a1!important;
+}
+#screen>.round-review-phase .round-art-image canvas{object-fit:fill!important}
+#screen>.round-review-phase .round-art-meta{
+ background:#d4bd90!important;color:#342b21!important;
+ border:1px solid #866b44!important;box-shadow:0 3px 0 #1a281faf!important;
+ align-self:center;max-width:100%;padding:clamp(5px,.7vw,10px)!important;
+ text-align:center;margin-top:clamp(7px,1.3vh,16px);
+}
+#screen>.round-review-phase .round-art-meta :is(strong,span,small){color:#3a2c20!important}
+#screen>.round-review-phase .round-review-bottom{
+ background:#283b31!important;border-top-color:#6e8a72!important;color:#e1ceab!important;
+}
+#screen>.round-review-phase .round-review-bottom>span{color:#e1ceab!important}
+
+/* Result podium: keep genuine scoring, remove the document-card feeling. */
+#screen>.finale-results{
+ background:radial-gradient(ellipse at 50% 15%,#435849,#263b32 86%)!important;color:#f0dfbf!important;
+}
+#screen>.finale-results .finale-results-head{border-bottom-color:#70836d!important}
+#screen>.finale-results .finale-results-head :is(h2,p,.finale-overline){color:#f0dfbf!important}
+#screen>.finale-results .finale-laureate{box-shadow:0 16px 39px #1022198c!important}
+#screen>.finale-results .finale-laureate-seal span{font-style:normal}
+
+/* Consistent framed comparisons: preserve real source aspect ratios. */
+.round-view-dialog .round-view-window,
+#screen>.waiting-phase .unveil-frame,
+#screen>.reveal-phase .unveil-frame,
+#screen>.round-review-phase .round-art-image{
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+}
+.round-view-dialog .round-view-window{
+ width:min(100%,calc((100dvh - 245px) * var(--art-aspect,1.333333)))!important;
+ max-width:100%!important;min-height:min(34dvh,260px)!important;
+}
+.round-view-dialog .round-view-image canvas{object-fit:fill!important}
+
+/* Main action stages occupy their actual viewport rather than imply scrolling. */
+@media(min-width:1020px) and (pointer:fine){
+ #screen>.page.exhibition-lobby{
+  max-width:2080px!important;
+  grid-template-columns:minmax(220px,25fr) minmax(0,56fr) minmax(190px,19fr)!important;
+  padding:clamp(6px,.9vh,12px) clamp(10px,1.25vw,25px)!important;
+  gap:clamp(6px,.8vh,11px) clamp(8px,1vw,17px)!important;
+ }
+ #screen>.exhibition-lobby .commons-frame{max-height:calc(100% - 64px)!important}
+ #screen>.exhibition-lobby .commons-frame canvas{
+  width:min(100%,calc((100dvh - 185px)*1.6))!important;
+ }
+ #screen>.exhibition-lobby .room-code{font-size:clamp(26px,2.7vw,43px)!important}
+ #screen>.exhibition-lobby .lobby-controls-title{font-size:clamp(16px,1.4vw,23px)!important}
+ #screen>.mobile-preview>.phase-body{
+  max-width:none!important;width:100%;min-height:0;
+  display:flex!important;flex-direction:column!important;
+  padding:clamp(7px,1.1vh,16px) clamp(10px,1.4vw,24px)!important;
+  justify-content:stretch!important;
+ }
+ #screen>.mobile-preview .phase-directive{display:none!important}
+ #screen>.mobile-preview .gallery.exhibition-grid{
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  flex:1 1 auto;min-height:0!important;max-height:none!important;
+  align-items:stretch!important;gap:clamp(7px,.85vw,18px)!important;
+  overflow:hidden!important;padding:0 0 6px!important;
+ }
+ #screen>.mobile-preview .gallery.exhibition-grid>.picture{
+  height:100%;min-height:0!important;padding:6px 1px!important;
+  display:flex!important;flex-direction:column;justify-content:center!important;
+ }
+ #screen>.mobile-preview .gallery.exhibition-grid>.picture .picture-image{
+  flex:1 1 auto;min-height:0!important;max-height:none!important;
+  height:auto!important;align-items:center!important;overflow:hidden!important;
+ }
+ #screen>.mobile-preview .gallery.exhibition-grid>.picture .caption{
+  background:linear-gradient(#e5cc9f,#d3b687)!important;
+  border:1px solid #89653c!important;color:#352a20!important;
+  box-shadow:0 3px 0 #1b2a1f9c!important;
+  padding:7px 6px!important;margin:9px auto 3px!important;
+  font:normal clamp(13px,1.2vw,19px)/1.12 Georgia,serif!important;
+  text-align:center;min-height:0!important;max-width:100%;
+ }
+ #screen>.mobile-preview .gallery.exhibition-grid>.picture .picture-index,
+ #screen>.mobile-preview .gallery.exhibition-grid>.picture .style{display:none!important}
+ #screen>.restore{
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  position:relative;
+ }
+ #screen>.restore>.work-area{
+  grid-column:1!important;grid-row:2!important;padding-right:clamp(80px,8vw,145px)!important;
+ }
+ #screen>.restore>.work-tools{
+  grid-column:1!important;grid-row:2!important;z-index:5;
+  position:absolute!important;right:clamp(12px,1.3vw,26px);top:50%;
+  transform:translateY(-50%);box-sizing:border-box;
+  width:clamp(145px,12.1vw,205px)!important;height:auto!important;
+  max-height:calc(100% - 28px)!important;min-height:0!important;
+  padding:clamp(8px,1vw,13px)!important;gap:clamp(5px,.7vh,10px)!important;
+  border:2px solid #a08a67!important;border-radius:2px!important;
+  background:linear-gradient(137deg,#e7d8be,#d1be9e)!important;
+  box-shadow:0 0 0 5px #3a352baa,0 18px 38px #111b149c!important;
+  overflow-y:auto!important;
+ }
+ #screen>.restore .tools{gap:4px!important}
+ #screen>.restore .tools>.tool{min-height:clamp(39px,5.2vh,53px)!important}
+ #screen>.restore .tools>.tool span{font-size:9px!important}
+ #screen>.restore .colors{gap:3px!important;padding:4px 0!important}
+ #screen>.restore .swatch{width:clamp(19px,2vw,26px)!important;height:clamp(19px,2vw,26px)!important}
+ #screen>.restore .color-input{width:clamp(20px,2vw,27px)!important;height:clamp(20px,2vw,27px)!important}
+ #screen>.restore .adjust{gap:3px!important}
+ #screen>.restore .adjust label{font-size:10px!important}
+ #screen>.restore .work-foot{padding-top:4px!important;margin:3px 0 0!important}
+ #screen>.restore .work-save-info{display:none!important}
+ #screen>.restore .work-foot .btn{min-height:38px!important;padding:5px!important;font-size:12px!important}
+}
+/* Compact screens retain horizontally accessible galleries and actions. */
+@media(max-width:1019px){
+ #screen>.round-review-phase .round-review-grid{
+  display:flex!important;gap:9px!important;overflow-x:auto!important;overflow-y:hidden!important;
+  scroll-snap-type:x mandatory;align-items:stretch!important;
+ }
+ #screen>.round-review-phase .round-art-card{flex:0 0 clamp(165px,58vw,320px)!important;scroll-snap-align:center}
+ #screen>.round-review-phase .round-art-image{max-height:min(43dvh,315px)}
+ #screen>.finale-reveal .reveal-brief{padding:0!important}
+ #screen>.finale-reveal .unveil-frame{max-height:min(46dvh,100%)!important}
+}
+@media(max-width:700px){
+ #screen>.passage-connection .passage-connection-seal{
+  height:100px!important;width:100px!important;
+ }
+ #screen>.passage-preparing .passage-image-strip{height:min(20dvh,135px)}
+ #screen>.passage-preparing .passage-image-slot{flex-basis:clamp(35px,14vw,65px)}
+ #screen>.round-review-phase .round-art-meta{padding:5px!important}
+ #screen>.finale-reveal .finale-reveal-provenance p{font-size:10px!important}
+ #screen>.finale-reveal .finale-reveal-brief .audit-line{min-height:30px!important}
+ #screen>.verdict-phase .finale-ballot-votes{min-height:44px!important;padding-top:4px!important}
+}
+@media(max-height:570px) and (min-width:1020px){
+ #screen>.restore>.work-tools{width:160px!important;padding:5px!important;gap:3px!important}
+ #screen>.restore .tools>.tool{min-height:32px!important}
+ #screen>.restore .colors{padding:2px 0!important}
+ #screen>.restore .adjust-actions .tool{min-height:26px!important}
+ #screen>.restore .work-foot .btn{min-height:31px!important}
+ #screen>.round-review-phase .round-art-image{max-height:38dvh}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen>.passage-preparing .passage-image-slot,
+ #screen>.passage-connection .passage-connection-seal,
+ #screen>.passage-connection .passage-connection-seal::after{
+  animation:none!important;
+ }
+}
+
+/* Jury room: the original paintings take the space, not five pale cards. */
+#screen>.expert-phase{background:#263a30!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+#screen>.expert-phase .phase-head{flex:none;background:#2c3a30!important;border-bottom:1px solid #7d886e!important}
+#screen>.expert-phase .phase-body.expert-round{
+ display:flex!important;flex-direction:column!important;flex:1 1 auto;
+ min-height:0!important;width:100%!important;max-width:1800px!important;
+ padding:clamp(6px,1vh,16px) clamp(8px,1.6vw,26px)!important;
+ background:radial-gradient(ellipse at 50% 20%,#405947,#22372e 85%)!important;
+}
+#screen>.expert-phase .expert-intro{flex:0 0 auto!important;color:#eedfc5!important}
+#screen>.expert-phase .expert-author h3,
+#screen>.expert-phase .expert-observers{color:#e9d8b7!important}
+#screen>.expert-phase .expert-ballot{
+ display:flex!important;flex:1 1 auto;flex-direction:column;
+ min-height:0!important;overflow:hidden!important;
+}
+#screen>.expert-phase .expert-ballot>p.hint{
+ flex:none;color:#ded0b4!important;margin:clamp(3px,.8vh,10px) 0!important;
+}
+#screen>.expert-phase .suspect-gallery{
+ flex:1 1 auto!important;min-height:0!important;margin:0!important;
+ gap:clamp(7px,1vw,18px)!important;overflow:hidden!important;align-items:stretch!important;
+}
+#screen>.expert-phase .stake-card{
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ min-height:0!important;overflow:hidden;
+}
+#screen>.expert-phase .stake-card.has-chips{background:transparent!important;box-shadow:none!important}
+#screen>.expert-phase .stake-frame{
+ display:flex!important;flex:1 1 auto;min-height:0;align-items:center;justify-content:center;
+ padding:clamp(4px,.5vw,8px)!important;background:#362b20!important;
+ border:clamp(5px,.6vw,9px) ridge #99764c!important;
+ box-shadow:0 10px 22px #101a149a!important;
+}
+#screen>.expert-phase .stake-frame :is(img,canvas){
+ width:auto!important;height:auto!important;max-height:100%!important;max-width:100%!important;
+ aspect-ratio:var(--art-aspect,auto)!important;object-fit:contain!important;border:0!important;
+ background:#32281e!important;
+}
+#screen>.expert-phase .stake-card .stake-details{
+ flex:0 0 auto;min-height:0!important;margin:6px 1px 0;padding:5px!important;
+ background:linear-gradient(#d9c297,#c9a878)!important;border:1px solid #917347!important;
+ text-align:center;
+}
+#screen>.expert-phase .stake-card .stake-details :is(strong,small){color:#34291e!important}
+#screen>.expert-phase .stake-actions{flex:0 0 auto;min-height:40px;margin-top:5px}
+#screen>.expert-phase .stake-locked{color:#ead2a7!important}
+#screen>.expert-phase .stake-tray{
+ flex:0 0 auto;min-height:0!important;position:relative!important;
+ background:#2d4335!important;border:1px solid #70866d!important;
+ color:#f0dec0!important;margin:clamp(5px,.9vh,12px) 0 0!important;
+ padding:clamp(6px,.8vh,10px) clamp(7px,1vw,16px)!important;
+}
+#screen>.expert-phase .stake-tray :is(#chipsRemaining,.coin-auto-status){color:#ebdbb8!important}
+#screen>.expert-phase .stake-wait{
+ flex:0 0 auto;margin:5px 0!important;padding:6px!important;
+ color:#ecd8b7!important;border:0!important;
+}
+@media(min-width:1000px){
+ #screen>.expert-phase .suspect-gallery{
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+ }
+}
+@media(max-width:999px){
+ #screen>.expert-phase .suspect-gallery{
+  display:flex!important;flex-direction:row!important;
+  overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory;
+ }
+ #screen>.expert-phase .suspect-gallery .stake-card{
+  flex:0 0 clamp(180px,66vw,360px)!important;scroll-snap-align:center;
+ }
+}
+/* Winning podium shares the dark wall rather than a white accounting sheet. */
+#screen>.finale-results .finale-ledger-heading{border-bottom:1px solid #718973!important}
+#screen>.finale-results .finale-ledger-heading :is(.finale-overline,strong){color:#e8d4b2!important}
+#screen>.finale-results .finale-ranking-row{
+ border-bottom:1px solid #728774!important;background:transparent!important;
+}
+#screen>.finale-results .finale-ranking-row.is-leading{
+ background:#455e4b!important;border-left:3px solid #c4a06a!important;
+}
+#screen>.finale-results .finale-ranking-row :is(.finale-ranking-place,.finale-ranking-name strong,.finale-ranking-name small,
+ .finale-ranking-score b,.finale-ranking-score small,.finale-score-breakdown,.finale-score-breakdown b){
+ color:#edddbe!important;
+}
+#screen>.finale-results .finale-score-track{background:#5e745e!important}
+#screen>.finale-results .finale-results-actions .btn.ghost{
+ background:#34483a!important;border-color:#829477!important;color:#f0e0c2!important;
+}
+@media(max-width:700px){
+ #screen>.expert-phase .stake-frame :is(img,canvas){max-height:100%!important}
+ #screen>.expert-phase .suspect-gallery .stake-card .stake-details{min-height:34px!important;padding:4px!important}
+ #screen>.expert-phase .stake-tray{padding:5px!important}
+}
