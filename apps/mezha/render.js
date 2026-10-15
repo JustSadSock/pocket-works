@@ -219,11 +219,18 @@ export function renderBattle(out,s,view,ui,t){
  ctx.save();ctx.translate(-Math.round(view.x/WORLD_SCALE),-Math.round(view.y/WORLD_SCALE));
  ctx.drawImage(cv,0,0);
  for(const z of sites){
-  // Site catchment is only shown for active order or selected site, not blanket rings.
   if(ui.site===z.id){circle(ctx,z.x,z.y,50,'#e2d5a331');ring(ctx,z.x,z.y,50,'#eddfb2')}
-  buildings(ctx,z,t);
  }
- keep(ctx,110,310,0,s.players[0].base,t);keep(ctx,850,310,1,s.players[1].base,t);
+ // Pixel depth: objects farther north are drawn first, feet determine occlusion.
+ const leader=troops.find(u=>u.side===0&&u.captain===ui.captain)?.id;
+ const layers=[
+  ...sites.map(z=>({y:z.y+12,draw:()=>buildings(ctx,z,t)})),
+  {y:327,draw:()=>keep(ctx,110,310,0,s.players[0].base,t)},
+  {y:327,draw:()=>keep(ctx,850,310,1,s.players[1].base,t)},
+  ...troops.map(u=>({y:u.y+9,draw:()=>squad(ctx,u,t,u.id===leader)}))
+ ];
+ layers.sort((a,b)=>a.y-b.y);
+ for(const item of layers)item.draw();
  const orders=ordersAll.filter(o=>o.side===0);
  for(const o of orders){
   const groups=troops.filter(u=>u.captain===o.id),cx=groups.length?groups.reduce((n,u)=>n+u.x,0)/groups.length:110,cy=groups.length?groups.reduce((n,u)=>n+u.y,0)/groups.length:310;
@@ -244,8 +251,6 @@ export function renderBattle(out,s,view,ui,t){
   pix(ctx,o.x-12,o.y+6,26,3,'#25373b');
   pix(ctx,o.x-10,o.y+7,22,1,'#9ec8cb');
  }
- const leader=troops.find(u=>u.side===0&&u.captain===ui.captain)?.id;
- for(const u of [...troops].sort((a,b)=>a.y-b.y))squad(ctx,u,t,u.id===leader);
  for(const e of events){
   const v=1-e.age/.75;
   if(e.type==='impact'){
