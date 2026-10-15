@@ -738,6 +738,13 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
   get selection(){return selectedId;},
    get placement(){return pending?{type:pending.type,valid:pending.valid,ready:pending.previewReady}:null;},
    get dragging(){return drag?.kind||null;},
+   meshY(id){return roots.get(id)?.position.y??null;},
+   groundPoint(x,z){
+    if(!ready)return null;
+    const rect=ui.canvas.getBoundingClientRect(),viewport=camera.viewport.toGlobal(ui.canvas.width,ui.canvas.height);
+    const position=Vector3.Project(new Vector3(x,0,z),Matrix.Identity(),scene.getTransformMatrix(),viewport);
+    return {x:rect.x+position.x*rect.width/ui.canvas.width,y:rect.y+position.y*rect.height/ui.canvas.height};
+   },
   get lighting(){return room?.lightingDiagnostics()??null;},
   item(id){return state.items.find(x=>x.id===id)?{...state.items.find(x=>x.id===id)}:null;},
   point(id){
