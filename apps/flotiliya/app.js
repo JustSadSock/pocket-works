@@ -615,7 +615,7 @@ function onPointerDown(e){
   if(chosen.side==='ally'){selectShip(chosen.id);return;}
   const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;
   const order=instruction(s,game.stage),old={kind:order.kind,targetId:order.targetId,route:order.route};
-  order.targetId=chosen.id;order.route=[];
+  order.targetId=chosen.id;
   if(order.kind==='hold')order.kind='shoot';
   if(!canPlan(s,s.orders)){
    Object.assign(order,old);notify('Недостаточно ОД: очисти часть пути или выбери другое действие.');return;
@@ -670,6 +670,19 @@ function drawOrders(s){
   ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-7,-6);ctx.lineTo(-3,0);ctx.lineTo(-7,6);ctx.closePath();ctx.fill();ctx.restore();
   if(selected){ctx.font='700 13px system-ui';ctx.textAlign='center';ctx.fillText(String(stage+1),end.x,end.y-13);}
   ctx.restore();
+ }
+ // Target marks are NOT routes. A selected foe never implies free pursuit.
+ if(s.id===game.selected){
+  for(let stage=0;stage<2;stage++){
+   const target=game.ships.find(t=>t.id===instruction(s,stage).targetId&&t.alive&&t.side!==s.side);
+   if(!target)continue;
+   ctx.save();ctx.strokeStyle=stage?'#eea985':'#f5daa5';
+   ctx.lineWidth=1.7;ctx.globalAlpha=.83;ctx.setLineDash([3,6]);
+   ctx.beginPath();ctx.arc(target.x,target.y,44+stage*6,0,TAU);ctx.stroke();
+   ctx.setLineDash([]);ctx.fillStyle=ctx.strokeStyle;ctx.font='700 13px system-ui';
+   ctx.textAlign='center';ctx.fillText('ЦЕЛЬ '+(stage+1),target.x,target.y+65+stage*14);
+   ctx.restore();
+  }
  }
 }
 function drawMovementBadge(s){
