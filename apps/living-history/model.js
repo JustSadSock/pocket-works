@@ -1687,7 +1687,7 @@ function scheduleManorialService(s){
   const choices=s.households.filter(h=>h.communityId===c.id&&h.id!==manor.id&&h.manorAgreement?.dueDays>0)
    .map(h=>{
     const agreement=h.manorAgreement;
-    if(agreement.year!==year){agreement.year=year;agreement.served=0;}
+    if(agreement.year!==year){agreement.year=year;agreement.served=0;agreement.serviceProgress=0;}
     const usable=liveMembers(s,h).filter(p=>p.age>=16&&p.health>35&&!p.travel&&p.hiredDay!==s.day&&p.job==='home');
     const walk=walkingSteps(s,h,manor);
     return {h,agreement,usable,walk};
@@ -1713,13 +1713,20 @@ function finishManorialService(s){
   const tenant=livingHouse(s,p.manorDutySource),a=tenant?.manorAgreement;
   if(a&&p.job==='farm'){
    const worked=workCapacity(p,'farm');
-   a.served+=worked;s.stats.manorServiceDays=(s.stats.manorServiceDays||0)+worked;
+   // Legal fulfilled obligations remain integer certified days, while a
+   // sick labourer's partial contribution accrues toward the NEXT day.
+   // The fractional balance cannot exceed one contractual day's worth.
+   const balance=(a.serviceProgress||0)+worked;
+   const credited=Math.min(a.dueDays-a.served,Math.floor(balance+1e-8));
+   a.serviceProgress=credited?roundSkill(Math.max(0,balance-credited)):roundSkill(balance);
+   a.served+=credited;
+   s.stats.manorServiceDays=(s.stats.manorServiceDays||0)+worked;
    earn(s,tenant,'manorServiceDays',worked);
-   recordLife(p,s.day,'manor-work','Отработал день на сеньориальной пашне');
-   if(a.served>=a.dueDays||a.served<=1)
-    event(s,'manor-service',`Семья ${familyName(s,tenant)} отработала день повинности`,
-     'Работа действительно выполнена на пашне поместья',
-     [tenant.id,a.manorId,p.id],{year:a.year+1,served:a.served,due:a.dueDays});
+   recordLife(p,s.day,'manor-work',`Отработал ${round(worked)} доли дня на сеньориальной пашне`);
+   if(credited&&(a.served===a.dueDays||a.served===1))
+    event(s,'manor-service',`Семья ${familyName(s,tenant)} зачла полный день повинности`,
+     'Дробные фактически выполненные человеко-дни накоплены до целого зачётного дня',
+     [tenant.id,a.manorId,p.id],{year:a.year+1,served:a.served,due:a.dueDays,partialBalance:a.serviceProgress});
   }
   delete p.manorDutyDay;delete p.manorDutySource;
  }
@@ -1926,6 +1933,7 @@ export function audit(s){
   if(!Number.isInteger(h.sheep||0)||(h.sheep||0)<0||!Number.isFinite(h.wool)||h.wool<0)issues.push(`Неверные овцы/шерсть ${h.id}`);
   if(h.manorAgreement){const a=h.manorAgreement;
    if(!Number.isInteger(a.dueDays)||a.dueDays<0||!Number.isInteger(a.served)||a.served<0||a.served>a.dueDays||
+    !Number.isFinite(a.serviceProgress||0)||(a.serviceProgress||0)<0||(a.serviceProgress||0)>=1||
     !Number.isInteger(a.annualRentCoin)||a.annualRentCoin<0||!Number.isFinite(a.rentArrears)||a.rentArrears<0)
     issues.push(`Повинности или рента повреждены у ${h.id}`);
    if(a.manorId&&!s.households.some(k=>k.id===a.manorId&&k.tenure==='demesne'))issues.push(`Неверное поместье ${h.id}`);
