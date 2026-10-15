@@ -1,5 +1,6 @@
 import { PocketNet } from '../../../shared/capabilities/net.js';
 import { getPocketIdentity, preferredPocketName, pocketIdentitySessionKey } from '../../../shared/capabilities/identity.js';
+import { byType } from './models.js';
 
 const SERVER=location.origin+'/pocketnet';
 const KEY='pocket-works:komnatka:coop:';
@@ -19,6 +20,7 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
  let net=null,me=null,room=null,code='',connected=false,busy=false,modal=false;
  let mode='tenants',name='Гость',joinCode=new URLSearchParams(location.search).get('room')||'';
  let reference=false,phase='',syncAt=0,awaiting=false,returnToHome=false;
+ let review=null;
  let identity=null;
  const send=payload=>{
   if(!connected||!net)return false;
@@ -32,6 +34,27 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
   if(room?.deadline&&['preview','build'].includes(room.phase)){
    $('onlineClock').textContent=mmss(Math.ceil((room.deadline-Date.now())/1000));
   }else $('onlineClock').textContent='';
+ }
+ function reviewMarkup(){
+  if(!review)return '<p class="memory-unavailable">Изображения недоступны. Эталон можно осмотреть отдельно.</p>';
+  const pictures=[['Эталон',review.model],['Ваша комната',review.assembled]]
+   .map(([label,src])=>'<figure><figcaption>'+label+'</figcaption>'+
+    (src?.startsWith('data:image/')?'<img src="'+src+'" alt="'+label+'">':'<div class="memory-no-photo">Нет снимка</div>')+'</figure>').join('');
+  const rows=(review.summary?.rows||[]).map(entry=>{
+   const name=byType[entry.type]?.name||entry.type;
+   return '<li class="memory-row '+entry.status+'"><span>'+escapeText(name)+'</span><small>'+escapeText(entry.detail)+'</small></li>';
+  }).join('');
+  const info=review.summary||{exact:0,partial:0,missing:0,extra:0};
+  return '<section class="memory-review" aria-label="Сравнение с образцом">'+
+   '<div class="memory-images">'+pictures+'</div>'+
+   '<div class="memory-summary">'+info.exact+' точных · '+info.partial+' частичных · '+
+   info.missing+' пропущено · '+info.extra+' лишних</div>'+
+   '<ul class="memory-differences">'+rows+'</ul></section>';
+ }
+ function tenantResults(){
+  return '<div class="tenant-results">'+(room?.goals||[]).map(g=>'<div class="tenant-result '+(g.done?'done':'')+'">'+
+   '<span>'+(g.done?'✓':'○')+'</span><strong>'+escapeText(g.label)+'</strong><small>'+
+   g.found+'/'+g.required+'</small></div>').join('')+'</div>';
  }
  function renderHud(){
   hud.hidden=!room;
@@ -48,11 +71,15 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
    '<span class="online-person" style="--player-color:'+palette[i%palette.length]+'"><i></i>'+escapeText(p.name)+
    (room.selections?.[p.id]?' ✋':'')+'</span>').join('');
   if(room.phase==='result'){
-   $('onlineGoals').innerHTML='<strong class="online-score">'+(room.score||0)+'%</strong> '+(room.mode==='memory'?'точность воспоминания':'пожелания жильца');
+   $('onlineGoals').innerHTML='<strong class="online-score">'+(room.score||0)+'%</strong> '+
+     (room.mode==='memory'?'совпадение с образцом':(room.goals||[]).filter(g=>g.done).length+' из '+(room.goals||[]).length+' пожеланий');
   }else if(room.phase==='preview'){
    $('onlineGoals').textContent='Запомни расположение, цвета и повороты вещей.';
   }else if(room.mode==='tenants'&&room.phase==='build'){
-   $('onlineGoals').innerHTML=(room.goals||[]).map(g=>
+   const job=room.brief||{};
+   $('onlineGoals').innerHTML='<div class="tenant-brief"><b>'+escapeText(job.title||'Новые жильцы')+'</b><span>'+
+    escapeText(job.text||'Соберите комнату по пожеланиям.')+'</span></div>'+
+    (room.goals||[]).map(g=>
     '<span class="online-goal '+(g.done?'done':'')+'">'+(g.done?'✓':'○')+' '+escapeText(g.label)+' <small>'+g.found+'/'+g.required+'</small></span>').join('');
   }else $('onlineGoals').textContent='';
   timer();
@@ -85,17 +112,20 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
    const host=room.host===me?.id;
    panel.innerHTML='<div class="online-title"><span>'+escapeText(PHASE[room.phase]||'В комнате')+'</span>'+
     '<h2>'+(room.phase==='lobby'?'Наша комнатка':room.mode==='memory'?'Собери по памяти':'Новые жильцы')+'</h2>'+
-    '<p>'+(room.phase==='lobby'?'Пригласи друзей по коду или ссылке.':'Игроки строят одну общую комнату.')+'</p></div>'+
-    '<div class="online-invite"><small>КОД ПРИГЛАШЕНИЯ</small><strong>'+escapeText(code||'••••••••')+'</strong>'+
+    '<p>'+(room.phase==='lobby'?'Пригласи друзей по коду или ссылке.':room.phase==='result'?'Сравните итог с заданием.':room.mode==='tenants'?escapeText(room.brief?.text||'Соберите уют по пожеланиям жильца.'):'Восстановите интерьер вместе.')+'</p></div>'+
+    (room.phase==='result'?'':'<div class="online-invite"><small>КОД ПРИГЛАШЕНИЯ</small><strong>'+escapeText(code||'••••••••')+'</strong>'+
     '<div><button id="onlineCopyCode">Код</button><button id="onlineCopyLink">Ссылка другу</button></div></div>'+
     '<div class="online-roster">'+(room.players||[]).map((p,i)=>'<span><i style="background:'+palette[i%palette.length]+'"></i>'+
-    escapeText(p.name)+(p.id===room.host?' · создатель':'')+'</span>').join('')+'</div>'+
+    escapeText(p.name)+(p.id===room.host?' · создатель':'')+'</span>').join('')+'</div>')+
     (host&&room.phase==='lobby'?'<div class="online-choices">'+
      '<button data-online-mode="tenants" class="'+(mode==='tenants'?'chosen':'')+'"><strong>Новые жильцы</strong><small>Собрать уют по пожеланиям</small></button>'+
      '<button data-online-mode="memory" class="'+(mode==='memory'?'chosen':'')+'"><strong>Собери по памяти</strong><small>Запомнить и повторить интерьер</small></button></div>':'')+
+    (room.phase==='result'?'<div class="online-result"><strong>'+Number(room.score||0)+'%</strong><span>'+
+     (room.mode==='memory'?'Совпадение с образцом':'Пожелания выполнены')+'</span></div>':'')+
+     (room.phase==='result'&&room.mode==='memory'?reviewMarkup():'')+
+     (room.phase==='result'&&room.mode==='tenants'?tenantResults():'')+
     (host&&['lobby','result'].includes(room.phase)?'<button id="onlineStart" class="online-primary" '+((room.players?.length||0)<2?'disabled':'')+'>Начать игру</button>':'')+
-    (room.phase==='result'?'<div class="online-result"><strong>'+Number(room.score||0)+'%</strong><span>'+(room.mode==='memory'?'Точность восстановления':'Пожелания выполнены')+'</span></div>':'')+
-    (room.phase==='result'&&room.mode==='memory'?'<button id="onlineCompareModal" class="online-primary">Сравнить с образцом</button>':'')+
+    (room.phase==='result'&&room.mode==='memory'?'<button id="onlineCompareModal" class="online-secondary">Осмотреть эталон крупно</button>':'')+
     (host&&room.phase==='preview'?'<button id="onlineSkip" class="online-primary">Мы запомнили — начать</button>':'')+
     (room.phase==='build'?'<button id="onlineContinue" class="online-primary">Вернуться к комнате</button>':'')+
     '<button id="onlineLeave" class="online-secondary">Покинуть комнату</button>';
@@ -121,7 +151,9 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
    if(next.phase==='preview')modal=false;
    if(next.phase==='build'){modal=false;if(next.mode==='memory')toast('Теперь соберите комнату по памяти!');}
   }
-  onRoom(room,{reference,phaseChanged:changed});
+  const newReview=onRoom(room,{reference,phaseChanged:changed});
+  if(next.phase==='result'&&next.mode==='memory'&&newReview)review=newReview;
+  if(changed&&next.phase!=='result')review=null;
   onPresence(room.selections||{},room.players||[],me?.id);
   render();
  }
@@ -188,7 +220,7 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
  }
  function leave(){
   if(net&&connected)try{net.leaveRoom();}catch{}
-  net?.close();net=null;me=null;room=null;code='';connected=false;busy=false;modal=false;phase='';reference=false;
+  net?.close();net=null;me=null;room=null;code='';connected=false;busy=false;modal=false;phase='';reference=false;review=null;
   returnToHome=false;onExit();render();
  }
  function open(requestedMode=null,fromHome=false){

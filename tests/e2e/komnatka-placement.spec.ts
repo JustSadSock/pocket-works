@@ -18,6 +18,22 @@ async function moveFromCatalog(page:any,type:string,target:Position){
  await page.mouse.down();
  await page.mouse.move(target.x,target.y,{steps:12});
 }
+test('home photograph comes from a real Babylon room, with Retina canvas quality',async ({page},testInfo)=>{
+ test.skip(!testInfo.project.name.includes('portrait'),'Retina home capture is evaluated in portrait');
+ test.setTimeout(90_000);
+ await page.goto('/apps/komnatka/?qa=1',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#homeSolo')).toBeVisible({timeout:20000});
+ await page.waitForFunction(()=>(window as any).__KOMNATKA_TEST__?.stageReady===true,undefined,{timeout:30000});
+ await expect(page.locator('#homeRoomImage')).toHaveClass(/ready/,{timeout:30000});
+ const quality=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.quality);
+ expect(['live-room','saved-room']).toContain(quality.preview);
+ if(quality.dpr>=2.5 && (await page.evaluate(()=>window.innerWidth))<560)expect(quality.scale).toBe(1);
+ await attachCriticalScreenshot(page,testInfo,'komnatka-home-real-3d-room',{fullPage:false});
+ await page.locator('#homeSolo').click();
+ const inside=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.quality);
+ expect(inside.pixels[0]*inside.pixels[1]).toBeGreaterThan(100000);
+ await attachCriticalScreenshot(page,testInfo,'komnatka-retina-rug-detail',{fullPage:false});
+});
 test.describe('КОМНАТКА — actual placement and motion',()=>{
  test.beforeEach(async ({},testInfo)=>{
   test.skip(!testInfo.project.name.includes('portrait'),'Primary dollhouse interactions are portrait-first');
