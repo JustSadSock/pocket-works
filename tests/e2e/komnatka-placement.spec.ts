@@ -52,6 +52,7 @@ test('new room purpose, distinct models, and real material remain after reopenin
  await moveFromCatalog(page,'diningtable',spot);
  await page.mouse.up();
  await expect.poll(()=>page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount)).toBe(1);
+ await page.locator('#materialToggle').click();
  await expect(page.locator('#selectionMaterials [data-material="walnut"]')).toBeVisible();
  await page.locator('#selectionMaterials [data-material="walnut"]').click();
  expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.materials[0].material)).toBe('walnut');
