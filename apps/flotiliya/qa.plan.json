@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "files": [
+        "combat.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#sailBtn",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#sailBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#resolveBtn"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#resolveBtn"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "battle-matrix",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/gameplay.spec.ts"
+      ]
+    }
+  ]
+}
