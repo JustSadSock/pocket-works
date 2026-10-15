@@ -13,6 +13,7 @@ test('garden produce is made only after a complete sequence of actual home labou
  assert.ok(s.households.some(x=>x.gardenYear?.harvested),'at least one family completed planting and tending');
  check(s);
  const p=live(s,h);for(const person of p){person.alive=false;person.job='dead';}
+ h.reservedBy=-1; // Isolate an uninhabited croft from legitimate later resettlement in this test.
  const old=(s.stats.gardenProduced||0),previousGardenProject=JSON.stringify(h.gardenYear);
  advanceDays(s,365);
  assert.equal(JSON.stringify(h.gardenYear),previousGardenProject,'empty homestead cannot cultivate a new croft season');
@@ -27,18 +28,18 @@ test('dairy production is conditional on cattle, fodder and a milking worker',()
  check(s);
 });
 test('a documented grain loan is a physical shipment with no minted money',()=>{
- const s=createWorld(43821),donor=s.households.find(h=>h.members.length===2);
+ const s=createWorld(43821),donor=s.households.find(h=>h.tenure==='customary'&&h.fields.length>=40);
  const debtor=s.households.find(h=>h.id!==donor.id&&walkingSteps(s,donor,h)>0&&walkingSteps(s,donor,h)<15&&h.fields.length>=15);
  assert.ok(debtor);
  for(const h of s.households){h.grain=300;h.coin=0;}
- donor.grain=720;debtor.grain=0;
+ donor.grain=1200;debtor.grain=0;
  s.economy.grainInitial=Number(s.households.reduce((n,h)=>n+h.grain,0).toFixed(2));s.economy.coinsInitial=0;
  advanceDays(s,7);
  const loan=s.loans.find(l=>l.borrowerId===debtor.id);
  assert.ok(loan,'field rights and a real neighboring reserve make limited credit possible');
  assert.equal(loan.status,'in-transit');
  assert.equal(loan.principal,loan.owed);
- assert.ok(donor.grain<720,'grain was removed from lender immediately');
+ assert.ok(donor.grain<1200,'grain was removed from lender immediately');
  assert.equal(debtor.grain,0,'borrower cannot eat grain before the carrier arrives');
  const ship=s.shipments.find(t=>t.loanId===loan.id);
  assert.ok(ship&&ship.kind==='loan'&&ship.cost===0);

@@ -10,8 +10,8 @@ const release=(s,h)=>{for(const i of h.fields)s.usage[i]=0;h.fields=[];h.farmYea
 
 test('founding rights are exclusive and the commons is an access boundary, not a free store',()=>{
  const s=createWorld(413),owner=new Map();assert.equal(s.commons.length,SIZE*SIZE);
- for(const h of s.households){assert.equal(h.tenure,'customary');assert.equal(h.tenureOrigin,'initial-settlement');
-  assert.ok(h.fields.length>12);for(const i of h.fields){assert.equal(s.usage[i],2);assert.ok(!owner.has(i));owner.set(i,h.id);} }
+ for(const h of s.households){assert.ok(['free','customary','cottar','demesne'].includes(h.tenure));assert.equal(h.tenureOrigin,'initial-settlement');
+  assert.ok(h.fields.length>0);for(const i of h.fields){assert.equal(s.usage[i],2);assert.ok(!owner.has(i));owner.set(i,h.id);} }
  assert.ok(s.commons.some(v=>v===s.communities[0].id));assert.ok(audit(s).ok);
 });
 
@@ -63,7 +63,7 @@ test('migration uses an accessible vacant dwelling, occurs after travel, and kee
  assert.ok(destination);
  for(const p of live(s,destination)){p.alive=false;p.job='dead';}
  // Court-authorised vacant holding with real fields remains available for resettlement.
- destination.lastEstateDay=309;
+ destination.lastEstateDay=310; // Released for migration at day 310, not for prior same-day local division.
  release(s,source);
  source.grain=90;source.coin=450;source.wood=350;s.day=309;rebase(s);
  const people=live(s,source).map(p=>p.id),members=new Set(people);
@@ -86,13 +86,13 @@ test('land tenure, ongoing projects, and claims survive a serialization round-tr
  advanceDays(s,20);advanceDays(clone,20);
  assert.equal(serialize(s),serialize(clone));
  assert.ok(audit(s).ok,audit(s).issues.join('; '));
- assert.equal(getHousehold(s,s.households[0].id).tenure,'customary');
+ assert.equal(getHousehold(s,s.households[0].id).tenure,'free');
 });
 
 test('seasonal sharecropping borrows underused land with crop-share rent, without transferring title',()=>{
- const s=createWorld(413);const owner=s.households[1],tenant=s.households[0];
- tenant.grain=30;owner.grain=1600;
- const transfer=tenant.fields.splice(5,21);owner.fields.push(...transfer);tenant.farmYear=null;owner.farmYear=null;
+ const s=createWorld(413);const owner=s.households[0],tenant=s.households[4];
+ tenant.grain=900;owner.grain=1600; // Existing mid-size dependent holding and large free owner.
+ tenant.farmYear=null;owner.farmYear=null;
  s.day=365;rebase(s);advanceDays(s,1);
  assert.ok(tenant.leaseIn?.length>0,'land-poor households must obtain usable leased strips');
  assert.ok(owner.leaseOut?.length>0);

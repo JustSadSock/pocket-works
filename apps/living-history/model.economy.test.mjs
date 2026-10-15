@@ -69,7 +69,8 @@ test('neighbor aid is an actual shipment: grain stays in transit until arrival',
  const target=s.households.find(h=>h.id!==source.id&&Math.hypot(h.x-source.x,h.y-source.y)<18);
  assert.ok(target);
  source.grain=4500;source.wood=1100;target.grain=0;
- source.coin+=target.coin;target.coin=0;
+ for(const h of s.households)h.coin=0; // Isolate voluntary aid from legitimate paid trade.
+ s.economy.coinsInitial=0;
  s.economy.grainInitial=s.households.reduce((n,h)=>n+h.grain,0);
  s.economy.woodInitial=s.households.reduce((n,h)=>n+h.wood,0);
  advanceDays(s,7);

@@ -8,7 +8,7 @@ test('initial parent-child generations have biologically possible ages',()=>{
  for(const seed of [1,413,43821,71331]){
   const s=createWorld(seed);const byId=new Map(s.people.map(p=>[p.id,p]));
   for(const child of s.people.filter(p=>p.parents.length)){
-   assert.equal(child.parents.length,2);
+   assert.ok(child.parents.length>=1&&child.parents.length<=2,'an elder may be a widowed sole known parent');
    for(const id of child.parents)assert.ok(byId.get(id)?.age-child.age>=16,`seed ${seed}: implausible parent age for ${child.id}`);
   }
  }

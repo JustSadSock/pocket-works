@@ -13,7 +13,8 @@
         "land-tenure.test.mjs",
         "food-access.test.mjs",
         "subsistence-credit.test.mjs",
-        "rural-resilience.test.mjs"
+        "rural-resilience.test.mjs",
+        "historic-village.test.mjs"
       ]
     },
     {
