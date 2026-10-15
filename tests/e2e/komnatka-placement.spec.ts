@@ -2,25 +2,12 @@ import { expect, test } from '@playwright/test';
 import { attachCriticalScreenshot } from './helpers';
 
 type Position={x:number;y:number};
-type QA={
- stageReady:boolean;
- itemCount:number;
- gridVisible:boolean;
- dragging:string|null;
- placement:{type:string;valid:boolean;ready:boolean}|null;
- groundPoint:(x:number,z:number)=>Position;
- point:(id:string)=>Position|null;
- meshY:(id:string)=>number|null;
-};
 async function enter(page:any){
  await page.goto('/apps/komnatka/?qa=1',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#homeSolo')).toBeVisible({timeout:15_000});
  await page.locator('#homeSolo').click();
  await expect(page.locator('#homeScreen')).toBeHidden();
  await page.waitForFunction(()=>(window as any).__KOMNATKA_TEST__?.stageReady===true,undefined,{timeout:25_000});
-}
-async function qa(page:any,method:(test:QA)=>unknown){
- return page.evaluate((code:string)=>eval(code)((window as any).__KOMNATKA_TEST__),String(method));
 }
 async function moveFromCatalog(page:any,type:string,target:Position){
  const box=await page.locator('#catalog [data-type="'+type+'"]').boundingBox();
@@ -56,7 +43,7 @@ test.describe('КОМНАТКА — actual placement and motion',()=>{
   await attachCriticalScreenshot(page,testInfo,'komnatka-invalid-placement',{fullPage:false});
   await page.mouse.up();
   expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount)).toBe(before+1);
-  await page.locator('#cancelPlacement').click();
+  await page.locator('#cancelPlacementMobile').click();
  });
  test('table decorations follow real-time lift and catalog specimens remain visible',async ({page},testInfo)=>{
   await enter(page);
