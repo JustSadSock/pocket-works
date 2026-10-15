@@ -16,7 +16,7 @@ const SAMPLE = [
 const $ = (id) => document.getElementById(id);
 const SCREENS = { editor: $('editorScreen'), play: $('playScreen'), review: $('reviewScreen'), results: $('resultsScreen') };
 function defaultSession() {
-  return { version: 1, view: 'editor', source: '', rounds: [], index: 0, history: [] };
+  return { version: 1, view: 'editor', source: '', rounds: [], index: 0, history: [], reviewReturn: false };
 }
 
 function validateSession(value) {
@@ -125,6 +125,7 @@ function startRoundTexts(texts) {
   state.rounds = texts.map(makeRound);
   state.index = 0;
   state.history = [];
+  state.reviewReturn = false;
   setView('play');
 }
 
@@ -311,12 +312,13 @@ function renderReview() {
     });
   }
   $('correctText').textContent = round.text;
-  $('nextBtn').firstChild.textContent = state.index === state.rounds.length - 1 ? 'Завершить ' : 'Следующая фраза ';
+  $('nextBtn').firstChild.textContent = state.reviewReturn ? 'К итогам ' : state.index === state.rounds.length - 1 ? 'Завершить ' : 'Следующая фраза ';
   updateTestState();
 }
 
 function advance() {
   if (state.view !== 'review') return;
+  if (state.reviewReturn) { state.reviewReturn = false; setView('results'); return; }
   if (state.index + 1 < state.rounds.length) {
     state.index++;
     state.history = [];
@@ -335,19 +337,22 @@ function renderResults() {
   const list = $('resultsList');
   list.replaceChildren();
   state.rounds.forEach((round, index) => {
-    const row = document.createElement('div');
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'result-row';
+    row.setAttribute('aria-label', 'Посмотреть разбор фразы ' + (index + 1));
     const number = document.createElement('span');
     number.className = 'result-index';
     number.textContent = formatNumber(index + 1);
     const text = document.createElement('span');
     text.className = 'result-text';
-    text.textContent = round.text;
+    text.textContent = round.skipped ? 'Пропущено' : round.accuracy === 100 ? 'Собрано верно' : 'Есть ошибки';
     text.dir = 'auto';
     const score = document.createElement('span');
     score.className = 'result-score';
     score.textContent = round.accuracy + '%';
     row.append(number, text, score);
+    row.addEventListener('click', () => { state.index = index; state.reviewReturn = true; setView('review'); });
     list.append(row);
   });
   $('retryBtn').hidden = wrong === 0;
@@ -372,6 +377,7 @@ function closeConfirm() {
 function openEditor() {
   if (state.view === 'editor') return;
   if (state.view === 'results') { setView('editor'); return; }
+  if (state.view === 'review' && state.reviewReturn) { state.reviewReturn = false; setView('results'); return; }
   askConfirm('Вернуться к тексту?', 'Текущая сборка сбросится. Исходный текст останется в редакторе.', () => {
     state.rounds = [];
     state.index = 0;
