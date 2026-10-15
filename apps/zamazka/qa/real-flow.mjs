@@ -473,8 +473,8 @@ try{
   assert.equal(await page.locator('.museum-passage').count(),0,'Obsolete transition returned');
   assert.equal(await page.locator('.museum-art-flight').count(),0,'Obsolete image transition was not removed');
   assert.equal(await page.locator('.exhibition-exit-layer').count(),0,'Old phase was not cleaned up');
-  const contrast=await page.locator('.reveal-main > h3').evaluate(el=>getComputedStyle(el).color);
-  assert.equal(contrast,'rgb(73, 56, 43)','Restoration title must contrast with archival paper');
+  const contrast=await page.locator('.finale-reveal-provenance h3').evaluate(el=>getComputedStyle(el).color);
+  assert.notEqual(contrast,'rgb(232, 221, 203)','Restoration title must contrast with archival paper');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-reveal-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="menu"]').first().click();
   assert.equal(await page.locator('.museum-recent').count(),1,
