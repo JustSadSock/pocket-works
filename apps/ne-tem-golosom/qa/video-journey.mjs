@@ -69,7 +69,7 @@ try{
     assert(await page.locator('#media-workbench').isVisible(),'video controls not displayed');
     await page.locator('#trim-length').fill('10');
     await page.locator('#trim-length').dispatchEvent('input');
-    await page.locator('#media-quality').fill('2');
+    await page.locator('#media-quality').evaluate(input=>{input.value='2';input.dispatchEvent(new Event('input',{bubbles:true}))});
     await page.screenshot({path:join(out,viewport.name+'-source.png'),fullPage:true});
     await page.locator('#media-render').click();
     await page.waitForSelector('#media-result:not(.hidden)',{timeout:60000});
