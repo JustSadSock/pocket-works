@@ -3177,7 +3177,7 @@
     "lastAttemptAt": "2026-10-13T22:04:38.310Z"
   },
   "living-history": {
-    "revision": "ac088735ac34a248d9ede5d43193cf058b994683",
+    "revision": "509641c6497ce016120d8ea857e5cf94806f551c",
     "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
@@ -3189,8 +3189,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "ac088735ac34a248d9ede5d43193cf058b994683",
-    "lastAttemptAt": "2026-10-15T12:48:03.385Z"
+    "lastAttemptRevision": "509641c6497ce016120d8ea857e5cf94806f551c",
+    "lastAttemptAt": "2026-10-15T12:55:50.365Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
