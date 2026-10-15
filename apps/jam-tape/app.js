@@ -502,6 +502,7 @@ async function action(nameAction,el){
   if(recording)finishRecord();releaseAll();instrument=next;sendEdit({kind:'inst',inst:next});renderStudio();return;
  }
  if(nameAction==='clip'){openEditor(el.dataset.clip);return}
+ if(nameAction==='new-pattern'){openEditor('new');return}
  if(nameAction==='export'){await exportMix();return}
  if(nameAction==='invite'){pairingMode=isHost?'host':'join';setScreen('pair');return}
  if(nameAction==='host-from-solo'){if(recording)finishRecord();await hostRoom(true);return}
@@ -540,12 +541,42 @@ document.querySelector('#roomButton').addEventListener('click',()=>{if(room){pai
 document.querySelector('#trimStart').addEventListener('input',updateClipPreview);
 document.querySelector('#trimEnd').addEventListener('input',updateClipPreview);
 document.querySelector('#closeClip').addEventListener('click',()=>clipDialog.close());
+clipDialog.addEventListener('click',event=>{
+ const bar=event.target.closest('[data-bar]');
+ if(bar){editBar=Number(bar.dataset.bar);renderPattern();return}
+ const half=event.target.closest('[data-half]');
+ if(half){editHalf=Number(half.dataset.half);renderPattern();return}
+ const cell=event.target.closest('[data-seq-step]');
+ if(cell){
+  const step=Number(cell.dataset.seqStep),pitch=Number(cell.dataset.seqPitch);
+  const index=editNotes.findIndex(n=>n[0]===step&&n[1]===pitch);
+  if(index>=0)editNotes.splice(index,1);
+  else if(editNotes.length<96){
+   editNotes.push([step,pitch,editLength,editVelocity]);
+   unlockAudio().then(ctx=>playNote(ctx,editInst,pitch,ctx.currentTime,.16,editVelocity/100)).catch(()=>{});
+  }else{inform('В одном фрагменте максимум 96 нот');return}
+  renderPattern();
+ }
+});
+document.querySelector('#noteLength').addEventListener('change',e=>{editLength=Number(e.target.value)||1});
+document.querySelector('#noteVelocity').addEventListener('input',e=>{editVelocity=Number(e.target.value)||80});
 document.querySelector('#saveClip').addEventListener('click',()=>{
- const a=Number(document.querySelector('#trimStart').value),b=Number(document.querySelector('#trimEnd').value);
- sendEdit({kind:'clip-trim',id:editClip,a,b});clipDialog.close();inform('Границы дубля сохранены');
+ if(!editNotes.length){inform('Добавь хотя бы одну ноту на сетку');return}
+ const id=editClip==='new'?'c-'+Date.now().toString(36)+'-'+rand():editClip;
+ const clip=editedClip(id);if(!clip)return;
+ sendEdit(editClip==='new'?{kind:'clip-add',clip}:{kind:'clip-update',id,clip});
+ clipDialog.close();inform('Фрагмент отправлен на дорожку');
+});
+document.querySelector('#duplicateClip').addEventListener('click',()=>{
+ if(editClip==='new')return;
+ if(mine().length>=6){inform('Дорожка заполнена: максимум 6 фрагментов');return}
+ const clip=editedClip('c-'+Date.now().toString(36)+'-'+rand());
+ if(!clip?.notes.length){inform('Нет нот для копирования');return}
+ sendEdit({kind:'clip-add',clip});clipDialog.close();inform('Копия добавлена');
 });
 document.querySelector('#deleteClip').addEventListener('click',()=>{
- sendEdit({kind:'clip-delete',id:editClip});clipDialog.close();inform('Дубль удалён');
+ if(editClip==='new')return;
+ sendEdit({kind:'clip-delete',id:editClip});clipDialog.close();inform('Фрагмент удалён');
 });
 document.querySelector('#cancelReset').addEventListener('click',()=>confirmDialog.close());
 document.querySelector('#confirmReset').addEventListener('click',()=>{
