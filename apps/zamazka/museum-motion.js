@@ -40,6 +40,10 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
  const applyArt=(node,index)=>{
   const id=order[wrap(index,order.length)],img=node.querySelector('img');
   img.dataset.artId=String(id);img.src=url(id);img.alt=arts[id]?.title||'Картина';
+  const title=node.querySelector('.museum-slide-label strong');
+  const creator=node.querySelector('.museum-slide-label span');
+  if(title)title.textContent=arts[id]?.title||'Картина';
+  if(creator)creator.textContent=[arts[id]?.artist,arts[id]?.date].filter(Boolean).join(' · ');
   layout(node);
  };
  for(const {slot} of galleryWindow(order,0)){
@@ -47,7 +51,7 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
   const interact=()=>{if(Date.now()<suppressClickUntil)return;const at=Number(node.dataset.slot);if(at===-1||at===1)shift(at);else if(at===0)onExhibit(order[center])};
   node.addEventListener('click',interact);
   node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();interact()}});
-  node.innerHTML='<div class="museum-slide-rim"><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-top"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-left"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-right"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-bottom"></span><img loading="eager" decoding="async" alt=""></div>';
+  node.innerHTML='<div class="museum-slide-rim"><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-top"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-left"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-right"></span><span aria-hidden="true" class="museum-frame-facet museum-frame-facet-bottom"></span><img loading="eager" decoding="async" alt=""></div><figcaption class="museum-slide-label"><strong></strong><span></span></figcaption>';
   node.querySelector('img').addEventListener('load',()=>layout(node));
   applyArt(node,slot);nodes.set(slot,node);stage.append(node);
  }
@@ -55,31 +59,37 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
  const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(relayout):null;
  if(observer)observer.observe(stage);else window.addEventListener('resize',relayout);
  onCenter(order[0],0);
- function shift(direction){
+ function shift(direction,sprint=false){
   if(removed)return;
   const step=Math.sign(direction);if(!step)return;
-  // Multiple deliberate inputs during a transition target the final painting.
-  // Coalesce the burst rather than replaying a delayed chain of animations.
-  if(busy){queued=Math.max(-12,Math.min(12,queued+step));return}
-  busy=true;center=wrap(center+step,order.length);
+  if(busy){queued=Math.max(-8,Math.min(8,queued+step));return}
+  busy=true;stage.dataset.galleryAnimating='true';
+  const duration=reduced?20:sprint?155:(document.documentElement.dataset.zamazkaAppearance==='new'?350:490);
+  stage.style.setProperty('--museum-shift-duration',duration+'ms');
+  center=wrap(center+step,order.length);
   const gone=step>0?-2:2,fresh=step>0?2:-2,exiting=nodes.get(gone),next=new Map();
   for(const [slot,node] of nodes){const target=slot-step;configureSlot(node,target);next.set(target,node)}
   nodes.clear();for(const [slot,node] of next)nodes.set(slot,node);
   const finish=()=>{
    if(removed)return;
-   busy=false;exiting.classList.add('instant');configureSlot(exiting,fresh);
+   exiting.classList.add('instant');configureSlot(exiting,fresh);
    applyArt(exiting,center+fresh);nodes.delete(gone-step);nodes.set(fresh,exiting);
    void exiting.offsetWidth;
    requestAnimationFrame(()=>exiting.classList.remove('instant'));
-   if(queued){
-    center=wrap(center+queued,order.length);
-    queued=0;
-    for(const [slot,node] of nodes){node.classList.add('instant');applyArt(node,center+slot)}
-    requestAnimationFrame(()=>{for(const node of nodes.values())node.classList.remove('instant')});
-   }
    onCenter(order[center],center);
+   busy=false;
+   if(queued){
+    const nextStep=Math.sign(queued);queued-=nextStep;
+    // Keep *every* visible frame moving. A short accelerated transition is
+    // preferable to a sudden image swap or several seconds of autoplay.
+    requestAnimationFrame(()=>shift(nextStep,true));
+   }else{
+    delete stage.dataset.galleryAnimating;
+    stage.style.removeProperty('--museum-shift-duration');
+   }
   };
-  done=setTimeout(finish,reduced?20:(document.documentElement.dataset.zamazkaAppearance==='new'?420:590));
+  done=setTimeout(finish,duration+24);
  }
+
  return {shift,dispose(){removed=true;stage.removeEventListener('pointerdown',onPointerDown);stage.removeEventListener('pointerup',onPointerUp);stage.removeEventListener('pointercancel',onPointerCancel);clearTimeout(done);observer?.disconnect();if(!observer)window.removeEventListener('resize',relayout);nodes.clear()},getCenter(){return order[center]}};
 }
