@@ -673,14 +673,14 @@ function drawOrders(s){
  }
  // Target marks are NOT routes. A selected foe never implies free pursuit.
  if(s.id===game.selected){
-  for(let stage=0;stage<2;stage++){
+  for(const stage of [game.stage]){
    const target=game.ships.find(t=>t.id===instruction(s,stage).targetId&&t.alive&&t.side!==s.side);
    if(!target)continue;
    ctx.save();ctx.strokeStyle=stage?'#eea985':'#f5daa5';
    ctx.lineWidth=1.7;ctx.globalAlpha=.83;ctx.setLineDash([3,6]);
    ctx.beginPath();ctx.arc(target.x,target.y,44+stage*6,0,TAU);ctx.stroke();
    ctx.setLineDash([]);ctx.fillStyle=ctx.strokeStyle;ctx.font='700 13px system-ui';
-   ctx.textAlign='center';ctx.fillText('ЦЕЛЬ '+(stage+1),target.x,target.y+65+stage*14);
+   ctx.textAlign='center';ctx.fillText('ЦЕЛЬ',target.x,target.y+65);
    ctx.restore();
   }
  }
