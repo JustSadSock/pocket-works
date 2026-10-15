@@ -309,3 +309,16 @@
 @media(prefers-reduced-motion:reduce){
  #screen>.passage-preparing .passage-image-slot{animation:none!important}
 }
+
+/* Loading now sits on the warm shell canvas: keep status and cancel readable. */
+#screen>.passage-connection .btn{
+ color:#554435!important;border-color:#a38c6a!important;background:#e1d1b7a6!important;
+}
+#screen>.passage-preparing .passage-prep-peer,
+#screen>.passage-preparing .passage-prep-peer :is(span,strong){
+ color:#564a3c!important;border-color:#b49d7e!important;
+}
+#screen>.passage-preparing .preparing-menu{
+ color:#584a38!important;border-color:#ac9575!important;background:transparent!important;
+}
+#screen>.passage-preparing .passage-prep-status[data-state="error"]{font-size:13px!important}
