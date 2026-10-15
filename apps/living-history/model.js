@@ -7,7 +7,9 @@ const GOODS = ['grain', 'wood'];
 export const CROP_KINDS=Object.freeze({grain:{share:.65,seedRate:125,yieldRate:680},oats:{share:.20,seedRate:105,yieldRate:585},pulses:{share:.15,seedRate:95,yieldRate:460}});
 const CROP_ORDER=['grain','oats','pulses'];
 const cropAt=(crop,area)=>!crop.mix?'grain':area<crop.plannedArea*.65-.00001?'grain':area<crop.plannedArea*.85-.00001?'oats':'pulses';
-const cropLimit=(crop,good)=>!crop.mix?crop.plannedArea:good==='grain'?crop.plannedArea*.65:good==='oats'?crop.plannedArea*.85:crop.plannedArea;
+const cropLimit=(crop,good)=>{const area=crop.plannedArea??crop.active.length*LAND_HA;
+ return !crop.mix?area:good==='grain'?area*.65:good==='oats'?area*.85:area;
+};
 const DAY = 24;
 const LAND_HA = 0.0625;
 // Historically inspired scenario; not a statistically representative sample of England.
@@ -1176,7 +1178,7 @@ function outsideTrading(s){
   s.stats.outsideGrainIn=round((s.stats.outsideGrainIn||0)+quantity);
   const duration=Math.max(4,Math.ceil(route.length/9)+3);
   s.shipments.push({id:s.nextId++,kind:'outside-import',good:'grain',amount:quantity,
-   seller:-1,buyer:h.id,cost:0,carrierId:available.id,carrierHouseId:h.id,
+   seller:-1,buyer:h.id,cost:0,haulFee:0,carrierId:available.id,carrierHouseId:h.id,
    departure:s.day+1,day:s.day+duration+1,route:route.points,externalPayment:cost});
   available.travel={from:{x:h.x,y:h.y},to:{x:route.points.at(-1)?.x??h.x,y:route.points.at(-1)?.y??h.y},
    points:route.points,start:s.day+1,arrival:s.day+duration+1,end:s.day+duration*2+1};
@@ -1203,7 +1205,7 @@ function outsideTrading(s){
   h.wool=round(h.wool-quantity);
   const duration=Math.max(4,Math.ceil(route.length/9)+3);
   s.shipments.push({id:s.nextId++,kind:'outside-export',good:'wool',amount:quantity,
-   seller:h.id,buyer:-1,cost:0,externalPayment:cost,
+   seller:h.id,buyer:-1,cost:0,haulFee:0,externalPayment:cost,
    carrierId:available.id,carrierHouseId:h.id,departure:s.day+1,
    day:s.day+duration+1,route:route.points});
   available.travel={from:{x:h.x,y:h.y},to:{x:route.points.at(-1)?.x??h.x,y:route.points.at(-1)?.y??h.y},
