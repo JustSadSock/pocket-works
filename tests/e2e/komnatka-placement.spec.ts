@@ -10,7 +10,9 @@ async function enter(page:any){
  await page.waitForFunction(()=>(window as any).__KOMNATKA_TEST__?.stageReady===true,undefined,{timeout:25_000});
 }
 async function moveFromCatalog(page:any,type:string,target:Position){
- const box=await page.locator('#catalog [data-type="'+type+'"]').boundingBox();
+ const button=page.locator('#catalog [data-type="'+type+'"]');
+ await button.scrollIntoViewIfNeeded();
+ const box=await button.boundingBox();
  expect(box,'Expected catalog item to be measurable').not.toBeNull();
  await page.mouse.move(box!.x+box!.width/2,box!.y+box!.height/2);
  await page.mouse.down();
