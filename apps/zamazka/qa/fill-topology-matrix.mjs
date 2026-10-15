@@ -93,6 +93,34 @@ for(const orientation of ['horizontal','vertical'])for(const gap of [1,2])
   'gap '+gap+' '+orientation+' alpha '+alpha+' unexpectedly leaked');
  pinholes++;
 }
+// A star's two independent outlines are close near their pointed tips.
+// This exact all-pixel fixture reproduced partial fill even after an earlier,
+// insufficient three-pixel collinearity guard. Keep the regression forever.
+{
+ const w=180,h=180,walls=new Uint8ClampedArray(w*h*4),
+  zone=new Uint8ClampedArray(w*h*4),output=new Uint8ClampedArray(w*h*4);
+ for(let i=3;i<zone.length;i+=4)zone[i]=255;
+ const vertices=r=>Array.from({length:10},(_,i)=>{
+  const a=Math.PI*2*i/10-Math.PI/2,d=r*(i%2?.76:1);
+  return [90+Math.cos(a)*d,90+Math.sin(a)*d];
+ });
+ const paths=[vertices(58),vertices(50)];
+ const distance=(px,py,a,b)=>{
+  const dx=b[0]-a[0],dy=b[1]-a[1];
+  const t=Math.max(0,Math.min(1,((px-a[0])*dx+(py-a[1])*dy)/(dx*dx+dy*dy)));
+  return Math.hypot(px-a[0]-t*dx,py-a[1]-t*dy);
+ };
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  let nearest=Infinity;
+  for(const points of paths)for(let i=0;i<points.length;i++)
+   nearest=Math.min(nearest,distance(x+.5,y+.5,points[i],points[(i+1)%points.length]));
+  if(nearest<=1.7)walls[(y*w+x)*4+3]=255;
+ }
+ const count=floodFillRaster({width:w,height:h,walls,zone,output,
+  point:[90,36],color:[54,133,190]});
+ assert(count>750&&count<1400,
+  'star tip welded two independent contours and fragmented one continuous basin: '+count);
+}
 assert(validClosed>=1900,'too few connected layouts '+validClosed);
 assert(masked>=1400,'too few masked layouts '+masked);
 console.log('ZAMAZKA: '+generated+' layouts, '+validClosed+' closed basins, '+
