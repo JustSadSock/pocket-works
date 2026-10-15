@@ -16,7 +16,8 @@
         "rural-resilience.test.mjs",
         "historic-village.test.mjs",
         "medieval-economy.test.mjs",
-        "historical-calibration.test.mjs"
+        "historical-calibration.test.mjs",
+        "causality-audit.test.mjs"
       ]
     },
     {
@@ -312,6 +313,110 @@
         "--seeds=413,7777,43821,9001,11,29,12345,21773,51291,71331,101,202",
         "--years=20",
         "--output={output}/distribution.json"
+      ]
+    },
+    {
+      "id": "causality-family-30y",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/causality-study.mjs",
+      "args": [
+        "--group=family",
+        "--batch={seed}",
+        "--years=30",
+        "--output={output}/causality-family.json"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ]
+    },
+    {
+      "id": "causality-paired-25y",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/causality-study.mjs",
+      "args": [
+        "--group=paired",
+        "--batch={seed}",
+        "--years=25",
+        "--output={output}/causality-paired.json"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "causality-crisis-30y",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/causality-study.mjs",
+      "args": [
+        "--group=crisis",
+        "--batch={seed}",
+        "--years=30",
+        "--output={output}/causality-crisis.json"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "causality-genealogy-200y",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/causality-study.mjs",
+      "args": [
+        "--group=genealogy",
+        "--batch={seed}",
+        "--years=200",
+        "--output={output}/causality-genealogy.json"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
       ]
     }
   ]
