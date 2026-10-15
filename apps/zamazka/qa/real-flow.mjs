@@ -401,8 +401,11 @@ try{
       'Second pen should enter precision mode');
     const held=await page.evaluate(()=>{
       const canvas=document.querySelector('#paintCanvas'),arm=document.querySelector('#precisionArm');
-      const r=canvas.getBoundingClientRect();
-      const x=r.left+r.width*.5,y=r.top+r.height*.54;
+      // Editor zooms and recentres the damage zone, so its logical centre is
+      // the VIEWPORT centre, not the scaled canvas bounding rectangle centre.
+      // The precision nib is 18px left / 50px above the resting touch.
+      const v=document.querySelector('.restore .viewport').getBoundingClientRect();
+      const x=v.left+v.width*.5+18,y=v.top+v.height*.5+50;
       const send=(target,type,id,atX,atY)=>target.dispatchEvent(new PointerEvent(type,{
         bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:id===101,
         clientX:atX,clientY:atY,buttons:type==='pointerup'?0:1,button:0
