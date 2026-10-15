@@ -445,7 +445,7 @@ function showGuide(item,allowed){
  if(!guide)return;
  const meta=byType[item.type],[width,depth]=dimensions(item);
  guide.show({x:item.x,z:item.z,y:meta.tabletop?item.y:0,width,depth,valid:allowed,wall:meta.layer==='wall'});
- ui.hint.textContent=allowed?'Отпусти, чтобы поставить':'Здесь предмет не поместится';
+ ui.hint.textContent=allowed?(drag?'Отпусти, чтобы поставить':'Нажми, чтобы поставить'):'Здесь предмет не поместится';
  ui.hint.classList.toggle('invalid',!allowed);
  ui.hint.classList.add('visible');
 }
