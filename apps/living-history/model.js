@@ -1149,7 +1149,7 @@ export function foodAccess(s,h){
  const rationCoverageToday=need>0?round(Math.min(1,(h.grain+gardenToday+dairyToday+pulsesToday+oatsToday)/need)):0;
  const homes=s.households.filter(k=>k.id!==h.id&&liveMembers(s,k).length&&dist(k,h)<=68);
  const paths=walkingDistances(s,h);
- let localGrain=0,marketSurplus=0,possibleAid=0,connected=0,creditCeiling=0,workOffers=0;
+ let localGrain=0,marketSurplus=0,connected=0,creditCeiling=0,workOffers=0;
  const unspent=Math.max(0,h.coin);
  const fields=Math.max(0,h.fields.length+(h.leaseIn?.length||0)-(h.leaseOut?.length||0));
  const openCredit=(s.loans||[]).some(l=>l.borrowerId===h.id&&['active','in-transit'].includes(l.status));
@@ -1169,9 +1169,10 @@ export function foodAccess(s,h){
   if(spareWorkers&&steps<=16&&k.fields.length>=9&&
      k.grain>foodProtection(s,k)+CALIBRATION.grainDailyWageKg*6&&
      activeAdults(s,k).length<2)workOffers++;
-  if(steps<=40&&k.grain>foodProtection(s,k,true)+need*7)possibleAid+=Math.max(0,k.grain-foodProtection(s,k,true));
+
  }
  const inbound=s.shipments.filter(t=>t.good==='grain'&&t.buyer===h.id).reduce((n,t)=>n+t.amount,0);
+ const aid=aidAssessment(s,h);
  return {houseId:h.id,communityId:h.communityId,day:s.day,people:liveMembers(s,h).length,
   foodKg:round(h.grain),oatsKg:round(h.oats||0),pulsesKg:round(h.pulses||0),gardenEquivalentKg:round(h.garden||0),dairyEquivalentKg:round(h.dairy||0),
   rationCoverageToday,foodDaysInterpretation:'raw-inventory; not guaranteed edible days',
@@ -1180,7 +1181,7 @@ export function foodAccess(s,h){
   creditsDueKg:round((s.loans||[]).filter(l=>l.lenderId===h.id&&['active','in-transit'].includes(l.status)).reduce((n,l)=>n+l.owed,0)),
   connectedSellers:connected,reachableGrainKg:round(localGrain),
   offeredEmergencyKg:Math.floor(marketSurplus),affordableKg:Math.floor(Math.min(marketSurplus,unspent/Math.max(.45,price*1.3))),
-  potentialAidKg:round(possibleAid),potentialCreditKg:round(Math.min(creditCeiling,Math.max(0,attainableHarvest(s,h)*.32))),potentialGrainWorkplaces:workOffers,grainInTransitKg:round(inbound),
+  potentialAidKg:round(aid.dispatchableKg),aid,potentialCreditKg:round(Math.min(creditCeiling,Math.max(0,attainableHarvest(s,h)*.32))),potentialGrainWorkplaces:workOffers,grainInTransitKg:round(inbound),
   reason:days>=14&&rationCoverageToday>=.99?'supplied':inbound>need*7?'delivery-pending':marketSurplus===0?
    (creditCeiling>7?'credit-possible':workOffers?'paid-work-possible':'no-saleable-surplus'):
    h.coin<5?'no-cash':unspent/Math.max(.45,price*1.3)<need*7?'not-affordable':'market-or-carrier-delay'};
@@ -1380,48 +1381,103 @@ function fosterOrphans(s){
  }
 }
 
+// A single read-only set of eligibility rules powers the real relief shipment
+// and every diagnostic view. It never moves stock or rolls RNG.
+function aidPairDecision(s,donor,target,kin){
+ const targetNeed=foodNeed(s,target),donorNeed=foodNeed(s,donor);
+ const donorSeed=Math.min(250,donor.fields.length*LAND_HA*CALIBRATION.seedKgPerHa*.65);
+ if(!kin&&(target.grain>=targetNeed*10||donor.grain<donorNeed*480+donorSeed))
+  return {reason:'unrelated-relief-rule',kin,donorId:donor.id};
+ const protectedReserve=foodProtection(s,donor,true)+donorNeed*(kin?0:210);
+ const surplus=donor.grain-protectedReserve;
+ if(surplus<targetNeed*7)
+  return {reason:'donor-reserve',kin,donorId:donor.id,reserveKg:round(protectedReserve)};
+ const worker=liveMembers(s,donor).find(p=>p.age>=15&&p.health>25&&!p.travel&&p.hiredDay!==s.day);
+ if(!worker)return {reason:'no-hauler',kin,donorId:donor.id,reserveKg:round(protectedReserve)};
+ const route=routeBetween(s,donor,target);
+ if(route.length<1||route.length>40||!Number.isFinite(route.length))
+  return {reason:'route',kin,donorId:donor.id,reserveKg:round(protectedReserve)};
+ const quantity=round(Math.min(80,surplus*.25,targetNeed*21-target.grain));
+ if(quantity<=0)return {reason:'nonpositive-quantity',kin,donorId:donor.id,reserveKg:round(protectedReserve)};
+ const duration=Math.max(1,Math.ceil(route.length/10));
+ return {reason:'eligible',kin,donorId:donor.id,carrierId:worker.id,
+  quantity,reserveKg:round(protectedReserve),travelDays:duration,
+  // References are internal: never put live objects in saved/returned evidence.
+  donor,worker,route,duration};
+}
+function aidDecision(s,target){
+ const people=liveMembers(s,target);
+ if(!people.length)return {reason:'uninhabited',tested:0,rejectedByReason:{}};
+ const need=foodNeed(s,target);
+ if(target.grain>=need*35)return {reason:'not-needy',tested:0,rejectedByReason:{}};
+ if(s.shipments.some(t=>t.kind==='aid'&&t.buyer===target.id))
+  return {reason:'delivery-pending',tested:0,rejectedByReason:{}};
+ const donors=nearbyHomes(s,target.x,target.y,32)
+  .filter(h=>h.id!==target.id&&liveMembers(s,h).length>0)
+  .map(donor=>({donor,kin:liveMembers(s,donor).some(p=>people.some(q=>areCloseKin(s,p,q)))}))
+  .sort((a,b)=>Number(b.kin)-Number(a.kin)||dist(a.donor,target)-dist(b.donor,target)||a.donor.id-b.donor.id);
+ const rejectedByReason={};
+ let firstRejection=null;
+ for(const {donor,kin} of donors){
+  const offered=aidPairDecision(s,donor,target,kin);
+  if(offered.reason==='eligible')
+   return {reason:'eligible',offer:offered,tested:donors.length,rejectedByReason,firstRejection};
+  rejectedByReason[offered.reason]=(rejectedByReason[offered.reason]||0)+1;
+  firstRejection??=offered.reason;
+ }
+ return {reason:donors.length?'no-eligible-donor':'no-nearby-donor',tested:donors.length,
+  rejectedByReason,firstRejection};
+}
+export function aidEligibility(s,donor,target){
+ // Pair-level diagnostic includes the very same limits as actual dispatch.
+ if(!liveMembers(s,target).length)return {eligible:false,reason:'uninhabited'};
+ if(target.grain>=foodNeed(s,target)*35)return {eligible:false,reason:'not-needy'};
+ if(s.shipments.some(t=>t.kind==='aid'&&t.buyer===target.id))
+  return {eligible:false,reason:'delivery-pending'};
+ if(donor.id===target.id||dist(donor,target)>32||!liveMembers(s,donor).length)
+  return {eligible:false,reason:'no-nearby-donor'};
+ const kin=liveMembers(s,donor).some(p=>liveMembers(s,target).some(q=>areCloseKin(s,p,q)));
+ const r=aidPairDecision(s,donor,target,kin);
+ return {eligible:r.reason==='eligible',reason:r.reason,donorId:donor.id,kin,
+  carrierId:r.carrierId??null,quantityKg:r.quantity??0,
+  protectedReserveKg:r.reserveKg??null,travelDays:r.travelDays??null};
+}
+export function aidAssessment(s,target){
+ const result=aidDecision(s,target);
+ const due=s.day%7===0,offer=result.offer;
+ const dispatchable=!!offer&&due;
+ return {
+  day:s.day,houseId:target.id,
+  status:offer?(due?'dispatchable':'awaiting-weekly-review'):result.reason,
+  reason:offer?(due?'eligible':'weekly-review'):result.firstRejection||result.reason,
+  canDispatchNow:dispatchable,
+  nextReviewDay:s.day+((7-s.day%7)%7),
+  donorId:offer?.donorId??null,carrierId:offer?.carrierId??null,
+  kin:offer?.kin??null,routeDays:offer?.travelDays??null,
+  // Only actual currently schedulable grain counts as available aid.
+  dispatchableKg:dispatchable?offer.quantity:0,
+  eligibleIfReviewedNowKg:offer?.quantity??0,
+  candidateCount:result.tested,rejectedByReason:result.rejectedByReason,
+  // A valid donor today does not guarantee a shipment on a future review day.
+  timingCaveat:'Eligibility is a snapshot; actual weekly delivery also depends on future stock and labour.',
+ };
+}
 function mutualAid(s){
- // Food relief is neither a universal redistribution nor a conjured food source.
- // Neighbours may offer a short ration only after protecting their own seed and
- // food until harvest. Actual cargo, travel time and household labour are required.
- const needy=s.households.filter(h=>liveMembers(s,h).length>0&&h.grain<foodNeed(s,h)*35);
- for(const target of needy){
-  if(s.shipments.some(t=>t.kind==='aid'&&t.buyer===target.id))continue;
-  const targetPeople=liveMembers(s,target);
-  const donors=nearbyHomes(s,target.x,target.y,32).filter(h=>h.id!==target.id&&liveMembers(s,h).length>0);
-  donors.sort((a,b)=>{
-   const kinA=liveMembers(s,a).some(p=>targetPeople.some(q=>areCloseKin(s,p,q)))?0:1;
-   const kinB=liveMembers(s,b).some(p=>targetPeople.some(q=>areCloseKin(s,p,q)))?0:1;
-   return kinA-kinB||dist(a,target)-dist(b,target)||a.id-b.id;
-  });
-  for(const donor of donors){
-   const kin=liveMembers(s,donor).some(p=>targetPeople.some(q=>areCloseKin(s,p,q)));
-   // Unrelated households give only from a larger real surplus.
-   // Historical evidence does not support universal non-kin charity.
-   // Unrelated relief is exceptional, and only from markedly secure stores.
-   if(!kin&&(target.grain>=foodNeed(s,target)*10||
-      donor.grain<foodNeed(s,donor)*480+Math.min(250,donor.fields.length*LAND_HA*CALIBRATION.seedKgPerHa*.65)))continue;
-   const protectedReserve=foodProtection(s,donor,true)+foodNeed(s,donor)*(kin?0:210);
-   const surplus=donor.grain-protectedReserve;
-   if(surplus<foodNeed(s,target)*7)continue;
-   const worker=liveMembers(s,donor).find(p=>p.age>=15&&p.health>25&&!p.travel&&p.hiredDay!==s.day);
-   if(!worker)continue;
-   const route=routeBetween(s,donor,target);
-   if(route.length<1||route.length>40||!Number.isFinite(route.length))continue;
-   const quantity=round(Math.min(80,surplus*.25,foodNeed(s,target)*21-target.grain));
-   if(quantity<=0)continue;
-   const duration=Math.max(1,Math.ceil(route.length/10));
-   donor.grain=round(donor.grain-quantity);earn(s,donor,'aidGiven',quantity);
-   const shipment={id:s.nextId++,kind:'aid',good:'grain',amount:quantity,seller:donor.id,buyer:target.id,cost:0,carrierId:worker.id,carrierHouseId:donor.id,haulFee:0,departure:s.day+1,day:s.day+duration+1,route:route.points};
-   s.shipments.push(shipment);
-   worker.travel={from:{x:donor.x,y:donor.y},to:{x:target.x,y:target.y},points:route.points,start:s.day+1,arrival:s.day+duration+1,end:s.day+duration*2+1};
-   worker.job='haul';recordWork(worker,'haul',duration*2);
-   s.stats.aid=round((s.stats.aid||0)+quantity);
-   event(s,'aid',`Семья ${familyName(s,donor)} передала ${quantity} кг зерна соседям`,
-     kin?'Родственная поддержка, добровольная передача настоящих запасов':'Помощь соседям из избытка после сохранения семян и пищи своей семьи',
-     [donor.id,target.id],{quantity,kin,donorRemaining:round(donor.grain)});
-   break;
-  }
+ // No grants, no teleports: the selected donor must pass the same predicate
+ // shown by aidAssessment. Every kg travels from an actual donor.
+ for(const target of s.households){
+  const decision=aidDecision(s,target),offer=decision.offer;
+  if(!offer)continue;
+  const {donor,worker,route,kin,quantity,duration}=offer;
+  donor.grain=round(donor.grain-quantity);earn(s,donor,'aidGiven',quantity);
+  const shipment={id:s.nextId++,kind:'aid',good:'grain',amount:quantity,seller:donor.id,buyer:target.id,cost:0,carrierId:worker.id,carrierHouseId:donor.id,haulFee:0,departure:s.day+1,day:s.day+duration+1,route:route.points};
+  s.shipments.push(shipment);
+  worker.travel={from:{x:donor.x,y:donor.y},to:{x:target.x,y:target.y},points:route.points,start:s.day+1,arrival:s.day+duration+1,end:s.day+duration*2+1};
+  worker.job='haul';recordWork(worker,'haul',duration*2);
+  s.stats.aid=round((s.stats.aid||0)+quantity);
+  event(s,'aid',`Семья ${familyName(s,donor)} передала ${quantity} кг зерна соседям`,
+   kin?'Родственная поддержка, добровольная передача настоящих запасов':'Помощь соседям из избытка после сохранения семян и пищи своей семьи',
+   [donor.id,target.id],{quantity,kin,donorRemaining:round(donor.grain)});
  }
 }
 
