@@ -92,3 +92,19 @@ test('one-year family CLI produces real audited monthly households and matching 
   assert.ok(data.results.every(x=>x.deaths.length===x.starvationCount&&x.missingCases===0));
  }finally{rmSync(folder,{recursive:true,force:true});}
 });
+
+test('a fatal-day workforce collapse is NOT classified as a pre-existing cause',()=>{
+ const last={day:21,houseId:10,people:1,stockDays:4,possibleRationToday:.2,
+  ownedFields:50,availableAdults:0,shortageDays:24,outstandingLoansKg:20,foodDebtMax:60};
+ const before=Array.from({length:20},(_,i)=>({
+  ...last,day:i+1,availableAdults:1,shortageDays:0,outstandingLoansKg:0
+ }));
+ const cause={day:21,foodDays:4,potentialAidKg:0,affordableKg:0,grainInTransitKg:0};
+ const flags=detectCausalFlags(last,cause,before);
+ assert.ok(!flags.includes('persistent-labour-shortage-before-death'));
+ assert.ok(!flags.includes('persistent-food-shortage-with-debt'));
+ const chronic=before.map(x=>({...x,availableAdults:0,shortageDays:24,outstandingLoansKg:20}));
+ const chronicFlags=detectCausalFlags(last,cause,chronic);
+ assert.ok(chronicFlags.includes('persistent-labour-shortage-before-death'));
+ assert.ok(chronicFlags.includes('persistent-food-shortage-with-debt'));
+});

@@ -53,14 +53,17 @@ export function householdFoodSnapshot(s,h,people=[]) {
  };
 }
 
-export function detectCausalFlags(snapshot,foodAccessAtDeath=null){
+export function detectCausalFlags(snapshot,foodAccessAtDeath=null,preDeathDays=[]){
  const flags=[];
  if(snapshot?.people>0 && snapshot.stockDays>=14 && snapshot.possibleRationToday<.99)
   flags.push('stocks-do-not-cover-daily-diet');
- if(snapshot?.people>0 && snapshot.availableAdults===0 && snapshot.ownedFields>0)
-  flags.push('land-without-available-labour');
- if(snapshot?.people>0 && snapshot.shortageDays>0 && snapshot.outstandingLoansKg>0)
-  flags.push('food-shortage-with-existing-debt');
+ // A worker who died TODAY must not be counted as evidence that the household
+ // lacked workers BEFORE the death. Require persistent pre-death observations.
+ const prior=preDeathDays.filter(row=>row.day<foodAccessAtDeath?.day || !foodAccessAtDeath).slice(-30);
+ if(prior.length>=14 && prior.filter(x=>x.ownedFields>0 && x.availableAdults===0).length>=14)
+  flags.push('persistent-labour-shortage-before-death');
+ if(prior.length>=14 && prior.filter(x=>x.shortageDays>0 && x.outstandingLoansKg>0).length>=14)
+  flags.push('persistent-food-shortage-with-debt');
  if(foodAccessAtDeath){
   if(foodAccessAtDeath.foodDays>=14 && snapshot?.foodDebtMax>0)
    flags.push('death-despite-positive-aggregate-stock-days');
@@ -110,12 +113,16 @@ export class CausalityRecorder {
    if(this.deathCases.length>=this.deathCaseLimit)continue;
    const timeline=(this.rings.get(cause.houseId)||[]).filter(x=>x&&x.day>=s.day-HOUSEHOLD_TRACE_DAYS+1&&x.day<=s.day)
      .sort((a,b)=>a.day-b.day);
-   const latest=timeline.at(-1)||null;
+   const previousDays=timeline.filter(x=>x.day<s.day);
+   // The snapshot from the fatal day has already lost the dead person's
+   // workforce/health state. Use the preceding day for causal attribution.
+   const latest=previousDays.at(-1)||timeline.at(-1)||null;
    this.deathCases.push({
     day:s.day,year:round(s.day/365),personId:cause.personId,
     houseId:cause.houseId,age:cause.age,reason:cause.reason,
     shortageDays:cause.shortageDays,foodAccessAtDeath:{...cause},
-    diagnosticFlags:detectCausalFlags(latest,cause),timeline,
+    preDeathObservationDays:previousDays.length,
+    diagnosticFlags:detectCausalFlags(latest,cause,previousDays),timeline,
     evidenceLimit:'Snapshots cover up to 90 days; available purchases/aid are possibilities, not guaranteed transactions.',
    });
   }
