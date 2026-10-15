@@ -982,3 +982,59 @@ html,body{background:#242822}
  .app-shell .dialog-box .inspection-details {max-height:63px}
  .app-shell .dialog-box:has(>.inspection-stage) > #modalActions {right:12px;top:12px}
 }
+
+
+/* Screenshot review: canonical profile is a quiet identity row, not a gray CTA. */
+.screen>.page.lobby-entry .entry-profile {
+ width:100%!important;min-width:0;
+ border:0!important;border-bottom:1px solid #cfc6b8!important;
+ border-radius:0!important;background:transparent!important;
+ box-shadow:none!important;color:#3c342b!important;
+ padding:11px 0 14px!important;text-align:left!important;
+ filter:none!important;transform:none!important;
+}
+.screen>.page.lobby-entry .entry-profile:hover {
+ background:#d6cab638!important;box-shadow:none!important;
+}
+.screen>.page.lobby-entry .entry-profile strong {color:#343127!important}
+.screen>.page.lobby-entry .entry-profile small {color:#80725e!important}
+.screen>.page.lobby-entry .entry-profile:focus-visible {
+ outline:2px solid #a2865b;outline-offset:3px;
+}
+@media (max-width:760px) {
+ .screen>.page.exhibition-lobby .lobby-mast {
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;gap:12px!important;
+ }
+ .screen>.page.exhibition-lobby .lobby-mast>div {
+  grid-column:1;grid-row:1;min-width:0;
+ }
+ .screen>.page.exhibition-lobby .lobby-mast .lobby-self {
+  display:none!important; /* The shell's Pocket ID avatar remains visible and interactive. */
+ }
+ .screen>.page.exhibition-lobby .lobby-mast .lobby-exit {
+  grid-column:2;grid-row:1;order:initial!important;
+  margin:0!important;align-self:center;white-space:nowrap;
+ }
+}
+.app-shell .dialog-box .inspection-stage {
+ position:relative;
+}
+.app-shell .dialog-box .inspection-loading {
+ position:absolute;z-index:2;inset:0;
+ display:grid;place-items:center;
+ font:500 12px system-ui,sans-serif;letter-spacing:.03em;
+ color:#d3c3ad;text-align:center;
+}
+.app-shell .dialog-box .inspection-stage.is-ready .inspection-loading {
+ display:none;
+}
+.app-shell .dialog-box .inspection-stage > .art-inspection {
+ opacity:0;transition:opacity 200ms ease;
+}
+.app-shell .dialog-box .inspection-stage.is-ready > .art-inspection {
+ opacity:1;
+}
+@media (prefers-reduced-motion:reduce){
+ .app-shell .dialog-box .inspection-stage > .art-inspection {transition:none}
+}
