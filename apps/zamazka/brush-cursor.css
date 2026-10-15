@@ -1,0 +1,46 @@
+
+/* Illustrated brush cursor. Its SVG tip is always anchored at the actual nib center. */
+.restore[data-active-tool="brush"] .viewport,
+.restore[data-active-tool="brush"] .viewport canvas{cursor:none!important}
+.restore .brush-cursor{isolation:isolate}
+.restore .brush-cursor .brush-cursor-art{
+ position:absolute;left:50%;top:50%;z-index:1;width:90px;height:90px;
+ transform-origin:10.435px 10.435px;
+ transform:translate(-10.435px,-10.435px) rotate(var(--brush-angle,0deg));
+ transition:transform 110ms cubic-bezier(.18,.9,.3,1.22),opacity 110ms ease;
+ will-change:transform;filter:drop-shadow(1px 2px 1px #15110d66);pointer-events:none
+}
+.restore .brush-cursor .brush-cursor-art svg{width:100%;height:100%;display:block;overflow:visible;transform-origin:11.594% 11.594%}
+.restore .brush-cursor .brush-cursor-art .fibers{transform-box:fill-box;transform-origin:50% 0%;transition:transform 115ms cubic-bezier(.25,.85,.2,1.18)}
+.restore .brush-cursor .brush-cursor-art .shaft{transition:transform 115ms ease}
+.restore .brush-cursor:not(.is-brush) .brush-cursor-art{display:none}
+.restore .brush-cursor.is-pressed .brush-cursor-art .fibers{transform:scaleY(.91)}
+.restore .brush-cursor.is-pressed .brush-cursor-art .shaft{transform:translateY(-1.6px)}
+.restore .brush-cursor.is-blocked .brush-cursor-art{opacity:.4;filter:grayscale(.8)}
+.restore .brush-cursor.is-blocked{border-style:dashed;border-color:#c38175;outline-color:#793b34;background:#b85e4a18}
+.restore .brush-cursor.is-blocked:after{background:#a14c3f;box-shadow:0 0 0 1px #eacdb8}
+.restore .brush-cursor.is-idle:not(.is-pressed) .brush-cursor-art svg{animation:zamazka-brush-breathe 2.6s ease-in-out infinite}
+.restore .brush-cursor.is-lifted .brush-cursor-art svg{animation:zamazka-brush-lift .32s ease-out}
+.restore .brush-cursor.is-changing .brush-cursor-art svg{animation:zamazka-brush-enter .32s cubic-bezier(.15,1.4,.4,1)}
+.restore .brush-cursor.is-dipping .brush-cursor-art svg{animation:zamazka-brush-dip .46s ease-in-out}
+.restore .brush-cursor .brush-cursor-sparks{position:absolute;left:50%;top:50%;width:5px;height:5px;opacity:0;pointer-events:none;box-shadow:none}
+.restore .brush-cursor.is-brush.is-fast.is-lifted .brush-cursor-sparks{animation:zamazka-brush-sparks .34s ease-out;box-shadow:10px -6px 0 -1px var(--brush-ink,#304a43),17px -11px 0 -1.5px var(--brush-ink,#304a43),7px -14px 0 -2px var(--brush-ink,#304a43)}
+.restore .brush-cursor.is-brush{background:color-mix(in srgb,var(--brush-ink,#304a43) 8%,transparent)}
+.restore .brush-cursor.is-brush:after{width:2px;height:2px;z-index:2}
+.restore .brush-cursor.is-brush.is-pressed{box-shadow:0 0 4px #19120c66}
+.restore .brush-cursor.is-brush.is-idle{border-style:dashed}
+.restore .brush-cursor.is-brush.is-blocked:before{content:"";position:absolute;inset:50% auto auto 50%;width:calc(100% + 5px);height:1px;background:#a24b3f;transform:translate(-50%,-50%) rotate(-45deg);pointer-events:none}
+.restore .brush-cursor[hidden]{display:none!important}
+.cursor-style-choice{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:9px}
+.cursor-style-choice select{min-width:125px;max-width:55%;height:38px;padding:5px 8px;font-size:13px}
+.cursor-style-preview{display:flex;align-items:center;gap:9px;margin-top:6px;min-height:47px;color:#69543d;font-size:11px}
+.cursor-style-preview svg{width:49px;height:49px;flex:none;filter:drop-shadow(1px 2px 1px #271b1445)}
+@keyframes zamazka-brush-breathe{0%,100%{transform:rotate(0deg)}50%{transform:rotate(1.65deg)}}
+@keyframes zamazka-brush-lift{0%{transform:scale(.94) rotate(-4deg)}54%{transform:scale(1.04) rotate(3deg)}100%{transform:none}}
+@keyframes zamazka-brush-enter{0%{transform:scale(.78) rotate(-9deg);opacity:.3}70%{transform:scale(1.03) rotate(2deg)}100%{transform:none;opacity:1}}
+@keyframes zamazka-brush-dip{0%{transform:none}30%{transform:rotate(-15deg) scale(.94)}65%{transform:rotate(-8deg) scale(.97)}100%{transform:none}}
+@keyframes zamazka-brush-sparks{0%{opacity:.8;transform:scale(.6)}100%{opacity:0;transform:scale(1.45)}}
+@media(prefers-reduced-motion:reduce){
+ .restore .brush-cursor .brush-cursor-art,.restore .brush-cursor .brush-cursor-art .fibers,.restore .brush-cursor .brush-cursor-art .shaft{transition:none}
+ .restore .brush-cursor .brush-cursor-art svg,.restore .brush-cursor .brush-cursor-sparks{animation:none!important}
+}
