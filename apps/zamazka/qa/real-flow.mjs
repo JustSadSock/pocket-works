@@ -283,6 +283,8 @@ try{
   }));
   assert(previewRatios.length===5&&previewRatios.every(x=>!x.clipped&&x.frameX<3&&x.frameY<3&&Math.abs(x.real-x.shown)<.012),
     'All five picture frames must fit real bitmap ratios without cropping: '+JSON.stringify(previewRatios));
+  await page.waitForTimeout(2900); // Let the real transient settings toast finish before evidence capture.
+  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-gallery-'+viewport.width+'.png'),fullPage:false});
   // Exercise three extreme image ratios without replacing the real preview DOM.
   const synthetic=await page.locator('.mobile-preview .picture-mat img').evaluateAll(async images=>{
     const shapes=[[180,350],[480,180],[300,300]];
@@ -298,9 +300,7 @@ try{
     return Math.abs(r.width/r.height-img.naturalWidth/img.naturalHeight)<.012&&
       frame.width<=host.width+2&&frame.height<=host.height+2&&r.width>25&&r.height>25;
   }),null,{timeout:6000});
-    await page.waitForTimeout(2900); // Let the real transient settings toast finish before evidence capture.
-  if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-gallery-'+viewport.width+'.png'),fullPage:false});
-  await page.locator('[data-action="skip"]').click();
+    await page.locator('[data-action="skip"]').click();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
   assert.equal(await page.locator('.museum-passage').count(),0,'No full-screen sliding doors');
   assert.equal(await page.locator('.restore .set-furniture').count(),1,'Opt-in atelier must have restrained scene dressing');
