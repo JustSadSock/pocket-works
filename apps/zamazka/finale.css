@@ -410,3 +410,37 @@
  #screen>.finale-results .finale-results-main{
   grid-template-rows:minmax(135px,.65fr) minmax(0,1.35fr)!important}
 }
+
+/* Salon hanging on tall wide desktops: one large accused picture, four
+   supporting dossiers. Actual vote counts choose the feature; labels retain
+   original artwork numbers. Small windows keep the familiar five slots. */
+@media(min-width:1600px) and (min-height:850px){
+ #screen>.verdict-phase .finale-ballot-grid{
+  display:grid!important;grid-template-columns:minmax(0,1.6fr) repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:repeat(2,minmax(0,1fr))!important;
+  gap:clamp(10px,1.1vw,20px)!important;align-items:stretch!important
+ }
+ #screen>.verdict-phase .finale-ballot-card{height:100%!important;max-height:100%!important;
+  align-self:stretch!important;padding:clamp(5px,.6vw,11px)!important;gap:4px!important}
+ #screen>.verdict-phase .finale-ballot-card.is-featured{
+  grid-column:1!important;grid-row:1/3!important;order:-1;
+  background:#ead7b3!important;border-color:#a7834c!important
+ }
+ #screen>.verdict-phase .finale-ballot-card .verdict-image{
+  flex:1 1 auto!important;aspect-ratio:auto!important;max-height:none!important;min-height:0!important}
+ #screen>.verdict-phase .finale-ballot-card .verdict-image img{
+  object-fit:contain!important;height:100%!important;width:100%!important}
+ #screen>.verdict-phase .finale-ballot-card.is-featured .finale-card-caption strong{font-size:24px!important}
+ #screen>.verdict-phase .finale-ballot-card.is-featured .finale-vote-tally strong{font-size:37px!important}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-voters{display:none}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-card-caption{min-height:18px!important}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-card-caption strong{font-size:14px!important}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-ballot-votes{padding-top:3px!important}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-vote-tally strong{font-size:23px!important}
+}
+/* Portrait mobile: a near full-width physical frame with the edge of the next
+   exhibit visible as the affordance to swipe. No giant empty photo mat. */
+@media(max-width:700px){
+ #screen>.verdict-phase .finale-ballot-card{
+  flex-basis:clamp(245px,82vw,355px)!important;width:clamp(245px,82vw,355px)!important}
+}
