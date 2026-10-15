@@ -20,7 +20,7 @@ test('different crops consume their own seeds and produce their own audited harv
  assert.ok(s.stats.oatsSeeded>0&&s.stats.pulsesSeeded>0,'real oat/legume seed was spent');
  assert.ok(s.stats.oatsHarvested>0&&s.stats.pulsesHarvested>0,'different crops produce separately');
  assert.ok(s.stats.pulsesEaten>0,'beans and peas can actually feed people');
- assert.ok(s.households.some(h=>h.farmYear.cropYields.oats>0&&h.farmYear.cropYields.pulses>0));
+ assert.ok(s.households.some(h=>(h.farmYear?.cropYields?.oats||0)>0&&(h.farmYear?.cropYields?.pulses||0)>0));
  check(s);
 });
 test('sheep, dairy cows and draft oxen keep distinct headcounts and shearing requires a worker',()=>{
