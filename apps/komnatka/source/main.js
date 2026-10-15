@@ -385,9 +385,10 @@ function memoryReviewPhoto(items,finishes){
   state=sanitize({...finishes,items});
   refresh();scene.render();
   const thumb=document.createElement('canvas'),context=thumb.getContext('2d');
-  thumb.width=500;thumb.height=420;
+  thumb.width=440;
+  thumb.height=Math.round(440*ui.canvas.height/Math.max(1,ui.canvas.width));
   context.fillStyle='#f3e6d4';context.fillRect(0,0,thumb.width,thumb.height);
-  context.drawImage(ui.canvas,0,0,500,420);
+  context.drawImage(ui.canvas,0,0,thumb.width,thumb.height);
   return thumb.toDataURL('image/jpeg',.91);
  }catch(error){console.warn('Comparison photograph unavailable',error);return null;}
  finally{state=saved;refresh();}
