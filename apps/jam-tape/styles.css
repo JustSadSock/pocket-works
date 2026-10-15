@@ -144,3 +144,11 @@
  .console .section-title{align-items:flex-end}
  .console .section-title .micro{font-size:9px;text-align:right}
 }
+
+
+/* Explicit tape-colored slider rails; Chromium/WebKit native progress tint is inconsistent. */
+@media(min-width:761px){.modal{max-height:calc(100dvh - 48px)}}
+.note-controls input[type=range]{background:transparent!important;accent-color:var(--orange)!important;padding:0!important;box-shadow:none!important}
+.note-controls input[type=range]::-webkit-slider-runnable-track{height:6px;background:#aebbad;border:0;border-radius:0;box-shadow:none}
+.note-controls input[type=range]::-moz-range-track{height:6px;background:#aebbad;border:0;border-radius:0}
+.note-controls input[type=range]::-moz-range-progress{height:6px;background:var(--orange);border-radius:0}
