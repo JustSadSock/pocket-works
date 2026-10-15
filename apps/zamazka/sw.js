@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.39.1';
+const CACHE_NAME = 'zamazka-v1.39.2';
 const ART_CACHE = 'zamazka-artworks-v1.12.5';
 const APP_VERSION = '1.39.2';
 const RELEASE_DATE = '2026-10-15';
