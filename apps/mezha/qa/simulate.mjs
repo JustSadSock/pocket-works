@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import {createGame,action,tick,stats,save,load,W,H,LIMIT,DOMINATION_SITES,DOMINATION_SECONDS} from '../engine.js';
-const dt=.05;
+import {createGame,action,tick,stats,save,load,W,H,WORLD_SCALE,LIMIT,DOMINATION_SITES,DOMINATION_SECONDS,SITE_DEFS} from '../engine.js';
+const dt=.05,P=n=>n*WORLD_SCALE;
 function play(s,secs,turn=()=>{}) {
  for(let i=0;i<secs/dt&&s.phase==='battle';i++){
   turn(s,i);tick(s,dt);
@@ -16,7 +16,7 @@ function testCore(){
  assert.equal(s.squads.length,8,'missing initial armies');
  assert.deepEqual([stats(s,0).troops,stats(s,1).troops],[4,4]);
  assert.equal(action(s,0,{kind:'order',captain:2,mode:'capture',x:450,y:300}).ok,false);
- assert.equal(action(s,0,{kind:'order',captain:0,mode:'raid',x:479,y:306}).ok,true);
+ assert.equal(action(s,0,{kind:'order',captain:0,mode:'raid',x:P(479),y:P(306)}).ok,true);
  assert.equal(action(s,0,{kind:'recruit',type:'levy'}).ok,true);
  assert.equal(stats(s,0).troops,5);
  assert.equal(action(s,0,{kind:'fort',site:'orchard'}).ok,true);
@@ -25,9 +25,9 @@ function testCore(){
  for(let i=0;i<20;i++)action(s,0,{kind:'recruit',type:'levy'});
  assert.equal(stats(s,0).troops,12,'recruit cap');
  const a=createGame(711,false);
- action(a,0,{kind:'order',captain:0,mode:'capture',x:850,y:310});
- play(a,90);
- assert.ok(a.squads.some(u=>u.side===0&&u.x>540),'river crossing');
+ action(a,0,{kind:'order',captain:0,mode:'capture',x:P(850),y:P(310)});
+ play(a,32);
+ assert.ok(a.squads.some(u=>u.side===0&&u.x>P(540)),'river crossing');
  const b=createGame(121,true);
  play(b,10);const restored=load(save(b));
  assert.deepEqual(restored,b,'snapshot mismatch');
@@ -37,8 +37,8 @@ function testCore(){
 function testSiege(){
  function siege(supplied){
   const s=createGame(900,false);s.squads=s.squads.filter(u=>u.side===0);
-  for(const u of s.squads){u.x=836;u.y=309;u.maxHp=u.hp=1000;u.morale=100}
-  for(const c of s.orders.filter(c=>c.side===0)){c.x=850;c.y=310;c.site=null}
+  for(const u of s.squads){u.x=P(836);u.y=P(309);u.maxHp=u.hp=1000;u.morale=100}
+  for(const c of s.orders.filter(c=>c.side===0)){c.x=P(850);c.y=P(310);c.site=null}
   if(supplied)s.sites.find(z=>z.id==='ford').owner=0;
   play(s,5);return {loss:480-s.players[1].base,damage:1000-s.squads[0].hp};
  }
@@ -55,11 +55,11 @@ function run(seed,strategy){
    action(s,0,{kind:'recruit',type});
   }
   if(i%700!==0)return;
-  if(strategy==='rush')for(let c=0;c<2;c++)action(s,0,{kind:'order',captain:c,mode:'capture',x:842,y:310});
+  if(strategy==='rush')for(let c=0;c<2;c++)action(s,0,{kind:'order',captain:c,mode:'capture',x:P(842),y:P(310)});
   if(strategy==='frontier'||strategy==='control'){
    if(i===0){
-    action(s,0,{kind:'order',captain:0,mode:'capture',x:482,y:122});
-    action(s,0,{kind:'order',captain:1,mode:'capture',x:strategy==='control'?478:485,y:strategy==='control'?306:516});
+    action(s,0,{kind:'order',captain:0,mode:'capture',x:P(482),y:P(122)});
+    action(s,0,{kind:'order',captain:1,mode:'capture',x:P(strategy==='control'?478:485),y:P(strategy==='control'?306:516)});
    }else if(strategy==='frontier'){
     for(let c=0;c<2;c++){
      const o=s.orders[c],remaining=s.sites.filter(z=>z.owner!==0).sort((a,b)=>Math.hypot(a.x-o.x,a.y-o.y)-Math.hypot(b.x-o.x,b.y-o.y));
@@ -82,7 +82,7 @@ function testRaidAndTowers(){
  assert.ok(target.raided>0,'raiding sprite not flagged');
  const t=createGame(502,false),loc=t.sites.find(z=>z.id==='orchard');
  loc.fort=2;t.squads=t.squads.filter(u=>u.side===1);
- const victim=t.squads[0];victim.x=loc.x+30;victim.y=loc.y;
+ const victim=t.squads[0];victim.x=loc.x+P(30);victim.y=loc.y;
  const before=victim.hp;tick(t,.05);
  assert.ok(victim.hp<before,'fort tower did not shoot nearby opponent');
 }
@@ -91,8 +91,8 @@ function testDistinctOrders(){
  function occupancy(mode){
   const s=createGame(937,false);
   s.squads=s.squads.filter(u=>u.side===0&&u.captain===0);
-  for(const u of s.squads){u.x=478;u.y=306;u.retreat=false}
-  action(s,0,{kind:'order',captain:0,mode,x:478,y:306});
+  for(const u of s.squads){u.x=P(478);u.y=P(306);u.retreat=false}
+  action(s,0,{kind:'order',captain:0,mode,x:P(478),y:P(306)});
   play(s,40);
   return s.sites.find(z=>z.id==='ford').owner;
  }
@@ -112,10 +112,10 @@ function testDistinctOrders(){
   const defender=s.squads.find(u=>u.side===0&&u.captain===0);
   const attacker=s.squads.find(u=>u.side===1&&u.captain===2);
   s.squads=[defender,attacker];
-  defender.x=236;defender.y=146;defender.attack=100;
-  attacker.x=250;attacker.y=146;attacker.attack=0;
-  action(s,0,{kind:'order',captain:0,mode,x:236,y:146});
-  action(s,1,{kind:'order',captain:2,mode:'capture',x:236,y:146});
+  defender.x=P(236);defender.y=P(146);defender.attack=100;
+  attacker.x=P(250);attacker.y=P(146);attacker.attack=0;
+  action(s,0,{kind:'order',captain:0,mode,x:P(236),y:P(146)});
+  action(s,1,{kind:'order',captain:2,mode:'capture',x:P(236),y:P(146)});
   const hp=defender.hp;tick(s,.05);return hp-defender.hp;
  }
  const inCapture=incoming('capture'),inDefend=incoming('defend');
@@ -149,7 +149,7 @@ function testAutonomousRival(){
  assert.ok(s.orders.some(o=>o.side===1&&['silver','ford','fen'].includes(o.site)),'AI must contest central objectives');
  const danger=createGame(817,true,'regular');
  const attackers=danger.squads.filter(u=>u.side===0);
- for(const u of attackers){u.x=842+(u.id%2)*8;u.y=310;u.hp=1000;u.maxHp=1000}
+ for(const u of attackers){u.x=P(842+(u.id%2)*8);u.y=P(310);u.hp=1000;u.maxHp=1000}
  danger.botClock=0;
  tick(danger,.05);
  assert.equal(danger.orders[2].mode,'defend','one captain must respond to a direct castle threat');
@@ -159,11 +159,31 @@ function testAutonomousRival(){
  assert.ok(choices[2].next>choices[0].next,'veteran must recruit more actively than casual');
  const snapshot=JSON.parse(save(s));snapshot.revision=2;delete snapshot.botSkill;delete snapshot.botPlans;
  const migrated=load(JSON.stringify(snapshot));
- assert.ok(migrated&&migrated.revision===3&&migrated.botSkill==='regular','older save must migrate');
+ assert.ok(migrated&&migrated.revision===4&&migrated.botSkill==='regular','older save must migrate');
  assert.equal(migrated.squads.length,s.squads.length,'migrating must preserve all units');
  tick(migrated,.05);
  return {initialPlans:s.botPlans.length,defendPlan:danger.botPlans.length,casualUnits:choices[0].next-9,veteranUnits:choices[2].next-9};
 }
+function testLongMarchAndMigration(){
+ const s=createGame(778,false);
+ const u=s.squads.find(v=>v.side===0&&v.type==='knight');
+ s.squads=[u];s.orders[0].x=P(236);s.orders[0].y=P(146);
+ const starting=Math.hypot(u.x-P(236),u.y-P(146));
+ const oldDistance=starting/WORLD_SCALE;
+ let spent=0;
+ while(spent<80&&Math.hypot(u.x-P(236),u.y-P(146))>P(32)){tick(s,dt);spent+=dt}
+ assert.ok(spent>oldDistance/31*1.20,'world expansion must lengthen actual travel, not only redraw the map');
+ const snapshot=JSON.parse(save(createGame(725,false)));
+ snapshot.revision=3;
+ for(const o of snapshot.orders){o.x/=WORLD_SCALE;o.y/=WORLD_SCALE}
+ for(const v of snapshot.squads){v.x/=WORLD_SCALE;v.y/=WORLD_SCALE;if(Number.isFinite(v.targetX))v.targetX/=WORLD_SCALE;if(Number.isFinite(v.targetY))v.targetY/=WORLD_SCALE}
+ for(const z of snapshot.sites){z.x/=WORLD_SCALE;z.y/=WORLD_SCALE}
+ const migrated=load(JSON.stringify(snapshot));assert.ok(migrated&&migrated.revision===4);
+ assert.equal(migrated.sites[0].x,SITE_DEFS[0].x);
+ assert.equal(load(save(migrated)).sites[0].x,SITE_DEFS[0].x,'do not scale a save twice');
+ return{world:[W,H],distanceMultiplier:WORLD_SCALE,measuredTravelSeconds:+spent.toFixed(1)};
+}
+const longMarch=testLongMarchAndMigration();
 const domination=testTerritorialVictory(),rival=testAutonomousRival(),distinctOrders=testDistinctOrders();
 testCore();testRaidAndTowers();const siege=testSiege(),simulations={};
 for(const strategy of ['passive','rush','control','frontier']){
@@ -173,4 +193,4 @@ for(const strategy of ['passive','rush','control','frontier']){
 assert.equal(simulations.passive.wins,0);
 assert.ok(simulations.rush.wins<16,'castle rush exploit still guaranteed');
 assert.ok(simulations.frontier.wins>0,'frontier policy never wins');
-console.log(JSON.stringify({tests:'PASS',domination,rival,distinctOrders,siege,simulations},null,2));
+console.log(JSON.stringify({tests:'PASS',longMarch,domination,rival,distinctOrders,siege,simulations},null,2));

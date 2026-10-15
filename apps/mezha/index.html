@@ -28,7 +28,7 @@
   <aside id="siteCard" class="site-card" data-ui hidden><div><b id="siteName"></b><small id="siteDetails"></small></div><button id="fortify" data-native-press>СТРОИТЬ БАШНЮ</button><button id="siteClose" aria-label="Закрыть" data-native-press>×</button></aside>
   <section id="commandDock" class="command-dock" data-ui>
     <div class="command-top">
-      <div class="captains"><button id="cap0" class="captain current" data-native-press aria-pressed="true"><span class="portrait sword">♜</span><span><b>БЕРТРАН</b><small>НАТИСК</small></span></button><button id="cap1" class="captain" data-native-press aria-pressed="false"><span class="portrait bow">⌁</span><span><b>МАРТЕН</b><small>МАНЁВР</small></span></button></div>
+      <div class="captains"><button id="cap0" class="captain current" data-native-press aria-pressed="true"><canvas class="portrait sword" width="28" height="38" data-unit-portrait="knight" aria-hidden="true"></canvas><span><b>БЕРТРАН</b><small>НАТИСК</small></span></button><button id="cap1" class="captain" data-native-press aria-pressed="false"><canvas class="portrait bow" width="28" height="38" data-unit-portrait="bow" aria-hidden="true"></canvas><span><b>МАРТЕН</b><small>МАНЁВР</small></span></button></div>
       <button id="recruitBtn" class="troop-button" data-native-press><span class="troop-symbol">⚒</span><b>ВОЙСКА</b><small id="troopCount">4 / 12</small></button>
     </div>
     <div class="orders">
@@ -41,9 +41,9 @@
   <section id="recruitPanel" class="recruit-panel" data-ui hidden>
     <div class="drawer-title"><b>СОЗВАТЬ ВОЙСКО</b><button id="recruitClose" aria-label="Закрыть набор" data-native-press>×</button></div>
     <div class="unit-options">
-      <button data-recruit="levy" data-native-press><span class="unit-art levy"></span><b>Ополчение</b><small>52 зол. · 12 пищи</small></button>
-      <button data-recruit="bow" data-native-press><span class="unit-art archer"></span><b>Лучники</b><small>70 зол. · 16 дер. · 13 пищи</small></button>
-      <button data-recruit="knight" data-native-press><span class="unit-art knight"></span><b>Латники</b><small>104 зол. · 24 дер. · 18 пищи</small></button>
+      <button data-recruit="levy" data-native-press><canvas class="unit-art levy" width="32" height="42" data-unit-portrait="levy" aria-hidden="true"></canvas><b>Ополчение</b><small>52 зол. · 12 пищи</small></button>
+      <button data-recruit="bow" data-native-press><canvas class="unit-art archer" width="32" height="42" data-unit-portrait="bow" aria-hidden="true"></canvas><b>Лучники</b><small>70 зол. · 16 дер. · 13 пищи</small></button>
+      <button data-recruit="knight" data-native-press><canvas class="unit-art knight" width="32" height="42" data-unit-portrait="knight" aria-hidden="true"></canvas><b>Латники</b><small>104 зол. · 24 дер. · 18 пищи</small></button>
     </div>
     <div class="doctrine-title">ПОВЕДЕНИЕ ВСЕЙ АРМИИ</div>
     <div class="doctrine-choices" role="group" aria-label="Боевая доктрина">
@@ -74,7 +74,7 @@
   </section>
   <div class="confirm" id="confirm" data-ui hidden><div><h2>Начать заново?</h2><p>Текущий матч будет завершён без сохранения.</p><div><button id="cancelReset" data-native-press>ОТМЕНА</button><button id="acceptReset" data-native-press>ЗАНОВО</button></div></div></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МЕЖА" data-app-version="1.1.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="МЕЖА" data-app-version="1.2.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

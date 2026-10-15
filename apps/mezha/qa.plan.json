@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "simulations",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/simulate.mjs"
+    },
+    {
+      "id": "pixel-playwright",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/pixel.spec.js"
+      ]
+    },
+    {
+      "id": "pixel-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#startBtn",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#startBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#field"
+        },
+        {
+          "action": "screenshot"
+        }
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ]
+    }
+  ]
+}
