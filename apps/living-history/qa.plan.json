@@ -213,6 +213,24 @@
         43821,
         9001
       ]
+    },
+    {
+      "id": "century-paired",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/century-paired.mjs",
+      "args": [
+        "--seed={seed}",
+        "--years=100",
+        "--output={output}/century-pair.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001,
+        12345
+      ]
     }
   ]
 }
