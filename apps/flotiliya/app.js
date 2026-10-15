@@ -10,9 +10,9 @@ const canvas = $('sea'), ctx = canvas.getContext('2d', {alpha:false});
 const W=660,H=1000,TAU=Math.PI*2,KEY='pocket-works:flotiliya:v1';
 const PHASE_SECONDS=4.5,HALF=2.25,MAX_ROUNDS=22;
 const MISSIONS=[
- {id:'battle',name:'Линейное сражение',brief:'Разбей противника, сохрани ветеранов и забери призы.',limit:22},
- {id:'breakout',name:'Прорыв блокады',brief:'Проведи хотя бы одну галеру к северной кромке моря (отмечена золотым створом).',limit:18},
- {id:'intercept',name:'Перехват посыльного',brief:'Не дай лёгкому вражескому судну уйти через южную кромку. Захвати или потопи его.',limit:18}
+ {id:'battle',name:'Линейное сражение',brief:'Разбей противника, сохрани ветеранов и забери призы.',limit:14},
+ {id:'breakout',name:'Прорыв блокады',brief:'Проведи хотя бы одну галеру к северной кромке моря (отмечена золотым створом).',limit:14},
+ {id:'intercept',name:'Перехват посыльного',brief:'Не дай лёгкому вражескому судну уйти через южную кромку. Захвати или потопи его.',limit:16}
 ];
 const missionFor=index=>MISSIONS[(index-1)%MISSIONS.length];
 const ISLAND_MAPS=[
@@ -184,10 +184,10 @@ function startBattle(){
  game.weather=WEATHER[(game.battleIndex-1)%WEATHER.length];game.mission=missionFor(game.battleIndex);
  const xs=[142,330,519];
  activeFleet().forEach((s,i)=>game.ships.push(battleShip(s,'ally',xs[i],852+(i%2)*24,-Math.PI/2)));
- const aiTypes=['swift','bow','heavy'];
+ const aiTypes=game.battleIndex<=2?['swift','heavy']:['swift','bow','heavy'];
  aiTypes.forEach((type,i)=>{
   const s=makeShip('enemy-'+game.battleIndex+'-'+i,namePool[(game.battleIndex+i*2)%namePool.length],type,{active:false});
-  const mult=1+Math.min(.22,(game.battleIndex-1)*.025);s.hp*=mult;s.maxHp*=mult;s.crew*=mult;s.maxCrew*=mult;s.damage*=mult;
+  const mult=.90+Math.min(.30,(game.battleIndex-1)*.035);s.hp*=mult;s.maxHp*=mult;s.crew*=mult;s.maxCrew*=mult;s.damage*=mult;
   game.ships.push(battleShip(s,'enemy',xs[i],148-(i%2)*24,Math.PI/2));
  });
  game.ships.filter(s=>s.side==='enemy').forEach(planEnemyOrders);
