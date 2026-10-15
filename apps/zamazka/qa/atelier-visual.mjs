@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {chromium} from '@playwright/test';
 import {cabinetMarkup,settingsMarkup} from '../atelier-collection.js';
 import {zamazkaAchievements} from '../../../shared/capabilities/zamazka-achievements.js';
-import {BRUSH_CURSOR_NAMES} from '../brush-cursor.js';
+import {BRUSH_CURSOR_NAMES,brushCursorSVG} from '../brush-cursor.js';
 const root=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
 const dir=process.env.ZAMAZKA_QA_ARTIFACT_DIR||join(tmpdir(),'zamazka-atelier-qa');
 await mkdir(dir,{recursive:true});
@@ -71,7 +71,8 @@ try{
   }
   for(const tab of ['brushes','preferences']){
    const markup=settingsMarkup({...opts,brushStyle:tab==='brushes'?4:0});
-   await page.evaluate(({markup,tab})=>{
+   const brushUrls=BRUSH_CURSOR_NAMES.map((n,i)=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(brushCursorSVG(i,'#815247')));
+   await page.evaluate(({markup,tab,brushUrls})=>{
     document.querySelector('#screen').innerHTML='<div style="width:100%;height:100%;background:radial-gradient(ellipse at 50% 20%,#524331,#26211d 80%);"></div>';
     const dialog=document.querySelector('#dialog');
     dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box atelier-settings-dialog"><h2>Мастерская</h2>'+
@@ -79,11 +80,17 @@ try{
     dialog.querySelectorAll('[data-settings-panel]').forEach(p=>{const show=p.dataset.settingsPanel===tab;p.hidden=!show;p.classList.toggle('is-active',show)});
     dialog.querySelectorAll('[data-settings-tab]').forEach(p=>{const show=p.dataset.settingsTab===tab;p.classList.toggle('is-active',show);p.setAttribute('aria-selected',String(show))});
     if(tab==='brushes'){
+     dialog.querySelectorAll('[data-brush-mini]').forEach(el=>{
+       const img=document.createElement('img');img.alt='';img.src=brushUrls[Number(el.dataset.brushMini)];
+       el.replaceChildren(img);
+     });
+     const preview=dialog.querySelector('#settingBrushPreview');
+     const img=document.createElement('img');img.alt='Щетина';img.src=brushUrls[4];preview?.replaceChildren(img);
      const canvas=dialog.querySelector('#settingStrokeCanvas'),ctx=canvas.getContext('2d');
      ctx.strokeStyle='#82554b';ctx.lineWidth=19;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(80,160);ctx.bezierCurveTo(130,30,330,260,510,100);ctx.stroke();
      dialog.querySelector('[data-brush-choice="4"]').classList.add('is-selected');
     }
-   },{markup,tab});
+   },{markup,tab,brushUrls});
    await page.waitForTimeout(120);
    const metrics=await page.evaluate(()=>{
     const dialog=document.querySelector('#dialog'),box=dialog.querySelector('.dialog-box'),root=document.querySelector('#screen');
