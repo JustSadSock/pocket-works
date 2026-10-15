@@ -61,7 +61,9 @@ test('heirs inherit reachable strips; unclaimed strips revert to free land',()=>
 test('migration uses an accessible vacant dwelling, occurs after travel, and keeps possessions conserved',()=>{
  const s=createWorld(9001),source=s.households[0],destination=s.households.find(h=>h.communityId!==source.communityId&&walkingSteps(s,source,h)>0&&walkingSteps(s,source,h)<190);
  assert.ok(destination);
- for(const p of live(s,destination)){p.alive=false;p.job='dead';}release(s,destination);
+ for(const p of live(s,destination)){p.alive=false;p.job='dead';}
+ // Court-authorised vacant holding with real fields remains available for resettlement.
+ destination.lastEstateDay=309;
  release(s,source);
  source.grain=90;source.coin=450;source.wood=350;s.day=309;rebase(s);
  const people=live(s,source).map(p=>p.id),members=new Set(people);
