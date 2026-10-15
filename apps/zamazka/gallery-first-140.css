@@ -177,7 +177,7 @@
  background:#34291f!important;
  border:clamp(5px,.6vw,10px) ridge #9f7c4e!important;
  box-shadow:0 12px 24px #101c15a1!important;
- transform:translateY(calc((100% - var(--vote-ratio)) * .12));
+ transform:scale(var(--vote-scale,1));transform-origin:center bottom;
  transition:transform .4s ease;
 }
 #screen>.verdict-phase .verdict-image img{
@@ -316,7 +316,10 @@
 #screen>.round-review-phase .round-art-image{
  aspect-ratio:var(--art-aspect,1.333333)!important;
 }
-.round-view-dialog .round-view-window{width:auto!important;max-width:100%!important}
+.round-view-dialog .round-view-window{
+ width:min(100%,calc((100dvh - 245px) * var(--art-aspect,1.333333)))!important;
+ max-width:100%!important;min-height:min(34dvh,260px)!important;
+}
 .round-view-dialog .round-view-image canvas{object-fit:fill!important}
 
 /* Main action stages occupy their actual viewport rather than imply scrolling. */
