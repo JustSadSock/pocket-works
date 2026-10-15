@@ -34,3 +34,6 @@
 .zoom{top:calc(env(safe-area-inset-top,0px) + 128px)}
 @media(max-height:680px){.challenge-select{margin-bottom:8px;gap:3px}.challenge-options button{min-height:33px;font-size:9px}.mapbox,.zoom{top:calc(env(safe-area-inset-top,0px) + 107px)}.menu-plaque .howto{margin-top:12px}}
 @media(max-width:380px){.match-strip{width:min(306px,calc(100% - 20px));padding:6px}.control-line{gap:3px;font-size:8px}.control-line #controlCount{min-width:62px}.control-line #controlTime{min-width:74px;font-size:8px}}
+
+canvas.unit-art{width:42px;height:56px;display:block;background:transparent!important;box-shadow:none!important;clip-path:none!important;image-rendering:pixelated}
+canvas.portrait{display:block;image-rendering:pixelated;object-fit:contain;flex:none}
