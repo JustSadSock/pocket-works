@@ -219,7 +219,7 @@ function playRemote(data,owner){
  if(!hearOthers||onlyMine||owner===ownId)return;
  const performer=session.players.find(p=>p.id===owner);if(!performer?.air)return;
  if(data.uid&&typeof data.uid==='string'&&data.uid.length<64&&
- ['keys','bass','drums'].includes(data.inst)&&Number.isInteger(data.pitch)&&data.pitch>=0&&data.pitch<=7){
+ labels[data.inst]&&Number.isInteger(data.pitch)&&data.pitch>=0&&data.pitch<=7){
   unlockAudio().then(ctx=>{
    if(!hearOthers||onlyMine||!self())return;
    const voice=playNote(ctx,data.inst,data.pitch,ctx.currentTime,2.5,clamp((data.vel||85)/100,.1,1));
