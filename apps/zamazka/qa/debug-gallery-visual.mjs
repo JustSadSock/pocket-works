@@ -47,6 +47,8 @@ try{
    const action=gallery.locator('[data-debug-select="'+entry.id+'"]');
    await action.click();
    await preview.locator('#screen[data-debug-preview="'+entry.id+'"]').waitFor({timeout:16000});
+   await preview.locator('#screen[data-debug-preview="'+entry.id+'"] > *').first().waitFor({state:'visible',timeout:16000});
+   await page.waitForTimeout(['results','verdict','awards'].includes(entry.id)?750:190);
    const mounted=await preview.locator('#screen').evaluate(el=>({
     children:el.childElementCount,stage:el.dataset.debugPreview,
     width:el.firstElementChild?.getBoundingClientRect().width,
