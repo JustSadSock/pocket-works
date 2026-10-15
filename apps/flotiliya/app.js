@@ -533,7 +533,14 @@ function missionOutcome(){
 }
 function finishBattle(forced=null){
  const score=s=>alive(s).reduce((a,v)=>a+v.hp/v.maxHp+v.crew/v.maxCrew*.5,0);
- const win=forced===null?(alive('enemy').length===0||score('ally')>=score('enemy')&&alive('ally').length>0):forced;game.endVictory=win;game.phase='result';
+ // A numerical advantage of 3 vs 2 is not a victory when both fleets stay intact.
+ const allyCount=game.ships.filter(s=>s.side==='ally').length;
+ const enemyCount=game.ships.filter(s=>s.side==='enemy').length;
+ const beatenEnemy=alive('enemy').length<enemyCount;
+ const decisive=alive('enemy').length===0||
+   (beatenEnemy&&alive('ally').length>0&&
+    score('ally')/Math.max(1,allyCount)>score('enemy')/Math.max(1,enemyCount)+.06);
+ const win=forced===null?decisive:forced;game.endVictory=win;game.phase='result';
  const survivors=game.ships.filter(s=>s.side==='ally'&&(s.alive||s.escaped));
  const dead=game.ships.filter(s=>s.side==='ally'&&!s.alive&&!s.escaped).length;
  for(const s of game.ships.filter(s=>s.side==='ally')){
