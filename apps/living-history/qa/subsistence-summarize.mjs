@@ -20,7 +20,7 @@ function read(group,seed){
  const file=path.join(input,`subsistence-${group}-${seed}`,'report.json');
  if(!fs.existsSync(file)){data.errors.push(`Missing ${group} ${seed}`);return null;}
  const item=JSON.parse(fs.readFileSync(file,'utf8'));
- if(item.seed!==seed||item.mode!==(group==='forensic'?'forensic':'curve')){
+ if(item.seed!==seed||item.mode!==(group==='forensic'?'forensic':'threshold')){
   data.errors.push(`Mismatched ${group} ${seed}`);return null;
  }
  return item;
@@ -51,7 +51,7 @@ data.forensic={
 const matched=new Map(studies.map(x=>[x.seed,x]));
 const comparisons=[];
 for(const seed of CONTROLS){
- const v=read('curve',seed);if(!v)continue;
+ const v=read('threshold',seed);if(!v)continue;
  if(v.variants?.map(x=>x.label).join(',')!=='base,gentle60,strict90')
   data.errors.push(`Incorrect control arms ${seed}`);
  if(v.variants?.some(x=>!x.audit?.passed))
