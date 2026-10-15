@@ -71,6 +71,11 @@ try{
     const r=rect(el),s=getComputedStyle(el);return s.display!=='none'&&s.visibility!=='hidden'&&r.w>0&&r.h>0;
    });
    const out=visibleButtons.filter(el=>{
+    // The roster deliberately scrolls horizontally on narrow screens.
+    // Offscreen kick buttons remain accessible by swiping that rail;
+    // they are not clipped primary gameplay controls.
+    const rail=el.closest('.lobby-attendance .players');
+    if(rail&&rail.scrollWidth>rail.clientWidth+3&&getComputedStyle(rail).overflowX!=='hidden')return false;
     const r=rect(el);return r.x<-2||r.right>innerWidth+2||r.y<rr.y-3||r.bottom>rr.bottom+3;
    }).map(el=>({text:el.textContent.trim().slice(0,25),box:rect(el)}));
    return {rootScroll:root.scrollHeight-root.clientHeight,sceneScroll:scene.scrollHeight-scene.clientHeight,
