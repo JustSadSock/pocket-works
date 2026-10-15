@@ -4,8 +4,8 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':
 const MAX_SELECTION = 100;
 
 export function installDeckBatchPicker({
-  getApps, isArchived, isPersonalArchived, isGlobalArchived, getFavorites,
-  canManageGlobal, isGlobalBusy, artwork, onPersonalArchive, onGlobalArchive, onFavorites
+  getApps, isArchived, isPersonalArchived, isGlobalArchived, isGlobalPinned, getFavorites,
+  canManageGlobal, isGlobalBusy, artwork, onPersonalArchive, onGlobalArchive, onGlobalPin, onFavorites
 }) {
   const dialog = $('#deck-batch-picker');
   const grid = $('#deck-batch-grid');
@@ -16,6 +16,8 @@ export function installDeckBatchPicker({
   const controls = {
     personal: $('#deck-batch-personal'),
     global: $('#deck-batch-global'),
+    pin: $('#deck-batch-pin'),
+    unpin: $('#deck-batch-unpin'),
     save: $('#deck-batch-save'),
     unsave: $('#deck-batch-unsave')
   };
@@ -26,7 +28,8 @@ export function installDeckBatchPicker({
     return getApps()
       .filter(app => isArchived(app.slug) === (view === 'archive'))
       .filter(app => !query || (app.name + ' ' + app.slug + ' ' + (app.tags || []).join(' ')).toLocaleLowerCase().includes(query))
-      .sort((a,b) => String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')) || a.name.localeCompare(b.name));
+      .sort((a,b) => Number(isGlobalPinned(b.slug))-Number(isGlobalPinned(a.slug))||
+        String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')) || a.name.localeCompare(b.name));
   }
   const chosen = () => [...selected].filter(slug => Boolean(getApps().find(app => app.slug === slug)));
   function report(text, kind='info') {
@@ -45,6 +48,9 @@ export function installDeckBatchPicker({
     controls.global.textContent = view === 'archive' ? 'Вернуть всем' : 'В общий архив';
     controls.global.hidden = !canManageGlobal();
     controls.global.disabled = !active || isGlobalBusy() || (view === 'archive' && !slugs.some(isGlobalArchived));
+    controls.pin.hidden = controls.unpin.hidden = !canManageGlobal();
+    controls.pin.disabled = !active || isGlobalBusy() || !slugs.some(slug=>!isGlobalPinned(slug));
+    controls.unpin.disabled = !active || isGlobalBusy() || !slugs.some(isGlobalPinned);
     controls.save.disabled = !active || slugs.every(slug => favorites.has(slug));
     controls.unsave.disabled = !active || slugs.every(slug => !favorites.has(slug));
     $('#deck-batch-all').disabled = visible().length === 0 || visible().every(app => selected.has(app.slug));
@@ -62,7 +68,7 @@ export function installDeckBatchPicker({
     const apps = visible();
     const signature = JSON.stringify({
       view, query:search.value, apps:apps.map(a=>[a.slug,a.version,a.updatedAt]),
-      archived:apps.map(a=>[a.slug,isGlobalArchived(a.slug),isPersonalArchived(a.slug)]),
+      archived:apps.map(a=>[a.slug,isGlobalArchived(a.slug),isPersonalArchived(a.slug),isGlobalPinned(a.slug)]),
       artwork:apps.map(a=>artwork(a).length)
     });
     if(force || signature !== lastSignature) {
@@ -71,7 +77,8 @@ export function installDeckBatchPicker({
         aria-pressed="${selected.has(app.slug)}" aria-label="${escapeHtml(app.name)}">
         <span class="deck-batch__art">${artwork(app)}</span>
         <span class="deck-batch__name">${escapeHtml(app.name)}</span>
-        ${isGlobalArchived(app.slug)?'<span class="deck-batch__scope" aria-label="Общий архив">Для всех</span>':''}
+        ${isGlobalArchived(app.slug)?'<span class="deck-batch__scope" aria-label="Общий архив">Общий архив</span>':''}
+        ${isGlobalPinned(app.slug)?'<span class="deck-batch__scope deck-batch__scope--pin">Закреплена для всех</span>':''}
         <span class="deck-batch__mark" aria-hidden="true">${selected.has(app.slug)?'✓':'+'}</span></button>`).join('')
         : '<p class="deck-batch__empty">Нет игр по этим условиям.</p>';
     }
@@ -149,6 +156,18 @@ export function installDeckBatchPicker({
       if(!canManageGlobal()||isGlobalBusy())return;
       const slugs = chosen().filter(slug=>view!=='archive'||isGlobalArchived(slug));
       if(slugs.length)onGlobalArchive(slugs,view!=='archive');
+      return;
+    }
+    if(event.target.closest('#deck-batch-pin')){
+      if(!canManageGlobal()||isGlobalBusy())return;
+      const slugs=chosen().filter(slug=>!isGlobalPinned(slug));
+      if(slugs.length)onGlobalPin(slugs,true);
+      return;
+    }
+    if(event.target.closest('#deck-batch-unpin')){
+      if(!canManageGlobal()||isGlobalBusy())return;
+      const slugs=chosen().filter(isGlobalPinned);
+      if(slugs.length)onGlobalPin(slugs,false);
     }
   });
   confirm.addEventListener('click',event=>{
