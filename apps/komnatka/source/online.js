@@ -112,19 +112,19 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
    const host=room.host===me?.id;
    panel.innerHTML='<div class="online-title"><span>'+escapeText(PHASE[room.phase]||'В комнате')+'</span>'+
     '<h2>'+(room.phase==='lobby'?'Наша комнатка':room.mode==='memory'?'Собери по памяти':'Новые жильцы')+'</h2>'+
-    '<p>'+(room.phase==='lobby'?'Пригласи друзей по коду или ссылке.':'Игроки строят одну общую комнату.')+'</p></div>'+
-    '<div class="online-invite"><small>КОД ПРИГЛАШЕНИЯ</small><strong>'+escapeText(code||'••••••••')+'</strong>'+
+    '<p>'+(room.phase==='lobby'?'Пригласи друзей по коду или ссылке.':room.phase==='result'?'Сравните итог с заданием.':room.mode==='tenants'?escapeText(room.brief?.text||'Соберите уют по пожеланиям жильца.'):'Восстановите интерьер вместе.')+'</p></div>'+
+    (room.phase==='result'?'':'<div class="online-invite"><small>КОД ПРИГЛАШЕНИЯ</small><strong>'+escapeText(code||'••••••••')+'</strong>'+
     '<div><button id="onlineCopyCode">Код</button><button id="onlineCopyLink">Ссылка другу</button></div></div>'+
     '<div class="online-roster">'+(room.players||[]).map((p,i)=>'<span><i style="background:'+palette[i%palette.length]+'"></i>'+
-    escapeText(p.name)+(p.id===room.host?' · создатель':'')+'</span>').join('')+'</div>'+
+    escapeText(p.name)+(p.id===room.host?' · создатель':'')+'</span>').join('')+'</div>')+
     (host&&room.phase==='lobby'?'<div class="online-choices">'+
      '<button data-online-mode="tenants" class="'+(mode==='tenants'?'chosen':'')+'"><strong>Новые жильцы</strong><small>Собрать уют по пожеланиям</small></button>'+
      '<button data-online-mode="memory" class="'+(mode==='memory'?'chosen':'')+'"><strong>Собери по памяти</strong><small>Запомнить и повторить интерьер</small></button></div>':'')+
-    (host&&['lobby','result'].includes(room.phase)?'<button id="onlineStart" class="online-primary" '+((room.players?.length||0)<2?'disabled':'')+'>Начать игру</button>':'')+
     (room.phase==='result'?'<div class="online-result"><strong>'+Number(room.score||0)+'%</strong><span>'+
      (room.mode==='memory'?'Совпадение с образцом':'Пожелания выполнены')+'</span></div>':'')+
      (room.phase==='result'&&room.mode==='memory'?reviewMarkup():'')+
      (room.phase==='result'&&room.mode==='tenants'?tenantResults():'')+
+    (host&&['lobby','result'].includes(room.phase)?'<button id="onlineStart" class="online-primary" '+((room.players?.length||0)<2?'disabled':'')+'>Начать игру</button>':'')+
     (room.phase==='result'&&room.mode==='memory'?'<button id="onlineCompareModal" class="online-secondary">Осмотреть эталон крупно</button>':'')+
     (host&&room.phase==='preview'?'<button id="onlineSkip" class="online-primary">Мы запомнили — начать</button>':'')+
     (room.phase==='build'?'<button id="onlineContinue" class="online-primary">Вернуться к комнате</button>':'')+
