@@ -2,3 +2,12 @@
 .head-tools{display:flex;justify-content:flex-end;align-items:center;gap:8px;min-width:0}.head-tools .head-button:not([hidden])+.head-right{display:none}.head-button{border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.09);padding:8px 10px;color:white;min-height:36px;font:900 11px system-ui,sans-serif;letter-spacing:0;cursor:pointer;text-align:center}.head-tools:has(.head-button:not([hidden])) #headStatus{display:none}@media(max-width:360px){.head-tools .head-button{display:block}}
 
 .result-row{width:100%;border:0;border-bottom:1px solid #cfd1dc;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer;border-radius:0}.result-row:active{background:#e1e3e9}.result-row:focus-visible{outline-offset:-3px}
+
+/* The physical workbench gives the user's fragments most of the screen. */
+.screen-play .assembly-surface{flex:0 0 clamp(155px,35dvh,320px)}
+.screen-play .bank-surface{flex:1;min-height:0}
+.screen-play .bank-zone{flex:1;min-height:68px;max-height:none;align-content:flex-start}
+.empty-slot{display:inline-block;flex:0 0 61px;max-width:20%;height:46px;border:2px dashed #c5cada;background:#e9ebec;opacity:.75;pointer-events:none;clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,0 100%)}
+.answer-zone:empty:before{display:none}
+@media(max-height:650px){.screen-play .assembly-surface{flex-basis:clamp(108px,30dvh,185px)}.empty-slot{height:36px;flex-basis:46px}}
+@media(min-width:700px){.screen-play .assembly-surface{flex-basis:clamp(210px,40dvh,335px)}}
