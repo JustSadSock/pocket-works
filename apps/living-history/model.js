@@ -1292,7 +1292,8 @@ function deliver(s){
    else if(t.kind==='loan-repayment'){
     if(loan){loan.owed=round(Math.max(0,loan.owed-t.amount));loan.repaid=round((loan.repaid||0)+t.amount);
      s.stats.loanRepaidKg=round((s.stats.loanRepaidKg||0)+t.amount);
-     if(loan.owed<=.01){loan.owed=0;loan.status='paid';loan.closed=s.day;}}
+     if(loan.owed<=.01){loan.owed=0;loan.status='paid';loan.closed=s.day;}
+     recordCredit(s,loan,'repaid',t.amount);}
    }else earn(s,a,'revenue',t.cost);
    const recipient=livingHouse(s,t.carrierHouseId);
    const wage=recipient&&recipient.id!==a.id?Math.min(t.haulFee||0,t.cost):0;
@@ -1370,6 +1371,37 @@ function mutualAid(s){
  }
 }
 
+// A manorial witness and recorded repayment matter more than raw wealth alone.
+// The sparse reputation ledger records *actual transactions* only; no abstract
+// reputation points are handed out on birthdays or population milestones.
+const creditKey=(lenderId,borrowerId)=>lenderId+':'+borrowerId;
+function creditHistory(s,lenderId,borrowerId){
+ const raw=s.creditHistory?.[creditKey(lenderId,borrowerId)];
+ return raw||{repaidKg:0,unpaidKg:0,contracts:0};
+}
+function recordCredit(s,loan,kind,kg){
+ s.creditHistory??={};
+ const key=creditKey(loan.lenderId,loan.borrowerId);
+ const row=s.creditHistory[key]??={repaidKg:0,unpaidKg:0,contracts:0};
+ if(kind==='opened')row.contracts++;
+ else if(kind==='repaid')row.repaidKg=round(row.repaidKg+kg);
+ else if(kind==='unpaid')row.unpaidKg=round(row.unpaidKg+kg);
+}
+function possibleGuarantor(s,debtor,lender){
+ const people=liveMembers(s,debtor);
+ return s.households.filter(h=>h.communityId===debtor.communityId&&h.id!==debtor.id&&h.id!==lender.id&&
+    liveMembers(s,h).some(p=>p.age>=18&&p.health>35)&&walkingSteps(s,debtor,h)<=30)
+  .map(h=>{
+   const hasKin=liveMembers(s,h).some(p=>people.some(q=>areCloseKin(s,p,q)));
+   const reserve=foodProtection(s,h)+foodNeed(s,h)*80;
+   const spare=Math.max(0,h.grain-reserve);
+   const previous=creditHistory(s,h.id,debtor.id);
+   return {h,hasKin,spare,previous,score:(hasKin?50:0)+previous.repaidKg*.09-
+    previous.unpaidKg*.25+Math.min(40,spare*.07)};
+  })
+  .filter(o=>o.spare>=45&&(o.hasKin||o.previous.repaidKg>50))
+  .sort((a,b)=>b.score-a.score||a.h.id-b.h.id)[0]||null;
+}
 // Cereal credit is a recorded chattel loan: grain is physically shipped and
 // owed in the same unit, with no universal interest or new monetary supply.
 // The prospective crop (and sometimes close kin) determines a real lender's risk.
@@ -1381,10 +1413,31 @@ function grainCredit(s){
   if(loan.status!=='active'||loan.owed<=0)continue;
   const borrower=livingHouse(s,loan.borrowerId),lender=livingHouse(s,loan.lenderId);
   if(!borrower||!lender||!liveMembers(s,borrower).length||!liveMembers(s,lender).length){
-   loan.status='defaulted';loan.closed=s.day;s.stats.loanDefaults=(s.stats.loanDefaults||0)+1;continue;
+   loan.status='defaulted';loan.closed=s.day;s.stats.loanDefaults=(s.stats.loanDefaults||0)+1;
+   recordCredit(s,loan,'unpaid',loan.owed);continue;
   }
   if(s.day>loan.due+365){
+   // A surety pays only if it still has real disposable grain and a real
+   // carrier can take it to the creditor. Failure remains possible.
+   const surety=loan.guarantorId&&livingHouse(s,loan.guarantorId);
+   if(surety&&liveMembers(s,surety).length){
+    const worker=liveMembers(s,surety).find(p=>p.age>=15&&p.health>25&&!p.travel&&p.hiredDay!==s.day);
+    const route=worker&&routeBetween(s,surety,lender);
+    const reserve=foodProtection(s,surety)+foodNeed(s,surety)*50;
+    const amount=round(Math.min(loan.owed,loan.guaranteeKg||0,Math.max(0,surety.grain-reserve)));
+    if(worker&&route&&route.length>=1&&route.length<=65&&amount>=7){
+     scheduleGrainCart(s,surety,lender,worker,amount,'loan-repayment',loan.id,route);
+     loan.guaranteeKg=round(Math.max(0,(loan.guaranteeKg||0)-amount));
+     loan.due=s.day+365;loan.suretyCalled=(loan.suretyCalled||0)+amount;
+     s.stats.suretyPaidKg=round((s.stats.suretyPaidKg||0)+amount);
+     event(s,'guarantor-paid',`Поручитель семьи ${familyName(s,borrower)} оплатил ${amount} кг зерна`,
+      'Реальный запас поручителя и настоящая перевозка, без списания несуществующего зерна',
+      [loan.id,surety.id,lender.id],{amount});
+     continue;
+    }
+   }
    loan.status='defaulted';loan.closed=s.day;s.stats.loanDefaults=(s.stats.loanDefaults||0)+1;
+   recordCredit(s,loan,'unpaid',loan.owed);
    event(s,'credit-default',`Долг по зерну семьи ${familyName(s,borrower)} не возвращён`,
     'Истёк дополнительный год; обязательство погашено только в бухгалтерском смысле, зерно не появилось',[loan.id,borrower.id,lender.id],{unpaidKg:round(loan.owed)});
    continue;
@@ -1425,11 +1478,17 @@ function grainCredit(s){
     const hardReserve=Math.max(foodProtection(s,lender,false),
       foodNeed(s,lender)*260+Math.min(250,lender.fields.length*LAND_HA*CALIBRATION.seedKgPerHa*.65));
     const excess=lender.grain-hardReserve;
-    const credible=fields>=15||kin&&fields>=7;
+    const guarantor=possibleGuarantor(s,debtor,lender);
+    const history=creditHistory(s,lender.id,debtor.id);
+    const credible=(fields>=15||kin&&fields>=7||guarantor&&fields>=5)&&history.unpaidKg<Math.max(55,history.repaidKg*.6);
+    // A guarantor makes a small farmer credible, but cannot turn a landless
+    // family or an unpaid serial defaulter into a guaranteed borrower.
     const route=routeBetween(s,lender,debtor);
-    return {lender,kin,excess,credible,route};
+    return {lender,kin,excess,credible,route,history,guarantor};
    }).filter(x=>x.credible&&x.excess>70&&x.route.length>=1&&x.route.length<=45);
-  sources.sort((a,b)=>Number(b.kin)-Number(a.kin)||b.excess-a.excess||a.route.length-b.route.length);
+  sources.sort((a,b)=>Number(b.kin)-Number(a.kin)||
+   b.history.repaidKg-a.history.repaidKg||Number(!!b.guarantor)-Number(!!a.guarantor)||
+   b.excess-a.excess||a.route.length-b.route.length);
   const choice=sources[0];if(!choice)continue;
   const {lender,route}=choice;
   const worker=liveMembers(s,lender).find(p=>p.age>=15&&p.health>25&&!p.travel&&p.hiredDay!==s.day);
@@ -1438,21 +1497,24 @@ function grainCredit(s){
   // bound what a creditor could plausibly expect repaid next harvest.
   const outstanding=s.loans.filter(l=>l.borrowerId===debtor.id&&l.status==='active')
    .reduce((n,l)=>n+l.owed,0);
-  const repayable=Math.max(0,attainableHarvest(s,debtor)*.32-outstanding);
+  const repayable=Math.max(0,attainableHarvest(s,debtor)*.32-outstanding+
+   Math.min(70,choice.guarantor?.spare*.13||0));
   const requested=seedShortage?Math.max(foodNeed(s,debtor)*65,seedRequirement+foodNeed(s,debtor)*42-debtor.grain):foodNeed(s,debtor)*65;
   const amount=round(Math.min(95,choice.excess*.22,requested,repayable));
   if(amount<7)continue;
   const delay=(310-doy+365)%365;
   const due=s.day+delay+(delay<55?365:0);
   const loan={id:s.nextId++,lenderId:lender.id,borrowerId:debtor.id,principal:amount,owed:amount,
-   created:s.day,due,status:'in-transit',repaid:0,purpose:seedShortage?'seed-and-food':'food'};
-  s.loans.push(loan);
+   created:s.day,due,status:'in-transit',repaid:0,purpose:seedShortage?'seed-and-food':'food',
+   guarantorId:choice.guarantor?.h.id||null,
+   guaranteeKg:round(Math.min(amount*.55,choice.guarantor?.spare*.22||0))};
+  s.loans.push(loan);recordCredit(s,loan,'opened',amount);
   scheduleGrainCart(s,lender,debtor,worker,amount,'loan',loan.id,route);
   s.stats.loanIssuedKg=round((s.stats.loanIssuedKg||0)+amount);
   earn(s,debtor,'loansIssuedKg',amount);
   event(s,'credit',`Семья ${familyName(s,lender)} ссудила зерно семье ${familyName(s,debtor)}`,
    seedShortage?'Посевной и продовольственный зерновой заём под ожидаемый урожай; перевозка настоящих запасов':'Возврат натурой после следующего урожая; зерно требует перевозчика, а кредитор сохраняет свой резерв',
-   [lender.id,debtor.id,loan.id],{quantity:amount,due});
+   [lender.id,debtor.id,loan.id,loan.guarantorId].filter(Boolean),{quantity:amount,due,guarantorId:loan.guarantorId});
  }
 }
 function scheduleGrainCart(s,from,to,worker,amount,kind,loanId,route){
@@ -1701,6 +1763,7 @@ export function audit(s){
   const expected=round(s.economy.woolInitial+(s.stats.woolProduced||0)-(s.stats.woolExported||0));
   if(Math.abs(wool-expected)>.051)issues.push(`Баланс шерсти: ${wool} вместо ${expected}`);
  }
+ if(s.creditHistory&&Object.values(s.creditHistory).some(row=>row.repaidKg<0||row.unpaidKg<0||row.contracts<0))issues.push('Повреждён кредитный реестр');
  if(s.outside){
   const coin=round(s.economy.outsideCoinInitial+(s.stats.outsideCoinOut||0)-(s.stats.outsideCoinIn||0)-
    s.shipments.filter(t=>t.kind==='outside-export').reduce((n,t)=>n+t.externalPayment,0));
@@ -1736,6 +1799,7 @@ export function audit(s){
  for(const i of plots)if(s.terrain[i]!==0)issues.push(`Земельные права поверх воды ${i}`);
  for(const t of s.shipments)if(!(t.amount>0&&(t.cost>0||(['aid','loan','loan-repayment','outside-import','outside-export'].includes(t.kind)&&t.cost===0))&&t.day>s.day&&(!('carrierId' in t)||owner.has(t.carrierId))))issues.push(`Некорректный груз ${t.id}`);
  for(const loan of s.loans||[]){
+  if(loan.guarantorId&&(!s.households.some(h=>h.id===loan.guarantorId)||loan.guaranteeKg<0))issues.push(`Недействительное поручительство ${loan.id}`);
   if(!(loan.principal>0&&Number.isFinite(loan.owed)&&loan.owed>=-.01&&loan.owed<=loan.principal+.01&&
    loan.repaid>=0&&loan.repaid<=loan.principal+.01&&loan.due>loan.created&&
    s.households.some(h=>h.id===loan.lenderId)&&s.households.some(h=>h.id===loan.borrowerId)))
