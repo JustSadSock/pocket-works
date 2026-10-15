@@ -4,9 +4,9 @@ import { containsPoint,fitsLayout,LAYOUTS,leftWallX } from './layout.js';
 import { sanitize,starter,emptyRoom,valid,findSupport } from './state.js';
 import { roomList,addRoom,saveRoom,loadRoom,deleteRoom,renameRoom,selectRoom,activeRoomId } from './rooms.js';
 describe('КОМНАТКА 1.0 catalogue',()=>{
- it('has 30 separate functional miniature item identities',()=>{
-  expect(CATALOG).toHaveLength(30);
-  expect(new Set(CATALOG.map(x=>x.type)).size).toBe(30);
+ it('retains all original miniature identities and adds new independent pieces',()=>{
+  expect(CATALOG).toHaveLength(46);
+  expect(new Set(CATALOG.map(x=>x.type)).size).toBe(46);
   for(const item of CATALOG){
    expect(item.name.length).toBeGreaterThan(2);
    expect(item.size[0]).toBeGreaterThan(0);
