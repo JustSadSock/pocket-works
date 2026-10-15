@@ -69,7 +69,10 @@ export function mountDebugGallery({onSelect=null}={}){
   if(!layer)return;active=debugId(id);
   const url=new URL(location.pathname,location.href);
   url.searchParams.set(DEBUG_QUERY,active);
-  frame.src=url.pathname+url.search;
+  const target=url.pathname+url.search;
+  // Choosing the already open entry must not unload the live preview.
+  if(frame.getAttribute('src')===target){updateCurrent();return}
+  frame.src=target;
   frame.title='Предпросмотр: '+DEBUG_SCREENS.find(x=>x.id===active).name;
   layer.classList.add('is-loading');
   updateCurrent();
