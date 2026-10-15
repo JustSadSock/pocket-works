@@ -1,0 +1,311 @@
+/* ZAMAZKA 1.40.1 — restrained museum surfaces and one shared hanging system.
+   Source of the physical plaques: museum-afterhours-home.css 1.37.6 */
+#screen>.passage-entry,
+#screen>.passage-connection,
+#screen>.passage-preparing{background:transparent!important;background-image:none!important}
+@media(min-width:900px){
+ #screen>.passage-entry{
+  max-width:1500px!important;width:100%!important;margin:auto!important;
+  display:grid!important;grid-template-columns:minmax(0,.97fr) minmax(0,1.03fr)!important;
+  gap:clamp(24px,4vw,72px)!important;padding:clamp(10px,2vh,26px) clamp(12px,3vw,44px)!important;
+  align-items:center!important;
+ }
+ #screen>.passage-entry .passage-document{
+  width:100%!important;max-width:580px!important;min-height:0!important;
+  justify-self:end!important;align-self:center!important;
+  padding:clamp(17px,2.7vh,32px) clamp(20px,2.7vw,35px)!important;
+ }
+ #screen>.passage-entry .passage-art{
+  display:flex!important;align-self:center!important;
+  max-height:min(78dvh,690px)!important;
+  padding:clamp(10px,2vw,30px)!important;
+ }
+ #screen>.page.exhibition-lobby{
+  grid-template-columns:minmax(210px,23fr) minmax(0,61fr) minmax(195px,16fr)!important;
+  gap:clamp(8px,1vw,19px)!important;
+ }
+ #screen>.exhibition-lobby>.lobby-invite{
+  justify-content:center!important;align-self:center!important;gap:clamp(10px,2vh,22px)!important;
+ }
+ #screen>.exhibition-lobby>.lobby-attendance{
+  justify-content:flex-start!important;
+  padding-top:clamp(5px,1vh,12px)!important;
+ }
+ #screen>.exhibition-lobby .commons-frame{max-height:calc(100% - 55px)!important}
+ #screen>.exhibition-lobby .commons-frame canvas{
+  width:min(100%,calc((100dvh - 164px)*1.6))!important;
+ }
+ #screen>.restore>.work-area{
+  padding-right:clamp(140px,17vw,250px)!important;
+ }
+ #screen>.restore>.work-tools{
+  width:clamp(185px,15.7vw,268px)!important;
+  padding:clamp(9px,1.15vw,17px)!important;
+  gap:clamp(6px,.85vh,13px)!important;
+ }
+ #screen>.restore .tools>.tool{min-height:clamp(46px,6.5vh,65px)!important}
+ #screen>.restore .tools>.tool span{font-size:clamp(10px,.85vw,12px)!important}
+ #screen>.restore .swatch{height:clamp(26px,2.2vw,33px)!important;width:clamp(26px,2.2vw,33px)!important}
+ #screen>.restore .color-input{height:clamp(27px,2.2vw,34px)!important;width:clamp(27px,2.2vw,34px)!important}
+ #screen>.restore .work-foot .btn{min-height:clamp(39px,5.4vh,49px)!important;font-size:13px!important}
+}
+/* Connect and load have no independent colored slab, only the floating objects. */
+#screen>.passage-connection .passage-connection-panel{background:transparent!important;box-shadow:none!important}
+#screen>.passage-preparing .passage-prep-workspace{background:transparent!important;box-shadow:none!important}
+#screen>.passage-preparing .passage-prep-progress{display:none!important}
+#screen>.passage-preparing .passage-image-slot b{display:none!important}
+#screen>.passage-preparing .passage-image-slot{
+ opacity:.40!important;filter:grayscale(.75) brightness(.6);
+ border-color:#685b4d!important;
+ box-shadow:0 8px 15px #28231e50!important;
+ animation:zam-prep-hang 1.65s cubic-bezier(.33,.7,.35,1) infinite!important;
+}
+#screen>.passage-preparing .passage-image-slot.is-loaded{
+ opacity:1!important;filter:brightness(1.13) saturate(.92);
+ border-color:#c4a06b!important;box-shadow:0 0 0 2px #c9a56b5e,0 10px 30px #3d2d2070!important;
+ animation:zam-prep-settle .54s cubic-bezier(.18,.9,.22,1) both!important;
+}
+#screen>.passage-preparing .passage-prep-status{
+ position:absolute!important;clip-path:inset(50%);width:1px;height:1px;overflow:hidden;
+}
+#screen>.passage-preparing .passage-prep-status[data-state="error"]{
+ position:static!important;clip-path:none!important;width:auto;height:auto;
+ overflow:visible;text-align:center;color:#9b5039!important;background:#f2e2cb;
+ padding:7px 12px;border-left:3px solid #99553c;
+}
+#screen>.passage-preparing .passage-prep-peer,
+#screen>.passage-preparing .passage-prep-peer :is(span,strong){
+ color:#e3d5bf!important;
+}
+@keyframes zam-prep-hang{0%,100%{transform:translateY(3px) rotate(-1deg)}45%{transform:translateY(-12px) rotate(1.5deg)}60%{transform:translateY(-8px) rotate(.5deg)}}
+@keyframes zam-prep-settle{from{transform:translateY(-12px) rotate(1deg)}to{transform:none}}
+
+/* Identical carved wood section + lathed museum plate, everywhere. */
+#screen .zam-exhibit-rim{
+ --frame-width:8px;
+ display:block!important;flex:none!important;position:relative!important;
+ box-sizing:border-box!important;min-width:0!important;min-height:0!important;
+ margin:0!important;border:0!important;border-radius:0!important;
+ padding:var(--frame-width)!important;background:#3e2c1e!important;
+ outline:1px solid #30251b!important;overflow:visible!important;
+ box-shadow:0 3px 0 #23190f,0 13px 25px #16120eb5!important;
+ transform-origin:center bottom;
+}
+#screen .zam-exhibit-rim .museum-frame-facet{
+ display:block!important;position:absolute;z-index:3;pointer-events:none;
+}
+#screen .zam-exhibit-rim .museum-frame-facet-top{
+ top:0;left:0;right:0;height:var(--frame-width);
+ clip-path:polygon(0 0,100% 0,calc(100% - var(--frame-width)) 100%,var(--frame-width) 100%);
+ background:linear-gradient(#a7875a,#745535 60%,#3e2e1f);border-top:2px solid #d0b18b;
+}
+#screen .zam-exhibit-rim .museum-frame-facet-left{
+ top:0;left:0;bottom:0;width:var(--frame-width);
+ clip-path:polygon(0 0,100% var(--frame-width),100% calc(100% - var(--frame-width)),0 100%);
+ background:linear-gradient(90deg,#634728,#c3a073 50%,#503923);border-left:2px solid #ac875d;
+}
+#screen .zam-exhibit-rim .museum-frame-facet-right{
+ top:0;right:0;bottom:0;width:var(--frame-width);
+ clip-path:polygon(100% 0,0 var(--frame-width),0 calc(100% - var(--frame-width)),100% 100%);
+ background:linear-gradient(90deg,#36271a,#856342 70%,#4a3524);border-right:2px solid #2d2017;
+}
+#screen .zam-exhibit-rim .museum-frame-facet-bottom{
+ bottom:0;left:0;right:0;height:var(--frame-width);
+ clip-path:polygon(0 100%,var(--frame-width) 0,calc(100% - var(--frame-width)) 0,100% 100%);
+ background:linear-gradient(#3f2f20,#92714c 75%,#3e2e20);border-bottom:2px solid #2c2018;
+}
+#screen .zam-exhibit-rim > :is(img,canvas){
+ width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+ display:block!important;border:0!important;outline:0!important;
+ margin:0!important;padding:0!important;box-shadow:none!important;
+ background:#2d251f!important;
+}
+#screen .zam-exhibit-stage{
+ flex:1 1 0!important;min-height:0!important;min-width:0!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;max-width:100%;overflow:visible!important;
+}
+#screen .zam-exhibit-plaque{
+ position:relative!important;flex:0 0 auto!important;align-self:center!important;
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ min-height:0!important;max-height:none!important;gap:clamp(2px,.4vh,6px)!important;
+ width:max-content!important;min-width:0!important;max-width:min(100%,320px)!important;
+ padding:clamp(6px,.9vh,11px) clamp(8px,1.1vw,17px) clamp(7px,1.1vh,13px)!important;
+ margin:clamp(7px,1.3vh,13px) auto clamp(1px,.6vh,6px)!important;
+ background:linear-gradient(105deg,#cbb78e 0%,#efdfbb 48%,#c8b08c 100%)!important;
+ border:1px solid #6e593a!important;border-top:2px solid #f7ebc8!important;
+ border-bottom:3px solid #7e6645!important;border-radius:1px!important;
+ box-shadow:inset 0 0 0 2px #e2ceaa,inset 0 0 0 3px #a88e65,
+ 0 3px 0 #382b1e,0 9px 18px #17120e9c!important;
+ text-align:center!important;color:#33271d!important;white-space:normal!important;
+}
+#screen .zam-exhibit-plaque::before{
+ content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+ width:30px;height:5px;border:1px solid #8f7551;border-bottom:0;
+ background:#82643f;box-shadow:inset 0 1px #e6d2a6;
+}
+#screen .zam-exhibit-plaque::after{
+ content:"";display:block;width:24px;height:1px;margin:1px auto 0;
+ background:linear-gradient(90deg,transparent,#85653c,transparent);
+}
+#screen .zam-exhibit-plaque strong{
+ display:block!important;font:500 clamp(11px,1.06vw,17px)/1.16 Georgia,serif!important;
+ color:#33271d!important;letter-spacing:-.025em!important;white-space:normal;
+ text-overflow:ellipsis;max-width:100%;overflow:hidden;
+}
+#screen .zam-exhibit-plaque span{
+ display:block!important;color:#68523b!important;
+ font:500 clamp(9px,.7vw,11px)/1.23 system-ui,sans-serif!important;
+ text-overflow:ellipsis;max-width:100%;overflow:hidden;white-space:normal;
+}
+/* Preview has the same plate as the home moving picture, not a beige caption row. */
+#screen>.mobile-preview .gallery.exhibition-grid>.picture>.zam-exhibit-plaque{
+ margin-top:clamp(7px,1.25vh,15px)!important;
+}
+#screen>.mobile-preview .gallery.exhibition-grid>.picture>.picture-index{display:none!important}
+
+/* Raked walnut instead of bright emerald on the finished and jury screens. */
+#screen>.passage-waiting>.passage-waiting-layout,
+#screen>.expert-phase .phase-body.expert-round,
+#screen>.verdict-phase>.finale-verdict-body,
+#screen>.finale-reveal>.reveal-layout{
+ background:#343936!important;background-image:radial-gradient(ellipse at 45% 20%,#4a5049,#303633 85%)!important;
+ border:0!important;box-shadow:none!important;
+}
+#screen>.passage-waiting .passage-waiting-status{
+ background:#45423a!important;color:#eee0c7!important;border:1px solid #8b7559!important;
+ box-shadow:inset 0 0 0 3px #3b372f!important;
+}
+#screen>.passage-waiting .passage-waiting-status header,
+#screen>.passage-waiting .passage-waiting-foot{border-color:#7f6e5a!important}
+#screen>.passage-waiting .passage-roster .waiting-person{
+ background:#524b3f!important;border-color:#766954!important;
+}
+#screen>.passage-waiting .passage-ready-track{background:#716b5d!important}
+#screen>.expert-phase{background:#343936!important}
+#screen>.expert-phase .phase-head,
+#screen>.verdict-phase .phase-head,
+#screen>.finale-reveal .phase-head{background:#4b3d31!important;border-bottom-color:#836a50!important}
+#screen>.expert-phase .stake-card,
+#screen>.verdict-phase .finale-ballot-card{display:flex!important;flex-direction:column!important;justify-content:center!important;min-height:0!important}
+#screen>.expert-phase .suspect-gallery{gap:clamp(5px,.8vw,12px)!important}
+#screen>.expert-phase .stake-locked{font:11px Georgia,serif}
+#screen>.expert-phase .stake-card .stake-number,
+#screen>.verdict-phase .finale-ballot-index{display:none!important}
+#screen>.expert-phase .stake-card .stake-details{display:none!important}
+#screen>.expert-phase .stake-actions{margin-top:3px}
+#screen>.expert-phase .stake-tray{background:#454037!important;border-color:#76634b!important}
+#screen>.expert-phase .stake-tray :is(#chipsRemaining,.coin-auto-status){color:#f0dfc4!important}
+/* Correct ratio is supplied by mountExhibitFrames, so the border never contains voids. */
+#screen>.expert-phase .stake-frame,
+#screen>.verdict-phase .verdict-image,
+#screen>.round-review-phase .round-art-image{
+ flex:0 0 auto!important;max-width:100%!important;max-height:100%!important;
+}
+#screen>.verdict-phase .verdict-image{transform:scale(var(--vote-scale,1))!important}
+#screen>.verdict-phase .finale-ballot-votes{
+ min-height:0!important;max-height:72px!important;padding:clamp(4px,1vh,11px) 0 0!important;
+}
+#screen>.verdict-phase .finale-vote-tally,
+#screen>.verdict-phase .finale-vote-tally strong{display:none!important}
+#screen>.verdict-phase .verdict-tokens{
+ min-height:20px!important;display:flex!important;justify-content:center!important;
+ align-items:center!important;max-width:100%;flex-wrap:wrap!important;
+}
+#screen>.verdict-phase .chip-dots{display:flex!important;justify-content:center!important;flex-wrap:wrap}
+#screen>.verdict-phase .finale-ballot-card .zam-exhibit-stage{flex:1 1 0!important}
+/* Comparison line must move in lockstep with the range thumb, never chase it. */
+#screen .unveil-frame .unveil-top{
+ transition:none!important;clip-path:inset(0 0 0 var(--split))!important;
+}
+#screen .unveil-frame .unveil-ruler{
+ transition:none!important;left:var(--split)!important;
+}
+#screen>.passage-waiting .unveil-frame{
+ border-color:#a88a62!important;box-shadow:0 12px 25px #16151199!important;
+}
+#screen>.passage-waiting .unveil-control,
+#screen>.finale-reveal .unveil-control{color:#e9d9bf!important}
+#screen :is(.passage-compare-control,.finale-reveal .unveil-control) input[type="range"]{
+ -webkit-appearance:none!important;appearance:none!important;
+ height:6px!important;min-height:6px!important;border-radius:0!important;border:0!important;
+ background:#a68c69!important;accent-color:#a77e48!important;outline-offset:6px!important;
+}
+#screen :is(.passage-compare-control,.finale-reveal .unveil-control) input[type="range"]::-webkit-slider-runnable-track{
+ height:6px;background:#b49d7d;border:0
+}
+#screen :is(.passage-compare-control,.finale-reveal .unveil-control) input[type="range"]::-webkit-slider-thumb{
+ -webkit-appearance:none!important;appearance:none!important;width:21px;height:21px;
+ margin-top:-8px;border:2px solid #eddbb7;border-radius:50%;background:#886640;
+ box-shadow:0 2px 5px #21191074;
+}
+#screen :is(.passage-compare-control,.finale-reveal .unveil-control) input[type="range"]::-moz-range-thumb{
+ width:21px;height:21px;border:2px solid #eddbb7;border-radius:50%;background:#886640;
+}
+/* Reveal jury becomes a discreet set of named coin piles. */
+#screen>.finale-reveal .finale-reveal-brief .outcome-head{
+ border-bottom-color:#87745e!important;box-shadow:none!important;background:transparent!important;
+}
+#screen>.finale-reveal .finale-reveal-brief .finale-audit-heading{border:0!important;padding:4px 0 0!important}
+#screen>.finale-reveal .finale-jury-coins{
+ display:flex;align-items:center;gap:4px;justify-content:flex-start;flex-wrap:wrap;
+}
+#screen>.finale-reveal .finale-jury-coins .chip-dots{display:flex;flex-wrap:wrap;gap:2px}
+#screen>.finale-reveal .finale-jury-coins .missed-coins .chip-dot{
+ opacity:.28;filter:grayscale(1);
+}
+#screen>.finale-reveal .finale-reveal-brief .audit-line{
+ min-height:40px!important;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) auto!important;
+ border-bottom:1px solid #83735f!important;gap:8px!important;
+}
+#screen>.finale-reveal .finale-reveal-brief .finale-bonus{
+ background:#4c453a!important;border:1px solid #85735b!important;
+}
+/* Gallery exhibition, no cream page body or clipped four-work row. */
+#screen>.round-review-phase{background:#333a35!important;background-image:none!important}
+#screen>.round-review-phase>.round-review-body{
+ background:transparent!important;background-image:none!important;
+ border:0!important;box-shadow:none!important;overflow:hidden!important;
+}
+#screen>.round-review-phase .round-review-grid{
+ --zam-review-gap:clamp(7px,.9vw,16px);
+ display:flex!important;flex-direction:row!important;align-items:stretch!important;
+ gap:var(--zam-review-gap)!important;overflow-x:auto!important;overflow-y:hidden!important;
+ width:100%;height:100%;min-height:0!important;
+ scrollbar-width:thin;scroll-snap-type:x proximity;
+}
+#screen>.round-review-phase .round-art-card{
+ flex:0 0 calc((100% - (var(--review-columns,5) - 1) * var(--zam-review-gap)) / var(--review-columns,5))!important;
+ min-width:0!important;max-width:none!important;
+ height:100%!important;display:flex!important;flex-direction:column!important;
+ justify-content:center!important;scroll-snap-align:start;
+}
+#screen>.round-review-phase .round-art-card .zam-exhibit-stage{flex:1 1 0!important}
+#screen>.round-review-phase .round-art-card .zam-exhibit-plaque{max-width:100%!important}
+#screen>.round-review-phase .round-review-bottom{background:#494136!important;border-color:#866d4d!important}
+#screen>.round-review-phase .round-review-bottom>span{color:#ead8b9!important}
+@media(max-width:1019px){
+ #screen>.round-review-phase .round-art-card{flex:0 0 clamp(178px,63vw,320px)!important}
+}
+@media(max-width:700px){
+ #screen>.passage-preparing .passage-image-strip{gap:5px!important}
+ #screen>.round-review-phase .round-art-card{flex:0 0 clamp(170px,69vw,315px)!important}
+ #screen .zam-exhibit-plaque{padding:5px 7px 6px!important;gap:2px!important;margin-top:5px!important}
+ #screen .zam-exhibit-plaque strong{font-size:12px!important}
+ #screen .zam-exhibit-plaque span{font-size:9px!important}
+ #screen>.expert-phase .stake-card .zam-exhibit-plaque{min-height:0!important}
+ #screen>.expert-phase .stake-card .stake-actions{min-height:43px}
+ #screen>.verdict-phase .finale-ballot-votes{padding-top:4px!important}
+}
+/* A short desktop keeps critical controls on-screen without overflowing the editor. */
+@media(min-width:900px) and (max-height:620px){
+ #screen>.passage-entry .passage-art{max-height:76dvh!important}
+ #screen>.restore>.work-tools{padding:6px!important;gap:4px!important;width:clamp(185px,16vw,250px)!important}
+ #screen>.restore .tools>.tool{min-height:37px!important}
+ #screen>.restore .colors{padding:4px 0!important}
+ #screen>.restore .work-foot .btn{min-height:35px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen>.passage-preparing .passage-image-slot{animation:none!important}
+}
