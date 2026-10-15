@@ -1,5 +1,6 @@
 import { MeshBuilder, Mesh, VertexData, Vector3, TransformNode, StandardMaterial, DynamicTexture, Color3 } from '@babylonjs/core';
 import { roundedGeometry } from './geometry.js';
+import { buildExtraFurniture } from './extra-furniture.js';
 
 export const CATALOG = [
   { type:'sofa', name:'Диван', group:'furniture', icon:'sofa', size:[2.55,1.26] },
@@ -31,7 +32,23 @@ export const CATALOG = [
   {type:'mirror',name:'Зеркало',group:'walls',icon:'frame',size:[1.08,.10],layer:'wall'},
   {type:'clock',name:'Часики',group:'walls',icon:'frame',size:[.79,.10],layer:'wall'},
   {type:'deskclock',name:'Будильник',group:'decor',icon:'mug',size:[.28,.23],tabletop:true},
-  {type:'teapot',name:'Чайничек',group:'decor',icon:'mug',size:[.42,.38],tabletop:true}
+  {type:'teapot',name:'Чайничек',group:'decor',icon:'mug',size:[.42,.38],tabletop:true},
+  {type:'diningtable',name:'Обеденный стол',group:'furniture',icon:'table',size:[2.15,1.35],top:0.8},
+  {type:'diningchair',name:'Стул обеденный',group:'furniture',icon:'chair',size:[0.72,0.78]},
+  {type:'kitchenunit',name:'Кухонный шкаф',group:'furniture',icon:'shelf',size:[1.72,0.75],top:0.96},
+  {type:'sink',name:'Мойка',group:'furniture',icon:'shelf',size:[1.21,0.76],top:0.94},
+  {type:'stove',name:'Плита',group:'furniture',icon:'shelf',size:[0.91,0.8],top:0.9},
+  {type:'fridge',name:'Холодильник',group:'furniture',icon:'shelf',size:[0.98,0.85]},
+  {type:'cutlery',name:'Сервировка',group:'decor',icon:'mug',size:[0.41,0.35],tabletop:true},
+  {type:'crib',name:'Кроватка',group:'furniture',icon:'bed',size:[1.33,1.88]},
+  {type:'toybox',name:'Ящик для игрушек',group:'furniture',icon:'shelf',size:[1.1,0.72],top:0.69},
+  {type:'starwall',name:'Звезда на стену',group:'walls',icon:'frame',size:[0.65,0.1],layer:'wall'},
+  {type:'officechair',name:'Рабочее кресло',group:'furniture',icon:'chair',size:[0.85,0.85]},
+  {type:'deskorganizer',name:'Органайзер',group:'decor',icon:'books',size:[0.42,0.36],tabletop:true},
+  {type:'vanity',name:'Трюмо',group:'furniture',icon:'shelf',size:[1.3,0.79],top:0.83},
+  {type:'curtains',name:'Шторы',group:'walls',icon:'window',size:[1.67,0.1],layer:'wall'},
+  {type:'chest',name:'Сундук',group:'furniture',icon:'shelf',size:[1.24,0.73],top:0.68},
+  {type:'teatable',name:'Чайный стол',group:'furniture',icon:'table',size:[1.3,1.17],top:0.66}
 ];
 export const byType = Object.fromEntries(CATALOG.map(x=>[x.type,x]));
 export const COLORS = ['#e8a58f','#d6bd80','#8eae99','#8baab8','#bc9bb5','#e8d8bf','#a58f77','#d2a993'];
@@ -92,6 +109,30 @@ export function fabricMaterial(scene,color){
  mat.diffuseColor=Color3.White();mat.specularColor=new Color3(.018,.018,.018);mat.specularPower=8;
  mat.diffuseTexture=tex;mat.backFaceCulling=true;mat.maxSimultaneousLights=6;
  byColor.set(color,mat);return mat;
+}
+const extendedSurfaceCache=new WeakMap();
+export function itemSurface(scene,color,kind='linen'){
+ if(kind==='linen')return fabricMaterial(scene,color);
+ let cache=extendedSurfaceCache.get(scene);
+ if(!cache){cache=new Map();extendedSurfaceCache.set(scene,cache);}
+ const key=kind+'-'+color;
+ if(cache.has(key))return cache.get(key);
+ let m;
+ if(['oak','walnut','paint'].includes(kind))m=grainMaterial(scene,key,kind==='oak'?'#d6b78c':kind==='walnut'?'#95715c':color);
+ else if(kind==='velvet'){
+  const tx=texture(scene,'plush-'+key,c=>{
+   c.fillStyle=color;c.fillRect(0,0,256,256);
+   for(let y=0;y<256;y+=3){c.fillStyle=y%2?'#ffffff09':'#00000007';c.fillRect(0,y,256,1);}
+  });
+  m=new StandardMaterial('velvet-'+key,scene);
+  m.diffuseTexture=tx;m.diffuseColor=Color3.White();
+  m.specularColor=new Color3(.06,.05,.06);m.specularPower=18;
+ }else{
+  m=makeMaterial(scene,'surface-'+key,color).clone('unique-surface-'+key);
+  m.specularColor=kind==='metal'?new Color3(.35,.34,.32):new Color3(.15,.14,.13);
+  m.specularPower=kind==='metal'?55:32;
+ }
+ m.maxSimultaneousLights=6;cache.set(key,m);return m;
 }
 function grainMaterial(scene,name,color){
  const tx=texture(scene,'wood-fibres-'+name,c=>{
@@ -225,7 +266,9 @@ function littleEmbroidery(scene,root,x,z,floret,center){
 export function makeItem(scene,item){
  const meta=byType[item.type];if(!meta)throw new Error('Unknown item: '+item.type);
  const M=getMaterials(scene), root=new TransformNode('item-'+item.id,scene);
- const cloth=fabricMaterial(scene,item.color||COLORS[2]), pastel=fabricMaterial(scene,item.color||COLORS[2]);
+ const cloth=itemSurface(scene,item.color||COLORS[2],item.material||'linen'),pastel=cloth;
+ const timber=itemSurface(scene,item.color||COLORS[2],
+  ['oak','walnut','paint'].includes(item.material)?item.material:'oak');
  root.position.set(item.x||0,item.y||0,item.z||0);root.rotation.y=(item.rot||0)*Math.PI/2;
  const t=item.type;
  // Opaque materials only. The room renderer owns physical floor shadows;
@@ -512,6 +555,7 @@ export function makeItem(scene,item){
    orb(scene,'clock-pivot',root,M.metal,0,0,.092,.044,.044,.032);
   }
  }
+ buildExtraFurniture(scene,item,root,M,cloth,timber,{box,orb,cylinder,MeshBuilder});
  if(t==='books'){
    const palette=['#c18d7d','#8ca18f','#d6bb82','#9b91a6'];
    for(let i=0;i<4;i++){const m=i===0&&item.color!==COLORS[2]?cloth:makeMaterial(scene,'book-'+i,palette[i]);box(scene,'little-book',root,m,.10,.23+.035*(i%2),.32,-.19+i*.13,.16,0,.025);
