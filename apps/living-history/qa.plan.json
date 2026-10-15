@@ -231,6 +231,24 @@
         9001,
         12345
       ]
+    },
+    {
+      "id": "century-forensics",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/century-forensics.mjs",
+      "args": [
+        "--seed={seed}",
+        "--years=100",
+        "--output={output}/century-forensics.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001,
+        12345
+      ]
     }
   ]
 }
