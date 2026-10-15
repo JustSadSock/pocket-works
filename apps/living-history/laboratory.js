@@ -31,7 +31,7 @@ export function diagnoseWorld(s){
   return {id,communityId:h.communityId,people:info.people,grainKg:rounded(h.grain),gardenEquivalentKg:rounded(h.garden||0),dairyEquivalentKg:rounded(h.dairy||0),coin:rounded(h.coin),
    foodDays:rounded(foodDays,1),storageUse:rounded(h.grain/Math.max(1,storageCapacity(h,s))),unhealthy:info.unhealthy,
    occupation:h.focus||h.work||'farm',workDays:info.workDays,landHa:rounded(h.fields.length*.0625,3),landStrips:h.fields.length,leasedIn:h.leaseIn?.length||0,leasedOut:h.leaseOut?.length||0,tenure:h.tenure||'customary',cattle:h.cattle||0,hayKg:rounded(h.fodder||0),
-   harvestKg:report.harvestKg||0,spoilKg:report.spoilKg||0,wagesEarned:report.wagesEarned||0,wagesPaid:report.wagesPaid||0};
+   harvestKg:report.harvestKg||0,spoilKg:report.spoilKg||0,wagesEarned:report.wagesEarned||0,wagesPaid:report.wagesPaid||0,grainWagesEarnedKg:report.grainWagesEarnedKg||0,grainWagesPaidKg:report.grainWagesPaidKg||0};
  }).filter(Boolean);
  const byCommunity=s.communities.map(c=>{
   const subset=rows.filter(h=>h.communityId===c.id);
@@ -55,7 +55,7 @@ export function diagnoseWorld(s){
   familiesUnder30Days:rows.filter(h=>h.foodDays<30).length,familiesUnder90Days:rows.filter(h=>h.foodDays<90).length,
   householdsWithUnhealthyPeople:rows.filter(h=>h.unhealthy>0).length,
   averageStorageUse:rounded(rows.length?rows.reduce((n,h)=>n+h.storageUse,0)/rows.length:0),
-  occupations:byOccupation,gardenProducedKg:stats.gardenProduced||0,gardenConsumedKg:stats.gardenConsumed||0,dairyProducedKg:stats.dairyProduced||0,dairyConsumedKg:stats.dairyConsumed||0,loanIssuedKg:stats.loanIssuedKg||0,loanRepaidKg:stats.loanRepaidKg||0,loanDefaults:stats.loanDefaults||0,activeLoans:(s.loans||[]).filter(l=>['active','in-transit'].includes(l.status)).length,grainSpoiledKg:stats.spoiled||0,grainHarvestedKg:stats.harvest||0,
+  occupations:byOccupation,gardenProducedKg:stats.gardenProduced||0,gardenConsumedKg:stats.gardenConsumed||0,dairyProducedKg:stats.dairyProduced||0,dairyConsumedKg:stats.dairyConsumed||0,grainWagesKg:stats.grainWagesKg||0,loanIssuedKg:stats.loanIssuedKg||0,seedLoans:(s.loans||[]).filter(l=>l.purpose==='seed-and-food').length,loanRepaidKg:stats.loanRepaidKg||0,loanDefaults:stats.loanDefaults||0,activeLoans:(s.loans||[]).filter(l=>['active','in-transit'].includes(l.status)).length,grainSpoiledKg:stats.spoiled||0,grainHarvestedKg:stats.harvest||0,
   totalPaidWages:rounded(rows.reduce((n,h)=>n+(h.wagesPaid||0),0)),
   transportDeliveries:stats.delivered||0,tradeCount:stats.trades||0,communities:byCommunity,
   // Rows are suitable for exporting, but are not shown all at once on mobile.
