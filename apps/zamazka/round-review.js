@@ -1,3 +1,4 @@
+import {exhibitFacets,exhibitPlaque} from './exhibition-ui.js';
 // The round review is intentionally a distinct, untimed stage.
 // All artwork is available only after the server has finished revealing every vote.
 let viewerCleanup=null;
@@ -12,7 +13,7 @@ export function roundReviewMarkup(v,hostId,arts,escapeText){
   const votes=Object.values(g.votes||{}).filter(Array.isArray),answer=v.selected.indexOf(g.art);
   const correct=votes.reduce((total,row)=>total+(row[answer]||0),0);
   const missed=votes.reduce((total,row)=>total+row.reduce((a,b)=>a+b,0)-(row[answer]||0),0);
-  return '<button class="round-art-card" type="button" data-review-open="'+i+'" aria-label="Открыть работу '+escapeText(g.name)+': '+escapeText(arts[g.art]?.title||'картина')+'"><div class="round-art-image"><canvas data-review-canvas="'+i+'" aria-hidden="true"></canvas><span class="round-art-index">'+String(i+1).padStart(2,'0')+'</span><span class="round-art-expand" aria-hidden="true">↗</span></div><div class="round-art-meta"><span>'+escapeText(g.name)+'</span><strong>'+escapeText(arts[g.art]?.title||'Картина')+'</strong><small>'+correct+' верно · '+missed+' мимо</small></div></button>';
+  return '<button class="round-art-card" type="button" data-review-open="'+i+'" aria-label="Открыть работу '+escapeText(g.name)+': '+escapeText(arts[g.art]?.title||'картина')+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="round-art-image zam-exhibit-rim">'+exhibitFacets()+'<canvas data-review-canvas="'+i+'" aria-hidden="true"></canvas></div></div>'+exhibitPlaque(arts[g.art]?.title||'Картина',g.name+' · '+correct+' верно · '+missed+' мимо')+'</button>';
  }).join('');
  const action=host?'<button type="button" class="btn primary round-review-next" data-action="continue">'+(last?'Посмотреть итоги':'Следующий раунд')+' →</button>':'<span class="round-review-pending">Ожидаем организатора</span>';
  return '<section class="phase-page round-review-phase"><div class="phase-head round-review-heading"><div><span class="eyebrow">РАУНД '+v.round+' / '+v.rounds+' · ВСЕ РАБОТЫ</span><h2>Выставка реставраций</h2></div><div class="round-review-head-actions"><span class="round-review-count">'+works.length+' работ</span><button type="button" class="phase-menu" data-action="menu" aria-label="Вернуться в главное меню">← <span>Меню</span></button></div></div><div class="phase-body round-review-body"><div class="round-review-description"><span>Открой картину, увеличь и сравни с оригиналом.</span><strong>Все ответы раскрыты</strong></div><div class="round-review-grid">'+cards+'</div></div><div class="round-review-bottom"><span>Без ограничения времени</span>'+action+'</div></section>';
