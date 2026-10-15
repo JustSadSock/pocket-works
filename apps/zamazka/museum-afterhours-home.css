@@ -850,3 +850,89 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display .museum
   transform:translate(-50%,-50%) translateX(var(--museum-step)) scale(.53) rotateY(-9deg)!important;
  }
 }
+
+
+/* 1.37.4 / A provenance plaque belongs to its physical frame.
+   This plaque moves through perspective with each work, never teleports. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage-caption {display:none!important}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide {
+ transition:transform var(--museum-shift-duration,350ms) cubic-bezier(.24,.72,.22,1),
+  opacity var(--museum-shift-duration,350ms) ease,
+  filter var(--museum-shift-duration,350ms) ease!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label {
+ display:flex!important;position:absolute;top:calc(100% + 8px);left:50%;
+ width:max-content;min-width:min(245px,100%);max-width:min(330px,132%);
+ transform:translateX(-50%);z-index:3;pointer-events:none;
+ flex-direction:column;align-items:center;gap:4px;
+ padding:10px 15px 11px;
+ border:1px solid #b69c7285;border-bottom:2px solid #756248;
+ border-radius:1px;
+ background:linear-gradient(175deg,#d5c4a5 0%,#bdab8b 100%);
+ box-shadow:inset 0 1px #f3e5c7,0 3px 0 #544934,0 9px 16px #070e09b0;
+ text-shadow:none;color:#342d26;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label::before {
+ content:"";position:absolute;top:-7px;left:50%;width:18px;height:7px;
+ transform:translateX(-50%);border:1px solid #8f7551;border-bottom:0;
+ background:linear-gradient(#5a4632,#a68c63);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label strong {
+ display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+ font:500 clamp(12px,1.16vw,17px)/1.16 Georgia,serif;
+ white-space:normal;text-align:center;letter-spacing:-.025em;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label span {
+ display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+ font:10px/1.23 system-ui,sans-serif;
+ white-space:normal;text-align:center;color:#655646;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide.instant {
+ transition:none!important;
+}
+html:not([data-zamazka-appearance="new"]) #screen>.museum-home .museum-slide-label {
+ display:none!important;
+}
+/* One avatar is one circular badge: do not inherit the generic footer button
+   positioning or stretch the nested Pocket ID graphic in a different column. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .home-pocket-identity {
+ display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;
+ gap:9px!important;flex:0 0 auto!important;min-width:0!important;width:auto!important;
+ padding:4px 1px!important;margin:0 3px 0 0!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ border-radius:0!important;transform:none!important;text-align:left!important;
+ cursor:pointer;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .home-pocket-identity > span:first-child {
+ display:grid;place-items:center;flex:0 0 37px!important;
+ width:37px!important;height:37px!important;
+ padding:0!important;margin:0!important;
+ overflow:hidden;border-radius:50%;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .home-pocket-identity .pw-identity-avatar {
+ display:grid!important;place-items:center!important;width:100%!important;height:100%!important;
+ margin:0!important;transform:none!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .home-pocket-identity .pw-identity-avatar > :is(img,svg){
+ display:block;width:100%!important;height:100%!important;object-fit:cover;
+}
+@media(max-width:699px){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label {
+  top:calc(100% + 5px);min-width:0;max-width:175px;width:max-content;
+  padding:5px 8px 6px;gap:2px;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label strong {
+  font:500 12px/1.08 Georgia,serif;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label span {
+  font:9px/1.1 system-ui,sans-serif;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .home-pocket-identity > span:first-child {
+  flex-basis:29px!important;width:29px!important;height:29px!important;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide {
+  transition:none!important;
+ }
+}
