@@ -21,7 +21,7 @@ test('garden produce is made only after a complete sequence of actual home labou
  check(s);
 });
 test('dairy production is conditional on cattle, fodder and a milking worker',()=>{
- const s=createWorld(413);for(const h of s.households){h.cattle=0;h.fodder=0;}
+ const s=createWorld(413);for(const h of s.households){h.cattle=0;h.draftOxen=0;h.dairyCows=0;h.fodder=0;}
  s.economy.cattleInitial=0;s.economy.forageInitial=Number((s.pasture.reduce((n,x)=>n+x,0)+s.stats.forageConverted).toFixed(2));
  advanceDays(s,30);
  assert.equal(s.stats.dairyProduced||0,0,'zero animals cannot produce food');
@@ -61,10 +61,10 @@ test('long-term saves preserve loan obligations and calorie conservation without
  assert.ok((s.stats.dairyProduced||0)>=0);
 });
 test('multiple food streams do not enforce survival when all edible calories are inaccessible',()=>{
- const s=createWorld(377);
- for(const h of s.households){h.grain=0;h.garden=0;h.dairy=0;h.cattle=0;h.fodder=0;h.fields=[];}
+ const s=createWorld(377);s.scenario='isolated';
+ for(const h of s.households){h.grain=0;h.oats=0;h.pulses=0;h.garden=0;h.dairy=0;h.cattle=0;h.draftOxen=0;h.dairyCows=0;h.sheep=0;h.fodder=0;h.fields=[];}
  s.usage.forEach((cell,i)=>{if(cell===2)s.usage[i]=0});
- s.economy.cattleInitial=0;s.economy.forageInitial=Number(s.pasture.reduce((n,x)=>n+x,0).toFixed(2));
+ s.economy.cattleInitial=0;s.economy.sheepInitial=0;s.economy.oatsInitial=0;s.economy.pulsesInitial=0;s.economy.forageInitial=Number(s.pasture.reduce((n,x)=>n+x,0).toFixed(2));
  s.economy.grainInitial=0;s.economy.gardenInitial=0;s.economy.dairyInitial=0;
  s.stats.forageConverted=0;
  advanceDays(s,180);
