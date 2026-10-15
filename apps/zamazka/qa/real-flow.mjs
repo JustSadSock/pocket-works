@@ -274,6 +274,13 @@ try{
   await page.locator('#soloDrawingSeconds').selectOption('0');
   await page.locator('#modalActions .btn.primary').click();
   await page.locator('.mobile-preview .gallery .picture').first().waitFor({timeout:17000});
+  if(mobile){
+    const heights=await page.evaluate(()=>({
+      root:document.querySelector('#screen').scrollHeight-document.querySelector('#screen').clientHeight,
+      view:document.querySelector('.mobile-preview').scrollHeight-document.querySelector('.mobile-preview').clientHeight
+    }));
+    assert(heights.root<=3&&heights.view<=3,'Preview must fit portrait height without vertical scrolling: '+JSON.stringify(heights));
+  }
   assert.equal(await page.locator('.mobile-preview .gallery .picture').count(),5);
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
   if(mobile){
@@ -346,6 +353,16 @@ try{
   const board=page.locator('#paintCanvas');
   await board.waitFor({timeout:10000});
   await page.waitForTimeout(720);
+  if(mobile){
+    const mobileScene=await page.evaluate(()=>{
+      const root=document.querySelector('#screen');
+      return {outerScroll:root.scrollHeight-root.clientHeight,
+       pageScroll:root.firstElementChild.scrollHeight-root.firstElementChild.clientHeight,
+       headWidth:document.documentElement.scrollWidth-innerWidth};
+    });
+    assert(mobileScene.outerScroll<=3&&mobileScene.headWidth<=3,
+      'Portrait painting screen must not scroll vertically: '+JSON.stringify(mobileScene));
+  }
   const viewportRect=await page.locator('.restore .viewport').boundingBox();
   assert(viewportRect?.width>100&&viewportRect?.height>100,'working canvas visible');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-workstation-'+viewport.width+'.png'),fullPage:false});
@@ -357,6 +374,44 @@ try{
   await page.waitForTimeout(150);
   const indicator=await page.locator('#strokeCount').textContent();
   assert(/Мазков: [1-9]/.test(indicator), 'editor failed to record real pointer stroke: '+indicator);
+  if(mobile){
+    // This exercises the real Editor pointer listeners; only the pointer
+    // transport is simulated. No direct state mutations or fake strokes.
+    await page.locator('[data-cmd="precision"]').click();
+    assert(await page.locator('.restore').evaluate(el=>el.classList.contains('precision-mode')),
+      'Second pen should enter precision mode');
+    const held=await page.evaluate(()=>{
+      const canvas=document.querySelector('#paintCanvas'),arm=document.querySelector('#precisionArm');
+      const r=canvas.getBoundingClientRect();
+      const x=r.left+r.width*.5,y=r.top+r.height*.54;
+      const send=(target,type,id,atX,atY)=>target.dispatchEvent(new PointerEvent(type,{
+        bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:id===101,
+        clientX:atX,clientY:atY,buttons:type==='pointerup'?0:1,button:0
+      }));
+      const count=()=>Number((document.querySelector('#strokeCount')?.textContent||'').match(/\d+/)?.[0]||0);
+      const before=count();
+      send(canvas,'pointerdown',101,x,y);
+      send(canvas,'pointermove',101,x+4,y+5);
+      const justAim=count();
+      send(arm,'pointerdown',102,arm.getBoundingClientRect().x+15,arm.getBoundingClientRect().y+17);
+      const on=arm.getAttribute('aria-pressed');
+      for(let i=0;i<7;i++)send(canvas,'pointermove',101,x+5+i*4,y+7+i*2);
+      send(arm,'pointerup',102,arm.getBoundingClientRect().x+15,arm.getBoundingClientRect().y+17);
+      const off=arm.getAttribute('aria-pressed');
+      const afterRelease=count();
+      for(let i=0;i<3;i++)send(canvas,'pointermove',101,x+36+i*4,y+21+i*2);
+      send(canvas,'pointerup',101,x+45,y+25);
+      return {before,justAim,on,off,afterRelease,afterMovement:count(),label:arm.querySelector('strong')?.textContent};
+    });
+    assert.equal(held.justAim,held.before,'Aiming must not draw without holding the second button');
+    assert.equal(held.on,'true','Touch-down must activate precision ink');
+    assert.equal(held.off,'false','Touch release must disarm precision ink');
+    assert(held.afterRelease>held.before,'Held precision button must create a real saved stroke: '+JSON.stringify(held));
+    assert.equal(held.afterMovement,held.afterRelease,'Moving after release must not draw');
+    assert.equal(held.label,'УДЕРЖИВАЙ','Second pen must not remain in a toggle state');
+    if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-precision-'+viewport.width+'.png'),fullPage:false});
+    await page.locator('[data-cmd="precision"]').click();
+  }
   await board.evaluate(el=>el.dataset.themeContinuity='intact');
   await page.locator('#settingsBtn').click();
   await page.locator('#settingNewAppearance').uncheck();
@@ -383,6 +438,14 @@ try{
     'Completed drawing should expose an actual recent-work shortcut');
   await page.locator('.museum-footer [data-action="collection"]').click();
   await page.locator('.archive-work').first().waitFor({timeout:7500});
+  if(mobile){
+    const noVertical=await page.evaluate(()=>{
+      const root=document.querySelector('#screen'),gallery=document.querySelector('.collection-page .archive-gallery');
+      return {root:root.scrollHeight-root.clientHeight,archive:gallery.scrollHeight-gallery.clientHeight,
+        horizontal:gallery.scrollWidth-gallery.clientWidth};
+    });
+    assert(noVertical.root<=3&&noVertical.archive<=3,'Archive must not scroll vertically: '+JSON.stringify(noVertical));
+  }
   assert.equal(await page.locator('.collection-page [data-action="menu"]').count(),1,
     'Archive exit must be unique and inside the header, not after the gallery');
   assert(await page.locator('.collection-mast .collection-back').isVisible(),
