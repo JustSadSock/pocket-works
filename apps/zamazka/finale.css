@@ -327,3 +327,43 @@
  #screen>.finale-reveal .finale-reveal-brief>.btn{min-height:36px!important}
  #screen>.finale-reveal .finale-reveal-brief>.stack .btn{min-height:35px!important}
 }
+
+/* Very short horizontal mobile/PWA: evidence becomes a swipeable row instead
+   of compressing five image frames to a few pixels. */
+@media(min-width:701px) and (max-width:1099px) and (max-height:480px){
+ #screen>.verdict-phase>.finale-verdict-body{gap:4px!important;padding:4px 8px!important}
+ #screen>.verdict-phase .finale-overview{padding-bottom:2px}
+ #screen>.verdict-phase .finale-overview h3{font-size:20px}
+ #screen>.verdict-phase .finale-overview p{display:none}
+ #screen>.verdict-phase .finale-ledger strong{font-size:23px}
+ #screen>.verdict-phase .finale-ballot-grid{
+  display:flex!important;flex-direction:row!important;align-items:stretch!important;
+  overflow-x:auto!important;overflow-y:hidden!important;
+  scroll-snap-type:x mandatory;scrollbar-width:none;gap:5px!important
+ }
+ #screen>.verdict-phase .finale-ballot-card{
+  flex:0 0 175px!important;max-width:175px;scroll-snap-align:start;
+  padding:4px!important;gap:2px!important
+ }
+ #screen>.verdict-phase .finale-ballot-index{padding-bottom:1px}
+ #screen>.verdict-phase .finale-ballot-index b{font-size:15px}
+ #screen>.verdict-phase .finale-ballot-card .verdict-image{flex:1 1 auto;min-height:35px}
+ #screen>.verdict-phase .finale-card-caption{min-height:20px}
+ #screen>.verdict-phase .finale-card-caption strong{font-size:12px!important}
+ #screen>.verdict-phase .finale-card-caption small{display:none}
+ #screen>.verdict-phase .finale-vote-tally strong{font-size:17px}
+ #screen>.verdict-phase .finale-vote-bar{margin:2px 0}
+ #screen>.verdict-phase .verdict-tokens{display:none!important}
+ #screen>.verdict-phase .finale-ballot-votes{padding-top:2px}
+ #screen>.verdict-phase .finale-voters{display:none}
+ #screen>.verdict-phase .finale-verdict-footer{padding-top:4px!important}
+ #screen>.verdict-phase .finale-verdict-footer>.btn{min-height:30px;padding:3px 10px}
+ #screen>.finale-reveal .reveal-option-image{height:26px!important}
+ #screen>.finale-reveal .finale-reveal-provenance h3{font-size:20px}
+ #screen>.finale-reveal .finale-reveal-provenance p{display:none}
+ #screen>.finale-reveal .unveil-frame{max-height:calc(100% - 65px)}
+ #screen>.finale-results .finale-laureate-seal{display:none}
+ #screen>.finale-results .finale-laureate{padding:7px}
+ #screen>.finale-results .finale-laureate-person{margin:3px}
+ #screen>.finale-results .finale-laureate-total strong{font-size:36px}
+}
