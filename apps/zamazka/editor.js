@@ -1,6 +1,7 @@
 import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame,artworkAspect} from './artworks.js';
 import {zamazkaStore} from './storage.js';
 import {floodFillRaster} from './fill-core.js';
+import {brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
 export {floodFillRaster};
 
 // Keep stroke coordinates in the 600×450 logical world, but rasterize on a much
@@ -272,7 +273,7 @@ export class Editor{
     this.inputMode=(sessionStorage.getItem('pocket-works:zamazka:input-mode')||localStorage.getItem('pocket-works:zamazka:input-mode'))==='precision'?'precision':'direct';
     this.hand=(sessionStorage.getItem('pocket-works:zamazka:precision-hand')||localStorage.getItem('pocket-works:zamazka:precision-hand'))==='left'?'left':'right';
     this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
-    this.cursor=root.querySelector('#brushCursor');this.pickerPreview=root.querySelector('#pickerPreview');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
+    this.cursor=root.querySelector('#brushCursor');this.cursorStyle=getBrushCursorStyle();this.cursorInk=null;this.cursorMotion=null;this.cursorIdleTimer=null;this.cursorLiftTimer=null;this.initCursorGraphic();this.root.querySelector('.restore')?.setAttribute('data-active-tool','brush');this.pickerPreview=root.querySelector('#pickerPreview');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
    this.draftKey=key+id+':'+variation+':'+round;
    try{const stored=JSON.parse(sessionStorage.getItem(this.draftKey)||localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
    this.attach();this.setMode(this.inputMode,false);this.center();this.render();
@@ -345,7 +346,7 @@ export class Editor{
   }
   setTool(tool){
     if(!['brush','fill','picker','erase','smudge','hand'].includes(tool))return;
-    this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
+    this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.cursor?.classList.remove('is-idle','is-fast');
     if(this.tool!==tool)this.onSound?.('tool');this.tool=tool;
     this.root.querySelector('.restore')?.setAttribute('data-active-tool',tool);
     this.viewport.classList.toggle('hand-mode',tool==='hand');
@@ -404,6 +405,7 @@ export class Editor{
     if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
     const pts=entry&&Math.hypot(entry[0]-snapped[0],entry[1]-snapped[1])>.1?[entry,snapped]:[snapped];
     this.working={c:this.color,s:this.size,t:this.tool,p:pts,g:this.edgeGestureGroup||'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
+    this.cursorContact(true);
     this.edgePaused=false;this.outsidePoint=null;
     this.redoStack=[];this.onSound?.('brush');this.render();
   }
@@ -437,7 +439,7 @@ export class Editor{
   }
   finishStroke(){
     if(!this.working)return;
-    this.strokes.push(this.working);this.working=null;this.limitWarned=false;
+    this.strokes.push(this.working);this.working=null;this.cursorContact(false);this.limitWarned=false;
     this.save();this.render();
   }
   // On touch, the precision nib is above the finger, as in Folio.
@@ -447,6 +449,39 @@ export class Editor{
       clientY:e.clientY-(offset?50:0),pointerType:e.pointerType};
   }
   pointAt(e){return this.point(this.tip(e))}
+
+  initCursorGraphic(){
+    if(!this.cursor)return;
+    this.cursor.innerHTML='<span class="brush-cursor-art" aria-hidden="true"></span><span class="brush-cursor-sparks" aria-hidden="true"></span>';
+    this.updateCursorGraphic(true);
+  }
+  updateCursorGraphic(force=false){
+    if(!this.cursor||(!force&&this.cursorInk===this.color))return;
+    this.cursorInk=this.color;
+    const art=this.cursor.querySelector('.brush-cursor-art');
+    if(art)art.innerHTML=brushCursorSVG(this.cursorStyle,this.color);
+  }
+  setCursorStyle(index){
+    this.cursorStyle=setBrushCursorStyle(index);
+    this.updateCursorGraphic(true);
+    if(this.cursor){this.cursor.classList.remove('is-changing');void this.cursor.offsetWidth;this.cursor.classList.add('is-changing')}
+    if(this.lastCursor)this.showCursor(this.lastCursor);
+  }
+  cursorDip(){
+    if(!this.cursor)return;
+    this.updateCursorGraphic();
+    this.cursor.classList.remove('is-dipping');void this.cursor.offsetWidth;this.cursor.classList.add('is-dipping');
+  }
+  cursorContact(active){
+    if(!this.cursor)return;
+    clearTimeout(this.cursorLiftTimer);
+    this.cursor.classList.toggle('is-pressed',active);
+    this.cursor.classList.remove('is-lifted');
+    if(!active){
+      void this.cursor.offsetWidth;this.cursor.classList.add('is-lifted');
+      this.cursorLiftTimer=setTimeout(()=>this.cursor?.classList.remove('is-lifted','is-fast'),370);
+    }
+  }
   showCursor(e){
     if(!this.cursor)return;
     if(this.pinch||this.panStart||this.tool==='hand'||this.tool==='fill'){
@@ -457,19 +492,33 @@ export class Editor{
       this.hideCursor();this.showPickerPreview(e);return;
     }
     this.hidePickerPreview();
+    this.updateCursorGraphic();
+    this.cursor.classList.toggle('is-brush',this.tool==='brush');
     const tip=this.tip(e),v=this.viewport.getBoundingClientRect(),c=this.canvas.getBoundingClientRect();
     const effectiveSize=this.tool==='pencil'?Math.max(.15,this.size*.4):this.size;
     const diameter=Math.max(2,effectiveSize*c.height/H);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
     // Absolutely positioned children start at the viewport padding edge, not its outer border.
    const drawn=this.point(tip);
+   this.cursor.classList.toggle('is-blocked',!this.inside(drawn));
+   const timestamp=typeof performance==='undefined'?Date.now():performance.now();
+   const prev=this.cursorMotion;
+   const elapsed=prev?Math.max(1,timestamp-prev.time):16;
+   const vx=prev?(tip.clientX-prev.x)/elapsed:0;
+   const vy=prev?(tip.clientY-prev.y)/elapsed:0;
+   this.cursorMotion={x:tip.clientX,y:tip.clientY,time:timestamp};
+   this.cursor.style.setProperty('--brush-angle',Math.max(-14,Math.min(14,vx*13+vy*3)).toFixed(2)+'deg');
+   this.cursor.classList.toggle('is-fast',Boolean(this.working)&&Math.hypot(vx,vy)>1.7);
+   this.cursor.classList.remove('is-idle');
+   clearTimeout(this.cursorIdleTimer);
+   if(!this.working)this.cursorIdleTimer=setTimeout(()=>{if(!this.closed&&!this.working)this.cursor?.classList.add('is-idle')},190);
    this.cursor.style.left=c.left+drawn[0]/W*c.width-v.left-this.viewport.clientLeft+'px';
    this.cursor.style.top=c.top+drawn[1]/H*c.height-v.top-this.viewport.clientTop+'px';
     this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.tool==='smudge'?'#c6a36d':this.color);
      this.cursor.classList?.toggle?.('is-smudge',this.tool==='smudge');
     this.cursor.hidden=false;
   }
-  hideCursor(){if(this.cursor)this.cursor.hidden=true}
+  hideCursor(){clearTimeout(this.cursorIdleTimer);this.cursorMotion=null;if(this.cursor){this.cursor.hidden=true;this.cursor.classList.remove('is-idle','is-fast','is-pressed')}}
   hidePickerPreview(){if(this.pickerPreview)this.pickerPreview.hidden=true}
   showPickerPreview(e){
     const sample=this.pickerPreview;if(!sample)return;
@@ -697,7 +746,7 @@ export class Editor{
     this.actions=e=>{
       const b=e.target.closest('[data-tool],[data-cmd],[data-color]');if(!b)return;
       if(b.dataset.tool)this.setTool(b.dataset.tool);
-      if(b.dataset.color){this.onSound?.('tool');this.color=b.dataset.color;this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.toggle('active',x===b));if(this.lastCursor)this.showCursor(this.lastCursor)}
+      if(b.dataset.color){this.onSound?.('tool');this.color=b.dataset.color;this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.toggle('active',x===b));this.cursorDip();if(this.lastCursor)this.showCursor(this.lastCursor)}
       if(b.dataset.cmd==='precision')this.setMode(this.inputMode==='precision'?'direct':'precision');
       if(b.dataset.cmd==='handedness'){
         this.hand=this.hand==='right'?'left':'right';
@@ -779,6 +828,7 @@ export class Editor{
       if(e.target.id==='customColor'){
         this.color=e.target.value;
         this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.remove('active'));
+        this.cursorDip();
       }
       if(this.lastCursor)this.showCursor(this.lastCursor);
     };
@@ -815,7 +865,7 @@ export class Editor{
        rgb=ctx.getImageData(Math.min(sample.width-1,Math.floor(p[0]*2)),Math.min(sample.height-1,Math.floor(p[1]*2)),1,1).data;
      }
      if(this.closed||!rgb||!rgb[3])return;
-     this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.previewInk=this.color;
+     this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.previewInk=this.color;this.cursorDip();
      const input=this.root.querySelector('#customColor');if(input)input.value=this.color;
      this.root.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('active',b.dataset.color?.toLowerCase()===this.color));
      if(!temporary)this.setTool('brush');
@@ -906,7 +956,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.closed=true;this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
+ dispose(){this.closed=true;clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
