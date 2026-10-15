@@ -64,9 +64,12 @@ function cylinder(scene,name,parent,mat,x,y,z,diam=0.1,h=1,taper=0){
  mesh.parent=parent;mesh.position.set(x,y,z);mesh.material=mat;return mesh;
 }
 function box(scene,name,parent,mat,w,h,d,x,y,z,r=.06){return rounded(scene,name,w,h,d,Math.min(r,w/2-.001,h/2-.001,d/2-.001),mat,parent,x,y,z);}
-function texture(scene,label,draw) {
- const tex=new DynamicTexture(label,{width:256,height:256},scene,false);
- const c=tex.getContext();draw(c);tex.update();return tex;
+function texture(scene,label,draw,size=256) {
+ const tex=new DynamicTexture(label,{width:size,height:size},scene,false);
+ const c=tex.getContext();
+ c.save();
+ if(size!==256)c.scale(size/256,size/256);
+ draw(c);c.restore();tex.update();return tex;
 }
 
 const fabricCache=new WeakMap();
@@ -188,7 +191,7 @@ function yarn(scene,color){
    c.strokeStyle=rand()>.55?'rgba(255,247,222,.24)':'rgba(90,64,53,.13)';
    c.lineWidth=1.1;c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+4,y-2,x+7,y+1);c.stroke();
   }
- });
+ },512);
  const mat=new StandardMaterial('mini-woven-yarn-'+color,scene);
  mat.diffuseTexture=tx;mat.diffuseColor=Color3.White();
  mat.specularColor=new Color3(.011,.011,.009);mat.specularPower=5;
