@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseItems, fragmentText, shuffledIds, makeRound, correctPositions } from './puzzle-core.mjs';
+import { parseItems, fragmentText, shuffledIds, makeRound, correctPositions } from './puzzle-core.js';
 
 test('numbered paragraphs are independent questions', () => {
   assert.deepEqual(parseItems('1. Alpha beta gamma.\n2) Delta epsilon zeta.\n3: Eta theta iota.'),
