@@ -281,3 +281,24 @@ html,body{min-width:0;max-width:100%;overscroll-behavior-y:none}
 #screen>.exhibition-lobby>.lobby-invite{grid-area:invite!important}
 #screen>.exhibition-lobby>.commons-desk{grid-area:canvas!important}
 #screen>.exhibition-lobby>.lobby-attendance{grid-area:roster!important}
+
+/* Short landscape browsers: 2 miniature desks side by side leave more
+   height for settings and prevent the second selector being hard-clipped. */
+@media(min-width:700px) and (max-width:1099px) and (max-height:550px){
+ #screen>.exhibition-lobby>.lobby-invite{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-content:start!important;align-items:start!important;gap:5px!important
+ }
+ #screen>.exhibition-lobby .room-ticket{padding:5px!important;border-left-width:4px!important}
+ #screen>.exhibition-lobby .room-ticket .section-label{font-size:8px!important;letter-spacing:0!important}
+ #screen>.exhibition-lobby .room-code{font-size:17px!important;margin:3px 0!important}
+ #screen>.exhibition-lobby .ticket-actions{display:grid!important;grid-template-columns:1fr!important;gap:2px!important}
+ #screen>.exhibition-lobby .ticket-actions .btn{min-height:25px!important;padding:2px!important;font-size:9px!important}
+ #screen>.exhibition-lobby .lobby-invite>.lobby-controls{padding:4px!important;gap:1px!important}
+ #screen>.exhibition-lobby .lobby-controls-title{font-size:12px!important;line-height:1.1!important}
+ #screen>.exhibition-lobby .lobby-controls .field{font-size:8px!important;margin:0!important}
+ #screen>.exhibition-lobby .lobby-controls .input{height:25px!important;min-height:25px!important;padding:0 3px!important;font-size:11px!important}
+ #screen>.exhibition-lobby .lobby-controls [data-action="start"]{min-height:28px!important;margin-top:2px!important;font-size:10px!important}
+ #screen>.exhibition-lobby .lobby-attendance{max-height:46px!important}
+ #screen>.exhibition-lobby .lobby-attendance .players{max-height:42px!important}
+}
