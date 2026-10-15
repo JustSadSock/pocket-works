@@ -445,17 +445,18 @@ try{
     if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-precision-'+viewport.width+'.png'),fullPage:false});
     await page.locator('[data-cmd="precision"]').click();
   }
+  const retainedInk=await page.locator('#strokeCount').textContent();
   await board.evaluate(el=>el.dataset.themeContinuity='intact');
   await page.locator('#settingsBtn').click();
   await page.locator('#settingNewAppearance').uncheck();
   await page.locator('#modalActions .btn.primary').click();
   assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Switching off must preserve mounted drawing canvas');
-  assert.equal(await page.locator('#strokeCount').textContent(),indicator,'Switching off must retain brush strokes');
+  assert.equal(await page.locator('#strokeCount').textContent(),retainedInk,'Switching off must retain brush strokes');
   await page.locator('#settingsBtn').click();
   await page.locator('#settingNewAppearance').check();
   await page.locator('#modalActions .btn.primary').click();
   assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Switching on must preserve mounted drawing canvas');
-  assert.equal(await page.locator('#strokeCount').textContent(),indicator,'Switching on must retain brush strokes');
+  assert.equal(await page.locator('#strokeCount').textContent(),retainedInk,'Switching on must retain brush strokes');
   await page.locator('[data-action="submit"]').click();
   await page.locator('.reveal-phase').waitFor({timeout:11000});
   await page.locator('.reveal-phase.is-composed').waitFor({timeout:12000});
