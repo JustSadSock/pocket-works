@@ -75,6 +75,15 @@ try{
   assert.equal(storedVolume,'35','Sound level was not persisted');
   await page.locator('#settingsBtn').click();
   assert.equal(await page.locator('#settingVolume').inputValue(),'35');
+  if(mobile){
+    const settingsFit=await page.locator('.dialog-box:has(#settingNewAppearance)').evaluate(el=>{
+      const actions=[...el.querySelectorAll('#modalActions button')];
+      return {scroll:el.scrollHeight-el.clientHeight,
+        visible:actions.every(button=>{const r=button.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})};
+    });
+    assert(settingsFit.scroll<=3&&settingsFit.visible,
+      'Portrait settings and Save must fit without vertical scrolling: '+JSON.stringify(settingsFit));
+  }
   const nextSwitch=page.locator('#settingNewAppearance');
   assert.equal(await nextSwitch.isChecked(),false,'New style must start disabled');
   await nextSwitch.check();
