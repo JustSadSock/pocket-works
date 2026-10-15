@@ -351,9 +351,11 @@ function rotatePlacement(){
   if(pending.previewReady)showGuide(pending.proto,pending.valid);
  sound('rotate');
 }
-function hideSelection(){ui.selected.hidden=true;}
+let expandedMaterials=false;
+function hideSelection(){ui.selected.hidden=true;expandedMaterials=false;$('selectionMaterials').hidden=true;}
 function select(id) {
  if(pending)cancelPending(false);
+ if(selectedId!==id)expandedMaterials=false;
  selectedId=state.items.some(x=>x.id===id)?id:null;
  if(!selectedId){hideSelection();return;}
  const item=state.items.find(x=>x.id===id);
@@ -362,6 +364,8 @@ function select(id) {
  ui.swatches.innerHTML=COLORS.map(c=>'<button type="button" class="color-dot '+(item.color===c?'picked':'')+'" style="--paint:'+c+'" data-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('');
  ui.swatches.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{const id=selectedId;mutate(()=>{const found=state.items.find(i=>i.id===id);if(found)found.color=button.dataset.color;});if(online?.active)online.send({type:'edit',id,patch:{color:button.dataset.color}});director?.touch(id);sound('paint');}));
  const materials=$('selectionMaterials');
+ materials.hidden=!expandedMaterials;
+ $('materialToggle').setAttribute('aria-expanded',String(expandedMaterials));
  materials.innerHTML=MATERIALS.map(m=>'<button type="button" data-material="'+m.id+'" class="'+(item.material===m.id?'picked':'')+'">'+m.name+'</button>').join('');
  materials.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
   const id=selectedId,material=b.dataset.material;
@@ -722,6 +726,8 @@ function addEvents(){
  $('duplicateBtn').addEventListener('click',duplicateSelected);
  $('deleteBtn').addEventListener('click',removeSelected);
  $('doneBtn').addEventListener('click',()=>{selectedId=null;hideSelection();sound('select');});
+ $('materialToggle').addEventListener('click',()=>{expandedMaterials=!expandedMaterials;
+  $('selectionMaterials').hidden=!expandedMaterials;$('materialToggle').setAttribute('aria-expanded',String(expandedMaterials));sound('select');});
  $('undoBtn').addEventListener('click',undo);$('redoBtn').addEventListener('click',redo);
  $('eveningBtn').addEventListener('click',switchDollhouseLighting);
  $('soundBtn').addEventListener('click',()=>{soundscape.toggle();updateActions();});
