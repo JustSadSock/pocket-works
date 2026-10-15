@@ -305,3 +305,6 @@ html,body{min-width:0;max-width:100%;overscroll-behavior-y:none}
 
 /* Hidden overflow was still programmatically scrollable by 4px in some portrait webviews. */
 #screen.screen:has(>.exhibition-lobby){overflow:clip!important}
+
+/* The five-pixel preview extent is a layout rounding surplus, not scrollable content. */
+#screen.screen:has(>.mobile-preview){overflow:clip!important}
