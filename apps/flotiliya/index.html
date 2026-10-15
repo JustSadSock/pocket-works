@@ -17,18 +17,18 @@
 <div class="workspace">
 <section class="board" id="board">
 <canvas id="sea" data-gesture-surface data-block-callout aria-label="Морское поле боя"></canvas>
-<div id="seaTop" class="sea-top" hidden><div class="round-stamp"><span class="overline">БОЕВОЙ ЖУРНАЛ</span><b id="turnLabel"></b><small id="weatherLabel">Штиль</small></div><div class="opposition"><span id="shipsLeft"></span><i></i><span id="scenarioLabel"></span></div></div>
+<div id="seaTop" class="sea-top" hidden><div class="round-stamp"><span class="overline">МОРСКАЯ КАРТА</span><b id="turnLabel"></b><small id="weatherLabel">Штиль</small></div><div class="opposition"><span id="shipsLeft"></span><i></i><span id="scenarioLabel"></span></div></div>
 <div id="harbor" class="harbor">
-<div class="intro"><span class="overline">МОРСКАЯ ТАКТИКА</span><h1>Корабли помнят<br>каждую битву.</h1><p>Три корабля. Один запас очков движения на оба приказа. Манёвренные суда успевают больше — используй это.</p><div class="port-stats"><span id="campaignLabel"></span><span id="harborCount"></span></div><button data-native-press id="sailBtn" class="primary">Начать сражение <span>↗</span></button></div>
-<div class="fleet"><div class="fleet-heading">ТВОЯ ЭСКАДРА <span id="activeCount"></span></div><div id="fleetList" class="fleet-list"></div><p class="fine">Выбери до трёх кораблей. Ремонт и улучшения сохраняются между боями.</p></div>
+<div class="intro"><span class="overline">СРЕДИЗЕМНОЕ МОРЕ · XIV ВЕК</span><h1>Курс решает<br>исход.</h1><div class="mission-card"><span class="mission-eyebrow">ПРИКАЗ КАПИТАНУ</span><p id="missionBrief"></p></div><div class="port-stats"><span id="campaignLabel"></span><span id="harborCount"></span></div><button data-native-press id="sailBtn" class="primary">Отдать швартовы <span>↗</span></button></div>
+<div class="fleet"><div class="fleet-heading">ТВОЯ ЭСКАДРА <span id="activeCount"></span></div><div id="fleetList" class="fleet-list"></div><p class="fine">До трёх галер в море. Потери и повреждения сохраняются.</p></div>
 </div>
-<div id="help" class="help" hidden><button data-native-press id="helpClose" class="smallbtn close" aria-label="Закрыть">×</button><span class="overline">КОМАНДНАЯ ПАМЯТКА</span><h2>Два приказа на одну фазу</h2><p><b>Очки движения.</b> Манёвр — 1 ОД, обстрел и уклонение — 2, абордаж — 3. Каждый участок нарисованного пути расходует ещё 1 ОД примерно за 35 единиц расстояния. Общий запас один на обе половины фазы.</p><p><b>Настоящий бой.</b> Позиция относительно носа и бортов влияет на урон; удары по бортам ломают вёсла и ухудшают скорость с манёвренностью. При абордаже корпуса сцепляются, обе стороны теряют бойцов, а поддержка третьего корабля может изменить исход. «Уклонение» помогает разорвать сцепление. Экипаж с низким боевым духом может отступить.</p><p><b>01 — первая половина.</b> Выбери корабль, зажми и проведи пальцем по воде или мышью, чтобы нарисовать ломаный маршрут. Простое касание задаёт точку.</p><p><b>02 — вторая половина.</b> Переключи половину фазы, выбери «Абордаж» и нажми на вражеский корабль — или продолжи рисовать путь обхода. Для каждой половины приказы отдельные.</p><p>Внизу карты — твой флот, сверху — противник. Оба флота исполняют короткую фазу одновременно. Учитывай поворот, рифы, острова, ветер и ограниченную скорость. Каждый корабль сохраняет опыт и повреждения.</p></div>
+<div id="help" class="help" hidden><button data-native-press id="helpClose" class="smallbtn close" aria-label="Закрыть">×</button><span class="overline">КОМАНДНАЯ ПАМЯТКА</span><h2>Два приказа на одну фазу</h2><p><b>Очки движения.</b> Манёвр — 1 ОД, обстрел и уклонение — 2, абордаж — 3. Каждый участок нарисованного пути расходует ещё 1 ОД примерно за 35 единиц расстояния. Общий запас один на обе половины фазы.</p><p><b>Настоящий бой.</b> Позиция относительно носа и бортов влияет на урон; удары по бортам ломают вёсла и ухудшают скорость с манёвренностью. При абордаже корпуса сцепляются, обе стороны теряют бойцов, а поддержка третьего корабля может изменить исход. «Уклонение» помогает разорвать сцепление. Экипаж с низким боевым духом может отступить.</p><p><b>01 — первая половина.</b> Выбери корабль, зажми и проведи пальцем по воде или мышью, чтобы нарисовать ломаный маршрут. Простое касание задаёт точку.</p><p><b>02 — вторая половина.</b> Переключи половину фазы, выбери «Абордаж» и нажми на вражеский корабль — или продолжи рисовать путь обхода. Для каждой половины приказы отдельные.</p><p>Внизу карты — твой флот, сверху — противник. Оба флота исполняют короткую фазу одновременно. Обстрел сам по себе не двигает судно. Учитывай поворот, рифы, острова, ветер и ограниченную скорость. Каждый корабль сохраняет опыт и повреждения.</p></div>
 <div id="combatFeed" class="combat-feed" role="status" aria-live="polite">Бой ещё не начался</div><div id="toast" class="toast" hidden></div>
 </section>
 <aside id="command" class="command" hidden>
 <div class="command-title"><span id="commandCaption" class="overline">ПРИКАЗЫ</span><h2 id="selectedName">Выбери корабль</h2><p id="selectedInfo"></p></div>
 <div class="ap-gauge" id="apGauge" aria-live="polite">
- <div class="ap-top"><div><span class="overline">ОЧКИ ДВИЖЕНИЯ</span><small id="apFormula">Общий запас на весь ход</small></div><div class="ap-numbers"><strong id="apRemaining">—</strong><span id="apTotal">/ —</span></div></div>
+ <div class="ap-top"><div><span class="overline">ЗАПАС ХОДА</span><small id="apFormula">Общий запас на весь ход</small></div><div class="ap-numbers"><strong id="apRemaining">—</strong><span id="apTotal">/ —</span></div></div>
  <div class="ap-pips" id="apPips" aria-label="Запас очков движения"></div>
  <div class="ap-costs"><span>01 <b id="apSpent0">0</b> ОД</span><span>02 <b id="apSpent1">0</b> ОД</span><span id="apState">Не назначено</span></div>
 </div>
@@ -50,10 +50,10 @@
 <button data-native-press data-order="board" class="mode"><span>⚔</span>Абордаж<small>3 ОД + путь</small></button>
 <button data-native-press data-order="evade" class="mode"><span>↷</span>Уклонение<small>2 ОД + путь</small></button>
 </div>
-<div class="route-actions"><button data-native-press id="clearRouteBtn" class="quiet-btn">↶ Сбросить путь</button><span id="instruction">Проведи по карте, чтобы нарисовать маршрут</span></div>
+<div class="route-actions"><button data-native-press id="clearRouteBtn" class="quiet-btn">↶ Сбросить путь</button><span id="instruction">Нарисуй оплаченный маршрут на карте</span></div>
 <div class="ship-state-row"><span id="maneuverReadout">Готов к приказу</span><span id="crewReadout"></span></div>
 </div>
-<button data-native-press id="resolveBtn" class="primary execute">Начать фазу · 4,5 c <span>▶</span></button><div id="progress" class="progress" hidden><div id="progressFill"></div></div>
+<button data-native-press id="resolveBtn" class="primary execute">ИСПОЛНИТЬ ПРИКАЗЫ <span>▶</span></button><div id="progress" class="progress" hidden><div id="progressFill"></div></div>
 <div id="endPanel" class="end" hidden><h2 id="endTitle"></h2><p id="endText"></p><button data-native-press id="returnBtn" class="primary">В гавань <span>↗</span></button></div>
 </aside>
 </div>
