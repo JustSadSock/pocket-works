@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "oskolki",
+  "name": "ОСКОЛКИ",
+  "shortName": "ОСКОЛКИ",
+  "description": "Игра на память: преврати свой текст в осколки фраз, собери предложения по памяти и проверь точность.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-15",
+  "releaseDateTime": "2026-10-15T19:20:00+03:00",
+  "changelog": [
+    "Первый выпуск: импорт многоязычного текста и TXT-файлов, автоматическое деление на пункты.",
+    "Сборка скрытых предложений из переставляемых фрагментов и точная проверка каждого ответа.",
+    "Локальное сохранение незавершённой игры, итоги и повтор ошибок, поддержка телефона и офлайна."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#f5cf5a",
+  "backgroundColor": "#194cc4",
+  "themeColor": "#194cc4",
+  "orientation": "portrait",
+  "cacheName": "oskolki-v1.0.0",
+  "storageNamespace": "pocket-works:oskolki",
+  "tags": [
+    "game",
+    "memory",
+    "study",
+    "language",
+    "puzzle",
+    "education",
+    "offline",
+    "PWA"
+  ],
+  "order": 512
+}
