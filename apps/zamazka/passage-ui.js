@@ -67,12 +67,13 @@ export function preparingMarkup({round,total,ready=0,local=false}={}){
  '</div><footer class="passage-prep-actions"><button class="btn primary" data-action="retry-art-preload" hidden>Повторить загрузку</button>'+
  '<button class="btn ghost preparing-menu" data-action="menu">В главное меню</button></footer></section>';
 }
-export function updateArtLoad(root,count,total=5){
+export function updateArtLoad(root,count,total=5,loadedIndices=null){
  if(!root)return;
  const n=Math.max(0,Math.min(total,Math.round(Number(count)||0)));
  const meter=root.querySelector('#artLoadCount');if(meter)meter.textContent=n+' / '+total;
  const bar=root.querySelector('#artLoadTrack');if(bar){bar.setAttribute('aria-valuenow',String(n));bar.style.setProperty('--passage-progress',100*n/total+'%')}
- root.querySelectorAll('.passage-image-slot').forEach((slot,i)=>slot.classList.toggle('is-loaded',i<n));
+ const loaded=Array.isArray(loadedIndices)?new Set(loadedIndices):null;
+ root.querySelectorAll('.passage-image-slot').forEach((slot,i)=>slot.classList.toggle('is-loaded',loaded?loaded.has(i):i<n));
 }
 export function updateReady(root,count,total){
  const label=root?.querySelector('#artReadyCount');if(label)label.textContent=Number(count||0)+' / '+Number(total||0);
