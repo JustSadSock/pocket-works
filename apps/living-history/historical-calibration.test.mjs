@@ -63,3 +63,29 @@ test('v0.6 save remains byte-identical and does not acquire free founding stores
  advanceDays(copy,365);
  check(copy);
 });
+
+test('founding customary sample never drifts when tenements are inherited or redistributed',()=>{
+ const s=createWorld(413);
+ const initial=historicalObservation(s);
+ const holdings=s.households.filter(h=>h.tenure==='customary'&&h.tenureOrigin==='initial-settlement');
+ const moved=holdings[0].fields.splice(0,20),owner=holdings[1];
+ owner.fields.push(...moved);
+ // This specific mutation is a test-only lawful transfer of ownership; no tile
+ // is added or removed and calibration must still refer to founding survey.
+ const changed=historicalObservation(s);
+ assert.equal(changed.customaryTenementsAbove10Acres,initial.customaryTenementsAbove10Acres);
+ assert.equal(changed.customarySampleOrigin,'frozen-foundation');
+ check(s);
+});
+test('first marriages are dated and cohort report excludes marriages outside a 25-year window',()=>{
+ const s=createWorld(413);advanceDays(s,365*24);
+ const married=s.people.filter(p=>Number.isFinite(p.firstMarriageAge));
+ assert.ok(married.length>0,'an observed couple eventually enters a first marriage');
+ assert.ok(married.every(p=>Number.isFinite(p.firstMarriageDay)&&p.firstMarriageDay>0));
+ const old=married[0].firstMarriageDay;
+ s.day+=26*365; // Observe the same archived population at a later historical epoch
+ const report=historicalObservation(s);
+ assert.ok(report.firstMarriagesObserved<=married.length);
+ assert.ok(report.firstMarriageCohortYears===25);
+ assert.ok(old<s.day-25*365);
+});

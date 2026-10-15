@@ -29,10 +29,17 @@ export function historicalObservation(s){
  const alive=s.people.filter(p=>p.alive),livingPerHome=new Map();
  for(const p of alive)livingPerHome.set(p.houseId,(livingPerHome.get(p.houseId)||0)+1);
  const inhabited=s.households.filter(h=>livingPerHome.has(h.id));
- const femaleAges=s.people.filter(p=>p.sex==='f'&&Number.isFinite(p.firstMarriageAge)).map(p=>p.firstMarriageAge);
- const maleAges=s.people.filter(p=>p.sex==='m'&&Number.isFinite(p.firstMarriageAge)).map(p=>p.firstMarriageAge);
- const allCustomary=s.households.filter(h=>h.tenure==='customary'&&h.tenureOrigin==='initial-settlement');
- const customaryLarge=allCustomary.filter(h=>h.fields.length*LAND_STRIP_HA/ACRE>10).length;
+ // Recent first-marriage cohort, not all historical first marriages since
+ // settlement. Absent dated events in a legacy save are not retroactively dated.
+ const lookbackDays=25*365,cutoff=Math.max(0,s.day-lookbackDays);
+ const sample=sex=>s.people.filter(p=>p.sex===sex&&Number.isFinite(p.firstMarriageAge)&&
+  (s.day<=lookbackDays||Number.isFinite(p.firstMarriageDay)&&p.firstMarriageDay>=cutoff));
+ const femaleAges=sample('f').map(p=>p.firstMarriageAge);
+ const maleAges=sample('m').map(p=>p.firstMarriageAge);
+ const foundingStrips=Array.isArray(s.historicalProfile?.foundingCustomaryStrips)?
+  s.historicalProfile.foundingCustomaryStrips:
+  s.households.filter(h=>h.tenure==='customary'&&h.tenureOrigin==='initial-settlement').map(h=>h.fields.length);
+ const customaryLarge=foundingStrips.filter(n=>n*LAND_STRIP_HA/ACRE>10).length;
  return {
   seed:s.seed,year:Math.floor(s.day/365),scenario:s.scenario,population:alive.length,
   totalPeople:s.people.length,inhabitedHomes:inhabited.length,
@@ -41,11 +48,13 @@ export function historicalObservation(s){
   femaleFirstMarriage:femaleAges.length?round(femaleAges.reduce((a,b)=>a+b,0)/femaleAges.length):null,
   maleFirstMarriage:maleAges.length?round(maleAges.reduce((a,b)=>a+b,0)/maleAges.length):null,
   firstMarriagesObserved:Math.min(femaleAges.length,maleAges.length),
+  firstMarriageCohortYears:25,
   femaleFirstMarriagesObserved:femaleAges.length,maleFirstMarriagesObserved:maleAges.length,
   femaleFirstMarriageDistribution:quantiles(femaleAges),
   maleFirstMarriageDistribution:quantiles(maleAges),
-  customaryTenementsAbove10Acres:allCustomary.length?round(customaryLarge/allCustomary.length):null,
-  customarySampleSize:allCustomary.length,
+  customaryTenementsAbove10Acres:foundingStrips.length?round(customaryLarge/foundingStrips.length):null,
+  customarySampleSize:foundingStrips.length,
+  customarySampleOrigin:s.historicalProfile?.foundingCustomaryStrips?'frozen-foundation':'legacy-observed',
   farmlandGini:gini( inhabited.filter(h=>h.tenure!=='demesne').map(h=>h.fields.length*LAND_STRIP_HA)),
   smallholdings:inhabited.filter(h=>h.tenure!=='demesne'&&h.fields.length*LAND_STRIP_HA/ACRE<=5).length,
   largeholdings:inhabited.filter(h=>h.tenure!=='demesne'&&h.fields.length*LAND_STRIP_HA/ACRE>10).length,
