@@ -10,7 +10,7 @@ const localId=(()=>{try{let id=sessionStorage.getItem(PROFILE+':id');if(!id){id=
 let saved=(()=>{try{return JSON.parse(localStorage.getItem(STORAGE)||'null')}catch{return null}})();
 let name=(()=>{try{return localStorage.getItem(PROFILE+':name')||'Музыкант'}catch{return 'Музыкант'}})();
 let pocketIdentity=null;
-let instrument='keys', air=true, hearOthers=true, onlyMine=false;
+let instrument='keys', air=true, hearOthers=true, onlyMine=false, settingsOpen=false;
 let ownId=localId, screen='welcome', netClient=null, connected=false, room=null, isHost=false, pairingMode='', joinCode='', initialClips=[];
 let session=null, recording=null, editClip=null, editNotes=[], editInst='keys', editBar=0, editHalf=0, editLength=1, editVelocity=88, held=new Map(), remoteVoices=new Map(), busy=false, timer=null, probeTimer=null, toastTimer=null;
 let clockOffset=0,lastScheduledMs=0, displayedStep=-1;
@@ -89,6 +89,7 @@ function renderPair(){
  '<div class="pair-row"><button data-action="copy-code">Копировать код</button><button data-action="share-link">Отправить ссылку</button></div></div>'+
  '<div class="roster"><h3>Музыканты · '+(session?.players.filter(p=>p.online).length||1)+'/4</h3>'+roster+'</div>'+
  '<button class="action primary" data-action="studio">Играть вместе →</button>':
+ (pairingMode==='host'||pairingMode==='resume')?'<p class="connect-hint">'+(busy?'Подготавливаем комнату…':'Ожидаем ответ PocketNet. При необходимости вернись и создай комнату заново.')+'</p>':
  '<p>Вставь код из приглашения друга. Устройства могут находиться в разных сетях.</p>'+
  '<label class="field-label" for="joinCodeField">КОД ИЗ 8 СИМВОЛОВ</label>'+
  '<input id="joinCodeField" maxlength="36" autocomplete="off" spellcheck="false" placeholder="Например, 12AB34CD" value="'+safe(joinCode)+'">'+
@@ -131,7 +132,7 @@ function renderStudio(){
  '<div class="console"><div class="section-title"><div><h2>Выбери инструмент</h2></div><span class="micro">Клавиши A–K</span></div>'+
  '<div class="instruments">'+INSTRUMENTS.map(i=>'<button class="instrument '+(instrument===i.id?'active':'')+'" data-action="inst" data-inst="'+i.id+'"><b>'+
  (i.id==='keys'?'⌁':i.id==='bass'?'≋':i.id==='drums'?'◉':i.id==='lead'?'∿':'◇')+'</b><span>'+i.name+'<small>'+i.sub+'</small></span></button>').join('')+'</div>'+
- '<details class="mix-controls"><summary>Настройки звука</summary><div class="sound-routing"><label class="route '+(air?'on':'')+'"><span class="route-led"></span><span><b>В эфир</b><small>Другие слышат меня</small></span><input id="airToggle" type="checkbox" '+(air?'checked':'')+'><i class="switch"></i></label>'+
+ '<details class="mix-controls" '+(settingsOpen?'open':'')+'><summary>Настройки звука</summary><div class="sound-routing"><label class="route '+(air?'on':'')+'"><span class="route-led"></span><span><b>В эфир</b><small>Другие слышат меня</small></span><input id="airToggle" type="checkbox" '+(air?'checked':'')+'><i class="switch"></i></label>'+
  '<label class="route '+(hearOthers?'on':'')+'"><span class="route-led"></span><span><b>Слушать остальных</b><small>Я слышу их партии</small></span><input id="hearToggle" type="checkbox" '+(hearOthers?'checked':'')+'><i class="switch"></i></label></div></details>'+
  '<div class="pads" id="pads" data-gesture-surface data-touch-action="none">'+padsView()+'</div>'+
  '<p class="pad-instruction">Касайся площадок или играй клавишами A–K.</p></div>'+
@@ -504,12 +505,13 @@ async function action(nameAction,el){
  if(nameAction==='clip'){openEditor(el.dataset.clip);return}
  if(nameAction==='new-pattern'){openEditor('new');return}
  if(nameAction==='export'){await exportMix();return}
- if(nameAction==='invite'){pairingMode=isHost?'host':'join';setScreen('pair');return}
+ if(nameAction==='invite'){if(recording)finishRecord();pairingMode=isHost?'host':'join';setScreen('pair');return}
  if(nameAction==='host-from-solo'){if(recording)finishRecord();await hostRoom(true);return}
  if(nameAction==='reset'){confirmDialog.showModal();return}
  if(nameAction==='leave'){if(recording)finishRecord();releaseAll();if(room)leaveNetwork(false);else{saveSketch();setScreen('welcome')}return}
 }
 view.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button&&!button.disabled){action(button.dataset.action,button).catch(e=>inform(e.message||'Ошибка действия'))}});
+view.addEventListener('toggle',event=>{if(event.target.matches('.mix-controls'))settingsOpen=event.target.open},true);
 view.addEventListener('change',event=>{
  const target=event.target;
  if(target.id==='airToggle'){if(!target.checked)releaseAll();air=target.checked;sendEdit({kind:'air',air});renderStudio()}
@@ -537,7 +539,7 @@ window.addEventListener('keydown',event=>{
 window.addEventListener('keyup',event=>release('key-'+event.code));
 window.addEventListener('blur',releaseAll);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();else resetSchedule()});
-document.querySelector('#roomButton').addEventListener('click',()=>{if(room){pairingMode=isHost?'host':'join';setScreen('pair')}});
+document.querySelector('#roomButton').addEventListener('click',()=>{if(room){if(recording)finishRecord();pairingMode=isHost?'host':'join';setScreen('pair')}});
 document.querySelector('#trimStart').addEventListener('input',updateClipPreview);
 document.querySelector('#trimEnd').addEventListener('input',updateClipPreview);
 document.querySelector('#closeClip').addEventListener('click',()=>clipDialog.close());
