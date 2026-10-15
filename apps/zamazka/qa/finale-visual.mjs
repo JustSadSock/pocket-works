@@ -79,7 +79,7 @@ try{
      }
     },artworkURL(g.art));
    }
-   await page.waitForTimeout(620);
+   await page.waitForTimeout(1320);
    const metrics=await page.evaluate(()=>{
     const root=document.querySelector('#screen'),scene=root.firstElementChild,r=scene.getBoundingClientRect();
     const interactive=[...scene.querySelectorAll('button')].filter(e=>getComputedStyle(e).display!=='none');
@@ -88,10 +88,12 @@ try{
     const hidden=interactive.filter(e=>{const a=e.getBoundingClientRect();return a.width<22||a.height<22}).map(e=>e.textContent.trim());
     const rail=scene.querySelector('.finale-ballot-grid'),ranking=scene.querySelector('.finale-ranking');
     const stage=scene.querySelector('.unveil-frame, .finale-laureate, .verdict-image');
+    const title=scene.querySelector('.finale-reveal-provenance h3');
+    const titleInk=title?getComputedStyle(title).color:null;
     return {scroll:root.scrollHeight-root.clientHeight,sceneScroll:scene.scrollHeight-scene.clientHeight,
      shellHeight:document.querySelector('.app-shell').clientHeight,scene:{height:r.height,width:r.width},
      actionVisible:!action||!!(ar&&ar.top>=0&&ar.bottom<=root.getBoundingClientRect().bottom+2),
-     hidden,stage:stage?{w:stage.getBoundingClientRect().width,h:stage.getBoundingClientRect().height}:null,
+     hidden,stage:stage?{w:stage.getBoundingClientRect().width,h:stage.getBoundingClientRect().height}:null,titleInk,
      railScrollable:rail?rail.scrollWidth>rail.clientWidth+3:null,
      rankingScrollable:ranking?ranking.scrollHeight>ranking.clientHeight+3:null};
    });
@@ -100,7 +102,11 @@ try{
    assert(metrics.actionVisible,layout.name+' '+name+' primary action is clipped '+JSON.stringify(metrics));
    assert.deepEqual(metrics.hidden,[],layout.name+' '+name+' collapsed buttons');
    assert(metrics.stage?.w>=50&&metrics.stage?.h>=35,layout.name+' '+name+' stage too small '+JSON.stringify(metrics));
-   if(name==='verdict'&&layout.w<=400)assert(metrics.railScrollable,layout.name+' should swipe evidence horizontally');
+   if(name==='verdict'&&layout.w<=400){
+    assert(metrics.railScrollable,layout.name+' should swipe evidence horizontally');
+    assert(metrics.stage.w/metrics.stage.h>1.1,layout.name+' artwork letterboxed inside a tall frame '+JSON.stringify(metrics.stage));
+   }
+   if(name==='reveal')assert(metrics.titleInk!=='rgb(255, 255, 255)'&&metrics.titleInk!=='rgb(240, 230, 210)',layout.name+' invisible name on parchment');
    await page.screenshot({path:join(dir,layout.name+'-'+name+'.png'),fullPage:false});
    console.log(layout.name+' '+name+' stage '+Math.round(metrics.stage.w)+'×'+Math.round(metrics.stage.h)+' scroll='+metrics.scroll);
   }
