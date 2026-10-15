@@ -484,10 +484,13 @@ try{
   if(mobile){
     const noVertical=await page.evaluate(()=>{
       const root=document.querySelector('#screen'),gallery=document.querySelector('.collection-page .archive-gallery');
+      root.scrollTop=250;const afterForcedScroll=root.scrollTop;root.scrollTop=0;
       return {root:root.scrollHeight-root.clientHeight,archive:gallery.scrollHeight-gallery.clientHeight,
+        overflow:getComputedStyle(root).overflowY,afterForcedScroll,
         horizontal:gallery.scrollWidth-gallery.clientWidth};
     });
-    assert(noVertical.root<=3&&noVertical.archive<=3,'Archive must not scroll vertically: '+JSON.stringify(noVertical));
+    assert(noVertical.root<=9&&noVertical.archive<=3&&noVertical.overflow==='clip'&&noVertical.afterForcedScroll===0,
+      'Archive must be genuinely unscrollable vertically: '+JSON.stringify(noVertical));
   }
   assert.equal(await page.locator('.collection-page [data-action="menu"]').count(),1,
     'Archive exit must be unique and inside the header, not after the gallery');
