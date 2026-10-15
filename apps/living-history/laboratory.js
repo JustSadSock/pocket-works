@@ -28,7 +28,7 @@ export function diagnoseWorld(s){
   const daily=info.foodDay;
   const foodDays=daily>0?(h.grain+(h.garden||0)+(h.dairy||0))/daily:0;
   const report=h.lastAccounting||h.accounting||{};
-  return {id,communityId:h.communityId,people:info.people,grainKg:rounded(h.grain),gardenEquivalentKg:rounded(h.garden||0),dairyEquivalentKg:rounded(h.dairy||0),coin:rounded(h.coin),
+  return {id,communityId:h.communityId,people:info.people,grainKg:rounded(h.grain),gardenEquivalentKg:rounded(h.garden||0),dairyEquivalentKg:rounded(h.dairy||0),coin:rounded(h.coin),oatsKg:rounded(h.oats||0),pulsesKg:rounded(h.pulses||0),woolKg:rounded(h.wool||0),sheep:h.sheep||0,draftOxen:h.draftOxen||0,dairyCows:h.dairyCows??h.cattle??0,
    foodDays:rounded(foodDays,1),storageUse:rounded(h.grain/Math.max(1,storageCapacity(h,s))),unhealthy:info.unhealthy,
    occupation:h.focus||h.work||'farm',workDays:info.workDays,landHa:rounded(h.fields.length*.0625,3),landStrips:h.fields.length,leasedIn:h.leaseIn?.length||0,leasedOut:h.leaseOut?.length||0,tenure:h.tenure||'customary',manorServiceDays:h.manorAgreement?.served||0,manorRentArrears:h.manorAgreement?.rentArrears||0,cattle:h.cattle||0,hayKg:rounded(h.fodder||0),
    harvestKg:report.harvestKg||0,spoilKg:report.spoilKg||0,wagesEarned:report.wagesEarned||0,wagesPaid:report.wagesPaid||0,grainWagesEarnedKg:report.grainWagesEarnedKg||0,grainWagesPaidKg:report.grainWagesPaidKg||0};
@@ -51,6 +51,14 @@ export function diagnoseWorld(s){
   firstMarriageFemaleMean:rounded((()=>{const ages=s.people.filter(p=>p.sex==='f'&&Number.isFinite(p.firstMarriageAge)).map(p=>p.firstMarriageAge);return ages.length?ages.reduce((a,b)=>a+b,0)/ages.length:0})(),1),
   firstMarriageMaleMean:rounded((()=>{const ages=s.people.filter(p=>p.sex==='m'&&Number.isFinite(p.firstMarriageAge)).map(p=>p.firstMarriageAge);return ages.length?ages.reduce((a,b)=>a+b,0)/ages.length:0})(),1),
   manorWorkdays:stats.manorServiceDays||0,manorRentCoins:stats.manorRentsCoin||0,
+  oatsKg:rounded(rows.reduce((n,h)=>n+h.oatsKg,0)),pulsesKg:rounded(rows.reduce((n,h)=>n+h.pulsesKg,0)),
+  woolKg:rounded(rows.reduce((n,h)=>n+h.woolKg,0)),sheep:rows.reduce((n,h)=>n+h.sheep,0),
+  oxen:rows.reduce((n,h)=>n+h.draftOxen,0),dairyCows:rows.reduce((n,h)=>n+h.dairyCows,0),
+  harvestOatsKg:stats.oatsHarvested||0,harvestPulsesKg:stats.pulsesHarvested||0,
+  oatsFedKg:stats.oatsFed||0,exportedWoolKg:stats.woolExported||0,
+  outsideGrainKg:stats.outsideGrainIn||0,outsideCoinNet:(stats.outsideCoinIn||0)-(stats.outsideCoinOut||0),
+  guarantorPaidKg:stats.suretyPaidKg||0,guaranteedLoans:(s.loans||[]).filter(l=>l.guarantorId).length,
+  externalWarehouse:s.outside?{grain:s.outside.grain,coin:s.outside.coin,wool:s.outside.wool}:null,
   population:members,homes:rows.length,cattle:rows.reduce((n,h)=>n+h.cattle,0),fodderKg:rounded(rows.reduce((n,h)=>n+h.hayKg,0)),peopleEver:s.people.length,deaths:stats.died||0,births:stats.born||0,hungerDeaths,
   landlessHomes:rows.filter(h=>h.landStrips===0).length,medianLandHa:quantile(rows.map(h=>h.landHa),.5),landGini:gini(rows.map(h=>h.landHa)),landInherited:stats.landInherited||0,landDivided:stats.landDivided||0,landReclaimed:stats.landReclaimed||0,landAbandoned:stats.landAbandoned||0,landReallocated:stats.landReallocated||0,leasePlots:stats.leasePlots||0,rentGrainKg:stats.rentGrain||0,migratedPersons:stats.migrations||0,serviceMigrants:stats.serviceMigrants||0,
   meanGrainKgPerPerson:rounded(members?grains.reduce((a,b)=>a+b,0)/members:0),
