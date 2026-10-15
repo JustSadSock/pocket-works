@@ -1,13 +1,14 @@
 import { layoutId, fitsLayout, leftWallX } from './layout.js';
 import { byType, COLORS } from './models.js';
+import { roomKind, itemMaterial } from './room-kinds.js';
 export const STORAGE='pocket-works:komnatka:scene-v1';
 export const ROOM=3.77;
-export const PATTERN_KEYS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig'];
-export const FLOOR_KEYS=['honey','walnut','painted','tile','blush','cherry'];
-export function emptyRoom(layout='classic'){return {...starter(),layout:layoutId(layout),items:[]};}
+export const PATTERN_KEYS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig','linen','plaster','panel'];
+export const FLOOR_KEYS=['honey','walnut','painted','tile','blush','cherry','herringbone','terrazzo'];
+export function emptyRoom(layout='classic',purpose='living'){return {...starter(),layout:layoutId(layout),purpose:roomKind(purpose),items:[]};}
 const item=(id,type,x,z,rot=0,more={})=>({id,type,x,z,rot,color:COLORS[2],...more});
 export function starter() {
- return { layout:'classic',wallColor:0,wallColorLeft:0,pattern:'plain',patternLeft:'plain',floor:'honey',evening:false,items:[
+ return { layout:'classic',purpose:'living',wallColor:0,wallColorLeft:0,pattern:'plain',patternLeft:'plain',floor:'honey',evening:false,items:[
   item('welcome-rug','rug',.35,.85,0,{color:'#d6ab93'}),
   item('welcome-sofa','sofa',.10,-2.38,0,{color:'#a3b5a1'}),
   item('welcome-coffee','coffee',.20,-.48,0),
@@ -29,13 +30,13 @@ export function sanitize(input){
   if(!raw||!byType[raw.type]||typeof raw.id!=='string'||raw.id.length>80||ids.has(raw.id))continue;
   ids.add(raw.id);
   const meta=byType[raw.type], color=/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:COLORS[2];
-  const next={id:raw.id,type:raw.type,x:finite(raw.x),z:finite(raw.z),y:finite(raw.y),rot:((integer(raw.rot)%4)+4)%4,color,variant:integer(raw.variant),wall:raw.wall==='left'?'left':'back',support:typeof raw.support==='string'?raw.support:null};
+  const next={id:raw.id,type:raw.type,x:finite(raw.x),z:finite(raw.z),y:finite(raw.y),rot:((integer(raw.rot)%4)+4)%4,color,variant:integer(raw.variant),wall:raw.wall==='left'?'left':'back',support:typeof raw.support==='string'?raw.support:null,material:itemMaterial(raw.material)};
   if(meta.layer==='wall'){next.y=Math.min(3.50,Math.max(.85,next.y));next.x=next.wall==='left'?leftWallX(input.layout):Math.max(-3,Math.min(3,next.x));next.z=next.wall==='back'?-3.91:Math.max(-3,Math.min(3,next.z));next.rot=next.wall==='left'?1:0;}
   else {next.x=Math.max(-ROOM,Math.min(ROOM,next.x));next.z=Math.max(-ROOM,Math.min(ROOM,next.z));}
   items.push(next);
  }
  return {
-  layout:layoutId(input.layout),
+  layout:layoutId(input.layout),purpose:roomKind(input.purpose),
   wallColor:Math.max(0,Math.min(5,integer(input.wallColor))),
   wallColorLeft:Math.max(0,Math.min(5,integer(input.wallColorLeft,input.wallColor))),
   pattern:PATTERN_KEYS.includes(input.pattern)?input.pattern:'plain',

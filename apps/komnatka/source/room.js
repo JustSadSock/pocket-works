@@ -3,8 +3,8 @@ import { makeMaterial, rounded, tintWindowView, setLampVisuals } from './models.
 import { lightingEnvelope, physicalLampEnabled } from './lighting-presets.js';
 
 export const WALLS=['#efe0ca','#d5e0ce','#edc5b9','#cad7dc','#e6d8df','#e2cfae'];
-export const FLOORS=['honey','walnut','painted','tile','blush','cherry'];
-export const PATTERNS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig'];
+export const FLOORS=['honey','walnut','painted','tile','blush','cherry','herringbone','terrazzo'];
+export const PATTERNS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig','linen','plaster','panel'];
 const hex=h=>Color3.FromHexString(h);
 const textureMaterialCache=new WeakMap();
 function materialTexture(scene,name,draw) {
@@ -43,11 +43,41 @@ function tiled(scene) {
  }
  });
 }
+function freshFloor(scene,type){
+ return materialTexture(scene,'floor-'+type,c=>{
+  c.fillStyle=type==='herringbone'?'#b99474':'#e0d9ca';c.fillRect(0,0,512,512);
+  if(type==='herringbone'){
+   for(let row=0;row<12;row++)for(let col=0;col<12;col++){
+    const x=col*48-14,y=row*48-14,shift=(row+col)%2;
+    c.save();c.translate(x+22,y+20);c.rotate(shift?Math.PI/4:-Math.PI/4);
+    c.fillStyle=shift?'#d4b18b':'#ae8567';c.fillRect(-21,-8,42,16);
+    c.strokeStyle='#8d6b5255';c.strokeRect(-21,-8,42,16);c.restore();
+   }
+  }else{
+   let seed=133;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+   const tones=['#9eafa5','#c7ab91','#faf4e6','#b5a6b1'];
+   for(let i=0;i<900;i++){c.fillStyle=tones[i%4];const x=rand()*512,y=rand()*512;
+    c.save();c.translate(x,y);c.rotate(rand()*3);c.fillRect(-rand()*4,-rand()*2,2+rand()*8,1+rand()*5);c.restore();}
+  }
+ });
+}
 function wallpaper(scene,base,pattern) {
  if(pattern==='plain')return makeMaterial(scene,'paint-'+base,base);
  return materialTexture(scene,'wallpaper-'+base+'-'+pattern,c=>{
   c.fillStyle=base;c.fillRect(0,0,512,512);
-  if(pattern==='stripe'){
+  if(pattern==='linen'){
+    for(let x=0;x<512;x+=3){c.fillStyle='#ffffff14';c.fillRect(x,0,1,512);}
+    for(let y=0;y<512;y+=3){c.fillStyle='#6a5b4b0d';c.fillRect(0,y,512,1);}
+   }else if(pattern==='plaster'){
+    let seed=77;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+    for(let i=0;i<2300;i++){c.fillStyle=i%2?'#ffffff15':'#6e5a460b';
+     c.fillRect(rand()*512,rand()*512,1+rand()*15,.6+rand()*4);}
+   }else if(pattern==='panel'){
+    for(let x=0;x<512;x+=128){
+     c.fillStyle='#ffffff27';c.fillRect(x+9,0,5,512);c.fillRect(x+115,0,3,512);
+     c.strokeStyle='#735e5320';c.lineWidth=3;c.strokeRect(x+20,23,91,460);
+    }
+   }else if(pattern==='stripe'){
    for(let x=0;x<512;x+=64){c.fillStyle='rgba(255,255,255,.20)';c.fillRect(x,0,21,512);c.fillStyle='rgba(105,84,71,.06)';c.fillRect(x+43,0,3,512);}
   }else if(pattern==='flower'||pattern==='daisy'||pattern==='sprig'){
    const step=pattern==='sprig'?82:104;
@@ -203,7 +233,7 @@ export function createRoom(scene) {
    lastWall=wallKey;
   }
   if(state.floor!==lastFloor){
-   const newFloor=state.floor==='walnut'?wood(scene,'smoked-oak','#907661'):state.floor==='painted'?wood(scene,'pale-boards','#dfd2b8'):state.floor==='tile'?tiled(scene):state.floor==='blush'?wood(scene,'rosy-boards','#d8b6ac'):state.floor==='cherry'?wood(scene,'cherry-planks','#b58a72'):wood(scene,'warm-oak','#c6a37b');
+   const newFloor=state.floor==='walnut'?wood(scene,'smoked-oak','#907661'):state.floor==='painted'?wood(scene,'pale-boards','#dfd2b8'):state.floor==='tile'?tiled(scene):state.floor==='blush'?wood(scene,'rosy-boards','#d8b6ac'):state.floor==='cherry'?wood(scene,'cherry-planks','#b58a72'):['herringbone','terrazzo'].includes(state.floor)?freshFloor(scene,state.floor):wood(scene,'warm-oak','#c6a37b');
    floor.material=newFloor;for(const piece of floorPieces)piece.material=newFloor;
    lastFloor=state.floor;
   }

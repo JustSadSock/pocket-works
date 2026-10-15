@@ -1,11 +1,11 @@
 {
   "name": "@pocket-works/komnatka",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "npm test && vite build --config vite.config.ts && node ../../scripts/promote-enhanced-build.mjs komnatka",
-    "test": "node --test source/state.test.js source/scene-position.test.js && vitest run source/placement-input.test.ts source/experience.test.ts source/core.test.ts source/geometry.test.ts source/motion.test.ts source/lighting-presets.test.ts source/online-rules.test.ts source/v1.test.ts --config vite.config.ts",
+    "test": "node --test source/state.test.js source/scene-position.test.js && vitest run source/placement-input.test.ts source/experience.test.ts source/room-kinds.test.ts source/v3.test.ts source/core.test.ts source/geometry.test.ts source/motion.test.ts source/lighting-presets.test.ts source/online-rules.test.ts source/v1.test.ts --config vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
