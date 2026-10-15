@@ -35,7 +35,7 @@ export function drawStroke(ctx,stroke,aspect=W/H){
  ctx.save();ctx.scale(correction,1);ctx.strokeStyle=color;ctx.lineWidth=stroke.t==='pencil'?Math.max(.15,size*.4):size;ctx.lineCap='round';ctx.lineJoin='round';
  ctx.globalAlpha=stroke.t==='pencil'?.82:stroke.t==='spray'?.44:1;
  if(stroke.t==='spray'){
-  for(let i=0;i<pts.length;i++){const pt=pts[i];for(let j=0;j<6;j++){const angle=((i*13+j*83)%360)*Math.PI/180,rad=(i+j*7)%11/11*size;dab(ctx,pt[0]/correction+Math.cos(angle)*rad,pt[1]+Math.sin(angle)*rad,size*.13,color,.34)}}
+  for(let i=0;i<pts.length;i++){const pt=pts[i],index=i+(Number(stroke.offset)||0);for(let j=0;j<6;j++){const angle=((index*13+j*83)%360)*Math.PI/180,rad=(index+j*7)%11/11*size;dab(ctx,pt[0]/correction+Math.cos(angle)*rad,pt[1]+Math.sin(angle)*rad,size*.13,color,.34)}}
  }else{ctx.beginPath();ctx.moveTo(pts[0][0]/correction,pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0]/correction,pts[i][1]);ctx.stroke();dab(ctx,pts[0][0]/correction,pts[0][1],ctx.lineWidth/2,color,ctx.globalAlpha)}
  ctx.restore();
 }
