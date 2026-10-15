@@ -90,3 +90,6 @@ import './fill-stroke-vote.mjs';
 
 // Structural region stress suite is part of the same CI regression gate.
 import './fill-integrity.mjs';
+
+// Extended randomized contour, basin recolour and asynchronous picker audit.
+import './fill-picker-stress.mjs';
