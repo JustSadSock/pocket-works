@@ -160,6 +160,11 @@ for(const h of s.households)if(h.communityId===c.id&&h.tenure!=='demesne')
   h.grain=round(Math.max(h.grain,bridge));
   h.foundingStoreKg=Math.max(0,Math.ceil(h.grain*1.12)-CALIBRATION.baseStorageKg);
  }
+ // Preserve historical founding land observations independently from a
+ // century of inheritance, leases and estate redistribution.
+ s.historicalProfile.foundingCustomaryStrips=s.households
+  .filter(h=>h.tenure==='customary'&&h.tenureOrigin==='initial-settlement')
+  .map(h=>h.fields.length);
  // Opening seed & food inventories are partitioned, not created: one unit leaves bread grain
  // for every unit of the alternative crop added, including poorer families.
  for(const h of s.households){h.oats=round(h.grain*.09);h.pulses=round(h.grain*.09);h.grain=round(h.grain-h.oats-h.pulses);}
@@ -1098,8 +1103,8 @@ function lifeCycle(s){
  // The founder's prehistory and widowing events matter. Without this guard,
  // elderly widows remarrying at 45 are incorrectly recorded as marrying first.
  const hadMarriage=p=>p.everMarried||p.lifeLog?.some(e=>['widowed','marriage','marriage-prehistory'].includes(e.type));
- if(!hadMarriage(f)&&f.firstMarriageAge===undefined)f.firstMarriageAge=round(f.age);
- if(!hadMarriage(husband)&&husband.firstMarriageAge===undefined)husband.firstMarriageAge=round(husband.age);
+ if(!hadMarriage(f)&&f.firstMarriageAge===undefined){f.firstMarriageAge=round(f.age);f.firstMarriageDay=s.day;}
+ if(!hadMarriage(husband)&&husband.firstMarriageAge===undefined){husband.firstMarriageAge=round(husband.age);husband.firstMarriageDay=s.day;}
  f.everMarried=true;husband.everMarried=true;
  const home=livingHouse(s,husband.houseId),source=livingHouse(s,f.houseId);
  if(home&&source&&home.id!==source.id){const dependents=liveMembers(s,source).filter(child=>child.age<15&&child.parents.includes(f.id));relocate(s,[f,...dependents],source,home);}
