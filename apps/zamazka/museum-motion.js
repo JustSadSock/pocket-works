@@ -8,7 +8,12 @@ export function fitMuseumArtwork(stageWidth,stageHeight,ratio){
  const chrome=32;
  const enlarged=stageWidth>=700&&document.documentElement.dataset.zamazkaAppearance==='new';
  const maxWidth=Math.max(110,Math.min(stageWidth*(enlarged?.79:.68),stageWidth<700?330:enlarged?620:480));
- const maxHeight=Math.max(86,stageHeight*.91);
+ // The painting shares its stage with its physically attached caption.
+ // Reserve both the measured frame chrome and a fixed plaque band, so the
+ // caption cannot be clipped by the stage edge on portrait or wide artworks.
+ const experimental=typeof document!=='undefined'&&document.documentElement.dataset.zamazkaAppearance==='new';
+ const reserved=experimental?(stageWidth>=700?125:82):0;
+ const maxHeight=Math.max(86,experimental?(stageHeight-reserved)*.92:stageHeight*.91);
  const width=Math.max(20,Math.min(maxWidth-chrome,(maxHeight-chrome)*r));
  return {width:Math.round(width),height:Math.round(width/r)};
 }
