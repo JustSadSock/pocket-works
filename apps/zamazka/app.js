@@ -343,7 +343,7 @@ function lobby(){
   '<div class="lobby-invite"><div class="room-ticket"><div class="ticket-top"><span class="section-label">ПРИГЛАСИТЬ В КОМНАТУ</span><span class="ticket-live"><span></span> ОТКРЫТА</span></div>'+
   '<div class="room-code" aria-label="Код комнаты">'+esc(code)+'</div>'+
   '<div class="ticket-actions"><button class="btn primary" data-action="copy-code">Скопировать код</button><button class="btn ghost" data-action="share">Ссылка ↗</button>'+
-  (isPocketMember()?'<button class="btn ghost pocket-invite" type="button" data-social-invite data-room-id="'+esc(roomId)+'">Пригласить друзей</button>':'')+'</div>'+  '<div class="stack lobby-controls"><div class="lobby-controls-title">Настройки выставки</div>'+
+  (isPocketMember()?'<button class="btn ghost pocket-invite" type="button" data-social-invite data-room-id="'+esc(roomId)+'">Пригласить друзей</button>':'')+'</div></div>'+  '<div class="stack lobby-controls"><div class="lobby-controls-title">Настройки выставки</div>'+
   (leader?'<label class="field" for="rounds">Раундов</label><select class="input" id="rounds">'+[1,3,5].map(n=>'<option value="'+n+'" '+(roundsChoice===n?'selected':'')+'>'+n+' '+(n===1?'раунд':n===5?'раундов':'раунда')+'</option>').join('')+'</select>'+
    '<label class="field" for="drawingSeconds">Время рисования</label><select class="input" id="drawingSeconds">'+durationOptionsHtml(drawingSecondsChoice)+'</select>'+
    '<button class="btn primary" data-action="start" '+(players.length<2?'disabled':'')+'>'+(players.length<2?'Ждём второго игрока':'Начать выставку ↗')+'</button>':
