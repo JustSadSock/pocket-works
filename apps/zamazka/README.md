@@ -454,3 +454,11 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - The shell honours `--app-viewport-height` supplied by shared mobile runtime (Safari/Chrome visual viewport vs standalone PWA) and notch/safe-area insets in viewport-fit=cover mode.
 - Optional scrolling remains in the long collection/archive and in unusually long modal content; critical lobby actions never require scrolling.
 - Screenshot regression: `node apps/zamazka/qa/viewport-fit.mjs`. Sixteen desktop/tablet/mobile viewport cases and four 8-person roster cases, with screenshots under `ZAMAZKA_QA_ARTIFACT_DIR`. Real-app multiplayer smoke is still covered by `qa/real-flow.mjs`.
+
+## 1.39.0 — Exhibition finale: the vote / reveal / awards trilogy
+
+- Three existing game phases share a museum-dossier visual system without modifying networking, authoritative votes, scoring, user identity or auto-advance deadlines.
+- `finale-ui.js` keeps verdict and results markup pure and testable with realistic vote/score fixtures, including spectator state, eight-player gallery and tied winners.
+- `finale.css` adds timed CSS-only coin placement and ledger appearance; honors `prefers-reduced-motion`. Mobile portraits display a horizontal swipeable five-art evidence rail; full rankings scroll only within the ledger while primary actions remain visible.
+- The original reveal uses a real before/after comparison canvas, with the score sheet in an independently scrollable panel and the same correct-answer strip.
+- Screenshot and gameplay QA: `node apps/zamazka/qa/finale-visual.mjs`; set `ZAMAZKA_QA_ARTIFACT_DIR` for evidence. Pure assertions live in `qa/finale-state.mjs`.
