@@ -99,25 +99,33 @@ try{
    }
    const walls=wctx.getImageData(0,0,W,H),zone=actx.getImageData(0,0,W,H),
     output=new Uint8ClampedArray(total*4);
-   // Pick a valid interior pixel near the thin band, then compare against
-   // 4-connected mathematical reachability on the browser's actual pixels.
+   // Find the actual gap between two separately drawn contours.
+   // Previous approximations sometimes clicked the outside background of an
+   // ellipse; those 'successful' fills were not testing the narrow basin.
    let seed=-1;
-   // Start specifically in the gap between the two drawn upper contours,
-   // not at the first free pixel in a broad rectangle (which might select
-   // the hollow centre or the background instead of the narrow ring).
-   for(let search=0;search<=11&&seed<0;search++)
-    for(let dy=-search;dy<=search&&seed<0;dy++)
-     for(let dx=-search;dx<=search;dx++){
-      if(Math.max(Math.abs(dx),Math.abs(dy))!==search)continue;
-      const x=cx+dx,y=Math.round(cy-radius+spacing/2+dy),i=y*W+x;
-      if(x>=0&&x<W&&y>=0&&y<H&&walls.data[i*4+3]<96&&zone.data[i*4+3]>=120){
-       seed=i;break
+   for(const [vx,vy] of [[0,-1],[1,0],[0,1],[-1,0]]){
+    if(seed>=0)break;
+    let state=0,channel=[];
+    for(let distance=1;distance<80;distance++){
+     const x=cx+vx*distance,y=cy+vy*distance,i=y*W+x;
+     if(x<0||x>=W||y<0||y>=H)break;
+     const onLine=walls.data[i*4+3]>=96;
+     if(state===0){if(onLine)state=1}
+     else if(state===1){if(!onLine){state=2;channel=[i]}}
+     else if(state===2){
+      if(onLine){
+       const valid=channel.filter(pixel=>zone.data[pixel*4+3]>=120);
+       if(valid.length>=2)seed=valid[Math.floor(valid.length/2)];
+       break;
       }
+      channel.push(i);
      }
+    }
+   }
    if(seed<0){skipped++;continue}
    const connected=oracle(walls.data,zone.data,seed);
    let expected=0;for(let i=0;i<total;i++)expected+=connected[i];
-   if(expected<18){skipped++;continue}
+   if(expected<18||expected>total*.40){skipped++;continue}
    const point=[seed%W,Math.floor(seed/W)],changed=new Uint8Array(total);
    const count=floodFillRaster({width:W,height:H,walls,zone,output,changed,
       point,color:[56,142,115]});
