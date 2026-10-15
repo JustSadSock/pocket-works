@@ -269,3 +269,16 @@
 @media(prefers-reduced-motion:reduce){
  #screen>.expert-phase .stake-actions button{transition:none!important}
 }
+
+/* Short desktop windows: center the list without clipping participant actions. */
+@media(min-width:1020px){
+ #screen>.exhibition-lobby .lobby-attendance{
+  display:flex!important;flex-direction:column!important;min-height:0!important;
+  padding-top:clamp(8px,2.2vh,24px)!important;overflow:hidden!important;
+ }
+ #screen>.exhibition-lobby .lobby-attendance .players{
+  flex:1 1 auto!important;min-height:0!important;
+  overflow-y:auto!important;overflow-x:hidden!important;
+  overscroll-behavior:contain;scrollbar-width:thin;
+ }
+}
