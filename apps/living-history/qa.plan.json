@@ -15,7 +15,8 @@
         "subsistence-credit.test.mjs",
         "rural-resilience.test.mjs",
         "historic-village.test.mjs",
-        "medieval-economy.test.mjs"
+        "medieval-economy.test.mjs",
+        "historical-calibration.test.mjs"
       ]
     },
     {
@@ -251,6 +252,66 @@
         43821,
         9001,
         12345
+      ]
+    },
+    {
+      "id": "historical-ensemble",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/historical-calibration.mjs",
+      "args": [
+        "--group=ensemble",
+        "--seed={seed}",
+        "--years=100",
+        "--output={output}/historical-100y.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001,
+        11,
+        29,
+        12345,
+        21773,
+        51291,
+        71331,
+        101,
+        202,
+        303,
+        404,
+        505,
+        606
+      ]
+    },
+    {
+      "id": "historical-sensitivity",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/historical-calibration.mjs",
+      "args": [
+        "--group=sensitivity",
+        "--seed={seed}",
+        "--years=25",
+        "--output={output}/sensitivity.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001
+      ]
+    },
+    {
+      "id": "historical-monte-carlo",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/historical-calibration.mjs",
+      "args": [
+        "--group=summary",
+        "--seeds=413,7777,43821,9001,11,29,12345,21773,51291,71331,101,202",
+        "--years=20",
+        "--output={output}/distribution.json"
       ]
     }
   ]

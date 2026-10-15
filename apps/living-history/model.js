@@ -13,17 +13,17 @@ const cropLimit=(crop,good)=>{const area=crop.plannedArea??crop.active.length*LA
 const DAY = 24;
 const LAND_HA = 0.0625;
 // Historically inspired scenario; not a statistically representative sample of England.
-export const HISTORIC_PROFILE=Object.freeze({region:'English Midlands',referenceYear:1280,source:'Hundred Rolls 1279–1280',version:1});
+export const HISTORIC_PROFILE=Object.freeze({region:'English Midlands',referenceYear:1280,source:'Hundred Rolls 1279–1280',version:2,calibration:'midlands-landholding-exemplar'});
 const FOUNDATION_HOLDINGS=Object.freeze([
- {tenure:'free',fields:120,grain:1850,coin:1850,wood:190,rent:6,service:0},
- {tenure:'free',fields:82,grain:1450,coin:1400,wood:165,rent:4,service:0},
- {tenure:'customary',fields:60,grain:1150,coin:1050,wood:165,rent:3,service:5},
- {tenure:'customary',fields:43,grain:950,coin:900,wood:160,rent:2,service:7},
- {tenure:'customary',fields:30,grain:750,coin:680,wood:145,rent:1,service:8},
- {tenure:'customary',fields:23,grain:625,coin:520,wood:135,rent:1,service:9},
- {tenure:'cottar',fields:15,grain:495,coin:375,wood:125,rent:0,service:8},
- {tenure:'cottar',fields:8,grain:390,coin:320,wood:120,rent:0,service:7},
- {tenure:'demesne',fields:165,grain:2850,coin:2350,wood:460,rent:0,service:0}
+ {tenure:'free',fields:155,grain:1850,coin:1850,wood:190,rent:6,service:0},
+ {tenure:'free',fields:125,grain:1450,coin:1400,wood:165,rent:4,service:0},
+ {tenure:'customary',fields:176,grain:1150,coin:1050,wood:165,rent:3,service:5},
+ {tenure:'customary',fields:150,grain:950,coin:900,wood:160,rent:2,service:7},
+ {tenure:'customary',fields:110,grain:750,coin:680,wood:145,rent:1,service:8},
+ {tenure:'customary',fields:60,grain:625,coin:520,wood:135,rent:1,service:9},
+ {tenure:'cottar',fields:24,grain:495,coin:375,wood:125,rent:0,service:8},
+ {tenure:'cottar',fields:12,grain:390,coin:320,wood:120,rent:0,service:7},
+ {tenure:'demesne',fields:245,grain:2850,coin:2350,wood:460,rent:0,service:0}
 ]);
 const MODES = ['normal','drought','isolated','uplands'];
 // Research multipliers are state-local, default to 1, and never change historical saves.
@@ -139,6 +139,9 @@ export function createWorld(seed=43821, options={}){const scenario=MODES.include
  const father=createPerson(s,h,26+Math.floor(rand(s)*16),'m');
  const mother=createPerson(s,h,23+Math.floor(rand(s)*15),'f');
  father.spouse=mother.id;mother.spouse=father.id;
+ // Founding couples were already married before the simulation begins. Their
+ // later remarriage is NOT a first marriage in the historical data sample.
+ father.everMarried=true;mother.everMarried=true;
  if(rand(s)<(pattern.tenure==='cottar'?.3:.65)){
   const elder=createPerson(s,h,Math.max(55,father.age+17)+Math.floor(rand(s)*12),rand(s)<.5?'m':'f');
   father.parents=[elder.id];
@@ -149,6 +152,14 @@ export function createWorld(seed=43821, options={}){const scenario=MODES.include
 }
 for(const h of s.households)if(h.communityId===c.id&&h.tenure!=='demesne')
  h.manorAgreement.manorId=c.manorHouseId??null;}
+ // Explicit starting endowment: a new valley begins with finite stores sufficient
+ // to bridge a normal winter and spring, not nine identical fictitious barns.
+ // This is a founding assumption, NEVER an in-world food rescue mechanism.
+ for(const h of s.households){
+  const bridge=foodNeed(s,h)*245+Math.min(230,h.fields.length*LAND_HA*CALIBRATION.seedKgPerHa*.32);
+  h.grain=round(Math.max(h.grain,bridge));
+  h.foundingStoreKg=Math.max(0,Math.ceil(h.grain*1.12)-CALIBRATION.baseStorageKg);
+ }
  // Opening seed & food inventories are partitioned, not created: one unit leaves bread grain
  // for every unit of the alternative crop added, including poorer families.
  for(const h of s.households){h.oats=round(h.grain*.09);h.pulses=round(h.grain*.09);h.grain=round(h.grain-h.oats-h.pulses);}
@@ -220,7 +231,7 @@ function account(s,h){
  return h.accounting;
 }
 function earn(s,h,field,quantity){const a=account(s,h);a[field]=round((a[field]||0)+quantity);}
-export function storageCapacity(h,s){return (CALIBRATION.baseStorageKg+(h.manorGranaryKg||0)+(h.storeLevel||0)*CALIBRATION.storageExpansionKg)*(s?tuning(s,'storage'):1);}
+export function storageCapacity(h,s){return (CALIBRATION.baseStorageKg+(h.foundingStoreKg||0)+(h.manorGranaryKg||0)+(h.storeLevel||0)*CALIBRATION.storageExpansionKg)*(s?tuning(s,'storage'):1);}
 function maintainStorage(s,h){
  if(!liveMembers(s,h).length)return;
  const capacity=storageCapacity(h,s);
@@ -1084,8 +1095,12 @@ function lifeCycle(s){
  const ageChance=!s.historicalProfile?1:clamp((f.age-20)*.31,.08,.95)*clamp((husband.age-22)*.25,.12,.95)*villageEconomy;
  if(hash(s.seed^0x32b741,(f.randomKey??f.id)^s.day,husband.randomKey??husband.id)>.9*ageChance)continue;
  f.spouse=husband.id;husband.spouse=f.id;
- if(f.firstMarriageAge===undefined)f.firstMarriageAge=round(f.age);
- if(husband.firstMarriageAge===undefined)husband.firstMarriageAge=round(husband.age);
+ // The founder's prehistory and widowing events matter. Without this guard,
+ // elderly widows remarrying at 45 are incorrectly recorded as marrying first.
+ const hadMarriage=p=>p.everMarried||p.lifeLog?.some(e=>['widowed','marriage','marriage-prehistory'].includes(e.type));
+ if(!hadMarriage(f)&&f.firstMarriageAge===undefined)f.firstMarriageAge=round(f.age);
+ if(!hadMarriage(husband)&&husband.firstMarriageAge===undefined)husband.firstMarriageAge=round(husband.age);
+ f.everMarried=true;husband.everMarried=true;
  const home=livingHouse(s,husband.houseId),source=livingHouse(s,f.houseId);
  if(home&&source&&home.id!==source.id){const dependents=liveMembers(s,source).filter(child=>child.age<15&&child.parents.includes(f.id));relocate(s,[f,...dependents],source,home);}
  recordLife(f,s.day,'marriage',`Вышла замуж за ${husband.name} (#${husband.id})`);
@@ -1811,6 +1826,7 @@ export function audit(s){
     issues.push(`Повинности или рента повреждены у ${h.id}`);
    if(a.manorId&&!s.households.some(k=>k.id===a.manorId&&k.tenure==='demesne'))issues.push(`Неверное поместье ${h.id}`);
   }
+  if(h.foundingStoreKg!==undefined&&(!Number.isFinite(h.foundingStoreKg)||h.foundingStoreKg<0))issues.push(`Поврежден исторический амбар ${h.id}`);
   if(h.storeLevel!==undefined&&(!Number.isInteger(h.storeLevel)||h.storeLevel<0||h.storeLevel>2))issues.push(`Неверный амбар ${h.id}`);
   if(h.storeProject&&(!Number.isInteger(h.storeProject.workDays)||h.storeProject.workDays<0||h.storeProject.workDays>=16))issues.push(`Неверная стройка амбара ${h.id}`);
   if(h.buildProject&&(!Number.isInteger(h.buildProject.days)||h.buildProject.days<0||h.buildProject.days>=50))issues.push(`Неверная постройка дома ${h.id}`);

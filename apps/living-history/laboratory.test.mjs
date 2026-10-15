@@ -64,11 +64,12 @@ test('diagnostics are read-only and have interpretable distributions',()=>{
  assert.equal(comparePaired(d,d).population,0);
 });
 test('diagnostics identify a family with no grain, without awarding it free resources',()=>{
- const s=create(),h=s.households[0],grain=h.grain;h.grain=0;
+ const s=create(),h=s.households[0],old={grain:h.grain,oats:h.oats,pulses:h.pulses,garden:h.garden,dairy:h.dairy};
+ for(const good of Object.keys(old))h[good]=0;
  const d=diagnoseWorld(s);assert.ok(d.familiesUnder30Days>=1);
  assert.equal(d.households.find(x=>x.id===h.id).foodDays,0);
  assert.equal(h.grain,0);
- h.grain=grain;assert.ok(audit(s).ok);
+ Object.assign(h,old);assert.ok(audit(s).ok);
 });
 test('tuned world survives save/load and produces identical daily outcomes',()=>{
  const a=create({yield:.85,weather:1.5,storage:.75});advanceDays(a,90);

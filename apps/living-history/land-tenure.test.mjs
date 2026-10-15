@@ -90,8 +90,8 @@ test('land tenure, ongoing projects, and claims survive a serialization round-tr
 });
 
 test('seasonal sharecropping borrows underused land with crop-share rent, without transferring title',()=>{
- const s=createWorld(413);const owner=s.households[0],tenant=s.households[4];
- tenant.grain=900;owner.grain=1600; // Existing mid-size dependent holding and large free owner.
+ const s=createWorld(413);const owner=s.households[0],tenant=s.households[7];
+ tenant.grain=900;owner.grain=1600; // A land-poor cottar may lease from a large free owner.
  tenant.farmYear=null;owner.farmYear=null;
  s.day=365;rebase(s);advanceDays(s,1);
  assert.ok(tenant.leaseIn?.length>0,'land-poor households must obtain usable leased strips');
@@ -102,7 +102,8 @@ test('seasonal sharecropping borrows underused land with crop-share rent, withou
  advanceDays(s,300);
  assert.ok(s.stats.leasePlots>0);
  assert.ok((s.stats.rentGrain||0)>0,'landlord must receive grain from a genuinely harvested rented strip');
- assert.equal(tenant.accounting.rentPaidKg,owner.accounting.rentReceivedKg);
+ assert.ok(tenant.accounting.rentPaidKg>0,'cottar paid physical crop share');
+ assert.ok(owner.accounting.rentReceivedKg>=tenant.accounting.rentPaidKg,'free owner can also lease to other tenants');
  assert.equal(existing,s.economy.grainInitial);
  assert.ok(audit(s).ok,audit(s).issues.join('; '));
 });
