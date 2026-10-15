@@ -1271,7 +1271,6 @@ let lastClockCue='';
 function tick(){
  if(pendingVote)attemptVote();
  if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
- autoFinishOnDeadline();
  const v=practice||view,clock=document.querySelector('#clock');
  const clockStage=(page==='preview'||page==='drawing')&&
                   (v?.phase==='preview'||v?.phase==='drawing');
@@ -1279,11 +1278,12 @@ function tick(){
   const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));
   clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   clock.classList.toggle('urgent',Boolean(clockStage&&s<=10));
-  if(clockStage&&s>0&&s<=10){
+  if(clockStage&&s>=0&&s<=10){
    const cue=(practice?'practice':roomId)+':'+v.round+':'+v.phase+':'+s;
-   if(cue!==lastClockCue){lastClockCue=cue;sound('clock-tick')}
+   if(cue!==lastClockCue){lastClockCue=cue;sound(s===0?'time-up':s<=3?'final-warning':'clock-tick')}
   }
  }
+ autoFinishOnDeadline();
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
   lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}
  }
