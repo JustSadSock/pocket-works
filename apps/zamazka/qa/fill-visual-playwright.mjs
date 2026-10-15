@@ -53,10 +53,19 @@ try{
     const c=document.querySelector(panel?'#right':'#left'),ctx=c.getContext('2d');
     ctx.fillStyle='#e8ddc6';ctx.fillRect(0,0,W,H);ctx.drawImage(wall,0,0);
     const pixels=ctx.getImageData(0,0,W,H),before=new Uint8ClampedArray(pixels.data),changed=new Uint8Array(W*H);
+    const point=kind==='nested'?[155,100]:[50,122];
     const first=floodFillRaster({width:W,height:H,walls,zone,output:pixels,changed,
-      point:kind==='nested'?[155,100]:[50,122],color:colors[panel]});
+      point,color:colors[0]});
     if(!first)throw Error('No basin filled: '+kind);
     preservePaintContours(pixels.data,before,walls.data,changed,true);
+    if(panel){
+      // The blue frame truly repaints the same already-green basin.
+      const beforeBlue=new Uint8ClampedArray(pixels.data),changedBlue=new Uint8Array(W*H);
+      const recoloured=floodFillRaster({width:W,height:H,walls,zone,output:pixels,
+        changed:changedBlue,point,color:colors[1]});
+      if(recoloured!==first)throw Error('Recolour changed reachable basin: '+kind);
+      preservePaintContours(pixels.data,beforeBlue,walls.data,changedBlue,true);
+    }
     ctx.putImageData(pixels,0,0);
     data.push({first,touched:changed.reduce((a,b)=>a+b,0),other:changed[122*W+355]});
    }
