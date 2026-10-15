@@ -153,7 +153,7 @@
     {
       "id": "historic-regression",
       "kind": "node-test",
-      "tier": "deep",
+      "tier": "smoke",
       "files": [
         "model.integration.test.mjs",
         "model.v02.test.mjs",
