@@ -139,6 +139,9 @@ export function createWorld(seed=43821, options={}){const scenario=MODES.include
  const father=createPerson(s,h,26+Math.floor(rand(s)*16),'m');
  const mother=createPerson(s,h,23+Math.floor(rand(s)*15),'f');
  father.spouse=mother.id;mother.spouse=father.id;
+ // Founding couples were already married before the simulation begins. Their
+ // later remarriage is NOT a first marriage in the historical data sample.
+ father.everMarried=true;mother.everMarried=true;
  if(rand(s)<(pattern.tenure==='cottar'?.3:.65)){
   const elder=createPerson(s,h,Math.max(55,father.age+17)+Math.floor(rand(s)*12),rand(s)<.5?'m':'f');
   father.parents=[elder.id];
@@ -1092,8 +1095,12 @@ function lifeCycle(s){
  const ageChance=!s.historicalProfile?1:clamp((f.age-20)*.31,.08,.95)*clamp((husband.age-22)*.25,.12,.95)*villageEconomy;
  if(hash(s.seed^0x32b741,(f.randomKey??f.id)^s.day,husband.randomKey??husband.id)>.9*ageChance)continue;
  f.spouse=husband.id;husband.spouse=f.id;
- if(f.firstMarriageAge===undefined)f.firstMarriageAge=round(f.age);
- if(husband.firstMarriageAge===undefined)husband.firstMarriageAge=round(husband.age);
+ // The founder's prehistory and widowing events matter. Without this guard,
+ // elderly widows remarrying at 45 are incorrectly recorded as marrying first.
+ const hadMarriage=p=>p.everMarried||p.lifeLog?.some(e=>['widowed','marriage','marriage-prehistory'].includes(e.type));
+ if(!hadMarriage(f)&&f.firstMarriageAge===undefined)f.firstMarriageAge=round(f.age);
+ if(!hadMarriage(husband)&&husband.firstMarriageAge===undefined)husband.firstMarriageAge=round(husband.age);
+ f.everMarried=true;husband.everMarried=true;
  const home=livingHouse(s,husband.houseId),source=livingHouse(s,f.houseId);
  if(home&&source&&home.id!==source.id){const dependents=liveMembers(s,source).filter(child=>child.age<15&&child.parents.includes(f.id));relocate(s,[f,...dependents],source,home);}
  recordLife(f,s.day,'marriage',`Вышла замуж за ${husband.name} (#${husband.id})`);
