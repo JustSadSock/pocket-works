@@ -1716,9 +1716,9 @@ function finishManorialService(s){
    // Legal fulfilled obligations remain integer certified days, while a
    // sick labourer's partial contribution accrues toward the NEXT day.
    // The fractional balance cannot exceed one contractual day's worth.
-   const balance=(a.serviceProgress||0)+worked;
-   const credited=Math.min(a.dueDays-a.served,Math.floor(balance+1e-8));
-   a.serviceProgress=credited?roundSkill(Math.max(0,balance-credited)):roundSkill(balance);
+   const balance=roundSkill((a.serviceProgress||0)+worked);
+   const credited=Math.min(a.dueDays-a.served,Math.floor(balance));
+   a.serviceProgress=roundSkill(Math.max(0,balance-credited));
    a.served+=credited;
    s.stats.manorServiceDays=(s.stats.manorServiceDays||0)+worked;
    earn(s,tenant,'manorServiceDays',worked);
