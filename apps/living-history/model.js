@@ -425,8 +425,11 @@ function spendFood(s,h){
  const need=foodNeed(s,h);
  const gardenEaten=round(Math.min(h.garden||0,need*.22));
  const dairyEaten=round(Math.min(h.dairy||0,need*.16));
- const pulsesEaten=round(Math.min(h.pulses||0,need*.24));
- const oatsEaten=round(Math.min(h.oats||0,Math.max(0,need*.18)));
+ // Pulses complement but do not replace an entire caloric ration. Oat porridge,
+ // however, can replace bread in a grain shortage, so a family with oats is
+ // not artificially declared starving while its own edible grain remains.
+ const pulsesEaten=round(Math.min(h.pulses||0,need*.38));
+ const oatsEaten=round(Math.min(h.oats||0,Math.max(0,need-gardenEaten-dairyEaten-pulsesEaten)));
  h.garden=round((h.garden||0)-gardenEaten);h.dairy=round((h.dairy||0)-dairyEaten);
  h.pulses=round((h.pulses||0)-pulsesEaten);h.oats=round((h.oats||0)-oatsEaten);
  s.stats.pulsesEaten=round((s.stats.pulsesEaten||0)+pulsesEaten);
