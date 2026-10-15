@@ -94,6 +94,8 @@ function updateMediaLab(){
   $('media-render').disabled=!!videoExportController||!supportsVideoExport();
   if(!supportsVideoExport()){
     $('media-note').textContent='В этом браузере нет локального кодировщика. Можно использовать файл без обработки, если он меньше 96 МиБ.';
+  }else if(videoExportBlob){
+    // Keep the actual encoded result message until the user accepts or discards it.
   }else if(sourceBlob.size>MAX_ROOM_VIDEO_BYTES&&mode==='host'){
     $('media-note').textContent='Для комнаты размер нужно уменьшить до 96 МиБ. Сжатие происходит локально.';
   }else if(!videoExportBlob){
