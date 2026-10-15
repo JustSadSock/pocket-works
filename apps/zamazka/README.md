@@ -447,3 +447,10 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - Run `node apps/zamazka/qa/fill-topology-matrix.mjs`: 4200 synthetic variants across concentric circles, ellipses, boxes, diamonds, wavy contours and irregular damage masks; compare against independent four-connected flood-fill, test a second colour fill and narrow line pinholes.
 - Run `node apps/zamazka/qa/fill-topology-playwright.mjs`: 48 Canvas2D contour/mask pairings with original production bucket, pixel coverage assertions, repeat fill and contact-sheet screenshot. Set `ZAMAZKA_QA_ARTIFACT_DIR` to collect evidence.
 - Cases without a topologically closed raster contour are correctly excluded from closed-region coverage assertions; open shapes should still paint their physically reachable space.
+
+## 1.38.6 — One-screen responsive rooms
+
+- The waiting room is a height-constrained grid: invitation, host options, shared drawing board and players share a single viewport on large desktops. Narrow windows reflow without a document scroll; only a genuinely overflowing player roster is independently navigable.
+- The shell honours `--app-viewport-height` supplied by shared mobile runtime (Safari/Chrome visual viewport vs standalone PWA) and notch/safe-area insets in viewport-fit=cover mode.
+- Optional scrolling remains in the long collection/archive and in unusually long modal content; critical lobby actions never require scrolling.
+- Screenshot regression: `node apps/zamazka/qa/viewport-fit.mjs`. Sixteen desktop/tablet/mobile viewport cases and four 8-person roster cases, with screenshots under `ZAMAZKA_QA_ARTIFACT_DIR`. Real-app multiplayer smoke is still covered by `qa/real-flow.mjs`.

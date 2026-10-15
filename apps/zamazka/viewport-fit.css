@@ -1,0 +1,304 @@
+/* ZAMAZKA — viewport-first staging. Intentionally loaded last.
+   The drawing coordinate system is never CSS-transformed. A viewport change
+   recomputes available space, not the canvas' logical width/height. */
+html,body{min-width:0;max-width:100%;overscroll-behavior-y:none}
+.app-shell{height:var(--app-viewport-height,100dvh);min-height:0;max-height:var(--app-viewport-height,100dvh);overflow:hidden}
+#screen.screen{min-width:0;min-height:0}
+#screen.screen:has(>.exhibition-lobby),
+#screen.screen:has(>.restore),
+#screen.screen:has(>.museum-home),
+#screen.screen:has(>.mobile-preview){overflow:hidden!important}
+
+/* The production lobby has exactly four direct children: mast, invite,
+   commons board, attendance. Old grid placement predates this DOM shape. */
+#screen>.page.exhibition-lobby{
+ box-sizing:border-box;max-width:1880px!important;
+ width:100%;height:100%;max-height:100%;min-height:0!important;
+ overflow:hidden!important;margin-inline:auto;
+ display:grid!important;align-content:stretch!important;align-items:stretch!important;
+ gap:clamp(6px,1vh,12px) clamp(9px,1.15vw,20px)!important;
+ padding:clamp(7px,1.15vh,15px) clamp(10px,1.5vw,28px)
+         clamp(7px,1vh,14px)!important;
+ grid-template-columns:minmax(205px,23fr) minmax(0,54fr) minmax(185px,23fr)!important;
+ grid-template-rows:auto minmax(0,1fr)!important;
+ grid-template-areas:"mast mast mast" "invite canvas roster"!important;
+}
+#screen>.exhibition-lobby>.lobby-mast{
+ grid-area:mast!important;grid-column:auto!important;grid-row:auto!important;
+ min-width:0;min-height:0;margin:0!important;padding:0 0 6px!important;
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+#screen>.exhibition-lobby .lobby-mast h2{
+ margin:2px 0 0!important;
+ font-size:clamp(21px,min(2.3vw,4.7vh),35px)!important;line-height:1.08
+}
+#screen>.exhibition-lobby>.lobby-invite{
+ grid-area:invite!important;grid-column:auto!important;grid-row:auto!important;
+ display:flex!important;flex-direction:column!important;
+ min-height:0;min-width:0;gap:clamp(7px,1.3vh,14px)!important;
+ align-self:stretch;margin:0!important;padding:0!important;
+}
+#screen>.exhibition-lobby .room-ticket{
+ margin:0!important;min-width:0;max-width:100%;
+ padding:clamp(8px,1.1vh,15px)!important;
+ box-sizing:border-box;
+}
+#screen>.exhibition-lobby .room-code{
+ font-size:clamp(21px,2.25vw,36px)!important;
+ overflow-wrap:anywhere;letter-spacing:.025em!important;
+ margin:clamp(5px,.85vh,11px) 0!important
+}
+#screen>.exhibition-lobby .ticket-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+#screen>.exhibition-lobby .ticket-actions .btn{
+ min-width:0;min-height:clamp(33px,4.5vh,43px)!important;
+ padding:5px!important;font-size:clamp(10px,.78vw,12px)!important;
+ white-space:normal;overflow-wrap:anywhere
+}
+#screen>.exhibition-lobby .ticket-actions .pocket-invite{grid-column:1/-1}
+#screen>.exhibition-lobby .lobby-invite>.lobby-controls{
+ display:flex!important;flex-direction:column!important;gap:clamp(3px,.65vh,9px)!important;
+ min-height:0;min-width:0;margin:0!important;
+ padding:clamp(8px,1.1vh,15px)!important;
+ align-self:stretch;position:static!important;top:auto!important
+}
+#screen>.exhibition-lobby .lobby-controls-title{font-size:clamp(15px,1.3vw,20px);margin:0 0 2px!important}
+#screen>.exhibition-lobby .lobby-controls .field{
+ margin:2px 0 0!important;font-size:clamp(9px,.75vw,11px)!important
+}
+#screen>.exhibition-lobby .lobby-controls .input{
+ height:clamp(31px,4.7vh,44px)!important;min-height:0!important;
+ font-size:clamp(12px,.95vw,15px)!important;padding:4px 7px!important
+}
+#screen>.exhibition-lobby .lobby-controls [data-action="start"]{
+ margin-top:auto!important;min-height:clamp(36px,5.3vh,48px)!important;
+ font-size:clamp(11px,1vw,14px)!important;padding:5px!important
+}
+#screen>.exhibition-lobby>.commons-desk{
+ grid-area:canvas!important;grid-column:auto!important;grid-row:auto!important;
+ min-width:0;min-height:0;margin:0!important;
+ display:flex!important;flex-direction:column!important;
+ justify-content:center;align-self:stretch;
+ overflow:hidden;padding:clamp(7px,1vh,15px)!important
+}
+#screen>.exhibition-lobby .commons-topline{
+ flex:0 0 auto;min-height:0;margin:0 0 4px!important
+}
+#screen>.exhibition-lobby .commons-topline h3{
+ font-size:clamp(17px,1.5vw,26px)!important;margin:0!important
+}
+#screen>.exhibition-lobby .commons-topline p{font-size:clamp(9px,.8vw,11px)!important;line-height:1.25}
+#screen>.exhibition-lobby .commons-frame{
+ flex:0 1 auto;min-height:0;min-width:0;
+ width:100%;max-width:100%;
+ max-height:calc(100% - 85px)!important;
+ margin:0!important;padding:clamp(3px,.6vh,8px)!important;
+ border-width:clamp(4px,.65vw,8px)!important;overflow:hidden;
+ display:flex;align-items:center;justify-content:center
+}
+#screen>.exhibition-lobby .commons-frame canvas{
+ display:block;width:min(100%,calc((100dvh - 242px) * 1.6))!important;
+ max-height:100%!important;height:auto!important;
+ aspect-ratio:8/5!important;object-fit:contain;flex:0 1 auto;margin-inline:auto
+}
+#screen>.exhibition-lobby .commons-controls{
+ flex:0 0 auto;min-width:0;display:flex;align-items:center;
+ gap:clamp(4px,.6vw,9px)!important;padding-top:clamp(5px,.8vh,10px)!important
+}
+#screen>.exhibition-lobby .commons-palette{flex:1 1 140px;min-width:0;gap:clamp(2px,.33vw,5px)}
+#screen>.exhibition-lobby .commons-swatch{
+ width:clamp(24px,2.5vw,32px)!important;height:clamp(24px,2.5vw,32px)!important;
+ flex:0 1 32px!important;min-width:0
+}
+#screen>.exhibition-lobby .commons-width{flex:1 1 100px;min-width:0;gap:4px}
+#screen>.exhibition-lobby .commons-wipe{flex:0 0 auto;min-height:32px}
+#screen>.exhibition-lobby>.lobby-attendance{
+ grid-area:roster!important;grid-column:auto!important;grid-row:auto!important;
+ min-width:0;min-height:0;max-height:100%;
+ display:flex!important;flex-direction:column!important;
+ gap:5px;padding:0!important;margin:0!important;overflow:hidden!important
+}
+#screen>.exhibition-lobby .lobby-list-heading{flex:none;margin:0!important;padding:4px 0!important}
+#screen>.exhibition-lobby .players{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+ grid-auto-flow:row;align-content:start!important;
+ min-width:0;min-height:0;max-height:100%;
+ gap:clamp(3px,.75vh,8px)!important;margin:0!important;
+ overflow-y:auto;overflow-x:hidden;
+ scrollbar-width:thin;overscroll-behavior:contain
+}
+#screen>.exhibition-lobby .player{
+ min-width:0;min-height:clamp(39px,5.4vh,57px)!important;
+ padding:clamp(3px,.65vh,8px) 5px!important;
+ gap:5px!important
+}
+#screen>.exhibition-lobby .player-name{
+ min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ font-size:clamp(11px,1vw,15px)!important
+}
+#screen>.exhibition-lobby .lobby-kick{min-height:30px!important;padding:3px 5px!important;font-size:10px!important}
+@media(min-width:1100px) and (max-height:700px){
+ #screen>.exhibition-lobby .ticket-live{display:none}
+ #screen>.exhibition-lobby .commons-topline p{display:none}
+ #screen>.exhibition-lobby .commons-controls{flex-wrap:nowrap}
+ #screen>.exhibition-lobby .commons-frame{max-height:calc(100% - 66px)!important}
+ #screen>.exhibition-lobby .lobby-controls-title{font-size:15px}
+ #screen>.exhibition-lobby .room-ticket{padding:8px!important}
+}
+@media(min-width:700px) and (max-width:1099px){
+ #screen>.page.exhibition-lobby{
+   grid-template-columns:minmax(185px,32fr) minmax(0,68fr)!important;
+   grid-template-rows:auto minmax(0,1fr) auto!important;
+   grid-template-areas:"mast mast" "invite canvas" "roster canvas"!important;
+ }
+ #screen>.exhibition-lobby .lobby-invite{gap:6px!important}
+ #screen>.exhibition-lobby .lobby-attendance{max-height:clamp(54px,13vh,92px)!important}
+ #screen>.exhibition-lobby .players{
+   display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+   overflow-x:auto!important;overflow-y:hidden!important;gap:4px!important
+ }
+ #screen>.exhibition-lobby .player{
+   flex:0 0 auto!important;max-width:185px;min-width:125px!important
+ }
+ #screen>.exhibition-lobby .commons-frame canvas{width:min(100%,calc((100dvh - 196px)*1.6))!important}
+ #screen>.exhibition-lobby .commons-topline p{display:none}
+ #screen>.exhibition-lobby .ticket-live{display:none}
+ #screen>.exhibition-lobby .ticket-actions{grid-template-columns:1fr}
+ #screen>.exhibition-lobby .room-code{font-size:clamp(18px,2.5vw,27px)!important}
+ #screen>.exhibition-lobby .lobby-invite>.lobby-controls{padding:7px!important;gap:2px!important}
+}
+@media(min-width:700px) and (max-height:550px){
+ #screen>.page.exhibition-lobby{gap:4px 8px!important;padding:4px 9px!important}
+ #screen>.exhibition-lobby .lobby-mast{padding-bottom:2px!important}
+ #screen>.exhibition-lobby .lobby-mast h2{font-size:20px!important}
+ #screen>.exhibition-lobby .lobby-list-heading{display:none}
+ #screen>.exhibition-lobby .commons-topline p{display:none}
+ #screen>.exhibition-lobby .commons-frame{max-height:calc(100% - 52px)!important}
+ #screen>.exhibition-lobby .commons-controls{flex-wrap:nowrap;gap:3px!important}
+ #screen>.exhibition-lobby .commons-wipe{font-size:10px;padding:3px}
+ #screen>.exhibition-lobby .room-code{font-size:19px!important}
+ #screen>.exhibition-lobby .ticket-actions .btn{min-height:30px!important}
+}
+/* Touch and small-window layouts: use free height rather than scroll the
+   room as a document. Preserve horizontal roster swipe and full-width canvas. */
+@media(max-width:699px){
+ #screen>.page.exhibition-lobby{
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:auto auto minmax(0,1fr) auto!important;
+  grid-template-areas:"mast" "invite" "canvas" "roster"!important;
+  gap:clamp(3px,.75vh,8px)!important;
+  padding:clamp(3px,.8vh,9px) clamp(5px,2vw,10px)
+          calc(clamp(3px,.8vh,9px) + env(safe-area-inset-bottom))!important
+ }
+ #screen>.exhibition-lobby .lobby-mast{min-height:0!important;padding:0!important}
+ #screen>.exhibition-lobby .lobby-mast h2{font-size:clamp(19px,5.6vw,25px)!important}
+ #screen>.exhibition-lobby .lobby-invite{
+  display:grid!important;grid-template-columns:minmax(0,.93fr) minmax(0,1.07fr)!important;
+  gap:clamp(4px,1vw,9px)!important
+ }
+ #screen>.exhibition-lobby .room-ticket{padding:clamp(5px,1vw,10px)!important}
+ #screen>.exhibition-lobby .room-code{font-size:clamp(14px,4.6vw,19px)!important}
+ #screen>.exhibition-lobby .ticket-actions{grid-template-columns:minmax(0,1fr)}
+ #screen>.exhibition-lobby .ticket-actions .btn{
+  min-height:clamp(28px,4.1vh,34px)!important;font-size:10px!important
+ }
+ #screen>.exhibition-lobby .lobby-invite>.lobby-controls{
+  padding:clamp(5px,1vw,9px)!important;gap:2px!important;
+  overflow:hidden
+ }
+ #screen>.exhibition-lobby .lobby-controls-title{font-size:clamp(13px,3.8vw,17px)!important}
+ #screen>.exhibition-lobby .lobby-controls .input{min-height:0!important;height:clamp(28px,4.5vh,36px)!important}
+ #screen>.exhibition-lobby .lobby-controls [data-action="start"]{min-height:clamp(33px,4.8vh,40px)!important}
+ #screen>.exhibition-lobby>.commons-desk{height:auto!important;min-height:0!important;padding:clamp(5px,1vw,9px)!important}
+ #screen>.exhibition-lobby .commons-topline{margin-bottom:3px!important}
+ #screen>.exhibition-lobby .commons-topline h3{font-size:clamp(15px,4.2vw,19px)!important}
+ #screen>.exhibition-lobby .commons-topline p{display:none}
+ #screen>.exhibition-lobby .commons-frame{max-height:calc(100% - 53px)!important;min-height:0!important;padding:3px!important}
+ #screen>.exhibition-lobby .commons-frame canvas{
+  width:auto!important;max-width:100%!important;max-height:100%!important;height:auto!important
+ }
+ #screen>.exhibition-lobby .commons-controls{flex-wrap:nowrap;gap:3px!important;padding-top:4px!important}
+ #screen>.exhibition-lobby .commons-swatch{width:clamp(20px,5.4vw,27px)!important;height:clamp(20px,5.4vw,27px)!important}
+ #screen>.exhibition-lobby .commons-width{flex:1 1 70px!important;font-size:10px!important}
+ #screen>.exhibition-lobby .commons-width input{min-width:32px!important}
+ #screen>.exhibition-lobby .commons-wipe{min-height:28px!important;padding:3px!important;font-size:10px}
+ #screen>.exhibition-lobby .lobby-list-heading{padding:0!important}
+ #screen>.exhibition-lobby .players{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  overflow-x:auto!important;overflow-y:hidden!important;
+  min-height:clamp(37px,6vh,47px)!important;max-height:clamp(37px,6vh,47px)!important;
+  gap:4px!important
+ }
+ #screen>.exhibition-lobby .player{
+  flex:0 0 auto!important;min-width:130px!important;max-width:185px!important;
+  min-height:35px!important
+ }
+}
+@media(max-width:699px) and (max-height:690px){
+ #screen>.page.exhibition-lobby{gap:3px!important}
+ #screen>.exhibition-lobby .ticket-top .section-label{font-size:8px}
+ #screen>.exhibition-lobby .ticket-live{display:none!important}
+ #screen>.exhibition-lobby .commons-topline .commons-online{display:none}
+ #screen>.exhibition-lobby .lobby-list-heading{display:none!important}
+ #screen>.exhibition-lobby .lobby-controls .field{font-size:9px!important}
+ #screen>.exhibition-lobby .lobby-invite>.lobby-controls{padding:4px!important}
+}
+/* PWA/standalone: viewport-fit=cover needs real device edge padding. In a
+   browser, visualViewport supplies actual usable height via mobile-runtime;
+   don't subtract Safari's toolbar twice. */
+@media (pointer:coarse) and (orientation:landscape){
+ .app-shell>.top{padding-left:calc(9px + env(safe-area-inset-left))!important;
+                 padding-right:calc(9px + env(safe-area-inset-right))!important}
+ #screen>.page.exhibition-lobby{padding-left:calc(9px + env(safe-area-inset-left))!important;
+                                padding-right:calc(9px + env(safe-area-inset-right))!important}
+}
+/* Other finite-stage screens also adapt, not become long documents. */
+@media(min-width:700px){
+ #screen>.museum-home{height:100%!important;min-height:0!important;overflow:hidden!important}
+ #screen>.museum-home .museum-display{min-height:0!important;max-height:100%!important}
+ #screen>.mobile-preview{height:100%!important;min-height:0!important;overflow:hidden!important}
+ #screen>.mobile-preview>.phase-body{flex:1;min-height:0;overflow:hidden!important}
+ #screen>.mobile-preview .gallery.exhibition-grid{min-height:0;max-height:calc(100dvh - 185px);overflow-x:auto;overflow-y:hidden}
+ #screen>.mobile-preview .gallery.exhibition-grid .picture-image{height:clamp(95px,22dvh,285px)!important;min-height:0}
+}
+@media(min-width:700px) and (max-height:620px){
+ #screen>.museum-home .museum-display{height:clamp(170px,55dvh,340px)!important}
+ #screen>.museum-home .museum-headline h1{font-size:clamp(38px,7vh,66px)!important}
+ #screen>.museum-home .museum-persona{min-height:42px!important;padding-block:4px!important}
+ #screen>.museum-home .start-restoration{min-height:49px!important;padding-block:5px!important}
+ #screen>.museum-home .museum-lower button{min-height:37px!important}
+ #screen>.museum-home .museum-footer{margin-top:4px!important;padding-top:4px!important}
+}
+/* Intentional scroll is reserved for genuinely long documents / archives. */
+#screen.screen:has(>.collection-page),
+#screen.screen:has(>.zamazka-achievements){overflow-y:auto}
+.dialog{padding-top:calc(8px + env(safe-area-inset-top));
+        padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+.dialog-box{min-height:0;max-height:calc(var(--app-viewport-height,100dvh) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto}
+
+/* grid-area must be declared LAST: it is a shorthand for grid-row/column.
+   Declaring grid-column:auto after it silently destroyed the named layout. */
+#screen>.exhibition-lobby>.lobby-mast{grid-area:mast!important}
+#screen>.exhibition-lobby>.lobby-invite{grid-area:invite!important}
+#screen>.exhibition-lobby>.commons-desk{grid-area:canvas!important}
+#screen>.exhibition-lobby>.lobby-attendance{grid-area:roster!important}
+
+/* Short landscape browsers: 2 miniature desks side by side leave more
+   height for settings and prevent the second selector being hard-clipped. */
+@media(min-width:700px) and (max-width:1099px) and (max-height:550px){
+ #screen>.exhibition-lobby>.lobby-invite{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-content:start!important;align-items:start!important;gap:5px!important
+ }
+ #screen>.exhibition-lobby .room-ticket{padding:5px!important;border-left-width:4px!important}
+ #screen>.exhibition-lobby .room-ticket .section-label{font-size:8px!important;letter-spacing:0!important}
+ #screen>.exhibition-lobby .room-code{font-size:17px!important;margin:3px 0!important}
+ #screen>.exhibition-lobby .ticket-actions{display:grid!important;grid-template-columns:1fr!important;gap:2px!important}
+ #screen>.exhibition-lobby .ticket-actions .btn{min-height:25px!important;padding:2px!important;font-size:9px!important}
+ #screen>.exhibition-lobby .lobby-invite>.lobby-controls{padding:4px!important;gap:1px!important}
+ #screen>.exhibition-lobby .lobby-controls-title{font-size:12px!important;line-height:1.1!important}
+ #screen>.exhibition-lobby .lobby-controls .field{font-size:8px!important;margin:0!important}
+ #screen>.exhibition-lobby .lobby-controls .input{height:25px!important;min-height:25px!important;padding:0 3px!important;font-size:11px!important}
+ #screen>.exhibition-lobby .lobby-controls [data-action="start"]{min-height:28px!important;margin-top:2px!important;font-size:10px!important}
+ #screen>.exhibition-lobby .lobby-attendance{max-height:46px!important}
+ #screen>.exhibition-lobby .lobby-attendance .players{max-height:42px!important}
+}
