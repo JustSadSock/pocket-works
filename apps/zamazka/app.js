@@ -376,7 +376,7 @@ function lobby(){
 
 function galleryHtml(list,select=false){
  const facets='<i class="picture-bevel picture-bevel-top" aria-hidden="true"></i><i class="picture-bevel picture-bevel-bottom" aria-hidden="true"></i><i class="picture-bevel picture-bevel-left" aria-hidden="true"></i><i class="picture-bevel picture-bevel-right" aria-hidden="true"></i>';
- return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><span class="picture-mat">'+facets+'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span></span>'+exhibitPlaque(ARTS[id]?.title||'Картина',[ARTS[id]?.artist||ARTS[id]?.style,ARTS[id]?.date,ARTS[id]?.schoolCountry].filter(Boolean).join(' · '))+'</button>').join('')+'</div>';
+ return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><span class="picture-hanger"><span class="picture-mat">'+facets+'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span>'+exhibitPlaque(ARTS[id]?.title||'Картина',[ARTS[id]?.artist||ARTS[id]?.style,ARTS[id]?.date,ARTS[id]?.schoolCountry].filter(Boolean).join(' · '))+'</span></span></button>').join('')+'</div>';
 }
 function preloadPreviewImage(id){
  return new Promise((resolve,reject)=>{
@@ -469,7 +469,7 @@ function fitPreviewFrames(rail){
    // Both axes and the four frame facets share the same explicit dimensions.
    const thickness=matchMedia('(max-width:900px), (pointer:coarse)').matches?7:10;
    const limitW=host.clientWidth-12-2*thickness-2;
-   const limitH=host.clientHeight-12-2*thickness-2;
+   const limitH=host.clientHeight-12-2*thickness-2-(host.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-4;
    if(limitW<28||limitH<28)continue;
    const width=Math.floor(Math.min(limitW,limitH*ratio));
    // Keep a fractional CSS height. Rounding 100.5px to 100px distorts
@@ -638,7 +638,7 @@ function vote(){
  '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':'Распредели 3 фишки между картинами.')+'</p>'+
  '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="stake-frame zam-exhibit-rim">'+exhibitFacets()+
  (examined?.art===id?'<canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
- '</div></div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+
+ '</div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+'</div>'+
  (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">На проверке</span>')+'</div>').join('')+'</div>'+
  (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div>'+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'<button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button>':'<span class="coin-auto-status" id="coinVoteStatus" role="status" aria-live="polite">3 фишки — и голос учтён</span>')+'</div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
  '</div></div></section>','vote');
@@ -1270,8 +1270,7 @@ screen.addEventListener('click',e=>{
 let lastClockCue='';
 function tick(){
  if(pendingVote)attemptVote();
- if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
- autoFinishOnDeadline();
+ 
  const v=practice||view,clock=document.querySelector('#clock');
  const clockStage=(page==='preview'||page==='drawing')&&
                   (v?.phase==='preview'||v?.phase==='drawing');
@@ -1279,11 +1278,13 @@ function tick(){
   const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));
   clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   clock.classList.toggle('urgent',Boolean(clockStage&&s<=10));
-  if(clockStage&&s>0&&s<=10){
+  if(clockStage&&s>=0&&s<=10){
    const cue=(practice?'practice':roomId)+':'+v.round+':'+v.phase+':'+s;
-   if(cue!==lastClockCue){lastClockCue=cue;sound('clock-tick')}
+   if(cue!==lastClockCue){lastClockCue=cue;sound(s===0?'time-up':s<=3?'final-warning':'clock-tick')}
   }
  }
+ if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
+ autoFinishOnDeadline();
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
   lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}
  }

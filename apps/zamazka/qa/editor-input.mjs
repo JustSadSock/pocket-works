@@ -21,6 +21,9 @@ for(let i=1;i<=300;i++){
 }
 art.finishStroke();
 assert.ok(art.strokes.length>1,'Long gesture is segmented');
+assert.equal(art.countPoints(),art.strokes.reduce((n,s)=>n+s.p.length,0),'point counter stays accurate after segmented gesture');
+assert.equal(art.pendingInkStrokes?.length,art.strokes.length,'each committed piece can be rasterized without full replay');
+assert.equal(art.committedPointCount,art.countPoints(),'committed point cache stays constant-time and exact');
 assert.ok(art.strokes.every(s=>s.p.length<=MAX_STROKE_POINTS),'Each segment fits PocketNet');
 assert.deepEqual(art.strokes[0].p.slice(0,fixed.length),fixed,'Existing geometry stays unchanged');
 assert.equal(new Set(art.strokes.map(s=>s.g)).size,1,'One gesture has one undo group');

@@ -11,11 +11,11 @@ function prepareCanvas(canvas,editor=false,thumbnail=false){
  const screenWidth=canvas.clientWidth||canvas.parentElement?.clientWidth||600;
  const dpr=typeof window==='undefined'?1:Math.max(1,Math.min(3,window.devicePixelRatio||1));
  const desktop=typeof window!=='undefined'&&window.matchMedia('(min-width:900px) and (pointer:fine)').matches;
- const needed=editor?Math.max(2.5,dpr*1.6):Math.max(2.7,dpr*1.3,desktop?3.25:2.7);
+ const needed=editor?Math.min(3,Math.max(2.5,dpr*1.5)):Math.max(2.7,dpr*1.3,desktop?3.25:2.7);
  // Thumbnails previously used a fixed 480x360 buffer, regardless of retina
  // density or full-screen review size. Render proportionally to actual demand.
  const scale=thumbnail?Math.min(2,Math.max(1,screenWidth*dpr/W*1.2)):
-   Math.min(editor?4:4,needed,Math.max(2,3500/W));
+   Math.min(editor?3:4,needed,Math.max(2,3500/W));
  const w=Math.round(W*scale),h=Math.round(H*scale);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
  const ctx=canvas.getContext('2d');
@@ -35,7 +35,7 @@ export function drawStroke(ctx,stroke,aspect=W/H){
  ctx.save();ctx.scale(correction,1);ctx.strokeStyle=color;ctx.lineWidth=stroke.t==='pencil'?Math.max(.15,size*.4):size;ctx.lineCap='round';ctx.lineJoin='round';
  ctx.globalAlpha=stroke.t==='pencil'?.82:stroke.t==='spray'?.44:1;
  if(stroke.t==='spray'){
-  for(let i=0;i<pts.length;i++){const pt=pts[i];for(let j=0;j<6;j++){const angle=((i*13+j*83)%360)*Math.PI/180,rad=(i+j*7)%11/11*size;dab(ctx,pt[0]/correction+Math.cos(angle)*rad,pt[1]+Math.sin(angle)*rad,size*.13,color,.34)}}
+  for(let i=0;i<pts.length;i++){const pt=pts[i],index=i+(Number(stroke.offset)||0);for(let j=0;j<6;j++){const angle=((index*13+j*83)%360)*Math.PI/180,rad=(index+j*7)%11/11*size;dab(ctx,pt[0]/correction+Math.cos(angle)*rad,pt[1]+Math.sin(angle)*rad,size*.13,color,.34)}}
  }else{ctx.beginPath();ctx.moveTo(pts[0][0]/correction,pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0]/correction,pts[i][1]);ctx.stroke();dab(ctx,pts[0][0]/correction,pts[0][1],ctx.lineWidth/2,color,ctx.globalAlpha)}
  ctx.restore();
 }
@@ -327,22 +327,41 @@ export class Editor{
  }
  transform(){this.canvas.style.transform='translate('+this.tx+'px,'+this.ty+'px) scale('+this.scale+')';if(this.lastCursor)this.showCursor(this.lastCursor)}
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(MAX_EDITOR_ZOOM,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
- point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
+ point(e,b=this.canvas.getBoundingClientRect()){return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
- save(){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot();this.onChange(this.strokes.length)}
+ save(){this.schedulePersistence();this.onChange(this.strokes.length)}
+  schedulePersistence(){
+    clearTimeout(this.persistTimer);
+    if(this.persistIdleId&&typeof cancelIdleCallback==='function')cancelIdleCallback(this.persistIdleId);
+    this.persistIdleId=null;
+    this.persistTimer=setTimeout(()=>{
+      this.persistTimer=null;if(this.closed)return;
+      if(this.working){this.schedulePersistence();return}
+      if(typeof requestIdleCallback==='function'){
+        this.persistIdleId=requestIdleCallback(()=>{this.persistIdleId=null;if(this.working){this.schedulePersistence();return}if(!this.closed)this.saveSnapshot()},{timeout:1800});
+      }else this.saveSnapshot();
+    },260);
+  }
+  flushPersistence(){
+    if(this.persistTimer==null&&this.persistIdleId==null)return;
+    clearTimeout(this.persistTimer);this.persistTimer=null;
+    if(this.persistIdleId&&typeof cancelIdleCallback==='function')cancelIdleCallback(this.persistIdleId);
+    this.persistIdleId=null;this.saveSnapshot();
+  }
   getSnapshot(){return [...this.strokes,...(this.working?[this.working]:[])].map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[...p])}))}
   saveSnapshot(){
    const strokes=this.getSnapshot();
+    const encoded=JSON.stringify(strokes);
    // Small tab-local recovery first, durable large recovery through IndexedDB.
-   try{sessionStorage.setItem(this.draftKey,JSON.stringify(strokes))}catch{}
+   try{sessionStorage.setItem(this.draftKey,encoded)}catch{}
    const generation=++this.saveGeneration;
    void zamazkaStore.set('draft:'+this.draftKey,strokes).then(()=>{
      // Only discard the fallback if it still describes the committed version.
-     try{if(sessionStorage.getItem(this.draftKey)===JSON.stringify(strokes))sessionStorage.removeItem(this.draftKey)}catch{}
+     try{if(sessionStorage.getItem(this.draftKey)===encoded)sessionStorage.removeItem(this.draftKey)}catch{}
      this.persistenceWarned=false;
      if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('local');
    }).catch(()=>{
-     try{localStorage.setItem(this.draftKey,JSON.stringify(strokes));if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('offline')}catch{
+     try{localStorage.setItem(this.draftKey,encoded);if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('offline')}catch{
        if(!this.persistenceWarned){this.persistenceWarned=true;this.onPersistenceError()}
        if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('error');
      }
@@ -353,7 +372,7 @@ export class Editor{
     if(this.strokes.length||!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
     const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:MAX_TOTAL_POINTS+1),0);
     if(total>MAX_TOTAL_POINTS||strokes.some(s=>!['brush','pencil','spray','erase','fill','smudge'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<MIN_BRUSH_SIZE||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
-    this.strokes=strokes.map(s=>({...s,p:s.p.map(p=>[...p])}));this.save();this.render();return true;
+    this.strokes=strokes.map(s=>({...s,p:s.p.map(p=>[...p])}));this.recountPoints();this.invalidateInk();this.save();this.render();return true;
   }
   setTool(tool){
     if(!['brush','fill','picker','erase','smudge','hand'].includes(tool))return;
@@ -390,7 +409,7 @@ export class Editor{
         a.p.push(...b.p.slice(1));this.strokes.splice(i--,1);changed=true;
       }
     }
-    if(changed){this.paintRevision=(this.paintRevision||0)+1;this.saveSnapshot()}
+    if(changed){this.recountPoints();this.invalidateInk();this.saveSnapshot()}
     return changed;
   }
   setBrushSize(next){
@@ -412,7 +431,9 @@ export class Editor{
       sample.setAttribute('aria-label','Кисть '+String(this.size));
     }
   }
-  countPoints(){return this.strokes.reduce((n,stroke)=>n+stroke.p.length,0)+(this.working?.p.length||0)}
+  countPoints(){if(this.committedPointCount===undefined)this.recountPoints();return this.committedPointCount+(this.working?.p.length||0)}
+  recountPoints(){this.committedPointCount=this.strokes.reduce((n,x)=>n+x.p.length,0)}
+  invalidateInk(){this.paintRevision=(this.paintRevision||0)+1;this.pendingInkStrokes=null;this.displayRevision=-1}
   beginStroke(p){
     const snapped=pointOnDamageEdge(this.zone,p,Math.min(25,Math.max(2,this.size*.65)));
     if(!snapped){
@@ -430,6 +451,11 @@ export class Editor{
     this.cursorContact(true);
     this.edgePaused=false;this.outsidePoint=null;
     this.redoStack=[];this.onSound?.('brush');this.render();
+  }
+  queueCommittedInk(stroke){
+    this.paintRevision=(this.paintRevision||0)+1;
+    if(stroke.t==='fill'||stroke.t==='smudge'||this.hasRasterInk){this.pendingInkStrokes=null;return}
+    (this.pendingInkStrokes ||= []).push(stroke);
   }
   warnLimit(){if(!this.limitWarned){this.onChange(-1);this.limitWarned=true}}
   extendStroke(p,drawNow=true){
@@ -454,14 +480,18 @@ export class Editor{
       // The completed piece is now in this.strokes rather than this.working:
       // invalidate the committed-ink cache immediately, or earlier pieces
       // vanish until pointerup saves the whole gesture.
-      this.paintRevision=(this.paintRevision||0)+1;
+      this.committedPointCount=(this.committedPointCount??this.strokes.reduce((n,x)=>n+x.p.length,0)-old.p.length)+old.p.length;
+      this.queueCommittedInk(old);
       this.working={c:old.c,s:old.s,t:old.t,g:old.g,p:[prev,p]};
     }else pts.push(p);
     if(drawNow)this.render();
   }
   finishStroke(){
     if(!this.working)return;
-    this.strokes.push(this.working);this.working=null;this.cursorContact(false);this.limitWarned=false;
+    const finished=this.working;
+    this.strokes.push(finished);this.committedPointCount=(this.committedPointCount??this.strokes.reduce((n,x)=>n+x.p.length,0)-finished.p.length)+finished.p.length;
+    this.queueCommittedInk(finished);
+    this.working=null;this.cursorContact(false);this.limitWarned=false;
     this.save();this.render();
   }
   // On touch, the precision nib is above the finger, as in Folio.
@@ -470,7 +500,7 @@ export class Editor{
     return {clientX:e.clientX+(offset?(this.hand==='left'?18:-18):0),
       clientY:e.clientY-(offset?50:0),pointerType:e.pointerType};
   }
-  pointAt(e){return this.point(this.tip(e))}
+  pointAt(e,bounds){return this.point(this.tip(e),bounds)}
 
   initCursorGraphic(){
     if(!this.cursor)return;
@@ -521,7 +551,7 @@ export class Editor{
     const diameter=Math.max(2,effectiveSize*c.height/H);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
     // Absolutely positioned children start at the viewport padding edge, not its outer border.
-   const drawn=this.point(tip);
+   const drawn=this.point(tip,c);
    this.cursor.classList?.toggle?.('is-blocked',Boolean(this.zone)&&!this.inside(drawn));
    const timestamp=typeof performance==='undefined'?Date.now():performance.now();
    const prev=this.cursorMotion;
@@ -627,7 +657,7 @@ export class Editor{
         if(!target)return;
         if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
         this.strokes.push({c:this.color,s:this.size,t:'fill',p:[target]});this.onSound?.('fill');
-        this.redoStack=[];this.save();this.render();return;
+        this.redoStack=[];this.committedPointCount=(this.committedPointCount??0)+1;this.invalidateInk();this.save();this.render();return;
       }
       if(this.inputMode==='precision'&&e.pointerType==='touch'){
         this.aimPointer=e.pointerId;this.aim={clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType};
@@ -675,9 +705,10 @@ export class Editor{
       this.showCursor(e);
       if(this.working||this.edgePaused){
         const events=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];
+        const canvasBounds=this.canvas.getBoundingClientRect();
         let previous=this.lastGesturePoint,changed=false;
         for(const sample of (events.length?[...events.slice(-23),e]:[e])){
-         const end=this.pointAt(sample);
+         const end=this.pointAt(sample,canvasBounds);
          const crossesEdge=previous&&(!this.inside(previous)||!this.inside(end));
          const length=previous?Math.hypot(end[0]-previous[0],end[1]-previous[1]):0;
          const steps=crossesEdge?Math.min(70,Math.max(1,Math.ceil(length/2))):1;
@@ -808,12 +839,12 @@ export class Editor{
         this.finishStroke();
         const tail=this.strokes.pop(),group=[tail];
         if(tail.g)while(this.strokes.length&&this.strokes[this.strokes.length-1].g===tail.g)group.unshift(this.strokes.pop());
-        this.redoStack.push(group);this.onSound?.('undo');this.save();this.render();
+        this.redoStack.push(group);this.recountPoints();this.invalidateInk();this.onSound?.('undo');this.save();this.render();
       }
       if(b.dataset.cmd==='redo'&&this.redoStack.length){
         this.finishStroke();
         const group=this.redoStack.pop();
-        this.strokes.push(...group);this.onSound?.('tool');this.save();this.render();
+        this.strokes.push(...group);this.recountPoints();this.invalidateInk();this.onSound?.('tool');this.save();this.render();
       }
       if(b.dataset.cmd==='in')this.zoom(1.3);
       if(b.dataset.cmd==='out')this.zoom(.77);
@@ -864,7 +895,9 @@ export class Editor{
     this.lostCapture=e=>{if(this.pointers.has(e.pointerId)||this.sizeDrag?.pointerId===e.pointerId)this.up({pointerId:e.pointerId,type:'pointercancel',pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY})};
     this.canvas.addEventListener('lostpointercapture',this.lostCapture);
     this.viewport.addEventListener('lostpointercapture',this.lostCapture);
-    window.addEventListener('blur',this.keyboardBlur);
+    this.persistOnHide=()=>{if(document.visibilityState==='hidden')this.flushPersistence()};
+     document.addEventListener('visibilitychange',this.persistOnHide);
+     window.addEventListener('blur',this.keyboardBlur);
     window.addEventListener('keydown',this.keyboardDown);
     window.addEventListener('keyup',this.keyboardUp);
     this.root.addEventListener('click',this.actions);
@@ -963,19 +996,30 @@ export class Editor{
      this.smudgePreviewLayer=null;
      this.smudgePreviewWorking=null;
      this.smudgeZoneMask=null;
+     this.displayLayer=null;this.liveLayer=null;this.liveInkWorking=null;
+     this.pendingInkStrokes=null;
    }
    const rev=this.paintRevision||0;
    if(this.cachedRevision!==rev){
-     this.inkCtx.clearRect(0,0,W,H);
-     this.inkCtx.fillStyle='#e8ddc6';this.inkCtx.fillRect(0,0,W,H);
-     renderStrokes(this.inkCtx,this.strokes,this.zone,artworkAspect(img));
-     this.cachedRevision=rev;
+     const pending=this.pendingInkStrokes;
+     const canAppend=this.cachedRevision>=0&&!this.hasRasterInk&&Array.isArray(pending)&&pending.length===rev-this.cachedRevision;
+     if(canAppend){for(const stroke of pending)drawStroke(this.inkCtx,stroke,artworkAspect(img))}
+     else{
+       this.inkCtx.clearRect(0,0,W,H);
+       this.inkCtx.fillStyle='#e8ddc6';this.inkCtx.fillRect(0,0,W,H);
+       renderStrokes(this.inkCtx,this.strokes,this.zone,artworkAspect(img));
+     }
+     this.hasRasterInk=this.strokes.some(stroke=>stroke.t==='fill'||stroke.t==='smudge');
+     this.pendingInkStrokes=[];this.cachedRevision=rev;this.displayRevision=-1;
    }
-   ctx.clearRect(0,0,W,H);
-   ctx.drawImage(this.baseLayer,0,0,W,H);
-   ctx.save();clipZone(ctx,this.zone);
-   ctx.drawImage(this.inkLayer,0,0,W,H);
-   ctx.restore();
+   // Composite immutable work once per committed revision, never for every pointer sample.
+   if(!this.displayLayer||this.displayLayer.width!==c.width||this.displayRevision!==rev){
+     const composed=makeLayer();composed.ctx.drawImage(this.baseLayer,0,0,W,H);
+     composed.ctx.save();clipZone(composed.ctx,this.zone);
+     composed.ctx.drawImage(this.inkLayer,0,0,W,H);composed.ctx.restore();
+     this.displayLayer=composed.canvas;this.displayRevision=rev;
+   }
+   ctx.clearRect(0,0,W,H);ctx.drawImage(this.displayLayer,0,0,W,H);
    if(this.working){
      ctx.save();clipZone(ctx,this.zone);
      if(this.working.t==='smudge'){
@@ -1000,7 +1044,20 @@ export class Editor{
          this.smudgePreviewPointCount=this.working.p.length;
        }
        ctx.drawImage(preview.canvas,0,0,W,H);
-     }else drawStroke(ctx,this.working,artworkAspect(img));
+     }else{
+        let live=this.liveLayer;
+        if(!live||live.canvas.width!==c.width||live.canvas.height!==c.height)live=this.liveLayer=makeLayer();
+        if(this.liveInkWorking!==this.working||this.liveInkRevision!==rev){
+          live.ctx.clearRect(0,0,W,H);this.liveInkWorking=this.working;this.liveInkRevision=rev;this.livePointCount=0;
+        }
+        const pts=this.working.p;
+        if(pts.length>this.livePointCount){
+          const start=Math.max(0,this.livePointCount-1);
+          drawStroke(live.ctx,{...this.working,p:pts.slice(start),offset:start},artworkAspect(img));
+          this.livePointCount=pts.length;
+        }
+        ctx.drawImage(live.canvas,0,0,W,H);
+      }
      ctx.restore();
    }
    // No dashed guide: the parchment cutout itself shows the editable area.
@@ -1008,13 +1065,13 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.closed=true;clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
+ dispose(){this.flushPersistence();this.closed=true;document.removeEventListener('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
  }
  for(const cb of this.paintWaiters||[])cb();
  this.paintWaiters=[];
- this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;this.smudgePreviewLayer=null;this.smudgePreviewWorking=null;this.smudgeZoneMask=null;
+ this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;this.displayLayer=null;this.liveLayer=null;this.smudgePreviewLayer=null;this.smudgePreviewWorking=null;this.smudgeZoneMask=null;
  this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);this.armButton?.removeEventListener('contextmenu',this.armContext);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('contextmenu',this.preventRightMenu);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }

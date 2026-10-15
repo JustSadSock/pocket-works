@@ -1,0 +1,289 @@
+/* Center the single admission postcard inside the stable app stage. */
+#screen:has(>.passage-entry){
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ min-height:0!important;box-sizing:border-box!important;padding:8px!important;
+}
+/* ZAMAZKA 1.40.2 — third critique pass. One postcard, one studio palette. */
+/* Admission is the postcard itself. No forest vignette, second panel or typography under the woman. */
+#screen>.passage-entry {
+ box-sizing:border-box!important;
+ display:grid!important;
+ grid-template-columns:minmax(0,1.1fr) minmax(220px,.85fr)!important;
+ grid-template-rows:minmax(0,1fr)!important;
+ align-items:stretch!important;justify-content:stretch!important;
+ width:min(91vw,1040px)!important;max-width:1040px!important;
+ height:min(83dvh,580px)!important;max-height:calc(100% - 18px)!important;
+ min-height:0!important;margin:auto!important;
+ padding:0!important;gap:0!important;
+ background:#f7f5f0!important;background-image:none!important;
+ border:1px solid #d2c7b9!important;
+ box-shadow:0 0 0 1px #e9e1d6,0 18px 54px #161c1b5c!important;
+ color:#3c342e!important;overflow:hidden!important;
+}
+#screen>.passage-entry .passage-document {
+ box-sizing:border-box!important;min-height:0!important;
+ align-self:center!important;justify-self:stretch!important;
+ width:100%!important;max-width:none!important;max-height:100%!important;
+ gap:clamp(10px,2vh,19px)!important;
+ padding:clamp(16px,3vw,41px)!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+}
+#screen>.passage-entry .passage-art {
+ box-sizing:border-box!important;
+ display:flex!important;align-self:stretch!important;
+ justify-content:center!important;align-items:center!important;
+ max-height:none!important;min-height:0!important;
+ padding:clamp(13px,2.8vw,34px)!important;
+ margin:0!important;gap:0!important;
+ background:transparent!important;background-image:none!important;
+ border:0!important;box-shadow:none!important;overflow:hidden!important;
+}
+#screen>.passage-entry .passage-art-light,
+#screen>.passage-entry .passage-art-label{display:none!important}
+#screen>.passage-entry .passage-art-frame{
+ box-sizing:border-box!important;
+ display:block!important;width:auto!important;height:auto!important;
+ max-width:100%!important;max-height:100%!important;
+ aspect-ratio:3/4!important;
+ border:clamp(8px,1vw,13px) ridge #a88354!important;
+ background:#44382a!important;
+ box-shadow:0 0 0 2px #56412c,0 10px 23px #22170f44!important;
+}
+#screen>.passage-entry .passage-art-frame img{
+ display:block!important;width:100%!important;height:100%!important;
+ object-fit:cover!important;object-position:center!important;
+}
+#screen>.passage-entry .passage-heading h2 {font-size:clamp(26px,2.9vw,41px)!important}
+#screen>.passage-entry .passage-entry-content {
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ gap:clamp(10px,1.7vh,18px)!important;
+}
+#screen>.passage-entry :is(.passage-document,.passage-entry-content,.passage-entry-form,.entry-fields) {
+ min-height:0!important;min-width:0!important;
+}
+#screen>.passage-entry .passage-identity {
+ min-height:0!important;border-bottom:1px solid #d4c8b8!important;
+}
+#screen>.passage-entry .passage-heading .section-label{color:#83715c!important}
+#screen>.passage-entry .entry-actions>.btn{min-height:41px!important}
+#screen>.passage-entry .entry-error{background:#f6e3d7!important;color:#733e35!important}
+@media(max-width:800px){
+ #screen>.passage-entry{
+  display:flex!important;flex-direction:column!important;
+  width:min(94vw,620px)!important;height:auto!important;
+  max-height:calc(100dvh - 110px)!important;
+  padding:clamp(12px,3vw,21px)!important;
+ }
+ #screen>.passage-entry .passage-art{display:none!important}
+ #screen>.passage-entry .passage-document{padding:clamp(4px,2vw,18px)!important;overflow-y:auto!important}
+}
+
+/* Waiting room: right side begins just beneath the collective canvas headline. */
+@media(min-width:1020px){
+ #screen>.exhibition-lobby .lobby-attendance {
+  align-self:stretch!important;justify-content:flex-start!important;
+  padding-top:clamp(34px,5.8vh,63px)!important;
+ }
+ #screen>.exhibition-lobby .lobby-attendance .lobby-list-heading{padding-top:0!important}
+ #screen>.restore>.work-tools {
+  width:clamp(206px,17vw,285px)!important;
+  padding:clamp(10px,1.2vw,17px)!important;
+  gap:clamp(8px,1vh,14px)!important;
+ }
+ #screen>.restore>.work-area{padding-right:clamp(165px,18vw,266px)!important}
+}
+
+/* Preparation: remove the accidental white vertical edges. Readiness must remain legible. */
+#screen>.passage-preparing :is(.passage-image-strip,.passage-prep-workspace,.passage-image-slot)::before,
+#screen>.passage-preparing :is(.passage-image-strip,.passage-prep-workspace,.passage-image-slot)::after{
+ content:none!important;display:none!important;
+}
+#screen>.passage-preparing .passage-prep-workspace{
+ border:0!important;outline:0!important;background:transparent!important;
+ box-shadow:none!important;
+}
+#screen>.passage-preparing .passage-image-slot{
+ outline:none!important;box-shadow:0 9px 21px #29241f56!important;
+}
+#screen>.passage-preparing .passage-prep-peer,
+#screen>.passage-preparing .passage-prep-peer :is(span,strong){
+ color:#382f26!important;font-weight:650!important;
+ text-shadow:0 1px 0 #f7efe580!important;
+}
+
+/* The placard is a physical part of its frame, not a separate label at card bottom. */
+#screen .picture-hanger{
+ display:flex!important;flex-direction:column!important;
+ justify-content:center!important;align-items:center!important;
+ max-width:100%!important;max-height:100%!important;
+ width:max-content!important;min-width:0!important;min-height:0!important;
+ margin:0 auto!important;
+}
+#screen .picture-hanger .picture-mat{flex:0 1 auto!important}
+#screen .picture-hanger .zam-exhibit-plaque,
+#screen .zam-exhibit-stage>.zam-exhibit-plaque{
+ position:relative!important;top:0!important;
+ margin:-1px auto 0!important;
+ padding:clamp(5px,.65vh,9px) clamp(8px,.95vw,14px) clamp(5px,.7vh,9px)!important;
+ transform:none!important;
+ box-shadow:inset 0 0 0 2px #e6d2af,0 3px 0 #48321e,0 7px 14px #1b160f66!important;
+}
+#screen .picture-hanger .zam-exhibit-plaque::before,
+#screen .zam-exhibit-stage>.zam-exhibit-plaque::before{
+ top:-4px!important;height:3px!important;
+}
+#screen .zam-exhibit-stage{
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:center!important;gap:0!important;
+}
+#screen>.mobile-preview .gallery.exhibition-grid>.picture{
+ padding:3px 1px!important;overflow:visible!important;
+}
+#screen>.mobile-preview .gallery.exhibition-grid>.picture .picture-image{
+ flex:1 1 auto!important;min-height:0!important;overflow:visible!important;
+}
+#screen>.mobile-preview .gallery.exhibition-grid>.picture .picture-hanger>.zam-exhibit-plaque{
+ max-width:100%!important;margin-top:-1px!important;
+}
+
+/* Voting: only painting and attached label, no second paper/card matting. */
+#screen>.expert-phase .expert-ballot,
+#screen>.expert-phase .suspect-gallery,
+#screen>.expert-phase .stake-card{
+ background:transparent!important;background-image:none!important;
+ outline:0!important;border:0!important;box-shadow:none!important;
+}
+#screen>.expert-phase :is(.expert-ballot,.suspect-gallery,.stake-card)::before,
+#screen>.expert-phase :is(.expert-ballot,.suspect-gallery,.stake-card)::after{
+ display:none!important;content:none!important;
+}
+#screen>.expert-phase .stake-card{justify-content:stretch!important}
+#screen>.expert-phase .stake-card .zam-exhibit-stage{
+ flex:1 1 auto!important;
+}
+#screen>.expert-phase .stake-frame.zam-exhibit-rim{
+ border:0!important;outline:1px solid #423022!important;
+ background:#4a3726!important;box-shadow:0 8px 16px #21171073!important;
+}
+#screen>.expert-phase .stake-card>.stake-actions{
+ display:grid!important;grid-template-columns:42px minmax(0,1fr) 42px!important;
+ align-items:center;gap:4px!important;
+ min-height:42px!important;padding:4px 2px!important;
+ background:transparent!important;border:0!important;
+}
+#screen>.expert-phase .stake-actions button{
+ min-height:39px!important;width:42px!important;
+ border:1px solid #987b55!important;background:#d6c39d!important;
+ color:#46372b!important;font:normal 24px/1 Georgia,serif!important;
+ box-shadow:0 3px 0 #33271db3!important;
+}
+#screen>.expert-phase .stake-actions button:active:not(:disabled){
+ transform:translateY(2px)!important;box-shadow:0 1px 0 #33271d!important;
+}
+#screen>.expert-phase .stake-actions button:disabled{
+ opacity:.3!important;cursor:default!important;
+}
+#screen>.expert-phase .stake-amount{
+ display:flex!important;justify-content:center!important;align-items:center!important;
+ min-height:39px!important;padding:4px!important;
+ background:#41392e!important;border:1px solid #806f59!important;
+ color:#e7d4ab!important;
+}
+#screen>.expert-phase .stake-amount strong{font:normal 23px Georgia,serif!important;color:#eddcb9!important}
+#screen>.expert-phase .stake-tray{background:#4e493f!important}
+#screen>.expert-phase .phase-body.expert-round{background:#4a4b46!important;background-image:none!important}
+
+/* Finished restoration and revelation share the stone-grey workbench, not the old green hall. */
+#screen>.passage-waiting>.passage-waiting-layout,
+#screen>.finale-reveal>.reveal-layout{
+ background:#4b4c48!important;
+ background-image:linear-gradient(150deg,#565650,#464943)!important;
+}
+#screen>.passage-waiting .passage-waiting-status,
+#screen>.finale-reveal .reveal-brief{
+ background:#50483d!important;color:#f0e4cc!important;
+ border-color:#867359!important;
+}
+#screen>.passage-waiting .passage-roster .waiting-person{background:#5a5347!important}
+#screen>.finale-reveal .audit-line{border-color:#85745d!important}
+
+/* Make the entire visible museum wall usable in the restoration exhibition. */
+#screen>.round-review-phase{background:#3b403c!important}
+#screen>.round-review-phase>.round-review-body{
+ max-width:none!important;width:100%!important;
+ padding:clamp(4px,.6vh,9px) clamp(4px,.8vw,13px)!important;
+}
+#screen>.round-review-phase .round-review-grid{
+ --zam-review-gap:clamp(4px,.5vw,10px)!important;
+ align-items:stretch!important;gap:var(--zam-review-gap)!important;
+}
+#screen>.round-review-phase .round-art-card{
+ padding:0!important;justify-content:stretch!important;gap:0!important;
+}
+#screen>.round-review-phase .round-art-card .zam-exhibit-stage{flex:1 1 auto!important;min-height:0!important}
+#screen>.round-review-phase .round-art-card .zam-exhibit-plaque{margin-top:-1px!important}
+#screen>.round-review-phase .round-review-bottom{background:#4c473d!important}
+
+/* Finals: let names and real totals carry the hierarchy. Hide duplicated microcopy. */
+#screen>.finale-results{background:#414741!important;color:#eee2cb!important}
+#screen>.finale-results .finale-results-head{
+ padding-bottom:6px!important;gap:0!important;
+ border-bottom:1px solid #94846c!important;
+}
+#screen>.finale-results .finale-results-head .finale-overline,
+#screen>.finale-results .finale-results-head p,
+#screen>.finale-results .finale-ledger-heading .finale-overline,
+#screen>.finale-results .finale-ledger-heading strong,
+#screen>.finale-results .finale-ranking-name small,
+#screen>.finale-results .finale-ranking-score small,
+#screen>.finale-results .finale-ranking-row .finale-score-breakdown,
+#screen>.finale-results .finale-ranking-row .finale-score-track{
+ display:none!important;
+}
+#screen>.finale-results .finale-results-head h2{
+ color:#f3e4c8!important;font-size:clamp(30px,3.2vw,47px)!important;
+}
+#screen>.finale-results .finale-laureate{
+ background:#4b4236!important;border:clamp(5px,.55vw,9px) ridge #b79a6e!important;
+}
+#screen>.finale-results .finale-laureate-person h3{
+ font-size:clamp(25px,2.7vw,43px)!important;
+}
+#screen>.finale-results .finale-ranking-row{
+ min-height:clamp(52px,8vh,78px)!important;
+ grid-template-rows:1fr!important;
+ padding:clamp(5px,.8vh,10px) clamp(8px,.8vw,12px)!important;
+ gap:10px!important;
+}
+#screen>.finale-results .finale-ranking-place{grid-row:1!important}
+#screen>.finale-results .finale-ranking-name strong{
+ font-size:clamp(16px,1.28vw,22px)!important;color:#f1e4cd!important;
+}
+#screen>.finale-results .finale-ranking-score b{
+ font-size:clamp(24px,2vw,36px)!important;color:#dfc195!important;
+}
+#screen>.finale-results .finale-ranking-row.is-leading{
+ background:#605340!important;box-shadow:inset 3px 0 0 #c5a070!important;
+}
+#screen>.finale-results .finale-ranking-row{border-bottom-color:#7b7465!important}
+@media(max-width:700px){
+ #screen>.finale-results .finale-results-head h2{font-size:28px!important}
+ #screen>.finale-results .finale-ranking-row{min-height:55px!important}
+ #screen>.passage-preparing .passage-prep-peer{padding:3px 8px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen>.expert-phase .stake-actions button{transition:none!important}
+}
+
+/* Short desktop windows: center the list without clipping participant actions. */
+@media(min-width:1020px){
+ #screen>.exhibition-lobby .lobby-attendance{
+  display:flex!important;flex-direction:column!important;min-height:0!important;
+  padding-top:clamp(8px,2.2vh,24px)!important;overflow:hidden!important;
+ }
+ #screen>.exhibition-lobby .lobby-attendance .players{
+  flex:1 1 auto!important;min-height:0!important;
+  overflow-y:auto!important;overflow-x:hidden!important;
+  overscroll-behavior:contain;scrollbar-width:thin;
+ }
+}

@@ -86,8 +86,10 @@ assert.match(app,/pendingSubmit=\{token,room:roomId/);
 assert.match(app,/const retryMs=view\.deadline&&Date\.now\(\)>=view\.deadline\?3500:15000/);
 const clock=app.slice(app.indexOf("let lastClockCue='';"),app.indexOf('let museumSwipe=null;'));
 assert.match(clock,/page==='preview'\|\|page==='drawing'/);
-assert.match(clock,/sound\('clock-tick'\)/);
-assert.doesNotMatch(clock,/final-warning|sound\('warning'\)/);
+assert.match(clock,/sound\(s===0\?'time-up':s<=3\?'final-warning':'clock-tick'\)/);
+assert.doesNotMatch(clock,/sound\('warning'\)/);
+assert.match(clock,/autoFinishOnDeadline\(\)/);
+assert.ok(clock.indexOf("'time-up'")<clock.indexOf('autoFinishOnDeadline()'),'Alarm fires before completing the phase');
 const css=readFileSync(new URL('../experience.css',import.meta.url),'utf8');
 assert.match(css,/\.screen>\.phase-page,\.screen>\.restore\{animation:none\}/,
  'a timer transition must not move the entire screen');
