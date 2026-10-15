@@ -1,22 +1,23 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
-import { createPocketLan } from '../../shared/capabilities/lan.js';
+import { PocketNet } from '../../shared/capabilities/net.js';
 import {getPocketIdentity,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import { STEPS, INSTRUMENTS, stepMs, loopMs, unlockAudio, audioContext, playNote, canHearTrack, renderWav } from './audio.js';
 installMobileRuntime();
 const STORAGE='pocket-works:jam-tape:session-v1', PROFILE='pocket-works:jam-tape:profile-v1';
 const view=document.querySelector('#view'), toastEl=document.querySelector('#toast');
 const clipDialog=document.querySelector('#clipDialog'), confirmDialog=document.querySelector('#confirmDialog');
-const ownId=(()=>{try{let id=sessionStorage.getItem(PROFILE+':id');if(!id){id=crypto.randomUUID();sessionStorage.setItem(PROFILE+':id',id)}return id}catch{return crypto.randomUUID()}})();
+const localId=(()=>{try{let id=sessionStorage.getItem(PROFILE+':id');if(!id){id=crypto.randomUUID();sessionStorage.setItem(PROFILE+':id',id)}return id}catch{return crypto.randomUUID()}})();
 let saved=(()=>{try{return JSON.parse(localStorage.getItem(STORAGE)||'null')}catch{return null}})();
 let name=(()=>{try{return localStorage.getItem(PROFILE+':name')||'Музыкант'}catch{return 'Музыкант'}})();
 let pocketIdentity=null;
 let instrument='keys', air=true, hearOthers=true, onlyMine=false;
-let screen='welcome', lan=null, room=null, isHost=false, pairingMode='', inviteSignal='', replySignal='', offerText='', answerText='', nearbyRooms=[];
-let session=null, recording=null, editClip=null, held=new Map(), remoteVoices=new Map(), busy=false, timer=null, probeTimer=null, toastTimer=null;
+let ownId=localId, screen='welcome', netClient=null, connected=false, room=null, isHost=false, pairingMode='', joinCode='', initialClips=[];
+let session=null, recording=null, editClip=null, editNotes=[], editInst='keys', editBar=0, editHalf=0, editLength=1, editVelocity=88, held=new Map(), remoteVoices=new Map(), busy=false, timer=null, probeTimer=null, toastTimer=null;
 let clockOffset=0,lastScheduledMs=0, displayedStep=-1;
 const noteKeys=['a','s','d','f','g','h','j','k'];
 const colors=['#e8663b','#519289','#d1a24d','#8595b3'];
-const labels={keys:'Клавиши',bass:'Бас',drums:'Ударные'};
+const labels=Object.fromEntries(INSTRUMENTS.map(i=>[i.id,i.name]));
+const ORIGIN=location.origin+'/pocketnet';
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const self=()=>session?.players.find(p=>p.id===ownId);
@@ -30,7 +31,7 @@ function emptySession(){
  return {bpm:108,playing:false,anchor:0,players:[p],tracks:{[ownId]:[]},rev:1};
 }
 function tidyClip(raw){
- if(!raw||typeof raw!=='object'||!['keys','bass','drums'].includes(raw.inst)||!Array.isArray(raw.notes))return null;
+ if(!raw||typeof raw!=='object'||!labels[raw.inst]||!Array.isArray(raw.notes))return null;
  const notes=raw.notes.slice(0,96).filter(n=>Array.isArray(n)&&n.length===4&&n.every(Number.isFinite)&&
   Number.isInteger(n[0])&&n[0]>=0&&n[0]<64&&Number.isInteger(n[1])&&n[1]>=0&&n[1]<8)
   .map(n=>[n[0],n[1],clamp(Math.round(n[2]),1,16),clamp(Math.round(n[3]),10,100)]);
@@ -40,7 +41,7 @@ function tidyClip(raw){
 function tidySession(s){
  if(!s||typeof s!=='object'||!Array.isArray(s.players)||s.players.length>4||!s.tracks)return null;
  const players=s.players.filter(p=>typeof p?.id==='string'&&p.id.length<80&&typeof p?.name==='string').map(p=>({
-  id:p.id,name:p.name.slice(0,24),avatar:typeof p.avatar==='string'&&['clay','moss','ink','sun','wave','ember','plum','stone'].includes(p.avatar)?p.avatar:null,inst:['keys','bass','drums'].includes(p.inst)?p.inst:'keys',air:p.air!==false,online:p.online!==false
+  id:p.id,name:p.name.slice(0,24),avatar:typeof p.avatar==='string'&&['clay','moss','ink','sun','wave','ember','plum','stone'].includes(p.avatar)?p.avatar:null,inst:labels[p.inst]?p.inst:'keys',air:p.air!==false,online:p.online!==false
  }));
  if(!players.length)return null;
  const tracks={};
@@ -64,47 +65,34 @@ function saveSketch(){
  saved={project:session,savedAt:Date.now()};
  try{localStorage.setItem(STORAGE,JSON.stringify(saved))}catch{inform('Место в памяти браузера закончилось — экспортируй микс')}
 }
-function createLan(){
- return createPocketLan({applicationId:'jam-tape',protocolVersion:1,displayName:name,player:{id:ownId,name,metadata:{app:'jam-tape',avatar:pocketIdentity?.complete?pocketIdentity.avatar:null}}});
-}
 function setScreen(next){screen=next;render()}
 function render(){document.querySelector('#roomButton').hidden=!(room&&screen==='studio');document.querySelector('#peerCount').textContent=String(session?.players.filter(p=>p.online).length||1);if(screen==='welcome')renderWelcome();if(screen==='pair')renderPair();if(screen==='studio')renderStudio()}
 function renderWelcome(){
- view.innerHTML='<section class="welcome"><div class="cover"><div class="cover-stamp">ЖИВАЯ ЛУП-СТУДИЯ / ВЫПУСК 001</div>'+
+ view.innerHTML='<section class="welcome"><div class="cover"><div class="cover-stamp">МУЗЫКАЛЬНАЯ СТУДИЯ</div>'+
  '<div class="tape-art"><div class="tape-label">PLAY<br>TOGETHER</div><div class="reel left"><b></b></div><div class="reel right"><b></b></div><div class="tape-stripe"></div></div>'+
- '<h1>Вместе<br><em>звучим.</em></h1><p>Придумай мелодию, запиши свой кусочек и передай ритм друзьям. Каждый играет на своём инструменте, а лента собирает всё вместе.</p></div>'+
- '<div class="entry"><label for="nameInput">ТВОЙ ПСЕВДОНИМ</label><input id="nameInput" type="text" maxlength="24" autocomplete="nickname" value="'+safe(name)+'" placeholder="Музыкант" '+(pocketIdentity?.complete?'readonly aria-readonly="true"':'')+'>'+
- '<p class="small-note pw-identity-notice">'+(pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' '+safe(pocketIdentity.nickname)+' · Pocket ID':'Гостевой музыкант')+' · <a href="'+pocketIdProfileUrl+'">'+(pocketIdentity?.complete?'Профиль':'Войти')+'</a></p>'+
- '<div class="entry-actions"><button class="action primary" data-action="solo">Открыть свою студию <span>↗</span></button>'+
- '<button class="action" data-action="host">Создать LAN-студию <span>↗</span></button>'+
- '<button class="action" data-action="join">Присоединиться <span>→</span></button></div>'+
- '<p class="small-note">Один Wi-Fi или точка доступа. PocketLAN работает напрямую между устройствами без сервера. В браузере участники обмениваются приглашением и ответом.</p></div></section>';
+ '<h1>Создавай.<br><em>Записывай.</em></h1><p>Играй на инструментах, собирай ритмы по шагам и сочиняй вместе с друзьями.</p></div>'+
+ '<div class="entry"><label for="nameInput">ИМЯ МУЗЫКАНТА</label><input id="nameInput" type="text" maxlength="24" autocomplete="nickname" value="'+safe(name)+'" '+(pocketIdentity?.complete?'readonly aria-readonly="true"':'')+'>'+
+ '<p class="small-note pw-identity-notice">'+(pocketIdentity?.complete?pocketAvatarMarkup(pocketIdentity.artwork||pocketIdentity.avatar,{small:true,accountId:pocketIdentity.id})+' '+safe(pocketIdentity.nickname)+' · Pocket ID':'Гостевой режим')+' · <a href="'+pocketIdProfileUrl+'">'+(pocketIdentity?.complete?'Профиль':'Войти')+'</a></p>'+
+ '<div class="entry-actions"><button class="action primary" data-action="solo">Моя студия <span>→</span></button>'+
+ '<button class="action" data-action="host">Создать комнату <span>↗</span></button>'+
+ '<button class="action" data-action="join">Войти по коду <span>→</span></button></div>'+
+ '<p class="small-note">Комнаты PocketNet работают через интернет. Достаточно восьмизначного кода или ссылки.</p></div></section>';
 }
-function statusLine(){return room?'В комнате: '+session.players.filter(p=>p.online).map(p=>p.name).join(', '):'Подготовка прямого соединения'}
+function statusLine(){return connected?'PocketNet · соединение активно':busy?'Подключаемся к PocketNet…':'Проверь подключение к интернету'}
 function renderPair(){
- const host=pairingMode==='host',native=Boolean(lan?.mode==='native-lan'||room&&typeof room.createInvite!=='function');
- view.innerHTML='<section class="pairing"><button class="back" data-action="back">← '+(room?'В студию':'В меню')+'</button>'+
- '<p class="eyebrow">POCKETLAN / ЛОКАЛЬНОЕ ПОДКЛЮЧЕНИЕ</p>'+
- '<h2>'+(host?'Пригласи музыкантов.':'Присоединись к ленте.')+'</h2>'+
- '<p>'+(host?'В студии может играть до четырёх человек. На устройствах должна быть одна локальная сеть.':'В браузере скопируй приглашение хоста, а потом отправь ему ответ. На совместимых устройствах можно найти комнату автоматически.')+'</p>'+
- (host?'<div class="pair-row"><button class="small-button" data-action="studio">Открыть студию →</button></div>':'')+
- (native&&host?'<p class="small-note">Комната готова для автоматического поиска на устройствах с PocketLAN.</p>':'')+
- (!host?'<div class="pair-row"><button class="small-button" data-action="discover">Найти рядом</button></div>'+
- (nearbyRooms.length?'<div class="native-list">'+nearbyRooms.map((x,i)=>'<button data-action="native" data-index="'+i+'">'+safe(x.name||'LAN-студия')+' →</button>').join('')+'</div>':''):'')+
- (host&&!native?'<label class="field-label" for="inviteOutput">1 / Приглашение другу</label>'+
- '<textarea id="inviteOutput" readonly spellcheck="false" aria-label="Приглашение">'+safe(inviteSignal)+'</textarea>'+
- '<div class="pair-row"><button data-action="copy-invite" '+(!inviteSignal?'disabled':'')+'>Копировать</button>'+
- '<button data-action="share-invite" '+(!inviteSignal?'disabled':'')+'>Поделиться</button>'+
- '<button data-action="new-invite">Новый код</button></div>'+
- '<label class="field-label" for="answerInput">2 / Ответ друга</label><textarea id="answerInput" placeholder="PWL1.…" spellcheck="false">'+safe(answerText)+'</textarea>'+
- '<button class="action primary" data-action="accept-answer">Подключить музыканта →</button>':'')+
- (!host?'<label class="field-label" for="offerInput">1 / Приглашение от друга</label>'+
- '<textarea id="offerInput" placeholder="PWL1.…" spellcheck="false">'+safe(offerText)+'</textarea>'+
- '<button class="action primary" data-action="make-answer">Создать ответ →</button>'+
- (replySignal?'<label class="field-label" for="replyOutput">2 / Верни этот ответ создателю</label>'+
- '<textarea id="replyOutput" readonly spellcheck="false">'+safe(replySignal)+'</textarea>'+
- '<div class="pair-row"><button data-action="copy-reply">Копировать</button><button data-action="share-reply">Поделиться</button></div>'+
- '<p class="small-note">Останься на этой странице: как только создатель подключит тебя, студия откроется сама.</p>':''):'')+
+ const joined=Boolean(room),host=isHost,code=room?.roomId?.slice(0,8).toUpperCase()||'';
+ const roster=(session?.players||[]).map(p=>'<div class="roster-member">'+(p.avatar?pocketAvatarMarkup(p.avatar,{small:true}):'<span class="roster-mark">♪</span>')+
+ '<span><b>'+safe(p.name)+'</b><small>'+(p.id===ownId?'Вы · ':'')+(p.id===session?.host?'ведущий':'музыкант')+(p.online?'':' · не в сети')+'</small></span></div>').join('');
+ view.innerHTML='<section class="pairing"><button class="back" data-action="back">← '+(joined?'В студию':'Назад')+'</button>'+
+ '<p class="eyebrow">POCKETNET / ИНТЕРНЕТ-КОМНАТА</p><h2>'+(joined?'Студия открыта':pairingMode==='host'?'Создаём комнату':'Войти в студию')+'</h2>'+
+ (joined?'<div class="room-access"><span class="field-label">КОД КОМНАТЫ</span><strong class="room-code">'+code+'</strong>'+
+ '<div class="pair-row"><button data-action="copy-code">Копировать код</button><button data-action="share-link">Отправить ссылку</button></div></div>'+
+ '<div class="roster"><h3>Музыканты · '+(session?.players.filter(p=>p.online).length||1)+'/4</h3>'+roster+'</div>'+
+ '<button class="action primary" data-action="studio">Играть вместе →</button>':
+ '<p>Вставь код из приглашения друга. Устройства могут находиться в разных сетях.</p>'+
+ '<label class="field-label" for="joinCodeField">КОД ИЗ 8 СИМВОЛОВ</label>'+
+ '<input id="joinCodeField" maxlength="36" autocomplete="off" spellcheck="false" placeholder="Например, 12AB34CD" value="'+safe(joinCode)+'">'+
+ '<button class="action primary" data-action="enter-code" '+(!connected||busy?'disabled':'')+'>Присоединиться →</button>')+
  '<div id="pairStatus" role="status">'+safe(statusLine())+'</div></section>';
 }
 function waveFor(clip){
