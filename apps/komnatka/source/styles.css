@@ -484,3 +484,53 @@
  .memory-images img{height:135px}
  .memory-differences{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Room purpose is a practical palette, not a decorative mode switch. */
+.room-purpose-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:8px 0 15px}
+.room-purpose-picker button{background:#f1e6d6;border:1px solid #dac9b2;padding:10px 7px;text-align:left;
+ border-radius:10px;display:flex;flex-direction:column;gap:3px;min-height:62px}
+.room-purpose-picker b{font-size:12px;color:#674b39}
+.room-purpose-picker small{font-size:10px;color:#927866}
+.room-purpose-picker button.chosen{background:#d9e1d1;border-color:#8fa38a}
+.room-field-heading{display:block;margin:9px 0;color:#7c5d49;font-size:12px;font-weight:850}
+.room-kind-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.room-kind-choices button{min-height:42px;text-align:left;border:1px solid #e4d6c7;
+ border-radius:10px;background:#f3e9dc;padding:9px;font-size:12px;font-weight:900}
+.room-kind-choices button.picked{background:#dbe7d6;color:#536a50;border-color:#9eb79a}
+.material-options{display:flex;gap:6px;align-items:center;overflow-x:auto;overscroll-behavior-x:contain;
+ padding:3px 0 10px;scrollbar-width:none}
+.material-options::-webkit-scrollbar{display:none}
+.material-options button{padding:7px 10px;min-height:33px;background:#f2e8dc;white-space:nowrap;
+ color:#896d5b;font-size:11px;font-weight:850;border-radius:8px;border:1px solid #ebdac7}
+.material-options button.picked{background:#dce5d6;border-color:#95aa8b;color:#546c51}
+.selection-tray{max-height:min(54vh,420px);overflow-y:auto}
+.placement-tray{max-height:min(45vh,270px);overflow-y:auto}
+@media(max-width:690px){.room-purpose-picker{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .material-options{flex-shrink:0}
+ .selection-tray{max-height:43dvh}
+ .placement-tray{max-height:40dvh}
+}
+
+
+/* Compare exact rendered rooms: the slider trims the reference, never redraws
+   or stretches the screenshot. */
+.memory-inspector{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:3px 0 4px}
+.memory-inspector button{background:#e5d9c6;color:#705543;border:1px solid #cdbba5;
+ font-size:12px;font-weight:900;border-radius:9px;min-height:36px;padding:7px 12px}
+.memory-inspector label{font-size:10px;color:#957762;font-weight:800}
+.memory-inspector input{flex:1;min-width:80px;accent-color:#ad836c}
+.memory-inspector output{font-size:11px;font-weight:800;color:#715847;font-variant-numeric:tabular-nums}
+.memory-images.overlay{position:relative;display:block;width:100%;height:clamp(145px,33vh,295px)}
+.memory-images.overlay figure{position:absolute;inset:0;overflow:hidden;z-index:1}
+.memory-images.overlay figure:last-child{clip-path:inset(0 0 0 var(--reveal));z-index:2}
+.memory-images.overlay figure:first-child{clip-path:inset(0 calc(100% - var(--reveal)) 0 0);z-index:3}
+.memory-images.overlay img{height:calc(100% - 33px);width:100%;object-fit:contain}
+.memory-images.overlay:after{content:'';position:absolute;top:32px;bottom:0;left:var(--reveal);
+ border-left:2px solid #8b6652;box-shadow:0 0 0 1px #fff8;z-index:5;pointer-events:none}
+.online-difficulty{display:flex;flex-direction:column;gap:8px;margin:9px 0 15px}
+.online-difficulty>strong{font-size:12px;color:#896c57}
+.online-difficulty>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.online-difficulty button{min-height:39px;background:#ede3d5;border:1px solid #dcc4ae;
+ border-radius:9px;color:#866c58;font-size:11px;font-weight:850}
+.online-difficulty button.chosen{background:#d9e5d3;border-color:#a3b99c;color:#56714f}
