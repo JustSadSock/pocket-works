@@ -173,6 +173,13 @@ function renderPlay() {
   const answer = $('answerZone');
   const bank = $('bankZone');
   answer.replaceChildren(...round.answer.map((id) => tileButton(round, id, 'answer')));
+  const remaining = Math.min(10, round.parts.length - round.answer.length);
+  for (let i = 0; i < remaining; i++) {
+    const slot = document.createElement('span');
+    slot.className = 'empty-slot';
+    slot.setAttribute('aria-hidden', 'true');
+    answer.append(slot);
+  }
   bank.replaceChildren(...round.bank.map((id) => tileButton(round, id, 'bank')));
   const isRtl = /[\u0590-\u08FF]/u.test(round.text) && !/^[^\u0590-\u08FF]*[A-Za-zА-Яа-яЁё]/u.test(round.text);
   answer.dir = isRtl ? 'rtl' : 'ltr';
