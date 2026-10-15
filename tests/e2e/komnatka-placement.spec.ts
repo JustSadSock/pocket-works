@@ -34,6 +34,33 @@ test('home photograph comes from a real Babylon room, with Retina canvas quality
  expect(inside.pixels[0]*inside.pixels[1]).toBeGreaterThan(100000);
  await attachCriticalScreenshot(page,testInfo,'komnatka-retina-rug-detail',{fullPage:false});
 });
+test('new room purpose, distinct models, and real material remain after reopening',async ({page},testInfo)=>{
+ test.setTimeout(130000);
+ await page.goto('/apps/komnatka/?qa=1',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#homeLibrary')).toBeVisible({timeout:30000});
+ await page.locator('#homeLibrary').click();
+ await expect(page.locator('#roomsLayer')).toBeVisible();
+ await page.locator('#addAlbum').click();
+ await page.locator('#newRoomPurposes [data-purpose="kitchen"]').click();
+ await page.locator('#newRoomLayouts [data-layout="classic"]').click();
+ await page.locator('#roomCreateConfirm').click();
+ await page.waitForFunction(()=>(window as any).__KOMNATKA_TEST__?.purpose==='kitchen',{timeout:30000});
+ await expect(page.locator('#categories [data-group="suggested"]')).toBeVisible();
+ const recommended=page.locator('#catalog [data-type="diningtable"]');
+ await expect(recommended).toBeVisible();
+ const spot=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.groundPoint(0,0)) as Position;
+ await moveFromCatalog(page,'diningtable',spot);
+ await page.mouse.up();
+ await expect.poll(()=>page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount)).toBe(1);
+ await expect(page.locator('#selectionMaterials [data-material="walnut"]')).toBeVisible();
+ await page.locator('#selectionMaterials [data-material="walnut"]').click();
+ expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.materials[0].material)).toBe('walnut');
+ await attachCriticalScreenshot(page,testInfo,'komnatka-kitchen-wood-material',{fullPage:false});
+ await page.locator('#menuBtn').click();
+ await page.locator('#homeSolo').click();
+ expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.purpose)).toBe('kitchen');
+ expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.materials[0].material)).toBe('walnut');
+});
 test.describe('КОМНАТКА — actual placement and motion',()=>{
  test.beforeEach(async ({},testInfo)=>{
   test.skip(!testInfo.project.name.includes('portrait'),'Primary dollhouse interactions are portrait-first');
