@@ -757,6 +757,16 @@ function evaluateMigration(s){
 }
 function nearbyFreeLand(s,c,r){if(!c)return 0;const d=walkingDistances(s,c);let n=0;for(let i=0;i<T;i++)if(d[i]>=0&&d[i]<=r&&!s.usage[i]&&s.soil[i]>=50&&s.terrain[i]===0)n++;return n;}
 
+// Species counts follow the actual relocated animals, not an abstract cattle total.
+function moveAnimals(from,to,all=false,fraction=1){
+ const oxen=Math.min(from.draftOxen||0,all?(from.draftOxen||0):Math.floor((from.draftOxen||0)*fraction));
+ const cows=Math.min(from.dairyCows??from.cattle??0,all?(from.dairyCows??from.cattle??0):Math.floor((from.dairyCows??from.cattle??0)*fraction));
+ const sheep=Math.min(from.sheep||0,all?(from.sheep||0):Math.floor((from.sheep||0)*fraction));
+ from.draftOxen=(from.draftOxen||0)-oxen;to.draftOxen=(to.draftOxen||0)+oxen;
+ from.dairyCows=(from.dairyCows??from.cattle??0)-cows;to.dairyCows=(to.dairyCows??to.cattle??0)+cows;
+ from.cattle-=oxen+cows;to.cattle+=oxen+cows;
+ from.sheep=(from.sheep||0)-sheep;to.sheep=(to.sheep||0)+sheep;
+}
 function finishMigration(s){
  for(const h of s.households){if(!h.migration||s.day<h.migration.end)continue;
   const to=livingHouse(s,h.migration.target),
@@ -770,8 +780,8 @@ function finishMigration(s){
   if(acceptable){
    const previous=h.communityId;
    for(const p of people){h.members=h.members.filter(id=>id!==p.id);to.members.push(p.id);p.houseId=to.id;p.travel=null;p.job='home';p.x=to.x;p.y=to.y;recordLife(p,s.day,'move',`Переселился в общину ${to.communityId}`);}
-   if(!service)for(const good of ['grain','wood','coin','fodder','garden','dairy']){to[good]=round((to[good]||0)+(h[good]||0));h[good]=0;}
-   if(!service){to.cattle=(to.cattle||0)+(h.cattle||0);h.cattle=0;}
+   if(!service)for(const good of ['grain','wood','coin','fodder','garden','dairy','oats','pulses','wool']){to[good]=round((to[good]||0)+(h[good]||0));h[good]=0;}
+   if(!service)moveAnimals(h,to,true);
    if(!service)redistributeAbandonedStrips(s,h);
    const released=service?0:releaseFields(s,h);resetGrazingCache(to);to.reservedBy=null;
    if(!lodging&&!service){to.tenure='customary';to.tenureOrigin='migration';}
@@ -804,9 +814,9 @@ function relocate(s,people,from,to){
  const n=people.length;if(!n||from.id===to.id)return;
  const fraction=n/Math.max(1,liveMembers(s,from).length);
  // Shares move between households without manufacturing or deleting resources.
- const cattleMoved=Math.min(from.cattle||0,Math.floor((from.cattle||0)*fraction));from.cattle=(from.cattle||0)-cattleMoved;to.cattle=(to.cattle||0)+cattleMoved;
+ moveAnimals(from,to,false,fraction);
   const hayMoved=round((from.fodder||0)*fraction*.5);from.fodder=round((from.fodder||0)-hayMoved);to.fodder=round((to.fodder||0)+hayMoved);
-  for(const resource of ['grain','wood','coin','garden','dairy']){
+  for(const resource of ['grain','wood','coin','garden','dairy','oats','pulses','wool']){
   const transferred=resource==='coin'?Math.floor(from[resource]*fraction*.5):round(from[resource]*fraction*.5);
   from[resource]=round(from[resource]-transferred);to[resource]=round(to[resource]+transferred);
  }
@@ -952,11 +962,11 @@ function inheritVacant(s,h){
   if(inherited.length)event(s,'land-inheritance',`Родственники унаследовали ${inherited.length} полос`,
    'Наследование зависимого крестьянского владения без создания новых участков',
    [h.id,recipient.id],{fields:inherited.length});
-  recipient.cattle=(recipient.cattle||0)+(h.cattle||0);h.cattle=0;
+  moveAnimals(h,recipient,true);
   recipient.fodder=round((recipient.fodder||0)+(h.fodder||0));h.fodder=0;
  }
  if(h.fields.length){redistributeAbandonedStrips(s,h);if(h.fields.length)releaseFields(s,h);}
-  if(recipient)for(const key of ['grain','wood','coin','garden','dairy']){recipient[key]=round((recipient[key]||0)+(h[key]||0));h[key]=0;}
+  if(recipient)for(const key of ['grain','wood','coin','garden','dairy','oats','pulses','wool']){recipient[key]=round((recipient[key]||0)+(h[key]||0));h[key]=0;}
  // In this explicitly customary village regime, ownerless goods are taken into
  // local stewardship, not abandoned forever in an inaccessible ghost household.
  // The steward is a real living household, reachable overland; property moves
@@ -967,10 +977,10 @@ function inheritVacant(s,h){
    liveMembers(s,k).some(p=>p.age>=18&&p.health>25)&&reachable[idx(k.x,k.y)]>=0&&reachable[idx(k.x,k.y)]<=95);
   trustees.sort((a,b)=>reachable[idx(a.x,a.y)]-reachable[idx(b.x,b.y)]||a.id-b.id);
   const trustee=trustees[0];
-  if(trustee&&[h.grain,h.wood,h.coin,h.fodder||0,h.cattle||0,h.garden||0,h.dairy||0].some(value=>value>0)){
+  if(trustee&&[h.grain,h.wood,h.coin,h.fodder||0,h.cattle||0,h.sheep||0,h.wool||0,h.oats||0,h.pulses||0,h.garden||0,h.dairy||0].some(value=>value>0)){
    const amounts={grain:h.grain,wood:h.wood,coin:h.coin,cattle:h.cattle||0,fodder:h.fodder||0,garden:h.garden||0,dairy:h.dairy||0};
-   for(const resource of ['grain','wood','coin','fodder','garden','dairy']){trustee[resource]=round((trustee[resource]||0)+(h[resource]||0));h[resource]=0;}
-   trustee.cattle=(trustee.cattle||0)+(h.cattle||0);h.cattle=0;
+   for(const resource of ['grain','wood','coin','fodder','garden','dairy','oats','pulses','wool']){trustee[resource]=round((trustee[resource]||0)+(h[resource]||0));h[resource]=0;}
+   moveAnimals(h,trustee,true);
    s.stats.escheatEstates=(s.stats.escheatEstates||0)+1;
    s.stats.escheatedCoin=(s.stats.escheatedCoin||0)+amounts.coin;
    event(s,'estate-stewardship',`Невостребованное имущество дома ${h.id} передано на местное хранение`,
