@@ -379,7 +379,9 @@ try{
   assert.equal(contrast,'rgb(73, 56, 43)','Restoration title must contrast with archival paper');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-reveal-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="menu"]').first().click();
-  await page.locator('[data-action="collection"]').click();
+  assert.equal(await page.locator('.museum-recent').count(),1,
+    'Completed drawing should expose an actual recent-work shortcut');
+  await page.locator('.museum-footer [data-action="collection"]').click();
   await page.locator('.archive-work').first().waitFor({timeout:7500});
   assert.equal(await page.locator('.collection-page [data-action="menu"]').count(),1,
     'Archive exit must be unique and inside the header, not after the gallery');
