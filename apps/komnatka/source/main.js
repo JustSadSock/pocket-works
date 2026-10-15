@@ -8,6 +8,8 @@ import { createSoundscape } from './soundscape.js';
 import { createMotionDirector } from './motion.js';
 import { buildFurnitureThumbnails } from './thumbnails.js';
 import { createPlacementGuide } from './placement-guide.js';
+import { catalogGestureIntent } from './catalog-gesture.js';
+import { findSurfaceTarget } from './support-target.js';
 import { createOnlineController } from './online.js';
 import { roomList,activeRoomId,loadRoom,saveRoom,selectRoom,addRoom,renameRoom,deleteRoom,ROOM_CAP } from './rooms.js';
 import { LAYOUTS,leftWallX } from './layout.js';
@@ -423,13 +425,17 @@ function pickTarget(ev,item) {
   const wall=p.pickedMesh.metadata.wall,coord=wall==='back'?nearest(p.pickedPoint.x):nearest(p.pickedPoint.z);
   return {x:wall==='left'?leftWallX(state.layout):coord,z:wall==='back'?-3.91:coord,y:Math.min(3.2,Math.max(1.03,nearest(p.pickedPoint.y))),wall,rot:wall==='left'?1:0};
  }
- const ground=pointOnGround(ev);if(!ground)return null;
- const x=nearest(ground.x),z=nearest(ground.z);
  if(meta.tabletop){
-  const support=findSupport(state,item,x,z);
-  return {x,z,y:support?byType[support.type].top:0,support:support?.id||null,rot:item.rot};
+  const rect=ui.canvas.getBoundingClientRect();
+  const ray=scene.createPickingRay(ev.clientX-rect.left,ev.clientY-rect.top,Matrix.Identity(),camera);
+  const supports=state.items.filter(part=>byType[part.type]?.top).map(part=>({
+   id:part.id,x:part.x,z:part.z,top:byType[part.type].top,size:dimensions(part)
+  }));
+  const surface=findSurfaceTarget(ray,supports,item.id);
+  if(surface)return {x:nearest(surface.x),z:nearest(surface.z),y:surface.y,support:surface.support,rot:item.rot};
  }
- return {x,z,y:0,rot:item.rot};
+ const ground=pointOnGround(ev);if(!ground)return null;
+ return {x:nearest(ground.x),z:nearest(ground.z),y:0,support:null,rot:item.rot};
 }
 function trashHovered(ev){
  const r=$('stage').getBoundingClientRect();
@@ -439,51 +445,52 @@ function trashHovered(ev){
 function hideTrash(){
  $('trashZone').hidden=true;$('trashZone').classList.remove('hover');
 }
-function snapFeedback(ev){
- if(reduce.matches)return;
- const pulse=$('snapPulse'),rect=$('stage').getBoundingClientRect();
- pulse.style.left=(ev.clientX-rect.left)+'px';
- pulse.style.top=(ev.clientY-rect.top)+'px';
- pulse.getAnimations?.().forEach(animation=>animation.cancel());
- pulse.animate([{transform:'translate(-50%,-50%) scale(.4)',opacity:.36},
-   {transform:'translate(-50%,-50%) scale(1.35)',opacity:0}],
-   {duration:190,easing:'ease-out',fill:'both'});
-}
 function showGuide(item,allowed){
  if(!guide)return;
  const meta=byType[item.type],[width,depth]=dimensions(item);
  guide.show({x:item.x,z:item.z,y:meta.tabletop?item.y:0,width,depth,valid:allowed,wall:meta.layer==='wall'});
- ui.hint.textContent=allowed?(drag?'Отпусти, чтобы поставить':'Нажми, чтобы поставить'):'Здесь предмет не поместится';
  ui.hint.classList.toggle('invalid',!allowed);
- ui.hint.classList.add('visible');
+ if(allowed)ui.hint.classList.remove('visible');
+ else{
+  ui.hint.textContent=meta.tabletop&&!item.support?'Наведи на поверхность мебели':'Здесь нет свободного места';
+  ui.hint.classList.add('visible');
+ }
 }
 function hideGuide(){
  guide?.hide();ui.hint.classList.remove('invalid');
  if(!pending)ui.hint.classList.remove('visible');
 }
 function catalogPointerDown(ev){
- if(!ready||ev.button>0||activeGroup==='finish')return;
+ if(!ready||ev.button>0||activeGroup==='finish'||catalogGesture)return;
  if(online?.active&&!online.canEdit){toast('Ждём начала обустройства');return;}
- catalogGesture={pointerId:ev.pointerId,type:ev.currentTarget.dataset.type,startX:ev.clientX,startY:ev.clientY,lastX:ev.clientX,dragging:false,scrolling:false};
+ const stage=$('stage').getBoundingClientRect(),rect=ui.catalog.getBoundingClientRect();
+ const portraitDock=rect.top>=stage.bottom-12;
+ catalogGesture={pointerId:ev.pointerId,type:ev.currentTarget.dataset.type,startX:ev.clientX,
+  startY:ev.clientY,lastX:ev.clientX,lastY:ev.clientY,portraitDock,dragging:false,scrolling:false};
+ try{ui.dock.setPointerCapture(ev.pointerId);}catch{}
 }
 function catalogPointerMove(ev){
  const g=catalogGesture;if(!g||g.pointerId!==ev.pointerId)return;
  const dx=ev.clientX-g.startX,dy=ev.clientY-g.startY;
- if(!g.dragging&&!g.scrolling&&Math.abs(dx)>11&&Math.abs(dx)>Math.abs(dy)*1.2)g.scrolling=true;
+ if(!g.dragging&&!g.scrolling){
+  const intent=catalogGestureIntent(dx,dy,g.portraitDock);
+  if(intent==='scroll')g.scrolling=true;
+  if(intent==='drag'){
+   g.dragging=true;beginPlacement(g.type,true);
+   if(!pending){catalogGesture=null;return;}
+   drag={kind:'place',fromCatalog:true,startX:g.startX,startY:g.startY};
+  }
+ }
  if(g.scrolling){
-  ui.catalog.scrollLeft-=ev.clientX-g.lastX;
-  g.lastX=ev.clientX;return;
- }
- if(!g.dragging&&Math.hypot(dx,dy)>9){
-  g.dragging=true;beginPlacement(g.type,true);
-  if(!pending){catalogGesture=null;return;}
-  drag={kind:'place',fromCatalog:true,startX:g.startX,startY:g.startY};
- }
- if(g.dragging)updateGhost(ev);
+  if(g.portraitDock)ui.catalog.scrollLeft-=ev.clientX-g.lastX;
+  else ui.catalog.scrollTop-=ev.clientY-g.lastY;
+ }else if(g.dragging)updateGhost(ev);
+ g.lastX=ev.clientX;g.lastY=ev.clientY;
 }
 function catalogPointerUp(ev){
  const g=catalogGesture;if(!g||g.pointerId!==ev.pointerId)return;
  catalogGesture=null;
+ try{if(ui.dock.hasPointerCapture(ev.pointerId))ui.dock.releasePointerCapture(ev.pointerId);}catch{}
  if(g.scrolling)return;
  if(!g.dragging){beginPlacement(g.type);return;}
  const bounds=ui.canvas.getBoundingClientRect();
@@ -530,7 +537,7 @@ function movePointer(ev) {
  const ok=valid(state,item)&&state.items.every(child=>child.support!==item.id||valid(state,child));
  if(ok){
   const cell=item.x+':'+item.z+':'+(item.support||'');
-  if(drag.cell!==cell){drag.cell=cell;snapFeedback(ev);}
+  drag.cell=cell;
  }
  director?.drag(item.id,dx,dz,ok);
   showGuide(item,ok);
@@ -564,6 +571,7 @@ function endPointer(ev) {
   }else{
    sound('blocked');
    toast(byType[pending.type].tabletop?'Нужна свободная поверхность стола':'Выбери свободное место');
+   if(d.fromCatalog)cancelPending(false);
   }
  }else if(d.kind==='move'&&d.moved){
   if(d.valid&&state.items.every(i=>i.id===d.id||i.support!==d.id||valid(state,i))){
@@ -744,15 +752,15 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
  window.__KOMNATKA_TEST__={
   get stageReady(){return Boolean(ready&&scene&&roots.size);},
   get selection(){return selectedId;},
-   get placement(){return pending?{type:pending.type,valid:pending.valid,ready:pending.previewReady}:null;},
+   get placement(){return pending?{type:pending.type,valid:pending.valid,ready:pending.previewReady,support:pending.proto.support}:null;},
    get dragging(){return drag?.kind||null;},
    get itemCount(){return state.items.length;},
    get gridVisible(){return Boolean(scene?.getMeshByName('placement-grid')?.isEnabled());},
    meshY(id){return roots.get(id)?.position.y??null;},
-   groundPoint(x,z){
+   groundPoint(x,z,y=0){
     if(!ready)return null;
     const rect=ui.canvas.getBoundingClientRect(),viewport=camera.viewport.toGlobal(ui.canvas.width,ui.canvas.height);
-    const position=Vector3.Project(new Vector3(x,0,z),Matrix.Identity(),scene.getTransformMatrix(),viewport);
+    const position=Vector3.Project(new Vector3(x,y,z),Matrix.Identity(),scene.getTransformMatrix(),viewport);
     return {x:rect.x+position.x*rect.width/ui.canvas.width,y:rect.y+position.y*rect.height/ui.canvas.height};
    },
   get lighting(){return room?.lightingDiagnostics()??null;},
