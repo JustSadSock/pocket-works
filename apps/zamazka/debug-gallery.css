@@ -1,0 +1,83 @@
+/* ZAMAZKA / QA Screen Gallery — app-private inspect mode.
+   Keyboard Backquote/ё toggles. A full iframe isolates all sample data
+   from the real session. No game element is replaced in the parent. */
+.zam-debug{--dbg-paper:#e8dcc7;--dbg-ink:#292e29;--dbg-border:#b59e77;
+ position:fixed;inset:0;z-index:2147483000;overflow:hidden;background:#171713;
+ color:#f0e6cf;font-family:system-ui,-apple-system,sans-serif}
+.zam-debug-frame{position:absolute;inset:0;width:100%;height:100%;border:0;
+ background:#332b24;display:block}
+.zam-debug-nav{position:absolute;z-index:2;left:clamp(5px,1vw,14px);
+ top:calc(7px + env(safe-area-inset-top));bottom:calc(7px + env(safe-area-inset-bottom));
+ width:min(286px,calc(100vw - 18px));min-height:0;display:flex;flex-direction:column;
+ background:var(--dbg-paper);color:var(--dbg-ink);
+ border:1px solid #927b57;box-shadow:0 8px 24px #0008,0 0 0 5px #30291f5e;
+ overflow:hidden;animation:dbg-open .21s cubic-bezier(.16,.72,.22,1) both}
+.zam-debug-head{display:flex;align-items:center;gap:8px;justify-content:space-between;
+ padding:11px 11px 9px;border-bottom:1px solid #ad9774;background:#e2d2b4}
+.zam-debug-head>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.zam-debug-head small{font:700 9px/1.2 system-ui;letter-spacing:.14em;color:#80684a}
+.zam-debug-head strong{font:normal 21px/1.1 Georgia,serif;color:#343a32}
+.zam-debug-head button{background:#45392e;border:1px solid #826b4e;color:#f6e4ca;
+ height:36px;width:36px;flex:none;font:26px/1 system-ui;cursor:pointer}
+.zam-debug-tools{padding:7px 11px;display:flex;flex-direction:column;gap:5px;
+ border-bottom:1px solid #c2af91}
+.zam-debug-tools button{width:100%;min-height:34px;
+ border:1px solid #9c8562;background:#eadfc9;color:#58402b;
+ font:650 11px system-ui;cursor:pointer}
+.zam-debug-tools span{color:#84745c;text-align:center;font:10px/1.25 system-ui}
+.zam-debug-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ scrollbar-width:thin;scrollbar-color:#a89270 transparent;
+ padding:7px;display:flex;flex-direction:column;gap:7px}
+.zam-debug-group{display:flex;flex-direction:column;gap:2px}
+.zam-debug-group-name{padding:7px 5px 4px;border-bottom:1px solid #beab8a;
+ font:700 9px/1 system-ui;letter-spacing:.13em;color:#826a49}
+.zam-debug-list button{border:1px solid transparent;background:transparent;
+ color:#44423a;min-height:35px;display:flex;align-items:center;text-align:left;
+ font:12px/1.24 system-ui;padding:5px 9px;cursor:pointer}
+.zam-debug-list button:hover{background:#d5c5a9;border-color:#c1aa87}
+.zam-debug-list button.is-active{background:#395044;color:#f5e8d0;border-color:#526d5c;
+ font-weight:700}
+.zam-debug-list button:focus-visible,.zam-debug-reopen:focus-visible,.zam-debug-head button:focus-visible,
+.zam-debug-tools button:focus-visible{outline:2px solid #b7833e;outline-offset:2px}
+.zam-debug-reopen{position:absolute;z-index:2;top:calc(9px + env(safe-area-inset-top));
+ left:calc(10px + env(safe-area-inset-left));display:none;align-items:center;gap:9px;
+ background:#e6d7bb;color:#36463b;max-width:calc(100vw - 20px);
+ border:1px solid #a28a62;box-shadow:0 3px 10px #1b1714a6;
+ padding:9px 12px;min-height:42px;text-align:left;cursor:pointer}
+.zam-debug-reopen span{font:800 9px system-ui;letter-spacing:.12em;color:#94744d}
+.zam-debug-reopen strong{font:normal 13px Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zam-debug-reopen i{font:15px system-ui;color:#9c7747}
+.zam-debug.is-collapsed .zam-debug-nav{display:none}
+.zam-debug.is-collapsed .zam-debug-reopen{display:flex}
+.zam-debug-load{display:none;position:absolute;right:15px;bottom:calc(15px + env(safe-area-inset-bottom));
+ z-index:2;background:#efe0c4;color:#564936;border:1px solid #c3a67f;
+ box-shadow:0 3px 12px #16110b59;padding:8px 13px;font:11px system-ui;pointer-events:none}
+.zam-debug.is-loading .zam-debug-load{display:block}
+@keyframes dbg-open{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+@media(max-width:700px){
+ .zam-debug-nav{left:calc(5px + env(safe-area-inset-left));
+  width:min(278px,85vw);top:calc(5px + env(safe-area-inset-top));
+  bottom:calc(5px + env(safe-area-inset-bottom))}
+ .zam-debug-list button{min-height:40px}
+ .zam-debug-head{padding:9px}
+ .zam-debug-reopen{padding:7px 10px;min-height:40px}
+}
+@media(max-height:430px){
+ .zam-debug-head{padding:5px 8px}
+ .zam-debug-head strong{font-size:17px}
+ .zam-debug-tools{padding:3px 7px}
+ .zam-debug-tools span{display:none}
+ .zam-debug-list{gap:2px;padding:3px}
+ .zam-debug-group-name{padding:4px}
+ .zam-debug-list button{min-height:27px;font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){
+ .zam-debug-nav{animation:none!important}
+}
+/* Child frame: show the exact game layout, but do not accidentally navigate
+   outside the isolated preview by clicking the shell's back arrow. */
+body.zam-debug-child .top .return,
+body.zam-debug-child .nav-tools [data-workshop-trigger],
+body.zam-debug-child .nav-tools #settingsBtn,
+body.zam-debug-child .nav-tools #profileBtn{pointer-events:none;opacity:.55}
+body.zam-debug-child #screen [data-action="menu"]{pointer-events:none}
