@@ -27,6 +27,8 @@ test('observations are read-only and missing samples are not mistaken for passin
  const s=createWorld(7777),raw=serialize(s),initial=historicalObservation(s);
  assert.equal(serialize(s),raw);
  assert.equal(initial.firstMarriagesObserved,0);
+ assert.equal(s.people.filter(p=>p.spouse).every(p=>p.everMarried),true);
+ assert.equal(s.people.filter(p=>p.spouse).every(p=>p.firstMarriageAge===undefined),true);
  assert.equal(historicalComparison(initial).find(r=>r.metric==='femaleFirstMarriage').interpretation,'insufficient-sample');
  assert.equal(initial.customaryTenementsAbove10Acres,.75);
  assert.equal(initial.activeVillages,4);
