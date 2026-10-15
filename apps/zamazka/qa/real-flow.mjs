@@ -315,11 +315,21 @@ try{
     await Promise.all(images.slice(0,3).map(img=>img.decode()));
     return true;
   });
-  await page.waitForFunction(()=>[...document.querySelectorAll('.mobile-preview .picture-mat')].slice(0,3).every(mat=>{
+  const aspectOK=()=>[...document.querySelectorAll('.mobile-preview .picture-mat')].slice(0,3).every(mat=>{
     const img=mat.querySelector('img'),r=img.getBoundingClientRect(),frame=mat.getBoundingClientRect(),host=mat.closest('.picture-image').getBoundingClientRect();
     return Math.abs(r.width/r.height-img.naturalWidth/img.naturalHeight)<.012&&
       frame.width<=host.width+2&&frame.height<=host.height+2&&r.width>25&&r.height>25;
-  }),null,{timeout:6000});
+  });
+  const aspectSettled=await page.waitForFunction(aspectOK,null,{timeout:6000}).then(()=>true).catch(()=>false);
+  if(!aspectSettled){
+    const ratios=await page.locator('.mobile-preview .picture-mat').evaluateAll(mats=>mats.slice(0,3).map(mat=>{
+      const im=mat.querySelector('img'),r=im.getBoundingClientRect(),f=mat.getBoundingClientRect(),h=mat.closest('.picture-image').getBoundingClientRect();
+      return {natural:[im.naturalWidth,im.naturalHeight],img:[r.width,r.height],frame:[f.width,f.height],
+        host:[h.width,h.height],widthStyle:mat.style.getPropertyValue('--preview-art-w'),
+        heightStyle:mat.style.getPropertyValue('--preview-art-h'),ready:mat.dataset.ratioReady};
+    }));
+    throw new Error('Synthetic preview image geometries do not fit: '+JSON.stringify(ratios));
+  }
     await page.locator('[data-action="skip"]').click();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
   assert.equal(await page.locator('.museum-passage').count(),0,'No full-screen sliding doors');
