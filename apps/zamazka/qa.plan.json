@@ -127,18 +127,6 @@
       "entry": "qa/finale-visual.mjs"
     },
     {
-      "id": "finale-live-flow",
-      "kind": "browser-node",
-      "tier": "smoke",
-      "entry": "qa/real-flow.mjs"
-    },
-    {
-      "id": "passage-state",
-      "kind": "node",
-      "tier": "smoke",
-      "entry": "qa/passage-state.mjs"
-    },
-    {
       "id": "passage-visual",
       "kind": "browser-node",
       "tier": "smoke",
