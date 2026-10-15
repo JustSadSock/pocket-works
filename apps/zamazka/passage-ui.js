@@ -28,20 +28,12 @@ export function admissionMarkup({creating,name,member,portrait,roomValue='',erro
    '<div class="passage-art-label"><span>01</span><span>ЗАМАЗКА<br><small>Музей подлинников</small></span></div></aside></section>';
 }
 
-const steps=[
- {label:'Проверяем доступность выставки'},
- {label:'Подготавливаем профиль игрока'},
- {label:'Устанавливаем соединение'},
- {label:'Открываем комнату'}
-];
-export function connectionMarkup({mode='join',escapeText}={}){
+export function connectionMarkup({mode='join',artURL=''}={}){
  const label=mode==='create'?'Открываем новый зал':mode==='resume'?'Восстанавливаем комнату':'Находим вашу выставку';
  return '<section class="page connecting-room passage-connection" data-passage="connection">'+
-  '<div class="passage-connection-panel"><span class="passage-connection-seal" aria-hidden="true">З</span>'+
+  '<div class="passage-connection-panel"><span class="passage-connection-seal" aria-hidden="true"><img src="'+artURL+'" alt=""></span>'+
   '<span class="section-label">ПОДКЛЮЧЕНИЕ</span><h2>'+label+'</h2>'+
-  '<ol class="passage-steps">'+steps.map((step,i)=>'<li class="passage-step'+(i===0?' is-current':'')+'" data-connection-step="'+i+'"><span class="passage-step-mark" aria-hidden="true">'+(i+1)+'</span>'+
-    '<span>'+step.label+'</span></li>').join('')+'</ol>'+
-  '<p class="passage-connection-status" id="connectionDetail" role="status" aria-live="polite">Проверяем сервер…</p>'+
+  '<p class="passage-connection-status" id="connectionDetail" role="status" aria-live="polite">Подключаемся…</p>'+
   '<button class="btn ghost" data-action="cancel-connect">Отменить</button></div></section>';
 }
 export function setConnectionStep(root,index,detail){
