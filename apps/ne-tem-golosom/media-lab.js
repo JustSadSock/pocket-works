@@ -17,6 +17,24 @@ function outputMime() {
     'video/mp4', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type)) || '';
 }
 function abortError() { return new DOMException('Обработка отменена', 'AbortError'); }
+/* MediaRecorder WebM may report duration=Infinity until its last frame has been sought. */
+export async function measureVideoDuration(video) {
+  if (Number.isFinite(video.duration) && video.duration > 0) return video.duration;
+  return new Promise(resolve => {
+    let done = false;
+    const finish = value => {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      video.removeEventListener('seeked', seeked);
+      resolve(Number.isFinite(value) && value > 0 ? value : 0);
+    };
+    const seeked = () => finish(video.currentTime);
+    const timer = setTimeout(() => finish(0), 5000);
+    video.addEventListener('seeked', seeked);
+    try { video.currentTime = 1e9; } catch { finish(0); }
+  });
+}
+
 
 /**
  * Export a precise segment with canvas-driven resolution and bitrate.
@@ -52,9 +70,10 @@ export async function exportVideo({ blob, start, duration, width, level, signal,
       video.load();
     });
     if (cancelled) throw abortError();
-    if (!Number.isFinite(video.duration) || start + duration > video.duration + 0.15)
+    const fileDuration = await measureVideoDuration(video);
+    if (!fileDuration || start + duration > fileDuration + 0.15)
       throw Error('Отрывок выходит за пределы файла.');
-    if (start > 0.01) {
+    if (start > 0.01 || video.currentTime > 0.01) {
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => { video.removeEventListener('seeked', done); reject(Error('Не удалось перейти к началу отрывка.')); }, 12000);
         const done = () => { clearTimeout(timeout); resolve(); };
