@@ -12,6 +12,7 @@ import { catalogGestureIntent } from './catalog-gesture.js';
 import { findSurfaceTarget } from './support-target.js';
 import { hardwareScale } from './render-quality.js';
 import { compareMemory } from './memory-review.js';
+import { ROOM_KINDS, MATERIALS, byRoomKind, recommendedFor } from './room-kinds.js';
 import { createOnlineController } from './online.js';
 import { roomList,activeRoomId,loadRoom,saveRoom,selectRoom,addRoom,renameRoom,deleteRoom,ROOM_CAP } from './rooms.js';
 import { LAYOUTS,leftWallX } from './layout.js';
@@ -21,13 +22,13 @@ import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'1.1.0',releaseNotes:['Рендер Retina, чёткий ковёр, настоящий интерьер в главном меню, сравнение двух комнат по памяти и отчёт по пожеланиям жильцов.']});
+registerEnhancedUpdate({appName:'КОМНАТКА',version:'1.2.0',releaseNotes:['Пять назначений комнат, 46 моделей, семь материалов, новые обои и полы, пространственные задачи жильцов и сравнение по памяти.']});
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
 let currentRoomId=activeRoomId(),state=loadRoom(currentRoomId),scene,engine,camera,room,director,guide,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
-const GROUPS=[['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
+const GROUPS=[['suggested','Для комнаты'],['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
 let activeGroup='furniture',savedTimer=0,toastTimer=0;
 const thumbnails=new Map();
 let catalogGesture=null;
@@ -127,7 +128,7 @@ function switchSavedRoom(id){
  selectRoom(id);currentRoomId=id;state=loadRoom(id);
  for(const root of roots.values())root.dispose(false,false);
  roots.clear();history.length=0;future.length=0;
- selectedId=null;cancelPending(false);hideSelection();refresh();hideHome();toast('Комнатка открыта');
+ selectedId=null;cancelPending(false);hideSelection();activeGroup='suggested';refresh();hideHome();toast('Комнатка открыта');
 }
 function createGalleryUI(){
  studio=createStudioUI({
@@ -138,7 +139,7 @@ function createGalleryUI(){
      for(const root of roots.values())root.dispose(false,false);
      roots.clear();selectedId=null;history.length=0;future.length=0;refresh();}
     return done;},
-   create:(name,layout)=>addRoom({name,layout})
+   create:(name,layout,purpose)=>addRoom({name,layout,purpose})
   }),
   load:switchSavedRoom,
   save:()=>saveRoom(currentRoomId,state,thumbnail()),
@@ -234,7 +235,7 @@ function showCatalog() {
  $('cancelPlacement').hidden=!pending;
  $('cancelPlacementMobile').hidden=!pending;
  if(activeGroup==='finish'){renderFinish();return;}
- ui.catalog.innerHTML=CATALOG.filter(it=>it.group===activeGroup).map(it=>'<button type="button" class="item-button '+(pending?.type===it.type?'choosing':'')+'" data-type="'+it.type+'"><span class="item-drawing '+it.type+'" data-image-type="'+it.type+'">'+(thumbnails.has(it.type)?'<img class="actual-thumbnail" src="'+thumbnails.get(it.type)+'" alt="">':sprite(it.type))+'</span><span>'+it.name+'</span></button>').join('');
+ ui.catalog.innerHTML=CATALOG.filter(it=>activeGroup==='suggested'?recommendedFor(state.purpose,it.type):it.group===activeGroup).map(it=>'<button type="button" class="item-button '+(pending?.type===it.type?'choosing':'')+'" data-type="'+it.type+'"><span class="item-drawing '+it.type+'" data-image-type="'+it.type+'">'+(thumbnails.has(it.type)?'<img class="actual-thumbnail" src="'+thumbnails.get(it.type)+'" alt="">':sprite(it.type))+'</span><span>'+it.name+'</span></button>').join('');
  ui.catalog.querySelectorAll('button').forEach(b=>{
   b.addEventListener('pointerdown',catalogPointerDown);
   // A pointer release is handled by catalogPointerUp, not a synthetic click.
@@ -242,20 +243,27 @@ function showCatalog() {
  });
 }
 function renderFinish(){
- const PATTERN_NAMES=['Краска','Полоска','Цветы','Клетка','Ягодки','Звёзды','Ромашки','Горошек','Веточки'];
- const FLOOR_NAMES=['Мёд','Орех','Светлый','Плитка','Розовый','Вишня'];
+ const PATTERN_NAMES=['Краска','Полоска','Цветы','Клетка','Ягодки','Звёзды','Ромашки','Горошек','Веточки','Лён','Штукатурка','Панели'];
+ const FLOOR_NAMES=['Мёд','Орех','Светлый','Плитка','Розовый','Вишня','Ёлочка','Терраццо'];
  const chips=(key,attr)=>'<div class="color-row">'+WALLS.map((c,i)=>'<button class="paint-chip '+(state[key]===i?'picked':'')+'" style="--paint:'+c+'" data-'+attr+'="'+i+'" title="Цвет '+(i+1)+'"></button>').join('')+'</div>';
  const patterns=(key,attr)=>'<div class="pattern-row">'+PATTERNS.map((p,i)=>'<button class="'+(state[key]===p?'picked':'')+'" data-'+attr+'="'+p+'">'+PATTERN_NAMES[i]+'</button>').join('')+'</div>';
  ui.finish.innerHTML='<div class="finish-row"><b>Задняя стена</b>'+chips('wallColor','wall')+patterns('pattern','pattern')+'</div>'+
  '<div class="finish-row"><b>Боковая стена</b>'+chips('wallColorLeft','wall-left')+patterns('patternLeft','pattern-left')+'</div>'+
  '<div class="finish-row"><b>Пол</b><div class="floor-row">'+FLOORS.map((f,i)=>'<button class="'+(state.floor===f?'picked':'')+'" data-floor="'+f+'">'+FLOOR_NAMES[i]+'</button>').join('')+'</div></div>'+
- '<div class="finish-row"><b>Планировка</b><div class="floor-row">'+LAYOUTS.map(l=>'<button data-layout="'+l.id+'" class="'+(state.layout===l.id?'picked':'')+'">'+l.name+'</button>').join('')+'</div></div>';
+ '<div class="finish-row"><b>Назначение</b><div class="room-kind-choices">'+ROOM_KINDS.map(kind=>'<button data-purpose="'+kind.id+'" class="'+(state.purpose===kind.id?'picked':'')+'">'+kind.name+'</button>').join('')+'</div></div>'+ 
+  '<div class="finish-row"><b>Планировка</b><div class="floor-row">'+LAYOUTS.map(l=>'<button data-layout="'+l.id+'" class="'+(state.layout===l.id?'picked':'')+'">'+l.name+'</button>').join('')+'</div></div>';
  for(const [attr,key] of [['wall','wallColor'],['wall-left','wallColorLeft'],['pattern','pattern'],['pattern-left','patternLeft'],['floor','floor']])
   ui.finish.querySelectorAll('[data-'+attr+']').forEach(el=>el.addEventListener('click',()=>{
    const value=attr.startsWith('wall')?Number(el.getAttribute('data-'+attr)):el.getAttribute('data-'+attr);
    mutate(()=>{state[key]=value;});if(online?.active)online.send({type:'decorate',patch:{[key]:value}});
    sound('paint');
   }));
+ ui.finish.querySelectorAll('[data-purpose]').forEach(el=>el.addEventListener('click',()=>{
+  if(online?.active){toast('Назначение общей комнаты выбирается до раунда');return;}
+  const next=el.dataset.purpose;if(state.purpose===next)return;
+  mutate(()=>{state.purpose=next;});activeGroup='suggested';showCatalog();
+  toast('Теперь '+byRoomKind[next].name.toLowerCase());sound('paint');
+ }));
  ui.finish.querySelectorAll('[data-layout]').forEach(el=>el.addEventListener('click',()=>{
   if(online?.active){toast('Планировку онлайн-раунда выбирает сервер');return;}
   const next=el.dataset.layout;
@@ -277,6 +285,16 @@ function placementPalette(){
  $('placementTitle').textContent='Подготовить: '+byType[type].name.toLowerCase();
  $('previewRotate').disabled=byType[type].layer==='wall';
  $('placementColors').innerHTML=COLORS.map(c=>'<button type="button" class="color-dot '+(proto.color===c?'picked':'')+'" style="--paint:'+c+'" data-preview-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('');
+ const choices=$('placementMaterials');
+ choices.innerHTML=MATERIALS.map(m=>'<button type="button" data-preview-material="'+m.id+'" class="'+(proto.material===m.id?'picked':'')+'">'+m.name+'</button>').join('');
+ choices.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  if(!pending)return;
+  pending.proto.material=b.dataset.previewMaterial;
+  const enabled=pending.previewReady;
+  pending.ghost.dispose(false,false);pending.ghost=makeItem(scene,pending.proto);
+  pending.rotAnim=null;pending.ghost.getChildMeshes(false).forEach(mesh=>{mesh.isPickable=false;mesh.visibility=pending.valid?1:.5;});
+  pending.ghost.setEnabled(Boolean(enabled));placementPalette();sound('paint');
+ }));
  $('placementColors').querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{
   if(!pending)return;pending.proto.color=button.dataset.previewColor;
   const enabled=pending.previewReady;
@@ -293,7 +311,7 @@ function beginPlacement(type,fromCatalogDrag=false){
  if(online?.active&&!online.canEdit){toast('Редактор доступен после начала раунда');return;}
  if(pending)cancelPending(false);
  selectedId=null;hideSelection();
- const proto={id:'preview',type,x:0,z:0,y:0,rot:0,color:type==='rug'?'#d9ad97':type==='plant'?'#c79078':COLORS[2],wall:'back',support:null,variant:0};
+ const proto={id:'preview',type,x:0,z:0,y:0,rot:0,material:'linen',color:type==='rug'?'#d9ad97':type==='plant'?'#c79078':COLORS[2],wall:'back',support:null,variant:0};
  if(byType[type].layer==='wall'){proto.z=-3.91;proto.y=2.58;}
  pending={type,proto,ghost:makeItem(scene,proto),valid:false,previewReady:false};
  pending.ghost.getChildMeshes(false).forEach(mesh=>{mesh.isPickable=false;});
@@ -343,6 +361,14 @@ function select(id) {
  ui.selected.hidden=false;
  ui.swatches.innerHTML=COLORS.map(c=>'<button type="button" class="color-dot '+(item.color===c?'picked':'')+'" style="--paint:'+c+'" data-color="'+c+'" aria-label="Цвет '+c+'"></button>').join('');
  ui.swatches.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{const id=selectedId;mutate(()=>{const found=state.items.find(i=>i.id===id);if(found)found.color=button.dataset.color;});if(online?.active)online.send({type:'edit',id,patch:{color:button.dataset.color}});director?.touch(id);sound('paint');}));
+ const materials=$('selectionMaterials');
+ materials.innerHTML=MATERIALS.map(m=>'<button type="button" data-material="'+m.id+'" class="'+(item.material===m.id?'picked':'')+'">'+m.name+'</button>').join('');
+ materials.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  const id=selectedId,material=b.dataset.material;
+  mutate(()=>{const found=state.items.find(i=>i.id===id);if(found)found.material=material;});
+  if(online?.active)online.send({type:'edit',id,patch:{material}});
+  sound('paint');
+ }));
  $('rotateBtn').disabled=item.type==='window'||item.type==='frame';
  $('duplicateBtn').disabled=false;
 
@@ -355,7 +381,7 @@ function refresh(){
  let changed=false;
  for(const item of state.items){
   present.add(item.id);
-  const signature=[item.type,item.color,item.variant].join('|');
+  const signature=[item.type,item.color,item.variant,item.material].join('|');
   let root=roots.get(item.id);
   if(!root || root.metadata?.appearance!==signature){
    if(root)root.dispose(false,false);
@@ -395,9 +421,9 @@ function memoryReviewPhoto(items,finishes){
 }
 function produceMemoryReview(snapshot){
  const summary=compareMemory(snapshot.target||[],snapshot.items||[]);
- const finishes={...(snapshot.finishes||{}),layout:snapshot.layout||'classic'};
+ const finishes={...(snapshot.finishes||{}),layout:snapshot.layout||'classic',purpose:snapshot.purpose||'living'};
  const assembled=memoryReviewPhoto(snapshot.items||[],finishes);
- const model=memoryReviewPhoto(snapshot.target||[],finishes);
+ const model=memoryReviewPhoto(snapshot.target||[],{...finishes,...(snapshot.targetFinishes||{})});
  scene.render();
  return {summary,assembled,model};
 }
@@ -405,7 +431,7 @@ function onOnlineRoom(snapshot,{reference,phaseChanged}={}){
  if(!snapshot)return;
  if(drag?.kind==='move'){queuedSnapshot={snapshot,reference,phaseChanged};return;}
  const before=new Map(state.items.map(item=>[item.id,{...item}]));
- const finishes={...(snapshot.finishes||{wallColor:0,pattern:'plain',floor:'honey',evening:false}),layout:snapshot.layout||'classic'};
+ const finishes={...(snapshot.finishes||{wallColor:0,pattern:'plain',floor:'honey',evening:false}),...(reference&&snapshot.targetFinishes||{}),layout:snapshot.layout||'classic',purpose:snapshot.purpose||'living'};
  const items=(reference?snapshot.target:snapshot.items)||[];
  state=sanitize({...finishes,items});
  selectedId=state.items.some(i=>i.id===selectedId)?selectedId:null;
@@ -813,6 +839,7 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
     return {x:rect.x+position.x*rect.width/ui.canvas.width,y:rect.y+position.y*rect.height/ui.canvas.height};
    },
   get lighting(){return room?.lightingDiagnostics()??null;},
+  get purpose(){return state.purpose;},get materials(){return state.items.map(i=>({type:i.type,material:i.material}));},
   get quality(){return {scale:engine?.getHardwareScalingLevel(),dpr:devicePixelRatio,pixels:[ui.canvas.width,ui.canvas.height],preview:$('homeRoomImage').dataset.source||null};},
   item(id){return state.items.find(x=>x.id===id)?{...state.items.find(x=>x.id===id)}:null;},
   point(id){
