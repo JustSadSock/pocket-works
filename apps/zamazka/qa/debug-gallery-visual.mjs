@@ -13,8 +13,8 @@ const server=createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost'),name=decodeURIComponent(url.pathname);
  const path=resolve(root,'.'+name,name.endsWith('/')?'index.html':'');
  if(!path.startsWith(root+sep)){res.writeHead(403);res.end('Forbidden');return}
- try{res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream','cache-control':'no-store'});res.end(await readFile(path))}
- catch{res.writeHead(404);res.end('Not found')}
+ try{const bytes=await readFile(path);res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream','cache-control':'no-store'});res.end(bytes)}
+ catch{if(!res.headersSent)res.writeHead(404);res.end('Not found')}
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const url='http://127.0.0.1:'+server.address().port+'/apps/zamazka/';
