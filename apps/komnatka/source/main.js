@@ -519,7 +519,7 @@ function movePointer(ev) {
  Object.assign(item,target);
  const root=roots.get(item.id);root?.position.set(item.x,sceneY(item),item.z);if(root)root.rotation.y=item.rot*Math.PI/2;
  for(const child of state.items.filter(it=>it.support===item.id))roots.get(child.id)?.position.set(child.x,sceneY(child),child.z);
- const ok=valid(state,item);
+ const ok=valid(state,item)&&state.items.every(child=>child.support!==item.id||valid(state,child));
  if(ok){
   const cell=item.x+':'+item.z+':'+(item.support||'');
   if(drag.cell!==cell){drag.cell=cell;snapFeedback(ev);}
