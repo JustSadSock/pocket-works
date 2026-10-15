@@ -1395,3 +1395,25 @@ html,body{background:#242822}
   color:#f3e9d9!important;
  }
 }
+
+
+/* 1.37.6 screenshot correction: the gilded frame fits the finished painting,
+   not an arbitrarily tall desktop thumbnail cell. No blank inner bands. */
+@media(min-width:761px) {
+ .screen>.page.collection-page .archive-work .archive-art-frame {
+  display:block!important;width:100%!important;height:auto!important;
+  min-height:0!important;max-height:none!important;
+  aspect-ratio:auto!important;padding:6px!important;margin:0!important;
+  border:8px ridge #876746!important;background:#29231e!important;
+  overflow:hidden!important;
+ }
+ .screen>.page.collection-page .archive-work .archive-art-frame canvas {
+  display:block!important;width:100%!important;height:auto!important;
+  min-height:0!important;max-height:none!important;
+  max-width:100%!important;object-fit:contain!important;
+  aspect-ratio:var(--art-aspect,4/3)!important;
+ }
+ .screen>.page.collection-page .archive-gallery>.archive-work {
+  gap:12px!important;padding:13px!important;
+ }
+}
