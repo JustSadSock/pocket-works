@@ -135,6 +135,12 @@
       "kind": "browser-node",
       "tier": "deep",
       "entry": "qa/passage-visual.mjs"
+    },
+    {
+      "id": "debug-gallery-visual",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/debug-gallery-visual.mjs"
     }
   ]
 }
