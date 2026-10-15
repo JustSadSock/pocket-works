@@ -51,7 +51,7 @@ assert.notDeepEqual(Array.from(filled.slice(idx(308,220),idx(308,220)+3)),[5,210
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const review=readFileSync(new URL('../round-review.js',import.meta.url),'utf8');
 assert.match(app,/phaseMenuButton=.*data-action="menu"/,'shared phase header has a menu action');
-assert.match(app,/preparing-menu" data-action="menu"/,'loading screen supports leaving');
+assert.match(readFileSync(new URL('../passage-ui.js',import.meta.url),'utf8'),/preparing-menu" data-action="menu"/,'loading screen supports leaving');
 assert.match(review,/round-review-head-actions.*data-action="menu"/,'review screen supports leaving');
 assert.match(app,/editor\?\.finishStroke\(\)/,'leaving commits the live gesture locally');
 assert.match(app,/\['В меню',\(\)=>\{closeDialog\(\);home\(\)\}/,'exit requires explicit confirmation');
