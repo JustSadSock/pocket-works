@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "a2bc62fe78eb26ea6d61c94d3600beacac923728",
+    "revision": "4223a28023488288e2afbdad3839ae20b7a8e193",
     "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "f45cd4aea4a8e64104195ab1e47171a19f7fc2a0c8a252e2ea602f15184551f0",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "a2bc62fe78eb26ea6d61c94d3600beacac923728",
-    "lastAttemptAt": "2026-10-15T00:35:08.383Z",
+    "lastAttemptRevision": "4223a28023488288e2afbdad3839ae20b7a8e193",
+    "lastAttemptAt": "2026-10-15T00:41:49.543Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -34,7 +34,7 @@
     "lastAttemptAt": "2026-10-13T12:40:00.907Z"
   },
   "komnatka": {
-    "revision": "78e46b2655a78861f0336336d2a722ec44feea4e",
+    "revision": "2cf2f48c663b5f56ec8895a3c42ff70e45641e75",
     "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
@@ -42,8 +42,8 @@
     "sha256": "72de8ca6f2729f3babd01ca862cace933797ba02488a3e6939fe69694120c6f4",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "78e46b2655a78861f0336336d2a722ec44feea4e",
-    "lastAttemptAt": "2026-10-15T00:35:27.085Z",
+    "lastAttemptRevision": "2cf2f48c663b5f56ec8895a3c42ff70e45641e75",
+    "lastAttemptAt": "2026-10-15T00:42:07.939Z",
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
