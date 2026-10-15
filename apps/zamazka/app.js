@@ -404,7 +404,7 @@ async function prepareRoundImages(local=false,retry=false){
  let completed=0;
  const loadedIndices=[];
  updateArtLoad(root,0,Math.max(1,v.selected.length));
- if(status)status.textContent='Загружаем оригиналы…';
+ if(status){status.textContent='Загружаем оригиналы…';delete status.dataset.state;}
  if(retryButton)retryButton.hidden=true;
  try{
    await Promise.all(v.selected.map(async (id,index)=>{
@@ -421,12 +421,12 @@ async function prepareRoundImages(local=false,retry=false){
      if(status?.isConnected)status.textContent='Картины готовы. Ожидаем остальных.';
      updateReady(root,view.readyCount||0,view.participants?.length||0);
      try{net.sendGame({type:'art_ready',round:v.round})}
-     catch{if(status?.isConnected)status.textContent='Нет связи с комнатой. Попробуй повторить.';if(retryButton)retryButton.hidden=false}
+     catch{if(status?.isConnected){status.textContent='Нет связи с комнатой. Попробуй повторить.';status.dataset.state='error'}if(retryButton)retryButton.hidden=false}
    }
  }catch{
    if(preparedRound!==token)return;
    preparingError='Не удалось загрузить картины. Проверь соединение.';
-   if(status?.isConnected)status.textContent=preparingError;
+   if(status?.isConnected){status.textContent=preparingError;status.dataset.state='error'}
    if(retryButton?.isConnected)retryButton.hidden=false;
  }
 }
@@ -639,7 +639,7 @@ function vote(){
  '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="stake-frame zam-exhibit-rim">'+exhibitFacets()+
  (examined?.art===id?'<canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
  '</div></div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+
- (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">№ '+(i+1)+'</span>')+'</div>').join('')+'</div>'+
+ (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">На проверке</span>')+'</div>').join('')+'</div>'+
  (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div>'+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'<button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button>':'<span class="coin-auto-status" id="coinVoteStatus" role="status" aria-live="polite">3 фишки — и голос учтён</span>')+'</div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
  '</div></div></section>','vote');
  exhibitFitter=mountExhibitFrames(screen);
