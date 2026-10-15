@@ -6,7 +6,7 @@ export function galleryWindow(order,center){
 export function fitMuseumArtwork(stageWidth,stageHeight,ratio){
  const r=Number.isFinite(ratio)&&ratio>0?ratio:4/3;
  const chrome=32;
- const enlarged=stageWidth>=700&&document.documentElement.dataset.zamazkaAppearance==='new';
+ const enlarged=stageWidth>=700&&typeof document!=='undefined'&&document.documentElement.dataset.zamazkaAppearance==='new';
  const maxWidth=Math.max(110,Math.min(stageWidth*(enlarged?.79:.68),stageWidth<700?330:enlarged?620:480));
  // The painting shares its stage with its physically attached caption.
  // Reserve both the measured frame chrome and a fixed plaque band, so the
