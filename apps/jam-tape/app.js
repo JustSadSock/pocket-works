@@ -46,7 +46,7 @@ function tidySession(s){
  if(!players.length)return null;
  const tracks={};
  for(const p of players){tracks[p.id]=(Array.isArray(s.tracks[p.id])?s.tracks[p.id]:[]).slice(0,6).map(tidyClip).filter(Boolean)}
- return {players,tracks,bpm:clamp(Math.round(Number(s.bpm)||108),60,180),playing:s.playing===true,anchor:Number.isFinite(s.anchor)?s.anchor:0,rev:Math.max(0,Math.round(Number(s.rev)||0))};
+ return {players,tracks,bpm:clamp(Math.round(Number(s.bpm)||108),60,180),playing:s.playing===true,anchor:Number.isFinite(s.anchor)?s.anchor:0,rev:Math.max(0,Math.round(Number(s.rev)||0)),host:typeof s.host==='string'?s.host:players[0]?.id};
 }
 function loadSketch(){
  const prior=tidySession(saved?.project);
@@ -233,28 +233,21 @@ function stopLive(data,owner){
  if(item){item.voice.release();remoteVoices.delete(key)}
 }
 function sendLive(type,payload){
- if(!room)return;
- try{room.broadcast(type,payload,{reliability:type==='live-on'?'realtime':'reliable'})}catch{ /* audio remains local */ }
+ if(!room||!connected||!netClient)return;
+ try{netClient.sendGame({type,data:payload})}catch{ /* Local playing remains available */ }
 }
-function validLive(payload){
- return payload&&typeof payload.uid==='string'&&payload.uid.length<64&&
- ['keys','bass','drums'].includes(payload.inst)&&Number.isInteger(payload.pitch)&&payload.pitch>=0&&payload.pitch<8;
-}
-function receiveLive(peer,type,data){
- const owner=peer?.id;if(!owner||!session.players.some(p=>p.id===owner&&p.air))return;
- if(type==='live-on'&&!validLive(data))return;
- if(type==='live-off'&&(!data||typeof data.uid!=='string'||data.uid.length>=64))return;
- if(type==='live-on')playRemote(data,owner);else stopLive(data,owner);
- if(isHost&&room){
-  for(const other of room.listPeers())if(other.id!==owner)try{room.send(other.id,type,{...data,owner},{reliability:type==='live-on'?'realtime':'reliable'})}catch{}
- }
+function receiveLive(type,payload){
+ const owner=payload?.owner;
+ if(!owner||owner===ownId||!session?.players.some(p=>p.id===owner&&p.air))return;
+ if(type==='live-on')playRemote(payload,owner);
+ if(type==='live-off')stopLive(payload,owner);
 }
 function applyEdit(owner,data){
  if(!data||typeof data!=='object'||!session)return false;
  const player=session.players.find(p=>p.id===owner);if(!player)return false;
  const list=session.tracks[owner]||[];
  if(data.kind==='inst'){
-  if(!['keys','bass','drums'].includes(data.inst))return false;
+  if(!labels[data.inst])return false;
   player.inst=data.inst;
  }else if(data.kind==='air'){
   if(typeof data.air!=='boolean')return false;
@@ -274,12 +267,12 @@ function applyEdit(owner,data){
   if(data.playing&&!session.playing)session.anchor=hostTime()+180;
   session.playing=data.playing;
  }else if(data.kind==='tempo'){
-  if(owner!==session.players[0].id||!Number.isInteger(data.bpm)||data.bpm<60||data.bpm>180)return false;
+  if(owner!==(session.host||session.players[0].id)||!Number.isInteger(data.bpm)||data.bpm<60||data.bpm>180)return false;
   // Keep a stable shared phase when tempo changes.
   if(session.playing){const ratio=loopMs(data.bpm)/loopMs(session.bpm);session.anchor=hostTime()-(hostTime()-session.anchor)*ratio}
   session.bpm=data.bpm;
  }else if(data.kind==='reset'){
-  if(owner!==session.players[0].id)return false;
+  if(owner!==(session.host||session.players[0].id))return false;
   for(const p of session.players)session.tracks[p.id]=[];
   session.playing=false;session.anchor=0;
  }else return false;
