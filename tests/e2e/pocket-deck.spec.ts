@@ -375,3 +375,85 @@ test('Home batch administrator action sends one verified bulk request and can re
   await page.locator('[data-batch-tab="active"]').click();
   for(const slug of slugs)await expect(page.locator('[data-batch-slug="'+slug+'"]')).toBeVisible();
 });
+
+test('administrator pins games for everyone and pinned games lead the public library',async({page})=>{
+  await page.addInitScript(()=>{
+    const original=window.fetch.bind(window);
+    const pinned=new Set<string>();
+    (window as any).__pinWrites=[];
+    window.fetch=(input,init)=>{
+      const url=typeof input==='string'?input:input instanceof Request?input.url:String(input);
+      let path='';
+      try{path=new URL(url,location.href).pathname;}catch{return original(input,init);}
+      if(path!=='/pocket-id/global-archive'&&path!=='/pocket-id/global-pins')return original(input,init);
+      const method=init?.method||(input instanceof Request?input.method:'GET');
+      if(path==='/pocket-id/global-pins'&&method==='POST'){
+        const body=JSON.parse(String(init?.body||'{}'));
+        (window as any).__pinWrites.push(body);
+        for(const slug of body.slugs||[]){
+          if(body.pinned)pinned.add(slug);else pinned.delete(slug);
+        }
+      }
+      return Promise.resolve(new Response(JSON.stringify({archived:[],pinned:[...pinned],canManage:true}),{
+        status:200,headers:{'content-type':'application/json'}
+      }));
+    };
+  });
+  await openDeck(page);
+  await page.locator('#deck-batch-trigger').click();
+  const target=page.locator('#deck-batch-grid [data-batch-slug]').last();
+  const slug=await target.getAttribute('data-batch-slug');
+  expect(slug).toBeTruthy();
+  await target.click();
+  await expect(page.locator('#deck-batch-pin')).toBeEnabled();
+  await expect(page.locator('#deck-batch-unpin')).toBeDisabled();
+  await page.locator('#deck-batch-pin').click();
+  await expect(page.locator('#deck-global-confirm')).toBeVisible();
+  await page.locator('#deck-global-confirm-cancel').click();
+  expect(await page.evaluate(()=>(window as any).__pinWrites)).toHaveLength(0);
+  await page.locator('#deck-batch-pin').click();
+  await page.locator('#deck-global-confirm-accept').click();
+  await expect(page.locator('#deck-batch-status')).toContainText('закреплены');
+  await expect(page.locator('[data-batch-slug="'+slug+'"] .deck-batch__scope--pin')).toBeVisible();
+  await page.locator('#deck-batch-close').click();
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await expect(page.locator('#app-list .app-entry').first()).toHaveAttribute('data-slug',slug!);
+  await expect(page.locator('.app-entry[data-slug="'+slug+'"] .app-entry__pin')).toBeVisible();
+  await page.locator('.app-entry[data-slug="'+slug+'"] .app-entry__more').click();
+  await page.locator('#detail-extras > summary').click();
+  await expect(page.locator('[data-deck-global-pin="'+slug+'"]')).toHaveText('Unpin for everyone');
+  await page.locator('[data-deck-global-pin="'+slug+'"]').click();
+  await page.locator('#deck-global-confirm-accept').click();
+  await expect(page.locator('[data-deck-global-pin="'+slug+'"]')).toHaveText('Pin for everyone');
+  await expect(page.locator('.app-entry[data-slug="'+slug+'"] .app-entry__pin')).toBeHidden();
+  const writes=await page.evaluate(()=>(window as any).__pinWrites);
+  expect(writes).toHaveLength(2);
+  expect(writes[0]).toEqual({slugs:[slug],pinned:true});
+  expect(writes[1]).toEqual({slugs:[slug],pinned:false});
+});
+
+test('globally pinned covers stay visible to guests without granting management controls',async({page})=>{
+  await page.addInitScript(()=>{
+    const original=window.fetch.bind(window);
+    window.fetch=(input,init)=>{
+      const url=typeof input==='string'?input:input instanceof Request?input.url:String(input);
+      let path='';
+      try{path=new URL(url,location.href).pathname;}catch{return original(input,init);}
+      if(path!=='/pocket-id/global-archive')return original(input,init);
+      return Promise.resolve(new Response(JSON.stringify({
+        archived:[],pinned:['screen-lab'],canManage:false
+      }),{status:200,headers:{'content-type':'application/json'}}));
+    };
+  });
+  await openDeck(page);
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await expect(page.locator('#app-list .app-entry').first()).toHaveAttribute('data-slug','screen-lab');
+  await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__pin')).toBeVisible();
+  await page.locator('.app-entry[data-slug="screen-lab"] .app-entry__more').click();
+  await page.locator('#detail-extras > summary').click();
+  await expect(page.locator('[data-deck-global-pin]')).toHaveCount(0);
+  await page.locator('#detail-close').click();
+  await page.locator('#deck-batch-trigger').click();
+  await expect(page.locator('#deck-batch-pin')).toBeHidden();
+  await expect(page.locator('#deck-batch-unpin')).toBeHidden();
+});
