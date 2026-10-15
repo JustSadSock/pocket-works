@@ -462,3 +462,11 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - `finale.css` adds timed CSS-only coin placement and ledger appearance; honors `prefers-reduced-motion`. Mobile portraits display a horizontal swipeable five-art evidence rail; full rankings scroll only within the ledger while primary actions remain visible.
 - The original reveal uses a real before/after comparison canvas, with the score sheet in an independently scrollable panel and the same correct-answer strip.
 - Screenshot and gameplay QA: `node apps/zamazka/qa/finale-visual.mjs`; set `ZAMAZKA_QA_ARTIFACT_DIR` for evidence. Pure assertions live in `qa/finale-state.mjs`.
+
+## 1.39.1 — Entry, preparation and between-stage passages
+
+- Admission is a single museum invitation that switches between create and join. Code, URL and display name keep the same underlying PocketNet validation; the paste control uses a real clipboard read or explains permission failure. Submit is a real HTML form, preserving Enter key semantics.
+- The handshake view shows four *actual* phases (server health, identity, PocketNet, room); cancellation closes any pending session and invalidates its connection epoch. No fake countdowns.
+- Round preparation loads all five real artworks and their preview thumbnails. As each pair decodes, a corresponding numbered frame completes; success and retry are backed by loading results and authoritative art_ready/readyCount events.
+- Submitted paintings are shown next to their original via an actual canvas split control; the roster and ready bar update from authoritative multiplayer snapshots without remounting and losing the split position.
+- CSS confines scroll to an eight-player roster if needed and adapts on desktop, phone browser, phone PWA and short landscape. Visual regression: `node apps/zamazka/qa/passage-visual.mjs`, functional regression: `node apps/zamazka/qa/passage-state.mjs`.
