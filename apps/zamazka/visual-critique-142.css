@@ -1,3 +1,8 @@
+/* Center the single admission postcard inside the stable app stage. */
+#screen:has(>.passage-entry){
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ min-height:0!important;box-sizing:border-box!important;padding:8px!important;
+}
 /* ZAMAZKA 1.40.2 — third critique pass. One postcard, one studio palette. */
 /* Admission is the postcard itself. No forest vignette, second panel or typography under the woman. */
 #screen>.passage-entry {
