@@ -1038,3 +1038,150 @@ html,body{background:#242822}
 @media (prefers-reduced-motion:reduce){
  .app-shell .dialog-box .inspection-stage > .art-inspection {transition:none}
 }
+
+
+/* 1.37.4 — gallery wall geometry is derived from decoded art dimensions,
+   never from a generic 4:3 card or a percentage-sized mat. */
+.screen>.mobile-preview .gallery.exhibition-grid > .picture .picture-image {
+ overflow:hidden!important;
+}
+.screen>.mobile-preview .gallery.exhibition-grid > .picture .picture-mat[data-ratio-ready="true"] {
+ --frame-width:10px;
+ display:block!important;position:relative;
+ box-sizing:border-box!important;
+ flex:0 0 auto!important;min-width:0!important;min-height:0!important;
+ width:calc(var(--preview-art-w) + 2 * var(--frame-width) + 2px)!important;
+ height:calc(var(--preview-art-h) + 2 * var(--frame-width) + 2px)!important;
+ max-width:none!important;max-height:none!important;
+ padding:var(--frame-width)!important;
+ border:1px solid #211b16!important;background:#3c2b1a!important;
+ overflow:visible!important;
+}
+.screen>.mobile-preview .gallery.exhibition-grid > .picture .picture-mat[data-ratio-ready="true"] > img {
+ display:block!important;box-sizing:border-box!important;
+ width:var(--preview-art-w)!important;height:var(--preview-art-h)!important;
+ min-width:0!important;min-height:0!important;
+ max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+ border:0!important;padding:0!important;margin:0!important;
+ background:none!important;
+}
+.screen>.mobile-preview .gallery.exhibition-grid > .picture .picture-mat[data-ratio-ready="true"] .picture-bevel {
+ pointer-events:none;
+}
+@media (max-width:900px),(pointer:coarse){
+ .screen>.mobile-preview .gallery.exhibition-grid > .picture .picture-mat[data-ratio-ready="true"] {
+  --frame-width:7px;
+ }
+}
+
+/* Expand desktop reference art: space once spent on card margins goes to paintings. */
+@media(min-width:1020px) and (min-height:640px){
+ .screen>.mobile-preview>.phase-body {
+  justify-content:center!important;
+  padding:clamp(12px,2.2vh,22px) clamp(18px,2.3vw,45px)!important;
+ }
+ .screen>.mobile-preview .phase-directive {
+  margin:0 0 10px!important;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid {
+  gap:clamp(12px,1.4vw,26px)!important;
+  align-items:stretch!important;
+  width:100%!important;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid > .picture {
+  padding:7px 2px 9px!important;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid > .picture .picture-image {
+  min-height:clamp(230px,37dvh,410px)!important;
+  max-height:clamp(230px,42dvh,460px)!important;
+ }
+ .screen>.mobile-preview .gallery.exhibition-grid > .picture .caption {
+  font-size:clamp(16px,1.3vw,24px)!important;
+ }
+}
+
+/* One large original, not a nested modal with three contradictory picture frames. */
+#dialog:has(.inspection-stage) {
+ background:#090c0be8!important;backdrop-filter:blur(9px);
+}
+.app-shell .dialog-box:has(>.inspection-stage) {
+ background:#161b18!important;color:#eee7dc!important;
+ border:0!important;outline:0!important;border-radius:0!important;
+ box-shadow:0 25px 90px #000c!important;
+ width:min(98vw,1650px)!important;max-width:min(98vw,1650px)!important;
+ height:96dvh!important;max-height:96dvh!important;
+ padding:clamp(10px,1.5vh,17px) clamp(13px,2vw,30px) 12px!important;
+}
+.app-shell .dialog-box:has(>.inspection-stage) > h2 {
+ color:#eae1d4!important;
+ font:400 clamp(18px,2vw,27px)/1.2 Georgia,serif!important;
+ margin:3px 0 10px!important;
+ max-width:calc(100% - 125px);
+}
+.app-shell .dialog-box .inspection-stage {
+ background:transparent!important;
+ margin:0!important;padding:0!important;
+}
+.app-shell .dialog-box .inspection-stage > .art-inspection {
+ border:0!important;outline:0!important;box-shadow:0 10px 38px #000b!important;
+ padding:0!important;margin:0!important;background:none!important;
+}
+.app-shell .dialog-box .inspection-details {
+ color:#d4c8b4!important;
+ max-height:54px;
+ border:0!important;
+}
+.app-shell .dialog-box .inspection-details .art-metadata,
+.app-shell .dialog-box .inspection-details .art-metadata div {
+ color:#b8b2a7!important;
+}
+.app-shell .dialog-box .inspection-details .art-source {
+ color:#dbbb92!important;
+}
+.app-shell .dialog-box:has(>.inspection-stage) > #modalActions .btn {
+ background:#343a31!important;color:#f3e4cb!important;
+ border:1px solid #b9a47e99!important;box-shadow:none!important;
+ border-radius:2px!important;
+}
+.app-shell .dialog-box:has(>.inspection-stage) > #modalActions .btn:hover {
+ background:#495244!important;
+}
+@media(max-width:699px){
+ .app-shell .dialog-box:has(>.inspection-stage) {
+  width:100vw!important;max-width:100vw!important;height:100dvh!important;max-height:100dvh!important;
+  padding:14px 8px 14px!important;
+ }
+ .app-shell .dialog-box .inspection-details {max-height:70px}
+}
+
+/* Balance the lobby without turning the roster into a third equal-size card. */
+@media(min-width:761px){
+ .screen>.page.exhibition-lobby .lobby-invite {
+  padding-top:clamp(30px,8dvh,90px)!important;
+  gap:clamp(18px,3.5vh,32px)!important;
+ }
+}
+.screen>.page.exhibition-lobby .room-ticket .ticket-top,
+.screen>.page.exhibition-lobby .room-ticket .ticket-top .section-label,
+.screen>.page.exhibition-lobby .room-ticket .ticket-live {
+ color:#615844!important;
+}
+.screen>.page.exhibition-lobby .room-ticket .ticket-actions .btn:not(.pocket-invite){
+ color:#463b2c!important;background:#eae0d0!important;
+}
+.screen>.page.exhibition-lobby .room-ticket .ticket-actions .pocket-invite {
+ background:#514938!important;color:#fff2dc!important;
+}
+.screen>.page.exhibition-lobby .player .me-tag {
+ color:#c9ae7e!important;
+}
+/* Calm scene entrance: content settles into place without sliding the old scene. */
+.screen>.atelier-scene-arrive {
+ animation:atelier-fresh-arrival-v2 250ms cubic-bezier(.2,.7,.2,1) both!important;
+}
+@keyframes atelier-fresh-arrival-v2 {
+ from{opacity:.36;translate:0 7px}
+ to{opacity:1;translate:0 0}
+}
+@media(prefers-reduced-motion:reduce){.screen>.atelier-scene-arrive{animation:none!important}}
