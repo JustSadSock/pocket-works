@@ -25,7 +25,7 @@ export function admissionMarkup({creating,name,member,portrait,roomValue='',erro
    '</div></div>'+
   '<aside class="entry-art passage-art">'+
    '<span class="entry-art-frame passage-art-frame"><img src="'+artURL+'" alt="" loading="eager"></span>'+
-   '<div class="passage-art-label"><span>01</span><span>ЗАМАЗКА<br><small>Музей подлинников</small></span></div></aside></section>';
+   '</aside></section>';
 }
 
 export function connectionMarkup({mode='join',artURL=''}={}){
