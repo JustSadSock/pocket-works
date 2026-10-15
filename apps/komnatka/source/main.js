@@ -11,6 +11,7 @@ import { createPlacementGuide } from './placement-guide.js';
 import { catalogGestureIntent } from './catalog-gesture.js';
 import { findSurfaceTarget } from './support-target.js';
 import { hardwareScale } from './render-quality.js';
+import { compareMemory } from './memory-review.js';
 import { createOnlineController } from './online.js';
 import { roomList,activeRoomId,loadRoom,saveRoom,selectRoom,addRoom,renameRoom,deleteRoom,ROOM_CAP } from './rooms.js';
 import { LAYOUTS,leftWallX } from './layout.js';
@@ -378,6 +379,27 @@ function refresh(){
  }
  showCatalog();updateActions();
 }
+function memoryReviewPhoto(items,finishes){
+ const saved=state;
+ try{
+  state=sanitize({...finishes,items});
+  refresh();scene.render();
+  const thumb=document.createElement('canvas'),context=thumb.getContext('2d');
+  thumb.width=500;thumb.height=420;
+  context.fillStyle='#f3e6d4';context.fillRect(0,0,thumb.width,thumb.height);
+  context.drawImage(ui.canvas,0,0,500,420);
+  return thumb.toDataURL('image/jpeg',.91);
+ }catch(error){console.warn('Comparison photograph unavailable',error);return null;}
+ finally{state=saved;refresh();}
+}
+function produceMemoryReview(snapshot){
+ const summary=compareMemory(snapshot.target||[],snapshot.items||[]);
+ const finishes={...(snapshot.finishes||{}),layout:snapshot.layout||'classic'};
+ const assembled=memoryReviewPhoto(snapshot.items||[],finishes);
+ const model=memoryReviewPhoto(snapshot.target||[],finishes);
+ scene.render();
+ return {summary,assembled,model};
+}
 function onOnlineRoom(snapshot,{reference,phaseChanged}={}){
  if(!snapshot)return;
  if(drag?.kind==='move'){queuedSnapshot={snapshot,reference,phaseChanged};return;}
@@ -393,6 +415,8 @@ function onOnlineRoom(snapshot,{reference,phaseChanged}={}){
   else if(old&&!reference&&(old.x!==item.x||old.z!==item.z||old.rot!==item.rot)&&snapshot.phase==='build')
    director?.land(item.id);
  }
+ if(snapshot.phase==='result'&&snapshot.mode==='memory'&&phaseChanged&&Array.isArray(snapshot.target))
+  return produceMemoryReview(snapshot);
 }
 let sharedPresence={},sharedPlayers=[],sharedMe=null;
 function updateOnlinePresence(selections,players,me){
