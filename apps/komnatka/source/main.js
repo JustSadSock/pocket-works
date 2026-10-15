@@ -182,6 +182,14 @@ function updateActions() {
 }
 function sprite(type){
  const d={
+ pillow:'<path d="M8 10Q16 7 24 10L27 14Q28 20 24 24Q16 27 8 24L5 20Q4 14 8 10Z"/><path d="M9 11q6 7 0 12m14-12q-6 7 0 12"/>',
+ teddy:'<circle cx="9" cy="7" r="4"/><circle cx="23" cy="7" r="4"/><circle cx="16" cy="14" r="10"/><ellipse cx="16" cy="25" rx="9" ry="6"/><circle cx="12" cy="12" r="1"/><circle cx="20" cy="12" r="1"/>',
+ vase:'<path d="M10 5h12M12 5c0 6-4 9-4 15 0 6 4 9 8 9s8-3 8-9c0-6-4-9-4-15M9 21h14"/>',
+ basket:'<path d="M5 15h22l-3 13H8Z"/><path d="M11 15q0-12 5-12t5 12M9 20h14M11 25h10"/>',
+ cactus:'<path d="M11 24V8a5 5 0 0 1 10 0v16M11 18H8c-3 0-3-5-3-8m16 7h3c3 0 3-5 3-8M8 24h16l-2 5H10Z"/>',
+ candle:'<path d="M11 14h10v14H11zM16 14V9M16 3q7 6 0 8-7-2 0-8Z"/>',
+ deskclock:'<circle cx="16" cy="18" r="10"/><path d="M16 11v7l5 3M8 7 5 10m19-3 3 3M10 29l-2 2m14-2 2 2"/>',
+ teapot:'<path d="M7 13h18v10q-1 7-9 7t-9-7ZM10 13q1-7 6-7t6 7M15 5V3M25 16h4q3 6-4 9M7 17 2 15v7l5 1"/>',
  sofa:'<rect x="4" y="11" width="24" height="13" rx="5"/><path d="M7 12V8a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v4M8 24v3m16-3v3M16 12v10"/>',
  chair:'<rect x="7" y="13" width="18" height="12" rx="5"/><path d="M9 14V7a7 7 0 0 1 14 0v7M10 25v3m12-3v3"/>',
  coffee:'<path d="M4 12h24v5H4zM8 17v11m16-11v11"/>',
