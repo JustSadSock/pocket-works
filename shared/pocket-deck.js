@@ -33,17 +33,19 @@ export function installPocketDeck({
   let batchPicker=null;
   const GLOBAL_CACHE_KEY='pocket-works:global-archive-cache:v1';
   const validSlug=slug=>typeof slug==='string'&&/^[a-z0-9-]{1,96}$/.test(slug);
-  let globalArchived=new Set(),canManageGlobal=false,globalReady=false,globalBusy=false;
+  let globalArchived=new Set(),globalPinned=new Set(),canManageGlobal=false,globalReady=false,globalBusy=false;
   let globalRevision=0,globalRequest=0,globalMessage='',pendingGlobalAction=null;
   try{
     const saved=JSON.parse(localStorage.getItem(GLOBAL_CACHE_KEY)||'null');
     if(Array.isArray(saved?.archived))globalArchived=new Set(saved.archived.filter(validSlug));
+    if(Array.isArray(saved?.pinned))globalPinned=new Set(saved.pinned.filter(validSlug));
   }catch{/* The cache provides offline presentation only, never administrator authority. */}
   const current=()=>store.get();
   const isArchived=slug=>globalArchived.has(slug)||current().archived.includes(slug);
   const favoriteSet=()=>new Set(getFavorites());
   const available=()=>getApps().filter(app=>!isArchived(app.slug));
   const sorted=()=>available().sort(byRelease);
+  const globallyPromoted=apps=>apps.sort((a,b)=>Number(globalPinned.has(b.slug))-Number(globalPinned.has(a.slug))||byRelease(a,b));
   const recent=()=>Object.entries(getRecents()).sort((a,b)=>b[1]-a[1]).map(([slug])=>available().find(app=>app.slug===slug)).filter(Boolean);
   const appBySlug=slug=>getApps().find(app=>app.slug===slug);
   const visibleTitle = {home:'Home',library:'Library',archive:'Archive'};
@@ -51,9 +53,10 @@ export function installPocketDeck({
     if(!app)return '<span class="deck-art deck-art--blank">✳</span>';
     const cover=covers.get(app.slug);
     const coverMarkup=cover ? `<img class="deck-art__photo" src="${escapeHtml(cover)}" alt="" loading="lazy" decoding="async">` : '';
+    const pinMarkup=globalPinned.has(app.slug)?'<span class="deck-art__pin" aria-label="Pinned for everyone">PINNED</span>':'';
     return `<span class="deck-art ${extra}" style="--deck-ink:${safeColor(app.accent)}">
       ${coverMarkup}<img class="deck-art__icon" src="${escapeHtml(app.path)}icons/icon.svg?v=${encodeURIComponent(app.version||'0')}" alt="" loading="lazy" decoding="async">
-      <span class="deck-art__index" aria-hidden="true">PW / ${escapeHtml(app.slug.slice(0,11).toUpperCase())}</span>
+      <span class="deck-art__index" aria-hidden="true">PW / ${escapeHtml(app.slug.slice(0,11).toUpperCase())}</span>${pinMarkup}
     </span>`;
   };
   const openTile=(app,style='small',caption='')=>{
@@ -137,12 +140,13 @@ export function installPocketDeck({
     const apps=sorted(),fav=favoriteSet(),fresh=recent();
     const featured=fresh[0]||apps.find(app=>fav.has(app.slug))||apps[0];
     if(!featured)return '<div class="deck-home-blank"><strong>No games yet</strong><button type="button" data-deck-view="library">Open Library</button></div>';
-    const quick=[...new Map([...fresh,...apps].filter(app=>app.slug!==featured.slug).map(app=>[app.slug,app])).values()].slice(0,6);
+    const pinned=apps.filter(app=>globalPinned.has(app.slug));
+    const quick=[...new Map([...pinned,...fresh,...apps].filter(app=>app.slug!==featured.slug).map(app=>[app.slug,app])).values()].slice(0,6);
     return `<div class="deck-focus__featured"><a class="deck-focus__play" data-deck-open="${escapeHtml(featured.slug)}" href="${escapeHtml(featured.path)}" aria-label="Play ${escapeHtml(featured.name)}">
       ${artMarkup(featured)}<span class="deck-focus__hero-label"><span>CONTINUE PLAYING</span><strong>${escapeHtml(featured.name)}</strong></span>
       <span class="deck-focus__play-mark" aria-hidden="true">▶</span></a>
       <button type="button" class="deck-focus__info" data-deck-details="${escapeHtml(featured.slug)}" aria-label="Details for ${escapeHtml(featured.name)}">···</button></div>
-      <div class="deck-focus__bottom"><div class="deck-focus__recent-title"><strong>Quick play</strong><button type="button" data-deck-view="library">All games →</button></div>
+      <div class="deck-focus__bottom"><div class="deck-focus__recent-title"><strong>${pinned.length?'Pinned · Quick play':'Quick play'}</strong><button type="button" data-deck-view="library">All games →</button></div>
       <div class="deck-focus__recent" role="list">${quick.map(app=>`<div class="deck-focus__quick" role="listitem">
         <a data-deck-open="${escapeHtml(app.slug)}" href="${escapeHtml(app.path)}" aria-label="Play ${escapeHtml(app.name)}">${artMarkup(app)}<span>${escapeHtml(app.name)}</span></a>
         <button type="button" data-deck-details="${escapeHtml(app.slug)}" aria-label="Details for ${escapeHtml(app.name)}">···</button></div>`).join('')}</div></div>`;
@@ -215,6 +219,12 @@ export function installPocketDeck({
       globalAction.hidden=!canManageGlobal;
       globalAction.disabled=!globalReady||globalBusy||chosen.size===0;
     }
+    for(const [selector, shouldPin] of [['[data-deck-organize-pin]',true],['[data-deck-organize-unpin]',false]]){
+      const button=bar.querySelector(selector);
+      if(!button)continue;
+      button.hidden=!canManageGlobal;
+      button.disabled=!globalReady||globalBusy||![...chosen].some(slug=>globalPinned.has(slug)!==shouldPin);
+    }
     for(const card of document.querySelectorAll('#app-list .app-entry[data-slug]')){
       const selected=chosen.has(card.dataset.slug);
       card.classList.toggle('deck-is-chosen',selected);
@@ -236,13 +246,15 @@ export function installPocketDeck({
     store.update({archived,projectStages});
   }
   function adoptGlobalArchive(data){
-    if(!data||!Array.isArray(data.archived)||data.archived.some(slug=>!validSlug(slug)))
-      throw new Error('Invalid server archive response');
+    if(!data||!Array.isArray(data.archived)||data.archived.some(slug=>!validSlug(slug))||
+       (data.pinned!==undefined&&(!Array.isArray(data.pinned)||data.pinned.some(slug=>!validSlug(slug)))))
+      throw new Error('Invalid server library response');
     globalArchived=new Set(data.archived);
+    globalPinned=new Set(data.pinned||[]);
     canManageGlobal=data.canManage===true;
     globalReady=true;
     globalRevision++;
-    try{localStorage.setItem(GLOBAL_CACHE_KEY,JSON.stringify({archived:[...globalArchived],savedAt:Date.now()}));}catch{}
+    try{localStorage.setItem(GLOBAL_CACHE_KEY,JSON.stringify({archived:[...globalArchived],pinned:[...globalPinned],savedAt:Date.now()}));}catch{}
     render();
     onViewChanged?.();
   }
@@ -261,41 +273,59 @@ export function installPocketDeck({
       }
     }
   }
-  function askGlobalArchive(slugs,archived){
+  function askGlobalAction(slugs,mode,enabled){
     if(!canManageGlobal||!globalReady||globalBusy)return;
+    if(!['archive','pin'].includes(mode))return;
     slugs=[...new Set(slugs)].filter(slug=>appBySlug(slug));
     if(!slugs.length)return;
-    pendingGlobalAction={slugs,archived};
-    $('#deck-global-confirm-description').textContent=archived
-      ? `Move ${slugs.length} game${slugs.length===1?'':'s'} into the archive for EVERY user? Games and saves will not be deleted.`
-      : `Restore ${slugs.length} game${slugs.length===1?'':'s'} to the main library for EVERY user?`;
-    $('#deck-global-confirm-accept').textContent=archived?'Archive for everyone':'Restore for everyone';
+    pendingGlobalAction={slugs,mode,enabled};
+    const count=`${slugs.length} game${slugs.length===1?'':'s'}`;
+    const title=mode==='pin'?'Change global pins?':'Change the global archive?';
+    $('#deck-global-confirm-title').textContent=title;
+    $('#deck-global-confirm-description').textContent=mode==='pin'
+      ? enabled
+        ? `Pin ${count} for EVERY user? They will appear first in the library and Quick play.`
+        : `Unpin ${count} for EVERY user? The games and personal favorites will be preserved.`
+      : enabled
+        ? `Move ${count} into the archive for EVERY user? Games and saves will not be deleted.`
+        : `Restore ${count} to the main library for EVERY user?`;
+    $('#deck-global-confirm-accept').textContent=mode==='pin'
+      ? enabled?'Pin for everyone':'Unpin for everyone'
+      : enabled?'Archive for everyone':'Restore for everyone';
     $('#deck-global-confirm').showModal();
   }
-  async function commitGlobalArchive(){
+  const askGlobalArchive=(slugs,archived)=>askGlobalAction(slugs,'archive',archived);
+  const askGlobalPin=(slugs,pinned)=>askGlobalAction(slugs,'pin',pinned);
+  async function commitGlobalAction(){
     const action=pendingGlobalAction;
     pendingGlobalAction=null;
     $('#deck-global-confirm').close();
     if(!action||!globalReady||!canManageGlobal||globalBusy)return;
     globalBusy=true;
-    globalMessage='Updating the archive for everyone…';
+    // Ignore snapshots started before this write.
+    globalRequest++;
+    const pin=action.mode==='pin';
+    globalMessage=pin?'Updating global pins…':'Updating the archive for everyone…';
     $('#deck-global-status').textContent=globalMessage;
     render();
     try{
-      const res=await fetch('/pocket-id/global-archive',{
+      const res=await fetch(pin?'/pocket-id/global-pins':'/pocket-id/global-archive',{
         method:'POST',credentials:'same-origin',
         headers:{'content-type':'application/json'},
-        body:JSON.stringify(action)
+        body:JSON.stringify({slugs:action.slugs,...(pin?{pinned:action.enabled}:{archived:action.enabled})})
       });
       const payload=await res.json().catch(()=>null);
       if(!res.ok)throw Error(res.status===403?'Administrator access denied. Sign in again.':'Server could not save the change.');
       adoptGlobalArchive(payload);
-      if(action.archived)exitOrganize();
-      if(batchPicker?.isOpen())batchPicker.complete(action.archived
-        ?'Игры перенесены в общий архив.':'Игры возвращены в общую библиотеку.');
-      globalMessage=action.archived?'Moved to the global archive.':'Restored to the global library.';
+      if(!pin&&action.enabled)exitOrganize();
+      if(batchPicker?.isOpen())batchPicker.complete(pin
+        ? action.enabled?'Игры закреплены для всех.':'Игры откреплены для всех.'
+        : action.enabled?'Игры перенесены в общий архив.':'Игры возвращены в общую библиотеку.');
+      globalMessage=pin
+        ? action.enabled?'Pinned for everyone.':'Unpinned for everyone.'
+        : action.enabled?'Moved to the global archive.':'Restored to the global library.';
     }catch(error){
-      globalMessage=error.message||'Could not update the global archive.';
+      globalMessage=error.message||'Could not update global library.';
       if(batchPicker?.isOpen())batchPicker.report(globalMessage,'error');
       void refreshGlobalArchive();
     }finally{
@@ -340,7 +370,7 @@ export function installPocketDeck({
       store.update({releaseHistory:{...state.releaseHistory,[slug]:[entry,...history].slice(0,10)}});
       return;
     }
-    const signature=[slug,stageOf(slug),globalArchived.has(slug),canManageGlobal,globalBusy,history.map(h=>h.version).join('|')].join(':');
+    const signature=[slug,stageOf(slug),globalArchived.has(slug),globalPinned.has(slug),canManageGlobal,globalBusy,history.map(h=>h.version).join('|')].join(':');
     if(root.dataset.signature===signature)return;
     // Stage and release-history updates must not erase a note being edited.
     // Only carry the draft within the same project; switching projects loads
@@ -353,7 +383,11 @@ export function installPocketDeck({
         ${[['trial','Trial'],['building','Developing'],['kept','Keep'],['archive','Archive']].map(([stage,label])=>`<button type="button" data-deck-stage="${stage}" aria-pressed="${stageOf(slug)===stage}">${label}</button>`).join('')}
       </div>
       ${globalArchived.has(slug)?'<p class="deck-global-note">In the archive for everyone. Personal labels do not override it.</p>':''}
-      ${canManageGlobal?`<button type="button" class="deck-global-action" data-deck-global-archive="${escapeHtml(slug)}" ${globalBusy?'disabled':''}>${globalArchived.has(slug)?'Restore for everyone':'Archive for everyone'}</button>`:''}
+      ${globalPinned.has(slug)?'<p class="deck-global-note">Pinned in the library for everyone.</p>':''}
+      ${canManageGlobal?`<div class="deck-global-actions">
+        <button type="button" class="deck-global-action" data-deck-global-pin="${escapeHtml(slug)}" ${globalBusy?'disabled':''}>${globalPinned.has(slug)?'Unpin for everyone':'Pin for everyone'}</button>
+        <button type="button" class="deck-global-action" data-deck-global-archive="${escapeHtml(slug)}" ${globalBusy?'disabled':''}>${globalArchived.has(slug)?'Restore for everyone':'Archive for everyone'}</button>
+      </div>`:''}
       <label class="deck-project-detail__note">Next improvement <textarea id="deck-project-note" rows="2" maxlength="750" placeholder="The one thing that would make this project worth returning to…">${escapeHtml(note)}</textarea></label>
       <button type="button" id="deck-note-save">Save project note</button>
       <span id="deck-note-feedback" role="status" aria-live="polite"></span>
@@ -449,14 +483,20 @@ export function installPocketDeck({
     if(event.target.closest('[data-deck-organize-global]')){
       askGlobalArchive([...chosen],true);return;
     }
+    if(event.target.closest('[data-deck-organize-pin]')){askGlobalPin([...chosen].filter(slug=>!globalPinned.has(slug)),true);return;}
+    if(event.target.closest('[data-deck-organize-unpin]')){askGlobalPin([...chosen].filter(slug=>globalPinned.has(slug)),false);return;}
     if(event.target.closest('[data-deck-global-archive]')){
       const slug=event.target.closest('[data-deck-global-archive]').dataset.deckGlobalArchive;
       askGlobalArchive([slug],!globalArchived.has(slug));return;
     }
+    if(event.target.closest('[data-deck-global-pin]')){
+      const slug=event.target.closest('[data-deck-global-pin]').dataset.deckGlobalPin;
+      askGlobalPin([slug],!globalPinned.has(slug));return;
+    }
     if(event.target.id==='deck-global-confirm-cancel'){
       pendingGlobalAction=null;$('#deck-global-confirm').close();return;
     }
-    if(event.target.id==='deck-global-confirm-accept'){void commitGlobalArchive();return;}
+    if(event.target.id==='deck-global-confirm-accept'){void commitGlobalAction();return;}
     if(event.target.id==='deck-archive-cancel'){$('#deck-archive-confirm').close();return;}
     if(event.target.id==='deck-archive-accept'){archiveChosen();return;}
     const open=event.target.closest('[data-deck-open]');
@@ -629,6 +669,7 @@ export function installPocketDeck({
     getApps, isArchived,
     isPersonalArchived:slug=>current().archived.includes(slug),
     isGlobalArchived:slug=>globalArchived.has(slug),
+    isGlobalPinned:slug=>globalPinned.has(slug),
     getFavorites, canManageGlobal:()=>canManageGlobal&&globalReady,
     isGlobalBusy:()=>globalBusy, artwork:app=>artMarkup(app),
     onPersonalArchive:(slugs,archived)=>{
@@ -644,6 +685,7 @@ export function installPocketDeck({
       store.update({archived:[...set],projectStages:stages});
     },
     onGlobalArchive:(slugs,archived)=>askGlobalArchive(slugs,archived),
+    onGlobalPin:(slugs,pinned)=>askGlobalPin(slugs,pinned),
     onFavorites:(slugs,save)=>{
       if(typeof onBulkFavorite==='function')onBulkFavorite(slugs,save);
       else for(const slug of slugs){if(favoriteSet().has(slug)!==save)onFavorite(slug);}
@@ -651,7 +693,7 @@ export function installPocketDeck({
   });
   render();document.documentElement.classList.add('has-pocket-deck');void store.hydrate();void loadCovers();void refreshGlobalArchive();
   return {
-    store, getView:()=>current().view, getState:current, setView,
+    store, getView:()=>current().view, getState:current, setView, isPinned:slug=>globalPinned.has(slug),
     getVisibleList:()=>{
       const state=current();
       return state.view==='archive'?getApps().filter(app=>isArchived(app.slug)):
