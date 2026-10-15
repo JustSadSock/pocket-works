@@ -501,7 +501,7 @@ export class Editor{
     if(this.armButton){
      this.armButton.hidden=!precision;this.armButton.classList.remove('is-armed');
      this.armButton.setAttribute('aria-pressed','false');
-     this.armButton.querySelector('strong').textContent='РИСОВАТЬ';
+     this.armButton.querySelector('strong').textContent='УДЕРЖИВАЙ';
     }
     if(this.sideButton)this.sideButton.hidden=!precision;
     const switcher=this.root.querySelector('[data-cmd="precision"]');
@@ -515,8 +515,8 @@ export class Editor{
   updatePrecisionHelp(){
     const help=this.root.querySelector('#precisionHelp');
     if(help)help.textContent=this.armed
-     ?'Перо включено · рисуй одним пальцем, кончик выше пальца. Нажми СТОП для наведения.'
-     :'Веди палец, чтобы навести кончик. Нажми РИСОВАТЬ, чтобы оставлять мазки.';
+     ?'Кнопка удерживается · веди вторым пальцем по картине.'
+     :'Наводи пальцем по картине. Для мазка удерживай кнопку другим пальцем.';
   }
   attach(){
     this.down=e=>{
@@ -633,30 +633,44 @@ export class Editor{
     this.viewport.addEventListener('pointercancel',this.frameUp);
     this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor();this.hidePickerPreview()}};
     this.viewport.addEventListener('pointerleave',this.cursorLeave);
-    // iOS single-finger latch; no simultaneous hold-and-drag needed.
+    // Two-finger precision: the resting finger only aims; the other must
+    // KEEP HOLDING the arm button to produce ink. No persistent latch.
+    this.setArmState=active=>{
+      const next=Boolean(active&&this.inputMode==='precision');
+      if(!next&&this.armed)this.finishStroke();
+      this.armed=next;
+      if(this.armButton){
+        this.armButton.classList.toggle('is-armed',next);
+        this.armButton.setAttribute('aria-pressed',String(next));
+        this.armButton.querySelector('strong').textContent=next?'РИСУЮ':'УДЕРЖИВАЙ';
+      }
+      this.updatePrecisionHelp();
+    };
     this.armDown=e=>{
       if(this.inputMode!=='precision'||this.armPointer!==null)return;
+      if(e.pointerType==='mouse'&&e.button!==0)return;
       e.preventDefault();e.stopPropagation();
       this.armPointer=e.pointerId;
-      this.armed=!this.armed;
-      this.armButton.classList.toggle('is-armed',this.armed);
-      this.armButton.setAttribute('aria-pressed',String(this.armed));
-      this.armButton.querySelector('strong').textContent=this.armed?'СТОП':'РИСОВАТЬ';
-      this.updatePrecisionHelp();
       try{this.armButton.setPointerCapture(e.pointerId)}catch{}
-      if(this.armed&&this.aim&&this.aimPointer!==null&&this.pointers.size===1&&!this.working)
+      this.setArmState(true);
+      if(this.aim&&this.aimPointer!==null&&this.pointers.size===1&&!this.working)
         this.beginStroke(this.pointAt(this.aim));
-      if(!this.armed)this.finishStroke();
     };
     this.armUp=e=>{
       if(this.armPointer!==e.pointerId)return;
-      e.preventDefault();e.stopPropagation();
+      e.preventDefault?.();e.stopPropagation?.();
       this.armPointer=null;
+      this.setArmState(false);
+      if(this.armButton?.hasPointerCapture?.(e.pointerId)){
+        try{this.armButton.releasePointerCapture(e.pointerId)}catch{}
+      }
     };
     this.armButton?.addEventListener('pointerdown',this.armDown);
     this.armButton?.addEventListener('pointerup',this.armUp);
     this.armButton?.addEventListener('pointercancel',this.armUp);
     this.armButton?.addEventListener('lostpointercapture',this.armUp);
+    this.armContext=e=>e.preventDefault();
+    this.armButton?.addEventListener('contextmenu',this.armContext);
     this.armGlobalUp=e=>{if(this.armPointer===e.pointerId)this.armUp(e)};
     window.addEventListener('pointerup',this.armGlobalUp);
     window.addEventListener('pointercancel',this.armGlobalUp);
