@@ -302,3 +302,6 @@ html,body{min-width:0;max-width:100%;overscroll-behavior-y:none}
  #screen>.exhibition-lobby .lobby-attendance{max-height:46px!important}
  #screen>.exhibition-lobby .lobby-attendance .players{max-height:42px!important}
 }
+
+/* Hidden overflow was still programmatically scrollable by 4px in some portrait webviews. */
+#screen.screen:has(>.exhibition-lobby){overflow:clip!important}
