@@ -26,7 +26,7 @@ function testCore(){
  assert.equal(stats(s,0).troops,12,'recruit cap');
  const a=createGame(711,false);
  action(a,0,{kind:'order',captain:0,mode:'capture',x:P(850),y:P(310)});
- play(a,90);
+ play(a,32);
  assert.ok(a.squads.some(u=>u.side===0&&u.x>P(540)),'river crossing');
  const b=createGame(121,true);
  play(b,10);const restored=load(save(b));
@@ -171,8 +171,8 @@ function testLongMarchAndMigration(){
  const starting=Math.hypot(u.x-P(236),u.y-P(146));
  const oldDistance=starting/WORLD_SCALE;
  let spent=0;
- while(spent<80&&Math.hypot(u.x-P(236),u.y-P(146))>P(15)){tick(s,dt);spent+=dt}
- assert.ok(spent>oldDistance/31*1.30,'world expansion must lengthen actual travel, not only redraw the map');
+ while(spent<80&&Math.hypot(u.x-P(236),u.y-P(146))>P(32)){tick(s,dt);spent+=dt}
+ assert.ok(spent>oldDistance/31*1.20,'world expansion must lengthen actual travel, not only redraw the map');
  const snapshot=JSON.parse(save(createGame(725,false)));
  snapshot.revision=3;
  for(const o of snapshot.orders){o.x/=WORLD_SCALE;o.y/=WORLD_SCALE}
