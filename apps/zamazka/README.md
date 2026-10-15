@@ -443,7 +443,7 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 
 ## 1.38.5 — Connected-fill topology stress testing
 
-- Fixed rare incomplete fills: the short-gap contour bridge used to weld independent adjacent stroke edges across thin corridors. The automatic 1–2 pixel gap repair now requires three pixels of original collinear stroke continuation beyond both endpoints. New bridges cannot become support for further bridges.
+- Fixed rare incomplete fills: the short-gap contour bridge used to weld independent adjacent stroke edges across thin corridors. The automatic 1–2 pixel gap repair now requires five pixels of original collinear stroke continuation beyond both endpoints. New bridges cannot become support for further bridges.
 - Run `node apps/zamazka/qa/fill-topology-matrix.mjs`: 4200 synthetic variants across concentric circles, ellipses, boxes, diamonds, wavy contours and irregular damage masks; compare against independent four-connected flood-fill, test a second colour fill and narrow line pinholes.
 - Run `node apps/zamazka/qa/fill-topology-playwright.mjs`: 48 Canvas2D contour/mask pairings with original production bucket, pixel coverage assertions, repeat fill and contact-sheet screenshot. Set `ZAMAZKA_QA_ARTIFACT_DIR` to collect evidence.
 - Cases without a topologically closed raster contour are correctly excluded from closed-region coverage assertions; open shapes should still paint their physically reachable space.
