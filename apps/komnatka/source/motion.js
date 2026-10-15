@@ -23,8 +23,8 @@ export const MOTION = Object.freeze({
 const defaults={lift:.12,settle:300,squash:0,wobble:0};
 export function motionProfile(type){return MOTION[type]||defaults;}
 const vector = v => ({x:v.x,y:v.y,z:v.z});
-export function createMotionDirector({getRoot,getItem,reducedMotion=()=>false}){
-  const actions=new Map(), retired=[];
+export function createMotionDirector({getRoot,getItem,getItems=()=>[],reducedMotion=()=>false}){
+  const actions=new Map(), retired=[], linkedChildren=new Set();
   const baseline=new WeakMap();
   let now=0;
   function children(root){
@@ -146,6 +146,22 @@ export function createMotionDirector({getRoot,getItem,reducedMotion=()=>false}){
             Math.sin(part.index*1.7)*p.wobble*wave;
       }
       if(t>=1){reset(id);}else active=true;
+    }
+    // A lamp, mug or stack of books is a separate root, not a child mesh of
+    // the table. Transfer the table's *animated* lift to those roots too.
+    // Positions in the saved game remain untouched.
+    for(const child of getItems()){
+      if(!child.support)continue;
+      const parent=getItem(child.support),parentRoot=getRoot(child.support),childRoot=getRoot(child.id);
+      if(!parent||!parentRoot||!childRoot||parentRoot.isDisposed()||childRoot.isDisposed())continue;
+      const movingParent=actions.has(parent.id)&&!reduced;
+      if(!movingParent&&!linkedChildren.has(child.id))continue;
+      const base=child.y||0;
+      const ownOffset=actions.has(child.id)?childRoot.position.y-base:0;
+      const lift=movingParent?parentRoot.position.y-(parent.y||0):0;
+      childRoot.position.y=base+ownOffset+lift;
+      if(movingParent)linkedChildren.add(child.id);
+      else linkedChildren.delete(child.id);
     }
     for(let i=retired.length-1;i>=0;i--){
       const r=retired[i],t=clamp01((timestamp-r.t)/170);
