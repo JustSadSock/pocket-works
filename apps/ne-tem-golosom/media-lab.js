@@ -52,6 +52,7 @@ export async function exportVideo({ blob, start, duration, width, level, signal,
   const src = URL.createObjectURL(blob);
   video.preload = 'auto';
   video.playsInline = true;
+  video.muted = true; // Silent element playback is allowed after async metadata/seek; audio is routed separately.
   video.src = src;
   let recorder, frame = 0, audioContext, stream, cancelled = false;
   let timer, started = false;
