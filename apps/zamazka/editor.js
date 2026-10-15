@@ -346,7 +346,7 @@ export class Editor{
   }
   setTool(tool){
     if(!['brush','fill','picker','erase','smudge','hand'].includes(tool))return;
-    this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.cursor?.classList.remove('is-idle','is-fast');
+    this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.cursor?.classList?.remove?.('is-idle','is-fast');
     if(this.tool!==tool)this.onSound?.('tool');this.tool=tool;
     this.root.querySelector('.restore')?.setAttribute('data-active-tool',tool);
     this.viewport.classList.toggle('hand-mode',tool==='hand');
@@ -458,27 +458,27 @@ export class Editor{
   updateCursorGraphic(force=false){
     if(!this.cursor||(!force&&this.cursorInk===this.color))return;
     this.cursorInk=this.color;
-    const art=this.cursor.querySelector('.brush-cursor-art');
+    const art=this.cursor.querySelector?.('.brush-cursor-art');
     if(art)art.innerHTML=brushCursorSVG(this.cursorStyle,this.color);
   }
   setCursorStyle(index){
     this.cursorStyle=setBrushCursorStyle(index);
     this.updateCursorGraphic(true);
-    if(this.cursor){this.cursor.classList.remove('is-changing');void this.cursor.offsetWidth;this.cursor.classList.add('is-changing')}
+    if(this.cursor){this.cursor.classList?.remove?.('is-changing');void this.cursor.offsetWidth;this.cursor.classList?.add?.('is-changing')}
     if(this.lastCursor)this.showCursor(this.lastCursor);
   }
   cursorDip(){
     if(!this.cursor)return;
     this.updateCursorGraphic();
-    this.cursor.classList.remove('is-dipping');void this.cursor.offsetWidth;this.cursor.classList.add('is-dipping');
+    this.cursor.classList?.remove?.('is-dipping');void this.cursor.offsetWidth;this.cursor.classList?.add?.('is-dipping');
   }
   cursorContact(active){
     if(!this.cursor)return;
     clearTimeout(this.cursorLiftTimer);
-    this.cursor.classList.toggle('is-pressed',active);
-    this.cursor.classList.remove('is-lifted');
+    this.cursor.classList?.toggle?.('is-pressed',active);
+    this.cursor.classList?.remove?.('is-lifted');
     if(!active){
-      void this.cursor.offsetWidth;this.cursor.classList.add('is-lifted');
+      void this.cursor.offsetWidth;this.cursor.classList?.add?.('is-lifted');
       this.cursorLiftTimer=setTimeout(()=>this.cursor?.classList.remove('is-lifted','is-fast'),370);
     }
   }
@@ -493,14 +493,14 @@ export class Editor{
     }
     this.hidePickerPreview();
     this.updateCursorGraphic();
-    this.cursor.classList.toggle('is-brush',this.tool==='brush');
+    this.cursor.classList?.toggle?.('is-brush',this.tool==='brush');
     const tip=this.tip(e),v=this.viewport.getBoundingClientRect(),c=this.canvas.getBoundingClientRect();
     const effectiveSize=this.tool==='pencil'?Math.max(.15,this.size*.4):this.size;
     const diameter=Math.max(2,effectiveSize*c.height/H);
     this.cursor.style.width=diameter+'px';this.cursor.style.height=diameter+'px';
     // Absolutely positioned children start at the viewport padding edge, not its outer border.
    const drawn=this.point(tip);
-   this.cursor.classList.toggle('is-blocked',!this.inside(drawn));
+   this.cursor.classList?.toggle?.('is-blocked',Boolean(this.zone)&&!this.inside(drawn));
    const timestamp=typeof performance==='undefined'?Date.now():performance.now();
    const prev=this.cursorMotion;
    const elapsed=prev?Math.max(1,timestamp-prev.time):16;
@@ -508,19 +508,19 @@ export class Editor{
    const vy=prev?(tip.clientY-prev.y)/elapsed:0;
    this.cursorMotion={x:tip.clientX,y:tip.clientY,time:timestamp};
    this.cursor.style.setProperty('--brush-angle',Math.max(-14,Math.min(14,vx*13+vy*3)).toFixed(2)+'deg');
-   this.cursor.classList.toggle('is-fast',(Boolean(this.working)&&Math.hypot(vx,vy)>1.7)||(this.cursor.classList.contains('is-lifted')&&this.cursor.classList.contains('is-fast')));
+   this.cursor.classList?.toggle?.('is-fast',(Boolean(this.working)&&Math.hypot(vx,vy)>1.7)||(this.cursor.classList?.contains?.('is-lifted')&&this.cursor.classList?.contains?.('is-fast')));
    const pressure=Number.isFinite(e.pressure)?e.pressure:(this.working?.5:0);
    this.cursor.style.setProperty('--brush-pressure',String(Math.max(.92,1-Math.max(0,pressure)*.08)));
-   this.cursor.classList.remove('is-idle');
+   this.cursor.classList?.remove?.('is-idle');
    clearTimeout(this.cursorIdleTimer);
-   if(!this.working)this.cursorIdleTimer=setTimeout(()=>{if(!this.closed&&!this.working)this.cursor?.classList.add('is-idle')},190);
+   if(!this.working)this.cursorIdleTimer=setTimeout(()=>{if(!this.closed&&!this.working)this.cursor?.classList?.add?.('is-idle')},190);
    this.cursor.style.left=c.left+drawn[0]/W*c.width-v.left-this.viewport.clientLeft+'px';
    this.cursor.style.top=c.top+drawn[1]/H*c.height-v.top-this.viewport.clientTop+'px';
     this.cursor.style.setProperty('--brush-ink',this.tool==='erase'?'#e8ddc6':this.tool==='smudge'?'#c6a36d':this.color);
      this.cursor.classList?.toggle?.('is-smudge',this.tool==='smudge');
     this.cursor.hidden=false;
   }
-  hideCursor(){clearTimeout(this.cursorIdleTimer);this.cursorMotion=null;if(this.cursor){this.cursor.hidden=true;this.cursor.classList.remove('is-idle','is-fast','is-pressed')}}
+  hideCursor(){clearTimeout(this.cursorIdleTimer);this.cursorMotion=null;if(this.cursor){this.cursor.hidden=true;this.cursor.classList?.remove?.('is-idle','is-fast','is-pressed')}}
   hidePickerPreview(){if(this.pickerPreview)this.pickerPreview.hidden=true}
   showPickerPreview(e){
     const sample=this.pickerPreview;if(!sample)return;
