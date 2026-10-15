@@ -82,6 +82,8 @@
       <button type="button" data-deck-select-unsaved>Select unkept</button>
       <button type="button" data-deck-organize-archive>Archive selected</button>
       <button type="button" data-deck-organize-global hidden>Archive for everyone</button>
+      <button type="button" data-deck-organize-pin hidden>Pin for everyone</button>
+      <button type="button" data-deck-organize-unpin hidden>Unpin for everyone</button>
       <button type="button" data-deck-organize-cancel>Done</button>
     </div>
     <p id="deck-global-status" class="deck-global-status" role="status" aria-live="polite"></p>
@@ -181,6 +183,8 @@
         <button id="deck-batch-unsave" type="button" disabled>Убрать из сохранённого</button>
         <button id="deck-batch-personal" type="button" disabled>В личный архив</button>
         <button id="deck-batch-global" type="button" disabled hidden>В общий архив</button>
+        <button id="deck-batch-pin" type="button" disabled hidden>Закрепить для всех</button>
+        <button id="deck-batch-unpin" type="button" disabled hidden>Открепить для всех</button>
       </div>
     </div>
   </dialog>
