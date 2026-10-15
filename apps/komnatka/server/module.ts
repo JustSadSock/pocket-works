@@ -2,7 +2,7 @@
 // The memory answer is omitted from building-phase messages, not merely hidden in CSS.
 export const MIN_PLAYERS=2;
 export const MAX_PLAYERS=5;
-export const RULESET_VERSION=2;
+export const RULESET_VERSION=3;
 const ROOM=3.77;
 const FOOT={
  sofa:[2.55,1.26],chair:[1.18,1.18],coffee:[1.58,1.08],shelf:[1.75,.72],bed:[2.3,2.7],
@@ -10,13 +10,16 @@ const FOOT={
  rug:[2.95,2.12],books:[.52,.36],mug:[.30,.30],frame:[1.37,.1],window:[1.94,.1],
  wardrobe:[1.62,.86],desk:[1.75,.92],nightstand:[.79,.66],bookcase:[1.42,.66],loveseat:[1.87,1.21],pouf:[.69,.69],
  teddy:[.39,.34],vase:[.28,.28],candle:[.22,.22],pillow:[.63,.43],basket:[.62,.52],cactus:[.56,.56],
- mirror:[1.08,.10],clock:[.79,.10],deskclock:[.28,.23],teapot:[.42,.38]
+ mirror:[1.08,.10],clock:[.79,.10],deskclock:[.28,.23],teapot:[.42,.38],diningtable:[2.15,1.35],diningchair:[.72,.78],kitchenunit:[1.72,.75],sink:[1.21,.76],stove:[.91,.8],fridge:[.98,.85],cutlery:[.41,.35],crib:[1.33,1.88],toybox:[1.1,.72],starwall:[.65,.1],officechair:[.85,.85],deskorganizer:[.42,.36],vanity:[1.3,.79],curtains:[1.67,.1],chest:[1.24,.73],teatable:[1.3,1.17]
 };
-const TOP={coffee:.72,shelf:1.02,stool:.52,desk:.80,nightstand:.65};
-const WALL=new Set(['frame','window','mirror','clock']),SMALL=new Set(['tablelamp','books','mug','teddy','vase','candle','deskclock','teapot']);
+const TOP={coffee:.72,shelf:1.02,stool:.52,desk:.80,nightstand:.65,diningtable:.8,kitchenunit:.96,sink:.94,stove:.9,toybox:.69,vanity:.83,chest:.68,teatable:.66};
+const WALL=new Set(['frame','window','mirror','clock','starwall','curtains']),SMALL=new Set(['tablelamp','books','mug','teddy','vase','candle','deskclock','teapot','cutlery','deskorganizer']);
+const MATERIALS=['linen','velvet','oak','walnut','paint','ceramic','metal'];
+const PURPOSES=['living','bedroom','kitchen','nursery','study'];
+const DIFFICULTIES=['easy','normal','hard'];
 const COLORS=['#e8a58f','#d6bd80','#8eae99','#8baab8','#bc9bb5','#e8d8bf','#a58f77','#d2a993'];
-const PATTERNS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig'];
-const FLOORS=['honey','walnut','painted','tile','blush','cherry'];
+const PATTERNS=['plain','stripe','flower','gingham','berries','stars','daisy','dots','sprig','linen','plaster','panel'];
+const FLOORS=['honey','walnut','painted','tile','blush','cherry','herringbone','terrazzo'];
 const LAYOUTS=['classic','narrow','nook'];
 function footprintFits(layout,item,w,d){
  if(WALL.has(item.type)){
@@ -42,7 +45,14 @@ const TASKS=[
  {title:'Сладкие сны',text:'Каждому сну — своё мягкое место.',goals:[['bed',1,'Кровать'],['nightstand',1,'Тумбочка у кровати','near','bed'],['tablelamp',1,'Ночник'],['pillow',1,'Подушечка']]},
  {title:'Маленький музей',text:'Самые красивые вещицы на виду.',goals:[['mirror',1,'Зеркальце'],['clock',1,'Настенные часы'],['frame',1,'Картина'],['vase',1,'Ваза на мебели']]},
  {title:'Плюшевое королевство',text:'Нужны объятия и много мягкости.',goals:[['loveseat',1,'Маленький диванчик'],['pouf',1,'Пуфик рядом','near','loveseat'],['teddy',1,'Игрушка на столе'],['basket',1,'Корзинка']]},
- {title:'Тихий вечер',text:'Оставь только мягкий свет и уют.',goals:[['candle',1,'Свеча'],['floorlamp',1,'Лампа около дивана','near','sofa'],['sofa',1,'Диван'],['rug',1,'Плетёный коврик']]}
+ {title:'Тихий вечер',text:'Оставь только мягкий свет и уют.',purpose:'living',goals:[['candle',1,'Свеча'],['floorlamp',1,'Лампа около дивана','near','sofa'],['sofa',1,'Диван'],['rug',1,'Плетёный коврик']]},
+ {title:'Обед для друзей',text:'Собери обеденную зону, где всем найдётся место.',purpose:'kitchen',goals:[['diningtable',1,'Обеденный стол'],['diningchair',2,'Два стула возле стола','near','diningtable'],['cutlery',1,'Посуда на обеденном столе','on','diningtable'],['kitchenunit',1,'Шкаф для посуды']]},
+ {title:'Кухня без тесноты',text:'Размести плиту, мойку и холодильник так, чтобы готовить было удобно.',purpose:'kitchen',goals:[['stove',1,'Плита'],['sink',1,'Мойка возле плиты','near','stove'],['fridge',1,'Холодильник отдельно от плиты','far','stove'],['kitchenunit',1,'Кухонный шкаф']]},
+ {title:'Комната малыша',text:'Место для отдыха и игр.',purpose:'nursery',goals:[['crib',1,'Кроватка'],['toybox',1,'Ящик с игрушками у кроватки','near','crib'],['starwall',1,'Звезда на стене'],['rug',1,'Ковёр для игр']]},
+ {title:'Рабочий день',text:'Оборудуй место для сосредоточенной работы.',purpose:'study',goals:[['desk',1,'Письменный стол'],['officechair',1,'Рабочее кресло у стола','near','desk'],['deskorganizer',1,'Органайзер на столе','on','desk'],['tablelamp',1,'Лампа на рабочем столе','on','desk']]},
+ {title:'Утро у окна',text:'Тихая спальня с уютным туалетным столиком.',purpose:'bedroom',goals:[['bed',1,'Кровать'],['vanity',1,'Трюмо'],['curtains',1,'Шторы'],['tablelamp',1,'Лампа на трюмо','on','vanity']]},
+ {title:'Игровая зона',text:'Устрой пространство для игр и творчества.',purpose:'nursery',goals:[['toybox',1,'Ящик с игрушками'],['teatable',1,'Столик для занятий'],['pouf',2,'Два пуфика рядом со столом','near','teatable'],['teddy',1,'Мишка на столике','on','teatable']]},
+ {title:'Книжная тишина',text:'Книги, рабочий стол и хорошее освещение.',purpose:'study',goals:[['desk',1,'Стол рядом с этажеркой','near','bookcase'],['bookcase',1,'Этажерка'],['officechair',1,'Рабочий стул рядом со столом','near','desk'],['tablelamp',1,'Настольная лампа','lit','desk']]}
 
 ];
 const TEMPLATES=[
@@ -89,7 +99,8 @@ function clean(raw,id,layout='classic'){
  const x=WALL.has(type)&&wall==='left'?(layout==='narrow'?-3.05:-3.91):nearest(raw.x),z=WALL.has(type)&&wall==='back'?-3.91:nearest(raw.z);
  const color=typeof raw.color==='string'&&/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:COLORS[2];
  return {id,type,x,z,rot,wall,color,y:WALL.has(type)?nearest(limit(n(raw.y)?raw.y:2.5,1,3.2)):0,
-  variant:limit(Math.floor(Number(raw.variant)||0),0,2),support:SMALL.has(type)?String(raw.support||'').slice(0,80):null};
+  variant:limit(Math.floor(Number(raw.variant)||0),0,2),support:SMALL.has(type)?String(raw.support||'').slice(0,80):null,
+   material:MATERIALS.includes(raw.material)?raw.material:'linen'};
 }
 function valid(s,item,exclude=item.id){
  const m=FOOT[item.type];if(!m)return false;
@@ -138,6 +149,9 @@ function brief(s){
  return template.goals.map(([type,required,label,rule,otherType])=>{
   const options=s.items.filter(i=>i.type===type&&(!SMALL.has(type)||!!i.support));
   const found=options.filter(item=>{
+   if(rule==='on')return s.items.some(other=>other.id===item.support&&other.type===otherType);
+   if(rule==='far')return s.items.some(other=>other.type===otherType&&Math.hypot(item.x-other.x,item.z-other.z)>3.15);
+   if(rule==='lit')return s.items.some(other=>['floorlamp','tablelamp'].includes(other.type)&&Math.hypot(item.x-other.x,item.z-other.z)<2.5);
    if(rule==='window')return s.items.some(w=>w.type==='window'&&Math.hypot(item.x-w.x,item.z-w.z)<4.3);
    if(rule==='near')return s.items.some(other=>other.type===otherType&&other.id!==item.id&&Math.hypot(item.x-other.x,item.z-other.z)<2.65);
    return true;
@@ -156,24 +170,30 @@ function scoreMemory(s){
    const pos=limit(1-dist/2.3,0,1);
    const turn=candidate.rot===expected.rot?1:.35;
    const shade=candidate.color===expected.color?1:.6;
-   const calc=pos*.7+turn*.2+shade*.1;
+   const material=candidate.material===expected.material?1:.65;
+   const support=Boolean(candidate.support)===Boolean(expected.support)?1:.45;
+   const calc=pos*.58+turn*.17+shade*.12+material*.07+support*.06;
    if(calc>bestScore){best=index;bestScore=calc;}
   });
   if(best>=0){used.add(best);points+=bestScore;}
  }
- return Math.round(100*points/Math.max(1,reference.length));
+ const extra=Math.max(0,choices.length-used.size);
+ const objectScore=limit(100*points/Math.max(1,reference.length)-extra*3.5,0,100);
+ const expected=s.targetFinishes||{};const actual=s.finishes||{};
+ const match=['pattern','patternLeft','floor'].filter(k=>expected[k]===actual[k]).length;
+ return Math.round(objectScore*.9+(match/3)*10);
 }
 function view(s){
- const safe={phase:s.phase,host:s.host,players:s.players,mode:s.mode,template:s.template,round:s.round,layout:s.layout,
+ const safe={phase:s.phase,host:s.host,players:s.players,mode:s.mode,template:s.template,round:s.round,layout:s.layout,purpose:s.purpose||'living',difficulty:s.difficulty||'normal',
   brief:s.mode==='tenants'?TASKS[s.template%TASKS.length]:null,goals:brief(s),deadline:s.deadline,
   started:s.started,items:s.items,finishes:s.finishes,selections:s.selections,score:s.score,revision:s.revision,
   completed:s.completed};
- if(s.mode==='memory'&&(s.phase==='preview'||s.phase==='result'))safe.target=s.target;
+ if(s.mode==='memory'&&(s.phase==='preview'||s.phase==='result')){safe.target=s.target;safe.targetFinishes=s.targetFinishes;}
  return safe;
 }
 function advance(s){
  const t=now();
- if(s.phase==='preview'&&t>=s.deadline){s.phase='build';s.deadline=t+155000;s.items=[];s.selections={};s.revision++;}
+ if(s.phase==='preview'&&t>=s.deadline){s.phase='build';s.deadline=t+(s.difficulty==='easy'?205000:s.difficulty==='hard'?120000:155000);s.items=[];s.selections={};s.revision++;}
  else if(s.phase==='build'&&t>=s.deadline)finish(s);
 }
 function finish(s){
@@ -228,8 +248,8 @@ function update(s,raw,player){
 }
 const module={
  protocolVersion:1,
- createRoom({player}){return {state:{phase:'lobby',host:player.id,players:[player],mode:'tenants',template:0,layout:'classic',
-   round:0,started:0,completed:0,deadline:0,items:[],target:[],finishes:{wallColor:0,wallColorLeft:0,pattern:'plain',patternLeft:'plain',floor:'honey',evening:false},
+ createRoom({player}){return {state:{phase:'lobby',host:player.id,players:[player],mode:'tenants',template:0,layout:'classic',purpose:'living',difficulty:'normal',
+   round:0,started:0,completed:0,deadline:0,items:[],target:[],targetFinishes:null,finishes:{wallColor:0,wallColorLeft:0,pattern:'plain',patternLeft:'plain',floor:'honey',evening:false},
    selections:{},revision:0,serial:0,score:null}};},
  onJoin({state,players}){
   if(players.length>MAX_PLAYERS)throw Error('room_full');
@@ -250,16 +270,21 @@ const module={
    if(state.players.length<MIN_PLAYERS)return {state,events:notice(player.id,'Нужно минимум два игрока.')};
    if(state.phase!=='lobby'&&state.phase!=='result')return {state,events:notice(player.id,'Раунд уже идёт.')};
    if(!['tenants','memory'].includes(p.mode))return {state,events:notice(player.id,'Неизвестный режим.')};
-   state.mode=p.mode;state.template=state.round% (state.mode==='tenants'?TASKS.length:15);
+   state.mode=p.mode;state.difficulty=DIFFICULTIES.includes(p.difficulty)?p.difficulty:'normal';
+    state.template=state.round% (state.mode==='tenants'?TASKS.length:15);
+    state.purpose=state.mode==='tenants'?TASKS[state.template].purpose||'living':['living','bedroom','study'][state.round%3];
    state.layout=state.mode==='memory'?'classic':LAYOUTS[state.round%LAYOUTS.length];
    state.round++;state.items=[];state.selections={};state.score=null;state.completed=0;state.started=now();
-   state.target=state.mode==='memory'?targetScene(state.template):[];
+   const allTargets=state.mode==='memory'?targetScene(state.template):[];
+    state.target=allTargets.slice(0,state.difficulty==='easy'?5:state.difficulty==='hard'?allTargets.length:7);
+    state.targetFinishes=state.mode==='memory'?{pattern:PATTERNS[(state.template*3)%PATTERNS.length],patternLeft:PATTERNS[(state.template*2)%PATTERNS.length],floor:FLOORS[state.template%FLOORS.length]}:null;
    state.phase=state.mode==='memory'?'preview':'build';
-   state.deadline=state.started+(state.mode==='memory'?18000:190000);
+   const times=state.difficulty==='easy'?[25000,240000]:state.difficulty==='hard'?[12000,135000]:[18000,190000];
+    state.deadline=state.started+(state.mode==='memory'?times[0]:times[1]);
    state.revision++;return {state,events:announce(state)};
   }
   if(p.type==='skip_preview'&&state.phase==='preview'&&player.id===state.host){
-   state.phase='build';state.items=[];state.selections={};state.deadline=now()+155000;state.revision++;
+   state.phase='build';state.items=[];state.selections={};state.deadline=now()+(state.difficulty==='easy'?205000:state.difficulty==='hard'?120000:155000);state.revision++;
    return {state,events:announce(state)};
   }
   if(p.type==='finish'&&state.phase==='build'&&player.id===state.host){finish(state);return {state,events:announce(state)};}
