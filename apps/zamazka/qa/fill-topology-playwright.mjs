@@ -102,10 +102,18 @@ try{
    // Pick a valid interior pixel near the thin band, then compare against
    // 4-connected mathematical reachability on the browser's actual pixels.
    let seed=-1;
-   for(let dy=-15;dy<=15&&seed<0;dy++)for(let dx=-15;dx<=15;dx++){
-    const x=Math.round(cx+radius-spacing/2+dx),y=cy+dy,i=y*W+x;
-    if(x>=0&&x<W&&y>=0&&y<H&&walls[i*4+3]<96&&zone[i*4+3]>=120){seed=i;break}
-   }
+   // Start specifically in the gap between the two drawn upper contours,
+   // not at the first free pixel in a broad rectangle (which might select
+   // the hollow centre or the background instead of the narrow ring).
+   for(let search=0;search<=11&&seed<0;search++)
+    for(let dy=-search;dy<=search&&seed<0;dy++)
+     for(let dx=-search;dx<=search;dx++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==search)continue;
+      const x=cx+dx,y=Math.round(cy-radius+spacing/2+dy),i=y*W+x;
+      if(x>=0&&x<W&&y>=0&&y<H&&walls[i*4+3]<96&&zone[i*4+3]>=120){
+       seed=i;break
+      }
+     }
    if(seed<0){skipped++;continue}
    const connected=oracle(walls.data,zone.data,seed);
    let expected=0;for(let i=0;i<total;i++)expected+=connected[i];
@@ -113,8 +121,12 @@ try{
    const point=[seed%W,Math.floor(seed/W)],changed=new Uint8Array(total);
    const count=floodFillRaster({width:W,height:H,walls,zone,output,changed,
       point,color:[56,142,115]});
-   let missed=0;
-   for(let i=0;i<total;i++)if(connected[i]&&output[i*4+3]!==255)missed++;
+   let missed=0,leaked=0;
+   for(let i=0;i<total;i++){
+    if(connected[i]&&output[i*4+3]!==255)missed++;
+    if(!connected[i]&&output[i*4+3]&&walls.data[i*4+3]<96&&zone.data[i*4+3]>=120)leaked++;
+   }
+   if(leaked)throw Error('Paint escaped into a separate basin '+shapeId+'/'+maskId+': '+leaked);
    const tolerance=Math.max(2,Math.floor(expected*.03));
    if(missed>tolerance){partial++;throw Error('Partial visible basin at '+shapeId+'/'+maskId+
      ': filled '+count+', missing '+missed+'/'+expected)}
