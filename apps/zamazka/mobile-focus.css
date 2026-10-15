@@ -430,3 +430,42 @@
  #screen>.collection-page .archive-gallery,
  #screen>.expert-phase .suspect-gallery {scroll-behavior:auto!important}
 }
+
+/* 1.38.2 — archive paintings are framed at their real height, not housed
+   in an enormous empty portrait rectangle. Center the accession on the wall. */
+@media (max-width:699px) and (orientation:portrait){
+ #screen>.collection-page .archive-gallery{
+   align-items:center!important;
+ }
+ #screen>.collection-page .archive-gallery>.archive-work{
+   flex:0 0 84%!important;width:84%!important;max-width:84%!important;
+   height:auto!important;max-height:100%!important;
+   justify-content:center!important;
+   padding:12px 12px 15px!important;gap:12px!important;
+   border-color:#8a7a63!important;
+   box-shadow:0 12px 26px #060c0878!important;
+ }
+ #screen>.collection-page .archive-art-frame {
+   display:flex!important;flex:0 0 auto!important;
+   width:100%!important;height:auto!important;min-height:0!important;
+   max-height:none!important;
+   align-items:center!important;justify-content:center!important;
+   padding:5px!important;margin:0!important;
+   background:#2b261e!important;
+ }
+ #screen>.collection-page .archive-art-frame canvas {
+   display:block!important;flex:0 1 auto!important;
+   width:min(100%, calc(40dvh * var(--art-aspect, 1.333333)))!important;
+   height:auto!important;
+   max-width:100%!important;max-height:40dvh!important;
+   aspect-ratio:var(--art-aspect, 1.333333)!important;
+   object-fit:fill!important;margin:0 auto!important;
+ }
+ #screen>.collection-page .archive-caption{
+   align-items:center;text-align:center;
+ }
+ #screen>.collection-page .archive-caption .caption{
+   white-space:normal!important;
+   max-width:100%;font-size:clamp(15px,4.5vw,21px)!important;
+ }
+}
