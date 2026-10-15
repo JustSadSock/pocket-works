@@ -1,0 +1,446 @@
+/* ЗАМАЗКА 1.39 — THE EXHIBITION FINALE
+   Three beats share one typographic hierarchy: stamped overline, centered
+   painting, physical accounting and a curator's verdict. Original source
+   canvases and game-state numbers are unchanged. */
+#screen>.finale-scene{box-sizing:border-box;min-width:0;min-height:0;height:100%;max-height:100%;overflow:hidden!important;
+ --finale-paper:#e8dec9;--finale-ink:#34372e;--finale-umber:#795c3f;--finale-gold:#bd8f4b;--finale-rule:#ad9c82;
+ --finale-green:#405b51;--finale-shadow:#29201644}
+#screen>.finale-scene :is(button,input){touch-action:manipulation}
+#screen>.finale-scene .phase-head{flex:0 0 auto;min-height:0;padding-block:clamp(6px,1.1vh,13px)!important}
+#screen>.finale-scene .phase-head h2{font-size:clamp(19px,min(2.9vw,3.8vh),32px)!important}
+#screen>.finale-scene .phase-body{min-width:0;min-height:0;max-width:100%;overflow:hidden}
+.finale-overline{font:700 clamp(9px,.8vw,11px)/1.3 system-ui,sans-serif;letter-spacing:.14em;color:#856645}
+.finale-overview{display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--finale-ink);
+ border-bottom:1px solid var(--finale-rule);padding-bottom:clamp(6px,1vh,13px);flex:0 0 auto}
+.finale-overview h3{font:normal clamp(21px,2vw,32px)/1.08 Georgia,serif;letter-spacing:-.025em;margin:3px 0!important;color:var(--finale-ink)}
+.finale-overview p{font:12px/1.4 system-ui,sans-serif;color:#6b6758;margin:3px 0 0}
+.finale-ledger{display:grid;grid-template-columns:auto auto;align-items:baseline;column-gap:7px;text-align:right;
+ padding:5px 0 5px 15px;border-left:1px solid #bbaa8b;white-space:nowrap}
+.finale-ledger span{grid-column:1/-1;color:#7a644a;font:700 9px system-ui;letter-spacing:.13em}
+.finale-ledger strong{font:normal clamp(28px,3.3vw,47px)/1 Georgia,serif;color:#6f5030}
+.finale-ledger small{font:11px system-ui;color:#665844}
+#screen>.verdict-phase{display:flex!important;flex-direction:column!important}
+#screen>.verdict-phase>.finale-verdict-body{display:flex!important;flex-direction:column!important;flex:1 1 auto;
+ padding:clamp(9px,1.3vh,20px) clamp(10px,2vw,30px) clamp(7px,1vh,12px)!important;
+ background:var(--finale-paper)!important;gap:clamp(8px,1.25vh,16px)}
+#screen>.verdict-phase .finale-ballot-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+ grid-auto-flow:row;flex:1 1 auto;min-height:0;max-width:100%;gap:clamp(6px,.8vw,14px)!important;
+ align-content:stretch;overflow:hidden;margin:0!important;padding:2px 1px 5px}
+#screen>.verdict-phase .finale-ballot-card{min-width:0;min-height:0;max-height:100%;overflow:hidden;
+ border:1px solid #c0ae8e;background:#f1e8d5;color:var(--finale-ink);
+ padding:clamp(5px,.75vw,12px)!important;margin:0!important;display:flex;flex-direction:column;
+ gap:clamp(3px,.6vh,9px);box-shadow:0 1px 0 #fff9e9 inset,0 3px 9px #30201315;
+ animation:finale-card-enter .49s cubic-bezier(.21,.7,.18,1) both;
+ animation-delay:calc(var(--case-index)*90ms)}
+#screen>.verdict-phase .finale-ballot-card.has-majority{border-color:#aa7f41;background:#eee0c4}
+.finale-ballot-index{display:flex;align-items:center;justify-content:space-between;gap:6px;
+ border-bottom:1px solid #d4c4a6;padding:0 0 4px;flex:0 0 auto}
+.finale-ballot-index span{font:700 clamp(8px,.65vw,10px) system-ui;letter-spacing:.08em;color:#907353}
+.finale-ballot-index b{font:italic 20px/.9 Georgia,serif;color:#927047}
+#screen>.verdict-phase .verdict-image{position:relative;display:flex;align-items:center;justify-content:center;
+ width:100%;min-width:0;min-height:0;flex:1 1 auto;overflow:hidden;
+ background:#b09b76;border:clamp(4px,.55vw,8px) ridge #997344}
+#screen>.verdict-phase .verdict-image img{display:block!important;position:relative;min-height:0;width:100%!important;height:100%!important;
+ max-width:100%!important;min-width:0;object-fit:contain;border:0!important;background:#4a3c30}
+.finale-card-caption{min-width:0;min-height:34px;flex:0 0 auto;display:flex;flex-direction:column;gap:2px}
+.finale-card-caption strong{display:block;min-width:0;font:normal clamp(12px,1.1vw,17px)/1.13 Georgia,serif!important;
+ color:#383b32!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finale-card-caption small{display:block;font:10px/1.2 system-ui;color:#827760;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.finale-ballot-votes{border-top:1px solid #c8b99c;padding-top:clamp(4px,.7vh,8px);flex:0 0 auto;min-height:0}
+.finale-vote-tally{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.finale-vote-tally span{color:#75664c;font:10px system-ui}
+.finale-vote-tally strong{color:#6d4c2b;font:normal clamp(21px,2vw,31px)/1 Georgia,serif;font-variant-numeric:tabular-nums}
+.finale-vote-bar{height:5px;background:#d5c6ae;overflow:hidden;margin:4px 0 5px}
+.finale-vote-bar i{display:block;height:100%;background:linear-gradient(90deg,#917047,#c49b61);
+ width:var(--vote-ratio);transform-origin:left;animation:finale-tally .72s cubic-bezier(.23,.66,.22,1) both;
+ animation-delay:calc(170ms + var(--case-index)*110ms)}
+#screen>.verdict-phase .verdict-tokens{border:none!important;display:flex!important;flex-direction:row!important;
+ justify-content:flex-start;gap:2px!important;flex-wrap:wrap;min-height:0!important;padding:0!important;margin:0!important}
+#screen>.verdict-phase .chip-dots{display:flex;flex-wrap:wrap;gap:2px}
+#screen>.verdict-phase .chip-dot{width:clamp(9px,.9vw,13px);height:clamp(9px,.9vw,13px);border:1px solid #8a6631;
+ box-shadow:inset 0 0 0 1px #e8c687,0 1px 1px #7b503a77;background:#b89452;border-radius:50%;
+ animation:finale-coin-place .46s cubic-bezier(.2,1.4,.3,1) both;animation-delay:calc(.3s + var(--case-index)*100ms)}
+.finale-voters{color:#736653;display:block;font:clamp(9px,.72vw,11px)/1.2 system-ui;margin-top:5px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:1.1em}
+#screen>.verdict-phase .finale-verdict-footer{display:flex!important;flex-direction:row!important;
+ flex:0 0 auto;justify-content:space-between;align-items:center;gap:10px;
+ padding:clamp(8px,1vh,15px) 0 0!important;margin:0!important;border-top:1px solid #b8a78a;
+ font:12px/1.3 system-ui;color:#65553c}
+.finale-verdict-footer>.btn{flex:none;min-height:clamp(36px,4.8vh,48px);padding:7px 17px}
+.finale-live-dot{display:inline-block;width:7px;height:7px;background:#628273;border-radius:50%;margin-right:7px;box-shadow:0 0 0 3px #62827320}
+.finale-wait-label{display:flex;gap:9px;align-items:center;font:12px system-ui;color:#685b48}
+.finale-wait-label .busy{width:14px;height:14px;flex:none}
+/* REVEAL / the gallery's X-ray desk. */
+#screen>.finale-reveal{display:flex;flex-direction:column}
+#screen>.finale-reveal>.reveal-layout{flex:1 1 auto;display:grid!important;
+ grid-template-columns:minmax(0,1.46fr) minmax(225px,.63fr)!important;gap:clamp(10px,2vw,28px)!important;
+ padding:clamp(8px,1.3vh,19px) clamp(10px,2vw,28px)!important;background:#e7dbc4!important}
+#screen>.finale-reveal .reveal-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:clamp(4px,.8vh,10px);overflow:hidden}
+.finale-reveal-provenance{display:grid;gap:2px;color:#383b31}
+.finale-reveal-provenance h3{margin:0!important;font:normal clamp(21px,2.3vw,34px)/1.05 Georgia,serif}
+.finale-reveal-provenance p{margin:0!important;color:#746854;font:11px/1.3 system-ui}
+.finale-reveal-provenance p strong{color:#46392b}
+#screen>.finale-reveal .reveal-answer-strip{margin:clamp(1px,.6vh,9px) 0!important;gap:5px!important;flex:0 0 auto}
+#screen>.finale-reveal .reveal-option{padding:3px!important}
+#screen>.finale-reveal .reveal-option-image{height:clamp(31px,8vh,96px)!important;max-height:none!important;aspect-ratio:auto!important;overflow:hidden}
+#screen>.finale-reveal .reveal-option-image :is(canvas,img){height:100%!important;width:100%!important;object-fit:cover}
+#screen>.finale-reveal .reveal-option.is-answer{background:#69502d;border-color:#bf9657;box-shadow:0 0 0 2px #c09549}
+.finale-inspection-label{display:flex;align-items:center;gap:8px;font:700 9px system-ui;letter-spacing:.12em;color:#866a44;min-height:10px}
+.finale-inspection-label i{flex:1;height:1px;background:#b4a17d}
+#screen>.finale-reveal .unveil-frame{flex:1 1 auto;min-height:0;max-height:min(47dvh,100%);width:auto;
+ max-width:100%;aspect-ratio:4/3;margin:0 auto!important;border-width:clamp(5px,.7vw,10px)!important;
+ box-shadow:0 8px 23px #241a1159!important}
+#screen>.finale-reveal .unveil-control{flex:0 0 auto;max-width:min(100%,850px);min-height:32px;
+ color:#614f3a!important;font:11px system-ui;margin:0 auto!important;width:100%;gap:8px}
+#screen>.finale-reveal .unveil-control input{min-width:70px}
+#screen>.finale-reveal .reveal-brief{min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ border-left:1px solid #b1a083!important;border-top:0!important;padding:0 0 0 clamp(9px,1.6vw,24px)!important;
+ align-self:stretch}
+#screen>.finale-reveal .outcome-head{margin:0 0 clamp(10px,1.5vh,19px)!important;background:#f4e9d0;
+ border:1px solid #c4ad82;border-left:4px solid #aa7942;padding:clamp(10px,1.4vh,18px)!important}
+#screen>.finale-reveal .outcome-head span{font:700 10px system-ui;letter-spacing:.14em;color:#85653b}
+#screen>.finale-reveal .outcome-head h3{font:normal clamp(23px,2.4vw,39px)/1.1 Georgia,serif;color:#3f4237;margin:6px 0!important}
+#screen>.finale-reveal .outcome-head strong{font:14px/1.25 Georgia,serif;color:#806241}
+.finale-audit-heading{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid #b8a78b;
+ padding-bottom:7px;margin-bottom:5px}
+.finale-audit-heading>span:last-child{color:#8b7d66;font:10px/1.2 system-ui}
+#screen>.finale-reveal .finale-audit-lines{display:flex;flex-direction:column;gap:0}
+#screen>.finale-reveal .audit-line{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;align-items:center;
+ min-height:43px;gap:8px;border-bottom:1px solid #c4b397;padding:7px 2px!important;
+ animation:finale-ledger-line .36s ease both;animation-delay:calc(150ms + var(--case-index)*60ms)}
+#screen>.finale-reveal .audit-line>span:first-child{font:13px/1.2 Georgia,serif;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#screen>.finale-reveal .audit-line .audit-chips{display:flex;align-items:center;gap:4px}
+#screen>.finale-reveal .audit-line .audit-chips small{font:9px system-ui;color:#766b58}
+#screen>.finale-reveal .audit-line>strong{font:normal 20px Georgia,serif;color:#466454}
+#screen>.finale-reveal .finale-bonus{margin:clamp(10px,1.5vh,18px) 0!important;border:1px solid #beac8b;
+ background:#d9cfb9;padding:clamp(8px,1vh,13px)!important;display:flex;gap:9px;align-items:center;justify-content:space-between}
+#screen>.finale-reveal .finale-bonus span{font:11px/1.3 system-ui;color:#665642}
+#screen>.finale-reveal .finale-bonus strong{font:normal clamp(24px,2.3vw,35px) Georgia,serif;color:#8e5934}
+#screen>.finale-reveal .reveal-brief>.btn,#screen>.finale-reveal .reveal-brief>.stack .btn{min-height:clamp(38px,5vh,48px)}
+/* RESULTS / a completed book of the exhibition, not a long list of cards */
+#screen>.finale-results{width:100%;max-width:1600px!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto;
+ gap:clamp(8px,1.5vh,18px);margin:0 auto;padding:clamp(10px,1.5vh,22px) clamp(12px,2.4vw,42px)
+ calc(clamp(8px,1.5vh,16px) + env(safe-area-inset-bottom))!important;
+ background:#e4d6bf;color:#31392f}
+.finale-results-head{display:flex;flex-direction:column;gap:3px;border-bottom:1px solid #a9977b;
+ padding-bottom:clamp(7px,1.4vh,18px);min-height:0}
+#screen>.finale-results .finale-results-head h2{font:normal clamp(28px,3.6vw,55px)/1 Georgia,serif;
+ color:#353e34;letter-spacing:-.04em;margin:2px 0!important}
+.finale-results-head p{font:clamp(10px,.9vw,13px)/1.4 system-ui;color:#7b6d59;margin:0}
+.finale-results-main{display:grid;grid-template-columns:minmax(240px,.84fr) minmax(0,1.38fr);
+ gap:clamp(10px,2vw,30px);min-width:0;min-height:0;overflow:hidden}
+.finale-laureate{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ overflow:hidden;min-height:0;padding:clamp(12px,2vw,35px);background:#384c42;color:#f0e1c6;
+ border:clamp(5px,.75vw,11px) ridge #ae8e59;box-shadow:inset 0 0 0 1px #f0cb8655,0 5px 17px #2f281b3a;
+ animation:finale-winner-emerge .7s ease both}
+.finale-laureate-hatch{position:absolute;inset:8px;border:1px solid #cfb17b70;pointer-events:none}
+.finale-laureate-seal{display:flex;align-items:center;justify-content:center;position:relative;
+ flex:0 1 auto;aspect-ratio:1;width:clamp(54px,12vh,110px);min-height:0;
+ border:3px double #e3c887;border-radius:50%;background:#b19257;box-shadow:0 0 0 6px #b1925733,0 7px 16px #10271c66;
+ margin-bottom:clamp(5px,1.2vh,15px);transform:rotate(-7deg)}
+.finale-laureate-seal span{font:italic clamp(28px,5vh,46px) Georgia,serif;color:#3b483d}
+.finale-laureate-seal i{position:absolute;bottom:2px;right:7px;font:14px Georgia,serif;color:#353b2d}
+.finale-laureate-label{font:700 clamp(9px,.85vw,11px) system-ui;letter-spacing:.15em;color:#e6c98e;text-align:center}
+.finale-laureate-person{display:flex;align-items:center;gap:9px;min-width:0;margin:clamp(6px,1.5vh,19px) 0}
+.finale-laureate-person .member-seal{flex:none}
+.finale-laureate-person h3{font:normal clamp(23px,2.6vw,42px)/1.07 Georgia,serif;
+ text-align:center;color:#f5e9d0;margin:0;overflow-wrap:anywhere}
+.finale-laureate-person p{font:10px system-ui;color:#d0c2a6;text-align:center;margin:4px 0}
+.finale-laureate-total{display:flex;align-items:baseline;gap:8px}
+.finale-laureate-total strong{font:normal clamp(40px,6vw,84px)/.95 Georgia,serif;color:#f5e3b5;font-variant-numeric:tabular-nums}
+.finale-laureate-total span{font:700 10px system-ui;letter-spacing:.12em;color:#dbcbab}
+.finale-laureate-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-self:stretch;
+ border-top:1px solid #c5ab796d;margin-top:clamp(6px,1vh,15px);padding-top:clamp(6px,1vh,13px);gap:8px}
+.finale-laureate-split>div{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.finale-laureate-split span{font:700 clamp(8px,.75vw,10px) system-ui;letter-spacing:.07em;color:#d4c5a8}
+.finale-laureate-split b{font:normal clamp(17px,2vw,27px) Georgia,serif;color:#f4e3c4}
+.finale-ledger-panel{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.finale-ledger-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;
+ padding:5px 0 clamp(5px,1vh,12px);border-bottom:1px solid #ac9b7e}
+.finale-ledger-heading strong{font:11px system-ui;color:#74644c}
+#screen>.finale-results .finale-ranking{display:flex!important;flex-direction:column;align-content:stretch;
+ flex:1 1 auto;min-height:0;overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior:contain;scrollbar-width:thin;gap:0;background:transparent;
+ padding:0!important;margin:0!important}
+#screen>.finale-results .finale-ranking-row{display:grid!important;grid-template-columns:34px minmax(0,1fr) auto;
+ grid-template-rows:auto auto;gap:3px clamp(6px,1vw,16px);align-items:center;min-height:clamp(70px,10vh,104px);
+ padding:clamp(5px,1vh,12px) clamp(4px,.8vw,10px)!important;
+ border-bottom:1px solid #c1b298;background:transparent;animation:finale-ledger-line .45s ease both;
+ animation-delay:calc(.22s + var(--rank-index)*75ms)}
+#screen>.finale-results .finale-ranking-row.is-leading{background:#ede2cb}
+.finale-ranking-place{grid-row:1/3;font:italic clamp(21px,2.1vw,35px) Georgia,serif;color:#a38153}
+.finale-ranking-name{min-width:0;display:flex;align-items:center;gap:7px}
+.finale-ranking-name .member-seal{flex:none}
+.finale-ranking-name>span{min-width:0;display:flex;flex-direction:column;gap:3px}
+.finale-ranking-name strong{font:normal clamp(14px,1.2vw,20px) Georgia,serif;color:#343a33;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.finale-ranking-name small{font:9px system-ui;color:#806f58}
+.finale-ranking-score{display:flex;align-items:baseline;gap:5px}
+.finale-ranking-score b{font:normal clamp(21px,2vw,33px) Georgia,serif;color:#435e4e;font-variant-numeric:tabular-nums}
+.finale-ranking-score small{font:10px system-ui;color:#806f55}
+.finale-score-breakdown{grid-column:2/3;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;
+ font:10px system-ui;color:#796a56}
+.finale-score-breakdown b{color:#524637}
+.finale-score-track{grid-column:3/4;width:clamp(60px,9vw,140px);height:6px;background:#ccbda3;
+ display:flex;overflow:hidden}
+.finale-score-track span{display:block;height:100%;background:#b18a55;flex:none}
+.finale-score-track i{display:block;height:100%;background:#486b5b;flex:none}
+.finale-results-actions{display:flex;align-items:center;justify-content:flex-end;gap:clamp(5px,1vw,12px);
+ padding-top:clamp(5px,.7vh,12px);border-top:1px solid #a9977b;min-width:0;flex-wrap:wrap}
+.finale-results-actions .btn{min-height:clamp(36px,4.5vh,49px);font-size:clamp(11px,.9vw,13px)}
+.finale-results-actions .btn.primary{margin-right:auto}
+@keyframes finale-card-enter{0%{opacity:0;transform:translateY(18px) rotate(-1.5deg)}100%{opacity:1;transform:none}}
+@keyframes finale-tally{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes finale-coin-place{0%{transform:translateY(-9px) scale(1.2);opacity:0}65%{transform:translateY(1px);opacity:1}100%{transform:none;opacity:1}}
+@keyframes finale-ledger-line{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes finale-winner-emerge{from{opacity:0;transform:scale(.965)}to{opacity:1;transform:none}}
+@media(min-width:701px) and (max-height:650px){
+ #screen>.verdict-phase .finale-ballot-card{gap:2px}
+ #screen>.verdict-phase .finale-overview p{display:none}
+ #screen>.verdict-phase .finale-card-caption{min-height:23px}
+ #screen>.verdict-phase .finale-voters{display:none}
+ #screen>.finale-reveal .reveal-option-image{height:clamp(29px,6vh,50px)!important}
+ #screen>.finale-reveal .finale-audit-heading>span:last-child{display:none}
+ #screen>.finale-results .finale-laureate-seal{width:clamp(38px,8vh,66px)}
+ #screen>.finale-results .finale-laureate-person{margin:4px 0}
+ #screen>.finale-results .finale-laureate-split{margin-top:4px;padding-top:4px}
+}
+@media(max-width:700px){
+ #screen>.verdict-phase>.finale-verdict-body{padding:8px 9px calc(7px + env(safe-area-inset-bottom))!important;gap:7px}
+ .finale-overview{gap:9px}
+ .finale-overview h3{font-size:21px}
+ .finale-overview p{font-size:10px;line-height:1.2}
+ .finale-ledger{padding:2px 0 2px 8px}
+ .finale-ledger strong{font-size:26px}
+ #screen>.verdict-phase .finale-ballot-grid{display:flex!important;flex-direction:row!important;
+   align-items:stretch!important;overflow-x:auto!important;overflow-y:hidden!important;
+   scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none;
+   scroll-padding-inline:0;gap:7px!important;padding:2px 0 4px!important;touch-action:pan-x}
+ #screen>.verdict-phase .finale-ballot-grid::-webkit-scrollbar{display:none}
+ #screen>.verdict-phase .finale-ballot-card{flex:0 0 clamp(205px,66vw,305px)!important;
+   width:clamp(205px,66vw,305px)!important;scroll-snap-align:start;min-height:0;padding:7px!important}
+ #screen>.verdict-phase .verdict-image{flex:1 1 auto;max-height:65%!important}
+ #screen>.verdict-phase .finale-card-caption{min-height:29px}
+ #screen>.verdict-phase .finale-card-caption strong{font-size:14px!important}
+ #screen>.verdict-phase .finale-voters{font-size:9px}
+ #screen>.verdict-phase .finale-verdict-footer{flex-direction:row!important}
+ #screen>.verdict-phase .finale-verdict-footer>span{font-size:10px;max-width:43%}
+ #screen>.verdict-phase .finale-verdict-footer>.btn{min-height:38px}
+ #screen>.finale-reveal>.reveal-layout{display:flex!important;flex-direction:column!important;
+   gap:7px!important;padding:6px 9px calc(7px + env(safe-area-inset-bottom))!important}
+ #screen>.finale-reveal .reveal-main{flex:1 1 60%;max-height:63%;gap:3px}
+ #screen>.finale-reveal .finale-reveal-provenance h3{font-size:22px}
+ #screen>.finale-reveal .finale-reveal-provenance p{font-size:10px}
+ #screen>.finale-reveal .reveal-option-image{height:clamp(26px,6.7vh,62px)!important}
+ #screen>.finale-reveal .reveal-option span{font-size:8px}
+ #screen>.finale-reveal .unveil-frame{flex:1 1 auto;max-height:calc(100% - 118px);width:auto!important;
+   aspect-ratio:4/3;margin:0 auto!important}
+ #screen>.finale-reveal .unveil-control{min-height:29px;font-size:10px}
+ #screen>.finale-reveal .finale-reveal-brief{flex:1 1 40%;min-height:0;max-height:39%;
+   border-left:0!important;border-top:1px solid #baa787!important;
+   padding:5px 0 0!important;overflow-y:auto!important}
+ #screen>.finale-reveal .outcome-head{margin:0 0 7px!important;padding:5px 9px!important}
+ #screen>.finale-reveal .outcome-head h3{font-size:20px;margin:2px 0!important}
+ #screen>.finale-reveal .outcome-head strong{font-size:11px}
+ #screen>.finale-reveal .audit-line{min-height:33px;padding:4px 0!important}
+ #screen>.finale-reveal .finale-bonus{margin:6px 0!important;padding:5px!important}
+ #screen>.finale-reveal .reveal-brief>.btn{min-height:40px}
+ #screen>.finale-results{grid-template-rows:auto minmax(0,1fr) auto;gap:6px;
+   padding:clamp(5px,1vh,10px) 8px calc(6px + env(safe-area-inset-bottom))!important}
+ #screen>.finale-results .finale-results-head{padding-bottom:5px}
+ #screen>.finale-results .finale-results-head h2{font-size:clamp(25px,7vw,34px)}
+ #screen>.finale-results .finale-results-head p{font-size:10px}
+ #screen>.finale-results .finale-results-main{display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+   grid-template-rows:minmax(125px,.78fr) minmax(0,1.22fr)!important;gap:7px}
+ #screen>.finale-results .finale-laureate{padding:8px;display:grid;grid-template-columns:56px minmax(0,1fr) auto;
+   grid-template-rows:auto 1fr auto;gap:3px 8px;align-items:center;justify-items:start}
+ #screen>.finale-results .finale-laureate-seal{grid-column:1;grid-row:1/3;width:48px;margin:0}
+ #screen>.finale-results .finale-laureate-label{grid-column:2/4;grid-row:1;text-align:left;font-size:8px}
+ #screen>.finale-results .finale-laureate-person{grid-column:2;grid-row:2;margin:0;gap:4px}
+ #screen>.finale-results .finale-laureate-person h3{font-size:clamp(18px,5.8vw,27px);text-align:left}
+ #screen>.finale-results .finale-laureate-person p{font-size:9px;text-align:left;margin:2px 0}
+ #screen>.finale-results .finale-laureate-total{grid-column:3;grid-row:2;flex-direction:column;gap:0;align-items:end}
+ #screen>.finale-results .finale-laureate-total strong{font-size:clamp(29px,8vw,43px)}
+ #screen>.finale-results .finale-laureate-total span{font-size:8px}
+ #screen>.finale-results .finale-laureate-split{grid-column:1/4;grid-row:3;margin:0;padding:3px 0 0;width:100%}
+ #screen>.finale-results .finale-laureate-split span{font-size:8px}
+ #screen>.finale-results .finale-laureate-split b{font-size:15px}
+ #screen>.finale-results .finale-ledger-heading{padding:3px 0}
+ #screen>.finale-results .finale-ranking-row{min-height:61px!important;padding:4px!important}
+ #screen>.finale-results .finale-ranking-place{font-size:23px}
+ #screen>.finale-results .finale-ranking-name strong{font-size:14px}
+ #screen>.finale-results .finale-ranking-score b{font-size:20px}
+ #screen>.finale-results .finale-score-track{width:63px}
+ #screen>.finale-results .finale-results-actions{justify-content:space-between;flex-wrap:nowrap;gap:4px}
+ #screen>.finale-results .finale-results-actions .btn{min-height:34px;font-size:10px;padding:5px;flex:1 1 auto}
+ #screen>.finale-results .finale-results-actions .btn.primary{flex:1.5 1 auto}
+ #screen>.finale-results .finale-wait-label{font-size:10px}
+}
+@media(max-width:700px) and (max-height:650px){
+ #screen>.verdict-phase .finale-overview p{display:none}
+ #screen>.verdict-phase .finale-voters{display:none}
+ #screen>.finale-reveal .reveal-option-image{height:29px!important}
+ #screen>.finale-reveal .finale-inspection-label{display:none}
+ #screen>.finale-reveal .reveal-main{max-height:61%}
+ #screen>.finale-reveal .reveal-brief{max-height:39%}
+ #screen>.finale-results .finale-laureate{grid-template-rows:auto 1fr auto}
+ #screen>.finale-results .finale-laureate-person p{display:none}
+}
+@media(min-width:701px) and (max-height:520px){
+ #screen>.finale-results .finale-laureate-seal{display:none}
+ #screen>.finale-results .finale-laureate{padding:8px}
+ #screen>.finale-results .finale-laureate-person{margin:2px 0}
+ #screen>.finale-results .finale-laureate-total strong{font-size:40px}
+ #screen>.finale-reveal .reveal-option-image{height:30px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen>.finale-scene *,#screen>.finale-scene *:before,#screen>.finale-scene *:after{
+  animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+
+/* The continue action is always on screen; only the variable-length jury
+   vote list scrolls. This also handles eight-player dossiers at 1366×640. */
+#screen>.finale-reveal .finale-reveal-brief{
+ display:flex!important;flex-direction:column!important;min-height:0!important;
+ overflow:hidden!important;gap:clamp(4px,.75vh,9px)!important
+}
+#screen>.finale-reveal .finale-reveal-brief>.outcome-head,
+#screen>.finale-reveal .finale-reveal-brief>.finale-audit-heading,
+#screen>.finale-reveal .finale-reveal-brief>.finale-bonus{
+ flex:0 0 auto!important;margin:0!important
+}
+#screen>.finale-reveal .finale-reveal-brief>.finale-audit-lines{
+ flex:1 1 auto!important;min-height:0!important;
+ overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin
+}
+#screen>.finale-reveal .finale-reveal-brief>.btn,
+#screen>.finale-reveal .finale-reveal-brief>.stack,
+#screen>.finale-reveal .finale-reveal-brief>.stake-wait{
+ flex:0 0 auto!important;margin:0!important;min-height:36px
+}
+#screen>.finale-reveal .finale-reveal-brief>.stack{gap:3px!important}
+@media(max-width:700px){
+ #screen>.finale-reveal .finale-reveal-brief{overflow:hidden!important;gap:3px!important}
+ #screen>.finale-reveal .finale-reveal-brief>.outcome-head{padding:5px 8px!important}
+ #screen>.finale-reveal .finale-reveal-brief>.finale-audit-heading{padding:3px 0!important}
+ #screen>.finale-reveal .finale-reveal-brief>.finale-bonus{padding:4px 6px!important}
+ #screen>.finale-reveal .finale-reveal-brief>.btn{min-height:36px!important}
+ #screen>.finale-reveal .finale-reveal-brief>.stack .btn{min-height:35px!important}
+}
+
+/* Very short horizontal mobile/PWA: evidence becomes a swipeable row instead
+   of compressing five image frames to a few pixels. */
+@media(min-width:701px) and (max-width:1099px) and (max-height:480px){
+ #screen>.verdict-phase>.finale-verdict-body{gap:4px!important;padding:4px 8px!important}
+ #screen>.verdict-phase .finale-overview{padding-bottom:2px}
+ #screen>.verdict-phase .finale-overview h3{font-size:20px}
+ #screen>.verdict-phase .finale-overview p{display:none}
+ #screen>.verdict-phase .finale-ledger strong{font-size:23px}
+ #screen>.verdict-phase .finale-ballot-grid{
+  display:flex!important;flex-direction:row!important;align-items:stretch!important;
+  overflow-x:auto!important;overflow-y:hidden!important;
+  scroll-snap-type:x mandatory;scrollbar-width:none;gap:5px!important
+ }
+ #screen>.verdict-phase .finale-ballot-card{
+  flex:0 0 175px!important;max-width:175px;scroll-snap-align:start;
+  padding:4px!important;gap:2px!important
+ }
+ #screen>.verdict-phase .finale-ballot-index{padding-bottom:1px}
+ #screen>.verdict-phase .finale-ballot-index b{font-size:15px}
+ #screen>.verdict-phase .finale-ballot-card .verdict-image{flex:1 1 auto;min-height:35px}
+ #screen>.verdict-phase .finale-card-caption{min-height:20px}
+ #screen>.verdict-phase .finale-card-caption strong{font-size:12px!important}
+ #screen>.verdict-phase .finale-card-caption small{display:none}
+ #screen>.verdict-phase .finale-vote-tally strong{font-size:17px}
+ #screen>.verdict-phase .finale-vote-bar{margin:2px 0}
+ #screen>.verdict-phase .verdict-tokens{display:none!important}
+ #screen>.verdict-phase .finale-ballot-votes{padding-top:2px}
+ #screen>.verdict-phase .finale-voters{display:none}
+ #screen>.verdict-phase .finale-verdict-footer{padding-top:4px!important}
+ #screen>.verdict-phase .finale-verdict-footer>.btn{min-height:30px;padding:3px 10px}
+ #screen>.finale-reveal .reveal-option-image{height:26px!important}
+ #screen>.finale-reveal .finale-reveal-provenance h3{font-size:20px}
+ #screen>.finale-reveal .finale-reveal-provenance p{display:none}
+ #screen>.finale-reveal .unveil-frame{max-height:calc(100% - 65px)}
+ #screen>.finale-results .finale-laureate-seal{display:none}
+ #screen>.finale-results .finale-laureate{padding:7px}
+ #screen>.finale-results .finale-laureate-person{margin:3px}
+ #screen>.finale-results .finale-laureate-total strong{font-size:36px}
+}
+
+/* Visual audit: high-contrast dossier copy, brass slider, true canvas ratios */
+#screen>.finale-reveal .finale-reveal-provenance h3{color:#353b31!important;opacity:1!important}
+#screen>.finale-reveal .finale-reveal-brief,
+#screen>.finale-reveal .finale-reveal-brief .audit-line,
+#screen>.finale-reveal .finale-reveal-brief .audit-line>span:first-child,
+#screen>.finale-reveal .finale-reveal-brief .finale-audit-heading{
+ color:#343c33!important;opacity:1!important
+}
+#screen>.finale-reveal .finale-reveal-brief .audit-line .audit-chips small{color:#6c6252!important}
+#screen>.finale-reveal .finale-reveal-brief>.finale-audit-lines{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important}
+#screen>.finale-reveal .finale-reveal-brief .audit-line{
+ display:grid!important;flex:0 0 auto!important;width:100%!important;min-width:0!important}
+#screen>.finale-reveal .unveil-control input[type="range"]{
+ appearance:none!important;-webkit-appearance:none!important;accent-color:#a77e48!important;
+ height:5px!important;min-height:5px!important;border:0!important;border-radius:0!important;
+ outline-offset:6px;background:#b9a788!important;box-shadow:inset 0 1px 2px #6e5b3b44!important
+}
+#screen>.finale-reveal .unveil-control input[type="range"]::-webkit-slider-runnable-track{
+ height:5px!important;background:#b9a788!important;border:0!important;border-radius:0!important}
+#screen>.finale-reveal .unveil-control input[type="range"]::-webkit-slider-thumb{
+ appearance:none!important;-webkit-appearance:none!important;width:20px!important;height:20px!important;
+ margin-top:-8px!important;border:2px solid #f0dab0!important;border-radius:50%!important;
+ background:#987044!important;box-shadow:0 2px 5px #38291f60!important}
+#screen>.finale-reveal .unveil-control input[type="range"]::-moz-range-track{
+ height:5px!important;background:#b9a788!important;border:0!important}
+#screen>.finale-reveal .unveil-control input[type="range"]::-moz-range-thumb{
+ width:18px!important;height:18px!important;background:#987044!important;
+ border:2px solid #f0dab0!important;border-radius:50%!important}
+@media(min-width:1100px) and (min-height:650px){
+ #screen>.verdict-phase .finale-ballot-grid{align-items:center!important}
+ #screen>.verdict-phase .finale-ballot-card{height:auto!important;align-self:center!important}
+ #screen>.verdict-phase .verdict-image{flex:0 0 auto!important;aspect-ratio:4/3!important;max-height:min(31dvh,300px)!important}
+}
+@media(max-width:700px){
+ #screen>.verdict-phase .finale-ballot-grid{align-items:center!important}
+ #screen>.verdict-phase .finale-ballot-card{height:auto!important;align-self:center!important}
+ #screen>.verdict-phase .finale-ballot-card .verdict-image{
+  flex:0 0 auto!important;aspect-ratio:4/3!important;max-height:min(38dvh,260px)!important;height:auto!important}
+ #screen>.finale-results .finale-results-main{
+  grid-template-rows:minmax(135px,.65fr) minmax(0,1.35fr)!important}
+}
+
+/* Salon hanging on tall wide desktops: one large accused picture, four
+   supporting dossiers. Actual vote counts choose the feature; labels retain
+   original artwork numbers. Small windows keep the familiar five slots. */
+@media(min-width:1600px) and (min-height:850px){
+ #screen>.verdict-phase .finale-ballot-grid{
+  display:grid!important;grid-template-columns:minmax(0,1.6fr) repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:repeat(2,minmax(0,1fr))!important;
+  gap:clamp(10px,1.1vw,20px)!important;align-items:stretch!important
+ }
+ #screen>.verdict-phase .finale-ballot-card{height:100%!important;max-height:100%!important;
+  align-self:stretch!important;padding:clamp(5px,.6vw,11px)!important;gap:4px!important}
+ #screen>.verdict-phase .finale-ballot-card.is-featured{
+  grid-column:1!important;grid-row:1/3!important;order:-1;
+  background:#ead7b3!important;border-color:#a7834c!important
+ }
+ #screen>.verdict-phase .finale-ballot-card .verdict-image{
+  flex:1 1 auto!important;aspect-ratio:auto!important;max-height:none!important;min-height:0!important}
+ #screen>.verdict-phase .finale-ballot-card .verdict-image img{
+  object-fit:contain!important;height:100%!important;width:100%!important}
+ #screen>.verdict-phase .finale-ballot-card.is-featured .finale-card-caption strong{font-size:24px!important}
+ #screen>.verdict-phase .finale-ballot-card.is-featured .finale-vote-tally strong{font-size:37px!important}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-voters{display:none}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-card-caption{min-height:18px!important}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-card-caption strong{font-size:14px!important}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-ballot-votes{padding-top:3px!important}
+ #screen>.verdict-phase .finale-ballot-card:not(.is-featured) .finale-vote-tally strong{font-size:23px!important}
+}
+/* Portrait mobile: a near full-width physical frame with the edge of the next
+   exhibit visible as the affordance to swipe. No giant empty photo mat. */
+@media(max-width:700px){
+ #screen>.verdict-phase .finale-ballot-card{
+  flex-basis:clamp(245px,82vw,355px)!important;width:clamp(245px,82vw,355px)!important}
+}

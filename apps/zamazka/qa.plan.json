@@ -113,6 +113,24 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/viewport-fit.mjs"
+    },
+    {
+      "id": "finale-state",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/finale-state.mjs"
+    },
+    {
+      "id": "finale-visual",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/finale-visual.mjs"
+    },
+    {
+      "id": "finale-live-flow",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/real-flow.mjs"
     }
   ]
 }

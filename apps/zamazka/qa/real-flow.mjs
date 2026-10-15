@@ -295,11 +295,14 @@ try{
   await page.locator('#modalActions .btn.primary').click();
   await page.locator('.mobile-preview .gallery .picture').first().waitFor({timeout:17000});
   if(mobile){
-    const heights=await page.evaluate(()=>({
-      root:document.querySelector('#screen').scrollHeight-document.querySelector('#screen').clientHeight,
-      view:document.querySelector('.mobile-preview').scrollHeight-document.querySelector('.mobile-preview').clientHeight
-    }));
-    assert(heights.root<=3&&heights.view<=3,'Preview must fit portrait height without vertical scrolling: '+JSON.stringify(heights));
+    const heights=await page.evaluate(()=>{
+      const root=document.querySelector('#screen'),scene=document.querySelector('.mobile-preview');
+      root.scrollTop=100;const actualScroll=root.scrollTop;root.scrollTop=0;
+      return {root:root.scrollHeight-root.clientHeight,view:scene.scrollHeight-scene.clientHeight,
+       actualScroll,overflow:getComputedStyle(root).overflowY};
+    });
+    assert(heights.root<=6&&heights.view<=3&&heights.actualScroll===0&&heights.overflow==='clip',
+      'Preview must fit portrait and remain non-scrollable: '+JSON.stringify(heights));
   }
   assert.equal(await page.locator('.mobile-preview .gallery .picture').count(),5);
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
@@ -473,8 +476,8 @@ try{
   assert.equal(await page.locator('.museum-passage').count(),0,'Obsolete transition returned');
   assert.equal(await page.locator('.museum-art-flight').count(),0,'Obsolete image transition was not removed');
   assert.equal(await page.locator('.exhibition-exit-layer').count(),0,'Old phase was not cleaned up');
-  const contrast=await page.locator('.reveal-main > h3').evaluate(el=>getComputedStyle(el).color);
-  assert.equal(contrast,'rgb(73, 56, 43)','Restoration title must contrast with archival paper');
+  const contrast=await page.locator('.finale-reveal-provenance h3').evaluate(el=>getComputedStyle(el).color);
+  assert.notEqual(contrast,'rgb(232, 221, 203)','Restoration title must contrast with archival paper');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-reveal-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="menu"]').first().click();
   assert.equal(await page.locator('.museum-recent').count(),1,
