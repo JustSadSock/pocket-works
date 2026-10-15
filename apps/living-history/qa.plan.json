@@ -14,7 +14,8 @@
         "food-access.test.mjs",
         "subsistence-credit.test.mjs",
         "rural-resilience.test.mjs",
-        "historic-village.test.mjs"
+        "historic-village.test.mjs",
+        "medieval-economy.test.mjs"
       ]
     },
     {
