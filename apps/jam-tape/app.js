@@ -134,7 +134,7 @@ function renderStudio(){
  '<div class="tempo"><label for="tempoInput">BPM</label><input id="tempoInput" type="number" min="60" max="180" value="'+session.bpm+'" '+(!canChange?'disabled':'')+'></div></div>'+
  '<div class="meter"><div class="meter-grid" id="meterGrid">'+Array.from({length:64},(_,i)=>'<span class="meter-cell '+(i%16===0?'bar':'')+'" data-step="'+i+'"></span>').join('')+'</div>'+
  '<div class="meter-head"><span>4 ТАКТА · 64 ШАГА</span><span id="recHint" class="'+(recording?'armed':'')+'">'+(recording?'● ЗАПИСЫВАЕМ ТВОИ НОТЫ':'Нажми запись и играй')+'</span></div></div>'+
- '<div class="console"><div class="section-title"><div><h2>Выбери инструмент</h2></div><span class="micro">Клавиши A–K</span></div>'+
+ '<div class="console"><div class="section-title"><div><h2>Выбери инструмент</h2></div><span class="micro">5 тембров · листай →</span></div>'+
  '<div class="instruments">'+INSTRUMENTS.map(i=>'<button class="instrument '+(instrument===i.id?'active':'')+'" data-action="inst" data-inst="'+i.id+'"><b>'+
  (i.id==='keys'?'⌁':i.id==='bass'?'≋':i.id==='drums'?'◉':i.id==='lead'?'∿':'◇')+'</b><span>'+i.name+'<small>'+i.sub+'</small></span></button>').join('')+'</div>'+
  '<details class="mix-controls" '+(settingsOpen?'open':'')+'><summary>Настройки звука</summary><div class="sound-routing"><label class="route '+(air?'on':'')+'"><span class="route-led"></span><span><b>В эфир</b><small>Другие слышат меня</small></span><input id="airToggle" type="checkbox" '+(air?'checked':'')+'><i class="switch"></i></label>'+
