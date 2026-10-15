@@ -36,6 +36,16 @@ test('real controls, mobile/desktop geometry, opening battle evidence', async ({
   await page.locator('#sailBtn').click();
   await expect(page.locator('#resolveBtn')).toBeVisible();
   await page.screenshot({ path: info.outputPath('02-orders.png'), fullPage: true });
+  await page.locator('#planBtn').click();
+  const planned = await page.evaluate(() => {
+    const api = (window as any).__FLOT_QA__;
+    const allies = api.game.ships.filter((s: any) => s.side === 'ally' && s.alive);
+    return allies.map((s: any) => ({valid:api.getBudget(s).valid,
+      waypoints:s.orders.reduce((n: number,o: any) => n + o.route.length,0)}));
+  });
+  expect(planned.every((ship: any) => ship.valid)).toBe(true);
+  expect(planned.some((ship: any) => ship.waypoints>0)).toBe(true);
+  await page.screenshot({ path: info.outputPath('02b-fleet-plan.png'), fullPage: true });
 
   const state = await page.evaluate(() => {
     const q = (window as any).__FLOT_QA__, game = q.game;
