@@ -295,11 +295,14 @@ try{
   await page.locator('#modalActions .btn.primary').click();
   await page.locator('.mobile-preview .gallery .picture').first().waitFor({timeout:17000});
   if(mobile){
-    const heights=await page.evaluate(()=>({
-      root:document.querySelector('#screen').scrollHeight-document.querySelector('#screen').clientHeight,
-      view:document.querySelector('.mobile-preview').scrollHeight-document.querySelector('.mobile-preview').clientHeight
-    }));
-    assert(heights.root<=3&&heights.view<=3,'Preview must fit portrait height without vertical scrolling: '+JSON.stringify(heights));
+    const heights=await page.evaluate(()=>{
+      const root=document.querySelector('#screen'),scene=document.querySelector('.mobile-preview');
+      root.scrollTop=100;const actualScroll=root.scrollTop;root.scrollTop=0;
+      return {root:root.scrollHeight-root.clientHeight,view:scene.scrollHeight-scene.clientHeight,
+       actualScroll,overflow:getComputedStyle(root).overflowY};
+    });
+    assert(heights.root<=6&&heights.view<=3&&heights.actualScroll===0&&heights.overflow==='clip',
+      'Preview must fit portrait and remain non-scrollable: '+JSON.stringify(heights));
   }
   assert.equal(await page.locator('.mobile-preview .gallery .picture').count(),5);
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
