@@ -43,6 +43,11 @@ test('import, complete, check accuracy, see errors, repeat and return to text', 
   await expect(page.locator('#resultsScreen')).toBeVisible();
   await expect(page.locator('.result-row')).toHaveCount(2);
   await page.screenshot({ path: testInfo.outputPath('06-results.png') });
+  await expect(page.locator('#resultsList')).not.toContainText('История помогает');
+  await page.locator('.result-row').last().click();
+  await expect(page.locator('#correctText')).toContainText('История помогает');
+  await page.locator('#nextBtn').click();
+  await expect(page.locator('#resultsScreen')).toBeVisible();
   await page.locator('#retryBtn').click();
   await expect(page.locator('#roundCounter')).toContainText('01 / 01');
   await page.reload();
