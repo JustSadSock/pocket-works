@@ -28,7 +28,7 @@ test('old saves gain derived store capacity and accounts without corrupting inve
 });
 
 test('workers receive wages, landowner pays wages, and missing adults can hire instead of magically producing',()=>{
- const s=createWorld(56),h=s.households[0];s.day=237;
+ const s=createWorld(56),h=s.households[0];s.day=237;s.scenario='isolated'; // Single-day wage transfer without outside imports.
  h.farmYear={year:0,active:h.fields.filter((_,i)=>i%3!==0),sownArea:1.25,tended:50,harvestedArea:0,seedKg:156.25,yieldKg:0,labourSow:14,labourTend:50,labourHarvest:0};
  const adult=h.members.map(id=>s.people.find(p=>p.id===id)).filter(p=>p.age>=15);
  for(const p of adult)p.age=12;
