@@ -329,20 +329,38 @@ export class Editor{
  zoom(factor,anchorX=this.viewport.clientWidth/2,anchorY=this.viewport.clientHeight/2){const old=this.scale;this.scale=Math.min(MAX_EDITOR_ZOOM,Math.max(1,old*factor));const change=this.scale/old;this.tx=anchorX-(anchorX-this.tx)*change;this.ty=anchorY-(anchorY-this.ty)*change;this.transform()}
  point(e){const b=this.canvas.getBoundingClientRect();return [Math.max(0,Math.min(600,Math.round((e.clientX-b.left)/b.width*6000)/10)),Math.max(0,Math.min(450,Math.round((e.clientY-b.top)/b.height*4500)/10))]}
  inside(p){return insideDamage(this.zone,p)}
- save(){this.saveSnapshot();this.onChange(this.strokes.length)}
+ save(){this.schedulePersistence();this.onChange(this.strokes.length)}
+  schedulePersistence(){
+    clearTimeout(this.persistTimer);
+    if(this.persistIdleId&&typeof cancelIdleCallback==='function')cancelIdleCallback(this.persistIdleId);
+    this.persistIdleId=null;
+    this.persistTimer=setTimeout(()=>{
+      this.persistTimer=null;if(this.closed)return;
+      if(typeof requestIdleCallback==='function'){
+        this.persistIdleId=requestIdleCallback(()=>{this.persistIdleId=null;if(!this.closed)this.saveSnapshot()},{timeout:1800});
+      }else this.saveSnapshot();
+    },260);
+  }
+  flushPersistence(){
+    if(this.persistTimer==null&&this.persistIdleId==null)return;
+    clearTimeout(this.persistTimer);this.persistTimer=null;
+    if(this.persistIdleId&&typeof cancelIdleCallback==='function')cancelIdleCallback(this.persistIdleId);
+    this.persistIdleId=null;this.saveSnapshot();
+  }
   getSnapshot(){return [...this.strokes,...(this.working?[this.working]:[])].map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[...p])}))}
   saveSnapshot(){
    const strokes=this.getSnapshot();
+    const encoded=JSON.stringify(strokes);
    // Small tab-local recovery first, durable large recovery through IndexedDB.
-   try{sessionStorage.setItem(this.draftKey,JSON.stringify(strokes))}catch{}
+   try{sessionStorage.setItem(this.draftKey,encoded)}catch{}
    const generation=++this.saveGeneration;
    void zamazkaStore.set('draft:'+this.draftKey,strokes).then(()=>{
      // Only discard the fallback if it still describes the committed version.
-     try{if(sessionStorage.getItem(this.draftKey)===JSON.stringify(strokes))sessionStorage.removeItem(this.draftKey)}catch{}
+     try{if(sessionStorage.getItem(this.draftKey)===encoded)sessionStorage.removeItem(this.draftKey)}catch{}
      this.persistenceWarned=false;
      if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('local');
    }).catch(()=>{
-     try{localStorage.setItem(this.draftKey,JSON.stringify(strokes));if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('offline')}catch{
+     try{localStorage.setItem(this.draftKey,encoded);if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('offline')}catch{
        if(!this.persistenceWarned){this.persistenceWarned=true;this.onPersistenceError()}
        if(!this.closed&&generation===this.saveGeneration)this.onPersistenceStatus('error');
      }
@@ -875,7 +893,9 @@ export class Editor{
     this.lostCapture=e=>{if(this.pointers.has(e.pointerId)||this.sizeDrag?.pointerId===e.pointerId)this.up({pointerId:e.pointerId,type:'pointercancel',pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY})};
     this.canvas.addEventListener('lostpointercapture',this.lostCapture);
     this.viewport.addEventListener('lostpointercapture',this.lostCapture);
-    window.addEventListener('blur',this.keyboardBlur);
+    this.persistOnHide=()=>{if(document.visibilityState==='hidden')this.flushPersistence()};
+     document.addEventListener('visibilitychange',this.persistOnHide);
+     window.addEventListener('blur',this.keyboardBlur);
     window.addEventListener('keydown',this.keyboardDown);
     window.addEventListener('keyup',this.keyboardUp);
     this.root.addEventListener('click',this.actions);
@@ -1043,7 +1063,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.closed=true;clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
+ dispose(){this.flushPersistence();this.closed=true;document.removeEventListener('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
