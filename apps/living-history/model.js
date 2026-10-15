@@ -153,7 +153,13 @@ for(const h of s.households)if(h.communityId===c.id&&h.tenure!=='demesne')
  ensureCommons(s);s.economy.cattleInitial=s.households.reduce((n,h)=>n+h.cattle,0);
  s.economy.sheepInitial=s.households.reduce((n,h)=>n+(h.sheep||0),0);s.economy.woolInitial=0;s.economy.forageInitial=round(s.pasture.reduce((n,v)=>n+v,0)+s.households.reduce((n,h)=>n+h.fodder,0)+s.stats.forageConverted);s.economy.coinsInitial=s.households.reduce((a,h)=>a+h.coin,0);s.economy.grainInitial=round(s.households.reduce((a,h)=>a+h.grain,0));
  s.economy.oatsInitial=round(s.households.reduce((a,h)=>a+h.oats,0));
- s.economy.pulsesInitial=round(s.households.reduce((a,h)=>a+h.pulses,0));s.economy.woodInitial=round(s.households.reduce((a,h)=>a+h.wood,0));event(s,'foundation','В долине образовались четыре независимые общины','Первоначальное расселение',s.communities.map(c=>c.id));return s; }
+ s.economy.pulsesInitial=round(s.households.reduce((a,h)=>a+h.pulses,0));
+ // The neighboring district exists outside the four-village map. It has a FINITE
+ // opening warehouse and treasury; neither is replenished from nowhere.
+ s.outside={name:'Соседний рынок',grain:16000,coin:9000,wool:0,
+   deliveredGrain:0,receivedWool:0};
+ s.economy.outsideGrainInitial=s.outside.grain;
+ s.economy.outsideCoinInitial=s.outside.coin;s.economy.woodInitial=round(s.households.reduce((a,h)=>a+h.wood,0));event(s,'foundation','В долине образовались четыре независимые общины','Первоначальное расселение',s.communities.map(c=>c.id));return s; }
 function personById(s,id){
  if(!s._peopleIndex){Object.defineProperty(s,'_peopleIndex',{value:new Map(),enumerable:false,writable:true,configurable:true});}
  if(s._peopleIndex.size!==s.people.length){s._peopleIndex.clear();for(const p of s.people)s._peopleIndex.set(p.id,p);}
@@ -1138,6 +1144,74 @@ function moveOnRoute(points,ratio){
  return points.at(-1);
 }
 
+// Short supply chains to an off-map market, represented by a real carrier's
+// route to the nearest village roadhead plus three outward travel days.
+// Purchases consume finite foreign stock and existing local cash. Exports
+// transfer real sheared wool only after delivery, with a finite cash treasury.
+function outsideTrading(s){
+ if(!s.outside||s.scenario==='isolated'||s.day%14!==0)return;
+ let imports=0,exports=0;
+ const homes=s.households.filter(h=>liveMembers(s,h).some(p=>p.age>=15&&p.health>30)&&!h.migration);
+ const options=homes.map(h=>{
+  const roadhead=s.communities.find(v=>v.id===h.communityId);
+  const route=routeBetween(s,h,roadhead);
+  return {h,route,available:liveMembers(s,h).find(p=>p.age>=15&&p.health>35&&!p.travel&&p.hiredDay!==s.day)};
+ }).filter(o=>o.available&&Number.isFinite(o.route.length)&&o.route.length<=105);
+ // Starving buyers are served first, but a poor family cannot buy what it cannot pay for.
+ const buyers=options.filter(o=>o.h.grain+(o.h.pulses||0)+(o.h.garden||0)<foodNeed(s,o.h)*58&&o.h.coin>=18)
+  .sort((a,b)=>(a.h.grain+(a.h.pulses||0))/Math.max(.1,foodNeed(s,a.h))-
+   (b.h.grain+(b.h.pulses||0))/Math.max(.1,foodNeed(s,b.h))||a.h.id-b.h.id);
+ for(const {h,route,available} of buyers){
+  if(imports>=4||s.outside.grain<8||s.shipments.some(t=>t.kind==='outside-import'&&t.buyer===h.id))break;
+  const quantity=Math.floor(Math.min(90,s.outside.grain,h.coin/2.2,foodNeed(s,h)*88-h.grain));
+  if(quantity<8)continue;
+  const cost=Math.ceil(quantity*2.2);if(cost>h.coin)continue;
+  h.coin-=cost;s.outside.coin+=cost;
+  s.outside.grain=round(s.outside.grain-quantity);
+  s.stats.outsideCoinOut=(s.stats.outsideCoinOut||0)+cost;
+  s.stats.outsideGrainIn=round((s.stats.outsideGrainIn||0)+quantity);
+  const duration=Math.max(4,Math.ceil(route.length/9)+3);
+  s.shipments.push({id:s.nextId++,kind:'outside-import',good:'grain',amount:quantity,
+   seller:-1,buyer:h.id,cost:0,carrierId:available.id,carrierHouseId:h.id,
+   departure:s.day+1,day:s.day+duration+1,route:route.points,externalPayment:cost});
+  available.travel={from:{x:h.x,y:h.y},to:{x:route.points.at(-1)?.x??h.x,y:route.points.at(-1)?.y??h.y},
+   points:route.points,start:s.day+1,arrival:s.day+duration+1,end:s.day+duration*2+1};
+  available.job='haul';recordWork(available,'haul',duration*2);markRoad(s,route.points);
+  s.stats.outsideImports=(s.stats.outsideImports||0)+1;
+  event(s,'outside-import',`Семья ${familyName(s,h)} заказала ${quantity} кг зерна из соседнего района`,
+   'Настоящий запас за пределами карты, монеты и время дороги; зерно пока в пути',
+   [h.id],{quantity,cost,arrival:s.day+duration+1});
+  imports++;
+ }
+ // Wool has no free income; shearing takes a person-day, and the outside market
+ // stops buying once its finite treasury has been spent.
+ const sellers=options.filter(o=>o.h.wool>=1&&o.available.job==='home'&&s.outside.coin>=8)
+  .sort((a,b)=>b.h.wool-a.h.wool||a.h.id-b.h.id);
+ for(const {h,route,available} of sellers){
+  if(exports>=4||s.outside.coin<8)break;
+  if(s.shipments.some(t=>t.kind==='outside-export'&&t.seller===h.id))continue;
+  const quantity=round(Math.min(25,h.wool,Math.floor(s.outside.coin/8)));
+  if(quantity<1)continue;
+  const cost=Math.floor(quantity*8);
+  // Reserve the outside buyer's money immediately and release it only when
+  // delivered, so concurrent carriers cannot sell against the same treasury.
+  s.outside.coin-=cost;
+  h.wool=round(h.wool-quantity);
+  const duration=Math.max(4,Math.ceil(route.length/9)+3);
+  s.shipments.push({id:s.nextId++,kind:'outside-export',good:'wool',amount:quantity,
+   seller:h.id,buyer:-1,cost:0,externalPayment:cost,
+   carrierId:available.id,carrierHouseId:h.id,departure:s.day+1,
+   day:s.day+duration+1,route:route.points});
+  available.travel={from:{x:h.x,y:h.y},to:{x:route.points.at(-1)?.x??h.x,y:route.points.at(-1)?.y??h.y},
+   points:route.points,start:s.day+1,arrival:s.day+duration+1,end:s.day+duration*2+1};
+  available.job='haul';recordWork(available,'haul',duration*2);markRoad(s,route.points);
+  s.stats.outsideExports=(s.stats.outsideExports||0)+1;
+  event(s,'outside-export',`Семья ${familyName(s,h)} отправила ${quantity} кг шерсти к соседнему рынку`,
+   'Снятая шерсть, реальный груз, настоящий перевозчик и конечная казна покупателя',
+   [h.id],{quantity,paymentOnDelivery:cost});
+  exports++;
+ }
+}
 function market(s){
  for(const c of s.communities){
   const nearby=s.households.filter(h=>(s.scenario==='isolated'?h.communityId===c.id:dist(h,c)<68)&&liveMembers(s,h).length>0);
@@ -1194,6 +1268,20 @@ function markRoad(s,points){
 function deliver(s){
  for(let i=s.shipments.length-1;i>=0;i--){
   const t=s.shipments[i];if(t.day>s.day)continue;
+  if(t.kind==='outside-import'){
+   const home=livingHouse(s,t.buyer);
+   if(home)home.grain=round(home.grain+t.amount);
+   else{s.outside.grain=round(s.outside.grain+t.amount);s.stats.outsideGrainIn=round(s.stats.outsideGrainIn-t.amount);}
+   s.shipments.splice(i,1);s.stats.delivered++;continue;
+  }
+  if(t.kind==='outside-export'){
+   const home=livingHouse(s,t.seller);
+   s.outside.wool=round(s.outside.wool+t.amount);
+   s.stats.woolExported=round((s.stats.woolExported||0)+t.amount);
+   if(home){home.coin+=t.externalPayment;s.stats.outsideCoinIn=(s.stats.outsideCoinIn||0)+t.externalPayment;}
+   else{s.outside.coin+=t.externalPayment;}
+   s.shipments.splice(i,1);s.stats.delivered++;continue;
+  }
   const a=livingHouse(s,t.seller),b=livingHouse(s,t.buyer);
   const loan=t.loanId?s.loans?.find(l=>l.id===t.loanId):null;
   if(a&&b){
@@ -1568,6 +1656,7 @@ export function advanceDays(s,days=1,profiler=null){
   measure('demography',()=>inRandomScope(s,'demography',()=>{lifeCycle(s);decayAbandonedHoldings(s);}));
   if(s.day%30===0)measure('orphanCare',()=>fosterOrphans(s));
   if(s.day%7===0)measure('marketsAndAid',()=>{inRandomScope(s,'market',()=>market(s));mutualAid(s);grainCredit(s);});
+  if(s.day%14===0)measure('outsideMarket',()=>outsideTrading(s));
   if(s.day%25===0)measure('forestGrowth',()=>{growForest(s);regrowPasture(s);});
   if(s.day%365===310)evaluateMigration(s);
    if(s.day%365===0)event(s,'year',`Прошёл ${Math.floor(s.day/365)}-й год`,`Календарь`,[],{population:population(s),houses:s.households.length,trades:s.stats.trades});
@@ -1579,9 +1668,10 @@ export const population=s=>s.people.reduce((n,p)=>n+(p.alive?1:0),0);
 export function overview(s){const h=s.households.filter(h=>liveMembers(s,h).length),grain=round(s.households.reduce((a,h)=>a+h.grain,0)+s.shipments.filter(t=>t.good==='grain').reduce((a,t)=>a+t.amount,0)),wood=round(s.households.reduce((a,h)=>a+h.wood,0)+s.shipments.filter(t=>t.good==='wood').reduce((a,t)=>a+t.amount,0));return {population:population(s),households:h.length,grain,wood,scenario:s.scenario||'normal',coin:s.households.reduce((a,h)=>a+h.coin,0)+s.shipments.reduce((a,t)=>a+t.cost,0),trade:s.stats.trades,born:s.stats.born,died:s.stats.died,hungry:h.filter(h=>h.shortage>7).length,year:Math.floor(s.day/365)+1,day:s.day%365+1};}
 export function audit(s){
  const o=overview(s),issues=[];
- if(Math.abs(o.coin-s.economy.coinsInitial)>.011)issues.push(`Монеты: ${o.coin} вместо ${s.economy.coinsInitial}`);
+ const expectedCoin=s.economy.coinsInitial+(s.stats.outsideCoinIn||0)-(s.stats.outsideCoinOut||0);
+ if(Math.abs(o.coin-expectedCoin)>.011)issues.push(`Монеты: ${o.coin} вместо ${expectedCoin}`);
  if(Number.isFinite(s.economy.grainInitial)){
-  const expected=round(s.economy.grainInitial+s.stats.harvest-s.stats.consumed-(s.stats.spoiled||0));
+  const expected=round(s.economy.grainInitial+s.stats.harvest-s.stats.consumed-(s.stats.spoiled||0)+(s.stats.outsideGrainIn||0));
   if(Math.abs(o.grain-expected)>.051)issues.push(`Нарушено сохранение зерна: ${o.grain} вместо ${expected}`);
  }
  const garden=round(s.households.reduce((n,h)=>n+(h.garden||0),0));
@@ -1606,9 +1696,18 @@ export function audit(s){
   if(actual!==s.economy.sheepInitial+(s.stats.sheepBorn||0)-(s.stats.sheepDied||0))issues.push(`Баланс овец: ${actual}`);
  }
  if(Number.isFinite(s.economy.woolInitial)){
-  const wool=round(s.households.reduce((n,h)=>n+(h.wool||0),0));
+  const wool=round(s.households.reduce((n,h)=>n+(h.wool||0),0)+s.shipments.filter(t=>t.kind==='outside-export').reduce((n,t)=>n+t.amount,0));
   const expected=round(s.economy.woolInitial+(s.stats.woolProduced||0)-(s.stats.woolExported||0));
   if(Math.abs(wool-expected)>.051)issues.push(`Баланс шерсти: ${wool} вместо ${expected}`);
+ }
+ if(s.outside){
+  const coin=round(s.economy.outsideCoinInitial+(s.stats.outsideCoinOut||0)-(s.stats.outsideCoinIn||0)-
+   s.shipments.filter(t=>t.kind==='outside-export').reduce((n,t)=>n+t.externalPayment,0));
+  if(Math.abs(coin-s.outside.coin)>.011)issues.push('Внешняя казна не сохраняет монеты');
+  const foreignGrain=round(s.economy.outsideGrainInitial-(s.stats.outsideGrainIn||0));
+  if(Math.abs(foreignGrain-s.outside.grain)>.011)issues.push('Внешний амбар не сохраняет зерно');
+  if(Math.abs((s.stats.woolExported||0)-s.outside.wool)>.011)issues.push('Внешний учёт шерсти');
+  if(s.outside.coin<0||s.outside.grain<0)issues.push('Отрицательные внешние запасы');
  }
  if(Number.isFinite(s.economy.cattleInitial)){const count=s.households.reduce((n,h)=>n+(h.cattle||0),0);if(count!==s.economy.cattleInitial+(s.stats.cattleBorn||0)-(s.stats.cattleDied||0))issues.push(`Нарушен баланс скота: ${count}`);}
  const owner=new Map(),plots=new Set(),homes=new Set();
@@ -1634,7 +1733,7 @@ export function audit(s){
  if(s.commons&&s.commons.length!==T)issues.push('Повреждённая карта общинных угодий');
  if(s.randomStreams&&Object.values(s.randomStreams).some(n=>!Number.isInteger(n)||n<-2147483648||n>2147483647))issues.push('Повреждённые потоки случайности');
  for(const i of plots)if(s.terrain[i]!==0)issues.push(`Земельные права поверх воды ${i}`);
- for(const t of s.shipments)if(!(t.amount>0&&(t.cost>0||(['aid','loan','loan-repayment'].includes(t.kind)&&t.cost===0))&&t.day>s.day&&(!('carrierId' in t)||owner.has(t.carrierId))))issues.push(`Некорректный груз ${t.id}`);
+ for(const t of s.shipments)if(!(t.amount>0&&(t.cost>0||(['aid','loan','loan-repayment','outside-import','outside-export'].includes(t.kind)&&t.cost===0))&&t.day>s.day&&(!('carrierId' in t)||owner.has(t.carrierId))))issues.push(`Некорректный груз ${t.id}`);
  for(const loan of s.loans||[]){
   if(!(loan.principal>0&&Number.isFinite(loan.owed)&&loan.owed>=-.01&&loan.owed<=loan.principal+.01&&
    loan.repaid>=0&&loan.repaid<=loan.principal+.01&&loan.due>loan.created&&
