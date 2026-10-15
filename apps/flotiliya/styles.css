@@ -356,3 +356,58 @@ body{background:#0c292f}
    second CSS-grid row consuming the entire desktop harbor height. */
 #harbor[hidden],#command[hidden],#seaTop[hidden],#endPanel[hidden],
 #help[hidden],#progress[hidden],#toast[hidden] {display:none!important}
+
+/* 0.6 — chart takes priority: command deck is a compact tool-strip on phones. */
+.status-btn{display:none;cursor:pointer;border:1px solid #a6967766;background:#254047;color:#f3d8a9;padding:3px 8px;font:700 10px system-ui;letter-spacing:.02em}
+#resolveBtn[hidden],#orderArea[hidden],#sailBtn[hidden]{display:none!important}
+@media(min-width:1100px){
+ .workspace{grid-template-columns:minmax(0,730px) minmax(320px,350px);max-width:1190px}
+}
+@media(max-width:720px) and (orientation:portrait){
+ .app{grid-template-rows:38px minmax(0,1fr)}
+ .workspace{grid-template-rows:minmax(0,1fr) auto}
+ .board{min-height:0}
+ .sea-top{padding:5px 8px}
+ .sea-top .overline,.sea-top .opposition i{display:none}
+ .round-stamp b{font-size:14px}
+ .round-stamp small{font-size:9px}
+ .command{gap:2px;padding:3px 8px max(5px,env(safe-area-inset-bottom));overflow:visible}
+ .command-title{display:flex;gap:4px;min-height:19px;align-items:center;justify-content:space-between;padding:0}
+ .command-title h2{font:600 15px Georgia,serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .status-btn{display:flex;align-items:center;gap:5px;flex:none;min-height:20px}
+ .ap-gauge{padding:1px 5px;min-height:20px}
+ .ap-top .overline{font-size:8px}
+ .ap-numbers strong{font-size:20px}
+ .ap-pips{gap:2px}
+ .ap-pip{height:6px}
+ .battle-condition{display:none}
+ .command.show-status .battle-condition{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:6px 2px 8px}
+ .command.show-status .condition-line{font-size:10px;gap:6px}
+ .command.show-status .condition-line .condition-track{height:6px}
+ .order-area{gap:2px}
+ .phase-tab{min-height:28px;padding:2px 5px}
+ .phase-tab strong{font-size:10px}
+ .phase-tab span{font-size:14px}
+ .modes{gap:3px}
+ .mode{min-height:34px;padding:2px 0;font-size:10px}
+ .mode span{font-size:14px}
+ .route-actions{min-height:22px;gap:4px}
+ .route-actions .quiet-btn{min-height:21px;padding:3px 7px}
+ .execute{min-height:37px;padding:5px 9px;font-size:12px}
+ .toast{top:50px;max-width:70%}
+ .combat-feed{font-size:9px;bottom:5px;padding:4px 6px}
+ /* During real-time execution the map expands to almost the entire viewport. */
+ .command:has(#progress:not([hidden])){padding:4px 8px max(7px,env(safe-area-inset-bottom));gap:2px}
+ .command:has(#progress:not([hidden])) .command-title,
+ .command:has(#progress:not([hidden])) .ap-gauge,
+ .command:has(#progress:not([hidden])) .battle-condition,
+ .command:has(#progress:not([hidden])) #orderArea{display:none!important}
+ .command:has(#progress:not([hidden])) #progress{margin:2px 0;min-height:7px}
+}
+@media(max-width:720px) and (orientation:portrait) and (max-height:710px){
+ .command-title{display:flex}
+ .ap-gauge{min-height:19px}
+ .phase-tab{min-height:26px}
+ .mode{min-height:32px}
+ .execute{min-height:35px}
+}

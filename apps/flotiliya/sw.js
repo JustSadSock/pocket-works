@@ -1,9 +1,9 @@
 const CACHE_PREFIX='flotiliya-';
-const CACHE_NAME='flotiliya-v0.5.0';
-const APP_VERSION='0.5.0';
+const CACHE_NAME='flotiliya-v0.6.0';
+const APP_VERSION='0.6.0';
 const RELEASE_DATE='2026-10-15';
-const NOTES=['Курсы и ИИ подчиняются одинаковому бюджету движения.','Три типа морских задач и быстрый оплаченный план эскадры.','Более крупные галеры, новые эффекты и удобный командный экран.'];
-const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./sea-art.js','./turn-budget.js','./naval-combat.js','./squadron-plan.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const NOTES=['Акватория стала на 20% больше по высоте и на 18% по ширине.','Корабли идут по обоим маршрутам непрерывно все 4,5 секунды.','Компактнее панель команд, больше видно морское поле.'];
+const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./sea-art.js','./turn-budget.js','./naval-combat.js','./squadron-plan.js','./course-motion.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const scope=new URL('./',self.registration.scope);
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await Promise.all(SHELL.map(async entry=>{const url=new URL(entry,scope);try{const resp=await fetch(url.href,{cache:'reload'});if(resp.ok)await cache.put(url.href,resp);}catch{}}));await self.skipWaiting();})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim();})()));

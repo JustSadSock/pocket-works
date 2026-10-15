@@ -1,14 +1,15 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { renderSea, renderGalley } from './sea-art.js';
 import { planSquadronShip } from './squadron-plan.js';
+import { TURN_SECONDS, buildCourse, sampleCourse } from './course-motion.js';
 import { ACTION_COST, MOVE_STEP, getBudget, canPlan, stagePathLength, stageRange, availableActions } from './turn-budget.js';
 import { condition, attackSector, attackPacket, contest, nearbySupport, rangeBlocked, oarFraction } from './naval-combat.js';
 installMobileRuntime();
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('sea'), ctx = canvas.getContext('2d', {alpha:false});
-const W=660,H=1000,TAU=Math.PI*2,KEY='pocket-works:flotiliya:v1';
-const PHASE_SECONDS=4.5,HALF=2.25,MAX_ROUNDS=22;
+const W=780,H=1200,TAU=Math.PI*2,KEY='pocket-works:flotiliya:v1';
+const PHASE_SECONDS=TURN_SECONDS,HALF=TURN_SECONDS/2,MAX_ROUNDS=22;
 const MISSIONS=[
  {id:'battle',name:'Линейное сражение',brief:'Разбей противника, сохрани ветеранов и забери призы.',limit:14},
  {id:'breakout',name:'Прорыв блокады',brief:'Проведи хотя бы одну галеру к северной кромке моря (отмечена золотым створом).',limit:14},
@@ -29,6 +30,14 @@ function terrainDistance(isl,x,y){
  return Math.hypot(lx/(isl.rx+16),ly/(isl.ry+14));
 }
 function withinIsland(x,y,pad=1){return (game.islands||[]).some(isl=>terrainDistance(isl,x,y)<pad);}
+function segmentHitsIsland(a,b,margin=1.09){
+ const length=distance(a,b);
+ for(let i=0,n=Math.max(1,Math.ceil(length/9));i<=n;i++){
+  const k=i/n;
+  if(withinIsland(a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k,margin))return true;
+ }
+ return false;
+}
 function readoutRoute(order){return order.route?.length?order.route.length+' ТОЧЕК':order.targetId?'ЦЕЛЬ НАЗНАЧЕНА':'СВОБОДНЫЙ КУРС';}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -68,7 +77,7 @@ function ensureFleet(){
 }
 function activeFleet(){return game.fleet.filter(s=>s.active).slice(0,3)}
 function renderHarbor(){
- game.phase='harbor';$('harbor').hidden=false;$('command').hidden=true;$('seaTop').hidden=true;$('toast').hidden=true;
+ game.phase='harbor';$('harbor').hidden=false;$('command').hidden=true;$('command').classList.remove('show-status');$('statusBtn').setAttribute('aria-expanded','false');$('seaTop').hidden=true;$('toast').hidden=true;
  $('gold').textContent='◈ '+game.gold;$('subtitle').textContent='Гавань · твоя эскадра';
  $('campaignLabel').textContent='ПОХОД '+roman(game.battleIndex)+' · '+missionFor(game.battleIndex).name;
  $('missionBrief').textContent=missionFor(game.battleIndex).brief;
@@ -156,7 +165,7 @@ function planEnemyOrders(s){
    point.x=clamp(origin.x+Math.cos(angle+turn)*allowance*.74,47,W-47);
    point.y=clamp(origin.y+Math.sin(angle+turn)*allowance*.74,56,H-56);
   }
-  if(!withinIsland(point.x,point.y,1.06)&&distance(origin,point)>12){
+  if(!withinIsland(point.x,point.y,1.06)&&!segmentHitsIsland(origin,point,1.08)&&distance(origin,point)>12){
    s.orders[stage].route=[point];
    if(canPlan(s,s.orders))origin=point;
    else s.orders[stage].route=[];
@@ -176,22 +185,22 @@ function planSquadron(){
   const t=game.mission?.id==='intercept'
    ?enemy.find(v=>v.id.endsWith('-0'))||nearest(s)
    :nearest(s);
-  if(t)s.orders=planSquadronShip(s,t,{mission:game.mission?.id,islands:game.islands});
+  if(t)s.orders=planSquadronShip(s,t,{mission:game.mission?.id,islands:game.islands,world:{width:W,height:H}});
  }
  selectShip(game.selected);
  notify('Оплаченные курсы записаны. Проверь каждый корабль перед исполнением.');
 }
 function startBattle(){
  game.ships=[];game.captured=[];game.events=[];game.particles=[];game.grapples=[];game.eventClock=0;game.round=1;game.elapsed=0;game.selected=null;game.stage=0;game.drag=null;
- game.islands=ISLAND_MAPS[(game.battleIndex-1)%ISLAND_MAPS.length].map(i=>({...i}));
+ game.islands=ISLAND_MAPS[(game.battleIndex-1)%ISLAND_MAPS.length].map(i=>({...i,x:i.x*W/660,y:i.y*H/1000,rx:i.rx*W/660,ry:i.ry*H/1000}));
  game.weather=WEATHER[(game.battleIndex-1)%WEATHER.length];game.mission=missionFor(game.battleIndex);
- const xs=[142,330,519];
- activeFleet().forEach((s,i)=>game.ships.push(battleShip(s,'ally',xs[i],852+(i%2)*24,-Math.PI/2)));
+ const xs=[.215,.5,.785].map(v=>v*W);
+ activeFleet().forEach((s,i)=>game.ships.push(battleShip(s,'ally',xs[i],H*.852+(i%2)*24,-Math.PI/2)));
  const aiTypes=game.battleIndex<=2?['swift','heavy']:['swift','bow','heavy'];
  aiTypes.forEach((type,i)=>{
   const s=makeShip('enemy-'+game.battleIndex+'-'+i,namePool[(game.battleIndex+i*2)%namePool.length],type,{active:false});
   const mult=.90+Math.min(.30,(game.battleIndex-1)*.035);s.hp*=mult;s.maxHp*=mult;s.crew*=mult;s.maxCrew*=mult;s.damage*=mult;
-  game.ships.push(battleShip(s,'enemy',xs[i],148-(i%2)*24,Math.PI/2));
+  game.ships.push(battleShip(s,'enemy',xs[i],H*.148-(i%2)*24,Math.PI/2));
  });
  game.ships.filter(s=>s.side==='enemy').forEach(planEnemyOrders);
  game.phase='orders';$('harbor').hidden=true;$('command').hidden=false;$('seaTop').hidden=false;$('endPanel').hidden=true;
@@ -236,7 +245,7 @@ function selectShip(id){
   state.morale<.35?'ЭКИПАЖ КОЛЕБЛЕТСЯ':'ГОТОВ К БОЮ';
  $('combatState').classList.toggle('danger',Boolean(s&&(s.sinkingTimer>0||s.retreating||g)));
  const order=s?instruction(s,game.stage):null;
- $('instruction').textContent=s?(order.route.length?'Маршрут записан. Можно нарисовать новый.':'Проведи по воде или выбери цель для атаки.'):'Выбери судно на поле';
+ $('instruction').textContent=s?(order.route.length?'Курс на весь ход записан. Можно изменить.':'Нарисуй курс на 4,5 секунды или укажи цель.'):'Выбери судно на поле';
  $('routeCounter').textContent=order?readoutRoute(order):'НЕТ МАРШРУТА';
  $('crewReadout').textContent=s?('ЭКИПАЖ '+Math.ceil(s.crew)):'';
  $('maneuverReadout').textContent=order?({hold:'МАНЁВР',shoot:'СТРЕЛЬБА',board:'АБОРДАЖ',evade:'УКЛОНЕНИЕ'}[order.kind]||'ПРИКАЗ'):'ОЖИДАНИЕ';
@@ -262,53 +271,42 @@ function setStage(stage){if(game.phase!=='orders')return;game.stage=stage;select
 function normalize(a){while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;return a}
 function maneuver(s,dt){
  if(s.grappleId){s.velocity*=Math.max(0,1-dt*4);return;}
- const stage=game.phase==='resolve'?Math.min(1,Math.floor(game.elapsed/HALF)):0;
- if(s._activeStage!==stage){s._activeStage=stage;s._cursor[stage]=0;}
- const ins=instruction(s,stage);s.order=ins.kind;
- const t=game.ships.find(v=>v.id===ins.targetId&&v.alive&&v.side!==s.side)||nearest(s);
- let goal=null;
- const points=ins.route||[];
- let index=s._cursor[stage]||0;
- while(index<points.length&&distance(s,points[index])<18)index++;
- s._cursor[stage]=index;
- if(index<points.length)goal=points[index];
- if(s.retreating)goal={x:s.x,y:s.side==='ally'?H+60:-60};
- // A command's action never grants free sailing toward an opponent.
- // Only an explicit, paid course can propel a warship; otherwise it coasts briefly.
- if(!goal){
-  s.velocity=Math.max(0,s.velocity-dt*68);
+ // Combat actions change halfway; both route stages form one 4.5-second course.
+ const stage=Math.min(1,Math.floor(game.elapsed/HALF)),ins=instruction(s,stage);
+ s.order=ins.kind;
+ if(s.retreating){
+  // A broken crew is withdrawing from battle, not an unpaid pursuit command.
+  const desired=s.side==='ally'?Math.PI/2:-Math.PI/2;
+  const state=condition(s),angular=s.turn*state.turn*dt*2.4;
+  s.angle=normalize(s.angle+clamp(normalize(desired-s.angle),-angular,angular));
+  s.velocity=s.speed*state.speed;
   s.x+=Math.cos(s.angle)*s.velocity*dt;
   s.y+=Math.sin(s.angle)*s.velocity*dt;
-  return;
- }
- let dx=goal.x-s.x,dy=goal.y-s.y;
- // Reactive avoidance handles islands for both player and AI.
- for(const isl of game.islands){
-  const ex=(s.x-isl.x)/(isl.rx+35),ey=(s.y-isl.y)/(isl.ry+34),r=Math.hypot(ex,ey);
-  if(r<1.8){
-   const aheadX=s.x+dx/Math.max(1,Math.hypot(dx,dy))*48,aheadY=s.y+dy/Math.max(1,Math.hypot(dx,dy))*48;
-   if(terrainDistance(isl,aheadX,aheadY)<1.36||r<1.12){
-    const awayX=(s.x-isl.x)/((isl.rx+35)**2),awayY=(s.y-isl.y)/((isl.ry+35)**2),mag=Math.hypot(awayX,awayY)||1;
-    const sign=Math.sign(awayX*dy-awayY*dx)||1;
-    dx+=(awayX/mag)*120+(-awayY/mag)*sign*90;
-    dy+=(awayY/mag)*120+(awayX/mag)*sign*90;
-   }
-  }
- }
- const state=condition(s),desired=Math.atan2(dy,dx),turn=clamp(normalize(desired-s.angle),-s.turn*state.turn*dt*1.15,s.turn*state.turn*dt*1.15);
- s.angle=normalize(s.angle+turn);
- let speed=s.speed*state.speed*1.15;
- if(game.weather?.kind==='gust')speed*=1.14;
- if(ins.kind==='evade')speed*=1.2;
- if(ins.kind==='board'&&t&&distance(s,t)<50)speed=Math.min(speed,19);
- if(s.sinkingTimer>0)speed*=.28;
- if(index<points.length&&distance(s,goal)<35)speed*=.78;
- s.velocity+=(speed-s.velocity)*Math.min(1,dt*.92);
- s.x+=Math.cos(s.angle)*s.velocity*dt;s.y+=Math.sin(s.angle)*s.velocity*dt;
- if(s.retreating&&(s.y<49||s.y>H-49)){
+  if(s.y<49||s.y>H-49){
    s.alive=false;s.escaped=true;s.hp=Math.max(1,s.hp);
-   logEvent(s.name+' вышел из боя!');
+   logEvent(s.name+' вышел из боя!');return;
+  }
+ }else if(s._courseBlocked){
+  s.velocity=0;return;
+ }else if(s._course?.total>0){
+  // Fewer movement points mean less distance over the SAME complete turn.
+  // Stage 01's route no longer exhausts itself at 2.25 seconds.
+  const position=sampleCourse(s._course,Math.min(PHASE_SECONDS,game.elapsed),PHASE_SECONDS);
+  // A scheduled route must still obey terrain collision.
+  if(segmentHitsIsland(s,position,1.01)){
+   s._courseBlocked=true;s.velocity=0;
+   logEvent(s.name+': курс пересекает мель. Обойди её следующим ходом.');
    return;
+  }
+  const dx=position.x-s.x,dy=position.y-s.y,delta=Math.hypot(dx,dy);
+  const state=condition(s),turnLimit=s.turn*state.turn*dt*3.2;
+  if(position.angle!==null)
+   s.angle=normalize(s.angle+clamp(normalize(position.angle-s.angle),-turnLimit,turnLimit));
+  s.velocity=delta/Math.max(dt,.0001);
+  s.x=position.x;s.y=position.y;
+ }else{
+  // Station keeping when no paid route was assigned.
+  s.velocity=Math.max(0,s.velocity-dt*68);
  }
  if(s.x<38||s.x>W-38||s.y<40||s.y>H-40){
   s.x=clamp(s.x,38,W-38);s.y=clamp(s.y,40,H-40);
@@ -493,8 +491,8 @@ function startResolve(){
   if(!canPlan(s,s.orders))s.orders=[freshOrder('hold'),freshOrder('hold')];
  }
  game.phase='resolve';game.elapsed=0;acc=0;
- for(const s of game.ships){s._cursor=[0,0];s._activeStage=-1;}
- $('subtitle').textContent='Бой · исполнение';$('commandCaption').textContent='СУДА ИСПОЛНЯЮТ ПРИКАЗЫ';
+ for(const s of game.ships){s._cursor=[0,0];s._activeStage=-1;s._course=buildCourse(s);s._courseBlocked=false;}
+ $('subtitle').textContent='Бой · исполнение';$('commandCaption').textContent='ОДИН КУРС · 4,5 СЕКУНДЫ';
  $('resolveBtn').hidden=true;$('orderArea').style.opacity='.42';
  $('progress').hidden=false;$('progressFill').style.width='0%';
 }
@@ -523,13 +521,13 @@ $('resolveBtn').hidden=false;
 }
 function missionOutcome(){
  if(game.mission?.id==='breakout'){
-  if(alive('ally').some(s=>s.y<=168))return true;
+  if(alive('ally').some(s=>s.y<=H*.168))return true;
   if(!alive('ally').length||game.round>=game.mission.limit)return false;
  }
  if(game.mission?.id==='intercept'){
   const courier=game.ships.find(s=>s.side==='enemy'&&s.id.endsWith('-0'));
   if(courier&&!courier.alive)return true;
-  if(courier?.alive&&courier.y>=828)return false;
+  if(courier?.alive&&courier.y>=H*.828)return false;
   if(!alive('ally').length||game.round>=game.mission.limit)return false;
  }
  return null;
@@ -595,6 +593,7 @@ function addRoutePoint(s,point){
  if(distance(previous,point)<10)return false;
  const oldLength=route.length;
  const tryPoint=(p)=>{
+  if(segmentHitsIsland(previous,p,1.09))return false;
   route.push({x:p.x,y:p.y});
   const ok=canPlan(s,s.orders);if(!ok)route.pop();
   return ok;
@@ -623,7 +622,7 @@ function onPointerDown(e){
   if(!canPlan(s,s.orders)){
    Object.assign(order,old);notify('Недостаточно ОД: очисти часть пути или выбери другое действие.');return;
   }
-  selectShip(s.id);notify('Цель выбрана для половины '+(game.stage+1));return;
+  selectShip(s.id);notify('Цель назначена для приказа '+(game.stage+1));return;
  }
  const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;
  if(withinIsland(p.x,p.y)){notify('Скалы непроходимы: проведи путь вокруг острова.');return;}
@@ -649,7 +648,7 @@ function onPointerUp(e){
  const s=game.ships.find(x=>x.id===game.drag.id&&x.alive);
  game.drag=null;
  try{canvas.releasePointerCapture?.(e.pointerId);}catch{}
- if(s){selectShip(s.id);const b=getBudget(s);notify('Осталось '+b.remaining+' из '+b.total+' ОД на весь ход.');}
+ if(s){selectShip(s.id);const b=getBudget(s);notify('Курс на весь ход. Осталось '+b.remaining+' из '+b.total+' ОД.');}
 }
 function seaBackground(now){renderSea(ctx,now,game.islands||[],game.weather,W,H);}
 function drawShip(s,now,ghost=false){renderGalley(ctx,s,now,!ghost&&s.id===game.selected&&game.phase==='orders');}
@@ -702,7 +701,7 @@ function render(now){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#0f313d';ctx.fillRect(0,0,w,h);
  ctx.translate(ox,oy);ctx.scale(scale,scale);seaBackground(now);
  if(game.phase==='harbor'){
-  const ghost=[{...makeShip('g1','', 'heavy'),x:200,y:730,angle:-1.7,side:'ally',velocity:0}, {...makeShip('g2','','bow'),x:435,y:570,angle:-1.45,side:'ally',velocity:0}, {...makeShip('g3','','swift'),x:360,y:265,angle:1.6,side:'ally',velocity:0}];
+  const ghost=[{...makeShip('g1','', 'heavy'),x:W*.30,y:H*.73,angle:-1.7,side:'ally',velocity:0}, {...makeShip('g2','','bow'),x:W*.66,y:H*.57,angle:-1.45,side:'ally',velocity:0}, {...makeShip('g3','','swift'),x:W*.55,y:H*.265,angle:1.6,side:'ally',velocity:0}];
   for(const s of ghost)drawShip(s,now,true);
  }else{
   const ss=game.ships.filter(s=>s.alive);
@@ -720,15 +719,15 @@ function render(now){
   // Mission finish-lines share the same world-space coordinate system as ships.
   if(game.mission?.id==='breakout'){
    ctx.save();ctx.strokeStyle='#f1d99c';ctx.lineWidth=3;ctx.setLineDash([12,9]);
-   ctx.beginPath();ctx.moveTo(38,168);ctx.lineTo(W-38,168);ctx.stroke();ctx.setLineDash([]);
+   ctx.beginPath();ctx.moveTo(38,H*.168);ctx.lineTo(W-38,H*.168);ctx.stroke();ctx.setLineDash([]);
    ctx.fillStyle='#f9df9f';ctx.textAlign='center';ctx.font='700 14px system-ui';
-   ctx.fillText('ПРОРВАТЬСЯ СЮДА',W/2,150);ctx.restore();
+   ctx.fillText('ПРОРВАТЬСЯ СЮДА',W/2,H*.168-18);ctx.restore();
   }
   if(game.mission?.id==='intercept'){
    ctx.save();ctx.strokeStyle='#d19b86';ctx.lineWidth=3;ctx.setLineDash([12,9]);
-   ctx.beginPath();ctx.moveTo(38,828);ctx.lineTo(W-38,828);ctx.stroke();ctx.setLineDash([]);
+   ctx.beginPath();ctx.moveTo(38,H*.828);ctx.lineTo(W-38,H*.828);ctx.stroke();ctx.setLineDash([]);
    ctx.fillStyle='#f5c6ab';ctx.font='700 14px system-ui';ctx.textAlign='center';
-   ctx.fillText('НЕ ДАТЬ ПОСЫЛЬНОМУ УЙТИ',W/2,810);ctx.restore();
+   ctx.fillText('НЕ ДАТЬ ПОСЫЛЬНОМУ УЙТИ',W/2,H*.828-18);ctx.restore();
   }
   if(game.phase==='orders')for(const s of ss)drawOrders(s);
   for(const s of ss)drawShip(s,now);
@@ -771,6 +770,10 @@ document.querySelectorAll('[data-order]').forEach(btn=>btn.addEventListener('cli
 $('sailBtn').addEventListener('click',startBattle);
 $('resolveBtn').addEventListener('click',startResolve);
 $('returnBtn').addEventListener('click',()=>{renderHarbor();});
+$('statusBtn').addEventListener('click',()=>{
+ const expanded=$('command').classList.toggle('show-status');
+ $('statusBtn').setAttribute('aria-expanded',String(expanded));
+});
 $('helpBtn').addEventListener('click',()=>{$('help').hidden=false;});
 $('helpClose').addEventListener('click',()=>{$('help').hidden=true;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('help').hidden=true;if(e.key===' '&&game.phase==='orders'&&!e.repeat){e.preventDefault();startResolve();}});

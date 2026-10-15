@@ -6,7 +6,8 @@
       "kind": "node-test",
       "files": [
         "combat.test.mjs",
-        "squadron-plan.test.mjs"
+        "squadron-plan.test.mjs",
+        "course-motion.test.mjs"
       ],
       "tier": "smoke"
     },

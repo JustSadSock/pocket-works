@@ -15,7 +15,7 @@ async function openAuditedGame(page: import('@playwright/test').Page) {
     const source = await response.text();
     const qaBridge = `
 ;window.__FLOT_QA__={game,initialFleet,startBattle,startResolve,advance,finishPhase,
-  renderHarbor,render,getBudget};
+  renderHarbor,render,getBudget,buildCourse,sampleCourse};
 `;
     await route.fulfill({ response, body: source + qaBridge, headers: {
       ...response.headers(), 'cache-control': 'no-store'
@@ -51,11 +51,11 @@ test('real controls, mobile/desktop geometry, opening battle evidence', async ({
     const q = (window as any).__FLOT_QA__, game = q.game;
     const s = game.ships.find((ship: any) => ship.side === 'ally');
     const canvas = document.getElementById('sea') as HTMLCanvasElement;
-    const r = canvas.getBoundingClientRect(), scale = Math.min(r.width / 660, r.height / 1000);
+    const r = canvas.getBoundingClientRect(), scale = Math.min(r.width / 780, r.height / 1200);
     return {
       ship: { id: s.id, x: s.x, y: s.y },
-      point: { x: r.left + (r.width - 660 * scale) / 2 + s.x * scale,
-               y: r.top + (r.height - 1000 * scale) / 2 + s.y * scale },
+      point: { x: r.left + (r.width - 780 * scale) / 2 + s.x * scale,
+               y: r.top + (r.height - 1200 * scale) / 2 + s.y * scale },
       geometry: {
         viewport: innerWidth,
         document: document.documentElement.scrollWidth,
@@ -69,6 +69,9 @@ test('real controls, mobile/desktop geometry, opening battle evidence', async ({
   expect(state.geometry.document).toBeLessThanOrEqual(state.geometry.viewport + 8);
   expect(state.geometry.canvasHeight).toBeGreaterThan(140);
   expect(state.geometry.executeVisible).toBe(true);
+  if (state.geometry.viewport <= 720 && (await page.evaluate(() => innerHeight)) >= 750) {
+    expect(state.geometry.canvasHeight / (await page.evaluate(() => innerHeight))).toBeGreaterThan(.68);
+  }
 
   await page.mouse.click(state.point.x, state.point.y);
   const selected = await page.evaluate(() => (window as any).__FLOT_QA__.game.selected);
@@ -94,6 +97,72 @@ test('real controls, mobile/desktop geometry, opening battle evidence', async ({
   await page.locator('#resolveBtn').click();
   await expect(page.locator('#progress')).toBeVisible();
   await page.screenshot({ path: info.outputPath('04-resolving.png'), fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test('ship courses move continuously across BOTH action stages at paid, route-dependent speed', async ({ page }) => {
+  const errors = await openAuditedGame(page);
+  const result = await page.evaluate(() => {
+    const api = (window as any).__FLOT_QA__;
+    const g = api.game;
+    g.fleet = api.initialFleet();
+    g.battleIndex = 1;
+    api.startBattle();
+    const heavy = g.ships.find((s: any) => s.side === 'ally' && s.type === 'heavy');
+    const swift = g.ships.find((s: any) => s.side === 'ally' && s.type === 'swift');
+    const heavyStart = {x:heavy.x,y:heavy.y},swiftStart={x:swift.x,y:swift.y};
+    // The heavy galley has a short FIRST-stage route. The swift ship has its
+    // route in SECOND-stage orders only, yet both start sailing immediately.
+    heavy.orders=[{kind:'hold',targetId:null,route:[{x:heavy.x,y:heavy.y-105}]},
+                  {kind:'hold',targetId:null,route:[]}];
+    swift.orders=[{kind:'hold',targetId:null,route:[]},
+                  {kind:'hold',targetId:null,route:[{x:swift.x,y:swift.y-175}]}];
+    const legal=api.getBudget(heavy).valid&&api.getBudget(swift).valid;
+    api.startResolve();
+    const frames: any[]=[];
+    for(let tick=1;tick<=135;tick++){
+      api.advance(1/30);
+      if([34,67,68,101,135].includes(tick))
+        frames.push({tick,heavy:Math.hypot(heavy.x-heavyStart.x,heavy.y-heavyStart.y),
+          swift:Math.hypot(swift.x-swiftStart.x,swift.y-swiftStart.y)});
+    }
+    return {legal,frames,phase:g.phase,error:frames.some(v=>!Number.isFinite(v.heavy+v.swift))};
+  });
+  expect(result.legal).toBe(true);
+  expect(result.error).toBe(false);
+  expect(result.frames).toHaveLength(5);
+  for(let i=1;i<result.frames.length;i++){
+    expect(result.frames[i].heavy).toBeGreaterThan(result.frames[i-1].heavy);
+    expect(result.frames[i].swift).toBeGreaterThan(result.frames[i-1].swift);
+  }
+  expect(result.frames[0].swift).toBeGreaterThan(5);
+  expect(result.frames[2].heavy-result.frames[1].heavy).toBeGreaterThan(.5);
+  expect(result.frames[2].swift-result.frames[1].swift).toBeGreaterThan(.5);
+  expect(result.frames.at(-1).heavy).toBeCloseTo(105,2);
+  expect(result.frames.at(-1).swift).toBeCloseTo(175,2);
+  expect(errors).toEqual([]);
+});
+
+test('course cannot pass through an island even when manually set to intersect land', async ({page}) => {
+  const errors = await openAuditedGame(page);
+  const result = await page.evaluate(() => {
+    const api=(window as any).__FLOT_QA__,g=api.game;
+    g.fleet=api.initialFleet();g.battleIndex=1;api.startBattle();
+    const island=g.islands[0];
+    const ship=g.ships.find((s:any)=>s.side==='ally'&&s.type==='swift');
+    ship.x=island.x-135;ship.y=island.y;ship.angle=0;
+    ship.orders=[{kind:'hold',route:[{x:island.x+40,y:island.y}],targetId:null},
+      {kind:'hold',route:[],targetId:null}];
+    const allowed=api.getBudget(ship).valid;
+    api.startResolve();
+    for(let tick=0;tick<135;tick++)api.advance(1/30);
+    return {allowed,blocked:ship._courseBlocked,shipX:ship.x,islandX:island.x,
+      alive:ship.alive};
+  });
+  expect(result.allowed).toBe(true);
+  expect(result.blocked).toBe(true);
+  expect(result.shipX).toBeLessThan(result.islandX-80);
+  expect(result.alive).toBe(true);
   expect(errors).toEqual([]);
 });
 

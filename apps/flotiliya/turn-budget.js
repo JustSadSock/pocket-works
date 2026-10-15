@@ -1,11 +1,12 @@
 /**
  * Флотилия — per-ship movement/action points for one simultaneous turn.
  * 1 action point moves approximately 35 world units along a planned course.
- * Both 2.25-second stages draw from the same budget; it resets each turn.
+ * Both action stages share the same budget and form one continuous 4.5-second course.
  */
 export const ACTION_COST=Object.freeze({hold:1,shoot:2,board:3,evade:2});
 export const MOVE_STEP=35;
 export const PHASE_HALF=2.25;
+export const TURN_SECONDS=PHASE_HALF*2;
 export const MAX_ROUTE_NODES=36;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export function maxPoints(ship){
@@ -37,11 +38,13 @@ export function getBudget(ship,orders=ship.orders){
  return {total,spent,remaining:total-spent,stages,valid:spent<=total};
 }
 export function stageRange(ship){
- return ship.speed*PHASE_HALF*1.14;
+ return ship.speed*TURN_SECONDS*1.14;
 }
 export function canPlan(ship,orders){
  const b=getBudget(ship,orders);
- return b.valid && b.stages.every(v=>v.length<=stageRange(ship)+0.001);
+ // Each order can spend the whole turn on navigation. There is no mid-turn
+ // speed boost for the first stage or compulsory stop after 2.25 seconds.
+ return b.valid && b.stages.reduce((n,v)=>n+v.length,0)<=stageRange(ship)+0.001;
 }
 export function availableActions(ship,stage){
  const result={};

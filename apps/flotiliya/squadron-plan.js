@@ -11,9 +11,18 @@ function seaObstacle(point,islands,margin=1){
   return Math.hypot(x/(land.rx+16),y/(land.ry+14))<margin;
  });
 }
+function seaSegmentBlocked(start,end,islands){
+ const n=Math.max(1,Math.ceil(dist(start,end)/10));
+ for(let i=0;i<=n;i++){
+  const t=i/n;
+  if(seaObstacle({x:start.x+(end.x-start.x)*t,y:start.y+(end.y-start.y)*t},islands,1.09))return true;
+ }
+ return false;
+}
 // Explicit tactical assistant. Every proposed waypoint passes exactly the
 // same point and stage-range validation as hand-drawn player routes.
-export function planSquadronShip(ship,target,{mission='battle',islands=[]}={}){
+export function planSquadronShip(ship,target,{mission='battle',islands=[],world={width:660,height:1000}}={}){
+ const width=world.width,height=world.height;
  const d=dist(ship,target);
  const board=ship.type==='heavy'&&d<82&&ship.morale>42&&ship.crew>ship.maxCrew*.6;
  const shooting=d<ship.range*.82;
@@ -21,24 +30,24 @@ export function planSquadronShip(ship,target,{mission='battle',islands=[]}={}){
  const away=Math.atan2(ship.y-target.y,ship.x-target.x);
  const range=ship.range*(ship.type==='bow'?.60:.45);
  let objective=mission==='breakout'
-  ?{x:ship.x,y:92}
+  ?{x:ship.x,y:height*.092}
   :{x:target.x+Math.cos(away)*range,y:target.y+Math.sin(away)*range};
  if(mission==='intercept')
-  objective={x:(ship.x+target.x)*.5,y:Math.min(ship.y-90,Math.max(350,target.y+90))};
+  objective={x:(ship.x+target.x)*.5,y:Math.min(ship.y-90,Math.max(height*.35,target.y+90))};
  let origin={x:ship.x,y:ship.y};
  for(let stage=0;stage<2;stage++){
   if(dist(origin,objective)<20)break;
   let theta=Math.atan2(objective.y-origin.y,objective.x-origin.x);
   const length=Math.min(stageRange(ship)*.84,stage===0?92:79,dist(origin,objective));
   if(length<16)break;
-  let p={x:clamp(origin.x+Math.cos(theta)*length,43,617),
-    y:clamp(origin.y+Math.sin(theta)*length,43,957)};
+  let p={x:clamp(origin.x+Math.cos(theta)*length,43,width-43),
+    y:clamp(origin.y+Math.sin(theta)*length,43,height-43)};
   if(seaObstacle(p,islands,1.32)){
-   theta+=(ship.x<330?-1:1)*.62;
+   theta+=(ship.x<width/2?-1:1)*.62;
    p={x:clamp(origin.x+Math.cos(theta)*length*.75,43,617),
       y:clamp(origin.y+Math.sin(theta)*length*.75,43,957)};
   }
-  if(!seaObstacle(p,islands,1.09)){
+  if(!seaObstacle(p,islands,1.09)&&!seaSegmentBlocked(origin,p,islands)){
    orders[stage].route=[p];
    if(canPlan(ship,orders))origin=p;
    else orders[stage].route=[];
