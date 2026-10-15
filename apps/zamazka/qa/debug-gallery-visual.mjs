@@ -43,7 +43,7 @@ try{
   const menu=await gallery.locator('.zam-debug-nav').evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.left,y:r.top}});
   assert(menu.x<25&&menu.y<50,name+' debug menu is not in upper left');
   for(const entry of DEBUG_SCREENS){
-   if(w<700)await gallery.locator('[data-debug-reopen]').click().catch(()=>{});
+   if(w<700&&await gallery.evaluate(el=>el.classList.contains('is-collapsed')))await gallery.locator('[data-debug-reopen]').click();
    const action=gallery.locator('[data-debug-select="'+entry.id+'"]');
    await action.click();
    await preview.locator('#screen[data-debug-preview="'+entry.id+'"]').waitFor({timeout:16000});
