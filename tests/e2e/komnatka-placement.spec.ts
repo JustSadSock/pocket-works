@@ -45,7 +45,47 @@ test.describe('КОМНАТКА — actual placement and motion',()=>{
   await attachCriticalScreenshot(page,testInfo,'komnatka-invalid-placement',{fullPage:false});
   await page.mouse.up();
   expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount)).toBe(before+1);
-  await page.locator('#cancelPlacementMobile').click();
+  expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.placement)).toBeNull();
+ });
+ test('decor goes on the visible tabletop at the cursor, not under the table',async ({page},testInfo)=>{
+  await enter(page);
+  await page.locator('#categories [data-group="decor"]').click();
+  const before=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount);
+  const surface=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.groundPoint(.75,-.76,.72)) as Position;
+  await moveFromCatalog(page,'deskclock',surface);
+  const placement=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.placement);
+  expect(placement?.type).toBe('deskclock');
+  expect(placement?.support).toBe('welcome-coffee');
+  expect(placement?.valid).toBe(true);
+  await attachCriticalScreenshot(page,testInfo,'komnatka-clock-on-visible-tabletop',{fullPage:false});
+  await page.mouse.up();
+  await expect.poll(()=>page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount)).toBe(before+1);
+  const upright=await page.evaluate(()=>{
+   const q=(window as any).__KOMNATKA_TEST__;
+   return q.meshRotation(q.selection,'alarm-upright-ivory-dial');
+  });
+  expect(upright,'The actual 3D clock face must be upright').toBeCloseTo(Math.PI/2,3);
+ });
+ test('desktop right-to-left drag is not mistaken for catalog scrolling',async ({page},testInfo)=>{
+  await page.setViewportSize({width:1140,height:790});
+  await enter(page);
+  const before=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount);
+  const free=await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.groundPoint(1.45,1.65)) as Position;
+  await moveFromCatalog(page,'stool',free);
+  expect(await page.evaluate(()=>(window as any).__KOMNATKA_TEST__.placement?.valid)).toBe(true);
+  await attachCriticalScreenshot(page,testInfo,'komnatka-desktop-direct-drag',{fullPage:false});
+  await page.mouse.up();
+  await expect.poll(()=>page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount)).toBe(before+1);
+ });
+ test('teddy and vase have readable model previews',async ({page},testInfo)=>{
+  await enter(page);
+  await page.locator('#categories [data-group="decor"]').click();
+  for(const type of ['teddy','vase']){
+   const item=page.locator('#catalog [data-type="'+type+'"]');
+   await item.scrollIntoViewIfNeeded();
+   await expect(item.locator('.item-drawing')).toBeVisible();
+   await attachCriticalScreenshot(page,testInfo,'komnatka-'+type+'-catalog-shape',{fullPage:false});
+  }
  });
  test('table decorations follow real-time lift and catalog specimens remain visible',async ({page},testInfo)=>{
   await enter(page);

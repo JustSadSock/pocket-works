@@ -427,24 +427,39 @@ export function makeItem(scene,item){
    box(scene,'soft-prickle',root,M.cream,.013,.075,.012,Math.cos(a)*.14,.83,Math.sin(a)*.14,.006);}
  }
  if(t==='teddy'){
-  orb(scene,'plush-teddy-body',root,cloth,0,.23,0,.30,.36,.26);
-  orb(scene,'teddy-head',root,cloth,0,.54,0,.30,.27,.27);
-  for(const x of [-.12,.12]){
-   orb(scene,'teddy-round-ear',root,cloth,x,.67,0,.13,.13,.11);
-   orb(scene,'teddy-paw',root,cloth,x,.18,.12,.13,.18,.13);
-   orb(scene,'button-eye',root,M.darkWood,x*.55,.56,.232,.032,.033,.02);
+  orb(scene,'teddy-plush-body',root,cloth,0,.23,-.015,.32,.35,.28);
+  orb(scene,'teddy-belly-patch',root,M.cream,0,.245,.135,.175,.19,.025);
+  orb(scene,'teddy-round-head',root,cloth,0,.52,-.012,.34,.315,.31);
+  for(const side of [-1,1]){
+   const x=side*.133;
+   orb(scene,'teddy-ear',root,cloth,x,.668,-.04,.14,.14,.115);
+   orb(scene,'teddy-ear-lining',root,M.cream,x,.677,.026,.079,.085,.027);
+   orb(scene,'teddy-shiny-eye',root,M.darkWood,side*.073,.548,.142,.029,.033,.016);
+   const arm=orb(scene,'teddy-sloping-arm',root,cloth,side*.172,.278,.044,.15,.24,.15);
+   arm.rotation.z=-side*.27;
+   orb(scene,'teddy-feet',root,cloth,side*.102,.095,.119,.145,.13,.19);
+   orb(scene,'teddy-stitched-paw',root,M.cream,side*.102,.082,.215,.083,.065,.018);
   }
-  orb(scene,'teddy-snout',root,M.cream,0,.48,.22,.15,.11,.13);
-  orb(scene,'teddy-nose',root,M.darkWood,0,.49,.337,.047,.03,.02);
+  orb(scene,'teddy-cream-muzzle',root,M.cream,0,.469,.145,.185,.132,.09);
+  orb(scene,'teddy-triangle-nose',root,M.darkWood,0,.49,.204,.057,.04,.024);
+  box(scene,'teddy-smile-stitch',root,M.darkWood,.012,.037,.008,0,.432,.231,.004);
  }
  if(t==='vase'||t==='teapot'||t==='candle'||t==='deskclock'){
   if(t==='vase'){
-   cylinder(scene,'tiny-ceramic-vase',root,cloth,0,.17,0,.25,.29,.42);
-   cylinder(scene,'vase-neck',root,cloth,0,.37,0,.13,.18);
-   for(let a=0;a<4;a++){const angle=a*Math.PI/2;
-    const stem=cylinder(scene,'flower-stem',root,M.leaf,Math.cos(angle)*.055,.53,Math.sin(angle)*.055,.022,.24);
-    stem.rotation.z=Math.sin(angle)*.16;
-    orb(scene,'flower-bloom',root,a%2?M.cream:M.art[1],Math.cos(angle)*.083,.67,Math.sin(angle)*.083,.10,.08,.10);
+   orb(scene,'ceramic-vase-belly',root,cloth,0,.206,0,.30,.32,.285);
+   orb(scene,'ceramic-vase-shoulder',root,cloth,0,.319,0,.218,.147,.22);
+   cylinder(scene,'ceramic-vase-neck',root,cloth,0,.38,0,.133,.145,.08);
+   cylinder(scene,'ceramic-vase-dark-opening',root,M.darkWood,0,.458,0,.105,.009);
+   const rim=MeshBuilder.CreateTorus('ceramic-vase-rim',{diameter:.146,thickness:.021,tessellation:18},scene);
+   rim.parent=root;rim.position.set(0,.461,0);rim.material=cloth;
+   cylinder(scene,'ceramic-vase-foot',root,cloth,0,.063,0,.157,.044);
+   const flowerColors=[M.cream,M.art[1],M.cream];
+   for(let i=0;i<3;i++){
+    const x=(i-1)*.078,z=i===1?.018:-.015,height=.23+(i===1?.06:0);
+    const stem=cylinder(scene,'thin-flower-stem',root,M.leaf,x*.55,.48+height*.44,z,.014,height);
+    stem.rotation.z=-x*.8;
+    orb(scene,'small-flower-head',root,flowerColors[i],x,.48+height,z,.085,.071,.079);
+    if(i<2)orb(scene,'silk-leaf',root,M.leaf,x+.048,.545,z,.083,.041,.066).rotation.z=.4;
    }
   }else if(t==='teapot'){
    orb(scene,'porcelain-teapot',root,cloth,0,.19,0,.36,.29,.34);
@@ -457,11 +472,26 @@ export function makeItem(scene,item){
    cylinder(scene,'candle-copper-holder',root,M.metal,0,.035,0,.26,.07);
    orb(scene,'candle-flame',root,M.light,0,.38,0,.056,.13,.056);
   }else{
-   box(scene,'little-alarm-clock',root,cloth,.29,.25,.11,0,.23,0,.07);
-   cylinder(scene,'clock-face',root,M.cream,0,.24,.068,.21,.02);
-   cylinder(scene,'clock-bell-left',root,M.metal,-.10,.39,0,.10,.055);
-   cylinder(scene,'clock-bell-right',root,M.metal,.10,.39,0,.10,.055);
-   box(scene,'hour-hand',root,M.darkWood,.012,.085,.01,0,.24,.084,.005);
+   // Cylinders default to a horizontal disk. Rotate both dial layers into XY.
+   orb(scene,'alarm-bell-shaped-body',root,cloth,0,.238,-.014,.32,.32,.18);
+   for(const side of [-1,1]){
+    box(scene,'alarm-little-foot',root,M.darkWood,.064,.07,.09,side*.098,.06,.005,.026);
+    orb(scene,'alarm-metal-bell',root,M.metal,side*.104,.445,-.028,.125,.085,.12);
+    cylinder(scene,'alarm-bell-peg',root,M.darkWood,side*.104,.395,-.025,.024,.068);
+   }
+   const bezel=cylinder(scene,'alarm-front-bezel',root,M.metal,0,.238,.085,.267,.055);
+   bezel.rotation.x=Math.PI/2;
+   const dial=cylinder(scene,'alarm-upright-ivory-dial',root,M.cream,0,.238,.118,.231,.016);
+   dial.rotation.x=Math.PI/2;
+   for(let i=0;i<12;i++){
+    const a=i*Math.PI/6;
+    const notch=box(scene,'alarm-minute-mark',root,M.darkWood,.013,.023,.008,
+     Math.sin(a)*.089,.238+Math.cos(a)*.089,.133,.004);
+    notch.rotation.z=-a;
+   }
+   box(scene,'alarm-hour-hand',root,M.darkWood,.017,.076,.009,-.018,.259,.146,.006).rotation.z=.47;
+   box(scene,'alarm-minute-hand',root,M.darkWood,.012,.092,.009,.023,.266,.148,.005).rotation.z=-.55;
+   orb(scene,'alarm-center-pin',root,M.metal,0,.238,.157,.029,.029,.019);
   }
  }
  if(t==='mirror'||t==='clock'){

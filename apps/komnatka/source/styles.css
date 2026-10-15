@@ -404,3 +404,9 @@
  .item-button{min-width:0;min-height:93px}
  .item-drawing{width:65px;height:59px}
 }
+
+
+/* Placement hints should feel like a quiet pencil guide, not an alarm. */
+.scene-hint.invalid{color:#8d7467;background:#f8f1e7e8;border:1px solid #d8c8b5;box-shadow:0 5px 17px #66513d19}
+.scene-hint{font-weight:800;letter-spacing:0}
+.item-button:active .item-drawing{transform:translateY(-2px) scale(1.015)}
