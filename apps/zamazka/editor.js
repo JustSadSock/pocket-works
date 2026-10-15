@@ -398,6 +398,7 @@ export class Editor{
     const minimum=Number(slider?.min)||.25;
     this.size=Math.max(minimum,Math.min(48,Math.round(next*4)/4));
     if(slider)slider.value=String(this.size);
+    if(this.cursor?.dataset)this.cursor.dataset.size=String(this.size).replace('.',',');
     const output=this.root.querySelector('#brushSizeValue');
     if(output)output.textContent=String(this.size).replace('.',',');
     this.updateSizeSample();
