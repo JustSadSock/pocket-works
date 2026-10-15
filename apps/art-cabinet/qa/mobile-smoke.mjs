@@ -49,7 +49,8 @@ try{
     await page.locator('.filter[data-filter="all"]').click();
     await page.locator('#nextPage').click();
     await expect(page.locator('#pageStatus')).toHaveText('2 / 5');
-    await page.locator('#heroArt').click({force:true});
+    await page.locator('#prevPage').click();
+    await page.locator('.work[data-id="3"] .work-visual').click();
     await expect(page.locator('#viewer')).toBeVisible();
     await expect(page.locator('#viewerTitle')).toHaveText('Смерть Марата');
     await page.locator('#viewerPick').click();
