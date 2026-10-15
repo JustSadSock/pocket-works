@@ -827,7 +827,8 @@ function renderView(){
  if(page==='preview'&&view.phase==='preview'&&key===lastUiKey)return; // Do not reset the player's mobile swipe position on server updates.
  if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
  // The server broadcasts repeat snapshots; retain the revealed image and slider.
- if(['verdict','reveal','results'].includes(page)&&view.phase===page&&key===lastUiKey)return;
+ if(['verdict','reveal','results'].includes(page)&&view.phase===page&&
+    lastUiKey.startsWith(view.phase+':'+view.round+':'+view.turn+':'))return;
  if(page==='vote'&&view.phase==='voting'&&voteScreenToken===view.round+':'+view.turn){
   // Authoritative vote receipts can update dozens of times per round.
   // Preserve the live gallery, five loaded originals, coin controls, scroll
