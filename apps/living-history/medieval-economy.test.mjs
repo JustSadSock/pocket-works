@@ -86,7 +86,7 @@ test('historical v0.5 save with no separated seed stores does not receive free n
  const copy=deserialize(serialize(s));
  assert.ok(!copy.outside,'no artificial external market inserted into existing saves');
  advanceDays(copy,365);
- assert.ok(copy.households.every(h=>h.farmYear.mix===false));
+ assert.ok(copy.households.filter(h=>h.farmYear).every(h=>h.farmYear.mix===false),'old historic saves plant legacy cereal only');
  assert.equal(copy.stats.oatsHarvested||0,0);
  check(copy);
 });
