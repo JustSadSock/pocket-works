@@ -52,6 +52,7 @@ try{
     document.querySelector('.app-shell').style.setProperty('--app-viewport-height',height+'px');
     document.querySelector('#screen').innerHTML=html;
    },{html:stage.html,height:layout.h});
+   if(stage.name.startsWith('admission'))await page.locator('.passage-art-frame img').evaluate(img=>img.decode().catch(()=>{})).catch(()=>{});
    if(stage.name==='preparing')await page.evaluate(()=>{
     for(let i=0;i<3;i++)document.querySelector('[data-art-slot="'+i+'"]')?.classList.add('is-loaded');
     const track=document.querySelector('#artLoadTrack');
