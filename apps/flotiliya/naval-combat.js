@@ -43,7 +43,7 @@ export function contest(attacker,defender,supportAttacker=0,supportDefender=0){
  const flank=attackSector(defender,attacker),defendAngle=attackSector(attacker,defender);
  const attack=boardingStrength(attacker,flank,supportAttacker);
  const defense=boardingStrength(defender,defendAngle,supportDefender)*.9;
- return {flank,pressure:(attack-defense)*3.7+2.25,attack,defense,
+ return {flank,pressure:(attack-defense)*3.7+0.45,attack,defense,
   attackerCrewDamage:Math.max(.3,defense*.27),
   defenderCrewDamage:Math.max(.5,attack*.4),
   attackerMoraleDamage:defense*.15,
