@@ -18,7 +18,7 @@ export function finaleVerdictMarkup({view:v,artworks,artworkURL,escapeText,head,
    '<div class="finale-ballot-index"><span>ЭКСПОНАТ</span><b>'+String(i+1).padStart(2,'0')+'</b></div>'+
    '<div class="verdict-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+label(art.title||'Полотно')+'"></div>'+
    '<div class="finale-card-caption"><strong>'+label(art.title||'Картина')+'</strong><small>'+label(art.artist||'')+'</small></div>'+
-   '<div class="finale-ballot-votes"><div class="finale-vote-tally"><span>'+count+' / '+Math.max(0,count)+' фиш.</span><strong aria-label="'+count+' фишек">'+count+'</strong></div>'+
+   '<div class="finale-ballot-votes"><div class="finale-vote-tally"><span>Поставлено</span><strong aria-label="'+count+' фишек">'+count+'</strong></div>'+
    '<div class="finale-vote-bar" role="img" aria-label="Ставки: '+count+'"><i></i></div>'+
    '<div class="verdict-tokens" aria-hidden="true">'+chipDots(Math.min(count,9))+'</div>'+
    '<small class="finale-voters">'+label(voters.length?voters.join(' · '):'Без ставок')+'</small></div></article>';
