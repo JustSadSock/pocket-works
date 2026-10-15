@@ -86,28 +86,28 @@ function summarizeDeaths(items){
 
 async function getEngine(label){
  if(label==='base')return {createWorld,advanceDays,audit,overview,serialize};
- // Only exact source substitutions. Test whether the work-access threshold
- // creates a feedback loop; these are NOT recommended gameplay defaults.
+ // The pre-v0.7.3 binary threshold experiment has been completed and its
+ // original report is archived. Current sensitivity compares continuous
+ // fitness curves around the production healthy=75 reference, not fake
+ // "healthy at 10" workers doing a full day of work.
  const modelSource=fs.readFileSync(path.join(appDir,'model.js'),'utf8');
  const navigationSource=fs.readFileSync(path.join(appDir,'navigation.js'),'utf8');
- const target='const activeAdults=(s,h)=>liveMembers(s,h).filter(p=>p.age>=15&&p.health>25';
- if(modelSource.split(target).length!==2)throw Error('Farm-threshold intervention anchor changed');
- const allGates=(modelSource.match(/p\.health>25/g)||[]).length;
- if(allGates!==13)throw Error('Unexpected model labour-gate count: '+allGates);
- let revised=label==='farm10'?modelSource.replace(target,target.replace('p.health>25','p.health>10')):
-  label==='gates10'?modelSource.replace(/p\.health>25/g,'p.health>10'):null;
- if(!revised)throw Error('Unknown sensitivity label');
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'living-work-gate-'));
+ const target='const healthy=75;';
+ if(modelSource.split(target).length!==2)throw Error('Labour-curve intervention anchor changed');
+ const healthy=label==='gentle60'?60:label==='strict90'?90:null;
+ if(!healthy)throw Error('Unknown sensitivity label');
+ const revised=modelSource.replace(target,'const healthy='+healthy+';');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'living-work-curve-'));
  fs.writeFileSync(path.join(dir,'package.json'),'{"type":"module"}');
  fs.writeFileSync(path.join(dir,'model.js'),revised);
  fs.writeFileSync(path.join(dir,'navigation.js'),navigationSource);
  const imported=await import(pathToFileURL(path.join(dir,'model.js')).href);
  return {...imported,dispose:()=>fs.rmSync(dir,{recursive:true,force:true}),
-  patch:{label,replacedGates:label==='farm10'?1:allGates,target:10,base:25}};
+  patch:{label,changed:'healthy-normalization',healthy,baselineHealthy:75}};
 }
 
 async function runThreshold(){
- const variants=['base','farm10','gates10'],rows=[];
+ const variants=['base','gentle60','strict90'],rows=[];
  for(const label of variants){
   const engine=await getEngine(label);
   try {
@@ -131,9 +131,9 @@ async function runThreshold(){
   row.firstAnnualPopulationDifference=row.annual.findIndex((x,i)=>x.population!==baseline.annual[i].population);
  }
  result.variants=rows;result.method={
-  matchedInitialSeed:seed,changedCode:'Only the exact health>25 eligibility predicates in model.js; base engine is untouched',
-  farm10:'Single threshold in activeAdults() becomes health>10, affecting daily farm/garden/cattle/work assignment',
-  gates10:'All 13 occurrences of p.health>25 become p.health>10; other health gates (>30, >35, etc.) stay as implemented',
+  matchedInitialSeed:seed,changedCode:'Only the healthy-normalization constant of workCapacity in a temporary copy of model.js is changed; the base engine remains untouched',
+  gentle60:'Full effective day is reached at health 60 rather than 75',
+  strict90:'Full effective day is reached at health 90 rather than 75',
   caveat:'Sensitivity probes the structural effect of labour eligibility. It does not establish the historically correct cutoff.',
   demography:'Same keyed draw procedure; economic choices and eligibility can diverge after intervention'};
 }
