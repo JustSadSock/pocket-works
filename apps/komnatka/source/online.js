@@ -18,9 +18,9 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
  const $=id=>document.getElementById(id);
  const layer=$('onlineLayer'),panel=$('onlinePanel'),hud=$('onlineHUD');
  let net=null,me=null,room=null,code='',connected=false,busy=false,modal=false;
- let mode='tenants',name='Гость',joinCode=new URLSearchParams(location.search).get('room')||'';
+ let mode='tenants',difficulty='normal',name='Гость',joinCode=new URLSearchParams(location.search).get('room')||'';
  let reference=false,phase='',syncAt=0,awaiting=false,returnToHome=false;
- let review=null;
+ let review=null,overlay=false,overlap=50;
  let identity=null;
  const send=payload=>{
   if(!connected||!net)return false;
@@ -46,7 +46,11 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
   }).join('');
   const info=review.summary||{exact:0,partial:0,missing:0,extra:0};
   return '<section class="memory-review" aria-label="Сравнение с образцом">'+
-   '<div class="memory-images">'+pictures+'</div>'+
+   '<div class="memory-images '+(overlay?'overlay':'')+'" style="--reveal:'+overlap+'%">'+pictures+'</div>'+
+   '<div class="memory-inspector"><button id="memoryOverlayToggle" type="button">'+
+    (overlay?'Показать рядом':'Наложить комнаты')+'</button>'+
+    (overlay?'<label for="memoryCompareSlider">Граница сравнения</label><input id="memoryCompareSlider" type="range" min="0" max="100" value="'+overlap+'" aria-label="Сравнить фотографии">'+
+     '<output id="memoryCompareValue">'+overlap+'%</output>':'')+'</div>'+
    '<div class="memory-summary">'+info.exact+' точных · '+info.partial+' частичных · '+
    info.missing+' пропущено · '+info.extra+' лишних</div>'+
    '<ul class="memory-differences">'+rows+'</ul></section>';
@@ -124,15 +128,28 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
      (room.mode==='memory'?'Совпадение с образцом':'Пожелания выполнены')+'</span></div>':'')+
      (room.phase==='result'&&room.mode==='memory'?reviewMarkup():'')+
      (room.phase==='result'&&room.mode==='tenants'?tenantResults():'')+
+    (host&&room.phase==='lobby'?'<div class="online-difficulty"><strong>Темп игры</strong><div>'+
+      [['easy','Спокойно'],['normal','Обычно'],['hard','На скорость']].map(([id,label])=>
+        '<button type="button" data-difficulty="'+id+'" class="'+(difficulty===id?'chosen':'')+'">'+label+'</button>').join('')+
+      '</div></div>':'')+
     (host&&['lobby','result'].includes(room.phase)?'<button id="onlineStart" class="online-primary" '+((room.players?.length||0)<2?'disabled':'')+'>Начать игру</button>':'')+
     (room.phase==='result'&&room.mode==='memory'?'<button id="onlineCompareModal" class="online-secondary">Осмотреть эталон крупно</button>':'')+
     (host&&room.phase==='preview'?'<button id="onlineSkip" class="online-primary">Мы запомнили — начать</button>':'')+
     (room.phase==='build'?'<button id="onlineContinue" class="online-primary">Вернуться к комнате</button>':'')+
     '<button id="onlineLeave" class="online-secondary">Покинуть комнату</button>';
-   $('onlineCopyCode')?.addEventListener('click',()=>copy(code));
+   $('memoryOverlayToggle')?.addEventListener('click',()=>{overlay=!overlay;renderModal();});
+    $('memoryCompareSlider')?.addEventListener('input',e=>{
+     overlap=Math.max(0,Math.min(100,Number(e.target.value)||0));
+     panel.querySelector('.memory-images')?.style.setProperty('--reveal',overlap+'%');
+     const value=$('memoryCompareValue');if(value)value.textContent=overlap+'%';
+    });
+    $('onlineCopyCode')?.addEventListener('click',()=>copy(code));
    $('onlineCopyLink')?.addEventListener('click',()=>copy(location.origin+location.pathname+'?room='+encodeURIComponent(code)));
    panel.querySelectorAll('[data-online-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.onlineMode;renderModal();}));
-   $('onlineStart')?.addEventListener('click',()=>send({type:'start',mode}));
+    panel.querySelectorAll('[data-difficulty]').forEach(b=>b.addEventListener('click',()=>{
+     difficulty=b.dataset.difficulty;renderModal();
+    }));
+   $('onlineStart')?.addEventListener('click',()=>send({type:'start',mode,difficulty}));
    $('onlineSkip')?.addEventListener('click',()=>send({type:'skip_preview'}));
    $('onlineCompareModal')?.addEventListener('click',toggleReference);
    $('onlineContinue')?.addEventListener('click',close);
@@ -145,6 +162,7 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
   const changed=next.phase!==phase;
   phase=next.phase;
   room={...next,roomId:room?.roomId};
+  if(['easy','normal','hard'].includes(next.difficulty)&&next.phase!=='lobby')difficulty=next.difficulty;
   if(changed){
    reference=next.phase==='preview';
    if(next.phase==='result'){modal=true;toast('Раунд завершён. Посмотрите результат.');}
@@ -153,7 +171,7 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
   }
   const newReview=onRoom(room,{reference,phaseChanged:changed});
   if(next.phase==='result'&&next.mode==='memory'&&newReview)review=newReview;
-  if(changed&&next.phase!=='result')review=null;
+  if(changed&&next.phase!=='result'){review=null;overlay=false;overlap=50;}
   onPresence(room.selections||{},room.players||[],me?.id);
   render();
  }
@@ -239,7 +257,7 @@ export function createOnlineController({onEnter,onExit,onRoom,onPresence,onDismi
  layer.addEventListener('pointerdown',e=>{if(e.target===layer)close();});
  $('onlineFinish').addEventListener('click',()=>send({type:'finish'}));
  $('onlineCompare').addEventListener('click',toggleReference);
- $('onlineNext').addEventListener('click',()=>send(room?.phase==='preview'?{type:'skip_preview'}:{type:'start',mode}));
+ $('onlineNext').addEventListener('click',()=>send(room?.phase==='preview'?{type:'skip_preview'}:{type:'start',mode,difficulty}));
  $('onlineCode').addEventListener('click',()=>copy(code));
  render();
  return {
