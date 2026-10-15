@@ -433,3 +433,98 @@
   animation:none!important;
  }
 }
+
+/* Jury room: the original paintings take the space, not five pale cards. */
+#screen>.expert-phase{background:#263a30!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+#screen>.expert-phase .phase-head{flex:none;background:#2c3a30!important;border-bottom:1px solid #7d886e!important}
+#screen>.expert-phase .phase-body.expert-round{
+ display:flex!important;flex-direction:column!important;flex:1 1 auto;
+ min-height:0!important;width:100%!important;max-width:1800px!important;
+ padding:clamp(6px,1vh,16px) clamp(8px,1.6vw,26px)!important;
+ background:radial-gradient(ellipse at 50% 20%,#405947,#22372e 85%)!important;
+}
+#screen>.expert-phase .expert-intro{flex:0 0 auto!important;color:#eedfc5!important}
+#screen>.expert-phase .expert-author h3,
+#screen>.expert-phase .expert-observers{color:#e9d8b7!important}
+#screen>.expert-phase .expert-ballot{
+ display:flex!important;flex:1 1 auto;flex-direction:column;
+ min-height:0!important;overflow:hidden!important;
+}
+#screen>.expert-phase .expert-ballot>p.hint{
+ flex:none;color:#ded0b4!important;margin:clamp(3px,.8vh,10px) 0!important;
+}
+#screen>.expert-phase .suspect-gallery{
+ flex:1 1 auto!important;min-height:0!important;margin:0!important;
+ gap:clamp(7px,1vw,18px)!important;overflow:hidden!important;align-items:stretch!important;
+}
+#screen>.expert-phase .stake-card{
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ min-height:0!important;overflow:hidden;
+}
+#screen>.expert-phase .stake-card.has-chips{background:transparent!important;box-shadow:none!important}
+#screen>.expert-phase .stake-frame{
+ display:flex!important;flex:1 1 auto;min-height:0;align-items:center;justify-content:center;
+ padding:clamp(4px,.5vw,8px)!important;background:#362b20!important;
+ border:clamp(5px,.6vw,9px) ridge #99764c!important;
+ box-shadow:0 10px 22px #101a149a!important;
+}
+#screen>.expert-phase .stake-frame :is(img,canvas){
+ width:auto!important;height:auto!important;max-height:100%!important;max-width:100%!important;
+ aspect-ratio:var(--art-aspect,auto)!important;object-fit:contain!important;border:0!important;
+ background:#32281e!important;
+}
+#screen>.expert-phase .stake-card .stake-details{
+ flex:0 0 auto;min-height:0!important;margin:6px 1px 0;padding:5px!important;
+ background:linear-gradient(#d9c297,#c9a878)!important;border:1px solid #917347!important;
+ text-align:center;
+}
+#screen>.expert-phase .stake-card .stake-details :is(strong,small){color:#34291e!important}
+#screen>.expert-phase .stake-actions{flex:0 0 auto;min-height:40px;margin-top:5px}
+#screen>.expert-phase .stake-locked{color:#ead2a7!important}
+#screen>.expert-phase .stake-tray{
+ flex:0 0 auto;min-height:0!important;position:relative!important;
+ background:#2d4335!important;border:1px solid #70866d!important;
+ color:#f0dec0!important;margin:clamp(5px,.9vh,12px) 0 0!important;
+ padding:clamp(6px,.8vh,10px) clamp(7px,1vw,16px)!important;
+}
+#screen>.expert-phase .stake-tray :is(#chipsRemaining,.coin-auto-status){color:#ebdbb8!important}
+#screen>.expert-phase .stake-wait{
+ flex:0 0 auto;margin:5px 0!important;padding:6px!important;
+ color:#ecd8b7!important;border:0!important;
+}
+@media(min-width:1000px){
+ #screen>.expert-phase .suspect-gallery{
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+ }
+}
+@media(max-width:999px){
+ #screen>.expert-phase .suspect-gallery{
+  display:flex!important;flex-direction:row!important;
+  overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory;
+ }
+ #screen>.expert-phase .suspect-gallery .stake-card{
+  flex:0 0 clamp(180px,66vw,360px)!important;scroll-snap-align:center;
+ }
+}
+/* Winning podium shares the dark wall rather than a white accounting sheet. */
+#screen>.finale-results .finale-ledger-heading{border-bottom:1px solid #718973!important}
+#screen>.finale-results .finale-ledger-heading :is(.finale-overline,strong){color:#e8d4b2!important}
+#screen>.finale-results .finale-ranking-row{
+ border-bottom:1px solid #728774!important;background:transparent!important;
+}
+#screen>.finale-results .finale-ranking-row.is-leading{
+ background:#455e4b!important;border-left:3px solid #c4a06a!important;
+}
+#screen>.finale-results .finale-ranking-row :is(.finale-ranking-place,.finale-ranking-name strong,.finale-ranking-name small,
+ .finale-ranking-score b,.finale-ranking-score small,.finale-score-breakdown,.finale-score-breakdown b){
+ color:#edddbe!important;
+}
+#screen>.finale-results .finale-score-track{background:#5e745e!important}
+#screen>.finale-results .finale-results-actions .btn.ghost{
+ background:#34483a!important;border-color:#829477!important;color:#f0e0c2!important;
+}
+@media(max-width:700px){
+ #screen>.expert-phase .stake-frame :is(img,canvas){max-height:100%!important}
+ #screen>.expert-phase .suspect-gallery .stake-card .stake-details{min-height:34px!important;padding:4px!important}
+ #screen>.expert-phase .stake-tray{padding:5px!important}
+}
