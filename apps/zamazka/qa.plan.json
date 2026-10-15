@@ -99,7 +99,7 @@
     {
       "id": "fill-visual-audit",
       "kind": "browser-node",
-      "tier": "deep",
+      "tier": "smoke",
       "entry": "qa/fill-visual-playwright.mjs"
     }
   ]
