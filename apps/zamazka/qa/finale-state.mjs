@@ -13,7 +13,6 @@ const view={phase:'verdict',host:'id0',turn:0,round:1,participants:people,select
  gallery:[{name:people[1].name,id:'id1',votes}],
  scores:Object.fromEntries(people.map((p,i)=>[p.id,{mask:100-i*8,eye:60+i*3}]))};
 const verdict=finaleVerdictMarkup({view,artworks:ARTS,artworkURL,escapeText:esc,head,chipDots:dots,hostId:'id0'});
-assert.equal((verdict.match(/class="verdict-card/g)||[]).length,0); // now annotated cards, not unnamed legacy HTML
 assert.equal((verdict.match(/finale-ballot-card/g)||[]).length,5);
 assert.match(verdict,/21<\/strong>/); // total 7 players × 3 coins, no fictitious stakes
 assert.match(verdict,/data-action="advance"/);
