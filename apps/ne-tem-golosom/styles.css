@@ -4,3 +4,22 @@
 @media(min-width:820px){.screen{padding:32px 42px}.home{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto auto;gap:24px;min-height:min(100dvh,850px)}.home .masthead{grid-column:1/-1}.home-art{grid-column:2;grid-row:2/4;max-height:none;min-height:420px;margin:0;align-self:center}.home-copy{grid-column:1;grid-row:2;align-self:end}h1{font-size:clamp(90px,9vw,126px)}.home-actions{grid-column:1;grid-row:3;align-self:start}.home-foot{grid-column:1/-1}.scene-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.editor{display:grid;grid-template-columns:1fr 335px;grid-template-rows:auto 1fr;padding:22px;gap:16px}.editor-head{grid-column:1/-1}.stage-wrap{grid-column:1;grid-row:2;max-height:calc(100dvh - 118px);border:8px solid #363d40}.editor-desk{grid-column:2;grid-row:2;display:flex;flex-direction:column;justify-content:center;padding:20px}.edit-controls{margin:22px 0}.editor-bottom{flex-wrap:wrap}.room-ticket{max-width:540px;width:100%;align-self:center}.trim-preview{max-height:55vh}.trim-preview video{max-height:55vh}}
 @media(max-width:380px){.screen{padding-left:12px;padding-right:12px}.editor{padding-left:0;padding-right:0}.home-art{min-height:160px}h1{font-size:65px}.film-mute{max-width:100px}.editor-head{padding:0 8px 10px}.editor-desk{padding:10px 9px}.edit-controls{gap:15px}.record-btn{min-width:126px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+/* Local film splicer — a compact cutting bench rather than a second full editor. */
+.media-workbench{background:#e4d6c3;border:1px solid #c9b597;border-left:5px solid #b45b42;padding:14px;display:flex;flex-direction:column;gap:13px}
+.media-workbench h3{font:700 20px Oswald,sans-serif}.media-stamp{font-size:11px;font-weight:800;color:#624e3b;font-variant-numeric:tabular-nums}
+.media-controls{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:end}
+.media-controls label{font-size:12px;font-weight:800;display:flex;flex-direction:column;gap:9px;min-width:0}
+.media-controls label span{font-size:11px;color:#815645}
+.media-controls input[type=range]{width:100%;accent-color:#b45b42;min-height:25px;margin:0}
+.media-controls select{width:100%;min-width:0;min-height:44px;border:1px solid #bcab95;background:#f9f2e5;padding:8px;color:var(--ink);font:700 12px Manrope,Arial,sans-serif}
+.media-budget{display:flex;align-items:start;justify-content:space-between;gap:10px;font-size:12px;font-variant-numeric:tabular-nums}
+.media-budget span{font-weight:800}.media-budget small{color:#6c6156;text-align:right;font-size:10px;max-width:180px;line-height:1.5}
+.media-render{background:#302f2c;color:#f7ead4;border:0;min-height:47px;width:100%;font-weight:800;padding:10px}.media-render:active{background:#4b4039}
+.media-note{font-size:11px;line-height:1.5;color:#655a4f}
+.media-progress{border-top:1px solid #bfaf9a;padding-top:10px}.media-progress strong{font-size:12px}.media-progress progress{width:100%;height:11px;accent-color:#b45b42;margin:8px 0}.media-progress small{font-size:10px;color:#675f54}
+.media-result{border-top:1px solid #bba992;padding-top:12px}.media-result-title{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:10px}.media-result-title span{font-variant-numeric:tabular-nums;color:#675f54}
+.media-result video{width:100%;max-height:260px;aspect-ratio:16/9;object-fit:contain;background:#171b1f}
+.media-result-actions{display:grid;grid-template-columns:1.5fr 1fr;gap:8px;margin-top:10px}.media-result-actions .action{min-height:46px;font-size:12px;padding:9px}.media-result-actions .secondary-action{box-shadow:none}
+@media(max-width:460px){.media-workbench{padding:12px}.media-controls{grid-template-columns:1fr 1fr;gap:9px}.media-budget{flex-direction:column;gap:4px}.media-budget small{text-align:left;max-width:none}.media-result-actions{grid-template-columns:1fr 1fr}}
+
+.room-connection{background:#e8dccb;border-left:4px solid var(--accent);padding:20px;display:flex;flex-direction:column;align-items:stretch;gap:14px;max-width:540px;width:100%;align-self:center}.room-connection strong{font-size:13px;line-height:1.6}.room-connection .action{width:100%;min-height:46px}

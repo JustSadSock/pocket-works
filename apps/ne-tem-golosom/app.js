@@ -1,6 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
+import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVideoBytes,supportsVideoExport,measureVideoDuration,exportVideo} from './media-lab.js';
 installMobileRuntime();
 
 const $=id=>document.getElementById(id);
@@ -33,6 +34,8 @@ const mem=new Map(),session={
 };
 let sound=true,audioContext=null,identity=null,name='Гость',mode='solo',view='home',selected=null,sourceBlob=null,scene=null;
 let relayQueue=Promise.resolve(),relayInbox=new Map();
+let videoExportController=null,videoExportBlob=null,videoExportUrl=null;
+const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],undoHistory=[],selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',saving=false,initializedScene='',toastTimer=0;
 const roomsOrigin=location.origin+'/pocketnet';
 const sceneSource=s=>LIBRARY.find(x=>x.id===s?.id)?.src||null;
@@ -62,23 +65,111 @@ function setVideoSources(target){const src=scene?.custom?(sourceBlob?((liveUrl&&
   if(id===active)setVideo(el,src);
   else if(el.hasAttribute('src')){el.pause();el.removeAttribute('src');delete el.dataset.mediaSrc;el.load()}
  }$('trim-video').onloadedmetadata=()=>seekVideo($('trim-video'),0);$('stage-placeholder').classList.toggle('hidden',!!src);if(src&&scene){for(const id of ['stage-video','premiere-video']){$(id).onloadedmetadata=()=>{seekVideo($(id),0);$('stage-placeholder').classList.add('hidden')};$(id).onerror=()=>{if(id==='stage-video'){$('stage-placeholder').textContent='Видео не открылось. Выбери другой фильм или загрузи MP4.';$('stage-placeholder').classList.remove('hidden')}}}}}
-function seekVideo(video,local){if(!scene||!video.duration||!Number.isFinite(video.duration))return;try{video.currentTime=clamp(scene.start+local,0,Math.max(0,video.duration-.03))}catch{}}
+function seekVideo(video,local){if(!scene||!video.readyState)return;try{const limit=Number.isFinite(video.duration)?Math.max(0,video.duration-.03):scene.start+scene.duration;video.currentTime=clamp(scene.start+local,0,limit)}catch{}}
 function time(video){return scene?clamp((video.currentTime||scene.start)-scene.start,0,scene.duration):0}
 
 function library(){const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
-function selectScene(item,blob=null){selected={...item,roles:[...item.roles]};sourceBlob=blob;if(blob&&selected.custom){selected.id='custom-'+uid()}$('scene-title').value=selected.title;$('trim-start').value=selected.start||0;$('trim-length').value=selected.duration||60;scene={...selected};setVideoSources();renderRoles();show('trim')}
+function selectScene(item,blob=null){selected={...item,roles:[...item.roles]};sourceBlob=blob;if(blob&&selected.custom){selected.id='custom-'+uid()}$('scene-title').value=selected.title;$('trim-start').value=selected.start||0;$('trim-length').value=selected.duration||60;scene={...selected};setVideoSources();renderRoles();show('trim');updateMediaLab()}
 function renderRoles(){$('role-tags').innerHTML=selected.roles.map((role,i)=>'<div class="role-tag"><input maxlength="35" aria-label="Персонаж '+(i+1)+'" data-role-index="'+i+'" value="'+esc(role)+'"><button data-remove-role="'+i+'" aria-label="Удалить роль">×</button></div>').join('')}
 function validateScene(){const start=Number($('trim-start').value),duration=Number($('trim-length').value);const name=$('scene-title').value.trim();const roles=[...document.querySelectorAll('[data-role-index]')].map(el=>el.value.trim()).filter(Boolean);const v=$('trim-video');if(!name||!roles.length)return toast('Укажи название и хотя бы одного персонажа'),false;if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<10||duration>90)return toast('Длина сцены — от 10 до 90 секунд.'),false;if(Number.isFinite(v.duration)&&v.duration>0&&start+duration>v.duration+.1)return toast('Отрывок выходит за пределы видео.'),false;scene={...selected,title:name,start,duration,roles};return true}
-async function confirmScene(){if(!validateScene())return;setVideoSources();if(mode==='solo'){await openEditor();return}if(mode==='host'){await connectRoom('create');return}show('room')}
-async function uploadVideo(file){if(!file)return;if(file.size>32*1024*1024&&mode!=='solo')return toast('Для комнаты файл должен быть не больше 32 МБ.');if(file.size>160*1024*1024)return toast('Файл слишком большой для мобильного редактора.');if(!file.type.startsWith('video/')&&!/\.(mp4|mov|webm)$/i.test(file.name))return toast('Нужен видеофайл.');const url=URL.createObjectURL(file),v=$('trim-video');const meta=await new Promise(resolve=>{const tmp=document.createElement('video');tmp.preload='metadata';tmp.src=url;let done=false;const finish=x=>{if(!done){done=true;resolve(x);tmp.src=''}};tmp.onloadedmetadata=()=>finish(tmp.duration);tmp.onerror=()=>finish(0);setTimeout(()=>finish(0),8000)});URL.revokeObjectURL(url);if(!meta)return toast('Этот видеоформат не поддерживается браузером.');selectScene({id:'custom',title:file.name.replace(/\.[^.]+$/,'').slice(0,55),start:0,duration:Math.min(60,Math.floor(meta)),custom:true,roles:['Персонаж 1','Персонаж 2']},file)}
+async function confirmScene(){if(videoExportController)return toast('Сначала заверши обработку видео.');if(!validateScene())return;if(mode==='host'&&scene.custom&&sourceBlob?.size>MAX_ROOM_VIDEO_BYTES){toast('Для комнаты нужен файл до 96 МиБ. Сожми выбранный отрывок.');$('media-render').focus();return}setVideoSources();if(mode==='solo'){await openEditor();return}if(mode==='host'){await connectRoom('create');return}show('room')}
+async function uploadVideo(file){if(!file)return;if(file.size>MAX_SOURCE_VIDEO_BYTES)return toast('Исходный файл не должен превышать 512 МиБ.');if(!file.type.startsWith('video/')&&!/\.(mp4|mov|webm)$/i.test(file.name))return toast('Нужен видеофайл.');const url=URL.createObjectURL(file),v=$('trim-video');const meta=await new Promise(resolve=>{const tmp=document.createElement('video');tmp.preload='metadata';tmp.src=url;let done=false;const finish=x=>{if(!done){done=true;resolve(x);tmp.src=''}};tmp.onloadedmetadata=()=>measureVideoDuration(tmp).then(finish).catch(()=>finish(0));tmp.onerror=()=>finish(0);setTimeout(()=>finish(0),8000)});URL.revokeObjectURL(url);if(!meta)return toast('Этот видеоформат не поддерживается браузером.');selectScene({id:'custom',title:file.name.replace(/\.[^.]+$/,'').slice(0,55),start:0,duration:Math.min(60,Math.floor(meta)),custom:true,roles:['Персонаж 1','Персонаж 2']},file)}
+
+function clearExportPreview(){
+  const v=$('media-output-preview');
+  v.pause();v.removeAttribute('src');v.load();
+  if(videoExportUrl)URL.revokeObjectURL(videoExportUrl);
+  videoExportUrl=null;videoExportBlob=null;
+  $('media-result').classList.add('hidden');
+}
+function updateMediaLab(){
+  const active=!!selected?.custom&&sourceBlob instanceof Blob;
+  $('media-workbench').classList.toggle('hidden',!active);
+  if(!active){clearExportPreview();return}
+  const length=Math.max(0,Number($('trim-length').value)||0);
+  const size=estimateVideoBytes(length,Number($('media-quality').value));
+  $('media-source-size').textContent='Исходник · '+formatVideoBytes(sourceBlob.size);
+  $('media-quality-label').textContent=qualityNames[Number($('media-quality').value)-1]||qualityNames[3];
+  $('media-estimate').textContent='После обработки ≈ '+formatVideoBytes(size);
+  $('media-render').disabled=!!videoExportController||!supportsVideoExport();
+  if(!supportsVideoExport()){
+    $('media-note').textContent='В этом браузере нет локального кодировщика. Можно использовать файл без обработки, если он меньше 96 МиБ.';
+  }else if(videoExportBlob){
+    // Keep the actual encoded result message until the user accepts or discards it.
+  }else if(sourceBlob.size>MAX_ROOM_VIDEO_BYTES&&mode==='host'){
+    $('media-note').textContent='Для комнаты размер нужно уменьшить до 96 МиБ. Сжатие происходит локально.';
+  }else if(!videoExportBlob){
+    $('media-note').textContent='Обрежь отрывок или уменьши файл. После обработки появится предпросмотр реального качества.';
+  }
+}
+function exportBusy(busy){
+  $('media-render').disabled=busy||!supportsVideoExport();
+  $('confirm-scene').disabled=busy;
+  for(const id of ['trim-start','trim-length','media-quality','media-resolution'])$(id).disabled=busy;
+  $('media-progress').classList.toggle('hidden',!busy);
+}
+async function processMedia(){
+  if(videoExportController||!selected?.custom||!(sourceBlob instanceof Blob))return;
+  const start=Number($('trim-start').value),duration=Number($('trim-length').value);
+  if(!Number.isFinite(start)||start<0||!Number.isFinite(duration)||duration<10||duration>90)
+    return toast('Выбери отрывок от 10 до 90 секунд.');
+  const total=$('trim-video').duration;
+  if(Number.isFinite(total)&&start+duration>total+.1)return toast('Отрывок выходит за пределы видео.');
+  clearExportPreview();
+  const controller=new AbortController();
+  videoExportController=controller;
+  exportBusy(true);$('media-progress-bar').value=0;$('media-progress-label').textContent='Обработка · 0%';
+  try{
+    const result=await exportVideo({blob:sourceBlob,start,duration,width:Number($('media-resolution').value),
+      level:Number($('media-quality').value),signal:controller.signal,
+      onProgress:progress=>{
+        const pct=Math.round(progress*100);
+        $('media-progress-bar').value=pct;
+        $('media-progress-label').textContent='Обработка · '+pct+'%';
+      }});
+    if(controller.signal.aborted)return;
+    videoExportBlob=result;
+    videoExportUrl=URL.createObjectURL(result);
+    $('media-output-preview').src=videoExportUrl;
+    $('media-output-preview').load();
+    $('media-output-size').textContent=formatVideoBytes(result.size)+' · '+fmt(duration);
+    $('media-accept').disabled=mode==='host'&&result.size>MAX_ROOM_VIDEO_BYTES;
+    $('media-result').classList.remove('hidden');
+    $('media-note').textContent=result.size>MAX_ROOM_VIDEO_BYTES&&mode==='host'
+      ? 'Файл ещё слишком большой для комнаты. Уменьши качество и повтори обработку.'
+      : 'Сравни исходник сверху и обработанный фрагмент. Нажми «Использовать», когда результат устроит.';
+    cue('ready');
+  }catch(e){
+    if(e?.name!=='AbortError')toast(e?.message||'Не получилось обработать видео.');
+    $('media-note').textContent=e?.name==='AbortError'?'Обработка отменена. Исходное видео не изменилось.':'Исходное видео сохранено. Попробуй другие параметры.';
+  }finally{
+    videoExportController=null;exportBusy(false);updateMediaLab();
+  }
+}
+function acceptMedia(){
+  if(!(videoExportBlob instanceof Blob)||videoExportController)return;
+  if(mode==='host'&&videoExportBlob.size>MAX_ROOM_VIDEO_BYTES)return toast('Нужно уменьшить размер до 96 МиБ.');
+  const length=Number($('trim-length').value),type=videoExportBlob.type;
+  const extension=type.includes('mp4')?'mp4':'webm';
+  sourceBlob=new File([videoExportBlob],(selected.title||'scene')+'-cut.'+extension,{type});
+  selected.start=0;selected.duration=length;
+  scene={...selected,start:0,duration:length};
+  $('trim-start').value='0';
+  clearExportPreview();
+  setVideoSources('trim-video');
+  updateMediaLab();
+  $('media-note').textContent='Фрагмент готов · '+formatVideoBytes(sourceBlob.size)+'. Продолжи, чтобы создать комнату.';
+  toast('Готовый фрагмент выбран.');
+}
+
 function sceneForServer(){if(!scene)return null;const {id,title,start,duration,roles,custom}=scene;return {id,title,start,duration,roles,custom:!!custom}}
 function sendGame(data){if(!net||!room)return;try{net.sendGame(data)}catch{toast('Нет соединения. Переподключаемся…')}}
 function roomUI(){
- const s=state;show('room');if(scene)setVideoSources(null);$('join-panel').classList.toggle('hidden',!!s||mode!=='guest');
- $('room-heading').textContent=s?'Ваша команда':'Войти в комнату';$('room-code').textContent=s?room.slice(0,8).toUpperCase():'—';
+ const s=state;show('room');if(scene)setVideoSources(null);$('join-panel').classList.toggle('hidden',!!s||mode!=='guest');$('room-connection').classList.toggle('hidden',!!s||mode!=='host');
+ $('room-heading').textContent=s?'Ваша команда':mode==='host'?'Создать комнату':'Войти в комнату';$('room-code').textContent=s?room.slice(0,8).toUpperCase():'—';
  $('room-ticket').style.display=s?'flex':'none';$('player-count').textContent=s?s.players.length+'/6':'';
  $('room-phase-note').textContent=s?'Ожидаем актёров':'';
- if(!s){$('room-players').innerHTML='';$('room-help').textContent='Введите код, которым поделился ведущий.';$('room-start').classList.add('hidden');return}
+ if(!s){$('room-players').innerHTML='';$('room-help').textContent=mode==='host'?'Подключение требуется для передачи видео другим участникам.':'Введите код, которым поделился ведущий.';$('room-start').classList.add('hidden');return}
  const roleOptions=[...s.scene.roles];for(let i=0;i<s.scene.roles.length;i++)for(let j=i+1;j<s.scene.roles.length;j++)roleOptions.push(s.scene.roles[i]+' + '+s.scene.roles[j]);roleOptions.push('Все роли');for(const name of Object.values(s.assignments))if(name&&!roleOptions.includes(name))roleOptions.push(name);
  $('room-players').innerHTML=s.players.map((p,i)=>'<div class="room-player" style="border-left-color:'+colors[i%colors.length]+'"><span><b>'+esc(p.name)+(p.id===me?' (ты)':'')+'</b><small>'+(p.id===s.host?'Ведущий':'Актёр')+(s.mediaReady?.[p.id]?' · Видео получено':' · Загружаем видео')+'</small></span>'+(meHost()?'<select data-assign="'+esc(p.id)+'">'+roleOptions.map(r=>'<option value="'+esc(r)+'" '+(r===s.assignments[p.id]?'selected':'')+'>'+esc(r)+'</option>').join('')+'</select>':'<b>'+esc(s.assignments[p.id]||'Актёр')+'</b>')+'</div>').join('')+(s.scene.custom&&!sourceBlob&&!meHost()?'<label class="upload-card" style="margin:8px 0"><input data-room-video type="file" accept="video/*" hidden><span class="upload-icon">＋</span><span><b>Видео не передалось?</b><small>Выбери тот же файл на своём устройстве.</small></span></label>':'');
  $('room-help').textContent=esc(s.scene.title)+' · '+fmt(s.scene.duration)+' · '+(s.scene.custom?'личное видео':'CC BY, Blender Studio');$('room-start').classList.toggle('hidden',!meHost());$('room-start').disabled=s.players.length<2||!s.players.every(p=>s.mediaReady?.[p.id]);
@@ -90,14 +181,14 @@ function stateChanged(s){if(!s||!s.phase||!Array.isArray(s.players))return;const
  else if(s.phase==='recording'&&view==='wait')waitUI();
  if(s.phase==='premiere'&&(!prev||prev.phase!=='premiere')){sentPremiere=false;beginPremiere();}
 }
-async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show('room');$('net-pill').textContent='Подключаемся…';room=null;state=null;const conn=new PocketNet({serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',storage:session});net=conn;conn.roomId=null;conn.persist();conn.on('connected',m=>{me=m.player?.id||'';$('net-pill').textContent='PocketNet · онлайн'});
+async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show('room');$('net-pill').textContent='Подключаемся…';room=null;state=null;$('room-connection-status').textContent='Подключаемся к PocketNet…';$('room-retry').classList.add('hidden');roomUI();const conn=new PocketNet({serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',storage:session});net=conn;conn.roomId=null;conn.persist();conn.on('connected',m=>{me=m.player?.id||'';$('net-pill').textContent='PocketNet · онлайн'});
  conn.on('room_joined',m=>{room=m.roomId;if(action==='create'){state=m.state;roomUI();sendGame({type:'scene',scene:sceneForServer()})}else{stateChanged(m.state);if(me)sendGame({type:'sync'})}ensurePeers()});
  conn.on('game_event',m=>{if(m.event?.type==='state'){const s=m.event.payload;stateChanged(s);ensurePeers()}else if(m.event?.type==='notice')toast(m.event.payload);else if(m.event?.type==='signal')receiveSignal(m.event.payload);else if(m.event?.type==='relay')receiveRelay(m.event.payload)});
  conn.on('error',e=>toast('Связь: '+(e.code||e.message||'ошибка')));
  conn.on('disconnected',()=>{$('net-pill').textContent='Переподключаемся…';toast('Соединение потеряно. Записи остались на устройстве.')});
- try{await conn.connect();if(action==='create')conn.createRoom('ne-tem-golosom');else conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());}catch(e){toast('PocketNet недоступен: '+e.message);$('net-pill').textContent='Нет связи';roomUI()}}
+ try{await conn.connect();if(action==='create')conn.createRoom('ne-tem-golosom');else conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());}catch(e){toast('PocketNet недоступен: '+e.message);$('net-pill').textContent='Нет связи';$('room-connection-status').textContent='Не удалось создать комнату. Проверь подключение и попробуй снова.';$('room-retry').classList.remove('hidden');roomUI()}}
 function leaveNetwork(){relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
-function resetRuntime(){cancelCountdown();stopAllPlayback();if(record)finishRecording();cleanAudios();localClips=[];remoteClips=[];undoHistory=[];if(liveUrl){URL.revokeObjectURL(liveUrl);liveUrl=null}sourceBlob=null;scene=null;}
+function resetRuntime(){videoExportController?.abort();clearExportPreview();cancelCountdown();stopAllPlayback();if(record)finishRecording();cleanAudios();localClips=[];remoteClips=[];undoHistory=[];if(liveUrl){URL.revokeObjectURL(liveUrl);liveUrl=null}sourceBlob=null;scene=null;}
 function closePeer(id){const p=peers.get(id);if(!p)return;try{p.dc?.close();p.pc.close()}catch{}peers.delete(id);for(const key of videoSent)if(key.startsWith(id+':'))videoSent.delete(key)}
 function peer(id,initiator){if(!window.RTCPeerConnection)return toast('WebRTC недоступен в этом браузере.'),null;if(peers.has(id))return peers.get(id);const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}]});const p={id,pc,dc:null,remoteReady:false,pending:[],rx:null,queued:[],busy:false};peers.set(id,p);
  pc.onicecandidate=e=>{if(e.candidate)sendGame({type:'signal',to:id,signal:{kind:'ice',candidate:e.candidate.toJSON()}})};
@@ -109,7 +200,7 @@ function ensurePeers(){if(!state||!me)return;for(const p of state.players){if(p.
 async function receiveSignal(data){if(!data||!state?.players.some(p=>p.id===data.from))return;const from=data.from,x=data.signal||{};let p=peers.get(from)||peer(from,false);if(!p)return;try{if(x.kind==='offer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'offer',sdp:x.sdp});const answer=await p.pc.createAnswer();await p.pc.setLocalDescription(answer);sendGame({type:'signal',to:from,signal:{kind:'answer',sdp:p.pc.localDescription.sdp}})}else if(x.kind==='answer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'answer',sdp:x.sdp})}else if(x.kind==='ice'&&x.candidate){if(!p.pc.remoteDescription)p.pending.push(x.candidate);else await p.pc.addIceCandidate(x.candidate)}if(p.pc.remoteDescription&&p.pending.length){for(const c of p.pending.splice(0))await p.pc.addIceCandidate(c).catch(()=>{})}}catch(e){toast('Ошибка соединения с актёром: '+e.message)}}
 function attachChannel(p,dc){p.dc=dc;dc.binaryType='arraybuffer';dc.bufferedAmountLowThreshold=128*1024;dc.onopen=()=>{flush(p);if(meHost()&&scene?.custom&&sourceBlob)sendVideoTo(p.id);if(state?.phase==='premiere'&&sentPremiere)sendOwnTo(p.id)};
  dc.onmessage=e=>onMedia(p,e.data);dc.onclose=()=>{p.dc=null};dc.onerror=()=>toast('Передача медиа была прервана.')}
-async function flush(p){if(p.busy||p.dc?.readyState!=='open')return;p.busy=true;try{while(p.queued.length&&p.dc?.readyState==='open'){const item=p.queued.shift(),blob=item.blob;if(blob.size>34*1024*1024)continue;const token=uid();p.dc.send(JSON.stringify({kind:'begin',token,media:item.kind,size:blob.size,meta:item.meta}));const chunkSize=16000;for(let offset=0;offset<blob.size;offset+=chunkSize){while(p.dc.bufferedAmount>600000){await new Promise(resolve=>{const timer=setTimeout(resolve,180);p.dc.addEventListener('bufferedamountlow',()=>{clearTimeout(timer);resolve()},{once:true})});if(p.dc.readyState!=='open')throw Error('channel_closed')}p.dc.send(await blob.slice(offset,offset+chunkSize).arrayBuffer())}p.dc.send(JSON.stringify({kind:'end',token}));}}catch{toast('Не удалось отправить медиа. Повтори подключение.')}finally{p.busy=false}}
+async function flush(p){if(p.busy||p.dc?.readyState!=='open')return;p.busy=true;try{while(p.queued.length&&p.dc?.readyState==='open'){const item=p.queued.shift(),blob=item.blob;if(blob.size>(item.kind==='video'?MAX_ROOM_VIDEO_BYTES:34*1024*1024))continue;const token=uid();p.dc.send(JSON.stringify({kind:'begin',token,media:item.kind,size:blob.size,meta:item.meta}));const chunkSize=16000;for(let offset=0;offset<blob.size;offset+=chunkSize){while(p.dc.bufferedAmount>600000){await new Promise(resolve=>{const timer=setTimeout(resolve,180);p.dc.addEventListener('bufferedamountlow',()=>{clearTimeout(timer);resolve()},{once:true})});if(p.dc.readyState!=='open')throw Error('channel_closed')}p.dc.send(await blob.slice(offset,offset+chunkSize).arrayBuffer())}p.dc.send(JSON.stringify({kind:'end',token}));}}catch{toast('Не удалось отправить медиа. Повтори подключение.')}finally{p.busy=false}}
 function queueMedia(id,kind,blob,meta){const p=peers.get(id);if(!p||!(blob instanceof Blob))return;p.queued.push({kind,blob,meta});flush(p)}
 function relayAudio(id,blob,meta){
  if(!net||!room||state?.phase!=='premiere'||blob.size>3000000){toast('Голос не передался. Попробуй переподключиться.');return}
@@ -151,7 +242,7 @@ function receiveRelay(packet){
 }
 const videoSent=new Set();
 function sendVideoTo(id){if(!scene?.custom||!sourceBlob||!meHost())return;const key=id+':'+scene.id;if(videoSent.has(key))return;videoSent.add(key);queueMedia(id,'video',sourceBlob,{scene:scene.id,mime:sourceBlob.type||'video/mp4'})}
-function onMedia(p,data){if(typeof data==='string'){let m;try{m=JSON.parse(data)}catch{return}if(m.kind==='begin'){if(p.rx||!['video','audio'].includes(m.media)||!Number.isInteger(m.size)||m.size<1||m.size>34*1024*1024)return;p.rx={kind:m.media,token:m.token,size:m.size,meta:m.meta||{},received:0,chunks:[]}}else if(m.kind==='end'&&p.rx?.token===m.token){const rx=p.rx;p.rx=null;if(rx.received===rx.size)receivedMedia(p,rx,new Blob(rx.chunks,{type:rx.meta.mime||'application/octet-stream'}))}return}
+function onMedia(p,data){if(typeof data==='string'){let m;try{m=JSON.parse(data)}catch{return}if(m.kind==='begin'){if(p.rx||!['video','audio'].includes(m.media)||!Number.isInteger(m.size)||m.size<1||m.size>(m.media==='video'?MAX_ROOM_VIDEO_BYTES:34*1024*1024))return;p.rx={kind:m.media,token:m.token,size:m.size,meta:m.meta||{},received:0,chunks:[]}}else if(m.kind==='end'&&p.rx?.token===m.token){const rx=p.rx;p.rx=null;if(rx.received===rx.size)receivedMedia(p,rx,new Blob(rx.chunks,{type:rx.meta.mime||'application/octet-stream'}))}return}
  const rx=p.rx;const b=data instanceof ArrayBuffer?data:null;if(!rx||!b||rx.received+b.byteLength>rx.size){p.rx=null;return}rx.received+=b.byteLength;rx.chunks.push(b)}
 async function receivedMedia(p,rx,blob){if(rx.kind==='video'){if(!scene?.custom||rx.meta.scene!==scene.id||meHost())return;sourceBlob=blob;setVideoSources();sendGame({type:'media_ready'});toast('Видео получено. Можно начинать.');return}
  if(state?.phase!=='premiere')return;const m=rx.meta,owner=String(m.owner||'');if(!state.players.some(x=>x.id===owner)||!Number.isFinite(+m.start)||!Number.isFinite(+m.end)||+m.start<0||+m.end>scene.duration+.01||+m.end<=+m.start)return;
@@ -197,17 +288,25 @@ $('create-btn').onclick=()=>{mode='host';library()};
 $('join-btn').onclick=()=>{mode='guest';state=null;scene=null;show('room');roomUI();$('join-code').focus()};
 $('scene-grid').onclick=e=>{const b=e.target.closest('[data-scene]');if(b){const s=LIBRARY.find(x=>x.id===b.dataset.scene);if(s)selectScene(s)}};
 $('video-file').onchange=e=>{uploadVideo(e.target.files[0]);e.target.value=''};
+$('media-quality').oninput=updateMediaLab;
+$('media-resolution').onchange=updateMediaLab;
+$('trim-length').oninput=updateMediaLab;
+$('media-render').onclick=processMedia;
+$('media-cancel').onclick=()=>videoExportController?.abort();
+$('media-discard').onclick=()=>{clearExportPreview();updateMediaLab()};
+$('media-accept').onclick=acceptMedia;
 $('add-role').onclick=()=>{if(selected.roles.length>=12)return toast('Максимум 12 персонажей.');selected.roles.push('Новый персонаж');renderRoles()};
 $('role-tags').onclick=e=>{const b=e.target.closest('[data-remove-role]');if(!b)return;if(selected.roles.length<2)return toast('Оставь хотя бы одну роль.');selected.roles.splice(Number(b.dataset.removeRole),1);renderRoles()};
 $('role-tags').oninput=e=>{if(e.target.matches('[data-role-index]'))selected.roles[Number(e.target.dataset.roleIndex)]=e.target.value};
 $('confirm-scene').onclick=confirmScene;
-$('trim-start').onchange=()=>{const v=$('trim-video');v.currentTime=Math.max(0,Number($('trim-start').value)||0)};
+$('trim-start').onchange=()=>{const v=$('trim-video');v.currentTime=Math.max(0,Number($('trim-start').value)||0);updateMediaLab()};
+$('room-retry').onclick=()=>connectRoom('create');
 $('enter-room').onclick=()=>{const code=$('join-code').value.trim();if(!/^[a-f0-9-]{8,36}$/i.test(code))return toast('Введи код из приглашения.');connectRoom('join')};
 $('copy-invite').onclick=()=>{if(!room)return;const url=new URL(location.href);url.search='?room='+room.slice(0,8).toUpperCase();const text=url.href;navigator.clipboard?.writeText(text).then(()=>toast('Ссылка скопирована')).catch(()=>toast('Код: '+room.slice(0,8).toUpperCase()))};
 $('room-players').onchange=async e=>{
  const video=e.target.closest('[data-room-video]');
  if(video){const f=video.files?.[0];if(!f)return;
-  if(f.size>32*1024*1024||!f.type.startsWith('video/'))return toast('Нужно видео до 32 МБ.');
+  if(f.size>MAX_ROOM_VIDEO_BYTES||(!f.type.startsWith('video/')&&!/\.(mp4|webm|mov)$/i.test(f.name)))return toast('Нужна версия видео до 96 МиБ.');
   const test=document.createElement('video'),src=URL.createObjectURL(f);
   const duration=await new Promise(resolve=>{test.preload='metadata';test.src=src;test.onloadedmetadata=()=>resolve(test.duration);test.onerror=()=>resolve(0);setTimeout(()=>resolve(0),8000)});
   test.removeAttribute('src');test.load();URL.revokeObjectURL(src);
@@ -232,7 +331,7 @@ $('premiere-play').onclick=playPremiere;
 $('premiere-repeat').onclick=()=>{pausePremiere();setPlayhead(0,true)};
 $('premiere-scrub').oninput=e=>{pausePremiere();setPlayhead(Number(e.target.value)/10,true)};
 $('premiere-back').onclick=()=>{pausePremiere();if(mode==='solo')openEditor();else if(meHost())sendGame({type:'again'});else toast('Новую сцену начинает ведущий.')};
-for(const b of document.querySelectorAll('[data-back]'))b.onclick=()=>{const to=b.dataset.back;if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});openEditor()}else if(view==='premiere'&&to==='home'){stopAllPlayback();leaveNetwork();resetRuntime();show('home')}else if(to==='home'){stopAllPlayback();leaveNetwork();resetRuntime();show('home')}else if(to==='library')library();else if(to==='editor')openEditor()};
+for(const b of document.querySelectorAll('[data-back]'))b.onclick=()=>{const to=b.dataset.back;if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});openEditor()}else if(view==='premiere'&&to==='home'){stopAllPlayback();leaveNetwork();resetRuntime();show('home')}else if(to==='home'){stopAllPlayback();leaveNetwork();resetRuntime();show('home')}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='editor')openEditor()};
 $('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(t>=scene.duration-.05){if(record)finishRecording();else stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}if(!record)updateClipSound(t,playing,false);renderTimeline()};
 $('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,!$('premiere-video').paused,true)};
 $('stage-video').onpause=()=>{if(!record){playing=false;$('play-toggle').textContent='▶';updateClipSound(time($('stage-video')),false)}};
