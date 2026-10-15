@@ -15,6 +15,7 @@
 .restore .brush-cursor .brush-cursor-art .shaft{transition:transform 115ms ease}
 .restore .brush-cursor:not(.is-brush) .brush-cursor-art{display:none}
 .restore .brush-cursor.is-pressed .brush-cursor-art .fibers{transform:scaleY(.91)}
+.restore .brush-cursor.is-pressed .brush-cursor-art svg{transform:scale(var(--brush-pressure,.96))}
 .restore .brush-cursor.is-pressed .brush-cursor-art .shaft{transform:translateY(-1.6px)}
 .restore .brush-cursor.is-blocked .brush-cursor-art{opacity:.4;filter:grayscale(.8)}
 .restore .brush-cursor.is-blocked{border-style:dashed;border-color:#c38175;outline-color:#793b34;background:#b85e4a18}
@@ -31,6 +32,7 @@
 .restore .brush-cursor.is-brush.is-idle{border-style:dashed}
 .restore .brush-cursor.is-brush.is-blocked:before{content:"";position:absolute;inset:50% auto auto 50%;width:calc(100% + 5px);height:1px;background:#a24b3f;transform:translate(-50%,-50%) rotate(-45deg);pointer-events:none}
 .restore .brush-cursor[hidden]{display:none!important}
+.dialog-box:has(.cursor-style-choice){max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
 .cursor-style-choice{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:9px}
 .cursor-style-choice select{min-width:125px;max-width:55%;height:38px;padding:5px 8px;font-size:13px}
 .cursor-style-preview{display:flex;align-items:center;gap:9px;margin-top:6px;min-height:47px;color:#69543d;font-size:11px}
