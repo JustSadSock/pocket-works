@@ -450,3 +450,37 @@
 @media(max-width:900px) and (orientation:landscape) and (max-height:560px){
  .home-showcase{height:84%;width:100%;max-height:360px}
 }
+
+
+/* Multiplayer results: two truthful scene captures + item-level diagnostics. */
+.online-dialog:has(.memory-review){width:min(760px,100%);max-height:92dvh}
+.memory-review{display:flex;flex-direction:column;gap:9px;margin:12px 0 7px}
+.memory-images{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px}
+.memory-images figure{margin:0;min-width:0;border-radius:10px;background:#ebe0d0;overflow:hidden;border:1px solid #dcc7b1}
+.memory-images figcaption{padding:8px 9px;font-size:12px;font-weight:900;color:#806751;background:#f1e6d7}
+.memory-images img{display:block;width:100%;height:clamp(110px,25vh,258px);object-fit:contain}
+.memory-no-photo{display:grid;place-items:center;min-height:110px;font-size:12px;color:#9f8b77}
+.memory-summary{color:#876e58;font-size:12px;font-weight:900;padding:3px 0}
+.memory-differences{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.memory-row{display:flex;flex-direction:column;gap:3px;background:#eee1d1;border-radius:8px;padding:9px 10px;min-width:0;border-left:3px solid #b4a58b}
+.memory-row span{color:#695446;font-size:12px;font-weight:900}
+.memory-row small{font-size:10px;color:#8b7464;line-height:1.4}
+.memory-row.exact{border-left-color:#789e7b;background:#e5ebde}
+.memory-row.partial{border-left-color:#bd956a}
+.memory-row.missing{border-left-color:#bd786b}
+.memory-row.extra{border-left-color:#9f86a5}
+.tenant-brief{flex-basis:100%;display:flex;flex-direction:column;gap:3px;padding:5px 1px}
+.tenant-brief b{color:#6d5144;font-size:13px}
+.tenant-brief span{color:#86715f;font-size:11px;line-height:1.35}
+.tenant-results{display:grid;gap:6px;margin-top:12px}
+.tenant-result{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:8px;
+ padding:9px 11px;border-radius:9px;background:#f0e3d4;color:#9e685d}
+.tenant-result.done{background:#e4eadb;color:#63816a}
+.tenant-result strong{font-size:12px;color:#685447}
+.tenant-result small{font-size:12px;font-variant-numeric:tabular-nums}
+@media(max-width:460px){
+ .online-dialog:has(.memory-review){padding:16px 12px}
+ .memory-images{gap:5px}
+ .memory-images img{height:135px}
+ .memory-differences{grid-template-columns:minmax(0,1fr)}
+}
