@@ -1,6 +1,6 @@
 // Read-only diagnostics. This module never changes the simulation or its RNG.
 import {CALIBRATION,BASE_TUNING,storageCapacity} from './model.js';
-import {historicalObservation,historicalComparison} from './historical-calibration.js';
+import {REFERENCES,historicalObservation,historicalComparison} from './historical-calibration.js';
 const rounded=(n,p=2)=>Number(n.toFixed(p));
 const quantile=(values,q)=>{
  if(!values.length)return 0;
@@ -49,7 +49,8 @@ export function diagnoseWorld(s){
  const hungerDeaths=deceased.filter(p=>p.lifeLog?.some(e=>e.type==='death'&&e.text?.includes('истощение'))).length;
  return {day:s.day,year:Math.floor(s.day/365)+1,seed:s.seed,scenario:s.scenario,tuning:{...BASE_TUNING,...s.tuning},
   historicProfile:s.historicalProfile||null,
-  historicalEvidence:historicalComparison(historicalObservation(s)),demesneCount:rows.filter(h=>h.tenure==='demesne').length,tenureMix:Object.fromEntries(['demesne','free','customary','cottar'].map(kind=>[kind,rows.filter(h=>h.tenure===kind).length])),
+  historicalEvidence:historicalComparison(historicalObservation(s)),
+  historicalSources:REFERENCES,demesneCount:rows.filter(h=>h.tenure==='demesne').length,tenureMix:Object.fromEntries(['demesne','free','customary','cottar'].map(kind=>[kind,rows.filter(h=>h.tenure===kind).length])),
   firstMarriageFemaleMean:rounded((()=>{const ages=s.people.filter(p=>p.sex==='f'&&Number.isFinite(p.firstMarriageAge)).map(p=>p.firstMarriageAge);return ages.length?ages.reduce((a,b)=>a+b,0)/ages.length:0})(),1),
   firstMarriageMaleMean:rounded((()=>{const ages=s.people.filter(p=>p.sex==='m'&&Number.isFinite(p.firstMarriageAge)).map(p=>p.firstMarriageAge);return ages.length?ages.reduce((a,b)=>a+b,0)/ages.length:0})(),1),
   manorWorkdays:stats.manorServiceDays||0,manorRentCoins:stats.manorRentsCoin||0,
