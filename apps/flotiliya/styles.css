@@ -364,3 +364,17 @@ body{background:#0c292f}
  .harbor .ship-row{padding:9px 0}
  .harbor{background:linear-gradient(180deg,#092832e8 0%,#092e36d1 58%,#0b343ba8 100%)}
 }
+
+/* HTML hidden must win over authored display:grid/flex and avoid an invisible
+   second CSS-grid row consuming the entire desktop harbor height. */
+#harbor[hidden],#command[hidden],#seaTop[hidden],#endPanel[hidden],
+#help[hidden],#progress[hidden],#toast[hidden] {display:none!important}
+@media(min-width:721px){
+ .workspace:has(#harbor:not([hidden])){
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+ }
+ .workspace:has(#harbor:not([hidden])) .board{
+  height:100%;min-height:0;grid-column:1;grid-row:1;
+ }
+}
