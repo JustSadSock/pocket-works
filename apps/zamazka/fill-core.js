@@ -25,6 +25,21 @@ export function floodFillRaster({width,height,walls,zone,output,point,color,chan
     if(endX<1||endX>=width-1||endY<1||endY>=height-1)break;
     const end=i+step*(gap+1);
     if(area[end*4+3]<ZONE_ALPHA||wall[end*4+3]<WALL_ALPHA)continue;
+    // Only bridge a genuine short pinhole in a continuous drawn line.
+    // Without this check, nearby independent contours (e.g. concentric
+    // circles or thin corridors between two strokes) get welded into an
+    // invisible barrier: a visibly connected area then fills only halfway.
+    // Require five pixels of collinear evidence beyond BOTH endpoints.
+    // The original wall mask is used, so new bridges cannot self-propagate.
+    let supported=true;
+    for(let k=1;k<=5;k++){
+      const bx=x-dx*k,by=y-dy*k,fx=endX+dx*k,fy=endY+dy*k;
+      if(bx<0||bx>=width||by<0||by>=height||
+         fx<0||fx>=width||fy<0||fy>=height||
+         wall[(by*width+bx)*4+3]<WALL_ALPHA||
+         wall[(fy*width+fx)*4+3]<WALL_ALPHA){supported=false;break}
+    }
+    if(!supported)continue;
     const sideX=-dy,sideY=dx,side=sideY*width+sideX;
     let thin=true;
     for(let k=1;k<=gap;k++){

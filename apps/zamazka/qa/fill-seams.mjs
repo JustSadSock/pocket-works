@@ -93,3 +93,6 @@ import './fill-integrity.mjs';
 
 // Extended randomized contour, basin recolour and asynchronous picker audit.
 import './fill-picker-stress.mjs';
+
+// Thousands of concentric, clipped, jagged and overlapping contour regressions.
+import './fill-topology-matrix.mjs';

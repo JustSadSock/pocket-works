@@ -440,3 +440,10 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - The eyedropper discards stale async requests when the user samples a different point before the previous render completes.
 - Desktop mouse: hold right button on the canvas and drag horizontally (right = thicker, left = thinner, 0.25 increments). Context menu is suppressed only over the editor viewport. Middle-button pan, wheel zoom and Alt+wheel size adjustment remain.
 - Audits: `node apps/zamazka/qa/fill-seams.mjs` for 200+ contour/picker properties plus existing seal/AA/smudge tests; `node apps/zamazka/qa/coordinate-input.mjs` for pointer capture/RMB; `node apps/zamazka/qa/fill-visual-playwright.mjs` for six screenshot captures (set `ZAMAZKA_QA_ARTIFACT_DIR`).
+
+## 1.38.5 — Connected-fill topology stress testing
+
+- Fixed rare incomplete fills: the short-gap contour bridge used to weld independent adjacent stroke edges across thin corridors. The automatic 1–2 pixel gap repair now requires five pixels of original collinear stroke continuation beyond both endpoints. New bridges cannot become support for further bridges.
+- Run `node apps/zamazka/qa/fill-topology-matrix.mjs`: 4200 synthetic variants across concentric circles, ellipses, boxes, diamonds, wavy contours and irregular damage masks; compare against independent four-connected flood-fill, test a second colour fill and narrow line pinholes.
+- Run `node apps/zamazka/qa/fill-topology-playwright.mjs`: 48 Canvas2D contour/mask pairings with original production bucket, pixel coverage assertions, repeat fill and contact-sheet screenshot. Set `ZAMAZKA_QA_ARTIFACT_DIR` to collect evidence.
+- Cases without a topologically closed raster contour are correctly excluded from closed-region coverage assertions; open shapes should still paint their physically reachable space.
