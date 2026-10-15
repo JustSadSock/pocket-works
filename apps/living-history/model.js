@@ -523,7 +523,7 @@ function takeForage(s,h,kg){
 }
 function tendCattle(s,h,adults){
  h.cattle??=0;h.fodder??=0;h.livestockHealth??=85;
- if(!h.cattle)return;
+ if(!h.cattle&&!h.sheep)return;
  const day=s.day%365,summer=day>=80&&day<=300;
  const sheep=h.sheep||0;
  if(day>=115&&day<=280&&day%4===0&&h.fodder<(h.cattle+sheep*.27)*1100){
@@ -567,7 +567,7 @@ function tendCattle(s,h,adults){
   h.cattle++;h.dairyCows=(h.dairyCows??0)+1;s.stats.cattleBorn++;
   event(s,'cattle-birth',`У семьи ${familyName(s,h)} появился телёнок`,'Здоровое стадо и доступное питание',[h.id],{cattle:h.cattle});
  }
- if(day===170&&h.sheep>0&&h.woolYear!==Math.floor((s.day-1)/365)){
+ if(day===173&&h.sheep>0&&h.woolYear!==Math.floor((s.day-1)/365)){
   const shearer=adults.find(p=>p.job==='home'&&p.health>30);
   if(shearer){const wool=round(h.sheep*.8*clamp(h.livestockHealth/85,.25,1));
    h.wool=round((h.wool||0)+wool);s.stats.woolProduced=round((s.stats.woolProduced||0)+wool);
