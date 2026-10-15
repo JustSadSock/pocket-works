@@ -297,3 +297,33 @@
  #screen>.finale-scene *,#screen>.finale-scene *:before,#screen>.finale-scene *:after{
   animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+/* The continue action is always on screen; only the variable-length jury
+   vote list scrolls. This also handles eight-player dossiers at 1366×640. */
+#screen>.finale-reveal .finale-reveal-brief{
+ display:flex!important;flex-direction:column!important;min-height:0!important;
+ overflow:hidden!important;gap:clamp(4px,.75vh,9px)!important
+}
+#screen>.finale-reveal .finale-reveal-brief>.outcome-head,
+#screen>.finale-reveal .finale-reveal-brief>.finale-audit-heading,
+#screen>.finale-reveal .finale-reveal-brief>.finale-bonus{
+ flex:0 0 auto!important;margin:0!important
+}
+#screen>.finale-reveal .finale-reveal-brief>.finale-audit-lines{
+ flex:1 1 auto!important;min-height:0!important;
+ overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin
+}
+#screen>.finale-reveal .finale-reveal-brief>.btn,
+#screen>.finale-reveal .finale-reveal-brief>.stack,
+#screen>.finale-reveal .finale-reveal-brief>.stake-wait{
+ flex:0 0 auto!important;margin:0!important;min-height:36px
+}
+#screen>.finale-reveal .finale-reveal-brief>.stack{gap:3px!important}
+@media(max-width:700px){
+ #screen>.finale-reveal .finale-reveal-brief{overflow:hidden!important;gap:3px!important}
+ #screen>.finale-reveal .finale-reveal-brief>.outcome-head{padding:5px 8px!important}
+ #screen>.finale-reveal .finale-reveal-brief>.finale-audit-heading{padding:3px 0!important}
+ #screen>.finale-reveal .finale-reveal-brief>.finale-bonus{padding:4px 6px!important}
+ #screen>.finale-reveal .finale-reveal-brief>.btn{min-height:36px!important}
+ #screen>.finale-reveal .finale-reveal-brief>.stack .btn{min-height:35px!important}
+}
