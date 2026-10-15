@@ -100,34 +100,49 @@ function battleShip(s,side,x,y,angle){
 }
 function planEnemyOrders(s){
  if(!s.alive||s.side!=='enemy')return;
- const foes=alive('ally');
- if(!foes.length){s.orders=[freshOrder('evade'),freshOrder('evade')];return;}
- foes.sort((a,b)=>{
-  const score=t=>distance(s,t)+
-    (s.type==='heavy'?t.hp/t.maxHp*32:t.oars*.4)+
-    (t.grappleId?(-45):0);
-  return score(a)-score(b);
- });
- const t=foes[0],d=distance(s,t);
- if(s.morale<26||s.retreating){
+ const foes=alive('ally').sort((a,b)=>distance(s,a)-distance(s,b));
+ if(!foes.length){s.orders=[freshOrder('hold'),freshOrder('hold')];return;}
+ const t=foes.find(v=>!v.grappleId)||foes[0],d=distance(s,t);
+ if(s.morale<22||s.retreating){
   s.retreating=true;s.orders=[freshOrder('evade'),freshOrder('evade')];return;
  }
- let first='shoot',second='shoot';
- if(s.type==='heavy'){
-  first=d<155?'board':'shoot';second='board';
- }else if(s.type==='swift'){
-  first=d<180?'hold':'shoot';second=d<75&&t.oars<55?'board':'shoot';
+ // AI obeys the identical points budget and distance limits as the player.
+ const boardReady=d<94&&s.crew>s.maxCrew*.47&&s.morale>38&&
+  (s.type==='heavy'||(s.crew/s.maxCrew)>(t.crew/t.maxCrew)*1.08);
+ const fireReady=d<s.range*.87;
+ const firstKind=fireReady?'shoot':'hold';
+ const secondKind=boardReady?'board':fireReady?'shoot':'hold';
+ s.orders=[freshOrder(firstKind),freshOrder(secondKind)];
+ for(const o of s.orders)o.targetId=t.id;
+ const exposed=t.angle+(s.id.charCodeAt(s.id.length-1)%2?1:-1)*Math.PI*.55;
+ const attackPoint=boardReady?{x:t.x,y:t.y}:{
+  x:t.x+Math.cos(exposed)*Math.min(s.range*.63,105),
+  y:t.y+Math.sin(exposed)*Math.min(s.range*.63,105)
+ };
+ let origin={x:s.x,y:s.y};
+ for(let stage=0;stage<2;stage++){
+  if(distance(origin,attackPoint)<(boardReady?23:58))break;
+  const angle=Math.atan2(attackPoint.y-origin.y,attackPoint.x-origin.x);
+  const allowance=Math.min(stageRange(s)*.94,stage===0?106:74,distance(origin,attackPoint));
+  if(allowance<16)break;
+  const point={x:clamp(origin.x+Math.cos(angle)*allowance,47,W-47),
+    y:clamp(origin.y+Math.sin(angle)*allowance,56,H-56)};
+  if(withinIsland(point.x,point.y,1.28)){
+   const turn=(s.id.charCodeAt(s.id.length-1)%2?1:-1)*.66;
+   point.x=clamp(origin.x+Math.cos(angle+turn)*allowance*.74,47,W-47);
+   point.y=clamp(origin.y+Math.sin(angle+turn)*allowance*.74,56,H-56);
+  }
+  if(!withinIsland(point.x,point.y,1.06)&&distance(origin,point)>12){
+   s.orders[stage].route=[point];
+   if(canPlan(s,s.orders))origin=point;
+   else s.orders[stage].route=[];
+  }
  }
- s.orders=[freshOrder(first),freshOrder(second)];
- s.orders[0].targetId=t.id;s.orders[1].targetId=t.id;
- if(s.type==='swift'&&d<210&&!s.grappleId){
-  // A fast galley tries to approach the enemy's exposed quarter, not its bow.
-  const flank=Math.atan2(s.y-t.y,s.x-t.x)>t.angle?-1:1;
-  const goal={x:t.x+Math.cos(t.angle+flank*Math.PI*.56)*85,y:t.y+Math.sin(t.angle+flank*Math.PI*.56)*85};
-  const theta=Math.atan2(goal.y-s.y,goal.x-s.x),travel=Math.min(67,distance(s,goal));
-  s.orders[0].route=[{x:clamp(s.x+Math.cos(theta)*travel,40,W-40),y:clamp(s.y+Math.sin(theta)*travel,45,H-45)}];
-  if(!canPlan(s,s.orders))s.orders[0].route=[];
+ for(let stage=1;stage>=0&&!canPlan(s,s.orders);stage--){
+  s.orders[stage].route=[];
+  if(!canPlan(s,s.orders))s.orders[stage].kind='hold';
  }
+ if(!canPlan(s,s.orders))s.orders=[freshOrder('hold'),freshOrder('hold')];
 }
 function startBattle(){
  game.ships=[];game.captured=[];game.events=[];game.particles=[];game.grapples=[];game.eventClock=0;game.round=1;game.elapsed=0;game.selected=null;game.stage=0;game.drag=null;
@@ -214,25 +229,21 @@ function maneuver(s,dt){
  if(s._activeStage!==stage){s._activeStage=stage;s._cursor[stage]=0;}
  const ins=instruction(s,stage);s.order=ins.kind;
  const t=game.ships.find(v=>v.id===ins.targetId&&v.alive&&v.side!==s.side)||nearest(s);
- let goal=null,stop=false;
+ let goal=null;
  const points=ins.route||[];
  let index=s._cursor[stage]||0;
  while(index<points.length&&distance(s,points[index])<18)index++;
  s._cursor[stage]=index;
  if(index<points.length)goal=points[index];
  if(s.retreating)goal={x:s.x,y:s.side==='ally'?H+60:-60};
- if(!goal&&ins.kind==='evade'&&t)goal={x:s.x+(s.x-t.x)*2,y:s.y+(s.y-t.y)*2};
- if(!goal&&ins.kind==='hold'){stop=true;goal={x:s.x+Math.cos(s.angle)*12,y:s.y+Math.sin(s.angle)*12};}
- if(!goal&&t){
-  const d=distance(s,t);
-  if(ins.kind==='shoot'){
-   const preferred=s.range*.72;
-   if(d>preferred+20)goal={x:t.x,y:t.y};
-   else if(d<preferred-50)goal={x:s.x+(s.x-t.x)*1.1,y:s.y+(s.y-t.y)*1.1};
-   else goal={x:s.x+Math.cos(s.angle)*80,y:s.y+Math.sin(s.angle)*80};
-  }else goal={x:t.x,y:t.y};
+ // A command's action never grants free sailing toward an opponent.
+ // Only an explicit, paid course can propel a warship; otherwise it coasts briefly.
+ if(!goal){
+  s.velocity=Math.max(0,s.velocity-dt*68);
+  s.x+=Math.cos(s.angle)*s.velocity*dt;
+  s.y+=Math.sin(s.angle)*s.velocity*dt;
+  return;
  }
- if(!goal){s.velocity*=Math.max(0,1-dt*.8);return;}
  let dx=goal.x-s.x,dy=goal.y-s.y;
  // Reactive avoidance handles islands for both player and AI.
  for(const isl of game.islands){
@@ -249,7 +260,7 @@ function maneuver(s,dt){
  }
  const state=condition(s),desired=Math.atan2(dy,dx),turn=clamp(normalize(desired-s.angle),-s.turn*state.turn*dt*1.15,s.turn*state.turn*dt*1.15);
  s.angle=normalize(s.angle+turn);
- let speed=stop?9:s.speed*condition(s).speed*1.15;
+ let speed=s.speed*state.speed*1.15;
  if(game.weather?.kind==='gust')speed*=1.14;
  if(ins.kind==='evade')speed*=1.2;
  if(ins.kind==='board'&&t&&distance(s,t)<50)speed=Math.min(speed,19);
@@ -394,7 +405,7 @@ function advance(dt){
   if(ao.kind==='board'||bo.kind==='board'){
    // Engagement is possible only when oared ships have sufficiently slowed.
    const closer=ao.kind==='board'?a:b,opponent=closer===a?b:a;
-   if(distance(a,b)<sep+10&&approach<42)beginGrapple(closer,opponent);
+   if(distance(a,b)<sep+7&&approach<28&&closer.morale>35&&closer.crew>closer.maxCrew*.42)beginGrapple(closer,opponent);
   }
   if(a.ramTimer<=0&&b.ramTimer<=0){
    const force=approach*.092;
@@ -420,7 +431,11 @@ function advance(dt){
   const precision=game.weather?.kind==='fog'?.72:1;
   if(d>s.range*precision||bearing>2.7||rangeBlocked(s,t,game.islands,terrainDistance))continue;
   const packet=attackPacket(s,t,'arrows');
-  damage(t,packet.hull,packet.crew,s,{oars:packet.oars,morale:packet.morale});
+  // Broadside shooting is a concrete positional advantage, not a cosmetic angle.
+  const broadside=Math.abs(Math.sin(normalize(Math.atan2(t.y-s.y,t.x-s.x)-s.angle)));
+  const advantage=.62+.57*broadside;
+  damage(t,packet.hull*advantage,packet.crew*advantage,s,
+   {oars:packet.oars*advantage,morale:packet.morale*advantage});
   s.fireTimer=1.15+rand(game.elapsed+s.x)*.35;
   game.particles.push({x:s.x,y:s.y,vx:(t.x-s.x)/Math.max(d,1)*190,vy:(t.y-s.y)/Math.max(d,1)*190,
     life:Math.min(.56,d/190),color:s.side==='ally'?'#f0dab0':'#e2b1a0',arrow:true});
@@ -433,6 +448,12 @@ function advance(dt){
 }
 function startResolve(){
  if(game.phase!=='orders')return;
+ for(const s of game.ships.filter(s=>s.alive)){
+  if(canPlan(s,s.orders))continue;
+  if(s.side==='ally'){selectShip(s.id);notify('Недостаточно очков на оба приказа.');return;}
+  planEnemyOrders(s);
+  if(!canPlan(s,s.orders))s.orders=[freshOrder('hold'),freshOrder('hold')];
+ }
  game.phase='resolve';game.elapsed=0;acc=0;
  for(const s of game.ships){s._cursor=[0,0];s._activeStage=-1;}
  $('subtitle').textContent='Бой · исполнение';$('commandCaption').textContent='СУДА ИСПОЛНЯЮТ ПРИКАЗЫ';
@@ -451,7 +472,7 @@ function finishPhase(){
  for(const s of game.ships.filter(s=>s.alive)){
   s._cursor=[0,0];s._activeStage=-1;
   if(s.side==='ally'){
-   s.orders=[freshOrder('hold'),freshOrder(s.type==='heavy'?'board':'shoot')];
+   s.orders=[freshOrder('hold'),freshOrder('shoot')];
    if(!canPlan(s,s.orders))s.orders[1]=freshOrder('shoot');
   }
   else planEnemyOrders(s);
@@ -575,46 +596,40 @@ function drawShip(s,now,ghost=false){renderGalley(ctx,s,now,!ghost&&s.id===game.
 function drawOrders(s){
  if(s.side!=='ally'||!s.alive)return;
  for(let stage=0;stage<2;stage++){
-  const o=instruction(s,stage),route=o.route||[],t=game.ships.find(x=>x.id===o.targetId&&x.alive);
-  if(!route.length&&!t)continue;
+  const o=instruction(s,stage),route=o.route||[];
+  if(!route.length)continue;
   const prev=instruction(s,0).route;
-  const start=stage===0?{x:s.x,y:s.y}:(prev.length?prev[prev.length-1]:{x:s.x+Math.cos(s.angle)*s.velocity*HALF,y:s.y+Math.sin(s.angle)*s.velocity*HALF});
-  ctx.save();ctx.strokeStyle=stage?'#e9a480':'#f4d6a1';ctx.fillStyle=ctx.strokeStyle;
-  ctx.lineWidth=s.id===game.selected?2.7:1.5;ctx.globalAlpha=s.id===game.selected?1:.42;
-  ctx.setLineDash(stage?[9,5]:[4,4]);ctx.beginPath();ctx.moveTo(start.x,start.y);
+  const start=stage===0?{x:s.x,y:s.y}:(prev.length?prev[prev.length-1]:{x:s.x,y:s.y});
+  const selected=s.id===game.selected;
+  ctx.save();ctx.strokeStyle=stage?'#f1ab80':'#f4d9a2';ctx.fillStyle=ctx.strokeStyle;
+  ctx.lineWidth=selected?2.6:1.3;ctx.globalAlpha=selected?.96:.36;
+  ctx.setLineDash(stage?[9,5]:[4,5]);ctx.beginPath();ctx.moveTo(start.x,start.y);
   for(const p of route)ctx.lineTo(p.x,p.y);
-  if(t)ctx.lineTo(t.x,t.y);
   ctx.stroke();ctx.setLineDash([]);
-  for(let i=0;i<route.length;i++){const p=route[i];ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,TAU);ctx.fill();}
-  const end=t||route[route.length-1];
-  if(end){ctx.beginPath();ctx.arc(end.x,end.y,8,0,TAU);ctx.stroke();
-    ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(String(stage+1),end.x,end.y-13);}
+  for(const p of route){ctx.beginPath();ctx.arc(p.x,p.y,2.6,0,TAU);ctx.fill();}
+  const end=route[route.length-1],last=route[route.length-2]||start;
+  const heading=Math.atan2(end.y-last.y,end.x-last.x);
+  ctx.save();ctx.translate(end.x,end.y);ctx.rotate(heading);
+  ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-7,-6);ctx.lineTo(-3,0);ctx.lineTo(-7,6);ctx.closePath();ctx.fill();ctx.restore();
+  if(selected){ctx.font='700 13px system-ui';ctx.textAlign='center';ctx.fillText(String(stage+1),end.x,end.y-13);}
   ctx.restore();
  }
 }
 function drawMovementBadge(s){
- if(!s.alive)return;
- const b=getBudget(s),own=s.side==='ally',selected=s.id===game.selected&&game.phase==='orders';
- const x=Math.min(W-57,s.x+53),y=Math.max(53,Math.min(H-53,s.y+9));
- ctx.save();
- ctx.fillStyle=selected?'#e7c88c':own?'#193f3c':'#653d3a';
- ctx.strokeStyle=selected?'#fff0c1':own?'#91beab':'#d5a293';
- ctx.lineWidth=selected?2.1:1.4;
- const bw=selected?79:69,bh=38;
- ctx.beginPath();ctx.roundRect(x-bw/2,y-bh/2,bw,bh,6);ctx.fill();ctx.stroke();
- ctx.font='800 20px system-ui,sans-serif';ctx.textBaseline='middle';ctx.textAlign='center';
- ctx.fillStyle=selected?'#283632':'#f7eed6';
- ctx.fillText(Math.max(0,b.remaining)+' / '+b.total,x,y+1);
- ctx.font='700 12px system-ui,sans-serif';ctx.fillStyle='#e0dbc9';
- if(selected)ctx.fillText('ОД',x,y+bh/2+12);
- ctx.restore();
+ if(!s.alive||s.side!=='ally'||s.id!==game.selected||game.phase!=='orders')return;
+ const b=getBudget(s),x=clamp(s.x+49,48,W-49),y=clamp(s.y+34,40,H-40);
+ ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.fillStyle='rgba(15,48,48,.89)';ctx.strokeStyle='#efd39e';ctx.lineWidth=1.4;
+ ctx.beginPath();ctx.roundRect(x-29,y-12,58,24,4);ctx.fill();ctx.stroke();
+ ctx.fillStyle='#f5dfb4';ctx.font='700 15px system-ui';
+ ctx.fillText(b.remaining+' / '+b.total,x,y+.5);ctx.restore();
 }
 function render(now){
  const {dpr,w,h,scale,ox,oy}=view;if(!w||!h)return;
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#0f313d';ctx.fillRect(0,0,w,h);
  ctx.translate(ox,oy);ctx.scale(scale,scale);seaBackground(now);
  if(game.phase==='harbor'){
-  const ghost=[{...makeShip('g1','', 'heavy'),x:200,y:740,angle:-1.7,side:'ally',velocity:0}, {...makeShip('g2','','bow'),x:452,y:625,angle:-1.45,side:'ally',velocity:0}, {...makeShip('g3','','swift'),x:410,y:290,angle:1.6,side:'enemy',velocity:0}];
+  const ghost=[{...makeShip('g1','', 'heavy'),x:200,y:730,angle:-1.7,side:'ally',velocity:0}, {...makeShip('g2','','bow'),x:435,y:570,angle:-1.45,side:'ally',velocity:0}, {...makeShip('g3','','swift'),x:360,y:265,angle:1.6,side:'ally',velocity:0}];
   for(const s of ghost)drawShip(s,now,true);
  }else{
   const ss=game.ships.filter(s=>s.alive);
@@ -629,8 +644,9 @@ function render(now){
    ctx.fillStyle='#d8b37f';ctx.fillRect(mx-25,my-25,50*progress,4);
    ctx.restore();
   }
-  for(const s of ss){drawShip(s,now);if(game.phase==='orders')drawOrders(s);}
-  for(const s of ss)drawMovementBadge(s);
+  if(game.phase==='orders')for(const s of ss)drawOrders(s);
+  for(const s of ss)drawShip(s,now);
+  if(game.phase==='orders')for(const s of ss)drawMovementBadge(s);
   for(const p of game.particles){
    ctx.globalAlpha=clamp(p.life/.7,0,1);ctx.strokeStyle=p.color;ctx.fillStyle=p.color;
    ctx.lineWidth=p.arrow?2:1;ctx.beginPath();
