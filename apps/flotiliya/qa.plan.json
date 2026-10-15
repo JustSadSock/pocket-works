@@ -42,7 +42,7 @@
     {
       "id": "battle-matrix",
       "kind": "playwright",
-      "tier": "deep",
+      "tier": "smoke",
       "files": [
         "qa/gameplay.spec.ts"
       ]
