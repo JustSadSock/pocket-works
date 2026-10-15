@@ -364,8 +364,8 @@ async function connectNet(mode){
  if(busy)return;
  busy=true;pairingMode=mode;room=null;connected=false;setScreen('pair');
  try{
-  try{localStorage.removeItem('pocket-net:'+ORIGIN)}catch{}
-  const client=new PocketNet({serverUrl:ORIGIN,name,identityKey:pocketIdentity?.id||'guest'});
+  if(mode!=='resume')try{sessionStorage.removeItem('pocket-net:'+ORIGIN)}catch{}
+  const client=new PocketNet({serverUrl:ORIGIN,name,storage:sessionStorage,identityKey:pocketIdentity?.id||'guest'});
   netClient=client;wireNet(client);
   await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Не удалось соединиться с сервером')),12000))]);
   if(netClient!==client)return;
@@ -373,7 +373,7 @@ async function connectNet(mode){
   if(mode==='host')client.createRoom('jam-tape',{avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:instrument,bpm:session?.bpm||108,clips:initialClips});
   else{
    renderPair();
-   if(joinCode)joinByCode();
+   if(mode==='join'&&joinCode)joinByCode();
   }
  }catch(e){
   if(netClient){netClient.close();netClient=null}
@@ -604,6 +604,11 @@ async function refreshIdentity(){
  if(screen==='welcome')renderWelcome();
  else if(screen==='studio'&&!room)renderStudio();
 }
-void refreshIdentity().then(()=>{const code=new URLSearchParams(location.search).get('room')||'';if(/^[a-f0-9]{8}$/i.test(code)&&!room&&!netClient)void joinMode()});
+void refreshIdentity().then(()=>{
+ const code=new URLSearchParams(location.search).get('room')||'';
+ if(/^[a-f0-9]{8}$/i.test(code)&&!room&&!netClient){void joinMode();return}
+ try{const previous=JSON.parse(sessionStorage.getItem('pocket-net:'+ORIGIN)||'null');
+  if(previous?.roomId&&!room&&!netClient)void connectNet('resume');}catch{}
+});
 window.addEventListener('pageshow',()=>void refreshIdentity());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshIdentity()});
