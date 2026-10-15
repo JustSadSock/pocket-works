@@ -29,7 +29,7 @@ export function createGame(seed=Date.now(),bot=true,skill='regular'){
  orders:[],squads:[],botClock:3,botPlans:[],economyClock:0,keepShots:[0,0],
  selection:0};
  for(let side=0;side<2;side++){
-  const x=sc(side===0?108:852);
+  const x=sc(side===0?172:788); // Rally on the road outside the keep, never inside its roof.
   for(let i=0;i<2;i++){
    s.orders.push({side,id:side*2+i,name:captainNames[side][i],trait:captainTraits[side][i],
     mode:'capture',x:sc(side===0?240:720),
@@ -72,7 +72,7 @@ export function action(s,side,req){
    p.gold-=cost[0];p.wood-=cost[1];p.food-=cost[2];
    const cs=s.orders.filter(q=>q.side===side);
    const cap=cs.reduce((best,q)=>s.squads.filter(u=>u.captain===q.id).length<s.squads.filter(u=>u.captain===best.id).length?q:best,cs[0]);
-   const home=nearHome(side);makeSquad(s,side,cap.id,type,home.x+(rng(s)-.5)*sc(25),home.y+(rng(s)-.5)*sc(40));
+   const home=nearHome(side);const rallyX=sc(side===0?172:788);makeSquad(s,side,cap.id,type,rallyX+(rng(s)-.5)*sc(25),home.y+(rng(s)-.5)*sc(40));
    log(s,'Набран отряд: '+({levy:'ополченцы',bow:'лучники',knight:'латники'}[type]),side);
    return{ok:true,message:'Отряд собирается у замка'};
  }
