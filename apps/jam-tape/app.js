@@ -18,6 +18,11 @@ const noteKeys=['a','s','d','f','g','h','j','k'];
 const colors=['#e8663b','#519289','#d1a24d','#8595b3'];
 const labels=Object.fromEntries(INSTRUMENTS.map(i=>[i.id,i.name]));
 const ORIGIN=location.origin+'/pocketnet';
+const netStorage={
+ getItem:key=>sessionStorage.getItem('jam-tape:'+key),
+ setItem:(key,value)=>sessionStorage.setItem('jam-tape:'+key,value),
+ removeItem:key=>sessionStorage.removeItem('jam-tape:'+key)
+};
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const self=()=>session?.players.find(p=>p.id===ownId);
@@ -365,8 +370,8 @@ async function connectNet(mode){
  if(busy)return;
  busy=true;pairingMode=mode;room=null;connected=false;setScreen('pair');
  try{
-  if(mode!=='resume')try{sessionStorage.removeItem('pocket-net:'+ORIGIN)}catch{}
-  const client=new PocketNet({serverUrl:ORIGIN,name,storage:sessionStorage,identityKey:pocketIdentity?.id||'guest'});
+  if(mode!=='resume')try{netStorage.removeItem('pocket-net:'+ORIGIN)}catch{}
+  const client=new PocketNet({serverUrl:ORIGIN,name,storage:netStorage,identityKey:pocketIdentity?.id||'guest'});
   netClient=client;wireNet(client);
   await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Не удалось соединиться с сервером')),12000))]);
   if(netClient!==client)return;
@@ -609,7 +614,7 @@ async function refreshIdentity(){
 void refreshIdentity().then(()=>{
  const code=new URLSearchParams(location.search).get('room')||'';
  if(/^[a-f0-9]{8}$/i.test(code)&&!room&&!netClient){void joinMode();return}
- try{const previous=JSON.parse(sessionStorage.getItem('pocket-net:'+ORIGIN)||'null');
+ try{const previous=JSON.parse(netStorage.getItem('pocket-net:'+ORIGIN)||'null');
   if(previous?.roomId&&!room&&!netClient)void connectNet('resume');}catch{}
 });
 window.addEventListener('pageshow',()=>void refreshIdentity());
