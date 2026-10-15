@@ -357,8 +357,17 @@
  #screen>.page:has(.result-item) {display:flex!important;flex-direction:column!important;
    gap:6px!important;padding:10px!important}
  #screen>.page:has(.result-item)>.notice {margin:0!important;padding:5px!important;font-size:10px!important}
- #screen>.page:has(.result-item)>.result-item {
-   flex:0 0 auto;min-height:0!important;padding:8px!important}
+ #screen>.page:has(.result-item)>.results-shelf {
+   display:flex!important;flex:1 1 0!important;flex-direction:row!important;
+   align-items:stretch!important;gap:9px!important;min-width:0!important;min-height:0!important;
+   overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory;
+   margin:0 -3px!important;padding:6px 3px!important
+ }
+ #screen>.page:has(.result-item)>.results-shelf>.result-item {
+   display:flex!important;flex:0 0 82%!important;flex-direction:column!important;
+   justify-content:center!important;min-height:0!important;padding:10px!important;
+   scroll-snap-align:start!important;
+ }
  #screen>.page:has(.result-item)>.stack {margin-top:auto!important;gap:5px!important}
  #screen>.page:has(.result-item)>.stack .btn {min-height:39px!important}
 }
