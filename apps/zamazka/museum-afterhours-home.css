@@ -949,3 +949,81 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .home-pocket-identity .
   top:calc(50% - 7px);
  }
 }
+
+
+/* 1.37.6: Museum accession plates, printed brass rather than a generic box. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label {
+ padding:11px 17px 13px!important;gap:6px!important;
+ background:linear-gradient(105deg,#cbb78e 0%,#efdfbb 48%,#c8b08c 100%)!important;
+ border:1px solid #6e593a!important;border-top:2px solid #f7ebc8!important;
+ border-bottom:3px solid #7e6645!important;
+ box-shadow:inset 0 0 0 2px #e2ceaa,inset 0 0 0 3px #a88e65,
+   0 3px 0 #382b1e,0 13px 26px #090e0bb8!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label::before {
+ width:30px!important;height:5px!important;top:-6px!important;
+ background:#82643f!important;box-shadow:inset 0 1px #e6d2a6;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label::after {
+ content:"";display:block;width:24px;height:1px;margin:1px auto 0;
+ background:linear-gradient(90deg,transparent,#85653c,transparent);
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label strong {
+ color:#33271d!important;font-family:Georgia,serif!important;font-style:normal!important;
+ letter-spacing:-.025em!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label span {
+ color:#68523b!important;font-weight:500!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration {
+ position:relative;
+ border-left:4px solid #987858!important;
+ background:linear-gradient(102deg,#f4e8d3 0%,#e2d0b3 95%)!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .start-restoration:hover:not(:disabled){
+ background:linear-gradient(102deg,#fff1dd,#e9d7bb)!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-lower button{
+ border-left:2px solid #aa916b77!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent {
+ display:grid;grid-template-columns:56px minmax(0,1fr) 22px;
+ align-items:center;gap:12px;text-align:left;width:100%;
+ min-height:64px;margin:12px 0 0;padding:7px 10px;
+ border:1px solid #746a5a80;border-radius:2px;
+ background:#d7c7ab12;box-shadow:inset 0 1px #e9ddbb14;
+ color:#f0e4d4;
+ transition:background-color .15s ease,border-color .15s ease;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent:hover {
+ background:#d7c7ab25;border-color:#a99d7a;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent-art {
+ display:grid;place-items:center;width:56px;height:45px;overflow:hidden;
+ background:#201f1b;border:3px ridge #a08764;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent-art canvas {
+ display:block;max-width:100%;max-height:100%;width:auto;height:auto;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent-meta {
+ min-width:0;display:flex;flex-direction:column;gap:4px;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent-meta small {
+ color:#bdad94;font:600 9px system-ui,sans-serif;letter-spacing:.12em;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent-meta strong {
+ display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ font:400 17px Georgia,serif;color:#eadfcc;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent-open {
+ color:#cdb48a;font:20px Georgia,serif;justify-self:end;
+}
+@media(max-width:699px), (max-height:750px) {
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent{display:none!important}
+}
+@media(max-width:699px){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label {
+  padding:6px 10px 7px!important;gap:3px!important;
+ }
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label::after{display:none}
+}
