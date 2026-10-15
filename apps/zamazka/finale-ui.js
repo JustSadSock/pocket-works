@@ -17,10 +17,10 @@ export function finaleVerdictMarkup({view:v,artworks,artworkURL,escapeText,head,
   return '<article class="verdict-card finale-ballot-card'+(count===largest&&count>0?' has-majority':'')+(i===tagged.i?' is-featured':'')+'" style="--case-index:'+i+';--vote-ratio:'+(100*count/largest).toFixed(1)+'%">'+
    '<div class="finale-ballot-index"><span>ЭКСПОНАТ</span><b>'+String(i+1).padStart(2,'0')+'</b></div>'+
    '<div class="verdict-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+label(art.title||'Полотно')+'"></div>'+
-   '<div class="finale-card-caption"><strong>'+label(art.title||'Картина')+'</strong><small>'+label(art.artist||'')+'</small></div>'+
+   
    '<div class="finale-ballot-votes"><div class="finale-vote-tally"><span>Поставлено</span><strong aria-label="'+count+' фишек">'+count+'</strong></div>'+
    '<div class="finale-vote-bar" role="img" aria-label="Ставки: '+count+'"><i></i></div>'+
-   '<div class="verdict-tokens" aria-hidden="true">'+chipDots(Math.min(count,9))+'</div>'+
+   '<div class="verdict-tokens" aria-hidden="true">'+chipDots(count)+'</div>'+
    '<small class="finale-voters">'+label(voters.length?voters.join(' · '):'Без ставок')+'</small></div></article>';
  }).join('');
  return '<section class="phase-page verdict-phase finale-scene" data-finale-phase="ballot">'+
@@ -53,7 +53,7 @@ export function finaleResultsMarkup({view:v,escapeText,memberSeal,pocketPlayerBa
  return '<section class="page finale-results finale-scene" data-finale-phase="results">'+
   '<header class="finale-results-head"><span class="finale-overline">ПОДВЕДЕНИЕ ИТОГОВ / ЭКСПОЗИЦИЯ ЗАКРЫТА</span><h2>Каталог победителей</h2><p>Обман и наблюдательность оцениваются отдельно.</p></header>'+
   '<div class="finale-results-main"><div class="finale-laureate"><span class="finale-laureate-hatch" aria-hidden="true"></span>'+
-   '<div class="finale-laureate-seal" aria-hidden="true"><span>З</span><i>Ⅰ</i></div><div class="finale-laureate-label">'+(ties>1?'ПЕРВОЕ МЕСТО РАЗДЕЛИЛИ':'ЛАУРЕАТ ВЫСТАВКИ')+'</div>'+
+   '<div class="finale-laureate-seal" aria-hidden="true"><span>❦</span><i>Ⅰ</i></div><div class="finale-laureate-label">'+(ties>1?'ПЕРВОЕ МЕСТО РАЗДЕЛИЛИ':'ЛАУРЕАТ ВЫСТАВКИ')+'</div>'+
    '<div class="finale-laureate-person">'+memberSeal(winner.person)+'<div><h3>'+label(winner.person.name)+'</h3><p>'+(ties>1?'Лидеров с равным счётом: '+ties:'Первое место в каталоге')+'</p></div></div>'+
    '<div class="finale-laureate-total"><strong>'+total(winner)+'</strong><span>ОЧКОВ</span></div>'+
    '<div class="finale-laureate-split"><div><span>МАСКИРОВКА</span><b>'+winner.mask+'</b></div><div><span>ЭКСПЕРТИЗА</span><b>'+winner.eye+'</b></div></div>'+
