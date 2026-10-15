@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {Script} from 'node:vm';
 import {WORKS} from '../catalog.js';
 assert.equal(WORKS.length,100);
 assert.deepEqual(WORKS.map(w=>w.id),Array.from({length:100},(_,i)=>i+1));
@@ -11,6 +12,12 @@ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const config=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
+const catalog=readFileSync(new URL('../catalog.js',import.meta.url),'utf8');
+// Compile the actual browser modules, not only the dataset: the original 1.0.0 silently failed because of a duplicate const url.
+assert.doesNotThrow(()=>new Script(app.replace(/^import \{ WORKS \} from '\.\/catalog\.js';/,'')), 'app.js must parse before publishing');
+assert.doesNotThrow(()=>new Script(catalog.replace('export const WORKS=', 'const WORKS=')), 'catalog.js must parse before publishing');
+assert.match(app,/document\.documentElement\.dataset\.artCabinetReady='1'/, 'boot watchdog resets on success');
+assert.match(html,/setTimeout\(report,7000\)/, 'boot error shown after timeout');
 assert.equal(config.slug,'art-cabinet');
 assert.equal(config.runtime,'quick');
 assert.match(app,/selected=new Set\(\[3\]\)/);
