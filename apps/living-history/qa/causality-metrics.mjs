@@ -40,6 +40,10 @@ export function householdFoodSnapshot(s,h,people=[]) {
   // "Possible" ignores reserved seed and tomorrow's food, deliberately an upper bound.
   caution:'Possible ration is an upper bound before seed protection; stock days are NOT guaranteed accessible food.',
   coin:round(h.coin||0),ownedFields:h.fields.length,leasedIn:h.leaseIn?.length||0,leasedOut:h.leaseOut?.length||0,
+  adultResidents:people.filter(p=>p.age>=15).length,
+  capableAdults:productive.length,
+  nonWorkingAdults:people.filter(p=>p.age>=15&&p.health<=25).length,
+  maxAdultHealth:people.some(p=>p.age>=15)?round(Math.max(...people.filter(p=>p.age>=15).map(p=>p.health))):null,
   availableAdults:productive.filter(p=>!p.travel||p.travel.end<=s.day).length,
   workersTraveling:productive.filter(p=>p.travel&&p.travel.end>s.day).length,
   workerJobs:Object.fromEntries(['farm','wood','garden','hired','haul','cattle','build','home'].map(k=>
@@ -62,6 +66,10 @@ export function detectCausalFlags(snapshot,foodAccessAtDeath=null,preDeathDays=[
  const prior=preDeathDays.filter(row=>row.day<foodAccessAtDeath?.day || !foodAccessAtDeath).slice(-30);
  if(prior.length>=14 && prior.filter(x=>x.ownedFields>0 && x.availableAdults===0).length>=14)
   flags.push('persistent-labour-shortage-before-death');
+ if(prior.length>=14 && prior.filter(x=>x.adultResidents>0&&x.capableAdults===0).length>=14)
+  flags.push('persistent-adult-incapacity-before-death');
+ if(prior.length>=14 && prior.filter(x=>x.adultResidents===0).length>=14)
+  flags.push('persistent-no-adult-residents-before-death');
  if(prior.length>=14 && prior.filter(x=>x.shortageDays>0 && x.outstandingLoansKg>0).length>=14)
   flags.push('persistent-food-shortage-with-debt');
  if(foodAccessAtDeath){
