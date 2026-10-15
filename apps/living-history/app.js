@@ -50,13 +50,25 @@ function drawFrame(){if(!sim)return;
    ctx.fillStyle=coat;ctx.fillRect(Math.round(x),Math.round(y+size*.52),Math.ceil(size),Math.ceil(size*.8));
    ctx.fillStyle=p.sex==='f'?'#e5bd8f':'#d4c09f';ctx.fillRect(Math.round(x+size*.15),Math.round(y),Math.max(2,size*.7),Math.max(2,size*.7));
   }
-  if(cam.z>.36){for(const hom of sim.households){if(!(hom.cattle>0))continue;
-   for(let i=0;i<Math.min(5,hom.cattle);i++){
+  if(cam.z>.36){for(const hom of sim.households){
+   for(let i=0;i<Math.min(5,hom.cattle||0);i++){
     const place=cattlePosition(hom,sim.day+movementFraction,i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
-    const scale=Math.max(2,cam.z*4);ctx.fillStyle='#604c39';ctx.fillRect(Math.round(x),Math.round(y),scale*1.7,scale);
-    const grazingMotion=Math.sin((sim.day+movementFraction)*1.9+i*1.7+hom.id*.29);const headDip=(.5+.5*grazingMotion)*scale*.35;
-    ctx.fillStyle='#aa967c';ctx.fillRect(Math.round(x+scale*1.2),Math.round(y-scale*.22+headDip),scale*.65,scale*.73);
+    const scale=Math.max(2,cam.z*4),ox=i<(hom.draftOxen||0);
+    ctx.fillStyle=ox?'#40382e':'#6b523b';ctx.fillRect(Math.round(x),Math.round(y),scale*(ox?1.95:1.65),scale*(ox?1.15:1));
+    ctx.fillStyle=ox?'#8a7558':'#b09a7b';
+    const dip=(.5+.5*Math.sin((sim.day+movementFraction)*1.4+i+hom.id*.2))*scale*.28;
+    ctx.fillRect(Math.round(x+scale*(ox?1.6:1.2)),Math.round(y-scale*.24+dip),scale*.68,scale*.7);
+    if(ox){ctx.fillStyle='#c4ad87';ctx.fillRect(Math.round(x+scale*1.65),Math.round(y-scale*.36),Math.max(1,scale*.2),scale*.22);}
+   }
+   for(let i=0;i<Math.min(10,hom.sheep||0);i++){
+    const place=cattlePosition(hom,sim.day+movementFraction,i+23,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    if(x<0||y<0||x>w||y>h)continue;
+    const u=Math.max(2,cam.z*2.6);
+    ctx.fillStyle='#4f4b40';ctx.fillRect(Math.round(x),Math.round(y+u*.62),u*.23,u*.6);ctx.fillRect(Math.round(x+u*.9),Math.round(y+u*.62),u*.23,u*.6);
+    ctx.fillStyle='#e7dcc1';ctx.fillRect(Math.round(x),Math.round(y),u*1.55,u*.91);
+    ctx.fillStyle='#c7bba2';ctx.fillRect(Math.round(x+u*1.2),Math.round(y+u*.13),u*.55,u*.60);
+    ctx.fillStyle='#4e463c';ctx.fillRect(Math.round(x+u*1.59),Math.round(y+u*.39),Math.max(1,cam.z),Math.max(1,cam.z));
    }
   }}
  }
