@@ -335,3 +335,36 @@
  #screen>.passage-entry *,#screen>.passage-connection *,#screen>.passage-preparing *,
  #screen>.passage-waiting *{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+/* Horizontal phone has a short effective document area after the shell header.
+   The handshake becomes a compact two-column clerk's desk: every real step
+   remains visible, including Cancel, without scrolling or removing a stage. */
+@media(min-width:701px) and (max-width:1099px) and (max-height:470px){
+ #screen>.passage-connection .passage-connection-panel{
+  width:min(100%,650px);padding:7px 13px!important;gap:3px 14px!important;
+  display:grid!important;grid-template-columns:minmax(0,.93fr) minmax(0,1.07fr)!important;
+  grid-template-rows:36px 11px auto auto 34px!important;align-items:center
+ }
+ #screen>.passage-connection .passage-connection-seal{grid-column:1;grid-row:1;
+  height:31px;width:31px;font-size:20px;border-width:2px;justify-self:start}
+ #screen>.passage-connection .section-label{grid-column:1;grid-row:2;font-size:9px}
+ #screen>.passage-connection h2{grid-column:1;grid-row:3;font-size:21px;text-align:left}
+ #screen>.passage-connection .passage-connection-status{grid-column:1;grid-row:4;
+  text-align:left;font-size:10px}
+ #screen>.passage-connection .btn{grid-column:1;grid-row:5;min-height:30px!important}
+ #screen>.passage-connection .passage-steps{grid-column:2;grid-row:1/6;
+  margin:0!important;gap:0!important;align-self:center}
+ #screen>.passage-connection .passage-step{min-height:32px;padding:3px 1px;
+  font-size:10px;gap:7px}
+ #screen>.passage-connection .passage-step-mark{width:20px;height:20px;flex-basis:20px;font-size:12px}
+}
+/* Participant rail: people are compact line entries, not large empty cards. */
+@media(max-width:700px){
+ #screen>.passage-waiting .passage-roster{align-items:center!important;min-height:40px}
+ #screen>.passage-waiting .passage-roster .waiting-person{
+  height:43px!important;min-height:43px!important;max-height:43px!important;
+  align-self:center!important;padding:3px 6px!important;box-sizing:border-box;
+  background:#e9ddc7!important
+ }
+ #screen>.passage-waiting .passage-roster .waiting-person .member-seal{max-height:31px}
+}
