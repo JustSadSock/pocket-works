@@ -60,7 +60,7 @@ try{
  for(const layout of layouts){
   const context=await browser.newContext({viewport:{width:layout.w,height:layout.h},isMobile:!!layout.mobile,hasTouch:!!layout.mobile,deviceScaleFactor:1});
   const page=await context.newPage();
-  await page.route(request=>request.url().endsWith('.js'),route=>route.abort());
+  await page.route('**/*.js',route=>route.abort());
   await page.goto(url,{waitUntil:'load'});
   for(const [name,markup] of [['verdict',verdict],['reveal',reveal],['results',results]]){
    await page.evaluate(({markup,viewportHeight})=>{
