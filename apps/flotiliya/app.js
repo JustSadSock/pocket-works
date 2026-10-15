@@ -8,6 +8,12 @@ const $ = (id) => document.getElementById(id);
 const canvas = $('sea'), ctx = canvas.getContext('2d', {alpha:false});
 const W=660,H=1000,TAU=Math.PI*2,KEY='pocket-works:flotiliya:v1';
 const PHASE_SECONDS=4.5,HALF=2.25,MAX_ROUNDS=22;
+const MISSIONS=[
+ {id:'battle',name:'Линейное сражение',brief:'Разбей противника, сохрани ветеранов и забери призы.',limit:22},
+ {id:'breakout',name:'Прорыв блокады',brief:'Проведи хотя бы одну галеру к северной кромке моря (отмечена золотым створом).',limit:18},
+ {id:'intercept',name:'Перехват посыльного',brief:'Не дай лёгкому вражескому судну уйти через южную кромку. Захвати или потопи его.',limit:18}
+];
+const missionFor=index=>MISSIONS[(index-1)%MISSIONS.length];
 const ISLAND_MAPS=[
  [{x:213,y:433,rx:72,ry:54,rotation:.45,seed:3},{x:477,y:611,rx:67,ry:72,rotation:-.57,seed:5},{x:462,y:254,rx:31,ry:35,rotation:.17,seed:9,rock:true}],
  [{x:176,y:337,rx:68,ry:54,rotation:.21,seed:13},{x:445,y:538,rx:78,ry:60,rotation:-.38,seed:18},{x:271,y:708,rx:34,ry:28,rotation:.5,seed:26,rock:true}],
@@ -32,7 +38,7 @@ swift:{kind:'Лёгкая галера',maxHp:70,maxCrew:27,speed:59,turn:1.26,r
 heavy:{kind:'Тяжёлая галера',maxHp:108,maxCrew:42,speed:39,turn:.78,range:155,damage:3.8,board:4.1,length:62,beam:21},
 bow:{kind:'Стрелковая галера',maxHp:78,maxCrew:29,speed:49,turn:1.04,range:218,damage:5,board:2.5,length:55,beam:17}
 };
-let store, game={phase:'harbor',round:0,elapsed:0,fleet:[],ships:[],captured:[],events:[],particles:[],battleIndex:1,gold:130,selected:null,endVictory:false,stage:0,islands:[],weather:WEATHER[0],drag:null,grapples:[],eventClock:0};
+let store, game={phase:'harbor',round:0,elapsed:0,fleet:[],ships:[],captured:[],events:[],particles:[],battleIndex:1,gold:130,selected:null,endVictory:false,stage:0,mission:MISSIONS[0],islands:[],weather:WEATHER[0],drag:null,grapples:[],eventClock:0};
 let view={scale:1,ox:0,oy:0,dpr:1,w:0,h:0},frameTime=0,acc=0,elapsedSound=0;
 function makeShip(id,name,type,extra={}) {
  const t=TYPE[type];return {...t,id,name,type,hp:t.maxHp,crew:t.maxCrew,xp:0,level:0,active:true,scars:0,oars:100,maxOars:100,morale:100,...extra};
@@ -63,7 +69,8 @@ function activeFleet(){return game.fleet.filter(s=>s.active).slice(0,3)}
 function renderHarbor(){
  game.phase='harbor';$('harbor').hidden=false;$('command').hidden=true;$('seaTop').hidden=true;$('toast').hidden=true;
  $('gold').textContent='◈ '+game.gold;$('subtitle').textContent='Гавань · твоя эскадра';
- $('campaignLabel').textContent='ПОХОД '+roman(game.battleIndex);
+ $('campaignLabel').textContent='ПОХОД '+roman(game.battleIndex)+' · '+missionFor(game.battleIndex).name;
+ $('missionBrief').textContent=missionFor(game.battleIndex).brief;
  $('harborCount').textContent=game.fleet.length+' СУДНА';
  $('activeCount').textContent=activeFleet().length+'/3 В БОЮ';
  $('sailBtn').disabled=!activeFleet().length;
@@ -103,6 +110,19 @@ function planEnemyOrders(s){
  const foes=alive('ally').sort((a,b)=>distance(s,a)-distance(s,b));
  if(!foes.length){s.orders=[freshOrder('hold'),freshOrder('hold')];return;}
  const t=foes.find(v=>!v.grappleId)||foes[0],d=distance(s,t);
+ if(game.mission?.id==='intercept'&&s.id.endsWith('-0')){
+  // Courier flees with paid steering, not by secretly crossing the entire chart.
+  s.orders=[freshOrder('evade'),freshOrder('evade')];
+  for(let stage=0;stage<2;stage++){
+   const origin=stage===0?{x:s.x,y:s.y}:(s.orders[0].route[0]||{x:s.x,y:s.y});
+   const target={x:clamp(origin.x+Math.sin(game.round*.33)*8,58,W-58),
+    y:Math.min(H-45,origin.y+Math.min(78,stageRange(s)*.88))};
+   s.orders[stage].route=[target];
+   if(!canPlan(s,s.orders))s.orders[stage].route=[];
+  }
+  if(!canPlan(s,s.orders))s.orders=[freshOrder('hold'),freshOrder('hold')];
+  return;
+ }
  if(s.morale<22||s.retreating){
   s.retreating=true;s.orders=[freshOrder('evade'),freshOrder('evade')];return;
  }
@@ -147,7 +167,7 @@ function planEnemyOrders(s){
 function startBattle(){
  game.ships=[];game.captured=[];game.events=[];game.particles=[];game.grapples=[];game.eventClock=0;game.round=1;game.elapsed=0;game.selected=null;game.stage=0;game.drag=null;
  game.islands=ISLAND_MAPS[(game.battleIndex-1)%ISLAND_MAPS.length].map(i=>({...i}));
- game.weather=WEATHER[(game.battleIndex-1)%WEATHER.length];
+ game.weather=WEATHER[(game.battleIndex-1)%WEATHER.length];game.mission=missionFor(game.battleIndex);
  const xs=[142,330,519];
  activeFleet().forEach((s,i)=>game.ships.push(battleShip(s,'ally',xs[i],852+(i%2)*24,-Math.PI/2)));
  const aiTypes=['swift','bow','heavy'];
@@ -159,9 +179,9 @@ function startBattle(){
  game.ships.filter(s=>s.side==='enemy').forEach(planEnemyOrders);
  game.phase='orders';$('harbor').hidden=true;$('command').hidden=false;$('seaTop').hidden=false;$('endPanel').hidden=true;
  $('orderArea').hidden=false;$('orderArea').style.opacity='1';$('resolveBtn').hidden=false;$('progress').hidden=true;
- $('subtitle').textContent='Боевой порядок · подготовка';$('gold').textContent='◈ '+game.gold;
+ $('subtitle').textContent=game.mission.name;$('gold').textContent='◈ '+game.gold;
  selectShip(game.ships.find(s=>s.side==='ally')?.id||null);updateBattleUI();resize();
- notify('Выбери судно. Нарисуй путь, затем укажи вторую команду.');
+ notify(game.mission.brief);
 }
 function alive(side){return game.ships.filter(s=>s.alive&&s.side===side)}
 function nearest(s){return alive(s.side==='ally'?'enemy':'ally').sort((a,b)=>distance(s,a)-distance(s,b))[0]||null}
@@ -213,10 +233,10 @@ function selectShip(id){
  updateBudgetUI(s);
 }
 function updateBattleUI(){
- $('turnLabel').textContent='ХОД '+String(game.round).padStart(2,'0')+' / '+MAX_ROUNDS;
+ $('turnLabel').textContent='ХОД '+String(game.round).padStart(2,'0')+' / '+(game.mission?.limit||MAX_ROUNDS);
  $('shipsLeft').textContent=alive('ally').length+' СВОИХ · '+alive('enemy').length+' ЧУЖИХ';
  $('weatherLabel').textContent=game.weather?.name||'Ясная погода';
- $('scenarioLabel').textContent='4,5 СЕК / ХОД';
+ $('scenarioLabel').textContent=game.mission.name.toUpperCase();
  if(game.phase==='orders')$('commandCaption').textContent='ПРИКАЗЫ ЭСКАДРЕ';
  if(game.selected)selectShip(game.selected);
 }
@@ -463,7 +483,9 @@ function startResolve(){
 function finishPhase(){
  $('progress').hidden=true;$('orderArea').style.opacity='1';
  const good=alive('ally').length,bad=alive('enemy').length;
- if(!good||!bad||game.round>=MAX_ROUNDS){finishBattle();return;}
+ const outcome=missionOutcome();
+ if(outcome!==null){finishBattle(outcome);return;}
+ if(!good||!bad||game.round>=(game.mission?.limit||MAX_ROUNDS)){finishBattle();return;}
  game.round++;game.phase='orders';game.stage=0;
  if(game.round===4||game.round===8){
   game.weather=WEATHER[(WEATHER.indexOf(game.weather)+1)%WEATHER.length];
@@ -481,9 +503,22 @@ $('resolveBtn').hidden=false;
  $('subtitle').textContent='Сражение · фаза приказов';
  updateBattleUI();notify('Новая фаза: скорректируй приказы');
 }
-function finishBattle(){
+function missionOutcome(){
+ if(game.mission?.id==='breakout'){
+  if(alive('ally').some(s=>s.y<=168))return true;
+  if(!alive('ally').length||game.round>=game.mission.limit)return false;
+ }
+ if(game.mission?.id==='intercept'){
+  const courier=game.ships.find(s=>s.side==='enemy'&&s.id.endsWith('-0'));
+  if(courier&&!courier.alive)return true;
+  if(courier?.alive&&courier.y>=828)return false;
+  if(!alive('ally').length||game.round>=game.mission.limit)return false;
+ }
+ return null;
+}
+function finishBattle(forced=null){
  const score=s=>alive(s).reduce((a,v)=>a+v.hp/v.maxHp+v.crew/v.maxCrew*.5,0);
- const win=alive('enemy').length===0||score('ally')>=score('enemy')&&alive('ally').length>0;game.endVictory=win;game.phase='result';
+ const win=forced===null?(alive('enemy').length===0||score('ally')>=score('enemy')&&alive('ally').length>0):forced;game.endVictory=win;game.phase='result';
  const survivors=game.ships.filter(s=>s.side==='ally'&&(s.alive||s.escaped));
  const dead=game.ships.filter(s=>s.side==='ally'&&!s.alive&&!s.escaped).length;
  for(const s of game.ships.filter(s=>s.side==='ally')){
@@ -506,7 +541,7 @@ function finishBattle(){
  $('endPanel').hidden=false;
  $('endTitle').textContent=win?'Море за тобой':'Флот возвращается';
  $('endText').textContent='Вернулось '+survivors.length+' из '+(survivors.length+dead)+' судов. Потеряно '+dead+'. Захвачено '+prizes+'. Награда: '+goldEarned+' монет. Корабли сохранили повреждения и опыт.';
- $('subtitle').textContent='Сражение · итог';
+ $('subtitle').textContent=game.mission.name+' · итог';
  updateBattleUI();resize();
 }
 function notify(message){
@@ -643,6 +678,19 @@ function render(now){
    ctx.fillStyle='#102f35ed';ctx.fillRect(mx-27,my-27,54,8);
    ctx.fillStyle='#d8b37f';ctx.fillRect(mx-25,my-25,50*progress,4);
    ctx.restore();
+  }
+  // Mission finish-lines share the same world-space coordinate system as ships.
+  if(game.mission?.id==='breakout'){
+   ctx.save();ctx.strokeStyle='#f1d99c';ctx.lineWidth=3;ctx.setLineDash([12,9]);
+   ctx.beginPath();ctx.moveTo(38,168);ctx.lineTo(W-38,168);ctx.stroke();ctx.setLineDash([]);
+   ctx.fillStyle='#f9df9f';ctx.textAlign='center';ctx.font='700 14px system-ui';
+   ctx.fillText('ПРОРВАТЬСЯ СЮДА',W/2,150);ctx.restore();
+  }
+  if(game.mission?.id==='intercept'){
+   ctx.save();ctx.strokeStyle='#d19b86';ctx.lineWidth=3;ctx.setLineDash([12,9]);
+   ctx.beginPath();ctx.moveTo(38,828);ctx.lineTo(W-38,828);ctx.stroke();ctx.setLineDash([]);
+   ctx.fillStyle='#f5c6ab';ctx.font='700 14px system-ui';ctx.textAlign='center';
+   ctx.fillText('НЕ ДАТЬ ПОСЫЛЬНОМУ УЙТИ',W/2,810);ctx.restore();
   }
   if(game.phase==='orders')for(const s of ss)drawOrders(s);
   for(const s of ss)drawShip(s,now);
