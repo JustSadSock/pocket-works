@@ -125,7 +125,10 @@ function planEnemyOrders(s){
   return;
  }
  if(s.morale<22||s.retreating){
-  s.retreating=true;s.orders=[freshOrder('evade'),freshOrder('evade')];return;
+  s.retreating=true;s.orders=[freshOrder('evade'),freshOrder('evade')];
+  if(!canPlan(s,s.orders))s.orders[1]=freshOrder('hold');
+  if(!canPlan(s,s.orders))s.orders[0]=freshOrder('hold');
+  return;
  }
  // AI obeys the identical points budget and distance limits as the player.
  const boardReady=d<94&&s.crew>s.maxCrew*.47&&s.morale>38&&
