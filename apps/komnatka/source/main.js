@@ -738,6 +738,8 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
   get selection(){return selectedId;},
    get placement(){return pending?{type:pending.type,valid:pending.valid,ready:pending.previewReady}:null;},
    get dragging(){return drag?.kind||null;},
+   get itemCount(){return state.items.length;},
+   get gridVisible(){return Boolean(scene?.getMeshByName('placement-grid')?.isEnabled());},
    meshY(id){return roots.get(id)?.position.y??null;},
    groundPoint(x,z){
     if(!ready)return null;
