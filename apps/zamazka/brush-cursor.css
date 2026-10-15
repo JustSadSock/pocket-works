@@ -46,3 +46,8 @@
  .restore .brush-cursor .brush-cursor-art,.restore .brush-cursor .brush-cursor-art .fibers,.restore .brush-cursor .brush-cursor-art .shaft{transition:none}
  .restore .brush-cursor .brush-cursor-art svg,.restore .brush-cursor .brush-cursor-sparks{animation:none!important}
 }
+
+/* RMB-held horizontal drag adjusts the nib without drawing. */
+.restore .brush-cursor.is-sizing{border-color:#f8d59c;outline-color:#805536;background:#c49a5a35}
+.restore .brush-cursor.is-sizing:before{content:attr(data-size);position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);min-width:34px;padding:4px 6px;background:#352e27ec;color:#fff0d6;font:700 11px/1.1 system-ui,sans-serif;text-align:center;white-space:nowrap;border:1px solid #b49a77;box-shadow:0 2px 7px #0005;pointer-events:none}
+.restore .brush-cursor.is-sizing .brush-cursor-art{opacity:.8}
