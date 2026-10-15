@@ -251,8 +251,11 @@ try{
   await page.waitForFunction(()=>!document.querySelector('#toast')?.classList.contains('show'),null,{timeout:6000});
   await page.waitForTimeout(360); // Capture the settled scene, not its 275ms entrance opacity.
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-create-room-'+viewport.width+'.png'),fullPage:false});
-  await page.locator('.lobby-entry [data-action="connect"]').click();
+  assert.equal(await page.locator('.lobby-entry #passageEntryForm').count(),1,'Invitation must be a keyboard-submit form');
+  assert.equal(await page.locator('.lobby-entry .passage-switch').count(),1,'Guests can switch room entry without leaving');
+  await page.locator('.lobby-entry .passage-submit').click();
   await page.locator('.exhibition-lobby #commonsCanvas').waitFor({timeout:12000});
+  assert.equal(await page.locator('.passage-connection .passage-step').count(),0,'Loading stage exits after room handshake');
   assert.equal(await page.locator('.exhibition-lobby .player').count(),3,'Room roster must render from authoritative state');
   assert.equal(await page.locator('.exhibition-lobby .lobby-self').count(),0,
     'Lobby must not duplicate Pocket ID in the masthead');

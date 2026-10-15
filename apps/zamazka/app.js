@@ -9,6 +9,7 @@ import {ARTS,REAL_COUNT,PLAYABLE_IDS,ARCHIVE_EDITION,normalizeArchiveEntry,artwo
 import {Editor,renderArtwork} from './editor.js';
 import {BRUSH_CURSOR_NAMES,brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
 import {finaleVerdictMarkup,finaleResultsMarkup,finaleRevealAuditMarkup} from './finale-ui.js';
+import {admissionMarkup,connectionMarkup,setConnectionStep,preparingMarkup,updateArtLoad,updateReady,waitingMarkup,updateWaiting} from './passage-ui.js';
 import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
 import {getSavedEmblem,storeEmblem} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
@@ -313,17 +314,9 @@ function home(skipLeave=false){
 
 }
 function setup(mode,error='',roomValue=invitedRoom){
- const creating=mode==='create';
- const display=creating?'Создать комнату':'Присоединиться';
- const identity='<button type="button" class="entry-profile" data-action="pocket-profile"><span data-pocket-identity>'+pocketPortrait()+'</span><span><strong>'+esc(gameName())+'</strong><small>'+(isPocketMember()?'Профиль Pocket ID':'Гостевой игрок · открыть Pocket ID')+'</small></span><span aria-hidden="true">↗</span></button>';
- change('<section class="page lobby-entry">'+
-  '<header class="entry-heading"><span class="section-label">ИГРА С ДРУЗЬЯМИ</span><h2>'+display+'</h2></header>'+
-  '<div class="entry-content">'+identity+
-   '<div class="entry-fields"><label class="field" for="who">Имя игрока</label><input class="input" id="who" maxlength="22" autocomplete="nickname" placeholder="Как тебя зовут?" value="'+esc(gameName())+'" '+(isPocketMember()?'readonly aria-readonly="true"':'')+'>'+
-   (creating?'':'<label class="field" for="room">Код или ссылка на комнату</label><input class="input room-entry-input" id="room" maxlength="250" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="Код из восьми символов" value="'+esc(roomValue)+'">')+
-   (error?'<div class="notice entry-error" role="alert">'+esc(error)+'</div>':'')+
-   '</div><div class="entry-actions"><button class="btn primary" data-action="connect" data-mode="'+mode+'">'+display+' ↗</button><button class="btn ghost" data-action="menu">Назад</button></div>'+
-  '</div><aside class="entry-art" aria-hidden="true"><span class="entry-art-frame"><img src="'+artworkURL(0)+'" alt="" loading="eager"></span></aside></section>','setup');
+ change(admissionMarkup({creating:mode==='create',name:gameName(),member:isPocketMember(),portrait:pocketPortrait(),
+  roomValue,error,escapeText:esc,artURL:artworkURL(0)}),'setup');
+ syncIdentity();
 }
 
 let roundsChoice=3;
@@ -393,8 +386,7 @@ function preloadPreviewImage(id){
 }
 function preparing(local=false){
  const v=local?practice:view;if(!v)return;
- const progress=local?'Готовим оригиналы…':'Готовим оригиналы · '+(v.readyCount||0)+' / '+v.participants.length;
- change('<section class="page center art-preparing"><span class="busy" aria-hidden="true"></span><h2>Готовим экспозицию</h2><p id="artPreparingStatus" class="hint">'+esc(progress)+'</p><button class="btn ghost" data-action="retry-art-preload" hidden>Повторить загрузку</button><button class="btn ghost preparing-menu" data-action="menu">← В главное меню</button></section>','preparing');
+ change(preparingMarkup({round:v.round,total:v.participants?.length||1,ready:v.readyCount||0,local}),'preparing');
  void prepareRoundImages(local);
 }
 async function prepareRoundImages(local=false,retry=false){
@@ -402,19 +394,29 @@ async function prepareRoundImages(local=false,retry=false){
  const token=(local?'local':roomId)+':'+v.round;
  if(preparedRound===token&&!retry)return;
  preparedRound=token;preparingError='';loadedRound='';
- const status=screen.querySelector('#artPreparingStatus'),retryButton=screen.querySelector('[data-action="retry-art-preload"]');
- if(status)status.textContent='Загружаем пять картин…';
+ const root=screen.querySelector('.passage-preparing');
+ const status=root?.querySelector('#artPreparingStatus'),retryButton=root?.querySelector('[data-action="retry-art-preload"]');
+ let completed=0;
+ const loadedIndices=[];
+ updateArtLoad(root,0,Math.max(1,v.selected.length));
+ if(status)status.textContent='Загружаем оригиналы…';
  if(retryButton)retryButton.hidden=true;
  try{
-   await Promise.all(v.selected.flatMap(id=>[loadArtwork(id),preloadPreviewImage(id)]));
+   await Promise.all(v.selected.map(async (id,index)=>{
+     await Promise.all([loadArtwork(id),preloadPreviewImage(id)]);
+     completed++;loadedIndices.push(index);
+     if(preparedRound===token&&root?.isConnected)updateArtLoad(root,completed,v.selected.length,loadedIndices);
+   }));
    if(preparedRound!==token)return;
    loadedRound=token;
    if(local){
      if(practice!==v||v.phase!=='preparing')return;
      v.phase='preview';v.deadline=Date.now()+25000;persistPractice();preview(true);
    }else if(view?.phase==='preparing'&&roomId&&net){
-     if(status?.isConnected)status.textContent='Картины готовы · ожидаем остальных';
-     net.sendGame({type:'art_ready',round:v.round});
+     if(status?.isConnected)status.textContent='Картины готовы. Ожидаем остальных.';
+     updateReady(root,view.readyCount||0,view.participants?.length||0);
+     try{net.sendGame({type:'art_ready',round:v.round})}
+     catch{if(status?.isConnected)status.textContent='Нет связи с комнатой. Попробуй повторить.';if(retryButton)retryButton.hidden=false}
    }
  }catch{
    if(preparedRound!==token)return;
@@ -423,6 +425,7 @@ async function prepareRoundImages(local=false,retry=false){
    if(retryButton?.isConnected)retryButton.hidden=false;
  }
 }
+
 function updateMobileGalleryNav(rail){
  const nav=rail?.parentElement?.querySelector('.mobile-gallery-nav');
  if(!nav)return;
@@ -560,17 +563,11 @@ function drawing(local=false){
 
 function waiting(){
  const v=view,ass=v?.mine;if(!v||!ass)return;
- const finished=v.done||[],players=v.participants||[];
- change('<section class="phase-page waiting-phase">'+head('РАУНД '+v.round+' · РАБОТА СДАНА','Твой шедевр в музее',v.deadline,artFactsHtml(ass.art),v.drawingSeconds===0)+
- '<div class="phase-body waiting-layout"><div class="waiting-work">'+
- '<h3>'+esc(ARTS[ass.art]?.title||'Твоя работа')+'</h3><p class="phase-directive">Двигай ползунок, чтобы сравнить с оригиналом.</p>'+
- '<div class="unveil-frame" id="unveilStage" style="--split:50%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Моя реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Оригинальная картина"></canvas><span class="unveil-label left">МОЯ РАБОТА</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
- '<label class="unveil-control" for="unveilRange">Сравнить до и после <input id="unveilRange" type="range" min="0" max="100" value="50" aria-label="Сравнить мою реставрацию и оригинал"></label></div>'+
- '<aside class="waiting-progress"><h3>Ожидаем остальных</h3><strong id="readyCount">'+finished.length+' / '+players.length+'</strong>'+
- '<details class="waiting-players"><summary>Кто ещё рисует <span aria-hidden="true">⌄</span></summary><div id="readyList" class="waiting-roster">'+players.map(p=>'<div class="waiting-person'+(finished.includes(p.id)?' is-ready':'')+'">'+memberSeal(p)+'<span>'+esc(p.name)+'</span><strong>'+(finished.includes(p.id)?'Готово':'Рисует')+'</strong></div>').join('')+'</div></details></aside></div></section>','waiting');
+ change(waitingMarkup({view:v,ass,arts:ARTS,escapeText:esc,memberSeal,head,artFactsHtml}),'waiting');
  void renderArtwork(screen.querySelector('#restCanvas'),ass.art,ass.variation,ass.strokes||[],true);
  void renderArtwork(screen.querySelector('#origCanvas'),ass.art,0,null,false);
 }
+
 function voteToken(v){return [roomId,v.round,v.turn].join(':')}
 function attemptVote(force=false){
  if(!pendingVote||!net||!view||view.phase!=='voting'||voteToken(view)!==pendingVote.token)return;
@@ -799,12 +796,11 @@ function renderView(){
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
-    const count=screen.querySelector('#readyCount');if(count)count.textContent=(view.done||[]).length+' / '+view.participants.length;
-    screen.querySelectorAll('.waiting-person').forEach((el,i)=>{const p=view.participants[i],status=el.querySelector('strong');if(p&&status){const ready=(view.done||[]).includes(p.id);if(ready&&!el.classList.contains('is-ready')){el.classList.add('just-ready');setTimeout(()=>el.classList.remove('just-ready'),440)}status.textContent=ready?'Готово':'Рисует';el.classList.toggle('is-ready',ready)}});
-    return;
-  }
+   updateWaiting(screen,view.done||[],view.participants||[]);
+   return;
+ }
  if(page==='preparing'&&view.phase==='preparing'&&key===lastUiKey){
-   const status=screen.querySelector('#artPreparingStatus');if(status&&!preparingError&&loadedRound===roomId+':'+view.round){const total=view.participants?.length||0;status.textContent='Картины готовы · '+(view.readyCount||0)+' / '+total+' игроков'}
+   const status=screen.querySelector('#artPreparingStatus');const root=screen.querySelector('.passage-preparing');if(root)updateReady(root,view.readyCount||0,view.participants?.length||0);if(status&&!preparingError&&loadedRound===roomId+':'+view.round)status.textContent='Картины готовы. Ожидаем остальных.';
    return;
  }
  if(page==='preview'&&view.phase==='preview'&&key===lastUiKey)return; // Do not reset the player's mobile swipe position on server updates.
@@ -852,22 +848,24 @@ async function connect(mode){
  const epoch=++connectionEpoch;
  connectionStatus('connecting');
  me=null;view=null;roomId='';
- change('<section class="page center connecting-room"><span class="busy"></span><h2>Открываем зал…</h2><p class="hint">Соединяем с выставкой.</p><button class="btn ghost wide" data-action="menu">Отменить</button></section>','connecting');
+ change(connectionMarkup({mode}),'connecting');
  try{
    const response=await fetch(POCKETNET_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(8000)});
    if(!response.ok)throw new Error('Выставки временно недоступны. Попробуй ещё раз.');
    const health=await response.json();
    if(!health.ok||!health.modules?.includes('zamazka'))throw new Error('Онлайн-комнаты сейчас недоступны.');
    if(epoch!==connectionEpoch)return;
+   setConnectionStep(screen,1,'Проверяем профиль…');
    // Separate authenticated identities for each open browser tab.
    const storage=await prepareTabGuest(POCKETNET_URL,name);
    if(epoch!==connectionEpoch)return;
+   setConnectionStep(screen,2,'Соединяемся с сервером…');
    if(net)net.close();
    const client=new PocketNet({serverUrl:POCKETNET_URL,name,storage,identityKey:pocketIdentitySessionKey(pocketIdentity)});
    net=client;
    if(mode!=='resume'){client.roomId=null;client.persist()}
    if(mode==='resume'&&!client.roomId)throw Error('Предыдущая сессия завершена');
-   client.on('connected',data=>{if(client.closed)return;me=data.player;connectionStatus('ok');markTabGuest(POCKETNET_URL,client.token)});
+   client.on('connected',data=>{if(client.closed)return;me=data.player;connectionStatus('ok');markTabGuest(POCKETNET_URL,client.token);setConnectionStep(screen,3,'Открываем зал…')});
    client.on('room_joined',msg=>{
      if(client.closed)return;
      roomId=msg.roomId;
@@ -877,7 +875,7 @@ async function connect(mode){
      if(page==='drawing'&&!pendingSubmit)backupDraft(true);
      // Legacy room emblems are read only for backwards compatibility; Pocket ID is the visible identity.
      if(view)renderView();
-     else change('<section class="page center connecting-room"><span class="busy"></span><h2>Готовим экспозицию…</h2><p class="hint">Собираем гостей.</p></section>','connecting');
+     else setConnectionStep(screen,3,'Собираем участников…');
    });
    // Big eight-player galleries arrive in ordered, bounded PocketNet frames.
    // Reconstruct only complete authoritative snapshots; never show partial art.
@@ -1102,6 +1100,12 @@ function openPocketProfile(){
 document.querySelector('#profileBtn')?.addEventListener('click',openPocketProfile);
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 syncIdentity();
+screen.addEventListener('submit',e=>{
+ if(e.target?.id!=='passageEntryForm')return;
+ e.preventDefault();
+ const button=e.target.querySelector('.passage-submit');
+ if(button&&!button.disabled)void connect(button.dataset.mode);
+});
 screen.addEventListener('click',e=>{
  const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub],[data-review-open]');if(!b)return;
  if(b.hasAttribute('data-review-open')){openRoundViewer({index:Number(b.dataset.reviewOpen),view,dialog,renderArtwork,arts:ARTS,esc,closeDialog});return}
@@ -1136,6 +1140,8 @@ screen.addEventListener('click',e=>{
  else if(action==='practice')practiceSettings();
  else if(action==='retry-gallery')home();
  else if(action==='retry-art-preload')void prepareRoundImages(Boolean(practice),true);
+ else if(action==='cancel-connect')home();
+ else if(action==='paste-invite')void (async()=>{const field=screen.querySelector('#room');if(!field)return;try{if(!navigator.clipboard?.readText)throw Error('unsupported');const text=await navigator.clipboard.readText();if(page!=='setup'||!field.isConnected)return;field.value=text.trim();field.focus();notify('Приглашение вставлено')}catch{field.focus();notify('Разреши доступ к буферу или вставь код вручную')}})();
  else if(action==='resume')resumePractice();
  else if(action==='collection')collection();
  else if(action==='export-archive')exportArchive();

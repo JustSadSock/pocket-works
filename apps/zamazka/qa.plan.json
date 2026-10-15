@@ -127,10 +127,10 @@
       "entry": "qa/finale-visual.mjs"
     },
     {
-      "id": "finale-live-flow",
+      "id": "passage-visual",
       "kind": "browser-node",
       "tier": "smoke",
-      "entry": "qa/real-flow.mjs"
+      "entry": "qa/passage-visual.mjs"
     }
   ]
 }
