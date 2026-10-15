@@ -20,13 +20,25 @@
     <header class="topbar"><button class="nav-back" data-back="home">←</button><h2>Выбери сцену</h2><span class="small-cap">01 / 03</span></header>
     <p class="section-intro">Готовые фильмы с открытой лицензией или собственное видео.</p>
     <div id="scene-grid" class="scene-grid"></div>
-    <label class="upload-card"><input type="file" id="video-file" accept="video/mp4,video/webm,video/quicktime,video/*" hidden><span class="upload-icon">＋</span><span><b>Своё видео</b><small>MP4 / MOV / WebM · до 32 МБ для комнаты</small></span><span class="arrow">↗</span></label>
+    <label class="upload-card"><input type="file" id="video-file" accept="video/mp4,video/webm,video/quicktime,video/*" hidden><span class="upload-icon">＋</span><span><b>Своё видео</b><small>MP4 / MOV / WebM · до 512 МиБ исходник · обработка на устройстве</small></span><span class="arrow">↗</span></label>
     <div id="scene-license" class="license-note">Исходные фильмы: <a href="https://studio.blender.org/projects/wing-it/" target="_blank" rel="noopener noreferrer">Wing It! · Blender Studio</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>); <a href="https://peach.blender.org/" target="_blank" rel="noopener noreferrer">Big Buck Bunny · Blender Foundation</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a>). Отрывки обрезаются и получают новую озвучку. Для собственных файлов нужны права на использование.</div>
   </section>
   <section id="screen-trim" class="screen trim hidden">
     <header class="topbar"><button class="nav-back" data-back="library">←</button><h2>Подготовить сцену</h2><span class="small-cap">02 / 03</span></header>
     <div class="trim-preview"><video id="trim-video" controls playsinline preload="metadata"></video></div>
     <div class="trim-info"><label>Название <input id="scene-title" maxlength="55" placeholder="Название сцены"></label><div class="two-inputs"><label>От (сек.)<input id="trim-start" type="number" min="0" step="1" value="0"></label><label>Длина (сек.)<input id="trim-length" type="number" min="10" max="90" step="1" value="60"></label></div></div>
+    <div id="media-workbench" class="media-workbench hidden">
+      <div class="row-between"><h3>Монтаж видеосцены</h3><span id="media-source-size" class="media-stamp"></span></div>
+      <div class="media-controls">
+        <label>Качество <span id="media-quality-label">Высокое</span><input id="media-quality" type="range" min="1" max="5" value="4" step="1" aria-label="Качество видео"></label>
+        <label>Размер кадра<select id="media-resolution"><option value="640">До 640 пикс.</option><option value="960">До 960 пикс.</option><option value="1280" selected>До 1280 пикс.</option><option value="1920">До 1920 пикс.</option></select></label>
+      </div>
+      <div class="media-budget"><span id="media-estimate">Ожидаемый размер</span><small>В комнате максимум 96 МиБ · оценка приблизительная</small></div>
+      <button id="media-render" class="media-render" type="button">✂ Обрезать и сжать</button>
+      <div id="media-progress" class="media-progress hidden" role="status"><div class="row-between"><strong id="media-progress-label">Обработка · 0%</strong><button id="media-cancel" class="text-action" type="button">Отменить</button></div><progress id="media-progress-bar" max="100" value="0"></progress><small>Обработка идёт на устройстве. Не закрывай экран.</small></div>
+      <div id="media-result" class="media-result hidden"><div class="media-result-title"><b>Готовый фрагмент</b><span id="media-output-size"></span></div><video id="media-output-preview" controls playsinline preload="metadata"></video><div class="media-result-actions"><button id="media-accept" class="action main-action" type="button">Использовать фрагмент →</button><button id="media-discard" class="action secondary-action" type="button">Пересжать</button></div></div>
+      <p id="media-note" class="media-note" aria-live="polite">Укажи начало и длину сцены. Предпросмотр итогового качества появится после обработки.</p>
+    </div>
     <div class="role-builder"><div class="row-between"><h3>Персонажи</h3><button id="add-role" class="text-action">+ Добавить</button></div><div id="role-tags" class="role-tags"></div></div>
     <button id="confirm-scene" class="action main-action bottom-action">Продолжить <span class="arrow">→</span></button>
   </section>
