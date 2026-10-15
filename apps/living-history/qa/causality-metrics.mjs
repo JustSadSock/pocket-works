@@ -77,8 +77,8 @@ export function detectCausalFlags(snapshot,foodAccessAtDeath=null,preDeathDays=[
    flags.push('death-despite-positive-aggregate-stock-days');
   if(foodAccessAtDeath.affordableKg>0 && foodAccessAtDeath.grainInTransitKg===0)
    flags.push('purchase-potential-requires-investigation');
-  if(foodAccessAtDeath.potentialAidKg>0)
-   flags.push('aid-potential-requires-investigation');
+  if(foodAccessAtDeath.aid?.canDispatchNow && foodAccessAtDeath.aid.dispatchableKg>0)
+   flags.push('aid-dispatch-eligible-on-death-day');
  }
  return flags;
 }
