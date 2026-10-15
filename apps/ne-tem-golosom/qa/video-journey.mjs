@@ -74,6 +74,17 @@ try{
     await page.locator('#media-render').click();
     await page.waitForSelector('#media-result:not(.hidden)',{timeout:60000});
     assert(await page.locator('#media-output-preview').evaluate(v=>Boolean(v.currentSrc)),'no output preview');
+    await page.waitForFunction(()=>{
+      const v=document.getElementById('media-output-preview');
+      return v.readyState>=2&&v.videoWidth>0;
+    },null,{timeout:16000});
+    const playback=await page.locator('#media-output-preview').evaluate(async video=>{
+      await video.play();
+      await new Promise(resolve=>setTimeout(resolve,500));
+      const time=video.currentTime,frames=video.videoWidth;
+      video.pause();return {time,frames};
+    });
+    assert(playback.frames>0&&playback.time>0,'encoded video must be actually playable');
     const resultSize=await page.locator('#media-output-size').innerText();
     assert(resultSize.includes('МиБ')||resultSize.includes('КиБ'),'output size missing');
     await page.screenshot({path:join(out,viewport.name+'-review.png'),fullPage:true});
@@ -82,6 +93,8 @@ try{
     assert((await page.locator('#media-note').innerText()).includes('Фрагмент готов'));
     await page.locator('#confirm-scene').click();
     await page.waitForSelector('#screen-room:not(.hidden)',{timeout:10000});
+    await page.waitForSelector('#room-retry:not(.hidden)',{timeout:12000});
+    assert.match(await page.locator('#room-connection-status').innerText(),/Не удалось создать комнату/);
     await page.screenshot({path:join(out,viewport.name+'-room.png'),fullPage:true});
     assert.deepEqual(errors,[],viewport.name+' browser errors');
     console.log(viewport.name,resultSize,'validated');
