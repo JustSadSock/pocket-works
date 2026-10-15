@@ -3218,5 +3218,21 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "b14fa3951b3d9643e465e3659cf50d872da937b4",
     "lastAttemptAt": "2026-10-15T01:12:10.112Z"
+  },
+  "oskolki": {
+    "revision": "5bd6b125d60059beca391659370485e7681bb4a4",
+    "qualityScore": 77,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "39277737f795dbed0270735da154d4c6c93f783aab10d0e06a02986423602f3b",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "5bd6b125d60059beca391659370485e7681bb4a4",
+    "lastAttemptAt": "2026-10-15T16:54:14.106Z"
   }
 }
