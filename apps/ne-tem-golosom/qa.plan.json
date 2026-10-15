@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "video-budget",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "qa/media-lab.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#create-btn",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#create-btn"
+        },
+        {
+          "action": "visible",
+          "selector": "#scene-grid .scene-card"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#scene-grid .scene-card:first-child"
+        },
+        {
+          "action": "visible",
+          "selector": "#screen-trim:not(.hidden)"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "video-journey",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/video-journey.mjs"
+    }
+  ]
+}
