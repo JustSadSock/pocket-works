@@ -707,3 +707,27 @@ html.has-pocket-deck[data-deck-density=micro] .app-entry__more{display:none}
 }
 @media(max-width:350px){.deck-batch__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.deck-batch__tile,#deck-batch-trigger,.deck-batch__mark{transition:none}}
+
+/* Global curator pins: visible in the library and Home without displacing play controls. */
+.deck-art__pin,
+html.has-pocket-deck .app-entry__pin{
+  position:absolute;z-index:7;top:7px;left:7px;display:block;width:max-content;
+  max-width:calc(100% - 14px);padding:4px 6px;border-radius:3px;
+  border:1px solid rgba(248,229,188,.43);background:rgba(29,43,40,.92);
+  color:#f4dcb0;font:800 9px/1.1 ui-monospace,Menlo,monospace;
+  letter-spacing:.11em;pointer-events:none;
+}
+html.has-pocket-deck .app-entry__pin{display:none;}
+html.has-pocket-deck .app-entry.is-globally-pinned .app-entry__pin{display:block;}
+.deck-focus__quick .deck-art__pin,.deck-mini-grid .deck-art__pin,.deck-batch__art .deck-art__pin{
+  font-size:7px;padding:3px 4px;top:4px;left:4px;letter-spacing:.02em;
+}
+html.has-pocket-deck[data-deck-density="micro"] .app-entry__pin{font-size:7px;padding:3px;top:3px;left:3px;}
+.deck-global-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:9px 0;}
+.deck-global-actions .deck-global-action{min-width:0;font-size:.81rem;}
+.deck-global-actions [data-deck-global-pin]{background:#34463f;color:#e8ddbb;border-color:#81947a;}
+.deck-batch__scope--pin{color:#f1d5a0;}
+.deck-batch__ops #deck-batch-pin{background:#465449;border-color:#b9a87d;color:#f6e9c9;}
+.deck-batch__ops #deck-batch-unpin{background:#293c3d;border-color:#8c9480;color:#dde4d1;}
+.deck-batch__ops #deck-batch-pin[hidden],.deck-batch__ops #deck-batch-unpin[hidden]{display:none;}
+@media(max-width:470px){.deck-global-actions{grid-template-columns:1fr;gap:6px}}

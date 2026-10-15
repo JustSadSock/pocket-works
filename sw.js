@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.11.0';
-const APP_VERSION = '0.11.0';
-const RELEASE_DATE = '2026-10-14';
+const CACHE_NAME = 'pocket-works-launcher-v0.11.1';
+const APP_VERSION = '0.11.1';
+const RELEASE_DATE = '2026-10-15';
 const CACHE_PROTOCOL = 8;
 const RELEASE_NOTES = [
+  'Administrators can pin and unpin games for everyone; pinned games lead the shared Library and Quick play.',
   'Pocket Social 0.11: join verified friends in live PocketNet lobbies, invite a saved company, and see friends online on Home.',
   'Pocket Social: compact live friend checks, better mobile cards, resilient search, invitations and offline status.',
   'MASKOT: refitted full-size medieval bascinet and herald outfit, improved waistcoat; secret GROOM-2026 wedding tuxedo.',

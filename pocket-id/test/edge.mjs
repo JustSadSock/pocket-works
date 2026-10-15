@@ -57,6 +57,7 @@ assert.deepEqual(codeAfterInvalid.data.user.entitlements,[],'Invalid codes must 
 const archiveGuest=await request('global-archive');
 assert.equal(archiveGuest.status,200);
 assert.ok(Array.isArray(archiveGuest.data.archived));
+assert.ok(Array.isArray(archiveGuest.data.pinned),'Public global pins must be readable by guests');
 assert.equal(archiveGuest.data.canManage,false);
 const archiveMember=await request('global-archive',{cookie:registered.cookie});
 assert.equal(archiveMember.status,200);
@@ -65,6 +66,11 @@ const guestArchiveWrite=await request('global-archive',{method:'POST',body:{slug
 assert.equal(guestArchiveWrite.status,401);
 const unauthorizedArchiveWrite=await request('global-archive',{method:'POST',cookie:registered.cookie,body:{slugs:['test-project'],archived:true}});
 assert.equal(unauthorizedArchiveWrite.status,403);
+const guestPinWrite=await request('global-pins',{method:'POST',body:{slugs:['test-project'],pinned:true}});
+assert.equal(guestPinWrite.status,401);
+const unauthorizedPinWrite=await request('global-pins',{method:'POST',cookie:registered.cookie,
+  body:{slugs:['test-project'],pinned:true}});
+assert.equal(unauthorizedPinWrite.status,403,'A signed-in regular user cannot pin globally');
 const directory=await request('directory?q='+encodeURIComponent(name.slice(0,5)),{cookie:registered.cookie});
 assert.equal(directory.status,404,'Internal directory is not a public API');
 const publicAccount=await request('public?id='+registered.data.user.id,{cookie:registered.cookie});
@@ -119,6 +125,21 @@ if(process.env.POCKET_ID_TEST_ACTIVATION_CODE){
   assert.ok(changed.data.archived.includes('pocket-id-test-archive'));
   await request('global-archive',{method:'POST',cookie:restored.cookie,
     body:{slugs:['pocket-id-test-archive'],archived:false}});
-  console.log('PASS: Single-use activation, persisted admin rights and global archive writes');
+  const badPin=await request('global-pins',{method:'POST',cookie:restored.cookie,
+    body:{slugs:['../invalid'],pinned:true}});
+  assert.equal(badPin.status,400,'Invalid pin slugs must be rejected');
+  const pinned=await request('global-pins',{method:'POST',cookie:restored.cookie,
+    body:{slugs:['pocket-id-test-pin-a','pocket-id-test-pin-b'],pinned:true}});
+  assert.equal(pinned.status,200,'Redeemed admin must manage global pins');
+  assert.ok(pinned.data.pinned.includes('pocket-id-test-pin-a'));
+  assert.ok(pinned.data.pinned.includes('pocket-id-test-pin-b'));
+  const pinPublic=await request('global-archive');
+  assert.ok(pinPublic.data.pinned.includes('pocket-id-test-pin-a'),'Guests see the same global pin snapshot');
+  const unpinned=await request('global-pins',{method:'POST',cookie:restored.cookie,
+    body:{slugs:['pocket-id-test-pin-a','pocket-id-test-pin-b'],pinned:false}});
+  assert.equal(unpinned.status,200);
+  assert.equal(unpinned.data.pinned.includes('pocket-id-test-pin-a'),false);
+  assert.equal(unpinned.data.pinned.includes('pocket-id-test-pin-b'),false);
+  console.log('PASS: Single-use activation, persisted admin rights, global archive and pin writes');
 }
 console.log('PASS: Pocket ID registration, unique nickname, profile, key rotation, sign out, recovery and code security');

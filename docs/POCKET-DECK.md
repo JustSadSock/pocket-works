@@ -156,3 +156,33 @@ live counts and status without altering the focus-first Home layout.
 Browser QA: `tests/e2e/pocket-deck.spec.ts` exercises saving, cancelling,
 personal bulk archive/restore and an authenticated-like mocked global batch
 request with a single list of game slugs.
+
+## Globally pinned games (administrator-controlled)
+
+Pocket ID administrators may **Pin for everyone** or **Unpin for everyone** from
+game details, Library Organize, and the Home **Выбрать** multi-select catalogue.
+They use the same authenticated account role as global archive management.
+Every write requests confirmation, requires a same-origin session, and checks
+the administrator entitlement or server allowlist in the Durable Object;
+ordinary users and guests cannot modify pins.
+
+The `PocketIdentity` SQLite `global_pins` table stores the shared set.
+`GET /pocket-id/global-archive` includes `pinned` (ordered newest-first)
+alongside `archived` and `canManage`. Administrator changes use
+`POST /pocket-id/global-pins` with
+`{"slugs":["game-slug"],"pinned":true|false}`, up to 100 validated slugs.
+The response contains the same shared snapshot. Unpinning preserves each
+person's saved games, recent history, archives and game saves.
+
+Globally pinned active games are placed **first in Library**, regardless of
+the selected secondary sort. A clear PINNED mark appears on Home and Library
+artwork, including the small-cover layout. Home **Quick play** gives pinned
+games priority while its main Continue Playing game remains personal.
+Globally archived games remain in Archive even if they are pinned.
+Online clients refresh the read-only snapshot on focus, reconnection, and
+while visible; the last snapshot is cached for offline presentation but
+never grants permission to change server state.
+
+Security smoke checks: `pocket-id/test/edge.mjs`; mobile UI, guest access,
+bulk pin, unpin, library priority, and confirmation:
+`tests/e2e/pocket-deck.spec.ts`.

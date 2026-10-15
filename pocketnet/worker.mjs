@@ -17,6 +17,14 @@ export default {
       return new Response(request.method === 'HEAD' ? null : asset.body, { status: asset.status, headers });
     }
     if (url.pathname.startsWith('/pocket-id/')) {
+      // Reject foreign-origin writes before forwarding to the Durable Object.
+      // PocketIdentity independently repeats the same validation for all mutations.
+      if (request.method === 'POST' && request.headers.get('origin') !== url.origin) {
+        return new Response(JSON.stringify({error:'origin_or_content_type_denied'}), {
+          status:403,
+          headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}
+        });
+      }
       const headers = new Headers(request.headers);
       for(const key of [...headers.keys()])if(key.startsWith('x-pw-'))headers.delete(key);
       return env.POCKET_ID.get(env.POCKET_ID.idFromName('pocket-id-global-v1')).fetch(new Request(request,{headers}));
