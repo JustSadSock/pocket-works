@@ -336,8 +336,9 @@ export class Editor{
     this.persistIdleId=null;
     this.persistTimer=setTimeout(()=>{
       this.persistTimer=null;if(this.closed)return;
+      if(this.working){this.schedulePersistence();return}
       if(typeof requestIdleCallback==='function'){
-        this.persistIdleId=requestIdleCallback(()=>{this.persistIdleId=null;if(!this.closed)this.saveSnapshot()},{timeout:1800});
+        this.persistIdleId=requestIdleCallback(()=>{this.persistIdleId=null;if(this.working){this.schedulePersistence();return}if(!this.closed)this.saveSnapshot()},{timeout:1800});
       }else this.saveSnapshot();
     },260);
   }
