@@ -7,7 +7,7 @@
    padding:calc(1px + var(--app-safe-top,env(safe-area-inset-top))) 7px 3px!important}
  .top .return,.top .profile-control,.top .round-control {height:40px!important;min-height:40px!important}
  .top .diagnostic-control {display:none!important}
- #screen.screen {flex:1 1 0!important;min-height:0!important;overflow:hidden!important;
+ #screen.screen {flex:1 1 0!important;min-height:0!important;overflow:clip!important;
    overscroll-behavior:none!important;touch-action:pan-x}
  #screen > .page,#screen > .phase-page {
    box-sizing:border-box;max-height:100%!important;min-height:0!important;
