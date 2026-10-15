@@ -270,3 +270,10 @@ export function renderMinimap(canvas,s,view){
  c.strokeStyle='#f9eac5';c.lineWidth=1;c.strokeRect(view.x/W*168,view.y/H*108,view.w/W*168,view.h/H*108);
 }
 export function nearestSite(s,x,y,max=58*WORLD_SCALE){let best=null,b=max;for(const site of s.sites){const d=Math.hypot(site.x-x,site.y-y);if(d<b){best=site;b=d}}return best}
+
+export function renderUnitPortrait(canvas,type,side=0){
+ const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
+ c.clearRect(0,0,canvas.width,canvas.height);
+ const x=Math.round(canvas.width/2)-2,y=Math.round(canvas.height*.57);
+ miniPerson(c,x,y,side,type,1.1,false);
+}
