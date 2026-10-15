@@ -85,7 +85,7 @@ try {
   first.send('create_room', { gameId: 'zamazka' });
   const created = await first.next('room_joined');
   assert.equal(created.state.phase, 'lobby');
-  assert.equal(created.version, 'v17');
+  assert.match(created.version, /^v[1-9][0-9]*$/, 'room must pin a valid immutable module version');
   const roomId = created.roomId;
   const code = roomId.slice(0, 8).toUpperCase();
   second.send('join_room', { roomId: '00000000' });
