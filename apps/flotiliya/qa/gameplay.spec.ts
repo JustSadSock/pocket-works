@@ -122,7 +122,11 @@ test('full-battle policy matrix: default, idle, shooting, focus fire and boardin
         const starting = allies.map((s: any) => ({ ship:s, x:s.x, y:s.y,
           noRoute:s.orders.every((o: any) => !o.route?.length) }));
         api.startResolve();
-        for (let i = 0; i < 90; i++) api.advance(0.05);
+        for (let i = 0; i < 135; i++) {
+          api.advance(1 / 30);
+          if (!g.ships.some((s: any) => s.side === 'ally' && s.alive) ||
+              !g.ships.some((s: any) => s.side === 'enemy' && s.alive)) break;
+        }
         executedStages += 2;
         for (const b of starting) {
           if (b.noRoute) noRouteMovement += Math.hypot(b.ship.x - b.x, b.ship.y - b.y);
