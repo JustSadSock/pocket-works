@@ -1,3 +1,4 @@
+import {exhibitFacets} from './exhibition-ui.js';
 // The exhibition's final three beats share the same dossier hierarchy.
 // Pure markup lets Playwright render real cards without a live PocketNet room.
 export const FINALE_REVISION='1.39.0';
@@ -15,12 +16,10 @@ export function finaleVerdictMarkup({view:v,artworks,artworkURL,escapeText,head,
  const cards=v.selected.map((id,i)=>{
   const art=artworks[id]||{},voters=votesFor(i),count=totals[i];
   return '<article class="verdict-card finale-ballot-card'+(count===largest&&count>0?' has-majority':'')+(i===tagged.i?' is-featured':'')+'" style="--case-index:'+i+';--vote-ratio:'+(100*count/largest).toFixed(1)+'%;--vote-scale:'+(0.84+0.16*count/largest).toFixed(3)+'">'+
-   '<div class="finale-ballot-index"><span>ЭКСПОНАТ</span><b>'+String(i+1).padStart(2,'0')+'</b></div>'+
-   '<div class="verdict-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+label(art.title||'Полотно')+'"></div>'+
-   
-   '<div class="finale-ballot-votes"><div class="finale-vote-tally"><span>Поставлено</span><strong aria-label="'+count+' фишек">'+count+'</strong></div>'+
+   '<div class="zam-exhibit-stage" data-exhibit-stage><div class="verdict-image zam-exhibit-rim">'+exhibitFacets()+'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+label(art.title||'Полотно')+'"></div></div>'+
+   '<div class="finale-ballot-votes" aria-label="'+count+' фишек"><div class="finale-vote-tally"><span>Поставлено</span><strong aria-label="'+count+' фишек">'+count+'</strong></div>'+
    '<div class="finale-vote-bar" role="img" aria-label="Ставки: '+count+'"><i></i></div>'+
-   '<div class="verdict-tokens" aria-hidden="true">'+chipDots(count)+'</div>'+
+   '<div class="verdict-tokens" role="img" aria-label="'+count+' фишек">'+chipDots(count)+'</div>'+
    '<small class="finale-voters">'+label(voters.length?voters.join(' · '):'Без ставок')+'</small></div></article>';
  }).join('');
  return '<section class="phase-page verdict-phase finale-scene" data-finale-phase="ballot">'+
@@ -66,7 +65,11 @@ export function finaleResultsMarkup({view:v,escapeText,memberSeal,pocketPlayerBa
     '<button class="btn ghost" data-action="menu">В главное меню</button></footer></section>';
 }
 export function finaleRevealAuditMarkup({breakdown,wrong,bonus,escapeText,chipDots}){
- return '<div class="finale-audit-heading"><span class="finale-overline">ВЕДОМОСТЬ ЭКСПЕРТИЗЫ</span><span>Верные ставки приносят очки</span></div>'+
-  '<div class="audit-lines finale-audit-lines">'+breakdown.map((x,i)=>'<div class="audit-line" style="--case-index:'+i+'"><span>'+safe(escapeText,x.name)+'</span><span class="audit-chips">'+chipDots(x.correct)+'<small>'+x.correct+' верно · '+x.wrong+' мимо</small></span><strong>+'+x.points+'</strong></div>').join('')+'</div>'+
-  '<div class="outcome-bonus finale-bonus"><span>Реставратор получил за '+wrong+' ошибочных фишек</span><strong>+'+bonus+'</strong></div>';
+ return '<div class="finale-audit-heading"><span class="finale-overline">ГОЛОСА</span></div>'+
+  '<div class="audit-lines finale-audit-lines">'+breakdown.map((x,i)=>
+   '<div class="audit-line" style="--case-index:'+i+'"><span>'+safe(escapeText,x.name)+'</span>'+
+   '<div class="finale-jury-coins" role="img" aria-label="'+x.correct+' верных и '+x.wrong+' ошибочных фишек">'+
+   '<span class="correct-coins">'+chipDots(x.correct)+'</span><span class="missed-coins">'+chipDots(x.wrong)+'</span>'+
+   '</div><strong>+'+x.points+'</strong></div>').join('')+'</div>'+
+  '<div class="outcome-bonus finale-bonus"><span>'+wrong+' фишек мимо — очки реставратору</span><strong>+'+bonus+'</strong></div>';
 }

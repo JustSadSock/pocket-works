@@ -56,6 +56,26 @@ try{
     buttons:el.querySelectorAll('button').length
    }));
    assert(mounted.children>0&&mounted.width>150&&mounted.height>80,name+' '+entry.id+' missing stage '+JSON.stringify(mounted));
+   if(entry.id==='round-review'){
+    assert.equal(await preview.locator('[data-review-open]').count(),5,'Debug exhibition must show five restored works');
+    assert.equal(await preview.locator('.round-art-card .zam-exhibit-plaque').count(),5,'Every restoration has a real hanging museum plate');
+   }
+   if(['preview','voting','voting-wait'].includes(entry.id)){
+    assert.equal(await preview.locator('.zam-exhibit-plaque').count(),5,'All original paintings have the same museum plate');
+   }
+   if(['waiting','reveal','solo-reveal'].includes(entry.id)){
+    const geometry=await preview.locator('#unveilStage').evaluate(stage=>{
+      const range=stage.closest('.phase-page')?.querySelector('#unveilRange');
+      if(!range)return null;
+      range.value='23';range.dispatchEvent(new Event('input',{bubbles:true}));
+      return {split:stage.style.getPropertyValue('--split'),
+        fade:getComputedStyle(stage.querySelector('.unveil-top')).transitionDuration,
+        ruler:getComputedStyle(stage.querySelector('.unveil-ruler')).transitionDuration,
+        clip:getComputedStyle(stage.querySelector('.unveil-top')).clipPath};
+    });
+    assert(geometry&&geometry.split==='23%'&&geometry.fade==='0s'&&geometry.ruler==='0s'&&geometry.clip.includes('23%'),
+      'The separator and bitmap must follow the comparison thumb without latency: '+JSON.stringify(geometry));
+   }
    assert.equal(await page.locator('#screen>.museum-home').count(),1,'Parent match replaced by debug frame');
    assert.equal(await page.evaluate(()=>localStorage.getItem('zam-debug-test-canary')),'never-change');
    const disabledClose=await page.locator('.zam-debug-list .is-active').textContent();

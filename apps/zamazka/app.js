@@ -23,6 +23,7 @@ import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
+import {exhibitFacets,exhibitPlaque,mountExhibitFrames} from './exhibition-ui.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
@@ -65,7 +66,7 @@ function connectionStatus(state){const node=document.querySelector('#netStatus')
 
 const gameName=()=>preferredPocketName(pocketIdentity,tabGuestName());
 const isPocketMember=()=>Boolean(pocketIdentity?.complete);
-let museumMotion=null,commonsBoard=null,lastMuseumWheel=0,boardResync=false,roomModuleVersion='v3';
+let museumMotion=null,commonsBoard=null,exhibitFitter=null,lastMuseumWheel=0,boardResync=false,roomModuleVersion='v3';
 const museumOrder=[0,...PLAYABLE_IDS.filter(id=>id!==3),3];
 let saved=(()=>{try{const a=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');return Array.isArray(a)?a.slice(0,96).map(normalizeArchiveEntry):[]}catch{return[]}})();
 
@@ -257,7 +258,7 @@ function change(html,which){
  if(previewFrameObserver){previewFrameObserver.disconnect();previewFrameObserver=null}
  if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}
  if(page!==which)closeDialog();
- museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();
+ museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;exhibitFitter?.dispose();exhibitFitter=null;stopEditor();
  // Keep the complete, already painted ballot visible until the reveal's
  // heavy restoration canvases finish rendering. Never flash an empty gallery.
  const oldBallot=page==='vote'&&which==='reveal'?screen.firstElementChild:null;
@@ -375,7 +376,7 @@ function lobby(){
 
 function galleryHtml(list,select=false){
  const facets='<i class="picture-bevel picture-bevel-top" aria-hidden="true"></i><i class="picture-bevel picture-bevel-bottom" aria-hidden="true"></i><i class="picture-bevel picture-bevel-left" aria-hidden="true"></i><i class="picture-bevel picture-bevel-right" aria-hidden="true"></i>';
- return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><span class="picture-mat">'+facets+'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span></span><span class="picture-index">ОБЪЕКТ '+String(i+1).padStart(2,'0')+'</span><span class="caption">'+esc(ARTS[id]?.title||'Картина')+'</span><span class="style">'+esc(ARTS[id]?.artist||ARTS[id]?.style)+' · '+esc(ARTS[id]?.date||'')+(ARTS[id]?.schoolCountry?' · '+esc(ARTS[id].schoolCountry):'')+'</span></button>').join('')+'</div>';
+ return '<div class="gallery exhibition-grid">'+list.map((id,i)=>'<button class="picture'+(choice===id&&select?' selected':'')+'" data-'+(select?'choice':'inspect')+'="'+id+'"><span class="picture-image"><span class="picture-mat">'+facets+'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Картина')+'" loading="eager"></span></span>'+exhibitPlaque(ARTS[id]?.title||'Картина',[ARTS[id]?.artist||ARTS[id]?.style,ARTS[id]?.date,ARTS[id]?.schoolCountry].filter(Boolean).join(' · '))+'</button>').join('')+'</div>';
 }
 function preloadPreviewImage(id){
  return new Promise((resolve,reject)=>{
@@ -403,7 +404,7 @@ async function prepareRoundImages(local=false,retry=false){
  let completed=0;
  const loadedIndices=[];
  updateArtLoad(root,0,Math.max(1,v.selected.length));
- if(status)status.textContent='Загружаем оригиналы…';
+ if(status){status.textContent='Загружаем оригиналы…';delete status.dataset.state;}
  if(retryButton)retryButton.hidden=true;
  try{
    await Promise.all(v.selected.map(async (id,index)=>{
@@ -420,12 +421,12 @@ async function prepareRoundImages(local=false,retry=false){
      if(status?.isConnected)status.textContent='Картины готовы. Ожидаем остальных.';
      updateReady(root,view.readyCount||0,view.participants?.length||0);
      try{net.sendGame({type:'art_ready',round:v.round})}
-     catch{if(status?.isConnected)status.textContent='Нет связи с комнатой. Попробуй повторить.';if(retryButton)retryButton.hidden=false}
+     catch{if(status?.isConnected){status.textContent='Нет связи с комнатой. Попробуй повторить.';status.dataset.state='error'}if(retryButton)retryButton.hidden=false}
    }
  }catch{
    if(preparedRound!==token)return;
    preparingError='Не удалось загрузить картины. Проверь соединение.';
-   if(status?.isConnected)status.textContent=preparingError;
+   if(status?.isConnected){status.textContent=preparingError;status.dataset.state='error'}
    if(retryButton?.isConnected)retryButton.hidden=false;
  }
 }
@@ -635,19 +636,21 @@ function vote(){
  change('<section class="phase-page expert-phase">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Найди реставрацию',v.deadline)+
  '<div class="phase-body expert-round"><div class="expert-intro"><div><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="phase-directive">Одна из пяти картин отреставрирована.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
  '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':'Распредели 3 фишки между картинами.')+'</p>'+
- '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="stake-frame">'+
+ '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="stake-frame zam-exhibit-rim">'+exhibitFacets()+
  (examined?.art===id?'<canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
- '<span class="stake-number">'+String(i+1).padStart(2,'0')+'</span></div><div class="stake-details"><strong>'+esc(ARTS[id]?.title||'Картина')+'</strong><small>'+esc(ARTS[id]?.artist||'')+'</small></div>'+
- (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">№ '+(i+1)+'</span>')+'</div>').join('')+'</div>'+
+ '</div></div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+
+ (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">На проверке</span>')+'</div>').join('')+'</div>'+
  (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div>'+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'<button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button>':'<span class="coin-auto-status" id="coinVoteStatus" role="status" aria-live="polite">3 фишки — и голос учтён</span>')+'</div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
  '</div></div></section>','vote');
- if(examined)void renderArtwork(screen.querySelector('#examinedCanvas'),examined.art,examined.variation,examined.strokes||[],true);
+ exhibitFitter=mountExhibitFrames(screen);
+ if(examined)void renderArtwork(screen.querySelector('#examinedCanvas'),examined.art,examined.variation,examined.strokes||[],true).then(()=>exhibitFitter?.refresh());
  if(!isOwn&&!already)updateChips();
 }
 
 function verdict(){
  if(!view?.gallery?.[view.turn])return;
  change(finaleVerdictMarkup({view,artworks:ARTS,artworkURL,escapeText:esc,head,chipDots,hostId:me?.id}),'verdict');
+ exhibitFitter=mountExhibitFrames(screen);
 }
 function reveal(local=false){
  const v=local?practice:view,index=local?0:v.turn;
@@ -684,6 +687,7 @@ function roundReview(){
  if(!view?.gallery?.length)return;
  const v=view;
  change(roundReviewMarkup(v,me?.id,ARTS,esc),'round-review');
+ exhibitFitter=mountExhibitFrames(screen);
  renderRoundThumbnails(screen,v,renderArtwork);
 }
 function results(){
@@ -1291,7 +1295,7 @@ screen.addEventListener('pointercancel',()=>museumSwipe=null);
 screen.addEventListener('wheel',e=>{if(page!=='home'||!e.target.closest('.museum-display'))return;e.preventDefault();if(Math.abs(e.deltaY)<4&&Math.abs(e.deltaX)<4)return;if(Date.now()-lastMuseumWheel<85)return;lastMuseumWheel=Date.now();shiftMuseum((Math.abs(e.deltaY)>Math.abs(e.deltaX)?e.deltaY:e.deltaX)>0?1:-1)},{passive:false});
 document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();shiftMuseum(e.key==='ArrowRight'?1:-1)}});
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=normalizedDuration(e.target.value)});
-screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.querySelector('.unveil-top')?.style.setProperty('transition','none');stage.style.setProperty('--split',e.target.value+'%')}}});
+screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.querySelector('.unveil-top')?.style.setProperty('transition','none');stage.querySelector('.unveil-ruler')?.style.setProperty('transition','none');stage.style.setProperty('--split',e.target.value+'%')}}});
 if(!IS_DEBUG_FRAME)setInterval(tick,350);
 if(!IS_DEBUG_FRAME)setInterval(()=>{
  if(page!=='drawing')return;

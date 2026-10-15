@@ -126,7 +126,7 @@ const dialog={classList:{add(){},remove(){}},innerHTML:'',
  removeEventListener(){}};
 const windowStub={addEventListener(){},removeEventListener(){}};
 const documentStub={activeElement:{tagName:'BUTTON'}};
-const viewerApi=Function('window','document',viewer.replaceAll('export function','function')+
+const viewerApi=Function('window','document',viewer.replace(/^import .*;\s*$/gm,'').replaceAll('export function','function')+
  ';return {openRoundViewer,closeRoundViewer};')(windowStub,documentStub);
 const archival={art:1,variation:27,strokes:[{t:'brush',c:'#124578',s:5,p:[[12,32],[100,340]]}],
  name:'Историческая работа',votes:{}};

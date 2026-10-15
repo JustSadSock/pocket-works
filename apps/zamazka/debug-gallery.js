@@ -34,7 +34,7 @@ export const debugId=id=>DEBUG_SCREENS.some(stage=>stage.id===id)?id:'home';
 export function debugMatch(ids){
  const selected=ids.slice(0,5);
  if(selected.length<5)throw Error('Debug gallery requires five playable paintings');
- const names=['Куратор','Алиса','Борис','Мария'];
+ const names=['Куратор','Алиса','Борис','Мария','Лев'];
  const participants=names.map((name,i)=>({id:'debug-'+i,name,verified:i===0}));
  const ballots=Object.fromEntries(participants.slice(1).map((p,i)=>[p.id,
   selected.map((_,j)=>j===(i+1)%5?3:0)]));
