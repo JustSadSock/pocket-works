@@ -278,147 +278,128 @@ function applyEdit(owner,data){
  }else return false;
  session.rev++;return true;
 }
-function broadcastState(){
- if(!session)return;saveSketch();
- if(room&&isHost)try{room.broadcast('snapshot',session)}catch{inform('Не удалось синхронизировать дорожки')}
- render();
-}
+function broadcastState(){if(!session)return;saveSketch();render();}
 function sendEdit(action){
  if(!session)return;
- if(room&&!isHost){try{room.broadcast('edit',action)}catch{inform('Связь потеряна — попробуй снова')}return}
- if(!applyEdit(ownId,action)){inform('Нельзя выполнить действие — дорожка заполнена или недоступна');return}
+ if(room){
+  if(!connected||!netClient){inform('Соединение восстанавливается. Повтори действие позже.');return}
+  try{netClient.sendGame({type:'edit',action})}catch{inform('Изменение не отправлено — нет связи')}
+  return;
+ }
+ if(!applyEdit(ownId,action)){inform('Не удалось изменить дорожку: проверь свободное место.');return}
  broadcastState();
 }
-function peerList(){
- if(!room)return [ownId];
- return room.listPeers().map(p=>p.id).concat(ownId);
+function applyNetworkState(raw){
+ const state=tidySession(raw);if(!state)return;
+ const oldPlaying=session?.playing,oldAnchor=session?.anchor;
+ session=state;isHost=session.host===ownId;
+ const me=self();if(me){air=me.air;instrument=me.inst}
+ for(const p of state.players)if(!p.air||!p.online)stopRemote(p.id);
+ if(!state.playing&&recording)finishRecord();
+ if(oldPlaying!==state.playing||oldAnchor!==state.anchor)resetSchedule();
+ if(screen==='studio')renderStudio();else if(screen==='pair')renderPair();
 }
-function attachRoom(next,host){
- room=next;isHost=host;clockOffset=0;resetSchedule();
- const reference=next;
- next.on('peerjoin',({peer})=>{
-  if(room!==reference)return;
-  if(isHost){
-   let member=session.players.find(p=>p.id===peer.id);
-   if(!member&&session.players.length>=4){inform('Студия заполнена');return}
-   const peerAvatar=['clay','moss','ink','sun','wave','ember','plum','stone'].includes(peer.metadata?.avatar)?peer.metadata.avatar:null;
-   if(member){member.online=true;member.name=peer.name.slice(0,24);member.avatar=peerAvatar}
-   else{session.players.push({id:peer.id,name:peer.name.slice(0,24),avatar:peerAvatar,inst:'keys',air:true,online:true});session.tracks[peer.id]=[]}
-   session.rev++;broadcastState();
-   inform(peer.name+' подключился к ленте');
-  }else{
-   try{room.send(peer.id,'request-state',{})}catch{}
-   pairingMode='';setScreen('studio');inform('Соединение с ведущим установлено');
-   probeClock();
-  }
- });
- next.on('peerleave',({peer})=>{
-  if(room!==reference)return;
-  stopRemote(peer.id);
-  if(isHost){
-   const member=session.players.find(p=>p.id===peer.id);if(member)member.online=false;
-   broadcastState();
-  }else{
-   inform('Ведущий отключился. Композиция осталась на устройстве');
-   leaveNetwork(true);
-  }
- });
- next.on('message',({peer,type,payload})=>{
-  if(room!==reference)return;
-  if(isHost){
-   if(type==='request-state'){try{room.send(peer.id,'snapshot',session)}catch{}}
-   else if(type==='edit'){if(applyEdit(peer.id,payload))broadcastState()}
-   else if(type==='clock-probe'){try{room.send(peer.id,'clock-reply',{t:payload?.t,server:Date.now()})}catch{}}
-   else if(type==='live-on'||type==='live-off')receiveLive(peer,type,payload);
-  }else{
-   if(type==='snapshot'){
-    const state=tidySession(payload);
-    if(state){
-     const previouslyPlaying=session?.playing,oldAnchor=session?.anchor;
-     session=state;for(const p of state.players)if(!p.air)stopRemote(p.id);const own=self();if(own){air=own.air;instrument=own.inst}
-     if(!state.playing&&recording)finishRecord();
-     if(previouslyPlaying!==state.playing||oldAnchor!==state.anchor)resetSchedule();
-     saveSketch();if(screen==='studio')renderStudio();
-    }
-   }else if(type==='clock-reply'&&Number.isFinite(payload?.t)&&Number.isFinite(payload?.server)){
-    const rtt=Date.now()-payload.t;if(rtt>=0&&rtt<3000)clockOffset=payload.server+rtt/2-Date.now();
-   }else if(type==='live-on'||type==='live-off'){
-    const owner=payload?.owner||peer?.id;
-    if(type==='live-on')playRemote(payload,owner);else stopLive(payload,owner);
-   }
-  }
- });
- next.on('error',()=>inform('PocketLAN: ошибка передачи. Проверь локальную сеть.'));
- next.on('close',()=>{if(room===reference)leaveNetwork(true)});
+function probeClock(){
+ if(!room||!connected||!netClient)return;
+ try{netClient.sendGame({type:'clock-probe',t:Date.now()})}catch{}
 }
-function probeClock(){if(!room||isHost)return;try{room.broadcast('clock-probe',{t:Date.now()})}catch{}}
+function wireNet(client){
+ client.on('connected',data=>{
+  if(netClient!==client)return;
+  connected=true;ownId=data.player.id;
+  if(screen==='pair')renderPair();
+ });
+ client.on('room_joined',data=>{
+  if(netClient!==client||data.gameId!=='jam-tape')return;
+  room={roomId:data.roomId};busy=false;
+  applyNetworkState(data.state);
+  if(pairingMode==='join')setScreen('studio');else setScreen('pair');
+  try{client.sendGame({type:'profile',avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:instrument})}catch{}
+  probeClock();inform('PocketNet · студия подключена');
+ });
+ client.on('game_event',data=>{
+  if(netClient!==client)return;
+  const event=data.event;
+  if(event?.type==='state')applyNetworkState(event.payload);
+  if(event?.type==='notice')inform(String(event.payload));
+  if(event?.type==='live-on'||event?.type==='live-off')receiveLive(event.type,event.payload);
+  if(event?.type==='clock-reply'){
+   const p=event.payload,rtt=Date.now()-p?.t;
+   if(Number.isFinite(rtt)&&rtt>=0&&rtt<3000&&Number.isFinite(p.server))
+    clockOffset=p.server+rtt/2-Date.now();
+  }
+ });
+ client.on('presence',()=>{if(netClient===client&&connected&&room)try{client.sendGame({type:'sync'})}catch{}});
+ client.on('disconnected',()=>{if(netClient===client){connected=false;inform('Связь прервана. PocketNet переподключается…');if(screen==='pair')renderPair()}});
+ client.on('room_closed',()=>{if(netClient===client){leaveNetwork(true);inform('Комната закрыта. Музыка сохранена локально.')}});
+ client.on('room_kicked',()=>{if(netClient===client){leaveNetwork(true);inform('Вы вышли из комнаты.')}});
+ client.on('error',error=>{
+  if(netClient!==client)return;
+  busy=false;
+  const dict={room_not_found:'Комната не найдена или закрыта',room_full:'Комната заполнена (до 4 участников)',game_unavailable:'Модуль ЛЕНТА ещё не опубликован',server_at_capacity:'Сервер перегружен'};
+  inform(dict[error?.code]||error?.message||'Ошибка PocketNet');
+  if(screen==='pair')renderPair();
+ });
+}
 function leaveNetwork(keepMusic=false){
- const old=room;room=null;lan=null;isHost=false;pairingMode='';inviteSignal='';replySignal='';nearbyRooms=[];
- if(old)try{old.close()}catch{}
- stopRemote();clockOffset=0;
- if(keepMusic){if(session){session.playing=false;session.players=session.players.map(p=>({...p,online:p.id===ownId}));saveSketch()}setScreen('studio')}
- else setScreen('welcome');
+ const old=netClient,wasRoom=Boolean(room),onlineId=ownId;
+ netClient=null;connected=false;room=null;isHost=false;pairingMode='';busy=false;clockOffset=0;joinCode='';
+ if(old){try{if(old.roomId)old.leaveRoom()}catch{}try{old.close()}catch{}}
+ stopRemote();releaseAll();
+ if(wasRoom&&session){
+  const user=session.players.find(p=>p.id===onlineId);
+  const myClips=(session.tracks[onlineId]||[]).map(tidyClip).filter(Boolean);
+  session.players=[{id:localId,name,avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:user?.inst||instrument,air:user?.air!==false,online:true},
+   ...session.players.filter(p=>p.id!==onlineId).slice(0,3).map(p=>({...p,online:false}))];
+  session.tracks[localId]=myClips;
+  if(onlineId!==localId)delete session.tracks[onlineId];
+  session.host=localId;session.playing=false;session.anchor=0;
+ }
+ ownId=localId;resetSchedule();
+ if(session&&wasRoom)saveSketch();
+ setScreen(keepMusic&&session?'studio':'welcome');
+ if(location.search.includes('room='))history.replaceState(null,'',location.pathname);
+}
+async function connectNet(mode){
+ if(busy)return;
+ busy=true;pairingMode=mode;room=null;connected=false;setScreen('pair');
+ try{
+  try{localStorage.removeItem('pocket-net:'+ORIGIN)}catch{}
+  const client=new PocketNet({serverUrl:ORIGIN,name,identityKey:pocketIdentity?.id||'guest'});
+  netClient=client;wireNet(client);
+  await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Не удалось соединиться с сервером')),12000))]);
+  if(netClient!==client)return;
+  busy=false;
+  if(mode==='host')client.createRoom('jam-tape',{avatar:pocketIdentity?.complete?pocketIdentity.avatar:null,inst:instrument,bpm:session?.bpm||108,clips:initialClips});
+  else{
+   renderPair();
+   if(joinCode)joinByCode();
+  }
+ }catch(e){
+  if(netClient){netClient.close();netClient=null}
+  connected=false;busy=false;ownId=localId;setScreen('welcome');inform(e.message||'PocketNet недоступен');
+ }
 }
 async function hostRoom(fromStudio=false){
- if(busy)return;busy=true;
- try{
-  const ownClips=fromStudio?mine():[];
-  session=emptySession();session.tracks[ownId]=ownClips.map(c=>tidyClip(c)).filter(Boolean);
-  lan=createLan();const capabilities=await lan.getCapabilities();
-  if(!capabilities.supported)throw Error('WebRTC не поддерживается этим браузером');
-  const next=await lan.hostRoom({name:'ЛЕНТА · '+name,maxPlayers:4});
-  attachRoom(next,true);pairingMode='host';setScreen('pair');
-  if(typeof next.createInvite==='function')await newInvite();
- }catch(e){inform('Не удалось создать студию: '+(e.message||'ошибка сети'));if(!room)setScreen('welcome')}
- finally{busy=false}
+ if(busy)return;
+ saveName();initialClips=fromStudio?mine().map(tidyClip).filter(Boolean):[];
+ if(!fromStudio)session=null;
+ await connectNet('host');
 }
 async function joinMode(){
- if(busy)return;busy=true;
- try{
-  lan=createLan();const cap=await lan.getCapabilities();if(!cap.supported)throw Error('WebRTC недоступен');
-  session=emptySession();pairingMode='join';setScreen('pair');
-  if(cap.automaticDiscovery)await discover();
- }catch(e){inform(e.message||'PocketLAN недоступен');setScreen('welcome')}
- finally{busy=false}
+ if(busy)return;
+ saveName();joinCode=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();
+ await connectNet('join');
 }
-async function discover(){
- if(!lan)return;
- try{nearbyRooms=await lan.discoverRooms({timeoutMs:1600})||[];if(screen==='pair')renderPair();
-  if(!nearbyRooms.length)inform('Комнат рядом нет. Проверь Wi-Fi или используй приглашение.')
- }catch{inform('Автоматический поиск недоступен. Введи приглашение вручную.')}
+function joinByCode(){
+ if(!netClient||!connected)return;
+ const value=(view.querySelector('#joinCodeField')?.value||joinCode).trim().toUpperCase();
+ if(!/^(?:[A-F0-9]{8}|[A-F0-9-]{36})$/.test(value)){inform('Нужен код из восьми символов.');return}
+ joinCode=value;busy=true;renderPair();
+ try{netClient.joinRoom(value)}catch{busy=false;renderPair();inform('Не удалось отправить код')}
 }
-async function joinNative(ix){
- try{const descriptor=nearbyRooms[ix];if(!descriptor)return;
-  const next=await lan.joinRoom(descriptor);attachRoom(next,false);setScreen('studio');probeClock()
- }catch(e){inform('Не удалось войти: '+e.message)}
-}
-async function newInvite(){
- if(!room||typeof room.createInvite!=='function')return;
- try{
-  if(inviteSignal)try{room.cancelInvite?.(inviteSignal)}catch{}
-  inviteSignal='';renderPair();
-  inform('Готовим приглашение для нового музыканта…');
-  inviteSignal=await room.createInvite();
-  if(screen==='pair')renderPair();
- }catch(e){inform('Новый код недоступен: '+e.message)}
-}
-async function joinOffer(){
- if(!lan||room)return;
- offerText=view.querySelector('#offerInput')?.value.trim()||'';
- if(!offerText.startsWith('PWL1.')){inform('Нужно полное приглашение формата PWL1.');return}
- try{
-  inform('Создаём ответ…');
-  const result=await lan.joinInvite(offerText);
-  attachRoom(result.room,false);replySignal=result.answer;renderPair();
- }catch(e){inform('Приглашение не принято. Проверь сеть и код.');}
-}
-async function acceptAnswer(){
- if(!room?.completeInvite)return;
- answerText=view.querySelector('#answerInput')?.value.trim()||'';
- if(!answerText.startsWith('PWL1.')){inform('Вставь полный ответ PWL1.');return}
- try{
-  await room.completeInvite(answerText);answerText='';inviteSignal='';renderPair();inform('Ответ принят, соединяем устройства…')
- }catch{inform('Неверный или устаревший ответ. Создай новый код приглашения.')}
+function roomLink(){
+ const u=new URL(location.pathname,location.origin);u.searchParams.set('room',room.roomId.slice(0,8).toUpperCase());return u.toString();
 }
 function saveName(){
  if(pocketIdentity?.complete){name=pocketIdentity.nickname;return}
