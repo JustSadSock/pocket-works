@@ -534,3 +534,10 @@
 .online-difficulty button{min-height:39px;background:#ede3d5;border:1px solid #dcc4ae;
  border-radius:9px;color:#866c58;font-size:11px;font-weight:850}
 .online-difficulty button.chosen{background:#d9e5d3;border-color:#a3b99c;color:#56714f}
+
+/* Material choice is intentional: collapsed by default so the selected
+   furniture remains draggable even on short landscape screens. */
+.selected-header #materialToggle{width:auto;min-width:73px;height:30px;padding:0 9px;
+ font-size:11px;line-height:1;font-weight:850;background:#e3dccd;color:#725d4d;
+ border:1px solid #d3c2ab;border-radius:8px;margin-left:auto;margin-right:9px}
+.selected-header #materialToggle[aria-expanded="true"]{background:#d8e5d2;color:#52744f;border-color:#9bad94}
