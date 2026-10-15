@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "puzzle-regressions",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "puzzle-core.test.mjs"
+      ]
+    },
+    {
+      "id": "complete-flow",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/flow.spec.js"
+      ]
+    },
+    {
+      "id": "board-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#sampleBtn",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#sampleBtn"
+        },
+        {
+          "action": "click",
+          "selector": "#startBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#answerZone"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
