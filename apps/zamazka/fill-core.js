@@ -2,12 +2,13 @@
 // Existing bucket colours never become barriers, and cutout edges close basins.
 // Minor pinholes in thin strokes are stitched without deleting tiny pockets.
 // The translucent stroke fringe is underpainted only from its nearest basin.
-export function floodFillRaster({width,height,walls,zone,output,point,color}){
+export function floodFillRaster({width,height,walls,zone,output,point,color,changed=null}){
  const total=width*height;
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||
     !walls||!zone||!output||!Array.isArray(point)||!Array.isArray(color)||
     !point.every(Number.isFinite)||color.length<3)return 0;
  const wall=walls.data||walls,area=zone.data||zone,ink=output.data||output;
+ const touched=changed&&changed.length>=total?changed:null;
  if(wall.length<total*4||area.length<total*4||ink.length<total*4)return 0;
  const barrier=new Uint8Array(total),WALL_ALPHA=96,ZONE_ALPHA=120;
  for(let i=0;i<total;i++)barrier[i]=area[i*4+3]<ZONE_ALPHA||wall[i*4+3]>=WALL_ALPHA?1:0;
@@ -65,6 +66,7 @@ export function floodFillRaster({width,height,walls,zone,output,point,color}){
  const [r,g,b]=color,paint=i=>{
   const k=i*4;if(!area[k+3])return;
   ink[k]=r;ink[k+1]=g;ink[k+2]=b;ink[k+3]=255;
+  if(touched)touched[i]=1;
  };
  for(let n=0;n<tail;n++)paint(queue[n]);
  // Underpaint only near a filled basin's contour, never a second basin.
