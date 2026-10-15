@@ -10,8 +10,9 @@ test('seeds and workdays physically gate planting and harvest',()=>{
  // Harvest is a multi-day labour action, not an autumn income trigger.
  for(const w of [active,idle]){w.day=237;const h=w.households[0];h.farmYear={year:0,active:h.fields.filter((_,i)=>i%3!==0),sownArea:1.25,tended:18,harvestedArea:0,seedKg:156.25,yieldKg:0,labourSow:14,labourTend:18,labourHarvest:0};}
  for(const id of b.members){const p=idle.people.find(p=>p.id===id);if(p.age>=15)p.age=13;}
- // The household cannot hire an external seasonal worker with zero coin.
+ // The household cannot hire an external seasonal worker without either cash or grain wages.
  idle.households[1].coin+=b.coin;b.coin=0;
+ idle.households[1].grain+=b.grain;b.grain=0;
  advanceDays(active,1);advanceDays(idle,1);
  assert.ok(a.farmYear.harvestedArea>0,'working household must physically harvest');
  assert.equal(b.farmYear.harvestedArea,0,'household with no labor must not harvest');
