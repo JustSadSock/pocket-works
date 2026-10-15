@@ -103,9 +103,9 @@
         <p class="placement-instruction">Выбери цвет и поворот, затем нажми на место в комнате</p>
       </div>
       <div class="selection-tray" id="selection" hidden data-ui>
-        <div class="selected-header"><b id="selectionName">Диван</b><button id="doneBtn" type="button" aria-label="Закрыть выбор" data-native-press>×</button></div>
+        <div class="selected-header"><b id="selectionName">Диван</b><button id="materialToggle" type="button" aria-expanded="false" aria-controls="selectionMaterials" data-native-press>Материал</button><button id="doneBtn" type="button" aria-label="Закрыть выбор" data-native-press>×</button></div>
         <div id="selectionColors" class="selection-colors" aria-label="Цвет предмета"></div>
-        <div class="material-options" id="selectionMaterials" role="group" aria-label="Материал предмета"></div>
+        <div class="material-options" id="selectionMaterials" hidden role="group" aria-label="Материал предмета"></div>
         <div class="selection-actions">
           <button id="rotateBtn" type="button" data-native-press><svg viewBox="0 0 24 24"><path d="M20 9A8 8 0 1 0 20 15m0-11v5h-5"/></svg> Повернуть</button>
           <button id="duplicateBtn" type="button" data-native-press><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg> Копия</button>
