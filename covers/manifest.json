@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "9fbc7ecda09a4d43c805176db6c772723d465b71",
+    "revision": "397f19eee9ce8fa18a07c82cb4edff475580d628",
     "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "f45cd4aea4a8e64104195ab1e47171a19f7fc2a0c8a252e2ea602f15184551f0",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "9fbc7ecda09a4d43c805176db6c772723d465b71",
-    "lastAttemptAt": "2026-10-15T01:05:11.604Z",
+    "lastAttemptRevision": "397f19eee9ce8fa18a07c82cb4edff475580d628",
+    "lastAttemptAt": "2026-10-15T01:12:22.061Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -34,7 +34,7 @@
     "lastAttemptAt": "2026-10-13T12:40:00.907Z"
   },
   "komnatka": {
-    "revision": "982f7b16ab134a78e52f18f1573721d076bb2188",
+    "revision": "d90a8e3f1f3bb9d7e97ee4754ce8b13164d854d4",
     "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
@@ -42,8 +42,8 @@
     "sha256": "72de8ca6f2729f3babd01ca862cace933797ba02488a3e6939fe69694120c6f4",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "982f7b16ab134a78e52f18f1573721d076bb2188",
-    "lastAttemptAt": "2026-10-15T00:50:17.968Z",
+    "lastAttemptRevision": "d90a8e3f1f3bb9d7e97ee4754ce8b13164d854d4",
+    "lastAttemptAt": "2026-10-15T01:12:39.076Z",
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
@@ -3181,23 +3181,23 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 29481,
-        "variance": 41.51477551115927,
-        "entropy": 1.9050614507355224,
-        "edgeDensity": 0.11495535714285714,
-        "colorfulness": 29.143310546875,
-        "centerDetail": 55.65692692762592,
-        "meanLight": 69.87786870117182
+        "bytes": 31054,
+        "variance": 40.49524076511201,
+        "entropy": 1.9797788206062124,
+        "edgeDensity": 0.1148313492063492,
+        "colorfulness": 29.125732421875,
+        "centerDetail": 55.62623248272797,
+        "meanLight": 72.80755395507872
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.1.0&pw_fp=bb32a417e17c5689907078c9"
+      "url": "http://127.0.0.1:4173/apps/mezha/?pw-cover=1&pw_release=1.2.0&pw_fp=e86d6193a1bd6be8ddbc9323"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "58a84e6d627ce54906dd169b52363eb4729a7e78",
-    "lastAttemptAt": "2026-10-14T15:53:23.920Z"
+    "lastAttemptRevision": "b14fa3951b3d9643e465e3659cf50d872da937b4",
+    "lastAttemptAt": "2026-10-15T01:12:10.112Z"
   }
 }
