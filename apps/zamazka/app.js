@@ -663,9 +663,8 @@ function reveal(local=false){
  const bonus=Math.round(wrong*50/others);
  change('<section class="phase-page reveal-phase finale-reveal finale-scene" data-finale-phase="reveal">'+head(local?'УЧЕБНАЯ РЕСТАВРАЦИЯ · ГОТОВО':'РАЗОБЛАЧЕНИЕ · '+(index+1)+' / '+v.participants.length,'Подлинник найден',local?0:v.deadline)+
  '<div class="phase-body reveal-layout"><div class="reveal-main"><div class="finale-reveal-provenance"><span class="finale-overline">'+(local?'УЧЕБНАЯ РАБОТА':'ЗАКЛЮЧЕНИЕ · ДЕЛО '+String(index+1).padStart(2,'0'))+'</span><h3>'+esc(g.name)+'</h3><p>Подлинник: <strong>'+esc(ARTS[g.art].title)+'</strong> · '+esc(ARTS[g.art].artist)+'</p></div>'+
- (local?'':'<div class="reveal-answer-strip" aria-label="Итоги голосования — правильный вариант подсвечен">'+v.selected.map((id,i)=>'<div class="reveal-option'+(id===g.art?' is-answer':'')+'"><div class="reveal-option-image">'+(id===g.art?'<canvas id="correctCandidate" aria-label="Отреставрированное полотно"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id].title)+'">')+'</div><span>№ '+(i+1)+(id===g.art?' · ВЕРНО':'')+'</span></div>').join('')+'</div>')+
-  '<div class="finale-inspection-label"><span>РЕСТАВРАЦИЯ</span><i></i><span>ОРИГИНАЛ</span></div><div class="unveil-frame" id="unveilStage" style="--split:100%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Подлинник"></canvas><span class="unveil-label left">РЕСТАВРАЦИЯ</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
- '<label class="unveil-control" for="unveilRange">Сравнение: двигай разделитель <input id="unveilRange" type="range" min="0" max="100" value="100" aria-label="Показать фрагмент оригинала"></label>'+
+  '<div class="finale-inspection-label"><span>РЕСТАВРАЦИЯ</span><i></i><span>ОРИГИНАЛ</span></div><div class="unveil-frame" id="unveilStage" style="--split:50%"><canvas id="restCanvas" class="unveil-bottom" aria-label="Реставрация"></canvas><canvas id="origCanvas" class="unveil-top" aria-label="Подлинник"></canvas><span class="unveil-label left">РЕСТАВРАЦИЯ</span><span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
+ '<label class="unveil-control" for="unveilRange">Сравнение: двигай разделитель <input id="unveilRange" type="range" min="0" max="100" value="50" aria-label="Показать фрагмент оригинала"></label>'+
  (g.source?'<p class="hint">'+esc(g.source)+'</p>':'')+'</div>'+
  '<div class="reveal-brief finale-reveal-brief">'+
  (local?'<h3>Личная реставрация</h3><p>Сдвигай разделитель и сравни свою работу с настоящим изображением.</p>':
@@ -675,11 +674,8 @@ function reveal(local=false){
  ''+
  (local?'<div class="stack"><button class="btn primary" data-action="practice">Новая реставрация</button><button class="btn ghost" data-action="collection">Моя галерея</button><button class="btn ghost" data-action="menu">В главное меню</button></div>':(me?.id===v.host?'<button class="btn primary" data-action="advance">Следующий экспонат ↗</button>':'<div class="stake-wait">Ожидаем следующий экспонат…</div>'))+
  '</div></div></section>','reveal');
- const correctCanvas=screen.querySelector('#correctCandidate');
-  if(correctCanvas)void renderArtwork(correctCanvas,g.art,g.variation,g.strokes||[],true);
   const source=screen.querySelector('#restCanvas'),original=screen.querySelector('#origCanvas'),stage=screen.querySelector('#unveilStage');
  Promise.all([renderArtwork(original,g.art,0,null,false),renderArtwork(source,g.art,g.variation,g.strokes||[],true)]).then(()=>{
-  if(stage?.isConnected){requestAnimationFrame(()=>{if(stage.isConnected)stage.style.setProperty('--split','50%')});const range=screen.querySelector('#unveilRange');if(range)range.value='50';}
   stage?.closest('.reveal-phase')?.classList.add('is-composed');
   finishVoteTransition();
  }).catch(()=>{stage?.closest('.reveal-phase')?.classList.add('is-composed');finishVoteTransition()});
@@ -830,6 +826,8 @@ function renderView(){
  }
  if(page==='preview'&&view.phase==='preview'&&key===lastUiKey)return; // Do not reset the player's mobile swipe position on server updates.
  if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
+ // The server broadcasts repeat snapshots; retain the revealed image and slider.
+ if(['verdict','reveal','results'].includes(page)&&view.phase===page&&key===lastUiKey)return;
  if(page==='vote'&&view.phase==='voting'&&voteScreenToken===view.round+':'+view.turn){
   // Authoritative vote receipts can update dozens of times per round.
   // Preserve the live gallery, five loaded originals, coin controls, scroll
@@ -873,7 +871,7 @@ async function connect(mode){
  const epoch=++connectionEpoch;
  connectionStatus('connecting');
  me=null;view=null;roomId='';
- change(connectionMarkup({mode}),'connecting');
+ change(connectionMarkup({mode,artURL:artworkURL(0)}),'connecting');
  try{
    const response=await fetch(POCKETNET_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(8000)});
    if(!response.ok)throw new Error('Выставки временно недоступны. Попробуй ещё раз.');
@@ -1292,7 +1290,7 @@ screen.addEventListener('pointercancel',()=>museumSwipe=null);
 screen.addEventListener('wheel',e=>{if(page!=='home'||!e.target.closest('.museum-display'))return;e.preventDefault();if(Math.abs(e.deltaY)<4&&Math.abs(e.deltaX)<4)return;if(Date.now()-lastMuseumWheel<85)return;lastMuseumWheel=Date.now();shiftMuseum((Math.abs(e.deltaY)>Math.abs(e.deltaX)?e.deltaY:e.deltaX)>0?1:-1)},{passive:false});
 document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();shiftMuseum(e.key==='ArrowRight'?1:-1)}});
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=normalizedDuration(e.target.value)});
-screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
+screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.querySelector('.unveil-top')?.style.setProperty('transition','none');stage.style.setProperty('--split',e.target.value+'%')}}});
 if(!IS_DEBUG_FRAME)setInterval(tick,350);
 if(!IS_DEBUG_FRAME)setInterval(()=>{
  if(page!=='drawing')return;
@@ -1338,7 +1336,7 @@ function renderDebugScreen(requested){
   case 'join':setup('join','', 'HALL-2841');break;
   case 'join-error':setup('join','Комната не найдена. Проверь код и попробуй ещё раз.','HALL-2841');break;
   case 'connecting':
-   change(connectionMarkup({mode:'join'}),'connecting');
+   change(connectionMarkup({mode:'join',artURL:artworkURL(0)}),'connecting');
    setConnectionStep(screen,2,'Соединяемся с PocketNet…');break;
   case 'lobby-host':
    sample.phase='lobby';lobby();break;
