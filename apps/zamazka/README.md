@@ -433,3 +433,10 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - Solo play offers the same six timed presets as the room, and **Без ограничения**. Choice is persisted locally, applied on each new solo round and remains accessible from the finished restoration. Older drafts retain a default 160-second limit.
 - Hosts can choose unlimited drawing time (0 seconds). The server preserves this explicit rule and gives no drawing deadline; drawing only ends when all participants' complete submissions are confirmed by PocketNet. All rounds retain the chosen rule, while image study, voting and reveals retain their own phase timers.
 - QA: `node apps/zamazka/qa/drawing-time.mjs` and `node apps/zamazka/qa/timing-provenance.mjs`.
+
+## 1.38.4 — Bucket contour audit and RMB resizing
+
+- A fill now restores the real AA stroke pigment over freshly painted basin pixels; it no longer reintroduces the pale pre-fill parchment at a contour. The touched-pixel mask prevents one fill from reprocessing adjacent basins.
+- The eyedropper discards stale async requests when the user samples a different point before the previous render completes.
+- Desktop mouse: hold right button on the canvas and drag horizontally (right = thicker, left = thinner, 0.25 increments). Context menu is suppressed only over the editor viewport. Middle-button pan, wheel zoom and Alt+wheel size adjustment remain.
+- Audits: `node apps/zamazka/qa/fill-seams.mjs` for 200+ contour/picker properties plus existing seal/AA/smudge tests; `node apps/zamazka/qa/coordinate-input.mjs` for pointer capture/RMB; `node apps/zamazka/qa/fill-visual-playwright.mjs` for six screenshot captures (set `ZAMAZKA_QA_ARTIFACT_DIR`).

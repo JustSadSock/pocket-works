@@ -55,6 +55,28 @@ e.pinch={d:5};
 listeners.get('lostpointercapture')({pointerId:7,pointerType:'mouse'});
 assert.equal(e.pointers.size,0,'lost capture cannot block future painting');
 assert.equal(e.pinch,null,'pinch state recovers');
+// RMB + horizontal drag changes the brush diameter, without adding a paint stroke
+// or taking over the middle-button pan gesture.
+const right=(x,id=81)=>({pointerId:id,pointerType:'mouse',button:2,clientX:x,clientY:145,
+  target:canvas,preventDefault(){}});
+const startingSize=e.size;
+e.down(right(115));
+assert.equal(e.pointers.size,0,'RMB size drag never begins a drawing pointer');
+assert.equal(e.working,null,'RMB cannot paint');
+e.move({...right(195),button:-1});
+assert.ok(e.size>startingSize,'rightward RMB drag increases brush diameter');
+assert.equal(Number(custom.value),e.size,'size slider tracks RMB adjustment');
+e.move({...right(35),button:-1});
+assert.ok(e.size<startingSize,'leftward RMB drag decreases brush diameter');
+e.up({...right(35),type:'pointerup'});
+assert.equal(e.sizeDrag,null,'release clears brush size drag');
+e.down(right(115,82));e.lostCapture({pointerId:82,pointerType:'mouse',clientX:115,clientY:145});
+assert.equal(e.sizeDrag,null,'lost pointer capture cannot strand resizing');
+e.down(right(115,83));e.keyboardBlur();
+assert.equal(e.sizeDrag,null,'window blur cancels RMB resizing');
+const menu=viewportListeners.get('contextmenu');
+let contextPrevented=false;menu({preventDefault(){contextPrevented=true}});
+assert.ok(contextPrevented,'browser context menu is suppressed over drawing area');
 const css=readFileSync(new URL('../gallery-motion.css',import.meta.url),'utf8');
 assert.match(css,/\.commons-desk canvas\{width:min\(100%,720px\);height:auto;max-height:none;object-fit:fill/,'desktop shared canvas must not letterbox');
 console.log('ZAMAZKA: border-aligned cursor, Alt+wheel brush, capture loss and shared-canvas dimensions OK');
