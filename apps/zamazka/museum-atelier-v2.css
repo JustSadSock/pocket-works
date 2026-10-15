@@ -1185,3 +1185,213 @@ html,body{background:#242822}
  to{opacity:1;translate:0 0}
 }
 @media(prefers-reduced-motion:reduce){.screen>.atelier-scene-arrive{animation:none!important}}
+
+
+/* 1.37.6 — one invitation desk, central shared canvas, quiet roster. */
+@media(min-width:1191px){
+ .screen>.page.exhibition-lobby {
+  grid-template-columns:minmax(240px,.89fr) minmax(0,2.4fr) minmax(205px,.74fr)!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  grid-template-areas:"mast mast mast" "invite canvas roster"!important;
+  gap:clamp(18px,2.2vw,38px)!important;
+ }
+ .screen>.page.exhibition-lobby .lobby-invite {
+  grid-area:invite!important;align-self:start!important;
+  gap:20px!important;padding-top:clamp(36px,7dvh,68px)!important;
+ }
+ .screen>.page.exhibition-lobby .commons-desk {
+  grid-area:canvas!important;align-self:start;
+ }
+ .screen>.page.exhibition-lobby .lobby-attendance {
+  grid-area:roster;align-self:start;padding-top:clamp(38px,7dvh,74px);
+ }
+}
+@media(min-width:761px) and (max-width:1190px){
+ .screen>.page.exhibition-lobby {
+  grid-template-areas:"mast mast" "invite canvas" "roster canvas"!important;
+  grid-template-columns:minmax(215px,.8fr) minmax(0,1.65fr)!important;
+  grid-template-rows:auto auto 1fr!important;
+ }
+ .screen>.page.exhibition-lobby .lobby-attendance {
+  grid-area:roster;min-width:0;
+ }
+ .screen>.page.exhibition-lobby .lobby-invite {
+  grid-area:invite!important;padding-top:16px!important;
+ }
+ .screen>.page.exhibition-lobby .commons-desk {grid-area:canvas!important}
+}
+.screen>.page.exhibition-lobby .lobby-attendance {
+ min-width:0;display:flex;flex-direction:column;gap:6px;
+ color:#e8e0d0;
+}
+.screen>.page.exhibition-lobby .lobby-list-heading {
+ margin:0;padding:10px 0 12px;
+}
+.screen>.page.exhibition-lobby .lobby-invite>.lobby-controls {
+ margin:0!important;position:static!important;
+ width:100%;min-width:0;align-self:stretch!important;
+ padding:17px 14px!important;
+ background:#c9bcaa!important;
+}
+.screen>.page.exhibition-lobby .lobby-controls-title {
+ font-size:clamp(18px,1.5vw,22px)!important;color:#393429!important;
+}
+.screen>.page.exhibition-lobby .lobby-controls .field {color:#524636!important}
+.screen>.page.exhibition-lobby .lobby-controls .btn.primary {
+ background:#574a3b!important;color:#f7ead8!important;
+}
+.screen>.page.exhibition-lobby .lobby-controls .btn.primary:disabled {
+ background:#817565!important;color:#f0e6d7!important;
+}
+.screen>.page.exhibition-lobby .lobby-invite .room-ticket {
+ background:#d9cdb9!important;
+}
+.screen>.page.exhibition-lobby .player-verified {
+ display:inline-grid;place-items:center;width:15px;height:15px;
+ margin-left:5px;vertical-align:middle;border-radius:50%;
+ color:#282e29;background:#c2aa7e;font:700 10px system-ui,sans-serif;
+}
+@media(max-width:760px) {
+ .screen>.page.exhibition-lobby {
+  display:flex!important;flex-direction:column!important;
+ }
+ .screen>.page.exhibition-lobby .lobby-invite {
+  display:contents!important;padding:0!important;
+ }
+ .screen>.page.exhibition-lobby .room-ticket {order:1;width:100%}
+ .screen>.page.exhibition-lobby .commons-desk {order:2;width:100%}
+ .screen>.page.exhibition-lobby .lobby-attendance {order:3;width:100%;padding:0 4px!important}
+ .screen>.page.exhibition-lobby .lobby-invite>.lobby-controls {
+  order:4;width:100%!important;min-height:0;
+ }
+}
+
+/* Focus-first desktop workbench: real drawing gets the width, the instruments
+   remain a compact reachable palette rather than an empty full-height cabinet. */
+@media(min-width:1100px) and (pointer:fine) {
+ .screen>.restore {
+  grid-template-columns:minmax(0,1fr) clamp(235px,16.2vw,285px)!important;
+ }
+ .screen>.restore>.work-tools {
+  display:flex!important;align-items:stretch!important;justify-content:flex-start!important;
+  gap:10px!important;padding:13px 12px!important;
+  overflow-x:hidden;overflow-y:auto;
+ }
+ .screen>.restore .tools {
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+ }
+ .screen>.restore .tools>.tool {
+  min-height:50px!important;padding:6px 2px!important;
+ }
+ .screen>.restore .tools>[data-tool="hand"] {display:none!important}
+ .screen>.restore .tools>.tool span {font-size:10px!important}
+ .screen>.restore .tools>.tool .draw-icon {width:21px!important;height:21px!important}
+ .screen>.restore .colors {
+  gap:5px 3px!important;padding:6px 0!important;
+  grid-template-columns:repeat(7,minmax(0,1fr))!important;
+ }
+ .screen>.restore .swatch {
+  width:29px!important;height:29px!important;
+ }
+ .screen>.restore .color-input {
+  grid-column:7!important;width:31px!important;height:29px!important;
+ }
+ .screen>.restore .adjust {gap:6px!important}
+ .screen>.restore .zoom-actions {display:none!important}
+ .screen>.restore .work-foot {
+  margin:10px 0 0!important;gap:7px!important;
+  padding:12px 0 0!important;
+  border-top:1px solid #9e8e796b!important;
+ }
+ .screen>.restore .work-foot .btn {min-height:50px!important}
+ .screen>.restore .work-save-info {display:flex;flex-wrap:wrap;gap:5px 12px!important}
+ .screen>.restore .work-save-info .quiet {font-size:10px!important}
+}
+
+/* Archive is a collection with a sticky, always-accessible exit—not a long
+   paper page with a bottom-only action. Actual player paintings remain primary. */
+.screen>.page.collection-page {
+ max-width:1550px!important;width:100%!important;
+ margin:0 auto!important;padding:clamp(12px,2vw,30px)!important;
+ background:#292d29!important;color:#ece1d0!important;
+ min-height:100%;box-shadow:none!important;
+}
+.screen:has(>.collection-page) {background:#292d29!important}
+.screen>.page.collection-page .collection-mast {
+ display:flex;align-items:center;justify-content:space-between;gap:18px;
+ position:sticky;top:-1px;z-index:15;
+ margin:0 0 17px;padding:10px 0 16px;
+ background:#292d29f7;border-bottom:1px solid #aca58b55;
+ backdrop-filter:blur(8px);
+}
+.screen>.page.collection-page .collection-mast .section-label {
+ color:#c2ad89!important;font:600 10px system-ui,sans-serif;letter-spacing:.14em;
+}
+.screen>.page.collection-page .collection-mast h2 {
+ color:#ede2d1!important;font:400 clamp(25px,2.8vw,40px)/1.12 Georgia,serif!important;
+ margin:5px 0 0!important;
+}
+.screen>.page.collection-page .collection-back {
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:42px;white-space:nowrap;flex:none;padding:8px 16px;
+ background:#d4c3a8;color:#2e2e28;border:1px solid #eee1c7;
+ border-radius:2px;font:600 12px system-ui,sans-serif;
+ transition:background-color .15s ease;
+}
+.screen>.page.collection-page .collection-back:hover {background:#f1e3cc}
+.screen>.page.collection-page .zamazka-cloud-row {
+ background:#3c4036!important;border:1px solid #746e5c!important;
+ padding:10px 14px!important;margin:0 0 19px!important;color:#e5ddc9!important;
+}
+.screen>.page.collection-page .zamazka-cloud-row [data-cloud-status] {
+ color:#e5ddc9!important;
+}
+.screen>.page.collection-page .zamazka-cloud-row .btn {
+ color:#e5d5bd!important;background:#535645!important;
+ border:1px solid #9c9c7e6b!important;
+}
+.screen>.page.collection-page .archive-local-status {color:#acb2a3}
+@media(min-width:761px){
+ .screen>.page.collection-page .archive-gallery {
+  display:grid!important;grid-template-columns:repeat(auto-fill,minmax(215px,1fr))!important;
+  gap:clamp(14px,2vw,25px)!important;align-items:start;
+ }
+ .screen>.page.collection-page .archive-gallery>.archive-work {
+  display:flex!important;flex-direction:column!important;transform:none!important;
+  width:100%;min-width:0;min-height:0;
+  padding:14px 12px 12px!important;
+  background:#3b4138!important;border:1px solid #626b5d!important;
+  box-shadow:0 9px 20px #11181274!important;
+  transition:border-color .17s ease,transform .17s ease!important;
+ }
+ .screen>.page.collection-page .archive-gallery>.archive-work:hover {
+  transform:translateY(-3px)!important;border-color:#b19c7c!important;
+ }
+ .screen>.page.collection-page .archive-work .archive-art-frame {
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:clamp(170px,17vw,235px);
+  padding:5px;border:8px ridge #876746;
+  background:#27231e;overflow:hidden;
+ }
+ .screen>.page.collection-page .archive-work canvas {
+  width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;
+  object-fit:contain!important;
+ }
+}
+.screen>.page.collection-page .archive-gallery .archive-caption {color:#efe4d2!important}
+.screen>.page.collection-page .archive-gallery .caption {color:#efe4d2!important}
+.screen>.page.collection-page .archive-gallery .style {color:#c0b6a3!important}
+@media(max-width:760px) {
+ .screen>.page.collection-page .collection-mast {gap:8px;padding:5px 0 12px}
+ .screen>.page.collection-page .collection-back {
+  min-height:38px;font-size:11px;padding:7px 9px;
+ }
+ .screen>.page.collection-page .archive-gallery>.archive-work {
+  background:#363d34!important;border:1px solid #747261!important;
+ }
+ .screen>.page.collection-page .archive-gallery .caption,
+ .screen>.page.collection-page .archive-gallery .style {
+  color:#f3e9d9!important;
+ }
+}
