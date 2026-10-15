@@ -117,3 +117,30 @@
  .transport-info{display:none}
  .entry-actions .action{min-height:42px}
 }
+
+
+/* Browser QA follow-up: ensure the pattern editor's real Save action never drops out of view. */
+.modal{max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
+.dialog-sheet .eyebrow{margin-bottom:6px}
+.dialog-sheet h2{margin-bottom:5px}
+.clip-preview{height:30px;margin:7px 0 10px}
+.pattern-grid{gap:2px;padding:4px 0}
+.pattern-step{min-height:30px}
+.pattern-bars button,.pattern-halves button{min-height:30px;padding:5px 2px}
+.note-controls{margin:6px 0}
+.dialog-actions{position:sticky;bottom:0;z-index:3;background:var(--paper);padding:10px 0 2px;box-shadow:0 -8px 12px var(--paper)}
+.dialog-actions:has(#deleteClip[hidden]){grid-template-columns:1fr}
+.dialog-actions .action{justify-content:center;text-align:center;min-height:46px}
+.note-controls input[type=range]{-webkit-appearance:none;appearance:none;border:0;height:6px;background:#bdc9b9;border-radius:0;outline-offset:9px;margin:13px 0 17px;cursor:pointer}
+.note-controls input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;border:2px solid var(--ink);background:var(--orange);width:19px;height:19px;border-radius:50%;box-shadow:1px 2px 0 #b0a38e}
+.note-controls input[type=range]::-moz-range-thumb{border:2px solid var(--ink);background:var(--orange);width:17px;height:17px;border-radius:50%}
+.console .section-title .micro{display:block;font-size:10px}
+@media(max-width:760px){
+ .modal{max-height:calc(100dvh - 12px);width:calc(100vw - 24px);max-width:calc(100vw - 24px)}
+ .dialog-sheet{padding:12px}
+ .dialog-sheet h2{font-size:21px}
+ .dialog-actions{padding:7px 0 2px}
+ .pattern-step{min-height:29px}
+ .console .section-title{align-items:flex-end}
+ .console .section-title .micro{font-size:9px;text-align:right}
+}
