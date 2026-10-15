@@ -512,8 +512,8 @@ function movePointer(ev) {
  $('trashZone').hidden=false;
  drag.trash=trashHovered(ev);
  $('trashZone').classList.toggle('hover',Boolean(drag.trash));
- if(drag.trash){drag.valid=false;director?.drag(item.id,0,0,false);return;}
- const target=pickTarget(ev,item);if(!target)return;
+ if(drag.trash){drag.valid=false;guide?.hide();director?.drag(item.id,0,0,false);return;}
+ const target=pickTarget(ev,item);if(!target){drag.valid=false;showGuide(item,false);return;}
  drag.moved=true;const dx=target.x-item.x,dz=target.z-item.z;
  moveWithChildren(state,item.id,dx,dz);
  Object.assign(item,target);
@@ -525,11 +525,12 @@ function movePointer(ev) {
   if(drag.cell!==cell){drag.cell=cell;snapFeedback(ev);}
  }
  director?.drag(item.id,dx,dz,ok);
+  showGuide(item,ok);
  drag.valid=ok;
 }
 function endPointer(ev) {
  if(!drag)return;
- const d=drag;drag=null;hideTrash();
+ const d=drag;drag=null;hideTrash();hideGuide();
  if(d.kind==='move'&&d.moved&&d.trash){
   const previous=state.items;
   if(online?.active)online.send({type:'delete',id:d.id});
@@ -629,8 +630,8 @@ function addEvents(){
   // Apply the newest authoritative snapshot as soon as the gesture ends.
   if(queuedSnapshot){const latest=queuedSnapshot;queuedSnapshot=null;onOnlineRoom(latest.snapshot,latest);}
  });
- ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();});
- window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();persist();});
+ ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();hideGuide();});
+ window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}catalogGesture=null;drag=null;hideTrash();hideGuide();persist();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&!online?.active){clearTimeout(savedTimer);saveRoom(currentRoomId,state);status('Сохранено');}});
  window.addEventListener('pagehide',()=>{if(!online?.active){clearTimeout(savedTimer);saveRoom(currentRoomId,state);}});
  $('rotateBtn').addEventListener('click',rotateSelected);
