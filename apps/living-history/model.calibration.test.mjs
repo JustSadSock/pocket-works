@@ -17,11 +17,19 @@ test('refeeding heals instead of continuing phantom post-famine damage',()=>{
  });
 
 test('healthy population still has genuine food limitation and no synthetic food',()=>{
- const s=createWorld(377); const h=s.households[0],first=alive(s,h)[0];
+ const s=createWorld(377);s.scenario='isolated';const h=s.households[0],first=alive(s,h)[0];
+ // Deliberate catastrophic loss: remove every edible food source, every herd
+ // and all cultivated rights. This is a fixture, not an ordinary world event.
  const deletedGrain=s.households.reduce((sum,k)=>sum+k.grain,0);
- for(const k of s.households){k.grain=0;k.fields=[];} // For controlled famine, field ownership must be freed too.
+ for(const k of s.households){
+  for(const good of ['grain','oats','pulses','garden','dairy','cattle','dairyCows','draftOxen','sheep','fodder'])k[good]=0;
+  k.fields=[];
+ }
  for(let i=0;i<s.usage.length;i++)if(s.usage[i]===2)s.usage[i]=0;
  s.stats.consumed+=deletedGrain;
+ s.economy.oatsInitial=0;s.economy.pulsesInitial=0;
+ s.economy.cattleInitial=0;s.economy.sheepInitial=0;
+ s.economy.forageInitial=Math.round((s.pasture.reduce((sum,amount)=>sum+amount,0)+(s.stats.forageConverted||0))*100)/100;
  assert.ok(audit(s).ok,audit(s).issues.join('; '));
  advanceDays(s,220);
  assert.equal(first.alive,false,'without grain or planting, famine can still kill');
