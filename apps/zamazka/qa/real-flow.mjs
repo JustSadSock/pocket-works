@@ -194,6 +194,12 @@ try{
   });
   assert(traveling.exists&&traveling.name.length>3&&traveling.offset>=-2&&traveling.offset<35,
     'Painting attribution must physically travel immediately below its frame');
+  const labelBounds=await page.locator('.museum-slide[data-slot="0"] .museum-slide-label').evaluate(el=>{
+    const r=el.getBoundingClientRect(),stage=document.querySelector('.museum-stage').getBoundingClientRect();
+    return {top:r.top,bottom:r.bottom,stageTop:stage.top,stageBottom:stage.bottom};
+  });
+  assert(labelBounds.top>=labelBounds.stageTop-3&&labelBounds.bottom<=labelBounds.stageBottom+3,
+    'Attached museum plaque must be wholly visible inside gallery: '+JSON.stringify(labelBounds));
   assert.equal(traveling.legacy,'none','Stationary caption must not remain in new appearance');
 
 
