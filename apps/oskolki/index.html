@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#194cc4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ОСКОЛКИ">
+  <title>ОСКОЛКИ — собери по памяти</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell" data-app-shell data-keyboard-aware>
+    <header class="topbar" data-ui>
+      <a class="exit-link" href="../../" data-app-control data-native-press aria-label="Вернуться в PocketWorks">← PocketWorks</a>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>ОСКОЛКИ</span></div>
+      <span class="head-right" id="headStatus">01 / память</span>
+    </header>
+
+    <section class="screen screen-editor" id="editorScreen" aria-labelledby="introTitle">
+      <div class="intro"><span class="overline">ИГРА ИЗ ТВОЕГО ТЕКСТА</span><h1 id="introTitle">Разбей.<br><em>Вспомни.</em> Собери.</h1></div>
+      <div class="editor-wrap">
+        <div class="section-line"><label for="sourceInput">Текст для запоминания</label><span id="sourceCount" aria-live="polite">0 пунктов</span></div>
+        <textarea id="sourceInput" data-selectable spellcheck="false" autocomplete="off" placeholder="1. Первая мысль или предложение&#10;2. Вторая мысль или предложение&#10;3. Третий пункт…"></textarea>
+        <p class="editor-hint" id="editorHint">Каждая нумерованная строка или абзац станет отдельным заданием. Текст останется на устройстве.</p>
+        <div class="import-controls"><label class="text-control file-control" for="fileInput" data-native-press>↥ Открыть TXT / MD</label><input id="fileInput" type="file" accept=".txt,.md,text/plain,text/markdown"><button class="text-control" id="sampleBtn" type="button" data-native-press>Загрузить пример</button></div>
+      </div>
+      <div class="editor-bottom"><p class="inline-error" id="editorError" role="alert" hidden></p><button class="main-action" id="startBtn" type="button" data-native-press disabled>Начать сборку <span aria-hidden="true">↗</span></button></div>
+    </section>
+
+    <section class="screen screen-play" id="playScreen" hidden aria-label="Сборка предложения">
+      <div class="game-top"><div class="game-counter"><span id="roundCounter">01 / 01</span><span class="round-label">СОБЕРИ ФРАЗУ</span></div><div class="meter" aria-hidden="true"><div id="meterFill"></div></div></div>
+      <div class="assembly-surface">
+        <div class="board-label"><span>01 — ТВОЯ СБОРКА</span><span id="filledCount">0 / 0</span></div>
+        <div id="answerZone" class="answer-zone" data-zone="answer" aria-label="Собранная фраза" aria-live="polite"></div>
+        <div class="board-hint" id="answerHint">Нажимай фрагменты снизу в нужном порядке</div>
+      </div>
+      <div class="bank-surface">
+        <div class="board-label board-label-light"><span>ФРАГМЕНТЫ</span><button type="button" id="undoBtn" class="tiny-action" data-native-press disabled>↶ Отменить</button></div>
+        <div id="bankZone" class="bank-zone" data-zone="bank" aria-label="Доступные фрагменты"></div>
+        <div class="game-controls"><button type="button" class="sub-action" id="skipBtn" data-native-press>Пропустить</button><button type="button" class="main-action check-action" id="checkBtn" data-native-press disabled>Проверить <span aria-hidden="true">→</span></button></div>
+      </div>
+    </section>
+
+    <section class="screen screen-review" id="reviewScreen" hidden aria-label="Проверка ответа">
+      <div class="review-head"><span class="overline">РЕЗУЛЬТАТ ФРАЗЫ <span id="reviewCounter"></span></span><strong id="reviewPercent">100<small>%</small></strong><div class="review-message" id="reviewMessage"></div></div>
+      <div class="review-body">
+        <div class="review-label">ТВОЙ ПОРЯДОК</div>
+        <div id="reviewTiles" class="review-tiles" aria-label="Собранная фраза с пометками правильности"></div>
+        <div class="legend"><span><i class="legend-correct"></i> На месте</span><span><i class="legend-wrong"></i> Не на месте</span></div>
+        <div class="review-label original-label">ОРИГИНАЛ</div><p id="correctText" class="correct-text" dir="auto"></p>
+      </div>
+      <div class="review-bottom"><button id="nextBtn" class="main-action" type="button" data-native-press>Следующая фраза <span aria-hidden="true">→</span></button></div>
+    </section>
+
+    <section class="screen screen-results" id="resultsScreen" hidden aria-label="Итоговые результаты">
+      <div class="results-top"><div class="overline">СБОРКА ЗАВЕРШЕНА</div><div class="total-score"><span id="totalPercent">0</span><small>%</small></div><p id="totalDescription">Точность сборки</p><div class="result-stats"><div><strong id="perfectCount">0</strong><span>Без ошибок</span></div><div><strong id="finishedCount">0</strong><span>Всего фраз</span></div></div></div>
+      <div class="results-list" id="resultsList" aria-label="Результаты по фразам"></div>
+      <div class="results-bottom"><button id="retryBtn" type="button" class="main-action" data-native-press>Повторить ошибки <span aria-hidden="true">↗</span></button><button id="newBtn" type="button" class="sub-action new-action" data-native-press>Другой текст</button></div>
+    </section>
+
+    <div class="modal-layer" id="confirmLayer" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h2 id="modalTitle">Начать заново?</h2><p id="modalBody">Текущий прогресс будет потерян.</p>
+        <div class="modal-actions"><button id="modalCancel" class="sub-action" type="button" data-native-press>Отмена</button><button id="modalAccept" class="main-action" type="button" data-native-press>Продолжить</button></div>
+      </div>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОСКОЛКИ" data-app-version="1.0.0"></script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
