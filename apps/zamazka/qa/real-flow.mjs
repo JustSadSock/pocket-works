@@ -180,12 +180,22 @@ try{
     document.querySelectorAll('[data-action="museum-next"]').forEach(button=>{for(let i=0;i<5;i++)button.click()});
     return (index+5)%71;
   });
-  await page.waitForTimeout(780);
+  await page.waitForFunction(()=>!document.querySelector('#museumStage')?.dataset.galleryAnimating,null,{timeout:4000});
   const settled=await page.evaluate(()=>Number(document.querySelector('.museum-exhibit-number').textContent.split('/')[0].trim())-1);
   assert.equal(settled,expectedAfter,'Rapid inputs should land on the last requested picture');
   await page.waitForTimeout(650);
   assert.equal(await page.evaluate(()=>Number(document.querySelector('.museum-exhibit-number').textContent.split('/')[0].trim())-1),settled,
     'Carousel must not continue turning on its own');
+  const traveling=await page.locator('.museum-slide[data-slot="0"]').evaluate(el=>{
+    const plaque=el.querySelector('.museum-slide-label');
+    const r=el.getBoundingClientRect(),t=plaque?.getBoundingClientRect();
+    return {exists:Boolean(plaque),name:plaque?.querySelector('strong')?.textContent,
+      offset:t?t.top-r.bottom:0,legacy:getComputedStyle(document.querySelector('#museumCaption')).display};
+  });
+  assert(traveling.exists&&traveling.name.length>3&&traveling.offset>=-2&&traveling.offset<35,
+    'Painting attribution must physically travel immediately below its frame');
+  assert.equal(traveling.legacy,'none','Stationary caption must not remain in new appearance');
+
 
   await page.locator('#settingsBtn').click();
   await page.locator('#settingNewAppearance').uncheck();
@@ -262,7 +272,33 @@ try{
     assert(frame.outerBorder===0&&frame.artworkBorder>=1&&frame.bezelHeight>=5,
       'Art frame must wrap only the decoded image, with four real bevel faces');
   }
-  await page.waitForTimeout(2900); // Let the real transient settings toast finish before evidence capture.
+  await page.waitForFunction(()=>[...document.querySelectorAll('.mobile-preview .picture-mat')].every(el=>el.dataset.ratioReady==='true'),null,{timeout:13000});
+  const previewRatios=await page.locator('.mobile-preview .picture-mat').evaluateAll(items=>items.map(mat=>{
+    const pic=mat.querySelector('img'),image=mat.closest('.picture-image');
+    const outer=mat.getBoundingClientRect(),inner=pic.getBoundingClientRect(),host=image.getBoundingClientRect();
+    return {real:pic.naturalWidth/pic.naturalHeight,shown:inner.width/inner.height,
+      clipped:outer.width>host.width+2||outer.height>host.height+2,
+      frameX:Math.abs(inner.left-outer.left-parseFloat(getComputedStyle(mat).paddingLeft)),
+      frameY:Math.abs(inner.top-outer.top-parseFloat(getComputedStyle(mat).paddingTop))};
+  }));
+  assert(previewRatios.length===5&&previewRatios.every(x=>!x.clipped&&x.frameX<3&&x.frameY<3&&Math.abs(x.real-x.shown)<.012),
+    'All five picture frames must fit real bitmap ratios without cropping: '+JSON.stringify(previewRatios));
+  // Exercise three extreme image ratios without replacing the real preview DOM.
+  const synthetic=await page.locator('.mobile-preview .picture-mat img').evaluateAll(async images=>{
+    const shapes=[[180,350],[480,180],[300,300]];
+    for(let i=0;i<3;i++){
+      const [w,h]=shapes[i];
+      images[i].src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><rect width="100%" height="100%" fill="#856747"/></svg>');
+    }
+    await Promise.all(images.slice(0,3).map(img=>img.decode()));
+    return true;
+  });
+  await page.waitForFunction(()=>[...document.querySelectorAll('.mobile-preview .picture-mat')].slice(0,3).every(mat=>{
+    const img=mat.querySelector('img'),r=img.getBoundingClientRect(),frame=mat.getBoundingClientRect(),host=mat.closest('.picture-image').getBoundingClientRect();
+    return Math.abs(r.width/r.height-img.naturalWidth/img.naturalHeight)<.012&&
+      frame.width<=host.width+2&&frame.height<=host.height+2&&r.width>25&&r.height>25;
+  }),null,{timeout:6000});
+    await page.waitForTimeout(2900); // Let the real transient settings toast finish before evidence capture.
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-gallery-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="skip"]').click();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
