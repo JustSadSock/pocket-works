@@ -973,11 +973,26 @@ function share(){
 function inspect(id,fromHome=false){
  const art=ARTS[id];
  modal(esc(art.title),
-  '<div class="inspection-stage"><img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(art.title)+'"></div>'+
+  '<div class="inspection-stage"><span class="inspection-loading" role="status">Загружаем картину…</span><img class="art-inspection" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(art.title)+'" decoding="async"></div>'+
   '<div class="inspection-details"><div class="art-metadata"><div class="art-inspect-facts">'+artFactsHtml(id)+'</div><div>Хранится: '+esc(art.museum)+'</div></div>'+
   (art.isReal?'<a class="art-source" href="'+esc(art.source)+'" target="_blank" rel="noopener noreferrer">Источник изображения ↗</a>':'')+'</div>',
   [['Закрыть',closeDialog,'primary']]
  );
+ const image=dialog.querySelector('.inspection-stage .art-inspection');
+ const stage=image?.closest('.inspection-stage');
+ if(!image||!stage)return;
+ const loaded=async()=>{
+  if(!image.isConnected||!image.naturalWidth)return;
+  try{await image.decode()}catch{}
+  if(stage.isConnected)stage.classList.add('is-ready');
+ };
+ image.addEventListener('load',()=>void loaded(),{once:true});
+ image.addEventListener('error',()=>setTimeout(()=>{
+  if(stage.isConnected&&!image.naturalWidth){
+   stage.querySelector('.inspection-loading').textContent='Не удалось открыть изображение';
+  }
+ },1200));
+ if(image.complete&&image.naturalWidth)void loaded();
 }
 
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
