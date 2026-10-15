@@ -18,14 +18,14 @@ const summarize=()=>{
  });
  return {year:s.day/365,population:overview(s).population,grainKg:overview(s).grain,
   starvationDeaths:s.stats.starvationDeaths||0,naturalDeaths:s.stats.died-(s.stats.starvationDeaths||0),
-  reliefKg:s.stats.aid||0,tradeCount:s.stats.trades||0,transfers:s.stats.migrations||0,lodgingMigrants:s.stats.lodgingMigrants||0,
-  criticalHouseholds:critical.length,unreachableReasons:reasons,communities,
+  reliefKg:s.stats.aid||0,tradeCount:s.stats.trades||0,transfers:s.stats.migrations||0,lodgingMigrants:s.stats.lodgingMigrants||0,serviceMigrants:s.stats.serviceMigrants||0,
+  gardenProducedKg:Math.round(s.stats.gardenProduced||0),gardenConsumedKg:Math.round(s.stats.gardenConsumed||0),dairyProducedKg:Math.round(s.stats.dairyProduced||0),dairyConsumedKg:Math.round(s.stats.dairyConsumed||0),loanCount:(s.loans||[]).length,loanIssuedKg:Math.round(s.stats.loanIssuedKg||0),loanRepaidKg:Math.round(s.stats.loanRepaidKg||0),loanDefaults:s.stats.loanDefaults||0,criticalHouseholds:critical.length,unreachableReasons:reasons,communities,
   householdsAtRisk:critical.sort((a,b)=>a.foodDays-b.foodDays).slice(0,18)};
 };
 for(let year=1;year<=years;year++){advanceDays(s,365);const result=audit(s);
  if(!result.ok)throw Error(`Year ${year} seed ${seed} broken: ${result.issues.join('; ')}`);
  const sample=summarize();samples.push(sample);
- console.log(`YEAR ${year}: pop=${sample.population} grain=${Math.round(sample.grainKg)} starved=${sample.starvationDeaths} migrated=${sample.transfers} lodged=${sample.lodgingMigrants} critical=${sample.criticalHouseholds} reasons=${JSON.stringify(sample.unreachableReasons)}`);
+ console.log(`YEAR ${year}: pop=${sample.population} grain=${Math.round(sample.grainKg)} starved=${sample.starvationDeaths} migrated=${sample.transfers} lodged=${sample.lodgingMigrants} service=${sample.serviceMigrants} loans=${sample.loanCount} garden=${sample.gardenProducedKg} dairy=${sample.dairyProducedKg} critical=${sample.criticalHouseholds} reasons=${JSON.stringify(sample.unreachableReasons)}`);
 }
 const results={version:'0.4.1',seed,scenario,years,elapsedMs:Math.round(performance.now()-start),
  samples,deathCases:(s.foodCases||[]).slice(-100),last:samples.at(-1)};
