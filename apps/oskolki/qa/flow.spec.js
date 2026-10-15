@@ -53,7 +53,7 @@ test('import, complete, check accuracy, see errors, repeat and return to text', 
   await page.locator('#nextBtn').click();
   await expect(page.locator('#retryBtn')).toBeHidden();
   await page.locator('#newBtn').click();
-  await expect(page.locator('#sourceInput')).toContainText('Свет распространяется');
+  await expect(page.locator('#sourceInput')).toHaveValue(/Свет распространяется/);
   expect(errors).toEqual([]);
 });
 
