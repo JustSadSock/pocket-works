@@ -456,9 +456,10 @@ function advance(dt){
   const advantage=.62+.57*broadside;
   damage(t,packet.hull*advantage,packet.crew*advantage,s,
    {oars:packet.oars*advantage,morale:packet.morale*advantage});
+  burst(t.x,t.y,'#e7d1a6',5);
   s.fireTimer=1.15+rand(game.elapsed+s.x)*.35;
-  game.particles.push({x:s.x,y:s.y,vx:(t.x-s.x)/Math.max(d,1)*190,vy:(t.y-s.y)/Math.max(d,1)*190,
-    life:Math.min(.56,d/190),color:s.side==='ally'?'#f0dab0':'#e2b1a0',arrow:true});
+  game.particles.push({x:s.x,y:s.y,vx:(t.x-s.x)/Math.max(d,1)*260,vy:(t.y-s.y)/Math.max(d,1)*260,
+    life:Math.min(.85,d/260+.12),color:s.side==='ally'?'#f0dab0':'#e2b1a0',arrow:true});
   if(t.oars<43&&t.oars+packet.oars>=43)logEvent('Гребцы '+t.name+' теряют ход!');
  }
  resolveGrapples(dt);
