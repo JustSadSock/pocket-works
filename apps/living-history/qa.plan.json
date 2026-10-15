@@ -11,11 +11,12 @@
         "visual-land.test.mjs",
         "movement-realism.test.mjs",
         "land-tenure.test.mjs",
-        "food-access.test.mjs"
+        "food-access.test.mjs",
+        "subsistence-credit.test.mjs"
       ]
     },
     {
-      "id": "food-access-20-year",
+      "id": "subsistence-20-year",
       "kind": "node",
       "tier": "smoke",
       "entry": "qa/food-access-study.mjs",
