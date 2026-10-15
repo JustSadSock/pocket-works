@@ -12,7 +12,8 @@
         "movement-realism.test.mjs",
         "land-tenure.test.mjs",
         "food-access.test.mjs",
-        "subsistence-credit.test.mjs"
+        "subsistence-credit.test.mjs",
+        "rural-resilience.test.mjs"
       ]
     },
     {

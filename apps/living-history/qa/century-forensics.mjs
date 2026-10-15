@@ -38,7 +38,7 @@ function inspect(s){
   meanGrainPerPerson:round(overview(s).grain/Math.max(1,overview(s).population)),
   harvestedKg:round(s.stats.harvest||0),starved:s.stats.starvationDeaths||0,
   loanIssuedKg:round(s.stats.loanIssuedKg||0),serviceMigrants:s.stats.serviceMigrants||0,
-  rng:s.rng
+  rng:s.rng,marketRng:s.randomStreams?.market??null,demographyRng:s.randomStreams?.demography??null
  };
 }
 function buildRecord(item){
@@ -92,13 +92,15 @@ function buildRecord(item){
 }
 for(const item of variants)records.push(buildRecord(item));
 const a=records[0],b=records[1];
-const firstRngMismatch=a.monthly.findIndex((x,i)=>x.rng!==b.monthly[i].rng);
+const firstRngMismatch=a.monthly.findIndex((x,i)=>x.marketRng!==b.monthly[i].marketRng);
 const firstPopMismatch=a.monthly.findIndex((x,i)=>x.population!==b.monthly[i].population);
 const output={schema:1,experiment:'forensic replay of five paired 100-year simulations',seed,years,
  sourceCommit:process.env.GITHUB_SHA||null,
  randomStream:{firstMismatchDay:firstRngMismatch>=0?a.monthly[firstRngMismatch].day:null,
   firstPopulationDifferenceDay:firstPopMismatch>=0?a.monthly[firstPopMismatch].day:null,
-  caution:'Same seed does not mean common random shocks after execution diverges.'},
+  firstLegacyStreamMismatchDay:(a.monthly.findIndex((x,i)=>x.rng!==b.monthly[i].rng)>=0?a.monthly[a.monthly.findIndex((x,i)=>x.rng!==b.monthly[i].rng)].day:null),
+  firstDemographyStreamMismatchDay:(a.monthly.findIndex((x,i)=>x.demographyRng!==b.monthly[i].demographyRng)>=0?a.monthly[a.monthly.findIndex((x,i)=>x.demographyRng!==b.monthly[i].demographyRng)].day:null),
+  caution:'Weather and individual demographic risk are keyed to the seed, day and genealogical identity; household and market draws use separate serialized streams. Economic differences may still alter which people are alive or eligible for marriage.'},
  records};
 const dst=resolve(flag('output','/tmp/century-forensics.json'));
 mkdirSync(dirname(dst),{recursive:true});writeFileSync(dst,JSON.stringify(output));

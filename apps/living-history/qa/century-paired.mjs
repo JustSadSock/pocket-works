@@ -88,6 +88,7 @@ const output={
  sourceCommit:process.env.GITHUB_SHA||null,
  startedAt:startStamp,finishedAt:new Date().toISOString(),
  historicalClaim:'None. Paired sensitivity experiment, not historically calibrated.',
+ randomDesign:'Person-and-day keyed mortality/conception and seed/day weather, isolated market and household streams; economic outcomes can still diverge through births, deaths and choice.',
  seed,years,scenario:'normal',calibration:{baseline,alternative:adjustments},
  durationMs:durations,results:{
   baseline:{final:base,annual:snapshots[0]},
