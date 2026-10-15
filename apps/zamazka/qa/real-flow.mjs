@@ -68,12 +68,30 @@ try{
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-atrium-'+viewport.width+'.png'),fullPage:false});
   // Real settings: volume persists, and the slider value is reflected without reloading.
   await page.locator('#settingsBtn').click();
+  await page.locator('[data-settings-tab="brushes"]').waitFor();
+  assert.equal(await page.locator('[data-brush-choice]').count(),5,'All five actual cursor brushes are present');
+  await page.locator('[data-brush-choice="4"]').click();
+  assert.equal(await page.locator('#settingBrushStyle').inputValue(),'4');
+  const strokeCanvas=page.locator('#settingStrokeCanvas'),strokeBox=await strokeCanvas.boundingBox();
+  assert(strokeBox&&strokeBox.width>150&&strokeBox.height>75,'Live brush paper must have useful area');
+  await page.mouse.move(strokeBox.x+strokeBox.width*.2,strokeBox.y+strokeBox.height*.5);
+  await page.mouse.down();
+  await page.mouse.move(strokeBox.x+strokeBox.width*.72,strokeBox.y+strokeBox.height*.55,{steps:12});
+  await page.mouse.up();
+  const painted=await strokeCanvas.evaluate(c=>{
+   const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+   for(let i=3;i<d.length;i+=4)if(d[i])return true;return false;
+  });
+  assert(painted,'Live brush trial must draw real pixels');
+  await page.locator('[data-settings-tab="preferences"]').click();
   await page.locator('#settingVolume').waitFor();
   await page.locator('#settingVolume').evaluate(el=>{el.value='35';el.dispatchEvent(new Event('input',{bubbles:true}))});
   await page.locator('#modalActions .btn.primary').click();
   const storedVolume=await page.evaluate(()=>localStorage.getItem('pocket-works:zamazka:sound-volume'));
   assert.equal(storedVolume,'35','Sound level was not persisted');
   await page.locator('#settingsBtn').click();
+  assert.equal(await page.locator('#settingBrushStyle').inputValue(),'4','Selected brush persists after Save');
+  await page.locator('[data-settings-tab="preferences"]').click();
   assert.equal(await page.locator('#settingVolume').inputValue(),'35');
   if(mobile){
     const settingsFit=await page.locator('.dialog-box:has(#settingNewAppearance)').evaluate(el=>{
@@ -101,6 +119,7 @@ try{
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'classic','Cancel must revert theme');
   assert.equal(await page.locator('.museum-plinth').count(),0,'Reverted classic must clean up scene objects');
   await page.locator('#settingsBtn').click();
+  await page.locator('[data-settings-tab="preferences"]').click();
   await page.locator('#settingNewAppearance').check();
   await page.locator('#modalActions .btn.primary').click();
   assert.equal(await page.evaluate(()=>localStorage.getItem('pocket-works:zamazka:appearance')),'new');
