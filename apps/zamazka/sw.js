@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.37.7';
+const CACHE_NAME = 'zamazka-v1.37.8';
 const ART_CACHE = 'zamazka-artworks-v1.12.5';
-const APP_VERSION = '1.37.7';
+const APP_VERSION = '1.37.8';
 const RELEASE_DATE = '2026-10-15';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Перелистывание галереи больше не ставит нажатия в очередь. Картины прекращают меняться одновременно с действиями игрока.","Новая печатная музейная этикетка, быстрый переход к последней работе, единая зона приглашения и настроек выставки без повторного Pocket ID.","Компактные инструменты рисования на ПК и красивый архив с видимым возвратом наверху."];
