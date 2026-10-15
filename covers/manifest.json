@@ -3109,11 +3109,30 @@
   },
   "flotiliya": {
     "note": "No frame passed image-content checks",
-    "diagnostic": null,
-    "status": "published",
+    "diagnostic": {
+      "bestScore": 68,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 44320,
+        "variance": 45.34313438632712,
+        "entropy": 1.282197586224091,
+        "edgeDensity": 0.1531498015873016,
+        "colorfulness": 39.878662109375,
+        "centerDetail": 56.562602733494174,
+        "meanLight": 57.33074013671924
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/flotiliya/?pw-cover=1&pw_release=0.5.0&pw_fp=568c510077c896693da4ddf7"
+    },
+    "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "ccb647535c08e0372ae72c39c19b1d9baba10c70",
-    "lastAttemptAt": "2026-10-15T00:58:02.937Z",
+    "lastAttemptRevision": "2b448b6b650d2005a9c01554594a55158320892e",
+    "lastAttemptAt": "2026-10-15T01:32:06.435Z",
     "revision": "ccb647535c08e0372ae72c39c19b1d9baba10c70",
     "qualityScore": 64,
     "visionScore": null,
