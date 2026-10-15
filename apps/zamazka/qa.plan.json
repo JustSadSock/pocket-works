@@ -91,7 +91,7 @@
     {
       "id": "real-flow",
       "kind": "browser-node",
-      "tier": "deep",
+      "tier": "smoke",
       "entry": "qa/real-flow.mjs"
     },
     {
@@ -133,7 +133,7 @@
     {
       "id": "passage-visual",
       "kind": "browser-node",
-      "tier": "smoke",
+      "tier": "deep",
       "entry": "qa/passage-visual.mjs"
     }
   ]
