@@ -1,4 +1,8 @@
 import test from 'node:test';
+import {spawnSync} from 'node:child_process';
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import path from 'node:path';
+import {tmpdir} from 'node:os';
 import assert from 'node:assert/strict';
 import {createWorld,advanceDays,audit,serialize,foodAccess} from './model.js';
 import {livingByHouse,householdFoodSnapshot,CausalityRecorder,detectCausalFlags} from './qa/causality-metrics.mjs';
@@ -71,4 +75,20 @@ test('audit plan has 232 distinct scenario-world runs, without any survival thre
  assert.equal(CRISES.length,4);
  assert.equal(32+24*6+12*4+8,232);
  assert.ok(FACTORS.slice(1).every(v=>Object.keys(v.tuning).length===1));
+});
+
+test('one-year family CLI produces real audited monthly households and matching death evidence',()=>{
+ const folder=mkdtempSync(path.join(tmpdir(),'living-causal-'));
+ try {
+  const dest=path.join(folder,'report.json');
+  const runner=new URL('./qa/causality-study.mjs',import.meta.url);
+  const run=spawnSync(process.execPath,[runner.pathname,'--group=family','--batch=0','--years=1','--output='+dest],
+   {encoding:'utf8',timeout:120000});
+  assert.equal(run.status,0,run.stderr+'\\n'+run.stdout);
+  const data=JSON.parse(readFileSync(dest,'utf8'));
+  assert.equal(data.group,'family');
+  assert.equal(data.samples,2);
+  assert.ok(data.results.every(x=>x.audit.ok&&x.monthly.length>=12&&x.annual.length===2));
+  assert.ok(data.results.every(x=>x.deaths.length===x.starvationCount&&x.missingCases===0));
+ }finally{rmSync(folder,{recursive:true,force:true});}
 });
