@@ -78,6 +78,16 @@ try{
     if(rail&&rail.scrollWidth>rail.clientWidth+3&&getComputedStyle(rail).overflowX!=='hidden')return false;
     const r=rect(el);return r.x<-2||r.right>innerWidth+2||r.y<rr.y-3||r.bottom>rr.bottom+3;
    }).map(el=>({text:el.textContent.trim().slice(0,25),box:rect(el)}));
+   const clipped=visibleButtons.filter(el=>{
+    const r=rect(el);
+    for(let parent=el.parentElement;parent&&parent!==scene;parent=parent.parentElement){
+     const p=rect(parent),style=getComputedStyle(parent);
+     const oy=style.overflowY,ox=style.overflowX;
+     if((oy==='hidden'||oy==='clip')&&(r.y<p.y-2||r.bottom>p.bottom+2))return true;
+     if((ox==='hidden'||ox==='clip')&&(r.x<p.x-2||r.right>p.right+2))return true;
+    }
+    return false;
+   }).map(el=>({text:el.textContent.trim().slice(0,25),box:rect(el)}));
    return {rootScroll:root.scrollHeight-root.clientHeight,sceneScroll:scene.scrollHeight-scene.clientHeight,
     htmlScroll:document.documentElement.scrollHeight-document.documentElement.clientHeight,
     wOverflow:root.scrollWidth-root.clientWidth,scene:sc,root:rr,board,
@@ -86,7 +96,7 @@ try{
     desk:rect(scene.querySelector('.commons-desk')),
     roster:rect(scene.querySelector('.lobby-attendance')),
     buttonCount:visibleButtons.length,
-    out,topHeight:document.querySelector('.top').getBoundingClientRect().height,
+    out,clipped,topHeight:document.querySelector('.top').getBoundingClientRect().height,
     canvasTransform:getComputedStyle(canvas).transform,
     boardIsDrawing:board.w>70&&board.h>38};
   });
@@ -109,6 +119,7 @@ try{
   }
   assert.equal(metrics.canvasTransform,'none',scenario.name+' raster canvas was transformed');
   assert.equal(metrics.out.length,0,scenario.name+' invisible/clipped controls '+JSON.stringify(metrics.out));
+  assert.equal(metrics.clipped.length,0,scenario.name+' controls cut off inside a hidden-overflow panel '+JSON.stringify(metrics.clipped));
   assert(metrics.buttonCount>=9,scenario.name+' some controls missing');
   await page.screenshot({path:join(dir,scenario.name+'.png'),fullPage:false});
   // Four very different windows test a full eight-person roster as well.
