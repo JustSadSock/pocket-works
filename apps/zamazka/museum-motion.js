@@ -18,7 +18,7 @@ export function fitMuseumArtwork(stageWidth,stageHeight,ratio){
  return {width:Math.round(width),height:Math.round(width/r)};
 }
 export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>{}}){
- let center=0,busy=false,queued=0,done=null,removed=false;
+ let center=0,busy=false,done=null,removed=false;
  let pointerStart=null,suppressClickUntil=0;
  const onPointerDown=e=>{pointerStart={id:e.pointerId,x:e.clientX,y:e.clientY}};
  const onPointerUp=e=>{if(pointerStart?.id===e.pointerId&&Math.abs(e.clientX-pointerStart.x)>20)suppressClickUntil=Date.now()+500;pointerStart=null};
@@ -67,7 +67,9 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
  function shift(direction,sprint=false){
   if(removed)return;
   const step=Math.sign(direction);if(!step)return;
-  if(busy){queued=Math.max(-8,Math.min(8,queued+step));return}
+  // Strict one-at-a-time: ignore additional wheel/taps during animation.
+  // There is no backlog to keep turning after the player stops input.
+  if(busy)return;
   busy=true;stage.dataset.galleryAnimating='true';
   const duration=reduced?20:sprint?155:(document.documentElement.dataset.zamazkaAppearance==='new'?350:490);
   stage.style.setProperty('--museum-shift-duration',duration+'ms');
@@ -83,15 +85,8 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
    requestAnimationFrame(()=>exiting.classList.remove('instant'));
    onCenter(order[center],center);
    busy=false;
-   if(queued){
-    const nextStep=Math.sign(queued);queued-=nextStep;
-    // Keep *every* visible frame moving. A short accelerated transition is
-    // preferable to a sudden image swap or several seconds of autoplay.
-    requestAnimationFrame(()=>shift(nextStep,true));
-   }else{
-    delete stage.dataset.galleryAnimating;
-    stage.style.removeProperty('--museum-shift-duration');
-   }
+   delete stage.dataset.galleryAnimating;
+   stage.style.removeProperty('--museum-shift-duration');
   };
   done=setTimeout(finish,duration+24);
  }
