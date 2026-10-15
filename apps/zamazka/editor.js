@@ -896,16 +896,18 @@ export class Editor{
     }
   }
  async pick(p,temporary=false){
+   const ticket=this.pickTicket=(this.pickTicket||0)+1;
    try{
      // Allow pending renders to finish before reading the composed painting.
      // Sampling stale pixels was especially visible after undo or switching tools.
      await this.render();
+     if(this.closed||ticket!==this.pickTicket)return;
      const x=Math.max(0,Math.min(this.canvas.width-1,Math.floor(p[0]/W*this.canvas.width)));
      const y=Math.max(0,Math.min(this.canvas.height-1,Math.floor(p[1]/H*this.canvas.height)));
      let rgb;
      try{rgb=this.canvas.getContext('2d').getImageData(x,y,1,1).data}catch{}
      if(!rgb||!rgb[3]){
-       const img=await loadArtwork(this.id);if(this.closed)return;
+       const img=await loadArtwork(this.id);if(this.closed||ticket!==this.pickTicket)return;
        const sample=document.createElement('canvas');sample.width=W*2;sample.height=H*2;
        const ctx=sample.getContext('2d',{willReadFrequently:true});ctx.scale(2,2);
        drawArtwork(ctx,img,this.id);ctx.save();clipZone(ctx,this.zone);
@@ -913,7 +915,7 @@ export class Editor{
        renderStrokes(ctx,[...this.strokes,...(this.working?[this.working]:[])],this.zone,artworkAspect(img));ctx.restore();
        rgb=ctx.getImageData(Math.min(sample.width-1,Math.floor(p[0]*2)),Math.min(sample.height-1,Math.floor(p[1]*2)),1,1).data;
      }
-     if(this.closed||!rgb||!rgb[3])return;
+     if(this.closed||ticket!==this.pickTicket||!rgb||!rgb[3])return;
      this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.previewInk=this.color;this.cursorDip();
      const input=this.root.querySelector('#customColor');if(input)input.value=this.color;
      this.root.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('active',b.dataset.color?.toLowerCase()===this.color));
