@@ -248,6 +248,8 @@
  #screen>.mobile-preview .gallery.exhibition-grid {
    min-height:0!important;overflow-y:hidden!important;padding-top:2px!important;padding-bottom:3px!important}
  #screen>.mobile-preview .gallery.exhibition-grid>.picture {
+   flex:0 0 calc(100% - 24px)!important;
+   width:calc(100% - 24px)!important;max-width:calc(100% - 24px)!important;
    overflow:hidden!important;padding:5px!important;border-width:1px!important}
  #screen>.mobile-preview .gallery .picture .caption {font-size:clamp(14px,3.8vw,17px)!important;margin:3px 0!important}
  #screen>.mobile-preview .gallery .picture .style {font-size:10px!important;line-height:1.1!important}
