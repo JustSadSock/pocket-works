@@ -1,5 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
-import { parseItems, fragmentText, makeRound, correctPositions } from './puzzle-core.mjs';
+import { parseItems, fragmentText, makeRound, correctPositions } from './puzzle-core.js';
 
 installMobileRuntime();
 
