@@ -1041,6 +1041,10 @@ export function advanceDays(s,days=1,profiler=null){
   s.day++;
   measure('weatherAndJobs',()=>{localWeather(s);for(const p of s.people)if(p.alive&&(!p.travel||p.travel.end<=s.day))p.job='home';if(s.day%365===1){for(const h of s.households)account(s,h);seasonalLeases(s);for(const c of s.communities){c.recentVolume=c.volume;c.volume=0;}}});
   measure('delivery',()=>{deliver(s);finishMigration(s);});
+  // Guest labour is a day-local work assignment, never a persistent workforce.
+  // A stale non-serialized map previously duplicated hired labour after day 65
+  // and made a loaded 25-year world diverge from its source chronology.
+  if(s._guests)delete s._guests;
   measure('seasonalHiring',()=>seasonalLaborMarket(s));
   measure('households',()=>{for(const h of [...s.households])updateHouse(s,h);});
   measure('demography',()=>lifeCycle(s));
