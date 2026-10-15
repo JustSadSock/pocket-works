@@ -17,7 +17,8 @@
         "historic-village.test.mjs",
         "medieval-economy.test.mjs",
         "historical-calibration.test.mjs",
-        "causality-audit.test.mjs"
+        "causality-audit.test.mjs",
+        "aid-policy.test.mjs"
       ]
     },
     {
