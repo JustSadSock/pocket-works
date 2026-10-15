@@ -5,7 +5,7 @@
       "id": "music-rules",
       "kind": "node-test",
       "files": [
-        "tests.mjs"
+        "music-rules.test.mjs"
       ],
       "tier": "smoke"
     },
