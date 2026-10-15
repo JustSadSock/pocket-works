@@ -95,7 +95,7 @@ function makeGround(){
  }
 }
 makeGround();
-function shadow(c,x,y,w=36,h=12){for(let j=-Math.ceil(h);j<=h;j++){const dx=Math.floor(w*Math.sqrt(Math.max(0,1-j*j/(h*h))));pix(c,x-dx,y+j,dx*2+1,1,'#30493e')}}
+function shadow(c,x,y,w=36,h=12){for(let j=-Math.ceil(h);j<=h;j++){const dx=Math.floor(w*Math.sqrt(Math.max(0,1-j*j/(h*h))));pix(c,x-dx,y+j,dx*2+1,1,'#243a3566')}}
 function flag(c,x,y,color,wave=0){
  pix(c,x-1,y-27,3,31,'#44392d');pix(c,x-2,y-29,5,4,'#dfcf9b');
  const vx=Math.round(Math.sin(wave)*2);
@@ -244,7 +244,8 @@ export function renderBattle(out,s,view,ui,t){
   pix(ctx,o.x-12,o.y+6,26,3,'#25373b');
   pix(ctx,o.x-10,o.y+7,22,1,'#9ec8cb');
  }
- for(const u of [...troops].sort((a,b)=>a.y-b.y))squad(ctx,u,t,u.captain===ui.captain&&u.side===0);
+ const leader=troops.find(u=>u.side===0&&u.captain===ui.captain)?.id;
+ for(const u of [...troops].sort((a,b)=>a.y-b.y))squad(ctx,u,t,u.id===leader);
  for(const e of events){
   const v=1-e.age/.75;
   if(e.type==='impact'){
