@@ -330,3 +330,17 @@ body{background:#0c292f}
  .mode{min-height:35px}
  .execute{min-height:38px}
 }
+
+/* Fleet plan is a decision, not a hidden autopilot. Reset remains reachable on short phones. */
+.route-actions{justify-content:flex-start;gap:6px}
+.plan-btn{background:#38524a;color:#f7ddaf;border-color:#cbb27e;font-weight:800;letter-spacing:.01em}
+.plan-btn:hover{background:#4b6957}
+@media(max-width:720px) and (orientation:portrait){
+ .route-actions{display:flex!important;min-height:22px;gap:5px;flex-wrap:nowrap}
+ .route-actions .quiet-btn{display:inline-flex!important;align-items:center;white-space:nowrap;min-height:21px;padding:3px 8px;font-size:10px}
+ .plan-btn{flex:1;justify-content:center}
+ #clearRouteBtn{flex:none}
+}
+@media(max-width:720px) and (orientation:portrait) and (max-height:710px){
+ .route-actions{display:flex!important;min-height:21px}
+}
