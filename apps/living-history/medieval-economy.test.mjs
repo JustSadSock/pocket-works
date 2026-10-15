@@ -37,7 +37,8 @@ test('external grain is a paid, finite, delayed cargo, and off-map money is cons
  buyer.grain=0;buyer.oats=0;buyer.pulses=0;
  s.economy.grainInitial=totals(s,'grain');s.economy.oatsInitial=totals(s,'oats');s.economy.pulsesInitial=totals(s,'pulses');
  const firstOutside=s.outside.grain,firstCoin=overview(s).coin;
- advanceDays(s,14);
+ s.day=13; // Day 14 opens the bounded regional market; household can still purchase.
+ advanceDays(s,1);
  const shipment=s.shipments.find(x=>x.kind==='outside-import'&&x.buyer===buyer.id);
  assert.ok(shipment,'reachable paid imports can be purchased, not conjured');
  assert.ok(s.outside.grain<firstOutside);
