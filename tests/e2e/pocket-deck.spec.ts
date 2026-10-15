@@ -13,7 +13,9 @@ async function openDeck(page: import('@playwright/test').Page) {
       try{pathname=new URL(value,location.href).pathname;}catch{return original(input,init);}
       const response=pathname==='/pocket-id/me'?{user:null}:
         pathname==='/pocket-id/config'?{googleEnabled:false,avatars:[]}:
-        pathname==='/pocket-social/me'?{profile:null}:null;
+        pathname==='/pocket-social/me'?{profile:null}:
+        pathname==='/pocket-id/global-archive'&&!(window as any).__mockGlobalArchive
+          ?{archived:[],pinned:[],canManage:false}:null;
       if(response!==null)return Promise.resolve(new Response(JSON.stringify(response),{
         status:200,headers:{'content-type':'application/json'}
       }));
@@ -331,6 +333,7 @@ test('Home batch administrator action sends one verified bulk request and can re
   await page.addInitScript(()=>{
     const existing=window.fetch.bind(window);
     const globalArchive=new Set<string>();
+    (window as any).__mockGlobalArchive=true;
     (window as any).__batchWrites=[];
     window.fetch=(input,init)=>{
       const url=typeof input==='string'?input:input instanceof Request?input.url:String(input);
@@ -380,6 +383,7 @@ test('administrator pins games for everyone and pinned games lead the public lib
   await page.addInitScript(()=>{
     const original=window.fetch.bind(window);
     const pinned=new Set<string>();
+    (window as any).__mockGlobalArchive=true;
     (window as any).__pinWrites=[];
     window.fetch=(input,init)=>{
       const url=typeof input==='string'?input:input instanceof Request?input.url:String(input);
@@ -435,6 +439,7 @@ test('administrator pins games for everyone and pinned games lead the public lib
 test('globally pinned covers stay visible to guests without granting management controls',async({page})=>{
   await page.addInitScript(()=>{
     const original=window.fetch.bind(window);
+    (window as any).__mockGlobalArchive=true;
     window.fetch=(input,init)=>{
       const url=typeof input==='string'?input:input instanceof Request?input.url:String(input);
       let path='';
