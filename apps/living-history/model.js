@@ -105,7 +105,7 @@ function allocFields(s,h,count) {
  }
  return n;
 }
-function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130,foundingFields=30) { const reachable=walkingDistances(s,c);const spot=nearestFree(s,x,y,(nx,ny)=>reachable[idx(nx,ny)]>=0);if(!spot)return null;const h={id:s.nextId++,communityId:c.id,x:spot.x,y:spot.y,members:[],grain,wood,coin:wealth,fields:[],sown:0,soilRest:0,needsHouse:false,capacity:5,shortage:0,lastTrade:null,work:'farm',focus:'farm',farmYear:null,leaseIn:[],leaseOut:[],leaseTerms:[],landValue:0,wealthOrigin:'initial',builtDay:s.day,courierUntil:0,cattle:s.day===0?(rand(s)<.55?0:1+Math.floor(rand(s)*1.35)):0,fodder:0,livestockHealth:85,garden:0,dairy:0,oats:0,pulses:0,gardenYear:null};h.fodder=h.cattle*(700+Math.floor(rand(s)*180));if(s.pasture){const footprint=idx(h.x,h.y);s.stats.forageConverted=round((s.stats.forageConverted||0)+s.pasture[footprint]);s.pasture[footprint]=0;}s.usage[idx(h.x,h.y)]=1;s.households.push(h);if(s.day===0)allocFields(s,h,foundingFields);h.tenure='customary';h.tenureOrigin=s.day===0?'initial-settlement':'family-division';return h; }
+function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130,foundingFields=30) { const reachable=walkingDistances(s,c);const spot=nearestFree(s,x,y,(nx,ny)=>reachable[idx(nx,ny)]>=0);if(!spot)return null;const h={id:s.nextId++,communityId:c.id,x:spot.x,y:spot.y,members:[],grain,wood,coin:wealth,fields:[],sown:0,soilRest:0,needsHouse:false,capacity:5,shortage:0,lastTrade:null,work:'farm',focus:'farm',farmYear:null,leaseIn:[],leaseOut:[],leaseTerms:[],landValue:0,wealthOrigin:'initial',builtDay:s.day,courierUntil:0,cattle:s.day===0?(rand(s)<.55?0:1+Math.floor(rand(s)*1.35)):0,fodder:0,livestockHealth:85,garden:0,dairy:0,oats:0,pulses:0,wool:0,sheep:0,draftOxen:0,dairyCows:0,gardenYear:null};h.fodder=h.cattle*(700+Math.floor(rand(s)*180));if(s.pasture){const footprint=idx(h.x,h.y);s.stats.forageConverted=round((s.stats.forageConverted||0)+s.pasture[footprint]);s.pasture[footprint]=0;}s.usage[idx(h.x,h.y)]=1;s.households.push(h);if(s.day===0)allocFields(s,h,foundingFields);h.tenure='customary';h.tenureOrigin=s.day===0?'initial-settlement':'family-division';return h; }
 function terrainAt(s) { s.terrain=new Array(T);s.soil=new Array(T);s.forest=new Array(T);s.stone=new Array(T);s.usage=new Array(T).fill(0);s.traffic=new Array(T).fill(0);s.pasture=new Array(T).fill(0); for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){const i=idx(x,y), ridge=Math.sin(x*.043+Math.cos(y*.036)*2)+Math.sin(y*.061-x*.021)*.6;const river=Math.abs(x-(SIZE*.47+Math.sin(y*.075)*11+Math.sin(y*.026)*7));const lake= Math.hypot(x-123,y-114)<8;const water=river<2.3||lake;const high=ridge+hash(s.seed,x>>3,y>>3)*.34;const rock=high>1.05; const forest=(hash(s.seed,x>>2,y>>2)*.65+hash(s.seed,x,y)*.25+Math.cos(y*.047)*.12)>.52; s.terrain[i]=water?1:rock?2:0;s.soil[i]=water?0:clamp(Math.round(73+hash(s.seed+3,x>>2,y>>2)*25-high*18),27,99);s.forest[i]=!water&&!rock&&forest?Math.round(150+hash(s.seed+9,x,y)*270):0;s.stone[i]=rock?Math.round(600+hash(s.seed+4,x,y)*550):0;s.pasture[i]=water||rock?0:Math.round(85+hash(s.seed+11,x,y)*130); } }
 function viableVillage(s,pt){
  const sufficient=(p)=>{const d=walkingDistances(s,p);let cells=0;for(const v of d)if(v>=0&&v<=95)cells++;return cells>=450;};
@@ -1162,7 +1162,8 @@ function outsideTrading(s){
   .sort((a,b)=>(a.h.grain+(a.h.pulses||0))/Math.max(.1,foodNeed(s,a.h))-
    (b.h.grain+(b.h.pulses||0))/Math.max(.1,foodNeed(s,b.h))||a.h.id-b.h.id);
  for(const {h,route,available} of buyers){
-  if(imports>=4||s.outside.grain<8||s.shipments.some(t=>t.kind==='outside-import'&&t.buyer===h.id))break;
+  if(imports>=4||s.outside.grain<8)break;
+  if(s.shipments.some(t=>t.kind==='outside-import'&&t.buyer===h.id))continue;
   const quantity=Math.floor(Math.min(90,s.outside.grain,h.coin/2.2,foodNeed(s,h)*88-h.grain));
   if(quantity<8)continue;
   const cost=Math.ceil(quantity*2.2);if(cost>h.coin)continue;
@@ -1716,7 +1717,7 @@ export function audit(s){
   const houseCell=idx(h.x,h.y);if(homes.has(houseCell)||s.usage[houseCell]!==1)issues.push(`Неверное положение дома ${h.id}`);homes.add(houseCell);
   if(!Number.isInteger(h.cattle||0)||(h.cattle||0)<0||!Number.isFinite(h.fodder||0)||(h.fodder||0)<-.001)issues.push(`Неверный скот или корм ${h.id}`);
   if(h.dairyCows!==undefined&&(h.dairyCows+h.draftOxen!==h.cattle||h.dairyCows<0||h.draftOxen<0))issues.push(`Нарушен состав стада ${h.id}`);
-  if(!Number.isInteger(h.sheep||0)||(h.sheep||0)<0||!Number.isFinite(h.wool||0)||(h.wool||0)<0)issues.push(`Неверные овцы/шерсть ${h.id}`);
+  if(!Number.isInteger(h.sheep||0)||(h.sheep||0)<0||!Number.isFinite(h.wool)||h.wool<0)issues.push(`Неверные овцы/шерсть ${h.id}`);
   if(h.manorAgreement){const a=h.manorAgreement;
    if(!Number.isInteger(a.dueDays)||a.dueDays<0||!Number.isInteger(a.served)||a.served<0||a.served>a.dueDays||
     !Number.isInteger(a.annualRentCoin)||a.annualRentCoin<0||!Number.isFinite(a.rentArrears)||a.rentArrears<0)
