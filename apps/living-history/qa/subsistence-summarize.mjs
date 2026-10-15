@@ -12,7 +12,7 @@ const CONTROLS=[...FORENSICS,29,101,505,71331];
 const data={schemaVersion:1,complete:false,errors:[],forensic:{},controls:{},interpretation:[
  'No mechanical relief, population floor or changed production code exists in the baseline.',
  'Threshold variants were loaded from guarded copies of model.js; baseline uses production engine.',
- 'Source-patched interventions probe labour-gate sensitivity, not historically valid thresholds.',
+ 'Source-patched interventions probe labour-gate sensitivity, not historically valid curves.',
  'Cause indicators are overlapping and sometimes contextual, never exhaustive medical causes.',
  'Aid potential only bounds possible offers; it does not prove a viable donor or carrier.',
 ]};
@@ -20,7 +20,7 @@ function read(group,seed){
  const file=path.join(input,`subsistence-${group}-${seed}`,'report.json');
  if(!fs.existsSync(file)){data.errors.push(`Missing ${group} ${seed}`);return null;}
  const item=JSON.parse(fs.readFileSync(file,'utf8'));
- if(item.seed!==seed||item.mode!==(group==='forensic'?'forensic':'threshold')){
+ if(item.seed!==seed||item.mode!==(group==='forensic'?'forensic':'curve')){
   data.errors.push(`Mismatched ${group} ${seed}`);return null;
  }
  return item;
@@ -51,8 +51,8 @@ data.forensic={
 const matched=new Map(studies.map(x=>[x.seed,x]));
 const comparisons=[];
 for(const seed of CONTROLS){
- const v=read('threshold',seed);if(!v)continue;
- if(v.variants?.map(x=>x.label).join(',')!=='base,farm10,gates10')
+ const v=read('curve',seed);if(!v)continue;
+ if(v.variants?.map(x=>x.label).join(',')!=='base,gentle60,strict90')
   data.errors.push(`Incorrect control arms ${seed}`);
  if(v.variants?.some(x=>!x.audit?.passed))
   data.errors.push(`Counterfactual audit failed ${seed}`);
@@ -60,8 +60,8 @@ for(const seed of CONTROLS){
  const baseline=v.variants.find(x=>x.label==='base')?.final;
  if(reference&&(baseline?.population!==reference.population||baseline?.starved!==reference.starved))
   data.errors.push(`Seed chronology disagreement ${seed}: forensic ${reference.population}/${reference.starved} vs base ${baseline?.population}/${baseline?.starved}`);
- comparisons.push({seed,base:baseline,farm10:v.variants.find(x=>x.label==='farm10'),
-  gates10:v.variants.find(x=>x.label==='gates10')});
+ comparisons.push({seed,base:baseline,gentle60:v.variants.find(x=>x.label==='gentle60'),
+  strict90:v.variants.find(x=>x.label==='strict90')});
 }
 const armStats=label=>{
  const a=comparisons.map(x=>x[label]);
@@ -78,8 +78,8 @@ const armStats=label=>{
 };
 data.controls={
  seedCount:comparisons.length,
- farm10:armStats('farm10'),
- gates10:armStats('gates10'),
+ gentle60:armStats('gentle60'),
+ strict90:armStats('strict90'),
  baselineMatchesForensic:FORENSICS.filter(seed=>matched.has(seed)&&comparisons.some(c=>c.seed===seed)).length,
 };
 if(studies.length!==FORENSICS.length||comparisons.length!==CONTROLS.length)
@@ -93,13 +93,13 @@ md+=`Голодных смертей: **${data.forensic.totalDeathCases}**. Не
 md+=`Возможная соседская помощь (только диагностический потенциал): ${data.forensic.aidPotential}; потенциальная платёжеспособность (≥7 кг): ${data.forensic.affordableGrain}. Эти показатели не являются доказательством действительной доступности еды.\n\n`;
 md+='## Контролируемая чувствительность порога работоспособности (25 лет)\n\n';
 md+='| Вмешательство | Медианная Δ населения | Медианная Δ смертей от голода | Миров с меньшей смертностью / 12 |\n|---|---:|---:|---:|\n';
-for(const [key,label] of [['farm10','Только базовая трудовая функция: 25→10'],['gates10','Все 13 условий health>25: 25→10']]){
+for(const [key,label] of [['gentle60','Полный трудовой день при health≥60'],['strict90','Полный трудовой день при health≥90']]){
  const r=data.controls[key];md+=`| ${label} | ${r.medianPopulationDelta??'—'} | ${r.medianStarvationDelta??'—'} | ${r.fewerStarvations} |\n`;
 }
 md+='\nКонтроль совпадения 25-го года с независимо запущенным 30-летним миром: '+data.controls.baselineMatchesForensic+'/8.\n\n';
 md+='## Данные по seed\n\n';
-md+='| Seed | Базовое население | Порог farm10: Δ населения / голодных смертей | Порог gates10: Δ населения / голодных смертей |\n|---|---:|---:|---:|\n';
-for(const row of comparisons)md+=`| ${row.seed} | ${row.base.population} | ${row.farm10.deltaPopulation} / ${row.farm10.deltaStarved} | ${row.gates10.deltaPopulation} / ${row.gates10.deltaStarved} |\n`;
+md+='| Seed | Базовое население | Порог gentle60: Δ населения / голодных смертей | Порог strict90: Δ населения / голодных смертей |\n|---|---:|---:|---:|\n';
+for(const row of comparisons)md+=`| ${row.seed} | ${row.base.population} | ${row.gentle60.deltaPopulation} / ${row.gentle60.deltaStarved} | ${row.strict90.deltaPopulation} / ${row.strict90.deltaStarved} |\n`;
 if(data.errors.length)md+='\nОшибки: '+data.errors.join('; ')+'\n';
 md+='\n**Методологическое ограничение:** тестирование другого порога не устанавливает исторически верного значения. Гибель животных и иных ресурсов не компенсируется; перенос ресурсов между семьями должен оставаться физическим. Обнаруженная зависимость требует исследования конкретных решений, а не автоматического изменения базового параметра.\n';
 fs.writeFileSync(path.join(output,'SUMMARY.md'),md);
