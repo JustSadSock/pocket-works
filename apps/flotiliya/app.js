@@ -1,5 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { renderSea, renderGalley } from './sea-art.js';
+import { planSquadronShip } from './squadron-plan.js';
 import { ACTION_COST, MOVE_STEP, getBudget, canPlan, stagePathLength, stageRange, availableActions } from './turn-budget.js';
 import { condition, attackSector, attackPacket, contest, nearbySupport, rangeBlocked, oarFraction } from './naval-combat.js';
 installMobileRuntime();
@@ -164,6 +165,19 @@ function planEnemyOrders(s){
  }
  if(!canPlan(s,s.orders))s.orders=[freshOrder('hold'),freshOrder('hold')];
 }
+function planSquadron(){
+ if(game.phase!=='orders')return;
+ const enemy=alive('enemy');
+ for(const s of alive('ally')){
+  if(s.grappleId)continue;
+  const t=game.mission?.id==='intercept'
+   ?enemy.find(v=>v.id.endsWith('-0'))||nearest(s)
+   :nearest(s);
+  if(t)s.orders=planSquadronShip(s,t,{mission:game.mission?.id,islands:game.islands});
+ }
+ selectShip(game.selected);
+ notify('Оплаченные курсы записаны. Проверь каждый корабль перед исполнением.');
+}
 function startBattle(){
  game.ships=[];game.captured=[];game.events=[];game.particles=[];game.grapples=[];game.eventClock=0;game.round=1;game.elapsed=0;game.selected=null;game.stage=0;game.drag=null;
  game.islands=ISLAND_MAPS[(game.battleIndex-1)%ISLAND_MAPS.length].map(i=>({...i}));
@@ -181,7 +195,7 @@ function startBattle(){
  $('orderArea').hidden=false;$('orderArea').style.opacity='1';$('resolveBtn').hidden=false;$('progress').hidden=true;
  $('subtitle').textContent=game.mission.name;$('gold').textContent='◈ '+game.gold;
  selectShip(game.ships.find(s=>s.side==='ally')?.id||null);updateBattleUI();resize();
- notify(game.mission.brief);
+ notify('Нарисуй курс или нажми «План эскадры». '+game.mission.brief);
 }
 function alive(side){return game.ships.filter(s=>s.alive&&s.side===side)}
 function nearest(s){return alive(s.side==='ally'?'enemy':'ally').sort((a,b)=>distance(s,a)-distance(s,b))[0]||null}
@@ -595,7 +609,7 @@ function onPointerDown(e){
   const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;
   const order=instruction(s,game.stage),old={kind:order.kind,targetId:order.targetId,route:order.route};
   order.targetId=chosen.id;order.route=[];
-  if(order.kind==='hold')order.kind='board';
+  if(order.kind==='hold')order.kind='shoot';
   if(!canPlan(s,s.orders)){
    Object.assign(order,old);notify('Недостаточно ОД: очисти часть пути или выбери другое действие.');return;
   }
@@ -720,6 +734,7 @@ canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
 canvas.addEventListener('pointercancel',onPointerUp);
 document.querySelectorAll('[data-stage]').forEach(btn=>btn.addEventListener('click',()=>setStage(Number(btn.dataset.stage))));
+$('planBtn').addEventListener('click',planSquadron);
 $('clearRouteBtn').addEventListener('click',()=>{const s=game.ships.find(x=>x.id===game.selected&&x.alive);if(!s)return;const o=instruction(s,game.stage);o.route=[];o.targetId=null;selectShip(s.id);});
 document.querySelectorAll('[data-order]').forEach(btn=>btn.addEventListener('click',()=>{
  const s=game.ships.find(s=>s.id===game.selected&&s.alive);
