@@ -110,7 +110,7 @@ try{
      for(let dx=-search;dx<=search;dx++){
       if(Math.max(Math.abs(dx),Math.abs(dy))!==search)continue;
       const x=cx+dx,y=Math.round(cy-radius+spacing/2+dy),i=y*W+x;
-      if(x>=0&&x<W&&y>=0&&y<H&&walls[i*4+3]<96&&zone[i*4+3]>=120){
+      if(x>=0&&x<W&&y>=0&&y<H&&walls.data[i*4+3]<96&&zone.data[i*4+3]>=120){
        seed=i;break
       }
      }
