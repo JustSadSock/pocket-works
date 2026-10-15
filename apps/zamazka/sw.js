@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.37.4';
+const CACHE_NAME = 'zamazka-v1.37.5';
 const ART_CACHE = 'zamazka-artworks-v1.12.5';
-const APP_VERSION = '1.37.4';
+const APP_VERSION = '1.37.5';
 const RELEASE_DATE = '2026-10-15';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Подписи стали частью картинных рам и движутся вместе с ними. Быстрое перелистывание ускоряется, но не подменяет картины резким скачком.","Рамы запоминания подстраиваются под истинные пропорции каждого изображения, портреты больше не обрезаются.","Большие картины открываются почти во весь экран без декоративных рамок. Поправлены профиль Pocket ID и гармония комнаты ожидания."];
