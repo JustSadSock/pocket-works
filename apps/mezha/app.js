@@ -1,7 +1,8 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createGame,action,tick,stats,save,load,W,H,nearHome,DOMINATION_SECONDS,DOMINATION_SITES,clamp} from './engine.js';
-import {renderBattle,renderMinimap,nearestSite} from './render.js';
+import {renderBattle,renderMinimap,nearestSite,renderUnitPortrait} from './render.js';
 installMobileRuntime();
+for(const icon of document.querySelectorAll('canvas[data-unit-portrait]'))renderUnitPortrait(icon,icon.dataset.unitPortrait);
 const $=id=>document.getElementById(id);
 const root=$('app'),canvas=$('field'),ctx=canvas.getContext('2d',{alpha:false});
 const storedKey='pocket-works:mezha:match-v1',optionsKey='pocket-works:mezha:options';
