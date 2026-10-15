@@ -232,12 +232,14 @@ try{
 
 
   await page.locator('#settingsBtn').click();
+  await page.locator('[data-settings-tab="preferences"]').click();
   await page.locator('#settingNewAppearance').uncheck();
   await page.locator('#modalActions .btn.primary').click();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'classic','Classic must be restored in-place');
   assert.equal(await page.locator('.museum-plinth').count(),0);
   assert.equal(await page.evaluate(()=>localStorage.getItem('pocket-works:zamazka:appearance')),'classic');
   await page.locator('#settingsBtn').click();
+  await page.locator('[data-settings-tab="preferences"]').click();
   await page.locator('#settingNewAppearance').check();
   await page.locator('#modalActions .btn.primary').click();
   assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
@@ -473,11 +475,13 @@ try{
   const retainedInk=await page.locator('#strokeCount').textContent();
   await board.evaluate(el=>el.dataset.themeContinuity='intact');
   await page.locator('#settingsBtn').click();
+  await page.locator('[data-settings-tab="preferences"]').click();
   await page.locator('#settingNewAppearance').uncheck();
   await page.locator('#modalActions .btn.primary').click();
   assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Switching off must preserve mounted drawing canvas');
   assert.equal(await page.locator('#strokeCount').textContent(),retainedInk,'Switching off must retain brush strokes');
   await page.locator('#settingsBtn').click();
+  await page.locator('[data-settings-tab="preferences"]').click();
   await page.locator('#settingNewAppearance').check();
   await page.locator('#modalActions .btn.primary').click();
   assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Switching on must preserve mounted drawing canvas');
@@ -545,6 +549,7 @@ try{
   // Changing the visual system in an active archive must not discard entries.
   const countBefore=await page.locator('.archive-work').count();
   await page.locator('#settingsBtn').click();
+  await page.locator('[data-settings-tab="preferences"]').click();
   await page.locator('#settingNewAppearance').uncheck();
   await page.locator('#modalActions .btn.primary').click();
   assert.equal(await page.locator('.archive-work').count(),countBefore,'Appearance switch must not remount archive');
