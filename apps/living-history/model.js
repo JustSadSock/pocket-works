@@ -423,6 +423,16 @@ function finishAgriculturalYear(s,h,crop){
  }
 }
 
+// A multi-crop household normally saves seed for next planting. In a true
+// famine after prolonged shortage it may break the reserve and survive today
+// at the cost of next year's field output. No seed is magically supplied.
+function cropSeedReserve(s,h,kind){
+ if(!s.historicalProfile||!Number.isFinite(s.economy.oatsInitial)||!h.fields.length)return 0;
+ const cultivated=(h.fields.length+(h.leaseIn?.length||0)-(h.leaseOut?.length||0))*LAND_HA*.67;
+ const familyArea=Math.max(.1,Math.min(cultivated,annualNeed(s,h)*1.6/560));
+ const area=h.tenure==='demesne'?cultivated:familyArea;
+ return round(Math.max(0,area*CROP_KINDS[kind].share*CROP_KINDS[kind].seedRate));
+}
 function spendFood(s,h){
  const need=foodNeed(s,h);
  const gardenEaten=round(Math.min(h.garden||0,need*.22));
@@ -430,8 +440,11 @@ function spendFood(s,h){
  // Pulses complement but do not replace an entire caloric ration. Oat porridge,
  // however, can replace bread in a grain shortage, so a family with oats is
  // not artificially declared starving while its own edible grain remains.
- const pulsesEaten=round(Math.min(h.pulses||0,need*.38));
- const oatsEaten=round(Math.min(h.oats||0,Math.max(0,need-gardenEaten-dairyEaten-pulsesEaten)));
+ const breakSeed=h.shortage>18;
+ const availablePulses=Math.max(0,(h.pulses||0)-(breakSeed?0:cropSeedReserve(s,h,'pulses')));
+ const pulsesEaten=round(Math.min(availablePulses,need*.38));
+ const availableOats=Math.max(0,(h.oats||0)-(breakSeed?0:cropSeedReserve(s,h,'oats')));
+ const oatsEaten=round(Math.min(availableOats,Math.max(0,need-gardenEaten-dairyEaten-pulsesEaten)));
  h.garden=round((h.garden||0)-gardenEaten);h.dairy=round((h.dairy||0)-dairyEaten);
  h.pulses=round((h.pulses||0)-pulsesEaten);h.oats=round((h.oats||0)-oatsEaten);
  s.stats.pulsesEaten=round((s.stats.pulsesEaten||0)+pulsesEaten);
@@ -551,7 +564,9 @@ function tendCattle(s,h,adults){
   if(summer){const source=takeForage(s,h,needed);grazed=source.taken;site=source.spot;}
   const fromBarn=Math.min(h.fodder,round(needed-grazed));h.fodder=round(h.fodder-fromBarn);
   // Actual fodder grain substitutes a limited weight of pasture, not new feed.
-  const oatsFed=round(Math.min(h.oats||0,Math.max(0,needed-grazed-fromBarn)*.65,h.cattle*1.2+sheep*.35));
+  const oatsFed=round(Math.min(
+   Math.max(0,(h.oats||0)-(h.livestockHealth<25?0:cropSeedReserve(s,h,'oats'))),
+   Math.max(0,needed-grazed-fromBarn)*.65,h.cattle*1.2+sheep*.35));
   h.oats=round((h.oats||0)-oatsFed);
   if(oatsFed>0){s.stats.oatsFed=round((s.stats.oatsFed||0)+oatsFed);earn(s,h,'sheepFeedOatsKg',oatsFed);}
   const eaten=round(grazed+fromBarn),fraction=(eaten+oatsFed*1.5)/Math.max(1,needed);
