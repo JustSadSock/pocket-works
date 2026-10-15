@@ -21,7 +21,7 @@ import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'1.0.0',releaseNotes:['30 миниатюр, три формы комнат, расписные обои, галерея пяти комнат, фото и разнообразные совместные задания.']});
+registerEnhancedUpdate({appName:'КОМНАТКА',version:'1.1.0',releaseNotes:['Рендер Retina, чёткий ковёр, настоящий интерьер в главном меню, сравнение двух комнат по памяти и отчёт по пожеланиям жильцов.']});
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
