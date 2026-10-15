@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "b662a88ca1fbf86d5f4bd7fc1bdc53ac961b0628",
+    "revision": "dbc2af47e7a5bc890dd1f569a45c801649f251ee",
     "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "342dff2cce77158acdf0d5992cb6f6a5953c502e9e49475e9e22c345e16d6a55",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "b662a88ca1fbf86d5f4bd7fc1bdc53ac961b0628",
-    "lastAttemptAt": "2026-10-15T21:02:50.063Z",
+    "lastAttemptRevision": "dbc2af47e7a5bc890dd1f569a45c801649f251ee",
+    "lastAttemptAt": "2026-10-15T21:27:36.543Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -279,16 +279,20 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "jam-tape": {
-    "revision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "qualityScore": 75,
+    "revision": "ce44fbb35d1ee78b78940b7be475c159c3b7e4f5",
+    "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "5f7f1628d35eee89c5700a24b8c3335d38fbc0e5c71d5208516c032cde8061a5",
+    "sha256": "80ada270afc9f6a69864b34fab2fed167ee38161da3506d3aa344bcef562bf68",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "lastAttemptAt": "2026-10-13T12:42:49.296Z"
+    "lastAttemptRevision": "ce44fbb35d1ee78b78940b7be475c159c3b7e4f5",
+    "lastAttemptAt": "2026-10-15T21:27:47.380Z",
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3"
   },
   "klyatvy": {
     "revision": "9c2ced319a4771dfe3e073907c528eff1099fe5c",
@@ -3177,7 +3181,7 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "5a625de8c1bd20bf7654987c07aa96392716ace6",
+    "revision": "fc547687e2005f5a580cf75c4b02729d083cccc2",
     "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
@@ -3189,8 +3193,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "5a625de8c1bd20bf7654987c07aa96392716ace6",
-    "lastAttemptAt": "2026-10-15T21:21:15.013Z"
+    "lastAttemptRevision": "fc547687e2005f5a580cf75c4b02729d083cccc2",
+    "lastAttemptAt": "2026-10-15T21:27:58.214Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
