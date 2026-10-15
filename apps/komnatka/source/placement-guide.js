@@ -1,12 +1,10 @@
-import { MeshBuilder, StandardMaterial, Color3 } from '@babylonjs/core';
+import { MeshBuilder, StandardMaterial, Color3, Vector3 } from '@babylonjs/core';
 
-// A world-space placement ruler: it follows the actual 0.25-unit game grid,
-// unlike an overlay fixed to the screen. None of its meshes can intercept picks.
 export function createPlacementGuide(scene) {
  const step=.25,half=1.5,lines=[];
- for(let i=-half;i<=half+0.001;i+=step){
-  lines.push([{x:i,y:0,z:-half},{x:i,y:0,z:half}]);
-  lines.push([{x:-half,y:0,z:i},{x:half,y:0,z:i}]);
+ for(let i=-half;i<=half+.001;i+=step){
+  lines.push([new Vector3(i,0,-half),new Vector3(i,0,half)]);
+  lines.push([new Vector3(-half,0,i),new Vector3(half,0,i)]);
  }
  const grid=MeshBuilder.CreateLineSystem('placement-grid',{lines},scene);
  grid.isPickable=false;grid.color=Color3.FromHexString('#a18b71');grid.alpha=.31;
@@ -17,7 +15,7 @@ export function createPlacementGuide(scene) {
  material.diffuseColor=Color3.FromHexString('#a9bd9b');
  footprint.material=material;
  const border=MeshBuilder.CreateLines('placement-outline',{points:[
-  {x:-.5,y:0,z:-.5},{x:.5,y:0,z:-.5},{x:.5,y:0,z:.5},{x:-.5,y:0,z:.5},{x:-.5,y:0,z:-.5}
+  new Vector3(-.5,0,-.5),new Vector3(.5,0,-.5),new Vector3(.5,0,.5),new Vector3(-.5,0,.5),new Vector3(-.5,0,-.5)
  ]},scene);
  border.isPickable=false;border.alpha=.85;
  function hide(){grid.setEnabled(false);footprint.setEnabled(false);border.setEnabled(false);}
