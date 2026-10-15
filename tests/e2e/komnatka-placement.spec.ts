@@ -60,6 +60,11 @@ test.describe('КОМНАТКА — actual placement and motion',()=>{
   await attachCriticalScreenshot(page,testInfo,'komnatka-clock-on-visible-tabletop',{fullPage:false});
   await page.mouse.up();
   await expect.poll(()=>page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount)).toBe(before+1);
+  const upright=await page.evaluate(()=>{
+   const q=(window as any).__KOMNATKA_TEST__;
+   return q.meshRotation(q.selection,'alarm-upright-ivory-dial');
+  });
+  expect(upright,'The actual 3D clock face must be upright').toBeCloseTo(Math.PI/2,3);
  });
  test('desktop right-to-left drag is not mistaken for catalog scrolling',async ({page},testInfo)=>{
   await page.setViewportSize({width:1140,height:790});
@@ -71,6 +76,16 @@ test.describe('КОМНАТКА — actual placement and motion',()=>{
   await attachCriticalScreenshot(page,testInfo,'komnatka-desktop-direct-drag',{fullPage:false});
   await page.mouse.up();
   await expect.poll(()=>page.evaluate(()=>(window as any).__KOMNATKA_TEST__.itemCount)).toBe(before+1);
+ });
+ test('teddy and vase have readable model previews',async ({page},testInfo)=>{
+  await enter(page);
+  await page.locator('#categories [data-group="decor"]').click();
+  for(const type of ['teddy','vase']){
+   const item=page.locator('#catalog [data-type="'+type+'"]');
+   await item.scrollIntoViewIfNeeded();
+   await expect(item.locator('.item-drawing')).toBeVisible();
+   await attachCriticalScreenshot(page,testInfo,'komnatka-'+type+'-catalog-shape',{fullPage:false});
+  }
  });
  test('table decorations follow real-time lift and catalog specimens remain visible',async ({page},testInfo)=>{
   await enter(page);
