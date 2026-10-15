@@ -254,6 +254,15 @@ try{
 
   assert.equal(await page.locator('.exhibition-lobby [data-action="start"]').count(),1,'Host must have start action');
   assert.equal(await page.locator('.exhibition-lobby [data-action="emblem"]').count(),0,'Custom sign must be gone from waiting room');
+  if(mobile){
+    const state=await page.evaluate(()=>{
+      const root=document.querySelector('#screen'),scene=document.querySelector('.exhibition-lobby');
+      return {root:root.scrollHeight-root.clientHeight,scene:scene.scrollHeight-scene.clientHeight,
+        action:(()=>{const r=scene.querySelector('[data-action="start"]').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()};
+    });
+    assert(state.root<=3&&state.scene<=3&&state.action,
+      'Lobby must fit portrait without vertical scroll or hidden Start: '+JSON.stringify(state));
+  }
   const boardBox=await page.locator('#commonsCanvas').boundingBox();
   assert(boardBox&&boardBox.width>100&&boardBox.height>60,'Interactive shared canvas must occupy meaningful space');
   assert(boardBox.x>=0&&boardBox.x+boardBox.width<=viewport.width+2,'Shared canvas overflow');
@@ -437,6 +446,15 @@ try{
   await page.locator('.reveal-phase').waitFor({timeout:11000});
   await page.locator('.reveal-phase.is-composed').waitFor({timeout:12000});
   await page.waitForTimeout(720);
+  if(mobile){
+    const state=await page.evaluate(()=>{
+      const root=document.querySelector('#screen'),scene=document.querySelector('.reveal-phase'),buttons=[...scene.querySelectorAll('.reveal-brief .stack .btn')];
+      return {root:root.scrollHeight-root.clientHeight,scene:scene.scrollHeight-scene.clientHeight,
+        actions:buttons.map(el=>{const r=el.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})};
+    });
+    assert(state.root<=3&&state.scene<=3&&state.actions.every(Boolean),
+      'Reveal must keep all three follow-up actions visible without vertical scrolling: '+JSON.stringify(state));
+  }
   assert.equal(await page.locator('.museum-passage').count(),0,'Obsolete transition returned');
   assert.equal(await page.locator('.museum-art-flight').count(),0,'Obsolete image transition was not removed');
   assert.equal(await page.locator('.exhibition-exit-layer').count(),0,'Old phase was not cleaned up');
