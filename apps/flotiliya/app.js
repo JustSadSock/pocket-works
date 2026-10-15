@@ -30,6 +30,14 @@ function terrainDistance(isl,x,y){
  return Math.hypot(lx/(isl.rx+16),ly/(isl.ry+14));
 }
 function withinIsland(x,y,pad=1){return (game.islands||[]).some(isl=>terrainDistance(isl,x,y)<pad);}
+function segmentHitsIsland(a,b,margin=1.09){
+ const length=distance(a,b);
+ for(let i=0,n=Math.max(1,Math.ceil(length/9));i<=n;i++){
+  const k=i/n;
+  if(withinIsland(a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k,margin))return true;
+ }
+ return false;
+}
 function readoutRoute(order){return order.route?.length?order.route.length+' ТОЧЕК':order.targetId?'ЦЕЛЬ НАЗНАЧЕНА':'СВОБОДНЫЙ КУРС';}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -157,7 +165,7 @@ function planEnemyOrders(s){
    point.x=clamp(origin.x+Math.cos(angle+turn)*allowance*.74,47,W-47);
    point.y=clamp(origin.y+Math.sin(angle+turn)*allowance*.74,56,H-56);
   }
-  if(!withinIsland(point.x,point.y,1.06)&&distance(origin,point)>12){
+  if(!withinIsland(point.x,point.y,1.06)&&!segmentHitsIsland(origin,point,1.08)&&distance(origin,point)>12){
    s.orders[stage].route=[point];
    if(canPlan(s,s.orders))origin=point;
    else s.orders[stage].route=[];
@@ -278,10 +286,18 @@ function maneuver(s,dt){
    s.alive=false;s.escaped=true;s.hp=Math.max(1,s.hp);
    logEvent(s.name+' вышел из боя!');return;
   }
+ }else if(s._courseBlocked){
+  s.velocity=0;return;
  }else if(s._course?.total>0){
   // Fewer movement points mean less distance over the SAME complete turn.
   // Stage 01's route no longer exhausts itself at 2.25 seconds.
   const position=sampleCourse(s._course,Math.min(PHASE_SECONDS,game.elapsed),PHASE_SECONDS);
+  // A scheduled route must still obey terrain collision.
+  if(segmentHitsIsland(s,position,1.01)){
+   s._courseBlocked=true;s.velocity=0;
+   logEvent(s.name+': курс пересекает мель. Обойди её следующим ходом.');
+   return;
+  }
   const dx=position.x-s.x,dy=position.y-s.y,delta=Math.hypot(dx,dy);
   const state=condition(s),turnLimit=s.turn*state.turn*dt*3.2;
   if(position.angle!==null)
@@ -475,7 +491,7 @@ function startResolve(){
   if(!canPlan(s,s.orders))s.orders=[freshOrder('hold'),freshOrder('hold')];
  }
  game.phase='resolve';game.elapsed=0;acc=0;
- for(const s of game.ships){s._cursor=[0,0];s._activeStage=-1;s._course=buildCourse(s);}
+ for(const s of game.ships){s._cursor=[0,0];s._activeStage=-1;s._course=buildCourse(s);s._courseBlocked=false;}
  $('subtitle').textContent='Бой · исполнение';$('commandCaption').textContent='ОДИН КУРС · 4,5 СЕКУНДЫ';
  $('resolveBtn').hidden=true;$('orderArea').style.opacity='.42';
  $('progress').hidden=false;$('progressFill').style.width='0%';
@@ -577,6 +593,7 @@ function addRoutePoint(s,point){
  if(distance(previous,point)<10)return false;
  const oldLength=route.length;
  const tryPoint=(p)=>{
+  if(segmentHitsIsland(previous,p,1.09))return false;
   route.push({x:p.x,y:p.y});
   const ok=canPlan(s,s.orders);if(!ok)route.pop();
   return ok;
