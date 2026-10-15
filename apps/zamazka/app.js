@@ -247,6 +247,7 @@ function finishVoteTransition(){
  setTimeout(()=>old.remove(),260);
 }
 function change(html,which){
+ if(previewFrameObserver){previewFrameObserver.disconnect();previewFrameObserver=null}
  if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}
  if(page!==which)closeDialog();
  museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;stopEditor();
@@ -442,6 +443,47 @@ function moveMobileGallery(direction){
  const next=Math.max(0,Math.min(cards.length-1,current+direction));
  rail.scrollTo({left:cards[next].offsetLeft-first.offsetLeft,behavior:'smooth'});
 }
+let previewFrameObserver=null;
+function fitPreviewFrames(rail){
+ if(!rail)return;
+ const frames=[...rail.querySelectorAll('.picture-image')];
+ let scheduled=false,disposed=false;
+ function paint(){
+  scheduled=false;if(disposed||!rail.isConnected)return;
+  for(const host of frames){
+   const mat=host.querySelector('.picture-mat'),img=mat?.querySelector('img');
+   if(!img?.naturalWidth||!img?.naturalHeight)continue;
+   const ratio=img.naturalWidth/img.naturalHeight;
+   // Calculate a fit from the *decoded* bitmap and the actual available cell.
+   // Both axes and the four frame facets share the same explicit dimensions.
+   const thickness=matchMedia('(max-width:900px), (pointer:coarse)').matches?7:10;
+   const limitW=host.clientWidth-12-2*thickness-2;
+   const limitH=host.clientHeight-12-2*thickness-2;
+   if(limitW<28||limitH<28)continue;
+   const width=Math.floor(Math.min(limitW,limitH*ratio));
+   const height=Math.floor(width/ratio);
+   const aw=Math.max(1,width)+'px',ah=Math.max(1,height)+'px';
+   if(mat.style.getPropertyValue('--preview-art-w')!==aw)mat.style.setProperty('--preview-art-w',aw);
+   if(mat.style.getPropertyValue('--preview-art-h')!==ah)mat.style.setProperty('--preview-art-h',ah);
+   mat.dataset.ratioReady='true';
+  }
+ }
+ function schedule(){if(!scheduled&&!disposed){scheduled=true;requestAnimationFrame(paint)}}
+ for(const host of frames){
+  const img=host.querySelector('img');
+  img.addEventListener('load',schedule);
+  if(img.complete&&img.naturalWidth)schedule();
+ }
+ const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(schedule):null;
+ if(observer){for(const host of frames)observer.observe(host)}
+ else window.addEventListener('resize',schedule);
+ schedule();
+ previewFrameObserver={disconnect(){
+  disposed=true;observer?.disconnect();
+  if(!observer)window.removeEventListener('resize',schedule);
+  for(const host of frames)host.querySelector('img')?.removeEventListener('load',schedule);
+ }};
+}
 function preview(local=false){
  const v=local?practice:view;
  change('<section class="phase-page mobile-preview">'+head('РАУНД '+v.round+' / '+(v.rounds||1),'Запомни оригиналы',v.deadline)+
@@ -460,6 +502,7 @@ function preview(local=false){
    requestAnimationFrame(()=>{scheduled=false;if(rail.isConnected)updateMobileGalleryNav(rail)});
   },{passive:true});
   updateMobileGalleryNav(rail);
+  fitPreviewFrames(rail);
  }
 }
 function editorIcon(name){
