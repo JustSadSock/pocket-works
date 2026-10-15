@@ -1,0 +1,157 @@
+name: Living History causal audit v0.7.1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/living-history/**'
+      - '.github/workflows/living-history-causality.yml'
+  workflow_dispatch:
+    inputs:
+      group:
+        description: Causal audit group
+        type: choice
+        required: true
+        default: all
+        options: [all, family, paired, crisis, genealogy]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: living-history-causal-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  family:
+    if: github.event_name == 'push' || inputs.group == 'all' || inputs.group == 'family'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reconstruct 90-day household trails and audit 30 years
+        run: node apps/living-history/qa/causality-study.mjs --group=family --batch=${{ matrix.batch }} --output=causality-output/report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: causality-family-${{ matrix.batch }}
+          path: causality-output/report.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  paired:
+    if: github.event_name == 'push' || inputs.group == 'all' || inputs.group == 'paired'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run paired, seeded one-factor experiments
+        run: node apps/living-history/qa/causality-study.mjs --group=paired --batch=${{ matrix.batch }} --output=causality-output/report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: causality-paired-${{ matrix.batch }}
+          path: causality-output/report.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  crisis:
+    if: github.event_name == 'push' || inputs.group == 'all' || inputs.group == 'crisis'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test drought, isolation, herd loss and combined crisis
+        run: node apps/living-history/qa/causality-study.mjs --group=crisis --batch=${{ matrix.batch }} --output=causality-output/report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: causality-crisis-${{ matrix.batch }}
+          path: causality-output/report.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  genealogy:
+    if: github.event_name == 'push' || inputs.group == 'all' || inputs.group == 'genealogy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check two-century inheritance, demographics and balances
+        run: node apps/living-history/qa/causality-study.mjs --group=genealogy --batch=${{ matrix.batch }} --output=causality-output/report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: causality-genealogy-${{ matrix.batch }}
+          path: causality-output/report.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  summary:
+    if: always()
+    needs: [family, paired, crisis, genealogy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: causality-*
+          path: causal-artifacts
+          merge-multiple: false
+      - name: Verify all planned shards and summarize causal evidence
+        env:
+          CAUSALITY_GROUP: ${{ github.event_name == 'push' && 'all' || inputs.group }}
+        run: node apps/living-history/qa/causality-summarize.mjs --input=causal-artifacts --output=causality-summary
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: causality-summary-${{ github.run_id }}
+          path: causality-summary/
+          retention-days: 7
+          if-no-files-found: warn
