@@ -29,10 +29,10 @@ export function floodFillRaster({width,height,walls,zone,output,point,color,chan
     // Without this check, nearby independent contours (e.g. concentric
     // circles or thin corridors between two strokes) get welded into an
     // invisible barrier: a visibly connected area then fills only halfway.
-    // Require three pixels of collinear evidence beyond BOTH endpoints.
+    // Require five pixels of collinear evidence beyond BOTH endpoints.
     // The original wall mask is used, so new bridges cannot self-propagate.
     let supported=true;
-    for(let k=1;k<=3;k++){
+    for(let k=1;k<=5;k++){
       const bx=x-dx*k,by=y-dy*k,fx=endX+dx*k,fy=endY+dy*k;
       if(bx<0||bx>=width||by<0||by>=height||
          fx<0||fx>=width||fy<0||fy>=height||
