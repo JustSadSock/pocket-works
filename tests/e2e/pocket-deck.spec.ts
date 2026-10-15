@@ -453,6 +453,7 @@ test('globally pinned covers stay visible to guests without granting management 
   await page.locator('#detail-extras > summary').click();
   await expect(page.locator('[data-deck-global-pin]')).toHaveCount(0);
   await page.locator('#detail-close').click();
+  await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
   await page.locator('#deck-batch-trigger').click();
   await expect(page.locator('#deck-batch-pin')).toBeHidden();
   await expect(page.locator('#deck-batch-unpin')).toBeHidden();
