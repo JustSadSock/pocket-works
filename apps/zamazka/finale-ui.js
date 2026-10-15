@@ -1,3 +1,4 @@
+import {exhibitFacets} from './exhibition-ui.js';
 // The exhibition's final three beats share the same dossier hierarchy.
 // Pure markup lets Playwright render real cards without a live PocketNet room.
 export const FINALE_REVISION='1.39.0';
@@ -15,10 +16,8 @@ export function finaleVerdictMarkup({view:v,artworks,artworkURL,escapeText,head,
  const cards=v.selected.map((id,i)=>{
   const art=artworks[id]||{},voters=votesFor(i),count=totals[i];
   return '<article class="verdict-card finale-ballot-card'+(count===largest&&count>0?' has-majority':'')+(i===tagged.i?' is-featured':'')+'" style="--case-index:'+i+';--vote-ratio:'+(100*count/largest).toFixed(1)+'%;--vote-scale:'+(0.84+0.16*count/largest).toFixed(3)+'">'+
-   '<div class="finale-ballot-index"><span>ЭКСПОНАТ</span><b>'+String(i+1).padStart(2,'0')+'</b></div>'+
-   '<div class="verdict-image"><img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+label(art.title||'Полотно')+'"></div>'+
-   
-   '<div class="finale-ballot-votes"><div class="finale-vote-tally"><span>Поставлено</span><strong aria-label="'+count+' фишек">'+count+'</strong></div>'+
+   '<div class="zam-exhibit-stage" data-exhibit-stage><div class="verdict-image zam-exhibit-rim">'+exhibitFacets()+'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+label(art.title||'Полотно')+'"></div></div>'+
+   '<div class="finale-ballot-votes" aria-label="'+count+' фишек"><div class="finale-vote-tally"><span>Поставлено</span><strong aria-label="'+count+' фишек">'+count+'</strong></div>'+
    '<div class="finale-vote-bar" role="img" aria-label="Ставки: '+count+'"><i></i></div>'+
    '<div class="verdict-tokens" aria-hidden="true">'+chipDots(count)+'</div>'+
    '<small class="finale-voters">'+label(voters.length?voters.join(' · '):'Без ставок')+'</small></div></article>';
