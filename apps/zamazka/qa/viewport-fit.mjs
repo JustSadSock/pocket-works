@@ -79,7 +79,12 @@ try{
     const r=rect(el);return r.x<-2||r.right>innerWidth+2||r.y<rr.y-3||r.bottom>rr.bottom+3;
    }).map(el=>({text:el.textContent.trim().slice(0,25),box:rect(el)}));
    const clipped=visibleButtons.filter(el=>{
-    const r=rect(el);
+    const r=rect(el),rail=el.closest('.lobby-attendance .players');
+    if(rail&&rail.scrollWidth>rail.clientWidth+3&&getComputedStyle(rail).overflowX!=='hidden'){
+      // Horizontal carousel cards may be outside the viewport until swiped.
+      // They must still remain vertically inside their own track.
+      const t=rect(rail);return r.y<t.y-3||r.bottom>t.bottom+3;
+    }
     for(let parent=el.parentElement;parent&&parent!==scene;parent=parent.parentElement){
      const p=rect(parent),style=getComputedStyle(parent);
      const oy=style.overflowY,ox=style.overflowX;
