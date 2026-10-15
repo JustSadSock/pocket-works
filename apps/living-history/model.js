@@ -364,11 +364,11 @@ function newFarmYear(s,h){
  if(previous?.sownArea>0&&previous.harvestedArea<previous.sownArea*.6)event(s,'crop-loss',`Поля семьи ${familyName(s,h)} остались неубранными`,'Не хватило рабочих дней до зимы',[h.id],{areaHa:round(previous.sownArea-previous.harvestedArea)});
  return crop;
 }
-function laborDay(p,kind,boost){
- const effort=workCapacity(p,kind);
+function laborDay(p,kind,boost,workFraction=1){
+ const effort=workCapacity(p,kind)*workFraction;
  p.job=kind==='farm'?'farm':kind;
  p.skill[kind]=roundSkill(p.skill[kind]+boost*p.aptitude*effort);
- recordWork(p,kind);
+ recordWork(p,kind,workFraction);
 }
 function cropUpdate(s,h,adults,guests=[]){
  const doy=s.day%365,crop=newFarmYear(s,h);
@@ -403,11 +403,11 @@ function cropUpdate(s,h,adults,guests=[]){
    crop.cropSeeds[kind]=round((crop.cropSeeds[kind]||0)+seed);
    if(kind!=='grain')earn(s,h,kind==='oats'?'oatsSeedKg':'pulsesSeedKg',seed);
    crop.sownArea=roundSkill(crop.sownArea+step);crop.seedKg=round(crop.seedKg+seed);crop.labourSow+=productiveWorkers;earn(s,h,'seedKg',seed);
-   for(const p of arriving)laborDay(p,'farm',.003);markWork();
+   for(const p of arriving)laborDay(p,'farm',.003,workFraction);markWork();
    if(crop.sownArea>=availableArea-.001||doy===145)event(s,'sowing',`Семья ${familyName(s,h)} засеяла ${crop.sownArea.toFixed(2)} га`,'Посев потребовал семян и рабочих дней',[h.id],{seedKg:crop.seedKg,workDays:crop.labourSow});
   }
  }
- if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const p of arriving)laborDay(p,'farm',.002);markWork();crop.tended+=productiveWorkers;crop.labourTend+=productiveWorkers;}
+ if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const p of arriving)laborDay(p,'farm',.002,workFraction);markWork();crop.tended+=productiveWorkers;crop.labourTend+=productiveWorkers;}
  if(doy>=238&&doy<=295&&crop.harvestedArea<crop.sownArea-.001){
   const kind=cropAt(crop,crop.harvestedArea);
   const step=Math.min(crop.sownArea-crop.harvestedArea,productiveWorkers*.065,Math.max(0,cropLimit(crop,kind)-crop.harvestedArea));
@@ -439,7 +439,7 @@ function cropUpdate(s,h,adults,guests=[]){
     }
    }
    crop.harvestedArea=roundSkill(crop.harvestedArea+step);crop.yieldKg=round(crop.yieldKg+output);earn(s,h,'harvestKg',output);crop.labourHarvest+=productiveWorkers;
-   for(const p of arriving)laborDay(p,'farm',.004);markWork();
+   for(const p of arriving)laborDay(p,'farm',.004,workFraction);markWork();
    if(crop.harvestedArea>=crop.sownArea-.001||doy===295){
      h.lastHarvest={day:s.day,kg:crop.yieldKg,breakdown:{...crop.cropYields},ha:round(crop.harvestedArea),workDays:crop.labourHarvest+crop.labourSow+crop.labourTend};
      event(s,'harvest',`Семья ${familyName(s,h)} собрала ${Math.round(crop.yieldKg)} кг зерна`,'Посев, уход, своевременная уборка, погода, почва и навыки',[h.id,...workers.map(p=>p.id)],{yieldKg:crop.yieldKg,areaHa:round(crop.harvestedArea),soil:round(soil),weather:round(weather),workDays:h.lastHarvest.workDays});
