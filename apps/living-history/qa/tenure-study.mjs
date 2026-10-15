@@ -20,9 +20,9 @@ for(let y=1;y<=years;y++){
    landDivided:s.stats.landDivided||0,landInherited:s.stats.landInherited||0,
    landReclaimed:s.stats.landReclaimed||0,landAbandoned:s.stats.landAbandoned||0,landReallocated:s.stats.landReallocated||0,
    leaseContracts:s.stats.leasePlots||0,rentGrainKg:s.stats.rentGrain||0,
-   migrants:s.stats.migrations||0,homeBuilds:s.stats.built,elapsedMs:Math.round(performance.now()-startYear)});
+   migrants:s.stats.migrations||0,lodgingMigrants:s.stats.lodgingMigrants||0,starvationDeaths:s.stats.starvationDeaths||0,homeBuilds:s.stats.built,elapsedMs:Math.round(performance.now()-startYear)});
 }
-const result={version:'0.4.0',seed,scenario,years,elapsedMs:Math.round(performance.now()-start),samples,last:samples.at(-1)};
+const result={version:'0.4.1',seed,scenario,years,elapsedMs:Math.round(performance.now()-start),samples,last:samples.at(-1)};
 const output=resolve(flag('output','/tmp/living-history-tenure.json'));
 mkdirSync(dirname(output),{recursive:true});writeFileSync(output,JSON.stringify(result,null,2));
 console.log(`tenure ${scenario} seed=${seed} year=${years} pop=${result.last.population} landless=${result.last.landlessHomes} migrated=${result.last.migrants} reclaimed=${result.last.landReclaimed} output=${output}`);

@@ -10,7 +10,25 @@
         "laboratory.test.mjs",
         "visual-land.test.mjs",
         "movement-realism.test.mjs",
-        "land-tenure.test.mjs"
+        "land-tenure.test.mjs",
+        "food-access.test.mjs"
+      ]
+    },
+    {
+      "id": "food-access-20-year",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/food-access-study.mjs",
+      "args": [
+        "--seed={seed}",
+        "--years=20",
+        "--output={output}/food-access.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001
       ]
     },
     {
@@ -169,6 +187,24 @@
         "--seed={seed}",
         "--years=20",
         "--output={output}/tenure.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001
+      ]
+    },
+    {
+      "id": "famine-stress",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/food-access-study.mjs",
+      "args": [
+        "--scenario=drought",
+        "--seed={seed}",
+        "--years=20",
+        "--output={output}/food-access-drought.json"
       ],
       "seeds": [
         413,
