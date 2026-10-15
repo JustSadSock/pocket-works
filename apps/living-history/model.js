@@ -325,7 +325,7 @@ function newFarmYear(s,h){
    annualNeed(s,h)*2.68*tuning(s,'planting')-h.grain;
  const expectedKgHa=CALIBRATION.baseGrainYieldKgPerHa*tuning(s,'yield')*fieldSoil(s,h)/90*.8;
  const plannedArea=roundSkill(clamp(needed/Math.max(240,expectedKgHa),Math.min(.12,availableArea),availableArea));
- const crop={year,active,ownedActive,plannedArea,mix:!!s.historicalProfile,cropYields:{grain:0,oats:0,pulses:0},cropSeeds:{grain:0,oats:0,pulses:0},sownArea:0,tended:0,harvestedArea:0,seedKg:0,yieldKg:0,labourSow:0,labourTend:0,labourHarvest:0};
+ const crop={year,active,ownedActive,plannedArea,mix:!!s.historicalProfile&&Number.isFinite(s.economy.oatsInitial),cropYields:{grain:0,oats:0,pulses:0},cropSeeds:{grain:0,oats:0,pulses:0},sownArea:0,tended:0,harvestedArea:0,seedKg:0,yieldKg:0,labourSow:0,labourTend:0,labourHarvest:0};
  if(h.sown>0&&s.day%365>130&&s.day%365<296){crop.sownArea=roundSkill(Math.min(active.length*LAND_HA,h.sown/140));crop.seedKg=h.sown;h.sown=0;}
  h.farmYear=crop;
  if(previous?.sownArea>0&&previous.harvestedArea<previous.sownArea*.6)event(s,'crop-loss',`Поля семьи ${familyName(s,h)} остались неубранными`,'Не хватило рабочих дней до зимы',[h.id],{areaHa:round(previous.sownArea-previous.harvestedArea)});
