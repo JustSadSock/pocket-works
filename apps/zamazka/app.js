@@ -7,6 +7,7 @@ import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,cle
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {ARTS,REAL_COUNT,PLAYABLE_IDS,ARCHIVE_EDITION,normalizeArchiveEntry,artworkURL,artworkFallbackURL,loadArtwork} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
+import {BRUSH_CURSOR_NAMES,brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
 import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
 import {getSavedEmblem,storeEmblem} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
@@ -1053,6 +1054,8 @@ function settings(){
   '<input class="sound-volume-range" id="settingVolume" type="range" min="0" max="100" step="5" value="'+soundVolume+'" aria-label="Громкость эффектов">'+
   '<label class="field"><input type="checkbox" id="settingConfirmVote" '+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'checked':'')+'> Подтверждать распределение монет</label>'+
   '<label class="field appearance-choice" for="settingNewAppearance"><span class="appearance-choice-text"><strong>Новый внешний вид</strong><small>Экспериментальная музейная мастерская</small></span><input type="checkbox" role="switch" id="settingNewAppearance" '+(appearance()==='new'?'checked':'')+'><span class="appearance-track" aria-hidden="true"></span></label>'+
+  '<div class="field cursor-style-choice"><label for="settingBrushStyle">Курсор-кисть</label><select id="settingBrushStyle" class="input" aria-label="Стиль курсора">'+BRUSH_CURSOR_NAMES.map((label,index)=>'<option value="'+index+'"'+(getBrushCursorStyle()===index?' selected':'')+'>'+label+'</option>').join('')+'</select></div>'+
+  '<div class="cursor-style-preview" id="settingBrushPreview" aria-live="polite"></div>'+
   '<p class="hint">Новый ник применится при следующем подключении.</p>',[
   ['Сохранить',()=>{
    rememberTabName(dialog.querySelector('#settingName').value.trim().slice(0,22)||'Реставратор');
@@ -1064,6 +1067,8 @@ function settings(){
     localStorage.setItem(CONFIRM_VOTE_KEY,dialog.querySelector('#settingConfirmVote').checked?'on':'off');
    }catch{}
    museumAudio.setEnabled(beepEnabled);museumAudio.setVolume(soundVolume/100);
+   const brushStyle=setBrushCursorStyle(dialog.querySelector('#settingBrushStyle').value);
+   editor?.setCursorStyle(brushStyle);
    applyAppearance(dialog.querySelector('#settingNewAppearance').checked?'new':'classic',true);
    settingsPreviewAppearance=null;settingsOriginalAppearance=null;
    settingsPreviewVolume=null;closeDialog();
@@ -1072,6 +1077,17 @@ function settings(){
   },'primary'],
   ['Отмена',()=>{museumAudio.setVolume(oldVolume/100);settingsPreviewVolume=null;closeDialog()},'ghost']
  ]);
+ const brushSelect=dialog.querySelector('#settingBrushStyle');
+ const updateBrushPreview=()=>{
+   const style=Number(brushSelect?.value)||0;
+   const preview=dialog.querySelector('#settingBrushPreview');
+   if(!preview)return;
+   const img=new Image();img.alt='Курсор '+BRUSH_CURSOR_NAMES[style];img.width=49;img.height=49;
+   img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(brushCursorSVG(style,'#9d4c3c'));
+   preview.replaceChildren(img,document.createTextNode('Внешний вид курсора; на точность рисования не влияет.'));
+ };
+ brushSelect?.addEventListener('change',updateBrushPreview);
+ updateBrushPreview();
  const volume=dialog.querySelector('#settingVolume'),value=dialog.querySelector('#settingVolumeValue');
  volume?.addEventListener('input',()=>{
   value.textContent=volume.value+'%';
