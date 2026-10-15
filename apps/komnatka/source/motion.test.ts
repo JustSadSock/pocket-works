@@ -63,6 +63,24 @@ describe('tactile room motion',()=>{
   director.tick(190);expect(root.dead).toBe(true);
   expect(director.hasMotion()).toBe(false);
  });
+ it('tabletop decorations follow the parent lift and settle without state changes',()=>{
+  const table={id:'table',type:'coffee',x:1,y:0,z:1,rot:0};
+  const books={id:'books',type:'books',x:1.2,y:.72,z:1,rot:0,support:'table'};
+  const roots=new Map([['table',fakeRoot()],['books',fakeRoot()]]);
+  const items=[table,books];
+  const director=createMotionDirector({
+   getRoot:id=>roots.get(id),getItem:id=>items.find(item=>item.id===id),getItems:()=>items
+  });
+  director.tick(0);director.lift('table');director.tick(130);
+  expect(roots.get('table')!.position.y).toBeGreaterThan(.07);
+  expect(roots.get('books')!.position.y).toBeCloseTo(.72+roots.get('table')!.position.y,5);
+  director.land('table');director.tick(280);
+  expect(roots.get('books')!.position.y).toBeCloseTo(.72+roots.get('table')!.position.y,5);
+  director.tick(750);
+  expect(roots.get('table')!.position.y).toBe(0);
+  expect(roots.get('books')!.position.y).toBeCloseTo(.72,5);
+  expect(books.y).toBe(.72);
+ });
  it('reduced-motion preference snaps all visual responses to the canonical state',()=>{
   const item={id:'bed',type:'bed',x:-1,y:0,z:1,rot:2},root=fakeRoot();
   const director=createMotionDirector({getRoot:()=>root,getItem:()=>item,reducedMotion:()=>true});
