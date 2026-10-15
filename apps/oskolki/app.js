@@ -110,8 +110,13 @@ function renderEditor() {
   const field = $('sourceInput');
   if (field.value !== state.source) field.value = state.source;
   const items = parseItems(state.source);
-  $('sourceCount').textContent = items.length + ' ' + (items.length === 1 ? 'пункт' : 'пунктов');
-  $('startBtn').disabled = !items.length || items.length > ITEM_LIMIT || state.source.length > SOURCE_LIMIT;
+  const last = items.length % 10, lastTwo = items.length % 100;
+  const noun = last === 1 && lastTwo !== 11 ? 'пункт' : last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'пункта' : 'пунктов';
+  $('sourceCount').textContent = items.length + ' ' + noun;
+  const tooLong = state.source.length > SOURCE_LIMIT;
+  const tooMany = items.length > ITEM_LIMIT;
+  $('startBtn').disabled = !items.length || tooMany || tooLong;
+  showError(tooLong ? 'Максимум 40 000 символов.' : tooMany ? 'Максимум 80 пунктов.' : '');
 }
 
 function handleSource(value) {
@@ -388,7 +393,7 @@ function openEditor() {
 
 $('sourceInput').addEventListener('input', (event) => handleSource(event.target.value));
 $('startBtn').addEventListener('click', beginGame);
-$('sampleBtn').addEventListener('click', () => { handleSource(SAMPLE); $('sourceInput').focus(); });
+$('sampleBtn').addEventListener('click', () => { handleSource(SAMPLE); $('sourceInput').blur(); });
 $('fileInput').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
