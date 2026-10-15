@@ -45,7 +45,6 @@ export function installPocketDeck({
   const favoriteSet=()=>new Set(getFavorites());
   const available=()=>getApps().filter(app=>!isArchived(app.slug));
   const sorted=()=>available().sort(byRelease);
-  const globallyPromoted=apps=>apps.sort((a,b)=>Number(globalPinned.has(b.slug))-Number(globalPinned.has(a.slug))||byRelease(a,b));
   const recent=()=>Object.entries(getRecents()).sort((a,b)=>b[1]-a[1]).map(([slug])=>available().find(app=>app.slug===slug)).filter(Boolean);
   const appBySlug=slug=>getApps().find(app=>app.slug===slug);
   const visibleTitle = {home:'Home',library:'Library',archive:'Archive'};
