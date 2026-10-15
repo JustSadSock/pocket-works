@@ -205,53 +205,58 @@ function aimArrow(c,from,to,color,time,dashed=true){
  for(let n=0;n<d-12;n+=11)path(c,[[from.x+vx*n,from.y+vy*n],[from.x+vx*Math.min(n+5,d-12),from.y+vy*Math.min(n+5,d-12)]],2,color);
  poly(c,[[to.x,to.y],[to.x-vx*11-vy*5,to.y-vy*11+vx*5],[to.x-vx*11+vy*5,to.y-vy*11-vx*5]],color);
 }
-export function renderBattle(ctx,s,view,ui,t){
- const screen=ctx.canvas;const vw=screen.width,vh=screen.height;
- ctx.clearRect(0,0,vw,vh);ctx.fillStyle='#314c48';ctx.fillRect(0,0,vw,vh);
- const k=vw/view.w;
- ctx.save();ctx.scale(k,k);ctx.translate(-view.x,-view.y);
+export function renderBattle(out,s,view,ui,t){
+ // A single native pixel grid for ground, buildings, soldiers and combat.
+ const vw=Math.max(1,Math.round(view.w/WORLD_SCALE)),vh=Math.max(1,Math.round(view.h/WORLD_SCALE));
+ if(stage.width!==vw)stage.width=vw;
+ if(stage.height!==vh)stage.height=vh;
+ const ctx=stage.getContext('2d',{alpha:false});ctx.imageSmoothingEnabled=false;
+ ctx.fillStyle='#314c48';ctx.fillRect(0,0,vw,vh);
+ const sites=s.sites.map(z=>({...z,x:z.x/WORLD_SCALE,y:z.y/WORLD_SCALE}));
+ const troops=s.squads.map(u=>({...u,x:u.x/WORLD_SCALE,y:u.y/WORLD_SCALE}));
+ const ordersAll=s.orders.map(o=>({...o,x:o.x/WORLD_SCALE,y:o.y/WORLD_SCALE}));
+ const events=s.events.map(e=>({...e,x:e.x/WORLD_SCALE,y:e.y/WORLD_SCALE}));
+ ctx.save();ctx.translate(-Math.round(view.x/WORLD_SCALE),-Math.round(view.y/WORLD_SCALE));
  ctx.drawImage(cv,0,0);
- for(const z of s.sites){
+ for(const z of sites){
   // Site catchment is only shown for active order or selected site, not blanket rings.
-  if(ui.site===z.id){circle(ctx,z.x,z.y,50,'#e2d5a331');ctx.strokeStyle='#eddfb2';ctx.lineWidth=2;ctx.beginPath();ctx.arc(z.x,z.y,50,0,TAU);ctx.stroke()}
+  if(ui.site===z.id){circle(ctx,z.x,z.y,50,'#e2d5a331');ring(ctx,z.x,z.y,50,'#eddfb2')}
   buildings(ctx,z,t);
  }
  keep(ctx,110,310,0,s.players[0].base,t);keep(ctx,850,310,1,s.players[1].base,t);
- const orders=s.orders.filter(o=>o.side===0);
+ const orders=ordersAll.filter(o=>o.side===0);
  for(const o of orders){
-  const groups=s.squads.filter(u=>u.captain===o.id),cx=groups.length?groups.reduce((n,u)=>n+u.x,0)/groups.length:110,cy=groups.length?groups.reduce((n,u)=>n+u.y,0)/groups.length:310;
+  const groups=troops.filter(u=>u.captain===o.id),cx=groups.length?groups.reduce((n,u)=>n+u.x,0)/groups.length:110,cy=groups.length?groups.reduce((n,u)=>n+u.y,0)/groups.length:310;
   aimArrow(ctx,{x:cx,y:cy},{x:o.x,y:o.y},o.id===ui.captain?'#f7d792':'#dbc892',t);
   const hover=Math.sin(t*2+o.id)*2;
   flag(ctx,o.x,o.y+hover,o.mode==='raid'?'#d87f66':o.mode==='defend'?'#7ebca0':'#f1c87f',t*3);
-  if(o.id===ui.captain){
-    ctx.font='bold 13px monospace';ctx.textAlign='center';ctx.fillStyle='#302e2a';ctx.fillRect(o.x-51,o.y-46,102,16);
-    ctx.fillStyle='#f4deb4';ctx.fillText(({capture:'ЗАНЯТЬ',defend:'ОБОРОНА',raid:'НАБЕГ'})[o.mode],o.x,o.y-33);
-  }
+
  }
  // Enemy standards become legible only when a friendly patrol can see
  // the destination. This makes enemy manoeuvres readable, not omniscient.
- for(const o of s.orders.filter(o=>o.side===1)){
+ for(const o of ordersAll.filter(o=>o.side===1)){
   if(!(o.changed>0))continue;
   const spot={x:o.x,y:o.y};
-  const sighted=s.squads.some(u=>u.side===0&&u.hp>0&&distance(u,spot)<130);
+  const sighted=troops.some(u=>u.side===0&&u.hp>0&&distance(u,spot)<130);
   if(!sighted)continue;
   const shade=o.mode==='raid'?'#bf8a80':o.mode==='defend'?'#86bba7':'#8bbfc5';
   flag(ctx,o.x+3,o.y,shade,t*3+o.id);
   pix(ctx,o.x-12,o.y+6,26,3,'#25373b');
   pix(ctx,o.x-10,o.y+7,22,1,'#9ec8cb');
  }
- for(const u of [...s.squads].sort((a,b)=>a.y-b.y))squad(ctx,u,t,u.captain===ui.captain&&u.side===0);
- for(const e of s.events){
+ for(const u of [...troops].sort((a,b)=>a.y-b.y))squad(ctx,u,t,u.captain===ui.captain&&u.side===0);
+ for(const e of events){
   const v=1-e.age/.75;
   if(e.type==='impact'){
    pix(ctx,e.x-3,e.y-18-(1-v)*9,6,7,e.side===0?'#ffe6a6':'#b6e4eb');
    pix(ctx,e.x-8,e.y-12-(1-v)*8,3,3,'#f6d3a1');
-  }else if(e.type==='capture'){ctx.strokeStyle=e.side===0?'#f3dc94':'#a5d7e2';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,54+(1-v)*26,0,TAU);ctx.stroke()}
+  }else if(e.type==='capture'){ring(ctx,e.x,e.y,54+(1-v)*26,e.side===0?'#f3dc94':'#a5d7e2')}
   else if(e.type==='fall'){pix(ctx,e.x-8,e.y,14,4,'#a76353')}
  }
  ctx.restore();
- // vignette edge in low resolution
- const grd=ctx.createLinearGradient(0,0,0,vh);grd.addColorStop(0,'#12292b48');grd.addColorStop(.12,'#00000000');grd.addColorStop(.87,'#00000000');grd.addColorStop(1,'#101e2266');ctx.fillStyle=grd;ctx.fillRect(0,0,vw,vh);
+ out.imageSmoothingEnabled=false;
+ out.fillStyle='#263d3a';out.fillRect(0,0,out.canvas.width,out.canvas.height);
+ out.drawImage(stage,0,0,out.canvas.width,out.canvas.height);
 }
 export function renderMinimap(canvas,s,view){
  const c=canvas.getContext('2d');canvas.width=168;canvas.height=108;c.imageSmoothingEnabled=false;
@@ -263,4 +268,4 @@ export function renderMinimap(canvas,s,view){
  for(const u of s.squads){c.fillStyle=PALETTES[u.side];c.fillRect(u.x/W*168-1,u.y/H*108-1,2,2)}
  c.strokeStyle='#f9eac5';c.lineWidth=1;c.strokeRect(view.x/W*168,view.y/H*108,view.w/W*168,view.h/H*108);
 }
-export function nearestSite(s,x,y,max=58){let best=null,b=max;for(const site of s.sites){const d=Math.hypot(site.x-x,site.y-y);if(d<b){best=site;b=d}}return best}
+export function nearestSite(s,x,y,max=58*WORLD_SCALE){let best=null,b=max;for(const site of s.sites){const d=Math.hypot(site.x-x,site.y-y);if(d<b){best=site;b=d}}return best}
