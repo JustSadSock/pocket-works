@@ -125,6 +125,12 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/finale-visual.mjs"
+    },
+    {
+      "id": "finale-live-flow",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/real-flow.mjs"
     }
   ]
 }
