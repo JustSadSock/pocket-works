@@ -197,7 +197,22 @@ function nearbyHomes(s,x,y,r){
  return result;
 }
 const liveMembers=(s,h)=>h.members.map(id=>personById(s,id)).filter(p=>p?.alive);
-const activeAdults=(s,h)=>liveMembers(s,h).filter(p=>p.age>=15&&p.health>25&&(!p.travel||p.travel.end<=s.day));
+// Physical work can be reduced by illness and malnutrition without creating
+// an artificial all-or-nothing cliff at health 25. This is a full-equivalent
+// workday multiplier, not extra hands, free labour, or healing.
+export function workCapacity(p,kind='farm'){
+ if(!p?.alive||p.age<15||!Number.isFinite(p.health))return 0;
+ const healthy=75;
+ const base=clamp((p.health-5)/(healthy-5),0,1);
+ // Light household care remains possible at low health. Ploughing, woods
+ // and building are more demanding, but all contributions approach zero
+ // continuously as illness becomes extreme.
+ const power=kind==='garden'||kind==='herd'?0.75:
+  kind==='farm'?1.12:kind==='wood'?1.22:kind==='build'?1.35:1.0;
+ return Math.pow(base,power);
+}
+const activeAdults=(s,h)=>liveMembers(s,h).filter(p=>workCapacity(p,'farm')>0&&(!p.travel||p.travel.end<=s.day));
+const labourTotal=(people,kind)=>people.reduce((n,p)=>n+workCapacity(p,kind),0);
 const foodNeed=(s,h)=>liveMembers(s,h).reduce((v,p)=>v+(p.age<4?.35:p.age<10?.55:p.age<15?.77:1)*.68,0);
 // Calibrated biological parameters are explicitly inspectable; this is a grain-only
 // subsistence proxy, not a reconstruction of the medieval diet or its institutions.
@@ -245,7 +260,7 @@ function maintainStorage(s,h){
  if(loss>0){h.grain=round(h.grain-loss);s.stats.spoiled=round((s.stats.spoiled||0)+loss);earn(s,h,'spoilKg',loss);}
  const builders=activeAdults(s,h).filter(p=>p.job==='home');
  if(h.storeProject){
-  if(builders.length){const worker=builders[0];worker.job='build';recordWork(worker,'build');h.storeProject.workDays++;
+  if(builders.length){const worker=builders[0];worker.job='build';recordWork(worker,'build');h.storeProject.workDays+=workCapacity(worker,'build');
    if(h.storeProject.workDays>=16){h.storeLevel=(h.storeLevel||0)+1;h.storeProject=null;
     event(s,'storage',`Семья ${familyName(s,h)} завершила зернохранилище`,'Ранее оплаченная древесина и шестнадцать рабочих дней',[h.id,worker.id],{capacityKg:storageCapacity(h,s)});
    }
@@ -349,7 +364,12 @@ function newFarmYear(s,h){
  if(previous?.sownArea>0&&previous.harvestedArea<previous.sownArea*.6)event(s,'crop-loss',`Поля семьи ${familyName(s,h)} остались неубранными`,'Не хватило рабочих дней до зимы',[h.id],{areaHa:round(previous.sownArea-previous.harvestedArea)});
  return crop;
 }
-function laborDay(p,kind,boost){p.job=kind==='farm'?'farm':kind;p.skill[kind]=roundSkill(p.skill[kind]+boost*p.aptitude);recordWork(p,kind);}
+function laborDay(p,kind,boost){
+ const effort=workCapacity(p,kind);
+ p.job=kind==='farm'?'farm':kind;
+ p.skill[kind]=roundSkill(p.skill[kind]+boost*p.aptitude*effort);
+ recordWork(p,kind);
+}
 function cropUpdate(s,h,adults,guests=[]){
  const doy=s.day%365,crop=newFarmYear(s,h);
  // Historical/hand-authored midseason save records may predate crop-specific
@@ -371,9 +391,9 @@ function cropUpdate(s,h,adults,guests=[]){
  const walking=walkingSteps(s,h,workPos),workFraction=workdayFraction(walking);
  if(!workFraction)return;
  const arriving=workers.filter(p=>p.job==='home'||p.job==='hired');
- const productiveWorkers=arriving.length*workFraction;
+ const productiveWorkers=labourTotal(arriving,'farm')*workFraction;
  const markWork=()=>{for(const p of arriving){p.x=workPos.x;p.y=workPos.y;}
-  earn(s,h,'travelHours',round(arriving.length*(1-workFraction)*8.5));};
+  earn(s,h,'travelHours',round(labourTotal(arriving,'farm')*(1-workFraction)*8.5));};
  if(doy>=65&&doy<=145&&crop.sownArea<availableArea-.001){
   const draftTeams=Math.floor((h.draftOxen??h.cattle??0)/2);const traction=draftTeams>0&&h.livestockHealth>35?1+Math.min(.36,draftTeams*.18):1;const kind=cropAt(crop,crop.sownArea),rate=CROP_KINDS[kind].seedRate;
   const step=Math.min(availableArea-crop.sownArea,productiveWorkers*.09*traction,(h[kind]||0)/rate,Math.max(0,cropLimit(crop,kind)-crop.sownArea));
@@ -382,18 +402,19 @@ function cropUpdate(s,h,adults,guests=[]){
    else s.stats[kind+'Seeded']=round((s.stats[kind+'Seeded']||0)+seed);
    crop.cropSeeds[kind]=round((crop.cropSeeds[kind]||0)+seed);
    if(kind!=='grain')earn(s,h,kind==='oats'?'oatsSeedKg':'pulsesSeedKg',seed);
-   crop.sownArea=roundSkill(crop.sownArea+step);crop.seedKg=round(crop.seedKg+seed);crop.labourSow+=workers.length;earn(s,h,'seedKg',seed);
+   crop.sownArea=roundSkill(crop.sownArea+step);crop.seedKg=round(crop.seedKg+seed);crop.labourSow+=productiveWorkers;earn(s,h,'seedKg',seed);
    for(const p of arriving)laborDay(p,'farm',.003);markWork();
    if(crop.sownArea>=availableArea-.001||doy===145)event(s,'sowing',`Семья ${familyName(s,h)} засеяла ${crop.sownArea.toFixed(2)} га`,'Посев потребовал семян и рабочих дней',[h.id],{seedKg:crop.seedKg,workDays:crop.labourSow});
   }
  }
- if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const p of arriving)laborDay(p,'farm',.002);markWork();crop.tended+=productiveWorkers;crop.labourTend+=arriving.length;}
+ if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const p of arriving)laborDay(p,'farm',.002);markWork();crop.tended+=productiveWorkers;crop.labourTend+=productiveWorkers;}
  if(doy>=238&&doy<=295&&crop.harvestedArea<crop.sownArea-.001){
   const kind=cropAt(crop,crop.harvestedArea);
   const step=Math.min(crop.sownArea-crop.harvestedArea,productiveWorkers*.065,Math.max(0,cropLimit(crop,kind)-crop.harvestedArea));
   if(step>.001){
    const soil=crop.active.reduce((v,i)=>v+s.soil[i],0)/crop.active.length;
-   const avgSkill=workers.reduce((v,p)=>v+p.skill.farm,0)/workers.length;
+   const labour=labourTotal(arriving,'farm')||1;
+   const avgSkill=arriving.reduce((v,p)=>v+p.skill.farm*workCapacity(p,'farm'),0)/labour;
    const weather=s.weather;
    const tendingFactor=clamp(.57+crop.tended/Math.max(2,crop.sownArea*32)*.43,.57,1.04);
    const output=round(step*CROP_KINDS[kind].yieldRate*tuning(s,'yield')*soil/82*weather*tendingFactor*(1+Math.min(.25,avgSkill*.07)));
@@ -417,7 +438,7 @@ function cropUpdate(s,h,adults,guests=[]){
      earn(s,h,'rentPaidKg',rent);earn(s,landlord,'rentReceivedKg',rent);
     }
    }
-   crop.harvestedArea=roundSkill(crop.harvestedArea+step);crop.yieldKg=round(crop.yieldKg+output);earn(s,h,'harvestKg',output);crop.labourHarvest+=workers.length;
+   crop.harvestedArea=roundSkill(crop.harvestedArea+step);crop.yieldKg=round(crop.yieldKg+output);earn(s,h,'harvestKg',output);crop.labourHarvest+=productiveWorkers;
    for(const p of arriving)laborDay(p,'farm',.004);markWork();
    if(crop.harvestedArea>=crop.sownArea-.001||doy===295){
      h.lastHarvest={day:s.day,kg:crop.yieldKg,breakdown:{...crop.cropYields},ha:round(crop.harvestedArea),workDays:crop.labourHarvest+crop.labourSow+crop.labourTend};
@@ -495,16 +516,20 @@ function spendFood(s,h){
 function tendGarden(s,h,adults){
  const day=s.day%365,year=Math.floor((s.day-1)/365);
  if(!h.gardenYear||h.gardenYear.year!==year)h.gardenYear={year,prepared:0,tended:0,harvested:false};
- const g=h.gardenYear,worker=adults.find(p=>p.job==='home'&&p.health>30);
+ const g=h.gardenYear,worker=adults.find(p=>p.job==='home'&&workCapacity(p,'garden')>0);
  if(!worker)return;
+ const effort=workCapacity(worker,'garden');
  if(day>=67&&day<=155&&g.prepared<6&&h.grain>foodNeed(s,h)*12){
-  g.prepared++;worker.job='garden';recordWork(worker,'garden');return;
+  g.prepared=Math.min(6,roundSkill(g.prepared+effort));worker.job='garden';recordWork(worker,'garden');return;
  }
  if(day>=155&&day<=245&&g.prepared>=6&&g.tended<9){
-  g.tended++;worker.job='garden';recordWork(worker,'garden');return;
+  g.tended=Math.min(9,roundSkill(g.tended+effort));worker.job='garden';recordWork(worker,'garden');return;
  }
  if(day>=245&&day<=295&&g.prepared>=6&&!g.harvested){
-  worker.job='garden';recordWork(worker,'garden');g.harvested=true;
+  worker.job='garden';recordWork(worker,'garden');
+  g.harvestProgress=roundSkill((g.harvestProgress||0)+effort);
+  if(g.harvestProgress<1)return;
+  g.harvested=true;
   const qty=round(CALIBRATION.gardenEquivalentKgPerYear*((s.soil[idx(h.x,h.y)]||60)/78)*Math.min(1,g.tended/9)*s.weather*tuning(s,'yield'));
   h.garden=round((h.garden||0)+qty);s.stats.gardenProduced=round((s.stats.gardenProduced||0)+qty);
   earn(s,h,'gardenHarvestKg',qty);
@@ -522,7 +547,10 @@ function spoilFreshFood(s,h){
 function familyName(s,h){const p=personById(s,h.members[0]);return p?p.name:'Неизвестная';}
 function recordWork(p,kind,days=1){
  p.workDays ??={farm:0,wood:0,haul:0,build:0};
- p.workDays[kind]=(p.workDays[kind]||0)+days;
+ // A person can be assigned only once to a work type in a simulated day.
+ // These are effective labour-day equivalents; no rounding is performed
+ // per shift, avoiding phantom productivity from fractional effort.
+ p.workDays[kind]=(p.workDays[kind]||0)+days*workCapacity(p,kind);
 }
 function recordLife(p,day,type,text){p.lifeLog??=[];p.lifeLog.push({day,type,text});if(p.lifeLog.length>240)p.lifeLog.splice(1,p.lifeLog.length-240);}
 // Farming is now cropUpdate: labour, seed, weather and rotation are accounted daily.
@@ -531,10 +559,13 @@ function gatherWood(s,h,adults){
  let target=-1,best=999;for(let y=Math.max(1,h.y-11);y<Math.min(SIZE-1,h.y+12);y++)for(let x=Math.max(1,h.x-11);x<Math.min(SIZE-1,h.x+12);x++){
  const i=idx(x,y),d=Math.abs(x-h.x)+Math.abs(y-h.y);if(s.forest[i]>30&&d<best){best=d;target=i;}}
  if(target<0){h.nextWoodSearch=s.day+21;return;}h.nextWoodSearch=0;
- const proficiency=adults.reduce((v,p)=>v+p.skill.wood,0)/adults.length;
- const amount=Math.min(s.forest[target],round((adults.length*1.8+2)*(1+Math.min(.7,proficiency*.22))/(1+best*.018)));
+ const labour=labourTotal(adults,'wood');
+ if(labour<=0)return;
+ const proficiency=adults.reduce((v,p)=>v+p.skill.wood*workCapacity(p,'wood'),0)/labour;
+ const amount=Math.min(s.forest[target],round((labour*1.8+2*Math.min(1,labour))*
+  (1+Math.min(.7,proficiency*.22))/(1+best*.018)));
  s.forest[target]=round(s.forest[target]-amount);h.wood=round(h.wood+amount);s.stats.produced=round(s.stats.produced+amount);earn(s,h,'woodKg',amount);
- for(const p of adults){p.skill.wood=roundSkill(p.skill.wood+.006*p.aptitude);p.job='wood';p.x=target%SIZE;p.y=Math.floor(target/SIZE);recordWork(p,'wood');}
+ for(const p of adults){p.skill.wood=roundSkill(p.skill.wood+.006*p.aptitude*workCapacity(p,'wood'));p.job='wood';p.x=target%SIZE;p.y=Math.floor(target/SIZE);recordWork(p,'wood');}
  s.traffic[target]=Math.min(255,s.traffic[target]+3);
 }
 function growForest(s){
@@ -572,7 +603,7 @@ function tendCattle(s,h,adults){
  const sheep=h.sheep||0;
  if(day>=115&&day<=280&&day%4===0&&h.fodder<(h.cattle+sheep*.27)*1100){
   const worker=adults.find(p=>p.job==='home');
-  if(worker){const hay=takeForage(s,h,145);
+  if(worker){const hay=takeForage(s,h,145*workCapacity(worker,'herd'));
    if(hay.taken){h.fodder=round(h.fodder+hay.taken);worker.job='herd';recordWork(worker,'herd');
     if(hay.spot>=0){worker.x=hay.spot%SIZE;worker.y=Math.floor(hay.spot/SIZE);}
    }
@@ -593,10 +624,10 @@ function tendCattle(s,h,adults){
   s.stats.forageConsumed=round((s.stats.forageConsumed||0)+eaten);
   // Approximate lactating portion of herd: no well-fed animals, no milk.
   if(h.livestockHealth>=60&&fraction>=.75){
-   const milker=adults.find(p=>p.job==='home'&&p.health>25);
+   const milker=adults.find(p=>p.job==='home'&&workCapacity(p,'herd')>0);
    if(milker){
     milker.job='herd';recordWork(milker,'herd');
-    const dairy=round((h.dairyCows??h.cattle)*CALIBRATION.dairyEquivalentPerCowWeek*Math.min(1,fraction));
+    const dairy=round((h.dairyCows??h.cattle)*CALIBRATION.dairyEquivalentPerCowWeek*Math.min(1,fraction)*workCapacity(milker,'herd'));
     h.dairy=round((h.dairy||0)+dairy);s.stats.dairyProduced=round((s.stats.dairyProduced||0)+dairy);
    }
   }
@@ -614,8 +645,8 @@ function tendCattle(s,h,adults){
   event(s,'cattle-birth',`У семьи ${familyName(s,h)} появился телёнок`,'Здоровое стадо и доступное питание',[h.id],{cattle:h.cattle});
  }
  if(day===173&&h.sheep>0&&h.woolYear!==Math.floor((s.day-1)/365)){
-  const shearer=adults.find(p=>p.job==='home'&&p.health>30);
-  if(shearer){const wool=round(h.sheep*.8*clamp(h.livestockHealth/85,.25,1));
+  const shearer=adults.find(p=>p.job==='home'&&workCapacity(p,'herd')>0);
+  if(shearer){const wool=round(h.sheep*.8*clamp(h.livestockHealth/85,.25,1)*workCapacity(shearer,'herd'));
    h.wool=round((h.wool||0)+wool);s.stats.woolProduced=round((s.stats.woolProduced||0)+wool);
    h.woolYear=Math.floor((s.day-1)/365);shearer.job='herd';recordWork(shearer,'herd');
    earn(s,h,'woolShearedKg',wool);
@@ -702,7 +733,7 @@ function reclaimProject(s,h,adults){
    [h.id],{cell:best,workDays:12});
  }
  const p=adults.find(p=>p.job==='home');if(!p)return;
- p.job='build';recordWork(p,'build');h.landProject.days++;
+ p.job='build';recordWork(p,'build');h.landProject.days+=workCapacity(p,'build');
  if(h.landProject.days>=12){
   const i=h.landProject.cell;
   if(s.usage[i]===0&&s.terrain[i]===0){
@@ -894,7 +925,7 @@ function planConstruction(s,h,adults){
  // Houses require a continuous investment of labour, rather than materialising
  // in a single tick. Timber is reserved at the start and conserved in the audit.
  if(h.buildProject){
-  if(builders.length){builders[0].job='build';recordWork(builders[0],'build');h.buildProject.days++;}
+  if(builders.length){builders[0].job='build';recordWork(builders[0],'build');h.buildProject.days+=workCapacity(builders[0],'build');}
   if(h.buildProject.days<50)return;
   const c=s.communities.find(c=>c.id===h.communityId),site=h.buildProject.site;
   const available=site&&!s.usage[idx(site.x,site.y)]&&s.terrain[idx(site.x,site.y)]===0;
@@ -1681,10 +1712,11 @@ function finishManorialService(s){
  for(const p of s.people)if(p.manorDutyDay===s.day){
   const tenant=livingHouse(s,p.manorDutySource),a=tenant?.manorAgreement;
   if(a&&p.job==='farm'){
-   a.served++;s.stats.manorServiceDays=(s.stats.manorServiceDays||0)+1;
-   earn(s,tenant,'manorServiceDays',1);
+   const worked=workCapacity(p,'farm');
+   a.served+=worked;s.stats.manorServiceDays=(s.stats.manorServiceDays||0)+worked;
+   earn(s,tenant,'manorServiceDays',worked);
    recordLife(p,s.day,'manor-work','Отработал день на сеньориальной пашне');
-   if(a.served===a.dueDays||a.served===1)
+   if(a.served>=a.dueDays||a.served<=1)
     event(s,'manor-service',`Семья ${familyName(s,tenant)} отработала день повинности`,
      'Работа действительно выполнена на пашне поместья',
      [tenant.id,a.manorId,p.id],{year:a.year+1,served:a.served,due:a.dueDays});
@@ -1720,7 +1752,7 @@ function seasonalLaborMarket(s){
  const jobs=new Map();const shortage=[];
  for(const h of s.households){
   const live=liveMembers(s,h);if(!live.length)continue;
-  const workers=live.filter(p=>p.age>=15&&p.health>25&&(!p.travel||p.travel.end<=s.day)&&p.job==='home');
+  const workers=live.filter(p=>p.age>=15&&workCapacity(p,'farm')>0.35&&(!p.travel||p.travel.end<=s.day)&&p.job==='home');
   jobs.set(h.id,workers);
   const affordableInKind=h.grain>foodProtection(s,h)+CALIBRATION.grainDailyWageKg*6;
   const demandForHands=h.fields.length>=9&&workers.length<(h.tenure==='demesne'?6:2)&&
