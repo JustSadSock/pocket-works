@@ -477,3 +477,11 @@ Mobile home fits within the visible app viewport without forcing vertical scroll
 - A medal can be selected to reveal its *real* server condition and the exact Pocket ID cosmetic reward. Desktop arranges the cabinet as seven physical medals with a large archival plate; portrait phones show two compact rows and a selected detail panel, without document scrolling.
 - Settings use working, mutually exclusive Brushes / Preferences tabs. Brushes offer all five authored cursors, an interactive pointer-driven canvas, resettable sample strokes and transient brush selection until Save. Volume and appearance preview live but Cancel reverts; saved preferences are unchanged in behavior.
 - Visual QA: `node apps/zamazka/qa/atelier-visual.mjs`; functional assertions `qa/atelier-state.mjs` are included in existing `finale-state` smoke batch; ordinary real-flow also checks saved/cancelled preferences and actual test strokes.
+
+## 1.39.3 — Screen debug gallery
+
+Press the physical Backquote key (left of 1; also Russian ё / English \` / ~) to toggle the in-app debug gallery. Its left-hand grouped menu lists all 25 representative game screens, including create/join/errors, organizer/guest lobby, five round phases, votes, reveal, results, collection, settings and solo screens. Select any entry for immediate display without a match. Collapse the navigator to inspect the full design; click the Close control or press the same key again to return to the actual uninterrupted session. Debug is desktop-keyboard-first; the panel itself remains usable with touch on mobile after opening with a connected keyboard.
+
+**Isolation:** each selected scene renders real game markup in a separate iframe loaded with a special internal preview query. The preview branch does not attach PocketNet, start archive/cloud hydration, autosave drafts, send votes, update achievements, or run a timer loop. Drawing shows the real editor layout without constructing a persistent Editor. Navigation/control clicks that would mutate state are intercepted; comparison sliders and brush trial remain interactive. Closing destroys the iframe. Nothing in the parent document or the active room is replaced.
+
+Browser QA: `node apps/zamazka/qa/debug-gallery-visual.mjs` verifies all named stages, desktop and mobile switching, toggle from iframe, isolation and screenshots.

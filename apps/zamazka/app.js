@@ -22,8 +22,11 @@ import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPaintingPaced} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
-installMobileRuntime();
-createWorkshopMode({appName:'ЗАМАЗКА',version:'1.38.2',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
+const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
+const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
+if(!IS_DEBUG_FRAME)installMobileRuntime();
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.38.2',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -50,7 +53,7 @@ const museumAudio=new MuseumAudio(beepEnabled);
 const SOUND_VOLUME_KEY=NS+'sound-volume';
 let soundVolume=Math.max(0,Math.min(100,Number(localStorage.getItem(SOUND_VOLUME_KEY)??55)||0));
 museumAudio.setVolume(soundVolume/100);
-const sound=(event='press',gesture=false)=>museumAudio.play(event,gesture);
+const sound=(event='press',gesture=false)=>IS_DEBUG_FRAME?undefined:museumAudio.play(event,gesture);
 let personalEmblem=getSavedEmblem();
 let zamazkaCloud=null;
 let pocketIdentity=null;
@@ -289,9 +292,9 @@ function home(skipLeave=false){
  // Unconfirmed uploads remain on this device and can resume upon rejoining their room.
  invitedRoom='';
  if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
- clearTabGuest();
+ if(!IS_DEBUG_FRAME)clearTabGuest();
  if(net){if(!skipLeave)try{net.leaveRoom()}catch{}net.close();net=null}
- view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;persistVote();connectionStatus('off');
+ view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;if(!IS_DEBUG_FRAME)persistVote();connectionStatus('off');
  change('<section class="museum-home">'+
   
   '<div class="museum-headline"><h1>Подделай<br><em>шедевр.</em></h1></div>'+
@@ -548,6 +551,7 @@ function drawing(local=false){
   if(!ass){change('<section class="phase-page">'+head('ЭКСПОЗИЦИЯ','Матч уже идёт',v.deadline)+'<div class="phase-body"><div class="notice">Ты подключился после начала. Доступ к реставрации откроется в новой комнате после завершения матча.</div><button class="btn ghost wide" data-action="leave">Выйти из комнаты</button></div></section>','waiting');return}
   if(!local&&v.done?.includes(me?.id)){waiting();return}
   change('<section class="restore"><div class="rest-head">'+head('РАУНД '+v.round+' · РЕСТАВРАЦИЯ',ARTS[ass.art].title,v.deadline,artFactsHtml(ass.art),v.drawingSeconds===0)+'</div><div class="work-area"><div class="work-stage"><div class="viewport" data-gesture-surface><canvas id="paintCanvas" width="600" height="450" aria-label="Холст для дорисовывания"></canvas><div class="brush-cursor" id="brushCursor" aria-hidden="true" hidden></div><div class="picker-preview" id="pickerPreview" aria-hidden="true" hidden></div></div></div><button type="button" id="precisionArm" class="precision-arm" data-gesture-surface aria-label="Удерживай кнопку, чтобы рисовать вторым пальцем" aria-pressed="false" hidden><span class="precision-arm-circle" aria-hidden="true"></span><strong>УДЕРЖИВАЙ</strong></button><div class="precision-help" id="precisionHelp" aria-live="polite" role="status"></div><button type="button" id="precisionSide" class="precision-side" data-cmd="handedness" aria-label="Переместить кнопку рисования на другую сторону" hidden><svg class="draw-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 5-4 4 4 4M4 9h15m-3 10 4-4-4-4M20 15H5"/></svg></button><div class="work-tip" id="drawingTip">Рисуй в повреждённой части</div></div><div class="work-tools">'+toolbar(local)+'<div class="work-foot"><div class="work-save-info"><div class="quiet" id="strokeCount">Мазков: 0</div><div class="quiet" id="draftStatus" data-state="idle" role="status">Автосохранение</div></div><button class="btn primary" data-action="submit">Сдать работу</button></div></div></section>','drawing');
+  if(IS_DEBUG_FRAME){void renderArtwork(screen.querySelector('#paintCanvas'),ass.art,ass.variation,ass.strokes||[],true);return}
   editor=new Editor(screen,{id:ass.art,variation:ass.variation,round:v.round,onPersistenceError:()=>notify('Не удалось сохранить черновик: проверь место в браузере.'),onPersistenceStatus:state=>{if(practice||!net){draftIndicator(state==='local'?'На устройстве':state==='error'?'Не удалось сохранить':'Копия на устройстве')}},onSound:event=>sound(event,true),onChange:n=>{const t=document.querySelector('#strokeCount');if(t)t.textContent=n<0?'Предел рисунка · отмените мазок':'Мазков: '+n;if(n>=0)queueDraft()}});
   if(!local&&Array.isArray(ass.draft))editor.adoptDraft(ass.draft);
   editor.updateSizeSample();
@@ -1289,14 +1293,14 @@ screen.addEventListener('wheel',e=>{if(page!=='home'||!e.target.closest('.museum
 document.addEventListener('keydown',e=>{if(page==='home'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();shiftMuseum(e.key==='ArrowRight'?1:-1)}});
 screen.addEventListener('change',e=>{if(e.target.id==='rounds')roundsChoice=Number(e.target.value)||3;else if(e.target.id==='drawingSeconds')drawingSecondsChoice=normalizedDuration(e.target.value)});
 screen.addEventListener('input',e=>{if(e.target.id==='unveilRange'){const stage=screen.querySelector('#unveilStage');if(stage){stage.style.transition='none';stage.style.setProperty('--split',e.target.value+'%')}}});
-setInterval(tick,350);
-setInterval(()=>{
+if(!IS_DEBUG_FRAME)setInterval(tick,350);
+if(!IS_DEBUG_FRAME)setInterval(()=>{
  if(page!=='drawing')return;
  if(pendingSubmit?.room===roomId&&pendingSubmit.round===view?.round)attemptSubmission();
  else backupDraft();
 },3600);
-document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden)tick()});
-window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
+if(!IS_DEBUG_FRAME)document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden)tick()});
+if(!IS_DEBUG_FRAME)window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
 async function refreshPocketBadge(){
  const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
  const initialIdentityKnown=pocketIdentity!==null;
@@ -1318,6 +1322,109 @@ async function refreshPocketBadge(){
  }
 
 }
+// The debug gallery previews the real stage renderers in a separate iframe.
+// No PocketNet connection, cloud sync, practice writes, score submission or
+// archive mutation are started in this child document.
+function renderDebugScreen(requested){
+ const id=debugId(requested),ids=PLAYABLE_IDS.slice(0,5);
+ const sample=debugMatch(ids);
+ view=sample;roomId='debug-room';roomModuleVersion='v15';
+ me={id:sample.participants[0].id,name:sample.participants[0].name};
+ const gallery=sample.gallery;
+ switch(id){
+  case 'home':
+   home(true);break;
+  case 'create':setup('create');break;
+  case 'join':setup('join','', 'HALL-2841');break;
+  case 'join-error':setup('join','Комната не найдена. Проверь код и попробуй ещё раз.','HALL-2841');break;
+  case 'connecting':
+   change(connectionMarkup({mode:'join'}),'connecting');
+   setConnectionStep(screen,2,'Соединяемся с PocketNet…');break;
+  case 'lobby-host':
+   sample.phase='lobby';lobby();break;
+  case 'lobby-guest':
+   sample.phase='lobby';sample.host=sample.participants[1].id;lobby();break;
+  case 'preparing':
+   sample.phase='preparing';
+   change(preparingMarkup({round:sample.round,total:sample.participants.length,ready:2}),'preparing');
+   updateArtLoad(screen,3,5,[0,2,3]);
+   {const node=screen.querySelector('#artPreparingStatus');if(node)node.textContent='Загружено 3 из 5 оригиналов…'}
+   break;
+  case 'preview':sample.phase='preview';preview();break;
+  case 'drawing':sample.phase='drawing';sample.done=[];drawing();break;
+  case 'waiting':sample.phase='drawing';waiting();break;
+  case 'voting':
+  case 'voting-wait':
+  case 'voting-author':
+   sample.phase='voting';
+   sample.author=id==='voting-author'?sample.participants[0]:sample.participants[1];
+   sample.candidate=gallery.find(g=>g.id===sample.author.id)||gallery[0];
+   sample.voted=id==='voting-wait'?[sample.participants[0].id]:[];
+   vote();break;
+  case 'verdict':sample.phase='verdict';verdict();break;
+  case 'reveal':sample.phase='reveal';reveal();break;
+  case 'round-review':sample.phase='round-review';roundReview();break;
+  case 'results':sample.phase='results';results();break;
+  case 'awards':
+  case 'awards-guest':
+   change(cabinetMarkup(zamazkaAchievements,
+    id==='awards'?zamazkaAchievements.slice(0,3).map(a=>a.id):[],
+    {status:id==='awards'?'ready':'guest',guest:id==='awards-guest'}),'achievements');
+   break;
+  case 'collection':
+   saved=[
+    {art:ids[0],variation:1,strokes:[],time:Date.now()},
+    {art:ids[1],variation:2,strokes:[],time:Date.now()-86400000}
+   ];
+   collection();break;
+  case 'settings-brushes':
+  case 'settings-preferences':
+   home(true);
+   settings();
+   if(id==='settings-preferences')setSettingsTab(dialog.querySelector('[data-settings-view]'),'preferences');
+   break;
+  case 'solo-settings':
+   home(true);practiceSettings();break;
+  case 'solo-reveal':
+   practice={...sample,phase:'reveal',mine:{...sample.mine},strokes:[],deadline:0};
+   reveal(true);break;
+ }
+ const clock=screen.querySelector('#clock');if(clock&&clock.textContent==='…')clock.textContent='2:40';
+ screen.dataset.debugPreview=id;
+ document.body.classList.add('zam-debug-child');
+ document.querySelector('.top .return')?.setAttribute('tabindex','-1');
+ const touchCancel=e=>{if(e.target.closest('input[type="range"]'))return;
+   if(e.target.closest('[data-settings-tab],[data-brush-choice],[data-setting-clear-preview],#settingStrokeCanvas'))return;
+   e.preventDefault();e.stopImmediatePropagation();
+ };
+ // Prevent sample action buttons from sending packets, saving settings,
+ // clearing archives or navigating. The slider and brush trial remain usable.
+ screen.addEventListener('click',touchCancel,true);
+ dialog.addEventListener('click',e=>{
+  if(e.target.closest('#modalActions,.dialog-box>h2')){e.preventDefault();e.stopImmediatePropagation()}
+ },true);
+ document.addEventListener('keydown',e=>{
+  if(isDebugKey(e)||e.key==='Escape'){
+   e.preventDefault();e.stopImmediatePropagation();
+   window.parent.postMessage({type:'zamazka-debug-toggle'},location.origin);
+  }
+ },true);
+ window.parent.postMessage({type:'zamazka-debug-ready',scene:id},location.origin);
+}
+const debugGallery = IS_DEBUG_FRAME?null:mountDebugGallery();
+if(!IS_DEBUG_FRAME){
+ document.addEventListener('keydown',event=>{
+  if(!isDebugKey(event)||event.repeat||event.altKey||event.ctrlKey||event.metaKey)return;
+  const target=event.target;
+  if(target?.closest?.('input,textarea,select,[contenteditable="true"]'))return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  debugGallery.toggle();
+ },true);
+}
+if(IS_DEBUG_FRAME){
+ renderDebugScreen(DEBUG_SCENE);
+}else{
 zamazkaCloud=createZamazkaCloud({
  getArchive:()=>saved,
  setArchive(items){
@@ -1372,3 +1479,5 @@ void refreshPocketBadge();
 window.addEventListener('pageshow',()=>void refreshPocketBadge());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshPocketBadge()});
 // Shared update manager owns service worker registration and activation.
+
+}
