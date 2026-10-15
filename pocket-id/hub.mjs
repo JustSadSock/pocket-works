@@ -64,6 +64,9 @@ export class PocketIdentity {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS global_archive (
       slug TEXT PRIMARY KEY, changed_at INTEGER NOT NULL, changed_by TEXT NOT NULL
     )`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS global_pins (
+      slug TEXT PRIMARY KEY, changed_at INTEGER NOT NULL, changed_by TEXT NOT NULL
+    )`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS account_entitlements (
       account_id TEXT NOT NULL, entitlement TEXT NOT NULL, granted_at INTEGER NOT NULL,
       PRIMARY KEY(account_id,entitlement)
@@ -96,6 +99,7 @@ export class PocketIdentity {
   globalArchiveSnapshot(canManage=false) {
     return {
       archived:this.query('SELECT slug FROM global_archive ORDER BY slug').toArray().map(row=>row.slug),
+      pinned:this.query('SELECT slug FROM global_pins ORDER BY changed_at DESC, slug').toArray().map(row=>row.slug),
       canManage
     };
   }
@@ -189,6 +193,26 @@ export class PocketIdentity {
               ON CONFLICT(slug) DO UPDATE SET changed_at=excluded.changed_at,changed_by=excluded.changed_by`,
               slug,changedAt,user.id);
             else this.query('DELETE FROM global_archive WHERE slug=?',slug);
+          }
+        });
+        return response(this.globalArchiveSnapshot(true));
+      }
+      if(path==='/pocket-id/global-pins'&&request.method==='POST') {
+        const user=await this.session(request);
+        if(!user) return response({error:'sign_in_required'},401);
+        if(!this.canManageGlobalArchive(user)) return response({error:'admin_required'},403);
+        const body=await readBody(request,16384);
+        const slugs=Array.isArray(body?.slugs)?body.slugs:[body?.slug];
+        if(typeof body?.pinned!=='boolean'||!slugs.length||slugs.length>100||
+           slugs.some(slug=>typeof slug!=='string'||!/^[a-z0-9-]{1,96}$/.test(slug)))
+          return response({error:'invalid_pin_action'},400);
+        const unique=[...new Set(slugs)],changedAt=Date.now();
+        this.ctx.storage.transactionSync(()=>{
+          for(const slug of unique) {
+            if(body.pinned) this.query(`INSERT INTO global_pins(slug,changed_at,changed_by) VALUES(?,?,?)
+              ON CONFLICT(slug) DO UPDATE SET changed_at=excluded.changed_at,changed_by=excluded.changed_by`,
+              slug,changedAt,user.id);
+            else this.query('DELETE FROM global_pins WHERE slug=?',slug);
           }
         });
         return response(this.globalArchiveSnapshot(true));
