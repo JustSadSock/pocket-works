@@ -397,14 +397,15 @@ async function prepareRoundImages(local=false,retry=false){
  const root=screen.querySelector('.passage-preparing');
  const status=root?.querySelector('#artPreparingStatus'),retryButton=root?.querySelector('[data-action="retry-art-preload"]');
  let completed=0;
+ const loadedIndices=[];
  updateArtLoad(root,0,Math.max(1,v.selected.length));
  if(status)status.textContent='Загружаем оригиналы…';
  if(retryButton)retryButton.hidden=true;
  try{
-   await Promise.all(v.selected.map(async id=>{
+   await Promise.all(v.selected.map(async (id,index)=>{
      await Promise.all([loadArtwork(id),preloadPreviewImage(id)]);
-     completed++;
-     if(preparedRound===token&&root?.isConnected)updateArtLoad(root,completed,v.selected.length);
+     completed++;loadedIndices.push(index);
+     if(preparedRound===token&&root?.isConnected)updateArtLoad(root,completed,v.selected.length,loadedIndices);
    }));
    if(preparedRound!==token)return;
    loadedRound=token;
