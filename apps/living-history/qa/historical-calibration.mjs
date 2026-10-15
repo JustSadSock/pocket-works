@@ -29,7 +29,7 @@ for(const seed of listed)for(const variant of variants){
   if(y===1||y===5||y===10||y%10===0||y===years){
    const o=historicalObservation(state);
    history.push({year:y,population:o.population,householdSize:o.householdSize,
-    firstMarriagesObserved:o.firstMarriagesObserved,femaleFirstMarriage:o.femaleFirstMarriage,
+    firstMarriagesObserved:o.firstMarriagesObserved,femaleFirstMarriagesObserved:o.femaleFirstMarriagesObserved,maleFirstMarriagesObserved:o.maleFirstMarriagesObserved,femaleFirstMarriage:o.femaleFirstMarriage,
     maleFirstMarriage:o.maleFirstMarriage,starvationDeaths:o.starvationDeaths,
     grainHarvestKg:o.harvestKg,externalGrainKg:o.grainTradeKg,activeVillages:o.activeVillages});
   }
