@@ -34,16 +34,16 @@
     "lastAttemptAt": "2026-10-13T12:40:00.907Z"
   },
   "komnatka": {
-    "revision": "d90a8e3f1f3bb9d7e97ee4754ce8b13164d854d4",
-    "qualityScore": 61,
+    "revision": "0b6b77d377ddae481141bf87fd4ada8516a2cda1",
+    "qualityScore": 67,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "72de8ca6f2729f3babd01ca862cace933797ba02488a3e6939fe69694120c6f4",
+    "sha256": "0591c059a1b964d309c045e40c4e961d156f9d77f5321d90ffc5281a63e53db4",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "d90a8e3f1f3bb9d7e97ee4754ce8b13164d854d4",
-    "lastAttemptAt": "2026-10-15T01:12:39.076Z",
+    "lastAttemptRevision": "0b6b77d377ddae481141bf87fd4ada8516a2cda1",
+    "lastAttemptAt": "2026-10-15T09:43:12.418Z",
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
@@ -3115,24 +3115,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 44320,
-        "variance": 45.34313438632712,
-        "entropy": 1.282197586224091,
-        "edgeDensity": 0.1531498015873016,
-        "colorfulness": 39.878662109375,
-        "centerDetail": 56.562602733494174,
-        "meanLight": 57.33074013671924
+        "bytes": 44305,
+        "variance": 44.6969620585109,
+        "entropy": 1.3664226681637897,
+        "edgeDensity": 0.16393849206349206,
+        "colorfulness": 39.81640625,
+        "centerDetail": 53.15594691229624,
+        "meanLight": 57.26996899414094
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/flotiliya/?pw-cover=1&pw_release=0.5.0&pw_fp=568c510077c896693da4ddf7"
+      "url": "http://127.0.0.1:4173/apps/flotiliya/?pw-cover=1&pw_release=0.6.0&pw_fp=a6b69f2ff601fd0c2fc96470"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "2b448b6b650d2005a9c01554594a55158320892e",
-    "lastAttemptAt": "2026-10-15T01:32:06.435Z",
+    "lastAttemptRevision": "f4ee9429e3a5afadc98ef5ab116a86babf6ea7d6",
+    "lastAttemptAt": "2026-10-15T09:42:57.182Z",
     "revision": "ccb647535c08e0372ae72c39c19b1d9baba10c70",
     "qualityScore": 64,
     "visionScore": null,
