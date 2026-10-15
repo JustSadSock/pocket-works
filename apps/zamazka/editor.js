@@ -53,13 +53,23 @@ function layer(){
 }
 // The alpha of the current (possibly smudged) contour protects its visible
 // pigment from the bucket while antialiased edges blend with the new colour.
-export function preservePaintContours(output,original,walls){
+export function preservePaintContours(output,original,walls,changed=null,useWallPigment=false){
  for(let i=0;i<output.length;i+=4){
+  // A fill must not recomposite a different (untouched) basin's old edges.
+  if(changed&&!changed[i/4])continue;
   const alpha=walls[i+3]/255;
   if(!alpha)continue;
-  const keep=alpha*alpha*(3-2*alpha);
-  for(let ch=0;ch<3;ch++)
-   output[i+ch]=Math.round(output[i+ch]*(1-keep)+original[i+ch]*keep);
+  if(useWallPigment&&alpha<.97){
+   // Blend the contour's actual pigment OVER the fresh fill, not the
+   // previous beige underpainting. Mixing in beige caused the pale halo.
+   for(let ch=0;ch<3;ch++)
+    output[i+ch]=Math.round(output[i+ch]*(1-alpha)+walls[i+ch]*alpha);
+  }else{
+   // Keep the true existing pixel at opaque contour cores, including smudges.
+   const keep=alpha*alpha*(3-2*alpha);
+   for(let ch=0;ch<3;ch++)
+    output[i+ch]=Math.round(output[i+ch]*(1-keep)+original[i+ch]*keep);
+  }
  }
 }
 function fillRegion(lines,paint,zoneMask,p,colour){
@@ -67,15 +77,16 @@ function fillRegion(lines,paint,zoneMask,p,colour){
  const walls=lines.ctx.getImageData(0,0,w,h);
  const current=paint.ctx.getImageData(0,0,w,h);
  const inkBefore=new Uint8ClampedArray(current.data);
+ const changed=new Uint8Array(w*h);
  const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
  const filled=floodFillRaster({
-   width:w,height:h,walls,zone:zoneMask,output:current,
+   width:w,height:h,walls,zone:zoneMask,output:current,changed,
    point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
  });
  if(filled){
    // Keep existing, potentially blended contour pigment instead of painting
    // the old, un-smudged line layer back over the bucket fill.
-   preservePaintContours(current.data,inkBefore,walls.data);
+   preservePaintContours(current.data,inkBefore,walls.data,changed,true);
    paint.ctx.putImageData(current,0,0);
  }
 }
