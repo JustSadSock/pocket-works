@@ -11,11 +11,11 @@ function prepareCanvas(canvas,editor=false,thumbnail=false){
  const screenWidth=canvas.clientWidth||canvas.parentElement?.clientWidth||600;
  const dpr=typeof window==='undefined'?1:Math.max(1,Math.min(3,window.devicePixelRatio||1));
  const desktop=typeof window!=='undefined'&&window.matchMedia('(min-width:900px) and (pointer:fine)').matches;
- const needed=editor?Math.min(2.6,Math.max(1.8,dpr*1.2)):Math.max(2.7,dpr*1.3,desktop?3.25:2.7);
+ const needed=editor?Math.min(3,Math.max(2.5,dpr*1.5)):Math.max(2.7,dpr*1.3,desktop?3.25:2.7);
  // Thumbnails previously used a fixed 480x360 buffer, regardless of retina
  // density or full-screen review size. Render proportionally to actual demand.
  const scale=thumbnail?Math.min(2,Math.max(1,screenWidth*dpr/W*1.2)):
-   Math.min(editor?2.6:4,needed,Math.max(2,3500/W));
+   Math.min(editor?3:4,needed,Math.max(2,3500/W));
  const w=Math.round(W*scale),h=Math.round(H*scale);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
  const ctx=canvas.getContext('2d');
