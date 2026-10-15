@@ -39,6 +39,47 @@
    min-height:40px!important;padding:4px 5px!important}
  html[data-zamazka-appearance="new"] #screen>.museum-home .museum-footer {
    margin-top:5px!important;padding-top:3px!important}
+ /* Settings are a compact two-column form; ordinary configuration no
+    longer requires a vertical wheel or a tucked-away Save button. */
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance) {
+   display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+   align-content:center!important;align-items:center!important;gap:7px 9px!important;
+   width:min(100%,440px)!important;max-height:calc(100dvh - 22px)!important;
+   padding:16px!important;overflow:hidden!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>h2,
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>.appearance-choice,
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>#modalActions {
+   grid-column:1/-1!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>h2 {
+   margin:0 0 6px!important;font-size:27px!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>.field {margin:0!important;font-size:12px!important}
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>#settingName {
+   min-width:0!important;width:100%!important;min-height:40px!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>.field:has(#settingSound),
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>.field:has(#settingConfirmVote) {
+   grid-column:1/-1!important;min-height:28px!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>.sound-volume-label {
+   display:flex!important;flex-wrap:wrap!important;gap:2px!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>#settingVolume {
+   width:100%!important;min-width:0!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>.appearance-choice {
+   min-height:52px!important;padding:8px!important;margin:0!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>p.hint {display:none!important}
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>#modalActions {
+   display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;
+   margin:3px 0 0!important
+ }
+ .app-shell #dialog .dialog-box:has(#settingNewAppearance)>#modalActions .btn {
+   min-height:43px!important
+ }
  /* Room entry: the single action is visible above the keyboard, not at
     the end of a decorative tall invitation sheet. */
  .screen:has(>.lobby-entry) {overflow:hidden!important;display:flex!important;
