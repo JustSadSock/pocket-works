@@ -107,6 +107,12 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/fill-topology-playwright.mjs"
+    },
+    {
+      "id": "viewport-fit",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/viewport-fit.mjs"
     }
   ]
 }
