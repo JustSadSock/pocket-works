@@ -427,23 +427,53 @@ async function startRecord(){
  recording={inst:instrument,notes:[]};renderStudio();inform('Игра записывается только на твою дорожку');
 }
 function openEditor(id){
- const clip=mine().find(c=>c.id===id);if(!clip)return;
- editClip=clip.id;
- document.querySelector('#clipTitle').textContent=labels[clip.inst]+' · дубль '+(mine().indexOf(clip)+1);
- const start=document.querySelector('#trimStart'),end=document.querySelector('#trimEnd');
- start.value=clip.a;end.value=clip.b;updateClipPreview();clipDialog.showModal();
+ const source=id==='new'?null:mine().find(c=>c.id===id);
+ if(id!=='new'&&!source)return;
+ if(id==='new'&&mine().length>=6){inform('Можно записать максимум 6 фрагментов.');return}
+ editClip=source?.id||'new';editInst=source?.inst||instrument;
+ editNotes=source?source.notes.map(n=>n.slice()):[];
+ editBar=0;editHalf=0;editLength=1;editVelocity=80;
+ document.querySelector('#clipTitle').textContent=source?labels[editInst]+' · фрагмент '+(mine().indexOf(source)+1):'Новый ритм · '+labels[editInst];
+ document.querySelector('#trimStart').value=source?.a??0;
+ document.querySelector('#trimEnd').value=source?.b??64;
+ document.querySelector('#noteLength').value='1';
+ document.querySelector('#noteVelocity').value='80';
+ document.querySelector('#deleteClip').hidden=!source;
+ document.querySelector('#duplicateClip').hidden=!source;
+ document.querySelector('#saveClip').textContent=source?'Сохранить изменения':'Добавить фрагмент';
+ updateClipPreview();renderPattern();clipDialog.showModal();
+}
+function renderPattern(){
+ if(!clipDialog.open&&editClip===null)return;
+ const sounds=INSTRUMENTS.find(i=>i.id===editInst)?.labels||[];
+ const bar=editBar*16,from=bar+editHalf*8;
+ document.querySelector('#patternBars').innerHTML=Array.from({length:4},(_,i)=>
+ '<button type="button" class="'+(editBar===i?'active':'')+'" data-bar="'+i+'" aria-pressed="'+(editBar===i)+'">Такт '+(i+1)+'</button>').join('');
+ document.querySelector('#patternHalves').innerHTML=[0,1].map(i=>'<button type="button" class="'+(editHalf===i?'active':'')+'" data-half="'+i+'" aria-pressed="'+(editHalf===i)+'">Шаги '+(i*8+1)+'–'+(i*8+8)+'</button>').join('');
+ let html='<div class="pattern-corner">Звук</div>'+Array.from({length:8},(_,i)=>'<span class="pattern-tick">'+(editHalf*8+i+1)+'</span>').join('');
+ for(let pitch=0;pitch<8;pitch++){
+  html+='<span class="pattern-sound" title="'+safe(sounds[pitch]||String(pitch+1))+'">'+safe(sounds[pitch]||String(pitch+1))+'</span>';
+  for(let step=from;step<from+8;step++){
+   const active=editNotes.some(n=>n[0]===step&&n[1]===pitch);
+   html+='<button type="button" class="pattern-step '+(active?'selected':'')+'" data-seq-step="'+step+'" data-seq-pitch="'+pitch+'" aria-pressed="'+active+'" aria-label="'+safe(sounds[pitch]||'Нота')+', шаг '+(step+1)+'">'+(active?'●':'')+'</button>';
+  }
+ }
+ document.querySelector('#patternGrid').innerHTML=html;
+ updateClipPreview();
 }
 function updateClipPreview(){
- const clip=mine().find(c=>c.id===editClip);if(!clip)return;
  const start=document.querySelector('#trimStart'),end=document.querySelector('#trimEnd');
  let a=Number(start.value),b=Number(end.value);
  if(a>=b){if(document.activeElement===start){b=Math.min(64,a+1);end.value=b}else{a=Math.max(0,b-1);start.value=a}}
  document.querySelector('#trimStartLabel').textContent=String(a+1);
  document.querySelector('#trimEndLabel').textContent=String(b);
- const notes=clip.notes.map(n=>'<i class="preview-mark" style="left:'+(n[0]/64*100)+'%;--h:'+(20+n[1]*10)+'%"></i>').join('');
- document.querySelector('#clipPreview').innerHTML=notes+
+ const marks=editNotes.map(n=>'<i class="preview-mark" style="left:'+(n[0]/64*100)+'%;--h:'+(20+n[1]*10)+'%"></i>').join('');
+ document.querySelector('#clipPreview').innerHTML=marks+
  '<div class="preview-mask" style="left:0;width:'+(a/64*100)+'%"></div>'+
  '<div class="preview-mask" style="right:0;width:'+((64-b)/64*100)+'%"></div>';
+}
+function editedClip(id){
+ return tidyClip({id,inst:editInst,a:Number(document.querySelector('#trimStart').value),b:Number(document.querySelector('#trimEnd').value),notes:editNotes});
 }
 function makeDownload(blob,filename){
  const url=URL.createObjectURL(blob),anchor=document.createElement('a');anchor.href=url;anchor.download=filename;document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),12000);
