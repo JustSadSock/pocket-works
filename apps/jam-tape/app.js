@@ -415,7 +415,7 @@ async function copy(text){
 }
 async function share(text){
  if(!text)return;
- if(navigator.share){try{await navigator.share({title:'ЛЕНТА / PocketLAN',text});return}catch{}}
+ if(navigator.share){try{await navigator.share({title:'ЛЕНТА / PocketNet',text});return}catch{}}
  await copy(text);
 }
 async function startRecord(){
@@ -459,17 +459,11 @@ async function action(nameAction,el){
  if(nameAction==='solo'){saveName();session=loadSketch();room=null;isHost=false;setScreen('studio');startTicker();return}
  if(nameAction==='host'){saveName();await hostRoom();return}
  if(nameAction==='join'){saveName();await joinMode();return}
- if(nameAction==='back'){if(room)setScreen('studio');else setScreen('welcome');return}
+ if(nameAction==='back'){if(room)setScreen('studio');else if(netClient)leaveNetwork(false);else setScreen('welcome');return}
  if(nameAction==='studio'){setScreen('studio');startTicker();return}
- if(nameAction==='discover'){await discover();return}
- if(nameAction==='native'){await joinNative(Number(el.dataset.index));return}
- if(nameAction==='new-invite'){await newInvite();return}
- if(nameAction==='copy-invite'){await copy(inviteSignal);return}
- if(nameAction==='share-invite'){await share(inviteSignal);return}
- if(nameAction==='make-answer'){await joinOffer();return}
- if(nameAction==='copy-reply'){await copy(replySignal);return}
- if(nameAction==='share-reply'){await share(replySignal);return}
- if(nameAction==='accept-answer'){await acceptAnswer();return}
+ if(nameAction==='enter-code'){joinByCode();return}
+ if(nameAction==='copy-code'){if(room)await copy(room.roomId.slice(0,8).toUpperCase());return}
+ if(nameAction==='share-link'){if(room)await share(roomLink());return}
  if(nameAction==='play'){await unlockAudio().catch(()=>{});sendEdit({kind:'transport',playing:true});return}
  if(nameAction==='stop'){if(recording)finishRecord();sendEdit({kind:'transport',playing:false});return}
  if(nameAction==='record'){await startRecord();return}
@@ -479,7 +473,7 @@ async function action(nameAction,el){
  }
  if(nameAction==='clip'){openEditor(el.dataset.clip);return}
  if(nameAction==='export'){await exportMix();return}
- if(nameAction==='invite'){pairingMode='host';setScreen('pair');if(room?.createInvite&&!inviteSignal)await newInvite();return}
+ if(nameAction==='invite'){pairingMode=isHost?'host':'join';setScreen('pair');return}
  if(nameAction==='host-from-solo'){if(recording)finishRecord();await hostRoom(true);return}
  if(nameAction==='reset'){confirmDialog.showModal();return}
  if(nameAction==='leave'){if(recording)finishRecord();releaseAll();if(room)leaveNetwork(false);else{saveSketch();setScreen('welcome')}return}
@@ -549,6 +543,6 @@ async function refreshIdentity(){
  if(screen==='welcome')renderWelcome();
  else if(screen==='studio'&&!room)renderStudio();
 }
-void refreshIdentity();
+void refreshIdentity().then(()=>{const code=new URLSearchParams(location.search).get('room')||'';if(/^[a-f0-9]{8}$/i.test(code)&&!room&&!netClient)void joinMode()});
 window.addEventListener('pageshow',()=>void refreshIdentity());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshIdentity()});
