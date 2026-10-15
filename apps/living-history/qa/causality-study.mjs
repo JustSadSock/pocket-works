@@ -4,6 +4,7 @@
 // Use --group + --batch to keep Universal QA jobs below the 45-minute limit.
 import fs from 'node:fs';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {createWorld,advanceDays,audit,overview} from '../model.js';
 import {historicalObservation,quantiles} from '../historical-calibration.js';
 import {CausalityRecorder,householdFoodSnapshot,livingByHouse} from './causality-metrics.mjs';
@@ -112,6 +113,7 @@ function runFamily(seed,years){
   deathCasesRecorded:evidence.deaths.length,missingCases:0,
   audit:{ok:true,yearsChecked:years},caveats:evidence.caveats};
 }
+if (process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
 const seeds=group==='family'?FAMILY_SEEDS.slice(batch*2,batch*2+2):
  group==='paired'?FAMILY_SEEDS.slice(batch*2,batch*2+2):
  group==='crisis'?[FAMILY_SEEDS[batch]]:[FAMILY_SEEDS[batch]];
@@ -161,3 +163,5 @@ if(destination){fs.mkdirSync(path.dirname(destination),{recursive:true});fs.writ
 else console.log(JSON.stringify({group,batch,years,seeds,samples:runs.length,
  stats:runs.map(r=>({seed:r.seed,variant:r.variant,population:(r.final||r.annual?.at(-1))?.population,
   starvationDeaths:(r.final||r.annual?.at(-1))?.starvationDeaths}))},null,2));
+
+}
