@@ -75,7 +75,12 @@ try{
    }).map(el=>({text:el.textContent.trim().slice(0,25),box:rect(el)}));
    return {rootScroll:root.scrollHeight-root.clientHeight,sceneScroll:scene.scrollHeight-scene.clientHeight,
     htmlScroll:document.documentElement.scrollHeight-document.documentElement.clientHeight,
-    wOverflow:root.scrollWidth-root.clientWidth,scene:sc,root:rr,board,buttonCount:visibleButtons.length,
+    wOverflow:root.scrollWidth-root.clientWidth,scene:sc,root:rr,board,
+    mast:rect(scene.querySelector('.lobby-mast')),
+    invite:rect(scene.querySelector('.lobby-invite')),
+    desk:rect(scene.querySelector('.commons-desk')),
+    roster:rect(scene.querySelector('.lobby-attendance')),
+    buttonCount:visibleButtons.length,
     out,topHeight:document.querySelector('.top').getBoundingClientRect().height,
     canvasTransform:getComputedStyle(canvas).transform,
     boardIsDrawing:board.w>70&&board.h>38};
@@ -84,6 +89,19 @@ try{
   assert(metrics.sceneScroll<=4,scenario.name+' scene overflows '+JSON.stringify(metrics));
   assert(metrics.wOverflow<=3,scenario.name+' horizontal overflow '+JSON.stringify(metrics));
   assert(metrics.boardIsDrawing,scenario.name+' shared canvas disappeared '+JSON.stringify(metrics));
+  // A screen may have zero overflow while CSS accidentally auto-places all
+  // sections in the wrong grid cells. Check the spatial composition explicitly.
+  if(scenario.w>=1100){
+   assert(metrics.mast.w>scenario.w*.70,scenario.name+' mast did not span top');
+   assert(metrics.invite.right<=metrics.desk.x+4,scenario.name+' invitation not left of board');
+   assert(metrics.desk.right<=metrics.roster.x+4,scenario.name+' roster not right of board');
+   assert(metrics.board.w>=Math.min(320,scenario.w*.23),scenario.name+' board too small for available screen');
+  }else if(scenario.w>=700){
+   assert(metrics.invite.right<=metrics.desk.x+4,scenario.name+' two-column layout broken');
+   assert(metrics.board.w>=170,scenario.name+' collapsed tablet board');
+  }else{
+   assert(metrics.desk.y>=metrics.invite.bottom-3,scenario.name+' mobile stage wrong order');
+  }
   assert.equal(metrics.canvasTransform,'none',scenario.name+' raster canvas was transformed');
   assert.equal(metrics.out.length,0,scenario.name+' invisible/clipped controls '+JSON.stringify(metrics.out));
   assert(metrics.buttonCount>=9,scenario.name+' some controls missing');
