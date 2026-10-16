@@ -372,10 +372,10 @@ export const APPROVED_2026_ADDITIONS=[
     "date": "ок. 1762",
     "style": "Классическая живопись",
     "museum": "Национальная галерея · Лондон",
-    "path": "1/19/",
-    "file": "Whistlejacket.jpg",
-    "commonsFile": "Whistlejacket.jpg",
-    "source": "https://commons.wikimedia.org/wiki/File:Whistlejacket.jpg",
+    "path": "4/48/",
+    "file": "Whistlejacket_by_George_Stubbs.jpg",
+    "commonsFile": "Whistlejacket by George Stubbs.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Whistlejacket_by_George_Stubbs.jpg",
     "isReal": true
   },
   {

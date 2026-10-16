@@ -315,10 +315,10 @@ export const APPROVED_WORKS=[
     "artist": "Джордж Стаббс",
     "group": "Образы и животные",
     "wiki": "Whistlejacket",
-    "commonsFile": "Whistlejacket.jpg",
-    "file": "Whistlejacket.jpg",
-    "source": "https://commons.wikimedia.org/wiki/File:Whistlejacket.jpg",
-    "path": "1/19/"
+    "commonsFile": "Whistlejacket by George Stubbs.jpg",
+    "file": "Whistlejacket_by_George_Stubbs.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Whistlejacket_by_George_Stubbs.jpg",
+    "path": "4/48/"
   },
   {
     "id": 80,

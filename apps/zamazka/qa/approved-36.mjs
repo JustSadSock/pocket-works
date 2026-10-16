@@ -40,6 +40,12 @@ for(const [i,work] of APPROVED_2026_ADDITIONS.entries()){
  assert.ok(PLAYABLE_IDS.includes(id));
 }
 assert.equal(new Set(APPROVED_2026_ADDITIONS.map(a=>a.file)).size,36);
+const horse=APPROVED_2026_ADDITIONS.find(a=>a.kartotekaId===78);
+assert.ok(horse,'Whistlejacket retained under original user selection #78');
+assert.equal(horse.file,'Whistlejacket_by_George_Stubbs.jpg');
+assert.equal(horse.path,'4/48/');
+assert.equal(horse.source,'https://commons.wikimedia.org/wiki/File:Whistlejacket_by_George_Stubbs.jpg');
+assert.equal(ARTS[100].file,horse.file,'existing game art ID 100 unchanged');
 for(const id of RETIRED_ARTWORK_IDS) assert.ok(!PLAYABLE_IDS.includes(id),'retired IDs cannot be sent to new players');
 assert.equal(ARTS[17].title,'Вавилонская башня');
 assert.equal(ARTS[22].title,'Сад земных наслаждений');
@@ -66,9 +72,9 @@ assert.ok(lock.zamazka.versions.includes('v21')&&lock.zamazka.versions.includes(
 const manifest=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
-assert.equal(manifest.version,'1.40.7');
-assert.match(html,/data-app-version="1\.40\.7"/);
-assert.match(sw,/const APP_VERSION = '1\.40\.7'/);
+assert.equal(manifest.version,'1.40.9');
+assert.match(html,/data-app-version="1\.40\.9"/);
+assert.match(sw,/const APP_VERSION = '1\.40\.9'/);
 assert.match(sw,/\.\/museum-approved-2026\.js/);
 assert.match(sw,/\.\/museum-approved-second-2026\.js/);
 console.log('ЗАМАЗКА: all 36 originals pinned, 108 originals, 104 playable IDs, v1–v5 archive compatibility, immutable v21 backend with v20 preserved OK');
