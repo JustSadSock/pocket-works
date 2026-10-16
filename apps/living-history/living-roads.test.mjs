@@ -31,7 +31,7 @@ test('worn roads can cause a physical longer route; private crofts cannot be sho
  s.landRevision++;
  const reroutedCroft=walkPath(s,from,to);
  assert.ok(reroutedCroft.every(({x,y})=>s.usage[idx(x,y)]!==3));
- assert.equal(pathEffort(s,reroutedCroft)<=pathEffort(s,direct),false);
+ assert.equal(pathEffort(s,direct),Infinity,'the direct route is blocked by actual croft titles');
 });
 test('walking distances invalidate when new enclosed crofts block a corridor',()=>{
  const s=makeMap();
