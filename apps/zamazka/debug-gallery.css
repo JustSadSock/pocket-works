@@ -4,8 +4,14 @@
 .zam-debug{--dbg-paper:#e8dcc7;--dbg-ink:#292e29;--dbg-border:#b59e77;
  position:fixed;inset:0;z-index:2147483000;overflow:hidden;background:#171713;
  color:#f0e6cf;font-family:system-ui,-apple-system,sans-serif}
-.zam-debug-frame{position:absolute;inset:0;width:100%;height:100%;border:0;
- background:#332b24;display:block}
+.zam-debug-stage{position:absolute;inset:0 0 0 0;display:flex;align-items:center;justify-content:center;
+ min-width:0;min-height:0;overflow:hidden;padding:12px;
+ background:radial-gradient(ellipse at center,#434036,#1b1a17 78%);transition:left .22s ease}
+.zam-debug-device-window{position:relative;flex:none;min-width:0;min-height:0;
+ border:1px solid #b09b7a;box-shadow:0 0 0 5px #17130f,0 18px 55px #000a;
+ background:#332b24;overflow:hidden}
+.zam-debug-frame{position:absolute;top:0;left:0;border:0;background:#332b24;
+ display:block;transform-origin:top left;max-width:none!important;max-height:none!important}
 .zam-debug-nav{position:absolute;z-index:2;left:clamp(5px,1vw,14px);
  top:calc(7px + env(safe-area-inset-top));bottom:calc(7px + env(safe-area-inset-bottom));
  width:min(286px,calc(100vw - 18px));min-height:0;display:flex;flex-direction:column;
@@ -21,6 +27,12 @@
  height:36px;width:36px;flex:none;font:26px/1 system-ui;cursor:pointer}
 .zam-debug-tools{padding:7px 11px;display:flex;flex-direction:column;gap:5px;
  border-bottom:1px solid #c2af91}
+.zam-debug-device-picker{display:grid;grid-template-columns:1fr 1fr;gap:3px;
+ border:1px solid #a99069;background:#c7b59a;padding:3px}
+.zam-debug-tools .zam-debug-device-picker button{min-height:35px;font:700 12px system-ui;
+ border:1px solid transparent;color:#594634;background:#e6d8c1}
+.zam-debug-tools .zam-debug-device-picker button.is-active{
+ color:#f8e8cd;border-color:#637968;background:#3c5547;box-shadow:inset 0 1px 4px #1824194d}
 .zam-debug-tools button{width:100%;min-height:34px;
  border:1px solid #9c8562;background:#eadfc9;color:#58402b;
  font:650 11px system-ui;cursor:pointer}
@@ -81,3 +93,6 @@ body.zam-debug-child .nav-tools [data-workshop-trigger],
 body.zam-debug-child .nav-tools #settingsBtn,
 body.zam-debug-child .nav-tools #profileBtn{pointer-events:none;opacity:.55}
 body.zam-debug-child #screen [data-action="menu"]{pointer-events:none}
+
+@media(max-width:700px){.zam-debug-stage{padding:6px}}
+@media(prefers-reduced-motion:reduce){.zam-debug-stage{transition:none}}
