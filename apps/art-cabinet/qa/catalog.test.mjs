@@ -51,7 +51,7 @@ assert.match(app,/document.documentElement.dataset.artCabinetReady='3'/);
 assert.match(app,/document.documentElement.classList.add\('has-viewer'\)/);
 assert.match(css,/@media\(max-width:760px\)\{html,body\{height:auto!important/);
 assert.match(css,/\.gallery-scroll\{height:auto!important;max-height:none!important;min-height:0;overflow:visible!important/);
-assert.match(sw,/art-cabinet-v1\.2\.0/);
+assert.match(sw,/art-cabinet-v1\.2\.1/);
 assert.match(sw,/original-review\.js/);
 assert.match(sw,/second-approved\.js/);
 const cfg=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
