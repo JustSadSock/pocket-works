@@ -16,6 +16,7 @@ import {getSavedEmblem,storeEmblem} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
 import {installGalleryLighting} from './museum-lighting.js';
 import {MuseumAudio} from './museum-audio.js';
+import {stepClockSound} from './clock-soundscape.js';
 import {createExhibitionDirector,saveTone,animateCoinDeposit} from './exhibition-director.js';
 import {setDressScene} from './scenography.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
@@ -1265,24 +1266,36 @@ screen.addEventListener('click',e=>{
  else if(action==='continue'&&view?.phase==='round-review'&&me?.id===view.host){b.disabled=true;try{net?.sendGame({type:'continue'})}catch{b.disabled=false;notify('Нет соединения с комнатой')}}
  else if(action==='next')net?.sendGame({type:'next'});
 });
-// Quiet, tactile clock ticks are only for the two timed creation stages.
-// Never sound alarms on voting, revealing, waiting or result screens.
-let lastClockCue='';
+// Audible timing belongs only to memorization and restoration.
+// The 15-second mechanical bed uses Web Audio's clock, not JS UI frame cadence.
+// Clockmaker A strikes exactly at 10, 5 and 0; suppressed in untimed stages.
+let clockSoundState=null;
 function tick(){
  if(pendingVote)attemptVote();
- 
  const v=practice||view,clock=document.querySelector('#clock');
- const clockStage=(page==='preview'||page==='drawing')&&
-                  (v?.phase==='preview'||v?.phase==='drawing');
- if(clock&&v?.deadline){
-  const s=Math.max(0,Math.ceil((v.deadline-Date.now())/1000));
+ const timed=(page==='preview'||page==='drawing')&&
+             (v?.phase==='preview'||v?.phase==='drawing')&&Number(v?.deadline)>0;
+ const now=Date.now();
+ if(clock&&timed){
+  const remaining=v.deadline-now,s=Math.max(0,Math.ceil(remaining/1000));
   clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-  clock.classList.toggle('urgent',Boolean(clockStage&&s<=10));
-  if(clockStage&&s>=0&&s<=10){
-   const cue=(practice?'practice':roomId)+':'+v.round+':'+v.phase+':'+s;
-   if(cue!==lastClockCue){lastClockCue=cue;sound(s===0?'time-up':s<=3?'final-warning':'clock-tick')}
+  clock.classList.toggle('urgent',s<=10);
+  const key=(practice?'practice':roomId)+':'+v.round+':'+v.phase+':'+v.deadline;
+  const plan=stepClockSound(clockSoundState,key,remaining);
+  clockSoundState=plan.state;
+  if(plan.ticking)museumAudio.syncCountdown(key,v.deadline,now);
+  else museumAudio.stopCountdown();
+  if(plan.cue)sound(plan.cue);
+ }else{
+  clockSoundState=null;
+  museumAudio.stopCountdown();
+  if(clock&&v?.deadline){
+   const s=Math.max(0,Math.ceil((v.deadline-now)/1000));
+   clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+   clock.classList.remove('urgent');
   }
  }
+ // Sound the zero cue before changing the screen or submitting the final stroke.
  if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
  autoFinishOnDeadline();
  if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
