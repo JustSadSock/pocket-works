@@ -72,7 +72,7 @@ assert.equal(initial.ok, true);
 assert.equal(initial.transport, 'cloudflare-durable-objects');
 assert.ok(initial.modules.includes('zamazka'));
 assert.equal(initial.games.zamazka.minPlayers, 2);
-assert.equal(initial.games.zamazka.rulesVersion, 19);
+assert.equal(initial.games.zamazka.rulesVersion, 20);
 const firstToken = await session('Painter');
 const secondToken = await session('Observer');
 assert.notEqual(firstToken, secondToken);
