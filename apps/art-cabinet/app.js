@@ -100,7 +100,7 @@ function draw({scroll=false}={}){
  const visible=list.slice(page*PAGE_SIZE,(page+1)*PAGE_SIZE);
  $('grid').replaceChildren(...visible.map(card));$('empty').hidden=list.length!==0;
  $('visibleTotal').textContent=list.length;
- $('catalogHeading').firstChild.textContent=filter==='approved'?'Уже одобрены ':filter==='picked'?'Мой выбор ':'Новые картины ';
+ $('headingPrefix').textContent=filter==='approved'?'Уже одобрены ':filter==='picked'?'Мой выбор ':'Новые картины ';
  $('pageStatus').textContent=(page+1)+' / '+pages;
  $('prevPage').disabled=page===0;$('nextPage').disabled=page>=pages-1;
  updateSelection();
