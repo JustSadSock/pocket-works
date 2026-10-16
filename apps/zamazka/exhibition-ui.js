@@ -48,8 +48,14 @@ export function mountExhibitFrames(root){
    const canvasH=canvasW/ratio;
    rim.style.setProperty('--art-aspect',String(ratio));
    rim.style.setProperty('--frame-width',chrome+'px');
-   rim.style.width=(canvasW+chrome*2)+'px';
-   rim.style.height=(canvasH+chrome*2)+'px';
+   const frameW=(canvasW+chrome*2)+'px',frameH=(canvasH+chrome*2)+'px';
+   rim.style.width=frameW;
+   rim.style.height=frameH;
+   // The protocol screen still has an older !important width/height rule.
+   // Override it using actual decoded geometry, or a 4:3 rule can collapse
+   // a natural portrait into a horizontal line.
+   rim.style.setProperty('width',frameW,'important');
+   rim.style.setProperty('height',frameH,'important');
   }
  }
  const schedule=()=>{if(!queued&&!disposed)queued=requestAnimationFrame(fit)};
