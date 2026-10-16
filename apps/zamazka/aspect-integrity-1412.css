@@ -123,3 +123,15 @@
   max-height:min(37dvh,300px)!important;
  }
 }
+
+/* Historic stage-specific borders were layered ON TOP of the physical wooden
+   facets. Their extra 1.2px per side made a 254×90.7 panorama display as
+   251.6×88.3 — enough to visibly distort very wide and narrow paintings. */
+#screen>.expert-phase .stake-card .stake-frame.zam-exhibit-rim,
+#screen>.verdict-phase .finale-ballot-card .verdict-image.zam-exhibit-rim,
+#screen>.round-review-phase .round-art-card .round-art-image.zam-exhibit-rim{
+ box-sizing:border-box!important;
+ border:0!important;
+ border-width:0!important;
+ padding:var(--frame-width)!important;
+}
