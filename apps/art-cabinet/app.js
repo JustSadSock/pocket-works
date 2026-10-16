@@ -10,7 +10,6 @@ const all=[...NEW_WORKS,...APPROVED_WORKS],byId=new Map(all.map(w=>[w.id,w]));
 const accepted=new Set(APPROVED_WORKS.map(w=>w.id));
 const selected=new Set(),pictures=new Map(),failed=new Set(),loading=new Set(),custom=new Map();
 let filter='all',term='',page=0,modalId=null,previousFocus=null,noticeTimer=null;
-let initialPaint=true;
 
 const getStored=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
 const store=(key,data)=>{try{localStorage.setItem(key,JSON.stringify(data))}catch{notify('Изменения сохраняются только на время сеанса: нет доступа к памяти браузера.')}};
@@ -137,8 +136,9 @@ function paintModalImage(w){
  const frame=$('viewerImage');frame.replaceChildren();
  const url=getImageLink(w);
  if(url){
-  const image=document.createElement('img');image.src=sanitizeImageURL(url)||url;image.alt=w.title;image.decoding='async';
-  image.addEventListener('error',()=>imageFailure(w.id,url));
+  const valid=sanitizeImageURL(url)||url;
+  const image=document.createElement('img');image.src=valid;image.alt=w.title;image.decoding='async';
+  image.addEventListener('error',()=>imageFailure(w.id,valid));
   frame.append(image);
  }else{
   const text=document.createElement('p');text.textContent=loading.has(w.id)?'Загружаем репродукцию…':'Репродукцию найти не удалось. Открой источник или подставь свой адрес.';
@@ -235,12 +235,13 @@ async function wikiImages(works){
  return match;
 }
 const insignificant=new Set(['the','with','from','after','over','into','girl','young','painting','caravaggio','and','for','a','in','of','on']);
+const LATIN_ARTISTS={'Жерико':'Théodore Géricault','Гойя':'Francisco Goya','Караваджо':'Caravaggio','Джентилески':'Artemisia Gentileschi','Давид':'Jacques-Louis David','Рембрандт':'Rembrandt','Бугро':'William Bouguereau','Жером':'Jean-Léon Gérôme','Милле':'John Everett Millais','Уотерхаус':'John William Waterhouse','Дега':'Edgar Degas','Кэссетт':'Mary Cassatt','Ренуар':'Renoir','Бастьен-Лепаж':'Bastien-Lepage','Хомер':'Winslow Homer','Икинс':'Thomas Eakins','Филдс':'Luke Fildes','Браун':'Ford Madox Brown','Бёклин':'Arnold Böcklin','Блейк':'William Blake','Фюзели':'Henry Fuseli','Сурбаран':'Francisco Zurbarán','Шарден':'Jean Siméon Chardin','Вермеер':'Johannes Vermeer'};
 function tokens(text){return (String(text||'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[a-z]{4,}/g)||[]).filter(t=>!insignificant.has(t))}
 async function commonsCandidate(w){
- const search=w.wiki.replace(/\s*\([^)]*\)/g,'')+' '+w.artist;
+ const search=w.wiki.replace(/\s*\([^)]*\)/g,'')+' '+(LATIN_ARTISTS[w.artist]||w.artist);
  const params=new URLSearchParams({action:'query',format:'json',formatversion:'2',generator:'search',gsrsearch:search,gsrnamespace:'6',gsrlimit:'10',prop:'imageinfo',iiprop:'url',iiurlwidth:'1024',origin:'*'});
  const result=await fetchJSON('https://commons.wikimedia.org/w/api.php?'+params,7500);
- const titles=tokens(w.wiki.replace(/\s*\([^)]*\)/g,'')),artist=tokens(w.artist);
+ const titles=tokens(w.wiki.replace(/\s*\([^)]*\)/g,'')),artist=tokens(LATIN_ARTISTS[w.artist]||w.artist);
  let best=null,score=0;
  for(const p of result.query?.pages||[]){
   const url=p.imageinfo?.[0]?.thumburl||p.imageinfo?.[0]?.url;
@@ -268,14 +269,14 @@ function queueImages(items){
  if(!targets.length){updateImageStatus();return}
  for(const w of targets)loading.add(w.id);updateImageStatus();
  void (async()=>{
-  const needWiki=targets.filter(w=>!isApproved(w));
+  const needWiki=targets;
   const obtained=new Map();
   for(let i=0;i<needWiki.length;i+=12){try{for(const [id,src] of await wikiImages(needWiki.slice(i,i+12)))obtained.set(id,src)}catch{}}
   // Approved works use pinned files; Wikipedia lookup is for new candidates only.
   for(const w of targets){
    if(obtained.has(w.id))placeImage(w,obtained.get(w.id));
   }
-  const remaining=targets.filter(w=>!pictures.has(w.id)&&!isApproved(w));
+  const remaining=targets.filter(w=>!pictures.has(w.id));
   for(let i=0;i<remaining.length;i+=3)await Promise.all(remaining.slice(i,i+3).map(w=>resolveUnfound(w)));
   for(const w of targets){loading.delete(w.id);if(!pictures.has(w.id)&&!failed.has(w.id))failed.add(w.id);paintImage(w)}
   updateImageStatus();
@@ -303,7 +304,7 @@ function wire(){
  let touch=null;
  $('viewerImage').addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY}},{passive:true});
  $('viewerImage').addEventListener('touchend',e=>{if(!touch||modalId===null)return;const dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(Math.abs(dx)>75&&Math.abs(dx)>Math.abs(dy)*1.4)shiftModal(dx<0?1:-1)},{passive:true});
- draw();document.documentElement.dataset.artCabinetReady='2';initialPaint=false;
+ draw();document.documentElement.dataset.artCabinetReady='2';
 }
 wire();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
