@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=20;
+export const RULESET_VERSION=21;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=136; // 72 old originals + 36 first selection + 28 second selection
 const EXCLUDED_PAINTINGS=new Set([2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115]); // The user's 26 rejected historical originals; IDs retained.
@@ -18,12 +18,12 @@ type Chips=number[];
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[]};
 type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
-type State={resumable?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={resumable?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
+ host:s.host,phase:s.phase,serverNow:now(),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
@@ -38,7 +38,7 @@ function choose(s:State){
  s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1).filter(id=>!EXCLUDED_PAINTINGS.has(id))).slice(0,5);
  // Assign each restorer independently from the same five previewed originals.
  // Two players may receive one painting but different damaged fragments.
- s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.turn=0;s.revealed=false;
+ s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.voteDrafts={};s.turn=0;s.revealed=false;
  members(s).forEach(p=>s.assignments[p.id]={art:s.selected[Math.floor(Math.random()*s.selected.length)],
   variation:Math.floor(Math.random()*0xffffffff),strokes:null});
  s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
@@ -78,6 +78,14 @@ function step(s:State){
   s.draftAssemblies={};s.drafts={};
   s.phase='voting';s.turn=0;s.deadline=now()+25500;
  }else if(s.phase==='voting'){
+  // At the deadline, count 1- and 2-coin ballots as submitted votes.
+  const target=members(s)[s.turn]?.id;
+  if(target){
+   s.votes[target]||={};
+   for(const [voter,coins] of Object.entries(s.voteDrafts?.[target]||{}))
+    if(voter!==target&&members(s).some(p=>p.id===voter)&&!(voter in s.votes[target])&&
+      Array.isArray(coins)&&coins.reduce((sum,n)=>sum+n,0)>0)s.votes[target][voter]=[...coins];
+  }
   // Every completed vote is immediately followed by its own answer.
   s.phase='reveal';s.deadline=now()+19000;
  }else if(s.phase==='reveal'){
@@ -151,6 +159,7 @@ const module: PocketModule<State>={
    const a=(payload&&typeof payload==='object'?payload:{}) as Record<string,unknown>;
    const id=player.id;const isMember=state.participants.some(p=>p.id===id);
    if(a.type==='sync')return {state,events:[{type:'state',to:id,payload:strip(state,id)}]};
+    if(a.type==='time_ping'&&Number.isFinite(a.stamp))return {state,events:[{type:'time_pong',to:id,payload:{stamp:a.stamp,serverNow:now()}}]};
    // Preview and voting advance at their normal deadlines. During drawing,
    // the timer expires at precisely 0:00, but buffered network chunks must
    // still have time to complete. Do not render voting before that window.
@@ -314,15 +323,24 @@ const module: PocketModule<State>={
         (state.drawingSeconds===0||now()>=state.deadline))step(state);
      return {state,events:[...emit(state),{type:'submission_saved',to:id,
        payload:{round:state.round,art:item.art,variation:item.variation,revision:null,lines:strokes.length}}]};
-   }else if(a.type==='vote'&&state.phase==='voting'){
+   }else if((a.type==='vote'||a.type==='vote_draft')&&state.phase==='voting'){
      const target=members(state)[state.turn]?.id;
      if(!target||id===target)return {state,events:notice(id,'Автор не голосует за собственную работу.')};
      const chips=a.chips;
-     if(!Array.isArray(chips)||chips.length!==5||chips.some(n=>!Number.isInteger(n)||n<0||n>3)||chips.reduce((a,b)=>a+b,0)!==3)
-      return {state,events:notice(id,'Распредели ровно три фишки между пятью полотнами.')};
+     if(!Array.isArray(chips)||chips.length!==5||chips.some(n=>!Number.isInteger(n)||n<0||n>3)||chips.reduce((a,b)=>a+b,0)>3)
+      return {state,events:notice(id,'Можно использовать не более трёх монет.')};
+     const used=chips.reduce((sum,n)=>sum+n,0);
+     if(a.type==='vote_draft'){
+      state.voteDrafts||={};state.voteDrafts[target]||={};
+      if(used)state.voteDrafts[target][id]=[...chips] as Chips;
+      else delete state.voteDrafts[target][id];
+      return {state,events:[]};
+     }
+     if(used<1)return {state,events:notice(id,'Поставь хотя бы одну монету.')};
      state.votes[target]||={};
      if(id in state.votes[target])return {state,events:[{type:'vote_saved',to:id,payload:{round:state.round,turn:state.turn}}]};
      state.votes[target][id]=[...chips] as Chips;
+     if(state.voteDrafts?.[target])delete state.voteDrafts[target][id];
      const acceptedTurn=state.turn;
      if(eligible(state,target,players.map(p=>p.id)).every(p=>p.id in state.votes[target]))step(state);
      return {state,events:[...emit(state),{type:'vote_saved',to:id,payload:{round:state.round,turn:acceptedTurn}}]};
