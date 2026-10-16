@@ -31,8 +31,8 @@ for(const [i,record] of SECOND.entries()){
  assert.equal(ARTS[id].schoolCountry,record.schoolCountry);
  assert.equal(record.schoolCountry,ART_SCHOOLS[id]);
  assert.ok(record.museum&&record.date);
- assert.match(record.file,/\\.(?:jpe?g|png)$/i);
- assert.match(record.path,/^[a-f0-9]\\/[a-f0-9]{2}\\/$/);
+ assert.match(record.file,/\.(?:jpe?g|png)$/i);
+ assert.match(record.path,/^[a-f0-9]\/[a-f0-9]{2}\/$/);
  const canonical=decodeURIComponent(record.file);
  assert.equal(record.commonsFile,canonical.replaceAll('_',' '));
  const hex=createHash('md5').update(canonical).digest('hex');
@@ -67,7 +67,7 @@ const snapshot=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/
 assert.equal(server,snapshot,'new rooms must use exact immutable v22 copy');
 assert.match(server,/RULESET_VERSION=19/);
 assert.match(server,/const CATALOG_COUNT=136/);
-assert.match(server,/EXCLUDED_PAINTINGS=new Set\\(\\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69\\]\\)/);
+assert.match(server,/EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69\]\)/);
 const lock=JSON.parse(readFileSync(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
 assert.equal(lock.zamazka.current,'v22');
 assert.ok(lock.zamazka.versions.includes('v21')&&lock.zamazka.versions.includes('v22'));
@@ -75,7 +75,7 @@ const config=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.ur
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 assert.equal(config.version,'1.40.7');
-assert.match(html,/data-app-version="1\\.40\\.7"/);
-assert.match(sw,/APP_VERSION = '1\\.40\\.7'/);
-assert.match(sw,/museum-approved-second-2026\\.js/);
+assert.match(html,/data-app-version="1\.40\.7"/);
+assert.match(sw,/APP_VERSION = '1\.40\.7'/);
+assert.match(sw,/museum-approved-second-2026\.js/);
 console.log('ZAMAZKA curation: 26 rejected originals excluded, 28 approved originals added, 109 playable, archive editions 1-6 safe, server v22 OK');
