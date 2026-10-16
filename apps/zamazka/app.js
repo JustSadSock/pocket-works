@@ -1480,7 +1480,7 @@ function renderDebugScreen(requested){
  screen.dataset.debugPreview=id;
  document.body.classList.add('zam-debug-child');
  document.querySelector('.top .return')?.setAttribute('tabindex','-1');
- const touchCancel=e=>{if(e.target.closest('input[type="range"]'))return;
+ const touchCancel=e=>{if(e.target.closest('input[type="range"],[data-debug-sound],[data-debug-sound-stop]'))return;
    if(e.target.closest('[data-settings-tab],[data-brush-choice],[data-setting-clear-preview],#settingStrokeCanvas'))return;
    e.preventDefault();e.stopImmediatePropagation();
  };
