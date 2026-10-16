@@ -146,7 +146,7 @@
 #screen>.expert-phase .stake-card .zam-exhibit-stage{
  justify-content:center!important;gap:0!important;flex:1 1 auto!important;
 }
-#screen>.expert-phase .stake-card>.stake-actions{
+#screen>.expert-phase .stake-card .zam-exhibit-stage>.stake-actions{
  position:relative!important;margin:-1px auto 0!important;
  width:min(100%,210px)!important;
  background:linear-gradient(#d8c39f,#bda37d)!important;
@@ -293,3 +293,18 @@
 #screen .zam-pause-panel li button{background:#594b39;color:#f5e5c7;min-height:32px;
  padding:5px 11px;border:0;cursor:pointer;font:600 11px system-ui}
 #screen .zam-pause-panel small{color:#78654e;font-size:11px}
+
+#screen>.expert-phase .stake-card .zam-exhibit-stage>.stake-actions{
+ display:grid!important;grid-template-columns:36px minmax(0,1fr) 36px!important;
+ flex:0 0 auto!important;align-items:center!important;gap:5px!important;
+ z-index:4!important;
+}
+#screen:has(>.zam-pause-cover){position:relative!important}
+#screen .zam-pause-panel>[data-action="claim-host"]{
+ display:block;margin:10px 0 13px;padding:9px 11px;
+ border:1px solid #645039;background:#554634;color:#f3dfbd;
+ font:600 12px system-ui;cursor:pointer;width:100%;
+}
+#screen .zam-pause-panel>[data-action="claim-host"]:disabled{
+ opacity:.5;cursor:not-allowed;
+}
