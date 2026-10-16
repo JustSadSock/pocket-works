@@ -79,11 +79,11 @@ assert.equal(free.phase,'voting');
 // Client must seal the actual in-progress stroke at 0:00, never at -1.9s.
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const finish=app.slice(app.indexOf('function autoFinishOnDeadline(){'),app.indexOf('function finishVoteTransition(){'));
-assert.match(finish,/Date\.now\(\)<view\.deadline\)return/);
+assert.match(finish,/networkNow\(\)<view\.deadline\)return/);
 assert.doesNotMatch(finish,/deadline-1900/);
 assert.match(app,/const strokes=editor\.getData\(\);editor\.saveSnapshot\(\)/);
 assert.match(app,/pendingSubmit=\{token,room:roomId/);
-assert.match(app,/const retryMs=view\.deadline&&Date\.now\(\)>=view\.deadline\?3500:15000/);
+assert.match(app,/const retryMs=view\.deadline&&networkNow\(\)>=view\.deadline\?3500:15000/);
 const clock=app.slice(app.indexOf('let clockSoundState=null;'),app.indexOf('let museumSwipe=null;'));
 assert.match(clock,/page==='preview'\|\|page==='drawing'/);
 assert.match(clock,/stepClockSound\(clockSoundState,key,remaining\)/);
