@@ -181,3 +181,24 @@ test('an unfinished painted background survives a visit to Friends',async({page}
   await page.locator('[data-pws=save-profile]').click();
   await expect(page.locator('.pws-content .pws-card')).toHaveAttribute('data-background','drawing');
 });
+
+
+test('layout import is reviewed as a draft before it replaces the saved home',async({page})=>{
+  await boot(page);await page.locator('[data-pws=close]').first().click();
+  await page.locator('#deck-customize').click();
+  await page.locator('.deck-editor__transfer>summary').click();
+  const backup={schema:'pocket-works-deck-v1',savedAt:Date.now(),data:{widgets:[{id:'imported',kind:'random',size:'half',tag:'',slug:''}]}};
+  const file={name:'layout.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(backup))};
+  await page.locator('#deck-layout-import-file').setInputFiles(file);
+  await page.locator('.pw-confirm [data-choice=cancel]').click();
+  await expect(page.locator('#deck-editor-preview>span')).toHaveCount(3);
+  await page.locator('#deck-layout-import-file').setInputFiles(file);
+  await page.locator('.pw-confirm [data-choice=accept]').click();
+  await expect(page.locator('#deck-editor-preview>span')).toHaveCount(1);
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:deck:v1')||'null'));
+  expect(JSON.stringify(saved)).not.toContain('imported');
+  await page.locator('#deck-editor-cancel').click();
+  await page.locator('.pw-confirm [data-choice=discard]').click();
+  await page.locator('#deck-customize').click();
+  await expect(page.locator('#deck-editor-preview>span')).toHaveCount(3);
+});

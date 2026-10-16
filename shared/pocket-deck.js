@@ -1,5 +1,5 @@
-import {askUnsaved} from './shell-dialogs.js';
-import { createDeckStateStore, DECK_WIDGET_KINDS } from './deck-state.js';
+import {askUnsaved,confirmShell} from './shell-dialogs.js';
+import { createDeckStateStore, cleanDeckState, DECK_WIDGET_KINDS } from './deck-state.js';
 import { installDeckBatchPicker } from './deck-batch.js';
 import { catalogIconUrl, systemIcon } from './catalog-art.js';
 
@@ -453,17 +453,20 @@ export function installPocketDeck({
     editingLayout=data;renderEditorRows();
   }
   async function exportLayout(){
-    const file=new Blob([JSON.stringify(store.exportBackup(),null,2)],{type:'application/json'});
+    const file=new Blob([JSON.stringify({...store.exportBackup(),data:editingLayout||current()},null,2)],{type:'application/json'});
     const url=URL.createObjectURL(file);const a=document.createElement('a');
     a.href=url;a.download='pocket-works-layout.json';a.click();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   async function importLayout(file){
     try{
+      if(file.size>1024*1024)throw Error('Файл больше 1 МБ.');
       const data=JSON.parse(await file.text());
-      await store.importBackup(data);
-      $('#deck-layout-status').textContent='Компоновка восстановлена.';
-      if(editor.open)closeEditor(false);
+      if(data?.schema!=='pocket-works-deck-v1'||!data.data||typeof data.data!=='object'||Array.isArray(data.data))
+        throw Error('Это не копия компоновки PocketWorks.');
+      if(!await confirmShell('Загрузить компоновку из файла?','Текущие изменения редактора будут заменены. Компоновка применится после нажатия «Сохранить».','Загрузить'))return;
+      editingLayout=cleanDeckState(data.data);renderEditorRows();
+      $('#deck-layout-status').textContent='Компоновка загружена. Проверь её и сохрани.';
     }catch(error){$('#deck-layout-status').textContent=`Не удалось импортировать: ${error.message}`;}
   }
   function onClick(event){

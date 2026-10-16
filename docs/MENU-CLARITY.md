@@ -18,5 +18,7 @@ dangerous operations separate and cancel on Escape. Global catalogue authority i
 still enforced on the server; the administrator scope stays explicit.
 
 Home layout sizes have three visible choices with a miniature of actual app art.
-Changes stay local to the editor until Save. Close, Escape and backdrop all use
+Changes stay local to the editor until Save. Imported layout files are validated
+and loaded into the same reviewable draft; import never writes the saved layout
+before Save. Close, Escape and backdrop all use
 the same unsaved-change guard. Touch targets are at least 44 CSS pixels.
