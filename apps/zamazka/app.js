@@ -1246,6 +1246,10 @@ screen.addEventListener('click',e=>{
  if(b.hasAttribute('data-saved')){openArchive(Number(b.dataset.saved));return}
 
  const action=b.dataset.action;
+ if(action==='claim-host'){
+  if(!view?.paused||(view.onlineIds||[]).includes(view.host)||Date.now()-(view.pausedAt||Date.now())<60000)return;
+  net?.sendGame({type:'claim_host'});return;
+ }
  if(action==='pause-kick'){
   const target=b.dataset.playerId,player=view?.participants?.find(p=>p.id===target);
   if(!view?.paused||view.host!==me?.id||!player||(view.onlineIds||[]).includes(target))return;
@@ -1395,7 +1399,12 @@ function renderPauseOverlay(){
  paused.className='zam-pause-cover';paused.setAttribute('role','status');
  paused.innerHTML='<div class="zam-pause-panel"><span class="section-label">СВЯЗЬ ПРЕРВАНА</span>'+
   '<h2>Выставка на паузе</h2><p>Время и работы сохранены. Продолжим, когда все вернутся, или куратор исключит отсутствующих.</p>'+
-  '<ul>'+names+'</ul><small>Подключено: '+(view.onlineIds||[]).length+' / '+view.participants.length+'</small></div>';
+  '<ul>'+names+'</ul>'+
+  (me?.id!==view.host&&!(view.onlineIds||[]).includes(view.host)?
+    '<button type="button" data-action="claim-host"'+
+     (Date.now()-(view.pausedAt||Date.now())<60000?' disabled':'')+
+     '>Стать куратором и восстановить матч</button>':'')+
+  '<small>Подключено: '+(view.onlineIds||[]).length+' / '+view.participants.length+'</small></div>';
  if(!paused.isConnected)screen.appendChild(paused);
 }
 // The debug gallery previews the real stage renderers in a separate iframe.
