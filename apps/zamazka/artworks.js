@@ -25,7 +25,7 @@ const REAL=[
 export const REAL_COUNT=REAL.length;
 // User's removal selection of 26 historical originals. Keep their IDs and
 // artwork records intact for archives and existing rooms.
-export const RETIRED_ARTWORK_IDS=Object.freeze([2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115]);
+export const RETIRED_ARTWORK_IDS=Object.freeze([2,4,5,9,10,11,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115]);
 export const PRE_EXPANSION_REAL_COUNT=54;
 export const PRE_APPROVAL_REAL_COUNT=72;
 export const PRE_SECOND_APPROVAL_REAL_COUNT=108;
