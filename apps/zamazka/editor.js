@@ -896,7 +896,7 @@ export class Editor{
     this.canvas.addEventListener('lostpointercapture',this.lostCapture);
     this.viewport.addEventListener('lostpointercapture',this.lostCapture);
     this.persistOnHide=()=>{if(document.visibilityState==='hidden')this.flushPersistence()};
-     document.addEventListener('visibilitychange',this.persistOnHide);
+     document.addEventListener?.('visibilitychange',this.persistOnHide);
      window.addEventListener('blur',this.keyboardBlur);
     window.addEventListener('keydown',this.keyboardDown);
     window.addEventListener('keyup',this.keyboardUp);
@@ -1065,7 +1065,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.flushPersistence();this.closed=true;document.removeEventListener('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
+ dispose(){this.flushPersistence();this.closed=true;document.removeEventListener?.('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
