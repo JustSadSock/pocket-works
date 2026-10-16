@@ -8,7 +8,7 @@ import {ARTS,REAL_COUNT,PLAYABLE_IDS,RETIRED_ARTWORK_IDS,ARCHIVE_EDITION,normali
 import {ART_SCHOOLS} from '../art-provenance.js';
 const requestedRemoval=[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115];
 const chosen=[102,103,104,106,107,108,112,116,117,124,125,126,127,133,134,135,136,137,139,142,144,145,146,147,148,176,191,192];
-assert.deepEqual(RETIRED_ARTWORK_IDS,[...requestedRemoval,115]);
+assert.deepEqual(RETIRED_ARTWORK_IDS,requestedRemoval);
 assert.equal(ARTS[115].title,'Смерть юного Бара');
 assert.equal(ARTS[115].kartotekaId,116);
 assert.ok(!PLAYABLE_IDS.includes(115),'Bara should not be selected in new games');
@@ -67,7 +67,7 @@ assert.equal(ARTS[136].isReal,false,'archived original synthetic image remains a
 assert.equal(ARTS[185].isReal,false,'archived last synthetic image remains in order');
 const server=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
 const snapshot=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v23.ts',import.meta.url),'utf8');
-assert.equal(server,snapshot,'new rooms must use exact immutable v22 copy');
+assert.equal(server,snapshot,'new rooms must use exact immutable v23 copy');
 assert.match(server,/RULESET_VERSION=20/);
 assert.match(server,/const CATALOG_COUNT=136/);
 assert.match(server,/EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115\]\)/);
@@ -81,4 +81,4 @@ assert.equal(config.version,'1.40.10');
 assert.match(html,/data-app-version="1\.40\.10"/);
 assert.match(sw,/APP_VERSION = '1\.40\.10'/);
 assert.match(sw,/museum-approved-second-2026\.js/);
-console.log('ZAMAZKA curation: 27 rejected originals excluded, 28 approved originals added, 108 playable, archive editions 1-6 safe, server v22 OK');
+console.log('ZAMAZKA curation: 27 rejected originals excluded, 28 approved originals added, 108 playable, archive editions 1-6 safe, server v23 OK');
