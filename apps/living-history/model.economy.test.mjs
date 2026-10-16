@@ -44,11 +44,16 @@ test('workers receive wages, landowner pays wages, and missing adults can hire i
 test('pregnancy nutrition affects infant initial condition, and health recovers with food',()=>{
  const s=createWorld(131),h=s.households[0];const mother=s.people.find(p=>h.members.includes(p.id)&&p.sex==='f'&&p.alive);
  mother.pregnantUntil=30;mother.pregnantFatherId=mother.spouse;mother.health=60;mother.foodDebt=55;
- // Birth by day 30 (every 30th day); provide sufficient grain to improve debt slightly but not erase it.
+ // Compare the baby born during THIS test, not an existing founding infant.
+ // The founding households may already contain zero-year-old children.
+ const present=new Set(s.people.map(p=>p.id));
  advanceDays(s,30);
- const child=s.people.find(p=>p.parents.includes(mother.id)&&p.age<.2);
+ const child=s.people.find(p=>!present.has(p.id)&&p.parents.includes(mother.id));
  assert.ok(child);
- assert.ok(child.health<100,'birth status reflects maternal health and nutrition');
+ const expected=Math.round(Math.max(42,Math.min(100,
+  78+mother.health*.22-mother.foodDebt*.27))*100)/100;
+ assert.equal(child.health,expected,'birth status must reflect actual maternal condition at delivery');
+ assert.ok(child.health>=42&&child.health<=100);
  assert.ok(audit(s).ok,audit(s).issues.join('; '));
 });
 

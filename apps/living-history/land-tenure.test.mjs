@@ -99,10 +99,32 @@ test('seasonal sharecropping borrows underused land with crop-share rent, withou
  assert.ok(tenant.leaseIn.every(i=>owner.fields.includes(i)),'land ownership remains with the landlord');
  assert.ok(tenant.leaseIn.every(i=>!tenant.fields.includes(i)),'tenant does not acquire ownership automatically');
  const existing=s.economy.grainInitial;
- advanceDays(s,300);
+ const spring=[];
+ for(let t=0;t<300;t++){
+  advanceDays(s,1);
+  const season=s.day%365;
+  if(season===66||season===79||season===90||season===110||season===145||season===238||season===250){
+   spring.push({day:s.day,season,grain:tenant.grain,oats:tenant.oats,pulses:tenant.pulses,
+    sow:tenant.farmYear?.sownArea,harvest:tenant.farmYear?.harvestedArea,
+    job:tenant.focus,age:tenant.members.map(id=>s.people.find(p=>p.id===id)).filter(Boolean)
+      .map(p=>({age:p.age,health:p.health,job:p.job,hired:p.hiredDay===s.day,travel:!!p.travel})),
+    first:tenant.farmYear?.active?.[0],leased:tenant.leaseIn.length});
+  }
+ }
  assert.ok(s.stats.leasePlots>0);
  assert.ok((s.stats.rentGrain||0)>0,'landlord must receive grain from a genuinely harvested rented strip');
- assert.ok(tenant.accounting.rentPaidKg>0,'cottar paid physical crop share');
+ assert.ok(tenant.accounting.rentPaidKg>0,
+  'cottar paid physical crop share: '+JSON.stringify({
+   owned:tenant.fields.length,leased:tenant.leaseIn.length,
+   season:tenant.farmYear&&{year:tenant.farmYear.year,active:tenant.farmYear.active.length,
+    sown:tenant.farmYear.sownArea,harvested:tenant.farmYear.harvestedArea,
+    planned:tenant.farmYear.plannedArea,seed:tenant.farmYear.seedKg,
+    yield:tenant.farmYear.yieldKg,hasRentedActive:tenant.farmYear.active.some(i=>tenant.leaseIn.includes(i))},
+   focus:tenant.focus,grains:tenant.grain,
+   workers:s.people.filter(p=>p.alive&&p.houseId===tenant.id&&p.age>=15)
+    .map(p=>({health:p.health,job:p.job,travel:!!p.travel})),
+   rent:tenant.accounting.rentPaidKg,landlord:owner.accounting.rentReceivedKg,spring
+  }));
  assert.ok(owner.accounting.rentReceivedKg>=tenant.accounting.rentPaidKg,'free owner can also lease to other tenants');
  assert.equal(existing,s.economy.grainInitial);
  assert.ok(audit(s).ok,audit(s).issues.join('; '));

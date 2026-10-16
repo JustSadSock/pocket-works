@@ -23,7 +23,25 @@ function makeWorldArt(){if(!sim)return;const stages=fieldAppearance(sim);draw.im
    else{draw.fillRect(X+1,Y+2,6,1);draw.fillRect(X+1,Y+5,6,1);}
   }
   continue;
- }if(v>68){draw.fillStyle='#9cac71';draw.fillRect(X+3,Y+3,2,2);}if(sim.forest[i]>60){draw.fillStyle='#355a41';draw.fillRect(X+1,Y+2,6,5);draw.fillStyle=v>40?'#3f6a4b':'#527453';draw.fillRect(X+1,Y,5,5);draw.fillStyle='#749063';draw.fillRect(X+2,Y+1,2,1);}if(sim.traffic[i]>14){draw.fillStyle='#9f9571';draw.fillRect(X+2,Y+3,4,2);}}
+ }
+ if(sim.usage[i]===3){
+  // Tofts have distinct owned crofts, not decorative gardens generated
+  // beside arbitrary roofs. Low hedges follow the ACTUAL cadastral cells.
+  draw.fillStyle='#889a68';draw.fillRect(X,Y,PX,PX);
+  draw.fillStyle='#a5a875';draw.fillRect(X+1,Y+1,6,5);
+  draw.fillStyle='#697d48';draw.fillRect(X+2,Y+1,1,5);draw.fillRect(X+5,Y+1,1,5);
+  draw.fillStyle='#c1ac78';
+  for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]){
+   const xx=x+dx,yy=y+dy,n=(xx<0||xx>=SIZE||yy<0||yy>=SIZE)?-1:yy*SIZE+xx;
+   if(n>=0&&sim.usage[n]===3)continue;
+   if(dx===-1)draw.fillRect(X,Y,1,PX);
+   else if(dx===1)draw.fillRect(X+PX-1,Y,1,PX);
+   else if(dy===-1)draw.fillRect(X,Y,PX,1);
+   else draw.fillRect(X,Y+PX-1,PX,1);
+  }
+  continue;
+ }
+ if(v>68){draw.fillStyle='#9cac71';draw.fillRect(X+3,Y+3,2,2);}if(sim.forest[i]>60){draw.fillStyle='#355a41';draw.fillRect(X+1,Y+2,6,5);draw.fillStyle=v>40?'#3f6a4b':'#527453';draw.fillRect(X+1,Y,5,5);draw.fillStyle='#749063';draw.fillRect(X+2,Y+1,2,1);}if(sim.traffic[i]>14){draw.fillStyle='#9f9571';draw.fillRect(X+2,Y+3,4,2);}}
  // Villages and roof silhouettes: every roof corresponds to an actual household.
  for(const h of sim.households){const X=h.x*PX,Y=h.y*PX;draw.fillStyle='#2e3c33';draw.fillRect(X-3,Y+2,13,9);draw.fillStyle='#ccae7f';draw.fillRect(X-2,Y+1,11,8);draw.fillStyle='#79553f';draw.fillRect(X-4,Y-3,15,7);draw.fillStyle='#a87752';draw.fillRect(X-1,Y-5,10,3);draw.fillStyle='#e0b77c';draw.fillRect(X+2,Y+5,2,2);draw.fillStyle='#513a2f';draw.fillRect(X+8,Y+4,2,5);}
  for(const c of sim.communities){const X=c.x*PX,Y=c.y*PX;draw.fillStyle='#ded4b2';draw.fillRect(X-4,Y-8,8,7);draw.fillStyle='#675f47';draw.fillRect(X-5,Y-11,10,4);draw.fillStyle='#e6bf6b';draw.fillRect(X,Y-17,2,9);}
@@ -140,7 +158,10 @@ if(mode==='laboratory'){
 if(mode==='chronicle'){el.innerHTML=sim.events.slice(-40).reverse().map(e=>`<button class="event" data-event="${e.id}"><time>${Math.floor(e.day/365)+1} г.</time><span class="body">${escapeHTML(e.message)}<small>${escapeHTML(e.cause)}</small></span></button>`).join('')||'<p class="note">Пока нет событий.</p>';return;}
 const a=audit(sim);el.innerHTML=`<button data-action="lab-open" class="lab-entry">Экономический срез <span>→</span></button><div class="tool-actions"><button data-action="save">Сохранить</button><button data-action="export">Экспорт JSON</button><button data-action="import">Импорт JSON</button><button data-action="reset" class="danger">Новый мир</button></div><div class="tool-foot">Seed ${sim.seed} · ${a.ok?'Проверка ресурсов и денег пройдена':escapeHTML(a.issues[0])} · IndexedDB, офлайн</div>`;}
 function setTab(m){mode=m;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===(m==='laboratory'?'tools':m)));renderSheet();}
-function findHouse(x,y){const xi=Math.floor(x),yi=Math.floor(y);if(xi>=0&&yi>=0&&xi<SIZE&&yi<SIZE){const plot=yi*SIZE+xi;if(sim.usage[plot]===2){const holder=sim.households.find(h=>h.fields.includes(plot));if(holder)return holder;}}let best=null,d=Infinity;for(const h of sim.households){const dd=Math.hypot(h.x-x,h.y-y);if(dd<d){d=dd;best=h;}}return d<Math.max(2.2,14/cam.z/PX)?best:null;}
+function findHouse(x,y){const xi=Math.floor(x),yi=Math.floor(y);if(xi>=0&&yi>=0&&xi<SIZE&&yi<SIZE){const plot=yi*SIZE+xi;if(sim.usage[plot]===2||sim.usage[plot]===3){
+ const holder=sim.households.find(h=>h.fields.includes(plot)||(h.croft||[]).includes(plot));
+ if(holder)return holder;
+}}let best=null,d=Infinity;for(const h of sim.households){const dd=Math.hypot(h.x-x,h.y-y);if(dd<d){d=dd;best=h;}}return d<Math.max(2.2,14/cam.z/PX)?best:null;}
 function selectAt(px,py){const p=screenToMap(px,py),h=findHouse(p.x,p.y);if(h){selected=h.id;selectedPerson=null;economyOpen=false;setTab('household');$('#world-label').textContent=`Дом ${getHousehold(sim,h.id).name}`;}else{selected=null;selectedPerson=null;const c=sim.communities.map(c=>({...c,d:Math.hypot(c.x-p.x,c.y-p.y)})).sort((a,b)=>a.d-b.d)[0];$('#world-label').textContent=c?.d<25?c.name:'Неосвоенная земля';setTab('overview');}renderSheet();}
 function onPointerDown(e){if(e.target!==canvas&&e.target!==worldNode)return;e.preventDefault();worldNode.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1){drag={x:e.clientX,y:e.clientY,startX:cam.x,startY:cam.y,moved:false};pinch=null;}else if(pointers.size===2){const p=[...pointers.values()];pinch={length:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z:cam.z};drag=null;}}
 function onPointerMove(e){if(!pointers.has(e.pointerId))return;e.preventDefault();pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const p=[...pointers.values()],len=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(pinch&&pinch.length)zoom(len/pinch.length*pinch.z/cam.z,(p[0].x+p[1].x)/2,(p[0].y+p[1].y)/2);return;}if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>7)drag.moved=true;cam.x=drag.startX+dx;cam.y=drag.startY+dy;}}
