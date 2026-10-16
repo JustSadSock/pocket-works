@@ -207,6 +207,30 @@ try{
     'Attached museum plaque must be wholly visible inside gallery: '+JSON.stringify(labelBounds));
   assert.equal(traveling.legacy,'none','Stationary caption must not remain in new appearance');
 
+  if(mobile){
+   // Follow the SAME physical frame from a side position to the center.
+   // The paper plaque should not darken/brighten when its parent slot changes.
+   const entering=await page.locator('.museum-slide[data-slot="1"]').elementHandle();
+   const sample=()=>entering.evaluate(el=>{
+    const plate=el.querySelector('.museum-slide-label'),rim=el.querySelector('.museum-slide-rim>img');
+    const p=getComputedStyle(plate),frame=getComputedStyle(el);
+    return {background:p.backgroundImage,color:p.color,opacity:p.opacity,
+     frameOpacity:frame.opacity,frameFilter:frame.filter,imageFilter:getComputedStyle(rim).filter};
+   });
+   const before=await sample();
+   await page.locator('[data-action="museum-next"]').click();
+   await page.waitForFunction(()=>!document.querySelector('#museumStage')?.dataset.galleryAnimating,null,{timeout:4000});
+   const after=await sample();
+   assert.equal(before.frameFilter,'none','Side frame must not dim its plate');
+   assert.equal(after.frameFilter,'none','Center frame must not relight its plate');
+   assert.equal(before.frameOpacity,'1');
+   assert.equal(after.frameOpacity,'1');
+   assert.equal(before.opacity,after.opacity,'Plate opacity cannot jump on swipe');
+   assert.equal(before.background,after.background,'Plate paper must not change brightness with carousel position');
+   assert.equal(before.color,after.color,'Plaque ink must not shift on swipe');
+  }
+
+
 
   await page.locator('#settingsBtn').click();
   await page.locator('[data-settings-tab="preferences"]').click();
