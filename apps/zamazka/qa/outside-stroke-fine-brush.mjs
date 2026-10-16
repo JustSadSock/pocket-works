@@ -51,7 +51,7 @@ const compile=src=>{
 };
 const current=compile(readFileSync(new URL('../server/module.ts',import.meta.url),'utf8'));
 const old=compile(readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v14.ts',import.meta.url),'utf8'));
-assert.equal(current.RULESET_VERSION,20);
+assert.equal(current.RULESET_VERSION,21);
 const host={id:'host',name:'Host'},guest={id:'guest',name:'Guest'},players=[host,guest];
 const fine={c:'#324a43',s:.25,t:'brush',p:[[60,60],[65,65]]};
 function submit(mod){

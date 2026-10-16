@@ -11,7 +11,7 @@ const moduleSrc=readFileSync(new URL('../server/module.ts',import.meta.url),'utf
 const output=ts.transpileModule(moduleSrc,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={};
 runInNewContext(output,{exports,Date:Clock,Math,Number,Array,Set,Map,JSON,Object,Error,console});
-assert.equal(exports.RULESET_VERSION,20);
+assert.equal(exports.RULESET_VERSION,21);
 const game=exports.default,host={id:'author',name:'Artist'},guest={id:'guest',name:'Expert'},players=[host,guest];
 const state=game.createRoom({player:host}).state;
 game.onJoin({state,player:guest,players});
