@@ -9,7 +9,7 @@ const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8')
 const transpiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={};
 runInNewContext(transpiled,{exports,Date:ControlledDate,Math,Array,Number,Object,Error,JSON,Set,Map,console});
-assert.equal(exports.RULESET_VERSION,20);
+assert.equal(exports.RULESET_VERSION,21);
 const module=exports.default,host={id:'host',name:'Host'},guest={id:'guest',name:'Guest'},players=[host,guest];
 function setup(){
  const state=module.createRoom({player:host}).state;
@@ -114,3 +114,6 @@ console.log('ZAMAZKA: seven timed presets including 10 minutes, untimed all-play
 
 // Deadline and final transfer regressions are part of the main timer gate.
 import './deadline-integrity.mjs';
+
+// Authoritative clocks, private partial votes and stable author frames.
+import './server-clock-votes.mjs';
