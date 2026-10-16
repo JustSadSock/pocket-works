@@ -74,7 +74,7 @@ try{
   await page.locator('#viewerNext').click();
   await expect(page.locator('#viewerIndex')).toContainText('2');
   await page.locator('#viewerPrev').click();
-  await expect(page.locator('#viewerIndex')).toContainText('101');
+  await expect(page.locator('#viewerIndex')).toContainText('№ 1 ·');
   await page.locator('#viewerPick').click();
   await expect(page.locator('#selectedCount')).toHaveText('0');
   await page.locator('#sourceEditor summary').click();
