@@ -61,7 +61,7 @@ const compiled=ts.transpileModule(moduleSource,{compilerOptions:{
 }}).outputText;
 const api={},randomMath=Object.create(Math);randomMath.random=()=>.12;
 runInNewContext(compiled,{exports:api,Math:randomMath,Date,Array,Number,Object,JSON,Set,Map,Error,console});
-assert.equal(api.RULESET_VERSION,17,'new immutable PocketNet ruleset');
+assert.equal(api.RULESET_VERSION,18,'new immutable PocketNet ruleset');
 const host={id:'a',name:'A'},guest={id:'b',name:'B'},players=[host,guest];
 const state=api.default.createRoom({player:host}).state;
 api.default.onJoin({state,player:guest,players});
