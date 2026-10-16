@@ -1,0 +1,82 @@
+/* ZAMAZKA — a single physical ratio for decoded painting, restoration and frame.
+   The 600×450 logical bitmap remains unchanged for saved brush coordinates. */
+
+/* Originals in voting and verdicts, and restored canvas candidates, share
+   exactly the same fitted opening. Never put 'contain' letterboxes inside a
+   gilded rim or give the image a second independent size constraint. */
+#screen .zam-exhibit-rim > :is(img,canvas){
+ display:block!important;
+ box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ min-width:0!important;min-height:0!important;
+ max-width:none!important;max-height:none!important;
+ padding:0!important;margin:0!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+}
+#screen .zam-exhibit-rim{min-width:0!important;min-height:0!important}
+
+/* Two canvases in the same comparison window MUST share the decoded ratio:
+   their internal 600×450 raster is presented on a natural-sized surface. */
+#screen .unveil-frame > canvas,
+#dialog .round-view-image > canvas{
+ position:absolute;inset:0;
+ display:block!important;width:100%!important;height:100%!important;
+ max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+}
+
+/* In the personal archive, the outer region is a staging area — not a
+   decorative 4:3 frame. Only the snug inner rim is gilded. A separate rim
+   avoids all old media rules forcibly stretching .archive-art-frame canvas. */
+#screen>.collection-page .archive-work .archive-art-frame{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;min-width:0!important;min-height:0!important;
+ padding:0!important;margin:0!important;
+ border:0!important;outline:0!important;
+ background:transparent!important;box-shadow:none!important;
+ overflow:visible!important;
+}
+#screen>.collection-page .archive-work .archive-art-frame .archive-rim{
+ --archive-art-height:clamp(155px,16vw,240px);
+ display:block!important;position:relative!important;
+ flex:0 0 auto!important;min-width:0!important;min-height:0!important;
+ box-sizing:border-box!important;
+ width:min(calc(var(--archive-art-height) * var(--art-aspect,1.333333)), calc(100% - 18px))!important;
+ max-width:calc(100% - 18px)!important;
+ height:auto!important;aspect-ratio:var(--art-aspect,1.333333)!important;
+ border:0!important;outline:7px ridge #97764d!important;
+ background:#2e261d!important;
+ box-shadow:0 7px 15px #14100bb0!important;
+ overflow:hidden!important;
+}
+#screen>.collection-page .archive-work .archive-rim > canvas{
+ display:block!important;
+ box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ min-width:0!important;min-height:0!important;
+ max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+ border:0!important;margin:0!important;padding:0!important;
+ background:transparent!important;
+}
+@media(max-width:760px){
+ #screen>.collection-page .archive-work .archive-art-frame .archive-rim{
+  --archive-art-height:min(31dvh,260px);
+  outline-width:5px!important;
+ }
+}
+@media(max-width:699px) and (orientation:portrait){
+ #screen>.collection-page .archive-work .archive-art-frame .archive-rim{
+  --archive-art-height:min(37dvh,300px);
+ }
+}
+/* Explicit canvas fit for large voting inspection and saved archive viewer;
+   both ratio vars are installed after the real image is decoded. */
+#largeCandidate{
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ width:min(100%,calc(52dvh * var(--art-aspect,1.333333)))!important;
+ height:auto!important;object-fit:fill!important;
+}
+#dialog .round-view-window{
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+}
