@@ -6,6 +6,7 @@ import {NEW_WORKS as SECOND_100} from '../new-catalog.js';
 import {REVIEW_WORKS} from '../original-review.js';
 import {APPROVED_WORKS as FIRST_36} from '../approved.js';
 import {SECOND_APPROVED_WORKS as SECOND_28} from '../second-approved.js';
+import {ARTS as ZAMAZKA_ARTS} from '../../zamazka/artworks.js';
 const picked=[102,103,104,106,107,108,112,116,117,124,125,126,127,133,134,135,136,137,139,142,144,145,146,147,148,176,191,192];
 assert.equal(FIRST_100.length,100);
 assert.equal(SECOND_100.length,100);
@@ -15,6 +16,7 @@ assert.equal(REVIEW_WORKS[0].title,'Девушка с жемчужной сер�
 assert.equal(REVIEW_WORKS[0].isCover,true);
 assert.equal(REVIEW_WORKS[71].title,'Вакх');
 assert.ok(REVIEW_WORKS.every(w=>w.file&&w.path&&w.source&&w.title&&w.artist));
+for(const work of REVIEW_WORKS){const game=ZAMAZKA_ARTS[work.id];assert.equal(work.title,game.title,'name of original game ID '+work.id);assert.equal(work.file,game.file,'exact filename of original game ID '+work.id);assert.equal(work.path,game.path,'exact Commons directory for game ID '+work.id);assert.equal(work.source,game.source,'original source for game ID '+work.id)}
 assert.deepEqual(REVIEW_WORKS.filter(w=>w.wasRetired).map(w=>w.id),[17,22,36]);
 assert.equal(REVIEW_WORKS.filter(w=>w.group==='Первоначальный фонд').length,54);
 assert.equal(REVIEW_WORKS.filter(w=>w.group==='Поздние дополнения').length,18);
