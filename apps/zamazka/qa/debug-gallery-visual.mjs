@@ -87,7 +87,25 @@ try{
    tested++;
   }
   // Never let a mock action accidentally submit/leave the real room.
-  if(w<700)await gallery.locator('[data-debug-reopen]').click();
+  // A real CSS viewport switch, not a cosmetic phone frame or label.
+  if(w<700&&await gallery.evaluate(el=>el.classList.contains('is-collapsed')))
+   await gallery.locator('[data-debug-reopen]').click();
+  await gallery.locator('[data-debug-device="phone"]').click();
+  await preview.locator('#screen[data-debug-preview="sounds"]').waitFor();
+  const phone=await preview.locator('body').evaluate(()=>[innerWidth,innerHeight]);
+  assert.deepEqual(phone,[390,844],name+' phone preview must use actual 390×844 layout');
+  assert.equal(await gallery.locator('[data-debug-device="phone"]').getAttribute('aria-pressed'),'true');
+  await gallery.locator('[data-debug-device="desktop"]').click();
+  await preview.locator('#screen[data-debug-preview="sounds"]').waitFor();
+  const desktop=await preview.locator('body').evaluate(()=>[innerWidth,innerHeight]);
+  assert.deepEqual(desktop,[1440,900],name+' desktop preview must use actual 1440×900 layout');
+  const available=await gallery.locator('.zam-debug-device-window').evaluate(el=>{
+   const rect=el.getBoundingClientRect();return {width:rect.width,height:rect.height};
+  });
+  assert(available.width<=w&&available.height<=h,'scaled device frame must fit real host viewport');
+  assert.equal(await gallery.locator('[data-debug-device="desktop"]').getAttribute('aria-pressed'),'true');
+  if(w<700&&await gallery.evaluate(el=>el.classList.contains('is-collapsed')))
+   await gallery.locator('[data-debug-reopen]').click();
   await gallery.locator('[data-debug-select="drawing"]').click();
   await preview.locator('#screen[data-debug-preview="drawing"]').waitFor();
   await preview.locator('[data-action="submit"]').click();
