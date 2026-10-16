@@ -26,7 +26,7 @@ const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8')
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={};
 runInNewContext(compiled,{exports,Date:Clock,Math,Array,Number,Object,Error,JSON,Set,Map,console});
-assert.equal(exports.RULESET_VERSION,19,'new server rules version');
+assert.equal(exports.RULESET_VERSION,20,'new server rules version');
 const player={id:'author',name:'Restorer'},guest={id:'peer',name:'Observer'},players=[player,guest];
 const game=exports.default,state=game.createRoom({player}).state;
 game.onJoin({state,player:guest,players});
