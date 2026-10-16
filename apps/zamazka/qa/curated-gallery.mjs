@@ -78,7 +78,7 @@ const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8')
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={},sandbox={exports,Date,Math,Number,Array,Object,JSON,Set,Map,Error,console};
 runInNewContext(compiled,sandbox);
-assert.equal(exports.RULESET_VERSION,20,'new room protocol version');
+assert.equal(exports.RULESET_VERSION,21,'new room protocol version');
 assert.match(source,/const CATALOG_COUNT=136;/);
 assert.match(source,/EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115\]\)/,'server excludes all 27 rejected paintings');
 const mod=exports.default,players=[{id:'a',name:'A'},{id:'b',name:'B'}];
