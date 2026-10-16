@@ -1,15 +1,15 @@
 {
   "zamazka": {
-    "revision": "9c494ec1382a140606bced591ac19b76e23bb5b3",
-    "qualityScore": 74,
+    "revision": "a42f31a495089bdcbbf2345b1b56530f2f7d973c",
+    "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "342dff2cce77158acdf0d5992cb6f6a5953c502e9e49475e9e22c345e16d6a55",
+    "sha256": "ae1c6280be4341f6d5ea2d9a61598c9b6d5f14051f88dde61ac35d127cb43016",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "9c494ec1382a140606bced591ac19b76e23bb5b3",
-    "lastAttemptAt": "2026-10-16T15:27:30.472Z",
+    "lastAttemptRevision": "a42f31a495089bdcbbf2345b1b56530f2f7d973c",
+    "lastAttemptAt": "2026-10-16T18:43:24.535Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -65,7 +65,7 @@
     "note": "existing cover rated higher",
     "status": "preserved",
     "lastAttemptRevision": "12252b96c0defcbbd8df4fdec54f00ee336c4928",
-    "lastAttemptAt": "2026-10-14T17:44:23.379Z",
+    "lastAttemptAt": "2026-10-16T18:43:35.480Z",
     "captureEngine": "safe-gameplay-v3"
   },
   "lipki": {
