@@ -7,6 +7,8 @@ import {ARTS,REAL_COUNT,PLAYABLE_IDS,RETIRED_ARTWORK_IDS,ARCHIVE_EDITION,normali
 import {PLAYFUL_ADDITIONS} from '../museum-playful.js';
 import {APPROVED_2026_ADDITIONS} from '../museum-approved-2026.js';
 import {ART_SCHOOLS} from '../art-provenance.js';
+// Execute the second edition and 26-removal invariants whenever the existing museum suite runs.
+import './final-curation-28-26.mjs';
 
 const oldRealCount=54;
 assert.equal(REAL_COUNT,136,'54 original + 18 playful + 36 first approvals + 28 second approvals');
