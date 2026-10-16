@@ -53,7 +53,7 @@ const q=new URLSearchParams(location.search);
 let invitedRoom=q.get('room')||'';
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',autoVoteTimer=null,connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 const museumAudio=new MuseumAudio(beepEnabled);
-let soundDemoTimer=null;
+let soundDemoTimer=null,connectionLost=false;
 const SOUND_VOLUME_KEY=NS+'sound-volume';
 let soundVolume=Math.max(0,Math.min(100,Number(localStorage.getItem(SOUND_VOLUME_KEY)??55)||0));
 museumAudio.setVolume(soundVolume/100);
@@ -181,7 +181,7 @@ function attemptSubmission(force=false){
  }
 }
 function submitArtwork({automatic=false}={}){
- if(view?.paused)return;
+ if(view?.paused||connectionLost)return;
  if(!editor||!view?.mine||!roomId)return;
  const ass=view.mine,token=submissionToken(ass,view.round);
  if(pendingSubmit?.token===token){attemptSubmission(true);return}
@@ -900,7 +900,7 @@ async function connect(mode){
    net=client;
    if(mode!=='resume'){client.roomId=null;client.persist()}
    if(mode==='resume'&&!client.roomId)throw Error('Предыдущая сессия завершена');
-   client.on('connected',data=>{if(client.closed)return;me=data.player;connectionStatus('ok');markTabGuest(POCKETNET_URL,client.token);setConnectionStep(screen,3,'Открываем зал…')});
+   client.on('connected',data=>{if(client.closed)return;connectionLost=false;me=data.player;connectionStatus('ok');markTabGuest(POCKETNET_URL,client.token);setConnectionStep(screen,3,'Открываем зал…')});
    client.on('room_joined',msg=>{
      if(client.closed)return;
      roomId=msg.roomId;
@@ -978,7 +978,7 @@ async function connect(mode){
    client.on('room_kicked',()=>{if(net!==client||client.closed)return;home(true);notify('Куратор исключил тебя из комнаты')});
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
    client.on('disconnected',()=>{
-     if(client.closed)return;connectionStatus('offline');
+     if(client.closed)return;connectionLost=true;museumAudio.stopCountdown();connectionStatus('offline');
      activeDraftTransfer?.abort();activeDraftTransfer=null;
      activeSubmitTransfer?.abort();activeSubmitTransfer=null;
      lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';
@@ -1323,8 +1323,8 @@ function tick(){
  const timed=(page==='preview'||page==='drawing')&&
              (v?.phase==='preview'||v?.phase==='drawing')&&Number(v?.deadline)>0;
  const now=Date.now();
- if(clock&&v?.paused){
-  const remaining=Math.max(0,Number(v.pauseRemainingMs)||0),seconds=Math.ceil(remaining/1000);
+ if(clock&&(v?.paused||connectionLost&&!practice)){
+  const remaining=Math.max(0,Number(v?.paused?v.pauseRemainingMs:v.deadline-Date.now())||0),seconds=Math.ceil(remaining/1000);
   clock.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
   clock.classList.remove('urgent');clockSoundState=null;museumAudio.stopCountdown();
  }else if(clock&&timed){
@@ -1348,8 +1348,8 @@ function tick(){
  }
  // Sound the zero cue before changing the screen or submitting the final stroke.
  if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
- if(!view?.paused)autoFinishOnDeadline();
- if(net&&view&&!view.paused&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
+ if(!view?.paused&&!connectionLost)autoFinishOnDeadline();
+ if(net&&view&&!view.paused&&!connectionLost&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
   lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}
  }
 }
