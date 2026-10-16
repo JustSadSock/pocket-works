@@ -56,7 +56,7 @@ assert(list.includes('clock-demo'));
 const html=soundGalleryMarkup();
 for(const name of list)assert(html.includes('data-debug-sound="'+name+'"'),'missing labeled demo '+name);
 const audio=readFileSync(new URL('../museum-audio.js',import.meta.url),'utf8');
-assert.match(audio,/const level=\.23\+\.34\*progress/,'clockwork must gradually get louder');
+assert.match(audio,/const level=\.085\+\.915\*Math\.pow\(progress,1\.34\)/,'clockwork must crescendo from quiet to fully audible');
 assert.match(audio,/if\(nowMs>=clock\.duckUntil\)/,'alarms must override gradual clock level');
 const muted=new MuseumAudio(false);
 assert.equal(muted.play('time-up',true),false);

@@ -32,3 +32,6 @@ import './clock-soundscape.mjs';
 
 // Crash recovery and every auditionable original sound.
 import './pause-and-sounds.mjs';
+
+// Fifth pass: real foley layering, nonlinear clock swell and uncluttered stage regression.
+import './fifth-review.mjs';

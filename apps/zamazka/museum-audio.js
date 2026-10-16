@@ -77,6 +77,25 @@ export class MuseumAudio{
   this.ring(t+.003,f*2.008,d*.67,g*.27,'triangle');
   this.ring(t+.006,f*3.014,d*.43,g*.12,'sine');
  }
+ // Foley primitives: physically short resonances plus asynchronous fibre friction.
+ // Neither one holds a pitched oscillator long enough to sound like a ringtone.
+ wood(t,low=165,g=.12){
+  this.grain(t,.065,low*3.8,g*.8,.54);
+  this.grain(t+.008,.042,low*7.3,g*.38,.7);
+  this.ring(t,low,.105,g*.28,'sine');
+  this.ring(t+.015,low*.74,.13,g*.12,'triangle');
+ }
+ rub(t,duration=.2,base=1050,intensity=.07,grainCount=7){
+  for(let i=0;i<grainCount;i++){
+   const fraction=i/Math.max(1,grainCount-1);
+   const envelope=(.27+.73*Math.sin(Math.PI*(.12+.8*fraction)));
+   this.grain(t+fraction*duration,.047,base*(.78+.38*fraction),intensity*envelope,.36);
+  }
+ }
+ cloth(t,duration=.25,level=.055){
+  this.rub(t,duration,800,level,9);
+  this.rub(t+.026,duration*.83,1840,level*.38,5);
+ }
  clockBeat(t,tock,bus){
   // Dry steel escapement alternating with a muted wooden return.
   this.grain(t,tock?.042:.029,tock?740:1900,tock?.084:.095,tock?.62:1.45,bus);
@@ -88,8 +107,8 @@ export class MuseumAudio{
   this.clock.duckUntil=Date.now()+seconds*1000;
   gain.cancelScheduledValues(at);
   gain.setValueAtTime(gain.value,at);
-  gain.setTargetAtTime(.10,at,.035);
-  gain.setTargetAtTime(.32,at+seconds,.13);
+  gain.setTargetAtTime(.045,at,.035);
+  gain.setTargetAtTime(.08,at+seconds,.13);
  }
  stopCountdown(fade=.08){
   const clock=this.clock;this.clock=null;
@@ -113,14 +132,14 @@ export class MuseumAudio{
    this.stopCountdown();
    const bus=this.context.createGain();
    bus.gain.value=.0001;bus.connect(this.master);
-   bus.gain.setTargetAtTime(.23,this.context.currentTime,.08);
+   bus.gain.setTargetAtTime(.085,this.context.currentTime,.08);
    this.clock={key,deadline:deadlineMs,bus,next:deadlineMs-15000,duckUntil:0};
   }
   const clock=this.clock,start=deadlineMs-15000;
-  // Progressive tension: 23% at -15 s → 57% at 0. The clock's own
-  // gain rises independently from the Clockmaker alarm gain and sound setting.
+  // Deliberate crescendo: 8.5% at -15s to 100% at zero (~21dB perceived
+  // shift in tick level). Exponent keeps the opening tick unobtrusive.
   const progress=Math.max(0,Math.min(1,(15000-(deadlineMs-nowMs))/15000));
-  const level=.23+.34*progress;
+  const level=.085+.915*Math.pow(progress,1.34);
   if(nowMs>=clock.duckUntil)clock.bus.gain.setTargetAtTime(level,this.context.currentTime,.16);
   if(clock.next<nowMs-500)clock.next=start+Math.ceil((nowMs-500-start)/500)*500;
   const horizon=Math.min(deadlineMs-30,nowMs+1050);
@@ -150,12 +169,39 @@ export class MuseumAudio{
    if(kind==='time-up')this.stopCountdown(.15);
    const at=t+.007;
    switch(kind){
-    case 'door':this.grain(at,.33,260,.053,.28);this.grain(at+.12,.19,105,.047,.48);this.ring(at+.13,118,.23,.021);break;
-    case 'frame':this.grain(at,.19,490,.076,.48);this.grain(at+.12,.07,200,.046,.85);this.ring(at+.13,173,.085,.033);break;
-    case 'paper':this.grain(at,.17,1150,.068,.38);this.grain(at+.07,.11,1920,.037,.51);break;
+    // Latch → long worn hinge drag → low wooden closing knock.
+    case 'door':
+     this.wood(at,205,.065);
+     this.rub(at+.075,.29,420,.062,10);
+     this.grain(at+.13,.27,300,.042,.4);
+     this.wood(at+.37,114,.18);
+     break;
+    // A carved frame slides across the museum desk and is set down twice.
+    case 'frame':
+     this.wood(at,197,.12);
+     this.rub(at+.05,.21,490,.047,8);
+     this.wood(at+.31,142,.18);
+     this.grain(at+.325,.07,620,.036,.8);
+     break;
+    // Archive sheet: dry broad-band fibre rustle, crisp curved page turnover.
+    case 'paper':
+     this.rub(at,.24,2120,.056,10);
+     this.rub(at+.06,.15,3270,.035,7);
+     this.grain(at+.29,.075,1240,.028,.65);
+     break;
     case 'tool':this.grain(at,.06,680,.073,1.15);this.ring(at+.008,264,.07,.023);break;
-    case 'brush':this.grain(at,.13,1600,.071,.4);this.grain(at+.028,.09,520,.042,.72);break;
-    case 'fill':this.grain(at,.16,460,.065,.45);this.ring(at+.045,220,.11,.033);break;
+    // Bristles scraping woven canvas, with changing contact pressure.
+    case 'brush':
+     this.rub(at,.20,920,.041,9);
+     this.rub(at+.011,.17,2230,.025,7);
+     this.grain(at+.21,.055,480,.019,.58);
+     break;
+    // Pigment dragged into canvas: broad softer swish and a grounded final dab.
+    case 'fill':
+     this.rub(at,.26,700,.066,10);
+     this.cloth(at+.035,.20,.032);
+     this.wood(at+.28,175,.048);
+     break;
     // The user's selected "coin on wooden table": dry woody knock plus a short metal wobble.
     case 'token':
      this.grain(at,.05,780,.095,.45);
@@ -164,8 +210,18 @@ export class MuseumAudio{
      this.ring(at+.076,1080,.21,.020,'sine');
      break;
     case 'undo':this.grain(at,.11,950,.055,.54);this.ring(at,196,.09,.022);break;
-    case 'confirm':this.grain(at,.095,470,.096,.72);this.ring(at,158,.22,.047);this.ring(at+.034,485,.18,.018,'sine');break;
-    case 'reveal':this.grain(at,.28,820,.074,.43);this.ring(at+.13,650,.32,.020,'sine');this.ring(at+.15,980,.26,.011,'sine');break;
+    // Firm curator's wooden stamp: two clear low beats and stable warm release.
+    case 'confirm':
+     this.wood(at,142,.14);
+     this.wood(at+.115,179,.12);
+     this.ring(at+.115,358,.21,.042,'sine');
+     break;
+    // Linen pulled away from a canvas, frame slides, gently meets its stop.
+    case 'reveal':
+     this.cloth(at,.31,.072);
+     this.rub(at+.23,.20,550,.032,7);
+     this.wood(at+.43,166,.11);
+     break;
     case 'clock-tick':this.clockBeat(at,false,this.master);break;
     // Clockmaker A: short mechanical tap and a small metallic watch chime.
     case 'watch-warning':
@@ -183,10 +239,27 @@ export class MuseumAudio{
      this.chime(at+.29,640,2.10,.16);
      this.chime(at+.59,765,1.90,.13);break;
     // Legacy effects remain valid but are no longer emitted by a countdown.
-    case 'warning':this.grain(at,.06,430,.068,.67);this.ring(at,270,.08,.033);break;
+    // Recognition-first caution: two clearly spaced rising wood-and-bell calls.
+    case 'warning':
+     this.wood(at,195,.11);
+     this.ring(at+.018,505,.12,.048,'sine');
+     this.wood(at+.19,222,.11);
+     this.ring(at+.21,674,.19,.049,'sine');
+     break;
     case 'final-warning':this.grain(at,.11,600,.091,.8);this.ring(at,380,.22,.065);break;
-    case 'error':this.grain(at,.13,290,.077,.63);this.ring(at,112,.15,.035);break;
-    default:this.grain(at,.045,1000,.05,.9);this.ring(at+.004,308,.058,.015);
+    // Distinct rejection: falling interval, then blunt stopped lower knock.
+    case 'error':
+     this.ring(at,320,.115,.060,'triangle');
+     this.wood(at+.14,146,.13);
+     this.ring(at+.14,175,.23,.065,'triangle');
+     this.grain(at+.20,.065,280,.045,.5);
+     break;
+    // The button itself is a substantial low-pitched, spring-return wooden latch.
+    case 'press':
+     this.wood(at,153,.125);
+     this.grain(at+.032,.033,1520,.020,1.35);
+     break;
+    default:this.wood(at,171,.08);
    }
    return true;
   }catch{return false} // Game stays playable when Web Audio is unavailable.
