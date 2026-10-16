@@ -33,11 +33,11 @@ try{
   await context.route(/https:\/\/commons\.wikimedia\.org\/w\/api\.php/,route=>route.fulfill({status:200,headers:{'access-control-allow-origin':'*'},contentType:'application/json',body:JSON.stringify({query:{pages:[]}})}));
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/apps/art-cabinet/',{waitUntil:'domcontentloaded'});
-  await expect.poll(()=>page.locator('html').getAttribute('data-art-cabinet-ready')).toBe('2');
+  await expect.poll(()=>page.locator('html').getAttribute('data-art-cabinet-ready')).toBe('3');
   await expect(page.locator('.work')).toHaveCount(12);
-  await expect(page.locator('.work[data-id="101"] .work-name')).toHaveText('Плот «Медузы»');
+  await expect(page.locator('.work[data-id="1"] .work-name')).toHaveText('Звёздная ночь');
   await expect(page.locator('#selectedCount')).toHaveText('0');
-  await expect.poll(()=>page.locator('.work[data-id="101"] img').evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);
+  await expect.poll(()=>page.locator('.work[data-id="1"] img').evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);
   if(viewport.width<=760){
    const before=await page.evaluate(()=>({client:innerHeight,scrollHeight:document.documentElement.scrollHeight,style:getComputedStyle(document.body).overflowY}));
    assert.ok(before.scrollHeight>before.client+250,'body must be taller than screen for real scrolling');
@@ -45,7 +45,7 @@ try{
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+3),'no unnecessary horizontal page scroll');
    await page.evaluate(()=>window.scrollTo(0,500));
    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(100);
-   const width=await page.locator('.work[data-id="101"] .work-visual').evaluate(el=>el.getBoundingClientRect().width);
+   const width=await page.locator('.work[data-id="1"] .work-visual').evaluate(el=>el.getBoundingClientRect().width);
    assert.ok(width>viewport.width*.78,'art fills most of the phone');
   }else{
    const region=page.locator('#galleryScroll');
@@ -53,22 +53,26 @@ try{
    await region.evaluate(el=>{el.scrollTop=260});
    await expect.poll(()=>region.evaluate(el=>el.scrollTop)).toBeGreaterThan(80);
   }
-  await page.locator('.work[data-id="101"] .work-pick').click();
+  await page.locator('.work[data-id="1"] .work-pick').click();
   await expect(page.locator('#selectedCount')).toHaveText('1');
   await page.locator('[data-filter="picked"]').click();
   await expect(page.locator('.work')).toHaveCount(1);
-  await page.locator('[data-filter="approved"]').click();
+  await page.locator('[data-filter="approved2"]').click();
   await expect(page.locator('.work')).toHaveCount(12);
-  await expect(page.locator('.work[data-id="3"] .work-pick')).toBeDisabled();
+  await expect(page.locator('.work[data-id="2000"] .work-pick')).toBeDisabled();
+  await expect(page.locator('.work[data-id="2000"] .work-index')).toHaveText('102');
+  await page.locator('[data-filter="approved1"]').click();
+  await expect(page.locator('.work')).toHaveCount(12);
+  await expect(page.locator('.work[data-id="1000"] .work-index')).toHaveText('1');
   await page.locator('[data-filter="all"]').click();
   await page.locator('#nextPage').click();
-  await expect(page.locator('#pageStatus')).toHaveText('2 / 9');
+  await expect(page.locator('#pageStatus')).toHaveText('2 / 6');
   await page.locator('#prevPage').click();
-  await page.locator('.work[data-id="101"] .work-visual').click();
+  await page.locator('.work[data-id="1"] .work-visual').click();
   await expect(page.locator('#viewer')).toBeVisible();
-  await expect(page.locator('#viewerTitle')).toHaveText('Плот «Медузы»');
+  await expect(page.locator('#viewerTitle')).toHaveText('Звёздная ночь');
   await page.locator('#viewerNext').click();
-  await expect(page.locator('#viewerIndex')).toContainText('102');
+  await expect(page.locator('#viewerIndex')).toContainText('2');
   await page.locator('#viewerPrev').click();
   await expect(page.locator('#viewerIndex')).toContainText('101');
   await page.locator('#viewerPick').click();
