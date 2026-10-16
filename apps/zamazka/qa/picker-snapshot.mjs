@@ -49,7 +49,7 @@ e.working=null;
 e.strokes=[{c:'#123456',s:12,t:'brush',p:[[125,170]]}];
 
 const handler=Object.create(Editor.prototype);
-Object.assign(handler,e,{tool:'brush',color:'#123456',spaceTool:null,spacePicked:false,lastMousePoint:{clientX:125,clientY:170,pointerType:'mouse'},strokes:[],working:null});
+Object.assign(handler,e,{tool:'brush',color:'#123456',spaceTool:null,spacePicked:false,lastMousePoint:{clientX:125,clientY:170,pointerType:'mouse'},strokes:[{c:'#123456',s:12,t:'brush',p:[[125,170]]}],working:null});
 handler.root=e.root;
 const listeners=new Map();globalThis.window={addEventListener(name,fn){listeners.set(name,fn)}};
 globalThis.document={querySelector(){return null}};
