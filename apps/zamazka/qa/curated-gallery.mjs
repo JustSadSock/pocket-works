@@ -18,11 +18,11 @@ assert.equal(APPROVED_2026_ADDITIONS.length,36);
 assert.equal(ARTS[22].title,'Сад земных наслаждений');
 assert.equal(ARTS[36].title,'Юпитер и Семела');
 assert.ok(!PLAYABLE_IDS.includes(22)&&!PLAYABLE_IDS.includes(36));
-assert.deepEqual(RETIRED_ARTWORK_IDS,[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69],'All 26 user-rejected old paintings excluded, original IDs retained');
+assert.deepEqual(RETIRED_ARTWORK_IDS,[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115],'All 26 original rejected plus Young Bara old paintings excluded, original IDs retained');
 assert.equal(ARTS[17].title,'Вавилонская башня');
 assert.ok(!PLAYABLE_IDS.includes(17),'retired painting cannot be selected in a new round');
 assert.ok(!PLAYABLE_IDS.includes(0),'the original cover remains out of active games');
-assert.equal(PLAYABLE_IDS.length,109,'136 originals minus cover and 26 rejected works');
+assert.equal(PLAYABLE_IDS.length,108,'136 originals minus cover and 27 rejected works');
 assert.ok(!PLAYABLE_IDS.includes(54)&&PLAYABLE_IDS.includes(71)&&PLAYABLE_IDS.includes(107)&&PLAYABLE_IDS.includes(135));
 assert.deepEqual(PLAYABLE_IDS.slice(-28),Array.from({length:28},(_,i)=>108+i));
 
@@ -78,9 +78,9 @@ const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8')
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={},sandbox={exports,Date,Math,Number,Array,Object,JSON,Set,Map,Error,console};
 runInNewContext(compiled,sandbox);
-assert.equal(exports.RULESET_VERSION,19,'new room protocol version');
+assert.equal(exports.RULESET_VERSION,20,'new room protocol version');
 assert.match(source,/const CATALOG_COUNT=136;/);
-assert.match(source,/EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69\]\)/,'server excludes all 26 rejected paintings');
+assert.match(source,/EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115\]\)/,'server excludes all 27 rejected paintings');
 const mod=exports.default,players=[{id:'a',name:'A'},{id:'b',name:'B'}];
 const state=mod.createRoom({player:players[0]}).state;
 mod.onJoin({state,player:players[1],players});
