@@ -272,6 +272,22 @@ export function firstDamageEntry(zone,from,to){
  }
  return to;
 }
+// Hit-test real brush pigment, never the beige undercoat.
+export function strokeTouchesPoint(stroke,point,aspect=W/H){
+ if(!stroke?.p?.length||!Number.isFinite(point?.[0])||!Number.isFinite(point?.[1]))return false;
+ if(stroke.t==='fill')return false;
+ const correction=(W/H)/Math.max(.1,aspect),width=Number(stroke.s)||8;
+ const radius=(stroke.t==='pencil'?Math.max(.15,width*.4):width)/2*(stroke.t==='spray'?2.25:1);
+ const px=point[0]/correction,py=point[1];
+ for(let i=0;i<stroke.p.length;i++){
+  const a=stroke.p[Math.max(0,i-1)],c=stroke.p[i];
+  const ax=a[0]/correction,ay=a[1],bx=c[0]/correction,by=c[1];
+  const dx=bx-ax,dy=by-ay,len=dx*dx+dy*dy;
+  const k=len?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/len)):0;
+  if(Math.hypot(px-ax-dx*k,py-ay-dy*k)<=radius+.33)return true;
+ }
+ return false;
+}
 export const MIN_BRUSH_SIZE=.25,MAX_EDITOR_ZOOM=8;
 export const MAX_STROKES=400,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=12000;
 
@@ -573,9 +589,42 @@ export class Editor{
     this.cursor.hidden=false;
   }
   hideCursor(){clearTimeout(this.cursorIdleTimer);this.cursorMotion=null;if(this.cursor){this.cursor.hidden=true;this.cursor.classList?.remove?.('is-idle','is-fast','is-pressed')}}
-  hidePickerPreview(){if(this.pickerPreview)this.pickerPreview.hidden=true}
+ // Only sample pixels actually belonging to the image or user-applied pigment.
+ pointOnPainting(e){
+  const b=this.canvas.getBoundingClientRect();
+  return Number.isFinite(e?.clientX)&&Number.isFinite(e?.clientY)&&
+   b.width>0&&b.height>0&&e.clientX>=b.left&&e.clientX<b.right&&
+   e.clientY>=b.top&&e.clientY<b.bottom;
+ }
+ paintedHere(p){
+  const aspect=this.frameAspect||W/H;
+  const strokes=[...(this.strokes||[]),...(this.working?[this.working]:[])];
+  for(let i=strokes.length-1;i>=0;i--){
+   const stroke=strokes[i];
+   if(stroke.t==='fill'||stroke.t==='smudge')continue;
+   if(strokeTouchesPoint(stroke,p,aspect))return stroke.t!=='erase';
+  }
+  if(strokes.some(stroke=>stroke.t==='fill')&&this.inkLayer?.getContext){
+   try{
+    const ink=this.inkLayer,rgba=ink.getContext('2d',{willReadFrequently:true}).getImageData(
+     Math.min(ink.width-1,Math.floor(p[0]/W*ink.width)),
+     Math.min(ink.height-1,Math.floor(p[1]/H*ink.height)),1,1).data;
+    if(rgba[3]&&Math.max(Math.abs(rgba[0]-232),Math.abs(rgba[1]-221),Math.abs(rgba[2]-198))>5)return true;
+   }catch{}
+  }
+  return false;
+ }
+ canPick(p){
+  if(!Array.isArray(p)||!Number.isFinite(p[0])||!Number.isFinite(p[1])||
+    p[0]<0||p[0]>=W||p[1]<0||p[1]>=H)return false;
+  return !this.zone||!insideDamage(this.zone,p)||this.paintedHere(p);
+ }
+ hidePickerPreview(){if(this.pickerPreview)this.pickerPreview.hidden=true}
   showPickerPreview(e){
     const sample=this.pickerPreview;if(!sample)return;
+    if(!this.pointOnPainting(e)){sample.hidden=true;return}
+    const source=this.pointAt(e);
+    if(!this.canPick(source)){sample.hidden=true;return}
     const v=this.viewport.getBoundingClientRect(),
       x=e.clientX-v.left-this.viewport.clientLeft,y=e.clientY-v.top-this.viewport.clientTop;
     sample.style.left=Math.max(24,Math.min(this.viewport.clientWidth-24,x+19))+'px';
@@ -583,7 +632,7 @@ export class Editor{
     if(!this.lastPickerTick||Date.now()-this.lastPickerTick>45){
       this.lastPickerTick=Date.now();
       try{
-        const p=this.pointAt(e);
+        const p=source;
         const px=Math.min(this.canvas.width-1,Math.floor(p[0]/W*this.canvas.width)),
           py=Math.min(this.canvas.height-1,Math.floor(p[1]/H*this.canvas.height));
         const rgba=this.canvas.getContext('2d').getImageData(px,py,1,1).data;
@@ -651,7 +700,7 @@ export class Editor{
       }
       this.showCursor(e);
       const p=this.pointAt(e);
-      if(this.tool==='picker'){if(this.spaceTool!==null)this.spacePicked=true;void this.pick(p,this.spaceTool!==null);return}
+      if(this.tool==='picker'){if(this.spaceTool!==null)this.spacePicked=true;if(this.pointOnPainting(e))void this.pick(p,this.spaceTool!==null);return}
       if(this.tool==='fill'){
         const target=pointOnDamageEdge(this.zone,p,3);
         if(!target)return;
@@ -931,11 +980,12 @@ export class Editor{
   }
  async pick(p,temporary=false){
    const ticket=this.pickTicket=(this.pickTicket||0)+1;
+   if(!this.canPick(p))return;
    try{
      // Allow pending renders to finish before reading the composed painting.
      // Sampling stale pixels was especially visible after undo or switching tools.
      await this.render();
-     if(this.closed||ticket!==this.pickTicket)return;
+     if(this.closed||ticket!==this.pickTicket||!this.canPick(p))return;
      const x=Math.max(0,Math.min(this.canvas.width-1,Math.floor(p[0]/W*this.canvas.width)));
      const y=Math.max(0,Math.min(this.canvas.height-1,Math.floor(p[1]/H*this.canvas.height)));
      let rgb;
@@ -949,7 +999,7 @@ export class Editor{
        renderStrokes(ctx,[...this.strokes,...(this.working?[this.working]:[])],this.zone,artworkAspect(img));ctx.restore();
        rgb=ctx.getImageData(Math.min(sample.width-1,Math.floor(p[0]*2)),Math.min(sample.height-1,Math.floor(p[1]*2)),1,1).data;
      }
-     if(this.closed||ticket!==this.pickTicket||!rgb||!rgb[3])return;
+     if(this.closed||ticket!==this.pickTicket||!this.canPick(p)||!rgb||!rgb[3])return;
      this.color='#'+[rgb[0],rgb[1],rgb[2]].map(n=>n.toString(16).padStart(2,'0')).join('');this.previewInk=this.color;this.cursorDip();
      const input=this.root.querySelector('#customColor');if(input)input.value=this.color;
      this.root.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('active',b.dataset.color?.toLowerCase()===this.color));
