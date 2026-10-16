@@ -646,7 +646,7 @@ function vote(){
  const v=view,target=v.author,isOwn=target?.id===me?.id,already=(v.voted||[]).includes(me?.id);
  const sessionKey=v.round+':'+v.turn;
  voteScreenToken=sessionKey;
- if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:[0,0,0,0,0]}
+ if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:Array.isArray(v.draftVote)&&v.draftVote.length===5?[...v.draftVote]:[0,0,0,0,0]}
  const count=(v.voted||[]).length,expected=v.participants.length-1;
  const examined=v.candidate;
  change('<section class="phase-page expert-phase'+(isOwn||already?' is-vote-waiting':'')+'">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Найди реставрацию',v.deadline)+
