@@ -16,6 +16,7 @@ import {getSavedEmblem,storeEmblem} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
 import {installGalleryLighting} from './museum-lighting.js';
 import {MuseumAudio} from './museum-audio.js';
+import {soundGalleryMarkup,SOUND_GALLERY} from './sound-gallery.js';
 import {stepClockSound} from './clock-soundscape.js';
 import {createExhibitionDirector,saveTone,animateCoinDeposit} from './exhibition-director.js';
 import {setDressScene} from './scenography.js';
@@ -52,10 +53,11 @@ const q=new URLSearchParams(location.search);
 let invitedRoom=q.get('room')||'';
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',autoVoteTimer=null,connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 const museumAudio=new MuseumAudio(beepEnabled);
+let soundDemoTimer=null;
 const SOUND_VOLUME_KEY=NS+'sound-volume';
 let soundVolume=Math.max(0,Math.min(100,Number(localStorage.getItem(SOUND_VOLUME_KEY)??55)||0));
 museumAudio.setVolume(soundVolume/100);
-const sound=(event='press',gesture=false)=>IS_DEBUG_FRAME?undefined:museumAudio.play(event,gesture);
+const sound=(event='press',gesture=false)=>IS_DEBUG_FRAME&&page!=='debug-sounds'?undefined:museumAudio.play(event,gesture);
 let personalEmblem=getSavedEmblem();
 let zamazkaCloud=null;
 let pocketIdentity=null;
@@ -256,6 +258,7 @@ function finishVoteTransition(){
  setTimeout(()=>old.remove(),260);
 }
 function change(html,which){
+ if(which!=='debug-sounds'&&soundDemoTimer){clearInterval(soundDemoTimer);soundDemoTimer=null}
  if(page!==which&&['preview','drawing'].includes(page)){museumAudio.stopCountdown();clockSoundState=null}
  if(previewFrameObserver){previewFrameObserver.disconnect();previewFrameObserver=null}
  if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}
@@ -1203,6 +1206,33 @@ screen.addEventListener('submit',e=>{
  if(button&&!button.disabled)void connect(button.dataset.mode);
 });
 screen.addEventListener('click',e=>{
+ const audition=e.target.closest('[data-debug-sound],[data-debug-sound-stop]');
+ if(audition&&page==='debug-sounds'){
+  const label=screen.querySelector('#debugSoundStatus');
+  if(audition.hasAttribute('data-debug-sound-stop')){
+   clearInterval(soundDemoTimer);soundDemoTimer=null;
+   museumAudio.stopCountdown();label.textContent='Звук остановлен';return;
+  }
+  const id=audition.dataset.debugSound;
+  if(id==='clock-demo'){
+   clearInterval(soundDemoTimer);museumAudio.stopCountdown();
+   const until=Date.now()+15000,key='qa-clock-'+Date.now();
+   museumAudio.ensure(true);
+   let state=null;
+   soundDemoTimer=setInterval(()=>{
+    const now=Date.now(),plan=stepClockSound(state,key,until-now);state=plan.state;
+    if(plan.ticking)museumAudio.syncCountdown(key,until,now);
+    else museumAudio.stopCountdown();
+    if(plan.cue)sound(plan.cue,true);
+    label.textContent=now<until?'Механическое тик-так · '+Math.max(0,Math.ceil((until-now)/1000))+' сек.':'Отсчёт завершён';
+    if(now>=until){clearInterval(soundDemoTimer);soundDemoTimer=null}
+   },80);
+  }else{
+   sound(id,true);
+   label.textContent=SOUND_GALLERY.flatMap(x=>x.items).find(x=>x[0]===id)?.[1]||id;
+  }
+  return;
+ }
  const b=e.target.closest('[data-action],[data-inspect],[data-magnify],[data-choice],[data-saved],[data-chipadd],[data-chipsub],[data-review-open],[data-achievement-select]');if(!b)return;
  if(b.hasAttribute('data-achievement-select')){showAchievementDetail(b.dataset.achievementSelect);sound('paper',true);return}
  if(b.hasAttribute('data-review-open')){openRoundViewer({index:Number(b.dataset.reviewOpen),view,dialog,renderArtwork,arts:ARTS,esc,closeDialog});return}
@@ -1401,6 +1431,7 @@ function renderDebugScreen(requested){
    settings();
    if(id==='settings-preferences')setSettingsTab(dialog.querySelector('[data-settings-view]'),'preferences');
    break;
+  case 'sounds':change(soundGalleryMarkup(),'debug-sounds');break;
   case 'solo-settings':
    home(true);practiceSettings();break;
   case 'solo-reveal':
