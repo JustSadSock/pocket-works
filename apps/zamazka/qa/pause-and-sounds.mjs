@@ -15,6 +15,7 @@ const game=exports.default;
 assert.equal(exports.RULESET_VERSION,18,'pause is a separately pinned immutable ruleset');
 const host={id:'host',name:'Куратор'},guest={id:'guest',name:'Гость'},third={id:'third',name:'Третий'};
 const room=game.createRoom({player:host}).state,users=[host,guest,third];
+assert.equal(room.resumable,true,'only new v21 rooms opt into persisted network pause');
 game.onJoin({state:room,player:guest,players:users});
 game.onJoin({state:room,player:third,players:users});
 const send=(person,payload)=>game.onMessage({state:room,player:person,players:users,payload});
