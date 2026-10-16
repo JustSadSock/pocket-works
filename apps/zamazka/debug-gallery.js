@@ -27,7 +27,8 @@ export const DEBUG_SCREENS=[
  {id:'settings-brushes',name:'Настройки · кисти',group:'Личное'},
  {id:'settings-preferences',name:'Настройки · параметры',group:'Личное'},
  {id:'solo-settings',name:'Одиночная · настройки',group:'Одиночная'},
- {id:'solo-reveal',name:'Одиночная · сравнение',group:'Одиночная'}
+ {id:'solo-reveal',name:'Одиночная · сравнение',group:'Одиночная'},
+ {id:'sounds',name:'Все звуки · прослушивание',group:'Звуки'}
 ];
 export const isDebugKey=event=>event.code==='Backquote'||['`','~','ё','Ё'].includes(event.key);
 export const debugId=id=>DEBUG_SCREENS.some(stage=>stage.id===id)?id:'home';
