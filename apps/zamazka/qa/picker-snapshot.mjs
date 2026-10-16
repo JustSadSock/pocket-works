@@ -46,6 +46,7 @@ assert.equal(e.canPick([125,170]),true,'new paint over erasure becomes pickable'
 e.strokes=[];e.working={c:'#ff1100',s:10,t:'brush',p:[[135,175]]};
 assert.equal(e.canPick([135,175]),true,'current uncommitted brush stroke is a valid source');
 e.working=null;
+e.strokes=[{c:'#123456',s:12,t:'brush',p:[[125,170]]}];
 
 const handler=Object.create(Editor.prototype);
 Object.assign(handler,e,{tool:'brush',color:'#123456',spaceTool:null,spacePicked:false,lastMousePoint:{clientX:125,clientY:170,pointerType:'mouse'},strokes:[],working:null});
