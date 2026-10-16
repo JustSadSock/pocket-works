@@ -6,4 +6,4 @@
 @media(max-width:760px){.feature .summary.prior{display:none}.feature .summary.current{display:flex}.collection{scroll-margin-top:55px}}
 
 /* The mobile page scrolls naturally; the full-screen viewer alone locks background scrolling. */
-@media(max-width:760px){html.has-viewer,html.has-viewer body{overflow-y:hidden!important;overscroll-behavior:none!important}html.has-viewer .shell{touch-action:none}html.has-viewer .viewer-inner,html.has-viewer .viewer-image,html.has-viewer .source-tools{touch-action:auto}}
+@media(max-width:760px){html.has-viewer,html.has-viewer body{overflow-y:hidden!important;overscroll-behavior:none!important}html.has-viewer .viewer-inner{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}}
