@@ -1,3 +1,4 @@
+import {confirmShell} from './shared/shell-dialogs.js';
 import {
   installMobileRuntime,
   setDocumentScrollLocked
@@ -847,12 +848,14 @@ detailCopy.addEventListener('click', () => copyAppLink(detailCopy.dataset.slug))
 detailClose.addEventListener('click', () => closeDetailPanel());
 detailBackdrop.addEventListener('click', () => closeDetailPanel());
 
-resetShelf.addEventListener('click', () => {
+resetShelf.addEventListener('click', async () => {
+  if(!await confirmShell('Сбросить коллекцию?','Избранное, недавние приложения, поиск и порядок каталога будут сброшены на этом устройстве. Игры и сохранения останутся на месте.','Сбросить',true))return;
   const selected = registry[0]?.slug || null;
   shelfState = { ...defaultShelfState(), selected };
   persistShelfState();
   closeDetailPanel({ restoreFocus: false });
   renderShelf({ transition: true });
+  document.querySelector('#tools-status').textContent='Коллекция сброшена.';
   navigator.vibrate?.([8, 30, 8]);
 });
 

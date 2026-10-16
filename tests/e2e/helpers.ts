@@ -106,3 +106,18 @@ export async function waitForActiveServiceWorker(page: Page, expectedScopeSuffix
     );
   }, expectedScopeSuffix, { timeout: 15_000 });
 }
+
+// Static site previews have no Cloudflare account service. Keep real assets and workers.
+export async function mockGuestShellServices(page:Page){
+  await page.addInitScript(()=>{
+    const original=window.fetch.bind(window);
+    window.fetch=(input,init)=>{
+      const url=new URL(typeof input==='string'?input:input instanceof Request?input.url:String(input),location.href);
+      const data=url.pathname==='/pocket-id/me'?{user:null}:
+        url.pathname==='/pocket-id/config'?{googleEnabled:false,avatars:[]}:
+        url.pathname==='/pocket-social/me'?{profile:null}:
+        url.pathname==='/pocket-id/global-archive'?{archived:[],pinned:[],canManage:false}:null;
+      return data?Promise.resolve(new Response(JSON.stringify(data),{headers:{'content-type':'application/json'}})):original(input,init);
+    };
+  });
+}

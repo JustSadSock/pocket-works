@@ -1,3 +1,4 @@
+import {confirmShell} from './shell-dialogs.js';
 import { getRegistrySnapshot } from './launcher-registry.js';
 
 function escapeText(value) { return String(value ?? 'unknown'); }
@@ -61,8 +62,13 @@ export function installShelfTools({ store } = {}) {
 
   open.addEventListener('click', () => {
     if (!dialog.open) dialog.showModal();
+    document.querySelector('#tools-density').value=document.documentElement.dataset.deckDensity||'compact';
     void inspect();
   });
+  document.querySelector('#tools-density').addEventListener('change',event=>{
+    document.querySelector('button[data-deck-density="'+event.target.value+'"]')?.click();
+  });
+  document.querySelector('#tools-home-layout').addEventListener('click',()=>{dialog.close();document.querySelector('#deck-customize').click();});
   close.addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', event => {
     if (event.target === dialog) dialog.close();
@@ -109,11 +115,11 @@ export function installShelfTools({ store } = {}) {
       if (record?.schema !== 'pocket-works-personal-shelf-v2') {
         throw new Error('Неподдерживаемый формат копии');
       }
-      if (!window.confirm('Восстановить избранное, недавние приложения и сортировку из этого файла?')) return;
+      if (!await confirmShell('Восстановить коллекцию?','Избранное, недавние приложения и порядок каталога будут заменены данными из файла. Сохранения игр не меняются.','Восстановить')) return;
       await store.importBackup(record);
-      setStatus('Моя коллекция imported and saved.');
+      setStatus('Коллекция восстановлена.');
       await inspect();
-      setStatus('Моя коллекция imported and saved.');
+      setStatus('Коллекция восстановлена.');
     } catch (error) { setStatus(`Не удалось восстановить: ${error.message}`, true); }
   });
 
@@ -122,7 +128,7 @@ export function installShelfTools({ store } = {}) {
       setStatus('Для восстановления оболочки нужен интернет.', true);
       return;
     }
-    if (!window.confirm('Очистить кеш оболочки и перезагрузить PocketWorks? Игры и сохранения останутся на месте.')) return;
+    if (!await confirmShell('Восстановить оболочку?','Кеш оболочки будет загружен заново. Игры и сохранения останутся на месте.','Восстановить')) return;
     const button = document.querySelector('#tools-repair');
     button.disabled = true;
     setStatus('Восстанавливаем оболочку…');

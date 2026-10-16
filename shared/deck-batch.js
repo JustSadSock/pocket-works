@@ -46,7 +46,7 @@ export function installDeckBatchPicker({
     const global=canManageGlobal() && $('#deck-batch-scope').value==='global';
     $('#deck-batch-scope-label').hidden=!canManageGlobal();
     controls.personal.hidden=global;controls.save.hidden=controls.unsave.hidden=global;
-    controls.personal.textContent = view === 'archive' ? 'Вернуть себе' : 'В личный архив';
+    controls.personal.textContent = view === 'archive' ? 'Вернуть себе' : 'Скрыть в архив';
     controls.personal.disabled = !active || (view === 'archive' && !slugs.some(isPersonalArchived));
     controls.global.textContent = view === 'archive' ? 'Вернуть всем' : 'В общий архив';
     controls.global.hidden = !global;
@@ -142,7 +142,7 @@ export function installDeckBatchPicker({
     if(event.target.closest('#deck-batch-save')||event.target.closest('#deck-batch-unsave')){
       const save = Boolean(event.target.closest('#deck-batch-save'));
       const slugs = chosen();
-      if(slugs.length){onFavorites(slugs,save);complete(save?'Игры сохранены.':'Игры удалены из сохранённого.');}
+      if(slugs.length){onFavorites(slugs,save);complete(save?'Добавлено в избранное.':'Убрано из избранного.');}
       return;
     }
     if(event.target.closest('#deck-batch-personal')){

@@ -68,7 +68,7 @@ test('widgets can be configured, reordered and saved without losing previous she
   const newRow=page.locator('#deck-editor-list .deck-editor-row').last();
   const id=await newRow.getAttribute('data-edit-id');
   expect(id).toMatch(/^projects-/);
-  await newRow.locator('[data-deck-size]').click();
+  await newRow.locator('[data-size-value=large]').click();
   await page.locator('[data-deck-move="'+id+'"][data-dir="-1"]').click();
   await page.locator('#deck-editor-save').click();
   await expect(page.locator('#deck-editor')).not.toBeVisible();
@@ -79,6 +79,7 @@ test('widgets can be configured, reordered and saved without losing previous she
   await page.locator('#deck-customize').click();
   await page.locator('[data-deck-remove="'+id+'"]').click();
   await page.locator('#deck-editor-cancel').click();
+  await page.locator('.pw-confirm [data-choice=discard]').click();
   await expect(page.locator('#deck-widgets .deck-widget')).toHaveCount(4);
 });
 
@@ -277,7 +278,7 @@ test('Home can batch-select any catalogue game, save and archive several at once
   await expect(page.locator('#deck-batch-count')).toHaveText('2 выбрано');
   await expect(page.locator('#deck-batch-save')).toBeEnabled();
   await page.locator('#deck-batch-save').click();
-  await expect(page.locator('#deck-batch-status')).toContainText('сохранены');
+  await expect(page.locator('#deck-batch-status')).toContainText('Добавлено в избранное');
   await expect(page.locator('#deck-batch-count')).toHaveText('0 выбрано');
   await page.locator('[data-batch-slug="'+slug1+'"]').click();
   await page.locator('[data-batch-slug="'+slug2+'"]').click();

@@ -1,4 +1,5 @@
-import { createDeckStateStore, DECK_WIDGET_KINDS } from './deck-state.js';
+import {askUnsaved,confirmShell} from './shell-dialogs.js';
+import { createDeckStateStore, cleanDeckState, DECK_WIDGET_KINDS } from './deck-state.js';
 import { installDeckBatchPicker } from './deck-batch.js';
 import { catalogIconUrl, systemIcon } from './catalog-art.js';
 
@@ -28,6 +29,7 @@ export function installPocketDeck({
   let pendingSeed=0;
   let editing=false;
   let editingLayout=null;
+  let initialLayout='',exitPending=false;
   let previewSignature='';
   let organizing=false;
   let chosen=new Set();
@@ -205,7 +207,7 @@ export function installPocketDeck({
     const bar=$('#deck-organize-bar');
     bar.hidden=!organizing || current().view!=='library';
     $('#deck-organize-start').setAttribute('aria-pressed',String(organizing));
-    $('#deck-organize-count').textContent=`${chosen.size} selected`;
+    $('#deck-organize-count').textContent=`${chosen.size} выбрано`;
     const action=bar.querySelector('[data-deck-organize-archive]');
     action.disabled=chosen.size===0;
     const globalAction=bar.querySelector('[data-deck-organize-global]');
@@ -413,7 +415,7 @@ export function installPocketDeck({
     const data=editingLayout||current();
     const apps=getApps();
     const tags=[...new Set(apps.flatMap(app=>app.tags||[]))].sort((a,b)=>a.localeCompare(b));
-    $('#deck-editor-preview').innerHTML=data.widgets.map(w=>`<span data-size="${escapeHtml(w.size)}">${escapeHtml(DECK_WIDGET_KINDS.find(k=>k.kind===w.kind)?.title||w.kind)}</span>`).join('');
+    $('#deck-editor-preview').innerHTML=data.widgets.map(w=>`<span data-size="${escapeHtml(w.size)}">${escapeHtml(DECK_WIDGET_KINDS.find(k=>k.kind===w.kind)?.title||w.kind)}<i>${(w.kind==='saved'?getApps().filter(a=>favoriteSet().has(a.slug)):w.kind==='spotlight'?getApps().filter(a=>a.slug===w.slug):sorted()).slice(0,4).map(a=>`<img src="${escapeHtml(catalogIconUrl(a))}" alt="">`).join('')}</i></span>`).join('');
     $('#deck-editor-list').innerHTML=data.widgets.map((w,index)=>{
       const name=DECK_WIDGET_KINDS.find(item=>item.kind===w.kind)?.title||w.kind;
       const details=w.kind==='collection'?`<label>Тема подборки<select data-deck-widget-tag="${escapeHtml(w.id)}"><option value="">Все темы</option>${tags.map(t=>`<option value="${escapeHtml(t)}" ${w.tag===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></label>`:
@@ -424,17 +426,22 @@ export function installPocketDeck({
         <div class="deck-editor-row__actions">
           <button type="button" data-deck-move="${escapeHtml(w.id)}" data-dir="-1" ${index===0?'disabled':''} aria-label="Поднять ${escapeHtml(name)}">${systemIcon('up')}</button>
           <button type="button" data-deck-move="${escapeHtml(w.id)}" data-dir="1" ${index===data.widgets.length-1?'disabled':''} aria-label="Опустить ${escapeHtml(name)}">${systemIcon('down')}</button>
-          <button type="button" data-deck-size="${escapeHtml(w.id)}" aria-label="Изменить размер подборки">${systemIcon(w.size==='half'?'half':w.size==='wide'?'wide':'large')}<span>${w.size==='large'?'Крупно':w.size==='wide'?'Широко':'Половина'}</span></button>
+          <div class="deck-size-options" role="group" aria-label="Размер: ${escapeHtml(name)}">${[['half','½'],['wide','Широко'],['large','Крупно']].map(([size,label])=>`<button type="button" data-deck-size="${escapeHtml(w.id)}" data-size-value="${size}" aria-label="${size==='half'?'Половина':label}" aria-pressed="${w.size===size}">${label}</button>`).join('')}</div>
           <button type="button" data-deck-remove="${escapeHtml(w.id)}" aria-label="Убрать ${escapeHtml(name)}">${systemIcon('close')}</button>
         </div>
       </div>`;
     }).join('') || '<p class="deck-editor-empty">Добавь подборку ниже.</p>';
   }
   function openEditor(){
-    editingLayout=current();editing=true;renderEditorRows();
+    editingLayout=current();initialLayout=JSON.stringify(editingLayout);editing=true;renderEditorRows();
     if(!editor.open)editor.showModal();
   }
-  function closeEditor(save){
+  async function closeEditor(save){
+    if(exitPending)return;
+    if(!save&&editingLayout&&JSON.stringify(editingLayout)!==initialLayout){
+      exitPending=true;const choice=await askUnsaved();exitPending=false;
+      if(choice==='cancel')return;save=choice==='save';
+    }
     if(save&&editingLayout)store.save(editingLayout);
     editing=false;editingLayout=null;editor.close();
   }
@@ -446,17 +453,20 @@ export function installPocketDeck({
     editingLayout=data;renderEditorRows();
   }
   async function exportLayout(){
-    const file=new Blob([JSON.stringify(store.exportBackup(),null,2)],{type:'application/json'});
+    const file=new Blob([JSON.stringify({...store.exportBackup(),data:editingLayout||current()},null,2)],{type:'application/json'});
     const url=URL.createObjectURL(file);const a=document.createElement('a');
     a.href=url;a.download='pocket-works-layout.json';a.click();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   async function importLayout(file){
     try{
+      if(file.size>1024*1024)throw Error('Файл больше 1 МБ.');
       const data=JSON.parse(await file.text());
-      await store.importBackup(data);
-      $('#deck-layout-status').textContent='Компоновка восстановлена.';
-      if(editor.open)closeEditor(false);
+      if(data?.schema!=='pocket-works-deck-v1'||!data.data||typeof data.data!=='object'||Array.isArray(data.data))
+        throw Error('Это не копия компоновки PocketWorks.');
+      if(!await confirmShell('Загрузить компоновку из файла?','Текущие изменения редактора будут заменены. Компоновка применится после нажатия «Сохранить».','Загрузить'))return;
+      editingLayout=cleanDeckState(data.data);renderEditorRows();
+      $('#deck-layout-status').textContent='Компоновка загружена. Проверь её и сохрани.';
     }catch(error){$('#deck-layout-status').textContent=`Не удалось импортировать: ${error.message}`;}
   }
   function onClick(event){
@@ -469,7 +479,7 @@ export function installPocketDeck({
     }
     if(event.target.closest('[data-deck-organize-archive]')){
       if(!chosen.size)return;
-      $('#deck-archive-summary').textContent=`Move ${chosen.size} selected projects into your archive? You can restore them any time. Apps, saves and source files are not deleted.`;
+      $('#deck-archive-summary').textContent=`Move ${chosen.size} выбрано projects into your archive? You can restore them any time. Apps, saves and source files are not deleted.`;
       $('#deck-archive-confirm').showModal();return;
     }
     if(event.target.closest('[data-deck-organize-global]')){
@@ -545,7 +555,7 @@ export function installPocketDeck({
     const size=event.target.closest('[data-deck-size]');
     if(size){
       const widget=editingLayout.widgets.find(w=>w.id===size.dataset.deckSize);
-      if(widget)changeWidget(widget.id,{size:widget.size==='half'?'wide':widget.size==='wide'?'large':'half'});
+      if(widget)changeWidget(widget.id,{size:size.dataset.sizeValue});
       return;
     }
     const remove=event.target.closest('[data-deck-remove]');

@@ -8,22 +8,23 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
-  <meta name="pocket-works-build" content="0.12.0">
+  <meta name="pocket-works-build" content="0.13.0">
   <title>Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=0.12.0">
-  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.12.0" type="image/svg+xml">
-  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.12.0">
-  <link rel="stylesheet" href="./shared/update-manager.css?v=0.12.0">
-  <link rel="stylesheet" href="./styles.css?v=0.12.0">
-  <link rel="stylesheet" href="./launcher-performance.css?v=0.12.0">
-  <link rel="stylesheet" href="./launcher-sync.css?v=0.12.0">
-  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.12.0">
-  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.12.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.13.0">
+  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.13.0" type="image/svg+xml">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.13.0">
+  <link rel="stylesheet" href="./shared/update-manager.css?v=0.13.0">
+  <link rel="stylesheet" href="./styles.css?v=0.13.0">
+  <link rel="stylesheet" href="./launcher-performance.css?v=0.13.0">
+  <link rel="stylesheet" href="./launcher-sync.css?v=0.13.0">
+  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.13.0">
+  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.13.0">
 
-  <link rel="stylesheet" href="./shared/capabilities/identity.css?v=0.12.0">
-  <link rel="stylesheet" href="./shared/pocket-id.css?v=0.12.0">
-  <link rel="stylesheet" href="./shared/pocket-social.css?v=0.12.0">
-  <link rel="stylesheet" href="./deck-shell.css?v=0.12.0">
+  <link rel="stylesheet" href="./shared/capabilities/identity.css?v=0.13.0">
+  <link rel="stylesheet" href="./shared/pocket-id.css?v=0.13.0">
+  <link rel="stylesheet" href="./shared/pocket-social.css?v=0.13.0">
+  <link rel="stylesheet" href="./shared/shell-dialogs.css?v=0.13.0">
+  <link rel="stylesheet" href="./deck-shell.css?v=0.13.0">
 </head>
 <body>
   <div class="library-room" aria-hidden="true"><span class="room-light"></span><span class="room-grain"></span><span class="room-shadow"></span></div>
@@ -34,7 +35,7 @@
         <span><strong>Pocket Works</strong><small>personal library</small></span>
       </a>
       <div class="shelf-heading">
-        <p class="eyebrow">COLLECTION · 0.12.0</p>
+        <p class="eyebrow">COLLECTION · 0.13.0</p>
         <h1>PocketWorks</h1>
       </div>
       <div class="system-rail" aria-label="Library status">
@@ -43,7 +44,7 @@
         <p><span>on this shelf</span><strong><span id="app-count">0</span> works</strong></p>
       </div>
       <div class="deck-top-actions" data-ui>
-        <button type="button" id="pocket-id-trigger" aria-label="Open Pocket ID" title="Pocket ID"><span class="pw-id-nav-glyph" aria-hidden="true">◎</span></button>
+        <button type="button" id="pocket-id-trigger" aria-label="Открыть Pocket ID" title="Pocket ID"><span class="pw-id-nav-glyph" aria-hidden="true">◎</span></button>
         <button id="deck-search-action" type="button" data-deck-search aria-label="Поиск приложений" title="Поиск приложений">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.7" cy="10.7" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
         </button>
@@ -156,7 +157,7 @@
     </div>
     <div class="deck-batch__tools">
       <div class="deck-batch__tabs" role="group" aria-label="Раздел">
-        <button type="button" data-batch-tab="active" aria-pressed="true">Библиотека</button>
+        <button type="button" data-batch-tab="active" aria-pressed="true">Каталог</button>
         <button type="button" data-batch-tab="archive" aria-pressed="false">Архив</button>
       </div>
       <label class="deck-batch__search"><span class="deck-batch__sr">Поиск игры</span>
@@ -171,11 +172,11 @@
     <div class="deck-batch__bottom">
       <div class="deck-batch__selection"><strong id="deck-batch-count">0 выбрано</strong>
         <span id="deck-batch-status" role="status" aria-live="polite"></span></div>
-      <label id="deck-batch-scope-label" class="deck-batch__scope-picker" hidden>Применить <select id="deck-batch-scope"><option value="personal">Для меня</option><option value="global">Для всех</option></select></label>
+      <label id="deck-batch-scope-label" class="deck-batch__scope-picker" hidden>Режим <select id="deck-batch-scope"><option value="personal">Для меня</option><option value="global">Для всех · администратор</option></select></label>
       <div class="deck-batch__ops">
-        <button id="deck-batch-save" type="button" disabled>Сохранить</button>
-        <button id="deck-batch-unsave" type="button" disabled>Убрать из сохранённого</button>
-        <button id="deck-batch-personal" type="button" disabled>В личный архив</button>
+        <button id="deck-batch-save" type="button" disabled>В избранное</button>
+        <button id="deck-batch-unsave" type="button" disabled>Убрать из избранного</button>
+        <button id="deck-batch-personal" type="button" disabled>Скрыть в архив</button>
         <button id="deck-batch-global" type="button" disabled hidden>В общий архив</button>
         <button id="deck-batch-pin" type="button" disabled hidden>Закрепить для всех</button>
         <button id="deck-batch-unpin" type="button" disabled hidden>Открепить для всех</button>
@@ -223,14 +224,21 @@
   <dialog id="shelf-tools" class="shelf-tools" aria-labelledby="tools-title">
     <header class="shelf-tools__header"><div><h2 id="tools-title">Настройки</h2></div><button type="button" id="tools-close" aria-label="Закрыть настройки">×</button></header>
     <div id="deck-update-ready" class="deck-update-ready" hidden><strong>Доступно обновление PocketWorks</strong><button id="deck-update-apply" type="button">Обновить</button></div>
-    <p class="shelf-tools__intro">Избранное и недавние приложения сохраняются на этом устройстве.</p>
-    <div class="shelf-tools__maintenance deck-actions"><button id="refresh-button" type="button" data-native-press>Обновить каталог</button><button id="update-installed-button" type="button" data-native-press>Проверить обновления</button><button id="shelf-tools-button" type="button" hidden>Диагностика</button></div>
-    <h3>Резервная копия</h3>
+    <section class="shelf-tools__section"><h3>Внешний вид</h3>
+      <label class="settings-row">Размер иконок <select id="tools-density"><option value="comfortable">Крупные</option><option value="compact">Обычные</option><option value="micro">Мелкие</option></select></label>
+      <button type="button" id="tools-home-layout">Настроить главную</button></section>
+    <section class="shelf-tools__section"><h3>Данные на устройстве</h3>
+      <p class="shelf-tools__intro">Копия избранного, недавних приложений и порядка каталога. Сохранения игр в неё не входят.</p>
     <div class="shelf-tools__actions">
       <button type="button" id="tools-export">Скачать копию</button>
       <button type="button" id="tools-import">Восстановить из файла</button>
     </div>
     <p class="shelf-tools__status" id="tools-status" role="status" aria-live="polite"></p>
+    </section><section class="shelf-tools__section"><h3>Обновления</h3>
+    <p class="shelf-tools__intro">Каталог — список приложений. Проверка обновлений — версии уже открытых игр.</p>
+    <div class="shelf-tools__maintenance deck-actions"><button id="refresh-button" type="button" data-native-press>Обновить каталог</button><button id="update-installed-button" type="button" data-native-press>Проверить обновления</button><button id="shelf-tools-button" type="button" hidden>Диагностика</button></div>
+    </section>
+    <details class="shelf-tools__about"><summary>О PocketWorks</summary><p>Версия 0.13.0</p><a href="/privacy">Политика конфиденциальности</a></details>
     <details class="shelf-tools__advanced">
       <summary>Диагностика и восстановление</summary>
       <div class="shelf-tools__facts" id="tools-facts" aria-live="polite">Проверяем устройство…</div>
@@ -242,13 +250,13 @@
       </div>
     </details>
     <input id="tools-import-file" type="file" accept=".json,application/json" hidden aria-label="Choose personal shelf backup file">
-    <p class="shelf-tools__note">Игры и их сохранения останутся на месте.</p>
+
     <a class="pw-id-privacy-link" href="/privacy">Политика конфиденциальности</a>
   </dialog>
   <dialog id="pocket-id-dialog" class="pw-id-dialog" aria-labelledby="pocket-id-heading">
     <div class="pw-id-dialog__top">
       <div class="pw-id-dialog__brand"><i>◎</i><span>POCKET / ID</span></div>
-      <button class="pw-id-dialog__close" id="pocket-id-close" type="button" aria-label="Close Pocket ID">×</button>
+      <button class="pw-id-dialog__close" id="pocket-id-close" type="button" aria-label="Закрыть Pocket ID">×</button>
     </div>
     <div class="pw-id-dialog__intro">
       <h2 id="pocket-id-heading">Pocket ID</h2>
@@ -318,16 +326,16 @@
   <template id="app-card-template">
     <article class="app-entry"><a class="app-entry__select" data-action="open" data-native-press><span class="app-preview" aria-hidden="true"><span class="preview-grid"></span><span class="preview-orbit"></span><span class="preview-signal"></span><span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span><span class="preview-scan"></span><span class="app-entry__pin" title="Закреплено для всех"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3 6 0-1 6 4 4v2h-5v6l-2-3v-3H6v-2l4-4z"/></svg></span></span><span class="app-entry__body"><span class="app-entry__topline"><strong class="app-entry__name"></strong><span class="app-entry__status"></span></span><span class="app-entry__description"></span><span class="app-entry__meta"></span></span></a><button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="В избранное" aria-pressed="false">☆</button><button type="button" class="app-entry__more" data-action="details" data-native-press aria-label="Об приложении"><span aria-hidden="true">···</span></button></article>
   </template>
-  <script type="module" src="./shared/update-manager.js?v=0.12.0" data-update-manager data-service-worker="./sw.js?build=0.12.0" data-app-name="Pocket Works" data-app-version="0.12.0" data-quiet-updates="true"></script>
-  <script src="./shared/view-transition-guard.js?v=0.12.0" type="module"></script>
-  <script src="./launcher-new-app-focus.js?v=0.12.0"></script>
-  <script src="./app.js?v=0.12.0" type="module"></script>
-  <script src="./launcher-release-links.js?v=0.12.0" type="module"></script>
-  <script src="./launcher-update-all-v3.js?v=0.12.0" type="module"></script>
-  <script src="./launcher-sync.js?v=0.12.0" type="module"></script>
-  <script src="./shared/launcher-list-motion.js?v=0.12.0" type="module"></script>
-  <script type="module" src="./shared/pocket-id.js?v=0.12.0"></script>
-  <script type="module" src="./shared/pocket-social.js?v=0.12.0"></script>
-  <script src="./shared/app-icon-previews.js?v=0.12.0" type="module"></script>
+  <script type="module" src="./shared/update-manager.js?v=0.13.0" data-update-manager data-service-worker="./sw.js?build=0.13.0" data-app-name="Pocket Works" data-app-version="0.13.0" data-quiet-updates="true"></script>
+  <script src="./shared/view-transition-guard.js?v=0.13.0" type="module"></script>
+  <script src="./launcher-new-app-focus.js?v=0.13.0"></script>
+  <script src="./app.js?v=0.13.0" type="module"></script>
+  <script src="./launcher-release-links.js?v=0.13.0" type="module"></script>
+  <script src="./launcher-update-all-v3.js?v=0.13.0" type="module"></script>
+  <script src="./launcher-sync.js?v=0.13.0" type="module"></script>
+  <script src="./shared/launcher-list-motion.js?v=0.13.0" type="module"></script>
+  <script type="module" src="./shared/pocket-id.js?v=0.13.0"></script>
+  <script type="module" src="./shared/pocket-social.js?v=0.13.0"></script>
+  <script src="./shared/app-icon-previews.js?v=0.13.0" type="module"></script>
 </body>
 </html>

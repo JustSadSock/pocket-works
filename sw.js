@@ -1,9 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.12.0';
-const APP_VERSION = '0.12.0';
+const CACHE_NAME = 'pocket-works-launcher-v0.13.0';
+const APP_VERSION = '0.13.0';
 const RELEASE_DATE = '2026-10-16';
 const CACHE_PROTOCOL = 8;
 const RELEASE_NOTES = [
+  'Понятные социальные меню, компактные списки друзей и приглашений, защита черновиков и единые подтверждения.',
+  'Настройки по разделам, явные размеры подборок и согласованные действия с избранным.',
   'Каталог с узнаваемыми иконками, единая главная для телефона и компьютера, согласованные окна и быстрый запуск.',
   'Скриншоты в подробностях, наглядный редактор подборок и единое управление личной и общей коллекцией.',
   'Administrators can pin and unpin games for everyone; pinned games lead the shared Library and Quick play.',
@@ -33,7 +35,7 @@ const RELEASE_NOTES = [
 const APP_SHELL = [
   './', './index.html', './privacy.html', './styles.css', './deck-shell.css', './covers/index.json', './launcher-performance.css', './launcher-sync.css', './app.js',
   './launcher-new-app-focus.js', './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
-  './shared/catalog-art.js', './shared/catalog-art/art-cabinet.svg', './shared/catalog-art/oskolki.svg', './shared/catalog-art/ne-tem-golosom.svg',
+  './shared/shell-dialogs.js', './shared/shell-dialogs.css', './shared/catalog-art.js', './shared/catalog-art/art-cabinet.svg', './shared/catalog-art/oskolki.svg', './shared/catalog-art/ne-tem-golosom.svg',
   './shared/deck-batch.js', './shared/capabilities/identity.js', './shared/capabilities/maskot.js', './shared/capabilities/zamazka-achievements.js', './shared/capabilities/card-studio.js', './shared/capabilities/identity.css', './shared/pocket-id.css', './shared/pocket-id.js', './shared/pocket-social.css', './shared/pocket-social.js', './shared/pocket-works-icon.svg', './shared/pocket-deck.js', './shared/deck-state.js', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
   './shared/update-manager.css', './shared/update-manager.js', './shared/release-guard.js', './shared/view-transition-guard.js',
   './shared/app-icon-previews.css', './shared/app-icon-previews.js', './shared/launcher-list-motion.css', './shared/launcher-list-motion.js'

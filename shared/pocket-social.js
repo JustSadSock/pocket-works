@@ -1,3 +1,4 @@
+import {askUnsaved,confirmShell} from './shell-dialogs.js';
 import {pocketAvatarMarkup} from './capabilities/identity.js';
 import {zamazkaAchievements} from './capabilities/zamazka-achievements.js';
 import {mountCardCanvas} from './capabilities/card-studio.js';
@@ -11,7 +12,7 @@ const portraitFrames=[['none','Без рамки'],['wood','Резное дер�
 const colors=['#273d46','#fff8e6','#d75e55','#f2ad6c','#f2d478','#82aa73','#478d8c','#6092bd','#8865a3','#c87eac','#8a604d','#101c29'];
 const errors={party_full:'В компании уже три друга.',invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
-const state={editorTab:'animal',paintOpen:false,reward:null,tab:'profile',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,searchLoading:false,searchError:'',unseenIncoming:[],unseenInvites:[],friendOrder:[],otherReturn:null,syncOffline:false,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,party:false,appearance:false}};
+const state={editorTab:'animal',paintOpen:false,reward:null,tab:'profile',exiting:false,draftBase:null,editorSection:'appearance',me:null,other:null,query:'',results:[],room:'',game:'zamazka',catalog:[],loading:false,busy:false,edit:false,draft:null,artHistory:[],ink:colors[0],notice:'',error:'',confirm:null,searchVersion:0,searchLoading:false,searchError:'',unseenIncoming:[],unseenInvites:[],friendOrder:[],otherReturn:null,syncOffline:false,cloud:null,cloudAccount:null,cloudLoading:false,cloudError:'',cloudVersion:0,cloudUpdated:0,expanded:{account:false,cloud:false,incoming:true,outgoing:false,blocked:false,party:false,appearance:false}};
 let dialog,content,entry,paintSession=null,searchClock=0,pollClock=0,heartbeatClock=0;
 let livePollClock=0,livePollBusy=false,reloadVersion=0,lastPortraitKey='',lastNotificationKey='',lastHomeKey='',liveRevision=null,lastCatalogCheck=0;
 const api=async(path,body)=>{
@@ -68,7 +69,7 @@ function personRow(p,actions,subtitle=presenceLabel(p),isNew=false){
     '<button type="button" class="pws-person__hit" data-pws="open-user" data-id="'+esc(p.id)+
     '" aria-label="Открыть профиль '+esc(p.nickname)+'"></button>'+
     '<div class="pws-person__top"><div class="pws-person__avatar">'+avatar(p)+'</div>'+
-    '<span class="pws-person__stamp">POCKET / ID<br>PLAYER CARD</span></div>'+
+    '</div>'+
     '<div class="pws-person__name"><strong>'+esc(p.nickname)+'</strong><small>'+esc(subtitle)+'</small></div>'+
     (isNew?'<span class="pws-person__new">НОВОЕ</span>':'')+
     '<div class="pws-person__actions">'+actions+'</div></article>';
@@ -183,11 +184,11 @@ async function loadCloudUsage(){
 }
 const maskotCategories=[
   ['animal','Зверь'],['hat','Голова'],['clothes','Одежда'],['face','Лицо'],
-  ['portrait','Рамка'],['background','Фон'],['achievements','Награды'],['account','Профиль']
+  ['portrait','Рамка'],['background','Фон'],['achievements','Награды']
 ];
 function paintingStudio(){
   return '<section class="pws-studio" aria-label="Редактор нарисованного фона">'+
-    '<div class="pws-studio__header"><div><strong>Мой рисунок</strong><small>Фон карточки · рисуй пальцем или мышью</small></div>'+
+    '<div class="pws-studio__header"><div><strong>Мой рисунок</strong></div>'+
     '<div class="pws-studio__header-actions">'+button('paint-cancel','Назад')+
     button('paint-done','Готово','primary')+'</div></div>'+
     '<div class="pws-studio__body"><div class="pws-studio__workspace"><canvas class="pws-studio-canvas" width="480" height="320" aria-label="Холст для рисования фона"></canvas></div>'+
@@ -222,7 +223,7 @@ function editor(){
     zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)));
   const rewardBg=backgrounds.filter(([id])=>id!=='gallery'||unlocks.includes('zamazka.five-works'));
   const rewardFrames=portraitFrames.filter(([id])=>id!=='worn-gilt'||unlocks.includes('zamazka.perfect-forgery'));
-  const category=state.editorTab;
+  const category=state.editorSection==='data'?'account':state.editorTab;
   const options=(rows,field)=>'<div class="pws-maskot-options">'+rows.map(([id,label])=>
     '<button type="button" data-pws="maskot-item" data-field="'+field+'" data-value="'+id+
     '" aria-pressed="'+(m[field]===id)+'"><span class="pws-maskot-option__art">'+
@@ -267,18 +268,12 @@ function editor(){
       '<div class="pws-field"><label for="pws-favorite">Любимая игра</label><select id="pws-favorite">'+
       '<option value="">Не выбрана</option>'+state.catalog.map(g=>
       '<option value="'+esc(g.slug)+'" '+(g.slug===d.favoriteGame?'selected':'')+'>'+esc(g.name)+'</option>').join('')+
-      '</select><small>Если игра не выбрана, карточка показывает «Участник PocketWorks» — это не титул.</small></div>'+
-      '<label class="pws-check"><input type="checkbox" id="pws-discoverable" '+(d.discoverable?'checked':'')+'> Показывать профиль в поиске</label>'+
-      '<label class="pws-check"><input type="checkbox" id="pws-presence" '+(d.presenceVisible?'checked':'')+'> Показывать онлайн</label>'+
-      '<label class="pws-check"><input type="checkbox" id="pws-invites" '+(d.allowInvites?'checked':'')+'> Разрешать приглашения</label>'+
-      '<details class="pws-fold pws-maskot-redeem"><summary>Активировать код</summary><div class="pws-fold__body">'+
-      '<div class="pws-maskot-redeem__row"><input id="pws-cosmetic-code" placeholder="Код награды" maxlength="60" autocomplete="off" spellcheck="false">'+
-      button('redeem','Получить','primary')+'</div></div></details>';
+      '</select></div>';
   return '<div class="pws-maskot-editor"><div class="pws-maskot-editor__preview">'+
     card({...state.me.profile,...d})+
     '<div class="pws-maskot-editor__actions">'+button('cancel-edit','Отмена')+
     button('save-profile',state.busy?'Сохранение…':'Сохранить','primary')+'</div></div>'+
-    '<div class="pws-maskot-editor__work"><div class="pws-maskot-tabs">'+maskotCategories.map(([id,label])=>
+    '<div class="pws-maskot-editor__work"><h3>'+ (state.editorSection==='data'?'Данные профиля':'Оформление карточки')+'</h3><div class="pws-maskot-tabs" '+(state.editorSection==='data'?'hidden':'')+'>'+maskotCategories.map(([id,label])=>
     '<button type="button" data-pws="maskot-tab" data-value="'+id+
     '" aria-pressed="'+(category===id)+'">'+label+'</button>').join('')+'</div>'+
     '<div class="pws-maskot-editor__picker">'+appearance+'</div></div></div>'+
@@ -293,14 +288,61 @@ function profilePanel(){
     '<div class="pws-actions">'+button('login','Открыть Pocket ID','primary')+'</div>';
   if(state.edit)return editor();
   return '<h2>Профиль</h2><div class="pws-profile-layout"><section>'+card(p)+
-    '<div class="pws-actions">'+button('edit','Изменить профиль','primary')+
+    '<div class="pws-actions">'+button('edit','Оформить карточку','primary')+button('edit-data','Данные профиля')+button('privacy','Приватность и вход')+
     button('copy-id','Скопировать ID','quiet')+'</div></section>'+
-    '<details class="pws-fold pws-fold--aside" data-pws-fold="account"'+(state.expanded.account?' open':'')+'>'+
-    '<summary>Аккаунт и безопасность</summary><div class="pws-fold__body"><p class="pws-muted">ID: <code>'+esc(p.id)+'</code></p>'+
-    button('account','Настройки Pocket ID')+'</div></details></div>'+
+    '</div>'+
+    '<details class="pws-fold"><summary>Активировать код награды</summary><div class="pws-fold__body"><div class="pws-maskot-redeem__row"><input id="pws-cosmetic-code" placeholder="Код награды" maxlength="60">'+button('redeem','Получить')+'</div></div></details>'+
     '<details class="pws-fold pws-cloud-fold" data-pws-fold="cloud"'+(state.expanded.cloud?' open':'')+'>'+
     '<summary>Облако'+(state.cloud?' · '+cloudBytes(state.cloud.usedBytes)+' / '+cloudBytes(state.cloud.maxBytes):'')+'</summary>'+
     cloudPanel()+'</details>';
+}
+function privacyPanel(){
+  if(!state.me)return profilePanel();
+  const p=state.draft||state.me.profile;
+  return button('profile-back','← К профилю')+'<h2>Приватность и вход</h2><section class="pws-privacy">'+
+    '<h3>Кто видит меня</h3>'+[
+      ['discoverable','Показывать профиль в поиске','pws-discoverable'],
+      ['presenceVisible','Показывать онлайн','pws-presence'],
+      ['allowInvites','Разрешать приглашения','pws-invites']
+    ].map(([key,label,id])=>'<label class="pws-check"><input type="checkbox" id="'+id+'" '+(p[key]?'checked':'')+'> '+label+'</label>').join('')+
+    '<div class="pws-actions">'+button('save-privacy','Сохранить приватность','primary')+'</div></section>'+
+    '<section id="pws-account-host" class="pws-account-host"></section>';
+}
+const draftFields=['nickname','background','frame','backgroundMode','portraitFrame','artwork','maskot','title','favoriteGame','discoverable','presenceVisible','allowInvites'];
+const draftSignature=p=>JSON.stringify(draftFields.map(k=>p?.[k]??null));
+function beginDraft(){
+  if(state.draft)return;
+  state.draft={...state.me.profile,backgroundMode:state.me.profile.backgroundMode||'preset',
+    portraitFrame:state.me.profile.portraitFrame||'wood',maskot:safeMascot(state.me.profile.maskot,state.me.profile.unlocked)};
+  state.draftBase=draftSignature(state.draft);
+}
+function capturePainting(){
+  if(state.paintOpen&&paintSession?.hasChanges()){
+    const art=paintSession.commit();if(!art)return false;
+    state.draft.artwork=art;state.draft.backgroundMode='drawing';
+  }
+  state.paintOpen=false;return true;
+}
+function hasDraft(){return state.draft&&draftSignature(state.draft)!==state.draftBase;}
+async function beforeIdentityLeave(){
+  if(!hasDraft())return true;
+  const choice=await askUnsaved();
+  if(choice==='cancel')return false;
+  if(choice==='save')return await saveUnifiedProfile();
+  state.draft=null;state.draftBase=null;render();return true;
+}
+async function leaveDraft(close=false){
+  if(state.busy||state.exiting||!capturePainting())return false;
+  state.exiting=true;
+  if(hasDraft()){
+    const choice=await askUnsaved();
+    if(choice==='cancel'){state.exiting=false;render();return false;}
+    if(choice==='save'){if(!await saveUnifiedProfile()){state.exiting=false;return false;}}
+    else {state.draft=null;state.draftBase=null;}
+  }else {state.draft=null;state.draftBase=null;}
+  state.edit=false;state.exiting=false;
+  if(close)dialog.close();else {state.tab='profile';render();}
+  return true;
 }
 function otherPanel(){
   const p=state.other;
@@ -309,7 +351,7 @@ function otherPanel(){
   const controls=status==='none'?button('send-request','Добавить в друзья','primary'):
     status==='outgoing'?button('cancel-friend','Отменить заявку'):
     status==='incoming'?button('accept-friend','Принять','primary')+button('decline-friend','Отклонить'):
-    status==='friends'?button('remove-friend','Удалить из друзей'):
+    status==='friends'?'':
     p.blockedByMe?button('unblock-friend','Разблокировать'):'';
   const saved=(state.me?.party||[]).includes(p.id);
   const companyButton=status==='friends'?
@@ -319,14 +361,7 @@ function otherPanel(){
   return button('back','← Назад')+'<h2 style="margin-top:15px">'+esc(p.nickname)+'</h2>'+card(p)+
     (p.activity?'<p class="pws-playing">'+esc(presenceLabel(p))+'</p>':'')+
     '<div class="pws-actions">'+join+companyButton+controls+
-    (p.blockedByMe?'':button('block-friend','Заблокировать','danger'))+'</div>'+
-    (state.confirm?confirmPanel():'');
-}
-function confirmPanel(){
-  const action=state.confirm;
-  return '<section class="pws-confirm"><strong>'+ (action==='block'?'Заблокировать игрока?':'Удалить из друзей?')+'</strong>'+
-    '<div class="pws-muted">Действие изменит доступ к приглашениям и заявкам.</div><div class="pws-actions">'+
-    button('confirm-action','Подтвердить','danger')+button('cancel-confirm','Отмена')+'</div></section>';
+    (p.blockedByMe?'':'<details class="pws-more"><summary>Ещё ···</summary><div>'+ (status==='friends'?button('remove-friend','Удалить из друзей'):'' )+button('block-friend','Заблокировать','danger')+'</div></details>')+'</div>';
 }
 function partyPanel(){
   const members=state.me?.party||[],friends=state.me?.friends||[];
@@ -413,11 +448,14 @@ function refreshTabBadges(){
 function render(){
   if(!dialog?.open)return;
   refreshTabBadges();
+  window.PocketID?.unmountAccount?.();
   content.innerHTML=errorMarkup()+(state.loading?'<div class="pws-loading">Загрузка…</div>':
     state.tab==='profile'?profilePanel():
+    state.tab==='privacy'?privacyPanel():
     state.tab==='friends'?friendsPanel():
     state.tab==='invites'?invitesPanel():
     state.tab==='invite'?invitePanel():otherPanel());
+  if(state.tab==='privacy'){window.PocketID?.mountAccount?.(q('#pws-account-host',content),{beforeLeave:beforeIdentityLeave});}
   if(state.edit&&state.tab==='profile'&&state.paintOpen){
     paintSession=mountCardCanvas(content,{initial:state.draft.artwork,
       onError:message=>{const label=q('.pws-studio__message',content);if(label)label.textContent=message;}});
@@ -449,13 +487,13 @@ async function reload(rerender=true){
   // Ignore an in-flight response from a previous account after sign-out/switch.
   const currentAccount=window.PocketID?.getUser?.();
   if(q('#pocket-id-trigger')&&(!currentAccount?.complete||data.profile.id!==currentAccount.id)){
-    state.me=null;lastPortraitKey='';resetCloud();updateNotification(0);
+    state.me=null;state.draft=null;state.draftBase=null;state.edit=false;lastPortraitKey='';resetCloud();updateNotification(0);
     if(rerender)render();
     return false;
   }
   if(state.cloudAccount&&state.cloudAccount!==data.profile.id)resetCloud();
   const accountChanged=state.me?.profile?.id!==data.profile.id;
-  if(accountChanged){state.friendOrder=[];liveRevision=null;}
+  if(accountChanged){state.friendOrder=[];liveRevision=null;state.draft=null;state.draftBase=null;state.edit=false;}
   state.me=data;refreshUnseen(data);updateHomeActivity();
   const portraitKey=JSON.stringify([data.profile.id,data.profile.avatar,data.profile.artwork,data.profile.maskot,data.profile.unlocked]);
   // Polling must not replace the nav avatar DOM every two seconds.
@@ -552,7 +590,7 @@ async function pollOpenSocial(){
           if(state.tab==='other'&&state.other?.id===peerId)state.other=peer;
         }catch{} // Keep the last profile if a transient read fails.
       }
-      if(!state.busy&&!state.loading&&!state.edit&&tab===state.tab&&
+      if(!state.busy&&!state.loading&&!state.edit&&tab!=='privacy'&&tab===state.tab&&
           before!==visibleSocialSignature(state.me,tab))renderLiveChanges();
     }
     if(Date.now()-lastCatalogCheck>60000){
@@ -598,8 +636,7 @@ async function open(room='',editNow=false,gameId='zamazka'){
   catch(e){state.me=null;state.error=e.message;updateConnectionStatus(e.message===errors.network||!navigator.onLine)}
   finally{state.loading=false}
   if(state.me&&editNow){
-    state.tab='profile';state.edit=true;state.draft={...state.me.profile};
-    state.draft.maskot=safeMascot(state.draft.maskot,state.draft.unlocked);
+    state.tab='profile';state.edit=true;beginDraft();
     state.editorTab='animal';state.artHistory=[state.draft.artwork];resetNotice();
   }else if(state.me&&!room){
     const incoming=(state.me.invites||[]).some(i=>i.incoming&&i.status==='pending');
@@ -672,12 +709,13 @@ async function saveUnifiedProfile(){
       discoverable:draft.discoverable,presenceVisible:draft.presenceVisible,
       allowInvites:draft.allowInvites});
     await reload(false);
-    state.edit=false;state.notice='Профиль сохранён.';
+    state.edit=false;state.draft=null;state.draftBase=null;state.notice='Профиль сохранён.';
     document.dispatchEvent(new CustomEvent('pocket-social:profile-updated',{detail:{accountId:state.me?.profile?.id}}));
   }catch(error){
     // The nickname can be saved before an appearance request fails; retry is safe.
     state.error=error.message+' Если никнейм уже изменился, повторное сохранение завершит настройку.';
   }finally{state.busy=false;render()}
+  return !state.draft;
 }
 async function mutate(path,body,{tab,stay=false}={}){
   if(state.busy)return;
@@ -694,6 +732,7 @@ async function mutate(path,body,{tab,stay=false}={}){
 }
 function install(){
   if(!document.body||dialog)return;
+  if(!document.querySelector('link[data-shell-dialogs]')){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./shell-dialogs.css',import.meta.url).href;css.dataset.shellDialogs='';document.head.append(css);}
   const identityTrigger=q('#pocket-id-trigger');
   if(identityTrigger){
     // Launcher has one entry: Pocket ID opens this card. No second Social icon.
@@ -721,8 +760,10 @@ function install(){
     '<div class="pws-content" id="pws-content"></div>'+
     '<footer class="pws-mobile-exit">'+button('close','Закрыть меню')+'</footer></div>';
   document.body.append(dialog);content=q('#pws-content',dialog);
-  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
+  dialog.addEventListener('click',e=>{if(e.target===dialog)void leaveDraft(true)});
+  dialog.addEventListener('cancel',e=>{e.preventDefault();void leaveDraft(true)});
   dialog.addEventListener('close',()=>{
+    window.PocketID?.unmountAccount?.();
     clearInterval(livePollClock);livePollClock=0;clearTimeout(searchClock);
     state.searchVersion++;updateConnectionStatus(false);
   });
@@ -760,7 +801,8 @@ function install(){
   dialog.addEventListener('click',async e=>{
     const tab=e.target.closest('[data-pws-tab]');
     if(tab){
-      resetNotice();state.tab=tab.dataset.pwsTab;state.edit=false;state.other=null;
+      if(!capturePainting())return;
+      resetNotice();state.tab=tab.dataset.pwsTab;state.edit=state.tab==='profile'&&!!state.draft;state.other=null;
       state.otherReturn=null;state.friendOrder=[];
       render();
       if(state.tab==='friends')rememberNotices('incoming');
@@ -771,16 +813,14 @@ function install(){
     const target=e.target.closest('[data-pws]');
     if(!target||state.busy)return;
     const action=target.dataset.pws,id=target.dataset.id;
-    if(action==='close'){dialog.close();return}
+    if(action==='close'){await leaveDraft(true);return}
     if(action==='login'){dialog.close();if(window.PocketID?.openAccount)window.PocketID.openAccount();else location.assign('/?pocket-id=login');return}
     if(action==='refresh-cloud'){void loadCloudUsage();return}
-    if(action==='account'){dialog.close();if(window.PocketID?.openAccount)window.PocketID.openAccount();else location.assign('/?pocket-id=login');return}
+    if(action==='account'||action==='privacy'){beginDraft();state.tab='privacy';state.edit=false;render();return}
+    if(action==='profile-back'){capturePainting();state.tab='profile';state.edit=false;render();return}
+    if(action==='save-privacy'){await saveUnifiedProfile();return}
     if(action==='copy-id'){try{await navigator.clipboard.writeText(state.me.profile.id);state.notice='ID скопирован.'}catch{state.error='Не удалось скопировать ID.'}render();return}
-    if(action==='edit'){state.edit=true;state.paintOpen=false;state.draft={...state.me.profile,
-      backgroundMode:state.me.profile.backgroundMode||'preset',
-      portraitFrame:state.me.profile.portraitFrame||'wood',
-      maskot:safeMascot(state.me.profile.maskot,state.me.profile.unlocked)};
-      state.editorTab='animal';state.artHistory=[state.draft.artwork];resetNotice();render();return}
+    if(action==='edit'||action==='edit-data'){beginDraft();state.edit=true;state.paintOpen=false;state.editorSection=action==='edit-data'?'data':'appearance';state.editorTab='animal';resetNotice();render();return}
     if(action==='maskot-tab'){state.editorTab=target.dataset.value;render();return}
     if(action==='portrait-frame'){state.draft.portraitFrame=target.dataset.value;render();return}
     if(action==='equip-achievement'){
@@ -790,6 +830,7 @@ function install(){
       else if(item.slot==='title')state.draft.title=item.item;
       else if(item.slot==='background'){state.draft.background=item.item;state.draft.backgroundMode='preset'}
       else if(item.slot==='portraitFrame')state.draft.portraitFrame=item.item;
+      state.editorSection=item.slot==='title'?'data':'appearance';
       state.editorTab=item.slot==='portraitFrame'?'portrait':item.slot==='background'?'background':
         item.slot==='title'?'account':item.slot;
       render();return;
@@ -797,7 +838,7 @@ function install(){
     if(action==='background-mode'){state.draft.backgroundMode=target.dataset.value;render();return}
     if(action==='paint-open'){state.paintOpen=true;render();return}
     if(action==='paint-cancel'){
-      if(paintSession?.hasChanges()&&!window.confirm('Отменить несохранённые изменения рисунка?'))return;
+      if(paintSession?.hasChanges()&&!await confirmShell('Отменить рисунок?','Изменения рисунка не сохранятся.','Не сохранять'))return;
       state.paintOpen=false;paintSession=null;render();return;
     }
     if(action==='paint-done'){
@@ -812,6 +853,7 @@ function install(){
       render();return;
     }
     if(action==='redeem'){
+      beginDraft();state.edit=true;state.editorSection='appearance';
       const input=q('#pws-cosmetic-code',dialog),code=input?.value.trim();
       if(!code){state.error='Введите код.';render();return}
       state.busy=true;resetNotice();
@@ -834,7 +876,7 @@ function install(){
       finally{state.busy=false;render()}return;
     }
     if(action==='reward-close'){state.reward=null;render();return}
-    if(action==='cancel-edit'){state.edit=false;state.paintOpen=false;render();return}
+    if(action==='cancel-edit'){await leaveDraft();return}
     if(action==='background'||action==='frame'){state.draft[action]=target.dataset.value;render();return}
     if(action==='save-profile'){await saveUnifiedProfile();return}
     if(action==='open-user'){await showUser(id);return}
@@ -843,12 +885,13 @@ function install(){
     if(action==='cancel-friend'){await mutate('friend-action',{id:state.other.id,action:'cancel'},{tab:'friends'});return}
     if(action==='accept-friend'){await mutate('friend-action',{id:state.other.id,action:'accept'},{tab:'friends'});return}
     if(action==='decline-friend'){await mutate('friend-action',{id:state.other.id,action:'decline'},{tab:'friends'});return}
-    if(action==='remove-friend'||action==='block-friend'){state.confirm=action==='block-friend'?'block':'remove';render();return}
-    if(action==='cancel-confirm'){state.confirm=null;render();return}
-    if(action==='confirm-action'){
-      await mutate('friend-action',{id:state.other.id,action:state.confirm},{tab:'friends'});return;
+    if(action==='remove-friend'||action==='block-friend'){
+      const block=action==='block-friend';
+      if(await confirmShell(block?'Заблокировать игрока?':'Удалить из друзей?',block?'Игрок не сможет отправлять тебе заявки и приглашения.':'Чтобы играть вместе через список друзей, понадобится новая заявка.',block?'Заблокировать':'Удалить',true))
+        await mutate('friend-action',{id:state.other.id,action:block?'block':'remove'},{tab:'friends'});
+      return;
     }
-    if(action==='unblock-friend'){await mutate('friend-action',{id:state.other.id,action:'unblock'},{tab:'friends'});return}
+        if(action==='unblock-friend'){await mutate('friend-action',{id:state.other.id,action:'unblock'},{tab:'friends'});return}
     if(action==='send-invite'){await mutate('invite',{toId:id,roomId:state.room,gameId:state.game},{tab:'invite',stay:true});return}
     if(action==='invite-party'){
       if(state.busy)return;
@@ -912,7 +955,7 @@ function install(){
     if(!event.detail?.user?.complete){
       reloadVersion++;lastPortraitKey='';
       liveRevision=null;state.friendOrder=[];state.otherReturn=null;
-      state.me=null;state.other=null;state.edit=false;state.results=[];resetCloud();updateHomeActivity();
+      state.me=null;state.other=null;state.edit=false;state.draft=null;state.draftBase=null;state.tab='profile';state.results=[];resetCloud();updateHomeActivity();
       updateNotification(0);if(dialog.open)render();
     }else{
       if(state.cloudAccount&&state.cloudAccount!==event.detail.user.id)resetCloud();

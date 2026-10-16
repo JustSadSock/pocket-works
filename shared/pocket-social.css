@@ -536,3 +536,48 @@
 #deck-home .pws-home-activity{max-width:100%}
 @media(max-width:480px){.pws-home-activity{margin:6px 0 9px;padding:8px 11px;min-height:48px}
  .pws-person:has(.pws-person__actions .pws-btn--primary){min-height:206px}}
+
+/* Menus 0.13: readable people rows, full character cards only inside profiles. */
+.pws-list{grid-template-columns:minmax(0,1fr);gap:8px}
+.pws-person[data-background],.pws-person:has(.pws-person__actions .pws-btn--primary){display:grid;grid-template-columns:52px minmax(0,1fr) auto;grid-template-rows:auto;align-items:center;gap:12px;min-height:78px;aspect-ratio:auto;padding:10px 12px;background:#213338;color:#eaf0e8;border:1px solid #425651;border-left:3px solid var(--pws-accent,#8da594);border-radius:9px}
+.pws-person[data-background]::before,.pws-person__paint,.pws-person__stamp{display:none}
+.pws-person__top{grid-column:1}.pws-person[data-background] .pws-person__avatar{width:48px;height:48px;border-radius:8px}
+.pws-person__name{grid-column:2;align-self:center}.pws-person__name strong{font-size:15px;letter-spacing:-.25px}.pws-person__name small{font-size:12px;white-space:normal!important;line-height:1.4}
+.pws-person__actions{grid-column:3;justify-content:flex-end;margin:0;gap:6px;max-width:255px}
+.pws-person[data-background] .pws-btn--quiet{background:#2c4142;border-color:#536763;color:#eaf0e8}
+.pws-person__new{position:static;grid-column:2;grid-row:2;justify-self:start;margin-top:-5px;font-size:10px;pointer-events:none}
+.pws-person[data-new=true] .pws-person__actions{grid-row:1/span 2}
+.pws-dialog .pws-btn,.pws-dialog .pws-option,.pws-dialog .pws-close,.pws-dialog .pws-maskot-tabs button,.pws-maskot-editor__actions .pws-btn,.pws-person__actions .pws-btn,.pws-dialog .pws-company__member,.pws-dialog .pws-studio__tools button,.pws-dialog .pws-studio__history button{min-height:44px}
+.pws-dialog .pws-check{display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 0}.pws-check input{width:20px;height:20px;flex:none;accent-color:#edb295}
+.pws-more{margin-left:auto;position:relative}.pws-more>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;padding:8px 14px;border:1px solid #506561;border-radius:7px;list-style:none}
+.pws-more>div{display:grid;gap:8px;margin-top:8px}.pws-privacy{border-bottom:1px solid #435653;padding-bottom:18px;margin:18px 0}
+.pws-account-host{padding-top:5px}.pws-account-host .pw-id-dialog__intro,.pws-account-host .pw-id-dialog__body,.pws-account-host .pw-id-dialog__bottom{padding:10px 0;border:0}
+.pws-account-host .pw-id-dialog__intro h2{font-size:22px!important}.pws-account-host .pw-id-dialog__intro p{margin:8px 0;color:#b2c0b8}
+.pws-account-host .pw-id-dialog__bottom{display:none}.pws-account-host .pw-id-dialog__status:empty{display:none}
+.pws-profile-layout{display:block}.pws-profile-layout .pws-actions{display:flex;flex-wrap:wrap;gap:8px}.pws-maskot-tabs[hidden]{display:none}
+.pws-maskot-editor__work h3{font-size:15px;margin:0 0 10px}.pws-content:has(.pws-maskot-editor){min-height:0}
+.pws-maskot-editor__preview .pws-card{min-height:0}.pws-maskot-redeem__row input{min-width:0;width:100%;min-height:44px;padding:8px;border:1px solid #566c64;border-radius:7px;background:#17282c;color:#fff}
+@media(max-width:600px){
+ .pws-person[data-background],.pws-person:has(.pws-person__actions .pws-btn--primary){grid-template-columns:44px minmax(0,1fr);gap:8px 11px;padding:10px;min-height:76px}
+ .pws-person[data-background] .pws-person__avatar{width:44px;height:44px}
+ .pws-person__actions,.pws-person[data-new=true] .pws-person__actions{grid-column:2;grid-row:auto;justify-content:flex-start;max-width:none}
+ .pws-person__new{grid-row:auto;margin:0}.pws-maskot-editor__preview .pws-card{max-height:24dvh}
+ .pws-content .pws-maskot-tabs button{font-size:12px;padding:9px 11px}.pws-maskot-editor__work h3{margin:0 5px 6px}
+ .pws-maskot-editor__preview .pws-card__foot{display:none}
+}
+.pws-person__actions .pws-btn{flex:0 0 auto;white-space:normal;max-width:100%}
+.pws-account-host button{min-height:44px}
+.pws-maskot-tabs{scrollbar-width:thin}
+@media(max-width:600px){
+ .pws-profile-layout>section>.pws-card{min-height:190px;padding:14px}
+ .pws-profile-layout>section>.pws-card .pws-portrait{width:105px;height:105px;flex:none}
+ .pws-profile-layout>section>.pws-card .pws-card__name{font-size:25px;margin-top:10px}
+}
+.pws-studio__workspace{position:relative;container-type:size;overflow:hidden;padding:6px}
+.pws-studio-canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(calc(100% - 12px),calc((100cqh - 12px)*1.5));height:auto;max-height:none;max-width:100%}
+.pws-studio__header strong{font:700 18px/1.2 system-ui,sans-serif}
+@media(max-width:700px){
+ .pws-studio__body{grid-template-rows:minmax(140px,1fr) minmax(90px,130px)}
+ .pws-studio__controls{overflow-y:auto;min-height:0;padding:2px 3px 4px;overscroll-behavior:contain}
+ .pws-studio__header strong{font-size:16px}
+}

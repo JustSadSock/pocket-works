@@ -6,8 +6,11 @@ import {
   attachCriticalScreenshot,
   monitorUnexpectedBrowserOutput,
   openStablePage,
-  openLibraryPage
+  openLibraryPage,
+  mockGuestShellServices
 } from './helpers';
+
+test.beforeEach(async({page})=>{await mockGuestShellServices(page);});
 
 const registry = JSON.parse(
   readFileSync(new URL('../../dist-site/apps.json', import.meta.url), 'utf8')
@@ -67,7 +70,9 @@ test('launcher shelf supports precise updated sorting, search, details and favor
   await expect(page.locator('#detail-panel')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#detail-name')).toHaveText('Screen Lab');
   await expect(page.locator('#detail-version')).toHaveText(`v${screenLabVersion}`);
-  await expect(page.locator('#detail-open')).toHaveAttribute('href', './apps/screen-lab/');
+  const releaseLink=new URL(await page.locator('#detail-open').getAttribute('href')||'',page.url());
+  expect(releaseLink.pathname).toBe('/apps/screen-lab/');
+  expect(releaseLink.searchParams.get('pw_release')).toBe(screenLabVersion);
   await expect(page.locator('#detail-preview')).toHaveClass(/has-app-icon/);
 
   const favorite = page.locator('#detail-favorite');
@@ -110,7 +115,7 @@ test('launcher list remains expanded after reload and BFCache-safe cleanup', asy
   monitor.assertClean();
 });
 
-test('launcher retains personal shelf state and reset requires a second confirmation press', async ({ page }) => {
+test('launcher retains personal shelf state and reset requires explicit confirmation', async ({ page }) => {
   const monitor = monitorUnexpectedBrowserOutput(page);
   const screenLabEntry = page.locator('.app-entry[data-slug="screen-lab"]');
   await openLibraryPage(page, screenLabEntry);
@@ -129,11 +134,11 @@ test('launcher retains personal shelf state and reset requires a second confirma
   await page.locator('.shelf-tools__advanced > summary').click();
   const reset = page.locator('#reset-shelf');
   await reset.click();
-  await expect(reset).toHaveText('Нажми ещё раз для сброса');
+  await expect(page.locator('.pw-confirm')).toBeVisible();
   await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'true');
 
-  await reset.click();
-  await expect(reset).toHaveText('Сбросить мою коллекцию');
+  await page.locator('.pw-confirm [data-choice=accept]').click();
+  await expect(page.locator('.pw-confirm')).toHaveCount(0);
   await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('[data-filter="all"]')).toHaveAttribute('aria-pressed', 'true');
   await assertNoHorizontalOverflow(page);

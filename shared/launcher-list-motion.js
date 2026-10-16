@@ -12,7 +12,6 @@ const networkStatus = document.querySelector('#network-status');
 const syncStatus = document.querySelector('#sync-status');
 const refreshButton = document.querySelector('#refresh-button');
 const sortButton = document.querySelector('#sort-button');
-const resetShelf = document.querySelector('#reset-shelf');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 // Contact Sheet is a two-dimensional, virtual-density grid. Its layout must not
 // be driven by the old vertical shelf FLIP animations or per-row DOM updates.
@@ -32,7 +31,6 @@ if (list) {
   let animationGeneration = 0;
   let rafOne = 0;
   let rafTwo = 0;
-  let resetConfirmTimer = 0;
   const activeAnimations = new Set();
 
   const toast = document.createElement('div');
@@ -320,15 +318,6 @@ if (list) {
     document.querySelector('.search-field')?.classList.toggle('has-value', Boolean(searchInput?.value));
   }
 
-  function clearResetConfirmation() {
-    window.clearTimeout(resetConfirmTimer);
-    if (!resetShelf?.dataset.confirming) return;
-    delete resetShelf.dataset.confirming;
-    resetShelf.classList.remove('is-confirming');
-    resetShelf.textContent = 'Сбросить мою коллекцию';
-    resetShelf.setAttribute('aria-label', 'Сбросить мою коллекцию');
-  }
-
   function installControlPolish() {
     syncStatus?.setAttribute('aria-live', 'polite');
     refreshButton?.setAttribute('aria-controls', 'app-list');
@@ -378,26 +367,7 @@ if (list) {
       }
     });
 
-    document.addEventListener('click', (event) => {
-      const control = event.target.closest?.('#reset-shelf');
-      if (!control) return;
 
-      if (control.dataset.confirming !== 'true') {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        control.dataset.confirming = 'true';
-        control.classList.add('is-confirming');
-        control.textContent = 'Нажми ещё раз для сброса';
-        control.setAttribute('aria-label', 'Нажми ещё раз, чтобы сбросить коллекцию');
-        showToast('Для сброса нажми ещё раз.', 'warning');
-        resetConfirmTimer = window.setTimeout(clearResetConfirmation, 2600);
-        return;
-      }
-
-      clearResetConfirmation();
-      window.setTimeout(() => showToast('Коллекция сброшена'), 80);
-    }, { capture: true });
 
     const refreshObserver = new MutationObserver(() => {
       if (!refreshButton) return;
