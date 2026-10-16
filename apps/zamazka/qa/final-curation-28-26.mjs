@@ -79,6 +79,6 @@ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 assert.equal(config.version,'1.40.12');
 assert.match(html,/data-app-version="1\.40\.12"/);
-assert.match(sw,/APP_VERSION = '1\.40\.11'/);
+assert.match(sw,/APP_VERSION = '1\.40\.12'/);
 assert.match(sw,/museum-approved-second-2026\.js/);
 console.log('ZAMAZKA curation: 27 rejected originals excluded, 28 approved originals added, 108 playable, archive editions 1-6 safe, server v24 OK');
