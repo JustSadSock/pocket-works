@@ -62,9 +62,10 @@ test('catalog identity and the full menu journey remain readable at every viewpo
   await page.locator('#deck-customize').click();
   await expect(page.locator('#deck-editor-preview span')).toHaveCount(3);
   await shot(page,info,'08-editor');
-  await page.locator('[data-deck-size]').first().click();
+  await page.locator('[data-deck-size=continue][data-size-value=half]').click();
   await expect(page.locator('#deck-editor-preview span').first()).toHaveAttribute('data-size','half');
   await page.locator('#deck-editor-cancel').click();
+  await page.locator('.pw-confirm [data-choice=discard]').click();
   await page.locator('#pocket-id-trigger').click();
   await expect(page.locator('#pocket-id-dialog')).toBeVisible();
   await shot(page,info,'09-pocket-id');
@@ -120,7 +121,7 @@ test('saved widget sizes change the desktop composition rather than only the pre
   await boot(page);
   const before=await page.locator('.deck-widget--continue').boundingBox();
   await page.locator('#deck-customize').click();
-  await page.locator('[data-deck-size=continue]').click();
+  await page.locator('[data-deck-size=continue][data-size-value=half]').click();
   await page.locator('#deck-editor-save').click();
   const after=await page.locator('.deck-widget--continue').boundingBox();
   expect(after!.width).toBeLessThan(before!.width/2);

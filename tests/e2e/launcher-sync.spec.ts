@@ -1,5 +1,8 @@
+import {mockGuestShellServices} from './helpers';
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
+
+test.beforeEach(async({page})=>{await mockGuestShellServices(page);});
 
 const registry = JSON.parse(
   readFileSync(new URL('../../dist-site/apps.json', import.meta.url), 'utf8')
@@ -35,7 +38,7 @@ test('launcher Sync updates only already-installed application workers', async (
   });
   expect(before).toEqual(['/apps/screen-lab/']);
 
-  await page.locator('#library-options > summary').click();
+  await page.locator('[data-deck-tools]').click();
   const sync = page.locator('#update-installed-button');
   await sync.click();
   await expect(sync).toBeEnabled({ timeout: 35_000 });
@@ -55,5 +58,5 @@ test('launcher Sync updates only already-installed application workers', async (
 test('launcher shell advertises the update-system release', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
-  await expect(page.locator('.shelf-heading .eyebrow')).toContainText(packageJson.version);
+  await expect(page.locator('meta[name=pocket-works-build]')).toHaveAttribute('content',packageJson.version);
 });

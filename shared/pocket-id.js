@@ -1,3 +1,4 @@
+import {confirmShell} from './shell-dialogs.js';
 // Pocket ID launcher surface. Local app data remains untouched; cloud identity is optional.
 const $ = selector => document.querySelector(selector);
 const dialog = $('#pocket-id-dialog');
@@ -31,7 +32,15 @@ const activationForm = $('#pocket-id-activation-form');
 const activationInput = $('#pocket-id-activation-code');
 const activationStatus = $('#pocket-id-activation-status');
 const activationOwned = $('#pocket-id-activation-entitlements');
-let user=null;
+let user=null,accountHost=null,beforeAccountLeave=null;
+const accountSections=[...dialog.children].filter(el=>!el.classList.contains('pw-id-dialog__top'));
+function unmountAccount(){if(!accountHost)return;for(const el of accountSections)dialog.append(el);accountHost=null;}
+function mountAccount(host,{beforeLeave}={}){
+  if(!host)return;unmountAccount();accountHost=host;beforeAccountLeave=beforeLeave;
+  for(const el of accountSections)host.append(el);
+  mode=user?(user.complete?'view':'onboarding'):'create';display();message('');
+}
+
 let config={googleEnabled:false,avatars:['clay','moss','ink','sun','wave','ember','plum','stone']};
 let mode='create',busy=false,validationClock=0,validationGeneration=0;
 const artwork={
@@ -59,7 +68,7 @@ function message(text,kind='info') {
 }
 function setBusy(value) {
   busy=value;
-  for(const control of dialog.querySelectorAll('button,input')) {
+  for(const control of (accountHost||dialog).querySelectorAll('button,input')) {
     if(control.id==='pocket-id-close') continue;
     control.disabled=value;
   }
@@ -101,6 +110,7 @@ function publish(userValue) {
   document.dispatchEvent(new CustomEvent('pocket-id:changed',{detail:{user}}));
 }
 window.PocketID=Object.freeze({
+  mountAccount,unmountAccount,
   getUser:()=>user?Object.freeze({...user}):null,
   refresh:async()=>{const data=await api('me');publish(data.user);return data.user;},
   openAccount:()=>{mode=user?(user.complete?'view':'onboarding'):'create';openDialog()},
@@ -116,8 +126,8 @@ function display() {
   newAccount.hidden=Boolean(user)||mode!=='recover';
   googleAction.hidden=!config.googleEnabled||Boolean(user?.linkedGoogle);
   googleAction.textContent=user?'Подключить Google':'Войти через Google';
-  headline.textContent=user?'Безопасность Pocket ID':mode==='recover'?'Восстановление доступа':'Твой Pocket ID';
-  subtitle.textContent=user?'Внешний вид, рисунок и никнейм настраиваются в общей карточке пользователя.':'Войди или создай учётную запись. Играть можно и без неё.';
+  headline.textContent=user?'Вход и восстановление':mode==='recover'?'Восстановление доступа':'Твой Pocket ID';
+  subtitle.textContent=user?'Способы входа и восстановления доступа.':'Войди или создай учётную запись. Играть можно и без неё.';
   if(user) {
     activeName.textContent=user.nickname||'Придумай никнейм';
     activeAvatar.innerHTML=avatar(user.avatar);
@@ -128,7 +138,7 @@ function display() {
     primary.textContent=user?'Завершить создание профиля':'Создать Pocket ID';
     nameHint.textContent='3–20 символов · буквы, цифры, _ и -';
   }
-  $('#pocket-id-edit-action').hidden=!user?.complete;
+  $('#pocket-id-edit-action').hidden=Boolean(accountHost)||!user?.complete;
   $('#pocket-id-recovery-action').hidden=!user||mode==='key';
   signout.hidden=!user;
   activationDetails.hidden=!user?.complete||mode!=='view';
@@ -138,6 +148,7 @@ function display() {
   activationOwned.textContent=names.length?'Активировано: '+names.join(', '):'';
 }
 function openDialog() {
+  unmountAccount();
   if(!dialog.open) dialog.showModal();
   if(mode!=='key') {
     mode=user?(user.complete?'view':'onboarding'):'create';
@@ -166,13 +177,13 @@ trigger.addEventListener('click',()=>{
 });
 $('#pocket-id-close').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('click',event=>{if(event.target===dialog) dialog.close();});
-googleAction.addEventListener('click',()=>{location.assign('/pocket-id/login/google');});
+googleAction.addEventListener('click',async()=>{if(accountHost&&beforeAccountLeave&&!await beforeAccountLeave())return;location.assign('/pocket-id/login/google');});
 $('#pocket-id-edit-action').addEventListener('click',()=>{
   dialog.close();
   if(window.PocketSocial?.open)window.PocketSocial.open();
 });
 $('#pocket-id-recovery-action').addEventListener('click',async()=>{
-  if(!confirm('Replace your current recovery key? Your old key will stop working.')) return;
+  if(!await confirmShell('Обновить ключ восстановления?','Прежний ключ перестанет работать.','Обновить ключ')) return;
   setBusy(true);
   try { const result=await api('new-key',{method:'POST',body:'{}'});showRecovery(result.recoveryCode); }
   catch(error){message(error.message,'error');}
@@ -188,7 +199,7 @@ recoveryCopy.addEventListener('click',async()=>{
 });
 $('#pocket-id-recovery-done').addEventListener('click',()=>{
   mode='view';display();message('Профиль создан.','success');
-  if(user?.complete){dialog.close();window.PocketSocial?.open?.()}
+  if(user?.complete&&!accountHost){dialog.close();window.PocketSocial?.open?.()}
 });
 activationForm.addEventListener('submit',async event=>{
   event.preventDefault();
@@ -214,6 +225,7 @@ activationForm.addEventListener('submit',async event=>{
   }finally{setBusy(false);}
 });
 signout.addEventListener('click',async()=>{
+  if(accountHost&&beforeAccountLeave&&!await beforeAccountLeave())return;
   setBusy(true);
   try {await api('logout',{method:'POST',body:'{}'});activationInput.value='';activationStatus.textContent='';activationDetails.open=false;publish(null);mode='create';display();message('Вход завершён. Игры и сохранения на месте.','success');}
   catch(error){message(error.message,'error');}finally{setBusy(false);}
