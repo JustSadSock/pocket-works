@@ -85,10 +85,11 @@ export class MuseumAudio{
  duckCountdown(at,seconds){
   if(!this.clock)return;
   const gain=this.clock.bus.gain;
+  this.clock.duckUntil=Date.now()+seconds*1000;
   gain.cancelScheduledValues(at);
   gain.setValueAtTime(gain.value,at);
   gain.setTargetAtTime(.10,at,.035);
-  gain.setTargetAtTime(.42,at+seconds,.13);
+  gain.setTargetAtTime(.32,at+seconds,.13);
  }
  stopCountdown(fade=.08){
   const clock=this.clock;this.clock=null;
@@ -112,10 +113,15 @@ export class MuseumAudio{
    this.stopCountdown();
    const bus=this.context.createGain();
    bus.gain.value=.0001;bus.connect(this.master);
-   bus.gain.setTargetAtTime(.42,this.context.currentTime,.08);
-   this.clock={key,deadline:deadlineMs,bus,next:deadlineMs-15000};
+   bus.gain.setTargetAtTime(.23,this.context.currentTime,.08);
+   this.clock={key,deadline:deadlineMs,bus,next:deadlineMs-15000,duckUntil:0};
   }
   const clock=this.clock,start=deadlineMs-15000;
+  // Progressive tension: 23% at -15 s → 57% at 0. The clock's own
+  // gain rises independently from the Clockmaker alarm gain and sound setting.
+  const progress=Math.max(0,Math.min(1,(15000-(deadlineMs-nowMs))/15000));
+  const level=.23+.34*progress;
+  if(nowMs>=clock.duckUntil)clock.bus.gain.setTargetAtTime(level,this.context.currentTime,.16);
   if(clock.next<nowMs-500)clock.next=start+Math.ceil((nowMs-500-start)/500)*500;
   const horizon=Math.min(deadlineMs-30,nowMs+1050);
   let count=0;
