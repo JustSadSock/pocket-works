@@ -40,7 +40,7 @@ const kickedGuest=send(guest,{type:'board_delta',revision:1,k:'hack1',q:0,c:'#44
 assert.match(kickedGuest.events[0].payload,/Матч уже начался/i,'evicted player loses access even before network layer detaches');
 send(host,{type:'start',rounds:1});
 assert.equal(state.phase,'preview','remaining two can start');
-assert.match(send(host,{type:'kick_player',targetId:third.id}).events[0].payload,/только до начала/i,'no dangerous mid-round change');
+assert.match(send(host,{type:'kick_player',targetId:third.id}).events[0].payload,/матч приостановлен/i,'no dangerous mid-round change unless recovery has paused the match');
 assert.equal(state.participants.length,2,'active match roster preserved');
 const app=file('../app.js'),hub=file('../../../pocketnet/hub.mjs'),node=file('../../../pocket-server/src/main.mjs'),local=file('../server/local/server.mjs');
 assert.match(app,/data-action="kick-player"/,'curator button is in lobby list');
