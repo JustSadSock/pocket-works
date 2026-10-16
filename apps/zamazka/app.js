@@ -476,7 +476,7 @@ function fitPreviewFrames(rail){
    // Both axes and the four frame facets share the same explicit dimensions.
    const thickness=matchMedia('(max-width:900px), (pointer:coarse)').matches?7:10;
    const limitW=host.clientWidth-12-2*thickness-2;
-   const limitH=host.clientHeight-12-2*thickness-2-(host.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-4;
+   const limitH=host.clientHeight-23-2*thickness-2-(host.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-4;
    if(limitW<28||limitH<28)continue;
    const width=Math.floor(Math.min(limitW,limitH*ratio));
    // Keep a fractional CSS height. Rounding 100.5px to 100px distorts
