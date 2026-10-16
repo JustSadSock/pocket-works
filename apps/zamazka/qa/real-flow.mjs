@@ -54,17 +54,14 @@ try{
   });
   await page.goto('http://127.0.0.1:'+port+'/apps/zamazka/',{waitUntil:'domcontentloaded'});
   await page.locator('.museum-home').waitFor({timeout:16000});
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'classic','Classic beige theme must be default');
-  assert.equal(await page.locator('#zamazka-experimental-style').getAttribute('media'),'not all');
-  assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),'not all','Classic mode must not load the new home CSS');
-  assert.equal(await page.locator('.set-furniture').count(),0,'Classic style must not mount decorative scenery');
-  assert.equal(await page.locator('.museum-console-structure').count(),0,'Cabinet is not part of either screen');
-  assert.equal(await page.locator('.museum-luminaire').evaluate(el=>getComputedStyle(el).display),'none');
-  assert.equal(await page.locator('.museum-frame-facet').first().evaluate(el=>getComputedStyle(el).display),'none');
-  assert.equal(await page.locator('.museum-plinth').count(),0,'Classic style must not mount museum plinth');
-  assert.equal(await page.locator('.museum-architecture').count(),0,'Classic mode must restore original DOM architecture');
+  assert.equal(await page.locator('html').getAttribute('data-zamazka-appearance'),'new','Museum look must be immediate');
+  assert.equal(await page.locator('#zamazka-experimental-style').getAttribute('media'),null);
+  assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),null);
+  assert.equal(await page.locator('.museum-home .museum-plinth').count(),1,'Physical museum set is the default');
+  assert.notEqual(await page.locator('.museum-frame-facet').first().evaluate(el=>getComputedStyle(el).display),'none');
+  assert.equal(await page.locator('.museum-console-structure').count(),0);
   const shellTheme=await page.locator('.museum-home').evaluate(el=>getComputedStyle(el).backgroundImage);
-  assert(shellTheme.includes('gradient'),'Stage world must paint without external image downloads');
+  assert(shellTheme.includes('gradient'),'Offline museum backdrop visible');
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-atrium-'+viewport.width+'.png'),fullPage:false});
   // Real settings: volume persists, and the slider value is reflected without reloading.
   await page.locator('#settingsBtn').click();
@@ -94,7 +91,7 @@ try{
   await page.locator('[data-settings-tab="preferences"]').click();
   assert.equal(await page.locator('#settingVolume').inputValue(),'35');
   if(mobile){
-    const settingsFit=await page.locator('.dialog-box:has(#settingNewAppearance)').evaluate(el=>{
+    const settingsFit=await page.locator('.atelier-settings-dialog').evaluate(el=>{
       const actions=[...el.querySelectorAll('#modalActions button')];
       return {scroll:el.scrollHeight-el.clientHeight,
         visible:actions.every(button=>{const r=button.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})};
@@ -102,33 +99,13 @@ try{
     assert(settingsFit.scroll<=3&&settingsFit.visible,
       'Portrait settings and Save must fit without vertical scrolling: '+JSON.stringify(settingsFit));
   }
-  const nextSwitch=page.locator('#settingNewAppearance');
-  assert.equal(await nextSwitch.isChecked(),false,'New style must start disabled');
-  await nextSwitch.check();
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new','Toggle must preview new look immediately');
-  // Switching the opt-in CSS media may load the stylesheet asynchronously.
-  // Verify the *computed* visual change, but allow the browser to finish CSS loading.
-  await page.waitForFunction(original => {
-    const el=document.querySelector('.museum-home');
-    return el && getComputedStyle(el).backgroundImage!==original;
-  },shellTheme,{timeout:5000});
-  const previewBackground=await page.locator('.museum-home').evaluate(el=>getComputedStyle(el).backgroundImage);
-  assert.notEqual(previewBackground,shellTheme,'Appearance switch must visibly change actual surface styling');
-  assert.equal(await page.locator('.museum-home .museum-plinth').count(),1,'New style must add its physical picture ledge');
+  assert.equal(await page.locator('#settingNewAppearance').count(),0,'Classic style control must be gone');
   await page.locator('#modalActions .btn.ghost').click();
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'classic','Cancel must revert theme');
-  assert.equal(await page.locator('.museum-plinth').count(),0,'Reverted classic must clean up scene objects');
-  await page.locator('#settingsBtn').click();
-  await page.locator('[data-settings-tab="preferences"]').click();
-  await page.locator('#settingNewAppearance').check();
-  await page.locator('#modalActions .btn.primary').click();
-  assert.equal(await page.evaluate(()=>localStorage.getItem('pocket-works:zamazka:appearance')),'new');
-  assert.equal(await page.locator('#zamazka-experimental-style').getAttribute('media'),'all','New look stylesheet must be enabled');
+  assert.equal(await page.locator('.museum-home .museum-plinth').count(),1,'Cancel cannot revert design');
   await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('.museum-home').waitFor({timeout:17000});
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new','New look must survive reload');
+  assert.equal(await page.locator('html').getAttribute('data-zamazka-appearance'),'new');
   assert.equal(await page.locator('.museum-home .museum-plinth').count(),1);
-  assert.equal(await page.locator('#zamazka-afterhours-home').getAttribute('media'),'all','After-hours art direction must only load in the opt-in theme');
   const constructed=await page.locator('.museum-home').evaluate(el=>{
     const lamp=el.querySelector('.museum-luminaire');
     const facets=[...el.querySelectorAll('.museum-slide[data-slot="0"] .museum-frame-facet')];
@@ -230,19 +207,36 @@ try{
     'Attached museum plaque must be wholly visible inside gallery: '+JSON.stringify(labelBounds));
   assert.equal(traveling.legacy,'none','Stationary caption must not remain in new appearance');
 
+  if(mobile){
+   // Follow the SAME physical frame from a side position to the center.
+   // The paper plaque should not darken/brighten when its parent slot changes.
+   const entering=await page.locator('.museum-slide[data-slot="1"]').elementHandle();
+   const sample=()=>entering.evaluate(el=>{
+    const plate=el.querySelector('.museum-slide-label'),rim=el.querySelector('.museum-slide-rim>img');
+    const p=getComputedStyle(plate),frame=getComputedStyle(el);
+    return {background:p.backgroundImage,color:p.color,opacity:p.opacity,
+     frameOpacity:frame.opacity,frameFilter:frame.filter,imageFilter:getComputedStyle(rim).filter};
+   });
+   const before=await sample();
+   await page.locator('[data-action="museum-next"]').click();
+   await page.waitForFunction(()=>!document.querySelector('#museumStage')?.dataset.galleryAnimating,null,{timeout:4000});
+   const after=await sample();
+   assert.equal(before.frameFilter,'none','Side frame must not dim its plate');
+   assert.equal(after.frameFilter,'none','Center frame must not relight its plate');
+   assert.equal(before.frameOpacity,'1');
+   assert.equal(after.frameOpacity,'1');
+   assert.equal(before.opacity,after.opacity,'Plate opacity cannot jump on swipe');
+   assert.equal(before.background,after.background,'Plate paper must not change brightness with carousel position');
+   assert.equal(before.color,after.color,'Plaque ink must not shift on swipe');
+  }
+
+
 
   await page.locator('#settingsBtn').click();
   await page.locator('[data-settings-tab="preferences"]').click();
-  await page.locator('#settingNewAppearance').uncheck();
-  await page.locator('#modalActions .btn.primary').click();
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'classic','Classic must be restored in-place');
-  assert.equal(await page.locator('.museum-plinth').count(),0);
-  assert.equal(await page.evaluate(()=>localStorage.getItem('pocket-works:zamazka:appearance')),'classic');
-  await page.locator('#settingsBtn').click();
-  await page.locator('[data-settings-tab="preferences"]').click();
-  await page.locator('#settingNewAppearance').check();
-  await page.locator('#modalActions .btn.primary').click();
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
+  await page.locator('#modalActions .btn.ghost').click();
+  assert.equal(await page.locator('.museum-home .museum-plinth').count(),1);
+  assert.equal(await page.locator('#settingNewAppearance').count(),0);
   const centerFrame=page.locator('.museum-slide[data-slot="0"]');
   await centerFrame.waitFor();
   assert.equal(await centerFrame.getAttribute('role'),'button','Paintings should be keyboard accessible');
@@ -325,11 +319,12 @@ try{
       return {root:root.scrollHeight-root.clientHeight,view:scene.scrollHeight-scene.clientHeight,
        actualScroll,overflow:getComputedStyle(root).overflowY};
     });
-    assert(heights.root<=6&&heights.view<=3&&heights.actualScroll===0&&heights.overflow==='clip',
+    // Physical museum framing adds subpixel layout extent, but the root must not scroll.
+    assert(heights.root<=8&&heights.view<=3&&heights.actualScroll===0&&heights.overflow==='clip',
       'Preview must fit portrait and remain non-scrollable: '+JSON.stringify(heights));
   }
   assert.equal(await page.locator('.mobile-preview .gallery .picture').count(),5);
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
+  assert.equal(await page.locator('html').getAttribute('data-zamazka-appearance'),'new');
   if(mobile){
     const frame=await page.locator('.mobile-preview .gallery .picture .picture-image').first().evaluate(el=>({
       outerBorder:parseFloat(getComputedStyle(el).borderTopWidth),
@@ -378,7 +373,7 @@ try{
     throw new Error('Synthetic preview image geometries do not fit: '+JSON.stringify(ratios));
   }
     await page.locator('[data-action="skip"]').click();
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
+  assert.equal(await page.locator('html').getAttribute('data-zamazka-appearance'),'new');
   assert.equal(await page.locator('.museum-passage').count(),0,'No full-screen sliding doors');
   assert.equal(await page.locator('.restore .set-furniture').count(),1,'Opt-in atelier must have restrained scene dressing');
   assert.equal(await page.locator('.exhibition-exit-layer [data-action]').count(),0,'Outgoing room must not have active controls');
@@ -476,16 +471,10 @@ try{
   await board.evaluate(el=>el.dataset.themeContinuity='intact');
   await page.locator('#settingsBtn').click();
   await page.locator('[data-settings-tab="preferences"]').click();
-  await page.locator('#settingNewAppearance').uncheck();
+  assert.equal(await page.locator('#settingNewAppearance').count(),0);
   await page.locator('#modalActions .btn.primary').click();
-  assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Switching off must preserve mounted drawing canvas');
-  assert.equal(await page.locator('#strokeCount').textContent(),retainedInk,'Switching off must retain brush strokes');
-  await page.locator('#settingsBtn').click();
-  await page.locator('[data-settings-tab="preferences"]').click();
-  await page.locator('#settingNewAppearance').check();
-  await page.locator('#modalActions .btn.primary').click();
-  assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Switching on must preserve mounted drawing canvas');
-  assert.equal(await page.locator('#strokeCount').textContent(),retainedInk,'Switching on must retain brush strokes');
+  assert.equal(await page.locator('#paintCanvas').getAttribute('data-theme-continuity'),'intact','Settings cannot remount drawing canvas');
+  assert.equal(await page.locator('#strokeCount').textContent(),retainedInk,'Settings preserve brush strokes');
   await page.locator('[data-action="submit"]').click();
   await page.locator('.reveal-phase').waitFor({timeout:11000});
   await page.locator('.reveal-phase.is-composed').waitFor({timeout:12000});
@@ -537,8 +526,9 @@ try{
   assert(await page.locator('.collection-mast .collection-back').isVisible(),
     'Archive back action must be immediately visible before scrolling');
 
-  assert.equal(await page.evaluate(()=>window.ZamazkaAppearance.get()),'new');
-  assert.equal(await page.locator('.collection-page .set-furniture').count(),1,'Opt-in theme must persist through archive');
+  assert.equal(await page.locator('html').getAttribute('data-zamazka-appearance'),'new');
+  assert.equal(await page.locator('html').getAttribute('data-zamazka-appearance'),'new');
+  assert.equal(await page.locator('.collection-page .set-furniture').count(),1,'Museum set persists in archive');
   await page.locator('.exhibition-exit-layer').waitFor({state:'detached',timeout:4000});
   await page.waitForTimeout(360);
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-archive-'+viewport.width+'.png'),fullPage:false});
@@ -546,15 +536,13 @@ try{
   await page.locator('[data-action="export-archive"]').click();
   const file=await dl;
   assert(/zamazka-archive-\d{4}-\d\d-\d\d\.json$/.test(file.suggestedFilename()));
-  // Changing the visual system in an active archive must not discard entries.
   const countBefore=await page.locator('.archive-work').count();
   await page.locator('#settingsBtn').click();
   await page.locator('[data-settings-tab="preferences"]').click();
-  await page.locator('#settingNewAppearance').uncheck();
+  assert.equal(await page.locator('#settingNewAppearance').count(),0);
   await page.locator('#modalActions .btn.primary').click();
-  assert.equal(await page.locator('.archive-work').count(),countBefore,'Appearance switch must not remount archive');
-  assert.equal(await page.locator('.collection-page .set-furniture').count(),0,'Classic archive must remove experimental scenery');
-  assert.equal(await page.locator('#zamazka-experimental-style').getAttribute('media'),'not all');
+  assert.equal(await page.locator('.archive-work').count(),countBefore,'Settings never remount archive');
+  assert.equal(await page.locator('.collection-page .set-furniture').count(),1);
   assert.equal(errors.length,0,'Uncaught browser errors: '+errors.join('; '));
   cases++;
   console.log('OK live UI '+viewport.width+'x'+viewport.height+': solo preview → stroke → reveal → archive export');

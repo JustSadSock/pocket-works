@@ -28,12 +28,13 @@ const guest=cabinetMarkup(zamazkaAchievements,[],{status:'guest',guest:true});
 assert.match(guest,/data-action="pocket-profile"/);
 assert.match(guest,/Pocket ID/);
 assert.doesNotMatch(guest,/>Не открыто</);
-const opts={name:'Реставратор',member:false,sound:true,volume:55,confirmVote:false,appearance:'classic',
+const opts={name:'Реставратор',member:false,sound:true,volume:55,confirmVote:false,
  brushStyle:0,brushNames:BRUSH_CURSOR_NAMES};
 const settings=settingsMarkup(opts);
 assert.equal((settings.match(/data-brush-choice=/g)||[]).length,5);
+assert(!settings.includes('settingNewAppearance'),'obsolete look switch must be removed');
 assert.match(settings,/id="settingStrokeCanvas"/);
-for(const id of ['settingBrushStyle','settingNewAppearance','settingVolume','settingSound','settingConfirmVote','settingName'])assert(settings.includes('id="'+id+'"'));
+for(const id of ['settingBrushStyle','settingVolume','settingSound','settingConfirmVote','settingName'])assert(settings.includes('id="'+id+'"'));
 const root={buttons:[{dataset:{settingsTab:'brushes'},classList:{toggle(k,v){this[k]=v}},setAttribute(k,v){this[k]=v}},
  {dataset:{settingsTab:'preferences'},classList:{toggle(k,v){this[k]=v}},setAttribute(k,v){this[k]=v}}],
  panels:[{dataset:{settingsPanel:'brushes'},classList:{toggle(k,v){this[k]=v}},hidden:false},

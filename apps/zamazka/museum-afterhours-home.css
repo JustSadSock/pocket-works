@@ -1027,3 +1027,32 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-recent-open {
  }
  html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label::after{display:none}
 }
+
+/* 1.40.12 — Gallery labels are physical brass/paper plates, not photographic
+   content. The former brightness(.72) and opacity(.75) on the entire slide
+   made labels pop from dark to light on every mobile carousel shift. */
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide{
+ filter:none!important;
+ opacity:1!important;
+ transition:transform var(--museum-shift-duration,350ms) cubic-bezier(.24,.72,.22,1)!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label,
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-label::before{
+ filter:none!important;opacity:1!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-rim>img{
+ filter:brightness(1) saturate(1);
+ transition:filter var(--museum-shift-duration,350ms) ease;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide:not([data-slot="0"]) .museum-slide-rim>img{
+ filter:brightness(.83) saturate(.90);
+}
+/* Keep the genuine painting carousel pointer and keyboard interactions that
+   were previously hidden inside the removed classic-appearance stylesheet. */
+.museum-slide[data-slot="-1"],.museum-slide[data-slot="0"],.museum-slide[data-slot="1"]{
+ pointer-events:auto;cursor:pointer;
+}
+.museum-slide:focus-visible{outline:3px solid #b68e54;outline-offset:4px}
+@media(prefers-reduced-motion:reduce){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide-rim>img{transition:none!important}
+}

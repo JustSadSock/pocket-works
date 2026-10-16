@@ -53,7 +53,7 @@ export function achievementDetailMarkup(a,earned=false,verified=false){
  '<h3>'+esc(a.name)+'</h3><p>'+esc(a.detail)+'</p>'+
  '<div class="cabinet-prize"><span>НАГРАДА ДЛЯ POCKET ID</span><strong>'+esc(a.reward)+'</strong></div></div></div>';
 }
-export function settingsMarkup({name,member,sound,volume,confirmVote,appearance,brushStyle,brushNames}){
+export function settingsMarkup({name,member,sound,volume,confirmVote,brushStyle,brushNames}){
  const chosen=Math.max(0,Math.min(brushNames.length-1,Number(brushStyle)||0));
  return '<div class="atelier-settings" data-settings-view>'+
  '<nav class="atelier-settings-tabs" aria-label="Разделы настроек">'+
@@ -82,10 +82,7 @@ export function settingsMarkup({name,member,sound,volume,confirmVote,appearance,
   '<input id="settingVolume" type="range" min="0" max="100" step="5" value="'+volume+'" aria-label="Громкость эффектов"></div>'+
  '<div class="atelier-preferences-group"><span class="atelier-group-title">ИГРА</span>'+
   '<label class="field atelier-switch-line" for="settingConfirmVote">Подтверждать распределение монет <input type="checkbox" id="settingConfirmVote"'+(confirmVote?' checked':'')+'></label>'+
-  '<label class="field appearance-choice atelier-appearance" for="settingNewAppearance">'+
-  '<span class="appearance-choice-text"><strong>Новый внешний вид</strong><small>Экспериментальная музейная мастерская</small></span>'+
-  '<input type="checkbox" role="switch" id="settingNewAppearance"'+(appearance==='new'?' checked':'')+'>'+
-  '<span class="appearance-track" aria-hidden="true"></span></label></div></div></section></div>';
+  '</div></div></section></div>';
 }
 export function setSettingsTab(root,name){
  const target=name==='preferences'?'preferences':'brushes';

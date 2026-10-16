@@ -31,7 +31,7 @@ const layouts=[
  ['landscape-844x390',844,390]
 ];
 const owned=[zamazkaAchievements[0].id,zamazkaAchievements[2].id,zamazkaAchievements[5].id];
-const opts={name:'Реставратор',member:false,sound:true,volume:65,confirmVote:true,appearance:'new',brushStyle:0,brushNames:BRUSH_CURSOR_NAMES};
+const opts={name:'Реставратор',member:false,sound:true,volume:65,confirmVote:true,brushStyle:0,brushNames:BRUSH_CURSOR_NAMES};
 let count=0;
 try{
  for(const [name,w,h] of layouts){
@@ -100,12 +100,12 @@ try{
      saveVisible:saved.bottom<=innerHeight&&saved.top>=0,
      modalVisible:r.top>=-2&&r.bottom<=innerHeight+2,overflow:s.overflowY,
      sample:dialog.querySelector('#settingStrokeCanvas')?.getBoundingClientRect().height,
-     prefs:dialog.querySelectorAll('#settingName,#settingSound,#settingNewAppearance,#settingConfirmVote').length};
+     prefs:dialog.querySelectorAll('#settingName,#settingSound,#settingConfirmVote').length};
    });
    assert(metrics.modalVisible&&metrics.saveVisible,name+' settings '+tab+' save clipped '+JSON.stringify(metrics));
    assert(metrics.dialogScroll<=6,name+' settings '+tab+' modal scroll '+JSON.stringify(metrics));
    if(tab==='brushes')assert(metrics.sample>=55,name+' brush test too small '+JSON.stringify(metrics));
-   else assert.equal(metrics.prefs,4);
+   else assert.equal(metrics.prefs,3);
    await page.screenshot({path:join(dir,name+'-settings-'+tab+'.png'),fullPage:false});
    console.log(name+' settings '+tab+' '+metrics.height);
    count++;

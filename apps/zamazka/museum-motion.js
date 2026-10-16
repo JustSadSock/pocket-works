@@ -6,14 +6,13 @@ export function galleryWindow(order,center){
 export function fitMuseumArtwork(stageWidth,stageHeight,ratio){
  const r=Number.isFinite(ratio)&&ratio>0?ratio:4/3;
  const chrome=32;
- const enlarged=stageWidth>=700&&typeof document!=='undefined'&&document.documentElement.dataset.zamazkaAppearance==='new';
- const maxWidth=Math.max(110,Math.min(stageWidth*(enlarged?.79:.68),stageWidth<700?330:enlarged?620:480));
+ const largeStage=stageWidth>=700;
+ const maxWidth=Math.max(110,Math.min(stageWidth*(largeStage?.79:.68),stageWidth<700?330:620));
  // The painting shares its stage with its physically attached caption.
  // Reserve both the measured frame chrome and a fixed plaque band, so the
  // caption cannot be clipped by the stage edge on portrait or wide artworks.
- const experimental=typeof document!=='undefined'&&document.documentElement.dataset.zamazkaAppearance==='new';
- const reserved=experimental?(stageWidth>=700?160:108):0;
- const maxHeight=Math.max(86,experimental?(stageHeight-reserved)*.92:stageHeight*.91);
+ const reserved=stageWidth>=700?160:108;
+ const maxHeight=Math.max(86,(stageHeight-reserved)*.92);
  const width=Math.max(20,Math.min(maxWidth-chrome,(maxHeight-chrome)*r));
  return {width:Math.round(width),height:Math.round(width/r)};
 }
@@ -71,7 +70,7 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
   // There is no backlog to keep turning after the player stops input.
   if(busy)return;
   busy=true;stage.dataset.galleryAnimating='true';
-  const duration=reduced?20:sprint?155:(document.documentElement.dataset.zamazkaAppearance==='new'?350:490);
+  const duration=reduced?20:sprint?155:350;
   stage.style.setProperty('--museum-shift-duration',duration+'ms');
   center=wrap(center+step,order.length);
   const gone=step>0?-2:2,fresh=step>0?2:-2,exiting=nodes.get(gone),next=new Map();

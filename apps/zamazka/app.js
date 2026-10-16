@@ -30,23 +30,14 @@ import {exhibitFacets,exhibitPlaque,mountExhibitFrames} from './exhibition-ui.js
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.11',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.12',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
-function appearance(){return window.ZamazkaAppearance?.get()||'classic'}
-function applyAppearance(mode,persist=false){
- const selected=window.ZamazkaAppearance?.apply(mode,persist)||'classic';
+// One permanent museum visual system. Legacy appearance choices are retired.
+function ensureMuseumScene(){
  const node=screen.firstElementChild;
- if(!node)return selected;
- if(selected==='new'){
-  if(!node.classList.contains('has-scenography'))setDressScene(node,page);
- }else if(node.classList.contains('has-scenography')){
-  node.querySelectorAll(':scope > .set-furniture,.museum-plinth').forEach(el=>el.remove());
-  node.classList.remove('has-scenography');
-  delete node.dataset.set;
- }
- return selected;
+ if(node&&!node.classList.contains('has-scenography'))setDressScene(node,page);
 }
 const NS='pocket-works:zamazka:',GALLERY_KEY=NS+'gallery',PRACTICE_KEY=NS+'practice',CONFIRM_VOTE_KEY=NS+'confirm-coins';
 const POCKETNET_URL=location.origin+'/pocketnet';
@@ -117,7 +108,7 @@ function notify(t){const message=String(t||'');if(message===lastToast&&Date.now(
  lastToast=message;lastToastAt=Date.now();toast.textContent=message;toast.classList.add('show');
  clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}
 
-function closeDialog(){settingsPreviewAbort?.();settingsPreviewAbort=null;if(settingsPreviewAppearance!==null){applyAppearance(settingsOriginalAppearance||'classic');settingsPreviewAppearance=null;settingsOriginalAppearance=null}if(settingsPreviewVolume!==null){museumAudio.setVolume(soundVolume/100);settingsPreviewVolume=null}closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
+function closeDialog(){settingsPreviewAbort?.();settingsPreviewAbort=null;if(settingsPreviewVolume!==null){museumAudio.setVolume(soundVolume/100);settingsPreviewVolume=null}closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
 function modal(title,body,buttons){dialogFocus=document.activeElement;dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound('press',true);fn()});actionBox.append(b)});(actionBox.querySelector('.ghost')||actionBox.querySelector('button'))?.focus({preventScroll:true})}
 let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 let activeSubmitTransfer=null,activeDraftTransfer=null,submissionBackoffUntil=0,draftSendAfter=0;
@@ -277,11 +268,11 @@ function change(html,which){
  if(oldBallot)oldBallot.remove();
  const previousRoom=screen.dataset.museumRoom;
  page=which;lastUiKey='';
- const freshScene=appearance()==='new'&&!oldBallot&&which!=='connecting';
+ const freshScene=!oldBallot&&which!=='connecting';
  exhibitionDirector.replace(html,{animate:!freshScene&&!oldBallot&&which!=='connecting',scene:which});
  if(freshScene&&screen.firstElementChild)screen.firstElementChild.classList.add('atelier-scene-arrive');
- if(appearance()==='new')applyAppearance('new');
- if(appearance()==='new'&&previousRoom&&previousRoom!==screen.dataset.museumRoom&&!oldBallot&&which!=='connecting')sound('frame');
+ ensureMuseumScene();
+ if(previousRoom&&previousRoom!==screen.dataset.museumRoom&&!oldBallot&&which!=='connecting')sound('frame');
  if(oldBallot){
   oldBallot.classList.add('vote-transition-layer');
   oldBallot.setAttribute('aria-hidden','true');
@@ -1086,7 +1077,7 @@ function inspect(id,fromHome=false){
 }
 
 function magnify(id){const cand=view?.candidate;modal(esc(ARTS[id].title),'<canvas id="largeCandidate" style="width:100%;aspect-ratio:4/3;display:block;max-height:55vh"></canvas><p class="hint">'+esc(ARTS[id].style)+' · Внимательно изучи мазки и фактуру.</p>',[['Закрыть',closeDialog,'primary']]);renderArtwork(dialog.querySelector('#largeCandidate'),id,cand?.variation||0,cand?.strokes||[],cand?.art===id)}
-let settingsPreviewVolume=null,settingsPreviewAppearance=null,settingsOriginalAppearance=null;
+let settingsPreviewVolume=null;
 let settingsPreviewAbort=null;
 function mountBrushTest(root){
  const canvas=root.querySelector('#settingStrokeCanvas'),pointer=root.querySelector('#settingBrushPointer');
@@ -1137,10 +1128,9 @@ function mountBrushTest(root){
  settingsPreviewAbort=()=>{drawing=false;pointer.classList.remove('is-visible')};
 }
 function settings(){
- const oldVolume=soundVolume,oldAppearance=appearance();
- settingsOriginalAppearance=oldAppearance;
+ const oldVolume=soundVolume;
  const content=settingsMarkup({name:tabGuestName(),member:isPocketMember(),sound:beepEnabled,volume:soundVolume,
-  confirmVote:localStorage.getItem(CONFIRM_VOTE_KEY)==='on',appearance:oldAppearance,
+  confirmVote:localStorage.getItem(CONFIRM_VOTE_KEY)==='on',
   brushStyle:getBrushCursorStyle(),brushNames:BRUSH_CURSOR_NAMES});
  modal('Мастерская',content,[
   ['Сохранить',()=>{
@@ -1156,8 +1146,6 @@ function settings(){
    museumAudio.setEnabled(beepEnabled);museumAudio.setVolume(soundVolume/100);
    const brushStyle=setBrushCursorStyle(dialog.querySelector('#settingBrushStyle')?.value);
    editor?.setCursorStyle(brushStyle);
-   applyAppearance(dialog.querySelector('#settingNewAppearance')?.checked?'new':'classic',true);
-   settingsPreviewAppearance=null;settingsOriginalAppearance=null;
    settingsPreviewVolume=null;settingsPreviewAbort?.();settingsPreviewAbort=null;
    closeDialog();
    if(page==='vote'&&view?.phase==='voting')vote();
@@ -1202,10 +1190,6 @@ function settings(){
  });
  volume?.addEventListener('change',()=>{
   if(root.querySelector('#settingSound')?.checked)museumAudio.play('tool',true);
- });
- root.querySelector('#settingNewAppearance')?.addEventListener('change',event=>{
-  settingsPreviewAppearance=event.target.checked?'new':'classic';
-  applyAppearance(settingsPreviewAppearance);
  });
 }
 
