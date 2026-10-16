@@ -1,0 +1,272 @@
+/* ZAMAZKA 1.40.5 / fourth visual review. Deliberately scoped to affected screens. */
+/* One physical, toothy sheet, two unequal but connected parts — no vacant centre column. */
+#screen>.passage-entry{
+ grid-template-columns:minmax(0,1.45fr) minmax(0,.83fr)!important;
+ width:min(96vw,1000px)!important;height:min(82dvh,560px)!important;
+ background-color:#e9e1d1!important;
+ background-image:
+  radial-gradient(ellipse at 18% 21%,#fff9e470,transparent 54%),
+  repeating-linear-gradient(98deg,#68584008 0px,#68584008 1px,transparent 1px,transparent 7px),
+  radial-gradient(#77644a2e .65px,transparent .95px)!important;
+ background-size:auto,auto,8px 9px!important;
+ box-shadow:0 2px 0 #c9bda8,0 0 0 1px #cabba3,0 14px 45px #17180f51!important;
+}
+#screen>.passage-entry .passage-document{
+ justify-content:center!important;
+ padding:clamp(14px,2.7vw,35px) clamp(19px,3.2vw,47px)!important;
+ gap:clamp(8px,1.4vh,14px)!important;
+}
+#screen>.passage-entry .passage-heading{text-align:left!important;align-self:stretch!important}
+#screen>.passage-entry .passage-heading h2{
+ font-size:clamp(31px,3.6vw,49px)!important;letter-spacing:-.045em!important;
+ line-height:1.08!important;max-width:100%!important;
+}
+#screen>.passage-entry .passage-entry-content{gap:clamp(7px,1.5vh,13px)!important}
+#screen>.passage-entry .passage-entry-form{gap:clamp(9px,1.5vh,15px)!important}
+#screen>.passage-entry .passage-art{
+ position:relative!important;display:flex!important;align-items:center!important;
+ justify-content:center!important;align-self:stretch!important;
+ padding:clamp(11px,1.6vw,19px) clamp(16px,2vw,25px) clamp(11px,1.5vw,18px)!important;
+ border-left:1px dashed #bba987a3!important;
+}
+#screen>.passage-entry .passage-art::before{
+ content:"";position:absolute;left:-4px;top:6%;bottom:6%;width:7px;
+ background:radial-gradient(circle,#52473950 1.4px,transparent 1.8px) center top/7px 19px repeat-y;
+ opacity:.6;pointer-events:none;
+}
+#screen>.passage-entry .passage-art-frame{
+ display:inline-flex!important;flex:0 1 auto!important;
+ box-sizing:content-box!important;align-items:center!important;justify-content:center!important;
+ width:max-content!important;height:max-content!important;
+ max-width:100%!important;max-height:100%!important;
+ aspect-ratio:auto!important;padding:0!important;margin:0!important;
+ border:clamp(8px,1.05vw,12px) ridge #916d40!important;
+ outline:1px solid #46321d!important;outline-offset:0!important;
+ background:#30251b!important;
+ box-shadow:inset 0 0 0 2px #cfb27e,0 8px 20px #28201643!important;
+ overflow:hidden!important;
+}
+#screen>.passage-entry .passage-art-frame>img{
+ display:block!important;flex:none!important;
+ box-sizing:border-box!important;
+ width:auto!important;height:auto!important;
+ max-width:min(29vw,305px)!important;
+ max-height:min(67dvh,465px)!important;
+ aspect-ratio:auto!important;object-fit:contain!important;
+ padding:0!important;margin:0!important;box-shadow:none!important;
+}
+/* On narrow screens preserve the focus-first compact mobile card. */
+@media(max-width:800px){
+ #screen>.passage-entry{display:flex!important;flex-direction:column!important;
+  width:min(94vw,600px)!important;max-height:calc(100dvh - 88px)!important;height:auto!important}
+ #screen>.passage-entry .passage-document{padding:clamp(8px,2.5vw,20px)!important}
+ #screen>.passage-entry .passage-art{display:none!important}
+ #screen>.passage-entry .passage-heading h2{font-size:clamp(28px,6vw,41px)!important}
+}
+/* The left invitation is top-weighted; lower the right-hand guest column to
+   align with the body of the communal canvas, not the mast label. */
+@media(min-width:1100px) and (min-height:580px){
+ #screen>.exhibition-lobby .lobby-attendance{
+  padding-top:clamp(48px,7.5vh,88px)!important;
+ }
+ #screen>.exhibition-lobby .lobby-attendance .players{min-height:0!important;overflow-y:auto!important}
+}
+@media(min-width:700px) and (max-width:1099px){
+ #screen>.exhibition-lobby .lobby-attendance{padding-top:0!important}
+ #screen>.exhibition-lobby .lobby-attendance .players{
+  overflow-x:auto!important;overflow-y:hidden!important;flex-direction:row!important;
+ }
+}
+/* Preparatory pictures are living individual sheets, not a bordered strip. */
+#screen>.passage-preparing .passage-prep-workspace,
+#screen>.passage-preparing .passage-image-strip{
+ border-left:0!important;border-right:0!important;outline:0!important;
+ box-shadow:none!important;background:transparent!important;
+}
+#screen>.passage-preparing .passage-prep-workspace::before,
+#screen>.passage-preparing .passage-prep-workspace::after,
+#screen>.passage-preparing .passage-image-strip::before,
+#screen>.passage-preparing .passage-image-strip::after,
+#screen>.passage-preparing .passage-image-slot::before,
+#screen>.passage-preparing .passage-image-slot::after{display:none!important;content:none!important}
+#screen>.passage-preparing .passage-image-slot{
+ animation:zam-cards-breathe 2.25s ease-in-out infinite alternate;
+ animation-delay:calc(var(--card-i,0)*-.27s);
+ transition:transform .65s cubic-bezier(.2,.9,.2,1),filter .65s,opacity .65s!important;
+}
+#screen>.passage-preparing .passage-image-slot:nth-child(1){--card-i:1}
+#screen>.passage-preparing .passage-image-slot:nth-child(2){--card-i:2}
+#screen>.passage-preparing .passage-image-slot:nth-child(3){--card-i:3}
+#screen>.passage-preparing .passage-image-slot:nth-child(4){--card-i:4}
+#screen>.passage-preparing .passage-image-slot:nth-child(5){--card-i:5}
+#screen>.passage-preparing .passage-image-slot.is-loaded{
+ animation:zam-card-ready .8s cubic-bezier(.16,.9,.25,1) both!important;
+}
+@keyframes zam-cards-breathe{
+ 0%{filter:brightness(.86);transform:translateY(2px) rotate(-.35deg)}
+ 50%{filter:brightness(.97);transform:translateY(-2px) rotate(.2deg)}
+ 100%{filter:brightness(1.08);transform:translateY(1px) rotate(.3deg)}
+}
+@keyframes zam-card-ready{
+ 0%{opacity:.65;filter:brightness(1.2);transform:translateY(9px) scale(.965)}
+ 35%{opacity:1;filter:brightness(1.3);transform:translateY(-7px) scale(1.018)}
+ 65%{filter:brightness(1.06);transform:translateY(2px) scale(.994)}
+ 100%{opacity:1;filter:brightness(1);transform:none}
+}
+#screen>.passage-preparing .passage-prep-peer{
+ background:transparent!important;border:0!important;border-top:1px solid #b3a085!important;
+ padding:clamp(6px,1.1vh,10px) 0!important;
+ color:#373025!important;
+}
+#screen>.passage-preparing .passage-prep-peer span,
+#screen>.passage-preparing .passage-prep-peer strong{
+ color:#33291f!important;text-shadow:none!important;
+ font-size:clamp(14px,1.2vw,19px)!important;
+}
+#screen>.passage-preparing .passage-prep-actions{
+ justify-content:space-between!important;align-items:center!important;
+}
+#screen>.passage-preparing .preparing-menu{
+ color:#e4d6b8!important;border-color:#8a7255!important;
+}
+/* Museum placards are suspended by a small wooden pin: just kiss the rim.
+   Negate the older overlapping -1px margin. */
+#screen .zam-exhibit-stage>.zam-exhibit-plaque,
+#screen .picture-hanger .zam-exhibit-plaque,
+#screen>.round-review-phase .round-art-card .zam-exhibit-plaque,
+#screen>.expert-phase .stake-card .zam-exhibit-plaque{
+ margin:3px auto 0!important;top:0!important;transform:none!important;
+}
+#screen .zam-exhibit-stage>.zam-exhibit-plaque::before,
+#screen .picture-hanger .zam-exhibit-plaque::before{
+ top:-4px!important;height:4px!important;background:#806344!important;
+}
+#screen>.mobile-preview .gallery.exhibition-grid>.picture .picture-hanger>.zam-exhibit-plaque{margin-top:3px!important}
+/* Voting controls form the underside of each catalogue plaque. */
+#screen>.expert-phase .stake-card .zam-exhibit-stage{
+ justify-content:center!important;gap:0!important;flex:1 1 auto!important;
+}
+#screen>.expert-phase .stake-card>.stake-actions{
+ position:relative!important;margin:-1px auto 0!important;
+ width:min(100%,210px)!important;
+ background:linear-gradient(#d8c39f,#bda37d)!important;
+ padding:5px 7px 7px!important;
+ border:1px solid #725737!important;border-top:3px solid #926e43!important;
+ box-shadow:0 4px 8px #1b150f52!important;
+}
+#screen>.expert-phase .stake-actions button{
+ background:#e8d8b8!important;box-shadow:inset 0 1px #fff0cb,0 2px 0 #57402c!important;
+ border-color:#8a6d4d!important;border-radius:50%!important;
+ width:36px!important;min-height:36px!important;
+}
+#screen>.expert-phase .stake-amount{
+ min-height:34px!important;background:transparent!important;border:0!important;
+ color:#4a3928!important;
+}
+#screen>.expert-phase .stake-amount strong{color:#403021!important}
+#screen>.expert-phase .stake-card .zam-exhibit-plaque{margin-bottom:1px!important}
+/* Verdict: outer rectangle no longer competes with the actual wooden rim. */
+#screen>.verdict-phase .finale-ballot-card{
+ background:transparent!important;border:0!important;outline:0!important;
+ box-shadow:none!important;padding:2px 2px 6px!important;
+}
+#screen>.verdict-phase .finale-ballot-card::before,
+#screen>.verdict-phase .finale-ballot-card::after{display:none!important}
+#screen>.verdict-phase .verdict-image.zam-exhibit-rim{
+ border:0!important;outline:1px solid #3b2a19!important;
+ background:#4b3721!important;box-shadow:0 7px 17px #19140f60!important;
+}
+/* Submitted work and reveal belong to the exact same conservation atelier. */
+#screen>.passage-waiting>.phase-head,
+#screen>.finale-reveal>.phase-head{
+ background:#403d37!important;background-image:none!important;
+ border-bottom:1px solid #826e55!important;color:#e9dcc6!important;
+}
+#screen>.passage-waiting .passage-waiting-layout,
+#screen>.finale-reveal .reveal-layout{
+ background:#45453f!important;background-image:none!important;
+}
+#screen>.passage-waiting .passage-waiting-status,
+#screen>.finale-reveal .finale-reveal-brief{
+ background:#d4c4a8!important;border:1px solid #ae9873!important;
+ box-shadow:inset 0 1px #ebddc6!important;color:#372e23!important;
+}
+#screen>.passage-waiting .passage-waiting-status :is(h3,.section-label,.passage-ready-number strong,.passage-ready-number span,.passage-roster-caption,#waitingStatusMessage),
+#screen>.finale-reveal .finale-reveal-brief :is(h3,p,span,strong,small){
+ color:#3c3024!important;text-shadow:none!important;
+}
+#screen>.passage-waiting .passage-roster .waiting-person{background:#e7dac3!important;color:#40382d!important}
+#screen>.passage-waiting .passage-roster .waiting-person strong{color:#776248!important}
+#screen>.passage-waiting .passage-waiting-foot{border-top:1px solid #bba57f!important}
+/* Reveal layout matches submitted-work layout: art on left, compact analysis on right. */
+@media(min-width:850px){
+ #screen>.finale-reveal>.reveal-layout{
+  grid-template-columns:minmax(0,1.72fr) minmax(248px,.72fr)!important;
+  gap:clamp(9px,1.4vw,22px)!important;
+  padding:clamp(9px,1.2vw,18px)!important;
+ }
+ #screen>.finale-reveal .reveal-main{
+  justify-content:flex-start!important;padding:0!important;
+  gap:clamp(5px,.7vh,9px)!important;
+ }
+ #screen>.finale-reveal .unveil-frame{max-height:100%!important}
+ #screen>.finale-reveal .finale-reveal-brief{
+  display:flex!important;flex-direction:column!important;
+  min-width:0!important;min-height:0!important;overflow-y:auto!important;
+  padding:clamp(9px,1.2vw,18px)!important;
+ }
+}
+/* Gallery: give real pixels to the work rather than the wall. */
+#screen>.round-review-phase>.round-review-body{padding:1px 2px!important}
+#screen>.round-review-phase .round-review-grid{--zam-review-gap:4px!important;gap:4px!important}
+#screen>.round-review-phase .round-art-card{padding:0!important;margin:0!important;gap:0!important}
+#screen>.round-review-phase .round-art-card .zam-exhibit-stage{
+ flex:1 1 0!important;height:100%!important;min-height:0!important;
+}
+#screen>.round-review-phase .round-art-card .zam-exhibit-plaque{
+ max-width:100%!important;margin-top:3px!important;
+}
+#screen>.round-review-phase .round-review-bottom{
+ padding:3px 8px!important;min-height:0!important;
+}
+#screen>.finale-results .finale-ranking-name{gap:clamp(12px,1.3vw,22px)!important}
+#screen>.finale-results .finale-ranking-row{column-gap:clamp(13px,1.5vw,23px)!important}
+@media(prefers-reduced-motion:reduce){
+ #screen>.passage-preparing .passage-image-slot{animation:none!important;transition:none!important}
+}
+/* QA sound gallery is a utilitarian real tool, not a fictional environment. */
+#screen>.zam-sound-gallery{
+ display:flex;flex-direction:column;gap:clamp(6px,1vh,12px);
+ height:100%;max-height:100%;min-height:0;width:100%;
+ padding:clamp(8px,1.6vw,22px);overflow:hidden;
+ background:#e7ddcc;color:#382d20;
+}
+#screen>.zam-sound-gallery header h2{font:normal clamp(22px,3vw,37px) Georgia,serif;margin:3px 0}
+#screen>.zam-sound-gallery header p{font-size:12px;margin:0;color:#645341}
+#screen>.zam-sound-gallery .zam-sound-gallery-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:clamp(7px,1vw,14px);min-height:0;flex:1 1 auto;overflow-y:auto;
+}
+#screen>.zam-sound-gallery .zam-sound-category{
+ padding:clamp(7px,1vw,14px);background:#f2e9d9;border:1px solid #baa98e;
+ display:grid;align-content:start;gap:5px;
+}
+#screen>.zam-sound-gallery .zam-sound-category h3{
+ font:normal clamp(16px,1.5vw,22px) Georgia,serif;margin:0 0 5px;
+}
+#screen>.zam-sound-gallery [data-debug-sound]{
+ min-height:32px;display:flex;gap:9px;align-items:center;text-align:left;
+ background:#ece0ca;border:1px solid #c1b092;color:#433524;padding:6px 9px;
+ cursor:pointer;
+}
+#screen>.zam-sound-gallery [data-debug-sound] strong{
+ font:600 12px/1.2 system-ui;flex:1;
+}
+#screen>.zam-sound-gallery [data-debug-sound] small{font-size:10px;color:#785f3d}
+#screen>.zam-sound-gallery [data-debug-sound]:active{background:#cbb28b}
+#screen>.zam-sound-gallery footer{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px}
+#screen>.zam-sound-gallery footer button{padding:8px 13px;border:1px solid #a08b6b;background:#d5c3a6;color:#423223;cursor:pointer}
+@media(max-width:700px){
+ #screen>.zam-sound-gallery .zam-sound-gallery-grid{grid-template-columns:minmax(0,1fr)}
+ #screen>.zam-sound-gallery .zam-sound-category{padding:7px}
+}
