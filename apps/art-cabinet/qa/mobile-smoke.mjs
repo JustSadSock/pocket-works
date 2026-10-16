@@ -29,6 +29,7 @@ try{
    return route.fulfill({status:200,headers:{'access-control-allow-origin':'*'},contentType:'application/json',body:JSON.stringify({query:{pages}})})
   });
   await context.route('https://thumb.wikimedia.org/**',route=>route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="850"><rect width="640" height="850" fill="#c59b6e"/><circle cx="320" cy="285" r="100" fill="#eee0b5"/></svg>'}));
+  await context.route(/https:\/\/commons\.wikimedia\.org\/wiki\/Special:Redirect\/file\//,route=>route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="850"><rect width="640" height="850" fill="#c59b6e"/></svg>'}));
   await context.route(/https:\/\/commons\.wikimedia\.org\/w\/api\.php/,route=>route.fulfill({status:200,headers:{'access-control-allow-origin':'*'},contentType:'application/json',body:JSON.stringify({query:{pages:[]}})}));
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/apps/art-cabinet/',{waitUntil:'domcontentloaded'});
@@ -41,6 +42,7 @@ try{
    const before=await page.evaluate(()=>({client:innerHeight,scrollHeight:document.documentElement.scrollHeight,style:getComputedStyle(document.body).overflowY}));
    assert.ok(before.scrollHeight>before.client+250,'body must be taller than screen for real scrolling');
    assert.notEqual(before.style,'hidden','phone body must be scrollable');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+3),'no unnecessary horizontal page scroll');
    await page.evaluate(()=>window.scrollTo(0,500));
    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(100);
    const width=await page.locator('.work[data-id="101"] .work-visual').evaluate(el=>el.getBoundingClientRect().width);
