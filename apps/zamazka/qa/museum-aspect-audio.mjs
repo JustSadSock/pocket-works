@@ -26,3 +26,6 @@ const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 assert(app.includes('onSound:event=>sound(event,true)'));
 assert(!app.includes('function sound(f=560)'));
 console.log('ZAMAZKA museum proportions and original audio: OK');
+
+// Live countdown scheduler and audio-bus regression, not just event names.
+import './clock-soundscape.mjs';
