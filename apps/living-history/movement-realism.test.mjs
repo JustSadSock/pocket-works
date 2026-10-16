@@ -37,7 +37,10 @@ test('paths go through dry river crossings and require more time than straight-l
  assert.ok(route.every(pt=>at(pt,s)));
  const left=route.find(p=>p.x<75),right=route.find(p=>p.x>80);
  assert.ok(left&&right);
- assert.ok(walkingSteps(s,a,b)>=route.length-1);
+ // Road-aware routing can be physically longer than the shortest dirt walk,
+ // but it must never shorten the actual geography or detour without bounds.
+ assert.ok(walkingSteps(s,a,b)<=route.length-1);
+ assert.ok(route.length-1<=walkingSteps(s,a,b)*1.8);
  assert.ok(workdayFraction(8)>workdayFraction(48));
 });
 
