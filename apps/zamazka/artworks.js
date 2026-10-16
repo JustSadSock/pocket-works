@@ -69,19 +69,22 @@ export function artworkURL(id,width=PREVIEW_WIDTH){
  return entry.isReal ? ROOT+entry.path+entry.file+'/'+width+'px-'+entry.file
    : 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(legacySvg(id-REAL_COUNT));
 }
+export function artworkOriginalURL(id){
+ const entry=ARTS[id];if(!entry?.isReal)return '';
+ return 'https://upload.wikimedia.org/wikipedia/commons/'+entry.path+entry.file;
+}
 export function artworkFallbackURL(id,failedUrl){
  const entry=ARTS[id];if(!entry?.isReal)return '';
  const index=MASTER_WIDTHS.findIndex(width=>artworkURL(id,width)===failedUrl);
- if(index<0)return artworkURL(id,960);
- return MASTER_WIDTHS[index+1]?artworkURL(id,MASTER_WIDTHS[index+1]):'';
+ if(index<0)return failedUrl===artworkOriginalURL(id)?'':artworkURL(id,960);
+ return MASTER_WIDTHS[index+1]?artworkURL(id,MASTER_WIDTHS[index+1]):artworkOriginalURL(id);
 }
 const MAX_DECODED_IMAGES=8;
 const pending=new Map();
 async function imageSource(id){
  if(!ARTS[id].isReal)return artworkURL(id);
  const cache=typeof caches==='undefined'?null:await caches.open(ART_CACHE).catch(()=>null);
- for(const width of MASTER_WIDTHS){
-   const url=artworkURL(id,width);
+ for(const url of [...MASTER_WIDTHS.map(width=>artworkURL(id,width)),artworkOriginalURL(id)]){
    try{
      const saved=await cache?.match(url);
      if(saved&&saved.ok)return URL.createObjectURL(await saved.blob());
@@ -94,7 +97,7 @@ async function imageSource(id){
      return URL.createObjectURL(blob);
    }catch{}
  }
- return artworkURL(id,960);
+ return artworkOriginalURL(id);
 }
 export function loadArtwork(id){
  if(pending.has(id)){
