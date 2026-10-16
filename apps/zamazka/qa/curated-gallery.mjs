@@ -47,9 +47,9 @@ for(const [idx,a] of PLAYFUL_ADDITIONS.entries()){
  assert.equal(ARTS[id].isReal,true);
  assert.ok(zoneFor(id,123).points.length>=4,'procedural damage exists on new original '+id);
 }
-// Edition 3 legacy works were saved at 54+, now they begin at 72.
+// Edition 3 legacy works were saved at 54+; they now begin at 108.
 // Rebase archives without accidentally converting new artwork IDs.
-assert.deepEqual(normalizeArchiveEntry({art:53,edition:3}),{art:53,edition:4});
+assert.deepEqual(normalizeArchiveEntry({art:53,edition:3}),{art:53,edition:5});
 assert.deepEqual(normalizeArchiveEntry({art:54,edition:3}),{art:108,edition:5});
 assert.deepEqual(normalizeArchiveEntry({art:103,edition:3}),{art:157,edition:5});
 assert.deepEqual(normalizeArchiveEntry({art:54,edition:ARCHIVE_EDITION}),{art:54,edition:5});
