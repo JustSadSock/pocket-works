@@ -10,7 +10,7 @@ const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES20
 const exports={};
 runInNewContext(js,{exports,Date:Clock,Math,Number,Array,Set,Map,JSON,Object,Error,console});
 const game=exports.default;
-assert.equal(exports.RULESET_VERSION,20);
+assert.equal(exports.RULESET_VERSION,21);
 const host={id:'host',name:'Host'},b={id:'b',name:'B'},c={id:'c',name:'C'};
 const players=[host,b,c],state=game.createRoom({player:host}).state;
 game.onJoin({state,player:b,players});game.onJoin({state,player:c,players});
