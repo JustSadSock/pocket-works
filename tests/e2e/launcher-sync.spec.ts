@@ -24,7 +24,7 @@ test('launcher Sync updates only already-installed application workers', async (
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#deck-bottom-nav')).toBeVisible();
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
-  await expect(page.locator('#deck-view-title')).toHaveText('Library');
+  await expect(page.locator('#deck-view-title')).toHaveText('Каталог');
   await expect(page.locator('#app-list .app-entry')).toHaveCount(registry.length);
 
   const before = await page.evaluate(async () => {
@@ -39,7 +39,7 @@ test('launcher Sync updates only already-installed application workers', async (
   const sync = page.locator('#update-installed-button');
   await sync.click();
   await expect(sync).toBeEnabled({ timeout: 35_000 });
-  await expect(sync).toHaveText('Check updates');
+  await expect(sync).toHaveText('Проверить обновления');
 
   const after = await page.evaluate(async () => {
     const registrations = await navigator.serviceWorker.getRegistrations();
@@ -49,7 +49,7 @@ test('launcher Sync updates only already-installed application workers', async (
   });
 
   expect(after).toEqual(['/apps/screen-lab/']);
-  await expect(page.locator('#sync-status')).toContainText(/current|updated|checked|on-demand|next launch/);
+  await expect(page.locator('#sync-status')).toContainText(/Актуально|Обновлено|Проверено|Загрузятся|при запуске/);
 });
 
 test('launcher shell advertises the update-system release', async ({ page }) => {

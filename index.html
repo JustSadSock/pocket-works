@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="has-pocket-deck" data-deck-view="home" data-deck-density="compact">
+<html lang="ru" class="has-pocket-deck" data-deck-view="home" data-deck-density="compact">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -8,21 +8,22 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
-  <meta name="pocket-works-build" content="0.11.1">
+  <meta name="pocket-works-build" content="0.12.0">
   <title>Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=0.11.1">
-  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.11.1" type="image/svg+xml">
-  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.11.1">
-  <link rel="stylesheet" href="./shared/update-manager.css?v=0.11.1">
-  <link rel="stylesheet" href="./styles.css?v=0.11.1">
-  <link rel="stylesheet" href="./launcher-performance.css?v=0.11.1">
-  <link rel="stylesheet" href="./launcher-sync.css?v=0.11.1">
-  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.11.1">
-  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.11.1">
-  <link rel="stylesheet" href="./deck-shell.css?v=0.11.1">
-  <link rel="stylesheet" href="./shared/capabilities/identity.css?v=0.11.1">
-  <link rel="stylesheet" href="./shared/pocket-id.css?v=0.11.1">
-  <link rel="stylesheet" href="./shared/pocket-social.css?v=0.11.1">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.12.0">
+  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.12.0" type="image/svg+xml">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.12.0">
+  <link rel="stylesheet" href="./shared/update-manager.css?v=0.12.0">
+  <link rel="stylesheet" href="./styles.css?v=0.12.0">
+  <link rel="stylesheet" href="./launcher-performance.css?v=0.12.0">
+  <link rel="stylesheet" href="./launcher-sync.css?v=0.12.0">
+  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.12.0">
+  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.12.0">
+
+  <link rel="stylesheet" href="./shared/capabilities/identity.css?v=0.12.0">
+  <link rel="stylesheet" href="./shared/pocket-id.css?v=0.12.0">
+  <link rel="stylesheet" href="./shared/pocket-social.css?v=0.12.0">
+  <link rel="stylesheet" href="./deck-shell.css?v=0.12.0">
 </head>
 <body>
   <div class="library-room" aria-hidden="true"><span class="room-light"></span><span class="room-grain"></span><span class="room-shadow"></span></div>
@@ -33,7 +34,7 @@
         <span><strong>Pocket Works</strong><small>personal library</small></span>
       </a>
       <div class="shelf-heading">
-        <p class="eyebrow">COLLECTION · 0.11.1</p>
+        <p class="eyebrow">COLLECTION · 0.12.0</p>
         <h1>PocketWorks</h1>
       </div>
       <div class="system-rail" aria-label="Library status">
@@ -43,39 +44,36 @@
       </div>
       <div class="deck-top-actions" data-ui>
         <button type="button" id="pocket-id-trigger" aria-label="Open Pocket ID" title="Pocket ID"><span class="pw-id-nav-glyph" aria-hidden="true">◎</span></button>
-        <button id="deck-search-action" type="button" data-deck-search aria-label="Search apps" title="Search applications">
+        <button id="deck-search-action" type="button" data-deck-search aria-label="Поиск приложений" title="Поиск приложений">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.7" cy="10.7" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
         </button>
-        <button type="button" data-deck-tools aria-label="Open PocketWorks settings" title="PocketWorks settings">
+        <button type="button" data-deck-tools aria-label="Открыть настройки PocketWorks" title="PocketWorks settings">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6M15 14v6"></path></svg>
         </button>
       </div>
     </header>
     <section id="deck-home" class="deck-home" aria-label="Personal home">
       <div class="deck-home__intro">
-        <div><h2>Pick a game.</h2></div>
+        <div><h2>Во что сыграем?</h2></div>
         <div class="deck-home__actions">
           <button id="deck-batch-trigger" type="button" aria-haspopup="dialog" aria-controls="deck-batch-picker">Выбрать</button>
-          <button id="deck-customize" type="button" data-deck-edit aria-label="Customize home layout">Edit</button>
+          <button id="deck-customize" type="button" data-deck-edit aria-label="Настроить главную">Настроить</button>
         </div>
       </div>
       <button id="deck-account-spotlight" class="deck-account-spotlight" type="button" data-deck-account aria-label="Create or customize your Pocket ID">
         <span id="deck-account-portrait" class="deck-account-portrait" aria-hidden="true">◎</span>
-        <span class="deck-account-copy"><strong id="deck-account-title">Create Pocket ID</strong><small id="deck-account-subtitle">Your name and avatar across games</small></span>
+        <span class="deck-account-copy"><strong id="deck-account-title">Создать Pocket ID</strong><small id="deck-account-subtitle">Имя и аватар во всех играх</small></span>
         <span id="deck-account-dot" class="deck-account-dot" aria-hidden="true" hidden></span><span class="deck-account-arrow" aria-hidden="true">↗</span>
       </button>
-      <section id="deck-focus" class="deck-focus" aria-label="Quick launch" aria-live="polite">
-        <div class="deck-focus__loading">Loading games…</div>
-      </section>
       <button type="button" id="deck-widgets-toggle" class="deck-widgets-toggle" aria-controls="deck-widgets" aria-expanded="false">
-        More from my shelf <span aria-hidden="true">⌄</span>
+        Все подборки <span aria-hidden="true">⌄</span>
       </button>
       <div id="deck-widgets" class="deck-widgets" aria-live="polite">
-        <div class="deck-loading">Opening your collection…</div>
+        <div class="deck-loading">Загружаем коллекцию…</div>
       </div>
     </section>
     <div class="deck-library-head" data-ui>
-      <div><h2 id="deck-view-title">Library</h2></div>
+      <div><h2 id="deck-view-title">Каталог</h2></div>
     </div>
     <div id="deck-organize-bar" class="deck-organize-bar" hidden role="toolbar" aria-label="Organize library">
       <strong id="deck-organize-count">0 selected</strong>
@@ -88,60 +86,55 @@
     </div>
     <p id="deck-global-status" class="deck-global-status" role="status" aria-live="polite"></p>
     <section class="command-deck" aria-label="Application library controls" data-ui>
-      <label class="search-field" for="app-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input id="app-search" type="search" inputmode="search" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Find a work…"><kbd aria-hidden="true">⌘ K</kbd><button id="clear-search" type="button" aria-label="Clear search" data-native-press hidden>×</button></label>
+      <label class="search-field" for="app-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input id="app-search" type="search" inputmode="search" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Найти приложение…"><kbd aria-hidden="true">⌘ K</kbd><button id="clear-search" type="button" aria-label="Clear search" data-native-press hidden>×</button></label>
       <div class="command-row">
-        <div class="filter-strip" id="filter-strip" role="toolbar" aria-label="Filter applications">
-          <button type="button" data-filter="all" aria-pressed="true" data-native-press>Library <span data-filter-count="all">0</span></button>
-          <button type="button" data-filter="favorites" aria-pressed="false" data-native-press>Saved <span data-filter-count="favorites">0</span></button>
-          <button type="button" data-filter="recent" aria-pressed="false" data-native-press>Recent <span data-filter-count="recent">0</span></button>
+        <div class="filter-strip" id="filter-strip" role="toolbar" aria-label="Фильтры каталога">
+          <button type="button" data-filter="all" aria-pressed="true" data-native-press>Все <span data-filter-count="all">0</span></button>
+          <button type="button" data-filter="favorites" aria-pressed="false" data-native-press>Избранное <span data-filter-count="favorites">0</span></button>
+          <button type="button" data-filter="recent" aria-pressed="false" data-native-press>Недавние <span data-filter-count="recent">0</span></button>
           <details id="library-options" class="library-options">
-            <summary aria-label="More library options"><span id="library-options-label">More</span><span aria-hidden="true">⌄</span></summary>
+            <summary aria-label="Дополнительные фильтры"><span id="library-options-label">Фильтры</span><span aria-hidden="true">⌄</span></summary>
             <div class="library-options__panel">
-              <div class="library-options__filters" aria-label="More filters">
-                <button type="button" data-filter="offline" aria-pressed="false" data-native-press>Offline <span data-filter-count="offline">0</span></button>
-                <button type="button" data-filter="experimental" aria-pressed="false" data-native-press>Workshop <span data-filter-count="experimental">0</span></button>
-              </div>
-              <div class="library-options__extras">
-                <div id="deck-density-controls" class="deck-density" role="group" aria-label="Cover size">
-                  <button data-deck-density="comfortable" type="button" aria-label="Large covers" title="Large covers">▦</button>
-                  <button data-deck-density="compact" type="button" aria-label="Compact covers" title="Compact covers">▥</button>
-                  <button data-deck-density="micro" type="button" aria-label="Small covers" title="Small covers">⠿</button>
-                </div>
-                <button id="deck-organize-start" type="button" data-deck-organize>Organize</button>
-                <div class="deck-actions">
-                  <button id="sort-button" type="button" data-native-press aria-label="Change application sort order">Updated ↓</button>
-                  <button id="refresh-button" type="button" data-native-press aria-label="Refresh library catalogue">Refresh</button>
-                  <button id="update-installed-button" type="button" data-native-press aria-label="Check installed app updates; apply on next launch">Check updates</button>
-                  <button id="shelf-tools-button" type="button" data-native-press aria-label="Open library diagnostics and backup tools">Tools</button>
-                </div>
-              </div>
+              <button type="button" data-filter="offline" aria-pressed="false" data-native-press>Без интернета <span data-filter-count="offline">0</span></button>
+              <button type="button" data-filter="experimental" aria-pressed="false" data-native-press>В разработке <span data-filter-count="experimental">0</span></button>
             </div>
           </details>
+        </div>
+        <div class="catalog-controls">
+          <button id="sort-button" type="button" data-native-press aria-label="Порядок приложений">Сначала новые ↓</button>
+          <div id="deck-density-controls" class="deck-density" role="group" aria-label="Размер иконок">
+            <button data-deck-density="comfortable" type="button" aria-label="Крупные иконки" title="Крупные иконки"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/></svg></button>
+            <button data-deck-density="compact" type="button" aria-label="Обычные иконки" title="Обычные иконки"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg></button>
+            <button data-deck-density="micro" type="button" aria-label="Мелкие иконки" title="Мелкие иконки"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h4v4H3zM10 3h4v4h-4zM17 3h4v4h-4zM3 10h4v4H3zM10 10h4v4h-4zM17 10h4v4h-4zM3 17h4v4H3zM10 17h4v4h-4zM17 17h4v4h-4z"/></svg></button>
+          </div>
+          <button id="deck-organize-start" type="button" data-deck-organize>Выбрать</button>
         </div>
       </div>
     </section>
     <section class="shelf-workspace">
       <section class="collection-panel" aria-labelledby="catalog-title">
-        <header class="collection-head" data-ui><div><p class="section-code">THE COLLECTION</p><h2 id="catalog-title">Works</h2></div><p id="result-summary" aria-live="polite">Reading library…</p></header>
+        <header class="collection-head" data-ui><div><p class="section-code">THE COLLECTION</p><h2 id="catalog-title">Works</h2></div><p id="result-summary" aria-live="polite">Загружаем каталог…</p></header>
         <div id="app-list" class="app-list" aria-live="polite" data-loading="true"></div>
-        <div id="empty-state" class="shelf-message" hidden><span aria-hidden="true">∅</span><strong>Nothing on this shelf.</strong><p>Try another filter or clear the search.</p></div>
-        <div id="error-state" class="shelf-message shelf-message--error" hidden><span aria-hidden="true">!</span><strong>The live collection could not be read.</strong><p id="error-copy">A locally saved shelf will be used when available.</p></div>
+        <div id="empty-state" class="shelf-message" hidden><span aria-hidden="true">∅</span><strong>Здесь пока пусто.</strong><p>Измени фильтр или очисти поиск.</p></div>
+        <div id="error-state" class="shelf-message shelf-message--error" hidden><span aria-hidden="true">!</span><strong>Не удалось обновить каталог.</strong><p id="error-copy">Покажем сохранённую копию, если она доступна.</p></div>
       </section>
       <aside class="detail-panel" id="detail-panel" aria-labelledby="detail-name" aria-hidden="true" tabindex="-1">
-        <div class="detail-handle" aria-hidden="true"></div><button class="detail-close" id="detail-close" type="button" aria-label="Close application details" data-native-press>×</button>
-        <div class="detail-empty" id="detail-empty"><span class="empty-object" aria-hidden="true"><i></i></span><strong>Select a game</strong></div>
+        <div class="detail-handle" aria-hidden="true"></div><button class="detail-close" id="detail-close" type="button" aria-label="Закрыть подробности" data-native-press>×</button>
+        <div class="detail-empty" id="detail-empty"><span class="empty-object" aria-hidden="true"><i></i></span><strong>Выбери приложение</strong></div>
         <div class="detail-content" id="detail-content" hidden>
-          <div class="app-preview app-preview--detail" id="detail-preview" aria-hidden="true"><span class="preview-grid"></span><span class="preview-orbit"></span><span class="preview-signal"></span><span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span><span class="preview-scan"></span></div>
-          <header class="detail-header"><p class="section-code" id="detail-kicker">APPLICATION</p><h2 id="detail-name">—</h2><p id="detail-description">—</p></header>
-          <div class="detail-actions"><a id="detail-open" href="#" data-native-press><span>Play</span><b aria-hidden="true">↗</b></a><button id="detail-favorite" type="button" data-native-press>Save</button></div>
+          <div class="detail-identity"><div class="app-preview app-preview--detail" id="detail-preview" aria-hidden="true"></div>
+          <header class="detail-header"><p class="section-code" id="detail-kicker"></p><h2 id="detail-name">—</h2></header></div>
+          <p id="detail-description">—</p>
+          <div class="detail-actions"><a id="detail-open" href="#" data-native-press><span>Открыть</span><b aria-hidden="true">↗</b></a><button id="detail-favorite" type="button" data-native-press>В избранное</button></div>
+          <button id="detail-screenshot" class="detail-screenshot" type="button" aria-label="Увеличить скриншот приложения" hidden><img id="detail-screenshot-image" alt="Скриншот приложения" loading="lazy"><span>Посмотреть экран ↗</span></button>
           <details id="detail-extras" class="detail-extras">
-            <summary>About this game <span aria-hidden="true">⌄</span></summary>
+            <summary>Об приложении <span aria-hidden="true">⌄</span></summary>
             <div class="detail-extras__body">
-              <dl class="detail-facts"><div><dt>version</dt><dd id="detail-version">—</dd></div><div><dt>released</dt><dd id="detail-updated">—</dd></div><div><dt>offline</dt><dd id="detail-offline">—</dd></div><div><dt>last opened</dt><dd id="detail-opened">—</dd></div></dl>
+              <dl class="detail-facts"><div><dt>Версия</dt><dd id="detail-version">—</dd></div><div><dt>Обновлено</dt><dd id="detail-updated">—</dd></div><div><dt>Без интернета</dt><dd id="detail-offline">—</dd></div><div><dt>Последний запуск</dt><dd id="detail-opened">—</dd></div></dl>
               <div class="detail-tags" id="detail-tags" aria-label="Application tags"></div>
               <section id="deck-project-detail" class="deck-project-detail" aria-label="Project development" hidden></section>
-              <section class="release-notes" aria-labelledby="release-title"><p class="section-code" id="release-title">Release notes</p><ul id="detail-changelog"></ul></section>
-              <button id="detail-copy" type="button" data-native-press>Copy link</button>
+              <section class="release-notes" aria-labelledby="release-title"><p class="section-code" id="release-title">Что нового</p><ul id="detail-changelog"></ul></section>
+              <button id="detail-copy" type="button" data-native-press>Скопировать ссылку</button>
               <p class="install-note" id="install-note"></p>
             </div>
           </details>
@@ -149,16 +142,16 @@
       </aside>
     </section>
     <nav id="deck-bottom-nav" class="deck-bottom-nav" aria-label="PocketWorks navigation" data-ui>
-      <button type="button" data-deck-view="home" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v11H3z"></path><path d="M9 21v-7h6v7"></path></svg><span>Home</span></button>
-      <button type="button" data-deck-view="library" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="8"></rect><rect x="14" y="3" width="7" height="8"></rect><rect x="3" y="15" width="7" height="6"></rect><rect x="14" y="15" width="7" height="6"></rect></svg><span>Library</span></button>
-      <button type="button" data-deck-view="archive" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v5H3zM5 9v12h14V9M9 14h6"></path></svg><span>Archive</span></button>
+      <button type="button" data-deck-view="home" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v11H3z"></path><path d="M9 21v-7h6v7"></path></svg><span>Главная</span></button>
+      <button type="button" data-deck-view="library" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="8"></rect><rect x="14" y="3" width="7" height="8"></rect><rect x="3" y="15" width="7" height="6"></rect><rect x="14" y="15" width="7" height="6"></rect></svg><span>Каталог</span></button>
+      <button type="button" data-deck-view="archive" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v5H3zM5 9v12h14V9M9 14h6"></path></svg><span>Архив</span></button>
     </nav>
-    <footer class="shelf-footer" data-ui><div class="shelf-footer__technical" hidden><span id="sync-status">Registry not synced</span><span id="offline-count">0 offline-ready</span><span id="storage-status">Checking personal shelf backup…</span></div><a class="pw-id-privacy-link" href="/privacy">Privacy policy</a></footer>
-    <button class="detail-backdrop" id="detail-backdrop" type="button" aria-label="Close application details" hidden></button>
+    <footer class="shelf-footer" data-ui><div class="shelf-footer__technical" hidden><span id="sync-status">Registry not synced</span><span id="offline-count">0 offline-ready</span><span id="storage-status">Checking personal shelf backup…</span></div><a class="pw-id-privacy-link" href="/privacy">Политика конфиденциальности</a></footer>
+    <button class="detail-backdrop" id="detail-backdrop" type="button" aria-label="Закрыть подробности" hidden></button>
   </main>
   <dialog id="deck-batch-picker" class="deck-batch" aria-labelledby="deck-batch-title">
     <div class="deck-batch__head">
-      <div><p class="deck-batch__eyebrow">POCKET WORKS / ORGANIZE</p><h2 id="deck-batch-title">Выбор игр</h2></div>
+      <div><p class="deck-batch__eyebrow">УПРАВЛЕНИЕ КОЛЛЕКЦИЕЙ</p><h2 id="deck-batch-title">Выбор игр</h2></div>
       <button id="deck-batch-close" type="button" aria-label="Закрыть выбор игр">×</button>
     </div>
     <div class="deck-batch__tools">
@@ -178,6 +171,7 @@
     <div class="deck-batch__bottom">
       <div class="deck-batch__selection"><strong id="deck-batch-count">0 выбрано</strong>
         <span id="deck-batch-status" role="status" aria-live="polite"></span></div>
+      <label id="deck-batch-scope-label" class="deck-batch__scope-picker" hidden>Применить <select id="deck-batch-scope"><option value="personal">Для меня</option><option value="global">Для всех</option></select></label>
       <div class="deck-batch__ops">
         <button id="deck-batch-save" type="button" disabled>Сохранить</button>
         <button id="deck-batch-unsave" type="button" disabled>Убрать из сохранённого</button>
@@ -196,56 +190,60 @@
       <button id="deck-batch-confirm-accept" type="button">Применить</button></div>
   </dialog>
   <dialog id="deck-archive-confirm" class="deck-archive-confirm" aria-labelledby="deck-archive-title">
-    <p class="deck-overline">ORGANIZE LIBRARY</p><h2 id="deck-archive-title">Move to archive?</h2>
+    <p class="deck-overline">МОЯ КОЛЛЕКЦИЯ</p><h2 id="deck-archive-title">Перенести в архив?</h2>
     <p id="deck-archive-summary">Selected projects will be hidden from the main library. Their files and saves remain intact.</p>
-    <div><button id="deck-archive-cancel" type="button">Cancel</button><button id="deck-archive-accept" type="button">Archive projects</button></div>
+    <div><button id="deck-archive-cancel" type="button">Отмена</button><button id="deck-archive-accept" type="button">В архив</button></div>
   </dialog>
   <dialog id="deck-global-confirm" class="deck-archive-confirm" aria-labelledby="deck-global-confirm-title">
-    <p class="deck-overline">ADMINISTRATOR · ALL ACCOUNTS</p>
-    <h2 id="deck-global-confirm-title">Change the global archive?</h2>
+    <p class="deck-overline">АДМИНИСТРАТОР · ДЛЯ ВСЕХ</p>
+    <h2 id="deck-global-confirm-title">Изменить общий архив?</h2>
     <p id="deck-global-confirm-description"></p>
-    <div><button id="deck-global-confirm-cancel" type="button">Cancel</button><button id="deck-global-confirm-accept" type="button">Confirm</button></div>
+    <div><button id="deck-global-confirm-cancel" type="button">Отмена</button><button id="deck-global-confirm-accept" type="button">Подтвердить</button></div>
   </dialog>
   <dialog id="deck-editor" class="deck-editor" aria-labelledby="deck-editor-title">
     <div class="deck-editor__head">
-      <div><h2 id="deck-editor-title">Edit Home</h2></div>
-      <button id="deck-editor-cancel" type="button" aria-label="Close without saving">×</button>
+      <div><h2 id="deck-editor-title">Настроить главную</h2></div>
+      <button id="deck-editor-cancel" type="button" aria-label="Закрыть без сохранения">×</button>
     </div>
+    <div id="deck-editor-preview" class="deck-editor-preview" aria-label="Предпросмотр расположения"></div>
     <div class="deck-editor__list" id="deck-editor-list" aria-label="Widget order"></div>
-    <div class="deck-editor__add"><label for="deck-widget-picker">Add a widget</label>
-      <select id="deck-widget-picker"><option value="continue">Continue</option><option value="saved">On my shelf</option><option value="new">Just made</option><option value="projects">In progress</option><option value="random">Rediscover</option><option value="collection">A collection</option><option value="spotlight">Spotlight</option></select>
-      <button type="button" id="deck-widget-add">+ Add</button>
+    <div class="deck-editor__add"><label for="deck-widget-picker">Добавить подборку</label>
+      <select id="deck-widget-picker"><option value="continue">Быстрый запуск</option><option value="saved">Избранное</option><option value="new">Новое</option><option value="projects">В работе</option><option value="random">Случайное</option><option value="collection">По теме</option><option value="spotlight">На виду</option></select>
+      <button type="button" id="deck-widget-add">Добавить</button>
     </div>
-    <div class="deck-editor__backup">
-      <button type="button" id="deck-layout-export">Export layout</button>
-      <button type="button" id="deck-layout-import">Import layout</button>
+    <details class="deck-editor__transfer"><summary>Перенос компоновки</summary><div class="deck-editor__backup">
+      <button type="button" id="deck-layout-export">Экспорт</button>
+      <button type="button" id="deck-layout-import">Импорт</button>
       <input id="deck-layout-import-file" type="file" accept=".json,application/json" hidden>
       <span id="deck-layout-status" role="status" aria-live="polite"></span>
     </div>
-    <div class="deck-editor__footer"><button type="button" id="deck-editor-save">Save layout</button></div>
+    </details>
+    <div class="deck-editor__footer"><button type="button" id="deck-editor-save">Сохранить компоновку</button></div>
   </dialog>
   <dialog id="shelf-tools" class="shelf-tools" aria-labelledby="tools-title">
-    <header class="shelf-tools__header"><div><h2 id="tools-title">Settings</h2></div><button type="button" id="tools-close" aria-label="Close tools">×</button></header>
-    <div id="deck-update-ready" class="deck-update-ready" hidden><strong>PocketWorks update available</strong><button id="deck-update-apply" type="button">Update now</button></div>
-    <p class="shelf-tools__intro">Your saved and recently played games stay on this device.</p>
+    <header class="shelf-tools__header"><div><h2 id="tools-title">Настройки</h2></div><button type="button" id="tools-close" aria-label="Закрыть настройки">×</button></header>
+    <div id="deck-update-ready" class="deck-update-ready" hidden><strong>Доступно обновление PocketWorks</strong><button id="deck-update-apply" type="button">Обновить</button></div>
+    <p class="shelf-tools__intro">Избранное и недавние приложения сохраняются на этом устройстве.</p>
+    <div class="shelf-tools__maintenance deck-actions"><button id="refresh-button" type="button" data-native-press>Обновить каталог</button><button id="update-installed-button" type="button" data-native-press>Проверить обновления</button><button id="shelf-tools-button" type="button" hidden>Диагностика</button></div>
+    <h3>Резервная копия</h3>
     <div class="shelf-tools__actions">
-      <button type="button" id="tools-export">Export library backup</button>
-      <button type="button" id="tools-import">Import library backup</button>
+      <button type="button" id="tools-export">Скачать копию</button>
+      <button type="button" id="tools-import">Восстановить из файла</button>
     </div>
     <p class="shelf-tools__status" id="tools-status" role="status" aria-live="polite"></p>
     <details class="shelf-tools__advanced">
-      <summary>Diagnostics &amp; recovery</summary>
-      <div class="shelf-tools__facts" id="tools-facts" aria-live="polite">Reading device information…</div>
+      <summary>Диагностика и восстановление</summary>
+      <div class="shelf-tools__facts" id="tools-facts" aria-live="polite">Проверяем устройство…</div>
       <div class="shelf-tools__actions">
-        <button type="button" id="tools-recheck">Recheck device</button>
-        <button type="button" id="tools-copy">Copy diagnostics</button>
-        <button type="button" id="tools-repair">Repair launcher cache</button>
-        <button id="reset-shelf" type="button" data-native-press>Reset personal shelf</button>
+        <button type="button" id="tools-recheck">Проверить ещё раз</button>
+        <button type="button" id="tools-copy">Скопировать отчёт</button>
+        <button type="button" id="tools-repair">Восстановить оболочку</button>
+        <button id="reset-shelf" type="button" data-native-press>Сбросить мою коллекцию</button>
       </div>
     </details>
     <input id="tools-import-file" type="file" accept=".json,application/json" hidden aria-label="Choose personal shelf backup file">
-    <p class="shelf-tools__note">Your games and their saves are never deleted by these tools.</p>
-    <a class="pw-id-privacy-link" href="/privacy">Privacy policy</a>
+    <p class="shelf-tools__note">Игры и их сохранения останутся на месте.</p>
+    <a class="pw-id-privacy-link" href="/privacy">Политика конфиденциальности</a>
   </dialog>
   <dialog id="pocket-id-dialog" class="pw-id-dialog" aria-labelledby="pocket-id-heading">
     <div class="pw-id-dialog__top">
@@ -254,13 +252,13 @@
     </div>
     <div class="pw-id-dialog__intro">
       <h2 id="pocket-id-heading">Pocket ID</h2>
-      <p id="pocket-id-subtitle">Sign in or create your profile.</p>
+      <p id="pocket-id-subtitle">Войди или создай профиль.</p>
     </div>
     <div class="pw-id-dialog__body" id="pocket-id-content">
       <div id="pocket-id-guest">
         <button id="pocket-id-google" class="pw-id-dialog__google" type="button" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22 12.2c0-.8-.07-1.58-.2-2.33H12v4.4h5.6a4.8 4.8 0 0 1-2.08 3.15v2.62h3.37C20.86 18.23 22 15.47 22 12.2Z"/><path fill="#34A853" d="M12 22c2.83 0 5.2-.94 6.93-2.56l-3.37-2.62c-.94.63-2.14 1-3.56 1-2.73 0-5.04-1.84-5.87-4.31H2.66v2.69A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.13 13.51a6 6 0 0 1 0-3.02V7.8H2.66a10 10 0 0 0 0 8.4l3.47-2.69Z"/><path fill="#EA4335" d="M12 6.18c1.54 0 2.91.53 3.99 1.56l2.99-2.99A9.96 9.96 0 0 0 12 2a10 10 0 0 0-9.34 5.8l3.47 2.69A6 6 0 0 1 12 6.18Z"/></svg>
-          Continue with Google
+          Войти через Google
         </button>
       </div>
       <div id="pocket-id-active" class="pw-id-active" hidden>
@@ -270,8 +268,8 @@
         </div>
         <div class="pw-id-active__actions">
           <button id="pocket-id-edit-action" type="button" class="pw-id-dialog__text-button">Вернуться к профилю</button>
-          <button id="pocket-id-recovery-action" type="button" class="pw-id-dialog__text-button">Reset recovery key</button>
-          <button id="pocket-id-signout" type="button" class="pw-id-dialog__text-button">Sign out</button>
+          <button id="pocket-id-recovery-action" type="button" class="pw-id-dialog__text-button">Обновить ключ восстановления</button>
+          <button id="pocket-id-signout" type="button" class="pw-id-dialog__text-button">Выйти</button>
         </div>
         <details id="pocket-id-activation" class="pw-id-activation" hidden>
           <summary>Код активации</summary>
@@ -288,47 +286,48 @@
       </div>
       <div id="pocket-id-edit" class="pw-id-dialog__form">
         <div class="pw-id-dialog__field"><label for="pocket-id-nickname">Уникальный никнейм в PocketWorks</label>
-          <input id="pocket-id-nickname" type="text" maxlength="20" minlength="3" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Choose your nickname">
-          <div class="pw-id-dialog__hint" id="pocket-id-nickname-hint" aria-live="polite">3–20 characters · letters, numbers, _ and -</div>
+          <input id="pocket-id-nickname" type="text" maxlength="20" minlength="3" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Придумай никнейм">
+          <div class="pw-id-dialog__hint" id="pocket-id-nickname-hint" aria-live="polite">3–20 символов · буквы, цифры, _ и -</div>
         </div>
-        <button id="pocket-id-save" type="button" class="pw-id-dialog__primary">Create Pocket ID</button>
+        <button id="pocket-id-save" type="button" class="pw-id-dialog__primary">Создать Pocket ID</button>
       </div>
       <div id="pocket-id-recover" class="pw-id-dialog__form" hidden>
         <div class="pw-id-dialog__field">
-          <label for="pocket-id-recover-code">Recovery key</label>
+          <label for="pocket-id-recover-code">Ключ восстановления</label>
           <input id="pocket-id-recover-code" type="text" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="PW1-…">
         </div>
-        <button id="pocket-id-recover-submit" type="button" class="pw-id-dialog__primary">Sign in with key</button>
+        <button id="pocket-id-recover-submit" type="button" class="pw-id-dialog__primary">Войти с ключом</button>
       </div>
       <div id="pocket-id-recovery" class="pw-id-dialog__key" hidden>
-        <h3>Keep your access key.</h3>
-        <p>This key lets you sign in on any device. It will not be shown again. Anyone holding it can access your profile.</p>
+        <h3>Сохрани ключ доступа.</h3>
+        <p>Ключ позволяет войти с другого устройства. Он не будет показан повторно. Любой, у кого есть этот ключ, сможет открыть твой профиль.</p>
         <code id="pocket-id-recovery-value" tabindex="0"></code>
         <div class="pw-id-dialog__small-actions">
-          <button id="pocket-id-recovery-copy" type="button">Copy private key</button>
-          <button id="pocket-id-recovery-done" type="button">I saved it</button>
+          <button id="pocket-id-recovery-copy" type="button">Скопировать ключ</button>
+          <button id="pocket-id-recovery-done" type="button">Ключ сохранён</button>
         </div>
       </div>
-      <button id="pocket-id-recover-toggle" type="button" class="pw-id-dialog__text-button">Already have a recovery key? Sign in</button>
-      <button id="pocket-id-new-account" type="button" class="pw-id-dialog__text-button" hidden>Create a new account instead</button>
-      <div id="pocket-id-status" class="pw-id-dialog__status" aria-live="polite" role="status">Connecting to Pocket ID…</div>
+      <button id="pocket-id-recover-toggle" type="button" class="pw-id-dialog__text-button">Войти с ключом восстановления</button>
+      <button id="pocket-id-new-account" type="button" class="pw-id-dialog__text-button" hidden>Создать новую учётную запись</button>
+      <div id="pocket-id-status" class="pw-id-dialog__status" aria-live="polite" role="status">Подключаемся к Pocket ID…</div>
     </div>
-    <div class="pw-id-dialog__bottom"><span><a href="/privacy">Privacy policy</a></span></div>
+    <div class="pw-id-dialog__bottom"><span><a href="/privacy">Политика конфиденциальности</a></span></div>
   </dialog>
-  <div class="launch-stage" id="launch-stage" aria-hidden="true"><div class="launch-stage__room"></div><div class="launch-stage__object"><span class="launch-stage__icon"></span><strong></strong><small>opening</small></div></div>
+  <dialog id="catalog-lightbox" class="catalog-lightbox" aria-label="Скриншот приложения"><button id="catalog-lightbox-close" type="button" aria-label="Закрыть скриншот">×</button><img id="catalog-lightbox-image" alt="Скриншот приложения"></dialog>
+  <div class="launch-stage" id="launch-stage" aria-hidden="true"><div class="launch-stage__room"></div><div class="launch-stage__object"><span class="launch-stage__icon"></span><strong></strong><small>открываем</small></div></div>
   <template id="app-card-template">
-    <article class="app-entry"><a class="app-entry__select" data-action="open" data-native-press><span class="app-preview" aria-hidden="true"><span class="preview-grid"></span><span class="preview-orbit"></span><span class="preview-signal"></span><span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span><span class="preview-scan"></span><span class="app-entry__pin">PINNED</span></span><span class="app-entry__body"><span class="app-entry__topline"><strong class="app-entry__name"></strong><span class="app-entry__status"></span></span><span class="app-entry__description"></span><span class="app-entry__meta"></span></span></a><button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="Save application" aria-pressed="false">☆</button><button type="button" class="app-entry__more" data-action="details" data-native-press aria-label="Application details"><span aria-hidden="true">···</span></button></article>
+    <article class="app-entry"><a class="app-entry__select" data-action="open" data-native-press><span class="app-preview" aria-hidden="true"><span class="preview-grid"></span><span class="preview-orbit"></span><span class="preview-signal"></span><span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span><span class="preview-scan"></span><span class="app-entry__pin" title="Закреплено для всех"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3 6 0-1 6 4 4v2h-5v6l-2-3v-3H6v-2l4-4z"/></svg></span></span><span class="app-entry__body"><span class="app-entry__topline"><strong class="app-entry__name"></strong><span class="app-entry__status"></span></span><span class="app-entry__description"></span><span class="app-entry__meta"></span></span></a><button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="В избранное" aria-pressed="false">☆</button><button type="button" class="app-entry__more" data-action="details" data-native-press aria-label="Об приложении"><span aria-hidden="true">···</span></button></article>
   </template>
-  <script type="module" src="./shared/update-manager.js?v=0.11.1" data-update-manager data-service-worker="./sw.js?build=0.11.1" data-app-name="Pocket Works" data-app-version="0.11.1" data-quiet-updates="true"></script>
-  <script src="./shared/view-transition-guard.js?v=0.11.1" type="module"></script>
-  <script src="./launcher-new-app-focus.js?v=0.11.1"></script>
-  <script src="./app.js?v=0.11.1" type="module"></script>
-  <script src="./launcher-release-links.js?v=0.11.1" type="module"></script>
-  <script src="./launcher-update-all-v3.js?v=0.11.1" type="module"></script>
-  <script src="./launcher-sync.js?v=0.11.1" type="module"></script>
-  <script src="./shared/launcher-list-motion.js?v=0.11.1" type="module"></script>
-  <script type="module" src="./shared/pocket-id.js?v=0.11.1"></script>
-  <script type="module" src="./shared/pocket-social.js?v=0.11.1"></script>
-  <script src="./shared/app-icon-previews.js?v=0.11.1" type="module"></script>
+  <script type="module" src="./shared/update-manager.js?v=0.12.0" data-update-manager data-service-worker="./sw.js?build=0.12.0" data-app-name="Pocket Works" data-app-version="0.12.0" data-quiet-updates="true"></script>
+  <script src="./shared/view-transition-guard.js?v=0.12.0" type="module"></script>
+  <script src="./launcher-new-app-focus.js?v=0.12.0"></script>
+  <script src="./app.js?v=0.12.0" type="module"></script>
+  <script src="./launcher-release-links.js?v=0.12.0" type="module"></script>
+  <script src="./launcher-update-all-v3.js?v=0.12.0" type="module"></script>
+  <script src="./launcher-sync.js?v=0.12.0" type="module"></script>
+  <script src="./shared/launcher-list-motion.js?v=0.12.0" type="module"></script>
+  <script type="module" src="./shared/pocket-id.js?v=0.12.0"></script>
+  <script type="module" src="./shared/pocket-social.js?v=0.12.0"></script>
+  <script src="./shared/app-icon-previews.js?v=0.12.0" type="module"></script>
 </body>
 </html>

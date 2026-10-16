@@ -17,7 +17,7 @@ const [launcher,launcherApp,index,rootWorker,updateManager,enhancedUpdateManager
 const errors=[];
 const requireToken=(source,token,label)=>{if(!source.includes(token))errors.push(`${label} must include ${token}`);};
 
-for(const token of ['APP_TIMEOUT','withTimeout(\n        updateInstalledApplication','UPDATE_CONCURRENCY=3','pw-update-progress','installedTargets','on-demand','pocketworks:registry-snapshot',"source:'bulk-update'"]){
+for(const token of ['APP_TIMEOUT','withTimeout(\n        updateInstalledApplication','UPDATE_CONCURRENCY=3','pw-update-progress','installedTargets','Загрузятся при запуске','pocketworks:registry-snapshot',"source:'bulk-update'"]){
   requireToken(launcher,token,'launcher bulk update interface');
 }
 for(const token of ['releaseIdentity','getVerifiedReleases','installedTargets','workerInfo','saveVerified','clearStaleAppRuntime']){

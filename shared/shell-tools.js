@@ -17,33 +17,33 @@ export function installShelfTools({ store } = {}) {
   let diagnosticText = '';
 
   async function inspect() {
-    facts.textContent = 'Reading device information…';
+    facts.textContent = 'Проверяем устройство…';
     setStatus('');
     const details = [
-      ['Launcher version', document.querySelector('meta[name="pocket-works-build"]')?.content],
-      ['Connection', navigator.onLine ? 'Online' : 'Offline'],
-      ['Library entries', getRegistrySnapshot()?.apps?.length ?? 'Not loaded'],
-      ['Last registry refresh', getRegistrySnapshot()?.savedAt
-        ? new Date(getRegistrySnapshot().savedAt).toLocaleString() : 'No saved registry']
+      ['Версия оболочки', document.querySelector('meta[name="pocket-works-build"]')?.content],
+      ['Подключение', navigator.onLine ? 'Онлайн' : 'Без интернета'],
+      ['Приложений', getRegistrySnapshot()?.apps?.length ?? 'Не загружено'],
+      ['Каталог обновлён', getRegistrySnapshot()?.savedAt
+        ? new Date(getRegistrySnapshot().savedAt).toLocaleString() : 'Копии пока нет']
     ];
     const saved = store.getStatus();
-    details.push(['Personal shelf', saved.warning || (saved.localOk && saved.dbOk ? 'LocalStorage + IndexedDB' :
-      saved.localOk ? 'LocalStorage' : saved.dbOk ? 'IndexedDB' : 'Not persisted')]);
+    details.push(['Моя коллекция', saved.warning || (saved.localOk && saved.dbOk ? 'LocalStorage + IndexedDB' :
+      saved.localOk ? 'LocalStorage' : saved.dbOk ? 'IndexedDB' : 'Не сохранено')]);
     const tasks = [
-      async () => ['App workers', (await navigator.serviceWorker.getRegistrations())
+      async () => ['Установленных приложений', (await navigator.serviceWorker.getRegistrations())
         .filter(reg => new URL(reg.scope).pathname.includes('/apps/')).length],
-      async () => ['Browser caches', (await caches.keys()).length],
+      async () => ['Кешей браузера', (await caches.keys()).length],
       async () => {
         const estimated = await navigator.storage?.estimate?.();
-        return ['Storage usage', estimated && estimated.usage != null
-          ? `${(estimated.usage / (1024 * 1024)).toFixed(1)} MiB` : 'Not supported'];
+        return ['Занято на устройстве', estimated && estimated.usage != null
+          ? `${(estimated.usage / (1024 * 1024)).toFixed(1)} MiB` : 'Недоступно'];
       },
       async () => {
         const registration = await navigator.serviceWorker.getRegistration('./');
-        return ['Launcher worker', registration?.active ? 'Active' : 'Not active'];
+        return ['Кеш оболочки', registration?.active ? 'Активен' : 'Не активен'];
       }
     ];
-    const inspected = await Promise.all(tasks.map(task => task().catch(error => ['Check unavailable', error.message])));
+    const inspected = await Promise.all(tasks.map(task => task().catch(error => ['Проверка недоступна', error.message])));
     details.push(...inspected);
     diagnosticText = details.map(([name, value]) => `${name}: ${escapeText(value)}`).join('\n');
     facts.replaceChildren();
@@ -73,8 +73,8 @@ export function installShelfTools({ store } = {}) {
     try {
       if (!diagnosticText) await inspect();
       await navigator.clipboard.writeText(diagnosticText);
-      setStatus('Diagnostics copied.');
-    } catch (error) { setStatus(`Unable to copy diagnostics: ${error.message}`, true); }
+      setStatus('Отчёт скопирован.');
+    } catch (error) { setStatus(`Не удалось скопировать отчёт: ${error.message}`, true); }
   });
 
   document.querySelector('#tools-export').addEventListener('click', () => {
@@ -89,8 +89,8 @@ export function installShelfTools({ store } = {}) {
       anchor.click();
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setStatus('Shelf backup exported. Keep the file somewhere safe.');
-    } catch (error) { setStatus(`Export failed: ${error.message}`, true); }
+      setStatus('Резервная копия скачана.');
+    } catch (error) { setStatus(`Не удалось скачать копию: ${error.message}`, true); }
   });
 
   document.querySelector('#tools-import').addEventListener('click', () => {
@@ -101,31 +101,31 @@ export function installShelfTools({ store } = {}) {
     const file = importFile.files?.[0];
     if (!file) return;
     if (file.size > 1024 * 1024) {
-      setStatus('Backup exceeds the 1 MiB limit.', true);
+      setStatus('Файл больше 1 МБ.', true);
       return;
     }
     try {
       const record = JSON.parse(await file.text());
       if (record?.schema !== 'pocket-works-personal-shelf-v2') {
-        throw new Error('Unsupported backup format');
+        throw new Error('Неподдерживаемый формат копии');
       }
-      if (!window.confirm('Replace saved favorites, recents and sorting with this backup?')) return;
+      if (!window.confirm('Восстановить избранное, недавние приложения и сортировку из этого файла?')) return;
       await store.importBackup(record);
-      setStatus('Personal shelf imported and saved.');
+      setStatus('Моя коллекция imported and saved.');
       await inspect();
-      setStatus('Personal shelf imported and saved.');
-    } catch (error) { setStatus(`Import failed: ${error.message}`, true); }
+      setStatus('Моя коллекция imported and saved.');
+    } catch (error) { setStatus(`Не удалось восстановить: ${error.message}`, true); }
   });
 
   document.querySelector('#tools-repair').addEventListener('click', async () => {
     if (!navigator.onLine) {
-      setStatus('An internet connection is required to repair the launcher.', true);
+      setStatus('Для восстановления оболочки нужен интернет.', true);
       return;
     }
-    if (!window.confirm('Clear only the Pocket Works launcher cache and reload? Installed games and saved progress are kept.')) return;
+    if (!window.confirm('Очистить кеш оболочки и перезагрузить PocketWorks? Игры и сохранения останутся на месте.')) return;
     const button = document.querySelector('#tools-repair');
     button.disabled = true;
-    setStatus('Repairing launcher cache…');
+    setStatus('Восстанавливаем оболочку…');
     try {
       const names = (await caches.keys()).filter(name => name.startsWith('pocket-works-launcher-'));
       await Promise.all(names.map(name => caches.delete(name)));
@@ -133,11 +133,11 @@ export function installShelfTools({ store } = {}) {
       // A same-version update() does not reinstall the worker or refill its precache.
       // Re-registering after reload always executes the normal atomic install.
       await registration?.unregister();
-      setStatus('Launcher cache cleared. Reloading and reinstalling current shell…');
+      setStatus('Кеш очищен. Загружаем актуальную оболочку…');
       location.reload();
     } catch (error) {
       button.disabled = false;
-      setStatus(`Repair failed: ${error.message}`, true);
+      setStatus(`Не удалось восстановить: ${error.message}`, true);
     }
   });
 

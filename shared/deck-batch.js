@@ -43,12 +43,15 @@ export function installDeckBatchPicker({
     for(const tab of dialog.querySelectorAll('[data-batch-tab]'))
       tab.setAttribute('aria-pressed', String(tab.dataset.batchTab === view));
     const active = slugs.length > 0;
+    const global=canManageGlobal() && $('#deck-batch-scope').value==='global';
+    $('#deck-batch-scope-label').hidden=!canManageGlobal();
+    controls.personal.hidden=global;controls.save.hidden=controls.unsave.hidden=global;
     controls.personal.textContent = view === 'archive' ? 'Вернуть себе' : 'В личный архив';
     controls.personal.disabled = !active || (view === 'archive' && !slugs.some(isPersonalArchived));
     controls.global.textContent = view === 'archive' ? 'Вернуть всем' : 'В общий архив';
-    controls.global.hidden = !canManageGlobal();
+    controls.global.hidden = !global;
     controls.global.disabled = !active || isGlobalBusy() || (view === 'archive' && !slugs.some(isGlobalArchived));
-    controls.pin.hidden = controls.unpin.hidden = !canManageGlobal();
+    controls.pin.hidden = controls.unpin.hidden = !global;
     controls.pin.disabled = !active || isGlobalBusy() || !slugs.some(slug=>!isGlobalPinned(slug));
     controls.unpin.disabled = !active || isGlobalBusy() || !slugs.some(isGlobalPinned);
     controls.save.disabled = !active || slugs.every(slug => favorites.has(slug));
@@ -84,8 +87,8 @@ export function installDeckBatchPicker({
     }
     renderControls();
   }
-  function open() {
-    selected.clear();view='active';search.value='';lastSignature='';
+  function open(initial='active') {
+    selected.clear();view=initial==='archive'?'archive':'active';$('#deck-batch-scope').value='personal';search.value='';lastSignature='';
     report('');
     dialog.showModal();
     renderGrid(true);
@@ -183,6 +186,7 @@ export function installDeckBatchPicker({
   confirm.addEventListener('close',()=>{pending=null;});
   dialog.addEventListener('close',()=>{selected.clear();lastSignature='';});
   search.addEventListener('input',()=>{renderGrid(true);});
-  $('#deck-batch-trigger')?.addEventListener('click',open);
+  $('#deck-batch-scope').addEventListener('change',renderControls);
+  $('#deck-batch-trigger')?.addEventListener('click',()=>open());
   return {open,close,refresh,complete,report,isOpen:()=>dialog.open};
 }

@@ -98,6 +98,7 @@ import { sameRelease, needsReleaseConvergence, clearStaleAppRuntime } from './sh
     event.preventDefault();
     event.stopImmediatePropagation();
     opening.add(slug);
+    document.dispatchEvent(new CustomEvent('pocketworks:release-launch',{detail:{slug}}));
     versionedHref(anchor);
     void clearStaleAppRuntime(slug,release).catch(error => {
       console.warn('Pocket Works failed to clean stale release', error);
