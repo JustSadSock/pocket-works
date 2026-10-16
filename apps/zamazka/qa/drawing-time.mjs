@@ -114,3 +114,6 @@ console.log('ZAMAZKA: seven timed presets including 10 minutes, untimed all-play
 
 // Deadline and final transfer regressions are part of the main timer gate.
 import './deadline-integrity.mjs';
+
+// Complete multiplayer clock drift + partial coin deadline + author frame loop regression.
+import './sync-and-partial-vote.mjs';
