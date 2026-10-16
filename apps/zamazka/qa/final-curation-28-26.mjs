@@ -65,7 +65,7 @@ assert.equal(ARTS[185].isReal,false,'archived last synthetic image remains in or
 const server=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
 const snapshot=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v22.ts',import.meta.url),'utf8');
 assert.equal(server,snapshot,'new rooms must use exact immutable v22 copy');
-assert.match(server,/RULESET_VERSION=19/);
+assert.match(server,/RULESET_VERSION=20/);
 assert.match(server,/const CATALOG_COUNT=136/);
 assert.match(server,/EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69\]\)/);
 const lock=JSON.parse(readFileSync(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
