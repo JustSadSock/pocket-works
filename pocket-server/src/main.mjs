@@ -70,7 +70,7 @@ function activeRoomMembers(room){
  return room.players.filter(member=>sockets.get(member.id)?.roomId===room.id);
 }
 async function refreshZamazkaPresence(room){
- if(room.gameId!=='zamazka'||Number(room.version?.slice(1))<21)return;
+ if(room.gameId!=='zamazka'||room.state?.resumable!==true)return;
  const state=room.state,active=activeRoomMembers(room);
  if(!Array.isArray(state?.participants))return;
  const live=new Set(active.map(p=>p.id));
