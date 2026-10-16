@@ -18,6 +18,7 @@ import {installGalleryLighting} from './museum-lighting.js';
 import {MuseumAudio} from './museum-audio.js';
 import {soundGalleryMarkup,SOUND_GALLERY} from './sound-gallery.js';
 import {stepClockSound} from './clock-soundscape.js';
+import {ServerClock} from './server-clock.js';
 import {createExhibitionDirector,saveTone,animateCoinDeposit} from './exhibition-director.js';
 import {setDressScene} from './scenography.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
@@ -29,7 +30,7 @@ import {exhibitFacets,exhibitPlaque,mountExhibitFrames} from './exhibition-ui.js
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.9',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.11',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -54,6 +55,9 @@ let invitedRoom=q.get('room')||'';
 let page='home',net=null,me=null,view=null,roomId='',editor=null,practice=null,choice=null,chips=[0,0,0,0,0],chipTarget='',autoVoteTimer=null,connectionEpoch=0,beepEnabled=localStorage.getItem(NS+'sound')!=='off',lastPulse=0,lastUiKey='';
 const museumAudio=new MuseumAudio(beepEnabled);
 let soundDemoTimer=null,connectionLost=false;
+const serverClock=new ServerClock();
+const networkNow=()=>serverClock.now();
+let lastTimePingAt=0;
 const SOUND_VOLUME_KEY=NS+'sound-volume';
 let soundVolume=Math.max(0,Math.min(100,Number(localStorage.getItem(SOUND_VOLUME_KEY)??55)||0));
 museumAudio.setVolume(soundVolume/100);
@@ -148,7 +152,7 @@ function attemptSubmission(force=false){
  // authoritative acknowledgement before retransmitting a new revision.
  // When the drawing timer has ended the server only has a short upload
  // acceptance window. Retry lost receipts promptly instead of waiting 15s.
- const retryMs=view.deadline&&Date.now()>=view.deadline?3500:15000;
+ const retryMs=view.deadline&&networkNow()>=view.deadline?3500:15000;
  if(!force&&p.sentAt&&Date.now()-p.sentAt<retryMs)return;
  activeDraftTransfer?.abort();activeDraftTransfer=null;
  clearTimeout(draftDelay);
@@ -247,7 +251,7 @@ function autoFinishOnDeadline(){
  if(!editor||practice||page!=='drawing'||!view||view.phase!=='drawing'||!view.deadline||view.done?.includes(me?.id))return;
  // Freeze at the actual deadline, not 1.9 seconds before it. getData()
  // commits the finger/mouse stroke in progress before the final snapshot.
- if(Date.now()<view.deadline)return;
+ if(networkNow()<view.deadline)return;
  const token=submissionToken(view.mine,view.round);
  if(autoSubmitted===token||pendingSubmit?.token===token)return;
  submitArtwork({automatic:true});
@@ -597,17 +601,22 @@ function attemptVote(force=false){
    if(button){button.disabled=false;button.textContent='Повторить отправку'}
  }
 }
-function submitVote(){
+function submitVote(allowPartial=false){
  if(autoVoteTimer!==null){clearTimeout(autoVoteTimer);autoVoteTimer=null}
  if(!view||view.phase!=='voting'||view.voted?.includes(me?.id))return;
  if(!pendingVote||pendingVote.token!==voteToken(view)){
-   if(chips.reduce((a,b)=>a+b,0)!==3)return;
+   if(chips.reduce((a,b)=>a+b,0)<1||(!allowPartial&&chips.reduce((a,b)=>a+b,0)!==3))return;
    pendingVote={token:voteToken(view),round:view.round,turn:view.turn,chips:[...chips],sentAt:0,attempts:0};
    persistVote();
  }
  attemptVote(true);updateChips();
 }
 function chipDots(count){return '<span class="chip-dots">'+Array.from({length:count},()=>'<i class="chip-dot" aria-hidden="true"></i>').join('')+'</span>'}
+function saveVoteDraft(){
+ if(!net||connectionLost||!view||view.phase!=='voting'||view.author?.id===me?.id||
+    view.voted?.includes(me?.id)||pendingVote?.token===voteToken(view))return;
+ try{net.sendGame({type:'vote_draft',chips:[...chips]})}catch{}
+}
 function updateChips(){
  const total=chips.reduce((a,b)=>a+b,0);
  screen.querySelectorAll('[data-chip-count]').forEach(el=>{el.textContent=chips[Number(el.dataset.chipCount)]});
@@ -637,12 +646,12 @@ function vote(){
  const v=view,target=v.author,isOwn=target?.id===me?.id,already=(v.voted||[]).includes(me?.id);
  const sessionKey=v.round+':'+v.turn;
  voteScreenToken=sessionKey;
- if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:[0,0,0,0,0]}
+ if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:Array.isArray(v.draftVote)&&v.draftVote.length===5?[...v.draftVote]:[0,0,0,0,0]}
  const count=(v.voted||[]).length,expected=v.participants.length-1;
  const examined=v.candidate;
  change('<section class="phase-page expert-phase'+(isOwn||already?' is-vote-waiting':'')+'">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Найди реставрацию',v.deadline)+
  '<div class="phase-body expert-round"><div class="expert-intro"><div><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="phase-directive">Одна из пяти картин отреставрирована.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
- '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':'Распредели 3 фишки между картинами.')+'</p>'+
+ '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':'Распредели до 3 монет. По окончании времени поставленные монеты засчитываются.')+'</p>'+
  '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="stake-frame zam-exhibit-rim">'+exhibitFacets()+
  (examined?.art===id?'<canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
  '</div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+
@@ -882,7 +891,7 @@ async function connect(mode){
  rememberTabName(name);
  const epoch=++connectionEpoch;
  connectionStatus('connecting');
- me=null;view=null;roomId='';
+ me=null;view=null;roomId='';serverClock.reset();lastTimePingAt=0;
  change(connectionMarkup({mode,artURL:artworkURL(0)}),'connecting');
  try{
    const response=await fetch(POCKETNET_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(8000)});
@@ -907,6 +916,7 @@ async function connect(mode){
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
+     if(Number(roomModuleVersion.slice(1))>=23){lastTimePingAt=Date.now();client.sendGame({type:'time_ping',stamp:lastTimePingAt})}
      if(page==='drawing'&&!pendingSubmit)backupDraft(true);
      // Legacy room emblems are read only for backwards compatibility; Pocket ID is the visible identity.
      if(view)renderView();
@@ -940,6 +950,7 @@ async function connect(mode){
       return;
      }
      if(event?.type==='state'){
+       serverClock.observeState(event.payload?.serverNow);
        view=event.payload;
        if(pendingVote&&(view.phase!=='voting'||voteToken(view)!==pendingVote.token||view.voted?.includes(me?.id))){pendingVote=null;persistVote()}
        if(view?.mine&&view.done?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
@@ -947,11 +958,14 @@ async function connect(mode){
        renderPauseOverlay();
        if(view?.phase==='drawing'&&!view.done?.includes(me?.id)&&
           pendingSubmit?.room===roomId&&pendingSubmit.round===view.round){
-         const retryMs=view.deadline&&Date.now()>=view.deadline?3500:15000;
+         const retryMs=view.deadline&&networkNow()>=view.deadline?3500:15000;
          if(!pendingSubmit.sentAt||Date.now()-pendingSubmit.sentAt>retryMs)attemptSubmission();
        }
      }
-     else if(event?.type==='submission_saved'){
+     else if(event?.type==='time_pong'){
+       serverClock.observeEcho(event.payload?.stamp,event.payload?.serverNow);
+      }
+      else if(event?.type==='submission_saved'){
        if(pendingSubmit&&event.payload?.round===pendingSubmit.round&&
           event.payload?.art===pendingSubmit.art&&event.payload?.revision===pendingSubmit.revision)
          confirmSubmission(event.payload.art,event.payload.round);
@@ -1240,15 +1254,15 @@ screen.addEventListener('click',e=>{
  if(b.hasAttribute('data-achievement-select')){showAchievementDetail(b.dataset.achievementSelect);sound('paper',true);return}
  if(b.hasAttribute('data-review-open')){openRoundViewer({index:Number(b.dataset.reviewOpen),view,dialog,renderArtwork,arts:ARTS,esc,closeDialog});return}
  if(b.hasAttribute('data-magnify')){magnify(Number(b.dataset.magnify));return}
- if(b.hasAttribute('data-chipadd')){const i=Number(b.dataset.chipadd);if(chips.reduce((a,b)=>a+b,0)<3){animateCoinDeposit(b);chips[i]++;sound('token',true);updateChips()}return}
- if(b.hasAttribute('data-chipsub')){const i=Number(b.dataset.chipsub);if(chips[i]>0){chips[i]--;sound('token',true);updateChips()}return}
+ if(b.hasAttribute('data-chipadd')){const i=Number(b.dataset.chipadd);if(chips.reduce((a,b)=>a+b,0)<3){animateCoinDeposit(b);chips[i]++;sound('token',true);saveVoteDraft();updateChips()}return}
+ if(b.hasAttribute('data-chipsub')){const i=Number(b.dataset.chipsub);if(chips[i]>0){chips[i]--;sound('token',true);saveVoteDraft();updateChips()}return}
  if(b.hasAttribute('data-choice')){sound('paper',true);choice=Number(b.dataset.choice);screen.querySelectorAll('[data-choice]').forEach(x=>x.closest('.picture')?.classList.toggle('selected',Number(x.dataset.choice)===choice));const v=screen.querySelector('[data-action=vote]');if(v)v.disabled=false;return}
  if(b.hasAttribute('data-inspect')){sound('paper',true);if(page==='preview'||page==='vote'&&(view?.author?.id===me?.id||(view?.voted||[]).includes(me?.id)))inspect(Number(b.dataset.inspect));return}
  if(b.hasAttribute('data-saved')){openArchive(Number(b.dataset.saved));return}
 
  const action=b.dataset.action;
  if(action==='claim-host'){
-  if(!view?.paused||(view.onlineIds||[]).includes(view.host)||Date.now()-(view.pausedAt||Date.now())<60000)return;
+  if(!view?.paused||(view.onlineIds||[]).includes(view.host)||networkNow()-(view.pausedAt||networkNow())<60000)return;
   net?.sendGame({type:'claim_host'});return;
  }
  if(action==='pause-kick'){
@@ -1318,16 +1332,16 @@ screen.addEventListener('click',e=>{
 // Clockmaker A strikes exactly at 10, 5 and 0; suppressed in untimed stages.
 let clockSoundState=null;
 function tick(){
- if(view?.paused&&view.pausedAt&&Date.now()-view.pausedAt>=60000){
+ if(view?.paused&&view.pausedAt&&networkNow()-view.pausedAt>=60000){
   const takeover=screen.querySelector('[data-action="claim-host"]:disabled');if(takeover)takeover.disabled=false;
  }
  if(pendingVote&&!view?.paused)attemptVote();
  const v=practice||view,clock=document.querySelector('#clock');
  const timed=(page==='preview'||page==='drawing')&&
              (v?.phase==='preview'||v?.phase==='drawing')&&Number(v?.deadline)>0;
- const now=Date.now();
+ const now=practice?Date.now():networkNow();
  if(clock&&(v?.paused||connectionLost&&!practice)){
-  const remaining=Math.max(0,Number(v?.paused?v.pauseRemainingMs:v.deadline-Date.now())||0),seconds=Math.ceil(remaining/1000);
+  const remaining=Math.max(0,Number(v?.paused?v.pauseRemainingMs:v.deadline-now)||0),seconds=Math.ceil(remaining/1000);
   clock.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
   clock.classList.remove('urgent');clockSoundState=null;museumAudio.stopCountdown();
  }else if(clock&&timed){
@@ -1352,7 +1366,15 @@ function tick(){
  // Sound the zero cue before changing the screen or submitting the final stroke.
  if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
  if(!view?.paused&&!connectionLost)autoFinishOnDeadline();
- if(net&&view&&!view.paused&&!connectionLost&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
+ if(!practice&&view?.phase==='voting'&&!view.paused&&!connectionLost&&
+    view.author?.id!==me?.id&&!view.voted?.includes(me?.id)&&
+    networkNow()>=view.deadline&&chips.some(Boolean)&&!pendingVote)submitVote(true);
+ if(net&&roomId&&!connectionLost&&Number(roomModuleVersion.slice(1))>=23&&
+    Date.now()-lastTimePingAt>5000){
+  lastTimePingAt=Date.now();
+  try{net.sendGame({type:'time_ping',stamp:lastTimePingAt})}catch{}
+ }
+ if(net&&view&&!view.paused&&!connectionLost&&view.deadline&&networkNow()>view.deadline-2400&&Date.now()-lastPulse>1800){
   lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}
  }
 }
@@ -1406,7 +1428,7 @@ function renderPauseOverlay(){
   '<ul>'+names+'</ul>'+
   (me?.id!==view.host&&!(view.onlineIds||[]).includes(view.host)?
     '<button type="button" data-action="claim-host"'+
-     (Date.now()-(view.pausedAt||Date.now())<60000?' disabled':'')+
+     (networkNow()-(view.pausedAt||networkNow())<60000?' disabled':'')+
      '>Стать куратором и восстановить матч</button>':'')+
   '<small>Подключено: '+(view.onlineIds||[]).length+' / '+view.participants.length+'</small></div>';
  if(!paused.isConnected)screen.appendChild(paused);
