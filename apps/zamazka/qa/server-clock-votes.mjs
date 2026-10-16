@@ -10,7 +10,7 @@ assert.equal(fast.observeState(300000,308050),true);
 assert.equal(fast.offset,-8050,'initial state removes a client clock that is eight seconds ahead');
 assert.equal(fast.observeEcho(308000,300050,308100),true);
 assert.equal(fast.offset,-8000,'half the round trip corrects the estimate of clock skew');
-assert.equal(fast.observeEcho(308000,300050,308099),false,'negative / inconsistent timing is ignored only when invalid');
+assert.equal(fast.observeEcho(308000,300050,307990),false,'negative round trips are invalid');
 const slow=new ServerClock();
 assert.equal(slow.observeEcho(293000,300050,293100),true);
 assert.equal(slow.offset,7000,'slow guest also sees the same authoritative instant');
