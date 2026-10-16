@@ -104,7 +104,8 @@ try{
   });
   assert(available.width<=w&&available.height<=h,'scaled device frame must fit real host viewport');
   assert.equal(await gallery.locator('[data-debug-device="desktop"]').getAttribute('aria-pressed'),'true');
-  if(w<700)await gallery.locator('[data-debug-reopen]').click();
+  if(w<700&&await gallery.evaluate(el=>el.classList.contains('is-collapsed')))
+   await gallery.locator('[data-debug-reopen]').click();
   await gallery.locator('[data-debug-select="drawing"]').click();
   await preview.locator('#screen[data-debug-preview="drawing"]').waitFor();
   await preview.locator('[data-action="submit"]').click();
