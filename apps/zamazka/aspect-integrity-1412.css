@@ -80,3 +80,20 @@
 #dialog .round-view-window{
  aspect-ratio:var(--art-aspect,1.333333)!important;
 }
+
+/* The ballot protocol has its own old 4:3 !important frame and an
+   intrinsic zero-height flex stage. Reserve enough real room before the
+   fitter measures it; its inline computed ratio then owns both axes. */
+#screen>.verdict-phase .finale-ballot-card .zam-exhibit-stage{
+ flex:1 1 auto!important;
+ min-height:clamp(90px,22dvh,240px)!important;
+}
+#screen>.verdict-phase .finale-ballot-card .verdict-image.zam-exhibit-rim{
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ max-height:none!important;
+}
+#screen>.verdict-phase .finale-ballot-card .verdict-image.zam-exhibit-rim > img{
+ width:100%!important;height:100%!important;
+ max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+}
