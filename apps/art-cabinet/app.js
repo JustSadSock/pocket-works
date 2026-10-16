@@ -108,7 +108,7 @@ function draw({scroll=false}={}){
  queueImages(visible);
 }
 function scrollToCatalogue(){
- if(window.matchMedia('(max-width:760px)').matches){document.querySelector('.collection').scrollIntoView({block:'start',behavior:'instant'})}
+ if(window.matchMedia('(max-width:760px)').matches){document.querySelector('.collection').scrollIntoView({block:'start',behavior:'auto'})}
  else $('galleryScroll').scrollTop=0;
 }
 function updateSelection(){
