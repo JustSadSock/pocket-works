@@ -687,7 +687,9 @@ function gatherWood(s,h,adults){
   (1+Math.min(.7,proficiency*.22))/(1+best*.018)));
  s.forest[target]=round(s.forest[target]-amount);h.wood=round(h.wood+amount);s.stats.produced=round(s.stats.produced+amount);earn(s,h,'woodKg',amount);
  for(const p of adults){p.skill.wood=roundSkill(p.skill.wood+.006*p.aptitude*workCapacity(p,'wood'));p.job='wood';p.x=target%SIZE;p.y=Math.floor(target/SIZE);recordWork(p,'wood');}
- s.traffic[target]=Math.min(255,s.traffic[target]+3);
+ const oldWear=s.traffic[target];
+ s.traffic[target]=Math.min(255,oldWear+3);
+ if(oldWear!==s.traffic[target])s.roadRevision=(s.roadRevision||0)+1;
 }
 function growForest(s){
  if(!s._forestAllowed){
