@@ -62,10 +62,6 @@
         },
         {
           "action": "click",
-          "selector": ".appearance-choice"
-        },
-        {
-          "action": "click",
           "selector": "#modalActions .btn.primary"
         },
         {
