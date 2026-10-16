@@ -211,7 +211,7 @@ function resetSource(){
 function selectionText(){return [...selected].sort((a,b)=>a-b).join(', ')}
 async function copySelection(){
  const text=selectionText();if(!text)return;
- try{if(!navigator.clipboard?.writeText)throw Error('clipboard disabled');await navigator.clipboard.writeText(text);notify('Номера скопированы: '+text)}
+ try{if(!navigator.clipboard?.writeText)throw Error('clipboard disabled');await navigator.clipboard.writeText(text);notify('Игровые ID на удаление скопированы: '+text)}
  catch{$('copyText').value=text;$('copyFallback').hidden=false;$('copyText').focus();$('copyText').select()}
 }
 function downloadSelection(){
@@ -276,6 +276,14 @@ function placeImage(w,url){
  pictures.set(w.id,url);failed.delete(w.id);paintImage(w);saveImageCache();
 }
 async function resolveUnfound(w){
+ // Don't substitute a guessed painting when reviewing the actual old game originals.
+ // Reuse the exact Commons file through its redirect if the CDN thumbnail fails.
+ if(w.file&&w.path){
+  try{
+   const exact='https://commons.wikimedia.org/wiki/Special:Redirect/file/'+encodeURIComponent(decodeURIComponent(w.file))+'?width=960';
+   placeImage(w,exact);return;
+  }catch{}
+ }
  try{const src=await commonsCandidate(w);if(src){placeImage(w,src);return}}catch{}
  if(!pictures.has(w.id))failed.add(w.id);
  paintImage(w);
