@@ -2,6 +2,8 @@
 // Real app screens are mounted in a same-origin *isolated iframe* with synthetic
 // immutable match data. The parent game session and its canvas remain untouched.
 export const DEBUG_QUERY='__zamazka_debug_screen';
+export const DEBUG_DEVICE_QUERY='__zamazka_debug_device';
+export const DEBUG_DEVICES=Object.freeze({phone:{width:390,height:844,label:'Телефон'},desktop:{width:1440,height:900,label:'ПК'}});
 export const DEBUG_SCREENS=[
  {id:'home',name:'Главный экран',group:'Главная'},
  {id:'create',name:'Создание комнаты',group:'Подключение'},
@@ -56,6 +58,33 @@ export function debugMatch(ids){
 }
 export function mountDebugGallery({onSelect=null}={}){
  let layer=null,frame=null,active='home';
+ let device=window.matchMedia('(max-width:700px)').matches?'phone':'desktop';
+ const dims=type=>DEBUG_DEVICES[type]||DEBUG_DEVICES.desktop;
+ function fit(){
+  if(!layer||!frame)return;
+  const stage=layer.querySelector('.zam-debug-stage'),windowEl=layer.querySelector('.zam-debug-device-window');
+  const {width,height}=dims(device);
+  const navOpen=!layer.classList.contains('is-collapsed');
+  const sidebar=navOpen&&innerWidth>700?Math.min(315,innerWidth*.36):0;
+  stage.style.left=sidebar+'px';
+  const spaceWidth=Math.max(80,innerWidth-sidebar-24),spaceHeight=Math.max(80,innerHeight-28);
+  const scale=Math.min(1,spaceWidth/width,spaceHeight/height);
+  windowEl.style.width=(width*scale)+'px';windowEl.style.height=(height*scale)+'px';
+  frame.style.width=width+'px';frame.style.height=height+'px';
+  frame.style.transform='scale('+scale+')';
+  layer.dataset.debugDevice=device;
+  layer.querySelectorAll('[data-debug-device]').forEach(button=>{
+   const active=button.dataset.debugDevice===device;
+   button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));
+  });
+ }
+ function setDevice(next){
+  if(!DEBUG_DEVICES[next]||!layer)return;
+  if(device===next)return;
+  device=next;fit();
+  // Re-render at the new CSS viewport width, without touching parent game state.
+  frame.removeAttribute('src');select(active);
+ }
  const groups=[...new Set(DEBUG_SCREENS.map(s=>s.group))];
  function updateCurrent(){
   if(!layer)return;
@@ -70,6 +99,7 @@ export function mountDebugGallery({onSelect=null}={}){
   if(!layer)return;active=debugId(id);
   const url=new URL(location.pathname,location.href);
   url.searchParams.set(DEBUG_QUERY,active);
+  url.searchParams.set(DEBUG_DEVICE_QUERY,device);
   const target=url.pathname+url.search;
   // Choosing the already open entry must not unload the live preview.
   if(frame.getAttribute('src')===target){updateCurrent();return}
@@ -82,6 +112,7 @@ export function mountDebugGallery({onSelect=null}={}){
  function close(){
   if(!layer)return;
   frame.src='about:blank';
+  window.removeEventListener('resize',fit);
   layer.remove();layer=null;frame=null;
  }
  function toggle(){
@@ -90,11 +121,15 @@ export function mountDebugGallery({onSelect=null}={}){
   layer.id='zamazkaDebugGallery';
   layer.className='zam-debug';
   layer.setAttribute('aria-label','Просмотр экранов Замазки');
-  layer.innerHTML='<iframe class="zam-debug-frame" title="Предпросмотр экрана" tabindex="0"></iframe>'+
+  layer.innerHTML='<div class="zam-debug-stage"><div class="zam-debug-device-window">'+
+   '<iframe class="zam-debug-frame" title="Предпросмотр экрана" tabindex="0"></iframe></div></div>'+
    '<aside class="zam-debug-nav" aria-label="Перейти к экрану">'+
     '<header class="zam-debug-head"><div><small>ЗАМАЗКА / ПРОСМОТР</small><strong>Режим экранов</strong></div>'+
     '<button type="button" data-debug-close aria-label="Закрыть режим просмотра">×</button></header>'+
-    '<div class="zam-debug-tools"><button type="button" data-debug-collapse>Свернуть список</button>'+
+    '<div class="zam-debug-tools"><div class="zam-debug-device-picker" role="group" aria-label="Формат экрана">'+
+     '<button type="button" data-debug-device="phone" aria-pressed="false">Телефон</button>'+
+     '<button type="button" data-debug-device="desktop" aria-pressed="false">ПК</button></div>'+
+    '<button type="button" data-debug-collapse>Свернуть список</button>'+
     '<span>Данные демонстрационные</span></div>'+
     '<nav class="zam-debug-list" aria-label="Список экранов">'+groups.map(group=>
      '<div class="zam-debug-group"><div class="zam-debug-group-name">'+group+'</div>'+
@@ -106,12 +141,15 @@ export function mountDebugGallery({onSelect=null}={}){
    '<div class="zam-debug-load" aria-hidden="true">Открываем экран…</div>';
   document.body.appendChild(layer);
   frame=layer.querySelector('iframe');frame.addEventListener('load',()=>layer?.classList.remove('is-loading'));
+  window.addEventListener('resize',fit);fit();
+  layer.querySelectorAll('[data-debug-device]').forEach(button=>button.addEventListener('click',()=>setDevice(button.dataset.debugDevice)));
+
   layer.querySelector('[data-debug-close]').addEventListener('click',close);
-  layer.querySelector('[data-debug-collapse]').addEventListener('click',()=>layer?.classList.add('is-collapsed'));
-  layer.querySelector('[data-debug-reopen]').addEventListener('click',()=>layer?.classList.remove('is-collapsed'));
+  layer.querySelector('[data-debug-collapse]').addEventListener('click',()=>{layer?.classList.add('is-collapsed');fit()});
+  layer.querySelector('[data-debug-reopen]').addEventListener('click',()=>{layer?.classList.remove('is-collapsed');fit()});
   layer.querySelectorAll('[data-debug-select]').forEach(button=>button.addEventListener('click',()=>{
    select(button.dataset.debugSelect);
-   if(matchMedia('(max-width:700px)').matches)layer?.classList.add('is-collapsed');
+   if(matchMedia('(max-width:700px)').matches){layer?.classList.add('is-collapsed');fit()}
   }));
   select(active);
  }
@@ -119,5 +157,5 @@ export function mountDebugGallery({onSelect=null}={}){
   if(e.origin===location.origin&&frame&&e.source===frame.contentWindow&&
    e.data?.type==='zamazka-debug-toggle')close();
  });
- return {toggle,close,select,isOpen:()=>Boolean(layer),screens:DEBUG_SCREENS};
+ return {toggle,close,select,setDevice,isOpen:()=>Boolean(layer),screens:DEBUG_SCREENS};
 }
