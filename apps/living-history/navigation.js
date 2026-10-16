@@ -68,7 +68,7 @@ export function walkPath(s,from,to){
  const a=nearestLand(s,from),b=nearestLand(s,to);if(!a||!b)return [];
  const start=idx(a.x,a.y),end=idx(b.x,b.y);if(start===end)return [a];
  let cache=routeCache.get(s);if(!cache){cache={key:null,paths:new Map()};routeCache.set(s,cache);}
- const epoch=`${Math.floor((s.day||0)/30)}:${s.roadRevision||0}:${s.landRevision||0}`;
+ const epoch=`${Math.floor((s.day||0)/30)}:${roadWetness(s).toFixed(6)}:${s.roadRevision||0}:${s.landRevision||0}`;
  if(cache.key!==epoch){cache.key=epoch;cache.paths.clear();}
  const key=`${start}:${end}`;if(cache.paths.has(key))return cache.paths.get(key);
  const previous=new Int32Array(CELLS).fill(-1),distance=new Float64Array(CELLS).fill(Infinity),heap=[];
