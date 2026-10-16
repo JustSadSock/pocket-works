@@ -76,7 +76,7 @@ async function refreshZamazkaPresence(room){
  const live=new Set(active.map(p=>p.id));
  state.onlineIds=state.participants.filter(p=>live.has(p.id)).map(p=>p.id);
  if(state.phase!=='lobby'&&state.phase!=='results'&&!state.paused&&!state.onlineIds.length){
-  state.paused=true;state.pauseRemainingMs=state.deadline?Math.max(0,state.deadline-Date.now()):null;
+  state.paused=true;state.pausedAt=Date.now();state.pauseRemainingMs=state.deadline?Math.max(0,state.deadline-Date.now()):null;
  }else if(state.paused&&state.participants.every(p=>live.has(p.id))){
   state.paused=false;
   if(state.deadline&&Number.isFinite(state.pauseRemainingMs))state.deadline=Date.now()+state.pauseRemainingMs;
