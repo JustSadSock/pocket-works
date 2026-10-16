@@ -14,12 +14,30 @@ const frame={
  style:{aspectRatio:'',vars:{},setProperty(key,val){this.vars[key]=val}},
  closest(){return this.parent;}
 };
-frame.parent={style:{vars:{},setProperty(key,val){this.vars[key]=val}}};
+frame.parent={style:{vars:{},setProperty(key,val){this.vars[key]=val}},matches:()=>true,parentElement:null};
+frame.parentElement=frame.parent;
 assert.equal(setArtworkFrame(frame,wide),2);
 assert.equal(frame.parent.style.vars['--art-aspect'],'2','the physical museum frame matches a wide painting');
 assert.equal(frame.style.aspectRatio,'2');
 assert.equal(setArtworkFrame(frame,tall),.5);
 assert.equal(frame.parent.style.vars['--art-aspect'],'0.5','portrait frame is resized rather than letterboxed');
+const archiveOuter={style:{vars:{},setProperty(key,val){this.vars[key]=val}},matches:q=>q.includes('.archive-art-frame'),parentElement:null};
+const archiveRim={style:{vars:{},setProperty(key,val){this.vars[key]=val}},matches:q=>q.includes('.archive-rim'),parentElement:archiveOuter};
+const archiveCanvas={style:{aspectRatio:'',vars:{},setProperty(key,val){this.vars[key]=val}},parentElement:archiveRim};
+for(const ratio of [.32,.5,1,4/3,2,3.1]){
+ const img={naturalWidth:ratio*1000,naturalHeight:1000};
+ assert(Math.abs(setArtworkFrame(archiveCanvas,img)-ratio)<1e-6);
+ assert.equal(Number(archiveRim.style.vars['--art-aspect']),ratio,'snug archival rim '+ratio);
+ assert.equal(Number(archiveOuter.style.vars['--art-aspect']),ratio,'archive staging inherits geometry '+ratio);
+ assert.equal(Number(archiveCanvas.style.vars['--art-aspect']),ratio,'restored canvas follows source '+ratio);
+}
+const comparisonWindow={style:{vars:{},setProperty(key,val){this.vars[key]=val}},matches:q=>q.includes('.round-view-window'),parentElement:null};
+const comparisonImage={style:{vars:{},setProperty(key,val){this.vars[key]=val}},matches:q=>q.includes('.round-view-image'),parentElement:comparisonWindow};
+const restored={style:{vars:{},setProperty(key,val){this.vars[key]=val}},parentElement:comparisonImage};
+setArtworkFrame(restored,tall);
+assert.equal(comparisonImage.style.vars['--art-aspect'],'0.5');
+assert.equal(comparisonWindow.style.vars['--art-aspect'],'0.5','restored lightbox and original must share one portrait ratio');
+
 for(const id of [1,6,12,29,44,50]){
  for(const seed of [0,42,123456789]){
   const z=zoneFor(id,seed);
@@ -46,6 +64,11 @@ assert.match(styles[2],/\.reveal-option-image canvas\{[^}]*object-fit:contain/,'
 const native=readFileSync(new URL('../native-art.css',import.meta.url),'utf8');
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const worker=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const aspectCSS=readFileSync(new URL('../aspect-integrity-1412.css',import.meta.url),'utf8');
+assert.match(aspectCSS,/\.archive-rim/,'archive frame is not an arbitrary 4:3 border');
+assert.match(aspectCSS,/\.zam-exhibit-rim > :is\(img,canvas\)/,'jury and original share fitted apertures');
+assert.match(aspectCSS,/\.round-view-image > canvas/,'comparison window shares natural canvas geometry');
+
 assert.match(html,/responsive-scale\.css.*native-art\.css/,'dynamic frame rules override fixed aspect styles');
 assert.match(worker,/\.\/native-art\.css/,'new styles are available offline');
 for(const selector of ['.restore .viewport','.unveil-frame','.round-view-window','.round-art-image']){
