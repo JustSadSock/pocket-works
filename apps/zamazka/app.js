@@ -256,6 +256,7 @@ function finishVoteTransition(){
  setTimeout(()=>old.remove(),260);
 }
 function change(html,which){
+ if(page!==which&&['preview','drawing'].includes(page)){museumAudio.stopCountdown();clockSoundState=null}
  if(previewFrameObserver){previewFrameObserver.disconnect();previewFrameObserver=null}
  if(archiveObserver){archiveObserver.disconnect();archiveObserver=null}
  if(page!==which)closeDialog();
