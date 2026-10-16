@@ -28,7 +28,8 @@ assert.match(app,/storedPractice\|\|JSON\.parse\(localStorage\.getItem\(PRACTICE
 assert.match(app,/sessionStorage\.setItem\(PRACTICE_KEY,data\)/,'can temporarily save practice');
 assert.doesNotMatch(editor,/this\.armed=!this\.armed/,'precision must not stay armed between taps');
 assert.match(editor,/this\.setArmState\(false\)/,'button release must immediately stop painting');
-assert.match(editor,/sessionStorage\.setItem\(this\.draftKey,JSON\.stringify\(strokes\)\)/,'editor writes a tab backup before IndexedDB');
+assert.match(editor,/const encoded=JSON\.stringify\(strokes\)/,'editor serializes each draft once');
+assert.match(editor,/sessionStorage\.setItem\(this\.draftKey,encoded\)/,'editor writes a tab backup before IndexedDB');
 assert.match(editor,/try\{localStorage\.setItem\('pocket-works:zamazka:input-mode'/,'quota cannot interrupt mode UI');
 const section=editor.slice(editor.indexOf('this.setArmState=active=>{'),editor.indexOf("this.armButton?.addEventListener('pointerdown'"));
 assert.ok(section.includes('this.armUp=e=>{'));
