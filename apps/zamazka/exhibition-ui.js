@@ -13,6 +13,7 @@ export function mountExhibitFrames(root){
  const stages=[...root.querySelectorAll('[data-exhibit-stage]')];
  if(!stages.length)return {dispose(){}};
  let disposed=false,queued=0;
+ const stableRoom=new WeakMap();
  function fit(){
   queued=0;if(disposed)return;
   for(const stage of stages){
@@ -25,7 +26,20 @@ export function mountExhibitFrames(root){
      Number.parseFloat(art.style.aspectRatio)||
      Number.parseFloat(rim.style.getPropertyValue('--art-aspect'));
    const ratio=natural||rendered||4/3;
-   const width=stage.clientWidth,height=stage.clientHeight-(stage.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-(stage.querySelector('.stake-actions,.stake-locked')?.offsetHeight||0)-7;
+   const width=stage.clientWidth;
+   const gallery=stage.closest?.('.stake-gallery,.round-review-grid,.exhibition-grid');
+   const bounds=gallery||stage.parentElement;
+   const outerWidth=bounds?.clientWidth||width,outerHeight=bounds?.clientHeight||stage.clientHeight;
+   const previous=stableRoom.get(stage);
+   // A non-voting author has no coin tray, so the picture's own height can
+   // feed back into its flex stage. A ResizeObserver then shrinks it repeatedly.
+   // Invalidate only when the *outer gallery* really changes dimensions.
+   const sameRoom=previous&&Math.abs(outerWidth-previous.outerWidth)<2&&
+     Math.abs(outerHeight-previous.outerHeight)<2&&Math.abs(width-previous.width)<2;
+   const freeHeight=sameRoom?Math.max(stage.clientHeight,previous.freeHeight):stage.clientHeight;
+   stableRoom.set(stage,{outerWidth,outerHeight,width,freeHeight});
+   const height=freeHeight-(stage.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-
+     (stage.querySelector('.stake-actions,.stake-locked')?.offsetHeight||0)-7;
    if(width<30||height<30)continue;
    const chrome=Math.max(4,Math.min(10,Math.round(width*.022)));
    const maxW=Math.max(20,width-2*chrome-4);
