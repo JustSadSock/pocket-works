@@ -825,7 +825,7 @@ function renderView(){
    if(view.mine)confirmSubmission(view.mine.art,view.round);
    if(editor)editor.clearDraft();
  }
- const key=view.phase+':'+view.round+':'+view.turn+':'+Boolean(view.paused)+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
+ const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
    updateWaiting(screen,view.done||[],view.participants||[]);
