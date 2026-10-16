@@ -25,7 +25,7 @@ for(const [i,work] of APPROVED_2026_ADDITIONS.entries()){
  assert.equal(ARTS[id].schoolCountry,ART_SCHOOLS[id]);
  assert.ok(work.artist.length>3&&work.date&&work.museum);
  assert.ok(/^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(work.source));
- assert.ok(/^(?:[a-z0-9]\/){2}$/i.test(work.path));
+ assert.ok(/^[0-9a-f]\/[0-9a-f]{2}\/$/i.test(work.path));
  assert.match(work.file,/\.(?:jpe?g|png)$/i);
  const canonical=decodeURIComponent(work.file);
  assert.equal(canonical.replaceAll('_',' '),work.commonsFile);
