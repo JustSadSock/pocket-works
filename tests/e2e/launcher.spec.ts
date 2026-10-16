@@ -72,7 +72,7 @@ test('launcher shelf supports precise updated sorting, search, details and favor
 
   const favorite = page.locator('#detail-favorite');
   await favorite.click();
-  await expect(favorite).toHaveText('Saved ✓');
+  await expect(favorite).toHaveText('В избранном');
   await expect(favorite).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.launcher-toast')).toHaveClass(/is-visible/);
   await page.locator('#detail-close').click();
@@ -129,11 +129,11 @@ test('launcher retains personal shelf state and reset requires a second confirma
   await page.locator('.shelf-tools__advanced > summary').click();
   const reset = page.locator('#reset-shelf');
   await reset.click();
-  await expect(reset).toHaveText('Press again to reset');
+  await expect(reset).toHaveText('Нажми ещё раз для сброса');
   await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'true');
 
   await reset.click();
-  await expect(reset).toHaveText('Reset personal shelf');
+  await expect(reset).toHaveText('Сбросить мою коллекцию');
   await expect(page.locator('.app-entry[data-slug="screen-lab"] .app-entry__favorite')).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('[data-filter="all"]')).toHaveAttribute('aria-pressed', 'true');
   await assertNoHorizontalOverflow(page);
@@ -203,9 +203,7 @@ test('launcher preserves card identity across sorting and filtering', async ({ p
   const card = page.locator('.app-entry[data-slug="screen-lab"]');
   await card.evaluate(element => { (window as any).__pwStableCard = element; });
 
-  await page.locator('#library-options > summary').click();
   await page.locator('#sort-button').click();
-  await page.locator('#library-options > summary').click();
   await expect.poll(() => card.evaluate(element => element === (window as any).__pwStableCard))
     .toBe(true);
 

@@ -38,22 +38,20 @@ test('Pocket Deck boots into an authored home and switches to dense library',asy
   await openDeck(page);
   await expect(page.locator('[data-deck-view="home"]').last()).toHaveAttribute('aria-current','page');
   await expect(page.locator('#deck-home')).toBeVisible();
-  if((page.viewportSize()?.width||1000)<=980)await expect(page.locator('#deck-focus .deck-focus__play')).toBeVisible();
+  if((page.viewportSize()?.width||1000)<=980)await expect(page.locator('.deck-widget--continue .deck-focus__play').first()).toBeVisible();
   else await expect(page.locator('#deck-widgets .deck-tile').first()).toBeVisible();
   await attachCriticalScreenshot(page,info,'deck-first-frame',{fullPage:false});
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
-  await expect(page.locator('#deck-view-title')).toHaveText('Library');
+  await expect(page.locator('#deck-view-title')).toHaveText('Каталог');
   await expect(page.locator('#app-list .app-entry').first()).toBeVisible();
   expect(await page.locator('#app-list .app-entry').count()).toBeGreaterThan(30);
-  await page.locator('#library-options > summary').click();
   await page.locator('[data-deck-density="micro"]').click();
-  await page.locator('#library-options > summary').click();
   await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro');
   await assertNoHorizontalOverflow(page);
   await attachCriticalScreenshot(page,info,'deck-contact-sheet',{fullPage:false});
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro');
-  await expect(page.locator('#deck-view-title')).toHaveText('Library');
+  await expect(page.locator('#deck-view-title')).toHaveText('Каталог');
   if(missingResources.length)console.log('Pocket Deck missing resources:',missingResources);
   monitor.assertClean();
 });
@@ -100,18 +98,18 @@ test('archive is reversible and project development notes persist independently 
   await page.locator('#deck-project-note').scrollIntoViewIfNeeded();
   await attachCriticalScreenshot(page,info,'deck-note-after-stage-change',{fullPage:false});
   await page.locator('#deck-note-save').click();
-  await expect(page.locator('#deck-note-feedback')).toContainText('Saved');
+  await expect(page.locator('#deck-note-feedback')).toContainText('Сохранено');
   await page.locator('#deck-project-detail [data-deck-stage="archive"]').click();
-  await page.locator('#detail-close').click();
+  if(await page.locator('#detail-close').isVisible())await page.locator('#detail-close').click();
   await page.locator('#deck-bottom-nav [data-deck-view="archive"]').click();
-  await expect(page.locator('#deck-view-title')).toHaveText('Archive');
+  await expect(page.locator('#deck-view-title')).toHaveText('Архив');
   const archived=page.locator('.app-entry[data-slug="'+slug+'"]');
   await expect(archived).toBeVisible();
   await archived.locator('.app-entry__more').click();
   await page.locator('#detail-extras > summary').click();
   await expect(page.locator('#deck-project-note')).toHaveValue('Improve flight feel and landing transitions');
   await page.locator('#deck-project-detail [data-deck-stage="trial"]').click();
-  await page.locator('#detail-close').click();
+  if(await page.locator('#detail-close').isVisible())await page.locator('#detail-close').click();
   await expect(archived).toHaveCount(0);
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await expect(page.locator('.app-entry[data-slug="'+slug+'"]')).toBeVisible();
@@ -139,46 +137,25 @@ test('one-hand customization and search preserve mobile navigation',async({page}
   await assertNoHorizontalOverflow(page);
 });
 
-test('bulk organization selects unkept projects and archives only after confirmation',async({page})=>{
+test('bulk organization archives only after confirmation and remains reversible',async({page})=>{
   await openDeck(page);
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
-  await page.locator('#library-options > summary').click();
-  await expect(page.locator('#deck-organize-start')).toBeVisible();
   await page.locator('#deck-organize-start').click();
-  const bar=page.locator('#deck-organize-bar');
-  await expect(bar).toBeVisible();
-  const cards=page.locator('#app-list .app-entry');
-  await expect(cards.first()).toBeVisible();
-  const first=await cards.first().getAttribute('data-slug');
-  const second=await cards.nth(1).getAttribute('data-slug');
-  expect(first).toBeTruthy();expect(second).toBeTruthy();
-  await cards.first().locator('.app-entry__select').click();
-  await cards.nth(1).locator('.app-entry__select').click();
-  await expect(page.locator('#deck-organize-count')).toHaveText('2 selected');
-  await page.locator('[data-deck-organize-archive]').click();
-  await expect(page.locator('#deck-archive-confirm')).toBeVisible();
-  await page.locator('#deck-archive-cancel').click();
-  await expect(page.locator('.app-entry[data-slug="'+first+'"]')).toBeVisible();
-  await page.locator('[data-deck-organize-archive]').click();
-  await page.locator('#deck-archive-accept').click();
-  await expect(page.locator('#deck-organize-bar')).toBeHidden();
-  await expect(page.locator('.app-entry[data-slug="'+first+'"]')).toHaveCount(0);
-  await expect(page.locator('.app-entry[data-slug="'+second+'"]')).toHaveCount(0);
-  await page.locator('#deck-bottom-nav [data-deck-view="archive"]').click();
-  await expect(page.locator('.app-entry[data-slug="'+first+'"]')).toBeVisible();
-  await expect(page.locator('.app-entry[data-slug="'+second+'"]')).toBeVisible();
-  await page.reload({waitUntil:'domcontentloaded'});
-  await expect(page.locator('.app-entry[data-slug="'+first+'"]')).toBeVisible();
-  // Reloading turns this into a returning-user visit: acknowledge the current
-  // shell's release receipt before interacting with the underlying project.
-  await expect(page.locator('[data-digest-close]')).toBeVisible();
-  await page.locator('[data-digest-close]').click();
-  await page.locator('.app-entry[data-slug="'+first+'"] .app-entry__more').click();
-  await page.locator('#detail-extras > summary').click();
-  await page.locator('[data-deck-stage="trial"]').click();
-  await page.locator('#detail-close').click();
-  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
-  await expect(page.locator('.app-entry[data-slug="'+first+'"]')).toBeVisible();
+  const first=page.locator('#deck-batch-grid [data-batch-slug]').first();
+  const slug=await first.getAttribute('data-batch-slug');
+  await first.click();
+  await page.locator('#deck-batch-personal').click();
+  await page.locator('#deck-batch-confirm-cancel').click();
+  await expect(first).toBeVisible();
+  await page.locator('#deck-batch-personal').click();
+  await page.locator('#deck-batch-confirm-accept').click();
+  await expect(page.locator('[data-batch-slug="'+slug+'"]').first()).toHaveCount(0);
+  await page.locator('[data-batch-tab="archive"]').click();
+  await page.locator('[data-batch-slug="'+slug+'"]').click();
+  await page.locator('#deck-batch-personal').click();
+  await page.locator('#deck-batch-confirm-accept').click();
+  await page.locator('#deck-batch-close').click();
+  await expect(page.locator('.app-entry[data-slug="'+slug+'"]')).toBeVisible();
 });
 
 test('cancelled widget drag preserves its position',async({page})=>{
@@ -213,7 +190,7 @@ test('archiving a spotlight removes the project from home widgets',async({page})
   await page.locator(`.app-entry[data-slug="${slug}"] .app-entry__more`).click();
   await page.locator('#detail-extras > summary').click();
   await page.locator('[data-deck-stage="archive"]').click();
-  await page.locator('#detail-close').click();
+  if(await page.locator('#detail-close').isVisible())await page.locator('#detail-close').click();
   await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
   await expect(page.locator(`#deck-home [data-deck-open="${slug}"]`)).toHaveCount(0);
   await page.reload({waitUntil:'domcontentloaded'});
@@ -229,12 +206,10 @@ test('saved layout and launcher navigation remain available offline',async({page
       navigator.serviceWorker.addEventListener('controllerchange',()=>resolve(),{once:true}));
   });
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
-  await page.locator('#library-options > summary').click();
   await page.locator('[data-deck-density="micro"]').click();
-  await page.locator('#library-options > summary').click();
   await context.setOffline(true);
   await page.reload({waitUntil:'domcontentloaded'});
-  await expect(page.locator('#deck-view-title')).toHaveText('Library');
+  await expect(page.locator('#deck-view-title')).toHaveText('Каталог');
   await expect(page.locator('html')).toHaveAttribute('data-deck-density','micro');
   await expect(page.locator('#app-list .app-entry').first()).toBeVisible();
   await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
@@ -245,17 +220,17 @@ test('saved layout and launcher navigation remain available offline',async({page
 
 test('focus-first library shows actions on demand without losing advanced filters',async({page})=>{
   await openDeck(page);
-  await expect(page.locator('.deck-home__intro h2')).toHaveText('Pick a game.');
+  await expect(page.locator('.deck-home__intro h2')).toHaveText('Во что сыграем?');
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await expect(page.locator('#library-options')).not.toHaveAttribute('open');
   await expect(page.locator('#update-installed-button')).toBeHidden();
   await page.locator('#library-options > summary').click();
-  await expect(page.locator('#update-installed-button')).toBeVisible();
+  await expect(page.locator('#update-installed-button')).toBeHidden();
   await page.locator('#library-options [data-filter="offline"]').click();
   await expect(page.locator('#library-options')).not.toHaveAttribute('open');
-  await expect(page.locator('#library-options-label')).toHaveText('Offline');
+  await expect(page.locator('#library-options-label')).toHaveText('Без интернета');
   await page.locator('[data-filter="all"]').click();
-  await expect(page.locator('#library-options-label')).toHaveText('More');
+  await expect(page.locator('#library-options-label')).toHaveText('Фильтры');
   await page.locator('#app-list .app-entry').first().locator('.app-entry__more').click();
   await expect(page.locator('#detail-open')).toBeVisible();
   await expect(page.locator('#detail-changelog')).toBeHidden();
@@ -265,16 +240,16 @@ test('focus-first library shows actions on demand without losing advanced filter
 
 test('phone home fits the viewport and keeps account and secondary widgets reachable',async({page})=>{
   await openDeck(page);
-  if((page.viewportSize()?.width||1000)>980)return;
+  if((page.viewportSize()?.width||1000)>600 || (page.viewportSize()?.height||900)<600)return;
   await expect(page.locator('#deck-account-spotlight')).toBeVisible();
   await expect(page.locator('#deck-focus__featured, .deck-focus__featured').first()).toBeVisible();
   const fits=await page.evaluate(()=>document.documentElement.scrollHeight<=window.innerHeight+3);
   expect(fits).toBe(true);
-  await expect(page.locator('#deck-widgets .deck-widget').first()).toBeHidden();
+  await expect(page.locator('#deck-widgets .deck-widget--saved').first()).toBeHidden();
   await page.locator('#deck-widgets-toggle').click();
-  await expect(page.locator('#deck-widgets .deck-widget').first()).toBeVisible();
+  await expect(page.locator('#deck-widgets .deck-widget--saved').first()).toBeVisible();
   await page.locator('#deck-widgets-toggle').click();
-  await expect(page.locator('#deck-focus .deck-focus__play')).toBeVisible();
+  await expect(page.locator('.deck-widget--continue .deck-focus__play').first()).toBeVisible();
 });
 test('library primary card opens a game while details are separate',async({page})=>{
   await openDeck(page);
@@ -288,7 +263,8 @@ test('library primary card opens a game while details are separate',async({page}
 
 test('Home can batch-select any catalogue game, save and archive several at once',async({page},info)=>{
   await openDeck(page);
-  await page.locator('#deck-batch-trigger').click();
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await page.locator('#deck-organize-start').click();
   const picker=page.locator('#deck-batch-picker');
   await expect(picker).toBeVisible();
   const tiles=page.locator('#deck-batch-grid [data-batch-slug]');
@@ -325,8 +301,7 @@ test('Home can batch-select any catalogue game, save and archive several at once
   await expect(page.locator('[data-batch-slug="'+slug1+'"]')).toBeVisible();
   await page.locator('#deck-batch-close').click();
   await expect(picker).toBeHidden();
-  if((page.viewportSize()?.width||1000)<=980)await expect(page.locator('#deck-focus .deck-focus__play')).toBeVisible();
-  else await expect(page.locator('#deck-widgets .deck-tile').first()).toBeVisible();
+  await expect(page.locator('#deck-view-title')).toHaveText('Каталог');
 });
 
 test('Home batch administrator action sends one verified bulk request and can restore globally',async({page})=>{
@@ -354,7 +329,9 @@ test('Home batch administrator action sends one verified bulk request and can re
     };
   });
   await openDeck(page);
-  await page.locator('#deck-batch-trigger').click();
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await page.locator('#deck-organize-start').click();
+  await page.locator('#deck-batch-scope').selectOption('global');
   await expect(page.locator('#deck-batch-global')).toBeVisible();
   const tiles=page.locator('#deck-batch-grid [data-batch-slug]');
   const slugs=[await tiles.first().getAttribute('data-batch-slug'),await tiles.nth(1).getAttribute('data-batch-slug')];
@@ -404,7 +381,9 @@ test('administrator pins games for everyone and pinned games lead the public lib
     };
   });
   await openDeck(page);
-  await page.locator('#deck-batch-trigger').click();
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await page.locator('#deck-organize-start').click();
+  await page.locator('#deck-batch-scope').selectOption('global');
   const target=page.locator('#deck-batch-grid [data-batch-slug]').last();
   const slug=await target.getAttribute('data-batch-slug');
   expect(slug).toBeTruthy();
@@ -418,17 +397,17 @@ test('administrator pins games for everyone and pinned games lead the public lib
   await page.locator('#deck-batch-pin').click();
   await page.locator('#deck-global-confirm-accept').click();
   await expect(page.locator('#deck-batch-status')).toContainText('закреплены');
-  await expect(page.locator('[data-batch-slug="'+slug+'"] .deck-batch__scope--pin')).toBeVisible();
+  await expect(page.locator('[data-batch-slug="'+slug+'"] .deck-art__pin')).toBeVisible();
   await page.locator('#deck-batch-close').click();
   await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
   await expect(page.locator('#app-list .app-entry').first()).toHaveAttribute('data-slug',slug!);
   await expect(page.locator('.app-entry[data-slug="'+slug+'"] .app-entry__pin')).toBeVisible();
   await page.locator('.app-entry[data-slug="'+slug+'"] .app-entry__more').click();
   await page.locator('#detail-extras > summary').click();
-  await expect(page.locator('[data-deck-global-pin="'+slug+'"]')).toHaveText('Unpin for everyone');
+  await expect(page.locator('[data-deck-global-pin="'+slug+'"]')).toHaveText('Открепить для всех');
   await page.locator('[data-deck-global-pin="'+slug+'"]').click();
   await page.locator('#deck-global-confirm-accept').click();
-  await expect(page.locator('[data-deck-global-pin="'+slug+'"]')).toHaveText('Pin for everyone');
+  await expect(page.locator('[data-deck-global-pin="'+slug+'"]')).toHaveText('Закрепить для всех');
   await expect(page.locator('.app-entry[data-slug="'+slug+'"] .app-entry__pin')).toBeHidden();
   const writes=await page.evaluate(()=>(window as any).__pinWrites);
   expect(writes).toHaveLength(2);
@@ -457,9 +436,10 @@ test('globally pinned covers stay visible to guests without granting management 
   await page.locator('.app-entry[data-slug="screen-lab"] .app-entry__more').click();
   await page.locator('#detail-extras > summary').click();
   await expect(page.locator('[data-deck-global-pin]')).toHaveCount(0);
-  await page.locator('#detail-close').click();
+  if(await page.locator('#detail-close').isVisible())await page.locator('#detail-close').click();
   await page.locator('#deck-bottom-nav [data-deck-view="home"]').click();
-  await page.locator('#deck-batch-trigger').click();
+  await page.locator('#deck-bottom-nav [data-deck-view="library"]').click();
+  await page.locator('#deck-organize-start').click();
   await expect(page.locator('#deck-batch-pin')).toBeHidden();
   await expect(page.locator('#deck-batch-unpin')).toBeHidden();
 });

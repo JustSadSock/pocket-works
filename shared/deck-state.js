@@ -118,11 +118,11 @@ export function createDeckStateStore(options={}) {
 }
 
 export const DECK_WIDGET_KINDS = [
-  {kind:'continue',title:'Continue',description:'Return to a recently opened project'},
-  {kind:'saved',title:'On my shelf',description:'Favorite applications'},
-  {kind:'new',title:'Just made',description:'Recent releases and experiments'},
-  {kind:'projects',title:'In progress',description:'Projects selected for further work'},
-  {kind:'random',title:'Rediscover',description:'A random work from your library'},
-  {kind:'collection',title:'A collection',description:'Projects with a chosen tag'},
-  {kind:'spotlight',title:'Spotlight',description:'One selected application'}
+  {kind:'continue',title:'Быстрый запуск',description:'Return to a recently opened project'},
+  {kind:'saved',title:'Избранное',description:'Favorite applications'},
+  {kind:'new',title:'Новое',description:'Recent releases and experiments'},
+  {kind:'projects',title:'В работе',description:'Projects selected for further work'},
+  {kind:'random',title:'Случайное',description:'A random work from your library'},
+  {kind:'collection',title:'По теме',description:'Projects with a chosen tag'},
+  {kind:'spotlight',title:'На виду',description:'One selected application'}
 ];

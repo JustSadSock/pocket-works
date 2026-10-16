@@ -1,5 +1,6 @@
 import { createDeckStateStore, DECK_WIDGET_KINDS } from './deck-state.js';
 import { installDeckBatchPicker } from './deck-batch.js';
+import { catalogIconUrl, systemIcon } from './catalog-art.js';
 
 const $ = selector => document.querySelector(selector);
 const escapeHtml = v => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -9,14 +10,14 @@ const icon = (name) => ({
   play:'▶', star:'★', spark:'✳', random:'↝', tune:'☷', arrow:'↗', back:'←'
 }[name] || name);
 function formatAgo(timestamp) {
-  if (!timestamp) return 'New discovery';
+  if (!timestamp) return 'Ещё не открывалось';
   const days=Math.floor((Date.now()-timestamp)/86400000);
-  return days<1?'Recently opened':days===1?'Yesterday':days<30?`${days} days ago`:'From your collection';
+  return days<1?'Недавно':days===1?'Вчера':days<30?`${days} дн. назад`:'Из коллекции';
 }
 
 export function installPocketDeck({
   getApps, getFavorites, getRecents, getSelected, onViewChanged,
-  onOpen, onDetails, onFavorite, onBulkFavorite, onRefresh, onTools
+  onOpen, onDetails, onFavorite, onBulkFavorite, onRefresh, onTools, onDismissDetails
 }) {
   const home=$('#deck-home'), widgets=$('#deck-widgets'), editor=$('#deck-editor');
   const nav=$('#deck-bottom-nav'), panel=$('#detail-panel');
@@ -47,76 +48,69 @@ export function installPocketDeck({
   const sorted=()=>available().sort(byRelease);
   const recent=()=>Object.entries(getRecents()).sort((a,b)=>b[1]-a[1]).map(([slug])=>available().find(app=>app.slug===slug)).filter(Boolean);
   const appBySlug=slug=>getApps().find(app=>app.slug===slug);
-  const visibleTitle = {home:'Home',library:'Library',archive:'Archive'};
-  const artMarkup=(app,extra='')=>{
+  const visibleTitle = {home:'Главная',library:'Каталог',archive:'Архив'};
+  const artMarkup=(app,extra='',large=false)=>{
     if(!app)return '<span class="deck-art deck-art--blank">✳</span>';
-    const cover=covers.get(app.slug);
+    const cover=large && ['living-history','moss-marble','pelagos','corvus-yard','petlya-17'].includes(app.slug) ? covers.get(app.slug) : null;
     const coverMarkup=cover ? `<img class="deck-art__photo" src="${escapeHtml(cover)}" alt="" loading="lazy" decoding="async">` : '';
-    const pinMarkup=globalPinned.has(app.slug)?'<span class="deck-art__pin" aria-label="Pinned for everyone">PINNED</span>':'';
+    const pinMarkup=globalPinned.has(app.slug)?`<span class="deck-art__pin" title="Закреплено для всех">${systemIcon('pin')}</span>`:'';
     return `<span class="deck-art ${extra}" style="--deck-ink:${safeColor(app.accent)}">
-      ${coverMarkup}<img class="deck-art__icon" src="${escapeHtml(app.path)}icons/icon.svg?v=${encodeURIComponent(app.version||'0')}" alt="" loading="lazy" decoding="async">
+      ${coverMarkup}<img class="deck-art__icon" src="${escapeHtml(catalogIconUrl(app))}" alt="" loading="lazy" decoding="async">
       <span class="deck-art__index" aria-hidden="true">PW / ${escapeHtml(app.slug.slice(0,11).toUpperCase())}</span>${pinMarkup}
     </span>`;
   };
   const openTile=(app,style='small',caption='')=>{
     if(!app)return '';
     return `<article class="deck-tile deck-tile--${style}" data-slug="${escapeHtml(app.slug)}">
-      <a class="deck-tile__launch" data-deck-open="${escapeHtml(app.slug)}" href="${escapeHtml(app.path)}" aria-label="Open ${escapeHtml(app.name)}">
+      <a class="deck-tile__launch" data-deck-open="${escapeHtml(app.slug)}" href="${escapeHtml(app.path)}" aria-label="Открыть ${escapeHtml(app.name)}">
         ${artMarkup(app)}<span class="deck-tile__caption"><strong>${escapeHtml(app.name)}</strong>${caption?`<small>${escapeHtml(caption)}</small>`:''}</span>
       </a>
-      <button class="deck-tile__more" type="button" data-deck-details="${escapeHtml(app.slug)}" aria-label="Details for ${escapeHtml(app.name)}">•••</button>
+      <button class="deck-tile__more" type="button" data-deck-details="${escapeHtml(app.slug)}" aria-label="Подробнее: ${escapeHtml(app.name)}">${systemIcon('more')}</button>
     </article>`;
   };
   function widgetContent(widget){
     const favorites=favoriteSet();
     const apps=sorted();
     const selected=widget.kind==='spotlight'&&widget.slug?apps.find(app=>app.slug===widget.slug):null;
-    if(widget.kind==='continue'){
-      const app=recent()[0]||apps.find(a=>favorites.has(a.slug))||apps[0];
-      return app?`<div class="deck-widget__heading"><span>CONTINUE</span><span class="deck-widget__counter">${formatAgo(getRecents()[app.slug])}</span></div>
-        <div class="deck-hero">${openTile(app,'hero')}
-          <span class="deck-hero__callout" aria-hidden="true"><b>▶</b> PLAY</span></div>`
-        : emptyWidget('No projects yet','New creations will appear here.');
-    }
+    if(widget.kind==='continue')return `<div class="deck-focus">${focusMarkup()}</div>`;
     if(widget.kind==='spotlight'){
       const app=selected||apps[0];
-      return `<div class="deck-widget__heading"><span>SPOTLIGHT</span></div>`+
-        (app?openTile(app,widget.size==='half'?'small':'hero'):emptyWidget('Pick a project','Choose one in Customize.'));
+      return `<div class="deck-widget__heading"><span>На виду</span></div>`+
+        (app?openTile(app,widget.size==='half'?'small':'hero'):emptyWidget('Выбери приложение','Укажи его в настройках главной.'));
     }
     if(widget.kind==='saved'){
       const matching=apps.filter(a=>favorites.has(a.slug));
-      return `<div class="deck-widget__heading"><span>ON MY SHELF</span><span class="deck-widget__counter">${matching.length} kept</span></div>`+
+      return `<div class="deck-widget__heading"><span>Избранное</span><span class="deck-widget__counter">${matching.length} сохранено</span></div>`+
         (matching.length?`<div class="deck-mini-grid">${matching.slice(0,widget.size==='half'?2:4).map(a=>openTile(a,'small')).join('')}</div>`
-         :emptyWidget('Nothing saved yet','Open a project and mark it as a favorite.', 'library'));
+         :emptyWidget('Пока нет избранного','Добавь приложения из каталога.', 'library'));
     }
     if(widget.kind==='new'){
-      return `<div class="deck-widget__heading"><span>JUST MADE</span></div>`+
+      return `<div class="deck-widget__heading"><span>Новое</span></div>`+
         (apps.length?`<div class="deck-mini-grid">${apps.slice(0,widget.size==='half'?2:4).map(a=>openTile(a,'small')).join('')}</div>`
-         :emptyWidget('No projects yet','New experiments will appear here.'));
+         :emptyWidget('Пока нет приложений','Новые приложения появятся здесь.'));
     }
     if(widget.kind==='projects'){
       const filtered=apps.filter(a=>current().projectStages[a.slug]==='building');
-      return `<div class="deck-widget__heading"><span>IN PROGRESS</span><span class="deck-widget__counter">${filtered.length} active</span></div>`+
-        (filtered.length?`<div class="deck-project-list">${filtered.slice(0,5).map(a=>`<button type="button" data-deck-details="${escapeHtml(a.slug)}"><span>${escapeHtml(a.name)}</span><small>${escapeHtml(current().projectNotes[a.slug]||'Review project')}</small><i>↗</i></button>`).join('')}</div>`
-         :emptyWidget('Your next great idea','Open project details and choose “Developing”.','library'));
+      return `<div class="deck-widget__heading"><span>В работе</span><span class="deck-widget__counter">${filtered.length} в работе</span></div>`+
+        (filtered.length?`<div class="deck-project-list">${filtered.slice(0,5).map(a=>`<button type="button" data-deck-details="${escapeHtml(a.slug)}"><span>${escapeHtml(a.name)}</span><small>${escapeHtml(current().projectNotes[a.slug]||'Открыть подробности')}</small><i>↗</i></button>`).join('')}</div>`
+         :emptyWidget('Пока нет приложений в работе','Выбери статус «В работе» в подробностях.','library'));
     }
     if(widget.kind==='random'){
       const app=apps.length?apps[pendingSeed%apps.length]:null;
-      return `<div class="deck-widget__heading"><span>REDISCOVER</span><button type="button" class="deck-widget__reroll" data-deck-reroll aria-label="Choose another project">↻ Another</button></div>`+
-        (app?openTile(app,widget.size==='half'?'small':'hero'):emptyWidget('Nothing to rediscover','Your library is empty.'));
+      return `<div class="deck-widget__heading"><span>Случайное</span><button type="button" class="deck-widget__reroll" data-deck-reroll aria-label="Choose another project">Другое ↻</button></div>`+
+        (app?openTile(app,widget.size==='half'?'small':'hero'):emptyWidget('Коллекция пока пуста','Открой каталог.'));
     }
     if(widget.kind==='collection'){
       const matching=apps.filter(a=>!widget.tag||(a.tags||[]).includes(widget.tag));
-      return `<div class="deck-widget__heading"><span>${escapeHtml(widget.tag||'COLLECTION')}</span><span class="deck-widget__counter">${matching.length} works</span></div>`+
+      return `<div class="deck-widget__heading"><span>${escapeHtml(widget.tag||'Подборка')}</span><span class="deck-widget__counter">${matching.length} приложений</span></div>`+
         (matching.length?`<div class="deck-mini-grid">${matching.slice(0,widget.size==='half'?2:4).map(a=>openTile(a,'small')).join('')}</div>`
-         :emptyWidget('No matching projects','Change this widget’s collection tag.'));
+         :emptyWidget('Нет подходящих приложений','Выбери другую тему подборки.'));
     }
     return '';
   }
   function emptyWidget(title,copy,view=''){
-    return `<div class="deck-widget__empty"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(copy)}</span>${view?`<button type="button" data-deck-view="${view}">Browse library →</button>`:''}</div>`;
+    return `<div class="deck-widget__empty"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(copy)}</span>${view?`<button type="button" data-deck-view="${view}">В каталог →</button>`:''}</div>`;
   }
-  const focus=$('#deck-focus');
   const accountButton=$('#deck-account-spotlight');
   const moreWidgets=$('#deck-widgets-toggle');
   let pendingSocial=0;
@@ -126,9 +120,9 @@ export function installPocketDeck({
     const label=$('#deck-account-title'),subtitle=$('#deck-account-subtitle');
     const portrait=$('#deck-account-portrait'),dot=$('#deck-account-dot');
     accountButton.classList.toggle('is-member',isMember);
-    label.textContent=isMember?identity.nickname:'Create Pocket ID';
-    subtitle.textContent=isMember?(pendingSocial?pendingSocial+' new invites or requests':'Customize your player card'):'Your name and avatar in every game';
-    accountButton.setAttribute('aria-label',isMember?(pendingSocial?'Open '+pendingSocial+' notifications':'Customize your player card'):'Create your Pocket ID');
+    label.textContent=isMember?identity.nickname:'Создать Pocket ID';
+    subtitle.textContent=isMember?(pendingSocial?pendingSocial+' новых запросов и приглашений':'Настроить профиль'):'Имя и аватар во всех играх';
+    accountButton.setAttribute('aria-label',isMember?(pendingSocial?'Открыть '+pendingSocial+' уведомлений':'Настроить профиль'):'Создать Pocket ID');
     if(dot)dot.hidden=!pendingSocial||!isMember;
     const avatarMarkup=$('#pocket-id-trigger')?.querySelector('.pw-social-personal-avatar, .pw-id-nav-avatar, .pw-id-avatar');
     if(avatarMarkup){portrait.innerHTML=avatarMarkup.outerHTML;}
@@ -138,17 +132,17 @@ export function installPocketDeck({
   function focusMarkup(){
     const apps=sorted(),fav=favoriteSet(),fresh=recent();
     const featured=fresh[0]||apps.find(app=>fav.has(app.slug))||apps[0];
-    if(!featured)return '<div class="deck-home-blank"><strong>No games yet</strong><button type="button" data-deck-view="library">Open Library</button></div>';
+    if(!featured)return '<div class="deck-home-blank"><strong>Пока нет приложений</strong><button type="button" data-deck-view="library">Открыть каталог</button></div>';
     const pinned=apps.filter(app=>globalPinned.has(app.slug));
     const quick=[...new Map([...pinned,...fresh,...apps].filter(app=>app.slug!==featured.slug).map(app=>[app.slug,app])).values()].slice(0,6);
-    return `<div class="deck-focus__featured"><a class="deck-focus__play" data-deck-open="${escapeHtml(featured.slug)}" href="${escapeHtml(featured.path)}" aria-label="Play ${escapeHtml(featured.name)}">
-      ${artMarkup(featured)}<span class="deck-focus__hero-label"><span>CONTINUE PLAYING</span><strong>${escapeHtml(featured.name)}</strong></span>
-      <span class="deck-focus__play-mark" aria-hidden="true">▶</span></a>
-      <button type="button" class="deck-focus__info" data-deck-details="${escapeHtml(featured.slug)}" aria-label="Details for ${escapeHtml(featured.name)}">···</button></div>
-      <div class="deck-focus__bottom"><div class="deck-focus__recent-title"><strong>${pinned.length?'Pinned · Quick play':'Quick play'}</strong><button type="button" data-deck-view="library">All games →</button></div>
+    return `<div class="deck-focus__featured"><a class="deck-focus__play" data-deck-open="${escapeHtml(featured.slug)}" href="${escapeHtml(featured.path)}" aria-label="Открыть ${escapeHtml(featured.name)}">
+      ${artMarkup(featured,'',true)}<span class="deck-focus__hero-label"><span>${fresh.length?'Продолжить':'Попробовать'}</span><strong>${escapeHtml(featured.name)}</strong></span>
+      <span class="deck-focus__play-mark" aria-hidden="true">${systemIcon('play')}</span></a>
+      <button type="button" class="deck-focus__info" data-deck-details="${escapeHtml(featured.slug)}" aria-label="Подробнее: ${escapeHtml(featured.name)}">${systemIcon('more')}</button></div>
+      <div class="deck-focus__bottom"><div class="deck-focus__recent-title"><strong>Под рукой</strong><button type="button" data-deck-view="library">Весь каталог →</button></div>
       <div class="deck-focus__recent" role="list">${quick.map(app=>`<div class="deck-focus__quick" role="listitem">
-        <a data-deck-open="${escapeHtml(app.slug)}" href="${escapeHtml(app.path)}" aria-label="Play ${escapeHtml(app.name)}">${artMarkup(app)}<span>${escapeHtml(app.name)}</span></a>
-        <button type="button" data-deck-details="${escapeHtml(app.slug)}" aria-label="Details for ${escapeHtml(app.name)}">···</button></div>`).join('')}</div></div>`;
+        <a data-deck-open="${escapeHtml(app.slug)}" href="${escapeHtml(app.path)}" aria-label="Открыть ${escapeHtml(app.name)}">${artMarkup(app)}<span>${escapeHtml(app.name)}</span></a>
+        <button type="button" data-deck-details="${escapeHtml(app.slug)}" aria-label="Подробнее: ${escapeHtml(app.name)}">${systemIcon('more')}</button></div>`).join('')}</div></div>`;
   }
   function renderHome(){
     const state=current();const apps=getApps();
@@ -157,9 +151,8 @@ export function installPocketDeck({
     refreshHomeIdentity();
     if(signature===modelSignature)return;
     modelSignature=signature;
-    focus.innerHTML=focusMarkup();
-    widgets.innerHTML=state.widgets.length?state.widgets.map(w=>`<section class="deck-widget deck-widget--${escapeHtml(w.size)}" data-widget-id="${escapeHtml(w.id)}">${widgetContent(w)}</section>`).join('')
-      :`<div class="deck-home-blank"><strong>No games here yet</strong><button type="button" data-deck-edit>Add a widget</button></div>`;
+    widgets.innerHTML=state.widgets.length?state.widgets.map(w=>`<section class="deck-widget deck-widget--${escapeHtml(w.size)} deck-widget--${escapeHtml(w.kind)}" data-widget-id="${escapeHtml(w.id)}">${widgetContent(w)}</section>`).join('')
+      :`<div class="deck-home-blank"><strong>Здесь пока пусто</strong><button type="button" data-deck-edit>Добавить подборку</button></div>`;
     // A cached cover index can outlive an individual image. Restore the genuine
     // app icon when its screenshot is unavailable, including offline visits.
     for(const photo of widgets.querySelectorAll('.deck-art__photo')){
@@ -174,7 +167,7 @@ export function installPocketDeck({
     if(state.view!=='home'&&home.classList.contains('deck-home--expanded')){
       home.classList.remove('deck-home--expanded');
       moreWidgets.setAttribute('aria-expanded','false');
-      moreWidgets.innerHTML='More from my shelf <span aria-hidden="true">⌄</span>';
+      moreWidgets.innerHTML='Все подборки <span aria-hidden="true">⌄</span>';
     }
     $('.deck-library-head').hidden=state.view==='home';
     $('.command-deck').hidden=state.view==='home';
@@ -186,24 +179,26 @@ export function installPocketDeck({
     }
     $('#deck-view-title').textContent=visibleTitle[state.view];
     $('#deck-density-controls').hidden=state.view==='home';
-    $('#deck-organize-start').hidden=state.view!=='library';
+    $('#deck-organize-start').hidden=state.view==='home';
     if(state.view!=='library'){organizing=false;chosen.clear();}
     for(const button of document.querySelectorAll('button[data-deck-density]')){
       button.setAttribute('aria-pressed',String(button.dataset.deckDensity===state.density));
     }
   }
   function paintCovers(){
-    for(const preview of document.querySelectorAll('.app-entry[data-slug] .app-preview, #detail-preview')){
-      const slug=preview.closest('[data-slug]')?.dataset.slug || ($('#detail-open')?.dataset.slug);
-      const cover=covers.get(slug);
-      const existing=preview.querySelector(':scope > .deck-cover-photo');
-      if(!cover){existing?.remove();preview.classList.remove('has-deck-cover');continue;}
-      if(existing?.getAttribute('src')===cover)continue;
-      existing?.remove();
-      const image=document.createElement('img');image.className='deck-cover-photo';image.src=cover;image.alt='';image.loading='lazy';image.decoding='async';
-      image.addEventListener('load',()=>preview.classList.add('has-deck-cover'),{once:true});
-      image.addEventListener('error',()=>{preview.classList.remove('has-deck-cover');image.remove();},{once:true});
-      preview.append(image);
+    // Icon identity never depends on a screenshot loading or on its crop.
+    for(const preview of document.querySelectorAll('.app-preview')){
+      preview.querySelector(':scope > .deck-cover-photo')?.remove();
+      preview.classList.remove('has-deck-cover');
+    }
+    const shot=$('#detail-screenshot'), image=$('#detail-screenshot-image');
+    const slug=$('#detail-open')?.dataset.slug;
+    const cover=covers.get(slug);
+    shot.hidden=!cover;
+    if(cover && image.getAttribute('src')!==cover){
+      image.src=cover;
+      image.alt='Экран приложения «'+(appBySlug(slug)?.name||'')+'»';
+      image.onerror=()=>{shot.hidden=true;image.removeAttribute('src');};
     }
   }
   function renderOrganize(){
@@ -278,19 +273,19 @@ export function installPocketDeck({
     slugs=[...new Set(slugs)].filter(slug=>appBySlug(slug));
     if(!slugs.length)return;
     pendingGlobalAction={slugs,mode,enabled};
-    const count=`${slugs.length} game${slugs.length===1?'':'s'}`;
-    const title=mode==='pin'?'Change global pins?':'Change the global archive?';
+    const count=`${slugs.length} приложений`;
+    const title=mode==='pin'?'Изменить закрепление для всех?':'Изменить общий архив?';
     $('#deck-global-confirm-title').textContent=title;
     $('#deck-global-confirm-description').textContent=mode==='pin'
       ? enabled
-        ? `Pin ${count} for EVERY user? They will appear first in the library and Quick play.`
-        : `Unpin ${count} for EVERY user? The games and personal favorites will be preserved.`
+        ? `Закрепить ${count} для всех? Они появятся первыми в каталоге и быстром запуске.`
+        : `Открепить ${count} для всех? Личное избранное сохранится.`
       : enabled
-        ? `Move ${count} into the archive for EVERY user? Games and saves will not be deleted.`
-        : `Restore ${count} to the main library for EVERY user?`;
+        ? `Перенести ${count} в общий архив? Игры и сохранения останутся на месте.`
+        : `Вернуть ${count} в каталог для всех?`;
     $('#deck-global-confirm-accept').textContent=mode==='pin'
-      ? enabled?'Pin for everyone':'Unpin for everyone'
-      : enabled?'Archive for everyone':'Restore for everyone';
+      ? enabled?'Закрепить для всех':'Открепить для всех'
+      : enabled?'В общий архив':'Вернуть всем';
     $('#deck-global-confirm').showModal();
   }
   const askGlobalArchive=(slugs,archived)=>askGlobalAction(slugs,'archive',archived);
@@ -304,7 +299,7 @@ export function installPocketDeck({
     // Ignore snapshots started before this write.
     globalRequest++;
     const pin=action.mode==='pin';
-    globalMessage=pin?'Updating global pins…':'Updating the archive for everyone…';
+    globalMessage=pin?'Меняем закрепление…':'Меняем общий архив…';
     $('#deck-global-status').textContent=globalMessage;
     render();
     try{
@@ -314,17 +309,17 @@ export function installPocketDeck({
         body:JSON.stringify({slugs:action.slugs,...(pin?{pinned:action.enabled}:{archived:action.enabled})})
       });
       const payload=await res.json().catch(()=>null);
-      if(!res.ok)throw Error(res.status===403?'Administrator access denied. Sign in again.':'Server could not save the change.');
+      if(!res.ok)throw Error(res.status===403?'Войди с правами администратора.':'Сервер не смог сохранить изменения.');
       adoptGlobalArchive(payload);
       if(!pin&&action.enabled)exitOrganize();
       if(batchPicker?.isOpen())batchPicker.complete(pin
         ? action.enabled?'Игры закреплены для всех.':'Игры откреплены для всех.'
         : action.enabled?'Игры перенесены в общий архив.':'Игры возвращены в общую библиотеку.');
       globalMessage=pin
-        ? action.enabled?'Pinned for everyone.':'Unpinned for everyone.'
-        : action.enabled?'Moved to the global archive.':'Restored to the global library.';
+        ? action.enabled?'Закреплено для всех.':'Откреплено для всех.'
+        : action.enabled?'Перенесено в общий архив.':'Возвращено в общую коллекцию.';
     }catch(error){
-      globalMessage=error.message||'Could not update global library.';
+      globalMessage=error.message||'Не удалось обновить общую коллекцию.';
       if(batchPicker?.isOpen())batchPicker.report(globalMessage,'error');
       void refreshGlobalArchive();
     }finally{
@@ -344,6 +339,8 @@ export function installPocketDeck({
   }
   function setView(view,{focus=false}={}){
     if(!['home','library','archive'].includes(view))return;
+    onDismissDetails?.();
+    const options=$('#library-options');if(options)options.open=false;
     store.update({view});
     if(view==='library'&&focus)$('#app-search')?.focus();
     window.scrollTo({top:0,behavior:'instant'});
@@ -365,7 +362,7 @@ export function installPocketDeck({
     // History begins when the user first inspects this project; previous releases
     // cannot be reconstructed from the current manifest without inventing records.
     if(app.version && !history.some(item=>item.version===app.version)){
-      const entry={version:app.version,seenAt:Date.now(),note:(app.changelog||[])[0]||'Release observed'};
+      const entry={version:app.version,seenAt:Date.now(),note:(app.changelog||[])[0]||'Обновление приложения'};
       store.update({releaseHistory:{...state.releaseHistory,[slug]:[entry,...history].slice(0,10)}});
       return;
     }
@@ -377,21 +374,21 @@ export function installPocketDeck({
     const note=root.dataset.slug===slug ? ($('#deck-project-note')?.value ?? state.projectNotes[slug] ?? '') : (state.projectNotes[slug]||'');
     root.dataset.slug=slug;
     root.dataset.signature=signature;
-    root.innerHTML=`<div class="deck-project-detail__label">Project status</div>
+    root.innerHTML=`<div class="deck-project-detail__label">Работа над приложением</div>
       <div class="deck-project-detail__stages">
-        ${[['trial','Trial'],['building','Developing'],['kept','Keep'],['archive','Archive']].map(([stage,label])=>`<button type="button" data-deck-stage="${stage}" aria-pressed="${stageOf(slug)===stage}">${label}</button>`).join('')}
+        ${[['trial','Попробовать'],['building','В работе'],['kept','Оставить'],['archive','В архив']].map(([stage,label])=>`<button type="button" data-deck-stage="${stage}" aria-pressed="${stageOf(slug)===stage}">${label}</button>`).join('')}
       </div>
-      ${globalArchived.has(slug)?'<p class="deck-global-note">In the archive for everyone. Personal labels do not override it.</p>':''}
-      ${globalPinned.has(slug)?'<p class="deck-global-note">Pinned in the library for everyone.</p>':''}
+      ${globalArchived.has(slug)?'<p class="deck-global-note">В общем архиве. Личные отметки не меняют этот статус.</p>':''}
+      ${globalPinned.has(slug)?'<p class="deck-global-note">Закреплено для всех.</p>':''}
       ${canManageGlobal?`<div class="deck-global-actions">
-        <button type="button" class="deck-global-action" data-deck-global-pin="${escapeHtml(slug)}" ${globalBusy?'disabled':''}>${globalPinned.has(slug)?'Unpin for everyone':'Pin for everyone'}</button>
-        <button type="button" class="deck-global-action" data-deck-global-archive="${escapeHtml(slug)}" ${globalBusy?'disabled':''}>${globalArchived.has(slug)?'Restore for everyone':'Archive for everyone'}</button>
+        <button type="button" class="deck-global-action" data-deck-global-pin="${escapeHtml(slug)}" ${globalBusy?'disabled':''}>${globalPinned.has(slug)?'Открепить для всех':'Закрепить для всех'}</button>
+        <button type="button" class="deck-global-action" data-deck-global-archive="${escapeHtml(slug)}" ${globalBusy?'disabled':''}>${globalArchived.has(slug)?'Вернуть всем':'В общий архив'}</button>
       </div>`:''}
-      <label class="deck-project-detail__note">Next improvement <textarea id="deck-project-note" rows="2" maxlength="750" placeholder="The one thing that would make this project worth returning to…">${escapeHtml(note)}</textarea></label>
-      <button type="button" id="deck-note-save">Save project note</button>
+      <label class="deck-project-detail__note">Заметка <textarea id="deck-project-note" rows="2" maxlength="750" placeholder="Что стоит улучшить…">${escapeHtml(note)}</textarea></label>
+      <button type="button" id="deck-note-save">Сохранить заметку</button>
       <span id="deck-note-feedback" role="status" aria-live="polite"></span>
       <div class="deck-project-detail__timeline">
-        <strong>Version history</strong>
+        <strong>История версий</strong>
         
         <ol>${history.map(item=>`<li><b>v${escapeHtml(item.version)}</b><time>${new Date(item.seenAt||Date.now()).toLocaleDateString()}</time><span>${escapeHtml(item.note)}</span></li>`).join('')}</ol>
       </div>`;
@@ -416,21 +413,22 @@ export function installPocketDeck({
     const data=editingLayout||current();
     const apps=getApps();
     const tags=[...new Set(apps.flatMap(app=>app.tags||[]))].sort((a,b)=>a.localeCompare(b));
+    $('#deck-editor-preview').innerHTML=data.widgets.map(w=>`<span data-size="${escapeHtml(w.size)}">${escapeHtml(DECK_WIDGET_KINDS.find(k=>k.kind===w.kind)?.title||w.kind)}</span>`).join('');
     $('#deck-editor-list').innerHTML=data.widgets.map((w,index)=>{
       const name=DECK_WIDGET_KINDS.find(item=>item.kind===w.kind)?.title||w.kind;
-      const details=w.kind==='collection'?`<label>Filter by tag<select data-deck-widget-tag="${escapeHtml(w.id)}"><option value="">All tags</option>${tags.map(t=>`<option value="${escapeHtml(t)}" ${w.tag===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></label>`:
-        w.kind==='spotlight'?`<label>Featured project<select data-deck-widget-slug="${escapeHtml(w.id)}">${apps.map(a=>`<option value="${escapeHtml(a.slug)}" ${w.slug===a.slug?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select></label>`:'';
+      const details=w.kind==='collection'?`<label>Тема подборки<select data-deck-widget-tag="${escapeHtml(w.id)}"><option value="">Все темы</option>${tags.map(t=>`<option value="${escapeHtml(t)}" ${w.tag===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></label>`:
+        w.kind==='spotlight'?`<label>Приложение<select data-deck-widget-slug="${escapeHtml(w.id)}">${apps.map(a=>`<option value="${escapeHtml(a.slug)}" ${w.slug===a.slug?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select></label>`:'';
       return `<div class="deck-editor-row" data-edit-id="${escapeHtml(w.id)}">
-        <span class="deck-editor-row__handle" data-deck-drag aria-label="Drag to reorder" title="Hold and drag">⠿</span>
+        <span class="deck-editor-row__handle" data-deck-drag aria-label="Перетащить подборку" title="Удерживай и перетаскивай">${systemIcon('grip')}</span>
         <div class="deck-editor-row__body"><strong>${escapeHtml(name)}</strong><div>${details}</div></div>
         <div class="deck-editor-row__actions">
-          <button type="button" data-deck-move="${escapeHtml(w.id)}" data-dir="-1" ${index===0?'disabled':''} aria-label="Move ${escapeHtml(name)} up">↑</button>
-          <button type="button" data-deck-move="${escapeHtml(w.id)}" data-dir="1" ${index===data.widgets.length-1?'disabled':''} aria-label="Move ${escapeHtml(name)} down">↓</button>
-          <button type="button" data-deck-size="${escapeHtml(w.id)}" aria-label="Change widget size">${w.size==='large'?'L':w.size==='wide'?'W':'½'}</button>
-          <button type="button" data-deck-remove="${escapeHtml(w.id)}" aria-label="Remove ${escapeHtml(name)}">×</button>
+          <button type="button" data-deck-move="${escapeHtml(w.id)}" data-dir="-1" ${index===0?'disabled':''} aria-label="Поднять ${escapeHtml(name)}">${systemIcon('up')}</button>
+          <button type="button" data-deck-move="${escapeHtml(w.id)}" data-dir="1" ${index===data.widgets.length-1?'disabled':''} aria-label="Опустить ${escapeHtml(name)}">${systemIcon('down')}</button>
+          <button type="button" data-deck-size="${escapeHtml(w.id)}" aria-label="Изменить размер подборки">${systemIcon(w.size==='half'?'half':w.size==='wide'?'wide':'large')}<span>${w.size==='large'?'Крупно':w.size==='wide'?'Широко':'Половина'}</span></button>
+          <button type="button" data-deck-remove="${escapeHtml(w.id)}" aria-label="Убрать ${escapeHtml(name)}">${systemIcon('close')}</button>
         </div>
       </div>`;
-    }).join('') || '<p class="deck-editor-empty">All widgets removed. Add one below.</p>';
+    }).join('') || '<p class="deck-editor-empty">Добавь подборку ниже.</p>';
   }
   function openEditor(){
     editingLayout=current();editing=true;renderEditorRows();
@@ -457,17 +455,12 @@ export function installPocketDeck({
     try{
       const data=JSON.parse(await file.text());
       await store.importBackup(data);
-      $('#deck-layout-status').textContent='Layout imported.';
+      $('#deck-layout-status').textContent='Компоновка восстановлена.';
       if(editor.open)closeEditor(false);
-    }catch(error){$('#deck-layout-status').textContent=`Import failed: ${error.message}`;}
+    }catch(error){$('#deck-layout-status').textContent=`Не удалось импортировать: ${error.message}`;}
   }
   function onClick(event){
-    if(event.target.closest('[data-deck-organize]')){
-      organizing=!organizing;chosen.clear();
-      const options=$('#library-options');
-      if(options)options.open=false;
-      renderOrganize();return;
-    }
+    if(event.target.closest('[data-deck-organize]')){batchPicker?.open(current().view==='archive'?'archive':'active');return;}
     if(event.target.closest('[data-deck-organize-cancel]')){exitOrganize();return;}
     if(event.target.closest('[data-deck-select-unsaved]')){
       const kept=favoriteSet(),stages=current().projectStages;
@@ -513,7 +506,7 @@ export function installPocketDeck({
       const expanded=!home.classList.contains('deck-home--expanded');
       home.classList.toggle('deck-home--expanded',expanded);
       moreWidgets.setAttribute('aria-expanded',String(expanded));
-      moreWidgets.innerHTML=expanded?'Back to games <span aria-hidden="true">↑</span>':'More from my shelf <span aria-hidden="true">⌄</span>';
+      moreWidgets.innerHTML=expanded?'Быстрый запуск <span aria-hidden="true">↑</span>':'Все подборки <span aria-hidden="true">⌄</span>';
       if(expanded)widgets.scrollTop=0;
       return;
     }
@@ -527,10 +520,15 @@ export function installPocketDeck({
     if(density){store.update({density:density.dataset.deckDensity});return;}
     const action=event.target.closest('[data-deck-stage]');
     if(action){setStage($('#detail-open')?.dataset.slug,action.dataset.deckStage);return;}
+    if(event.target.closest('#detail-screenshot')){
+      const image=$('#catalog-lightbox-image');image.src=$('#detail-screenshot-image').src;image.alt=$('#detail-screenshot-image').alt;
+      $('#catalog-lightbox').showModal();return;
+    }
+    if(event.target.closest('#catalog-lightbox-close')||event.target.id==='catalog-lightbox'){$('#catalog-lightbox').close();return;}
     if(event.target.id==='deck-note-save'){
       const slug=$('#detail-open')?.dataset.slug,notes={...current().projectNotes};
       if(slug){notes[slug]=$('#deck-project-note').value.trim();store.update({projectNotes:notes});
-        $('#deck-note-feedback').textContent='Saved on this device.';}
+        $('#deck-note-feedback').textContent='Сохранено на устройстве.';}
       return;
     }
     if(event.target.id==='deck-editor-save'){closeEditor(true);return;}

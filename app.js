@@ -9,6 +9,7 @@ import { inspectOfflineReadiness } from './shared/offline-readiness.js';
 import { createShelfStateStore } from './shared/shelf-state.js';
 import { installShelfTools } from './shared/shell-tools.js';
 import { installPocketDeck } from './shared/pocket-deck.js';
+import { catalogIconUrl, systemIcon } from './shared/catalog-art.js';
 
 installMobileRuntime();
 
@@ -16,9 +17,9 @@ installMobileRuntime();
 const FILTERS = ['all', 'favorites', 'recent', 'offline', 'experimental'];
 const SORTS = ['updated', 'recent', 'name'];
 const SORT_LABELS = {
-  updated: 'Updated ↓',
-  recent: 'Recent ↓',
-  name: 'Name A–Z'
+  updated: 'Сначала новые ↓',
+  recent: 'Недавно открытые ↓',
+  name: 'По названию А–Я'
 };
 
 const root = document.documentElement;
@@ -57,12 +58,12 @@ window.addEventListener('appupdateavailable',event=>showPendingLauncherUpdate(ev
 if(window.__pocketWorksPendingUpdate)showPendingLauncherUpdate(window.__pocketWorksPendingUpdate);
 updateApply?.addEventListener('click',async()=>{
   if(!pendingLauncherUpdate)return;
-  updateApply.disabled=true;updateApply.textContent='Updating…';
+  updateApply.disabled=true;updateApply.textContent='Обновляем…';
   try{
     const success=await pendingLauncherUpdate.apply();
-    if(!success){updateApply.disabled=false;updateApply.textContent='Try again';}
+    if(!success){updateApply.disabled=false;updateApply.textContent='Повторить';}
   }catch{
-    updateApply.disabled=false;updateApply.textContent='Try again';
+    updateApply.disabled=false;updateApply.textContent='Повторить';
   }
 });
 
@@ -214,6 +215,18 @@ function shouldUseNativeNavigation(event, link) {
     || link?.hasAttribute('download');
 }
 
+function rememberLaunch(slug) {
+  recordRecent(slug);
+  try {
+    sessionStorage.setItem('pocket-works:return-object',slug);
+    sessionStorage.setItem('pocket-works:return-deck-view',deck?.getView()||'library');
+    sessionStorage.setItem('pocket-works:return-scroll',String(window.scrollY));
+  } catch { /* Local navigation remains available without storage. */ }
+}
+document.addEventListener('pocketworks:release-launch',event=>{
+  if(registry.some(app=>app.slug===event.detail?.slug))rememberLaunch(event.detail.slug);
+});
+
 function launchApp(event, slug, link) {
   const app = registry.find((item) => item.slug === slug);
   if (!app || !link || shouldUseNativeNavigation(event, link)) {
@@ -224,35 +237,23 @@ function launchApp(event, slug, link) {
   event.preventDefault();
   if (launchInProgress) return;
   launchInProgress = true;
-  recordRecent(app.slug);
-
-  try {
-    sessionStorage.setItem('pocket-works:return-object', app.slug);
-    sessionStorage.setItem('pocket-works:return-deck-view', deck?.getView() || 'library');
-    sessionStorage.setItem('pocket-works:return-scroll', String(window.scrollY));
-  } catch {
-    // Spatial continuity is an enhancement; navigation must always work.
-  }
+  rememberLaunch(app.slug);
 
   if (!launchStage || reducedMotionQuery.matches) {
     window.location.assign(link.href);
     return;
   }
 
-  const sourcePreview = link.closest('.app-entry')?.querySelector('.app-preview') || link.closest('.deck-tile')?.querySelector('.deck-art') || detailPreview;
-  const sourcePhoto = sourcePreview?.querySelector('.deck-art__photo, .deck-cover-photo');
-  const coverUrl = sourcePhoto?.getAttribute('src');
-  const iconImage = coverUrl ? `url("${new URL(coverUrl, document.baseURI).href}")`
-    : sourcePreview?.style.getPropertyValue('--app-icon-image')
-    || `url("${new URL(`${app.path}icons/icon.svg?v=${encodeURIComponent(app.version || '0')}`, document.baseURI).href}")`;
+  const sourcePreview = link.querySelector('.deck-art') || link.closest('.app-entry')?.querySelector('.app-preview') || link.closest('.deck-tile')?.querySelector('.deck-art') || detailPreview;
+  const iconImage = `url("${catalogIconUrl(app)}")`;
   const bounds = sourcePreview?.getBoundingClientRect();
   if (deck && bounds?.width > 0 && bounds?.height > 0) {
     launchStage.classList.add('deck-launch');
     launchStage.style.setProperty('--deck-launch-x', `${bounds.left + bounds.width / 2 - window.innerWidth / 2}px`);
     launchStage.style.setProperty('--deck-launch-y', `${bounds.top + bounds.height / 2 - window.innerHeight / 2}px`);
-    launchStage.style.setProperty('--deck-launch-scale-x', String(bounds.width / 170));
-    launchStage.style.setProperty('--deck-launch-scale-y', String(bounds.height / 170));
-    launchStage.classList.toggle('deck-launch--cover', Boolean(coverUrl));
+    launchStage.style.setProperty('--deck-launch-scale-x', String(bounds.width / 120));
+    launchStage.style.setProperty('--deck-launch-scale-y', String(bounds.height / 120));
+
   }
 
   launchStage.style.setProperty('--launch-icon', iconImage);
@@ -262,7 +263,7 @@ function launchApp(event, slug, link) {
   body.classList.add('is-launching-app');
   navigator.vibrate?.(10);
 
-  window.setTimeout(() => window.location.assign(link.href), 515);
+  window.location.assign(link.href);
 }
 
 function restoreLibraryPosition() {
@@ -335,12 +336,12 @@ function updateSystemStatus() {
 }
 
 function formatDate(value, compact = false) {
-  if (!value) return 'unknown';
+  if (!value) return '—';
   const source = String(value);
   const hasTime = source.includes('T');
   const date = new Date(hasTime ? source : `${source}T12:00:00`);
   if (Number.isNaN(date.getTime())) return source;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('ru-RU', {
     ...(compact ? {} : { year: 'numeric' }),
     month: 'short', day: 'numeric',
     ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {})
@@ -348,16 +349,16 @@ function formatDate(value, compact = false) {
 }
 
 function formatRecent(timestamp) {
-  if (!timestamp) return 'never';
+  if (!timestamp) return 'Ещё не открывалось';
   const elapsed = Math.max(0, Date.now() - timestamp);
   const minutes = Math.floor(elapsed / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return 'Только что';
+  if (minutes < 60) return `${minutes} мин. назад`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours} ч. назад`;
   const days = Math.floor(hours / 24);
-  if (days < 14) return `${days}d ago`;
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(timestamp));
+  if (days < 14) return `${days} дн. назад`;
+  return new Intl.DateTimeFormat('ru-RU', { month: 'short', day: 'numeric' }).format(new Date(timestamp));
 }
 
 function appMatchesQuery(app, query) {
@@ -413,7 +414,7 @@ function visibleApps() {
 }
 
 function filterCounts() {
-  const apps = deck ? registry.filter(app => !deck.getState().archived.includes(app.slug)) : registry;
+  const apps = deck && deck.getView() !== 'home' ? deck.getVisibleList() : registry;
   return {
     all: apps.length,
     favorites: apps.filter((app) => isFavorite(app.slug)).length,
@@ -433,16 +434,14 @@ function updateControlState(apps) {
   }
 
   const extraLabel = document.querySelector('#library-options-label');
-  if (extraLabel) extraLabel.textContent = shelfState.filter === 'offline' ? 'Offline' : shelfState.filter === 'experimental' ? 'Workshop' : 'More';
+  if (extraLabel) extraLabel.textContent = shelfState.filter === 'offline' ? 'Без интернета' : shelfState.filter === 'experimental' ? 'В разработке' : 'Фильтры';
   if (searchInput.value !== shelfState.query) searchInput.value = shelfState.query;
   clearSearch.hidden = shelfState.query.length === 0;
   sortButton.dataset.sort = shelfState.sort;
   sortButton.textContent = SORT_LABELS[shelfState.sort];
   count.textContent = String(apps.length);
 
-  const noun = apps.length === 1 ? 'object' : 'objects';
-  const qualifier = shelfState.query ? ` matching “${shelfState.query}”` : '';
-  resultSummary.textContent = `${apps.length} ${noun}${qualifier}`;
+  resultSummary.textContent = shelfState.query ? `Найдено: ${apps.length}` : `Приложений: ${apps.length}`;
 }
 
 function createAppEntry() {
@@ -457,6 +456,8 @@ function createAppEntry() {
     description: entry.querySelector('.app-entry__description'),
     meta: entry.querySelector('.app-entry__meta')
   };
+  entry.pwParts.favorite.innerHTML=systemIcon('star');
+  entry.pwParts.more.innerHTML=systemIcon('more');
   return entry;
 }
 
@@ -469,19 +470,19 @@ function patchAppEntry(entry, app, index) {
   entry.classList.toggle('is-globally-pinned', Boolean(deck?.isPinned(app.slug)));
 
   p.select.dataset.slug = app.slug;
-  p.select.setAttribute('aria-label', `Play ${app.name}${deck?.isPinned(app.slug)?' — pinned for everyone':''}`);
+  p.select.setAttribute('aria-label', `Открыть ${app.name}${deck?.isPinned(app.slug)?' — закреплено для всех':''}`);
   if (p.select.getAttribute('href') !== app.path) p.select.href = app.path;
   p.more.dataset.slug = app.slug;
-  p.more.setAttribute('aria-label', `Details for ${app.name}`);
+  p.more.setAttribute('aria-label', `Подробнее: ${app.name}`);
   p.favorite.dataset.slug = app.slug;
-  p.favorite.setAttribute('aria-label', isFavorite(app.slug) ? `Remove ${app.name} from saved applications` : `Save ${app.name}`);
+  p.favorite.setAttribute('aria-label', isFavorite(app.slug) ? `Убрать ${app.name} из избранного` : `В избранное: ${app.name}`);
   p.favorite.setAttribute('aria-pressed', String(isFavorite(app.slug)));
-  setText(p.favorite, isFavorite(app.slug) ? '★' : '☆');
+
    setText(p.name, app.name);
   setText(p.status, app.status === 'experimental' ? 'lab' : app.status);
   setText(p.description, app.description);
   const cacheState = offlineStates.get(app.slug)?.status;
-  const cacheLabel = cacheState === 'ready' ? 'offline essentials cached' :
+  const cacheLabel = cacheState === 'ready' ? 'offline Готово' :
     cacheState === 'partial' ? 'partial cache' : 'not cached';
   const baseMeta = [
     `v${app.version}`, formatDate(app.updatedAt, true), cacheLabel,
@@ -496,11 +497,15 @@ function patchAppEntry(entry, app, index) {
 }
 
 function renderApps(apps) {
+  const oldRects=new Map();
+  if(!reducedMotionQuery.matches && deck?.getView()!=='home'){
+    for(const entry of [...list.children].slice(0,24)){const r=entry.getBoundingClientRect();if(r.bottom>0&&r.top<innerHeight)oldRects.set(entry.dataset.slug,r);}
+  }
   const inArchive = deck?.getView() === 'archive';
-  emptyState.querySelector('strong').textContent = inArchive ? 'Nothing archived.' : 'Nothing on this shelf.';
+  emptyState.querySelector('strong').textContent = inArchive ? 'Архив пуст.' : 'Здесь пока пусто.';
   emptyState.querySelector('p').textContent = inArchive
-    ? 'You can move unused experiments here from Library. Nothing gets deleted.'
-    : 'Try another filter or clear the search.';
+    ? 'Здесь хранятся приложения, убранные из каталога.'
+    : 'Измени фильтр или очисти поиск.';
   emptyState.hidden = apps.length !== 0;
   reconcileKeyed(list, apps, {
     key: app => app.slug,
@@ -509,6 +514,14 @@ function renderApps(apps) {
     remove: entry => previewObserver?.unobserve(entry.querySelector('.app-preview'))
   });
   observeListPreviews();
+  if(oldRects.size && list.getBoundingClientRect().height>0){
+    for(const entry of [...list.children].slice(0,24)){
+      const next=entry.getBoundingClientRect(),old=oldRects.get(entry.dataset.slug);
+      if(next.top>innerHeight||next.bottom<0)continue;
+      const dx=old?old.left-next.left:0,dy=old?old.top-next.top:5;
+      if(Math.abs(dx)+Math.abs(dy)>1)entry.animate([{translate:`${dx}px ${dy}px`,opacity:old?1:0},{translate:'0 0',opacity:1}],{duration:180,easing:'cubic-bezier(.2,.8,.2,1)'});
+    }
+  }
 }
 
 function selectedApp() {
@@ -516,11 +529,11 @@ function selectedApp() {
 }
 
 function installInstruction() {
-  if (getDisplayMode() === 'standalone') return 'This shelf is already running as a standalone application.';
+  if (getDisplayMode() === 'standalone') return 'PocketWorks уже установлен как приложение.';
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   return isIOS
-    ? 'Install independently: open the application, then use Safari Share → Add to Home Screen.'
-    : 'Install independently from the application page using your browser’s install action.';
+    ? 'Чтобы установить: открой приложение, затем в Safari выбери «Поделиться» → «На экран Домой».'
+    : 'Установить приложение можно через меню браузера на его странице.';
 }
 
 let lastDetailSignature = '';
@@ -542,6 +555,8 @@ function renderDetail(app) {
   if (!app) {
     detailEmpty.hidden = false;
     detailContent.hidden = true;
+    detailOpen.removeAttribute('data-slug');
+    document.querySelector('#detail-screenshot').hidden=true;
     detailPanel.style.removeProperty('--detail-accent');
     if (!mobilePanelQuery.matches) detailPanel.setAttribute('aria-hidden', 'true');
     syncDetailPreviewMotion();
@@ -557,15 +572,15 @@ function renderDetail(app) {
   detailVersion.textContent = `v${app.version}`;
   detailUpdated.textContent = formatDate(app.updatedAt);
   const offlineState = offlineStates.get(app.slug);
-  detailOffline.textContent = offlineState?.status === 'ready' ? 'essentials cached' :
-    offlineState?.status === 'partial' ? 'incomplete cache' : 'open online first';
-  detailOffline.title = offlineState?.reason || 'Offline availability has not been verified';
+  detailOffline.textContent = offlineState?.status === 'ready' ? 'Готово' :
+    offlineState?.status === 'partial' ? 'Загружено частично' : 'Сначала открой онлайн';
+  detailOffline.title = offlineState?.reason || 'Доступность без интернета пока не проверена';
   detailOpened.textContent = formatRecent(recentTimestamp(app.slug));
   detailOpen.href = app.path;
   detailOpen.dataset.slug = app.slug;
   detailFavorite.dataset.slug = app.slug;
   detailFavorite.setAttribute('aria-pressed', String(isFavorite(app.slug)));
-  detailFavorite.textContent = isFavorite(app.slug) ? 'Saved ✓' : 'Save ☆';
+  detailFavorite.textContent = isFavorite(app.slug) ? 'В избранном' : 'В избранное';
   detailCopy.dataset.slug = app.slug;
   installNote.textContent = installInstruction();
 
@@ -577,7 +592,7 @@ function renderDetail(app) {
   }
 
   detailChangelog.replaceChildren();
-  const notes = app.changelog.length > 0 ? app.changelog : ['No release notes were supplied for this build.'];
+  const notes = app.changelog.length > 0 ? app.changelog : ['Описание обновления пока не добавлено.'];
   for (const note of notes.slice(0, 5)) {
     const item = document.createElement('li');
     item.textContent = note;
@@ -602,7 +617,8 @@ function renderShelf({ transition = false } = {}) {
     const apps = visibleApps();
     updateControlState(apps);
     renderApps(apps);
-    renderDetail(selectedApp());
+    const selected=selectedApp();
+    renderDetail(apps.some(app=>app.slug===selected?.slug)?selected:null);
     updateSystemStatus();
     deck?.refresh();
   };
@@ -629,7 +645,9 @@ function openDetailPanel() {
 }
 
 function closeDetailPanel({ restoreFocus = true } = {}) {
-  if (!mobilePanelQuery.matches) return;
+  if (!mobilePanelQuery.matches) {
+    shelfState.selected=null;persistShelfState();renderShelf();return;
+  }
   panelOpen = false;
   detailPanel.classList.remove('is-open');
   detailBackdrop.classList.remove('is-open');
@@ -679,7 +697,7 @@ async function copyAppLink(slug) {
   }
 
   const original = detailCopy.textContent;
-  detailCopy.textContent = 'Copied';
+  detailCopy.textContent = 'Скопировано';
   navigator.vibrate?.(8);
   window.setTimeout(() => { detailCopy.textContent = original; }, 1300);
 }
@@ -732,11 +750,11 @@ async function loadRegistry({ manual = false } = {}) {
     }
   } finally {
     refreshButton.disabled = false;
-    refreshButton.textContent = 'Refresh';
+    refreshButton.textContent = 'Обновить каталог';
   }
 
   if (!registry.some((app) => app.slug === shelfState.selected)) {
-    shelfState.selected = registry[0]?.slug || null;
+    shelfState.selected = null;
     persistShelfState();
   }
 
@@ -754,7 +772,7 @@ async function applyExternalRegistrySnapshot(apps) {
   lastSyncAt = Date.now();
 
   if (!registry.some((app) => app.slug === shelfState.selected)) {
-    shelfState.selected = registry[0]?.slug || null;
+    shelfState.selected = null;
     persistShelfState();
   }
 
@@ -905,6 +923,7 @@ deck = installPocketDeck({
     if (deck?.getView() !== 'library') shelfState.query = '';
     renderShelf();
   },
+  onDismissDetails: () => closeDetailPanel(),
   onOpen: (event, slug, link) => launchApp(event, slug, link),
   onDetails: slug => selectApp(slug),
   onFavorite: slug => toggleFavorite(slug),

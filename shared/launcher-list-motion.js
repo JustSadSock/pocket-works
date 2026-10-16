@@ -325,8 +325,8 @@ if (list) {
     if (!resetShelf?.dataset.confirming) return;
     delete resetShelf.dataset.confirming;
     resetShelf.classList.remove('is-confirming');
-    resetShelf.textContent = 'Reset personal shelf';
-    resetShelf.setAttribute('aria-label', 'Reset personal shelf');
+    resetShelf.textContent = 'Сбросить мою коллекцию';
+    resetShelf.setAttribute('aria-label', 'Сбросить мою коллекцию');
   }
 
   function installControlPolish() {
@@ -355,7 +355,7 @@ if (list) {
 
       if (control.id === 'sort-button') {
         requestAnimationFrame(() => {
-          sortButton.setAttribute('aria-label', `Change application sort order. Current: ${sortButton.textContent}`);
+          sortButton.setAttribute('aria-label', `Порядок приложений: ${sortButton.textContent}`);
           animateTextChange(sortButton);
         });
       }
@@ -366,14 +366,14 @@ if (list) {
       }
 
       if (control.id === 'detail-copy') {
-        window.setTimeout(() => showToast('Application link copied'), 60);
+        window.setTimeout(() => showToast('Ссылка скопирована'), 60);
       }
 
       if (control.matches('[data-action="favorite"], #detail-favorite')) {
         window.setTimeout(() => {
           const favorite = document.querySelector(`[data-action="favorite"][data-slug="${control.dataset.slug}"]`);
           const pressed = favorite?.getAttribute('aria-pressed') === 'true';
-          showToast(pressed ? 'Saved to shelf' : 'Shelf updated');
+          showToast(pressed ? 'Добавлено в избранное' : 'Избранное обновлено');
         }, 100);
       }
     });
@@ -388,20 +388,20 @@ if (list) {
         event.stopImmediatePropagation();
         control.dataset.confirming = 'true';
         control.classList.add('is-confirming');
-        control.textContent = 'Press again to reset';
-        control.setAttribute('aria-label', 'Press again to confirm shelf reset');
-        showToast('Reset armed. Press once more to confirm.', 'warning');
+        control.textContent = 'Нажми ещё раз для сброса';
+        control.setAttribute('aria-label', 'Нажми ещё раз, чтобы сбросить коллекцию');
+        showToast('Для сброса нажми ещё раз.', 'warning');
         resetConfirmTimer = window.setTimeout(clearResetConfirmation, 2600);
         return;
       }
 
       clearResetConfirmation();
-      window.setTimeout(() => showToast('Personal shelf reset'), 80);
+      window.setTimeout(() => showToast('Коллекция сброшена'), 80);
     }, { capture: true });
 
     const refreshObserver = new MutationObserver(() => {
       if (!refreshButton) return;
-      const done = !refreshButton.disabled && refreshButton.textContent.trim() === 'Refresh';
+      const done = !refreshButton.disabled && refreshButton.textContent.trim() === 'Обновить каталог';
       if (!done) return;
       window.setTimeout(() => {
         refreshButton.classList.remove('is-busy');

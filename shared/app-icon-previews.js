@@ -1,16 +1,14 @@
+import { catalogIconUrl } from './catalog-art.js';
 import { loadRegistry, subscribeRegistry } from './launcher-registry.js';
 
 const SHELF_STATE_KEY = 'pocket-works:shelf:v1';
 
 let registryBySlug = new Map();
 
-function iconUrl(app) {
-  return new URL(`${app.path}icons/icon.svg?v=${encodeURIComponent(app.version || '0')}`, document.baseURI).href;
-}
 
 function applyIcon(preview, app) {
   if (!preview || !app) return;
-  const imageValue = `url("${iconUrl(app)}")`;
+  const imageValue = `url("${catalogIconUrl(app)}")`;
   if (preview.dataset.iconSlug === app.slug && preview.style.getPropertyValue('--app-icon-image') === imageValue) return;
 
   preview.classList.add('has-app-icon');

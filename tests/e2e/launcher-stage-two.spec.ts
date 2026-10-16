@@ -19,9 +19,7 @@ test('mobile library preserves visible card nodes on sort and search', async ({ 
   await expect(screenLab).toBeVisible();
   await screenLab.evaluate(element => { (window as any).__stableScreenLab = element; });
 
-  await page.locator('#library-options > summary').click();
   await page.locator('#sort-button').click();
-  await page.locator('#library-options > summary').click();
   await expect.poll(() => screenLab.evaluate(element => element === (window as any).__stableScreenLab))
     .toBe(true);
 
@@ -41,9 +39,9 @@ test('mobile library Refresh never installs unrelated apps', async ({ page }) =>
   await openShelf(page);
   const before = await page.locator('#app-list .app-entry').count();
   expect(before).toBeGreaterThan(20);
-  await page.locator('#library-options > summary').click();
+  await page.locator('[data-deck-tools]').click();
   await page.locator('#refresh-button').click();
-  await expect(page.locator('#refresh-button')).toHaveText('Refresh', { timeout: 35_000 });
+  await expect(page.locator('#refresh-button')).toHaveText('Обновить каталог', { timeout: 35_000 });
   await expect(page.locator('#sync-status')).toContainText(/Synced|Saved shelf|Registry unavailable/);
   await expect(page.locator('#app-list .app-entry')).toHaveCount(before);
 

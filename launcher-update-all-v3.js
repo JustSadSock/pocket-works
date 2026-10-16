@@ -13,8 +13,8 @@ const errorText=error=>error instanceof Error?error.message:String(error);
 const progressRoot=document.createElement('div');
 progressRoot.className='pw-update-progress';
 progressRoot.hidden=true;
-progressRoot.innerHTML='<div class="pw-update-progress__copy"><strong data-pw-update-stage>Syncing shelf</strong><span data-pw-update-count>0 / 0</span></div><div class="pw-update-progress__track"><i data-pw-update-bar></i></div>';
-document.querySelector('.command-deck')?.append(progressRoot);
+progressRoot.innerHTML='<div class="pw-update-progress__copy"><strong data-pw-update-stage>Проверяем приложения</strong><span data-pw-update-count>0 / 0</span></div><div class="pw-update-progress__track"><i data-pw-update-bar></i></div>';
+document.querySelector('.shelf-tools__maintenance')?.append(progressRoot);
 const progressStage=progressRoot.querySelector('[data-pw-update-stage]');
 const progressCount=progressRoot.querySelector('[data-pw-update-count]');
 const progressBar=progressRoot.querySelector('[data-pw-update-bar]');
@@ -42,10 +42,10 @@ async function mapWithConcurrency(items,concurrency,handler,onProgress){
 
 function showProgress({completed,total,label}){
   progressRoot.hidden=false;
-  progressStage.textContent=label||'Syncing shelf';
+  progressStage.textContent=label||'Проверяем приложения';
   progressCount.textContent=`${completed} / ${total}`;
   progressBar.style.width=`${total?Math.min(100,completed/total*100):100}%`;
-  refreshButton.textContent=total?`${completed}/${total}` : 'Check updates';
+  refreshButton.textContent=total?`${completed}/${total}` : 'Проверить обновления';
 }
 
 function summaryFor(results,onDemand){
@@ -56,13 +56,13 @@ function summaryFor(results,onDemand){
   const failed=results.filter(result=>result.status==='failed');
   const names=failed.slice(0,2).map(result=>result.app.name).join(', ');
   const pieces=[];
-  if(changed)pieces.push(`${changed} updated`);
-  if(current)pieces.push(`${current} current`);
-  if(checked)pieces.push(`${checked} checked`);
-  if(deferred)pieces.push(`${deferred} on next launch`);
-  if(onDemand)pieces.push(`${onDemand} on-demand`);
-  if(failed.length)pieces.push(`${failed.length} failed${names?`: ${names}`:''}`);
-  if(!pieces.length)pieces.push('Shelf synced');
+  if(changed)pieces.push(`Обновлено: ${changed}`);
+  if(current)pieces.push(`Актуально: ${current}`);
+  if(checked)pieces.push(`Проверено: ${checked}`);
+  if(deferred)pieces.push(`Обновятся при запуске: ${deferred}`);
+  if(onDemand)pieces.push(`Загрузятся при запуске: ${onDemand}`);
+  if(failed.length)pieces.push(`Ошибок: ${failed.length}${names?`: ${names}`:''}`);
+  if(!pieces.length)pieces.push('Каталог обновлён');
   return{changed,current,checked,deferred,failed,onDemand,main:pieces.join(' / ')};
 }
 
@@ -72,13 +72,13 @@ async function runBulkUpdate(){
   completedCount=0;
   refreshButton.disabled=true;
   refreshButton.textContent='…';
-  syncStatus.textContent='Reading live shelf';
-  showProgress({completed:0,total:0,label:'Reading live shelf'});
+  syncStatus.textContent='Обновляем каталог';
+  showProgress({completed:0,total:0,label:'Обновляем каталог'});
 
   const active=new Map();
   try{
-    if(!('serviceWorker'in navigator))throw new Error('Service Workers are unavailable');
-    if(!navigator.onLine)throw new Error('No internet connection');
+    if(!('serviceWorker'in navigator))throw new Error('Установка приложений недоступна');
+    if(!navigator.onLine)throw new Error('Нет подключения к интернету');
 
     const apps=await fetchLiveRegistry();
     window.dispatchEvent(new CustomEvent('pocketworks:registry-snapshot',{
@@ -98,7 +98,7 @@ async function runBulkUpdate(){
       return;
     }
 
-    showProgress({completed:0,total:targets.length,label:`Checking ${targets.length} installed app${targets.length===1?'':'s'}`});
+    showProgress({completed:0,total:targets.length,label:`Проверяем установленные приложения: ${targets.length}`});
 
     const results=await mapWithConcurrency(
       targets,
@@ -115,11 +115,11 @@ async function runBulkUpdate(){
       (completed,total,result)=>{
         active.delete(result.app.slug);
         const label=result.status==='failed'
-          ?`${result.app.name} · failed`
+          ?`${result.app.name} · ошибка`
           :result.status==='updated'
-            ?`${result.app.name} · updated`
+            ?`${result.app.name} · обновлено`
             :result.status==='current'
-              ?`${result.app.name} · current`
+              ?`${result.app.name} · актуально`
               :result.status==='deferred'
                 ?`${result.app.name} · next launch`
                 :`${result.app.name} · checked`;
@@ -134,12 +134,12 @@ async function runBulkUpdate(){
     showProgress({completed:targets.length,total:targets.length,label:summary.main});
     navigator.vibrate?.(summary.failed.length?[10,40,10]:12);
   }catch(error){
-    syncStatus.textContent=`${errorText(error)} — previous releases kept`;
+    syncStatus.textContent=`${errorText(error)} — сохранённые версии на месте`;
     progressStage.textContent=syncStatus.textContent;
   }finally{
     bulkUpdateRunning=false;
     refreshButton.disabled=false;
-    refreshButton.textContent='Check updates';
+    refreshButton.textContent='Проверить обновления';
     setTimeout(()=>{if(!bulkUpdateRunning)progressRoot.hidden=true;},2800);
   }
 }

@@ -72,22 +72,22 @@ async function api(path,options={}) {
       credentials:'same-origin',cache:'no-store',
       ...options,headers:options.body?{'content-type':'application/json'}:undefined
     });
-  } catch { throw new Error('Network unavailable. Try again online.'); }
+  } catch { throw new Error('Нет связи. Попробуй, когда появится интернет.'); }
   const data=await response.json().catch(()=>({error:'bad_response'}));
   if(!response.ok) {
     const messages={
-      nickname_taken:'This nickname is already taken.',invalid_profile:'Use 3–20 letters, numbers, _ or - and choose an avatar.',
-      already_signed_in:'Already signed in. Sign out before creating another account.',
-      too_many_attempts:'Too many attempts. Try again in 15 minutes.',
-      invalid_recovery_code:'Recovery key is invalid.',sign_in_required:'Session expired. Sign in again.',
-      google_not_configured:'Google sign-in has not been configured by the site owner.',
+      nickname_taken:'Этот никнейм занят.',invalid_profile:'Используй 3–20 букв, цифр, _ или -.',
+      already_signed_in:'Сначала выйди из текущей учётной записи.',
+      too_many_attempts:'Слишком много попыток. Попробуй через 15 минут.',
+      invalid_recovery_code:'Неверный ключ восстановления.',sign_in_required:'Сессия завершилась. Войди снова.',
+      google_not_configured:'Вход через Google пока недоступен.',
       invalid_activation_code:'Код не найден или введён неверно.',
       code_already_used:'Этот код уже использован другим аккаунтом.',
       code_already_redeemed:'Этот код уже активирован на твоём аккаунте.',
       profile_incomplete:'Сначала заверши создание Pocket ID.',
-      internal_error:'Server error. Try again.',origin_or_content_type_denied:'Request not accepted.'
+      internal_error:'Ошибка сервера. Попробуй ещё раз.',origin_or_content_type_denied:'Запрос не принят.'
     };
-    throw new Error(messages[data.error]||data.error||'Unable to complete request.');
+    throw new Error(messages[data.error]||data.error||'Не удалось выполнить запрос.');
   }
   return data;
 }
@@ -115,18 +115,18 @@ function display() {
   recoverToggle.hidden=Boolean(user)||mode==='recover';
   newAccount.hidden=Boolean(user)||mode!=='recover';
   googleAction.hidden=!config.googleEnabled||Boolean(user?.linkedGoogle);
-  googleAction.textContent=user?'Link Google account':'Continue with Google';
+  googleAction.textContent=user?'Подключить Google':'Войти через Google';
   headline.textContent=user?'Безопасность Pocket ID':mode==='recover'?'Восстановление доступа':'Твой Pocket ID';
   subtitle.textContent=user?'Внешний вид, рисунок и никнейм настраиваются в общей карточке пользователя.':'Войди или создай учётную запись. Играть можно и без неё.';
   if(user) {
-    activeName.textContent=user.nickname||'Choose your nickname';
+    activeName.textContent=user.nickname||'Придумай никнейм';
     activeAvatar.innerHTML=avatar(user.avatar);
-    activeCaption.textContent=user.linkedGoogle?'Google connected':'Recovery-key account';
+    activeCaption.textContent=user.linkedGoogle?'Google подключён':'Вход с ключом восстановления';
   }
   if(mode==='create'||mode==='onboarding') {
     nicknameInput.value=user?.nickname||nicknameInput.value||'';
     primary.textContent=user?'Завершить создание профиля':'Создать Pocket ID';
-    nameHint.textContent='3–20 characters · letters, numbers, _ and -';
+    nameHint.textContent='3–20 символов · буквы, цифры, _ и -';
   }
   $('#pocket-id-edit-action').hidden=!user?.complete;
   $('#pocket-id-recovery-action').hidden=!user||mode==='key';
@@ -143,14 +143,14 @@ function openDialog() {
     mode=user?(user.complete?'view':'onboarding'):'create';
   }
   display();
-  if(user?.complete) message('Your identity is saved securely.','success');
-  else message('Guest mode remains available without an account.');
+  if(user?.complete) message('Профиль сохранён.','success');
+  else message('Играть можно без учётной записи.');
 }
 function showRecovery(key) {
   mode='key';
   recoveryValue.textContent=key;
   display();
-  message('Save this recovery key outside Pocket Works. It grants account access.','warning');
+  message('Сохрани ключ вне PocketWorks: он даёт доступ к учётной записи.','warning');
 }
 async function refresh() {
   const [state,settings]=await Promise.all([api('me'),api('config')]);
@@ -178,13 +178,13 @@ $('#pocket-id-recovery-action').addEventListener('click',async()=>{
   catch(error){message(error.message,'error');}
   finally{setBusy(false);}
 });
-recoverToggle.addEventListener('click',()=>{mode='recover';display();message('Enter the recovery key saved when you created your account.');});
-newAccount.addEventListener('click',()=>{mode='create';display();message('Choose a nickname and avatar.');});
+recoverToggle.addEventListener('click',()=>{mode='recover';display();message('Введи ключ, сохранённый при создании учётной записи.');});
+newAccount.addEventListener('click',()=>{mode='create';display();message('Придумай никнейм.');});
 recoveryCopy.addEventListener('click',async()=>{
   try {
     await navigator.clipboard.writeText(recoveryValue.textContent);
-    message('Recovery key copied. Store it somewhere private.','success');
-  } catch {message('Copy unavailable. Select and copy the key manually.','warning');}
+    message('Ключ скопирован. Сохрани его в надёжном месте.','success');
+  } catch {message('Не удалось скопировать. Выдели ключ и скопируй вручную.','warning');}
 });
 $('#pocket-id-recovery-done').addEventListener('click',()=>{
   mode='view';display();message('Профиль создан.','success');
@@ -215,7 +215,7 @@ activationForm.addEventListener('submit',async event=>{
 });
 signout.addEventListener('click',async()=>{
   setBusy(true);
-  try {await api('logout',{method:'POST',body:'{}'});activationInput.value='';activationStatus.textContent='';activationDetails.open=false;publish(null);mode='create';display();message('Signed out. Local game data was not removed.','success');}
+  try {await api('logout',{method:'POST',body:'{}'});activationInput.value='';activationStatus.textContent='';activationDetails.open=false;publish(null);mode='create';display();message('Вход завершён. Игры и сохранения на месте.','success');}
   catch(error){message(error.message,'error');}finally{setBusy(false);}
 });
 recoverButton.addEventListener('click',async()=>{
@@ -235,7 +235,7 @@ primary.addEventListener('click',async()=>{
 });
 nicknameInput.addEventListener('input',()=>{
   const input=nicknameInput.value.trim();
-  nameHint.textContent='Checking nickname…';
+  nameHint.textContent='Проверяем никнейм…';
   const generation=++validationGeneration;
   clearTimeout(validationClock);
   validationClock=setTimeout(async()=>{
@@ -243,11 +243,11 @@ nicknameInput.addEventListener('input',()=>{
       const result=await api('nickname?value='+encodeURIComponent(input));
       if(generation!==validationGeneration) return;
       const own=user?.nickname?.normalize('NFKC').toLowerCase()===input.normalize('NFKC').toLowerCase();
-      nameHint.textContent=result.available||own?'Nickname available.':'Nickname already taken.';
+      nameHint.textContent=result.available||own?'Никнейм свободен.':'Никнейм занят.';
       nameHint.dataset.kind=result.available||own?'success':'error';
     } catch(error) {
       if(generation!==validationGeneration)return;
-      nameHint.textContent=error.message.includes('invalid_nickname')?'3–20 characters · letters, numbers, _ and -':'Name availability will be checked when saving.';
+      nameHint.textContent=error.message.includes('invalid_nickname')?'3–20 символов · буквы, цифры, _ и -':'Проверим никнейм при сохранении.';
       nameHint.dataset.kind='info';
     }
   },340);
@@ -268,7 +268,7 @@ nicknameInput.addEventListener('input',()=>{
       if(window.PocketSocial?.open)window.PocketSocial.open();
       else window.addEventListener('load',()=>window.PocketSocial?.open?.(),{once:true});
     }else openDialog();
-    if(result==='error') message('Google sign-in was unsuccessful: '+(reason||'unknown error').replaceAll('_',' '),'error');
-    else if(result==='welcome') message('Google account connected. Set your nickname and avatar to finish.','success');
+    if(result==='error') message('Не удалось войти через Google: '+(reason||'неизвестная ошибка').replaceAll('_',' '),'error');
+    else if(result==='welcome') message('Google подключён. Придумай никнейм, чтобы завершить регистрацию.','success');
   }
 })();

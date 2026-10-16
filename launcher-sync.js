@@ -254,12 +254,12 @@ function createDigestSurface() {
   surface.setAttribute('aria-live', 'polite');
   surface.innerHTML = `
     <div class="app-update-prompt__copy">
-      <p class="app-update-prompt__eyebrow" data-digest-eyebrow>WHAT'S NEW</p>
+      <p class="app-update-prompt__eyebrow" data-digest-eyebrow>ЧТО НОВОГО</p>
       <strong class="app-update-prompt__title" data-digest-title></strong>
       <ul class="app-update-prompt__notes" data-digest-notes></ul>
     </div>
     <div class="app-update-prompt__actions">
-      <button type="button" data-digest-close data-native-press>Got it</button>
+      <button type="button" data-digest-close data-native-press>Понятно</button>
     </div>
   `;
 
@@ -277,7 +277,7 @@ function ensureWhatsNewButton() {
   button.type = 'button';
   button.dataset.whatsNew = '';
   button.dataset.nativePress = '';
-  button.innerHTML = `What's new <span data-whats-new-count hidden></span>`;
+  button.innerHTML = `Что нового <span data-whats-new-count hidden></span>`;
   button.addEventListener('click', () => {
     // Do not replace an unacknowledged digest with a history-only copy:
     // the history intentionally has no release cursor to acknowledge.
@@ -305,12 +305,12 @@ function updateWhatsNewButton(digest, { unread = false } = {}) {
 function showDigest(digest) {
   activeDigest = digest;
   const surface = document.querySelector('[data-launcher-release-digest]') || createDigestSurface();
-  surface.querySelector('[data-digest-eyebrow]').textContent = digest.eyebrow || "WHAT'S NEW";
-  surface.querySelector('[data-digest-title]').textContent = digest.title || 'Pocket Works changed';
+  surface.querySelector('[data-digest-eyebrow]').textContent = digest.eyebrow || 'ЧТО НОВОГО';
+  surface.querySelector('[data-digest-title]').textContent = digest.title || 'Обновления PocketWorks';
 
   const notes = surface.querySelector('[data-digest-notes]');
   notes.replaceChildren();
-  for (const note of (Array.isArray(digest.notes) && digest.notes.length > 0 ? digest.notes : ['The live shelf was refreshed.']).slice(0, 5)) {
+  for (const note of (Array.isArray(digest.notes) && digest.notes.length > 0 ? digest.notes : ['Каталог обновлён.']).slice(0, 5)) {
     const item = document.createElement('li');
     item.textContent = note;
     notes.append(item);
@@ -356,7 +356,7 @@ function showAcknowledgementWarning() {
     message.style.cssText = 'position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:2147483647;padding:12px 16px;background:#422;color:white;border-radius:10px;font:14px/1.4 system-ui;box-shadow:0 6px 24px #0006';
     document.body.append(message);
   }
-  message.textContent = 'Could not save read updates on this device. Free some browser storage and retry from What’s new.';
+  message.textContent = 'Не удалось сохранить просмотренные обновления. Освободи место на устройстве и попробуй снова.';
 }
 
 function enqueueDigest(digest, { remember = true, immediate = false } = {}) {
@@ -383,15 +383,15 @@ function enqueueDigest(digest, { remember = true, immediate = false } = {}) {
 function buildRegistryDigest(changes, nextApps) {
   const notes = [];
   for (const app of changes.added) {
-    notes.push(`New application: ${app.name}${app.description ? ` — ${app.description}` : ''}`);
+    notes.push(`Новое приложение: ${app.name}${app.description ? ` — ${app.description}` : ''}`);
   }
   for (const app of changes.updated) {
-    const releaseNote = app.changelog[0] || 'Release metadata changed.';
+    const releaseNote = app.changelog[0] || 'Обновлена информация о версии.';
     notes.push(`${app.name}${app.version ? ` v${app.version}` : ''}: ${releaseNote}`);
   }
 
   const total = changes.added.length + changes.updated.length;
-  if (total > 5) notes[4] = `And ${total - 4} more application changes.`;
+  if (total > 5) notes[4] = `И ещё обновлений: ${total - 4}.`;
 
   return {
     id: `registry:${hashString(registryFingerprint(nextApps))}`,
@@ -399,10 +399,10 @@ function buildRegistryDigest(changes, nextApps) {
     changeCount: total,
     // Acknowledge only releases in this digest, not a stale whole-library snapshot.
     releaseCursor: buildReleaseCursor([...changes.added, ...changes.updated]),
-    eyebrow: changes.added.length > 0 ? 'NEW ON THE SHELF' : 'APPLICATIONS UPDATED',
+    eyebrow: changes.added.length > 0 ? 'НОВЫЕ ПРИЛОЖЕНИЯ' : 'ПРИЛОЖЕНИЯ ОБНОВЛЕНЫ',
     title: changes.added.length > 0
-      ? `${changes.added.length} new application${changes.added.length === 1 ? '' : 's'}`
-      : `${changes.updated.length} application update${changes.updated.length === 1 ? '' : 's'}`,
+      ? `Новых приложений: ${changes.added.length}`
+      : `Обновлений приложений: ${changes.updated.length}`,
     notes: notes.slice(0, 5),
     savedAt: Date.now()
   };
