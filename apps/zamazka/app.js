@@ -180,6 +180,7 @@ function attemptSubmission(force=false){
  }
 }
 function submitArtwork({automatic=false}={}){
+ if(view?.paused)return;
  if(!editor||!view?.mine||!roomId)return;
  const ass=view.mine,token=submissionToken(ass,view.round);
  if(pendingSubmit?.token===token){attemptSubmission(true);return}
@@ -823,7 +824,7 @@ function renderView(){
    if(view.mine)confirmSubmission(view.mine.art,view.round);
    if(editor)editor.clearDraft();
  }
- const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
+ const key=view.phase+':'+view.round+':'+view.turn+':'+Boolean(view.paused)+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
    updateWaiting(screen,view.done||[],view.participants||[]);
@@ -942,6 +943,7 @@ async function connect(mode){
        if(pendingVote&&(view.phase!=='voting'||voteToken(view)!==pendingVote.token||view.voted?.includes(me?.id))){pendingVote=null;persistVote()}
        if(view?.mine&&view.done?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
        renderView();
+       renderPauseOverlay();
        if(view?.phase==='drawing'&&!view.done?.includes(me?.id)&&
           pendingSubmit?.room===roomId&&pendingSubmit.round===view.round){
          const retryMs=view.deadline&&Date.now()>=view.deadline?3500:15000;
@@ -1244,6 +1246,15 @@ screen.addEventListener('click',e=>{
  if(b.hasAttribute('data-saved')){openArchive(Number(b.dataset.saved));return}
 
  const action=b.dataset.action;
+ if(action==='pause-kick'){
+  const target=b.dataset.playerId,player=view?.participants?.find(p=>p.id===target);
+  if(!view?.paused||view.host!==me?.id||!player||(view.onlineIds||[]).includes(target))return;
+  if(view.participants.length<=2){notify('В комнате должны остаться минимум двое');return}
+  modal('Исключить отсутствующего?','<p class="hint">'+esc(player.name)+' не подключён. Его результаты будут исключены.</p>',[
+   ['Исключить',()=>{closeDialog();net?.sendGame({type:'kick_player',targetId:target})},'primary'],
+   ['Отмена',closeDialog,'ghost']
+  ]);return;
+ }
  if(action!=='museum-next'&&action!=='museum-prev')sound(['submit','vote','advance','next','continue','start'].includes(action)?'confirm':['collection','resume','menu','skip'].includes(action)?'paper':'press',true);
  if(action==='pocket-profile')openPocketProfile();
  else if(action==='create'||action==='join')setup(action);
@@ -1254,11 +1265,11 @@ screen.addEventListener('click',e=>{
  else if(action==='kick-player'){
   const targetId=b.dataset.playerId;
   const player=view?.participants?.find(p=>p.id===targetId);
-  if(page!=='lobby'||view?.host!==me?.id||Number(roomModuleVersion.slice(1))<14||!player||player.id===me.id)return;
+  if(!(page==='lobby'||view?.paused)||view?.host!==me?.id||Number(roomModuleVersion.slice(1))<14||!player||player.id===me.id)return;
   modal('Исключить реставратора?','<p class="hint"><strong>'+esc(player.name)+'</strong> будет удалён из комнаты. При необходимости его можно пригласить снова.</p>',[
    ['Исключить',()=>{
     closeDialog();
-    if(!net||view?.phase!=='lobby'||view.host!==me?.id||!view.participants.some(p=>p.id===targetId))return;
+    if(!net||!(view?.phase==='lobby'||view?.paused)||view.host!==me?.id||!view.participants.some(p=>p.id===targetId))return;
     try{net.sendGame({type:'kick_player',targetId})}catch{notify('Нет связи с комнатой')}
    },'primary'],['Отмена',closeDialog,'ghost']
   ]);
@@ -1307,7 +1318,11 @@ function tick(){
  const timed=(page==='preview'||page==='drawing')&&
              (v?.phase==='preview'||v?.phase==='drawing')&&Number(v?.deadline)>0;
  const now=Date.now();
- if(clock&&timed){
+ if(clock&&v?.paused){
+  const remaining=Math.max(0,Number(v.pauseRemainingMs)||0),seconds=Math.ceil(remaining/1000);
+  clock.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
+  clock.classList.remove('urgent');clockSoundState=null;museumAudio.stopCountdown();
+ }else if(clock&&timed){
   const remaining=v.deadline-now,s=Math.max(0,Math.ceil(remaining/1000));
   clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   clock.classList.toggle('urgent',s<=10);
@@ -1328,8 +1343,8 @@ function tick(){
  }
  // Sound the zero cue before changing the screen or submitting the final stroke.
  if(practice&&practice.deadline>0&&['preview','drawing'].includes(practice.phase)&&Date.now()>=practice.deadline)practiceStep();
- autoFinishOnDeadline();
- if(net&&view&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
+ if(!view?.paused)autoFinishOnDeadline();
+ if(net&&view&&!view.paused&&view.deadline&&Date.now()>view.deadline-2400&&Date.now()-lastPulse>1800){
   lastPulse=Date.now();try{net.sendGame({type:'pulse'})}catch{}
  }
 }
@@ -1369,6 +1384,19 @@ async function refreshPocketBadge(){
   if(note)note.textContent=isPocketMember()?'Профиль Pocket ID':'Гостевой игрок · открыть Pocket ID';
  }
 
+}
+function renderPauseOverlay(){
+ const prior=screen.querySelector('.zam-pause-cover');
+ if(!view?.paused||!roomId||page==='home'){prior?.remove();return}
+ const offline=(view.participants||[]).filter(p=>!(view.onlineIds||[]).includes(p.id));
+ const names=offline.map(p=>'<li>'+esc(p.name)+(me?.id===view.host&&p.id!==me.id&&view.participants.length>2?
+  '<button type="button" data-action="pause-kick" data-player-id="'+esc(p.id)+'">Исключить</button>':'')+'</li>').join('');
+ const paused=prior||document.createElement('aside');
+ paused.className='zam-pause-cover';paused.setAttribute('role','status');
+ paused.innerHTML='<div class="zam-pause-panel"><span class="section-label">СВЯЗЬ ПРЕРВАНА</span>'+
+  '<h2>Выставка на паузе</h2><p>Время и работы сохранены. Продолжим, когда все вернутся, или куратор исключит отсутствующих.</p>'+
+  '<ul>'+names+'</ul><small>Подключено: '+(view.onlineIds||[]).length+' / '+view.participants.length+'</small></div>';
+ if(!paused.isConnected)screen.appendChild(paused);
 }
 // The debug gallery previews the real stage renderers in a separate iframe.
 // No PocketNet connection, cloud sync, practice writes, score submission or
