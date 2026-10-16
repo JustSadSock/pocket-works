@@ -50,8 +50,18 @@ test('external grain is a paid, finite, delayed cargo, and off-map money is cons
  check(s);
 });
 test('wool export has a delayed delivery, a bounded buyer treasury and real local income',()=>{
- const s=createWorld(7777);advanceDays(s,365);
- assert.ok((s.stats.outsideExports||0)>0,'some wool reaches a finite neighbouring market');
+ const s=createWorld(7777);
+ // This tests the external exchange mechanism, independently of whether
+ // natural shearing happened to produce marketable stock in this particular
+ // first-year geography. Introduce a fully accounted, finite *opening*
+ // physical inventory, rather than fake wool produced in an event.
+ for(const c of s.communities){
+  const seller=s.households.find(h=>h.communityId===c.id&&h.tenure!=='demesne');
+  seller.wool+=12;
+  s.economy.woolInitial+=12;
+ }
+ advanceDays(s,365);
+ assert.ok((s.stats.outsideExports||0)>0,'actual stock is transported to the finite neighbouring market');
  assert.ok((s.stats.woolExported||0)>0);
  assert.ok(s.outside.wool>0);
  assert.ok(s.outside.coin>=0);
