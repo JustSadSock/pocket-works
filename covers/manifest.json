@@ -3244,16 +3244,16 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "37c9c0e63c6132b082da371e2206510ae8028a67",
-    "lastAttemptAt": "2026-10-15T23:53:05.232Z",
-    "revision": "37c9c0e63c6132b082da371e2206510ae8028a67",
+    "lastAttemptRevision": "a310797b59a1590eb0d0bec84cf09e50f5e70550",
+    "lastAttemptAt": "2026-10-16T10:25:00.251Z",
+    "revision": "a310797b59a1590eb0d0bec84cf09e50f5e70550",
     "qualityScore": 78,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "shot": 0,
-    "sha256": "887ef9c94ce4ea022d38fa0dcf77c447a030eed3692bb247347ead4d3195f680",
+    "sha256": "ce40466d106478340b0e944d8ba6658195832f2db6fa8fc7c78e3bfd6cae5691",
     "imageVersion": 2
   }
 }
