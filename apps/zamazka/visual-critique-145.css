@@ -311,3 +311,8 @@
 
 /* Curator confirmation dialogs must sit above the frozen match overlay. */
 #dialog:not(.hidden){z-index:600!important}
+
+/* The museum plate adds real height; reclaim the old five-pixel gallery gutters on portrait devices. */
+@media(max-width:699px){
+ #screen>.mobile-preview .gallery.exhibition-grid{padding-top:0!important;padding-bottom:0!important}
+}
