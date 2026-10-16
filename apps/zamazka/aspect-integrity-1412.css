@@ -97,3 +97,29 @@
  max-width:none!important;max-height:none!important;
  aspect-ratio:auto!important;object-fit:fill!important;
 }
+
+/* Split comparison: old mobile flex rules could independently squeeze its
+   HEIGHT, even after the source ratio had been applied. Never stretch the
+   original and restored image together inside a distorted comparison box. */
+#screen>.finale-reveal .unveil-frame,
+#screen>.reveal-phase .unveil-frame,
+#screen>.passage-waiting .unveil-frame,
+#screen>.waiting-phase .unveil-frame{
+ box-sizing:border-box!important;
+ flex:0 0 auto!important;
+ min-height:0!important;
+ height:auto!important;
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ width:min(100%,calc(min(56dvh,510px) * var(--art-aspect,1.333333)))!important;
+ max-height:min(56dvh,510px)!important;
+ align-self:center!important;
+}
+@media(max-width:700px){
+ #screen>.finale-reveal .unveil-frame,
+ #screen>.reveal-phase .unveil-frame,
+ #screen>.passage-waiting .unveil-frame,
+ #screen>.waiting-phase .unveil-frame{
+  width:min(100%,calc(min(37dvh,300px) * var(--art-aspect,1.333333)))!important;
+  max-height:min(37dvh,300px)!important;
+ }
+}
