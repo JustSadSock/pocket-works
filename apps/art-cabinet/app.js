@@ -20,7 +20,7 @@ function restoreState(){
  try{const cache=JSON.parse(sessionStorage.getItem(IMAGE_KEY)||'{}');if(cache.expiry>Date.now())for(const [id,url] of Object.entries(cache.images||{}))if(byId.has(Number(id))&&sanitizeImageURL(url))pictures.set(Number(id),url)}catch{}
  // Stable Commons files from the previously approved collection, no Wiki API calls.
  for(const work of APPROVED_WORKS)if(!custom.has(work.id)&&!pictures.has(work.id))pictures.set(work.id,pinnedUrl(work));
- for(const [id,url] of custom)pictures.set(id,sanitizeImageURL(url));
+ for(const [id,url] of custom){const validated=sanitizeImageURL(url);if(validated)pictures.set(id,validated)}
 }
 function pinnedUrl(w){return 'https://thumb.wikimedia.org/wikipedia/commons/thumb/'+w.path+w.file+'/960px-'+w.file}
 function sanitizeImageURL(value){
@@ -135,7 +135,7 @@ function selectFilter(value){
  document.querySelectorAll('button[data-filter]').forEach(btn=>{const yes=btn.dataset.filter===filter;btn.classList.toggle('active',yes);btn.setAttribute('aria-pressed',String(yes))});
  draw({scroll:true});
 }
-function getImageLink(w){return custom.has(w.id)?custom.get(w.id):pictures.get(w.id)}
+function getImageLink(w){return failed.has(w.id)?null:pictures.get(w.id)}
 function paintModalImage(w){
  const frame=$('viewerImage');frame.replaceChildren();
  const url=getImageLink(w);
@@ -155,7 +155,7 @@ function paintModalImage(w){
 function openModal(id){
  const w=byId.get(id);if(!w)return;
  previousFocus=document.activeElement;modalId=id;$('viewer').hidden=false;
- document.body.style.overflow='hidden';$('sourceEditor').open=false;
+ document.documentElement.classList.add('has-viewer');document.body.style.overflow='hidden';$('sourceEditor').open=false;
  paintModal();$('viewerClose').focus();
 }
 function paintModal(){
@@ -170,7 +170,7 @@ function paintModal(){
 }
 function closeModal(){
  if(modalId===null)return;modalId=null;$('viewer').hidden=true;
- document.body.style.overflow='';
+ document.documentElement.classList.remove('has-viewer');document.body.style.overflow='';
  if(previousFocus?.isConnected)previousFocus.focus();
 }
 function shiftModal(delta){
