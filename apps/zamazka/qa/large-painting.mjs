@@ -10,7 +10,7 @@ const raw=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
 const transpiled=ts.transpileModule(raw,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={};
 runInNewContext(transpiled,{exports,Date:FakeDate,Math,Array,Number,Object,Error,JSON,Set,Map,console});
-assert.equal(exports.RULESET_VERSION,18);
+assert.equal(exports.RULESET_VERSION,19);
 const game=exports.default,a={id:'artist',name:'Artist'},b={id:'guest',name:'Guest'},players=[a,b];
 const state=game.createRoom({player:a}).state;
 game.onJoin({state,player:b,players});

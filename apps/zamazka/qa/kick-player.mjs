@@ -9,7 +9,7 @@ const exports={};
 const transpiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 runInNewContext(transpiled,{exports,Date,Math,Array,Number,Object,Error,JSON,Set,Map,console});
 const mod=exports.default;
-assert.equal(exports.RULESET_VERSION,18);
+assert.equal(exports.RULESET_VERSION,19);
 const host={id:'curator',name:'Куратор'},guest={id:'guest',name:'Гость'},third={id:'third',name:'Третий'};
 const players=[host,guest,third],state=mod.createRoom({player:host}).state;
 mod.onJoin({state,player:guest,players});

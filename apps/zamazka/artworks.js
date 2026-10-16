@@ -2,6 +2,7 @@ import { svgFor as legacySvg, ARTS as LEGACY } from './legacy-artworks.js';
 import { MUSEUM_ADDITIONS } from './museum-catalog.js';
 import {PLAYFUL_ADDITIONS} from './museum-playful.js';
 import {APPROVED_2026_ADDITIONS} from './museum-approved-2026.js';
+import {SECOND_APPROVED_2026_ADDITIONS} from './museum-approved-second-2026.js';
 import {artworkOrigin} from './art-provenance.js';
 
 /** An entirely public-domain gallery. Descriptions and source links are kept beside the images. */
@@ -18,15 +19,17 @@ const REAL=[
   {title:'Рождение Венеры',artist:'Сандро Боттичелли',date:'ок. 1485',style:'Раннее Возрождение',museum:'Галерея Уффици · Флоренция',file:'Birth_of_Venus_Botticelli.jpg',path:'1/14/',source:'https://commons.wikimedia.org/wiki/File:Birth_of_Venus_Botticelli.jpg'},
   ...MUSEUM_ADDITIONS,
   ...PLAYFUL_ADDITIONS,
-  ...APPROVED_2026_ADDITIONS
+  ...APPROVED_2026_ADDITIONS,
+  ...SECOND_APPROVED_2026_ADDITIONS
 ];
 export const REAL_COUNT=REAL.length;
-// Retired from new games without deleting their archival artwork IDs:
-// 17 Tower of Babel, 22 Garden of Earthly Delights, 36 Jupiter and Semele.
-export const RETIRED_ARTWORK_IDS=Object.freeze([17,22,36]);
+// User's removal selection of 26 historical originals. Keep their IDs and
+// artwork records intact for archives and existing rooms.
+export const RETIRED_ARTWORK_IDS=Object.freeze([2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69]);
 export const PRE_EXPANSION_REAL_COUNT=54;
 export const PRE_APPROVAL_REAL_COUNT=72;
-export const ARCHIVE_EDITION=5;
+export const PRE_SECOND_APPROVAL_REAL_COUNT=108;
+export const ARCHIVE_EDITION=6;
 export const PLAYABLE_IDS=Array.from({length:REAL.length-1},(_,i)=>i+1)
  .filter(id=>!RETIRED_ARTWORK_IDS.includes(id));
 /** Rebase legacy (procedurally drawn) archive IDs after new real paintings.
@@ -38,7 +41,9 @@ export function normalizeArchiveEntry(entry){
  if(!Number.isInteger(id)||id<0)return entry;
  if(entry.edition===ARCHIVE_EDITION)return entry;
  let art=id;
- if(entry.edition===4){
+ if(entry.edition===5){
+  if(id>=PRE_SECOND_APPROVAL_REAL_COUNT)art+=REAL_COUNT-PRE_SECOND_APPROVAL_REAL_COUNT;
+ }else if(entry.edition===4){
   if(id>=PRE_APPROVAL_REAL_COUNT)art+=REAL_COUNT-PRE_APPROVAL_REAL_COUNT;
  }else if(entry.edition===3){
   if(id>=PRE_EXPANSION_REAL_COUNT)art+=REAL_COUNT-PRE_EXPANSION_REAL_COUNT;
@@ -64,19 +69,22 @@ export function artworkURL(id,width=PREVIEW_WIDTH){
  return entry.isReal ? ROOT+entry.path+entry.file+'/'+width+'px-'+entry.file
    : 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(legacySvg(id-REAL_COUNT));
 }
+export function artworkOriginalURL(id){
+ const entry=ARTS[id];if(!entry?.isReal)return '';
+ return 'https://upload.wikimedia.org/wikipedia/commons/'+entry.path+entry.file;
+}
 export function artworkFallbackURL(id,failedUrl){
  const entry=ARTS[id];if(!entry?.isReal)return '';
  const index=MASTER_WIDTHS.findIndex(width=>artworkURL(id,width)===failedUrl);
- if(index<0)return artworkURL(id,960);
- return MASTER_WIDTHS[index+1]?artworkURL(id,MASTER_WIDTHS[index+1]):'';
+ if(index<0)return failedUrl===artworkOriginalURL(id)?'':artworkURL(id,960);
+ return MASTER_WIDTHS[index+1]?artworkURL(id,MASTER_WIDTHS[index+1]):artworkOriginalURL(id);
 }
 const MAX_DECODED_IMAGES=8;
 const pending=new Map();
 async function imageSource(id){
  if(!ARTS[id].isReal)return artworkURL(id);
  const cache=typeof caches==='undefined'?null:await caches.open(ART_CACHE).catch(()=>null);
- for(const width of MASTER_WIDTHS){
-   const url=artworkURL(id,width);
+ for(const url of [...MASTER_WIDTHS.map(width=>artworkURL(id,width)),artworkOriginalURL(id)]){
    try{
      const saved=await cache?.match(url);
      if(saved&&saved.ok)return URL.createObjectURL(await saved.blob());
@@ -89,7 +97,7 @@ async function imageSource(id){
      return URL.createObjectURL(blob);
    }catch{}
  }
- return artworkURL(id,960);
+ return artworkOriginalURL(id);
 }
 export function loadArtwork(id){
  if(pending.has(id)){
