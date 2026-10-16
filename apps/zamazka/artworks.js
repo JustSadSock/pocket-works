@@ -1,6 +1,7 @@
 import { svgFor as legacySvg, ARTS as LEGACY } from './legacy-artworks.js';
 import { MUSEUM_ADDITIONS } from './museum-catalog.js';
 import {PLAYFUL_ADDITIONS} from './museum-playful.js';
+import {APPROVED_2026_ADDITIONS} from './museum-approved-2026.js';
 import {artworkOrigin} from './art-provenance.js';
 
 /** An entirely public-domain gallery. Descriptions and source links are kept beside the images. */
@@ -16,14 +17,16 @@ const REAL=[
   {title:'Спальня в Арле',artist:'Винсент ван Гог',date:'1889',style:'Постимпрессионизм',museum:'Институт искусств · Чикаго',file:'Vincent_van_Gogh_-_The_Bedroom_-_1926.417_-_Art_Institute_of_Chicago.jpg',path:'5/50/',source:'https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_The_Bedroom_-_1926.417_-_Art_Institute_of_Chicago.jpg'},
   {title:'Рождение Венеры',artist:'Сандро Боттичелли',date:'ок. 1485',style:'Раннее Возрождение',museum:'Галерея Уффици · Флоренция',file:'Birth_of_Venus_Botticelli.jpg',path:'1/14/',source:'https://commons.wikimedia.org/wiki/File:Birth_of_Venus_Botticelli.jpg'},
   ...MUSEUM_ADDITIONS,
-  ...PLAYFUL_ADDITIONS
+  ...PLAYFUL_ADDITIONS,
+  ...APPROVED_2026_ADDITIONS
 ];
 export const REAL_COUNT=REAL.length;
-// Retired from all new rounds and the main museum carousel; keep slot 17
-// intact to preserve pre-1.28 cloud archives, drafts and ongoing rooms.
-export const RETIRED_ARTWORK_IDS=Object.freeze([17]); // The Tower of Babel
+// Retired from new games without deleting their archival artwork IDs:
+// 17 Tower of Babel, 22 Garden of Earthly Delights, 36 Jupiter and Semele.
+export const RETIRED_ARTWORK_IDS=Object.freeze([17,22,36]);
 export const PRE_EXPANSION_REAL_COUNT=54;
-export const ARCHIVE_EDITION=4;
+export const PRE_APPROVAL_REAL_COUNT=72;
+export const ARCHIVE_EDITION=5;
 export const PLAYABLE_IDS=Array.from({length:REAL.length-1},(_,i)=>i+1)
  .filter(id=>!RETIRED_ARTWORK_IDS.includes(id));
 /** Rebase legacy (procedurally drawn) archive IDs after new real paintings.
@@ -35,7 +38,9 @@ export function normalizeArchiveEntry(entry){
  if(!Number.isInteger(id)||id<0)return entry;
  if(entry.edition===ARCHIVE_EDITION)return entry;
  let art=id;
- if(entry.edition===3){
+ if(entry.edition===4){
+  if(id>=PRE_APPROVAL_REAL_COUNT)art+=REAL_COUNT-PRE_APPROVAL_REAL_COUNT;
+ }else if(entry.edition===3){
   if(id>=PRE_EXPANSION_REAL_COUNT)art+=REAL_COUNT-PRE_EXPANSION_REAL_COUNT;
  }else if(entry.edition===2){
   art=id>=8?id+46:id; // Historical 8-real-painting build
