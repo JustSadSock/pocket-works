@@ -188,7 +188,7 @@ const maskotCategories=[
 ];
 function paintingStudio(){
   return '<section class="pws-studio" aria-label="Редактор нарисованного фона">'+
-    '<div class="pws-studio__header"><div><strong>Мой рисунок</strong><small>Фон карточки · рисуй пальцем или мышью</small></div>'+
+    '<div class="pws-studio__header"><div><strong>Мой рисунок</strong></div>'+
     '<div class="pws-studio__header-actions">'+button('paint-cancel','Назад')+
     button('paint-done','Готово','primary')+'</div></div>'+
     '<div class="pws-studio__body"><div class="pws-studio__workspace"><canvas class="pws-studio-canvas" width="480" height="320" aria-label="Холст для рисования фона"></canvas></div>'+

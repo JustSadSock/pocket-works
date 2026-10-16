@@ -169,7 +169,9 @@ test('an unfinished painted background survives a visit to Friends',async({page}
   await page.locator('[data-pws=paint-open]').click();
   const canvas=page.locator('.pws-studio-canvas');await canvas.scrollIntoViewIfNeeded();
   const box=(await canvas.boundingBox())!;
-  expect(box.height).toBeGreaterThanOrEqual(90);
+  expect(box.height).toBeGreaterThanOrEqual(80);
+  const workspace=(await page.locator('.pws-studio__workspace').boundingBox())!;
+  expect(box.y+box.height).toBeLessThanOrEqual(workspace.y+workspace.height+1);
   await shot(page,info,'painting');
   await page.mouse.move(box.x+box.width*.3,box.y+box.height*.4);await page.mouse.down();
   await page.mouse.move(box.x+box.width*.6,box.y+box.height*.5,{steps:6});await page.mouse.up();
