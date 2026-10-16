@@ -135,7 +135,7 @@ export class PocketNetHub {
   // rooms, freeze the authoritative deadline as soon as the last socket closes.
   // A room stays paused across Durable Object hibernation and server restarts.
   async refreshZamazkaPresence(room){
-    if(room.gameId!=='zamazka'||Number(room.version?.slice(1))<21)return;
+    if(room.gameId!=='zamazka'||room.state?.resumable!==true)return;
     const state=room.state;
     if(!state||!Array.isArray(state.participants))return;
     const ids=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
