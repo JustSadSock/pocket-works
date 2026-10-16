@@ -40,7 +40,7 @@ send(guest,{type:'kick_player',targetId:'host'});
 assert.equal(room.participants.length,2,'absent curator can be removed without affecting live players');
 assert.equal(room.assignments.host,undefined);
 assert.equal(room.onlineIds.includes('host'),false);
-assert.deepEqual(room.participants.map(p=>p.id),['guest','third']);
+assert.equal(room.participants.map(p=>p.id).join(','),'guest,third');
 assert.equal(send(guest,{type:'kick_player',targetId:'third'}).events[0].type,'notice',
  'host may not kick connected player');
 room.paused=false;room.deadline=time+room.pauseRemainingMs;room.pauseRemainingMs=null;
