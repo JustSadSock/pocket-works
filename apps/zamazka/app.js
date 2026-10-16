@@ -1318,6 +1318,9 @@ screen.addEventListener('click',e=>{
 // Clockmaker A strikes exactly at 10, 5 and 0; suppressed in untimed stages.
 let clockSoundState=null;
 function tick(){
+ if(view?.paused&&view.pausedAt&&Date.now()-view.pausedAt>=60000){
+  const takeover=screen.querySelector('[data-action="claim-host"]:disabled');if(takeover)takeover.disabled=false;
+ }
  if(pendingVote&&!view?.paused)attemptVote();
  const v=practice||view,clock=document.querySelector('#clock');
  const timed=(page==='preview'||page==='drawing')&&
