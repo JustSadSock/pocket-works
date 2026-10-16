@@ -12,7 +12,7 @@ const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES20
 const exports={};
 runInNewContext(js,{exports,Date:Clock,Math,Number,Array,Object,Map,Set,JSON,Error,console});
 const game=exports.default;
-assert.equal(exports.RULESET_VERSION,18,'pause is a separately pinned immutable ruleset');
+assert.equal(exports.RULESET_VERSION,19,'pause is a separately pinned immutable ruleset');
 const host={id:'host',name:'Куратор'},guest={id:'guest',name:'Гость'},third={id:'third',name:'Третий'};
 const room=game.createRoom({player:host}).state,users=[host,guest,third];
 assert.equal(room.resumable,true,'only new v21 rooms opt into persisted network pause');
