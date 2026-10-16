@@ -140,6 +140,7 @@ function confirmSubmission(art,round){
  draftIndicator('Принято сервером ✓');sound('confirm');
 }
 function attemptSubmission(force=false){
+ if(view?.paused)return;
  const p=pendingSubmit;
  if(!p||p.room!==roomId||!net||!view||view.phase!=='drawing'||view.done?.includes(me?.id)||
     activeSubmitTransfer||Date.now()<submissionBackoffUntil)return;
@@ -1317,7 +1318,7 @@ screen.addEventListener('click',e=>{
 // Clockmaker A strikes exactly at 10, 5 and 0; suppressed in untimed stages.
 let clockSoundState=null;
 function tick(){
- if(pendingVote)attemptVote();
+ if(pendingVote&&!view?.paused)attemptVote();
  const v=practice||view,clock=document.querySelector('#clock');
  const timed=(page==='preview'||page==='drawing')&&
              (v?.phase==='preview'||v?.phase==='drawing')&&Number(v?.deadline)>0;
