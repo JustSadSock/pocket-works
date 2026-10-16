@@ -135,3 +135,14 @@
  border-width:0!important;
  padding:var(--frame-width)!important;
 }
+
+/* Portrait voting uses a swipe carousel. Its old rule made the picture
+   itself flex:1 1 0, stretching every square/panorama rim to the available
+   carousel height, despite correct explicitly calculated dimensions. */
+#screen>.expert-phase .suspect-gallery .stake-card .stake-frame.zam-exhibit-rim{
+ flex:0 0 auto!important;
+ align-self:center!important;
+ min-height:0!important;
+ max-height:none!important;
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+}
