@@ -72,13 +72,13 @@ assert.equal(initial.ok, true);
 assert.equal(initial.transport, 'cloudflare-durable-objects');
 assert.ok(initial.modules.includes('zamazka'));
 assert.equal(initial.games.zamazka.minPlayers, 2);
-assert.equal(initial.games.zamazka.rulesVersion, 16);
+assert.equal(initial.games.zamazka.rulesVersion, 18);
 const firstToken = await session('Painter');
 const secondToken = await session('Observer');
 assert.notEqual(firstToken, secondToken);
 const first = await channel(firstToken);
 const second = await channel(secondToken);
-let again;
+let again,resumedHost,resumedGuest;
 try {
   assert.equal((await first.next('authenticated')).player.name, 'Гость · Painter');
   assert.equal((await second.next('authenticated')).player.name, 'Гость · Observer');
@@ -147,13 +147,33 @@ try {
   assert.equal(restored.players.length, 2);
   again.send('game_message', { payload: { type: 'sync' } });
   assert.equal((await again.next('game_event', event => event.event?.type === 'state')).event.payload.phase, 'preview');
-  first.send('leave_room');
+  // A complete disconnection suspends the room, including its drawing deadline.
+  await close(first);
+  await close(again);
+  await sleep(450);
+  resumedHost=await channel(firstToken);
+  await resumedHost.next('authenticated');
+  resumedHost.send('join_room',{roomId});
+  const frozen=await resumedHost.next('room_joined');
+  assert.equal(frozen.state.paused,true,'first reconnected player finds paused room');
+  assert(frozen.state.pauseRemainingMs>=0,'server preserves remaining seconds');
+  resumedGuest=await channel(secondToken);
+  await resumedGuest.next('authenticated');
+  resumedGuest.send('join_room',{roomId});
+  await resumedGuest.next('room_joined');
+  const unfrozen=await resumedHost.next('game_event',event=>
+   event.event?.type==='state'&&event.event.payload.paused===false);
+  assert.equal(unfrozen.event.payload.phase,'preview','room restores same stage');
+  assert(unfrozen.event.payload.deadline>Date.now(),'resumed deadline is future');
+  resumedHost.send('leave_room');
   await sleep(100);
-  again.send('leave_room');
+  resumedGuest.send('leave_room');
   assert.equal((await health()).rooms, 0);
-  console.log('PASS: PocketNet rooms, concurrent incremental drawing, snapshots, clear permissions, security, reconnect');
+  console.log('PASS: PocketNet rooms, concurrent incremental drawing, snapshots, clear permissions, security, reconnect, complete outage and resumed timed match');
 } finally {
   await close(first);
   await close(second);
   if (again) await close(again);
+  if (resumedHost) await close(resumedHost);
+  if (resumedGuest) await close(resumedGuest);
 }

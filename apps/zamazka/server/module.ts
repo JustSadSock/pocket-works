@@ -2,7 +2,7 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=17;
+export const RULESET_VERSION=18;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=108; // 72 stable original IDs + 36 approved originals
 const EXCLUDED_PAINTINGS=new Set([17,22,36]); // Babel, Garden of Earthly Delights, Jupiter and Semele.
@@ -18,12 +18,12 @@ type Chips=number[];
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[]};
 type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
-type State={artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={resumable?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
+ host:s.host,phase:s.phase,paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
@@ -135,7 +135,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{resumable:true,board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.phase==='lobby'&&!state.participants.some(p=>p.id===player.id)){
      state.participants.push(player);state.scores[player.id]={mask:0,eye:0};
@@ -154,19 +154,40 @@ const module: PocketModule<State>={
    // Preview and voting advance at their normal deadlines. During drawing,
    // the timer expires at precisely 0:00, but buffered network chunks must
    // still have time to complete. Do not render voting before that window.
-   if(state.deadline&&state.phase!=='results'&&now()>=
+   if(!state.paused&&state.deadline&&state.phase!=='results'&&now()>=
       (state.phase==='drawing'&&state.drawingSeconds>0
        ?state.deadline+(members(state).every(p=>state.assignments[p.id]?.strokes!==null)
           ?0:FINAL_SUBMISSION_GRACE_MS):state.deadline))step(state);
    if(a.type==='pulse')return {state,events:emit(state)};
+    if(state.paused&&a.type!=='kick_player'&&a.type!=='claim_host')return {state,events:notice(id,'Матч на паузе. Дождитесь участников или исключите отсутствующего игрока.')};
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
+   if(a.type==='claim_host'&&state.paused){
+    if((state.onlineIds||[]).includes(state.host)||state.host===id)
+     return {state,events:notice(id,'Организатор уже в комнате.')};
+    if(now()-(state.pausedAt||now())<60000)
+     return {state,events:notice(id,'Переназначение организатора доступно через минуту паузы.')};
+    state.host=id;return {state,events:emit(state)};
+   }
    if(a.type==='kick_player'){
-     if(state.phase!=='lobby')return {state,events:notice(id,'Исключать игроков можно только до начала выставки.')};
+     if(state.phase!=='lobby'&&!state.paused)return {state,events:notice(id,'Исключать игроков можно в зале ожидания или когда матч приостановлен.')};
      if(state.host!==id)return {state,events:notice(id,'Исключать игроков может только куратор.')};
      const target=typeof a.targetId==='string'?a.targetId:'';
      if(!target||target===id||!players.some(p=>p.id===target)||!members(state).some(p=>p.id===target))
        return {state,events:notice(id,'Этот участник уже вышел или его нельзя исключить.')};
-     state.participants=members(state).filter(p=>p.id!==target);
+     if(state.paused){
+       if((state.onlineIds||[]).includes(target))return {state,events:notice(id,'Этот игрок уже подключился.')};
+       if(members(state).length<=2)return {state,events:notice(id,'Для продолжения выставки нужно хотя бы два игрока.')};
+      }
+      const oldTurn=members(state)[state.turn]?.id;
+      state.participants=members(state).filter(p=>p.id!==target);
+      if(state.phase!=='lobby'){
+       state.turn=Math.max(0,Math.min(state.participants.length-1,
+        state.participants.findIndex(p=>p.id===oldTurn)>=0?
+        state.participants.findIndex(p=>p.id===oldTurn):state.turn));
+       for(const ballot of Object.values(state.votes||{}))delete ballot[target];
+       delete state.votes[target];
+      }
+      state.onlineIds=state.onlineIds?.filter(p=>p!==target);
      delete state.scores[target];
      delete state.emblems?.[target];
      delete state.assignments[target];

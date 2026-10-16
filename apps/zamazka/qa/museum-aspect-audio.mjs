@@ -29,3 +29,6 @@ console.log('ZAMAZKA museum proportions and original audio: OK');
 
 // Live countdown scheduler and audio-bus regression, not just event names.
 import './clock-soundscape.mjs';
+
+// Crash recovery and every auditionable original sound.
+import './pause-and-sounds.mjs';

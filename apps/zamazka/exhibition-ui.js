@@ -25,7 +25,7 @@ export function mountExhibitFrames(root){
      Number.parseFloat(art.style.aspectRatio)||
      Number.parseFloat(rim.style.getPropertyValue('--art-aspect'));
    const ratio=natural||rendered||4/3;
-   const width=stage.clientWidth,height=stage.clientHeight-(stage.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-4;
+   const width=stage.clientWidth,height=stage.clientHeight-(stage.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-(stage.querySelector('.stake-actions,.stake-locked')?.offsetHeight||0)-7;
    if(width<30||height<30)continue;
    const chrome=Math.max(4,Math.min(10,Math.round(width*.022)));
    const maxW=Math.max(20,width-2*chrome-4);

@@ -66,6 +66,27 @@ function roomBroadcast(room, type, payload) {
     if (socket?.roomId === room.id) send(socket.ws, type, payload);
   }
 }
+function activeRoomMembers(room){
+ return room.players.filter(member=>sockets.get(member.id)?.roomId===room.id);
+}
+async function refreshZamazkaPresence(room){
+ if(room.gameId!=='zamazka'||room.state?.resumable!==true)return;
+ const state=room.state,active=activeRoomMembers(room);
+ if(!Array.isArray(state?.participants))return;
+ const live=new Set(active.map(p=>p.id));
+ state.onlineIds=state.participants.filter(p=>live.has(p.id)).map(p=>p.id);
+ if(state.phase!=='lobby'&&state.phase!=='results'&&!state.paused&&!state.onlineIds.length){
+  state.paused=true;state.pausedAt=Date.now();state.pauseRemainingMs=state.deadline?Math.max(0,state.deadline-Date.now()):null;
+ }else if(state.paused&&state.participants.every(p=>live.has(p.id))){
+  state.paused=false;
+  if(state.deadline&&Number.isFinite(state.pauseRemainingMs))state.deadline=Date.now()+state.pauseRemainingMs;
+  state.pauseRemainingMs=null;
+ }
+ await saveRoom(room);
+ if(!state.paused){
+  for(const p of active)await transition(room,'message',p,{type:'sync'});
+ }
+}
 async function closeRoom(room) {
   rooms.delete(room.id);
   roomBroadcast(room, 'room_closed', { roomId: room.id });
@@ -92,7 +113,7 @@ async function transition(room, action, player, payload = null) {
     } else roomBroadcast(room, 'game_event', { roomId: room.id, event });
   }
   if (action === 'message' && room.gameId === 'zamazka' &&
-      room.state?.phase === 'lobby' && player.id === room.state.host) {
+      (room.state?.phase === 'lobby' || room.state?.paused) && player.id === room.state.host) {
     let changed = false;
     for (const event of result.events) {
       const targetId = event?.to;
@@ -110,6 +131,7 @@ async function transition(room, action, player, payload = null) {
     if (changed) {
       await saveRoom(room);
       roomBroadcast(room, 'presence', { roomId: room.id, players: room.players });
+      await refreshZamazkaPresence(room);
     }
   }
   if (result.finished) await closeRoom(room);
@@ -243,6 +265,7 @@ wss.on('connection', ws => {
           sockets.get(player.id).roomId = room.id;
           send(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version, state: room.state, players: room.players });
           roomBroadcast(room, 'presence', { roomId: room.id, players: room.players });
+          await refreshZamazkaPresence(room);
         });
         return;
       }
@@ -271,7 +294,10 @@ wss.on('connection', ws => {
     if (player && sockets.get(player.id)?.ws === ws) {
       sockets.delete(player.id);
       const room = rooms.get(roomId);
-      if (room?.players.some(p => p.id === player.id)) roomBroadcast(room, 'presence', { roomId, players: room.players, disconnected: player.id });
+      if (room?.players.some(p => p.id === player.id)){
+        roomBroadcast(room, 'presence', { roomId, players: room.players, disconnected: player.id });
+        void enqueue(room,()=>refreshZamazkaPresence(room));
+      }
     }
   });
 });
@@ -289,7 +315,7 @@ setInterval(() => {
 setInterval(() => {
   for (const room of rooms.values()) {
     const connected = room.players.some(player => sockets.get(player.id)?.roomId === room.id);
-    if (!connected && Date.now() - (room.updatedAt || room.createdAt) > 30 * 60_000) {
+    if (!connected && Date.now() - (room.updatedAt || room.createdAt) > (room.gameId==='zamazka'&&room.state?.paused?12*60*60_000:30*60_000)) {
       enqueue(room, () => rooms.has(room.id) ? closeRoom(room) : undefined);
     }
   }

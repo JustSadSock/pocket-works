@@ -109,8 +109,8 @@ export class PocketNetHub {
   // A module may request a network-level eviction only after validating the
   // curator and removing the guest from its own lobby state. Transport removes
   // the seat even if the kicked browser ignores the notification.
-  applyKicks(room, events, actorId) {
-    if (room.gameId !== 'zamazka' || room.state?.phase !== 'lobby' || room.state?.host !== actorId) return;
+  async applyKicks(room, events, actorId) {
+    if (room.gameId !== 'zamazka' || (!room.state?.paused&&room.state?.phase !== 'lobby') || room.state?.host !== actorId) return;
     let changed = false;
     for (const event of events ?? []) {
       if (event?.type !== 'player_kicked' || typeof event.to !== 'string') continue;
@@ -128,6 +128,42 @@ export class PocketNetHub {
     if (changed) {
       this.persist(room);
       this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
+      await this.refreshZamazkaPresence(room);
+    }
+  }
+  // PocketNet preserves authenticated seats after a socket disconnect. For v21+
+  // rooms, freeze the authoritative deadline as soon as the last socket closes.
+  // A room stays paused across Durable Object hibernation and server restarts.
+  async refreshZamazkaPresence(room){
+    if(room.gameId!=='zamazka'||room.state?.resumable!==true)return;
+    const state=room.state;
+    if(!state||!Array.isArray(state.participants))return;
+    const ids=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
+    const active=new Set(ids);
+    state.onlineIds=state.participants.filter(p=>active.has(p.id)).map(p=>p.id);
+    const waiting=state.phase!=='lobby'&&state.phase!=='results';
+    let resumed=false;
+    if(waiting&&!state.paused&&state.onlineIds.length===0){
+      state.paused=true;
+      state.pauseRemainingMs=state.deadline?Math.max(0,state.deadline-Date.now()):null;
+      state.pausedAt=Date.now();
+    }else if(state.paused&&state.participants.every(p=>active.has(p.id))){
+      state.paused=false;
+      if(state.deadline&&Number.isFinite(state.pauseRemainingMs))
+        state.deadline=Date.now()+state.pauseRemainingMs;
+      state.pauseRemainingMs=null;
+      state.pausedAt=0;
+      resumed=true;
+    }
+    this.persist(room);
+    // Send each participant their private snapshot, preserving hidden art.
+    if(resumed){
+      const mod=this.module(room.gameId,room.version);
+      for(const p of room.players){
+        if(!active.has(p.id))continue;
+        const result=await mod?.onMessage({state:copied(room.state),player:p,players:room.players,payload:{type:'sync'}});
+        if(result?.events)this.emit(room,result.events);
+      }
     }
   }
   broadcast(room, type, payload) {
@@ -472,6 +508,7 @@ export class PocketNetHub {
             message(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version,
               state: room.state, players: room.players });
             this.emit(room, result.events ?? []);
+            await this.refreshZamazkaPresence(room);
           } else {
             // Reconnecting with the same durable token keeps the same seat while
             // propagating a freshly verified nickname/avatar into room snapshots.
@@ -487,6 +524,7 @@ export class PocketNetHub {
             this.setRoom(ws, room.id);
             message(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version,
               state: room.state, players: room.players });
+            await this.refreshZamazkaPresence(room);
           }
           this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
           return;
@@ -507,7 +545,7 @@ export class PocketNetHub {
           this.persist(room);
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
-          this.applyKicks(room, result.events ?? [], player.id);
+          await this.applyKicks(room, result.events ?? [], player.id);
           await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
@@ -541,6 +579,7 @@ export class PocketNetHub {
       const room = this.readRoom(info.roomId);
       if (room) {
         this.broadcast(room, 'presence', { roomId: room.id, players: room.players, disconnected: info.id });
+        await this.refreshZamazkaPresence(room);
         this.ensureAlarm();
       }
     }
@@ -552,9 +591,10 @@ export class PocketNetHub {
     this.sql('DELETE FROM sessions WHERE expires < ?', now);
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
     for (const row of rows) {
-      if (now - row.updated_at < ROOM_TTL || this.sockets(row.id).length) continue;
       const room = this.readRoom(row.id);
-      if (room) await this.closeRoom(room);
+      const ttl=room?.gameId==='zamazka'&&room.state?.paused?12*60*60_000:ROOM_TTL;
+      if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
+      if(room)await this.closeRoom(room);
     }
     this.ensureAlarm();
   }
