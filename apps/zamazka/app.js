@@ -613,7 +613,7 @@ function submitVote(allowPartial=false){
 }
 function chipDots(count){return '<span class="chip-dots">'+Array.from({length:count},()=>'<i class="chip-dot" aria-hidden="true"></i>').join('')+'</span>'}
 function saveVoteDraft(){
- if(!net||connectionLost||!view||view.phase!=='voting'||view.author?.id===me?.id||
+ if(!net||connectionLost||Number(roomModuleVersion.slice(1))<24||!view||view.phase!=='voting'||view.author?.id===me?.id||
     view.voted?.includes(me?.id)||pendingVote?.token===voteToken(view))return;
  try{net.sendGame({type:'vote_draft',chips:[...chips]})}catch{}
 }
@@ -916,7 +916,7 @@ async function connect(mode){
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
-     if(Number(roomModuleVersion.slice(1))>=23){lastTimePingAt=Date.now();client.sendGame({type:'time_ping',stamp:lastTimePingAt})}
+     if(Number(roomModuleVersion.slice(1))>=24){lastTimePingAt=Date.now();client.sendGame({type:'time_ping',stamp:lastTimePingAt})}
      if(page==='drawing'&&!pendingSubmit)backupDraft(true);
      // Legacy room emblems are read only for backwards compatibility; Pocket ID is the visible identity.
      if(view)renderView();
@@ -1369,7 +1369,7 @@ function tick(){
  if(!practice&&view?.phase==='voting'&&!view.paused&&!connectionLost&&
     view.author?.id!==me?.id&&!view.voted?.includes(me?.id)&&
     networkNow()>=view.deadline&&chips.some(Boolean)&&!pendingVote)submitVote(true);
- if(net&&roomId&&!connectionLost&&Number(roomModuleVersion.slice(1))>=23&&
+ if(net&&roomId&&!connectionLost&&Number(roomModuleVersion.slice(1))>=24&&
     Date.now()-lastTimePingAt>5000){
   lastTimePingAt=Date.now();
   try{net.sendGame({type:'time_ping',stamp:lastTimePingAt})}catch{}
