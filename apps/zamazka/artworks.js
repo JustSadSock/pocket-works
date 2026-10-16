@@ -140,8 +140,15 @@ export function setArtworkFrame(canvas,image,legacyFrame=false){
    canvas.style.aspectRatio=String(ratio);
    canvas.style.setProperty?.('--art-aspect',String(ratio));
  }
- const parent=canvas?.closest?.('.viewport,.unveil-frame,.round-view-window,.round-art-image,.stake-frame,.reveal-option-image,.picture-image,.verdict-image,.compare');
- parent?.style?.setProperty?.('--art-aspect',String(ratio));
+ // Synchronize every nested frame and clipping viewport, not just the
+ // nearest parent. Otherwise an archived canvas can be portrait while its
+ // gold mat or comparison window remains stuck at 4:3.
+ const selectors='.viewport,.unveil-frame,.round-view-window,.round-view-image,.round-art-image,.archive-rim,.archive-art-frame,.stake-frame,.zam-exhibit-rim,.reveal-option-image,.picture-image,.verdict-image,.compare';
+ let node=canvas?.parentElement;
+ while(node){
+  if(node.matches?.(selectors))node.style?.setProperty?.('--art-aspect',String(ratio));
+  node=node.parentElement;
+ }
  return ratio;
 }
 export function drawArtwork(ctx,image,id,legacyFrame=false){
