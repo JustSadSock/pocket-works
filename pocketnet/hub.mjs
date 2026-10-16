@@ -109,7 +109,7 @@ export class PocketNetHub {
   // A module may request a network-level eviction only after validating the
   // curator and removing the guest from its own lobby state. Transport removes
   // the seat even if the kicked browser ignores the notification.
-  applyKicks(room, events, actorId) {
+  async applyKicks(room, events, actorId) {
     if (room.gameId !== 'zamazka' || (!room.state?.paused&&room.state?.phase !== 'lobby') || room.state?.host !== actorId) return;
     let changed = false;
     for (const event of events ?? []) {
@@ -128,7 +128,7 @@ export class PocketNetHub {
     if (changed) {
       this.persist(room);
       this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
-      void this.refreshZamazkaPresence(room);
+      await this.refreshZamazkaPresence(room);
     }
   }
   // PocketNet preserves authenticated seats after a socket disconnect. For v21+
@@ -545,7 +545,7 @@ export class PocketNetHub {
           this.persist(room);
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
-          this.applyKicks(room, result.events ?? [], player.id);
+          await this.applyKicks(room, result.events ?? [], player.id);
           await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
