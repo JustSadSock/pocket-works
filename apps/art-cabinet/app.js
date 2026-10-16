@@ -8,7 +8,7 @@ const SOURCE_KEY='pocket-works:art-cabinet:custom-sources-v2';
 const PAGE_SIZE=12;
 const all=[...NEW_WORKS,...APPROVED_WORKS],byId=new Map(all.map(w=>[w.id,w]));
 const accepted=new Set(APPROVED_WORKS.map(w=>w.id));
-const selected=new Set(),pictures=new Map(),failed=new Set(),loading=new Set(),custom=new Map();
+const selected=new Set(),pictures=new Map(),failed=new Set(),loading=new Set(),custom=new Map(),fallbackTried=new Set();
 let filter='all',term='',page=0,modalId=null,previousFocus=null,noticeTimer=null;
 
 const getStored=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
@@ -72,7 +72,11 @@ function paintImage(w){
 }
 function imageFailure(id,failedSrc){
  const w=byId.get(id);if(!w||pictures.get(id)!==failedSrc)return;
- pictures.delete(id);failed.add(id);paintImage(w);
+ pictures.delete(id);
+ if(!fallbackTried.has(id)&&!custom.has(id)){
+  fallbackTried.add(id);loading.add(id);paintImage(w);
+  void resolveUnfound(w).finally(()=>{loading.delete(id);paintImage(w)});
+ }else{failed.add(id);paintImage(w)}
 }
 function card(w){
  const article=document.createElement('article');article.className='work'+(selected.has(w.id)?' selected':'');article.dataset.id=w.id;
@@ -177,6 +181,7 @@ function shiftModal(delta){
 }
 function retryImage(w){
  if(!w)return;failed.delete(w.id);pictures.delete(w.id);
+ fallbackTried.delete(w.id);
  if(custom.has(w.id)){pictures.set(w.id,sanitizeImageURL(custom.get(w.id)));paintImage(w);return}
  if(isApproved(w))pictures.set(w.id,pinnedUrl(w));
  paintImage(w);
@@ -186,7 +191,7 @@ function saveSource(){
  if(modalId===null)return;
  const input=$('customSourceInput').value.trim(),url=sanitizeImageURL(input);
  if(!url){notify('Поддерживаются только прямые файлы Wikimedia или страницы Commons File.');return}
- custom.set(modalId,input);store(SOURCE_KEY,Object.fromEntries(custom));pictures.set(modalId,url);failed.delete(modalId);
+ custom.set(modalId,input);store(SOURCE_KEY,Object.fromEntries(custom));pictures.set(modalId,url);failed.delete(modalId);fallbackTried.delete(modalId);
  paintImage(byId.get(modalId));notify('Для картины №'+modalId+' установлен новый источник');
 }
 function resetSource(){
