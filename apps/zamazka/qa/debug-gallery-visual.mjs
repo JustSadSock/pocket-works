@@ -81,12 +81,16 @@ try{
       }else if(canvas)setArtworkFrame(canvas,{naturalWidth:ratio*1000,naturalHeight:1000});
      }
      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-     await new Promise(resolve=>setTimeout(resolve,70));
+     await new Promise(resolve=>setTimeout(resolve,420));
      return rims.map((rim,i)=>{
       const art=rim.querySelector('img,canvas'),r=art.getBoundingClientRect(),f=rim.getBoundingClientRect();
       const inset=Number.parseFloat(rim.style.getPropertyValue('--frame-width'))||0;
+      const css=getComputedStyle(art);
       return {expected:expected[i],art:r.width/r.height,
-       aperture:(f.width-2*inset)/(f.height-2*inset),w:f.width,h:f.height};
+       aperture:(f.width-2*inset)/(f.height-2*inset),w:f.width,h:f.height,
+       box:[r.width,r.height],style:[css.width,css.height],
+       inline:[art.style.getPropertyValue('width'),art.style.getPropertyValue('height')],
+       sizing:css.boxSizing,transform:css.transform,margin:css.margin,padding:css.padding,border:css.borderWidth};
      });
     });
     assert.equal(aspectCases.length,3,'Need three different aspect ratios at '+entry.id);
