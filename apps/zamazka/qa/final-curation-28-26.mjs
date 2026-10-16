@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {SECOND_APPROVED_WORKS} from '../../art-cabinet/second-approved.js';
 import {SECOND_APPROVED_2026_ADDITIONS as SECOND} from '../museum-approved-second-2026.js';
 import {APPROVED_2026_ADDITIONS as FIRST} from '../museum-approved-2026.js';
-import {ARTS,REAL_COUNT,PLAYABLE_IDS,RETIRED_ARTWORK_IDS,ARCHIVE_EDITION,normalizeArchiveEntry,artworkURL,artworkFallbackURL,zoneFor} from '../artworks.js';
+import {ARTS,REAL_COUNT,PLAYABLE_IDS,RETIRED_ARTWORK_IDS,ARCHIVE_EDITION,normalizeArchiveEntry,artworkURL,artworkFallbackURL,artworkOriginalURL,zoneFor} from '../artworks.js';
 import {ART_SCHOOLS} from '../art-provenance.js';
 const requestedRemoval=[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69];
 const chosen=[102,103,104,106,107,108,112,116,117,124,125,126,127,133,134,135,136,137,139,142,144,145,146,147,148,176,191,192];
@@ -43,6 +43,9 @@ for(const [i,record] of SECOND.entries()){
  newNames.add(record.file);
  assert.ok(artworkURL(id).endsWith('/1920px-'+record.file));
  assert.ok(artworkFallbackURL(id,artworkURL(id)).endsWith('/1280px-'+record.file));
+ assert.equal(artworkFallbackURL(id,artworkURL(id,960)),artworkOriginalURL(id),'full original used when all three thumbnail widths fail');
+ assert.ok(artworkOriginalURL(id).endsWith(record.path+record.file));
+ assert.equal(artworkFallbackURL(id,artworkOriginalURL(id)),'','last fallback must terminate');
  assert.ok(zoneFor(id,417).points.length>=4,'painting must generate damage');
  assert.ok(PLAYABLE_IDS.includes(id),'every personally approved addition must be playable');
 }
