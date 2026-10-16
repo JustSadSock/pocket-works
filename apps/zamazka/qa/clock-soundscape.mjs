@@ -77,7 +77,7 @@ try{
  assert.equal(synth.syncCountdown('room/drawing',15000,0),true);
  assert.equal(synth.context.starts.length,before,'same UI tick does not schedule duplicate clock sounds');
  assert.equal(synth.play('watch-warning'),true);
- assert(oldBus.gain.events.some(e=>e[0]==='target'&&e[1]===.10),'Clockmaker ducks mechanical ticking');
+ assert(oldBus.gain.events.some(e=>e[0]==='target'&&e[1]===.045),'Clockmaker ducks the rising mechanical ticking');
  synth.setVolume(.13);assert.equal(synth.volume,.13);
  synth.setEnabled(false);assert.equal(synth.clock,null,'muting stops the mechanical bed immediately');
  assert.equal(synth.play('watch-five'),false,'muted five-second bell stays silent');
