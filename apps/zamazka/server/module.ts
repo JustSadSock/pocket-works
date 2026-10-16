@@ -2,10 +2,10 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=16;
+export const RULESET_VERSION=17;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
-const CATALOG_COUNT=72; // 54 historical IDs + 18 new public-domain originals
-const EXCLUDED_PAINTINGS=new Set([17]); // The Tower of Babel is permanently retired from new rounds.
+const CATALOG_COUNT=108; // 72 stable original IDs + 36 approved originals
+const EXCLUDED_PAINTINGS=new Set([17,22,36]); // Babel, Garden of Earthly Delights, Jupiter and Semele.
 // 0 = untimed drawing; only committed submissions from every participant end it.
 const DRAWING_TIMES=[0,60,90,120,160,240,300,600];
 const DEFAULT_DRAWING_SECONDS=160;
