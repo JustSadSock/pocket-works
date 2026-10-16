@@ -308,3 +308,6 @@
 #screen .zam-pause-panel>[data-action="claim-host"]:disabled{
  opacity:.5;cursor:not-allowed;
 }
+
+/* Curator confirmation dialogs must sit above the frozen match overlay. */
+#dialog:not(.hidden){z-index:600!important}
