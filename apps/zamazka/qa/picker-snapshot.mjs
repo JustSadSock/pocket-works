@@ -26,6 +26,27 @@ assert.equal(e.tool,'brush','temporary picker leaves original tool intact');
 assert.equal(custom.value,e.color,'custom color chip updates');
 assert.equal(picks,1);
 
+// Beige damage paper is never a legitimate paint sample, even when opaque.
+e.zone={x:100,y:130,w:110,h:95,points:[[100,130],[210,130],[210,225],[100,225]]};
+assert.equal(e.canPick([150,185]),false,'empty restoration cutout must be rejected');
+assert.equal(e.canPick([210,185]),true,'original painting outside cutout is allowed');
+assert.equal(e.canPick([700,175]),false,'viewport beyond art is never a painting');
+const preserved=e.color;
+await e.pick([150,185],true);
+assert.equal(e.color,preserved,'holding the pipette over beige cannot modify color');
+assert.equal(picks,1,'background cannot even be sampled at canvas level');
+e.strokes=[{c:'#123456',s:12,t:'brush',p:[[122,170],[128,170]]}];
+assert.equal(e.canPick([125,170]),true,'real brush pigment is a valid source');
+await e.pick([125,170],true);
+assert.equal(picks,2,'a real brush stroke can be sampled');
+e.strokes.push({c:'#e8ddc6',s:16,t:'erase',p:[[125,170]]});
+assert.equal(e.canPick([125,170]),false,'erasing a colored stroke leaves no sample source');
+e.strokes.push({c:'#abcdef',s:10,t:'brush',p:[[125,170]]});
+assert.equal(e.canPick([125,170]),true,'new paint over erasure becomes pickable');
+e.strokes=[];e.working={c:'#ff1100',s:10,t:'brush',p:[[135,175]]};
+assert.equal(e.canPick([135,175]),true,'current uncommitted brush stroke is a valid source');
+e.working=null;
+
 const handler=Object.create(Editor.prototype);
 Object.assign(handler,e,{tool:'brush',color:'#123456',spaceTool:null,spacePicked:false,lastMousePoint:{clientX:125,clientY:170,pointerType:'mouse'},strokes:[],working:null});
 handler.root=e.root;
