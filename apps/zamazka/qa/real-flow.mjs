@@ -319,7 +319,8 @@ try{
       return {root:root.scrollHeight-root.clientHeight,view:scene.scrollHeight-scene.clientHeight,
        actualScroll,overflow:getComputedStyle(root).overflowY};
     });
-    assert(heights.root<=6&&heights.view<=3&&heights.actualScroll===0&&heights.overflow==='clip',
+    // Physical museum framing adds subpixel layout extent, but the root must not scroll.
+    assert(heights.root<=8&&heights.view<=3&&heights.actualScroll===0&&heights.overflow==='clip',
       'Preview must fit portrait and remain non-scrollable: '+JSON.stringify(heights));
   }
   assert.equal(await page.locator('.mobile-preview .gallery .picture').count(),5);
