@@ -20,7 +20,8 @@
         "causality-audit.test.mjs",
         "aid-policy.test.mjs",
         "graded-labour.test.mjs",
-        "organic-settlement.test.mjs"
+        "organic-settlement.test.mjs",
+        "living-roads.test.mjs"
       ]
     },
     {
