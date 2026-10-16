@@ -2,10 +2,10 @@ import type { PocketModule } from '../../../pocket-server/module-contract.js';
 // The local host exports this in /health so an outdated three-player backend
 // cannot silently masquerade as the current two-player edition.
 export const MIN_PLAYERS=2;
-export const RULESET_VERSION=19;
+export const RULESET_VERSION=20;
 // Updated alongside ARTS in artworks.js; the initial cover portrait remains outside matches.
 const CATALOG_COUNT=136; // 72 old originals + 36 first selection + 28 second selection
-const EXCLUDED_PAINTINGS=new Set([2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69]); // The user's 26 rejected historical originals; IDs retained.
+const EXCLUDED_PAINTINGS=new Set([2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115]); // The user's 26 rejected historical originals; IDs retained.
 // 0 = untimed drawing; only committed submissions from every participant end it.
 const DRAWING_TIMES=[0,60,90,120,160,240,300,600];
 const DEFAULT_DRAWING_SECONDS=160;

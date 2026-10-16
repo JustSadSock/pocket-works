@@ -9,7 +9,7 @@ const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8')
 const transpiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const exports={};
 runInNewContext(transpiled,{exports,Date:ControlledDate,Math,Array,Number,Object,Error,JSON,Set,Map,console});
-assert.equal(exports.RULESET_VERSION,19);
+assert.equal(exports.RULESET_VERSION,20);
 const module=exports.default,host={id:'host',name:'Host'},guest={id:'guest',name:'Guest'},players=[host,guest];
 function setup(){
  const state=module.createRoom({player:host}).state;
