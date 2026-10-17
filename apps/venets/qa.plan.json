@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "world-regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/world.test.mjs"
+      ]
+    },
+    {
+      "id": "world-stress-100x50",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/stress.mjs",
+      "args": [
+        "--seeds=100",
+        "--years=50",
+        "--output={output}/venets-100x50.json"
+      ]
+    },
+    {
+      "id": "world-century",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/stress.mjs",
+      "args": [
+        "--seeds=100",
+        "--years=100",
+        "--output={output}/venets-100x100.json"
+      ]
+    },
+    {
+      "id": "dossier-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#document h1",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-doc=\"RESEARCH.md\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#document"
+        },
+        {
+          "action": "screenshot"
+        }
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ]
+    }
+  ]
+}
