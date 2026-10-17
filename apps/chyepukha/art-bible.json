@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "product": "chyepukha",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "bozhe-ne-tak",
+      "evidence": "apps/bozhe-ne-tak/visual-direction.json",
+      "lesson": "Никаких резных алтарей и сценических лиц."
+    },
+    {
+      "slug": "cantica-glass",
+      "evidence": "apps/cantica-glass/visual-direction.json",
+      "lesson": "Не повторять центрированную готическую архитектуру."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://en.wikipedia.org/wiki/Consequences_(game)",
+      "inspectedAt": "2026-10-18",
+      "observation": "Исходная структура коллективной игры — каждый пишет частично скрытую часть текста.",
+      "principle": "Передаваемый фрагмент является реальным игровым артефактом.",
+      "application": "Механизм частично передаваемых слов и запечатанных рукописей.",
+      "avoid": "Не копировать оригинальные графические оформления."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "paper-desk",
+      "medium": "DOM/CSS + canvas comic",
+      "composition": "Несколько неровно уложенных рукописей на общем темном столе.",
+      "interaction": "Выбор слов-отрывков, печать и смена рукописи.",
+      "motion": "Податливая бумага/сургуч.",
+      "rationale": "Выбрано — метафора соответствует механике."
+    },
+    {
+      "id": "newsroom",
+      "medium": "HTML/CSS",
+      "composition": "Газетная редакция с колонками и штампами.",
+      "interaction": "Заполнение номера журнала.",
+      "motion": "Печатающие литеры.",
+      "rationale": "Отклонено: визуальный шум и малый экран."
+    },
+    {
+      "id": "chat",
+      "medium": "DOM",
+      "composition": "Групповой чат с сообщениями.",
+      "interaction": "Ответы в чат.",
+      "motion": "Пузырьки сообщений.",
+      "rationale": "Отклонено: разрушает информационную асимметрию и уникальность."
+    }
+  ],
+  "selection": {
+    "concept": "paper-desk",
+    "reason": "Центр игры — приватный рукописный лист и передача маленькой части его текста.",
+    "rejected": [
+      {
+        "concept": "chat",
+        "reason": "Скучная привычная форма; пострадает метафора запечатывания."
+      },
+      {
+        "concept": "newsroom",
+        "reason": "Перегрузка вместо фокуса на написании."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "svg",
+      "availability": "available",
+      "reason": "Ручной SVG-значок рукописи."
+    },
+    {
+      "id": "canvas",
+      "availability": "available",
+      "reason": "Локальная иллюстрация всех сцен в комиксе без API-ключа."
+    }
+  ],
+  "assets": [
+    {
+      "id": "paper-icon",
+      "tool": "svg",
+      "source": "icons/icon.svg",
+      "output": "icons/icon.svg",
+      "role": "PWA иконка приложения."
+    },
+    {
+      "id": "comic-panels",
+      "tool": "canvas",
+      "source": "comic.js",
+      "output": "exported user PNG",
+      "role": "Дополнительный иллюстрированный результат после игры."
+    }
+  ],
+  "evidence": {
+    "firstFrame": "Письменная доска с одним большим листом и двумя отрывными записками.",
+    "action": "Отдельные слова ответа превращаются в выбранные оттиски.",
+    "settled": "Запечатанный лист и, после последнего круга, полная история."
+  }
+}
