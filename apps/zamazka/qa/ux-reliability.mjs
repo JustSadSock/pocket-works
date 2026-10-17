@@ -70,3 +70,6 @@ import './mobile-touch.mjs';
 
 // Gallery, compact archive and precision-on-iPhone failure cases.
 import './mobile-visual-fixes.mjs';
+
+// Gallery immediate frame replacement and final-stage visual hierarchy.
+import './gallery-motion-visual-20261017.mjs';
