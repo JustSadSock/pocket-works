@@ -383,5 +383,47 @@ verify('draft: valid quarter-pixel archived stroke survives restore',()=>{
  assert.deepEqual(e.strokes[0].p,[[70,80],[71.2,81.5]]);
 });
 
+
+async function verifyAsync(name,fn){
+ try{await fn();passed++}
+ catch(error){failures.push({name,message:error.stack||String(error)});console.error('FAIL '+name+': '+error.message)}
+}
+function pickerEditor(zone=null){
+ const e=fakeEditor(zone),chip={value:''};
+ let reads=0;
+ e.root.querySelector=selector=>selector==='#customColor'?chip:null;
+ e.canvas.getContext=()=>({getImageData(){reads++;return {data:new Uint8ClampedArray([17,34,51,255])}}});
+ return {e,chip,reads:()=>reads};
+}
+await verifyAsync('picker: sample original canvas colour',async()=>{
+ const {e,chip,reads}=pickerEditor();
+ e.setTool('picker');await e.pick([120,100],false);
+ assert.equal(e.color,'#112233');assert.equal(chip.value,'#112233');
+ assert.equal(reads(),1);assert.equal(e.tool,'brush');
+});
+await verifyAsync('picker: temporary pick preserves active eraser',async()=>{
+ const {e}=pickerEditor();e.setTool('erase');
+ await e.pick([120,100],true);
+ assert.equal(e.color,'#112233');assert.equal(e.tool,'erase');
+});
+await verifyAsync('picker: blank damaged paper cannot be sampled',async()=>{
+ const {e,reads}=pickerEditor(rectangle);
+ await e.pick([120,100],true);assert.equal(reads(),0);assert.equal(e.color,'#284d6e');
+});
+await verifyAsync('picker: brush pigment within damage can be sampled',async()=>{
+ const {e,reads}=pickerEditor(rectangle);
+ e.strokes=[{t:'brush',s:12,c:'#123456',p:[[120,100]]}];
+ await e.pick([120,100],true);assert.equal(reads(),1);assert.equal(e.color,'#112233');
+});
+await verifyAsync('picker: an erased pixel rejects stale paint sampling',async()=>{
+ const {e,reads}=pickerEditor(rectangle);
+ e.strokes=[{t:'brush',s:12,c:'#123456',p:[[120,100]]},{t:'erase',s:16,c:'#e8ddc6',p:[[120,100]]}];
+ await e.pick([120,100],true);assert.equal(reads(),0);assert.equal(e.color,'#284d6e');
+});
+await verifyAsync('picker: coordinate beyond artwork cannot be sampled',async()=>{
+ const {e,reads}=pickerEditor();
+ await e.pick([601,100],true);assert.equal(reads(),0);
+});
+
 console.log('ZAMAZKA tool matrix: '+passed+' passed, '+failures.length+' failed, '+(passed+failures.length)+' independent scenarios');
 if(failures.length)throw new AggregateError(failures.map(item=>new Error(item.name+': '+item.message)),'ZAMAZKA tool-matrix failures');
