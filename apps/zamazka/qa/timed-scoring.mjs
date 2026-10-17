@@ -107,7 +107,7 @@ function finishRound(match){
  now=state.deadline+1;send(players[0],{type:'pulse'});
  const audit=send(players[0],{type:'sync'}).events[0].payload.gallery[0].scoreAudit;
  assert.equal(audit.correct,0);assert.equal(audit.wrong,3);
- assert.equal(audit.undetected,30);
+ assert.equal(audit.undetected,60);
  assert(audit.mask>150,'late deception earns more than old 3×50');
  checks+=3;
  finishRound(m);assert(state.scores.curator.mask>=audit.mask);
