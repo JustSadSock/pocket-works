@@ -322,7 +322,7 @@ function execute(w,a){
   return outcome;
 }
 export function politicalYear(world,{maxActions=12,excludeIds=[]}={}){
-  if(!Number.isSafeInteger(maxActions)||maxActions<0||maxActions>40 || !Array.isArray(excludeIds))throw new RangeError('Invalid political action budget');
+  if(!Number.isSafeInteger(maxActions)||maxActions<0||maxActions>48 || !Array.isArray(excludeIds))throw new RangeError('Invalid political action budget');
   cleanFactions(world);
   for(const person of world.people){
     if(!person.alive)continue;
