@@ -27,8 +27,8 @@ const FOUNDATION_HOLDINGS=Object.freeze([
 ]);
 const MODES = ['normal','drought','isolated','uplands'];
 // Research multipliers are state-local, default to 1, and never change historical saves.
-export const EXPERIMENT_RANGES=Object.freeze({yield:[.7,1.3],storage:[.65,1.35],planting:[.7,1.3],transport:[.5,1.5],weather:[.5,1.5]});
-export const BASE_TUNING=Object.freeze({yield:1,storage:1,planting:1,transport:1,weather:1});
+export const EXPERIMENT_RANGES=Object.freeze({yield:[.7,1.3],storage:[.65,1.35],planting:[.7,1.3],transport:[.5,1.5],weather:[.5,1.5],roadAttraction:[0,2]});
+export const BASE_TUNING=Object.freeze({yield:1,storage:1,planting:1,transport:1,weather:1,roadAttraction:1});
 export function normalizeTuning(value={}){
  const out={};for(const [k,[lo,hi]] of Object.entries(EXPERIMENT_RANGES)){
   const n=value&&Object.prototype.hasOwnProperty.call(value,k)?value[k]:1;
@@ -127,7 +127,7 @@ export function chooseSettlementSite(s,c,near,radius=19){
    // A house competes for street frontage, fertile land and social contact.
    // Very isolated or overcrowded sites lose their economic advantage.
    const social=nearby.length?12-Math.abs(closest-5)*2:4;
-   const score=s.soil[cell]*.13+social+Math.min(70,road)*.33
+   const score=s.soil[cell]*.13+social+Math.min(70,road)*.33*tuning(s,'roadAttraction')
     -access*.44-Math.hypot(x-near.x,y-near.y)*.22
     +croft.length*2+hash(s.seed+c.id,x,y)*2.3;
    if(score>bestScore){bestScore=score;best={x,y};}

@@ -22,7 +22,8 @@
         "graded-labour.test.mjs",
         "organic-settlement.test.mjs",
         "living-roads.test.mjs",
-        "spatial-metrics.test.mjs"
+        "spatial-metrics.test.mjs",
+        "road-incentive.test.mjs"
       ]
     },
     {

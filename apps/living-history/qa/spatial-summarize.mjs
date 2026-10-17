@@ -5,11 +5,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {SEEDS} from './spatial-seeds.mjs';
 import {median,share} from './spatial-metrics.mjs';
+import {verifyRoadExperiment,summarizeRoadExperiments,roadMarkdown} from './road-incentive-summarize.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).filter(x=>x.startsWith('--')).map(x=>{const i=x.indexOf('=');return [x.slice(2,i),x.slice(i+1)];}));
 const root=path.resolve(args.input||'raw'),dest=path.resolve(args.output||'summary');
 fs.mkdirSync(dest,{recursive:true});
-const reports=[],errors=[],checkpoints=[1,5,20,50];
+const reports=[],experiments=[],errors=[],checkpoints=[1,5,20,50];
 for(const seed of SEEDS){
  const shard=Math.floor(SEEDS.indexOf(seed)/2),base=path.join(root,'spatial-shard-'+shard,String(seed));
  const file=path.join(base,'metrics.json'),map=path.join(base,'maps.svg');
@@ -37,6 +38,14 @@ for(const seed of SEEDS){
   }
  }
  if(!fs.readFileSync(map,'utf8').startsWith('<svg'))errors.push('Invalid map '+seed);
+ const studyPath=path.join(base,'road-incentive.json');
+ if(!fs.existsSync(studyPath))errors.push('Missing paired road experiment seed '+seed);
+ else {
+  try{const trial=JSON.parse(fs.readFileSync(studyPath,'utf8'));
+   errors.push(...verifyRoadExperiment(r,trial).map(x=>'Seed '+seed+': '+x));
+   experiments.push(trial);
+  }catch(e){errors.push('Unreadable paired road experiment '+seed+': '+e.message);}
+ }
  reports.push(r);
 }
 const med=values=>median(values);
@@ -97,6 +106,13 @@ const report={schema:2,complete:reports.length===24&&errors.length===0,seeds:rep
  'A one-year baseline road precedes year-end buildings only coarsely; no construction-day causal ordering is claimed.',
  'A population decline is not automatically caused by roads or building placement.'
 ]};
+const pairedReport=summarizeRoadExperiments(experiments);
+pairedReport.errors.push(...errors);
+pairedReport.complete=pairedReport.complete&&errors.length===0;
+report.complete=report.complete&&pairedReport.complete;
+report.pairedRoadStudy={complete:pairedReport.complete,simulatedYears:pairedReport.totalSimulatedYears,seeds:pairedReport.seeds};
+fs.writeFileSync(path.join(dest,'road-causality-summary.json'),JSON.stringify(pairedReport,null,2));
+fs.writeFileSync(path.join(dest,'ROAD_CAUSALITY.md'),roadMarkdown(pairedReport));
 fs.writeFileSync(path.join(dest,'summary.json'),JSON.stringify(report,null,2));
 let md='# «Живая история» v0.7.6 — анатомия поселения\n\n';
 md+='**Проверено:** '+report.seeds+'/24 миров, '+report.simulatedYears+'/1200 лет, ежегодный материальный аудит; статус: '+(report.complete?'полный':'НЕПОЛНЫЙ')+'.\n\n';
