@@ -2,11 +2,11 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHousehold, SIZE} from './model.js';
 import {diagnoseWorld} from './laboratory.js';
-import {fieldAppearance,cattlePosition} from './visual-land.js';
+import {fieldAppearance,trailAppearance,cattlePosition} from './visual-land.js';
 import {timeMode,integrateClock,dayClock,dayPhase,activeShiftCounts,planSubday,sampleSubday,makeFastView,advanceFastView,fastAnimalPosition} from './subday.js';
 import {walkPath} from './navigation.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.8.0',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.8.1',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -51,16 +51,22 @@ function makeWorldArt(){if(!sim)return;const stages=fieldAppearance(sim);draw.im
   if(stock>140){draw.fillStyle='#799362';draw.fillRect(X+2,Y+1,2,1);}
  }else if(sim.forest[i]>0&&sim.forest[i]<=35&&sim.usage[i]!==1){
   draw.fillStyle='#786e4f';draw.fillRect(X+3,Y+4,2,2);
- }if(sim.traffic[i]>11){
-  // Actual worn segments form contiguous paths, not a dotted decoration.
-  const busy=sim.traffic[i]>=55,thick=busy?3:2,m=4;
-  draw.fillStyle=busy?'#917752':'#ae9875';
-  draw.fillRect(X+m-1,Y+m-1,thick,thick);
-  if(x>0&&sim.traffic[i-1]>11)draw.fillRect(X,Y+m-1,m,thick);
-  if(x<SIZE-1&&sim.traffic[i+1]>11)draw.fillRect(X+m,Y+m-1,PX-m,thick);
-  if(y>0&&sim.traffic[i-SIZE]>11)draw.fillRect(X+m-1,Y,thick,m);
-  if(y<SIZE-1&&sim.traffic[i+SIZE]>11)draw.fillRect(X+m-1,Y+m,thick,PX-m);
- }}
+ }
+ }
+ // Draw actual worn paths only after all terrain and crop textures have been
+ // painted. A footpath across a planted strip is therefore visible, unlike
+ // the earlier tile 'continue' that silently hid every field route.
+ const trails=trailAppearance(sim,stages);
+ for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
+  const i=y*SIZE+x,tier=trails[i];if(!tier)continue;
+  const X=x*PX,Y=y*PX,m=4,thick=tier,off=m-Math.floor(thick/2);
+  draw.fillStyle=tier===1?'#b9a781':tier===2?'#af9671':'#987d58';
+  draw.fillRect(X+off,Y+off,thick,thick);
+  if(x>0&&trails[i-1])draw.fillRect(X,Y+off,m,thick);
+  if(x<SIZE-1&&trails[i+1])draw.fillRect(X+m,Y+off,PX-m,thick);
+  if(y>0&&trails[i-SIZE])draw.fillRect(X+off,Y,thick,m);
+  if(y<SIZE-1&&trails[i+SIZE])draw.fillRect(X+off,Y+m,thick,PX-m);
+ }
  // Only actual house-building projects receive a temporary foundation.
  for(const h of sim.households){const p=h.buildProject,site=p?.site;
   if(!site||sim.usage[site.y*SIZE+site.x]||sim.terrain[site.y*SIZE+site.x]!==0)continue;

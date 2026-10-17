@@ -27,7 +27,8 @@
         "visible-life.test.mjs",
         "subday.test.mjs",
         "forest-clearance.test.mjs",
-        "hourly-economy.test.mjs"
+        "hourly-economy.test.mjs",
+        "grounded-motion.test.mjs"
       ]
     },
     {

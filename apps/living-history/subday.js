@@ -35,87 +35,86 @@ export function dayPhase(phase){
 // The real model records work per *day*. Do not split grain/wood/cash into
 // simulated hourly transfers here. The subday scheduler is a deterministic
 // spatial account of the jobs already committed by advanceDays().
+// A visible citizen moves only for a committed work shift or a real trip.
+// Idle families remain home. There is no sinusoidal household wandering.
 export function planSubday(world){
  const households=new Map(world.households.map(h=>[h.id,h]));
  const plans=new Map();
  const counters={home:0,farm:0,wood:0,build:0,herd:0,haul:0,other:0,travel:0};
  for(const p of world.people){
   if(!p.alive)continue;
-  const h=households.get(p.houseId);
-  const from=nearestLand(world,h||p)||{x:p.x,y:p.y};
-  const to=nearestLand(world,p.job==='home'&&h?h:p)||from;
-  const traveling=Boolean(p.travel&&p.travel.end>world.day);
+  const home=nearestLand(world,households.get(p.houseId)||p)||{x:p.x,y:p.y};
   const shift=p.dailyShift?.day===world.day?p.dailyShift:null;
-  const job=shift?.kind||p.job||'home';
-  counters[traveling?'travel':job in counters?job:'other']++;
-  const start=shift?.from||from,end=shift?.to||to;
-  const route=(job!=='home'||traveling)&&!same(start,end)?walkPath(world,start,end):[start];
-  const length=Math.max(0,route.length-1);
-  const offset=h32(world.seed,p.id,world.day);
-  const departure=.16+offset*.12;
-  const outward=Math.min(.21,Math.max(.05,length*.006));
-  const arrival=Math.min(.55,departure+outward);
-  const returnStart=.76+h32(p.id,world.day,43)*.07;
-  const returnEnd=Math.min(.96,returnStart+outward);
-  plans.set(p.id,{id:p.id,job,traveling,from:start,to:end,route,
-   departure:shift?shift.depart/24:departure,arrival:shift?shift.arrive/24:arrival,
-   returnStart:shift?shift.returnStart/24:returnStart,
-   returnEnd:shift?shift.end/24:returnEnd,
-   shift,phase:h32(p.id,world.day,11),length});
+  const trip=p.travel&&p.travel.start<=world.day&&p.travel.end>world.day?p.travel:null;
+  const job=shift?.kind|| (trip?'haul':p.job||'home');
+  // Actual multi-day transport and migration have explicit endpoints and dates.
+  const from=shift?.from||trip?.from||home;
+  const to=shift?.to||trip?.to||home;
+  const route=shift?.routeCells?.length
+   ?shift.routeCells.map(cell=>({x:cell%160,y:Math.floor(cell/160)}))
+   :trip?.points?.length>1?trip.points:
+    (!same(from,to)?walkPath(world,from,to):[from]);
+  const safeRoute=route.length?route:[from];
+  const length=Math.max(0,safeRoute.length-1);
+  counters[trip?'travel':shift?job in counters?job:'other':'home']++;
+  plans.set(p.id,{id:p.id,job,from,to,route:safeRoute,shift,trip,length,
+   departure:shift?shift.depart/24:0,
+   arrival:shift?shift.arrive/24:0,
+   returnStart:shift?shift.returnStart/24:0,
+   returnEnd:shift?shift.end/24:0,
+   phase:h32(p.id,world.seed,world.day)});
  }
  return {day:world.day,seed:world.seed,plans,counters,kind:'subday'};
 }
-function oscillate(phase){
- const cycle=phase*2*Math.PI;
- return {x:Math.cos(cycle),y:Math.sin(cycle)};
+const inactive=point=>({...point,activity:'home',pose:0});
+// Real farm work happens on a measured strip. A small straight furrow motion
+// represents handling the currently assigned tile; no circles, no trips
+// to fictional fields and no actor motion in idle households.
+function workPose(p,t){
+ if(p.job==='farm'){
+  const travel=(t*2+p.phase)%2;
+  const furrow=travel<1?travel:2-travel;
+  const lateral=(furrow-.5)*.36;
+  const axis=p.to.x%2===0;
+  return {x:p.to.x+(axis?lateral:0),y:p.to.y+(axis?0:lateral),
+   activity:p.job,pose:Math.floor(t*14)%2};
+ }
+ // Builders and woodcutters can swing tools without translating their feet.
+ return {...p.to,activity:p.job,pose:Math.floor(t*14)%2};
+}
+function sampleJourney(p,day,t){
+ const trip=p.trip;
+ const outbound=Math.max(1,trip.arrival-trip.start);
+ if(trip.end<=trip.arrival){
+  const progress=clamp((day+t-trip.start)/outbound);
+  return {...(pathPosition(p.route,progress)||p.to),activity:'haul',pose:1};
+ }
+ if(day+t<=trip.arrival){
+  const progress=clamp((day+t-trip.start)/outbound);
+  return {...(pathPosition(p.route,progress)||p.to),activity:'haul',pose:1};
+ }
+ const returnDays=Math.max(1,trip.end-trip.arrival);
+ const progress=clamp((day+t-trip.arrival)/returnDays);
+ return {...(pathPosition(p.route,1-progress)||p.from),activity:'return',pose:1};
 }
 export function sampleSubday(person,dayPlan,time){
  if(!dayPlan||!dayPlan.plans.has(person.id))return {x:person.x,y:person.y,activity:'absent',pose:0};
  const p=dayPlan.plans.get(person.id),t=clamp(time);
- // Authoritative schedules are committed by the economic engine. The visual
- // projection never chooses independent working hours or invents a job.
  if(p.shift){
   const phase=timeAt(p.shift,t);
-  if(phase.phase==='home')return {...p.from,activity:'home',pose:0};
+  if(phase.phase==='home')return inactive(p.from);
   if(phase.phase==='travel'||phase.phase==='return'){
-   const q=phase.phase==='travel'?smooth(phase.part):1-smooth(phase.part);
-   const point=pathPosition(p.route,q)||p.to;
-   return {...point,activity:phase.phase,pose:1};
+   const progress=phase.phase==='travel'?phase.part:1-phase.part;
+   // Route pace derives from actual work/commute hours, not an arbitrary
+   // slow visual curve. Every intermediate point lies on the traversed path.
+   return {...(pathPosition(p.route,progress)||p.to),activity:phase.phase,pose:1};
   }
-  const angle=p.phase+phase.part*(p.job==='farm'?3.2:2.1);
-  const swing=Math.sin(Math.PI*phase.part)*.22;
-  const wave=oscillate(angle);
-  return {x:p.to.x+wave.x*swing,y:p.to.y+wave.y*swing,
-   activity:p.job,pose:Math.floor(phase.part*(p.job==='build'?8:6))%2};
+  return workPose(p,phase.part);
  }
- if(p.job==='home'&&!p.traveling){
-  const wiggle=oscillate(t*.72+p.phase);
-  const scale=Math.sin(Math.PI*t)*.13;
-  return {x:p.from.x+wiggle.x*scale,y:p.from.y+wiggle.y*scale,activity:'home',pose:0};
- }
- if(t<=p.departure)return {...p.from,activity:'home',pose:0};
- if(t<p.arrival){
-  const point=pathPosition(p.route,smooth((t-p.departure)/Math.max(.001,p.arrival-p.departure)))||p.to;
-  return {...point,activity:'travel',pose:1};
- }
- if(p.traveling){
-  const point=p.to;
-  return {...point,activity:'haul',pose:0};
- }
- if(t<p.returnStart){
-  // Real workplace and person-specific, bounded local animation. No invented
-  // walks into another field, croft or river.
-  const phase=(t-p.arrival)/Math.max(.001,p.returnStart-p.arrival);
-  const oscillation=oscillate(p.phase+phase*(p.job==='farm'?3.2:2.1));
-  const swing=Math.sin(Math.PI*phase)*.22;
-  return {x:p.to.x+oscillation.x*swing,y:p.to.y+oscillation.y*swing,
-   activity:p.job,pose:Math.floor(phase*(p.job==='build'?8:6))%2};
- }
- if(t<p.returnEnd){
-  const point=pathPosition(p.route,1-smooth((t-p.returnStart)/Math.max(.001,p.returnEnd-p.returnStart)))||p.from;
-  return {...point,activity:'return',pose:1};
- }
- return {...p.from,activity:'home',pose:0};
+ if(p.trip)return sampleJourney(p,dayPlan.day,t);
+ // Historic saves without a current shift and residents who are not
+ // employed must never be forced to stroll around their houses.
+ return inactive(p.from);
 }
 export function makeFastView(){return {positions:new Map(),animals:new Map(),kind:'coarse'};}
 // Keep actual herds visible at high speed without jumping between weekly pasture sites.
@@ -136,9 +135,15 @@ export function advanceFastView(view,world,dt){
   if(!p.alive)continue;
   seen.add(p.id);
   const h=homes.get(p.houseId);
-  const goal=p.job==='home'&&h?h:p;
+  const shift=p.dailyShift?.day===world.day?p.dailyShift:null;
+  // Fast overview follows real daily job sites and stays still when idle.
+  // Daily job labels without a booked shift must not make workers orbit homes.
+  const goal=shift?.to||(p.travel?{x:p.x,y:p.y}:h||p);
   const prev=view.positions.get(p.id)||{x:goal.x,y:goal.y};
-  view.positions.set(p.id,move(prev,goal,factor));
+  const distance=Math.hypot(prev.x-goal.x,prev.y-goal.y);
+  // Suppress sub-tile wandering; distant genuine day-to-day relocations
+  // still use a damped overview so a 20x tick cannot hard-teleport figures.
+  view.positions.set(p.id,distance<.55?{x:goal.x,y:goal.y}:move(prev,goal,factor));
  }
  for(const id of view.positions.keys())if(!seen.has(id))view.positions.delete(id);
  return view;

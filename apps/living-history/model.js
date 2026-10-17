@@ -362,6 +362,12 @@ function recordShift(s,h,p,shift){
  s.stats.commuteHours=round((s.stats.commuteHours||0)+shift.travelHours);
  earn(s,h,'laborHours',shift.workHours);
  earn(s,h,'travelHours',shift.travelHours);
+ // Trails only arise from actually executed journeys. One physical passage
+ // sample every six workdays avoids inventing traffic during unemployment,
+ // while repeated trips across open fields slowly compact the soil.
+ if(shift.routeCells?.length>1&&(s.day+p.id)%6===0){
+  markRoad(s,shift.routeCells.map(i=>({x:i%SIZE,y:Math.floor(i/SIZE)})),2);
+ }
  return factor;
 }
 const foodNeed=(s,h)=>liveMembers(s,h).reduce((v,p)=>v+(p.age<4?.35:p.age<10?.55:p.age<15?.77:1)*.68,0);
@@ -573,9 +579,7 @@ function cropUpdate(s,h,adults,guests=[]){
   .map(p=>({p,shift:availableShift(s,p,'farm',workPos)})).filter(w=>w.shift);
  const productiveWorkers=arriving.reduce((n,w)=>n+workCapacity(w.p,'farm')*w.shift.fraction,0);
  if(productiveWorkers<=0)return;
- const markWork=()=>{for(const {p,shift} of arriving)recordShift(s,h,p,shift);
-  if(s.day%24===0){const path=walkPath(s,h,workPos);if(path.length>1)markRoad(s,path,4);}
- };
+ const markWork=()=>{for(const {p,shift} of arriving)recordShift(s,h,p,shift);};
  if(doy>=65&&doy<=145&&crop.sownArea<availableArea-.001){
   const draftTeams=Math.floor((h.draftOxen??h.cattle??0)/2);const traction=draftTeams>0&&h.livestockHealth>35?1+Math.min(.36,draftTeams*.18):1;const kind=cropAt(crop,crop.sownArea),rate=CROP_KINDS[kind].seedRate;
   const step=Math.min(availableArea-crop.sownArea,productiveWorkers*.09*traction,(h[kind]||0)/rate,Math.max(0,cropLimit(crop,kind)-crop.sownArea));
