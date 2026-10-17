@@ -14,7 +14,7 @@
     "Бумажный интерфейс, финальное раскрытие и локальная сборка комиксов."
   ],
   "status": "experimental",
-  "preset": "creative",
+  "preset": "interactive",
   "accent": "#a6533d",
   "backgroundColor": "#293f3b",
   "themeColor": "#293f3b",
