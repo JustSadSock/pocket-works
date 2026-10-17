@@ -11,7 +11,7 @@
 <body data-app-preset="game-2d"><main class="shell" data-app-shell data-fullscreen-app>
 <header class="header" data-ui><a class="return" href="../../" data-app-control>← Pocket Works</a>
 <div class="wordmark"><span class="wordmark-emblem">✣</span> ТУМАН ЗАВОЕВАНИЙ</div>
-<button class="subtle" id="menuBtn" type="button" aria-label="Открыть меню">☰</button></header>
+<button data-native-press class="subtle" id="menuBtn" type="button" aria-label="Открыть меню">☰</button></header>
 <div class="campaign" id="campaign">
 <div class="ribbon" data-ui><span id="season">ХОД 1 · СЕВЕР</span><span id="status">Золото 7 · Доход +4</span></div>
 <div class="field" id="field" data-gesture-surface data-block-callout>
@@ -24,7 +24,7 @@
 <div class="unit-copy"><strong id="unitTitle">Выберите отряд</strong><small id="unitHint">Коснитесь своего знамени на карте</small></div>
 <button class="clear" id="clear" title="Снять выделение" aria-label="Снять выделение">×</button></div>
 <div class="actions" id="actions"><div class="starter-tip">Разведайте местность, займите мельницы и осадите цитадель соперника.</div></div>
-<div class="bottomline"><div id="log" class="last-event">Поле ждёт первого приказа.</div><button id="endTurn" class="end-turn">ЗАВЕРШИТЬ ХОД <span>→</span></button></div></section>
+<div class="bottomline"><div id="log" class="last-event">Поле ждёт первого приказа.</div><button data-native-press id="endTurn" class="end-turn">ЗАВЕРШИТЬ ХОД <span>→</span></button></div></section>
 </div>
 <section class="veil" id="start"><div class="start-panel">
 <div class="cover-art" aria-hidden="true"><svg viewBox="0 0 360 190"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#aab7a3"/><stop offset="1" stop-color="#e4d6b4"/></linearGradient></defs>
@@ -41,8 +41,8 @@
 <p>Война видна лишь до горизонта. Всё остальное приходится завоёвывать.</p>
 <div class="start-controls"><label>КАРТА <select id="size"><option value="compact">Малая · 12×16</option><option value="standard" selected>Средняя · 16×22</option><option value="expanse">Большая · 20×28</option></select></label>
 <label>ПРОТИВНИК <select id="difficulty"><option value="1">I · Новобранец</option><option value="2">II · Ополчение</option><option value="3" selected>III · Командир</option><option value="4">IV · Стратег</option><option value="5">V · Полководец</option><option value="6">VI · Кошмар</option></select></label></div>
-<button class="primary" id="newGame">НАЧАТЬ ПОХОД <span>→</span></button>
-<div class="secondary-grid"><button id="continueGame" disabled>Продолжить</button><button id="onlineBtn">Партия с другом</button></div>
+<button data-native-press class="primary" id="newGame">НАЧАТЬ ПОХОД <span>→</span></button>
+<div class="secondary-grid"><button data-native-press id="continueGame" disabled>Продолжить</button><button data-native-press id="onlineBtn">Партия с другом</button></div>
 <a class="exit" href="../../" data-app-control>← Вернуться в Pocket Works</a>
 </div></section>
 <section class="modal" id="online" hidden><div class="dialog"><h2>Поле для двоих</h2><p>Ходы сохраняются на сервере. Дождитесь соперника или вернитесь к партии позднее.</p>
