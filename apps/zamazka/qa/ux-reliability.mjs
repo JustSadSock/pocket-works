@@ -82,3 +82,6 @@ import './damage-area-balance.mjs';
 
 // Authoritative timestamped coins and speed/endurance score receipts.
 import './timed-scoring.mjs';
+
+// Convex time awards, audited at seven exact clock fractions per outcome.
+import './quadratic-rewards.mjs';
