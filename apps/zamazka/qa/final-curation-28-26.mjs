@@ -77,7 +77,7 @@ assert.ok(lock.zamazka.versions.includes('v21')&&lock.zamazka.versions.includes(
 const config=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
-assert.equal(config.version,'1.40.12');
+assert.equal(config.version,'1.40.13');
 assert.match(html,/data-app-version="1\.40\.12"/);
 assert.match(sw,/APP_VERSION = '1\.40\.12'/);
 assert.match(sw,/museum-approved-second-2026\.js/);
