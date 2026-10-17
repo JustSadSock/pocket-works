@@ -40,7 +40,7 @@ function choose(s:State){
  // Two players may receive one painting but different damaged fragments.
  s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.voteDrafts={};s.turn=0;s.revealed=false;
  members(s).forEach(p=>s.assignments[p.id]={art:s.selected[Math.floor(Math.random()*s.selected.length)],
-  variation:Math.floor(Math.random()*0xffffffff),strokes:null});
+  variation:0x100000000+Math.floor(Math.random()*0x100000000),strokes:null});
  s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
 }
 function completeVotes(s:State){
