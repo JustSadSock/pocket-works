@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "trafficity",
+  "name": "TRAFFICITY — Город на ладони",
+  "shortName": "TRAFFICITY",
+  "description": "Пошаговая дуэль курьеров на процедурном миниатюрном городе. Маршруты, доставки, ИИ и онлайн-матчи через PocketNet.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T02:20:00+03:00",
+  "changelog": [
+    "Перенос правил Trafficity: 35 перекрёстков, процедурные города и 30 тактических ходов.",
+    "Две машины на игрока, точечные остановки, авто-маршруты и ИИ.",
+    "Синхронные пошаговые дуэли через PocketNet с кодом комнаты.",
+    "Авторский миниатюрный город, жесты для телефона, клавиатура ПК и локальное сохранение."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#39888c",
+  "backgroundColor": "#e4d4b4",
+  "themeColor": "#344940",
+  "orientation": "portrait",
+  "cacheName": "trafficity-v1.0.0",
+  "storageNamespace": "pocket-works:trafficity",
+  "tags": [
+    "game",
+    "strategy",
+    "tactics",
+    "procedural",
+    "multiplayer",
+    "PocketNet"
+  ],
+  "order": 90
+}
