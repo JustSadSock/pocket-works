@@ -107,6 +107,7 @@ export function resolveInheritance(world,deadId) {
   const fallback=chooseFallback(world,dead,holdings[0]);
   let partitionCount=0;
   let primary=null;
+  const distribution=[];
   for(const title of holdings) {
     let winner,reason;
     if(title.law==='seniority') {
@@ -120,9 +121,13 @@ export function resolveInheritance(world,deadId) {
     if(!winner) {winner=fallback.heir;reason=fallback.reason;}
     if(!primary) primary=winner;
     changeTitleHolder(world,{titleId:title.id,newHolderId:winner.id,cause:'succession:'+reason+':'+dead.id});
+    distribution.push({titleId:title.id,heirId:winner.id});
     for(const contender of branches) if(contender.id!==winner.id) claim(world,title,contender.id,dead.id);
     if(reason==='escheat')world.stats.escheats++;
-    if(reason==='partible-inheritance' && branches.length>1)world.stats.partitions++;
+  }
+  if(new Set(distribution.map(t=>t.heirId)).size>1){
+    world.stats.partitions++;
+    recordEvent(world,'realm-partition','portfolio-division:'+dead.id,{deceasedId:dead.id,distribution});
   }
   const estateHeir=primary ?? (dead.spouseId&&isAlive(world,dead.spouseId)?findPerson(world,dead.spouseId):null) ??
     branches[0] ?? fallback.heir;
