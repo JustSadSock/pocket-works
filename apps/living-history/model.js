@@ -149,7 +149,10 @@ function clearFoundingForest(s,i){
 // neither construction nor farm projects may teleport standing timber away.
 function fellForClearance(s,h,i,worker){
  if(s.terrain[i]!==0||s.usage[i]||!(s.forest[i]>0))return 0;
- const effort=workCapacity(worker,'wood'),amount=Math.min(s.forest[i],round(18*effort));
+ const site={x:i%SIZE,y:Math.floor(i/SIZE)};
+ const shift=availableShift(s,worker,'wood',site);
+ if(!shift)return 0;
+ const effort=workCapacity(worker,'wood')*shift.fraction,amount=Math.min(s.forest[i],round(18*effort));
  if(amount<=0)return 0;
  const kept=round(amount*.80),waste=round(amount-kept);
  s.forest[i]=round(s.forest[i]-amount);
@@ -158,8 +161,8 @@ function fellForClearance(s,h,i,worker){
  s.stats.woodlandFelled=round((s.stats.woodlandFelled||0)+amount);
  s.stats.woodlandWaste=round((s.stats.woodlandWaste||0)+waste);
  earn(s,h,'woodKg',kept);
- worker.job='wood';worker.x=i%SIZE;worker.y=Math.floor(i/SIZE);
- recordWork(worker,'wood');
+ recordShift(s,h,worker,shift);
+ recordWork(worker,'wood',shift.fraction);
  worker.skill.wood=roundSkill(worker.skill.wood+.006*worker.aptitude*effort);
  const before=s.traffic[i];
  s.traffic[i]=Math.min(255,before+3);
@@ -695,15 +698,17 @@ function tendGarden(s,h,adults){
  if(!h.gardenYear||h.gardenYear.year!==year)h.gardenYear={year,prepared:0,tended:0,harvested:false};
  const g=h.gardenYear,worker=adults.find(p=>p.job==='home'&&workCapacity(p,'garden')>0);
  if(!worker)return;
- const effort=workCapacity(worker,'garden');
+ const shift=availableShift(s,worker,'garden',h);
+ if(!shift)return;
+ const effort=workCapacity(worker,'garden')*shift.fraction;
  if(day>=67&&day<=155&&g.prepared<6&&h.grain>foodNeed(s,h)*12){
-  g.prepared=Math.min(6,roundSkill(g.prepared+effort));worker.job='garden';recordWork(worker,'garden');return;
+  g.prepared=Math.min(6,roundSkill(g.prepared+effort));recordShift(s,h,worker,shift);recordWork(worker,'garden',shift.fraction);return;
  }
  if(day>=155&&day<=245&&g.prepared>=6&&g.tended<9){
-  g.tended=Math.min(9,roundSkill(g.tended+effort));worker.job='garden';recordWork(worker,'garden');return;
+  g.tended=Math.min(9,roundSkill(g.tended+effort));recordShift(s,h,worker,shift);recordWork(worker,'garden',shift.fraction);return;
  }
  if(day>=245&&day<=295&&g.prepared>=6&&!g.harvested){
-  worker.job='garden';recordWork(worker,'garden');
+  recordShift(s,h,worker,shift);recordWork(worker,'garden',shift.fraction);
   g.harvestProgress=roundSkill((g.harvestProgress||0)+effort);
   if(g.harvestProgress<1)return;
   g.harvested=true;
@@ -736,13 +741,18 @@ function gatherWood(s,h,adults){
  let target=-1,best=999;for(let y=Math.max(1,h.y-11);y<Math.min(SIZE-1,h.y+12);y++)for(let x=Math.max(1,h.x-11);x<Math.min(SIZE-1,h.x+12);x++){
  const i=idx(x,y),d=Math.abs(x-h.x)+Math.abs(y-h.y);if(s.terrain[i]===0&&!s.usage[i]&&s.forest[i]>30&&d<best){best=d;target=i;}}
  if(target<0){h.nextWoodSearch=s.day+21;return;}h.nextWoodSearch=0;
- const labour=labourTotal(adults,'wood');
+ const site={x:target%SIZE,y:Math.floor(target/SIZE)};
+ const workers=adults.map(p=>({p,shift:availableShift(s,p,'wood',site)})).filter(x=>x.shift);
+ const labour=workers.reduce((n,{p,shift})=>n+workCapacity(p,'wood')*shift.fraction,0);
  if(labour<=0)return;
- const proficiency=adults.reduce((v,p)=>v+p.skill.wood*workCapacity(p,'wood'),0)/labour;
+ const proficiency=workers.reduce((v,{p,shift})=>v+p.skill.wood*workCapacity(p,'wood')*shift.fraction,0)/labour;
  const amount=Math.min(s.forest[target],round((labour*1.8+2*Math.min(1,labour))*
   (1+Math.min(.7,proficiency*.22))/(1+best*.018)));
  s.forest[target]=round(s.forest[target]-amount);h.wood=round(h.wood+amount);s.stats.produced=round(s.stats.produced+amount);s.stats.woodlandFelled=round((s.stats.woodlandFelled||0)+amount);earn(s,h,'woodKg',amount);
- for(const p of adults){p.skill.wood=roundSkill(p.skill.wood+.006*p.aptitude*workCapacity(p,'wood'));p.job='wood';p.x=target%SIZE;p.y=Math.floor(target/SIZE);recordWork(p,'wood');}
+ for(const {p,shift} of workers){
+  p.skill.wood=roundSkill(p.skill.wood+.006*p.aptitude*workCapacity(p,'wood')*shift.fraction);
+  recordShift(s,h,p,shift);recordWork(p,'wood',shift.fraction);
+ }
  const oldWear=s.traffic[target];
  s.traffic[target]=Math.min(255,oldWear+3);
  if(oldWear!==s.traffic[target])s.roadRevision=(s.roadRevision||0)+1;
@@ -930,8 +940,11 @@ function reclaimProject(s,h,adults){
   fellForClearance(s,h,cell,p);
   return;
  }
- p.job='build';p.x=cell%SIZE;p.y=Math.floor(cell/SIZE);
- recordWork(p,'build');h.landProject.days+=workCapacity(p,'build');
+ const shift=availableShift(s,p,'build',{x:cell%SIZE,y:Math.floor(cell/SIZE)});
+ if(!shift)return;
+ recordShift(s,h,p,shift);
+ recordWork(p,'build',shift.fraction);
+ h.landProject.days+=workCapacity(p,'build')*shift.fraction;
  if(h.landProject.days>=12){
   const i=h.landProject.cell;
   if(s.usage[i]===0&&s.terrain[i]===0){
@@ -1126,7 +1139,13 @@ function planConstruction(s,h,adults){
    if(builders.length)fellForClearance(s,h,clearing,builders[0]);
    return;
   }
-  if(builders.length){builders[0].job='build';builders[0].x=site.x;builders[0].y=site.y;recordWork(builders[0],'build');h.buildProject.days+=workCapacity(builders[0],'build');}
+  if(builders.length){
+   const p=builders[0],shift=availableShift(s,p,'build',site);
+   if(shift){
+    recordShift(s,h,p,shift);recordWork(p,'build',shift.fraction);
+    h.buildProject.days+=workCapacity(p,'build')*shift.fraction;
+   }
+  }
   if(h.buildProject.days<50)return;
   const available=site&&!s.usage[idx(site.x,site.y)]&&s.terrain[idx(site.x,site.y)]===0&&croftCandidate(s,site.x,site.y,c).length>=2;
   const movers=availableMovers(s,h);
