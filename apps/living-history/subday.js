@@ -135,9 +135,15 @@ export function advanceFastView(view,world,dt){
   if(!p.alive)continue;
   seen.add(p.id);
   const h=homes.get(p.houseId);
-  const goal=p.job==='home'&&h?h:p;
+  const shift=p.dailyShift?.day===world.day?p.dailyShift:null;
+  // Fast overview follows real daily job sites and stays still when idle.
+  // Daily job labels without a booked shift must not make workers orbit homes.
+  const goal=shift?.to||(p.travel?{x:p.x,y:p.y}:h||p);
   const prev=view.positions.get(p.id)||{x:goal.x,y:goal.y};
-  view.positions.set(p.id,move(prev,goal,factor));
+  const distance=Math.hypot(prev.x-goal.x,prev.y-goal.y);
+  // Suppress sub-tile wandering; distant genuine day-to-day relocations
+  // still use a damped overview so a 20x tick cannot hard-teleport figures.
+  view.positions.set(p.id,distance<.55?{x:goal.x,y:goal.y}:move(prev,goal,factor));
  }
  for(const id of view.positions.keys())if(!seen.has(id))view.positions.delete(id);
  return view;
