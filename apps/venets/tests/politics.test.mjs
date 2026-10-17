@@ -33,7 +33,9 @@ test('autonomous political AI explains scores and produces real world consequenc
 });
 test('different temperaments lead to different utility rankings with same objective state',()=>{
   const base=createWorld(99);
-  const actor=get(base,'pe-17');
+  const actor=base.people.find(p=>p.treasury.coin>=14 &&
+    possibleActions(base,p.id).some(a=>a.kind==='gift'));
+  assert.ok(actor);
   // Only character weights change; identical world and resources.
   const peer=get(base,'pe-01');
   const before=possibleActions(base,actor.id).find(a=>a.kind==='gift');
