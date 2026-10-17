@@ -3,10 +3,10 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHousehold, SIZE} from './model.js';
 import {diagnoseWorld} from './laboratory.js';
 import {fieldAppearance,cattlePosition} from './visual-land.js';
-import {timeMode,integrateClock,dayClock,dayPhase,planSubday,sampleSubday,makeFastView,advanceFastView,fastAnimalPosition} from './subday.js';
+import {timeMode,integrateClock,dayClock,dayPhase,activeShiftCounts,planSubday,sampleSubday,makeFastView,advanceFastView,fastAnimalPosition} from './subday.js';
 import {walkPath} from './navigation.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.7.10',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.8.0',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -150,7 +150,10 @@ $('.live-mark').classList.toggle('running',speed>0);document.querySelectorAll('[
 function updateDayDial(){
  const detailed=renderDetail==='fine'&&Boolean(dayPlan);
  $('#time-detail').dataset.mode=detailed?'fine':'coarse';
- $('#time-stage').textContent=detailed?dayClock(movementFraction)+' · '+dayPhase(movementFraction):
+ const counts=detailed?activeShiftCounts(dayPlan,movementFraction):null;
+ const label=counts?(counts.work>0?'Работают: '+counts.work:
+  counts.travel+counts.return>0?'В пути: '+(counts.travel+counts.return):dayPhase(movementFraction)):null;
+ $('#time-stage').textContent=detailed?dayClock(movementFraction)+' · '+label:
   speed===0?'Пауза · суточный обзор':'Быстрый обзор · суточные итоги';
  $('#time-fill').style.width=detailed?(movementFraction*100).toFixed(1)+'%':(((sim?.day||0)%365)/365*100).toFixed(1)+'%';
 }
