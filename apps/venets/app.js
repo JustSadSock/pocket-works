@@ -12,6 +12,22 @@ const TITLES={marriage:'Заключить династический брак',
   grant:'Пожаловать графство',petition:'Потребовать признания права',
   faction:'Создать фракцию претендента',join:'Поддержать претендента',
   ultimatum:'Предъявить ультиматум'};
+const REASONS={
+  'unmarried':'Свободны для брака','dynastic-link':'Связь двух домов',
+  'gift-affordable':'Есть средства','improve-relationship':'Улучшить отношения',
+  'family-appanage':'Надел родственнику','spare-county':'Есть свободное графство',
+  'documented-claim':'Подтверждённое право','feudal-petition':'Требование по праву',
+  'living-claimant':'Претендент жив','political-opposition':'Политическая оппозиция',
+  'active-faction':'Действующая фракция','political-affinity':'Общие интересы',
+  'coalition':'Союз сторонников',
+  'partner-consent':'Согласие партнёра',
+  'pledged-power':'Сила сторонников','ruler-power':'Сила правителя'
+};
+const reasonLabel=reason=>{
+  const [key,value]=String(reason).split('=');
+  const word=REASONS[key]||key;
+  return value===undefined?word:word+': '+value;
+};
 const ICONS={marriage:'✦',gift:'◇',grant:'♜',petition:'§',faction:'⚑',join:'✧',ultimatum:'!'}; // compact navigation glyphs, not real coat-of-arms
 const GOALS={'secure-claim':'Вернуть спорный титул','political-leverage':'Ослабить сюзерена',
   'gain-land':'Получить владение','stabilize-realm':'Укрепить мир','seek-marriage':'Создать союзный дом',
@@ -212,7 +228,7 @@ function actionDetail(a,w){
     ultimatum:'Политическое давление может привести к уступке земли или ещё большей вражде. Это не война.'};
   let text=traits[a.kind]||'';
   if(a.kind==='gift')text+=' Цена: '+a.meta.amount+' монет.';
-  return text+' Основания: '+a.reasons.join(' · ')+'.';
+  return text+' Основания: '+a.reasons.map(reasonLabel).join(' · ')+'.';
 }
 function renderCouncil(){
   const w=game.world,p=w.people.find(p=>p.id===game.playerId);
@@ -320,7 +336,7 @@ function eventHeadline(e,w){
     case 'faction-founded':return ['Создана фракция','Претензия на '+tname(w,x.titleId)];
     case 'faction-ended':return ['Фракция распущена','Политическое требование изменилось'];
     case 'political-decision':return [name(x.actorId)+': '+(TITLES[x.kind]||x.kind),
-      x.outcome?.success?'Успешно · '+(x.reasons||[]).join(', '):'Отказ · '+(x.reasons||[]).join(', ')];
+      x.outcome?.success?'Успешно · '+(x.reasons||[]).map(reasonLabel).join(', '):'Отказ · '+(x.reasons||[]).join(', ')];
     case 'claim-founded':return ['Возникла претензия на '+tname(w,x.titleId),name(x.personId)];
     case 'shortage':return ['Недостаток зерна в '+(w.provinces.find(p=>p.id===x.provinceId)?.name||'провинции'),'Недостаёт '+x.missing];
     default:return [e.kind,e.cause];
