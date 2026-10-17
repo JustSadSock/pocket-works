@@ -15,19 +15,6 @@ const pick=(trueIndex,n=1)=>Array.from({length:5},(_,i)=>i===trueIndex?n:0);
 const different=(trueIndex,n=1)=>pick((trueIndex+1)%5,n);
 let checks=0;
 
-function fresh({players=people,timed=true}={}){
- now+=200_000;
- const state=game.createRoom({player:players[0]}).state;
- assert.equal(state.timedScoring,true);
- if(!timed)delete state.timedScoring;
- for(const p of players.slice(1))game.onJoin({state,player:p,players});
- const send=(p,type,chips)=>game.onMessage({state,player:p,players,payload:chips?{type,chips}:{type}});
- send(players[0],'start');
- now=state.deadline+1;send(players[0],'pulse');
- assert.equal(state.phase,'drawing');
- for(const p of players)send(p,'submit'); // the drawing submission requires strokes; use proper payload below
- return {state,players,send};
-}
 function active(players=people){
  now+=200_000;
  const state=game.createRoom({player:players[0]}).state;
@@ -105,7 +92,7 @@ function finishRound(match){
  assert(ui.includes('за скорость')&&ui.includes('Выдержка'),'visible receipt explains speed/endurance awards');
  checks++;
  finishRound(m);
- assert.equal(state.scores[author.id].mask,audit.mask+state.scores[author.id].mask-audit.mask);
+ assert(state.scores[author.id].mask>=audit.mask,'author scoreboard must contain the disclosed vote reward');
  assert(state.scores.bravo.eye>=audit.byVoter.bravo.eye,'real scoreboard includes the early correct vote');
  const previous=JSON.stringify(state.scores);
  send(players[0],{type:'pulse'});assert.equal(JSON.stringify(state.scores),previous,'replayed pulse cannot score twice');
