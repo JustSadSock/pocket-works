@@ -25,7 +25,7 @@ const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,serverNow:now(),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
+ host:s.host,phase:s.phase,serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
