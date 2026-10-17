@@ -103,3 +103,6 @@ import './deep-fill-topology.mjs';
 // Large already-painted regions and chronological replay cache invariants.
 import './large-painted-fill.mjs';
 import './large-fill-cache.mjs';
+
+// The complete numbered 100-scenario matrix, each in three layouts.
+import './fill-100-raster.mjs';
