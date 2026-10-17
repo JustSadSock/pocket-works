@@ -3,6 +3,7 @@ import './reader.js';
 import {installUIInspector, INSPECTOR_SCREENS} from './dev-inspector.js';
 import {renderAtlas,renderGenealogy,shieldSvg} from './atlas.js';
 import {atlasOwnerSnapshot,transferHighlights} from './atlas-core.js';
+import {memoryImpact} from './sim/politics.js';
 import {campaignStarts,startCampaign,campaignChoices,campaignAction,campaignYear,
   campaignScore,extendCampaign,serializeCampaign,loadCampaign} from './sim/campaign.js';
 installMobileRuntime();
@@ -31,6 +32,7 @@ const REASONS={
   'high-risk':'Высокий риск разоблачения','service-for-silver':'Военная поддержка за серебро',
   'finite-oath':'Присяга на ограниченный срок','cease-hostilities':'Прекращение войны',
   'renounce-current-siege':'Отказ от текущей осады',
+  'past-refusal':'Прежний отказ','remembered-injustice':'Помнит несправедливость',
   'partner-consent':'Согласие партнёра',
   'pledged-power':'Сила сторонников','ruler-power':'Сила правителя'
 };
@@ -44,10 +46,10 @@ const ICONS={marriage:'✦',gift:'◇',grant:'♜',petition:'§',faction:'⚑',j
 const GOALS={'secure-claim':'Вернуть спорный титул','political-leverage':'Ослабить сюзерена',
   'gain-land':'Получить владение','stabilize-realm':'Укрепить мир','seek-marriage':'Создать союзный дом',
   'secure-house':'Защитить род'};
-let game=null,saved=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
+let game=null,saved=null,backupRaw=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
 let screen='loading',autoSpeed=0,autoHandle=null,saveQueue=Promise.resolve();
 let storage='indexeddb',database=null,actionPending=null,busy=false,toastHandle=null;
-let atlasView='atlas',familyFocus=null,atlasChanges=[],atlasRegion=0,selectedSize=12;
+let atlasView='atlas',familyFocus=null,atlasChanges=[],atlasRegion=0,selectedSize=12,showAllChoices=false;
 const houseColor=(w,id)=>{
   const p=w.people.find(p=>p.id===id);
   const index=w.dynasties.findIndex(h=>h.id===p?.dynastyId);
@@ -85,40 +87,67 @@ function openDB(){
     request.onblocked=()=>reject(Error('Another tab blocks saves'));
   });
 }
-function dbRead(){
+function dbRead(key='active'){
   return new Promise((resolve,reject)=>{
     const tx=database.transaction('saves','readonly');
-    const request=tx.objectStore('saves').get('active');
+    const request=tx.objectStore('saves').get(key);
     request.onsuccess=()=>resolve(request.result||null);
     request.onerror=()=>reject(request.error||Error('Save read error'));
   });
 }
-function dbWrite(data){
+function dbWrite(data,{rotate=true}={}){
   return new Promise((resolve,reject)=>{
-    const tx=database.transaction('saves','readwrite');
-    tx.objectStore('saves').put(data,'active');
-    tx.oncomplete=()=>resolve();
+    const tx=database.transaction('saves','readwrite'),store=tx.objectStore('saves');
+    let old=null;
+    const prior=store.get('active');
+    prior.onsuccess=()=>{
+      old=prior.result||null;
+      if(rotate&&old&&old!==data)store.put(old,'backup');
+      store.put(data,'active');
+    };
+    tx.oncomplete=()=>resolve(old);
     tx.onerror=()=>reject(tx.error||Error('Save write failed'));
     tx.onabort=()=>reject(tx.error||Error('Save aborted'));
   });
 }
 async function initializeStorage(){
-  try{database=await openDB();storage='indexeddb';return await dbRead()}
-  catch(e){
+  try{
+    database=await openDB();storage='indexeddb';
+    return {active:await dbRead('active'),backup:await dbRead('backup')};
+  }catch(e){
     database=null;storage='localstorage';
-    try{return localStorage.getItem('venets:campaign:v1')}
-    catch {storage='memory';notify('Хранилище браузера недоступно. Эта кампания не сохранится после закрытия вкладки.');return null}
+    try{return {active:localStorage.getItem('venets:campaign:v1'),
+      backup:localStorage.getItem('venets:campaign:backup:v1')}}
+    catch{
+      storage='memory';
+      notify('Хранилище недоступно. Прогресс не сохранится после закрытия вкладки.');
+      return {active:null,backup:null};
+    }
   }
 }
+async function writeSave(data,{rotate=true}={}){
+  if(storage==='indexeddb'&&database)return dbWrite(data,{rotate});
+  if(storage==='localstorage'){
+    const old=localStorage.getItem('venets:campaign:v1');
+    if(rotate&&old&&old!==data)localStorage.setItem('venets:campaign:backup:v1',old);
+    localStorage.setItem('venets:campaign:v1',data);
+    return old;
+  }
+  throw Error('Нет постоянного хранилища');
+}
+function validBackup(raw){
+  if(typeof raw!=='string'||!raw)return null;
+  try{loadCampaign(raw);return raw}catch{return null}
+}
+
 function saveGame(){
   if(IS_PREVIEW||!game)return;
   let data;
   try{data=serializeCampaign(game)}catch(e){notify('Сохранение остановлено: '+e.message);return}
   by('save-status').textContent='Сохраняем…';
   saveQueue=saveQueue.catch(()=>{}).then(async()=>{
-    if(storage==='indexeddb'&&database)await dbWrite(data);
-    else if(storage==='localstorage')localStorage.setItem('venets:campaign:v1',data);
-    else throw Error('Нет постоянного хранилища');
+    const previous=await writeSave(data);
+    if(previous&&previous!==data)backupRaw=validBackup(previous);
     saved=data;
     by('save-status').textContent='Сохранено';
   }).catch(e=>{
@@ -127,6 +156,7 @@ function saveGame(){
   });
 }
 function saveMenu(){
+  by('restore-backup').hidden=!backupRaw;
   by('resume').hidden=!(saved||game);
   if(game){
     label(by('resume-summary'),String(game.world.year)+' год · '+pname(game.world,game.playerId));
@@ -182,7 +212,7 @@ function begin(){
   try{
     game=startCampaign({seed,countyId:selectedCounty,size:selectedSize});
     selectedProvince='pr-'+selectedCounty.slice(-2);atlasRegion=0;
-    panel='council';filter='house';atlasView='atlas';familyFocus=null;atlasChanges=[];saveGame();play();
+    panel='council';filter='house';atlasView='atlas';familyFocus=null;atlasChanges=[];showAllChoices=false;saveGame();play();
   }catch(e){notify('Не удалось создать мир: '+e.message)}
 }
 function showNewConfirmation(){
@@ -224,6 +254,7 @@ function nextYear(){
     const previousOwners=atlasOwnerSnapshot(game.world);
     const result=campaignYear(game);
     atlasChanges=transferHighlights(previousOwners,game.world);
+    showAllChoices=false;
     saveGame();
     if(result.finished||result.chapterComplete){pause();renderEnding();screenTo('ending')}
     else{
@@ -280,29 +311,45 @@ function renderCouncil(){
     (inherited.length?
       'Дом '+house(w,game.dynastyId)+' удерживает '+inherited.length+' '+(inherited.length===1?'титул.':'титулов.'):
       'Ваш дом лишился земель, но ещё жив. Сохраните претензии и ищите сторонников.');
-  label(by('story'),story);
+  const remembered=claim?memoryImpact(w,p.id,claim.holderId):{value:0,source:null};
+  label(by('story'),story+(remembered.value<=-5&&remembered.source?
+    ' Помнит обиду · '+remembered.source.year+' г.':''));
   renderConflictStatus();
   const actions=campaignChoices(game);
   const container=by('actions'),frag=document.createDocumentFragment();
-  frag.append(element('p','action-intro',game.lastActionYear===w.year?
-    'В этом году решение уже принято. Следующий шаг — новый год.':
-    p && w.year-p.birthYear<18?
-    'Правитель несовершеннолетний. Решения станут доступны с 18 лет.':
-    'Одно решение в год.'));
-  if(!actions.length)frag.append(element('p','subnote',game.lastActionYear===w.year?
-    'Другие правители продолжат действовать, когда вы переведёте время.':
-    'Доступных политических действий сейчас нет. Перейдите к следующему году.'));
-  else for(const a of actions.slice(0,9)){
-    const b=element('button','action-choice');b.type='button';b.dataset.actionKind=a.kind;
-    const sign=element('span','action-sign',ICONS[a.kind]);
-    const info=element('span','action-copy');
-    info.append(element('strong','',TITLES[a.kind]),element('small','',
-      (a.targetId?pname(w,a.targetId):'Династическое решение')+
-      (a.titleId?' · '+tname(w,a.titleId):'')+
-      (a.kind==='gift'?' · '+a.meta.amount+' монет':'') ));
-    b.append(sign,info,element('span','action-arrow','→'));
-    b.addEventListener('click',()=>askAction(a));
-    frag.append(b);
+  if(!actions.length){
+    frag.append(element('p','action-intro',game.lastActionYear===w.year?
+      'Решение принято. Продолжить →':w.year-p.birthYear<18?
+      'До совершеннолетия решения недоступны.':'Нет решений. Продолжить →'));
+  }else{
+    const featured=actions.slice(0,3);
+    // Hostilities must not be hidden in the extra-actions drawer.
+    for(const a of actions)if(['peace','war'].includes(a.kind)&&
+      !featured.some(v=>v.kind===a.kind&&v.targetId===a.targetId&&v.titleId===a.titleId))
+      featured.push(a);
+    const rest=actions.filter(a=>!featured.includes(a));
+    const chosen=showAllChoices?[...featured,...rest]:featured;
+    for(const a of chosen){
+      const b=element('button','action-choice');b.type='button';b.dataset.actionKind=a.kind;
+      const sign=element('span','action-sign',ICONS[a.kind]);
+      const info=element('span','action-copy');
+      info.append(element('strong','',TITLES[a.kind]),element('small','',
+        (a.targetId?pname(w,a.targetId):'Династическое решение')+
+        (a.titleId?' · '+tname(w,a.titleId):'')+
+        (a.reasons.includes('remembered-injustice')?' · Помнит обиду':'')+
+        (a.reasons.includes('past-refusal')?' · Не доверяет':'')+
+        (a.kind==='gift'?' · '+a.meta.amount+' монет':'')));
+      b.append(sign,info,element('span','action-arrow','→'));
+      b.addEventListener('click',()=>askAction(a));
+      frag.append(b);
+    }
+    if(rest.length){
+      const more=element('button','more-actions',showAllChoices?
+        'Свернуть решения ↑':'Ещё решения · '+rest.length+' ↓');
+      more.type='button';more.setAttribute('aria-expanded',String(showAllChoices));
+      more.addEventListener('click',()=>{showAllChoices=!showAllChoices;renderCouncil()});
+      frag.append(more);
+    }
   }
   container.replaceChildren(frag);
 }
@@ -321,6 +368,7 @@ by('confirm-dialog').addEventListener('close',()=>{
     const previousOwners=atlasOwnerSnapshot(game.world);
     const outcome=campaignAction(game,a);
     atlasChanges=transferHighlights(previousOwners,game.world);
+    showAllChoices=false;
     saveGame();
     const msg=outcome.success?'Решение исполнено. Последствия внесены в летопись.':
       'Получен отказ. Обиды и требования сохранены.';
@@ -499,6 +547,26 @@ function renderEnding(){
   by('continue-legacy').hidden=game.finished;
 }
 function closeGameToMenu(){pause();saveGame();menu()}
+by('restore-backup').addEventListener('click',()=>{
+  if(!backupRaw)return;
+  pause();by('restore-dialog').returnValue='';by('restore-dialog').showModal();
+});
+by('restore-dialog').addEventListener('close',async()=>{
+  if(by('restore-dialog').returnValue!=='confirm'||!backupRaw)return;
+  pause();by('restore-backup').disabled=true;
+  try{
+    await saveQueue; // never race a pending auto-save of the newer campaign
+    const prior=validBackup(backupRaw);
+    if(!prior)throw Error('Резервная запись повреждена');
+    const restored=loadCampaign(prior);
+    await writeSave(prior,{rotate:false}); // preserve checkpoint, never overwrite it with corrupted active
+    saved=prior;game=restored;panel='council';atlasView='atlas';familyFocus=null;
+    selectedProvince='pr-'+game.startCountyId.slice(-2);atlasRegion=0;
+    notify('Резервная хроника восстановлена');
+    resume();
+  }catch(e){notify('Не удалось восстановить: '+e.message)}
+  finally{by('restore-backup').disabled=false}
+});
 document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>setSpeed(Number(b.dataset.speed))));
 document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click',()=>{panel=b.dataset.panel;by('game-screen').dataset.activePanel=panel;
   for(const n of document.querySelectorAll('[data-panel]')){const selected=n.dataset.panel===panel;n.classList.toggle('active',selected);n.setAttribute('aria-pressed',String(selected))}
@@ -607,9 +675,16 @@ if(IS_PREVIEW){
   // Storage is read exactly once on the real app only.
   (async()=>{
     try{
-      const raw=await initializeStorage();
-      if(raw){try{const restored=loadCampaign(raw);saved=raw;game=restored}
-        catch(e){saved=null;game=null;notify('Сохранение не удалось прочитать: '+e.message)}}
+      const {active,backup}=await initializeStorage();
+      backupRaw=validBackup(backup);
+      if(active){
+        try{const restored=loadCampaign(active);saved=active;game=restored}
+        catch(e){
+          saved=null;game=null;
+          notify(backupRaw?'Основная хроника повреждена. Можно восстановить резервную.':
+            'Не удалось прочитать хронику: '+e.message);
+        }
+      }
       menu();
     }catch(e){menu();notify('Ошибка запуска: '+e.message)}
   })();
