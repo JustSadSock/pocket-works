@@ -240,7 +240,7 @@ export function seedFamilyFoundations(world) {
   for(const person of titled) {
     const sex=person.sex==='male'?'female':'male';
     const age=world.year-person.birthYear;
-    const spouse=addPerson(world,{sex,dynastyId:world.dynasties.filter(d=>d.id!==person.dynastyId)[randomInt(world,4)].id,
+    const spouse=addPerson(world,{sex,dynastyId:world.dynasties.filter(d=>d.id!==person.dynastyId)[randomInt(world,world.dynasties.length-1)].id,
       birthYear:world.year-Math.max(20,Math.min(40,age-4+randomInt(world,9))),
       origin:'founder-spouse',treasury:{grain:10+randomInt(world,22),coin:5+randomInt(world,12)}});
     person.spouseId=spouse.id;spouse.spouseId=person.id;
