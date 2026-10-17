@@ -26,7 +26,10 @@ test('a real household forest supply reduces trees and credits a conserved house
  const after=woodland(s),reported=audit(s);
  assert.ok(after.harvested>start.harvested,'some households actually harvest nearby trees for wood');
  assert.ok(after.standing<start.standing+after.regrown);
- assert.equal(after.waste,0,'normal logging stock is not logged as new field clearing waste');
+ assert.ok(after.waste>=0&&after.waste<after.harvested,'cleared branches are part of physically felled biomass');
+ const producedWood=Math.round((s.stats.produced-s.stats.harvest)*100)/100;
+ assert.ok(Math.abs(producedWood+after.waste-after.harvested)<.11,
+  'merchantable timber plus measured brush must equal actual felled standing biomass');
  assert.ok(reported.ok,reported.issues.join('; '));
 });
 
