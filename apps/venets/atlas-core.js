@@ -61,7 +61,14 @@ const HERALDRY=[
   {main:'#784b45',alt:'#edcfaa',ink:'#482d2e',charge:'chevron'},
   {main:'#536c75',alt:'#f1dcb3',ink:'#2a424e',charge:'river'},
   {main:'#88734b',alt:'#e4d9ac',ink:'#4d442f',charge:'sun'},
-  {main:'#4b685e',alt:'#ebd5ae',ink:'#30483e',charge:'tower'}
+  {main:'#4b685e',alt:'#ebd5ae',ink:'#30483e',charge:'tower'},
+  {main:'#7a6455',alt:'#f3dcb7',ink:'#513a31',charge:'wheat'},
+  {main:'#567367',alt:'#efe1bd',ink:'#345044',charge:'moon'},
+  {main:'#785d61',alt:'#f2dfc0',ink:'#543b3f',charge:'sword'},
+  {main:'#59657a',alt:'#e8d0ae',ink:'#384251',charge:'star'},
+  {main:'#81754b',alt:'#f1dbb4',ink:'#554b32',charge:'mountain'},
+  {main:'#68615b',alt:'#ecdbb8',ink:'#443e3a',charge:'bridge'},
+  {main:'#56695c',alt:'#edd6aa',ink:'#35473a',charge:'crown'}
 ];
 export function heraldryFor(dynastyId){
   const n=Number(String(dynastyId).split('-').at(-1));
