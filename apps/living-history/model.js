@@ -105,7 +105,7 @@ function croftCandidate(s,x,y,c){
  }
  return best?.cells||[];
 }
-function chooseSettlementSite(s,c,near,radius=19){
+export function chooseSettlementSite(s,c,near,radius=19){
  let best=null,bestScore=-Infinity;
  const villageDistances=walkingDistances(s,c);
  const living=s.households.filter(h=>h.communityId===c.id);
