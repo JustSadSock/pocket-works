@@ -1,7 +1,7 @@
 
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
-import {ITEMS,TREATMENTS,getItem,getRite,getDoctrine,MAX_ROUNDS} from './engine.js';
+import {ITEMS,TREATMENTS,getItem,getDoctrine,MAX_ROUNDS} from './engine.js';
 import {offeringArt,godArt} from './art.js';
 
 const K='pocket-works:bozhe-ne-tak:online:';
@@ -28,7 +28,7 @@ const EXPLAIN={
 };
 const safeAction=()=>({itemId:null,treatment:null,bell:1,height:'low'});
 export function createOnline(onChange,onExit){
- let clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
+ let draftItem='',draftTreatment='',clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
  const show=()=>onChange();
  const isLive=()=>client?.socket?.readyState===WebSocket.OPEN&&status==='room';
  const message=s=>{notice=s;show()};
@@ -36,13 +36,20 @@ export function createOnline(onChange,onExit){
  const apply=s=>{
   if(!s||!Array.isArray(s.players)||typeof s.phase!=='string')return;
   if(view&&Number.isInteger(s.revision)&&s.revision<view.revision)return;
-  const old=view;view=s;if(Number.isFinite(s.serverNow))clockOffset=s.serverNow-Date.now();sequence=Math.max(sequence,s.lastSeq?.[ownId]||0);
-  if(old?.phase!==s.phase)notice='';
+  const old=view;view=s;if(Number.isFinite(s.serverNow))clockOffset=s.serverNow-Date.now();sequence=Math.max(sequence,s.ownSeq||0);
+  if(old?.phaseId!==s.phaseId){notice='';draftItem='';draftTreatment='';}
   status='room';show();
  };
  const bind=(net,id)=>{
   net.on('connected',x=>{if(id!==epoch)return;ownId=x.player.id;error='';status='connecting';show()});
-  net.on('room_joined',x=>{if(id!==epoch)return;roomId=x.roomId;ownId=ownId||x.players?.[0]?.id||'';apply(x.state);send({type:'sync'})});
+  net.on('room_joined',x=>{
+   if(id!==epoch)return;
+   if(x.version!=='v2'){
+    try{net.leaveRoom()}catch{}
+    roomId='';view=null;status='intro';error='Эта комната создана на старой версии. Создайте новый храм.';show();return;
+   }
+   roomId=x.roomId;ownId=ownId||x.players?.[0]?.id||'';apply(x.state);send({type:'sync'});
+  });
   net.on('game_event',x=>{if(id!==epoch)return;
    if(x.event?.type==='state')apply(x.event.payload);
    if(x.event?.type==='notice')message(typeof x.event.payload==='string'?x.event.payload:'Операция не принята.')
@@ -116,7 +123,7 @@ export function createOnline(onChange,onExit){
   const ps=view.players||[],host=view.host===ownId;
   return '<section class="net-room"><div class="net-room-top">'+
    '<span class="chapter">СОВЕТ ЖРЕЦОВ · 2–5 ИГРОКОВ</span><h1>Пока бог спит</h1>'+
-   '<p>Отправьте товарищам код. Все готовят свои подношения независимо; сервер объединяет результат обряда.</p>'+
+   '<p>Отправьте товарищам код. Каждый знает только часть ритуала. Раскройте подсказки, подготовьте общий дар и примите решение вместе.</p>'+
    '<div class="net-code"><strong>'+escape(roomId.slice(0,8).toUpperCase())+'</strong>'+
    '<button data-net="copy" type="button">Скопировать приглашение</button></div></div>'+
    '<div class="net-roster"><span class="section-label">ПРИШЛИ В ХРАМ · '+ps.length+'/5</span>'+
@@ -135,43 +142,94 @@ export function createOnline(onChange,onExit){
     r?'ЗАПЕЧАТАНО':c?.itemId?escape(getItem(c.itemId)?.name||'Дар'):'ВЫБИРАЕТ ДАР')+'</span></div>';
   }).join('')+'</div>';
  }
+
+ const roleLabels={need:'Пророк',taboo:'Страж запрета',offering:'Ризничий',bell:'Звонарь',height:'Алтарщик'};
+ const taskNames={need:'Расшифровать знамение',taboo:'Объявить запрет',offering:'Приготовить дар',bell:'Назначить звон',height:'Поднять или оставить'};
+ function assignedRoster(){
+  return '<div class="net-roles-roster">'+view.players.map(p=>{
+   const tasks=view.assignments?.[p.id]||[],isMe=p.id===ownId;
+   const completed=tasks.every(t=>view.done?.[t]);
+   return '<div class="net-role-person '+(isMe?'mine':'')+'"><span class="net-role-name">'+escape(p.name)+(isMe?' (вы)':'')+
+    '</span><span>'+tasks.map(t=>escape(roleLabels[t])).join(' · ')+'</span><b>'+(
+     view.locked?.[p.id]?'ЗАПЕЧАТАНО':completed?'ГОТОВ':'В ПРОЦЕССЕ')+'</b></div>';
+  }).join('')+'</div>';
+ }
+ function roleCard(task){
+  const clue=view.ownClues?.[task],done=!!view.done?.[task],locked=!!view.locked?.[ownId];
+  let controls='';
+  if(task==='need'||task==='taboo'){
+   controls='<button type="button" data-role-reveal="'+task+'" class="net-role-confirm" '+(done||locked?'disabled':'')+'>'+
+    (done?'ЗНАМЕНИЕ ПЕРЕДАНО':'ОТПРАВИТЬ ЗНАМЕНИЕ →')+'</button>';
+  }else if(task==='offering'){
+   const item=draftItem||view.altar?.itemId||'';
+   const treatment=draftTreatment||view.altar?.treatment||'';
+   controls='<div class="net-offerings">'+ITEMS.map(x=>'<button type="button" class="net-offering '+(item===x.id?'chosen':'')+
+    '" data-role-item="'+x.id+'" aria-pressed="'+(item===x.id)+'" '+(locked?'disabled':'')+'>'+offeringArt(x.id,48)+
+    '<b>'+escape(x.name)+'</b></button>').join('')+'</div><div class="net-tool-row">'+TREATMENTS.map(x=>
+    '<button type="button" class="net-tool '+(treatment===x.id?'chosen':'')+'" data-role-treatment="'+x.id+
+    '" aria-pressed="'+(treatment===x.id)+'" '+(locked?'disabled':'')+'>'+escape(x.name)+'</button>').join('')+'</div>'+
+    '<span class="net-role-small">'+(done?'Дар поставлен. Можно изменить до печати.':
+      'Укажите предмет и подготовку — выбранное сразу появится на общем алтаре.')+'</span>';
+  }else if(task==='bell'){
+   controls='<div class="net-tool-row">'+[1,2,3].map(x=>'<button type="button" class="net-tool '+(view.altar?.bell===x?'chosen':'')+
+    '" data-role-bell="'+x+'" aria-pressed="'+(view.altar?.bell===x)+'" '+(locked?'disabled':'')+'>'+x+' удар'+(x===1?'':'а')+'</button>').join('')+'</div>';
+  }else if(task==='height'){
+   controls='<div class="net-tool-row">'+['low','high'].map(x=>'<button type="button" class="net-tool '+(view.altar?.height===x?'chosen':'')+
+    '" data-role-height="'+x+'" aria-pressed="'+(view.altar?.height===x)+'" '+(locked?'disabled':'')+'>'+
+    (x==='low'?'У подножия':'Вознести дар')+'</button>').join('')+'</div>';
+  }
+  return '<section class="net-task '+(done?'task-done':'')+'"><div class="net-task-title"><span>'+
+   escape(taskNames[task])+'</span><span>'+(done?'ГОТОВО':'ТРЕБУЕТСЯ')+'</span></div>'+
+   (clue?'<div class="net-clue"><span>ТОЛЬКО ВАМ ОТКРЫТО</span><strong>'+escape(clue.text)+'</strong></div>':'')+controls+'</section>';
+ }
  function phasePlay(){
-  const m=view.match,rite=getRite(m),mine=view.choices[ownId]||safeAction(),locked=!!view.ready[ownId];
-  const props=ITEMS.map(o=>'<button class="net-offering '+(mine.itemId===o.id?'chosen':'')+'" data-net-item="'+o.id+'" type="button" '+(locked?'disabled':'')+
-   ' aria-pressed="'+(mine.itemId===o.id)+'">'+offeringArt(o.id,54)+'<b>'+escape(o.name)+'</b></button>').join('');
-  const treat=TREATMENTS.map(t=>'<button class="net-tool '+(mine.treatment===t.id?'chosen':'')+'" data-net-treatment="'+t.id+
-   '" type="button" '+(locked?'disabled':'')+' aria-pressed="'+(mine.treatment===t.id)+'">'+escape(t.name)+'</button>').join('');
-  const beats=[1,2,3].map(n=>'<button class="net-tool '+(mine.bell===n?'chosen':'')+'" data-net-bell="'+n+
-   '" type="button" '+(locked?'disabled':'')+' aria-pressed="'+(mine.bell===n)+'">'+n+'</button>').join('');
-  const height=['low','high'].map((x,i)=>'<button class="net-tool '+(mine.height===x?'chosen':'')+'" data-net-height="'+x+
-   '" type="button" '+(locked?'disabled':'')+' aria-pressed="'+(mine.height===x)+'">'+(i?'Поднять':'У подножия')+'</button>').join('');
-  const dogmas=m.doctrines.map(id=>'<span class="net-rule">'+escape(getDoctrine(id).name)+'</span>').join('');
-  const timer=Math.max(0,Math.ceil((view.deadlineAt-Date.now())/1000));
+  const m=view.match,tasks=view.ownTasks||[],timer=Math.max(0,Math.ceil((view.deadlineAt-(Date.now()+clockOffset))/1000));
+  const chosen=getItem(view.altar?.itemId),all=view.players.length,locked=!!view.locked?.[ownId];
+  const ownDone=tasks.length>0&&tasks.every(k=>view.done?.[k]);
+  const signals=(view.announcements||[]).slice(-9);
+  const dogmas=(m.doctrines||[]).map(id=>'<span class="net-rule">'+escape(getDoctrine(id)?.name||'')+'</span>').join('');
   return '<section class="net-play">'+sharedHeader()+'<div class="net-play-main">'+
-   '<div class="net-shrine">'+
-   '<div class="net-mask">'+godArt()+'</div><div class="net-plinth">'+(mine.itemId?offeringArt(mine.itemId,95):'<span>?</span>')+'</div>'+
-   '<div class="net-prophecy"><span>ЗНАМЕНИЕ · '+escape(rite.title)+'</span><p>'+escape(rite.riddle)+'</p></div>'+
-   '</div><div class="net-actions">'+
-   '<div class="net-live"><span>ДО СУДА <b data-net-timer>'+timer+'</b> С</span><span>'+Object.keys(view.ready).length+'/'+view.players.length+' ГОТОВЫ</span></div>'+
-   '<div class="section-label">I. ПОДНОШЕНИЕ</div><div class="net-offerings">'+props+'</div>'+
-   '<div class="net-tools"><div><div class="section-label">II. ОБРАБОТКА</div><div class="net-tool-row">'+treat+'</div></div>'+
-   '<div><div class="section-label">III. КОЛОКОЛ</div><div class="net-tool-row">'+beats+'</div></div>'+
-   '<div class="net-height"><div class="section-label">IV. ВЫСОТА</div><div class="net-tool-row">'+height+'</div></div></div>'+
-   (dogmas?'<div class="net-dogma-line">'+dogmas+'</div>':'')+contributions()+
-   (locked?controls('ИЗМЕНИТЬ ПОДНОШЕНИЕ','unlock',false,'secondary')+
-       '<p class="net-wait">Ваш дар запечатан. Суд начнётся, когда все будут готовы, либо закончится время.</p>':
-    controls(mine.itemId?'ЗАПЕЧАТАТЬ ПОДНОШЕНИЕ →':'СНАЧАЛА ВЫБЕРИТЕ ДАР','lock',!mine.itemId,'primary'))+
+   '<div class="net-shrine"><div class="net-mask">'+godArt()+'</div>'+
+   '<div class="net-plinth">'+(chosen?offeringArt(chosen.id,93):'<span>?</span>')+'</div>'+
+   '<div class="net-prophecy"><span>СКРЫТОЕ ЗНАМЕНИЕ</span><p>'+escape(view.riteTitle||'ОГО ждёт вашего дара')+
+   '</p><small>Каждый жрец знает лишь свою часть обряда.</small></div></div>'+
+   '<div class="net-actions net-actions-v4"><div class="net-live"><span>ДО СУДА <b data-net-timer>'+timer+
+   '</b> С</span><span>'+Object.keys(view.locked||{}).length+'/'+all+' ЗАПЕЧАТАЛИ</span></div>'+
+   '<div class="section-label">ВАШИ ОБЯЗАННОСТИ</div>'+
+   tasks.map(roleCard).join('')+
+   '<div class="section-label">НАСТЕННЫЕ ЗНАМЕНИЯ</div>'+
+   '<div class="net-messages">'+(signals.length?signals.map(x=>{
+    const name=view.players.find(p=>p.id===x.by)?.name||'Жрец';
+    return '<div><b>'+escape(name)+'</b><span>'+escape(x.text)+'</span></div>';
+   }).join(''):'<p>Пока никто не передал знамение. ОГО явно что-то скрывает.</p>')+'</div>'+
+   '<div class="net-signal-actions"><button data-role-call="help">Нужна подсказка</button>'+
+   '<button data-role-call="warn">Проверьте запрет</button>'+
+   '<button data-role-call="agree">Согласен</button>'+
+   '<button data-role-call="urgent">Скоро суд!</button></div>'+
+   (dogmas?'<div class="net-dogma-line">'+dogmas+'</div>':'')+
+   '<div class="section-label">КТО УЖЕ ИСПОЛНИЛ СВОЙ ДОЛГ</div>'+assignedRoster()+
+   (locked?'<button type="button" class="btn secondary" data-net="unlock">ИЗМЕНИТЬ СВОЁ РЕШЕНИЕ</button>':
+   '<button type="button" class="btn primary" data-net="lock" '+(!ownDone?'disabled':'')+'>'+
+   (ownDone?'ЗАПЕЧАТАТЬ МОЮ ЧАСТЬ →':'СНАЧАЛА ЗАВЕРШИТЕ СВОИ ДЕЛА')+'</button>')+
    '</div></div></section>';
  }
  function phaseJudgment(){
-  const m=view.match,j=m.judgment,score=j.contributions||[],a=view.acks||{};
+  const m=view.match,j=m.judgment,a=view.acks||{};
   const verdict=j.verdict==='bless'?'БОГ ДОВОЛЕН':j.verdict==='wrath'?'БОГ РАЗГНЕВАН':'БОГ ЗАДУМАЛСЯ';
+  const item=getItem(j.selected);
   return '<section class="net-verdict">'+sharedHeader()+'<div class="net-verdict-head">'+
-   '<div class="net-mask verdict-'+j.verdict+'">'+godArt()+'</div><div><span class="chapter">ОБЩИЙ СУД</span><h1>'+verdict+'</h1>'+
-   '<p>'+escape(j.miracleText)+'</p><strong>Командный счёт: '+j.score+' · Милость '+(j.faithDelta>0?'+':'')+j.faithDelta+'</strong></div></div>'+
-   '<div class="section-label">ПОДНОШЕНИЯ ЖРЕЦОВ</div><div class="net-score-list">'+score.map(c=>
-    '<div><span>'+escape(c.name)+' · '+escape(getItem(c.action.itemId)?.name||'Дар')+'</span><strong>'+c.score+'</strong></div>').join('')+'</div>'+
-   controls(a[ownId]?'СУД ПРИНЯТ · ОЖИДАНИЕ':'ПРИЗНАТЬ ПРИГОВОР →','ack',!!a[ownId],'primary')+'</section>';
+   '<div class="net-mask verdict-'+j.verdict+'">'+godArt()+'</div><div><span class="chapter">СУД НАД ОБЩИМ ДАРОМ</span>'+
+   '<h1>'+verdict+'</h1><p>'+escape(j.miracleText)+'</p>'+
+   '<strong>Оценка '+j.score+' · Милость '+(j.faithDelta>0?'+':'')+j.faithDelta+'</strong></div></div>'+
+   '<div class="section-label">ОГО ПРОВЕРИЛ</div><div class="net-score-list">'+
+   '<div><span>Общее подношение: '+escape(item?.name||'Каравай')+'</span><strong>'+j.score+'</strong></div>'+
+   (j.criteria||[]).map(c=>'<div><span>'+escape(c.name)+'</span><strong>'+c.score+'/'+c.max+'</strong></div>').join('')+
+   (j.doctrineResults||[]).map(d=>'<div><span>'+escape(getDoctrine(d.id)?.name||'Догмат')+'</span><strong>'+
+    (d.delta>0?'+':'')+d.delta+'</strong></div>').join('')+'</div>'+
+   ((j.unfinished||[]).length?'<p class="net-unfinished">Не успели: '+j.unfinished.map(t=>taskNames[t]).join(', ')+
+    '. Сервер применил стандартные решения.</p>':'')+
+   controls(a[ownId]?'ПРИГОВОР ПРИНЯТ · ЖДЁМ ОСТАЛЬНЫХ':'ПРИЗНАТЬ ПРИГОВОР →','ack',!!a[ownId],'primary')+
+   '</section>';
  }
  function phaseDogma(){
   const m=view.match,offers=m.offers||[],votes=view.votes||{},chosen=votes[ownId];
@@ -199,14 +257,14 @@ export function createOnline(onChange,onExit){
  function intro(){
   return '<section class="net-intro"><div class="net-intro-mask">'+godArt()+'</div>'+
    '<div class="net-intro-form"><span class="chapter">POCKETNET · НАСТОЯЩИЕ ИГРОКИ</span><h1>Собор зовёт</h1>'+
-    '<p>Создайте храм или присоединитесь по коду. Каждый жрец готовит свой дар, сервер решает судьбу всей церкви.</p>'+
+    '<p>Создайте храм или присоединитесь по коду. Роли разные: один раскрывает знамение, другой готовит дар, третий звонит. Общий приговор выносит сервер.</p>'+
     '<label for="bnt-name">ИМЯ ЖРЕЦА</label><input id="bnt-name" autocomplete="nickname" maxlength="24" value="'+escape(name)+'" placeholder="Ваше имя"/>'+
     controls('ОТКРЫТЬ СВОЙ ХРАМ →','create',false,'primary')+
     '<label for="bnt-room-code">КОД КОМНАТЫ ИЛИ ССЫЛКА</label>'+
     '<input id="bnt-room-code" autocapitalize="characters" autocomplete="off" maxlength="180" placeholder="Восемь символов" value="'+escape(code)+'"/>'+
     controls('ПРИСОЕДИНИТЬСЯ →','join',false,'secondary')+
     (savedRoom()?controls('ВЕРНУТЬСЯ В ПРОШЛУЮ КОМНАТУ','resume',false,'secondary'):'')+
-    '<p class="net-disclaimer">На этой стадии все сведения об обрядах публичные. Тайные роли появятся в следующем обновлении.</p>'+
+    '<p class="net-disclaimer">Тайные подсказки защищены сервером. Встроенные сигналы позволяют играть без голосового чата.</p>'+
    '</div></section>';
  }
  function markup(){
@@ -222,16 +280,26 @@ export function createOnline(onChange,onExit){
    (notice?'<p class="net-notice" role="status">'+escape(notice)+'</p>':'')+
   '</div>';
  }
+
  function action(event){
-  const el=event.target.closest('[data-net],[data-net-item],[data-net-treatment],[data-net-bell],[data-net-height],[data-net-vote]');
+  const el=event.target.closest('[data-net],[data-net-vote],[data-role-reveal],[data-role-item],[data-role-treatment],[data-role-bell],[data-role-height],[data-role-call]');
   if(!el)return false;
-  if(el.hasAttribute('data-net-item')||el.hasAttribute('data-net-treatment')||el.hasAttribute('data-net-bell')||el.hasAttribute('data-net-height')){
-   const patch=el.dataset.netItem?{itemId:el.dataset.netItem}:
-    el.dataset.netTreatment?{treatment:el.dataset.netTreatment}:
-    el.dataset.netBell?{bell:Number(el.dataset.netBell)}:{height:el.dataset.netHeight};
-   command('choose',{patch});return true;
-  }
+  const own=view?.ownTasks||[],sealed=!!view?.locked?.[ownId];
   if(el.hasAttribute('data-net-vote')){command('vote',{id:el.dataset.netVote});return true}
+  if(el.hasAttribute('data-role-call')){command('call',{kind:el.dataset.roleCall});return true}
+  if(el.hasAttribute('data-role-reveal')){
+   const task=el.dataset.roleReveal;
+   if(!sealed&&own.includes(task))command('reveal',{task});return true;
+  }
+  if(el.hasAttribute('data-role-item')||el.hasAttribute('data-role-treatment')){
+   if(sealed||!own.includes('offering'))return true;
+   if(el.hasAttribute('data-role-item'))draftItem=el.dataset.roleItem;
+   else draftTreatment=el.dataset.roleTreatment;
+   if(draftItem&&draftTreatment)command('set',{task:'offering',itemId:draftItem,treatment:draftTreatment});
+   show();return true;
+  }
+  if(el.hasAttribute('data-role-bell')){if(!sealed&&own.includes('bell'))command('set',{task:'bell',value:Number(el.dataset.roleBell)});return true}
+  if(el.hasAttribute('data-role-height')){if(!sealed&&own.includes('height'))command('set',{task:'height',value:el.dataset.roleHeight});return true}
   switch(el.dataset.net){
    case 'create':{const i=document.querySelector('#bnt-name');if(i)nickname(i.value);void start('create');break}
    case 'join':{const i=document.querySelector('#bnt-name'),j=document.querySelector('#bnt-room-code');
@@ -239,14 +307,16 @@ export function createOnline(onChange,onExit){
    case 'resume':{const i=document.querySelector('#bnt-name');if(i)nickname(i.value);void start('resume');break}
    case 'cancel':close();show();break;
    case 'leave':leave();break;
-   case 'start':{if(client?.socket?.readyState===WebSocket.OPEN)send({type:'start'});break}
+   case 'start':if(client?.socket?.readyState===WebSocket.OPEN)send({type:'start'});break;
    case 'lock':command('lock');break;
    case 'unlock':command('unlock');break;
    case 'ack':command('ack');break;
-   case 'copy':{const u=new URL(location.href);u.searchParams.set('room',roomId.slice(0,8));u.hash='';
+   case 'copy':{
+    const u=new URL(location.href);u.searchParams.set('room',roomId.slice(0,8));u.hash='';
     const invite=u.href;Promise.resolve(navigator.clipboard?.writeText(invite)||
      Promise.reject(Error('Clipboard unavailable'))).then(()=>message('Ссылка скопирована.'))
-      .catch(()=>message('Ссылка: '+invite));break}
+      .catch(()=>message('Ссылка: '+invite));break
+   }
   }
   return true;
  }

@@ -177,3 +177,59 @@ try {
   if (resumedHost) await close(resumedHost);
   if (resumedGuest) await close(resumedGuest);
 }
+
+
+/* BNT v0.4: exercise the actual Durable Object projection (not a browser mock).
+   A missing projection at ANY of create, join, broadcast, sync or reconnect leaks
+   the server-side seed and all other players' exclusive clues. */
+const xToken=await session('Needkeeper');
+const yToken=await session('Bellkeeper');
+let x=null,y=null,z=null;
+try{
+ x=await channel(xToken);y=await channel(yToken);
+ await x.next('authenticated');await y.next('authenticated');
+ x.send('create_room',{gameId:'bozhe-ne-tak'});
+ const created=await x.next('room_joined');
+ assert.equal(created.version,'v2');
+ assert.equal(created.state.phase,'lobby');
+ assert.equal(created.state.match,null);
+ y.send('join_room',{roomId:created.roomId.slice(0,8)});
+ const joined=await y.next('room_joined');
+ assert.equal(joined.roomId,created.roomId);
+ x.send('game_message',{payload:{type:'start'}});
+ const startedX=await x.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='play');
+ const startedY=await y.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='play');
+ const vx=startedX.event.payload,vy=startedY.event.payload;
+ assert.deepEqual(vx.ownTasks,['need','taboo','offering']);
+ assert.deepEqual(vy.ownTasks,['bell','height']);
+ for(const v of [vx,vy]){
+  assert.ok(!('seed' in v.match)&&!('order' in v.match));
+  assert.ok(!('riddle' in v.match));
+  assert.ok(!('lastSeq' in v));
+  assert.ok(!JSON.stringify(v).includes('"seed"'));
+  assert.ok(!JSON.stringify(v).includes('"order"'));
+ }
+ assert.ok(vx.ownClues.need&&vx.ownClues.taboo&&vx.ownClues.treatment);
+ assert.ok(!vy.ownClues.need&&!vy.ownClues.taboo&&!vy.ownClues.treatment);
+ assert.ok(vy.ownClues.bell&&vy.ownClues.height);
+ assert.ok(!vx.ownClues.bell&&!vx.ownClues.height);
+ x.send('game_message',{payload:{type:'reveal',task:'need',seq:1,phaseId:vx.phaseId}});
+ const publicMessage=await y.next('game_event',m=>m.event?.type==='state'&&m.event.payload.done?.need===true);
+ assert.ok(publicMessage.event.payload.announcements.some(a=>a.kind==='revelation'));
+ assert.ok(!publicMessage.event.payload.ownClues.taboo);
+ y.send('game_message',{payload:{type:'sync'}});
+ const personal=await y.next('game_event',m=>m.event?.type==='state'&&m.event.to===vy.players.find(p=>p.name==='Гость · Bellkeeper')?.id);
+ assert.ok(personal.event.payload.ownClues.bell);
+ assert.ok(!personal.event.payload.ownClues.need);
+ await close(x);x=null;
+ z=await channel(xToken);await z.next('authenticated');
+ z.send('join_room',{roomId:created.roomId});
+ const restored=await z.next('room_joined');
+ assert.deepEqual(restored.state.ownTasks,['need','taboo','offering']);
+ assert.equal(restored.state.done.need,true);
+ assert.ok(!restored.state.ownClues.bell);
+ z.send('leave_room');y.send('leave_room');
+ console.log('PASS: PocketNet private room views on create, join, broadcast, sync and reconnect');
+} finally {
+ if(x)await close(x);if(y)await close(y);if(z)await close(z);
+}

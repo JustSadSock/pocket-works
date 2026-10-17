@@ -76,7 +76,7 @@ function home(){
  '<div class="home-actions">'+(has?'<button class="btn primary" data-action="resume">Продолжить '+(session.phase==='end'?'хронику':'обряд')+' <span>→</span></button>':'')+
  '<button class="btn '+(has?'secondary':'primary')+'" data-action="new">'+(has?'Новая религия':'Начать служение')+' <span>✦</span></button>'+
  '</div><div class="home-online"><button type="button" class="btn secondary" data-action="online">ИГРАТЬ ВМЕСТЕ · POCKETNET <span>↗</span></button></div><div class="quiet-actions"><button data-action="help">Как играть</button><button data-action="project">Дорожная карта</button></div>'+
- '<div class="build-note">v0.3 · ЛОКАЛЬНО И ВМЕСТЕ · POCKETNET</div></div></section>';
+ '<div class="build-note">v0.4 · ТАЙНЫЕ РОЛИ · POCKETNET</div></div></section>';
 }
 function layout(inside,view='active'){
  return '<div class="ritual-layout '+view+'">'+inside+'</div>';

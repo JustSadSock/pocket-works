@@ -1,7 +1,6 @@
-// BNT PocketNet authoritative module v1. PUBLIC information only.
-// Pinned snapshot includes the exact pure local ritual rules; never import mutable app code.
-export const MIN_PLAYERS=2,MAX_PLAYERS=5,RULESET_VERSION=1;
-
+// Authoritative BNT v0.4 role-driven rituals. Immutable PocketNet v2 snapshot.
+// State contains secrets; viewForPlayer projects only the recipient's own clues.
+export const MIN_PLAYERS=2,MAX_PLAYERS=5,RULESET_VERSION=2;
 /* BNT v0.2 - deterministic, dependency-free local ritual engine.
    The pure transition functions are deliberately reusable by a future PocketNet server. */
 const ITEMS = Object.freeze([
@@ -179,149 +178,203 @@ function loadGame(raw){
 }
 function isWin(state){return state.phase==='end'&&state.faith>0;}
 
-const LIMIT_PLAYERS=5,ROUND_MS=125000,JUDGMENT_MS=16000,COUNCIL_MS=28000;
-const events=s=>[{type:'state',payload:view(s)}];
-const notice=(p,msg)=>[{type:'notice',to:p.id,payload:msg}];
-const view=s=>({...s,serverNow:Date.now()}); // Entire state PUBLIC; no hidden prophecies.
-const ids=s=>s.players.map(p=>p.id);
-const cleanChoice=p=>({
- itemId:validItem(p?.itemId)?p.itemId:null,
- treatment:treatSet.has(p?.treatment)?p.treatment:null,
- bell:[1,2,3].includes(p?.bell)?p.bell:1,
- height:['high','low'].includes(p?.height)?p.height:'low'
-});
-const defaultChoice=()=>({itemId:'bread',treatment:'wash',bell:1,height:'low'});
-const allDone=(s,bag)=>s.players.every(p=>!!bag[p.id]);
-const nextRevision=s=>{s.revision++;return {state:s,events:events(s)};};
-const enterPhase=(s,phase)=>{
- s.phase=phase;s.match.phase=phase;
- const now=Date.now();
- s.deadlineAt=phase==='play'?now+ROUND_MS:phase==='judgment'?now+JUDGMENT_MS:
-  phase==='dogma'?now+COUNCIL_MS:0;
- s.phaseId=s.match.round+':'+phase;
- s.acks={};s.votes={};s.ready={};
+
+const TIME_PLAY=145000,TIME_JUDGE=19000,TIME_VOTE=34000;
+const TASKS=['need','taboo','offering','bell','height'];
+const roles=n=>n===2?[['need','taboo','offering'],['bell','height']]:
+ n===3?[['need','taboo'],['offering'],['bell','height']]:
+ n===4?[['need'],['taboo'],['offering'],['bell','height']]:
+ [['need'],['taboo'],['offering'],['bell'],['height']];
+const labels={need:'Пророк знамений',taboo:'Хранитель запретов',offering:'Ризничий',bell:'Звонарь',height:'Алтарщик'};
+const announcements={help:'Нужна подсказка',warn:'Проверьте запрет!',agree:'Согласен с обрядом',urgent:'Скоро суд!'};
+const signText={
+ need:r=>({color:'Нужен цвет',shape:'Нужна форма',kind:'Нужен вид',material:'Нужен материал'}[r.need]||'Нужна метка')+': '+({
+ white:'белый',gold:'золотой',silver:'серебряный',dark:'тёмный',round:'круглый',long:'вытянутый',
+ angular:'угловатый',food:'пища',metal:'металл'
+ }[r.value]||r.value),
+ taboo:r=>'Запрещено: '+({metal:'металл',living:'живые существа',food:'пища',gold:'золотой цвет',silver:'серебряный цвет'}[r.taboo]||r.taboo)
 };
-function concludeOffering(s){
+const has=(s,id,task)=>s.assignments[id]?.includes(task)||false;
+const roster=s=>s.players.map(p=>({id:p.id,name:p.name,verified:!!p.verified}));
+const emit=()=>[{type:'state',payload:null}]; // Hub replaces payload with opt-in personal projection.
+const note=(player,txt)=>[{type:'notice',to:player.id,payload:txt}];
+const bump=s=>({state:{...s,revision:s.revision+1},events:emit()});
+const taskOwners=s=>Object.fromEntries(s.players.flatMap((p,i)=>s.assignments[p.id].map(task=>[task,p.id])));
+const initRoles=s=>{
+ const scheme=roles(s.players.length);
+ s.assignments=Object.fromEntries(s.players.map((p,i)=>[p.id,scheme[(i+(s.match?.round||0))%s.players.length]]));
+};
+const clearRound=s=>{
+ s.altar={itemId:null,treatment:null,bell:null,height:null};
+ s.done={};s.locked={};s.announcements=[];s.votes={};s.acks={};
+};
+function newPhase(s,phase){
+ s.phase=phase;s.phaseNonce=(s.phaseNonce||0)+1;
+ s.phaseId=s.match?.round+':'+phase+':'+s.phaseNonce;
+ s.deadlineAt=phase==='play'?Date.now()+TIME_PLAY:phase==='judgment'?Date.now()+TIME_JUDGE:
+  phase==='dogma'?Date.now()+TIME_VOTE:0;
+ if(phase==='play')clearRound(s);
+ if(phase==='judgment')s.acks={};
+ if(phase==='dogma')s.votes={};
+}
+function isReady(s){
+ return TASKS.every(task=>s.done[task]===true)&&s.players.every(p=>s.locked[p.id]===true);
+}
+function playResult(s){
  if(s.phase!=='play')return;
- const people=s.players;
- const contributions=people.map(p=>{
-  const action=cleanChoice(s.choices[p.id]);const full={...defaultChoice(),...action,itemId:action.itemId||'bread'};
-  const result=evaluateRite(getRite(s.match),full,s.match.doctrines);
-  return {playerId:p.id,name:p.name,action:full,score:result.score,locked:!!s.ready[p.id]};
- });
- const teamScore=Math.round(contributions.reduce((n,c)=>n+c.score,0)/people.length);
- const verdict=teamScore>=4?'bless':teamScore>=3?'doubt':'wrath';
- const faithDelta=verdict==='bless'?2:verdict==='wrath'?-2:0;
- const lead=contributions.reduce((best,c)=>!best||c.score>best.score?c:best,null);
- const m=commitRite({...s.match,actions:lead.action});
- const oldFaith=s.match.faith;
- m.judgment={...m.judgment,score:teamScore,verdict,faithDelta,contributions};
- m.faith=Math.max(0,Math.min(MAX_FAITH,oldFaith+faithDelta));
- const last=m.history.length-1;
- m.history[last]={...m.history[last],score:teamScore,verdict,faithDelta,faithAfter:m.faith,
-   contributions};
- s.match=m;s.choices={...s.choices};
- enterPhase(s,'judgment');
+ const a={itemId:s.altar.itemId||'bread',treatment:s.altar.treatment||'wash',
+  bell:s.altar.bell||1,height:s.altar.height||'low'};
+ const previous=s.match;
+ const next=commitRite({...previous,actions:a});
+ if(next===previous)throw Error('cannot_resolve_rite');
+ next.judgment={...next.judgment,unfinished:TASKS.filter(k=>!s.done[k]),
+  lockedCount:Object.values(s.locked).filter(Boolean).length,contributors:taskOwners(s)};
+ next.history[next.history.length-1]={...next.history[next.history.length-1],
+   unfinished:next.judgment.unfinished};
+ s.match=next;newPhase(s,'judgment');
 }
-function settleJudgment(s){
+function continueJudgment(s){
  if(s.phase!=='judgment')return;
- const m=continueFromJudgment(s.match);s.match=m;
- if(m.phase==='end'){s.phase='end';s.deadlineAt=0;s.phaseId=m.round+':end';}
- else enterPhase(s,'dogma');
+ s.match=continueFromJudgment(s.match);
+ if(s.match.phase==='end'){s.phase='end';s.phaseId=s.match.round+':end';s.deadlineAt=0;}
+ else newPhase(s,'dogma');
 }
-function settleVotes(s){
+function concludeCouncil(s){
  if(s.phase!=='dogma')return;
- const choices=s.match.offers,counts=choices.map(x=>s.players.reduce((total,p)=>total+(s.votes[p.id]===x?1:0),0));
- const winner=counts[1]>counts[0]?choices[1]:choices[0];
- s.match=chooseDoctrine(s.match,winner);
- s.choices={};enterPhase(s,'play');
+ const offers=s.match.offers||[];
+ const scores=offers.map(x=>Object.values(s.votes).filter(v=>v===x).length);
+ s.match=chooseDoctrine(s.match,scores[1]>scores[0]?offers[1]:offers[0]);
+ initRoles(s);newPhase(s,'play');
 }
-function advance(s,now=Date.now()){
- if(!s.match||!s.deadlineAt||now<s.deadlineAt)return false;
- if(s.phase==='play')concludeOffering(s);
- else if(s.phase==='judgment')settleJudgment(s);
- else if(s.phase==='dogma')settleVotes(s);
+function advance(s){
+ if(!s.deadlineAt||Date.now()<s.deadlineAt)return false;
+ if(s.phase==='play')playResult(s);
+ else if(s.phase==='judgment')continueJudgment(s);
+ else if(s.phase==='dogma')concludeCouncil(s);
  else return false;
- s.revision++;return true;
+ s.revision++;
+ return true;
 }
-function reconcile(s,players){
- s.players=players.map(p=>({id:p.id,name:p.name,verified:!!p.verified}));
- if(!players.some(p=>p.id===s.host))s.host=players[0]?.id||null;
- const allowed=new Set(ids(s));
- for(const key of ['choices','ready','acks','votes','lastSeq'])
-  for(const id of Object.keys(s[key]||{}))if(!allowed.has(id))delete s[key][id];
+function matchView(m){
+ return m?{phase:m.phase,round:m.round,faith:m.faith,doctrines:[...m.doctrines],
+  offers:[...m.offers],judgment:m.judgment,history:m.history.map(h=>({
+   round:h.round,riteTitle:h.riteTitle,itemId:h.itemId,score:h.score,verdict:h.verdict,
+   miracleText:h.miracleText,adopted:h.adopted,faithAfter:h.faithAfter,unfinished:h.unfinished||[]
+  }))}:null;
 }
-const module={
+const game={
  protocolVersion:1,
+ viewForPlayer({state:s,player}){
+  const tasks=s.assignments?.[player.id]||[];
+  const rite=s.match&&s.phase==='play'?getRite(s.match):null;
+  const clues={};
+  if(rite){
+   if(tasks.includes('need'))clues.need={field:rite.need,value:rite.value,text:signText.need(rite)};
+   if(tasks.includes('taboo'))clues.taboo={value:rite.taboo,text:signText.taboo(rite)};
+   if(tasks.includes('offering'))clues.treatment={value:rite.treatment,text:'Подготовка: '+({
+    wash:'омыть',smoke:'окурить',gild:'позолотить'}[rite.treatment]||rite.treatment)};
+   if(tasks.includes('bell'))clues.bell={value:rite.bell,text:'Колокольных ударов: '+rite.bell};
+   if(tasks.includes('height'))clues.height={value:rite.height,text:rite.height==='high'?'Вознести дар':'Оставить у подножия'};
+  }
+  return {
+   phase:s.phase,phaseId:s.phaseId,revision:s.revision,serverNow:Date.now(),
+   host:s.host,players:roster(s),assignments:s.assignments,match:matchView(s.match),
+   riteTitle:rite?.title||null,ownTasks:tasks,ownClues:clues,
+   altar:{...s.altar},done:{...s.done},locked:{...s.locked},
+   announcements:s.announcements.map(x=>({...x})),votes:{...s.votes},acks:{...s.acks},
+   deadlineAt:s.deadlineAt,ownSeq:s.lastSeq?.[player.id]||0
+  };
+ },
  createRoom({player}){
-  return {state:{phase:'lobby',phaseId:'lobby',revision:0,
-   host:player.id,players:[{id:player.id,name:player.name,verified:!!player.verified}],
-   match:null,choices:{},ready:{},acks:{},votes:{},lastSeq:{},deadlineAt:0,matchNo:0}};
+  const s={phase:'lobby',phaseId:'lobby',revision:0,host:player.id,
+   players:[{id:player.id,name:player.name,verified:!!player.verified}],
+   assignments:{},match:null,altar:{itemId:null,treatment:null,bell:null,height:null},
+   done:{},locked:{},announcements:[],votes:{},acks:{},lastSeq:{},deadlineAt:0,
+   phaseNonce:0,matchNo:0};
+  initRoles(s);return {state:s};
  },
- onJoin({state,players}){
-  if(state.phase!=='lobby'&&state.phase!=='end')throw Error('match_in_progress');
-  if(players.length>LIMIT_PLAYERS)throw Error('room_full');
-  reconcile(state,players);return nextRevision(state);
+ onJoin({state:s,players}){
+  if(s.phase!=='lobby'&&s.phase!=='end')throw Error('match_in_progress');
+  if(players.length>MAX_PLAYERS)throw Error('room_full');
+  s.players=players.map(p=>({id:p.id,name:p.name,verified:!!p.verified}));
+  initRoles(s);return bump(s);
  },
- onLeave({state,players}){
-  reconcile(state,players);
-  if(state.phase==='play'&&players.length>=MIN_PLAYERS&&allDone(state,state.ready))concludeOffering(state);
-  if(state.phase==='judgment'&&players.length>=MIN_PLAYERS&&allDone(state,state.acks))settleJudgment(state);
-  if(state.phase==='dogma'&&players.length>=MIN_PLAYERS&&allDone(state,state.votes))settleVotes(state);
-  if(players.length<MIN_PLAYERS&&state.phase!=='lobby'&&state.phase!=='end'){
-   state.phase='lobby';state.phaseId='lobby';state.match=null;
-   state.choices={};state.ready={};state.acks={};state.votes={};state.deadlineAt=0;
-  }
-  return nextRevision(state);
+ onLeave({state:s,players}){
+  s.players=players.map(p=>({id:p.id,name:p.name,verified:!!p.verified}));
+  if(!s.players.some(p=>p.id===s.host))s.host=s.players[0]?.id||null;
+  const ids=new Set(s.players.map(p=>p.id));
+  for(const key of ['locked','votes','acks','lastSeq'])for(const id of Object.keys(s[key]||{}))
+   if(!ids.has(id))delete s[key][id];
+  initRoles(s);
+  if(s.players.length<MIN_PLAYERS&&s.phase!=='lobby'&&s.phase!=='end'){
+   s.phase='lobby';s.phaseId='lobby';s.match=null;s.deadlineAt=0;clearRound(s);
+  }else if(s.phase==='play'){newPhase(s,'play');}
+  else if(s.phase==='judgment'&&s.players.every(p=>s.acks[p.id]))continueJudgment(s);
+  else if(s.phase==='dogma'&&s.players.every(p=>s.votes[p.id]))concludeCouncil(s);
+  return bump(s);
  },
- onMessage({state,player,payload}){
+ onMessage({state:s,player,payload}){
   const p=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
-  const advanced=advance(state);
-  if(p.type==='sync'||p.type==='pulse')return {state,events:[{type:'state',to:player.id,payload:view(state)},...(advanced?events(state):[])]};
+  const advanced=advance(s);
+  if(p.type==='sync'||p.type==='pulse')
+   return {state:s,events:[{type:'state',to:player.id,payload:null},...(advanced?emit():[])]};
   if(p.type==='start'){
-   if(player.id!==state.host)return {state,events:notice(player,'Начать может только создатель.')};
-   if(state.phase!=='lobby'&&state.phase!=='end')return {state,events:notice(player,'Партия уже идёт.')};
-   if(state.players.length<MIN_PLAYERS||state.players.length>MAX_PLAYERS)
-    return {state,events:notice(player,'Нужно от 2 до 5 жрецов.')};
-   state.matchNo++;
-   const seed=((Date.now()^((state.matchNo*2654435761)>>>0))>>>0);
-   state.match=createGame(seed);state.choices={};state.lastSeq={};enterPhase(state,'play');return nextRevision(state);
+   if(s.host!==player.id)return {state:s,events:note(player,'Начать может только настоятель.')};
+   if(s.phase!=='lobby'&&s.phase!=='end')return {state:s,events:note(player,'Обряд уже начат.')};
+   if(s.players.length<MIN_PLAYERS||s.players.length>MAX_PLAYERS)
+    return {state:s,events:note(player,'Нужно 2–5 жрецов.')};
+   s.matchNo++;
+   s.match=createGame((Date.now()^(s.matchNo*2654435761))>>>0);
+   s.lastSeq={};initRoles(s);newPhase(s,'play');return bump(s);
   }
-  if(!state.match)return {state,events:notice(player,'Дождитесь начала игры.')};
-  if(typeof p.phaseId!=='string'||p.phaseId!==state.phaseId)
-   return {state,events:notice(player,'Обряд уже перешёл в другую фазу. Обновите состояние.')};
-  if(!Number.isInteger(p.seq)||p.seq<1||p.seq>1000000)
-   return {state,events:notice(player,'Неверный номер действия.')};
-  if(p.seq<=(state.lastSeq[player.id]||0))
-   return {state,events:[{type:'state',to:player.id,payload:view(state)}]};
-  state.lastSeq[player.id]=p.seq;
-  if(p.type==='choose'&&state.phase==='play'){
-   if(state.ready[player.id])return {state,events:notice(player,'Дар уже запечатан.')};
-   const original=state.choices[player.id]||defaultAction();
-   const next=setAction({...state.match,phase:'play',actions:original},p.patch||{}).actions;
-   state.choices[player.id]=next;return nextRevision(state);
+  if(!s.match)return {state:s,events:note(player,'Ждите начала обряда.')};
+  if(typeof p.phaseId!=='string'||p.phaseId!==s.phaseId)
+   return {state:s,events:note(player,'Фаза уже изменилась. Обновите ритуал.')};
+  if(!Number.isInteger(p.seq)||p.seq<1||p.seq>10000000)return {state:s,events:note(player,'Неверный номер действия.')};
+  if(p.seq<=(s.lastSeq[player.id]||0))return {state:s,events:[{type:'state',to:player.id,payload:null}]};
+  s.lastSeq[player.id]=p.seq;
+  if(s.phase==='play'){
+   if(p.type==='call'&&Object.hasOwn(announcements,p.kind)&&typeof p.kind==='string'){
+    const cooldown=s.announcements.filter(x=>x.by===player.id);
+    if(cooldown.length>=6)return {state:s,events:note(player,'Небесная доска заполнена вашими знаками.')};
+    s.announcements=[...s.announcements,{by:player.id,kind:p.kind,text:announcements[p.kind]}].slice(-12);
+    return bump(s);
+   }
+   if(s.locked[player.id])return {state:s,events:note(player,'Вы уже запечатали свою работу.')};
+   if(p.type==='reveal'&&has(s,player.id,p.task)&&['need','taboo'].includes(p.task)){
+    const rite=getRite(s.match);
+    s.done[p.task]=true;
+    s.announcements=[...s.announcements,{by:player.id,kind:'revelation',
+      text:signText[p.task](rite)}].slice(-12);
+    return bump(s);
+   }
+   if(p.type==='set'&&typeof p.task==='string'&&has(s,player.id,p.task)){
+    if(p.task==='offering'){
+     if(!validItem(p.itemId)||!treatSet.has(p.treatment))return {state:s,events:note(player,'Нужен настоящий дар и способ подготовки.')};
+     s.altar.itemId=p.itemId;s.altar.treatment=p.treatment;s.done.offering=true;return bump(s);
+    }
+    if(p.task==='bell'&&[1,2,3].includes(p.value)){s.altar.bell=p.value;s.done.bell=true;return bump(s);}
+    if(p.task==='height'&&['low','high'].includes(p.value)){s.altar.height=p.value;s.done.height=true;return bump(s);}
+   }
+   if(p.type==='lock'&&s.assignments[player.id].every(task=>s.done[task]===true)){
+    s.locked[player.id]=true;
+    if(isReady(s))playResult(s);
+    return bump(s);
+   }
+   if(p.type==='unlock'){delete s.locked[player.id];return bump(s);}
+   return {state:s,events:note(player,'Этот инструмент принадлежит другому жрецу.')};
   }
-  if(p.type==='lock'&&state.phase==='play'){
-   if(!validItem(state.choices[player.id]?.itemId))return {state,events:notice(player,'Сначала выберите дар.')};
-   state.ready[player.id]=true;
-   if(allDone(state,state.ready))concludeOffering(state);
-   return nextRevision(state);
+  if(s.phase==='judgment'&&p.type==='ack'){
+   s.acks[player.id]=true;
+   if(s.players.every(w=>s.acks[w.id]))continueJudgment(s);
+   return bump(s);
   }
-  if(p.type==='unlock'&&state.phase==='play'){
-   delete state.ready[player.id];return nextRevision(state);
+  if(s.phase==='dogma'&&p.type==='vote'&&s.match.offers.includes(p.id)){
+   s.votes[player.id]=p.id;
+   if(s.players.every(w=>s.votes[w.id]))concludeCouncil(s);
+   return bump(s);
   }
-  if(p.type==='ack'&&state.phase==='judgment'){
-   state.acks[player.id]=true;
-   if(allDone(state,state.acks))settleJudgment(state);
-   return nextRevision(state);
-  }
-  if(p.type==='vote'&&state.phase==='dogma'){
-   if(!state.match.offers.includes(p.id))return {state,events:notice(player,'Неизвестный догмат.')};
-   state.votes[player.id]=p.id;
-   if(allDone(state,state.votes))settleVotes(state);
-   return nextRevision(state);
-  }
-  return {state,events:notice(player,'Действие сейчас недоступно.')};
+  return {state:s,events:note(player,'Действие сейчас недоступно.')};
  }
 };
-export default module;
+export default game;
