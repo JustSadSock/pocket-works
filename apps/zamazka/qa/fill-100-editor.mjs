@@ -69,4 +69,34 @@ for(let id=81;id<=95;id++)for(let v=0;v<3;v++){
  }catch(error){throw new Error('ZAMAZKA scenario #'+id+' '+CASES[id]+' layout='+v+': '+error.message,{cause:error})}
 }
 assert.equal(passed,45);
+// Additional REAL input-transition coverage for raster scenarios that combine
+// bucket with another tool or tap along/outside the damage region.
+const damage={x:40,y:40,w:210,h:180,points:[[40,40],[250,40],[250,220],[40,220]]};
+const extras=[65,66,67,71,72,73,74,75,76,77,78,79];
+let transitions=0;
+for(const id of extras)for(let v=0;v<3;v++){
+ try{
+  const e=make(v);
+  e.zone=damage;
+  const brush=(t)=>{e.setTool(t);e.beginStroke([90,100]);e.extendStroke([150,120],false);e.finishStroke()};
+  const bucket=()=>{e.setTool('fill');tap(e,110,130)};
+  if(id===65){tap(e,40,100);assert.equal(e.strokes.length,1)}
+  if(id===66){tap(e,30,100);assert.equal(e.strokes.length,0,'tap outside clip must be ignored')}
+  if(id===67){tap(e,430,300);assert.equal(e.strokes.length,0,'distant tap must be ignored')}
+  if(id===71){brush('brush');bucket();assert.deepEqual(e.strokes.map(s=>s.t),['brush','fill'])}
+  if(id===72||id===73){
+   const t=id===72?'pencil':'spray';e.strokes.push({...stroke(2),t});e.recountPoints();bucket();
+   assert.deepEqual(e.strokes.map(s=>s.t),[t,'fill']);
+  }
+  if(id===74){bucket();brush('brush');assert.deepEqual(e.strokes.map(s=>s.t),['fill','brush'])}
+  if(id===75){brush('brush');bucket();brush('brush');bucket();assert.deepEqual(e.strokes.map(s=>s.t),['brush','fill','brush','fill'])}
+  if(id===76){bucket();brush('erase');assert.deepEqual(e.strokes.map(s=>s.t),['fill','erase'])}
+  if(id===77){brush('brush');brush('erase');bucket();assert.deepEqual(e.strokes.map(s=>s.t),['brush','erase','fill'])}
+  if(id===78){bucket();brush('smudge');assert.deepEqual(e.strokes.map(s=>s.t),['fill','smudge'])}
+  if(id===79){brush('smudge');bucket();assert.deepEqual(e.strokes.map(s=>s.t),['smudge','fill'])}
+  transitions++;
+ }catch(error){throw new Error('ZAMAZKA transition #'+id+' layout='+v+': '+error.message,{cause:error})}
+}
+assert.equal(transitions,36);
+console.log('ZAMAZKA editor transitions: 36/36 actual pointer and instrument-order operations OK');
 console.log('ZAMAZKA FILL-100 EDITOR: 45 passed / 45; 15 numbered scenarios × 3 aspect, input, undo and restored-draft layouts');
