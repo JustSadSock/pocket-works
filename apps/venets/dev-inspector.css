@@ -1,0 +1,93 @@
+/* Developer-only viewport inspector; intentionally separate from in-game art. */
+.venets-dev-inspector{
+  position:fixed!important;inset:8px;z-index:2147480000;
+  display:grid;grid-template-columns:212px minmax(0,1fr);
+  min-height:0;overflow:hidden;
+  background:#242b27;color:#e6e9de;
+  border:1px solid #6b7569;
+  box-shadow:0 18px 75px #101711cc;
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif
+}
+.venets-dev-inspector *{box-sizing:border-box}
+.venets-dev-inspector button{
+  font-family:inherit;cursor:pointer;border-radius:0;
+  transition:background .12s ease,color .12s ease
+}
+.venets-dev-inspector button:focus-visible{
+  outline:2px solid #e2c697;outline-offset:-2px
+}
+.venets-dev-nav{display:flex;flex-direction:column;min-height:0;border-right:1px solid #48574b}
+.venets-dev-heading{
+  flex:none;display:flex;justify-content:space-between;gap:5px;
+  align-items:flex-start;padding:16px 11px 13px;border-bottom:1px solid #48574b
+}
+.venets-dev-heading strong{display:block;font-size:15px;letter-spacing:.015em}
+.venets-dev-heading small{display:block;font-size:10px;margin-top:5px;color:#abb8a7}
+.venets-dev-dismiss{
+  border:1px solid #5b6c5e;background:transparent;color:#edf0e9;
+  font-size:22px;line-height:1;width:30px;height:30px;flex:none
+}
+.venets-dev-dismiss:hover{background:#425044}
+.venets-dev-list{flex:1;min-height:0;overflow-y:auto;padding:8px}
+.venets-dev-group{
+  color:#a5b5a7;font-size:10px;text-transform:uppercase;letter-spacing:.14em;
+  padding:7px 9px 4px;margin:0
+}
+.venets-dev-list button{
+  width:100%;display:block;text-align:left;min-height:33px;
+  border:1px solid transparent;background:transparent;color:#d8ded6;
+  font-size:11.5px;line-height:1.3;padding:7px 9px
+}
+.venets-dev-list button:hover{background:#3a483c}
+.venets-dev-list button.selected{
+  background:#e5d9bb;color:#2c342c;border-color:#e5d9bb;font-weight:650
+}
+.venets-dev-note{
+  flex:none;font-size:10px;line-height:1.5;margin:0;
+  padding:11px;color:#c5d0c3;border-top:1px solid #48574b
+}
+.venets-dev-preview{min-width:0;min-height:0;display:flex;flex-direction:column}
+.venets-dev-bar{
+  flex:none;min-height:62px;display:flex;gap:14px;align-items:center;
+  justify-content:space-between;border-bottom:1px solid #48574b;padding:9px 15px
+}
+.venets-dev-current{min-width:0}
+.venets-dev-current strong{display:block;font-size:14px;font-weight:700}
+.venets-dev-current small{display:block;font-size:10px;margin-top:4px;color:#b0bfb0}
+.venets-dev-controls{display:flex;gap:5px;flex:none}
+.venets-dev-controls button{
+  border:1px solid #68776b;background:transparent;color:#d8e1d6;
+  min-height:34px;min-width:35px;font-size:11px;padding:6px 10px
+}
+.venets-dev-controls button:hover{background:#394c3b}
+.venets-dev-controls button.selected{background:#d8ccac;color:#28382c;border-color:#d8ccac}
+.venets-dev-stage{
+  background:repeating-linear-gradient(135deg,#353e36 0,#353e36 12px,#303b33 12px,#303b33 24px);
+  flex:1;min-height:0;min-width:0;display:flex;justify-content:center;align-items:center;
+  overflow:auto;padding:15px
+}
+.venets-dev-frame-wrap{
+  position:relative;flex:none;overflow:hidden;background:#ede7d8;
+  box-shadow:0 16px 55px #111c17a8;border:1px solid #a4af9f
+}
+.venets-dev-frame{display:block;border:0;background:#f2ecde}
+.venets-dev-footer{
+  flex:none;min-height:33px;display:flex;align-items:center;
+  justify-content:space-between;gap:8px;border-top:1px solid #48574b;
+  padding:7px 15px;font-size:10px;color:#bfccbe
+}
+@media(max-width:720px){
+  .venets-dev-inspector{inset:0;grid-template-columns:143px minmax(0,1fr)}
+  .venets-dev-heading{padding:12px 6px}
+  .venets-dev-heading small{font-size:9px}
+  .venets-dev-list{padding:4px}
+  .venets-dev-list button{padding:7px 5px;font-size:10px}
+  .venets-dev-group{padding:5px;font-size:9px}
+  .venets-dev-bar{flex-wrap:wrap;padding:8px;gap:5px}
+  .venets-dev-controls button{min-height:30px;font-size:10px;padding:5px}
+  .venets-dev-footer{padding:5px 8px;font-size:9px}
+  .venets-dev-footer span:last-child{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .venets-dev-inspector button{transition:none}
+}
