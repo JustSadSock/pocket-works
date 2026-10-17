@@ -3,14 +3,14 @@
 // target: statistical diagnosis is not an optimization criterion.
 import fs from 'node:fs';
 import path from 'node:path';
-import {createWorld,advanceDays,audit,SIZE,overview} from '../model.js';
+import {createWorld,advanceDays,audit,SIZE,overview,chooseSettlementSite} from '../model.js';
+import {homeRoadMetrics,siteSelectionAblation,networkDistances,median,share,TRACK_WEAR,MAIN_WEAR} from './spatial-metrics.mjs';
 import {walkingSteps,walkPath,pathEffort} from '../navigation.js';
 
 const args=Object.fromEntries(process.argv.slice(2).filter(x=>x.startsWith('--')).map(x=>{const i=x.indexOf('=');return [x.slice(2,i),x.slice(i+1)];}));
 const seed=Number(args.seed??413),years=Number(args.years??50),out=path.resolve(args.output||'spatial-audit');
 if(!Number.isSafeInteger(seed)||seed<0||seed>0xffffffff||![1,5,20,50].includes(years))throw Error('Invalid seed or years');
-const checkpoints=[1,5,20,50].filter(y=>y<=years),result={schema:1,seed,years,units:{tileMeters:25,fieldHa:.0625},snapshots:[],auditPassedYears:[],warnings:[]};
-const median=a=>{if(!a.length)return null;const v=[...a].sort((a,b)=>a-b),n=v.length;return n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2;};
+const checkpoints=[1,5,20,50].filter(y=>y<=years),result={schema:2,seed,years,units:{tileMeters:25,fieldHa:.0625},snapshots:[],auditPassedYears:[],constructionObservations:[],warnings:[]};
 const round=x=>Math.round(x*100)/100;
 const pos=i=>({x:i%SIZE,y:Math.floor(i/SIZE)});
 const xy=(x,y)=>y*SIZE+x;
@@ -20,6 +20,7 @@ function inspection(s,year){
  const communities=s.communities.map(c=>{
   const hh=homes.filter(h=>h.communityId===c.id);
   const nearest=hh.map(h=>Math.min(Infinity,...hh.filter(k=>k.id!==h.id).map(k=>Math.hypot(h.x-k.x,h.y-k.y)))).filter(Number.isFinite);
+  const roadStructure=homeRoadMetrics(s.traffic,SIZE,hh);
   const houseToCenter=hh.map(h=>walkingSteps(s,h,c)).filter(n=>n>=0);
   const fieldWalk=[],roadFrontage=[],actualCommute=[];
   for(const h of hh){
@@ -41,12 +42,20 @@ function inspection(s,year){
    fieldsWalkTilesMedian:median(fieldWalk),fieldsActualEffortMedian:median(actualCommute),
    roadFrontageShare:round(roadFrontage.reduce((a,b)=>a+b,0)/Math.max(1,roadFrontage.length)),
    croftTiles:hh.reduce((n,h)=>n+(h.croft||[]).length,0),
-   isolatedHouses:hh.filter(h=>!hh.some(k=>k.id!==h.id&&Math.hypot(k.x-h.x,k.y-h.y)<=9)).length};
+   isolatedHouses:hh.filter(h=>!hh.some(k=>k.id!==h.id&&Math.hypot(k.x-h.x,k.y-h.y)<=9)).length,
+   ...roadStructure};
  });
  const road=s.traffic.reduce((a,t)=>{if(t>=12)a.worn++;if(t>=55)a.main++;a.totalIntensity+=t;return a;},{worn:0,main:0,totalIntensity:0});
  const pop=overview(s);
+ const ablationTrials=siteSelectionAblation(s,chooseSettlementSite);
+ const comparable=ablationTrials.filter(t=>t.comparable);
+ const roadAblation={attempts:ablationTrials.length,comparable:comparable.length,
+  changed:comparable.filter(t=>t.changed).length,changedShare:share(comparable.map(t=>t.changed)),
+  // Detailed paired locations allow an independent check of the summary.
+  trials:ablationTrials};
  return {year,day:s.day,population:pop.population,grainKg:pop.grain,inhabitedHomes:homes.length,totalHomes:s.households.length,
-  road,communities,positions:homes.map(h=>({id:h.id,x:h.x,y:h.y,community:h.communityId,croft:h.croft||[]})),
+  road,communities,roadAblation,roadStructure:homeRoadMetrics(s.traffic,SIZE,homes),
+  constructionsToDate:result.constructionObservations.length,positions:homes.map(h=>({id:h.id,x:h.x,y:h.y,community:h.communityId,croft:h.croft||[]})),
   fieldCells:s.households.flatMap(h=>h.fields.map(i=>({i,ownerId:h.id}))),
   roadCells:s.traffic.map((v,i)=>v>=12?{i,wear:v}:null).filter(Boolean)};
 }
@@ -84,7 +93,22 @@ function svg(s){
 const s=createWorld(seed);
 fs.mkdirSync(out,{recursive:true});
 for(let year=1;year<=years;year++){
+ // Compare completed dwellings with the road surface at the START of their
+ // construction year. This is a temporal association, not an instant causal proof.
+ const previousIds=new Set(s.households.map(h=>h.id));
+ const previousTraffic=s.traffic.slice();
  advanceDays(s,365);
+ const newHouses=s.households.filter(h=>!previousIds.has(h.id)&&h.builtDay>0);
+ if(newHouses.length){
+  const priorTrack=networkDistances(previousTraffic,SIZE,TRACK_WEAR);
+  const priorMain=networkDistances(previousTraffic,SIZE,MAIN_WEAR);
+  const currentTrack=networkDistances(s.traffic,SIZE,TRACK_WEAR);
+  for(const h of newHouses){const i=xy(h.x,h.y);
+   result.constructionObservations.push({year,dayBuilt:h.builtDay,houseId:h.id,communityId:h.communityId,
+    priorYearTrackDistanceTiles:priorTrack[i],priorYearMainDistanceTiles:priorMain[i],
+    finishedYearTrackDistanceTiles:currentTrack[i]});
+  }
+ }
  const checked=audit(s);
  if(!checked.ok)throw Error(`Seed ${seed} year ${year}: ${checked.issues.slice(0,6).join(' | ')}`);
  result.auditPassedYears.push(year);
