@@ -3,6 +3,7 @@ import {PocketNet} from '../../shared/capabilities/net.js';
 const $=id=>document.getElementById(id), canvas=$('map'),field=$('field'),ctx=canvas.getContext('2d',{alpha:false});
 const KEY='pocket-works:fog-of-conquest:save-v1',PREF='pocket-works:fog-of-conquest:preferences';
 let state=null,online=false,net=null,side=1,room=null,chosen=null,pendingRecruit=null,locked=false,toastId=0,frame=0;
+const netStorage={getItem:key=>{try{return localStorage.getItem('pocket-works:fog-net:'+key)}catch{return null}},setItem:(key,value)=>{try{localStorage.setItem('pocket-works:fog-net:'+key,value)}catch{}}};
 let soundOn=true,difficulty=3,zoom=1,offX=0,offY=0,dirty=true,mini=false;
 const tile=40,pointers=new Map(),gesture={moved:false,start:null,dist:0,oldZoom:1},toasts=['Туман отступает перед разведчиками.'];
 const PAL=['#b1bb93','#6b9596','#638374','#b6ad82','#7b847b'];
@@ -184,10 +185,10 @@ $('save').onclick=()=>{if(online){toast('Сетевая партия храни�
 $('newConfirm').onclick=()=>{hide('menu');show('confirm');};
 $('confirmNo').onclick=()=>hide('confirm');$('confirmYes').onclick=()=>{if(online){net?.close();net=null;}newSolo();};
 $('finishNew').onclick=()=>{if(online){net?.close();net=null;online=false;}newSolo();};
-$('onlineBtn').onclick=()=>{hide('start');show('online');};
+$('onlineBtn').onclick=()=>{hide('start');show('online');void connectOnline();};
 $('onlineClose').onclick=()=>{hide('online');if(!state){net?.close();net=null;room=null;online=false;show('start');}else update();};
 async function connectOnline(){
- try{if(!net||net.closed){net=new PocketNet({serverUrl:location.origin+'/pocketnet',name:$('nickname').value.trim().slice(0,24)||'Полководец',storage:localStorage});
+ try{if(!net||net.closed){net=new PocketNet({serverUrl:location.origin+'/pocketnet',name:$('nickname').value.trim().slice(0,24)||'Полководец',identityKey:'fog-of-conquest',storage:netStorage});
   net.on('connected',()=>{networkStatus('Связь установлена.');});
   net.on('disconnected',()=>{locked=true;networkStatus('Соединение потеряно. PocketNet переподключается…');if(state)update();});
   net.on('error',e=>networkStatus('Ошибка сети: '+String(e?.message||e)));
