@@ -3259,28 +3259,28 @@
   "venets": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 53,
+      "bestScore": 56,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 54938,
-        "variance": 35.55385121629756,
-        "entropy": 1.1415785059520285,
-        "edgeDensity": 0.18501984126984128,
-        "colorfulness": 19.26416015625,
-        "centerDetail": 40.538849517019734,
-        "meanLight": 220.8596149902316
+        "bytes": 54648,
+        "variance": 38.33905639975807,
+        "entropy": 1.261504289219481,
+        "edgeDensity": 0.19940476190476192,
+        "colorfulness": 19.40869140625,
+        "centerDetail": 42.4402493391221,
+        "meanLight": 219.00363974609098
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.2.0&pw_fp=ea410fb02a2355029a996f43"
+      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.3.0&pw_fp=210ce29d61043c27629efde4"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "e9e81ecae42a4cd8dd44244abc430d97e00768f0",
-    "lastAttemptAt": "2026-10-17T13:38:56.222Z"
+    "lastAttemptRevision": "13b0d440611db4d6419d9ad48fdbc9869b1b9d4f",
+    "lastAttemptAt": "2026-10-17T14:15:07.277Z"
   }
 }
