@@ -24,13 +24,14 @@ test('road-distance flood-fill is Manhattan, bounded and does not invent roads',
 });
 
 test('fixed-rank core reflects strongest road and breaks wear ties by cell',()=>{
- const t=Uint8Array.from([12,22,0,90,90,12,0,0,0,0]);
+ const t=new Uint8Array(100);
+ t.set([12,22,0,90,90,12,0,0,0,0]);
  const core=coreRoadRaster(t,10,.25);
  assert.equal(core.reduce((n,v)=>n+v,0),2);
  assert.equal(core[3],1);
  assert.equal(core[4],1);
  assert.equal(core[1],0);
- assert.ok(coreRoadRaster(new Uint8Array(10),10).every(v=>v===0));
+ assert.ok(coreRoadRaster(new Uint8Array(100),10).every(v=>v===0));
 });
 test('through-junction is not confused with private access or roadless map',()=>{
  const s=9,t=new Uint8Array(s*s);
