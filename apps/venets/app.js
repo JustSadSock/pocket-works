@@ -3,6 +3,7 @@ import './reader.js';
 import {installUIInspector, INSPECTOR_SCREENS} from './dev-inspector.js';
 import {renderAtlas,renderGenealogy,shieldSvg} from './atlas.js';
 import {atlasOwnerSnapshot,transferHighlights} from './atlas-core.js';
+import {memoryImpact} from './sim/politics.js';
 import {campaignStarts,startCampaign,campaignChoices,campaignAction,campaignYear,
   campaignScore,extendCampaign,serializeCampaign,loadCampaign} from './sim/campaign.js';
 installMobileRuntime();
@@ -31,6 +32,7 @@ const REASONS={
   'high-risk':'Высокий риск разоблачения','service-for-silver':'Военная поддержка за серебро',
   'finite-oath':'Присяга на ограниченный срок','cease-hostilities':'Прекращение войны',
   'renounce-current-siege':'Отказ от текущей осады',
+  'past-refusal':'Прежний отказ','remembered-injustice':'Помнит несправедливость',
   'partner-consent':'Согласие партнёра',
   'pledged-power':'Сила сторонников','ruler-power':'Сила правителя'
 };
@@ -47,7 +49,7 @@ const GOALS={'secure-claim':'Вернуть спорный титул','politica
 let game=null,saved=null,backupRaw=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
 let screen='loading',autoSpeed=0,autoHandle=null,saveQueue=Promise.resolve();
 let storage='indexeddb',database=null,actionPending=null,busy=false,toastHandle=null;
-let atlasView='atlas',familyFocus=null,atlasChanges=[],atlasRegion=0,selectedSize=12;
+let atlasView='atlas',familyFocus=null,atlasChanges=[],atlasRegion=0,selectedSize=12,showAllChoices=false;
 const houseColor=(w,id)=>{
   const p=w.people.find(p=>p.id===id);
   const index=w.dynasties.findIndex(h=>h.id===p?.dynastyId);
@@ -210,7 +212,7 @@ function begin(){
   try{
     game=startCampaign({seed,countyId:selectedCounty,size:selectedSize});
     selectedProvince='pr-'+selectedCounty.slice(-2);atlasRegion=0;
-    panel='council';filter='house';atlasView='atlas';familyFocus=null;atlasChanges=[];saveGame();play();
+    panel='council';filter='house';atlasView='atlas';familyFocus=null;atlasChanges=[];showAllChoices=false;saveGame();play();
   }catch(e){notify('Не удалось создать мир: '+e.message)}
 }
 function showNewConfirmation(){
@@ -252,6 +254,7 @@ function nextYear(){
     const previousOwners=atlasOwnerSnapshot(game.world);
     const result=campaignYear(game);
     atlasChanges=transferHighlights(previousOwners,game.world);
+    showAllChoices=false;
     saveGame();
     if(result.finished||result.chapterComplete){pause();renderEnding();screenTo('ending')}
     else{
@@ -308,29 +311,45 @@ function renderCouncil(){
     (inherited.length?
       'Дом '+house(w,game.dynastyId)+' удерживает '+inherited.length+' '+(inherited.length===1?'титул.':'титулов.'):
       'Ваш дом лишился земель, но ещё жив. Сохраните претензии и ищите сторонников.');
-  label(by('story'),story);
+  const remembered=claim?memoryImpact(w,p.id,claim.holderId):{value:0,source:null};
+  label(by('story'),story+(remembered.value<=-5&&remembered.source?
+    ' Отказ '+remembered.source.year+' г. изменяет решения.':''));
   renderConflictStatus();
   const actions=campaignChoices(game);
   const container=by('actions'),frag=document.createDocumentFragment();
-  frag.append(element('p','action-intro',game.lastActionYear===w.year?
-    'В этом году решение уже принято. Следующий шаг — новый год.':
-    p && w.year-p.birthYear<18?
-    'Правитель несовершеннолетний. Решения станут доступны с 18 лет.':
-    'Одно решение в год.'));
-  if(!actions.length)frag.append(element('p','subnote',game.lastActionYear===w.year?
-    'Другие правители продолжат действовать, когда вы переведёте время.':
-    'Доступных политических действий сейчас нет. Перейдите к следующему году.'));
-  else for(const a of actions.slice(0,9)){
-    const b=element('button','action-choice');b.type='button';b.dataset.actionKind=a.kind;
-    const sign=element('span','action-sign',ICONS[a.kind]);
-    const info=element('span','action-copy');
-    info.append(element('strong','',TITLES[a.kind]),element('small','',
-      (a.targetId?pname(w,a.targetId):'Династическое решение')+
-      (a.titleId?' · '+tname(w,a.titleId):'')+
-      (a.kind==='gift'?' · '+a.meta.amount+' монет':'') ));
-    b.append(sign,info,element('span','action-arrow','→'));
-    b.addEventListener('click',()=>askAction(a));
-    frag.append(b);
+  if(!actions.length){
+    frag.append(element('p','action-intro',game.lastActionYear===w.year?
+      'Решение принято. Продолжить →':w.year-p.birthYear<18?
+      'До совершеннолетия решения недоступны.':'Нет решений. Продолжить →'));
+  }else{
+    const featured=actions.slice(0,3);
+    // Hostilities must not be hidden in the extra-actions drawer.
+    for(const a of actions)if(['peace','war'].includes(a.kind)&&
+      !featured.some(v=>v.kind===a.kind&&v.targetId===a.targetId&&v.titleId===a.titleId))
+      featured.push(a);
+    const rest=actions.filter(a=>!featured.includes(a));
+    const chosen=showAllChoices?[...featured,...rest]:featured;
+    for(const a of chosen){
+      const b=element('button','action-choice');b.type='button';b.dataset.actionKind=a.kind;
+      const sign=element('span','action-sign',ICONS[a.kind]);
+      const info=element('span','action-copy');
+      info.append(element('strong','',TITLES[a.kind]),element('small','',
+        (a.targetId?pname(w,a.targetId):'Династическое решение')+
+        (a.titleId?' · '+tname(w,a.titleId):'')+
+        (a.reasons.includes('remembered-injustice')?' · Помнит обиду':'')+
+        (a.reasons.includes('past-refusal')?' · Не доверяет':'')+
+        (a.kind==='gift'?' · '+a.meta.amount+' монет':'')));
+      b.append(sign,info,element('span','action-arrow','→'));
+      b.addEventListener('click',()=>askAction(a));
+      frag.append(b);
+    }
+    if(rest.length){
+      const more=element('button','more-actions',showAllChoices?
+        'Свернуть решения ↑':'Ещё решения · '+rest.length+' ↓');
+      more.type='button';more.setAttribute('aria-expanded',String(showAllChoices));
+      more.addEventListener('click',()=>{showAllChoices=!showAllChoices;renderCouncil()});
+      frag.append(more);
+    }
   }
   container.replaceChildren(frag);
 }
@@ -349,6 +368,7 @@ by('confirm-dialog').addEventListener('close',()=>{
     const previousOwners=atlasOwnerSnapshot(game.world);
     const outcome=campaignAction(game,a);
     atlasChanges=transferHighlights(previousOwners,game.world);
+    showAllChoices=false;
     saveGame();
     const msg=outcome.success?'Решение исполнено. Последствия внесены в летопись.':
       'Получен отказ. Обиды и требования сохранены.';
