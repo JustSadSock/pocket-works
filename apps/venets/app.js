@@ -288,7 +288,7 @@ function renderCouncil(){
     'Другие правители продолжат действовать, когда вы переведёте время.':
     'Доступных политических действий сейчас нет. Перейдите к следующему году.'));
   else for(const a of actions.slice(0,9)){
-    const b=element('button','action-choice');b.type='button';
+    const b=element('button','action-choice');b.type='button';b.dataset.actionKind=a.kind;
     const sign=element('span','action-sign',ICONS[a.kind]);
     const info=element('span','action-copy');
     info.append(element('strong','',TITLES[a.kind]),element('small','',
