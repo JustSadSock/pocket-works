@@ -4,30 +4,31 @@
   "slug": "bozhe-ne-tak",
   "name": "БОЖЕ, НЕ ТАК!",
   "shortName": "БОЖЕ, НЕ ТАК!",
-  "description": "Проектное досье будущей кооперативной комедии о жрецах и капризном боге. Дорожная карта и архитектура — пока не игра.",
-  "version": "0.1.0",
+  "description": "Локальный первый игровой релиз: пять обрядов, живая деревянная маска бога и догматы, меняющие правила. Онлайн-кооператив впереди.",
+  "version": "0.2.0",
   "releaseDate": "2026-10-17",
-  "releaseDateTime": "2026-10-17T16:00:00+03:00",
+  "releaseDateTime": "2026-10-17T17:45:00+03:00",
   "changelog": [
-    "Добавлено интерактивное проектное досье и дорожная карта P0–P7.",
-    "Зафиксированы геймдизайн, ограничения PocketNet, визуал и сетевые тесты."
+    "Первый полностью играбельный локальный матч из пяти обрядов с победой, поражением и хроникой.",
+    "Десять подношений, подготовка, колокола, высота алтаря и восемь действующих догматов.",
+    "Сохранение прогресса, повторение одного seed, визуальные реакции бога и самостоятельная звуковая палитра."
   ],
   "status": "experimental",
-  "preset": "interactive",
-  "accent": "#bc7652",
-  "backgroundColor": "#2c2824",
-  "themeColor": "#2c2824",
+  "preset": "game-2d",
+  "accent": "#b77554",
+  "backgroundColor": "#302c28",
+  "themeColor": "#302c28",
   "orientation": "portrait",
-  "cacheName": "bozhe-ne-tak-v0.1.0",
+  "cacheName": "bozhe-ne-tak-v0.2.0",
   "storageNamespace": "pocket-works:bozhe-ne-tak",
   "tags": [
     "game",
     "co-op",
     "medieval",
-    "design",
-    "roadmap",
-    "PocketNet",
-    "experimental"
+    "ritual",
+    "local",
+    "experimental",
+    "PocketNet-planned"
   ],
   "order": 86
 }

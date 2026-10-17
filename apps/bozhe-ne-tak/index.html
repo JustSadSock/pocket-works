@@ -1,12 +1,17 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2c2824"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="БОЖЕ, НЕ ТАК!"><meta name="description" content="Проектное досье и дорожная карта кооперативной игры БОЖЕ, НЕ ТАК!">
-<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css"><title>БОЖЕ, НЕ ТАК! — досье</title></head>
-<body><main class="app-shell" data-app-shell>
-<header class="topbar" data-ui><a class="exit" data-app-control data-native-press href="../../">← Pocket Works</a><span class="release" aria-label="Текущая стадия">ПРОЕКТ · P0</span></header>
-<section class="hero" aria-label="Проект БОЖЕ, НЕ ТАК!"><div class="hero-copy"><p class="eyebrow">ПРОЕКТНОЕ ДОСЬЕ / 17.10.2026</p><h1>БОЖЕ,<br>НЕ ТАК!</h1><p class="sub">Кооперативная комедия. Игроки сами создают нелепые догматы — и потом вынуждены им следовать.</p><p class="warning">Сейчас доступен план разработки. Сетевой игры пока нет.</p></div>
-<svg class="god" viewBox="0 0 260 284" role="img" aria-label="Резная деревянная маска капризного бога"><defs><linearGradient id="wood" x1="0" x2="1"><stop stop-color="#86634c"/><stop offset=".48" stop-color="#c08a60"/><stop offset="1" stop-color="#75523f"/></linearGradient></defs><path d="M130 12 219 62 237 169 200 242 130 276 60 242 23 169 41 62Z" fill="#31241f" stroke="#caa77b" stroke-width="5"/><path d="M130 23 207 69 221 165 190 231 130 263 70 231 39 165 53 69Z" fill="url(#wood)" stroke="#533b31" stroke-width="6"/><path d="M51 101Q130 50 209 101M55 195Q130 239 205 195" fill="none" stroke="#7e5844" stroke-width="9" opacity=".55"/><path d="M63 118Q93 91 120 117M139 117Q167 92 195 118" fill="none" stroke="#50382d" stroke-width="13" stroke-linecap="round"/><ellipse cx="96" cy="132" rx="17" ry="13" fill="#e1d6bb"/><ellipse cx="167" cy="132" rx="17" ry="13" fill="#e1d6bb"/><circle cx="100" cy="132" r="7" fill="#2d4038"/><circle cx="162" cy="132" r="7" fill="#2d4038"/><path d="m130 132-9 42 21 2" fill="none" stroke="#684936" stroke-width="8" stroke-linecap="round"/><path d="M99 206Q130 184 162 208Q132 236 99 206Z" fill="#362822" stroke="#e8b77c" stroke-width="4"/><path d="M113 214h35" stroke="#e3c9a0" stroke-width="6" stroke-linecap="round"/><circle cx="130" cy="41" r="10" fill="#e4bb7e"/><path d="M113 45 99 77 130 70 160 77 148 45" fill="none" stroke="#49342b" stroke-width="4"/></svg>
-</section>
-<nav class="sections" aria-label="Разделы проекта" data-ui><button type="button" data-section="roadmap" aria-pressed="true">Этапы</button><button type="button" data-section="network" aria-pressed="false">Сеть</button><button type="button" data-section="design" aria-pressed="false">Замысел</button><button type="button" data-section="qa" aria-pressed="false">Проверки</button></nav>
-<section class="workspace" aria-live="polite"><div class="phase-list" id="phaseList" aria-label="Выбрать этап"></div><article class="inspector" id="inspector" tabindex="-1"></article></section>
-<footer class="foot" data-ui><span id="footerStatus">P0 · ПЛАН ПРИНЯТ</span><span>0.1.0 / ДОСЬЕ</span></footer>
-</main><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="БОЖЕ, НЕ ТАК!" data-app-version="0.1.0"></script><script src="./app.js" type="module"></script></body></html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#302c28"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="БОЖЕ, НЕ ТАК!">
+<meta name="description" content="Пять смешных обрядов, капризный бог и догматы, которые вы придумали сами. Локальный игровой режим.">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="apple-touch-icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css">
+<title>БОЖЕ, НЕ ТАК! — Храм ОГО</title></head>
+<body data-app-preset="game-2d">
+<main class="app-shell" data-app-shell data-fullscreen-app>
+<div id="game" aria-live="off"><div class="boot-screen"><a class="exit" href="../../" data-native-press data-app-control>← Pocket Works</a><div class="loading-text">Пробуждаем бога…</div></div></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="БОЖЕ, НЕ ТАК!" data-app-version="0.2.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
