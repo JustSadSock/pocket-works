@@ -1,5 +1,6 @@
 
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
 import {ITEMS,TREATMENTS,getItem,getRite,getDoctrine,MAX_ROUNDS} from './engine.js';
 import {offeringArt,godArt} from './art.js';
 
@@ -70,7 +71,11 @@ export function createOnline(onChange,onExit){
    const stored=JSON.parse(store.getItem(roomStorageKey)||'null');
    if(stored){delete stored.roomId;store.setItem(roomStorageKey,JSON.stringify(stored))}
   }
-  const id=epoch,net=new PocketNet({serverUrl:location.origin+'/pocketnet',name:name.trim(),storage:store,identityKey:'bnt-guest'});
+  const id=epoch;
+  const identity=await getPocketIdentity().catch(()=>null);
+  if(id!==epoch)return;
+  const net=new PocketNet({serverUrl:location.origin+'/pocketnet',name:preferredPocketName(identity,name.trim()),storage:store,
+   identityKey:pocketIdentitySessionKey(identity)});
   client=net;bind(net,id);
   try{
    await Promise.race([net.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Сервер не отвечает')),11000))]);

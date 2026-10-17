@@ -434,3 +434,16 @@ button:active:not(:disabled){transform:translateY(1px)}
  .net-actions{overflow:visible}
 }
 @media(prefers-reduced-motion:reduce){.net-loading .net-mask{animation:none}}
+
+/* Visual audit: move the real sacrificial object below the deity's eyes.
+   265px gives the mask a full silhouette without squeezing the tool tray. */
+@media(max-width:760px) and (min-height:681px){
+ .net-shrine{flex:0 0 265px;min-height:265px}
+ .net-shrine .net-mask{height:49%;top:3%}
+ .net-plinth{margin-bottom:0}
+}
+@media(max-width:760px) and (max-height:680px){
+ .net-shrine{flex:0 0 220px;min-height:220px}
+ .net-shrine .net-mask{height:44%;top:2%}
+ .net-plinth{margin-bottom:0}
+}
