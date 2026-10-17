@@ -65,10 +65,10 @@ button:active:not(:disabled){transform:translateY(1px)}
 .temple-column.left{left:2%}.temple-column.right{right:2%}
 .god-shell{position:absolute;top:2%;left:50%;transform:translateX(-50%);height:64%;aspect-ratio:1;z-index:1}
 .god-shell .idol{height:100%;width:100%;filter:drop-shadow(0 12px 5px #211914)}
-.altar-platform{position:absolute;z-index:2;bottom:13%;left:50%;transform:translateX(-50%);width:70%;height:67px;transition:bottom .26s cubic-bezier(.2,.9,.4,1)}
-.altar-platform.raised{bottom:21%}
+.altar-platform{position:absolute;z-index:2;bottom:8%;left:50%;transform:translateX(-50%);width:70%;height:67px;transition:bottom .26s cubic-bezier(.2,.9,.4,1)}
+.altar-platform.raised{bottom:15%}
 .altar-disc{position:absolute;inset:0;border-radius:50% 50% 32% 32%/20% 20% 52% 52%;background:linear-gradient(#b38b62 0%,#98714f 26%,#76543e 68%,#47352c 100%);border-top:12px solid #cfaa78;border-bottom:4px solid #3e3029;display:flex;justify-content:center;align-items:center;box-shadow:0 14px 8px #2d201c,0 0 0 3px #403127;transition:transform .2s}
-.altar-platform .offering-svg{transform:translateY(-26px);filter:drop-shadow(0 8px 3px #34241e);animation:offering-land .28s ease-out}
+.altar-platform .offering-svg{transform:translateY(-6px);filter:drop-shadow(0 8px 3px #34241e);animation:offering-land .28s ease-out}
 .altar-platform .empty-altar{font:700 44px Georgia,serif;color:#c9ab86;opacity:.65;transform:translateY(-8px)}
 .altar-shaft{position:absolute;bottom:-32px;left:30%;right:30%;height:35px;background:linear-gradient(90deg,#473126,#936e49,#5e4335);box-shadow:inset 0 -4px #33271e}
 .scene-subtitle{position:relative;z-index:2;color:#e8d1ad;letter-spacing:.09em;font-size:11px;font-weight:800;margin-bottom:9px;text-shadow:0 2px 3px #1c1814}
@@ -161,7 +161,7 @@ button:active:not(:disabled){transform:translateY(1px)}
 .modal-actions{display:flex;gap:9px;margin-top:20px}.modal-actions .btn{flex:1;padding:10px 12px}
 @keyframes breathe{from{transform:translateY(0) rotate(-1deg)}to{transform:translateY(5px) rotate(1deg)}}
 @keyframes spark{0%{opacity:0;transform:rotate(45deg) scale(.4)}40%{opacity:1}100%{opacity:0;transform:translateY(-30px) rotate(80deg) scale(.3)}}
-@keyframes offering-land{from{transform:translateY(-50px) scale(.87);opacity:.5}to{transform:translateY(-26px) scale(1);opacity:1}}
+@keyframes offering-land{from{transform:translateY(-50px) scale(.87);opacity:.5}to{transform:translateY(-6px) scale(1);opacity:1}}
 @media(max-width:760px){
  .topbar{min-height:45px;padding:0 9px}.exit,.sound{font-size:10px;padding:4px 6px;min-height:44px}.top-center{font-size:10px}
  .home-stage{grid-template-columns:1fr;grid-template-rows: minmax(140px,38%) auto;padding:0 23px 16px;background:radial-gradient(ellipse at 50% 22%,#775740 0%,#45352a 44%,#24211e 99%)}
@@ -178,8 +178,8 @@ button:active:not(:disabled){transform:translateY(1px)}
  .shrine-scene{min-height:0}
  .god-shell{height:63%;top:0}
  .temple-arch{border-width:12px}.temple-column{width:17px}
- .altar-platform{height:44px;bottom:13%}
- .altar-platform .offering-svg{width:65px;height:65px;transform:translateY(-19px)}
+ .altar-platform{height:44px;bottom:8%}
+ .altar-platform .offering-svg{width:65px;height:65px;transform:translateY(-5px)}
  .altar-shaft{height:24px;bottom:-19px}
  .altar-disc{border-top-width:8px}
  .prophecy{min-height:0;padding:9px 13px 11px;border-top-width:4px}
@@ -240,7 +240,7 @@ button:active:not(:disabled){transform:translateY(1px)}
  .shrine-column{flex:0 0 auto;height:235px}
  .work-column{flex:0 0 auto;overflow:visible}
  .prophecy{padding:6px 12px}.prophecy p{font-size:11px}
- .god-shell{height:62%}
+ .god-shell{height:55%}
  .dogma-idol{width:82px}.dogma-right h2{font-size:24px}
  .doctrine-option{min-height:125px}
 }
