@@ -59,7 +59,7 @@ function finishRound(match){
  checks++;
  // A paused/resumed PocketNet clock may change the deadline. Already placed
  // coins retain their relative progress and cannot be artificially backdated.
- const preserve=state.voteTiming[author.id][players[1].id][truth].slice();
+ const preserve=Array.from(state.voteTiming[author.id][players[1].id][truth]);
  state.deadline+=5000;
  now=start+12000;send(players[1],{type:'vote',chips:pick(truth,2)});
  assert.deepEqual(Array.from(state.voteTiming[author.id][players[1].id][truth]),preserve);
