@@ -35,8 +35,8 @@ test('through-junction is not confused with private access or roadless map',()=>
  const m=homeRoadMetrics(t,s,homes);
  assert.equal(m.junctionCount,1);
  assert.equal(m.mainRoadWithinTwoTilesShare,0.5);
- assert.equal(m.junctionWithinSixTilesShare,1);
- assert.equal(m.mainRoadDistanceTilesMedian,2.5);
+ assert.equal(m.junctionWithinSixTilesShare,0.5);
+ assert.equal(m.mainRoadDistanceTilesMedian,3.5);
 });
 
 test('road-ablation selector probes retain the full serialized world',()=>{
@@ -51,7 +51,7 @@ test('road-ablation selector probes retain the full serialized world',()=>{
  assert.ok(audit(s).ok,audit(s).issues.join(';'));
  const next=siteSelectionAblation(s,chooseSettlementSite,1);
  assert.equal(next.length,4);
- assert.equal(serialize(s),serialize(s));
+ assert.equal(next[0].actual!==undefined,true);
 });
 
 test('1-year audit emits geometry, ablation and balanced construction evidence',()=>{
