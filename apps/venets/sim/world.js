@@ -122,7 +122,7 @@ function annualTax(world, province, good, cap, cause) {
   }
   world.stats[good === 'grain' ? 'taxGrain' : 'taxCoin'] += tax;
 }
-export function stepYear(world) {
+export function stepYear(world, { excludePlayerId = null } = {}) {
   assertWorld(world);
   if (world.year >= 5000) throw new RangeError('Calendar end reached');
   world.year++;
@@ -152,7 +152,7 @@ export function stepYear(world) {
     annualTax(world, p, 'coin', Math.floor(trade * 0.28), 'coin-tax:' + p.id);
   }
   demographicYear(world);
-  politicalYear(world);
+  politicalYear(world,{excludeIds:excludePlayerId?[excludePlayerId]:[]});
   world.stats.years++;
   recordEvent(world, 'year-closed', 'calendar-tick', {
     year: world.year, shortages: world.stats.shortages,

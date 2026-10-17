@@ -1,36 +1,110 @@
 <!doctype html>
-<html lang="ru">
-<head>
+<html lang="ru"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#eee9dc"><meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Венец">
-<title>Венец · PocketWorks</title>
+<meta name="theme-color" content="#e9e3d3"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Венец">
+<title>Венец — династическая хроника</title>
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css">
 </head>
 <body data-fullscreen-app>
-<main class="app-shell" data-app-shell>
-<header class="mast" data-ui>
-<a class="exit" href="../../" data-native-press data-app-control>← PocketWorks</a>
-<span class="build">ИССЛЕДОВАТЕЛЬСКИЙ ЭТАП · 0.4</span>
+<main id="root" class="app-shell" data-app-shell>
+<header class="app-header" data-ui>
+  <a class="home-link" href="../../" data-app-control data-native-press aria-label="В PocketWorks">← <span>PocketWorks</span></a>
+  <span class="brand"><span class="brand-mark" aria-hidden="true">♜</span><strong>Венец</strong><small>ПЕРВАЯ ИСТОРИЯ · 0.5</small></span>
+  <button id="back-menu" class="quiet-control" type="button" hidden data-native-press>Меню</button>
 </header>
-<section class="sheet">
-<div class="ident"><span class="monogram" aria-hidden="true">♜</span><div><p class="category">ДИНАСТИЧЕСКАЯ СТРАТЕГИЯ</p><h1>Венец</h1></div></div>
-<p class="lead">Маленький мир. Долгая память.</p>
-<p class="notice">Это проектное досье, не игровая демоверсия. Автономные династии теперь принимают решения: заключают браки, помнят обиды и добиваются титулов. Игровой интерфейс появится позже.</p>
-<div class="reader">
-<nav class="tabs" aria-label="Разделы исследования" data-ui>
-<button type="button" data-doc="DESIGN.md" class="active" aria-pressed="true" data-native-press>Концепция</button>
-<button type="button" data-doc="RESEARCH.md" aria-pressed="false" data-native-press>Научная база</button>
-<button type="button" data-doc="TEST_PLAN.md" aria-pressed="false" data-native-press>Испытания</button>
-<button type="button" data-doc="VISUAL_RESEARCH.md" aria-pressed="false" data-native-press>Визуал</button>
-</nav>
-<article id="document" class="document selectable-content" data-selectable aria-live="polite"><p>Загружаем документ…</p></article>
-<div id="error" class="error" hidden><p>Документ не удалось открыть.</p><button id="retry" type="button" data-native-press>Повторить загрузку</button></div>
-</div>
+<div id="notice" role="status" aria-live="polite" class="notice-toast" hidden></div>
+<section id="loading-screen" class="center-screen" aria-live="polite"><span class="loader-mark" aria-hidden="true">♜</span><p>Открываем летопись…</p></section>
+<section id="menu-screen" class="menu-screen" hidden>
+  <div class="menu-hero"><p class="eyebrow">МЕЖДУРЕЧЬЕ · 1066</p><h1>Одно графство.<br>Три поколения.</h1><p>Каждый титул имеет владельца. Каждая обида — память. Наследие начнётся с одного спорного права.</p></div>
+  <div class="menu-bottom">
+    <button id="resume" type="button" class="big-button" hidden data-native-press>Продолжить летопись <span id="resume-summary"></span> →</button>
+    <div class="new-campaign">
+      <div class="new-heading"><h2>Начать хронику</h2><label for="seed-input">Мир № <input id="seed-input" type="number" inputmode="numeric" min="0" max="4294967295" step="1" value="413"/></label></div>
+      <div id="starts" class="starts" role="group" aria-label="Выбор графства"></div>
+      <button id="begin" type="button" class="primary-control" data-native-press>Принять графство <span aria-hidden="true">→</span></button>
+      <p class="subnote">До версии 0.6 карта остаётся условной схемой. Мир и его политика уже настоящие.</p>
+    </div>
+    <button id="open-docs" class="text-link" type="button" data-native-press>Исследования и устройство мира ↗</button>
+  </div>
 </section>
-<footer class="foot"><span>Текущий этап: политический ИИ 0.4</span><a href="../../" data-app-control>В библиотеку PocketWorks</a></footer>
+<section id="game-screen" class="game-screen" hidden>
+  <div class="campaign-top">
+    <div id="ruler-seal" class="ruler-seal" aria-hidden="true">♜</div>
+    <div class="campaign-identity"><p class="eyebrow" id="ruler-rank">ГРАФСТВО · ДИНАСТИЯ</p><h1 id="ruler-name"></h1><p id="ruler-subtitle" class="subline"></p></div>
+    <div class="campaign-wealth"><div><strong id="year-count">1066</strong><span>год</span></div><div><strong id="coin-count">0</strong><span>монеты</span></div></div>
+  </div>
+  <div class="game-columns" id="game-columns">
+    <section id="panel-council" class="game-panel council-panel" aria-labelledby="council-heading">
+      <div class="panel-head"><p class="eyebrow">СОВЕТ</p><h2 id="council-heading">Решение года</h2></div>
+      <div id="story" class="story-message"></div>
+      <div id="actions" class="actions" aria-live="polite"></div>
+      <div id="last-action" class="action-result" hidden></div>
+    </section>
+    <section id="panel-lands" class="game-panel lands-panel" aria-labelledby="lands-heading">
+      <div class="panel-head"><p class="eyebrow">ВЛАДЕНИЯ</p><h2 id="lands-heading">Междуречье</h2></div>
+      <div class="map-caption">Условный политический атлас · 12 графств</div>
+      <div id="province-grid" class="province-grid" role="group" aria-label="Выбрать провинцию"></div>
+      <div id="province-info" class="province-info"></div>
+    </section>
+    <section id="panel-history" class="game-panel history-panel" aria-labelledby="history-heading">
+      <div class="panel-head"><p class="eyebrow">ПАМЯТЬ</p><h2 id="history-heading">Летопись</h2></div>
+      <div class="history-filters" role="group" aria-label="Фильтры событий">
+        <button type="button" data-filter="house" class="active" aria-pressed="true">Ваш дом</button>
+        <button type="button" data-filter="politics" aria-pressed="false">Политика</button>
+        <button type="button" data-filter="all" aria-pressed="false">Всё</button>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </section>
+  </div>
+  <footer class="game-controls" data-ui>
+    <nav class="mobile-tabs" aria-label="Разделы игры">
+      <button type="button" data-panel="council" class="active" aria-pressed="true"><span>⚖</span>Совет</button>
+      <button type="button" data-panel="lands" aria-pressed="false"><span>▦</span>Земли</button>
+      <button type="button" data-panel="history" aria-pressed="false"><span>☷</span>Летопись</button>
+    </nav>
+    <div class="time-controls">
+      <div id="auto-controls" class="speed-controls" role="group" aria-label="Скорость времени">
+        <button type="button" data-speed="0" class="active" aria-pressed="true" title="Пауза">Ⅱ</button>
+        <button type="button" data-speed="1" aria-pressed="false">▶</button>
+        <button type="button" data-speed="2" aria-pressed="false">2×</button>
+        <button type="button" data-speed="4" aria-pressed="false">4×</button>
+      </div>
+      <button id="next-year" type="button" class="next-year" data-native-press>Следующий год <span aria-hidden="true">→</span></button>
+    </div>
+    <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
+  </footer>
+</section>
+<section id="ending-screen" class="center-screen ending-screen" hidden>
+  <p class="eyebrow">ПЕРВАЯ ХРОНИКА ЗАВЕРШЕНА</p><h1 id="ending-title">След в истории</h1>
+  <p id="ending-note"></p>
+  <div id="ending-stats" class="ending-stats"></div>
+  <div class="ending-actions"><button id="continue-legacy" class="primary-control" type="button" data-native-press>Продолжить ещё 50 лет</button><button id="ending-new" type="button" class="quiet-control" data-native-press>Другая династия</button></div>
+</section>
+<section id="docs-screen" class="docs-screen" hidden>
+  <div class="doc-header"><div><p class="eyebrow">ОБ ОСНОВАНИИ МИРА</p><h1>Исследовательские записи</h1></div><button id="close-docs" type="button" class="quiet-control">← Назад</button></div>
+  <div class="reader">
+    <nav class="tabs" aria-label="Разделы исследования" data-ui>
+      <button type="button" data-doc="DESIGN.md" class="active" aria-pressed="true">Концепция</button>
+      <button type="button" data-doc="RESEARCH.md" aria-pressed="false">Научная база</button>
+      <button type="button" data-doc="TEST_PLAN.md" aria-pressed="false">Испытания</button>
+      <button type="button" data-doc="VISUAL_RESEARCH.md" aria-pressed="false">Визуал</button>
+    </nav>
+    <article id="document" class="document selectable-content" data-selectable aria-live="polite">Загружаем…</article>
+    <div id="error" class="error" hidden><p>Документ недоступен.</p><button id="retry" type="button">Повторить</button></div>
+  </div>
+</section>
+<dialog id="confirm-dialog" class="confirm-dialog">
+  <form method="dialog"><p class="eyebrow">РЕШЕНИЕ</p><h2 id="confirm-title"></h2><p id="confirm-text"></p><menu>
+  <button id="confirm-cancel" value="cancel" type="submit" class="quiet-control">Отмена</button>
+  <button id="confirm-approve" value="confirm" type="submit" class="primary-control">Утвердить</button>
+  </menu></form>
+</dialog>
+<dialog id="new-dialog" class="confirm-dialog"><form method="dialog">
+  <h2>Завершить текущую летопись?</h2><p>Вы сможете продолжить сохранённую кампанию до начала новой. После создания нового мира прежнее сохранение заменится.</p>
+  <menu><button type="submit" value="cancel" class="quiet-control">Остаться</button><button type="submit" value="confirm" class="primary-control">Начать заново</button></menu>
+</form></dialog>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.4.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.5.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>

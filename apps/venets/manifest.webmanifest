@@ -2,13 +2,13 @@
   "id": "/apps/venets/",
   "name": "Венец",
   "short_name": "Венец",
-  "description": "Исследовательская основа династической стратегии",
+  "description": "Первая играбельная браузерная стратегия о династиях: спор о праве, политические решения, наследование и летопись поколений.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#eee9dc",
-  "theme_color": "#eee9dc",
+  "background_color": "#e9e3d3",
+  "theme_color": "#e9e3d3",
   "icons": [
     {
       "src": "./icons/icon.svg",
