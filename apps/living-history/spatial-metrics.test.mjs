@@ -44,7 +44,7 @@ test('through-junction is not confused with private access or roadless map',()=>
  const m=homeRoadMetrics(t,s,homes);
  assert.equal(m.junctionCount,1);
  assert.equal(m.coreRoadCells,1);
- assert.equal(m.coreRoadWithinTwoTilesShare,0.5);
+ assert.equal(m.coreRoadWithinTwoTilesShare,0);
  assert.equal(m.coreRoadDistanceTilesMedian,4.5);
  assert.equal(m.mainRoadWithinTwoTilesShare,0.5);
  assert.equal(m.junctionWithinSixTilesShare,0.5);
