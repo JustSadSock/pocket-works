@@ -25,6 +25,9 @@ export function transfer(world, { good, from = null, to = null, amount, cause })
   // Fully validate before mutation so a rejected transfer has no partial effect.
   const source = account(world, from), target = account(world, to);
   if (source && source[good] < amount) throw new RangeError('Insufficient ' + good + ' in ' + from);
+  if (target && !Number.isSafeInteger(target[good] + amount)) throw new RangeError('Target account overflow');
+  if (from === null && !Number.isSafeInteger(world.ledger.created[good] + amount)) throw new RangeError('Created ledger overflow');
+  if (to === null && !Number.isSafeInteger(world.ledger.consumed[good] + amount)) throw new RangeError('Consumed ledger overflow');
   if (amount === 0) return null;
   if (source) source[good] -= amount; else world.ledger.created[good] += amount;
   if (target) target[good] += amount; else world.ledger.consumed[good] += amount;
