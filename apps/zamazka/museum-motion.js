@@ -43,14 +43,21 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
  };
  const applyArt=(node,index)=>{
   const id=order[wrap(index,order.length)],img=node.querySelector('img');
-  img.dataset.artId=String(id);img.src=url(id);img.alt=arts[id]?.title||'Картина';
+  if(img.dataset.artId!==String(id)){
+   img.dataset.artId=String(id);
+   img.src=url(id);
+ }
+ img.alt=arts[id]?.title||'Картина';
   const title=node.querySelector('.museum-slide-label strong');
   const creator=node.querySelector('.museum-slide-label span');
   if(title)title.textContent=arts[id]?.title||'Картина';
   if(creator)creator.textContent=[arts[id]?.artist,arts[id]?.date].filter(Boolean).join(' · ');
   layout(node);
  };
- for(const {slot} of galleryWindow(order,0)){
+ // Render an extra decoded frame on each side. The next painting is already
+ // mounted before it comes into view; image downloads are never started at
+ // the instant when a frame is supposed to enter the gallery.
+ for(const slot of [-3,-2,-1,0,1,2,3]){
   const node=document.createElement('figure');node.className='museum-slide';node.setAttribute('role','button');configureSlot(node,slot);
   const interact=()=>{if(Date.now()<suppressClickUntil)return;const at=Number(node.dataset.slot);if(at===-1||at===1)shift(at);else if(at===0)onExhibit(order[center])};
   node.addEventListener('click',interact);
@@ -66,26 +73,42 @@ export function createMuseumMotion(stage,{order,url,arts,onCenter,onExhibit=()=>
  function shift(direction,sprint=false){
   if(removed)return;
   const step=Math.sign(direction);if(!step)return;
-  // Strict one-at-a-time: ignore additional wheel/taps during animation.
-  // There is no backlog to keep turning after the player stops input.
+  // One frame per gesture; never accumulate an uncontrolled queue of slides.
   if(busy)return;
-  busy=true;stage.dataset.galleryAnimating='true';
-  const duration=reduced?20:sprint?155:350;
+  busy=true;
+  stage.dataset.galleryAnimating='true';
+  const duration=reduced?20:sprint?155:285;
   stage.style.setProperty('--museum-shift-duration',duration+'ms');
   center=wrap(center+step,order.length);
-  const gone=step>0?-2:2,fresh=step>0?2:-2,exiting=nodes.get(gone),next=new Map();
-  for(const [slot,node] of nodes){const target=slot-step;configureSlot(node,target);next.set(target,node)}
-  nodes.clear();for(const [slot,node] of next)nodes.set(slot,node);
+  // The leaving picture was already hidden in slot ±3. Recycle it at
+  // the OPPOSITE, equally hidden end *before* the movement starts.
+  // Waiting for the 350ms animation to finish used to make incoming
+  // paintings appear late (and trigger image decoding during a transition).
+  const exiting=nodes.get(step>0?-3:3);
+  const fresh=step>0?3:-3;
+  const next=new Map();
+  for(const [slot,node] of nodes){
+   if(node===exiting)continue;
+   const target=slot-step;
+   configureSlot(node,target);
+   next.set(target,node);
+  }
+  exiting.classList.add('instant');
+  configureSlot(exiting,fresh);
+  applyArt(exiting,center+fresh);
+  next.set(fresh,exiting);
+  nodes.clear();
+  for(const [slot,node] of next)nodes.set(slot,node);
+  // The index and accessible label track the currently arriving painting
+  // immediately, not after the last animation frame.
+  onCenter(order[center],center);
+  requestAnimationFrame(()=>{if(!removed)exiting.classList.remove('instant')});
   const finish=()=>{
    if(removed)return;
-   exiting.classList.add('instant');configureSlot(exiting,fresh);
-   applyArt(exiting,center+fresh);nodes.delete(gone-step);nodes.set(fresh,exiting);
-   void exiting.offsetWidth;
-   requestAnimationFrame(()=>exiting.classList.remove('instant'));
-   onCenter(order[center],center);
    busy=false;
    delete stage.dataset.galleryAnimating;
    stage.style.removeProperty('--museum-shift-duration');
+   done=null;
   };
   done=setTimeout(finish,duration+24);
  }
