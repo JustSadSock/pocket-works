@@ -155,6 +155,7 @@ export function stepYear(world) {
 }
 export function advanceYears(world, years = 1) {
   if (!Number.isSafeInteger(years) || years < 0 || years > 200) throw new RangeError('Years must be an integer in [0, 200]');
+  if (world.year + years > 5000) throw new RangeError('Advance exceeds calendar end');
   for (let i = 0; i < years; i++) stepYear(world);
   return world;
 }
