@@ -5,7 +5,7 @@ import {zamazkaAchievements} from '../../shared/capabilities/zamazka-achievement
 import {inviteCode,parseRoomInput} from './room-code.js';
 import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
-import {ARTS,REAL_COUNT,PLAYABLE_IDS,ARCHIVE_EDITION,normalizeArchiveEntry,artworkURL,artworkFallbackURL,loadArtwork} from './artworks.js';
+import {ARTS,REAL_COUNT,PLAYABLE_IDS,ARCHIVE_EDITION,normalizeArchiveEntry,freshZoneVariation,artworkURL,artworkFallbackURL,loadArtwork} from './artworks.js';
 import {Editor,renderArtwork} from './editor.js';
 import {BRUSH_CURSOR_NAMES,brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
 import {finaleVerdictMarkup,finaleResultsMarkup,finaleRevealAuditMarkup} from './finale-ui.js';
@@ -817,7 +817,7 @@ function persistPractice(){
    try{if(sessionStorage.getItem(PRACTICE_KEY)===data)sessionStorage.removeItem(PRACTICE_KEY);localStorage.removeItem(PRACTICE_KEY)}catch{}
  }).catch(()=>{try{localStorage.setItem(PRACTICE_KEY,data)}catch{notify('Недостаточно места для черновика.')}});
 }
-function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preparing',round:1,rounds:1,selected,deadline:0,drawingSeconds:soloDrawingSecondsChoice,mine:{art:selected[Math.floor(Math.random()*5)],variation:Math.floor(Math.random()*0xffffffff)},strokes:[]};preparedRound='';persistPractice();preparing(true)}
+function newPractice(){const order=[...PLAYABLE_IDS];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}const selected=order.slice(0,5);practice={phase:'preparing',round:1,rounds:1,selected,deadline:0,drawingSeconds:soloDrawingSecondsChoice,mine:{art:selected[Math.floor(Math.random()*5)],variation:freshZoneVariation()},strokes:[]};preparedRound='';persistPractice();preparing(true)}
 function resumePractice(){try{const p=JSON.parse(sessionStorage.getItem(PRACTICE_KEY)||'null')||storedPractice||JSON.parse(localStorage.getItem(PRACTICE_KEY)||'null');if(!p||!Array.isArray(p.selected)||!ARTS[p.mine?.art]||!['preparing','preview','drawing'].includes(p.phase))throw Error('missing');if(p.edition!==ARCHIVE_EDITION){
  p.mine.art=normalizeArchiveEntry({art:p.mine.art,edition:p.edition}).art;
  p.selected=p.selected.map(art=>normalizeArchiveEntry({art,edition:p.edition}).art);
