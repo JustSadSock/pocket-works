@@ -142,21 +142,28 @@ function compass(svg){
    T('text','С',{x:0,y:-40,'font-size':13,'text-anchor':'middle','font-family':'Georgia,serif',fill:'#575344'}));
  svg.append(rose);
 }
-export function renderAtlas(world,{selectedId='pr-01',onSelect,changes=[]}={}){
- const model=countyAtlasModel(world,makeAtlasGeometry(world.seed));
- const svg=S('svg',{viewBox:'0 0 860 570',class:'living-atlas',role:'group',
+export function renderAtlas(world,{selectedId='pr-01',onSelect,changes=[],region=0}={}){
+ const expanded=world.provinces.length===48;
+ const model=countyAtlasModel(world,makeAtlasGeometry(world.seed,world.provinces.length));
+ const ox=expanded?(region%2)*860:0,oy=expanded?Math.floor(region/2)*570:0;
+ const svg=S('svg',{viewBox:ox+' '+oy+' 860 570',class:'living-atlas',role:'group',
    'aria-label':'Политическая карта Междуречья: 12 настоящих графств',preserveAspectRatio:'xMidYMid meet'});
  atlasDefs(svg,model);
- svg.append(S('rect',{x:0,y:0,width:860,height:570,fill:'#bdc5b5'}),
-   S('rect',{x:0,y:0,width:860,height:570,fill:'#dae1d4','fill-opacity':.37}),
+ svg.append(S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#bdc5b5'}),
+   S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#dae1d4','fill-opacity':.37}),
    S('path',{d:model.perimeter,transform:'translate(5 9)',fill:'#5b6658','fill-opacity':.22}),
    S('path',{d:model.perimeter,fill:'url(#atlas-paper)',stroke:'#726f5b','stroke-width':4.5}),
    S('path',{d:model.perimeter,fill:'url(#atlas-light)'}),
    S('g',{'clip-path':'url(#atlas-land)'},[
-     S('rect',{width:860,height:570,fill:'#526040',filter:'url(#atlas-grain)'})]),
+     S('rect',{width:model.width,height:model.height,fill:'#526040',filter:'url(#atlas-grain)'})]),
    engraving(model,world.seed),mapCounties(world,model,selectedId,changes,onSelect));
  warMarkers(svg,model,world);
- compass(svg);
+ if(expanded){
+   const point=S('g',{transform:'translate('+ox+' '+oy+')','pointer-events':'none'});
+   point.append(T('text',['I','II','III','IV'][region]+' / IV',{
+     x:767,y:512,'text-anchor':'middle',fill:'#53624d',
+     'font-size':20,'font-family':'Georgia,serif'}));svg.append(point);
+ }else compass(svg);
  const container=DOM('div','atlas-canvas');
  container.append(svg);
  const stamp=DOM('div','atlas-corner-mark','М Е Ж Д У Р Е Ч Ь Е');
