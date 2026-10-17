@@ -17,8 +17,8 @@ export function integrateClock(acc,deltaSeconds,speed){
  const mode=timeMode(speed);
  if(mode==='paused')return {days:0,phase:clamp(acc),mode};
  const total=acc+Math.max(0,Math.min(.08,Number.isFinite(deltaSeconds)?deltaSeconds:0))*speed;
- const days=Math.min(40,Math.floor(total));
- return {days,phase:clamp(total-days),mode};
+ const days=Math.min(40,Math.floor(total+1e-9));
+ return {days,phase:clamp(Math.max(0,total-days)),mode};
 }
 export function dayClock(phase){
  const minutes=Math.min(1439,Math.max(0,Math.floor(clamp(phase)*1440)));
@@ -95,7 +95,15 @@ export function sampleSubday(person,dayPlan,time){
  }
  return {...p.from,activity:'home',pose:0};
 }
-export function makeFastView(){return {positions:new Map(),kind:'coarse'};}
+export function makeFastView(){return {positions:new Map(),animals:new Map(),kind:'coarse'};}
+// Keep actual herds visible at high speed without jumping between weekly pasture sites.
+export function fastAnimalPosition(view,key,target,dt){
+ const start=view.animals.get(key)||target;
+ const factor=1-Math.exp(-Math.max(0,Math.min(.08,dt))*7);
+ const next=move(start,target,factor);
+ view.animals.set(key,next);
+ return next;
+}
 // Fast mode depicts real end-of-day locations and household counts. An
 // exponential screen-space follower prevents unreadable daily teleports.
 export function advanceFastView(view,world,dt){
