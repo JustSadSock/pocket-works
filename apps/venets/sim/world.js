@@ -1,11 +1,12 @@
-// ВЕНЕЦ v0.2 — headless, renderer-independent medieval simulation foundation.
-// Deliberately no mortality/succession, army or character decision-making until later roadmap gates.
+// ВЕНЕЦ v0.3 — deterministic dynastic simulation. No war/political AI or map UI yet.
 import { initialRngState, normalizeSeed, randomInt } from './random.js';
 import { recordEvent, transfer, changeTitleHolder } from './transactions.js';
 import { assertWorld } from './validate.js';
-export { transfer, recordEvent, changeTitleHolder, assertWorld };
+import { assertWorldV2 } from './validate-v2.js';
+import { seedFamilyFoundations, demographicYear, migrateV2, birth, marry, die, setSuccessionLaw, descendantBranches, resolveInheritance, ancestors, titlesOf } from './dynasty.js';
+export { transfer, recordEvent, changeTitleHolder, assertWorld, birth, marry, die, setSuccessionLaw, descendantBranches, resolveInheritance, ancestors, titlesOf };
 
-export const WORLD_SCHEMA_VERSION = 2;
+export const WORLD_SCHEMA_VERSION = 3;
 export const START_YEAR = 1066;
 const COUNTY_NAMES = ['Берег','Ольхов','Перевал','Вышград','Чернолесье','Речица',
   'Вельск','Устье','Луговое','Белый Яр','Залесье','Кремень'];
@@ -87,11 +88,12 @@ export function createWorld(seed = 1) {
       });
     }
   }
+  seedFamilyFoundations(world);
   for (const good of ['grain', 'coin']) {
     world.ledger.initial[good] = sumInitial([...world.people, ...world.provinces], good);
   }
   recordEvent(world, 'foundation', 'seeded-world', {
-    seed: sourceSeed, kingdom: 'ki-01', provinces: 12, titles: 17, people: 17
+    seed: sourceSeed, kingdom: 'ki-01', provinces: 12, titles: 17, people: world.people.length
   });
   assertWorld(world);
   return world;
@@ -146,6 +148,7 @@ export function stepYear(world) {
     annualTax(world, p, 'grain', Math.floor(harvest * 0.12), 'grain-tax:' + p.id);
     annualTax(world, p, 'coin', Math.floor(trade * 0.28), 'coin-tax:' + p.id);
   }
+  demographicYear(world);
   world.stats.years++;
   recordEvent(world, 'year-closed', 'calendar-tick', {
     year: world.year, shortages: world.stats.shortages,
@@ -166,6 +169,10 @@ export function serializeWorld(world) {
 export function loadWorld(source) {
   if (typeof source !== 'string' || source.length > 16_000_000 || source.length < 50) throw new RangeError('Invalid save payload');
   const world = JSON.parse(source);
+  if (world.schemaVersion === 2) {
+    assertWorldV2(world);
+    migrateV2(world);
+  }
   assertWorld(world);
   return world;
 }
@@ -173,5 +180,9 @@ export function summary(world) {
   const report = assertWorld(world);
   return { ...report, seed: world.seed, shortages: world.stats.shortages,
     harvested: world.stats.harvested, minted: world.stats.minted,
+    births:world.stats.births, deaths:world.stats.deaths, marriages:world.stats.marriages,
+    partitions:world.stats.partitions, escheats:world.stats.escheats,
+    alive:world.people.filter(p=>p.alive).length,
+    dynastiesRepresented:new Set(world.people.filter(p=>p.alive).map(p=>p.dynastyId)).size,
     ledger: structuredClone(world.ledger) };
 }
