@@ -64,6 +64,22 @@ export function remember(world,{witnessId,otherId,kind,weight,cause}){
   }
   return amount;
 }
+// A signed, decaying account of concrete encounters, not invented relationship text.
+// Computed from the existing bounded historical memories; no save schema migration.
+// Used in decision ranking so remembered refusals actually change future strategy.
+export function memoryImpact(world,witnessId,otherId){
+  if(world.experiment?.memory===false)return {value:0,source:null};
+  const witness=findPerson(world,witnessId);
+  if(!witness?.politics?.memories||!otherId)return {value:0,source:null};
+  const recent=witness.politics.memories.filter(m=>m.otherId===otherId&&
+    world.year-m.year>=0&&world.year-m.year<=24);
+  if(!recent.length)return {value:0,source:null};
+  const sum=recent.reduce((n,m)=>n+Math.round(m.weight*(25-(world.year-m.year))/25),0);
+  const value=clamp(sum,-35,35);
+  const newest=recent.at(-1);
+  return {value,source:value===0?null:{kind:newest.kind,year:newest.year,
+    otherId,cause:newest.cause}};
+}
 const claimFor=(world,p)=>world.titles.filter(t=>t.holderId!==p.id&&
   t.claims.some(c=>c.personId===p.id)).sort((a,b)=>(rank[b.rank]||0)-(rank[a.rank]||0)||ordered(a,b));
 function directLiege(world,person){
@@ -173,8 +189,9 @@ export function possibleActions(world,personId){
     if(owner && (owner.id===directLiege(world,p)?.id ||
       (liegeTitle && liegeTitle.holderId===owner.id))){
       actions.push(candidate(world,p,'petition',owner.id,title.id,
-        39+traits.ambition/2-traits.caution/5+(goal.kind==='secure-claim'?12:0),
-        ['documented-claim','feudal-petition']));
+        39+traits.ambition/2-traits.caution/5+(goal.kind==='secure-claim'?12:0)+
+          Math.round(memoryImpact(world,p.id,owner.id).value*.65),
+        ['documented-claim','feudal-petition',...(memoryImpact(world,p.id,owner.id).value<-4?['past-refusal']:[])]));
     }
   }
   const membersOf=politics.factions.find(f=>f.members.includes(p.id));
@@ -182,8 +199,9 @@ export function possibleActions(world,personId){
     const claim=contested.find(t=>t.rank!=='county'||power(world,p.id)>0);
     if(claim && traits.ambition>=42){
       actions.push(candidate(world,p,'faction',claim.holderId,claim.id,
-        31+traits.ambition/2-traits.caution/3+(goal.kind==='secure-claim'?12:0),
-        ['living-claimant','political-opposition'],{claimantId:p.id}));
+        31+traits.ambition/2-traits.caution/3+(goal.kind==='secure-claim'?12:0)-
+          Math.round(memoryImpact(world,p.id,claim.holderId).value*.9),
+        ['living-claimant','political-opposition',...(memoryImpact(world,p.id,claim.holderId).value<-4?['remembered-injustice']:[])],{claimantId:p.id}));
     }
   }
   for(const f of politics.factions){
@@ -193,8 +211,9 @@ export function possibleActions(world,personId){
       const anger=opponent?-opinion(world,p.id,opponent.id):0;
       actions.push(candidate(world,p,'join',f.leaderId,f.titleId,
         25+traits.ambition/3+(100-traits.loyalty)/6-traits.caution/7+
-        affinity/3+anger/4+(goal.kind==='political-leverage'?11:0),
-        ['active-faction','political-affinity'],{factionId:f.id}));
+        affinity/3+anger/4+(goal.kind==='political-leverage'?11:0)-
+          Math.round(memoryImpact(world,p.id,opponent?.id).value*.65),
+        ['active-faction','political-affinity',...(memoryImpact(world,p.id,opponent?.id).value<-4?['remembered-injustice']:[])],{factionId:f.id}));
     }
     if(f.leaderId===p.id&&cooldown(world,p,'ultimatum',4) &&
       world.year-f.createdYear>=1&&f.members.length>=2){

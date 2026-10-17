@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#e5e4dc">
+  <meta name="description" content="ТЯГА — дуэль за гравитацию шара.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ТЯГА">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+  <title>ТЯГА — Pocket Works</title>
+</head>
+<body data-fullscreen-app>
+<main id="app" class="app-shell" data-app-shell>
+  <div class="instrument">
+    <canvas id="field" data-gesture-surface data-block-callout aria-label="Дуэль гравитации: коснитесь зоны своего игрока"></canvas>
+    <header class="chrome" data-ui>
+      <a href="../../" class="pw-exit" data-app-control data-native-press aria-label="Выйти в Pocket Works">PW</a>
+      <span class="brand-mini">ТЯГА <i></i> DUEL</span>
+      <button type="button" id="pauseButton" class="icon-key" data-native-press aria-label="Пауза" hidden>Ⅱ</button>
+    </header>
+    <div id="hud" class="hud" data-ui hidden>
+      <div class="score score-top"><div class="player-title"><span class="signal red"></span><span id="topName">ВЕРХ</span></div><strong id="topScore">0</strong></div>
+      <div class="score score-bottom"><div class="player-title"><span class="signal blue"></span><span id="bottomName">НИЗ</span></div><strong id="bottomScore">0</strong></div>
+      <p class="input-hint" id="inputHint"></p>
+    </div>
+    <section id="menuScreen" class="screen menu-screen" data-ui aria-label="Меню">
+      <div class="menu-emblem" aria-hidden="true"><span>↑</span><b>●</b><span>↓</span></div>
+      <h1>ТЯГА</h1>
+      <p class="tagline">КТО ПЕРЕТЯНЕТ ШАР?</p>
+      <div class="menu-actions">
+        <button type="button" id="aiButton" class="start-button" data-native-press><span>ПРОТИВ ИИ</span><span class="key-arrow">↗</span></button>
+        <button type="button" id="localButton" class="start-button alternate" data-native-press><span>ДВА ИГРОКА</span><span class="key-arrow">↗</span></button>
+        <div class="arena-picker" aria-label="Выбор арены">
+          <button type="button" id="arenaPrev" class="picker-key" data-native-press aria-label="Предыдущая арена">‹</button>
+          <div class="picker-center"><span>АРЕНА <output id="arenaIndex">01 / 03</output></span><strong id="arenaName">ПУСТОТА</strong></div>
+          <button type="button" id="arenaNext" class="picker-key" data-native-press aria-label="Следующая арена">›</button>
+        </div>
+      </div>
+      <p class="rules">Верх тянет вверх. Низ — вниз.<br>Первым забей пять.</p>
+      <div class="menu-foot"><button type="button" id="menuSound" class="text-key" data-native-press>ЗВУК: ВКЛ</button><a href="../../" data-app-control data-native-press>В БИБЛИОТЕКУ ↗</a></div>
+    </section>
+    <div id="pointBanner" class="point-banner" aria-live="polite" aria-atomic="true" hidden><span id="pointTitle">ОЧКО</span></div>
+    <section id="pauseScreen" class="screen dialog-screen" data-ui aria-label="Пауза" hidden>
+      <div class="dialog-body"><span class="overline">МАТЧ ОСТАНОВЛЕН</span><h2>ПАУЗА</h2>
+        <button type="button" id="resumeButton" class="start-button" data-native-press>ПРОДОЛЖИТЬ <span>↗</span></button>
+        <button type="button" id="restartButton" class="line-button" data-native-press>НОВЫЙ МАТЧ</button>
+        <button type="button" id="pauseSound" class="line-button" data-native-press>ЗВУК: ВКЛ</button>
+        <button type="button" id="pauseHome" class="line-button" data-native-press>К ВЫБОРУ РЕЖИМА</button>
+        <button type="button" class="line-button" data-workshop-trigger data-native-press>WORKSHOP</button>
+      </div>
+    </section>
+    <section id="resultScreen" class="screen dialog-screen" data-ui aria-label="Результат" hidden>
+      <div class="dialog-body result-body"><span class="overline">МАТЧ ЗАВЕРШЁН</span><div class="winner-mark" id="winnerMark">↑</div>
+        <h2 id="winnerTitle">ВЕРХ ПОБЕДИЛ</h2><p id="resultScore" class="result-score">5 : 0</p>
+        <button type="button" id="rematchButton" class="start-button" data-native-press>РЕВАНШ <span>↗</span></button>
+        <button type="button" id="resultHome" class="line-button" data-native-press>СМЕНИТЬ РЕЖИМ</button>
+        <a class="result-exit" href="../../" data-app-control data-native-press>POCKET WORKS ↗</a>
+      </div>
+    </section>
+  </div>
+  <p id="status" class="sr-only" role="status" aria-live="polite"></p>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ТЯГА" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

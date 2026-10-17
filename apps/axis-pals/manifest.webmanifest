@@ -1,0 +1,20 @@
+{
+  "id": "/apps/axis-pals/",
+  "name": "ОСИ: Склад",
+  "short_name": "ОСИ",
+  "description": "Два оператора — две оси. Складская кооперативная головоломка.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#d9e4df",
+  "theme_color": "#d9e4df",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

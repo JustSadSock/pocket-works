@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "meat-exe",
+  "name": "MEAT.EXE",
+  "shortName": "MEAT",
+  "description": "Брутальный трёхмерный шутер внутри процедурно растущего живого организма: пять волн, мутации, мобильное и компьютерное управление.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T00:00:00+03:00",
+  "changelog": [
+    "Перенесены генерация живого лабиринта и Three.js из самостоятельного проекта Meat.exe, игровой цикл объединён в один 3D-движок.",
+    "Пять боевых волн, четыре типа врагов, Hash-Heart, две пушки, динамическая сложность и фрагменты оружия.",
+    "Сенсорные джойстик, прицел, стрельба и рывок; мышь, WASD, пауза, сохранение, звук и офлайн-PWA."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#d7443c",
+  "backgroundColor": "#17080a",
+  "themeColor": "#17080a",
+  "orientation": "landscape",
+  "cacheName": "meat-exe-v1.0.0",
+  "storageNamespace": "pocket-works:meat-exe",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "3D",
+    "FPS",
+    "horror",
+    "shooter",
+    "procedural",
+    "landscape"
+  ],
+  "order": 266
+}

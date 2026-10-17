@@ -338,3 +338,56 @@ h2{letter-spacing:-.025em}
  .region-controls button{min-width:29px;min-height:30px}
  .region-controls span{font-size:11px}
 }
+
+
+/* v0.9 editorial polish: primary action first, supporting actions on demand. */
+.actions{gap:6px;padding-bottom:14px}
+.action-choice{position:relative;min-height:60px;padding:10px 12px;
+  border-color:#d2c8b3;background:#f1ecdfaa;
+  transition:background .16s ease,border-color .16s ease,transform .13s ease}
+.action-choice:hover{background:#f7f1e3;border-color:#99947b}
+.action-choice:active{transform:translateY(1px);background:#e8e1ce}
+.action-choice:first-of-type{border-color:#899582;background:#ecf0e5}
+.action-choice:first-of-type .action-sign{border-color:#566b56;color:#465d4b}
+.action-copy strong{font-size:13px;margin-bottom:3px}
+.action-copy small{font-size:10px;line-height:1.35}
+.action-sign{width:34px;height:34px;font-size:18px}
+.more-actions{align-self:flex-start;border:0;border-bottom:1px solid #8c7964;
+  padding:9px 3px;background:transparent;color:#625440;font-size:11px;
+  min-height:34px;transition:color .15s ease}
+.more-actions:hover{color:#293f32}
+.more-actions:focus-visible{outline:2px solid #527968;outline-offset:3px}
+.council-panel{scrollbar-gutter:stable}
+.council-panel .story-message{padding:11px 0;margin-bottom:10px;
+  font-size:clamp(13px,1.5vw,16px);line-height:1.42;border-top:0}
+.conflict-strip:not([hidden]){margin:0 0 9px}
+.new-campaign,.genealogy,.atlas-canvas,.history-panel{transition:background-color .18s ease}
+.menu-bottom>.text-link{min-height:32px;padding:5px 0}
+.menu-bottom{gap:10px}
+.new-heading{padding-bottom:10px}
+.start-choice{min-height:58px;padding:5px 10px}
+.start-choice.active{box-shadow:inset 3px 0 #586c58}
+.atlas-county:focus-visible>path:first-child{stroke:#2c3b2c;stroke-width:5}
+.kin-node:active,.region-controls button:active{transform:translateY(1px)}
+.game-panel:focus-within{scrollbar-color:#897b65 transparent}
+@media(max-width:900px){
+ .game-panel{scrollbar-gutter:auto}
+ .council-panel{scrollbar-gutter:auto}
+ .council-panel .story-message{font-size:14px}
+ .action-choice{min-height:56px}
+ .action-sign{width:32px;height:32px}
+ .menu-bottom{gap:8px}
+ .start-choice{min-height:54px}
+}
+@media(max-width:370px){
+ .action-choice{padding:7px 9px;gap:8px}
+ .action-sign{width:29px;height:29px}
+ .action-copy strong{font-size:12px}
+ .action-copy small{font-size:10px}
+ .new-campaign{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .action-choice,.more-actions,.new-campaign,.genealogy,.atlas-canvas,
+ .history-panel{transition:none!important}
+ .action-choice:active,.kin-node:active,.region-controls button:active{transform:none}
+}

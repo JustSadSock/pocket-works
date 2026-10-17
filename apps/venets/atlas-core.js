@@ -56,6 +56,17 @@ export function makeAtlasGeometry(seed=413,size=12){
   perimeter+=' Z';
   return {polys,perimeter,width,height};
 }
+// Geography is immutable within a seeded campaign. Reuse paths between render
+// passes instead of re-running 48*4*edge segments after every calendar turn.
+const geometryCache=new Map();
+export function getAtlasGeometry(seed=413,size=12){
+  const key=(seed>>>0)+':'+size;
+  if(geometryCache.has(key))return geometryCache.get(key);
+  const geometry=makeAtlasGeometry(seed,size);
+  if(geometryCache.size>=8)geometryCache.delete(geometryCache.keys().next().value);
+  geometryCache.set(key,geometry);
+  return geometry;
+}
 const HERALDRY=[
   {main:'#626f51',alt:'#ead7a7',ink:'#354735',charge:'oak'},
   {main:'#784b45',alt:'#edcfaa',ink:'#482d2e',charge:'chevron'},
@@ -74,7 +85,7 @@ export function heraldryFor(dynastyId){
   const n=Number(String(dynastyId).split('-').at(-1));
   return HERALDRY[(Number.isInteger(n)&&n>0?n-1:0)%HERALDRY.length];
 }
-export function countyAtlasModel(world,geometry=makeAtlasGeometry(world.seed,world.provinces.length)){
+export function countyAtlasModel(world,geometry=getAtlasGeometry(world.seed,world.provinces.length)){
   const polygons=geometry.polys.map(shape=>{
     const province=world.provinces.find(p=>p.id===shape.id);
     if(!province)throw Error('Atlas has no province '+shape.id);
