@@ -18,7 +18,7 @@ function addRoyalChildren(world,n=2) {
 test('all founders have coherent spouses, child chronology and title legal records',()=>{
   for(const seed of [0,1,413,7777,4294967295]){
     const world=createWorld(seed);
-    assert.equal(world.schemaVersion,3);
+    assert.equal(world.schemaVersion,4);
     assert.equal(world.titles.length,17);
     assert.ok(world.people.length>=34);
     assert.equal(world.people.filter(p=>p.origin==='founder-spouse').length,17);
@@ -156,11 +156,11 @@ test('v2 snapshot migrates to v3 without changing known money, titles or event j
     [...old.people,...old.provinces].reduce((s,p)=>s+p.treasury[good],0);
   old.events[0].effect.people=17;
   const converted=loadWorld(JSON.stringify(old));
-  assert.equal(converted.schemaVersion,3);
+  assert.equal(converted.schemaVersion,4);
   assert.equal(converted.people.length,17);
   assert.deepEqual(converted.ledger,old.ledger);
   assert.equal(converted.events.at(-1).kind,'migration');
-  assert.equal(converted.events.length,old.events.length+1);
+  assert.equal(converted.events.length,old.events.length+2);
   assertWorld(converted);
   advanceYears(converted,5);
   assertWorld(converted);
