@@ -4,14 +4,17 @@ import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHo
 import {diagnoseWorld} from './laboratory.js';
 import {fieldAppearance,trailAppearance,cattlePosition} from './visual-land.js';
 import {timeMode,integrateClock,dayClock,dayPhase,activeShiftCounts,planSubday,sampleSubday,makeFastView,advanceFastView,fastAnimalPosition} from './subday.js';
-import {walkPath} from './navigation.js';
+import {walkPath,walkingSteps} from './navigation.js';
+import {landCadastre,landAt,tenureSummary,parcelEconomics} from './land-economy.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.8.1',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.8.2',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
 let sim=null,mode='overview',selected=null,selectedPerson=null,economyOpen=false,speed=0,cam={x:0,y:0,z:1},drag=null,dirty=true,last=performance.now(),acc=0,lastStats=0,lastSavedDay=0,savePending=false,active=true,pointers=new Map(),pinch=null;
 const worldCanvas=document.createElement('canvas');worldCanvas.width=W;worldCanvas.height=W;const draw=worldCanvas.getContext('2d');
+let tenureMode=false,selectedPlot=null,tenureDirty=true,tenureCache=null;
+const tenureCanvas=document.createElement('canvas');tenureCanvas.width=W;tenureCanvas.height=W;const tenureDraw=tenureCanvas.getContext('2d');
 let toastTimer=0,dayPlan=null,fastView=makeFastView(),renderDetail='coarse',modeBlend=null,blendRemaining=0;let movementFraction=1,visualDt=0;
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),2600);}
 function rngTile(i){let n=Math.imul(i+31,2654435761);n^=n>>>13;return (n>>>0)%100;}
@@ -86,10 +89,46 @@ function fitView(){const box=worldNode.getBoundingClientRect();let z=Math.max(bo
 function resize(){const r=worldNode.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);if(canvas.width!==Math.round(r.width*dpr)||canvas.height!==Math.round(r.height*dpr)){canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}if(cam.z===1&&cam.x===0&&cam.y===0)fitView();}
 function screenToMap(px,py){const rect=canvas.getBoundingClientRect();return{x:(px-rect.left-cam.x)/cam.z/PX,y:(py-rect.top-cam.y)/cam.z/PX};}
 function zoom(f,cx,cy){const r=canvas.getBoundingClientRect(),x=cx-r.left,y=cy-r.top;const next=Math.max(.15,Math.min(4,cam.z*f));const factor=next/cam.z;cam.x=x-(x-cam.x)*factor;cam.y=y-(y-cam.y)*factor;cam.z=next;}
+// Overlay cadastral facts on actual terrain rather than inventing colored
+// property rectangles. Persistent map shows tiny borders; a selected family
+// gets a restrained wash, rented strips show a pale inset mark.
+function paintTenure(){
+ tenureDraw.clearRect(0,0,W,W);
+ if(!tenureMode&&selected===null){tenureDirty=false;return;}
+ const cad=landCadastre(sim),owners=cad.owners;
+ const family=selected??0;
+ for(let i=0;i<owners.length;i++){
+  const owner=owners[i],tenant=cad.tenants[i];
+  if(!owner)continue;
+  const relevant=family&&(owner===family||tenant===family);
+  if(!tenureMode&&!relevant)continue;
+  const x=i%SIZE,y=Math.floor(i/SIZE),X=x*PX,Y=y*PX;
+  const palette=['#aa9b76','#9ea78a','#b1a07d','#7f9e96','#9f9c8b','#a49791'];
+  const ink=relevant?'#e4cf94':palette[(owner*7+Math.floor(owner/5))%palette.length];
+  if(relevant){tenureDraw.fillStyle='rgba(233,207,147,.20)';tenureDraw.fillRect(X,Y,PX,PX);}
+  tenureDraw.fillStyle=ink;
+  if(x===0||owners[i-1]!==owner)tenureDraw.fillRect(X,Y,1,PX);
+  if(y===0||owners[i-SIZE]!==owner)tenureDraw.fillRect(X,Y,PX,1);
+  if(x===SIZE-1||owners[i+1]!==owner)tenureDraw.fillRect(X+PX-1,Y,1,PX);
+  if(y===SIZE-1||owners[i+SIZE]!==owner)tenureDraw.fillRect(X,Y+PX-1,PX,1);
+  if(tenant){tenureDraw.fillStyle='#f1ead1';tenureDraw.fillRect(X+3,Y+3,2,2);}
+ }
+ if(selectedPlot!==null){
+  const X=(selectedPlot%SIZE)*PX,Y=Math.floor(selectedPlot/SIZE)*PX;
+  tenureDraw.strokeStyle='#fff5da';tenureDraw.lineWidth=2;
+  tenureDraw.strokeRect(X+1,Y+1,PX-2,PX-2);
+ }
+ tenureDirty=false;
+}
 function drawFrame(){if(!sim)return;
  resize();const dpr=Math.min(2,devicePixelRatio||1),w=canvas.width/dpr,h=canvas.height/dpr;
  ctx.fillStyle='#2c4739';ctx.fillRect(0,0,w,h);if(dirty)makeWorldArt();
  ctx.imageSmoothingEnabled=false;ctx.drawImage(worldCanvas,Math.round(cam.x),Math.round(cam.y),Math.round(W*cam.z),Math.round(W*cam.z));
+ if(tenureMode||selected!==null){
+  const token=sim.day+':'+(selected??'')+':'+(selectedPlot??'')+':'+tenureMode;
+  if(tenureDirty||tenureCache!==token){paintTenure();tenureCache=token;}
+  ctx.drawImage(tenureCanvas,Math.round(cam.x),Math.round(cam.y),Math.round(W*cam.z),Math.round(W*cam.z));
+ }
  const showFigures=cam.z>=.17;
  const fine=renderDetail==='fine';
  if(showFigures){
