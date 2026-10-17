@@ -134,6 +134,10 @@ function execute(w,choice){
     cost(w,p,10,'levy-raised:'+id);
     transfer(w,{good:'grain',from:'person:'+p.id,amount:14,cause:'levy-provisions:'+id});
     const defense=Math.min(armed(w,q),Math.floor(q.treasury.coin/2)+Math.floor(q.treasury.grain/3));
+    const coinRaised=Math.min(q.treasury.coin,Math.ceil(defense/4));
+    const grainRaised=Math.min(q.treasury.grain,Math.ceil(defense/2));
+    if(coinRaised)transfer(w,{good:'coin',from:'person:'+q.id,amount:coinRaised,cause:'defensive-levy:'+id});
+    if(grainRaised)transfer(w,{good:'grain',from:'person:'+q.id,amount:grainRaised,cause:'defensive-provisions:'+id});
     const attacker=Math.max(6,armed(w,p));
     const war={id,attackerId:p.id,defenderId:q.id,titleId:choice.titleId,
       locationId:from,objectiveId:to,attackerTroops:attacker,defenderTroops:defense,
@@ -180,6 +184,12 @@ function battleYear(w,war){
   if(upkeep)transfer(w,{good:'grain',from:'person:'+p.id,amount:upkeep,cause:'campaign-supply:'+war.id});
   const pay=Math.min(p.treasury.coin,2);
   if(pay)transfer(w,{good:'coin',from:'person:'+p.id,amount:pay,cause:'campaign-pay:'+war.id});
+  const guard=person(w,war.defenderId);
+  const defenceUpkeep=Math.min(guard.treasury.grain,Math.ceil(war.defenderTroops/6));
+  if(defenceUpkeep)transfer(w,{good:'grain',from:'person:'+guard.id,amount:defenceUpkeep,
+    cause:'garrison-supply:'+war.id});
+  const unpaid=defenceUpkeep<Math.ceil(war.defenderTroops/6);
+  if(unpaid)war.defenderTroops=Math.max(0,war.defenderTroops-2);
   const shortage=upkeep<Math.ceil(war.attackerTroops/5)||pay<2;
   if(shortage)war.attackerTroops=Math.max(0,war.attackerTroops-3);
   const routeNow=route(w,war.locationId,war.objectiveId);
