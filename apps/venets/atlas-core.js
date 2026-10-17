@@ -2,8 +2,8 @@
 // Geometry is pure and generated WITHOUT consuming the world PRNG. Same seed means
 // the same geography even after births, inheritance or save/load.
 export const ATLAS_W=860, ATLAS_H=570;
-const COLS=4,ROWS=3;
-const X0=49,Y0=54,CW=191,CH=151;
+const SHAPES={12:{cols:4,rows:3,width:860,height:570,x0:49,y0:54,cw:191,ch:151},
+  48:{cols:8,rows:6,width:1720,height:1140,x0:49,y0:54,cw:199,ch:168}};
 const mix32=n=>{n=(n^(n>>>16))>>>0;n=Math.imul(n,0x7feb352d);n=(n^(n>>>15))>>>0;n=Math.imul(n,0x846ca68b);return(n^(n>>>16))>>>0};
 export function atlasNoise(seed,key){return mix32((seed>>>0)^Math.imul(key+1,0x9e3779b1))/4294967296}
 const round=n=>+n.toFixed(2);
@@ -24,7 +24,9 @@ function sharedEdge(a,b,seed){
   samples.push(q);
   return a.key===p.key?samples:samples.reverse();
 }
-export function makeAtlasGeometry(seed=413){
+export function makeAtlasGeometry(seed=413,size=12){
+  const shape=SHAPES[size];if(!shape)throw RangeError('Unknown atlas size');
+  const {cols:COLS,rows:ROWS,width,height,x0:X0,y0:Y0,cw:CW,ch:CH}=shape;
   const vertices=[];
   for(let y=0;y<=ROWS;y++){
     const row=[];
@@ -52,7 +54,7 @@ export function makeAtlasGeometry(seed=413){
   for(let i=0;i<edgeVertices.length;i++)
     perimeter+=' '+polyline(edgeVertices[i],edgeVertices[(i+1)%edgeVertices.length]);
   perimeter+=' Z';
-  return {polys,perimeter,width:ATLAS_W,height:ATLAS_H};
+  return {polys,perimeter,width,height};
 }
 const HERALDRY=[
   {main:'#626f51',alt:'#ead7a7',ink:'#354735',charge:'oak'},
@@ -65,7 +67,7 @@ export function heraldryFor(dynastyId){
   const n=Number(String(dynastyId).split('-').at(-1));
   return HERALDRY[(Number.isInteger(n)&&n>0?n-1:0)%HERALDRY.length];
 }
-export function countyAtlasModel(world,geometry=makeAtlasGeometry(world.seed)){
+export function countyAtlasModel(world,geometry=makeAtlasGeometry(world.seed,world.provinces.length)){
   const polygons=geometry.polys.map(shape=>{
     const province=world.provinces.find(p=>p.id===shape.id);
     if(!province)throw Error('Atlas has no province '+shape.id);
