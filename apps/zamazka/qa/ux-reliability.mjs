@@ -79,3 +79,6 @@ import './vote-aspect-fairness.mjs';
 
 // A fixed 3% canvas fraction for NEW masks; old artwork geometry remains byte-identical.
 import './damage-area-balance.mjs';
+
+// Authoritative timestamped coins and speed/endurance score receipts.
+import './timed-scoring.mjs';
