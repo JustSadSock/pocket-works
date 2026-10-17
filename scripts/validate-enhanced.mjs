@@ -31,7 +31,7 @@ function requireIncludes(source, fragments, label) {
 }
 
 const packageJson = JSON.parse(await read('package.json') || '{}');
-for (const dependency of ['vite', 'vite-plugin-pwa', 'vitest', 'typescript', 'pixi.js', 'phaser', 'tone', 'workbox-core', 'workbox-precaching', 'workbox-routing']) {
+for (const dependency of ['vite', 'vite-plugin-pwa', 'vitest', 'typescript', 'pixi.js', 'phaser', 'tone', 'workbox-core', 'workbox-precaching', 'workbox-routing', 'workbox-window']) {
   if (!packageJson.dependencies?.[dependency] && !packageJson.devDependencies?.[dependency]) {
     errors.push(`root package.json must declare ${dependency}`);
   }

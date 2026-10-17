@@ -63,7 +63,8 @@
     "tone": "^15.0.0",
     "workbox-core": "^7.3.0",
     "workbox-precaching": "^7.3.0",
-    "workbox-routing": "^7.3.0"
+    "workbox-routing": "^7.3.0",
+    "workbox-window": "^7.4.1"
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
