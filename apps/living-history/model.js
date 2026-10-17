@@ -1,5 +1,6 @@
 import {walkingDistances,walkingSteps,workdayFraction,walkPath,pathEffort} from './navigation.js';
 import {WORK_HOURS,scheduleWork,commitWork,shiftAudit} from './work-time.js';
+import {parcelEconomics,leaseEconomics} from './land-economy.js';
 // Living History: deterministic, renderer-independent regional society simulation.
 export const SIZE = 160;
 const T = SIZE * SIZE;
@@ -170,25 +171,31 @@ function fellForClearance(s,h,i,worker){
  return amount;
 }
 function allocFields(s,h,count) {
- // Families cultivate contiguous sectors accessible on foot, but each family
- // joins the existing communal arable; no predetermined cardinal field blocks.
+ // No village-centred ring or predetermined field sector. Every founding
+ // household evaluates soil, real walking access, woodland, nearby cultivated
+ // strips and the opportunity cost of placing fields close to other homes.
+ // Founders already possess historical rights: no present-day coin is minted
+ // or spent to backdate old claims.
  const village=s.communities.find(c=>c.id===h.communityId)||h;
  const distances=walkingDistances(s,h),candidates=[];
+ const neighbors=s.households.filter(k=>k.communityId===h.communityId);
  for(let y=Math.max(2,village.y-64);y<=Math.min(SIZE-3,village.y+64);y++)
-  for(let x=Math.max(2,village.x-64);x<=Math.min(SIZE-3,village.x+64);x++){
-   const i=idx(x,y),radial=Math.hypot(x-village.x,y-village.y);
-   if(radial<14||radial>64||s.terrain[i]!==0||s.usage[i]||s.soil[i]<40
-      ||distances[i]<0||distances[i]>135)continue;
-   // Furlong-like concentrations form around land already in agricultural use,
-   // but the boundaries follow terrain and different household decisions.
-   let shared=0;
-   for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)
-    if((dx||dy)&&s.usage[idx(x+dx,y+dy)]===2)shared++;
-   const score=distances[i]*.63+radial*.12+(99-s.soil[i])*.14
-    -Math.min(9,shared)*.72+hash(s.seed+h.id,x,y)*2.6;
-   candidates.push({i,score});
-  }
- candidates.sort((a,b)=>a.score-b.score||a.i-b.i);
+ for(let x=Math.max(2,village.x-64);x<=Math.min(SIZE-3,village.x+64);x++){
+  const i=idx(x,y),d=distances[i];
+  if(s.terrain[i]!==0||s.usage[i]||s.soil[i]<40||d<0||d>135)continue;
+  const closeHome=neighbors.some(k=>Math.abs(k.x-x)+Math.abs(k.y-y)<4);
+  if(closeHome)continue; // reserve tofts and their pedestrian approaches
+  let nearbyOpen=0;
+  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)
+   if((dx||dy)&&s.usage[idx(x+dx,y+dy)]===2)nearbyOpen++;
+  const economics=parcelEconomics(s,h,i,d,nearbyOpen,{founding:true});
+  // Attractive areas near existing open fields and one's own door naturally
+  // coalesce without concentric hand-written field blocks.
+  const value=economics.score+Math.min(6,nearbyOpen)*.28
+   -Math.max(0,14-d)*.09+hash(s.seed+h.id,x,y)*.75;
+  candidates.push({i,value});
+ }
+ candidates.sort((a,b)=>b.value-a.value||a.i-b.i);
  let n=0;
  for(const {i} of candidates){
   if(n>=count)break;
@@ -487,7 +494,7 @@ function seasonalLeases(s){
   for(const holding of landlords){if(!remaining||!holding.available)break;
    const owner=holding.h;if(owner.id===tenant.id||owner.communityId!==tenant.communityId)continue;
    const plots=owner.fields.filter(i=>!owner.leaseOut.includes(i)&&reach[i]>=0&&reach[i]<=100)
-     .sort((a,b)=>reach[a]-reach[b]);
+     .sort((a,b)=>leaseEconomics(s,tenant,b,reach[b]).netKg-leaseEconomics(s,tenant,a,reach[a]).netKg||reach[a]-reach[b]||a-b);
    const amount=Math.min(remaining,holding.available,plots.length);
    if(amount<1)continue;
    for(const cell of plots.slice(0,amount)){
@@ -932,26 +939,30 @@ function reclaimProject(s,h,adults){
   // Choose unclaimed ground in an existing village's open fields, accessible by foot.
   const village=s.communities.find(c=>c.id===h.communityId);if(!village)return;
   const walk=walkingDistances(s,h);
-  let best=-1,score=Infinity;
+  let best=-1,bestScore=-Infinity,choice=null;
   for(let y=Math.max(2,village.y-53);y<Math.min(SIZE-2,village.y+54);y+=2)
   for(let x=Math.max(2,village.x-53);x<Math.min(SIZE-2,village.x+54);x++){
    const i=idx(x,y),d=walk[i];
    if(s.commons[i]!==h.communityId||s.usage[i]||s.terrain[i]!==0||s.soil[i]<50||d<0||d>95)continue;
-   // Prefer land next to other open-field strips, rather than scattering isolated cells.
    const adjacent=[i-1,i+1,i-SIZE,i+SIZE].filter(k=>s.usage[k]===2).length;
-   const value=d*.11+(100-s.soil[i])*.1-adjacent*4+s.forest[i]*.025+hash(s.seed,h.id,i)*2;
-   if(value<score){score=value;best=i;}
+   const bid=parcelEconomics(s,h,i,d,adjacent);
+   if(h.wood<bid.woodNeeded||h.coin<bid.compensation)continue;
+   // A productive household cannot justify a remote, low-yield claim just
+   // because it has some cash. Clearing work and road travel matter.
+   const value=bid.score+hash(s.seed,h.id,i)*.15;
+   if(value>bestScore){bestScore=value;best=i;choice=bid;}
   }
-  if(best<0)return;
-  h.wood=round(h.wood-24);s.stats.landWood=(s.stats.landWood||0)+24;
-  // Coins are deposited with the existing community households as compensation
-  // for losing common use, not destroyed or minted.
+  if(best<0||!choice||choice.netAnnual<=0)return;
+  h.wood=round(h.wood-choice.woodNeeded);
+  s.stats.landWood=round((s.stats.landWood||0)+choice.woodNeeded);
+  // Claim compensation is a genuine transfer between village households.
+  // If the claimant is alone, the settlement cannot sell its commons to itself.
   const recipients=s.households.filter(k=>k.communityId===h.communityId&&k.id!==h.id&&liveMembers(s,k).length).sort((a,b)=>a.id-b.id);
-  if(recipients.length){h.coin-=16;recipients[0].coin+=16;}
-  h.landProject={cell:best,days:0,costWood:24};
+  if(recipients.length){h.coin-=choice.compensation;recipients[0].coin+=choice.compensation;}
+  h.landProject={cell:best,days:0,costWood:choice.woodNeeded,compensation:recipients.length?choice.compensation:0,bid:choice};
   event(s,'land-claim-start',`${familyName(s,h)} расчищает новый участок`,
    'Доступная общинная земля, компенсация соседям, расход древесины и труд',
-   [h.id],{cell:best,workDays:12});
+   [h.id],{cell:best,workDays:12,expectedAnnualKg:choice.expectedAnnualKg,walkingSteps:choice.walkSteps,compensation:choice.compensation});
  }
  const p=adults.find(p=>p.job==='home');if(!p)return;
  const cell=h.landProject.cell;

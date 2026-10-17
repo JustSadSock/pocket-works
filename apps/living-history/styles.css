@@ -57,3 +57,11 @@
 .time-detail[data-mode="fine"]{color:#345139}
 @media(max-width:370px){.time-detail{font-size:9px;gap:5px}.time-track{min-width:25px}}
 @media(prefers-reduced-motion:reduce){.time-track i{transition:none}}
+
+/* Cadastral overlay is optional and does not cover the living scene with cards. */
+#tenure-toggle.active{background:#ddc692;color:#283b31;border-color:#f0d7a3}
+.land-overview{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 8px}
+.land-overview span{font:10px/1.5 system-ui;color:#475540;background:#d9d6c3;padding:4px 7px;border-left:2px solid #a09b76}
+.land-overview b{font-weight:700;color:#263e31}
+.parcel-detail{font:11px/1.5 system-ui;color:#4c4739;background:#e9ddbf;border-left:3px solid #a78e5f;padding:6px 8px;margin:7px 0}
+.scene-actions button:last-child{border-radius:0 0 7px 7px}

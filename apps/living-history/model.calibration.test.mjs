@@ -39,7 +39,11 @@ test('healthy population still has genuine food limitation and no synthetic food
 test('fallow soil recovers even with zero labour and zero harvest',()=>{
  const s=createWorld(411),h=s.households[0];s.day=364;
  h.farmYear={year:0,active:h.fields.slice(0,12),sownArea:0,tended:0,harvestedArea:0,seedKg:0,yieldKg:0,labourSow:0,labourTend:0,labourHarvest:0};
- const fallow=h.fields.find(i=>!h.farmYear.active.includes(i)),before=s.soil[fallow];
+ const fallow=h.fields.find(i=>!h.farmYear.active.includes(i));
+ // Soil already at the physical ceiling cannot improve further; simulate
+ // an exhausted resting strip to measure actual fallow recovery.
+ s.soil[fallow]=Math.min(s.soil[fallow],80);
+ const before=s.soil[fallow];
  advanceDays(s,1);
  assert.ok(s.soil[fallow]>before,`fallow ${before} -> ${s.soil[fallow]}`);
  assert.equal(h.farmYear.soilFinalized,true);
