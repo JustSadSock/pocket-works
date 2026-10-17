@@ -31,7 +31,7 @@ const fresh=()=>{const out={drawImage(canvas){this.view=[...canvas.events]}};ren
 const run=()=>{render(ctx,strokes,zone,4/3,cached);assert.deepEqual(ctx.view,fresh(),'cache differs from full chronological replay')};
 let fillCount=0;
 for(let i=0;i<48;i++){
- const t=i%5===1?'brush':i%5===3?'smudge':i%7===0?'erase':'fill';
+ const t=i%5===1?'brush':i%5===3?'smudge':i>0&&i%7===0?'erase':'fill';
  strokes.push({id:i,t,c:'#'+String(i).padStart(6,'0'),s:8,p:[[i,20]]});
  const before=fills;
  render(ctx,strokes,zone,4/3,cached);
