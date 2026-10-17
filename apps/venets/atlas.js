@@ -118,6 +118,23 @@ function mapCounties(world,model,selectedId,changes,onSelect){
  }
  return group;
 }
+function warMarkers(svg,model,world){
+ const active=world.conflicts?.wars||[];
+ for(const war of active){
+  const province=model.polygons.find(p=>p.id===war.locationId);
+  if(!province)continue;
+  const c=province.center;
+  const pos={x:c.x+35,y:c.y-38};
+  const badge=S('g',{transform:'translate('+pos.x+' '+pos.y+')',
+    class:'atlas-army','pointer-events':'none','aria-label':'Дружина: '+war.attackerTroops});
+  badge.append(S('circle',{r:20,fill:'#463d34',stroke:'#e1c999','stroke-width':2}),
+    S('path',{d:'M-8 -11L8 12 M8 -11L-8 12',stroke:'#e8d2a3','stroke-width':2.5}),
+    T('text',String(war.attackerTroops),{x:0,y:32,fill:'#332e29',
+      'font-size':13,'font-family':'Georgia,serif','text-anchor':'middle',
+      stroke:'#f4e7c9','stroke-width':2,'paint-order':'stroke'}));
+  svg.append(badge);
+ }
+}
 function compass(svg){
  const rose=S('g',{transform:'translate(778 81)','pointer-events':'none','aria-hidden':'true'});
  rose.append(S('circle',{r:30,fill:'none',stroke:'#787864','stroke-width':1,'stroke-opacity':.5}),
@@ -138,6 +155,7 @@ export function renderAtlas(world,{selectedId='pr-01',onSelect,changes=[]}={}){
    S('g',{'clip-path':'url(#atlas-land)'},[
      S('rect',{width:860,height:570,fill:'#526040',filter:'url(#atlas-grain)'})]),
    engraving(model,world.seed),mapCounties(world,model,selectedId,changes,onSelect));
+ warMarkers(svg,model,world);
  compass(svg);
  const container=DOM('div','atlas-canvas');
  container.append(svg);
