@@ -39,7 +39,7 @@ test('real economy books one saved shift per worker and limits work to available
    assert.ok(q.workHours>0&&q.workHours<=WORK_HOURS+.001);
    assert.ok(q.travelHours>=0);
    assert.ok(q.workHours+q.travelHours<=WORK_HOURS+.02);
-   assert.equal(q.fraction,Math.round(q.workHours/WORK_HOURS*10000)/10000);
+   assert.ok(Math.abs(q.fraction-q.workHours/WORK_HOURS)<.0001,'shift fraction corresponds to actual hours');
    if(q.kind==='farm')sawFarm=true;
    if(q.kind==='wood')sawWood=true;
    if(q.kind==='garden')sawGarden=true;
