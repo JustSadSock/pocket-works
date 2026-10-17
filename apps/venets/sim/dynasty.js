@@ -48,16 +48,25 @@ export function descendantBranches(world,personId) {
     .map(id=>findPerson(world,id));
 }
 function collateral(world,dead) {
-  const visited=new Set([dead.id]);
-  let generation = [dead];
-  for(let depth=0; depth<12 && generation.length; depth++) {
-    const parents=distinct(generation.flatMap(p=>p.parentIds.filter(Boolean))).map(id=>findPerson(world,id)).filter(Boolean);
+  // Search breadth-first by kinship level: siblings (including their represented
+  // descendants), then parents, then aunts/uncles and their lines.
+  let branches=[dead];
+  const seen=new Set([dead.id]);
+  for(let depth=0;depth<12&&branches.length;depth++) {
+    const parents=distinct(branches.flatMap(p=>p.parentIds.filter(Boolean)))
+      .map(id=>findPerson(world,id)).filter(p=>p&&!seen.has(p.id));
     if(!parents.length) break;
-    const siblings=world.people.filter(p=>p.alive && p.id!==dead.id && !visited.has(p.id) &&
-      parents.some(parent=>p.parentIds.includes(parent.id)) && !ancestors(world,p.id).has(dead.id));
-    if(siblings.length) return siblings.sort(seniority)[0];
-    parents.forEach(p=>visited.add(p.id));
-    generation=parents;
+    for(const parent of parents) {
+      const siblings=kids(world,parent.id).filter(child=>
+        !branches.some(branch=>branch.id===child.id));
+      for(const sibling of siblings) {
+        const heir=representative(world,sibling);
+        if(heir && heir.id!==dead.id && !ancestors(world,heir.id).has(dead.id))return heir;
+      }
+    }
+    for(const parent of parents)if(parent.alive)return parent;
+    parents.forEach(p=>seen.add(p.id));
+    branches=parents;
   }
   return null;
 }
