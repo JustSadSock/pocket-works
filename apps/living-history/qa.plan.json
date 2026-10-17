@@ -21,7 +21,8 @@
         "aid-policy.test.mjs",
         "graded-labour.test.mjs",
         "organic-settlement.test.mjs",
-        "living-roads.test.mjs"
+        "living-roads.test.mjs",
+        "spatial-metrics.test.mjs"
       ]
     },
     {
