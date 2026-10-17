@@ -53,6 +53,7 @@ function connect(how,settings){
 }
 function apply(v){if(!v||v.protocol!==1||!Array.isArray(v.players))return;
  if(view&&v.revision<view.revision)return;
+ if(v.phase==='finished'&&Array.isArray(v.stories))v={...v,stories:v.stories.map(st=>({...st,text:st.fragments.map(f=>f.answer).join('\n\n')}))};
  const prev=view;const same=prev?.phase==='writing'&&v.phase==='writing'&&!prev.waiting&&!v.waiting&&prev.round===v.round&&prev.sheet?.id===v.sheet?.id;
  if(prev?.phase==='writing'&&!prev.waiting&&v.waiting)clearDraft();
  view=v;if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
