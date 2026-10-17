@@ -30,6 +30,7 @@ for(const seed of SEEDS){
    ||s.roadAblation.changed>s.roadAblation.comparable
    ||s.roadAblation.trials?.length!==s.roadAblation.attempts
    ||s.communities.some(c=>c.roadFrontageShare<0||c.roadFrontageShare>1
+     ||c.coreRoadCells<0||c.coreRoadWithinTwoTilesShare===undefined||c.coreRoadDistanceTilesMedian===undefined
      ||c.mainRoadWithinTwoTilesShare!==null&&(c.mainRoadWithinTwoTilesShare<0||c.mainRoadWithinTwoTilesShare>1)
      ||c.junctionWithinSixTilesShare!==null&&(c.junctionWithinSixTilesShare<0||c.junctionWithinSixTilesShare>1))){
    errors.push('Invalid morphology seed '+seed+' year '+s.year);break;
@@ -53,6 +54,8 @@ const yearStats=checkpoints.map(year=>{
   medianMainRoadCells:med(snapshots.map(s=>s.road.main)),
   legacyFrontageShare:med(communities.map(c=>c.roadFrontageShare)),
   medianMainRoadWithinTwoTilesShare:med(communities.map(c=>c.mainRoadWithinTwoTilesShare)),
+  medianCoreRoadWithinTwoTilesShare:med(communities.map(c=>c.coreRoadWithinTwoTilesShare)),
+  medianCoreRoadDistanceTiles:med(communities.map(c=>c.coreRoadDistanceTilesMedian)),
   medianJunctionWithinSixTilesShare:med(communities.map(c=>c.junctionWithinSixTilesShare)),
   medianDistanceToMainRoadTiles:med(communities.map(c=>c.mainRoadDistanceTilesMedian)),
   medianDistanceToJunctionTiles:med(communities.map(c=>c.junctionDistanceTilesMedian)),
@@ -74,9 +77,9 @@ const yearStats=checkpoints.map(year=>{
 const last=yearStats.at(-1),first=yearStats[0];
 const findings=[
  {id:'street-frontage-saturation',type:'measurement',
-  observation:'Legacy frontage within two cells = '+last.legacyFrontageShare+' at year 50. The house route itself marks nearby traffic.',
+  observation:'Legacy frontage within two cells = '+last.legacyFrontageShare+' at year 50; absolute main-road frontage = '+last.medianMainRoadWithinTwoTilesShare+' while rank-core frontage = '+last.medianCoreRoadWithinTwoTilesShare+'.',
   mechanism:'initialFootpaths() and markRoad() imprint journeys from homes; a radius around the same homes cannot distinguish a street from a private access trail.',
-  response:'Do not interpret legacy frontage as street organization. Use independent main-road/junction distances and construction-time temporal evidence.'},
+  response:'Do not interpret legacy or absolute-main-road frontage as street organization. Inspect top-decile core road access, junction structure and construction-time temporal evidence.'},
  {id:'road-incentive-in-site-choice',type:'paired-selection-test',
   observation:last.siteSelectionAblation.changed+' of '+last.siteSelectionAblation.compared+' same-state site selections move if traffic is zeroed.',
   mechanism:'chooseSettlementSite() rewards wear; croftCandidate() also penalizes existing traffic behind the toft.',
@@ -97,9 +100,9 @@ const report={schema:2,complete:reports.length===24&&errors.length===0,seeds:rep
 fs.writeFileSync(path.join(dest,'summary.json'),JSON.stringify(report,null,2));
 let md='# «Живая история» v0.7.6 — анатомия поселения\n\n';
 md+='**Проверено:** '+report.seeds+'/24 миров, '+report.simulatedYears+'/1200 лет, ежегодный материальный аудит; статус: '+(report.complete?'полный':'НЕПОЛНЫЙ')+'.\n\n';
-md+='| Год | Население (мед.) | Дома (мед.) | Дороги, клетки (мед.) | Магистрали (мед.) | У магистрали ≤2 клеток | До развилки, клетки | Пешком до пашни | Контрфактов с изменением места |\n';
-md+='|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n';
-for(const s of yearStats)md+='| '+[s.year,s.medianPopulation,s.medianHouseholds,s.medianWornRoadCells,s.medianMainRoadCells,s.medianMainRoadWithinTwoTilesShare,s.medianDistanceToJunctionTiles,s.medianWalkingDistanceToFieldsTiles,(s.siteSelectionAblation.changed+'/'+s.siteSelectionAblation.compared)].join(' | ')+' |\n';
+md+='| Год | Население (мед.) | Дома (мед.) | Дороги, клетки (мед.) | Магистрали (мед.) | У магистрали ≤2 клеток | У топ-10% дорог ≤2 клеток | До ядра дороги, клетки | Пешком до пашни | Контрфактов с изменением места |\n';
+md+='|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n';
+for(const s of yearStats)md+='| '+[s.year,s.medianPopulation,s.medianHouseholds,s.medianWornRoadCells,s.medianMainRoadCells,s.medianMainRoadWithinTwoTilesShare,s.medianCoreRoadWithinTwoTilesShare,s.medianCoreRoadDistanceTiles,s.medianWalkingDistanceToFieldsTiles,(s.siteSelectionAblation.changed+'/'+s.siteSelectionAblation.compared)].join(' | ')+' |\n';
 md+='\n**Построено новых домов:** '+last.newHomesToDate+'. **Доля уже у протоптанной дороги в начале года строительства:** '+last.newHomesWithinTwoTilesOfPriorYearTrackShare+'.\n';
 md+='\n## Три приоритетных вывода для следующего этапа\n\n';
 for(const f of findings)md+='### '+f.id+'\n'+f.observation+'\n\n**Механизм:** '+f.mechanism+'\n\n**Действие:** '+f.response+'\n\n';
