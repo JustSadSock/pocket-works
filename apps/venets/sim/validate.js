@@ -1,4 +1,5 @@
-// World schema v3: structural, kinship, legal and audited financial invariants.
+// World schema v4: structural, kinship, legal, conflict and financial invariants.
+import {assertConflicts} from './conflicts.js';
 const demand=(ok,message)=>{if(!ok)throw new Error('Invalid Venets world: '+message);};
 const safe=n=>Number.isSafeInteger(n)&&n>=0;
 const ranks={county:1,duchy:2,kingdom:3};
@@ -227,6 +228,7 @@ export function assertWorld(w){
     demand(totals[good]===w.ledger.initial[good]+w.ledger.created[good]-w.ledger.consumed[good],
       'ledger balance mismatch '+good);
   }
+  assertConflicts(w);
   return {provinces:12,titles:17,people:w.people.length,alive,dynasties:w.dynasties.length,
     year:w.year,events:w.events.length,resources:totals};
 }
