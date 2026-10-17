@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "engine",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/engine.test.mjs"
+      ]
+    },
+    {
+      "id": "solo-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#solo",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#solo"
+        },
+        {
+          "action": "visible",
+          "selector": "#dispatch"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#auto"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "visible",
+          "selector": "#cityCanvas"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "playthrough",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/playthrough.spec.ts"
+      ]
+    }
+  ]
+}

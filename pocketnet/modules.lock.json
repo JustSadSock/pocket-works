@@ -143,5 +143,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "trafficity": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
