@@ -784,13 +784,19 @@ function grazingSpots(s,h){
  return h._grazingSpots;
 }
 function takeForage(s,h,kg){
- let remaining=kg,lastSpot=-1;
+ // Working-hour fractions create centigram inputs. Quantize before taking
+ // stock, and use the same rounded amount on both sides of each transfer.
+ // Otherwise forage silently disappears/appears over multi-year simulations.
+ let remaining=round(Math.max(0,kg)),lastSpot=-1;
+ const requested=remaining;
  const spots=grazingSpots(s,h);
  for(const i of spots){if(remaining<.01)break;if(s.usage[i]||s.terrain[i]!==0)continue;
-  const taken=Math.min(s.pasture[i],remaining);
-  if(taken<=0)continue;s.pasture[i]=round(s.pasture[i]-taken);remaining=round(remaining-taken);lastSpot=i;
+  const taken=round(Math.min(s.pasture[i],remaining));
+  if(taken<=0)continue;
+  s.pasture[i]=round(s.pasture[i]-taken);
+  remaining=round(remaining-taken);lastSpot=i;
  }
- return {taken:round(kg-remaining),spot:lastSpot};
+ return {taken:round(requested-remaining),spot:lastSpot};
 }
 function tendCattle(s,h,adults){
  h.cattle??=0;h.fodder??=0;h.livestockHealth??=85;
