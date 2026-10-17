@@ -27,6 +27,7 @@ import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
 import {exhibitFacets,exhibitPlaque,mountExhibitFrames} from './exhibition-ui.js';
+import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
@@ -463,25 +464,28 @@ function fitPreviewFrames(rail){
  let scheduled=false,disposed=false;
  function paint(){
   scheduled=false;if(disposed||!rail.isConnected)return;
+  const cells=[];
   for(const host of frames){
    const mat=host.querySelector('.picture-mat'),img=mat?.querySelector('img');
    if(!img?.naturalWidth||!img?.naturalHeight)continue;
    const ratio=img.naturalWidth/img.naturalHeight;
-   // Calculate a fit from the *decoded* bitmap and the actual available cell.
-   // Both axes and the four frame facets share the same explicit dimensions.
    const thickness=matchMedia('(max-width:900px), (pointer:coarse)').matches?7:10;
-   const limitW=host.clientWidth-12-2*thickness-2;
-   const limitH=host.clientHeight-23-2*thickness-2-(host.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-4;
-   if(limitW<28||limitH<28)continue;
-   const width=Math.floor(Math.min(limitW,limitH*ratio));
-   // Keep a fractional CSS height. Rounding 100.5px to 100px distorts
-   // very wide paintings enough to visibly skew the snug frame.
-   const height=width/ratio;
-   const aw=Math.max(1,width)+'px',ah=Math.max(1,height).toFixed(3)+'px';
+   const maxWidth=host.clientWidth-12-2*thickness-2;
+   const maxHeight=host.clientHeight-14-2*thickness-
+    (host.querySelector('.zam-exhibit-plaque')?.offsetHeight||0);
+   if(maxWidth<28||maxHeight<28)continue;
+   cells.push({mat,ratio,maxWidth,maxHeight});
+  }
+  // Identical visual-area budget to the voting wall. This makes portrait,
+  // wide and square originals compete on painted pixels, not outer 4:3 boxes.
+  const fitted=fitGalleryArtwork(cells);
+  cells.forEach(({mat},i)=>{
+   const {width,height}=fitted[i];
+   const aw=width.toFixed(2)+'px',ah=height.toFixed(2)+'px';
    if(mat.style.getPropertyValue('--preview-art-w')!==aw)mat.style.setProperty('--preview-art-w',aw);
    if(mat.style.getPropertyValue('--preview-art-h')!==ah)mat.style.setProperty('--preview-art-h',ah);
    mat.dataset.ratioReady='true';
-  }
+  });
  }
  function schedule(){if(!scheduled&&!disposed){scheduled=true;requestAnimationFrame(paint)}}
  for(const host of frames){
