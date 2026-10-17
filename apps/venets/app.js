@@ -549,7 +549,7 @@ function initPreview(id){
   }
   // No persistency, no reconstruction of the user's actual game:
   // each preview gets a new seeded political world.
-  game=startCampaign({seed:413,countyId:'co-01'});
+  game=startCampaign({seed:413,countyId:'co-01',size:id==='expanded-atlas'?48:12});
   if(id==='menu-resume'){menu();return}
   if(id==='docs'){screenTo('docs');return}
   if(id==='ending'){
@@ -562,7 +562,7 @@ function initPreview(id){
     if(!order)throw Error('No legal war in inspection seed');
     campaignAction(game,order);panel='lands';
   }
-  if(id==='lands'||id==='atlas')panel='lands';
+  if(id==='lands'||id==='atlas'||id==='expanded-atlas')panel='lands';
   if(id==='genealogy'){panel='lands';atlasView='family'}
   if(id==='title-transfer'){
     panel='lands';
