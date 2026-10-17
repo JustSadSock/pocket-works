@@ -123,7 +123,8 @@
       "tier": "smoke",
       "files": [
         "qa/dev-inspector.spec.ts",
-        "qa/atlas.spec.ts"
+        "qa/atlas.spec.ts",
+        "qa/war.spec.ts"
       ]
     }
   ]
