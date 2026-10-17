@@ -181,3 +181,32 @@ test('v0.3 ensemble accepts at least 100 seeds by 100 years with balanced estate
   assert.ok(partitions>0,'At least some division of multi-titled holdings');
   assert.ok(distinctHistories.size>80,'Worlds must yield meaningfully different demographics');
 });
+
+test('collateral succession represents a deceased sibling through their living child',()=>{
+  let candidate=null;
+  for(let seed=0;seed<300&&!candidate;seed++){
+    const world=createWorld(seed);
+    const founders=world.people.filter(p=>p.origin==='founder');
+    const father=founders.filter(p=>p.sex==='male').sort((a,b)=>a.birthYear-b.birthYear)[0];
+    const mother=founders.filter(p=>p.sex==='female').sort((a,b)=>a.birthYear-b.birthYear)[0];
+    const young=world.people.filter(p=>p.origin==='founder-spouse'&&
+      p.birthYear>=Math.max(father.birthYear,mother.birthYear)+16 &&
+      p.id!==father.spouseId&&p.id!==mother.spouseId);
+    const b=young.find(p=>p.sex==='female'&&
+      world.people.filter(ch=>ch.parentIds.includes(p.id)).length<4);
+    const a=young.find(p=>p.id!==b?.id&&!world.people.some(ch=>ch.parentIds.includes(p.id)));
+    if(a&&b)candidate={world,a,b,father,mother};
+  }
+  assert.ok(candidate,'Expected a feasible collateral pedigree fixture');
+  const {world,a,b,father,mother}=candidate;
+  a.parentIds=[father.id,mother.id];
+  b.parentIds=[father.id,mother.id];
+  assertWorld(world);
+  const heir=birth(world,{motherId:b.id,fatherId:b.spouseId,cause:'nephew-born'});
+  changeTitleHolder(world,{titleId:'co-01',newHolderId:a.id,cause:'grant-before-collateral'});
+  setSuccessionLaw(world,{titleId:'co-01',law:'primogeniture'});
+  die(world,{personId:b.id,cause:'sibling-earlier-death'});
+  die(world,{personId:a.id,cause:'childless-owner-death'});
+  assert.equal(world.titles.find(t=>t.id==='co-01').holderId,heir.id);
+  assertWorld(world);
+});
