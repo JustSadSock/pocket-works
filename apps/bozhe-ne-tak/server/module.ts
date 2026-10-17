@@ -202,7 +202,7 @@ const bump=s=>({state:{...s,revision:s.revision+1},events:emit()});
 const taskOwners=s=>Object.fromEntries(s.players.flatMap((p,i)=>s.assignments[p.id].map(task=>[task,p.id])));
 const initRoles=s=>{
  const scheme=roles(s.players.length);
- s.assignments=Object.fromEntries(s.players.map((p,i)=>[p.id,scheme[i]]));
+ s.assignments=Object.fromEntries(s.players.map((p,i)=>[p.id,scheme[(i+(s.match?.round||0))%s.players.length]]));
 };
 const clearRound=s=>{
  s.altar={itemId:null,treatment:null,bell:null,height:null};
@@ -244,7 +244,7 @@ function concludeCouncil(s){
  const offers=s.match.offers||[];
  const scores=offers.map(x=>Object.values(s.votes).filter(v=>v===x).length);
  s.match=chooseDoctrine(s.match,scores[1]>scores[0]?offers[1]:offers[0]);
- newPhase(s,'play');
+ initRoles(s);newPhase(s,'play');
 }
 function advance(s){
  if(!s.deadlineAt||Date.now()<s.deadlineAt)return false;

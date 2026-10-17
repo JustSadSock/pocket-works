@@ -19,7 +19,8 @@ const broadcast=(room,msg)=>{for(const s of sockets.values())if(s.roomId===room.
 const deliver=(room,events)=>{
  for(const event of events||[])for(const s of sockets.values())
   if(s.roomId===room.id&&(!event.to||s.player?.id===event.to))
-   enqueue(s,{type:'game_event',roomId:room.id,event});
+   enqueue(s,{type:'game_event',roomId:room.id,event:event.type==='state'
+    ?{...event,payload:rules.viewForPlayer({state:room.state,player:s.player,players:room.players})}:event});
 };
 function handle(socket,msg){
  if(!socket)throw Error('bad_socket');
@@ -30,7 +31,7 @@ function handle(socket,msg){
  const player=socket.player;if(!player)return enqueue(socket,{type:'error',code:'auth_required'});
  if(msg.type==='create_room'){
   const room={id:roomId,players:[player],state:rules.createRoom({player}).state};rooms.set(roomId,room);socket.roomId=roomId;
-  enqueue(socket,{type:'room_joined',roomId,gameId:'bozhe-ne-tak',version:'v1',players:room.players,state:room.state});
+  enqueue(socket,{type:'room_joined',roomId,gameId:'bozhe-ne-tak',version:'v2',players:room.players,state:rules.viewForPlayer({state:room.state,player,players:room.players})});
   return;
  }
  if(msg.type==='join_room'){
@@ -43,7 +44,7 @@ function handle(socket,msg){
    catch(e){enqueue(socket,{type:'error',code:e.message});return}
   }
   socket.roomId=roomId;
-  enqueue(socket,{type:'room_joined',roomId,gameId:'bozhe-ne-tak',version:'v1',players:room.players,state:room.state});
+  enqueue(socket,{type:'room_joined',roomId,gameId:'bozhe-ne-tak',version:'v2',players:room.players,state:rules.viewForPlayer({state:room.state,player,players:room.players})});
   broadcast(room,{type:'presence',roomId,players:room.players});return;
  }
  const room=rooms.get(socket.roomId);
@@ -133,16 +134,25 @@ try{
  await host.page.locator('[data-net="start"]').click();
  await host.page.locator('.net-play').waitFor();
  await guest.page.locator('.net-play').waitFor();
- await host.page.locator('[data-net-item="goose"]').click();
- await guest.page.locator('[data-net-item="bread"]').click();
- await host.page.waitForFunction(()=>window.__BNT_QA__().onlinePhase==='play');
- await guest.page.locator('[data-net-treatment="wash"]').click();
- await host.page.locator('[data-net-treatment="gild"]').click();
+
+ // Two players: host owns prophecy + taboo + offerings; guest owns bell and altar height.
+ assert.equal(await host.page.locator('[data-role-reveal]').count(),2);
+ assert.equal(await guest.page.locator('[data-role-reveal]').count(),0);
+ assert.equal(await host.page.locator('[data-role-bell]').count(),0);
+ assert.equal(await guest.page.locator('[data-role-bell]').count(),3);
+ await host.page.locator('[data-role-reveal="need"]').click();
+ await host.page.locator('[data-role-reveal="taboo"]').click();
+ await host.page.locator('[data-role-item="goose"]').click();
+ await host.page.locator('[data-role-treatment="wash"]').click();
+ await guest.page.locator('[data-role-bell="2"]').click();
+ await guest.page.locator('[data-role-height="high"]').click();
+ await host.page.waitForFunction(()=>document.querySelectorAll('.net-role-person').length===2);
  await host.page.locator('[data-net="lock"]').click();
  await guest.page.locator('[data-net="lock"]').click();
  await host.page.locator('.net-verdict').waitFor();
  await guest.page.locator('.net-verdict').waitFor();
- assert.equal(await host.page.locator('.net-score-list>div').count(),2);
+ assert.ok(await host.page.locator('.net-score-list>div').count()>=6);
+ assert.equal(rooms.get(roomId).state.match.history.length,1);
  if(dir)await host.page.screenshot({path:join(dir,'two-player-judgment.png')});
  await host.page.locator('[data-net="ack"]').click();
  await guest.page.locator('[data-net="ack"]').click();
