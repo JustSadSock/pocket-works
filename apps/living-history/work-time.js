@@ -12,7 +12,7 @@ const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 function hash3(a,b,c){
  let n=Math.imul((a|0)+71,1597334677)^Math.imul((b|0)+13,3812015801)^Math.imul((c|0)+113,1103515245);
  n=Math.imul(n^(n>>>16),2246822519);
- return (n^(n>>>13)>>>0)/4294967296;
+ return ((n^(n>>>13))>>>0)/4294967296;
 }
 export function scheduleWork(s,person,kind,destination,home){
  const from=home||s.households.find(h=>h.id===person.houseId)||person;
