@@ -648,13 +648,25 @@ function vote(){
  '<div class="phase-body expert-round"><div class="expert-intro"><div><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="phase-directive">Одна из пяти картин отреставрирована.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
  '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':'Распредели до 3 монет. По окончании времени поставленные монеты засчитываются.')+'</p>'+
  '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="stake-frame zam-exhibit-rim">'+exhibitFacets()+
- (examined?.art===id?'<canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
+ (examined?.art===id?'<img class="candidate-underlay" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="" aria-hidden="true" loading="eager"><canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
  '</div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+
  (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">На проверке</span>')+'</div></div>').join('')+'</div>'+
  (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div>'+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'<button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button>':'<span class="coin-auto-status" id="coinVoteStatus" role="status" aria-live="polite">3 фишки — и голос учтён</span>')+'</div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
  '</div></div></section>','vote');
  exhibitFitter=mountExhibitFrames(screen);
- if(examined)void renderArtwork(screen.querySelector('#examinedCanvas'),examined.art,examined.variation,examined.strokes||[],true).then(()=>exhibitFitter?.refresh());
+ if(examined){
+  const canvas=screen.querySelector('#examinedCanvas');
+  void renderArtwork(canvas,examined.art,examined.variation,examined.strokes||[],true)
+   .then(ok=>{
+    if(!canvas?.isConnected)return;
+    // Never reveal the forged slot through an unloaded or 4:3 placeholder.
+    // The same original image remains visible beneath until the edited
+    // canvas is fully painted at the source artwork's native proportions.
+    if(ok)canvas.classList.add('is-ready');
+    else notify('Не удалось отобразить реставрацию. Проверь соединение.');
+    exhibitFitter?.refresh();
+   });
+ }
  if(!isOwn&&!already)updateChips();
 }
 
