@@ -2,7 +2,7 @@
 // Preserve EACH painting's decoded aspect ratio; use approximately equal
 // visible painted area, rather than giving wide images all the screen and
 // portraits an arbitrary 4:3 picture box.
-export function fitGalleryArtwork(cells,{balance=.82}={}){
+export function fitGalleryArtwork(cells,{balance=1}={}){
  const finite=n=>Number.isFinite(n)&&n>0;
  const available=cells.map(cell=>{
   const ratio=finite(cell.ratio)?cell.ratio:4/3;
