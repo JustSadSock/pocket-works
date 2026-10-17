@@ -51,9 +51,14 @@ export function personPosition(p,s,previous,progress,active=true){
  // During the remaining day, actual jobs involve local unsynchronised motion,
  // rather than a worker teleporting to a plot and freezing in place.
  const moving=start.x!==end.x||start.y!==end.y;
- const travelEnd=moving?.72:0;
+ // Different residents leave home at different moments; long journeys occupy
+ // more of the workday than visiting a neighbour. All motion follows real paths.
+ const depart=moving?.04+hash(s.seed,p.id,s.day+11)*.15:0;
+ const steps=Math.abs(start.x-end.x)+Math.abs(start.y-end.y);
+ const travelEnd=moving?Math.min(.83,depart+.16+Math.min(.51,steps*.016)):0;
+ if(moving&&t<=depart)return start;
  if(moving&&t<travelEnd){
-  const eased=smooth(t/travelEnd);
+  const eased=smooth((t-depart)/Math.max(.01,travelEnd-depart));
   return pathPosition(pathFor(s,start,end),eased)||end;
  }
  if(t>=1)return end;
