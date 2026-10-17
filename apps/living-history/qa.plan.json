@@ -26,7 +26,8 @@
         "road-incentive.test.mjs",
         "visible-life.test.mjs",
         "subday.test.mjs",
-        "forest-clearance.test.mjs"
+        "forest-clearance.test.mjs",
+        "hourly-economy.test.mjs"
       ]
     },
     {
