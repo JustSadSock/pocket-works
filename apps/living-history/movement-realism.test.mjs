@@ -27,8 +27,9 @@ test('a human work journey follows traversable tiles, with no decorative circula
  assert.deepEqual(personPosition(p,s,previous,1,true),to);
  assert.equal(serialize(s),baseline);
  p.job='home';p.x=h.x;p.y=h.y;
- const standing=personPosition(p,s,previous,.17,true);
- assert.deepEqual(standing,personPosition(p,s,previous,.88,true));
+ const standing=personPosition(p,s,previous,.17,true),late=personPosition(p,s,previous,.88,true);
+ assert.ok(at(standing,s)&&at(late,s),'courtyard life must stay on accessible land');
+ assert.ok(Math.hypot(standing.x-late.x,standing.y-late.y)<.45,'quiet home movement must remain subtle');
 });
 
 test('paths go through dry river crossings and require more time than straight-line travel',()=>{
