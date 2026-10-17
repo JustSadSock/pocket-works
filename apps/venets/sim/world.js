@@ -36,7 +36,7 @@ export function createWorld(seed = 1) {
     titles: [],
     provinces: [],
     ledger: { initial: { grain: 0, coin: 0 }, created: { grain: 0, coin: 0 }, consumed: { grain: 0, coin: 0 } },
-    stats: { years: 0, shortages: 0, harvested: 0, minted: 0, taxes: 0, relief: 0 },
+    stats: { years: 0, shortages: 0, harvested: 0, minted: 0, taxGrain: 0, taxCoin: 0 },
     events: []
   };
   // 12 county holders, four ducal holders, one crown holder. No placeholder heirs.
@@ -115,7 +115,7 @@ function annualTax(world, province, good, cap, cause) {
     transfer(world, { good, from: 'person:' + duke.holderId, to: 'person:' + king.holderId,
       amount: crown, cause: 'crown-dues:' + province.id });
   }
-  world.stats.taxes += tax;
+  world.stats[good === 'grain' ? 'taxGrain' : 'taxCoin'] += tax;
 }
 export function stepYear(world) {
   assertWorld(world);
