@@ -73,7 +73,8 @@ test('previewed outcomes never change the real campaign or saved data',async({pa
   await page.goto(ENTRY);
   await page.locator('#begin').click();
   await expect(page.locator('#game-screen')).toBeVisible();
-  const savedBefore=await savedCampaign(page).then(x=>x??'').catch(()=>null);
+  await expect.poll(async()=> (await savedCampaign(page))?.length??0).toBeGreaterThan(100);
+  const savedBefore=await savedCampaign(page);
   const year=await page.locator('#year-count').textContent();
   const name=await page.locator('#ruler-name').textContent();
 
@@ -89,7 +90,7 @@ test('previewed outcomes never change the real campaign or saved data',async({pa
 
   // Press Backquote inside the child frame: the parent inspector must close.
   await frame.locator('#confirm-cancel').focus();
-  await page.keyboard.press('Backquote');
+  await frame.locator('#confirm-cancel').press('Backquote');
   await expect(overlay).toHaveCount(0);
   await expect(page.locator('#game-screen')).toBeVisible();
   await expect(page.locator('#year-count')).toHaveText(year);
