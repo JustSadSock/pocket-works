@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "35182c765f97d0d238e94df3085f13783f32f999",
+    "revision": "734b34f6a645731439fa9ad33a54289254b9fd3f",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "ae1c6280be4341f6d5ea2d9a61598c9b6d5f14051f88dde61ac35d127cb43016",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "35182c765f97d0d238e94df3085f13783f32f999",
-    "lastAttemptAt": "2026-10-17T14:04:32.560Z",
+    "lastAttemptRevision": "734b34f6a645731439fa9ad33a54289254b9fd3f",
+    "lastAttemptAt": "2026-10-17T18:52:16.559Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3258,39 +3258,29 @@
   },
   "venets": {
     "note": "No frame passed image-content checks",
-    "diagnostic": {
-      "bestScore": 49,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 54501,
-        "variance": 33.429269269089026,
-        "entropy": 1.0268999603250046,
-        "edgeDensity": 0.16083829365079366,
-        "colorfulness": 19.39990234375,
-        "centerDetail": 31.333403388749314,
-        "meanLight": 222.29513124999684
-      },
-      "gameplayEntry": {
-        "started": false,
-        "actions": []
-      },
-      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.4.0&pw_fp=ae9eec196af7742c09204f43"
-    },
-    "status": "failed",
+    "diagnostic": null,
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "9ade773af8344f84e491ae26e77bc19849740fdc",
-    "lastAttemptAt": "2026-10-17T15:51:24.710Z"
+    "lastAttemptRevision": "43994863408fc70909d218efcd5e5837ec00e71a",
+    "lastAttemptAt": "2026-10-17T18:51:52.877Z",
+    "revision": "43994863408fc70909d218efcd5e5837ec00e71a",
+    "qualityScore": 57,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "shot": 0,
+    "sha256": "6fdcf600f54d15097c7a741d26af416b682ec48380554903feb5420912a61e6b",
+    "imageVersion": 2
   },
   "bozhe-ne-tak": {
     "note": "No frame passed image-content checks",
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "f9e1b4844a22b6ce0c87dad01a11b3c09002f356",
-    "lastAttemptAt": "2026-10-17T15:51:47.406Z",
-    "revision": "f9e1b4844a22b6ce0c87dad01a11b3c09002f356",
+    "lastAttemptRevision": "16697a1b12f0293c094d62bb9624e614ac683f94",
+    "lastAttemptAt": "2026-10-17T18:52:04.656Z",
+    "revision": "16697a1b12f0293c094d62bb9624e614ac683f94",
     "qualityScore": 62,
     "visionScore": null,
     "prepared": false,
@@ -3303,7 +3293,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "cc2549d614235d5418e0f1fd9047668dbdba68caa41e4830a2c15610494fe853",
+    "sha256": "7d35d84fd1d60268c2f76dbff50fc0319cdd201d477301bd3ec1a6483372da21",
     "imageVersion": 2
   }
 }
