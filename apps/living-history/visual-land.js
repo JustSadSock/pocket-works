@@ -19,6 +19,18 @@ export function fieldAppearance(s){
  }
  return stages;
 }
+// Passable field strips can contain trails, even when a crop is growing.
+// An unobtrusive one-pixel footpath gradually becomes a broader lane as
+// actual walkers wear down the vegetation; enclosed crofts remain private.
+export function trailAppearance(s,stages=fieldAppearance(s)){
+ const result=new Uint8Array(LAND_SIZE*LAND_SIZE);
+ for(let i=0;i<result.length;i++){
+  if(s.terrain[i]!==0||s.usage[i]===3)continue;
+  const wear=s.traffic[i]||0,arable=stages[i]>0;
+  result[i]=wear>=65?(arable?2:3):wear>(arable?8:11)?(arable?1:2):0;
+ }
+ return result;
+}
 function pathFor(s,from,to){
  let memo=paths.get(s);
  const revision=`${s.landRevision||0}:${s.roadRevision||0}:${Math.floor((s.day||0)/30)}`;
@@ -62,15 +74,15 @@ export function personPosition(p,s,previous,progress,active=true){
   return pathPosition(pathFor(s,start,end),eased)||end;
  }
  if(t>=1)return end;
- // A standing family at home does not invent a journey to a distant field.
- // Work is animated inside the current walkable tile only.
- const working=p.job!=='home';
- const phase=hash(s.seed,p.id,Math.floor(s.day/3));
- const angle=TWO_PI*(phase+(.21+.44*hash(p.id,s.day,73))*Math.max(0,t-travelEnd));
- const local=working?.35:.14;
- const fade=working?Math.sin(Math.PI*(t-travelEnd)/Math.max(.001,1-travelEnd)):Math.sin(Math.PI*t);
- const amount=Math.max(0,fade)*local;
- return {x:end.x+Math.cos(angle)*amount,y:end.y+Math.sin(angle)*amount};
+ // A worker's small, linear movement follows the orientation of the
+ // current furrow; an idle household never circles a house just to look busy.
+ if(p.job!=='farm')return end;
+ const motion=Math.max(0,(t-travelEnd)/Math.max(.001,1-travelEnd));
+ const cycle=(motion*2+hash(s.seed,p.id,s.day))%2;
+ const stroke=(cycle<1?cycle:2-cycle)-.5;
+ const along=stroke*.46*Math.sin(Math.PI*motion);
+ return (Math.round(end.x)+Math.round(end.y))%2===0?
+  {x:end.x+along,y:end.y}:{x:end.x,y:end.y+along};
 }
 function pastureTile(s,h,origin,x,y){
  if(!walkable(s,x,y))return false;
