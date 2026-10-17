@@ -23,7 +23,7 @@
       <div class="new-heading"><h2>Начать хронику</h2><label for="seed-input">Мир № <input id="seed-input" type="number" inputmode="numeric" min="0" max="4294967295" step="1" value="413"/></label></div>
       <div id="starts" class="starts" role="group" aria-label="Выбор графства"></div>
       <button id="begin" type="button" class="primary-control" data-native-press>Принять графство <span aria-hidden="true">→</span></button>
-      <p class="subnote">До версии 0.6 карта остаётся условной схемой. Мир и его политика уже настоящие.</p>
+      <p class="subnote">Фамилии, титулы и границы изменяются вместе с вашим миром.</p>
     </div>
     <button id="open-docs" class="text-link" type="button" data-native-press>Исследования и устройство мира ↗</button>
   </div>
@@ -43,8 +43,18 @@
     </section>
     <section id="panel-lands" class="game-panel lands-panel" aria-labelledby="lands-heading">
       <div class="panel-head"><p class="eyebrow">ВЛАДЕНИЯ</p><h2 id="lands-heading">Междуречье</h2></div>
-      <div class="map-caption">Условный политический атлас · 12 графств</div>
-      <div id="province-grid" class="province-grid" role="group" aria-label="Выбрать провинцию"></div>
+      <div class="atlas-tools" role="group" aria-label="Вид владений">
+        <button type="button" data-atlas-view="atlas" class="active" aria-pressed="true">Атлас</button>
+        <button type="button" data-atlas-view="family" aria-pressed="false">Родословная</button>
+      </div>
+      <div id="atlas-stage" class="atlas-stage">
+        <div id="province-grid" class="province-grid" role="group" aria-label="Выбрать провинцию"></div>
+      </div>
+      <div id="genealogy-stage" class="genealogy-stage" hidden>
+        <div class="genealogy-controls"><span id="genealogy-subject"></span><button id="genealogy-return" type="button">К правителю ↩</button></div>
+        <div id="genealogy-tree"></div>
+      </div>
+      <div id="atlas-transfer" class="atlas-transfer" role="status" hidden></div>
       <div id="province-info" class="province-info"></div>
     </section>
     <section id="panel-history" class="game-panel history-panel" aria-labelledby="history-heading">
@@ -60,7 +70,7 @@
   <footer class="game-controls" data-ui>
     <nav class="mobile-tabs" aria-label="Разделы игры">
       <button type="button" data-panel="council" class="active" aria-pressed="true"><span>⚖</span>Совет</button>
-      <button type="button" data-panel="lands" aria-pressed="false"><span>▦</span>Земли</button>
+      <button type="button" data-panel="lands" aria-pressed="false"><span>▦</span>Атлас</button>
       <button type="button" data-panel="history" aria-pressed="false"><span>☷</span>Летопись</button>
     </nav>
     <div class="time-controls">
@@ -105,6 +115,6 @@
   <menu><button type="submit" value="cancel" class="quiet-control">Остаться</button><button type="submit" value="confirm" class="primary-control">Начать заново</button></menu>
 </form></dialog>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.5.1"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.6.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
