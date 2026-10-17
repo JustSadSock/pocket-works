@@ -239,9 +239,9 @@ for(const id of ids)for(let v=0;v<3;v++){
   }
  }else if(id<=80){
   separator(id===72?1:2);
-  if(id===73){f.walls.fill(0);for(let y=0;y<h;y+=4)f.wall(mid,y);assert.equal(f.fill(left),w*h,'spray specks must not be a separator')}
-  else if(id===77){for(let y=cy-4;y<=cy+4;y++)f.wall(mid,y,0);f.fill(left);assert.equal(f.alpha(...right),255,'eraser opening not followed')}
-  else if(id===79){for(let y=cy-3;y<=cy+3;y++)f.wall(mid,y,0);f.fill(left);assert.equal(f.alpha(...right),255)}
+  if(id===73){f.walls.fill(0);for(let y=0;y<h;y+=4)f.wall(mid,y);assert.equal(f.fill(left),w*h-Math.ceil(h/4),'spray specks must not be a separator');assert.equal(f.alpha(...right),255)}
+  else if(id===77){for(let y=cy-4;y<=cy+4;y++)for(let x=mid;x<mid+2;x++)f.wall(x,y,0);f.fill(left);assert.equal(f.alpha(...right),255,'eraser opening not followed')}
+  else if(id===79){for(let y=cy-3;y<=cy+3;y++)for(let x=mid;x<mid+2;x++)f.wall(x,y,0);f.fill(left);assert.equal(f.alpha(...right),255)}
   else{
    f.fill(left,C[0]);
    if(id===74||id===75){f.output.set(C[1].concat([255]),f.at(left[0],cy));}
