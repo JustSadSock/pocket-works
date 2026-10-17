@@ -59,7 +59,7 @@ export function planSubday(world){
  }
  return {day:world.day,seed:world.seed,plans,counters,kind:'subday'};
 }
-function oscillate(s,phase){
+function oscillate(phase){
  const cycle=phase*2*Math.PI;
  return {x:Math.cos(cycle),y:Math.sin(cycle)};
 }
@@ -67,7 +67,7 @@ export function sampleSubday(person,dayPlan,time){
  if(!dayPlan||!dayPlan.plans.has(person.id))return {x:person.x,y:person.y,activity:'absent',pose:0};
  const p=dayPlan.plans.get(person.id),t=clamp(time);
  if(p.job==='home'&&!p.traveling){
-  const wiggle=oscillate(t*.72+p.phase,p.phase);
+  const wiggle=oscillate(t*.72+p.phase);
   const scale=Math.sin(Math.PI*t)*.13;
   return {x:p.from.x+wiggle.x*scale,y:p.from.y+wiggle.y*scale,activity:'home',pose:0};
  }
@@ -84,7 +84,7 @@ export function sampleSubday(person,dayPlan,time){
   // Real workplace and person-specific, bounded local animation. No invented
   // walks into another field, croft or river.
   const phase=(t-p.arrival)/Math.max(.001,p.returnStart-p.arrival);
-  const oscillation=oscillate(p.phase+phase*(p.job==='farm'?3.2:2.1),phase);
+  const oscillation=oscillate(p.phase+phase*(p.job==='farm'?3.2:2.1));
   const swing=Math.sin(Math.PI*phase)*.22;
   return {x:p.to.x+oscillation.x*swing,y:p.to.y+oscillation.y*swing,
    activity:p.job,pose:Math.floor(phase*(p.job==='build'?8:6))%2};
