@@ -3,7 +3,7 @@
 // material-balance audits. Morphology is not a target population/road shape.
 import fs from 'node:fs';
 import path from 'node:path';
-import {SEEDS} from './spatial-batch.mjs';
+import {SEEDS} from './spatial-seeds.mjs';
 import {median,share} from './spatial-metrics.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).filter(x=>x.startsWith('--')).map(x=>{const i=x.indexOf('=');return [x.slice(2,i),x.slice(i+1)];}));
