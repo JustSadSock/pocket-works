@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "cc791817a27ea9d8ef360b7720d7c1c7b04a3bfa",
+    "revision": "5aa5d6c019d2decb61e074d78cb221df52a80a17",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "cc791817a27ea9d8ef360b7720d7c1c7b04a3bfa",
-    "lastAttemptAt": "2026-10-17T22:37:03.216Z",
+    "lastAttemptRevision": "5aa5d6c019d2decb61e074d78cb221df52a80a17",
+    "lastAttemptAt": "2026-10-17T23:06:54.636Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3171,20 +3171,20 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "61adae14ca9cf689aa6356e5f2b7ce9ae20d3504",
-    "qualityScore": 73,
+    "revision": "6912224b5096ba3e96f6ab76a77e90f02e0c8112",
+    "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "0a53d7d8085e6e7f919bc9cfda7257b815d6f9d5337d8a7fd469871fd350c2a6",
+    "sha256": "8e9d9a0f4c1878d71d5b33f1e0f82041e611ca482820891a8cf95a7676d74506",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "61adae14ca9cf689aa6356e5f2b7ce9ae20d3504",
-    "lastAttemptAt": "2026-10-17T22:13:14.199Z"
+    "lastAttemptRevision": "6912224b5096ba3e96f6ab76a77e90f02e0c8112",
+    "lastAttemptAt": "2026-10-17T23:07:05.607Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3266,12 +3266,12 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.6.0&pw_fp=0920f7daaeafc8f983d27302"
+      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.7.0&pw_fp=4beaf9103a4964b26af4ca36"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "37ed9d8f733d3811acc0c93bcf42b2500b77889c",
-    "lastAttemptAt": "2026-10-17T22:13:25.009Z",
+    "lastAttemptRevision": "12ddc55d829b0ffaa4d9ccef68d959af48e665fe",
+    "lastAttemptAt": "2026-10-17T23:06:42.648Z",
     "revision": "0012928bd207ce181b744643c5b240209a1003b0",
     "qualityScore": 57,
     "visionScore": null,
