@@ -3285,5 +3285,32 @@
     "shot": 0,
     "sha256": "7d35d84fd1d60268c2f76dbff50fc0319cdd201d477301bd3ec1a6483372da21",
     "imageVersion": 2
+  },
+  "meat-exe": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 68,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 31283,
+        "variance": 55.66301247918561,
+        "entropy": 1.2619969881200421,
+        "edgeDensity": 0.11222718253968254,
+        "colorfulness": 24.8427734375,
+        "centerDetail": 77.05519164051877,
+        "meanLight": 28.65126577148446
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.0.0&pw_fp=0547a26800095d550baba535"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "5645f127867152169158f1d0a16ecc1e695fd682",
+    "lastAttemptAt": "2026-10-17T23:36:51.713Z"
   }
 }
