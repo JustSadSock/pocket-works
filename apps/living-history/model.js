@@ -129,7 +129,8 @@ export function chooseSettlementSite(s,c,near,radius=19){
    const social=nearby.length?12-Math.abs(closest-5)*2:4;
    const score=s.soil[cell]*.13+social+Math.min(70,road)*.33*tuning(s,'roadAttraction')
     -access*.44-Math.hypot(x-near.x,y-near.y)*.22
-    +croft.length*2+hash(s.seed+c.id,x,y)*2.3;
+    +croft.length*2-(s.forest[cell]+croft.reduce((n,i)=>n+s.forest[i],0))*.013
+    +hash(s.seed+c.id,x,y)*2.3;
    if(score>bestScore){bestScore=score;best={x,y};}
   }
  }
@@ -883,7 +884,7 @@ function reclaimProject(s,h,adults){
    if(s.commons[i]!==h.communityId||s.usage[i]||s.terrain[i]!==0||s.soil[i]<50||d<0||d>95)continue;
    // Prefer land next to other open-field strips, rather than scattering isolated cells.
    const adjacent=[i-1,i+1,i-SIZE,i+SIZE].filter(k=>s.usage[k]===2).length;
-   const value=d*.11+(100-s.soil[i])*.1-adjacent*4+hash(s.seed,h.id,i)*2;
+   const value=d*.11+(100-s.soil[i])*.1-adjacent*4+s.forest[i]*.025+hash(s.seed,h.id,i)*2;
    if(value<score){score=value;best=i;}
   }
   if(best<0)return;
@@ -1099,7 +1100,7 @@ function planConstruction(s,h,adults){
   // A house and its adjoining enclosed ground cannot appear over intact
   // woodland. Cutting consumes the same finite worker-days as other work.
   const clearing=site&&croft.length>=2?
-   [idx(site.x,site.y),...croft].find(i=>!s.usage[i]&&s.forest[i]>0):-1;
+   ([idx(site.x,site.y),...croft].find(i=>!s.usage[i]&&s.forest[i]>0)??-1):-1;
   if(clearing>=0){
    if(builders.length)fellForClearance(s,h,clearing,builders[0]);
    return;
@@ -2096,7 +2097,6 @@ export function audit(s){
   const actual=round(s.forest.reduce((n,v)=>n+v,0));
   const expected=round(s.economy.woodlandInitial+(s.stats.woodlandRegrown||0)-(s.stats.woodlandFelled||0));
   if(Math.abs(actual-expected)>.55)issues.push(`Баланс стоящего леса: ${actual} вместо ${expected}`);
-  if(Math.abs((s.stats.woodlandWaste||0)-(s.stats.clearanceWasteExpected||0))>Infinity)issues.push('Ошибочный учёт порубочных остатков');
  }
  if(Number.isFinite(s.economy.woodInitial)){
   const expected=round(s.economy.woodInitial+s.stats.produced-s.stats.harvest-490*s.stats.built-(s.stats.storageWood||0)-(s.stats.landWood||0)-(s.stats.houseWoodReserved||0));
@@ -2178,6 +2178,19 @@ export function audit(s){
  return {ok:issues.length===0,issues,...o};
 }
 export function serialize(s){return JSON.stringify(s);}
-export function deserialize(raw){const s=typeof raw==='string'?JSON.parse(raw):raw;if(!s.scenario)s.scenario='normal';s.tuning=normalizeTuning(s.tuning);if(!Array.isArray(s.pasture)){s.pasture=s.terrain.map((t,i)=>t===0&&!s.usage[i]?Math.round(85+hash(s.seed+11,i%SIZE,Math.floor(i/SIZE))*130):0);for(const h of s.households){h.cattle??=0;h.fodder??=0;h.livestockHealth??=85;}s.economy.cattleInitial=s.households.reduce((n,h)=>n+(h.cattle||0),0);s.economy.forageInitial=round(s.pasture.reduce((n,x)=>n+x,0));s.stats.forageGrown??=0;s.stats.forageConsumed??=0;s.stats.forageConverted??=0;s.stats.cattleBorn??=0;s.stats.cattleDied??=0;}s.economy.gardenInitial??=0;s.economy.dairyInitial??=0;s.loans??=[];s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
+export function deserialize(raw){const s=typeof raw==='string'?JSON.parse(raw):raw;if(!s.scenario)s.scenario='normal';s.tuning=normalizeTuning(s.tuning);if(!Array.isArray(s.pasture)){s.pasture=s.terrain.map((t,i)=>t===0&&!s.usage[i]?Math.round(85+hash(s.seed+11,i%SIZE,Math.floor(i/SIZE))*130):0);for(const h of s.households){h.cattle??=0;h.fodder??=0;h.livestockHealth??=85;}s.economy.cattleInitial=s.households.reduce((n,h)=>n+(h.cattle||0),0);s.economy.forageInitial=round(s.pasture.reduce((n,x)=>n+x,0));s.stats.forageGrown??=0;s.stats.forageConsumed??=0;s.stats.forageConverted??=0;s.stats.cattleBorn??=0;s.stats.cattleDied??=0;}s.economy.gardenInitial??=0;s.economy.dairyInitial??=0;
+ // v0.7.9 and earlier contained invisible standing forest inside fields.
+ // Reclassify only that impossible legacy stock at load: the old farms
+ // already existed before this feature and must not receive free timber.
+ if(!Number.isFinite(s.economy.woodlandInitial)){
+  let corrected=0;
+  for(let i=0;i<T;i++)if(s.usage[i]&&s.forest[i]>0){
+   corrected=round(corrected+s.forest[i]);s.forest[i]=0;
+  }
+  s.stats.legacyCanopyCorrected=corrected;
+  s.stats.woodlandFelled=0;s.stats.woodlandRegrown=0;s.stats.woodlandWaste=0;
+  s.economy.woodlandInitial=round(s.forest.reduce((n,v)=>n+v,0));
+ }
+ s.loans??=[];s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
  ensureCommons(s);for(const h of s.households){h.garden??=0;h.dairy??=0;h.oats??=0;h.pulses??=0;h.sheep??=0;h.wool??=0;h.dairyCows??=h.cattle||0;h.draftOxen??=0;h.tenure??='customary';h.tenureOrigin??='legacy-holding';h.leaseIn??=[];h.leaseOut??=[];h.leaseTerms??=[];h.croft??=[];}if(s.version!==1||s.terrain?.length!==T||!Array.isArray(s.people)||!Array.isArray(s.households)||!Array.isArray(s.shipments))throw Error('Сохранение несовместимо с моделью v0.1');const v=audit(s);if(!v.ok)throw Error(`Повреждённые данные: ${v.issues[0]}`);return s;}
 export function getHousehold(s,id){const h=livingHouse(s,id);if(!h)return null;return {...h,people:liveMembers(s,h),name:familyName(s,h),tenureTitle:h.tenure==='demesne'?'Сеньориальный двор':h.tenure==='free'?'Свободный держатель':h.tenure==='cottar'?'Малоземельный коттер':'Обычное зависимое держание',manor:h.manorAgreement||null,community:s.communities.find(c=>c.id===h.communityId)?.name,soil:round(fieldSoil(s,h)),annualFood:round(annualNeed(s,h)),storageKg:storageCapacity(h,s),croftHa:round((h.croft?.length||0)*LAND_HA),tenure:h.tenure||'customary',tenureOrigin:h.tenureOrigin||'legacy-holding',landProject:h.landProject||null,leasedIn:h.leaseIn?.length||0,leasedOut:h.leaseOut?.length||0,commonUse:homeHasCommons(s,h),livestock:{cattle:h.cattle||0,fodderKg:h.fodder||0,health:h.livestockHealth||0},decision:h.decision||null,accounts:h.accounting||null,foodAccess:liveMembers(s,h).length?foodAccess(s,h):null};}
