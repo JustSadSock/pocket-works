@@ -1,42 +1,427 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import './reader.js';
+import {campaignStarts,startCampaign,campaignChoices,campaignAction,campaignYear,
+  campaignScore,extendCampaign,serializeCampaign,loadCampaign} from './sim/campaign.js';
 installMobileRuntime();
-const DOCS=new Set(['DESIGN.md','RESEARCH.md','TEST_PLAN.md','VISUAL_RESEARCH.md']);
-const pane=document.getElementById('document'),error=document.getElementById('error'),buttons=[...document.querySelectorAll('[data-doc]')];
-let current='DESIGN.md',token=0;
-function inline(parent,value){
- const regex=/https?:\/\/[^\s<>]+|\*\*[^*]+\*\*|`[^`]+`/g;let match,last=0;
- while((match=regex.exec(value))){
-  if(match.index>last)parent.append(document.createTextNode(value.slice(last,match.index)));
-  const t=match[0];
-  if(t.startsWith('http')){const a=document.createElement('a');a.href=t.replace(/[.,;]$/,'');a.target='_blank';a.rel='noopener noreferrer';a.textContent=a.href;parent.append(a)}
-  else{const el=document.createElement(t.startsWith('**')?'strong':'code');el.textContent=t.slice(t.startsWith('**')?2:1,t.startsWith('**')?-2:-1);parent.append(el)}
-  last=regex.lastIndex;
- }
- if(last<value.length)parent.append(document.createTextNode(value.slice(last)));
+
+const by=id=>document.getElementById(id);
+const screens={loading:by('loading-screen'),menu:by('menu-screen'),game:by('game-screen'),
+  ending:by('ending-screen'),docs:by('docs-screen')};
+const SHADES=['#686f55','#885d4b','#77785f','#596e74','#8b7b57'];
+const TITLES={marriage:'Заключить династический брак',gift:'Отправить дипломатический дар',
+  grant:'Пожаловать графство',petition:'Потребовать признания права',
+  faction:'Создать фракцию претендента',join:'Поддержать претендента',
+  ultimatum:'Предъявить ультиматум'};
+const ICONS={marriage:'✦',gift:'◇',grant:'♜',petition:'§',faction:'⚑',join:'✧',ultimatum:'!'}; // compact navigation glyphs, not real coat-of-arms
+const GOALS={'secure-claim':'Вернуть спорный титул','political-leverage':'Ослабить сюзерена',
+  'gain-land':'Получить владение','stabilize-realm':'Укрепить мир','seek-marriage':'Создать союзный дом',
+  'secure-house':'Защитить род'};
+let game=null,saved=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
+let screen='loading',autoSpeed=0,autoHandle=null,saveQueue=Promise.resolve();
+let storage='indexeddb',database=null,actionPending=null,busy=false,toastHandle=null;
+const houseColor=(w,id)=>{
+  const p=w.people.find(p=>p.id===id);
+  const index=w.dynasties.findIndex(h=>h.id===p?.dynastyId);
+  return SHADES[Math.max(index,0)%SHADES.length];
+};
+const pname=(w,id)=>w.people.find(p=>p.id===id)?.name||'Неизвестный';
+const tname=(w,id)=>w.titles.find(t=>t.id===id)?.name||'Неизвестный титул';
+const titleHolder=(w,id)=>w.titles.find(t=>t.id===id)?.holderId;
+const house=(w,id)=>w.dynasties.find(d=>d.id===id)?.name||'Дом';
+const children=(w,id)=>w.people.filter(p=>p.parentIds.includes(id));
+function label(element,text){element.textContent=text;return element}
+function element(tag,cls='',text=''){
+  const n=document.createElement(tag);if(cls)n.className=cls;
+  if(text)n.textContent=text;
+  return n;
 }
-function render(markdown){
- const fragment=document.createDocumentFragment();let list=null,listType=null,paragraph=[];
- const flush=()=>{if(paragraph.length){const p=document.createElement('p');inline(p,paragraph.join(' '));fragment.append(p);paragraph=[]}};
- for(const raw of markdown.split(/\r?\n/)){
-  const line=raw.trim();
-  if(!line){flush();list=null;listType=null;continue}
-  const heading=/^(#{1,3})\s+(.+)$/.exec(line);
-  const item=/^(?:([-*])|(\d+)\.)\s+(.+)$/.exec(line);
-  if(heading){flush();list=null;listType=null;const h=document.createElement('h'+heading[1].length);inline(h,heading[2]);fragment.append(h);continue}
-  if(item){flush();const wanted=item[2]?'ol':'ul';if(listType!==wanted){list=document.createElement(wanted);fragment.append(list);listType=wanted}const li=document.createElement('li');inline(li,item[3]);list.append(li);continue}
-  list=null;listType=null;paragraph.push(line);
- }
- flush();pane.replaceChildren(fragment);
+function notify(message){
+  const n=by('notice');n.textContent=message;n.hidden=false;
+  if(toastHandle)clearTimeout(toastHandle);
+  toastHandle=setTimeout(()=>{n.hidden=true},4300);
 }
-async function openDoc(name){
- if(!DOCS.has(name))return;
- current=name;const ticket=++token;
- buttons.forEach(b=>{const active=b.dataset.doc===name;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
- pane.replaceChildren(document.createTextNode('Загрузка…'));error.hidden=true;
- try{const response=await fetch('./dossier.json',{cache:'no-cache'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();const text=data[name];if(typeof text!=='string'||!text)throw Error('Document missing');if(ticket!==token)return;render(text);try{localStorage.setItem('pocket-works:venets:doc',name)}catch{}}
- catch(e){if(ticket!==token)return;pane.replaceChildren();error.hidden=false;console.warn('Research dossier unavailable',e)}
+function screenTo(name){
+  screen=name;
+  for(const [key,node] of Object.entries(screens))node.hidden=key!==name;
+  by('back-menu').hidden=name==='menu'||name==='loading';
 }
-buttons.forEach(b=>b.addEventListener('click',()=>openDoc(b.dataset.doc)));
-document.getElementById('retry').addEventListener('click',()=>openDoc(current));
-let saved='DESIGN.md';try{saved=localStorage.getItem('pocket-works:venets:doc')||saved}catch{}
-openDoc(DOCS.has(saved)?saved:'DESIGN.md');
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB'in window)){reject(Error('IndexedDB unsupported'));return}
+    const request=indexedDB.open('venets-campaigns',1);
+    request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains('saves'))db.createObjectStore('saves')};
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error||Error('IndexedDB unavailable'));
+    request.onblocked=()=>reject(Error('Another tab blocks saves'));
+  });
+}
+function dbRead(){
+  return new Promise((resolve,reject)=>{
+    const tx=database.transaction('saves','readonly');
+    const request=tx.objectStore('saves').get('active');
+    request.onsuccess=()=>resolve(request.result||null);
+    request.onerror=()=>reject(request.error||Error('Save read error'));
+  });
+}
+function dbWrite(data){
+  return new Promise((resolve,reject)=>{
+    const tx=database.transaction('saves','readwrite');
+    tx.objectStore('saves').put(data,'active');
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error||Error('Save write failed'));
+    tx.onabort=()=>reject(tx.error||Error('Save aborted'));
+  });
+}
+async function initializeStorage(){
+  try{database=await openDB();storage='indexeddb';return await dbRead()}
+  catch(e){
+    database=null;storage='localstorage';
+    try{return localStorage.getItem('venets:campaign:v1')}
+    catch {storage='memory';notify('Хранилище браузера недоступно. Эта кампания не сохранится после закрытия вкладки.');return null}
+  }
+}
+function saveGame(){
+  if(!game)return;
+  let data;
+  try{data=serializeCampaign(game)}catch(e){notify('Сохранение остановлено: '+e.message);return}
+  by('save-status').textContent='Сохраняем…';
+  saveQueue=saveQueue.catch(()=>{}).then(async()=>{
+    if(storage==='indexeddb'&&database)await dbWrite(data);
+    else if(storage==='localstorage')localStorage.setItem('venets:campaign:v1',data);
+    else throw Error('Нет постоянного хранилища');
+    saved=data;
+    by('save-status').textContent='Сохранено';
+  }).catch(e=>{
+    by('save-status').textContent='Не сохранено';
+    notify('Ошибка сохранения: '+e.message+'. Проверьте свободное место в браузере.');
+  });
+}
+function saveMenu(){
+  by('resume').hidden=!(saved||game);
+  if(game){
+    label(by('resume-summary'),String(game.world.year)+' год · '+pname(game.world,game.playerId));
+  }else if(saved){
+    try{const data=loadCampaign(saved);
+      label(by('resume-summary'),data.world.year+' год · '+pname(data.world,data.playerId));
+    }catch(e){saved=null;by('resume').hidden=true;notify('Старое сохранение повреждено. Можно начать новую хронику.')}
+  }
+}
+function buildStarts(){
+  const seed=Number(by('seed-input').value);
+  const valid=Number.isSafeInteger(seed)&&seed>=0&&seed<=0xffffffff;
+  by('begin').disabled=!valid;
+  if(!valid){by('starts').replaceChildren(element('p','subnote','Укажите целый номер мира от 0 до 4294967295.'));return}
+  let starts;
+  try{starts=campaignStarts(seed)}catch(e){by('starts').replaceChildren(element('p','subnote',e.message));return}
+  const fragment=document.createDocumentFragment();
+  for(const entry of starts){
+    const button=element('button','start-choice'+(selectedCounty===entry.countyId?' active':''));
+    button.type='button';button.dataset.county=entry.countyId;
+    button.setAttribute('aria-pressed',String(selectedCounty===entry.countyId));
+    const seal=element('span','shield','♜');seal.style.setProperty('--house',houseColor({dynasties:[{id:entry.dynastyId}] ,people:[{id:entry.personId,dynastyId:entry.dynastyId}]},entry.personId));
+    const details=element('span','start-copy');
+    details.append(element('strong','',entry.name),element('small','',entry.personName+' · спор с герцогом'));
+    button.append(seal,details,element('span','choice-check',selectedCounty===entry.countyId?'✓':''));
+    button.addEventListener('click',()=>{selectedCounty=entry.countyId;buildStarts()});
+    fragment.append(button);
+  }
+  by('starts').replaceChildren(fragment);
+}
+function menu(){
+  pause();screenTo('menu');saveMenu();buildStarts();
+}
+function play(){
+  if(!game){menu();return}
+  pause();screenTo('game');by('game-screen').dataset.activePanel=panel;
+  renderGame();
+}
+function resume(){
+  if(!game&&saved){try{game=loadCampaign(saved)}catch(e){notify('Не удалось открыть сохранение: '+e.message);saved=null;menu();return}}
+  if(!game){menu();return}
+  if(game.finished||game.chapterComplete){pause();renderEnding();screenTo('ending')}
+  else play();
+}
+function begin(){
+  const seed=Number(by('seed-input').value);
+  if(!Number.isSafeInteger(seed)||seed<0||seed>0xffffffff){notify('Номер мира должен быть целым положительным числом или нулём.');return}
+  try{
+    game=startCampaign({seed,countyId:selectedCounty});
+    selectedProvince='pr-'+selectedCounty.slice(-2);
+    panel='council';filter='house';saveGame();play();
+  }catch(e){notify('Не удалось создать мир: '+e.message)}
+}
+function showNewConfirmation(){
+  if(!game&&!saved){begin();return}
+  const dialog=by('new-dialog');
+  dialog.returnValue='';
+  dialog.showModal();
+}
+by('new-dialog').addEventListener('close',()=>{
+  if(by('new-dialog').returnValue==='confirm'){pause();begin()}
+});
+function pause(){
+  autoSpeed=0;if(autoHandle){clearInterval(autoHandle);autoHandle=null}
+  for(const b of document.querySelectorAll('[data-speed]')){
+    const selected=Number(b.dataset.speed)===0;
+    b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));
+  }
+}
+function setSpeed(speed){
+  pause();
+  if(!game||game.finished||game.chapterComplete)return;
+  autoSpeed=speed;
+  for(const b of document.querySelectorAll('[data-speed]')){
+    const selected=Number(b.dataset.speed)===speed;
+    b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));
+  }
+  if(speed>0){
+    const ms=({1:1800,2:900,4:390})[speed];
+    autoHandle=setInterval(()=>{
+      if(screen!=='game'||document.hidden){pause();return}
+      nextYear();
+    },ms);
+  }
+}
+function nextYear(){
+  if(busy||!game||game.finished||game.chapterComplete)return;
+  busy=true;
+  try{
+    const result=campaignYear(game);
+    saveGame();
+    if(result.finished||result.chapterComplete){pause();renderEnding();screenTo('ending')}
+    else{
+      renderGame();
+      if(result.succession){pause();notify('Наследование: теперь вы играете за '+result.succession.name)}
+      else if(result.significant){pause();notify('Важное событие в вашем владении. Время остановлено.')}
+    }
+  }catch(e){pause();notify('Год не завершён: '+e.message);console.error(e)}
+  finally{busy=false}
+}
+function actionTitle(action,w){
+  const who=action.targetId?pname(w,action.targetId):'';
+  const land=action.titleId?' · '+tname(w,action.titleId):'';
+  return TITLES[action.kind]+(who?' — '+who:'')+land;
+}
+function actionDetail(a,w){
+  const traits={gift:'Передаёт деньги и повышает доверие. Повторение ограничено.',
+    marriage:'Оба человека должны быть свободны, совершеннолетни и не состоять в близком родстве.',
+    grant:'Графство перейдёт другому владельцу навсегда; его право будет записано в историю.',
+    petition:'Обладатель титула может согласиться с требованием или отказать. Отказ запомнят.',
+    faction:'Создаёт постоянное политическое объединение претендента. Сторонники могут присоединиться.',
+    join:'Вы войдёте в политическую коалицию и будете поддерживать другого претендента.',
+    ultimatum:'Политическое давление может привести к уступке земли или ещё большей вражде. Это не война.'};
+  let text=traits[a.kind]||'';
+  if(a.kind==='gift')text+=' Цена: '+a.meta.amount+' монет.';
+  return text+' Основания: '+a.reasons.join(' · ')+'.';
+}
+function renderCouncil(){
+  const w=game.world,p=w.people.find(p=>p.id===game.playerId);
+  const inherited=w.titles.filter(t=>t.holderId===p.id);
+  const claim=w.titles.find(t=>t.claims.some(c=>c.personId===p.id) && t.holderId!==p.id);
+  const story=claim?
+    'У вас есть документированная претензия на '+claim.name+'. '+pname(w,claim.holderId)+
+    ' пока удерживает эту власть. Вы можете обратиться к нему или объединить сторонников.':
+    (inherited.length?
+      'Дом '+house(w,game.dynastyId)+' удерживает '+inherited.length+' '+(inherited.length===1?'титул':'титулов')+
+      '. События двора меняются каждый год. Берегите наследников и ищите новые возможности.':
+      'Ваш дом лишился земель, но ещё жив. Сохраните претензии и ищите сторонников.');
+  label(by('story'),story);
+  const actions=campaignChoices(game);
+  const container=by('actions'),frag=document.createDocumentFragment();
+  frag.append(element('p','action-intro',game.lastActionYear===w.year?
+    'В этом году решение уже принято. Следующий шаг — новый год.':
+    p && w.year-p.birthYear<18?
+    'Правитель несовершеннолетний. Решения станут доступны с 18 лет.':
+    'Выберите одно политическое решение на этот год.'));
+  if(!actions.length)frag.append(element('p','subnote',game.lastActionYear===w.year?
+    'Другие правители продолжат действовать, когда вы переведёте время.':
+    'Доступных политических действий сейчас нет. Перейдите к следующему году.'));
+  else for(const a of actions.slice(0,9)){
+    const b=element('button','action-choice');b.type='button';
+    const sign=element('span','action-sign',ICONS[a.kind]);
+    const info=element('span','action-copy');
+    info.append(element('strong','',TITLES[a.kind]),element('small','',
+      (a.targetId?pname(w,a.targetId):'Династическое решение')+
+      (a.titleId?' · '+tname(w,a.titleId):'')+
+      (a.kind==='gift'?' · '+a.meta.amount+' монет':'') ));
+    b.append(sign,info,element('span','action-arrow','→'));
+    b.addEventListener('click',()=>askAction(a));
+    frag.append(b);
+  }
+  container.replaceChildren(frag);
+}
+function askAction(a){
+  if(!game||screen!=='game')return;
+  actionPending=a;
+  label(by('confirm-title'),TITLES[a.kind]);
+  label(by('confirm-text'),actionTitle(a,game.world)+'. '+actionDetail(a,game.world));
+  const dlg=by('confirm-dialog');dlg.returnValue='';dlg.showModal();
+  pause();
+}
+by('confirm-dialog').addEventListener('close',()=>{
+  if(by('confirm-dialog').returnValue!=='confirm'||!actionPending){actionPending=null;return}
+  const a=actionPending;actionPending=null;
+  try{
+    const outcome=campaignAction(game,a);
+    saveGame();
+    const msg=outcome.success?'Решение исполнено. Последствия внесены в летопись.':
+      'Получен отказ. Обиды и требования сохранены.';
+    const pane=by('last-action');
+    pane.replaceChildren(element('strong','',outcome.success?'Решение принято':'Ваша просьба отклонена'),
+      element('span','',msg));
+    pane.hidden=false;
+    renderGame();
+    notify(msg);
+  }catch(e){notify('Решение больше недоступно: '+e.message);renderGame()}
+});
+function renderProvinces(){
+  const w=game.world,frag=document.createDocumentFragment();
+  for(const province of w.provinces){
+    const county=w.titles.find(t=>t.id===province.titleId);
+    const owner=w.people.find(p=>p.id===county.holderId);
+    const selected=province.id===selectedProvince;
+    const ours=owner.dynastyId===game.dynastyId;
+    const button=element('button','province'+(selected?' selected':'')+(ours?' ours':''));
+    button.dataset.province=province.id;button.type='button';
+    button.style.setProperty('--house',houseColor(w,county.holderId));
+    button.title=county.name+' — '+owner.name;
+    button.setAttribute('aria-pressed',String(selected));
+    button.append(element('span','',ours?'♛':'◆'),element('strong','',province.name));
+    button.addEventListener('click',()=>{selectedProvince=province.id;renderProvinces()});
+    frag.append(button);
+  }
+  by('province-grid').replaceChildren(frag);
+  const selected=w.provinces.find(p=>p.id===selectedProvince)||w.provinces[0];
+  const county=w.titles.find(t=>t.id===selected.titleId);
+  const ruler=w.people.find(p=>p.id===county.holderId);
+  const duke=w.titles.find(t=>t.id===county.liegeId);
+  const node=by('province-info');
+  const dl=element('dl');
+  for(const [key,value] of [
+    ['Правитель',ruler.name],['Дом',house(w,ruler.dynastyId)],['Сюзерен',pname(w,duke.holderId)],
+    ['Претензии',county.claims.filter(c=>w.people.some(p=>p.id===c.personId&&p.alive)).map(c=>pname(w,c.personId)).join(', ')||'Нет'],
+    ['Местность',selected.terrain==='hills'?'Холмы':'Равнины'],
+    ['Запас зерна',String(selected.treasury.grain)] ]){
+    dl.append(element('dt','',key),element('dd','',value));
+  }
+  node.replaceChildren(element('h3','',county.name),dl);
+}
+function eventHeadline(e,w){
+  const x=e.effect||{};
+  const name=id=>pname(w,id);
+  switch(e.kind){
+    case 'campaign-founded':return ['Начало правления','Оспаривается власть герцога'];
+    case 'death':return ['Умер '+name(x.personId),'Возраст: '+(x.age??'—')];
+    case 'birth':return ['Родился '+name(x.personId),'Дом пополнился наследником'];
+    case 'marriage':return ['Свадьба: '+name(x.personAId)+' и '+name(x.personBId),'Связаны два семейства'];
+    case 'title-transfer':return [tname(w,x.titleId)+' меняет владельца',name(x.oldHolderId)+' → '+name(x.newHolderId)];
+    case 'realm-partition':return ['Раздел владений','Несколько титулов перешли разным наследникам'];
+    case 'inheritance':return ['Открыто наследство '+name(x.deceasedId),'Преемник: '+name(x.heirId)];
+    case 'faction-founded':return ['Создана фракция','Претензия на '+tname(w,x.titleId)];
+    case 'faction-ended':return ['Фракция распущена','Политическое требование изменилось'];
+    case 'political-decision':return [name(x.actorId)+': '+(TITLES[x.kind]||x.kind),
+      x.outcome?.success?'Успешно · '+(x.reasons||[]).join(', '):'Отказ · '+(x.reasons||[]).join(', ')];
+    case 'claim-founded':return ['Возникла претензия на '+tname(w,x.titleId),name(x.personId)];
+    case 'shortage':return ['Недостаток зерна в '+(w.provinces.find(p=>p.id===x.provinceId)?.name||'провинции'),'Недостаёт '+x.missing];
+    default:return [e.kind,e.cause];
+  }
+}
+function eventAboutHouse(e,w){
+  const x=e.effect||{},ids=[x.personId,x.actorId,x.oldHolderId,x.newHolderId,
+    x.deceasedId,x.heirId,x.personAId,x.personBId,x.claimantId].filter(Boolean);
+  if(ids.some(id=>w.people.find(p=>p.id===id)?.dynastyId===game.dynastyId))return true;
+  if(x.titleId){
+    const t=w.titles.find(t=>t.id===x.titleId);
+    return w.people.find(p=>p.id===t?.holderId)?.dynastyId===game.dynastyId;
+  }
+  return false;
+}
+function renderChronicle(){
+  const w=game.world,types=new Set(['campaign-founded','death','birth','marriage','inheritance',
+    'title-transfer','realm-partition','faction-founded','faction-ended',
+    'political-decision','claim-founded','shortage']);
+  let events=w.events.filter(e=>types.has(e.kind));
+  if(filter==='house')events=events.filter(e=>eventAboutHouse(e,w)||e.kind==='campaign-founded');
+  if(filter==='politics')events=events.filter(e=>['political-decision','faction-founded',
+    'faction-ended','claim-founded','title-transfer'].includes(e.kind));
+  events=events.slice(-75).reverse();
+  const fragment=document.createDocumentFragment();
+  if(!events.length)fragment.append(element('p','subnote','Пока нет событий. Время продолжает идти.'));
+  for(const e of events){
+    const [head,desc]=eventHeadline(e,w);
+    const row=element('div','entry'),group=element('div');
+    group.append(element('strong','',head),element('p','',desc));
+    row.append(element('time','',String(e.year)),group);
+    fragment.append(row);
+  }
+  by('history-list').replaceChildren(fragment);
+  for(const button of document.querySelectorAll('[data-filter]')){
+    const active=button.dataset.filter===filter;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  }
+}
+function renderGame(){
+  if(!game)return;
+  const w=game.world,p=w.people.find(p=>p.id===game.playerId);
+  const owned=w.titles.filter(t=>t.holderId===p.id).sort((a,b)=>
+    ({kingdom:3,duchy:2,county:1})[b.rank]-({kingdom:3,duchy:2,county:1})[a.rank]);
+  by('ruler-seal').style.setProperty('--house',houseColor(w,p.id));
+  label(by('ruler-name'),p.name);
+  label(by('ruler-rank'),(owned[0]?.name||'БЕЗЗЕМЕЛЬНЫЙ ПРЕТЕНДЕНТ').toLocaleUpperCase('ru-RU'));
+  label(by('ruler-subtitle'),'Дом '+house(w,game.dynastyId)+' · '+(w.year-p.birthYear)+' лет · '+(GOALS[p.politics.goal.kind]||'Ожидание'));
+  label(by('year-count'),String(w.year));
+  label(by('coin-count'),String(p.treasury.coin));
+  renderCouncil();renderProvinces();renderChronicle();
+  by('game-screen').dataset.activePanel=panel;
+  for(const button of document.querySelectorAll('[data-panel]')){
+    const active=button.dataset.panel===panel;button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  }
+  if(game.lastActionYear!==w.year)by('last-action').hidden=true;
+}
+function renderEnding(){
+  if(!game)return;
+  const score=campaignScore(game);
+  label(by('ending-title'),game.finished?'Последняя страница дома':'Дом '+house(game.world,game.dynastyId));
+  label(by('ending-note'),game.finished?
+    'Не осталось наследников. Летопись этого дома завершилась, но история остальных владений продолжается.':
+    'Прошло '+game.turns+' лет. Мир изменялся без вашего приказа — и каждое принятое решение оставило след.');
+  const stats=[
+    [String(score.year),'последний год'],[String(score.generations),'поколения'],
+    [String(score.titles),'титулов у дома'],[String(score.decisions),'личных решений'],
+    [String(score.family),'живых родственников'],[score.crown?'Да':'Нет','королевский венец']
+  ];
+  const fragment=document.createDocumentFragment();
+  for(const [value,name] of stats){const div=element('div');div.append(element('strong','',value),element('span','',name));fragment.append(div)}
+  by('ending-stats').replaceChildren(fragment);
+  by('continue-legacy').hidden=game.finished;
+}
+function closeGameToMenu(){pause();saveGame();menu()}
+document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>setSpeed(Number(b.dataset.speed))));
+document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click',()=>{panel=b.dataset.panel;by('game-screen').dataset.activePanel=panel;
+  for(const n of document.querySelectorAll('[data-panel]')){const selected=n.dataset.panel===panel;n.classList.toggle('active',selected);n.setAttribute('aria-pressed',String(selected))}
+}));
+document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;renderChronicle()}));
+by('next-year').addEventListener('click',nextYear);
+by('back-menu').addEventListener('click',()=>{if(screen==='docs'){menu()}else closeGameToMenu()});
+by('open-docs').addEventListener('click',()=>{pause();screenTo('docs')});
+by('close-docs').addEventListener('click',menu);
+by('resume').addEventListener('click',resume);
+by('begin').addEventListener('click',showNewConfirmation);
+by('ending-new').addEventListener('click',()=>{pause();menu()});
+by('continue-legacy').addEventListener('click',()=>{
+  try{extendCampaign(game);saveGame();play()}catch(e){notify(e.message)}
+});
+by('seed-input').addEventListener('change',buildStarts);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
+window.addEventListener('pagehide',()=>{pause()});
+// Storage is read exactly once; failures always surface and allow a new game.
+(async()=>{
+  try{
+    const raw=await initializeStorage();
+    if(raw){try{const restored=loadCampaign(raw);saved=raw;game=restored}
+      catch(e){saved=null;game=null;notify('Сохранение не удалось прочитать: '+e.message)}}
+    menu();
+  }catch(e){menu();notify('Ошибка запуска: '+e.message)}
+})();
