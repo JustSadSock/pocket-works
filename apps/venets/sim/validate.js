@@ -24,6 +24,9 @@ export function assertWorld(w){
   demand(Array.isArray(w.people)&&w.people.length>=count+duchies+1,'people count');
   demand(Array.isArray(w.dynasties)&&w.dynasties.length===houses,'house count');
   demand(w.profile===undefined||['full','simple'].includes(w.profile),'world experiment profile');
+  demand(w.experiment===undefined||w.experiment&&typeof w.experiment==='object'&&
+    Object.keys(w.experiment).every(k=>['memory','goals','diplomacy','inheritance'].includes(k)&&
+      typeof w.experiment[k]==='boolean'),'experiment switches');
   const people=index(w.people,'people'),titles=index(w.titles,'titles'),provinces=index(w.provinces,'provinces');
   const dynasties=index(w.dynasties,'dynasties');
   demand(w.nextPersonId===w.people.length+1 && Number.isSafeInteger(w.nextPersonId),'next-person ID');
