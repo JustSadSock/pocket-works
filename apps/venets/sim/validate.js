@@ -13,7 +13,7 @@ const index=(arr,label)=>{
 };
 export function assertWorld(w){
   demand(w&&typeof w==='object'&&!Array.isArray(w),'world object');
-  demand(w.schemaVersion===3 && safe(w.seed) && w.seed<=0xffffffff,'schema/seed');
+  demand(w.schemaVersion===4 && safe(w.seed) && w.seed<=0xffffffff,'schema/seed');
   demand(safe(w.rngState)&&w.rngState<=0xffffffff&&w.rngState!==0,'PRNG');
   demand(Number.isSafeInteger(w.year)&&w.year>=1066&&w.year<=5000,'year');
   demand(Array.isArray(w.provinces)&&w.provinces.length===12,'12 provinces');
@@ -119,6 +119,54 @@ export function assertWorld(w){
   }
   demand(seen.size===12,'not contiguous');
 
+  // Political activity has its own counters and bounded, signed memories.
+  const goals=new Set(['secure-house','secure-claim','political-leverage','gain-land','stabilize-realm','seek-marriage']);
+  const memories=new Set(['favor','grievance','marriage','grant','petition','faction','refusal','concession']);
+  for(const p of w.people){
+    const pol=p.politics;
+    demand(pol&&pol.traits&&pol.goal&&pol.opinions&&Array.isArray(pol.memories)&&pol.lastActions,
+      'political personality missing');
+    for(const trait of ['ambition','loyalty','caution','diplomacy'])
+      demand(Number.isSafeInteger(pol.traits[trait])&&pol.traits[trait]>=15&&pol.traits[trait]<=100,
+        'invalid trait '+trait);
+    demand(goals.has(pol.goal.kind)&&safe(pol.goal.since)&&pol.goal.since<=w.year &&
+      (pol.goal.targetId===null||people.has(pol.goal.targetId)) &&
+      (pol.goal.titleId===null||titles.has(pol.goal.titleId)),'political goal');
+    demand(pol.memories.length<=12&&Object.keys(pol.opinions).length<=20,'political memory cap');
+    for(const [id,value] of Object.entries(pol.opinions))
+      demand(people.has(id)&&id!==p.id&&Number.isSafeInteger(value)&&value>=-100&&value<=100,
+        'opinion target/bounds');
+    for(const m of pol.memories)
+      demand(safe(m?.year)&&m.year<=w.year && people.has(m.otherId)&&m.otherId!==p.id &&
+        memories.has(m.kind)&&Number.isSafeInteger(m.weight)&&m.weight>=-50&&m.weight<=50&&
+        typeof m.cause==='string'&&m.cause,'political memory provenance');
+    for(const [action,year] of Object.entries(pol.lastActions))
+      demand(['marriage','gift','grant','petition','faction','join','ultimatum'].includes(action) &&
+        safe(year)&&year<=w.year,'cooldown timeline');
+  }
+  const political=w.politics;
+  demand(political&&safe(political.nextFactionId)&&political.nextFactionId>=1&&
+    Array.isArray(political.factions)&&political.stats,'political registry');
+  for(const [kind,num] of Object.entries(political.stats))demand([
+    'actions','gifts','marriages','grants','petitions','coalitions','joins','ultimatums','concessions','refusals'
+  ].includes(kind)&&safe(num),'political metric '+kind);
+  for(const key of ['actions','gifts','marriages','grants','petitions','coalitions','joins','ultimatums','concessions','refusals'])
+    demand(safe(political.stats[key]),'missing political metric '+key);
+  const actorMemberships=new Set();
+  for(const f of political.factions){
+    demand(typeof f.id==='string' && /^fa-\d+$/.test(f.id) && titles.has(f.titleId) &&
+      people.get(f.claimantId)?.alive && people.get(f.leaderId)?.alive &&
+      safe(f.createdYear)&&f.createdYear<=w.year&&safe(f.refusals)&&
+      Array.isArray(f.members)&&f.members.length>=1 &&
+      new Set(f.members).size===f.members.length && f.members.includes(f.leaderId),
+      'faction constitution');
+    for(const id of f.members){
+      demand(people.get(id)?.alive && w.year-people.get(id).birthYear>=18 &&
+        !actorMemberships.has(id),'invalid/repeated faction member');
+      actorMemberships.add(id);
+    }
+  }
+  demand(political.nextFactionId>political.factions.length,'faction serial');
   const stats=w.stats;
   demand(stats&&safe(stats.years)&&stats.years===w.year-1066,'year statistics');
   for(const key of ['shortages','harvested','minted','taxGrain','taxCoin','births','deaths',
@@ -126,6 +174,7 @@ export function assertWorld(w){
   demand(stats.shortages===w.provinces.reduce((n,p)=>n+p.shortages,0),'shortage counter');
   demand(stats.deaths===w.people.filter(p=>!p.alive).length,'death counter');
   let lastYear=1066,closed=0,eventsBorn=0,eventsDead=0,eventsMarried=0,eventsPartitioned=0;
+  const actionCounts={actions:0,gifts:0,marriages:0,grants:0,petitions:0,coalitions:0,joins:0,ultimatums:0,concessions:0,refusals:0};
   const flows={created:{grain:0,coin:0},consumed:{grain:0,coin:0}};
   for(let i=0;i<w.events.length;i++){
     const e=w.events[i];
@@ -138,6 +187,20 @@ export function assertWorld(w){
     if(e.kind==='death')eventsDead++;
     if(e.kind==='marriage')eventsMarried++;
     if(e.kind==='realm-partition')eventsPartitioned++;
+    if(e.kind==='political-decision'){
+      const {actorId,kind,goal,score,reasons,traits,outcome}=e.effect;
+      demand(people.has(actorId) && typeof kind==='string' &&
+        typeof goal==='string'&&Number.isSafeInteger(score)&&
+        Array.isArray(reasons)&&traits&&outcome?.kind===kind&&
+        outcome.actorId===actorId,'political decision evidence');
+      actionCounts.actions++;
+      const map={gift:'gifts',marriage:'marriages',grant:'grants',petition:'petitions',
+        faction:'coalitions',join:'joins',ultimatum:'ultimatums'};
+      demand(Boolean(map[kind]),'action kind');
+      actionCounts[map[kind]]++;
+      if((kind==='petition'||kind==='ultimatum')&&outcome.success)actionCounts.concessions++;
+      if((kind==='petition'||kind==='ultimatum')&&!outcome.success)actionCounts.refusals++;
+    }
     if(e.kind==='transfer'){
       const {good,from,to,amount}=e.effect;
       demand(goods.includes(good)&&safe(amount)&&from!==to &&
@@ -149,6 +212,8 @@ export function assertWorld(w){
   }
   demand(closed===stats.years,'year-close entries');
   demand(eventsPartitioned===stats.partitions,'portfolio partition counter');
+  for(const key of Object.keys(actionCounts))
+    demand(actionCounts[key]===political.stats[key],'political event/stat mismatch '+key);
   demand(eventsBorn===stats.births&&eventsDead===stats.deaths&&eventsMarried===stats.marriages,
     'demographic event counters');
   const totals={grain:0,coin:0};
