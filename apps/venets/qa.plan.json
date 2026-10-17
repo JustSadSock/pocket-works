@@ -92,6 +92,18 @@
         },
         {
           "action": "click",
+          "selector": ".action-choice"
+        },
+        {
+          "action": "visible",
+          "selector": "#confirm-dialog"
+        },
+        {
+          "action": "click",
+          "selector": "#confirm-approve"
+        },
+        {
+          "action": "click",
           "selector": "#next-year"
         },
         {
