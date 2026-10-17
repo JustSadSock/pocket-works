@@ -74,23 +74,14 @@
         },
         {
           "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-pick-dogma]"
-        },
-        {
-          "action": "click",
-          "selector": "[data-action='confirm-doctrine']"
-        },
-        {
-          "action": "visible",
-          "selector": ".work-space"
-        },
-        {
-          "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "playthrough-3-viewports",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/playthrough.mjs"
     }
   ]
 }
