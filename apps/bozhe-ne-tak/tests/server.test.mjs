@@ -120,7 +120,7 @@ test('deadline fallback, vote tie and reconnect views',()=>{
  assert.equal(r.s.phase,'play');
  assert.equal(r.s.match.doctrines[0],codes[0]);
  const snapshot=mod.viewForPlayer({state:r.s,player:r.players[1]});
- assert.deepEqual(snapshot.ownTasks,['offering']);
+ assert.deepEqual(snapshot.ownTasks,['bell','height'],'roles rotate after the first council');
  assert.equal(snapshot.match.round,1);
 });
 test('leaving player reassigns without deadlocking the round',()=>{
