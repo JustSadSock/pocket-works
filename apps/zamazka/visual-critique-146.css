@@ -263,7 +263,6 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display{
 }
 html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage{
  overflow:visible!important;pointer-events:none!important;
- perspective:none!important;
 }
 html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide{
  transition:transform var(--museum-shift-duration,285ms) cubic-bezier(.24,.72,.22,1),
