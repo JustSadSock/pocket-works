@@ -45,6 +45,12 @@ export function assertWorld(world) {
     }
   }
   demand(counties === 12 && duchies === 4 && kingdoms === 1, 'title hierarchy composition');
+  const occupiedCells = new Set();
+  for (const p of world.provinces) {
+    const cell = p.x + ':' + p.y;
+    demand(!occupiedCells.has(cell), 'overlapping province coordinates');
+    occupiedCells.add(cell);
+  }
   const visited = new Set(['pr-01']), queue = ['pr-01'];
   while (queue.length) {
     const p = provinces.get(queue.shift());
@@ -58,7 +64,11 @@ export function assertWorld(world) {
     demand(safe(p.baseYield) && safe(p.baseTrade) && safe(p.demand), 'province economy parameters');
     demand(safe(p.shortages) && safe(p.lastShortage), 'shortage counters');
     demand(Array.isArray(p.neighbors) && new Set(p.neighbors).size === p.neighbors.length, 'duplicate neighbors');
-    for (const n of p.neighbors) demand(n !== p.id && provinces.get(n)?.neighbors.includes(p.id), 'asymmetric neighbors');
+    for (const n of p.neighbors) {
+      const other = provinces.get(n);
+      demand(n !== p.id && other?.neighbors.includes(p.id), 'asymmetric neighbors');
+      demand(Math.abs(other.x - p.x) + Math.abs(other.y - p.y) === 1, 'non-adjacent province link');
+    }
   }
   for (const p of world.people) {
     demand(dynasties.has(p.dynastyId) && Number.isSafeInteger(p.birthYear), 'person dynasty/birth');
@@ -72,10 +82,33 @@ export function assertWorld(world) {
     }
   }
   for (const good of ['grain','coin']) {
+    demand(Number.isSafeInteger(totals[good]), 'resource sum overflow');
     demand(safe(world.ledger?.initial?.[good]) && safe(world.ledger?.created?.[good]) && safe(world.ledger?.consumed?.[good]), 'invalid ledger ' + good);
     demand(totals[good] === world.ledger.initial[good] + world.ledger.created[good] - world.ledger.consumed[good], 'unbalanced ledger ' + good);
   }
   demand(world.stats && safe(world.stats.years) && world.stats.years === world.year - 1066 && safe(world.stats.shortages) && safe(world.stats.harvested) && safe(world.stats.minted) && safe(world.stats.taxGrain) && safe(world.stats.taxCoin), 'time metrics');
-  demand(world.events.every((e, i) => e?.id === i + 1 && e.year >= 1066 && e.year <= world.year && typeof e.kind === 'string' && typeof e.cause === 'string' && e.effect && typeof e.effect === 'object'), 'event integrity');
+  let eventYear = 1066, closedYears = 0;
+  const eventFlows = { created: { grain: 0, coin: 0 }, consumed: { grain: 0, coin: 0 } };
+  for (let i = 0; i < world.events.length; i++) {
+    const e = world.events[i];
+    demand(e?.id === i + 1 && Number.isSafeInteger(e.year) && e.year >= eventYear &&
+      e.year <= world.year && typeof e.kind === 'string' && e.kind &&
+      typeof e.cause === 'string' && e.cause && e.effect && typeof e.effect === 'object', 'event integrity');
+    eventYear = e.year;
+    if (e.kind === 'year-closed') closedYears++;
+    if (e.kind !== 'transfer') continue;
+    const { good, amount, from, to } = e.effect;
+    demand(['grain','coin'].includes(good) && safe(amount) && from !== to &&
+      (from === null || (typeof from === 'string' && (/^(province|person):/).test(from))) &&
+      (to === null || (typeof to === 'string' && (/^(province|person):/).test(to))), 'event transfer payload');
+    if (from === null) eventFlows.created[good] += amount;
+    if (to === null) eventFlows.consumed[good] += amount;
+  }
+  demand(closedYears === world.stats.years, 'closed-year count mismatch');
+  demand(world.stats.shortages === world.provinces.reduce((count, p) => count + p.shortages, 0), 'shortage count mismatch');
+  for (const good of ['grain','coin']) {
+    demand(eventFlows.created[good] === world.ledger.created[good], 'created ledger/event mismatch ' + good);
+    demand(eventFlows.consumed[good] === world.ledger.consumed[good], 'consumed ledger/event mismatch ' + good);
+  }
   return { provinces: provinces.size, titles: titles.size, people: people.size, dynasties: dynasties.size, year: world.year, events: world.events.length, resources: totals };
 }
