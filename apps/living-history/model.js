@@ -560,14 +560,14 @@ function cropUpdate(s,h,adults,guests=[]){
   const route=walkPath(s,h,workPos);
   h.commuteMemo={cell:workCell,month,effort:pathEffort(s,route)};
  }
- const commute=walking<0?Infinity:h.commuteMemo?.effort;
- const workFraction=Number.isFinite(commute)?workdayFraction(commute):0;
- if(!workFraction)return;
- const arriving=workers.filter(p=>p.job==='home'||p.job==='hired');
- const productiveWorkers=labourTotal(arriving,'farm')*workFraction;
- const markWork=()=>{for(const p of arriving){p.x=workPos.x;p.y=workPos.y;}
-  earn(s,h,'travelHours',round(labourTotal(arriving,'farm')*(1-workFraction)*8.5));
-  // Real field journeys reinforce the practical route to the arable.
+ // Each prospective worker gets a path-accurate round trip and an 8.5-hour
+ // budget. Hired hands depart from their own house, not the employer's door.
+ // No time is reserved until a real sowing, harvest or tending task succeeds.
+ const arriving=workers.filter(p=>p.job==='home'||p.job==='hired')
+  .map(p=>({p,shift:availableShift(s,p,'farm',workPos)})).filter(w=>w.shift);
+ const productiveWorkers=arriving.reduce((n,w)=>n+workCapacity(w.p,'farm')*w.shift.fraction,0);
+ if(productiveWorkers<=0)return;
+ const markWork=()=>{for(const {p,shift} of arriving)recordShift(s,h,p,shift);
   if(s.day%24===0){const path=walkPath(s,h,workPos);if(path.length>1)markRoad(s,path,4);}
  };
  if(doy>=65&&doy<=145&&crop.sownArea<availableArea-.001){
@@ -579,18 +579,18 @@ function cropUpdate(s,h,adults,guests=[]){
    crop.cropSeeds[kind]=round((crop.cropSeeds[kind]||0)+seed);
    if(kind!=='grain')earn(s,h,kind==='oats'?'oatsSeedKg':'pulsesSeedKg',seed);
    crop.sownArea=roundSkill(crop.sownArea+step);crop.seedKg=round(crop.seedKg+seed);crop.labourSow+=productiveWorkers;earn(s,h,'seedKg',seed);
-   for(const p of arriving)laborDay(p,'farm',.003,workFraction);markWork();
+   for(const {p,shift} of arriving)laborDay(p,'farm',.003,shift.fraction);markWork();
    if(crop.sownArea>=availableArea-.001||doy===145)event(s,'sowing',`Семья ${familyName(s,h)} засеяла ${crop.sownArea.toFixed(2)} га`,'Посев потребовал семян и рабочих дней',[h.id],{seedKg:crop.seedKg,workDays:crop.labourSow});
   }
  }
- if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const p of arriving)laborDay(p,'farm',.002,workFraction);markWork();crop.tended+=productiveWorkers;crop.labourTend+=productiveWorkers;}
+ if(doy>=150&&doy<=236&&crop.sownArea>0&&doy%5===0){for(const {p,shift} of arriving)laborDay(p,'farm',.002,shift.fraction);markWork();crop.tended+=productiveWorkers;crop.labourTend+=productiveWorkers;}
  if(doy>=238&&doy<=295&&crop.harvestedArea<crop.sownArea-.001){
   const kind=cropAt(crop,crop.harvestedArea);
   const step=Math.min(crop.sownArea-crop.harvestedArea,productiveWorkers*.065,Math.max(0,cropLimit(crop,kind)-crop.harvestedArea));
   if(step>.001){
    const soil=crop.active.reduce((v,i)=>v+s.soil[i],0)/crop.active.length;
-   const labour=labourTotal(arriving,'farm')||1;
-   const avgSkill=arriving.reduce((v,p)=>v+p.skill.farm*workCapacity(p,'farm'),0)/labour;
+   const labour=productiveWorkers||1;
+   const avgSkill=arriving.reduce((v,{p,shift})=>v+p.skill.farm*workCapacity(p,'farm')*shift.fraction,0)/labour;
    const weather=s.weather;
    const tendingFactor=clamp(.57+crop.tended/Math.max(2,crop.sownArea*32)*.43,.57,1.04);
    const output=round(step*CROP_KINDS[kind].yieldRate*tuning(s,'yield')*soil/82*weather*tendingFactor*(1+Math.min(.25,avgSkill*.07)));
@@ -616,7 +616,7 @@ function cropUpdate(s,h,adults,guests=[]){
     }
    }
    crop.harvestedArea=roundSkill(crop.harvestedArea+step);crop.yieldKg=round(crop.yieldKg+output);earn(s,h,'harvestKg',output);crop.labourHarvest+=productiveWorkers;
-   for(const p of arriving)laborDay(p,'farm',.004,workFraction);markWork();
+   for(const {p,shift} of arriving)laborDay(p,'farm',.004,shift.fraction);markWork();
    if(crop.harvestedArea>=crop.sownArea-.001||doy===295){
      h.lastHarvest={day:s.day,kg:crop.yieldKg,breakdown:{...crop.cropYields},ha:round(crop.harvestedArea),workDays:crop.labourHarvest+crop.labourSow+crop.labourTend};
      event(s,'harvest',`Семья ${familyName(s,h)} собрала ${Math.round(crop.yieldKg)} кг зерна`,'Посев, уход, своевременная уборка, погода, почва и навыки',[h.id,...workers.map(p=>p.id)],{yieldKg:crop.yieldKg,areaHa:round(crop.harvestedArea),soil:round(soil),weather:round(weather),workDays:h.lastHarvest.workDays});
@@ -1926,7 +1926,7 @@ function finishManorialService(s){
  for(const p of s.people)if(p.manorDutyDay===s.day){
   const tenant=livingHouse(s,p.manorDutySource),a=tenant?.manorAgreement;
   if(a&&p.job==='farm'){
-   const worked=workCapacity(p,'farm');
+   const worked=workCapacity(p,'farm')*(p.dailyShift?.day===s.day?p.dailyShift.fraction:1);
    // Legal fulfilled obligations remain integer certified days, while a
    // sick labourer's partial contribution accrues toward the NEXT day.
    // The fractional balance cannot exceed one contractual day's worth.
