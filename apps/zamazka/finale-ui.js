@@ -73,7 +73,7 @@ export function finaleRevealAuditMarkup({breakdown,wrong,bonus,authorExtras=null
    '<div class="finale-jury-coins" role="img" aria-label="'+x.correct+' верных и '+x.wrong+' ошибочных фишек">'+
    '<span class="correct-coins">'+chipDots(x.correct)+'</span><span class="missed-coins">'+chipDots(x.wrong)+'</span>'+
    '</div><strong>+'+x.points+(x.speed>0?'<small class="audit-speed">включая +'+x.speed+' за скорость</small>':'')+'</strong></div>').join('')+'</div>'+
-  '<div class="outcome-bonus finale-bonus"><span>'+wrong+' фишек мимо — очки реставратору'+
+  '<div class="outcome-bonus finale-bonus"><span>'+(authorExtras?'Маскировка · '+wrong+' неверных монет':wrong+' фишек мимо — очки реставратору')+
    (authorExtras?'<small class="audit-endurance">'+(endurance?'Выдержка +'+endurance:'')+
     (endurance&&undetected?' · ':'')+(undetected?'Не разгадали +'+undetected:'')+'</small>':'')+
    '</span><strong>+'+bonus+'</strong></div>';

@@ -47,11 +47,14 @@ function choose(s:State){
 }
 const VOTE_WINDOW_MS=25500;
 const RATE_SPEED=40; // early correct guess, maximum per coin
-const RATE_DECOY_DELAY=20; // late wrong guess, maximum per coin
-const RATE_DISCOVERY_DELAY=15; // author resisted recognition until late
-const UNDETECTED_BONUS=30; // author: at least one cast vote, zero correct guesses
+const RATE_DECOY_DELAY=80; // maximum for the latest wrong coin, quadratic ramp
+const RATE_DISCOVERY_DELAY=30; // maximum for the latest correct discovery, quadratic ramp
+const UNDETECTED_BONUS=60; // author: at least one cast vote, zero correct guesses
 // A later difficulty selector can pass a multiplier for the RESTORER only;
 // neutral difficulty=1 preserves today's unweighted artwork assignments.
+// Later guesses pay disproportionately more to the restorer. Both curves
+// start at zero, remain smooth, and are server-authoritative (t in [0,1]).
+const lateRewardCurve=(t:number)=>t*t;
 function recordVoteTiming(s:State,target:string,voter:string,chips:Chips){
  s.voteTiming||={};s.voteTiming[target]||={};
  const old=s.voteTiming[target][voter]||[[],[],[],[],[]];
@@ -83,8 +86,8 @@ function scoreTurn(s:State,authorId:string,difficultyWeight=1):ScoreAudit{
     // recordVoteTiming on receipt; legacy missing metadata earns no
     // early-guesser advantage.
     const fraction=Math.max(0,Math.min(1,Number(times[i]?.[n]??1000)/1000));
-    if(i===correctIndex){hit++;correct++;speed+=1-fraction;catchDelay+=fraction;}
-    else{wrong++;missDelay+=fraction;}
+    if(i===correctIndex){hit++;correct++;speed+=1-fraction;catchDelay+=lateRewardCurve(fraction);}
+    else{wrong++;missDelay+=lateRewardCurve(fraction);}
    }
   }
   const base=Math.round(100*hit/others);
