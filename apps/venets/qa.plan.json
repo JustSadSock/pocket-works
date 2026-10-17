@@ -30,6 +30,33 @@
         "--years=100",
         "--output={output}/venets-100x100.json"
       ]
+    },
+    {
+      "id": "dossier-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#document h1",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-doc=\"RESEARCH.md\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#document"
+        },
+        {
+          "action": "screenshot"
+        }
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ]
     }
   ]
 }
