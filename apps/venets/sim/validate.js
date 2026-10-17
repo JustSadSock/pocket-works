@@ -75,7 +75,7 @@ export function assertWorld(world) {
     demand(safe(world.ledger?.initial?.[good]) && safe(world.ledger?.created?.[good]) && safe(world.ledger?.consumed?.[good]), 'invalid ledger ' + good);
     demand(totals[good] === world.ledger.initial[good] + world.ledger.created[good] - world.ledger.consumed[good], 'unbalanced ledger ' + good);
   }
-  demand(world.stats && safe(world.stats.years) && world.stats.years === world.year - 1066 && safe(world.stats.shortages), 'time metrics');
+  demand(world.stats && safe(world.stats.years) && world.stats.years === world.year - 1066 && safe(world.stats.shortages) && safe(world.stats.harvested) && safe(world.stats.minted) && safe(world.stats.taxGrain) && safe(world.stats.taxCoin), 'time metrics');
   demand(world.events.every((e, i) => e?.id === i + 1 && e.year >= 1066 && e.year <= world.year && typeof e.kind === 'string' && typeof e.cause === 'string' && e.effect && typeof e.effect === 'object'), 'event integrity');
   return { provinces: provinces.size, titles: titles.size, people: people.size, dynasties: dynasties.size, year: world.year, events: world.events.length, resources: totals };
 }
