@@ -42,8 +42,12 @@
         "mobile",
         "desktop"
       ],
-      "ready": "#document h1",
+      "ready": "#open-docs",
       "steps": [
+        {
+          "action": "click",
+          "selector": "#open-docs"
+        },
         {
           "action": "click",
           "selector": "[data-doc=\"RESEARCH.md\"]"
