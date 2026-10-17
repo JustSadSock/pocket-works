@@ -37,3 +37,46 @@ document.addEventListener('click',e=>{const section=e.target.closest('[data-sect
 draw();
 window.__BOZHE_DOSSIER_QA__=()=>({section:current.section,stage:current.stage,phaseCount:phases.length,navButtons:[...document.querySelectorAll('[data-section]')].length,hasInspector:!!inspector.textContent.trim()});
 
+
+const availableDocuments=new Set(["ROADMAP.md","GAME-DESIGN.md","NETWORK.md","ART-DIRECTION.md","QA-PLAN.md","DECISIONS.md"]);
+let openDocumentKey=null;
+let documentToken=0;
+function renderDocument(markdown){
+ const fragment=document.createDocumentFragment();let list=null,listType=null,paragraph=[];
+ const flush=()=>{if(paragraph.length){const p=document.createElement('p');p.textContent=paragraph.join(' ');fragment.append(p);paragraph=[]}};
+ for(const raw of markdown.split(/\r?\n/)){
+  const line=raw.trim();
+  if(!line){flush();list=null;listType=null;continue}
+  const head=/^(#{1,3})\s+(.+)$/.exec(line);
+  const item=/^(?:([-*])|(\d+)\.)\s+(.+)$/.exec(line);
+  if(head){flush();list=null;listType=null;const h=document.createElement('h'+head[1].length);h.textContent=head[2];fragment.append(h);continue}
+  if(item){flush();const type=item[2]?'ol':'ul';if(listType!==type){list=document.createElement(type);fragment.append(list);listType=type}const li=document.createElement('li');li.textContent=item[3];list.append(li);continue}
+  if(line.startsWith('|')){flush();list=null;listType=null;const row=document.createElement('pre');row.textContent=line;fragment.append(row);continue}
+  list=null;listType=null;paragraph.push(line);
+ }
+ flush();return fragment;
+}
+async function showProjectDocument(id){
+ if(!availableDocuments.has(id))return;
+ openDocumentKey=id;const ticket=++documentToken;
+ inspector.innerHTML='<p class="stage-key">ПОЛНАЯ СПЕЦИФИКАЦИЯ</p><button type="button" class="back-document" data-doc-back>← Назад к разделу</button><div class="doc-render" id="docBody" role="status">Загрузка документа…</div>';
+ inspector.scrollTop=0;
+ try{
+  const response=await fetch('./dossier.json',{cache:'no-cache'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const payload=await response.json();
+  if(ticket!==documentToken||openDocumentKey!==id)return;
+  if(typeof payload[id]!=='string')throw Error('Текст не найден');
+  const body=inspector.querySelector('#docBody');body.replaceChildren(renderDocument(payload[id]));body.removeAttribute('role');
+ }catch(e){
+  if(ticket!==documentToken||openDocumentKey!==id)return;
+  inspector.querySelector('#docBody').innerHTML='<p>Не удалось загрузить документ. Проверьте соединение или повторите загрузку.</p><button type="button" class="next" data-doc-retry>Повторить загрузку</button>';
+ }
+}
+document.addEventListener('click',event=>{
+ const link=event.target.closest('a[href^="./docs/"]');
+ if(link){event.preventDefault();showProjectDocument(link.getAttribute('href').split('/').pop());return}
+ if(event.target.closest('[data-doc-back]')){openDocumentKey=null;documentToken++;draw();return}
+ if(event.target.closest('[data-doc-retry]')&&openDocumentKey){showProjectDocument(openDocumentKey);return}
+ if(event.target.closest('[data-section],[data-stage],[data-next]')){openDocumentKey=null;documentToken++}
+});

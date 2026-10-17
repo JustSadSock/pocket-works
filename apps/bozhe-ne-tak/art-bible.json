@@ -122,9 +122,9 @@
   },
   "verification": {
     "states": [
-      "dossier-first-open",
-      "roadmap-switch",
-      "network-view"
+      "initial",
+      "action",
+      "settled"
     ],
     "risks": [
       "narrow viewport clipping",
