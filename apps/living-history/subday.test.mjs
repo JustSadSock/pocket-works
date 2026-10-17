@@ -34,12 +34,17 @@ test('integrating either view advances exactly the same number of authoritative 
 });
 
 test('individual morning, outbound, work and return motion follows existing destinations',()=>{
- const s=createWorld(17);advanceDays(s,1);
- const plan=planSubday(s);
+ const s=createWorld(17);
+ let plan=null,p=null;
+ // The winter starting day may have no distant field work. Find an actual
+ // working day instead of imposing a fake assignment on the population.
+ for(let d=0;d<200&&!p;d++){
+  advanceDays(s,1);plan=planSubday(s);
+  p=s.people.find(p=>p.alive&&p.job!=='home'&&!p.travel&&plan.plans.get(p.id)?.length>3);
+ }
+ assert.ok(p,'the settlement should have a working day with a real destination');
  assert.equal(plan.day,s.day);
  assert.equal(plan.plans.size,s.people.filter(p=>p.alive).length);
- const p=s.people.find(p=>p.alive&&p.job!=='home'&&!p.travel&&plan.plans.get(p.id)?.length>3);
- assert.ok(p,'requires actual employed worker on the first day');
  const schedule=plan.plans.get(p.id);
  assert.ok(schedule.departure<schedule.arrival);
  assert.ok(schedule.arrival<schedule.returnStart);
