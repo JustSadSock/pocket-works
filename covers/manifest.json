@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "f2f8df757a89f3e7b0a30e1377ad0c706c5559ff",
+    "revision": "cc791817a27ea9d8ef360b7720d7c1c7b04a3bfa",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "f2f8df757a89f3e7b0a30e1377ad0c706c5559ff",
-    "lastAttemptAt": "2026-10-17T21:56:57.274Z",
+    "lastAttemptRevision": "cc791817a27ea9d8ef360b7720d7c1c7b04a3bfa",
+    "lastAttemptAt": "2026-10-17T22:37:03.216Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -220,36 +220,26 @@
   },
   "folio": {
     "note": "No frame passed image-content checks",
-    "status": "failed",
-    "lastAttemptRevision": "7f706026daf3cc960a2c082b4c9df848ed55982e",
-    "lastAttemptAt": "2026-10-17T15:14:53.705Z",
-    "diagnostic": {
-      "bestScore": 72,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 46791,
-        "variance": 50.51650948625923,
-        "entropy": 1.9003222772295545,
-        "edgeDensity": 0.2119295634920635,
-        "colorfulness": 46.45361328125,
-        "centerDetail": 52.37460534794021,
-        "meanLight": 208.0756771972629
-      },
-      "gameplayEntry": {
-        "started": true,
-        "actions": [
-          {
-            "label": "Нарисовать ↗",
-            "id": "new-work",
-            "score": 92
-          }
-        ]
-      },
-      "url": "http://127.0.0.1:4173/apps/folio/?pw-cover=1&pw_release=1.5.1&pw_fp=8b85b639a8863da0b122656f"
-    },
-    "captureEngine": "safe-gameplay-v3"
+    "status": "published",
+    "lastAttemptRevision": "495748b24e933ead8b1dd0ca1df1526fd5f0d3f2",
+    "lastAttemptAt": "2026-10-17T22:36:51.293Z",
+    "diagnostic": null,
+    "captureEngine": "safe-gameplay-v3",
+    "revision": "495748b24e933ead8b1dd0ca1df1526fd5f0d3f2",
+    "qualityScore": 79,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Нарисовать ↗",
+        "id": "new-work",
+        "score": 92
+      }
+    ],
+    "shot": 0,
+    "sha256": "e164291284eba806fe1262451dcd10b1082138ea9b40019636eac6ac65bf3382",
+    "imageVersion": 2
   },
   "flagpost": {
     "note": "No frame passed image-content checks",
