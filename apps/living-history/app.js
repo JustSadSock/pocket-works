@@ -6,7 +6,7 @@ import {fieldAppearance,cattlePosition} from './visual-land.js';
 import {timeMode,integrateClock,dayClock,dayPhase,planSubday,sampleSubday,makeFastView,advanceFastView,fastAnimalPosition} from './subday.js';
 import {walkPath} from './navigation.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.7.9',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.7.10',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
