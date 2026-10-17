@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "bozhe-ne-tak",
+  "name": "БОЖЕ, НЕ ТАК!",
+  "shortName": "БОЖЕ, НЕ ТАК!",
+  "description": "Проектное досье будущей кооперативной комедии о жрецах и капризном боге. Дорожная карта и архитектура — пока не игра.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-17",
+  "releaseDateTime": "2026-10-17T16:00:00+03:00",
+  "changelog": [
+    "Добавлено интерактивное проектное досье и дорожная карта P0–P7.",
+    "Зафиксированы геймдизайн, ограничения PocketNet, визуал и сетевые тесты."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#bc7652",
+  "backgroundColor": "#2c2824",
+  "themeColor": "#2c2824",
+  "orientation": "portrait",
+  "cacheName": "bozhe-ne-tak-v0.1.0",
+  "storageNamespace": "pocket-works:bozhe-ne-tak",
+  "tags": [
+    "game",
+    "co-op",
+    "medieval",
+    "design",
+    "roadmap",
+    "PocketNet",
+    "experimental"
+  ],
+  "order": 86
+}

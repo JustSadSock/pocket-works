@@ -1,0 +1,24 @@
+{
+  "id": "/apps/bozhe-ne-tak/",
+  "name": "БОЖЕ, НЕ ТАК! · Досье",
+  "short_name": "БОЖЕ, НЕ ТАК!",
+  "description": "Проектное досье будущей кооперативной комедии о жрецах и капризном боге. Дорожная карта и архитектура — пока не игра.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#2c2824",
+  "theme_color": "#2c2824",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

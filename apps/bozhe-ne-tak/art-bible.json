@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "product": "bozhe-ne-tak",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "zamazka",
+      "evidence": "Existing apps/zamazka/visual-direction.json",
+      "lesson": "Избегать музейных карт и пергаментных панелей."
+    },
+    {
+      "slug": "horugvi",
+      "evidence": "Existing apps/horugvi/index.html",
+      "lesson": "Не использовать иллюминированные поля сражений как фон планировщика."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://www.bl.uk/stories/blogs/posts/knight-v-snail?s=09",
+      "inspectedAt": "2026-10-17",
+      "observation": "Комические сцены противоборства человека с улиткой в полях средневековых рукописей.",
+      "principle": "Контраст серьезного сакрального языка с нелепым поступком.",
+      "application": "Жесты резной маски и последующие догматы — комедия без текстового скетча.",
+      "avoid": "Не повторять чужие миниатюры."
+    },
+    {
+      "url": "https://www.bl.uk/stories/blogs/posts/ludicrous-figures-in-the-margin",
+      "inspectedAt": "2026-10-17",
+      "observation": "Средневековые маргиналии изображают странную инверсию ролей, животных-музыкантов и нападение улиток.",
+      "principle": "Абсурд рождается из смешения значимых ролей.",
+      "application": "Исполняемые догматы и реакция алтаря.",
+      "avoid": "Не переносить страницу книги как интерфейс."
+    },
+    {
+      "url": "https://www.vam.ac.uk/articles/tipus-tiger",
+      "inspectedAt": "2026-10-17",
+      "observation": "Деревянный полуавтомат движет частью тела фигуры при вращении механизма.",
+      "principle": "Подвижная деревянная скульптура может казаться живой при небольшом числе сочленений.",
+      "application": "Глаза, брови и челюсть бога реагируют на суд.",
+      "avoid": "Не заимствовать исторический сюжет или композицию механизма."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "altar",
+      "medium": "2D резные SVG/Canvas и CSS",
+      "composition": "Лик бога над функциональным алтарем, детали в рейке",
+      "interaction": "Нажатие печати или подношения",
+      "motion": "Сочлененные челюсть и брови",
+      "rationale": "Лучшее сочетание характера и цены производства."
+    },
+    {
+      "id": "book",
+      "medium": "Рукописная плоскость",
+      "composition": "Печатная книга со страницами",
+      "interaction": "Листание свитка",
+      "motion": "Поворот листов",
+      "rationale": "Риск чрезмерной бумажности и сходства с другими играми."
+    },
+    {
+      "id": "stone3d",
+      "medium": "Полностью 3D авторская сцена",
+      "composition": "Монументальный храм и камеры",
+      "interaction": "Перемещение персонажей",
+      "motion": "Полная 3D анимация",
+      "rationale": "Ненужная техническая сложность для phase-based серверной механики."
+    }
+  ],
+  "selection": {
+    "concept": "altar",
+    "reason": "Материальность и характер при доступной 2D реализации.",
+    "rejected": [
+      {
+        "concept": "book",
+        "reason": "Бумага и повторение визуального шаблона"
+      },
+      {
+        "concept": "stone3d",
+        "reason": "Высокая стоимость ассетов, важнее проверить цикл ритуала"
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "svg",
+      "availability": "available",
+      "reason": "Авторская SVG иконка уже создана, полностью локальная."
+    },
+    {
+      "id": "canvas",
+      "availability": "available",
+      "reason": "Стандартный Web Canvas для будущих эффектов."
+    },
+    {
+      "id": "pixi",
+      "availability": "planned",
+      "reason": "Enhanced runtime только при подтвержденной необходимости P5; fallback Canvas."
+    }
+  ],
+  "assets": [
+    {
+      "id": "god-icon",
+      "tool": "svg",
+      "source": "icons/icon.svg",
+      "output": "icons/icon.svg",
+      "role": "Маркер сакральной маски и иконка",
+      "integration": "HTML favicon / PWA manifest",
+      "provenance": "Original code SVG",
+      "acceptance": "Распознается при 48px и 512px",
+      "maxBytes": 16384
+    },
+    {
+      "id": "altar-stage",
+      "tool": "canvas",
+      "source": "app.js",
+      "output": "styles.css",
+      "role": "Пока только навигационная сцена планирования; не полноценная игра",
+      "integration": "HTML/CSS",
+      "provenance": "Original",
+      "acceptance": "Читается на 320px",
+      "maxBytes": 70000
+    }
+  ],
+  "constraints": {
+    "viewport": "320x568 to 1440x900; portrait-primary",
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 30
+  },
+  "verification": {
+    "states": [
+      "dossier-first-open",
+      "roadmap-switch",
+      "network-view"
+    ],
+    "risks": [
+      "narrow viewport clipping",
+      "scroll traps",
+      "confusing project state with live game"
+    ],
+    "comparisons": [
+      "zamazka",
+      "horugvi"
+    ]
+  }
+}
