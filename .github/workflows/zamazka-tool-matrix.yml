@@ -1,0 +1,33 @@
+name: ZAMAZKA editor tool matrix
+
+on:
+  pull_request:
+    paths:
+      - 'apps/zamazka/editor.js'
+      - 'apps/zamazka/fill-core.js'
+      - 'apps/zamazka/qa/all-tools-matrix.mjs'
+      - 'apps/zamazka/qa/editor-input.mjs'
+      - '.github/workflows/zamazka-tool-matrix.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/zamazka/editor.js'
+      - 'apps/zamazka/fill-core.js'
+      - 'apps/zamazka/qa/all-tools-matrix.mjs'
+      - 'apps/zamazka/qa/editor-input.mjs'
+      - '.github/workflows/zamazka-tool-matrix.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  editor-tool-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Exercise painting, erasing, fill, smudge, picking, pan, zoom and precision touch
+        run: node apps/zamazka/qa/all-tools-matrix.mjs
