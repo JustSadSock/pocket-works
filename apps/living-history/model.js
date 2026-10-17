@@ -1,4 +1,5 @@
 import {walkingDistances,walkingSteps,workdayFraction,walkPath,pathEffort} from './navigation.js';
+import {WORK_HOURS,scheduleWork,commitWork,shiftAudit} from './work-time.js';
 // Living History: deterministic, renderer-independent regional society simulation.
 export const SIZE = 160;
 const T = SIZE * SIZE;
@@ -37,7 +38,7 @@ export function normalizeTuning(value={}){
  }return out;
 }
 const tuning=(s,k)=>s.tuning?.[k]??1;
-const ACCOUNT_FIELDS=['woolShearedKg','sheepFeedOatsKg','oatsHarvestKg','pulsesHarvestKg','oatsSeedKg','pulsesSeedKg','oatsFoodKg','pulsesFoodKg','manorServiceDays','manorRentPaidCoin','manorRentReceivedCoin','harvestKg','seedKg','foodKg','spoilKg','woodKg','salesKg','purchasesKg','revenue','spending','wagesEarned','wagesPaid','grainWagesEarnedKg','grainWagesPaidKg','haulEarned','aidReceived','aidGiven','gardenHarvestKg','gardenFoodKg','dairyFoodKg','loansIssuedKg','loansRepaidKg','travelHours','rentPaidKg','rentReceivedKg'];
+const ACCOUNT_FIELDS=['laborHours','woolShearedKg','sheepFeedOatsKg','oatsHarvestKg','pulsesHarvestKg','oatsSeedKg','pulsesSeedKg','oatsFoodKg','pulsesFoodKg','manorServiceDays','manorRentPaidCoin','manorRentReceivedCoin','harvestKg','seedKg','foodKg','spoilKg','woodKg','salesKg','purchasesKg','revenue','spending','wagesEarned','wagesPaid','grainWagesEarnedKg','grainWagesPaidKg','haulEarned','aidReceived','aidGiven','gardenHarvestKg','gardenFoodKg','dairyFoodKg','loansIssuedKg','loansRepaidKg','travelHours','rentPaidKg','rentReceivedKg'];
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const round = x => Math.round(x * 100) / 100;
 const roundSkill = x => Math.round(x * 10000) / 10000;
@@ -340,6 +341,26 @@ export function workCapacity(p,kind='farm'){
 }
 const activeAdults=(s,h)=>liveMembers(s,h).filter(p=>workCapacity(p,'farm')>0&&(!p.travel||p.travel.end<=s.day));
 const labourTotal=(people,kind)=>people.reduce((n,p)=>n+workCapacity(p,kind),0);
+// The shift is a real finite time allocation used to determine productive
+// effort, and later reused verbatim for slow-motion representation.
+function availableShift(s,p,kind,position){
+ if(!p.alive||p.dailyShift?.day===s.day)return null;
+ const shift=scheduleWork(s,p,kind,position);
+ return shift.workHours>.001&&Number.isFinite(shift.workHours)?shift:null;
+}
+function productiveEffort(s,p,kind,position){
+ const shift=availableShift(s,p,kind,position);
+ return shift?workCapacity(p,kind)*shift.fraction:0;
+}
+function recordShift(s,h,p,shift){
+ const factor=commitWork(s,p,shift);
+ // Daily physical hour accounts are inspectable by household, job and person.
+ s.stats.laborHours=round((s.stats.laborHours||0)+shift.workHours);
+ s.stats.commuteHours=round((s.stats.commuteHours||0)+shift.travelHours);
+ earn(s,h,'laborHours',shift.workHours);
+ earn(s,h,'travelHours',shift.travelHours);
+ return factor;
+}
 const foodNeed=(s,h)=>liveMembers(s,h).reduce((v,p)=>v+(p.age<4?.35:p.age<10?.55:p.age<15?.77:1)*.68,0);
 // Calibrated biological parameters are explicitly inspectable; this is a grain-only
 // subsistence proxy, not a reconstruction of the medieval diet or its institutions.
@@ -2050,7 +2071,7 @@ export function advanceDays(s,days=1,profiler=null){
  for(let d=0;d<days;d++){
   s.day++;
   if(s.day%30===0)wearOutFootpaths(s);
-  measure('weatherAndJobs',()=>{localWeather(s);for(const p of s.people)if(p.alive&&(!p.travel||p.travel.end<=s.day))p.job='home';if(s.day%365===1){for(const h of s.households)account(s,h);seasonalLeases(s);for(const c of s.communities){c.recentVolume=c.volume;c.volume=0;}}});
+  measure('weatherAndJobs',()=>{localWeather(s);for(const p of s.people){if(p.dailyShift)delete p.dailyShift;if(p.alive&&(!p.travel||p.travel.end<=s.day))p.job='home';}if(s.day%365===1){for(const h of s.households)account(s,h);seasonalLeases(s);for(const c of s.communities){c.recentVolume=c.volume;c.volume=0;}}});
   measure('delivery',()=>{deliver(s);finishMigration(s);});
   // Guest labour is a day-local work assignment, never a persistent workforce.
   // A stale non-serialized map previously duplicated hired labour after day 65
@@ -2098,6 +2119,7 @@ export function audit(s){
   const expected=round(s.economy.woodlandInitial+(s.stats.woodlandRegrown||0)-(s.stats.woodlandFelled||0));
   if(Math.abs(actual-expected)>.55)issues.push(`Баланс стоящего леса: ${actual} вместо ${expected}`);
  }
+ issues.push(...shiftAudit(s));
  if(Number.isFinite(s.economy.woodInitial)){
   const expected=round(s.economy.woodInitial+s.stats.produced-s.stats.harvest-490*s.stats.built-(s.stats.storageWood||0)-(s.stats.landWood||0)-(s.stats.houseWoodReserved||0));
   if(Math.abs(o.wood-expected)>.051)issues.push(`Нарушено сохранение древесины: ${o.wood} вместо ${expected}`);
