@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "slug": "fog-of-conquest",
+  "name": "ТУМАН ЗАВОЕВАНИЙ",
+  "shortName": "Туман",
+  "description": "Полевая пошаговая стратегия: исследуй карту, захватывай форты, растите экономику и веди отряды сквозь туман войны.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T02:20:00+03:00",
+  "changelog": [
+    "Полная пошаговая кампания: карты, войска, экономики, штурмы, туман и шесть уровней ИИ.",
+    "Мобильная карта, автоматические сохранения и дуэли PocketNet с серверным контролем ходов."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#869b7d",
+  "backgroundColor": "#2d3730",
+  "themeColor": "#2d3730",
+  "orientation": "any",
+  "cacheName": "fog-of-conquest-v1.0.0",
+  "storageNamespace": "pocket-works:fog-of-conquest",
+  "runtime": "quick",
+  "tags": [
+    "game",
+    "strategy",
+    "tactics",
+    "turn-based",
+    "multiplayer",
+    "offline"
+  ],
+  "order": 36
+}
