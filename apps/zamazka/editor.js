@@ -291,6 +291,28 @@ export function strokeTouchesPoint(stroke,point,aspect=W/H){
 export const MIN_BRUSH_SIZE=.25,MAX_EDITOR_ZOOM=8;
 export const MAX_STROKES=400,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=12000;
 
+// Reject truncated or corrupt autosaves BEFORE they reach Canvas2D and render.
+// Both tab-local restoration and IndexedDB migration use the same bounds.
+function validSavedDraft(strokes){
+ if(!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
+ let total=0;
+ for(const stroke of strokes){
+  if(!stroke||!['brush','pencil','spray','erase','fill','smudge'].includes(stroke.t)||
+     typeof stroke.c!=='string'||!/^#[0-9a-f]{6}$/i.test(stroke.c)||
+     typeof stroke.s!=='number'||!Number.isFinite(stroke.s)||
+     stroke.s<MIN_BRUSH_SIZE||stroke.s>48||
+     !Array.isArray(stroke.p)||!stroke.p.length||stroke.p.length>MAX_STROKE_POINTS)return false;
+  total+=stroke.p.length;
+  if(total>MAX_TOTAL_POINTS)return false;
+  for(const p of stroke.p){
+   if(!Array.isArray(p)||p.length!==2||
+      !Number.isFinite(p[0])||!Number.isFinite(p[1])||
+      p[0]<0||p[0]>W||p[1]<0||p[1]>H)return false;
+  }
+ }
+ return true;
+}
+
 const key='pocket-works:zamazka:draft:';
 export class Editor{
  constructor(root,{id,variation=0,round=1,onChange=()=>{},onSound=()=>{},onPersistenceError=()=>{},onPersistenceStatus=()=>{}}){
@@ -302,7 +324,7 @@ export class Editor{
     this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
     this.cursor=root.querySelector('#brushCursor');this.cursorStyle=getBrushCursorStyle();this.cursorInk=null;this.cursorMotion=null;this.cursorIdleTimer=null;this.cursorLiftTimer=null;this.initCursorGraphic();this.root.querySelector('.restore')?.setAttribute('data-active-tool','brush');this.pickerPreview=root.querySelector('#pickerPreview');this.armButton=root.querySelector('#precisionArm');this.sideButton=root.querySelector('#precisionSide');
    this.draftKey=key+id+':'+variation+':'+round;
-   try{const stored=JSON.parse(sessionStorage.getItem(this.draftKey)||localStorage.getItem(this.draftKey)||'null');if(Array.isArray(stored)&&stored.length<=MAX_STROKES)this.strokes=stored}catch{}
+   try{const stored=JSON.parse(sessionStorage.getItem(this.draftKey)||localStorage.getItem(this.draftKey)||'null');if(validSavedDraft(stored))this.strokes=stored.map(s=>({...s,p:s.p.map(p=>[...p])}))}catch{}
    this.attach();this.setMode(this.inputMode,false);this.center();this.render();
    // Restore only while the editor is untouched: never replace newly drawn strokes.
    void zamazkaStore.migrate('draft:'+this.draftKey,this.draftKey).then(stored=>{
@@ -385,9 +407,7 @@ export class Editor{
    return true;
   }
   adoptDraft(strokes){
-    if(this.strokes.length||!Array.isArray(strokes)||strokes.length>MAX_STROKES)return false;
-    const total=strokes.reduce((n,s)=>n+(Array.isArray(s?.p)?s.p.length:MAX_TOTAL_POINTS+1),0);
-    if(total>MAX_TOTAL_POINTS||strokes.some(s=>!['brush','pencil','spray','erase','fill','smudge'].includes(s.t)||!/^#[0-9a-f]{6}$/i.test(s.c)||s.s<MIN_BRUSH_SIZE||s.s>48||!Array.isArray(s.p)||!s.p.length||s.p.length>MAX_STROKE_POINTS))return false;
+    if(this.strokes.length||!validSavedDraft(strokes))return false;
     this.strokes=strokes.map(s=>({...s,p:s.p.map(p=>[...p])}));this.recountPoints();this.invalidateInk();this.save();this.render();return true;
   }
   setTool(tool){

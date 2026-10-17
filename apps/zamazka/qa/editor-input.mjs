@@ -59,3 +59,6 @@ import './edge-and-pacing.mjs';
 
 // Run the super-zoom, fractional-brush and outside-mask gesture regression.
 import './outside-stroke-fine-brush.mjs';
+
+// Cross-tool state machine and raster interaction stress regression.
+import './all-tools-matrix.mjs';
