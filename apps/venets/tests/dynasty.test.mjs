@@ -11,7 +11,8 @@ function addRoyalChildren(world,n=2) {
   const king=lord(world);
   assert.equal(king.sex,'male');
   const mother=lord(world,king.spouseId);
-  for(let i=0;i<n;i++) birth(world,{motherId:mother.id,fatherId:king.id,cause:'test-child-'+i});
+  const existing=world.people.filter(p=>p.parentIds.includes(king.id)).length;
+  for(let i=existing;i<n;i++) birth(world,{motherId:mother.id,fatherId:king.id,cause:'test-child-'+i});
   return descendantBranches(world,king.id).map(p=>p.id);
 }
 test('all founders have coherent spouses, child chronology and title legal records',()=>{
