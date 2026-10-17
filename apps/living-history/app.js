@@ -223,11 +223,17 @@ document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',
   const next=Number(b.dataset.speed);
   if(!Number.isFinite(next)||next<0||next>20)return;
   // First day begins immediately even at 0.25×: no four-second frozen launch.
-  if(speed===0&&next>0&&!previousPeople)acc=1;
+  if(speed===0&&next>0&&!dayPlan&&fastView.positions.size===0)acc=1;
+  const target=timeMode(next);
+  if(target==='fine'&&renderDetail!=='fine'){
+   captureBlend();dayPlan=planSubday(sim);renderDetail='fine';
+  }else if(target==='coarse'&&renderDetail!=='coarse'){
+   captureBlend();renderDetail='coarse';
+  }
   speed=next;updateHUD();
  }));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
 $('#sheet-content').addEventListener('click',e=>{const person=e.target.closest('[data-person]');if(person){selectedPerson=Number(person.dataset.person);renderSheet();return;}if(e.target.closest('[data-person-back]')){selectedPerson=null;renderSheet();return;}const eventButton=e.target.closest('[data-event]');if(eventButton){const item=sim.events.find(v=>v.id===Number(eventButton.dataset.event));const h=item?.subjects.map(id=>sim.households.find(x=>x.id===id)).find(Boolean);if(h){selected=h.id;selectedPerson=null;economyOpen=false;setTab('household');centerOn(h.x,h.y);}else if(item)toast(item.cause);return;}const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case'econ-detail':economyOpen=!economyOpen;renderSheet();break;case'lab-open':speed=0;setTab('laboratory');break;case'lab-back':setTab('tools');break;case'lab-export':exportLab();break;case'save':save().then(()=>toast('Мир записан в IndexedDB')).catch(err=>toast(err.message));break;case'export':exportSave();break;case'import':$('#import-file').click();break;case'reset':speed=0;$('#modal').hidden=false;break;}});
-$('#cancel-reset').addEventListener('click',()=>$('#modal').hidden=true);$('#confirm-reset').addEventListener('click',()=>{const seedText=$('#world-seed').value.trim();const seedNumber=seedText===''?((Date.now()&0xffffffff)>>>0):Number(seedText);if(!Number.isInteger(seedNumber)||seedNumber<0||seedNumber>4294967295){toast('Seed должен быть целым числом от 0 до 4294967295');return;}sim=createWorld(seedNumber,{scenario:$('#world-scenario').value,tuning:experimentPreset($('#world-experiment').value)});selected=null;selectedPerson=null;economyOpen=false;speed=0;acc=0;movementFraction=1;previousPeople=null;dirty=true;fitView();lastSavedDay=-1;$('#modal').hidden=true;setTab('overview');save().then(()=>toast('Создана новая долина с выбранными условиями')).catch(err=>toast(err.message));});
+$('#cancel-reset').addEventListener('click',()=>$('#modal').hidden=true);$('#confirm-reset').addEventListener('click',()=>{const seedText=$('#world-seed').value.trim();const seedNumber=seedText===''?((Date.now()&0xffffffff)>>>0):Number(seedText);if(!Number.isInteger(seedNumber)||seedNumber<0||seedNumber>4294967295){toast('Seed должен быть целым числом от 0 до 4294967295');return;}sim=createWorld(seedNumber,{scenario:$('#world-scenario').value,tuning:experimentPreset($('#world-experiment').value)});selected=null;selectedPerson=null;economyOpen=false;speed=0;acc=0;movementFraction=1;dayPlan=null;fastView=makeFastView();renderDetail='coarse';modeBlend=null;blendRemaining=0;dirty=true;fitView();lastSavedDay=-1;$('#modal').hidden=true;setTab('overview');save().then(()=>toast('Создана новая долина с выбранными условиями')).catch(err=>toast(err.message));});
 function centerOn(x,y){const r=worldNode.getBoundingClientRect();cam.z=Math.max(cam.z,1.28);cam.x=r.width/2-x*PX*cam.z;cam.y=r.height/2-y*PX*cam.z;}
 $('#import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{const value=deserialize(await file.text());sim=value;speed=0;acc=0;movementFraction=1;selected=null;selectedPerson=null;previousPeople=null;dirty=true;fitView();updateHUD();await save();toast('Мир успешно импортирован');}catch(err){toast(`Импорт не удался: ${err.message}`);}});
 function experimentPreset(name){
@@ -243,7 +249,37 @@ function exportSave(){try{const blob=new Blob([serialize(sim)],{type:'applicatio
 function db(){return new Promise((resolve,reject)=>{const req=indexedDB.open('pw-living-history-v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('saves');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||Error('IndexedDB недоступна'));});}
 async function save(){if(!sim||savePending)return;savePending=true;let base;const snapshotDay=sim.day;try{base=await db();const payload=serialize(sim);await new Promise((res,rej)=>{const t=base.transaction('saves','readwrite');t.objectStore('saves').put(payload,'latest');t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});lastSavedDay=snapshotDay;}finally{savePending=false;base?.close();}}
 async function load(){let base=await db();try{const raw=await new Promise((res,rej)=>{const req=base.transaction('saves','readonly').objectStore('saves').get('latest');req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);});return raw?deserialize(raw):null;}finally{base.close();}}
-function animate(now){requestAnimationFrame(animate);if(!active||!sim){last=now;return;}const dt=Math.min(.08,(now-last)/1000);last=now;if(speed>0){acc+=speed*dt;const days=Math.min(Math.floor(acc),40);if(days){previousPeople=new Map(sim.people.filter(p=>p.alive).map(p=>[p.id,{x:p.x,y:p.y}]));advanceDays(sim,days);acc-=days;if(Math.floor(sim.day/5)!==Math.floor((sim.day-days)/5))dirty=true;if(sim.day-lastSavedDay>=100)save().catch(err=>toast(`Автосохранение: ${err.message}`));}}movementFraction=Math.max(0,Math.min(1,acc));if(now-lastStats>550){updateHUD();lastStats=now;}drawFrame();}
+function captureBlend(){
+ modeBlend=new Map();
+ for(const p of sim.people){if(!p.alive)continue;
+  const pos=renderDetail==='fine'&&dayPlan?sampleSubday(p,dayPlan,movementFraction):
+   fastView.positions.get(p.id)||{x:p.x,y:p.y};
+  modeBlend.set(p.id,{x:pos.x,y:pos.y});
+ }
+ blendRemaining=.23;
+}
+function animate(now){
+ requestAnimationFrame(animate);
+ if(!active||!sim){last=now;return;}
+ const dt=Math.max(0,Math.min(.08,(now-last)/1000));last=now;
+ if(speed>0){
+  const step=integrateClock(acc,dt,speed);
+  acc=step.phase;
+  if(step.days){
+   const prior=sim.day;
+   advanceDays(sim,step.days);
+   if(renderDetail==='fine'){dayPlan=planSubday(sim);dirty=true;}
+   else if(Math.floor(sim.day/5)!==Math.floor(prior/5))dirty=true;
+   if(sim.day-lastSavedDay>=100)save().catch(err=>toast(`Автосохранение: ${err.message}`));
+  }
+  if(renderDetail==='fine'&&(!dayPlan||dayPlan.day!==sim.day))dayPlan=planSubday(sim);
+ }
+ movementFraction=Math.max(0,Math.min(1,acc));
+ if(renderDetail==='coarse'&&speed>0)advanceFastView(fastView,sim,dt);
+ if(blendRemaining>0)blendRemaining=Math.max(0,blendRemaining-dt);
+ if(now-lastStats>500){updateHUD();lastStats=now;}
+ updateDayDial();drawFrame();
+}
 window.addEventListener('resize',()=>{resize();});document.addEventListener('visibilitychange',()=>{active=!document.hidden;if(!active)save().catch(()=>{});last=performance.now();});window.addEventListener('pagehide',()=>save().catch(()=>{}));
 async function init(){try{sim=await load();if(sim)toast('Продолжена сохранённая история');}catch(err){toast(`Локальная база: ${err.message}`);}if(!sim)sim=createWorld(43821);fitView();const village=sim.communities[0];if(village)centerOn(village.x,village.y);dirty=true;updateHUD();requestAnimationFrame(animate);}
 init();
