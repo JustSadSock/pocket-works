@@ -270,7 +270,7 @@ document.addEventListener('click',event=>{
  if(action==='home'){goto('home');return}
  if(action==='resume'){goto('play');return}
  if(action==='cancel'){modal='';render();return}
- if(action==='new'){if(session&&session.phase!=='end'){modal='new';render()}else{session=createGame(newSeed());persist();goto('play');bellAudio('bell')}return}
+ if(action==='new'){if(session){modal='new';render()}else{session=createGame(newSeed());persist();goto('play');bellAudio('bell')}return}
  if(action==='confirm-new'){session=createGame(newSeed());persist();goto('play');bellAudio('bell');return}
  if(action==='retry-seed'){modal='retry';render();return}
  if(action==='confirm-retry'){session=createGame(session.seed);persist();goto('play');bellAudio('bell');return}
