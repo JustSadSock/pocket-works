@@ -3255,5 +3255,32 @@
     "shot": 0,
     "sha256": "3ee6f78cc588ce17338510f52c27723cb4400e2441d519f9554c87723ffb70f5",
     "imageVersion": 2
+  },
+  "venets": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 54,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 54937,
+        "variance": 35.61055713361676,
+        "entropy": 1.1479205759922382,
+        "edgeDensity": 0.18551587301587302,
+        "colorfulness": 19.255859375,
+        "centerDetail": 40.56812029459343,
+        "meanLight": 220.78596069335663
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.1.0&pw_fp=1b3d8acf3846ad245522b094"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "0f5bc70cc604a7b44d77b3049490450ed9b578d8",
+    "lastAttemptAt": "2026-10-17T12:49:49.080Z"
   }
 }
