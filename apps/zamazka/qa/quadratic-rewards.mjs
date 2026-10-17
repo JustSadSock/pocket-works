@@ -33,6 +33,10 @@ function trial(phase,correct,people=[curator,viewer]){
  const index=correct?m.trueIndex:(m.trueIndex+1)%5;
  now=m.started+Math.min(duration-1,Math.round(phase*duration));
  m.send(viewer,{type:'vote',chips:ballot(index)});
+ if(m.state.phase==='voting'){
+  now=m.state.deadline+1;
+  m.send(curator,{type:'pulse'});
+ }
  const timing=m.state.voteTiming.curator.viewer[index][0]/1000;
  const audit=m.send(curator,{type:'sync'}).events[0].payload.gallery[0].scoreAudit;
  const normalized=timing*timing;
@@ -72,7 +76,7 @@ assert.equal(trial(.999,true,[curator,viewer,third]).audit.late,45,'normalizatio
  const wrongIndex=(m.trueIndex+1)%5;
  now=m.started+Math.round(duration*.2);
  m.send(viewer,{type:'vote_draft',chips:ballot(wrongIndex)});
- const first=m.state.voteTiming.curator.viewer[wrongIndex].slice();
+ const first=Array.from(m.state.voteTiming.curator.viewer[wrongIndex]);
  now=m.started+Math.round(duration*.9);
  m.send(viewer,{type:'vote',chips:ballot(wrongIndex)});
  m.send(viewer,{type:'vote_draft',chips:ballot(m.trueIndex)});
@@ -80,7 +84,7 @@ assert.equal(trial(.999,true,[curator,viewer,third]).audit.late,45,'normalizatio
  assert.deepEqual(Array.from(m.state.voteTiming.curator.viewer[wrongIndex]),first);
  assert.equal(m.state.votes.curator.viewer[wrongIndex],3);
  const audit=m.send(curator,{type:'sync'}).events[0].payload;
- assert.equal(audit.gallery,undefined,'no score details leaked during voting');
+ assert.equal(audit.gallery,null,'no score details leaked during voting');
  assertions+=3;
 }
 
