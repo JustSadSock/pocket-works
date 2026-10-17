@@ -19,7 +19,7 @@ Tap one of your own banner tokens, then a legal position or enemy. Tap your buil
 ## Multiplayer
 A PocketNet room is server-authoritative and persists while disconnected. The owner starts when both participants join. Turn ownership, recruitment economy, combat and fog are validated by the server. Each projection hides unexplored terrain, enemy units and unobserved buildings. Client revisions prevent stale commands.
 
-Backend activation requires the immutable PocketNet module snapshot and lockfile **in a separate platform change**. The app PR must stay inside apps/fog-of-conquest/.
+Backend activation is part of this coordinated app/platform release: the immutable `pocketnet/module-versions/fog-of-conquest/v1.ts` snapshot, `pocketnet/modules.lock.json` registration, and `pocketnet/hub.mjs` seat/async-retention rules travel in the same `platform-change`-labeled PR. Active matches are retained for up to six days without activity, subject to PocketNet session expiry and Cloudflare service limits.
 
 ## Rules & verification
 Run: node --test apps/fog-of-conquest/test/engine.test.mjs. Verify new game, end turn, reload, AI progression and two clients joining PocketNet. Production deployment relies on Cloudflare Workers Builds after merge.
