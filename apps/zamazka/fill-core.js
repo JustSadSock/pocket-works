@@ -6,7 +6,8 @@ export function floodFillRaster({width,height,walls,zone,output,point,color,chan
  const total=width*height;
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||
     !walls||!zone||!output||!Array.isArray(point)||!Array.isArray(color)||
-    !point.every(Number.isFinite)||color.length<3)return 0;
+    point.length!==2||!point.every(Number.isFinite)||color.length<3||
+    !color.slice(0,3).every(channel=>Number.isFinite(channel)&&channel>=0&&channel<=255))return 0;
  const wall=walls.data||walls,area=zone.data||zone,ink=output.data||output;
  const touched=changed&&changed.length>=total?changed:null;
  if(wall.length<total*4||area.length<total*4||ink.length<total*4)return 0;
