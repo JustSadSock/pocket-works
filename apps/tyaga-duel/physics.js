@@ -50,10 +50,10 @@ export function getBumpers(g) {
   if (g.arena === "pins") return [
     { x: 92, y: h * .34, r: 21, vx: 0, vy: 0 },
     { x: 268, y: h * .66, r: 21, vx: 0, vy: 0 },
-    { x: 180, y: h * .50, r: 16, vx: 0, vy: 0 }
+    { x: 251, y: h * .50, r: 16, vx: 0, vy: 0 }
   ];
   if (g.arena === "swing") return [
-    { x: 180 + 94 * Math.sin(g.elapsed * 1.36), y: h * .50, r: 26, vx: 127.84 * Math.cos(g.elapsed * 1.36), vy: 0 },
+    { x: 180 + 94 * Math.cos(g.elapsed * 1.36), y: h * .50, r: 26, vx: -127.84 * Math.sin(g.elapsed * 1.36), vy: 0 },
     { x: 92, y: h * .28, r: 14, vx: 0, vy: 0 },
     { x: 268, y: h * .72, r: 14, vx: 0, vy: 0 }
   ];
@@ -84,8 +84,8 @@ export function stepGame(g, dt = STEP) {
     const distSq = dx * dx + dy * dy;
     const min = R + p.r;
     if (distSq >= min * min) continue;
-    const distance = Math.max(.0001, Math.sqrt(distSq));
-    if (distance < .001) { dx = 0; dy = -1; }
+    if (distSq < .000001) { dx = 0; dy = g.rounds % 2 ? -1 : 1; }
+    const distance = Math.sqrt(dx * dx + dy * dy);
     const nx = dx / distance, ny = dy / distance;
     b.x += nx * (min - distance + .04);
     b.y += ny * (min - distance + .04);
