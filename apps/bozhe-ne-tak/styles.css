@@ -3,3 +3,6 @@
 .phase-list[hidden]{display:none!important}
 
 .doc-render{font-size:13px;line-height:1.65;color:#e7d5be;padding-bottom:18px;overflow-wrap:anywhere}.doc-render h1,.doc-render h2,.doc-render h3{color:#f4dec0;font-family:Georgia,serif;letter-spacing:normal;text-transform:none;margin:23px 0 10px}.doc-render h1{font-size:27px}.doc-render h2{font-size:21px}.doc-render h3{font-size:17px}.doc-render p{margin:9px 0 15px}.doc-render ul,.doc-render ol{margin:12px 0 15px;padding-left:24px;list-style:initial;display:block}.doc-render ol{list-style:decimal}.doc-render li{padding:0;margin:0 0 7px;border:0;list-style:inherit}.doc-render li::before{display:none}.doc-render pre{margin:6px 0;overflow:auto;padding:6px 0;white-space:pre;font-size:11px;color:#eacaaa;line-height:1.5}.back-document{display:inline-flex;align-items:center;min-height:44px;border:1px solid #8a6d59;background:#44362f;color:#efddc7;padding:9px 13px;border-radius:2px;cursor:pointer}.back-document:active{background:#73503a}
+
+/* Keep the launch view in one viewport; only the document inspector scrolls. */
+.app-shell{height:100dvh}
