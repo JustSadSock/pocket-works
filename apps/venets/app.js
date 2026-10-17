@@ -141,7 +141,7 @@ function buildStarts(){
     const button=element('button','start-choice'+(selectedCounty===entry.countyId?' active':''));
     button.type='button';button.dataset.county=entry.countyId;
     button.setAttribute('aria-pressed',String(selectedCounty===entry.countyId));
-    const seal=element('span','shield','♜');seal.style.setProperty('--house',SHADES[(Number(entry.dynastyId.split('-').at(-1))-1)%SHADES.length]);
+    const seal=element('span','shield');seal.append(shieldSvg(entry.dynastyId));
     const details=element('span','start-copy');
     details.append(element('strong','',entry.name),element('small','',entry.personName+' · спор с герцогом'));
     button.append(seal,details,element('span','choice-check',selectedCounty===entry.countyId?'✓':''));
@@ -414,6 +414,7 @@ function renderGame(){
   const owned=w.titles.filter(t=>t.holderId===p.id).sort((a,b)=>
     ({kingdom:3,duchy:2,county:1})[b.rank]-({kingdom:3,duchy:2,county:1})[a.rank]);
   by('ruler-seal').style.setProperty('--house',houseColor(w,p.id));
+  by('ruler-seal').replaceChildren(shieldSvg(p.dynastyId));
   label(by('ruler-name'),p.name.split(' ')[0]);
   label(by('ruler-rank'),(owned[0]?.name||'БЕЗЗЕМЕЛЬНЫЙ ПРЕТЕНДЕНТ').toLocaleUpperCase('ru-RU'));
   label(by('ruler-subtitle'),house(w,game.dynastyId)+' · '+(w.year-p.birthYear)+' лет');
