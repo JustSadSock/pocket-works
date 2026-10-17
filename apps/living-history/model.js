@@ -411,7 +411,10 @@ function maintainStorage(s,h){
  if(loss>0){h.grain=round(h.grain-loss);s.stats.spoiled=round((s.stats.spoiled||0)+loss);earn(s,h,'spoilKg',loss);}
  const builders=activeAdults(s,h).filter(p=>p.job==='home');
  if(h.storeProject){
-  if(builders.length){const worker=builders[0];worker.job='build';recordWork(worker,'build');h.storeProject.workDays+=workCapacity(worker,'build');
+  if(builders.length){const worker=builders[0],shift=availableShift(s,worker,'build',h);
+   if(!shift)return;
+   recordShift(s,h,worker,shift);recordWork(worker,'build',shift.fraction);
+   h.storeProject.workDays+=workCapacity(worker,'build')*shift.fraction;
    if(h.storeProject.workDays>=16){h.storeLevel=(h.storeLevel||0)+1;h.storeProject=null;
     event(s,'storage',`Семья ${familyName(s,h)} завершила зернохранилище`,'Ранее оплаченная древесина и шестнадцать рабочих дней',[h.id,worker.id],{capacityKg:storageCapacity(h,s)});
    }
@@ -796,9 +799,17 @@ function tendCattle(s,h,adults){
  const sheep=h.sheep||0;
  if(day>=115&&day<=280&&day%4===0&&h.fodder<(h.cattle+sheep*.27)*1100){
   const worker=adults.find(p=>p.job==='home');
-  if(worker){const hay=takeForage(s,h,145*workCapacity(worker,'herd'));
-   if(hay.taken){h.fodder=round(h.fodder+hay.taken);worker.job='herd';recordWork(worker,'herd');
-    if(hay.spot>=0){worker.x=hay.spot%SIZE;worker.y=Math.floor(hay.spot/SIZE);}
+  if(worker){
+   const cell=grazingSpots(s,h).find(i=>!s.usage[i]&&s.terrain[i]===0&&s.pasture[i]>0);
+   if(cell!==undefined){
+    const shift=availableShift(s,worker,'herd',{x:cell%SIZE,y:Math.floor(cell/SIZE)});
+    if(shift){
+     const hay=takeForage(s,h,145*workCapacity(worker,'herd')*shift.fraction);
+     if(hay.taken){
+      h.fodder=round(h.fodder+hay.taken);
+      recordShift(s,h,worker,shift);recordWork(worker,'herd',shift.fraction);
+     }
+    }
    }
   }
  }
@@ -819,8 +830,10 @@ function tendCattle(s,h,adults){
   if(h.livestockHealth>=60&&fraction>=.75){
    const milker=adults.find(p=>p.job==='home'&&workCapacity(p,'herd')>0);
    if(milker){
-    milker.job='herd';recordWork(milker,'herd');
-    const dairy=round((h.dairyCows??h.cattle)*CALIBRATION.dairyEquivalentPerCowWeek*Math.min(1,fraction)*workCapacity(milker,'herd'));
+    const shift=availableShift(s,milker,'herd',h);
+    if(!shift)return;
+    recordShift(s,h,milker,shift);recordWork(milker,'herd',shift.fraction);
+    const dairy=round((h.dairyCows??h.cattle)*CALIBRATION.dairyEquivalentPerCowWeek*Math.min(1,fraction)*workCapacity(milker,'herd')*shift.fraction);
     h.dairy=round((h.dairy||0)+dairy);s.stats.dairyProduced=round((s.stats.dairyProduced||0)+dairy);
    }
   }
