@@ -133,7 +133,7 @@ export function die(world,{personId,cause='natural-mortality'}={}) {
   if(formerSpouse) {
     const spouse=findPerson(world,formerSpouse);
     if(spouse?.spouseId===dead.id) spouse.spouseId=null;
-    dead.spouseId=null;
+    // Historical spouse reference remains on deceased person; the widow is now free to remarry.
   }
   for(const title of world.titles) title.claims=title.claims.filter(c=>c.personId!==dead.id);
   world.stats.deaths++;
@@ -231,7 +231,6 @@ export function seedFamilyFoundations(world) {
     person.marriages.push({spouseId:spouse.id,year:world.year});
     spouse.marriages.push({spouseId:person.id,year:world.year});
     // Seed a few historically possible existing children, with no post-foundation birth events.
-    const older=world.year-Math.min(40,age);
     const maxChildAge=Math.max(0,Math.min(12,Math.min(world.year-person.birthYear,world.year-spouse.birthYear)-18));
     const count=maxChildAge>0?randomInt(world,3):0;
     for(let c=0;c<count;c++) {
