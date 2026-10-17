@@ -40,6 +40,7 @@ export function changeTitleHolder(world, { titleId, newHolderId, cause }) {
   if (title.holderId === newHolderId) return null;
   const oldHolderId = title.holderId;
   title.holderId = newHolderId;
+  if (Array.isArray(title.claims)) title.claims=title.claims.filter(c=>c.personId!==newHolderId);
   if (Array.isArray(title.history)) title.history.push({year:world.year,from:oldHolderId,to:newHolderId,cause});
   return recordEvent(world, 'title-transfer', cause, { titleId, oldHolderId, newHolderId });
 }
