@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.40.15';
+const CACHE_NAME = 'zamazka-v1.40.16';
 const ART_CACHE = 'zamazka-artworks-v1.12.5';
-const APP_VERSION = '1.40.15';
+const APP_VERSION = '1.40.16';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Бонус за ранний точный голос, до 40 очков на монету.","Реставратору начисляется бонус за позднее обнаружение и отсутствие верных голосов.","Монеты и их время регистрируются сервером, прежние комнаты используют старые правила."];
