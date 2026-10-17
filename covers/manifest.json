@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "8e6c9ad7a0ced23bac58f0874002ef0610ae7617",
+    "revision": "ed70f25f4da7661a123acdc2303f57f195766c23",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "ae1c6280be4341f6d5ea2d9a61598c9b6d5f14051f88dde61ac35d127cb43016",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "8e6c9ad7a0ced23bac58f0874002ef0610ae7617",
-    "lastAttemptAt": "2026-10-17T13:02:07.569Z",
+    "lastAttemptRevision": "ed70f25f4da7661a123acdc2303f57f195766c23",
+    "lastAttemptAt": "2026-10-17T13:39:08.041Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3259,28 +3259,28 @@
   "venets": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 54,
+      "bestScore": 53,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 54937,
-        "variance": 35.61055713361676,
-        "entropy": 1.1479205759922382,
-        "edgeDensity": 0.18551587301587302,
-        "colorfulness": 19.255859375,
-        "centerDetail": 40.56812029459343,
-        "meanLight": 220.78596069335663
+        "bytes": 54938,
+        "variance": 35.55385121629756,
+        "entropy": 1.1415785059520285,
+        "edgeDensity": 0.18501984126984128,
+        "colorfulness": 19.26416015625,
+        "centerDetail": 40.538849517019734,
+        "meanLight": 220.8596149902316
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.1.0&pw_fp=1b3d8acf3846ad245522b094"
+      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.2.0&pw_fp=ea410fb02a2355029a996f43"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a673dd549277c8f50107091f7156eed211fa119b",
-    "lastAttemptAt": "2026-10-17T13:14:46.554Z"
+    "lastAttemptRevision": "e9e81ecae42a4cd8dd44244abc430d97e00768f0",
+    "lastAttemptAt": "2026-10-17T13:38:56.222Z"
   }
 }
