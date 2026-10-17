@@ -15,22 +15,24 @@ export const FINAL_SUBMISSION_GRACE_MS=12000;
 type Stroke={c:string;s:number;t:string;p:number[][]};
 type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type Chips=number[];
+type VoteTiming=Record<string,Record<string,number[][]>>;
+type ScoreAudit={byVoter:Record<string,{eye:number;base:number;speed:number;correct:number}>;mask:number;base:number;delay:number;late:number;undetected:number;correct:number;wrong:number};
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[]};
 type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
-type State={resumable?:boolean;balancedDamage?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={resumable?:boolean;balancedDamage?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,serverNow:now(),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
+ host:s.host,phase:s.phase,serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes,draft:s.drafts?.[id]??null}:null,
  author:members(s)[s.turn]||null,
  candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
- gallery:(s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>s.phase!=='reveal'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{}}):null):null
+ gallery:(s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>s.phase!=='reveal'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
@@ -38,30 +40,90 @@ function choose(s:State){
  s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1).filter(id=>!EXCLUDED_PAINTINGS.has(id))).slice(0,5);
  // Assign each restorer independently from the same five previewed originals.
  // Two players may receive one painting but different damaged fragments.
- s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.voteDrafts={};s.turn=0;s.revealed=false;
+ s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.voteDrafts={};s.voteTiming={};s.turn=0;s.revealed=false;
  members(s).forEach(p=>s.assignments[p.id]={art:s.selected[Math.floor(Math.random()*s.selected.length)],
   variation:s.balancedDamage?0x100000000+Math.floor(Math.random()*0x100000000):Math.floor(Math.random()*0xffffffff),strokes:null});
  s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
 }
-function completeVotes(s:State){
- // Three brass tokens per target. Every token on the restored canvas pays
- // 100 in a two-player match. Normalize by possible other voters so scores
- // stay comparable between duos and larger groups. Wrong tokens pay the
- // restorer instead; no explicit punishment for a wrong guess.
- const others=Math.max(1,members(s).length-1);
- for(const p of members(s)){
-  const index=s.selected.indexOf(s.assignments[p.id]?.art);
-  const ballots=Object.values(s.votes[p.id]||{}).filter(Array.isArray);
-  const correct=ballots.reduce((n,chips)=>n+(chips[index]||0),0);
-  const total=ballots.reduce((n,chips)=>n+chips.reduce((a,b)=>a+b,0),0);
-  s.scores[p.id].mask+=Math.round(50*(total-correct)/others);
-  let eye=0;
-  for(const q of members(s)){
-   if(q.id===p.id)continue;
-   const ballot=s.votes[q.id]?.[p.id];
-   if(Array.isArray(ballot))eye+=ballot[s.selected.indexOf(s.assignments[q.id]?.art)]||0;
+const VOTE_WINDOW_MS=25500;
+const RATE_SPEED=40; // early correct guess, maximum per coin
+const RATE_DECOY_DELAY=20; // late wrong guess, maximum per coin
+const RATE_DISCOVERY_DELAY=15; // author resisted recognition until late
+const UNDETECTED_BONUS=30; // author: at least one cast vote, zero correct guesses
+// A later difficulty selector can pass a multiplier for the RESTORER only;
+// neutral difficulty=1 preserves today's unweighted artwork assignments.
+function recordVoteTiming(s:State,target:string,voter:string,chips:Chips){
+ s.voteTiming||={};s.voteTiming[target]||={};
+ const old=s.voteTiming[target][voter]||[[],[],[],[],[]];
+ // Store millisecond-level elapsed fractions, normalized to 0–1000.
+ // No client-sent clock is ever trusted. Relative deadline remains correct
+ // if PocketNet extends the round following a connection pause.
+ const elapsed=Math.max(0,Math.min(1000,Math.round(
+  (1-(s.deadline-now())/VOTE_WINDOW_MS)*1000)));
+ s.voteTiming[target][voter]=chips.map((n,i)=>{
+  const prior=Array.isArray(old[i])?old[i]:[];
+  return Array.from({length:n},(_,j)=>j<prior.length?prior[j]:elapsed);
+ });
+}
+function scoreTurn(s:State,authorId:string,difficultyWeight=1):ScoreAudit{
+ const others=Math.max(1,members(s).length-1),assignment=s.assignments[authorId];
+ const correctIndex=s.selected.indexOf(assignment?.art);
+ const byVoter:ScoreAudit['byVoter']={};
+ let correct=0,wrong=0,missDelay=0,catchDelay=0;
+ for(const voter of members(s)){
+  if(voter.id===authorId)continue;
+  const ballot=s.votes[authorId]?.[voter.id];
+  if(!Array.isArray(ballot))continue;
+  const times=s.voteTiming?.[authorId]?.[voter.id]||[];
+  let hit=0,speed=0;
+  for(let i=0;i<5;i++){
+   const qty=Math.max(0,Math.min(3,Number(ballot[i])||0));
+   for(let n=0;n<qty;n++){
+    // A direct submission (without a preceding draft) is timestamped by
+    // recordVoteTiming on receipt; legacy missing metadata earns no
+    // early-guesser advantage.
+    const fraction=Math.max(0,Math.min(1,Number(times[i]?.[n]??1000)/1000));
+    if(i===correctIndex){hit++;correct++;speed+=1-fraction;catchDelay+=fraction;}
+    else{wrong++;missDelay+=fraction;}
+   }
   }
-  s.scores[p.id].eye+=Math.round(100*eye/others);
+  const base=Math.round(100*hit/others);
+  const fast=Math.round(RATE_SPEED*speed/others);
+  byVoter[voter.id]={eye:base+fast,base,speed:fast,correct:hit};
+ }
+ const weight=Number.isFinite(difficultyWeight)?Math.max(.5,Math.min(2,difficultyWeight)):1;
+ const base=Math.round(50*wrong/others*weight);
+ const delay=Math.round(RATE_DECOY_DELAY*missDelay/others*weight);
+ const late=Math.round(RATE_DISCOVERY_DELAY*catchDelay/others*weight);
+ const undetected=wrong>0&&correct===0?Math.round(UNDETECTED_BONUS*weight):0;
+ return {byVoter,mask:base+delay+late+undetected,base,delay,late,undetected,correct,wrong};
+}
+function completeVotes(s:State){
+ if(s.revealed)return;
+ if(!s.timedScoring){
+  // Older room state created before timed scoring keeps legacy math.
+  const others=Math.max(1,members(s).length-1);
+  for(const p of members(s)){
+   const index=s.selected.indexOf(s.assignments[p.id]?.art);
+   const ballots=Object.values(s.votes[p.id]||{}).filter(Array.isArray);
+   const correct=ballots.reduce((n,chips)=>n+(chips[index]||0),0);
+   const total=ballots.reduce((n,chips)=>n+chips.reduce((a,b)=>a+b,0),0);
+   s.scores[p.id].mask+=Math.round(50*(total-correct)/others);
+   let eye=0;
+   for(const q of members(s)){
+    if(q.id===p.id)continue;
+    const ballot=s.votes[q.id]?.[p.id];
+    if(Array.isArray(ballot))eye+=ballot[s.selected.indexOf(s.assignments[q.id]?.art)]||0;
+   }
+   s.scores[p.id].eye+=Math.round(100*eye/others);
+  }
+ }else{
+  for(const author of members(s)){
+   const audit=scoreTurn(s,author.id);
+   s.scores[author.id].mask+=audit.mask;
+   for(const [voterId,award] of Object.entries(audit.byVoter))
+    if(s.scores[voterId])s.scores[voterId].eye+=award.eye;
+  }
  }
  s.revealed=true;
 }
@@ -76,7 +138,7 @@ function step(s:State){
   // In-flight chunks must not survive the deadline: their complete predecessor
   // is already installed, and keeping them can bloat a full eight-player room.
   s.draftAssemblies={};s.drafts={};
-  s.phase='voting';s.turn=0;s.deadline=now()+25500;
+  s.phase='voting';s.turn=0;s.deadline=now()+VOTE_WINDOW_MS;
  }else if(s.phase==='voting'){
   // At the deadline, count 1- and 2-coin ballots as submitted votes.
   const target=members(s)[s.turn]?.id;
@@ -84,12 +146,19 @@ function step(s:State){
    s.votes[target]||={};
    for(const [voter,coins] of Object.entries(s.voteDrafts?.[target]||{}))
     if(voter!==target&&members(s).some(p=>p.id===voter)&&!(voter in s.votes[target])&&
-      Array.isArray(coins)&&coins.reduce((sum,n)=>sum+n,0)>0)s.votes[target][voter]=[...coins];
+      Array.isArray(coins)&&coins.reduce((sum,n)=>sum+n,0)>0){
+      s.votes[target][voter]=[...coins];
+      if(s.timedScoring){
+       // Earlier draft timestamps survive deadline-commit. Never treat
+       // unfinished coins as if they were only placed at 0:00.
+       if(!s.voteTiming?.[target]?.[voter])recordVoteTiming(s,target,voter,coins);
+      }
+    }
   }
   // Every completed vote is immediately followed by its own answer.
   s.phase='reveal';s.deadline=now()+19000;
  }else if(s.phase==='reveal'){
-  if(s.turn<members(s).length-1){s.turn++;s.phase='voting';s.deadline=now()+25500;}
+  if(s.turn<members(s).length-1){s.turn++;s.phase='voting';s.deadline=now()+VOTE_WINDOW_MS;}
   else {
    completeVotes(s);
    // Untimed shared exhibition, advancing only when the host chooses.
@@ -143,7 +212,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{resumable:true,balancedDamage:true,board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{resumable:true,balancedDamage:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.phase==='lobby'&&!state.participants.some(p=>p.id===player.id)){
      state.participants.push(player);state.scores[player.id]={mask:0,eye:0};
@@ -331,15 +400,19 @@ const module: PocketModule<State>={
       return {state,events:notice(id,'Можно использовать не более трёх монет.')};
      const used=chips.reduce((sum,n)=>sum+n,0);
      if(a.type==='vote_draft'){
+      // A delayed/retried draft must never rewrite a finalized ballot.
+      if(id in (state.votes[target]||{}))return {state,events:[]};
       state.voteDrafts||={};state.voteDrafts[target]||={};
       if(used)state.voteDrafts[target][id]=[...chips] as Chips;
       else delete state.voteDrafts[target][id];
+      if(state.timedScoring)recordVoteTiming(state,target,id,chips as Chips);
       return {state,events:[]};
      }
      if(used<1)return {state,events:notice(id,'Поставь хотя бы одну монету.')};
      state.votes[target]||={};
      if(id in state.votes[target])return {state,events:[{type:'vote_saved',to:id,payload:{round:state.round,turn:state.turn}}]};
      state.votes[target][id]=[...chips] as Chips;
+     if(state.timedScoring)recordVoteTiming(state,target,id,chips as Chips);
      if(state.voteDrafts?.[target])delete state.voteDrafts[target][id];
      const acceptedTurn=state.turn;
      if(eligible(state,target,players.map(p=>p.id)).every(p=>p.id in state.votes[target]))step(state);
