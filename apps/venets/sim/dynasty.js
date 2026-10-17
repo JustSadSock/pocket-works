@@ -2,6 +2,7 @@
 // This module never changes geography or acts as political AI.
 import { randomInt } from './random.js';
 import { recordEvent, transfer, changeTitleHolder } from './transactions.js';
+import { initializePoliticalPerson } from './politics.js';
 
 export const SUCCESSION_LAWS = ['primogeniture','partition','seniority'];
 const MALE = ['Радослав','Ярослав','Всеволод','Борислав','Святополк','Мирослав','Глеб','Добромир','Лев','Олег'];
@@ -178,6 +179,7 @@ function addPerson(world,{sex,dynastyId,birthYear,parentIds=[null,null],origin='
     dynastyId,sex,birthYear,parentIds:[...parentIds],spouseId:null,
     marriages:[],alive:true,deathYear:null,origin,treasury:{...treasury}};
   world.people.push(person);
+  if(world.schemaVersion>=4) initializePoliticalPerson(world,person);
   return person;
 }
 function bringOutsider(world,sex,host,cause) {
@@ -282,7 +284,7 @@ export function demographicYear(world) {
       age>=55?20:age>=40?5:age<=3?22:age<=12?5:3;
     if(randomInt(world,1000)<risk)die(world,{personId:person.id,cause:'age-and-health'});
   }
-  for(const person of cohort) {
+  if(world.schemaVersion<4) for(const person of cohort) {
     if(!person.alive||person.spouseId)continue;
     const age=world.year-person.birthYear;
     if(age<19||age>(person.sex==='female'?39:54))continue;
