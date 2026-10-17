@@ -87,14 +87,16 @@ function update(){
  dirty=true;draw();finishCheck();
 }
 function selectNext(){const s=gameView();if(!s)return;const mine=s.units.filter(u=>u.owner===side);const i=mine.findIndex(u=>u.id===chosen?.unit);if(mine.length){chosen={unit:mine[(i+1)%mine.length].id};pendingRecruit=null;centerAt(mine[(i+1)%mine.length].r,mine[(i+1)%mine.length].c);update();}}
-function centerAt(r,c){const w=field.clientWidth,h=field.clientHeight;offX=w/2-(c+.5)*tile*zoom;offY=h/2-(r+.5)*tile*zoom;clampPan();draw();}
-function centerOnBase(animate=true){const s=gameView()||state;if(!s)return;const base=s.buildings.find(b=>b.type==='base'&&b.owner===side)||s.units.find(u=>u.owner===side);zoom=window.innerWidth<750?Math.max(.88,Math.min(1.5,(field.clientHeight+18)/(s.h*tile))):Math.min(1.4,Math.max(field.clientWidth/(s.w*tile),field.clientHeight/(s.h*tile)));zoom=Math.max(.67,zoom);if(base)centerAt(base.r+1,base.c+1);}
+function mapViewport(){const w=field.clientWidth,h=field.clientHeight;const phone=window.innerWidth<850;
+ const top=phone?36:0,bottom=phone?$('orders').offsetHeight+8:0;
+ return {w,h,top,bottom,usableH:Math.max(120,h-top-bottom)};
+}
+function centerAt(r,c){const v=mapViewport();offX=v.w/2-(c+.5)*tile*zoom;offY=v.top+v.usableH/2-(r+.5)*tile*zoom;clampPan();draw();}
+function centerOnBase(animate=true){const s=gameView()||state;if(!s)return;const base=s.buildings.find(b=>b.type==='base'&&b.owner===side)||s.units.find(u=>u.owner===side);const v=mapViewport();zoom=window.innerWidth<750?Math.max(.88,Math.min(1.5,(v.usableH+18)/(s.h*tile))):Math.min(1.4,Math.max(v.w/(s.w*tile),v.h/(s.h*tile)));zoom=Math.max(.67,zoom);if(base)centerAt(base.r+1,base.c+1);}
 function clampPan(){const s=gameView();if(!s)return;
- const w=field.clientWidth,h=field.clientHeight,sw=s.w*tile*zoom,sh=s.h*tile*zoom;
- // A small map is centered; a large map cannot expose empty space outside
- // its top/left/bottom/right edges when the player focuses a border fortress.
- offX=sw<=w?(w-sw)/2:Math.max(w-sw,Math.min(0,offX));
- offY=sh<=h?(h-sh)/2:Math.max(h-sh,Math.min(0,offY));
+ const v=mapViewport(),sw=s.w*tile*zoom,sh=s.h*tile*zoom;
+ offX=sw<=v.w?(v.w-sw)/2:Math.max(v.w-sw,Math.min(0,offX));
+ offY=sh<=v.usableH?v.top+(v.usableH-sh)/2:Math.max(v.h-v.bottom-sh,Math.min(v.top,offY));
 }
 function fitCanvas(){const r=field.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);if(r.width<1||r.height<1)return;const w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}draw();}
 function stamp(seed,r,c,k=0){let n=(seed^Math.imul(r+59,4027)^Math.imul(c+31,7919)^Math.imul(k+1,104729))>>>0;n^=n>>>16;n=Math.imul(n,2246822519);return (n>>>0)/4294967296;}
@@ -178,7 +180,7 @@ canvas.addEventListener('pointermove',e=>{
 });
 canvas.addEventListener('pointerup',e=>{if(!pointers.has(e.pointerId))return;const isTap=!gesture.moved&&pointers.size===1;const point={x:e.clientX,y:e.clientY};pointers.delete(e.pointerId);gesture.start=null;if(isTap)tapMap(point.x,point.y);});
 canvas.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);gesture.start=null;});
-function changeZoom(k){const cx=field.clientWidth/2,cy=field.clientHeight/2,old=zoom;zoom=Math.max(.45,Math.min(2.4,zoom*k));offX=cx-(cx-offX)*zoom/old;offY=cy-(cy-offY)*zoom/old;clampPan();draw();}
+function changeZoom(k){const v=mapViewport(),cx=v.w/2,cy=v.top+v.usableH/2,old=zoom;zoom=Math.max(.45,Math.min(2.4,zoom*k));offX=cx-(cx-offX)*zoom/old;offY=cy-(cy-offY)*zoom/old;clampPan();draw();}
 canvas.addEventListener('wheel',e=>{e.preventDefault();changeZoom(e.deltaY<0?1.1:.9);},{passive:false});
 canvas.addEventListener('keydown',e=>{if(e.key==='ArrowUp')offY+=25;if(e.key==='ArrowDown')offY-=25;if(e.key==='ArrowLeft')offX+=25;if(e.key==='ArrowRight')offX-=25;if(e.key==='+'||e.key==='=')changeZoom(1.15);if(e.key==='-')changeZoom(.85);clampPan();draw();});
 $('zoomIn').onclick=()=>changeZoom(1.22);$('zoomOut').onclick=()=>changeZoom(.82);$('focus').onclick=()=>centerOnBase();
