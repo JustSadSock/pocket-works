@@ -151,15 +151,34 @@ export function smudgeStroke(ctx,stroke,from=0,mask=false,zoneMask=null,aspect=W
   for(let j=1;j<=steps;j++)smudgeStamp(ctx,prev[0]+dx*j/steps,prev[1]+dy*j/steps,stroke.s,dx,dy,mask,zoneMask,aspect);
  }
 }
-function renderStrokes(ctx,strokes,zone,aspect=W/H){
- if(!strokes.some(s=>s.t==='fill'||s.t==='smudge')){strokes.forEach(s=>drawStroke(ctx,s,aspect));return}
- // Chronological raster pass: paint added after a smudge must remain sharp.
- // A separate contour mask still bounds region fills.
- const lines=layer(),paint=layer(),area=layer();
- paint.ctx.fillStyle='#e8ddc6';paint.ctx.fillRect(0,0,W,H);
- area.ctx.fillStyle='#fff';damagePath(area.ctx,zone);area.ctx.fill();
- const zoneMask=area.ctx.getImageData(0,0,area.canvas.width,area.canvas.height);
- for(const stroke of strokes){
+function renderStrokes(ctx,strokes,zone,aspect=W/H,cache=null){
+ if(!strokes.some(s=>s.t==='fill'||s.t==='smudge')){
+  if(cache)cache.state=null;
+  strokes.forEach(s=>drawStroke(ctx,s,aspect));return;
+ }
+ // A large recoloured area used to rerun EVERY preceding bucket operation
+ // on every new brush stroke or fill. Each fill works on a 1200x900 raster:
+ // the replay time therefore grew quadratically with the number of fills.
+ // Keep the chronological contour and pigment layers for an unchanged
+ // committed stroke prefix. A replacement/undo/reordering rebuilds them.
+ const prior=cache?.state;
+ const append=prior&&prior.zone===zone&&prior.aspect===aspect&&
+  prior.strokes.length<=strokes.length&&prior.strokes.every((s,i)=>s===strokes[i]);
+ let lines,paint,zoneMask,start=0;
+ if(append){
+  ({lines,paint,zoneMask}=prior);
+  start=prior.strokes.length;
+ }else{
+  lines=layer();paint=layer();
+  const area=layer();
+  paint.ctx.fillStyle='#e8ddc6';paint.ctx.fillRect(0,0,W,H);
+  area.ctx.fillStyle='#fff';damagePath(area.ctx,zone);area.ctx.fill();
+  zoneMask=area.ctx.getImageData(0,0,area.canvas.width,area.canvas.height);
+ }
+ // The paint and wall masks advance together in stroke order. Raster fills
+ // are intentionally NOT barriers for later fills.
+ for(let i=start;i<strokes.length;i++){
+  const stroke=strokes[i];
   if(stroke.t==='fill'){fillRegion(lines,paint,zoneMask,stroke.p[0],stroke.c);continue}
   if(stroke.t==='smudge'){
    smudgeStroke(paint.ctx,stroke,0,false,zoneMask,aspect);
@@ -172,6 +191,7 @@ function renderStrokes(ctx,strokes,zone,aspect=W/H){
    drawStroke(lines.ctx,stroke,aspect);lines.ctx.restore();
   }else{drawStroke(paint.ctx,stroke,aspect);drawStroke(lines.ctx,stroke,aspect)}
  }
+ if(cache)cache.state={zone,aspect,strokes:strokes.slice(),lines,paint,zoneMask};
  // The damage edge is clipped once on the final artwork.
  ctx.drawImage(paint.canvas,0,0,W,H);
 }
@@ -1077,7 +1097,8 @@ export class Editor{
      else{
        this.inkCtx.clearRect(0,0,W,H);
        this.inkCtx.fillStyle='#e8ddc6';this.inkCtx.fillRect(0,0,W,H);
-       renderStrokes(this.inkCtx,this.strokes,this.zone,artworkAspect(img));
+       renderStrokes(this.inkCtx,this.strokes,this.zone,artworkAspect(img),
+         (this.inkRasterCache ||= {}));
      }
      this.hasRasterInk=this.strokes.some(stroke=>stroke.t==='fill'||stroke.t==='smudge');
      this.pendingInkStrokes=[];this.cachedRevision=rev;this.displayRevision=-1;
@@ -1143,5 +1164,6 @@ export class Editor{
  for(const cb of this.paintWaiters||[])cb();
  this.paintWaiters=[];
  this.baseLayer=null;this.inkLayer=null;this.inkCtx=null;this.displayLayer=null;this.liveLayer=null;this.smudgePreviewLayer=null;this.smudgePreviewWorking=null;this.smudgeZoneMask=null;
+ this.inkRasterCache=null;
  this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.up);this.canvas.removeEventListener('lostpointercapture',this.lostCapture);this.viewport.removeEventListener('lostpointercapture',this.lostCapture);window.removeEventListener('pointerup',this.globalPointerUp);window.removeEventListener('pointercancel',this.globalPointerUp);this.viewport.removeEventListener('wheel',this.wheel);this.viewport.removeEventListener('pointerleave',this.cursorLeave);this.armButton?.removeEventListener('pointerdown',this.armDown);this.armButton?.removeEventListener('pointerup',this.armUp);this.armButton?.removeEventListener('pointercancel',this.armUp);this.armButton?.removeEventListener('lostpointercapture',this.armUp);this.armButton?.removeEventListener('contextmenu',this.armContext);window.removeEventListener('pointerup',this.armGlobalUp);window.removeEventListener('pointercancel',this.armGlobalUp);this.viewport.removeEventListener('mousedown',this.preventMiddle);this.viewport.removeEventListener('auxclick',this.preventMiddle);this.viewport.removeEventListener('contextmenu',this.preventRightMenu);this.viewport.removeEventListener('pointerdown',this.frameDown);this.viewport.removeEventListener('pointermove',this.frameMove);this.viewport.removeEventListener('pointerup',this.frameUp);this.viewport.removeEventListener('pointercancel',this.frameUp);this.root.removeEventListener('click',this.actions);this.root.removeEventListener('input',this.slider);window.removeEventListener('blur',this.keyboardBlur);window.removeEventListener('keydown',this.keyboardDown);window.removeEventListener('keyup',this.keyboardUp);window.removeEventListener('resize',this.resize)}
 }
