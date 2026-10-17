@@ -8,15 +8,21 @@ const mix32=n=>{n=(n^(n>>>16))>>>0;n=Math.imul(n,0x7feb352d);n=(n^(n>>>15))>>>0;
 export function atlasNoise(seed,key){return mix32((seed>>>0)^Math.imul(key+1,0x9e3779b1))/4294967296}
 const round=n=>+n.toFixed(2);
 function sharedEdge(a,b,seed){
-  const points=[a,b].sort((p,q)=>p.key-q.key);
-  const [p,q]=points;
+  const [p,q]=[a,b].sort((u,v)=>u.key-v.key);
   const dx=q.x-p.x,dy=q.y-p.y,dist=Math.hypot(dx,dy)||1;
-  const side=atlasNoise(seed,p.key*97+q.key*19)-.5;
-  const bend=side*14;
-  const middle={x:round((p.x+q.x)/2-dy/dist*bend),
-    y:round((p.y+q.y)/2+dx/dist*bend)};
-  const endPoints=a.key===p.key?[a,middle,b]:[a,middle,b];
-  return endPoints;
+  const bias=(atlasNoise(seed,p.key*97+q.key*19)-.5)*76;
+  const ripple=(atlasNoise(seed,p.key*151+q.key*53)-.5)*23;
+  const samples=[p];
+  for(let i=1;i<=5;i++){
+    const t=i/6;
+    // The same coastline/feudal boundary is used from both sides, in
+    // opposite traversal order. No gaps, random-jump seams or rectilinear grid.
+    const offset=Math.sin(Math.PI*t)*bias+Math.sin(3*Math.PI*t)*ripple;
+    samples.push({x:round(p.x+t*dx-dy/dist*offset),
+      y:round(p.y+t*dy+dx/dist*offset)});
+  }
+  samples.push(q);
+  return a.key===p.key?samples:samples.reverse();
 }
 export function makeAtlasGeometry(seed=413){
   const vertices=[];
@@ -24,8 +30,8 @@ export function makeAtlasGeometry(seed=413){
     const row=[];
     for(let x=0;x<=COLS;x++){
       const key=y*(COLS+1)+x,edge=x===0||x===COLS||y===0||y===ROWS;
-      row.push({key,x:round(X0+x*CW+(atlasNoise(seed,key*2)-.5)*(edge?26:48)),
-        y:round(Y0+y*CH+(atlasNoise(seed,key*2+1)-.5)*(edge?24:46))});
+      row.push({key,x:round(X0+x*CW+(atlasNoise(seed,key*2)-.5)*(edge?38:78)),
+        y:round(Y0+y*CH+(atlasNoise(seed,key*2+1)-.5)*(edge?32:65))});
     }
     vertices.push(row);
   }
