@@ -1,0 +1,24 @@
+{
+  "id": "/apps/tyaga-duel/",
+  "name": "ТЯГА",
+  "short_name": "ТЯГА",
+  "description": "Гравитационная дуэль на двоих или против ИИ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#e5e4dc",
+  "theme_color": "#e5e4dc",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
