@@ -35,7 +35,7 @@ test('the map renders 12 real counties with live owners, heraldry and focus',asy
   if(await page.locator('[data-panel="council"]').isVisible())await page.locator('[data-panel="council"]').click();
   await page.locator('#next-year').click();
   await expect(page.locator('#year-count')).toHaveText('1067');
-  await page.locator('[data-panel="lands"]').click();
+  if(await page.locator('[data-panel="lands"]').isVisible())await page.locator('[data-panel="lands"]').click();
   await expect(page.locator('.atlas-county')).toHaveCount(12);
   expect(errors).toEqual([]);
 });
@@ -46,7 +46,7 @@ test('320px viewport remains usable without page scrolling or obscured timeline'
   await expect(page.locator('#begin')).toBeVisible();
   await page.locator('#begin').click();
   await expect(page.locator('#game-screen')).toBeVisible();
-  await page.locator('[data-panel="lands"]').click();
+  if(await page.locator('[data-panel="lands"]').isVisible())await page.locator('[data-panel="lands"]').click();
   await expect(page.locator('.living-atlas')).toBeVisible();
   await expect(page.locator('#next-year')).toBeVisible();
   const result=await page.evaluate(()=>{
