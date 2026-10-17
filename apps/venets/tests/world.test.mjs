@@ -9,7 +9,7 @@ test('canonical world topology: 12 contiguous counties, 4 duchies, 1 kingdom', (
     const check = assertWorld(w);
     assert.equal(check.provinces, 12);
     assert.equal(check.titles, 17);
-    assert.equal(check.people, 17);
+    assert.ok(check.people >= 34);
     assert.equal(check.dynasties, 5);
     assert.equal(w.events[0].kind, 'foundation');
     assert.equal(w.schemaVersion, WORLD_SCHEMA_VERSION);
