@@ -136,5 +136,5 @@ test('resource journal cannot be forged by changing both a wallet and ledger', (
   const attack=loadWorld(serializeWorld(base));
   attack.provinces[0].treasury.grain+=20;
   attack.ledger.created.grain+=20;
-  assert.throws(()=>assertWorld(attack), /created ledger\/event mismatch/);
+  assert.throws(()=>assertWorld(attack), /ledger-event mismatch/);
 });
