@@ -87,7 +87,7 @@ function chapter(phaseTitle){
 }
 function riteStage(mood,art,subtitle){
  return '<div class="shrine-scene" data-mood="'+mood+'"><div class="temple-depth" aria-hidden="true"><div class="temple-arch"></div><div class="temple-column left"></div><div class="temple-column right"></div></div>'+
- '<div class="god-shell">'+mask(mood)+'</div>'+
+ '<div class="god-shell">'+mask(mood)+'</div><div class="miracle-vfx" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>'+
  '<div class="altar-platform '+(session.actions.height==='high'?'raised':'')+'"><div class="altar-shaft" aria-hidden="true"></div>'+
  '<div class="altar-disc">'+(art||'<span class="empty-altar">?</span>')+'</div></div>'+
  (subtitle?'<div class="scene-subtitle">'+toHtml(subtitle)+'</div>':'')+'</div>';
@@ -133,7 +133,7 @@ function judgment(){
  return layout(chapter()+ '<div class="work-space verdict-space"><section class="shrine-column">'+
  riteStage(mood,offeringArt(obj.id,108),headline)+'</section><section class="work-column verdict-column">'+
  '<div class="section-label">'+toHtml(rit.title)+'</div><h2 class="verdict-title '+mood+'">'+headline+'</h2>'+
- '<p class="verdict-copy">'+subtitle+'</p>'+
+ '<p class="verdict-copy">'+subtitle+'</p><p class="miracle-text">'+toHtml(j.miracleText||'')+'</p>'+
  '<div class="score-seal"><span>СУД НЕБЕС</span><strong>'+j.score+'</strong><span>Милость: <b>'+(j.faithDelta>0?'+':'')+j.faithDelta+'</b></span></div>'+
  '<div class="score-breakdown">'+j.criteria.map(scoreLine).join('')+
  j.doctrineResults.map(d=>'<div class="score-row dogma-score"><span>'+toHtml(getDoctrine(d.id).name)+': '+toHtml(d.text)+'</span>'+
@@ -169,7 +169,7 @@ function ending(){
   return '<li class="chronicle-entry"><span class="chronicle-no">'+String(i+1).padStart(2,'0')+'</span>'+
   '<div class="chronicle-icon">'+offeringArt(h.itemId,61)+'</div><div><b>'+toHtml(h.riteTitle)+'</b>'+
   '<p>'+toHtml(getItem(h.itemId).name)+' · '+(h.verdict==='bless'?'благословён':h.verdict==='wrath'?'навлёк гнев':'вызвал сомнения')+
-  ' · '+h.score+' очк.</p>'+(d?'<span class="chronicle-law">НОВЫЙ ДОГМАТ: '+toHtml(d.name)+'</span>':'')+'</div></li>';
+  ' · '+h.score+' очк.</p><p class="chronicle-miracle">'+toHtml(h.miracleText||'')+'</p>'+(d?'<span class="chronicle-law">НОВЫЙ ДОГМАТ: '+toHtml(d.name)+'</span>':'')+'</div></li>';
  }).join('');
  return '<section class="ending"><div class="ending-main">'+mask(win?'bless':'wrath',true)+
  '<div class="chapter">КОНЕЦ ПАЛОМНИЧЕСТВА</div><h1>'+title+'</h1><p>'+paragraphs+'</p>'+

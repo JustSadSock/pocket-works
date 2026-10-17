@@ -98,7 +98,16 @@ export function evaluateRite(rite,action,doctrines=[]){
  const score=criteria.reduce((n,c)=>n+c.score,0)+doctrineResults.reduce((n,d)=>n+d.delta,0);
  const verdict=score>=4?'bless':score>=3?'doubt':'wrath';
  const delta=verdict==='bless'?2:verdict==='wrath'?-2:0;
- return {score,criteria,doctrineResults,verdict,faithDelta:delta,selected:item.id};
+ // Four authored miracle families arise from real actions, not a random joke generator.
+ const miracleId=item.id==='goose'?'goose':action.treatment==='gild'?'gilded':
+  action.bell===3?'thunder':'ash';
+ const miracleText={
+  goose:'Гусь оглядел прихожан и объявил себя единственным настоящим епископом.',
+  gilded:'Небо пролилось золотой пылью. ОГО потребовал выдать её за пожертвования.',
+  thunder:'Колокол ударил снова без участия звонаря. Никто не посмел возразить.',
+  ash:'С алтаря поднялся клуб пыли. Совет признал его священным дымом.'
+ }[miracleId];
+ return {score,criteria,doctrineResults,verdict,faithDelta:delta,selected:item.id,miracleId,miracleText};
 }
 function makeOffers(state,judgment){
  const item=getItem(state.actions.itemId);

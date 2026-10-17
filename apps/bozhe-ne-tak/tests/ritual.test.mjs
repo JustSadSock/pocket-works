@@ -78,3 +78,13 @@ test('no corruption or external executable input through storage',()=>{
  assert.equal(loadGame({...s,phase:'god_mode'}),null);
  assert.equal(loadGame(null),null);
 });
+
+test('four miracle families are causally linked to offerings and sound',()=>{
+ const r=getRite(createGame(23));
+ const a=evaluateRite(r,{itemId:'goose',treatment:'wash',bell:1,height:'low'},[]);
+ const b=evaluateRite(r,{itemId:'bread',treatment:'gild',bell:2,height:'low'},[]);
+ const c=evaluateRite(r,{itemId:'key',treatment:'smoke',bell:3,height:'low'},[]);
+ const d=evaluateRite(r,{itemId:'stone',treatment:'wash',bell:1,height:'low'},[]);
+ assert.deepEqual([a.miracleId,b.miracleId,c.miracleId,d.miracleId],['goose','gilded','thunder','ash']);
+ for(const x of [a,b,c,d])assert.ok(x.miracleText.length>30);
+});
