@@ -28,9 +28,10 @@ function sumInitial(entities, good) {
   return entities.reduce((sum, entity) => sum + entity.treasury[good], 0);
 }
 
-export function createWorld(seed = 1, {size=12,profile='full'}={}) {
+export function createWorld(seed = 1, {size=12,profile='full',experiment=null}={}) {
   if(![12,48].includes(size)||!['full','simple'].includes(profile))throw new RangeError('Unknown world experiment');
-  if(size===48){const w=createExpandedWorld(seed);w.profile=profile;assertWorld(w);return w;}
+  if(size===48){const w=createExpandedWorld(seed);w.profile=profile;
+    if(experiment)w.experiment={...experiment};assertWorld(w);return w;}
   const sourceSeed = normalizeSeed(seed);
   const world = {
     schemaVersion: WORLD_SCHEMA_VERSION,
@@ -101,6 +102,7 @@ export function createWorld(seed = 1, {size=12,profile='full'}={}) {
     world.ledger.initial[good] = sumInitial([...world.people, ...world.provinces], good);
   }
   if(profile==='simple')world.profile='simple';
+  if(experiment)world.experiment={...experiment};
   recordEvent(world, 'foundation', 'seeded-world', {
     seed: sourceSeed, kingdom: 'ki-01', provinces: 12, titles: 17, people: world.people.length
   });
@@ -159,7 +161,7 @@ export function stepYear(world, { excludePlayerId = null } = {}) {
   }
   demographicYear(world);
   const beforePolitics=world.events.length;
-  if(world.profile!=='simple')politicalYear(world,{
+  if(world.profile!=='simple'&&world.experiment?.diplomacy!==false)politicalYear(world,{
     maxActions:world.provinces.length===48?28:12,
     excludeIds:excludePlayerId?[excludePlayerId]:[]
   });
