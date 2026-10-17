@@ -8,7 +8,7 @@ import {timeAt} from './work-time.js';
 
 const clamp=(v,min=0,max=1)=>Math.min(max,Math.max(min,v));
 const smooth=v=>{const x=clamp(v);return x*x*(3-2*x);};
-const h32=(a,b,c=0)=>{let n=Math.imul((a|0)+0x51ed270b,1597334677)^Math.imul((b|0)+103,3812015801)^Math.imul((c|0)+97,1103515245);n=Math.imul(n^(n>>>16),2246822519);return (n^(n>>>13)>>>0)/4294967296;};
+const h32=(a,b,c=0)=>{let n=Math.imul((a|0)+0x51ed270b,1597334677)^Math.imul((b|0)+103,3812015801)^Math.imul((c|0)+97,1103515245);n=Math.imul(n^(n>>>16),2246822519);return ((n^(n>>>13))>>>0)/4294967296;};
 const move=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
 export const FINE_MAX_SPEED=1;
