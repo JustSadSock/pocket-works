@@ -97,30 +97,35 @@ function grazingWaypoint(s,h,i,phase,anchor){
  if(memo.size>5000)memo.clear();memo.set(key,point);
  return point;
 }
+function grazingMotion(s,h,i,day,anchor){
+ const duration=3+Math.floor(hash(h.id,i,91)*4);
+ const absolute=day+hash(s.seed,h.id+i*17,18)*duration;
+ const phase=Math.floor(absolute/duration),t=smooth(frac(absolute/duration));
+ const from=grazingWaypoint(s,h,i,phase,anchor),to=grazingWaypoint(s,h,i,phase+1,anchor);
+ if(from.x===to.x&&from.y===to.y)return from;
+ return pathPosition(pathFor(s,from,to),t)||from;
+}
 export function cattlePosition(h,day,i,s=null){
  const grazing=day%365>=80&&day%365<=300&&Number.isInteger(h.lastPastureCell);
  const goal=grazing?{x:h.lastPastureCell%LAND_SIZE,y:(h.lastPastureCell/LAND_SIZE)|0}:h;
  const anchor=s?(nearestLand(s,goal)||h):goal;
  if(!s)return {x:anchor.x+((i*17+h.id*3)%7-3)*.3,y:anchor.y+((i*11+h.id)%5-2)*.34};
  if(!grazing){
-  // In winter the animals remain at the actual farm, with distinct places.
   const at=yardPosition(s,h,h.id+i*31+17);
   return {x:at.x+.17*Math.cos(i*2.39),y:at.y+.17*Math.sin(i*2.39)};
  }
- const duration=3+Math.floor(hash(h.id,i,91)*4);
- const absolute=day+hash(s.seed,h.id+i*17,18)*duration;
- const phase=Math.floor(absolute/duration),t=smooth(frac(absolute/duration));
- let from=grazingWaypoint(s,h,i,phase,anchor);
- const to=grazingWaypoint(s,h,i,phase+1,anchor);
- // When the physical herd changes pasture today, interpolate the trip from
- // yesterday's recorded pasture rather than teleporting all animals at once.
  if(Number.isInteger(h.prevPastureCell)&&h.prevPastureCell!==h.lastPastureCell
     &&h.pastureMovedDay===Math.floor(day)){
   const old={x:h.prevPastureCell%LAND_SIZE,y:(h.prevPastureCell/LAND_SIZE)|0};
   const prior=nearestLand(s,old);
-  if(prior)from=grazingWaypoint(s,h,i,phase,prior);
-  return pathPosition(pathFor(s,from,to),smooth(frac(day)))||from;
+  if(prior){
+   const first=Math.floor(day),start=grazingMotion(s,h,i,first,prior);
+   const end=grazingMotion(s,h,i,first+1,anchor),t=smooth(frac(day));
+   const route=pathFor(s,start,end);
+   if(route.length>1){const points=route.slice();points[0]=start;points[points.length-1]=end;
+    return pathPosition(points,t)||start;}
+   return t<1?start:end;
+  }
  }
- if(from.x===to.x&&from.y===to.y)return from;
- return pathPosition(pathFor(s,from,to),t)||from;
+ return grazingMotion(s,h,i,day,anchor);
 }
