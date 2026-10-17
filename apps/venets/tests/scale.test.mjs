@@ -67,3 +67,15 @@ test('all four counterfactual switches are individually valid and deterministic'
   assert.equal(serializeWorld(w),serializeWorld(other),component);
  }
 });
+
+test('extended 48-land campaign completes its full ninety-year founding chronicle',()=>{
+ const g=startCampaign({seed:413,countyId:'co-02',size:48});
+ for(let i=0;i<90;i++)campaignYear(g);
+ assert.equal(g.world.year,1156);
+ assert.equal(g.chapterComplete,true);
+ assertWorld(g.world);
+ const saved=serializeCampaign(g);
+ const restored=loadCampaign(saved);
+ assert.equal(restored.world.provinces.length,48);
+ assert.equal(serializeCampaign(restored),saved);
+});
