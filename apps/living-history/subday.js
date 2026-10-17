@@ -4,10 +4,11 @@
 // schedules with traversable routes. Above 1 day/sec the view uses smoothed
 // daily endpoints, never invented fractional transactions or births.
 import {walkPath,pathPosition,nearestLand,walkable} from './navigation.js';
+import {timeAt} from './work-time.js';
 
 const clamp=(v,min=0,max=1)=>Math.min(max,Math.max(min,v));
 const smooth=v=>{const x=clamp(v);return x*x*(3-2*x);};
-const h32=(a,b,c=0)=>{let n=Math.imul((a|0)+0x51ed270b,1597334677)^Math.imul((b|0)+103,3812015801)^Math.imul((c|0)+97,1103515245);n=Math.imul(n^(n>>>16),2246822519);return (n^(n>>>13)>>>0)/4294967296;};
+const h32=(a,b,c=0)=>{let n=Math.imul((a|0)+0x51ed270b,1597334677)^Math.imul((b|0)+103,3812015801)^Math.imul((c|0)+97,1103515245);n=Math.imul(n^(n>>>16),2246822519);return ((n^(n>>>13))>>>0)/4294967296;};
 const move=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
 export const FINE_MAX_SPEED=1;
@@ -44,9 +45,11 @@ export function planSubday(world){
   const from=nearestLand(world,h||p)||{x:p.x,y:p.y};
   const to=nearestLand(world,p.job==='home'&&h?h:p)||from;
   const traveling=Boolean(p.travel&&p.travel.end>world.day);
-  const job=(p.job||'home');
+  const shift=p.dailyShift?.day===world.day?p.dailyShift:null;
+  const job=shift?.kind||p.job||'home';
   counters[traveling?'travel':job in counters?job:'other']++;
-  const route=(job!=='home'||traveling)&&!same(from,to)?walkPath(world,from,to):[from];
+  const start=shift?.from||from,end=shift?.to||to;
+  const route=(job!=='home'||traveling)&&!same(start,end)?walkPath(world,start,end):[start];
   const length=Math.max(0,route.length-1);
   const offset=h32(world.seed,p.id,world.day);
   const departure=.16+offset*.12;
@@ -54,8 +57,11 @@ export function planSubday(world){
   const arrival=Math.min(.55,departure+outward);
   const returnStart=.76+h32(p.id,world.day,43)*.07;
   const returnEnd=Math.min(.96,returnStart+outward);
-  plans.set(p.id,{id:p.id,job,traveling,from,to,route,departure,arrival,
-   returnStart,returnEnd,phase:h32(p.id,world.day,11),length});
+  plans.set(p.id,{id:p.id,job,traveling,from:start,to:end,route,
+   departure:shift?shift.depart/24:departure,arrival:shift?shift.arrive/24:arrival,
+   returnStart:shift?shift.returnStart/24:returnStart,
+   returnEnd:shift?shift.end/24:returnEnd,
+   shift,phase:h32(p.id,world.day,11),length});
  }
  return {day:world.day,seed:world.seed,plans,counters,kind:'subday'};
 }
@@ -66,6 +72,22 @@ function oscillate(phase){
 export function sampleSubday(person,dayPlan,time){
  if(!dayPlan||!dayPlan.plans.has(person.id))return {x:person.x,y:person.y,activity:'absent',pose:0};
  const p=dayPlan.plans.get(person.id),t=clamp(time);
+ // Authoritative schedules are committed by the economic engine. The visual
+ // projection never chooses independent working hours or invents a job.
+ if(p.shift){
+  const phase=timeAt(p.shift,t);
+  if(phase.phase==='home')return {...p.from,activity:'home',pose:0};
+  if(phase.phase==='travel'||phase.phase==='return'){
+   const q=phase.phase==='travel'?smooth(phase.part):1-smooth(phase.part);
+   const point=pathPosition(p.route,q)||p.to;
+   return {...point,activity:phase.phase,pose:1};
+  }
+  const angle=p.phase+phase.part*(p.job==='farm'?3.2:2.1);
+  const swing=Math.sin(Math.PI*phase.part)*.22;
+  const wave=oscillate(angle);
+  return {x:p.to.x+wave.x*swing,y:p.to.y+wave.y*swing,
+   activity:p.job,pose:Math.floor(phase.part*(p.job==='build'?8:6))%2};
+ }
  if(p.job==='home'&&!p.traveling){
   const wiggle=oscillate(t*.72+p.phase);
   const scale=Math.sin(Math.PI*t)*.13;
@@ -122,3 +144,13 @@ export function advanceFastView(view,world,dt){
  return view;
 }
 export function subdayCounts(plan){return plan?{...plan.counters}:{};}
+export function activeShiftCounts(plan,time){
+ const out={home:0,travel:0,work:0,return:0};
+ if(!plan)return out;
+ for(const p of plan.plans.values()){
+  if(!p.shift)continue;
+  const activity=timeAt(p.shift,time).phase;
+  out[activity]++;
+ }
+ return out;
+}
