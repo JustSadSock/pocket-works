@@ -106,3 +106,5 @@ import './large-fill-cache.mjs';
 
 // The complete numbered 100-scenario matrix, each in three layouts.
 import './fill-100-raster.mjs';
+
+import './fill-100-editor.mjs';
