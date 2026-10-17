@@ -321,8 +321,8 @@ function execute(w,a){
   });
   return outcome;
 }
-export function politicalYear(world,{maxActions=12}={}){
-  if(!Number.isSafeInteger(maxActions)||maxActions<0||maxActions>40)throw new RangeError('Invalid political action budget');
+export function politicalYear(world,{maxActions=12,excludeIds=[]}={}){
+  if(!Number.isSafeInteger(maxActions)||maxActions<0||maxActions>40 || !Array.isArray(excludeIds))throw new RangeError('Invalid political action budget');
   cleanFactions(world);
   for(const person of world.people){
     if(!person.alive)continue;
@@ -332,7 +332,8 @@ export function politicalYear(world,{maxActions=12}={}){
       if(person.politics.opinions[id]===0&&!person.politics.memories.some(m=>m.otherId===id))delete person.politics.opinions[id];
     }
   }
-  const active=world.people.filter(p=>adult(world,p)&&
+  const excluded=new Set(excludeIds);
+  const active=world.people.filter(p=>adult(world,p)&&!excluded.has(p.id)&&
     (titlesOf(world,p.id).length||p.parentIds.some(id=>id&&titlesOf(world,id).length)||
       claimFor(world,p).length)).sort(ordered);
   for(const person of active)chooseGoal(world,person);
