@@ -2,16 +2,17 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHousehold, SIZE} from './model.js';
 import {diagnoseWorld} from './laboratory.js';
-import {fieldAppearance,personPosition,cattlePosition} from './visual-land.js';
+import {fieldAppearance,cattlePosition} from './visual-land.js';
+import {timeMode,integrateClock,dayClock,dayPhase,planSubday,sampleSubday,makeFastView,advanceFastView,fastAnimalPosition} from './subday.js';
 import {walkPath} from './navigation.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.7.8',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.7.9',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
 let sim=null,mode='overview',selected=null,selectedPerson=null,economyOpen=false,speed=0,cam={x:0,y:0,z:1},drag=null,dirty=true,last=performance.now(),acc=0,lastStats=0,lastSavedDay=0,savePending=false,active=true,pointers=new Map(),pinch=null;
 const worldCanvas=document.createElement('canvas');worldCanvas.width=W;worldCanvas.height=W;const draw=worldCanvas.getContext('2d');
-let toastTimer=0;let previousPeople=null;let movementFraction=1;
+let toastTimer=0,dayPlan=null,fastView=makeFastView(),renderDetail='coarse',modeBlend=null,blendRemaining=0;let movementFraction=1,visualDt=0;
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),2600);}
 function rngTile(i){let n=Math.imul(i+31,2654435761);n^=n>>>13;return (n>>>0)%100;}
 function tileColor(i,stage){if(sim.terrain[i]===1)return '#4c8990';if(sim.terrain[i]===2)return rngTile(i)>63?'#89947c':'#818e79';if(stage===2)return '#927653';if(stage===3)return '#84945c';if(stage===4)return '#aa906b';if(stage===1)return '#7c8b62';const s=sim.soil[i];return s>83?'#718a57':s>65?'#738357':'#8d9066';}
@@ -84,10 +85,14 @@ function drawFrame(){if(!sim)return;
  ctx.fillStyle='#2c4739';ctx.fillRect(0,0,w,h);if(dirty)makeWorldArt();
  ctx.imageSmoothingEnabled=false;ctx.drawImage(worldCanvas,Math.round(cam.x),Math.round(cam.y),Math.round(W*cam.z),Math.round(W*cam.z));
  const showFigures=cam.z>=.17;
+ const fine=renderDetail==='fine';
  if(showFigures){
   const people=sim.people;
   for(const p of people){if(!p.alive)continue;
-   const where=personPosition(p,sim,previousPeople,movementFraction,true);
+   const real=fine&&dayPlan?sampleSubday(p,dayPlan,movementFraction):fastView.positions.get(p.id)||{x:p.x,y:p.y};
+    const prev=blendRemaining>0?modeBlend?.get(p.id):null;
+    const ease=1-Math.max(0,Math.min(1,blendRemaining/.23));
+    const where=prev?{x:prev.x+(real.x-prev.x)*ease,y:prev.y+(real.y-prev.y)*ease}:real;
    const x=cam.x+(where.x*PX+3)*cam.z,y=cam.y+(where.y*PX+3)*cam.z;
    if(x<2||y<3||x>w-2||y>h-3)continue;
    const size=Math.max(2,Math.min(8,cam.z*5));
@@ -96,10 +101,18 @@ function drawFrame(){if(!sim)return;
    ctx.fillStyle='#25362d';ctx.fillRect(Math.round(x-.8),Math.round(y+size*.4),Math.ceil(size)+2,Math.ceil(size*.7)+1);
    ctx.fillStyle=coat;ctx.fillRect(Math.round(x),Math.round(y+size*.52),Math.ceil(size),Math.ceil(size*.8));
    ctx.fillStyle=p.sex==='f'?'#e5bd8f':'#d4c09f';ctx.fillRect(Math.round(x+size*.15),Math.round(y),Math.max(2,size*.7),Math.max(2,size*.7));
+    // Actual work phases display small tool gestures, absent in fast overview.
+    if(fine&&cam.z>.65&&real.pose&&['farm','wood','build','herd'].includes(real.activity)){
+      const swing=(Math.floor(movementFraction*96+p.id)%2?1:-1)*Math.max(1,cam.z*2);
+      ctx.strokeStyle=real.activity==='wood'?'#c7ba94':real.activity==='build'?'#d2a878':'#b9ac7c';
+      ctx.lineWidth=Math.max(1,cam.z*.85);ctx.beginPath();ctx.moveTo(x+size,y+size*.7);
+      ctx.lineTo(x+size+swing,y-size*.12);ctx.stroke();
+    }
   }
   if(cam.z>.36){for(const hom of sim.households){
    for(let i=0;i<Math.min(5,hom.cattle||0);i++){
-    const place=cattlePosition(hom,sim.day+movementFraction,i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const raw=cattlePosition(hom,sim.day+(fine?movementFraction:.5),i,sim);
+     const place=fine?raw:fastAnimalPosition(fastView,hom.id+':c:'+i,raw,visualDt),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const scale=Math.max(2,cam.z*4),ox=i<(hom.draftOxen||0);
     ctx.fillStyle=ox?'#40382e':'#6b523b';ctx.fillRect(Math.round(x),Math.round(y),scale*(ox?1.95:1.65),scale*(ox?1.15:1));
@@ -109,7 +122,8 @@ function drawFrame(){if(!sim)return;
     if(ox){ctx.fillStyle='#c4ad87';ctx.fillRect(Math.round(x+scale*1.65),Math.round(y-scale*.36),Math.max(1,scale*.2),scale*.22);}
    }
    for(let i=0;i<Math.min(10,hom.sheep||0);i++){
-    const place=cattlePosition(hom,sim.day+movementFraction,i+23,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const raw=cattlePosition(hom,sim.day+(fine?movementFraction:.5),i+23,sim);
+     const place=fine?raw:fastAnimalPosition(fastView,hom.id+':s:'+i,raw,visualDt),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const u=Math.max(2,cam.z*2.6);
     ctx.fillStyle='#4f4b40';ctx.fillRect(Math.round(x),Math.round(y+u*.62),u*.23,u*.6);ctx.fillRect(Math.round(x+u*.9),Math.round(y+u*.62),u*.23,u*.6);
@@ -132,7 +146,14 @@ function drawFrame(){if(!sim)return;
 }
 function updateHUD(){if(!sim)return;const o=overview(sim),seasons=['Зима','Весна','Лето','Осень'];$('#date').textContent=`Год ${o.year} · ${seasons[Math.floor((o.day%365)/91.25)%4]}`;$('#population').textContent=`${o.population} жителей · ${o.households} хозяйств · +${sim.stats.built||0} домов${sim.scenario==='drought'&&o.year>=6&&o.year<=8?' · ЗАСУХА':''}`;
 $('#live-text').textContent=speed===0?'МИР ПРИОСТАНОВЛЕН':`ВРЕМЯ ИДЁТ · ${String(speed).replace('.',',')} ДН./С`;
-$('.live-mark').classList.toggle('running',speed>0);document.querySelectorAll('[data-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.speed)===speed));renderSheet();}
+$('.live-mark').classList.toggle('running',speed>0);document.querySelectorAll('[data-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.speed)===speed));updateDayDial();renderSheet();}
+function updateDayDial(){
+ const detailed=renderDetail==='fine'&&Boolean(dayPlan);
+ $('#time-detail').dataset.mode=detailed?'fine':'coarse';
+ $('#time-stage').textContent=detailed?dayClock(movementFraction)+' · '+dayPhase(movementFraction):
+  speed===0?'Пауза · суточный обзор':'Быстрый обзор · суточные итоги';
+ $('#time-fill').style.width=detailed?(movementFraction*100).toFixed(1)+'%':(((sim?.day||0)%365)/365*100).toFixed(1)+'%';
+}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderSheet(){if(!sim)return;const el=$('#sheet-content'),o=overview(sim);
 if(mode==='overview'){
@@ -204,13 +225,19 @@ document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',
   const next=Number(b.dataset.speed);
   if(!Number.isFinite(next)||next<0||next>20)return;
   // First day begins immediately even at 0.25×: no four-second frozen launch.
-  if(speed===0&&next>0&&!previousPeople)acc=1;
+  if(speed===0&&next>0&&!dayPlan&&fastView.positions.size===0)acc=1;
+  const target=timeMode(next);
+  if(target==='fine'&&renderDetail!=='fine'){
+   captureBlend();dayPlan=planSubday(sim);renderDetail='fine';
+  }else if(target==='coarse'&&renderDetail!=='coarse'){
+   captureBlend();renderDetail='coarse';
+  }
   speed=next;updateHUD();
  }));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
 $('#sheet-content').addEventListener('click',e=>{const person=e.target.closest('[data-person]');if(person){selectedPerson=Number(person.dataset.person);renderSheet();return;}if(e.target.closest('[data-person-back]')){selectedPerson=null;renderSheet();return;}const eventButton=e.target.closest('[data-event]');if(eventButton){const item=sim.events.find(v=>v.id===Number(eventButton.dataset.event));const h=item?.subjects.map(id=>sim.households.find(x=>x.id===id)).find(Boolean);if(h){selected=h.id;selectedPerson=null;economyOpen=false;setTab('household');centerOn(h.x,h.y);}else if(item)toast(item.cause);return;}const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case'econ-detail':economyOpen=!economyOpen;renderSheet();break;case'lab-open':speed=0;setTab('laboratory');break;case'lab-back':setTab('tools');break;case'lab-export':exportLab();break;case'save':save().then(()=>toast('Мир записан в IndexedDB')).catch(err=>toast(err.message));break;case'export':exportSave();break;case'import':$('#import-file').click();break;case'reset':speed=0;$('#modal').hidden=false;break;}});
-$('#cancel-reset').addEventListener('click',()=>$('#modal').hidden=true);$('#confirm-reset').addEventListener('click',()=>{const seedText=$('#world-seed').value.trim();const seedNumber=seedText===''?((Date.now()&0xffffffff)>>>0):Number(seedText);if(!Number.isInteger(seedNumber)||seedNumber<0||seedNumber>4294967295){toast('Seed должен быть целым числом от 0 до 4294967295');return;}sim=createWorld(seedNumber,{scenario:$('#world-scenario').value,tuning:experimentPreset($('#world-experiment').value)});selected=null;selectedPerson=null;economyOpen=false;speed=0;acc=0;movementFraction=1;previousPeople=null;dirty=true;fitView();lastSavedDay=-1;$('#modal').hidden=true;setTab('overview');save().then(()=>toast('Создана новая долина с выбранными условиями')).catch(err=>toast(err.message));});
+$('#cancel-reset').addEventListener('click',()=>$('#modal').hidden=true);$('#confirm-reset').addEventListener('click',()=>{const seedText=$('#world-seed').value.trim();const seedNumber=seedText===''?((Date.now()&0xffffffff)>>>0):Number(seedText);if(!Number.isInteger(seedNumber)||seedNumber<0||seedNumber>4294967295){toast('Seed должен быть целым числом от 0 до 4294967295');return;}sim=createWorld(seedNumber,{scenario:$('#world-scenario').value,tuning:experimentPreset($('#world-experiment').value)});selected=null;selectedPerson=null;economyOpen=false;speed=0;acc=0;movementFraction=1;dayPlan=null;fastView=makeFastView();renderDetail='coarse';modeBlend=null;blendRemaining=0;dirty=true;fitView();lastSavedDay=-1;$('#modal').hidden=true;setTab('overview');save().then(()=>toast('Создана новая долина с выбранными условиями')).catch(err=>toast(err.message));});
 function centerOn(x,y){const r=worldNode.getBoundingClientRect();cam.z=Math.max(cam.z,1.28);cam.x=r.width/2-x*PX*cam.z;cam.y=r.height/2-y*PX*cam.z;}
-$('#import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{const value=deserialize(await file.text());sim=value;speed=0;acc=0;movementFraction=1;selected=null;selectedPerson=null;previousPeople=null;dirty=true;fitView();updateHUD();await save();toast('Мир успешно импортирован');}catch(err){toast(`Импорт не удался: ${err.message}`);}});
+$('#import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{const value=deserialize(await file.text());sim=value;speed=0;acc=0;movementFraction=1;selected=null;selectedPerson=null;dayPlan=null;fastView=makeFastView();renderDetail='coarse';modeBlend=null;blendRemaining=0;dirty=true;fitView();updateHUD();await save();toast('Мир успешно импортирован');}catch(err){toast(`Импорт не удался: ${err.message}`);}});
 function experimentPreset(name){
  const items={normal:{},yieldLow:{yield:.85},storageLow:{storage:.75},plantingHigh:{planting:1.2},transportHigh:{transport:1.5},weatherHigh:{weather:1.5}};
  return items[name]||{};
@@ -224,7 +251,37 @@ function exportSave(){try{const blob=new Blob([serialize(sim)],{type:'applicatio
 function db(){return new Promise((resolve,reject)=>{const req=indexedDB.open('pw-living-history-v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('saves');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||Error('IndexedDB недоступна'));});}
 async function save(){if(!sim||savePending)return;savePending=true;let base;const snapshotDay=sim.day;try{base=await db();const payload=serialize(sim);await new Promise((res,rej)=>{const t=base.transaction('saves','readwrite');t.objectStore('saves').put(payload,'latest');t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});lastSavedDay=snapshotDay;}finally{savePending=false;base?.close();}}
 async function load(){let base=await db();try{const raw=await new Promise((res,rej)=>{const req=base.transaction('saves','readonly').objectStore('saves').get('latest');req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);});return raw?deserialize(raw):null;}finally{base.close();}}
-function animate(now){requestAnimationFrame(animate);if(!active||!sim){last=now;return;}const dt=Math.min(.08,(now-last)/1000);last=now;if(speed>0){acc+=speed*dt;const days=Math.min(Math.floor(acc),40);if(days){previousPeople=new Map(sim.people.filter(p=>p.alive).map(p=>[p.id,{x:p.x,y:p.y}]));advanceDays(sim,days);acc-=days;if(Math.floor(sim.day/5)!==Math.floor((sim.day-days)/5))dirty=true;if(sim.day-lastSavedDay>=100)save().catch(err=>toast(`Автосохранение: ${err.message}`));}}movementFraction=Math.max(0,Math.min(1,acc));if(now-lastStats>550){updateHUD();lastStats=now;}drawFrame();}
+function captureBlend(){
+ modeBlend=new Map();
+ for(const p of sim.people){if(!p.alive)continue;
+  const pos=renderDetail==='fine'&&dayPlan?sampleSubday(p,dayPlan,movementFraction):
+   fastView.positions.get(p.id)||{x:p.x,y:p.y};
+  modeBlend.set(p.id,{x:pos.x,y:pos.y});
+ }
+ blendRemaining=.23;
+}
+function animate(now){
+ requestAnimationFrame(animate);
+ if(!active||!sim){last=now;return;}
+ const dt=Math.max(0,Math.min(.08,(now-last)/1000));last=now;visualDt=speed>0?dt:0;
+ if(speed>0){
+  const step=integrateClock(acc,dt,speed);
+  acc=step.phase;
+  if(step.days){
+   const prior=sim.day;
+   advanceDays(sim,step.days);
+   if(renderDetail==='fine'){dayPlan=planSubday(sim);dirty=true;}
+   else if(Math.floor(sim.day/5)!==Math.floor(prior/5))dirty=true;
+   if(sim.day-lastSavedDay>=100)save().catch(err=>toast(`Автосохранение: ${err.message}`));
+  }
+  if(renderDetail==='fine'&&(!dayPlan||dayPlan.day!==sim.day))dayPlan=planSubday(sim);
+ }
+ movementFraction=Math.max(0,Math.min(1,acc));
+ if(renderDetail==='coarse'&&speed>0)advanceFastView(fastView,sim,dt);
+ if(speed>0&&blendRemaining>0)blendRemaining=Math.max(0,blendRemaining-dt);
+ if(now-lastStats>500){updateHUD();lastStats=now;}
+ updateDayDial();drawFrame();
+}
 window.addEventListener('resize',()=>{resize();});document.addEventListener('visibilitychange',()=>{active=!document.hidden;if(!active)save().catch(()=>{});last=performance.now();});window.addEventListener('pagehide',()=>save().catch(()=>{}));
 async function init(){try{sim=await load();if(sim)toast('Продолжена сохранённая история');}catch(err){toast(`Локальная база: ${err.message}`);}if(!sim)sim=createWorld(43821);fitView();const village=sim.communities[0];if(village)centerOn(village.x,village.y);dirty=true;updateHUD();requestAnimationFrame(animate);}
 init();

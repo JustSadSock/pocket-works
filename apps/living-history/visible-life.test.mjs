@@ -12,8 +12,8 @@ test('0.25x and 0.5x playback controls are actionable and fit the mobile six-col
  const speeds=[...html.matchAll(/data-native-press data-speed="([\d.]+)"/g)].map(m=>Number(m[1]));
  assert.deepEqual(speeds,[0,.25,.5,1,5,20]);
  assert.match(css,/repeat\(6,minmax\(0,1fr\)\)/);
- assert.match(app,/acc\+=speed\*dt/);
- assert.match(app,/speed===0&&next>0&&!previousPeople/);
+ assert.match(app,/integrateClock\(acc,dt,speed\)/);
+ assert.match(app,/speed===0&&next>0&&!dayPlan&&fastView\.positions\.size===0/);
  assert.match(app,/const pending=sim\.households\.filter\(h=>h\.buildProject\?\.site\)/);
  assert.match(app,/stock=sim\.forest\[i\]/);
 });
