@@ -8,7 +8,8 @@
       "files": [
         "tests/world.test.mjs",
         "tests/dynasty.test.mjs",
-        "tests/politics.test.mjs"
+        "tests/politics.test.mjs",
+        "tests/campaign.test.mjs"
       ]
     },
     {
@@ -58,6 +59,44 @@
       "engines": [
         "chromium",
         "webkit"
+      ]
+    },
+    {
+      "id": "campaign-mobile-first-year",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#begin",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#begin"
+        },
+        {
+          "action": "visible",
+          "selector": "#game-screen"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#next-year"
+        },
+        {
+          "action": "visible",
+          "selector": "#year-count"
+        },
+        {
+          "action": "screenshot"
+        }
       ]
     }
   ]
