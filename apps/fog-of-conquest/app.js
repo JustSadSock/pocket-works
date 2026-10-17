@@ -34,7 +34,7 @@ function noiseHit(type='select'){
  }catch{}
 }
 function store(){if(online||!state)return;try{localStorage.setItem(KEY,JSON.stringify(state));$('continueGame').disabled=false;}catch{toast('Хранилище недоступно — сохранение не удалось.');}}
-function newSolo(){difficulty=+$('difficulty').value||3;state=createGame((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0,$('size').value);online=false;side=1;chosen=null;pendingRecruit=null;hide('start');hide('menu');hide('confirm');hide('finish');hide('online');locked=false;centerOnBase();store();update();}
+function newSolo(){if(net){net.close();net=null;room=null;}difficulty=+$('difficulty').value||3;state=createGame((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0,$('size').value);online=false;side=1;chosen=null;pendingRecruit=null;hide('start');hide('menu');hide('confirm');hide('finish');hide('online');locked=false;centerOnBase();store();update();}
 function continueSolo(){const x=saved();if(!x){toast('Сохранение повреждено.');return;}state=x;online=false;side=1;chosen=null;pendingRecruit=null;hide('start');hide('menu');hide('confirm');hide('finish');centerOnBase();update();}
 function gameView(){return state?online?state:project(state,side):null;}
 function myTurn(){return !!(state&&state.phase==='battle'&&state.current===side&&!locked);}
@@ -185,7 +185,7 @@ $('newConfirm').onclick=()=>{hide('menu');show('confirm');};
 $('confirmNo').onclick=()=>hide('confirm');$('confirmYes').onclick=()=>{if(online){net?.close();net=null;}newSolo();};
 $('finishNew').onclick=()=>{if(online){net?.close();net=null;online=false;}newSolo();};
 $('onlineBtn').onclick=()=>{hide('start');show('online');};
-$('onlineClose').onclick=()=>{hide('online');if(!state)show('start');else update();};
+$('onlineClose').onclick=()=>{hide('online');if(!state){net?.close();net=null;room=null;online=false;show('start');}else update();};
 async function connectOnline(){
  try{if(!net||net.closed){net=new PocketNet({serverUrl:location.origin+'/pocketnet',name:$('nickname').value.trim().slice(0,24)||'Полководец',storage:localStorage});
   net.on('connected',()=>{networkStatus('Связь установлена.');});
@@ -229,7 +229,7 @@ $('joinRoom').onclick=async()=>{
  net.joinRoom(code);
  }catch(e){networkStatus('Не удалось войти: '+String(e.message||e));}finally{$('joinRoom').disabled=false;}
 };
-$('startRoom').onclick=()=>{try{net.sendGame({type:'start'});networkStatus('Формируем карту…');}catch{networkStatus('Нет связи. Повторите попытку.');}};
+$('startRoom').onclick=()=>{try{net.sendGame({type:'start',size:$('size').value});networkStatus('Формируем карту…');}catch{networkStatus('Нет связи. Повторите попытку.');}};
 $('copyRoom').onclick=async()=>{if(!room?.roomId)return;const url=new URL(location.href);url.searchParams.set('room',room.roomId.slice(0,8).toUpperCase());try{await navigator.clipboard.writeText(url.toString());toast('Ссылка приглашения скопирована.');}catch{toast('Скопируйте код комнаты: '+room.roomId.slice(0,8).toUpperCase());}};
 window.addEventListener('resize',()=>{fitCanvas();clampPan();draw();});if('ResizeObserver'in window)new ResizeObserver(()=>{fitCanvas();clampPan();draw();}).observe(field);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&state&&!online)store();else draw();});
