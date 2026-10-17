@@ -182,7 +182,7 @@ function isWin(state){return state.phase==='end'&&state.faith>0;}
 const LIMIT_PLAYERS=5,ROUND_MS=125000,JUDGMENT_MS=16000,COUNCIL_MS=28000;
 const events=s=>[{type:'state',payload:view(s)}];
 const notice=(p,msg)=>[{type:'notice',to:p.id,payload:msg}];
-const view=s=>({...s}); // Entire state intentionally PUBLIC; never put secret instructions in this state.
+const view=s=>({...s,serverNow:Date.now()}); // Entire state PUBLIC; no hidden prophecies.
 const ids=s=>s.players.map(p=>p.id);
 const cleanChoice=p=>({
  itemId:validItem(p?.itemId)?p.itemId:null,
@@ -205,7 +205,7 @@ function concludeOffering(s){
  if(s.phase!=='play')return;
  const people=s.players;
  const contributions=people.map(p=>{
-  const action=cleanChoice(s.choices[p.id]);const full={...defaultChoice(),...action};
+  const action=cleanChoice(s.choices[p.id]);const full={...defaultChoice(),...action,itemId:action.itemId||'bread'};
   const result=evaluateRite(getRite(s.match),full,s.match.doctrines);
   return {playerId:p.id,name:p.name,action:full,score:result.score,locked:!!s.ready[p.id]};
  });

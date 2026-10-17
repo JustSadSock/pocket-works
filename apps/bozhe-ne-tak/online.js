@@ -27,7 +27,7 @@ const EXPLAIN={
 };
 const safeAction=()=>({itemId:null,treatment:null,bell:1,height:'low'});
 export function createOnline(onChange,onExit){
- let client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
+ let clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
  const show=()=>onChange();
  const isLive=()=>client?.socket?.readyState===WebSocket.OPEN&&status==='room';
  const message=s=>{notice=s;show()};
@@ -35,7 +35,7 @@ export function createOnline(onChange,onExit){
  const apply=s=>{
   if(!s||!Array.isArray(s.players)||typeof s.phase!=='string')return;
   if(view&&Number.isInteger(s.revision)&&s.revision<view.revision)return;
-  const old=view;view=s;sequence=Math.max(sequence,s.lastSeq?.[ownId]||0);
+  const old=view;view=s;if(Number.isFinite(s.serverNow))clockOffset=s.serverNow-Date.now();sequence=Math.max(sequence,s.lastSeq?.[ownId]||0);
   if(old?.phase!==s.phase)notice='';
   status='room';show();
  };
@@ -100,7 +100,7 @@ export function createOnline(onChange,onExit){
  let pulseCounter=0;
  const pulse=setInterval(()=>{
   const clock=document.querySelector('[data-net-timer]');
-  if(clock&&view?.deadlineAt)clock.textContent=String(Math.max(0,Math.ceil((view.deadlineAt-Date.now())/1000)));
+  if(clock&&view?.deadlineAt)clock.textContent=String(Math.max(0,Math.ceil((view.deadlineAt-(Date.now()+clockOffset))/1000)));
   if(++pulseCounter%6===0)tick();
  },1000);
  function destroy(){clearInterval(pulse);close()}
