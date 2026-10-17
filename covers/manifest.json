@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "5aa5d6c019d2decb61e074d78cb221df52a80a17",
+    "revision": "0d836a7921add7c300861e76ff41403507ea3a49",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "5aa5d6c019d2decb61e074d78cb221df52a80a17",
-    "lastAttemptAt": "2026-10-17T23:06:54.636Z",
+    "lastAttemptRevision": "0d836a7921add7c300861e76ff41403507ea3a49",
+    "lastAttemptAt": "2026-10-17T23:28:47.710Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3248,38 +3248,19 @@
   },
   "venets": {
     "note": "No frame passed image-content checks",
-    "diagnostic": {
-      "bestScore": 56,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 40216,
-        "variance": 41.16386039065301,
-        "entropy": 2.070501562292416,
-        "edgeDensity": 0.15252976190476192,
-        "colorfulness": 19.1923828125,
-        "centerDetail": 28.77349036794643,
-        "meanLight": 222.21946157226444
-      },
-      "gameplayEntry": {
-        "started": false,
-        "actions": []
-      },
-      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.7.0&pw_fp=4beaf9103a4964b26af4ca36"
-    },
-    "status": "failed",
+    "diagnostic": null,
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "12ddc55d829b0ffaa4d9ccef68d959af48e665fe",
-    "lastAttemptAt": "2026-10-17T23:06:42.648Z",
-    "revision": "0012928bd207ce181b744643c5b240209a1003b0",
-    "qualityScore": 57,
+    "lastAttemptRevision": "fcfa7b59941756828f28992a22ce7de668f0e495",
+    "lastAttemptAt": "2026-10-17T23:28:58.573Z",
+    "revision": "fcfa7b59941756828f28992a22ce7de668f0e495",
+    "qualityScore": 59,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "shot": 0,
-    "sha256": "6fdcf600f54d15097c7a741d26af416b682ec48380554903feb5420912a61e6b",
+    "sha256": "a7b336dd568d3917e555267a4716c6ede98b42a3c9e8dbb04ec0ce529ff1740a",
     "imageVersion": 2
   },
   "bozhe-ne-tak": {
