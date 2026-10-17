@@ -2,6 +2,7 @@
 import { initialRngState, normalizeSeed, randomInt } from './random.js';
 import { recordEvent, transfer, changeTitleHolder } from './transactions.js';
 import {ensureConflicts,conflictYear} from './conflicts.js';
+import {createExpandedWorld} from './expanded.js';
 import { assertWorld } from './validate.js';
 import { assertWorldV2 } from './validate-v2.js';
 import { assertWorldV3 } from './validate-v3.js';
@@ -27,7 +28,10 @@ function sumInitial(entities, good) {
   return entities.reduce((sum, entity) => sum + entity.treasury[good], 0);
 }
 
-export function createWorld(seed = 1) {
+export function createWorld(seed = 1, {size=12,profile='full',experiment=null}={}) {
+  if(![12,48].includes(size)||!['full','simple'].includes(profile))throw new RangeError('Unknown world experiment');
+  if(size===48){const w=createExpandedWorld(seed);w.profile=profile;
+    if(experiment)w.experiment={...experiment};assertWorld(w);return w;}
   const sourceSeed = normalizeSeed(seed);
   const world = {
     schemaVersion: WORLD_SCHEMA_VERSION,
@@ -97,6 +101,8 @@ export function createWorld(seed = 1) {
   for (const good of ['grain', 'coin']) {
     world.ledger.initial[good] = sumInitial([...world.people, ...world.provinces], good);
   }
+  if(profile==='simple')world.profile='simple';
+  if(experiment)world.experiment={...experiment};
   recordEvent(world, 'foundation', 'seeded-world', {
     seed: sourceSeed, kingdom: 'ki-01', provinces: 12, titles: 17, people: world.people.length
   });
@@ -155,10 +161,13 @@ export function stepYear(world, { excludePlayerId = null } = {}) {
   }
   demographicYear(world);
   const beforePolitics=world.events.length;
-  politicalYear(world,{excludeIds:excludePlayerId?[excludePlayerId]:[]});
+  if(world.profile!=='simple'&&world.experiment?.diplomacy!==false)politicalYear(world,{
+    maxActions:world.provinces.length===48?28:12,
+    excludeIds:excludePlayerId?[excludePlayerId]:[]
+  });
   const politicalActors=world.events.slice(beforePolitics).filter(e=>e.kind==='political-decision')
     .map(e=>e.effect.actorId);
-  conflictYear(world,{excludePlayerId,excludeIds:politicalActors});
+  if(world.profile!=='simple')conflictYear(world,{excludePlayerId,excludeIds:politicalActors});
   world.stats.years++;
   recordEvent(world, 'year-closed', 'calendar-tick', {
     year: world.year, shortages: world.stats.shortages,

@@ -17,10 +17,16 @@ export function assertWorld(w){
   demand(w.schemaVersion===4 && safe(w.seed) && w.seed<=0xffffffff,'schema/seed');
   demand(safe(w.rngState)&&w.rngState<=0xffffffff&&w.rngState!==0,'PRNG');
   demand(Number.isSafeInteger(w.year)&&w.year>=1066&&w.year<=5000,'year');
-  demand(Array.isArray(w.provinces)&&w.provinces.length===12,'12 provinces');
-  demand(Array.isArray(w.titles)&&w.titles.length===17,'17 titles');
-  demand(Array.isArray(w.people)&&w.people.length>=17,'people count');
-  demand(Array.isArray(w.dynasties)&&w.dynasties.length===5,'five houses');
+  const expanded=w.provinces?.length===48;
+  const count=expanded?48:12,duchies=expanded?12:4,houses=expanded?12:5;
+  demand(Array.isArray(w.provinces)&&w.provinces.length===count,'province count');
+  demand(Array.isArray(w.titles)&&w.titles.length===count+duchies+1,'title count');
+  demand(Array.isArray(w.people)&&w.people.length>=count+duchies+1,'people count');
+  demand(Array.isArray(w.dynasties)&&w.dynasties.length===houses,'house count');
+  demand(w.profile===undefined||['full','simple'].includes(w.profile),'world experiment profile');
+  demand(w.experiment===undefined||w.experiment&&typeof w.experiment==='object'&&
+    Object.keys(w.experiment).every(k=>['memory','goals','diplomacy','inheritance'].includes(k)&&
+      typeof w.experiment[k]==='boolean'),'experiment switches');
   const people=index(w.people,'people'),titles=index(w.titles,'titles'),provinces=index(w.provinces,'provinces');
   const dynasties=index(w.dynasties,'dynasties');
   demand(w.nextPersonId===w.people.length+1 && Number.isSafeInteger(w.nextPersonId),'next-person ID');
@@ -94,11 +100,11 @@ export function assertWorld(w){
         c.personId!==t.holderId&&c.origin==='passed-over'&&safe(c.year)&&c.year<=w.year,
         'invalid inheritance claim');
   }
-  demand(countyCount===12&&duchyCount===4&&kingdomCount===1,'feudal ranks');
+  demand(countyCount===count&&duchyCount===duchies&&kingdomCount===1,'feudal ranks');
   const grid=new Set();
   for(const p of w.provinces){
     demand(titles.get(p.titleId)?.provinceId===p.id,'county mapping');
-    demand(safe(p.x)&&p.x<4&&safe(p.y)&&p.y<3,'grid coordinate');
+    demand(safe(p.x)&&p.x<(expanded?8:4)&&safe(p.y)&&p.y<(expanded?6:3),'grid coordinate');
     const coord=p.x+':'+p.y;
     demand(!grid.has(coord),'overlapping provinces');grid.add(coord);
     demand(['plains','hills'].includes(p.terrain)&&safe(p.baseYield)&&safe(p.baseTrade)&&safe(p.demand),
@@ -118,7 +124,7 @@ export function assertWorld(w){
     demand(p,'grid root');
     for(const other of p.neighbors)if(!seen.has(other)){seen.add(other);queue.push(other);}
   }
-  demand(seen.size===12,'not contiguous');
+  demand(seen.size===count,'not contiguous');
 
   // Political activity has its own counters and bounded, signed memories.
   const goals=new Set(['secure-house','secure-claim','political-leverage','gain-land','stabilize-realm','seek-marriage']);
@@ -229,6 +235,6 @@ export function assertWorld(w){
       'ledger balance mismatch '+good);
   }
   assertConflicts(w);
-  return {provinces:12,titles:17,people:w.people.length,alive,dynasties:w.dynasties.length,
+  return {provinces:count,titles:count+duchies+1,people:w.people.length,alive,dynasties:w.dynasties.length,
     year:w.year,events:w.events.length,resources:totals};
 }

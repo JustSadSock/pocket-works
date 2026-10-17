@@ -17,6 +17,13 @@ const charge=(kind,ink)=>{
     case 'river':g.append(S('path',{d:'M-9 -16 C6 -12 -8 -4 6 0 S-2 10 10 14 M-12 -11 C1 -7 -13 1 1 5'}));break;
     case 'sun':g.append(S('circle',{cx:0,cy:0,r:7}),...Array.from({length:8},(_,i)=>{const a=i*Math.PI/4;return S('path',{d:'M'+Math.round(Math.sin(a)*10)+' '+Math.round(Math.cos(a)*10)+' L'+Math.round(Math.sin(a)*15)+' '+Math.round(Math.cos(a)*15)})}));break;
     case 'tower':g.append(S('path',{d:'M-10 14V-9H-7V-15H-3V-9H3V-15H7V-9H10V14Z M-3 14V5 Q0 0 3 5V14 M-5 -4H5'}));break;
+    case 'wheat':g.append(S('path',{d:'M0 16V-16 M0 5 Q-11 1-10 -7Q-3 -6 0 0 M0 -2Q11 -8 10 -13 Q2 -12 0 -8 M0 11L-11 6 M0 6L10 1'}));break;
+    case 'moon':g.append(S('path',{d:'M8 -16 Q-10 -11-9 2Q-7 14 8 14Q-4 6-3 -5Q-3 -12 8 -16Z'}));break;
+    case 'sword':g.append(S('path',{d:'M0 -19L3 4L0 9L-3 4Z M-11 6H11 M0 9V18 M-4 18H4'}));break;
+    case 'star':g.append(S('path',{d:'M0 -17L5 -5L16 -4L7 4L10 16L0 9L-10 16L-7 4L-16 -4L-5 -5Z'}));break;
+    case 'mountain':g.append(S('path',{d:'M-16 13L-3 -13L5 -2L10 -10L17 13Z M-9 0L-3 -8L2 1'}));break;
+    case 'bridge':g.append(S('path',{d:'M-17 13H17M-15 2H15M-13 2V13M13 2V13M-7 13V8Q0-4 7 8V13'}));break;
+    case 'crown':g.append(S('path',{d:'M-14 -7L-10 11H10L14 -7L6 1L0 -13L-6 1Z M-11 16H11'}));break;
   }
   return g;
 };
@@ -142,21 +149,28 @@ function compass(svg){
    T('text','С',{x:0,y:-40,'font-size':13,'text-anchor':'middle','font-family':'Georgia,serif',fill:'#575344'}));
  svg.append(rose);
 }
-export function renderAtlas(world,{selectedId='pr-01',onSelect,changes=[]}={}){
- const model=countyAtlasModel(world,makeAtlasGeometry(world.seed));
- const svg=S('svg',{viewBox:'0 0 860 570',class:'living-atlas',role:'group',
+export function renderAtlas(world,{selectedId='pr-01',onSelect,changes=[],region=0}={}){
+ const expanded=world.provinces.length===48;
+ const model=countyAtlasModel(world,makeAtlasGeometry(world.seed,world.provinces.length));
+ const ox=expanded?(region%2)*860:0,oy=expanded?Math.floor(region/2)*570:0;
+ const svg=S('svg',{viewBox:ox+' '+oy+' 860 570',class:'living-atlas',role:'group',
    'aria-label':'Политическая карта Междуречья: 12 настоящих графств',preserveAspectRatio:'xMidYMid meet'});
  atlasDefs(svg,model);
- svg.append(S('rect',{x:0,y:0,width:860,height:570,fill:'#bdc5b5'}),
-   S('rect',{x:0,y:0,width:860,height:570,fill:'#dae1d4','fill-opacity':.37}),
+ svg.append(S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#bdc5b5'}),
+   S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#dae1d4','fill-opacity':.37}),
    S('path',{d:model.perimeter,transform:'translate(5 9)',fill:'#5b6658','fill-opacity':.22}),
    S('path',{d:model.perimeter,fill:'url(#atlas-paper)',stroke:'#726f5b','stroke-width':4.5}),
    S('path',{d:model.perimeter,fill:'url(#atlas-light)'}),
    S('g',{'clip-path':'url(#atlas-land)'},[
-     S('rect',{width:860,height:570,fill:'#526040',filter:'url(#atlas-grain)'})]),
+     S('rect',{width:model.width,height:model.height,fill:'#526040',filter:'url(#atlas-grain)'})]),
    engraving(model,world.seed),mapCounties(world,model,selectedId,changes,onSelect));
  warMarkers(svg,model,world);
- compass(svg);
+ if(expanded){
+   const point=S('g',{transform:'translate('+ox+' '+oy+')','pointer-events':'none'});
+   point.append(T('text',['I','II','III','IV'][region]+' / IV',{
+     x:767,y:512,'text-anchor':'middle',fill:'#53624d',
+     'font-size':20,'font-family':'Georgia,serif'}));svg.append(point);
+ }else compass(svg);
  const container=DOM('div','atlas-canvas');
  container.append(svg);
  const stamp=DOM('div','atlas-corner-mark','М Е Ж Д У Р Е Ч Ь Е');

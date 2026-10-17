@@ -317,3 +317,24 @@ h2{letter-spacing:-.025em}
  .conflict-strip span{padding:4px 7px;font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.atlas-army{animation:none}.action-choice:active{transform:none}}
+
+
+/* v0.8: wider world is opt-in, and its four regional atlas views remain legible. */
+.world-size-options{display:flex;gap:4px;margin:4px 0 11px;max-width:270px}
+.world-size-options button{flex:1;min-height:36px;border:1px solid #aa9d85;
+ background:#ebe3d1;color:#5c5549;font-size:12px;padding:5px 8px}
+.world-size-options button.active{background:#4b594b;color:#ffefcf;border-color:#4b594b}
+.world-size-options button:focus-visible,.region-controls button:focus-visible{outline:2px solid #6a5843;outline-offset:2px}
+.region-controls:not([hidden]){display:flex;align-items:center;gap:4px;margin-left:auto;color:#615945}
+.region-controls button{min-width:32px;min-height:32px;border:1px solid #aea087;
+ background:#ece2cd;color:#544d41;font:22px Georgia,serif;padding:0}
+.region-controls span{font:12px Georgia,serif;letter-spacing:.04em;white-space:nowrap}
+@media(max-width:390px){
+ .world-size-options{margin:4px 0 7px}
+ .world-size-options button{min-height:33px}
+ .atlas-tools{gap:2px}
+ .atlas-tools>button{padding:5px 8px;font-size:11px}
+ .region-controls{gap:1px}
+ .region-controls button{min-width:29px;min-height:30px}
+ .region-controls span{font-size:11px}
+}

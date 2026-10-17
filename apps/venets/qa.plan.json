@@ -11,7 +11,8 @@
         "tests/politics.test.mjs",
         "tests/campaign.test.mjs",
         "tests/atlas.test.mjs",
-        "tests/conflicts.test.mjs"
+        "tests/conflicts.test.mjs",
+        "tests/scale.test.mjs"
       ]
     },
     {
@@ -124,7 +125,17 @@
       "files": [
         "qa/dev-inspector.spec.ts",
         "qa/atlas.spec.ts",
-        "qa/war.spec.ts"
+        "qa/war.spec.ts",
+        "qa/scale.spec.ts"
+      ]
+    },
+    {
+      "id": "scale-study-2x2",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/scale-study.mjs",
+      "args": [
+        "--output={output}/venets-scale-study.json"
       ]
     }
   ]

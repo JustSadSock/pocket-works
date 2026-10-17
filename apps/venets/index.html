@@ -10,20 +10,23 @@
 <main id="root" class="app-shell" data-app-shell>
 <header class="app-header" data-ui>
   <a class="home-link" href="../../" data-app-control data-native-press aria-label="В PocketWorks">← <span>PocketWorks</span></a>
-  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>МЕЧ И ГРАМОТА · 0.7</small></span>
+  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>БОЛЬШОЙ МИР · 0.8</small></span>
   <button id="back-menu" class="quiet-control" type="button" hidden data-native-press>Меню</button>
 </header>
 <div id="notice" role="status" aria-live="polite" class="notice-toast" hidden></div>
 <section id="loading-screen" class="center-screen" aria-live="polite"><span class="loader-mark" aria-hidden="true">♜</span><p>Открываем летопись…</p></section>
 <section id="menu-screen" class="menu-screen" hidden>
-  <div class="menu-hero"><p class="eyebrow">МЕЖДУРЕЧЬЕ · 1066</p><h1>Одно графство.<br>Три поколения.</h1><p>Каждый титул имеет владельца. Каждая обида — память. Наследие начнётся с одного спорного права.</p></div>
+  <div class="menu-hero"><p class="eyebrow">МЕЖДУРЕЧЬЕ · 1066</p><h1>Одно право.<br>Много судеб.</h1><p>Выберите дом. Остальную историю создадут ваши решения.</p></div>
   <div class="menu-bottom">
     <button id="resume" type="button" class="big-button" hidden data-native-press>Продолжить летопись <span id="resume-summary"></span> →</button>
     <div class="new-campaign">
       <div class="new-heading"><h2>Начать хронику</h2><label for="seed-input">Мир № <input id="seed-input" type="number" inputmode="numeric" min="0" max="4294967295" step="1" value="413"/></label></div>
+      <div class="world-size-options" role="group" aria-label="Размер мира">
+        <button data-world-size="12" class="active" aria-pressed="true" type="button">12 земель</button>
+        <button data-world-size="48" aria-pressed="false" type="button">48 земель</button>
+      </div>
       <div id="starts" class="starts" role="group" aria-label="Выбор графства"></div>
       <button id="begin" type="button" class="primary-control" data-native-press>Принять графство <span aria-hidden="true">→</span></button>
-      <p class="subnote">Фамилии, титулы и границы изменяются вместе с вашим миром.</p>
     </div>
     <button id="open-docs" class="text-link" type="button" data-native-press>Исследования и устройство мира ↗</button>
   </div>
@@ -47,6 +50,11 @@
       <div class="atlas-tools" role="group" aria-label="Вид владений">
         <button type="button" data-atlas-view="atlas" class="active" aria-pressed="true">Атлас</button>
         <button type="button" data-atlas-view="family" aria-pressed="false">Родословная</button>
+        <div id="region-controls" class="region-controls" hidden>
+          <button id="region-prev" type="button" aria-label="Предыдущая область">‹</button>
+          <span id="region-label" aria-live="polite">I / IV</span>
+          <button id="region-next" type="button" aria-label="Следующая область">›</button>
+        </div>
       </div>
       <div id="atlas-stage" class="atlas-stage">
         <div id="province-grid" class="province-grid" role="group" aria-label="Выбрать провинцию"></div>
@@ -116,6 +124,6 @@
   <menu><button type="submit" value="cancel" class="quiet-control">Остаться</button><button type="submit" value="confirm" class="primary-control">Начать заново</button></menu>
 </form></dialog>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.7.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.8.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
