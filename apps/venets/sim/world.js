@@ -4,7 +4,7 @@ import { recordEvent, transfer, changeTitleHolder } from './transactions.js';
 import { assertWorld } from './validate.js';
 import { assertWorldV2 } from './validate-v2.js';
 import { assertWorldV3 } from './validate-v3.js';
-import { initializePolitics, politicalYear, possibleActions, chooseGoal, opinion, remember } from './politics.js';
+import { initializePolitics, politicalYear, possibleActions, chooseGoal, opinion, remember, performPoliticalAction } from './politics.js';
 import { seedFamilyFoundations, demographicYear, migrateV2, birth, marry, die, setSuccessionLaw, descendantBranches, resolveInheritance, ancestors, titlesOf } from './dynasty.js';
 export { transfer, recordEvent, changeTitleHolder, assertWorld, birth, marry, die, setSuccessionLaw, descendantBranches, resolveInheritance, ancestors, titlesOf, politicalYear, possibleActions, chooseGoal, opinion, remember };
 
