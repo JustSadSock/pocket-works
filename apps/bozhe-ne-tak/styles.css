@@ -275,3 +275,16 @@ button:active:not(:disabled){transform:translateY(1px)}
 @keyframes thunder-flash{0%,35%,65%,100%{filter:none;opacity:1}12%,49%{filter:brightness(2);opacity:.8}}
 @keyframes ash-rise{0%{transform:translate(0,0) scale(.4);opacity:0}25%{opacity:.55}100%{transform:translate(15px,-85px) scale(2.3);opacity:0}}
 @media(max-width:760px){.miracle-text{font-size:12px;padding:7px 10px;margin:3px 0 7px}}
+
+/* v0.2 QA: prevent prep controls from overlapping the bells on narrow phones. */
+@media(max-width:760px){
+ .choice-tools{grid-template-columns:minmax(0,2.1fr) minmax(0,1fr)}
+ .tools-row .tool{min-width:0;flex:1 1 0;padding:5px 3px;font-size:10px;white-space:nowrap}
+ .work-column{padding-bottom:max(22px,env(safe-area-inset-bottom))}
+ .god-shell{height:53%;top:0}
+}
+@media(max-width:350px){
+ .choice-tools{grid-template-columns:minmax(0,1fr)}
+ .choice-block.height-choice{grid-column:auto}
+ .tools-row .tool{font-size:11px}
+}

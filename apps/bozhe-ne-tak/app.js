@@ -2,7 +2,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {ITEMS,DOCTRINES,TREATMENTS,MAX_ROUNDS,START_FAITH,MAX_FAITH,createGame,setAction,
  getRite,getItem,getDoctrine,doctrineEffect,commitRite,continueFromJudgment,chooseDoctrine,
- conveneCouncil,loadGame,isWin} from './engine.mjs';
+ conveneCouncil,loadGame,isWin} from './engine.js';
 import {offeringArt,godArt} from './art.js';
 installMobileRuntime();
 

@@ -16,7 +16,7 @@ export const ITEMS = Object.freeze([
 export const TREATMENTS=Object.freeze([
  {id:'wash',name:'Омыть',short:'Вода'},
  {id:'smoke',name:'Окурить',short:'Дым'},
- {id:'gild',name:'Позолотить',short:'Золото'}
+ {id:'gild',name:'Золотить',short:'Золото'}
 ]);
 export const RITES=Object.freeze([
  {id:'white',title:'Белее облака',riddle:'«Принесите светлое. Не терплю железа. Пусть омовение станет первым благословением. Два звона и низкий постамент».',

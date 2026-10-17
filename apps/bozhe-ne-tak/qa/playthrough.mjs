@@ -46,7 +46,7 @@ try{
   let loop=0;
   while(loop<5){
    const prepared=await page.evaluate(async()=>{
-    const e=await import('./engine.mjs');
+    const e=await import('./engine.js');
     const s=JSON.parse(localStorage.getItem('pocket-works:bozhe-ne-tak:game-v2'));
     const r=e.getRite(s);let best=null;
     for(const item of e.ITEMS)for(const treatment of e.TREATMENTS)for(const bell of [1,2,3])for(const height of ['low','high']){

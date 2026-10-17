@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame,setAction,getRite,ITEMS,DOCTRINES,evaluateRite,commitRite,continueFromJudgment,
- chooseDoctrine,conveneCouncil,loadGame,getBestPossible,MAX_ROUNDS,isWin} from '../engine.mjs';
+ chooseDoctrine,conveneCouncil,loadGame,getBestPossible,MAX_ROUNDS,isWin} from '../engine.js';
 test('seed is deterministic and rites never repeat',()=>{
  const a=createGame(413),b=createGame(413);
  assert.deepEqual(a,b);assert.equal(new Set(a.order).size,MAX_ROUNDS);
