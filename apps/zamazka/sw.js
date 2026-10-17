@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.40.14';
+const CACHE_NAME = 'zamazka-v1.40.15';
 const ART_CACHE = 'zamazka-artworks-v1.12.5';
-const APP_VERSION = '1.40.14';
+const APP_VERSION = '1.40.15';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Площадь каждого нового повреждения нормализована до 3% картины; сохранились все шесть форм и естественные контуры.","Существующие комнаты, текущие рисунки и архивы продолжают использовать прежние маски без изменений.","Новые матчи и одиночные тренировки получают равнозначный объём реставрации."];
