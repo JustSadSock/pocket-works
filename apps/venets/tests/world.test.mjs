@@ -99,6 +99,9 @@ test('tampering with money, title hierarchy, adjacency or event order is rejecte
   run(w => w.titles.find(t => t.id === 'du-01').liegeId = 'du-02');
   run(w => w.provinces[0].neighbors.pop());
   run(w => w.events[0].id = 27);
+  run(w => w.events[0].year = 1090);
+  run(w => w.provinces[0].x = w.provinces[1].x);
+  run(w => w.stats.shortages++);
   run(w => w.people[0].dynastyId = 'dy-404');
 });
 test('invalid inputs never mutate a valid world', () => {
@@ -125,4 +128,13 @@ test('stress acceptance: at least 100 seeds × 50 simulated years', () => {
   assert.equal(auditedYears,5000);
   assert.ok(shortageWorlds>0, 'Climate must occasionally affect subsistence');
   assert.ok(differentHistories.size>90, 'World generation should produce distinct histories');
+});
+
+test('resource journal cannot be forged by changing both a wallet and ledger', () => {
+  const base=createWorld(29);
+  stepYear(base);
+  const attack=loadWorld(serializeWorld(base));
+  attack.provinces[0].treasury.grain+=20;
+  attack.ledger.created.grain+=20;
+  assert.throws(()=>assertWorld(attack), /created ledger\/event mismatch/);
 });
