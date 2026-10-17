@@ -3181,7 +3181,7 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "dab1c9479e6466fb8e8806cb210f028a8851d308",
+    "revision": "61adae14ca9cf689aa6356e5f2b7ce9ae20d3504",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -3193,8 +3193,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "dab1c9479e6466fb8e8806cb210f028a8851d308",
-    "lastAttemptAt": "2026-10-17T21:30:39.125Z"
+    "lastAttemptRevision": "61adae14ca9cf689aa6356e5f2b7ce9ae20d3504",
+    "lastAttemptAt": "2026-10-17T22:13:14.199Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3258,11 +3258,30 @@
   },
   "venets": {
     "note": "No frame passed image-content checks",
-    "diagnostic": null,
-    "status": "published",
+    "diagnostic": {
+      "bestScore": 56,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 40216,
+        "variance": 41.16386039065301,
+        "entropy": 2.070501562292416,
+        "edgeDensity": 0.15252976190476192,
+        "colorfulness": 19.1923828125,
+        "centerDetail": 28.77349036794643,
+        "meanLight": 222.21946157226444
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/venets/?pw-cover=1&pw_release=0.6.0&pw_fp=0920f7daaeafc8f983d27302"
+    },
+    "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "0012928bd207ce181b744643c5b240209a1003b0",
-    "lastAttemptAt": "2026-10-17T19:25:26.872Z",
+    "lastAttemptRevision": "37ed9d8f733d3811acc0c93bcf42b2500b77889c",
+    "lastAttemptAt": "2026-10-17T22:13:25.009Z",
     "revision": "0012928bd207ce181b744643c5b240209a1003b0",
     "qualityScore": 57,
     "visionScore": null,
