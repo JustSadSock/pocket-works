@@ -2,6 +2,14 @@
   "schema": 1,
   "suites": [
     {
+      "id": "pocketnet-rules",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/server.test.mjs"
+      ]
+    },
+    {
       "id": "ritual-model",
       "kind": "node-test",
       "tier": "smoke",

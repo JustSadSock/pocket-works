@@ -4,13 +4,15 @@ import {ITEMS,DOCTRINES,TREATMENTS,MAX_ROUNDS,START_FAITH,MAX_FAITH,createGame,s
  getRite,getItem,getDoctrine,doctrineEffect,commitRite,continueFromJudgment,chooseDoctrine,
  conveneCouncil,loadGame,isWin} from './engine.js';
 import {offeringArt,godArt} from './art.js';
+import {createOnline} from './online.js';
 installMobileRuntime();
 
 const SAVE_KEY='pocket-works:bozhe-ne-tak:game-v2';
 const SOUND_KEY='pocket-works:bozhe-ne-tak:sound';
 const root=document.querySelector('#game');
 const toHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let session=null,screen='home',modal='',selection=null,documentName='ROADMAP.md',docCache=null,docError='';
+let session=null,screen=new URL(location.href).searchParams.has('room')?'online':'home',modal='',selection=null,documentName='ROADMAP.md',docCache=null,docError='';
+const online=createOnline(()=>{if(screen==='online')render()},()=>goto('home'));
 let sound=true,audio=null,noiseBuffer=null,toastMessage='',toastId;
 try{session=loadGame(JSON.parse(localStorage.getItem(SAVE_KEY)||'null'));}catch{}
 try{sound=localStorage.getItem(SOUND_KEY)!=='off';}catch{}
@@ -51,9 +53,9 @@ function bellAudio(type='wood'){
  }catch{/* Audio permission is optional; visuals always work. */}
 }
 function topbar(){
- const back=screen==='home'?'<a class="exit" href="../../" data-app-control data-native-press>← Pocket Works</a>':
+ const back=screen==='online'?'<button type="button" class="exit" data-action="online-exit">← Покинуть комнату</button>':screen==='home'?'<a class="exit" href="../../" data-app-control data-native-press>← Pocket Works</a>':
  '<button type="button" class="exit" data-action="home">← К выбору</button>';
- const status=session&&screen==='play'?'ОБРЯД '+(session.round+1)+' / '+MAX_ROUNDS:screen==='project'?'ДОКУМЕНТЫ':'ХРАМ ОГО';
+ const status=screen==='online'?'POCKETNET · СОБОР':session&&screen==='play'?'ОБРЯД '+(session.round+1)+' / '+MAX_ROUNDS:screen==='project'?'ДОКУМЕНТЫ':'ХРАМ ОГО';
  return '<header class="topbar" data-ui>'+back+'<span class="top-center">'+status+'</span>'+
  '<button class="sound" type="button" data-action="sound" aria-label="'+(sound?'Выключить звук':'Включить звук')+'">'+
  (sound?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ')+'</button></header>';
@@ -73,8 +75,8 @@ function home(){
  '<p>Пять обрядов. Один капризный бог. Догматы, которые вы сами и придумали.</p>'+
  '<div class="home-actions">'+(has?'<button class="btn primary" data-action="resume">Продолжить '+(session.phase==='end'?'хронику':'обряд')+' <span>→</span></button>':'')+
  '<button class="btn '+(has?'secondary':'primary')+'" data-action="new">'+(has?'Новая религия':'Начать служение')+' <span>✦</span></button>'+
- '</div><div class="quiet-actions"><button data-action="help">Как играть</button><button data-action="project">Дорожная карта</button></div>'+
- '<div class="build-note">v0.2 · ЛОКАЛЬНАЯ ПАРТИЯ · ОНЛАЙН В РАЗРАБОТКЕ</div></div></section>';
+ '</div><div class="home-online"><button type="button" class="btn secondary" data-action="online">ИГРАТЬ ВМЕСТЕ · POCKETNET <span>↗</span></button></div><div class="quiet-actions"><button data-action="help">Как играть</button><button data-action="project">Дорожная карта</button></div>'+
+ '<div class="build-note">v0.3 · ЛОКАЛЬНО И ВМЕСТЕ · POCKETNET</div></div></section>';
 }
 function layout(inside,view='active'){
  return '<div class="ritual-layout '+view+'">'+inside+'</div>';
@@ -239,7 +241,7 @@ function confirmationModal(){
 }
 function render(){
  if(!root)return;
- root.innerHTML=topbar()+(screen==='home'?home():screen==='help'?help():screen==='project'?project():
+ root.innerHTML=topbar()+(screen==='online'?online.markup():screen==='home'?home():screen==='help'?help():screen==='project'?project():
  !session?home():screen==='play'?(session.phase==='play'?play():session.phase==='judgment'?judgment():session.phase==='dogma'?dogmaStage():ending()):home())+
  confirmationModal()+'<div class="toast '+(toastMessage?'shown':'')+'" id="toast" role="status">'+toHtml(toastMessage)+'</div>';
  if(screen==='project')void loadDoc();
@@ -249,6 +251,7 @@ function offerRite(){
  changeState(commitRite(session));bellAudio(session.judgment?.verdict==='wrath'?'wrath':session.judgment?.verdict==='bless'?'bless':'bell');
 }
 document.addEventListener('click',event=>{
+ if(screen==='online'&&online.action(event))return;
  const choice=event.target.closest('[data-item],[data-treatment],[data-bell],[data-height],[data-pick-dogma],[data-doc]');
  const button=event.target.closest('[data-action]');
  if(choice){
@@ -267,6 +270,8 @@ document.addEventListener('click',event=>{
  if(action==='sound'){sound=!sound;try{localStorage.setItem(SOUND_KEY,sound?'on':'off')}catch{}render();if(sound)bellAudio('wood');return}
  if(action==='help'){goto('help');return}
  if(action==='project'){goto('project');return}
+ if(action==='online-exit'){online.leave();goto('home');return}
+ if(action==='online'){goto('online');return}
  if(action==='home'){goto('home');return}
  if(action==='resume'){goto('play');return}
  if(action==='cancel'){modal='';render();return}
@@ -286,6 +291,6 @@ document.addEventListener('click',event=>{
  if(action==='retry-doc'){docError='';docCache=null;render();return}
 });
 window.addEventListener('pagehide',()=>{if(session)persist()});
-window.__BNT_QA__=()=>({screen,phase:session?.phase||null,round:session?.round??null,faith:session?.faith??null,
+window.__BNT_QA__=()=>({onlinePhase:online.phase,onlineRoom:online.roomId,screen,phase:session?.phase||null,round:session?.round??null,faith:session?.faith??null,
  item:session?.actions.itemId??null,doctrines:session?.doctrines||[],history:session?.history.length||0,hasSave:!!session});
 render();
