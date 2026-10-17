@@ -313,7 +313,7 @@ function renderCouncil(){
       'Ваш дом лишился земель, но ещё жив. Сохраните претензии и ищите сторонников.');
   const remembered=claim?memoryImpact(w,p.id,claim.holderId):{value:0,source:null};
   label(by('story'),story+(remembered.value<=-5&&remembered.source?
-    ' Отказ '+remembered.source.year+' г. изменяет решения.':''));
+    ' Помнит обиду · '+remembered.source.year+' г.':''));
   renderConflictStatus();
   const actions=campaignChoices(game);
   const container=by('actions'),frag=document.createDocumentFragment();
