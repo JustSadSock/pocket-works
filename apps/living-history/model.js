@@ -135,6 +135,35 @@ export function chooseSettlementSite(s,c,near,radius=19){
  }
  return best;
 }
+// Founding households stand on historically cleared ground: these trees were
+// removed before day zero, not sold, and cannot become free player resources.
+function clearFoundingForest(s,i){
+ if(s.day!==0)return;
+ const trees=s.forest[i]||0;
+ if(trees>0){s.stats.foundingForestCleared=round((s.stats.foundingForestCleared||0)+trees);s.forest[i]=0;}
+}
+// Actual post-foundation felling transfers only salvageable timber into a real
+// household. Branches and roots are logged as waste in the woodland balance;
+// neither construction nor farm projects may teleport standing timber away.
+function fellForClearance(s,h,i,worker){
+ if(s.terrain[i]!==0||s.usage[i]||!(s.forest[i]>0))return 0;
+ const effort=workCapacity(worker,'wood'),amount=Math.min(s.forest[i],round(18*effort));
+ if(amount<=0)return 0;
+ const kept=round(amount*.80),waste=round(amount-kept);
+ s.forest[i]=round(s.forest[i]-amount);
+ h.wood=round(h.wood+kept);
+ s.stats.produced=round(s.stats.produced+kept);
+ s.stats.woodlandFelled=round((s.stats.woodlandFelled||0)+amount);
+ s.stats.woodlandWaste=round((s.stats.woodlandWaste||0)+waste);
+ earn(s,h,'woodKg',kept);
+ worker.job='wood';worker.x=i%SIZE;worker.y=Math.floor(i/SIZE);
+ recordWork(worker,'wood');
+ worker.skill.wood=roundSkill(worker.skill.wood+.006*worker.aptitude*effort);
+ const before=s.traffic[i];
+ s.traffic[i]=Math.min(255,before+3);
+ if(before!==s.traffic[i])s.roadRevision=(s.roadRevision||0)+1;
+ return amount;
+}
 function allocFields(s,h,count) {
  // Families cultivate contiguous sectors accessible on foot, but each family
  // joins the existing communal arable; no predetermined cardinal field blocks.
@@ -160,7 +189,7 @@ function allocFields(s,h,count) {
   if(n>=count)break;
   if(s.usage[i])continue;
   if(s.pasture){s.stats.forageConverted=round((s.stats.forageConverted||0)+s.pasture[i]);s.pasture[i]=0;}
-  s.usage[i]=2;h.fields.push(i);n++;
+  clearFoundingForest(s,i);s.usage[i]=2;h.fields.push(i);n++;
  }
  return n;
 }
@@ -168,6 +197,8 @@ function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130,foundingFields=30) 
  const reachable=walkingDistances(s,c);
  const spot=nearestFree(s,x,y,(nx,ny)=>reachable[idx(nx,ny)]>=0&&croftCandidate(s,nx,ny,c).length>=2);
  if(!spot)return null;
+ const croft=croftCandidate(s,spot.x,spot.y,c);
+ if(s.day>0&&(s.forest[idx(spot.x,spot.y)]>0||croft.some(i=>s.forest[i]>0)))return null;
  const h={id:s.nextId++,communityId:c.id,x:spot.x,y:spot.y,members:[],grain,wood,coin:wealth,
   fields:[],croft:[],sown:0,soilRest:0,needsHouse:false,capacity:5,shortage:0,lastTrade:null,
   work:'farm',focus:'farm',farmYear:null,leaseIn:[],leaseOut:[],leaseTerms:[],landValue:0,
@@ -176,8 +207,8 @@ function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130,foundingFields=30) 
   draftOxen:0,dairyCows:0,gardenYear:null};
  h.fodder=h.cattle*(700+Math.floor(rand(s)*180));
  const takePlot=i=>{if(s.pasture){s.stats.forageConverted=round((s.stats.forageConverted||0)+s.pasture[i]);s.pasture[i]=0;}};
- const roof=idx(h.x,h.y);takePlot(roof);s.usage[roof]=1;
- for(const i of croftCandidate(s,h.x,h.y,c)){takePlot(i);s.usage[i]=3;h.croft.push(i);}
+ const roof=idx(h.x,h.y);takePlot(roof);clearFoundingForest(s,roof);s.usage[roof]=1;
+ for(const i of croft){takePlot(i);clearFoundingForest(s,i);s.usage[i]=3;h.croft.push(i);}
  s.households.push(h);
  s.landRevision=(s.landRevision||0)+1;
  if(s.day===0)allocFields(s,h,foundingFields);
@@ -269,7 +300,10 @@ for(const h of s.households)if(h.communityId===c.id&&h.tenure!=='demesne')
  s.outside={name:'Соседний рынок',grain:16000,coin:9000,wool:0,
    deliveredGrain:0,receivedWool:0};
  s.economy.outsideGrainInitial=s.outside.grain;
- s.economy.outsideCoinInitial=s.outside.coin;s.economy.woodInitial=round(s.households.reduce((a,h)=>a+h.wood,0));event(s,'foundation','В долине образовались четыре независимые общины','Первоначальное расселение',s.communities.map(c=>c.id));return s; }
+ s.economy.outsideCoinInitial=s.outside.coin;s.economy.woodInitial=round(s.households.reduce((a,h)=>a+h.wood,0));
+ s.economy.woodlandInitial=round(s.forest.reduce((n,v)=>n+v,0));
+ s.stats.woodlandFelled=0;s.stats.woodlandRegrown=0;s.stats.woodlandWaste=0;
+ event(s,'foundation','В долине образовались четыре независимые общины','Первоначальное расселение',s.communities.map(c=>c.id));return s; }
 function personById(s,id){
  if(!s._peopleIndex){Object.defineProperty(s,'_peopleIndex',{value:new Map(),enumerable:false,writable:true,configurable:true});}
  if(s._peopleIndex.size!==s.people.length){s._peopleIndex.clear();for(const p of s.people)s._peopleIndex.set(p.id,p);}
@@ -678,14 +712,14 @@ function recordLife(p,day,type,text){p.lifeLog??=[];p.lifeLog.push({day,type,tex
 function gatherWood(s,h,adults){
  const need=h.wood<120||(h.needsHouse&&h.wood<490)||(h.focus==='wood'&&h.wood<650);if(!need||!adults.length||(h.nextWoodSearch||0)>s.day)return;
  let target=-1,best=999;for(let y=Math.max(1,h.y-11);y<Math.min(SIZE-1,h.y+12);y++)for(let x=Math.max(1,h.x-11);x<Math.min(SIZE-1,h.x+12);x++){
- const i=idx(x,y),d=Math.abs(x-h.x)+Math.abs(y-h.y);if(s.forest[i]>30&&d<best){best=d;target=i;}}
+ const i=idx(x,y),d=Math.abs(x-h.x)+Math.abs(y-h.y);if(s.terrain[i]===0&&!s.usage[i]&&s.forest[i]>30&&d<best){best=d;target=i;}}
  if(target<0){h.nextWoodSearch=s.day+21;return;}h.nextWoodSearch=0;
  const labour=labourTotal(adults,'wood');
  if(labour<=0)return;
  const proficiency=adults.reduce((v,p)=>v+p.skill.wood*workCapacity(p,'wood'),0)/labour;
  const amount=Math.min(s.forest[target],round((labour*1.8+2*Math.min(1,labour))*
   (1+Math.min(.7,proficiency*.22))/(1+best*.018)));
- s.forest[target]=round(s.forest[target]-amount);h.wood=round(h.wood+amount);s.stats.produced=round(s.stats.produced+amount);earn(s,h,'woodKg',amount);
+ s.forest[target]=round(s.forest[target]-amount);h.wood=round(h.wood+amount);s.stats.produced=round(s.stats.produced+amount);s.stats.woodlandFelled=round((s.stats.woodlandFelled||0)+amount);earn(s,h,'woodKg',amount);
  for(const p of adults){p.skill.wood=roundSkill(p.skill.wood+.006*p.aptitude*workCapacity(p,'wood'));p.job='wood';p.x=target%SIZE;p.y=Math.floor(target/SIZE);recordWork(p,'wood');}
  const oldWear=s.traffic[target];
  s.traffic[target]=Math.min(255,oldWear+3);
@@ -698,7 +732,8 @@ function growForest(s){
   Object.defineProperty(s,'_forestAllowed',{value:mask,enumerable:false,configurable:true});
  }
  for(let i=0;i<T;i++)if(s._forestAllowed[i]&&s.terrain[i]===0&&!s.usage[i]&&s.forest[i]<=410){
-   s.forest[i]=round(s.forest[i]+.18*(1-s.forest[i]/500));
+   const prev=s.forest[i];s.forest[i]=round(prev+.18*(1-prev/500));
+   s.stats.woodlandRegrown=round((s.stats.woodlandRegrown||0)+s.forest[i]-prev);
  }
 }
 // Periodic commons grazing: the biomass is spatial, finite and shared by all herds.
@@ -828,7 +863,11 @@ function divideLand(s,parent,child,fraction=.45){
 }
 function reclaimProject(s,h,adults){
  const day=s.day%365;
- if(day<310||day>346||!adults.length||h.fields.length>=50)return;
+ if(!adults.length)return;
+ if(!h.landProject&&(day<310||day>346||h.fields.length>=50))return;
+ // Finish work started in autumn into early spring; do not abandon partially
+ // cleared woodland when the calendar crosses day 346.
+ if(h.landProject&&day>70&&day<310)return;
  if(!h.landProject){
   const demand=annualNeed(s,h),reserve=h.grain/Math.max(1,demand);
   if(!(h.fields.length<8||reserve<.70||h.members.filter(id=>personById(s,id)?.alive).length>=6))return;
@@ -859,7 +898,18 @@ function reclaimProject(s,h,adults){
    [h.id],{cell:best,workDays:12});
  }
  const p=adults.find(p=>p.job==='home');if(!p)return;
- p.job='build';recordWork(p,'build');h.landProject.days+=workCapacity(p,'build');
+ const cell=h.landProject.cell;
+ if(s.usage[cell]||s.terrain[cell]!==0){
+  // A competing claim wins the site; previous clearing remains physically
+  // visible and its salvage stays with whoever actually performed the work.
+  h.landProject=null;return;
+ }
+ if(s.forest[cell]>0){
+  fellForClearance(s,h,cell,p);
+  return;
+ }
+ p.job='build';p.x=cell%SIZE;p.y=Math.floor(cell/SIZE);
+ recordWork(p,'build');h.landProject.days+=workCapacity(p,'build');
  if(h.landProject.days>=12){
   const i=h.landProject.cell;
   if(s.usage[i]===0&&s.terrain[i]===0){
@@ -1044,9 +1094,18 @@ function planConstruction(s,h,adults){
  // Houses require a continuous investment of labour, rather than materialising
  // in a single tick. Timber is reserved at the start and conserved in the audit.
  if(h.buildProject){
-  if(builders.length){builders[0].job='build';recordWork(builders[0],'build');h.buildProject.days+=workCapacity(builders[0],'build');}
-  if(h.buildProject.days<50)return;
   const c=s.communities.find(c=>c.id===h.communityId),site=h.buildProject.site;
+  const croft=c&&site?croftCandidate(s,site.x,site.y,c):[];
+  // A house and its adjoining enclosed ground cannot appear over intact
+  // woodland. Cutting consumes the same finite worker-days as other work.
+  const clearing=site&&croft.length>=2?
+   [idx(site.x,site.y),...croft].find(i=>!s.usage[i]&&s.forest[i]>0):-1;
+  if(clearing>=0){
+   if(builders.length)fellForClearance(s,h,clearing,builders[0]);
+   return;
+  }
+  if(builders.length){builders[0].job='build';builders[0].x=site.x;builders[0].y=site.y;recordWork(builders[0],'build');h.buildProject.days+=workCapacity(builders[0],'build');}
+  if(h.buildProject.days<50)return;
   const available=site&&!s.usage[idx(site.x,site.y)]&&s.terrain[idx(site.x,site.y)]===0&&croftCandidate(s,site.x,site.y,c).length>=2;
   const movers=availableMovers(s,h);
   if(!c||!available||!movers){
@@ -2033,6 +2092,12 @@ export function audit(s){
   const expected=round(s.economy[kind+'Initial']+(s.stats[produced]||0)-(s.stats[seeded]||0)-(s.stats[eaten]||0)-(s.stats[kind+'Fed']||0));
   if(Math.abs(remaining-expected)>.051)issues.push(`Баланс ${kind}: ${remaining} вместо ${expected}`);
  }
+ if(Number.isFinite(s.economy.woodlandInitial)){
+  const actual=round(s.forest.reduce((n,v)=>n+v,0));
+  const expected=round(s.economy.woodlandInitial+(s.stats.woodlandRegrown||0)-(s.stats.woodlandFelled||0));
+  if(Math.abs(actual-expected)>.55)issues.push(`Баланс стоящего леса: ${actual} вместо ${expected}`);
+  if(Math.abs((s.stats.woodlandWaste||0)-(s.stats.clearanceWasteExpected||0))>Infinity)issues.push('Ошибочный учёт порубочных остатков');
+ }
  if(Number.isFinite(s.economy.woodInitial)){
   const expected=round(s.economy.woodInitial+s.stats.produced-s.stats.harvest-490*s.stats.built-(s.stats.storageWood||0)-(s.stats.landWood||0)-(s.stats.houseWoodReserved||0));
   if(Math.abs(o.wood-expected)>.051)issues.push(`Нарушено сохранение древесины: ${o.wood} вместо ${expected}`);
@@ -2105,8 +2170,10 @@ export function audit(s){
  }
  // A toft cannot silently become unowned or be represented by decorative
  // map cells disconnected from an actual household title.
- for(let i=0;i<T;i++)if(s.usage[i]===3&&!plots.has(i))
-  issues.push(`Приусадебный участок без владельца: ${i}`);
+ for(let i=0;i<T;i++){
+  if(s.usage[i]===3&&!plots.has(i))issues.push(`Приусадебный участок без владельца: ${i}`);
+  if(s.usage[i]&&s.forest[i]>.001)issues.push(`Живой лес поверх освоенной земли: ${i}`);
+ }
  if(s.historicalProfile)for(const cm of s.communities)if(cm.manorHouseId&&!s.households.some(h=>h.id===cm.manorHouseId&&h.tenure==='demesne'&&h.communityId===cm.id))issues.push(`Сеньориальный двор повреждён: ${cm.id}`);
  return {ok:issues.length===0,issues,...o};
 }
