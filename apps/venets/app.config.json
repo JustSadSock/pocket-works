@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "venets",
+  "name": "Венец",
+  "shortName": "Венец",
+  "description": "Исследовательская основа камерной династической стратегии: механики, источники, тесты и визуальное направление.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-17",
+  "releaseDateTime": "2026-10-17T15:21:00+03:00",
+  "changelog": [
+    "Созданы концепция, научные источники и гипотезы мини-CK3.",
+    "Добавлен абстрактный план симуляционных тестов.",
+    "Собрано исследование выполнимого визуального направления; игрового прототипа пока нет."
+  ],
+  "status": "experimental",
+  "preset": "vanilla",
+  "accent": "#825d3d",
+  "backgroundColor": "#eee9dc",
+  "themeColor": "#eee9dc",
+  "orientation": "any",
+  "cacheName": "venets-v0.1.0",
+  "storageNamespace": "pocket-works:venets",
+  "tags": [
+    "offline",
+    "PWA",
+    "strategy",
+    "medieval",
+    "research",
+    "prototype",
+    "dynasty"
+  ],
+  "order": 96
+}
