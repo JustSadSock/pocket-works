@@ -1,6 +1,7 @@
 // ВЕНЕЦ v0.4 — deterministic world, kinship and explainable political AI.
 import { initialRngState, normalizeSeed, randomInt } from './random.js';
 import { recordEvent, transfer, changeTitleHolder } from './transactions.js';
+import {ensureConflicts,conflictYear} from './conflicts.js';
 import { assertWorld } from './validate.js';
 import { assertWorldV2 } from './validate-v2.js';
 import { assertWorldV3 } from './validate-v3.js';
@@ -92,6 +93,7 @@ export function createWorld(seed = 1) {
   }
   seedFamilyFoundations(world);
   initializePolitics(world);
+  ensureConflicts(world);
   for (const good of ['grain', 'coin']) {
     world.ledger.initial[good] = sumInitial([...world.people, ...world.provinces], good);
   }
@@ -153,6 +155,7 @@ export function stepYear(world, { excludePlayerId = null } = {}) {
   }
   demographicYear(world);
   politicalYear(world,{excludeIds:excludePlayerId?[excludePlayerId]:[]});
+  conflictYear(world,{excludePlayerId});
   world.stats.years++;
   recordEvent(world, 'year-closed', 'calendar-tick', {
     year: world.year, shortages: world.stats.shortages,
@@ -181,6 +184,7 @@ export function loadWorld(source) {
     assertWorldV3(world);
     initializePolitics(world,{migration:true});
   }
+  ensureConflicts(world);
   assertWorld(world);
   return world;
 }
