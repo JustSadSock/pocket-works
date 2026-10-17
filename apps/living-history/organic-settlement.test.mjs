@@ -41,7 +41,9 @@ test('cultivation is no longer confined to scripted four cardinal rectangles',()
    // The old model only allowed one coordinate to stay within 13 tiles
    // of the village centre. Organic blocks must reach some diagonal sectors.
    if(Math.abs(dx)>14&&Math.abs(dy)>14)other++;
-   assert.ok(Math.hypot(dx,dy)>=14,'a distant open-field strip must remain beyond the residential toft/croft zone');
+   // Founding plots may now lie close to the village: actual available rights,
+   // soil, household distance and garden protection determine the fringe.
+   assert.ok(s.terrain[cell]===0&&s.usage[cell]===2);
   }
  }
  assert.ok(other>0,`no fields outside four artificial cross arms, seed 413`);
