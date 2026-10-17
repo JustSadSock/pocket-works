@@ -125,7 +125,7 @@ export function assertWorld(w){
     'marriages','escheats','partitions']) demand(safe(stats[key]),'missing/invalid stats '+key);
   demand(stats.shortages===w.provinces.reduce((n,p)=>n+p.shortages,0),'shortage counter');
   demand(stats.deaths===w.people.filter(p=>!p.alive).length,'death counter');
-  let lastYear=1066,closed=0,eventsBorn=0,eventsDead=0,eventsMarried=0;
+  let lastYear=1066,closed=0,eventsBorn=0,eventsDead=0,eventsMarried=0,eventsPartitioned=0;
   const flows={created:{grain:0,coin:0},consumed:{grain:0,coin:0}};
   for(let i=0;i<w.events.length;i++){
     const e=w.events[i];
@@ -137,6 +137,7 @@ export function assertWorld(w){
     if(e.kind==='birth')eventsBorn++;
     if(e.kind==='death')eventsDead++;
     if(e.kind==='marriage')eventsMarried++;
+    if(e.kind==='realm-partition')eventsPartitioned++;
     if(e.kind==='transfer'){
       const {good,from,to,amount}=e.effect;
       demand(goods.includes(good)&&safe(amount)&&from!==to &&
@@ -147,6 +148,7 @@ export function assertWorld(w){
     }
   }
   demand(closed===stats.years,'year-close entries');
+  demand(eventsPartitioned===stats.partitions,'portfolio partition counter');
   demand(eventsBorn===stats.births&&eventsDead===stats.deaths&&eventsMarried===stats.marriages,
     'demographic event counters');
   const totals={grain:0,coin:0};
