@@ -6,15 +6,17 @@ import {personPosition,cattlePosition,fieldAppearance} from './visual-land.js';
 const at=(p,s)=>walkable(s,p.x,p.y);
 
 test('family-selected open fields are safe, reachable and not forced into a village ring',()=>{
- const s=createWorld(413);
+ const s=createWorld(413);let nearCount=0,farCount=0;
  for(const h of s.households){const c=s.communities.find(x=>x.id===h.communityId);
   assert.ok(h.fields.length>=1,`missing real strips for house ${h.id}: ${h.fields.length}`);
   assert.ok(h.fields.every(i=>s.usage[i]===2&&s.terrain[i]===0));
   const nearby=h.fields.filter(i=>Math.hypot(i%160-c.x,Math.floor(i/160)-c.y)<14);
-  assert.ok(nearby.length<=h.fields.length);
+  nearCount+=nearby.length;farCount+=h.fields.length-nearby.length;
   assert.ok(h.fields.every(i=>!h.croft.includes(i)),'field and private croft rights cannot overlap');
   assert.ok(h.fields.some(i=>walkingSteps(s,h,{x:i%160,y:Math.floor(i/160)})>5));
  }
+ assert.ok(nearCount>0,'accessible plots can exist inside the obsolete 14-cell village ring');
+ assert.ok(farCount>0,'separate open fields remain genuinely rural');
 });
 
 test('a human work journey follows traversable tiles, with no decorative circular motion',()=>{
