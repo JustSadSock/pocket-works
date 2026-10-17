@@ -96,6 +96,8 @@ assert(index.lastIndexOf('visual-critique-146.css')>index.indexOf('museum-afterh
 assert.match(css,/\.screen:has\(>\.museum-home\)[\s\S]*?overflow:visible!important/);
 assert.match(css,/\.museum-slide\[data-slot="-3"\]/);
 assert.match(css,/\.museum-slide\[data-slot="3"\]/);
+assert.match(css,/\.museum-display\{[\s\S]*?pointer-events:auto!important/, 'gallery-wide mouse wheel and swipe must remain usable');
+assert.match(css,/\.museum-stage\{[\s\S]*?pointer-events:auto!important/, 'empty gallery space must receive wheel navigation');
 assert.match(css,/#screen>\.passage-entry \.passage-heading[\s\S]*?border-bottom:0!important/);
 assert.match(css,/#screen>\.passage-preparing\{\s*background:#263e33!important;background-image:none!important/);
 assert.match(css,/#screen>\.exhibition-lobby>\.lobby-attendance/);
