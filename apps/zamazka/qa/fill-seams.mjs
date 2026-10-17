@@ -99,3 +99,7 @@ import './fill-topology-matrix.mjs';
 
 // Independent four-neighbour oracle and rotating randomized region stress.
 import './deep-fill-topology.mjs';
+
+// Large already-painted regions and chronological replay cache invariants.
+import './large-painted-fill.mjs';
+import './large-fill-cache.mjs';

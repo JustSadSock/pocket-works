@@ -108,7 +108,7 @@ assert.match(viewer,/paintArchivePair\(\)\.then\(draw\)/,
 const editorSource=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
 assert.match(editorSource,/renderStrokes\(paint,strokes\|\|\[\],z,legacyFrame\?W\/H:artworkAspect\(image\)\)/,
  'archive/reveal replays all strokes with aspect correction');
-assert.match(editorSource,/renderStrokes\(this\.inkCtx,this\.strokes,this\.zone,artworkAspect\(img\)\)/,
+assert.match(editorSource,/renderStrokes\(this\.inkCtx,this\.strokes,this\.zone,artworkAspect\(img\),\s*\(this\.inkRasterCache \|\|= \{\}\)\)/,
  'live editor and archived render use the same aspect correction');
 
 // Exercise the real archive viewer event flow, not only presence of the button.
