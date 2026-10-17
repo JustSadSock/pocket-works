@@ -10,7 +10,7 @@
 <main id="root" class="app-shell" data-app-shell>
 <header class="app-header" data-ui>
   <a class="home-link" href="../../" data-app-control data-native-press aria-label="В PocketWorks">← <span>PocketWorks</span></a>
-  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>БОЛЬШОЙ МИР · 0.8</small></span>
+  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>ОГРАНКА · 0.9</small></span>
   <button id="back-menu" class="quiet-control" type="button" hidden data-native-press>Меню</button>
 </header>
 <div id="notice" role="status" aria-live="polite" class="notice-toast" hidden></div>
@@ -28,6 +28,7 @@
       <div id="starts" class="starts" role="group" aria-label="Выбор графства"></div>
       <button id="begin" type="button" class="primary-control" data-native-press>Принять графство <span aria-hidden="true">→</span></button>
     </div>
+    <button id="restore-backup" class="text-link" type="button" hidden data-native-press>Восстановить предыдущую хронику ↶</button>
     <button id="open-docs" class="text-link" type="button" data-native-press>Исследования и устройство мира ↗</button>
   </div>
 </section>
@@ -123,7 +124,13 @@
   <h2>Завершить текущую летопись?</h2><p>Вы сможете продолжить сохранённую кампанию до начала новой. После создания нового мира прежнее сохранение заменится.</p>
   <menu><button type="submit" value="cancel" class="quiet-control">Остаться</button><button type="submit" value="confirm" class="primary-control">Начать заново</button></menu>
 </form></dialog>
+<dialog id="restore-dialog" class="confirm-dialog"><form method="dialog">
+  <p class="eyebrow">РЕЗЕРВНАЯ КОПИЯ</p><h2>Восстановить предыдущую хронику?</h2>
+  <p>Текущая партия будет заменена предыдущим подтверждённым сохранением. Резервная запись останется доступна.</p>
+  <menu><button value="cancel" type="submit" class="quiet-control">Отмена</button>
+  <button value="confirm" type="submit" class="primary-control">Восстановить</button></menu>
+</form></dialog>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.8.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.9.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
