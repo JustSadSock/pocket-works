@@ -14,7 +14,8 @@ const screens={loading:by('loading-screen'),menu:by('menu-screen'),game:by('game
   ending:by('ending-screen'),docs:by('docs-screen')};
 const SHADES=['#686f55','#885d4b','#77785f','#596e74','#8b7b57'];
 const TITLES={marriage:'Заключить династический брак',gift:'Отправить дипломатический дар',
-  grant:'Пожаловать графство',petition:'Потребовать признания права',
+  grant:'Пожаловать графство',contract:'Служебная грамота',war:'Объявить войну',
+  peace:'Заключить мир',blackmail:'Собрать компромат',assassinate:'Организовать покушение',petition:'Потребовать признания права',
   faction:'Создать фракцию претендента',join:'Поддержать претендента',
   ultimatum:'Предъявить ультиматум'};
 const REASONS={
@@ -25,6 +26,11 @@ const REASONS={
   'living-claimant':'Претендент жив','political-opposition':'Политическая оппозиция',
   'active-faction':'Действующая фракция','political-affinity':'Общие интересы',
   'coalition':'Союз сторонников',
+  'written-claim':'Документированная претензия','levy-funded':'Оплаченная дружина',
+  'spies-paid':'Оплаченные агенты','dynastic-rivalry':'Династический соперник',
+  'high-risk':'Высокий риск разоблачения','service-for-silver':'Военная поддержка за серебро',
+  'finite-oath':'Присяга на ограниченный срок','cease-hostilities':'Прекращение войны',
+  'renounce-current-siege':'Отказ от текущей осады',
   'partner-consent':'Согласие партнёра',
   'pledged-power':'Сила сторонников','ruler-power':'Сила правителя'
 };
@@ -33,7 +39,8 @@ const reasonLabel=reason=>{
   const word=REASONS[key]||key;
   return value===undefined?word:word+': '+value;
 };
-const ICONS={marriage:'✦',gift:'◇',grant:'♜',petition:'§',faction:'⚑',join:'✧',ultimatum:'!'}; // compact navigation glyphs, not real coat-of-arms
+const ICONS={marriage:'✦',gift:'◇',grant:'♜',petition:'§',faction:'⚑',join:'✧',ultimatum:'!',
+  contract:'♜',war:'⚔',peace:'◌',blackmail:'⌕',assassinate:'✧'}; // compact navigation glyphs, not real coat-of-arms
 const GOALS={'secure-claim':'Вернуть спорный титул','political-leverage':'Ослабить сюзерена',
   'gain-land':'Получить владение','stabilize-realm':'Укрепить мир','seek-marriage':'Создать союзный дом',
   'secure-house':'Защитить род'};
@@ -234,10 +241,30 @@ function actionDetail(a,w){
     petition:'Обладатель титула может согласиться с требованием или отказать. Отказ запомнят.',
     faction:'Создаёт постоянное политическое объединение претендента. Сторонники могут присоединиться.',
     join:'Вы войдёте в политическую коалицию и будете поддерживать другого претендента.',
-    ultimatum:'Политическое давление может привести к уступке земли или ещё большей вражде. Это не война.'};
+    ultimatum:'Политическое давление может привести к уступке земли или ещё большей вражде. Это не война.',
+    contract:'8 монет за шестилетнюю службу. Договор приносит поддержку при мобилизации.',
+    war:'Подтверждённая претензия; 10 монет и 14 зерна за сбор дружины. Марш, снабжение и осада идут по годам.',
+    peace:'Прекратить войну, не получив спорный титул.',
+    blackmail:'8 монет за тайное расследование. Шанс добиться передачи титула; при разоблачении отношения портятся.',
+    assassinate:'14 монет за рискованное покушение. Смерть противника запускает обычное наследование.'};
   let text=traits[a.kind]||'';
   if(a.kind==='gift')text+=' Цена: '+a.meta.amount+' монет.';
   return text+' Основания: '+a.reasons.map(reasonLabel).join(' · ')+'.';
+}
+function renderConflictStatus(){
+  const node=by('conflict-strip');
+  const w=game.world,s=w.conflicts;
+  const active=s?.wars.filter(war=>war.attackerId===game.playerId||war.defenderId===game.playerId)||[];
+  const plots=s?.schemes.filter(x=>x.actorId===game.playerId)||[];
+  const contracts=s?.contracts.filter(x=>x.beneficiaryId===game.playerId)||[];
+  const bits=[];
+  for(const war of active)bits.push('Война: '+tname(w,war.titleId)+' · '+war.attackerTroops+
+    ' бойцов · осада '+war.siege+'/3');
+  for(const plot of plots)bits.push((plot.kind==='assassinate'?'Покушение':'Интрига')+
+    ' · '+Math.min(100,plot.progress)+'%');
+  if(contracts.length)bits.push('Присяги: '+contracts.length);
+  node.hidden=!bits.length;
+  node.replaceChildren(...bits.map(str=>element('span','',str)));
 }
 function renderCouncil(){
   const w=game.world,p=w.people.find(p=>p.id===game.playerId);
@@ -249,6 +276,7 @@ function renderCouncil(){
       'Дом '+house(w,game.dynastyId)+' удерживает '+inherited.length+' '+(inherited.length===1?'титул.':'титулов.'):
       'Ваш дом лишился земель, но ещё жив. Сохраните претензии и ищите сторонников.');
   label(by('story'),story);
+  renderConflictStatus();
   const actions=campaignChoices(game);
   const container=by('actions'),frag=document.createDocumentFragment();
   frag.append(element('p','action-intro',game.lastActionYear===w.year?
@@ -260,7 +288,7 @@ function renderCouncil(){
     'Другие правители продолжат действовать, когда вы переведёте время.':
     'Доступных политических действий сейчас нет. Перейдите к следующему году.'));
   else for(const a of actions.slice(0,9)){
-    const b=element('button','action-choice');b.type='button';
+    const b=element('button','action-choice');b.type='button';b.dataset.actionKind=a.kind;
     const sign=element('span','action-sign',ICONS[a.kind]);
     const info=element('span','action-copy');
     info.append(element('strong','',TITLES[a.kind]),element('small','',
@@ -357,6 +385,12 @@ function eventHeadline(e,w){
   const x=e.effect||{};
   const name=id=>pname(w,id);
   switch(e.kind){
+    case 'war-declared':return ['Подняты хоругви: '+tname(w,x.titleId),name(x.attackerId)+' против '+name(x.defenderId)];
+    case 'war-year':return ['Поход за '+tname(w,x.titleId),'Дружина: '+x.troops+' · осада '+x.siege+'/3'];
+    case 'war-peace':return ['Мир: '+tname(w,x.titleId),x.outcome==='victory'?'Победа претендента':x.outcome==='retreat'?'Отступление': 'Поражение'];
+    case 'scheme-started':return ['Начата тайная операция',name(x.actorId)+' → '+name(x.targetId)];
+    case 'scheme-ended':return ['Интрига завершена',x.success?'Успех':'Без результата'];
+    case 'conflict-decision':return [name(x.actorId)+': '+(TITLES[x.kind]||x.kind),x.success?'Решение принято':'Получен отказ'];
     case 'campaign-founded':return ['Начало правления','Оспаривается власть герцога'];
     case 'death':return ['Умер '+name(x.personId),'Возраст: '+(x.age??'—')];
     case 'birth':return ['Родился '+name(x.personId),'Дом пополнился наследником'];
@@ -375,7 +409,7 @@ function eventHeadline(e,w){
 }
 function eventAboutHouse(e,w){
   const x=e.effect||{},ids=[x.personId,x.actorId,x.oldHolderId,x.newHolderId,
-    x.deceasedId,x.heirId,x.personAId,x.personBId,x.claimantId].filter(Boolean);
+    x.deceasedId,x.heirId,x.personAId,x.personBId,x.claimantId,x.attackerId,x.defenderId,x.targetId].filter(Boolean);
   if(ids.some(id=>w.people.find(p=>p.id===id)?.dynastyId===game.dynastyId))return true;
   if(x.titleId){
     const t=w.titles.find(t=>t.id===x.titleId);
@@ -386,11 +420,13 @@ function eventAboutHouse(e,w){
 function renderChronicle(){
   const w=game.world,types=new Set(['campaign-founded','death','birth','marriage','inheritance',
     'title-transfer','realm-partition','faction-founded','faction-ended',
-    'political-decision','claim-founded','shortage']);
+    'political-decision','claim-founded','shortage',
+    'war-declared','war-year','war-peace','scheme-started','scheme-ended','conflict-decision']);
   let events=w.events.filter(e=>types.has(e.kind));
   if(filter==='house')events=events.filter(e=>eventAboutHouse(e,w)||e.kind==='campaign-founded');
   if(filter==='politics')events=events.filter(e=>['political-decision','faction-founded',
-    'faction-ended','claim-founded','title-transfer'].includes(e.kind));
+    'faction-ended','claim-founded','title-transfer','war-declared','war-year','war-peace',
+    'scheme-started','scheme-ended','conflict-decision'].includes(e.kind));
   events=events.slice(-75).reverse();
   const fragment=document.createDocumentFragment();
   if(!events.length)fragment.append(element('p','subnote','Пока нет событий. Время продолжает идти.'));
@@ -492,6 +528,11 @@ function initPreview(id){
     game.goalYear=1067;
     campaignYear(game); // real turn resolves the short testing chapter
     renderEnding();screenTo('ending');return;
+  }
+  if(id==='war'){
+    const order=campaignChoices(game).find(a=>a.kind==='war');
+    if(!order)throw Error('No legal war in inspection seed');
+    campaignAction(game,order);panel='lands';
   }
   if(id==='lands'||id==='atlas')panel='lands';
   if(id==='genealogy'){panel='lands';atlasView='family'}

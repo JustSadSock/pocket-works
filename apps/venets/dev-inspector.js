@@ -7,6 +7,7 @@ export const INSPECTOR_SCREENS = Object.freeze([
   {id:'council',name:'Совет · решения',group:'Основные'},
   {id:'lands',name:'Атлас · владения',group:'Основные'},
   {id:'genealogy',name:'Родословная',group:'Основные'},
+  {id:'war',name:'Военный поход',group:'Основные'},
   {id:'history',name:'Летопись',group:'Основные'},
   {id:'ending',name:'Завершение главы',group:'Основные'},
   {id:'docs',name:'Исследования',group:'Основные'},

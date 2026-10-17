@@ -29,7 +29,7 @@ test('Backquote opens a compact top-left inspector and switches actual previews'
   await page.keyboard.press('Backquote');
   const overlay=page.locator('.venets-dev-inspector');
   await expect(overlay).toBeVisible();
-  await expect(overlay.locator('.venets-dev-list [data-inspector-screen]')).toHaveCount(14);
+  await expect(overlay.locator('.venets-dev-list [data-inspector-screen]')).toHaveCount(15);
   await expect(overlay.locator('.venets-dev-frame')).toHaveAttribute('title',/Совет/);
   const frame=page.frameLocator('.venets-dev-frame');
   await expect(frame.locator('#game-screen')).toBeVisible();
@@ -47,6 +47,7 @@ test('Backquote opens a compact top-left inspector and switches actual previews'
     ['menu-resume','#resume'],
     ['lands','#panel-lands'],
     ['genealogy','#genealogy-tree'],
+    ['war','.atlas-army'],
     ['history','#panel-history'],
     ['confirm','#confirm-dialog'],
     ['decision','#last-action'],

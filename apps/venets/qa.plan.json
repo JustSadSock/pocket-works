@@ -10,7 +10,8 @@
         "tests/dynasty.test.mjs",
         "tests/politics.test.mjs",
         "tests/campaign.test.mjs",
-        "tests/atlas.test.mjs"
+        "tests/atlas.test.mjs",
+        "tests/conflicts.test.mjs"
       ]
     },
     {
@@ -122,7 +123,8 @@
       "tier": "smoke",
       "files": [
         "qa/dev-inspector.spec.ts",
-        "qa/atlas.spec.ts"
+        "qa/atlas.spec.ts",
+        "qa/war.spec.ts"
       ]
     }
   ]

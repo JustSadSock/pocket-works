@@ -1,6 +1,7 @@
 // A player-run chronicle over the existing world. No invented conquest or narrative RNG.
 // Campaign data is kept outside world to preserve the audited schema-4 simulation.
 import {createWorld, stepYear, assertWorld, performPoliticalAction, possibleActions, chooseGoal, serializeWorld, loadWorld, recordEvent, remember} from './world.js';
+import {conflictChoices,performConflictAction} from './conflicts.js';
 
 export const CAMPAIGN_SCHEMA=1;
 export const COUNTY_STARTS=['co-01','co-02','co-03'];
@@ -100,15 +101,20 @@ export function campaignChoices(g){
   if(g.finished||g.chapterComplete||g.lastActionYear===g.world.year)return [];
   const actor=g.world.people.find(p=>p.id===g.playerId);
   if(actor?.alive)chooseGoal(g.world,actor);
-  return possibleActions(g.world,g.playerId);
+  return [...possibleActions(g.world,g.playerId),...conflictChoices(g.world,g.playerId)]
+    .sort((a,b)=>b.score-a.score||a.kind.localeCompare(b.kind));
 }
 export function campaignAction(g,choice){
   assertCampaign(g);
   if(g.finished||g.chapterComplete||g.lastActionYear===g.world.year)
     throw new RangeError('This year is already settled');
-  if(!choice||!['marriage','gift','grant','petition','faction','join','ultimatum'].includes(choice.kind))
+  if(!choice||!['marriage','gift','grant','petition','faction','join','ultimatum',
+    'war','peace','blackmail','assassinate','contract'].includes(choice.kind))
     throw new RangeError('Unknown campaign action');
-  const result=performPoliticalAction(g.world,{
+  const newKind=['war','peace','blackmail','assassinate','contract'].includes(choice.kind);
+  const result=newKind?performConflictAction(g.world,{
+    actorId:g.playerId,kind:choice.kind,targetId:choice.targetId??null,titleId:choice.titleId??null
+  }):performPoliticalAction(g.world,{
     actorId:g.playerId,kind:choice.kind,targetId:choice.targetId??null,
     titleId:choice.titleId??null,factionId:choice.meta?.factionId??null
   });
@@ -149,9 +155,11 @@ export function campaignYear(g){
   const changed=events.filter(e=>e.kind==='title-transfer'&&
     (e.effect.oldHolderId===oldPlayer||e.effect.newHolderId===g.playerId||
       e.effect.oldHolderId===g.playerId));
-  const changes=events.filter(e=>['death','realm-partition','political-decision',
+  const changes=events.filter(e=>['death','realm-partition','political-decision','war-year','war-peace','scheme-ended',
     'claim-founded','inheritance','faction-founded','faction-ended'].includes(e.kind));
-  const significant=Boolean(succession||changed.length||g.chapterComplete||g.finished);
+  const significant=Boolean(succession||changed.length||g.chapterComplete||g.finished||
+    events.some(e=>['war-peace','scheme-ended'].includes(e.kind)&&
+      (e.effect.attackerId===oldPlayer||e.effect.actorId===oldPlayer)));
   assertCampaign(g);
   return {fromYear:oldYear,year:g.world.year,succession,significant,
     relevant:changed,highlights:changes.slice(-6),titles:playerTitles.map(t=>t.id),

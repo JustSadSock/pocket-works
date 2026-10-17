@@ -10,7 +10,7 @@
 <main id="root" class="app-shell" data-app-shell>
 <header class="app-header" data-ui>
   <a class="home-link" href="../../" data-app-control data-native-press aria-label="В PocketWorks">← <span>PocketWorks</span></a>
-  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>ЖИВОЙ АТЛАС · 0.6</small></span>
+  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>МЕЧ И ГРАМОТА · 0.7</small></span>
   <button id="back-menu" class="quiet-control" type="button" hidden data-native-press>Меню</button>
 </header>
 <div id="notice" role="status" aria-live="polite" class="notice-toast" hidden></div>
@@ -38,6 +38,7 @@
     <section id="panel-council" class="game-panel council-panel" aria-labelledby="council-heading">
       <div class="panel-head"><p class="eyebrow">СОВЕТ</p><h2 id="council-heading">Решение года</h2></div>
       <div id="story" class="story-message"></div>
+      <div id="conflict-strip" class="conflict-strip" hidden aria-live="polite"></div>
       <div id="actions" class="actions" aria-live="polite"></div>
       <div id="last-action" class="action-result" hidden></div>
     </section>
@@ -115,6 +116,6 @@
   <menu><button type="submit" value="cancel" class="quiet-control">Остаться</button><button type="submit" value="confirm" class="primary-control">Начать заново</button></menu>
 </form></dialog>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.6.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.7.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
