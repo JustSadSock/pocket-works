@@ -41,6 +41,19 @@ export function floodFillRaster({width,height,walls,zone,output,point,color,chan
     }
     if(!supported)continue;
     const sideX=-dy,sideY=dx,side=sideY*width+sideX;
+    // A gap between two thick, independent objects is a real paintable
+    // corridor, not a pinhole in a single thin contour. The collinear
+    // evidence alone misidentified narrow alleys between painted blocks.
+    // Thin hand-drawn lines have empty pixels on BOTH sides of their
+    // supporting endpoints. Inspect several original (unbridged) samples.
+    for(let k=0;k<3;k++){
+     const a=i-step*k,b=end+step*k;
+     if(wall[(a+side)*4+3]>=WALL_ALPHA||wall[(a-side)*4+3]>=WALL_ALPHA||
+        wall[(b+side)*4+3]>=WALL_ALPHA||wall[(b-side)*4+3]>=WALL_ALPHA){
+       supported=false;break;
+     }
+    }
+    if(!supported)continue;
     let thin=true;
     for(let k=1;k<=gap;k++){
      const at=i+step*k;

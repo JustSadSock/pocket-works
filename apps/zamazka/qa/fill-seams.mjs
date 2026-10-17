@@ -96,3 +96,6 @@ import './fill-picker-stress.mjs';
 
 // Thousands of concentric, clipped, jagged and overlapping contour regressions.
 import './fill-topology-matrix.mjs';
+
+// Independent four-neighbour oracle and rotating randomized region stress.
+import './deep-fill-topology.mjs';
