@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "rules",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "engine.test.mjs"
+      ]
+    },
+    {
+      "id": "mobile-and-desktop",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#menu",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#campaign"
+        },
+        {
+          "action": "visible",
+          "selector": "#board"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
+        },
+        {
+          "action": "visible",
+          "selector": "#overlayMain"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
