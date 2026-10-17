@@ -76,3 +76,6 @@ import './gallery-motion-visual-20261017.mjs';
 
 // Source-proportional originals and edits, equal visual weight, painted recolour.
 import './vote-aspect-fairness.mjs';
+
+// A fixed 3% canvas fraction for NEW masks; old artwork geometry remains byte-identical.
+import './damage-area-balance.mjs';
