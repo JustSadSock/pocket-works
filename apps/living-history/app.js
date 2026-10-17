@@ -2,16 +2,17 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHousehold, SIZE} from './model.js';
 import {diagnoseWorld} from './laboratory.js';
-import {fieldAppearance,personPosition,cattlePosition} from './visual-land.js';
+import {fieldAppearance,cattlePosition} from './visual-land.js';
+import {timeMode,integrateClock,dayClock,dayPhase,planSubday,sampleSubday,makeFastView,advanceFastView} from './subday.js';
 import {walkPath} from './navigation.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.7.8',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.7.9',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
 let sim=null,mode='overview',selected=null,selectedPerson=null,economyOpen=false,speed=0,cam={x:0,y:0,z:1},drag=null,dirty=true,last=performance.now(),acc=0,lastStats=0,lastSavedDay=0,savePending=false,active=true,pointers=new Map(),pinch=null;
 const worldCanvas=document.createElement('canvas');worldCanvas.width=W;worldCanvas.height=W;const draw=worldCanvas.getContext('2d');
-let toastTimer=0;let previousPeople=null;let movementFraction=1;
+let toastTimer=0,dayPlan=null,fastView=makeFastView(),renderDetail='coarse',modeBlend=null,blendRemaining=0;let movementFraction=1;
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),2600);}
 function rngTile(i){let n=Math.imul(i+31,2654435761);n^=n>>>13;return (n>>>0)%100;}
 function tileColor(i,stage){if(sim.terrain[i]===1)return '#4c8990';if(sim.terrain[i]===2)return rngTile(i)>63?'#89947c':'#818e79';if(stage===2)return '#927653';if(stage===3)return '#84945c';if(stage===4)return '#aa906b';if(stage===1)return '#7c8b62';const s=sim.soil[i];return s>83?'#718a57':s>65?'#738357':'#8d9066';}
@@ -84,10 +85,14 @@ function drawFrame(){if(!sim)return;
  ctx.fillStyle='#2c4739';ctx.fillRect(0,0,w,h);if(dirty)makeWorldArt();
  ctx.imageSmoothingEnabled=false;ctx.drawImage(worldCanvas,Math.round(cam.x),Math.round(cam.y),Math.round(W*cam.z),Math.round(W*cam.z));
  const showFigures=cam.z>=.17;
+ const fine=renderDetail==='fine';
  if(showFigures){
   const people=sim.people;
   for(const p of people){if(!p.alive)continue;
-   const where=personPosition(p,sim,previousPeople,movementFraction,true);
+   const real=fine&&dayPlan?sampleSubday(p,dayPlan,movementFraction):fastView.positions.get(p.id)||{x:p.x,y:p.y};
+    const prev=blendRemaining>0?modeBlend?.get(p.id):null;
+    const ease=1-Math.max(0,Math.min(1,blendRemaining/.23));
+    const where=prev?{x:prev.x+(real.x-prev.x)*ease,y:prev.y+(real.y-prev.y)*ease}:real;
    const x=cam.x+(where.x*PX+3)*cam.z,y=cam.y+(where.y*PX+3)*cam.z;
    if(x<2||y<3||x>w-2||y>h-3)continue;
    const size=Math.max(2,Math.min(8,cam.z*5));
@@ -96,10 +101,17 @@ function drawFrame(){if(!sim)return;
    ctx.fillStyle='#25362d';ctx.fillRect(Math.round(x-.8),Math.round(y+size*.4),Math.ceil(size)+2,Math.ceil(size*.7)+1);
    ctx.fillStyle=coat;ctx.fillRect(Math.round(x),Math.round(y+size*.52),Math.ceil(size),Math.ceil(size*.8));
    ctx.fillStyle=p.sex==='f'?'#e5bd8f':'#d4c09f';ctx.fillRect(Math.round(x+size*.15),Math.round(y),Math.max(2,size*.7),Math.max(2,size*.7));
+    // Actual work phases display small tool gestures, absent in fast overview.
+    if(fine&&cam.z>.65&&real.pose&&['farm','wood','build','herd'].includes(real.activity)){
+      const swing=(Math.floor(movementFraction*96+p.id)%2?1:-1)*Math.max(1,cam.z*2);
+      ctx.strokeStyle=real.activity==='wood'?'#c7ba94':real.activity==='build'?'#d2a878':'#b9ac7c';
+      ctx.lineWidth=Math.max(1,cam.z*.85);ctx.beginPath();ctx.moveTo(x+size,y+size*.7);
+      ctx.lineTo(x+size+swing,y-size*.12);ctx.stroke();
+    }
   }
   if(cam.z>.36){for(const hom of sim.households){
    for(let i=0;i<Math.min(5,hom.cattle||0);i++){
-    const place=cattlePosition(hom,sim.day+movementFraction,i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const place=cattlePosition(hom,sim.day+(fine?movementFraction:.5),i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const scale=Math.max(2,cam.z*4),ox=i<(hom.draftOxen||0);
     ctx.fillStyle=ox?'#40382e':'#6b523b';ctx.fillRect(Math.round(x),Math.round(y),scale*(ox?1.95:1.65),scale*(ox?1.15:1));
@@ -109,7 +121,7 @@ function drawFrame(){if(!sim)return;
     if(ox){ctx.fillStyle='#c4ad87';ctx.fillRect(Math.round(x+scale*1.65),Math.round(y-scale*.36),Math.max(1,scale*.2),scale*.22);}
    }
    for(let i=0;i<Math.min(10,hom.sheep||0);i++){
-    const place=cattlePosition(hom,sim.day+movementFraction,i+23,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const place=cattlePosition(hom,sim.day+(fine?movementFraction:.5),i+23,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const u=Math.max(2,cam.z*2.6);
     ctx.fillStyle='#4f4b40';ctx.fillRect(Math.round(x),Math.round(y+u*.62),u*.23,u*.6);ctx.fillRect(Math.round(x+u*.9),Math.round(y+u*.62),u*.23,u*.6);
@@ -132,7 +144,14 @@ function drawFrame(){if(!sim)return;
 }
 function updateHUD(){if(!sim)return;const o=overview(sim),seasons=['Зима','Весна','Лето','Осень'];$('#date').textContent=`Год ${o.year} · ${seasons[Math.floor((o.day%365)/91.25)%4]}`;$('#population').textContent=`${o.population} жителей · ${o.households} хозяйств · +${sim.stats.built||0} домов${sim.scenario==='drought'&&o.year>=6&&o.year<=8?' · ЗАСУХА':''}`;
 $('#live-text').textContent=speed===0?'МИР ПРИОСТАНОВЛЕН':`ВРЕМЯ ИДЁТ · ${String(speed).replace('.',',')} ДН./С`;
-$('.live-mark').classList.toggle('running',speed>0);document.querySelectorAll('[data-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.speed)===speed));renderSheet();}
+$('.live-mark').classList.toggle('running',speed>0);document.querySelectorAll('[data-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.speed)===speed));updateDayDial();renderSheet();}
+function updateDayDial(){
+ const detailed=renderDetail==='fine'&&Boolean(dayPlan);
+ $('#time-detail').dataset.mode=detailed?'fine':'coarse';
+ $('#time-stage').textContent=detailed?dayClock(movementFraction)+' · '+dayPhase(movementFraction):
+  speed===0?'Пауза · суточный обзор':'Быстрый обзор · суточные итоги';
+ $('#time-fill').style.width=detailed?(movementFraction*100).toFixed(1)+'%':(((sim?.day||0)%365)/365*100).toFixed(1)+'%';
+}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderSheet(){if(!sim)return;const el=$('#sheet-content'),o=overview(sim);
 if(mode==='overview'){
