@@ -59,7 +59,7 @@ test('primogeniture passes crown to first represented descendant',()=>{
   assert.ok(titled(world,branches[0].id).length>=oldTitles.length);
   assert.equal(king.treasury.coin,0);
   assert.ok(branches[0].treasury.coin>=previous);
-  assert.equal(lord(world,king.spouseId)?.alive,undefined); // deceased keeps historical spouse pointer
+  assert.ok(lord(world,king.spouseId)?.alive); // widow remains a real living character
   assertWorld(world);
 });
 test('partible succession distributes several real counties to separate branches',()=>{
