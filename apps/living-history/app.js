@@ -5,7 +5,7 @@ import {diagnoseWorld} from './laboratory.js';
 import {fieldAppearance,personPosition,cattlePosition} from './visual-land.js';
 import {walkPath} from './navigation.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.4.0',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.7.8',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -41,7 +41,16 @@ function makeWorldArt(){if(!sim)return;const stages=fieldAppearance(sim);draw.im
   }
   continue;
  }
- if(v>68){draw.fillStyle='#9cac71';draw.fillRect(X+3,Y+3,2,2);}if(sim.forest[i]>60){draw.fillStyle='#355a41';draw.fillRect(X+1,Y+2,6,5);draw.fillStyle=v>40?'#3f6a4b':'#527453';draw.fillRect(X+1,Y,5,5);draw.fillStyle='#749063';draw.fillRect(X+2,Y+1,2,1);}if(sim.traffic[i]>11){
+ if(v>68){draw.fillStyle='#9cac71';draw.fillRect(X+3,Y+3,2,2);}if(sim.forest[i]>35&&sim.usage[i]!==1){
+  // Crown size follows actual standing biomass rather than an unchanged forest blob.
+  const stock=sim.forest[i],crown=stock>270?6:stock>140?5:3;
+  draw.fillStyle='#354d39';draw.fillRect(X+3,Y+2,2,5);
+  draw.fillStyle=stock>270?'#355d42':stock>140?'#44694a':'#628369';
+  draw.fillRect(X+4-Math.floor(crown/2),Y+1,crown,Math.max(2,crown-1));
+  if(stock>140){draw.fillStyle='#799362';draw.fillRect(X+2,Y+1,2,1);}
+ }else if(sim.forest[i]>0&&sim.forest[i]<=35&&sim.usage[i]!==1){
+  draw.fillStyle='#786e4f';draw.fillRect(X+3,Y+4,2,2);
+ }if(sim.traffic[i]>11){
   // Actual worn segments form contiguous paths, not a dotted decoration.
   const busy=sim.traffic[i]>=55,thick=busy?3:2,m=4;
   draw.fillStyle=busy?'#917752':'#ae9875';
@@ -51,8 +60,19 @@ function makeWorldArt(){if(!sim)return;const stages=fieldAppearance(sim);draw.im
   if(y>0&&sim.traffic[i-SIZE]>11)draw.fillRect(X+m-1,Y,thick,m);
   if(y<SIZE-1&&sim.traffic[i+SIZE]>11)draw.fillRect(X+m-1,Y+m,thick,PX-m);
  }}
- // Villages and roof silhouettes: every roof corresponds to an actual household.
- for(const h of sim.households){const X=h.x*PX,Y=h.y*PX;draw.fillStyle='#2e3c33';draw.fillRect(X-3,Y+2,13,9);draw.fillStyle='#ccae7f';draw.fillRect(X-2,Y+1,11,8);draw.fillStyle='#79553f';draw.fillRect(X-4,Y-3,15,7);draw.fillStyle='#a87752';draw.fillRect(X-1,Y-5,10,3);draw.fillStyle='#e0b77c';draw.fillRect(X+2,Y+5,2,2);draw.fillStyle='#513a2f';draw.fillRect(X+8,Y+4,2,5);}
+ // Only actual house-building projects receive a temporary foundation.
+ for(const h of sim.households){const p=h.buildProject,site=p?.site;
+  if(!site||sim.usage[site.y*SIZE+site.x]||sim.terrain[site.y*SIZE+site.x]!==0)continue;
+  const x=site.x*PX,y=site.y*PX,progress=Math.max(0,Math.min(1,(p.days||0)/50));
+  draw.fillStyle='#bda17a';draw.fillRect(x-3,y,13,9);
+  draw.fillStyle='#66543e';draw.fillRect(x-3,y,2,9);draw.fillRect(x+8,y,2,9);
+  draw.fillStyle='#ac875b';draw.fillRect(x-3,y+2,13,2);
+  if(progress>.23){draw.fillStyle='#79553f';draw.fillRect(x-5,y-2,15,2);}
+  if(progress>.56){draw.fillStyle='#a87752';draw.fillRect(x-4,y-4,13,2);}
+ }
+ // Roofs correspond to real buildings; recent and vacant homes are distinguishable.
+ const residents=new Set(sim.people.filter(p=>p.alive).map(p=>p.houseId));
+ for(const h of sim.households){const X=h.x*PX,Y=h.y*PX;draw.fillStyle='#2e3c33';draw.fillRect(X-3,Y+2,13,9);draw.fillStyle='#ccae7f';draw.fillRect(X-2,Y+1,11,8);draw.fillStyle=!residents.has(h.id)?'#665b4a':h.builtDay>0&&sim.day-h.builtDay<365*2?'#985e40':'#79553f';draw.fillRect(X-4,Y-3,15,7);draw.fillStyle=h.builtDay>0&&sim.day-h.builtDay<365*2?'#c18d5f':'#a87752';draw.fillRect(X-1,Y-5,10,3);draw.fillStyle='#e0b77c';draw.fillRect(X+2,Y+5,2,2);draw.fillStyle='#513a2f';draw.fillRect(X+8,Y+4,2,5);}
  for(const c of sim.communities){const X=c.x*PX,Y=c.y*PX;draw.fillStyle='#ded4b2';draw.fillRect(X-4,Y-8,8,7);draw.fillStyle='#675f47';draw.fillRect(X-5,Y-11,10,4);draw.fillStyle='#e6bf6b';draw.fillRect(X,Y-17,2,9);}
  dirty=false;}
 function fitView(){const box=worldNode.getBoundingClientRect();let z=Math.max(box.width/W,box.height/W)*1.09;cam.z=Math.max(.16,z);cam.x=(box.width-W*cam.z)/2;cam.y=(box.height-W*cam.z)/2;}
@@ -67,7 +87,7 @@ function drawFrame(){if(!sim)return;
  if(showFigures){
   const people=sim.people;
   for(const p of people){if(!p.alive)continue;
-   const where=personPosition(p,sim,previousPeople,movementFraction,speed>0);
+   const where=personPosition(p,sim,previousPeople,movementFraction,true);
    const x=cam.x+(where.x*PX+3)*cam.z,y=cam.y+(where.y*PX+3)*cam.z;
    if(x<2||y<3||x>w-2||y>h-3)continue;
    const size=Math.max(2,Math.min(8,cam.z*5));
@@ -84,7 +104,7 @@ function drawFrame(){if(!sim)return;
     const scale=Math.max(2,cam.z*4),ox=i<(hom.draftOxen||0);
     ctx.fillStyle=ox?'#40382e':'#6b523b';ctx.fillRect(Math.round(x),Math.round(y),scale*(ox?1.95:1.65),scale*(ox?1.15:1));
     ctx.fillStyle=ox?'#8a7558':'#b09a7b';
-    const dip=(.5+.5*Math.sin((sim.day+movementFraction)*1.4+i+hom.id*.2))*scale*.28;
+    const dip=(.5+.5*Math.sin((sim.day-1+movementFraction)*1.4+i*1.7+hom.id*.2))*scale*.28;
     ctx.fillRect(Math.round(x+scale*(ox?1.6:1.2)),Math.round(y-scale*.24+dip),scale*.68,scale*.7);
     if(ox){ctx.fillStyle='#c4ad87';ctx.fillRect(Math.round(x+scale*1.65),Math.round(y-scale*.36),Math.max(1,scale*.2),scale*.22);}
    }
@@ -110,8 +130,8 @@ function drawFrame(){if(!sim)return;
  if(selected){const household=sim.households.find(k=>k.id===selected);if(household){const x=cam.x+(household.x*PX+4)*cam.z,y=cam.y+(household.y*PX+4)*cam.z;ctx.strokeStyle='#ffe3a4';ctx.lineWidth=2;ctx.strokeRect(x-8,y-8,16,16);}}
  if(cam.z>.5){ctx.font='700 12px Georgia';ctx.textAlign='center';for(const c of sim.communities){const x=cam.x+c.x*PX*cam.z,y=cam.y+c.y*PX*cam.z-14;if(x<15||x>w-15||y<60||y>h-10)continue;ctx.fillStyle='#16271dc9';const name=c.name,tw=ctx.measureText(name).width;ctx.fillRect(x-tw/2-8,y-13,tw+16,20);ctx.fillStyle='#f2e5c2';ctx.fillText(name,x,y+1);}}
 }
-function updateHUD(){if(!sim)return;const o=overview(sim),seasons=['Зима','Весна','Лето','Осень'];$('#date').textContent=`Год ${o.year} · ${seasons[Math.floor((o.day%365)/91.25)%4]}`;$('#population').textContent=`${o.population} жителей · ${o.households} хозяйств${sim.scenario==='drought'&&o.year>=6&&o.year<=8?' · ЗАСУХА':''}`;
-$('#live-text').textContent=speed===0?'МИР ПРИОСТАНОВЛЕН':`ВРЕМЯ ИДЁТ · ${speed} ДН./С`;
+function updateHUD(){if(!sim)return;const o=overview(sim),seasons=['Зима','Весна','Лето','Осень'];$('#date').textContent=`Год ${o.year} · ${seasons[Math.floor((o.day%365)/91.25)%4]}`;$('#population').textContent=`${o.population} жителей · ${o.households} хозяйств · +${sim.stats.built||0} домов${sim.scenario==='drought'&&o.year>=6&&o.year<=8?' · ЗАСУХА':''}`;
+$('#live-text').textContent=speed===0?'МИР ПРИОСТАНОВЛЕН':`ВРЕМЯ ИДЁТ · ${String(speed).replace('.',',')} ДН./С`;
 $('.live-mark').classList.toggle('running',speed>0);document.querySelectorAll('[data-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.speed)===speed));renderSheet();}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderSheet(){if(!sim)return;const el=$('#sheet-content'),o=overview(sim);
@@ -122,7 +142,8 @@ if(mode==='overview'){
  const farmers=homes.filter(h=>h.focus==='farm'&&h.members.some(id=>adults.some(p=>p.id===id))).length;
  const woods=homes.filter(h=>h.focus==='wood'&&h.members.some(id=>adults.some(p=>p.id===id))).length;
  return `<div class="community-row"><span><b>${escapeHTML(c.name)}</b><small>${farmers} полевых · ${woods} лесных · ${homes.filter(h=>h.tenure==='demesne').length} поместье</small></span><strong>${adults.length}</strong></div>`;}).join('');
- el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}</div><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
+ const pending=sim.households.filter(h=>h.buildProject?.site).length;
+ el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}</div><p class="map-key">Построено домов: ${sim.stats.built||0} · Строится: ${pending} · Древесины заготовлено: ${Math.round((sim.stats.produced||0)/1000)} т.</p><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
 }
 if(mode==='household'){
  const h=getHousehold(sim,selected);
@@ -179,11 +200,17 @@ worldNode.addEventListener('pointerdown',onPointerDown);worldNode.addEventListen
 worldNode.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY>0?.83:1.2,e.clientX,e.clientY);},{passive:false});
 $('#zoom-plus').addEventListener('click',()=>zoom(1.35,canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2));
 $('#zoom-minus').addEventListener('click',()=>zoom(.74,canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2));$('#center').addEventListener('click',()=>fitView());$('#village-view').addEventListener('click',()=>{if(!sim)return;const c=sim.communities.reduce((a,b)=>!a||Math.hypot(b.x-(canvas.width/2-cam.x)/(PX*cam.z),b.y-(canvas.height/2-cam.y)/(PX*cam.z))<Math.hypot(a.x-(canvas.width/2-cam.x)/(PX*cam.z),a.y-(canvas.height/2-cam.y)/(PX*cam.z))?b:a,null);if(c)centerOn(c.x,c.y);});
-document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>{speed=Number(b.dataset.speed);updateHUD();}));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>{
+  const next=Number(b.dataset.speed);
+  if(!Number.isFinite(next)||next<0||next>20)return;
+  // First day begins immediately even at 0.25×: no four-second frozen launch.
+  if(speed===0&&next>0&&!previousPeople)acc=1;
+  speed=next;updateHUD();
+ }));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
 $('#sheet-content').addEventListener('click',e=>{const person=e.target.closest('[data-person]');if(person){selectedPerson=Number(person.dataset.person);renderSheet();return;}if(e.target.closest('[data-person-back]')){selectedPerson=null;renderSheet();return;}const eventButton=e.target.closest('[data-event]');if(eventButton){const item=sim.events.find(v=>v.id===Number(eventButton.dataset.event));const h=item?.subjects.map(id=>sim.households.find(x=>x.id===id)).find(Boolean);if(h){selected=h.id;selectedPerson=null;economyOpen=false;setTab('household');centerOn(h.x,h.y);}else if(item)toast(item.cause);return;}const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case'econ-detail':economyOpen=!economyOpen;renderSheet();break;case'lab-open':speed=0;setTab('laboratory');break;case'lab-back':setTab('tools');break;case'lab-export':exportLab();break;case'save':save().then(()=>toast('Мир записан в IndexedDB')).catch(err=>toast(err.message));break;case'export':exportSave();break;case'import':$('#import-file').click();break;case'reset':speed=0;$('#modal').hidden=false;break;}});
-$('#cancel-reset').addEventListener('click',()=>$('#modal').hidden=true);$('#confirm-reset').addEventListener('click',()=>{const seedText=$('#world-seed').value.trim();const seedNumber=seedText===''?((Date.now()&0xffffffff)>>>0):Number(seedText);if(!Number.isInteger(seedNumber)||seedNumber<0||seedNumber>4294967295){toast('Seed должен быть целым числом от 0 до 4294967295');return;}sim=createWorld(seedNumber,{scenario:$('#world-scenario').value,tuning:experimentPreset($('#world-experiment').value)});selected=null;selectedPerson=null;economyOpen=false;speed=0;previousPeople=null;dirty=true;fitView();lastSavedDay=-1;$('#modal').hidden=true;setTab('overview');save().then(()=>toast('Создана новая долина с выбранными условиями')).catch(err=>toast(err.message));});
+$('#cancel-reset').addEventListener('click',()=>$('#modal').hidden=true);$('#confirm-reset').addEventListener('click',()=>{const seedText=$('#world-seed').value.trim();const seedNumber=seedText===''?((Date.now()&0xffffffff)>>>0):Number(seedText);if(!Number.isInteger(seedNumber)||seedNumber<0||seedNumber>4294967295){toast('Seed должен быть целым числом от 0 до 4294967295');return;}sim=createWorld(seedNumber,{scenario:$('#world-scenario').value,tuning:experimentPreset($('#world-experiment').value)});selected=null;selectedPerson=null;economyOpen=false;speed=0;acc=0;movementFraction=1;previousPeople=null;dirty=true;fitView();lastSavedDay=-1;$('#modal').hidden=true;setTab('overview');save().then(()=>toast('Создана новая долина с выбранными условиями')).catch(err=>toast(err.message));});
 function centerOn(x,y){const r=worldNode.getBoundingClientRect();cam.z=Math.max(cam.z,1.28);cam.x=r.width/2-x*PX*cam.z;cam.y=r.height/2-y*PX*cam.z;}
-$('#import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{const value=deserialize(await file.text());sim=value;speed=0;selected=null;selectedPerson=null;previousPeople=null;dirty=true;fitView();updateHUD();await save();toast('Мир успешно импортирован');}catch(err){toast(`Импорт не удался: ${err.message}`);}});
+$('#import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{const value=deserialize(await file.text());sim=value;speed=0;acc=0;movementFraction=1;selected=null;selectedPerson=null;previousPeople=null;dirty=true;fitView();updateHUD();await save();toast('Мир успешно импортирован');}catch(err){toast(`Импорт не удался: ${err.message}`);}});
 function experimentPreset(name){
  const items={normal:{},yieldLow:{yield:.85},storageLow:{storage:.75},plantingHigh:{planting:1.2},transportHigh:{transport:1.5},weatherHigh:{weather:1.5}};
  return items[name]||{};
