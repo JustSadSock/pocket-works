@@ -277,3 +277,15 @@ h2{letter-spacing:-.025em}
  .atlas-county.title-changed>path:first-child,.atlas-title-change{animation:none}
  .atlas-county>path:first-child{transition:none}
 }
+
+
+/* Critical touch layering: the political atlas must never overlay time or tabs. */
+.game-controls{position:relative;z-index:8;isolation:isolate}
+.game-columns{overflow:hidden;position:relative;z-index:0}
+.game-panel{overscroll-behavior:contain}
+@media(max-width:900px){
+ .game-columns{overflow:hidden}
+ .mobile-tabs{position:relative;z-index:2}
+ .time-controls{position:relative;z-index:2}
+ .game-screen[data-active-panel="lands"] .lands-panel{overflow:hidden!important}
+}
