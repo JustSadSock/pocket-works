@@ -162,6 +162,13 @@ const SHAPES=['round','oval','star','torn','diamond','burst'];
 // Generated afresh by the server for every player and every round. A 32-bit
 // variation seed is part of the signed game state; all clients can reproduce
 // exactly the same contour in editor, votes, reveals and saved paintings.
+// Legacy variations are 32-bit unsigned integers. Values above 2^32
+// identify the balanced-area geometry without invalidating old matches,
+// downloaded drafts or archive entries whose exact masks must remain stable.
+export const BALANCED_ZONE_OFFSET=0x100000000;
+export function freshZoneVariation(){
+ return BALANCED_ZONE_OFFSET+Math.floor(Math.random()*0x100000000);
+}
 export function zoneFor(id,variation=0){
  const seed=(Math.imul((id+11)>>>0,2654435761)^(Number(variation)>>>0)^0x5195afd3)>>>0;
  const r=rand(seed);
@@ -182,6 +189,37 @@ export function zoneFor(id,variation=0){
   const arx=kind==='round'?(rx+ry)/2:rx;
   const ary=kind==='round'?(rx+ry)/2:ry;
   points.push([Math.round((cx+Math.cos(angle)*arx*radius)*10)/10,Math.round((cy+Math.sin(angle)*ary*radius)*10)/10]);
+ }
+ // All geometries use the full 600×450 logical canvas, whose area
+ // fraction is preserved under non-uniform presentation scaling. Different
+ // polygon families historically covered 0.9%–6.1%; rebalance NEW seeds to
+ // exactly 3% of the actual painting, while retaining their contour, angle,
+ // relative dimensions, and deterministic placement.
+ // Do not alter 32-bit legacy variations: a mid-game deployment must not
+ // move anyone's existing restoration mask.
+ if(Number.isSafeInteger(variation)&&variation>=BALANCED_ZONE_OFFSET){
+  const polygonArea=Math.abs(points.reduce((sum,[x,y],i)=>{
+   const [nx,ny]=points[(i+1)%points.length];
+   return sum+x*ny-nx*y;
+  },0))*.5;
+  if(polygonArea>0){
+   const scale=Math.sqrt((W*H*.03)/polygonArea);
+   for(const p of points){
+    p[0]=cx+(p[0]-cx)*scale;
+    p[1]=cy+(p[1]-cy)*scale;
+   }
+   // Shifting (never clipping) keeps the entire 3% mask inside the source
+   // image, including very narrow portrait or star-shaped damage.
+   const minX=Math.min(...points.map(p=>p[0])),maxX=Math.max(...points.map(p=>p[0]));
+   const minY=Math.min(...points.map(p=>p[1])),maxY=Math.max(...points.map(p=>p[1]));
+   const margin=2;
+   const shiftX=minX<margin?margin-minX:maxX>W-margin?W-margin-maxX:0;
+   const shiftY=minY<margin?margin-minY:maxY>H-margin?H-margin-maxY:0;
+   for(const p of points){
+    p[0]=Math.round((p[0]+shiftX)*100)/100;
+    p[1]=Math.round((p[1]+shiftY)*100)/100;
+   }
+  }
  }
  const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
  const x=Math.min(...xs),y=Math.min(...ys);
