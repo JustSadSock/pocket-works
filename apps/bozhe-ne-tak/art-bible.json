@@ -51,18 +51,18 @@
     },
     {
       "id": "book",
-      "medium": "Рукописная плоскость",
+      "medium": "Авторские цветные средневековые иллюминации на плоском рукописном листе.",
       "composition": "Печатная книга со страницами",
-      "interaction": "Листание свитка",
-      "motion": "Поворот листов",
+      "interaction": "Листание и наложение печатей с управлением через сенсорный экран.",
+      "motion": "Мягкие физические переходы между страницами и раскрытие скрытых символов.",
       "rationale": "Риск чрезмерной бумажности и сходства с другими играми."
     },
     {
       "id": "stone3d",
       "medium": "Полностью 3D авторская сцена",
       "composition": "Монументальный храм и камеры",
-      "interaction": "Перемещение персонажей",
-      "motion": "Полная 3D анимация",
+      "interaction": "Свободное перемещение трёхмерных персонажей вокруг ритуального алтаря.",
+      "motion": "Полноценная скелетная анимация фигур и движение виртуальной камеры.",
       "rationale": "Ненужная техническая сложность для phase-based серверной механики."
     }
   ],
@@ -93,36 +93,29 @@
     },
     {
       "id": "pixi",
-      "availability": "planned",
-      "reason": "Enhanced runtime только при подтвержденной необходимости P5; fallback Canvas."
+      "availability": "unverified",
+      "reason": "Enhanced runtime только при подтвержденной необходимости P5; fallback Canvas.",
+      "fallback": "Если PixiJS пока не проверен на целевых устройствах, использовать стандартный Canvas 2D и SVG в локальной сцене."
     }
   ],
   "assets": [
     {
       "id": "god-icon",
       "tool": "svg",
-      "source": "icons/icon.svg",
+      "source": "docs/ART-DIRECTION.md",
       "output": "icons/icon.svg",
-      "role": "Маркер сакральной маски и иконка",
-      "integration": "HTML favicon / PWA manifest",
-      "provenance": "Original code SVG",
-      "acceptance": "Распознается при 48px и 512px",
+      "role": "Резная узнаваемая морда божества для launcher icon и стартового экрана приложения.",
+      "integration": "SVG вставлен в PWA manifest, favicon и исходный HTML, из того же рисунка собрана сценическая маска.",
+      "provenance": "Оригинальный SVG создан кодом специально для данного приложения, без копирования чужих иллюстраций.",
+      "acceptance": "При разрешении 48 на 48 пикселей морда узнаваема, контраст остаётся достаточным на разных цветовых темах.",
       "maxBytes": 16384
-    },
-    {
-      "id": "altar-stage",
-      "tool": "canvas",
-      "source": "app.js",
-      "output": "styles.css",
-      "role": "Пока только навигационная сцена планирования; не полноценная игра",
-      "integration": "HTML/CSS",
-      "provenance": "Original",
-      "acceptance": "Читается на 320px",
-      "maxBytes": 70000
     }
   ],
   "constraints": {
-    "viewport": "320x568 to 1440x900; portrait-primary",
+    "viewport": [
+      390,
+      844
+    ],
     "textureBytes": 0,
     "triangles": 0,
     "targetFps": 30
