@@ -179,7 +179,7 @@ export function project(s,side){
   copy.units=s.units.filter(u=>u.owner===side||visible[u.r][u.c]).map(u=>({...u}));
   copy.buildings=s.buildings.filter(b=>b.owner===side||visible[b.r][b.c]).map(b=>({...b}));
   copy.gold={[side]:s.gold[side]};copy.visible=visible;copy.seen={[side]:seen};
-  copy.nextId=null;return copy;
+  copy.nextId=null;copy.seed=0;return copy;
 }
 export function aiTurn(input,level=3){
   let s=input;const side=2;if(s.phase!=='battle'||s.current!==side)return s;
