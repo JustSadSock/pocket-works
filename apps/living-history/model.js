@@ -837,10 +837,11 @@ function tendCattle(s,h,adults){
    const milker=adults.find(p=>p.job==='home'&&workCapacity(p,'herd')>0);
    if(milker){
     const shift=availableShift(s,milker,'herd',h);
-    if(!shift)return;
-    recordShift(s,h,milker,shift);recordWork(milker,'herd',shift.fraction);
-    const dairy=round((h.dairyCows??h.cattle)*CALIBRATION.dairyEquivalentPerCowWeek*Math.min(1,fraction)*workCapacity(milker,'herd')*shift.fraction);
-    h.dairy=round((h.dairy||0)+dairy);s.stats.dairyProduced=round((s.stats.dairyProduced||0)+dairy);
+    if(shift){
+     recordShift(s,h,milker,shift);recordWork(milker,'herd',shift.fraction);
+     const dairy=round((h.dairyCows??h.cattle)*CALIBRATION.dairyEquivalentPerCowWeek*Math.min(1,fraction)*workCapacity(milker,'herd')*shift.fraction);
+     h.dairy=round((h.dairy||0)+dairy);s.stats.dairyProduced=round((s.stats.dairyProduced||0)+dairy);
+    }
    }
   }
   h.livestockHealth=round(clamp(h.livestockHealth+(fraction>=.99?.45:-(1-fraction)*11),0,100));
