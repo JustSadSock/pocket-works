@@ -244,11 +244,9 @@ function renderCouncil(){
   const inherited=w.titles.filter(t=>t.holderId===p.id);
   const claim=w.titles.find(t=>t.claims.some(c=>c.personId===p.id) && t.holderId!==p.id);
   const story=claim?
-    'У вас есть документированная претензия на '+claim.name+'. '+pname(w,claim.holderId)+
-    ' пока удерживает эту власть. Вы можете обратиться к нему или объединить сторонников.':
+    'Ваше право: '+claim.name+'. Держатель — '+pname(w,claim.holderId)+'.':
     (inherited.length?
-      'Дом '+house(w,game.dynastyId)+' удерживает '+inherited.length+' '+(inherited.length===1?'титул':'титулов')+
-      '. События двора меняются каждый год. Берегите наследников и ищите новые возможности.':
+      'Дом '+house(w,game.dynastyId)+' удерживает '+inherited.length+' '+(inherited.length===1?'титул.':'титулов.'):
       'Ваш дом лишился земель, но ещё жив. Сохраните претензии и ищите сторонников.');
   label(by('story'),story);
   const actions=campaignChoices(game);
@@ -257,7 +255,7 @@ function renderCouncil(){
     'В этом году решение уже принято. Следующий шаг — новый год.':
     p && w.year-p.birthYear<18?
     'Правитель несовершеннолетний. Решения станут доступны с 18 лет.':
-    'Выберите одно политическое решение на этот год.'));
+    'Одно решение в год.'));
   if(!actions.length)frag.append(element('p','subnote',game.lastActionYear===w.year?
     'Другие правители продолжат действовать, когда вы переведёте время.':
     'Доступных политических действий сейчас нет. Перейдите к следующему году.'));
@@ -416,9 +414,9 @@ function renderGame(){
   const owned=w.titles.filter(t=>t.holderId===p.id).sort((a,b)=>
     ({kingdom:3,duchy:2,county:1})[b.rank]-({kingdom:3,duchy:2,county:1})[a.rank]);
   by('ruler-seal').style.setProperty('--house',houseColor(w,p.id));
-  label(by('ruler-name'),p.name);
+  label(by('ruler-name'),p.name.split(' ')[0]);
   label(by('ruler-rank'),(owned[0]?.name||'БЕЗЗЕМЕЛЬНЫЙ ПРЕТЕНДЕНТ').toLocaleUpperCase('ru-RU'));
-  label(by('ruler-subtitle'),'Дом '+house(w,game.dynastyId)+' · '+(w.year-p.birthYear)+' лет · '+(GOALS[p.politics.goal.kind]||'Ожидание'));
+  label(by('ruler-subtitle'),house(w,game.dynastyId)+' · '+(w.year-p.birthYear)+' лет');
   label(by('year-count'),String(w.year));
   label(by('coin-count'),String(p.treasury.coin));
   renderCouncil();renderProvinces();renderChronicle();
