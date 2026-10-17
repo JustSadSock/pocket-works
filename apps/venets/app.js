@@ -1,6 +1,8 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import './reader.js';
 import {installUIInspector, INSPECTOR_SCREENS} from './dev-inspector.js';
+import {renderAtlas,renderGenealogy,shieldSvg} from './atlas.js';
+import {atlasOwnerSnapshot,transferHighlights} from './atlas-core.js';
 import {campaignStarts,startCampaign,campaignChoices,campaignAction,campaignYear,
   campaignScore,extendCampaign,serializeCampaign,loadCampaign} from './sim/campaign.js';
 installMobileRuntime();
@@ -38,6 +40,7 @@ const GOALS={'secure-claim':'Вернуть спорный титул','politica
 let game=null,saved=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
 let screen='loading',autoSpeed=0,autoHandle=null,saveQueue=Promise.resolve();
 let storage='indexeddb',database=null,actionPending=null,busy=false,toastHandle=null;
+let atlasView='atlas',familyFocus=null,atlasChanges=[];
 const houseColor=(w,id)=>{
   const p=w.people.find(p=>p.id===id);
   const index=w.dynasties.findIndex(h=>h.id===p?.dynastyId);
@@ -167,7 +170,7 @@ function begin(){
   try{
     game=startCampaign({seed,countyId:selectedCounty});
     selectedProvince='pr-'+selectedCounty.slice(-2);
-    panel='council';filter='house';saveGame();play();
+    panel='council';filter='house';atlasView='atlas';familyFocus=null;atlasChanges=[];saveGame();play();
   }catch(e){notify('Не удалось создать мир: '+e.message)}
 }
 function showNewConfirmation(){
@@ -206,7 +209,9 @@ function nextYear(){
   if(busy||!game||game.finished||game.chapterComplete)return;
   busy=true;
   try{
+    const previousOwners=atlasOwnerSnapshot(game.world);
     const result=campaignYear(game);
+    atlasChanges=transferHighlights(previousOwners,game.world);
     saveGame();
     if(result.finished||result.chapterComplete){pause();renderEnding();screenTo('ending')}
     else{
@@ -282,7 +287,9 @@ by('confirm-dialog').addEventListener('close',()=>{
   if(by('confirm-dialog').returnValue!=='confirm'||!actionPending){actionPending=null;return}
   const a=actionPending;actionPending=null;
   try{
+    const previousOwners=atlasOwnerSnapshot(game.world);
     const outcome=campaignAction(game,a);
+    atlasChanges=transferHighlights(previousOwners,game.world);
     saveGame();
     const msg=outcome.success?'Решение исполнено. Последствия внесены в летопись.':
       'Получен отказ. Обиды и требования сохранены.';
@@ -294,37 +301,59 @@ by('confirm-dialog').addEventListener('close',()=>{
     notify(msg);
   }catch(e){notify('Решение больше недоступно: '+e.message);renderGame()}
 });
-function renderProvinces(){
-  const w=game.world,frag=document.createDocumentFragment();
-  for(const province of w.provinces){
-    const county=w.titles.find(t=>t.id===province.titleId);
-    const owner=w.people.find(p=>p.id===county.holderId);
-    const selected=province.id===selectedProvince;
-    const ours=owner.dynastyId===game.dynastyId;
-    const button=element('button','province'+(selected?' selected':'')+(ours?' ours':''));
-    button.dataset.province=province.id;button.type='button';
-    button.style.setProperty('--house',houseColor(w,county.holderId));
-    button.title=county.name+' — '+owner.name;
-    button.setAttribute('aria-pressed',String(selected));
-    button.append(element('span','',ours?'♛':'◆'),element('strong','',province.name));
-    button.addEventListener('click',()=>{selectedProvince=province.id;renderProvinces()});
-    frag.append(button);
+function selectAtlasView(view){
+  atlasView=view==='family'?'family':'atlas';
+  by('atlas-stage').hidden=atlasView!=='atlas';
+  by('genealogy-stage').hidden=atlasView!=='family';
+  by('province-info').hidden=atlasView!=='atlas';
+  for(const button of document.querySelectorAll('[data-atlas-view]')){
+    const active=button.dataset.atlasView===atlasView;
+    button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));
   }
-  by('province-grid').replaceChildren(frag);
-  const selected=w.provinces.find(p=>p.id===selectedProvince)||w.provinces[0];
-  const county=w.titles.find(t=>t.id===selected.titleId);
+}
+function renderFamilyPanel(){
+  const w=game.world,subject=w.people.find(p=>p.id===familyFocus);
+  if(!subject)familyFocus=game.playerId;
+  const chosen=w.people.find(p=>p.id===familyFocus);
+  label(by('genealogy-subject'),chosen.name);
+  by('genealogy-return').hidden=chosen.id===game.playerId;
+  by('genealogy-tree').replaceChildren(renderGenealogy(w,chosen.id,{onPerson:id=>{
+    familyFocus=id;renderFamilyPanel();
+  }}));
+}
+function renderProvinces(){
+  const w=game.world;
+  const province=w.provinces.find(p=>p.id===selectedProvince)||w.provinces[0];
+  selectedProvince=province.id;
+  const rendered=renderAtlas(w,{selectedId:selectedProvince,changes:atlasChanges,onSelect:id=>{
+    selectedProvince=id;renderProvinces();
+  }});
+  by('province-grid').replaceChildren(rendered);
+  const county=w.titles.find(t=>t.id===province.titleId);
   const ruler=w.people.find(p=>p.id===county.holderId);
   const duke=w.titles.find(t=>t.id===county.liegeId);
-  const node=by('province-info');
-  const dl=element('dl');
-  for(const [key,value] of [
-    ['Правитель',ruler.name],['Дом',house(w,ruler.dynastyId)],['Сюзерен',pname(w,duke.holderId)],
-    ['Претензии',county.claims.filter(c=>w.people.some(p=>p.id===c.personId&&p.alive)).map(c=>pname(w,c.personId)).join(', ')||'Нет'],
-    ['Местность',selected.terrain==='hills'?'Холмы':'Равнины'],
-    ['Запас зерна',String(selected.treasury.grain)] ]){
-    dl.append(element('dt','',key),element('dd','',value));
-  }
-  node.replaceChildren(element('h3','',county.name),dl);
+  const isOurs=ruler.dynastyId===game.dynastyId;
+  const claims=county.claims.filter(c=>w.people.some(p=>p.id===c.personId&&p.alive)).length;
+  const detail=by('province-info');
+  const group=element('div','atlas-selected');
+  const shield=shieldSvg(ruler.dynastyId);
+  const info=element('div','atlas-selected-text');
+  info.append(element('h3','',province.name),element('p','',ruler.name+' · '+(duke?'герцог '+pname(w,duke.holderId):'коронное владение')));
+  const meta=element('div','atlas-selected-meta');
+  meta.append(element('span','',isOurs?'Ваш дом':'Чужой дом'),
+    element('span','',claims?claims+' притяз.':'Без споров'));
+  group.append(shield,info,meta);
+  detail.replaceChildren(group);
+  const ribbon=by('atlas-transfer');
+  const affected=atlasChanges.map(id=>{
+    const county=w.titles.find(t=>t.provinceId===id);
+    return county?.name?.replace(/^Графство /,'');
+  }).filter(Boolean);
+  ribbon.hidden=!affected.length;
+  if(affected.length)ribbon.textContent='Титул перешёл другому владельцу: '+affected.join(', ');
+  if(!familyFocus||!w.people.some(p=>p.id===familyFocus))familyFocus=game.playerId;
+  renderFamilyPanel();
+  selectAtlasView(atlasView);
 }
 function eventHeadline(e,w){
   const x=e.effect||{};
@@ -422,6 +451,8 @@ document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',
 document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click',()=>{panel=b.dataset.panel;by('game-screen').dataset.activePanel=panel;
   for(const n of document.querySelectorAll('[data-panel]')){const selected=n.dataset.panel===panel;n.classList.toggle('active',selected);n.setAttribute('aria-pressed',String(selected))}
 }));
+document.querySelectorAll('[data-atlas-view]').forEach(button=>button.addEventListener('click',()=>selectAtlasView(button.dataset.atlasView)));
+by('genealogy-return').addEventListener('click',()=>{familyFocus=game?.playerId; if(game)renderFamilyPanel()});
 document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;renderChronicle()}));
 by('next-year').addEventListener('click',nextYear);
 by('back-menu').addEventListener('click',()=>{if(screen==='docs'){menu()}else closeGameToMenu()});
@@ -443,6 +474,9 @@ function initPreview(id){
   if(!INSPECTOR_SCREENS.some(item=>item.id===id))throw Error('Неизвестный экран: '+id);
   selectedCounty='co-01';
   selectedProvince='pr-01';
+  atlasChanges=[];
+  familyFocus=null;
+  atlasView='atlas';
   panel='council';
   filter='house';
   if(id==='loading'){screenTo('loading');return}
@@ -460,7 +494,14 @@ function initPreview(id){
     campaignYear(game); // real turn resolves the short testing chapter
     renderEnding();screenTo('ending');return;
   }
-  if(id==='lands')panel='lands';
+  if(id==='lands'||id==='atlas')panel='lands';
+  if(id==='genealogy'){panel='lands';atlasView='family'}
+  if(id==='title-transfer'){
+    panel='lands';
+    const before=atlasOwnerSnapshot(game.world);
+    for(let i=0;i<12;i++){campaignYear(game); if(transferHighlights(before,game.world).length)break}
+    atlasChanges=transferHighlights(before,game.world);
+  }
   if(id==='history')panel='history';
   play();
   if(id==='confirm'){
