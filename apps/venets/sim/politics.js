@@ -45,6 +45,7 @@ export function opinion(world,fromId,toId){
   return from.politics?.opinions[toId]??0;
 }
 export function remember(world,{witnessId,otherId,kind,weight,cause}){
+  if(world.experiment?.memory===false)return 0;
   const witness=findPerson(world,witnessId);
   if(!witness?.alive||!findPerson(world,otherId)||witnessId===otherId||!memoryTypes.has(kind)||
       !Number.isSafeInteger(weight)||weight < -50||weight>50||!cause)
@@ -72,6 +73,7 @@ function directLiege(world,person){
   return parent?findPerson(world,parent.holderId):null;
 }
 export function chooseGoal(world,person){
+  if(world.experiment?.goals===false)return person.politics.goal;
   if(!person.alive)return person.politics.goal;
   const t=person.politics.traits,held=titlesOf(world,person.id);
   const disputed=claimFor(world,person);
