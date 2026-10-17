@@ -30,7 +30,10 @@ export function scheduleWork(s,person,kind,destination,home){
   day:s.day,kind,from:{x:from.x,y:from.y},to:{x:to.x,y:to.y},
   depart:round(start),arrive:round(arrive),returnStart:round(returnStart),end:round(end),
   workHours:round(hours),travelHours:round(travelHours),
-  fraction:round(hours/WORK_HOURS),pathEffort:round(effort)
+  fraction:round(hours/WORK_HOURS),pathEffort:round(effort),
+  // The actually chosen traversable route becomes part of the recorded shift.
+  // Drawing and trail formation reuse it; no invented after-the-fact shortcut.
+  routeCells:route.length>1?route.map(p=>p.y*160+p.x):[]
  };
  return shift;
 }
