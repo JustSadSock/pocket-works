@@ -1,82 +1,291 @@
+
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {ITEMS,DOCTRINES,TREATMENTS,MAX_ROUNDS,START_FAITH,MAX_FAITH,createGame,setAction,
+ getRite,getItem,getDoctrine,doctrineEffect,commitRite,continueFromJudgment,chooseDoctrine,
+ conveneCouncil,loadGame,isWin} from './engine.mjs';
+import {offeringArt,godArt} from './art.js';
 installMobileRuntime();
-const phases=[{"id":"P0","ver":"0.1","name":"Основание","state":"ТЕКУЩИЙ РЕЛИЗ","theme":"Досье и архитектура","goal":"Зафиксировать игру и честно обозначить, чего ещё нет.","tasks":["Концепция: жрецы придумывают религию из собственных ошибок","Системная дорожная карта P0–P7","Проверенная архитектура PocketNet и запрет обязательного голоса","Проверяемые правила тестирования и визуальные ограничения"],"gate":"Работающее офлайн-досье, план в репозитории, без фиктивного онлайн-режима.","next":"P1"},{"id":"P1","ver":"0.2","name":"Первый обряд","state":"СЛЕДУЮЩИЙ","theme":"Полноценный локальный игровой цикл","goal":"Проверить весело ли играть прежде чем строить сеть.","tasks":["Пять связанных обрядов: знамение → действие → суд → догмат","Один бог, 10 предметов, 6 догматов и четыре чуда","Локальный seed и воспроизводимое решение","Сохранение партии и настоящая Хроника веры"],"gate":"30 полных симуляций, ни одного неразрешимого обряда; можно проиграть и переиграть.","next":"P2"},{"id":"P2","ver":"0.3","name":"Комнаты","state":"ЗАПЛАНИРОВАНО","theme":"PocketNet и серверная истина","goal":"Перевести правила в интернет-комнаты 2–5 игроков.","tasks":["Комнаты, приглашения, серверное разрешение обряда","idempotency, revision, подтверждения и повторный вход","Безопасные представления данных для разных игроков","Измерение числа команд и SQLite-записей"],"gate":"2/3/5 участников проходят полный матч; секреты не утекают в room_joined.","next":"P3"},{"id":"P3","ver":"0.4","name":"Совет","state":"ЗАПЛАНИРОВАНО","theme":"Кооперация без Discord","goal":"Сделать общение полноценным управлением.","tasks":["Пророк, Ризничий, Звонарь и дополнительные рабочие станции","Сигналы: предмет / отношение / просьба / указатель","Разделённые знания при серверной изоляции","Смена ролей между обрядами"],"gate":"Три телефона завершают партию полностью без голосового чата.","next":"P4"},{"id":"P4","ver":"0.5","name":"Догматы","state":"ЗАПЛАНИРОВАНО","theme":"Системный абсурд и вариативность","goal":"Ошибки становятся правилами следующих обрядов.","tasks":["≥20 исполняемых догматов","Три бога, ≥20 предметов, ≥12 архетипов задач","Проверка совместимости догматов и «собор» для исправления","Процедурная Хроника веры"],"gate":"Генератор не создаёт тупиков; разные религии реально играются по-разному.","next":"P5"},{"id":"P5","ver":"0.6","name":"Зрелище","state":"ЗАПЛАНИРОВАНО","theme":"Деревянный театр бога","goal":"Превратить системные решения в запоминающиеся чудеса.","tasks":["Авторская полихромная сцена и подвижный лик бога","Локальные детерминированные анимации по seed события","Материальный звук: дерево, бронза, воск","Reduced motion и управление звуком"],"gate":"Просмотрены реальные мобильные скриншоты и видео; читаемые действия за 5 секунд.","next":"P6"},{"id":"P6","ver":"0.9","name":"Испытания","state":"ЗАПЛАНИРОВАНО","theme":"Сеть, масштаб, UX","goal":"Сломать игру до того, как её сломают игроки.","tasks":["50 полных сетевых матчей и 2/3/5 устройств","Потери связи, 150–600 мс RTT, дубль и задержка сообщений","WebKit/Chromium, safe areas, offline и accessibility","Проверка server writes и временных дедлайнов"],"gate":"Нет расхождения состояний, зависаний или неразрешимых раундов.","next":"P7"},{"id":"P7","ver":"1.0","name":"Релиз","state":"ЗАПЛАНИРОВАНО","theme":"Пять обрядов и собственная религия","goal":"Завершенная кооперативная вечеринка в Pocket Works.","tasks":["12–18 минут, комнаты на 2–5 игроков","Три бога, хроника и повторные партии","Честная косметическая кастомизация","Стабильная публикация, понятный игровой вход"],"gate":"Новая группа играет без инструктора, видит итог и может начать снова.","next":"—"}];
-const STORE='pocket-works:bozhe-ne-tak:dossier:selection';
-const validSections=['roadmap','network','design','qa'];
-let current={section:'roadmap',stage:'P1'};
-try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(parsed&&validSections.includes(parsed.section)&&phases.some(p=>p.id===parsed.stage))current=parsed;}catch{}
-const phaseList=document.querySelector('#phaseList'),inspector=document.querySelector('#inspector'),footer=document.querySelector('#footerStatus');
-const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const bullets=items=>'<ul>'+items.map(i=>'<li>'+escape(i)+'</li>').join('')+'</ul>';
-const header=(over,title,summary)=>'<p class="stage-key">'+escape(over)+'</p><h2>'+escape(title)+'</h2><p class="summary">'+escape(summary)+'</p>';
-const pages={
-network:()=>header('ОСНОВА · POCKETNET','Без тиков. Без иллюзий.','Cloudflare Worker + SQLite Durable Object. Сервер принимает команды, сохраняет решение и рассылает события. Частота 60 Hz не обещана.')+
-'<h3>Проверенные ограничения</h3>'+bullets(['32 комнаты / 48 сокетов в общем хабе','До 16 КиБ на входящее сообщение','Не более 30 сообщений/с с одного клиента','До 256 КиБ на состояние комнаты','Приватные роли пока заблокированы: room_joined сейчас отдаёт room.state'])+
-'<h3>Наш сетевой принцип</h3>'+bullets(['Локальная анимация — на устройстве','Сервер получает окончательное действие, а не каждый кадр','Догмат и решение бога вычисляются авторитетно','У каждого действия id, фаза и подтверждение; reconnect без дублей','Встроенного голосового чата пока нет и не требуется'])+
-'<div class="gate"><b>БЛОКЕР ПЕРЕД P3</b>Без безопасного пользовательского snapshot секретные пророчества не публикуем.</div><a class="doclink" href="./docs/NETWORK.md" data-app-control>Полная спецификация сети ↗</a>',
-design:()=>header('СЕРДЦЕ ИГРЫ','Религия из ошибок','Вы не выполняете заготовленные шутки: вы сами делаете догматы, которые меняют следующие ритуалы.')+
-'<h3>Один матч</h3>'+bullets(['Пять коротких обрядов, 12–18 минут','Знамение → истолкование → изготовление → общий суд','Пророк, Ризничий и Звонарь владеют разными обязанностями','Сигналы предмета, запрета, согласия и просьбы заменяют обязательный голос','Случайное чудо может стать новым обязательным догматом'])+
-'<h3>Визуальный язык</h3>'+bullets(['Подвижная резная голова бога, цветная деревянная скульптура','Общий алтарь как сцена, не россыпь карточек','Плавные последствия чудес просчитываются на клиенте','Контрастный мобильный UX с одним главным действием'])+
-'<a class="doclink" href="./docs/GAME-DESIGN.md" data-app-control>Подробные правила ↗</a>',
-qa:()=>header('ПРИЁМКА · НИКАКИХ ЗАГЛУШЕК','Уровни проверки','Новая стадия открывается только после доказанного полноценного пользовательского сценария.')+
-'<h3>Сценарии</h3>'+bullets(['30 детерминированных локальных прогонов в P1','2/3/5 клиентов, reconnect и повторные команды для P2','Секреты невозможно увидеть через состояние WebSocket','1000 seed не дают неразрешимого ритуала','50 полных сетевых матчей до v1.0','Mobile WebKit/Chromium, offline, safe area, reduced motion'])+
-'<div class="gate"><b>ЗАПРЕТ</b>Работу нельзя объявлять готовой только потому, что кнопки нарисованы или тест не упал.</div><a class="doclink" href="./docs/QA-PLAN.md" data-app-control>Полный QA-план ↗</a>'
-};
-function draw(){
-document.querySelectorAll('[data-section]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.section===current.section)));
-phaseList.hidden=current.section!=='roadmap';
-if(current.section==='roadmap'){
- phaseList.innerHTML=phases.map(p=>'<button class="step" type="button" data-stage="'+p.id+'" aria-pressed="'+(current.stage===p.id)+'"><span class="step-n">'+p.id+'</span><span><b>'+escape(p.name)+'</b><small>v'+p.ver+'</small></span></button>').join('');
- const p=phases.find(p=>p.id===current.stage);
- inspector.innerHTML=header(p.id+' · '+p.state,p.name,p.goal)+'<p class="mini-label">v'+p.ver+' · '+escape(p.theme)+'</p><h3>Задачи этапа</h3>'+bullets(p.tasks)+'<div class="gate"><b>УСЛОВИЕ ГОТОВНОСТИ</b>'+escape(p.gate)+'</div>'+(p.next==='—'?'<a href="./docs/ROADMAP.md" class="doclink" data-app-control>Полная дорожная карта ↗</a>':'<button type="button" class="next" data-next="'+p.next+'">Следующий этап <span>'+p.next+' →</span></button>')+'<p><a class="doclink" href="./docs/ROADMAP.md" data-app-control>Полная дорожная карта ↗</a></p>';
- footer.textContent=p.id+' · '+p.state;
-}else{phaseList.innerHTML='';inspector.innerHTML=pages[current.section]();footer.textContent='P0 · ПРОЕКТНОЕ ДОСЬЕ'}
-try{localStorage.setItem(STORE,JSON.stringify(current));}catch{}
-}
-document.addEventListener('click',e=>{const section=e.target.closest('[data-section]');const stage=e.target.closest('[data-stage]');const next=e.target.closest('[data-next]');if(section){current.section=section.dataset.section;draw();}else if(stage||next){current.section='roadmap';current.stage=(stage||next).dataset.stage||(stage||next).dataset.next;draw();const item=phaseList.querySelector('[aria-pressed=true]');item?.scrollIntoView({block:'nearest',inline:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}if(section||stage||next)inspector.scrollTop=0;});
-draw();
-window.__BOZHE_DOSSIER_QA__=()=>({section:current.section,stage:current.stage,phaseCount:phases.length,navButtons:[...document.querySelectorAll('[data-section]')].length,hasInspector:!!inspector.textContent.trim()});
 
-
-const availableDocuments=new Set(["ROADMAP.md","GAME-DESIGN.md","NETWORK.md","ART-DIRECTION.md","QA-PLAN.md","DECISIONS.md"]);
-let openDocumentKey=null;
-let documentToken=0;
-function renderDocument(markdown){
- const fragment=document.createDocumentFragment();let list=null,listType=null,paragraph=[];
- const flush=()=>{if(paragraph.length){const p=document.createElement('p');p.textContent=paragraph.join(' ');fragment.append(p);paragraph=[]}};
- for(const raw of markdown.split(/\r?\n/)){
-  const line=raw.trim();
-  if(!line){flush();list=null;listType=null;continue}
-  const head=/^(#{1,3})\s+(.+)$/.exec(line);
-  const item=/^(?:([-*])|(\d+)\.)\s+(.+)$/.exec(line);
-  if(head){flush();list=null;listType=null;const h=document.createElement('h'+head[1].length);h.textContent=head[2];fragment.append(h);continue}
-  if(item){flush();const type=item[2]?'ol':'ul';if(listType!==type){list=document.createElement(type);fragment.append(list);listType=type}const li=document.createElement('li');li.textContent=item[3];list.append(li);continue}
-  if(line.startsWith('|')){flush();list=null;listType=null;const row=document.createElement('pre');row.textContent=line;fragment.append(row);continue}
-  list=null;listType=null;paragraph.push(line);
- }
- flush();return fragment;
+const SAVE_KEY='pocket-works:bozhe-ne-tak:game-v2';
+const SOUND_KEY='pocket-works:bozhe-ne-tak:sound';
+const root=document.querySelector('#game');
+const toHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let session=null,screen='home',modal='',selection=null,documentName='ROADMAP.md',docCache=null,docError='';
+let sound=true,audio=null,noiseBuffer=null,toastMessage='',toastId;
+try{session=loadGame(JSON.parse(localStorage.getItem(SAVE_KEY)||'null'));}catch{}
+try{sound=localStorage.getItem(SOUND_KEY)!=='off';}catch{}
+function persist(){
+ try{localStorage.setItem(SAVE_KEY,JSON.stringify(session));}catch{note('Сохранение недоступно в этом браузере');}
 }
-async function showProjectDocument(id){
- if(!availableDocuments.has(id))return;
- openDocumentKey=id;const ticket=++documentToken;
- inspector.innerHTML='<p class="stage-key">ПОЛНАЯ СПЕЦИФИКАЦИЯ</p><button type="button" class="back-document" data-doc-back>← Назад к разделу</button><div class="doc-render" id="docBody" role="status">Загрузка документа…</div>';
- inspector.scrollTop=0;
+function newSeed(){try{return crypto.getRandomValues(new Uint32Array(1))[0]}catch{return Date.now()>>>0}}
+function changeState(state){session=state;persist();render()}
+function goto(name){modal='';screen=name;selection=null;render()}
+function note(message){
+ toastMessage=message;clearTimeout(toastId);const el=document.querySelector('#toast');
+ if(el){el.textContent=message;el.classList.add('shown');}
+ toastId=setTimeout(()=>{toastMessage='';const n=document.querySelector('#toast');if(n)n.classList.remove('shown')},2600);
+}
+function bellAudio(type='wood'){
+ if(!sound)return;
  try{
-  const response=await fetch('./dossier.json',{cache:'no-cache'});
-  if(!response.ok)throw Error('HTTP '+response.status);
-  const payload=await response.json();
-  if(ticket!==documentToken||openDocumentKey!==id)return;
-  if(typeof payload[id]!=='string')throw Error('Текст не найден');
-  const body=inspector.querySelector('#docBody');body.replaceChildren(renderDocument(payload[id]));body.removeAttribute('role');
- }catch(e){
-  if(ticket!==documentToken||openDocumentKey!==id)return;
-  inspector.querySelector('#docBody').innerHTML='<p>Не удалось загрузить документ. Проверьте соединение или повторите загрузку.</p><button type="button" class="next" data-doc-retry>Повторить загрузку</button>';
+  const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;
+  audio||=new Ctx();if(audio.state==='suspended')void audio.resume();
+  const t=audio.currentTime;
+  const params=type==='bell'?{low:515,time:.55,vol:.075,noise:.012}:type==='bless'?{low:365,time:1.05,vol:.075,noise:.015}:
+    type==='wrath'?{low:105,time:.44,vol:.07,noise:.045}:type==='seal'?{low:225,time:.24,vol:.06,noise:.026}:
+    {low:155,time:.13,vol:.045,noise:.025};
+  const gain=audio.createGain();gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(params.vol,t+.013);
+  gain.gain.exponentialRampToValueAtTime(.0001,t+params.time);gain.connect(audio.destination);
+  for(const ratio of (type==='bell'?[1,2.32,3.72]:type==='bless'?[1,1.5,2]:[1,1.91])){
+   const o=audio.createOscillator();o.type=ratio===1?'triangle':'sine';o.frequency.setValueAtTime(params.low*ratio,t);
+   o.frequency.exponentialRampToValueAtTime(Math.max(50,params.low*ratio*.96),t+params.time);
+   const sub=audio.createGain();sub.gain.value=1/((ratio+1)*1.5);o.connect(sub).connect(gain);o.start(t);o.stop(t+params.time+.02);
+  }
+  const count=Math.floor(audio.sampleRate*.17);const buffer=audio.createBuffer(1,count,audio.sampleRate);
+  let prev=0;const arr=buffer.getChannelData(0);
+  for(let i=0;i<count;i++){prev=(prev+Math.random()*2-1)*.49;arr[i]=prev}
+  const n=audio.createBufferSource();n.buffer=buffer;
+  const filter=audio.createBiquadFilter();filter.type='bandpass';filter.frequency.value=type==='bell'?1100:340;filter.Q.value=1;
+  const ng=audio.createGain();ng.gain.setValueAtTime(params.noise,t);ng.gain.exponentialRampToValueAtTime(.0001,t+.15);
+  n.connect(filter).connect(ng).connect(audio.destination);n.start(t);n.stop(t+.16);
+ }catch{/* Audio permission is optional; visuals always work. */}
+}
+function topbar(){
+ const back=screen==='home'?'<a class="exit" href="../../" data-app-control data-native-press>← Pocket Works</a>':
+ '<button type="button" class="exit" data-action="home">← К выбору</button>';
+ const status=session&&screen==='play'?'ОБРЯД '+(session.round+1)+' / '+MAX_ROUNDS:screen==='project'?'ДОКУМЕНТЫ':'ХРАМ ОГО';
+ return '<header class="topbar" data-ui>'+back+'<span class="top-center">'+status+'</span>'+
+ '<button class="sound" type="button" data-action="sound" aria-label="'+(sound?'Выключить звук':'Включить звук')+'">'+
+ (sound?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ')+'</button></header>';
+}
+function mask(mood='idle',small=false){
+ return '<div class="idol '+(small?'mini ':'')+'mood-'+mood+'">'+godArt()+
+ '<div class="idol-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>';
+}
+function footer(text=''){
+ return '<div class="under-stage" data-ui>'+toHtml(text)+'</div>';
+}
+function home(){
+ const has=!!session;
+ return '<section class="home-stage"><div class="home-architecture" aria-hidden="true"><i></i><i></i><i></i></div>'+
+ '<div class="home-idol">'+mask('idle')+'</div><div class="home-copy">'+
+ '<div class="chapter-mark">ХРАМ НЕКОМПЕТЕНТНЫХ ЖРЕЦОВ</div><h1>БОЖЕ,<br>НЕ ТАК!</h1>'+
+ '<p>Пять обрядов. Один капризный бог. Догматы, которые вы сами и придумали.</p>'+
+ '<div class="home-actions">'+(has?'<button class="btn primary" data-action="resume">Продолжить '+(session.phase==='end'?'хронику':'обряд')+' <span>→</span></button>':'')+
+ '<button class="btn '+(has?'secondary':'primary')+'" data-action="new">'+(has?'Новая религия':'Начать служение')+' <span>✦</span></button>'+
+ '</div><div class="quiet-actions"><button data-action="help">Как играть</button><button data-action="project">Дорожная карта</button></div>'+
+ '<div class="build-note">v0.2 · ЛОКАЛЬНАЯ ПАРТИЯ · ОНЛАЙН В РАЗРАБОТКЕ</div></div></section>';
+}
+function layout(inside,view='active'){
+ return '<div class="ritual-layout '+view+'">'+inside+'</div>';
+}
+function chapter(phaseTitle){
+ return '<div class="ritual-head"><span class="chapter">ОБРЯД '+(session.round+1)+' / '+MAX_ROUNDS+'</span>'+
+ '<div class="faith"><span class="faith-label">МИЛОСТЬ</span>'+
+ '<span class="faith-pips" aria-label="'+session.faith+' из '+MAX_FAITH+'">'+Array.from({length:MAX_FAITH},(_,i)=>'<i class="'+(i<session.faith?'lit':'')+'"></i>').join('')+'</span>'+
+ '<strong>'+session.faith+'</strong></div></div>';
+}
+function riteStage(mood,art,subtitle){
+ return '<div class="shrine-scene" data-mood="'+mood+'"><div class="temple-depth" aria-hidden="true"><div class="temple-arch"></div><div class="temple-column left"></div><div class="temple-column right"></div></div>'+
+ '<div class="god-shell">'+mask(mood)+'</div>'+
+ '<div class="altar-platform '+(session.actions.height==='high'?'raised':'')+'"><div class="altar-shaft" aria-hidden="true"></div>'+
+ '<div class="altar-disc">'+(art||'<span class="empty-altar">?</span>')+'</div></div>'+
+ (subtitle?'<div class="scene-subtitle">'+toHtml(subtitle)+'</div>':'')+'</div>';
+}
+function doctrineRibbon(){
+ if(!session.doctrines.length)return '<div class="dogma-empty">Пока ни одного догмата. Это ненадолго.</div>';
+ return '<div class="dogma-ribbon">'+session.doctrines.map(id=>{
+  const d=getDoctrine(id),effect=doctrineEffect(id,session.actions);
+  return '<span class="dogma-chip '+(effect.delta>0?'good':effect.delta<0?'bad':'')+'" title="'+toHtml(d.desc)+'">'+
+   toHtml(d.name)+' <b>'+(session.actions.itemId?(effect.delta>0?'+':'')+effect.delta:'·')+'</b></span>';
+ }).join('')+'</div>';
+}
+function play(){
+ const a=session.actions,rite=getRite(session),item=getItem(a.itemId);
+ const items=ITEMS.map(o=>'<button type="button" class="offering '+(o.id===a.itemId?'chosen':'')+'" data-item="'+o.id+'" aria-pressed="'+(o.id===a.itemId)+'">'+
+ '<span class="offer-figure">'+offeringArt(o.id,58)+'</span><b>'+o.name+'</b><small>'+o.hint+'</small></button>').join('');
+ const treatment=TREATMENTS.map(t=>'<button type="button" class="tool '+(a.treatment===t.id?'chosen':'')+
+ '" data-treatment="'+t.id+'" aria-pressed="'+(a.treatment===t.id)+'">'+t.name+'</button>').join('');
+ const bells=[1,2,3].map(n=>'<button class="score-beat '+(a.bell===n?'chosen':'')+
+ '" data-bell="'+n+'" type="button" aria-pressed="'+(a.bell===n)+'">'+n+'</button>').join('');
+ return layout(chapter()+'<div class="work-space">'+
+ '<section class="shrine-column">'+riteStage('idle',item?offeringArt(item.id,94):null,item?item.name:'Выберите дар ниже')+
+ '<div class="prophecy"><div class="prophecy-kicker">ЗНАМЕНИЕ · '+toHtml(rite.title)+'</div><p>'+toHtml(rite.riddle)+'</p></div></section>'+
+ '<section class="work-column">'+
+ '<div class="section-label">I. ВЫБЕРИТЕ ДАР</div><div class="offering-row" tabindex="0" aria-label="Предметы для подношения">'+items+'</div>'+
+ '<div class="choice-tools"><div class="choice-block"><div class="section-label">II. ПОДГОТОВКА</div><div class="tools-row">'+treatment+'</div></div>'+
+ '<div class="choice-block"><div class="section-label">III. ЗВОН</div><div class="beats">'+bells+'</div></div>'+
+ '<div class="choice-block height-choice"><div class="section-label">IV. ВЫСОТА</div><div class="tools-row"><button class="tool '+(a.height==='low'?'chosen':'')+'" data-height="low" aria-pressed="'+(a.height==='low')+'">У подножия</button>'+
+ '<button class="tool '+(a.height==='high'?'chosen':'')+'" data-height="high" aria-pressed="'+(a.height==='high')+'">Поднять</button></div></div></div>'+
+ '<div class="active-dogmas"><div class="section-label">ДОГМАТЫ '+(session.doctrines.length?session.doctrines.length+'/3':'')+'</div>'+doctrineRibbon()+
+ (session.doctrines.length&&!session.councilUsed&&session.faith>=2?'<button class="council" type="button" data-action="council">Созвать собор · −1 милость</button>':'')+'</div>'+
+ '<button class="btn primary ritual-commit" type="button" data-action="commit" '+(!item?'disabled':'')+'>'+
+ (item?'ПРИНЕСТИ '+item.name.toUpperCase():'СНАЧАЛА ВЫБЕРИТЕ ДАР')+' <span>✦</span></button></section></div>', 'play-layout');
+}
+function scoreLine(c){
+ return '<div class="score-row"><span>'+toHtml(c.name)+'</span><strong class="'+(c.score===0?'miss':'hit')+'">'+c.score+' / '+c.max+'</strong></div>';
+}
+function judgment(){
+ const j=session.judgment,rit=getRite(session),obj=getItem(session.actions.itemId);
+ const mood=j.verdict==='bless'?'bless':j.verdict==='wrath'?'wrath':'doubt';
+ const headline={bless:'БОГ ДОВОЛЕН',doubt:'БОГ ЗАДУМАЛСЯ',wrath:'БОГ РАЗГНЕВАН'}[mood];
+ const subtitle={bless:'ОГО одобряет ваше странное богослужение.',doubt:'ОГО морщит деревянный лоб и ничего не обещает.',wrath:'ОГО требует объяснить, кто вас вообще рукоположил.'}[mood];
+ return layout(chapter()+ '<div class="work-space verdict-space"><section class="shrine-column">'+
+ riteStage(mood,offeringArt(obj.id,108),headline)+'</section><section class="work-column verdict-column">'+
+ '<div class="section-label">'+toHtml(rit.title)+'</div><h2 class="verdict-title '+mood+'">'+headline+'</h2>'+
+ '<p class="verdict-copy">'+subtitle+'</p>'+
+ '<div class="score-seal"><span>СУД НЕБЕС</span><strong>'+j.score+'</strong><span>Милость: <b>'+(j.faithDelta>0?'+':'')+j.faithDelta+'</b></span></div>'+
+ '<div class="score-breakdown">'+j.criteria.map(scoreLine).join('')+
+ j.doctrineResults.map(d=>'<div class="score-row dogma-score"><span>'+toHtml(getDoctrine(d.id).name)+': '+toHtml(d.text)+'</span>'+
+ '<strong class="'+(d.delta<0?'miss':'hit')+'">'+(d.delta>0?'+':'')+d.delta+'</strong></div>').join('')+'</div>'+
+ '<button class="btn primary" data-action="after-judgment">'+
+ (session.faith===0||session.round===MAX_ROUNDS-1?'ЗАВЕРШИТЬ ХРОНИКУ':'УСЛЫШАТЬ НОВОЕ ПРАВИЛО')+' <span>→</span></button>'+
+ '</section></div>','verdict-layout');
+}
+function dogmaStage(){
+ const verdict=session.judgment;
+ const cards=session.offers.map(id=>{
+  const d=getDoctrine(id);
+  return '<button class="doctrine-option '+(selection===id?'selected':'')+'" type="button" data-pick-dogma="'+id+
+  '" aria-pressed="'+(selection===id)+'"><span class="seal-icon" aria-hidden="true">✥</span>'+
+  '<b>'+toHtml(d.name)+'</b><span>'+toHtml(d.desc)+'</span><span class="choice-corner">'+(selection===id?'ВЫБРАНО':'ИЗБРАТЬ')+'</span></button>';
+ }).join('');
+ return layout(chapter()+'<div class="dogma-stage">'+
+ '<div class="dogma-idol">'+mask('doubt')+'</div><div class="dogma-right">'+
+ '<div class="chapter">ПОСЛЕ ОБРЯДА '+(session.round+1)+'</div><h2>Церковный собор</h2>'+
+ '<p>Ваше решение стало чудом. Жрецы должны объявить, что именно оно означает для будущих обрядов.</p>'+
+ '<div class="dogma-options">'+cards+'</div>'+
+ '<p class="dogma-caveat">Новые догматы реально меняют оценку следующих подношений. Максимум три; старейший догмат уступает место новому.</p>'+
+ '<button class="btn primary" data-action="confirm-doctrine" '+(!selection?'disabled':'')+'>ЗАКРЕПИТЬ ДОГМАТ <span>✦</span></button>'+
+ '</div></div>','dogma-layout');
+}
+function ending(){
+ const win=isWin(session);
+ const title=win?'НАША ВЕРА ВЫЖИЛА':'БОГ ЗАКРЫЛ ХРАМ';
+ const paragraphs=win?'ОГО остался с вами. Теперь у него появились правила, которых вчера ещё не существовало.':
+ 'Священный престол пуст. Но хроника ваших нелепых решений сохранилась.';
+ const timeline=session.history.map((h,i)=>{
+  const d=getDoctrine(h.adopted);
+  return '<li class="chronicle-entry"><span class="chronicle-no">'+String(i+1).padStart(2,'0')+'</span>'+
+  '<div class="chronicle-icon">'+offeringArt(h.itemId,61)+'</div><div><b>'+toHtml(h.riteTitle)+'</b>'+
+  '<p>'+toHtml(getItem(h.itemId).name)+' · '+(h.verdict==='bless'?'благословён':h.verdict==='wrath'?'навлёк гнев':'вызвал сомнения')+
+  ' · '+h.score+' очк.</p>'+(d?'<span class="chronicle-law">НОВЫЙ ДОГМАТ: '+toHtml(d.name)+'</span>':'')+'</div></li>';
+ }).join('');
+ return '<section class="ending"><div class="ending-main">'+mask(win?'bless':'wrath',true)+
+ '<div class="chapter">КОНЕЦ ПАЛОМНИЧЕСТВА</div><h1>'+title+'</h1><p>'+paragraphs+'</p>'+
+ '<div class="final-metrics"><div>МИЛОСТЬ <strong>'+session.faith+'</strong></div><div>ОБРЯДЫ <strong>'+session.history.length+'/5</strong></div>'+
+ '<div>ДОГМАТЫ <strong>'+session.doctrines.length+'</strong></div></div>'+
+ '<button class="btn primary" data-action="new">НОВАЯ РЕЛИГИЯ <span>→</span></button>'+
+ '<button class="btn secondary" data-action="retry-seed">Повторить тот же вызов</button></div>'+
+ '<div class="chronicle"><div class="section-label">ЛЕТОПИСЬ НАШЕЙ ВЕРЫ</div><ol>'+timeline+'</ol></div></section>';
+}
+function help(){
+ return '<section class="help-screen"><span class="chapter">ЗАПОВЕДИ НЕОПЫТНОГО ЖРЕЦА</span><h1>Пять обрядов до просветления</h1>'+
+ '<div class="help-steps"><p><b>1. Прочтите знамение.</b> Бог описывает желанный дар, запрет, подготовку, число звонов и высоту подношения. В его словах действительно есть ответ.</p>'+
+ '<p><b>2. Приготовьте обряд.</b> Выберите предмет по характеристикам, обработайте его, задайте звон и высоту. Можно менять решения до суда.</p>'+
+ '<p><b>3. Получите вердикт.</b> ОГО начисляет или отнимает милость. После обряда вы сами утверждаете новый догмат, который изменит следующие испытания.</p>'+
+ '<p><b>4. Доживите до финала.</b> Милость не должна упасть до нуля. Один раз за игру разрешено отменить старейший догмат через собор, потратив милость.</p></div>'+
+ '<p class="help-note">В этой версии один игрок управляет всеми частями обряда. Настоящие роли и интернет-комнаты появятся позже, без необходимости в голосовом чате.</p>'+
+ '<button class="btn primary" data-action="home">ПОНЯТНО <span>→</span></button></section>';
+}
+function parseDoc(markdown){
+ const frag=document.createDocumentFragment();let currentList=null,para=[];
+ const flush=()=>{if(para.length){const p=document.createElement('p');p.textContent=para.join(' ');frag.append(p);para=[]}};
+ for(const raw of markdown.split(/\r?\n/)){
+  const l=raw.trim();if(!l){flush();currentList=null;continue}
+  const hd=/^(#{1,3})\s+(.+)$/.exec(l);
+  const li=/^[-*]\s+(.+)$/.exec(l);
+  if(hd){flush();currentList=null;const h=document.createElement('h'+hd[1].length);h.textContent=hd[2];frag.append(h)}
+  else if(li){flush();if(!currentList){currentList=document.createElement('ul');frag.append(currentList)}
+   const item=document.createElement('li');item.textContent=li[1];currentList.append(item);}
+  else if(l.startsWith('|')){flush();const p=document.createElement('pre');p.textContent=l;frag.append(p)}
+  else {currentList=null;para.push(l)}
  }
+ flush();return frag;
+}
+async function loadDoc(){
+ const target=document.querySelector('#project-document');
+ if(!target)return;
+ if(docError){target.textContent=docError;return}
+ try{
+  docCache ||= fetch('./dossier.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()});
+  const pack=await docCache;if(screen!=='project'||!target.isConnected)return;
+  if(!Object.hasOwn(pack,documentName))throw Error('Недоступный раздел');
+  target.replaceChildren(parseDoc(pack[documentName]));
+ }catch{
+  if(screen!=='project'||!target.isConnected)return;
+  docCache=null;target.replaceChildren();
+  const p=document.createElement('p');p.textContent='Не удалось открыть документ — повторите загрузку.';
+  const b=document.createElement('button');b.className='btn secondary';b.type='button';b.dataset.action='retry-doc';b.textContent='Повторить';
+  target.append(p,b);
+ }
+}
+function project(){
+ const docs=[['ROADMAP.md','Этапы'],['GAME-DESIGN.md','Механики'],['NETWORK.md','Сеть'],['ART-DIRECTION.md','Визуал'],['QA-PLAN.md','Тесты'],['DECISIONS.md','Решения']];
+ return '<section class="project-screen"><div class="chapter">АРХИВ РАЗРАБОТКИ</div><h1>План храма</h1>'+
+ '<div class="document-tabs">'+docs.map(x=>'<button type="button" data-doc="'+x[0]+'" aria-pressed="'+(documentName===x[0])+'">'+x[1]+'</button>').join('')+
+ '</div><article class="project-document" id="project-document" aria-live="polite">Загрузка документа…</article></section>';
+}
+function confirmationModal(){
+ if(!modal)return '';
+ const deleting=modal==='new',council=modal==='council';
+ const title=deleting?'Начать новую веру?':council?'Упразднить догмат?':'Повторить эту партию?';
+ const body=deleting?'Текущая хроника будет заменена новой партией.':council?
+ 'Самый старый догмат исчезнет навсегда. Цена собора — 1 милость. Использовать собор можно только один раз за партию.':
+ 'Вы начнёте заново с тем же набором пяти знамений.';
+ return '<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-label="'+title+'">'+
+ '<h2>'+title+'</h2><p>'+body+'</p><div class="modal-actions"><button class="btn secondary" data-action="cancel">Отмена</button>'+
+ '<button class="btn primary" data-action="confirm-'+(council?'council':deleting?'new':'retry')+'">Подтвердить</button></div></section></div>';
+}
+function render(){
+ if(!root)return;
+ root.innerHTML=topbar()+(screen==='home'?home():screen==='help'?help():screen==='project'?project():
+ !session?home():screen==='play'?(session.phase==='play'?play():session.phase==='judgment'?judgment():session.phase==='dogma'?dogmaStage():ending()):home())+
+ confirmationModal()+'<div class="toast '+(toastMessage?'shown':'')+'" id="toast" role="status">'+toHtml(toastMessage)+'</div>';
+ if(screen==='project')void loadDoc();
+}
+function offerRite(){
+ if(!session||!getItem(session.actions.itemId))return;
+ changeState(commitRite(session));bellAudio(session.judgment?.verdict==='wrath'?'wrath':session.judgment?.verdict==='bless'?'bless':'bell');
 }
 document.addEventListener('click',event=>{
- const link=event.target.closest('a[href^="./docs/"]');
- if(link){event.preventDefault();showProjectDocument(link.getAttribute('href').split('/').pop());return}
- if(event.target.closest('[data-doc-back]')){openDocumentKey=null;documentToken++;draw();return}
- if(event.target.closest('[data-doc-retry]')&&openDocumentKey){showProjectDocument(openDocumentKey);return}
- if(event.target.closest('[data-section],[data-stage],[data-next]')){openDocumentKey=null;documentToken++}
+ const choice=event.target.closest('[data-item],[data-treatment],[data-bell],[data-height],[data-pick-dogma],[data-doc]');
+ const button=event.target.closest('[data-action]');
+ if(choice){
+  if(choice.hasAttribute('data-doc')){documentName=choice.dataset.doc;render();return;}
+  if(choice.hasAttribute('data-pick-dogma')){selection=choice.dataset.pickDogma;bellAudio('wood');render();return;}
+  if(!session||session.phase!=='play')return;
+  let patch={};if(choice.hasAttribute('data-item'))patch={itemId:choice.dataset.item};
+  else if(choice.hasAttribute('data-treatment'))patch={treatment:choice.dataset.treatment};
+  else if(choice.hasAttribute('data-bell'))patch={bell:Number(choice.dataset.bell)};
+  else if(choice.hasAttribute('data-height'))patch={height:choice.dataset.height};
+  if(Object.keys(patch).length){changeState(setAction(session,patch));bellAudio(choice.hasAttribute('data-bell')?'bell':'wood');}
+  return;
+ }
+ if(!button)return;
+ const action=button.dataset.action;
+ if(action==='sound'){sound=!sound;try{localStorage.setItem(SOUND_KEY,sound?'on':'off')}catch{}render();if(sound)bellAudio('wood');return}
+ if(action==='help'){goto('help');return}
+ if(action==='project'){goto('project');return}
+ if(action==='home'){goto('home');return}
+ if(action==='resume'){goto('play');return}
+ if(action==='cancel'){modal='';render();return}
+ if(action==='new'){if(session&&session.phase!=='end'){modal='new';render()}else{session=createGame(newSeed());persist();goto('play');bellAudio('bell')}return}
+ if(action==='confirm-new'){session=createGame(newSeed());persist();goto('play');bellAudio('bell');return}
+ if(action==='retry-seed'){modal='retry';render();return}
+ if(action==='confirm-retry'){session=createGame(session.seed);persist();goto('play');bellAudio('bell');return}
+ if(action==='commit'){offerRite();return}
+ if(action==='after-judgment'){changeState(continueFromJudgment(session));bellAudio('seal');return}
+ if(action==='confirm-doctrine'){
+  if(!session||!selection)return;
+  const result=chooseDoctrine(session,selection);
+  if(result!==session){selection=null;changeState(result);bellAudio('seal');}return;
+ }
+ if(action==='council'){if(session&&!session.councilUsed&&session.faith>=2){modal='council';render()}return}
+ if(action==='confirm-council'){const result=conveneCouncil(session);modal='';if(result!==session){changeState(result);bellAudio('seal')}else render();return}
+ if(action==='retry-doc'){docError='';docCache=null;render();return}
 });
+window.addEventListener('pagehide',()=>{if(session)persist()});
+window.__BNT_QA__=()=>({screen,phase:session?.phase||null,round:session?.round??null,faith:session?.faith??null,
+ item:session?.actions.itemId??null,doctrines:session?.doctrines||[],history:session?.history.length||0,hasSave:!!session});
+render();
