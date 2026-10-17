@@ -11,7 +11,8 @@
         "tests/politics.test.mjs",
         "tests/campaign.test.mjs",
         "tests/atlas.test.mjs",
-        "tests/conflicts.test.mjs"
+        "tests/conflicts.test.mjs",
+        "tests/scale.test.mjs"
       ]
     },
     {
