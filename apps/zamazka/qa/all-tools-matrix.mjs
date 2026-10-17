@@ -361,5 +361,27 @@ verify('smudge: incremental stroke matches one-shot replay',()=>{
  assert.deepEqual(f.data,g.data);
 });
 
+
+// Corrupt or truncated local autosaves must never make the editor crash.
+for(const [name,point] of [
+ ['null point',null],['object point',{x:70,y:80}],['single coordinate',[70]],
+ ['third coordinate',[70,80,90]],['non-finite coordinate',[70,NaN]],
+ ['negative coordinate',[-1,80]],['outside world',[601,80]],
+ ['string coordinate',['70',80]],['null coordinate',[null,80]]
+])verify('draft: reject malformed '+name,()=>{
+ const e=fakeEditor();
+ const bad={c:'#284d6e',s:8,t:'brush',p:[point]};
+ assert.equal(e.adoptDraft([bad]),false,'invalid point must be rejected before render or cloning');
+ assert.equal(e.strokes.length,0,'bad draft must never modify the working document');
+});
+for(const [name,size] of [['not a number',NaN],['numeric string','8'],['negative size',-3]])verify('draft: reject invalid nib '+name,()=>{
+ const e=fakeEditor();assert.equal(e.adoptDraft([{c:'#284d6e',s:size,t:'brush',p:[[70,80]]}]),false);
+});
+verify('draft: valid quarter-pixel archived stroke survives restore',()=>{
+ const e=fakeEditor();
+ assert.equal(e.adoptDraft([{c:'#284d6e',s:.25,t:'brush',p:[[70,80],[71.2,81.5]]}]),true);
+ assert.deepEqual(e.strokes[0].p,[[70,80],[71.2,81.5]]);
+});
+
 console.log('ZAMAZKA tool matrix: '+passed+' passed, '+failures.length+' failed, '+(passed+failures.length)+' independent scenarios');
 if(failures.length)throw new AggregateError(failures.map(item=>new Error(item.name+': '+item.message)),'ZAMAZKA tool-matrix failures');
