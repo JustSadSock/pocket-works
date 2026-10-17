@@ -24,6 +24,7 @@ test('fog never reveals hostile units or terrain before discovery',()=>{
  assert.equal(v.map[s.h-3][s.w-3],null);
  assert.equal(v.gold[2],undefined);
  assert.equal(v.seen[2],undefined);
+ assert.equal(v.seed,0); // Never leak the procedural world seed to the recipient
 });
 test('turn ownership and out-of-bounds moves are rejected without mutation',()=>{
  const s=createGame(10);
