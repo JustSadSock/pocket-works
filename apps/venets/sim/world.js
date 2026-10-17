@@ -154,8 +154,11 @@ export function stepYear(world, { excludePlayerId = null } = {}) {
     annualTax(world, p, 'coin', Math.floor(trade * 0.28), 'coin-tax:' + p.id);
   }
   demographicYear(world);
+  const beforePolitics=world.events.length;
   politicalYear(world,{excludeIds:excludePlayerId?[excludePlayerId]:[]});
-  conflictYear(world,{excludePlayerId});
+  const politicalActors=world.events.slice(beforePolitics).filter(e=>e.kind==='political-decision')
+    .map(e=>e.effect.actorId);
+  conflictYear(world,{excludePlayerId,excludeIds:politicalActors});
   world.stats.years++;
   recordEvent(world, 'year-closed', 'calendar-tick', {
     year: world.year, shortages: world.stats.shortages,
