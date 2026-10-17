@@ -12,7 +12,7 @@ const index=(arr,label)=>{
   demand(entries.size===arr.length&&!entries.has(undefined),'unique '+label);
   return entries;
 };
-export function assertWorld(w){
+export function assertWorldV3(w){
   demand(w&&typeof w==='object'&&!Array.isArray(w),'world object');
   demand(w.schemaVersion===3 && safe(w.seed) && w.seed<=0xffffffff,'schema/seed');
   demand(safe(w.rngState)&&w.rngState<=0xffffffff&&w.rngState!==0,'PRNG');
