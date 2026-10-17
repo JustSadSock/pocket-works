@@ -43,7 +43,7 @@ test('movement consumes move but permits an attack, starting next turn resets it
 });
 test('recruitment spends gold and does not permit repeated training',()=>{
  let s=createGame(801),b=s.buildings.find(x=>x.type==='base'&&x.owner===1);
- let r=transition(s,1,{type:'recruit',building:b.id,unitType:'scout',r:1,c:3});
+ let r=transition(s,1,{type:'recruit',building:b.id,unitType:'scout',r:2,c:1});
  assert.equal(r.error,null);assert.equal(r.state.gold[1],5);
  assert.equal(r.state.units.filter(u=>u.owner===1).length,4);
  assert.ok(transition(r.state,1,{type:'recruit',building:b.id,unitType:'scout',r:2,c:4}).error);
