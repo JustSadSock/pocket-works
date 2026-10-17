@@ -1,4 +1,4 @@
-import {makeAtlasGeometry,countyAtlasModel,heraldryFor,familyRelations} from './atlas-core.js';
+import {getAtlasGeometry,countyAtlasModel,heraldryFor,familyRelations} from './atlas-core.js';
 const NS='http://www.w3.org/2000/svg';
 const S=(tag,attrs={},children=[])=>{
   const n=document.createElementNS(NS,tag);
@@ -151,7 +151,7 @@ function compass(svg){
 }
 export function renderAtlas(world,{selectedId='pr-01',onSelect,changes=[],region=0}={}){
  const expanded=world.provinces.length===48;
- const model=countyAtlasModel(world,makeAtlasGeometry(world.seed,world.provinces.length));
+ const model=countyAtlasModel(world,getAtlasGeometry(world.seed,world.provinces.length));
  const ox=expanded?(region%2)*860:0,oy=expanded?Math.floor(region/2)*570:0;
  const svg=S('svg',{viewBox:ox+' '+oy+' 860 570',class:'living-atlas',role:'group',
    'aria-label':'Политическая карта Междуречья: 12 настоящих графств',preserveAspectRatio:'xMidYMid meet'});

@@ -12,7 +12,8 @@
         "tests/campaign.test.mjs",
         "tests/atlas.test.mjs",
         "tests/conflicts.test.mjs",
-        "tests/scale.test.mjs"
+        "tests/scale.test.mjs",
+        "tests/refinement.test.mjs"
       ]
     },
     {
@@ -126,7 +127,8 @@
         "qa/dev-inspector.spec.ts",
         "qa/atlas.spec.ts",
         "qa/war.spec.ts",
-        "qa/scale.spec.ts"
+        "qa/scale.spec.ts",
+        "qa/refinement.spec.ts"
       ]
     },
     {

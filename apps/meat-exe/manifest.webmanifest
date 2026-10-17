@@ -1,0 +1,25 @@
+{
+  "id": "/apps/meat-exe/",
+  "name": "MEAT.EXE",
+  "short_name": "MEAT",
+  "description": "Брутальный трёхмерный шутер внутри процедурно растущего живого организма: пять волн, мутации, мобильное и компьютерное управление.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#17080a",
+  "theme_color": "#17080a",
+  "lang": "ru",
+  "categories": [
+    "games",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

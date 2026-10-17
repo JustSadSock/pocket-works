@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "organ",
+      "kind": "node-test",
+      "files": [
+        "qa/organ.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#startBtn",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#startBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#hud"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
