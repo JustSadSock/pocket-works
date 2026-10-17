@@ -289,3 +289,15 @@ h2{letter-spacing:-.025em}
  .time-controls{position:relative;z-index:2}
  .game-screen[data-active-panel="lands"] .lands-panel{overflow:hidden!important}
 }
+
+/* Consistent product heraldry instead of generic unicode rook placeholders. */
+.brand-icon{width:28px;height:28px;object-fit:contain;display:block;align-self:center}
+.ruler-seal{clip-path:none;background:transparent;width:58px;height:69px}
+.ruler-seal svg{display:block;width:58px;height:67px;filter:drop-shadow(0 2px 1px #45372936)}
+.start-choice .shield{clip-path:none;background:transparent;color:inherit}
+.start-choice .shield svg{width:39px;height:46px}
+@media(max-width:390px){
+ .ruler-seal{width:42px;height:52px}
+ .ruler-seal svg{width:42px;height:52px}
+ .brand-icon{width:25px;height:25px}
+}
