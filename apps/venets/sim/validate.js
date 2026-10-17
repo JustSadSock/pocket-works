@@ -154,7 +154,7 @@ export function assertWorld(w){
     demand(safe(political.stats[key]),'missing political metric '+key);
   const actorMemberships=new Set();
   for(const f of political.factions){
-    demand(typeof f.id==='string' && /^fa-\\d+$/.test(f.id) && titles.has(f.titleId) &&
+    demand(typeof f.id==='string' && /^fa-\d+$/.test(f.id) && titles.has(f.titleId) &&
       people.get(f.claimantId)?.alive && people.get(f.leaderId)?.alive &&
       safe(f.createdYear)&&f.createdYear<=w.year&&safe(f.refusals)&&
       Array.isArray(f.members)&&f.members.length>=1 &&
