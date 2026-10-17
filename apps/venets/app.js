@@ -118,7 +118,7 @@ function buildStarts(){
     const button=element('button','start-choice'+(selectedCounty===entry.countyId?' active':''));
     button.type='button';button.dataset.county=entry.countyId;
     button.setAttribute('aria-pressed',String(selectedCounty===entry.countyId));
-    const seal=element('span','shield','♜');seal.style.setProperty('--house',houseColor({dynasties:[{id:entry.dynastyId}] ,people:[{id:entry.personId,dynastyId:entry.dynastyId}]},entry.personId));
+    const seal=element('span','shield','♜');seal.style.setProperty('--house',SHADES[(Number(entry.dynastyId.split('-').at(-1))-1)%SHADES.length]);
     const details=element('span','start-copy');
     details.append(element('strong','',entry.name),element('small','',entry.personName+' · спор с герцогом'));
     button.append(seal,details,element('span','choice-check',selectedCounty===entry.countyId?'✓':''));
