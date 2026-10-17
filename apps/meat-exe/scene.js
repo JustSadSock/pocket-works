@@ -39,8 +39,36 @@ export function createWorld(canvas, initialSeed) {
   }
   wallShape.computeVertexNormals();
   const boneShape = new THREE.CylinderGeometry(.085,.12,2.45,5,6);
-  const membrane = new THREE.MeshStandardMaterial({color:0x93414c, roughness:.67, metalness:0, side:THREE.DoubleSide, emissive:0x240306, emissiveIntensity:.3});
-  const wallMat = new THREE.MeshStandardMaterial({color:0x88353b, roughness:.78, metalness:0, emissive:0x2d0408, emissiveIntensity:.45});
+  // Generated collagen and capillary colour map. One shared atlas keeps the nine visible chunks cheap.
+  function makeFleshMap(){
+    const c=document.createElement('canvas');c.width=c.height=256;
+    const x=c.getContext('2d');if(!x)return null;
+    let seed=0x13b0de;
+    const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};
+    x.fillStyle='#d8a09b';x.fillRect(0,0,256,256);
+    for(let i=0;i<700;i++){
+      const a=random()*256,b=random()*256,r=1+random()*13;
+      x.fillStyle=random()>.49?'rgba(60,13,18,.065)':'rgba(250,211,194,.11)';
+      x.beginPath();x.ellipse(a,b,r,r*(.13+random()*.25),random()*Math.PI,0,Math.PI*2);x.fill();
+    }
+    for(let i=0;i<31;i++){
+      const a=random()*256,b=random()*256,length=20+random()*115;
+      x.strokeStyle=random()>.47?'rgba(88,13,21,.34)':'rgba(253,208,184,.3)';
+      x.lineWidth=1+random()*4;x.lineCap='round';
+      x.beginPath();x.moveTo(a,b);
+      x.bezierCurveTo(a+length*.3,b-24+random()*48,a+length*.65,b-27+random()*54,a+length,b-8+random()*16);
+      x.stroke();
+    }
+    for(let i=0;i<85;i++){
+      const a=random()*256,b=random()*256;
+      x.fillStyle='rgba(83,4,10,.19)';x.beginPath();x.ellipse(a,b,1+random()*3,3+random()*7,random()*Math.PI,0,Math.PI*2);x.fill();
+    }
+    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;
+    return t;
+  }
+  const fleshMap=makeFleshMap();
+  const membrane = new THREE.MeshStandardMaterial({color:0xc18487, map:fleshMap, roughness:.64, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
+  const wallMat = new THREE.MeshStandardMaterial({color:0xa35862, map:fleshMap, roughness:.66, metalness:0, emissive:0x280407, emissiveIntensity:.27});
   const boneMat = new THREE.MeshStandardMaterial({color:0xb3a087, roughness:.91, metalness:0});
   const bile = new THREE.MeshStandardMaterial({color:0x88b36e, roughness:.32, emissive:0x223b10, emissiveIntensity:.65});
   const bloodMat = new THREE.MeshBasicMaterial({color:0x9c0b19, transparent:true, opacity:.64, depthWrite:false, side:THREE.DoubleSide});
@@ -58,6 +86,13 @@ export function createWorld(canvas, initialSeed) {
     heart:new THREE.MeshStandardMaterial({color:0xbd132d,roughness:.31,emissive:0x5f0713,emissiveIntensity:1})
   };
   const eyeMat = new THREE.MeshBasicMaterial({color:0xffe6bc});
+  const vesselMat = new THREE.MeshStandardMaterial({color:0x7e2434,metalness:.06,roughness:.33,emissive:0x26050a,emissiveIntensity:.25});
+  const vesselGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-.46,.09,-.25),new THREE.Vector3(-.20,.11,-.05),
+    new THREE.Vector3(.12,.08,.06),new THREE.Vector3(.46,.12,.21)
+  ]),12,.038,5,false);
+  const sacGeo = new THREE.IcosahedronGeometry(.19,1);
+  const sacMat = new THREE.MeshStandardMaterial({color:0x9c4a54,roughness:.41,metalness:0,emissive:0x270b0f,emissiveIntensity:.25});
   const particlesGeo = new THREE.BufferGeometry();
   const particleArr = new Float32Array(600*3);
   particlesGeo.setAttribute('position', new THREE.BufferAttribute(particleArr,3));
@@ -111,8 +146,10 @@ export function createWorld(canvas, initialSeed) {
   }
   function buildChunk(cx,cz){
     const cs=getCells(cx,cz),cells=[...cs].map(k=>k.split(',').map(Number));
-    const walls=[],bones=[];
+    const walls=[],bones=[],vessels=[],sacs=[];
     for(const [x,z] of cells){
+      if(rand(x,z,seed+161)>.27)vessels.push([x,.01,z,rand(x,z,seed+162)*Math.PI*2]);
+      if(rand(x,z,seed+171)>.87)sacs.push([x+(rand(x,z,seed+172)-.5)*.43,2.62,z+(rand(x,z,seed+173)-.5)*.43]);
       for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
         if(!isFloor(x+dx,z+dz)) {
           const rot=dx?Math.PI/2:0;
@@ -143,6 +180,16 @@ export function createWorld(canvas, initialSeed) {
       const bone=new THREE.InstancedMesh(boneShape,boneMat,bones.length);
       bones.forEach(([x,y,z,rot],i)=>{temp.position.set(x,y,z);temp.rotation.set(0,rot,.13);temp.scale.set(1,1,1);temp.updateMatrix();bone.setMatrixAt(i,temp.matrix);});
       bone.instanceMatrix.needsUpdate=true;group.add(bone);
+    }
+    if(vessels.length){
+      const vesselsMesh=new THREE.InstancedMesh(vesselGeo,vesselMat,vessels.length);
+      vessels.forEach(([x,y,z,rot],i)=>{temp.position.set(x,y,z);temp.rotation.set(0,rot,0);temp.scale.set(1,1,1);temp.updateMatrix();vesselsMesh.setMatrixAt(i,temp.matrix);});
+      vesselsMesh.instanceMatrix.needsUpdate=true;group.add(vesselsMesh);
+    }
+    if(sacs.length){
+      const sacsMesh=new THREE.InstancedMesh(sacGeo,sacMat,sacs.length);
+      sacs.forEach(([x,y,z],i)=>{temp.position.set(x,y,z);temp.rotation.set(0,0,0);temp.scale.set(1,1,1);temp.updateMatrix();sacsMesh.setMatrixAt(i,temp.matrix);});
+      sacsMesh.instanceMatrix.needsUpdate=true;group.add(sacsMesh);
     }
     chunks.set(cellKey(cx,cz),group);
     scene.add(group);
