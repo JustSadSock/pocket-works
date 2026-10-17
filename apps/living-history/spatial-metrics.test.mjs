@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {createWorld,chooseSettlementSite,serialize,audit,advanceDays} from './model.js';
-import {median,share,networkDistances,roadJunctions,homeRoadMetrics,siteSelectionAblation} from './qa/spatial-metrics.mjs';
+import {median,share,networkDistances,roadJunctions,homeRoadMetrics,coreRoadRaster,siteSelectionAblation} from './qa/spatial-metrics.mjs';
 
 test('road-distance flood-fill is Manhattan, bounded and does not invent roads',()=>{
  const s=7,traffic=new Uint8Array(s*s);
@@ -23,6 +23,15 @@ test('road-distance flood-fill is Manhattan, bounded and does not invent roads',
  assert.equal(share([true,false,true]),2/3);
 });
 
+test('fixed-rank core reflects strongest road and breaks wear ties by cell',()=>{
+ const t=Uint8Array.from([12,22,0,90,90,12,0,0,0,0]);
+ const core=coreRoadRaster(t,10,.25);
+ assert.equal(core.reduce((n,v)=>n+v,0),2);
+ assert.equal(core[3],1);
+ assert.equal(core[4],1);
+ assert.equal(core[1],0);
+ assert.ok(coreRoadRaster(new Uint8Array(10),10).every(v=>v===0));
+});
 test('through-junction is not confused with private access or roadless map',()=>{
  const s=9,t=new Uint8Array(s*s);
  for(let x=2;x<=6;x++)t[4*s+x]=85;
@@ -34,6 +43,9 @@ test('through-junction is not confused with private access or roadless map',()=>
  const homes=[{x:4,y:5},{x:0,y:0}];
  const m=homeRoadMetrics(t,s,homes);
  assert.equal(m.junctionCount,1);
+ assert.equal(m.coreRoadCells,1);
+ assert.equal(m.coreRoadWithinTwoTilesShare,0.5);
+ assert.equal(m.coreRoadDistanceTilesMedian,4.5);
  assert.equal(m.mainRoadWithinTwoTilesShare,0.5);
  assert.equal(m.junctionWithinSixTilesShare,0.5);
  assert.equal(m.mainRoadDistanceTilesMedian,3.5);
@@ -66,7 +78,7 @@ test('1-year audit emits geometry, ablation and balanced construction evidence',
   assert.ok(Array.isArray(result.constructionObservations));
   const snap=result.snapshots[0];
   assert.equal(snap.roadAblation.attempts,8);
-  assert.ok(snap.communities.every(c=>c.mainRoadDistanceTilesMedian!==undefined&&c.junctionCount>=0));
+  assert.ok(snap.communities.every(c=>c.mainRoadDistanceTilesMedian!==undefined&&c.junctionCount>=0&&c.coreRoadCells>0));
   assert.ok(fs.readFileSync(path.join(root,'maps.svg'),'utf8').startsWith('<svg'));
  }finally{fs.rmSync(root,{force:true,recursive:true});}
 });
