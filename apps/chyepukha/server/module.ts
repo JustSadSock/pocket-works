@@ -73,7 +73,7 @@ function viewForPlayer({state:s,player,players}){
    setLabel:BANK[sh.set]?.label||'Свій набір',
    genre:GENRES.find(x=>x.id===sh.genre)?.label||s.settings.customGenre||'Свій жанр',
    heroGender:sh.heroGender,
-   text:sh.fragments.map(f=>f.answer).join('\n\n'),
+   // Assemble the whole story client-side from fragments to avoid doubling wire bytes.
    fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[i]?.prompt||'',answer:f.answer,
       author:s.players.find(x=>x.id===f.by)?.name||'Автор'}))
  }))};
