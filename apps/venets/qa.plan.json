@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "tests/world.test.mjs"
+        "tests/world.test.mjs",
+        "tests/dynasty.test.mjs"
       ]
     },
     {
@@ -23,7 +24,7 @@
     {
       "id": "world-century",
       "kind": "node",
-      "tier": "deep",
+      "tier": "smoke",
       "entry": "qa/stress.mjs",
       "args": [
         "--seeds=100",
