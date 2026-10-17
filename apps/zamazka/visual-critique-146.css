@@ -259,10 +259,10 @@ html[data-zamazka-appearance="new"] #screen>.museum-home{
 }
 html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display{
  overflow:visible!important;isolation:auto!important;z-index:4!important;
- pointer-events:none!important;
+ pointer-events:auto!important;
 }
 html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage{
- overflow:visible!important;pointer-events:none!important;
+ overflow:visible!important;pointer-events:auto!important;
 }
 html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide{
  transition:transform var(--museum-shift-duration,285ms) cubic-bezier(.24,.72,.22,1),
