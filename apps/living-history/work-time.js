@@ -60,7 +60,7 @@ export function shiftAudit(s){
    !Number.isFinite(q.travelHours)||q.travelHours<0||
    q.workHours+q.travelHours>WORK_HOURS+.02||
    q.depart<7||q.depart>8||q.arrive<q.depart||q.returnStart<q.arrive||q.end<q.returnStart||
-   q.end>24)issues.push('Неверное рабочее время '+p.id);
+   q.end>24)issues.push('Неверное рабочее время '+p.id+': '+JSON.stringify(q));
  }
  return issues;
 }
