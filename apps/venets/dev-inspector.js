@@ -11,6 +11,7 @@ export const INSPECTOR_SCREENS = Object.freeze([
   {id:'war',name:'Военный поход',group:'Основные'},
   {id:'history',name:'Летопись',group:'Основные'},
   {id:'ending',name:'Завершение главы',group:'Основные'},
+  {id:'ending-crown',name:'Финал · корона',group:'Основные'},
   {id:'docs',name:'Исследования',group:'Основные'},
   {id:'confirm',name:'Подтверждение приказа',group:'Состояния'},
   {id:'decision',name:'Результат приказа',group:'Состояния'},
