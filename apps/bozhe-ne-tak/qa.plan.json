@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "ritual-model",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/ritual.test.mjs"
+      ]
+    },
+    {
+      "id": "full-ritual-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": ".home-stage",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='new']"
+        },
+        {
+          "action": "visible",
+          "selector": ".work-space"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-item='goose']"
+        },
+        {
+          "action": "click",
+          "selector": "[data-treatment='wash']"
+        },
+        {
+          "action": "click",
+          "selector": "[data-bell='2']"
+        },
+        {
+          "action": "click",
+          "selector": "[data-height='high']"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='commit']"
+        },
+        {
+          "action": "visible",
+          "selector": ".verdict-title"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='after-judgment']"
+        },
+        {
+          "action": "visible",
+          "selector": ".dogma-stage"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-pick-dogma]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='confirm-doctrine']"
+        },
+        {
+          "action": "visible",
+          "selector": ".work-space"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
