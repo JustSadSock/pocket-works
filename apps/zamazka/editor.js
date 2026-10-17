@@ -216,10 +216,12 @@ export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=f
   // once. Previous beige+fill+stroke clipping multiplied edge alpha.
   ctx.save();clipZone(ctx,z);ctx.drawImage(overlay,0,0,W,H);ctx.restore();
  }
+ return true;
  }catch{
   ctx ||= prepareCanvas(canvas,false,thumbnail);
   ctx.fillStyle='#ddc6aa';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#512d2a';ctx.fillText('Не удалось открыть картину',20,50);
+  return false;
  }
 }
 
