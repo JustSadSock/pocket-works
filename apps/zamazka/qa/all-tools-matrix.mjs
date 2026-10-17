@@ -297,14 +297,14 @@ verify('touch: lost capture resets gesture state',()=>{
  e.lostCapture(pointer(1,90,90,'touch'));assert.equal(e.pointers.size,0);assert.equal(e.working,null);
 });
 verify('keyboard: individual B/E/S/H shortcuts change tools',()=>{
- const e=interactive();
+ const e=interactive();globalThis.document={querySelector(){return null}};
  for(const [key,tool] of [['KeyB','brush'],['KeyE','erase'],['KeyS','smudge'],['KeyH','hand']]){
   e.keyboardDown({code:key,ctrlKey:false,altKey:false,metaKey:false,preventDefault(){},target:{matches(){return false}}});
   assert.equal(e.tool,tool);
  }
 });
 verify('keyboard: Space temporarily picks then restores tool',()=>{
- const e=interactive();e.setTool('erase');
+ const e=interactive();globalThis.document={querySelector(){return null}};e.setTool('erase');
  e.keyboardDown({code:'Space',ctrlKey:false,altKey:false,metaKey:false,preventDefault(){},target:{matches(){return false}}});
  assert.equal(e.tool,'picker');e.keyboardUp({code:'Space',preventDefault(){}});
  assert.equal(e.tool,'erase');
