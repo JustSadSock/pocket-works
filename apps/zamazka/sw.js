@@ -37,6 +37,7 @@ const APP_SHELL = [
   './visual-critique-145.css',
   './visual-critique-146.css',
   './exhibition-ui.js',
+  './gallery-proportions.js',
   './experience.css',
   './responsive-scale.css',
   './round-review.css',
