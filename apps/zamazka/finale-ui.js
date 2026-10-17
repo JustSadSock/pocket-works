@@ -50,7 +50,7 @@ export function finaleResultsMarkup({view:v,escapeText,memberSeal,pocketPlayerBa
    '</article>';
  }).join('');
  return '<section class="page finale-results finale-scene" data-finale-phase="results">'+
-  '<header class="finale-results-head"><span class="finale-overline">ПОДВЕДЕНИЕ ИТОГОВ / ЭКСПОЗИЦИЯ ЗАКРЫТА</span><h2>Каталог победителей</h2><p>Обман и наблюдательность оцениваются отдельно.</p></header>'+
+  '<header class="finale-results-head"><span class="finale-overline">ПОДВЕДЕНИЕ ИТОГОВ / ЭКСПОЗИЦИЯ ЗАКРЫТА</span><h2>Каталог победителей</h2><p>'+(v.timedScoring?'Точность, скорость и выдержка входят в итоговый счёт.':'Обман и наблюдательность оцениваются отдельно.')+'</p></header>'+
   '<div class="finale-results-main"><div class="finale-laureate"><span class="finale-laureate-hatch" aria-hidden="true"></span>'+
    '<div class="finale-laureate-seal" aria-hidden="true"><span>❦</span><i>Ⅰ</i></div><div class="finale-laureate-label">'+(ties>1?'ПЕРВОЕ МЕСТО РАЗДЕЛИЛИ':'ЛАУРЕАТ ВЫСТАВКИ')+'</div>'+
    '<div class="finale-laureate-person">'+memberSeal(winner.person)+'<div><h3>'+label(winner.person.name)+'</h3><p>'+(ties>1?'Лидеров с равным счётом: '+ties:'Первое место в каталоге')+'</p></div></div>'+
@@ -64,12 +64,17 @@ export function finaleResultsMarkup({view:v,escapeText,memberSeal,pocketPlayerBa
     '<button class="btn ghost" data-action="achievements">Награды</button>'+
     '<button class="btn ghost" data-action="menu">В главное меню</button></footer></section>';
 }
-export function finaleRevealAuditMarkup({breakdown,wrong,bonus,escapeText,chipDots}){
+export function finaleRevealAuditMarkup({breakdown,wrong,bonus,authorExtras=null,escapeText,chipDots}){
+ const endurance=Math.max(0,Number(authorExtras?.endurance)||0);
+ const undetected=Math.max(0,Number(authorExtras?.undetected)||0);
  return '<div class="finale-audit-heading"><span class="finale-overline">ГОЛОСА</span></div>'+
   '<div class="audit-lines finale-audit-lines">'+breakdown.map((x,i)=>
    '<div class="audit-line" style="--case-index:'+i+'"><span>'+safe(escapeText,x.name)+'</span>'+
    '<div class="finale-jury-coins" role="img" aria-label="'+x.correct+' верных и '+x.wrong+' ошибочных фишек">'+
    '<span class="correct-coins">'+chipDots(x.correct)+'</span><span class="missed-coins">'+chipDots(x.wrong)+'</span>'+
-   '</div><strong>+'+x.points+'</strong></div>').join('')+'</div>'+
-  '<div class="outcome-bonus finale-bonus"><span>'+wrong+' фишек мимо — очки реставратору</span><strong>+'+bonus+'</strong></div>';
+   '</div><strong>+'+x.points+(x.speed>0?'<small class="audit-speed">включая +'+x.speed+' за скорость</small>':'')+'</strong></div>').join('')+'</div>'+
+  '<div class="outcome-bonus finale-bonus"><span>'+wrong+' фишек мимо — очки реставратору'+
+   (authorExtras?'<small class="audit-endurance">'+(endurance?'Выдержка +'+endurance:'')+
+    (endurance&&undetected?' · ':'')+(undetected?'Не разгадали +'+undetected:'')+'</small>':'')+
+   '</span><strong>+'+bonus+'</strong></div>';
 }
