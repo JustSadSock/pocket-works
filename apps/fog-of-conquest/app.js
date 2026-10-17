@@ -1,5 +1,7 @@
 import {TERRAIN,UNITS,BUILDINGS,SIZES,createGame,transition,reach,project,aiTurn,isValidSave} from './engine.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+installMobileRuntime();
 const $=id=>document.getElementById(id), canvas=$('map'),field=$('field'),ctx=canvas.getContext('2d',{alpha:false});
 const KEY='pocket-works:fog-of-conquest:save-v1',PREF='pocket-works:fog-of-conquest:preferences';
 let state=null,online=false,net=null,side=1,room=null,chosen=null,pendingRecruit=null,locked=false,toastId=0,frame=0;
