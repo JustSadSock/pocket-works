@@ -98,7 +98,11 @@ function grazingWaypoint(s,h,i,phase,anchor){
   }
   if(r>=5&&candidates.length>=12)break;
  }
- const point=(!candidates.length)?anchor:(candidates.sort((a,b)=>a.rank-b.rank||a.y-b.y||a.x-b.x),{x:candidates[0].x,y:candidates[0].y});
+ // Even if local forage is exhausted, animals occupy different places within
+ // the genuine recorded pasture cell rather than stacking at one pixel.
+ const point=(!candidates.length)?
+  {x:anchor.x+(hash(h.id,i,phase*11)-.5)*.64,y:anchor.y+(hash(i,h.id,phase*17)-.5)*.64}:
+  (candidates.sort((a,b)=>a.rank-b.rank||a.y-b.y||a.x-b.x),{x:candidates[0].x,y:candidates[0].y});
  if(memo.size>5000)memo.clear();memo.set(key,point);
  return point;
 }
@@ -108,7 +112,10 @@ function grazingMotion(s,h,i,day,anchor){
  const phase=Math.floor(absolute/duration),t=smooth(frac(absolute/duration));
  const from=grazingWaypoint(s,h,i,phase,anchor),to=grazingWaypoint(s,h,i,phase+1,anchor);
  if(from.x===to.x&&from.y===to.y)return from;
- return pathPosition(pathFor(s,from,to),t)||from;
+ const route=pathFor(s,from,to);
+ if(route.length<=1)return {x:from.x+(to.x-from.x)*t,y:from.y+(to.y-from.y)*t};
+ const points=route.slice();points[0]=from;points[points.length-1]=to;
+ return pathPosition(points,t)||from;
 }
 export function cattlePosition(h,day,i,s=null){
  const grazing=day%365>=80&&day%365<=300&&Number.isInteger(h.lastPastureCell);
