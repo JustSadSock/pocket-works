@@ -88,8 +88,14 @@ function update(){
 }
 function selectNext(){const s=gameView();if(!s)return;const mine=s.units.filter(u=>u.owner===side);const i=mine.findIndex(u=>u.id===chosen?.unit);if(mine.length){chosen={unit:mine[(i+1)%mine.length].id};pendingRecruit=null;centerAt(mine[(i+1)%mine.length].r,mine[(i+1)%mine.length].c);update();}}
 function centerAt(r,c){const w=field.clientWidth,h=field.clientHeight;offX=w/2-(c+.5)*tile*zoom;offY=h/2-(r+.5)*tile*zoom;clampPan();draw();}
-function centerOnBase(animate=true){const s=gameView()||state;if(!s)return;const base=s.buildings.find(b=>b.type==='base'&&b.owner===side)||s.units.find(u=>u.owner===side);zoom=window.innerWidth<750?.85:Math.min(1.25,Math.min(field.clientWidth/(s.w*tile),field.clientHeight/(s.h*tile)));zoom=Math.max(.67,zoom);if(base)centerAt(base.r+1,base.c+1);}
-function clampPan(){const s=gameView();if(!s)return;const w=field.clientWidth,h=field.clientHeight,sw=s.w*tile*zoom,sh=s.h*tile*zoom;offX=Math.min(w-45,Math.max(45-sw,offX));offY=Math.min(h-45,Math.max(45-sh,offY));}
+function centerOnBase(animate=true){const s=gameView()||state;if(!s)return;const base=s.buildings.find(b=>b.type==='base'&&b.owner===side)||s.units.find(u=>u.owner===side);zoom=window.innerWidth<750?Math.max(.88,Math.min(1.5,(field.clientHeight+18)/(s.h*tile))):Math.min(1.4,Math.max(field.clientWidth/(s.w*tile),field.clientHeight/(s.h*tile)));zoom=Math.max(.67,zoom);if(base)centerAt(base.r+1,base.c+1);}
+function clampPan(){const s=gameView();if(!s)return;
+ const w=field.clientWidth,h=field.clientHeight,sw=s.w*tile*zoom,sh=s.h*tile*zoom;
+ // A small map is centered; a large map cannot expose empty space outside
+ // its top/left/bottom/right edges when the player focuses a border fortress.
+ offX=sw<=w?(w-sw)/2:Math.max(w-sw,Math.min(0,offX));
+ offY=sh<=h?(h-sh)/2:Math.max(h-sh,Math.min(0,offY));
+}
 function fitCanvas(){const r=field.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);if(r.width<1||r.height<1)return;const w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}draw();}
 function stamp(seed,r,c,k=0){let n=(seed^Math.imul(r+59,4027)^Math.imul(c+31,7919)^Math.imul(k+1,104729))>>>0;n^=n>>>16;n=Math.imul(n,2246822519);return (n>>>0)/4294967296;}
 function draw(){
