@@ -7,7 +7,8 @@
       "tier": "smoke",
       "files": [
         "tests/world.test.mjs",
-        "tests/dynasty.test.mjs"
+        "tests/dynasty.test.mjs",
+        "tests/politics.test.mjs"
       ]
     },
     {
