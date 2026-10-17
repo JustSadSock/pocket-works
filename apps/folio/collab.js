@@ -126,8 +126,10 @@ export function createFolioCollab({onSnapshot,onOperation,onRemove,onPreview,onS
     const kind=message?.code||message?.message||'network_error';
     const fatal=['room_not_found','room_version_unavailable','room_full','account_already_in_room','game_unavailable'];
     error=({room_not_found:'Комната не найдена или истекла.',room_full:'Комната заполнена (6 художников).',account_already_in_room:'Этот Pocket ID уже участвует в комнате.',rate_limited:'Слишком частые команды.'})[kind]||String(kind);
-    if(fatal.includes(kind)){onExit();teardown(false);error=String(kind)}
-    else status='reconnecting';
+    if(fatal.includes(kind)){
+     const reason=error;
+     onExit();teardown(false);status='error';error=reason;
+    }else status='reconnecting';
     notifyStatus();
    });
    await instance.connect();
