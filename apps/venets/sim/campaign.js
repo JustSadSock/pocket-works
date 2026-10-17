@@ -1,6 +1,6 @@
 // A player-run chronicle over the existing world. No invented conquest or narrative RNG.
 // Campaign data is kept outside world to preserve the audited schema-4 simulation.
-import {createWorld, stepYear, assertWorld, performPoliticalAction, possibleActions, serializeWorld, loadWorld, recordEvent, remember} from './world.js';
+import {createWorld, stepYear, assertWorld, performPoliticalAction, possibleActions, chooseGoal, serializeWorld, loadWorld, recordEvent, remember} from './world.js';
 
 export const CAMPAIGN_SCHEMA=1;
 export const COUNTY_STARTS=['co-01','co-02','co-03'];
@@ -98,6 +98,8 @@ export function startCampaign({seed=413,countyId='co-01'}={}){
 export function campaignChoices(g){
   assertCampaign(g);
   if(g.finished||g.chapterComplete||g.lastActionYear===g.world.year)return [];
+  const actor=g.world.people.find(p=>p.id===g.playerId);
+  if(actor?.alive)chooseGoal(g.world,actor);
   return possibleActions(g.world,g.playerId);
 }
 export function campaignAction(g,choice){
