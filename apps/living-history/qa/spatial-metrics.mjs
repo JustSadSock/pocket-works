@@ -37,17 +37,37 @@ export function roadJunctions(traffic,side,minimum=MAIN_WEAR){
  }
  return mask;
 }
+// Fixed-rank road core: strongest 10% of genuinely worn cells, with deterministic
+// index tie-breaks. Unlike absolute threshold-55 frontage it cannot saturate
+// simply because almost every household generates a well-worn access path.
+export function coreRoadRaster(traffic,side,fraction=.10){
+ if(!traffic||traffic.length!==side*side||!Number.isFinite(fraction)||fraction<=0||fraction>1)
+  throw Error('Invalid core road raster');
+ const ranked=[];
+ for(let i=0;i<traffic.length;i++)if(traffic[i]>=TRACK_WEAR)ranked.push(i);
+ ranked.sort((a,b)=>traffic[b]-traffic[a]||a-b);
+ const count=ranked.length?Math.max(1,Math.ceil(ranked.length*fraction)):0;
+ const mask=new Uint8Array(traffic.length);
+ for(let k=0;k<count;k++)mask[ranked[k]]=1;
+ return mask;
+}
 export function homeRoadMetrics(traffic,side,homes){
  const worn=networkDistances(traffic,side,TRACK_WEAR);
  const main=networkDistances(traffic,side,MAIN_WEAR);
  const junctionMask=roadJunctions(traffic,side);
  const junction=networkDistances(junctionMask,side,1);
+ const coreMask=coreRoadRaster(traffic,side);
+ const core=networkDistances(coreMask,side,1);
  const at=(d,h)=>Number.isInteger(h.x)&&Number.isInteger(h.y)
   &&h.x>=0&&h.y>=0&&h.x<side&&h.y<side?d[h.y*side+h.x]:-1;
  const wornDistances=homes.map(h=>at(worn,h)),mainDistances=homes.map(h=>at(main,h)),junctionDistances=homes.map(h=>at(junction,h));
+ const coreDistances=homes.map(h=>at(core,h));
  const reachable=values=>values.filter(x=>x>=0);
  return {
   trackDistanceTilesMedian:median(reachable(wornDistances)),
+  coreRoadDistanceTilesMedian:median(reachable(coreDistances)),
+  coreRoadWithinTwoTilesShare:share(coreDistances.map(d=>d>=0&&d<=NEAR_ROAD_TILES)),
+  coreRoadCells:coreMask.reduce((n,v)=>n+v,0),
   mainRoadDistanceTilesMedian:median(reachable(mainDistances)),
   junctionDistanceTilesMedian:median(reachable(junctionDistances)),
   mainRoadWithinTwoTilesShare:share(mainDistances.map(d=>d>=0&&d<=NEAR_ROAD_TILES)),
