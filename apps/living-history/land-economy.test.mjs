@@ -49,8 +49,8 @@ test('founding farmland has no artificial radial exclusion and respects real hom
  assert.ok(all.length>500,'founders still hold real land rights');
  for(const i of all){
   const {x,y}=pos(i);
-  assert.ok(occupied.every(h=>Math.abs(x-h.x)+Math.abs(y-h.y)>=4),
-   'farm strips cannot occupy another home approach or kitchen-garden land');
+  assert.ok(occupied.every(h=>!(x===h.x&&y===h.y)&&!h.croft.includes(i)),
+   'farm strips cannot occupy another roof or owned kitchen-garden land');
  }
  const distances=all.map(i=>{
   const {x,y}=pos(i),h=occupied.find(h=>h.fields.includes(i));
