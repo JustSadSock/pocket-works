@@ -27,7 +27,7 @@ const EXPLAIN={
 };
 const safeAction=()=>({itemId:null,treatment:null,bell:1,height:'low'});
 export function createOnline(onChange,onExit){
- let client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code='',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
+ let client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
  const show=()=>onChange();
  const isLive=()=>client?.socket?.readyState===WebSocket.OPEN&&status==='room';
  const message=s=>{notice=s;show()};
@@ -53,7 +53,11 @@ export function createOnline(onChange,onExit){
   net.on('disconnected',()=>{if(id!==epoch)return;status='reconnecting';show()});
   net.on('room_closed',()=>{if(id!==epoch)return;view=null;roomId='';status='intro';error='Комната закрыта.';show()});
   net.on('error',x=>{if(id!==epoch)return;const code=x?.code||x?.message||'';
-   error=EXPLAIN[code]||('Ошибка соединения: '+code.slice(0,90));show()});
+   error=EXPLAIN[code]||('Ошибка соединения: '+code.slice(0,90));
+   if(['room_not_found','room_full','match_in_progress','room_version_unavailable','account_already_in_room'].includes(code)){
+    status='intro';view=null;roomId='';net.roomId=null;net.persist();
+   }
+   show()});
  };
  async function start(mode){
   if(status==='connecting')return;
@@ -93,7 +97,12 @@ export function createOnline(onChange,onExit){
  }
  function close(){clean();view=null;roomId='';status='intro'}
  function tick(){if(status==='room'&&view&&client?.socket?.readyState===WebSocket.OPEN&&view.phase!=='end')send({type:'pulse'})}
- const pulse=setInterval(tick,6000);
+ let pulseCounter=0;
+ const pulse=setInterval(()=>{
+  const clock=document.querySelector('[data-net-timer]');
+  if(clock&&view?.deadlineAt)clock.textContent=String(Math.max(0,Math.ceil((view.deadlineAt-Date.now())/1000)));
+  if(++pulseCounter%6===0)tick();
+ },1000);
  function destroy(){clearInterval(pulse);close()}
  function nickname(v){name=String(v).slice(0,24)}
  function invite(v){code=String(v).slice(0,180)}
@@ -236,7 +245,7 @@ export function createOnline(onChange,onExit){
   }
   return true;
  }
- return {markup,action,start,close,destroy,isLive,get phase(){return view?.phase||status},
+ return {markup,action,start,leave,close,destroy,isLive,get phase(){return view?.phase||status},
   get roomId(){return roomId},get view(){return view},get ownId(){return ownId},
   get status(){return status},get error(){return error}};
 }
