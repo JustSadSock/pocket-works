@@ -44,7 +44,7 @@ const ICONS={marriage:'✦',gift:'◇',grant:'♜',petition:'§',faction:'⚑',j
 const GOALS={'secure-claim':'Вернуть спорный титул','political-leverage':'Ослабить сюзерена',
   'gain-land':'Получить владение','stabilize-realm':'Укрепить мир','seek-marriage':'Создать союзный дом',
   'secure-house':'Защитить род'};
-let game=null,saved=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
+let game=null,saved=null,backupRaw=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
 let screen='loading',autoSpeed=0,autoHandle=null,saveQueue=Promise.resolve();
 let storage='indexeddb',database=null,actionPending=null,busy=false,toastHandle=null;
 let atlasView='atlas',familyFocus=null,atlasChanges=[],atlasRegion=0,selectedSize=12;
@@ -85,40 +85,67 @@ function openDB(){
     request.onblocked=()=>reject(Error('Another tab blocks saves'));
   });
 }
-function dbRead(){
+function dbRead(key='active'){
   return new Promise((resolve,reject)=>{
     const tx=database.transaction('saves','readonly');
-    const request=tx.objectStore('saves').get('active');
+    const request=tx.objectStore('saves').get(key);
     request.onsuccess=()=>resolve(request.result||null);
     request.onerror=()=>reject(request.error||Error('Save read error'));
   });
 }
-function dbWrite(data){
+function dbWrite(data,{rotate=true}={}){
   return new Promise((resolve,reject)=>{
-    const tx=database.transaction('saves','readwrite');
-    tx.objectStore('saves').put(data,'active');
-    tx.oncomplete=()=>resolve();
+    const tx=database.transaction('saves','readwrite'),store=tx.objectStore('saves');
+    let old=null;
+    const prior=store.get('active');
+    prior.onsuccess=()=>{
+      old=prior.result||null;
+      if(rotate&&old&&old!==data)store.put(old,'backup');
+      store.put(data,'active');
+    };
+    tx.oncomplete=()=>resolve(old);
     tx.onerror=()=>reject(tx.error||Error('Save write failed'));
     tx.onabort=()=>reject(tx.error||Error('Save aborted'));
   });
 }
 async function initializeStorage(){
-  try{database=await openDB();storage='indexeddb';return await dbRead()}
-  catch(e){
+  try{
+    database=await openDB();storage='indexeddb';
+    return {active:await dbRead('active'),backup:await dbRead('backup')};
+  }catch(e){
     database=null;storage='localstorage';
-    try{return localStorage.getItem('venets:campaign:v1')}
-    catch {storage='memory';notify('Хранилище браузера недоступно. Эта кампания не сохранится после закрытия вкладки.');return null}
+    try{return {active:localStorage.getItem('venets:campaign:v1'),
+      backup:localStorage.getItem('venets:campaign:backup:v1')}}
+    catch{
+      storage='memory';
+      notify('Хранилище недоступно. Прогресс не сохранится после закрытия вкладки.');
+      return {active:null,backup:null};
+    }
   }
 }
+async function writeSave(data,{rotate=true}={}){
+  if(storage==='indexeddb'&&database)return dbWrite(data,{rotate});
+  if(storage==='localstorage'){
+    const old=localStorage.getItem('venets:campaign:v1');
+    if(rotate&&old&&old!==data)localStorage.setItem('venets:campaign:backup:v1',old);
+    localStorage.setItem('venets:campaign:v1',data);
+    return old;
+  }
+  throw Error('Нет постоянного хранилища');
+}
+function validBackup(raw){
+  if(typeof raw!=='string'||!raw)return null;
+  try{loadCampaign(raw);return raw}catch{return null}
+}
+
 function saveGame(){
   if(IS_PREVIEW||!game)return;
   let data;
   try{data=serializeCampaign(game)}catch(e){notify('Сохранение остановлено: '+e.message);return}
   by('save-status').textContent='Сохраняем…';
   saveQueue=saveQueue.catch(()=>{}).then(async()=>{
-    if(storage==='indexeddb'&&database)await dbWrite(data);
-    else if(storage==='localstorage')localStorage.setItem('venets:campaign:v1',data);
-    else throw Error('Нет постоянного хранилища');
+    const previous=await writeSave(data);
+    if(previous&&previous!==data)backupRaw=validBackup(previous);
     saved=data;
     by('save-status').textContent='Сохранено';
   }).catch(e=>{
@@ -127,6 +154,7 @@ function saveGame(){
   });
 }
 function saveMenu(){
+  by('restore-backup').hidden=!backupRaw;
   by('resume').hidden=!(saved||game);
   if(game){
     label(by('resume-summary'),String(game.world.year)+' год · '+pname(game.world,game.playerId));
@@ -499,6 +527,26 @@ function renderEnding(){
   by('continue-legacy').hidden=game.finished;
 }
 function closeGameToMenu(){pause();saveGame();menu()}
+by('restore-backup').addEventListener('click',()=>{
+  if(!backupRaw)return;
+  pause();by('restore-dialog').returnValue='';by('restore-dialog').showModal();
+});
+by('restore-dialog').addEventListener('close',async()=>{
+  if(by('restore-dialog').returnValue!=='confirm'||!backupRaw)return;
+  pause();by('restore-backup').disabled=true;
+  try{
+    await saveQueue; // never race a pending auto-save of the newer campaign
+    const prior=validBackup(backupRaw);
+    if(!prior)throw Error('Резервная запись повреждена');
+    const restored=loadCampaign(prior);
+    await writeSave(prior,{rotate:false}); // preserve checkpoint, never overwrite it with corrupted active
+    saved=prior;game=restored;panel='council';atlasView='atlas';familyFocus=null;
+    selectedProvince='pr-'+game.startCountyId.slice(-2);atlasRegion=0;
+    notify('Резервная хроника восстановлена');
+    resume();
+  }catch(e){notify('Не удалось восстановить: '+e.message)}
+  finally{by('restore-backup').disabled=false}
+});
 document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>setSpeed(Number(b.dataset.speed))));
 document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click',()=>{panel=b.dataset.panel;by('game-screen').dataset.activePanel=panel;
   for(const n of document.querySelectorAll('[data-panel]')){const selected=n.dataset.panel===panel;n.classList.toggle('active',selected);n.setAttribute('aria-pressed',String(selected))}
@@ -607,9 +655,16 @@ if(IS_PREVIEW){
   // Storage is read exactly once on the real app only.
   (async()=>{
     try{
-      const raw=await initializeStorage();
-      if(raw){try{const restored=loadCampaign(raw);saved=raw;game=restored}
-        catch(e){saved=null;game=null;notify('Сохранение не удалось прочитать: '+e.message)}}
+      const {active,backup}=await initializeStorage();
+      backupRaw=validBackup(backup);
+      if(active){
+        try{const restored=loadCampaign(active);saved=active;game=restored}
+        catch(e){
+          saved=null;game=null;
+          notify(backupRaw?'Основная хроника повреждена. Можно восстановить резервную.':
+            'Не удалось прочитать хронику: '+e.message);
+        }
+      }
       menu();
     }catch(e){menu();notify('Ошибка запуска: '+e.message)}
   })();
