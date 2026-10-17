@@ -109,7 +109,7 @@ function draw(){
  const ranges=chosen?.unit&&myTurn()?reach({...s,map:s.map.map(row=>row.map(x=>x==null?0:x))},s.units.find(u=>u.id===chosen.unit)):null;
  for(let r=y0;r<y1;r++)for(let c=x0;c<x1;c++){
    const t=s.map[r][c],x=c*tile,y=r*tile,n=stamp(s.seed,r,c);
-   if(t===null){ctx.fillStyle='#29382f';ctx.fillRect(x,y,tile,tile);ctx.fillStyle='#3b4a3e';if(n>.43){ctx.beginPath();ctx.ellipse(x+20,y+20,19,8,n*3,0,Math.PI*2);ctx.fill();}continue;}
+   if(t===null){ctx.fillStyle='#29382f';ctx.fillRect(x,y,tile,tile);if(n>.85){ctx.strokeStyle='#708372';ctx.globalAlpha=.12;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+5,y+12);ctx.quadraticCurveTo(x+18,y+7,x+32,y+11);ctx.stroke();ctx.globalAlpha=1;}continue;}
    ctx.fillStyle=PAL[t];ctx.fillRect(x,y,tile,tile);
    ctx.fillStyle='#f8ecd1';ctx.globalAlpha=.07+stamp(s.seed,r,c,2)*.09;ctx.fillRect(x+1,y+1,tile-2,tile-2);ctx.globalAlpha=1;
    ctx.strokeStyle='#263b30';ctx.globalAlpha=.18;ctx.strokeRect(x+.6,y+.6,tile-.8,tile-.8);ctx.globalAlpha=1;
