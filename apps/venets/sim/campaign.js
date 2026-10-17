@@ -58,17 +58,17 @@ export function assertCampaign(g){
     throw new Error('Campaign history mismatch');
   return true;
 }
-export function campaignStarts(seed=413){
+export function campaignStarts(seed=413,{size=12}={}){
   return COUNTY_STARTS.map(id=>{
-    const w=createWorld(seed),t=title(w,id),p=person(w,t.holderId);
+    const w=createWorld(seed,{size}),t=title(w,id),p=person(w,t.holderId);
     const duke=title(w,t.liegeId);
     return {countyId:id,name:t.name,personId:p.id,personName:p.name,dynastyId:p.dynastyId,
       duke:duke.name,realm:duke.holderId,traits:{...p.politics.traits}};
   });
 }
-export function startCampaign({seed=413,countyId='co-01'}={}){
+export function startCampaign({seed=413,countyId='co-01',size=12}={}){
   if(!COUNTY_STARTS.includes(countyId))throw new RangeError('Invalid initial county');
-  const world=createWorld(seed);
+  const world=createWorld(seed,{size});
   const county=title(world,countyId),founder=person(world,county.holderId);
   const liege=title(world,county.liegeId),ruler=person(world,liege.holderId);
   // Documentary conflict provides legal leverage at the first turn, and is
