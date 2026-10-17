@@ -39,7 +39,7 @@ export function mountExhibitFrames(root){
    const previous=stableRoom.get(stage);
    const sameRoom=previous&&Math.abs(outerWidth-previous.outerWidth)<2&&
     Math.abs(outerHeight-previous.outerHeight)<2&&Math.abs(width-previous.width)<2;
-   const availableHeight=Math.max(stage.clientHeight,stage.parentElement?.clientHeight||0);
+   const availableHeight=stage.clientHeight;
    const freeHeight=sameRoom?Math.max(availableHeight,previous.freeHeight):availableHeight;
    stableRoom.set(stage,{outerWidth,outerHeight,width,freeHeight});
    const height=freeHeight-
