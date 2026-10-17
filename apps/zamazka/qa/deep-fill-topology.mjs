@@ -132,4 +132,30 @@ for(let alpha=0;alpha<256;alpha+=4){
  floodFillRaster({width:f.w,height:f.h,walls:f.walls,zone:f.zone,output:f.output,point:[5,14],color:palette[0]});
  check(f.output[f.pixel(33,14)+3]===0,'crossed mask/barrier alpha '+alpha);
 }
+// The gap stitcher must not weld two separate thick blocks across a real
+// one- or two-pixel alley. This was a reproducible partial-fill bug.
+for(const gap of [1,2,3]){
+ const f=fixture(75,54);
+ for(let y=8;y<=45;y++){
+  for(let x=7;x<=30;x++)wall(f,x,y);
+  for(let x=31+gap;x<=63;x++)wall(f,x,y);
+ }
+ const midpoint=31+Math.floor((gap-1)/2),start=[midpoint,26],changed=new Uint8Array(f.w*f.h);
+ const count=floodFillRaster({width:f.w,height:f.h,walls:f.walls,zone:f.zone,output:f.output,point:start,color:palette[0],changed});
+ check(count>500,'narrow alley seeded but no region filled: '+gap);
+ for(let y=0;y<f.h;y++)for(let x=31;x<31+gap;x++)
+  check(changed[f.index(x,y)]===1,'real '+gap+'px alley was sealed at '+x+','+y);
+}
+// A genuine 1/2-pixel break IN a thin continuous ink line must still be
+// stitched, including when the paper itself uses a clipped damage mask.
+for(const gap of [1,2])for(const vertical of [true,false]){
+ const f=fixture(65,58),mid=vertical?32:29,opening=25;
+ for(let i=0;i<(vertical?58:65);i++)if(i<opening||i>=opening+gap){
+  if(vertical)wall(f,mid,i);else wall(f,i,mid);
+ }
+ const first=vertical?[10,25]:[32,10],opposite=vertical?[50,25]:[32,49],touched=new Uint8Array(f.w*f.h);
+ floodFillRaster({width:f.w,height:f.h,walls:f.walls,zone:f.zone,output:f.output,point:first,color:palette[0],changed:touched});
+ check(touched[f.index(opposite[0],opposite[1])]===0,'real contour pinhole '+gap+'px leaked');
+}
+
 console.log('ZAMAZKA DEEP FILL: '+checks+' assertions; '+layouts+' randomized layouts x4 recolours; 200 rotations; 16 nested cycles; 64 mask alphas; '+filledCells+' reached pixels, slowest '+maxMs.toFixed(2)+'ms; elapsed '+((performance.now()-t0)/1000).toFixed(2)+'s');
