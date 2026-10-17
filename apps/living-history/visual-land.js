@@ -2,7 +2,7 @@
 // Drawing must never write model state, consume RNG, or create simulated agents.
 import {walkPath,pathPosition,nearestLand,walkable} from './navigation.js';
 export const LAND_SIZE=160;
-const paths=new WeakMap(),TWO_PI=Math.PI*2;
+const paths=new WeakMap(),grazingMemo=new WeakMap(),TWO_PI=Math.PI*2;
 const frac=x=>x-Math.floor(x);
 const hash=(a,b,c)=>{let n=Math.imul((a|0)^0x62b5b311,374761393)^Math.imul((b|0)+127,668265263)^Math.imul((c|0)+521,1274126177);n=Math.imul(n^(n>>>13),1274126177);return (n^(n>>>16)>>>0)/4294967296;};
 const smooth=t=>{const a=Math.max(0,Math.min(1,t));return a*a*(3-2*a);};
@@ -73,6 +73,10 @@ function pastureTile(s,h,origin,x,y){
 // Waypoints depend on seed, owner, animal and multi-day phase — not a shared
 // synchronized group trajectory. Does not consume forage or move real herds.
 function grazingWaypoint(s,h,i,phase,anchor){
+ let memo=grazingMemo.get(s);
+ if(!memo){memo=new Map();grazingMemo.set(s,memo);}
+ const key=[h.id,i,phase,anchor.x,anchor.y,s.landRevision||0,Math.floor(s.day/30)].join(':');
+ if(memo.has(key))return memo.get(key);
  const candidates=[];
  for(let r=0;r<=7;r++){
   for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
@@ -86,9 +90,9 @@ function grazingWaypoint(s,h,i,phase,anchor){
   }
   if(r>=5&&candidates.length>=12)break;
  }
- if(!candidates.length)return anchor;
- candidates.sort((a,b)=>a.rank-b.rank||a.y-b.y||a.x-b.x);
- return {x:candidates[0].x,y:candidates[0].y};
+ const point=(!candidates.length)?anchor:(candidates.sort((a,b)=>a.rank-b.rank||a.y-b.y||a.x-b.x),{x:candidates[0].x,y:candidates[0].y});
+ if(memo.size>5000)memo.clear();memo.set(key,point);
+ return point;
 }
 export function cattlePosition(h,day,i,s=null){
  const grazing=day%365>=80&&day%365<=300&&Number.isInteger(h.lastPastureCell);
