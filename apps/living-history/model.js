@@ -1,4 +1,4 @@
-import {walkingDistances,walkingSteps,workdayFraction,walkPath} from './navigation.js';
+import {walkingDistances,walkingSteps,workdayFraction,walkPath,pathEffort} from './navigation.js';
 // Living History: deterministic, renderer-independent regional society simulation.
 export const SIZE = 160;
 const T = SIZE * SIZE;
@@ -179,6 +179,7 @@ function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130,foundingFields=30) 
  const roof=idx(h.x,h.y);takePlot(roof);s.usage[roof]=1;
  for(const i of croftCandidate(s,h.x,h.y,c)){takePlot(i);s.usage[i]=3;h.croft.push(i);}
  s.households.push(h);
+ s.landRevision=(s.landRevision||0)+1;
  if(s.day===0)allocFields(s,h,foundingFields);
  h.tenure='customary';h.tenureOrigin=s.day===0?'initial-settlement':'family-division';
  return h;
@@ -495,7 +496,16 @@ function cropUpdate(s,h,adults,guests=[]){
  const spotIndex=Math.min(crop.active.length-1,Math.floor((doy>=238?crop.harvestedArea:crop.sownArea)/LAND_HA));
  const workCell=crop.active[spotIndex];
  const workPos={x:workCell%SIZE,y:Math.floor(workCell/SIZE)};
- const walking=walkingSteps(s,h,workPos),workFraction=workdayFraction(walking);
+ const walking=walkingSteps(s,h,workPos);
+ const month=Math.floor(s.day/30);
+ // A route is planned for each worksite and calendar period. Its cost is
+ // stored with the household, so saving/loading does not silently replan.
+ if(walking>=0&&(h.commuteMemo?.cell!==workCell||h.commuteMemo?.month!==month)){
+  const route=walkPath(s,h,workPos);
+  h.commuteMemo={cell:workCell,month,effort:pathEffort(s,route)};
+ }
+ const commute=walking<0?Infinity:h.commuteMemo?.effort;
+ const workFraction=Number.isFinite(commute)?workdayFraction(commute):0;
  if(!workFraction)return;
  const arriving=workers.filter(p=>p.job==='home'||p.job==='hired');
  const productiveWorkers=labourTotal(arriving,'farm')*workFraction;
@@ -677,7 +687,9 @@ function gatherWood(s,h,adults){
   (1+Math.min(.7,proficiency*.22))/(1+best*.018)));
  s.forest[target]=round(s.forest[target]-amount);h.wood=round(h.wood+amount);s.stats.produced=round(s.stats.produced+amount);earn(s,h,'woodKg',amount);
  for(const p of adults){p.skill.wood=roundSkill(p.skill.wood+.006*p.aptitude*workCapacity(p,'wood'));p.job='wood';p.x=target%SIZE;p.y=Math.floor(target/SIZE);recordWork(p,'wood');}
- s.traffic[target]=Math.min(255,s.traffic[target]+3);
+ const oldWear=s.traffic[target];
+ s.traffic[target]=Math.min(255,oldWear+3);
+ if(oldWear!==s.traffic[target])s.roadRevision=(s.roadRevision||0)+1;
 }
 function growForest(s){
  if(!s._forestAllowed){
@@ -691,10 +703,13 @@ function growForest(s){
 }
 // Periodic commons grazing: the biomass is spatial, finite and shared by all herds.
 function grazingSpots(s,h){
- if(!h._grazingSpots){ensureCommons(s);const cells=[],reachable=walkingDistances(s,h);for(let y=Math.max(2,h.y-20);y<=Math.min(SIZE-3,h.y+20);y++)for(let x=Math.max(2,h.x-20);x<=Math.min(SIZE-3,h.x+20);x++){
+ // A newly founded croft can close a footpath to the commons. Recompute
+ // previously cached pasture access when the physical map changes.
+ if(!h._grazingSpots||h._grazingRevision!==(s.landRevision||0)){ensureCommons(s);const cells=[],reachable=walkingDistances(s,h);for(let y=Math.max(2,h.y-20);y<=Math.min(SIZE-3,h.y+20);y++)for(let x=Math.max(2,h.x-20);x<=Math.min(SIZE-3,h.x+20);x++){
    const i=idx(x,y);if(s.terrain[i]!==0||s.commons[i]!==h.communityId||reachable[i]<0||reachable[i]>90)continue;const d=reachable[i];cells.push({i,d});
   }cells.sort((a,b)=>a.d-b.d||a.i-b.i);
   Object.defineProperty(h,'_grazingSpots',{value:cells.slice(0,240).map(x=>x.i),enumerable:false,configurable:true});
+  Object.defineProperty(h,'_grazingRevision',{value:s.landRevision||0,enumerable:false,configurable:true,writable:true});
  }
  return h._grazingSpots;
 }
@@ -1328,8 +1343,8 @@ export function foodAccess(s,h){
 
 function riverX(y){return SIZE*.47+Math.sin(y*.075)*11+Math.sin(y*.026)*7;}
 function routeBetween(s,a,b){
- const points=walkPath(s,a,b);return {points,length:points.length?points.length-1:Infinity};
-
+ const points=walkPath(s,a,b);
+ return {points,length:points.length?points.length-1:Infinity,effort:pathEffort(s,points)};
 }
 function moveOnRoute(points,ratio){
  const legs=points.slice(1).map((p,i)=>dist(points[i],p));const total=legs.reduce((v,n)=>v+n,0)||1;
@@ -1365,7 +1380,7 @@ function outsideTrading(s){
   s.outside.grain=round(s.outside.grain-quantity);
   s.stats.outsideCoinOut=(s.stats.outsideCoinOut||0)+cost;
   s.stats.outsideGrainIn=round((s.stats.outsideGrainIn||0)+quantity);
-  const duration=Math.max(4,Math.ceil(route.length/9)+3);
+  const duration=Math.max(4,Math.ceil(route.effort/9)+3);
   s.shipments.push({id:s.nextId++,kind:'outside-import',good:'grain',amount:quantity,
    seller:-1,buyer:h.id,cost:0,haulFee:0,carrierId:available.id,carrierHouseId:h.id,
    departure:s.day+1,day:s.day+duration+1,route:route.points,externalPayment:cost});
@@ -1392,7 +1407,7 @@ function outsideTrading(s){
   // delivered, so concurrent carriers cannot sell against the same treasury.
   s.outside.coin-=cost;
   h.wool=round(h.wool-quantity);
-  const duration=Math.max(4,Math.ceil(route.length/9)+3);
+  const duration=Math.max(4,Math.ceil(route.effort/9)+3);
   s.shipments.push({id:s.nextId++,kind:'outside-export',good:'wool',amount:quantity,
    seller:h.id,buyer:-1,cost:0,haulFee:0,externalPayment:cost,
    carrierId:available.id,carrierHouseId:h.id,departure:s.day+1,
@@ -1425,21 +1440,21 @@ function market(s){
     const seller=sellers.find(a=>a.id!==buyer.id&&supply(s,a,good)>5&&
        !s.shipments.some(t=>t.seller===a.id&&t.buyer===buyer.id&&t.good===good));
     if(!seller)continue;
-    const route=routeBetween(s,seller,buyer),distance=route.length,haulPrice=1+distance*.009*tuning(s,'transport');
+    const route=routeBetween(s,seller,buyer),distance=route.length,haulPrice=1+route.effort*.009*tuning(s,'transport');
     if(!Number.isFinite(distance)||!route.points.length)continue;
      const haulers=nearby.filter(h=>h.focus==='trade'||h.id===seller.id);
     let carrier=null,carrierHome=null,bestTransport=Infinity;
     for(const home of haulers){const worker=liveMembers(s,home).find(p=>p.age>=15&&p.health>25&&!p.travel&&p.hiredDay!==s.day);if(!worker)continue;const travel=dist(home,seller);const score=travel+(home.focus==='trade'?-8:0);if(score<bestTransport){carrier=worker;carrierHome=home;bestTransport=score;}}
     if(!carrier)continue;
-    const approach=routeBetween(s,carrierHome,seller).length;if(!Number.isFinite(approach))continue;
+    const approach=routeBetween(s,carrierHome,seller).effort;if(!Number.isFinite(approach))continue;
     const price=round(c.prices[good]*haulPrice*(.97+rand(s)*.06));
     const quantity=Math.min(160,supply(s,seller,good),demand(s,buyer,good),Math.floor(buyer.coin/Math.max(.1,price)));
     if(quantity<5)continue;
     const cost=Math.ceil(quantity*price);if(cost>buyer.coin)continue;
     seller[good]=round(seller[good]-quantity);buyer.coin-=cost;earn(s,seller,'salesKg',quantity);earn(s,buyer,'purchasesKg',quantity);earn(s,buyer,'spending',cost);
-    const duration=Math.max(1,Math.ceil((distance+approach)/(s.scenario==='isolated'?5:10)));
+    const duration=Math.max(1,Math.ceil((route.effort+approach)/(s.scenario==='isolated'?5:10)));
     const shipment={id:s.nextId++,good,amount:quantity,seller:seller.id,buyer:buyer.id,cost,
-       carrierId:carrier.id,route:route.points,carrierHouseId:carrierHome.id,haulFee:Math.min(cost-1,Math.floor(cost*.1+distance*.03*tuning(s,'transport'))),departure:s.day+1,day:s.day+duration+1,origin:{x:seller.x,y:seller.y},destination:{x:buyer.x,y:buyer.y},
+       carrierId:carrier.id,route:route.points,carrierHouseId:carrierHome.id,haulFee:Math.min(cost-1,Math.floor(cost*.1+route.effort*.03*tuning(s,'transport'))),departure:s.day+1,day:s.day+duration+1,origin:{x:seller.x,y:seller.y},destination:{x:buyer.x,y:buyer.y},
        reason:`У покупателя дефицит, у продавца избыток; ставка зависит от местного рынка`};
     s.shipments.push(shipment);
     carrier.travel={from:{x:seller.x,y:seller.y},to:{x:buyer.x,y:buyer.y},points:route.points,start:s.day+1,arrival:s.day+duration+1,end:s.day+duration*2+1};
@@ -1453,12 +1468,22 @@ function market(s){
  }
 }
 function markRoad(s,points,visits=1){
+ let changed=false;
  for(let leg=1;leg<points.length;leg++){
   const a=points[leg-1],b=points[leg],steps=Math.max(1,Math.ceil(dist(a,b)*2));
   for(let k=0;k<=steps;k++){const f=k/steps,nx=clamp(Math.round(a.x+(b.x-a.x)*f),0,SIZE-1),ny=clamp(Math.round(a.y+(b.y-a.y)*f),0,SIZE-1),i=idx(nx,ny);
-   if(s.terrain[i]===0&&s.usage[i]!==3)s.traffic[i]=Math.min(255,s.traffic[i]+2*visits);
+   if(s.terrain[i]===0&&s.usage[i]!==3){const old=s.traffic[i];s.traffic[i]=Math.min(255,old+2*visits);if(old!==s.traffic[i])changed=true;}
   }
  }
+ if(changed)s.roadRevision=(s.roadRevision||0)+1;
+}
+function wearOutFootpaths(s){
+ // Unused dirt tracks naturally fade: not an instant reset or a free repair.
+ let changed=false;
+ for(let i=0;i<T;i++)if(s.traffic[i]>0){
+  s.traffic[i]=Math.max(0,s.traffic[i]-1);changed=true;
+ }
+ if(changed)s.roadRevision=(s.roadRevision||0)+1;
 }
 function deliver(s){
  for(let i=s.shipments.length-1;i>=0;i--){
@@ -1538,7 +1563,7 @@ function aidPairDecision(s,donor,target,kin){
   return {reason:'route',kin,donorId:donor.id,reserveKg:round(protectedReserve)};
  const quantity=round(Math.min(80,surplus*.25,targetNeed*21-target.grain));
  if(quantity<=0)return {reason:'nonpositive-quantity',kin,donorId:donor.id,reserveKg:round(protectedReserve)};
- const duration=Math.max(1,Math.ceil(route.length/10));
+ const duration=Math.max(1,Math.ceil(route.effort/10));
  return {reason:'eligible',kin,donorId:donor.id,carrierId:worker.id,
   quantity,reserveKg:round(protectedReserve),travelDays:duration,
   // References are internal: never put live objects in saved/returned evidence.
@@ -1964,6 +1989,7 @@ export function advanceDays(s,days=1,profiler=null){
  const measure=(stage,fn)=>{if(!timer){fn();return;}const t=timer();fn();profiler[stage]=(profiler[stage]||0)+(timer()-t);};
  for(let d=0;d<days;d++){
   s.day++;
+  if(s.day%30===0)wearOutFootpaths(s);
   measure('weatherAndJobs',()=>{localWeather(s);for(const p of s.people)if(p.alive&&(!p.travel||p.travel.end<=s.day))p.job='home';if(s.day%365===1){for(const h of s.households)account(s,h);seasonalLeases(s);for(const c of s.communities){c.recentVolume=c.volume;c.volume=0;}}});
   measure('delivery',()=>{deliver(s);finishMigration(s);});
   // Guest labour is a day-local work assignment, never a persistent workforce.

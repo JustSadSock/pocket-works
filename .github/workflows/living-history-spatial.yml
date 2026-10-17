@@ -1,0 +1,76 @@
+name: Living History spatial morphology (24 x 50y)
+
+on:
+  pull_request:
+    paths:
+      - 'apps/living-history/model.js'
+      - 'apps/living-history/navigation.js'
+      - 'apps/living-history/qa/spatial-*.mjs'
+      - '.github/workflows/living-history-spatial.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/living-history/model.js'
+      - 'apps/living-history/navigation.js'
+      - 'apps/living-history/qa/spatial-*.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: living-history-spatial-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  world:
+    runs-on: ubuntu-latest
+    name: geography (${{ matrix.shard }})
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run two independent fifty-year worlds and four map snapshots per seed
+        run: node apps/living-history/qa/spatial-batch.mjs --shard=${{ matrix.shard }} --output=out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spatial-shard-${{ matrix.shard }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 7
+
+  summary:
+    if: always()
+    needs: [world]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: spatial-shard-*
+          path: raw
+      - name: Require complete evidence and compute regional morphology
+        run: node apps/living-history/qa/spatial-summarize.mjs --input=raw --output=summary
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spatial-24-world-summary-${{ github.run_id }}
+          path: summary/
+          retention-days: 7
+          if-no-files-found: warn

@@ -41,7 +41,16 @@ function makeWorldArt(){if(!sim)return;const stages=fieldAppearance(sim);draw.im
   }
   continue;
  }
- if(v>68){draw.fillStyle='#9cac71';draw.fillRect(X+3,Y+3,2,2);}if(sim.forest[i]>60){draw.fillStyle='#355a41';draw.fillRect(X+1,Y+2,6,5);draw.fillStyle=v>40?'#3f6a4b':'#527453';draw.fillRect(X+1,Y,5,5);draw.fillStyle='#749063';draw.fillRect(X+2,Y+1,2,1);}if(sim.traffic[i]>14){draw.fillStyle='#9f9571';draw.fillRect(X+2,Y+3,4,2);}}
+ if(v>68){draw.fillStyle='#9cac71';draw.fillRect(X+3,Y+3,2,2);}if(sim.forest[i]>60){draw.fillStyle='#355a41';draw.fillRect(X+1,Y+2,6,5);draw.fillStyle=v>40?'#3f6a4b':'#527453';draw.fillRect(X+1,Y,5,5);draw.fillStyle='#749063';draw.fillRect(X+2,Y+1,2,1);}if(sim.traffic[i]>11){
+  // Actual worn segments form contiguous paths, not a dotted decoration.
+  const busy=sim.traffic[i]>=55,thick=busy?3:2,m=4;
+  draw.fillStyle=busy?'#917752':'#ae9875';
+  draw.fillRect(X+m-1,Y+m-1,thick,thick);
+  if(x>0&&sim.traffic[i-1]>11)draw.fillRect(X,Y+m-1,m,thick);
+  if(x<SIZE-1&&sim.traffic[i+1]>11)draw.fillRect(X+m,Y+m-1,PX-m,thick);
+  if(y>0&&sim.traffic[i-SIZE]>11)draw.fillRect(X+m-1,Y,thick,m);
+  if(y<SIZE-1&&sim.traffic[i+SIZE]>11)draw.fillRect(X+m-1,Y+m,thick,PX-m);
+ }}
  // Villages and roof silhouettes: every roof corresponds to an actual household.
  for(const h of sim.households){const X=h.x*PX,Y=h.y*PX;draw.fillStyle='#2e3c33';draw.fillRect(X-3,Y+2,13,9);draw.fillStyle='#ccae7f';draw.fillRect(X-2,Y+1,11,8);draw.fillStyle='#79553f';draw.fillRect(X-4,Y-3,15,7);draw.fillStyle='#a87752';draw.fillRect(X-1,Y-5,10,3);draw.fillStyle='#e0b77c';draw.fillRect(X+2,Y+5,2,2);draw.fillStyle='#513a2f';draw.fillRect(X+8,Y+4,2,5);}
  for(const c of sim.communities){const X=c.x*PX,Y=c.y*PX;draw.fillStyle='#ded4b2';draw.fillRect(X-4,Y-8,8,7);draw.fillStyle='#675f47';draw.fillRect(X-5,Y-11,10,4);draw.fillStyle='#e6bf6b';draw.fillRect(X,Y-17,2,9);}
