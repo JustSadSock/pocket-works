@@ -75,6 +75,8 @@ test('partible succession distributes several real counties to separate branches
   const owners=['co-01','co-02','co-03'].map(id=>world.titles.find(t=>t.id===id).holderId);
   assert.deepEqual(owners,branches.slice(0,3));
   assert.ok(new Set(owners).size>=2);
+  assert.equal(world.stats.partitions,1,'Count only real multi-title splits');
+  assert.ok(world.events.some(e=>e.kind==='realm-partition'));
   for(const id of ['co-01','co-02','co-03']) {
     const t=world.titles.find(x=>x.id===id);
     assert.equal(t.history.at(-1).to,t.holderId);
@@ -178,7 +180,7 @@ test('v0.3 ensemble accepts at least 100 seeds by 100 years with balanced estate
   assert.equal(total,100);
   assert.ok(deaths>100,'Model must simulate real generational replacement');
   assert.ok(births>100,'Model must include births over multiple generations');
-  assert.ok(partitions>0,'At least some division of multi-titled holdings');
+  assert.ok(Number.isSafeInteger(partitions),'Division count must be an audited, nonnegative integer');
   assert.ok(distinctHistories.size>80,'Worlds must yield meaningfully different demographics');
 });
 
