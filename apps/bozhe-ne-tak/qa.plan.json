@@ -90,6 +90,39 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/playthrough.mjs"
+    },
+    {
+      "id": "online-two-players",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/online-flow.mjs"
+    },
+    {
+      "id": "online-entry",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": ".home-stage",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-action='online']"
+        },
+        {
+          "action": "visible",
+          "selector": ".net-intro"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
     }
   ]
 }
