@@ -35,10 +35,12 @@ export function transfer(world, { good, from = null, to = null, amount, cause })
 }
 export function changeTitleHolder(world, { titleId, newHolderId, cause }) {
   const title = world.titles.find(t => t.id === titleId);
-  if (!title || !world.people.some(p => p.id === newHolderId)) throw new RangeError('Unknown title/holder');
+  if (!title || !world.people.some(p => p.id === newHolderId && p.alive)) throw new RangeError('Unknown title or deceased holder');
   if (!cause || typeof cause !== 'string') throw new TypeError('Cause required');
   if (title.holderId === newHolderId) return null;
   const oldHolderId = title.holderId;
   title.holderId = newHolderId;
+  if (Array.isArray(title.claims)) title.claims=title.claims.filter(c=>c.personId!==newHolderId);
+  if (Array.isArray(title.history)) title.history.push({year:world.year,from:oldHolderId,to:newHolderId,cause});
   return recordEvent(world, 'title-transfer', cause, { titleId, oldHolderId, newHolderId });
 }
