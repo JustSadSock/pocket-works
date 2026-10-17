@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "world-regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/world.test.mjs"
+      ]
+    },
+    {
+      "id": "world-stress-100x50",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/stress.mjs",
+      "args": [
+        "--seeds=100",
+        "--years=50",
+        "--output={output}/venets-100x50.json"
+      ]
+    },
+    {
+      "id": "world-century",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/stress.mjs",
+      "args": [
+        "--seeds=100",
+        "--years=100",
+        "--output={output}/venets-100x100.json"
+      ]
+    }
+  ]
+}
