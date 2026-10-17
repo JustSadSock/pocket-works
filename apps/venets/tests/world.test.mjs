@@ -39,7 +39,8 @@ test('save/load is deterministic including future RNG and event sequence', () =>
   advanceYears(restored, 29);
   assert.equal(serializeWorld(original), serializeWorld(restored));
   assert.deepEqual(summary(restored), summary(original));
-  assert.throws(() => loadWorld('{"schemaVersion":2}'), /Invalid Venets world/);
+  assert.throws(() => loadWorld('{"schemaVersion":2}'), /Invalid save payload/);
+  assert.throws(() => loadWorld(JSON.stringify({schemaVersion:2,seed:3,padding:'X'.repeat(70)})), /Invalid Venets world/);
   assert.throws(() => loadWorld('z'.repeat(16_000_001)), /Invalid save/);
 });
 test('transaction entries are double-entry and failed transactions are atomic', () => {
