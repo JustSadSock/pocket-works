@@ -142,7 +142,7 @@ export function assertWorld(w){
         memories.has(m.kind)&&Number.isSafeInteger(m.weight)&&m.weight>=-50&&m.weight<=50&&
         typeof m.cause==='string'&&m.cause,'political memory provenance');
     for(const [action,year] of Object.entries(pol.lastActions))
-      demand(['marriage','gift','grant','petition','faction','join','ultimatum'].includes(action) &&
+      demand(['marriage','gift','grant','petition','faction','join','ultimatum','war','peace','contract','blackmail','assassinate'].includes(action) &&
         safe(year)&&year<=w.year,'cooldown timeline');
   }
   const political=w.politics;
