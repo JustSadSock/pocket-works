@@ -45,9 +45,10 @@ test('full two-person run: parallel authors, deterministic sheet rotation, priva
  assert.equal(state.phase,'finished');assert.equal(state.round,2);
  const final=see(state,b,players);
  assert.equal(final.stories.length,2);
+ assert.equal('text' in final.stories[0],false);
  assert.equal(final.stories[0].fragments.length,2);
- assert.match(final.stories[0].text,/кавун/);
- assert.match(final.stories[0].text,/президентом/);
+ assert.match(final.stories[0].fragments.map(x=>x.answer).join('\n\n'),/кавун/);
+ assert.match(final.stories[0].fragments.map(x=>x.answer).join('\n\n'),/президентом/);
  assert.equal(final.stories[0].fragments[0].author,'Anna');
  assert.equal(final.stories[0].fragments[1].author,'Bohdan');
 });
@@ -99,4 +100,26 @@ test('full original ten question sets, custom and per-sheet random included',()=
   s=msg(s,p,{type:'start'}).state;
   assert.equal(s.total,10);
  }
+});
+
+test('eight authors and sixteen maximal Cyrillic fragments remain below PocketNet state and event caps',()=>{
+ const players=ps(...Array.from({length:8},(_,i)=>'Автор '+i));
+ const raw={maxPlayers:8,visibleTailWords:3,questionSet:'custom',customQuestions:Array.from({length:16},(_,i)=>'Сюжетне питання '+i+' '+'т'.repeat(100))};
+ let state=game.createRoom({player:players[0],payload:{settings:raw}}).state;
+ state=game.onJoin({state,players}).state;
+ state=msg(state,players[0],{type:'start'}).state;
+ const answer='Жираф крадькома читав новини '+('сміливого неспокійного динозавра '.repeat(30)).slice(0,770);
+ for(let round=0;round<16;round++){
+   for(const player of players){
+     const view=see(state,player,players);
+     const result=msg(state,player,{type:'submit',round,sheetId:view.sheet.id,answer,tailIndexes:[0,1,2],gender:'unspecified'});
+     assert.equal(result.events[0].type,'state');
+     state=result.state;
+   }
+ }
+ assert.equal(state.phase,'finished');
+ assert.ok(Buffer.byteLength(JSON.stringify(state),'utf8')<256*1024);
+ const final=see(state,players[0],players);
+ assert.equal(final.stories.length,8);
+ assert.ok(Buffer.byteLength(JSON.stringify({roomId:'test',event:{type:'state',payload:final}}),'utf8')<256*1024);
 });
