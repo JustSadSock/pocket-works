@@ -529,6 +529,11 @@ function initPreview(id){
     campaignYear(game); // real turn resolves the short testing chapter
     renderEnding();screenTo('ending');return;
   }
+  if(id==='war'){
+    const order=campaignChoices(game).find(a=>a.kind==='war');
+    if(!order)throw Error('No legal war in inspection seed');
+    campaignAction(game,order);panel='lands';
+  }
   if(id==='lands'||id==='atlas')panel='lands';
   if(id==='genealogy'){panel='lands';atlasView='family'}
   if(id==='title-transfer'){
