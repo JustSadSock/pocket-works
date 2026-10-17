@@ -20,7 +20,7 @@ function settingsFrom(raw,previous=DEFAULTS) {
  const v=raw && typeof raw==='object' ? raw : {};
  const q=typeof v.questionSet==='string'&&([...IDS,'custom','random','perSheetRandom'].includes(v.questionSet))?v.questionSet:previous.questionSet;
  const g=typeof v.genre==='string'&&([...GENRE_IDS,'custom','random','perSheetRandom'].includes(v.genre))?v.genre:previous.genre;
- const custom=Array.isArray(v.customQuestions) ? v.customQuestions.slice(0,20).map(x=>clean(x,120)).filter(Boolean) : previous.customQuestions;
+ const custom=Array.isArray(v.customQuestions) ? v.customQuestions.slice(0,16).map(x=>clean(x,120)).filter(Boolean) : previous.customQuestions;
  return {maxPlayers:clamp(v.maxPlayers,2,MAX_PLAYERS,previous.maxPlayers),questionSet:q,customQuestions:custom,
    visibleTailWords:clamp(v.visibleTailWords,0,12,previous.visibleTailWords),genre:g,
    customGenre:clean(v.customGenre===undefined?previous.customGenre:v.customGenre,60)};
@@ -45,9 +45,9 @@ function begin(s){
   const set=commonSet==='perSheetRandom'?choose(IDS):commonSet;
   const genre=commonGenre==='perSheetRandom'?choose(GENRE_IDS):commonGenre;
   return {id:'sheet-'+i,starter:player.id,set,genre,heroGender:null,
-    questions:resolveQuestions(opts,set),fragments:[]};
+    fragments:[]};
  });
- s.total=s.sheets[0].questions.length;
+ s.total=resolveQuestions(opts,s.sheets[0].set).length;
  s.round=0;s.submitted={};s.phase='writing';s.message='';s.revision++;
  return null;
 }
@@ -66,7 +66,7 @@ function viewForPlayer({state:s,player,players}){
   return {...common,sheet:{id:sheet.id,set:sheet.set,setLabel:BANK[sheet.set]?.label||'Свій набір',
     genre:sheet.genre,genreLabel:GENRES.find(x=>x.id===sheet.genre)?.label||s.settings.customGenre||'Свій жанр',
     starter:s.players.find(x=>x.id===sheet.starter)?.name||'Автор',gender:sheet.heroGender,
-    question:sheet.questions[s.round],tail:previous?.tail||''},waiting:Boolean(s.submitted[p.id])};
+    question:resolveQuestions(s.settings,sheet.set)[s.round],tail:previous?.tail||''},waiting:Boolean(s.submitted[p.id])};
  }
  if(s.phase==='finished')return {...common,stories:s.sheets.map(sh=>({
    id:sh.id,starter:s.players.find(x=>x.id===sh.starter)?.name||'Автор',
@@ -74,7 +74,7 @@ function viewForPlayer({state:s,player,players}){
    genre:GENRES.find(x=>x.id===sh.genre)?.label||s.settings.customGenre||'Свій жанр',
    heroGender:sh.heroGender,
    text:sh.fragments.map(f=>f.answer).join('\n\n'),
-   fragments:sh.fragments.map((f,i)=>({question:sh.questions[i]?.prompt||'',answer:f.answer,
+   fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[i]?.prompt||'',answer:f.answer,
       author:s.players.find(x=>x.id===f.by)?.name||'Автор'}))
  }))};
  return common;
@@ -96,6 +96,7 @@ function submit(s,player,v){
  if(chosen.length!==target||chosen.some(x=>!Number.isInteger(x)||x<0||x>=ws.length))return 'Познач рівно '+target+' слова для наступного автора.';
  const tail=chosen.map(i=>ws[i]).join(' ').slice(0,160);
  if(s.round===0)sh.heroGender=v.gender;
+ if(sh.fragments.length)delete sh.fragments[sh.fragments.length-1].tail;
  sh.fragments.push({by:player.id,answer,tail});
  s.submitted[player.id]=true;
  if(s.players.every(p=>s.submitted[p.id])){
