@@ -351,3 +351,18 @@ export function politicalYear(world,{maxActions=12}={}){
   cleanFactions(world);
   return executed;
 }
+
+// Direct command API for tests and later player UI. Only actually available legal
+// choices can be executed; the decision remains attributable in the world journal.
+export function performPoliticalAction(world,{actorId,kind,targetId=null,titleId=null,factionId=null}={}){
+  const actor=findPerson(world,actorId);
+  if(!actor?.alive)throw new RangeError('Unknown or deceased actor');
+  chooseGoal(world,actor);
+  const action=possibleActions(world,actorId).find(a=>a.kind===kind&&
+    a.targetId===targetId&&a.titleId===titleId&&
+    (a.meta.factionId??null)===factionId);
+  if(!action)throw new RangeError('Political action not available under world rules');
+  const result=execute(world,action);
+  if(!result)throw new Error('Candidate ceased to be legal');
+  return result;
+}
