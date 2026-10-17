@@ -5,7 +5,7 @@ import {diagnoseWorld} from './laboratory.js';
 import {fieldAppearance,personPosition,cattlePosition} from './visual-land.js';
 import {walkPath} from './navigation.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.4.0',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.7.8',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -41,7 +41,16 @@ function makeWorldArt(){if(!sim)return;const stages=fieldAppearance(sim);draw.im
   }
   continue;
  }
- if(v>68){draw.fillStyle='#9cac71';draw.fillRect(X+3,Y+3,2,2);}if(sim.forest[i]>60){draw.fillStyle='#355a41';draw.fillRect(X+1,Y+2,6,5);draw.fillStyle=v>40?'#3f6a4b':'#527453';draw.fillRect(X+1,Y,5,5);draw.fillStyle='#749063';draw.fillRect(X+2,Y+1,2,1);}if(sim.traffic[i]>11){
+ if(v>68){draw.fillStyle='#9cac71';draw.fillRect(X+3,Y+3,2,2);}if(sim.forest[i]>35&&sim.usage[i]!==1){
+  // Crown size follows actual standing biomass rather than an unchanged forest blob.
+  const stock=sim.forest[i],crown=stock>270?6:stock>140?5:3;
+  draw.fillStyle='#354d39';draw.fillRect(X+3,Y+2,2,5);
+  draw.fillStyle=stock>270?'#355d42':stock>140?'#44694a':'#628369';
+  draw.fillRect(X+4-Math.floor(crown/2),Y+1,crown,Math.max(2,crown-1));
+  if(stock>140){draw.fillStyle='#799362';draw.fillRect(X+2,Y+1,2,1);}
+ }else if(sim.forest[i]>0&&sim.forest[i]<=35&&sim.usage[i]!==1){
+  draw.fillStyle='#786e4f';draw.fillRect(X+3,Y+4,2,2);
+ }if(sim.traffic[i]>11){
   // Actual worn segments form contiguous paths, not a dotted decoration.
   const busy=sim.traffic[i]>=55,thick=busy?3:2,m=4;
   draw.fillStyle=busy?'#917752':'#ae9875';
@@ -51,8 +60,19 @@ function makeWorldArt(){if(!sim)return;const stages=fieldAppearance(sim);draw.im
   if(y>0&&sim.traffic[i-SIZE]>11)draw.fillRect(X+m-1,Y,thick,m);
   if(y<SIZE-1&&sim.traffic[i+SIZE]>11)draw.fillRect(X+m-1,Y+m,thick,PX-m);
  }}
- // Villages and roof silhouettes: every roof corresponds to an actual household.
- for(const h of sim.households){const X=h.x*PX,Y=h.y*PX;draw.fillStyle='#2e3c33';draw.fillRect(X-3,Y+2,13,9);draw.fillStyle='#ccae7f';draw.fillRect(X-2,Y+1,11,8);draw.fillStyle='#79553f';draw.fillRect(X-4,Y-3,15,7);draw.fillStyle='#a87752';draw.fillRect(X-1,Y-5,10,3);draw.fillStyle='#e0b77c';draw.fillRect(X+2,Y+5,2,2);draw.fillStyle='#513a2f';draw.fillRect(X+8,Y+4,2,5);}
+ // Only actual house-building projects receive a temporary foundation.
+ for(const h of sim.households){const p=h.buildProject,site=p?.site;
+  if(!site||sim.usage[site.y*SIZE+site.x]||sim.terrain[site.y*SIZE+site.x]!==0)continue;
+  const x=site.x*PX,y=site.y*PX,progress=Math.max(0,Math.min(1,(p.days||0)/50));
+  draw.fillStyle='#bda17a';draw.fillRect(x-3,y,13,9);
+  draw.fillStyle='#66543e';draw.fillRect(x-3,y,2,9);draw.fillRect(x+8,y,2,9);
+  draw.fillStyle='#ac875b';draw.fillRect(x-3,y+2,13,2);
+  if(progress>.23){draw.fillStyle='#79553f';draw.fillRect(x-5,y-2,15,2);}
+  if(progress>.56){draw.fillStyle='#a87752';draw.fillRect(x-4,y-4,13,2);}
+ }
+ // Roofs correspond to real buildings; recent and vacant homes are distinguishable.
+ const residents=new Set(sim.people.filter(p=>p.alive).map(p=>p.houseId));
+ for(const h of sim.households){const X=h.x*PX,Y=h.y*PX;draw.fillStyle='#2e3c33';draw.fillRect(X-3,Y+2,13,9);draw.fillStyle='#ccae7f';draw.fillRect(X-2,Y+1,11,8);draw.fillStyle=!residents.has(h.id)?'#665b4a':h.builtDay>0&&sim.day-h.builtDay<365*2?'#985e40':'#79553f';draw.fillRect(X-4,Y-3,15,7);draw.fillStyle=h.builtDay>0&&sim.day-h.builtDay<365*2?'#c18d5f':'#a87752';draw.fillRect(X-1,Y-5,10,3);draw.fillStyle='#e0b77c';draw.fillRect(X+2,Y+5,2,2);draw.fillStyle='#513a2f';draw.fillRect(X+8,Y+4,2,5);}
  for(const c of sim.communities){const X=c.x*PX,Y=c.y*PX;draw.fillStyle='#ded4b2';draw.fillRect(X-4,Y-8,8,7);draw.fillStyle='#675f47';draw.fillRect(X-5,Y-11,10,4);draw.fillStyle='#e6bf6b';draw.fillRect(X,Y-17,2,9);}
  dirty=false;}
 function fitView(){const box=worldNode.getBoundingClientRect();let z=Math.max(box.width/W,box.height/W)*1.09;cam.z=Math.max(.16,z);cam.x=(box.width-W*cam.z)/2;cam.y=(box.height-W*cam.z)/2;}
@@ -79,17 +99,17 @@ function drawFrame(){if(!sim)return;
   }
   if(cam.z>.36){for(const hom of sim.households){
    for(let i=0;i<Math.min(5,hom.cattle||0);i++){
-    const place=cattlePosition(hom,sim.day+movementFraction,i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const place=cattlePosition(hom,sim.day-1+movementFraction,i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const scale=Math.max(2,cam.z*4),ox=i<(hom.draftOxen||0);
     ctx.fillStyle=ox?'#40382e':'#6b523b';ctx.fillRect(Math.round(x),Math.round(y),scale*(ox?1.95:1.65),scale*(ox?1.15:1));
     ctx.fillStyle=ox?'#8a7558':'#b09a7b';
-    const dip=(.5+.5*Math.sin((sim.day+movementFraction)*1.4+i+hom.id*.2))*scale*.28;
+    const dip=(.5+.5*Math.sin((sim.day-1+movementFraction)*1.4+i*1.7+hom.id*.2))*scale*.28;
     ctx.fillRect(Math.round(x+scale*(ox?1.6:1.2)),Math.round(y-scale*.24+dip),scale*.68,scale*.7);
     if(ox){ctx.fillStyle='#c4ad87';ctx.fillRect(Math.round(x+scale*1.65),Math.round(y-scale*.36),Math.max(1,scale*.2),scale*.22);}
    }
    for(let i=0;i<Math.min(10,hom.sheep||0);i++){
-    const place=cattlePosition(hom,sim.day+movementFraction,i+23,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const place=cattlePosition(hom,sim.day-1+movementFraction,i+23,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const u=Math.max(2,cam.z*2.6);
     ctx.fillStyle='#4f4b40';ctx.fillRect(Math.round(x),Math.round(y+u*.62),u*.23,u*.6);ctx.fillRect(Math.round(x+u*.9),Math.round(y+u*.62),u*.23,u*.6);
@@ -110,8 +130,8 @@ function drawFrame(){if(!sim)return;
  if(selected){const household=sim.households.find(k=>k.id===selected);if(household){const x=cam.x+(household.x*PX+4)*cam.z,y=cam.y+(household.y*PX+4)*cam.z;ctx.strokeStyle='#ffe3a4';ctx.lineWidth=2;ctx.strokeRect(x-8,y-8,16,16);}}
  if(cam.z>.5){ctx.font='700 12px Georgia';ctx.textAlign='center';for(const c of sim.communities){const x=cam.x+c.x*PX*cam.z,y=cam.y+c.y*PX*cam.z-14;if(x<15||x>w-15||y<60||y>h-10)continue;ctx.fillStyle='#16271dc9';const name=c.name,tw=ctx.measureText(name).width;ctx.fillRect(x-tw/2-8,y-13,tw+16,20);ctx.fillStyle='#f2e5c2';ctx.fillText(name,x,y+1);}}
 }
-function updateHUD(){if(!sim)return;const o=overview(sim),seasons=['Зима','Весна','Лето','Осень'];$('#date').textContent=`Год ${o.year} · ${seasons[Math.floor((o.day%365)/91.25)%4]}`;$('#population').textContent=`${o.population} жителей · ${o.households} хозяйств${sim.scenario==='drought'&&o.year>=6&&o.year<=8?' · ЗАСУХА':''}`;
-$('#live-text').textContent=speed===0?'МИР ПРИОСТАНОВЛЕН':`ВРЕМЯ ИДЁТ · ${speed} ДН./С`;
+function updateHUD(){if(!sim)return;const o=overview(sim),seasons=['Зима','Весна','Лето','Осень'];$('#date').textContent=`Год ${o.year} · ${seasons[Math.floor((o.day%365)/91.25)%4]}`;$('#population').textContent=`${o.population} жителей · ${o.households} хозяйств · +${sim.stats.built||0} домов${sim.scenario==='drought'&&o.year>=6&&o.year<=8?' · ЗАСУХА':''}`;
+$('#live-text').textContent=speed===0?'МИР ПРИОСТАНОВЛЕН':`ВРЕМЯ ИДЁТ · ${String(speed).replace('.',',')} ДН./С`;
 $('.live-mark').classList.toggle('running',speed>0);document.querySelectorAll('[data-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.speed)===speed));renderSheet();}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderSheet(){if(!sim)return;const el=$('#sheet-content'),o=overview(sim);
