@@ -1,3 +1,4 @@
+const PREVIEW=new URLSearchParams(location.search).has('venets-preview');
 const DOCS=new Set(['DESIGN.md','RESEARCH.md','TEST_PLAN.md','VISUAL_RESEARCH.md']);
 const pane=document.getElementById('document'),error=document.getElementById('error'),buttons=[...document.querySelectorAll('[data-doc]')];
 let current='DESIGN.md',token=0;
@@ -31,10 +32,10 @@ async function openDoc(name){
  current=name;const ticket=++token;
  buttons.forEach(b=>{const active=b.dataset.doc===name;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
  pane.replaceChildren(document.createTextNode('Загрузка…'));error.hidden=true;
- try{const response=await fetch('./dossier.json',{cache:'no-cache'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();const text=data[name];if(typeof text!=='string'||!text)throw Error('Document missing');if(ticket!==token)return;render(text);try{localStorage.setItem('pocket-works:venets:doc',name)}catch{}}
+ try{const response=await fetch('./dossier.json',{cache:'no-cache'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();const text=data[name];if(typeof text!=='string'||!text)throw Error('Document missing');if(ticket!==token)return;render(text);if(!PREVIEW)try{localStorage.setItem('pocket-works:venets:doc',name)}catch{}}
  catch(e){if(ticket!==token)return;pane.replaceChildren();error.hidden=false;console.warn('Research dossier unavailable',e)}
 }
 buttons.forEach(b=>b.addEventListener('click',()=>openDoc(b.dataset.doc)));
 document.getElementById('retry').addEventListener('click',()=>openDoc(current));
-let saved='DESIGN.md';try{saved=localStorage.getItem('pocket-works:venets:doc')||saved}catch{}
+let saved='DESIGN.md';if(!PREVIEW)try{saved=localStorage.getItem('pocket-works:venets:doc')||saved}catch{}
 openDoc(DOCS.has(saved)?saved:'DESIGN.md');

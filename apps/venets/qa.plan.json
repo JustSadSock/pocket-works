@@ -114,6 +114,14 @@
           "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "inspector-real-previews",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/dev-inspector.spec.ts"
+      ]
     }
   ]
 }

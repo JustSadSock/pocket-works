@@ -1,8 +1,11 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import './reader.js';
+import {installUIInspector, INSPECTOR_SCREENS} from './dev-inspector.js';
 import {campaignStarts,startCampaign,campaignChoices,campaignAction,campaignYear,
   campaignScore,extendCampaign,serializeCampaign,loadCampaign} from './sim/campaign.js';
 installMobileRuntime();
+const PREVIEW_ID=new URLSearchParams(location.search).get('venets-preview');
+const IS_PREVIEW=PREVIEW_ID!==null;
 
 const by=id=>document.getElementById(id);
 const screens={loading:by('loading-screen'),menu:by('menu-screen'),game:by('game-screen'),
@@ -54,7 +57,8 @@ function element(tag,cls='',text=''){
 function notify(message){
   const n=by('notice');n.textContent=message;n.hidden=false;
   if(toastHandle)clearTimeout(toastHandle);
-  toastHandle=setTimeout(()=>{n.hidden=true},4300);
+  // Inspector screenshots must remain stable without affecting the real session.
+  if(!IS_PREVIEW)toastHandle=setTimeout(()=>{n.hidden=true},4300);
 }
 function screenTo(name){
   screen=name;
@@ -97,7 +101,7 @@ async function initializeStorage(){
   }
 }
 function saveGame(){
-  if(!game)return;
+  if(IS_PREVIEW||!game)return;
   let data;
   try{data=serializeCampaign(game)}catch(e){notify('Сохранение остановлено: '+e.message);return}
   by('save-status').textContent='Сохраняем…';
@@ -432,12 +436,72 @@ by('continue-legacy').addEventListener('click',()=>{
 by('seed-input').addEventListener('change',buildStarts);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 window.addEventListener('pagehide',()=>{pause()});
-// Storage is read exactly once; failures always surface and allow a new game.
-(async()=>{
-  try{
-    const raw=await initializeStorage();
-    if(raw){try{const restored=loadCampaign(raw);saved=raw;game=restored}
-      catch(e){saved=null;game=null;notify('Сохранение не удалось прочитать: '+e.message)}}
-    menu();
-  }catch(e){menu();notify('Ошибка запуска: '+e.message)}
-})();
+// Inspector frame uses the *real renderers and state transitions* in an isolated
+// deterministic sandbox. Preview routes never access the player's IndexedDB or
+// campaign localStorage; only the parent window owns the debug menu.
+function initPreview(id){
+  if(!INSPECTOR_SCREENS.some(item=>item.id===id))throw Error('Неизвестный экран: '+id);
+  selectedCounty='co-01';
+  selectedProvince='pr-01';
+  panel='council';
+  filter='house';
+  if(id==='loading'){screenTo('loading');return}
+  if(id==='menu'||id==='invalid-seed'){menu();
+    if(id==='invalid-seed'){by('seed-input').value='-12';buildStarts()}
+    return;
+  }
+  // No persistency, no reconstruction of the user's actual game:
+  // each preview gets a new seeded political world.
+  game=startCampaign({seed:413,countyId:'co-01'});
+  if(id==='menu-resume'){menu();return}
+  if(id==='docs'){screenTo('docs');return}
+  if(id==='ending'){
+    game.goalYear=1067;
+    campaignYear(game); // real turn resolves the short testing chapter
+    renderEnding();screenTo('ending');return;
+  }
+  if(id==='lands')panel='lands';
+  if(id==='history')panel='history';
+  play();
+  if(id==='confirm'){
+    const action=campaignChoices(game).find(a=>a.kind==='petition')||campaignChoices(game)[0];
+    if(!action)throw Error('Нет допустимого действия для предпросмотра');
+    askAction(action);
+  }
+  if(id==='decision'){
+    const action=campaignChoices(game).find(a=>a.kind==='petition')||campaignChoices(game)[0];
+    if(!action)throw Error('Нет допустимого действия для предпросмотра');
+    const result=campaignAction(game,action);
+    renderGame();
+    const pane=by('last-action');
+    pane.replaceChildren(element('strong','',result.success?'Решение принято':'Прошение отклонено'),
+      element('span','',result.success?
+        'Юридический результат записан в титульную историю.':
+        'Владелец отказал. Претензия сохранилась, отношения ухудшились.'));
+    pane.hidden=false;
+  }
+  if(id==='notice')notify('Династическое событие: наследственные права изменились. Время остановлено.');
+  if(id==='restart'){const dialog=by('new-dialog');dialog.returnValue='';dialog.showModal()}
+}
+if(IS_PREVIEW){
+  // A physical-key shortcut still works after the preview iframe gains focus.
+  window.addEventListener('keydown',event=>{
+    if(event.code==='Backquote'&&!event.repeat){
+      event.preventDefault();
+      window.parent?.postMessage({type:'venets-inspector-toggle'},location.origin);
+    }
+  },true);
+  try{initPreview(PREVIEW_ID)}
+  catch(error){screenTo('loading');notify('Не удалось открыть тестовый экран: '+error.message);console.error(error)}
+}else{
+  installUIInspector();
+  // Storage is read exactly once on the real app only.
+  (async()=>{
+    try{
+      const raw=await initializeStorage();
+      if(raw){try{const restored=loadCampaign(raw);saved=raw;game=restored}
+        catch(e){saved=null;game=null;notify('Сохранение не удалось прочитать: '+e.message)}}
+      menu();
+    }catch(e){menu();notify('Ошибка запуска: '+e.message)}
+  })();
+}
