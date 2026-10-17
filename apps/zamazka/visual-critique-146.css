@@ -249,3 +249,101 @@
 @media(max-width:699px){
  #screen>.round-review-phase .round-art-card{flex:0 0 min(87vw,410px)!important}
 }
+
+/* 1.40.13 — Gallery interaction: never clip a physical frame at the small
+   gallery viewport. Keep the screen height fixed while permitting frame
+   corners to overlap the room controls, as in a real layered exhibition. */
+html[data-zamazka-appearance="new"] .screen:has(>.museum-home),
+html[data-zamazka-appearance="new"] #screen>.museum-home{
+ overflow:visible!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-display{
+ overflow:visible!important;isolation:auto!important;z-index:4!important;
+ pointer-events:none!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-stage{
+ overflow:visible!important;pointer-events:none!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide{
+ transition:transform var(--museum-shift-duration,285ms) cubic-bezier(.24,.72,.22,1),
+  opacity 185ms ease!important;
+ contain:layout style;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-2"],
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="2"],
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-3"],
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="3"]{
+ opacity:0!important;pointer-events:none!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-3"]{
+ transform:translate(-50%,-50%) translateX(calc(-2.7 * var(--museum-step))) scale(.39) rotate(-12deg)!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="3"]{
+ transform:translate(-50%,-50%) translateX(calc(2.7 * var(--museum-step))) scale(.39) rotate(12deg)!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="-1"],
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="0"],
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide[data-slot="1"]{
+ opacity:1!important;pointer-events:auto!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide.instant{
+ transition:none!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-control{
+ z-index:5!important;
+}
+html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel{
+ pointer-events:auto!important;
+}
+@media(prefers-reduced-motion:reduce){
+ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-slide{transition:none!important}
+}
+
+/* Admission: the parchment has its own texture and requires no fine grey
+   dividers between its form, portrait and heading. Keep editable input borders. */
+#screen>.passage-entry::after,
+#screen>.passage-entry .passage-art::before,
+#screen>.passage-entry .passage-document::before,
+#screen>.passage-entry .passage-document::after{
+ display:none!important;content:none!important;
+}
+#screen>.passage-entry .passage-heading,
+#screen>.passage-entry .passage-identity,
+#screen>.passage-entry .passage-art,
+#screen>.passage-entry .passage-switch{
+ border-left:0!important;border-right:0!important;border-bottom:0!important;
+ box-shadow:none!important;
+}
+
+/* Waiting room: lower only the guest roster, preserving the room ticket and
+   usable height for the communal drawing board. */
+@media(min-width:1100px) and (min-height:600px){
+ #screen>.exhibition-lobby>.lobby-attendance{
+  padding-top:clamp(105px,14.7vh,160px)!important;
+ }
+}
+@media(min-width:1020px) and (max-width:1099px) and (min-height:770px){
+ #screen>.exhibition-lobby>.lobby-attendance{
+  padding-top:clamp(52px,8.4vh,83px)!important;
+ }
+}
+
+/* Preparation is only five suspended canvases in a uniform dark-green
+   studio. Error status and the real retry button remain usable. */
+#screen>.passage-preparing{
+ background:#263e33!important;background-image:none!important;
+ box-shadow:none!important;
+}
+#screen>.passage-preparing::before,
+#screen>.passage-preparing::after,
+#screen>.passage-preparing .passage-prep-workspace::before,
+#screen>.passage-preparing .passage-prep-workspace::after,
+#screen>.passage-preparing .passage-image-strip::before,
+#screen>.passage-preparing .passage-image-strip::after{
+ content:none!important;display:none!important;
+}
+#screen>.passage-preparing .passage-prep-workspace,
+#screen>.passage-preparing .passage-image-strip{
+ background:none!important;background-image:none!important;
+ border:0!important;outline:0!important;box-shadow:none!important;
+}
