@@ -17,7 +17,7 @@ if (![seeds, years, offset].every(Number.isSafeInteger) || seeds < 1 || seeds > 
     years < 1 || years > 200 || offset < 0 || offset + seeds > 0x100000000) {
   throw new RangeError('Invalid seed/years/offset bounds');
 }
-const aggregate = { seeds, years, auditedYears: 0, shortages: 0, worldsWithShortages: 0, births: 0, deaths: 0, marriages: 0, partitions: 0,
+const aggregate = { seeds, years, auditedYears: 0, shortages: 0, worldsWithShortages: 0, politicalActions: 0, politicalConcessions: 0, politicalCoalitions: 0, politicalGifts: 0, births: 0, deaths: 0, marriages: 0, partitions: 0,
   totalHarvest: 0, totalTrade: 0, firstSeed: offset, lastSeed: offset + seeds - 1,
   firstWorld: null, lastWorld: null };
 for(let index=0; index<seeds; index++){
@@ -39,10 +39,15 @@ for(let index=0; index<seeds; index++){
   aggregate.deaths += report.deaths;
   aggregate.marriages += report.marriages;
   aggregate.partitions += report.partitions;
+  aggregate.politicalActions += report.politics.actions;
+  aggregate.politicalConcessions += report.politics.concessions;
+  aggregate.politicalCoalitions += report.politics.coalitions;
+  aggregate.politicalGifts += report.politics.gifts;
   const sample={ seed, year:report.year, grain:report.resources.grain,
     coin:report.resources.coin, events:report.events, shortages:report.shortages,
     births:report.births, deaths:report.deaths, alive:report.alive,
     marriages:report.marriages, partitions:report.partitions,
+    political:report.politics,
     ledger:report.ledger };
   if(index===0)aggregate.firstWorld=sample;
   if(index===seeds-1)aggregate.lastWorld=sample;
