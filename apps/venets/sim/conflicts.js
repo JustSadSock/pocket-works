@@ -229,7 +229,7 @@ function schemeYear(w,s){
   recordEvent(w,'scheme-ended','scheme-tested-against-counterintel',{schemeId:s.id,
     kind:s.kind,actorId:p.id,targetId:q.id,titleId:t.id,success,progress:s.progress});
 }
-export function conflictYear(w,{excludePlayerId=null}={}){
+export function conflictYear(w,{excludePlayerId=null,excludeIds=[]}={}){
   const state=ensureConflicts(w);
   state.contracts=state.contracts.filter(c=>c.untilYear>w.year&&
     person(w,c.beneficiaryId)?.alive&&person(w,c.patronId)?.alive);
@@ -250,7 +250,7 @@ export function conflictYear(w,{excludePlayerId=null}={}){
   }
   state.contracts=state.contracts.filter(c=>person(w,c.beneficiaryId)?.alive&&person(w,c.patronId)?.alive);
   // Bounded autonomous activity. NPCs observe exactly the same legal eligibility.
-  const excluded=new Set([excludePlayerId].filter(Boolean));
+  const excluded=new Set([excludePlayerId,...excludeIds].filter(Boolean));
   const active=w.people.filter(p=>adult(w,p)&&!excluded.has(p.id)&&
     (holdings(w,p.id).length||w.titles.some(t=>claimant(w,p,t)))).sort((a,b)=>a.id.localeCompare(b.id));
   let used=0;
