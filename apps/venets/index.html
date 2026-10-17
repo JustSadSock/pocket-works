@@ -10,7 +10,7 @@
 <main id="root" class="app-shell" data-app-shell>
 <header class="app-header" data-ui>
   <a class="home-link" href="../../" data-app-control data-native-press aria-label="В PocketWorks">← <span>PocketWorks</span></a>
-  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>ОГРАНКА · 0.9</small></span>
+  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>ЛЕТОПИСЬ · 1.0</small></span>
   <button id="back-menu" class="quiet-control" type="button" hidden data-native-press>Меню</button>
 </header>
 <div id="notice" role="status" aria-live="polite" class="notice-toast" hidden></div>
@@ -95,11 +95,25 @@
     <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
   </footer>
 </section>
-<section id="ending-screen" class="center-screen ending-screen" hidden>
-  <p class="eyebrow">ПЕРВАЯ ХРОНИКА ЗАВЕРШЕНА</p><h1 id="ending-title">След в истории</h1>
-  <p id="ending-note"></p>
-  <div id="ending-stats" class="ending-stats"></div>
-  <div class="ending-actions"><button id="continue-legacy" class="primary-control" type="button" data-native-press>Продолжить ещё 50 лет</button><button id="ending-new" type="button" class="quiet-control" data-native-press>Другая династия</button></div>
+<section id="ending-screen" class="ending-screen" hidden>
+  <div class="ending-sheet">
+    <div class="ending-head">
+      <div id="ending-herald" class="ending-herald" aria-hidden="true"></div>
+      <div class="ending-titles"><p class="eyebrow" id="ending-eyebrow">ЛЕТОПИСЬ · 1156</p>
+        <h1 id="ending-title">След в истории</h1><p id="ending-note"></p></div>
+    </div>
+    <div id="ending-stats" class="ending-stats" aria-label="Итоги династии"></div>
+    <div class="ending-history">
+      <div class="ending-history-head"><h2>Следы правления</h2><span id="ending-house"></span></div>
+      <ol id="ending-timeline" class="ending-timeline" aria-label="Вехи династии"></ol>
+    </div>
+    <div class="ending-actions">
+      <button id="continue-legacy" class="primary-control" type="button" data-native-press>Продолжить ещё 50 лет</button>
+      <button id="download-chronicle" type="button" class="quiet-control" data-native-press>Сохранить свиток ↓</button>
+      <button id="ending-new" type="button" class="quiet-control" data-native-press>Другая династия</button>
+    </div>
+    <a class="ending-home" href="../../" data-app-control data-native-press>← В библиотеку PocketWorks</a>
+  </div>
 </section>
 <section id="docs-screen" class="docs-screen" hidden>
   <div class="doc-header"><div><p class="eyebrow">ОБ ОСНОВАНИИ МИРА</p><h1>Исследовательские записи</h1></div><button id="close-docs" type="button" class="quiet-control">← Назад</button></div>
@@ -121,7 +135,7 @@
   </menu></form>
 </dialog>
 <dialog id="new-dialog" class="confirm-dialog"><form method="dialog">
-  <h2>Завершить текущую летопись?</h2><p>Вы сможете продолжить сохранённую кампанию до начала новой. После создания нового мира прежнее сохранение заменится.</p>
+  <h2>Завершить текущую летопись?</h2><p>После создания нового мира текущая хроника будет заменена. Её можно заранее сохранить свитком.</p>
   <menu><button type="submit" value="cancel" class="quiet-control">Остаться</button><button type="submit" value="confirm" class="primary-control">Начать заново</button></menu>
 </form></dialog>
 <dialog id="restore-dialog" class="confirm-dialog"><form method="dialog">
@@ -131,6 +145,6 @@
   <button value="confirm" type="submit" class="primary-control">Восстановить</button></menu>
 </form></dialog>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="0.9.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="1.0.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
