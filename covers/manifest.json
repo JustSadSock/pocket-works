@@ -3181,7 +3181,7 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "92e6ce117b895983123ec2df2d55a7f929c041d1",
+    "revision": "a523be0fb88f0edda26aaca36ae266fe1323f965",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -3193,8 +3193,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "92e6ce117b895983123ec2df2d55a7f929c041d1",
-    "lastAttemptAt": "2026-10-17T12:28:35.659Z"
+    "lastAttemptRevision": "a523be0fb88f0edda26aaca36ae266fe1323f965",
+    "lastAttemptAt": "2026-10-17T14:25:55.743Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3282,5 +3282,32 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "13b0d440611db4d6419d9ad48fdbc9869b1b9d4f",
     "lastAttemptAt": "2026-10-17T14:15:07.277Z"
+  },
+  "bozhe-ne-tak": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 50,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 45279,
+        "variance": 30.55538103997551,
+        "entropy": 1.5630354003635802,
+        "edgeDensity": 0.15364583333333334,
+        "colorfulness": 14.33740234375,
+        "centerDetail": 28.802832875969504,
+        "meanLight": 53.68732856445127
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/bozhe-ne-tak/?pw-cover=1&pw_release=0.1.0&pw_fp=c334910200df84c7a1f81252"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "daa32dda2047f79a42c8186aa860d9bb518281b4",
+    "lastAttemptAt": "2026-10-17T14:26:06.505Z"
   }
 }
