@@ -86,7 +86,11 @@ export class PocketNetHub {
   }
   joined(ws,room,player){
     const state=this.projectedState(room,player);
-    if(bytes({roomId:room.id,gameId:room.gameId,version:room.version,state,players:room.players})>MAX_EVENT_BYTES)
+    // Legacy rooms may legitimately join with large artwork snapshots.
+    // Only new private-view games opt into the small projected-view cap.
+    const mod=this.module(room.gameId,room.version);
+    if(typeof mod?.viewForPlayer==='function'&&
+       bytes({roomId:room.id,gameId:room.gameId,version:room.version,state,players:room.players})>MAX_EVENT_BYTES)
       throw Error('room_view_too_large');
     message(ws,'room_joined',{roomId:room.id,gameId:room.gameId,version:room.version,
       state,players:room.players});
