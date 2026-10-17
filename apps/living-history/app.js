@@ -3,7 +3,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {createWorld, advanceDays, overview, audit, serialize, deserialize, getHousehold, SIZE} from './model.js';
 import {diagnoseWorld} from './laboratory.js';
 import {fieldAppearance,cattlePosition} from './visual-land.js';
-import {timeMode,integrateClock,dayClock,dayPhase,planSubday,sampleSubday,makeFastView,advanceFastView} from './subday.js';
+import {timeMode,integrateClock,dayClock,dayPhase,planSubday,sampleSubday,makeFastView,advanceFastView,fastAnimalPosition} from './subday.js';
 import {walkPath} from './navigation.js';
 installMobileRuntime();
 createWorkshopMode({appName:'Живая история',version:'0.7.9',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
@@ -12,7 +12,7 @@ const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:f
 const PX=8,W=SIZE*PX;
 let sim=null,mode='overview',selected=null,selectedPerson=null,economyOpen=false,speed=0,cam={x:0,y:0,z:1},drag=null,dirty=true,last=performance.now(),acc=0,lastStats=0,lastSavedDay=0,savePending=false,active=true,pointers=new Map(),pinch=null;
 const worldCanvas=document.createElement('canvas');worldCanvas.width=W;worldCanvas.height=W;const draw=worldCanvas.getContext('2d');
-let toastTimer=0,dayPlan=null,fastView=makeFastView(),renderDetail='coarse',modeBlend=null,blendRemaining=0;let movementFraction=1;
+let toastTimer=0,dayPlan=null,fastView=makeFastView(),renderDetail='coarse',modeBlend=null,blendRemaining=0;let movementFraction=1,visualDt=0;
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),2600);}
 function rngTile(i){let n=Math.imul(i+31,2654435761);n^=n>>>13;return (n>>>0)%100;}
 function tileColor(i,stage){if(sim.terrain[i]===1)return '#4c8990';if(sim.terrain[i]===2)return rngTile(i)>63?'#89947c':'#818e79';if(stage===2)return '#927653';if(stage===3)return '#84945c';if(stage===4)return '#aa906b';if(stage===1)return '#7c8b62';const s=sim.soil[i];return s>83?'#718a57':s>65?'#738357':'#8d9066';}
@@ -111,7 +111,8 @@ function drawFrame(){if(!sim)return;
   }
   if(cam.z>.36){for(const hom of sim.households){
    for(let i=0;i<Math.min(5,hom.cattle||0);i++){
-    const place=cattlePosition(hom,sim.day+(fine?movementFraction:.5),i,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const raw=cattlePosition(hom,sim.day+(fine?movementFraction:.5),i,sim);
+     const place=fine?raw:fastAnimalPosition(fastView,hom.id+':c:'+i,raw,visualDt),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const scale=Math.max(2,cam.z*4),ox=i<(hom.draftOxen||0);
     ctx.fillStyle=ox?'#40382e':'#6b523b';ctx.fillRect(Math.round(x),Math.round(y),scale*(ox?1.95:1.65),scale*(ox?1.15:1));
@@ -121,7 +122,8 @@ function drawFrame(){if(!sim)return;
     if(ox){ctx.fillStyle='#c4ad87';ctx.fillRect(Math.round(x+scale*1.65),Math.round(y-scale*.36),Math.max(1,scale*.2),scale*.22);}
    }
    for(let i=0;i<Math.min(10,hom.sheep||0);i++){
-    const place=cattlePosition(hom,sim.day+(fine?movementFraction:.5),i+23,sim),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
+    const raw=cattlePosition(hom,sim.day+(fine?movementFraction:.5),i+23,sim);
+     const place=fine?raw:fastAnimalPosition(fastView,hom.id+':s:'+i,raw,visualDt),x=cam.x+place.x*PX*cam.z,y=cam.y+place.y*PX*cam.z;
     if(x<0||y<0||x>w||y>h)continue;
     const u=Math.max(2,cam.z*2.6);
     ctx.fillStyle='#4f4b40';ctx.fillRect(Math.round(x),Math.round(y+u*.62),u*.23,u*.6);ctx.fillRect(Math.round(x+u*.9),Math.round(y+u*.62),u*.23,u*.6);
@@ -261,7 +263,7 @@ function captureBlend(){
 function animate(now){
  requestAnimationFrame(animate);
  if(!active||!sim){last=now;return;}
- const dt=Math.max(0,Math.min(.08,(now-last)/1000));last=now;
+ const dt=Math.max(0,Math.min(.08,(now-last)/1000));last=now;visualDt=speed>0?dt:0;
  if(speed>0){
   const step=integrateClock(acc,dt,speed);
   acc=step.phase;
