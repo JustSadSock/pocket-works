@@ -1,5 +1,6 @@
 import { POCKET_MODULES } from './generated-modules.mjs';
 import {assessZamazkaAwards} from './zamazka-awards.mjs';
+import {playerRoomView} from './private-views.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -78,10 +79,44 @@ export class PocketNetHub {
   connected(id, roomId) {
     return this.sockets(roomId).find(ws => ws.deserializeAttachment()?.id === id);
   }
+  projectedState(room,player){
+    const mod=this.module(room.gameId,room.version);
+    if(!mod)throw Error('room_version_unavailable');
+    return playerRoomView(mod,room.state,player,room.players);
+  }
+  joined(ws,room,player){
+    const state=this.projectedState(room,player);
+    // Legacy rooms may legitimately join with large artwork snapshots.
+    // Only new private-view games opt into the small projected-view cap.
+    const mod=this.module(room.gameId,room.version);
+    if(typeof mod?.viewForPlayer==='function'&&
+       bytes({roomId:room.id,gameId:room.gameId,version:room.version,state,players:room.players})>MAX_EVENT_BYTES)
+      throw Error('room_view_too_large');
+    message(ws,'room_joined',{roomId:room.id,gameId:room.gameId,version:room.version,
+      state,players:room.players});
+  }
   emit(room, events) {
     if (!Array.isArray(events) || events.length > 32) throw new Error('invalid_module_events');
     for (const event of events) {
       if (typeof event?.type !== 'string' || event.type.length > 64) continue;
+      // Opt-in private-view modules receive state events reconstructed from the
+      // authoritative current state for each authenticated, joined recipient.
+      // Discard event.payload entirely: accidental full-state broadcasts cannot
+      // leak secret material, including during reconnect/sync.
+      const mod=this.module(room.gameId,room.version);
+      if(event.type==='state'&&typeof mod?.viewForPlayer==='function'){
+        const recipients=event.to?this.sockets(room.id).filter(ws=>ws.deserializeAttachment()?.id===event.to):this.sockets(room.id);
+        for(const ws of recipients){
+          const id=ws.deserializeAttachment()?.id;
+          const player=room.players.find(p=>p.id===id);
+          if(!player)continue;
+          const own={...event,payload:this.projectedState(room,player)};
+          const packet={roomId:room.id,event:own};
+          if(bytes(packet)>MAX_EVENT_BYTES)throw Error('event_too_large');
+          message(ws,'game_event',packet);
+        }
+        continue;
+      }
       const packet = { roomId: room.id, event };
       const size=bytes(packet);
       if (size > MAX_EVENT_BYTES) {
@@ -472,8 +507,7 @@ export class PocketNetHub {
             state: result.state, createdAt: Date.now() };
           this.persist(room);
           this.setRoom(ws, room.id);
-          message(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version,
-            state: room.state, players: room.players });
+          this.joined(ws,room,member);
           if (result.events) this.emit(room, result.events);
           return;
         }
@@ -505,8 +539,7 @@ export class PocketNetHub {
             room.state = result.state;
             this.persist(room);
             this.setRoom(ws, room.id);
-            message(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version,
-              state: room.state, players: room.players });
+            this.joined(ws,room,member);
             this.emit(room, result.events ?? []);
             await this.refreshZamazkaPresence(room);
           } else {
@@ -522,8 +555,7 @@ export class PocketNetHub {
               this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
             }
             this.setRoom(ws, room.id);
-            message(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version,
-              state: room.state, players: room.players });
+            this.joined(ws,room,member);
             await this.refreshZamazkaPresence(room);
           }
           this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
