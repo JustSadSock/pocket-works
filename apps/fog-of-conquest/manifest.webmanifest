@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Туман завоеваний",
+  "short_name": "Туман",
+  "description": "Тактическая пошаговая стратегия с туманом войны",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2d3730",
+  "theme_color": "#2d3730",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
