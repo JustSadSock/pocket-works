@@ -137,5 +137,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "axis-pals": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
