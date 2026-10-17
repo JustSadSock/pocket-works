@@ -278,7 +278,7 @@ function animate(now){
  }
  movementFraction=Math.max(0,Math.min(1,acc));
  if(renderDetail==='coarse'&&speed>0)advanceFastView(fastView,sim,dt);
- if(blendRemaining>0)blendRemaining=Math.max(0,blendRemaining-dt);
+ if(speed>0&&blendRemaining>0)blendRemaining=Math.max(0,blendRemaining-dt);
  if(now-lastStats>500){updateHUD();lastStats=now;}
  updateDayDial();drawFrame();
 }
