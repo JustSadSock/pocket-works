@@ -393,3 +393,24 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel{
   max-width:calc(100% - 4px)!important;
  }
 }
+
+/* An edited candidate begins with the SAME original photograph and wooden
+   silhouette as all other votes. The 600×450 raster replacement appears
+   only when its painting is decoded and composited successfully. */
+#screen>.expert-phase .stake-frame.zam-exhibit-rim:has(.candidate-art){
+ position:relative!important;
+}
+#screen>.expert-phase .stake-frame.zam-exhibit-rim>.candidate-underlay{
+ display:block!important;
+}
+#screen>.expert-phase .stake-frame.zam-exhibit-rim>canvas.candidate-art{
+ position:absolute!important;
+ left:var(--frame-width)!important;top:var(--frame-width)!important;
+ width:calc(100% - 2 * var(--frame-width))!important;
+ height:calc(100% - 2 * var(--frame-width))!important;
+ opacity:0!important;visibility:hidden!important;
+ pointer-events:none!important;z-index:1!important;
+}
+#screen>.expert-phase .stake-frame.zam-exhibit-rim>canvas.candidate-art.is-ready{
+ opacity:1!important;visibility:visible!important;
+}
