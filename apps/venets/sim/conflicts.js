@@ -60,7 +60,7 @@ export function conflictChoices(w,actorId){
   const first=claims[0];
   const target=first?person(w,first.holderId):null;
   const canFund=p.treasury.coin>=10&&p.treasury.grain>=14;
-  if(first&&target?.alive&&canFund&&!active&&state.wars.length<2&&
+  if(first&&target?.alive&&canFund&&!active&&state.wars.length<(w.provinces.length===48?4:2)&&
     w.year-last(p,'war')>=10&&ownProvince(w,p.id).length){
     const staging=ownProvince(w,p.id)[0],objective=goalProvince(w,first);
     if(objective&&route(w,staging,objective))
@@ -277,7 +277,7 @@ export function assertConflicts(w){
   if(!w.conflicts)return true; // v0.6 saves can migrate without losing anything.
   const s=w.conflicts;
   if(!safe(s.nextId)||!Array.isArray(s.wars)||!Array.isArray(s.schemes)||
-    !Array.isArray(s.contracts)||!s.stats||s.wars.length>2)throw Error('Invalid conflict registry');
+    !Array.isArray(s.contracts)||!s.stats||s.wars.length>(w.provinces.length===48?4:2))throw Error('Invalid conflict registry');
   const ids=new Set();
   for(const obj of [...s.wars,...s.schemes,...s.contracts]){
     if(!obj.id||ids.has(obj.id)){throw Error('Duplicate conflict id')}
