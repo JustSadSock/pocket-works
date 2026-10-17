@@ -175,7 +175,8 @@ for(const id of ids)for(let v=0;v<3;v++){
    for(let k=1;k<=rings;k++)rect(f,mid-k*rStep,cy-k*rStep,mid+k*rStep,cy+k*rStep,2);
    exact(f,[mid,cy],C[0]);f.col(mid,cy,C[0]);assert.equal(f.alpha(0,0),0);
    for(let k=0;k<(id===38?1:3);k++){let x=mid+(k*2+1)*rStep; if(x<mid+rings*rStep)f.fill([x,cy],C[(k+1)%C.length])}
-   if(id===40||id===41){const p=id===40?[w-2,cy]:[mid,cy];exact(f,p,C[3]);if(id===40)f.col(mid,cy,C[0]);else f.col(w-2,cy,C[0].map(()=>0).map((_,i)=>f.rgb(w-2,cy)[i]))}
+   if(id===40){const p=[mid+Math.floor((rings-.5)*rStep),cy];exact(f,p,C[3]);f.col(mid,cy,C[0]);f.col(...p,C[3])}
+   if(id===41){const out=f.rgb(w-2,cy);exact(f,[mid,cy],C[3]);f.col(w-2,cy,out);f.col(mid,cy,C[3])}
   }
   if([44,45].includes(id)){
    const cols=6,rows=5;
@@ -192,12 +193,30 @@ for(const id of ids)for(let v=0;v<3;v++){
  }else if(id<=60){
   if(id<=50){
    const gap=id===46?1:id===47?2:id===48?5:id===49?10:6;
-   for(let y=0;y<h;y++)if(y<cy||y>=cy+gap)f.wall(mid,y);
+   for(let y=0;y<h;y++)if((y<cy||y>=cy+gap)&&!(id===50&&y>=cy-15&&y<cy-9))f.wall(mid,y);
    const first=f.fill(left,C[0]);assert(first>0);
    if(id<=47){assert.equal(f.alpha(...right),0,'pinhole not stitched')}
    else{assert.equal(f.alpha(...right),255,'intentional door sealed')}
-  }else if(id<=56||id===59){
-   const gap=id===51?1:id===52?2:id===53?3:id===54?2:id===55?3:id===56?3:2;
+  }else if(id===55){
+   for(let y=8;y<h-8;y++){
+    const x=mid+Math.round(Math.sin(y/8)*5);
+    for(let xx=mid-10;xx<=mid+10;xx++)f.wall(xx,y);
+    for(let dx=-2;dx<=2;dx++)f.wall(x+dx,y,0);
+   }
+   const xAt=y=>mid+Math.round(Math.sin(y/8)*5);
+   const n=f.fill([xAt(cy),cy],C[0]);assert(n>0);
+   for(const y of [10,cy,h-11])assert.equal(f.alpha(xAt(y),y),255,'zigzag was cut at '+y);
+  }else if(id===56){
+   for(let y=8;y<h-8;y++)for(let x=mid-5;x<=mid+16;x++)f.wall(x,y);
+   for(let y=8;y<h-8;y++)for(const x of [mid-1,mid,mid+6,mid+7,mid+13,mid+14])f.wall(x,y,0);
+   const n=f.fill([mid,cy],C[0]);assert(n>0);
+   for(const x of [mid,mid+7,mid+14])assert.equal(f.alpha(x,cy),255,'alternative passage not visited '+x);
+  }else if(id===59){
+   for(let y=8;y<h-8;y++){f.wall(mid-2,y);f.wall(mid+2,y)}
+   const n=f.fill([mid,cy],C[0]);assert(n>0);
+   for(let y=9;y<h-9;y++)assert.equal(f.alpha(mid,y),255,'gap between independent lines welded');
+  }else if(id<=54){
+   const gap=id===51?1:id===52?2:id===53?3:2;
    const corridorLeft=mid-gap,corridorRight=mid;
    for(let y=8;y<h-8;y++)for(let x=0;x<w;x++)
     if(x>=7&&x<corridorLeft||x>=corridorRight&&x<w-7)f.wall(x,y);
@@ -252,7 +271,17 @@ for(const id of ids)for(let v=0;v<3;v++){
    if(id===71||id===72){assert.equal(f.alpha(...right),0)}
   }
  }else if(id>=96){
-  if(id===96){separator();for(let k=0;k<100;k++)f.fill(k%2?right:left,C[k%C.length]);f.col(...left,C[98%C.length]);f.col(...right,C[99%C.length])}
+  if(id===96){
+   for(let x=1;x<w;x++)if(x%Math.floor(w/10)===0)for(let y=0;y<h;y++)f.wall(x,y);
+   for(let y=1;y<h;y++)if(y%Math.floor(h/10)===0)for(let x=0;x<w;x++)f.wall(x,y);
+   const cellW=Math.floor(w/10),cellH=Math.floor(h/10);
+   for(let k=0;k<100;k++){
+    const p=[(k%10)*cellW+2,Math.floor(k/10)*cellH+2];
+    assert(f.fill(p,C[k%C.length])>0,'bucket '+k+' did not paint');
+    f.col(...p,C[k%C.length]);
+   }
+   f.col(2,2,C[0]);f.col(9*cellW+2,9*cellH+2,C[99%C.length]);
+  }
   if(id===97){for(let k=0;k<100;k++)f.fill(left,C[k%C.length]);f.col(...left,C[99%C.length]);f.col(...right,C[99%C.length])}
   if(id===98){for(let k=0;k<300;k++){const x=Math.floor(rand()*w),y=Math.floor(rand()*h);f.output.set([40,80,90,255],f.at(x,y))}exact(f,left,C[0]);f.col(...right,C[0])}
   if(id===99){for(let x=2;x<w-2;x+=10)for(let y=2;y<h-2;y+=10)rect(f,x,y,Math.min(w-1,x+5),Math.min(h-1,y+5));const n=f.fill([0,0]);assert(n>0);f.fill([Math.floor(w*.6),Math.floor(h*.6)],C[1]);assert.equal(f.alpha(0,0),255)}
