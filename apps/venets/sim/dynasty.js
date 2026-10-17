@@ -104,14 +104,17 @@ export function resolveInheritance(world,deadId) {
   const dead=findPerson(world,deadId);
   if(!dead || dead.alive) throw Error('Inheritance requires an already deceased person');
   const holdings=titlesOf(world,deadId).sort((a,b)=>rankValue(b.rank)-rankValue(a.rank)||a.id.localeCompare(b.id));
-  const branches=descendantBranches(world,deadId);
+  const withoutHeredity=world.experiment?.inheritance===false;
+  const branches=withoutHeredity?[]:descendantBranches(world,deadId);
   const fallback=chooseFallback(world,dead,holdings[0]);
   let partitionCount=0;
   let primary=null;
   const distribution=[];
   for(const title of holdings) {
     let winner,reason;
-    if(title.law==='seniority') {
+    if(withoutHeredity){
+      winner=elect(world,dead);reason='experiment-nonhereditary-election';
+    }else if(title.law==='seniority') {
       const seniors=world.people.filter(p=>p.alive && p.dynastyId===dead.dynastyId && p.id!==dead.id).sort(seniority);
       winner=seniors[0];
       reason=winner?'house-seniority':fallback.reason;
