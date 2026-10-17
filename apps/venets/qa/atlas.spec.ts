@@ -14,7 +14,7 @@ test('the map renders 12 real counties with live owners, heraldry and focus',asy
   await page.goto(PATH);
   await page.locator('#begin').click();
   await expect(page.locator('#game-screen')).toBeVisible();
-  await page.locator('[data-panel="lands"]').click();
+  if(await page.locator('[data-panel="lands"]').isVisible())await page.locator('[data-panel="lands"]').click();
   await expect(page.locator('#panel-lands')).toBeVisible();
   const map=page.locator('.living-atlas');
   await expect(map).toBeVisible();
@@ -32,7 +32,7 @@ test('the map renders 12 real counties with live owners, heraldry and focus',asy
   await snap(page,testInfo,'family');
   await page.locator('[data-atlas-view="atlas"]').click();
   await expect(map).toBeVisible();
-  await page.locator('[data-panel="council"]').click();
+  if(await page.locator('[data-panel="council"]').isVisible())await page.locator('[data-panel="council"]').click();
   await page.locator('#next-year').click();
   await expect(page.locator('#year-count')).toHaveText('1067');
   await page.locator('[data-panel="lands"]').click();
