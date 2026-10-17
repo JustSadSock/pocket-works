@@ -73,3 +73,6 @@ import './mobile-visual-fixes.mjs';
 
 // Gallery immediate frame replacement and final-stage visual hierarchy.
 import './gallery-motion-visual-20261017.mjs';
+
+// Source-proportional originals and edits, equal visual weight, painted recolour.
+import './vote-aspect-fairness.mjs';
