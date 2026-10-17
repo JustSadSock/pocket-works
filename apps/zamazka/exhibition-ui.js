@@ -1,3 +1,4 @@
+import {fitGalleryArtwork} from './gallery-proportions.js';
 // Shared physical museum objects used by preview, voting, ballots and review.
 const esc = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const exhibitFacets = () => ['top','left','right','bottom'].map(side =>
@@ -16,40 +17,59 @@ export function mountExhibitFrames(root){
  const stableRoom=new WeakMap();
  function fit(){
   queued=0;if(disposed)return;
+  const groups=new Map();
   for(const stage of stages){
    if(!stage.isConnected)continue;
    const rim=stage.querySelector('.zam-exhibit-rim');
    const art=rim?.querySelector('img,canvas');
    if(!rim||!art)continue;
-   const natural=art.tagName==='IMG'&&art.naturalWidth>0?art.naturalWidth/art.naturalHeight:0;
-   const rendered=Number.parseFloat(art.style.getPropertyValue('--art-aspect'))||
-     Number.parseFloat(art.style.aspectRatio)||
-     Number.parseFloat(rim.style.getPropertyValue('--art-aspect'));
-   const ratio=natural||rendered||4/3;
+   // The source image and edited canvas MUST share the same final frame
+   // dimensions. A restored canvas has a fixed 600x450 bitmap, which says
+   // nothing about the original painting's physical aspect ratio.
+   const natural=art.tagName==='IMG'&&art.naturalWidth>0?
+    art.naturalWidth/art.naturalHeight:0;
+   const styled=Number.parseFloat(art.style.getPropertyValue('--art-aspect'))||
+    Number.parseFloat(art.style.aspectRatio)||
+    Number.parseFloat(rim.style.getPropertyValue('--art-aspect'));
+   const ratio=natural||styled||4/3;
    const width=stage.clientWidth;
    const gallery=stage.closest?.('.stake-gallery,.round-review-grid,.exhibition-grid');
    const bounds=gallery||stage.parentElement;
    const outerWidth=bounds?.clientWidth||width,outerHeight=bounds?.clientHeight||stage.clientHeight;
    const previous=stableRoom.get(stage);
-   // A non-voting author has no coin tray, so the picture's own height can
-   // feed back into its flex stage. A ResizeObserver then shrinks it repeatedly.
-   // Invalidate only when the *outer gallery* really changes dimensions.
    const sameRoom=previous&&Math.abs(outerWidth-previous.outerWidth)<2&&
-     Math.abs(outerHeight-previous.outerHeight)<2&&Math.abs(width-previous.width)<2;
-   const freeHeight=sameRoom?Math.max(stage.clientHeight,previous.freeHeight):stage.clientHeight;
+    Math.abs(outerHeight-previous.outerHeight)<2&&Math.abs(width-previous.width)<2;
+   const availableHeight=stage.clientHeight;
+   const freeHeight=sameRoom?Math.max(availableHeight,previous.freeHeight):availableHeight;
    stableRoom.set(stage,{outerWidth,outerHeight,width,freeHeight});
-   const height=freeHeight-(stage.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-
-     (stage.querySelector('.stake-actions,.stake-locked')?.offsetHeight||0)-7;
+   const height=freeHeight-
+    (stage.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-
+    (stage.querySelector('.stake-actions,.stake-locked')?.offsetHeight||0)-7;
    if(width<30||height<30)continue;
    const chrome=Math.max(4,Math.min(10,Math.round(width*.022)));
-   const maxW=Math.max(20,width-2*chrome-4);
-   const maxH=Math.max(20,height-2*chrome-4);
-   const canvasW=Math.max(12,Math.min(maxW,maxH*ratio));
-   const canvasH=canvasW/ratio;
-   rim.style.setProperty('--art-aspect',String(ratio));
-   rim.style.setProperty('--frame-width',chrome+'px');
-   rim.style.width=(canvasW+chrome*2)+'px';
-   rim.style.height=(canvasH+chrome*2)+'px';
+   const cell={stage,rim,ratio,chrome,
+    maxWidth:Math.max(20,width-2*chrome-4),
+    maxHeight:Math.max(20,height-2*chrome-4)};
+   const key=gallery||stage;
+   if(!groups.has(key))groups.set(key,[]);
+   groups.get(key).push(cell);
+  }
+  for(const cells of groups.values()){
+   const fits=fitGalleryArtwork(cells);
+   cells.forEach((cell,i)=>{
+    const {rim,ratio,chrome}=cell;
+    const {width,height}=fits[i];
+    rim.style.setProperty('--art-aspect',String(ratio));
+    rim.style.setProperty('--frame-width',chrome+'px');
+    rim.style.width=(width+chrome*2)+'px';
+    rim.style.height=(height+chrome*2)+'px';
+    // A replaced IMG and the 600x450 restoration CANVAS must occupy
+    // precisely the same content box. Never let intrinsic bitmap dimensions
+    // create a different silhouette for the forged painting.
+    const image=rim.querySelector('img,canvas');
+    image.style.width=width+'px';
+    image.style.height=height+'px';
+   });
   }
  }
  const schedule=()=>{if(!queued&&!disposed)queued=requestAnimationFrame(fit)};

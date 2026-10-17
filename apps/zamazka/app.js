@@ -27,10 +27,11 @@ import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
 import {exhibitFacets,exhibitPlaque,mountExhibitFrames} from './exhibition-ui.js';
+import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.12',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.13',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -463,25 +464,28 @@ function fitPreviewFrames(rail){
  let scheduled=false,disposed=false;
  function paint(){
   scheduled=false;if(disposed||!rail.isConnected)return;
+  const cells=[];
   for(const host of frames){
    const mat=host.querySelector('.picture-mat'),img=mat?.querySelector('img');
    if(!img?.naturalWidth||!img?.naturalHeight)continue;
    const ratio=img.naturalWidth/img.naturalHeight;
-   // Calculate a fit from the *decoded* bitmap and the actual available cell.
-   // Both axes and the four frame facets share the same explicit dimensions.
    const thickness=matchMedia('(max-width:900px), (pointer:coarse)').matches?7:10;
-   const limitW=host.clientWidth-12-2*thickness-2;
-   const limitH=host.clientHeight-23-2*thickness-2-(host.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-4;
-   if(limitW<28||limitH<28)continue;
-   const width=Math.floor(Math.min(limitW,limitH*ratio));
-   // Keep a fractional CSS height. Rounding 100.5px to 100px distorts
-   // very wide paintings enough to visibly skew the snug frame.
-   const height=width/ratio;
-   const aw=Math.max(1,width)+'px',ah=Math.max(1,height).toFixed(3)+'px';
+   const maxWidth=host.clientWidth-12-2*thickness-2;
+   const maxHeight=host.clientHeight-14-2*thickness-
+    (host.querySelector('.zam-exhibit-plaque')?.offsetHeight||0);
+   if(maxWidth<28||maxHeight<28)continue;
+   cells.push({mat,ratio,maxWidth,maxHeight});
+  }
+  // Identical visual-area budget to the voting wall. This makes portrait,
+  // wide and square originals compete on painted pixels, not outer 4:3 boxes.
+  const fitted=fitGalleryArtwork(cells);
+  cells.forEach(({mat},i)=>{
+   const {width,height}=fitted[i];
+   const aw=width.toFixed(2)+'px',ah=height.toFixed(2)+'px';
    if(mat.style.getPropertyValue('--preview-art-w')!==aw)mat.style.setProperty('--preview-art-w',aw);
    if(mat.style.getPropertyValue('--preview-art-h')!==ah)mat.style.setProperty('--preview-art-h',ah);
    mat.dataset.ratioReady='true';
-  }
+  });
  }
  function schedule(){if(!scheduled&&!disposed){scheduled=true;requestAnimationFrame(paint)}}
  for(const host of frames){
@@ -644,13 +648,25 @@ function vote(){
  '<div class="phase-body expert-round"><div class="expert-intro"><div><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="phase-directive">Одна из пяти картин отреставрирована.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
  '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':'Распредели до 3 монет. По окончании времени поставленные монеты засчитываются.')+'</p>'+
  '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="stake-frame zam-exhibit-rim">'+exhibitFacets()+
- (examined?.art===id?'<canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
+ (examined?.art===id?'<img class="candidate-underlay" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="" aria-hidden="true" loading="eager"><canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
  '</div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+
  (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">На проверке</span>')+'</div></div>').join('')+'</div>'+
  (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div>'+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'<button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button>':'<span class="coin-auto-status" id="coinVoteStatus" role="status" aria-live="polite">3 фишки — и голос учтён</span>')+'</div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
  '</div></div></section>','vote');
  exhibitFitter=mountExhibitFrames(screen);
- if(examined)void renderArtwork(screen.querySelector('#examinedCanvas'),examined.art,examined.variation,examined.strokes||[],true).then(()=>exhibitFitter?.refresh());
+ if(examined){
+  const canvas=screen.querySelector('#examinedCanvas');
+  void renderArtwork(canvas,examined.art,examined.variation,examined.strokes||[],true)
+   .then(ok=>{
+    if(!canvas?.isConnected)return;
+    // Never reveal the forged slot through an unloaded or 4:3 placeholder.
+    // The same original image remains visible beneath until the edited
+    // canvas is fully painted at the source artwork's native proportions.
+    if(ok)canvas.classList.add('is-ready');
+    else notify('Не удалось отобразить реставрацию. Проверь соединение.');
+    exhibitFitter?.refresh();
+   });
+ }
  if(!isOwn&&!already)updateChips();
 }
 
