@@ -39,7 +39,8 @@ export function mountExhibitFrames(root){
    const previous=stableRoom.get(stage);
    const sameRoom=previous&&Math.abs(outerWidth-previous.outerWidth)<2&&
     Math.abs(outerHeight-previous.outerHeight)<2&&Math.abs(width-previous.width)<2;
-   const freeHeight=sameRoom?Math.max(stage.clientHeight,previous.freeHeight):stage.clientHeight;
+   const availableHeight=Math.max(stage.clientHeight,stage.parentElement?.clientHeight||0);
+   const freeHeight=sameRoom?Math.max(availableHeight,previous.freeHeight):availableHeight;
    stableRoom.set(stage,{outerWidth,outerHeight,width,freeHeight});
    const height=freeHeight-
     (stage.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-
