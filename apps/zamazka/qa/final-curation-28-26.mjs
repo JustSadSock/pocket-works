@@ -67,7 +67,11 @@ assert.equal(ARTS[136].isReal,false,'archived original synthetic image remains a
 assert.equal(ARTS[185].isReal,false,'archived last synthetic image remains in order');
 const server=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
 const snapshot=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v25.ts',import.meta.url),'utf8');
-assert.equal(server,snapshot,'new rooms must use exact immutable v24 copy');
+assert.equal(server,snapshot,'current rooms must use the exact immutable v25 copy');
+const earlier=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v24.ts',import.meta.url),'utf8');
+assert.doesNotMatch(earlier,/balancedDamage/,'pinned v24 room logic must remain unmodified');
+assert.match(earlier,/variation:Math.floor\(Math.random\(\)\*0xffffffff\)/,'legacy v24 assignment unchanged');
+assert.match(snapshot,/variation:s.balancedDamage/,'new room masks have explicit per-room compatibility flag');
 assert.match(server,/RULESET_VERSION=21/);
 assert.match(server,/const CATALOG_COUNT=136/);
 assert.match(server,/EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115\]\)/);
