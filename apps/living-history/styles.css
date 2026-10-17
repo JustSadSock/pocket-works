@@ -31,3 +31,10 @@
 
 /* Map key describes actual field states, and remains inside the existing overview sheet. */
 .map-key{font:10px/1.5 system-ui;color:#766c56;margin:9px 0 2px}
+/* Six genuine simulation speeds, never horizontal scrolling on small phones. */
+.playbar{flex-direction:column;align-items:stretch;gap:8px;padding:9px 12px 10px}
+.live-mark{min-height:14px}
+.speed{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));width:100%;gap:2px}
+.speed button{min-width:0;height:35px;font-size:12px;font-variant-numeric:tabular-nums}
+@media(max-width:370px){.playbar{padding:7px 10px 9px}.speed button{height:33px;font-size:11px}}
+@media(max-height:570px){.playbar{gap:4px;padding:5px 10px 6px}.speed button{height:30px}}
