@@ -87,7 +87,7 @@ function drawFrame(){if(!sim)return;
  if(showFigures){
   const people=sim.people;
   for(const p of people){if(!p.alive)continue;
-   const where=personPosition(p,sim,previousPeople,movementFraction,speed>0);
+   const where=personPosition(p,sim,previousPeople,movementFraction,true);
    const x=cam.x+(where.x*PX+3)*cam.z,y=cam.y+(where.y*PX+3)*cam.z;
    if(x<2||y<3||x>w-2||y>h-3)continue;
    const size=Math.max(2,Math.min(8,cam.z*5));
