@@ -128,5 +128,11 @@
       "v1",
       "v2"
     ]
+  },
+  "folio": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }

@@ -2,6 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { floodLinework } from './fill-engine.mjs';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {createFolioCloudSync} from './cloud-sync.js';
+import {createFolioCollab} from './collab.js';
 
 installMobileRuntime();
 
@@ -55,6 +56,9 @@ function rememberMode(mode){
 }
 let database=null;
 let folioCloud=null;
+let folioCollab=null;
+let remotePreviews=[];
+let collaborationJobs=Promise.resolve();
 const DB_NAME='pocket-works:folio:documents';
 const DB_STORE='works';
 try {const stored=localStorage.getItem('pocket-works:folio:fillTolerance');if(stored!==null){const n=Number(stored);if(Number.isFinite(n)&&n>=0&&n<=100)state.fillTolerance=n;}}catch{}
@@ -129,6 +133,7 @@ function paintStroke(ctx,stroke){
     ctx.save();ctx.globalCompositeOperation='source-over';
     ctx.globalAlpha=clamp(stroke.opacity??1,0,1);ctx.fillStyle=stroke.color;
     for(const run of stroke.runs||[])ctx.fillRect(run[1],run[0],run[2]-run[1]+1,1);
+    for(const band of stroke.bands||[])ctx.fillRect(band[2],band[0],band[3]-band[2]+1,band[1]-band[0]+1);
     ctx.restore();return;
   }
   const p=stroke.points;
@@ -204,6 +209,12 @@ function drawContents(ctx,forExport=false){
       ctx.drawImage(temp,0,0);
     }else ctx.drawImage(layerCanvas(layer),0,0);
     ctx.restore();
+  }
+  if(!forExport&&remotePreviews.length){
+    for(const stroke of remotePreviews){
+      if(!doc.layers.some(l=>l.id===stroke.layer&&l.visible))continue;
+      paintStroke(ctx,stroke);
+    }
   }
 }
 function render(){
@@ -362,17 +373,24 @@ function extendStroke(e){
   const pseudoPressure=clamp(1-velocity*.13,.46,1);
   list.push([...p,pseudoPressure]);
   state.lastMove=performance.now();scheduleDraw();
+  folioCollab?.preview(state.draft);
 }
 function finishStroke(cancel=false){
   const draft=state.draft;state.draft=null;state.previewCanvas=null;
+  folioCollab?.endPreview();
   stage.classList.remove('is-drawing');hideCursor();
   if(state.mode==='precision'&&state.aimEvent&&state.pointers.size===1)setCursor(state.aimEvent);
   if(!draft||cancel){scheduleDraw();return;}
   const points=draft.points;
   const layer=state.doc.layers.find(l=>l.id===draft.layer);
   if(!layer)return;
-  // Keep the actual sampled trajectory. Holding the pointer at the end
-  // must not unexpectedly replace a detailed stroke with one straight line.
+  // Keep the actual sampled trajectory. In shared mode, send one bounded
+  // operation instead of network packets for every PointerEvent.
+  if(folioCollab?.active()){
+    const accepted=folioCollab.commit(draft);
+    if(!accepted){scheduleDraw();return;}
+    Object.assign(draft,accepted);
+  }
   layer.strokes.push(draft);
   state.undo.push({layer:layer.id,stroke:draft,index:layer.strokes.length-1});
   if(state.undo.length>200)state.undo.shift();
@@ -435,7 +453,16 @@ function fillAt(e){
   const linePixels=inkCtx.getImageData(0,0,w,h).data;
   const runs=floodLinework(linePixels,w,h,x,y,state.fillTolerance);
   if(!runs.length){notify('Коснись пространства внутри контура');return;}
-  const stroke={id:uid(),layer:layer.id,tool:'fill',color:state.color,opacity:state.opacity,runs};
+  // Vertical run bands dramatically shrink large flat flood-fills in PocketNet.
+  const bands=[];
+  for(const [y,x1,x2] of runs){
+    const prev=bands[bands.length-1];
+    if(prev&&prev[1]===y-1&&prev[2]===x1&&prev[3]===x2)prev[1]=y;
+    else bands.push([y,y,x1,x2]);
+  }
+  const stroke={id:uid(),layer:layer.id,tool:'fill',color:state.color,opacity:state.opacity,
+    ...(folioCollab?.active()?{bands}: {runs})};
+  if(folioCollab?.active()&&!folioCollab.commit(stroke))return;
   // All buckets paint over previous buckets, but beneath hand-drawn contours.
   const position=layer.strokes.findIndex(s=>s.tool!=='fill');
   const index=position<0?layer.strokes.length:position;
@@ -454,6 +481,9 @@ function translatePan(e){
 }
 canvas.addEventListener('pointerdown',e=>{
   if(!state.doc||state.sheet)return;
+  if(folioCollab?.active()&&!folioCollab.ready()){
+    notify('Нет связи · рисование возобновится после подключения');return;
+  }
   if(e.button===2){e.preventDefault();sampleColor(e);return;}
   e.preventDefault();try{canvas.setPointerCapture(e.pointerId);}catch{}
   const point=canvasPoint(e);
@@ -576,10 +606,15 @@ canvas.addEventListener('wheel',e=>{
 },{passive:false});
 
 function updateUndoRedo(){
+  if(folioCollab?.active()){
+    $('undo').disabled=!folioCollab.ready()||!state.doc?.layers?.some(l=>l.strokes.some(s=>folioCollab.isMine(s)));
+    $('redo').disabled=!folioCollab.ready()||!folioCollab.canRedo();return;
+  }
   $('undo').disabled=state.undo.length===0;
   $('redo').disabled=state.redo.length===0;
 }
 function undo(){
+  if(folioCollab?.active()){folioCollab.undo();return;}
   finishStroke(true);
   const entry=state.undo.pop();if(!entry)return;
   const layer=state.doc.layers.find(l=>l.id===entry.layer);
@@ -589,6 +624,7 @@ function undo(){
   state.redo.push(entry);markDirty(layer.id);updateUndoRedo();queueSave();
 }
 function redo(){
+  if(folioCollab?.active()){folioCollab.redo();return;}
   const entry=state.redo.pop();if(!entry)return;
   const layer=state.doc.layers.find(l=>l.id===entry.layer);
   if(!layer)return;
@@ -620,6 +656,7 @@ function selectTool(tool){
   updateToolUI();
 }
 function openSheet(kind){
+  if(folioCollab?.active()&&kind==='layers'){notify('Все рисуют на общем слое. Изменение слоёв доступно в личной копии.');return;}
   finishStroke(true);
   state.sheet=kind;
   $('sheet').hidden=false;$('sheet-backdrop').hidden=false;
@@ -665,7 +702,7 @@ function renderSheet(){
       const copy=cloneData(state.doc);copy.id=uid();copy.title+=' — копия';copy.updatedAt=Date.now();
       await putWork(copy);notify('Копия добавлена в альбом');closeSheet();
     };
-    $('do-delete').onclick=()=>showModal({title:'Удалить работу?',note:'Рисунок исчезнет из локального альбома. Это действие нельзя отменить.',okText:'Удалить',danger:true,onOk:async()=>{const id=state.doc.id;await removeWork(id);state.doc=null;closeSheet();await showHome();folioCloud?.schedule();notify('Работа удалена');}});
+    $('do-delete').onclick=()=>{if(folioCollab?.active()){notify('Сначала выйди из общей комнаты');return;}showModal({title:'Удалить работу?',note:'Рисунок исчезнет из локального альбома. Это действие нельзя отменить.',okText:'Удалить',danger:true,onOk:async()=>{const id=state.doc.id;await removeWork(id);state.doc=null;closeSheet();await showHome();folioCloud?.schedule();notify('Работа удалена');}});};
   }
 }
 function renderLayerSheet(body){
@@ -701,6 +738,8 @@ $('sheet-body').addEventListener('click',e=>{
   if(target.dataset.hand){state.hand=target.dataset.hand;try{localStorage.setItem('pocket-works:folio:hand',state.hand);}catch{}renderSheet();notify(state.hand==='left'?'Острие для левой руки':'Острие для правой руки');}
   if(target.dataset.brush){state.brush=target.dataset.brush;selectTool('brush');closeSheet();notify(brushes.find(b=>b.id===state.brush).name);}
   if(target.dataset.color){state.color=target.dataset.color;selectTool(state.tool==='fill'?'fill':'brush');closeSheet();}
+  if(target.dataset.toggleLayer&&folioCollab?.active())return;
+  if(target.dataset.shiftLayer&&folioCollab?.active())return;
   if(target.dataset.toggleLayer){const l=state.doc.layers.find(x=>x.id===target.dataset.toggleLayer);l.visible=!l.visible;renderSheet();scheduleDraw();queueSave();}
   if(target.dataset.selectLayer){state.doc.activeLayer=target.dataset.selectLayer;renderSheet();scheduleDraw();}
   if(target.dataset.shiftLayer){
@@ -766,13 +805,29 @@ function queueSave(){
   clearTimeout(state.saveTimer);
   state.saveTimer=setTimeout(()=>{void persist();},700);
 }
+function legacyCompatibleDoc(doc){
+  // The PocketNet protocol compresses horizontal spans into vertical bands.
+  // Expand only when persisting so FOLIO 1.5 and other legacy viewers can read
+  // shared pages using the unchanged `runs` document field.
+  if(!doc.layers.some(l=>l.strokes.some(stroke=>Array.isArray(stroke.bands))))return doc;
+  const saved=cloneData(doc);
+  for(const layer of saved.layers)for(const stroke of layer.strokes){
+    if(!Array.isArray(stroke.bands))continue;
+    stroke.runs=[];
+    for(const [first,last,left,right] of stroke.bands){
+      for(let y=first;y<=last;y++)stroke.runs.push([y,left,right]);
+    }
+    delete stroke.bands;
+  }
+  return saved;
+}
 async function persist(){
   clearTimeout(state.saveTimer);
   if(!state.doc)return;
   const doc=state.doc;
   try{
     doc.thumb=drawThumbnail();
-    await putWork(doc);
+    await putWork(legacyCompatibleDoc(doc));
     folioCloud?.schedule();
   }catch(error){console.error('FOLIO save',error);notify('Нет места для сохранения рисунка');}
 }
@@ -790,6 +845,7 @@ async function openWork(doc,isNew=false){
 }
 async function showHome(){
   if(state.doc){finishStroke();await persist();}
+  if(folioCollab?.active())folioCollab.leave();
   resetInput();state.doc=null;resetCache();
   $('studio').hidden=true;$('home').hidden=false;closeSheet();
   state.works=(await loadWorks()).sort((a,b)=>b.updatedAt-a.updatedAt);
@@ -833,7 +889,7 @@ function exportPNG(){
 $('new-work').onclick=()=>newCanvasDialog();
 $('spark-action').onclick=()=>openSheet('spark');
 $('back-home').onclick=()=>void showHome();
-$('edit-title').onclick=()=>showModal({title:'Название рисунка',input:state.doc.title,okText:'Переименовать',onOk:value=>{state.doc.title=value;$('document-title').textContent=value;queueSave();}});
+$('edit-title').onclick=()=>{if(folioCollab?.active()){notify('Название общего листа фиксируется при создании');return;}showModal({title:'Название рисунка',input:state.doc.title,okText:'Переименовать',onOk:value=>{state.doc.title=value;$('document-title').textContent=value;queueSave();}});};
 $('undo').onclick=undo;$('redo').onclick=redo;
 $('export').onclick=()=>openSheet('export');
 $('brush-tool').onclick=()=>openSheet('brush');
@@ -860,6 +916,9 @@ $('focus-restore').onclick=()=>{state.focus=false;$('studio').classList.remove('
 function syncDesktop(){
   if(!state.doc)return;
   const doc=state.doc;
+  $('layers-tool').disabled=Boolean(folioCollab?.active());
+  $('desktop-layer-options').disabled=Boolean(folioCollab?.active());
+  $('desktop-add-layer').disabled=Boolean(folioCollab?.active());
   document.querySelectorAll('.desktop-tool').forEach(el=>{
     const match={
       'desktop-brush-tool':state.tool==='brush',
@@ -902,6 +961,7 @@ $('desktop-focus-tool').onclick=()=>{$('focus-toggle').click();};
 $('desktop-idea').onclick=()=>openSheet('spark');
 $('desktop-layer-options').onclick=()=>openSheet('layers');
 $('desktop-add-layer').onclick=()=>{
+  if(folioCollab?.active()){notify('Общий слой нельзя изменить до выхода из комнаты');return;}
   if(state.doc.layers.length>=12){notify('Максимум 12 слоёв');return;}
   const l=newLayer('Слой '+(state.doc.layers.length+1));
   state.doc.layers.push(l);state.doc.activeLayer=l.id;syncDesktop();queueSave();scheduleDraw();
@@ -915,6 +975,7 @@ $('desktop-swatches').onclick=e=>{
   state.color=b.dataset.desktopColor;selectTool(state.tool==='fill'?'fill':'brush');syncDesktop();
 };
 $('desktop-layers').onclick=e=>{
+  if(folioCollab?.active())return;
   const eye=e.target.closest('[data-desktop-eye]');
   if(eye){const l=state.doc.layers.find(l=>l.id===eye.dataset.desktopEye);l.visible=!l.visible;syncDesktop();scheduleDraw();queueSave();return;}
   const layer=e.target.closest('[data-desktop-layer]');
@@ -986,7 +1047,7 @@ window.addEventListener('pagehide',()=>{
   if(state.doc){finishStroke();void persist();}
 });
 
-createWorkshopMode({appName:'FOLIO',version:'1.5.1',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
+createWorkshopMode({appName:'FOLIO',version:'1.6.0',cachePrefix: 'folio-',storageNamespace: 'pocket-works:folio',onReset:async()=>{
   if(database)await txPromise('readwrite',s=>s.clear());else localStorage.removeItem(DB_NAME+':fallback');
   state.doc=null;await showHome();
 }});
@@ -999,5 +1060,57 @@ async function boot(){
     async onUpdate(){if(!state.doc){state.works=(await loadWorks()).sort((a,b)=>b.updatedAt-a.updatedAt);renderGallery();}}
   });
   folioCloud.start();
+  folioCollab=createFolioCollab({
+    notify,
+    onStatus({active,ready,status,error,roomId,players}){
+      $('folio-collab-studio').hidden=!active;
+      $('folio-collab-count').textContent=players.length||1;
+      $('folio-collab-studio').classList.toggle('is-offline',!ready);
+      $('folio-collab-setup').hidden=active;
+      $('folio-collab-live').hidden=!active;
+      $('folio-collab-roomcode').textContent=roomId?roomId.slice(0,8).toUpperCase():'';
+      $('folio-collab-players').innerHTML=players.map(p=>'<span>'+escapeHTML(p.name)+'</span>').join('');
+      $('folio-collab-status').textContent=error|| (ready?'Холст общий · '+players.length+' участников · автоматическое сохранение':
+        status==='connecting'||status==='joining'?'Подключаем мастерскую…':
+        status==='reconnecting'?'Нет связи · пытаемся восстановить комнату':
+        'Можно рисовать одновременно с друзьями на одном листе.');
+      $('folio-collab-create').disabled=status==='connecting'||status==='joining';
+      $('folio-collab-join').disabled=status==='connecting'||status==='joining';
+      if(state.doc){updateUndoRedo();syncDesktop();}
+    },
+    onSnapshot(work,pending){
+      collaborationJobs=collaborationJobs.then(async()=>{
+        const doc=cloneData(work),layer=doc.layers[0];
+        for(const stroke of pending)if(!layer.strokes.some(s=>s.id===stroke.id))layer.strokes.push(stroke);
+        if(state.doc?.id===doc.id){state.doc=doc;resetCache();$('document-title').textContent=doc.title;syncDesktop();scheduleDraw();queueSave();}
+        else await openWork(doc,true);
+        $('folio-collab-dialog').hidden=true;
+        updateUndoRedo();
+      }).catch(e=>{console.error('FOLIO shared snapshot',e);notify('Не удалось открыть общий рисунок');});
+    },
+    onOperation(stroke){
+      collaborationJobs=collaborationJobs.then(()=>{
+        const layer=state.doc?.layers?.find(l=>l.id===stroke.layer);if(!layer)return;
+        const index=layer.strokes.findIndex(s=>s.id===stroke.id);
+        if(index>=0)layer.strokes[index]=stroke;
+        else if(stroke.tool==='fill'){
+          const firstInk=layer.strokes.findIndex(s=>s.tool!=='fill');
+          layer.strokes.splice(firstInk<0?layer.strokes.length:firstInk,0,stroke);
+        }else layer.strokes.push(stroke);
+        state.undo=[];state.redo=[];
+        markDirty(layer.id);queueSave();updateUndoRedo();
+      }).catch(e=>{console.error(e);notify('Ошибка обновления общего холста');});
+    },
+    onRemove(id){
+      collaborationJobs=collaborationJobs.then(()=>{
+        const layer=state.doc?.layers?.[0];if(!layer)return;
+        const i=layer.strokes.findIndex(s=>s.id===id);
+        if(i>=0)layer.strokes.splice(i,1);
+        markDirty(layer.id);queueSave();updateUndoRedo();
+      });
+    },
+    onPreview(strokes){remotePreviews=strokes;scheduleDraw();},
+    onExit(){remotePreviews=[];scheduleDraw();queueSave();}
+  });
 }
 boot().catch(error=>{console.error(error);notify('Не удалось открыть мастерскую');});
