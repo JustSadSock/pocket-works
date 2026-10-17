@@ -38,3 +38,13 @@
 .speed button{min-width:0;height:35px;font-size:12px;font-variant-numeric:tabular-nums}
 @media(max-width:370px){.playbar{padding:7px 10px 9px}.speed button{height:33px;font-size:11px}}
 @media(max-height:570px){.playbar{gap:4px;padding:5px 10px 6px}.speed button{height:30px}}
+
+/* The population and real build counter must never collide with the title. */
+@media(max-width:540px){
+ .top{gap:6px}
+ .identity{flex:1 1 auto;min-width:0}
+ .wordmark{font-size:16px;letter-spacing:.05em}
+ .wordmark small{font-size:7px;letter-spacing:.09em}
+ .clock{flex:0 0 43%;min-width:0;max-width:43%}
+ .status{font-size:10px;line-height:1.3;overflow-wrap:normal}
+}
