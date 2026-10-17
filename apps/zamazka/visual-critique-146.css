@@ -347,3 +347,49 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel{
  background:none!important;background-image:none!important;
  border:0!important;outline:0!important;box-shadow:none!important;
 }
+
+/* Voting fairness / natural-geometry invariant.
+   Original IMG and restored 600×450 canvas fill the EXACT SAME physical
+   frame. Canvas pixel coordinates are a transmission format, not an art
+   aspect ratio. object-fit:fill is intentional for both since each frame
+   itself has the source artwork's decoded ratio. */
+#screen>.expert-phase .stake-frame.zam-exhibit-rim>img,
+#screen>.expert-phase .stake-frame.zam-exhibit-rim>canvas{
+ display:block!important;
+ box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ min-width:0!important;min-height:0!important;
+ max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+ margin:0!important;padding:0!important;border:0!important;
+ background:transparent!important;
+}
+#screen>.expert-phase .stake-frame.zam-exhibit-rim{
+ max-width:100%!important;max-height:100%!important;
+ flex:0 0 auto!important;overflow:hidden!important;
+}
+/* Give the paintings, not the framing and whitespace, the five-column
+   viewport. This applies identically before and after a vote is submitted. */
+@media(min-width:1000px){
+ #screen>.expert-phase .suspect-gallery{
+  gap:clamp(4px,.48vw,10px)!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+ }
+ #screen>.expert-phase .stake-card{padding:0!important}
+ #screen>.expert-phase .stake-card .zam-exhibit-stage{
+  min-width:0!important;min-height:0!important;
+ }
+ #screen>.mobile-preview .gallery.exhibition-grid{
+  gap:clamp(4px,.55vw,11px)!important;
+ }
+ #screen>.mobile-preview .gallery.exhibition-grid>.picture{
+  min-width:0!important;padding:2px 0!important;
+ }
+}
+/* Keep native portrait and landscape shapes; small-screen gallery remains
+   horizontally scrollable and voting controls stay reachable. */
+@media(max-width:999px){
+ #screen>.expert-phase .stake-frame.zam-exhibit-rim{
+  max-width:calc(100% - 4px)!important;
+ }
+}
