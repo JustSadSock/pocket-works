@@ -291,5 +291,24 @@ for(const id of ids)for(let v=0;v<3;v++){
  elapsed.push(performance.now()-t0);
  }catch(e){throw new Error('ZAMAZKA scenario #'+id+' '+names[id]+' layout='+v+' '+w+'x'+h+': '+e.message,{cause:e})}
 }
+// Adversarial API inputs: formerly [] and a one-element point silently
+// selected pixel zero rather than rejecting malformed client data.
+let invalid=0;
+for(const [point,color] of [
+ [[],C[0]],[[12],C[0]],[[12,9,4],C[0]],
+ [[NaN,2],C[0]],[[Infinity,2],C[0]],
+ [[2,2],[NaN,1,1]],[[2,2],[1,Infinity,1]],
+ [[2,2],[1,3]],[[2,2],[-1,40,70]],
+ [[2,2],[256,40,70]],[[2,2],['25',35,50]],
+ [[2,2],[null,40,70]]
+]){
+ const f=make(28,20),original=f.output.slice();
+ assert.equal(f.fill(point,color),0,'malformed point or pigment accepted: '+JSON.stringify([point,color]));
+ assert.deepEqual(f.output,original,'invalid bucket must not change artwork');
+ assert.equal(count(f.changed),0,'invalid bucket must not set changed mask');
+ invalid++;
+}
+assert.equal(invalid,12);
+console.log('ZAMAZKA malformed bucket seeds and colours: '+invalid+'/12 rejected before editing pixels');
 assert.equal(checks,85*3,'not all raster cases executed');
 console.log('ZAMAZKA FILL-100 RASTER: '+checks+' passed / '+checks+'; 85 named tests × 3 independent layouts; largest 1200x900; slowest '+Math.max(...elapsed).toFixed(1)+'ms');
