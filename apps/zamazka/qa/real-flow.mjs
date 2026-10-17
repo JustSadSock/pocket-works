@@ -493,6 +493,14 @@ try{
   assert.equal(await page.locator('.exhibition-exit-layer').count(),0,'Old phase was not cleaned up');
   const contrast=await page.locator('.finale-reveal-provenance h3').evaluate(el=>getComputedStyle(el).color);
   assert.notEqual(contrast,'rgb(232, 221, 203)','Restoration title must contrast with archival paper');
+  const paired=await page.locator('#unveilStage').evaluate(stage=>{
+    const f=stage.getBoundingClientRect(),a=stage.querySelector('#restCanvas')?.getBoundingClientRect(),
+      b=stage.querySelector('#origCanvas')?.getBoundingClientRect();
+    return {source:Number(stage.style.getPropertyValue('--art-aspect')),
+      frame:f.width/f.height,restored:a?.width/a?.height,original:b?.width/b?.height};
+  });
+  assert(paired.source>.1&&[paired.frame,paired.restored,paired.original].every(r=>Math.abs(r-paired.source)<.045),
+    'Original and restored split canvases must share source ratio: '+JSON.stringify(paired));
   if(screenshotDir)await page.screenshot({path:join(screenshotDir,'zamazka-reveal-'+viewport.width+'.png'),fullPage:false});
   await page.locator('[data-action="menu"]').first().click();
   assert.equal(await page.locator('.museum-recent').count(),1,
@@ -511,7 +519,7 @@ try{
       'Archive must be genuinely unscrollable vertically: '+JSON.stringify(noVertical));
     await page.waitForFunction(()=>document.querySelector('.archive-work canvas')?.style.getPropertyValue('--art-aspect'),null,{timeout:5000});
     const frameMeasure=await page.locator('.archive-work').first().evaluate(card=>{
-      const frame=card.querySelector('.archive-art-frame'),image=card.querySelector('canvas');
+      const frame=card.querySelector('.archive-rim'),image=card.querySelector('canvas');
       const f=frame.getBoundingClientRect(),r=image.getBoundingClientRect();
       return {frameHeight:f.height,imageHeight:r.height,frameWidth:f.width,imageWidth:r.width,
         shownRatio:r.width/r.height,sourceRatio:Number(image.style.getPropertyValue('--art-aspect'))};
@@ -519,6 +527,24 @@ try{
     assert(frameMeasure.frameHeight-frameMeasure.imageHeight<50&&
       Math.abs(frameMeasure.shownRatio-frameMeasure.sourceRatio)<.025,
       'Archive frame should snugly wrap the artwork, never house empty vertical strips: '+JSON.stringify(frameMeasure));
+    const extremeFrames=await page.locator('.archive-work').first().evaluate(async card=>{
+      const {setArtworkFrame}=await import('./artworks.js');
+      const canvas=card.querySelector('canvas'),rim=card.querySelector('.archive-rim'),
+        wall=card.querySelector('.archive-art-frame');
+      const savedRatio=Number(canvas.style.getPropertyValue('--art-aspect'))||4/3;
+      const results=[];
+      for(const ratio of [.32,.5,1,4/3,2.9]){
+        setArtworkFrame(canvas,{naturalWidth:ratio*1000,naturalHeight:1000});
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+        const f=rim.getBoundingClientRect(),c=canvas.getBoundingClientRect(),s=wall.getBoundingClientRect();
+        results.push({ratio,frame:f.width/f.height,canvas:c.width/c.height,
+          clippedX:f.width>s.width+2,clippedY:f.height>s.height+2});
+      }
+      setArtworkFrame(canvas,{naturalWidth:savedRatio*1000,naturalHeight:1000});
+      return results;
+    });
+    assert(extremeFrames.every(x=>Math.abs(x.ratio-x.frame)<.035&&Math.abs(x.ratio-x.canvas)<.035&&
+      !x.clippedX&&!x.clippedY),'Archive frame must follow 0.32–2.9 images: '+JSON.stringify(extremeFrames));
 
   }
   assert.equal(await page.locator('.collection-page [data-action="menu"]').count(),1,

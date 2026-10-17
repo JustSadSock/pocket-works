@@ -48,8 +48,27 @@ export function mountExhibitFrames(root){
    const canvasH=canvasW/ratio;
    rim.style.setProperty('--art-aspect',String(ratio));
    rim.style.setProperty('--frame-width',chrome+'px');
-   rim.style.width=(canvasW+chrome*2)+'px';
-   rim.style.height=(canvasH+chrome*2)+'px';
+   const frameW=(canvasW+chrome*2)+'px',frameH=(canvasH+chrome*2)+'px';
+   rim.style.width=frameW;
+   rim.style.height=frameH;
+   // The protocol screen still has an older !important width/height rule.
+   // Override it using actual decoded geometry, or a 4:3 rule can collapse
+   // a natural portrait into a horizontal line.
+   rim.style.setProperty('width',frameW,'important');
+   rim.style.setProperty('height',frameH,'important');
+   // Legacy thumbnail rules can independently clamp canvas/image width or
+   // height even when the wooden opening has the correct ratio. Give both
+   // *exact* content-box dimensions after decoding; no visual letterboxing.
+   // Only write changed values: canvas style is watched by MutationObserver.
+   const imageW=canvasW.toFixed(3)+'px',imageH=canvasH.toFixed(3)+'px';
+   if(art.style?.setProperty){
+    if(art.style.getPropertyValue('width')!==imageW||
+       art.style.getPropertyPriority?.('width')!=='important')
+     art.style.setProperty('width',imageW,'important');
+    if(art.style.getPropertyValue('height')!==imageH||
+       art.style.getPropertyPriority?.('height')!=='important')
+     art.style.setProperty('height',imageH,'important');
+   }
   }
  }
  const schedule=()=>{if(!queued&&!disposed)queued=requestAnimationFrame(fit)};

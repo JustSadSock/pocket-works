@@ -1,0 +1,148 @@
+/* ZAMAZKA — a single physical ratio for decoded painting, restoration and frame.
+   The 600×450 logical bitmap remains unchanged for saved brush coordinates. */
+
+/* Originals in voting and verdicts, and restored canvas candidates, share
+   exactly the same fitted opening. Never put 'contain' letterboxes inside a
+   gilded rim or give the image a second independent size constraint. */
+#screen .zam-exhibit-rim > :is(img,canvas){
+ display:block!important;
+ box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ min-width:0!important;min-height:0!important;
+ max-width:none!important;max-height:none!important;
+ padding:0!important;margin:0!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+}
+#screen .zam-exhibit-rim{min-width:0!important;min-height:0!important}
+
+/* Two canvases in the same comparison window MUST share the decoded ratio:
+   their internal 600×450 raster is presented on a natural-sized surface. */
+#screen .unveil-frame > canvas,
+#dialog .round-view-image > canvas{
+ position:absolute;inset:0;
+ display:block!important;width:100%!important;height:100%!important;
+ max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+}
+
+/* In the personal archive, the outer region is a staging area — not a
+   decorative 4:3 frame. Only the snug inner rim is gilded. A separate rim
+   avoids all old media rules forcibly stretching .archive-art-frame canvas. */
+#screen>.collection-page .archive-work .archive-art-frame{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;min-width:0!important;min-height:0!important;
+ padding:0!important;margin:0!important;
+ border:0!important;outline:0!important;
+ background:transparent!important;box-shadow:none!important;
+ overflow:visible!important;
+}
+#screen>.collection-page .archive-work .archive-art-frame .archive-rim{
+ --archive-art-height:clamp(155px,16vw,240px);
+ display:block!important;position:relative!important;
+ flex:0 0 auto!important;min-width:0!important;min-height:0!important;
+ box-sizing:border-box!important;
+ width:min(calc(var(--archive-art-height) * var(--art-aspect,1.333333)), calc(100% - 18px))!important;
+ max-width:calc(100% - 18px)!important;
+ height:auto!important;aspect-ratio:var(--art-aspect,1.333333)!important;
+ border:0!important;outline:7px ridge #97764d!important;
+ background:#2e261d!important;
+ box-shadow:0 7px 15px #14100bb0!important;
+ overflow:hidden!important;
+}
+#screen>.collection-page .archive-work .archive-rim > canvas{
+ display:block!important;
+ box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ min-width:0!important;min-height:0!important;
+ max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+ border:0!important;margin:0!important;padding:0!important;
+ background:transparent!important;
+}
+@media(max-width:760px){
+ #screen>.collection-page .archive-work .archive-art-frame .archive-rim{
+  --archive-art-height:min(31dvh,260px);
+  outline-width:5px!important;
+ }
+}
+@media(max-width:699px) and (orientation:portrait){
+ #screen>.collection-page .archive-work .archive-art-frame .archive-rim{
+  --archive-art-height:min(37dvh,300px);
+ }
+}
+/* Explicit canvas fit for large voting inspection and saved archive viewer;
+   both ratio vars are installed after the real image is decoded. */
+#largeCandidate{
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ width:min(100%,calc(52dvh * var(--art-aspect,1.333333)))!important;
+ height:auto!important;object-fit:fill!important;
+}
+#dialog .round-view-window{
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+}
+
+/* The ballot protocol has its own old 4:3 !important frame and an
+   intrinsic zero-height flex stage. Reserve enough real room before the
+   fitter measures it; its inline computed ratio then owns both axes. */
+#screen>.verdict-phase .finale-ballot-card .zam-exhibit-stage{
+ flex:1 1 auto!important;
+ min-height:clamp(90px,22dvh,240px)!important;
+}
+#screen>.verdict-phase .finale-ballot-card .verdict-image.zam-exhibit-rim{
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ max-height:none!important;
+}
+#screen>.verdict-phase .finale-ballot-card .verdict-image.zam-exhibit-rim > img{
+ width:100%!important;height:100%!important;
+ max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;object-fit:fill!important;
+}
+
+/* Split comparison: old mobile flex rules could independently squeeze its
+   HEIGHT, even after the source ratio had been applied. Never stretch the
+   original and restored image together inside a distorted comparison box. */
+#screen>.finale-reveal .unveil-frame,
+#screen>.reveal-phase .unveil-frame,
+#screen>.passage-waiting .unveil-frame,
+#screen>.waiting-phase .unveil-frame{
+ box-sizing:border-box!important;
+ flex:0 0 auto!important;
+ min-height:0!important;
+ height:auto!important;
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ width:min(100%,calc(min(56dvh,510px) * var(--art-aspect,1.333333)))!important;
+ max-height:min(56dvh,510px)!important;
+ align-self:center!important;
+}
+@media(max-width:700px){
+ #screen>.finale-reveal .unveil-frame,
+ #screen>.reveal-phase .unveil-frame,
+ #screen>.passage-waiting .unveil-frame,
+ #screen>.waiting-phase .unveil-frame{
+  width:min(100%,calc(min(37dvh,300px) * var(--art-aspect,1.333333)))!important;
+  max-height:min(37dvh,300px)!important;
+ }
+}
+
+/* Historic stage-specific borders were layered ON TOP of the physical wooden
+   facets. Their extra 1.2px per side made a 254×90.7 panorama display as
+   251.6×88.3 — enough to visibly distort very wide and narrow paintings. */
+#screen>.expert-phase .stake-card .stake-frame.zam-exhibit-rim,
+#screen>.verdict-phase .finale-ballot-card .verdict-image.zam-exhibit-rim,
+#screen>.round-review-phase .round-art-card .round-art-image.zam-exhibit-rim{
+ box-sizing:border-box!important;
+ border:0!important;
+ border-width:0!important;
+ padding:var(--frame-width)!important;
+}
+
+/* Portrait voting uses a swipe carousel. Its old rule made the picture
+   itself flex:1 1 0, stretching every square/panorama rim to the available
+   carousel height, despite correct explicitly calculated dimensions. */
+#screen>.expert-phase .suspect-gallery .stake-card .stake-frame.zam-exhibit-rim{
+ flex:0 0 auto!important;
+ align-self:center!important;
+ min-height:0!important;
+ max-height:none!important;
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+}

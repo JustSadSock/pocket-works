@@ -63,6 +63,41 @@ try{
    if(['preview','voting','voting-wait'].includes(entry.id)){
     assert.equal(await preview.locator('.zam-exhibit-plaque').count(),5,'All original paintings have the same museum plate');
    }
+   if(['voting','voting-wait','verdict','round-review'].includes(entry.id)){
+    // Swap artwork imagery locally for known 0.4/1.0/2.8 proportions.
+    // This proves the decoded original and restored canvas share a real
+    // aperture; downloaded museum thumbnails are not required for the test.
+    const aspectCases=await preview.locator('#screen').evaluate(async root=>{
+     const {setArtworkFrame}=await import('./artworks.js');
+     const rims=[...root.querySelectorAll('.zam-exhibit-rim')].slice(0,3);
+     const expected=[.4,1,2.8];
+     for(let i=0;i<rims.length;i++){
+      const img=rims[i].querySelector('img'),canvas=rims[i].querySelector('canvas');
+      const ratio=expected[i];
+      if(img){
+       const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+Math.round(ratio*1000)+'" height="1000"><rect width="100%" height="100%" fill="#765c40"/></svg>';
+       img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+       await img.decode();
+      }else if(canvas)setArtworkFrame(canvas,{naturalWidth:ratio*1000,naturalHeight:1000});
+     }
+     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+     await new Promise(resolve=>setTimeout(resolve,420));
+     return rims.map((rim,i)=>{
+      const art=rim.querySelector('img,canvas'),r=art.getBoundingClientRect(),f=rim.getBoundingClientRect();
+      const inset=Number.parseFloat(rim.style.getPropertyValue('--frame-width'))||0;
+      const css=getComputedStyle(art);
+      return {expected:expected[i],art:r.width/r.height,
+       aperture:(f.width-2*inset)/(f.height-2*inset),w:f.width,h:f.height,
+       box:[r.width,r.height],style:[css.width,css.height],
+       inline:[art.style.getPropertyValue('width'),art.style.getPropertyValue('height')],
+       sizing:css.boxSizing,transform:css.transform,margin:css.margin,padding:css.padding,border:css.borderWidth};
+     });
+    });
+    assert.equal(aspectCases.length,3,'Need three different aspect ratios at '+entry.id);
+    assert(aspectCases.every(x=>x.w>15&&x.h>15&&
+       Math.abs(x.expected-x.art)<.045&&Math.abs(x.expected-x.aperture)<.045),
+       'Museum frames must hug portrait, square and panorama both as image and restoration on '+entry.id+': '+JSON.stringify(aspectCases));
+   }
    if(['waiting','reveal','solo-reveal'].includes(entry.id)){
     const geometry=await preview.locator('#unveilStage').evaluate(stage=>{
       const range=stage.closest('.phase-page')?.querySelector('#unveilRange');
