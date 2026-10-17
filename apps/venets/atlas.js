@@ -17,6 +17,13 @@ const charge=(kind,ink)=>{
     case 'river':g.append(S('path',{d:'M-9 -16 C6 -12 -8 -4 6 0 S-2 10 10 14 M-12 -11 C1 -7 -13 1 1 5'}));break;
     case 'sun':g.append(S('circle',{cx:0,cy:0,r:7}),...Array.from({length:8},(_,i)=>{const a=i*Math.PI/4;return S('path',{d:'M'+Math.round(Math.sin(a)*10)+' '+Math.round(Math.cos(a)*10)+' L'+Math.round(Math.sin(a)*15)+' '+Math.round(Math.cos(a)*15)})}));break;
     case 'tower':g.append(S('path',{d:'M-10 14V-9H-7V-15H-3V-9H3V-15H7V-9H10V14Z M-3 14V5 Q0 0 3 5V14 M-5 -4H5'}));break;
+    case 'wheat':g.append(S('path',{d:'M0 16V-16 M0 5 Q-11 1-10 -7Q-3 -6 0 0 M0 -2Q11 -8 10 -13 Q2 -12 0 -8 M0 11L-11 6 M0 6L10 1'}));break;
+    case 'moon':g.append(S('path',{d:'M8 -16 Q-10 -11-9 2Q-7 14 8 14Q-4 6-3 -5Q-3 -12 8 -16Z'}));break;
+    case 'sword':g.append(S('path',{d:'M0 -19L3 4L0 9L-3 4Z M-11 6H11 M0 9V18 M-4 18H4'}));break;
+    case 'star':g.append(S('path',{d:'M0 -17L5 -5L16 -4L7 4L10 16L0 9L-10 16L-7 4L-16 -4L-5 -5Z'}));break;
+    case 'mountain':g.append(S('path',{d:'M-16 13L-3 -13L5 -2L10 -10L17 13Z M-9 0L-3 -8L2 1'}));break;
+    case 'bridge':g.append(S('path',{d:'M-17 13H17M-15 2H15M-13 2V13M13 2V13M-7 13V8Q0-4 7 8V13'}));break;
+    case 'crown':g.append(S('path',{d:'M-14 -7L-10 11H10L14 -7L6 1L0 -13L-6 1Z M-11 16H11'}));break;
   }
   return g;
 };
