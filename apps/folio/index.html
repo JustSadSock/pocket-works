@@ -89,6 +89,7 @@
       </div>
       <div class="home-actions" data-ui>
         <button id="new-work" class="make-button" data-native-press><svg><use href="#i-plus"/></svg><span>Нарисовать</span><span class="make-arrow">↗</span></button>
+        <button id="folio-collab-open" class="inspire-button" type="button">✎ Рисовать вместе</button>
         <button id="spark-action" class="inspire-button" data-native-press><svg><use href="#i-spark"/></svg> Подкинь идею</button>
       </div>
       <section class="library-section" aria-labelledby="library-title">
@@ -107,7 +108,7 @@
       <header class="studio-top" data-ui>
         <button class="back-studio" id="back-home" aria-label="К альбому"><svg><use href="#i-arrow"/></svg><span>Альбом</span></button>
         <button class="work-title" id="edit-title" title="Переименовать рисунок"><span id="document-title">Без названия</span><svg><use href="#i-pen"/></svg></button>
-        <div class="top-actions">
+        <div class="top-actions"><button id="folio-collab-studio" class="collab-chip" type="button" hidden title="Участники общего холста">● <span id="folio-collab-count">1</span></button>
           <button id="undo" aria-label="Отменить" title="Отменить"><svg><use href="#i-undo"/></svg></button>
           <button id="redo" aria-label="Повторить" title="Повторить"><svg><use href="#i-redo"/></svg></button>
           <button id="export" class="export-button" aria-label="Экспортировать PNG" title="Экспортировать PNG"><svg><use href="#i-export"/></svg></button>
@@ -198,9 +199,24 @@
         <div class="modal-buttons"><button type="button" id="modal-cancel">Отмена</button><button type="button" id="modal-ok">Продолжить</button></div>
       </section>
     </div>
+    <div class="collab-scrim" id="folio-collab-dialog" hidden>
+      <section class="collab-paper" role="dialog" aria-modal="true" aria-label="Рисовать вместе">
+        <div class="collab-heading"><div><span>FOLIO · ВМЕСТЕ</span><h2>Один лист на всех</h2></div><button type="button" id="folio-collab-close" aria-label="Закрыть">✕</button></div>
+        <div class="collab-status" id="folio-collab-status" aria-live="polite">Создай мастерскую или войди по коду.</div>
+        <div id="folio-collab-setup">
+          <label>Название листа<input id="folio-collab-title" type="text" maxlength="70" value="Наш рисунок"></label>
+          <label>Форма листа<select id="folio-collab-format"><option value="square">Квадрат · 1024 × 1024</option><option value="portrait">Вертикальный · 960 × 1280</option><option value="landscape">Горизонтальный · 1280 × 960</option></select></label>
+          <button class="collab-primary" type="button" id="folio-collab-create">Создать общий холст</button>
+          <div class="collab-divider">или войти по приглашению</div>
+          <div class="collab-join"><input id="folio-collab-code" inputmode="text" autocomplete="off" placeholder="Код или ссылка"><button type="button" id="folio-collab-join">Войти</button></div>
+        </div>
+        <div id="folio-collab-live" hidden><div class="collab-roomcode" id="folio-collab-roomcode"></div><div id="folio-collab-players" class="collab-players"></div><button class="collab-primary" type="button" id="folio-collab-copy">Скопировать приглашение</button><button class="collab-leave" type="button" id="folio-collab-leave">Выйти из комнаты</button></div>
+        <p class="collab-footnote">Штрихи видны всем. Копия рисунка сохраняется в альбоме каждого участника; Pocket ID синхронизирует её с личным облаком.</p>
+      </section>
+    </div>
     <div id="toast" class="toast" aria-live="polite"></div>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.5.1"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="FOLIO" data-app-version="1.6.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

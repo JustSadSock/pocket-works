@@ -90,7 +90,14 @@ export function createFolioCloudSync({loadWorks,putWork,removeWork,onUpdate,getO
    for(const item of remote.items){
     const id=item.id,doc=local.get(id),prior=meta[id];
     remoteIds.add(id);
-    if(getOpenId()===id){deferred=true;continue;} // Keep live canvas untouched.
+    if(getOpenId()===id){
+     // Never replace a live editor's document. Safe outgoing saves can still be
+     // uploaded if the server's revision has not moved since our last snapshot.
+     if(doc&&!item.deleted&&prior&&changed(doc,prior)&&item.revision===prior.revision){
+      try{await push(id,doc,item.revision,meta)}catch(error){failures.push(doc.title+': '+error.message)}
+     }else deferred=true;
+     continue;
+    }
     try{
      if(item.deleted){
       if(doc){

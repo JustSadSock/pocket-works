@@ -68,6 +68,8 @@ jobs:
           node --check shared/capabilities/cloud.js
           node shared/capabilities/cloud.test.mjs
           node apps/folio/test-cloud-sync.mjs
+          node apps/folio/test-collab.mjs
+          node --check apps/folio/collab.js
           node --check apps/folio/app.js
           node --check apps/folio/cloud-sync.js
           node --check apps/zamazka/cloud-sync.js

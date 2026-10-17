@@ -796,3 +796,33 @@ button:focus-visible,a:focus-visible,input:focus-visible{
 .folio-cloud-sync:not(:disabled):hover{background:#417360}
 .folio-cloud-sync:disabled{opacity:.65}
 @media(max-width:370px){.folio-cloud-sync{font-size:9px;padding:4px 6px}.folio-cloud-symbol{font-size:22px;flex-basis:24px}}
+
+/* Shared paper: compact sketchbook invite panel, not a second application shell. */
+.collab-scrim{position:fixed;inset:0;z-index:2500;background:#1d3035b8;display:grid;place-items:center;padding:max(15px,env(safe-area-inset-top)) 14px max(15px,env(safe-area-inset-bottom));backdrop-filter:blur(4px)}
+.collab-paper{width:min(440px,100%);max-height:min(94dvh,720px);overflow:auto;background:#f9efd9;color:#233c47;border:2px solid #29475b;box-shadow:8px 11px 0 #162c36,0 20px 70px #0004;padding:22px 22px 20px;border-radius:3px}
+.collab-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:15px}
+.collab-heading span{color:#ae5938;font-size:10px;font-weight:900;letter-spacing:2px}
+.collab-heading h2{font:800 clamp(23px,5vw,29px)/1.12 Georgia,serif;letter-spacing:-.04em;margin:7px 0 0}
+.collab-heading button{background:#dfceac;width:38px;height:38px;flex-shrink:0;border-radius:4px}
+.collab-status{background:#e7d9bd;border-left:3px solid #a65737;padding:11px 12px;margin:0 0 16px;font-size:13px;line-height:1.4}
+.collab-paper label{display:grid;gap:5px;margin:0 0 12px;font-size:11px;font-weight:850;letter-spacing:.07em;text-transform:uppercase}
+.collab-paper input,.collab-paper select{width:100%;height:43px;background:#fffaf0;border:1px solid #baa88a;border-radius:3px;padding:0 11px;color:#233c47;min-width:0;font:550 14px system-ui}
+.collab-paper button{min-height:40px}
+.collab-primary{width:100%;background:#b94d35;color:#fff9e8;padding:11px 14px;font-weight:850;border-radius:3px;box-shadow:0 3px 0 #7b3127}
+.collab-divider{text-align:center;font-size:11px;font-weight:750;opacity:.68;padding:18px 0 12px}
+.collab-join{display:flex;gap:7px}.collab-join button{background:#24465c;color:white;padding:0 17px;border-radius:3px;font-weight:800}
+.collab-footnote{font-size:11px;line-height:1.45;color:#766a58;margin:18px 0 0}
+.collab-roomcode{font-weight:900;letter-spacing:.16em;font-size:27px;padding:8px 0;color:#24465c}
+.collab-players{display:flex;flex-wrap:wrap;gap:6px;margin:5px 0 16px}
+.collab-players span{font-size:12px;font-weight:700;padding:6px 10px;border:1px solid #c8ad88;border-radius:3px;background:#f0dfbd}
+.collab-leave{display:block;width:100%;background:transparent;color:#883d31;text-decoration:underline;font-weight:750;margin-top:10px}
+.collab-chip{height:36px!important;min-width:42px;border:1px solid #c1a36b!important;border-radius:4px;background:#eddfc1!important;color:#9a4c34!important;font-weight:900;font-size:13px;padding:0 8px}
+.collab-chip.is-offline{background:#e9c8bd!important}
+@media(max-width:390px){.collab-paper{padding:15px}.collab-join button{padding:0 11px}.collab-heading h2{font-size:23px}}
+
+/* FOLIO shared-session entrance: two main actions, quiet optional prompt. */
+.home-actions #folio-collab-open{background:#f1c776;border:2px solid #9b632f;color:#263f4b;box-shadow:3px 4px 0 #b18a57;font-weight:850}
+.home-actions #folio-collab-open:hover{background:#f6d58e}
+.home-actions #spark-action{grid-column:1/-1;min-height:40px;font-size:12px}
+@media(min-width:960px){.home-actions #spark-action{grid-column:1/-1;max-height:48px}}
+@media(max-width:380px){.home-actions #folio-collab-open{font-size:11px;padding:0 7px}}
