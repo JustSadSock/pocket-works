@@ -1,0 +1,20 @@
+{
+  "id": "/apps/venets/",
+  "name": "Венец",
+  "short_name": "Венец",
+  "description": "Исследовательская основа династической стратегии",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eee9dc",
+  "theme_color": "#eee9dc",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
