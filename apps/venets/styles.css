@@ -183,3 +183,121 @@ h2{letter-spacing:-.025em}
  .game-controls{padding-left:6px;padding-right:6px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* v0.6 / Living Atlas: map dominates its panel; no generic province tiles. */
+.game-columns{grid-template-columns:minmax(270px,.82fr) minmax(420px,1.32fr) minmax(245px,.76fr)}
+.lands-panel{display:flex;flex-direction:column;overflow:hidden!important;min-height:0;background:#dfd6bc}
+.lands-panel .panel-head{flex:none;margin-bottom:6px;display:flex;align-items:baseline;justify-content:space-between}
+.lands-panel .panel-head h2{font-size:26px}
+.lands-panel .panel-head .eyebrow{margin:0}
+.atlas-tools{flex:none;display:flex;align-items:center;gap:4px;margin-bottom:8px;border-bottom:1px solid #b3a992;padding-bottom:7px}
+.atlas-tools button{border:0;background:none;min-height:32px;padding:6px 13px;font-size:12px;color:#776952}
+.atlas-tools button.active{background:#4c5543;color:#fff5dc}
+.atlas-tools button:focus-visible{outline:2px solid #4c5543;outline-offset:2px}
+.atlas-stage,.genealogy-stage{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column}
+.province-grid{flex:1;min-height:0;min-width:0;width:100%;max-width:none;display:flex;align-items:center;justify-content:center;
+  background:none;border:0;box-shadow:none;gap:0;padding:0;position:relative}
+.atlas-canvas{position:relative;width:100%;max-height:100%;aspect-ratio:860/570;overflow:hidden;
+  border:1px solid #a5a18d;box-shadow:0 2px 8px #605b4829;background:#c8d2c4;
+  display:flex;align-items:center;justify-content:center}
+.living-atlas{display:block;width:100%;height:100%;max-height:100%}
+.atlas-corner-mark{position:absolute;bottom:5px;right:8px;pointer-events:none;color:#5d625a8a;font:9px Georgia,serif;letter-spacing:.26em}
+.atlas-county{cursor:pointer;outline:none}
+.atlas-county>path:first-child{transition:fill-opacity .18s,stroke-width .18s,filter .18s}
+.atlas-county:hover>path:first-child{fill-opacity:.48}
+.atlas-county:focus-visible>path:first-child{stroke:#282e28;stroke-width:5}
+.atlas-county.is-selected>path:first-child{fill-opacity:.59;stroke:#3d4939;stroke-width:3.4}
+.atlas-county text{pointer-events:none}
+.atlas-county.title-changed>path:first-child{animation:atlas-claim-ink .62s ease both}
+.atlas-title-change{pointer-events:none;transform-box:fill-box;transform-origin:center;
+  animation:atlas-title-ring .8s ease-out both}
+@keyframes atlas-claim-ink{0%{fill-opacity:.06}55%{fill-opacity:.71}100%{fill-opacity:.36}}
+@keyframes atlas-title-ring{0%{stroke-opacity:.85;transform:scale(.5)}100%{stroke-opacity:0;transform:scale(1.8)}}
+.atlas-transfer{flex:none;padding:7px 10px;color:#f3ead8;background:#566550;font-size:11px;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.province-info{flex:none;min-width:0;margin-top:8px;border-top:1px solid #b7ab90;padding:9px 0 0;font-size:12px}
+.province-info .atlas-selected{display:flex;align-items:center;gap:10px;min-width:0}
+.atlas-selected h3{font:normal 20px Georgia,serif;margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atlas-selected-text{min-width:0;flex:1}
+.atlas-selected-text p{margin:0;color:#706550;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atlas-selected-meta{display:flex;gap:7px;flex-wrap:wrap;flex:none;align-items:center;justify-content:flex-end}
+.atlas-selected-meta span{padding:4px 7px;border:1px solid #afa38a;color:#594f40;font-size:10px;white-space:nowrap}
+.genealogy-stage{background:linear-gradient(120deg,#ded5bc,#eae1c9);min-height:0;overflow:hidden}
+.genealogy-controls{min-height:31px;display:flex;justify-content:space-between;align-items:center;
+  color:#675e50;padding:3px 5px;font-size:11px}
+.genealogy-controls button{border:0;background:none;color:#6a4e39;font-size:11px;min-height:30px}
+.genealogy{height:100%;min-height:0;overflow-y:auto;display:flex;flex-direction:column;
+  justify-content:space-around;border:1px solid #b2a588;background:radial-gradient(ellipse at 50% 15%,#f4ebd3,#dbd2b6);
+  padding:8px 14px}
+.genealogy-crown{display:flex;align-items:center;justify-content:center;gap:9px;
+  font:italic 18px Georgia,serif;color:#52513f;min-height:38px}
+.kin-generation{min-height:0;display:flex;flex-direction:column;gap:3px;position:relative;align-items:center}
+.kin-generation+.kin-generation::before{content:"";position:absolute;width:1px;height:12px;top:-11px;left:50%;background:#94856b}
+.kin-generation-title{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#85765c}
+.kin-members{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;max-width:100%}
+.kin-node{display:flex;align-items:center;gap:5px;border:1px solid #b5a586;padding:5px;
+  min-width:80px;min-height:42px;max-width:140px;background:#efe6ce;color:#4d463c}
+.kin-node:hover,.kin-node.current{border-color:#54644d;background:#e2e7d8}
+.kin-node.deceased{filter:saturate(.45);opacity:.72}
+.kin-node svg{flex:none}
+.kin-label{min-width:0;text-align:left}
+.kin-label strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:13px Georgia,serif}
+.kin-label small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;color:#776958;margin-top:3px}
+.kin-empty{font:16px Georgia,serif;color:#9e957f;padding:7px}
+.kin-titles{display:flex;gap:13px;justify-content:center;font-size:10px;color:#80745c}
+@media(max-width:1120px) and (min-width:901px){
+ .game-columns{grid-template-columns:minmax(245px,.85fr) minmax(330px,1.25fr) minmax(200px,.7fr)}
+ .lands-panel{padding-left:12px;padding-right:12px}
+ .atlas-selected-meta span:nth-child(2){display:none}
+}
+@media(max-width:900px){
+ .game-screen[data-active-panel="lands"] .lands-panel{display:flex!important;overflow:hidden!important}
+ .lands-panel{padding:12px 12px 10px}
+ .lands-panel .panel-head{align-items:center}
+ .lands-panel .panel-head h2{font-size:25px}
+ .atlas-tools{margin-bottom:5px;padding-bottom:5px}
+ .atlas-stage,.genealogy-stage{flex:1;min-height:0}
+ .province-grid{flex:1}
+ .atlas-canvas{max-width:100%;max-height:100%;width:min(100%,calc((100dvh - 330px)*860/570))}
+ .province-info{margin-top:5px;padding-top:6px}
+ .atlas-selected h3{font-size:19px}
+ .atlas-selected-meta{gap:4px}
+ .atlas-selected-meta span{font-size:9px;padding:3px 5px}
+ .genealogy{padding:5px 7px}
+ .kin-generation-title{font-size:9px}
+ .kin-node{max-width:125px;padding:3px}
+}
+@media(max-width:370px){
+ .lands-panel{padding:9px 8px}
+ .atlas-selected-meta span:nth-child(2){display:none}
+ .atlas-tools button{padding:5px 9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .atlas-county.title-changed>path:first-child,.atlas-title-change{animation:none}
+ .atlas-county>path:first-child{transition:none}
+}
+
+
+/* Critical touch layering: the political atlas must never overlay time or tabs. */
+.game-controls{position:relative;z-index:8;isolation:isolate}
+.game-columns{overflow:hidden;position:relative;z-index:0}
+.game-panel{overscroll-behavior:contain}
+@media(max-width:900px){
+ .game-columns{overflow:hidden}
+ .mobile-tabs{position:relative;z-index:2}
+ .time-controls{position:relative;z-index:2}
+ .game-screen[data-active-panel="lands"] .lands-panel{overflow:hidden!important}
+}
+
+/* Consistent product heraldry instead of generic unicode rook placeholders. */
+.brand-icon{width:28px;height:28px;object-fit:contain;display:block;align-self:center}
+.ruler-seal{clip-path:none;background:transparent;width:58px;height:69px}
+.ruler-seal svg{display:block;width:58px;height:67px;filter:drop-shadow(0 2px 1px #45372936)}
+.start-choice .shield{clip-path:none;background:transparent;color:inherit}
+.start-choice .shield svg{width:39px;height:46px}
+@media(max-width:390px){
+ .ruler-seal{width:42px;height:52px}
+ .ruler-seal svg{width:42px;height:52px}
+ .brand-icon{width:25px;height:25px}
+}
