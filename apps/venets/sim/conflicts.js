@@ -17,7 +17,7 @@ const ownProvince=(w,id)=>holdings(w,id).map(t=>t.provinceId).filter(Boolean).so
 const goalProvince=(w,t)=>{
   if(t.rank==='county')return t.provinceId;
   const v=w.titles.filter(x=>x.rank==='county'&&x.liegeId===t.id);
-  return (v.find(x=>x.holderId===t.holderId)||v[0])?.provinceId||null;
+  return (v.find(x=>x.holderId===t.holderId)||v.at(-1))?.provinceId||null;
 };
 function route(w,from,to){
   const prev=new Map([[from,null]]),queue=[from];
@@ -42,7 +42,7 @@ function armed(w,p){
     Math.min(9,Math.floor(p.treasury.grain/10))+pledge(w,p.id));
 }
 function candidate(w,p,kind,targetId,titleId,score,reasons,meta={}){
-  return {kind,actorId:p.id,targetId,targetId,titleId,score,reasons,meta};
+  return {kind,actorId:p.id,targetId,titleId,score,reasons,meta};
 }
 function last(p,kind){return p.politics.lastActions[kind]??-999}
 export function ensureConflicts(w){
@@ -117,8 +117,8 @@ function execute(w,choice){
     const accepted=q.alive&&(q.dynastyId===p.dynastyId||
       opinion(w,q.id,p.id)+q.politics.traits.loyalty>=84);
     if(accepted){
-      cost(w,p,choice.meta.cost,'contract-retainer:'+p.id);
-      transfer(w,{good:'coin',to:'person:'+q.id,amount:choice.meta.cost,cause:'contract-retainer:'+p.id});
+      transfer(w,{good:'coin',from:'person:'+p.id,to:'person:'+q.id,
+        amount:choice.meta.cost,cause:'contract-retainer:'+p.id});
       const c={id:'vo-'+state.nextId++,beneficiaryId:p.id,patronId:q.id,
         startYear:w.year,untilYear:choice.meta.until};
       state.contracts.push(c);state.stats.contracts++;detail=c.id;
@@ -235,6 +235,20 @@ export function conflictYear(w,{excludePlayerId=null}={}){
     person(w,c.beneficiaryId)?.alive&&person(w,c.patronId)?.alive);
   for(const war of [...state.wars])battleYear(w,war);
   for(const s of [...state.schemes])schemeYear(w,s);
+  // An assassination may kill somebody who was a participant in a war or another plot.
+  for(const war of [...state.wars]){
+    const incumbent=title(w,war.titleId);
+    if(!person(w,war.attackerId)?.alive||!incumbent){
+      resolveWar(w,war,'withdrawal','claimant-died-during-intrigue');continue;
+    }
+    war.defenderId=incumbent.holderId;
+  }
+  for(const scheme of [...state.schemes])if(!person(w,scheme.actorId)?.alive||!person(w,scheme.targetId)?.alive){
+    state.schemes=state.schemes.filter(o=>o.id!==scheme.id);
+    recordEvent(w,'scheme-ended','death-interrupted-intrigue',{
+      schemeId:scheme.id,actorId:scheme.actorId,outcome:'lapsed'});
+  }
+  state.contracts=state.contracts.filter(c=>person(w,c.beneficiaryId)?.alive&&person(w,c.patronId)?.alive);
   // Bounded autonomous activity. NPCs observe exactly the same legal eligibility.
   const excluded=new Set([excludePlayerId].filter(Boolean));
   const active=w.people.filter(p=>adult(w,p)&&!excluded.has(p.id)&&
