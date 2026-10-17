@@ -24,7 +24,8 @@
         "living-roads.test.mjs",
         "spatial-metrics.test.mjs",
         "road-incentive.test.mjs",
-        "visible-life.test.mjs"
+        "visible-life.test.mjs",
+        "subday.test.mjs"
       ]
     },
     {
