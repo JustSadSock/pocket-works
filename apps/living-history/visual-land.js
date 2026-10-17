@@ -42,7 +42,10 @@ export function personPosition(p,s,previous,progress,active=true){
  const end=nearestLand(s,raw)||{x:p.x,y:p.y};
  const t=Math.max(0,Math.min(1,progress));
  const earlier=previous?.get(p.id);
- const start=earlier?(nearestLand(s,earlier)||end):end;
+ let start=earlier?(nearestLand(s,earlier)||end):end;
+ // Returning residents standing in their own courtyard must not repeat
+ // a house-to-yard commute at the start of every single simulated day.
+ if(p.job==='home'&&h&&earlier&&earlier.x===h.x&&earlier.y===h.y)start=end;
  if(!active||!previous)return end;
  // The first part of the displayed day follows a real traversable route.
  // During the remaining day, actual jobs involve local unsynchronised motion,
@@ -107,8 +110,17 @@ export function cattlePosition(h,day,i,s=null){
  const duration=3+Math.floor(hash(h.id,i,91)*4);
  const absolute=day+hash(s.seed,h.id+i*17,18)*duration;
  const phase=Math.floor(absolute/duration),t=smooth(frac(absolute/duration));
- const from=grazingWaypoint(s,h,i,phase,anchor);
+ let from=grazingWaypoint(s,h,i,phase,anchor);
  const to=grazingWaypoint(s,h,i,phase+1,anchor);
+ // When the physical herd changes pasture today, interpolate the trip from
+ // yesterday's recorded pasture rather than teleporting all animals at once.
+ if(Number.isInteger(h.prevPastureCell)&&h.prevPastureCell!==h.lastPastureCell
+    &&h.pastureMovedDay===Math.floor(day)){
+  const old={x:h.prevPastureCell%LAND_SIZE,y:(h.prevPastureCell/LAND_SIZE)|0};
+  const prior=nearestLand(s,old);
+  if(prior)from=grazingWaypoint(s,h,i,phase,prior);
+  return pathPosition(pathFor(s,from,to),smooth(frac(day)))||from;
+ }
  if(from.x===to.x&&from.y===to.y)return from;
  return pathPosition(pathFor(s,from,to),t)||from;
 }
