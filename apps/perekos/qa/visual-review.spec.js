@@ -16,10 +16,14 @@ test('visual audit: six mages, own silhouette, different projectile and three-ru
  await expect(page.locator('#controls')).toBeVisible();
  expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].mageId)).toBe('wire');
  await expect(page.locator('#attack-name')).toHaveText('РАЗРЯД');
- await page.keyboard.down('Space');await page.waitForTimeout(160);await page.keyboard.up('Space');
+ const fire=await page.locator('#attack-btn').boundingBox();expect(fire).toBeTruthy();
+ await page.mouse.move(fire.x+fire.width/2,fire.y+fire.height/2);
+ await page.mouse.down();
+ await expect.poll(()=>page.evaluate(()=>window.__perekosTest.state.shots.filter(s=>s.owner===0).map(s=>s.style)),{timeout:2500}).toContain('bolt');
  const shots=await page.evaluate(()=>window.__perekosTest.state.shots.filter(s=>s.owner===0).map(s=>s.style));
- expect(shots).toContain('bolt');expect(shots.filter(s=>s==='bolt').length).toBe(1);
+ expect(shots.filter(s=>s==='bolt').length).toBe(1);
  await testInfo.attach('bolt-in-arena',{body:await page.screenshot(),contentType:'image/png'});
+ await page.mouse.up();
  await page.evaluate(()=>{const s=window.__perekosTest.state;s.remaining=0.0001;s.actors[0].hp=8;s.actors[1].hp=95;window.__perekosTest.step()});
  await expect(page.locator('#draft')).toBeVisible();
  await expect(page.locator('#draft-title')).toContainText('Ничья');
