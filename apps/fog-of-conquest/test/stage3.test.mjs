@@ -62,9 +62,11 @@ test('accepted command has private ack, lost duplicate never applies twice',()=>
   const first=mod.onMessage({state:s,player:a,players:[a,b],payload:cmd});
   assert.equal(first.state.game.revision,rev+1);
   assert.equal(first.state.game.units.find(x=>x.id===u.id).c,3);
-  assert.deepEqual(first.events.map(e=>e.type),['state','ack']);
+  assert.deepEqual(first.events.map(e=>e.type),['state','battle_event','ack']);
   assert.equal(first.events[1].to,a.id);
-  assert.equal(first.events[1].revision,rev+1);
+  assert.equal(first.events[1].payload.kind,'move');
+  assert.equal(first.events[2].to,a.id);
+  assert.equal(first.events[2].revision,rev+1);
   const serialized=JSON.stringify(first.state);
   const duplicate=mod.onMessage({state:first.state,player:a,players:[a,b],payload:cmd});
   assert.equal(JSON.stringify(duplicate.state),serialized);
