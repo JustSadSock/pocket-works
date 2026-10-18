@@ -24,8 +24,7 @@ function trim(s){return {
 };}
 test('embedded PocketNet rules exactly match the client kernel and v7 immutable snapshot',()=>{
  const marker='const FogRuleKernel=';
- const extract=s=>s.slice(s.indexOf(marker,s.indexOf('function reach')-50)>0?
-   s.lastIndexOf(marker,s.indexOf('function reach')):s.indexOf(marker),
+ const extract=s=>s.slice(s.lastIndexOf(marker,s.indexOf('function reach')),
    s.indexOf('})();',s.indexOf('function reach'))+5);
  const a=extract(client),b=extract(source);
  assert.equal(a,b,'Current server embedded kernel drifted from client source');
