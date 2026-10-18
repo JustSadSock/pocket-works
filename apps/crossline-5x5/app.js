@@ -119,7 +119,11 @@ async function connect(action,code=''){
  leaveNet(false);mode='online';busy=true;show('lobby');lobby();
  try{
   const name=profile?.complete?profile.nickname:read('nick','Игрок');
-  const client=new PocketNet({serverUrl:NET,name,storage:scoped,identityKey:profile?.id||'guest'});net=client;wire(client);
+  const client=new PocketNet({serverUrl:NET,name,storage:scoped,identityKey:profile?.id||'guest'});
+  // Explicit create/join means abandon any saved room. Only an unprompted
+  // reconnect to the current online session should restore the old room.
+  if(client.roomId){client.roomId=null;client.persist();}
+  net=client;wire(client);
   await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('PocketNet не отвечает')),16000))]);
   if(net!==client)return;
   // PocketNet.connect auto-restores a room for the current token. Don't create a
@@ -165,8 +169,6 @@ function allowed(){
 }
 function enqueue(action){
  if(locked()||plan.length>=STEPS)return;
- const candidate=[...plan,action],why=validatePlan([...candidate,...Array(STEPS-candidate.length).fill('up')]);
- // Explicit incremental validation avoids filler interacting with an attack's directions.
  const info=allowed();
  if(typeof action==='object'){
   if(info.attacks||!action.dirs.length||action.dirs.some(d=>info.moved.has(d))){soundFX('error');toast('Невозможно выбрать эти направления');return;}
@@ -382,7 +384,7 @@ function drawVideoFrame(ctx,frame,round,i,size){
  ctx.font='bold 22px system-ui';ctx.fillStyle='#d2ddda';ctx.fillText('ШАГ '+i+' / '+STEPS,45,810);
 }
 $('solo').onclick=()=>localStart('solo');$('hotseat').onclick=()=>localStart('hotseat');
-$('online').onclick=()=>connect('create');$('openRules').onclick=showRules;
+$('online').onclick=()=>connect('create');$('joinOnline').onclick=()=>connect('join');$('openRules').onclick=showRules;
 $('difficulty').value=difficulty;$('difficulty').onchange=()=>{difficulty=$('difficulty').value;write('difficulty',difficulty)};
 $('sound').onclick=()=>{sound=!sound;write('sound',sound?'on':'off');$('sound').textContent=sound?'♪':'♪̸';soundFX('tap')};$('sound').textContent=sound?'♪':'♪̸';
 $('pause').onclick=confirmReturn;
