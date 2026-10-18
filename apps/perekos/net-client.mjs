@@ -65,7 +65,8 @@ export class OnlineDuel {
  sample(ctl,round,now){
   if(!this.active||!this.connected||this.view?.phase!=='fight'||now-this.lastSent<115)return false;
   this.lastSent=now;this.seq++;
-  return this.send({type:'input',seq:this.seq,round,control:ctl});
+  const control=typeof ctl==='function'?ctl():ctl;
+  return this.send({type:'input',seq:this.seq,round,control});
  }
  start(){return this.send({type:this.view?.phase==='result'?'rematch':'start'})}
  pick(rune,replace){return this.send({type:'pick',rune,replace})}
