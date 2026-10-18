@@ -79,3 +79,12 @@ test('reloading lasts real time even when rendering falls to one frame per two s
  assert.equal(x.runtime.get().ammo,6,'real-time reload should finish despite a very slow render frame');
  assert.equal(x.runtime.get().reserve,17);
 });
+
+test('a single slow WebKit-style frame preserves expected walking distance without tunnelling',()=>{
+ const x=boot();x.el('start').fire('click');x.frame(1);
+ const first=x.runtime.get().position;
+ x.key('w');x.tickMs(520);x.key('w',false);
+ const next=x.runtime.get().position;
+ assert.ok(Math.hypot(next.x-first.x,next.z-first.z)>.30,'walking speed must use real elapsed time on mobile');
+ assert.ok(x.runtime.getWorld().canStand(next.x,next.z),'large movement frame passed through a wall');
+});
