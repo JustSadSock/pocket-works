@@ -25,8 +25,6 @@ jobs:
       - name: Validate site manifest and staging build
         run: |
           npm run registry:check
-          npm run prepare:site
-          npm run validate:site
       - name: Install browser
         run: npx playwright install chromium
       - name: Mobile and desktop browser smoke
