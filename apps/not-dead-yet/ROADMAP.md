@@ -278,7 +278,7 @@ hiding simplistic assets.
       inspection, weight in doors, subtle visual reaction on enemy hits,
       readable feedback on reaching a new depth. No overlay spam.
 
-### 2.1.4 — screenshot-driven review and framing correction (shipped)
+### 2.1.4–2.1.5 — real-browser review, gameplay and framing correction (shipped)
 - [x] Universal Pocket Works QA executed the real PWA in desktop Chromium,
       mobile Chromium, desktop WebKit and mobile WebKit with full screenshot
       evidence; all four initial viewport/browser visual checks passed.
@@ -292,6 +292,10 @@ hiding simplistic assets.
 - [x] Added Playwright first-frame composition, real PNG screenshot pixel
       variance, deterministic room screenshot and cache regression tests;
       isolated the visual-regression suite for targeted reruns.
+- [x] Investigate failing real browser traces: nearest pickup priority
+      corrected, camera yaw asserted relative to starting heading,
+      memory-path test accounts for closed actual doors, and screenshot
+      test has a realistic time budget.
 - [ ] Record final outcomes of the complete interactive Playwright journey
       and dedicated screenshot suite; see
       [VISUAL_QA_REPORT_2026-10-19.md](./VISUAL_QA_REPORT_2026-10-19.md).
