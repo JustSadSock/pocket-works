@@ -16,3 +16,6 @@ h1,h2,h3{font-family:'Literata',Georgia,serif;letter-spacing:-.055em}h1{font-siz
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 .mobile-leave{display:none}
 @media(max-width:760px){.mobile-leave{display:inline-block;padding:4px;font-size:11px;margin:0 0 0 auto}.writing .progress{gap:8px}.writing .progress strong{font-size:20px}}
+
+/* iOS Safari: form controls remain at 16px while the keyboard is open. */
+@media(max-width:760px){input.field,textarea.field,select.field{font-size:16px}}
