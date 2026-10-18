@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id),canvas=$('space'),ctx=canvas.getContext(
 const sound=new AudioBus(),STORAGE='pocket-works:portal-lab:relativity-v2';
 const defaults={model:'ellis',a:1,eta:.45,kind:'light',count:13,spread:32,speed:.7,timeScale:1,view:'map',source:{l:3.15,phi:Math.PI,alpha:Math.PI}};
 let settings=structuredClone(defaults);
-let rays=[],elapsed=0,paused=false,lastTime=0,accum=0,selected=null,drag=null,displayW=800,displayH=600,layout=null,dirty=true,saveTimeout=0;
+let rays=[],elapsed=0,paused=false,lastTime=0,accum=0,drag=null,displayW=800,displayH=600,layout=null,dirty=true,saveTimeout=0;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function clean(n,min,max,defaultValue){return Number.isFinite(Number(n))?Math.max(min,Math.min(max,Number(n))):defaultValue;}
 function load(){
@@ -93,6 +93,9 @@ function updateReadouts(){
  $('crossings').textContent=rays.reduce((s,r)=>s+r.crossings,0);
  let error=0;for(const r of rays)error=Math.max(error,Math.abs(constraint(r,m)));
  $('precision').textContent=error<.001?error.toExponential(1):error.toFixed(4);
+ const photon=rays.find(r=>r.k===0);
+ $('impact').textContent=photon?Math.abs(photon.L/photon.E).toFixed(3):'—';
+ $('critical-value').textContent=(m.a/geometry(0,m).N).toFixed(3);
  $('clock-near').textContent=(elapsed*staticClockRate(.8*m.a,m)).toFixed(3);
  $('clock-far').textContent=(elapsed*staticClockRate(5*m.a,m)).toFixed(3);
  $('frame-state').textContent=settings.view==='map'?settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`:'r² = l² + a²';
@@ -115,6 +118,16 @@ $('model').addEventListener('change',e=>{settings.model=e.target.value;changeMet
 for(const button of document.querySelectorAll('[data-kind]'))button.addEventListener('click',()=>{settings.kind=button.dataset.kind;sync();scheduleSave();});
 for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{settings.view=button.dataset.view;sync();scheduleSave();});
 $('shoot').addEventListener('click',()=>emit());
+$('critical').addEventListener('click',()=>{
+ const m=currentMetric(),src=settings.source;
+ const R=geometry(src.l*m.a,m).R,N=geometry(src.l*m.a,m).N;
+ const criticalImpact=m.a/geometry(0,m).N;
+ // Subcritical rays wind around the unstable photon sphere before traversing.
+ const argument=Math.min(.999,criticalImpact*.996*N/R);
+ settings.kind='light';settings.count=1;settings.spread=0;
+ settings.source.alpha=Math.PI+Math.asin(argument);
+ sync();emit();sound.play('mount');scheduleSave();
+});
 $('clear').addEventListener('click',()=>resetData());
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Продолжить':'Пауза';$('pause').setAttribute('aria-label',paused?'Продолжить':'Приостановить симуляцию');});
 $('sound').addEventListener('click',()=>{sound.set(!sound.enabled);$('sound').classList.toggle('muted',!sound.enabled);$('sound').setAttribute('aria-label',sound.enabled?'Выключить звук':'Включить звук');});
@@ -230,6 +243,7 @@ function drawSheet(index){
  write(index===0?'РЕГИОН A · l > 0':'РЕГИОН B · l < 0',center.x,center.y-radius-19,
   {size:layout.horizontal?13:11,color,align:'center',weight:700});
  write('ГОРЛОВИНА',center.x,center.y+layout.throat+14,{size:9,color:'#bdd6bd',align:'center'});
+ if(m.eta>0)write('N₀ '+geometry(0,m).N.toFixed(2),center.x,center.y-layout.throat-10,{size:10,color:color,align:'center'});
  for(const n of [2,4]){
   const r=layout.throat+n*layout.range/layout.limit;
   write(n+'a',center.x+r+4,center.y,{size:9,color:'#7a9b88'});
