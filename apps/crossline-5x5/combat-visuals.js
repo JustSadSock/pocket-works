@@ -123,9 +123,12 @@ export async function playArenaBeat(host,before,after,{
  const ensure=()=>Boolean(alive());
  if(reduced){
   paintArena(host,after.units,after.edgesCollapsed,events,{round,instant:true});
-  if(state.hit||state.fall)sound('hit');else if(state.block)sound('block');
-  else if(state.attack)sound('attack');else if(state.shield)sound('shield');
-  else if(state.move)sound('move');
+  if(state.move)sound('move');
+  if(state.attack)sound('attack');
+  if(state.shield)sound('shield');
+  if(state.hit)sound('hit');
+  if(state.block)sound('block');
+  if(state.fall)sound('fall');
   if(state.collapse)sound('collapse');
   await sleep(total);
   return ensure();
@@ -136,20 +139,23 @@ export async function playArenaBeat(host,before,after,{
  await sleep(total*.37);if(!ensure())return false;
  const telegraph=events.filter(e=>e.type==='attack'||e.type==='shield');
  paintArena(host,moving,before.edgesCollapsed,telegraph,{round,instant:true});
- if(state.attack)sound('attack');else if(state.shield)sound('shield');
+ if(state.attack)sound('attack');
+ if(state.shield)sound('shield');
  await sleep(total*.25);if(!ensure())return false;
  const contact=events.filter(e=>e.type!=='collapse'&&!(state.collapse&&e.type==='fall'));
  paintArena(host,actorUnits(before,after,contact),before.edgesCollapsed,contact,{round,instant:true,duration:total*.27});
  // Set casualties dead only after the attack / block has visually landed.
  if(state.hit||state.block||(!state.collapse&&state.fall)){
   paintArena(host,after.units,before.edgesCollapsed,contact,{round,instant:true,duration:total*.27});
-  if(state.hit||state.fall)sound('hit');else sound('block');
+  if(state.hit)sound('hit');
+  if(state.block)sound('block');
+  if(state.fall&&!state.collapse)sound('fall');
   feedback(state.hit?18:state.block?9:10);
  }
  await sleep(total*.22);if(!ensure())return false;
  if(state.collapse){
   paintArena(host,after.units,after.edgesCollapsed,events,{round,instant:true,duration:total*.27});
-  sound('collapse');feedback(14);
+  sound('collapse');if(state.fall)sound('fall');feedback(14);
  }
  await sleep(total*.16);
  return ensure();
