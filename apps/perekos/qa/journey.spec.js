@@ -6,7 +6,7 @@ test('start, move, cast, pause, resume, pick rune and finish complete 1v1 traini
  await page.locator('#primary-action').click();
  await expect(page.locator('#controls')).toBeVisible();
  const a=await page.evaluate(()=>window.__perekosTest.state.actors[0].x);
- await page.keyboard.down('KeyD');await page.waitForTimeout(330);await page.keyboard.up('KeyD');
+ await page.keyboard.down('d');await page.waitForTimeout(330);await page.keyboard.up('d');
  const b=await page.evaluate(()=>window.__perekosTest.state.actors[0].x);
  expect(b).toBeGreaterThan(a);
  await page.keyboard.down('Space');await page.waitForTimeout(250);await page.keyboard.up('Space');
