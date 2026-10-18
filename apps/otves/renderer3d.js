@@ -324,7 +324,7 @@ export class SpatialMazeRenderer {
     item(makeBox(-.20,-.34,-.20,maze.cols+.20,-.25,maze.rows+.20),5);
     item(makeFloorWithHole(maze.cols,maze.rows,maze.goal),0);
     item(makeWell(maze.goal.x,maze.goal.y),4);
-    item(makeUnifiedWalls(maze.walls),1,IDENTITY,true);
+    item(makeUnifiedWalls(maze.walls,.46),1,IDENTITY,true);
     item(makeTorus(.396,.040),3,translation(maze.goal.x,.008,maze.goal.y));
     item(makeTorus(.305,.008),3,translation(maze.start.x,.013,maze.start.y));
     this.ballMesh = upload(gl,makeSphere());
@@ -340,7 +340,8 @@ export class SpatialMazeRenderer {
     const fov = .61;
     const distance = this.height/(2*Math.tan(fov/2)*Math.max(1,pxPerUnit))*1.065;
     const cx = maze.cols/2, cz = maze.rows/2;
-    const eye = [cx+maze.cols*.030,distance,cz+maze.rows*.065];
+    // A restrained 17-degree rake exposes real wall sides without hiding paths.
+    const eye = [cx+distance*.115,distance,cz+distance*.27];
     const target = [cx,0,cz];
     const view = lookAt(eye,target,[0,0,-1]);
     this.cameraVP = multiply(perspective(fov,aspect,.05,Math.max(200,distance+100)),view);
