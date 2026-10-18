@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "tests/core.test.mjs"
+        "tests/core.test.mjs",
+        "tests/avatar.test.mjs"
       ]
     },
     {
@@ -55,7 +56,8 @@
       "kind": "playwright",
       "tier": "smoke",
       "files": [
-        "qa/journey.spec.js"
+        "qa/journey.spec.js",
+        "qa/avatar.spec.js"
       ]
     }
   ]
