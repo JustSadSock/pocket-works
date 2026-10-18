@@ -23,7 +23,8 @@ test('a genuine gastric 3D chamber renders and shows warned guardian',async ({pa
  expect(world.immunity.guardianStages).toContain(2);
  expect(world.ecology.enemies.some(e=>e.type==='warden')).toBe(true);
  await test.info().attach('gastric-guardian',{body:await page.screenshot(),contentType:'image/png'});
- await page.locator('#pauseBtn').click();
+ // Keyboard pause does not wait for canvas mouse pointer-lock stability.
+ await page.keyboard.press('Escape');
  await expect(page.locator('#pauseMenu')).toBeVisible();
  await page.locator('#menuPause').click();await page.reload();
  await page.locator('#resumeSaved').click();

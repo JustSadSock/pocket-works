@@ -125,9 +125,9 @@ export function createWorld(canvas, initialSeed) {
   }
   const gastricMaps=makeGastricMaps();
   const stomachWallMat=new THREE.MeshStandardMaterial({color:0xffffff,map:gastricMaps.color,
-    bumpMap:gastricMaps.bump,bumpScale:.16,roughness:.31,metalness:0,emissive:0x36150e,emissiveIntensity:.30});
-  const gastricFoldMat=new THREE.MeshStandardMaterial({color:0xb16b66,map:gastricMaps.color,
-    bumpMap:gastricMaps.bump,bumpScale:.12,roughness:.25,side:THREE.DoubleSide,emissive:0x2b130d,emissiveIntensity:.25});
+    bumpMap:gastricMaps.bump,bumpScale:.16,roughness:.49,metalness:0,emissive:0x170b09,emissiveIntensity:.12});
+  const gastricFoldMat=new THREE.MeshStandardMaterial({color:0x9c7770,map:gastricMaps.color,
+    bumpMap:gastricMaps.bump,bumpScale:.17,roughness:.48,side:THREE.DoubleSide,emissive:0x180c08,emissiveIntensity:.08});
   const gastricMucusMat=new THREE.MeshStandardMaterial({color:0xa9a56d,roughness:.14,
     transparent:true,opacity:.88,emissive:0x384522,emissiveIntensity:.36,depthWrite:false});
 
@@ -374,10 +374,15 @@ export function createWorld(canvas, initialSeed) {
         const lx=x-cx*8,lz=z-cz*8;
         return lx>=2&&lx<=5&&lz>=2&&lz<=5&&isBaseFloor(x,z);
       });
+      // A giant ring over the player's spawn reads as an orange obstruction,
+      // not anatomy. Keep major structures in the surrounding tissue perimeter.
+      const landmarkCells=(cx===0&&cz===0?
+        cells.filter(([x,z])=>Math.hypot(x-3.5,z-3.5)>=2.45):clearCenter);
+      const sites=landmarkCells.length?landmarkCells:cells;
       for(let j=0;j<archCount;j++){
-        const [x,z]=clearCenter[(j*5+style)%clearCenter.length]||cells[j%cells.length];
-        temp.position.set(x,1.95,z);temp.rotation.set(Math.PI/2,gastricSeedArt(x,z,31)*Math.PI,0);
-        temp.scale.set(1.1+gastricSeedArt(x,z,32)*.22,.85,.5);
+        const [x,z]=sites[(j*5+style)%sites.length];
+        temp.position.set(x,2.47,z);temp.rotation.set(Math.PI/2,gastricSeedArt(x,z,31)*Math.PI,0);
+        temp.scale.set(.69+gastricSeedArt(x,z,32)*.11,.71,.47);
         temp.updateMatrix();arches.setMatrixAt(placed++,temp.matrix);
       }
       arches.count=placed;arches.instanceMatrix.needsUpdate=true;group.add(arches);
@@ -389,9 +394,9 @@ export function createWorld(canvas, initialSeed) {
       if(folds.length){
         const drapes=new THREE.InstancedMesh(gastricDrapeGeo,gastricFoldMat,folds.length);
         folds.forEach(([x,z],i)=>{
-          temp.position.set(x,2.42,z);temp.rotation.set(.13,gastricSeedArt(x,z,26)*6.28,.13);
-          const stretch=.14+gastricSeedArt(x,z,27)*.14*art.hang;
-          temp.scale.set(.26+stretch,.21+stretch,.16+stretch);
+          temp.position.set(x,2.53,z);temp.rotation.set(.13,gastricSeedArt(x,z,26)*6.28,.13);
+          const stretch=.09+gastricSeedArt(x,z,27)*.11*art.hang;
+          temp.scale.set(.20+stretch,.16+stretch,.15+stretch);
           temp.updateMatrix();drapes.setMatrixAt(i,temp.matrix);
         });
         drapes.instanceMatrix.needsUpdate=true;group.add(drapes);
@@ -400,9 +405,9 @@ export function createWorld(canvas, initialSeed) {
       if(ridges.length){
         const creases=new THREE.InstancedMesh(gastricRugaGeo,gastricFoldMat,ridges.length);
         ridges.forEach(([x,y,z,rot,a,b],i)=>{
-          temp.position.set(x,y+(gastricSeedArt(a,b,45)-.5)*.6,z);
+          temp.position.set(x,2.24+(gastricSeedArt(a,b,45)-.5)*.14,z);
           temp.rotation.set(0,rot,gastricSeedArt(a,b,46)*.3);
-          temp.scale.set(.6,.95,.52);temp.updateMatrix();creases.setMatrixAt(i,temp.matrix);
+          temp.scale.set(.46,.73,.36);temp.updateMatrix();creases.setMatrixAt(i,temp.matrix);
         });
         creases.instanceMatrix.needsUpdate=true;group.add(creases);
       }
@@ -411,21 +416,21 @@ export function createWorld(canvas, initialSeed) {
       // cistern: pendant bladder;
       // rugae: pleated tendon vault.
       if(art.type==='cistern'&&clearCenter.length>=4){
-        const [x,z]=clearCenter[Math.floor(style%clearCenter.length)];
+        const [x,z]=sites[Math.floor(style%sites.length)];
         const bulb=new THREE.Mesh(gastricDrapeGeo,gastricFoldMat);
-        bulb.position.set(x,2.34,z);bulb.scale.set(.54,.33,.53);group.add(bulb);
+        bulb.position.set(x,2.56,z);bulb.scale.set(.46,.22,.43);group.add(bulb);
         for(let i=0;i<3;i++){
           const mouth=new THREE.Mesh(gastricPylorusGeo,i===1?gastricMucusMat:gastricFoldMat);
-          mouth.position.set(x,2.12-i*.20,z);mouth.rotation.x=Math.PI/2;
-          mouth.scale.setScalar(.53+i*.1);group.add(mouth);
+          mouth.position.set(x,2.48-i*.12,z);mouth.rotation.x=Math.PI/2;
+          mouth.scale.setScalar(.36+i*.07);group.add(mouth);
         }
       }
       if(art.type==='rugae'&&clearCenter.length>=4){
         const pleats=new THREE.InstancedMesh(gastricRugaGeo,gastricFoldMat,6);
         for(let i=0;i<6;i++){
-          const [x,z]=clearCenter[(i*5+style)%clearCenter.length];
-          temp.position.set(x,2.35,z);temp.rotation.set(Math.PI/2,i*.9,.1);
-          temp.scale.set(.6+.08*i,.75,.85);temp.updateMatrix();pleats.setMatrixAt(i,temp.matrix);
+          const [x,z]=sites[(i*5+style)%sites.length];
+          temp.position.set(x,2.48,z);temp.rotation.set(Math.PI/2,i*.9,.1);
+          temp.scale.set(.47+.05*i,.61,.68);temp.updateMatrix();pleats.setMatrixAt(i,temp.matrix);
         }
         pleats.instanceMatrix.needsUpdate=true;group.add(pleats);
       }
@@ -433,8 +438,8 @@ export function createWorld(canvas, initialSeed) {
       if((profile.archetype==='atrium'||art.type==='pylorus')&&clearCenter.length>=7){
         const cords=new THREE.InstancedMesh(gastricSinewGeo,gastricFoldMat,4);
         for(let i=0;i<4;i++){
-          const [x,z]=clearCenter[(i*3)%clearCenter.length];
-          temp.position.set(x,2.27,z);temp.rotation.set(.25*i,.4*i,.52);
+          const [x,z]=sites[(i*3)%sites.length];
+          temp.position.set(x,2.39,z);temp.rotation.set(.25*i,.4*i,.52);
           temp.scale.set(1,1.0,1);temp.updateMatrix();cords.setMatrixAt(i,temp.matrix);
         }
         cords.instanceMatrix.needsUpdate=true;group.add(cords);
@@ -659,7 +664,7 @@ export function createWorld(canvas, initialSeed) {
     particlesGeo.attributes.position.needsUpdate=true;particlesGeo.setDrawRange(0,droplets.length);
     organPulse=Math.max(0,organPulse-dt);
     pulseLamp.intensity=6.5+Math.sin(time*(stage===4?5.2:stage===1?3.8:2.7))*2.6+organPulse*7+immunePressure*6;
-    if(stage===2)stomachWallMat.roughness=.30+Math.sin(time*1.6)*.045;
+    if(stage===2)stomachWallMat.roughness=.49+Math.sin(time*1.6)*.025;
     hazardMat.emissiveIntensity=.48+Math.sin(time*(stage===4?6:2.5))*.17;
     for(const root of tissueVisuals.values())if(root.visible){root.userData.flash=Math.max(0,root.userData.flash-dt);
       root.scale.setScalar(1+Math.sin(time*3.4+root.position.x*.25)*.045+root.userData.flash*.4);
