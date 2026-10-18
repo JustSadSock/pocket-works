@@ -8,7 +8,7 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),keys=new Set(),stick={x:0,y:0};
 const quiet=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false;
 let world,renderer,player,phase='menu',stress=0,energy=100,ammo=6,reserve=18,elapsed=0,shotTime=0,reloadTime=0,reloadAt=0;
 let torch=true,enemies=[],upgrades={},collected=0,kills=0,sectorBest=0,spawnAt=4,saveAt=6,worldAt=0,noise=null;
-let lastFrame=performance.now(),moveSteps=0,moves=0,attempts=0,blocked=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,sound=true,noticeUntil=0,upgradeChoices=[];
+let lastFrame=performance.now(),moveSteps=0,moves=0,attempts=0,blocked=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,sound=true,noticeUntil=0,upgradeChoices=[],lastPresenceCue=0;
 const audio=createSoundscape();
 try{sound=JSON.parse(localStorage.getItem(OPTIONS)||'{}').sound!==false}catch{}
 audio.setEnabled(sound);
@@ -30,7 +30,7 @@ function setup(seed,data=null){
  ammo=data?.ammo??6;reserve=data?.reserve??18;limitAmmo();
  elapsed=data?.elapsed??0;collected=data?.collected??0;kills=data?.kills??0;
  upgradeChoices=Array.isArray(data?.choices)?data.choices.filter(id=>UPGRADES.some(u=>u.id===id)):[];enemies=[];noise=null;
- spawnAt=elapsed+5;worldAt=elapsed+.4;saveAt=elapsed+6;reloadAt=0;reloadTime=0;shotTime=0;moveSteps=0;moves=0;attempts=0;blocked=0;
+ spawnAt=elapsed+5;worldAt=elapsed+.4;saveAt=elapsed+6;reloadAt=0;reloadTime=0;shotTime=0;moveSteps=0;moves=0;attempts=0;blocked=0;lastPresenceCue=elapsed;
  clearInputs();showHud()
 }
 function overlay(id){for(const n of ['menu','pauseOverlay','inventoryOverlay','endOverlay','confirmOverlay','upgradeOverlay']){
@@ -187,6 +187,12 @@ function simulation(dt){
   if(c.near&&elapsed>=(e.attackAt||0)){change+=e.kind==='crawler'?21:13;e.attackAt=elapsed+1.25;audio.event('heartbeat')}
  }
  enemies=enemies.filter(e=>!e.done);
+ // Distinct positional warning: the approach is audible before an attack.
+ if(elapsed-lastPresenceCue>.85){
+  const nearby=enemies.map(e=>({e,cue:presenceCue(e,player)})).filter(v=>v.cue.distance<7)
+   .sort((a,b)=>a.cue.distance-b.cue.distance)[0];
+  if(nearby){audio.event('presence-step',{pan:nearby.cue.pan,intensity:clamp(1.4-nearby.cue.distance/8,.35,1.3)});lastPresenceCue=elapsed}
+ }
  stress=clamp(stress+change/(1+.23*(upgrades.breath||0))-(inside?.18:.70)*dt,0,maxStress());
  if(stress>=maxStress()){endRun();return}
  if(noise&&elapsed>noise.until)noise=null;
