@@ -10,6 +10,8 @@
  * Computed with radial Lorentz boost of static orthonormal Riemann frame.
  * In local proper time τ: ξ'' = λ ξ + elastic forces per unit mass.
  *
+ * Numerical integration: implicit tridiagonal solver for spring velocities.
+ * At high stiffness, fast acoustic transients are time-averaged.
  * A <-> SI: a_phys meters; c=299792458 m/s. Sound speed is sqrt(E/ρ).
  * Valid only when specimenLength/a_phys << 1 (Fermi linearization).
  * Strength values below are explicit educational idealizations.
@@ -57,10 +59,8 @@ export function createSpecimen(m,options={}){
  sample(specimen);
  return specimen;
 }
-function springAccelerations(s){
- const n=s.nodes.length,force=new Float64Array(n);
- const mat=materialProps(s.material),speed=Math.sqrt(mat.E/mat.density)/SPEED_OF_LIGHT;
- const k=(speed/s.h)**2,damper=2*mat.damping*speed/s.h;
+function updateLinks(s){
+ const mat=materialProps(s.material);
  let peak=0,maxStress=0;
  for(let i=0;i<s.links.length;i++){
   const link=s.links[i];if(!link.alive)continue;
@@ -71,30 +71,53 @@ function springAccelerations(s){
   maxStress=Math.max(maxStress,Math.abs(strain)*mat.E);
   if(strain>mat.tension||strain<-mat.compression){
    link.alive=false;link.failedAt=s.ray.tau;s.breakCount++;
-   continue;
   }
-  // Hooke + Kelvin viscosity, equal node masses; interaction respects
-  // action/reaction exactly. No force crosses a broken link.
-  const elastic=k*(d-s.h);
-  const viscous=damper*(s.nodes[i+1].v-s.nodes[i].v);
-  force[i]+=elastic+viscous;force[i+1]-=elastic+viscous;
  }
  s.peakStrain=Math.max(s.peakStrain,peak);
  s.peakStress=Math.max(s.peakStress,maxStress);
- return force;
+}
+function solveTridiagonal(lower,diag,upper,rhs){
+ const n=rhs.length,cp=new Float64Array(n),dp=new Float64Array(n),out=new Float64Array(n);
+ let pivot=diag[0];if(!(pivot>0))throw Error('Неустойчивое локальное решение');
+ cp[0]=upper[0]/pivot;dp[0]=rhs[0]/pivot;
+ for(let i=1;i<n;i++){
+  pivot=diag[i]-lower[i-1]*cp[i-1];
+  if(!(pivot>0))throw Error('Неустойчивое локальное решение');
+  cp[i]=i<n-1?upper[i]/pivot:0;
+  dp[i]=(rhs[i]-lower[i-1]*dp[i-1])/pivot;
+ }
+ out[n-1]=dp[n-1];
+ for(let i=n-2;i>=0;i--)out[i]=dp[i]-cp[i]*out[i+1];
+ return out;
 }
 function substep(s,dt){
  const prev=s.ray.tau;
  advance(s.ray,s.m,dt,{record:false});
  const dTau=s.ray.tau-prev;
  const frame=tidalFrame(s.ray,s.m),lambda=s.axis==='radial'?frame.radial:frame.transverse;
- const elastic=springAccelerations(s);
- // Symplectic Euler in comoving local proper time; nonrelativistic internal
- // displacements and velocities. Fixed background, no self-gravity.
- for(let i=0;i<s.nodes.length;i++){
-  const p=s.nodes[i];
-  p.v+=(lambda*p.x+elastic[i])*dTau;
-  p.x+=p.v*dTau;
+ updateLinks(s);
+ const mat=materialProps(s.material);
+ const sound=Math.sqrt(mat.E/mat.density)/SPEED_OF_LIGHT,k=(sound/s.h)**2;
+ const damper=2*mat.damping*sound/s.h;
+ const n=s.nodes.length;
+ const diag=new Float64Array(n),upper=new Float64Array(n-1),lower=new Float64Array(n-1),rhs=new Float64Array(n);
+ // Fully implicit linear mass/spring/dashpot update in proper time.
+ // A v' = rhs, with A=I-dτ² λI+(dτ² k + dτ c) * graph Laplacian.
+ const coeff=dTau*dTau*k+dTau*damper;
+ for(let i=0;i<n;i++){
+  diag[i]=1-dTau*dTau*lambda;
+  rhs[i]=s.nodes[i].v+dTau*lambda*s.nodes[i].x;
+ }
+ for(let i=0;i<n-1;i++){
+  if(!s.links[i].alive)continue;
+  diag[i]+=coeff;diag[i+1]+=coeff;upper[i]=-coeff;lower[i]=-coeff;
+  const stretch=s.nodes[i+1].x-s.nodes[i].x-s.h;
+  rhs[i]+=dTau*k*stretch;rhs[i+1]-=dTau*k*stretch;
+ }
+ const velocities=solveTridiagonal(lower,diag,upper,rhs);
+ for(let i=0;i<n;i++){
+  s.nodes[i].v=velocities[i];
+  s.nodes[i].x+=dTau*velocities[i];
  }
  s.elapsedProper=s.ray.tau;
  s.minL=Math.min(s.minL,s.ray.l);
@@ -132,7 +155,7 @@ export function stepSpecimen(s,dt){
  let remaining=dt;
  // Numerical resolution is stricter than a/c for material sound traversal.
  const sound=Math.sqrt(materialProps(s.material).E/materialProps(s.material).density)/SPEED_OF_LIGHT;
- const stable=clamp(.32*s.h/sound,.001*s.m.a,.009*s.m.a);
+ const stable=clamp(.25*s.h/sound,.003*s.m.a,.012*s.m.a);
  while(remaining>1e-11&&s.phase==='running'){
   const h=Math.min(remaining,stable);
   substep(s,h);remaining-=h;
