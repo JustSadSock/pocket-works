@@ -1,0 +1,43 @@
+name: Fog source fidelity browser QA
+on:
+  push:
+    branches:
+      - app/fog-of-conquest-port-20261018
+    paths:
+      - .github/workflows/fog-source-qa.yml
+      - apps/fog-of-conquest/**
+  pull_request:
+    paths:
+      - apps/fog-of-conquest/**
+      - pocketnet/module-versions/fog-of-conquest/**
+permissions:
+  contents: read
+jobs:
+  original-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Isolated Playwright install
+        run: |
+          mkdir -p /tmp/fog-tests
+          cd /tmp/fog-tests
+          npm init -y
+          npm install --no-audit --no-fund @playwright/test@1.55.0
+          cd "$GITHUB_WORKSPACE"
+          ln -s /tmp/fog-tests/node_modules node_modules
+          node_modules/.bin/playwright install --with-deps chromium webkit
+      - name: Original-game browser scenarios
+        run: node_modules/.bin/playwright test --config apps/fog-of-conquest/qa/playwright.config.ts
+      - name: Preserve QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fog-original-browser-evidence
+          path: |
+            apps/fog-of-conquest/qa/fog-playwright-results/
+            apps/fog-of-conquest/qa/fog-playwright-report/
+          retention-days: 5
