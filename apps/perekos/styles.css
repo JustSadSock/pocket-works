@@ -113,3 +113,38 @@
 @media(max-height:710px){.online-button{min-height:45px;font-size:14px}.net-sheet{padding:15px 12px}.net-invite{padding:12px}#net-copy-code{font-size:26px!important}.net-wait-mark{font-size:42px}}
 
 .net-feedback{user-select:text;-webkit-user-select:text;overflow-wrap:anywhere}
+
+
+/* v0.5 — the handbound three-spell laboratory, and grounded silhouette selection */
+.mage-switch{width:100%;display:flex;align-items:center;justify-content:space-between;gap:7px;min-height:47px;padding:8px 11px;background:#283f35;border:1px solid #a88c5f;color:#e6d6ad;text-align:left;font-size:11px;font-weight:850}
+.mage-switch strong{margin-left:auto;font-size:16px;color:#fff0bf}.mage-switch span{font-size:10px;color:#aebaa6;white-space:nowrap}
+.mage-picker{width:min(430px,94vw);max-height:min(91dvh,780px);display:flex;flex-direction:column;padding:16px 14px;overflow:hidden}
+.mage-picker h2{font-size:28px;margin:4px 0 6px}.mage-picker>p{font-size:11px;line-height:1.45;margin:0 0 7px;color:#645940}
+.mage-options{overflow-y:auto;min-height:0;display:grid;gap:6px;scrollbar-width:thin;flex:1}
+.mage-family{background:#d4bb92;border-left:4px solid #9c755c;padding:7px}.mage-family.mage-storm{border-color:#577e79}.mage-family.mage-stone{border-color:#727d69}
+.mage-family h3{margin:0 0 5px;display:flex;align-items:center;gap:8px;font-size:13px;color:#35483b;font-weight:950}
+.mage-family h3 small{font-size:9px;color:#655b4a;font-weight:550;line-height:1.25}
+.mage-family-choices{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mage-option{display:flex;align-items:center;gap:7px;text-align:left;min-width:0;min-height:60px;padding:6px;background:#f1e3c5;border:1px solid #9b876f;color:#2d3f36}
+.mage-option.picked{border:2px solid #294e42;background:#e0f0d9;box-shadow:inset 0 0 0 2px #92b198}
+.mage-option i{font-style:normal;display:grid;place-items:center;width:27px;height:33px;flex-shrink:0;font-size:23px;color:#ac654c}
+.mage-storm .mage-option i{color:#578c90}.mage-stone .mage-option i{color:#657967}
+.mage-option span{min-width:0;display:grid;gap:3px}.mage-option strong{font-size:12px}.mage-option small{color:#68735e;font-size:9px;line-height:1.25}
+.mage-picker-actions{display:flex;gap:8px;flex-shrink:0;margin-top:9px}.mage-picker-actions button{margin:0!important;min-height:46px}.mage-picker-actions button:first-child{width:35%;background:#877258}.mage-picker-actions .big-button{width:65%;font-size:14px}
+.net-mage-area{display:grid;gap:6px;margin:10px 0;border-top:1px dashed #a58c66;padding-top:8px}
+.net-mage-area>small{font-size:10px;letter-spacing:1px;color:#574a39;font-weight:900}
+.net-mages{max-height:188px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.net-mages .mage-family{padding:4px;border-left-width:2px}.net-mages .mage-family h3{font-size:10px}.net-mages .mage-family-choices{grid-template-columns:1fr;gap:3px}
+.net-mages .mage-option{min-height:29px;padding:3px 2px}.net-mages .mage-option i{font-size:11px;width:12px;height:16px}
+.net-mages .mage-option strong{font-size:10px}
+.workbench .bench-slots{max-height:min(44dvh,398px);overflow-y:auto;scrollbar-width:thin;gap:8px;padding:3px}
+.spell-lane{border:1px solid #8a7f62;background:#c2b18e;padding:4px;display:grid;gap:3px;box-shadow:inset 0 1px #f0deb9}
+.spell-lane-head{font-size:10px;font-weight:950;letter-spacing:1.2px;color:#395746;padding:1px 5px 3px}
+.spell-lane:nth-child(2){border-left:3px solid #6b8e7c}
+.spell-lane:nth-child(3){border-left:3px solid #a27659}
+.spell-lane .bench-slot{min-height:38px}.spell-lane .slot-drag{padding-block:2px}.spell-lane .rune-icon{height:27px}
+.draft-outcome{display:inline-block;margin:4px 0 8px;font-weight:950;letter-spacing:.6px;font-size:11px;color:#805943}
+#attack-btn{touch-action:none;user-select:none}
+#attack-btn.aiming{box-shadow:inset 0 0 0 4px #f3dfaa,0 0 14px #e1c47f80;filter:brightness(1.12)}
+@media(max-height:735px){.mage-picker{max-height:90dvh;padding:10px}.mage-option{min-height:47px}.mage-option small{font-size:8px}.mage-switch{min-height:38px}.workbench .bench-slots{max-height:35dvh}.spell-lane .bench-slot{min-height:33px}}
+@media(max-width:365px){.mage-option{gap:3px;padding:4px}.mage-option i{width:20px}.mage-option strong{font-size:11px}.mage-family{padding:4px}.net-mages{gap:2px}}
