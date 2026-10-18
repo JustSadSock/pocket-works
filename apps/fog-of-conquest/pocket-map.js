@@ -212,20 +212,24 @@
     $('endTurnBtn')?.focus();
   });
   // No Escape-to-reveal shortcut: accept explicitly before seeing private map.
-  curtain.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();accept.focus();}});
+  curtain.addEventListener('keydown',e=>{if(e.key==='Escape'||e.key==='Tab'){e.preventDefault();accept.focus();}});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!curtain.hidden){e.stopImmediatePropagation();accept.focus();}},true);
   // Focus-first main menu: rules remain accessible but are not the first screen.
   const rulesToggle=$('fogRulesToggle'),summary=$('summary');
-  rulesToggle?.addEventListener('click',()=>{
-    const open=summary.hidden;summary.hidden=!open;
-    rulesToggle.setAttribute('aria-expanded',String(open));
-    const lang=document.documentElement.lang;
+  function updateRulesLabel(){
+    if(!rulesToggle)return;
+    const open=!summary.hidden,lang=document.documentElement.lang;
     rulesToggle.textContent=lang==='en'?(open?'Hide rules':'Rules'):
       lang==='uk'?(open?'Сховати правила':'Правила'):(open?'Скрыть правила':'Правила');
+  }
+  rulesToggle?.addEventListener('click',()=>{
+    const open=summary.hidden;summary.hidden=!open;
+    rulesToggle.setAttribute('aria-expanded',String(open));updateRulesLabel();
   });
+  $('langSelect')?.addEventListener('change',()=>requestAnimationFrame(updateRulesLabel));
   window.addEventListener('DOMContentLoaded',()=>{
     if(window.matchMedia('(max-width:720px)').matches&&!panel.classList.contains('collapsed'))
       $('panelToggleBtn')?.click();
-    resize();scheduleMap();
+    updateRulesLabel();resize();scheduleMap();
   });
 })();
