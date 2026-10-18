@@ -1,4 +1,5 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
 
 // PocketNet is the only online transport. Original local rules remain untouched.
 const $=id=>document.getElementById(id);
@@ -11,7 +12,7 @@ const copyCode=document.createElement('button');copyCode.type='button';copyCode.
 controls.append(start,copyCode);lobby.append(controls);
 const turn=document.createElement('span');turn.id='onlineTurnStatus';turn.setAttribute('aria-live','polite');
 $('controls')?.prepend(turn);
-let client=null,room=null,view=null,lock=false,connecting=false,selectedSize='medium',active=false;
+let client=null,room=null,view=null,lock=false,connectPromise=null,selectedSize='medium',active=false;
 const message=text=>{status.textContent=text;};
 const roomCode=()=>room?.roomId?.slice(0,8).toUpperCase()||'';
 const canIssue=()=>Boolean(active&&view?.game?.phase==='battle'&&view.game.state.currentPlayer===view.side&&!lock&&client?.socket?.readyState===WebSocket.OPEN);
@@ -23,7 +24,6 @@ function refresh(){
 }
 function installListeners(net){
  net.on('connected',()=>{
-   connecting=false;
    if(net.roomId)message('Восстанавливаем комнату…');
    else message('Соединение установлено');
    refresh();
@@ -36,6 +36,7 @@ function installListeners(net){
    refresh();
  });
  net.on('game_event',packet=>{
+   if(!room||packet.roomId!==room.roomId)return;
    if(packet.event?.type==='notice'){lock=false;message(String(packet.event.payload||'Приказ отклонён'));refresh();return;}
    if(packet.event?.type!=='state')return;
    view=packet.event.payload;lock=false;
@@ -50,17 +51,31 @@ function installListeners(net){
 }
 async function ensure(){
  if(client&&client.socket?.readyState===WebSocket.OPEN)return client;
- if(connecting)return client;
- if(!client){
-  let nick='Полководец';
-  try{nick=localStorage.getItem('fog-of-conquest:online-nick')||nick;}catch{}
-  client=new PocketNet({serverUrl:location.origin+'/pocketnet',name:nick,identityKey:'fog-v2'});
-  installListeners(client);
- }
- connecting=true;message('Подключаемся к PocketNet…');
- try{await client.connect();connecting=false;return client;}
- catch(error){connecting=false;message('Не удалось подключиться: '+String(error?.message||error));throw error;}
+ if(connectPromise)return connectPromise;
+ connectPromise=(async()=>{
+   // PocketNet tokens cannot be reused by another Pocket ID account.
+   // Guests live in sessionStorage so two local testing tabs get separate seats.
+   const identity=await getPocketIdentity({force:true});
+   const identityKey=pocketIdentitySessionKey(identity);
+   const storage=identity?.complete?localStorage:sessionStorage;
+   let nick='Полководец';
+   try{nick=localStorage.getItem('fog-of-conquest:online-nick')||nick;}catch{}
+   nick=preferredPocketName(identity,nick);
+   if(client&&(client.identityKey!==identityKey||client.storage!==storage)){
+     client.close();client=null;room=null;view=null;active=false;
+   }
+   if(!client){
+     client=new PocketNet({serverUrl:location.origin+'/pocketnet',name:nick,identityKey,storage});
+     installListeners(client);
+   }
+   message('Подключаемся к PocketNet…');
+   try{await client.connect();return client;}
+   catch(error){message('Не удалось подключиться: '+String(error?.message||error));throw error;}
+ })();
+ try{return await connectPromise;}
+ finally{connectPromise=null;}
 }
+
 async function create(size){
  try{const c=await ensure();selectedSize=size||'medium';if(c.roomId)c.leaveRoom();c.createRoom('fog-of-conquest',{});message('Создание комнаты…');}
  catch{}
@@ -90,9 +105,19 @@ start.addEventListener('click',()=>{if(start.disabled)return;try{client.sendGame
 copyCode.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(roomCode());message('Код '+roomCode()+' скопирован.');}catch{input.value=roomCode();input.select();message('Код выделен · скопируй его.');}});
 window.FogPocketNet={create,join,issue,leave,canIssue,refresh};
 for(const id of ['settingsMenuBtn','victoryMenuBtn','victoryOkBtn'])$(id)?.addEventListener('click',()=>{if(active)leave();},true);
-// Saved PocketNet sessions retain both identity and room. Rejoin on next launch.
-if(typeof localStorage!=='undefined'){
- try{const saved=JSON.parse(localStorage.getItem('pocket-net:'+location.origin+'/pocketnet')||'null');
-   if(saved?.roomId&&saved.identityKey==='fog-v2')void ensure().catch(()=>{});
+// Restore a valid seat only for the same Pocket ID or the current guest tab.
+void getPocketIdentity({force:true}).then(identity=>{
+ const storage=identity?.complete?localStorage:sessionStorage;
+ try{
+   const saved=JSON.parse(storage.getItem('pocket-net:'+location.origin+'/pocketnet')||'null');
+   if(saved?.roomId&&saved?.identityKey===pocketIdentitySessionKey(identity))
+     void ensure().catch(()=>{});
  }catch{}
-}
+}).catch(()=>{});
+document.addEventListener('pocket-id:changed',event=>{
+ if(!client||client.identityKey===pocketIdentitySessionKey(event.detail?.user))return;
+ client.close();client=null;room=null;view=null;active=false;lock=false;
+ window.FogLeaveOnline?.();lobby.style.display='none';
+ $('startPanel').style.display='flex';$('newGameOptions').style.display='flex';
+ message('Профиль изменён. Сетевая сессия завершена.');refresh();
+});
