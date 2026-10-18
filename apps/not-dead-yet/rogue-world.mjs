@@ -281,7 +281,7 @@ export class RogueWorld{
    const target=state.open?DOOR_SWING:0;
    if(Math.abs(target-state.angle)<.001){state.angle=target;continue}
    // The closing animation stops if any living actor enters its sweep.
-   const parts=key.split(':'),coords=parts[1]?.split(',').map(Number);
+   const parts=key.split(':'),coords=parts[2]?.split(',').map(Number);
    if(!coords||coords.length!==2||coords.some(v=>!Number.isFinite(v)))continue;
    const c=this.chunk(Math.floor(coords[0]/SECTOR),Math.floor(coords[1]/SECTOR));
    const door=c.doors.find(d=>doorKey(d,c.epoch)===key);
