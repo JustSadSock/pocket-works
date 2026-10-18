@@ -6,6 +6,7 @@ import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DIRECTIONS,STEPS,MAX_ROUNDS,initialMatch,validatePlan,simulateRound,aiPlan} from './engine.js';
 import {paintArena,playArenaBeat,frameBefore,drawArenaCanvas,timing} from './combat-visuals.js';
 import {trySetCommand,trySwapCommand,removeCommand,controlsFor,previewOrders,paintPlanOverlay,describeIssue} from './planning.js';
+import {HISTORY_KEY,getHistory,saveHistory,deleteHistory,captureHistory,commandLabel,outcomeText,analyzeBeat,exportMatch} from './replay-archive.js';
 const previewRequested=new URLSearchParams(location.search).get(DEV_QUERY);
 const IS_DEV_FRAME=window.parent!==window&&DEV_SCENES.some(s=>s.id===previewRequested);
 if(!IS_DEV_FRAME)installMobileRuntime();
@@ -33,7 +34,7 @@ const storedTheme=read('theme','dark');
 document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
 let plan=[],editingSlot=null,attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
-let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0;
+let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0,archiveEntry=null;
 let roomVersion='v1',opponentDisconnected=false,pendingForfeitLeave=false,forfeitWatchdog=0;
 const roomQuery=new URLSearchParams(location.search).get('room')?.trim()||'';
 const latest=()=>mode==='online'?server:offline;
@@ -59,7 +60,7 @@ function soundFX(type='tap'){
 }
 function buzz(v=8){try{navigator.vibrate?.(v)}catch{}}
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600)}
-function show(view){screen=view;for(const id of ['menu','difficultyView','lobby','play','replay'])$(id).classList.toggle('hidden',view!==id);if(view==='play')render();}
+function show(view){screen=view;for(const id of ['menu','difficultyView','lobby','play','replay','archive'])$(id).classList.toggle('hidden',view!==id);if(view==='play')render();if(view==='menu')refreshArchiveCount();if(view==='archive')paintArchive();}
 function modal(kicker,title,body,main,alt,third){
  modalOpen=true;const data=[['modalMain',main],['modalAlt',alt],['modalThird',third]];
  $('modalKicker').textContent=kicker;$('modalTitle').textContent=title;$('modalBody').textContent=body;
