@@ -1,3 +1,5 @@
+import { identityRotation, rollQuaternion } from './marble-motion.js';
+
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export class MarblePhysics {
@@ -5,7 +7,8 @@ export class MarblePhysics {
     this.radius = radius;
     this.position = { x: 0.5, y: 0.5 };
     this.velocity = { x: 0, y: 0 };
-    this.spin = 0;
+    this.spin = 0; // retained for the legacy Canvas 2D fallback
+    this.orientation = identityRotation();
     this.impact = 0;
     this.lastCollisionAt = -Infinity;
   }
@@ -16,7 +19,9 @@ export class MarblePhysics {
     this.velocity.x = 0;
     this.velocity.y = 0;
     this.spin = 0;
+    this.orientation = identityRotation();
     this.impact = 0;
+    this.lastCollisionAt = -Infinity;
   }
 
   update(deltaSeconds, tilt, maze, onCollision) {
@@ -41,9 +46,16 @@ export class MarblePhysics {
     const steps = Math.max(2, Math.min(7, Math.ceil((speed * dt) / (this.radius * 0.35))));
     const substep = dt / steps;
     for (let index = 0; index < steps; index += 1) {
+      const beforeX = this.position.x;
+      const beforeY = this.position.y;
       this.position.x += this.velocity.x * substep;
       this.position.y += this.velocity.y * substep;
       this.resolveWalls(maze.walls, onCollision);
+      // Integrate only the ACTUAL resolved trajectory, not the velocity
+      // before collision; otherwise the marble spins while stuck at walls.
+      const dx = this.position.x - beforeX;
+      const dz = this.position.y - beforeY;
+      this.orientation = rollQuaternion(this.orientation, dx, dz, this.radius);
     }
 
     this.spin += speed * dt * 2.7;
