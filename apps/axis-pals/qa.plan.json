@@ -33,18 +33,14 @@
         },
         {
           "action": "click",
-          "selector": "[data-move=\"up\"]"
-        },
-        {
-          "action": "click",
-          "selector": "[data-move=\"up\"]"
-        },
-        {
-          "action": "click",
           "selector": "[data-move=\"right\"]"
         },
         {
           "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"down\"]"
         },
         {
           "action": "screenshot"
