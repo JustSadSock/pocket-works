@@ -143,14 +143,14 @@ export function rogueStaticMesh(world,player){
     box(out,px+S/2,.08,q,S,.13,.055,[.28,.24,.19],6);
     if(!room)box(out,px+S/2,.84,q,S,.035,.018,[.30,.34,.26],8)
    }
-   appendWallDetails(out,{x,z,px,pz,dx,dz,room});
+   if(Math.hypot(x+.5-player.x,z+.5-player.z)<9)appendWallDetails(out,{x,z,px,pz,dx,dz,room});
   }
  }
  for(const c of world.nearby(player.x,player.z,17)){
-  for(const p of c.props)if(Math.hypot(p.x-player.x,p.z-player.z)<17){propMesh(out,p);appendPropDetails(out,p)}
+  for(const p of c.props)if(Math.hypot(p.x-player.x,p.z-player.z)<17){propMesh(out,p);if(Math.hypot(p.x-player.x,p.z-player.z)<9)appendPropDetails(out,p)}
   for(const room of c.rooms){
    const rx=c.cx*SECTOR+(room.x0+room.x1)/2+0.5,rz=c.cz*SECTOR+(room.z0+room.z1)/2+.5;
-   if(Math.hypot(rx-player.x,rz-player.z)<17){roomDetail(out,c,room);appendRoomDetails(out,c,room)}
+   if(Math.hypot(rx-player.x,rz-player.z)<17){roomDetail(out,c,room);if(Math.hypot(rx-player.x,rz-player.z)<11)appendRoomDetails(out,c,room)}
   }
   for(const d of c.doors)if(Math.hypot(d.x-player.x,d.z-player.z)<17){
    const x=(d.x+.5)*S,z=(d.z+.5)*S;
@@ -164,7 +164,7 @@ export function rogueStaticMesh(world,player){
    }
    box(out,x+.29,.04,z+.48,.49,2.28,.075,[.37,.22,.12],6);
    box(out,x+.29,1.25,z+.52,.36,.66,.03,[.16,.22,.21],10);
-   appendDoorDetails(out,d)
+   if(Math.hypot(d.x-player.x,d.z-player.z)<9)appendDoorDetails(out,d)
   }
  }
  return out
