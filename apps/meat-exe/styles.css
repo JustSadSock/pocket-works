@@ -187,3 +187,14 @@
 @media(max-height:480px){.guardian-status{top:calc(38px + env(safe-area-inset-top));
  width:min(230px,34vw);font-size:9px}.guardian-track{height:3px}}
 @media(prefers-reduced-motion:reduce){.guardian-track i{transition:none}}
+
+
+/* Route action appears only near a physical fork gate; it never covers fire. */
+.fork-control{position:absolute;left:50%;bottom:calc(97px + env(safe-area-inset-bottom));
+ transform:translateX(-50%);z-index:4;min-height:44px;min-width:122px;padding:8px 14px;
+ background:rgba(66,29,32,.93);color:#f4d9b8;border:1px solid #dfae8c;
+ font:700 11px Arial,sans-serif;letter-spacing:.07em;box-shadow:0 5px 20px #16080b;
+ touch-action:manipulation}
+.fork-control:active{background:#a14f43;transform:translateX(-50%) translateY(2px)}
+@media(max-height:480px){.fork-control{bottom:calc(18px + env(safe-area-inset-bottom));
+ left:49%;min-width:95px;font-size:9px;padding:7px}}
