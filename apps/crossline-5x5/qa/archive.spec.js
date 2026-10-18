@@ -78,3 +78,21 @@ for(const {label,width,height} of [{label:'portrait',width:390,height:844},{labe
   }finally{await context.close()}
  });
 }
+
+
+test('WebM records the full match through the shared canvas renderer',async({page})=>{
+ await seedArchive(page);
+ await page.locator('#archiveOpen').click();
+ await page.locator('[data-archive-play="0"]').click();
+ const supported=await page.evaluate(()=>Boolean(window.MediaRecorder&&HTMLCanvasElement.prototype.captureStream&&
+  ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].some(m=>MediaRecorder.isTypeSupported(m))));
+ test.skip(!supported,'This browser cannot encode WebM; JSON remains available');
+ const promise=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#replayVideo').click();
+ const download=await promise;
+ expect(download.suggestedFilename()).toBe('5x5-arena-full-match.webm');
+ const {stat}=await import('node:fs/promises');
+ const details=await stat(await download.path());
+ expect(details.size).toBeGreaterThan(1000);
+ await expect(page.locator('#replayVideo')).toBeEnabled();
+});
