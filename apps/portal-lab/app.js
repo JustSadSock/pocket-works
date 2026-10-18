@@ -114,6 +114,7 @@ $('power').addEventListener('input',e=>{power=Number(e.target.value);$('power-va
 $('gravity').addEventListener('input',e=>{sim.gravity=Number(e.target.value);$('gravity-value').textContent=sim.gravity.toFixed(2);aimDirty=true});
 $('bounce').addEventListener('input',e=>{sim.restitution=Number(e.target.value);$('bounce-value').textContent=sim.restitution.toFixed(2);aimDirty=true});
 window.addEventListener('keydown',e=>{
+ if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyR','KeyP','Digit1','Digit2'].includes(e.code)&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName))e.preventDefault();
  if(e.repeat&&e.code==='Space')return;
  if(e.code==='Space')shoot();if(e.code==='KeyR')resetBodies();
