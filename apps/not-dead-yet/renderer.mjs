@@ -510,6 +510,22 @@ function phantom(out,e,t){
   box(out,headX,1.84+breath,headZ-.244,.12,.020,.014,[.24,.23,.22],9);
  }
 }
+// Faceted cylindrical barrel points along the muzzle Z axis, not a solid box.
+// Side normals follow the silhouette so steel catches light as metal.
+function revolverBarrel(o,x,y,z,rx,ry,length,color,material=9,sides=12){
+ const front=z-length*.5,back=z+length*.5;
+ for(let k=0;k<sides;k++){
+  const a=k*Math.PI*2/sides,b=(k+1)*Math.PI*2/sides,
+   ax=Math.cos(a),ay=Math.sin(a),bx=Math.cos(b),by=Math.sin(b);
+  quad(o,[x+ax*rx,y+ay*ry,front],[x+bx*rx,y+by*ry,front],
+   [x+bx*rx,y+by*ry,back],[x+ax*rx,y+ay*ry,back],color,
+   [(ax+bx)*.5,(ay+by)*.5,0],material);
+  for(const t of [
+    [[x,y,back],[x+bx*rx,y+by*ry,back],[x+ax*rx,y+ay*ry,back],[0,0,1]],
+    [[x,y,front],[x+ax*rx,y+ay*ry,front],[x+bx*rx,y+by*ry,front],[0,0,-1]]
+  ])for(const p of t.slice(0,3))o.push(...p,...color,...t[3],material)
+ }
+}
 function pistolMesh(){
  const o=[],steel=[.31,.32,.31],blue=[.18,.23,.24],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.34,.30],brass=[.57,.48,.30];
  // Sleeve, wrist, palm and knuckles. The worn revolver stays in the lower right.
@@ -519,10 +535,12 @@ function pistolMesh(){
  for(let k=0;k<3;k++)round(o,.42+k*.065,-.71,-1.57,.045,.12,.095,skin,8);
  box(o,.51,-.88,-1.46,.215,.48,.23,wood,6);
  box(o,.51,-.91,-1.58,.22,.09,.22,[.23,.24,.24],9);
- box(o,.50,-.56,-1.61,.245,.19,.55,steel,9);
+ box(o,.50,-.56,-1.61,.22,.15,.32,steel,9);
  round(o,.50,-.605,-1.53,.178,.165,.17,blue,9); // revolving drum
  for(let k=0;k<6;k++){let a=k*Math.PI/3;round(o,.50+Math.cos(a)*.109,-.605+Math.sin(a)*.102,-1.61,.020,.021,.020,brass,9)}
- box(o,.50,-.53,-1.87,.125,.115,.48,blue,9);
+ revolverBarrel(o,.50,-.53,-1.84,.091,.071,.52,blue,9,12);
+ revolverBarrel(o,.50,-.53,-2.107,.077,.056,.024,[.11,.13,.14],9,12);
+ revolverBarrel(o,.50,-.53,-2.121,.038,.029,.008,[.035,.046,.045],10,12);
  box(o,.50,-.44,-1.47,.115,.038,.13,[.52,.50,.43],9);
  box(o,.50,-.705,-1.43,.14,.031,.24,[.17,.19,.18],9);
  round(o,.50,-.77,-1.42,.042,.055,.045,[.19,.20,.19],9);
