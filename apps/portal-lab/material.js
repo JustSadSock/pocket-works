@@ -137,12 +137,12 @@ function sample(s){
   strain=Math.max(strain,Math.abs(link.strain));
   stress=Math.max(stress,Math.abs(link.strain)*mat.E);
  }
- const record={t:s.ray.t,proper:s.ray.tau,l:s.ray.l/s.m.a,
+ const record={t:s.ray.t/s.m.a,proper:s.ray.tau/s.m.a,l:s.ray.l/s.m.a,
   tidal:(s.axis==='radial'?f.radial:f.transverse)*s.m.a*s.m.a,
   beta:f.beta,peakStrain:s.peakStrain,strain,stressMPa:stress/1e6,
   stressPeakMPa:s.peakStress/1e6,broken:fracture,steps:s.nodes.length,
   condition:Math.abs(constraint(s.ray,s.m))};
- if(!s.history.length||s.ray.t-s.history.at(-1).t>.035*s.m.a||s.phase==='completed'){
+ if(!s.history.length||s.ray.t/s.m.a-s.history.at(-1).t>.035||s.phase==='completed'){
   s.history.push(record);if(s.history.length>700)s.history.shift();
  }
  return record;
