@@ -117,7 +117,16 @@ function chooseUpgrade(id){
  upgradeChoices=[];phase='play';overlay(null);audio.event('pickup');notify('Вспомнил: '+UPGRADES.find(x=>x.id===id).name,2.2);
  lastFrame=performance.now();focusScene();persist();showHud()
 }
-function nearDrop(){return world.drops(player.x,player.z,1.65).filter(d=>world.visible(player.x,player.z,d.x,d.z))[0]||null}
+function nearDrop(){
+ // Interaction follows the nearest physical object, not the generation
+ // order of sector loot. This matters when medicine and a memory overlap.
+ const choices=world.drops(player.x,player.z,1.65).filter(d=>world.visible(player.x,player.z,d.x,d.z));
+ choices.sort((a,b)=>{
+  const da=(a.x-player.x)**2+(a.z-player.z)**2,db=(b.x-player.x)**2+(b.z-player.z)**2;
+  return da-db||String(a.id).localeCompare(String(b.id))
+ });
+ return choices[0]||null
+}
 function pickup(){
  const drop=nearDrop();if(!drop){notify('Здесь ничего нет.',1);return}
  if(!world.take(drop))return;
