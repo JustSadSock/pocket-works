@@ -33,7 +33,7 @@ document.documentElement.dataset.motion=motion?'on':'off';
 const storedTheme=read('theme','dark');
 document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
-let plan=[],editingSlot=null,attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
+let plan=[],editingSlot=null,thinkingAI=false,attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
 let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0,archiveEntry=null,devHistory=[];
 let roomVersion='v1',opponentDisconnected=false,pendingForfeitLeave=false,forfeitWatchdog=0;
 const roomQuery=new URLSearchParams(location.search).get('room')?.trim()||'';
@@ -43,7 +43,7 @@ const side=()=>mode==='online'?server?.side:mode==='hotseat'?offline?.turn:'A';
 const ready=()=>mode==='online'?server?.ready||{A:false,B:false}:{A:!!offline?.pending?.A,B:!!offline?.pending?.B};
 const score=()=>mode==='online'?server?.score||{A:0,B:0}:offline?.score||{A:0,B:0};
 const isPlanning=()=>latest()?.phase==='planning';
-const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen||pendingForfeitLeave;
+const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen||pendingForfeitLeave||thinkingAI;
 const reduceMotion=()=>!motion||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
 function soundFX(type='tap'){
  if(!sound&&!IS_DEV_FRAME)return;
@@ -161,6 +161,7 @@ function resumeOffer(){
   leaveNet(false);mode=cached.mode;offline=cached.offline;plan=Array.isArray(cached.draft)?cached.draft.slice(0,STEPS):[];editingSlot=null;attackMode=false;animating=false;
   show('play');render();
   if(mode==='hotseat'&&offline?.pending?.A&&!offline?.pending?.B&&offline.turn==='A')handoff();
+  if(mode==='solo'&&offline?.pending?.A&&!offline?.pending?.B)continueSoloPlanning();
  };
  $('menu').querySelector('.menu-controls').append(btn);
 }
@@ -193,14 +194,14 @@ function leaveToMenu(force=false){
   return;
  }
  if(mode!=='online')storeOffline(); // Keep any unfinished local draft.
- gameToken++;clearTimeout(replayTimer);replayPaused=true;animating=false;attackMode=false;editingSlot=null;plan=[];
+ gameToken++;clearTimeout(replayTimer);replayPaused=true;animating=false;thinkingAI=false;attackMode=false;editingSlot=null;plan=[];
  modalOpen=false;$('modal').classList.add('hidden');
  if(mode==='online')leaveNet(false);
  mode='menu';show('menu');resumeOffer();
 }
 function localStart(kind){
  leaveNet(false);gameToken++;clearTimeout(replayTimer);mode=kind;offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:initialMatch(),score:{A:0,B:0},seriesId:matchSeriesId()};
- plan=[];editingSlot=null;attackMode=false;animating=false;showingOutcome=false;show('play');storeOffline();soundFX('tap');
+ plan=[];editingSlot=null;thinkingAI=false;attackMode=false;animating=false;showingOutcome=false;show('play');storeOffline();soundFX('tap');
 }
 function handoff(){
  plan=[];editingSlot=null;attackMode=false;attackDirs=[];render();
@@ -208,17 +209,40 @@ function handoff(){
   offline.turn='B';plan=[];attackMode=false;show('play');render();storeOffline();
  }});
 }
-function submitLocal(){
- const g=offline.match,who=side(),err=validatePlan(plan);if(err){toast('План недопустим');soundFX('error');return;}
- offline.pending[who]=JSON.parse(JSON.stringify(plan));plan=[];editingSlot=null;attackMode=false;attackDirs=[];soundFX('plan');
- if(mode==='solo'){
-  offline.pending.B=aiPlan(g,null,difficulty);
- }else if(!offline.pending.B){handoff();storeOffline();return;}
- const oldRound=g.round,record=simulateRound(g,offline.pending);
- offline.match=record.match;offline.phase=offline.match.outcome?'finished':'planning';
+function finishLocalRound(){
+ if(!offline?.pending?.A||!offline?.pending?.B)return;
+ const match=offline.match,round=match.round,record=simulateRound(match,offline.pending);
+ offline.match=record.match;offline.phase=record.match.outcome?'finished':'planning';
  offline.pending={A:null,B:null};offline.turn='A';
- if(offline.match.outcome&&offline.match.outcome!=='draw')offline.score[offline.match.outcome]++;
- plan=[];attackMode=false;storeOffline();animateRecord(record.record,oldRound);
+ if(record.match.outcome&&record.match.outcome!=='draw')offline.score[record.match.outcome]++;
+ plan=[];editingSlot=null;attackMode=false;storeOffline();
+ animateRecord(record.record,round);
+}
+async function continueSoloPlanning(){
+ if(thinkingAI||mode!=='solo'||!offline?.pending?.A||offline.pending.B)return;
+ thinkingAI=true;
+ const ticket=gameToken,match=offline.match,session=offline;
+ storeOffline();render();
+ // Allow the real waiting state to paint before the CPU-bound AI search.
+ await new Promise(resolve=>setTimeout(resolve,32));
+ if(ticket!==gameToken||mode!=='solo'||offline!==session||offline.match!==match){
+  thinkingAI=false;return;
+ }
+ try{offline.pending.B=aiPlan(match,null,difficulty);}
+ catch(error){
+  thinkingAI=false;render();toast('Не удалось выбрать ход ИИ. Вернись в меню и продолжи партию.');return;
+ }
+ if(ticket!==gameToken||mode!=='solo'||offline!==session){thinkingAI=false;return}
+ thinkingAI=false;finishLocalRound();
+}
+function submitLocal(){
+ const who=side(),err=validatePlan(plan);
+ if(err){planProblem(err);return}
+ offline.pending[who]=JSON.parse(JSON.stringify(plan));
+ plan=[];editingSlot=null;attackMode=false;attackDirs=[];soundFX('plan');
+ if(mode==='solo'){continueSoloPlanning();return}
+ if(!offline.pending.B){handoff();storeOffline();return}
+ finishLocalRound();
 }
 function applyRemote(next,version=roomVersion){
  if(!next||!['lobby','planning','finished'].includes(next.phase))return;
@@ -384,7 +408,7 @@ function undo(){
  $('planFeedback').classList.remove('is-error');soundFX('tap');render();saveDraft();
 }
 function submit(){
- if(animating||recording||modalOpen)return;
+ if(animating||recording||modalOpen||thinkingAI)return;
  if(attackMode){toggleAttack();return;}
  if(!isPlanning()||ready()[side()])return;
  if(plan.length!==STEPS){toast('Нужны все пять команд');return;}
@@ -407,12 +431,12 @@ function render(){
  const picture=animFrame||{units:match.units,edgesCollapsed:match.edgesCollapsed,events:[]};
  drawBoard($('board'),picture.units,picture.edgesCollapsed,picture.events,!animating,picture.round||match.round);
  $('roundInfo').textContent='РАУНД '+Math.min(match.round,4)+' / '+MAX_ROUNDS;
- $('phaseInfo').textContent=mode==='online'&&!connected?'НЕТ СВЯЗИ':mode==='online'&&opponentDisconnected?'СОПЕРНИК ВНЕ СЕТИ':animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
+ $('phaseInfo').textContent=thinkingAI?'ИИ ВЫБИРАЕТ ХОД':mode==='online'&&!connected?'НЕТ СВЯЗИ':mode==='online'&&opponentDisconnected?'СОПЕРНИК ВНЕ СЕТИ':animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
  $('nameA').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[0])?.name||'ИГРОК А'):'ИГРОК А';
  $('nameB').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[1])?.name||'ИГРОК Б'):(mode==='solo'?'КОМПЬЮТЕР':'ИГРОК Б');
  $('winsA').textContent=sidescore.A;$('winsB').textContent=sidescore.B;
  $('fA').style.opacity=turn==='B'&&!finished?'.6':'1';$('fB').style.opacity=turn==='A'&&!finished?'.6':'1';
- $('planOwner').textContent=animating?'РАЗРЕШЕНИЕ ХОДА':finished?'БИТВА ЗАВЕРШЕНА':flags[turn]?'ПЛАН ОТПРАВЛЕН':turn==='A'?'КОМАНДЫ ИГРОКА А':'КОМАНДЫ ИГРОКА Б';
+ $('planOwner').textContent=thinkingAI?'КОМПЬЮТЕР ДУМАЕТ':animating?'РАЗРЕШЕНИЕ ХОДА':finished?'БИТВА ЗАВЕРШЕНА':flags[turn]?'ПЛАН ОТПРАВЛЕН':turn==='A'?'КОМАНДЫ ИГРОКА А':'КОМАНДЫ ИГРОКА Б';
  $('planCount').textContent=String(plan.length)+' / '+STEPS;
  $('slots').innerHTML=Array.from({length:STEPS},(_,i)=>{
   const selectable=!locked()&&i<=plan.length,active=editingSlot===i,cmd=plan[i];
@@ -426,12 +450,18 @@ function render(){
  document.querySelectorAll('[data-dir]').forEach(b=>{
   const d=b.dataset.dir,conflict=attack?info.moved.has(d):info.attacked.has(d);
   b.classList.toggle('chosen',attack&&attackDirs.includes(d));
-  b.disabled=disabled||full||conflict;
+  b.classList.toggle('conflict',conflict&&!disabled&&!full);
+  b.disabled=disabled||full;
+  b.setAttribute('aria-disabled',String(conflict));
   b.title=conflict?describeIssue('attack_direction_conflict'):'';
   b.setAttribute('aria-label',conflict?(d+' — '+describeIssue('attack_direction_conflict')):d);
  });
- $('attack').disabled=disabled||full||(!attack&&info.attackUsed);
- $('shield').disabled=disabled||attack||info.shieldUsed||full;
+ $('attack').disabled=disabled||full;
+ $('attack').classList.toggle('conflict',!attack&&info.attackUsed&&!disabled&&!full);
+ $('attack').setAttribute('aria-disabled',String(!attack&&info.attackUsed));
+ $('shield').disabled=disabled||attack||full;
+ $('shield').classList.toggle('conflict',info.shieldUsed&&!disabled&&!full);
+ $('shield').setAttribute('aria-disabled',String(info.shieldUsed));
  $('attack').textContent=attack?'✓':'⚔';
  $('undo').textContent=attack?'ОТМЕНА':editingSlot!==null?'× Удалить шаг':'← Удалить';
  $('undo').disabled=disabled||(!attack&&!plan.length);
@@ -446,17 +476,17 @@ function render(){
  const feedback=$('planFeedback');
  if(!feedback.classList.contains('is-error')){
   const projection=previewOrders(match,turn,plan);
-  feedback.textContent=animating?'Исполнение пяти команд':projection.risk!==null?
+  feedback.textContent=thinkingAI?'Компьютер выбирает пять команд…':animating?'Исполнение пяти команд':projection.risk!==null?
    'Опасно: шаг '+projection.risk+' ведёт на разрушенный край':
    attack?'Укажи направление удара'+(info.moved.size?' · движение '+[...info.moved].map(d=>symbols[d]).join(' ')+' уже занято':''):
    edit?'Замени команду или передвинь выбранный шаг':
    full?'План готов. Нажми шаг для изменения':info.attacked.size?'Направление '+[...info.attacked].map(d=>symbols[d]).join(' ')+' занято атакой':'Выбери команду. Нажми шаг, чтобы заменить его.';
   feedback.classList.toggle('is-risk',projection.risk!==null&&!animating);
  }
- $('submit').textContent=finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
+ $('submit').textContent=thinkingAI?'ИИ ВЫБИРАЕТ ХОД…':finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
  $('submit').disabled=disabled||plan.length!==STEPS;
  $('attackHint').classList.toggle('hidden',!attack);
- $('boardNote').textContent=mode==='online'&&!connected?'Связь потеряна. Место и отправленный план сохраняются':mode==='online'&&opponentDisconnected?'Соперник отключился: ждём возвращения или выхода из комнаты':animating?'Раунд исполняется одновременно':finished?'Повтор и реванш доступны после боя':flags[turn]?'Соперник '+(flags[turn==='A'?'B':'A']?'готов':'ещё планирует'):'Направления атаки и движения не должны пересекаться.';
+ $('boardNote').textContent=thinkingAI?'План принят. Компьютер выбирает ответ.':mode==='online'&&!connected?'Связь потеряна. Место и отправленный план сохраняются':mode==='online'&&opponentDisconnected?'Соперник отключился: ждём возвращения или выхода из комнаты':animating?'Раунд исполняется одновременно':finished?'Повтор и реванш доступны после боя':flags[turn]?'Соперник '+(flags[turn==='A'?'B':'A']?'готов':'ещё планирует'):'Направления атаки и движения не должны пересекаться.';
  $('beat').classList.toggle('hidden',!animating);
  if(animFrame)$('beat').textContent='ШАГ '+animFrame.beat+' / '+STEPS;
 }
