@@ -6,14 +6,10 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'crumple-yard-';
-const CACHE_NAME = 'crumple-yard-v1.0.0';
-const APP_VERSION = '1.0.0';
-const RELEASE_DATE = '2026-09-19';
-const RELEASE_NOTES = [
-  'Реальные Rapier contact-force события управляют накопительным повреждением.',
-  'Деформация кузова, отрываемые панели и механические отказы меняют поведение машины.',
-  'Три архетипа, crash-test yard, трафик и портретное управление входят в MVP.'
-];
+const CACHE_NAME = 'crumple-yard-v1.2.0';
+const APP_VERSION = '1.2.0';
+const RELEASE_DATE = '2026-10-18';
+const RELEASE_NOTES = ["Фиксированное направление 3D-камеры по умолчанию; переключение погонной камеры в гараже и паузе сохраняется между запусками."];
 
 setCacheNameDetails({ prefix: 'crumple-yard', suffix: 'v' + APP_VERSION, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
