@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "tests/engine.test.mjs"
+        "tests/engine.test.mjs",
+        "tests/server.test.mjs"
       ]
     },
     {
@@ -59,7 +60,8 @@
       "kind": "playwright",
       "tier": "smoke",
       "files": [
-        "qa/playthrough.spec.ts"
+        "qa/playthrough.spec.ts",
+        "qa/network.spec.ts"
       ]
     }
   ]
