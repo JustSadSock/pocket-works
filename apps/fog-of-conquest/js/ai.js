@@ -127,7 +127,7 @@
     const enemyCounts={};
     enemyUnits.forEach(u=>enemyCounts[u.type]=(enemyCounts[u.type]||0)+1);
     buildings.filter(b=>b.owner===p && BUILD_TYPES[b.type].spawn.length).forEach(b=>{
-      const avail=BUILD_TYPES[b.type].spawn.filter(t=>UNIT_TYPES[t].cost<=state.gold[p]);
+      const avail=units.length<140?BUILD_TYPES[b.type].spawn.filter(t=>UNIT_TYPES[t].cost<=state.gold[p]):[];
       const zones=[{r:b.r-1,c:b.c},{r:b.r+1,c:b.c},{r:b.r,c:b.c-1},{r:b.r,c:b.c+1}]
         .filter(z=>z.r>=0&&z.r<ROWS&&z.c>=0&&z.c<COLS&&
                map[z.r][z.c]!==TERRAIN.MOUNTAIN&&
@@ -154,7 +154,21 @@
 
     units.filter(u=>u.owner===p).forEach(u=>{
       while(u.mp>0){
-        const enemy=units.find(t=>t.owner===1 && !F[t.r][t.c] &&
+        // A mage is a healer in the original rules, not a zero-damage attacker.
+        if(u.type==='mage'){
+          const patient=units.filter(t=>t.owner===p &&
+            t.hp<UNIT_TYPES[t.type].hpMax &&
+            Math.abs(t.r-u.r)+Math.abs(t.c-u.c)<=1)
+            .sort((a,b)=>a.hp/UNIT_TYPES[a.type].hpMax-b.hp/UNIT_TYPES[b.type].hpMax)[0];
+          if(patient){
+            patient.hp=Math.min(UNIT_TYPES[patient.type].hpMax,patient.hp+2);
+            u.mp=0;
+            global.addReplay && global.addReplay({type:'heal',unit:u,target:patient});
+            global.recordEvent && global.recordEvent(`Маг исцелил ${global.UNIT_LABELS[patient.type]}`);
+            break;
+          }
+        }
+        const enemy=units.find(t=>u.type!=='mage' && t.owner===1 && !F[t.r][t.c] &&
           Math.abs(t.r-u.r)+Math.abs(t.c-u.c)<=UNIT_TYPES[u.type].range &&
           global.hasLOS(u.r,u.c,t.r,t.c,{forestBlock:false}));
         if(enemy){
@@ -228,6 +242,7 @@
             }
 
             enemyUnits.forEach(e=>{
+              if(u.type==='mage')return;
               const dist=Math.abs(e.r-pos.r)+Math.abs(e.c-pos.c);
               if(dist<=UNIT_TYPES[u.type].range &&
                  global.hasLOS(pos.r,pos.c,e.r,e.c,{forestBlock:false})){
@@ -243,6 +258,13 @@
               }
             });
 
+            if(u.type==='mage'){
+              const wounded=units.filter(a=>a.owner===p && a.hp<UNIT_TYPES[a.type].hpMax);
+              if(wounded.length){
+                const distance=Math.min(...wounded.map(a=>Math.abs(a.r-pos.r)+Math.abs(a.c-pos.c)));
+                score+=Math.max(0,40-distance*12);
+              }
+            }
             let risk=0;
             enemyUnits.forEach(e=>{
               const dist=Math.abs(e.r-pos.r)+Math.abs(e.c-pos.c);
@@ -281,14 +303,11 @@
           }
         }
         if(target){
-          const pathInfo=aStar(u,target);
-          let moveCost=0;
-          if(pathInfo){
-            moveCost=pathInfo.cost;
-            const last=pathInfo.path[pathInfo.path.length-1];
-            target={r:last.r,c:last.c};
-          }else moveCost=u.mp;
-          u.mp-=moveCost;
+          // Exactly the same reachable-cell validator as for the human player.
+          // Re-running A* could exceed MP or pass through a hostile building.
+          const remaining=cz.rem?.[target.r]?.[target.c];
+          if(!Number.isInteger(remaining)||remaining<0||remaining>=u.mp)break;
+          u.mp=remaining;
           let bb=buildings.find(b=>b.r===target.r&&b.c===target.c&&b.owner!==p);
           if(bb){
             global.damageBuilding && global.damageBuilding(bb);
