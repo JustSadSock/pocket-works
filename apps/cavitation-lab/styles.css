@@ -69,6 +69,7 @@ button:disabled{opacity:.38;cursor:default}
 .launch:active{background:#f0b773;transform:translateY(1px)}
 .launch-symbol{font-size:20px;line-height:1}
 .pause,.speed{background:transparent;border:1px solid #b3bdaf;min-height:37px;color:#3f5754}
+.pause{font-size:17px;font-weight:700}
 .pause{grid-column:2}.speed{grid-column:3}
 .pause:active,.speed:active{background:#c7d0c6}
 .console-foot{font-size:9px;letter-spacing:.1em;color:#72817c;text-align:center;padding-top:4px}
