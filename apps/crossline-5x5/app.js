@@ -244,7 +244,9 @@ function drawBoard(host,units,edges,events=[],preview=false,shownRound=game()?.r
  for(let y=0;y<5;y++)for(let x=0;x<5;x++){
   const at=['A','B'].filter(k=>units[k]?.alive&&units[k].x===x&&units[k].y===y),coord=x+','+y,outer=x===0||y===0||x===4||y===4;
   const warned=(!edges&&shownRound===4&&outer),lava=edges&&outer;
-  const hit=at.some(k=>impacts.has(k)),block=at.some(k=>blocked.has(k));
+  // A struck unit is already marked dead in the resolved frame. Paint the
+  // hit on its final cell rather than requiring an alive actor there.
+  const hit=[...impacts].some(k=>units[k]?.x===x&&units[k]?.y===y),block=[...blocked].some(k=>units[k]?.x===x&&units[k]?.y===y);
   html+='<div class="cell '+(warned?'edge-warning ':'')+(lava?'lava ':'')+(traces.traces.has(coord)?'trace ':'')+(traces.targets.has(coord)?'target ':'')+(hit?'impact ':'')+(block?'block ':'')+'" role="gridcell" data-x="'+x+'" data-y="'+y+'" data-trace="'+(traces.traces.get(coord)||'')+'">';
   if(at.length)html+='<div class="piece '+(at.length===2?'both':at[0].toLowerCase())+'"><span>'+(at.length===2?'ⅠⅡ':at[0]==='A'?'Ⅰ':'Ⅱ')+'</span></div>';
   html+='</div>';
