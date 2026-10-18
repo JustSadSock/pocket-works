@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'otves-';
-const CACHE_NAME = 'otves-v1.5.0';
-const APP_VERSION = '1.5.0';
+const CACHE_NAME = 'otves-v1.6.0';
+const APP_VERSION = '1.6.0';
 const RELEASE_DATE = '2026-10-18';
 const RELEASE_NOTES = [
-  'Лабиринт теперь до физических границ экрана, без виртуальной рамки.',
-  'Камера и размер лабиринта подстраиваются под ориентацию телефона, сохраняя проходы.',
-  'У стеклянных стен появились встроенные металлические кромки и уплотнители; интерфейс стал компактнее.'
+  'Шар непрерывно и тихо шуршит по керамике в зависимости от скорости; столкновения звенят стеклом.',
+  'Переработаны звуки лунки, калибровки и паузы.',
+  'Добавлена независимая настройка вибрации и более удобные переходы меню.'
 ];
 const APP_SHELL = [
   './',
@@ -20,6 +20,7 @@ const APP_SHELL = [
   './render-materials.js',
   './marble-motion.js',
   './edge-layout.js',
+  './instrument-feedback.js',
   './render-geometry.js',
   './manifest.webmanifest',
   './icons/icon.svg',

@@ -40,8 +40,8 @@
         <div class="serial-row"><span>PW / TILT INSTRUMENT 07</span><b>⌁</b></div>
         <img class="app-mark" src="./icons/icon.svg" alt="" draggable="false">
         <h1>ОТВЕС</h1>
-        <p class="subtitle">СТЕКЛО · ЛАБИРИНТ · ГРАВИТАЦИЯ</p>
-        <p class="instruction">Положи телефон <strong>экраном вверх</strong>. Шар находится будто внутри дисплея: наклоняй сам телефон и закати его в латунную лунку.</p>
+        <p class="subtitle">СТЕКЛО · КЕРАМИКА · ГРАВИТАЦИЯ</p>
+        <p class="instruction">Наклоняй телефон, чтобы катить стеклянный шар по лабиринту. Цель — латунная лунка. Без датчика проведи пальцем по экрану.</p>
         <div class="tilt-diagram" aria-hidden="true">
           <span>↖</span><span>↑</span><span>↗</span>
           <span>←</span><i></i><span>→</span>
@@ -49,7 +49,7 @@
         </div>
         <button class="primary-key" id="continueButton" type="button" data-native-press>РАЗРЕШИТЬ НАКЛОН И ИГРАТЬ</button>
         <button class="line-key" id="newRunButton" type="button" data-native-press>НОВАЯ СЕРИЯ ЛАБИРИНТОВ</button>
-        <button class="line-key sound-toggle" id="startSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+        <div class="sensory-controls" role="group" aria-label="Звук и вибрация"><button class="line-key sound-toggle" id="startSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button><button class="line-key haptic-toggle" id="startHapticButton" type="button" aria-pressed="true" data-native-press>ВИБРАЦИЯ: ВКЛ</button></div>
         <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
       </div>
     </section>
@@ -61,7 +61,7 @@
         <button class="primary-key" id="resumeButton" type="button" data-native-press>ПРОДОЛЖИТЬ</button>
         <button class="line-key" id="restartButton" type="button" data-native-press>ЗАНОВО ЭТОТ ЛАБИРИНТ</button>
         <button class="line-key" id="pauseCalibrateButton" type="button" data-native-press>ВЫРОВНЯТЬ НОЛЬ</button>
-        <button class="line-key sound-toggle" id="pauseSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button>
+        <div class="sensory-controls" role="group" aria-label="Звук и вибрация"><button class="line-key sound-toggle" id="pauseSoundButton" type="button" aria-pressed="true" data-native-press>ЗВУК: ВКЛ</button><button class="line-key haptic-toggle" id="pauseHapticButton" type="button" aria-pressed="true" data-native-press>ВИБРАЦИЯ: ВКЛ</button></div>
         <button class="line-key" type="button" data-workshop-trigger data-native-press>WORKSHOP</button>
         <a class="exit-link" href="../../" data-shell-exit data-app-control data-native-press>ВЫЙТИ В POCKET WORKS</a>
         <button class="bare-key" id="menuButton" type="button" data-native-press>К ТИТУЛЬНОЙ ПЛАСТИНЕ</button>
@@ -86,7 +86,7 @@
     </section>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОТВЕС" data-app-version="1.5.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОТВЕС" data-app-version="1.6.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

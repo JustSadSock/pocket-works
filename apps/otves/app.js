@@ -1,7 +1,7 @@
 import { installMobileRuntime, setDocumentScrollLocked } from '../../shared/mobile-runtime.js';
 import { watchOrientation, getDeviceCapabilities } from '../../shared/capabilities/device.js';
 import { createRafLoop, watchReducedMotion } from '../../shared/capabilities/motion.js';
-import { createAudioFeedback } from '../../shared/capabilities/audio.js';
+import { createInstrumentAudio, createInstrumentHaptics } from './instrument-feedback.js';
 import { createVersionedStore } from '../../shared/capabilities/storage.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { createMaze, dimensionsForLevel, seedForLevel } from './maze.js';
@@ -48,7 +48,8 @@ const elements = {
   resultCollisions: document.querySelector('#resultCollisions'),
   resultBest: document.querySelector('#resultBest'),
   recordStamp: document.querySelector('#recordStamp'),
-  soundButtons: [...document.querySelectorAll('.sound-toggle')]
+  soundButtons: [...document.querySelectorAll('.sound-toggle')],
+  hapticButtons: [...document.querySelectorAll('.haptic-toggle')]
 };
 
 const store = createVersionedStore({
@@ -56,6 +57,7 @@ const store = createVersionedStore({
   version: 1,
   defaults: {
     sound: true,
+    haptics: true,
     currentLevel: 1,
     unlockedLevel: 1,
     runSeed: randomSeed(),
@@ -64,6 +66,7 @@ const store = createVersionedStore({
   validate(value) {
     return Boolean(value)
       && typeof value.sound === 'boolean'
+      && (value.haptics === undefined || typeof value.haptics === 'boolean')
       && Number.isInteger(value.currentLevel)
       && value.currentLevel >= 1
       && Number.isInteger(value.unlockedLevel)
@@ -76,7 +79,8 @@ const store = createVersionedStore({
   }
 });
 
-const audio = createAudioFeedback({ enabled: store.get('sound', true), volume: 0.2 });
+const audio = createInstrumentAudio({ enabled: store.get('sound', true), volume: .30 });
+const haptics = createInstrumentHaptics({ enabled: store.get('haptics', true) });
 // Keep the original 2D canvas as the input surface and as a genuine fallback.
 // A separate WebGL canvas avoids the browser's irreversible canvas-context choice.
 let renderer;
@@ -126,7 +130,6 @@ let latestOrientation = null;
 let baseline = null;
 let sensorWatchTimer = 0;
 let toastTimer = 0;
-let rollingSoundAt = 0;
 let hudUpdatedAt = 0;
 let pointer = null;
 let reducedMotion = false;
@@ -150,13 +153,26 @@ function showToast(message, duration = 1800) {
 }
 
 function setScreen(screen) {
-  // The playfield remains edge-to-edge; HUD furniture dissolves in a run.
+  // The playfield remains edge-to-edge; modal focus and visibility are atomic.
+  const wasPlaying = elements.canvas.closest('.app-shell')?.classList.contains('is-playing');
   elements.canvas.closest('.app-shell')?.classList.toggle('is-playing',
     !screen && (state === 'playing' || state === 'finishing'));
   for (const item of [elements.startScreen, elements.pauseScreen, elements.completeScreen]) {
     const visible = item === screen;
     item.classList.toggle('is-visible', visible);
     item.setAttribute('aria-hidden', String(!visible));
+    item.inert = !visible;
+  }
+  if (screen) {
+    screen.querySelector('.primary-key')?.focus({preventScroll:true});
+  } else if (state === 'playing') {
+    // Focus never remains trapped inside a now-inert modal.
+    elements.pauseButton.focus({preventScroll:true});
+  }
+  if (!screen && !wasPlaying && state === 'playing') {
+    elements.time.classList.remove('dial-awake');
+    void elements.time.offsetWidth;
+    elements.time.classList.add('dial-awake');
   }
 }
 
@@ -164,6 +180,14 @@ function updateSoundButtons() {
   for (const button of elements.soundButtons) {
     button.textContent = `ЗВУК: ${audio.enabled ? 'ВКЛ' : 'ВЫКЛ'}`;
     button.setAttribute('aria-pressed', String(audio.enabled));
+  }
+}
+
+function updateHapticButtons() {
+  for (const button of elements.hapticButtons) {
+    button.textContent = `ВИБРАЦИЯ: ${haptics.enabled ? 'ВКЛ' : 'ВЫКЛ'}`;
+    button.setAttribute('aria-pressed', String(haptics.enabled));
+    button.hidden = !haptics.available;
   }
 }
 
@@ -254,7 +278,8 @@ function calibrate(showMessage = true) {
   sensorTilt.x = 0;
   sensorTilt.y = 0;
   if (showMessage) showToast('ЭТО ПОЛОЖЕНИЕ ПРИНЯТО ЗА НОЛЬ');
-  audio.play('click');
+  audio.play('calibrate');
+  haptics.pulse('click');
 }
 
 async function enableSensor() {
@@ -309,31 +334,58 @@ async function prepareInput() {
 }
 
 async function startLevel(nextLevel = level) {
-  await prepareInput();
+  if (state === 'starting') return;
+  state = 'starting';
+  const actions = [elements.continueButton, elements.newRunButton,
+    elements.restartButton, elements.nextButton, elements.retryButton];
+  for (const button of actions) button.disabled = true;
+  elements.startScreen.setAttribute('aria-busy', 'true');
+  elements.pauseScreen.setAttribute('aria-busy', 'true');
+  elements.completeScreen.setAttribute('aria-busy', 'true');
+  try {
+    await prepareInput();
+  } catch (error) {
+    // A denied orientation/audio permission must not prevent finger play.
+    console.warn('ОТВЕС: input preparation unavailable', error);
+    sensorEnabled = false;
+    sensorReceived = false;
+    updateInputReadout();
+    showToast('НАКЛОН НЕ ДОСТУПЕН · УПРАВЛЯЙ ПАЛЬЦЕМ');
+  } finally {
+    for (const button of actions) button.disabled = false;
+    for (const screen of [elements.startScreen,elements.pauseScreen,elements.completeScreen])
+      screen.removeAttribute('aria-busy');
+  }
   buildLevel(nextLevel);
   state = 'playing';
   store.patch({ currentLevel: level, runSeed });
   setScreen(null);
   elements.pauseButton.disabled = false;
-  audio.play('click');
+  audio.setPaused(false);
+  audio.play('resume');
 }
 
 function pauseGame() {
   if (state !== 'playing') return;
   state = 'paused';
+  audio.setPaused(true);
   setScreen(elements.pauseScreen);
-  audio.play('click');
+  audio.play('pause');
+  haptics.pulse('click');
 }
 
 function resumeGame() {
   if (state !== 'paused') return;
   state = 'playing';
   setScreen(null);
-  audio.play('click');
+  audio.unlock().then(() => audio.setPaused(false)).catch(() => {});
+  audio.play('resume');
+  haptics.pulse('click');
 }
 
 function returnToMenu() {
   state = 'menu';
+  audio.setPaused(true);
   elements.pauseButton.disabled = true;
   setScreen(elements.startScreen);
   updateContinueLabel();
@@ -346,12 +398,13 @@ function completeLevel() {
   // Capture the incoming velocity and orientation BEFORE freezing physics.
   goalCapture = startGoalCapture(marble,maze.goal);
   state = 'finishing';
+  audio.setPaused(true);
   elements.pauseButton.disabled = true;
   completedAt = performance.now();
   completion = 0;
   landingCuePlayed = false;
   // A restrained tap as the ball crosses the brass rim.
-  audio.tone({frequency:390,endFrequency:260,duration:.09,type:'triangle',gain:.052});
+  audio.play('rim');
   elements.time.textContent = formatTime(elapsed);
   marble.velocity.x = 0;
   marble.velocity.y = 0;
@@ -382,23 +435,14 @@ function revealCompletedLevel() {
   state = 'complete';
   completion = 1;
   setScreen(elements.completeScreen);
-  audio.tone({ frequency: 520, endFrequency: 690, duration: 0.11, type: 'sine', gain: 0.22 });
-  audio.tone({ frequency: 710, endFrequency: 920, duration: 0.16, type: 'sine', gain: 0.2, delay: 0.08 });
-  navigator.vibrate?.([18, 35, 22]);
+  audio.play('success');
+  haptics.pulse('success');
 }
 
 function handleCollision(speed) {
   collisions += 1;
-  if (audio.enabled) {
-    audio.tone({
-      frequency: clamp(540 + speed * 120, 590, 1050),
-      endFrequency: clamp(430 + speed * 65, 470, 810),
-      duration: 0.038 + clamp(speed, 0, 5) * 0.008,
-      type: 'triangle',
-      gain: clamp(0.055 + speed * 0.022, 0.06, 0.17)
-    });
-  }
-  if (speed > 2.1) navigator.vibrate?.(7);
+  audio.impact(speed);
+  if (speed > 1.7) haptics.pulse('collision', speed/4.3);
 }
 
 function effectiveTilt(now) {
@@ -423,20 +467,6 @@ function updateHud(now) {
   if (state === 'playing' || state === 'paused') elements.time.textContent = formatTime(elapsed);
 }
 
-function rollingAudio(now) {
-  if (!audio.enabled || state !== 'playing') return;
-  const speed = marble.speed();
-  if (speed < 0.72 || now < rollingSoundAt) return;
-  const interval = clamp(185 - speed * 23, 64, 170);
-  rollingSoundAt = now + interval;
-  audio.tone({
-    frequency: 210 + speed * 34 + Math.sin(now * 0.021) * 18,
-    endFrequency: 190 + speed * 28,
-    duration: 0.022,
-    type: 'triangle',
-    gain: clamp(0.018 + speed * 0.006, 0.018, 0.05)
-  });
-}
 
 const loop = createRafLoop((now, deltaMilliseconds) => {
   if (!maze) return;
@@ -452,7 +482,7 @@ const loop = createRafLoop((now, deltaMilliseconds) => {
     const dx = marble.position.x - maze.goal.x;
     const dy = marble.position.y - maze.goal.y;
     if (Math.hypot(dx, dy) < 0.31) completeLevel();
-    rollingAudio(now);
+    audio.rolling(marble.speed());
   } else if (state === 'menu' && !reducedMotion) {
     marble.velocity.x = Math.sin(now * 0.0012) * 0.22;
     marble.velocity.y = Math.cos(now * 0.001) * 0.18;
@@ -461,8 +491,8 @@ const loop = createRafLoop((now, deltaMilliseconds) => {
     completion = clamp((now - completedAt) / (reducedMotion ? 560 : GOAL_CAPTURE_MS), 0, 1);
     if (!landingCuePlayed && completion >= .87) {
       landingCuePlayed = true;
-      audio.tone({frequency:175,endFrequency:103,duration:.16,type:'sine',gain:.047});
-      navigator.vibrate?.(7);
+      audio.play('landing');
+      haptics.pulse('landing');
     }
     if (completion >= 1) revealCompletedLevel();
   }
@@ -568,17 +598,39 @@ for (const button of elements.soundButtons) {
     const enabled = !audio.enabled;
     audio.setEnabled(enabled);
     store.set('sound', enabled);
-    if (enabled) {
-      await audio.unlock();
-      audio.play('click');
-    }
+    // Feedback is immediate even if Safari/Chromium delays AudioContext.resume.
     updateSoundButtons();
+    if (enabled) {
+      try {
+        await audio.unlock();
+        audio.setPaused(state !== 'playing');
+        audio.play('click');
+      } catch (error) {
+        console.warn('ОТВЕС: audio cannot resume on this device',error);
+      }
+    }
   });
 }
 
+for (const button of elements.hapticButtons) {
+  button.addEventListener('click', () => {
+    const enabled = !haptics.enabled;
+    haptics.setEnabled(enabled);
+    store.set('haptics', enabled);
+    updateHapticButtons();
+    if (enabled) haptics.pulse('click');
+  });
+}
+
+document.addEventListener('click', (event) => {
+  if (!event.isTrusted || !event.target.closest('[data-native-press]')) return;
+  if (event.target.closest('.haptic-toggle')) return;
+  haptics.pulse('click');
+});
+
 createWorkshopMode({
   appName: 'ОТВЕС',
-  version: '1.5.0',
+  version: '1.6.0',
   cachePrefix: 'otves-',
   storageNamespace: 'pocket-works:otves',
   onReset: async () => location.reload()
@@ -586,6 +638,8 @@ createWorkshopMode({
 
 elements.pauseButton.disabled = true;
 updateSoundButtons();
+updateHapticButtons();
+setScreen(elements.startScreen);
 updateContinueLabel();
 updateInputReadout();
 demoLevel();

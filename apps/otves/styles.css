@@ -80,3 +80,113 @@
 @media (prefers-reduced-motion:reduce){
   .best-readout{transition:none}
 }
+
+
+/* 1.6 — TACTILE INSTRUMENT.
+   Dense ceramic, fine machined edges, restrained modal motion. The gameplay
+   viewport itself stays unobstructed and borderless. */
+[hidden]{display:none!important}
+.screen{
+  background:rgba(5,10,7,.68);
+  transition:opacity .21s ease,visibility .21s;
+}
+.title-plate,.control-plate{
+  position:relative;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.055),transparent 30%),
+    linear-gradient(153deg,#343f33 0%,#202a22 46%,#121c16 100%);
+  color:#ede9d5;
+  border:1px solid #7e846b;
+  box-shadow:0 22px 75px rgba(0,0,0,.52),
+    inset 0 0 0 3px rgba(4,8,5,.58),
+    inset 0 3px 0 rgba(220,221,186,.18);
+  clip-path:polygon(0 0,97.5% 0,100% 2.5%,100% 100%,2.5% 100%,0 97.5%);
+  transform:translateY(10px) scale(.989);
+  transition:transform .24s cubic-bezier(.2,.72,.2,1);
+}
+.screen.is-visible .title-plate,.screen.is-visible .control-plate{
+  transform:translateY(0) scale(1);
+}
+.serial-row{
+  color:#a9b39f;
+  border-color:rgba(198,173,102,.32);
+  font-weight:600;
+}
+.serial-row b{color:#d7c187}
+.title-plate h1,.control-plate h2{
+  color:#f1eedc;
+  text-shadow:0 1px 0 rgba(0,0,0,.4),0 2px 5px rgba(0,0,0,.23);
+}
+.subtitle{color:#beae7f}
+.instruction{color:#d0d5c8}
+.tilt-diagram{color:#9aaa99}
+.primary-key,.line-key,.exit-link,.bare-key{
+  transition:background .13s ease,transform .12s ease,border-color .13s ease,color .13s ease;
+}
+.primary-key{
+  color:#1d291d;
+  background:linear-gradient(180deg,#d6cfab,#b4a675);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),
+    inset 0 -3px 0 #827654,0 3px 9px rgba(0,0,0,.22);
+}
+.primary-key:active{box-shadow:inset 0 3px 6px rgba(0,0,0,.19)}
+.line-key,.exit-link{
+  background:rgba(228,229,203,.028);
+  color:#e1e3d2;
+  border-top:1px solid rgba(201,204,169,.24);
+  border-bottom:1px solid rgba(201,204,169,.22);
+}
+.line-key:active,.exit-link:active{background:rgba(228,229,203,.12)}
+.bare-key{color:#b7bfa9}
+.control-plate>p{color:#a5b19e}
+.result-disc{
+  background:
+    linear-gradient(160deg,rgba(250,255,228,.12),transparent 35%),
+    linear-gradient(150deg,#67715c,#252f27 60%,#18211a);
+  color:#f3f0dd;
+  border:1px solid #a49766;
+  box-shadow:0 24px 75px rgba(0,0,0,.51),
+    inset 0 0 0 6px rgba(8,16,11,.31);
+  transform:translateY(10px) scale(.98);
+  transition:transform .23s cubic-bezier(.2,.72,.2,1);
+}
+.screen.is-visible .result-disc{transform:translateY(0) scale(1)}
+.result-disc h2{color:#f4f0da}
+.result-disc>p{color:#c7c49f}
+.result-disc dl div{border-color:rgba(221,220,180,.23)}
+.record-stamp{border-color:#d3af7d;color:#e0c69c}
+.result-rings{border-color:rgba(213,204,157,.16);box-shadow:0 0 0 26px rgba(200,190,147,.028),0 0 0 53px rgba(200,190,147,.03)}
+.sensory-controls{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;
+  margin-top:8px;
+}
+.sensory-controls .line-key{font-size:9px;letter-spacing:.07em;min-height:39px;margin-top:0;padding:0 4px}
+.sensory-controls:has(.haptic-toggle[hidden]){grid-template-columns:1fr}
+.title-plate .sensory-controls + .exit-link{margin-top:8px}
+button:focus-visible,a:focus-visible{
+  outline:2px solid #e4d2a0;outline-offset:3px;
+}
+button:disabled{opacity:.52;pointer-events:none}
+.screen[aria-busy="true"] .primary-key::after{
+  content:"";display:inline-block;width:11px;height:11px;
+  margin-left:10px;border:1.5px solid currentColor;
+  border-right-color:transparent;border-radius:50%;
+  animation:otves-loading .7s linear infinite;
+}
+.dial-awake{animation:otves-awake .34s cubic-bezier(.14,.7,.2,1)}
+@keyframes otves-loading{to{transform:rotate(360deg)}}
+@keyframes otves-awake{
+  0%{opacity:.45;transform:translateY(3px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+@media(max-width:355px){.sensory-controls .line-key{font-size:8px}}
+@media(max-height:680px){
+  .title-plate,.control-plate{padding-top:13px;padding-bottom:12px}
+  .sensory-controls{margin-top:5px}
+  .sensory-controls .line-key{min-height:34px}
+}
+@media(prefers-reduced-motion:reduce){
+  .screen,.title-plate,.control-plate,.result-disc,
+  .primary-key,.line-key,.exit-link,.bare-key{transition:none}
+  .dial-awake,.screen[aria-busy="true"] .primary-key::after{animation:none}
+}
