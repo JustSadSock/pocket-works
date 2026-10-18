@@ -30,7 +30,8 @@
         "hourly-economy.test.mjs",
         "grounded-motion.test.mjs",
         "land-economy.test.mjs",
-        "conflicts.test.mjs"
+        "conflicts.test.mjs",
+        "realism-contract.test.mjs"
       ]
     },
     {
