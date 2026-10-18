@@ -69,6 +69,16 @@ A confused, visually impaired elderly protagonist believes he is walking around 
 - [ ] Multistage domestic tasks that depend on furniture rather than HUD labels; alternative endings with meaningful physical staging.
 - [ ] Expand the lived-in flat to a credible landing / neighboring threshold and add location-specific NPC-like memory encounters.
 
+## 1.6.0 — The blackout: household electrical task
+- [x] Fixed, recoverable power outage triggered after a meaningful period of exploration; no sudden black game over and no repeat trip after repair.
+- [x] Soviet ceramic fuse board in hallway and aging plug-in hotplate in kitchen; both accessible from walkable tile paths across varied room arrangements.
+- [x] Two-stage true interaction: unplug hotplate first, then re-engage hall breaker; premature breaker reset refuses with physical sound and in-world clue.
+- [x] Radio correctly pauses as an electrical appliance, ambient lamps darken through the WebGL1 fragment shader while battery torch remains available.
+- [x] Blackout and restoration have native offline Web Audio, modest tension consequence, saved state and restored availability after reload.
+- [x] 500 randomized accessibility checks and an end-to-end browser QA case for power outage/restore.
+- [ ] More individualized room circuits, visual switches and dynamic light sources including refrigerator compressor and emergency landing illumination.
+- [ ] Hardware contact shadows/normal mapping and profiling on iPhone Safari rather than pretending that planar shadow geometry is shadow mapping.
+
 ## 1.3 — Memory and perception
 - Context-sensitive changes: family pictures reverse, bathroom door leads elsewhere, furniture shifts while unseen, radios recite distorted memories, doors become unfamiliar.
 - Explicit safety invariants: all accessible objectives and exit remain reachable; no geometry changes inside view, player capsule, or an occupied prop.
