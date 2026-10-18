@@ -436,9 +436,10 @@ const FogRuleKernel=(function(){
   }
   function canSpawn(map,units,buildings,state,building,unitType,point,unitTypes,buildTypes,beta){
     const info=unitTypes[unitType];
+    const allowed=buildTypes[building?.type]?.spawn.includes(unitType)||
+      (beta&&unitType==='bog'&&building?.type==='base');
     if(!building||!point||!info||building.owner!==state.currentPlayer||
-      !buildTypes[building.type]?.spawn.includes(unitType)||
-      (unitType==='bog'&&!beta))return false;
+      !allowed||(unitType==='bog'&&!beta))return false;
     if(!Number.isInteger(point.r)||!Number.isInteger(point.c)||
       point.r<0||point.r>=map.length||point.c<0||point.c>=map[0].length||
       manhattan(building,point)!==1||map[point.r][point.c]===4)return false;
@@ -557,7 +558,9 @@ export function originalAction(source,side,action){
    target.hp=Math.min(UNIT_TYPES[target.type].hpMax,target.hp+2);u.mp=0;log(g,p,'Отряд исцелён.');
  }else if(action.type==='spawn'){
    const b=g.buildings.find(b=>b.id===action.building),info=UNIT_TYPES[action.unitType];
-   if(!b||b.owner!==p||!info||!BUILD_TYPES[b.type]?.spawn.includes(action.unitType)||
+   const canProduce=BUILD_TYPES[b?.type]?.spawn.includes(action.unitType)||
+     (g.modeBeta&&action.unitType==='bog'&&b?.type==='base');
+   if(!b||b.owner!==p||!info||!canProduce||
       action.unitType==='bog'&&!g.modeBeta)return failure('Нельзя нанять такой отряд.');
    if(g.state.gold[p]<info.cost)return failure('Недостаточно золота.');
    if(g.units.length>=140)return failure('Армия слишком велика.');
