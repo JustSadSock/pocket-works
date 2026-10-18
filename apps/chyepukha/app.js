@@ -20,7 +20,7 @@ const code=s=>{let x=String(s||'').trim();try{x=new URL(x).searchParams.get('roo
 const words=s=>String(s||'').trim().split(/\s+/u).filter(Boolean);
 const GENDERS=[['male','Чоловік'],['female','Жінка'],['nonbinary','Інше'],['unspecified','Неважливо']];
 let net=null,view=null,me='',room='',connected=false,connecting=false,notice='';
-let name=read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',comicImage='',modal='',sound=read('sound','off')==='on',audio=null;
+let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',comicImage='',modal='',sound=read('sound','off')==='on',audio=null;
 let previewDraft='';
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
@@ -65,7 +65,7 @@ async function refreshPocketBadge(initial=false){
  // WebKit can time out a forced shared-identity refresh even when /me itself is healthy.
  if(!next){
   try{
-   const response=await fetch('/pocket-id/me',{credentials:'same-origin',cache:'no-store'});
+   const response=await fetch('/pocket-id/me',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(4500)});
    if(response.ok){const payload=await response.json();next=payload.user?.id?payload.user:null}
    else if(wasKnown&&member())return;
   }catch{if(wasKnown&&member())return}
@@ -145,7 +145,7 @@ async function connect(how,settings){
  // cookie on session creation and WebSocket auth, preventing stale-account access.
  const nick=(member()?pocketIdentity.nickname:name.trim()).slice(0,24);
  if(!nick){toast('Вкажи ім’я.');return}
- if(!member()){name=nick;save('name',nick)}
+ if(!member()){name=nick;save('name',nick);try{storageForTab().setItem(KEY+'tab-name',nick)}catch{}}
  if(how==='join'&&!code(invitation)){toast('Вкажи правильний код кімнати.');return}
  if(how==='resume'&&!savedRoom()){toast('Збережена кімната для цього профілю недоступна.');return}
  if(net){net.close();net=null;releaseActive()}
