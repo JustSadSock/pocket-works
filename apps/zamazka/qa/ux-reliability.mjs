@@ -29,9 +29,7 @@ assert.equal(state.deadline-time,25_000,'the full 25-second study window begins 
 time=state.deadline+1;send(host,{type:'pulse'});
 assert.equal(state.phase,'drawing');
 for(const p of players)send(p,{type:'submit',strokes:[]});
-assert.equal(state.phase,'drawing','all players may submit early without ending the visible timer');
-time=state.deadline+1;send(host,{type:'pulse'});
-assert.equal(state.phase,'voting');
+assert.equal(state.phase,'voting','all accepted artworks open expert voting immediately');
 const ballot={type:'vote',chips:[3,0,0,0,0]};
 const first=send(b,ballot);
 assert.ok(first.events.some(e=>e.type==='vote_saved'&&e.to==='b'&&e.payload.turn===0));
