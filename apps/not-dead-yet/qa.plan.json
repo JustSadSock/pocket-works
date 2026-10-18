@@ -15,7 +15,8 @@
         "tests/memory.test.mjs",
         "tests/story.test.mjs",
         "tests/power.test.mjs",
-        "tests/landing.test.mjs"
+        "tests/landing.test.mjs",
+        "tests/presences.test.mjs"
       ]
     },
     {

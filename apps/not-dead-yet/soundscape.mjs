@@ -63,6 +63,10 @@ export function createSoundscape({Context=(typeof window!=='undefined'?(window.A
       note(52,{type:'sine',end:32,duration:.13,volume:.023*scale,at:now+.2,pan});break;
      case 'clock':
       note(970,{type:'sine',end:770,duration:.026,volume:.007,pan});break;
+     case 'presence-step':
+      hiss({duration:.23,volume:.013,frequency:330,pan});
+      note(86,{type:'triangle',end:55,duration:.18,volume:.014,pan});
+      note(440,{type:'sine',end:280,duration:.042,volume:.006,at:now+.11,pan});break;
      case 'pipe':
       note(144,{type:'triangle',end:73,duration:1.1,volume:.012,pan});
       hiss({duration:1.2,frequency:360,volume:.007,pan});break;

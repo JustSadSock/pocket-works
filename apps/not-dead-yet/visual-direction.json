@@ -9,7 +9,7 @@
     "surfaceAndMaterial": "Late Soviet and post-Soviet lived-in domestic realism: varnished glass-panel doors, wall carpet, heavy polished wall-unit with china, enamel kettle, kitchen oilcloth, familiar faded flower wallpaper and herringbone parquet. More readable textile seams, sofa cushions, worn wardrobe moldings, enamel fridge magnets and shallow geometric wall cast shadows. A pale ceramic breaker board and a battered plug-in hotplate have visually meaningful switch states.",
     "paletteLogic": "Desaturated nicotine cream, brown wood and muted sage replace teal industrial corridors; isolated warm brass marks objects and danger appears as faint rusty red.",
     "typography": "Small utilitarian location and objective labels in play; larger compressed worn theatre-poster title only in the initial nocturnal menu.",
-    "signature": "The Soviet apartment opens onto a second recognizable place through a real brass peephole. A stairwell grocery net and family photograph unite remembered life inside and outside; topology remains safe and closed until a future walkable chapter.",
+    "signature": "A lived-in Soviet apartment where shot noise draws perceived figures, footsteps matter, and keeping a flashlight on a silhouette reveals a familiar coat stand or bathrobe before the fear subsides.",
     "distinction": "Memory is participatory: recognize distorted furniture, tune a radio, connect family objects and resolve a personally meaningful ending. Never a standard gun-vs-monsters progression.",
     "spatialRationale": "A small persistent HUD leaves almost the entire view for walls and belongings. Separate left/right thumb surfaces keep first-person navigation usable in portrait.",
     "comparisons": [
@@ -31,9 +31,9 @@
   },
   "motion": {
     "character": "Measured walking inertia and subtle gait synchronized to movement; rounded enemies sway slightly, avoiding ceaseless random camera wobble.",
-    "action": "The same E/touch action checks the peephole, then leaves its view; active look mode disables movement, pistol and other competing controls until exit.",
+    "action": "Look with a responsive flashlight, walk quietly or sprint, open doors, recognize memory objects, inspect peephole and complete household circuits. Gunshots create an acoustic consequence.",
     "anticipation": "A shadow at a doorway or the sound of furniture shifting warns of a changing remembered room before it can be revisited.",
-    "response": "Real E/touch interactions change kettle/plug and breaker state, audible latches, radio availability and electrical ambient illumination; the flashlight remains independently powered.",
+    "response": "False presences orient toward recent nearby noise and can dissolve after the player steadily illuminates and recognizes an ordinary familiar household object.",
     "followThrough": "After a glance away, a room may have moved its door; the next visit resolves into a visibly different furniture arrangement while objectives remain accessible.",
     "interruption": "Pointercancel and focus loss always reset movement; pause saves state and freezes pursuit without claiming the user has died.",
     "reducedMotion": "Reduce-motion disables head-bob while keeping navigation, textures, enemy visibility and action states intact."

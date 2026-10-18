@@ -232,3 +232,21 @@ test('1.7 real peephole reveals stairwell and family object, survives mobile/des
  expect((await state(page)).landing).toMatchObject({knocked:true,seen:true,recognized:true});
  expect(errors).toEqual([]);
 });
+
+
+test('1.8 flashlight recognition disperses a remembered coat while a loud shot attracts a different figure',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#start')).toBeVisible();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.spawnPresenceAhead('coat'))).toBe(true);
+ await expect.poll(async()=> (await state(page)).presences.length).toBe(1);
+ await expect.poll(async()=> (await state(page)).presences.length,{timeout:9000}).toBe(0);
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.spawnPresenceBehind('figure'))).toBe(true);
+ await page.keyboard.press('Space');
+ await expect.poll(async()=> (await state(page)).noise?.type).toBe('shot');
+ await expect.poll(async()=> (await state(page)).presences.some(p=>p.attention==='sound'),{timeout:5000}).toBe(true);
+ expect(errors).toEqual([]);
+});

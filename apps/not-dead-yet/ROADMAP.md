@@ -92,6 +92,20 @@ A confused, visually impaired elderly protagonist believes he is walking around 
 - [ ] Neighbors represented through believable physical behaviors and ambient sound rather than hallucination-only antagonists.
 - [ ] High-quality GPU contact shadows and profile-aware visual-detail adaptation on real iPhone Safari hardware.
 
+## 1.8.0 — Acoustic memory and recognition through light
+- [x] Decouple perceived presence behavior from the game loop into a testable module.
+- [x] Different sound radii and lifetimes for quiet footsteps, sprinting, shooting, radio, breakers and wooden doors. Closed doors attenuate sound.
+- [x] Visible figures respond to the protagonist; unheard ones do not automatically pursue through apartment walls; noises temporarily attract attention.
+- [x] Holding the flashlight on a coat or human-like silhouette restores the recognizable domestic object and disperses the apparition without a firearm.
+- [x] A shot creates loud acoustic attention and may bring another perceptual figure sooner; shooting is functional but no longer a consequence-free shortcut.
+- [x] Localized wooden-floor shuffle sounds, no external audio assets or global health changes.
+- [x] Unit tests for perception, line of sight, attenuation, movement and nonviolent flashlight dispersal; browser gameplay checks.
+
+### Still open
+- [ ] More substantial environmental acoustic simulation, obstruction-aware reflections and room reverb, beyond basic muffled range and stereo panning.
+- [ ] Physically based flashlight shadows cast by furniture and characters rather than only planar projection.
+- [ ] Real recorded speech and further multistep domestic puzzle sequences, with mobile-first gameplay QA.
+
 ## 1.3 — Memory and perception
 - Context-sensitive changes: family pictures reverse, bathroom door leads elsewhere, furniture shifts while unseen, radios recite distorted memories, doors become unfamiliar.
 - Explicit safety invariants: all accessible objectives and exit remain reachable; no geometry changes inside view, player capsule, or an occupied prop.
