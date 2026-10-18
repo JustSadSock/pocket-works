@@ -773,7 +773,7 @@ $('board').addEventListener('click',event=>{
 $('board').addEventListener('keydown',event=>{
  const cell=event.target.closest('.cell');
  if(cell&&['Enter',' '].includes(event.key)){
-  event.preventDefault();changeBoardMark(Number(cell.dataset.x),Number(cell.dataset.y));
+  event.preventDefault();event.stopPropagation();changeBoardMark(Number(cell.dataset.x),Number(cell.dataset.y));
  }
 });
 $('sound').onclick=openSettings;
