@@ -893,7 +893,7 @@ function frame(timestamp){
     // Frame-rate ceiling in manual Detail mode leaves CPU/GPU time for game input.
     // Let the browser service touch, mouse and pause events between expensive SW-WebGL frames.
     // Fast GPU systems keep the previous fast refresh rate.
-    const interval=world?.softwareRenderer?80:effectiveQuality==='high'?20:effectiveQuality==='low'?20:0;
+    const interval=world?.conservativeRenderer?80:effectiveQuality==='high'?20:effectiveQuality==='low'?20:0;
     const shouldPaint=mode==='playing'?(timestamp-lastPaint>=interval&&performance.now()>=paintCoolDownUntil):lastPaint===0;
     if(world&&!document.hidden&&shouldPaint){
       const elapsed=Math.min(dt,.045);lastPaint=timestamp;
