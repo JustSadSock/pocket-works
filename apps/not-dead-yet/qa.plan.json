@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/maze.test.mjs",
+        "tests/apartment.test.mjs",
+        "tests/chapter.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#start",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#start"
+        },
+        {
+          "action": "visible",
+          "selector": "#view"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
+        },
+        {
+          "action": "visible",
+          "selector": "#pauseOverlay"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/journey.spec.js"
+      ]
+    }
+  ]
+}

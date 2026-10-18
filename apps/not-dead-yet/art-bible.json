@@ -6,21 +6,21 @@
     {
       "slug": "gloamstep",
       "evidence": "apps/gloamstep/app.config.json",
-      "lesson": "Dungeon turns and overhead board representation work there, but repeat neither the grid framing nor the touch d-pad."
+      "lesson": "Do not copy an overhead pixel board, framed stage or conventional d-pad; the apartment must be experienced from fragile eye-height perspective."
     },
     {
       "slug": "melt-crypt",
       "evidence": "apps/melt-crypt/source/game.js",
-      "lesson": "A first-person action setting can use dynamic geometry, but this survival game should not imitate weapon-dominated HUD and combat."
+      "lesson": "Avoid a giant aggressive FPS action console; the old service revolver is a small tool inside a larger exploration and memory experience."
     }
   ],
   "references": [
     {
       "url": "https://github.com/JustSadSock/Not-Dead-Yet",
       "inspectedAt": "2026-10-18",
-      "observation": "Original 2D map uses independently regenerated tile chunks and a limited memory-visibility duration.",
+      "observation": "The original HTML5 prototype changes chunks as a character's tile memory decays, but inconsistent game-map interfaces and partial merging create isolated rooms.",
       "principle": "Architecture rearranging itself behind the player is the central gameplay identity, not merely random corridors.",
-      "application": "Whole sectors regenerate after being left behind with fixed guaranteed edge portals and a deterministic seed.",
+      "application": "Use a bounded fully walkable apartment. Rewrite room door positions and furnishing only after leaving sight and physical vicinity.",
       "avoid": "Avoid partial merging of old remembered cells into new grids, which was able to strand walking paths."
     },
     {
@@ -28,7 +28,7 @@
       "inspectedAt": "2026-10-18",
       "observation": "The Godot prototype already started experimenting with spatial movement, apartment cells, and projectile scripts.",
       "principle": "Player-scale spatial navigation fits the tension of a horror labyrinth better than reading square tiles from above.",
-      "application": "Build directly authored WebGL polygons with eye-height look and actual collisions, not a visual-only 2D mockup.",
+      "application": "Reuse the native first-person movement/shooting intent, but make fresh keyboard and touch input independent from mouse pointer lock.",
       "avoid": "Do not carry over engine-specific scene dependencies or half-connected controllers from the abandoned prototype."
     },
     {
@@ -36,18 +36,18 @@
       "inspectedAt": "2026-10-18",
       "observation": "Existing Gloamstep demonstrates a fully localized mobile dungeon, objective counters and a deliberate exit route.",
       "principle": "On a small screen, important progress and escape should be visible without permanent panels or scrolling.",
-      "application": "Place only health, memory counter, nearest target compass and pause above the full-bleed geometry.",
+      "application": "Show the real interior, its own wallpaper and worn wood; use a restrained objective line instead of a wide status control ribbon.",
       "avoid": "Avoid copying overhead tile rendering, the framing strips or a full directional control pad."
     }
   ],
   "concepts": [
     {
       "id": "webgl-depth",
-      "medium": "Offline native WebGL 1 polygons with a custom flashlight shader and depth-tested concrete geometry.",
-      "composition": "The environment occupies the whole phone, with a narrow permanent compass and peripheral twin-thumb controls.",
-      "interaction": "A drag steers the head independently from movement; players cross real gates, lose sight of old routes, and find signals.",
-      "motion": "Immediate first-person turning and proportional walking bob; distant corridors softly fade through atmospheric fog.",
-      "rationale": "Chosen because changing spaces are felt bodily at eye level and all needed resources are local on slow mobile networks."
+      "medium": "Offline authored WebGL1 indoor 3D geometry, GLSL procedural surface patterns, rounded silhouettes and an independent first-person revolver model.",
+      "composition": "Furnished apartment fills the whole screen, while small location, self-control, ammo and chapter progress marks hug the screen perimeter.",
+      "interaction": "Pressing WASD or a left thumb translates freely in two axes; right drag changes gaze; E, shoot, reload and inventory directly change game state.",
+      "motion": "Immediate camera parallax with minor walking bob, proportional furniture and silhouette movement, restrained firearm flash and animated memory instability.",
+      "rationale": "A genuine inhabited flat makes forgotten domestic routes emotionally meaningful rather than another anonymous maze. All materials are generated locally."
     },
     {
       "id": "blueprint-floorplan",
@@ -68,7 +68,7 @@
   ],
   "selection": {
     "concept": "webgl-depth",
-    "reason": "True perspective supports the original memory-shifting idea while a fixed connected graph avoids recreating the old navigation failures.",
+    "reason": "The full-depth apartment best expresses unreliable recollection; persistent doors, the personal inventory and visually legible objects form one usable survival scenario.",
     "rejected": [
       {
         "concept": "blueprint-floorplan",
@@ -99,32 +99,32 @@
   ],
   "assets": [
     {
-      "id": "threshold-emblem",
+      "id": "apartment-door-icon",
       "tool": "svg",
       "source": "visual-direction.json",
       "output": "icons/icon.svg",
-      "role": "Recognizable square app emblem where a narrow signal glows deep behind a concrete double gate.",
-      "acceptance": "The stacked doorway and warm beacon remain distinct as a single app icon at 64 pixels.",
-      "integration": "The launcher, manifest, HTML and offline service worker all reference the same local SVG.",
-      "provenance": "Hand-authored from original paths and gradients for this project, without third-party art or font binaries.",
+      "role": "Aged half-open wooden apartment door with brass peephole and a suggestion of a faceless shadow, visible in the PocketWorks library.",
+      "acceptance": "Door silhouette, handle and peephole remain distinct in the 64-to-256-pixel icon range without text or neon glows.",
+      "integration": "Manifest, HTML tab icon and service-worker offline precache share the same authored SVG at icons/icon.svg.",
+      "provenance": "Custom original vector geometry created for NOT DEAD YET and based on ordinary domestic architecture rather than another game design.",
       "maxBytes": 30000
     },
     {
-      "id": "volumetric-rooms",
+      "id": "apartment-materials",
       "tool": "webgl",
-      "source": "world.mjs",
+      "source": "apartment.mjs",
       "output": "renderer.mjs",
-      "role": "Procedural lit walls, ceiling slabs, floor joints, memory monoliths and pursuer silhouettes define the actual space.",
-      "acceptance": "Cells share matching exits and the renderer draws depth-tested triangles with flashlight shading and fog.",
-      "integration": "The renderer reads chunk geometry from World and draws cached WebGL meshes plus dynamic actors.",
-      "provenance": "All primitives, palette, lighting formula and world topology are original local JavaScript source.",
-      "maxBytes": 120000
+      "role": "Real wall, floor, ceiling, furniture and object meshes colored by wood grain, aged plaster, patterned wallpaper, tile, cloth, enamel and brass GLSL materials.",
+      "acceptance": "Every room has recognisable furniture and a repeatable coherent material, and picking a memory object removes its visible 3D prop.",
+      "integration": "Renderer reads room data, dynamic item states and object coordinates from the chapter world; materials are compiled in its original local WebGL shader.",
+      "provenance": "Materials are mathematically authored original procedural shader patterns; no downloaded textures, fonts or online runtime resources.",
+      "maxBytes": 180000
     }
   ],
   "evidence": {
-    "firstFrame": "First-person corridor preview under a large compressed title and rotated mechanical aperture.",
-    "action": "Entering the labyrinth removes the menu and the user immediately walks through spatial corridors.",
-    "settled": "A memory signal vanishes on approach, the progress counter increments and compass redirects."
+    "firstFrame": "An aged apartment door fills the main menu aside from the compressed title and one clear start action.",
+    "action": "The menu closes into the furnished hall; left analog stick or keyboard traverses rooms while the right side looks around.",
+    "settled": "A collected memory item disappears, its name fills one inventory entry and the door unlocks after all four items are found."
   },
   "constraints": {
     "viewport": [
@@ -132,7 +132,7 @@
       844
     ],
     "textureBytes": 0,
-    "triangles": 50000,
+    "triangles": 70000,
     "targetFps": 45
   },
   "verification": {
@@ -142,14 +142,15 @@
       "settled"
     ],
     "risks": [
-      "Shader compile error, WebGL context loss or a missing mobile touch pointer could leave a black frame.",
-      "Long controls on a narrow phone must never obscure the next memory marker or block the real gameplay.",
-      "Sectors may regenerate only after the player leaves, without sealing portals or spawning actors inside walls."
+      "Blocked keyboard motion or a dragging joystick returning zero must be caught by synthetic movement telemetry and real browser walkthrough.",
+      "Door mutation cannot seal a room or cover a user, quest prop or imagined pursuer; 300 seeded layouts should always be traversable.",
+      "Low-end WebKit shader compilation may fail with too many procedural operations; QA must inspect real frame output.",
+      "Tall portrait phone must show the interact, fire, reload and pause controls without preventing camera gestures."
     ],
     "comparisons": [
-      "GLOAMSTEP uses top-down flat tiles while this app uses eye-level volumetric corridors and no d-pad.",
-      "MELT//CRYPT is a weapon-centric action arena rather than navigational horror without combat equipment.",
-      "Axis Pals is a planar shared-control puzzle rather than a solo first-person exploration space."
+      "The earlier teal concrete chamber is replaced by warm aged domestic wallpaper, parquet, a bed, a kitchen and an old front door.",
+      "GLOAMSTEP remains a top-down grid crawler while this chapter has a free moving full-height first-person eye camera.",
+      "MELT//CRYPT focuses on combat and fantastical spaces rather than personal memory objects and subjective domestic exploration."
     ]
   }
 }

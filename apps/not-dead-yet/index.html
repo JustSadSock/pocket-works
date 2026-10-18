@@ -1,18 +1,58 @@
 <!doctype html><html lang="ru"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0b171b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>NOT DEAD YET</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<meta name="theme-color" content="#171918"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="NOT DEAD YET">
+<title>NOT DEAD YET — Квартира №17</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css"></head>
 <body><main class="app-shell" data-app-shell data-fullscreen-app>
-<canvas id="view" data-gesture-surface data-block-callout aria-label="Трёхмерный лабиринт от первого лица"></canvas>
-<div class="vignette" aria-hidden="true"></div><div class="reticle" aria-hidden="true"></div>
-<div class="hud" data-ui><div class="hud-left"><span class="sigil"></span><div class="identity"><strong>NOT DEAD YET</strong><small id="sector">СЕКТОР 00 / 00</small></div></div><div class="hud-right"><div class="memory">ПАМЯТЬ <b id="count">0 / 3</b></div><button id="pause" class="quiet" data-native-press type="button">Пауза</button></div></div>
-<div class="threat" id="threat" data-ui><div id="lifeFill"></div></div><div class="compass" id="compass" aria-label="Указатель цели" data-ui><span id="needle">⌁</span><small id="distance">—</small></div>
-<div class="hint" id="hint" data-ui aria-live="polite"></div><div id="joystick" class="joystick" data-gesture-surface data-ui aria-label="Движение"><div id="knob"></div></div><div id="touchLook" class="look-zone" data-gesture-surface aria-label="Повернуть взгляд"></div>
-<div class="touch-actions" data-ui><button id="run" class="action" data-native-press>БЕГ</button><button id="torch" class="action torch" data-native-press>СВЕТ</button></div>
-<section id="menu" class="overlay is-open" data-ui aria-label="Главное меню"><div class="menu-visual"><div class="aperture"><i></i><i></i><i></i><i></i></div></div><div class="menu-content"><p class="kicker">ЭКСПЕРИМЕНТ / 01</p><h1>NOT<br>DEAD<br><em>YET.</em></h1><p class="lead">Лабиринт меняется, когда перестаёшь о нём помнить. Собери три сигнала и вернись к исходной двери. Не все силуэты настоящие.</p><div class="menu-buttons"><button id="start" class="primary" data-native-press>Войти в лабиринт <span>↗</span></button><button id="continue" class="secondary" data-native-press hidden>Продолжить забег</button><button id="sound" class="secondary" data-native-press>Звук: вкл</button><a href="../../" data-app-control class="exit">Вернуться в Pocket Works</a></div></div><div class="menu-corner">WASD — ходьба · Мышь — взгляд · Shift — бег · F — фонарь</div></section>
-<section id="pauseOverlay" class="overlay" hidden data-ui><div class="dialog"><p class="kicker">ПРИОСТАНОВЛЕНО</p><h2>Ты ещё здесь.</h2><p id="pauseText" class="lead"></p><button id="resume" class="primary" data-native-press>Продолжить</button><button id="new" class="secondary" data-native-press>Новый лабиринт</button><a href="../../" data-app-control class="exit">Вернуться в Pocket Works</a></div></section>
-<section id="endOverlay" class="overlay" hidden data-ui><div class="dialog"><p id="endTag" class="kicker"></p><h2 id="endTitle"></h2><p id="endText" class="lead"></p><button id="again" class="primary" data-native-press>Снова войти</button><a href="../../" data-app-control class="exit">Вернуться в Pocket Works</a></div></section>
-<section id="confirmOverlay" class="overlay" hidden data-ui><div class="dialog"><p class="kicker">БЕЗ ВОЗВРАТА</p><h2>Стереть этот забег?</h2><button id="erase" class="primary" data-native-press>Да, начать заново</button><button id="cancel" class="secondary" data-native-press>Остаться</button></div></section>
-<div id="fatal" hidden role="alert"><strong>Не удалось включить 3D.</strong><span>Нужен браузер с WebGL. Попробуй обновить страницу.</span><a href="../../">Вернуться в Pocket Works</a></div>
-</main><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="NOT DEAD YET" data-app-version="1.0.0"></script><script type="module" src="./app.js"></script></body></html>
+<canvas id="view" data-gesture-surface data-block-callout aria-label="Квартира №17 от первого лица"></canvas>
+<div class="grain" aria-hidden="true"></div><div id="perception" class="perception" aria-hidden="true"></div><div class="reticle" aria-hidden="true"></div>
+<header class="hud" data-ui>
+ <div class="location"><span class="location-mark"></span><div><strong id="sector">КВАРТИРА №17</strong><small id="objective">Вспомнить дорогу домой</small></div></div>
+ <div class="headright"><div class="rounds"><small>ПАТРОНЫ</small><strong id="ammo">6 / 18</strong></div><button id="torch" class="edge" type="button" data-native-press>Свет: вкл</button><button id="pause" class="edge" type="button" data-native-press>Пауза</button></div>
+</header>
+<div class="mind" data-ui><div id="lifeFill"></div><span>САМООБЛАДАНИЕ</span></div>
+<div class="top-progress" data-ui><span id="count">0 / 4</span><span>ВОСПОМИНАНИЯ</span></div>
+<div id="hint" class="hint" data-ui role="status" aria-live="polite"></div>
+<div id="aimHint" class="aim-hint" data-ui></div>
+<div id="joystick" class="joystick" data-gesture-surface data-ui aria-label="Ходьба"><div id="knob"></div></div>
+<div id="touchLook" class="look-zone" data-gesture-surface aria-label="Повернуть взгляд"></div>
+<div class="touch-actions" data-ui>
+ <button id="run" class="control run" type="button" data-native-press>Бег</button>
+ <button id="interact" class="control use" type="button" data-native-press>Взять</button>
+ <button id="fire" class="control fire" type="button" data-native-press>ОГОНЬ</button>
+ <button id="reload" class="control reload" type="button" data-native-press>↻</button>
+</div>
+<button id="pack" class="inventory-button" data-native-press type="button">Вещи <span id="packCount">0</span></button>
+<section id="menu" class="overlay is-open" data-ui aria-label="Меню">
+ <div class="menu-visual" aria-hidden="true"><span class="door-shape"><i></i></span><span class="door-glimmer"></span></div>
+ <div class="menu-main"><p class="eyebrow">ГЛАВА I / КВАРТИРА №17</p><h1>NOT<br>DEAD<br><em>YET.</em></h1>
+ <p class="intro">Ты снова проснулся дома. Только комнаты находятся не там, где должны. Найди вещи, которые ещё помнишь, и открой входную дверь.</p>
+ <div class="menu-actions"><button id="start" class="primary" data-native-press>Начать новую ночь <span>↗</span></button>
+ <button id="continue" class="secondary" hidden data-native-press>Продолжить прошлую ночь</button>
+ <button id="sound" class="secondary" data-native-press>Звук: вкл</button>
+ <a class="exit" data-app-control href="../../">Вернуться в Pocket Works</a></div>
+ <p class="control-help">WASD — ходьба · Мышь — взгляд · E — взять · ЛКМ — стрелять · R — перезарядка · I — вещи</p>
+ </div>
+</section>
+<section id="pauseOverlay" class="overlay" hidden data-ui><div class="dialog">
+ <p class="eyebrow">ТИШИНА</p><h2>Ты знаешь эту квартиру.</h2><p id="pauseText" class="intro"></p>
+ <button id="resume" class="primary" data-native-press>Продолжить</button><button id="new" class="secondary" data-native-press>Начать заново</button>
+ <a href="../../" data-app-control class="exit">Вернуться в Pocket Works</a>
+</div></section>
+<section id="inventoryOverlay" class="overlay" hidden data-ui><div class="dialog pack-panel">
+ <p class="eyebrow">ТО, ЧТО ОСТАЛОСЬ</p><h2>В карманах</h2><div id="inventoryList" class="inventory-list"></div>
+ <p id="inventoryAdvice" class="inventory-advice"></p><button id="closePack" class="primary" data-native-press>Вернуться в квартиру</button>
+ <a href="../../" data-app-control class="exit">Вернуться в Pocket Works</a>
+</div></section>
+<section id="endOverlay" class="overlay" hidden data-ui><div class="dialog">
+ <p id="endTag" class="eyebrow"></p><h2 id="endTitle"></h2><p id="endText" class="intro"></p>
+ <button id="again" class="primary" data-native-press>Ещё одна ночь</button><a href="../../" data-app-control class="exit">Вернуться в Pocket Works</a>
+</div></section>
+<section id="confirmOverlay" class="overlay" hidden data-ui><div class="dialog">
+ <p class="eyebrow">ПАМЯТЬ НЕ ВЕРНУТЬ</p><h2>Забыть прошлую ночь?</h2>
+ <button id="erase" class="primary" data-native-press>Да, начать заново</button><button id="cancel" class="secondary" data-native-press>Отмена</button>
+</div></section>
+<div id="fatal" hidden role="alert"><strong>Квартира не открылась</strong><span>WebGL недоступен. Обнови страницу или выбери другой браузер.</span><a href="../../">Вернуться в Pocket Works</a></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="NOT DEAD YET" data-app-version="1.1.0"></script>
+<script type="module" src="./app.js"></script></body></html>
