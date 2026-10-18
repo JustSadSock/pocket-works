@@ -55,6 +55,20 @@ A confused, visually impaired elderly protagonist believes he is walking around 
 - [ ] Physically based soft GPU shadow mapping from torch and every bulb, GPU frame profiling at real device resolution.
 - [ ] Narrative triggers with original spoken memories, photograph content variations and a more intricate apartment topology beyond four primary rooms.
 
+## 1.5.0 — A voice in the apartment (implemented)
+- [x] Built an actually interactable Bakelite radio with three tuned stations and diegetic moving dial in the furnished living room.
+- [x] Synthesized distinct static, nostalgic melody and familiar-message signals offline. Captioned text conveys the memory explicitly; a real voice recording is not yet shipped.
+- [x] Family album acts as the clue to understand the familiar channel. This discovery has a one-time stress and world-stability reward, no farming.
+- [x] Inventory opens four original family-memory passages and contextual radio / apartment-recall status only on demand.
+- [x] Two distinct completed chapter endings: one ordinary escape and a more intimate resolution based on radio discovery plus recognizing two different rooms.
+- [x] Persist radio and narrative state in the existing world save, with default behavior for all legacy saves.
+- [x] Unit and browser tests for radio accessibility, player interaction, saved tuner, journal and ending decisions.
+
+### Narrative / atmosphere next steps
+- [ ] Real performed, locally stored speech recordings (with captions, audio opt-out and size budgets), not synthesized fake dialogue.
+- [ ] Multistage domestic tasks that depend on furniture rather than HUD labels; alternative endings with meaningful physical staging.
+- [ ] Expand the lived-in flat to a credible landing / neighboring threshold and add location-specific NPC-like memory encounters.
+
 ## 1.3 — Memory and perception
 - Context-sensitive changes: family pictures reverse, bathroom door leads elsewhere, furniture shifts while unseen, radios recite distorted memories, doors become unfamiliar.
 - Explicit safety invariants: all accessible objectives and exit remain reachable; no geometry changes inside view, player capsule, or an occupied prop.

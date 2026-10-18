@@ -134,3 +134,32 @@ test('1.4 unfamiliar furniture can be remembered, reduces panic and survives res
  expect((await state(page)).layoutVersion).toBe(2);
  expect(errors).toEqual([]);
 });
+
+
+test('1.5 family radio: collect album, tune home station, reveal journal and restore after reload',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true,{timeout:20000});
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearMemory('living'))).toBe(true);
+ await page.keyboard.press('e');
+ await expect.poll(async()=> (await state(page)).inventory).toContain('album');
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearRadio())).toBe(true);
+ await expect(page.locator('#aimHint')).toContainText('НАСТРОИТЬ');
+ await page.keyboard.press('e');
+ await expect.poll(async()=> (await state(page)).radio.channel).toBe(1);
+ await page.keyboard.press('e');
+ await expect.poll(async()=> (await state(page)).radio.channel).toBe(2);
+ await expect.poll(async()=> (await state(page)).radio.heard).toBe(true);
+ await page.locator('#pack').click();
+ await expect(page.locator('#journalList .memory-entry')).toHaveCount(1);
+ await expect(page.locator('#journalStatus')).toContainText('Голос');
+ await page.locator('#closePack').click();
+ await page.locator('#pause').click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#continue').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect((await state(page)).radio).toMatchObject({channel:2,heard:true});
+ expect(errors).toEqual([]);
+});

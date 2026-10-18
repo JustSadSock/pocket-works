@@ -1,6 +1,7 @@
 import {Apartment,ITEMS,HOME,hash} from './apartment.mjs';
 import {Renderer} from './renderer.mjs';
 import {createSoundscape} from './soundscape.mjs';
+import {chapterJournal,chapterEnding} from './story.mjs';
 const $=id=>document.getElementById(id),STORAGE='pocket-works:not-dead-yet:chapter-one:v2',OPTIONS='pocket-works:not-dead-yet:options';
 const keys=new Set(),stick={x:0,y:0},quiet=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false;
 let world,renderer,player,phase='menu',inventory=[],shadows=[],stress=0,elapsed=0,ammo=6,reserve=18,reloadTime=0,reloadDeadline=0,shotTime=0,stunTime=0,torch=true,energy=100,showHintUntil=0,spawnAt=8,saveAt=5,worldAt=0,lastFrame=performance.now(),moveCount=0,attemptCount=0,blockedCount=0,stepCount=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,confirmSource='pause',screenNotice='',sound=true,runId=0;
@@ -41,13 +42,20 @@ function drawInventory(){const list=$('inventoryList');list.replaceChildren();
   const detail=document.createElement('div'),name=document.createElement('strong'),desc=document.createElement('small');
   name.textContent=item.label;desc.textContent=inventory.includes(item.id)?item.note:'Ещё не найдено';
   detail.append(name,desc);row.append(mark,detail);list.append(row)}
- $('inventoryAdvice').textContent=inventory.length===4?'Всё найдено. Осталось открыть входную дверь.':'Пока не собраны все вещи, входная дверь не откроется.'
+ const journal=chapterJournal(inventory,world.recognizedCount(),world.radio.heard);
+ const notes=$('journalList');notes.replaceChildren();
+ for(const entry of journal.entries){
+  const card=document.createElement('article'),title=document.createElement('strong'),body=document.createElement('p');
+  card.className='memory-entry';title.textContent=entry.title;body.textContent=entry.body;
+  card.append(title,body);notes.append(card)
+ }
+ $('journalStatus').textContent=journal.radio+' '+journal.memory;
+ $('inventoryAdvice').textContent=journal.goal
 }
 function finish(won){
  if(phase!=='play')return;phase='end';clearInputs();releaseMouse();localStorage.removeItem(STORAGE);
- $('endTag').textContent=won?'ГЛАВА I / КОНЕЦ':'ГЛАВА I / ПОТЕРЯННЫЙ ВЕЧЕР';
- $('endTitle').textContent=won?'Дверь вспомнила тебя.':'Ты забыл, где находишься.';
- $('endText').textContent=won?'В кармане четыре знакомые вещи. Дверь открылась. По ту сторону — утро. Время: '+Math.round(elapsed)+' сек.':'Стены остались на месте. Но память снова подвела. Найдено вещей: '+inventory.length+' из 4.';
+ const ending=chapterEnding({won,inventory,recognized:world.recognizedCount(),heard:world.radio.heard,seconds:elapsed});
+ $('endTag').textContent=ending.tag;$('endTitle').textContent=ending.title;$('endText').textContent=ending.text;
  overlay('endOverlay');acoustics.event(won?'win':'lose')
 }
 function nearItem(){
@@ -57,6 +65,10 @@ function nearItem(){
  return found
 }
 function nearExit(){return Math.hypot(player.x-15.5,player.z-21)<2.25}
+function nearRadio(){
+ const pos=world.radioPosition();const d=Math.hypot(player.x-pos.x,player.z-pos.z);
+ return d<2.25&&world.visible(player.x,player.z,pos.x,pos.z)?pos:null
+}
 function nearMemory(){
  let found=null,best=2.05;
  for(const r of world.rooms){const state=world.memoryState(r.type);if(!state?.active)continue;
@@ -77,6 +89,13 @@ function interact(){
   }
  }
  if(nearExit()){if(inventory.length===4)finish(true);else notice('Ты уверен, что собрал все свои вещи?',2.3);return}
+ if(nearRadio()){
+  const result=world.tuneRadio(inventory.includes('album'));
+  acoustics.event(result.sound,{intensity:1});
+  if(result.newMemory){stress=Math.max(0,stress-16);world.nextShift+=13}
+  notice(result.message,result.newMemory?5:3.3);
+  persist();hud();return
+ }
  const door=world.nearestDoor(player.x,player.z,2.2);
  if(door){const result=world.toggleDoor(door.room,player.x,player.z);
   if(result.ok){acoustics.event('door');notice(result.open?'Дверь открылась.':'Дверь закрылась.',1.6);persist()}
@@ -173,16 +192,18 @@ function hud(){
  $('objective').textContent=inventory.length===4?'Вернуться к входной двери':'Найти четыре знакомые вещи';
  $('perception').style.opacity=String(clamp(.08+stress/170,0,.7));
  $('reload').textContent=reloadTime>0?'…':'↻';$('torch').textContent='Свет: '+(torch?'вкл':'выкл');
- const item=nearItem(),memory=!item?nearMemory():null,exit=nearExit(),door=!item&&!memory&&!exit?world.nearestDoor(player.x,player.z,2.2):null;
- $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:memory?'E / ВСПОМНИТЬ — '+world.location(memory.x,memory.z):exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):door?'E / '+(door.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' — '+world.location(world.point(door.room).x,world.point(door.room).z):'';
- $('interact').textContent=item?'Взять':memory?'Вспомнить':door?(door.open?'Закрыть':'Открыть'):exit?'Открыть':'Взять';
- $('interact').classList.toggle('ready',Boolean(item||memory||exit||door));
+ const item=nearItem(),memory=!item?nearMemory():null,exit=nearExit();
+ const radio=!item&&!memory&&!exit?nearRadio():null;
+ const door=!item&&!memory&&!exit&&!radio?world.nearestDoor(player.x,player.z,2.2):null;
+ $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:memory?'E / ВСПОМНИТЬ — '+world.location(memory.x,memory.z):radio?'E / НАСТРОИТЬ ПРИЁМНИК':exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):door?'E / '+(door.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' — '+world.location(world.point(door.room).x,world.point(door.room).z):'';
+ $('interact').textContent=item?'Взять':memory?'Вспомнить':radio?'Настроить':door?(door.open?'Закрыть':'Открыть'):exit?'Открыть':'Взять';
+ $('interact').classList.toggle('ready',Boolean(item||memory||radio||exit||door));
 }
 function paint(t){
  const dt=Math.min(.20,Math.max(0,(t-lastFrame)/1000));lastFrame=t;
  if(phase==='play')simulate(dt);
  if(world&&renderer&&!renderer.lost){const items=ITEMS.filter(i=>!inventory.includes(i.id)).map(i=>world.itemPosition(i.id));renderer.draw(world,player,shadows,items,torch,elapsed,stress/100,shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)}
- window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true,memoryTraces:world?.rooms.map(r=>world.memoryState(r.type)),layoutVersion:world?.layoutVersion,doors:world?.doors().map(d=>({room:d.type,open:d.open,angle:d.angle,gate:d.gate})),sovietInterior:true};
+ window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true,memoryTraces:world?.rooms.map(r=>world.memoryState(r.type)),radio:world?.radio?{...world.radio}:null,recognized:world?.recognizedCount(),layoutVersion:world?.layoutVersion,doors:world?.doors().map(d=>({room:d.type,open:d.open,angle:d.angle,gate:d.gate})),sovietInterior:true};
  requestAnimationFrame(paint)
 }
 function moveStick(e){const b=$('joystick').getBoundingClientRect(),x=e.clientX-b.left-b.width*.5,y=e.clientY-b.top-b.height*.5,rad=b.width*.38,d=Math.max(.01,Math.hypot(x,y)),scale=Math.min(1,rad/d);stick.x=x*scale/rad;stick.y=-y*scale/rad;$('knob').style.transform='translate('+(x*scale)+'px,'+(y*scale)+'px)'}
@@ -226,6 +247,15 @@ try{
  renderer=new Renderer($('view'));setup(nextSeed());phase='menu';overlay('menu');$('continue').hidden=!readSave();
  if(new URLSearchParams(window.location?.search||'').get('qa')==='1'){
   window.__PW_TEST_HOOKS__={
+   teleportNearRadio(){
+    if(phase!=='play')return false;
+    const pos=world.radioPosition();
+    // The table itself has a collision footprint, so stand next to the front edge.
+    const candidates=[[0,1.25],[0,-1.25],[1.45,0],[-1.45,0],[0,1.65],[0,-1.65]];
+    for(const [dx,dz] of candidates){const x=pos.x+dx,z=pos.z+dz;
+     if(world.canStand(x,z)&&world.visible(x,z,pos.x,pos.z)){player.x=x;player.z=z;hud();return true}
+    }return false
+   },
    teleportNearMemory(type){
     if(phase!=='play')return false;
     const spot=world.memorySpot(type);if(!spot)return false;
