@@ -4,6 +4,7 @@ import { sweepCircle } from './stability.js';
 import {ENEMY_TELLS,telegraphSeverity} from './ecology.js';
 import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
 import {gastricChamber} from './gastricArt.js';
+import {structuralChamber} from './structuralArt.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -63,6 +64,40 @@ export function createWorld(canvas, initialSeed) {
       (z>=0?1:-1)*(.10*Math.sin(y*4.8+x*1.9)+.075*fold));
   }
   gastricWallGeo.computeVertexNormals();
+  // Different anatomy must remain identifiable without its palette:
+  // a compressed rounded artery, honeycomb-like bone, and fibrous neural sheath.
+  function sculptOrganWall(type){
+    const g=new THREE.BoxGeometry(1.03,2.8,.28,12,16,2);
+    const a=g.attributes.position;
+    for(let i=0;i<a.count;i++){
+      const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
+      const side=z>=0?1:-1;
+      if(type==='vascular'){
+        a.setXYZ(i,x+Math.sin(y*3.8+x*3.2)*.055,
+          y, z+side*(.10*Math.sin(y*2.8)+.06*Math.cos(x*9+y*4.3)));
+      }else if(type==='marrow'){
+        const pore=Math.pow(Math.max(0,Math.sin(x*13+y*5)*Math.cos(y*8-x*4)),2);
+        a.setXYZ(i,x+Math.sin(y*5+x*7)*.032,y,
+          z+side*(.07*Math.sin(y*7+x*5)-.115*pore));
+      }else{
+        const fiber=Math.sin(y*11+x*16)+.4*Math.cos(x*25-y*6);
+        a.setXYZ(i,x+Math.sin(y*4.4)*.05,y,z+side*(.06*fiber+.04*Math.cos(y*17)));
+      }
+    }
+    g.computeVertexNormals();return g;
+  }
+  const structuralWallGeo={
+    vascular:sculptOrganWall('vascular'),marrow:sculptOrganWall('marrow'),
+    neural:sculptOrganWall('neural')
+  };
+  const vascularArchGeo=new THREE.TorusGeometry(.68,.105,7,18,Math.PI);
+  const vascularValveGeo=new THREE.TorusGeometry(.34,.082,8,20);
+  const marrowVaultGeo=new THREE.TorusGeometry(.69,.145,7,16,Math.PI);
+  const marrowPoreGeo=new THREE.IcosahedronGeometry(.23,1);
+  const marrowSpineGeo=new THREE.ConeGeometry(.14,.61,7);
+  const neuralFiberGeo=new THREE.CylinderGeometry(.065,.045,1.24,7,2);
+  const neuralNodeGeo=new THREE.IcosahedronGeometry(.36,2);
+  const neuralHaloGeo=new THREE.TorusGeometry(.33,.044,5,15);
   const gastricDrapeGeo=new THREE.IcosahedronGeometry(1,2);
   const gastricRugaGeo=new THREE.TorusGeometry(.43,.115,7,15,Math.PI*1.55);
   const gastricPylorusGeo=new THREE.TorusGeometry(.75,.21,8,18);
@@ -131,6 +166,50 @@ export function createWorld(canvas, initialSeed) {
   const gastricMucusMat=new THREE.MeshStandardMaterial({color:0xa9a56d,roughness:.14,
     transparent:true,opacity:.88,emissive:0x384522,emissiveIntensity:.36,depthWrite:false});
 
+  function makeStructuralMaps(kind){
+    const colorCanvas=document.createElement('canvas'),heightCanvas=document.createElement('canvas');
+    colorCanvas.width=colorCanvas.height=heightCanvas.width=heightCanvas.height=128;
+    const colorCtx=colorCanvas.getContext('2d'),heightCtx=heightCanvas.getContext('2d');
+    if(!colorCtx||!heightCtx)return {color:fleshMap,bump:fleshMap};
+    const color=colorCtx.createImageData(128,128),bump=heightCtx.createImageData(128,128);
+    for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+      const u=x/128,v=y/128,grain=rand(x,y,kind==='vascular'?811:kind==='marrow'?997:1297)*.14;
+      const fold=kind==='vascular'?
+        Math.sin(v*34+Math.sin(u*8)*2)*.23+Math.sin(u*65+v*10)*.13:
+        kind==='marrow'?
+        -Math.pow(Math.max(0,Math.sin(u*31)*Math.sin(v*29)),5)*.59+Math.sin(u*17+v*15)*.09:
+        Math.sin(u*52+v*12)*.17+Math.sin(v*40-u*29)*.14;
+      const shade=clamp(.73+fold+grain,0,1),j=(y*128+x)*4;
+      const tint=kind==='vascular'?[252,204,211]:kind==='marrow'?[245,236,215]:[215,217,249];
+      for(let n=0;n<3;n++)color.data[j+n]=Math.round(tint[n]*(.66+.34*shade));
+      color.data[j+3]=255;
+      for(let n=0;n<3;n++)bump.data[j+n]=Math.round(shade*255);
+      bump.data[j+3]=255;
+    }
+    colorCtx.putImageData(color,0,0);heightCtx.putImageData(bump,0,0);
+    const map=new THREE.CanvasTexture(colorCanvas),relief=new THREE.CanvasTexture(heightCanvas);
+    map.colorSpace=THREE.SRGBColorSpace;
+    for(const t of [map,relief]){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=2;}
+    return {color:map,bump:relief};
+  }
+  const structuralMaps={
+    vascular:makeStructuralMaps('vascular'),marrow:makeStructuralMaps('marrow'),
+    neural:makeStructuralMaps('neural')
+  };
+  const structuralWallMats=Object.fromEntries(Object.entries(structuralMaps).map(([id,m])=>[
+    id,new THREE.MeshStandardMaterial({color:0xffffff,map:m.color,bumpMap:m.bump,
+      bumpScale:id==='marrow'?.20:.12,roughness:id==='vascular'?.36:id==='marrow'?.88:.58,
+      emissive:id==='neural'?0x141025:id==='vascular'?0x28080c:0x1a1113,emissiveIntensity:.14})
+  ]));
+  const structuralAccents={
+    vascular:new THREE.MeshStandardMaterial({color:0xa43d4c,roughness:.34,
+      map:structuralMaps.vascular.color,bumpMap:structuralMaps.vascular.bump,bumpScale:.11}),
+    marrow:new THREE.MeshStandardMaterial({color:0xe2d1b9,roughness:.87,
+      map:structuralMaps.marrow.color,bumpMap:structuralMaps.marrow.bump,bumpScale:.18}),
+    neural:new THREE.MeshStandardMaterial({color:0x9d93c2,roughness:.44,emissive:0x333056,
+      emissiveIntensity:.42,map:structuralMaps.neural.color,bumpMap:structuralMaps.neural.bump,bumpScale:.1})
+  };
+  const marrowDark=new THREE.MeshStandardMaterial({color:0x4f303a,roughness:.91});
   const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.64, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
   const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.66, metalness:0, emissive:0x280407, emissiveIntensity:.27});
   const boneMat = new THREE.MeshStandardMaterial({color:0xb3a087, roughness:.91, metalness:0});
@@ -356,7 +435,9 @@ export function createWorld(canvas, initialSeed) {
     });
     floor.instanceMatrix.needsUpdate=true;ceiling.instanceMatrix.needsUpdate=true;
     group.add(floor,ceiling);
-    const wall=new THREE.InstancedMesh(stage===2?gastricWallGeo:wallShape,stage===2?stomachWallMat:wallMat,walls.length);
+    const nonGastric=stage===1?'vascular':stage===3?'marrow':'neural';
+    const wall=new THREE.InstancedMesh(stage===2?gastricWallGeo:structuralWallGeo[nonGastric],
+      stage===2?stomachWallMat:structuralWallMats[nonGastric],walls.length);
     walls.forEach(([x,y,z,rot,a,b],i)=>{
       temp.position.set(x,y,z);temp.rotation.set(0,rot,0);temp.scale.set(1,1,1);temp.updateMatrix();wall.setMatrixAt(i,temp.matrix);
       wall.setColorAt(i,new THREE.Color().setHSL(biome.hue+(rand(a,b,seed+12)-.5)*.019,biome.saturation,biome.wallLight+rand(a,b,seed+14)*.14));
@@ -443,6 +524,91 @@ export function createWorld(canvas, initialSeed) {
           temp.scale.set(1,1.0,1);temp.updateMatrix();cords.setMatrixAt(i,temp.matrix);
         }
         cords.instanceMatrix.needsUpdate=true;group.add(cords);
+      }
+    }
+    if(stage!==2){
+      // The same walkable cells now carry three very different 3D vault systems.
+      // All hanging forms are at ceiling height. Only existing blocked wall
+      // cells contain lower relief, so movement and bullet logic stay stable.
+      const art=structuralChamber(cx,cz,seed,biome.id);
+      const marginCells=cells.filter(([x,z])=>Math.hypot(x-(cx*8+3.5),z-(cz*8+3.5))>=2.30);
+      const sites=(cx===0&&cz===0&&marginCells.length?marginCells:cells);
+      if(art&&sites.length){
+        const at=(i)=>(sites[(i*5+art.seed)%sites.length]);
+        if(art.biome==='vascular'){
+          const arches=new THREE.InstancedMesh(vascularArchGeo,structuralAccents.vascular,art.ribs);
+          for(let i=0;i<art.ribs;i++){
+            const [x,z]=at(i);temp.position.set(x,1.87,z);
+            temp.rotation.set(0,Math.round((art.twist+i)*2/Math.PI)*Math.PI/2,0);
+            temp.scale.set(art.mass,.86,1);temp.updateMatrix();arches.setMatrixAt(i,temp.matrix);
+          }
+          arches.instanceMatrix.needsUpdate=true;group.add(arches);
+          // Valve rings and thick arteries create an anatomical focal point.
+          const valveCount=art.type==='valve-hall'?3:1;
+          const valves=new THREE.InstancedMesh(vascularValveGeo,structuralAccents.vascular,valveCount);
+          for(let i=0;i<valveCount;i++){
+            const [x,z]=at(i+2);temp.position.set(x,2.43,z);temp.rotation.set(0,i*.68,0);
+            temp.scale.setScalar(.89+art.mass*.10);temp.updateMatrix();valves.setMatrixAt(i,temp.matrix);
+          }
+          valves.instanceMatrix.needsUpdate=true;group.add(valves);
+          if(art.type==='anastomosis'){
+            const a=new THREE.InstancedMesh(sacGeo,sacMat,3);
+            for(let i=0;i<3;i++){
+              const [x,z]=at(i+5);temp.position.set(x,2.46,z);
+              temp.rotation.set(0,i,0);temp.scale.set(1.9,1.2,1.6);temp.updateMatrix();a.setMatrixAt(i,temp.matrix);
+            }
+            a.instanceMatrix.needsUpdate=true;group.add(a);
+          }
+        }
+        if(art.biome==='marrow'){
+          const vaults=new THREE.InstancedMesh(marrowVaultGeo,structuralAccents.marrow,art.ribs);
+          for(let i=0;i<art.ribs;i++){
+            const [x,z]=at(i);temp.position.set(x,1.92,z);
+            temp.rotation.set(0,i%2*Math.PI/2,0);temp.scale.set(art.mass,.85,1);
+            temp.updateMatrix();vaults.setMatrixAt(i,temp.matrix);
+          }
+          vaults.instanceMatrix.needsUpdate=true;group.add(vaults);
+          const teeth=new THREE.InstancedMesh(marrowSpineGeo,structuralAccents.marrow,art.filaments);
+          for(let i=0;i<art.filaments;i++){
+            const [x,z]=at(i+7);temp.position.set(x,2.49,z);temp.rotation.set(0,i,Math.PI);
+            temp.scale.set(1,art.mass*.74,1);temp.updateMatrix();teeth.setMatrixAt(i,temp.matrix);
+          }
+          teeth.instanceMatrix.needsUpdate=true;group.add(teeth);
+          if(art.type==='bone-well'||art.type==='marrow-crypt'){
+            const pores=new THREE.InstancedMesh(marrowPoreGeo,marrowDark,5);
+            for(let i=0;i<5;i++){
+              const [x,z]=at(i+11);temp.position.set(x,2.59,z);temp.rotation.set(i*.6,i*.9,0);
+              temp.scale.set(art.pores*1.5,.20,art.pores*1.4);
+              temp.updateMatrix();pores.setMatrixAt(i,temp.matrix);
+            }
+            pores.instanceMatrix.needsUpdate=true;group.add(pores);
+          }
+        }
+        if(art.biome==='neural'){
+          const fibers=new THREE.InstancedMesh(neuralFiberGeo,structuralAccents.neural,art.filaments);
+          for(let i=0;i<art.filaments;i++){
+            const [x,z]=at(i);temp.position.set(x,2.43,z);
+            temp.rotation.set(Math.PI/2,i*.67+art.twist,.38);
+            temp.scale.set(1,art.mass,1);temp.updateMatrix();fibers.setMatrixAt(i,temp.matrix);
+          }
+          fibers.instanceMatrix.needsUpdate=true;group.add(fibers);
+          const nodes=new THREE.InstancedMesh(neuralNodeGeo,structuralAccents.neural,art.ribs);
+          for(let i=0;i<art.ribs;i++){
+            const [x,z]=at(i+9);temp.position.set(x,2.47,z);
+            temp.rotation.set(i*.5,art.twist+i,0);temp.scale.set(.67,.42,.66);
+            temp.updateMatrix();nodes.setMatrixAt(i,temp.matrix);
+          }
+          nodes.instanceMatrix.needsUpdate=true;group.add(nodes);
+          if(art.type==='synapse'||art.type==='ganglion'){
+            const rings=new THREE.InstancedMesh(neuralHaloGeo,structuralAccents.neural,2);
+            for(let i=0;i<2;i++){
+              const [x,z]=at(i+12);temp.position.set(x,2.49,z);
+              temp.rotation.set(Math.PI*.5,art.twist+i*.8,0);temp.scale.setScalar(.9);
+              temp.updateMatrix();rings.setMatrixAt(i,temp.matrix);
+            }
+            rings.instanceMatrix.needsUpdate=true;group.add(rings);
+          }
+        }
       }
     }
     if(bones.length){
