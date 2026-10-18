@@ -58,7 +58,7 @@ test('hazards deterministically mark existing floor but never block central star
 test('legacy saves migrate without losing ruptures while v4 tags each biome',()=>{
  const legacy={v:3,seed:413,x:4,z:5,wave:3,hp:75,maxHp:100,ruptured:['3,6','3,6','-8,1'],ruptureCount:2};
  const migrated=validateRun(legacy);
- assert.equal(migrated.v,4);
+ assert.equal(migrated.v,5);
  assert.deepEqual(migrated.ruptured,['3:3,6','3:-8,1']);
  assert.equal(migrated.wave,3);
  assert.deepEqual(validateRun(migrated),migrated);
