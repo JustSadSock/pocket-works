@@ -41,10 +41,12 @@ function material(kind,u,v,x,y,seed){
    break
   }
   case 2: { // square parquet with staggered plank seams
-   const row=Math.floor(v*5),uu=frac(u*3+(row%2)*.5),vv=frac(v*5);
-   const line=uu<.027||vv<.025;
-   const grain=Math.sin(u*170+noise(u*6,v*4,seed)*9)*.032;
-   tone=.73+cloud*.11+grain+grit*.09-(line?.24:0);
+   // Old herringbone parquet (ёлочка): alternating perpendicular short planks.
+   const row=Math.floor(v*10),col=Math.floor(u*10),turned=(row+col)%2===0;
+   const plankX=turned?u*10+v*5:v*10-u*5,plankY=turned?v*10:u*10;
+   const seam=Math.min(frac(plankX),1-frac(plankX))<.035||Math.min(frac(plankY),1-frac(plankY))<.035;
+   const grain=Math.sin((turned?u:v)*170+noise(u*6,v*4,seed)*9)*.042;
+   tone=.73+cloud*.10+grain+grit*.09-(seam?.25:0);
    break
   }
   case 3: { // irregular ceramic grout; tiny stippled glaze

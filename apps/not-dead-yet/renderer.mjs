@@ -1,5 +1,6 @@
 import {W,H,HOME} from './apartment.mjs';
 import {makeMaterialAtlas} from './textures.mjs';
+import {panels} from './doors.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
@@ -51,6 +52,56 @@ function box(out,x,y,z,w,h,d,color,material=6){const a=x-w/2,b=x+w/2,l=y,t=y+h,c
  quad(out,[a,l,e],[b,l,e],[b,l,c],[a,l,c],color,[0,-1,0],material)}
 function round(out,x,y,z,rx,ry,rz,color,material=7){const rings=5,sides=10;for(let j=0;j<rings-1;j++){const a=-Math.PI*.5+Math.PI*j/(rings-1),b=-Math.PI*.5+Math.PI*(j+1)/(rings-1);for(let i=0;i<sides;i++){const u=i*Math.PI*2/sides,v=(i+1)*Math.PI*2/sides,pt=(t,k)=>[x+Math.cos(t)*Math.cos(k)*rx,y+Math.sin(t)*ry,z+Math.cos(t)*Math.sin(k)*rz];quad(out,pt(a,u),pt(a,v),pt(b,v),pt(b,u),color,[Math.cos(a)*Math.cos(u),Math.sin(a),Math.cos(a)*Math.sin(u)],material)}}}
 const SCHEME={living:[.46,.37,.28],kitchen:[.45,.49,.42],bedroom:[.36,.34,.38],bathroom:[.59,.63,.58],hall:[.46,.43,.37]};
+
+// Planar projected cast-shadow polygons. Silhouettes are derived from actual prop
+// footprints and point-lamp elevation, instead of arbitrary black circles.
+function castFloorShadow(out,px,pz,w,d,h,lamp,strength=1){
+ if(h<=.05)return;
+ const dist=Math.hypot(px-lamp.x,pz-lamp.z);
+ if(dist>11||dist<.12)return;
+ const y=Math.min(h,2.1),extent=Math.min(2.45,lamp.y/Math.max(.55,lamp.y-y));
+ const corners=[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]];
+ const footprint=corners.map(([dx,dz])=>[px+dx,.019,pz+dz]);
+ const projected=corners.map(([dx,dz])=>[lamp.x+(px+dx-lamp.x)*extent,.020,lamp.z+(pz+dz-lamp.z)*extent]);
+ const color=[.075+.013*(1-strength),.069,.061];
+ for(let i=0;i<4;i++){
+  let j=(i+1)%4;
+  quad(out,footprint[i],footprint[j],projected[j],projected[i],color,[0,1,0],11)
+ }
+}
+function doorGeometry(out,world){
+ const timber=[.32,.19,.105],trim=[.43,.30,.19],glass=[.16,.22,.20],brass=[.67,.49,.22],light=[.69,.64,.52];
+ for(const door of world.doors()){
+  const leafs=panels(door.gate,door.insideSign,door.angle);
+  for(const [i,leaf] of leafs.entries()){
+   const X=t=>SCALE*(leaf.a.x+(leaf.b.x-leaf.a.x)*t),Z=t=>SCALE*(leaf.a.z+(leaf.b.z-leaf.a.z)*t);
+   const vx=leaf.b.x-leaf.a.x,vz=leaf.b.z-leaf.a.z,ln=Math.hypot(vx,vz)||1;
+   const nx=-vz/ln,nz=vx/ln;
+   // Each leaf is genuinely hinged, has an inset glass pane and a visible latch.
+   const panel=(x0,x1,y0,y1,col,mat,offset=0)=>{
+    const a=[X(x0)+nx*offset,y0,Z(x0)+nz*offset],b=[X(x1)+nx*offset,y0,Z(x1)+nz*offset];
+    const c=[X(x1)+nx*offset,y1,Z(x1)+nz*offset],d=[X(x0)+nx*offset,y1,Z(x0)+nz*offset];
+    quad(out,a,b,c,d,col,[nx,0,nz],mat);
+    quad(out,b,a,d,c,col,[-nx,0,-nz],mat)
+   };
+   panel(0,1,.025,2.74,timber,6);
+   panel(.10,.90,.14,1.08,trim,6,.015);
+   panel(.15,.85,1.24,2.43,trim,6,.015);
+   panel(.21,.79,1.31,2.36,glass,10,.020);
+   for(const y of [1.61,1.96])panel(.2,.8,y,y+.035,trim,6,.024);
+   panel(.07,.1,.04,2.70,[.22,.13,.09],6,.023);
+   panel(.90,.93,.04,2.70,[.23,.14,.08],6,.023);
+   round(out,X(.82),1.12,Z(.82),.065,.042,.065,brass,9);
+   round(out,X(.82)+nx*.048,1.12,Z(.82)+nz*.048,.03,.03,.030,[.78,.63,.36],9);
+   // Door casts a changing silhouette across the linoleum / parquet.
+   const cx=(X(0)+X(1))*.5,cz=(Z(0)+Z(1))*.5;
+   const lamp=world.point(door.type);
+   castFloorShadow(out,cx,cz,Math.max(.11,Math.abs(X(1)-X(0))),Math.max(.11,Math.abs(Z(1)-Z(0))),2.60,
+    {x:lamp.x*SCALE,y:2.65,z:lamp.z*SCALE},.85);
+  }
+ }
+}
+
 function apartmentMesh(world){
  const out=[],M=SCALE,ceil=3.35;
  const tileColor=(x,z)=>{if(world.cell(x,z)===1)return SCHEME.hall;const r=world.rooms.find(r=>x>r.x0&&x<r.x1&&z>r.z0&&z<r.z1);return r?SCHEME[r.type]:SCHEME.hall};
@@ -81,11 +132,26 @@ function apartmentMesh(world){
   const x=f.x*M,z=f.z*M,w=f.w*M,d=f.d*M,h=f.h;
   if(f.type==='sofa'){box(out,x,.1,z,w,.48,d,fabric,7);box(out,x,.55,z-d*.31,w,.75,.30,[.29,.21,.17],7);for(const s of [-1,1])box(out,x+s*(w*.46),.40,z,w*.09,.57,d,[.38,.29,.21],7)}
   if(f.type==='rug'){box(out,x,.013,z,w,.012,d,[.46,.27,.18],7);box(out,x,.025,z,w*.84,.009,d*.78,[.25,.23,.20],7)}
+  if(f.type==='wallunit'){
+   // Polished Soviet living-room wall-unit with glass vitrine and family dishes.
+   box(out,x,0,z,w,h,d,[.29,.17,.09],6);
+   for(let j=1;j<=4;j++)box(out,x,j*h/5,z+d*.15,w*.94,.045,d*.82,[.44,.28,.15],6);
+   for(const side of [-1,1])box(out,x+side*w*.47,.08,z+d*.20,.044,h*.94,d*.92,[.19,.13,.08],6);
+   box(out,x,1.13,z+d*.52,w*.82,.66,.035,[.37,.24,.12],6);
+   box(out,x,1.18,z+d*.56,w*.64,.47,.032,[.13,.16,.15],10);
+   box(out,x,1.20,z+d*.58,w*.61,.42,.01,[.30,.38,.36],10);
+   for(const side of [-1,1]){box(out,x+side*w*.34,.98,z+d*.56,.027,.37,.02,[.65,.47,.25],9);
+    box(out,x+side*w*.30,1.83,z+d*.54,.019,.30,.025,[.54,.43,.26],9)}
+   for(let j=0;j<8;j++)box(out,x-w*.40+j*w*.105,1.61,z+d*.45,w*.075,.22+(j%3)*.10,d*.20,
+    [.36+(j%3)*.075,.24+(j%4)*.04,.17+(j%2)*.04],7);
+   for(let j=0;j<3;j++){round(out,x+(j-1)*w*.24,2.04,z+d*.50,w*.09,.12,d*.13,[.73,.72,.61],8);
+    round(out,x+(j-1)*w*.24,2.16,z+d*.50,w*.06,.035,d*.07,[.77,.75,.66],8)}
+  }
   if(f.type==='books'){box(out,x,0,z,w,h,d,wood,6);for(let i=1;i<5;i++)box(out,x,.30+i*.35,z,w,.065,d,[.43,.30,.22],6);for(let i=0;i<17;i++)box(out,x-w*.42+i*w/18,.39+(i%4)*.39,z,w/28,.22+(i%2)*.08,d*.6,[.21+(i%3)*.13,.20+(i%4)*.09,.16+(i%2)*.12],7)}
-  if(f.type==='cabinets'){box(out,x,0,z,w,.95,d,wood,6);box(out,x,1.36,z,w,.76,d,[.31,.26,.18],6);for(const s of [-1,0,1]){box(out,x+s*w*.31,.13,z+d*.51,.035,.55,.015,brass,9);box(out,x+s*w*.31,1.5,z+d*.51,.035,.42,.014,brass,9)}}
-  if(f.type==='fridge'){box(out,x,0,z,w,h,d,[.55,.56,.53],9);box(out,x+w*.36,.76,z+d*.51,.045,.68,.03,dark,9)}
+  if(f.type==='cabinets'){box(out,x,0,z,w,.95,d,[.51,.44,.32],6);box(out,x,1.36,z,w,.76,d,[.31,.26,.18],6);for(const s of [-1,0,1]){box(out,x+s*w*.31,.13,z+d*.51,.035,.55,.015,brass,9);box(out,x+s*w*.31,1.5,z+d*.51,.035,.42,.014,brass,9)}}
+  if(f.type==='fridge'){box(out,x,0,z,w,h,d,[.71,.70,.60],8);box(out,x+w*.36,.76,z+d*.51,.045,.68,.03,dark,9)}
   if(f.type==='sink'){box(out,x,.72,z,w,.17,d,[.69,.67,.63],8);box(out,x,.87,z,w*.7,.02,d*.55,[.21,.25,.23],9);box(out,x+w*.2,.9,z-.15,.055,.28,.07,brass,9)}
-  if(f.type==='table'||f.type==='desk'){box(out,x,.71,z,w,.11,d,wood,6);for(const xx of [-1,1])for(const zz of [-1,1])box(out,x+xx*w*.39,0,z+zz*d*.38,.09,.73,.09,wood,6)}
+  if(f.type==='table'||f.type==='desk'){box(out,x,.71,z,w,.11,d,wood,6);if(f.room==='kitchen')box(out,x,.82,z,w*1.03,.018,d*1.04,[.61,.56,.37],2);for(const xx of [-1,1])for(const zz of [-1,1])box(out,x+xx*w*.39,0,z+zz*d*.38,.09,.73,.09,wood,6)}
   if(f.type==='bed'){box(out,x,.32,z,w,.34,d,[.39,.26,.22],6);box(out,x,.65,z,w*.95,.1,d*.86,[.38,.37,.31],7);for(const s of [-1,1])round(out,x+s*w*.24,.78,z-d*.32,w*.20,.11,d*.13,[.68,.61,.51],7);box(out,x,.75,z+d*.19,w*.9,.07,d*.45,[.25,.34,.34],7)}
   if(f.type==='wardrobe'){box(out,x,0,z,w,h,d,wood,6);box(out,x-w*.01,.2,z+d*.51,.03,h*.65,.03,brass,9)}
   if(f.type==='bath'){box(out,x,.1,z,w,.69,d,[.75,.72,.64],8);box(out,x,.8,z,w*.85,.06,d*.82,[.22,.26,.26],8)}
@@ -96,6 +162,12 @@ function apartmentMesh(world){
   if(f.type==='door'){box(out,x,.03,z,w,h,d,[.26,.18,.11],6);box(out,x+w*.37,1.30,z+d*.6,.14,.08,.09,brass,9);box(out,x,2.72,z,w*.92,.07,.06,[.41,.32,.19],6)}
  }
  apartmentDetail(out,world,M);
+ // Physically projected static shadows underneath furniture, recomputed on room changes.
+ const shadowLamps=world.rooms.map(r=>({room:r.type,p:world.point(r.type)}));
+ for(const f of world.objects()){if(!f.solid||f.h<.3||f.type==='door')continue;
+  const lamp=shadowLamps.find(p=>p.room===f.room)?.p||world.point('living');
+  castFloorShadow(out,f.x*M,f.z*M,f.w*M,f.d*M,f.h,{x:lamp.x*M,z:lamp.z*M,y:2.66},.8)
+ }
  for(const r of world.rooms){const x=(r.x0+r.x1+1)*M*.5,z=(r.z0+r.z1+1)*M*.5;box(out,x,ceil-.17,z,1.25,.18,1.25,[.48,.43,.32],8);round(out,x,ceil-.32,z,.34,.15,.34,[.83,.63,.40],8)}
  for(const z of [5,12,19]){box(out,15.5*M,ceil-.11,z*M,1.1,.16,1.1,[.42,.38,.28],8);round(out,15.5*M,ceil-.29,z*M,.30,.13,.30,[.81,.66,.42],8)}
  return out
@@ -128,6 +200,14 @@ function apartmentDetail(out,world,M){
    box(out,centralX+side*ww*.33,1.14,topZ+.17,.06,1.47,.085,[.58,.48,.40],12)
   }
   if(r.type==='living'){
+   // Pile carpet on a side wall, its geometry flush with the wall and no fake collider.
+   const carpetX=(r.x0+1)*M+.023,carpetZ=((r.z0+r.z1)/2)*M;
+   box(out,carpetX,1.10,carpetZ,.036,1.55,2.55,[.50,.23,.15],7);
+   box(out,carpetX+.018,1.13,carpetZ,.025,1.26,2.30,[.26,.17,.19],7);
+   for(let k=-3;k<=3;k++)for(let j=-1;j<=1;j++){
+    let zz=carpetZ+k*.28,yy=1.12+j*.34;
+    box(out,carpetX+.038,yy,zz,.014,.16,.16,[.62,.37,.22],7)
+   }
    // An old grandfather clock with a working, not decorative, face.
    const cx=(r.x1-1.7)*M,cz=(r.z1-1.4)*M;
    box(out,cx,0,cz,.55,1.95,.45,timber,6);box(out,cx,1.48,cz+.246,.38,.39,.016,[.70,.63,.45],8);
@@ -141,7 +221,12 @@ function apartmentDetail(out,world,M){
    if(obj){const x=obj.x*M,z=obj.z*M;
     for(let k=0;k<3;k++){round(out,x+(.34*k-.34),.86,z-.09,.11,.07,.11,[.69,.66,.53],8);
      round(out,x+(.34*k-.34),.925,z-.09,.072,.03,.072,[.44,.40,.31],8)}
-    box(out,x+.43,.84,z+.23,.14,.25,.14,[.45,.48,.34],8)}
+    box(out,x+.43,.84,z+.23,.14,.25,.14,[.45,.48,.34],8);
+    // Enamel teapot and Soviet oilcloth table.
+    round(out,x-.26,.91,z+.18,.17,.14,.15,[.70,.68,.58],8);
+    round(out,x-.26,1.045,z+.18,.105,.035,.105,[.54,.51,.44],9);
+    box(out,x-.26,1.15,z+.18,.025,.16,.022,[.26,.25,.23],9)
+   }
   }else if(r.type==='bedroom'){
    const rX=(r.x1-2.0)*M,rZ=(r.z0+2.1)*M;
    box(out,rX,.57,rZ,.61,.10,.42,[.50,.32,.21],6);
@@ -275,8 +360,13 @@ export class Renderer{
   gl.uniform3fv(this.u.lampA,[lampA.x*SCALE,2.64,lampA.z*SCALE]);gl.uniform3fv(this.u.lampB,[lampB.x*SCALE,2.64,lampB.z*SCALE]);
   gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);
   this.bind(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
-  const dyn=[];clockHands(dyn,world,t);for(const item of items)relicMesh(dyn,item,t);
-  for(const e of enemies)phantom(dyn,e,t);
+  const dyn=[];doorGeometry(dyn,world);clockHands(dyn,world,t);for(const item of items)relicMesh(dyn,item,t);
+  for(const e of enemies){
+   const d=Math.hypot(e.x-player.x,e.z-player.z);
+   if(d<14&&flash)castFloorShadow(dyn,e.x*SCALE,e.z*SCALE,.58,.35,1.50,
+    {x:player.x*SCALE,y:1.65,z:player.z*SCALE},.85);
+   phantom(dyn,e,t)
+  }
   if(dyn.length){this.upload(this.dynamicBuffer,dyn,gl.DYNAMIC_DRAW);this.bind(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10)}
   // Proper viewmodel at the lower right: no world-space cyan marker below the camera.
   const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false});

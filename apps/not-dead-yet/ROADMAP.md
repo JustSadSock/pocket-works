@@ -32,6 +32,18 @@ A confused, visually impaired elderly protagonist believes he is walking around 
 - [ ] Room-aware convolution reverb, positional voice memories and localized high-quality foley rather than synthesis only.
 - [ ] Phone screenshots and GPU frame-time profiling to establish a 45–60fps device-specific target.
 
+## 1.3.0 — Soviet apartment physicality (released)
+- [x] Fix the setting as a worn Soviet/post-Soviet domestic flat, not generic brutalist hallways: wall-unit and display china, old television, wall carpet, oilcloth, enamel crockery, herringbone parquet.
+- [x] Interactive double interior doors with shared collision/render geometry, a tactile open/close action, hinge creak, animated leaves and persisted states.
+- [x] Shadow polygons physically projected from real furniture footprints towards room lamps; moving doors and perceived figures cast corresponding floor shadows. This is not full wall-aware shadow mapping.
+- [x] Avoid closing on top of the player's capsule; restore previous saves with open leaves.
+- [x] Door and route regression tests, mobile interaction feedback and browser QA.
+
+### Rendering follow-up
+- [ ] Hardware shadow maps for walls and tall objects with mobile GPU budget validation, soft shadow filtering and directional lamp/torch occlusion.
+- [ ] High-quality authored models and more believable reflective glass and translucent cloth.
+- [ ] A real apartment layout with additional tighter and individualized rooms and a physically animated front exit door.
+
 ## 1.3 — Memory and perception
 - Context-sensitive changes: family pictures reverse, bathroom door leads elsewhere, furniture shifts while unseen, radios recite distorted memories, doors become unfamiliar.
 - Explicit safety invariants: all accessible objectives and exit remain reachable; no geometry changes inside view, player capsule, or an occupied prop.
