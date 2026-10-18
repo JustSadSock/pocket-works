@@ -152,9 +152,10 @@
     ]
   },
   "fog-of-conquest": {
-    "current": "v1",
+    "current": "v2",
     "versions": [
-      "v1"
+      "v1",
+      "v2"
     ]
   },
   "chyepukha": {
