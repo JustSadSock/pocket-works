@@ -73,14 +73,17 @@ function refreshState(){
  let label='ГОТОВ К ИМПУЛЬСУ';
  if(mode==='paused')label='ОПЫТ НА ПАУЗЕ';
  else if(mode==='complete')label='ОПЫТ ЗАВЕРШЁН · ПОВТОРИТЕ';
- else if(mode==='running' && timeTau<solution.firstMinimumTau*.7)label='ДАВЛЕНИЕ СЖИМАЕТ ПУЗЫРЁК';
+ else if(mode==='running' && timeTau<solution.firstMinimumTau*.7)label=solution.kind==='cloud'?'СЖАТИЕ · СВЯЗАННАЯ СИСТЕМА':'ДАВЛЕНИЕ СЖИМАЕТ ПУЗЫРЁК';
  else if(mode==='running' && timeTau<solution.firstMinimumTau)label='УСКОРЕНИЕ КОЛЛАПСА';
  else if(mode==='running')label=solution.kind==='cloud'?'СВЯЗАННЫЙ КОЛЛАПС · '+solution.geometry.length+' ПУЗЫРЬКОВ':solution.jetFactor>.15?'КОЛЛАПС · СТРУЯ У СТЕНКИ':'КОЛЛАПС · РАДИАЛЬНАЯ ВОЛНА';
  $('phase-label').textContent=label;
  $('graph-caption').textContent=solution.kind==='cloud'
    ?(mode==='ready'?'ВЫБЕРИТЕ ПУЗЫРЁК В КАМЕРЕ':'РАСЧЁТНЫЕ РАДИУСЫ')
    :(mode==='ready'?'РАСЧЁТНАЯ ТРАЕКТОРИЯ':'РАДИУС / РЕАЛЬНОЕ ВРЕМЯ');
- $('wall-instruction').style.opacity=mode==='running'?'.35':'.75';
+ $('wall-instruction').textContent=solution.kind==='cloud'
+   ?'ВЫБЕРИТЕ ПУЗЫРЁК · СТЕНКА ↔'
+   :'↔ СТЕНКУ МОЖНО ДВИГАТЬ';
+ $('wall-instruction').style.opacity=mode==='running'?'.25':'.75';
 }
 function applyConfig(next){
  config=sanitize(next);
