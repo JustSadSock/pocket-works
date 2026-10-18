@@ -5,8 +5,8 @@ import vm from 'node:vm';
 
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const source=read('../server/module.ts');
-const snapshot=read('../../../pocketnet/module-versions/fog-of-conquest/v6.ts');
-const previous=read('../../../pocketnet/module-versions/fog-of-conquest/v5.ts');
+const snapshot=read('../../../pocketnet/module-versions/fog-of-conquest/v7.ts');
+const previous=read('../../../pocketnet/module-versions/fog-of-conquest/v6.ts');
 const rules=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const sizes=[['tiny',5,8],['small',10,15],['medium',20,30],['large',20,60]];
 const player1={id:'p1',name:'North'},player2={id:'p2',name:'South'};
@@ -23,12 +23,12 @@ function reachable(g){
   }
   return seen.has((g.rows-2)+','+(g.cols-2));
 }
-test('v6 snapshot is immutable, old v5 remains a distinct ruleset',()=>{
+test('v7 snapshot is immutable, old v6 remains a distinct ruleset',()=>{
   assert.equal(snapshot,source);
-  assert.match(previous,/RULESET_VERSION=4;/);
-  assert.match(source,/RULESET_VERSION=5;/);
+  assert.match(previous,/RULESET_VERSION=6;/);
+  assert.match(source,/RULESET_VERSION=6;/);
   const lock=JSON.parse(read('../../../pocketnet/modules.lock.json'));
-  assert.equal(lock['fog-of-conquest'].current,'v6');
+  assert.equal(lock['fog-of-conquest'].current,'v7');
 });
 test('FOG-012: rescue counter decrements only after the affected side ends a turn',()=>{
   const g=rules.createOriginalMatch({size:'small'});
