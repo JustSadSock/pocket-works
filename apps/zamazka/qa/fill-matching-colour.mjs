@@ -64,7 +64,7 @@ for(let seed=0;seed<80;seed++){
 {
  const f=fixture(600,450);
  for(let y=25;y<425;y++)for(let x=25;x<575;x++)write(f,x,y,[172,139,108]);
- for(let y=30;y<420;y++)write(f,300,y,[18,18,22]);
+ for(let y=25;y<425;y++)write(f,300,y,[18,18,22]);
  const t=performance.now();
  const n=paint(f,[145,200],[20,110,180]);
  check(n===275*400,'left field recolour exact count');
