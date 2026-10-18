@@ -89,6 +89,14 @@ export function createSoundscape({Context=(typeof window!=='undefined'?(window.A
       note(72,{type:'sine',end:104,duration:1.1,volume:.035,pan});
       note(650,{type:'triangle',end:520,duration:.18,volume:.019,at:now+.23,pan});
       hiss({frequency:460,duration:.50,volume:.012,at:now+.33,pan});break;
+     case 'knock':
+      for(let i=0;i<3;i++){
+       note(94,{type:'triangle',end:55,duration:.18,volume:.064,pan:.20,at:now+[0,.27,.68][i]});
+       hiss({duration:.10,frequency:390,volume:.023,pan:.20,at:now+[0,.27,.68][i]});
+      }break;
+     case 'peephole':
+      note(255,{type:'triangle',end:164,duration:.15,volume:.018,pan:.1});
+      hiss({duration:.25,frequency:530,volume:.007,pan:.1});break;
      case 'door':
       note(132,{type:'triangle',end:71,duration:.39,volume:.033,pan});
       hiss({duration:.28,volume:.020,frequency:520,pan});

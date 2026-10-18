@@ -196,3 +196,39 @@ test('1.6 outage: fuse cannot reset until kitchen hotplate is unplugged, persist
  expect((await state(page)).powerAvailable).toBe(true);
  expect(errors).toEqual([]);
 });
+
+
+test('1.7 real peephole reveals stairwell and family object, survives mobile/desktop resume',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#start')).toBeVisible({timeout:15000});
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.triggerKnock())).toBe(true);
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearEntrance())).toBe(true);
+ await expect(page.locator('#aimHint')).toContainText('ГЛАЗОК');
+ if(await page.locator('#interact').isVisible())await page.locator('#interact').click();else await page.keyboard.press('e');
+ await expect.poll(async()=>(await state(page)).peephole).toBe(true);
+ await expect(page.locator('.app-shell')).toHaveClass(/is-peephole/);
+ const before=(await state(page)).ammo;
+ await page.keyboard.press('Space');
+ expect((await state(page)).ammo).toBe(before,'shooting is disabled during optical inspection');
+ await page.keyboard.press('Escape');
+ await expect.poll(async()=>(await state(page)).peephole).toBe(false);
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.givePhoto())).toBe(true);
+ await expect(page.locator('#aimHint')).toContainText('ГЛАЗОК');
+ await page.keyboard.press('e');
+ await expect.poll(async()=>(await state(page)).landing.recognized).toBe(true);
+ await expect.poll(async()=>(await state(page)).peephole).toBe(true);
+ await page.keyboard.press('e');
+ await page.locator('#pack').click();
+ await expect(page.locator('#journalList .memory-entry')).toHaveCount(2);
+ await page.locator('#closePack').click();
+ await page.locator('#pause').click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#continue').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect((await state(page)).landing).toMatchObject({knocked:true,seen:true,recognized:true});
+ expect(errors).toEqual([]);
+});

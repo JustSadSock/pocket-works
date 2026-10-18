@@ -79,6 +79,19 @@ A confused, visually impaired elderly protagonist believes he is walking around 
 - [ ] More individualized room circuits, visual switches and dynamic light sources including refrigerator compressor and emergency landing illumination.
 - [ ] Hardware contact shadows/normal mapping and profiling on iPhone Safari rather than pretending that planar shadow geometry is shadow mapping.
 
+## 1.7.0 — The neighbor's landing and peephole
+- [x] Three diegetic knocks beyond the front door at a meaningful point in exploration (can never farm the event).
+- [x] An authored WebGL Soviet shared landing viewed through the brass peephole: elevator, neighbor door, chipped plaster, steps, rail and abandoned grocery net.
+- [x] E/touch peephole mode with constrained controls, exit action, camera treatment, and no loss of prior tasks or inventory.
+- [x] Family-photo-based recognition, persistent hallway observation, optional stress relief and third distinct chapter ending.
+- [x] Notebook continuity, fully local sound cues and deterministic saved-state regressions.
+- [x] Room accessibility tests and browser gameplay test for no-shot and recognition/resume.
+
+### Next chapter / technical debt
+- [ ] A fully walkable building landing and elevator shaft with physically collidable stair steps, rather than the peephole-only miniature stage.
+- [ ] Neighbors represented through believable physical behaviors and ambient sound rather than hallucination-only antagonists.
+- [ ] High-quality GPU contact shadows and profile-aware visual-detail adaptation on real iPhone Safari hardware.
+
 ## 1.3 — Memory and perception
 - Context-sensitive changes: family pictures reverse, bathroom door leads elsewhere, furniture shifts while unseen, radios recite distorted memories, doors become unfamiliar.
 - Explicit safety invariants: all accessible objectives and exit remain reachable; no geometry changes inside view, player capsule, or an occupied prop.

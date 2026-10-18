@@ -13,20 +13,25 @@ export function radioBroadcast(channel,hasAlbum=false){
  if(!hasAlbum)return{station,label:RADIO_STATIONS[2],message:'Женский голос теряется в шуме. Чего-то не хватает, чтобы узнать его.',heard:false,sound:'radio-static'};
  return{station,label:RADIO_STATIONS[2],message:'Из приёмника: «Я всегда найду тебя дома». Она назвала себя Леной — это имя ты видел на семейном альбоме.',heard:true,sound:'radio-memory'}
 }
-export function chapterJournal(inventory=[],recognized=0,heard=false){
+export function chapterJournal(inventory=[],recognized=0,heard=false,landing=null){
  const known=new Set(Array.isArray(inventory)?inventory:[]);
  const entries=Object.entries(FRAGMENTS).filter(([id])=>known.has(id)).map(([id,data])=>({id,...data}));
+ if(landing?.recognized)entries.push({id:'landing',title:'Авоська на площадке',body:'На лестнице осталась Ленина авоська. Ты вспомнил, как она просила соседку подержать дверь лифта. За стеной была обычная жизнь.'});
  const goal=known.size===4?'Вещи на месте. Осталось открыть входную дверь.':'Осталось найти '+(4-known.size)+' из четырёх вещей.';
  const radio=heard?'Голос из приёмника узнан.':known.has('album')?'Попробуй настроить старый приёмник в гостиной.':'В гостиной остался старый радиоприёмник.';
- const memory=recognized>0?'Удалось узнать '+recognized+' '+(recognized===1?'комнату':recognized<5?'комнаты':'комнат')+'.':'Стены могут измениться, когда ты перестанешь смотреть.';
+ const memory=(recognized>0?'Удалось узнать '+recognized+' '+(recognized===1?'комнату':recognized<5?'комнаты':'комнат')+'.':'Стены могут измениться, когда ты перестанешь смотреть.')+(landing?.knocked?(landing.recognized?' Ты вспомнил, кому принадлежала авоська в подъезде.':landing.seen?'В подъезде никого не было.':' Кто-то постучал в дверь.'):'');
  return{entries,goal,radio,memory}
 }
-export function chapterEnding({won=false,inventory=[],recognized=0,heard=false,seconds=0}={}){
+export function chapterEnding({won=false,inventory=[],recognized=0,heard=false,landing=null,seconds=0}={}){
  const count=Array.isArray(inventory)?new Set(inventory).size:0;
  if(!won)return{tag:'ГЛАВА I / ПОТЕРЯННЫЙ ВЕЧЕР',title:'Вечер повторился.',text:'Ты сел у знакомой двери. За стеной продолжало тихо играть радио. Найдено вещей: '+count+' из 4.'};
  if(count===4&&heard&&recognized>=2)return{
   tag:'ГЛАВА I / ТЁПЛОЕ УТРО',title:'Ты вспомнил дорогу домой.',
   text:'Ты узнал голос из старого приёмника и '+recognized+' знакомые комнаты. Замок поддался. Квартира наконец перестала спорить с памятью. Утро за дверью не изменилось. Время: '+Math.round(seconds)+' сек.'
+ };
+ if(count===4&&landing?.recognized)return{
+  tag:'ГЛАВА I / ЗНАКОМАЯ ЛЕСТНИЦА',title:'Там всё ещё живут люди.',
+  text:'За дверным глазком ты увидел старую авоську Лены. Знакомые ступени, соседская дверь, гул лифта — мир снаружи не исчез. С четырьмя вещами в руках ты повернул ключ и вышел. Время: '+Math.round(seconds)+' сек.'
  };
  return{
   tag:'ГЛАВА I / УТРО',title:'Дверь вспомнила тебя.',

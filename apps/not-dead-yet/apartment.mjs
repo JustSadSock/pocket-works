@@ -1,6 +1,7 @@
 import {MAX_SWING,blockedByPanels,advanceDoor,panels,doorOccludesRay} from './doors.mjs';
 import {radioBroadcast} from './story.mjs';
 import {FUSE_LOCATION,readPower,powerOn,powerHint,tripPower,unplugPlate,resetBreaker} from './power.mjs';
+import {readLanding,knockAtDoor,inspectPeephole,landingHint} from './landing.mjs';
 // NOT DEAD YET — the first authored apartment chapter and its safe mutable topology.
 export const W=30,H=24,SIZE=30;
 export const HOME={x:15.5,z:12.5};
@@ -36,7 +37,7 @@ export class Apartment {
    return [r.type,{type:r.type,open:opened,angle:opened?MAX_SWING:0}]
   }));
   this.radio={channel:Math.max(0,Math.min(2,Number.isInteger(data?.radio?.channel)?data.radio.channel:0)),heard:data?.radio?.heard===true};
-  this.power=readPower(data?.power);
+  this.power=readPower(data?.power);this.landing=readLanding(data?.landing);
   this.tiles=new Uint8Array(W*H);this.rebuild()
  }
  room(type){return this.rooms.find(r=>r.type===type)}
@@ -141,6 +142,9 @@ export class Apartment {
  }
  // The memory trace is near a real collectible: reaching it never requires a
  // second collision graph or a procedurally placed, unreachable prop.
+ knock(elapsed,found){return knockAtDoor(this.landing,elapsed,found)}
+ inspectLanding(hasPhoto){return inspectPeephole(this.landing,{hasPhoto})}
+ landingObjective(hasPhoto){return landingHint(this.landing,hasPhoto)}
  fusePosition(){return {...FUSE_LOCATION}}
  platePosition(){
   const table=this.objects().find(o=>o.room==='kitchen'&&o.type==='table');
@@ -213,7 +217,7 @@ export class Apartment {
  }
  save(){return{seed:this.seed,layoutVersion:this.layoutVersion,phases:this.rooms.map(r=>r.phase),
   recognized:Object.fromEntries(this.rooms.map(r=>[r.type,r.recognizedPhase])),
-  radio:{...this.radio},power:{...this.power},
+  radio:{...this.radio},power:{...this.power},landing:{...this.landing},
   doors:Object.fromEntries(Object.entries(this.doorStates).map(([k,v])=>[k,v.open]))}}
  fingerprint(){return this.rooms.map(r=>r.type+':'+this.door(r).x+':'+r.phase+':'+r.x0+':'+r.x1+':'+r.z0+':'+r.z1).join('|')}
 }

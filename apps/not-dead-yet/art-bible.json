@@ -46,6 +46,14 @@
       "principle": "On a small screen, important progress and escape should be visible without permanent panels or scrolling.",
       "application": "Show the real interior, its own wallpaper and worn wood; use a restrained objective line instead of a wide status control ribbon.",
       "avoid": "Avoid copying overhead tile rendering, the framing strips or a full directional control pad."
+    },
+    {
+      "url": "https://github.com/JustSadSock/pocket-works/tree/main/apps/not-dead-yet",
+      "inspectedAt": "2026-10-18",
+      "observation": "First-person apartment chapter with an authored front entrance, branching memory narrative and Soviet household props.",
+      "principle": "Extend spatial story through a believable inspectable domestic threshold, not a larger generic horror maze.",
+      "application": "Connect the apartment entrance to a tiny visually coherent 3D Soviet landing seen from a peephole, with a persisted family-memory interaction.",
+      "avoid": "Avoid treating an untraversable peek scene as a walkable floor, glossy generic horror corridors, fake stock imagery, and loud jump scares in place of believable domestic mystery."
     }
   ],
   "concepts": [
