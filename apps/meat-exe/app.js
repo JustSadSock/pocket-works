@@ -28,6 +28,7 @@ let save=validateRun(safeRead('session'));
 let quality=safeRead('quality');if(!['auto','speed','detail'].includes(quality))quality='auto';
 let effectiveQuality=quality==='speed'?'low':quality==='detail'?'high':'medium';
 let gamepadFire=false,padMove={x:0,y:0},prevPadButtons=[],accumulator=0,lastPaint=0,fpsClock=0,fpsFrames=0;
+let paintCoolDownUntil=0,paintCost=0;
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
   touch:$('touchControls'),cross:$('crosshair'),pauseBtn:$('pauseBtn'),wave:$('waveValue'),
@@ -117,7 +118,7 @@ function begin(resume=false){
     shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';hitUntil=fireUntil=killUntil=0;gateHintShown=false;lastGateHitAt=-999;
     ui.cross.classList.remove('hit','firing','killed');
     last=performance.now();clock=0;waveBreak=0;lastSave=0;accumulator=0;lastPaint=0;
-    setQuality(quality);
+    setQuality(quality);paintCost=0;paintCoolDownUntil=0;
     world.nearChunks(state.x,state.z);
     syncHUD();
     // An immediate pointer lock would intercept the visible pause control.
@@ -559,14 +560,20 @@ function frame(timestamp){
       }
     }else{accumulator=0;}
     // Frame-rate ceiling in manual Detail mode leaves CPU/GPU time for game input.
-    const interval=effectiveQuality==='high'?20:0;
-    const shouldPaint=mode==='playing'?timestamp-lastPaint>=interval:lastPaint===0;
+    // Let the browser service touch, mouse and pause events between expensive SW-WebGL frames.
+    // Fast GPU systems keep the previous fast refresh rate.
+    const interval=effectiveQuality==='high'?20:effectiveQuality==='low'?20:0;
+    const shouldPaint=mode==='playing'?(timestamp-lastPaint>=interval&&performance.now()>=paintCoolDownUntil):lastPaint===0;
     if(world&&!document.hidden&&shouldPaint){
       const elapsed=Math.min(dt,.045);lastPaint=timestamp;
       recoil=Math.max(0,recoil-elapsed*6);damageFlash=Math.max(0,damageFlash-elapsed*2.8);
       ui.damage.style.opacity=String(damageFlash*.8);
       const cameraState=state||{x:3,z:3,yaw:1.4,pitch:0,moving:0,sprinting:false};
+      const paintStart=performance.now();
       world.paint(cameraState,state?.enemies||[],state?.pickups||[],state?.elapsed||timestamp*.001,mode==='playing'?elapsed:0,recoil,damageFlash,state?.projectiles||[]);
+      const cost=performance.now()-paintStart;
+      paintCost=paintCost?paintCost*.65+cost*.35:cost;
+      if(mode==='playing'&&paintCost>24)paintCoolDownUntil=performance.now()+Math.min(180,paintCost*2.4);
     }
   }catch(error){fatal(error);world=null;}
   if(world)requestAnimationFrame(frame);

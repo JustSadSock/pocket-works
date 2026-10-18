@@ -204,9 +204,9 @@ export function createWorld(canvas, initialSeed) {
     heart.scale.set(.28,.38,.22);group.add(heart);
     const eye=new THREE.Mesh(valveEyeGeo,valveGlow);
     eye.position.set(0,1.37,-.73);group.add(eye);
-    for(let i=0;i<4;i++){
+    for(let i=0;i<2;i++){
       const ring=new THREE.Mesh(valveRing,i%2?boneMat:valveCore);
-      ring.position.y=.53+i*.54;ring.rotation.x=Math.PI/2;ring.scale.set(.85+i*.07,.84+i*.05,.9);
+      ring.position.y=.85+i*.92;ring.rotation.x=Math.PI/2;ring.scale.set(.85+i*.07,.84+i*.05,.9);
       group.add(ring);
     }
     group.position.set(tissue.x,0,tissue.z);group.userData={flash:0};
@@ -270,7 +270,7 @@ export function createWorld(canvas, initialSeed) {
     }
     for(const tissue of getTissues(cx,cz))if(!openedTissues.has(tissue.id))group.add(makeTissueVisual(tissue));
     if(profile.archetype==='rib-vault'){
-      for(const [x,z] of cells.filter(([x,z])=>(x+z+profile.rotation)%5===0).slice(0,7)){
+      for(const [x,z] of cells.filter(([x,z])=>(x+z+profile.rotation)%5===0).slice(0,3)){
         const arch=new THREE.Mesh(archGeo,boneMat);arch.position.set(x,1.82,z);group.add(arch);
       }
     }
