@@ -1,12 +1,16 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
+import {DEV_QUERY,DEV_SCENES,devScene,mountArenaDevGallery,isDevKey} from './dev-gallery.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DIRECTIONS,STEPS,MAX_ROUNDS,initialMatch,validatePlan,simulateRound,aiPlan} from './engine.js';
-installMobileRuntime();
+const previewRequested=new URLSearchParams(location.search).get(DEV_QUERY);
+const IS_DEV_FRAME=window.parent!==window&&DEV_SCENES.some(s=>s.id===previewRequested);
+if(!IS_DEV_FRAME)installMobileRuntime();
+let devAnimationSpeed=1;
 const $=id=>document.getElementById(id),NET=location.origin+'/pocketnet',KEY='pocket-works:crossline-5x5:';
-const read=(key,fallback='')=>{try{return localStorage.getItem(KEY+key)??fallback}catch{return fallback}};
-const write=(key,val)=>{try{localStorage.setItem(KEY+key,String(val))}catch{}};
+const read=(key,fallback='')=>{if(IS_DEV_FRAME)return fallback;try{return localStorage.getItem(KEY+key)??fallback}catch{return fallback}};
+const write=(key,val)=>{if(IS_DEV_FRAME)return;try{localStorage.setItem(KEY+key,String(val))}catch{}};
 const scoped={getItem:k=>{try{return sessionStorage.getItem(KEY+k)}catch{return null}},setItem:(k,v)=>{try{sessionStorage.setItem(KEY+k,v)}catch{}},removeItem:k=>{try{sessionStorage.removeItem(KEY+k)}catch{}}};
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const symbols={up:'↑',down:'↓',left:'←',right:'→',shield:'▣'};
@@ -25,7 +29,7 @@ const score=()=>mode==='online'?server?.score||{A:0,B:0}:offline?.score||{A:0,B:
 const isPlanning=()=>latest()?.phase==='planning';
 const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen;
 function soundFX(type='tap'){
- if(!sound)return;
+ if(!sound&&!IS_DEV_FRAME)return;
  try{
   const A=window.AudioContext||window.webkitAudioContext;if(!A)return;
   audio ||= new A();audio.resume?.();
@@ -126,6 +130,7 @@ function wire(client){
  client.on('error',e=>{if(net!==client)return;busy=false;const errors={room_not_found:'Комната не найдена',room_full:'В комнате уже два игрока',game_unavailable:'Правила ещё не опубликованы',match_in_progress:'Матч уже идёт',already_in_room:'Ты уже в комнате',room_version_unavailable:'Старая версия правил недоступна'};toast(errors[e.code]||e.code||'Ошибка PocketNet');lobby()});
 }
 async function connect(action,code=''){
+ if(IS_DEV_FRAME){initDevPreview(action==='create'?'lobby-host':'lobby-guest');return;}
  leaveNet(false);mode='online';busy=true;show('lobby');lobby();
  try{
   const name=profile?.complete?profile.nickname:read('nick','Игрок');
@@ -151,6 +156,7 @@ function joinFromField(){
  try{busy=true;net.joinRoom(code);lobby()}catch{busy=false;lobby();toast('Не удалось войти')}
 }
 function send(payload){
+ if(IS_DEV_FRAME){if(payload?.type==='start'||payload?.type==='rematch'){initDevPreview('planning');return true;}if(payload?.type==='plan'){initDevPreview('plan-wait');return true;}return true;}
  if(!net||!connected){toast('Ожидаем восстановления сети');return false;}
  try{net.sendGame(payload);return true}catch{toast('Нет соединения');return false;}
 }
@@ -238,7 +244,9 @@ function drawBoard(host,units,edges,events=[],preview=false,shownRound=game()?.r
  for(let y=0;y<5;y++)for(let x=0;x<5;x++){
   const at=['A','B'].filter(k=>units[k]?.alive&&units[k].x===x&&units[k].y===y),coord=x+','+y,outer=x===0||y===0||x===4||y===4;
   const warned=(!edges&&shownRound===4&&outer),lava=edges&&outer;
-  const hit=at.some(k=>impacts.has(k)),block=at.some(k=>blocked.has(k));
+  // A struck unit is already marked dead in the resolved frame. Paint the
+  // hit on its final cell rather than requiring an alive actor there.
+  const hit=[...impacts].some(k=>units[k]?.x===x&&units[k]?.y===y),block=[...blocked].some(k=>units[k]?.x===x&&units[k]?.y===y);
   html+='<div class="cell '+(warned?'edge-warning ':'')+(lava?'lava ':'')+(traces.traces.has(coord)?'trace ':'')+(traces.targets.has(coord)?'target ':'')+(hit?'impact ':'')+(block?'block ':'')+'" role="gridcell" data-x="'+x+'" data-y="'+y+'" data-trace="'+(traces.traces.get(coord)||'')+'">';
   if(at.length)html+='<div class="piece '+(at.length===2?'both':at[0].toLowerCase())+'"><span>'+(at.length===2?'ⅠⅡ':at[0]==='A'?'Ⅰ':'Ⅱ')+'</span></div>';
   html+='</div>';
@@ -287,12 +295,12 @@ function animateRecord(record){
   else animFrame={...frames[i],round:record.round};
   render();
   if(i>=frames.length-1){
-   setTimeout(()=>{if(ticket!==gameToken)return;animating=false;animFrame=null;plan=[];render();if(latest()?.phase==='finished')finish();},560);
+   setTimeout(()=>{if(ticket!==gameToken)return;animating=false;animFrame=null;plan=[];render();if(latest()?.phase==='finished')finish();},560/devAnimationSpeed);
    return;
   }
   i++;const evt=frames[i]?.events||[];
   soundFX(evt.some(e=>e.type==='hit'||e.type==='fall')?'hit':evt.some(e=>e.type==='block')?'block':'move');
-  setTimeout(step,580);
+  setTimeout(step,580/devAnimationSpeed);
  };
  step();
 }
@@ -435,7 +443,7 @@ window.addEventListener('keydown',e=>{
 async function checkNet(){
  try{const r=await fetch(NET+'/health',{cache:'no-store',signal:AbortSignal.timeout(6000)}),j=await r.json();$('netStatus').textContent=r.ok&&j.modules?.includes('crossline-5x5')?'POCKETNET · ДОСТУПЕН':'POCKETNET · ОЖИДАЕТ ПУБЛИКАЦИИ'}catch{$('netStatus').textContent='POCKETNET · СЕЙЧАС НЕ В СЕТИ'}
 }
-getPocketIdentity().then(p=>{profile=p;startFromSession()}).catch(()=>startFromSession());
+if(!IS_DEV_FRAME)getPocketIdentity().then(p=>{profile=p;startFromSession()}).catch(()=>startFromSession());
 function startFromSession(){
  if(roomQuery){$('code').value=roomQuery;connect('join',roomQuery);return;}
  // Saved session and pinned room ID survive a page reload in this browser.
@@ -443,5 +451,140 @@ function startFromSession(){
  const restored=new PocketNet({serverUrl:NET,name:profile?.complete?profile.nickname:'Игрок',storage:scoped,identityKey:profile?.id||'guest'});
  if(restored.roomId)connect('resume');
 }
-createWorkshopMode({appName:'5×5 Arena',version:'1.1.0',cachePrefix: 'crossline-5x5-',storageNamespace: 'pocket-works:crossline-5x5',onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
-checkNet();resumeOffer();
+if(!IS_DEV_FRAME){
+ const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.2.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+ mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
+ checkNet();resumeOffer();
+}else{
+ document.body.classList.add('arena-dev-child');
+ window.addEventListener('keydown',event=>{
+  if(isDevKey(event)&&!event.repeat){event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'arena-dev-toggle'},location.origin)}
+ },true);
+ window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||event.source!==window.parent)return;
+  if(event.data?.type==='arena-dev-restart')initDevPreview(previewRequested);
+  if(event.data?.type==='arena-dev-speed'&&[.25,.5,1,2,4].includes(event.data.speed))devAnimationSpeed=event.data.speed;
+  if(event.data?.type==='arena-dev-theme')$('themeToggle').click();
+ });
+ initDevPreview(previewRequested);
+}
+
+
+// QA scenarios are constructed from the real rules engine, never from screenshots.
+// This executes only inside the isolated iframe indicated by DEV_QUERY.
+function devPlanA(){return ['right','up','left','down','shield'];}
+function devPlanB(){return ['left','up','right','down','shield'];}
+function devCombat(kind){
+ const match=initialMatch();
+ match.units.A={x:2,y:2,alive:true};match.units.B={x:2,y:3,alive:true};
+ const attackDown={type:'attack',dirs:['down']},attackUp={type:'attack',dirs:['up']};
+ let A=[attackDown,'up','left','right','shield'];
+ let B=['up','down','left','right','shield'];
+ if(kind==='shield')B=['shield','up','down','left','right'];
+ if(kind==='mutual')B=[attackUp,'down','left','right','shield'];
+ if(kind==='move'){match.units.A={x:0,y:2,alive:true};match.units.B={x:4,y:2,alive:true};A=['right','right','up','down','shield'];B=['left','left','up','down','shield'];}
+ if(kind==='collapse'){
+  match.round=4;match.units.A={x:0,y:2,alive:true};match.units.B={x:4,y:2,alive:true};
+  A=['up','down','left','right','shield'];B=['up','down','left','right','shield'];
+ }
+ return simulateRound(match,{A,B});
+}
+function devLobby(scene){
+ mode='online';connected=scene!=='lobby-connect'&&scene!=='lobby-error';busy=scene==='lobby-connect';
+ roomId=scene==='lobby-connect'||scene==='lobby-error'?'':'F3A4B5C6';
+ const a={id:'dev-a',name:'Синий',verified:true},b={id:'dev-b',name:'Оранжевый',verified:false};
+ const guest=scene==='lobby-guest';me=guest?b:a;
+ server={phase:'lobby',host:a.id,players:scene==='lobby-ready'||guest?[a,b]:[a],
+  seats:[a.id,b.id],side:guest?'B':'A',match:null,score:{A:0,B:0},ready:{A:false,B:false}};
+ show('lobby');lobby();
+ if(scene==='lobby-error'){busy=false;toast('Комната не найдена или соединение потеряно');lobby();}
+}
+function devPlayOnline(scene){
+ mode='online';connected=true;roomId='F3A4B5C6';me={id:'dev-a',name:'Синий'};
+ const state=initialMatch();
+ server={phase:'planning',host:'dev-a',side:'A',
+  players:[{id:'dev-a',name:'Синий'},{id:'dev-b',name:'Оранжевый'}],
+  seats:['dev-a','dev-b'],match:state,score:{A:2,B:1},ready:{A:scene==='plan-wait',B:scene==='plan-rival-wait'},ownPlan:scene==='plan-wait'?devPlanA():[],revision:0};
+ show('play');
+}
+function devSounds(){
+ show('menu');$('menu').classList.add('hidden');
+ const root=document.createElement('section');root.id='arenaDevSoundLab';root.className='view arena-dev-sound-lab';
+ const entries=[['tap','Нажатие'],['plan','Команда плана'],['move','Перемещение'],
+  ['hit','Попадание'],['block','Щит / блок'],['win','Победа'],['error','Ошибка']];
+ root.innerHTML='<h2>Звуки 5×5 Arena</h2><p>Это реальные игровые сигналы. Нажми на звук для воспроизведения, включая режим с отключённым в основной игре звуком.</p>'+
+ '<div class="arena-dev-sounds">'+entries.map(([key,title])=>
+ '<button type="button" data-arena-audio="'+key+'">'+title+' <small>'+key+'</small></button>').join('')+
+ '</div><output class="arena-dev-status" aria-live="polite">Выбери любой сигнал.</output>';
+ document.querySelector('.shell').append(root);
+ root.querySelectorAll('[data-arena-audio]').forEach(b=>b.addEventListener('click',()=>{
+  const id=b.dataset.arenaAudio;soundFX(id);
+  root.querySelector('output').textContent='Воспроизведён звук: '+b.textContent.trim();
+ }));
+}
+function initDevPreview(requested){
+ if(!IS_DEV_FRAME)return;
+ const scene=devScene(requested);
+ gameToken++;clearTimeout(replayTimer);clearTimeout(toastTimer);
+ replayPaused=true;animating=false;animFrame=null;showingOutcome=false;modalOpen=false;recording=false;
+ attackMode=false;attackDirs=[];plan=[];server=null;offline=null;net=null;me=null;roomId='';busy=false;connected=false;
+ $('modal').classList.add('hidden');$('toast').classList.remove('show');
+ document.getElementById('arenaDevSoundLab')?.remove();
+ mode='solo';
+ offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:initialMatch(),score:{A:2,B:1}};
+ if(scene==='menu'){show('menu');return;}
+ if(scene==='difficulty'){show('difficultyView');return;}
+ if(scene==='rules'){show('menu');showRules();return;}
+ if(scene==='sounds'){devSounds();return;}
+ if(scene.startsWith('lobby-')){devLobby(scene);return;}
+ if(scene==='plan-wait'||scene==='plan-rival-wait'){devPlayOnline(scene);return;}
+ if(scene==='planning'||scene==='plan-partial'||scene==='plan-attack'||scene==='plan-full'||scene==='round-four'){
+  if(scene==='plan-partial')plan=['right','up','shield'];
+  if(scene==='plan-attack'){plan=['up'];attackMode=true;attackDirs=['right'];}
+  if(scene==='plan-full')plan=devPlanA();
+  if(scene==='round-four'){offline.match.round=4;offline.match.units.A={x:1,y:2,alive:true};offline.match.units.B={x:3,y:2,alive:true};}
+  show('play');render();return;
+ }
+ if(scene==='handoff'){mode='hotseat';offline.pending.A=devPlanA();show('play');handoff();return;}
+ if(scene==='pause'){show('play');confirmReturn();return;}
+ if(['win','lose','draw'].includes(scene)){
+  offline.phase='finished';offline.match.outcome=scene==='win'?'A':scene==='lose'?'B':'draw';
+  offline.match.units.A.alive=scene!=='lose';offline.match.units.B.alive=scene!=='win';
+  show('play');finish();return;
+ }
+ if(scene==='toast'){show('play');toast('План успешно подтверждён');return;}
+ if(scene==='replay'||scene==='replay-end'||scene==='replay-playing'){
+  offline.match=devCombat('move').match;
+  offline.phase=offline.match.outcome?'finished':'planning';
+  show('play');openReplay();
+  if(scene==='replay-end'){replayIndex=currentRecord().frames.length;paintReplay();}
+  if(scene==='replay-playing')toggleReplay();
+  return;
+ }
+ if(scene.startsWith('anim-')){
+  const kind=scene.slice(5);
+  const actual=kind==='attack'?'attack':kind==='shield'?'shield':kind==='mutual'?'mutual':kind==='collapse'?'collapse':'move';
+  const completed=devCombat(actual);
+  offline.match=completed.match;
+  // Previewing combat does not accidentally trigger an end-of-match dialog.
+  offline.phase='planning';
+  show('play');animateRecord(completed.record);
+  return;
+ }
+ if(scene.startsWith('fx-')){
+  if(scene==='fx-danger'){
+   offline.match.round=4;offline.match.units.A={x:1,y:2,alive:true};offline.match.units.B={x:3,y:2,alive:true};
+   show('play');return;
+  }
+  const data=devCombat(scene==='fx-block'?'shield':scene==='fx-fall'?'collapse':'attack');
+  offline.match=data.match;
+  offline.match.round=scene==='fx-fall'?4:1;
+  const frame=data.record.frames[0];
+  animating=true;
+  animFrame={...frame,round:data.record.round};
+  show('play');render();
+  // Flash can be replayed by the parent's repeat control.
+  return;
+ }
+ show('menu');
+}
