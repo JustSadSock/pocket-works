@@ -73,3 +73,16 @@ test('invalid saves are rejected and snapshots are separate objects',()=>{
  const s=createGame(209);assert.ok(isValidSave(s));assert.equal(isValidSave({...s,map:[]}),false);
  const v=project(s,1);v.gold[1]=999;assert.equal(s.gold[1],7);
 });
+
+test('healer restores damaged friendly unit once but cannot heal enemies',()=>{
+ const s=createGame(812);
+ const medic={id:s.nextId++,type:'mage',owner:1,r:2,c:4,hp:4,mp:3,acted:false,moved:false};
+ s.units.push(medic);
+ const ally=s.units.find(u=>u.owner===1&&u.type==='swordsman');
+ ally.hp=2;
+ const healed=transition(s,1,{type:'heal',unit:medic.id,r:ally.r,c:ally.c});
+ assert.equal(healed.error,null);
+ assert.equal(healed.state.units.find(u=>u.id===ally.id).hp,5);
+ assert.ok(transition(healed.state,1,{type:'heal',unit:medic.id,r:ally.r,c:ally.c}).error);
+ assert.ok(transition(s,1,{type:'heal',unit:medic.id,r:s.h-3,c:s.w-4}).error);
+});
