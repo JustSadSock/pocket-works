@@ -596,6 +596,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     fogSnapshot = null;
     window.fogSnapshot = fogSnapshot;
     initFog();
+    state.lastSeen={1:{},2:{}};
     overlay.style.display = 'none';
     spawnPanel.style.display = 'none';
   }
@@ -703,6 +704,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // expose for tests
   Object.assign(window, {
+    FogVisibleBuildings: visibleBuildings,
     computeZone,
     hasLOS,
     doAttack,
@@ -751,6 +753,17 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   // === Fog ===
+  // A remembered building is a frozen observation, never its live hidden state.
+  function visibleBuildings(){
+    const p=state.currentPlayer,F=state.fog[p],S=state.seen[p];
+    const live=buildings.filter(b=>!b.lastSeen&&(!F?.[b.r]?.[b.c]||revealAll));
+    if(revealAll)return live;
+    const remembered=Object.values(state.lastSeen?.[p]||{})
+      .filter(b=>F?.[b.r]?.[b.c]&&S?.[b.r]?.[b.c]&&
+        !live.some(x=>x.r===b.r&&x.c===b.c))
+      .map(b=>({...b,stale:true}));
+    return [...live,...remembered];
+  }
   function updateFog(){
     if(onlineGame) return; // Server supplies each participant's private visibility.
     if(!modeBeta && !revealAll){
@@ -768,6 +781,17 @@ window.addEventListener('DOMContentLoaded', ()=>{
           }
         }
       });
+    }
+    const p=state.currentPlayer, F=state.fog[p];
+    state.lastSeen??={1:{},2:{}};
+    const memory=state.lastSeen[p]??={};
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      if(!F[r][c]){
+        const b=buildings.find(b=>b.r===r&&b.c===c);
+        const key=r+','+c;
+        if(b)memory[key]={id:b.id,r,c,type:b.type,owner:b.owner,hp:b.hp,gen:b.gen};
+        else delete memory[key];
+      }
     }
   }
 
@@ -842,8 +866,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
       spawnZones.forEach(z=>ctx.fillRect(z.c*cellW,z.r*cellH,cellW,cellH));
     }
 
-    buildings.forEach(b=>{
+    visibleBuildings().forEach(b=>{
       if((!F[b.r][b.c]||S[b.r][b.c]||revealAll)){
+        if(b.stale)ctx.globalAlpha=0.5;
         let col = BUILD_TYPES[b.type].gen? '#fc0'
                 : b.type==='fort'? '#666'
                 : b.owner===p? '#00f'
@@ -867,6 +892,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
         let frac=b.hp/BUILD_TYPES[b.type].hpMax;
         ctx.fillStyle=b.owner===p?'#0f0':'#f00';
         ctx.fillRect(bx,by,bw*frac,bh);
+        ctx.globalAlpha=1;
       }
     });
 
@@ -989,8 +1015,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }
 
     // buildings
-    buildings.forEach(b=>{
+    visibleBuildings().forEach(b=>{
       if((!F[b.r][b.c]||S[b.r][b.c]||revealAll)){
+        if(b.stale)ctx.globalAlpha=0.5;
         const img = getBuildingSprite(b);
         if(img) ctx.drawImage(img,b.c*cellW,b.r*cellH,cellW,cellH);
         const bGen = b.gen ?? BUILD_TYPES[b.type].gen;
@@ -1007,6 +1034,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
         let frac=b.hp/BUILD_TYPES[b.type].hpMax;
         ctx.fillStyle=b.owner===p?'#0f0':'#f00';
         ctx.fillRect(bx,by,bw*frac,bh);
+        ctx.globalAlpha=1;
       }
     });
 
@@ -1173,6 +1201,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // === spawn ===
   function spawn(type,r,c){
     const p=state.currentPlayer, cost=UNIT_TYPES[type].cost;
+    if(units.length>=140){reportSave('Лимит армии: 140 отрядов.',true);return;}
     if(state.gold[p]<cost) return;
     const unit={id:nextUnitId++,r,c,owner:p,type,hp:UNIT_TYPES[type].hpMax,mp:0,startR:r,startC:c};
     units.push(unit);
@@ -1184,20 +1213,19 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   // === checkVictory ===
-  function checkVictory(){
-    if(onlineGame)return; // Projected enemy data cannot be used to declare local victory.
-    if(state.turn===0) return;      // не проверяем до первого хода
-    if(gameOver) return;
-    [1,2].forEach(p=>{
-      let bases=buildings.filter(b=>b.owner===p&& (b.gen ?? BUILD_TYPES[b.type].gen)===0).length,
-          unts=units.filter(u=>u.owner===p).length,
-          other=p===1?2:1;
-      if(bases===0&&unts===0) endGame(other);
-      else if(bases===0&&unts>0){
-        if(state.grace[p]===null) state.grace[p]=5;
-        else if(--state.grace[p]<=0) endGame(other);
-      } else state.grace[p]=null;
-    });
+  // Five completed turns by the affected side, never five redraws/actions.
+  // Military buildings (gen=0) retain the original game's base definition.
+  function checkVictory(endedSide=null){
+    if(onlineGame||state.turn===0||gameOver)return;
+    for(const p of [1,2]){
+      const bases=buildings.filter(b=>b.owner===p&&(b.gen??BUILD_TYPES[b.type].gen)===0).length;
+      const alive=units.filter(u=>u.owner===p).length;
+      if(!bases&&!alive){endGame(3-p);return;}
+      if(!bases){
+        if(state.grace[p]===null)state.grace[p]=5;
+        else if(endedSide===p&&--state.grace[p]<=0){endGame(3-p);return;}
+      }else state.grace[p]=null;
+    }
   }
 
   function endGame(w){
@@ -1788,6 +1816,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     units.filter(u=>u.owner===state.currentPlayer).forEach(u=>{
       u.mp=UNIT_TYPES[u.type].move; u.startR=u.r; u.startC=u.c;
     });
+    // Check the rescue clock only when an actual player finishes a turn.
+    checkVictory(prev);
     recordTurn(); updateAll();
     if(!aiMode)window.FogCenterCamera?.(state.currentPlayer);
   }
@@ -2001,6 +2031,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     state.gold={1:g.state.gold[1]||0,2:g.state.gold[2]||0};
     state.fog={[onlineSide]:g.state.fog[onlineSide]};
     state.seen={[onlineSide]:g.state.seen[onlineSide]};
+    state.lastSeen={[onlineSide]:g.state.lastSeen?.[onlineSide]||{}};
     state.log={[onlineSide]:g.state.log[onlineSide]||[]};
     state.grace=g.state.grace||{1:null,2:null};
     sel=null;zoneMap=null;zoneList=[];spawnMode=false;onlineBuilding=null;
