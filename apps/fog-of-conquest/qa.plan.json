@@ -2,16 +2,16 @@
   "schema": 1,
   "suites": [
     {
-      "id": "game-rules",
+      "id": "original-rules",
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "test/engine.test.mjs",
-        "test/server.test.mjs"
+        "test/original-port.test.mjs",
+        "test/original-pocketnet.test.mjs"
       ]
     },
     {
-      "id": "field-mobile-desktop",
+      "id": "original-mobile-desktop",
       "kind": "visual",
       "tier": "smoke",
       "viewports": [
@@ -22,29 +22,37 @@
         "chromium",
         "webkit"
       ],
-      "ready": "#newGame",
+      "ready": "#newGameBtn",
       "steps": [
         {
           "action": "screenshot"
         },
         {
           "action": "click",
-          "selector": "#newGame"
+          "selector": "#newGameBtn"
+        },
+        {
+          "action": "click",
+          "selector": "#twoBtn"
         },
         {
           "action": "visible",
-          "selector": "#field"
+          "selector": "#canvas"
         },
         {
           "action": "screenshot"
         },
         {
           "action": "click",
-          "selector": "#menuBtn"
+          "selector": "#endTurnBtn"
         },
         {
           "action": "visible",
-          "selector": "#menu"
+          "selector": "#overlay"
+        },
+        {
+          "action": "click",
+          "selector": "#yesBtn"
         },
         {
           "action": "screenshot"
@@ -52,7 +60,7 @@
       ]
     },
     {
-      "id": "real-playthrough",
+      "id": "original-playthrough",
       "kind": "playwright",
       "tier": "smoke",
       "files": [
