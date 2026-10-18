@@ -214,6 +214,16 @@ function releaseStick(e){if(e.pointerId!==stick.pointer)return;stick.pointer=nul
 stickEl.addEventListener('pointerup',releaseStick);stickEl.addEventListener('pointercancel',releaseStick);stickEl.addEventListener('lostpointercapture',releaseStick);
 function binder(id,field){const b=$(id);b.addEventListener('pointerdown',e=>{if(mode!=='fight')return;e.preventDefault();b.setPointerCapture(e.pointerId);if(field==='attack')input.attack=true;else input[field]=true});const release=e=>{if(field==='attack')input.attack=false};b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release);b.addEventListener('click',()=>{if(mode==='fight'&&field!=='attack')input[field]=true})}
 binder('attack-btn','attack');binder('shield-btn','shield');binder('dash-btn','dash');
+const aimButton=$('attack-btn');let aimedPointer=null;
+aimButton.addEventListener('pointerdown',e=>{if(mode==='fight'){aimedPointer=e.pointerId;input.aim=null;aimButton.classList.add('aiming')}});
+aimButton.addEventListener('pointermove',e=>{
+ if(mode!=='fight'||e.pointerId!==aimedPointer||!active)return;
+ const r=aimButton.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+ if(Math.hypot(dx,dy)>11){const a=myActor(),d=Math.hypot(dx,dy);input.aim={x:Math.max(0,Math.min(W,a.x+dx/d*330)),y:Math.max(0,Math.min(H,a.y+dy/d*330))};}
+});
+const stopAim=e=>{if(e.pointerId!==aimedPointer)return;aimedPointer=null;aimButton.classList.remove('aiming');if(e.pointerType!=='mouse')input.aim=null};
+aimButton.addEventListener('pointerup',stopAim);aimButton.addEventListener('pointercancel',stopAim);aimButton.addEventListener('lostpointercapture',stopAim);
+
 function canvasPoint(e){const r=canvas.getBoundingClientRect();return {x:Math.max(0,Math.min(W,(e.clientX-r.left)/r.width*W)),y:Math.max(0,Math.min(H,(e.clientY-r.top)/r.height*H))}}
 canvas.addEventListener('pointermove',e=>{if(mode==='fight'&&e.pointerType==='mouse')input.aim=canvasPoint(e)});
 canvas.addEventListener('pointerdown',e=>{if(mode!=='fight')return;input.aim=canvasPoint(e);if(e.pointerType==='mouse')input.attack=true});
@@ -239,19 +249,46 @@ function line(x,y,a,b,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;c
 function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0){
  const look=enemy?(online?.active?rivalAppearance:DEFAULT_APPEARANCE):appearance;
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
- drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,shield,flash,runes});
+ const a=active?.actors?.[enemy?1-myIndex():myIndex()];drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0});
 }
 function drawConstructs(s){
  for(const w of s.barriers){circle(w.x+3,w.y+6,w.r,'#12251f9e');circle(w.x,w.y,w.r,'#60745d');circle(w.x-3,w.y-5,Math.max(6,w.r-8),'#82917a');pixel(w.x-w.r*.35,w.y-3,5,3,'#a6ad89')}
  for(const m of s.mines){circle(m.x,m.y+3,9,'#111f1b90');circle(m.x,m.y,7,'#ae6a55');pixel(m.x-3,m.y-4,6,4,'#ffdf9f');pixel(m.x-1,m.y-8,2,4,'#f3a66e')}
 }
-function drawShots(s){for(const q of s.shots){const x=Math.round(q.x),y=Math.round(q.y);pixel(x-5,y-1,9,3,q.owner===myIndex()?'#dfa660':'#d7807c');circle(x,y,q.r+2,q.owner===myIndex()?'#ffc97999':'#df8d8099');pixel(x-3,y-3,6,6,'#ffecb9');pixel(x-1,y-5,3,2,'#fff4db');pixel(x-Math.sign(q.vx)*9,y-Math.sign(q.vy)*9,2,2,'#c4a46c')}}
+function drawShots(s){
+ for(const q of s.shots){
+  const x=Math.round(q.x),y=Math.round(q.y),style=q.style||'orb',friendly=q.owner===myIndex();
+  const backX=q.vx/(Math.hypot(q.vx,q.vy)||1),backY=q.vy/(Math.hypot(q.vx,q.vy)||1);
+  if(style==='bolt'||style==='arc'){
+   ctx.lineWidth=style==='arc'?4:2;ctx.strokeStyle=friendly?'#a6e6d7':'#eab7df';
+   ctx.beginPath();ctx.moveTo(x-backX*27,y-backY*27);ctx.lineTo(x-backX*11-backY*5,y-backY*11+backX*5);
+   ctx.lineTo(x,y);ctx.stroke();circle(x,y,style==='arc'?4:3,'#eafdf4');
+   pixel(x-backX*13-3,y-backY*13-3,3,3,'#b5e7d6');
+  }else if(style==='rock'){
+   const wob=Math.sin(frame*.32+q.owner*3)*2;
+   pixel(x-11,y-9+wob,21,17,'#293c3d');pixel(x-9,y-11+wob,17,17,'#8c9a7c');
+   pixel(x-7,y-9+wob,9,4,'#c4c5a1');pixel(x+3,y+wob,6,3,'#4f6760');
+   pixel(x-backX*16-2,y-backY*16-2,5,5,'#84937a');
+  }else if(style==='wave'){
+   ctx.strokeStyle=friendly?'#c9d4a4':'#d4b0a4';ctx.lineWidth=5;
+   ctx.beginPath();ctx.arc(x,y,10,Math.atan2(q.vy,q.vx)-1.1,Math.atan2(q.vy,q.vx)+1.1);ctx.stroke();
+   pixel(x-backX*16-4,y-backY*16-4,6,6,'#9aa68c');
+  }else if(style==='flame'){
+   circle(x,y,8,'#ee8651');pixel(x-5,y-5,10,10,'#ffbb70');
+   pixel(x-2,y-7,6,7,'#ffe4a2');
+   for(let i=0;i<3;i++){const t=(frame*.19+i*.37)%1;pixel(x-backX*(12+t*16)+Math.sin(frame*.22+i)*4,y-backY*(12+t*16)+Math.cos(frame*.22+i)*4,3,3,i%2?'#c85c44':'#edae69')}
+  }else{
+   circle(x,y,q.r+2,friendly?'#e6a568':'#c47b78');circle(x,y,Math.max(3,q.r-1),'#ffe2a2');
+   pixel(x-backX*12-2,y-backY*12-2,4,4,'#dda36e');
+  }
+ }
+}
 function drawEffects(s){for(const e of s.echoes){wizard(e.x,e.y,0,frame/60,e.owner!==myIndex(),Math.min(.5,e.life/4),0,0)}
 for(const f of s.fx){const t=f.t/.38,r=Math.round(t*23)+3;if(f.k==='hit'){circle(f.x,f.y,Math.max(1,r),'#f5b36a30');for(let n=0;n<6;n++){const a=n*Math.PI/3+f.id;pixel(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,3,3,'#efc28c')}}else if(f.k==='shoot'){circle(f.x,f.y,8*(1-t),'#f9d39996')}else if(f.k==='shield'){ctx.strokeStyle='#c7edd0';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,14+27*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='heal'){pixel(f.x-1,f.y-19-t*10,4,11,'#aff0b2');pixel(f.x-5,f.y-15-t*10,12,3,'#aff0b2')}else if(f.k==='dash'){pixel(f.x-15+t*8,f.y-10,24*(1-t),3,'#d6c3a3')}else if(f.k==='overload'){ctx.strokeStyle='#f6b16f';ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x,f.y,10+62*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='mine'){circle(f.x,f.y,16*(1-t),'#f2b476ab')}else if(f.k==='spark'){pixel(f.x-5+t*8,f.y-4,4,4,'#fbca87');pixel(f.x+6-t*7,f.y+5,3,3,'#f9ddab')}}}
 function drawOverlay(s){if(s?.phase==='fight'&&s.overtime){ctx.fillStyle='#9c3c3044';ctx.fillRect(16,16,369,10);ctx.fillRect(16,594,369,9)}
 for(let i=0;i<14;i++){const v=(frame*.2+i*71)%620,x=20+(i*71%360);pixel(x,(v+Math.sin(frame*.003+i)*3)%620,2,2,'#f3dca128')}}
 function render(){if(mode==='menu'&&frame%3===0)drawHero($('hero-preview').getContext('2d'),appearance,frame/60);if(!bgCanvas)bgCanvas=background();ctx.clearRect(0,0,W,H);ctx.drawImage(bgCanvas,0,0);
-if(active){drawConstructs(active);drawEffects(active);for(let i=0;i<2;i++){const a=active.actors[i],mine=i===myIndex();if(!displayXY[i])displayXY[i]={x:a.x,y:a.y};const p=displayXY[i];if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash)}drawShots(active)}else{wizard(107,352,0,frame/60,false,1,12,0);wizard(297,252,Math.PI,frame/60,true,1,9,0);for(let j=0;j<6;j++){const x=180+Math.sin(frame/50+j*2)*35,y=270+j*19+Math.cos(frame/37+j)*14;circle(x,y,4,'#f1c880');pixel(x-1,y-1,3,3,'#fdf3ca')}}drawOverlay(active)}
+if(active){drawConstructs(active);drawEffects(active);for(let i=0;i<2;i++){const a=active.actors[i],mine=i===myIndex();if(!displayXY[i])displayXY[i]={x:a.x,y:a.y};const p=displayXY[i];if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash)}drawShots(active);if(mode==='fight'&&input.aim){ctx.strokeStyle='#eee1b1a0';ctx.lineWidth=1.5;const {x,y}=input.aim;ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.moveTo(x-15,y);ctx.lineTo(x-6,y);ctx.moveTo(x+6,y);ctx.lineTo(x+15,y);ctx.stroke()}}else{wizard(107,352,0,frame/60,false,1,12,0);wizard(297,252,Math.PI,frame/60,true,1,9,0);for(let j=0;j<6;j++){const x=180+Math.sin(frame/50+j*2)*35,y=270+j*19+Math.cos(frame/37+j)*14;circle(x,y,4,'#f1c880');pixel(x-1,y-1,3,3,'#fdf3ca')}}drawOverlay(active)}
 function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k);played.add(f.k);count++}seen=active.serial}
 function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
