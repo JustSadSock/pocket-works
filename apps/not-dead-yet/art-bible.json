@@ -16,6 +16,14 @@
   ],
   "references": [
     {
+      "url": "https://en.wikipedia.org/wiki/Khrushchevka",
+      "inspectedAt": "2026-10-18",
+      "observation": "A recognizable Soviet domestic flat emphasizes modest corridors, compact furnishings and characteristic older residential construction.",
+      "principle": "Make lived-in Soviet housing feel personal and time-worn, not a generic violent horror stage.",
+      "application": "Use glass-paneled lacquered doors, a living-room furniture wall, porcelain display, wall rugs and herringbone parquet.",
+      "avoid": "Do not replace personal domestic specificity with a uniform industrial texture or fake neon highlights."
+    },
+    {
       "url": "https://github.com/JustSadSock/Not-Dead-Yet",
       "inspectedAt": "2026-10-18",
       "observation": "The original HTML5 prototype changes chunks as a character's tile memory decays, but inconsistent game-map interfaces and partial merging create isolated rooms.",
@@ -119,6 +127,17 @@
       "integration": "Renderer reads room data, dynamic item states and object coordinates from the chapter world; materials are compiled in its original local WebGL shader.",
       "provenance": "Materials are mathematically authored original procedural shader patterns; no downloaded textures, fonts or online runtime resources.",
       "maxBytes": 180000
+    },
+    {
+      "id": "soviet-interior-geometry",
+      "tool": "webgl",
+      "source": "apartment.mjs",
+      "output": "renderer.mjs",
+      "role": "Polished wall-unit furniture, portrait glass doors with hinged leaves, wall carpets, enamel tea sets and geometry-based cast floor shadows.",
+      "acceptance": "Visual props sit on the actual apartment floor/walls and doors align with their physics collision polygons.",
+      "integration": "The renderer reads world.doors() directly, while world.canStand() uses the same shared panels geometry in doors.mjs.",
+      "provenance": "All geometry, sounds, textures and UI states are custom authored local source; no external app runtime assets.",
+      "maxBytes": 250000
     }
   ],
   "evidence": {

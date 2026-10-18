@@ -1,3 +1,4 @@
+import {MAX_SWING,blockedByPanels,advanceDoor,panels,doorOccludesRay} from './doors.mjs';
 // NOT DEAD YET — the first authored apartment chapter and its safe mutable topology.
 export const W=30,H=24,SIZE=30;
 export const HOME={x:15.5,z:12.5};
@@ -14,6 +15,10 @@ export class Apartment {
   const types=[...TYPES],rand=rng(hash(seed,177));
   for(let i=types.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[types[i],types[j]]=[types[j],types[i]]}
   this.rooms=RECTS.map((r,i)=>({...r,type:types[i],phase:data?.phases?.[i]??0,lastSeen:0,lastChanged:-15}));
+  // Doors begin open for old saves and newly generated rooms; closing is optional.
+  this.doorStates=Object.fromEntries(this.rooms.map(r=>{const opened=data?.doors?.[r.type]!==false;
+   return [r.type,{type:r.type,open:opened,angle:opened?MAX_SWING:0}]
+  }));
   this.tiles=new Uint8Array(W*H);this.rebuild()
  }
  room(type){return this.rooms.find(r=>r.type===type)}
@@ -35,7 +40,7 @@ export class Apartment {
   for(const r of this.rooms){const width=r.x1-r.x0,depth=r.z1-r.z0,shift=((r.phase+this.seed)%3-1)*.22;
    if(r.type==='living'){
     add(r,'sofa',2.7,2.3+shift,2.7,1.1,1.04);add(r,'rug',width*.5,depth*.52,3.7,2.3,.015,false);
-    add(r,'books',width-1.4,2.1,1.0,.5,2.2);add(r,'table',width*.52,depth*.56,1.35,.85,.45);
+    add(r,'wallunit',width-1.4,2.1,1.0,.5,2.2);add(r,'table',width*.52,depth*.56,1.35,.85,.45);
     add(r,'lamp',width-2,depth-1.9,.35,.35,1.8,false);add(r,'painting',width*.45,.25,1.8,.08,1.25,false)
    }else if(r.type==='kitchen'){
     // The entry is always on the corridor-facing wall. Appliances belong opposite it,
@@ -57,6 +62,9 @@ export class Apartment {
   if(!Number.isFinite(x)||!Number.isFinite(z))return false;
   for(const dx of [-r,r])for(const dz of [-r,r])if(!this.pass(Math.floor(x+dx),Math.floor(z+dz)))return false;
   for(const a of this.objects())if(a.solid&&Math.abs(x-a.x)<a.w*.5+r&&Math.abs(z-a.z)<a.d*.5+r)return false;
+  if(this.doorStates)for(const room of this.rooms){const state=this.doorStates[room.type];
+   if(state&&blockedByPanels(x,z,this.door(room),room.z0<11?-1:1,state.angle,r))return false
+  }
   return true
  }
  reachablePosition(target){
@@ -68,6 +76,28 @@ export class Apartment {
     if(!seen.has(k)&&this.canStand(xx+.5,zz+.5)){seen.add(k);queue.push([xx,zz])}
    }
   }return false
+ }
+ doors(){
+  return this.rooms.map(r=>({type:r.type,gate:this.door(r),insideSign:r.z0<11?-1:1,
+   open:this.doorStates[r.type].open,angle:this.doorStates[r.type].angle}))
+ }
+ nearestDoor(x,z,reach=2.5){
+  let best=null,dist=reach;
+  for(const r of this.rooms){const gate=this.door(r),d=Math.hypot(gate.x+1-x,gate.z+.5-z);
+   if(d<dist){best={...this.doorStates[r.type],gate,room:r.type};dist=d}
+  }
+  return best
+ }
+ toggleDoor(type,px,pz){
+  const r=this.room(type),d=r&&this.doorStates[type];if(!r||!d)return {ok:false,reason:'missing'};
+  const next=!d.open;
+  // Never close a door on top of the player capsule.
+  if(!next&&[0,.26,.52,.78,1].some(t=>blockedByPanels(px,pz,this.door(r),r.z0<11?-1:1,MAX_SWING*t,.24)))return {ok:false,reason:'occupied'};
+  d.open=next;return {ok:true,open:next}
+ }
+ updateDoors(dt){
+  let changing=false;for(const d of Object.values(this.doorStates))if(advanceDoor(d,dt))changing=true;
+  return changing
  }
  itemPosition(id){
   if(this.itemCache.has(id))return this.itemCache.get(id);
@@ -87,7 +117,9 @@ export class Apartment {
   this.itemCache.set(id,fallback);return fallback
  }
  location(x,z){for(const r of this.rooms)if(x>=r.x0&&x<=r.x1+1&&z>=r.z0&&z<=r.z1+1&&this.cell(Math.floor(x),Math.floor(z))===2)return LABELS[r.type];return LABELS.hall}
- visible(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d*8));for(let i=1;i<n;i++){const t=i/n;if(!this.pass(Math.floor(ax+(bx-ax)*t),Math.floor(az+(bz-az)*t)))return false}return true}
+ visible(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d*8));for(let i=1;i<n;i++){const t=i/n;if(!this.pass(Math.floor(ax+(bx-ax)*t),Math.floor(az+(bz-az)*t)))return false}
+  for(const r of this.rooms){if(doorOccludesRay(ax,az,bx,bz,this.door(r),r.z0<11?-1:1,this.doorStates[r.type].angle))return false}
+  return true}
  tick(px,pz,yaw,t){
   if(t<this.nextShift)return false;
   const lx=Math.sin(yaw),lz=-Math.cos(yaw);
@@ -99,8 +131,9 @@ export class Apartment {
     (doorDist<15&&doorFacing>.18&&this.visible(px,pz,door.x+.5,door.z+.5));
    if(seen)r.lastSeen=t;
    if(d<5.6||Math.hypot(px-door.x,pz-door.z)<4.5||seen||t-r.lastSeen<2||t-r.lastChanged<7)continue;
-   const prev=r.phase;r.phase++;this.rebuild();
-   if(!this.canStand(px,pz)){r.phase=prev;this.rebuild();continue}
+   const prev=r.phase,doorWas={...this.doorStates[r.type]};r.phase++;
+   this.doorStates[r.type].open=true;this.doorStates[r.type].angle=MAX_SWING;this.rebuild();
+   if(!this.canStand(px,pz)){r.phase=prev;Object.assign(this.doorStates[r.type],doorWas);this.rebuild();continue}
    r.lastChanged=t;r.lastSeen=t;this.nextShift=t+4.8;this.changes++;this.epoch++;this.lastChange={type:r.type,t};return true
   }return false
  }
@@ -114,7 +147,7 @@ export class Apartment {
   let at=K(...end),origin=K(...start);while(prev.get(at)!==origin&&at!==origin){at=prev.get(at);if(!at)return null}
   if(at===origin)return{x:tx,z:tz};const [x,z]=at.split(',').map(Number);return{x:x+.5,z:z+.5}
  }
- save(){return{seed:this.seed,phases:this.rooms.map(r=>r.phase)}}
+ save(){return{seed:this.seed,phases:this.rooms.map(r=>r.phase),doors:Object.fromEntries(Object.entries(this.doorStates).map(([k,v])=>[k,v.open]))}}
  fingerprint(){return this.rooms.map(r=>r.type+':'+this.door(r).x+':'+r.phase).join('|')}
 }
 export function validateApartment(seed){const a=new Apartment(seed);if(!a.canStand(HOME.x,HOME.z))return false;return [...ITEMS.map(i=>a.itemPosition(i.id)),HOME].every(p=>a.canStand(p.x,p.z)&&a.findStep(HOME.x,HOME.z,p.x,p.z))}

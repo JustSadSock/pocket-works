@@ -76,3 +76,30 @@ test('1.2 material atlas and pause-menu sound controls survive a page refresh',a
  await expect(page.locator('#sound')).toContainText(!before?'вкл':'выкл');
  expect(errors).toEqual([]);
 });
+
+
+test('1.3 hinged Soviet interior door opens, blocks passage, saves and restores',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#start')).toBeVisible();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ const room=(await state(page)).doors[0].room;
+ expect(await page.evaluate(room=>window.__PW_TEST_HOOKS__.teleportNearDoor(room),room)).toBe(true);
+ await expect(page.locator('#interact')).toHaveText('Закрыть');
+ await page.locator('#interact').click();
+ await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).open).toBe(false);
+ await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).angle).toBeLessThan(.04);
+ await page.locator('#pause').click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#continue')).toBeVisible();
+ await page.locator('#continue').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect((await state(page)).doors.find(d=>d.room===room).open).toBe(false);
+ await expect(page.locator('#interact')).toHaveText('Открыть');
+ await page.locator('#interact').click();
+ await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).open).toBe(true);
+ await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).angle).toBeGreaterThan(1.4);
+ expect(errors).toEqual([]);
+});

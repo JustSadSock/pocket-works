@@ -62,6 +62,12 @@ function interact(){
  const item=nearItem();
  if(item){inventory.push(item.id);stress=Math.max(0,stress-13);notice('Вспомнил: '+item.label+'. '+item.note,4.5);acoustics.event('pickup');persist();hud();return}
  if(nearExit()){if(inventory.length===4)finish(true);else notice('Ты уверен, что собрал все свои вещи?',2.3);return}
+ const door=world.nearestDoor(player.x,player.z,2.2);
+ if(door){const result=world.toggleDoor(door.room,player.x,player.z);
+  if(result.ok){acoustics.event('door');notice(result.open?'Дверь открылась.':'Дверь закрылась.',1.6);persist()}
+  else notice('Отойди от дверного полотна.',1.8);
+  hud();return
+ }
  notice('Здесь нечего взять.',1)
 }
 function toggleTorch(){if(phase!=='play')return;torch=!torch;notice(torch?'Фонарь включён.':'Фонарь выключен.',1);acoustics.event('torch');hud()}
@@ -94,7 +100,7 @@ function makeShadow(){
  }
 }
 function simulate(dt){
- elapsed+=dt;
+ elapsed+=dt;world.updateDoors(dt);
  if(reloadTime>0){reloadTime=Math.max(0,(reloadDeadline-performance.now())/1000);if(reloadTime===0){const load=Math.min(6-ammo,reserve);ammo+=load;reserve-=load;chirp(310,.13,.023);hud()}}
  shotTime=Math.max(0,shotTime-dt);stunTime=Math.max(0,stunTime-dt);
  let forward=(Number(keys.has('w')||keys.has('arrowup'))-Number(keys.has('s')||keys.has('arrowdown')))+stick.y;
@@ -148,15 +154,16 @@ function hud(){
  $('objective').textContent=inventory.length===4?'Вернуться к входной двери':'Найти четыре знакомые вещи';
  $('perception').style.opacity=String(clamp(.08+stress/170,0,.7));
  $('reload').textContent=reloadTime>0?'…':'↻';$('torch').textContent='Свет: '+(torch?'вкл':'выкл');
- const item=nearItem(),exit=nearExit();
- $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):'';
- $('interact').classList.toggle('ready',Boolean(item||exit));
+ const item=nearItem(),exit=nearExit(),door=!item&&!exit?world.nearestDoor(player.x,player.z,2.2):null;
+ $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):door?'E / '+(door.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' — '+world.location(world.point(door.room).x,world.point(door.room).z):'';
+ $('interact').textContent=item?'Взять':door?(door.open?'Закрыть':'Открыть'):exit?'Открыть':'Взять';
+ $('interact').classList.toggle('ready',Boolean(item||exit||door));
 }
 function paint(t){
  const dt=Math.min(.20,Math.max(0,(t-lastFrame)/1000));lastFrame=t;
  if(phase==='play')simulate(dt);
  if(world&&renderer&&!renderer.lost){const items=ITEMS.filter(i=>!inventory.includes(i.id)).map(i=>world.itemPosition(i.id));renderer.draw(world,player,shadows,items,torch,elapsed,stress/100,shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)}
- window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true};
+ window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true,doors:world?.doors().map(d=>({room:d.type,open:d.open,angle:d.angle})),sovietInterior:true};
  requestAnimationFrame(paint)
 }
 function moveStick(e){const b=$('joystick').getBoundingClientRect(),x=e.clientX-b.left-b.width*.5,y=e.clientY-b.top-b.height*.5,rad=b.width*.38,d=Math.max(.01,Math.hypot(x,y)),scale=Math.min(1,rad/d);stick.x=x*scale/rad;stick.y=-y*scale/rad;$('knob').style.transform='translate('+(x*scale)+'px,'+(y*scale)+'px)'}
@@ -198,6 +205,17 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 window.addEventListener('pagehide',()=>{persist();acoustics.dispose()});
 try{
  renderer=new Renderer($('view'));setup(nextSeed());phase='menu';overlay('menu');$('continue').hidden=!readSave();
+ if(new URLSearchParams(window.location?.search||'').get('qa')==='1'){
+  window.__PW_TEST_HOOKS__={
+   teleportNearDoor(type){
+    if(phase!=='play')return false;
+    const door=world.doors().find(d=>d.type===type);if(!door)return false;
+    const x=door.gate.x+.5,z=door.gate.z+.5-door.insideSign*1.05;
+    if(!world.canStand(x,z))return false;
+    player.x=x;player.z=z;hud();return true
+   }
+  }
+ }
  $('view').addEventListener('webglcontextlost',e=>{e.preventDefault();pause();$('fatal').hidden=false});
  requestAnimationFrame(paint)
 }catch(e){console.error('NOT DEAD YET error',e);$('fatal').hidden=false}
