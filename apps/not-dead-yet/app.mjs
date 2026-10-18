@@ -85,6 +85,20 @@ function nearMemory(){
 function interact(){
  if(phase!=='play')return;
  if(peeking){peeking=false;document.querySelector?.('.app-shell')?.classList.remove('is-peephole');acoustics.event('peephole');hud();return}
+ // Repair interactions take precedence while electricity is out: an
+ // adjacent collectible or the entrance must not steal the "breaker" tap.
+ if(!world.powerAvailable()&&nearFuse()){
+  const result=world.resetBreaker();
+  if(result.ok){notice('Свет вернулся. Снова слышно холодильник.',4);stress=Math.max(0,stress-8);acoustics.event('power-return');persist();hud()}
+  else{notice('Автомат снова выбило. Сначала выключи плитку на кухне.',4);acoustics.event('breaker')}
+  return
+ }
+ if(!world.powerAvailable()&&nearPlate()){
+  const result=world.unplugPlate();
+  if(result.ok){notice('Электроплитка отключена. Теперь — щиток у входа.',4);acoustics.event('breaker');persist();hud()}
+  else notice('Плитка уже выключена.',1.6);
+  return
+ }
  const item=nearItem();
  if(item){inventory.push(item.id);stress=Math.max(0,stress-13);notice('Вспомнил: '+item.label+'. '+item.note,4.5);acoustics.event('pickup');persist();hud();return}
  const memory=nearMemory();
@@ -95,7 +109,7 @@ function interact(){
    hud();persist();return
   }
  }
- if(nearExit()&&(world.powerAvailable()||!nearFuse())){
+ if(nearExit()){
   const doorMemory=world.landing.knocked&&(!world.landing.seen||inventory.includes('photo')&&!world.landing.recognized);
   if(doorMemory){
    const result=world.inspectLanding(inventory.includes('photo'));
@@ -105,18 +119,6 @@ function interact(){
    notice(result.text,6);persist();hud();return
   }
   if(inventory.length===4)finish(true);else notice('Ты уверен, что собрал все свои вещи?',2.3);
-  return
- }
- if(nearPlate()&&!world.powerAvailable()){
-  const result=world.unplugPlate();
-  if(result.ok){notice('Электроплитка отключена. Теперь — щиток у входа.',4);acoustics.event('breaker');persist();hud()}
-  else notice('Плитка уже выключена.',1.6);
-  return
- }
- if(nearFuse()&&!world.powerAvailable()){
-  const result=world.resetBreaker();
-  if(result.ok){notice('Свет вернулся. Снова слышно холодильник.',4);stress=Math.max(0,stress-8);acoustics.event('power-return');persist();hud()}
-  else{notice('Автомат снова выбило. Сначала выключи плитку на кухне.',4);acoustics.event('breaker')}
   return
  }
  if(nearRadio()){
@@ -236,14 +238,13 @@ function hud(){
  $('objective').textContent=!world.powerAvailable()?world.powerObjective():inventory.length===4?'Вернуться к входной двери':'Найти четыре знакомые вещи';
  $('perception').style.opacity=String(clamp(.08+stress/170,0,.7));
  $('reload').textContent=reloadTime>0?'…':'↻';$('torch').textContent='Свет: '+(torch?'вкл':'выкл');
- const item=nearItem(),memory=!item?nearMemory():null,exit=nearExit()&&(world.powerAvailable()||!nearFuse());
+ const fuse=!world.powerAvailable()?nearFuse():null,plate=!fuse&&!world.powerAvailable()?nearPlate():null;
+ const item=!fuse&&!plate?nearItem():null,memory=!item&&!fuse&&!plate?nearMemory():null,exit=!fuse&&!plate?nearExit():false;
  const doorMemory=exit&&world.landing.knocked&&(!world.landing.seen||inventory.includes('photo')&&!world.landing.recognized);
- const radio=!item&&!memory&&!exit?nearRadio():null;
- const plate=!item&&!memory&&!exit&&!radio&&!world.powerAvailable()?nearPlate():null;
- const fuse=!item&&!memory&&!exit&&!radio&&!plate&&!world.powerAvailable()?nearFuse():null;
+ const radio=!item&&!memory&&!exit&&!fuse&&!plate?nearRadio():null;
  const door=!item&&!memory&&!exit&&!radio&&!plate&&!fuse?world.nearestDoor(player.x,player.z,2.2):null;
- $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:memory?'E / ВСПОМНИТЬ — '+world.location(memory.x,memory.z):radio?'E / '+(world.powerAvailable()?'НАСТРОИТЬ ПРИЁМНИК':'ПРИЁМНИК БЕЗ СВЕТА'):doorMemory?'E / ПОСМОТРЕТЬ В ГЛАЗОК':plate?'E / ОТКЛЮЧИТЬ ПЛИТКУ':fuse?'E / ВКЛЮЧИТЬ АВТОМАТ':exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):door?'E / '+(door.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' — '+world.location(world.point(door.room).x,world.point(door.room).z):'';
- $('interact').textContent=item?'Взять':memory?'Вспомнить':radio?'Настроить':doorMemory?'Глазок':plate?'Выключить':fuse?'Включить':door?(door.open?'Закрыть':'Открыть'):exit?'Открыть':'Взять';
+ $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:memory?'E / ВСПОМНИТЬ — '+world.location(memory.x,memory.z):fuse?'E / ВКЛЮЧИТЬ АВТОМАТ':plate?'E / ОТКЛЮЧИТЬ ПЛИТКУ':radio?'E / '+(world.powerAvailable()?'НАСТРОИТЬ ПРИЁМНИК':'ПРИЁМНИК БЕЗ СВЕТА'):doorMemory?'E / ПОСМОТРЕТЬ В ГЛАЗОК':exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):door?'E / '+(door.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' — '+world.location(world.point(door.room).x,world.point(door.room).z):'';
+ $('interact').textContent=item?'Взять':memory?'Вспомнить':fuse?'Включить':plate?'Выключить':radio?'Настроить':doorMemory?'Глазок':door?(door.open?'Закрыть':'Открыть'):exit?'Открыть':'Взять';
  $('interact').classList.toggle('ready',Boolean(item||memory||radio||plate||fuse||exit||door));
 }
 function paint(t){
