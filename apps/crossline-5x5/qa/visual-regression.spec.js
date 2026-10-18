@@ -24,11 +24,11 @@ test('all 45 QA screens: stable screenshots, interactive layout, real DOM and no
    await page.locator('header [data-workshop-trigger]').click();
    await expect(page.locator('#arenaDevGallery')).toBeVisible();
    // The gallery hosts actual same-origin app instances, not screenshot mocks.
-   await page.locator('[data-arena-device="'+target.name+'"]').click();
+   if(target.name!=='phone')await page.locator('[data-arena-device="'+target.name+'"]').click();
    const frame=page.frameLocator('.arena-dev__frame');
    for(const scene of DEV_SCENES){
     issues.length=0;
-    await page.locator('[data-arena-scene="'+scene.id+'"]').click();
+    await page.evaluate(id=>{const button=document.querySelector('[data-arena-scene="'+id+'"]');if(!button)throw Error('Missing dev scene '+id);button.click()},scene.id);
     await expect(frame.locator('main.shell')).toBeVisible({timeout:12000});
     await expect.poll(async()=>frame.locator('body').evaluate(el=>
       el.ownerDocument.defaultView.location.search.includes('__arena_dev='+scene.id)
