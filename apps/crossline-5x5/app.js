@@ -916,7 +916,7 @@ function devSounds(){
  show('menu');$('menu').classList.add('hidden');
  const root=document.createElement('section');root.id='arenaDevSoundLab';root.className='view arena-dev-sound-lab';
  const entries=[['tap','Нажатие'],['plan','Команда плана'],['move','Перемещение'],
-  ['hit','Попадание'],['block','Щит / блок'],['attack','Взмах атаки'],['shield','Поднятие щита'],['collapse','Обрушение'],['win','Победа'],['error','Ошибка']];
+  ['hit','Попадание'],['block','Щит / блок'],['attack','Взмах атаки'],['shield','Поднятие щита'],['collapse','Обрушение плит'],['fall','Падение в пустоту'],['win','Победа'],['error','Ошибка']];
  root.innerHTML='<h2>Звуки 5×5 Arena</h2><p>Это реальные игровые сигналы. Нажми на звук для воспроизведения, включая режим с отключённым в основной игре звуком.</p>'+
  '<div class="arena-dev-sounds">'+entries.map(([key,title])=>
  '<button type="button" data-arena-audio="'+key+'">'+title+' <small>'+key+'</small></button>').join('')+
