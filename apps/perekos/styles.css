@@ -148,3 +148,11 @@
 #attack-btn.aiming{box-shadow:inset 0 0 0 4px #f3dfaa,0 0 14px #e1c47f80;filter:brightness(1.12)}
 @media(max-height:735px){.mage-picker{max-height:90dvh;padding:10px}.mage-option{min-height:47px}.mage-option small{font-size:8px}.mage-switch{min-height:38px}.workbench .bench-slots{max-height:35dvh}.spell-lane .bench-slot{min-height:33px}}
 @media(max-width:365px){.mage-option{gap:3px;padding:4px}.mage-option i{width:20px}.mage-option strong{font-size:11px}.mage-family{padding:4px}.net-mages{gap:2px}}
+
+
+/* A genuine small fighter sprite replaces generic class glyphs in selection. */
+.mage-option .mage-sprite{display:block;flex:0 0 41px;width:41px;height:44px;background:#3c4a3b;border-bottom:3px solid #9c9671;image-rendering:pixelated}
+.mage-family.mage-storm .mage-sprite{background:#334b50}
+.mage-family.mage-stone .mage-sprite{background:#414a3f}
+.net-mages .mage-option .mage-sprite{flex-basis:27px;width:27px;height:27px}
+.net-sheet{max-height:90dvh;overflow-y:auto;scrollbar-width:thin}
