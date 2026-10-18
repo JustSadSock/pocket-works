@@ -1,6 +1,6 @@
 // Defensive saved-session migration and swept collisions; independent of DOM / WebGL.
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
-const kinds=new Set(['crawler','spitter','brute','heart']);
+const kinds=new Set(['crawler','spitter','brute','heart','leech']);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
 export function validateRun(s){
   if(!s||typeof s!=='object'||![1,2,3,4].includes(s.v)||!Number.isInteger(s.seed)||s.seed<0||s.seed>4294967295||!validPosition(s)||!Number.isFinite(s.hp)||s.hp<=0)return null;

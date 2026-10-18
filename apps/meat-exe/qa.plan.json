@@ -121,6 +121,22 @@
         "qa/biomes.spec.js"
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "ecology",
+      "kind": "node-test",
+      "files": [
+        "qa/ecology.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "ecology-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/ecology.spec.js"
+      ],
+      "tier": "smoke"
     }
   ]
 }

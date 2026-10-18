@@ -3,7 +3,8 @@ import { createWorld } from './scene.js';
 import { validateRun, deadzone, findOpenFacing } from './stability.js';
 import { hitRay, pelletAim, staggerDuration } from './combat.js';
 import { createCombatAudio } from './sound-forge.js';
-import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal,biomeSpawnWeight} from './biomes.js';
+import {initialEnemyIntent,advanceEnemyIntent,interruptIntent,enemyTerrainReaction,maxActiveAttackers,resetIntent,chooseEnemyKind} from './ecology.js';
+import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal} from './biomes.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -19,6 +20,7 @@ const sample=[[-1,0],[1,0],[0,-1],[0,1]];
 let mode='menu',state=null,world=null,last=0,clock=0,lastSave=0,nextId=1;
 let waveBreak=0,recoil=0,damageFlash=0,noticeUntil=0,hitUntil=0,fireUntil=0,killUntil=0;
 let shotsFired=0,confirmedHits=0,wallHits=0,lastShotKind='none',gateHintShown=false,lastGateHitAt=-999;
+let telegraphsSeen=0,chargesDodged=0,attacksInterrupted=0,terrainEnemyHits=0;
 const keys=new Set(),movement={x:0,y:0};
 let movingPointer=null,lookPointer=null,lookLast={x:0,y:0},shootHeld=false,keyFireHeld=false,mouseLocked=false;
 let soundOn=safeRead('sound')!==false;
@@ -79,9 +81,10 @@ function newState(seed){
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
-  const max=type==='heart'?310:type==='brute'?118:type==='spitter'?49:61;
-  return {id:nextId++,type,x,z,hp:hp||max,maxHp:max,attack:1+rng(0,.5),
-    speed:type==='heart'?.8:type==='brute'?.86:type==='spitter'?1.14:1.55,visual:world.makeEnemy(type,x,z)};
+  const max=type==='heart'?310:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61;
+  const id=nextId++;
+  return {id,type,x,z,hp:hp||max,maxHp:max,...initialEnemyIntent(type,id),
+    speed:type==='heart'?.8:type==='brute'?.86:type==='spitter'?1.14:type==='leech'?1.20:1.55,visual:world.makeEnemy(type,x,z)};
 }
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
@@ -116,7 +119,7 @@ function begin(resume=false){
       startWave(1);
     }
     audioStart();sound('menu');setMode('playing');
-    shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';hitUntil=fireUntil=killUntil=0;gateHintShown=false;lastGateHitAt=-999;
+    shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';telegraphsSeen=0;chargesDodged=0;attacksInterrupted=0;terrainEnemyHits=0;hitUntil=fireUntil=killUntil=0;gateHintShown=false;lastGateHitAt=-999;
     ui.cross.classList.remove('hit','firing','killed');
     last=performance.now();clock=0;waveBreak=0;lastSave=0;accumulator=0;lastPaint=0;
     setQuality(quality);paintCost=0;paintCoolDownUntil=0;
@@ -204,7 +207,7 @@ function defeatEnemy(e){
   world.splatter(e.x,e.z,e.type==='heart'?55:16);
   world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
-  state.kills++;state.score+=e.type==='heart'?2500:e.type==='brute'?160:e.type==='spitter'?110:80;
+  state.kills++;state.score+=e.type==='heart'?2500:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
   killUntil=clock+.2;ui.cross.classList.add('killed');
   if(e.type==='heart'){finish(true);return;}
   if(Math.random()<.36)dropAt(e.x,e.z);
@@ -229,8 +232,11 @@ function shoot(){
     if(result.kind==='flesh'){
       const enemy=result.enemy;
       hits++;confirmedHits++;
-      enemy.hp-=gun.damage+state.damageBonus+state.level*3;
+      const shotDamage=gun.damage+state.damageBonus+state.level*3;
+      enemy.hp-=shotDamage;
       enemy.hitFlash=.18;
+      const cancelled=interruptIntent(enemy,shotDamage,weapon);
+      if(cancelled){attacksInterrupted++;state.score+=40;setNotice('АТАКА СОРВАНА',.8);}
       enemy.stagger=Math.max(enemy.stagger||0,staggerDuration(enemy.type));
       world.impact(result.point,direction,'flesh');
       if(enemy.hp<=0){
@@ -278,7 +284,7 @@ function shoot(){
   lastShotKind=hits?'flesh':tissueHits?'tissue':walls?'wall':'miss';
 }
 function createProjectile(e,angle=0){
-  const toX=state.x-e.x,toZ=state.z-e.z,theta=Math.atan2(toX,toZ)+angle;
+  const toX=(e.intentX??state.x)-e.x,toZ=(e.intentZ??state.z)-e.z,theta=Math.atan2(toX,toZ)+angle;
   const r=e.type==='heart'?.24:.16;
   state.projectiles.push({x:e.x,z:e.z,vx:Math.sin(theta)*3.15,vz:Math.cos(theta)*3.15,ttl:4,r,visual:world.makeProjectile(e.x,e.z,r)});
 }
@@ -304,39 +310,82 @@ function makeNavigation(){
     }
   }
 }
+// Reactions are a tactical resource: stomach acid harms flesh, marrow grips small
+// bodies, neural nodes interrupt attacks. Never calculate hazards off the floor.
+function exposeEnemyToTerrain(e,dt){
+  const hazard=world.getHazardAt(e.x,e.z),reaction=enemyTerrainReaction(e.type,hazard);
+  e.terrainClock=Math.max(0,(e.terrainClock||0)-dt);
+  if(reaction.damage&&e.terrainClock===0){
+    e.terrainClock=hazard==='acid'?1.3:1.55;
+    e.hp-=reaction.damage;e.hitFlash=Math.max(e.hitFlash||0,.16);
+    terrainEnemyHits++;
+    if(reaction.stagger)resetIntent(e,.65);
+    e.stagger=Math.max(e.stagger||0,reaction.stagger);
+    world.impact({x:e.x,y:.35,z:e.z},{x:0,y:1,z:0},'flesh');
+    if(e.hp<=0){defeatEnemy(e);return null;}
+  }
+  return reaction;
+}
 function updateEnemies(dt){
   navAt-=dt;if(navAt<=0){makeNavigation();navAt=.36;}
+  // At most four concurrent attack windups maintain a readable threat field.
+  let active=state.enemies.reduce((n,e)=>n+((e.windup||0)>0||(e.lunge||0)>0?1:0),0);
+  const cap=maxActiveAttackers(state.enemies);
   for(const e of [...state.enemies]){
+    if(mode!=='playing')break;
+    e.hitFlash=Math.max(0,(e.hitFlash||0)-dt);
+    e.stagger=Math.max(0,(e.stagger||0)-dt);
+    const terrain=exposeEnemyToTerrain(e,dt);if(!terrain)continue;
     const dx=state.x-e.x,dz=state.z-e.z,dist=Math.hypot(dx,dz);
-    const hasSight=dist<10&&world.visible(state,e);
+    const hasSight=dist<11&&world.visible(state,e);
     let tx=state.x,tz=state.z;
     if(!hasSight){
       const rx=Math.round(e.x),rz=Math.round(e.z);
       let best=navigation.get(key(rx,rz))??Infinity;
-      let target=null;
       for(const [vx,vz] of sample){
         const ax=rx+vx,az=rz+vz,step=navigation.get(key(ax,az));
-        if(step!==undefined&&step<best){target={x:ax,z:az};best=step;}
+        if(step!==undefined&&step<best){tx=ax;tz=az;best=step;}
       }
-      if(target){tx=target.x;tz=target.z;}
     }
-    e.attack-=dt;
-    e.hitFlash=Math.max(0,(e.hitFlash||0)-dt);
-    e.stagger=Math.max(0,(e.stagger||0)-dt);
-    const gap=Math.hypot(state.x-e.x,state.z-e.z);
-    if(e.type==='spitter'&&gap<8&&gap>2&&hasSight&&e.attack<=0){
-      createProjectile(e);e.attack=2.0+rng(0,.45);
-    }else if(e.type==='heart'&&gap<10&&e.attack<=0){
-      for(let n=-2;n<=2;n++)createProjectile(e,n*.29);
-      e.attack=2.2-state.heartPhase*.3;
-    }else if(gap<(e.type==='heart'?1.55:.72)&&e.attack<=0){
-      harm(e.type==='heart'?20:e.type==='brute'?17:10);e.attack=.9;
+    // Prevent twenty simultaneous telegraphs without freezing existing AI.
+    const canStart=active<cap;
+    const wasWinding=e.windup>0;
+    const result=advanceEnemyIntent(e,dt,{x:e.x,z:e.z,visible:hasSight&&(canStart||e.windup>0||e.lunge>0),
+      playerX:state.x,playerZ:state.z});
+    if(!wasWinding&&result.action==='warn'&&e.windup>0){
+      active++;telegraphsSeen++;
     }
-    if(gap>.75){
-      const distGoal=Math.hypot(tx-e.x,tz-e.z)||1;
+    if(result.action==='shoot'){createProjectile(e);sound('heart');}
+    else if(result.action==='volley'){for(let n=-2;n<=2;n++)createProjectile(e,n*.29);}
+    else if(result.action==='bite'){harm(e.type==='brute'?18:e.type==='heart'?21:10);}
+    else if(result.action==='drain'){
+      const before=state.hp;harm(10);
+      if(state.hp<before){e.hp=Math.min(e.maxHp,e.hp+12);world.impact({x:e.x,y:.8,z:e.z},{x:0,y:1,z:0},'flesh');}
+    }
+    else if(result.action==='charge'){e.chargeHit=false;setNotice('ТАРАН · УВЕРНИСЬ',.7);}
+    if(e.lunge>0){
+      const before=Math.hypot(state.x-e.x,state.z-e.z);
+      const step=8.2*dt*terrain.speed*(e.stagger>0?.45:1);
+      const candidate=world.moveCircle(e.x,e.z,e.lungeX*step,e.lungeZ*step,.27);
+      e.x=candidate.x;e.z=candidate.z;
+      if(!e.chargeHit&&Math.hypot(state.x-e.x,state.z-e.z)<.91){
+        e.chargeHit=true;harm(19);
+      }
+      if(before>1.1&&e.lunge<=dt&&!e.chargeHit){chargesDodged++;state.score+=25;}
+      continue;
+    }
+    if(e.windup>0&&(e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
+    if(dist>.76){
       const modifier=mutation?.key==='faster'?1.18:1;
-      const speed=e.speed*modifier*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1);
-      const candidate=world.moveCircle(e.x,e.z,(tx-e.x)/distGoal*speed,(tz-e.z)/distGoal*speed,e.type==='heart'?.23:.19);
+      let pace=e.speed*modifier*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1)*terrain.speed;
+      let vx=(tx-e.x)/(Math.hypot(tx-e.x,tz-e.z)||1),vz=(tz-e.z)/(Math.hypot(tx-e.x,tz-e.z)||1);
+      // Crawlers weave into corridors instead of forming a single straight queue.
+      if(e.type==='crawler'&&hasSight&&dist>2.1){
+        const side=Math.sin(state.elapsed*2.3+e.id*2.1)*.52;
+        const oldX=vx;vx=vx-vz*side;vz=vz+oldX*side;
+        const normal=Math.hypot(vx,vz)||1;vx/=normal;vz/=normal;
+      }
+      const candidate=world.moveCircle(e.x,e.z,vx*pace,vz*pace,e.type==='heart'?.23:.19);
       e.x=candidate.x;e.z=candidate.z;
     }
   }
@@ -391,7 +440,7 @@ function update(dt){
   if(state.toSpawn>0){
     state.spawnClock-=dt;
     if(state.spawnClock<=0&&state.enemies.length<20){
-      const type=state.wave===5?'heart':Math.random()<biomeSpawnWeight(state.wave)?'brute':Math.random()<.33?'spitter':'crawler';
+      const type=chooseEnemyKind(state.wave,Math.random());
       if(spawnUnit(type)){state.toSpawn--;state.spawnClock=state.wave===5?0:rng(.4,.9);}
       else state.spawnClock=1.1;
     }
@@ -609,6 +658,10 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   score:state?.score??null,enemies:state?.enemies?.length??0,biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
+  ecology:{telegraphsSeen,chargesDodged,attacksInterrupted,terrainEnemyHits,
+    pending:state?.enemies?.filter(e=>e.windup>0).length??0,
+    enemies:state?.enemies?.slice(0,8).map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,attack:e.attack,
+      windup:e.windup,kind:e.windupKind,lunge:e.lunge}))??[]},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{

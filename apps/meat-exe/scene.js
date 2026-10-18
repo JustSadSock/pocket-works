@@ -1,6 +1,7 @@
 import * as THREE from './three.module.js';
 import { generateOrgan, getOrganProfile, getTissueNodes, setSeed, CELLS_PER_CHUNK } from './organGen.js';
 import { sweepCircle } from './stability.js';
+import {ENEMY_TELLS,telegraphSeverity} from './ecology.js';
 import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -94,9 +95,18 @@ export function createWorld(canvas, initialSeed) {
     crawler:new THREE.MeshStandardMaterial({color:0x9f2937,roughness:.46,emissive:0x330307,emissiveIntensity:.4}),
     spitter:new THREE.MeshStandardMaterial({color:0x718a3d,roughness:.44,emissive:0x283108,emissiveIntensity:.36}),
     brute:new THREE.MeshStandardMaterial({color:0x765361,roughness:.82,emissive:0x22070e,emissiveIntensity:.25}),
+    leech:new THREE.MeshStandardMaterial({color:0x6c516f,roughness:.46,emissive:0x271332,emissiveIntensity:.45}),
     heart:new THREE.MeshStandardMaterial({color:0xbd132d,roughness:.31,emissive:0x5f0713,emissiveIntensity:1})
   };
   const eyeMat = new THREE.MeshBasicMaterial({color:0xffe6bc});
+  const tellRingGeo=new THREE.TorusGeometry(.57,.052,6,20);
+  const tellMats=Object.fromEntries(Object.entries(ENEMY_TELLS).map(([kind,info])=>[
+    kind,new THREE.MeshBasicMaterial({color:info.color,transparent:true,opacity:.88,depthWrite:false})
+  ]));
+  const spitterSacGeo=new THREE.IcosahedronGeometry(.30,1);
+  const brutePlateGeo=new THREE.ConeGeometry(.23,.65,5);
+  const crawlerClawGeo=new THREE.ConeGeometry(.12,.62,5);
+  const leechTubeGeo=new THREE.TorusGeometry(.34,.09,6,12);
   const vesselMat = new THREE.MeshStandardMaterial({color:0x7e2434,metalness:.06,roughness:.33,emissive:0x26050a,emissiveIntensity:.25});
   const vesselGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
     new THREE.Vector3(-.46,.09,-.25),new THREE.Vector3(-.20,.11,-.05),
@@ -331,7 +341,7 @@ export function createWorld(canvas, initialSeed) {
   function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
   function makeEnemy(type,x,z){
     const g=new THREE.Group(), core=mobMats[type]||mobMats.crawler;
-    const scale=type==='heart'?1.8:type==='brute'?1.28:type==='spitter'?.84:.95;
+    const scale=type==='heart'?1.8:type==='brute'?1.28:type==='spitter'?.84:type==='leech'?.93:.95;
     const body=new THREE.Mesh(organicGeo,core);body.position.y=.85;body.scale.set(.42,.5,.32);g.add(body);
     const wound=new THREE.Mesh(organicGeo,woundMat);wound.position.y=.85;wound.scale.set(.46,.54,.37);wound.visible=false;g.add(wound);g.userData.wound=wound;
     const jaw=new THREE.Mesh(new THREE.TorusGeometry(.2,.07,6,12),boneMat);jaw.position.set(0,.65,-.3);g.add(jaw);
@@ -344,6 +354,37 @@ export function createWorld(canvas, initialSeed) {
       const eye=new THREE.Mesh(eyeGeo,eyeMat);eye.position.set(.17*s,1,-.25);g.add(eye);
       const leg=new THREE.Mesh(toothGeo,core);leg.position.set(.29*s,.28,.02);leg.rotation.z=s*Math.PI*.34;g.add(leg);
     }
+    if(type==='spitter'){
+      // High, swollen venom glands: identifiable before the creature attacks.
+      for(const side of [-1,1]){
+        const sac=new THREE.Mesh(spitterSacGeo,bile);
+        sac.position.set(side*.32,1.18,.14);sac.scale.set(.9,1.4,1.25);g.add(sac);
+      }
+    }
+    if(type==='leech'){
+      for(let ring=0;ring<3;ring++){
+        const collar=new THREE.Mesh(leechTubeGeo,ring===1?boneMat:core);
+        collar.position.set(0,.63+ring*.24,0);collar.rotation.x=Math.PI/2;
+        collar.scale.setScalar(.8+ring*.15);g.add(collar);
+      }
+    }
+    if(type==='brute'){
+      // Back armour leaves a clear heavy silhouette even in volumetric fog.
+      for(const side of [-1,0,1]){
+        const plate=new THREE.Mesh(brutePlateGeo,boneMat);
+        plate.position.set(side*.28,1.29,.10);plate.rotation.x=-.28;
+        plate.scale.set(1.25,1.25,1.08);g.add(plate);
+      }
+    }
+    if(type==='crawler'){
+      for(const side of [-1,1]){
+        const claw=new THREE.Mesh(crawlerClawGeo,core);
+        claw.position.set(side*.43,.17,-.31);claw.rotation.z=side*.49;g.add(claw);
+      }
+    }
+    const tell=new THREE.Mesh(tellRingGeo,tellMats[type]||tellMats.crawler);
+    tell.rotation.x=Math.PI/2;tell.position.y=.085;tell.visible=false;g.add(tell);
+    g.userData.tell=tell;
     if(type==='heart')for(let i=0;i<5;i++){
       const ring=new THREE.Mesh(veinGeo,i%2?boneMat:core);ring.position.set(0,.8+i*.065,0);ring.rotation.set(i*.23,i*.5,0);ring.scale.setScalar(1.4+i*.08);g.add(ring);
     }
@@ -458,8 +499,19 @@ export function createWorld(canvas, initialSeed) {
       e.visual.position.set(e.x,Math.sin(time*4+e.id)*.038-hit*.05,e.z);
       e.visual.rotation.y=Math.atan2(player.x-e.x,player.z-e.z)+Math.PI;
       e.visual.rotation.z=(reduced?0:Math.sin(time*26+e.id)*hit*.075);
-      e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='brute'?1.28:e.type==='spitter'?.84:.95)*(1+Math.sin(time*5+e.id)*.045-hit*.07));
+      e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='brute'?1.28:e.type==='spitter'?.84:e.type==='leech'?.93:.95)*(1+Math.sin(time*5+e.id)*.045-hit*.07));
       if(e.visual.userData.wound)e.visual.userData.wound.visible=hit>.1;
+      const tell=e.visual.userData.tell;
+      if(tell){
+        const severity=telegraphSeverity(e);
+        tell.visible=severity>0;
+        if(tell.visible){
+          const amp=(e.type==='brute'?1.43:1.0)*(0.80+severity*.47);
+          tell.scale.setScalar(amp);
+          // Face-to-floor organic warning ring, no UI popover or unrelated glow.
+          tell.position.y=.09+Math.sin(time*12)*.012;
+        }
+      }
     }
     for(const p of pickups)if(p.visual){p.visual.position.y=.55+Math.sin(time*3+p.x)*.12;p.visual.rotation.y+=dt*1.8;}
     for(const p of shots)if(p.visual){p.visual.position.set(p.x,.95+Math.sin(time*13+p.x)*.07,p.z);p.visual.rotation.y+=dt*5;}
