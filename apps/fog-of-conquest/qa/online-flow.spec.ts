@@ -105,6 +105,8 @@ test('two real clients: short invite, private maps, move, turns and reconnect',a
     await expect.poll(()=>b.evaluate(()=>window.units?.filter(u=>u.owner===2).length)).toBe(2);
     expect(await b.evaluate(()=>window.units.some(u=>u.owner===1))).toBe(false);
     expect(await a.evaluate(()=>window.units.some(u=>u.owner===2))).toBe(false);
+    // The southern player must not spawn looking at an empty northern corner.
+    await expect.poll(()=>b.evaluate(()=>document.getElementById('battleViewport')!.scrollLeft)).toBeGreaterThan(0);
     await a.screenshot({path:info.outputPath('pocketnet-host.png')});
     await b.screenshot({path:info.outputPath('pocketnet-guest.png')});
 
