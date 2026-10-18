@@ -1,6 +1,7 @@
 import {W,H,HOME} from './apartment.mjs';
 import {makeMaterialAtlas} from './textures.mjs';
 import {panels} from './doors.mjs';
+import {rogueStaticMesh,roguePickupsMesh} from './rogue-scene.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
@@ -627,15 +628,21 @@ export class Renderer{
  resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.3:1.6),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
  draw(world,player,enemies,items,flash,t,damage=0,shot=0,reload=0){
   if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
-  if(this.staticRevision!==world.terrainRevision){const mesh=apartmentMesh(world);this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);this.staticCount=mesh.length/10;this.staticRevision=world.terrainRevision}
+  const rogue=world.endless===true;
+  const meshKey=rogue?'rogue:'+world.terrainRevision+':'+Math.floor(player.x/5)+':'+Math.floor(player.z/5):world.terrainRevision;
+  if(this.staticRevision!==meshKey){const mesh=rogue?rogueStaticMesh(world,player):apartmentMesh(world);
+   this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);this.staticCount=mesh.length/10;this.staticRevision=meshKey}
   const eye=[player.x*SCALE,1.54+(player.bob||0),player.z*SCALE],dir=[Math.sin(player.yaw)*Math.cos(player.pitch),-Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)];
   const proj=projection(Math.PI*.50,this.canvas.width/this.canvas.height),mvp=multiply(proj,view(eye,dir));
-  const lampA=world.point('living'),lampB=world.point('kitchen');
+  const lampA=rogue?{x:Math.floor(player.x/18)*18+4.5,z:Math.floor(player.z/18)*18+4.5}:world.point('living'),
+   lampB=rogue?{x:Math.floor(player.x/18)*18+13.5,z:Math.floor(player.z/18)*18+13.5}:world.point('kitchen');
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
   gl.uniform3fv(this.u.lampA,[lampA.x*SCALE,2.64,lampA.z*SCALE]);gl.uniform3fv(this.u.lampB,[lampB.x*SCALE,2.64,lampB.z*SCALE]);
-  gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);gl.uniform1f(this.u.electrical,world.powerAvailable()?1:0);
+  gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);gl.uniform1f(this.u.electrical,rogue?1:world.powerAvailable()?1:0);
   this.bind(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
-  const dyn=[];doorGeometry(dyn,world);electricalProps(dyn,world,t);clockHands(dyn,world,t);for(const item of items)relicMesh(dyn,item,t);
+  const dyn=[];
+  if(rogue)roguePickupsMesh(dyn,items,t);
+  else {doorGeometry(dyn,world);electricalProps(dyn,world,t);clockHands(dyn,world,t);for(const item of items)relicMesh(dyn,item,t);}
   for(const e of enemies){
    const d=Math.hypot(e.x-player.x,e.z-player.z);
    if(d<14&&flash)castFloorShadow(dyn,e.x*SCALE,e.z*SCALE,.58,.35,1.50,
