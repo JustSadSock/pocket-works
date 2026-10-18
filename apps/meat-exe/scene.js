@@ -327,7 +327,7 @@ export function createWorld(canvas, initialSeed) {
   let currentWidth=0,currentHeight=0,quality='medium',ratio=0;
   function setQuality(next){
     if(!['low','medium','high'].includes(next))return;
-    if(next!==quality){quality=next;currentWidth=0;resize();}
+    if(next!==quality){quality=next;currentWidth=0;lastChunk='';resize();}
   }
   function resize(){
     const w=Math.max(1,Math.round(canvas.clientWidth||window.innerWidth));
@@ -660,10 +660,23 @@ export function createWorld(canvas, initialSeed) {
   }
   function nearChunks(x,z) {
     const cx=Math.floor(Math.round(x)/CELLS_PER_CHUNK),cz=Math.floor(Math.round(z)/CELLS_PER_CHUNK);
-    const focus=cellKey(cx,cz);if(lastChunk===focus)return;
+    const slim=softwareRenderer&&quality!=='high';
+    const focus=cellKey(cx,cz)+'/'+(slim?'5':'9');if(lastChunk===focus)return;
     lastChunk=focus;
-    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++) if(!chunks.has(cellKey(cx+dx,cz+dz)))buildChunk(cx+dx,cz+dz);
-    for(const [k,m] of chunks){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>1||Math.abs(b-cz)>1){scene.remove(m);chunks.delete(k);for(const t of getTissues(a,b)){t.visual=null;tissueVisuals.delete(t.id);}}}
+    // On SwiftShader and software WebGL, five tiles preserve both open portals
+    // and near-field silhouettes but avoid rendering four unseen corner chunks.
+    // Game collision/nav still use the authoritative, full procedural graph.
+    const keep=new Set();
+    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
+      if(slim&&Math.abs(dx)+Math.abs(dz)>1)continue;
+      const k=cellKey(cx+dx,cz+dz);keep.add(k);
+      if(!chunks.has(k))buildChunk(cx+dx,cz+dz);
+    }
+    for(const [k,m] of chunks)if(!keep.has(k)){
+      scene.remove(m);chunks.delete(k);
+      const [a,b]=k.split(',').map(Number);
+      for(const t of getTissues(a,b)){t.visual=null;tissueVisuals.delete(t.id);}
+    }
     if(layouts.size>120){for(const [k] of layouts){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>6||Math.abs(b-cz)>6)layouts.delete(k);}}
   }
   function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
