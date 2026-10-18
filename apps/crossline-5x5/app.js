@@ -168,6 +168,11 @@ function applyRemote(next,version=roomVersion){
   attackMode=false;
  }else if(next.ownPlan?.length)plan=JSON.parse(JSON.stringify(next.ownPlan));
  render();
+ if(next.phase==='finished'&&showingOutcome&&modalOpen&&mode==='online'){
+  const enabled=next.host===me?.id&&next.players?.length===2;
+  const button=$(next.match?.replays?.length?'modalAlt':'modalMain');
+  button.disabled=!enabled;button.textContent=enabled?'Реванш':'Ждём второго игрока';
+ }
  if(next.phase==='finished'&&!showingOutcome&&!animating&&screen==='play')finish();
 }
 function wire(client){
@@ -365,11 +370,17 @@ function finish(){
  const termination=game()?.termination;
  const narrative=termination?.type==='forfeit'?(termination.by===side()?'Вы сдались. Победа засчитана сопернику.':'Соперник сдался. Победа записана в счёт.'):winner==='draw'?'Оба плана привели к равному исходу.':'Пять ходов решают больше, чем кажется.';
  soundFX('win');
- modal('ПАРТИЯ ОКОНЧЕНА',name,narrative,
-  {label:'Смотреть повтор',action:openReplay},
-  {label:mode==='online'?(server?.host===me?.id?'Реванш':'Ждём хозяина'):'Реванш',action:rematch},
-  {label:'В меню',action:leaveToMenu});
- $('modalAlt').disabled=mode==='online'&&server?.host!==me?.id;
+ const canReplay=Boolean(game()?.replays?.length);
+ const canRematch=mode!=='online'||server?.host===me?.id&&server?.players?.length===2;
+ const again={label:canRematch?'Реванш':'Ждём второго игрока',action:rematch};
+ if(canReplay){
+  modal('ПАРТИЯ ОКОНЧЕНА',name,narrative,
+   {label:'Смотреть повтор',action:openReplay},again,{label:'В меню',action:()=>leaveToMenu()});
+  $('modalAlt').disabled=!canRematch;
+ }else{
+  modal('ПАРТИЯ ОКОНЧЕНА',name,narrative,again,{label:'В меню',action:()=>leaveToMenu()});
+  $('modalMain').disabled=!canRematch;
+ }
 }
 function rematch(){
  showingOutcome=false;gameToken++;plan=[];attackMode=false;
