@@ -1,5 +1,5 @@
-const VERSION='1.5.0',CACHE='trafficity-v1.5.0',PREFIX='trafficity-',PROTOCOL=2,DATE='2026-10-18';
-const NOTES=['Узкие улицы, пробки и конкурентные доставки.','Общие контракты с наградами и сроками.','Уровни сложности ИИ и масштабирование города.','PocketNet v2: приватность, переподключение и защита от зависания.'];
+const VERSION='1.6.0',CACHE='trafficity-v1.6.0',PREFIX='trafficity-',PROTOCOL=2,DATE='2026-10-18';
+const NOTES=['Магистрали, узкие улицы и мосты теперь нарисованы по игровым правилам.','ИИ перестраивает путь, избегает заторов и не бросает выбранный заказ.','Умный маршрут игрока адаптируется, ручной план сохраняется.','Более плавные анимации, живые река и город; PocketNet v3.'];
 const FILES=['./','./index.html','./app.js','./art.js','./engine.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/update-manager.js','../../shared/update-manager.css','../../shared/capabilities/net.js'];
 const BASE=new URL('./',self.registration.scope),KEYS=new Map(FILES.map(x=>{const u=new URL(x,BASE);return [u.pathname,u.href]}));
 async function fresh(raw){const url=new URL(raw instanceof Request?raw.url:raw,BASE);url.searchParams.set('__pw_build',VERSION+'-p'+PROTOCOL);const r=await fetch(url,{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw Error('No network');return r;}

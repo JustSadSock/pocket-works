@@ -29,7 +29,7 @@ test('two real browser clients: private plans, simultaneous turns, reload and fo
   if(!player)throw Error('no authenticated session');
   if(data.type==='create_room'){
    room={players:[player],state:rules.createRoom({player}).state};tabs.add(page);
-   await deliver(page,{type:'room_joined',roomId:ROOM,gameId:'trafficity',version:'v2',players:room.players,
+   await deliver(page,{type:'room_joined',roomId:ROOM,gameId:'trafficity',version:'v3',players:room.players,
     state:rules.viewForPlayer({state:room.state,player,players:room.players})});return;
   }
   if(data.type==='join_room'){
@@ -39,7 +39,7 @@ test('two real browser clients: private plans, simultaneous turns, reload and fo
     room.players.push(player);room.state=joined.state;
    }
    tabs.add(page);
-   await deliver(page,{type:'room_joined',roomId:ROOM,gameId:'trafficity',version:'v2',players:room.players,
+   await deliver(page,{type:'room_joined',roomId:ROOM,gameId:'trafficity',version:'v3',players:room.players,
     state:rules.viewForPlayer({state:room.state,player,players:room.players})});
    await broadcast([{type:'state'}]);return;
   }
@@ -88,6 +88,8 @@ test('two real browser clients: private plans, simultaneous turns, reload and fo
   expect(mine.cars[0].route.length).toBeGreaterThan(0);
   expect(theirs.cars[0].route).toEqual([]);
   expect(theirs.cars[0].goal).toBe(-1);
+  expect(theirs.cars[0].route).toEqual([]);
+  expect((await guest.page.evaluate(()=>window.__AI_TEST_STATE__)).rulesVersion).toBe(3);
   await guest.page.locator('#auto').click();
   await guest.page.waitForFunction(()=>window.__AI_TEST_STATE__.cars[2].route.length>0);
   await host.page.locator('#next').click();
