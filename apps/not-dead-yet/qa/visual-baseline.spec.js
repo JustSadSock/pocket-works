@@ -23,3 +23,36 @@ test('three reproducible visual references render without WebGL errors',async({p
  }
  expect(errors).toEqual([])
 });
+
+
+test('returning along a corridor reuses cached architectural geometry without rebuilding',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(origin,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.__PW_ROGUE_QA__?.visual&&window.__PW_TEST_STATE__?.renderer3D,{timeout:20000});
+ await page.evaluate(()=>window.__PW_ROGUE_QA__.startSeed(222));
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ const first=await page.evaluate(()=>{
+  const api=window.__PW_ROGUE_QA__,w=api.world();
+  api.setPosition(9.5,9.5);
+  const original=api.player();
+  const gridX=Math.floor(original.x/5),gridZ=Math.floor(original.z/5);
+  for(let z=-8;z<=24;z++)for(let x=-8;x<=24;x++){
+   if(Math.floor(x/5)===gridX&&Math.floor(z/5)===gridZ)continue;
+   if(w.canStand(x+.5,z+.5))return{x:x+.5,z:z+.5}
+  }
+  return null
+ });
+ expect(first).not.toBeNull();
+ const before=await page.evaluate(()=>window.__PW_ROGUE_QA__.visual().renderer.cacheHits||0);
+ await page.evaluate(position=>window.__PW_ROGUE_QA__.setPosition(position.x,position.z),first);
+ await page.waitForFunction(p=>window.__PW_ROGUE_QA__.visual().renderer.lastMeshKey?.endsWith(
+  ':'+Math.floor(p.x/5)+':'+Math.floor(p.z/5)),first,{timeout:4000});
+ await page.evaluate(()=>window.__PW_ROGUE_QA__.setPosition(9.5,9.5));
+ await page.waitForFunction(old=>window.__PW_ROGUE_QA__.visual().renderer.cacheHits>old,before,{timeout:4000});
+ const stats=await page.evaluate(()=>window.__PW_ROGUE_QA__.visual().renderer);
+ expect(stats.cacheEntries).toBeGreaterThanOrEqual(2);
+ expect(stats.cacheEntries).toBeLessThanOrEqual(3);
+ expect(stats.meshBuildMs).toBe(0);
+ expect(stats.cacheBytes).toBeGreaterThan(0);
+ expect(errors).toEqual([])
+});
