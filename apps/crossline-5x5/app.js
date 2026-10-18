@@ -5,6 +5,7 @@ import {DEV_QUERY,DEV_SCENES,devScene,mountArenaDevGallery,isDevKey} from './dev
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DIRECTIONS,STEPS,MAX_ROUNDS,initialMatch,validatePlan,simulateRound,aiPlan} from './engine.js';
 import {paintArena,playArenaBeat,frameBefore,drawArenaCanvas,timing} from './combat-visuals.js';
+import {createArenaSoundscape} from './audio-design.js';
 import {trySetCommand,trySwapCommand,removeCommand,controlsFor,previewOrders,paintPlanOverlay,describeIssue} from './planning.js';
 import {HISTORY_KEY,getHistory,saveHistory,deleteHistory,captureHistory,commandLabel,outcomeText,analyzeBeat,exportMatch} from './replay-archive.js';
 import {GUIDE_OPPONENT,createGuideMatch,guideStep,guideAccept,guideReady,sanitizeMarks,cycleCellMark,paintCellMarks} from './learning.js';
@@ -37,7 +38,7 @@ const storedTheme=read('theme','dark');
 document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
 let plan=[],editingSlot=null,thinkingAI=false,attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
-let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0,archiveEntry=null,devHistory=[];
+let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,replayPlaybackId=0,archiveEntry=null,devHistory=[];
 let roomVersion='v1',opponentDisconnected=false,pendingForfeitLeave=false,forfeitWatchdog=0;
 const roomQuery=new URLSearchParams(location.search).get('room')?.trim()||'';
 const latest=()=>mode==='online'?server:offline;
@@ -48,18 +49,9 @@ const score=()=>mode==='online'?server?.score||{A:0,B:0}:offline?.score||{A:0,B:
 const isPlanning=()=>latest()?.phase==='planning';
 const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen||pendingForfeitLeave||thinkingAI||settingsOpen;
 const reduceMotion=()=>!motion||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+const arenaSoundscape=createArenaSoundscape();
 function soundFX(type='tap'){
- if((!sound||volume===0)&&!IS_DEV_FRAME)return;
- try{
-  const A=window.AudioContext||window.webkitAudioContext;if(!A)return;
-  audio ||= new A();audio.resume?.();
-  const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime;
-  o.type=type==='win'||type==='block'?'sine':['hit','attack','collapse','fall'].includes(type)?'sawtooth':'triangle';
-  const freq={tap:370,plan:440,hit:140,block:620,move:280,win:570,error:115,attack:420,shield:670,collapse:105,fall:120}[type]||340;
-  o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(freq*(type==='win'?1.7:type==='collapse'?.4:.74),t+(type==='collapse'?.23:.12));
-  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0001,(type==='hit'?.052:.032)*volume/70),t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='collapse'?.26:.15));
-  o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='collapse'?.27:.16));
- }catch{}
+ arenaSoundscape.play(type,{enabled:sound,volume,preview:IS_DEV_FRAME});
 }
 function buzz(v=8){if(!haptics)return;try{navigator.vibrate?.(v)}catch{}}
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600)}
@@ -865,7 +857,7 @@ function startFromSession(){
  if(restored.roomId)connect('resume');
 }
 if(!IS_DEV_FRAME){
- const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.7.1',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+ const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.8.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
  mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
  checkNet();resumeOffer();refreshArchiveCount();
 }else{
@@ -924,7 +916,7 @@ function devSounds(){
  show('menu');$('menu').classList.add('hidden');
  const root=document.createElement('section');root.id='arenaDevSoundLab';root.className='view arena-dev-sound-lab';
  const entries=[['tap','Нажатие'],['plan','Команда плана'],['move','Перемещение'],
-  ['hit','Попадание'],['block','Щит / блок'],['attack','Взмах атаки'],['shield','Поднятие щита'],['collapse','Обрушение'],['win','Победа'],['error','Ошибка']];
+  ['hit','Попадание'],['block','Щит / блок'],['attack','Взмах атаки'],['shield','Поднятие щита'],['collapse','Обрушение плит'],['fall','Падение в пустоту'],['win','Победа'],['error','Ошибка']];
  root.innerHTML='<h2>Звуки 5×5 Arena</h2><p>Это реальные игровые сигналы. Нажми на звук для воспроизведения, включая режим с отключённым в основной игре звуком.</p>'+
  '<div class="arena-dev-sounds">'+entries.map(([key,title])=>
  '<button type="button" data-arena-audio="'+key+'">'+title+' <small>'+key+'</small></button>').join('')+

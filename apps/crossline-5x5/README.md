@@ -64,3 +64,12 @@ QA-галерея: 45 настоящих экранов × 2 размера (390
 Real Edge QA: .github/workflows/arena-pocketnet-e2e.yml запускает настоящий локальный Worker с SQLite Durable Object и двумя WebSocket-клиентами. Скрипт apps/crossline-5x5/qa/pocketnet-live.mjs проверяет скрытые планы, реконнект, сдачу, реванш и выход. Включены Chromium/WebKit mobile/browser QA и экспорт архивов.
 
 Не подтверждается исключительно автоматизированным тестом: публикация production Cloudflare, реальное 7-дневное истечение сессии, ощущения вибрации и звука на физических устройствах.
+
+
+## Reworked physical sound & collapse (v1.8.0)
+
+`audio-design.js` is an original, WebAudio-only material soundscape with eleven individually staged cues. A single recycled AudioContext and noise buffer combine shaped oscillators with filtered sound bursts and stereo-separated stone debris. Existing mute, volume and haptics preferences are preserved, including sound-lab previews; no remote files or network fetches. All nodes have bounded lifetimes.
+
+Round-four collapse in `combat-visuals.js` now shows each of the sixteen perimeter slabs tumbling and accelerating into black voids in a clockwise stagger. The lasting board state is a **hole**, not a red lava-like surface. Fighters that lose support visibly drop with the tiles; the existing engine still controls casualties and coordinates. WebM collapse follows the same event log with shrinking and moving tiles. Both system and in-app reduced-motion options suppress gravity animation immediately.
+
+Quality gates: `tests/sonic-depth.test.mjs`, `qa/sonic-depth.spec.js`, original combat rules and full 45-screen dev visual suite. This update deliberately does not change PocketNet server modules or original game logic.

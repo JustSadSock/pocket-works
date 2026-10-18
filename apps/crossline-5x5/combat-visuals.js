@@ -9,6 +9,9 @@ export const COMBAT_BEAT_MS=820;
 export const COMBAT_MIN_MS=125;
 const SIDES=['A','B'];
 const outer=(x,y)=>x===0||x===4||y===0||y===4;
+// Clockwise release order across the actual 16 perimeter slabs.
+export const perimeterOrder=(x,y)=>!outer(x,y)?-1:y===0?x:x===4?4+y:y===4?8+(4-x):12+(4-y);
+export const gravityProgress=p=>Math.pow(Math.max(0,Math.min(1,p)),1.72);
 const cellsOf=events=>events.flatMap(event=>event.type==='attack'?event.cells||[]:[]);
 const cellsEqual=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 export const frameBefore=(record,index)=>{
@@ -75,13 +78,25 @@ export function paintArena(host,units,edges,events=[],{
  const tiles=prepareBoard(host),positions=effectPositions(units,events),
   collapse=events.some(e=>e.type==='collapse');
  const warning=round===4&&!edges;
+ const fallDuration=Math.max(520,Number(duration)||820);
  tiles.forEach(cell=>{
   const x=Number(cell.dataset.x),y=Number(cell.dataset.y),
    coord=x+','+y,perimeter=outer(x,y);
   cell.className='cell';
   if(perimeter&&warning)cell.classList.add('edge-warning');
-  if(perimeter&&edges)cell.classList.add('lava');
-  if(perimeter&&collapse)cell.classList.add('shatter');
+  if(perimeter&&edges)cell.classList.add('lava','void');
+  if(perimeter&&collapse){
+   cell.classList.add('shatter');
+   const order=perimeterOrder(x,y),delay=order*12;
+   cell.style.setProperty?.('--fall-delay',delay+'ms');
+   cell.style.setProperty?.('--fall-duration',Math.max(470,fallDuration-delay)+'ms');
+   cell.style.setProperty?.('--fall-twist',(order%2?-1:1)*(9+order%5*7)+'deg');
+   cell.style.setProperty?.('--fall-drift',((x-2)*10)+'px');
+   cell.style.setProperty?.('--fall-drift-mid',((x-2)*3.5)+'px');
+   cell.style.setProperty?.('--fall-drift-late',((x-2)*7)+'px');
+   cell.style.setProperty?.('--fall-twist-mid',((order%2?-1:1)*(9+order%5*7)*.35)+'deg');
+   cell.style.setProperty?.('--fall-twist-late',((order%2?-1:1)*(9+order%5*7)*.75)+'deg');
+  }
   if(traces?.has?.(coord)){cell.classList.add('trace');cell.dataset.trace=String(traces.get(coord))}
   else cell.dataset.trace='';
   if(targets?.has?.(coord))cell.classList.add('target');
@@ -97,7 +112,7 @@ export function paintArena(host,units,edges,events=[],{
   const state=units[side],hit=events.some(e=>e.side===side&&e.type==='hit'),
    fall=events.find(e=>e.side===side&&e.type==='fall');
   const visible=state?.alive||hit||fall;
-  if(!visible){actor.hidden=true;actor.classList.remove('dying');continue}
+  if(!visible){actor.hidden=true;actor.classList.remove('dying','falling');continue}
   const location=fall?.at||state;
   const cell=tiles[location.y*5+location.x];
   if(!cell){actor.hidden=true;continue}
@@ -108,8 +123,9 @@ export function paintArena(host,units,edges,events=[],{
   actor.style.left=left+'px';actor.style.top=top+'px';
   actor.dataset.position=location.x+','+location.y;
   actor.classList.toggle('overlap',Boolean(overlap));
-  actor.classList.toggle('dying',Boolean(hit||fall));
-  if(hit||fall)actor.style.animationDuration=Math.max(160,duration||460)+'ms';
+  actor.classList.toggle('dying',Boolean(hit&&!fall));
+  actor.classList.toggle('falling',Boolean(fall));
+  if(hit||fall)actor.style.animationDuration=(fall?Math.max(620,duration||740):Math.max(160,duration||460))+'ms';
   if(side==='A')actor.setAttribute('aria-label','Игрок А');else actor.setAttribute('aria-label','Игрок Б');
  }
 }
@@ -154,10 +170,11 @@ export async function playArenaBeat(host,before,after,{
  }
  await sleep(total*.22);if(!ensure())return false;
  if(state.collapse){
-  paintArena(host,after.units,after.edgesCollapsed,events,{round,instant:true,duration:total*.27});
+  paintArena(host,after.units,after.edgesCollapsed,events,{round,instant:true,duration:Math.max(570,820/Math.max(.25,Math.min(5,speed)))});
   sound('collapse');if(state.fall)sound('fall');feedback(14);
  }
- await sleep(total*.16);
+ // The falling slabs need time to descend before the next frame or redraw.
+ await sleep(total*.16+(state.collapse?Math.max(450,720/Math.max(.25,Math.min(5,speed))):0));
  return ensure();
 }
 // Palette and effects are identical to those used by paintArena (rather than
@@ -177,12 +194,25 @@ export function drawArenaCanvas(ctx,from,to,round=1,progress=1,{
  for(let y=0;y<5;y++)for(let x=0;x<5;x++){
   const border=outer(x,y),baseX=ox+x*(unit+gap),baseY=oy+y*(unit+gap);
   const lava=border&&shouldCollapse,warning=border&&round===4&&!lava;
-  ctx.fillStyle=lava?C.lava:warning?C.warning:C.tile;
+  // A collapsed cell is an actual hole, not an orange tile.
+  ctx.fillStyle=lava?'#070c15':warning?C.warning:C.tile;
   ctx.beginPath();
   if(ctx.roundRect)ctx.roundRect(baseX,baseY,unit-3,unit-3,10);
   else ctx.rect(baseX,baseY,unit-3,unit-3);
   ctx.fill();
-  ctx.strokeStyle=C.border;ctx.lineWidth=1;ctx.stroke();
+  ctx.strokeStyle=lava?'#1a2638':C.border;ctx.lineWidth=1;ctx.stroke();
+  if(lava&&!prev?.edgesCollapsed){
+   const t=gravityProgress((progress-.70)/.30),order=perimeterOrder(x,y);
+   const spin=(order%2?-1:1)*(9+order%5*7)*Math.PI/180;
+   ctx.save();
+   ctx.globalAlpha=1-Math.max(0,(t-.64)/.36);
+   ctx.translate?.(baseX+(unit-3)/2+(x-2)*12*t,baseY+(unit-3)/2+72*t*t);
+   ctx.rotate?.(spin*t);
+   ctx.scale?.(1-t*.74,1-t*.75);
+   ctx.fillStyle=C.tile;ctx.fillRect(-(unit-3)/2,-(unit-3)/2,unit-3,unit-3);
+   ctx.fillStyle='#52657d';ctx.fillRect(-(unit-3)/2,-(unit-3)/2,unit-3,Math.max(2,unit*.045));
+   ctx.restore();
+  }
   if(progress>=.38&&hasCoord(positions.attacks,x,y)){
    ctx.save();ctx.globalAlpha=.34;ctx.fillStyle=C.attack;ctx.fillRect(baseX+8,baseY+8,unit-19,unit-19);ctx.restore();
   }
@@ -210,6 +240,11 @@ export function drawArenaCanvas(ctx,from,to,round=1,progress=1,{
    cy=oy+y*(unit+gap)+(unit-3)/2;
   ctx.save();
   ctx.globalAlpha=!b?.alive?Math.min(1,Math.max(0,(.91-progress)/.18)):1;
+  if(events.some(e=>e.type==='fall'&&e.side===side)&&progress>=.7){
+   const fall=gravityProgress((progress-.7)/.3);
+   ctx.translate?.(0,fall*unit*.56);
+   ctx.scale?.(1-fall*.7,1-fall*.7);
+  }
   ctx.fillStyle=C[side];ctx.shadowBlur=13;ctx.shadowColor=C[side];
   ctx.beginPath();ctx.arc(cx,cy,unit*.28,0,2*Math.PI);ctx.fill();
   ctx.restore();
