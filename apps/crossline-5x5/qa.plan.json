@@ -13,7 +13,8 @@
         "tests/planning.test.mjs",
         "tests/reliability.test.mjs",
         "tests/replay-archive.test.mjs",
-        "tests/learning.test.mjs"
+        "tests/learning.test.mjs",
+        "tests/stress.test.mjs"
       ]
     },
     {
@@ -83,6 +84,14 @@
       "tier": "smoke",
       "files": [
         "qa/learning.spec.js"
+      ]
+    },
+    {
+      "id": "visual-regression",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/visual-regression.spec.js"
       ]
     }
   ]
