@@ -254,6 +254,10 @@ test('field tactics use only actual arrivals and navigable flanking positions',(
   assert.equal(routeCells[0],fromCell);
   assert.equal(routeCells[routeCells.length-1],toCell);
   assert.equal(routeCells.length,2);
+  const person=s.people.find(p=>p.id===personId);
+  assert.deepEqual(person.dailyShift.to,{x:toCell%160,y:Math.floor(toCell/160)});
+  assert.equal(person.dailyShift.routeCells.at(-1),toCell);
+  assert.ok(person.dailyShift.workHours+person.dailyShift.travelHours<=8.501);
  }
  assert.ok(c.pursued.every(id=>c.wounded.includes(id)));
  assert.ok(c.wounded.every(id=>[...c.claimants,...c.owners].includes(id)));
