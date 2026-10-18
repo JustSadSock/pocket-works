@@ -86,7 +86,7 @@ function submit(s,player,v){
  const si=(pi-s.round%s.players.length+s.players.length)%s.players.length;
  const sh=s.sheets[si];
  if(v.sheetId!==sh.id)return 'Це інший аркуш. Синхронізуй кімнату.';
- if(typeof v.answer!=='string'||v.answer.length>MAX_ANSWER*2)return 'Фрагмент завеликий.';
+ if(typeof v.answer!=='string'||v.answer.length>MAX_ANSWER)return 'Фрагмент завеликий (до 800 символів).';
  const answer=clean(v.answer,MAX_ANSWER);
  const ws=words(answer);if(ws.length<4||answer.length>MAX_ANSWER)return 'Напиши принаймні чотири слова (до 800 символів).';
  if(s.round===0&&!GENDERS.includes(v.gender))return 'Обери стать персонажа або «неважливо».';
