@@ -1064,7 +1064,7 @@ export function createWorld(canvas, initialSeed) {
         const severity=telegraphSeverity(e);
         tell.visible=severity>0;
         if(tell.visible){
-          const amp=e.type==='clot'?3.6*(.79+severity*.21):e.type==='ossuary'?1.8*(.8+severity*.47):
+          const amp=e.type==='clot'?4.65*(.8+severity*.2):e.type==='ossuary'?1.8*(.8+severity*.47):
             (e.type==='brute'?1.43:1.0)*(.80+severity*.47);
           tell.scale.setScalar(amp);
           // Face-to-floor organic warning ring, no UI popover or unrelated glow.
