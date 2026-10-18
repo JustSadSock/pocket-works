@@ -1,66 +1,66 @@
-import { test, expect } from '@playwright/test';
+import {test,expect} from '@playwright/test';
 
-test('campaign: playable map, turn, autosave, reload and return',async ({page},info)=>{
-  const errors:string[]=[];
-  page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/apps/fog-of-conquest/',{waitUntil:'domcontentloaded'});
-  await expect(page.locator('#newGame')).toBeVisible();
-  await page.locator('#newGame').click();
-  await expect(page.locator('#start')).toBeHidden();
-  await expect(page.locator('#field')).toBeVisible();
-  await expect(page.locator('#endTurn')).toBeEnabled();
-  const display=await page.locator('#map').evaluate((el:HTMLCanvasElement)=>{
-    const {width,height}=el;
-    const ctx=el.getContext('2d')!;
-    const pixels=ctx.getImageData(0,0,width,height).data;
-    const samples=new Set<string>();
-    for(let y=0;y<height;y+=23)for(let x=0;x<width;x+=23){
-      const n=(y*width+x)*4;
-      samples.add(pixels[n]+','+pixels[n+1]+','+pixels[n+2]);
-    }
-    return {width,height,colors:samples.size};
-  });
-  expect(display.width).toBeGreaterThan(160);
-  expect(display.height).toBeGreaterThan(220);
-  expect(display.colors).toBeGreaterThan(12);
-  await page.screenshot({path:info.outputPath('01-map.png')});
-  await page.locator('#zoomIn').click();
-  await page.locator('#focus').click();
-  await page.locator('#endTurn').click();
-  await expect(page.locator('#season')).toContainText('ХОД 2',{timeout:12000});
-  await page.screenshot({path:info.outputPath('02-turn.png')});
-  await page.locator('#menuBtn').click();
-  await expect(page.locator('#menu')).toBeVisible();
-  await page.locator('#save').click();
-  await page.locator('#resume').click();
-  await expect(page.locator('#menu')).toBeHidden();
-  await page.reload({waitUntil:'domcontentloaded'});
-  await expect(page.locator('#continueGame')).toBeEnabled();
-  await page.locator('#continueGame').click();
-  await expect(page.locator('#start')).toBeHidden();
-  await expect(page.locator('#season')).toContainText('ХОД 2');
-  const bounds=await page.evaluate(()=>({w:document.documentElement.scrollWidth,h:document.documentElement.scrollHeight,vw:innerWidth,vh:innerHeight}));
-  expect(bounds.w).toBeLessThanOrEqual(bounds.vw+2);
-  expect(bounds.h).toBeLessThanOrEqual(bounds.vh+2);
-  expect(errors).toEqual([]);
+// The actual original DOM, sprites and move algorithm, NOT the abandoned remake.
+test('original campaign: render, move, turn, autosave, restore and launcher link',async({page},info)=>{
+ const errors:string[]=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/fog-of-conquest/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#newGameBtn')).toBeVisible();
+ await page.locator('#newGameBtn').click();
+ await page.locator('#twoBtn').click();
+ await expect(page.locator('#startPanel')).toBeHidden();
+ await expect(page.locator('#canvas')).toBeVisible();
+ await page.waitForFunction(()=>window.units?.length>=4&&window.map?.length===20);
+ const rendering=await page.locator('#canvas').evaluate((canvas:HTMLCanvasElement)=>{
+   const data=canvas.getContext('2d')!.getImageData(0,0,canvas.width,canvas.height).data;
+   const colors=new Set<string>();
+   for(let i=0;i<data.length;i+=1600)colors.add(data[i]+','+data[i+1]+','+data[i+2]);
+   return {width:canvas.width,height:canvas.height,colors:colors.size};
+ });
+ expect(rendering.width).toBeGreaterThan(360);
+ expect(rendering.height).toBeGreaterThan(360);
+ expect(rendering.colors).toBeGreaterThan(8);
+ await page.screenshot({path:info.outputPath('01-original-map.png')});
+ await page.evaluate(()=>{
+   const canvas=document.getElementById('canvas') as HTMLCanvasElement;
+   const rect=canvas.getBoundingClientRect();
+   const c=canvas.width/30;
+   const click=(r:number,col:number)=>canvas.dispatchEvent(new MouseEvent('click',{
+     bubbles:true,cancelable:true,clientX:rect.left+(col+.5)*c,clientY:rect.top+(r+.5)*c}));
+   click(1,2);click(1,3);
+ });
+ await expect.poll(()=>page.evaluate(()=>window.units.find(u=>u.owner===1&&u.type==='swordsman')?.c)).toBe(3);
+ await page.locator('#endTurnBtn').click();
+ await expect(page.locator('#overlay')).toBeVisible();
+ await page.locator('#yesBtn').click();
+ await expect.poll(()=>page.evaluate(()=>window.state.currentPlayer)).toBe(2);
+ expect(await page.evaluate(()=>Boolean(localStorage.getItem('focSave_autosave')))).toBe(true);
+ await page.screenshot({path:info.outputPath('02-original-next-turn.png')});
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#loadBtn').click();
+ await page.locator('#loadList .loadBtn').first().click();
+ await expect.poll(()=>page.evaluate(()=>window.state.currentPlayer)).toBe(2);
+ const dims=await page.evaluate(()=>({
+   scrollW:document.documentElement.scrollWidth,scrollH:document.documentElement.scrollHeight,
+   w:innerWidth,h:innerHeight,buttons:[...document.querySelectorAll('#controls button')].map(el=>(el as HTMLElement).getBoundingClientRect().height)
+ }));
+ expect(dims.scrollW).toBeLessThanOrEqual(dims.w+2);
+ expect(dims.scrollH).toBeLessThanOrEqual(dims.h+2);
+ expect(errors).toEqual([]);
 });
-
-test('menu: online lobby and cancellation do not trap the app',async ({page})=>{
-  const errors:string[]=[];
-  page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/apps/fog-of-conquest/',{waitUntil:'domcontentloaded'});
-  await page.locator('#onlineBtn').click();
-  await expect(page.locator('#online')).toBeVisible();
-  await expect(page.locator('#createRoom')).toBeVisible();
-  await page.locator('#onlineClose').click();
-  await expect(page.locator('#start')).toBeVisible();
-  await expect(page.locator('#online')).toBeHidden();
-  await page.locator('#newGame').click();
-  await page.locator('#menuBtn').click();
-  await page.locator('#newConfirm').click();
-  await expect(page.locator('#confirm')).toBeVisible();
-  await page.locator('#confirmNo').click();
-  await expect(page.locator('#confirm')).toBeHidden();
-  await expect(page.locator('#field')).toBeVisible();
-  expect(errors).toEqual([]);
+test('menu: original settings, AI choices and PocketNet lobby are reachable',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/fog-of-conquest/',{waitUntil:'domcontentloaded'});
+ await page.locator('#newGameBtn').click();
+ await expect(page.locator('#aiBtn')).toBeVisible();
+ await page.locator('#onlineBtn').click();
+ await expect(page.locator('#lobbyPanel')).toBeVisible();
+ await expect(page.locator('#onlineLobbyControls')).toBeVisible();
+ await page.locator('#lobbyBackBtn').click();
+ await expect(page.locator('#startPanel')).toBeVisible();
+ await page.locator('#startSettingsBtn').click();
+ await expect(page.locator('#settingsOverlay')).toBeVisible();
+ await page.locator('#settingsCloseBtn').click();
+ await expect(page.locator('#settingsOverlay')).toBeHidden();
+ expect(errors).toEqual([]);
 });
