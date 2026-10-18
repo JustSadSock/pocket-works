@@ -3,6 +3,7 @@ import { createWorld } from './scene.js';
 import { validateRun, deadzone, findOpenFacing } from './stability.js';
 import { hitRay, pelletAim, staggerDuration } from './combat.js';
 import { createCombatAudio } from './sound-forge.js';
+import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal,biomeSpawnWeight} from './biomes.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -37,7 +38,7 @@ const ui={
   resume:$('resumeSaved'),record:$('record'),mutation:$('scar'),resultTitle:$('resultTitle'),
   resultBody:$('resultBody'),note:$('notice'),damage:$('damageOverlay'),
   mute:$('soundMenu'),pauseMute:$('soundPause'),resumeBtn:$('resumeBtn'),
-  qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart')
+  qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue')
 };
 const weaponStats=[
   {name:'КОСТОЛОМ',cooldown:.22,damage:26,pellets:1,spread:.015},
@@ -70,11 +71,11 @@ function setMode(next){
 }
 function newState(seed){
   const start=world.getStart();
-  return {v:3,seed,x:start.x,z:start.z,yaw:findOpenFacing(start.x,start.z,world.isFloor),pitch:0,hp:100,maxHp:100,heat:0,
+  return {v:4,seed,x:start.x,z:start.z,yaw:findOpenFacing(start.x,start.z,world.isFloor),pitch:0,hp:100,maxHp:100,heat:0,
     weapon:0,level:0,damageBonus:0,cooldown:0,dashCooldown:0,dashTime:0,dashDirX:0,dashDirZ:0,
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
-    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0};
+    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
@@ -85,11 +86,11 @@ function makeEnemy(type,x,z,hp){
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
   const {enemies,pickups,projectiles,...base}=state;
-  safeWrite('session',{...base,v:3,enemies:enemies.map(({visual,...e})=>e),pickups:pickups.map(({visual,...p})=>p)});
+  safeWrite('session',{...base,v:4,enemies:enemies.map(({visual,...e})=>e),pickups:pickups.map(({visual,...p})=>p)});
 }
 function restore(raw){
   const s=validateRun(raw);if(!s)return false;
-  world.reset(s.seed,s.ruptured);nextId=1;
+  world.reset(s.seed,s.ruptured,s.wave);nextId=1;
   const base=newState(s.seed);
   state={...base,...s,enemies:[],pickups:[],projectiles:[]};
   if(!world.isFloor(state.x,state.z)){state.x=base.x;state.z=base.z;}
@@ -126,9 +127,22 @@ function begin(resume=false){
   }catch(error){fatal(error);}
 }
 function startWave(number){
+  if(world.getStage()!==number){
+    // A new organ must be a real spatial transition, not just a tint:
+    // its geometry, seed, hazards, drop positions and environment all change.
+    state.pickups.forEach(p=>world.disposeVisual(p.visual));
+    state.projectiles.forEach(p=>world.disposeVisual(p.visual));
+    state.pickups=[];state.projectiles=[];
+    world.reset(state.seed,state.ruptured,number);
+    const spawn=world.getStart();state.x=spawn.x;state.z=spawn.z;
+    state.yaw=findOpenFacing(spawn.x,spawn.z,world.isFloor);state.pitch=0;
+    state.hazardCooldown=1.4;state.invuln=Math.max(state.invuln,1.25);
+    world.nearChunks(spawn.x,spawn.z);
+    navAt=0;gateHintShown=false;
+  }
   state.wave=number;state.waveTime=0;state.spawnClock=0;state.toSpawn=number===5?1:7+number*3;
-  if(number===5){setNotice('СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
-  else setNotice('ВОЛНА '+String(number).padStart(2,'0')+' / 05',2.5);
+  if(number===5){setNotice('НЕРВНЫЙ УЗЕЛ · СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
+  else {setNotice(biomeForWave(number).name+' · ВОЛНА '+number+'/05',2.8);sound('heart');}
   snapshot();
 }
 function chooseSpawn(min=4,max=11){
@@ -237,6 +251,8 @@ function shoot(){
       if(damage?.opened){
         state.ruptured.push(damage.id);state.ruptureCount++;
         state.score+=180;
+        const heal=biomeRuptureHeal(state.wave);
+        if(heal)state.hp=Math.min(state.maxHp,state.hp+heal);
         state.immuneHeat=Math.min(100,state.immuneHeat+26);
         state.immuneDelay=1.85;
         navAt=0;sound('heart');
@@ -348,6 +364,14 @@ function update(dt){
       if(state.enemies.length>0)setNotice('ИММУННАЯ СИСТЕМА ОТВЕТИЛА',1.4);
     }
   }
+  state.hazardCooldown=Math.max(0,(state.hazardCooldown||0)-dt);
+  const terrain=world.getHazardAt(state.x,state.z);
+  if(terrain&&state.hazardCooldown===0&&biomeDamage(terrain)>0){
+    state.hazardCooldown=terrain==='charge'?1.4:1.1;
+    harm(biomeDamage(terrain));
+    if(mode!=='playing')return;
+    setNotice(terrain==='acid'?'КИСЛОТА · ПОКИНЬ ЛУЖУ':'НЕРВНЫЙ РАЗРЯД · УЙДИ С УЗЛА',1);
+  }
   state.cooldown=Math.max(0,state.cooldown-dt);
   state.dashCooldown=Math.max(0,state.dashCooldown-dt);
   state.invuln=Math.max(0,state.invuln-dt);
@@ -356,7 +380,7 @@ function update(dt){
   const d=state.dashTime>0?{x:state.dashDirX,z:state.dashDirZ}:direction();
   state.moving=Math.min(1,Math.hypot(d.x,d.z));
   state.sprinting=keys.has('ShiftLeft')||keys.has('ShiftRight');
-  const speed=state.dashTime>0?14:state.sprinting?4.8:3.4;
+  const speed=(state.dashTime>0?14:state.sprinting?4.8:3.4)*biomeSpeedFactor(terrain);
   const next=world.moveCircle(state.x,state.z,d.x*speed*dt,d.z*speed*dt,.22);
   state.x=next.x;state.z=next.z;
   if(!gateHintShown){
@@ -367,7 +391,7 @@ function update(dt){
   if(state.toSpawn>0){
     state.spawnClock-=dt;
     if(state.spawnClock<=0&&state.enemies.length<20){
-      const type=state.wave===5?'heart':Math.random()<Math.min(.25,state.wave*.055)?'brute':Math.random()<.33?'spitter':'crawler';
+      const type=state.wave===5?'heart':Math.random()<biomeSpawnWeight(state.wave)?'brute':Math.random()<.33?'spitter':'crawler';
       if(spawnUnit(type)){state.toSpawn--;state.spawnClock=state.wave===5?0:rng(.4,.9);}
       else state.spawnClock=1.1;
     }
@@ -392,6 +416,7 @@ function update(dt){
 function syncHUD(){
   if(!state)return;
   ui.wave.textContent=String(state.wave).padStart(2,'0')+' / 05';
+  ui.zone.textContent=biomeForWave(state.wave).short;
   ui.hp.textContent=String(Math.ceil(state.hp)).padStart(3,'0');
   ui.healthFill.style.width=(state.hp/state.maxHp*100)+'%';
   ui.healthFill.style.background=state.hp<30?'#f83f39':'#dec09b';
@@ -581,13 +606,13 @@ function frame(timestamp){
 }
 window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   x:state?.x??null,z:state?.z??null,yaw:state?.yaw??null,pitch:state?.pitch??null,hp:state?.hp??null,wave:state?.wave??null,
-  score:state?.score??null,enemies:state?.enemies?.length??0,
+  score:state?.score??null,enemies:state?.enemies?.length??0,biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{
-  world=createWorld(canvas,save?.v===3?save.seed:2026);
+  world=createWorld(canvas,save?.seed??2026);
   world.setQuality(effectiveQuality);
   const demo=world.getStart();world.nearChunks(demo.x,demo.z);
   setMode('menu');
