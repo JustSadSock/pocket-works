@@ -63,7 +63,7 @@ test('saves preserve random seed, visited progress, pickups and rewritten map',(
  const restored=new RogueWorld(w.seed,w.save());
  assert.equal(restored.changes,w.changes);
  assert.equal(restored.depth,w.depth);
- assert.equal(restored.fingerprint().includes(':0:'),w.fingerprint().includes(':0:'));
+ assert.equal(restored.chunk(0,0).epoch,w.chunk(0,0).epoch);
  if(p)assert.equal(restored.taken.has(p.id),true);
 });
 test('scene mesh uses finite geometric vertices and upgrade pool is actionable',()=>{
