@@ -160,7 +160,12 @@ field.addEventListener('pointerdown',e=>{
  const px=e.clientX-rect.left,py=e.clientY-rect.top;
  const g=solution.kind==='cloud'?cloudViewport(rect.width,rect.height,solution):sceneMetrics(rect.width,rect.height,config.standOff);
  if(solution.kind==='cloud'){
-   const index=g.bubbles.findIndex(b=>Math.hypot(b.x-px,b.y-py)<Math.max(25,b.r+10));
+   // Use the nearest object first; overlapping touch targets must not steal taps.
+   let index=-1,nearest=Infinity;
+   g.bubbles.forEach((bubble,i)=>{
+     const d=Math.hypot(bubble.x-px,bubble.y-py);
+     if(d<nearest&&d<Math.max(20,bubble.r+10)){nearest=d;index=i}
+   });
    if(index>=0){
      selectedBubble=index;syncControls();refreshState();needGraph=true;dirty=true;save();return;
    }
