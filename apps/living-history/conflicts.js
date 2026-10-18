@@ -224,7 +224,7 @@ export function expeditionGrain(s){
 }
 function feedExpedition(s,c,side){
  const ids=side==='claimants'?c.claimants:c.owners,stock=c.supply[side];
- const present=ids.map(id=>citizen(s,id)).filter(p=>p?.alive);
+ const present=ids.map(id=>citizen(s,id)).filter(p=>p?.alive&&(!c.expedition||c.stage!=='returning'||p.combatAwayDay===s.day));
  const required=rnd(present.length*EXPEDITION_RATION);
  const eaten=rnd(Math.min(required,stock.grain));
  stock.grain=rnd(stock.grain-eaten);stock.eaten=rnd(stock.eaten+eaten);
@@ -260,6 +260,7 @@ function stepMarch(s,c,returning){
  for(const p of active){
   const h=byId(s,p.houseId);if(!h)continue;
   const from=xy(c.positions[p.id]),to=returning?{x:h.x,y:h.y}:xy(c.cell);
+  if(returning&&from.x===to.x&&from.y===to.y)continue;
   const path=walkPath(s,from,to);
   if(!path.length){blocked++;continue;}
   const segment=path.slice(0,DAILY_MARCH_CELLS+1);
@@ -343,7 +344,12 @@ export function advanceLocalConflicts(s,notify){
   const fight=beginLandDispute(s,c.claimant.id,c.owner.id,c.cell,notify,{muster,expedition:muster});
   if(fight){used.add(c.claimant.communityId);started++;patrol(s,fight,muster);}
  }
- if(s.conflicts.length>90)s.conflicts.splice(0,s.conflicts.length-90);
+ // Never drop a live field inventory. Only old finished history is capped.
+ if(s.conflicts.length>90){
+  const excess=s.conflicts.length-90;
+  let removed=0;
+  s.conflicts=s.conflicts.filter(c=>c.stage!=='resolved'||removed++>=excess);
+ }
 }
 export function conflictAudit(s){
  const issues=[];
