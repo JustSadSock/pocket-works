@@ -1,7 +1,7 @@
 // PocketNet adaptation of the ORIGINAL Fog of Conquest, without rebalance.
 // Original unit/building definitions and complete generator are embedded verbatim.
 // Never broadcast raw state: enemies and fogged terrain remain private.
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=4;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=5;
 const TERRAIN={PLAIN:0,WATER:1,FOREST:2,HILL:3,MOUNTAIN:4};
 const TERR_COST=[1,2,2,2,999],TERR_DEF=[0,-1,1,2,0];
 const BASE_ROWS=20,BASE_COLS=30;
@@ -497,7 +497,40 @@ function privateView(g,side){
  v.state={...g.state,gold:{[side]:g.state.gold[side]},fog:{[side]:fog},seen:{[side]:seen},lastSeen:{[side]:copy(memory)},log:{[side]:g.state.log[side]},grace:{[side]:g.state.grace[side]}};
  // Never disclose a seeded map's reconstruction key while fog is active.
  delete v.seed;
+ v.battleHistory={[side]:copy(g.battleHistory?.[side]||[])};
  v.nextUnitId=0;return v;
+}
+// Each side receives only observations it could already make with its fog.
+function visibleAt(g,side,point){
+ return !!point&&inMap(g,point.r,point.c)&&g.state.fog[side]?.[point.r]?.[point.c]===false;
+}
+function recordBattleEvents(before,after,actor,action){
+ const oldUnit=before.units.find(u=>u.id===action.unit);
+ const target=inMap(after,action.r,action.c)?{r:action.r,c:action.c}:null;
+ const from=oldUnit?{r:oldUnit.r,c:oldUnit.c}:null;
+ // A response is an observation, not an undoable command or raw game diff.
+ // No HP, hidden entity IDs, concealed spawn types or unseen ownership.
+ const kind=['move','attack','heal','spawn','end'].includes(action.type)?action.type:null;
+ if(!kind)return [];
+ after.battleSeq=(before.battleSeq||0)+1;
+ after.battleHistory??={1:[],2:[]};
+ const packets=[];
+ for(const side of [1,2]){
+   const fromKnown=side===actor||visibleAt(before,side,from);
+   const targetKnown=side===actor||visibleAt(before,side,target)||visibleAt(after,side,target);
+   if(kind!=='end'&&!fromKnown&&!targetKnown)continue;
+   const ev={seq:after.battleSeq,kind,actor,turn:after.state.turn,revision:after.revision};
+   if(fromKnown&&from)ev.from=from;
+   if(targetKnown&&target)ev.at=target;
+   if(kind==='spawn'&&side===actor)ev.unitType=action.unitType;
+   if(kind==='attack'&&targetKnown)ev.outcome=
+     after.units.some(u=>u.r===target.r&&u.c===target.c)?'occupied':'cleared';
+   const journal=after.battleHistory[side]??=[];
+   journal.push(ev);
+   if(journal.length>96)journal.splice(0,journal.length-96);
+   packets.push({type:'battle_event',payload:ev,side});
+ }
+ return packets;
 }
 const stateEvent=()=>[{type:'state',payload:null}];
 const notice=(id,msg,requestId)=>[{type:'notice',to:id,payload:msg,...(requestId?{requestId}:{})}];
@@ -569,9 +602,17 @@ const module={
          {type:'state',to:player.id,payload:null}]};
      const result=originalAction(state.game,side,action.action);
      if(result.error)return {state,events:notice(player.id,result.error,requestId)};
+     const previous=state.game;
+     const observed=recordBattleEvents(previous,result.state,side,action.action);
      state.game=result.state;state.phase=result.state.phase;state.revision++;
+     // Resolve recipients using immutable room seat IDs; never broadcast all
+     // battle events and never include a recipient-less packet.
+     const events=observed.flatMap(event=>{
+       const id=state.seats[event.side-1]?.id;
+       return id?[{type:'battle_event',to:id,payload:event.payload}]:[];
+     });
      remember(state,player.id,requestId);
-     return {state,events:[...stateEvent(),...(requestId?[receipt(player.id,requestId,state.game.revision)]:[])]};
+     return {state,events:[...stateEvent(),...events,...(requestId?[receipt(player.id,requestId,state.game.revision)]:[])]};
    }
    if(action.type==='resign'){
      if(state.phase!=='battle')return {state,events:notice(player.id,'Нет активной партии.')};
