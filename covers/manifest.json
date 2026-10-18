@@ -3341,7 +3341,7 @@
     "lastAttemptAt": "2026-10-18T00:58:04.029Z"
   },
   "axis-pals": {
-    "revision": "603e5276c73ab2394930de646ce2d99c13dc7b47",
+    "revision": "53f4caf76cad21c723c5fb5fa32370968c2e24c0",
     "qualityScore": 70,
     "visionScore": null,
     "prepared": false,
@@ -3359,8 +3359,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "603e5276c73ab2394930de646ce2d99c13dc7b47",
-    "lastAttemptAt": "2026-10-18T08:32:07.989Z"
+    "lastAttemptRevision": "53f4caf76cad21c723c5fb5fa32370968c2e24c0",
+    "lastAttemptAt": "2026-10-18T08:50:30.353Z"
   },
   "trafficity": {
     "revision": "51ea14f0aaec60f97c480ebc914b7dfbc25dcb52",
