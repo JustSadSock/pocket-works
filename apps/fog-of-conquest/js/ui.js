@@ -200,8 +200,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // constants moved to gameState.js
   const MIN_INFO_HEIGHT = 140;
   let aiMode = false, aiLevel = 2;
-  let lobbyConn = null;
-  let gameConn = null;
+  // No legacy root-WebSocket connection: PocketNet owns all network state.
   let onlineGame = false;
   // terrain and unit data moved to gameState.js
 
@@ -429,10 +428,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     fogSnapshot,
     replayEvents,
     replayPaused,
-    gameConn,
     onlineGame
   });
-  window.gameConn = gameConn;
   window.onlineGame = onlineGame;
 
   let cellW, cellH;
@@ -461,7 +458,10 @@ window.addEventListener('DOMContentLoaded', ()=>{
     };
   }
   function safeSavePayload(replays=replayEvents){
-    return window.FogSaveSchema.normalize(gameSavePayload(replays));
+    // Validate first, then encode. A network-projected view can never enter
+    // offline storage, even by importing or calling this code directly.
+    const verified=window.FogSaveSchema.normalize(gameSavePayload(replays));
+    return window.FogReplayCodec.packSave(verified);
   }
   const saveNotice=document.createElement('div');
   saveNotice.id='fogSaveNotice';saveNotice.setAttribute('role','status');
@@ -495,7 +495,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(aiMode && p===2) state.log[1].push(t('logEnemy').replace('{text}', txt));
     const ev = {type:'action',action:lastAction,text:txt,snapshot:snapshot()};
     replayEvents.push(ev);
-    if(onlineGame && gameConn) gameConn.send({event:ev});
+    if(replayEvents.length>window.FogReplayCodec.LIMIT)
+      replayEvents.splice(0,replayEvents.length-window.FogReplayCodec.LIMIT);
     lastAction=null;
     renderLog();
     persistAutoSave();
@@ -505,7 +506,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     state.log[p].push(t('logTurn').replace('{turn}', state.turn+1));
     const ev = {type:'turn',turn:state.turn+1,snapshot:snapshot()};
     replayEvents.push(ev);
-    if(onlineGame && gameConn) gameConn.send({event:ev});
+    if(replayEvents.length>window.FogReplayCodec.LIMIT)
+      replayEvents.splice(0,replayEvents.length-window.FogReplayCodec.LIMIT);
     renderLog();
     persistAutoSave();
   }
@@ -631,6 +633,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   function applySavedData(d){
+    // Expand/validate before clearing a live game (also applies to rollback).
+    d=window.FogSaveSchema.normalize(d);
     resetState();
     mapSize=d.mapSize;ROWS=d.map.length;COLS=d.map[0].length;
     window.ROWS=ROWS;window.COLS=COLS;
@@ -717,7 +721,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     updateReplayPauseBtn,
     saveGame, loadGameData, listSaves, deleteSave,
     startMatchReplay, stopMatchReplay, seekReplay,
-    handleNetEvent, handleNetMessage, attachConnection });
+    });
 
   // === LOS ===
   function hasLOS(r0,c0,r1,c1,{forestBlock=true}={}){
@@ -1664,6 +1668,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(saveBtn){
       saveBtn.style.display = (!onlineGame && startPanel.style.display === 'none') ? 'block' : 'none';
     }
+    const exportCurrent=document.getElementById('fogExportCurrentBtn');
+    if(exportCurrent)exportCurrent.style.display=(!onlineGame&&startPanel.style.display==='none'
+      &&map.length)?'block':'none';
     settingsOverlay.style.display='flex';
   });
 
@@ -1734,6 +1741,48 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(saveBtn){
     saveBtn.addEventListener('click', saveGame);
   }
+  function downloadParty(payload){
+    // Export is an explicit gesture; never upload personal offline play data.
+    const valid=window.FogSaveSchema.normalize(payload);
+    const packed=window.FogReplayCodec.packSave(valid);
+    const blob=new Blob([JSON.stringify(packed)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download='fog-conquest-'+new Date(packed.timestamp).toISOString().slice(0,10)+'.json';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+    reportSave('Файл партии подготовлен для скачивания.');
+  }
+  document.getElementById('fogExportCurrentBtn')?.addEventListener('click',()=>{
+    if(onlineGame||startPanel.style.display!=='none'||!map.length){
+      reportSave('Экспорт доступен только для локальной партии.',true);return;
+    }
+    try{downloadParty(safeSavePayload());}
+    catch(e){reportSave('Экспорт не удался: '+String(e?.message||e),true);}
+  });
+  const importButton=document.getElementById('fogImportSaveBtn');
+  const importInput=document.getElementById('fogImportSaveInput');
+  importButton?.addEventListener('click',()=>importInput?.click());
+  importInput?.addEventListener('change',async()=>{
+    const file=importInput.files?.[0];
+    importInput.value='';
+    if(!file)return;
+    if(file.size>3*1024*1024){
+      reportSave('Файл слишком большой (максимум 3 МБ).',true);return;
+    }
+    try{
+      const raw=JSON.parse(await file.text());
+      // Import never overwrites the active match or PocketNet session.
+      const normalized=window.FogSaveSchema.normalize(raw);
+      const archive=window.FogReplayCodec.packSave(normalized);
+      const key=SAVE_PREFIX+archive.timestamp+'-import-'+Date.now();
+      localStorage.setItem(key,JSON.stringify(archive));
+      populateLoadList();
+      reportSave('Партия импортирована. Выбери её в списке для загрузки.');
+    }catch(e){
+      reportSave('Импорт отклонён: '+String(e?.message||e),true);
+    }
+  });
 
   if(loadBtn){
     loadBtn.addEventListener('click', ()=>{
@@ -1757,7 +1806,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
       const date=new Date(s.timestamp).toLocaleString();
       row.innerHTML = `<span>${date}</span>`+
         `<span><button data-key="${s.key}" class="loadBtn game-btn" data-i18n="loadSave">${t('loadSave')}</button>`+
-        `<button data-key="${s.key}" class="delBtn game-btn" data-i18n="deleteSave">${t('deleteSave')}</button></span>`;
+        `<button data-key="${s.key}" class="delBtn game-btn" data-i18n="deleteSave">${t('deleteSave')}</button>`+
+        `<button data-key="${s.key}" class="exportBtn game-btn">Экспорт</button></span>`;
       loadList.appendChild(row);
     });
     applyStrings();
@@ -1774,6 +1824,13 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }else if(e.target.classList.contains('delBtn')){
       deleteSave(key);
       populateLoadList();
+    }else if(e.target.classList.contains('exportBtn')){
+      try{
+        const raw=JSON.parse(localStorage.getItem(key));
+        downloadParty(raw);
+      }catch(error){
+        reportSave('Не удалось экспортировать сохранение: '+String(error?.message||error),true);
+      }
     }
   });
 
@@ -1900,59 +1957,21 @@ window.addEventListener('DOMContentLoaded', ()=>{
     });
   }
 
-  lobbyBackBtn.addEventListener('click', ()=>{
+  lobbyBackBtn.addEventListener('click',()=>{
     if(window.FogPocketNet){window.FogPocketNet.leave();return;}
-    if(lobbyConn){ lobbyConn.close(); lobbyConn=null; }
-    gameConn = null; onlineGame = false;
-    window.gameConn = gameConn; window.onlineGame = onlineGame;
     lobbyPanel.style.display='none';
     startPanel.style.display='flex';
-    if(newGameOptions) newGameOptions.style.display='flex';
+    if(newGameOptions)newGameOptions.style.display='flex';
   });
 
-  function connectLobbyWrapper(){
-    if(lobbyConn){ lobbyConn.close(); }
-    lobbyConn = connectLobby();
-    lobbyConn.on('message', data=>{
-      if(data && data.action==='start'){
-        lobbyPanel.style.display='none';
-        waitOverlay.style.display='none';
-        gameConn = lobbyConn;
-        onlineGame = true;
-        window.gameConn = gameConn;
-        window.onlineGame = onlineGame;
-        gameConn.on('message', handleNetMessage);
-        twoBtn.click();
-      }
-    });
-  lobbyConn.on('disconnect', ()=>{
-    waitOverlay.style.display='none';
-    lobbyPanel.style.display='flex';
-    gameConn = null; onlineGame = false;
-    window.gameConn = gameConn; window.onlineGame = onlineGame;
-  });
-  }
-
-  createRoomBtn.addEventListener('click', ()=>{
+  // PocketNet is the only transport; historical root-WebSocket code removed.
+  createRoomBtn.addEventListener('click',()=>{
     if(window.FogPocketNet)void window.FogPocketNet.create(mapSizeSel.value);
-    else console.warn('PocketNet is loading; old root-WebSocket transport is disabled');
-    return;
-    connectLobbyWrapper();
-    const room = roomIdInput.value.trim();
-    lobbyConn.on('connected', ()=> lobbyConn.send({action:'create', room}));
-    lobbyPanel.style.display='none';
-    waitOverlay.style.display='flex';
+    else reportSave('PocketNet ещё загружается. Повтори действие.',true);
   });
-
-  joinRoomBtn.addEventListener('click', ()=>{
+  joinRoomBtn.addEventListener('click',()=>{
     if(window.FogPocketNet)void window.FogPocketNet.join(roomIdInput.value.trim());
-    else console.warn('PocketNet is loading; old root-WebSocket transport is disabled');
-    return;
-    connectLobbyWrapper();
-    const room = roomIdInput.value.trim();
-    lobbyConn.on('connected', ()=> lobbyConn.send({action:'join', room}));
-    lobbyPanel.style.display='none';
-    waitOverlay.style.display='flex';
+    else reportSave('PocketNet ещё загружается. Повтори действие.',true);
   });
 
   // === Инициализация ===

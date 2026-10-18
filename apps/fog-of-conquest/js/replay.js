@@ -49,25 +49,6 @@
     }
   }
 
-  function handleNetEvent(ev){
-    if(!ev) return;
-    replayEvents.push(ev);
-    applySnapshot(ev.snapshot);
-    handleReplayAction(ev.action);
-  }
-
-  function handleNetMessage(data){
-    if(data && data.event) handleNetEvent(data.event);
-  }
-
-  function attachConnection(conn){
-    gameConn = conn;
-    onlineGame = !!conn;
-    window.gameConn = gameConn;
-    window.onlineGame = onlineGame;
-    if(conn) conn.on('message', handleNetMessage);
-  }
-
   function startMatchReplay(){
     if(!replayEvents.length) return;
     replayIndex = 0;
@@ -224,7 +205,6 @@
   if(global){
     Object.assign(global, {
       stopReplay, replayAI, applySnapshot, handleReplayAction,
-      handleNetEvent, handleNetMessage, attachConnection,
       startMatchReplay, recordReplayVideo, seekReplay, stopMatchReplay
     });
   }

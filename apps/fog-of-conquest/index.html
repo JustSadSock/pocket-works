@@ -189,6 +189,7 @@
       </div>
       <button id="fullscreenBtn" class="game-btn" data-i18n="fullscreen">Fullscreen</button>
       <button id="saveBtn" class="game-btn" style="display:none;" data-i18n="saveBtn">Save</button>
+      <button id="fogExportCurrentBtn" class="game-btn" type="button" style="display:none">Экспорт партии</button>
       <button id="settingsMenuBtn" class="game-btn" data-i18n="exitReplay">Menu</button><a class="pocket-back" href="../../">← Pocket Works</a>
       <button id="settingsCloseBtn" class="game-btn" data-i18n="settingsClose">Close</button>
     </div>
@@ -197,6 +198,8 @@
   <div id="loadOverlay">
     <div class="panel">
       <div id="loadList"></div>
+      <button id="fogImportSaveBtn" class="game-btn" type="button">Импорт партии (.json)</button>
+      <input id="fogImportSaveInput" type="file" accept=".json,application/json" hidden aria-label="Файл сохранения Fog of Conquest"/>
       <button id="loadCloseBtn" class="game-btn" data-i18n="settingsClose">Close</button>
     </div>
   </div>
@@ -223,12 +226,11 @@
 
   <script src="js/ai.js"></script>
   <script src="js/dropdown.js"></script>
-  <script src="js/network.js"></script>
   <script src="js/data.js"></script>
   <script src="js/gameState.js"></script>
   <script src="js/worldGen.js"></script>
-  <script src="js/lobby.js"></script>
   <script src="js/replay.js"></script>
+  <script src="js/replay-codec.js"></script>
   <script src="js/save-schema.js"></script>
   <script src="./pocket-audio.js"></script>
   <script src="./pocket-visual.js"></script>
@@ -237,6 +239,6 @@
 <script src="./pocket-map.js" defer></script>
 <script src="./battle-events.js" defer></script>
 <script type="module" src="./pocket-online.js"></script>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Fog of Conquest" data-app-version="1.6.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Fog of Conquest" data-app-version="1.7.0"></script>
 </body>
 </html>
