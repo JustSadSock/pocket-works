@@ -48,9 +48,9 @@ async function runPocketRoom(page,mode='normal'){
   };
   window.__qaDisconnect=()=>window.__chySockets?.at(-1)?.close();
  },mode);
- const identity={id:'00000000-0000-4000-8000-000000000001',nickname:'Марта',complete:true,avatar:'moss'};
+ const identity=mode==='guest'?null:{id:'00000000-0000-4000-8000-000000000001',nickname:'Марта',complete:true,avatar:'moss'};
  await page.route('**/pocket-id/me',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({user:identity})}));
- await page.route('**/pocket-social/me',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({profile:{id:identity.id,artwork:'',maskot:null}})}));
+ await page.route('**/pocket-social/me',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({profile:{id:identity?.id||'',artwork:'',maskot:null}})}));
  await page.route('**/pocketnet/health',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,modules:['chyepukha']})}));
  await page.route('**/pocketnet/session',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({token:'a'.repeat(64)})}));
 }
@@ -112,4 +112,17 @@ test('a stalled authenticated session is explicitly cancellable, then allows ret
  await page.locator('[data-act=cancel-connect]').click();
  await expect(page.locator('.home-cover')).toBeVisible();
  await expect(page.locator('#createForm button')).toBeEnabled();
+});
+
+test('guest username is persisted and the same room resumes after reload',async({page})=>{
+ await runPocketRoom(page,'guest');
+ await page.goto('/apps/chyepukha/index.html');
+ await expect(page.locator('.home-identity.is-guest')).toBeVisible();
+ await page.locator('#guestNick').fill('Олеся');
+ await page.locator('#createForm button').click();
+ await expect(page.locator('.room')).toBeVisible();
+ expect(await page.evaluate(()=>localStorage.getItem('pocket-works:chyepukha:name'))).toBe('Олеся');
+ await page.reload();
+ await expect(page.locator('.room')).toBeVisible();
+ await expect(page.locator('.code')).toContainText('ABCDEF12');
 });

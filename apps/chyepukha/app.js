@@ -145,6 +145,7 @@ async function connect(how,settings){
  // cookie on session creation and WebSocket auth, preventing stale-account access.
  const nick=(member()?pocketIdentity.nickname:name.trim()).slice(0,24);
  if(!nick){toast('Вкажи ім’я.');return}
+ if(!member()){name=nick;save('name',nick)}
  if(how==='join'&&!code(invitation)){toast('Вкажи правильний код кімнати.');return}
  if(how==='resume'&&!savedRoom()){toast('Збережена кімната для цього профілю недоступна.');return}
  if(net){net.close();net=null;releaseActive()}
