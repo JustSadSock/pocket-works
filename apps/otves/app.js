@@ -9,6 +9,7 @@ import { MarblePhysics } from './physics.js';
 import { GOAL_CAPTURE_MS, startGoalCapture } from './marble-motion.js';
 import { MazeRenderer } from './renderer.js';
 import { SpatialMazeRenderer } from './renderer3d.js';
+import { recordKey } from './edge-layout.js';
 
 installMobileRuntime();
 setDocumentScrollLocked(true);
@@ -202,7 +203,7 @@ function buildLevel(nextLevel = level) {
   landingCuePlayed = false;
   elements.level.value = String(level).padStart(2, '0');
   elements.time.textContent = formatTime(0);
-  const bestTime = Number(store.get('bestTimes', {})[level]);
+  const bestTime = Number(store.get('bestTimes', {})[recordKey(level,maze.cols,maze.rows)]);
   elements.best.value = bestTime > 0 ? formatTime(bestTime) : '—';
 }
 
@@ -356,9 +357,10 @@ function completeLevel() {
   marble.velocity.y = 0;
 
   const bestTimes = store.get('bestTimes', {});
-  const oldBest = Number(bestTimes[level]) || Infinity;
+  const key = recordKey(level,maze.cols,maze.rows);
+  const oldBest = Number(bestTimes[key]) || Infinity;
   const isRecord = elapsed < oldBest;
-  if (isRecord) bestTimes[level] = Number(elapsed.toFixed(3));
+  if (isRecord) bestTimes[key] = Number(elapsed.toFixed(3));
   const unlockedLevel = Math.max(store.get('unlockedLevel', 1), level + 1);
   store.patch({
     bestTimes,
