@@ -596,6 +596,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     fogSnapshot = null;
     window.fogSnapshot = fogSnapshot;
     initFog();
+    state.lastSeen={1:{},2:{}};
     overlay.style.display = 'none';
     spawnPanel.style.display = 'none';
   }
@@ -751,6 +752,17 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   // === Fog ===
+  // A remembered building is a frozen observation, never its live hidden state.
+  function visibleBuildings(){
+    const p=state.currentPlayer,F=state.fog[p],S=state.seen[p];
+    const live=buildings.filter(b=>!b.lastSeen&&(!F?.[b.r]?.[b.c]||revealAll));
+    if(revealAll)return live;
+    const remembered=Object.values(state.lastSeen?.[p]||{})
+      .filter(b=>F?.[b.r]?.[b.c]&&S?.[b.r]?.[b.c]&&
+        !live.some(x=>x.r===b.r&&x.c===b.c))
+      .map(b=>({...b,stale:true}));
+    return [...live,...remembered];
+  }
   function updateFog(){
     if(onlineGame) return; // Server supplies each participant's private visibility.
     if(!modeBeta && !revealAll){
@@ -768,6 +780,17 @@ window.addEventListener('DOMContentLoaded', ()=>{
           }
         }
       });
+    }
+    const p=state.currentPlayer, F=state.fog[p];
+    state.lastSeen??={1:{},2:{}};
+    const memory=state.lastSeen[p]??={};
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      if(!F[r][c]){
+        const b=buildings.find(b=>b.r===r&&b.c===c);
+        const key=r+','+c;
+        if(b)memory[key]={id:b.id,r,c,type:b.type,owner:b.owner,hp:b.hp,gen:b.gen};
+        else delete memory[key];
+      }
     }
   }
 
@@ -842,8 +865,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
       spawnZones.forEach(z=>ctx.fillRect(z.c*cellW,z.r*cellH,cellW,cellH));
     }
 
-    buildings.forEach(b=>{
+    visibleBuildings().forEach(b=>{
       if((!F[b.r][b.c]||S[b.r][b.c]||revealAll)){
+        if(b.stale)ctx.globalAlpha=0.5;
         let col = BUILD_TYPES[b.type].gen? '#fc0'
                 : b.type==='fort'? '#666'
                 : b.owner===p? '#00f'
@@ -867,6 +891,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
         let frac=b.hp/BUILD_TYPES[b.type].hpMax;
         ctx.fillStyle=b.owner===p?'#0f0':'#f00';
         ctx.fillRect(bx,by,bw*frac,bh);
+        ctx.globalAlpha=1;
       }
     });
 
@@ -989,8 +1014,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }
 
     // buildings
-    buildings.forEach(b=>{
+    visibleBuildings().forEach(b=>{
       if((!F[b.r][b.c]||S[b.r][b.c]||revealAll)){
+        if(b.stale)ctx.globalAlpha=0.5;
         const img = getBuildingSprite(b);
         if(img) ctx.drawImage(img,b.c*cellW,b.r*cellH,cellW,cellH);
         const bGen = b.gen ?? BUILD_TYPES[b.type].gen;
@@ -1007,6 +1033,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
         let frac=b.hp/BUILD_TYPES[b.type].hpMax;
         ctx.fillStyle=b.owner===p?'#0f0':'#f00';
         ctx.fillRect(bx,by,bw*frac,bh);
+        ctx.globalAlpha=1;
       }
     });
 
