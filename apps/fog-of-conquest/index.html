@@ -14,17 +14,18 @@
 <link rel="stylesheet" href="./styles.css"/>
   <link rel="stylesheet" href="./pocket-map.css"/>
   <link rel="stylesheet" href="./battle-events.css"/>
+  <link rel="stylesheet" href="./pocket-visual.css"/>
   <link rel="icon" type="image/png" href="assets/icon.png" sizes="512x512"/>
   <link rel="apple-touch-icon" href="assets/icon.png" sizes="512x512"/>
   <link rel="manifest" href="./manifest.webmanifest"/>
 </head>
 <body data-app-shell>
   <!-- Background music removed -->
-  <audio id="attackSfx" src="https://samplelib.com/lib/preview/mp3/sample-3s.mp3" data-type="sfx"></audio>
-  <audio id="healSfx" src="https://samplelib.com/lib/preview/mp3/sample-6s.mp3" data-type="sfx"></audio>
-  <audio id="captureSfx" src="https://samplelib.com/lib/preview/mp3/sample-9s.mp3" data-type="sfx"></audio>
-  <audio id="uiClickSfx" src="https://samplelib.com/lib/preview/mp3/sample-12s.mp3" data-type="sfx"></audio>
-  <audio id="uiHoverSfx" src="https://samplelib.com/lib/preview/mp3/sample-15s.mp3" data-type="sfx"></audio>
+  <audio id="attackSfx" data-type="sfx"></audio>
+  <audio id="healSfx" data-type="sfx"></audio>
+  <audio id="captureSfx" data-type="sfx"></audio>
+  <audio id="uiClickSfx" data-type="sfx"></audio>
+  <audio id="uiHoverSfx" data-type="sfx"></audio>
   <div id="startPanel"><a class="pocket-back menu-back" href="../../">← Pocket Works</a>
     <div id="startHeader">
       <h1 data-i18n="title">Fog of Conquest</h1>
@@ -229,6 +230,8 @@
   <script src="js/lobby.js"></script>
   <script src="js/replay.js"></script>
   <script src="js/save-schema.js"></script>
+  <script src="./pocket-audio.js"></script>
+  <script src="./pocket-visual.js"></script>
   <script src="js/ui.js"></script>
 <script src="./pocket-adapter.js" defer></script>
 <script src="./pocket-map.js" defer></script>
