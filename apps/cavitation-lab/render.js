@@ -66,7 +66,7 @@ export function renderScene(ctx,w,h,solution,point,phase,elapsed) {
   const major=i%2===0;
   line(ctx,railX,tickY,railX+(major?11:6),tickY);
  }
- ctx.fillStyle='#a7c9b6aa';ctx.font='10px Arial';ctx.fillText('ШКАЛА',railX,cy-baseRadius*1.85);
+ // Tick marks are sufficient; a label would overlap the radius readout on narrow screens.
  // Fixed rigid wall. Recessed seam, hand-drag grip and contact stain.
  const metal=ctx.createLinearGradient(wallX,0,Math.min(w,wallX+55),0);
  metal.addColorStop(0,'#9cb2ad');metal.addColorStop(.09,'#3d5a60');metal.addColorStop(.28,'#213a40');metal.addColorStop(1,'#0e282e');
