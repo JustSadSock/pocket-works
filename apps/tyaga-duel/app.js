@@ -355,9 +355,14 @@ function drawBoosters(g,t) {
     ctx.strokeStyle="#665c43";ctx.lineWidth=1.5;
     const scroll=(t*24)%19;
     for(let j=-2;j<9;j++){
-      const x=p.x+j*19+scroll;
-      strokeLine(x,top+3,x+7,top+p.h/2);
-      strokeLine(x+7,top+p.h/2,x,top+p.h-3);
+      const x=p.x+j*19+(p.bias>0?scroll:19-scroll);
+      if(p.bias>0) {
+        strokeLine(x,top+3,x+7,top+p.h/2);
+        strokeLine(x+7,top+p.h/2,x,top+p.h-3);
+      } else {
+        strokeLine(x+7,top+3,x,top+p.h/2);
+        strokeLine(x,top+p.h/2,x+7,top+p.h-3);
+      }
     }
     ctx.restore();
     ctx.globalAlpha=1;
