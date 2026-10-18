@@ -5,6 +5,8 @@ test('cavitation experiment: launch, pause, scrub, restart and persist input',as
  page.on('pageerror',error=>failures.push(error.message));
  await page.goto('/apps/cavitation-lab/');
  await expect(page.locator('#field')).toBeVisible();
+ await expect(page.locator('#launch')).toBeInViewport();
+ await expect(page.locator('#speed')).toBeInViewport();
  await expect(page.locator('#launch-label')).toHaveText('СХЛОПНУТЬ ПУЗЫРЁК');
  await page.locator('#pressure').evaluate(el=>{el.value='2.35';el.dispatchEvent(new Event('input',{bubbles:true}));});
  await expect(page.locator('#pressure-val')).toContainText('2,35');
