@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {chromium} from 'playwright';
+import {chromium} from '@playwright/test';
 import {mkdir} from 'node:fs/promises';
 const site=spawn('python3',['-m','http.server','8765','--directory','.'],{stdio:'ignore'});
 const base='http://127.0.0.1:8765/apps/fog-of-conquest/';
