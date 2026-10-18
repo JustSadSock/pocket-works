@@ -245,10 +245,13 @@ function resolve(s,c,notify){
  s.stats.armedDisputesResolved=(s.stats.armedDisputesResolved||0)+1;
  s.stats.battleWounds=(s.stats.battleWounds||0)+c.wounded.length;
  if(c.retreated)s.stats.disputeRetreats=(s.stats.disputeRetreats||0)+1;
+ const cause=c.tactics?
+  `Местность: ${c.tactics.terrain.label}. ${c.tactics.claimants.formation} против ${c.tactics.owners.formation}${c.tactics.flank?' · реальный обход с фланга':''}${c.broken?' · группа потеряла строй':''}${c.pursued.length?' · раненых при преследовании: '+c.pursued.length:''}. Права на поле не изменились`:
+  'Численность, здоровье и мораль прибывших жителей. Права на землю не изменились';
  notify?.('armed-clash',c.outcome==='dispersed'?'Участники земельного спора разошлись':
   c.retreated?'Участники земельного спора отступили без схватки':
   `Вооружённая стычка на общинной пашне: ранено ${c.wounded.length}`,
-  'Исход определили пришедшие жители, их здоровье, сплочённость и усталость. Права на поле не изменились',
+  cause,
   [c.claimantId,c.ownerId,...c.claimants,...c.owners],
   {cell:c.cell,outcome:c.outcome,wounded:c.wounded.length,dead:c.dead.length,
    compensationCoin:c.compensationCoin,morale:c.morale,arrived:c.arrived,retreated:c.retreated,
