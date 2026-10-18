@@ -2,7 +2,7 @@ import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reo
 import {rune,description,compile,TYPES,legalRunes} from './runes.mjs';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
-import {DEFAULT_APPEARANCE,normalizeAppearance,decodeAppearance} from './avatar-profile.mjs';
+import {DEFAULT_APPEARANCE,COLORSETS,normalizeAppearance,decodeAppearance} from './avatar-profile.mjs';
 import {drawMage,drawPortrait,drawHero} from './mage-art.mjs';
 import {OnlineDuel,inviteCode,incomingCode} from './net-client.mjs';
 installMobileRuntime();
@@ -11,6 +11,7 @@ ctx.imageSmoothingEnabled=false;
 const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'match',booksKey=storage+'grimoire';
 let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
+let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
 let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
@@ -202,7 +203,7 @@ function pixel(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Mat
 function circle(x,y,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
 function line(x,y,a,b,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(a,b);ctx.stroke()}
 function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0){
- const look=enemy?DEFAULT_APPEARANCE:appearance;
+ const look=enemy&&online?.active?rivalAppearance:appearance;
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
  drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,shield,flash,runes});
 }
@@ -268,6 +269,30 @@ drawPortrait($('result-portrait').getContext('2d'),appearance,56);
 void refreshAppearance({force:true});
 
 
+function applyRival(){if(pendingRival){rivalAppearance=pendingRival;pendingRival=null}}
+async function refreshRival(view){
+ const index=1-view.me,member=view.players?.find(p=>p.id===view.seats?.[index]);
+ if(!member)return;
+ const id=member.verified&&typeof member.accountId==='string'?member.accountId:'';
+ const key=id+'|'+(member.avatar||'')+'|'+(member.verified?'verified':'guest');
+ if(key===rivalKey)return;
+ rivalKey=key;const request=++rivalRequest;
+ let next={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']};
+ if(id&&/^[a-f0-9]{8}-[a-f0-9-]{27,}$/i.test(id)){
+  const identity={id,complete:true,avatar:member.avatar,nickname:member.name};
+  let social=null;
+  try{
+   const response=await fetch('/pocket-social/user?id='+encodeURIComponent(id),{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(3500)});
+   if(response.ok)social=await response.json();
+  }catch{}
+  next=await decodeAppearance(normalizeAppearance(identity,social));
+ }else if(Object.hasOwn(COLORSETS,member.avatar)){
+  next={...DEFAULT_APPEARANCE,source:'preset',preset:member.avatar,colors:COLORSETS[member.avatar]};
+ }
+ if(request!==rivalRequest||!online?.active)return;
+ pendingRival=next;
+ if(['online-lobby','draft','build','net-wait'].includes(mode))applyRival();
+}
 function roomRoster(players=[],disconnected=''){
  const root=$('net-players');root.replaceChildren();
  for(let i=0;i<2;i++){
@@ -285,14 +310,15 @@ function roomInfo(roomId){
 }
 function onlineView(view){
  if(!online?.active||!view)return;
+ void refreshRival(view);
  online.view=view;active=view.match||null;
  const stamp=[view.phase,active?.round??0,view.picked,view.ready].join(':');
  if(stamp===onlinePhase){if(view.phase==='lobby')updateNetworkLobby(view);return}
  onlinePhase=stamp;displayXY=[null,null];
- if(view.phase==='lobby'){show('online-lobby');updateNetworkLobby(view)}
- else if(view.phase==='fight'){onlinePreviewRunes=null;applyPendingAppearance();show('fight');toast('Дуэль началась')}
+ if(view.phase==='lobby'){applyRival();show('online-lobby');updateNetworkLobby(view)}
+ else if(view.phase==='fight'){onlinePreviewRunes=null;applyRival();applyPendingAppearance();show('fight');toast('Дуэль началась')}
  else if(view.phase==='draft'){
-  if(view.ready){show('net-wait')}
+  applyRival();if(view.ready){show('net-wait')}
   else if(view.picked){onlinePreviewRunes=[...myActor().runes];show('build');renderWorkbench()}
   else{onlinePreviewRunes=null;show('draft');renderDraft()}
  }else if(view.phase==='result'){show('result');renderResult()}
@@ -306,7 +332,7 @@ function updateNetworkLobby(view){
 }
 online=new OnlineDuel({
  onView:onlineView,
- onRoom:roomId=>{roomInfo(roomId);if(!roomId)onlinePhase='';},
+ onRoom:roomId=>{roomInfo(roomId);if(!roomId){onlinePhase='';rivalKey='';rivalRequest++;pendingRival=null;rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}}},
  onStatus:message=>{$('net-feedback').textContent=message;$('net-signal').textContent=message.includes('потеряна')?'НЕТ СВЯЗИ':online?.connected?'В СЕТИ':'ПОДКЛЮЧЕНИЕ';if(!['fight','draft','build','result','net-wait'].includes(mode))$('net-feedback').textContent=message},
  onError:message=>{$('net-feedback').textContent=message;toast(message);$('net-signal').textContent='ОШИБКА'},
  onPresence:roomRoster
