@@ -17,6 +17,7 @@ const start=async page=>{
 test('compact council still exposes every legal decision and the paid-war route',async({page},info)=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await start(page);
+ await page.locator('[data-panel="council"]').click();
  await expect(page.locator('[data-action-kind="war"]')).toBeVisible();
  const more=page.locator('.more-actions');
  if(await more.isVisible()){
@@ -78,6 +79,7 @@ test('corrupt active record exposes the last verified campaign rather than a bro
 test('restoration controls and council remain usable on a 320x568 device without page scrolling',async({page},info)=>{
  await page.setViewportSize({width:320,height:568});
  await start(page);
+ await page.locator('[data-panel="council"]').click();
  await expect(page.locator('.action-choice').first()).toBeVisible();
  await shot(page,info,'320-council');
  const geometry=await page.evaluate(()=>({

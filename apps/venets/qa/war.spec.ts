@@ -12,6 +12,7 @@ test('claim-driven paid war is ordered in council and marches on real map',async
  await page.goto('/apps/venets/index.html');
  await page.locator('#begin').click();
  await expect(page.locator('#game-screen')).toBeVisible();
+ await page.locator('[data-panel="council"]').click();
  await expect(page.locator('[data-action-kind="war"]')).toBeVisible();
  await page.locator('[data-action-kind="war"]').click();
  await expect(page.locator('#confirm-dialog')).toBeVisible();
