@@ -59,7 +59,7 @@ function show(view){screen=view;for(const id of ['menu','difficultyView','lobby'
 function modal(kicker,title,body,main,alt,third){
  modalOpen=true;const data=[['modalMain',main],['modalAlt',alt],['modalThird',third]];
  $('modalKicker').textContent=kicker;$('modalTitle').textContent=title;$('modalBody').textContent=body;
- data.forEach(([id,entry])=>{const b=$(id);b.classList.toggle('hidden',!entry);if(entry){b.textContent=entry.label;b.onclick=()=>{closeModal();entry.action?.();}}});
+ data.forEach(([id,entry])=>{const b=$(id);b.classList.toggle('hidden',!entry);b.disabled=false;if(entry){b.textContent=entry.label;b.onclick=()=>{closeModal();entry.action?.();}}});
  $('modal').classList.remove('hidden');
 }
 function closeModal(){if(pendingForfeitLeave)return;modalOpen=false;$('modal').classList.add('hidden');if(screen==='play')render();}
