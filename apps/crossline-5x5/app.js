@@ -517,6 +517,32 @@ function replayFrame(){
  const rec=currentRecord();if(!rec)return null;
  return replayIndex===0?{units:rec.begin,edgesCollapsed:rec.round===4?false:rec.round>4,events:[],beat:0}:rec.frames[Math.min(replayIndex-1,rec.frames.length-1)];
 }
+function analyzeReplayPresentation(rec){
+ const info=analyzeBeat(rec,replayIndex),names=archiveEntry?.players||playerLabels();
+ if(!info){$('replayAnalysis').replaceChildren();return}
+ $('replayAnalysis').innerHTML=['A','B'].map((side,idx)=>{
+  const projected=previewOrders({round:rec.round,units:rec.begin,edgesCollapsed:rec.round>4},side,rec.plans[side]).steps;
+  const cells=Array.from({length:STEPS},(_,i)=>{
+   const expected=projected[i]?.to,actual=rec.frames[i]?.units?.[side],executed=!!rec.frames[i];
+   const different=executed&&expected&&actual&&(expected.x!==actual.x||expected.y!==actual.y);
+   const location=p=>p?(p.x+1)+','+(p.y+1):'–';
+   return '<button data-analysis-beat="'+(i+1)+'" class="analysis-beat'+(replayIndex===i+1?' is-current':'')+
+    (different?' is-different':'')+(!executed?' is-unplayed':'')+'" '+(!executed?'disabled':'')+
+    ' aria-label="'+side+' шаг '+(i+1)+'" aria-pressed="'+(replayIndex===i+1)+'"><small>'+(i+1)+'</small>'+
+    '<strong>'+esc(commandLabel(rec.plans[side][i]))+'</strong><span>'+location(expected)+' → '+location(executed?actual:null)+'</span></button>';
+  }).join('');
+  return '<div class="analysis-side '+side.toLowerCase()+'"><div class="analysis-side-head"><strong><i></i>'+
+   esc(names[idx]||'Игрок '+side)+'</strong><small>'+
+   (replayIndex===0?'До исполнения':esc(info.projected[side].verdict))+
+   '</small></div><div class="analysis-beats">'+cells+'</div></div>';
+ }).join('')+'<p class="analysis-explainer">План → факт (столбец, строка). Расчёт маршрута не предсказывает действия соперника; оба плана раскрываются после раунда.</p>';
+ $('replayStepBack').disabled=replayIndex<=0;
+ $('replayStepForward').disabled=replayIndex>=rec.frames.length;
+}
+function seekReplay(index){
+ const rec=currentRecord();if(!rec)return;
+ pauseReplay();replayIndex=Math.max(0,Math.min(rec.frames.length,index));paintReplay();
+}
 function paintReplay(){
  const rec=currentRecord();if(!rec)return;const frame=replayFrame();
  drawBoard($('replayBoard'),frame.units,frame.edgesCollapsed,frame.events,false,rec.round);
@@ -524,6 +550,7 @@ function paintReplay(){
  $('replayLabel').textContent=replayIndex===0?'ПЕРЕД ИСПОЛНЕНИЕМ':('ШАГ '+frame.beat+' / '+rec.frames.length+' · '+rec.frames[Math.max(0,replayIndex-1)].events.map(e=>e.type==='hit'?'ПОПАДАНИЕ':e.type==='block'?'БЛОК':e.type==='collapse'?'ОБРУШЕНИЕ':'').filter(Boolean).join(' '));
  $('replayPlay').textContent=replayPaused?'▶ Играть':'Ⅱ Пауза';
  $('replaySpeed').textContent=replaySpeed+'×';
+ analyzeReplayPresentation(rec);
 }
 function pauseReplay(){
  replayPaused=true;replayPlaybackId++;clearTimeout(replayTimer);
@@ -635,13 +662,20 @@ $('removeSelected').onclick=removeSlot;
 $('endEdit').onclick=()=>{editingSlot=null;attackMode=false;attackDirs=[];soundFX('tap');render()};
 $('replayBack').onclick=()=>{pauseReplay();if(mode==='archive'){archiveEntry=null;show('archive');return;}show('play');if(latest()?.phase==='finished'){showingOutcome=false;finish();}};
 $('replayRound').onchange=()=>{replayRound=Number($('replayRound').value);replayIndex=0;pauseReplay();paintReplay()};
-$('replaySeek').oninput=()=>{replayIndex=Number($('replaySeek').value);pauseReplay();paintReplay()};
+$('replaySeek').oninput=()=>seekReplay(Number($('replaySeek').value));
+$('replayStepBack').onclick=()=>seekReplay(replayIndex-1);
+$('replayStepForward').onclick=()=>seekReplay(replayIndex+1);
+$('replayAnalysis').addEventListener('click',event=>{
+ const button=event.target.closest('[data-analysis-beat]');
+ if(button)seekReplay(Number(button.dataset.analysisBeat));
+});
 $('replayPlay').onclick=toggleReplay;$('replaySpeed').onclick=()=>{const list=[1,2,3,5];replaySpeed=list[(list.indexOf(replaySpeed)+1)%list.length];paintReplay()};
 $('replaySave').onclick=exportReplay;$('replayVideo').onclick=videoReplay;
 window.addEventListener('keydown',e=>{
  if(/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName||''))return;
  if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
- if(screen!=='play'||modalOpen)return;
+ if(screen==='replay'&&!modalOpen&&['ArrowLeft','ArrowRight'].includes(e.key)){seekReplay(replayIndex+(e.key==='ArrowLeft'?-1:1));e.preventDefault();return}
+  if(screen!=='play'||modalOpen)return;
  if(e.key>='1'&&e.key<='5'){selectSlot(Number(e.key)-1);e.preventDefault();return}
  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
  if(map[e.key]){direction(map[e.key]);e.preventDefault()}
