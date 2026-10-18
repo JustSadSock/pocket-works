@@ -15,6 +15,8 @@ const APP_SHELL = [
   "./pocket-map.js",
   "./pocket-map.css",
   "./pocket-online.js",
+  "./battle-events.js",
+  "./battle-events.css",
   "../../shared/capabilities/net.js",
   "../../shared/capabilities/identity.js",
   "../../shared/capabilities/maskot.js",
