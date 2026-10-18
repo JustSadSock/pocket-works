@@ -247,7 +247,7 @@ if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
 if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
  const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn')a.heat=Math.min(100,a.heat+2);if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
- s.shots.splice(j,1);continue
+ fx(s,'impact_'+(q.style||'orb'),nx,ny);s.shots.splice(j,1);continue
 }
 const wall=distWall(nx,ny,q.r)||blocking(s,nx,ny,q.r),edge=nx<19||nx>W-19||ny<21||ny>H-21;
 if(wall||edge){if(q.bounces>0){q.bounces--;const wallX=distWall(nx,q.y,q.r)||blocking(s,nx,q.y,q.r)||nx<19||nx>W-19;if(wallX)q.vx*=-1;else q.vy*=-1;q.x+=q.vx*dt;q.y+=q.vy*dt;fx(s,'spark',q.x,q.y);emit(s,'on_bounce',q.owner,{},q.depth)}else{s.shots.splice(j,1);fx(s,'spark',q.x,q.y);emit(s,'on_expire',q.owner,{},q.depth)}continue}
