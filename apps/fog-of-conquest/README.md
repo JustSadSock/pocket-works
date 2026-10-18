@@ -51,3 +51,7 @@ AI healers prioritize injured allies, and AI movement spends only points proven 
 ## Mobile tactical atlas (v1.4.0)
 
 `pocket-map.js` and `pocket-map.css` add pinch/double-tap/button zoom on the existing original canvas, a side-private minimap, a quick centering action, responsive focus-first HUD and a private hotseat handoff curtain. Client hit testing uses the actual rendered canvas size, so changing CSS scale does not change legal movement or attacks. Fog memory used by the minimap never reads current invisible enemy information. Rule text is still accessible via the main menu. Regression tests: `qa/stage2.spec.ts`.
+
+## PocketNet reconnect & command safety v1.5.0
+
+Current module is immutable `pocketnet/module-versions/fog-of-conquest/v5.ts`. Earlier rooms continue using their original pinned snapshots. A deliberate leave forfeits an active match, but a WebSocket disconnect retains the player's seat. Leaving a lobby transfers host rights to the remaining member. Client commands carry unique request IDs and expected revisions; the authoritative module confirms each successful order privately, deduplicates replays, and synchronizes authoritative private state on stale requests. Auth changes invalidate old asynchronous operations and room-not-found/expired snapshots produce clear exit actions. See `test/stage3.test.mjs` and `qa/stage3.spec.ts`. Full real-Worker disconnect matrix and action-effects replay remain open.

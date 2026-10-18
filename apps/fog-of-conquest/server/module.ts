@@ -1,7 +1,7 @@
 // PocketNet adaptation of the ORIGINAL Fog of Conquest, without rebalance.
 // Original unit/building definitions and complete generator are embedded verbatim.
 // Never broadcast raw state: enemies and fogged terrain remain private.
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=3;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=4;
 const TERRAIN={PLAIN:0,WATER:1,FOREST:2,HILL:3,MOUNTAIN:4};
 const TERR_COST=[1,2,2,2,999],TERR_DEF=[0,-1,1,2,0];
 const BASE_ROWS=20,BASE_COLS=30;
@@ -499,11 +499,25 @@ function privateView(g,side){
  delete v.seed;
  v.nextUnitId=0;return v;
 }
-const stateEvent=()=>[{type:'state',payload:null}],notice=(id,msg)=>[{type:'notice',to:id,payload:msg}];
+const stateEvent=()=>[{type:'state',payload:null}];
+const notice=(id,msg,requestId)=>[{type:'notice',to:id,payload:msg,...(requestId?{requestId}:{})}];
+const receipt=(id,requestId,revision,status='applied')=>requestId?
+ {type:'ack',to:id,requestId,revision,status}:null;
+const validRequestId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(id);
+// Store only a bounded window of accepted command IDs: old duplicates may
+// never execute again because each command also carries the original revision.
+const alreadyApplied=(s,id,key)=>Array.isArray(s.commandHistory)&&
+ s.commandHistory.some(x=>x.player===id&&x.requestId===key);
+const remember=(s,id,key)=>{
+ if(!key)return;
+ s.commandHistory??=[];
+ s.commandHistory.push({player:id,requestId:key});
+ if(s.commandHistory.length>64)s.commandHistory.splice(0,s.commandHistory.length-64);
+};
 const seat=(s,id)=>s.seats.findIndex(p=>p.id===id)+1;
 const module={
  protocolVersion:1,
- createRoom({player}){return {state:{phase:'lobby',host:player.id,seats:[player],game:null,revision:1}};},
+ createRoom({player}){return {state:{phase:'lobby',host:player.id,seats:[player],game:null,revision:1,commandHistory:[]}};},
  onJoin({state,player,players}){
    if(players.length>2)throw Error('room_full');
    if(state.phase!=='lobby'&&!state.seats.some(p=>p.id===player.id))throw Error('match_in_progress');
@@ -511,8 +525,18 @@ const module={
    state.revision++;return {state,events:stateEvent()};
  },
  onLeave({state,player}){
-   if(state.phase==='battle'&&state.game){state.game.phase='finished';state.game.winner=3-seat(state,player.id);state.phase='finished';}
-   if(state.phase==='lobby')state.seats=state.seats.filter(p=>p.id!==player.id);
+   const side=seat(state,player.id);
+   if(side===0)return {state,events:stateEvent()};
+   if(state.phase==='battle'&&state.game){
+     // A deliberate departure is a forfeit; a socket disconnect never
+     // invokes onLeave and must keep both seats resumable.
+     state.game.phase='finished';state.game.winner=3-side;state.phase='finished';
+   }
+   if(state.phase==='lobby'){
+     state.seats=state.seats.filter(p=>p.id!==player.id);
+     if(state.host===player.id)state.host=state.seats[0]?.id??null;
+     if(!state.seats.length)state.phase='closed';
+   }
    state.revision++;return {state,events:stateEvent()};
  },
  viewForPlayer({state,player}){
@@ -522,24 +546,38 @@ const module={
  onMessage({state,player,players,payload}){
    const action=payload&&typeof payload==='object'?payload:{},side=seat(state,player.id);
    if(!side)return {state,events:notice(player.id,'Нет места в комнате.')};
-   if(action.type==='sync')return {state,events:stateEvent()};
+   if(action.type==='sync')return {state,events:[{type:'state',to:player.id,payload:null}]};
+   const requestId=action.requestId;
+   if(requestId!==undefined&&!validRequestId(requestId))
+     return {state,events:notice(player.id,'Некорректный ID приказа.')};
+   if(requestId&&alreadyApplied(state,player.id,requestId)){
+     // Full private state lets a reconnecting client reconcile a lost receipt.
+     return {state,events:[{type:'state',to:player.id,payload:null},
+       receipt(player.id,requestId,state.game?.revision??state.revision,'duplicate')]};
+   }
    if(action.type==='start'){
      if(state.phase!=='lobby'||state.host!==player.id||state.seats.length!==2||players.length!==2)return {state,events:notice(player.id,'Ожидается второй полководец.')};
-     state.game=createOriginalMatch({size:action.size,beta:action.beta});state.phase='battle';state.revision++;
-     return {state,events:stateEvent()};
+     state.game=createOriginalMatch({size:action.size,beta:action.beta});
+     state.phase='battle';state.revision++;
+     remember(state,player.id,requestId);
+     return {state,events:[...stateEvent(),...(requestId?[receipt(player.id,requestId,state.game.revision)]:[])]};
    }
    if(action.type==='act'){
-     if(state.phase!=='battle'||!state.game)return {state,events:notice(player.id,'Нет активной партии.')};
-     if(action.revision!==state.game.revision)return {state,events:notice(player.id,'Устаревший приказ.')};
+     if(state.phase!=='battle'||!state.game)return {state,events:notice(player.id,'Нет активной партии.',requestId)};
+     if(action.revision!==state.game.revision)
+       return {state,events:[...notice(player.id,'Устаревший приказ.',requestId),
+         {type:'state',to:player.id,payload:null}]};
      const result=originalAction(state.game,side,action.action);
-     if(result.error)return {state,events:notice(player.id,result.error)};
+     if(result.error)return {state,events:notice(player.id,result.error,requestId)};
      state.game=result.state;state.phase=result.state.phase;state.revision++;
-     return {state,events:stateEvent()};
+     remember(state,player.id,requestId);
+     return {state,events:[...stateEvent(),...(requestId?[receipt(player.id,requestId,state.game.revision)]:[])]};
    }
    if(action.type==='resign'){
      if(state.phase!=='battle')return {state,events:notice(player.id,'Нет активной партии.')};
      state.game.phase='finished';state.game.winner=3-side;state.phase='finished';state.revision++;
-     return {state,events:stateEvent()};
+     remember(state,player.id,requestId);
+     return {state,events:[...stateEvent(),...(requestId?[receipt(player.id,requestId,state.game.revision)]:[])]};
    }
    return {state,events:notice(player.id,'Неизвестная команда.')};
  }
