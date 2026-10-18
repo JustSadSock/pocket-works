@@ -1,7 +1,7 @@
 // Dense Soviet interiors for the endless roguelike, using the same WebGL material
 // atlas as the authored chapter. All positions are actual collidable world cells.
 import {SECTOR,TILE} from './rogue-world.mjs';
-import {appendPropDetails,appendRoomDetails,appendDoorDetails} from './rogue-detail.mjs';
+import {appendPropDetails,appendRoomDetails,appendDoorDetails,appendHallFixtures} from './rogue-detail.mjs';
 import {architecturalWall,doorwayReturn} from './rogue-architecture.mjs';
 const S=TILE,HEIGHT=2.62;
 const C={
@@ -148,6 +148,10 @@ export function rogueStaticMesh(world,player){
    architecturalWall(out,{x,z,px,pz,dx,dz,room,sector:sec,seed:world.seed,
     tile:S,detail:Math.hypot(x+.5-player.x,z+.5-player.z)<9});
 
+  }
+  if(!room&&Math.hypot(x+.5-player.x,z+.5-player.z)<10){
+   const walls=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dz])=>!world.pass(x+dx,z+dz));
+   appendHallFixtures(out,{x,z,px,pz,seed:world.seed,epoch:sec.epoch,walls,tile:S})
   }
  }
  for(const c of world.nearby(player.x,player.z,17)){
