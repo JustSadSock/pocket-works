@@ -6,6 +6,7 @@ import { createVersionedStore } from '../../shared/capabilities/storage.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { createMaze, dimensionsForLevel, seedForLevel } from './maze.js';
 import { MarblePhysics } from './physics.js';
+import { GOAL_CAPTURE_MS, startGoalCapture } from './marble-motion.js';
 import { MazeRenderer } from './renderer.js';
 import { SpatialMazeRenderer } from './renderer3d.js';
 
@@ -115,6 +116,7 @@ let elapsed = 0;
 let collisions = 0;
 let completion = 0;
 let completedAt = 0;
+let goalCapture = null;
 let orientationStop = null;
 let sensorEnabled = false;
 let sensorReceived = false;
@@ -192,6 +194,7 @@ function buildLevel(nextLevel = level) {
   collisions = 0;
   completion = 0;
   completedAt = 0;
+  goalCapture = null;
   elements.level.value = String(level).padStart(2, '0');
   elements.time.textContent = formatTime(0);
   const bestTime = Number(store.get('bestTimes', {})[level]);
@@ -199,6 +202,8 @@ function buildLevel(nextLevel = level) {
 }
 
 function demoLevel() {
+  goalCapture = null;
+  completion = 0;
   const dimensions = dimensionsForLevel(2, currentAspect());
   maze = createMaze({ ...dimensions, seed: 0x0f7e5a });
   marble.reset({ x: 1.5, y: 1.5 });
@@ -331,10 +336,13 @@ function returnToMenu() {
 
 function completeLevel() {
   if (state !== 'playing') return;
-  state = 'complete';
+  // Capture the incoming velocity and orientation BEFORE freezing physics.
+  goalCapture = startGoalCapture(marble,maze.goal);
+  state = 'finishing';
   elements.pauseButton.disabled = true;
   completedAt = performance.now();
   completion = 0;
+  elements.time.textContent = formatTime(elapsed);
   marble.velocity.x = 0;
   marble.velocity.y = 0;
 
@@ -355,8 +363,14 @@ function completeLevel() {
   elements.resultCollisions.textContent = String(collisions);
   elements.resultBest.textContent = formatTime(Math.min(oldBest, elapsed));
   elements.recordStamp.classList.toggle('is-visible', isRecord);
-  setScreen(elements.completeScreen);
+  setScreen(null);
+}
 
+function revealCompletedLevel() {
+  if(state !== 'finishing') return;
+  state = 'complete';
+  completion = 1;
+  setScreen(elements.completeScreen);
   audio.tone({ frequency: 520, endFrequency: 690, duration: 0.11, type: 'sine', gain: 0.22 });
   audio.tone({ frequency: 710, endFrequency: 920, duration: 0.16, type: 'sine', gain: 0.2, delay: 0.08 });
   navigator.vibrate?.([18, 35, 22]);
@@ -432,11 +446,12 @@ const loop = createRafLoop((now, deltaMilliseconds) => {
     marble.velocity.x = Math.sin(now * 0.0012) * 0.22;
     marble.velocity.y = Math.cos(now * 0.001) * 0.18;
     marble.spin += deltaMilliseconds * 0.0008;
-  } else if (state === 'complete') {
-    completion = clamp((now - completedAt) / 650, 0, 1);
+  } else if (state === 'finishing') {
+    completion = clamp((now - completedAt) / (reducedMotion ? 560 : GOAL_CAPTURE_MS), 0, 1);
+    if (completion >= 1) revealCompletedLevel();
   }
 
-  activeRenderer().draw({ maze, marble, visualTilt, elapsed: now, mode: state, completion });
+  activeRenderer().draw({ maze, marble, visualTilt, elapsed: now, mode: state, completion, goalCapture });
   updateHud(now);
 });
 
