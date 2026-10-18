@@ -9,7 +9,8 @@
         "engine.test.mjs",
         "actors.test.mjs",
         "diorama.test.mjs",
-        "feedback.test.mjs"
+        "feedback.test.mjs",
+        "life.test.mjs"
       ]
     },
     {
