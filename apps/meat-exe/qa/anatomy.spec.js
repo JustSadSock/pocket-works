@@ -9,7 +9,7 @@ test('living organ loads, procedural tissue state survives pause, refresh and re
  expect(run.anatomy).toBeDefined();expect(run.anatomy.ruptures).toBe(0);
  expect(run.anatomy.immuneHeat).toBe(0);
  if(isMobile)await page.locator('#fireBtn').tap();
- else await page.locator('#stage').click({position:{x:350,y:250}});
+ else await page.locator('#stage').click({position:{x:350,y:250},noWaitAfter:true});
  await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__?.().combat.shotsFired)).toBeGreaterThan(0);
  if(isMobile)await page.locator('#pauseBtn').click();
  else await page.keyboard.press('Escape');

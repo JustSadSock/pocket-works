@@ -53,6 +53,12 @@
         <button id="resumeSaved" class="secondary" type="button" data-native-press hidden>ПРОДОЛЖИТЬ ЗАБЕГ</button>
         <button id="qualityMenu" class="secondary quality-button" type="button" data-native-press>ГРАФИКА: АВТО</button>
       </div>
+      <div class="gene-archive">
+        <button id="archiveToggle" class="archive-toggle" type="button" aria-expanded="false" aria-controls="archivePanel" data-native-press>АРХИВ ШРАМОВ <span id="archiveBalance"></span></button>
+        <div id="archivePanel" class="archive-panel" hidden>
+          <div id="archiveOptions" class="archive-options" role="group" aria-label="Сохранённые генетические адаптации"></div>
+        </div>
+      </div>
       <div class="instructions"><span>ПК: WASD · МЫШЬ · ЛКМ / F · SPACE · SHIFT · Q</span><span>ТЕЛЕФОН: ДВИЖЕНИЕ СЛЕВА · ПРИЦЕЛ СПРАВА</span><span>ГЕЙМПАД: СТИКИ · RT ОГОНЬ · A РЫВОК · B СМЕНА · START ПАУЗА</span></div>
       <div class="menu-footer"><span id="record">РЕКОРД 0</span><span id="scar"></span></div>
     </div>
@@ -63,7 +69,8 @@
       <div class="surgery-heading">
         <span class="surgery-kicker">МЕЖДУ ОРГАНАМИ <span id="draftCount">1 → 2</span></span>
         <h2>ЧТО ПРИШИТЬ?</h2>
-        <p>Выбери одно приращение. Каждое даёт силу и требует платы.</p>
+        <p>Выбери путь через следующий орган и одно приращение. У каждого решения есть цена.</p>
+        <div id="routeFork" class="route-fork" role="group" aria-label="Путь через следующий орган"></div>
       </div>
       <div id="graftCards" class="graft-cards" role="group" aria-label="Варианты приращения"></div>
       <div class="surgery-footer">

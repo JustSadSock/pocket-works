@@ -7,6 +7,7 @@ import { createCombatAudio } from './sound-forge.js';
 import {initialEnemyIntent,advanceEnemyIntent,interruptIntent,enemyTerrainReaction,maxActiveAttackers,resetIntent,chooseEnemyKind} from './ecology.js';
 import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal} from './biomes.js';
 import {drawGrafts,applyGraft,graftForId,weaponBuild,dashCooldown,moveSpeed,incomingDamage,membraneDamage,immuneHeatGain,hasGraft,maxWeaponIndex} from './biobuilds.js';
+import {GENES,routeOptions,applyRoute,sanitizeArchive,unlockGene,equipGene,applyGene,earnEchoes} from './runPaths.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -29,6 +30,8 @@ let soundOn=safeRead('sound')!==false;
 const combatAudio=createCombatAudio();if(!soundOn)combatAudio.setEnabled(false);
 let best=safeRead('best')||{score:0,wave:0,kills:0};
 let mutation=safeRead('mutation')||null;
+let archive=sanitizeArchive(safeRead('archive'));
+let archiveOpen=false;
 let save=validateRun(safeRead('session'));
 let quality=safeRead('quality');if(!['auto','speed','detail'].includes(quality))quality='auto';
 let effectiveQuality=quality==='speed'?'low':quality==='detail'?'high':'medium';
@@ -43,12 +46,39 @@ const ui={
   resultBody:$('resultBody'),note:$('notice'),damage:$('damageOverlay'),
   mute:$('soundMenu'),pauseMute:$('soundPause'),resumeBtn:$('resumeBtn'),
   qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue'),
-  draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel')
+  draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel'),
+  routeFork:$('routeFork'),archiveToggle:$('archiveToggle'),archivePanel:$('archivePanel'),archiveOptions:$('archiveOptions'),archiveBalance:$('archiveBalance')
 };
 function audioStart(){combatAudio.unlock();}
 function sound(kind){combatAudio.pulse(kind);}
 function setNotice(message,seconds=2){
   ui.note.textContent=message;ui.note.classList.add('visible');noticeUntil=clock+seconds;
+}
+function renderArchive(){
+  ui.archiveBalance.textContent=archive.echoes+' ЭХО';
+  ui.archiveToggle.setAttribute('aria-expanded',String(archiveOpen));
+  ui.archivePanel.hidden=!archiveOpen;
+  ui.archiveOptions.replaceChildren();
+  const off=document.createElement('button');off.type='button';off.className='archive-option';
+  off.setAttribute('aria-pressed',String(archive.equipped===null));
+  off.innerHTML='<span><strong>БЕЗ ШРАМА</strong><small>Обычный старт</small></span><b>СНЯТЬ</b>';
+  off.addEventListener('click',()=>{equipGene(archive,null);safeWrite('archive',archive);renderArchive();});
+  ui.archiveOptions.append(off);
+  for(const gene of GENES){
+    const unlocked=archive.unlocked.includes(gene.id);
+    const button=document.createElement('button');button.type='button';button.className='archive-option';
+    button.setAttribute('aria-pressed',String(archive.equipped===gene.id));
+    const body=document.createElement('span'),title=document.createElement('strong'),desc=document.createElement('small'),price=document.createElement('b');
+    title.textContent=gene.name;desc.textContent=gene.description;
+    price.textContent=archive.equipped===gene.id?'ВСТРОЕН':unlocked?'ВЫБРАТЬ':gene.cost+' ЭХО';
+    body.append(title,desc);button.append(body,price);
+    button.disabled=!unlocked&&archive.echoes<gene.cost;
+    button.addEventListener('click',()=>{
+      if(!archive.unlocked.includes(gene.id)&&!unlockGene(archive,gene.id))return;
+      equipGene(archive,gene.id);safeWrite('archive',archive);renderArchive();sound('pickup');
+    });
+    ui.archiveOptions.append(button);
+  }
 }
 function setMode(next){
   mode=next;
@@ -68,6 +98,7 @@ function setMode(next){
     ui.resume.hidden=!save;
     ui.record.textContent='РЕКОРД  '+Number(best.score||0).toLocaleString('ru-RU')+'  /  ВОЛНА '+(best.wave||0);
     ui.mutation.textContent=mutation?('ПОСЛЕДНИЙ ШРАМ: '+mutation.label):'ОРГАН ЕЩЁ НЕ ЗНАЕТ ТЕБЯ';
+    renderArchive();
   }
 }
 function newState(seed){
@@ -77,7 +108,8 @@ function newState(seed){
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
     ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
-    grafts:[],biomass:0,pendingDraft:0,draftRevision:0};
+    grafts:[],biomass:0,pendingDraft:0,draftRevision:0,
+    routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
@@ -116,6 +148,7 @@ function begin(resume=false){
         if(mutation.key==='frail'){state.maxHp=82;state.hp=82;}
         if(mutation.key==='armed')state.level=1;
       }
+      if(archive.equipped)applyGene(state,archive.equipped);
       startWave(1);
     }
     audioStart();sound('menu');
@@ -145,6 +178,7 @@ function startWave(number){
     navAt=0;gateHintShown=false;
   }
   state.wave=number;state.waveTime=0;state.spawnClock=0;state.toSpawn=number===5?1:7+number*3;
+  state.routeId='';state.routeWave=0;state.routeHazard=0;
   if(number===2)state.immune.heat=Math.max(state.immune.heat,18);
   if(number===5){setNotice('НЕРВНЫЙ УЗЕЛ · СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
   else {setNotice(biomeForWave(number).name+' · ВОЛНА '+number+'/05',2.8);sound('heart');}
@@ -457,7 +491,7 @@ function update(dt){
   const terrain=world.getHazardAt(state.x,state.z);
   if(terrain&&state.hazardCooldown===0&&biomeDamage(terrain)>0){
     state.hazardCooldown=terrain==='charge'?1.4:1.1;
-    harm(biomeDamage(terrain));
+    harm(biomeDamage(terrain)+(state.routeWave===state.wave?state.routeHazard||0:0));
     if(mode!=='playing')return;
     setNotice(terrain==='acid'?'КИСЛОТА · ПОКИНЬ ЛУЖУ':'НЕРВНЫЙ РАЗРЯД · УЙДИ С УЗЛА',1);
   }
@@ -522,8 +556,27 @@ function availableDraft(){
   if(!state?.pendingDraft)return [];
   return drawGrafts(state.seed,state.pendingDraft,state.grafts,state.draftRevision||0);
 }
+function renderRoutes(){
+  const choices=routeOptions(state.seed,state.pendingDraft);
+  if(!choices.some(c=>c.id===state.selectedRoute))state.selectedRoute=choices[0].id;
+  ui.routeFork.replaceChildren();
+  for(const route of choices){
+    const b=document.createElement('button');b.type='button';b.className='route-option';
+    b.dataset.route=route.id;b.setAttribute('aria-pressed',String(route.id===state.selectedRoute));
+    const name=document.createElement('strong');name.textContent=route.name;
+    const gain=document.createElement('span');gain.textContent=route.detail;
+    const cost=document.createElement('small');cost.textContent=route.cost;
+    b.append(name,gain,cost);
+    b.addEventListener('click',()=>{
+      if(mode!=='draft')return;
+      state.selectedRoute=route.id;renderRoutes();snapshot();sound('switch');
+    });
+    ui.routeFork.append(b);
+  }
+}
 function renderDraft(){
   const options=availableDraft();
+  renderRoutes();
   ui.draftCount.textContent='ОРГАН '+state.wave+' / 5 → '+state.pendingDraft+' / 5';
   ui.draftMass.textContent='БИОМАССА '+(state.biomass||0);
   ui.draftCards.replaceChildren();
@@ -553,6 +606,7 @@ function showDraft(){
 }
 function openDraft(nextWave){
   state.pendingDraft=nextWave;state.draftRevision=0;
+  state.selectedRoute=routeOptions(state.seed,nextWave)[0].id;
   state.enemies.forEach(e=>world.disposeVisual(e.visual));state.enemies=[];
   showDraft();sound('heart');
 }
@@ -561,11 +615,13 @@ function chooseGraft(id){
   if(!applyGraft(state,id))return;
   const chosen=graftForId(id);
   const next=state.pendingDraft;
+  const route=routeOptions(state.seed,next).some(r=>r.id===state.selectedRoute)?state.selectedRoute:routeOptions(state.seed,next)[0].id;
   state.pendingDraft=0;state.draftRevision=0;
   state.hp=Math.min(state.maxHp,state.hp+16);
   startWave(next);
+  if(!applyRoute(state,route,next))throw new Error('Не удалось выбрать путь: '+route);
   setMode('playing');last=performance.now();accumulator=0;lastPaint=0;
-  setNotice(chosen.name+' · ВСТРОЕНО',2.6);sound('pickup');
+  setNotice(chosen.name+' · ПУТЬ: '+state.routeId.toUpperCase(),2.6);sound('pickup');
   syncHUD();snapshot();
 }
 function rerollDraft(){
@@ -577,6 +633,7 @@ function finish(victory){
   if(mode!=='playing')return;
   snapshot();safeRemove('session');
   if(victory)state.score+=Math.max(0,Math.round(2500-state.elapsed*6));
+  const gained=earnEchoes(archive,state,victory);safeWrite('archive',archive);
   if(state.score>best.score){best={score:state.score,wave:state.wave,kills:state.kills};safeWrite('best',best);}
   const options=[
     {key:'strong',label:'УСИЛЕННЫЙ БОЛТЕР'},
@@ -587,7 +644,7 @@ function finish(victory){
   mutation=options[(state.seed+state.kills+state.wave)%options.length];
   safeWrite('mutation',mutation);
   ui.resultTitle.textContent=victory?'СЕРДЦЕ РАЗОРВАНО':'ТЫ ПЕРЕВАРЕН';
-  ui.resultBody.textContent='ОЧКИ '+state.score.toLocaleString('ru-RU')+' · УБИЙСТВ '+state.kills+'\nВОЛНА '+state.wave+'/5 · '+Math.floor(state.elapsed/60)+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0')+'\nСЛЕДУЮЩАЯ МУТАЦИЯ: '+mutation.label;
+  ui.resultBody.textContent='ОЧКИ '+state.score.toLocaleString('ru-RU')+' · УБИЙСТВ '+state.kills+'\nВОЛНА '+state.wave+'/5 · '+Math.floor(state.elapsed/60)+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0')+'\nСЛЕДУЮЩАЯ МУТАЦИЯ: '+mutation.label+'\nАРХИВ: +'+gained+' ЭХО · ВСЕГО '+archive.echoes;
   setMode(victory?'won':'dead');
   sound(victory?'pickup':'heart');
 }
@@ -622,6 +679,10 @@ function pollGamepad(dt){
   const buttons=Array.from(pad.buttons,b=>Boolean(b?.pressed));
   const pressed=i=>buttons[i]&&!prevPadButtons[i];
   if(mode==='draft'){
+    if(pressed(4)||pressed(5)){
+      const options=routeOptions(state.seed,state.pendingDraft);
+      state.selectedRoute=options[state.selectedRoute===options[0].id?1:0].id;renderRoutes();snapshot();
+    }
     if(pressed(14)||pressed(12))draftIndex=(draftIndex+2)%3;
     if(pressed(15)||pressed(13))draftIndex=(draftIndex+1)%3;
     if(pressed(0)){const option=availableDraft()[draftIndex];if(option)chooseGraft(option.id);}
@@ -687,6 +748,10 @@ document.addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat&&['Escape','KeyQ','KeyE','KeyR'].includes(e.code))return;
   if(mode==='draft'){
+    if(e.code==='ArrowLeft'||e.code==='ArrowRight'){
+      const options=routeOptions(state.seed,state.pendingDraft);
+      state.selectedRoute=options[e.code==='ArrowLeft'?0:1].id;renderRoutes();snapshot();return;
+    }
     if(['Digit1','Digit2','Digit3'].includes(e.code)){const pick=availableDraft()[Number(e.code.slice(-1))-1];if(pick)chooseGraft(pick.id);return;}
     if(e.code==='KeyR'){rerollDraft();return;}
     if(e.code==='Escape'){menu();return;}
@@ -709,6 +774,7 @@ $('startBtn').addEventListener('click',confirmNewRun);
 ui.resume.addEventListener('click',()=>begin(true));
 ui.pauseBtn.addEventListener('click',pause);
 ui.draftReroll.addEventListener('click',rerollDraft);
+ui.archiveToggle.addEventListener('click',()=>{archiveOpen=!archiveOpen;renderArchive();sound('switch');});
 $('draftExit').addEventListener('click',menu);
 ui.resumeBtn.addEventListener('click',resume);
 $('restartPause').addEventListener('click',confirmNewRun);
@@ -769,6 +835,7 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   x:state?.x??null,z:state?.z??null,yaw:state?.yaw??null,pitch:state?.pitch??null,hp:state?.hp??null,wave:state?.wave??null,
   score:state?.score??null,enemies:state?.enemies?.length??0,biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
+  architecture:world?.getArchitectureSignature?.()??null,
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
   immunity:{...state?.immune},
   ecology:{telegraphsSeen,chargesDodged,attacksInterrupted,terrainEnemyHits,
@@ -778,6 +845,9 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   builds:{grafts:state?.grafts||[],biomass:state?.biomass||0,pendingDraft:state?.pendingDraft||0,
     revision:state?.draftRevision||0,choices:availableDraft().map(g=>g.id),weaponCount:state?maxWeaponIndex(state)+1:2,
     damage:state?weaponBuild(state,state.weapon).damage:26},
+  routes:{selected:state?.selectedRoute||null,active:state?.routeId||null,history:state?.routeHistory||[],
+    offers:state?.pendingDraft?routeOptions(state.seed,state.pendingDraft).map(r=>r.id):[],hazardExtra:state?.routeHazard||0},
+  archive:{echoes:archive.echoes,unlocked:archive.unlocked,equipped:archive.equipped,runs:archive.runs},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{
