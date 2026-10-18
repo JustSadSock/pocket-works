@@ -152,21 +152,51 @@ function safe(s,player){
   match:s.match,score:s.score,revision:s.revision};
 }
 export function viewForPlayer({state,player}){return safe(state,player);}
+// v2: explicit surrender and abandoning a live match have an authoritative
+// outcome. A disconnected socket does NOT mean a surrender: PocketNet keeps
+// its authenticated seat for reconnects.
+function awardForfeit(state,side,reason='surrender'){
+ if(state.phase!=='planning'||!state.match||state.match.outcome||!['A','B'].includes(side))return false;
+ const winner=side==='A'?'B':'A';
+ state.match.outcome=winner;
+ state.match.termination={type:'forfeit',by:side,reason,round:state.match.round};
+ state.match.revision++;
+ state.pending={A:null,B:null};
+ state.phase='finished';
+ state.score[winner]=(state.score[winner]||0)+1;
+ state.revision++;
+ return true;
+}
 const module={
  protocolVersion:1,
  viewForPlayer,
  createRoom({player}){return {state:{phase:'lobby',host:player.id,players:[player],seats:[player.id],pending:{A:null,B:null},
   match:null,score:{A:0,B:0},revision:0}};},
- onJoin({state,players}){
+ onJoin({state,players,player}){
   if(players.length!==2)throw Error('room_full');
-  if(state.phase!=='lobby')throw Error('match_in_progress');
-  state.players=players;state.seats=players.map(p=>p.id);state.revision++;
+  if(state.phase!=='lobby'&&state.phase!=='finished')throw Error('match_in_progress');
+  state.players=players;
+  if(state.phase==='finished'){
+   // Preserve the side of the surviving player, even when the host (A) left.
+   const occupied=new Set(players.filter(p=>p.id!==player.id).map(p=>p.id));
+   const free=state.seats.findIndex(id=>!occupied.has(id));
+   if(free<0)throw Error('room_full');
+   state.seats[free]=player.id;
+  }else state.seats=players.map(p=>p.id);
+  state.revision++;
   return {state,events:emit()};
  },
- onLeave({state,players}){
-  state.players=players;state.host=players.some(p=>p.id===state.host)?state.host:players[0]?.id||'';
-  state.seats=players.map(p=>p.id);state.phase='lobby';state.match=null;state.pending={A:null,B:null};
-  state.revision++;return {state,events:emit()};
+ onLeave({state,player,players}){
+  const departing=seat(state,player.id);
+  if(departing&&state.phase==='planning')awardForfeit(state,departing,'left_room');
+  state.players=players;
+  state.host=players.some(p=>p.id===state.host)?state.host:players[0]?.id||'';
+  if(state.phase==='lobby'){
+   state.seats=players.map(p=>p.id);state.match=null;state.pending={A:null,B:null};
+  }
+  // Finished match and scoreboard are retained for the remaining player.
+  state.revision++;
+  return {state,events:emit()};
  },
  onMessage({state,player,players,payload}){
   state.players=players;
@@ -174,6 +204,10 @@ const module={
   if(!side)return {state,events:[]};
   const v=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
   if(v.type==='sync')return {state,events:emit()};
+  if(v.type==='forfeit'&&state.phase==='planning'){
+   awardForfeit(state,side);
+   return {state,events:emit()};
+  }
   if(v.type==='start'&&id===state.host&&state.phase==='lobby'){
    if(players.length!==2)return {state,events:tell(id,'Нужны два игрока')};
    state.phase='planning';state.match=initialMatch();state.pending={A:null,B:null};state.revision++;
