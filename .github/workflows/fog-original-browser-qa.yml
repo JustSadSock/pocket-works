@@ -1,0 +1,38 @@
+name: Fog real device browser QA
+on:
+  push:
+    branches: [app/fog-of-conquest-port-20261018]
+    paths: [.github/workflows/fog-original-browser-qa.yml]
+permissions: {contents: write}
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: true}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-package-lock --no-audit --no-fund --ignore-scripts
+          npx playwright install --with-deps chromium webkit
+      - name: Original game flows on Chromium and WebKit (phone and desktop)
+        run: npx playwright test --config apps/fog-of-conquest/qa/playwright.config.ts
+      - name: Upload visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fog-v12-real-browsers
+          path: |
+            apps/fog-of-conquest/qa/fog-playwright-results/
+            apps/fog-of-conquest/qa/fog-playwright-report/
+          retention-days: 4
+      - name: Remove one-time QA runner
+        if: always()
+        run: |
+          git rm -f .github/workflows/fog-original-browser-qa.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'ci: remove completed Fog browser QA runner'
+          git push origin HEAD:app/fog-of-conquest-port-20261018
