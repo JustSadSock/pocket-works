@@ -29,7 +29,8 @@
         "forest-clearance.test.mjs",
         "hourly-economy.test.mjs",
         "grounded-motion.test.mjs",
-        "land-economy.test.mjs"
+        "land-economy.test.mjs",
+        "conflicts.test.mjs"
       ]
     },
     {
