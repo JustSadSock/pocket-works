@@ -446,6 +446,20 @@ function phantom(out,e,t){
  const breath=.035*Math.sin(t*1.2+e.x*2),limp=.17*Math.sin(t*1.4+e.z);
  const clarity=Math.min(1,Math.max(0,(e.hit||0)*1.5));
  const blend=(a,b)=>a.map((v,i)=>v+(b[i]-v)*clarity);
+ if(e.kind==='crawler'){
+  // Low, asymmetric silhouette distinct from a human standing in the hallway.
+  const body=[.22,.23,.20],clothes=[.39,.37,.30],skin=[.56,.52,.44];
+  round(out,x,.27,z,.54,.25,.48,body,7);
+  round(out,x,.48,z-.36,.25,.25,.28,clothes,7);
+  for(const side of [-1,1]){
+   round(out,x+side*.48,.22,z+.17,.16,.15,.19,skin,8);
+   box(out,x+side*.47,.03,z+.36,.20,.08,.24,body,7);
+   round(out,x+side*.24,.13,z+.45,.18,.12,.35,body,7)
+  }
+  round(out,x-.095,.48,z-.60,.027,.023,.020,[.15,.15,.14],9);
+  round(out,x+.095,.48,z-.60,.027,.023,.020,[.15,.15,.14],9);
+  return
+ }
  const coatCloth=blend(coat?[.16,.17,.16]:[.27,.25,.23],[.46,.37,.28]),
   shadow=blend([.27,.25,.23],[.49,.42,.35]),pale=blend([.45,.43,.39],[.60,.52,.43]);
  // The familiar Soviet coat stand briefly comes into focus in the torch beam.
