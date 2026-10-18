@@ -50,10 +50,10 @@ function harm(s,a,amount,from,depth=0){
 function receiveHeal(s,a,amount,depth=0){const old=a.hp;a.hp=Math.min(stats(a).max,a.hp+amount);const delta=a.hp-old;if(delta>0){emit(s,'on_heal',a.id,{},depth);fx(s,'heal',a.x,a.y)}return delta}
 function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
  if(s.shots.length>=80)return false;
- const v=252*(options.fastshot?1.42:1),speed=Number.isFinite(v)?v:252;
+ const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style;const v=(style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1),speed=Number.isFinite(v)?v:252;
  s.shots.push({x,y,vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,owner:a.id,
-  damage:options.clone?6:12*(options.strong?1.6:1),life:options.far?1.8:1.15,
-  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?9:options.clone?4:5,depth:options.depth||0});
+  style,damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:(options.far?1.8:1.15)*(style==='arc'?.68:style==='rock'?1.2:style==='wave'?.65:1),
+  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0});
  fx(s,'shoot',x,y);return true;
 }
 function attack(s,a,target){
@@ -63,12 +63,12 @@ function attack(s,a,target){
 }
 function guard(s,a){
  if(a.shieldReady>0||a.stun>0)return false;
- a.shield=Math.min(80,a.shield+stats(a).shield);a.shieldReady=5;a.heat=Math.min(HEAT_LIMIT,a.heat+7);
+ a.shield=Math.min(80,a.shield+stats(a).shield+(mage(a.mageId).trait==='guard_extra'?5:0));a.shieldReady=5;if(mage(a.mageId).trait==='guard_slow'){const enemy=s.actors[1-a.id];if(Math.hypot(a.x-enemy.x,a.y-enemy.y)<105)enemy.slow=Math.max(enemy.slow,1.1)}a.heat=Math.min(HEAT_LIMIT,a.heat+7);
  fx(s,'shield',a.x,a.y);emit(s,'on_guard',a.id);return true;
 }
 function dash(s,a,dir){
  if(a.dashReady>0||a.stun>0)return false;const m=mag(dir.x,dir.y);
- a.vx=dir.x/m*370;a.vy=dir.y/m*370;a.dash=.17;a.dashReady=2.5;a.invuln=.13;a.heat=Math.min(HEAT_LIMIT,a.heat+6);
+ a.vx=dir.x/m*370;a.vy=dir.y/m*370;if(mage(a.mageId).trait==='dash_haste')a.haste=Math.max(a.haste,.9);a.dash=.17;a.dashReady=2.5;a.invuln=.13;a.heat=Math.min(HEAT_LIMIT,a.heat+6);
  fx(s,'dash',a.x,a.y);emit(s,'on_dash',a.id);return true;
 }
 // The queue is cleared each update and every event owns a bounded ancestry depth.
@@ -85,7 +85,7 @@ function addHeat(s,a,amount,depth=0){
 }
 function act(s,a,action,mods,ev){
  const other=s.actors[1-a.id],m=new Set(mods),strong=m.has('strong')?1.6:1,reach=m.has('far')?1.5:1;
- const angle=Math.atan2(other.y-a.y,other.x-a.x)+(m.has('reverse')?Math.PI:0),depth=ev.depth+1;
+ const angle=a.face+(m.has('reverse')?Math.PI:0),depth=ev.depth+1;
  switch(action){
  case 'ball':spawnShot(s,a,angle,a.x,a.y,{strong:m.has('strong'),far:m.has('far'),bounce:m.has('bounce'),drain:m.has('drain'),wide:m.has('wide'),fastshot:m.has('fastshot'),depth});break;
  case 'heal':receiveHeal(s,a,7*strong,depth);break;
@@ -146,12 +146,12 @@ if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
 if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
- const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,s.actors[q.owner],3,q.depth)}
+ const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn')a.heat=Math.min(100,a.heat+2);if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
  s.shots.splice(j,1);continue
 }
 const wall=distWall(nx,ny,q.r)||blocking(s,nx,ny,q.r),edge=nx<19||nx>W-19||ny<21||ny>H-21;
 if(wall||edge){if(q.bounces>0){q.bounces--;const wallX=distWall(nx,q.y,q.r)||blocking(s,nx,q.y,q.r)||nx<19||nx>W-19;if(wallX)q.vx*=-1;else q.vy*=-1;q.x+=q.vx*dt;q.y+=q.vy*dt;fx(s,'spark',q.x,q.y);emit(s,'on_bounce',q.owner,{},q.depth)}else{s.shots.splice(j,1);fx(s,'spark',q.x,q.y);emit(s,'on_expire',q.owner,{},q.depth)}continue}
-if(q.life<=0){s.shots.splice(j,1);emit(s,'on_expire',q.owner,{},q.depth);continue}q.x=nx;q.y=ny}
+if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}q.x=nx;q.y=ny}
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
@@ -162,13 +162,12 @@ for(let j=s.mines.length-1;j>=0;j--){
  flushEvents(s);
  s.fx.forEach(f=>f.t+=dt);s.fx=s.fx.filter(f=>f.t<.38);
 if(s.actors.some(a=>a.hp<=0)||s.remaining<=0){const [a,b]=s.actors;let winner;
-if(a.hp<=0&&b.hp<=0)winner=a.hit>=b.hit?0:1;
+if(a.hp<=0&&b.hp<=0)winner=null;
 else if(a.hp<=0)winner=1;else if(b.hp<=0)winner=0;
-else if(Math.abs(a.hp/stats(a).max-b.hp/stats(b).max)>.001)winner=a.hp/stats(a).max>b.hp/stats(b).max?0:1;
-else if(s.overtime<1){s.overtime=1;s.remaining=8;fx(s,'overtime',200,310);return s}
-else winner=a.hit>=b.hit?0:1;
-s.score[winner]++;s.lastWinner=winner;
-if(s.score[winner]>=4){s.phase='result';s.champion=winner}
+// Timeouts and double knockouts are actual draws: no overtime tie-breaker or free point.
+if(winner===null){s.draws++;s.lastWinner=null;s.lastOutcome='draw'}
+else{s.score[winner]++;s.lastWinner=winner;s.lastOutcome='win'}
+if(winner!==null&&s.score[winner]>=4){s.phase='result';s.champion=winner}
 else{s.phase='draft';s.pick=offers(s)}
 }
 return s}
