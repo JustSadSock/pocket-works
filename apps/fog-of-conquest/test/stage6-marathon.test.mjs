@@ -74,3 +74,30 @@ test('FOG-018: full 7-tier, 20-seed campaigns perform 50+ authentic half-turns o
    })
  }));
 },{timeout:15*60*1000});
+
+test('FOG-034: attacking a hostile structure cannot overlap an allied occupying unit',async()=>{
+ const mod=await import('data:text/javascript;base64,'+
+   Buffer.from(read('../server/module.ts')).toString('base64'));
+ const g=mod.createOriginalMatch({size:'small',seed:430});
+ const building=g.buildings.find(x=>x.owner===2);
+ assert.ok(building);
+ building.r=3;building.c=6;building.hp=1;
+ g.map[3][6]=0;g.map[3][5]=0;
+ g.units=[
+   {id:900,owner:1,type:'swordsman',r:3,c:6,hp:1,mp:0,startR:3,startC:6},
+   {id:901,owner:1,type:'swordsman',r:3,c:5,hp:5,mp:2,startR:3,startC:5}
+ ];
+ g.state.currentPlayer=1;
+ const prior=JSON.stringify(g);
+ const denied=mod.originalAction(g,1,{type:'attack',unit:901,r:3,c:6});
+ assert.match(denied.error,/Вражеская цель/);
+ assert.equal(JSON.stringify(g),prior);
+ assert.equal(denied.state,g);
+ const valid=structuredClone(g);
+ valid.units=valid.units.filter(u=>u.id!==900);
+ const accepted=mod.originalAction(valid,1,{type:'attack',unit:901,r:3,c:6});
+ assert.equal(accepted.error,null);
+ assert.equal(accepted.state.units[0].r,3);
+ assert.equal(accepted.state.units[0].c,6);
+ assert.equal(accepted.state.buildings.find(x=>x.id===building.id).owner,1);
+});
