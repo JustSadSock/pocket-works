@@ -211,7 +211,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   const SAVE_PREFIX = 'focSave_';
   const SAVE_VERSION = 2;
   const isTestEnv = navigator.userAgent.includes('jsdom');
-  let style = 'toen',
+  let style = 'ai',
       musicVolume = 0.5,
       sfxVolume = 0.5,
       musicEnabled = false,
@@ -712,6 +712,26 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // === Draw ===
 
+  // Unknown ground remains hidden. Paper-grain rendering prevents a
+  // featureless black canvas without leaking unseen terrain or units.
+  function drawUnknownGround(r,c,x,y){
+    const seed=Math.abs(Math.sin((r+1)*127.1+(c+1)*311.7)*43758.5);
+    const tint=seed%1;
+    ctx.fillStyle=tint<.34?'#1e2720':tint<.68?'#202a23':'#222b25';
+    ctx.fillRect(x,y,cellW+1,cellH+1);
+    ctx.strokeStyle='rgba(181,174,131,0.075)';
+    ctx.lineWidth=Math.max(.5,cellW/65);
+    ctx.beginPath();
+    const ox=(seed*7%1)*cellW*.35;
+    ctx.moveTo(x+ox+cellW*.1,y+cellH*.13);
+    ctx.lineTo(x+ox+cellW*.5,y+cellH*.34);
+    ctx.moveTo(x+cellW*.48,y+cellH*.77);
+    ctx.lineTo(x+cellW*.87,y+cellH*.54);
+    ctx.stroke();
+    ctx.fillStyle='rgba(231,218,170,0.065)';
+    ctx.fillRect(x+cellW*(.25+tint*.15),y+cellH*.7,Math.max(1,cellW*.055),Math.max(1,cellH*.055));
+  }
+
   function redrawSimple(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     const p=state.currentPlayer, F=state.fog[p], S=state.seen[p];
@@ -719,7 +739,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
       let x=c*cellW, y=r*cellH;
       if(!S[r][c]&&!revealAll){
-        ctx.fillStyle='#000'; ctx.fillRect(x,y,cellW,cellH);
+        drawUnknownGround(r,c,x,y);
       } else {
         ctx.fillStyle=TERR_COL[map[r][c]]; ctx.fillRect(x,y,cellW,cellH);
         if(!revealAll&&F[r][c]){
@@ -852,7 +872,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
       let x=c*cellW, y=r*cellH;
       if(!S[r][c]&&!revealAll){
-        ctx.fillStyle='#000'; ctx.fillRect(x,y,cellW,cellH);
+        drawUnknownGround(r,c,x,y);
       } else {
         ctx.drawImage(getGrassSprite(),x,y,cellW,cellH);
         if(map[r][c]===TERRAIN.WATER){
