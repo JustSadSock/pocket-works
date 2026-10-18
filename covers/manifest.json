@@ -3480,9 +3480,9 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "bbcd4f7200a1d5a10c6d9f037631326a1c8a437e",
-    "lastAttemptAt": "2026-10-18T23:07:42.166Z",
-    "revision": "bbcd4f7200a1d5a10c6d9f037631326a1c8a437e",
+    "lastAttemptRevision": "34692b7416e20766f7db841ace3959e0b6a91c11",
+    "lastAttemptAt": "2026-10-18T23:14:44.654Z",
+    "revision": "34692b7416e20766f7db841ace3959e0b6a91c11",
     "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
@@ -3495,7 +3495,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "c90e8deffea438ac8bb5c7c07b17d024975eeb08f8aa043661cc1c281c8da14e",
+    "sha256": "69a82f0fb517dd1f5e17272dede4df059dd533f1f4e07fe908f95d62ecc411a8",
     "imageVersion": 2
   },
   "crossline-5x5": {
@@ -3541,8 +3541,8 @@
     "diagnostic": null,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a47c6eb4522252660e83a7b543d2f303e0e4391d",
-    "lastAttemptAt": "2026-10-18T22:43:51.032Z",
+    "lastAttemptRevision": "8625009f8ddf231217fd2c156e5e65508817ef2c",
+    "lastAttemptAt": "2026-10-18T23:14:29.299Z",
     "revision": "a2672a9600b739fdd5af458623b881c308430c7c",
     "qualityScore": 76,
     "visionScore": null,
