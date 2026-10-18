@@ -16,7 +16,10 @@ export function validateRun(s){
     guardianPending:Array.isArray(s.guardianDefeated)&&s.guardianDefeated.includes(s.wave)?0:
       sanitizeGuardianPending(s.guardianPending,s.wave),
     routeHistory:sanitizeRouteHistory(s.routeHistory),
-    selectedRoute:Number.isInteger(s.pendingDraft)&&s.pendingDraft>=2&&s.pendingDraft<=5&&routeOptions(s.seed,s.pendingDraft).some(r=>r.id===s.selectedRoute)?s.selectedRoute:'',
+    selectedRoute:(Number.isInteger(s.pendingDraft)&&s.pendingDraft>=2&&s.pendingDraft<=5?
+      s.pendingDraft:Math.min(5,Math.max(2,(Math.floor(s.wave)||1)+1)))<=5&&
+      (Math.floor(s.wave)||1)<5&&routeOptions(s.seed,Number.isInteger(s.pendingDraft)&&s.pendingDraft>=2&&s.pendingDraft<=5?
+      s.pendingDraft:Math.min(5,(Math.floor(s.wave)||1)+1)).some(r=>r.id===s.selectedRoute)?s.selectedRoute:'',
     routeId:Number.isInteger(s.routeWave)&&s.routeWave===Math.floor(s.wave)&&ROUTES.some(r=>r.id===s.routeId)?s.routeId:'',
     routeWave:Number.isInteger(s.routeWave)&&s.routeWave===Math.floor(s.wave)&&ROUTES.some(r=>r.id===s.routeId)?s.routeWave:0,
     routeHazard:Number.isInteger(s.routeWave)&&s.routeWave===Math.floor(s.wave)&&s.routeId==='necrosis'?4:0,
