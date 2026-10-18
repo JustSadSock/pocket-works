@@ -180,7 +180,7 @@ function commitFlank(s,c){
  const p=citizen(s,m.personId),q=p?.dailyShift;
  if(!p?.alive||q?.day!==s.day||q.workHours<.04){c.tactics.flank=null;return;}
  const distance=pathEffort(s,m.routeCells.map(xy));
- const extra=rnd(distance*.025/4); // one physical 25-metre maneuver at 4 km/h
+ const extra=Math.round(distance*.025/4*10000)/10000; // one physical 25-metre maneuver at 4 km/h
  const total=q.expedition?extra:2*extra;
  if(!Number.isFinite(extra)||q.workHours<=total){c.tactics.flank=null;return;}
  q.travelHours=Math.round((q.travelHours+total)*10000)/10000;
