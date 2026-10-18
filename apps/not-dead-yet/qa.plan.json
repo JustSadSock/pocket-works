@@ -16,7 +16,8 @@
         "tests/story.test.mjs",
         "tests/power.test.mjs",
         "tests/landing.test.mjs",
-        "tests/presences.test.mjs"
+        "tests/presences.test.mjs",
+        "tests/roguelike.test.mjs"
       ]
     },
     {
@@ -61,7 +62,8 @@
       "kind": "playwright",
       "tier": "smoke",
       "files": [
-        "qa/journey.spec.js"
+        "qa/journey.spec.js",
+        "qa/roguelike.spec.js"
       ]
     }
   ]
