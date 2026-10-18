@@ -12,7 +12,8 @@
         "tests/engine.test.mjs",
         "tests/planning.test.mjs",
         "tests/reliability.test.mjs",
-        "tests/replay-archive.test.mjs"
+        "tests/replay-archive.test.mjs",
+        "tests/learning.test.mjs"
       ]
     },
     {
@@ -74,6 +75,14 @@
       "tier": "smoke",
       "files": [
         "qa/archive.spec.js"
+      ]
+    },
+    {
+      "id": "learning-journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/learning.spec.js"
       ]
     }
   ]
