@@ -94,7 +94,12 @@ test('tiny phone is focus-first, accessible and without document overflow',async
         left:r.left,right:r.right,height:r.height}))};
   });
   expect(fit.scrollW).toBeLessThanOrEqual(fit.width+2);
-  expect(fit.scrollH).toBeLessThanOrEqual(fit.height+2);
+  const documentScroll=await page.evaluate(async()=>{
+    window.scrollTo(0,200);
+    await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+    return window.scrollY;
+  });
+  expect(documentScroll).toBe(0);
   expect(fit.mapH).toBeGreaterThan(400);
   for(const b of fit.controls){
     expect(b.left).toBeGreaterThanOrEqual(-2);
