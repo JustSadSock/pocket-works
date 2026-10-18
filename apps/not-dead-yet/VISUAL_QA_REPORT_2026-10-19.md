@@ -68,6 +68,27 @@ the art and camera meet the quality bar.
   and reload transforms. Split visual-regression spec into its own QA suite
   to allow targeted screenshot reruns.
 
+## Post-fix visual evidence
+
+Post-fix universal visual task in
+[run 39171889336](https://github.com/JustSadSock/pocket-works/actions/runs/39171889336)
+also passed all four combinations of Chromium/WebKit and mobile/desktop.
+[Post-fix screenshot artifact](https://github.com/JustSadSock/pocket-works/actions/runs/39171889336/artifacts/12152632336)
+contains the second set of gameplay and UI captures.
+
+Side-by-side observation: the keyboard banner is absent on both mobile
+browsers, the hand/weapon occupies substantially less of the portrait
+frame, and the new geometry has a less square muzzle. Corridor repetition
+remains very noticeable; shader/material and room-layout work is still
+needed. Different randomly generated starting seeds mean this is a
+composition comparison rather than pixel-for-pixel room A/B.
+
+A dedicated [visual-regression workflow
+39172237451](https://github.com/JustSadSock/pocket-works/actions/runs/39172237451)
+was started to run screenshot pixel-variation assertions separately
+from the longer story / gameplay journey suite. Its result must not be
+assumed until that job finishes.
+
 ## Outstanding acceptance gates
 
 - [ ] Confirm every new Playwright browser test **passes**, including
