@@ -33,7 +33,7 @@ export function poseFor(motion,index,now,reduced=false){
  // 0–11% anticipation; 11–84% travel; 84–100% soft settle.
  const slide=t<.11?0:ease((t-.11)/.77);
  const progress=clamp(slide);
- const impact=blocked?Math.sin(Math.PI*clamp(elapsed/330)):0;
+ const impact=blocked&&elapsed<330?Math.sin(Math.PI*clamp(elapsed/330)):0;
  const hop=travelling?Math.sin(Math.PI*progress)*.065:0;
  const lean=travelling?Math.sin(Math.PI*t)*.075:0;
  const recoil=blocked?Math.sin(Math.PI*clamp(elapsed/245))*.048:0;
