@@ -7,7 +7,7 @@ import {timeMode,integrateClock,dayClock,dayPhase,activeShiftCounts,planSubday,s
 import {walkPath,walkingSteps} from './navigation.js';
 import {landCadastre,landAt,tenureSummary,parcelEconomics} from './land-economy.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.9.0',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.9.1',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
