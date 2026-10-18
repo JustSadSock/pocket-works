@@ -45,6 +45,13 @@ async function verify(page,label,evidence) {
     return {
       profile:surface?.dataset.renderProfile,
       refraction:surface?.dataset.opticalRefraction,
+      edgeMode:surface?.dataset.edgeMode,
+      minimalHud:document.querySelector('.app-shell')?.classList.contains('is-playing'),
+      edgeControls:[...document.querySelectorAll('.text-key,.readout,.calibration-key,.round-key')]
+        .map(el=>{
+          const r=el.getBoundingClientRect();
+          return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};
+        }),
       glError:gl?gl.getError():null,
       screenWidth:surface?.width||0,screenHeight:surface?.height||0,
       playTime:document.querySelector('#timeValue')?.textContent,
@@ -53,6 +60,15 @@ async function verify(page,label,evidence) {
   });
   assert.equal(errors.length,0,label+': page errors: '+errors.join(' | '));
   assert.ok(status.visible,label+': 3D canvas must be visible');
+  assert.equal(status.edgeMode,'full',label+': device and outer maze walls must meet');
+  assert.equal(status.minimalHud,true,label+': focus-first HUD activates in a run');
+  const controls=status.edgeControls;
+  for(let i=0;i<controls.length;i++) for(let j=i+1;j<controls.length;j++) {
+    const a=controls[i],b=controls[j];
+    const overlap=Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))
+      * Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));
+    assert.ok(overlap<5,label+': touch controls must not overlap');
+  }
   assert.ok(status.screenWidth>0&&status.screenHeight>0,label+': actual GPU canvas');
   assert.notEqual(status.playTime,'00:00.00',label+': the HUD timer must visibly advance');
   assert.equal(status.glError,0,label+': no GL error after draw');
@@ -121,6 +137,11 @@ try {
     return error;
   });
   assert.equal(captureDone,0,'settled sphere cannot trigger GL errors');
+  // A live device rotation must not crop a portrait run to fill landscape.
+  await hiPage.setViewportSize({width:844,height:390});
+  await hiPage.waitForTimeout(250);
+  assert.equal(await hiPage.locator('canvas.spatial-canvas').getAttribute('data-edge-mode'),
+    'safe-fit','existing run remains fully visible after rotation');
   await hi.close();
 
   const low=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2});

@@ -9,6 +9,7 @@ import { MarblePhysics } from './physics.js';
 import { GOAL_CAPTURE_MS, startGoalCapture } from './marble-motion.js';
 import { MazeRenderer } from './renderer.js';
 import { SpatialMazeRenderer } from './renderer3d.js';
+import { recordKey } from './edge-layout.js';
 
 installMobileRuntime();
 setDocumentScrollLocked(true);
@@ -149,6 +150,9 @@ function showToast(message, duration = 1800) {
 }
 
 function setScreen(screen) {
+  // The playfield remains edge-to-edge; HUD furniture dissolves in a run.
+  elements.canvas.closest('.app-shell')?.classList.toggle('is-playing',
+    !screen && (state === 'playing' || state === 'finishing'));
   for (const item of [elements.startScreen, elements.pauseScreen, elements.completeScreen]) {
     const visible = item === screen;
     item.classList.toggle('is-visible', visible);
@@ -199,7 +203,7 @@ function buildLevel(nextLevel = level) {
   landingCuePlayed = false;
   elements.level.value = String(level).padStart(2, '0');
   elements.time.textContent = formatTime(0);
-  const bestTime = Number(store.get('bestTimes', {})[level]);
+  const bestTime = Number(store.get('bestTimes', {})[recordKey(level,maze.cols,maze.rows)]);
   elements.best.value = bestTime > 0 ? formatTime(bestTime) : '—';
 }
 
@@ -353,9 +357,10 @@ function completeLevel() {
   marble.velocity.y = 0;
 
   const bestTimes = store.get('bestTimes', {});
-  const oldBest = Number(bestTimes[level]) || Infinity;
+  const key = recordKey(level,maze.cols,maze.rows);
+  const oldBest = Number(bestTimes[key]) || Infinity;
   const isRecord = elapsed < oldBest;
-  if (isRecord) bestTimes[level] = Number(elapsed.toFixed(3));
+  if (isRecord) bestTimes[key] = Number(elapsed.toFixed(3));
   const unlockedLevel = Math.max(store.get('unlockedLevel', 1), level + 1);
   store.patch({
     bestTimes,
@@ -573,7 +578,7 @@ for (const button of elements.soundButtons) {
 
 createWorkshopMode({
   appName: 'ОТВЕС',
-  version: '1.4.0',
+  version: '1.5.0',
   cachePrefix: 'otves-',
   storageNamespace: 'pocket-works:otves',
   onReset: async () => location.reload()

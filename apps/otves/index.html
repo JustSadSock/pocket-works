@@ -22,7 +22,7 @@
     <canvas id="gameCanvas" aria-label="Объёмный лабиринт внутри экрана ОТВЕС" data-gesture-surface data-block-callout></canvas>
 
     <header class="instrument-bar" data-ui>
-      <a class="text-key" href="../../" data-shell-exit data-app-control data-native-press>POCKET WORKS</a>
+      <a class="text-key" href="../../" aria-label="Вернуться в Pocket Works" title="Pocket Works" data-shell-exit data-app-control data-native-press>‹</a>
       <div class="readout" aria-label="Текущий уровень и время">
         <span>ЛАБ. <output id="levelValue">01</output></span>
         <strong id="timeValue">00:00.00</strong>
@@ -32,7 +32,7 @@
 
     <div class="best-readout" data-ui><span>ЛУЧШЕЕ</span><output id="bestValue">—</output></div>
     <div class="input-readout" id="inputReadout" data-ui><i></i><span id="inputLabel">ДАТЧИК НЕ АКТИВЕН</span></div>
-    <button class="calibration-key" id="calibrateButton" type="button" data-native-press data-ui>В НОЛЬ</button>
+    <button class="calibration-key" id="calibrateButton" type="button" aria-label="Откалибровать наклон: принять текущее положение за ноль" title="Выставить ноль" data-native-press data-ui>0°</button>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="screen start-screen is-visible" id="startScreen" aria-label="Начальный экран" data-ui>
@@ -86,7 +86,7 @@
     </section>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОТВЕС" data-app-version="1.4.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ОТВЕС" data-app-version="1.5.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

@@ -27,9 +27,10 @@ jobs:
           node --check apps/otves/sw.js
           node --check apps/otves/render-materials.js
           node --check apps/otves/marble-motion.js
+          node --check apps/otves/edge-layout.js
           node --check apps/otves/qa/optics-smoke.mjs
       - name: Geometry regressions
-        run: node --test apps/otves/render-geometry.test.mjs apps/otves/render-materials.test.mjs apps/otves/marble-motion.test.mjs
+        run: node --test apps/otves/render-geometry.test.mjs apps/otves/render-materials.test.mjs apps/otves/marble-motion.test.mjs apps/otves/edge-layout.test.mjs
 
   browser-optics:
     runs-on: ubuntu-latest
