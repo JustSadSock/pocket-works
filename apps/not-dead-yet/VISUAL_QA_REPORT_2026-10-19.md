@@ -89,6 +89,42 @@ was started to run screenshot pixel-variation assertions separately
 from the longer story / gameplay journey suite. Its result must not be
 assumed until that job finishes.
 
+## Completed full Playwright journey evidence
+
+[First journey 39170954643](https://github.com/JustSadSock/pocket-works/actions/runs/39170954643)
+ran 54 planned tests across mobile Chromium, mobile WebKit and desktop
+Chromium: **47 passed**, **4 failed**, **1 flaky**, **2 skipped**.
+The failures were not a false "everything passed" result:
+
+1. The all-seeds 20-screen visual test hit the default **45 second**
+   timeout on Chromium even though the screenshots themselves could
+   be captured. Its own test timeout was increased to 180 seconds.
+2. An upgrade test teleported to a relic but interacted with a nearby
+   medicine because nearDrop chose items in sector-generation order.
+   This was a genuine interaction bug. Gameplay now selects the nearest
+   visible object, with a deterministic ID tie-break, and QA asserts
+   the active target before interacting.
+3. The keyboard test required absolute yaw > 0.3 even when the starting
+   camera had already rotated. QA now checks the positive angular delta.
+4. The procedural-memory test assumed closed physical doors never
+   obstruct a route, which is incorrect gameplay behavior; it opens
+   those real doors before testing permanent sector connectivity.
+
+[Second full journey 39171889336](https://github.com/JustSadSock/pocket-works/actions/runs/39171889336)
+ran 55 checks, **53 passed, 2 failed**. Its remaining failures
+were both in the optional story chapter's mobile-WebKit controls:
+a frame-stale ammo assertion immediately after tapping Fire, and a
+hinged door which did not close when tapping Interact. Those were
+recorded for targeted chapter-input tests and must not be marked fixed
+without a repeat run.
+
+**New v2.1.5 checks**
+- [Focused visual-regression run](https://github.com/JustSadSock/pocket-works/issues/981),
+  [targeted journey run](https://github.com/JustSadSock/pocket-works/issues/982).
+- Both runs are newly requested after fixing the nearest-item gameplay
+  selection and screenshot matrix timeout. Their outcomes must be
+  checked before marking this milestone green.
+
 ## Outstanding acceptance gates
 
 - [ ] Confirm every new Playwright browser test **passes**, including
