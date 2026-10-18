@@ -66,7 +66,7 @@ test('no remote MP3 requests, recording provides supported fallback and never le
  expect(requests).toEqual([]);
 });
 
-test('all render modes stay legible at phone and landscape, including motion reduction',async({page})=>{
+test('all render modes stay legible at phone and landscape, including motion reduction',async({page},testInfo)=>{
  await page.emulateMedia({reducedMotion:'reduce'});
  await openBattle(page);
  for(const viewport of [{width:320,height:640},{width:390,height:844},{width:844,height:390}]){
@@ -91,7 +91,7 @@ test('all render modes stay legible at phone and landscape, including motion red
    expect(fit.panel).toBeLessThanOrEqual(viewport.width+2);
    expect(fit.mapHeight).toBeGreaterThan(100);
    expect(fit.docScroll).toBeLessThanOrEqual(viewport.width+2);
-   await page.screenshot({path:`fog-stage4-${viewport.width}x${viewport.height}-${style}.png`});
+   await page.screenshot({path:testInfo.outputPath(`fog-stage4-${viewport.width}x${viewport.height}-${style}.png`)});
   }
  }
 });
