@@ -75,3 +75,29 @@ test('first seconds: no keyboard instruction banner covering mobile horror view'
  }
  await page.screenshot({path:test.info().outputPath('horror-first-seconds.png'),animations:'disabled'})
 });
+
+
+test('rendered corridor screenshot has real luminance variation instead of a blank GPU frame',async({page})=>{
+ await page.goto(origin,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.__PW_ROGUE_QA__?.visual&&window.__PW_TEST_STATE__?.renderer3D,{timeout:20000});
+ await page.evaluate(()=>{window.__PW_ROGUE_QA__.startSeed(222);window.__PW_ROGUE_QA__.bookmark('corridor')});
+ await page.waitForTimeout(450);
+ const image=await page.screenshot({animations:'disabled'});
+ const metrics=await page.evaluate(async data=>{
+  const im=new Image();im.src='data:image/png;base64,'+data;await im.decode();
+  const c=document.createElement('canvas');c.width=im.width;c.height=im.height;
+  const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(im,0,0);
+  const w=c.width,h=c.height,p=ctx.getImageData(0,0,w,h).data;
+  let n=0,sum=0,sum2=0,lo=255,hi=0;const levels=new Set();
+  for(let y=Math.floor(h*.36);y<h*.74;y+=7)
+   for(let x=Math.floor(w*.30);x<w*.68;x+=7){
+    const i=(y*w+x)*4,v=p[i]*.2126+p[i+1]*.7152+p[i+2]*.0722;
+    n++;sum+=v;sum2+=v*v;lo=Math.min(lo,v);hi=Math.max(hi,v);
+    levels.add(Math.floor(v/4))
+   }
+  return{deviation:Math.sqrt(Math.max(0,sum2/n-(sum/n)**2)),range:hi-lo,levels:levels.size}
+ },image.toString('base64'));
+ expect(metrics.deviation).toBeGreaterThan(6);
+ expect(metrics.range).toBeGreaterThan(35);
+ expect(metrics.levels).toBeGreaterThan(10)
+});
