@@ -11,7 +11,18 @@ let devAnimationSpeed=1;
 const $=id=>document.getElementById(id),NET=location.origin+'/pocketnet',KEY='pocket-works:crossline-5x5:';
 const read=(key,fallback='')=>{if(IS_DEV_FRAME)return fallback;try{return localStorage.getItem(KEY+key)??fallback}catch{return fallback}};
 const write=(key,val)=>{if(IS_DEV_FRAME)return;try{localStorage.setItem(KEY+key,String(val))}catch{}};
-const scoped={getItem:k=>{try{return sessionStorage.getItem(KEY+k)}catch{return null}},setItem:(k,v)=>{try{sessionStorage.setItem(KEY+k,v)}catch{}},removeItem:k=>{try{sessionStorage.removeItem(KEY+k)}catch{}}};
+// PocketNet identity-scoped room resumes across browser restarts; migrate v1
+// sessionStorage once, without allowing disposable QA frames to access it.
+const scoped={
+ getItem:k=>{if(IS_DEV_FRAME)return null;try{
+  const current=localStorage.getItem(KEY+k);if(current)return current;
+  const legacy=sessionStorage.getItem(KEY+k);
+  if(legacy){localStorage.setItem(KEY+k,legacy);sessionStorage.removeItem(KEY+k)}
+  return legacy;
+ }catch{return null}},
+ setItem:(k,v)=>{if(IS_DEV_FRAME)return;try{localStorage.setItem(KEY+k,v)}catch{}},
+ removeItem:k=>{if(IS_DEV_FRAME)return;try{localStorage.removeItem(KEY+k);sessionStorage.removeItem(KEY+k)}catch{}}
+};
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const symbols={up:'↑',down:'↓',left:'←',right:'→',shield:'▣'};
 let profile=null,sound=read('sound','on')==='on',difficulty=read('difficulty','normal');
@@ -20,6 +31,7 @@ document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
 let plan=[],attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
 let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null;
+let roomVersion='v1',opponentDisconnected=false,pendingForfeitLeave=false,forfeitWatchdog=0;
 const roomQuery=new URLSearchParams(location.search).get('room')?.trim()||'';
 const latest=()=>mode==='online'?server:offline;
 const game=()=>latest()?.match;
@@ -27,7 +39,7 @@ const side=()=>mode==='online'?server?.side:mode==='hotseat'?offline?.turn:'A';
 const ready=()=>mode==='online'?server?.ready||{A:false,B:false}:{A:!!offline?.pending?.A,B:!!offline?.pending?.B};
 const score=()=>mode==='online'?server?.score||{A:0,B:0}:offline?.score||{A:0,B:0};
 const isPlanning=()=>latest()?.phase==='planning';
-const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen;
+const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen||pendingForfeitLeave;
 function soundFX(type='tap'){
  if(!sound&&!IS_DEV_FRAME)return;
  try{
@@ -47,31 +59,64 @@ function show(view){screen=view;for(const id of ['menu','difficultyView','lobby'
 function modal(kicker,title,body,main,alt,third){
  modalOpen=true;const data=[['modalMain',main],['modalAlt',alt],['modalThird',third]];
  $('modalKicker').textContent=kicker;$('modalTitle').textContent=title;$('modalBody').textContent=body;
- data.forEach(([id,entry])=>{const b=$(id);b.classList.toggle('hidden',!entry);if(entry){b.textContent=entry.label;b.onclick=()=>{closeModal();entry.action?.();}}});
+ data.forEach(([id,entry])=>{const b=$(id);b.classList.toggle('hidden',!entry);b.disabled=false;if(entry){b.textContent=entry.label;b.onclick=()=>{closeModal();entry.action?.();}}});
  $('modal').classList.remove('hidden');
 }
-function closeModal(){modalOpen=false;$('modal').classList.add('hidden');if(screen==='play')render();}
-function confirmReturn(){modal('ПАУЗА','Дуэль на паузе','Выход из сетевой комнаты считается сдачей текущей партии.',{label:'Продолжить',action:()=>{}},
-  {label:'Повтор раундов',action:openReplay},{label:'В меню',action:leaveToMenu});}
+function closeModal(){if(pendingForfeitLeave)return;modalOpen=false;$('modal').classList.add('hidden');if(screen==='play')render();}
+function confirmReturn(){
+ const playing=mode==='online'&&server?.phase==='planning';
+ modal('ПАУЗА','Дуэль на паузе',playing?
+  'Сдача присуждает победу сопернику. Кратковременный обрыв связи сдачей не считается.':'Партию можно продолжить после паузы.',
+  {label:'Продолжить',action:()=>{}},
+  {label:'Повтор раундов',action:openReplay},
+  {label:playing?'Сдаться и выйти':'В меню',action:()=>leaveToMenu()});
+}
 function showRules(){modal('ПРАВИЛА','Предугадай противника','Каждый раунд оба игрока скрытно выбирают 5 команд. Перемещения выполняются одновременно, затем срабатывают атаки и щиты. Атака один раз за раунд: отмечай соседние направления (и свою клетку). Щит один раз за раунд. Направление, выбранное для атаки, нельзя использовать для движения в этом плане, и наоборот. В 4-м раунде после первого шага внешний контур обрушится.',{label:'Понятно',action:()=>{}});}
-function storeOffline(){if(offline)write('saved',JSON.stringify({mode,offline}));}
+function storeOffline(){if(offline)write('saved',JSON.stringify({mode,offline,draft:mode==='hotseat'&&offline.pending?.A&&offline.turn==='A'?[]:plan}));}
 function resumeOffer(){
  let cached;try{cached=JSON.parse(read('saved','null'))}catch{}
  document.getElementById('resume')?.remove();
  if(!cached?.offline?.match||cached.offline.phase==='finished')return;
  const btn=document.createElement('button');btn.id='resume';btn.className='minor';btn.textContent='Продолжить незавершённую партию';
- btn.onclick=()=>{leaveNet(false);mode=cached.mode;offline=cached.offline;plan=[];attackMode=false;animating=false;show('play');render()};
+ btn.onclick=()=>{
+  leaveNet(false);mode=cached.mode;offline=cached.offline;plan=Array.isArray(cached.draft)?cached.draft.slice(0,STEPS):[];attackMode=false;animating=false;
+  show('play');render();
+  if(mode==='hotseat'&&offline?.pending?.A&&!offline?.pending?.B&&offline.turn==='A')handoff();
+ };
  $('menu').querySelector('.menu-controls').append(btn);
 }
 function leaveNet(navigate=true){
+ clearTimeout(forfeitWatchdog);pendingForfeitLeave=false;opponentDisconnected=false;roomVersion='v1';
  const active=net;net=null;
  if(active){try{if(connected&&active.roomId)active.leaveRoom()}catch{}active.roomId=null;active.persist();active.close()}
  connected=false;busy=false;server=null;roomId='';me=null;
  if(navigate){mode='menu';show('menu');resumeOffer();}
 }
-function leaveToMenu(){
+function leaveToMenu(force=false){
+ if(!force&&mode==='online'&&server?.phase==='planning'&&!server?.match?.outcome){
+  if(roomVersion!=='v2'){leaveToMenu(true);toast('Старая комната v1: сдача не фиксируется');return;}
+  if(!connected){
+   modal('НЕТ СЕТИ','Невозможно подтвердить сдачу','Остаться и дождаться сети или выйти без подтверждения результата?',
+    {label:'Остаться',action:()=>{}},{label:'Выйти без подтверждения',action:()=>leaveToMenu(true)});
+   return;
+  }
+  pendingForfeitLeave=true;
+  if(!send({type:'forfeit'})){pendingForfeitLeave=false;return;}
+  modal('СДАЧА','Подтверждаем результат','Дожидаемся ответа сервера.',{label:'Ожидание сервера…',action:()=>{}});
+  $('modalMain').disabled=true;
+  clearTimeout(forfeitWatchdog);
+  forfeitWatchdog=setTimeout(()=>{
+   if(!pendingForfeitLeave)return;
+   pendingForfeitLeave=false;
+   modal('НЕТ ПОДТВЕРЖДЕНИЯ','Сервер не ответил','Раунд может продолжаться. Повторить сдачу или выйти из комнаты?',
+    {label:'Повторить',action:()=>leaveToMenu()},{label:'Выйти из комнаты',action:()=>leaveToMenu(true)});
+  },9000);
+  return;
+ }
+ if(mode!=='online')storeOffline(); // Keep any unfinished local draft.
  gameToken++;clearTimeout(replayTimer);replayPaused=true;animating=false;attackMode=false;plan=[];
- if(mode==='online')leaveNet(false);else storeOffline();
+ modalOpen=false;$('modal').classList.add('hidden');
+ if(mode==='online')leaveNet(false);
  mode='menu';show('menu');resumeOffer();
 }
 function localStart(kind){
@@ -79,15 +124,16 @@ function localStart(kind){
  plan=[];attackMode=false;animating=false;showingOutcome=false;show('play');storeOffline();soundFX('tap');
 }
 function handoff(){
+ plan=[];attackMode=false;attackDirs=[];render();
  modal('ЛОКАЛЬНАЯ ДУЭЛЬ','Передай устройство','Игрок А закончил планирование. Теперь пять команд выбирает игрок Б. План соперника скрыт.',{label:'Игрок Б готов',action:()=>{
   offline.turn='B';plan=[];attackMode=false;show('play');render();storeOffline();
  }});
 }
 function submitLocal(){
  const g=offline.match,who=side(),err=validatePlan(plan);if(err){toast('План недопустим');soundFX('error');return;}
- offline.pending[who]=JSON.parse(JSON.stringify(plan));soundFX('plan');
+ offline.pending[who]=JSON.parse(JSON.stringify(plan));plan=[];attackMode=false;attackDirs=[];soundFX('plan');
  if(mode==='solo'){
-  offline.pending.B=aiPlan(g,offline.pending.A,difficulty);
+  offline.pending.B=aiPlan(g,null,difficulty);
  }else if(!offline.pending.B){handoff();storeOffline();return;}
  const oldRound=g.round,record=simulateRound(g,offline.pending);
  offline.match=record.match;offline.phase=offline.match.outcome?'finished':'planning';
@@ -95,9 +141,13 @@ function submitLocal(){
  if(offline.match.outcome&&offline.match.outcome!=='draw')offline.score[offline.match.outcome]++;
  plan=[];attackMode=false;storeOffline();animateRecord(record.record,oldRound);
 }
-function applyRemote(next,version='v1'){
+function applyRemote(next,version=roomVersion){
  if(!next||!['lobby','planning','finished'].includes(next.phase))return;
- if(version!=='v1'){toast('Версия комнаты несовместима с этим приложением');leaveNet();return;}
+ if(!['v1','v2'].includes(version)){toast('Версия комнаты несовместима с этим приложением');leaveNet();return;}
+ if(pendingForfeitLeave&&next.phase==='finished'){
+  pendingForfeitLeave=false;clearTimeout(forfeitWatchdog);
+  leaveToMenu(true);toast('Сдача записана. Победа присуждена сопернику.');return;
+ }
  const previous=server,oldKey=previous?.match?.round+':'+previous?.match?.revision;
  server=next;
  if(previous?.phase==='finished'&&next.phase==='planning'){
@@ -118,13 +168,22 @@ function applyRemote(next,version='v1'){
   attackMode=false;
  }else if(next.ownPlan?.length)plan=JSON.parse(JSON.stringify(next.ownPlan));
  render();
+ if(next.phase==='finished'&&showingOutcome&&modalOpen&&mode==='online'){
+  const enabled=next.host===me?.id&&next.players?.length===2;
+  const button=$(next.match?.replays?.length?'modalAlt':'modalMain');
+  button.disabled=!enabled;button.textContent=enabled?'Реванш':'Ждём второго игрока';
+ }
  if(next.phase==='finished'&&!showingOutcome&&!animating&&screen==='play')finish();
 }
 function wire(client){
  client.on('connected',e=>{if(net!==client)return;connected=true;me=e.player;busy=false;lobby();});
- client.on('room_joined',e=>{if(net!==client)return;roomId=e.roomId;busy=false;applyRemote(e.state,e.version);lobby();});
- client.on('game_event',e=>{if(net!==client)return;if(e.event?.type==='state')applyRemote(e.event.payload);else if(e.event?.type==='notice'){toast(String(e.event.payload));soundFX('error');}});
- client.on('presence',()=>{if(net===client){lobby();try{net.sendGame({type:'sync'})}catch{}}});
+ client.on('room_joined',e=>{if(net!==client)return;roomId=e.roomId;roomVersion=e.version||'v1';busy=false;opponentDisconnected=false;applyRemote(e.state,roomVersion);lobby();});
+ client.on('game_event',e=>{if(net!==client)return;if(e.event?.type==='state')applyRemote(e.event.payload,roomVersion);else if(e.event?.type==='notice'){toast(String(e.event.payload));soundFX('error');}});
+ client.on('presence',e=>{if(net===client){
+  if(e?.disconnected&&e.disconnected!==me?.id)opponentDisconnected=true;
+  else if(!e?.disconnected)opponentDisconnected=false;
+  lobby();render();try{net.sendGame({type:'sync'})}catch{}
+ }});
  client.on('disconnected',()=>{if(net===client){connected=false;toast('Переподключаемся…');lobby();render()}});
  client.on('room_closed',()=>{if(net===client){leaveToMenu();toast('Комната закрыта')}});
  client.on('error',e=>{if(net!==client)return;busy=false;const errors={room_not_found:'Комната не найдена',room_full:'В комнате уже два игрока',game_unavailable:'Правила ещё не опубликованы',match_in_progress:'Матч уже идёт',already_in_room:'Ты уже в комнате',room_version_unavailable:'Старая версия правил недоступна'};toast(errors[e.code]||e.code||'Ошибка PocketNet');lobby()});
@@ -190,7 +249,7 @@ function enqueue(action){
   if(info.attacks||!action.dirs.length||action.dirs.some(d=>info.moved.has(d))){soundFX('error');toast('Невозможно выбрать эти направления');return;}
  }else if(action==='shield'){if(info.shielded)return;}
  else if(info.used.has(action))return;
- plan.push(action);attackMode=false;attackDirs=[];soundFX('plan');buzz(6);render(); // candidate validated on confirmation.
+ plan.push(action);attackMode=false;attackDirs=[];soundFX('plan');buzz(6);render();if(mode!=='online')storeOffline(); // candidate validated on confirmation.
 }
 function direction(d){
  if(locked()&&!attackMode)return;
@@ -214,7 +273,7 @@ function undo(){
  if(locked()&&!attackMode)return;
  if(attackMode){attackMode=false;attackDirs=[];}
  else plan.pop();
- soundFX('tap');render();
+ soundFX('tap');render();if(mode!=='online')storeOffline();
 }
 function submit(){
  if(animating||recording||modalOpen)return;
@@ -261,7 +320,7 @@ function render(){
  const picture=animFrame||{units:match.units,edgesCollapsed:match.edgesCollapsed,events:[]};
  drawBoard($('board'),picture.units,picture.edgesCollapsed,picture.events,!animating,picture.round||match.round);
  $('roundInfo').textContent='РАУНД '+Math.min(match.round,4)+' / '+MAX_ROUNDS;
- $('phaseInfo').textContent=animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
+ $('phaseInfo').textContent=mode==='online'&&!connected?'НЕТ СВЯЗИ':mode==='online'&&opponentDisconnected?'СОПЕРНИК ВНЕ СЕТИ':animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
  $('nameA').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[0])?.name||'ИГРОК А'):'ИГРОК А';
  $('nameB').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[1])?.name||'ИГРОК Б'):(mode==='solo'?'КОМПЬЮТЕР':'ИГРОК Б');
  $('winsA').textContent=sidescore.A;$('winsB').textContent=sidescore.B;
@@ -280,7 +339,7 @@ function render(){
  $('submit').textContent=finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
  $('submit').disabled=disabled||plan.length!==STEPS;
  $('attackHint').classList.toggle('hidden',!attack);
- $('boardNote').textContent=animating?'Раунд исполняется одновременно':finished?'Повтор и реванш доступны после боя':flags[turn]?'Соперник '+(flags[turn==='A'?'B':'A']?'готов':'ещё планирует'):'Направления атаки и движения не должны пересекаться.';
+ $('boardNote').textContent=mode==='online'&&!connected?'Связь потеряна. Место и отправленный план сохраняются':mode==='online'&&opponentDisconnected?'Соперник отключился: ждём возвращения или выхода из комнаты':animating?'Раунд исполняется одновременно':finished?'Повтор и реванш доступны после боя':flags[turn]?'Соперник '+(flags[turn==='A'?'B':'A']?'готов':'ещё планирует'):'Направления атаки и движения не должны пересекаться.';
  $('beat').classList.toggle('hidden',!animating);
  if(animFrame)$('beat').textContent='ШАГ '+animFrame.beat+' / '+STEPS;
 }
@@ -308,12 +367,20 @@ function finish(){
  if(showingOutcome||screen!=='play')return;
  showingOutcome=true;
  const winner=game()?.outcome,name=winner==='draw'?'Ничья':winner==='A'?'Победа игрока А':'Победа игрока Б';
+ const termination=game()?.termination;
+ const narrative=termination?.type==='forfeit'?(termination.by===side()?'Вы сдались. Победа засчитана сопернику.':'Соперник сдался. Победа записана в счёт.'):winner==='draw'?'Оба плана привели к равному исходу.':'Пять ходов решают больше, чем кажется.';
  soundFX('win');
- modal('ПАРТИЯ ОКОНЧЕНА',name,winner==='draw'?'Оба плана привели к равному исходу.':'Пять ходов решают больше, чем кажется.',
-  {label:'Смотреть повтор',action:openReplay},
-  {label:mode==='online'?(server?.host===me?.id?'Реванш':'Ждём хозяина'):'Реванш',action:rematch},
-  {label:'В меню',action:leaveToMenu});
- $('modalAlt').disabled=mode==='online'&&server?.host!==me?.id;
+ const canReplay=Boolean(game()?.replays?.length);
+ const canRematch=mode!=='online'||server?.host===me?.id&&server?.players?.length===2;
+ const again={label:canRematch?'Реванш':'Ждём второго игрока',action:rematch};
+ if(canReplay){
+  modal('ПАРТИЯ ОКОНЧЕНА',name,narrative,
+   {label:'Смотреть повтор',action:openReplay},again,{label:'В меню',action:()=>leaveToMenu()});
+  $('modalAlt').disabled=!canRematch;
+ }else{
+  modal('ПАРТИЯ ОКОНЧЕНА',name,narrative,again,{label:'В меню',action:()=>leaveToMenu()});
+  $('modalMain').disabled=!canRematch;
+ }
 }
 function rematch(){
  showingOutcome=false;gameToken++;plan=[];attackMode=false;
@@ -431,7 +498,7 @@ $('replayPlay').onclick=toggleReplay;$('replaySpeed').onclick=()=>{const list=[1
 $('replaySave').onclick=exportReplay;$('replayVideo').onclick=videoReplay;
 window.addEventListener('keydown',e=>{
  if(/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName||''))return;
- if(e.key==='Escape'){if(modalOpen)closeModal();else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
+ if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
  if(screen!=='play'||modalOpen)return;
  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
  if(map[e.key]){direction(map[e.key]);e.preventDefault()}
@@ -452,7 +519,7 @@ function startFromSession(){
  if(restored.roomId)connect('resume');
 }
 if(!IS_DEV_FRAME){
- const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.2.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+ const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.3.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
  mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
  checkNet();resumeOffer();
 }else{

@@ -84,60 +84,90 @@ export function simulateRound(match,plans){
  next.replays.push(record);next.revision++;
  return {match:next,record};
 }
-export function aiPlan(match,opponentPlan,difficulty='normal',random=Math.random){
- const config={easy:[30,.45,.28,8],normal:[60,.25,.16,5],hard:[150,.10,.05,2],expert:[300,.05,.02,1],insane:[500,.02,.01,0]}[difficulty]||[60,.25,.16,5];
- const [samples,randomness,mistakes,noise]=config;
- const opponent=opponentPlan, candidates=[];
- for(let n=0;n<samples;n++){
-  const usedMoves=new Set(),usedAttackDirs=new Set();let attack=0,shield=0;
-  const plan=[];let provisional=copy(match);
-  for(let i=0;i<STEPS;i++){
-   const me=provisional.units.B,enemy=provisional.units.A;
-   const available=dirs.filter(d=>!usedAttackDirs.has(d)&&me.x+DIRECTIONS[d][0]>=0&&me.x+DIRECTIONS[d][0]<=4&&me.y+DIRECTIONS[d][1]>=0&&me.y+DIRECTIONS[d][1]<=4);
-   const best=[...available].sort((a,b)=>{
-    const dist=d=>Math.abs(me.x+DIRECTIONS[d][0]-enemy.x)+Math.abs(me.y+DIRECTIONS[d][1]-enemy.y);
-    return dist(a)-dist(b);
-   })[0];
-   let action;
-   const adjacent=dirs.find(d=>me.x+DIRECTIONS[d][0]===enemy.x&&me.y+DIRECTIONS[d][1]===enemy.y&&!usedMoves.has(d));
-   if(!attack&&adjacent&&random()>randomness)action={type:'attack',dirs:[adjacent]};
-   else if(best&&random()>randomness)action=best;
-   else if(!shield&&random()<.28)action='shield';
-   else if(available.length)action=available[Math.floor(random()*available.length)];
-   else if(!attack)action={type:'attack',dirs:dirs.filter(d=>!usedMoves.has(d))};
-   else action='shield';
-   if(typeof action==='object'){attack++;action.dirs=action.dirs.length?action.dirs:[dirs.find(d=>!usedMoves.has(d))];action.dirs.forEach(d=>usedAttackDirs.add(d));}
-   else if(action==='shield')shield++;
-   else usedMoves.add(action);
-   if(shield>1){action=available[0]||'up';shield=1;if(action!=='up'||!usedAttackDirs.has('up'))usedMoves.add(action);}
-   plan.push(action);
-   // Preview a single simultaneous beat to inform the next AI action.
-   const dummy={...provisional,round:1,edgesCollapsed:provisional.edgesCollapsed,replays:[],outcome:null};
-   const pA=Array(5).fill('shield').map((v,k)=>k===0?opponent[i]:'up');
-   const pB=Array(5).fill('up').map((v,k)=>k===0?action:'down');
-   // Preview movement only; combat evaluation occurs for complete candidates below.
-   const oldA=dummy.units.A,oldB=dummy.units.B;
-   move(oldA,opponent[i],dummy.edgesCollapsed);move(oldB,action,dummy.edgesCollapsed);
-   if(!oldB.alive)break;
+// Solo AI never reads the player's secret five-action plan. The same tactical
+// hypotheses are used for all candidate moves; harder tiers search more and
+// rank strictly by score rather than randomly selecting among the top 50.
+function predictPlan(match,side,style,random){
+ const opponent=side==='A'?'B':'A',mine=copy(match.units[side]),rival=copy(match.units[opponent]);
+ const commands=[],moved=new Set();let shield=false,attack=false;
+ for(let beat=0;beat<STEPS;beat++){
+  const available=dirs.filter(d=>!commands.some(a=>typeof a==='object'&&a.dirs.includes(d)));
+  const dist=Math.abs(mine.x-rival.x)+Math.abs(mine.y-rival.y);
+  const validAttack=dirs.filter(d=>!moved.has(d));
+  const attacking=validAttack.length&&(!attack)&&(dist<=1&&random()<(style==='aggressive'?.78:.44)||dist===2&&style==='ambush'&&random()<.24);
+  let action;
+  if(attacking){
+   const ordered=validAttack.slice().sort((a,b)=>{
+    const cell=d=>Math.abs(mine.x+DIRECTIONS[d][0]-rival.x)+Math.abs(mine.y+DIRECTIONS[d][1]-rival.y);
+    return cell(a)-cell(b);
+   });
+   action={type:'attack',dirs:style==='aggressive'?ordered:ordered.slice(0,1+Math.floor(random()*Math.min(3,ordered.length)))};
+   attack=true;
+  }else if(!shield&&(dist<=1||style==='guard')&&random()<(style==='guard'?.58:.23)){
+   action='shield';shield=true;
+  }else{
+   const moves=available.map(d=>{
+    const x=Math.max(0,Math.min(4,mine.x+DIRECTIONS[d][0])),y=Math.max(0,Math.min(4,mine.y+DIRECTIONS[d][1]));
+    const target=Math.abs(x-rival.x)+Math.abs(y-rival.y);
+    const peril=match.edgesCollapsed&&(x===0||x===4||y===0||y===4)?20:0;
+    const edgeRisk=match.round===4&&beat===0&&(x===0||x===4||y===0||y===4)?15:0;
+    return {d,score:(style==='evasive'? -target: target)*(style==='random'?0:1)+peril+edgeRisk+(random()-.5)*(style==='random'?16:style==='evasive'?2:3)};
+   });
+   moves.sort((a,b)=>a.score-b.score);
+   action=moves[0]?.d||(!shield?'shield':dirs.find(d=>!moved.has(d))||'up');
+   if(action==='shield')shield=true;
   }
-  // If a candidate dies before five beats, fill its remaining slots legally.
-  while(plan.length<5){
-   const choices=dirs.filter(d=>!usedAttackDirs.has(d));
-   const a=choices[0]||(!shield?'shield':null);
-   if(!a)break;
-   plan.push(a);if(a==='shield')shield++;else usedMoves.add(a);
+  commands.push(action);
+  if(typeof action==='string'&&DIRECTIONS[action]){moved.add(action);move(mine,action,match.edgesCollapsed)}
+  // Opponent hypotheses are deliberately imperfect; avoid using actual orders.
+  if(beat<STEPS-1&&style==='aggressive'&&random()<.42){
+   const choices=dirs.filter(d=>{
+    const [dx,dy]=DIRECTIONS[d],x=rival.x+dx,y=rival.y+dy;
+    return x>=0&&x<=4&&y>=0&&y<=4;
+   });
+   if(choices.length){const toward=choices.sort((a,b)=>{
+    const delta=d=>{const [dx,dy]=DIRECTIONS[d];return Math.abs(rival.x+dx-mine.x)+Math.abs(rival.y+dy-mine.y)};
+    return delta(a)-delta(b);
+   })[0];move(rival,toward,false);}
   }
-  if(validatePlan(plan))continue;
-  const result=simulateRound(match,{A:opponent,B:plan}).match;
-  const a=result.units.A,b=result.units.B;
-  let value=!b.alive&&!a.alive?-50:!b.alive?-100:!a.alive?200:10-Math.abs(a.x-b.x)-Math.abs(a.y-b.y);
-  if(a.alive&&b.alive&&Math.abs(a.x-b.x)+Math.abs(a.y-b.y)===1)value+=20;
-  if(result.edgesCollapsed&&edge(b))value-=40;
-  value+=(random()*2-1)*(noise+random()*noise*.5);
-  if(random()<mistakes)value+=(random()-.5)*14;
-  candidates.push({plan,value});
  }
- candidates.sort((a,b)=>b.value-a.value);
- const count=Math.max(1,Math.round(1/randomness));
- return copy(candidates[Math.floor(random()*Math.min(candidates.length,count))]?.plan||['up','down','left','right','shield']);
+ return validatePlan(commands)?['up','down','left','right','shield']:commands;
+}
+function evaluatePlan(match,plan,opponents,difficulty){
+ const scores=[];
+ for(const sample of opponents){
+  const next=simulateRound(match,{A:sample,B:plan}).match;
+  const a=next.units.A,b=next.units.B;
+  let score=next.outcome==='B'?260:next.outcome==='A'?-280:next.outcome==='draw'?-16:0;
+  if(b.alive&&a.alive){
+   const distance=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
+   score+=12-distance*1.6;
+   if(distance===1)score+=4;
+   if(next.round===4&&edge(b))score-=30;
+  }
+  scores.push(score);
+ }
+ const mean=scores.reduce((a,b)=>a+b,0)/scores.length;
+ // On top difficulty, reward consistent survival instead of accidental lucky wins.
+ const risk={easy:0,normal:0,hard:.06,expert:.12,insane:.18}[difficulty]||0;
+ return mean*(1-risk)+Math.min(...scores)*risk;
+}
+export function aiPlan(match,_hiddenPlayerPlan,difficulty='normal',random=Math.random){
+ const levels={
+  easy:{candidates:24,predictions:3,noise:22,policies:['random','aggressive']},
+  normal:{candidates:60,predictions:4,noise:9,policies:['random','aggressive','ambush']},
+  hard:{candidates:130,predictions:6,noise:3,policies:['aggressive','ambush','guard','evasive']},
+  expert:{candidates:240,predictions:9,noise:.6,policies:['aggressive','ambush','guard','evasive']},
+  insane:{candidates:360,predictions:12,noise:0,policies:['aggressive','ambush','guard','evasive']}
+ };
+ const config=levels[difficulty]||levels.normal;
+ const hypotheses=Array.from({length:config.predictions},(_,i)=>predictPlan(match,'A',['aggressive','ambush','guard','random'][i%4],random));
+ let best=null,bestScore=-Infinity;
+ for(let i=0;i<config.candidates;i++){
+  const policy=config.policies[Math.floor(random()*config.policies.length)];
+  const candidate=predictPlan(match,'B',policy,random);
+  const score=evaluatePlan(match,candidate,hypotheses,difficulty)+(random()-.5)*config.noise;
+  if(score>bestScore){bestScore=score;best=candidate}
+ }
+ return best||['up','down','left','right','shield'];
 }
