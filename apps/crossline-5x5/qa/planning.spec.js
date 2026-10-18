@@ -79,3 +79,30 @@ for(const {label,width,height} of [
   }finally{await context.close()}
  });
 }
+
+
+test('saved solo plan resumes AI resolution after reopening without losing the round',async({page})=>{
+ const errors=await startSolo(page);
+ const pending=['right','left','shield','up','down'];
+ await page.evaluate(actions=>{
+  const key='pocket-works:crossline-5x5:saved';
+  const cached=JSON.parse(localStorage.getItem(key));
+  cached.offline.pending.A=actions;
+  cached.offline.pending.B=null;
+  cached.draft=[];
+  localStorage.setItem(key,JSON.stringify(cached));
+ },pending);
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#resume')).toBeVisible({timeout:10000});
+ await page.locator('#resume').click();
+ await expect(page.locator('#play')).toBeVisible();
+ await expect.poll(async()=>page.evaluate(()=>{
+  const saved=JSON.parse(localStorage.getItem('pocket-works:crossline-5x5:saved'));
+  return saved?.offline?.match?.replays?.length||0;
+ }),{timeout:15000}).toBe(1);
+ const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:crossline-5x5:saved')));
+ expect(state.offline.pending).toEqual({A:null,B:null});
+ expect(state.offline.match.revision).toBe(1);
+ expect(state.offline.match.replays[0].plans.A).toEqual(pending);
+ expect(errors).toEqual([]);
+});

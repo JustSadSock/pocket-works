@@ -254,3 +254,12 @@
  .analysis-explainer{display:none}
 }
 @media(pointer:coarse){.archive-row-actions button{min-width:44px}.replay-step-actions button{min-height:40px}}
+
+/* Invalid directions explain their conflict on touch instead of being dead buttons. */
+.controls button.conflict{opacity:.58;filter:saturate(.36);border:1px dashed var(--color-warning);cursor:help}
+.controls button.conflict:hover:not(:disabled){filter:saturate(.6);opacity:.82}
+.controls button.conflict:active:not(:disabled){filter:saturate(1);transform:scale(.94)}
+#phaseInfo.is-ai-thinking{color:var(--color-accent);animation:arenaAIWorking 1s ease-in-out infinite}
+@keyframes arenaAIWorking{50%{opacity:.56}}
+@media(prefers-reduced-motion:reduce){#phaseInfo.is-ai-thinking{animation:none}}
+:root[data-motion="off"] #phaseInfo.is-ai-thinking{animation:none}

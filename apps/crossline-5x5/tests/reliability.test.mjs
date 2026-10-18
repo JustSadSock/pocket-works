@@ -98,7 +98,7 @@ test('client persists local drafts and guards hiding A orders during hotseat han
  assert.match(app,/localStorage\.setItem\(KEY\+k,legacy\)/);
  assert.match(app,/draft:mode==='hotseat'&&offline\.pending\?\.A&&offline\.turn==='A'\?\[\]:plan/);
  assert.match(app,/if\(mode==='hotseat'&&offline\?\.pending\?\.A&&!offline\?\.pending\?\.B&&offline\.turn==='A'\)handoff\(\)/);
- assert.match(app,/offline\.pending\[who\]=JSON\.parse\(JSON\.stringify\(plan\)\);plan=\[\];/);
+ assert.match(app,/offline\.pending\[who\]=JSON\.parse\(JSON\.stringify\(plan\)\);\s*plan=\[\];/);
  assert.match(app,/pendingForfeitLeave&&next\.phase==='finished'/);
  assert.match(app,/roomVersion!=='v2'/);
 });
