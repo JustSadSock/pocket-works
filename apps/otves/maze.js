@@ -1,3 +1,5 @@
+import { edgeMazeDimensions } from './edge-layout.js';
+
 const DIRECTIONS = [
   { key: 'n', opposite: 's', dc: 0, dr: -1 },
   { key: 'e', opposite: 'w', dc: 1, dr: 0 },
@@ -25,17 +27,7 @@ function shuffle(items, random) {
 }
 
 export function dimensionsForLevel(level, aspect = 0.65) {
-  const step = Math.max(0, level - 1);
-  if (aspect > 1.08) {
-    return {
-      cols: Math.min(17, 10 + Math.floor(step / 2)),
-      rows: Math.min(11, 7 + Math.floor(step / 3))
-    };
-  }
-  return {
-    cols: Math.min(12, 7 + Math.floor(step / 3)),
-    rows: Math.min(17, 10 + Math.floor(step / 2))
-  };
+  return edgeMazeDimensions(level,aspect);
 }
 
 export function createMaze({ cols, rows, seed }) {
