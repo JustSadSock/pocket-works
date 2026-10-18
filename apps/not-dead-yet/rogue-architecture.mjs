@@ -29,7 +29,7 @@ export function finishFor(seed,sector,room){
 export function architecturalWall(o,{x,z,px,pz,dx,dz,room,sector,seed,tile=1.27,detail=true}){
  // World.cell() says the neighbor tile is not traversable; a solid
  // plaster/concrete partition can occupy that neighbor without new collision.
- const index=finishFor(seed,sector,room),p=PALETTES[index],thick=room?.type==='bathroom'||room?.type==='toilet'?.19:.155;
+ const index=finishFor(seed,sector,room),p=PALETTES[index],wet=room?.type==='bathroom'||room?.type==='toilet',thick=wet?.19:.155;
  const axisX=dx!==0,walkFace=axisX?(dx>0?px+tile:px):(dz>0?pz+tile:pz);
  const inner=walkFace+(axisX?dx:dz)*thick*.50,mat=room?.type==='bathroom'||room?.type==='toilet'?4:room?.type==='kitchen'?2:room?2:1;
  if(axisX){
