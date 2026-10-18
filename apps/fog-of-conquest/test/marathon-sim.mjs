@@ -29,12 +29,12 @@ function invariant(g,ctx){
  if(![1,2].includes(g.state.currentPlayer))throw Error(ctx+' invalid side');
  if(g.state.gold[1]<0||g.state.gold[2]<0)throw Error(ctx+' negative gold');
  if(!Number.isInteger(g.state.turn)||g.state.turn<0)throw Error(ctx+' invalid turn');
- const ids=new Set(),places=new Set();
+ const ids=new Set(),places=new Map();
  for(const u of g.units){
   if(ids.has(u.id))throw Error(ctx+' duplicate unit id');ids.add(u.id);
   const key=u.r+','+u.c;
-  if(places.has(key))throw Error(ctx+' overlapping armies at '+key);
-  places.add(key);
+  if(places.has(key))throw Error(ctx+' overlapping armies at '+key+' '+JSON.stringify([places.get(key),u]));
+  places.set(key,u);
   if(u.r<0||u.c<0||u.r>=g.rows||u.c>=g.cols||
     !Number.isFinite(u.mp)||u.mp<0||!Number.isFinite(u.hp)||
     u.hp<=0||u.hp>UNIT_TYPES[u.type].hpMax)
@@ -67,6 +67,7 @@ function runCampaign({level=6,seed=1,size='small',maxHalfTurns=60}={}){
   if(result.error){metric.rejected++;return false;}
   if(result.state===before)throw Error('accepted order not copied');
   g=result.state;metric.accepted++;
+  invariant(g,'opponent order '+JSON.stringify(action)+' seed '+seed+' level '+level);
   metric[action.type]=(metric[action.type]||0)+1;
   return true;
  }
