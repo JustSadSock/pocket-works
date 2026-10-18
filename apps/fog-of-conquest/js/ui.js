@@ -1173,6 +1173,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // === spawn ===
   function spawn(type,r,c){
     const p=state.currentPlayer, cost=UNIT_TYPES[type].cost;
+    if(units.length>=140){reportSave('Лимит армии: 140 отрядов.',true);return;}
     if(state.gold[p]<cost) return;
     const unit={id:nextUnitId++,r,c,owner:p,type,hp:UNIT_TYPES[type].hpMax,mp:0,startR:r,startC:c};
     units.push(unit);
@@ -1184,20 +1185,19 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   // === checkVictory ===
-  function checkVictory(){
-    if(onlineGame)return; // Projected enemy data cannot be used to declare local victory.
-    if(state.turn===0) return;      // не проверяем до первого хода
-    if(gameOver) return;
-    [1,2].forEach(p=>{
-      let bases=buildings.filter(b=>b.owner===p&& (b.gen ?? BUILD_TYPES[b.type].gen)===0).length,
-          unts=units.filter(u=>u.owner===p).length,
-          other=p===1?2:1;
-      if(bases===0&&unts===0) endGame(other);
-      else if(bases===0&&unts>0){
-        if(state.grace[p]===null) state.grace[p]=5;
-        else if(--state.grace[p]<=0) endGame(other);
-      } else state.grace[p]=null;
-    });
+  // Five completed turns by the affected side, never five redraws/actions.
+  // Military buildings (gen=0) retain the original game's base definition.
+  function checkVictory(endedSide=null){
+    if(onlineGame||state.turn===0||gameOver)return;
+    for(const p of [1,2]){
+      const bases=buildings.filter(b=>b.owner===p&&(b.gen??BUILD_TYPES[b.type].gen)===0).length;
+      const alive=units.filter(u=>u.owner===p).length;
+      if(!bases&&!alive){endGame(3-p);return;}
+      if(!bases){
+        if(state.grace[p]===null)state.grace[p]=5;
+        else if(endedSide===p&&--state.grace[p]<=0){endGame(3-p);return;}
+      }else state.grace[p]=null;
+    }
   }
 
   function endGame(w){
@@ -1788,6 +1788,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     units.filter(u=>u.owner===state.currentPlayer).forEach(u=>{
       u.mp=UNIT_TYPES[u.type].move; u.startR=u.r; u.startC=u.c;
     });
+    // Check the rescue clock only when an actual player finishes a turn.
+    checkVictory(prev);
     recordTurn(); updateAll();
     if(!aiMode)window.FogCenterCamera?.(state.currentPlayer);
   }
