@@ -54,6 +54,7 @@ async function verify(page,label,evidence) {
   assert.equal(errors.length,0,label+': page errors: '+errors.join(' | '));
   assert.ok(status.visible,label+': 3D canvas must be visible');
   assert.ok(status.screenWidth>0&&status.screenHeight>0,label+': actual GPU canvas');
+  assert.notEqual(status.playTime,'00:00.00',label+': the HUD timer must visibly advance');
   assert.equal(status.glError,0,label+': no GL error after draw');
   await mkdir(evidence.dir,{recursive:true});
   await page.screenshot({path:join(evidence.dir,'optics-'+label+'.png')});
