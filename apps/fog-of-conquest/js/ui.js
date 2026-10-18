@@ -1668,6 +1668,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(saveBtn){
       saveBtn.style.display = (!onlineGame && startPanel.style.display === 'none') ? 'block' : 'none';
     }
+    const exportCurrent=document.getElementById('fogExportCurrentBtn');
+    if(exportCurrent)exportCurrent.style.display=(!onlineGame&&startPanel.style.display==='none'
+      &&map.length)?'block':'none';
     settingsOverlay.style.display='flex';
   });
 
@@ -1738,6 +1741,48 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(saveBtn){
     saveBtn.addEventListener('click', saveGame);
   }
+  function downloadParty(payload){
+    // Export is an explicit gesture; never upload personal offline play data.
+    const valid=window.FogSaveSchema.normalize(payload);
+    const packed=window.FogReplayCodec.packSave(valid);
+    const blob=new Blob([JSON.stringify(packed)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download='fog-conquest-'+new Date(packed.timestamp).toISOString().slice(0,10)+'.json';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+    reportSave('Файл партии подготовлен для скачивания.');
+  }
+  document.getElementById('fogExportCurrentBtn')?.addEventListener('click',()=>{
+    if(onlineGame||startPanel.style.display!=='none'||!map.length){
+      reportSave('Экспорт доступен только для локальной партии.',true);return;
+    }
+    try{downloadParty(safeSavePayload());}
+    catch(e){reportSave('Экспорт не удался: '+String(e?.message||e),true);}
+  });
+  const importButton=document.getElementById('fogImportSaveBtn');
+  const importInput=document.getElementById('fogImportSaveInput');
+  importButton?.addEventListener('click',()=>importInput?.click());
+  importInput?.addEventListener('change',async()=>{
+    const file=importInput.files?.[0];
+    importInput.value='';
+    if(!file)return;
+    if(file.size>3*1024*1024){
+      reportSave('Файл слишком большой (максимум 3 МБ).',true);return;
+    }
+    try{
+      const raw=JSON.parse(await file.text());
+      // Import never overwrites the active match or PocketNet session.
+      const normalized=window.FogSaveSchema.normalize(raw);
+      const archive=window.FogReplayCodec.packSave(normalized);
+      const key=SAVE_PREFIX+archive.timestamp+'-import-'+Date.now();
+      localStorage.setItem(key,JSON.stringify(archive));
+      populateLoadList();
+      reportSave('Партия импортирована. Выбери её в списке для загрузки.');
+    }catch(e){
+      reportSave('Импорт отклонён: '+String(e?.message||e),true);
+    }
+  });
 
   if(loadBtn){
     loadBtn.addEventListener('click', ()=>{
@@ -1761,7 +1806,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
       const date=new Date(s.timestamp).toLocaleString();
       row.innerHTML = `<span>${date}</span>`+
         `<span><button data-key="${s.key}" class="loadBtn game-btn" data-i18n="loadSave">${t('loadSave')}</button>`+
-        `<button data-key="${s.key}" class="delBtn game-btn" data-i18n="deleteSave">${t('deleteSave')}</button></span>`;
+        `<button data-key="${s.key}" class="delBtn game-btn" data-i18n="deleteSave">${t('deleteSave')}</button>`+
+        `<button data-key="${s.key}" class="exportBtn game-btn">Экспорт</button></span>`;
       loadList.appendChild(row);
     });
     applyStrings();
@@ -1778,6 +1824,13 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }else if(e.target.classList.contains('delBtn')){
       deleteSave(key);
       populateLoadList();
+    }else if(e.target.classList.contains('exportBtn')){
+      try{
+        const raw=JSON.parse(localStorage.getItem(key));
+        downloadParty(raw);
+      }catch(error){
+        reportSave('Не удалось экспортировать сохранение: '+String(error?.message||error),true);
+      }
     }
   });
 
