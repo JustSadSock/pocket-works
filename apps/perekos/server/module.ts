@@ -256,3 +256,105 @@ function validState(s){
  &&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&n<=4);
 }
 
+
+
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=1;
+const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false};
+const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
+const side=(s,id)=>s.seats.indexOf(id);
+const safeInput=v=>{
+ if(!v||typeof v!=='object'||Array.isArray(v)||!v.aim)return null;
+ const {x,y}=v,ax=v.aim.x,ay=v.aim.y;
+ if(![x,y,ax,ay].every(n=>typeof n==='number'&&Number.isFinite(n))||Math.abs(x)>1.01||Math.abs(y)>1.01||ax<0||ax>W||ay<0||ay>H)return null;
+ const m=Math.max(1,Math.hypot(x,y));return {x:x/m,y:y/m,aim:{x:ax,y:ay},attack:v.attack===true,shield:v.shield===true,dash:v.dash===true};
+};
+function beginNet(s){
+ s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff));
+ for(const a of s.match.actors)a.runes=['on_cast','ball'];
+ startRound(s.match);s.phase='fight';s.offers=[[],[]];s.picked=[false,false];s.ready=[false,false];
+ s.inputs=[{...ZERO},{...ZERO}];s.seq=[-1,-1];s.seen=[clock(),clock()];s.at=clock();s.credit=0;s.lastEmit=0;s.revision++;
+}
+function advanceNet(s){
+ if(s.phase!=='fight')return false;
+ const now=clock(),delta=Math.max(0,Math.min(230,now-s.at));s.at=now;
+ if(s.seen.some(t=>now-t>2000)){s.credit=0;return false}
+ s.credit=Math.min(230,s.credit+delta);
+ let steps=0;
+ while(s.credit>=1000/60&&steps<12&&s.match.phase==='fight'){tick(s.match,s.inputs[0],STEP,s.inputs[1]);s.credit-=1000/60;steps++}
+ if(s.match.phase==='draft'){
+  s.phase='draft';s.offers=[0,1].map(i=>eligibleOffers(s.match,i));s.picked=[false,false];s.ready=[false,false];s.revision++;return true;
+ }
+ if(s.match.phase==='result'){s.phase='result';s.revision++;return true}
+ return steps>0;
+}
+function chooseNet(s,i,id,replace){
+ if(s.phase!=='draft'||s.picked[i]||!s.offers[i].includes(id))return false;
+ const list=s.match.actors[i].runes;
+ if(list.length===5){if(!Number.isInteger(replace)||replace<0||replace>=5)return false;list[replace]=id}
+ else list.push(id);
+ if(!legalRunes(list))return false;
+ s.picked[i]=true;s.revision++;return true;
+}
+function reorderNet(s,i,list){
+ if(s.phase!=='draft'||!s.picked[i]||s.ready[i]||!legalRunes(list))return false;
+ const old=s.match.actors[i].runes;
+ if(old.length!==list.length||[...old].sort().join('|')!==[...list].sort().join('|'))return false;
+ s.match.actors[i].runes=[...list];s.revision++;return true;
+}
+function readyNet(s,i,list){
+ if(!reorderNet(s,i,list))return false;
+ s.ready[i]=true;s.revision++;
+ if(s.ready.every(Boolean)){startRound(s.match);s.phase='fight';s.seq=[-1,-1];s.inputs=[{...ZERO},{...ZERO}];s.seen=[clock(),clock()];s.at=clock();s.credit=0}
+ return true;
+}
+function viewForPlayer({state:s,player,players}){
+ const i=side(s,player.id);
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:1,match:s.match,
+  players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true})),
+  offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
+  connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
+}
+const module={
+ protocolVersion:1,
+ createRoom({player}){return {state:{host:player.id,seats:[player.id],phase:'lobby',match:null,revision:0,
+  offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
+  seen:[clock(),clock()],at:clock(),credit:0,lastEmit:0}}},
+ onJoin({state:s,player,players}){
+  if(s.seats.length>=2||players.length>2)throw Error('room_full');
+  if(!['lobby','result'].includes(s.phase))throw Error('match_in_progress');
+  s.seats.push(player.id);s.seen[1]=clock();s.revision++;return {state:s,events:updates()};
+ },
+ onLeave({state:s,player}){
+  const i=side(s,player.id);if(i<0)return {state:s,events:[]};
+  if(s.match&&!['lobby','result'].includes(s.phase)){
+   s.phase='result';s.match.phase='result';s.match.champion=1-i;s.match.score[1-i]=4;
+  }
+  s.seats=s.seats.filter(id=>id!==player.id);if(s.host===player.id)s.host=s.seats[0]||'';
+  s.revision++;return {state:s,events:updates()};
+ },
+ viewForPlayer,
+ onMessage({state:s,player,payload}){
+  const i=side(s,player.id);if(i<0)return {state:s,events:[]};
+  const p=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
+  const out=(events=updates())=>({state:s,events});
+  if(p.type==='sync'){s.seen[i]=clock();s.at=clock();return out([{type:'state',to:player.id,payload:null}])}
+  if(p.type==='start'||p.type==='rematch'){
+   if(s.host!==player.id)return out(warn(player.id,'Матч запускает создатель комнаты.'));
+   if(s.seats.length!==2)return out(warn(player.id,'Нужны два игрока.'));
+   if((p.type==='start'&&s.phase!=='lobby')||(p.type==='rematch'&&s.phase!=='result'))return out([]);
+   beginNet(s);return out();
+  }
+  if(p.type==='input'){
+   if(s.phase!=='fight'||p.round!==s.match.round||!Number.isSafeInteger(p.seq)||p.seq<=s.seq[i]||p.seq>s.seq[i]+100000)return out([]);
+   const input=safeInput(p.control);if(!input)return out(warn(player.id,'Неверная команда.'));
+   const moved=advanceNet(s);s.inputs[i]=input;s.seq[i]=p.seq;s.seen[i]=clock();
+   if(moved||clock()-s.lastEmit>115){s.lastEmit=clock();s.revision++;return out()}
+   return out([]);
+  }
+  if(p.type==='pick')return chooseNet(s,i,p.rune,p.replace)?out():out(warn(player.id,'Такую руну взять нельзя.'));
+  if(p.type==='order')return reorderNet(s,i,p.runes)?out():out(warn(player.id,'Порядок рун не подходит.'));
+  if(p.type==='ready')return readyNet(s,i,p.runes)?out():out(warn(player.id,'Сначала выбери руну.'));
+  return out([]);
+ }
+};
+export default module;
