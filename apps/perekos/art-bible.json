@@ -114,10 +114,10 @@
       "tool": "canvas2d",
       "source": "core.mjs",
       "output": "app.js",
-      "role": "Small top-down hat, coat, face and staff identify the two players even at phone scale.",
-      "acceptance": "Two characters remain visually different by coat color and detail while their health changes in real time.",
-      "integration": "The renderer receives game state coordinates, portrait palette hints and current effects as explicit arguments.",
-      "provenance": "Original custom-painted pixel rectangles and no derived third-party character sprites.",
+      "role": "The authenticated PocketWorks account portrait, hat and MASKOT species control the pixel mage, and its rune-specific overlay changes with the equipped build.",
+      "acceptance": "Eight standard presets, three official MASKOT animal shapes and a drawn PNG/WebP keep visibly distinct coats and portraits; a profile swap appears between rounds, never inside a live fight.",
+      "integration": "The app uses avatar-profile.mjs for same-account Pocket ID/Pocket Social validation, then mage-art.mjs composes base appearance and rune gear in both menu and battle without changing collision.",
+      "provenance": "Original programmatically authored Canvas sprite shapes; existing account images are treated as user-controlled raster data and never injected as SVG or HTML.",
       "maxBytes": 250000
     },
     {
@@ -150,12 +150,17 @@
     "risks": [
       "Wizard and bolt may become too small on a narrow phone.",
       "Virtual thumb controls may obscure a spell near the bottom wall.",
-      "Three rune choices may overflow on a short iPhone viewport."
+      "Three rune choices may overflow on a short iPhone viewport.",
+      "Owner-drawn artwork may decode slowly; retain guest sprite and swap only at a round boundary.",
+      "Large or invalid account raster must never freeze Canvas rendering or enter match storage.",
+      "Special rune armor must not conceal an otherwise recognizable animal silhouette."
     ],
     "comparisons": [
       "Compare home and fight screenshots at 390x844: background remains readable, menu hides cleanly.",
       "Compare fight and rune-draft screens: choices appear above scene without vertical overflow.",
-      "Compare fight state to not-dead-yet and meat-exe: different view axis, text density and ability placement."
+      "Compare fight state to not-dead-yet and meat-exe: different view axis, text density and ability placement.",
+      "Compare frog/cat/rabbit profile preview vs combat sprite to verify both identify the same account.",
+      "Compare basic and armor/clone/heat rune builds: each adds features without erasing the original hat and ear outline."
     ]
   }
 }
