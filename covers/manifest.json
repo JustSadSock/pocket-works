@@ -3432,7 +3432,7 @@
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
-    "revision": "625c43646d2bcd6835b9b178ec629dcc7c1f07a5",
+    "revision": "48de9e4c7e54def25fa8382de398743c37b49b58",
     "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
@@ -3444,8 +3444,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "625c43646d2bcd6835b9b178ec629dcc7c1f07a5",
-    "lastAttemptAt": "2026-10-18T11:40:21.196Z"
+    "lastAttemptRevision": "48de9e4c7e54def25fa8382de398743c37b49b58",
+    "lastAttemptAt": "2026-10-18T12:43:30.673Z"
   },
   "not-dead-yet": {
     "note": "No frame passed image-content checks",
