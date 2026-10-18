@@ -69,7 +69,14 @@
       "tier": "smoke",
       "files": [
         "qa/journey.spec.js",
-        "qa/roguelike.spec.js",
+        "qa/roguelike.spec.js"
+      ]
+    },
+    {
+      "id": "visual-regression",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
         "qa/visual-baseline.spec.js"
       ]
     }
