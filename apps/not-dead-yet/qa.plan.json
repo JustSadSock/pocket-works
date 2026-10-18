@@ -21,7 +21,8 @@
         "tests/keyboard.test.mjs",
         "tests/visual-baseline.test.mjs",
         "tests/floorplans.test.mjs",
-        "tests/rogue-doors.test.mjs"
+        "tests/rogue-doors.test.mjs",
+        "tests/architecture-cache.test.mjs"
       ]
     },
     {
