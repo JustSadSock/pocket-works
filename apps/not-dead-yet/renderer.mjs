@@ -610,7 +610,7 @@ export class Renderer{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.uniform1i(this.u.paintedAtlas,0);this.textureBytes=atlas.pixels.byteLength;
-  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;
+  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;this.visualMetrics={staticTriangles:0,staticVertices:0,staticBytes:0,meshBuildMs:0,meshUploadMs:0,dynamicTriangles:0,drawCalls:0,textureBytes:0};
   gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true});this.lost=false
  }
@@ -644,14 +644,25 @@ export class Renderer{
   if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
   const rogue=world.endless===true;
   const meshKey=rogue?'rogue:'+world.terrainRevision+':'+Math.floor(player.x/5)+':'+Math.floor(player.z/5):world.terrainRevision;
-  if(this.staticRevision!==meshKey){const mesh=rogue?rogueStaticMesh(world,player):apartmentMesh(world);
-   this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);this.staticCount=mesh.length/10;this.staticRevision=meshKey}
+  if(this.staticRevision!==meshKey){
+   const start=performance.now(),mesh=rogue?rogueStaticMesh(world,player):apartmentMesh(world);
+   const built=performance.now();this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);
+   this.staticCount=mesh.length/10;this.staticRevision=meshKey;
+   this.visualMetrics.staticTriangles=this.staticCount/3;
+   this.visualMetrics.staticVertices=this.staticCount;
+   this.visualMetrics.staticBytes=mesh.length*4;
+   this.visualMetrics.meshBuildMs=Math.round((built-start)*100)/100;
+   this.visualMetrics.meshUploadMs=Math.round((performance.now()-built)*100)/100;
+   this.visualMetrics.textureBytes=this.textureBytes;
+   this.visualMetrics.lastMeshKey=meshKey;
+  }
   const eye=[player.x*SCALE,1.54+(player.bob||0),player.z*SCALE],dir=[Math.sin(player.yaw)*Math.cos(player.pitch),-Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)];
   const proj=projection(Math.PI*.50,this.canvas.width/this.canvas.height),mvp=multiply(proj,view(eye,dir));
   const lampA=rogue?{x:Math.floor(player.x/18)*18+4.5,z:Math.floor(player.z/18)*18+4.5}:world.point('living'),
    lampB=rogue?{x:Math.floor(player.x/18)*18+13.5,z:Math.floor(player.z/18)*18+13.5}:world.point('kitchen');
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
   gl.uniform3fv(this.u.lampA,[lampA.x*SCALE,2.64,lampA.z*SCALE]);gl.uniform3fv(this.u.lampB,[lampB.x*SCALE,2.64,lampB.z*SCALE]);
+  this.visualMetrics.drawCalls=1;this.visualMetrics.dynamicTriangles=0;
   gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);gl.uniform1f(this.u.electrical,rogue?1:world.powerAvailable()?1:0);gl.uniform1f(this.u.sight,rogue?(player.sight||0):0);
   this.bind(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
   const dyn=[];
@@ -663,9 +674,9 @@ export class Renderer{
     {x:player.x*SCALE,y:1.65,z:player.z*SCALE},.85);
    phantom(dyn,e,t)
   }
-  if(dyn.length){this.upload(this.dynamicBuffer,dyn,gl.DYNAMIC_DRAW);this.bind(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10)}
+  if(dyn.length){this.upload(this.dynamicBuffer,dyn,gl.DYNAMIC_DRAW);this.bind(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10);this.visualMetrics.dynamicTriangles=dyn.length/30;this.visualMetrics.drawCalls++}
   // Proper viewmodel at the lower right: no world-space cyan marker below the camera.
   const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false});
-  if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));gl.uniform1f(this.u.electrical,1);this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10)}
+  if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));gl.uniform1f(this.u.electrical,1);this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10);this.visualMetrics.drawCalls++}
  }
 }
