@@ -7,6 +7,7 @@ import {DIRECTIONS,STEPS,MAX_ROUNDS,initialMatch,validatePlan,simulateRound,aiPl
 import {paintArena,playArenaBeat,frameBefore,drawArenaCanvas,timing} from './combat-visuals.js';
 import {trySetCommand,trySwapCommand,removeCommand,controlsFor,previewOrders,paintPlanOverlay,describeIssue} from './planning.js';
 import {HISTORY_KEY,getHistory,saveHistory,deleteHistory,captureHistory,commandLabel,outcomeText,analyzeBeat,exportMatch} from './replay-archive.js';
+import {GUIDE_OPPONENT,createGuideMatch,guideStep,guideAccept,guideReady,sanitizeMarks,cycleCellMark,paintCellMarks} from './learning.js';
 const previewRequested=new URLSearchParams(location.search).get(DEV_QUERY);
 const IS_DEV_FRAME=window.parent!==window&&DEV_SCENES.some(s=>s.id===previewRequested);
 if(!IS_DEV_FRAME)installMobileRuntime();
@@ -28,7 +29,9 @@ const scoped={
 };
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const symbols={up:'↑',down:'↓',left:'←',right:'→',shield:'▣'};
-let profile=null,sound=read('sound','on')==='on',difficulty=read('difficulty','normal'),motion=read('motion','on')!=='off';
+let profile=null,sound=read('sound','on')==='on',volume=Math.max(0,Math.min(100,Number(read('volume','70'))||0)),haptics=read('haptics','on')!=='off',difficulty=read('difficulty','normal'),motion=read('motion','on')!=='off';
+let settingsOpen=false,settingsReturnFocus=null,onlineMarkCache={};
+try{onlineMarkCache=JSON.parse(read('onlineMarks','{}'))||{}}catch{onlineMarkCache={}}
 document.documentElement.dataset.motion=motion?'on':'off';
 const storedTheme=read('theme','dark');
 document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
@@ -43,10 +46,10 @@ const side=()=>mode==='online'?server?.side:mode==='hotseat'?offline?.turn:'A';
 const ready=()=>mode==='online'?server?.ready||{A:false,B:false}:{A:!!offline?.pending?.A,B:!!offline?.pending?.B};
 const score=()=>mode==='online'?server?.score||{A:0,B:0}:offline?.score||{A:0,B:0};
 const isPlanning=()=>latest()?.phase==='planning';
-const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen||pendingForfeitLeave||thinkingAI;
+const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen||pendingForfeitLeave||thinkingAI||settingsOpen;
 const reduceMotion=()=>!motion||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
 function soundFX(type='tap'){
- if(!sound&&!IS_DEV_FRAME)return;
+ if((!sound||volume===0)&&!IS_DEV_FRAME)return;
  try{
   const A=window.AudioContext||window.webkitAudioContext;if(!A)return;
   audio ||= new A();audio.resume?.();
@@ -54,15 +57,16 @@ function soundFX(type='tap'){
   o.type=type==='win'||type==='block'?'sine':['hit','attack','collapse','fall'].includes(type)?'sawtooth':'triangle';
   const freq={tap:370,plan:440,hit:140,block:620,move:280,win:570,error:115,attack:420,shield:670,collapse:105,fall:120}[type]||340;
   o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(freq*(type==='win'?1.7:type==='collapse'?.4:.74),t+(type==='collapse'?.23:.12));
-  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(type==='hit'?.052:.032,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='collapse'?.26:.15));
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0001,(type==='hit'?.052:.032)*volume/70),t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='collapse'?.26:.15));
   o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='collapse'?.27:.16));
  }catch{}
 }
-function buzz(v=8){try{navigator.vibrate?.(v)}catch{}}
+function buzz(v=8){if(!haptics)return;try{navigator.vibrate?.(v)}catch{}}
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600)}
 function show(view){screen=view;for(const id of ['menu','difficultyView','lobby','play','replay','archive'])$(id).classList.toggle('hidden',view!==id);if(view==='play')render();if(view==='menu')refreshArchiveCount();if(view==='archive')paintArchive();}
 function modal(kicker,title,body,main,alt,third){
  modalOpen=true;const data=[['modalMain',main],['modalAlt',alt],['modalThird',third]];
+ $('pauseSettings').classList.add('hidden');
  $('modalKicker').textContent=kicker;$('modalTitle').textContent=title;$('modalBody').textContent=body;
  data.forEach(([id,entry])=>{const b=$(id);b.classList.toggle('hidden',!entry);b.disabled=false;if(entry){b.textContent=entry.label;b.onclick=()=>{closeModal();entry.action?.();}}});
  $('modal').classList.remove('hidden');
@@ -75,9 +79,10 @@ function confirmReturn(){
   {label:'Продолжить',action:()=>{}},
   {label:'Повтор раундов',action:openReplay},
   {label:playing?'Сдаться и выйти':'В меню',action:()=>leaveToMenu()});
+ $('pauseSettings').classList.remove('hidden');
 }
 function showRules(){modal('ПРАВИЛА','Предугадай противника','Каждый раунд оба игрока скрытно выбирают 5 команд. Перемещения выполняются одновременно, затем срабатывают атаки и щиты. Атака один раз за раунд: отмечай соседние направления (и свою клетку). Щит один раз за раунд. Направление, выбранное для атаки, нельзя использовать для движения в этом плане, и наоборот. В 4-м раунде после первого шага внешний контур обрушится.',{label:'Понятно',action:()=>{}});}
-function storeOffline(){if(offline)write('saved',JSON.stringify({mode,offline,draft:mode==='hotseat'&&offline.pending?.A&&offline.turn==='A'?[]:plan}));}
+function storeOffline(){if(mode==='tutorial')return;if(offline)write('saved',JSON.stringify({mode,offline,draft:mode==='hotseat'&&offline.pending?.A&&offline.turn==='A'?[]:plan}));}
 function matchSeriesId(){
  try{return crypto.randomUUID()}catch{return 'match-'+Date.now()+'-'+Math.floor(Math.random()*1e9)}
 }
@@ -729,7 +734,7 @@ function startFromSession(){
  if(restored.roomId)connect('resume');
 }
 if(!IS_DEV_FRAME){
- const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.6.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+ const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.7.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
  mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
  checkNet();resumeOffer();refreshArchiveCount();
 }else{
