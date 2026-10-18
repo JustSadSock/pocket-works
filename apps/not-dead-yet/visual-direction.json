@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "not-dead-yet",
+  "direction": {
+    "premise": "A physical abandoned maze that literally rearranges forgotten parts. Player feels alone until the corridor breathes behind them.",
+    "composition": "The 3D world fills the screen; one faint axial compass and a tiny slab of health float on top. Menu type wraps around a ghostly lens aperture rather than a card.",
+    "shapeLanguage": "Brutalist tiled service tunnels, sharp double-door apertures, bare concrete ribs, faceless rectangular sentries.",
+    "surfaceAndMaterial": "Tarnished calcium walls, streaked aged concrete, matt graphite ceilings, amber mnemonic relics, fog and hard light.",
+    "paletteLogic": "Deep petrol shadow and muted pale lime grey architecture. Amber appears only where objective or life is recoverable; bruised carmine on threats.",
+    "typography": "Tall compressed mechanical sans for status; huge tightly stacked uppercase title; no atmospheric microcopy during play.",
+    "signature": "The unchangeable four-way structural spine of every chunk is surrounded by peripheral rooms that morph only after the player leaves; a faint rotating target pointer remains stable as architecture shifts.",
+    "distinction": "Unlike GLOAMSTEP's overhead pixel board and MELT//CRYPT's ornamental combat arena, this is first-person embodied navigation through volumetric concrete with deliberately minimal controls.",
+    "spatialRationale": "Every pixel beyond occasional floating controls belongs to rendered corridors; joystick/looking surfaces use separate thumb zones with no document scrolling.",
+    "comparisons": [
+      {
+        "slug": "gloamstep",
+        "spatialDifference": "First-person WebGL field with spatial walls and fog replaces a framed top-down tile arena.",
+        "interactionDifference": "Continuous physical walking and looking replace swipe-by-tile turns."
+      },
+      {
+        "slug": "melt-crypt",
+        "spatialDifference": "No action-toolbar or heavily composed weapon frame; nearly screen-filling desolate geometric hallways.",
+        "interactionDifference": "Exposure, retreat and collecting anchors rather than projectiles and execution."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Pure authored WebGL geometry and custom light/fog shader, zero runtime CDN dependencies; generated chunks with cached vertex buffers.",
+    "focalAsset": "Stable two-cell architectural passages, procedurally carved rooms and original faceless phantom meshes."
+  },
+  "motion": {
+    "character": "Inertial head bob tied only to actual movement, no idle screen wobble.",
+    "action": "Thumb drag or mouse looks and WASD walks through real geometric rooms.",
+    "anticipation": "A low crimson hue and a distant elongated silhouette warn of a nearby genuine pursuer.",
+    "response": "Torch direction immediately reveals detail and can dispel fake phantoms; pressing sprint changes physical movement speed.",
+    "followThrough": "Collected amber mnemonic fades, counter increments and compass redirects to the next source.",
+    "interruption": "Pointer cancellation clears sticks; tab suspension pauses simulation and autosaves.",
+    "reducedMotion": "User motion reduction disables head-bob and incidental shake while preserving traversal."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#start"
+    },
+    "expectedChange": "Main menu disappears and the first-person 3D labyrinth becomes controllable with compass and health displayed.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  },
+  "architecture": {
+    "spatialLayout": "full-bleed-world",
+    "controlLocation": "perimeter",
+    "navigation": "world-travel",
+    "chromeTopology": "unframed-scene",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Move through geometric 3D corridors and collect memory sources while evading pursuers.",
+    "physicalFeedback": "Position changes with WASD/thumb; corridor parallax and torch cone move continuously; collectible disappears when reached.",
+    "spatialRationale": "Full phone width remains 3D scene. Peripheral overlays do not reduce field of view; buttons sit inside thumb reach only.",
+    "comparisons": [
+      {
+        "slug": "tyaga-duel",
+        "spatialDifference": "A continuous 3D maze seen through eye-height perspective replaces a flat single-screen competitive gravity or pulling arena.",
+        "interactionDifference": "Player explores branching hallways and survives fleeting pursuers through spatial awareness, instead of issuing short symmetric competitive pushes."
+      },
+      {
+        "slug": "axis-pals",
+        "spatialDifference": "Eye-level corridor depth and fullscreen personal horror replace the tiny cooperative warehouse seen as a planar two-avatar puzzle.",
+        "interactionDifference": "One person navigates and turns their viewpoint with continuous independent controls rather than splitting axes between two human players."
+      },
+      {
+        "slug": "chyepukha",
+        "spatialDifference": "Rendered brutalist tunnels and open 3D fog replace the paper manuscript and framed shared writing workspace.",
+        "interactionDifference": "Survival movement and exploration have immediate spatial consequences rather than alternating between text drafting and chapter reveal."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "An eye-height full-bleed 3D labyrinth, without Zamazka's tabletop image restorations and picture comparison gallery.",
+        "interactionDifference": "Continuous dual-stick physical exploration and real-time survival replaces restoring and voting on altered artworks."
+      },
+      {
+        "slug": "living-history",
+        "spatialDifference": "A narrow first-person concrete labyrinth with nearly invisible interface replaces the readable broad overhead village model.",
+        "interactionDifference": "Every swipe turns the character's eyes while movement can provoke stalkers, rather than selecting or observing historical households."
+      },
+      {
+        "slug": "folio",
+        "spatialDifference": "The player sees a foggy 3D service tunnel, not Folio's bright framed illustration and brush workbench.",
+        "interactionDifference": "Walk, turn and hide from silhouettes instead of drawing strokes, filling regions and managing layers."
+      },
+      {
+        "slug": "gloamstep",
+        "spatialDifference": "Full-bleed first-person 3D environment replaces a flat framed dungeon viewport.",
+        "interactionDifference": "Continuous twin-stick navigation replaces discrete map steps."
+      },
+      {
+        "slug": "petlya",
+        "spatialDifference": "Deep volumetric corridors replace overhead time-echo puzzle grid.",
+        "interactionDifference": "Moving and surviving while forgetting spaces replaces placing route echoes."
+      },
+      {
+        "slug": "pepelny-dozor",
+        "spatialDifference": "Eye-height corridor navigation replaces top-down abbey and bottom bell plate.",
+        "interactionDifference": "Free movement with 3D flashlight replaces pivoting a fixed lamp."
+      }
+    ]
+  }
+}
