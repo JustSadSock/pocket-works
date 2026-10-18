@@ -3,6 +3,7 @@ import {makeMaterialAtlas} from './textures.mjs';
 import {panels} from './doors.mjs';
 import {rogueStaticMesh,roguePickupsMesh} from './rogue-scene.mjs';
 import {rogueDoorMesh} from './rogue-door-visual.mjs';
+import {RogueMeshCache} from './rogue-mesh-cache.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
@@ -611,7 +612,7 @@ export class Renderer{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.uniform1i(this.u.paintedAtlas,0);this.textureBytes=atlas.pixels.byteLength;
-  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;this.visualMetrics={staticTriangles:0,staticVertices:0,staticBytes:0,meshBuildMs:0,meshUploadMs:0,dynamicTriangles:0,drawCalls:0,textureBytes:0};
+  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;this.rogueMeshCache=new RogueMeshCache({limit:3,grid:5});this.visualMetrics={staticTriangles:0,staticVertices:0,staticBytes:0,meshBuildMs:0,meshUploadMs:0,dynamicTriangles:0,drawCalls:0,textureBytes:0,cacheHits:0,cacheMisses:0,cacheEntries:0,cacheBytes:0};
   gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true});this.lost=false
  }
@@ -639,23 +640,29 @@ export class Renderer{
  }
 
  bind(buffer){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(let i=0;i<4;i++)if(this.attrs[i]>=0)gl.vertexAttribPointer(this.attrs[i],i===3?1:3,gl.FLOAT,false,40,[0,12,24,36][i])}
- upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(values),kind)}
+ upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,values instanceof Float32Array?values:new Float32Array(values),kind)}
  resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.3:1.6),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
  draw(world,player,enemies,items,flash,t,damage=0,shot=0,reload=0){
   if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
   const rogue=world.endless===true;
   const meshKey=rogue?'rogue:'+world.terrainRevision+':'+Math.floor(player.x/5)+':'+Math.floor(player.z/5):world.terrainRevision;
   if(this.staticRevision!==meshKey){
-   const start=performance.now(),mesh=rogue?rogueStaticMesh(world,player):apartmentMesh(world);
-   const built=performance.now();this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);
+   const start=performance.now(),entry=rogue?this.rogueMeshCache.get(world,player,
+    anchor=>rogueStaticMesh(world,anchor)):null;
+   const mesh=rogue?entry.data:apartmentMesh(world),built=performance.now();
+   this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);
    this.staticCount=mesh.length/10;this.staticRevision=meshKey;
    this.visualMetrics.staticTriangles=this.staticCount/3;
    this.visualMetrics.staticVertices=this.staticCount;
    this.visualMetrics.staticBytes=mesh.length*4;
-   this.visualMetrics.meshBuildMs=Math.round((built-start)*100)/100;
+   this.visualMetrics.meshBuildMs=entry?.hit?0:Math.round((built-start)*100)/100;
    this.visualMetrics.meshUploadMs=Math.round((performance.now()-built)*100)/100;
    this.visualMetrics.textureBytes=this.textureBytes;
    this.visualMetrics.lastMeshKey=meshKey;
+   this.visualMetrics.cacheHits=this.rogueMeshCache.hits;
+   this.visualMetrics.cacheMisses=this.rogueMeshCache.misses;
+   this.visualMetrics.cacheEntries=this.rogueMeshCache.size;
+   this.visualMetrics.cacheBytes=this.rogueMeshCache.bytes;
   }
   const eye=[player.x*SCALE,1.54+(player.bob||0),player.z*SCALE],dir=[Math.sin(player.yaw)*Math.cos(player.pitch),-Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)];
   const proj=projection(Math.PI*.50,this.canvas.width/this.canvas.height),mvp=multiply(proj,view(eye,dir));
