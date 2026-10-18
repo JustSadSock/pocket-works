@@ -557,9 +557,13 @@ export function originalAction(source,side,action){
    target.hp=Math.min(UNIT_TYPES[target.type].hpMax,target.hp+2);u.mp=0;log(g,p,'Отряд исцелён.');
  }else if(action.type==='spawn'){
    const b=g.buildings.find(b=>b.id===action.building),info=UNIT_TYPES[action.unitType];
+   if(!b||b.owner!==p||!info||!BUILD_TYPES[b.type]?.spawn.includes(action.unitType)||
+      action.unitType==='bog'&&!g.modeBeta)return failure('Нельзя нанять такой отряд.');
+   if(g.state.gold[p]<info.cost)return failure('Недостаточно золота.');
+   if(g.units.length>=140)return failure('Армия слишком велика.');
    if(!FogRuleKernel.canSpawn(g.map,g.units,g.buildings,g.state,b,action.unitType,
        action,UNIT_TYPES,BUILD_TYPES,g.modeBeta))
-     return failure('Нельзя нанять: проверь постройку, золото и клетку.');
+     return failure('Место для отряда недоступно.');
    g.state.gold[p]-=info.cost;g.units.push({id:g.nextUnitId++,r:action.r,c:action.c,owner:p,type:action.unitType,hp:info.hpMax,mp:0,startR:action.r,startC:action.c});
    log(g,p,'Отряд нанят.');
  }else return failure('Неизвестный приказ.');
