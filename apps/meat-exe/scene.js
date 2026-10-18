@@ -12,6 +12,15 @@ const rand = (a,b,s=0) => {
 
 export function createWorld(canvas, initialSeed) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
+  // Software rasterizers are common on headless Chromium and older devices.
+  // Detect capability, not user agent, so regular GPUs keep full detail.
+  let softwareRenderer=false;
+  try {
+    const gl=renderer.getContext();
+    const debug=gl.getExtension('WEBGL_debug_renderer_info');
+    const gpu=debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
+    softwareRenderer=/swiftshader|llvmpipe|software|softpipe/i.test(String(gpu));
+  }catch{}
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.25;
@@ -152,8 +161,8 @@ export function createWorld(canvas, initialSeed) {
     const mobile=w<900 || ('ontouchstart' in window);
     const desired=quality==='low'?1:quality==='high'?(mobile?1.32:1.55):(mobile?1.14:1.35);
     // Bound real pixel work, not only CSS size: software WebGL must never stall input.
-    const budget=mobile?1_300_000:2_200_000;
-    const pixelRatio=Math.min(window.devicePixelRatio||1,desired,Math.sqrt(budget/(w*h)));
+    const budget=softwareRenderer?310_000:mobile?1_300_000:2_200_000;
+    const pixelRatio=Math.min(window.devicePixelRatio||1,softwareRenderer?.66:desired,Math.sqrt(budget/(w*h)));
     if(w===currentWidth&&h===currentHeight&&ratio===pixelRatio) return;
     currentWidth=w;currentHeight=h;
     ratio=pixelRatio;renderer.setPixelRatio(ratio);
@@ -177,8 +186,10 @@ export function createWorld(canvas, initialSeed) {
   function getTissueAt(x,z){
     const a=Math.round(x),b=Math.round(z);
     if(Math.abs(x-a)>.49||Math.abs(z-b)>.49)return null;
-    return getTissues(Math.floor(a/CELLS_PER_CHUNK),Math.floor(b/CELLS_PER_CHUNK))
-      .find(t=>t.x===a&&t.z===b&&!openedTissues.has(t.id))||null;
+    // Do NOT compute a tissue node graph on a collision or navigation query.
+    // Loaded chunks have complete gate data; distant chunks only require floor geometry.
+    const nodes=tissueChunks.get(cellKey(Math.floor(a/CELLS_PER_CHUNK),Math.floor(b/CELLS_PER_CHUNK)));
+    return nodes?.find(t=>t.x===a&&t.z===b&&!openedTissues.has(t.id))||null;
   }
   function isFloor(x,z){return isBaseFloor(x,z)&&!getTissueAt(x,z);}
   function getTissueCount(cx,cz){return getTissues(cx,cz).filter(t=>!openedTissues.has(t.id)).length;}
@@ -423,5 +434,5 @@ export function createWorld(canvas, initialSeed) {
   }
   function end(){clearChunks();renderer.dispose();}
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
 }

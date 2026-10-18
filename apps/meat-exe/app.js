@@ -562,7 +562,7 @@ function frame(timestamp){
     // Frame-rate ceiling in manual Detail mode leaves CPU/GPU time for game input.
     // Let the browser service touch, mouse and pause events between expensive SW-WebGL frames.
     // Fast GPU systems keep the previous fast refresh rate.
-    const interval=effectiveQuality==='high'?20:effectiveQuality==='low'?20:0;
+    const interval=world?.softwareRenderer?80:effectiveQuality==='high'?20:effectiveQuality==='low'?20:0;
     const shouldPaint=mode==='playing'?(timestamp-lastPaint>=interval&&performance.now()>=paintCoolDownUntil):lastPaint===0;
     if(world&&!document.hidden&&shouldPaint){
       const elapsed=Math.min(dt,.045);lastPaint=timestamp;
@@ -581,7 +581,7 @@ function frame(timestamp){
 window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   x:state?.x??null,z:state?.z??null,hp:state?.hp??null,wave:state?.wave??null,
   score:state?.score??null,enemies:state?.enemies?.length??0,
-  saved:Boolean(validateRun(safeRead('session'))),
+  softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
