@@ -144,6 +144,7 @@
   // Pointer gestures keep the page stationary; the tactical map scrolls instead.
   viewport.addEventListener('pointerdown',e=>{
     if(e.pointerType!=='touch')return;
+    if(!pointers.size)gestureMoved=false;
     pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pointers.size===2){
       const [a,b]=[...pointers.values()];pinching=true;
@@ -172,9 +173,11 @@
   }};
   window.addEventListener('pointerup',release,{passive:true});
   window.addEventListener('pointercancel',release,{passive:true});
-  viewport.addEventListener('click',e=>{if(gestureMoved){
-    e.stopImmediatePropagation();e.preventDefault();gestureMoved=false;
-  }},true);
+  viewport.addEventListener('click',e=>{
+    if(e.detail>=2||gestureMoved){
+      e.stopImmediatePropagation();e.preventDefault();gestureMoved=false;
+    }
+  },true);
   viewport.addEventListener('dblclick',e=>{
     e.preventDefault();setZoom(zoom*1.4,e.clientX,e.clientY);
   });
@@ -220,7 +223,9 @@
     rulesToggle.textContent=lang==='en'?(open?'Hide rules':'Rules'):
       lang==='uk'?(open?'Сховати правила':'Правила'):(open?'Скрыть правила':'Правила');
   });
-  if(window.matchMedia('(max-width:720px)').matches&&!panel.classList.contains('collapsed'))
-    $('panelToggleBtn')?.click();
-  resize();scheduleMap();
+  window.addEventListener('DOMContentLoaded',()=>{
+    if(window.matchMedia('(max-width:720px)').matches&&!panel.classList.contains('collapsed'))
+      $('panelToggleBtn')?.click();
+    resize();scheduleMap();
+  });
 })();
