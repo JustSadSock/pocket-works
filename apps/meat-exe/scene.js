@@ -330,8 +330,8 @@ export function createWorld(canvas, initialSeed) {
     bolter.visible=w===0;shredder.visible=w===1;
     const portrait=canvas.clientHeight>canvas.clientWidth;
     gun.scale.setScalar(portrait?.76:1);
-    gun.position.set((portrait?.23:.17)+Math.sin(time*8)*(player.moving||0)*.012,
-      (portrait?-.28:-.16)+Math.cos(time*8)*(player.moving||0)*.008-recoil*.04,
+    gun.position.set((portrait?.10:.17)+Math.sin(time*8)*(player.moving||0)*.012,
+      (portrait?-.14:-.16)+Math.cos(time*8)*(player.moving||0)*.008-recoil*.04,
       -.20-Math.min(.23,kickPos*.2));
     gun.rotation.x=(reduced?0:Math.min(.12,kickPos*.19));
     longFlash.visible=muzzleTime>0&&muzzleKind===0;

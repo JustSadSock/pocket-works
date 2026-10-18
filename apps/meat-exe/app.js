@@ -463,7 +463,7 @@ $('weaponBtn').addEventListener('click',weaponSwitch);
 canvas.addEventListener('pointerdown',e=>{
   if(mode!=='playing'||touch||e.button!==0)return;
   if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.()?.catch?.(()=>{});
-  else{shootHeld=true;shoot();}
+  shootHeld=true;shoot(); // The first click must fire, not only acquire the cursor.
 });
 document.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')shootHeld=false;});
 document.addEventListener('mousemove',e=>{if(mouseLocked)look(e.movementX,e.movementY);});
