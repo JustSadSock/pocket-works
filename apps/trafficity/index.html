@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#e4d4b4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>TRAFFICITY · Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css">
+</head><body>
+<main class="shell" data-app-shell data-fullscreen-app data-ui>
+<header class="chrome">
+ <a class="launcher" href="../../" data-app-control data-native-press>← Pocket Works</a>
+ <div class="brand"><span class="brand-icon"><i></i><i></i></span><b>TRAFFICITY</b><small>ДУЭЛЬ МАРШРУТОВ</small></div>
+ <button id="sound" class="header-btn" type="button" data-native-press aria-label="Переключить звук">♪</button>
+ <button id="pause" class="header-btn" type="button" data-native-press hidden>☰</button>
+</header>
+<div class="workspace">
+ <section class="city">
+  <div class="city-head"><div class="turn-badge">ХОД <b id="turn">00</b><span>/30</span></div>
+   <div class="score-bar"><div class="score-field"><i class="teal"></i><span id="leftName">ТЫ</span><b id="leftScore">0</b></div><span class="versus">:</span><div class="score-field"><b id="rightScore">0</b><span id="rightName">ИИ</span><i class="ochre"></i></div></div>
+  </div>
+  <div class="city-inner">
+   <canvas id="cityCanvas" aria-label="Миниатюрная карта города. Выбери машину и нажимай дорожные перекрёстки для маршрута." data-gesture-surface data-block-callout></canvas>
+   <div class="city-stamp" aria-hidden="true"><span>ГОРОД</span><b id="mapNumber">№ 001</b></div>
+  </div>
+  <div id="status" class="city-status" aria-live="polite">Выбери машину и проложи маршрут</div>
+ </section>
+ <aside class="dispatch" id="dispatch" hidden>
+  <div class="dispatch-title"><div><small>ДИСПЕТЧЕРСКАЯ</small><b id="panelLabel">ВАШ АВТОПАРК</b></div><span class="stamp">T·Y</span></div>
+  <div class="vehicles" role="group" aria-label="Выбор машины">
+   <button class="vehicle-choice active" data-vehicle="0" data-native-press><span class="mini-car">1</span><span class="vcopy"><b>МАШИНА 01</b><small id="goal0">Пункт назначения</small></span><span id="distance0" class="distance">—</span></button>
+   <button class="vehicle-choice" data-vehicle="1" data-native-press><span class="mini-car">2</span><span class="vcopy"><b>МАШИНА 02</b><small id="goal1">Пункт назначения</small></span><span id="distance1" class="distance">—</span></button>
+  </div>
+  <div class="dispatch-tools">
+   <button id="auto" class="tool-primary" data-native-press type="button">↗ <span>КРАТЧАЙШИЙ ПУТЬ</span></button>
+   <button id="undo" class="tool-secondary" data-native-press type="button" aria-label="Убрать последний участок">↶</button>
+   <button id="clearRoute" class="tool-secondary" data-native-press type="button" aria-label="Сбросить маршрут">×</button>
+  </div>
+  <div class="stop-strip"><button id="stopMode" data-native-press type="button">◎ ОСТАНОВКА</button><label for="stopCount">ХОДОВ <output id="stopValue">1</output></label><input id="stopCount" type="range" min="1" max="5" value="1"></div>
+  <p class="route-hint" id="hint">Нажми на перекрёсток, чтобы провести маршрут. Можно вести пальцем вдоль дороги.</p>
+  <button id="next" class="next-button" data-native-press type="button">СЛЕДУЮЩИЙ ХОД <span>→</span></button>
+ </aside>
+</div>
+<div id="menu" class="screen-cover">
+ <section class="menu-leaf">
+  <div class="menu-seal">ТАКТИЧЕСКАЯ НАСТОЛЬНАЯ ИГРА</div>
+  <h1>Город<br><em>на ладони.</em></h1>
+  <p>Две машины. Тридцать ходов. Опереди соперника по доставкам.</p>
+  <button id="solo" class="menu-button main-action" data-native-press type="button">ПРОТИВ ИИ <span>→</span></button>
+  <div class="menu-row"><button id="host" class="menu-button" data-native-press type="button">СОЗДАТЬ КОМНАТУ</button><button id="join" class="menu-button" data-native-press type="button">ПО КОДУ</button></div>
+  <button id="resume" class="text-action" data-native-press type="button" hidden>Продолжить партию →</button>
+  <a class="return" href="../../" data-app-control>Вернуться в Pocket Works</a>
+ </section>
+</div>
+<div id="lobby" class="screen-cover" hidden>
+ <section class="menu-leaf room-leaf">
+  <div class="menu-seal">POCKETNET · ИГРА НА ДВОИХ</div>
+  <h2>Комната<br>открыта.</h2>
+  <span class="room-label">КОД ПРИГЛАШЕНИЯ</span><button id="roomCode" class="code" data-native-press type="button">········</button>
+  <div class="room-players"><span id="seat0">Хозяин</span><span id="seat1">Ожидаем второго игрока…</span></div>
+  <button id="copy" class="menu-button" data-native-press>КОПИРОВАТЬ КОД</button>
+  <button id="start" class="menu-button main-action" data-native-press disabled>ЖДЁМ ИГРОКА</button>
+  <button id="leaveLobby" class="text-action" data-native-press>Покинуть комнату</button>
+  <a class="return" href="../../" data-app-control>Вернуться в Pocket Works</a>
+ </section>
+</div>
+<div id="finish" class="screen-cover" hidden><section class="menu-leaf finish-leaf">
+ <div class="menu-seal">МАТЧ ЗАВЕРШЁН</div><h2 id="finishTitle">Победа</h2><div class="end-score" id="finishScore">0 : 0</div>
+ <p id="finishDetail">Результаты матча</p>
+ <button id="again" class="menu-button main-action" data-native-press>НОВЫЙ ГОРОД →</button>
+ <button id="finishMenu" class="text-action" data-native-press>В главное меню</button>
+ <a class="return" href="../../" data-app-control>Вернуться в Pocket Works</a>
+ </section></div>
+<div id="connect" class="screen-cover" hidden><section class="menu-leaf connect-leaf"><div class="menu-seal">POCKETNET</div><h2>Подключение…</h2><p id="connectMessage">Открываем безопасную игровую комнату.</p><button id="cancelConnect" class="menu-button" data-native-press>ОТМЕНА</button></section></div>
+<div id="dialog" class="screen-cover" hidden><section class="menu-leaf dialog-leaf" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+ <h2 id="dialogTitle">Войти в комнату</h2><label for="nickname">ИМЯ</label><input id="nickname" type="text" maxlength="22" autocomplete="nickname" value="Игрок">
+ <label for="invite" id="inviteLabel">КОД</label><input id="invite" type="text" maxlength="36" autocomplete="off" placeholder="8 символов">
+ <p id="dialogText">Игроки планируют маршруты одновременно. Ход начинается, когда оба готовы.</p>
+ <button id="dialogOk" class="menu-button main-action" data-native-press>ПРОДОЛЖИТЬ</button><button id="dialogCancel" class="text-action" data-native-press>Отмена</button>
+ </section></div>
+<div id="pauseOverlay" class="screen-cover" hidden><section class="menu-leaf dialog-leaf"><h2>Пауза.</h2><p id="pauseText">Прогресс сохранён.</p><button id="continue" class="menu-button main-action" data-native-press>ПРОДОЛЖИТЬ</button><button id="exitGame" class="menu-button" data-native-press>ЗАВЕРШИТЬ ПАРТИЮ</button><button id="exitConfirm" class="menu-button danger" data-native-press hidden>ДА, ЗАВЕРШИТЬ</button><a class="return" href="../../" data-app-control>Вернуться в Pocket Works</a></section></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Trafficity" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>

@@ -3312,5 +3312,70 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "5645f127867152169158f1d0a16ecc1e695fd682",
     "lastAttemptAt": "2026-10-17T23:36:51.713Z"
+  },
+  "tyaga-duel": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 62,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 20310,
+        "variance": 49.75760834266108,
+        "entropy": 1.1420393870419285,
+        "edgeDensity": 0.0873015873015873,
+        "colorfulness": 8.335693359375,
+        "centerDetail": 68.10796365809878,
+        "meanLight": 210.65023579102495
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/tyaga-duel/?pw-cover=1&pw_release=1.0.0&pw_fp=9515e0291758b1854abcfb23"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "64ff976686c00084606ebbd84bb386823d900818",
+    "lastAttemptAt": "2026-10-17T23:51:10.452Z"
+  },
+  "axis-pals": {
+    "revision": "d2c81aa1ae614ed20ffc2203f2327ba15ba5b5a2",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Играть вдвоём на одном устройстве ↗",
+        "id": "campaign",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "446b07e68b23f9e1d41b906d1295ce003a1a3d0dae0bffa5f87eb092987226dd",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "d2c81aa1ae614ed20ffc2203f2327ba15ba5b5a2",
+    "lastAttemptAt": "2026-10-17T23:51:22.254Z"
+  },
+  "trafficity": {
+    "revision": "5d33749e7cdd4ef94dde991b165bed4d7cad89fd",
+    "qualityScore": 75,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "b092e43e39d02d4fb623b11f1d05273f68208ba89695168e1fded3669c02caa9",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "5d33749e7cdd4ef94dde991b165bed4d7cad89fd",
+    "lastAttemptAt": "2026-10-17T23:58:08.377Z"
   }
 }
