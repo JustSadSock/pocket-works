@@ -209,7 +209,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   const SETTINGS_KEY = 'focSettings';
   const SAVE_PREFIX = 'focSave_';
-  const SAVE_VERSION = 2;
+  const SAVE_VERSION = window.FogSaveSchema.SAVE_VERSION;
   const isTestEnv = navigator.userAgent.includes('jsdom');
   let style = 'ai',
       musicVolume = 0.5,
@@ -469,15 +469,39 @@ window.addEventListener('DOMContentLoaded', ()=>{
     };
   }
 
+  // Offline snapshots must never contain a server-projected multiplayer view.
+  function gameSavePayload(replays=replayEvents){
+    return {
+      version:SAVE_VERSION,timestamp:Date.now(),origin:'offline',
+      mode:aiMode?'ai':modeBeta?'beta':'hotseat',aiMode,aiLevel,modeBeta,
+      map,buildings,units,state,mapSize,nextUnitId,replayEvents:replays
+    };
+  }
+  function safeSavePayload(replays=replayEvents){
+    return window.FogSaveSchema.normalize(gameSavePayload(replays));
+  }
+  const saveNotice=document.createElement('div');
+  saveNotice.id='fogSaveNotice';saveNotice.setAttribute('role','status');
+  saveNotice.setAttribute('aria-live','polite');
+  saveNotice.hidden=true;document.body.append(saveNotice);
+  function reportSave(message,isError=false){
+    saveNotice.textContent=message;
+    saveNotice.dataset.level=isError?'error':'ok';
+    saveNotice.hidden=false;
+  }
+  window.FogCurrentMode=()=>({aiMode,aiLevel,modeBeta,onlineGame});
+
   // One fixed autosave slot avoids unbounded save-list growth.
   // The game's original explicit numbered saves are preserved.
   function persistAutoSave(){
     if(onlineGame || startPanel.style.display!=='none' || !map.length || !units.length)return;
     try {
-      const data={version:SAVE_VERSION,timestamp:Date.now(),map,buildings,units,state,
-        mapSize,nextUnitId,replayEvents:replayEvents.slice(-180)};
+      const data=safeSavePayload(replayEvents.slice(-180));
       localStorage.setItem(SAVE_PREFIX+'autosave',JSON.stringify(data));
-    }catch(error){ console.warn('fog_autosave_unavailable',String(error)); }
+    }catch(error){
+      console.warn('fog_autosave_unavailable',String(error));
+      reportSave('Автосохранение не удалось. Проверь свободное место.',true);
+    }
   }
   window.addEventListener('pagehide',persistAutoSave);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)persistAutoSave()});
@@ -584,60 +608,96 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   function listSaves(){
-    const arr = [];
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k && k.startsWith(SAVE_PREFIX)){
+    const arr=[];
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        if(!k?.startsWith(SAVE_PREFIX))continue;
         try{
-          const d = JSON.parse(localStorage.getItem(k));
-          if(d && d.timestamp) arr.push({key:k, timestamp:d.timestamp});
+          const d=JSON.parse(localStorage.getItem(k));
+          if(d?.timestamp)arr.push({key:k,timestamp:d.timestamp});
         }catch(e){}
       }
-    }
+    }catch(e){reportSave('Не удаётся прочитать список сохранений.',true);}
     return arr.sort((a,b)=>b.timestamp-a.timestamp);
   }
 
   function saveGame(){
-    const data = {
-      version: SAVE_VERSION,
-      timestamp: Date.now(),
-      map,
-      buildings,
-      units,
-      state,
-      mapSize,
-      nextUnitId,
-      replayEvents
-    };
-    try{ localStorage.setItem(SAVE_PREFIX+data.timestamp, JSON.stringify(data)); }
-    catch(e){}
+    if(onlineGame){
+      reportSave('Интернет-партия сохраняется на сервере PocketNet. Вернись в свою комнату для продолжения.',true);
+      return false;
+    }
+    if(startPanel.style.display!=='none'||!map.length){
+      reportSave('Сначала начни локальную партию.',true);return false;
+    }
+    try{
+      const data=safeSavePayload();
+      const key=SAVE_PREFIX+data.timestamp+'-'+Math.floor(Math.random()*100000);
+      localStorage.setItem(key,JSON.stringify(data));
+      reportSave('Партия сохранена. Её можно загрузить из главного меню.');
+      return true;
+    }catch(e){
+      reportSave('Не удалось сохранить партию: '+(e?.name==='QuotaExceededError'?'закончилось место в хранилище.':String(e?.message||e)),true);
+      return false;
+    }
+  }
+
+  function applySavedData(d){
+    resetState();
+    mapSize=d.mapSize;ROWS=d.map.length;COLS=d.map[0].length;
+    window.ROWS=ROWS;window.COLS=COLS;
+    map.length=0;d.map.forEach(row=>map.push([...row]));
+    buildings.length=0;d.buildings.forEach(b=>buildings.push({...b}));
+    units.length=0;d.units.forEach(u=>units.push({...u}));
+    Object.assign(state,d.state);
+    aiMode=d.aiMode;aiLevel=d.aiLevel;window.aiLevel=aiLevel;
+    modeBeta=d.modeBeta;
+    BUILD_TYPES.base.spawn=modeBeta?[...BASE_SPAWN_DEFAULT,'bog']:[...BASE_SPAWN_DEFAULT];
+    revealAll=false;revealBtn.style.display=modeBeta?'inline-block':'none';
+    replayEvents=d.replayEvents.slice();window.replayEvents=replayEvents;
+    nextUnitId=d.nextUnitId;mapSizeSel.value=d.mapSize;
+    aiLevelSel.value=String(aiLevel);
+    onlineGame=false;window.onlineGame=false;
+    startPanel.style.display='none';aiPanel.style.display='none';
+    lobbyPanel.style.display='none';waitOverlay.style.display='none';
+    overlay.style.display='none';victoryOverlay.style.display='none';
+    endTurnBtn.disabled=false;viewReplayBtn.style.display='';
+    window.dispatchEvent(new Event('resize'));updateAll();
+    requestAnimationFrame(()=>window.FogCenterCamera?.(state.currentPlayer));
   }
 
   function loadGameData(key){
+    if(onlineGame){
+      reportSave('Сначала выйди из интернет-партии. Её состояние хранится на PocketNet.',true);
+      return false;
+    }
+    let data;
     try{
-      const d = JSON.parse(localStorage.getItem(key));
-      if(!d) return;
-      resetState();
-      map.length = 0; d.map.forEach(row=>map.push([...row]));
-      buildings.length = 0; d.buildings.forEach(b=>buildings.push({...b}));
-      units.length = 0; d.units.forEach(u=>units.push({...u}));
-      Object.assign(state, d.state);
-      if(Array.isArray(d.replayEvents)){
-        replayEvents.length = 0;
-        d.replayEvents.forEach(ev => replayEvents.push(ev));
-        window.replayEvents = replayEvents;
-      }
-      mapSize = d.mapSize || mapSize;
-      ROWS = map.length; COLS = map[0].length;
-      nextUnitId = d.nextUnitId || (Math.max(0,...units.map(u=>u.id))+1);
-      startPanel.style.display='none';
-      window.dispatchEvent(new Event('resize'));
-      updateAll();
-    }catch(e){}
+      const json=localStorage.getItem(key);
+      if(!json)throw new Error('Файл не найден.');
+      // ALL validation happens before touching the running match.
+      data=window.FogSaveSchema.normalize(JSON.parse(json));
+    }catch(e){reportSave('Не удалось загрузить партию: '+String(e?.message||e),true);return false;}
+    let backup=null;
+    try{
+      if(map.length&&units.length)backup=safeSavePayload();
+      applySavedData(data);
+      reportSave(data.legacyModeUnknown
+        ?'Старая партия загружена как игра вдвоём: прежний файл не содержал режима ИИ.'
+        :'Партия восстановлена.');
+      if(aiMode&&state.currentPlayer===2&&!gameOver)
+        requestAnimationFrame(()=>{if(aiMode&&state.currentPlayer===2){aiTakeTurn();}});
+      return true;
+    }catch(e){
+      if(backup)try{applySavedData(backup)}catch(rollbackError){console.error('fog_restore_rollback_failed',rollbackError);}
+      reportSave('Ошибка восстановления; предыдущая партия сохранена: '+String(e?.message||e),true);
+      return false;
+    }
   }
 
   function deleteSave(key){
-    localStorage.removeItem(key);
+    try{localStorage.removeItem(key);return true}
+    catch(e){reportSave('Не удалось удалить сохранение: '+String(e?.message||e),true);return false;}
   }
 
 
@@ -1566,7 +1626,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     langSelect.value = lang;
     hintsChk.checked = tooltipEnabled;
     if(saveBtn){
-      saveBtn.style.display = (startPanel.style.display === 'none') ? 'block' : 'none';
+      saveBtn.style.display = (!onlineGame && startPanel.style.display === 'none') ? 'block' : 'none';
     }
     settingsOverlay.style.display='flex';
   });
@@ -1674,8 +1734,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   loadList.addEventListener('click',e=>{
     const key=e.target.dataset.key;
     if(e.target.classList.contains('loadBtn')){
-      loadGameData(key);
-      loadOverlay.style.display='none';
+      if(loadGameData(key))loadOverlay.style.display='none';
     }else if(e.target.classList.contains('delBtn')){
       deleteSave(key);
       populateLoadList();
