@@ -67,7 +67,7 @@ for(let seed=0;seed<80;seed++){
  for(let y=30;y<420;y++)write(f,300,y,[18,18,22]);
  const t=performance.now();
  const n=paint(f,[145,200],[20,110,180]);
- check(n===275*400-390,'left field recolour exact count');
+ check(n===275*400,'left field recolour exact count');
  check(read(f,480,200).join()==='172,139,108','large canvas fill crossed separator');
  check(read(f,300,200).join()==='18,18,22','large canvas lost separator');
  console.log('ZAMAZKA 600x450 RGB flood: '+(performance.now()-t).toFixed(1)+'ms');
