@@ -282,7 +282,7 @@ function advanceNet(s){
  let steps=0;
  while(s.credit>=1000/60&&steps<12&&s.match.phase==='fight'){tick(s.match,s.inputs[0],STEP,s.inputs[1]);s.credit-=1000/60;steps++}
  if(s.match.phase==='draft'){
-  s.phase='draft';s.offers=[0,1].map(i=>eligibleOffers(s.match,i));s.picked=[false,false];s.ready=[false,false];s.revision++;return true;
+  s.phase='draft';s.offers=[0,1].map(i=>eligibleOffers(s.match,i));s.match.pick=[];s.picked=[false,false];s.ready=[false,false];s.revision++;return true;
  }
  if(s.match.phase==='result'){s.phase='result';s.revision++;return true}
  return steps>0;
@@ -320,16 +320,16 @@ const module={
   offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
   seen:[clock(),clock()],at:clock(),credit:0,lastEmit:0}}},
  onJoin({state:s,player,players}){
-  if(s.seats.length>=2||players.length>2)throw Error('room_full');
+  if(s.seats.filter(Boolean).length>=2||players.length>2)throw Error('room_full');
   if(!['lobby','result'].includes(s.phase))throw Error('match_in_progress');
-  s.seats.push(player.id);s.seen[1]=clock();s.revision++;return {state:s,events:updates()};
+  const slot=s.seats.indexOf('');if(slot>=0)s.seats[slot]=player.id;else s.seats.push(player.id);s.seen[slot>=0?slot:1]=clock();s.revision++;return {state:s,events:updates()};
  },
  onLeave({state:s,player}){
   const i=side(s,player.id);if(i<0)return {state:s,events:[]};
   if(s.match&&!['lobby','result'].includes(s.phase)){
    s.phase='result';s.match.phase='result';s.match.champion=1-i;s.match.score[1-i]=4;
   }
-  s.seats=s.seats.filter(id=>id!==player.id);if(s.host===player.id)s.host=s.seats[0]||'';
+  s.seats[i]='';if(s.host===player.id)s.host=s.seats.find(Boolean)||'';
   s.revision++;return {state:s,events:updates()};
  },
  viewForPlayer,
@@ -340,7 +340,7 @@ const module={
   if(p.type==='sync'){s.seen[i]=clock();s.at=clock();return out([{type:'state',to:player.id,payload:null}])}
   if(p.type==='start'||p.type==='rematch'){
    if(s.host!==player.id)return out(warn(player.id,'Матч запускает создатель комнаты.'));
-   if(s.seats.length!==2)return out(warn(player.id,'Нужны два игрока.'));
+   if(s.seats.length!==2||!s.seats.every(Boolean))return out(warn(player.id,'Нужны два игрока.'));
    if((p.type==='start'&&s.phase!=='lobby')||(p.type==='rematch'&&s.phase!=='result'))return out([]);
    beginNet(s);return out();
   }
