@@ -1,6 +1,7 @@
 import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame,artworkAspect} from './artworks.js';
 import {zamazkaStore} from './storage.js';
 import {floodFillRaster} from './fill-core.js';
+import {enclosingContourAt,fillEscapedContour} from './fill-contours.js';
 import {brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
 export {floodFillRaster};
 
@@ -72,23 +73,50 @@ export function preservePaintContours(output,original,walls,changed=null,useWall
   }
  }
 }
-function fillRegion(lines,paint,zoneMask,p,colour){
+function fillRegion(lines,paint,zoneMask,p,colour,priority=null){
  const w=lines.canvas.width,h=lines.canvas.height;
- const walls=lines.ctx.getImageData(0,0,w,h);
  const current=paint.ctx.getImageData(0,0,w,h);
  const inkBefore=new Uint8ClampedArray(current.data);
  const changed=new Uint8Array(w*h);
  const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
- const filled=floodFillRaster({
-   width:w,height:h,walls,zone:zoneMask,output:current,changed,
-   point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
+ const apply=walls=>floodFillRaster({
+  width:w,height:h,walls,zone:zoneMask,output:current,changed,
+  point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
  });
- if(filled){
-   // Keep existing, potentially blended contour pigment instead of painting
-   // the old, un-smudged line layer back over the bucket fill.
-   preservePaintContours(current.data,inkBefore,walls.data,changed,true);
-   paint.ctx.putImageData(current,0,0);
+ // The latest closed outline must remain a boundary even when its entire
+ // interior is already covered by older opaque brushwork.
+ let walls=priority?.walls||lines.ctx.getImageData(0,0,w,h);
+ let filled=apply(walls);
+ if(priority&&(!filled||fillEscapedContour(changed,w,h,priority.bounds,FILL_SCALE))){
+  // A geometrically closed but raster-leaky line cannot repaint other basins.
+  current.data.set(inkBefore);
+  changed.fill(0);
+  walls=lines.ctx.getImageData(0,0,w,h);
+  filled=apply(walls);
  }
+ if(filled){
+  preservePaintContours(current.data,inkBefore,walls.data,changed,true);
+  paint.ctx.putImageData(current,0,0);
+ }
+}
+
+function priorityContourWalls(strokes,end,point,aspect,zoneMask){
+ const contour=enclosingContourAt(strokes,end,point,aspect);
+ if(!contour)return null;
+ const selected=layer();
+ // Ignore older pigment inside this outline; preserve newer dividers/erasures.
+ for(let i=contour.start;i<end;i++){
+  const stroke=strokes[i];
+  if(stroke.t==='fill')continue;
+  if(stroke.t==='smudge'){
+   smudgeStroke(selected.ctx,stroke,0,true,zoneMask,aspect);
+  }else if(stroke.t==='erase'){
+   selected.ctx.save();selected.ctx.globalCompositeOperation='destination-out';
+   drawStroke(selected.ctx,stroke,aspect);selected.ctx.restore();
+  }else drawStroke(selected.ctx,stroke,aspect);
+ }
+ return {walls:selected.ctx.getImageData(0,0,selected.canvas.width,selected.canvas.height),
+  bounds:contour.bounds};
 }
 // Drag colour behind the nib, mixing it with neighbouring pigment.
 // Stored strokes stay as compact vectors and replay deterministically.
@@ -179,7 +207,11 @@ function renderStrokes(ctx,strokes,zone,aspect=W/H,cache=null){
  // are intentionally NOT barriers for later fills.
  for(let i=start;i<strokes.length;i++){
   const stroke=strokes[i];
-  if(stroke.t==='fill'){fillRegion(lines,paint,zoneMask,stroke.p[0],stroke.c);continue}
+  if(stroke.t==='fill'){
+   fillRegion(lines,paint,zoneMask,stroke.p[0],stroke.c,
+    priorityContourWalls(strokes,i,stroke.p[0],aspect,zoneMask));
+   continue;
+  }
   if(stroke.t==='smudge'){
    smudgeStroke(paint.ctx,stroke,0,false,zoneMask,aspect);
    smudgeStroke(lines.ctx,stroke,0,true,zoneMask,aspect);
