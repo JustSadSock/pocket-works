@@ -1,4 +1,5 @@
 import {defineConfig,devices} from '@playwright/test';
+import {fileURLToPath} from 'node:url';
 const baseURL='http://127.0.0.1:8765';
 export default defineConfig({
  testDir:'.',
@@ -11,7 +12,7 @@ export default defineConfig({
  reporter:[['line'],['html',{outputFolder:'fog-playwright-report',open:'never'}]],
  outputDir:'fog-playwright-results',
  use:{baseURL,trace:'retain-on-failure',screenshot:'on',serviceWorkers:'block'},
- webServer:{command:'python3 -m http.server 8765 --directory .',url:baseURL+'/apps/fog-of-conquest/',reuseExistingServer:false,timeout:60000},
+ webServer:{command:'python3 -m http.server 8765 --directory .',cwd:fileURLToPath(new URL('../../../',import.meta.url)),url:baseURL+'/apps/fog-of-conquest/',reuseExistingServer:false,timeout:60000},
  projects:[
   {name:'chromium-phone',use:{...devices['Pixel 5']}},
   {name:'webkit-phone',use:{...devices['iPhone 13']}},
