@@ -2969,23 +2969,23 @@
     "sha256": "54eb398ac7bafd27fe2e89ee9af9efbf616f416c156595a06a84362419a3d5e7",
     "imageVersion": 2,
     "status": "failed",
-    "lastAttemptRevision": "9c2acfea66f4081f2d3aedece467fb3d024fea36",
-    "lastAttemptAt": "2026-10-18T15:08:46.735Z",
+    "lastAttemptRevision": "f6fd0f4d109b2be072d840f66063fb41e809ef28",
+    "lastAttemptAt": "2026-10-18T15:40:27.471Z",
     "note": "No frame passed image-content checks",
     "captureEngine": "safe-gameplay-v3",
     "diagnostic": {
-      "bestScore": 36,
+      "bestScore": 39,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 25365,
-        "variance": 18.31932832595625,
-        "entropy": 1.5026638444011233,
-        "edgeDensity": 0.07415674603174603,
-        "colorfulness": 15.596923828125,
-        "centerDetail": 6.084488750042301,
-        "meanLight": 105.04418901367703
+        "bytes": 25526,
+        "variance": 18.45171269277457,
+        "entropy": 1.518801335182809,
+        "edgeDensity": 0.08444940476190477,
+        "colorfulness": 15.603271484375,
+        "centerDetail": 8.0082507437235,
+        "meanLight": 104.73540937500545
       },
       "gameplayEntry": {
         "started": true,
@@ -2997,7 +2997,7 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/otves/?pw-cover=1&pw_release=1.5.0&pw_fp=12e981aca425f6d51018b5df"
+      "url": "http://127.0.0.1:4173/apps/otves/?pw-cover=1&pw_release=1.6.0&pw_fp=3b00e00d24429e891af62fb5"
     }
   },
   "kromka": {
@@ -3448,15 +3448,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.4.0&pw_fp=a9041ced8230902f39388c53"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.5.0&pw_fp=3de2fcf60224609575b013a1"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "5abb60e5a18c83d953cfd9680c8176d2f781a652",
-    "lastAttemptAt": "2026-10-18T15:23:22.598Z",
+    "lastAttemptRevision": "88e50551b8d4edf249a4efb7f96efede4e2a6126",
+    "lastAttemptAt": "2026-10-18T15:40:09.436Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
