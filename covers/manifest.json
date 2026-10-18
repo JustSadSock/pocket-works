@@ -3478,10 +3478,10 @@
   "not-dead-yet": {
     "note": "existing cover rated higher",
     "diagnostic": null,
-    "status": "published",
+    "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "010e2a40ab158c451d539375fd36c55b77df4840",
-    "lastAttemptAt": "2026-10-18T22:17:54.911Z",
+    "lastAttemptRevision": "526e85a7a52423c4c2f20b8379844a8fdd808e33",
+    "lastAttemptAt": "2026-10-18T22:24:59.480Z",
     "revision": "010e2a40ab158c451d539375fd36c55b77df4840",
     "qualityScore": 75,
     "visionScore": null,
