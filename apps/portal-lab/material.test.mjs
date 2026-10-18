@@ -128,3 +128,25 @@ test('all enabled models finish with finite outputs for representative instrumen
   assert.ok(result.pointNorm<1e-6);
  }
 });
+
+
+test('a very wide throat is traversable without false explicit-solver explosion',()=>{
+ const m=metric({a:1,eta:0});
+ const small=createSpecimen(m,{material:'steel',axis:'transverse',aMeters:1000,lengthMeters:2});
+ const large=createSpecimen(m,{material:'steel',axis:'transverse',aMeters:100000000,lengthMeters:2});
+ const a=run(small,20,.03),b=run(large,20,.03);
+ assert.equal(a.phase,'completed');assert.equal(b.phase,'completed');
+ assert.ok(a.broken>0);assert.equal(b.broken,0);
+ assert.ok(b.peakStrain<.01);
+ assert.ok(b.pointNorm<1e-8);
+});
+test('relative strain and link count converge under halved integration step',()=>{
+ const m=metric({a:1,eta:0});
+ const a=createSpecimen(m,{material:'steel',axis:'radial',aMeters:1000});
+ const b=createSpecimen(m,{material:'steel',axis:'radial',aMeters:1000});
+ for(let i=0;i<100;i++){stepSpecimen(a,.01);stepSpecimen(b,.005);stepSpecimen(b,.005);}
+ const q=specimenStats(a),r=specimenStats(b);
+ close(q.l,r.l,1e-9);close(q.pointNorm,r.pointNorm,1e-9);
+ close(q.peakStrain,r.peakStrain,1e-9);
+ assert.equal(q.broken,r.broken);
+});
