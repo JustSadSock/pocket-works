@@ -12,6 +12,7 @@
 <div class="hud-block me"><span id="my-name">ТЫ</span><div class="hp-track"><i id="my-hp"></i></div><small id="my-hp-text">100 / 100</small></div>
 <div class="round-clock"><strong id="clock">25</strong><span id="round-number">РАУНД 1</span></div>
 <div class="hud-block enemy"><span>СОПЕРНИК</span><div class="hp-track"><i id="bot-hp"></i></div><small id="bot-hp-text">100 / 100</small></div>
+<div class="heat-row"><span>ПЕРЕГРУЗКА</span><div class="heat-track"><i id="heat-fill"></i></div><b id="heat-value">0%</b></div>
 <div class="score-row"><span id="score-me">● ○ ○ ○</span><button id="pause-btn" type="button" data-native-press aria-label="Пауза">Ⅱ</button><span id="score-bot">○ ○ ○ ○</span></div>
 </header>
 <section id="controls" class="control-layer" hidden data-ui>
@@ -25,13 +26,36 @@
 <div class="menu-top"><a href="../../" data-app-control>← В PocketWorks</a><button id="menu-audio" type="button" data-native-press>Звук: вкл.</button></div>
 <div class="menu-composition"><div class="spell-seal" aria-hidden="true"><div class="seal-orbit"><i></i><i></i><i></i></div><div class="seal-hat"><i></i></div></div>
 <h1>ПЕРЕКОС</h1><p>Маги. Руны. Очень плохие идеи.</p>
-<div class="play-block"><button id="primary-action" class="big-button" type="button" data-native-press>Начать дуэль <span>↗</span></button><button id="continue" type="button" hidden data-native-press>Продолжить матч</button><small>7 раундов максимум · соперник управляется ИИ</small></div>
+<div class="play-block"><button id="primary-action" class="big-button" type="button" data-native-press>Начать дуэль <span>↗</span></button><button id="continue" type="button" hidden data-native-press>Продолжить матч</button><button id="open-grimoire" type="button" data-native-press>Мои сборки</button><small>7 раундов максимум · соперник управляется ИИ</small></div>
 </div><div class="menu-bottom"><span>v0.1 — испытательный круг</span><span id="identity">Гостевой маг</span></div></section>
 <section id="draft" class="scene-panel draft" hidden data-ui>
-<div class="sheet"><div class="sheet-kicker">ПОСЛЕ РАУНДА <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><p>Что поменяем в твоём маге?</p><div id="rune-cards" class="rune-cards"></div><div class="loadout" id="loadout"></div></div>
+<div class="sheet"><div class="sheet-kicker">ПОСЛЕ РАУНДА <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><p>Что поменяем в твоём маге?</p><div id="rune-cards" class="rune-cards"></div><div id="replace-zone" class="replace-zone" hidden><strong>Что заменить?</strong><div id="replace-list"></div><button id="replace-cancel" type="button">Другую руну</button></div><div class="loadout" id="loadout"></div></div>
 </section>
+<section id="build" class="scene-panel build" hidden data-ui>
+<div class="sheet workbench">
+<div class="sheet-kicker">РАБОЧИЙ СТОЛ <span id="bench-count">2 / 5</span></div>
+<h2>Собери правило</h2>
+<p class="bench-explain">Слева направо: когда → что → как. Переставляй руны стрелками. Новое «когда» начинает новую цепочку.</p>
+<div id="bench-slots" class="bench-slots" aria-label="Пять мест для рун"></div>
+<div class="bench-result">
+<strong>ЧТО ПОЛУЧИТСЯ</strong><div id="chain-preview" class="chain-preview"></div>
+<canvas id="bench-canvas" width="340" height="66" aria-label="Пример действия цепочки"></canvas>
+</div>
+<div class="bench-actions"><button id="bench-save" type="button" data-native-press>Сохранить сборку</button><button id="bench-fight" class="big-button" type="button" data-native-press>Дальше в бой <span>↗</span></button></div>
+</div></section>
+<section id="books" class="scene-panel books" hidden data-ui><div class="sheet">
+<div class="sheet-kicker">ГРИМУАР</div><h2>Мои сборки</h2>
+<p>Сборка из прошлого матча. В тренировке её можно испытать, но в будущих PvP-матчах силы не переносится.</p>
+<div id="book-list" class="book-list"></div>
+<button id="books-close" type="button" data-native-press>Вернуться в меню</button>
+</div></section>
+<section id="book-delete" class="scene-panel confirm" hidden data-ui><div class="sheet">
+<h2>Удалить сборку?</h2><p>Вернуть её после удаления не получится.</p>
+<button id="book-delete-yes" type="button" class="big-button" data-native-press>Да, удалить</button>
+<button id="book-delete-no" type="button" data-native-press>Отмена</button>
+</div></section>
 <section id="result" class="scene-panel result" hidden data-ui>
-<div class="sheet"><div class="sheet-kicker">МАТЧ ОКОНЧЕН</div><h2 id="result-title">Победа</h2><p id="result-copy"></p><div class="result-score" id="result-score"></div><button id="again" class="big-button" type="button" data-native-press>Ещё один матч <span>↗</span></button><a class="sub-link" href="../../" data-app-control>В PocketWorks</a></div>
+<div class="sheet"><div class="sheet-kicker">МАТЧ ОКОНЧЕН</div><h2 id="result-title">Победа</h2><p id="result-copy"></p><div class="result-score" id="result-score"></div><button id="result-save" type="button" class="secondary-action" data-native-press>Сохранить сборку</button><button id="again" class="big-button" type="button" data-native-press>Ещё один матч <span>↗</span></button><a class="sub-link" href="../../" data-app-control>В PocketWorks</a></div>
 </section>
 <section id="pause" class="scene-panel pause" hidden data-ui>
 <div class="sheet"><div class="sheet-kicker">ПАУЗА</div><h2>Передышка</h2><button id="resume" class="big-button" type="button" data-native-press>Вернуться в бой <span>↗</span></button><button id="pause-audio" type="button" data-native-press>Звук: вкл.</button><button id="quit" type="button" data-native-press>Закончить матч</button><a class="sub-link" href="../../" data-app-control>Вернуться в PocketWorks</a></div>
