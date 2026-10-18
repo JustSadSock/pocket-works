@@ -10,9 +10,9 @@ export const MAGES=Object.freeze([
  mageEntry('kindle','fire','Искра','burn','Попадание чуть нагревает врага.','orb',1,1,.98,.94),
  mageEntry('cinder','fire','Уголёк','miss_cool','Промах помогает остыть.','flame',1.05,.92,.9,.9),
  mageEntry('wire','storm','Провод','dash_haste','После рывка ненадолго ускоряется.','bolt',1.07,.94,.88,.88),
- mageEntry('coil','storm','Катушка','guard_slow','Щит замедляет врага рядом.','arc',1.02,.95,1,.94),
+ mageEntry('coil','storm','Катушка','guard_slow','Щит замедляет врага рядом.','arc',1.03,.98,.97,.96),
  mageEntry('pebble','stone','Галька','guard_extra','Щит получает ещё немного прочности.','rock',.94,1.1,1.12,1.15),
- mageEntry('slate','stone','Плита','hit_push','Попадания слегка толкают врага.','wave',.92,1.06,1.1,1.08)
+ mageEntry('slate','stone','Плита','hit_push','Попадания слегка толкают врага.','wave',.97,1.06,1.06,1.06)
 ]);
 export const MAGE_BY_ID=new Map(MAGES.map(x=>[x.id,x]));
 export function mage(id){return MAGE_BY_ID.get(id)||MAGES[0]}

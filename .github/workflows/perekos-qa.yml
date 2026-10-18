@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify classes, server snapshot, fair draws and full game loops
-        run: node --test apps/perekos/tests/core.test.mjs apps/perekos/tests/avatar.test.mjs apps/perekos/tests/net.test.mjs
+        run: node --test apps/perekos/tests/core.test.mjs apps/perekos/tests/avatar.test.mjs apps/perekos/tests/net.test.mjs apps/perekos/tests/elements.test.mjs apps/perekos/tests/balance.test.mjs
 
   visual-and-gameplay:
     runs-on: ubuntu-latest
@@ -53,7 +53,7 @@ jobs:
         env:
           PW_QA_SITE_ROOT: ${{ github.workspace }}
           PW_QA_OUTPUT_DIR: ${{ github.workspace }}/qa-artifacts/perekos-journey
-        run: node node_modules/@playwright/test/cli.js test --config=scripts/universal-qa/playwright.config.mjs apps/perekos/qa/journey.spec.js apps/perekos/qa/avatar.spec.js apps/perekos/qa/net.spec.js apps/perekos/qa/visual-review.spec.js
+        run: node node_modules/@playwright/test/cli.js test --config=scripts/universal-qa/playwright.config.mjs apps/perekos/qa/journey.spec.js apps/perekos/qa/avatar.spec.js apps/perekos/qa/net.spec.js apps/perekos/qa/visual-review.spec.js apps/perekos/qa/elements.spec.js
       - name: Upload real browser screenshots and traces
         if: always()
         uses: actions/upload-artifact@v4
