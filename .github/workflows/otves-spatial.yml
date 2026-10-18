@@ -25,5 +25,33 @@ jobs:
           node --check apps/otves/renderer3d.js
           node --check apps/otves/render-geometry.js
           node --check apps/otves/sw.js
+          node --check apps/otves/render-materials.js
+          node --check apps/otves/qa/optics-smoke.mjs
       - name: Geometry regressions
-        run: node --test apps/otves/render-geometry.test.mjs
+        run: node --test apps/otves/render-geometry.test.mjs apps/otves/render-materials.test.mjs
+
+  browser-optics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated Playwright (no monorepo lockfile)
+        run: |
+          mkdir -p /tmp/otves-playwright
+          npm install --prefix /tmp/otves-playwright --ignore-scripts --no-package-lock --no-audit --no-fund playwright@1.55.0
+      - name: Install Chromium
+        run: node /tmp/otves-playwright/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Test optical tiers and WebGL2 rendering
+        env:
+          OTVES_PLAYWRIGHT_IMPORT: file:///tmp/otves-playwright/node_modules/playwright/index.mjs
+        run: node apps/otves/qa/optics-smoke.mjs
+      - name: Preserve browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: otves-optical-screenshots
+          path: apps/otves/qa/evidence/*.png
+          if-no-files-found: ignore
