@@ -107,3 +107,20 @@ test('tiny phone is focus-first, accessible and without document overflow',async
     expect(b.height).toBeGreaterThanOrEqual(42);
   }
 });
+
+test('all four original map sizes synchronize atlas dimensions and center on owned troops',async({page})=>{
+  for(const [size,rows,cols] of [['tiny',5,8],['small',10,15],['medium',20,30],['large',20,60]] as const){
+    await page.goto('/apps/fog-of-conquest/',{waitUntil:'domcontentloaded'});
+    await page.locator('#newGameBtn').click();
+    await page.evaluate(size=>{
+      const select=document.getElementById('mapSizeSelect') as HTMLSelectElement;
+      select.value=size;select.dispatchEvent(new Event('change',{bubbles:true}));
+    },size);
+    await page.locator('#twoBtn').click();
+    await expect.poll(()=>page.evaluate(()=>({rows:(window as any).ROWS,cols:(window as any).COLS})))
+      .toEqual({rows,cols});
+    await expect.poll(()=>page.locator('#fogMini').evaluate((mini:HTMLCanvasElement)=>mini.width))
+      .toBe(cols*4);
+    await page.locator('#fogFindArmy').click();
+  }
+});
