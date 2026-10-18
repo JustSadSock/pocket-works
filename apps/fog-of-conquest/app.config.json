@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
   "slug": "fog-of-conquest",
-  "name": "ТУМАН ЗАВОЕВАНИЙ",
-  "shortName": "Туман",
-  "description": "Оригинальная Fog of Conquest: все исходные войска, постройки, туман войны, карты, визуальные режимы, ИИ и реплеи.",
+  "name": "FOG OF CONQUEST",
+  "shortName": "Fog Conquest",
+  "description": "Оригинальная Fog of Conquest внутри PocketWorks: исходные войска и постройки, карты, туман войны, ИИ, спрайты, сохранения и реплеи.",
   "version": "1.1.0",
   "releaseDate": "2026-10-18",
   "releaseDateTime": "2026-10-18T02:20:00+03:00",
   "changelog": [
-    "Импортированы все исходные графические ассеты, оригинальный интерфейс, генерация карт, войска, экономика и тактические правила.",
-    "Добавлены мобильная панорама карты, автосохранения и полноценный вход из PocketWorks."
+    "Восстановлена исходная игра с обоими комплектами спрайтов, семью сложностями ИИ и тремя визуальными режимами.",
+    "Исправлен обрыв проходов при генерации, добавлены мобильная панорама поля и автосохранение."
   ],
   "status": "active",
   "preset": "game-2d",
-  "accent": "#869b7d",
-  "backgroundColor": "#2d3730",
-  "themeColor": "#2d3730",
+  "accent": "#bda46a",
+  "backgroundColor": "#151610",
+  "themeColor": "#1b1b14",
   "orientation": "any",
   "cacheName": "fog-of-conquest-v1.1.0",
   "storageNamespace": "pocket-works:fog-of-conquest",
@@ -25,7 +25,6 @@
     "strategy",
     "tactics",
     "turn-based",
-    "multiplayer",
     "offline"
   ],
   "order": 36
