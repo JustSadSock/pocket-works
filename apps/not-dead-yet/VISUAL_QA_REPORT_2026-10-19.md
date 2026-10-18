@@ -125,9 +125,69 @@ without a repeat run.
   selection and screenshot matrix timeout. Their outcomes must be
   checked before marking this milestone green.
 
+## Follow-up test results and model-driven fixes
+
+- [Visual-regression 39172949932](https://github.com/JustSadSock/pocket-works/actions/runs/39172949932):
+  **12/12 real Playwright tests passed**. This includes screenshot capture
+  for deterministic sector bookmarks, bounded CPU mesh reuse, first-frame
+  focus and actual screenshot luminance variance in mobile Chromium,
+  mobile WebKit and desktop Chromium.
+- [Power/camera smoke 39174955391](https://github.com/JustSadSock/pocket-works/actions/runs/39174955391):
+  **6/6 tests passed**. Fuse and hotplate use correct priority; right-arrow
+  camera turns in the expected direction; Escape returns to live play.
+- [Geometry, power, weapon and hallway CPU regressions 39175555758](https://github.com/JustSadSock/pocket-works/actions/runs/39175555758):
+  **93/93 passed**, including deterministic sparse corridor fixtures and
+  10-float WebGL vertex ABI validation.
+- [Full gameplay suite 39174534979](https://github.com/JustSadSock/pocket-works/actions/runs/39174534979):
+  **44 passed, 2 failed, 2 skipped**. The failed reload checks on
+  mobile WebKit and desktop Chromium exposed a *real* regression:
+  capping `simulation(dt)` to prevent gigantic camera steps also made
+  a 1.55-second revolver reload advance too slowly when software WebGL
+  rendered fewer frames. Fixed in **v2.1.7** by using two clocks:
+  maximum 100ms game-physics step and the real active frame duration for
+  reloading. Exposed both as `simulationFrameTime` and `fpsFrameTime`.
+  The post-fix journey must be evaluated separately.
+- [Scoped interaction acceptance run 39174955391](https://github.com/JustSadSock/pocket-works/actions/runs/39174955391)
+  was expanded with a simulated 650ms browser main-thread stall to verify
+  reload time in addition to fuse, camera and pause. This new test is
+  not included in that older 6/6 result.
+
+### Quantitative screenshot diagnostics
+
+In gameplay screenshots from the 2.1.4 review, sampling the middle image
+region (23–77% horizontal, 27–70% vertical) produced these raw 8-bit
+luminance values:
+
+| Screenshot | Mean luminance | Standard deviation |
+|---|---:|---:|
+| Chromium portrait (390×844) | 174.8 | 22.9 |
+| WebKit portrait (390×844) | 158.5 | 14.7 |
+| Chromium desktop (1366×768) | 132.1 | 58.9 |
+| WebKit desktop (1366×768) | 126.0 | 52.4 |
+
+These are diagnostic samples from **different randomized rooms**, not a
+calibrated display measurement or matched scene A/B. The mobile captures
+show substantial low-frequency bright wall surfaces, with fewer visually
+readable anchors than desktop. This informed the next art pass: sparse,
+distinct low-poly objects integrated into **real corridors**, including
+ceiling lanterns, electrical switchboards, coat rails and apartment number
+plates. The objects do not affect collision or room regeneration logic.
+Their actual screenshot appearance must be reviewed in the newest visual
+run, not inferred from CPU mesh tests.
+
+### Remaining verification
+
+- [Post-hall-geometry screenshot suite 39175557084](https://github.com/JustSadSock/pocket-works/actions/runs/39175557084)
+  (request #991): check final job status and inspect new artifacts.
+- [Post-reload interaction suite request #992](https://github.com/JustSadSock/pocket-works/issues/992)
+  and [full gameplay suite request #993](https://github.com/JustSadSock/pocket-works/issues/993):
+  check outcomes before calling the release fully validated.
+- Test real mobile hardware under load. GitHub CI uses software/virtualized
+  browser rendering, not the user's GPU.
+
 ## Outstanding acceptance gates
 
-- [ ] Confirm every new Playwright browser test **passes**, including
+- [x] Confirm initial visual Playwright browser tests **pass**, including
       narrow mobile mode, WebGL image variance, seed bookmarks, reload/doors.
 - [ ] Review *post-fix* Chromium/WebKit screenshot artifacts side-by-side
       with the baseline photos and verify the weapon actually frames better.
