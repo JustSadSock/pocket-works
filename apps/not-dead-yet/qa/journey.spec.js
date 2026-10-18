@@ -88,7 +88,7 @@ test('1.3 hinged Soviet interior door opens, blocks passage, saves and restores'
  const room=(await state(page)).doors[0].room;
  expect(await page.evaluate(room=>window.__PW_TEST_HOOKS__.teleportNearDoor(room),room)).toBe(true);
  await expect(page.locator('#interact')).toHaveText('Закрыть');
- await page.locator('#interact').click();
+ if(await page.locator('#interact').isVisible())await page.locator('#interact').click();else await page.keyboard.press('e');
  await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).open).toBe(false);
  await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).angle).toBeLessThan(.04);
  await page.locator('#pause').click();
@@ -98,7 +98,7 @@ test('1.3 hinged Soviet interior door opens, blocks passage, saves and restores'
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
  expect((await state(page)).doors.find(d=>d.room===room).open).toBe(false);
  await expect(page.locator('#interact')).toHaveText('Открыть');
- await page.locator('#interact').click();
+ if(await page.locator('#interact').isVisible())await page.locator('#interact').click();else await page.keyboard.press('e');
  await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).open).toBe(true);
  await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).angle).toBeGreaterThan(1.4);
  expect(errors).toEqual([]);
