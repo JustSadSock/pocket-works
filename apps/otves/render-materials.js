@@ -102,8 +102,13 @@ void main() {
   if (uSurface == 0) {
     // Glazed dark ceramic with subpixel-scale variation, not an overlaid grid.
     float micro = grain(vPosition);
-    base = vec3(0.108, 0.154, 0.123) * mix(0.97, 1.03, micro);
-    rough = mix(0.31, 0.38, micro);
+    // Hairline machining marks belong to the ceramic, not the display glass.
+    float scratch = pow(max(0.0,sin(vPosition.x * 81.0
+      + sin(vPosition.z * 9.0) * 0.6)), 110.0)
+      * step(0.91,grain(vPosition * 0.41));
+    base = vec3(0.108, 0.154, 0.123) * mix(0.97, 1.03, micro)
+      + vec3(scratch * 0.004);
+    rough = mix(0.31, 0.39, micro);
   } else if (uSurface == 3) {
     float brushed = sin(vPosition.x * 210.0 + vPosition.z * 75.0) * 0.015;
     base = vec3(0.64, 0.43, 0.18) + brushed;
@@ -112,6 +117,16 @@ void main() {
   } else if (uSurface == 4) {
     base = vec3(0.020, 0.031, 0.025);
     rough = 0.8;
+  } else if (uSurface == 6) {
+    // Edge inlay: desaturated machined nickel, never a thick golden frame.
+    base = vec3(0.24, 0.28, 0.255);
+    metal = 0.87;
+    rough = 0.23;
+  } else if (uSurface == 7) {
+    // Thin dark gasket visible beneath transparent glass ribs.
+    base = vec3(0.027, 0.041, 0.032);
+    metal = 0.06;
+    rough = 0.85;
   } else {
     base = vec3(0.060, 0.091, 0.071);
     metal = 0.42;
@@ -208,8 +223,11 @@ void main() {
     outColor = vec4(clamp(color, 0.0, 1.0), 1.0);
   } else {
     float edge = pow(1.0 - ndv, 2.1);
-    float faceVisibility = clamp(0.14 + edge * 0.52 +
-      max(dot(N, L),0.0) * 0.09, 0.15, 0.72);
+    float polish = 1.0 - smoothstep(0.016, 0.09,abs(vPosition.y - 0.46));
+    float seating = 1.0 - smoothstep(0.018,0.07,vPosition.y);
+    float faceVisibility = clamp(0.13 + edge * 0.50 +
+      max(dot(N, L),0.0) * 0.08 + polish * 0.10 + seating * 0.08,
+      0.15, 0.76);
     vec3 reflectionColor = film(reflection * 0.57
       + vec3(0.39,0.49,0.42) * clamp(direct * 0.08,0.0,1.0));
     vec3 tint = uUseRefraction
@@ -217,6 +235,7 @@ void main() {
       : vec3(0.45, 0.69, 0.58);
     vec3 glass = mix(tint, reflectionColor, clamp(fres * 1.95 + 0.08, 0.0, 0.91));
     glass += vec3(0.025, 0.044, 0.031) * studioRim * edge;
+    glass += vec3(0.047, 0.057, 0.049) * polish;
     outColor = vec4(clamp(glass, 0.0, 1.0), faceVisibility);
   }
 }`;
