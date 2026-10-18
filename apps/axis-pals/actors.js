@@ -48,7 +48,7 @@ export function robotMood({onGoal=false,win=false,impact=0,travelling=false,idle
  if(impact>.22)return 'squint';
  if(onGoal)return 'pleased';
  if(travelling)return 'focused';
- if(!reduced&&idleTime>0&&idleTime%10500>8250&&idleTime%10500<8550)return 'curious';
+ // Deliberately no looping idle behavior; life.js supplies one quiet event after inactivity.
  return 'idle';
 }
 function rr(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r)}
@@ -65,8 +65,10 @@ function drawMouth(c,id,mood){
  c.save();c.translate(0,.067);
  c.lineCap='round';c.lineWidth=.026;c.strokeStyle='#25423e';
  c.beginPath();
- if(mood==='squint'){c.ellipse(0,0,.035,.06,0,0,2*Math.PI);c.stroke()}
- else if(mood==='celebrate'){c.moveTo(-.075,-.015);c.quadraticCurveTo(0,.115,.078,-.015);c.stroke()}
+ if(mood==='squint'||mood==='startled'){c.ellipse(0,0,.035,mood==='startled'?.075:.06,0,0,2*Math.PI);c.stroke()}
+ else if(mood==='celebrate'||mood==='cheer'||mood==='proud'){c.moveTo(-.082,-.015);c.quadraticCurveTo(0,.125,.082,-.015);c.stroke()}
+ else if(mood==='grumble'||mood==='concerned'){c.moveTo(-.073,.02);c.quadraticCurveTo(0,-.055,.07,.02);c.stroke()}
+ else if(mood==='relieved'||mood==='reassure'||mood==='wave'){c.moveTo(-.072,-.014);c.quadraticCurveTo(0,.078,.08,-.014);c.stroke()}
  else if(id===0){
   c.moveTo(-.055,0);c.quadraticCurveTo(0,mood==='pleased'?.06:.025,.057,0);c.stroke();
  }else{
@@ -75,15 +77,16 @@ function drawMouth(c,id,mood){
  }
  c.restore();
 }
-export function drawRobot(c,id,p,other,size,now,pose,{onGoal=false,win=false,reduced=false}={}){
+export function drawRobot(c,id,p,other,size,now,pose,{onGoal=false,win=false,reduced=false,reaction=null,idleFace=null}={}){
  const palette=ROBOTS[id];if(!palette||!p)return;
  const moving=pose?.travel>.06,impact=pose?.impact||0;
- const mood=robotMood({onGoal,win,impact,travelling:moving,idleTime:now+id*1700,reduced});
+ const mood=reaction?.faces?.[id]||idleFace||robotMood({onGoal,win,impact,travelling:moving,idleTime:now+id*1700,reduced});
  const blink=!reduced&&!win&&mood==='idle'&&((now+id*1930)%4350)<110;
  const glance=other?clamp((other.x-p.x)/3,-1,1):0;
  const look=mood==='squint'?0:clamp((pose?.dx||0)*.4+glance*.6,-1,1);
  const moveBreath=!reduced&&mood==='idle'?Math.sin(now*.0016+id*1.3)*.006:0;
- const celebrate=win&&!reduced?Math.sin(now*.018+id*.6):0;
+ const celebrate=!reduced&&reaction?.kind==='duet'?Math.sin(Math.PI*reaction.progress)*Math.sin(reaction.progress*11+id*.6):0;
+ const nod=!reduced&&reaction?.kind!=='duet'&&['reassure','wave','proud','relieved'].includes(mood)?Math.sin(Math.PI*(reaction?.progress||0))*Math.sin((reaction?.progress||0)*12)*.045:0;
  const squish=impact*.21;
  const sway=pose?.lean||0;
  const ox=(p.x+.5)*size,oy=(p.y+.5)*size;
@@ -91,7 +94,7 @@ export function drawRobot(c,id,p,other,size,now,pose,{onGoal=false,win=false,red
  // Contact shadow remains anchored at the target plane even during hopping.
  c.fillStyle='#1f4d4755';c.beginPath();c.ellipse(.02*size,.32*size,size*(.34-impact*.02),size*.095,0,0,Math.PI*2);c.fill();
  c.translate(-(pose?.dx||0)*sway*size*.09,-((pose?.hop||0)+Math.max(0,celebrate)*.055)*size);
- c.rotate(((pose?.dx||0)*sway+celebrate*.028)*.48);
+ c.rotate(((pose?.dx||0)*sway+celebrate*.028)*.48+nod);
  c.scale(size*(1-squish*(pose?.dx?1:.16)),size*(1-squish*(pose?.dy?1:.16)+moveBreath));
  // Wheels are still small enough to read at the smallest gameplay tile.
  c.fillStyle='#314d49';
@@ -115,12 +118,12 @@ export function drawRobot(c,id,p,other,size,now,pose,{onGoal=false,win=false,red
  c.fillStyle='#e5e9db';rr(c,-.27,-.15,.54,.295,.095);c.fill();
  c.fillStyle='#a8c0b6';rr(c,-.25,.108,.50,.034,.017);c.fill();
  c.save();c.beginPath();c.rect(-.25,-.15,.50,.29);c.clip();
- if(mood==='squint'){
+ if(mood==='squint'||mood==='grumble'||mood==='concerned'){
   c.lineCap='round';c.strokeStyle='#304d48';c.lineWidth=.035;
-  for(const x of [-.135,.135]){c.beginPath();c.moveTo(x-.063,-.03);c.lineTo(x+.055,.015);c.stroke()}
+  for(const x of [-.135,.135]){c.beginPath();if(mood==='grumble'||mood==='concerned'){c.moveTo(x-.060,.010);c.lineTo(x+.060,-.016)}else{c.moveTo(x-.063,-.03);c.lineTo(x+.055,.015)}c.stroke()}
  }else{
   const y=id===0?-.035:-.035,wide=id===0?.123:.111;
-  eye(c,-.135,y,wide,.143,look,blink);eye(c,.135,y,wide,.143,look,blink);
+  eye(c,-.135,y,wide,mood==='startled'?.183:.143,look,blink);eye(c,.135,y,wide,mood==='startled'?.183:.143,look,blink);
  }
  drawMouth(c,id,mood);c.restore();
  // Personality: a cautious badge on Y, high-speed chevrons on X.

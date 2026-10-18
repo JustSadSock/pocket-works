@@ -9,7 +9,8 @@
         "engine.test.mjs",
         "actors.test.mjs",
         "diorama.test.mjs",
-        "feedback.test.mjs"
+        "feedback.test.mjs",
+        "life.test.mjs"
       ]
     },
     {
@@ -50,6 +51,76 @@
         {
           "action": "click",
           "selector": "#pause"
+        },
+        {
+          "action": "visible",
+          "selector": "#overlayMain"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "complete-level-and-duet",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#menu",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#campaign"
+        },
+        {
+          "action": "visible",
+          "selector": "#board"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"right\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"down\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"down\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"left\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"left\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"left\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "screenshot"
         },
         {
           "action": "visible",
