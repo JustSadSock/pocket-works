@@ -10,26 +10,47 @@
 <main id="root" class="app-shell" data-app-shell>
 <header class="app-header" data-ui>
   <a class="home-link" href="../../" data-app-control data-native-press aria-label="В PocketWorks">← <span>PocketWorks</span></a>
-  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>ЛЕТОПИСЬ · 1.0</small></span>
+  <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>АТЛАС · 1.1</small></span>
   <button id="back-menu" class="quiet-control" type="button" hidden data-native-press>Меню</button>
 </header>
 <div id="notice" role="status" aria-live="polite" class="notice-toast" hidden></div>
 <section id="loading-screen" class="center-screen" aria-live="polite"><span class="loader-mark" aria-hidden="true">♜</span><p>Открываем летопись…</p></section>
 <section id="menu-screen" class="menu-screen" hidden>
-  <div class="menu-hero"><p class="eyebrow">МЕЖДУРЕЧЬЕ · 1066</p><h1>Одно право.<br>Много судеб.</h1><p>Выберите дом. Остальную историю создадут ваши решения.</p></div>
-  <div class="menu-bottom">
-    <button id="resume" type="button" class="big-button" hidden data-native-press>Продолжить летопись <span id="resume-summary"></span> →</button>
-    <div class="new-campaign">
-      <div class="new-heading"><h2>Начать хронику</h2><label for="seed-input">Мир № <input id="seed-input" type="number" inputmode="numeric" min="0" max="4294967295" step="1" value="413"/></label></div>
-      <div class="world-size-options" role="group" aria-label="Размер мира">
-        <button data-world-size="12" class="active" aria-pressed="true" type="button">12 земель</button>
-        <button data-world-size="48" aria-pressed="false" type="button">48 земель</button>
-      </div>
-      <div id="starts" class="starts" role="group" aria-label="Выбор графства"></div>
-      <button id="begin" type="button" class="primary-control" data-native-press>Принять графство <span aria-hidden="true">→</span></button>
+  <div class="menu-hero">
+    <p class="eyebrow">МЕЖДУРЕЧЬЕ · ЛЕТО 1066</p>
+    <h1>Венец</h1>
+    <p>Чья судьба станет вашей?</p>
+  </div>
+  <div class="menu-map-frame">
+    <div class="map-cartouche" aria-hidden="true">Земли Междуречья <span>✦</span> Атлас владений</div>
+    <div id="start-map" class="start-map" role="group" aria-label="Выберите владение на карте"></div>
+    <div id="start-region-controls" class="start-region-controls" hidden>
+      <button id="start-region-prev" type="button" aria-label="Предыдущая часть карты">‹</button>
+      <span id="start-region-label" aria-live="polite">I / IV</span>
+      <button id="start-region-next" type="button" aria-label="Следующая часть карты">›</button>
     </div>
-    <button id="restore-backup" class="text-link" type="button" hidden data-native-press>Восстановить предыдущую хронику ↶</button>
-    <button id="open-docs" class="text-link" type="button" data-native-press>Исследования и устройство мира ↗</button>
+  </div>
+  <div class="menu-bottom">
+    <button id="resume" type="button" class="big-button" hidden data-native-press>Продолжить хронику <span id="resume-summary"></span> →</button>
+    <div class="new-campaign">
+      <div class="new-heading"><h2>Начало правления</h2></div>
+      <div class="start-rank-options" role="group" aria-label="Ранг правителя">
+        <button type="button" data-start-rank="county" class="active" aria-pressed="true">Графы</button>
+        <button type="button" data-start-rank="duchy" aria-pressed="false">Герцоги</button>
+        <button type="button" data-start-rank="kingdom" aria-pressed="false">Король</button>
+      </div>
+      <div id="starts" class="starts" aria-live="polite"></div>
+      <button id="begin" type="button" class="primary-control" data-native-press>Править этим домом <span aria-hidden="true">→</span></button>
+      <details class="world-settings"><summary>Параметры мира</summary>
+        <label for="seed-input">Мир № <input id="seed-input" type="number" inputmode="numeric" min="0" max="4294967295" step="1" value="413"></label>
+        <div class="world-size-options" role="group" aria-label="Размер мира">
+          <button data-world-size="12" class="active" aria-pressed="true" type="button">12 земель</button>
+          <button data-world-size="48" aria-pressed="false" type="button">48 земель</button>
+        </div>
+      </details>
+    </div>
+    <button id="restore-backup" class="text-link" type="button" hidden data-native-press>Восстановить хронику ↶</button>
+    <button id="open-docs" class="text-link" type="button" data-native-press>Источники и исследование ↗</button>
   </div>
 </section>
 <section id="game-screen" class="game-screen" hidden>
@@ -47,7 +68,7 @@
       <div id="last-action" class="action-result" hidden></div>
     </section>
     <section id="panel-lands" class="game-panel lands-panel" aria-labelledby="lands-heading">
-      <div class="panel-head"><p class="eyebrow">ВЛАДЕНИЯ</p><h2 id="lands-heading">Междуречье</h2></div>
+      <div class="panel-head"><p class="eyebrow">АТЛАС КОРОНЫ</p><h2 id="lands-heading">Междуречье</h2></div>
       <div class="atlas-tools" role="group" aria-label="Вид владений">
         <button type="button" data-atlas-view="atlas" class="active" aria-pressed="true">Атлас</button>
         <button type="button" data-atlas-view="family" aria-pressed="false">Родословная</button>
@@ -80,7 +101,7 @@
   <footer class="game-controls" data-ui>
     <nav class="mobile-tabs" aria-label="Разделы игры">
       <button type="button" data-panel="council" class="active" aria-pressed="true"><span>⚖</span>Совет</button>
-      <button type="button" data-panel="lands" aria-pressed="false"><span>▦</span>Атлас</button>
+      <button type="button" data-panel="lands" aria-pressed="false"><span>◇</span>Карта</button>
       <button type="button" data-panel="history" aria-pressed="false"><span>☷</span>Летопись</button>
     </nav>
     <div class="time-controls">
@@ -145,6 +166,6 @@
   <button value="confirm" type="submit" class="primary-control">Восстановить</button></menu>
 </form></dialog>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
