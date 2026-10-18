@@ -3251,16 +3251,16 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "84a4d1921c6438805e3f879462a0f8b1f52dde05",
-    "lastAttemptAt": "2026-10-18T00:27:17.230Z",
-    "revision": "84a4d1921c6438805e3f879462a0f8b1f52dde05",
+    "lastAttemptRevision": "3e75d60e1fed0bd383259f5f15add985ff66c301",
+    "lastAttemptAt": "2026-10-18T11:17:37.312Z",
+    "revision": "3e75d60e1fed0bd383259f5f15add985ff66c301",
     "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "shot": 0,
-    "sha256": "ec9db3a7d044299a8273edb7fc933e9e7920a361f51a1efa16c24d82b8fd936f",
+    "sha256": "d8a8d6d44f14adb155ed82bf6242a6f315ec8a86b126aac4e16f8cb6a14c2a86",
     "imageVersion": 2
   },
   "bozhe-ne-tak": {
@@ -3418,30 +3418,26 @@
   },
   "not-dead-yet": {
     "note": "No frame passed image-content checks",
-    "diagnostic": {
-      "bestScore": 62,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 27685,
-        "variance": 44.199798821024906,
-        "entropy": 0.9855785423575809,
-        "edgeDensity": 0.10032242063492064,
-        "colorfulness": 19.694580078125,
-        "centerDetail": 60.61479182289343,
-        "meanLight": 38.54907226562548
-      },
-      "gameplayEntry": {
-        "started": false,
-        "actions": []
-      },
-      "url": "http://127.0.0.1:4173/apps/not-dead-yet/?pw-cover=1&pw_release=1.0.0&pw_fp=63dcc55493ae154830ecdfd0"
-    },
-    "status": "failed",
+    "diagnostic": null,
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "ccec837ec8c3c511c495d5e713e9a70ed31d6564",
-    "lastAttemptAt": "2026-10-18T00:58:15.850Z"
+    "lastAttemptRevision": "dd5109eecef80ae0a2fa98676cb8ead2061c7331",
+    "lastAttemptAt": "2026-10-18T11:17:26.476Z",
+    "revision": "dd5109eecef80ae0a2fa98676cb8ead2061c7331",
+    "qualityScore": 68,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начать новую ночь ↗",
+        "id": "start",
+        "score": 74
+      }
+    ],
+    "shot": 0,
+    "sha256": "fd124766ed108d805198b4e54215775043bb016ed4f939ab799f12da29b17f11",
+    "imageVersion": 2
   },
   "crossline-5x5": {
     "revision": "9fef283a7733d5ba41efeca8955ae937badbe8e1",
