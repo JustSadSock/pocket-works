@@ -62,6 +62,11 @@
     "spatialRationale": "Full phone width remains 3D scene. Peripheral overlays do not reduce field of view; buttons sit inside thumb reach only.",
     "comparisons": [
       {
+        "slug": "tyaga-duel",
+        "spatialDifference": "A continuous 3D maze seen through eye-height perspective replaces a flat single-screen competitive gravity or pulling arena.",
+        "interactionDifference": "Player explores branching hallways and survives fleeting pursuers through spatial awareness, instead of issuing short symmetric competitive pushes."
+      },
+      {
         "slug": "axis-pals",
         "spatialDifference": "Eye-level corridor depth and fullscreen personal horror replace the tiny cooperative warehouse seen as a planar two-avatar puzzle.",
         "interactionDifference": "One person navigates and turns their viewpoint with continuous independent controls rather than splitting axes between two human players."
