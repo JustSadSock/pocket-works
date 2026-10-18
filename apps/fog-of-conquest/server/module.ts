@@ -334,7 +334,9 @@ export function createOriginalMatch(options={}){
    map:g.map,units:g.units,buildings:g.buildings};
  if(modeBeta)global.BUILD_TYPES.base.spawn.push('bog');
  originalGenerator(global);
- g.nextUnitId=global.nextUnitId;refresh(g);return g;
+ g.nextUnitId=global.nextUnitId;
+ g.buildings.forEach((building,index)=>{building.id='building-'+index;});
+ refresh(g);return g;
 }
 function log(g,side,message){g.state.log[side].push(message);if(g.state.log[side].length>50)g.state.log[side].shift();}
 function zones(g,u){
