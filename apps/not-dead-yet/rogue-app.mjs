@@ -1,14 +1,15 @@
 import {RogueWorld,SECTOR,hash,UPGRADES,REWARDS} from './rogue-world.mjs';
+import {GameKeyboard,isTextEditingTarget} from './keyboard.mjs';
 import {Renderer} from './renderer.mjs';
 import {createSoundscape} from './soundscape.mjs';
 import {acousticEvent,updatePresence,shouldDespawn,presenceCue} from './presences.mjs';
 
 const $=id=>document.getElementById(id),STORAGE='pocket-works:not-dead-yet:rogue:v1',BEST='pocket-works:not-dead-yet:rogue:best',OPTIONS='pocket-works:not-dead-yet:options';
-const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),keys=new Set(),stick={x:0,y:0};
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),keyboard=new GameKeyboard(),stick={x:0,y:0};
 const quiet=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false;
 let world,renderer,player,phase='menu',stress=0,energy=100,ammo=6,reserve=18,elapsed=0,shotTime=0,reloadTime=0,reloadAt=0;
 let torch=true,enemies=[],upgrades={},collected=0,kills=0,sectorBest=0,spawnAt=4,saveAt=6,worldAt=0,noise=null;
-let lastFrame=performance.now(),moveSteps=0,moves=0,attempts=0,blocked=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,sound=true,noticeUntil=0,upgradeChoices=[],lastPresenceCue=0;
+let lastFrame=performance.now(),moveSteps=0,moves=0,attempts=0,blocked=0,joystickPointer=null,lookPointer=null,lastLook=null,mouseDrag=null,sprintHeld=false,sound=true,noticeUntil=0,upgradeChoices=[],lastPresenceCue=0;
 const audio=createSoundscape();
 try{sound=JSON.parse(localStorage.getItem(OPTIONS)||'{}').sound!==false}catch{}
 audio.setEnabled(sound);
@@ -38,16 +39,26 @@ function overlay(id){for(const n of ['menu','pauseOverlay','inventoryOverlay','e
 function notify(msg,duration=2.6){const h=$('hint');if(!h)return;h.textContent=msg;h.classList.add('visible');noticeUntil=elapsed+duration}
 function start(data=null){
  setup(data?.seed??newSeed(),data);phase='play';overlay(null);lastFrame=performance.now();audio.activate();audio.event('radio');
- notify(data?'Ты опять здесь.':'Знакомый коридор. Дальше — ещё одна дверь.',4);
+ notify(data?'Ты опять здесь.':'WASD — ходьба · Мышь — обзор · Клик по игре — захват мыши',4);
+ focusScene();
  if(data?.phase==='upgrade'&&upgradeChoices.length)openUpgrade(true);else persist()
 }
 function releaseMouse(){if(document.pointerLockElement)document.exitPointerLock?.()}
 function clearStick(){joystickPointer=null;stick.x=0;stick.y=0;if($('knob'))$('knob').style.transform='translate(0px,0px)'}
-function clearInputs(){keys.clear();sprintHeld=false;lookPointer=null;lastLook=null;clearStick()}
+function clearInputs(){keyboard.clear();sprintHeld=false;lookPointer=null;lastLook=null;mouseDrag=null;clearStick()}
+function focusScene(){
+ try{document.activeElement?.blur?.()}catch{}
+ try{$('view').focus?.({preventScroll:true})}catch{}
+}
+function applyLook(dx,dy,sensitivity=.0025){
+ if(phase!=='play'||!player)return;
+ player.yaw=Math.atan2(Math.sin(player.yaw+dx*sensitivity),Math.cos(player.yaw+dx*sensitivity));
+ player.pitch=clamp(player.pitch+dy*sensitivity,-1.13,1.13)
+}
 function pause(){if(phase!=='play')return;phase='pause';clearInputs();releaseMouse();audio.suspend();persist();
  $('pauseText').textContent='Исследовано участков: '+world.visited.size+' · Видений рассеяно: '+kills+' · Улучшений: '+Object.values(upgrades).reduce((a,b)=>a+b,0);
  overlay('pauseOverlay')}
-function resume(){if(phase!=='pause'&&phase!=='inventory')return;phase='play';overlay(null);audio.activate();lastFrame=performance.now()}
+function resume(){if(phase!=='pause'&&phase!=='inventory')return;phase='play';clearInputs();overlay(null);audio.activate();lastFrame=performance.now();focusScene()}
 function showInventory(){if(phase!=='play')return;phase='inventory';clearInputs();releaseMouse();persist();
  const list=$('inventoryList');list.replaceChildren();
  for(const u of UPGRADES){
@@ -98,7 +109,7 @@ function chooseUpgrade(id){
  if(id==='tea')stress=Math.max(0,stress-32);
  if(id==='glasses')player.sight=upgrades.glasses;
  upgradeChoices=[];phase='play';overlay(null);audio.event('pickup');notify('Вспомнил: '+UPGRADES.find(x=>x.id===id).name,2.2);
- lastFrame=performance.now();persist();showHud()
+ lastFrame=performance.now();focusScene();persist();showHud()
 }
 function nearDrop(){return world.drops(player.x,player.z,1.65).filter(d=>world.visible(player.x,player.z,d.x,d.z))[0]||null}
 function pickup(){
@@ -147,9 +158,11 @@ function simulation(dt){
  if(reloadAt&&elapsed>=reloadAt){const n=Math.min(6-ammo,reserve);ammo+=n;reserve-=n;reloadAt=0;reloadTime=0}
  else if(reloadAt)reloadTime=reloadAt-elapsed;
  shotTime=Math.max(0,shotTime-dt);
- const forward=(keys.has('w')||keys.has('arrowup')?1:0)-(keys.has('s')||keys.has('arrowdown')?1:0)+stick.y;
- const side=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0)+stick.x;
- const len=Math.hypot(forward,side),running=(keys.has('shift')||sprintHeld)&&energy>1&&len>.1;
+ const controls=keyboard.intent;
+ if(controls.turn)applyLook(controls.turn*dt*2.1,0,1);
+ const forward=clamp(controls.forward+stick.y,-1,1);
+ const side=clamp(controls.strafe+stick.x,-1,1);
+ const len=Math.hypot(forward,side),running=(controls.sprint||sprintHeld)&&energy>1&&len>.1;
  const velocity=(running?3.40:2.25)*(1+.11*(upgrades.shoes||0));
  const distance=Math.min(velocity*dt,velocity*.65);
  let travelled=0;
@@ -241,29 +254,65 @@ function wireInputs(){
  look.addEventListener('pointerdown',e=>{if(phase!=='play')return;lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};look.setPointerCapture(e.pointerId)});
  look.addEventListener('pointermove',e=>{
   if(e.pointerId!==lookPointer||phase!=='play'||!lastLook)return;
-  player.yaw+=(e.clientX-lastLook.x)*.004;
-  player.pitch=clamp(player.pitch+(e.clientY-lastLook.y)*.004,-1.13,1.13);
+  applyLook(e.clientX-lastLook.x,e.clientY-lastLook.y,.004);
   lastLook={x:e.clientX,y:e.clientY}
  });
  for(const name of ['pointerup','pointercancel','lostpointercapture'])look.addEventListener(name,()=>{lookPointer=null;lastLook=null});
+ const view=$('view');
+ // A scene click captures the mouse from ANY visible part of the desktop viewport.
+ // If browser pointer lock is unavailable, holding LMB still permits drag-to-look.
+ view.addEventListener('pointerdown',e=>{
+  if(phase!=='play'||e.pointerType==='touch'||e.button!==0||document.pointerLockElement===view)return;
+  mouseDrag={id:e.pointerId,x:e.clientX,y:e.clientY};
+  try{view.setPointerCapture?.(e.pointerId)}catch{}
+ });
+ view.addEventListener('pointermove',e=>{
+  if(phase!=='play'||document.pointerLockElement===view||!mouseDrag||mouseDrag.id!==e.pointerId)return;
+  applyLook(e.clientX-mouseDrag.x,e.clientY-mouseDrag.y,.004);
+  mouseDrag={id:e.pointerId,x:e.clientX,y:e.clientY}
+ });
+ for(const name of ['pointerup','pointercancel','lostpointercapture'])view.addEventListener(name,()=>{mouseDrag=null});
  document.addEventListener('mousemove',e=>{
-  if(phase!=='play'||document.pointerLockElement!==$('view'))return;
-  player.yaw+=e.movementX*.0025;player.pitch=clamp(player.pitch+e.movementY*.0025,-1.13,1.13)
+  if(phase==='play'&&document.pointerLockElement===view)applyLook(e.movementX,e.movementY)
  });
- $('view').addEventListener('click',()=>{if(phase==='play'&&!document.pointerLockElement)$('view').requestPointerLock?.().catch(()=>{})});
- document.addEventListener('mousedown',e=>{if(phase==='play'&&document.pointerLockElement===$('view')&&e.button===0){e.preventDefault();shoot()}});
+ view.addEventListener('click',()=>{
+  if(phase!=='play'||document.pointerLockElement===view)return;
+  try{view.requestPointerLock?.()?.catch?.(()=>{})}catch{}
+ });
+ document.addEventListener('mousedown',e=>{
+  if(phase==='play'&&document.pointerLockElement===view&&e.button===0){e.preventDefault();shoot()}
+ });
+ document.addEventListener('pointerlockchange',()=>{
+  if(phase==='play'&&document.pointerLockElement!==view&&!mouseDrag)pause()
+ });
  document.addEventListener('keydown',e=>{
-  const key=e.key.toLowerCase();
-  if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(key))e.preventDefault();
-  keys.add(key);
-  if(key==='escape'){
-   if(phase==='play')pause();else if(phase==='pause'||phase==='inventory')resume();return
+  if(isTextEditingTarget(e.target))return;
+  const key=keyboard.down(e);
+  if(!key)return;
+  if(phase!=='play'&&key.action!=='pause'&&!key.action.startsWith('upgrade'))return;
+  e.preventDefault?.();
+  if(key.action==='pause'){
+   if(e.repeat)return;
+   if(phase==='play')pause();
+   else if(phase==='pause'||phase==='inventory')resume();
+   else if(phase==='confirm')overlay('pauseOverlay');
+   return
   }
-  if(phase==='play'&&!e.repeat){
-   if(key==='e')pickup();if(key==='r')reload();if(key==='f')torchToggle();if(key==='i')showInventory();if(key===' ')shoot()
+  if(phase==='upgrade'){
+   if(key.first&&key.action.startsWith('upgrade')){
+    const number=Number(key.action.slice(-1))-1,id=upgradeChoices[number];
+    if(id)chooseUpgrade(id)
+   }
+   return
   }
+  if(phase!=='play'||!key.first)return;
+  if(key.action==='interact')pickup();
+  else if(key.action==='reload')reload();
+  else if(key.action==='torch')torchToggle();
+  else if(key.action==='inventory')showInventory();
+  else if(key.action==='fire')shoot()
  });
- document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+ document.addEventListener('keyup',e=>keyboard.up(e));
  window.addEventListener('blur',()=>{clearInputs();if(phase==='play')pause()});
  const run=$('run');
  run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.classList.add('held');run.setPointerCapture(e.pointerId)});
