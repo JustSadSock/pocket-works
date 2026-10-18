@@ -93,6 +93,19 @@ export function makeUnifiedWalls(walls, height = 0.38) {
   return result;
 }
 
+// Edge-hardware is sunk into the last millimetres of the existing perimeter
+// glass: never a detached board frame. The phone hardware is the other half.
+export function makePerimeterHardware(cols,rows) {
+  const inboard=.065,thickness=.018;
+  const top=.466,bottom=.446;
+  return [
+    makeBox(inboard,bottom,inboard,cols-inboard,top,inboard+thickness),
+    makeBox(inboard,bottom,rows-inboard-thickness,cols-inboard,top,rows-inboard),
+    makeBox(inboard,bottom,inboard+thickness,inboard+thickness,top,rows-inboard-thickness),
+    makeBox(cols-inboard-thickness,bottom,inboard+thickness,cols-inboard,top,rows-inboard-thickness)
+  ];
+}
+
 export function makeFloorWithHole(cols, rows, goal, radius = 0.385) {
   const m = mesh();
   const goalX = Math.floor(goal.x);
