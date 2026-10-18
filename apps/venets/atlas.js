@@ -170,7 +170,7 @@ export function renderAtlas(world,{selectedId='pr-01',onSelect=()=>{},changes=[]
    S('path',{d:model.perimeter,transform:'translate(8 12)',fill:'#443e32','fill-opacity':.30}),
    S('path',{d:model.perimeter,fill:'url(#'+uid+'-paper)',stroke:'#4b4638','stroke-width':5}),
    S('path',{d:model.perimeter,fill:'url(#'+uid+'-light)'}),
-   S('g',{'clip-path':'url(#atlas-land)'},[
+   S('g',{'clip-path':'url(#'+uid+'-land)'},[
      S('rect',{width:model.width,height:model.height,fill:'#5c452e',filter:'url(#'+uid+'-grain)'})]),
    engraving(model,world.seed,uid),mapCounties(world,model,selectedId,changes,onSelect,{rank,selectedTitleId}));
  warMarkers(svg,model,world);
