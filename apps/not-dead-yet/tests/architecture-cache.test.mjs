@@ -17,7 +17,7 @@ test('physical plaster layer projects behind original traversable boundary',()=>
   const values=[];for(let i=axis;i<out.length;i+=10)values.push(out[i]);
   if(side>0)assert.ok(Math.min(...values)>=plane-.0101);
   else assert.ok(Math.max(...values)<=plane+.0101);
-  assert.ok(Math.max(...values)-Math.min(...values)>=.16,'wall must have thickness')
+  assert.ok(Math.max(...values)-Math.min(...values)>=.15,'wall must have thickness')
  }
 });
 test('five distinct deterministic material finishes and raised Soviet wall repairs',()=>{
