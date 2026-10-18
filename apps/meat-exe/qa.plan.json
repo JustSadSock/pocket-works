@@ -137,6 +137,22 @@
         "qa/ecology.spec.js"
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "biobuilds",
+      "kind": "node-test",
+      "files": [
+        "qa/biobuilds.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "biobuilds-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/biobuilds.spec.js"
+      ],
+      "tier": "smoke"
     }
   ]
 }
