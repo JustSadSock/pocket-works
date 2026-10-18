@@ -24,8 +24,7 @@ function active(players=people){
  now=state.deadline+1;send(players[0],{type:'pulse'});
  assert.equal(state.phase,'drawing');
  for(const p of players)send(p,{type:'submit',strokes:[]});
- now=state.deadline+1;send(players[0],{type:'pulse'});
- assert.equal(state.phase,'voting');
+ assert.equal(state.phase,'voting','all accepted paintings start the jury immediately');
  const start=now;return {state,players,send,start};
 }
 function nextAfterReveal(match){
