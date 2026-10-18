@@ -39,7 +39,7 @@ export function architecturalWall(o,{x,z,px,pz,dx,dz,room,sector,seed,tile=1.27,
   if(detail)decorate(o,walkFace,pz,dx,0,tile,p,sector,room,x,z)
  }else{
   box(o,px+tile*.5,0,inner,tile,HEIGHT,thick,p.back,1);
-  box(o,px+tile*.5,.13,walkFace+dz*.004,tile-.015,HEIGHT-.20,.008,p.paper,mat);
+  box(o,px+tile*.5,.13,walkFace-dz*.005,tile-.015,HEIGHT-.20,.008,p.paper,mat);
   if(detail)decorate(o,walkFace,px,0,dz,tile,p,sector,room,x,z)
  }
 }
