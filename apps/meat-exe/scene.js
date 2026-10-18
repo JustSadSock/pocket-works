@@ -3,6 +3,7 @@ import { generateOrgan, getOrganProfile, getTissueNodes, setSeed, CELLS_PER_CHUN
 import { sweepCircle } from './stability.js';
 import {ENEMY_TELLS,telegraphSeverity} from './ecology.js';
 import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
+import {gastricChamber} from './gastricArt.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -360,13 +361,13 @@ export function createWorld(canvas, initialSeed) {
       temp.position.set(x,y,z);temp.rotation.set(0,rot,0);temp.scale.set(1,1,1);temp.updateMatrix();wall.setMatrixAt(i,temp.matrix);
       wall.setColorAt(i,new THREE.Color().setHSL(biome.hue+(rand(a,b,seed+12)-.5)*.019,biome.saturation,biome.wallLight+rand(a,b,seed+14)*.14));
     });
-    wall.instanceMatrix.needsUpdate;wall.instanceMatrix.needsUpdate=true;group.add(wall);
+    wall.instanceMatrix.needsUpdate=true;group.add(wall);
     if(stage===2){
       // Real gastric architecture: distinct per-sector landmarks and irregular
       // pleated hanging vaults. All large forms stay overhead or in wall space,
       // not inside movement / hitscan lanes.
-      const style=(Math.imul(cx,73856093)^Math.imul(cz,19349663)^seed)>>>0;
-      const archCount=style%3===0?2:style%3===1?3:1;
+      const art=gastricChamber(cx,cz,seed),style=art.seed;
+      const archCount=art.arches;
       const arches=new THREE.InstancedMesh(gastricPylorusGeo,gastricFoldMat,archCount);
       let placed=0;
       const clearCenter=cells.filter(([x,z])=>{
@@ -382,14 +383,14 @@ export function createWorld(canvas, initialSeed) {
       arches.count=placed;arches.instanceMatrix.needsUpdate=true;group.add(arches);
       const folds=[];
       for(const [x,z] of cells){
-        if(gastricSeedArt(x,z,23)<.53)continue;
+        if(gastricSeedArt(x,z,23)>art.folds)continue;
         folds.push([x+(gastricSeedArt(x,z,24)-.5)*.3,z+(gastricSeedArt(x,z,25)-.5)*.3]);
       }
       if(folds.length){
         const drapes=new THREE.InstancedMesh(gastricDrapeGeo,gastricFoldMat,folds.length);
         folds.forEach(([x,z],i)=>{
           temp.position.set(x,2.42,z);temp.rotation.set(.13,gastricSeedArt(x,z,26)*6.28,.13);
-          const stretch=.14+gastricSeedArt(x,z,27)*.14;
+          const stretch=.14+gastricSeedArt(x,z,27)*.14*art.hang;
           temp.scale.set(.26+stretch,.21+stretch,.16+stretch);
           temp.updateMatrix();drapes.setMatrixAt(i,temp.matrix);
         });
@@ -405,8 +406,31 @@ export function createWorld(canvas, initialSeed) {
         });
         creases.instanceMatrix.needsUpdate=true;group.add(creases);
       }
+      // Per-sector hero geometry:
+      // pylorus: layered occluding rings;
+      // cistern: pendant bladder;
+      // rugae: pleated tendon vault.
+      if(art.type==='cistern'&&clearCenter.length>=4){
+        const [x,z]=clearCenter[Math.floor(style%clearCenter.length)];
+        const bulb=new THREE.Mesh(gastricDrapeGeo,gastricFoldMat);
+        bulb.position.set(x,2.34,z);bulb.scale.set(.54,.33,.53);group.add(bulb);
+        for(let i=0;i<3;i++){
+          const mouth=new THREE.Mesh(gastricPylorusGeo,i===1?gastricMucusMat:gastricFoldMat);
+          mouth.position.set(x,2.12-i*.20,z);mouth.rotation.x=Math.PI/2;
+          mouth.scale.setScalar(.53+i*.1);group.add(mouth);
+        }
+      }
+      if(art.type==='rugae'&&clearCenter.length>=4){
+        const pleats=new THREE.InstancedMesh(gastricRugaGeo,gastricFoldMat,6);
+        for(let i=0;i<6;i++){
+          const [x,z]=clearCenter[(i*5+style)%clearCenter.length];
+          temp.position.set(x,2.35,z);temp.rotation.set(Math.PI/2,i*.9,.1);
+          temp.scale.set(.6+.08*i,.75,.85);temp.updateMatrix();pleats.setMatrixAt(i,temp.matrix);
+        }
+        pleats.instanceMatrix.needsUpdate=true;group.add(pleats);
+      }
       // Twisted pyloric tendons in especially open atria.
-      if(profile.archetype==='atrium'&&clearCenter.length>=7){
+      if((profile.archetype==='atrium'||art.type==='pylorus')&&clearCenter.length>=7){
         const cords=new THREE.InstancedMesh(gastricSinewGeo,gastricFoldMat,4);
         for(let i=0;i<4;i++){
           const [x,z]=clearCenter[(i*3)%clearCenter.length];
@@ -567,7 +591,7 @@ export function createWorld(canvas, initialSeed) {
     }
     const tell=new THREE.Mesh(tellRingGeo,tellMats[type]||tellMats.crawler);
     tell.rotation.x=Math.PI/2;tell.position.y=.085;tell.visible=false;g.add(tell);
-    g.userData.tell=tell;g.userData.limbs=limbs;
+    g.userData.tell=tell;g.userData.limbs=limbs;g.userData.bodyBaseY=body.scale.y;
     g.scale.setScalar(scale);g.position.set(x,0,z);source.add(g);
     return g;
   }
@@ -684,7 +708,7 @@ export function createWorld(canvas, initialSeed) {
       e.visual.rotation.y=Math.atan2(player.x-e.x,player.z-e.z)+Math.PI;
       e.visual.rotation.z=(reduced?0:Math.sin(time*26+e.id)*hit*.075);
       e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='warden'?1.67:e.type==='brute'?1.36:e.type==='spitter'?.90:e.type==='leech'?.94:1)*(1+Math.sin(time*5+e.id)*.045-hit*.07));
-       if(e.visual.userData.body){const body=e.visual.userData.body;body.scale.y*=1+Math.sin(time*3+e.id)*.0009;}
+       if(e.visual.userData.body){const body=e.visual.userData.body;body.scale.y=e.visual.userData.bodyBaseY*(1+Math.sin(time*3+e.id)*.045);}
        if(e.visual.userData.limbs&&!reduced){for(const limb of e.visual.userData.limbs){limb.joint.rotation.x=Math.sin(time*(e.type==='crawler'?10:6)+e.id+limb.index*2+limb.side)*(.15+(e.windup>0?.10:0));}}
       if(e.visual.userData.wound)e.visual.userData.wound.visible=hit>.1;
       const tell=e.visual.userData.tell;
