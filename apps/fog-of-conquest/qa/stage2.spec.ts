@@ -69,7 +69,14 @@ test('hot-seat handoff is opaque and must be acknowledged before viewing',async(
   expect(cover).toBe(true);
   await page.locator('#fogAcceptSide').click();
   await expect(page.locator('#fogHandOff')).toBeHidden();
-  await expect.poll(()=>page.evaluate(()=>document.getElementById('battleViewport')!.scrollTop)).toBeGreaterThan(0);
+  const inView=await page.evaluate(()=>{
+    const w=window as any,v=document.getElementById('battleViewport')!.getBoundingClientRect();
+    const canvas=document.getElementById('canvas') as HTMLCanvasElement;
+    const box=canvas.getBoundingClientRect(),unit=w.units.find((u:any)=>u.owner===2);
+    const y=box.top+(unit.r+.5)*box.height/w.ROWS;
+    return y>=v.top&&y<=v.bottom;
+  });
+  expect(inView).toBe(true);
 });
 
 test('tiny phone is focus-first, accessible and without document overflow',async({page})=>{
