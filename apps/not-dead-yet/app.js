@@ -2,6 +2,11 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 installMobileRuntime();
 const chapter=new URLSearchParams(location.search).has('chapter');
 if(chapter){
+ document.title='NOT DEAD YET — Квартира №17';
+ const progress=document.querySelector('.top-progress span:last-child');
+ if(progress)progress.textContent='ВОСПОМИНАНИЯ';
+ const inventory=document.getElementById('pack');
+ if(inventory)inventory.firstChild.textContent='Вещи ';
  const title=document.querySelector('#menu .eyebrow');
  if(title)title.textContent='ГЛАВА I / КВАРТИРА №17';
  const intro=document.querySelector('#menu .intro');
