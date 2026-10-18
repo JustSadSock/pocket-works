@@ -90,8 +90,13 @@ try{
  await close(guest);
  rejoined=await client(b);rejoined.send('join_room',{roomId:code});
  const resumed=await rejoined.next('room_joined');
- assert.equal(resumed.state.me,1);assert.equal(resumed.state.match.score.join(':'),originalScore);
+ assert.equal(resumed.state.me,1);assert.ok(resumed.state.nextSeq>0,'Reconnect must return server-side next input sequence');assert.equal(resumed.state.match.score.join(':'),originalScore);
  assert.equal(resumed.state.match.actors[0].runes.join(','),'on_cast,ball');
+ rejoined.send('game_message',{payload:{type:'input',seq:resumed.state.nextSeq,round:1,control:ctl(-.4)}});
+ await idle(150);
+ host.send('game_message',{payload:{type:'input',seq:19,round:1,control:ctl(0)}});
+ const afterReconnect=(await receive(rejoined,'fight')).event.payload;
+ assert.ok(afterReconnect.nextSeq>resumed.state.nextSeq,'Recovered seat must accept the next input immediately');
  rejoined.send('leave_room');
  const finished=(await receive(host,'result')).event.payload;
  assert.equal(finished.match.champion,0);
