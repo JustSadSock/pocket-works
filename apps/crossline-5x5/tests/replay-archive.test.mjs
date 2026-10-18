@@ -78,7 +78,7 @@ test('revealed plans are preserved for both players at any beat including pre-pl
  assert.equal(record.frames.length,1);
  const before=analyzeBeat(record,0);
  assert.equal(before.step,0);
- assert.deepEqual(before.projected.A.planned,record.begin.A);
+ assert.deepEqual(before.projected.A.planned,{x:record.begin.A.x,y:record.begin.A.y});
  assert.equal(before.projected.A.verdict,'До начала');
  const after=analyzeBeat(record,1);
  assert.deepEqual(after.projected.A.action,planA[0]);
