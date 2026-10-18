@@ -33,6 +33,9 @@ test('visual audit: six mages, own silhouette, different projectile and three-ru
  await page.evaluate(()=>{const a=window.__perekosTest.state.actors[0];a.runes=['on_hurt','armor','on_cast','ball','on_dash','blink'];window.__perekosTest.reorder(0,0)});
  await expect(page.locator('.spell-lane')).toHaveCount(3);
  await expect(page.locator('.bench-slot')).toHaveCount(6);
+ await expect(page.locator('#spell-index button')).toHaveCount(3);
+ await page.locator('#spell-index button').nth(2).click();
+ await expect(page.locator('#spell-index button').nth(2)).toHaveClass(/active/);
  await testInfo.attach('three-spells-workbench',{body:await page.screenshot(),contentType:'image/png'});
  const sizing=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,slots:document.querySelector('#bench-slots').scrollHeight,visible:document.querySelector('#bench-slots').clientHeight}));
  expect(sizing.scroll).toBeLessThanOrEqual(sizing.width+1);
