@@ -102,3 +102,62 @@ test('organic land disputes are scored by actual neighbouring land titles and do
  assert.match(app,/sim\.conflicts/);
  assert.match(app,/stage==='mobilizing'/);
 });
+
+test('organised militia musters at real households before marching and cannot create supplies',()=>{
+ const s=createWorld(413),pair=settlementPair(s);assert.ok(pair);
+ const pop=population(s),cash=s.households.reduce((n,h)=>n+h.coin,0);
+ const timber=s.households.reduce((n,h)=>n+(h.wood||0)+(h.staveWood||0),0);
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot,null,{muster:true});
+ assert.ok(c,'physical roster and wood stock must permit mobilisation');
+ assert.equal(c.stage,'mustering');
+ assert.equal(c.rallyDay,s.day+1);assert.equal(c.meetDay,s.day+2);
+ assert.ok(c.claimants.length<=4&&c.owners.length<=4);
+ assert.equal(population(s),pop);
+ assert.equal(s.households.reduce((n,h)=>n+(h.wood||0)+(h.staveWood||0),0),timber);
+ advanceDays(s,1);
+ assert.equal(c.stage,'mobilizing');
+ for(const id of [...c.claimants,...c.owners]){
+  const p=s.people.find(p=>p.id===id);
+  if(p?.alive&&p.combatDutyDay===s.day){
+   const h=s.households.find(h=>h.id===p.houseId);
+   assert.deepEqual(p.dailyShift.to,{x:h.x,y:h.y},'muster is held at home');
+  }
+ }
+ advanceDays(s,1);
+ assert.equal(c.stage,'resolved');
+ assert.deepEqual(Object.keys(c.arrived).sort(),['claimants','owners']);
+ assert.ok(c.arrived.claimants<=c.claimants.length&&c.arrived.owners<=c.owners.length);
+ assert.ok(Object.values(c.morale).every(x=>x>=0&&x<=1));
+ assert.equal(s.households.reduce((n,h)=>n+h.coin,0),cash);
+ assert.ok(audit(s).ok,audit(s).issues.join('; '));
+});
+
+test('morale enables a peaceful withdrawal from a vastly weaker and hungry side',()=>{
+ const s=createWorld(413),pair=settlementPair(s);assert.ok(pair);
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot);
+ assert.ok(c);
+ for(const id of c.claimants)s.people.find(p=>p.id===id).health=38;
+ for(const id of c.owners)s.people.find(p=>p.id===id).health=100;
+ pair.poor.shortage=35;
+ advanceDays(s,1);
+ assert.equal(c.stage,'resolved');
+ assert.equal(c.retreated,'claimants');
+ assert.equal(c.outcome,'owner');
+ assert.deepEqual(c.wounded,[],'retreat avoids a forced fight');
+ assert.ok(c.morale.claimants<c.morale.owners);
+ assert.equal(s.stats.disputeRetreats,1);
+ assert.ok(audit(s).ok,audit(s).issues.join('; '));
+});
+
+test('muster preserves deterministic outcomes through two independent save/reload paths',()=>{
+ const s=createWorld(43821),pair=settlementPair(s);assert.ok(pair);
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot,null,{muster:true});
+ assert.ok(c);
+ const save=serialize(s),once=deserialize(save),stepwise=deserialize(save);
+ advanceDays(once,18);for(let day=0;day<18;day++)advanceDays(stepwise,1);
+ assert.equal(serialize(once),serialize(stepwise));
+ const result=once.conflicts.find(x=>x.id===c.id);
+ assert.equal(result.stage,'resolved');
+ assert.ok(result.morale&&result.arrived);
+ assert.ok(audit(once).ok,audit(once).issues.join('; '));
+});

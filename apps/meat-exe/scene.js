@@ -102,23 +102,39 @@ export function createWorld(canvas, initialSeed) {
   scene.add(particles);
   const source = new THREE.Group();
   scene.add(source);
-  const chunks = new Map(), layouts = new Map(), stains = [], droplets = [];
+  const chunks = new Map(), layouts = new Map(), stains = [], droplets = [], streaks = [];
+  const lineMat=new THREE.LineBasicMaterial({color:0xffd5ab,transparent:true,opacity:.62,depthWrite:false});
+  const bileLineMat=new THREE.LineBasicMaterial({color:0xffb980,transparent:true,opacity:.48,depthWrite:false});
+  const impactGeo=new THREE.CircleGeometry(1,9);
+  const wallBlood=new THREE.MeshBasicMaterial({color:0x740b19,transparent:true,opacity:.78,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-3});
+  const woundMat=new THREE.MeshBasicMaterial({color:0xffd2a9,transparent:true,opacity:.56,depthWrite:false});
   let seed=0, lastChunk='', frame=0;
-  const gun = new THREE.Group();
-  const metal = new THREE.MeshStandardMaterial({color:0x535050,metalness:.62,roughness:.38});
-  const muscle = new THREE.MeshStandardMaterial({color:0x5d1a23,metalness:.12,roughness:.52});
-  const muzzle = new THREE.MeshBasicMaterial({color:0xffbd69});
-  function part(geo,mat,x,y,z,sx,sy,sz, parent=gun) {
+  const gun = new THREE.Group(), bolter=new THREE.Group(), shredder=new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({color:0x565151,metalness:.62,roughness:.38});
+  const muscle = new THREE.MeshStandardMaterial({color:0x491e26,metalness:.06,roughness:.78});
+  const barrelBone = new THREE.MeshStandardMaterial({color:0xd4b49a,metalness:.04,roughness:.84});
+  const muzzle = new THREE.MeshBasicMaterial({color:0xffd5a0});
+  gun.add(bolter,shredder);
+  function part(geo,mat,x,y,z,sx,sy,sz, parent=bolter) {
     const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;
   }
-  part(new THREE.BoxGeometry(1,1,1),muscle,.27,-.28,-.75,.23,.23,.75);
+  // Distinct real silhouettes: a long screwed-in bolt lance and a paired bone jaw shotgun.
+  part(new THREE.CylinderGeometry(.15,.21,.83,9,4).rotateX(Math.PI/2),muscle,.27,-.31,-.73,1,1,1);
   part(new THREE.CylinderGeometry(.13,.19,1,8).rotateX(Math.PI/2),metal,.27,-.19,-1.06,1,1,1);
-  part(new THREE.BoxGeometry(1,1,1),metal,.27,-.39,-.5,.15,.32,.28);
+  part(new THREE.CylinderGeometry(.075,.13,.32,7),metal,.28,-.49,-.48,1,1,1);
   for(let k=0;k<3;k++) part(new THREE.TorusGeometry(.14,.034,6,12),k===1?muscle:metal,.27,-.19,-.72-k*.21,1,1,1);
-  const flash = part(new THREE.SphereGeometry(1,10,8),muzzle,.27,-.19,-1.58,.02,.02,.02);
-  flash.visible=false;
-  camera.add(gun);
-  scene.add(camera);
+  const longFlash=part(new THREE.ConeGeometry(.18,.5,7).rotateX(-Math.PI/2),muzzle,.27,-.19,-1.73,1,1,1);
+  part(new THREE.CylinderGeometry(.23,.3,.75,9,4).rotateX(Math.PI/2),muscle,.27,-.31,-.68,1,1,1,shredder);
+  part(new THREE.CylinderGeometry(.13,.17,.33,7).rotateX(Math.PI/2),metal,.26,-.34,-.33,1,1,1,shredder);
+  for(const side of [-1,1]){
+    part(new THREE.CylinderGeometry(.13,.16,1.25,7).rotateX(Math.PI/2),barrelBone,.27+side*.16,-.24,-1.14,1,1,1,shredder);
+    for(let tooth=0;tooth<3;tooth++) part(new THREE.ConeGeometry(.075,.25,5),barrelBone,.27+side*.20,-.37,-.78-tooth*.29,.92,1,.9,shredder);
+    part(new THREE.TorusGeometry(.16,.034,6,9),metal,.27+side*.16,-.24,-1.42,1,1,1,shredder);
+  }
+  const wideFlash=part(new THREE.IcosahedronGeometry(.23,0),muzzle,.27,-.24,-1.77,1.2,1,1.1,shredder);
+  let muzzleTime=0,muzzleKind=0,kickPos=0,kickVel=0;
+  longFlash.visible=false;wideFlash.visible=false;
+  camera.add(gun);scene.add(camera);
   let currentWidth=0,currentHeight=0,quality='medium',ratio=0;
   function setQuality(next){
     if(!['low','medium','high'].includes(next))return;
@@ -128,8 +144,10 @@ export function createWorld(canvas, initialSeed) {
     const w=Math.max(1,Math.round(canvas.clientWidth||window.innerWidth));
     const h=Math.max(1,Math.round(canvas.clientHeight||window.innerHeight));
     const mobile=w<900 || ('ontouchstart' in window);
-    const desired=quality==='low'?1:quality==='high'?(mobile?1.5:1.85):(mobile?1.2:1.45);
-    const pixelRatio=Math.min(window.devicePixelRatio||1,desired);
+    const desired=quality==='low'?1:quality==='high'?(mobile?1.32:1.55):(mobile?1.14:1.35);
+    // Bound real pixel work, not only CSS size: software WebGL must never stall input.
+    const budget=mobile?1_300_000:2_200_000;
+    const pixelRatio=Math.min(window.devicePixelRatio||1,desired,Math.sqrt(budget/(w*h)));
     if(w===currentWidth&&h===currentHeight&&ratio===pixelRatio) return;
     currentWidth=w;currentHeight=h;
     ratio=pixelRatio;renderer.setPixelRatio(ratio);
@@ -148,8 +166,10 @@ export function createWorld(canvas, initialSeed) {
   function clearChunks() {
     for(const obj of chunks.values()) scene.remove(obj);
     chunks.clear();layouts.clear();lastChunk='';
+    for(const line of streaks)line.obj.geometry.dispose();streaks.length=0;
     source.clear();
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
+    kickPos=0;kickVel=0;muzzleTime=0;
   }
   function buildChunk(cx,cz){
     const cs=getCells(cx,cz),cells=[...cs].map(k=>k.split(',').map(Number));
@@ -214,6 +234,7 @@ export function createWorld(canvas, initialSeed) {
     const g=new THREE.Group(), core=mobMats[type]||mobMats.crawler;
     const scale=type==='heart'?1.8:type==='brute'?1.28:type==='spitter'?.84:.95;
     const body=new THREE.Mesh(organicGeo,core);body.position.y=.85;body.scale.set(.42,.5,.32);g.add(body);
+    const wound=new THREE.Mesh(organicGeo,woundMat);wound.position.y=.85;wound.scale.set(.46,.54,.37);wound.visible=false;g.add(wound);g.userData.wound=wound;
     const jaw=new THREE.Mesh(new THREE.TorusGeometry(.2,.07,6,12),boneMat);jaw.position.set(0,.65,-.3);g.add(jaw);
     for(let i=0;i<4;i++){
       const a=i*Math.PI/2+.35;
@@ -239,6 +260,41 @@ export function createWorld(canvas, initialSeed) {
     const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.04,6,12),boneMat);ring.rotation.x=Math.PI/2;
     group.add(outer,ring);group.position.set(x,.55,z);source.add(group);return group;
   }
+  function firePulse(weapon){
+    muzzleKind=weapon;muzzleTime=weapon===1?.115:.075;
+    kickVel+=weapon===1?5.7:2.6;
+  }
+  function fireTrace(origin,point,weapon){
+    const budget=quality==='low'?11:24;
+    if(streaks.length>=budget){
+      const old=streaks.shift();source.remove(old.obj);old.obj.geometry.dispose();
+    }
+    const dir=new THREE.Vector3(point.x-origin.x,point.y-origin.y,point.z-origin.z).normalize();
+    const start=new THREE.Vector3(origin.x+dir.x*.42,origin.y+dir.y*.42,origin.z+dir.z*.42);
+    const end=new THREE.Vector3(point.x,point.y,point.z);
+    const geometry=new THREE.BufferGeometry().setFromPoints([start,end]);
+    const obj=new THREE.Line(geometry,weapon?bileLineMat:lineMat);source.add(obj);
+    streaks.push({obj,life:.11});
+  }
+  function impact(point,dir,kind){
+    if(kind==='wall'){
+      if(stains.length>=44)source.remove(stains.shift());
+      const decal=new THREE.Mesh(impactGeo,wallBlood);
+      decal.position.set(point.x-dir.x*.035,Math.max(.055,Math.min(2.67,point.y-dir.y*.035)),point.z-dir.z*.035);
+      decal.lookAt(decal.position.x-dir.x,decal.position.y-dir.y,decal.position.z-dir.z);
+      const radius=.11+Math.random()*.12;
+      decal.scale.set(radius,radius*(.65+Math.random()*.55),1);source.add(decal);stains.push(decal);
+    }
+    const count=quality==='low'?4:kind==='flesh'?14:7;
+    for(let i=0;i<count&&droplets.length<600;i++){
+      const angle=Math.random()*Math.PI*2,force=.75+Math.random()*2.4;
+      droplets.push({x:point.x,y:point.y,z:point.z,
+        vx:dir.x*force*.54+Math.cos(angle)*force*.75,
+        vy:dir.y*force*.28+(Math.random()-.24)*2.7,
+        vz:dir.z*force*.54+Math.sin(angle)*force*.75,
+        life:.19+Math.random()*.5});
+    }
+  }
   function splatter(x,z,count=13){
     for(let i=0;i<count&&droplets.length<600;i++){
       const a=Math.random()*Math.PI*2,force=.8+Math.random()*3;
@@ -248,6 +304,9 @@ export function createWorld(canvas, initialSeed) {
     const stain=new THREE.Mesh(gooGeo,bloodMat);stain.position.set(x,.025,z);stain.scale.setScalar(.2+Math.random()*.3);source.add(stain);stains.push(stain);
   }
   function tickFx(dt,time){
+    for(let i=streaks.length-1;i>=0;i--){const s=streaks[i];s.life-=dt;if(s.life<=0){source.remove(s.obj);s.obj.geometry.dispose();streaks.splice(i,1);}}
+    muzzleTime=Math.max(0,muzzleTime-dt);
+    kickVel+=(-kickPos*125-kickVel*18)*dt;kickPos+=kickVel*dt;
     for(let i=droplets.length-1;i>=0;i--){
       const p=droplets[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vy-=9.5*dt;p.life-=dt;
       if(p.life<=0||p.y<=.04)droplets.splice(i,1);
@@ -263,15 +322,29 @@ export function createWorld(canvas, initialSeed) {
   function paint(player,entities,pickups,time,dt,recoil=0,damage=0,shots=[]){
     resize();nearChunks(player.x,player.z);
     camera.position.set(player.x,1.41+Math.sin(time*11)*Math.min(.025,(player.moving||0)*.018),player.z);
-    camera.rotation.set(player.pitch,player.yaw,0,'YXZ');
+    const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    camera.rotation.set(player.pitch+(reduced?0:Math.min(.016,kickPos*.03)),player.yaw,0,'YXZ');
     camera.fov=77+recoil*2.8+(player.sprinting?3:0);camera.updateProjectionMatrix();
     lamp.position.set(player.x,1.7,player.z);pulseLamp.position.set(player.x,2.55,player.z-1.8);
-    gun.position.set(Math.sin(time*9)*(player.moving||0)*.012,Math.cos(time*9)*(player.moving||0)*.008-recoil*.08,Math.min(0,recoil*.15));
-    gun.rotation.x=recoil*.15;flash.visible=recoil>.58;
+    const w=player.weapon===1?1:0;
+    bolter.visible=w===0;shredder.visible=w===1;
+    const portrait=canvas.clientHeight>canvas.clientWidth;
+    gun.scale.setScalar(portrait?.76:1);
+    gun.position.set((portrait?.10:.17)+Math.sin(time*8)*(player.moving||0)*.012,
+      (portrait?-.14:-.16)+Math.cos(time*8)*(player.moving||0)*.008-recoil*.04,
+      -.20-Math.min(.23,kickPos*.2));
+    gun.rotation.x=(reduced?0:Math.min(.12,kickPos*.19));
+    longFlash.visible=muzzleTime>0&&muzzleKind===0;
+    wideFlash.visible=muzzleTime>0&&muzzleKind===1;
+    if(longFlash.visible)longFlash.scale.setScalar(.9+muzzleTime*3);
+    if(wideFlash.visible)wideFlash.scale.setScalar(.85+muzzleTime*3.1);
     for(const e of entities)if(e.visual){
-      e.visual.position.set(e.x,Math.sin(time*4+e.id)*.038,e.z);
+      const hit=clamp((e.hitFlash||0)/.18,0,1);
+      e.visual.position.set(e.x,Math.sin(time*4+e.id)*.038-hit*.05,e.z);
       e.visual.rotation.y=Math.atan2(player.x-e.x,player.z-e.z)+Math.PI;
-      e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='brute'?1.28:e.type==='spitter'?.84:.95)*(1+Math.sin(time*5+e.id)*.045));
+      e.visual.rotation.z=(reduced?0:Math.sin(time*26+e.id)*hit*.075);
+      e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='brute'?1.28:e.type==='spitter'?.84:.95)*(1+Math.sin(time*5+e.id)*.045-hit*.07));
+      if(e.visual.userData.wound)e.visual.userData.wound.visible=hit>.1;
     }
     for(const p of pickups)if(p.visual){p.visual.position.y=.55+Math.sin(time*3+p.x)*.12;p.visual.rotation.y+=dt*1.8;}
     for(const p of shots)if(p.visual){p.visual.position.set(p.x,.95+Math.sin(time*13+p.x)*.07,p.z);p.visual.rotation.y+=dt*5;}
@@ -288,5 +361,5 @@ export function createWorld(canvas, initialSeed) {
   }
   function end(){clearChunks();renderer.dispose();}
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, end };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
 }

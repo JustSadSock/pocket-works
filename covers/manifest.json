@@ -3171,7 +3171,7 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "4bc623a4a4214beb3e9cb90f0d8717764fb8d9e8",
+    "revision": "1ac5a1a2aa5199bb2bd0a00ceb0d4f4c83657e10",
     "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
@@ -3183,8 +3183,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4bc623a4a4214beb3e9cb90f0d8717764fb8d9e8",
-    "lastAttemptAt": "2026-10-18T00:27:06.387Z"
+    "lastAttemptRevision": "1ac5a1a2aa5199bb2bd0a00ceb0d4f4c83657e10",
+    "lastAttemptAt": "2026-10-18T09:22:35.483Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3294,24 +3294,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 35141,
-        "variance": 57.53181699840296,
-        "entropy": 1.4520150289986462,
-        "edgeDensity": 0.11185515873015874,
-        "colorfulness": 25.4931640625,
-        "centerDetail": 78.43064946535326,
-        "meanLight": 31.617732617187695
+        "bytes": 35113,
+        "variance": 57.5159365642552,
+        "entropy": 1.4627031032424236,
+        "edgeDensity": 0.11135912698412699,
+        "colorfulness": 25.282470703125,
+        "centerDetail": 78.63071153891137,
+        "meanLight": 31.553363427734663
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.1.0&pw_fp=da9d51a98e3c4de0eaa8e815"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.2.0&pw_fp=c183ee86caad8b43dd384c12"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "3e491748f4cb55816731509b270aeca0d5d40c4e",
-    "lastAttemptAt": "2026-10-18T08:46:35.449Z"
+    "lastAttemptRevision": "549142e9d6f7d7d0152a0f4a2e4a8047094d7242",
+    "lastAttemptAt": "2026-10-18T10:54:37.399Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3341,7 +3341,7 @@
     "lastAttemptAt": "2026-10-18T00:58:04.029Z"
   },
   "axis-pals": {
-    "revision": "483d05f215b538a81685e9b749a63198c426ffd4",
+    "revision": "67562c2e7b7bd6b8f914d81b4e674f755f8602ba",
     "qualityScore": 70,
     "visionScore": null,
     "prepared": false,
@@ -3355,12 +3355,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "f85b7065b966df48b59f051b9af6f5e1c950340c6b35c8714fbe9883751a5e48",
+    "sha256": "cfa817a12eae3671103eb78fde1e51b8e444122366909861bb77e97577a0390c",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "483d05f215b538a81685e9b749a63198c426ffd4",
-    "lastAttemptAt": "2026-10-18T08:57:08.656Z"
+    "lastAttemptRevision": "67562c2e7b7bd6b8f914d81b4e674f755f8602ba",
+    "lastAttemptAt": "2026-10-18T09:12:25.098Z"
   },
   "trafficity": {
     "revision": "483d05f215b538a81685e9b749a63198c426ffd4",

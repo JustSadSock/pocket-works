@@ -10,7 +10,8 @@
         "actors.test.mjs",
         "diorama.test.mjs",
         "feedback.test.mjs",
-        "life.test.mjs"
+        "life.test.mjs",
+        "themes.test.mjs"
       ]
     },
     {
@@ -121,6 +122,47 @@
         },
         {
           "action": "screenshot"
+        },
+        {
+          "action": "visible",
+          "selector": "#overlayMain"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "archive-first-endless",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#menu",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#endless"
+        },
+        {
+          "action": "visible",
+          "selector": "#board"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"right\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
         },
         {
           "action": "visible",
