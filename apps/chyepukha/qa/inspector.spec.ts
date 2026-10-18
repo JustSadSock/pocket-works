@@ -8,7 +8,7 @@ test('screen inspector has all stages and actual responsive app views',async({pa
  await page.keyboard.press('Backquote');
  const inspector=page.locator('.chy-qa');
  await expect(inspector).toBeVisible();
- await expect(inspector.locator('[data-screen]')).toHaveCount(19);
+ await expect(inspector.locator('[data-screen]')).toHaveCount(22);
  await inspector.locator('[data-device=phone]').click();
  await expect(inspector.locator('[data-size]')).toContainText('390 × 844');
  const frame=page.frameLocator('.chy-qa-frame');
@@ -19,7 +19,8 @@ test('screen inspector has all stages and actual responsive app views',async({pa
   ['writing-first','#answerForm'],['writing-tail','.incoming'],
   ['writing-selection','.word.selected'],['writing-zero','#wordCount'],
   ['waiting','.wax'],['offline','#answerForm'],['leave','.comic-modal'],
-  ['results','.story-paper'],['results-second','.story-paper'],['comic','.comic-inner img']
+  ['results','.story-paper'],['results-second','.story-paper'],['comic','.comic-inner img'],
+  ['archive','.archive-manuscript'],['archive-empty','.archive-empty'],['archive-delete','.comic-modal']
  ]){
   if(await inspector.evaluate(e=>e.classList.contains('collapsed')))await inspector.locator('.chy-qa-expand').click();
   await inspector.locator('[data-screen="'+id+'"]').click();
