@@ -5,7 +5,7 @@ import {appendPropDetails,appendRoomDetails,appendWallDetails,appendDoorDetails}
 const S=TILE,HEIGHT=2.62;
 const C={
  living:[.49,.38,.30],kitchen:[.45,.52,.43],bedroom:[.46,.39,.32],
- bathroom:[.56,.59,.54],closet:[.42,.39,.32],nursery:[.48,.45,.34],hall:[.39,.47,.40]
+ bathroom:[.56,.59,.54],closet:[.42,.39,.32],nursery:[.48,.45,.34],toilet:[.52,.55,.48],hall:[.39,.47,.40]
 };
 function quad(out,a,b,c,d,color,n,mat=1){for(const p of [a,b,c,a,c,d])out.push(...p,...color,...n,mat)}
 function box(out,x,y,z,w,h,d,col,mat=6){
@@ -27,7 +27,7 @@ function roomDetail(out,c,room){
  box(out,x,HEIGHT-.25,z,.35,.13,.35,[.80,.64,.40],8);
  // Window facing the outer wall: recessed frame, two panes, heavy curtains and sill.
  const wx=x,wz=(rz+room.z0)*S+.035,w=Math.min(1.8,(room.x1-room.x0-1)*S);
- if(w>.7){
+ if(w>.7&&!room.service&&['living','kitchen','bedroom','nursery'].includes(room.type)){
   box(out,wx,1.12,wz,w,1.18,.045,wood,6);
   box(out,wx,1.18,wz+.040,w*.88,1.02,.019,glass,10);
   box(out,wx,1.18,wz+.063,.05,1.05,.07,paper,8);
@@ -109,7 +109,13 @@ function propMesh(out,p){
   box(out,x,.06,z,w,.67,d,[.76,.72,.63],8);
   box(out,x,.67,z,w*.91,.05,d*.91,[.35,.39,.39],9);return
  }
- if(p.type==='sink'){
+ if(p.type==='toilet'){
+   box(out,x,.05,z,w*.79,.39,d*.87,[.78,.75,.68],8);
+   box(out,x,.42,z+d*.16,w*.93,.10,d*.90,[.83,.80,.70],8);
+   box(out,x,.57,z-d*.36,w*.82,.39,d*.32,[.76,.73,.65],8);
+   box(out,x,.47,z+d*.16,w*.69,.032,d*.64,[.38,.39,.36],10);return
+  }
+  if(p.type==='sink'){
   box(out,x,.62,z,w,.19,d,[.73,.69,.60],8);
   box(out,x,.84,z-.12,.045,.25,.06,[.57,.48,.29],9);return
  }
@@ -129,7 +135,7 @@ export function rogueStaticMesh(world,player){
   const sec=world.chunk(Math.floor(x/SECTOR),Math.floor(z/SECTOR));
   const room=roomAt(sec,x-sec.cx*SECTOR,z-sec.cz*SECTOR);
   const col=room?C[room.type]:C.hall;
-  const mat=room?.type==='bathroom'?4:room?.type==='living'||room?.type==='bedroom'?3:5;
+  const mat=(room?.type==='bathroom'||room?.type==='toilet')?4:room?.type==='living'||room?.type==='bedroom'?3:5;
   const px=x*S,pz=z*S;
   quad(out,[px,0,pz+S],[px+S,0,pz+S],[px+S,0,pz],[px,0,pz],[.42,.35,.25],[0,1,0],mat);
   quad(out,[px,HEIGHT,pz],[px+S,HEIGHT,pz],[px+S,HEIGHT,pz+S],[px,HEIGHT,pz+S],[.56,.54,.46],[0,-1,0],1);
