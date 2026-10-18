@@ -19,9 +19,9 @@
 <body data-app-preset="canvas">
   <main id="wrap" data-app-shell>
   <header><a href="../../" class="exit">Pocket Works</a><strong>PetriForge</strong>
-    <button id="playPause">Запустить</button>
-    <button id="step">Шаг</button>
-    <button id="reset">Сброс</button>
+    <button data-native-press id="playPause">Запустить</button>
+    <button data-native-press id="step">Шаг</button>
+    <button data-native-press id="reset">Сброс</button>
     <span class="pill" id="status">idle</span>
     <div class="spacer"></div>
       <label>Tile:
@@ -51,15 +51,15 @@
           <option value="2">200%</option>
         </select>
       </label>
-      <button id="save">Сохранить</button>
-      <button id="load">Загрузить</button>
+      <button data-native-press id="save">Сохранить</button>
+      <button data-native-press id="load">Загрузить</button>
       <label>Agent:
         <select id="agentSelect">
           <option value="random">Random</option>
         <option value="qlearning">Q-Learning</option>
       </select>
     </label>
-  <button id="undo">Отменить</button><button id="redo">Повторить</button><label>Среда <select id="generate"><option value="">Выбрать…</option><option value="3">Шум</option><option value="4">Лабиринт</option><option value="5">Комнаты</option><option value="6">Остров</option></select></label></header>
+  <button data-native-press id="undo">Отменить</button><button data-native-press id="redo">Повторить</button><label>Среда <select id="generate"><option value="">Выбрать…</option><option value="3">Шум</option><option value="4">Лабиринт</option><option value="5">Комнаты</option><option value="6">Остров</option></select></label></header>
 
     <div id="stage" data-gesture-surface>
       <canvas id="cv" data-gesture-surface aria-label="Среда агента: рисуйте клетки" width="720" height="480"></canvas>
