@@ -1,3 +1,4 @@
+import { edgeCameraFit } from './edge-layout.js';
 import { sampleGoalCapture } from './marble-motion.js';
 
 const TAU = Math.PI * 2;
@@ -47,22 +48,17 @@ export class MazeRenderer {
     this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
   }
 
-  configureCamera(maze, tilt) {
-    const compact = this.height < 620;
-    const horizontalPadding = this.width < 430 ? 19 : 34;
-    const topPadding = compact ? 72 : 92;
-    const bottomPadding = compact ? 54 : 72;
-    const availableWidth = Math.max(1, this.width - horizontalPadding * 2);
-    const availableHeight = Math.max(1, this.height - topPadding - bottomPadding);
-    this.scale = Math.min(availableWidth / maze.cols, availableHeight / maze.rows);
-    const playfieldWidth = maze.cols * this.scale;
-    const playfieldHeight = maze.rows * this.scale;
-    this.origin.x = (this.width - playfieldWidth) / 2;
-    this.origin.y = topPadding + (availableHeight - playfieldHeight) / 2 + this.scale * WALL_HEIGHT * 0.38;
-
-    const motionScale = this.reducedMotion ? 0.3 : 1;
-    this.light.x = clamp(-0.34 + tilt.x * 0.22 * motionScale, -0.58, 0.08);
-    this.light.y = clamp(-0.46 + tilt.y * 0.18 * motionScale, -0.68, -0.12);
+  configureCamera(maze,tilt) {
+    // Canvas mode shares the same physical-edge presentation as WebGL.
+    const fit=edgeCameraFit(maze.cols,maze.rows,this.width,this.height);
+    this.cameraFit=fit;
+    this.canvas.dataset.edgeMode=fit.fullBleed?'full':'safe-fit';
+    this.scale=fit.scale;
+    this.origin.x=(this.width-maze.cols*this.scale)/2;
+    this.origin.y=(this.height-maze.rows*this.scale)/2;
+    const motionScale=this.reducedMotion?.3:1;
+    this.light.x=clamp(-.34+tilt.x*.22*motionScale,-.58,.08);
+    this.light.y=clamp(-.46+tilt.y*.18*motionScale,-.68,-.12);
   }
 
   project(_maze, x, y, z = 0) {
@@ -469,7 +465,7 @@ export class MazeRenderer {
     );
     vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
     vignette.addColorStop(0.7, 'rgba(0, 0, 0, 0.06)');
-    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.52)');
+    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.16)');
     context.fillStyle = vignette;
     context.fillRect(0, 0, this.width, this.height);
   }
