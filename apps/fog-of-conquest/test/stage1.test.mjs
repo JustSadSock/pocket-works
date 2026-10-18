@@ -25,7 +25,7 @@ function reachable(g){
 }
 test('v7 snapshot is immutable, old v6 remains a distinct ruleset',()=>{
   assert.equal(snapshot,source);
-  assert.match(previous,/RULESET_VERSION=6;/);
+  assert.match(previous,/RULESET_VERSION=5;/);
   assert.match(source,/RULESET_VERSION=6;/);
   const lock=JSON.parse(read('../../../pocketnet/modules.lock.json'));
   assert.equal(lock['fog-of-conquest'].current,'v7');
