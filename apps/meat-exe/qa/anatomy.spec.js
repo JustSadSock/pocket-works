@@ -9,7 +9,7 @@ test('living organ loads, procedural tissue state survives pause, refresh and re
  expect(run.anatomy).toBeDefined();expect(run.anatomy.ruptures).toBe(0);
  expect(run.anatomy.immuneHeat).toBe(0);
  if(isMobile)await page.locator('#fireBtn').tap();
- else await page.locator('#stage').click({position:{x:350,y:250},noWaitAfter:true});
+ else await page.keyboard.press('f'); // the real keyboard fire path; combat.spec covers mouse capture
  await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__?.().combat.shotsFired)).toBeGreaterThan(0);
  if(isMobile)await page.locator('#pauseBtn').click();
  else await page.keyboard.press('Escape');
@@ -61,10 +61,16 @@ test('shooting a gland opens its corridor and the rupture persists',async ({page
     // soon as the real in-game rupture is observed to avoid needless GPU stress.
     await page.locator('#weaponBtn').tap();
     await expect(page.locator('#weaponValue')).toContainText('МЯСОРУБКА');
-    for(let i=0;i<5;i++){
-      await page.locator('#fireBtn').tap();
-      if((await page.evaluate(()=>window.__MEAT_QA__?.().anatomy.ruptures))>0)break;
-      await page.waitForTimeout(650);
+    // Verify the actual touch trigger once, then keep shooting through the
+    // shared keyboard-fire path. Repeated Playwright touch synthesis can
+    // exhaust parallel mobile WebGL runners without exercising new logic.
+    await page.locator('#fireBtn').tap();
+    if((await page.evaluate(()=>window.__MEAT_QA__?.().anatomy.ruptures))===0){
+      await page.keyboard.down('f');
+      try{
+        await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__?.().anatomy.ruptures),
+          {timeout:12000}).toBeGreaterThan(0);
+      }finally{await page.keyboard.up('f');}
     }
   }else{
     // A real keyboard-fire control prevents initial pointer-lock mouse motion
