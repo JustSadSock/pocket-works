@@ -50,8 +50,15 @@ function observe(ch,kind){
  return ch.next('game_event',x=>x.event?.type===kind);
 }
 async function run(){
- const response=await fetch(origin+'/pocketnet/health');
- assert.equal(response.status,200);
+ let response=null;
+ for(let attempt=0;attempt<100;attempt++){
+  try{
+   const result=await fetch(origin+'/pocketnet/health');
+   if(result.ok){response=result;break;}
+  }catch{}
+  await sleep(300);
+ }
+ assert.ok(response,'Cloudflare Wrangler did not become healthy within startup window');
  const health=await response.json();
  assert.equal(health.games['fog-of-conquest'].version,'v6');
  assert.equal(health.games['fog-of-conquest'].rulesVersion,5);
