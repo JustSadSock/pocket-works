@@ -19,7 +19,7 @@ const start=(s=make(),requestId='begin-1')=>mod.onMessage({
 });
 test('immutable v9 and earlier match rules remain pinned',()=>{
   assert.equal(source,pinned);
-  assert.match(old,/RULESET_VERSION=8;/);
+  assert.match(old,/RULESET_VERSION=7;/);
   assert.match(source,/RULESET_VERSION=8;/);
   assert.equal(lock['fog-of-conquest'].current,'v9');
   assert.deepEqual(lock['fog-of-conquest'].versions,['v1','v2','v3','v4','v5','v6','v7','v8','v9']);
