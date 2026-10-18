@@ -358,7 +358,7 @@ async function copyRoom(link){
  const code=online.room;if(!code)return;
  const value=link?location.origin+location.pathname+'?room='+encodeURIComponent(inviteCode(code)):inviteCode(code);
  try{await navigator.clipboard.writeText(value);toast(link?'Приглашение скопировано':'Код скопирован')}
- catch{const input=$('net-code');input.value=value;input.focus();input.select();toast('Скопируй выделенный текст')}
+ catch{$('net-feedback').textContent=value;toast('Текст приглашения показан внизу. Его можно выделить.')}
 }
 $('net-copy-code').addEventListener('click',()=>void copyRoom(false));
 $('net-copy-link').addEventListener('click',()=>void copyRoom(true));
