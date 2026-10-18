@@ -35,6 +35,17 @@ unseen: returning does not restore the layout the player remembers.
 - [ ] Validate release with live Chromium/WebKit device screenshots and GPU
       frame times; repository-only tests do not establish mobile performance.
 
+## 2.0.1 — Input reliability (shipped)
+- [x] Physical-key WASD, Cyrillic-layout safety, Space fire, Tab inventory,
+      Shift sprint, E interact, R reload, F torch, Esc pause.
+- [x] Keyboard-only navigation: arrows up/down walk; left/right rotate camera.
+- [x] Restore desktop pointer lock from the entire scene instead of allowing
+      the mobile touch overlay to swallow half the viewport.
+- [x] Fallback drag-to-look for browsers without pointer lock.
+- [x] Clear pressed keys on pause/resume/blur, refocus canvas to stop
+      buttons from accidentally activating during a run.
+- [x] Keyboard regressions + Playwright flows; pending live browser/device CI.
+
 ## 2.1 — The flat must feel lived-in, not modular
 - [ ] Use several genuinely different Soviet layouts per sector, including
       walk-through rooms, narrow partition corridors, toilets separated from
