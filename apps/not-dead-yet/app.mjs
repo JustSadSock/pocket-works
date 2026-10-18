@@ -1,24 +1,20 @@
 import {Apartment,ITEMS,HOME,hash} from './apartment.mjs';
 import {Renderer} from './renderer.mjs';
+import {createSoundscape} from './soundscape.mjs';
 const $=id=>document.getElementById(id),STORAGE='pocket-works:not-dead-yet:chapter-one:v2',OPTIONS='pocket-works:not-dead-yet:options';
 const keys=new Set(),stick={x:0,y:0},quiet=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false;
-let world,renderer,player,phase='menu',inventory=[],shadows=[],stress=0,elapsed=0,ammo=6,reserve=18,reloadTime=0,reloadDeadline=0,shotTime=0,stunTime=0,torch=true,energy=100,showHintUntil=0,spawnAt=8,saveAt=5,worldAt=0,lastFrame=performance.now(),moveCount=0,attemptCount=0,blockedCount=0,stepCount=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,confirmSource='pause',screenNotice='',sound=true,audio=null,runId=0;
+let world,renderer,player,phase='menu',inventory=[],shadows=[],stress=0,elapsed=0,ammo=6,reserve=18,reloadTime=0,reloadDeadline=0,shotTime=0,stunTime=0,torch=true,energy=100,showHintUntil=0,spawnAt=8,saveAt=5,worldAt=0,lastFrame=performance.now(),moveCount=0,attemptCount=0,blockedCount=0,stepCount=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,confirmSource='pause',screenNotice='',sound=true,runId=0;
 try{sound=JSON.parse(localStorage.getItem(OPTIONS)||'{}').sound!==false}catch{}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function chirp(freq=280,secs=.09,vol=.018,form='sine'){if(!sound)return;try{
- audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
- const osc=audio.createOscillator(),gain=audio.createGain();osc.type=form;osc.frequency.setValueAtTime(freq,audio.currentTime);
- osc.frequency.exponentialRampToValueAtTime(Math.max(40,freq*.72),audio.currentTime+secs);
- gain.gain.setValueAtTime(vol,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+secs);
- osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+secs)
-}catch{}}
+const acoustics=createSoundscape();acoustics.setEnabled(sound);
+function chirp(freq=280,secs=.09,vol=.018,form='sine'){if(sound)acoustics.tone(freq,secs,vol,form)}
 function nextSeed(){runId++;const a=new Uint32Array(1);try{crypto.getRandomValues(a)}catch{a[0]=Date.now()>>>0}
  return hash(a[0],Math.floor(performance.now()*1000),Date.now(),runId)}
 function readSave(){try{const o=JSON.parse(localStorage.getItem(STORAGE)||'null');if(!o||o.schema!==2||!Number.isFinite(o.seed)||!o.position||!Array.isArray(o.inventory)||!Number.isFinite(o.position.x)||!Number.isFinite(o.position.z))return null;return o}catch{return null}}
 function persist(){if(phase!=='play'&&phase!=='paused'&&phase!=='inventory')return;try{localStorage.setItem(STORAGE,JSON.stringify({schema:2,seed:world.seed,world:world.save(),position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},stress,energy,inventory,ammo,reserve,elapsed,runId}))}catch{}}
 function setup(seed,save=null){
  world=new Apartment(seed,save?.world);
- player={x:save?.position?.x??HOME.x,z:save?.position?.z??HOME.z,yaw:save?.position?.yaw??0,pitch:save?.position?.pitch??0,bob:0};
+ player={x:save?.position?.x??HOME.x,z:save?.position?.z??HOME.z,yaw:save?.position?.yaw??0,pitch:save?.position?.pitch??0,bob:0,movement:0,reduceMotion:quiet};
  if(!world.canStand(player.x,player.z)){player.x=HOME.x;player.z=HOME.z}
  stress=clamp(save?.stress??0,0,99);energy=clamp(save?.energy??100,0,100);
  ammo=clamp(save?.ammo??6,0,6);reserve=clamp(save?.reserve??18,0,40);
@@ -29,15 +25,15 @@ function setup(seed,save=null){
 function overlay(id){for(const name of ['menu','pauseOverlay','inventoryOverlay','endOverlay','confirmOverlay']){const e=$(name);e.hidden=id!==name;e.classList.toggle('is-open',id===name)}}
 function notice(message,seconds=2.6){screenNotice=message;showHintUntil=elapsed+seconds;$('hint').textContent=message;$('hint').classList.add('visible')}
 function start(save=null){
- setup(save?.seed??nextSeed(),save);phase='play';overlay(null);hud();notice('Это твоя квартира. Вспомни, где лежат четыре вещи.',4);
+ setup(save?.seed??nextSeed(),save);phase='play';overlay(null);hud();acoustics.activate();acoustics.event('radio');notice('Это твоя квартира. Вспомни, где лежат четыре вещи.',4);
  chirp(300,.20,.025,'triangle');persist();lastFrame=performance.now()
 }
 function releaseMouse(){if(document.pointerLockElement)document.exitPointerLock?.()}
 function clearStick(){joystickPointer=null;stick.x=0;stick.y=0;$('knob').style.transform='translate(0px,0px)'}
 function clearInputs(){keys.clear();sprintHeld=false;lookPointer=null;lastLook=null;clearStick()}
-function pause(){if(phase!=='play')return;phase='paused';clearInputs();releaseMouse();persist();
+function pause(){if(phase!=='play')return;phase='paused';clearInputs();releaseMouse();persist();acoustics.suspend();
  $('pauseText').textContent='Вещей: '+inventory.length+' / 4 · '+world.location(player.x,player.z)+' · '+Math.floor(elapsed/60)+' мин.';overlay('pauseOverlay');chirp(170,.12,.016)}
-function resume(){if(phase!=='paused'&&phase!=='inventory')return;phase='play';overlay(null);lastFrame=performance.now()}
+function resume(){if(phase!=='paused'&&phase!=='inventory')return;phase='play';overlay(null);acoustics.activate();lastFrame=performance.now()}
 function showInventory(){if(phase!=='play')return;phase='inventory';clearInputs();releaseMouse();drawInventory();overlay('inventoryOverlay');persist()}
 function drawInventory(){const list=$('inventoryList');list.replaceChildren();
  for(const item of ITEMS){const row=document.createElement('div');row.className='inventory-row'+(inventory.includes(item.id)?' found':'');
@@ -52,7 +48,7 @@ function finish(won){
  $('endTag').textContent=won?'ГЛАВА I / КОНЕЦ':'ГЛАВА I / ПОТЕРЯННЫЙ ВЕЧЕР';
  $('endTitle').textContent=won?'Дверь вспомнила тебя.':'Ты забыл, где находишься.';
  $('endText').textContent=won?'В кармане четыре знакомые вещи. Дверь открылась. По ту сторону — утро. Время: '+Math.round(elapsed)+' сек.':'Стены остались на месте. Но память снова подвела. Найдено вещей: '+inventory.length+' из 4.';
- overlay('endOverlay');chirp(won?640:110,.44,.03,won?'sine':'sawtooth')
+ overlay('endOverlay');acoustics.event(won?'win':'lose')
 }
 function nearItem(){
  let found=null,best=2;
@@ -64,22 +60,22 @@ function nearExit(){return Math.hypot(player.x-15.5,player.z-21)<2.25}
 function interact(){
  if(phase!=='play')return;
  const item=nearItem();
- if(item){inventory.push(item.id);stress=Math.max(0,stress-13);notice('Вспомнил: '+item.label+'. '+item.note,4.5);chirp(490+inventory.length*72,.26,.04,'triangle');persist();hud();return}
+ if(item){inventory.push(item.id);stress=Math.max(0,stress-13);notice('Вспомнил: '+item.label+'. '+item.note,4.5);acoustics.event('pickup');persist();hud();return}
  if(nearExit()){if(inventory.length===4)finish(true);else notice('Ты уверен, что собрал все свои вещи?',2.3);return}
  notice('Здесь нечего взять.',1)
 }
-function toggleTorch(){if(phase!=='play')return;torch=!torch;notice(torch?'Фонарь включён.':'Фонарь выключен.',1);chirp(torch?380:170,.08);hud()}
+function toggleTorch(){if(phase!=='play')return;torch=!torch;notice(torch?'Фонарь включён.':'Фонарь выключен.',1);acoustics.event('torch');hud()}
 function reload(){
  if(phase!=='play')return;
  if(reloadTime>0){notice('Руки ещё заняты перезарядкой.',.8);return}
  if(ammo===6||reserve===0){notice(reserve===0?'Запасных патронов больше нет.':'Барабан уже полон.',1);return}
- reloadTime=1.55;reloadDeadline=performance.now()+1550;notice('Перезаряжаю...',1.5);chirp(190,.09,.018,'triangle')
+ reloadTime=1.55;reloadDeadline=performance.now()+1550;notice('Перезаряжаю...',1.5);acoustics.event('reload')
 }
 function shoot(){
  if(phase!=='play')return;
  if(reloadTime>0){notice('Сначала перезарядить.',.8);return}
- if(ammo<=0){chirp(95,.045,.015,'triangle');notice('Пустой барабан. R — перезарядить.',1.7);return}
- ammo--;shotTime=.17;stress=clamp(stress+1.6,0,100);chirp(80,.28,.075,'sawtooth');if(navigator.vibrate)navigator.vibrate(40);
+ if(ammo<=0){acoustics.event('empty');notice('Пустой барабан. R — перезарядить.',1.7);return}
+ ammo--;shotTime=.17;stress=clamp(stress+1.6,0,100);acoustics.event('shot');if(navigator.vibrate)navigator.vibrate(40);
  let victim=null,best=15;
  for(const s of shadows){const dx=s.x-player.x,dz=s.z-player.z,dist=Math.hypot(dx,dz);
   const angle=Math.atan2(dx,-dz)-player.yaw,heading=Math.atan2(Math.sin(angle),Math.cos(angle));
@@ -94,7 +90,7 @@ function makeShadow(){
   if(d<5||!world.canStand(p.x,p.z))continue;
   const dot=((p.x-player.x)*Math.sin(player.yaw)-(p.z-player.z)*Math.cos(player.yaw))/d;
   if(dot>.6&&world.visible(player.x,player.z,p.x,p.z))continue;
-  shadows.push({x:p.x,z:p.z,age:0,speed:.45+Math.random()*.24,kind:Math.random()<.45?'coat':'figure',path:null,pathTime:0,hit:0});return
+  shadows.push({x:p.x,z:p.z,age:0,speed:.45+Math.random()*.24,kind:Math.random()<.45?'coat':'figure',path:null,pathTime:0,hit:0});acoustics.event('sighting',{pan:Math.sign(p.x-player.x)*.5});return
  }
 }
 function simulate(dt){
@@ -114,10 +110,10 @@ function simulate(dt){
   if(world.canStand(player.x+dx,player.z))player.x+=dx;
   if(world.canStand(player.x,player.z+dz))player.z+=dz;
   const moved=Math.hypot(player.x-x,player.z-z);if(moved>.0001){moveCount++;stepCount+=moved}else{blockedCount++;if(blockedCount%120===0)notice('Здесь стена. Попробуй повернуться.',1.4)}
-  if(stepCount>2.5){stepCount=0;chirp(running?82:95,.045,.008,'triangle')}
+  if(stepCount>.95){stepCount=0;acoustics.event('footstep',{room:world.location(player.x,player.z),intensity:running?1.3:1})}
  }
- player.bob=quiet?0:Math.sin(elapsed*(running?13:8))*Math.min(.025,amount*.019);
- if(elapsed>worldAt){worldAt=elapsed+.42;const changed=world.tick(player.x,player.z,player.yaw,elapsed);if(changed){chirp(95,.19,.009,'triangle');notice('Что-то переместилось в соседней комнате.',1.6)}}
+ player.movement=Math.min(1,amount);player.bob=quiet?0:Math.sin(elapsed*(running?13:8))*Math.min(.025,amount*.019);
+ if(elapsed>worldAt){worldAt=elapsed+.42;const changed=world.tick(player.x,player.z,player.yaw,elapsed);if(changed){acoustics.event('shift',{pan:.55});notice('Что-то переместилось в соседней комнате.',1.6)}}
  if(elapsed>=spawnAt){makeShadow();spawnAt=elapsed+10+Math.random()*5}
  for(const e of shadows){
   e.age+=dt;e.pathTime-=dt;
@@ -135,6 +131,7 @@ function simulate(dt){
  shadows=shadows.filter(e=>e.age<30&&world.canStand(e.x,e.z,.07));
  stress=clamp(stress-(shadows.length===0?.75:.15)*dt,0,100);
  if(stress>=100){finish(false);return}
+ acoustics.tick({elapsed,room:world.location(player.x,player.z),stress,active:phase==='play'});
  if(elapsed>=saveAt){saveAt=elapsed+5;persist()}
  if(showHintUntil&&elapsed>=showHintUntil){showHintUntil=0;$('hint').classList.remove('visible')}
  hud()
@@ -154,8 +151,8 @@ function hud(){
 function paint(t){
  const dt=Math.min(.046,Math.max(0,(t-lastFrame)/1000));lastFrame=t;
  if(phase==='play')simulate(dt);
- if(world&&renderer&&!renderer.lost){const items=ITEMS.filter(i=>!inventory.includes(i.id)).map(i=>world.itemPosition(i.id));renderer.draw(world,player,shadows,items,torch,elapsed,stress/100,shotTime/.17)}
- window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost};
+ if(world&&renderer&&!renderer.lost){const items=ITEMS.filter(i=>!inventory.includes(i.id)).map(i=>world.itemPosition(i.id));renderer.draw(world,player,shadows,items,torch,elapsed,stress/100,shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)}
+ window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true};
  requestAnimationFrame(paint)
 }
 function moveStick(e){const b=$('joystick').getBoundingClientRect(),x=e.clientX-b.left-b.width*.5,y=e.clientY-b.top-b.height*.5,rad=b.width*.38,d=Math.max(.01,Math.hypot(x,y)),scale=Math.min(1,rad/d);stick.x=x*scale/rad;stick.y=-y*scale/rad;$('knob').style.transform='translate('+(x*scale)+'px,'+(y*scale)+'px)'}
@@ -190,10 +187,11 @@ $('new').addEventListener('click',()=>{confirmSource='pause';overlay('confirmOve
 $('cancel').addEventListener('click',()=>overlay(confirmSource==='menu'?'menu':'pauseOverlay'));
 $('erase').addEventListener('click',()=>{localStorage.removeItem(STORAGE);start()});
 $('again').addEventListener('click',()=>start());
-$('sound').addEventListener('click',()=>{sound=!sound;$('sound').textContent='Звук: '+(sound?'вкл':'выкл');try{localStorage.setItem(OPTIONS,JSON.stringify({sound}))}catch{}});
-$('sound').textContent='Звук: '+(sound?'вкл':'выкл');
+function toggleSound(){sound=!sound;acoustics.setEnabled(sound);const label='Звук: '+(sound?'вкл':'выкл');$('sound').textContent=label;$('pauseSound').textContent=label;try{localStorage.setItem(OPTIONS,JSON.stringify({sound}))}catch{}}
+$('sound').addEventListener('click',toggleSound);$('pauseSound').addEventListener('click',toggleSound);
+$('sound').textContent='Звук: '+(sound?'вкл':'выкл');$('pauseSound').textContent=$('sound').textContent;
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
-window.addEventListener('pagehide',persist);
+window.addEventListener('pagehide',()=>{persist();acoustics.dispose()});
 try{
  renderer=new Renderer($('view'));setup(nextSeed());phase='menu';overlay('menu');$('continue').hidden=!readSave();
  $('view').addEventListener('webglcontextlost',e=>{e.preventDefault();pause();$('fatal').hidden=false});
