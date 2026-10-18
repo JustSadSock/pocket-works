@@ -3289,29 +3289,29 @@
   "meat-exe": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 68,
+      "bestScore": 69,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 31283,
-        "variance": 55.66301247918561,
-        "entropy": 1.2619969881200421,
-        "edgeDensity": 0.11222718253968254,
-        "colorfulness": 24.8427734375,
-        "centerDetail": 77.05519164051877,
-        "meanLight": 28.65126577148446
+        "bytes": 35141,
+        "variance": 57.53181699840296,
+        "entropy": 1.4520150289986462,
+        "edgeDensity": 0.11185515873015874,
+        "colorfulness": 25.4931640625,
+        "centerDetail": 78.43064946535326,
+        "meanLight": 31.617732617187695
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.0.0&pw_fp=0547a26800095d550baba535"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.1.0&pw_fp=da9d51a98e3c4de0eaa8e815"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "5645f127867152169158f1d0a16ecc1e695fd682",
-    "lastAttemptAt": "2026-10-17T23:36:51.713Z"
+    "lastAttemptRevision": "3e491748f4cb55816731509b270aeca0d5d40c4e",
+    "lastAttemptAt": "2026-10-18T08:46:35.449Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
