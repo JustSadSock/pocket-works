@@ -7,7 +7,7 @@ import {timeMode,integrateClock,dayClock,dayPhase,activeShiftCounts,planSubday,s
 import {walkPath,walkingSteps} from './navigation.js';
 import {landCadastre,landAt,tenureSummary,parcelEconomics} from './land-economy.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.9.1',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.9.2',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -162,7 +162,7 @@ function drawFrame(){if(!sim)return;
    const y=cam.y+(Math.floor(c.cell/SIZE)*PX+4)*cam.z;
    if(x<0||y<0||x>w||y>h)continue;
    const r=Math.max(4,5*cam.z);
-   ctx.save();ctx.strokeStyle=c.stage==='mobilizing'?'#d6b77d':c.stage==='mustering'?'#b9a76f':'#a77d61';ctx.lineWidth=Math.max(1,cam.z*.9);
+   ctx.save();ctx.strokeStyle=['marching','returning'].includes(c.stage)?'#c9af7b':c.stage==='encamped'?'#e0b575':c.stage==='mobilizing'?'#d6b77d':c.stage==='mustering'?'#b9a76f':'#a77d61';ctx.lineWidth=Math.max(1,cam.z*.9);
    ctx.beginPath();ctx.moveTo(x-r,y-r);ctx.lineTo(x+r,y-r);ctx.lineTo(x+r,y+r);ctx.lineTo(x-r,y+r);ctx.closePath();ctx.stroke();
    ctx.restore();
   }
@@ -228,9 +228,12 @@ if(mode==='overview'){
   const encounters=(sim.conflicts||[]).filter(c=>c.stage!=='resolved'||sim.day-(c.endDay||0)<=7).slice(-2).reverse();
   const encounterRows=encounters.map(c=>{
    const claim=sim.households.find(h=>h.id===c.claimantId),owner=sim.households.find(h=>h.id===c.ownerId);
-   const phase=c.stage==='mustering'?'Сбор у дворов':c.stage==='mobilizing'?'Путь к полю':c.retreated?'Отступление':c.outcome==='dispersed'?'Разошлись':'Спор разрешён';
+   const phase=c.stage==='mustering'?'Сбор у дворов':c.stage==='mobilizing'?'Путь к полю':c.stage==='marching'?'Поход к полю':c.stage==='encamped'?'Ночёвка и охрана':c.stage==='returning'?'Возвращаются домой':c.aborted?'Поход отменён':c.retreated?'Отступление':c.outcome==='dispersed'?'Разошлись':'Спор разрешён';
    const count=(c.arrived?.claimants||0)+(c.arrived?.owners||0);
-   const details=c.stage==='resolved'?count+' пришли · '+c.wounded.length+' ранены'+(c.compensationCoin?' · '+c.compensationCoin+' мон.':''):
+   const bags=c.supply?[c.supply.claimants,c.supply.owners]:[];
+   const ration=bags.reduce((sum,bag)=>sum+(bag.grain||0),0);
+   const details=c.stage==='resolved'?count+' пришли · '+c.wounded.length+' ранены'+(c.compensationCoin?' · '+c.compensationCoin+' мон.':'')+(c.expedition?' · '+(c.travelDays||0)+' дн. в пути':''):
+    c.expedition?c.claimants.length+c.owners.length+' участников · '+ration.toFixed(1)+' кг зерна · '+(c.travelDays||0)+' дн. в пути':
     c.claimants.length+c.owners.length+' участников · день встречи '+(c.meetDay+1);
    return `<div class="community-row"><span><b>Земельный спор · ${escapeHTML(phase)}</b><small>Семьи #${claim?.id??c.claimantId} и #${owner?.id??c.ownerId} · ${details}</small></span></div>`;
   }).join('');
