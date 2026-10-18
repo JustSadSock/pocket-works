@@ -117,7 +117,7 @@ function renderWorkbench(){
  if(!active)return;const slots=online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
  const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
  drawMage(mini,appearance,{x:32,y:57,scale:1.25,time:0,runes:slots});
- $('bench-count').textContent=slots.length+' / 9';const rack=$('bench-slots');rack.replaceChildren();let lane=null,laneNumber=0;
+ $('bench-count').textContent=slots.length+' / 9';const rack=$('bench-slots'),previousScroll=rack.scrollTop;rack.replaceChildren();let lane=null,laneNumber=0;
  const info=description(slots);
  slots.forEach((id,i)=>{
   const r=rune(id);if(!r)return;
@@ -148,6 +148,21 @@ function renderWorkbench(){
   row.append(drag,moves);lane.append(row);
  });
  while(laneNumber<3){laneNumber++;const empty=document.createElement('div');empty.className='spell-lane spell-lane-empty';const label=document.createElement('div');label.className='spell-lane-head';label.textContent='ПРИЁМ '+laneNumber;const hint=document.createElement('p');hint.textContent='Для нового приёма нужна руна «КОГДА».';empty.append(label,hint);rack.append(empty)}
+ const nav=$('spell-index');nav.replaceChildren();
+ const lanes=[...rack.querySelectorAll('.spell-lane')];
+ lanes.forEach((panel,i)=>{
+  const button=document.createElement('button');button.type='button';
+  const amount=panel.querySelectorAll('.bench-slot').length;
+  button.textContent='ПРИЁМ '+(i+1)+' · '+amount;
+  button.className='spell-index-button'+(i===0?' active':'');
+  button.setAttribute('aria-label','Перейти к приёму '+(i+1)+', рун '+amount);
+  button.addEventListener('click',()=>{
+   nav.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+   button.classList.add('active');
+   rack.scrollTo({top:Math.max(0,panel.offsetTop-rack.offsetTop),behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
+  });nav.append(button);
+ });
+ rack.scrollTop=previousScroll;
  const display=$('chain-preview');display.replaceChildren();
  for(const text of info.lines.length?info.lines:['Добавь «КОГДА» и «ЧТО». Руна «КАК» меняет действие прямо перед ней.']){
   const p=document.createElement('p');p.textContent=text;display.append(p);
