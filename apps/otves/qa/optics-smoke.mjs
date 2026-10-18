@@ -79,6 +79,48 @@ try {
   const highStatus=await verify(hiPage,'high',evidence);
   assert.equal(highStatus.profile,'high');
   assert.equal(highStatus.refraction,'true');
+  // Exercise the complete marble animation with the ACTUAL WebGL renderer.
+  // A second local canvas lets us render distinct animation frames without
+  // modifying production gameplay state, cheating the goal, or timing out input.
+  const captureStart=await hiPage.evaluate(async()=>{
+    const [{SpatialMazeRenderer},{createMaze},{MarblePhysics},{startGoalCapture}]
+      =await Promise.all([
+        import('/apps/otves/renderer3d.js'),import('/apps/otves/maze.js'),
+        import('/apps/otves/physics.js'),import('/apps/otves/marble-motion.js')
+      ]);
+    const canvas=document.createElement('canvas');
+    canvas.style.cssText='position:fixed;inset:0;width:100vw;height:100dvh;z-index:60;pointer-events:none';
+    document.body.append(canvas);
+    const renderer=new SpatialMazeRenderer(canvas);
+    const maze=createMaze({cols:7,rows:10,seed:19});
+    const marble=new MarblePhysics();
+    marble.reset({x:maze.goal.x-.18,y:maze.goal.y+.06});
+    marble.velocity.x=1.2;
+    marble.velocity.y=-.2;
+    const capture=startGoalCapture(marble,maze.goal);
+    window.__otvesCaptureQA={renderer,maze,marble,capture};
+    renderer.draw({maze,marble,mode:'finishing',completion:0,goalCapture:capture});
+    return {glError:renderer.gl.getError(),meshCount:renderer.meshes.length};
+  });
+  assert.equal(captureStart.glError,0,'goal capture should render with no GPU error');
+  assert.ok(captureStart.meshCount>=9,'real frame sections + floor + shaft + walls');
+  await hiPage.screenshot({path:join(evidence.dir,'marble-rim-high.png')});
+  const captureMid=await hiPage.evaluate(()=>{
+    const {renderer,maze,marble,capture}=window.__otvesCaptureQA;
+    renderer.draw({maze,marble,mode:'finishing',completion:.59,goalCapture:capture});
+    return renderer.gl.getError();
+  });
+  assert.equal(captureMid,0,'mid-fall cannot trigger GL errors');
+  await hiPage.screenshot({path:join(evidence.dir,'marble-falling-high.png')});
+  const captureDone=await hiPage.evaluate(()=>{
+    const {renderer,maze,marble,capture}=window.__otvesCaptureQA;
+    renderer.draw({maze,marble,mode:'complete',completion:1,goalCapture:capture});
+    const error=renderer.gl.getError();
+    renderer.canvas.remove();
+    delete window.__otvesCaptureQA;
+    return error;
+  });
+  assert.equal(captureDone,0,'settled sphere cannot trigger GL errors');
   await hi.close();
 
   const low=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2});
