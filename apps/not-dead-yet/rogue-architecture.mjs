@@ -46,7 +46,7 @@ export function architecturalWall(o,{x,z,px,pz,dx,dz,room,sector,seed,tile=1.27,
 function decorate(o,plane,start,dx,dz,S,p,sector,room,x,z){
  // Each tile has actual raised wooden skirting, a milled cornice profile,
  // and sparse deliberately irregular plaster/wallpaper repairs.
- const w=room?.type==='bathroom'||room?.type==='toilet'?.055:.082;
+ const wet=room?.type==='bathroom'||room?.type==='toilet',w=wet?.055:.082;
  const face=plane-(dx||dz)*.007;
  if(dx){
   box(o,face,.017,start+S*.5,.035,w,S-.010,p.trim,6);
