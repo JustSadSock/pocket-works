@@ -3476,12 +3476,12 @@
     "lastAttemptAt": "2026-10-18T13:50:35.710Z"
   },
   "not-dead-yet": {
-    "note": "No frame passed image-content checks",
+    "note": "existing cover rated higher",
     "diagnostic": null,
-    "status": "published",
+    "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "8679e4ea06b8cf7be2e3f9a6a15e003cda7454ab",
-    "lastAttemptAt": "2026-10-18T21:06:10.608Z",
+    "lastAttemptRevision": "3f7e488e5ec0e68108894b55ed4c89af2ee30fcd",
+    "lastAttemptAt": "2026-10-18T21:13:25.878Z",
     "revision": "8679e4ea06b8cf7be2e3f9a6a15e003cda7454ab",
     "qualityScore": 79,
     "visionScore": null,
