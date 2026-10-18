@@ -4,7 +4,8 @@ test('P0: beta tiny stays on-map and survives a full reload',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/fog-of-conquest/',{waitUntil:'domcontentloaded'});
  await page.locator('#newGameBtn').click();
- await page.locator('#mapSizeSelect').selectOption('tiny');
+ await page.locator('#mapSizeSelect + .dropdown .dropdown-toggle').click();
+ await page.locator('#mapSizeSelect + .dropdown [data-value="tiny"]').click();
  await page.locator('#betaBtn').click();
  const initial=await page.evaluate(()=>{
    const bogs=window.units.filter(u=>u.type==='bog');
@@ -32,7 +33,8 @@ test('P0: AI and current side persist; malformed local save never changes live m
  await page.goto('/apps/fog-of-conquest/',{waitUntil:'domcontentloaded'});
  await page.locator('#newGameBtn').click();
  await page.locator('#aiBtn').click();
- await page.locator('#aiLevelSelect').selectOption('6');
+ await page.locator('#aiLevelSelect + .dropdown .dropdown-toggle').click();
+ await page.locator('#aiLevelSelect + .dropdown [data-value="6"]').click();
  await page.locator('#aiStartBtn').click();
  expect(await page.evaluate(()=>window.saveGame())).toBe(true);
  const key=await page.evaluate(()=>Object.keys(localStorage).find(k=>k.startsWith('focSave_')&&k!=='focSave_autosave'));
