@@ -89,7 +89,9 @@ export default {
       if (url.pathname === '/pocket-social/user' && request.method === 'GET') {
         const lookup = new URL('/pocket-id/public', url);
         lookup.searchParams.set('id', url.searchParams.get('id')||'');
-        const result = await identity.fetch(new Request(lookup,{headers:{cookie:request.headers.get('cookie')||'','x-pw-social-internal':'1'}}));
+        const lookupHeaders={cookie:request.headers.get('cookie')||'','x-pw-social-internal':'1'};
+        if(publicPortraitRead)lookupHeaders['x-pw-public-portrait']='1';
+        const result = await identity.fetch(new Request(lookup,{headers:lookupHeaders}));
         if (!result.ok) return result;
         const target=(await result.json()).user;
         if (target) headers.set('x-pw-target-user', JSON.stringify(target));
