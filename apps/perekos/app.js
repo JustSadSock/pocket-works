@@ -29,6 +29,36 @@ function setAudio(){sound=!sound;remember();$('menu-audio').textContent=$('pause
 $('menu-audio').addEventListener('click',setAudio);$('pause-audio').addEventListener('click',setAudio);
 $('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');
 function show(name){mode=name;for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=name==='menu'||name==='online-lobby';if(name==='fight'||name==='menu')paused=false;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
+function mageCards(node,value,onPick,small=false){
+ node.replaceChildren();
+ for(const school of SCHOOLS){
+  const group=document.createElement('div');group.className='mage-family mage-'+school.id;
+  const heading=document.createElement('h3');heading.textContent=school.name;
+  if(!small){const sub=document.createElement('small');sub.textContent=school.explain;heading.append(sub)}
+  group.append(heading);
+  const choices=document.createElement('div');choices.className='mage-family-choices';
+  for(const m of MAGES.filter(m=>m.school===school.id)){
+   const btn=document.createElement('button');btn.type='button';btn.dataset.mage=m.id;
+   btn.className='mage-option'+(value===m.id?' picked':'');btn.setAttribute('aria-pressed',String(value===m.id));
+   const symbol=document.createElement('i');symbol.textContent=m.school==='fire'?'✹':m.school==='storm'?'ϟ':'▣';
+   const label=document.createElement('span'),title=document.createElement('strong');title.textContent=m.name;label.append(title);
+   if(!small){const detail=document.createElement('small');detail.textContent=m.description;label.append(detail)}
+   btn.append(symbol,label);btn.addEventListener('click',()=>onPick(m.id));choices.append(btn);
+  }group.append(choices);node.append(group);
+ }
+}
+function updateSelectedMage(){
+ $('chosen-mage-name').textContent=mage(selectedMage).name;
+ $('attack-name').textContent={fire:'ЖАР',storm:'РАЗРЯД',stone:'КАМЕНЬ'}[mage(selectedMage).school];
+}
+$('choose-mage').addEventListener('click',()=>{
+ mageFrom='menu';selectionDraft=selectedMage;show('mage-select');
+ const pick=id=>{selectionDraft=id;mageCards($('mage-options'),id,pick)};
+ mageCards($('mage-options'),selectedMage,pick);
+});
+$('mage-cancel').addEventListener('click',()=>show('menu'));
+$('mage-confirm').addEventListener('click',()=>{selectedMage=selectionDraft;updateSelectedMage();remember();show('menu');toast('Выбран '+mage(selectedMage).name)});
+updateSelectedMage();
 function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff),selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+3)%MAGES.length].id);fxParticles=[];seen=0;audioContext();show('fight');toast('Зажми атаку, веди пальцем для прицеливания');remember()}
 $('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',()=>online?.active?online.start():newMatch());
 $('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
@@ -305,6 +335,11 @@ function roomRoster(players=[],disconnected=''){
   row.append(face,title,tag);root.append(row);
  }
 }
+function drawNetworkMageOptions(){
+ const m=online?.view?.mages?.[online.me]||selectedMage;
+ const pick=id=>{selectedMage=id;updateSelectedMage();remember();if(online?.active)online.chooseMage(id);mageCards($('net-mages'),id,pick,true)};
+ mageCards($('net-mages'),m,pick,true);
+}
 function roomInfo(roomId){
  $('net-room-info').hidden=!roomId;$('net-choice').hidden=!!roomId;
  $('net-copy-code').textContent=roomId?inviteCode(roomId):'--------';
@@ -315,9 +350,9 @@ function onlineView(view){
  void refreshRival(view);
  online.view=view;active=view.match||null;
  const stamp=[view.phase,active?.round??0,view.picked,view.ready].join(':');
- if(stamp===onlinePhase){if(view.phase==='lobby')updateNetworkLobby(view);return}
+ if(stamp===onlinePhase){if(view.phase==='lobby'){updateNetworkLobby(view);drawNetworkMageOptions()}return}
  onlinePhase=stamp;displayXY=[null,null];
- if(view.phase==='lobby'){applyRival();show('online-lobby');updateNetworkLobby(view)}
+ if(view.phase==='lobby'){applyRival();show('online-lobby');updateNetworkLobby(view);drawNetworkMageOptions()}
  else if(view.phase==='fight'){onlinePreviewRunes=null;applyRival();applyPendingAppearance();show('fight');toast('Дуэль началась')}
  else if(view.phase==='draft'){
   applyRival();if(view.ready){show('net-wait')}
