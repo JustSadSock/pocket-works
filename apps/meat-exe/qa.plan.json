@@ -159,7 +159,8 @@
       "kind": "node-test",
       "files": [
         "qa/immunity.test.mjs",
-        "qa/gastric.test.mjs"
+        "qa/gastric.test.mjs",
+        "qa/structural.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -167,22 +168,7 @@
       "id": "gastric-browser",
       "kind": "playwright",
       "files": [
-        "qa/gastric.spec.js"
-      ],
-      "tier": "smoke"
-    },
-    {
-      "id": "structural",
-      "kind": "node-test",
-      "files": [
-        "qa/structural.test.mjs"
-      ],
-      "tier": "smoke"
-    },
-    {
-      "id": "structural-browser",
-      "kind": "playwright",
-      "files": [
+        "qa/gastric.spec.js",
         "qa/structural.spec.js"
       ],
       "tier": "smoke"
