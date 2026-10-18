@@ -164,8 +164,17 @@ export class RogueWorld{
    const seen=this.lastNear.has(k),away=time-(this.lastNear.get(k)??time);
    const angleX=(c.cx+.5)*SECTOR-px,angleZ=(c.cz+.5)*SECTOR-pz;
    const facing=(angleX*Math.sin(yaw)-angleZ*Math.cos(yaw))/Math.max(1,Math.hypot(angleX,angleZ));
-   const safe=d>8+memoryLevel*2&&away>3+memoryLevel*2&&facing<.32&&time-(this.shifted.get(k)??-100)>9+memoryLevel*5;
-   if(seen&&safe){
+   const eligible=d>8+memoryLevel*2&&away>3+memoryLevel*2&&facing<.32&&time-(this.shifted.get(k)??-100)>9+memoryLevel*5;
+   // A neighboring sector can straddle the field of view despite its center
+   // being behind the player. Never replace any corridor the player can see.
+   const cameraX=Math.sin(yaw),cameraZ=-Math.cos(yaw);
+   const glimpses=[[1,1],[9,1],[16,1],[1,9],[9,9],[16,9],[1,16],[9,16],[16,16]];
+   const exposed=eligible&&glimpses.some(([sx,sz])=>{
+    const tx=c.cx*SECTOR+sx+.5,tz=c.cz*SECTOR+sz+.5,dx=tx-px,dz=tz-pz,range=Math.hypot(dx,dz);
+    if(range>17||range<.01||(dx*cameraX+dz*cameraZ)/range<.35)return false;
+    return this.pass(Math.floor(tx),Math.floor(tz))&&this.visible(px,pz,tx,tz)
+   });
+   if(seen&&eligible&&!exposed){
     const next=c.epoch+1;this.epochs.set(k,next);this.chunks.set(k,generateSector(this.seed,c.cx,c.cz,next));
     this.lastNear.delete(k);this.shifted.set(k,time);this.terrainRevision++;
     this.changes++;this.lastChange={cx:c.cx,cz:c.cz,time};changed=true
