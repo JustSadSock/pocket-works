@@ -3,6 +3,7 @@ import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {campaign,endless,solve,step,solved,CAMPAIGN_NAMES} from './engine.js';
 import {drawRobot,describeMove,bumpMotion,poseFor} from './actors.js';
+import {drawDiorama,sceneFingerprint} from './diorama.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id),NET=location.origin+'/pocketnet',PREFIX='pocket-works:axis-pals:';
 const local=(k,d='')=>{try{return localStorage.getItem(PREFIX+k)??d}catch{return d}};
@@ -188,44 +189,34 @@ async function copy(text){
   const t=document.createElement('textarea');t.value=text;t.style.cssText='position:fixed;left:-9999px';document.body.append(t);t.select();const ok=document.execCommand('copy');t.remove();notify(ok?'Скопировано':'Не удалось скопировать');
  }
 }
-const canvas=$('board'),ctx=canvas.getContext('2d',{alpha:false});let pixels=0,unit=1;
+const canvas=$('board'),ctx=canvas.getContext('2d',{alpha:false});let pixels=0,unit=1,sceneCache=null,sceneKey='';
 function resizeBoard(){
  const g=getGame();if(screen!=='play'||!g?.level)return;
  const zone=document.querySelector('.board-zone');const rect=zone.getBoundingClientRect();
  if(rect.width<20||rect.height<20)return;
  const w=g.level.width,h=g.level.height,fit=Math.max(8,Math.min((rect.width-22)/(w+.2),(rect.height-24)/(h+.2)));
  const cw=w*fit,ch=h*fit;
- canvas.style.width=cw+'px';canvas.style.height=ch+'px';
+ if(canvas.style.width!==cw+'px')canvas.style.width=cw+'px';
+ if(canvas.style.height!==ch+'px')canvas.style.height=ch+'px';
  const dpr=Math.min(window.devicePixelRatio||1,2);
  const pw=Math.round(cw*dpr),ph=Math.round(ch*dpr);
- if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph}
+ if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;sceneCache=null;sceneKey=''}
  pixels=dpr;unit=cw/w;
 }
-const round=(x,y,w,h,r)=>{ctx.beginPath();ctx.roundRect(x,y,w,h,r)};
+// Background/material lighting are rasterized only when the map or viewport changes.
 function drawBoard(now){
  const g=getGame();if(screen!=='play'||!g?.level||!canvas.width)return;
- const lvl=g.level,d=pixels,u=unit;ctx.setTransform(d,0,0,d,0,0);
- ctx.fillStyle='#c1d0c7';ctx.fillRect(0,0,lvl.width*u,lvl.height*u);
- for(let y=0;y<lvl.height;y++)for(let x=0;x<lvl.width;x++){
-  const X=x*u,Y=y*u,wall=lvl.map[y][x]==='#';
-  ctx.fillStyle=wall?'#455f58':((x+y)%2?'#cddcd2':'#c4d5cb');ctx.fillRect(X,Y,u,u);
-  if(wall){
-   ctx.fillStyle='#597a6c';ctx.fillRect(X+u*.08,Y+u*.08,u*.82,u*.80);
-   ctx.fillStyle='#779589';ctx.fillRect(X+u*.13,Y+u*.09,u*.72,u*.14);
-   ctx.fillStyle='#324b46';ctx.fillRect(X+u*.09,Y+u*.72,u*.82,u*.17);
-   ctx.strokeStyle='#395850';ctx.lineWidth=Math.max(1,u*.035);
-   ctx.strokeRect(X+u*.24,Y+u*.22,u*.52,u*.5);
-  }else{
-   ctx.strokeStyle='#92aea02b';ctx.lineWidth=1;ctx.strokeRect(X+.5,Y+.5,u-1,u-1);
-   const id=((x*31+y*79+lvl.seed)>>>0)%11;
-   if(id<2){ctx.fillStyle='#8da89b66';ctx.fillRect(X+u*.28,Y+u*.75,u*.08,u*.035);ctx.fillRect(X+u*.76,Y+u*.2,u*.045,u*.045)}
-  }
+ const lvl=g.level,d=pixels,u=unit;
+ const key=sceneFingerprint(lvl,canvas.width,canvas.height,d);
+ if(key!==sceneKey||!sceneCache){
+  const surface=document.createElement('canvas');
+  surface.width=canvas.width;surface.height=canvas.height;
+  const sc=surface.getContext('2d',{alpha:false});
+  if(sc){drawDiorama(sc,lvl,u,d);sceneCache=surface;sceneKey=key}
  }
- for(let i=0;i<2;i++){const p=lvl.goals[i],X=(p.x+.5)*u,Y=(p.y+.5)*u,c=i===0?'#268f81':'#ce6747';
-  ctx.fillStyle=i===0?'#57bbae40':'#ef936f40';round(X-u*.38,Y-u*.38,u*.76,u*.76,u*.13);ctx.fill();
-  ctx.strokeStyle=c;ctx.lineWidth=Math.max(2,u*.075);ctx.setLineDash([u*.11,u*.10]);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle=c;ctx.font='900 '+(u*.26)+'px Arial';ctx.textAlign='center';ctx.fillText(i?'X':'Y',X,Y+u*.085);
- }
+ ctx.setTransform(d,0,0,d,0,0);
+ if(sceneCache)ctx.drawImage(sceneCache,0,0,lvl.width*u,lvl.height*u);
+ else{ctx.fillStyle='#cadacf';ctx.fillRect(0,0,lvl.width*u,lvl.height*u)}
 
  const base=g.positions||lvl.starts;
  if(base.length!==2)return;
