@@ -296,9 +296,10 @@ hiding simplistic assets.
       corrected, camera yaw asserted relative to starting heading,
       memory-path test accounts for closed actual doors, and screenshot
       test has a realistic time budget.
-- [ ] Record final outcomes of the complete interactive Playwright journey
-      and dedicated screenshot suite; see
-      [VISUAL_QA_REPORT_2026-10-19.md](./VISUAL_QA_REPORT_2026-10-19.md).
+- [x] Final independent GitHub CI: 93/93 Node, 12/12 image/visual
+      Playwright, 9/9 fast interaction/slow-GPU reload Playwright,
+      46 passed + 2 device-conditional skipped in the full gameplay
+      journey, 0 failures. [Full audit](./VISUAL_QA_REPORT_2026-10-19.md).
 - [x] v2.1.7: actual corridor-mounted ceiling fixtures, enamel electrical
       panels, coat rails and apartment plaques; seeded sparsely by actual
       world cell, invisible collision not added, deterministic mesh
@@ -306,9 +307,13 @@ hiding simplistic assets.
 - [x] Separate clock for weapon reloading from capped 100ms physics
       timestep; resolves a regression observed only in full software-GPU
       browser runs. Pixel and input QA now have dedicated fast suites.
-- [ ] Reinspect screenshots after geometry additions for actual readability,
-      especially whether practical ceiling fixtures correspond to the
-      real spatial light sources and whether phone corridor contrast improves.
+- [x] Inspect 60 new actual Chromium/WebKit screens (five seeds × four rooms
+      × three browser profiles): corridor lamps and wall objects are visible;
+      no visually broken geometry was found in these sampled frames.
+- [ ] Align practical lights with actual lighting sources and increase
+      recognizable corridor silhouette changes. A pixel crop audit found
+      cross-seed corridor pairs with just 4.7–5.2/255 absolute average
+      pixel difference, so some seeds still look nearly identical.
 - [ ] Address visually repetitive hallways and lighting after fixing
       actual measured art issues, not by adding generic bloom or haze.
 
