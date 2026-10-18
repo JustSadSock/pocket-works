@@ -42,16 +42,16 @@ function pathText(x,y,value,size=11){
 function atlasDefs(svg,model){
  const defs=S('defs');
  const paper=S('linearGradient',{id:'atlas-paper',x1:'0',y1:'0',x2:'1',y2:'1'},[
-   S('stop',{offset:'0%', 'stop-color':'#d8d2ad'}),
-   S('stop',{offset:'55%','stop-color':'#e9ddbd'}),
-   S('stop',{offset:'100%','stop-color':'#b9bb99'})]);
+   S('stop',{offset:'0%', 'stop-color':'#b7aa82'}),
+   S('stop',{offset:'55%','stop-color':'#d3c29c'}),
+   S('stop',{offset:'100%','stop-color':'#a99b76'})]);
  const light=S('radialGradient',{id:'atlas-light',cx:'44%',cy:'38%',r:'71%'},[
-   S('stop',{offset:'0%','stop-color':'#ffffff','stop-opacity':.38}),
-   S('stop',{offset:'100%','stop-color':'#535e4a','stop-opacity':.25})]);
+   S('stop',{offset:'0%','stop-color':'#fff4cd','stop-opacity':.26}),
+   S('stop',{offset:'100%','stop-color':'#4d392b','stop-opacity':.30})]);
  const noise=S('filter',{id:'atlas-grain',x:'0%',y:'0%',width:'100%',height:'100%'},[
-   S('feTurbulence',{type:'fractalNoise',baseFrequency:'.32',numOctaves:3,seed:8,result:'n'}),
+   S('feTurbulence',{type:'fractalNoise',baseFrequency:'.45',numOctaves:3,seed:8,result:'n'}),
    S('feColorMatrix',{in:'n',type:'saturate',values:0,result:'mono'}),
-   S('feComponentTransfer',{},[S('feFuncA',{type:'linear',slope:'.08'})])]);
+   S('feComponentTransfer',{},[S('feFuncA',{type:'linear',slope:'.21'})])]);
  defs.append(paper,light,noise,S('clipPath',{id:'atlas-land'},[S('path',{d:model.perimeter})]));
  for(const item of model.polygons)
    defs.append(S('clipPath',{id:'county-clip-'+item.id},[S('path',{d:item.path})]));
@@ -63,11 +63,11 @@ function engraving(model,seed){
  for(const item of model.polygons){
    const p=item.province,c=item.center;
    const ink=p.terrain==='hills'?'#4b5848':'#657059';
-   const inkOpacity=p.terrain==='hills'?.23:.13;
+   const inkOpacity=p.terrain==='hills'?.40:.21;
    const clipped=S('g',{'clip-path':'url(#county-clip-'+item.id+')',stroke:ink,
       'stroke-opacity':inkOpacity,fill:'none','stroke-width':1.45,'stroke-linecap':'round'});
    const h=p.terrain==='hills';
-   for(let i=0;i<(h?7:5);i++){
+   for(let i=0;i<(h?8:6);i++){
      const dx=(i-3)*17,dy=(i%2)*18-10;
      if(h){
        clipped.append(S('path',{d:'M'+(c.x-59+dx)+' '+(c.y+dy+15)+
@@ -91,31 +91,38 @@ function engraving(model,seed){
    }
  // Rivers are static illustration, not fake political events, and do not affect economy.
  scene.append(S('path',{d:'M315 12 C340 72 285 122 346 170 S460 225 426 305 S485 392 535 425 S606 504 570 582',
-   stroke:'#6c8b90','stroke-opacity':.54,'stroke-width':13,fill:'none'}),
+   stroke:'#476f7c','stroke-opacity':.74,'stroke-width':14,fill:'none'}),
    S('path',{d:'M315 12 C340 72 285 122 346 170 S460 225 426 305 S485 392 535 425 S606 504 570 582',
-   stroke:'#d5e4d9','stroke-opacity':.9,'stroke-width':5.2,fill:'none'}));
+   stroke:'#b3d2d0','stroke-opacity':.88,'stroke-width':4.5,fill:'none'}));
  return scene;
 }
-function mapCounties(world,model,selectedId,changes,onSelect){
+function mapCounties(world,model,selectedId,changes,onSelect,{rank='county',selectedTitleId=null}={}){
  const group=S('g',{class:'atlas-counties'});
+ const titleForCounty=county=>{
+   if(rank==='county')return county;
+   const duchy=world.titles.find(t=>t.id===county.liegeId);
+   if(rank==='duchy')return duchy||county;
+   return world.titles.find(t=>t.id===duchy?.liegeId)||duchy||county;
+ };
  for(const item of model.polygons){
-   const {province,title,holder,heraldry,corners,center}=item;
-   const selected=province.id===selectedId;
+   const {province,title,center}=item;
+   const rankTitle=titleForCounty(title);
+   const rankHolder=world.people.find(p=>p.id===rankTitle.holderId);
+   const heraldry=heraldryFor(rankHolder.dynastyId);
+   const selected=selectedTitleId?rankTitle.id===selectedTitleId:province.id===selectedId;
    const changed=changes?.includes(province.id);
-   const owner=holder.dynastyId;
    const region=S('g',{class:'atlas-county'+(selected?' is-selected':'')+(changed?' title-changed':''),
-     role:'button',tabindex:0,'aria-label':title.name+', '+holder.name,
-     'aria-pressed':selected?'true':'false','data-province':province.id});
-   region.append(S('path',{d:item.path,fill:heraldry.main,'fill-opacity':selected?.36:.22,
-     stroke:'#746e58','stroke-opacity':selected?1:.66,'stroke-width':selected?3.4:1.65,
+     role:'button',tabindex:0,'aria-label':rankTitle.name+', '+rankHolder.name+', '+province.name,
+     'aria-pressed':selected?'true':'false','data-province':province.id,'data-title':rankTitle.id});
+   region.append(S('path',{d:item.path,fill:heraldry.main,'fill-opacity':selected?.4:.26,
+     stroke:'#63513c','stroke-opacity':selected?.95:.64,'stroke-width':selected?3.2:1.55,
      'vector-effect':'non-scaling-stroke'}));
-   const pick=()=>onSelect(province.id);
+   const pick=()=>onSelect(province.id,rankTitle.id);
    region.addEventListener('click',pick);
    region.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();pick()}});
-   // Preserve family identity rather than swapping meaningless marker glyphs.
    const symbol=S('g',{transform:'translate('+center.x+' '+(center.y-11)+')'});
    symbol.append(S('path',{d:'M-15 -21H15V5 Q14 17 0 23 Q-14 17 -15 5Z',
-     fill:heraldry.main,stroke:'#fbf0d1','stroke-width':2.5}),
+     fill:heraldry.main,stroke:'#f5e5bd','stroke-width':2.5}),
      S('path',{d:'M-12 -17H12V5Q11 13 0 19Q-11 13 -12 5Z',
      fill:'none',stroke:heraldry.alt,'stroke-width':1}),
      S('g',{transform:'scale(.72)'},[charge(heraldry.charge,heraldry.alt)]));
@@ -149,21 +156,21 @@ function compass(svg){
    T('text','С',{x:0,y:-40,'font-size':13,'text-anchor':'middle','font-family':'Georgia,serif',fill:'#575344'}));
  svg.append(rose);
 }
-export function renderAtlas(world,{selectedId='pr-01',onSelect,changes=[],region=0}={}){
+export function renderAtlas(world,{selectedId='pr-01',onSelect=()=>{},changes=[],region=0,rank='county',selectedTitleId=null}={}){
  const expanded=world.provinces.length===48;
  const model=countyAtlasModel(world,getAtlasGeometry(world.seed,world.provinces.length));
  const ox=expanded?(region%2)*860:0,oy=expanded?Math.floor(region/2)*570:0;
  const svg=S('svg',{viewBox:ox+' '+oy+' 860 570',class:'living-atlas',role:'group',
-   'aria-label':'Политическая карта Междуречья: 12 настоящих графств',preserveAspectRatio:'xMidYMid meet'});
+   'aria-label':'Политическая карта Междуречья: '+world.provinces.length+' графств',preserveAspectRatio:'xMidYMid meet'});
  atlasDefs(svg,model);
- svg.append(S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#bdc5b5'}),
-   S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#dae1d4','fill-opacity':.37}),
-   S('path',{d:model.perimeter,transform:'translate(5 9)',fill:'#5b6658','fill-opacity':.22}),
-   S('path',{d:model.perimeter,fill:'url(#atlas-paper)',stroke:'#726f5b','stroke-width':4.5}),
+ svg.append(S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#788b83'}),
+   S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#e1d3b4','fill-opacity':.27}),
+   S('path',{d:model.perimeter,transform:'translate(8 12)',fill:'#443e32','fill-opacity':.30}),
+   S('path',{d:model.perimeter,fill:'url(#atlas-paper)',stroke:'#4b4638','stroke-width':5}),
    S('path',{d:model.perimeter,fill:'url(#atlas-light)'}),
    S('g',{'clip-path':'url(#atlas-land)'},[
-     S('rect',{width:model.width,height:model.height,fill:'#526040',filter:'url(#atlas-grain)'})]),
-   engraving(model,world.seed),mapCounties(world,model,selectedId,changes,onSelect));
+     S('rect',{width:model.width,height:model.height,fill:'#5c452e',filter:'url(#atlas-grain)'})]),
+   engraving(model,world.seed),mapCounties(world,model,selectedId,changes,onSelect,{rank,selectedTitleId}));
  warMarkers(svg,model,world);
  if(expanded){
    const point=S('g',{transform:'translate('+ox+' '+oy+')','pointer-events':'none'});
