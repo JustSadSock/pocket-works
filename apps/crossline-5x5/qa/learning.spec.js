@@ -45,7 +45,7 @@ test('sound settings volume and mute persist across reloads; reduced-motion is f
  await page.goto('/apps/crossline-5x5/',{waitUntil:'domcontentloaded'});
  await page.locator('#sound').click();
  await expect(page.locator('#arenaSettings')).toBeVisible();
- await page.locator('#settingsVolume').fill('35');
+ await page.locator('#settingsVolume').evaluate(element=>{element.value='35';element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}));});
  await expect(page.locator('#volumeOutput')).toHaveText('35%');
  await page.locator('#settingsMute').click();
  await expect(page.locator('#settingsMute')).toHaveText('Включить звук');
