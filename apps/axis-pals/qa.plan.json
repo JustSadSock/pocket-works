@@ -58,6 +58,52 @@
         },
         {
           "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#overlayMain"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"down\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"left\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"left\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"left\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "visible",
+          "selector": "#overlayMain"
+        },
+        {
+          "action": "screenshot"
         }
       ]
     }
