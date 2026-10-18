@@ -71,3 +71,7 @@ Offline save schema v5 supports `replayArchive`: a 20-event checkpoint plus unit
 ## Shared original rules kernel v1.8.0
 
 `js/rules-core.js` is used for local movement points, combat calculations, income, unspent-movement healing and grace-period victories. To keep PocketNet rules snapshots fully immutable, the exact `FogRuleKernel` block is embedded in `server/module.ts` and pinned as `pocketnet/module-versions/fog-of-conquest/v7.ts`; `test/stage5-parity.test.mjs` enforces textual identity and randomized comparisons against v6. The only intentional change is the cavalry defense modifier: enemy troops use a building's protection only when the building is theirs, matching the original local client. Earlier PocketNet versions stay pinned and active rooms are not migrated. See `qa/stage5-parity.spec.ts` for real browser checks.
+
+## Command and fog parity (v1.9.0)
+
+`FogRuleKernel` now implements recruitment validation, mage healing validation, capture of destroyed buildings, line-of-sight and side-private fog projection as well as movement, combat and turn economy. The local client and immutable PocketNet v8 embed identical routines. Earlier pinned v1–v7 rooms are unchanged. Regression coverage includes seeded vision comparison against v7, hidden-building privacy, valid/invalid heals, real production-building recruitment, army caps, and destroyed-base capture. Source-of-truth tests live in `test/stage5-commands.test.mjs`.

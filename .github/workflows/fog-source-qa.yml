@@ -31,7 +31,7 @@ jobs:
           ln -s /tmp/fog-tests/node_modules node_modules
           node_modules/.bin/playwright install --with-deps chromium webkit
       - name: Rule, AI and save regressions
-        run: node --test apps/fog-of-conquest/test/stage0.test.mjs apps/fog-of-conquest/test/stage1.test.mjs apps/fog-of-conquest/test/stage3.test.mjs apps/fog-of-conquest/test/stage3-events.test.mjs apps/fog-of-conquest/test/stage5.test.mjs apps/fog-of-conquest/test/stage5-parity.test.mjs apps/fog-of-conquest/test/original-pocketnet.test.mjs apps/fog-of-conquest/test/original-port.test.mjs
+        run: node --test apps/fog-of-conquest/test/stage0.test.mjs apps/fog-of-conquest/test/stage1.test.mjs apps/fog-of-conquest/test/stage3.test.mjs apps/fog-of-conquest/test/stage3-events.test.mjs apps/fog-of-conquest/test/stage5.test.mjs apps/fog-of-conquest/test/stage5-parity.test.mjs apps/fog-of-conquest/test/stage5-commands.test.mjs apps/fog-of-conquest/test/original-pocketnet.test.mjs apps/fog-of-conquest/test/original-port.test.mjs
       - name: Original-game browser scenarios
         run: node_modules/.bin/playwright test --config apps/fog-of-conquest/qa/playwright.config.ts
       - name: Preserve QA evidence

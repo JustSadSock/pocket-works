@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
-const source=read('../server/module.ts'), pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v7.ts');
-const old=read('../../../pocketnet/module-versions/fog-of-conquest/v6.ts');
+const source=read('../server/module.ts'), pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v8.ts');
+const old=read('../../../pocketnet/module-versions/fog-of-conquest/v7.ts');
 const lock=JSON.parse(read('../../../pocketnet/modules.lock.json'));
 const rules=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const mod=rules.default;
@@ -17,12 +17,12 @@ const start=(s=make(),requestId='begin-1')=>mod.onMessage({
   state:s,player:a,players:[a,b],
   payload:{type:'start',size:'small',requestId}
 });
-test('immutable v7 and earlier match rules remain pinned',()=>{
+test('immutable v8 and earlier match rules remain pinned',()=>{
   assert.equal(source,pinned);
-  assert.match(old,/RULESET_VERSION=5;/);
-  assert.match(source,/RULESET_VERSION=6;/);
-  assert.equal(lock['fog-of-conquest'].current,'v7');
-  assert.deepEqual(lock['fog-of-conquest'].versions,['v1','v2','v3','v4','v5','v6','v7']);
+  assert.match(old,/RULESET_VERSION=6;/);
+  assert.match(source,/RULESET_VERSION=7;/);
+  assert.equal(lock['fog-of-conquest'].current,'v8');
+  assert.deepEqual(lock['fog-of-conquest'].versions,['v1','v2','v3','v4','v5','v6','v7','v8']);
 });
 test('exiting host in lobby transfers host and never strands remaining guest',()=>{
   let s=make();
