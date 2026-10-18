@@ -92,7 +92,27 @@ function leaveNet(navigate=true){
  connected=false;busy=false;server=null;roomId='';me=null;
  if(navigate){mode='menu';show('menu');resumeOffer();}
 }
-function leaveToMenu(){
+function leaveToMenu(force=false){
+ if(!force&&mode==='online'&&server?.phase==='planning'&&!server?.match?.outcome){
+  if(roomVersion!=='v2'){leaveToMenu(true);toast('Старая комната v1: сдача не фиксируется');return;}
+  if(!connected){
+   modal('НЕТ СЕТИ','Невозможно подтвердить сдачу','Остаться и дождаться сети или выйти без подтверждения результата?',
+    {label:'Остаться',action:()=>{}},{label:'Выйти без подтверждения',action:()=>leaveToMenu(true)});
+   return;
+  }
+  pendingForfeitLeave=true;
+  if(!send({type:'forfeit'})){pendingForfeitLeave=false;return;}
+  modal('СДАЧА','Подтверждаем результат','Дожидаемся ответа сервера.',{label:'Ожидание сервера…',action:()=>{}});
+  $('modalMain').disabled=true;
+  clearTimeout(forfeitWatchdog);
+  forfeitWatchdog=setTimeout(()=>{
+   if(!pendingForfeitLeave)return;
+   pendingForfeitLeave=false;
+   modal('НЕТ ПОДТВЕРЖДЕНИЯ','Сервер не ответил','Раунд может продолжаться. Повторить сдачу или выйти из комнаты?',
+    {label:'Повторить',action:()=>leaveToMenu()},{label:'Выйти из комнаты',action:()=>leaveToMenu(true)});
+  },9000);
+  return;
+ }
  gameToken++;clearTimeout(replayTimer);replayPaused=true;animating=false;attackMode=false;plan=[];
  if(mode==='online')leaveNet(false);else storeOffline();
  mode='menu';show('menu');resumeOffer();
@@ -119,9 +139,13 @@ function submitLocal(){
  if(offline.match.outcome&&offline.match.outcome!=='draw')offline.score[offline.match.outcome]++;
  plan=[];attackMode=false;storeOffline();animateRecord(record.record,oldRound);
 }
-function applyRemote(next,version='v1'){
+function applyRemote(next,version=roomVersion){
  if(!next||!['lobby','planning','finished'].includes(next.phase))return;
- if(version!=='v1'){toast('Версия комнаты несовместима с этим приложением');leaveNet();return;}
+ if(!['v1','v2'].includes(version)){toast('Версия комнаты несовместима с этим приложением');leaveNet();return;}
+ if(pendingForfeitLeave&&next.phase==='finished'){
+  pendingForfeitLeave=false;clearTimeout(forfeitWatchdog);
+  leaveToMenu(true);toast('Сдача записана. Победа присуждена сопернику.');return;
+ }
  const previous=server,oldKey=previous?.match?.round+':'+previous?.match?.revision;
  server=next;
  if(previous?.phase==='finished'&&next.phase==='planning'){
@@ -146,8 +170,8 @@ function applyRemote(next,version='v1'){
 }
 function wire(client){
  client.on('connected',e=>{if(net!==client)return;connected=true;me=e.player;busy=false;lobby();});
- client.on('room_joined',e=>{if(net!==client)return;roomId=e.roomId;busy=false;applyRemote(e.state,e.version);lobby();});
- client.on('game_event',e=>{if(net!==client)return;if(e.event?.type==='state')applyRemote(e.event.payload);else if(e.event?.type==='notice'){toast(String(e.event.payload));soundFX('error');}});
+ client.on('room_joined',e=>{if(net!==client)return;roomId=e.roomId;roomVersion=e.version||'v1';busy=false;opponentDisconnected=false;applyRemote(e.state,roomVersion);lobby();});
+ client.on('game_event',e=>{if(net!==client)return;if(e.event?.type==='state')applyRemote(e.event.payload,roomVersion);else if(e.event?.type==='notice'){toast(String(e.event.payload));soundFX('error');}});
  client.on('presence',()=>{if(net===client){lobby();try{net.sendGame({type:'sync'})}catch{}}});
  client.on('disconnected',()=>{if(net===client){connected=false;toast('Переподключаемся…');lobby();render()}});
  client.on('room_closed',()=>{if(net===client){leaveToMenu();toast('Комната закрыта')}});
@@ -285,7 +309,7 @@ function render(){
  const picture=animFrame||{units:match.units,edgesCollapsed:match.edgesCollapsed,events:[]};
  drawBoard($('board'),picture.units,picture.edgesCollapsed,picture.events,!animating,picture.round||match.round);
  $('roundInfo').textContent='РАУНД '+Math.min(match.round,4)+' / '+MAX_ROUNDS;
- $('phaseInfo').textContent=animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
+ $('phaseInfo').textContent=mode==='online'&&!connected?'НЕТ СВЯЗИ':mode==='online'&&opponentDisconnected?'СОПЕРНИК ВНЕ СЕТИ':animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
  $('nameA').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[0])?.name||'ИГРОК А'):'ИГРОК А';
  $('nameB').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[1])?.name||'ИГРОК Б'):(mode==='solo'?'КОМПЬЮТЕР':'ИГРОК Б');
  $('winsA').textContent=sidescore.A;$('winsB').textContent=sidescore.B;
@@ -304,7 +328,7 @@ function render(){
  $('submit').textContent=finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
  $('submit').disabled=disabled||plan.length!==STEPS;
  $('attackHint').classList.toggle('hidden',!attack);
- $('boardNote').textContent=animating?'Раунд исполняется одновременно':finished?'Повтор и реванш доступны после боя':flags[turn]?'Соперник '+(flags[turn==='A'?'B':'A']?'готов':'ещё планирует'):'Направления атаки и движения не должны пересекаться.';
+ $('boardNote').textContent=mode==='online'&&!connected?'Связь потеряна. Место и отправленный план сохраняются':mode==='online'&&opponentDisconnected?'Соперник отключился: ждём возвращения или выхода из комнаты':animating?'Раунд исполняется одновременно':finished?'Повтор и реванш доступны после боя':flags[turn]?'Соперник '+(flags[turn==='A'?'B':'A']?'готов':'ещё планирует'):'Направления атаки и движения не должны пересекаться.';
  $('beat').classList.toggle('hidden',!animating);
  if(animFrame)$('beat').textContent='ШАГ '+animFrame.beat+' / '+STEPS;
 }
