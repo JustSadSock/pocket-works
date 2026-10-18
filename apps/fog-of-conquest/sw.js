@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'fog-of-conquest-';
-const CACHE_NAME = 'fog-of-conquest-v1.1.0';
-const APP_VERSION = '1.1.0';
+const CACHE_NAME = 'fog-of-conquest-v1.2.0';
+const APP_VERSION = '1.2.0';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Полная пошаговая кампания: карты, войска, экономики, штурмы, туман и шесть уровней ИИ.","Мобильная карта, автоматические сохранения и дуэли PocketNet с серверным контролем ходов."];
+const RELEASE_NOTES = ['Сохранены исходные боевые правила и оригинальная графика.', 'Подключена серверная сеть PocketNet с проверкой приказов.'];
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -11,6 +11,8 @@ const APP_SHELL = [
   "./css/style.css",
   "./pocket-adapter.css",
   "./pocket-adapter.js",
+  "./pocket-online.js",
+  "../../shared/capabilities/net.js",
   "./manifest.webmanifest",
   "./manifest.json",
   "./icons/icon.svg",
