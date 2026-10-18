@@ -1,0 +1,26 @@
+/* Issue 03 — a shelf of finished paper manuscripts, not another dashboard. */
+.archive-ticket{appearance:none;width:100%;min-height:49px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;background:#bd9d72;color:#21392e;border:1px solid #ead9b5;border-left:5px solid #3e5948;padding:10px 16px;box-shadow:4px 5px 0 #0f221c78;font-family:Georgia,serif;font-size:17px;cursor:pointer;transition:transform .16s,box-shadow .16s}
+.archive-ticket:hover{background:#ddc19a}.archive-ticket:active{transform:translate(2px,2px);box-shadow:2px 3px 0 #0f221c78}
+.archive-ticket span{display:block}.archive-ticket small{display:block;font:600 10px 'DM Sans',sans-serif;letter-spacing:.04em;opacity:.75;margin-top:2px}.archive-ticket b{font:800 16px 'DM Sans',sans-serif}
+.archive-page{width:min(1100px,100%);height:min(740px,calc(100dvh - 85px));min-height:0;display:flex;flex-direction:column;gap:14px}
+.archive-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:3px 0 4px;color:#edddc1}.archive-heading h2{font-size:clamp(29px,4vw,46px);margin:4px 0 3px;color:#fff0d6}.archive-heading .eyebrow{color:#d6a981}.archive-heading .mini{color:#ccbea4;margin:3px 0}.archive-back{flex:none;border-color:#e5ceab!important;color:#f1e2c4!important}
+.archive-layout{min-height:0;max-height:none;height:100%;flex:1;grid-template-columns:minmax(170px,220px) minmax(0,1fr);gap:18px}
+.archive-editions{background:#d1b791;box-shadow:5px 8px 0 #12272180;padding:17px 12px}.archive-editions .chapter{font:600 14px/1.5 Georgia,serif;padding:13px 8px}.archive-editions h3{font:700 26px Georgia,serif;margin:4px 8px 10px}
+.archive-manuscript{min-height:0}.archive-manuscript h3{font-size:clamp(24px,3vw,34px);margin:15px 0 5px}.archive-manuscript .content{min-height:0}
+.archive-tabs{display:flex;overflow:auto;flex-shrink:0;gap:8px;padding:9px 0 11px;margin-bottom:13px;border-bottom:1px dashed #998368}
+.archive-tab{background:transparent;border:1px solid #aa9879;padding:9px 12px;font-size:12px;font-weight:800;flex:none;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#36473a}.archive-tab.is-active{background:#385548;color:#ffefd2;border-color:#385548}
+.archive-credits{padding:16px 0 8px;font-size:13px}.archive-credits>summary{cursor:pointer;font-weight:800}.archive-delete{align-self:flex-start;margin-top:6px;min-height:40px}
+.archive-empty{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(28px,7vw,70px);max-width:680px;width:100%;margin:0 auto}.archive-empty h3{font-size:clamp(26px,5vw,39px);margin:15px 0 4px}.archive-empty .lead{margin:5px 0 30px}
+@media(max-width:760px){
+ .home-edition .archive-ticket{grid-column:1/-1;min-height:44px;padding:7px 13px;font-size:15px}
+ .archive-page{height:calc(var(--app-viewport-height,100dvh) - 66px);gap:9px}
+ .archive-heading{padding:2px 3px;gap:10px}.archive-heading h2{font-size:27px;margin:1px 0}.archive-heading .eyebrow{font-size:8px}.archive-heading .mini{font-size:10px}.archive-back{padding:8px 10px;font-size:10px}
+ .archive-layout{flex-direction:column;display:flex;min-height:0;gap:8px;height:100%}
+ .archive-editions{display:flex;align-items:center;overflow-x:auto;overflow-y:hidden;gap:6px;max-height:71px;min-height:68px;padding:6px}
+ .archive-editions h3{display:none}.archive-editions .chapter{width:157px;min-width:157px;max-width:157px;padding:9px 10px;font-size:12px;min-height:53px}
+ .archive-manuscript{min-height:0;max-height:none;flex:1;overflow:auto;padding:18px}
+ .archive-manuscript h3{font-size:23px;margin:10px 0 2px}.archive-manuscript .content{overflow:auto}
+ .archive-tab{padding:7px 9px}.archive-empty{padding:28px;min-height:0}
+}
+@media(max-width:380px){.archive-heading h2{font-size:22px}.archive-back{font-size:9px}.archive-editions{max-height:60px;min-height:60px}}
+@media(prefers-reduced-motion:reduce){.archive-ticket{transition:none}}

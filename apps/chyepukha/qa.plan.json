@@ -8,7 +8,8 @@
       "files": [
         "tests/server.test.mjs",
         "tests/hardening.test.mjs",
-        "tests/tab-session.test.mjs"
+        "tests/tab-session.test.mjs",
+        "tests/story-library.test.mjs"
       ]
     },
     {
