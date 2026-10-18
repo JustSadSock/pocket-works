@@ -56,3 +56,22 @@ test('returning along a corridor reuses cached architectural geometry without re
  expect(stats.cacheBytes).toBeGreaterThan(0);
  expect(errors).toEqual([])
 });
+
+
+test('first seconds: no keyboard instruction banner covering mobile horror view',async({page})=>{
+ await page.goto(origin,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.__PW_ROGUE_QA__?.world&&window.__PW_TEST_STATE__?.renderer3D,{timeout:20000});
+ const mobile=await page.evaluate(()=>matchMedia('(pointer:coarse)').matches);
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ if(mobile){
+  expect(await page.locator('#hint').evaluate(el=>el.classList.contains('visible'))).toBe(false);
+ }else{
+  const overlaps=await page.evaluate(()=>{
+   const tip=document.getElementById('hint').getBoundingClientRect(),aim=document.querySelector('.reticle').getBoundingClientRect();
+   return tip.left<aim.right&&tip.right>aim.left&&tip.top<aim.bottom&&tip.bottom>aim.top
+  });
+  expect(overlaps).toBe(false)
+ }
+ await page.screenshot({path:test.info().outputPath('horror-first-seconds.png'),animations:'disabled'})
+});
