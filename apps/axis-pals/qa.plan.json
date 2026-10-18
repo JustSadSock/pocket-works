@@ -58,10 +58,34 @@
         },
         {
           "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "complete-level-and-duet",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#menu",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#campaign"
+        },
+        {
+          "action": "visible",
+          "selector": "#board"
         },
         {
           "action": "click",
-          "selector": "#overlayMain"
+          "selector": "[data-move=\"right\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"down\"]"
         },
         {
           "action": "click",
