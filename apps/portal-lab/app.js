@@ -2,7 +2,7 @@ import {metric,geometry,launch,advance,constraint,collectBeam,staticAcceleration
 import {AudioBus} from './audio.js';
 import {createObservatory} from './observatory.js';
 const $=id=>document.getElementById(id),canvas=$('space'),ctx=canvas.getContext('2d',{alpha:false});
-const sound=new AudioBus(),observatory=createObservatory(canvas),STORAGE='pocket-works:portal-lab:relativity-v2';
+const sound=new AudioBus(),observatory=createObservatory(canvas,{onAction:kind=>sound.play(kind)}),STORAGE='pocket-works:portal-lab:relativity-v2';
 const defaults={model:'ellis',a:1,eta:.45,kind:'light',count:13,spread:32,speed:.7,timeScale:1,view:'observer',source:{l:3.15,phi:Math.PI,alpha:Math.PI}};
 let settings=structuredClone(defaults);
 let rays=[],elapsed=0,paused=false,lastTime=0,accum=0,drag=null,displayW=800,displayH=600,layout=null,dirty=true,saveTimeout=0;
