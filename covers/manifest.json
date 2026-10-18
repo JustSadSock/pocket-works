@@ -3420,18 +3420,18 @@
       }
     ],
     "diagnostic": {
-      "bestScore": 44,
+      "bestScore": 45,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 11297,
-        "variance": 34.48706133845976,
-        "entropy": 1.411001387139736,
-        "edgeDensity": 0.04030257936507937,
-        "colorfulness": 0.8193359375,
-        "centerDetail": 48.1621700306336,
-        "meanLight": 21.914232910156258
+        "bytes": 11341,
+        "variance": 35.29205592538712,
+        "entropy": 1.4041152494340599,
+        "edgeDensity": 0.04092261904761905,
+        "colorfulness": 0.741455078125,
+        "centerDetail": 50.09450482091557,
+        "meanLight": 22.131478515625
       },
       "gameplayEntry": {
         "started": true,
@@ -3448,15 +3448,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.3.0&pw_fp=647b0fab3a2a93ba0f719264"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.4.0&pw_fp=a9041ced8230902f39388c53"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "e79aa66d10ec97d9068ed9c707750002b13a57e0",
-    "lastAttemptAt": "2026-10-18T14:51:34.739Z",
+    "lastAttemptRevision": "5abb60e5a18c83d953cfd9680c8176d2f781a652",
+    "lastAttemptAt": "2026-10-18T15:23:22.598Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
