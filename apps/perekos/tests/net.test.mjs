@@ -8,9 +8,9 @@ const send=(s,who,type,extra={})=>module.onMessage({state:s,player:who,players:[
 const input=(seq,round,changes={})=>({type:'input',seq,round,control:{x:0,y:0,aim:{x:200,y:300},attack:false,shield:false,dash:false,...changes}});
 function room(){const first=module.createRoom({player:p}).state;return module.onJoin({state:first,player:q,players:[p,q]}).state}
 function match(){const s=room();send(s,p,'start');return s}
-test('server module is importable and binary-exact immutable v1 snapshot',async()=>{
- const [main,snapshot]=await Promise.all([readFile(new URL('../server/module.ts',import.meta.url),'utf8'),readFile(new URL('../../../pocketnet/module-versions/perekos/v1.ts',import.meta.url),'utf8')]);
- assert.equal(main,snapshot);assert.equal(RULESET_VERSION,1);
+test('server module is importable and binary-exact immutable v2 snapshot',async()=>{
+ const [main,snapshot]=await Promise.all([readFile(new URL('../server/module.ts',import.meta.url),'utf8'),readFile(new URL('../../../pocketnet/module-versions/perekos/v2.ts',import.meta.url),'utf8')]);
+ assert.equal(main,snapshot);assert.equal(RULESET_VERSION,2);
  assert.equal(module.protocolVersion,1);
 });
 test('rooms have two durable authenticated seats and host must start',()=>{
@@ -20,7 +20,7 @@ test('rooms have two durable authenticated seats and host must start',()=>{
  assert.throws(()=>module.onJoin({state:s,player:{id:'intruder'},players:[p,q,{id:'intruder'}]}),/room_full/);
  send(s,q,'start');assert.equal(s.phase,'lobby');
  send(s,p,'start');assert.equal(s.phase,'fight');assert.equal(s.match.phase,'fight');
- assert.deepEqual(s.match.actors.map(a=>a.runes),[['on_cast','ball'],['on_cast','ball']]);
+ assert.deepEqual(s.match.actors.map(a=>a.runes),[['on_hurt','armor'],['on_hurt','armor']]);
 });
 test('invalid and replayed packets never alter position, score, health or rune choices',()=>{
  const s=match(),initial=s.match.actors[0].x,round=s.match.round;
@@ -30,7 +30,7 @@ test('invalid and replayed packets never alter position, score, health or rune c
   send(s,p,'input',{seq,round,control,score:[4,0],hp:0});
  }
  assert.equal(s.match.actors[0].x,initial);assert.deepEqual(s.match.score,[0,0]);
- assert.equal(s.match.actors[0].hp,100);assert.deepEqual(s.match.actors[0].runes,['on_cast','ball']);
+ assert.equal(s.match.actors[0].hp,100);assert.deepEqual(s.match.actors[0].runes,['on_hurt','armor']);
 });
 test('valid inputs move real server fighter; client cannot choose physics or winner',()=>{
  const old=Date.now;let time=1_000_000;Date.now=()=>time;
@@ -48,7 +48,7 @@ test('valid inputs move real server fighter; client cannot choose physics or win
 test('two server-side rune offers stay secret across room joined and state event',()=>{
  const old=Date.now;let time=2_000_000;Date.now=()=>time;
  try{
-  const s=match();s.match.remaining=.01;s.match.overtime=1;s.match.actors[0].hp=50;time+=80;
+  const s=match();s.match.remaining=.01;s.match.actors[0].hp=50;time+=80;
   send(s,p,'input',input(0,1));
   assert.equal(s.phase,'draft');assert.equal(s.offers[0].length,3);assert.equal(s.offers[1].length,3);
   assert.deepEqual(s.match.pick,[]);
@@ -67,12 +67,12 @@ test('two server-side rune offers stay secret across room joined and state event
   assert.equal(s.phase,'draft');
   send(s,q,'ready',{runes:[...s.match.actors[1].runes]});
   assert.equal(s.phase,'fight');assert.equal(s.match.round,2);
-  assert.equal(s.match.score.reduce((a,b)=>a+b,0),1);
+  assert.equal(s.match.score.reduce((a,b)=>a+b,0),0);assert.equal(s.match.draws,1);
  }finally{Date.now=old}
 });
 test('reconnect sync keeps the original side, score, runes, version and host',()=>{
  const s=match(),before=JSON.stringify(s.match),seat1=module.viewForPlayer({state:s,player:q,players:[p,q]});
- assert.equal(seat1.me,1);assert.equal(seat1.rulesVersion,1);
+ assert.equal(seat1.me,1);assert.equal(seat1.rulesVersion,2);
  s.seen[1]=0;const stale=module.viewForPlayer({state:s,player:p,players:[p,q]});assert.equal(stale.opponentConnected,false);
  const reply=send(s,q,'sync');assert.equal(reply.events[0].to,'second');
  assert.equal(JSON.stringify(s.match),before);assert.equal(module.viewForPlayer({state:s,player:q,players:[p,q]}).me,1);
@@ -87,4 +87,24 @@ test('leaving during fight awards forfeit without shifting the remaining seat',(
  module.onJoin({state:s,player:third,players:[q,third]});
  assert.deepEqual(s.seats,['third','second']);
  assert.equal(module.viewForPlayer({state:s,player:q,players:[q,third]}).me,1);
+});
+
+test('selecting a mage in the lobby is server-validated and locks for a full match',()=>{
+ const s=room();const bad=send(s,p,'mage',{mageId:'not-a-mage'});
+ assert.equal(bad.events[0].type,'notice');assert.equal(s.mages[0],'kindle');
+ send(s,p,'mage',{mageId:'slate'});send(s,q,'mage',{mageId:'coil'});
+ assert.deepEqual(s.mages,['slate','coil']);
+ send(s,p,'start');assert.equal(s.match.actors[0].mageId,'slate');assert.equal(s.match.actors[1].mageId,'coil');
+ const deny=send(s,p,'mage',{mageId:'kindle'});
+ assert.equal(deny.events[0].type,'notice');assert.equal(s.match.actors[0].mageId,'slate');
+});
+test('invalid nine-rune replacements cannot corrupt server state or ready flags',()=>{
+ const s=match(),old=Date.now;let t=100000;Date.now=()=>t;
+ try{s.match.remaining=.01;t+=80;send(s,p,'input',input(0,1));assert.equal(s.phase,'draft');
+ const allowed=s.offers[0][0];send(s,p,'pick',{rune:allowed});
+ const before=[...s.match.actors[0].runes];
+ send(s,p,'order',{runes:['on_cast','on_cast','ball']});
+ assert.deepEqual(s.match.actors[0].runes,before);
+ assert.equal(s.ready[0],false);
+ }finally{Date.now=old}
 });
