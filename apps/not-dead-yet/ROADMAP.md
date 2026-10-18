@@ -99,7 +99,7 @@ hiding simplistic assets.
       middle ground, distant darkness and familiar shapes must communicate
       space and danger.
 
-### 2.1.1 — Architectural geometry with depth, not a box labyrinth (in progress: 2.1.2 doors)
+### 2.1.1 — Architectural geometry with depth, not a box labyrinth (in progress: 2.1.3 walls)
 - [x] Five floor-plan families: four-room, staggered-wing, walk-through,
       service-nook and crooked-vestibule; actual path geometry differs.
 - [x] Room footprints shrink to maximum 4×4 cells, with 2-cell WC/pantry.
@@ -123,6 +123,22 @@ hiding simplistic assets.
       occlusion, safe sweeping, sound-relevant interaction, saved state,
       enemy routing, epoch cleanup, rendered vertices; browser E journey
       authored but not yet run on a real device.
+- [x] v2.1.3: create true 155mm thick partitions and 190mm wet-room
+      walls; the depth extends into non-walkable tile volumes and does not
+      interfere with door collision or reduce walkable corridor width.
+- [x] Wall finishes are deterministic across five aged palettes; modeled
+      skirting, cornices, irregularly patched wallpaper, exposed conduit
+      clips and deep doorway returns increase physical spatial cues.
+- [x] Bounded 3-entry `RogueMeshCache` uses fixed 5-cell render anchors;
+      backtracking reuses CPU meshes, while new run objects and terrain
+      revision changes safely invalidate cache. WebGL uploads reuse the
+      existing typed array rather than rematerializing it.
+- [x] Regression suite asserts finite bounded mesh output, five material
+      variants, wall thickness, cache reuse/eviction and door/collision
+      compatibility, including browser QA test authored for return visit.
+- [ ] Optimize WebGL buffer uploads when moving between cached regions,
+      profile real low-end phones and verify that thick wall corners/wallpaper
+      layers look convincing rather than z-fighting in screenshots.
 - [ ] Inspect five-family screenshot route in Chromium and mobile WebKit.
 - [ ] Add thick partition walls, more differentiated panel profiles,
       deeper architectural connections, wall damage and varied ceiling construction before
@@ -133,7 +149,7 @@ hiding simplistic assets.
       rooms, attached kitchens, combined/separate toilets, closets, uneven
       doorway positions and dead-end service nooks. Preserve infinite seams,
       navigability and unseen regeneration.
-- [ ] Physically model **wall thickness, real door openings, lintels, baseboards,
+- [x] Physically model **wall thickness, real door openings, lintels, baseboards,
       ceiling cornices, uneven thresholds, protruding ducts/pipe runs,
       radiators, window reveals, sills and ventilation grilles**. Avoid
       floating trim and walls made of infinitely thin sheets.
