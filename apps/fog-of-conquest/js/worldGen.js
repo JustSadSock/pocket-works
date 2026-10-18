@@ -1,6 +1,11 @@
 (function(global){
   'use strict';
   const abs = Math.abs;
+  let random=Math.random;
+  function seededRandom(seed){
+    let x=(seed>>>0)||0x9e3779b9;
+    return ()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296;};
+  }
   const NOISE_FREQS = [8, 16, 32];
   const WATER_RATIO = 0.1;
   const HILL_RATIO = 0.15;
@@ -10,6 +15,8 @@
   const START_CLEAR_RADIUS = 2;
 
   function generateWorld(beta = global.modeBeta){
+    random=Number.isInteger(global.FogWorldSeed)&&global.FogWorldSeed>=0&&global.FogWorldSeed<=0xffffffff
+      ?seededRandom(global.FogWorldSeed):Math.random;
     global.buildings.length = 0;
     global.units.length = 0;
 
@@ -229,7 +236,7 @@
     types.forEach(t=>{
       if(!global.map.some(row=>row.includes(t))){
         for(let i=0;i<1000;i++){
-          const r=Math.random()*global.ROWS|0, c=Math.random()*global.COLS|0;
+          const r=random()*global.ROWS|0, c=random()*global.COLS|0;
           if(global.map[r][c]===global.TERRAIN.PLAIN){ global.map[r][c]=t; break; }
         }
       }
@@ -264,8 +271,8 @@
 
   function freeCell(side){
     for(let i=0;i<500;i++){
-      let r=2+Math.random()*(global.ROWS-4)|0,
-          c=2+Math.random()*(global.COLS-4)|0;
+      let r=2+random()*(global.ROWS-4)|0,
+          c=2+random()*(global.COLS-4)|0;
       if(side===1&&c>=global.COLS/2) continue;
       if(side===2&&c<global.COLS/2)  continue;
       if(global.map[r][c]!==global.TERRAIN.PLAIN) continue;
