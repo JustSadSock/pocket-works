@@ -36,7 +36,7 @@ test('finding a recognizable thing offers three functional upgrades and saves th
  await boot(page);
  const found=await page.evaluate(()=>{
   const api=window.__PW_ROGUE_QA__,w=api.world();
-  for(let cz=-1;cz<=1;cz++)for(let cx=-1;cx<=1;cx++){
+  for(let cz=-2;cz<=2;cz++)for(let cx=-2;cx<=2;cx++){
    const drop=w.chunk(cx,cz).drops.find(x=>x.type==='relic');
    if(drop&&api.setPosition(drop.x,drop.z))return drop.id
   }return null
