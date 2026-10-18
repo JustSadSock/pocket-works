@@ -37,7 +37,7 @@ export function createMaterialLab(options={}){
   phase='ready';reportedBreaks=0;dirty=true;update();
  }
  function configure(metric){m={...metric};build();}
- function setActive(next){active=next;if(next){if(!body)build();update();dirty=true;}}
+ function setActive(next){active=next;if(next){if(!body)build();update();dirty=true;}else $('shoot').disabled=false;}
  function update(){
   $('matter-material').value=state.material;
   $('matter-size').value=state.length;$('matter-size-value').textContent=format(state.length);
@@ -51,8 +51,10 @@ export function createMaterialLab(options={}){
   $('matter-sound').textContent=format(Math.sqrt(MATERIALS[state.material].E/MATERIALS[state.material].density),0);
   $('matter-phase').textContent=phase==='running'?'СИМУЛЯЦИЯ':phase==='completed'?
    (body.stopReason==='fractured'?'ОБРАЗЕЦ РАЗРУШЕН':'ПРОХОД ЗАВЕРШЁН'):'ГОТОВ К ИСПЫТАНИЮ';
-  $('matter-launch').textContent=phase==='running'?'Эксперимент идёт':phase==='completed'?'Повторить испытание':'Запустить образец';
-  $('matter-launch').disabled=phase==='running';
+  if(active){
+   $('shoot').innerHTML=(phase==='running'?'Эксперимент идёт':phase==='completed'?'Повторить испытание':'Запустить образец')+' <span aria-hidden="true">↗</span>';
+   $('shoot').disabled=phase==='running';
+  }
   if(!body)return;
   const s=specimenStats(body);
   $('matter-peak').textContent=format(s.stressPeakMPa,2);
@@ -164,9 +166,7 @@ export function createMaterialLab(options={}){
  for(const [id,key] of [['matter-throat','logRadius'],['matter-size','length'],['matter-speed','speed']]){
   $(id).addEventListener('input',e=>{state[key]=Number(e.target.value);save();build();});
  }
- $('matter-launch').addEventListener('click',trigger);
- $('matter-reset').addEventListener('click',reset);
- return {state,configure,setActive,tick,draw,trigger,reset,get phase(){return phase;},
+  return {state,configure,setActive,tick,draw,trigger,reset,get phase(){return phase;},
   get snapshot(){return body?{
    config:{...state,aMeters:radiusMeters()},stats:specimenStats(body),
    history:body.history.slice(),nodes:body.nodes.map(n=>({...n})),
