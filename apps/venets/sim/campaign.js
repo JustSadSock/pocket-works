@@ -101,7 +101,8 @@ export function startCampaign({seed=413,countyId='co-01',size=12}={}){
     remember(world,{witnessId:founder.id,otherId:ruler.id,kind:'grievance',weight:-16,cause:'disputed-charter'});
     remember(world,{witnessId:ruler.id,otherId:founder.id,kind:'grievance',weight:-12,cause:'disputed-charter'});
   }
-  recordEvent(world,'campaign-founded','contested-ducal-rights',{
+  recordEvent(world,'campaign-founded',county.rank==='kingdom'?'royal-accession':
+    county.rank==='duchy'?'contested-royal-rights':'contested-ducal-rights',{
     founderId:founder.id,countyId,duchyId:liege?.id||null,rivalId:ruler?.id||null
   });
   const g={schemaVersion:CAMPAIGN_SCHEMA,world,seed,startCountyId:countyId,
