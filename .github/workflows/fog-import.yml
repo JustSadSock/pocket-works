@@ -1,0 +1,35 @@
+name: One-off Fog source import
+on:
+  push:
+    branches:
+      - app/fog-of-conquest-port-20261018
+    paths:
+      - .github/workflows/fog-import.yml
+permissions:
+  contents: write
+jobs:
+  import-original:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dedicated port branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 1
+      - name: Preserve exact source game and art
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/JustSadSock/Fog-Of-Conquest.git /tmp/fog-original
+          mkdir -p apps/fog-of-conquest
+          rm -f apps/fog-of-conquest/engine.js
+          cp -a /tmp/fog-original/assets /tmp/fog-original/'assets(ai)' /tmp/fog-original/css /tmp/fog-original/data /tmp/fog-original/js apps/fog-of-conquest/
+          cp /tmp/fog-original/index.html /tmp/fog-original/manifest.json apps/fog-of-conquest/
+          cp /tmp/fog-original/README.md apps/fog-of-conquest/ORIGINAL-README.md
+          echo 'Source snapshot: JustSadSock/Fog-Of-Conquest main' > apps/fog-of-conquest/SOURCE.md
+          git rm -f .github/workflows/fog-import.yml
+          git add -A apps/fog-of-conquest
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "port(fog): preserve original game, complete visual assets and mechanics"
+          git push origin HEAD:app/fog-of-conquest-port-20261018
