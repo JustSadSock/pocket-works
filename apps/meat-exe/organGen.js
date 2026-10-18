@@ -81,48 +81,107 @@ function listFirst(set){
 let floorGeo, wallGeo;
 let floorMat, wallMat;
 
+// Every sector is a *connected* miniature room graph. The peripheral vessel loop
+// deliberately creates two viable routes, letting a rupture open a shortcut
+// without ever being required to traverse the level.
+export function getOrganProfile(cx,cy){
+  const rnd=mulberry32((Math.imul(cx,73856093)^Math.imul(cy,19349663)^worldSeed^0x741acf2d)>>>0);
+  return {archetype:['atrium','rib-vault','artery'][Math.floor(rnd()*3)],rotation:Math.floor(rnd()*4),
+    vent:Math.floor(rnd()*4),growth:rnd(),tone:rnd()};
+}
 export function generateOrgan(cx,cy){
-  const cells=[];
-  const cellSet=new Set();
-  const SIZE=CELLS_PER_CHUNK; // cells per chunk side
-  const baseX=cx*SIZE;
-  const baseY=cy*SIZE;
-  const rnd=mulberry32((cx*73856093^cy*19349663^worldSeed)>>>0);
-  const roomCount=1+Math.floor(rnd()*2);
-  const dig=(lx,ly)=>{const key=lx+','+ly;if(!cellSet.has(key)){cellSet.add(key);cells.push({x:baseX+lx,y:baseY+ly});}};
-  const centers=[];
-  let prevCenter=null;
-  const connect=(a,b)=>{
-    let x=a.x,y=a.y;
-    while(x!==b.x){x+=Math.sign(b.x-x);dig(x,y);}
-    while(y!==b.y){y+=Math.sign(b.y-y);dig(x,y);}
+  const SIZE=CELLS_PER_CHUNK,bx=cx*SIZE,by=cy*SIZE;
+  const rnd=mulberry32((Math.imul(cx,73856093)^Math.imul(cy,19349663)^worldSeed)>>>0);
+  const profile=getOrganProfile(cx,cy);
+  const found=new Set(),cells=[];
+  const dig=(x,y)=>{
+    if(x<0||y<0||x>=SIZE||y>=SIZE)return;
+    const key=x+','+y;
+    if(!found.has(key)){found.add(key);cells.push({x:bx+x,y:by+y});}
   };
-  for(let i=0;i<roomCount;i++){
-    const w=5+Math.floor(rnd()*3);
-    const h=5+Math.floor(rnd()*3);
-    const rx=Math.floor(rnd()*(SIZE-w));
-    const ry=Math.floor(rnd()*(SIZE-h));
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++)dig(rx+x,ry+y);
-    const center={x:rx+(w>>1),y:ry+(h>>1)};
-    centers.forEach(c=>connect(c,center));
-    centers.push(center);
-    prevCenter=center;
+  const corridor=(start,end,horizontalFirst=true)=>{
+    let x=start.x,y=start.y;dig(x,y);
+    const xWalk=()=>{while(x!==end.x){x+=Math.sign(end.x-x);dig(x,y);}};
+    const yWalk=()=>{while(y!==end.y){y+=Math.sign(end.y-y);dig(x,y);}};
+    if(horizontalFirst){xWalk();yWalk();}else{yWalk();xWalk();}
+  };
+  // Closed vessel loop around a mechanically distinct inner chamber. No false
+  // dead ends: every portal is connected to this loop via a short stem.
+  const left=1,right=6,top=1,bottom=6;
+  for(let x=left;x<=right;x++){dig(x,top);dig(x,bottom);}
+  for(let y=top;y<=bottom;y++){dig(left,y);dig(right,y);}
+  const center={x:3+(profile.rotation%2),y:3+Math.floor(profile.rotation/2)};
+  if(profile.archetype==='atrium'){
+    for(let x=2;x<=5;x++)for(let y=2;y<=5;y++){
+      if((x===2||x===5)&&(y===2||y===5)&&profile.growth<.63)continue;
+      dig(x,y);
+    }
+  }else if(profile.archetype==='rib-vault'){
+    for(let y=2;y<=5;y++)for(let x=2;x<=5;x++){
+      if(y===3||y===4||((x+y+profile.rotation)%3===0))dig(x,y);
+    }
+  }else{
+    for(let y=2;y<=5;y++)for(let x=2;x<=5;x++){
+      if(x===center.x||y===center.y||((x+y+profile.rotation)%5===0))dig(x,y);
+    }
   }
-  // connect to edges using nearest room center for a more maze-like feel
-  const dirs=[[0,-1],[1,0],[0,1],[-1,0]];
-  for(let i=0;i<4;i++){
-    if(edgeOpen(cx,cy,i)){
-      const ex = i===1?SIZE-1:i===3?0:edgeCoord(cx,cy,i);
-      const ey = i===0?0:i===2?SIZE-1:edgeCoord(cx,cy,i);
-      let best=centers[0],bestDist=Infinity;
-      for(const c of centers){
-        const d=Math.abs(c.x-ex)+Math.abs(c.y-ey);
-        if(d<bestDist){bestDist=d;best=c;}
-      }
-      connect(best,{x:ex,y:ey});
+  // Bridges from the loop into the chamber have different orientations.
+  const links=[{x:1,y:center.y},{x:6,y:center.y},{x:center.x,y:1},{x:center.x,y:6}];
+  for(let i=0;i<4;i++)if(i%2===profile.rotation%2||rnd()>.54)
+    corridor(center,links[i],i%2===0);
+  // Inter-chunk portals always match their neighbours.
+  const portals=[
+    {x:edgeCoord(cx,cy,0),y:0,inner:{x:edgeCoord(cx,cy,0),y:1}},
+    {x:7,y:edgeCoord(cx,cy,1),inner:{x:6,y:edgeCoord(cx,cy,1)}},
+    {x:edgeCoord(cx,cy,2),y:7,inner:{x:edgeCoord(cx,cy,2),y:6}},
+    {x:0,y:edgeCoord(cx,cy,3),inner:{x:1,y:edgeCoord(cx,cy,3)}}
+  ];
+  for(const p of portals){
+    dig(p.x,p.y);
+    const loopEntry={x:Math.min(6,Math.max(1,p.inner.x)),y:Math.min(6,Math.max(1,p.inner.y))};
+    corridor(p,loopEntry,true);
+    // Corner portals are pulled inward to the vessel loop before entering a chamber.
+  }
+  // A few irregular vessel bulbs; never carve disconnected cells.
+  for(let j=0;j<3;j++){
+    const x=2+Math.floor(rnd()*4),y=2+Math.floor(rnd()*4);
+    if(found.has(x+','+y)){
+      const dx=[-1,1,0,0][j],dy=[0,0,-1,1][j];
+      if(rnd()>.28)dig(x+dx,y+dy);
     }
   }
   return cells;
+}
+
+// Select a destructible membrane ONLY from cells whose removal leaves the
+// sector's remaining traversal graph connected. Entrance and spawn are exempt.
+export function getTissueNodes(cx,cy){
+  const cells=generateOrgan(cx,cy),open=new Set(cells.map(c=>c.x+','+c.y));
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  const baseX=cx*CELLS_PER_CHUNK,baseY=cy*CELLS_PER_CHUNK;
+  const options=[];
+  for(const c of cells){
+    const lx=c.x-baseX,ly=c.y-baseY;
+    if(lx<=0||ly<=0||lx>=7||ly>=7)continue;
+    if(cx===0&&cy===0&&Math.hypot(lx-3.5,ly-3.5)<2.2)continue;
+    const neighbors=dirs.filter(([dx,dy])=>open.has((c.x+dx)+','+(c.y+dy))).length;
+    if(neighbors<2||neighbors>3)continue;
+    const removed=c.x+','+c.y;
+    const first=cells.find(v=>v.x+','+v.y!==removed);
+    const queue=[first],seen=new Set([first.x+','+first.y]);
+    for(let i=0;i<queue.length;i++){
+      const v=queue[i];
+      for(const [dx,dy] of dirs){
+        const k=(v.x+dx)+','+(v.y+dy);
+        if(k!==removed&&open.has(k)&&!seen.has(k)){seen.add(k);queue.push({x:v.x+dx,y:v.y+dy});}
+      }
+    }
+    if(seen.size===cells.length-1)options.push(c);
+  }
+  if(!options.length)return [];
+  const rnd=mulberry32((Math.imul(cx,83492791)^Math.imul(cy,2654435761)^worldSeed^0x515a3d3)>>>0);
+  const c=options[Math.floor(rnd()*options.length)];
+  return [{id:c.x+','+c.y,x:c.x,z:c.y,hp:100,archetype:getOrganProfile(cx,cy).archetype}];
 }
 
 // Helper for the Three.js renderer. Builds a tunnel mesh for a chunk.

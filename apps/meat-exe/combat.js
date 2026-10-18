@@ -11,15 +11,17 @@ export function pelletAim(yaw,pitch,index,count,spread){
   const a=(index-1)*2.399963229728653,r=Math.sqrt(index/(count-1))*spread;
   return directionFromAim(yaw+Math.cos(a)*r,pitch+Math.sin(a)*r);
 }
-export function hitRay(origin,dir,enemies,isFloor,range=15){
+export function hitRay(origin,dir,enemies,isFloor,range=15,getTissueAt=null){
   const norm=Math.hypot(dir.x,dir.y,dir.z);
   if(!Number.isFinite(norm)||norm<.00001)return null;
   const d={x:dir.x/norm,y:dir.y/norm,z:dir.z/norm};
-  let wall=range,last={x:origin.x,y:origin.y,z:origin.z};
+  let wall=range,last={x:origin.x,y:origin.y,z:origin.z},tissue=null;
   // Small enough steps to stop at cell boundaries and never pass through a membrane.
   for(let t=.085;t<=range+.085;t+=.085){
     const dist=Math.min(range,t),x=origin.x+d.x*dist,y=origin.y+d.y*dist,z=origin.z+d.z*dist;
-    if(y<.07||y>2.7||!isFloor(x,z)){wall=dist;break;}
+    if(y<.07||y>2.7){wall=dist;break;}
+    tissue=getTissueAt?.(x,z)||null;
+    if(tissue||!isFloor(x,z)){wall=dist;break;}
     last={x,y,z};if(dist===range)break;
   }
   let chosen=null,near=wall;
@@ -34,6 +36,7 @@ export function hitRay(origin,dir,enemies,isFloor,range=15){
     if(hit<near-0.035&&hit<=range){near=hit;chosen=e;}
   }
   if(chosen)return {kind:'flesh',enemy:chosen,distance:near,point:{x:origin.x+d.x*near,y:origin.y+d.y*near,z:origin.z+d.z*near},direction:d};
+  if(tissue)return {kind:'tissue',enemy:null,tissue,distance:wall,point:{x:origin.x+d.x*wall,y:origin.y+d.y*wall,z:origin.z+d.z*wall},direction:d};
   if(wall<range)return {kind:'wall',enemy:null,distance:wall,point:last,direction:d};
   return {kind:'miss',enemy:null,distance:range,point:{x:origin.x+d.x*range,y:origin.y+d.y*range,z:origin.z+d.z*range},direction:d};
 }

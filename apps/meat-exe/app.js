@@ -17,9 +17,9 @@ const safeRemove=name=>{try{localStorage.removeItem(KEY+name);}catch{}};
 const sample=[[-1,0],[1,0],[0,-1],[0,1]];
 let mode='menu',state=null,world=null,last=0,clock=0,lastSave=0,nextId=1;
 let waveBreak=0,recoil=0,damageFlash=0,noticeUntil=0,hitUntil=0,fireUntil=0,killUntil=0;
-let shotsFired=0,confirmedHits=0,wallHits=0,lastShotKind='none';
+let shotsFired=0,confirmedHits=0,wallHits=0,lastShotKind='none',gateHintShown=false,lastGateHitAt=-999;
 const keys=new Set(),movement={x:0,y:0};
-let movingPointer=null,lookPointer=null,lookLast={x:0,y:0},shootHeld=false,mouseLocked=false;
+let movingPointer=null,lookPointer=null,lookLast={x:0,y:0},shootHeld=false,keyFireHeld=false,mouseLocked=false;
 let soundOn=safeRead('sound')!==false;
 const combatAudio=createCombatAudio();if(!soundOn)combatAudio.setEnabled(false);
 let best=safeRead('best')||{score:0,wave:0,kills:0};
@@ -28,6 +28,7 @@ let save=validateRun(safeRead('session'));
 let quality=safeRead('quality');if(!['auto','speed','detail'].includes(quality))quality='auto';
 let effectiveQuality=quality==='speed'?'low':quality==='detail'?'high':'medium';
 let gamepadFire=false,padMove={x:0,y:0},prevPadButtons=[],accumulator=0,lastPaint=0,fpsClock=0,fpsFrames=0;
+let paintCoolDownUntil=0,paintCost=0;
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
   touch:$('touchControls'),cross:$('crosshair'),pauseBtn:$('pauseBtn'),wave:$('waveValue'),
@@ -58,7 +59,7 @@ function setMode(next){
   ui.touch.hidden=next!=='playing'||!touch;
   ui.pauseBtn.hidden=next!=='playing'||mouseLocked;
   ui.cross.hidden=next!=='playing';
-  if(next!=='playing'){shootHeld=false;gamepadFire=false;movement.x=movement.y=0;padMove.x=padMove.y=0;keys.clear();resetStick();accumulator=0;}
+  if(next!=='playing'){shootHeld=false;keyFireHeld=false;gamepadFire=false;movement.x=movement.y=0;padMove.x=padMove.y=0;keys.clear();resetStick();accumulator=0;}
   if(next!=='playing'&&document.pointerLockElement===canvas)document.exitPointerLock?.();
   if(next==='menu'){
     save=validateRun(safeRead('session'));
@@ -69,10 +70,11 @@ function setMode(next){
 }
 function newState(seed){
   const start=world.getStart();
-  return {v:2,seed,x:start.x,z:start.z,yaw:findOpenFacing(start.x,start.z,world.isFloor),pitch:0,hp:100,maxHp:100,heat:0,
+  return {v:3,seed,x:start.x,z:start.z,yaw:findOpenFacing(start.x,start.z,world.isFloor),pitch:0,hp:100,maxHp:100,heat:0,
     weapon:0,level:0,damageBonus:0,cooldown:0,dashCooldown:0,dashTime:0,dashDirX:0,dashDirZ:0,
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
-    enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0};
+    enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
+    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
@@ -83,11 +85,11 @@ function makeEnemy(type,x,z,hp){
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
   const {enemies,pickups,projectiles,...base}=state;
-  safeWrite('session',{...base,v:2,enemies:enemies.map(({visual,...e})=>e),pickups:pickups.map(({visual,...p})=>p)});
+  safeWrite('session',{...base,v:3,enemies:enemies.map(({visual,...e})=>e),pickups:pickups.map(({visual,...p})=>p)});
 }
 function restore(raw){
   const s=validateRun(raw);if(!s)return false;
-  world.reset(s.seed);nextId=1;
+  world.reset(s.seed,s.ruptured);nextId=1;
   const base=newState(s.seed);
   state={...base,...s,enemies:[],pickups:[],projectiles:[]};
   if(!world.isFloor(state.x,state.z)){state.x=base.x;state.z=base.z;}
@@ -113,10 +115,10 @@ function begin(resume=false){
       startWave(1);
     }
     audioStart();sound('menu');setMode('playing');
-    shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';hitUntil=fireUntil=killUntil=0;
+    shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';hitUntil=fireUntil=killUntil=0;gateHintShown=false;lastGateHitAt=-999;
     ui.cross.classList.remove('hit','firing','killed');
     last=performance.now();clock=0;waveBreak=0;lastSave=0;accumulator=0;lastPaint=0;
-    setQuality(quality);
+    setQuality(quality);paintCost=0;paintCoolDownUntil=0;
     world.nearChunks(state.x,state.z);
     syncHUD();
     // An immediate pointer lock would intercept the visible pause control.
@@ -204,10 +206,10 @@ function shoot(){
   fireUntil=clock+(weapon===1?.16:.105);
   ui.cross.classList.add('firing');
   const origin={x:state.x,y:1.41,z:state.z};
-  let hits=0,walls=0,oneKill=false;
+  let hits=0,walls=0,tissueHits=0,oneKill=false;
   for(let pellet=0;pellet<gun.pellets;pellet++){
     const direction=pelletAim(state.yaw,state.pitch,pellet,gun.pellets,gun.spread);
-    const result=hitRay(origin,direction,state.enemies,world.isFloor,weapon===1?12:17);
+    const result=hitRay(origin,direction,state.enemies,world.isFloor,weapon===1?12:17,world.getTissueAt);
     if(!result)continue;
     if(pellet===0||result.kind==='flesh'||(weapon===1&&pellet%2===0))world.fireTrace(origin,result.point,weapon);
     if(result.kind==='flesh'){
@@ -228,19 +230,36 @@ function shoot(){
           sound('heart');setNotice('СЕРДЦЕ / ФАЗА '+next,2);
         }
       }
+    }else if(result.kind==='tissue'){
+      tissueHits++;gateHintShown=true;
+      world.impact(result.point,direction,'flesh');
+      const damage=world.damageTissue(result.tissue.id,gun.damage*(weapon===1?.75:1.3));
+      if(damage?.opened){
+        state.ruptured.push(damage.id);state.ruptureCount++;
+        state.score+=180;
+        state.immuneHeat=Math.min(100,state.immuneHeat+26);
+        state.immuneDelay=1.85;
+        navAt=0;sound('heart');
+        if(state.pickups.length<18)state.pickups.push({x:damage.x,z:damage.z,type:'fragment',visual:world.makePickup(damage.x,damage.z)});
+        setNotice('ЗАТВОР РАЗОРВАН · ИММУННАЯ РЕАКЦИЯ',2.3);
+        snapshot();
+      }else if(damage&&clock-lastGateHitAt>.42){
+        setNotice('МЕМБРАНА '+Math.ceil(damage.hp)+'% · СТРЕЛЯЙ',.75);
+        lastGateHitAt=clock;
+      }
     }else if(result.kind==='wall'){
       walls++;wallHits++;
       if(pellet===0||pellet===3)world.impact(result.point,direction,'wall');
     }
     if(mode!=='playing')break;
   }
-  if(hits){
+  if(hits||tissueHits){
     sound('hit');hitUntil=clock+.18;
     ui.cross.classList.add('hit');
     if(oneKill)ui.cross.classList.add('killed');
     if(hits>=3)navigator.vibrate?.(10);
   }else if(walls){sound('wall');}
-  lastShotKind=hits?'flesh':walls?'wall':'miss';
+  lastShotKind=hits?'flesh':tissueHits?'tissue':walls?'wall':'miss';
 }
 function createProjectile(e,angle=0){
   const toX=state.x-e.x,toZ=state.z-e.z,theta=Math.atan2(toX,toZ)+angle;
@@ -320,6 +339,15 @@ function update(dt){
   clock+=dt;
   if(mode!=='playing')return;
   state.elapsed+=dt;state.waveTime+=dt;
+  state.immuneHeat=Math.max(0,state.immuneHeat-dt*.53);
+  if(state.immuneDelay>0){
+    state.immuneDelay=Math.max(0,state.immuneDelay-dt);
+    if(state.immuneDelay===0&&state.enemies.length<18){
+      const response=state.immuneHeat>48?2:1;
+      for(let i=0;i<response;i++)spawnUnit(i===0?'spitter':'crawler');
+      if(state.enemies.length>0)setNotice('ИММУННАЯ СИСТЕМА ОТВЕТИЛА',1.4);
+    }
+  }
   state.cooldown=Math.max(0,state.cooldown-dt);
   state.dashCooldown=Math.max(0,state.dashCooldown-dt);
   state.invuln=Math.max(0,state.invuln-dt);
@@ -331,7 +359,11 @@ function update(dt){
   const speed=state.dashTime>0?14:state.sprinting?4.8:3.4;
   const next=world.moveCircle(state.x,state.z,d.x*speed*dt,d.z*speed*dt,.22);
   state.x=next.x;state.z=next.z;
-  if(shootHeld||gamepadFire)shoot();
+  if(!gateHintShown){
+    const lookAhead=world.getTissueAt(state.x-Math.sin(state.yaw)*2.0,state.z-Math.cos(state.yaw)*2.0);
+    if(lookAhead){gateHintShown=true;setNotice('ПУЛЬСИРУЮЩИЙ ЗАТВОР · РАЗРУШЬ ОГНЁМ',2.5);}
+  }
+  if(shootHeld||keyFireHeld||gamepadFire)shoot();
   if(state.toSpawn>0){
     state.spawnClock-=dt;
     if(state.spawnClock<=0&&state.enemies.length<20){
@@ -479,10 +511,11 @@ document.addEventListener('keydown',e=>{
   if(e.code==='Escape'){if(!ui.confirm.hidden)ui.confirm.hidden=true;else if(mode==='playing')pause();else if(mode==='paused')resume();return;}
   if(e.code==='KeyQ'||e.code==='KeyE'){weaponSwitch();return;}
   if(e.code==='KeyR'&&mode==='dead'){begin(false);return;}
+  if(e.code==='KeyF'){if(mode==='playing'){keyFireHeld=true;shoot();}return;}
   keys.add(e.code);
   if(e.code==='Space'&&mode==='playing')dash();
 });
-document.addEventListener('keyup',e=>keys.delete(e.code));
+document.addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='KeyF')keyFireHeld=false;});
 window.addEventListener('blur',()=>{if(mode==='playing')pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause();});
 window.addEventListener('pagehide',()=>snapshot());
@@ -528,26 +561,33 @@ function frame(timestamp){
       }
     }else{accumulator=0;}
     // Frame-rate ceiling in manual Detail mode leaves CPU/GPU time for game input.
-    const interval=effectiveQuality==='high'?20:0;
-    const shouldPaint=mode==='playing'?timestamp-lastPaint>=interval:lastPaint===0;
+    // Let the browser service touch, mouse and pause events between expensive SW-WebGL frames.
+    // Fast GPU systems keep the previous fast refresh rate.
+    const interval=world?.softwareRenderer?80:effectiveQuality==='high'?20:effectiveQuality==='low'?20:0;
+    const shouldPaint=mode==='playing'?(timestamp-lastPaint>=interval&&performance.now()>=paintCoolDownUntil):lastPaint===0;
     if(world&&!document.hidden&&shouldPaint){
       const elapsed=Math.min(dt,.045);lastPaint=timestamp;
       recoil=Math.max(0,recoil-elapsed*6);damageFlash=Math.max(0,damageFlash-elapsed*2.8);
       ui.damage.style.opacity=String(damageFlash*.8);
       const cameraState=state||{x:3,z:3,yaw:1.4,pitch:0,moving:0,sprinting:false};
+      const paintStart=performance.now();
       world.paint(cameraState,state?.enemies||[],state?.pickups||[],state?.elapsed||timestamp*.001,mode==='playing'?elapsed:0,recoil,damageFlash,state?.projectiles||[]);
+      const cost=performance.now()-paintStart;
+      paintCost=paintCost?paintCost*.65+cost*.35:cost;
+      if(mode==='playing'&&paintCost>24)paintCoolDownUntil=performance.now()+Math.min(180,paintCost*2.4);
     }
   }catch(error){fatal(error);world=null;}
   if(world)requestAnimationFrame(frame);
 }
 window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
-  x:state?.x??null,z:state?.z??null,hp:state?.hp??null,wave:state?.wave??null,
+  x:state?.x??null,z:state?.z??null,yaw:state?.yaw??null,pitch:state?.pitch??null,hp:state?.hp??null,wave:state?.wave??null,
   score:state?.score??null,enemies:state?.enemies?.length??0,
-  saved:Boolean(validateRun(safeRead('session'))),
+  softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
+  anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{
-  world=createWorld(canvas,save?.v===2?save.seed:2026);
+  world=createWorld(canvas,save?.v===3?save.seed:2026);
   world.setQuality(effectiveQuality);
   const demo=world.getStart();world.nearChunks(demo.x,demo.z);
   setMode('menu');

@@ -1,5 +1,5 @@
 import * as THREE from './three.module.js';
-import { generateOrgan, setSeed, CELLS_PER_CHUNK } from './organGen.js';
+import { generateOrgan, getOrganProfile, getTissueNodes, setSeed, CELLS_PER_CHUNK } from './organGen.js';
 import { sweepCircle } from './stability.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -12,6 +12,15 @@ const rand = (a,b,s=0) => {
 
 export function createWorld(canvas, initialSeed) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
+  // Software rasterizers are common on headless Chromium and older devices.
+  // Detect capability, not user agent, so regular GPUs keep full detail.
+  let softwareRenderer=false;
+  try {
+    const gl=renderer.getContext();
+    const debug=gl.getExtension('WEBGL_debug_renderer_info');
+    const gpu=debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
+    softwareRenderer=/swiftshader|llvmpipe|software|softpipe/i.test(String(gpu));
+  }catch{}
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.25;
@@ -102,7 +111,13 @@ export function createWorld(canvas, initialSeed) {
   scene.add(particles);
   const source = new THREE.Group();
   scene.add(source);
-  const chunks = new Map(), layouts = new Map(), stains = [], droplets = [], streaks = [];
+  const chunks = new Map(), layouts = new Map(), tissueChunks = new Map(), tissueVisuals = new Map(), stains = [], droplets = [], streaks = [];
+  let openedTissues=new Set(),organPulse=0;
+  const valveSkin=new THREE.MeshStandardMaterial({color:0x9d3c4d,roughness:.48,emissive:0x631822,emissiveIntensity:.65});
+  const valveCore=new THREE.MeshStandardMaterial({color:0xe0ad7c,roughness:.42,emissive:0x8a3318,emissiveIntensity:.8});
+  const valveGlow=new THREE.MeshBasicMaterial({color:0xffda9b});
+  const valveGeo=new THREE.IcosahedronGeometry(1,1),valveRing=new THREE.TorusGeometry(.51,.095,7,16);
+  const valveEyeGeo=new THREE.SphereGeometry(.11,9,7),archGeo=new THREE.TorusGeometry(.9,.07,6,12,Math.PI);
   const lineMat=new THREE.LineBasicMaterial({color:0xffd5ab,transparent:true,opacity:.62,depthWrite:false});
   const bileLineMat=new THREE.LineBasicMaterial({color:0xffb980,transparent:true,opacity:.48,depthWrite:false});
   const impactGeo=new THREE.CircleGeometry(1,9);
@@ -146,8 +161,8 @@ export function createWorld(canvas, initialSeed) {
     const mobile=w<900 || ('ontouchstart' in window);
     const desired=quality==='low'?1:quality==='high'?(mobile?1.32:1.55):(mobile?1.14:1.35);
     // Bound real pixel work, not only CSS size: software WebGL must never stall input.
-    const budget=mobile?1_300_000:2_200_000;
-    const pixelRatio=Math.min(window.devicePixelRatio||1,desired,Math.sqrt(budget/(w*h)));
+    const budget=softwareRenderer?310_000:mobile?1_300_000:2_200_000;
+    const pixelRatio=Math.min(window.devicePixelRatio||1,softwareRenderer?.66:desired,Math.sqrt(budget/(w*h)));
     if(w===currentWidth&&h===currentHeight&&ratio===pixelRatio) return;
     currentWidth=w;currentHeight=h;
     ratio=pixelRatio;renderer.setPixelRatio(ratio);
@@ -159,26 +174,72 @@ export function createWorld(canvas, initialSeed) {
     if(!layouts.has(k)) layouts.set(k,new Set(generateOrgan(cx,cz).map(c=>cellKey(c.x,c.y))));
     return layouts.get(k);
   }
-  function isFloor(x,z){
+  function isBaseFloor(x,z){
     const a=Math.round(x),b=Math.round(z);
     return getCells(Math.floor(a/CELLS_PER_CHUNK),Math.floor(b/CELLS_PER_CHUNK)).has(cellKey(a,b));
   }
+  function getTissues(cx,cz){
+    const k=cellKey(cx,cz);
+    if(!tissueChunks.has(k))tissueChunks.set(k,getTissueNodes(cx,cz).map(t=>({...t,visual:null})));
+    return tissueChunks.get(k);
+  }
+  function getTissueAt(x,z){
+    const a=Math.round(x),b=Math.round(z);
+    if(Math.abs(x-a)>.49||Math.abs(z-b)>.49)return null;
+    // Do NOT compute a tissue node graph on a collision or navigation query.
+    // Loaded chunks have complete gate data; distant chunks only require floor geometry.
+    const nodes=tissueChunks.get(cellKey(Math.floor(a/CELLS_PER_CHUNK),Math.floor(b/CELLS_PER_CHUNK)));
+    return nodes?.find(t=>t.x===a&&t.z===b&&!openedTissues.has(t.id))||null;
+  }
+  function isFloor(x,z){return isBaseFloor(x,z)&&!getTissueAt(x,z);}
+  function getTissueCount(cx,cz){return getTissues(cx,cz).filter(t=>!openedTissues.has(t.id)).length;}
+  function damageTissue(id,amount){
+    if(typeof id!=='string'||!Number.isFinite(amount)||amount<=0||openedTissues.has(id))return null;
+    const [x,z]=id.split(',').map(Number);
+    if(!Number.isInteger(x)||!Number.isInteger(z))return null;
+    const tissue=getTissues(Math.floor(x/CELLS_PER_CHUNK),Math.floor(z/CELLS_PER_CHUNK)).find(t=>t.id===id);
+    if(!tissue)return null;
+    tissue.hp=Math.max(0,tissue.hp-amount);
+    if(tissue.visual)tissue.visual.userData.flash=.23;
+    const opened=tissue.hp===0;
+    if(opened){openedTissues.add(id);if(tissue.visual)tissue.visual.visible=false;
+      organPulse=1.7;splatter(x,z,28);
+    }
+    return {id,x,z,hp:tissue.hp,opened};
+  }
+  function makeTissueVisual(tissue){
+    const group=new THREE.Group();
+    const shell=new THREE.Mesh(valveGeo,valveSkin);shell.position.y=1.36;
+    shell.scale.set(.64,1.13,.67);group.add(shell);
+    const heart=new THREE.Mesh(valveGeo,valveCore);heart.position.set(0,1.35,-.54);
+    heart.scale.set(.28,.38,.22);group.add(heart);
+    const eye=new THREE.Mesh(valveEyeGeo,valveGlow);
+    eye.position.set(0,1.37,-.73);group.add(eye);
+    for(let i=0;i<2;i++){
+      const ring=new THREE.Mesh(valveRing,i%2?boneMat:valveCore);
+      ring.position.y=.85+i*.92;ring.rotation.x=Math.PI/2;ring.scale.set(.85+i*.07,.84+i*.05,.9);
+      group.add(ring);
+    }
+    group.position.set(tissue.x,0,tissue.z);group.userData={flash:0};
+    tissue.visual=group;tissueVisuals.set(tissue.id,group);
+    return group;
+  }
   function clearChunks() {
     for(const obj of chunks.values()) scene.remove(obj);
-    chunks.clear();layouts.clear();lastChunk='';
+    chunks.clear();layouts.clear();tissueChunks.clear();tissueVisuals.clear();lastChunk='';
     for(const line of streaks)line.obj.geometry.dispose();streaks.length=0;
     source.clear();
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
-    kickPos=0;kickVel=0;muzzleTime=0;
+    kickPos=0;kickVel=0;muzzleTime=0;organPulse=0;
   }
   function buildChunk(cx,cz){
-    const cs=getCells(cx,cz),cells=[...cs].map(k=>k.split(',').map(Number));
+    const cs=getCells(cx,cz),cells=[...cs].map(k=>k.split(',').map(Number)),profile=getOrganProfile(cx,cz);
     const walls=[],bones=[],vessels=[],sacs=[];
     for(const [x,z] of cells){
       if(rand(x,z,seed+161)>.27)vessels.push([x,.01,z,rand(x,z,seed+162)*Math.PI*2]);
-      if(rand(x,z,seed+171)>.87)sacs.push([x+(rand(x,z,seed+172)-.5)*.43,2.62,z+(rand(x,z,seed+173)-.5)*.43]);
+      if(rand(x,z,seed+171)>(profile.archetype==='atrium'?.82:.92))sacs.push([x+(rand(x,z,seed+172)-.5)*.43,2.62,z+(rand(x,z,seed+173)-.5)*.43]);
       for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
-        if(!isFloor(x+dx,z+dz)) {
+        if(!isBaseFloor(x+dx,z+dz)) {
           const rot=dx?Math.PI/2:0;
           walls.push([x+dx*.5,1.4,z+dz*.5,rot,x,z]);
           if(rand(x,z,seed+dx*7+dz*11)>.67)bones.push([x+dx*.48,1.18,z+dz*.48,rot]);
@@ -191,9 +252,9 @@ export function createWorld(canvas, initialSeed) {
     cells.forEach(([x,z],i)=>{
       temp.position.set(x,0,z);temp.rotation.set(0,0,0);
       temp.scale.set(1,1,1);temp.updateMatrix();floor.setMatrixAt(i,temp.matrix);
-      floor.setColorAt(i,new THREE.Color().setHSL(.965+rand(x,z,seed)*.027,.31,.48));
+      floor.setColorAt(i,new THREE.Color().setHSL(.965+rand(x,z,seed)*.027,.3+profile.tone*.12,.44+profile.growth*.09));
       temp.position.y=2.76;temp.rotation.set(0,0,0);temp.updateMatrix();ceiling.setMatrixAt(i,temp.matrix);
-      ceiling.setColorAt(i,new THREE.Color().setHSL(.96+rand(x,z,seed+7)*.027,.31,.34));
+      ceiling.setColorAt(i,new THREE.Color().setHSL(.96+rand(x,z,seed+7)*.027,.31+profile.tone*.1,.29+profile.growth*.09));
     });
     floor.instanceMatrix.needsUpdate=true;ceiling.instanceMatrix.needsUpdate=true;
     group.add(floor,ceiling);
@@ -218,6 +279,12 @@ export function createWorld(canvas, initialSeed) {
       sacs.forEach(([x,y,z],i)=>{temp.position.set(x,y,z);temp.rotation.set(0,0,0);temp.scale.set(1,1,1);temp.updateMatrix();sacsMesh.setMatrixAt(i,temp.matrix);});
       sacsMesh.instanceMatrix.needsUpdate=true;group.add(sacsMesh);
     }
+    for(const tissue of getTissues(cx,cz))if(!openedTissues.has(tissue.id))group.add(makeTissueVisual(tissue));
+    if(profile.archetype==='rib-vault'){
+      for(const [x,z] of cells.filter(([x,z])=>(x+z+profile.rotation)%5===0).slice(0,3)){
+        const arch=new THREE.Mesh(archGeo,boneMat);arch.position.set(x,1.82,z);group.add(arch);
+      }
+    }
     chunks.set(cellKey(cx,cz),group);
     scene.add(group);
   }
@@ -226,7 +293,7 @@ export function createWorld(canvas, initialSeed) {
     const focus=cellKey(cx,cz);if(lastChunk===focus)return;
     lastChunk=focus;
     for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++) if(!chunks.has(cellKey(cx+dx,cz+dz)))buildChunk(cx+dx,cz+dz);
-    for(const [k,m] of chunks){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>1||Math.abs(b-cz)>1){scene.remove(m);chunks.delete(k);}}
+    for(const [k,m] of chunks){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>1||Math.abs(b-cz)>1){scene.remove(m);chunks.delete(k);for(const t of getTissues(a,b)){t.visual=null;tissueVisuals.delete(t.id);}}}
     if(layouts.size>120){for(const [k] of layouts){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>6||Math.abs(b-cz)>6)layouts.delete(k);}}
   }
   function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
@@ -313,11 +380,17 @@ export function createWorld(canvas, initialSeed) {
     }
     for(let i=0;i<droplets.length;i++){const p=droplets[i];particleArr[i*3]=p.x;particleArr[i*3+1]=p.y;particleArr[i*3+2]=p.z;}
     particlesGeo.attributes.position.needsUpdate=true;particlesGeo.setDrawRange(0,droplets.length);
-    pulseLamp.intensity=6.5+Math.sin(time*3.8)*2.6;
+    organPulse=Math.max(0,organPulse-dt);
+    pulseLamp.intensity=6.5+Math.sin(time*3.8)*2.6+organPulse*7;
+    for(const root of tissueVisuals.values())if(root.visible){root.userData.flash=Math.max(0,root.userData.flash-dt);
+      root.scale.setScalar(1+Math.sin(time*3.4+root.position.x*.25)*.045+root.userData.flash*.4);
+    }
     membrane.emissiveIntensity=.3+Math.sin(time*2.15)*.09;
   }
-  function reset(newSeed){
-    seed=(newSeed>>>0);setSeed(seed);clearChunks();return seed;
+  function reset(newSeed,ruptured=[]){
+    seed=(newSeed>>>0);setSeed(seed);clearChunks();
+    openedTissues=new Set((Array.isArray(ruptured)?ruptured:[]).filter(id=>typeof id==='string'&&/^-?\d+,-?\d+$/.test(id)).slice(0,2000));
+    return seed;
   }
   function paint(player,entities,pickups,time,dt,recoil=0,damage=0,shots=[]){
     resize();nearChunks(player.x,player.z);
@@ -352,7 +425,7 @@ export function createWorld(canvas, initialSeed) {
     renderer.render(scene,camera);
   }
   function disposeVisual(obj){if(obj){source.remove(obj);}}
-  function getOpenCells(cx,cz){return [...getCells(cx,cz)].map(k=>{const a=k.split(',');return {x:+a[0],z:+a[1]};});}
+  function getOpenCells(cx,cz){return [...getCells(cx,cz)].map(k=>{const a=k.split(',');return {x:+a[0],z:+a[1]};}).filter(p=>isFloor(p.x,p.z));}
   function getStart(){const cells=getOpenCells(0,0);return cells.reduce((a,b)=>Math.hypot(b.x-3.5,b.z-3.5)<Math.hypot(a.x-3.5,a.z-3.5)?b:a,cells[0]||{x:3,z:3});}
   function visible(a,b) {
     const dist=Math.hypot(a.x-b.x,a.z-b.z), steps=Math.ceil(dist/.13);
@@ -361,5 +434,5 @@ export function createWorld(canvas, initialSeed) {
   }
   function end(){clearChunks();renderer.dispose();}
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
 }
