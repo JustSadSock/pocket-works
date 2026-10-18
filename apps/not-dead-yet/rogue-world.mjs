@@ -220,7 +220,7 @@ export class RogueWorld{
   for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
    const c=this.chunk(cx+dx,cz+dz);
    for(const door of c.doors){
-    if(Math.abs(door.x+.5-x)>1.8||Math.abs(door.z+.5-z)>1.8)continue;
+    if(Math.abs(door.x+.5-x)>1.8||Math.abs(door.z+.5-z)>1.8||this.legacyDoor(door,c))continue;
     if(leafBlocksPoint(door,this.doorState(door,c).angle,x,z,r))return false
    }
   }
@@ -233,7 +233,7 @@ export class RogueWorld{
   for(let cz=minZ;cz<=maxZ;cz++)for(let cx=minX;cx<=maxX;cx++){
    const c=this.chunk(cx,cz);
    for(const door of c.doors){
-    if(leafIntersectsRay(door,this.doorState(door,c).angle,ax,az,bx,bz))return false
+    if(!this.legacyDoor(door,c)&&leafIntersectsRay(door,this.doorState(door,c).angle,ax,az,bx,bz))return false
    }
   }
   return true
@@ -242,6 +242,13 @@ export class RogueWorld{
   const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d*7));
   for(let i=1;i<n;i++){const t=i/n;if(!this.pass(Math.floor(ax+(bx-ax)*t),Math.floor(az+(bz-az)*t)))return false}
   return true
+ }
+ legacyDoor(door,c=null){
+  if(this.layoutVersion!==1)return false;
+  const chunk=c||this.chunk(Math.floor(door.x/SECTOR),Math.floor(door.z/SECTOR));
+  // A run saved before interior doors existed must not suddenly grow solid
+  // new obstacles over its old player position. New runs get real doors.
+  return !this.doorStates.has(doorKey(door,chunk.epoch))
  }
  doorState(door,c=null){
   const chunk=c||this.chunk(Math.floor(door.x/SECTOR),Math.floor(door.z/SECTOR));
@@ -255,7 +262,7 @@ export class RogueWorld{
   for(const c of this.nearby(px,pz,3)){
    for(const door of c.doors){
     const tx=door.x+.5,tz=door.z+.5,dist=Math.hypot(tx-px,tz-pz);
-    if(dist>=best||dist<.04)continue;
+    if(dist>=best||dist<.04||this.legacyDoor(door,c))continue;
     const alignment=((tx-px)*Math.sin(yaw)+(tz-pz)*-Math.cos(yaw))/dist;
     if(alignment<.22||!this.visibleTiles(px,pz,tx,tz))continue;
     closest={door,chunk:c,dist,state:this.doorState(door,c)};best=dist
