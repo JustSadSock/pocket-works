@@ -170,6 +170,22 @@
         "qa/gastric.spec.js"
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "structural",
+      "kind": "node-test",
+      "files": [
+        "qa/structural.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "structural-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/structural.spec.js"
+      ],
+      "tier": "smoke"
     }
   ]
 }
