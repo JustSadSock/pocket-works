@@ -153,6 +153,23 @@
         "qa/biobuilds.spec.js"
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "immunity",
+      "kind": "node-test",
+      "files": [
+        "qa/immunity.test.mjs",
+        "qa/gastric.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "gastric-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/gastric.spec.js"
+      ],
+      "tier": "smoke"
     }
   ]
 }
