@@ -14,7 +14,8 @@
         "tests/reliability.test.mjs",
         "tests/replay-archive.test.mjs",
         "tests/learning.test.mjs",
-        "tests/stress.test.mjs"
+        "tests/stress.test.mjs",
+        "tests/sonic-depth.test.mjs"
       ]
     },
     {
@@ -92,6 +93,14 @@
       "tier": "smoke",
       "files": [
         "qa/visual-regression.spec.js"
+      ]
+    },
+    {
+      "id": "sonic-depth-journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/sonic-depth.spec.js"
       ]
     }
   ]
