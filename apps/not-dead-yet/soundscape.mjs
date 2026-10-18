@@ -48,6 +48,10 @@ export function createSoundscape({Context=(typeof window!=='undefined'?(window.A
      case 'empty':note(520,{duration:.03,volume:.03,type:'square',end:340});break;
      case 'reload':
       for(let i=0;i<4;i++)note([470,390,600,550][i],{type:'triangle',volume:.019,duration:.055,at:now+i*.19,pan});break;
+     case 'memory':
+      note(261.6,{duration:.43,volume:.026,type:'triangle',end:293.6,pan});
+      note(329.6,{duration:.60,volume:.023,type:'sine',end:392,at:now+.13,pan});
+      hiss({frequency:490,duration:.32,volume:.012,pan});break;
      case 'pickup':
       for(let i=0;i<3;i++)note([392,494,588][i],{volume:.028,duration:.32,at:now+i*.105,pan});break;
      case 'shift':

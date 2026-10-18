@@ -138,6 +138,17 @@
       "integration": "The renderer reads world.doors() directly, while world.canStand() uses the same shared panels geometry in doors.mjs.",
       "provenance": "All geometry, sounds, textures and UI states are custom authored local source; no external app runtime assets.",
       "maxBytes": 250000
+    },
+    {
+      "id": "spatial-memory-1.4",
+      "tool": "webgl",
+      "source": "apartment.mjs",
+      "output": "renderer.mjs",
+      "role": "Asymmetric rooms and four subdued diegetic memory errors that change from player recognition.",
+      "acceptance": "Every room trace is physically reachable, visible only after offscreen mutation, clears on recognition, survives reload, cannot be farmed repeatedly.",
+      "integration": "Memory state and phase are serialized by Apartment.save(); game action and renderer read the same state.",
+      "provenance": "Original local procedural geometry; no external assets.",
+      "maxBytes": 260000
     }
   ],
   "evidence": {

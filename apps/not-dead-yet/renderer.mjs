@@ -69,6 +69,65 @@ function castFloorShadow(out,px,pz,w,d,h,lamp,strength=1){
   quad(out,footprint[i],footprint[j],projected[j],projected[i],color,[0,1,0],11)
  }
 }
+// Project a tall object's profile onto the nearest plaster wall along a lamp ray.
+// This is lightweight geometric contact projection, not a GPU shadow map.
+function castWallShadow(out,room,prop,lamp){
+ if(prop.h<.5)return;
+ const M=SCALE,cx=prop.x*M,cz=prop.z*M,h=Math.min(2.45,prop.h),w=prop.w*M,d=prop.d*M;
+ const walls=[
+  {axis:'x',plane:(room.x0+1)*M+.027,min:(room.z0+1)*M+.09,max:room.z1*M-.09,n:[1,0,0]},
+  {axis:'x',plane:room.x1*M-.027,min:(room.z0+1)*M+.09,max:room.z1*M-.09,n:[-1,0,0]},
+  {axis:'z',plane:(room.z0+1)*M+.027,min:(room.x0+1)*M+.09,max:room.x1*M-.09,n:[0,0,1]},
+  {axis:'z',plane:room.z1*M-.027,min:(room.x0+1)*M+.09,max:room.x1*M-.09,n:[0,0,-1]}
+ ];
+ let best=null;
+ for(const wall of walls){
+  const center=wall.axis==='x'?cx:cz,light=wall.axis==='x'?lamp.x:lamp.z;
+  if(Math.abs(center-light)<.12)continue;
+  const t=(wall.plane-light)/(center-light);if(t<=1.03||t>3.15)continue;
+  const along=wall.axis==='x'?cz:cx,lightAlong=wall.axis==='x'?lamp.z:lamp.x;
+  const centerWall=lightAlong+(along-lightAlong)*t;
+  if(centerWall<=wall.min+.16||centerWall>=wall.max-.16)continue;
+  const top=lamp.y+(h-lamp.y)*t,low=lamp.y+(.2-lamp.y)*t;
+  const y0=Math.max(.13,low),y1=Math.min(2.85,top);if(y1-y0<.24)continue;
+  const spread=Math.min(.92,(wall.axis==='x'?d:w)*t*.32);
+  if(!best||t<best.t)best={wall,centerWall,y0,y1,spread,t}
+ }
+ if(!best)return;
+ const {wall,centerWall,y0,y1,spread}=best;
+ const a=Math.max(wall.min,centerWall-spread),b=Math.min(wall.max,centerWall+spread);
+ const c=[.155,.132,.104];
+ if(wall.axis==='x')quad(out,[wall.plane,y0,a],[wall.plane,y0,b],[wall.plane,y1,b],[wall.plane,y1,a],c,wall.n,11);
+ else quad(out,[a,y0,wall.plane],[b,y0,wall.plane],[b,y1,wall.plane],[a,y1,wall.plane],c,wall.n,11)
+}
+// Familiar things become conspicuously wrong only AFTER a room rearranges unseen.
+function memoryDetail(out,world){
+ const timber=[.31,.21,.14],paper=[.60,.49,.36],shadow=[.19,.20,.19];
+ for(const r of world.rooms){
+  if(!world.memoryState(r.type)?.active)continue;
+  const p=world.memorySpot(r.type),x=p.x*SCALE,z=p.z*SCALE;
+  if(r.type==='bedroom'){
+   const wallX=(r.x0+1)*SCALE+.062,wallZ=((r.z0+r.z1)/2)*SCALE;
+   box(out,wallX,1.12,wallZ,.055,.78,.62,timber,6);
+   box(out,wallX+.035,1.16,wallZ+.06,.025,.57,.45,paper,8);
+   box(out,wallX+.06,1.23,wallZ+.09,.012,.12,.25,shadow,9)
+  }else if(r.type==='kitchen'){
+   for(let i=0;i<3;i++){
+    round(out,x+(i-1)*.21,.13,z+.36,.10,.09,.10,[.70,.64,.52],8);
+    box(out,x+(i-1)*.21,.24,z+.36,.11,.025,.11,shadow,9)
+   }
+  }else if(r.type==='bathroom'){
+   const x2=(r.x1-1.5)*SCALE,z2=(r.z0+1.2)*SCALE;
+   box(out,x2,1.15,z2,.34,.65,.037,shadow,10);
+   round(out,x2,1.43,z2+.03,.12,.18,.03,[.31,.29,.27],7)
+  }else{
+   box(out,x,.58,z+.37,.63,.40,.14,timber,6);
+   box(out,x,.69,z+.47,.51,.28,.02,shadow,10);
+   box(out,x+.11,.84,z+.49,.14,.05,.016,paper,8)
+  }
+ }
+}
+
 function doorGeometry(out,world){
  const timber=[.32,.19,.105],trim=[.43,.30,.19],glass=[.16,.22,.20],brass=[.67,.49,.22],light=[.69,.64,.52];
  for(const door of world.doors()){
@@ -130,8 +189,23 @@ function apartmentMesh(world){
  const wood=[.27,.17,.11],brass=[.65,.46,.20],dark=[.12,.13,.12],fabric=[.35,.25,.19],white=[.69,.67,.58];
  for(const f of world.objects()){
   const x=f.x*M,z=f.z*M,w=f.w*M,d=f.d*M,h=f.h;
-  if(f.type==='sofa'){box(out,x,.1,z,w,.48,d,fabric,7);box(out,x,.55,z-d*.31,w,.75,.30,[.29,.21,.17],7);for(const s of [-1,1])box(out,x+s*(w*.46),.40,z,w*.09,.57,d,[.38,.29,.21],7)}
-  if(f.type==='rug'){box(out,x,.013,z,w,.012,d,[.46,.27,.18],7);box(out,x,.025,z,w*.84,.009,d*.78,[.25,.23,.20],7)}
+  if(f.type==='sofa'){box(out,x,.1,z,w,.48,d,fabric,7);
+   box(out,x,.55,z-d*.31,w,.75,.30,[.29,.21,.17],7);
+   for(const side of [-1,1]){box(out,x+side*(w*.46),.40,z,w*.09,.57,d,[.38,.29,.21],7);
+    box(out,x+side*w*.38,.03,z+d*.30,.11,.13,.11,[.19,.15,.12],6)}
+   for(let i=0;i<3;i++){const xx=x+(i-1)*w*.29;
+    round(out,xx,.59,z+.13,w*.14,.10,d*.34,[.43,.31,.24],7);
+    box(out,xx,.66,z+d*.32,w*.24,.02,.027,[.26,.20,.17],7)}
+   // A plaid throw, asymmetrically folded on the sofa back.
+   box(out,x-w*.24,1.21,z-d*.35,w*.27,.027,d*.25,[.51,.40,.28],7)
+  }
+  if(f.type==='rug'){box(out,x,.013,z,w,.012,d,[.46,.27,.18],7);
+   box(out,x,.025,z,w*.84,.009,d*.78,[.25,.23,.20],7);
+   for(let i=-5;i<=5;i++){const xx=x+i*w*.073;
+    box(out,xx,.037,z,w*.022,.01,d*.70,[.49,.34,.25],7)}
+   for(const side of [-1,1])for(let i=0;i<11;i++)
+    box(out,x+(i-5)*w*.079,.018,z+side*d*.495,.027,.012,.20,[.56,.45,.35],7)
+  }
   if(f.type==='wallunit'){
    // Polished Soviet living-room wall-unit with glass vitrine and family dishes.
    box(out,x,0,z,w,h,d,[.29,.17,.09],6);
@@ -149,19 +223,56 @@ function apartmentMesh(world){
   }
   if(f.type==='books'){box(out,x,0,z,w,h,d,wood,6);for(let i=1;i<5;i++)box(out,x,.30+i*.35,z,w,.065,d,[.43,.30,.22],6);for(let i=0;i<17;i++)box(out,x-w*.42+i*w/18,.39+(i%4)*.39,z,w/28,.22+(i%2)*.08,d*.6,[.21+(i%3)*.13,.20+(i%4)*.09,.16+(i%2)*.12],7)}
   if(f.type==='cabinets'){box(out,x,0,z,w,.95,d,[.51,.44,.32],6);box(out,x,1.36,z,w,.76,d,[.31,.26,.18],6);for(const s of [-1,0,1]){box(out,x+s*w*.31,.13,z+d*.51,.035,.55,.015,brass,9);box(out,x+s*w*.31,1.5,z+d*.51,.035,.42,.014,brass,9)}}
-  if(f.type==='fridge'){box(out,x,0,z,w,h,d,[.71,.70,.60],8);box(out,x+w*.36,.76,z+d*.51,.045,.68,.03,dark,9)}
+  if(f.type==='fridge'){box(out,x,0,z,w,h,d,[.71,.70,.60],8);
+   box(out,x,1.30,z+d*.51,w*.94,.035,.021,[.39,.40,.36],9);
+   box(out,x+w*.36,.54,z+d*.52,.04,.56,.025,dark,9);
+   box(out,x+w*.36,1.63,z+d*.52,.04,.29,.025,dark,9);
+   // The fridge is old, not a blank modern monolith: yellowed corners and magnets.
+   for(let i=0;i<3;i++)box(out,x-w*.23+i*w*.18,1.12+(i%2)*.22,z+d*.54,.10,.085,.014,[.48+i*.05,.42,.29],8)
+  }
   if(f.type==='sink'){box(out,x,.72,z,w,.17,d,[.69,.67,.63],8);box(out,x,.87,z,w*.7,.02,d*.55,[.21,.25,.23],9);box(out,x+w*.2,.9,z-.15,.055,.28,.07,brass,9)}
   if(f.type==='table'||f.type==='desk'){box(out,x,.71,z,w,.11,d,wood,6);if(f.room==='kitchen')box(out,x,.82,z,w*1.03,.018,d*1.04,[.61,.56,.37],2);for(const xx of [-1,1])for(const zz of [-1,1])box(out,x+xx*w*.39,0,z+zz*d*.38,.09,.73,.09,wood,6)}
   if(f.type==='bed'){box(out,x,.32,z,w,.34,d,[.39,.26,.22],6);box(out,x,.65,z,w*.95,.1,d*.86,[.38,.37,.31],7);for(const s of [-1,1])round(out,x+s*w*.24,.78,z-d*.32,w*.20,.11,d*.13,[.68,.61,.51],7);box(out,x,.75,z+d*.19,w*.9,.07,d*.45,[.25,.34,.34],7)}
-  if(f.type==='wardrobe'){box(out,x,0,z,w,h,d,wood,6);box(out,x-w*.01,.2,z+d*.51,.03,h*.65,.03,brass,9)}
+  if(f.type==='wardrobe'){box(out,x,0,z,w,h,d,[.37,.23,.14],6);
+   for(const side of [-1,1]){
+    const xx=x+side*w*.25;
+    box(out,xx,.16,z+d*.51,w*.44,h*.82,.025,[.45,.27,.15],6);
+    box(out,xx,.29,z+d*.532,w*.38,h*.63,.014,[.38,.21,.12],6);
+    box(out,x+side*w*.055,1.02,z+d*.57,.026,.24,.038,brass,9)}
+   box(out,x,h-.11,z,w*1.06,.12,d*1.07,[.25,.16,.09],6)
+  }
   if(f.type==='bath'){box(out,x,.1,z,w,.69,d,[.75,.72,.64],8);box(out,x,.8,z,w*.85,.06,d*.82,[.22,.26,.26],8)}
   if(f.type==='toilet'){round(out,x,.42,z,.29,.23,.32,white,8);box(out,x,.30,z-.28,.50,.42,.23,white,8)}
   if(f.type==='mirror'){box(out,x,.96,z,w,h,d,brass,9);box(out,x,1,z,w*.88,h*.88,d*.8,[.27,.34,.36],10)}
   if(f.type==='lamp'){box(out,x,0,z,.09,1.55,.09,brass,9);round(out,x,1.53,z,.29,.22,.29,[.86,.64,.32],8)}
   if(f.type==='painting'){box(out,x,1.4,z,w,h,d,wood,6);box(out,x,1.47,z,w*.83,h*.78,d*1.1,[.31,.37,.34],7)}
+  if(f.type==='doormat'){
+   box(out,x,.021,z,w,.018,d,[.36,.24,.19],7);
+   for(let i=-4;i<=4;i++)box(out,x+i*w*.087,.038,z,w*.027,.008,d*.82,[.58,.44,.33],7)
+  }
+  if(f.type==='shoerack'){
+   box(out,x,0,z,w,.50,d,[.36,.24,.14],6);
+   for(const side of [-1,1])for(let i=0;i<2;i++)round(out,x+side*.09,.13+i*.25,z,.12,.07,.22,[.24+i*.05,.23,.21],7)
+  }
+  if(f.type==='coatstand'){
+   box(out,x,0,z,.11,1.91,.11,[.33,.23,.17],6);
+   for(let i=0;i<4;i++){const t=i*Math.PI/2;
+    const xx=x+Math.cos(t)*.20,zz=z+Math.sin(t)*.20;
+    box(out,xx,1.76,zz,.26,.046,.055,[.29,.20,.15],6)}
+   round(out,x,2.01,z,.14,.11,.14,[.38,.24,.15],6)
+  }
+  if(f.type==='radiator'){
+   for(let i=0;i<7;i++)box(out,x,.24,z+(i-3)*d*.14,w*.8,h*.81,d*.080,[.62,.61,.53],9);
+   box(out,x,.26,z,.04,.10,d,[.35,.34,.31],9)
+  }
   if(f.type==='door'){box(out,x,.03,z,w,h,d,[.26,.18,.11],6);box(out,x+w*.37,1.30,z+d*.6,.14,.08,.09,brass,9);box(out,x,2.72,z,w*.92,.07,.06,[.41,.32,.19],6)}
  }
  apartmentDetail(out,world,M);
+ for(const prop of world.objects()){const room=world.room(prop.room);
+  if(room&&prop.solid){const lamp=world.point(prop.room);
+   castWallShadow(out,room,prop,{x:lamp.x*M,z:lamp.z*M,y:2.68})}
+ }
+ memoryDetail(out,world);
  // Physically projected static shadows underneath furniture, recomputed on room changes.
  const shadowLamps=world.rooms.map(r=>({room:r.type,p:world.point(r.type)}));
  for(const f of world.objects()){if(!f.solid||f.h<.3||f.type==='door')continue;
