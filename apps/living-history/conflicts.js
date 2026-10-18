@@ -175,6 +175,7 @@ function wound(s,c,people,threat,side,notify,pursuit=false){
  }
 }
 function resolve(s,c,notify){
+ c.pursued??=[];c.broken??=null;
  const left=readiness(s,c.claimants),right=readiness(s,c.owners);
  const attacker=byId(s,c.claimantId),defender=byId(s,c.ownerId);
  c.morale={claimants:left.morale,owners:right.morale};
