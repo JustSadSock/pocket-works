@@ -83,7 +83,7 @@ async function run(){
   const command={type:'act',revision:rev,requestId:'fog-move-1',
     action:{type:'move',unit:stA.event.payload.game.units.find(x=>x.owner===1&&x.type==='swordsman').id,r:1,c:3}};
   a.send('game_message',{payload:command});
-  const moved=await a.next('game_event',m=>m.event?.type==='state'&&m.event.payload.game.revision===rev+1);
+  const moved=await a.next('game_event',m=>m.event?.type==='state'&&m.event?.payload?.game?.revision===rev+1);
   assert.equal(moved.event.payload.game.units.find(x=>x.owner===1&&x.type==='swordsman').c,3);
   const e=await observe(a,'battle_event');
   assert.equal(e.event.payload.kind,'move');assert.deepEqual(e.event.payload.at,{r:1,c:3});
@@ -111,10 +111,10 @@ async function run(){
     }
   }
   a.send('game_message',{payload:{type:'act',revision:rev+1,requestId:'fog-end-1',action:{type:'end'}}});
-  const ended=await a.next('game_event',m=>m.event?.type==='state'&&m.event.payload.game.state.currentPlayer===2);
+  const ended=await a.next('game_event',m=>m.event?.type==='state'&&m.event?.payload?.game?.state?.currentPlayer===2);
   assert.equal(ended.event.payload.game.revision,rev+2);
   // South's move is concealed by the northern side's unexplored fog.
-  const current=await b.next('game_event',m=>m.event?.type==='state'&&m.event.payload.game.revision===rev+2);
+  const current=await b.next('game_event',m=>m.event?.type==='state'&&m.event?.payload?.game?.revision===rev+2);
   const own=current.event.payload.game.units.find(u=>u.owner===2&&u.type==='swordsman');
   const before=a.all.filter(m=>m.type==='game_event'&&m.event?.type==='battle_event'&&m.event.payload.kind==='move').length;
   let accepted=false;let target;
@@ -122,7 +122,7 @@ async function run(){
     b.send('game_message',{payload:{type:'act',revision:rev+2,requestId:'fog-south-'+dr+'-'+dc,
       action:{type:'move',unit:own.id,r:own.r+dr,c:own.c+dc}}});
     const outcome=await b.next('game_event',m=>['state','notice'].includes(m.event?.type)&&
-      (m.event.type==='notice'||m.event.payload.game.revision===rev+3));
+      (m.event.type==='notice'||m.event?.payload?.game?.revision===rev+3));
     if(outcome.event.type==='state'){accepted=true;target={r:own.r+dr,c:own.c+dc};break;}
   }
   assert.equal(accepted,true,'No valid south move');
