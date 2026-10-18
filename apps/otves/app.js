@@ -149,6 +149,9 @@ function showToast(message, duration = 1800) {
 }
 
 function setScreen(screen) {
+  // The playfield remains edge-to-edge; HUD furniture dissolves in a run.
+  elements.canvas.closest('.app-shell')?.classList.toggle('is-playing',
+    !screen && (state === 'playing' || state === 'finishing'));
   for (const item of [elements.startScreen, elements.pauseScreen, elements.completeScreen]) {
     const visible = item === screen;
     item.classList.toggle('is-visible', visible);
