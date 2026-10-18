@@ -36,3 +36,9 @@ export function edgeCameraFit(cols,rows,viewWidth,viewHeight) {
     heightCoverage:worldHeight*scale/height
   };
 }
+
+/** New full-bleed layouts must not overwrite or compare old-level records
+ * produced on a different maze size. Legacy numeric keys stay untouched. */
+export function recordKey(level,cols,rows) {
+  return String(Math.max(1,Math.floor(level)))+':'+cols+'x'+rows;
+}
