@@ -64,14 +64,19 @@ test('walking up to a physical fork and pressing X presets the actual surgery ro
  const destination=first.routes.forks[1];
  // Save position as a normal durable checkpoint, no live world mutation.
  await page.keyboard.press('Escape');await page.locator('#menuPause').click();
+ // Navigate to an unloaded menu first. The old page has no live state left
+ // when the fixture is edited, so neither visibilitychange nor pagehide can
+ // overwrite the checkpoint with its stale live coordinates.
+ await page.goto('/apps/meat-exe/');
  await page.evaluate(({key,destination})=>{
   const state=JSON.parse(localStorage.getItem(key));
   state.x=destination.x;state.z=destination.z;
   localStorage.setItem(key,JSON.stringify(state));
-  // This deliberate fixture edit must survive the outgoing page's automatic pagehide save.
-  window.addEventListener('pagehide',event=>event.stopImmediatePropagation(),{capture:true,once:true});
  },{key:SESSION,destination});
  await page.reload();await page.locator('#resumeSaved').click();
+ const moved=await page.evaluate(()=>window.__MEAT_QA__());
+ expect([moved.x,moved.z]).toEqual([destination.x,destination.z]);
+ expect(moved.routes.forks).toContainEqual(destination);
  await expect(page.locator('#hud')).toBeVisible();
  if(isMobile){
   await expect(page.locator('#forkInteract')).toBeVisible();
@@ -84,11 +89,11 @@ test('walking up to a physical fork and pressing X presets the actual surgery ro
  expect(saved.routes.selected).toBe(destination.id);
  // Complete this already-cleared seed to ensure surgery respects physical choice.
  await page.keyboard.press('Escape');await page.locator('#menuPause').click();
+ await page.goto('/apps/meat-exe/');
  await page.evaluate(key=>{
   const state=JSON.parse(localStorage.getItem(key));
   state.toSpawn=0;state.enemies=[];state.spawnClock=30;
   localStorage.setItem(key,JSON.stringify(state));
-  window.addEventListener('pagehide',event=>event.stopImmediatePropagation(),{capture:true,once:true});
  },SESSION);
  await page.reload();await page.locator('#resumeSaved').click();
  await expect(page.locator('#graftDraft')).toBeVisible({timeout:22000});
