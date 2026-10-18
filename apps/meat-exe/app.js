@@ -37,7 +37,7 @@ let save=validateRun(safeRead('session'));
 let quality=safeRead('quality');if(!['auto','speed','detail'].includes(quality))quality='auto';
 let effectiveQuality=quality==='speed'?'low':quality==='detail'?'high':'medium';
 let gamepadFire=false,padMove={x:0,y:0},prevPadButtons=[],accumulator=0,lastPaint=0,fpsClock=0,fpsFrames=0;
-let paintCoolDownUntil=0,paintCost=0,draftIndex=0;
+let paintCoolDownUntil=0,paintCost=0,draftIndex=0,lastForkNearby='';
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
   touch:$('touchControls'),cross:$('crosshair'),pauseBtn:$('pauseBtn'),wave:$('waveValue'),
@@ -49,7 +49,7 @@ const ui={
   qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue'),
   draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel'),
   routeFork:$('routeFork'),archiveToggle:$('archiveToggle'),archivePanel:$('archivePanel'),archiveOptions:$('archiveOptions'),archiveBalance:$('archiveBalance'),
-  guardian:$('guardianStatus'),guardianName:$('guardianName'),guardianFill:$('guardianFill')
+  guardian:$('guardianStatus'),guardianName:$('guardianName'),guardianFill:$('guardianFill'),forkBtn:$('forkInteract')
 };
 function audioStart(){combatAudio.unlock();}
 function sound(kind){combatAudio.pulse(kind);}
@@ -94,6 +94,7 @@ function setMode(next){
   ui.pauseBtn.hidden=next!=='playing'||mouseLocked;
   ui.cross.hidden=next!=='playing';
   ui.guardian.hidden=next!=='playing';
+  ui.forkBtn.hidden=next!=='playing';
   if(next!=='playing'){shootHeld=false;keyFireHeld=false;gamepadFire=false;movement.x=movement.y=0;padMove.x=padMove.y=0;keys.clear();resetStick();accumulator=0;}
   if(next!=='playing'&&document.pointerLockElement===canvas)document.exitPointerLock?.();
   if(next==='menu'){
@@ -142,6 +143,9 @@ function restore(raw){
     state.enemies.push(mob);
   }
   world.setRouteMark?.(state.routeId);
+  world.setForkSites?.(state.pendingDraft||state.wave>=5?[]:
+    routeOptions(state.seed,state.wave+1).map(r=>r.id));
+  world.setForkSelection?.(state.selectedRoute);
   for(const p of s.pickups){
     if(world.isFloor(p.x,p.z))state.pickups.push({...p,visual:world.makePickup(p.x,p.z)});
   }
@@ -164,6 +168,7 @@ function begin(resume=false){
     if(state.pendingDraft){showDraft();}else setMode('playing');
     shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';telegraphsSeen=0;chargesDodged=0;attacksInterrupted=0;terrainEnemyHits=0;hitUntil=fireUntil=killUntil=0;gateHintShown=false;lastGateHitAt=-999;
     ui.cross.classList.remove('hit','firing','killed');
+    lastForkNearby='';
     last=performance.now();clock=0;waveBreak=0;lastSave=0;accumulator=0;lastPaint=0;
     setQuality(quality);paintCost=0;paintCoolDownUntil=0;
     world.nearChunks(state.x,state.z);
@@ -190,6 +195,8 @@ function startWave(number){
   state.routeId='';state.routeWave=0;state.routeHazard=0;
   state.guardianPending=guardianForWave(number)?number:0;
   world.setRouteMark?.('');
+  world.setForkSites?.(number<5?routeOptions(state.seed,number+1).map(r=>r.id):[]);
+  world.setForkSelection?.('');
   if(number===2)state.immune.heat=Math.max(state.immune.heat,18);
   if(number===5){setNotice('НЕРВНЫЙ УЗЕЛ · СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
   else {setNotice(biomeForWave(number).name+' · ВОЛНА '+number+'/05',2.8);sound('heart');}
@@ -213,6 +220,16 @@ function spawnUnit(type){
   if(!p)return false;
   state.enemies.push(makeEnemy(type,p.x,p.z));
   return true;
+}
+function chooseWorldFork(){
+  if(mode!=='playing'||!state||state.wave>=5)return false;
+  const id=world.getNearbyFork?.(state.x,state.z);
+  if(!id||!routeOptions(state.seed,state.wave+1).some(r=>r.id===id))return false;
+  state.selectedRoute=id;
+  world.setForkSelection?.(id);
+  const selected=routeOptions(state.seed,state.wave+1).find(r=>r.id===id);
+  setNotice(selected.name+' · ПУТЬ ЗАПОМНЕН',2.3);
+  sound('switch');snapshot();return true;
 }
 function weaponSwitch(){
   if(!state||mode!=='playing')return;
@@ -541,6 +558,12 @@ function update(dt){
   const speed=(state.dashTime>0?14:state.sprinting?4.8:3.4)*biomeSpeedFactor(terrain)*moveSpeed(state);
   const next=world.moveCircle(state.x,state.z,d.x*speed*dt,d.z*speed*dt,.22);
   state.x=next.x;state.z=next.z;
+  const nearby=world.getNearbyFork?.(state.x,state.z)||'';
+  if(nearby&&nearby!==lastForkNearby){
+    const route=routeOptions(state.seed,state.wave+1).find(r=>r.id===nearby);
+    if(route)setNotice('РАЗВИЛКА · '+route.name+' · X / КНОПКА ПУТЬ',1.9);
+  }
+  lastForkNearby=nearby;
   if(!gateHintShown){
     const lookAhead=world.getTissueAt(state.x-Math.sin(state.yaw)*2.0,state.z-Math.cos(state.yaw)*2.0);
     if(lookAhead){gateHintShown=true;setNotice('ПУЛЬСИРУЮЩИЙ ЗАТВОР · РАЗРУШЬ ОГНЁМ',2.5);}
@@ -586,6 +609,8 @@ function syncHUD(){
   ui.healthFill.style.background=state.hp<30?'#f83f39':'#dec09b';
   ui.enemies.textContent=String(state.enemies.length+state.toSpawn+(state.guardianPending?1:0)).padStart(2,'0');
   const boss=state.enemies.find(e=>isGuardian(e.type)||e.type==='heart');
+  const fork=world.getNearbyFork?.(state.x,state.z);
+  ui.forkBtn.hidden=mode!=='playing'||!touch||!fork||state.wave>=5;
   ui.guardian.hidden=mode!=='playing'||!boss;
   if(boss){
     const spec=guardianForWave(state.wave);
@@ -617,7 +642,7 @@ function renderRoutes(){
     b.append(name,gain,cost);
     b.addEventListener('click',()=>{
       if(mode!=='draft')return;
-      state.selectedRoute=route.id;renderRoutes();snapshot();sound('switch');
+      state.selectedRoute=route.id;world.setForkSelection?.(route.id);renderRoutes();snapshot();sound('switch');
     });
     ui.routeFork.append(b);
   }
@@ -654,7 +679,9 @@ function showDraft(){
 }
 function openDraft(nextWave){
   state.pendingDraft=nextWave;state.draftRevision=0;
-  state.selectedRoute=routeOptions(state.seed,nextWave)[0].id;
+  if(!routeOptions(state.seed,nextWave).some(r=>r.id===state.selectedRoute))
+    state.selectedRoute=routeOptions(state.seed,nextWave)[0].id;
+  world.setForkSites?.([]);
   state.enemies.forEach(e=>world.disposeVisual(e.visual));state.enemies=[];
   showDraft();sound('heart');
 }
@@ -747,7 +774,7 @@ function pollGamepad(dt){
     padMove={x:deadzone(pad.axes[0]||0),y:deadzone(pad.axes[1]||0)};
     look(deadzone(pad.axes[2]||0)*dt*620,deadzone(pad.axes[3]||0)*dt*620,.0023);
     gamepadFire=buttons[7]||(pad.buttons[7]?.value||0)>.25;
-    if(pressed(0))dash();if(pressed(1)||pressed(3))weaponSwitch();
+    if(pressed(0))dash();if(pressed(1)||pressed(3))weaponSwitch();if(pressed(2))chooseWorldFork();
   }else{padMove.x=padMove.y=0;gamepadFire=false;}
   prevPadButtons=buttons;
 }
@@ -808,6 +835,7 @@ document.addEventListener('keydown',e=>{
   }
   if(e.code==='Escape'){if(!ui.confirm.hidden)ui.confirm.hidden=true;else if(mode==='playing')pause();else if(mode==='paused')resume();return;}
   if(e.code==='KeyQ'||e.code==='KeyE'){weaponSwitch();return;}
+  if(e.code==='KeyX'&&mode==='playing'){chooseWorldFork();return;}
   if(e.code==='KeyR'&&mode==='dead'){begin(false);return;}
   if(e.code==='KeyF'){if(mode==='playing'){keyFireHeld=true;shoot();}return;}
   keys.add(e.code);
@@ -824,6 +852,7 @@ ui.resume.addEventListener('click',()=>begin(true));
 ui.pauseBtn.addEventListener('click',pause);
 ui.draftReroll.addEventListener('click',rerollDraft);
 ui.archiveToggle.addEventListener('click',()=>{archiveOpen=!archiveOpen;renderArchive();sound('switch');});
+ui.forkBtn.addEventListener('click',chooseWorldFork);
 $('draftExit').addEventListener('click',menu);
 ui.resumeBtn.addEventListener('click',resume);
 $('restartPause').addEventListener('click',confirmNewRun);
@@ -898,7 +927,8 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
     active:state?.enemies?.filter(e=>isGuardian(e.type)).map(e=>({type:e.type,hp:e.hp,maxHp:e.maxHp,
       windup:e.windup,facing:e.facing}))||[]},
   routes:{selected:state?.selectedRoute||null,active:state?.routeId||null,marker:world?.getRouteMark?.()||null,history:state?.routeHistory||[],
-    offers:state?.pendingDraft?routeOptions(state.seed,state.pendingDraft).map(r=>r.id):[],hazardExtra:state?.routeHazard||0},
+    offers:state?.pendingDraft?routeOptions(state.seed,state.pendingDraft).map(r=>r.id):[],
+    forks:world?.getForkSites?.()||[],hazardExtra:state?.routeHazard||0},
   archive:{echoes:archive.echoes,unlocked:archive.unlocked,equipped:archive.equipped,runs:archive.runs},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
