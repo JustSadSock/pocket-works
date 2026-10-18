@@ -40,7 +40,7 @@ export function validateRun(s){
     wave:num(Math.floor(s.wave),1,5,1),elapsed:num(s.elapsed,0,10000000,0),
     waveTime:num(s.waveTime,0,1000000,0),toSpawn:num(Math.floor(s.toSpawn),0,40,0),
     spawnClock:num(s.spawnClock,0,30,0),
-    enemies:(Array.isArray(s.enemies)?s.enemies:[]).filter(e=>validPosition(e)&&kinds.has(e.type)&&Number.isFinite(e.hp)&&e.hp>0).slice(0,28).map(e=>({type:e.type,x:e.x,z:e.z,hp:num(e.hp,1,500,1),facing:num(e.facing,-100000,100000,0)})),
+    enemies:(Array.isArray(s.enemies)?s.enemies:[]).filter(e=>validPosition(e)&&kinds.has(e.type)&&Number.isFinite(e.hp)&&e.hp>0).slice(0,28).map(e=>({type:e.type,x:e.x,z:e.z,hp:num(e.hp,1,500,1),...(e.type==='ossuary'?{facing:num(e.facing,-100000,100000,0)}:{})})),
     pickups:(Array.isArray(s.pickups)?s.pickups:[]).filter(validPosition).slice(0,30).map(p=>({x:p.x,z:p.z,type:p.type==='heal'?'heal':'fragment'})),
     projectiles:[],moving:0,sprinting:false,heartPhase:num(Math.floor(s.heartPhase),1,3,1),phase:0
   };
