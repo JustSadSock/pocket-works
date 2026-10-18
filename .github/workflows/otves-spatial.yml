@@ -38,11 +38,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install workspace dependencies
-        run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
+      - name: Install isolated Playwright (no monorepo lockfile)
+        run: |
+          mkdir -p /tmp/otves-playwright
+          npm install --prefix /tmp/otves-playwright --ignore-scripts --no-package-lock --no-audit --no-fund playwright@1.55.0
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: node /tmp/otves-playwright/node_modules/playwright/cli.js install --with-deps chromium
       - name: Test optical tiers and WebGL2 rendering
+        env:
+          OTVES_PLAYWRIGHT_IMPORT: file:///tmp/otves-playwright/node_modules/playwright/index.mjs
         run: node apps/otves/qa/optics-smoke.mjs
       - name: Preserve browser screenshots
         if: always()
