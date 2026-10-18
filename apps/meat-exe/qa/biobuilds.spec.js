@@ -28,7 +28,7 @@ test('real wave finish opens surgery; reroll, choose and save are durable',async
  expect(saved.builds.grafts).toContain(chosen);
  expect(saved.worldStage).toBe(2);expect(errors).toEqual([]);
 });
-test('pending surgery persists across reload; the actual weapon button selects the needle launcher',async ({page})=>{
+test('pending surgery persists across reload; the actual weapon control selects the needle launcher',async ({page,isMobile})=>{
  test.setTimeout(85000);await page.goto('/apps/meat-exe/');
  const seed=await page.evaluate(async()=>{
   const {drawGrafts}=await import('/apps/meat-exe/biobuilds.js');
@@ -46,7 +46,8 @@ test('pending surgery persists across reload; the actual weapon button selects t
  await page.locator('[data-graft="stinger"]').click();
  await expect(page.locator('#hud')).toBeVisible();
  expect((await page.evaluate(()=>window.__MEAT_QA__())).builds.weaponCount).toBe(3);
- await page.locator('#weaponBtn').click();await page.locator('#weaponBtn').click();
+ if(isMobile){await page.locator('#weaponBtn').tap();await page.locator('#weaponBtn').tap();}
+ else{await page.keyboard.press('q');await page.keyboard.press('q');}
  await expect(page.locator('#weaponValue')).toContainText('ИГЛОМЁТ');
  expect((await page.evaluate(()=>window.__MEAT_QA__())).builds.damage).toBeGreaterThan(50);
 });
