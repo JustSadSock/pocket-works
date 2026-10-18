@@ -1832,7 +1832,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   createRoomBtn.addEventListener('click', ()=>{
-    if(window.FogPocketNet){void window.FogPocketNet.create(mapSizeSel.value);return;}
+    if(window.FogPocketNet)void window.FogPocketNet.create(mapSizeSel.value);
+    else console.warn('PocketNet is loading; old root-WebSocket transport is disabled');
+    return;
     connectLobbyWrapper();
     const room = roomIdInput.value.trim();
     lobbyConn.on('connected', ()=> lobbyConn.send({action:'create', room}));
@@ -1841,7 +1843,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   });
 
   joinRoomBtn.addEventListener('click', ()=>{
-    if(window.FogPocketNet){void window.FogPocketNet.join(roomIdInput.value.trim());return;}
+    if(window.FogPocketNet)void window.FogPocketNet.join(roomIdInput.value.trim());
+    else console.warn('PocketNet is loading; old root-WebSocket transport is disabled');
+    return;
     connectLobbyWrapper();
     const room = roomIdInput.value.trim();
     lobbyConn.on('connected', ()=> lobbyConn.send({action:'join', room}));
