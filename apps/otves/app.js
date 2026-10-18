@@ -163,6 +163,12 @@ function setScreen(screen) {
     item.setAttribute('aria-hidden', String(!visible));
     item.inert = !visible;
   }
+  if (screen) {
+    screen.querySelector('.primary-key')?.focus({preventScroll:true});
+  } else if (state === 'playing') {
+    // Focus never remains trapped inside a now-inert modal.
+    elements.pauseButton.focus({preventScroll:true});
+  }
   if (!screen && !wasPlaying && state === 'playing') {
     elements.time.classList.remove('dial-awake');
     void elements.time.offsetWidth;
@@ -181,6 +187,7 @@ function updateHapticButtons() {
   for (const button of elements.hapticButtons) {
     button.textContent = `ВИБРАЦИЯ: ${haptics.enabled ? 'ВКЛ' : 'ВЫКЛ'}`;
     button.setAttribute('aria-pressed', String(haptics.enabled));
+    button.hidden = !haptics.available;
   }
 }
 
