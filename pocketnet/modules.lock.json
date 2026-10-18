@@ -178,5 +178,11 @@
       "v1",
       "v2"
     ]
+  },
+  "perekos": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }

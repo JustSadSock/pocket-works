@@ -127,7 +127,7 @@ function shoot(){
   if(dist<best&&Math.abs(heading)<.11+(.03*(upgrades.steady||0))&&Math.abs(player.pitch)<.46&&world.visible(player.x,player.z,e.x,e.z)){victim=e;best=dist}
  }
  if(victim){
-  victim.hp-=1+Math.floor((upgrades.steady||0)/2);victim.hit=Math.max(victim.hit||0,.18);
+  victim.hp-=1+.5*(upgrades.steady||0);victim.hit=Math.max(victim.hit||0,.18);
   if(victim.hp<=0){enemies=enemies.filter(e=>e!==victim);kills++;stress=Math.max(0,stress-2);audio.event('memory')}
   else audio.event('sighting')
  }

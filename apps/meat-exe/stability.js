@@ -1,22 +1,26 @@
 // Defensive saved-session migration and swept collisions; independent of DOM / WebGL.
+import {sanitizeGrafts,maxWeaponIndex} from './biobuilds.js';
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
 const kinds=new Set(['crawler','spitter','brute','heart','leech']);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
 export function validateRun(s){
-  if(!s||typeof s!=='object'||![1,2,3,4].includes(s.v)||!Number.isInteger(s.seed)||s.seed<0||s.seed>4294967295||!validPosition(s)||!Number.isFinite(s.hp)||s.hp<=0)return null;
-  const maxHp=num(s.maxHp,1,100,100),hp=num(s.hp,0,maxHp,100);
+  if(!s||typeof s!=='object'||![1,2,3,4,5].includes(s.v)||!Number.isInteger(s.seed)||s.seed<0||s.seed>4294967295||!validPosition(s)||!Number.isFinite(s.hp)||s.hp<=0)return null;
+  const maxHp=num(s.maxHp,1,160,100),hp=num(s.hp,0,maxHp,100);
   if(hp<=0)return null;
   return {
-    v:4,seed:s.seed>>>0,x:s.x,z:s.z,
+    v:5,seed:s.seed>>>0,x:s.x,z:s.z,
+    grafts:sanitizeGrafts(s.grafts),biomass:num(Math.floor(s.biomass),0,99,0),
+    pendingDraft:Number.isInteger(s.pendingDraft)&&s.pendingDraft>=2&&s.pendingDraft<=5&&s.pendingDraft===(Math.floor(s.wave)||1)+1?s.pendingDraft:0,
+    draftRevision:num(Math.floor(s.draftRevision),0,100,0),
     ruptured:(Array.isArray(s.ruptured)?s.ruptured:[])
       .filter(id=>typeof id==='string'&&id.length<=29&&/^(?:[1-5]:)?-?\d+,-?\d+$/.test(id))
       .slice(0,2000).map(id=>id.includes(':')?id:(num(Math.floor(s.wave),1,5,1)+':'+id))
       .filter((id,i,a)=>a.indexOf(id)===i),
     ruptureCount:num(Math.floor(s.ruptureCount),0,2000,0),immuneHeat:num(s.immuneHeat,0,100,0),immuneDelay:num(s.immuneDelay,0,6,0),hazardCooldown:num(s.hazardCooldown,0,3,0),
     yaw:num(s.yaw,-100000,100000,Math.PI/2),pitch:num(s.pitch,-1.24,1.24,0),
-    hp,maxHp,heat:0,weapon:s.weapon===1?1:0,
+    hp,maxHp,heat:0,weapon:Number.isInteger(s.weapon)&&s.weapon>=0&&s.weapon<=maxWeaponIndex(s)?s.weapon:0,
     level:num(Math.floor(s.level),0,8,0),damageBonus:num(s.damageBonus,0,250,0),
-    cooldown:0,dashCooldown:num(s.dashCooldown,0,2.7,0),dashTime:0,dashDirX:0,dashDirZ:0,invuln:1,
+    cooldown:0,dashCooldown:num(s.dashCooldown,0,4.1,0),dashTime:0,dashDirX:0,dashDirZ:0,invuln:1,
     score:num(Math.floor(s.score),0,100000000,0),kills:num(Math.floor(s.kills),0,1000000,0),
     wave:num(Math.floor(s.wave),1,5,1),elapsed:num(s.elapsed,0,10000000,0),
     waveTime:num(s.waveTime,0,1000000,0),toSpawn:num(Math.floor(s.toSpawn),0,40,0),

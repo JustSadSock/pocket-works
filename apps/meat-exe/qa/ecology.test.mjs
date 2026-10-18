@@ -63,6 +63,6 @@ test('the added leech type survives saved-session migration without trusting att
  const run={v:4,seed:413,x:3,z:3,hp:100,maxHp:100,wave:3,
   enemies:[{type:'leech',x:5,z:3,hp:55,windup:999,attack:-999}],ruptured:[]};
  const safe=validateRun(run);
- assert.equal(safe.v,4);assert.equal(safe.enemies.length,1);
+ assert.equal(safe.v,5);assert.equal(safe.enemies.length,1);
  assert.deepEqual(safe.enemies[0],{type:'leech',x:5,z:3,hp:55});
 });

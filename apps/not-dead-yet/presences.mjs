@@ -29,7 +29,7 @@ export function updatePresence(e,ctx){
  e.age=(e.age||0)+dt;
  e.hit=Math.max(0,e.hit||0);
  const dist=Math.hypot(e.x-player.x,e.z-player.z);
- const illuminated=Boolean(torch&&insideTorch(player,e,world));
+ const illuminated=Boolean(torch&&insideTorch(player,e,world,12+(player.sight||0)*4));
  e.hit=illuminated?e.hit+dt:Math.max(0,e.hit-dt*.75);
  const recognition=e.kind==='coat'?.85:1.45;
  if(e.hit>=recognition)return{resolved:true,illuminated,stressDelta:-5,near:dist<1.35};

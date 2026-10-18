@@ -69,3 +69,64 @@
  .crosshair.firing{transform:none}
  .crosshair.killed{transform:none}
 }
+
+/* v1.6 · Surgery is a diegetic organ transplant table, not a generic modal.
+   Landscape shows three vertical incisions; portrait is a compact vertical docket. */
+.surgery-overlay{display:grid;place-items:center;overflow:auto;overscroll-behavior:contain;
+ background:radial-gradient(ellipse at 50% 52%,rgba(55,18,27,.92),rgba(10,3,5,.95) 78%);
+ padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right))
+ max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));}
+.surgery-sheet{width:min(940px,100%);max-height:100%;display:flex;flex-direction:column;gap:clamp(11px,2vh,22px);}
+.surgery-heading{flex:0 0 auto;border-bottom:1px solid #784246;padding-bottom:clamp(8px,1.8vh,18px)}
+.surgery-kicker{font:700 11px Arial,sans-serif;letter-spacing:.22em;color:#d3a99e;}
+.surgery-heading h2{margin:8px 0;font-size:clamp(36px,6vw,72px);line-height:.89;letter-spacing:-.025em;color:#f0d6bf}
+.surgery-heading p{font:12px/1.4 Arial,sans-serif;color:#ceb1a2}
+.graft-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;min-height:0;}
+.graft-option{background:linear-gradient(145deg,#54222a,#241116 64%);border:1px solid #85514f;
+ border-top:3px solid #b8947b;padding:clamp(12px,2vw,24px);color:#f2d8ba;text-align:left;
+ display:flex;flex-direction:column;min-height:clamp(170px,27vh,250px);position:relative;
+ gap:18px;clip-path:polygon(0 0,96% 0,100% 8%,100% 100%,0 100%);
+ transition:background .12s,transform .1s,border-color .1s;}
+.graft-option:hover,.graft-option:focus-visible{background:linear-gradient(145deg,#7d3336,#32151a);border-color:#e0b795;outline:2px solid #d5a887;outline-offset:-4px}
+.graft-option:active{transform:translateY(3px)}
+.graft-num{font-size:clamp(23px,3vw,43px);line-height:1;color:#c89179}
+.graft-copy{display:flex;flex-direction:column;gap:11px;flex:1}
+.graft-copy strong{font-size:clamp(17px,2vw,24px);line-height:1;letter-spacing:.02em}
+.graft-copy>span{font:13px/1.35 Arial,sans-serif;color:#ebd6bc}
+.graft-copy small{font:11px/1.36 Arial,sans-serif;letter-spacing:.03em;color:#efa99c;border-top:1px solid #75434a;padding-top:10px;margin-top:auto}
+.graft-option>b{position:absolute;right:20px;top:14px;font-size:18px;color:#c2a391}
+.surgery-footer{display:flex;align-items:center;gap:12px;min-height:46px;flex:0 0 auto;font:11px Arial,sans-serif;letter-spacing:.08em}
+.surgery-footer>span{margin-right:auto;color:#e7ba95}
+.surgery-footer button{font:700 11px Arial,sans-serif;letter-spacing:.06em;padding:12px;min-height:40px;
+ border:1px solid #a27e70;background:#3a1c21;color:#e9d2bb}
+.surgery-footer button:disabled{opacity:.4}
+.surgery-footer button:not(:disabled):active{transform:translateY(2px)}
+@media(max-width:650px), (max-height:480px){
+ .surgery-sheet{gap:8px}
+ .surgery-heading h2{font-size:clamp(27px,5vw,46px);margin:4px 0}
+ .surgery-heading p{font-size:10px}
+ .graft-option{padding:9px;gap:8px;min-height:0}
+ .graft-num{font-size:19px}
+ .graft-copy{gap:6px}
+ .graft-copy strong{font-size:13px}
+ .graft-copy>span{font-size:10px}
+ .graft-copy small{font-size:9px;padding-top:5px}
+ .graft-option>b{font-size:12px;right:8px;top:9px}
+ .surgery-footer{flex-wrap:wrap;font-size:9px;gap:5px}
+ .surgery-footer button{padding:8px;font-size:9px;min-height:34px}
+}
+@media(max-width:650px) and (orientation:portrait){
+ .surgery-sheet{width:min(480px,100%);max-height:100%}
+ .surgery-heading{padding-bottom:7px}
+ .surgery-heading h2{font-size:clamp(34px,8vw,55px)}
+ .graft-cards{grid-template-columns:1fr;gap:6px}
+ .graft-option{flex-direction:row;align-items:center;min-height:0;padding:10px 14px;clip-path:none}
+ .graft-num{font-size:27px;width:40px;flex:0 0 auto}
+ .graft-copy{gap:5px}
+ .graft-copy strong{font-size:17px}
+ .graft-copy>span{font-size:11px}
+ .graft-copy small{font-size:9px;padding-top:5px}
+ .graft-option>b{display:none}
+ .surgery-footer>span{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.graft-option{transition:none}}

@@ -14,7 +14,7 @@ const FS=[
 'precision mediump float;',
 'varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
 'uniform vec3 eye;uniform vec3 facing;uniform vec3 lampA;uniform vec3 lampB;',
-'uniform float torch;uniform mediump float time;uniform float hit;uniform float electrical;',
+'uniform float torch;uniform mediump float time;uniform float hit;uniform float electrical;uniform float sight;',
 'uniform sampler2D paintedAtlas;',
 'void main(){',
 'vec3 norm=normalize(n);',
@@ -26,7 +26,7 @@ const FS=[
 'vec3 delta=p-eye;float d=length(delta);',
 'vec3 look=normalize(delta+vec3(.0001));',
 'float cone=smoothstep(.69,.96,dot(look,normalize(facing)));',
-'float beam=torch*cone*(1.0-smoothstep(6.0,23.0,d));',
+'float beam=torch*cone*(1.0-smoothstep(6.0,23.0+sight*5.0,d));',
 'float flicker=.965+.018*sin(time*3.7)+.011*sin(time*11.1);',
 'float warm=((1.0-smoothstep(1.0,11.0,length(p-lampA)))*.65+',
 '(1.0-smoothstep(1.0,10.0,length(p-lampB)))*.42)*flicker;',
@@ -34,7 +34,7 @@ const FS=[
 'warm*=electrical;',
 'vec3 color=c*(.57+.54*pigment)*(mix(.095,.30,electrical)+warm+beam*1.70)*diffuse;',
 'color+=c*warm*vec3(.16,.10,.02);',
-'float mist=smoothstep(14.0,39.0,d);color=mix(color,vec3(.057,.056,.051),mist*.82);',
+'float mist=smoothstep(14.0+sight*2.8,39.0+sight*5.0,d);color=mix(color,vec3(.057,.056,.051),mist*.82);',
 'color=mix(color,vec3(.65,.15,.11),hit*.24);',
 'gl_FragColor=vec4(color,1.0);',
 '}'
@@ -590,7 +590,7 @@ export class Renderer{
   this.gl=gl;const program=gl.createProgram();gl.attachShader(program,shader(gl,gl.VERTEX_SHADER,VS));gl.attachShader(program,shader(gl,gl.FRAGMENT_SHADER,FS));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   this.program=program;gl.useProgram(program);this.attrs=['position','tint','normal','material'].map(name=>{const l=gl.getAttribLocation(program,name);if(l>=0)gl.enableVertexAttribArray(l);return l});
-  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical'].map(x=>[x,gl.getUniformLocation(program,x)]));
+  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical','sight'].map(x=>[x,gl.getUniformLocation(program,x)]));
   const atlas=makeMaterialAtlas(1701);this.texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,atlas.width,atlas.height,0,gl.RGBA,gl.UNSIGNED_BYTE,atlas.pixels);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -619,7 +619,7 @@ export class Renderer{
   gl.uniform3fv(this.u.lampA,[-1.55,2.4,-2.9]);gl.uniform3fv(this.u.lampB,[0,3.05,-4.1]);
   gl.uniform1f(this.u.torch,0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,0);
   // Communal landing has its own light, even if the flat's electricity is out.
-  gl.uniform1f(this.u.electrical,.36);
+  gl.uniform1f(this.u.electrical,.36);gl.uniform1f(this.u.sight,0);
   this.bind(this.landingBuffer);gl.drawArrays(gl.TRIANGLES,0,this.landingCount)
  }
 
@@ -638,7 +638,7 @@ export class Renderer{
    lampB=rogue?{x:Math.floor(player.x/18)*18+13.5,z:Math.floor(player.z/18)*18+13.5}:world.point('kitchen');
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
   gl.uniform3fv(this.u.lampA,[lampA.x*SCALE,2.64,lampA.z*SCALE]);gl.uniform3fv(this.u.lampB,[lampB.x*SCALE,2.64,lampB.z*SCALE]);
-  gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);gl.uniform1f(this.u.electrical,rogue?1:world.powerAvailable()?1:0);
+  gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);gl.uniform1f(this.u.electrical,rogue?1:world.powerAvailable()?1:0);gl.uniform1f(this.u.sight,rogue?(player.sight||0):0);
   this.bind(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
   const dyn=[];
   if(rogue)roguePickupsMesh(dyn,items,t);

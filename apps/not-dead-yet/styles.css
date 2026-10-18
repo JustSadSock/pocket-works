@@ -13,3 +13,15 @@
 .app-shell.is-peephole::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:6;background:radial-gradient(ellipse 30% 32% at 50% 47%,transparent 20%,rgba(9,10,9,.36) 47%,rgba(4,6,5,.98) 69%,#030403 84%);box-shadow:inset 0 0 11vw rgba(0,0,0,.9)}
 .app-shell.is-peephole .reticle,.app-shell.is-peephole #fire,.app-shell.is-peephole #reload,.app-shell.is-peephole #torch,.app-shell.is-peephole #pack,.app-shell.is-peephole #run,.app-shell.is-peephole #joystick{visibility:hidden;pointer-events:none}
 .app-shell.is-peephole .control.use{visibility:visible}
+
+/* Endless memory-run: deliberate, tactile, single-action upgrade pause. */
+.upgrade-panel{width:min(510px,calc(100% - 32px));max-height:calc(100% - 28px);padding-right:18px}
+.upgrade-list{width:100%;display:grid;gap:9px;margin:8px 0 14px}
+.upgrade-card{width:100%;text-align:left;display:grid;gap:6px;padding:14px 15px 12px;min-height:78px;background:linear-gradient(100deg,#363029,#262925);border:1px solid #7f6d55;border-left:4px solid #bfa17a;transition:background .15s,border-color .15s,transform .12s}
+.upgrade-card strong{font-family:Georgia,serif;color:#eed8bd;font-size:20px;font-weight:400}
+.upgrade-card small{color:#cfc5b5;font-size:12px;line-height:1.35}
+.upgrade-card span{font-size:10px;letter-spacing:.08em;color:#c3a57b}
+.upgrade-card:active{transform:scale(.985)}.upgrade-card:hover,.upgrade-card:focus-visible{background:#554736;border-color:#ead0a7;outline:none}
+.chapter-link{font-size:11px;text-decoration:none;min-width:190px;display:inline-flex;align-items:center}
+@media(max-height:670px){.upgrade-card{min-height:60px;padding:8px 12px;gap:3px}.upgrade-card strong{font-size:16px}.upgrade-list{gap:6px}}
+@media(pointer:coarse){.upgrade-card{min-height:72px}.chapter-link{min-height:43px}}

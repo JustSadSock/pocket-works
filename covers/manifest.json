@@ -3199,7 +3199,7 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "472649f3420ea8b3c91f263e8df88bd6c0b05180",
+    "revision": "30636524a1021bf4b8822ec260cd6bc45c205ef0",
     "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
@@ -3211,8 +3211,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "472649f3420ea8b3c91f263e8df88bd6c0b05180",
-    "lastAttemptAt": "2026-10-18T18:30:44.919Z"
+    "lastAttemptRevision": "30636524a1021bf4b8822ec260cd6bc45c205ef0",
+    "lastAttemptAt": "2026-10-18T19:01:50.986Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3480,22 +3480,22 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4f4b186c07f521ba7fb2316cb419a54262fdcc3e",
-    "lastAttemptAt": "2026-10-18T18:54:01.060Z",
-    "revision": "4f4b186c07f521ba7fb2316cb419a54262fdcc3e",
-    "qualityScore": 77,
+    "lastAttemptRevision": "ad8820f1d0bc24c6890994303e7051c06ba73221",
+    "lastAttemptAt": "2026-10-18T19:01:39.893Z",
+    "revision": "ad8820f1d0bc24c6890994303e7051c06ba73221",
+    "qualityScore": 78,
     "visionScore": null,
     "prepared": false,
     "started": true,
     "gameplayEntry": [
       {
-        "label": "Начать новую ночь ↗",
+        "label": "Начать забег ↗",
         "id": "start",
         "score": 74
       }
     ],
     "shot": 0,
-    "sha256": "1b62fe52e909caa8272a7ffc9fe365b35aef2ffddb3b1e9c842033e289832eec",
+    "sha256": "f0ee959e913892044765ac094118ba0cceb1b22b508fac1cd0dc82347c9dfab0",
     "imageVersion": 2
   },
   "crossline-5x5": {

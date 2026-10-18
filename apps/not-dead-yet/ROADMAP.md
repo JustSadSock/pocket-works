@@ -1,9 +1,78 @@
-# NOT DEAD YET — product roadmap (18 October 2026)
+# NOT DEAD YET — core roguelike roadmap
+
+## Canonical premise (restored in v2.0)
+The PRIMARY game is an endless first-person survival-horror roguelike. An elderly,
+partially sighted protagonist with unreliable memory experiences his own small
+Soviet/post-Soviet flat as an impossible chain of rooms and tight corridors.
+There is no task list to finish and no final entrance door. The player pushes
+deeper, finds ammunition, calming supplies and build-changing memories, and
+defends against *perceived* monsters. The playable threats are real in the
+player's experience; this does not imply that people with psychiatric diagnoses
+are dangerous. The environment behind the camera changes after it is left and
+unseen: returning does not restore the layout the player remembers.
+
+## 2.0 — Return to the original roguelike loop (implemented)
+- [x] Make endless procedural exploration the default PocketWorks entry.
+- [x] Keep the existing four-item story as optional `?chapter=1`, rather than
+      stripping out its radio, door, blackout, family memory and endings.
+- [x] Replace oversized floor plan with connected deterministic sectors:
+      one-cell corridors (~1.27m), 2.62m ceilings and small rooms with doors,
+      furniture, radiators, curtains, tile, parquet and wall carpets.
+- [x] Regenerate previously visited sectors only when distant, behind or outside
+      view; preserve seam portals, current player tile and deterministic epochs.
+- [x] Infinite growth, increasing danger, enemy chase, actual revolver hits,
+      ammo depletion, real reload time, finite composure and permadeath.
+- [x] Obtain tea, medicine, bullets and relics. Pick 1 of 3 distinct upgrades:
+      steady hand, pockets, breathing, shoes, glasses, rituals or tea routine.
+      Every selection changes a gameplay variable; levels are persistent in
+      that run.
+- [x] Autosave/resume, random seed, records, restart confirmation, pause,
+      mobile thumb movement/aim/fire/interact and working audio toggle.
+- [x] Reuse existing authored WebGL materials, viewmodel and spatial audio;
+      tune sight loss as fog/vignette, partially alleviated by glasses.
+- [x] Pure node generation/geometry/memory mutation regressions and browser
+      test scenarios; legacy chapter regressions remain routed separately.
+- [ ] Validate release with live Chromium/WebKit device screenshots and GPU
+      frame times; repository-only tests do not establish mobile performance.
+
+## 2.1 — The flat must feel lived-in, not modular
+- [ ] Use several genuinely different Soviet layouts per sector, including
+      walk-through rooms, narrow partition corridors, toilets separated from
+      bathrooms and dead-end service spaces.
+- [ ] Consistent wallpaper/fixtures and owner-specific clutter across a
+      contiguous run of rooms; reuse props in unsettling ways after memory shifts.
+- [ ] Add destructible light fixtures, door hinges and reachability-aware physics.
+- [ ] Visual depth: contact shadows, high-quality normal/roughness maps,
+      reflected flashlight highlights and dense, optimized furnishings.
+- [ ] Profile mesh rebuild time and GPU draw budget on 390×844 mobile.
+
+## 2.2 — Roguelike combat identity
+- [ ] Add distinct silhouettes, e.g. ceiling-crawling figure, wardrobe-bound
+      pursuer, false family member, with unique clear telegraphs.
+- [ ] Interactions beyond damage: proximity, sound, poor eyesight and selective
+      light recognition create meaningful costs and counters.
+- [ ] More weapons with reload/sway/noise trade-offs rather than pure DPS.
+- [ ] Synergy-specific builds, reward risk, enemy archetype-specific balance.
+- [ ] 20+ minute procedural-run soak tests and difficulty/loot telemetry.
+
+## 2.3 — Unreliable memory as the main mechanic
+- [ ] Non-Euclidean-feeling room changes must remain physically collision-safe,
+      not obvious teleports or discontinuous rendering.
+- [ ] Track false room recognition and signs of returning to a rewritten place.
+- [ ] Allow rare stable memory anchors that survive regeneration as deliberate
+      player build choices.
+- [ ] Stronger audiovisual perceptual distortion without making controls
+      unreadable or treating mental illness as an enemy identity.
+
+---
+## Archived milestones (v1.1–1.8)
+
+# 2026-10-18 — authored chapter history
 
 ## Product promise
 A confused, visually impaired elderly protagonist believes he is walking around his own apartment. The space, faces and threats are filtered through unreliable memory and paranoia. The player should recognize ordinary domestic details before those details become uncanny. Diagnoses are not treated as a justification for violence; figures are explicitly ambiguous subjective phenomena rather than a population of dangerous mentally ill people.
 
-## 1.1 — The Apartment, completed chapter
+## 1.1 — The Apartment, completed OPTIONAL chapter
 - [x] Replace abstract infinite sector maze with a hand-designed four-room apartment, narrow lived-in corridors and the original front door.
 - [x] Rebuild deterministic floor graph with seeded room assignments, variable double doors, guaranteed accessible objectives, bounded room mutation and no player trapping.
 - [x] Uncouple first-person movement from pointer lock: independent WASD and mobile twin-thumb input, corner sliding, collision diagnostics and recoverable pointer cancellation.
