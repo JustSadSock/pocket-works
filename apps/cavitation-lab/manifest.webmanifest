@@ -1,0 +1,25 @@
+{
+  "id": "/apps/cavitation-lab/",
+  "name": "КАВИТАЦИЯ — лаборатория пузырька",
+  "short_name": "КАВИТАЦИЯ",
+  "description": "Эксперименты со схлопыванием пузырьков",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#13262b",
+  "theme_color": "#13262b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

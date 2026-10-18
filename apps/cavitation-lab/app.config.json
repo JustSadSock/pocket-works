@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "cavitation-lab",
+  "name": "КАВИТАЦИЯ — лаборатория пузырька",
+  "shortName": "КАВИТАЦИЯ",
+  "description": "Интерактивная лаборатория схлопывания пузырька в воде: модель Рэлея–Плессета, перепад давления, стенка, микроструя и график радиуса.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-19",
+  "releaseDateTime": "2026-10-19T00:51:00+03:00",
+  "changelog": [
+    "Добавлена модель Рэлея–Плессета с численным расчётом изменения радиуса и времени схлопывания.",
+    "Создана объёмно освещённая лабораторная камера с замедленным коллапсом, схематической ударной волной и асимметрией у стенки.",
+    "Доступны давление, размер пузырька, расстояние до стенки, пресеты, временной график, пауза и перемотка."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#d38e4f",
+  "backgroundColor": "#13262b",
+  "themeColor": "#13262b",
+  "orientation": "any",
+  "cacheName": "cavitation-lab-v1.0.0",
+  "storageNamespace": "pocket-works:cavitation-lab",
+  "tags": [
+    "simulation",
+    "cavitation",
+    "physics",
+    "water",
+    "rayleigh-plesset",
+    "science",
+    "bubble",
+    "offline"
+  ],
+  "order": 81
+}

@@ -1,0 +1,30 @@
+import { test, expect } from '@playwright/test';
+
+test('cavitation experiment: launch, pause, scrub, restart and persist input',async({page})=>{
+ const failures=[];
+ page.on('pageerror',error=>failures.push(error.message));
+ await page.goto('/apps/cavitation-lab/');
+ await expect(page.locator('#field')).toBeVisible();
+ await expect(page.locator('#launch-label')).toHaveText('СХЛОПНУТЬ ПУЗЫРЁК');
+ await page.locator('#pressure').evaluate(el=>{el.value='2.35';el.dispatchEvent(new Event('input',{bubbles:true}));});
+ await expect(page.locator('#pressure-val')).toContainText('2,35');
+ await page.locator('#launch').click();
+ await expect(page.locator('#phase-label')).not.toHaveText('ГОТОВ К ИМПУЛЬСУ');
+ await page.waitForTimeout(1000);
+ const time=await page.locator('#time-now').innerText();
+ expect(time).not.toMatch(/^0\s/);
+ await page.locator('#pause').click();
+ await expect(page.locator('#phase-label')).toHaveText('ОПЫТ НА ПАУЗЕ');
+ const before=await page.locator('#time-now').innerText();
+ await page.waitForTimeout(250);
+ expect(await page.locator('#time-now').innerText()).toBe(before);
+ await page.locator('#trace').click({position:{x:40,y:25}});
+ await page.locator('#science').click();
+ await expect(page.locator('#science-panel')).toBeVisible();
+ await page.locator('#science-done').click();
+ await expect(page.locator('#science-panel')).toBeHidden();
+ await page.reload();
+ await expect(page.locator('#pressure-val')).toContainText('2,35');
+ await expect(page.locator('#field')).toBeVisible();
+ expect(failures).toEqual([]);
+});

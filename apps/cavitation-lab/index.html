@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#13262b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="КАВИТАЦИЯ">
+<title>КАВИТАЦИЯ — лаборатория пузырька</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main class="app-shell" data-app-shell data-fullscreen-app>
+ <header class="topbar" data-ui>
+  <a href="../../" class="exit" data-app-control data-native-press>← Pocket Works</a>
+  <div class="wordmark"><span class="wordmark-icon" aria-hidden="true"></span><span>КАВИТАЦИЯ</span><small>ЛАБОРАТОРИЯ 01</small></div>
+  <button type="button" id="science" class="science" data-native-press aria-label="О физической модели">i <span>Модель</span></button>
+ </header>
+ <div class="workspace">
+  <section class="chamber" aria-label="Камера с водой">
+   <canvas id="field" data-gesture-surface data-block-callout aria-label="Пузырёк и перетаскиваемая стенка"></canvas>
+   <div class="field-top" data-ui>
+    <div class="readout"><span>РАДИУС</span><strong id="radius-now">0,90 <small>мм</small></strong></div>
+    <div class="readout time-readout"><span>ВРЕМЯ</span><strong id="time-now">0 <small>мкс</small></strong></div>
+   </div>
+   <div class="chamber-label" data-ui><i id="status-led"></i><span id="phase-label">ГОТОВ К ИМПУЛЬСУ</span></div>
+   <div class="wall-instruction" data-ui id="wall-instruction">↔ СТЕНКУ МОЖНО ДВИГАТЬ</div>
+   <div class="graph-shell" data-ui>
+    <div class="graph-head"><span>R / R₀</span><span id="graph-caption">ЗАВИСИМОСТЬ РАДИУСА ОТ ВРЕМЕНИ</span></div>
+    <canvas id="trace" data-gesture-surface aria-label="График радиуса от времени, можно перемещать курсор"></canvas>
+   </div>
+  </section>
+  <aside class="console" data-ui aria-label="Управление лабораторией">
+   <div class="console-head"><div class="serial">01 <span>/</span> ОДИН ПУЗЫРЁК</div><div class="medium">H₂O · 20 °C</div></div>
+   <div class="console-main">
+    <div class="presets" role="group" aria-label="Готовые эксперименты">
+      <button type="button" class="preset" data-preset="free" data-native-press>Свободная вода</button>
+      <button type="button" class="preset active" data-preset="wall" aria-pressed="true" data-native-press>У стенки</button>
+      <button type="button" class="preset" data-preset="gentle" data-native-press>Мягкий импульс</button>
+    </div>
+    <div class="sliders">
+     <label class="instrument"><span>Перепад давления <output id="pressure-val">1,80 бар</output></span><input id="pressure" type="range" min="0.3" max="4" value="1.8" step="0.05"></label>
+     <label class="instrument"><span>Начальный радиус <output id="size-val">0,90 мм</output></span><input id="size" type="range" min="0.25" max="2.5" value="0.9" step="0.05"></label>
+     <label class="instrument"><span>Расстояние до стенки <output id="distance-val">1,65 R₀</output></span><input id="distance" type="range" min="1.15" max="4" value="1.65" step="0.05"></label>
+    </div>
+    <div class="result" id="result" aria-live="polite">
+      <div><span>Расчётное время коллапса</span><b id="collapse-time">—</b></div>
+      <div><span>Минимальный радиус</span><b id="min-radius">—</b></div>
+      <div><span>У стенки</span><b id="jet-status">—</b></div>
+    </div>
+    <div class="actions">
+     <button type="button" id="launch" class="launch" data-native-press><span class="launch-symbol" aria-hidden="true">◉</span><span id="launch-label">СХЛОПНУТЬ ПУЗЫРЁК</span><span aria-hidden="true">→</span></button>
+     <button type="button" id="pause" class="pause" data-native-press disabled>Пауза</button>
+     <button type="button" id="speed" class="speed" data-native-press title="Скорость воспроизведения">1×</button>
+    </div>
+    <div class="console-foot">СФЕРИЧЕСКАЯ МОДЕЛЬ · СТРУЯ У СТЕНКИ — СХЕМА</div>
+   </div>
+  </aside>
+ </div>
+ <section class="science-panel" id="science-panel" hidden role="dialog" aria-modal="true" aria-label="О физической модели">
+  <div class="science-sheet">
+   <header><strong>Что здесь рассчитывается?</strong><button type="button" id="close-science" data-native-press aria-label="Закрыть">×</button></header>
+   <p>Размер пузырька рассчитывается численным интегрированием уравнения Рэлея–Плессета для воды при 20 °C. Учитываются инерция, вязкость, поверхностное натяжение, давление пара и небольшой остаток газа.</p>
+   <p>Давление меняется скачком. Физическое время показано в микросекундах; анимация замедлена. Вспышка и круговая волна — поясняющая графика, а не расчёт распространения ударной волны.</p>
+   <p>Возле твёрдой стенки реальный пузырёк деформируется и образует микрострую. Здесь показана <b>качественная схема струи</b> в зависимости от расстояния: сферическая модель не рассчитывает её скорость или давление удара.</p>
+   <p class="source-label">МОДЕЛЬ · Rayleigh–Plesset / Rayleigh collapse time</p>
+   <button class="science-close" type="button" id="science-done" data-native-press>Вернуться к опыту</button>
+  </div>
+ </section>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАВИТАЦИЯ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
