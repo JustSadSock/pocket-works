@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "perekos",
+  "name": "ПЕРЕКОС",
+  "shortName": "ПЕРЕКОС",
+  "description": "Магическая дуэль с ИИ: собирай неожиданные сочетания рун и выигрывай короткие раунды.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T14:40:00+03:00",
+  "changelog": [
+    "Первая полноценная тренировочная дуэль: движение, атака, щит, рывок и адаптивный ИИ.",
+    "12 простых рун, выбор после раунда, до четырёх побед, сохранение серии.",
+    "Авторская пиксельная арена, мобильное управление и звуковые эффекты."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#ddac6c",
+  "backgroundColor": "#151e1d",
+  "themeColor": "#151e1d",
+  "orientation": "portrait",
+  "cacheName": "perekos-v0.1.0",
+  "storageNamespace": "pocket-works:perekos",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "arena",
+    "magic",
+    "roguelike",
+    "buildcraft",
+    "AI",
+    "touch",
+    "pixel art"
+  ],
+  "order": 205
+}
