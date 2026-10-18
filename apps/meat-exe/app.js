@@ -458,7 +458,8 @@ function updateEnemies(dt){
     }
     const special=guardianAction(e.type,result.action,e,state);
     if(special?.kind==='pulse'||special?.kind==='surge'){
-      if(special.hit)harm(special.damage);
+      // Pressure cannot damage a player behind an intact wall or membrane.
+      if(special.hit&&(special.kind!=='pulse'||world.visible(e,state)))harm(special.damage);
       world.impact({x:special.kind==='surge'?e.intentX:e.x,y:.12,
         z:special.kind==='surge'?e.intentZ:e.z},{x:0,y:1,z:0},'wall');
       sound('heart');
