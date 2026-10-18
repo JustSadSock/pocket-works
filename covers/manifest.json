@@ -3322,24 +3322,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 36501,
-        "variance": 54.50969429883231,
-        "entropy": 1.9428251852018084,
+        "bytes": 36500,
+        "variance": 54.50409492161729,
+        "entropy": 1.9424119586944553,
         "edgeDensity": 0.11036706349206349,
-        "colorfulness": 28.16943359375,
-        "centerDetail": 72.81600707250647,
-        "meanLight": 41.12136528320337
+        "colorfulness": 28.1796875,
+        "centerDetail": 72.79403647264523,
+        "meanLight": 41.12700161132833
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.6.0&pw_fp=fc99542156e6b93842d09b4d"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.7.0&pw_fp=74b907e93159a9d25362cb72"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "f733bef34de6c4b3f6bf80e4068b2293bc76a6a6",
-    "lastAttemptAt": "2026-10-18T19:12:32.466Z"
+    "lastAttemptRevision": "cbb0478e5a76d92fde77972fa9ed2052eda5f7ae",
+    "lastAttemptAt": "2026-10-18T20:55:44.710Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3455,8 +3455,8 @@
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a71efb44caa0a547b7b907f5dab11eae4d9a1164",
-    "lastAttemptAt": "2026-10-18T20:47:10.968Z",
+    "lastAttemptRevision": "b0ea374ddafe5d174cd12908c5edbf01e7c7d7f1",
+    "lastAttemptAt": "2026-10-18T20:55:33.421Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3480,10 +3480,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "1704224802eb850c9278b63deec3c68ef2884dac",
-    "lastAttemptAt": "2026-10-18T20:47:49.945Z",
-    "revision": "1704224802eb850c9278b63deec3c68ef2884dac",
-    "qualityScore": 78,
+    "lastAttemptRevision": "3586adee406ebcabf8d280cd277e34be1b2753b1",
+    "lastAttemptAt": "2026-10-18T20:56:00.391Z",
+    "revision": "3586adee406ebcabf8d280cd277e34be1b2753b1",
+    "qualityScore": 77,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3495,7 +3495,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "b1c6745bea863718a11f188e400b2c7628bff5a969e22afbc27e7074b815f48b",
+    "sha256": "db62506db87d9e5250063425eb14504d6ea06494969cce988e99ec8ce6de73f2",
     "imageVersion": 2
   },
   "crossline-5x5": {
