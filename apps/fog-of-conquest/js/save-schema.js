@@ -1,7 +1,7 @@
 /* Versioned, offline-only save contract. Parse and validate BEFORE mutating a live game. */
 (function(root){
   'use strict';
-  const SAVE_VERSION=4;
+  const SAVE_VERSION=5;
   const SIZES={tiny:[5,8],small:[10,15],medium:[20,30],large:[20,60]};
   const UNIT_TYPES=new Set(['swordsman','archer','heavy','cavalry','mage','bog']);
   const BUILD_TYPES=new Set(['base','barracks','stable','mageTower','mill','fort']);
@@ -61,8 +61,17 @@
         }
       }
     }
-    const replayEvents=raw.replayEvents===undefined?[]:raw.replayEvents;
-    assert(Array.isArray(replayEvents)&&replayEvents.length<=30000,'повреждена запись повтора');
+    assert(!(raw.replayEvents!==undefined&&raw.replayArchive!==undefined),
+      'дублирование форматов повтора');
+    let replayEvents=raw.replayEvents===undefined?[]:raw.replayEvents;
+    if(raw.replayArchive!==undefined){
+      assert(root.FogReplayCodec&&typeof root.FogReplayCodec.expand==='function',
+        'архив повторов не поддерживается этим клиентом');
+      replayEvents=root.FogReplayCodec.expand(raw.replayArchive);
+    }
+    assert(Array.isArray(replayEvents)&&replayEvents.length<=30000&&
+      replayEvents.every(e=>e&&typeof e==='object'&&!Array.isArray(e)),
+      'повреждена запись повтора');
     const legacy=raw.version===undefined||raw.version<3;
     const modeBeta=typeof raw.modeBeta==='boolean'?raw.modeBeta:
       raw.mode==='beta'||raw.units.some(u=>u.type==='bog');
