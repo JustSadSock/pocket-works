@@ -337,15 +337,44 @@ function render(){
  $('fA').style.opacity=turn==='B'&&!finished?'.6':'1';$('fB').style.opacity=turn==='A'&&!finished?'.6':'1';
  $('planOwner').textContent=animating?'РАЗРЕШЕНИЕ ХОДА':finished?'БИТВА ЗАВЕРШЕНА':flags[turn]?'ПЛАН ОТПРАВЛЕН':turn==='A'?'КОМАНДЫ ИГРОКА А':'КОМАНДЫ ИГРОКА Б';
  $('planCount').textContent=String(plan.length)+' / '+STEPS;
- $('slots').innerHTML=Array.from({length:STEPS},(_,i)=>'<div class="slot '+(plan[i]?'filled ':'')+(i===plan.length?'current':'')+'" data-index="'+(i+1)+'" title="'+esc(plan[i]?actionText(plan[i]):'Ожидает команду')+'">'+(plan[i]?esc(actionText(plan[i])):'·')+'</div>').join('');
+ $('slots').innerHTML=Array.from({length:STEPS},(_,i)=>{
+  const selectable=!locked()&&i<=plan.length,active=editingSlot===i,cmd=plan[i];
+  return '<button type="button" class="slot '+(cmd?'filled ':'')+(i===plan.length?'current ':'')+
+   (active?'editing ':'')+'" data-slot="'+i+'" '+(selectable?'':'disabled ')+
+   'aria-pressed="'+String(active)+'" aria-label="Шаг '+(i+1)+': '+esc(cmd?actionText(cmd):'пустой')+
+   (selectable?'. Нажми для замены команды':'')+'">'+(cmd?esc(actionText(cmd)):'·')+'</button>';
+ }).join('');
  const info=allowed(),disabled=locked(),attack=attackMode;
+ const full=plan.length===STEPS&&editingSlot===null;
  document.querySelectorAll('[data-dir]').forEach(b=>{
-  const d=b.dataset.dir; b.classList.toggle('chosen',attack&&attackDirs.includes(d));
-  b.disabled=disabled?true:attack?info.moved.has(d):info.used.has(d)||plan.length>=STEPS;
+  const d=b.dataset.dir,conflict=attack?info.moved.has(d):info.attacked.has(d);
+  b.classList.toggle('chosen',attack&&attackDirs.includes(d));
+  b.disabled=disabled||full||conflict;
+  b.title=conflict?describeIssue('attack_direction_conflict'):'';
+  b.setAttribute('aria-label',conflict?(d+' — '+describeIssue('attack_direction_conflict')):d);
  });
- $('attack').disabled=disabled||(!attack&&info.attacks);$('shield').disabled=disabled||attack||info.shielded||plan.length>=STEPS;
- $('attack').textContent=attack?'✓':'⚔';$('undo').textContent=attack?'ОТМЕНА':'← Удалить';
+ $('attack').disabled=disabled||full||(!attack&&info.attackUsed);
+ $('shield').disabled=disabled||attack||info.shieldUsed||full;
+ $('attack').textContent=attack?'✓':'⚔';
+ $('undo').textContent=attack?'ОТМЕНА':editingSlot!==null?'× Удалить шаг':'← Удалить';
  $('undo').disabled=disabled||(!attack&&!plan.length);
+ const edit=editingSlot!==null&&!disabled;
+ $('editBar').classList.toggle('hidden',!edit);
+ if(edit){
+  $('editDescription').textContent='Шаг '+(editingSlot+1)+' · замена';
+  $('moveEarlier').disabled=editingSlot===0||editingSlot>=plan.length;
+  $('moveLater').disabled=editingSlot>=plan.length-1;
+  $('removeSelected').disabled=editingSlot>=plan.length;
+ }
+ const feedback=$('planFeedback');
+ if(!feedback.classList.contains('is-error')){
+  const projection=previewOrders(match,turn,plan);
+  feedback.textContent=animating?'Исполнение пяти команд':projection.risk!==null?
+   'Опасно: шаг '+projection.risk+' ведёт на разрушенный край':
+   edit?'Замени команду или передвинь выбранный шаг':
+   full?'План готов. Нажми шаг для изменения':'Выбери команду. Нажми шаг, чтобы заменить его.';
+  feedback.classList.toggle('is-risk',projection.risk!==null&&!animating);
+ }
  $('submit').textContent=finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
  $('submit').disabled=disabled||plan.length!==STEPS;
  $('attackHint').classList.toggle('hidden',!attack);
@@ -513,6 +542,11 @@ $('roomCode').onclick=()=>copy(roomId.slice(0,8).toUpperCase());$('copyLink').on
 $('attack').onclick=toggleAttack;$('shield').onclick=()=>enqueue('shield');
 document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>direction(b.dataset.dir));
 $('undo').onclick=undo;$('submit').onclick=submit;
+$('slots').addEventListener('click',event=>{const button=event.target.closest('[data-slot]');if(button)selectSlot(Number(button.dataset.slot))});
+$('moveEarlier').onclick=()=>reorderSlot(-1);
+$('moveLater').onclick=()=>reorderSlot(1);
+$('removeSelected').onclick=removeSlot;
+$('endEdit').onclick=()=>{editingSlot=null;attackMode=false;attackDirs=[];soundFX('tap');render()};
 $('replayBack').onclick=()=>{pauseReplay();show('play');if(latest()?.phase==='finished'){showingOutcome=false;finish();}};
 $('replayRound').onchange=()=>{replayRound=Number($('replayRound').value);replayIndex=0;pauseReplay();paintReplay()};
 $('replaySeek').oninput=()=>{replayIndex=Number($('replaySeek').value);pauseReplay();paintReplay()};
@@ -522,11 +556,13 @@ window.addEventListener('keydown',e=>{
  if(/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName||''))return;
  if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
  if(screen!=='play'||modalOpen)return;
+ if(e.key>='1'&&e.key<='5'){selectSlot(Number(e.key)-1);e.preventDefault();return}
  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
  if(map[e.key]){direction(map[e.key]);e.preventDefault()}
  else if(e.key.toLowerCase()==='a'){toggleAttack();e.preventDefault()}
  else if(e.key.toLowerCase()==='s'){enqueue('shield');e.preventDefault()}
  else if(e.key==='Backspace'){undo();e.preventDefault()}
+ else if(e.key==='Delete'&&editingSlot!==null){removeSlot();e.preventDefault()}
  else if(e.key==='Enter'){submit();e.preventDefault()}
 });
 async function checkNet(){
