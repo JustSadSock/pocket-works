@@ -65,6 +65,14 @@
           "selector": "#hud"
         }
       ]
+    },
+    {
+      "id": "journey",
+      "kind": "playwright",
+      "files": [
+        "qa/journey.spec.js"
+      ],
+      "tier": "smoke"
     }
   ]
 }

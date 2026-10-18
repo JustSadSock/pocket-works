@@ -87,7 +87,7 @@ function setMode(next){
   ui.menu.hidden=next!=='menu';ui.pause.hidden=next!=='paused';ui.result.hidden=next!=='dead'&&next!=='won';
   ui.hud.hidden=next!=='playing'&&next!=='paused';
   ui.touch.hidden=next!=='playing'||!touch;
-  ui.pauseBtn.hidden=next!=='playing';
+  ui.pauseBtn.hidden=next!=='playing'||mouseLocked;
   ui.cross.hidden=next!=='playing';
   if(next!=='playing'){shootHeld=false;gamepadFire=false;movement.x=movement.y=0;padMove.x=padMove.y=0;keys.clear();resetStick();accumulator=0;}
   if(next!=='playing'&&document.pointerLockElement===canvas)document.exitPointerLock?.();
@@ -148,7 +148,8 @@ function begin(resume=false){
     setQuality(quality);
     world.nearChunks(state.x,state.z);
     syncHUD();
-    if(!touch && canvas.requestPointerLock)canvas.requestPointerLock()?.catch?.(()=>{});
+    // An immediate pointer lock would intercept the visible pause control.
+    // Desktop aiming begins only after the player clicks the actual 3D view.
   }catch(error){fatal(error);}
 }
 function startWave(number){
@@ -411,7 +412,7 @@ function pause(){
 function resume(){
   if(mode!=='paused')return;
   setMode('playing');last=performance.now();
-  audioStart();if(!touch&&canvas.requestPointerLock)canvas.requestPointerLock()?.catch?.(()=>{});
+  audioStart(); // Do not recapture the mouse until the player clicks the world.
 }
 function menu(){snapshot();setMode('menu');}
 function confirmNewRun(){
@@ -485,6 +486,7 @@ document.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')shootHeld=f
 document.addEventListener('mousemove',e=>{if(mouseLocked)look(e.movementX,e.movementY);});
 document.addEventListener('pointerlockchange',()=>{
   const was=mouseLocked;mouseLocked=document.pointerLockElement===canvas;
+  ui.pauseBtn.hidden=(mode!=='playing'||mouseLocked);
   if(was&&!mouseLocked&&mode==='playing'&&!touch)pause();
 });
 document.addEventListener('keydown',e=>{
