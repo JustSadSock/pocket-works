@@ -193,7 +193,7 @@ function buildLevel(nextLevel = level) {
   completion = 0;
   completedAt = 0;
   elements.level.value = String(level).padStart(2, '0');
-  elements.time.value = formatTime(0);
+  elements.time.textContent = formatTime(0);
   const bestTime = Number(store.get('bestTimes', {})[level]);
   elements.best.value = bestTime > 0 ? formatTime(bestTime) : '—';
 }
@@ -203,7 +203,7 @@ function demoLevel() {
   maze = createMaze({ ...dimensions, seed: 0x0f7e5a });
   marble.reset({ x: 1.5, y: 1.5 });
   elements.level.value = '—';
-  elements.time.value = '00:00.00';
+  elements.time.textContent = '00:00.00';
   elements.best.value = '—';
 }
 
@@ -395,7 +395,7 @@ function effectiveTilt(now) {
 function updateHud(now) {
   if (now - hudUpdatedAt < 45) return;
   hudUpdatedAt = now;
-  if (state === 'playing' || state === 'paused') elements.time.value = formatTime(elapsed);
+  if (state === 'playing' || state === 'paused') elements.time.textContent = formatTime(elapsed);
 }
 
 function rollingAudio(now) {
