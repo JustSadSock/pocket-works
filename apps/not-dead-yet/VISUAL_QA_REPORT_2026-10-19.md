@@ -207,6 +207,42 @@ run, not inferred from CPU mesh tests.
   is the remaining independent end-to-end gate; its completion should be
   checked before claiming *all* suites have passed.
 
+## Final CI closure — v2.1.7
+
+All scoped suites are now independently confirmed green on GitHub Actions:
+
+| Scope | Github Actions | Result |
+|---|---|---|
+| Full game journey, inventory, doors, story, saves and controls | [39175833714](https://github.com/JustSadSock/pocket-works/actions/runs/39175833714) | **46 passed, 2 deliberately skipped, 0 failed** |
+| Deterministic CPU/material/geometry tests after publishing v2.1.7 | [39176418513](https://github.com/JustSadSock/pocket-works/actions/runs/39176418513) | **93/93 passed** |
+| Actual WebGL image/room screenshot tests, post-hall-fixture change | [39175557084](https://github.com/JustSadSock/pocket-works/actions/runs/39175557084) | **12/12 passed** |
+| Short high-signal power, keyboard, reload-under-GPU-stall scenarios | [39175830656](https://github.com/JustSadSock/pocket-works/actions/runs/39175830656) | **9/9 passed** |
+
+Two browser tests were conditionally skipped in the full cross-device
+journey. They were not counted as passes.
+
+### Additional visual similarity audit
+
+A one-off numerical review sampled a common cropped center region of the
+actual post-fix corridor screenshots for all 5 deterministic seeds.
+For each browser project, the cropped pixels were resized to 64×64 RGB
+and mean absolute per-channel pixel difference (0–255) was computed for
+each of the 10 cross-seed pairs.
+
+- Mobile Chromium: smallest difference **5.0/255** (seeds 413, 8787);
+  median difference **24.1/255**.
+- Mobile WebKit: smallest **5.2/255** (413, 8787), median **21.3/255**.
+- Desktop Chromium: smallest **4.7/255** (222, 14), median **17.85/255**.
+
+The test does **not** imply these runs share the same underlying physical
+map; it shows that two procedurally different layouts can still produce
+almost identical *visible corridor compositions*. This is an outstanding
+art-direction limitation, despite successful new fixture geometry and
+five underlying room-family designs. The next work should vary
+architectural silhouette, junction patterns, door prominence, clutter
+composition and **fixture-attached light placement**, not merely repaint
+the same corridor layout with another pastel shade.
+
 ## Outstanding acceptance gates
 
 - [x] Confirm initial visual Playwright browser tests **pass**, including
