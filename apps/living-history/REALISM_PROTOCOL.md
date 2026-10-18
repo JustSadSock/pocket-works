@@ -51,7 +51,7 @@ node apps/living-history/qa/realism-ensemble.mjs --seeds=413,7777,43821,9001 --y
 node apps/living-history/qa/realism-aggregate.mjs --inputs=/tmp/realism-413.json,/tmp/realism-413-drought.json --output=/tmp/realism-paired.json
 ```
 
-Каждый прогон пишет машинный `.json` и читаемый `.md` с полными годовыми значениями, размерами выборок, предупреждениями и историческими разницами. В CI `realism-25-year` — smoke, а `realism-drought-25-year`, `realism-50-year`, `realism-100-year` — deep: их наличие в qa.plan.json **не означает**, что deep реально выполнялись при каждой отправке PR.
+Каждый прогон пишет машинный `.json` и читаемый `.md` с полными годовыми значениями, размерами выборок, предупреждениями и историческими разницами. В CI `realism-25-year` — smoke на четырёх seed. Уже существующий deep-набор `historical-ensemble` выполняет 100-летние траектории и дополнительно сохраняет количественный отчёт; `historical-sensitivity` запускает 25-летние сценарии чувствительности. Парные normal/drought за 25 лет и 50-летние горизонты запускаются через CLI вручную: они **не входят** в обычный CI. Ранее доступный `historical-monte-carlo` остаётся CLI-командой `qa/historical-calibration.mjs --group=summary`, но не отдельной suite из-за ограничения 16 suite и 20 задач платформы.
 
 ## 6. Методологические недостатки
 
