@@ -113,6 +113,9 @@ function leave(){
 start.addEventListener('click',()=>{if(start.disabled)return;try{client.sendGame({type:'start',size:selectedSize,beta:false});start.disabled=true;message('Создаём поле сражения…');}catch(e){message(String(e.message||e));}});
 copyCode.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(roomCode());message('Код '+roomCode()+' скопирован.');}catch{input.value=roomCode();input.select();message('Код выделен · скопируй его.');}});
 window.FogPocketNet={create,join,issue,leave,canIssue,refresh};
+// Visible lobby actions become usable only after the online bridge has loaded.
+$('createRoomBtn').disabled=false;
+$('joinRoomBtn').disabled=false;
 for(const id of ['settingsMenuBtn','victoryMenuBtn','victoryOkBtn'])$(id)?.addEventListener('click',()=>{if(active)leave();},true);
 // Restore a valid seat only for the same Pocket ID or the current guest tab.
 void getPocketIdentity({force:true}).then(identity=>{
