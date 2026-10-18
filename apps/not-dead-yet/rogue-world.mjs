@@ -6,7 +6,7 @@ export const TILE=1.27;
 const HASH=(...values)=>{let h=2166136261;for(const value of values){h=Math.imul(h^(value|0),16777619);h^=h>>>13}return(h^(h>>>16))>>>0};
 const KEY=(x,z)=>x+','+z;
 const TYPE=['living','kitchen','bedroom','bathroom','closet','nursery'];
-export const ROOM_NAMES={living:'Гостиная',kitchen:'Кухня',bedroom:'Спальня',bathroom:'Санузел',closet:'Кладовка',nursery:'Детская',hall:'Коридор'};
+export const ROOM_NAMES={living:'Гостиная',kitchen:'Кухня',bedroom:'Спальня',bathroom:'Санузел',closet:'Кладовка',nursery:'Детская',toilet:'Туалет',hall:'Коридор'};
 export const REWARDS={
  ammo:{name:'Патроны',text:'Несколько патронов в жестяной коробке'},
  tea:{name:'Крепкий чай',text:'Дыхание становится ровнее'},
@@ -52,10 +52,10 @@ export function generateSector(seed,cx,cz,epoch=0){
  const rooms=[],props=[],doors=[];
  const add=(room,type,x,z,w,d,h,solid=true)=>props.push({room:room.id,type,x:cx*SECTOR+x,z:cz*SECTOR+z,w,d,h,solid});
  for(let i=0;i<specs.length;i++){
-  const spec=specs[i],room={...spec,id:KEY(cx,cz)+':'+i,type:spec.service?'closet':plan.walkthrough&&i===0?'living':plan.walkthrough&&i===2?'bedroom':types[i],epoch,cx,cz};
+  const spec=specs[i],room={...spec,id:KEY(cx,cz)+':'+i,type:spec.service?(plan.name==='service-nook'?'toilet':'closet'):plan.walkthrough&&i===0?'living':plan.walkthrough&&i===2?'bedroom':types[i],epoch,cx,cz};
   // Only trim the OUTSIDE edge; keep the room entrance reachable.
-  if(!spec.service&&i%2===0&&rand()<.22&&room.x0<room.x1-3)room.x0++;
-  if(!spec.service&&i%2===1&&rand()<.22&&room.x1>room.x0+3)room.x1--;
+  if(!spec.service&&!(plan.walkthrough&&(i===0||i===2))&&i%2===0&&rand()<.22&&room.x0<room.x1-3)room.x0++;
+  if(!spec.service&&!(plan.walkthrough&&(i===0||i===2))&&i%2===1&&rand()<.22&&room.x1>room.x0+3)room.x1--;
   for(let z=room.z0;z<=room.z1;z++)for(let x=room.x0;x<=room.x1;x++)paint(x,z,2);
   if(spec.via!=='walkthrough'){
    const entryZ=spec.entryZ,entryX=spec.face==='left'?room.x1+1:room.x0-1;
@@ -65,7 +65,7 @@ export function generateSector(seed,cx,cz,epoch=0){
   rooms.push(room);
   const centerX=(room.x0+room.x1)/2,centerZ=(room.z0+room.z1)/2;
   if(spec.service){
-   add(room,'shelf',room.x0+.48,room.z0+.27,.32,.44,1.65);
+   add(room,room.type==='toilet'?'toilet':'shelf',room.x0+.48,room.z0+.27,room.type==='toilet'?.55:.32,.44,room.type==='toilet'?.78:1.65);
   }else if(room.type==='living'){
    add(room,'sofa',centerX,room.z0+.75,2.12,.72,1.08);
    add(room,'wallunit',room.x1-.14,centerZ,.42,1.82,2.25);
@@ -75,8 +75,8 @@ export function generateSector(seed,cx,cz,epoch=0){
    add(room,'fridge',room.x1-.12,room.z0+.7,.55,.65,1.92);
    add(room,'table',centerX,centerZ+.30,1.12,.76,.74);
   }else if(room.type==='bedroom'||room.type==='nursery'){
-   add(room,'bed',plan.walkthrough&&i===2?room.x1-.80:centerX-.35,plan.walkthrough&&i===2?room.z0+2.25:room.z0+1.05,1.25,1.78,.71);
-   add(room,'wardrobe',room.x1-.20,room.z1-.48,.50,.79,2.16);
+   add(room,'bed',plan.walkthrough&&i===2?room.x1-.80:spec.face==='left'?room.x0+.62:room.x1-.62,plan.walkthrough&&i===2?room.z0+2.25:spec.entryZ<=(room.z0+room.z1)/2?room.z1-1.05:room.z0+1.05,1.25,1.78,.71);
+   add(room,'wardrobe',plan.walkthrough&&i===2?room.x1-.20:spec.face==='left'?room.x0+.18:room.x1-.18,plan.walkthrough&&i===2?room.z1-.48:room.z0+.48,.50,.79,2.16);
   }else if(room.type==='bathroom'){
    add(room,'bath',room.x0+1.12,room.z0+.52,1.58,.65,.65);
    add(room,'sink',room.x1-.30,room.z1-.40,.47,.43,.86);
