@@ -149,6 +149,17 @@
       "integration": "Memory state and phase are serialized by Apartment.save(); game action and renderer read the same state.",
       "provenance": "Original local procedural geometry; no external assets.",
       "maxBytes": 260000
+    },
+    {
+      "id": "family-radio-1.5",
+      "tool": "webgl",
+      "source": "renderer.mjs",
+      "output": "apps/not-dead-yet/renderer.mjs",
+      "role": "Diegetic period-specific Bakelite radio with amber/ivory dial, wooden veneer and tactile tuning controls.",
+      "acceptance": "Positioned on the actual living-room table and the world-interaction radius matches the prop; mobile and desktop can reach all three channels.",
+      "integration": "The mesh reads Apartment.radio.channel; gameplay and offline WebAudio use the same state. Story text remains captioned and accessible when muted.",
+      "provenance": "Original procedural WebGL geometry, original local synthesized audio and Russian authored text, no downloaded assets.",
+      "maxBytes": 30000
     }
   ],
   "evidence": {

@@ -68,6 +68,16 @@ export function createSoundscape({Context=(typeof window!=='undefined'?(window.A
       hiss({duration:1.2,frequency:360,volume:.007,pan});break;
      case 'radio':
       hiss({duration:.9,frequency:1500,volume:.008,pan});break;
+     case 'radio-static':
+      hiss({duration:1.0,frequency:1600,volume:.023,pan});
+      note(151,{duration:.31,volume:.012,type:'triangle',end:119,pan});break;
+     case 'radio-melody':
+      hiss({duration:.42,frequency:720,volume:.014,pan});
+      for(let i=0;i<5;i++)note([294,330,392,330,262][i],{type:'sine',volume:.018,duration:.26,at:now+.16+i*.25,pan});break;
+     case 'radio-memory':
+      hiss({duration:.55,frequency:550,volume:.013,pan});
+      for(let i=0;i<5;i++)note([262,294,330,392,330][i],{type:'triangle',volume:.022,duration:.36,at:now+.15+i*.30,pan});
+      note(131,{duration:1.2,volume:.014,type:'sine',end:165,at:now+.30,pan});break;
      case 'door':
       note(132,{type:'triangle',end:71,duration:.39,volume:.033,pan});
       hiss({duration:.28,volume:.020,frequency:520,pan});

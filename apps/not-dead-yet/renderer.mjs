@@ -161,6 +161,26 @@ function doorGeometry(out,world){
  }
 }
 
+// Bakelite tabletop radio with tuning needle, ivory dial and woven speaker cloth.
+// Its dial follows the actual station in the chapter, not a decorative HUD number.
+function familyRadioMesh(out,world){
+ const pos=world.radioPosition(),x=pos.x*SCALE,z=pos.z*SCALE-.12;
+ const veneer=[.31,.20,.12],black=[.18,.16,.13],ivory=[.69,.61,.47],brass=[.60,.45,.24];
+ box(out,x,.835,z,.80,.28,.36,veneer,6);
+ box(out,x,1.09,z,.83,.035,.39,[.43,.29,.17],6);
+ box(out,x-.19,.894,z+.195,.35,.17,.026,[.37,.32,.23],7);
+ for(let i=0;i<6;i++)box(out,x-.33+i*.055,.94,z+.213,.015,.10,.008,[.18,.17,.16],9);
+ box(out,x+.18,.89,z+.195,.28,.19,.025,ivory,8);
+ box(out,x+.18,.98,z+.215,.23,.025,.016,brass,9);
+ const station=world.radio?.channel??0;
+ box(out,x+.08+station*.10,.92,z+.224,.014,.10,.020,black,9);
+ for(let i=0;i<2;i++)round(out,x+.11+i*.20,.868,z+.23,.047,.043,.040,[.38,.34,.26],9);
+ // Bent antenna and two feet, no cyberpunk lighting or screens.
+ box(out,x+.34,1.12,z-.08,.012,.39,.013,brass,9);
+ box(out,x+.34,1.48,z-.08,.022,.035,.022,ivory,9);
+ for(const side of [-1,1])box(out,x+side*.30,.79,z-.06,.07,.06,.12,black,6)
+}
+
 function apartmentMesh(world){
  const out=[],M=SCALE,ceil=3.35;
  const tileColor=(x,z)=>{if(world.cell(x,z)===1)return SCHEME.hall;const r=world.rooms.find(r=>x>r.x0&&x<r.x1&&z>r.z0&&z<r.z1);return r?SCHEME[r.type]:SCHEME.hall};
@@ -268,6 +288,7 @@ function apartmentMesh(world){
   if(f.type==='door'){box(out,x,.03,z,w,h,d,[.26,.18,.11],6);box(out,x+w*.37,1.30,z+d*.6,.14,.08,.09,brass,9);box(out,x,2.72,z,w*.92,.07,.06,[.41,.32,.19],6)}
  }
  apartmentDetail(out,world,M);
+ familyRadioMesh(out,world);
  for(const prop of world.objects()){const room=world.room(prop.room);
   if(room&&prop.solid){const lamp=world.point(prop.room);
    castWallShadow(out,room,prop,{x:lamp.x*M,z:lamp.z*M,y:2.68})}

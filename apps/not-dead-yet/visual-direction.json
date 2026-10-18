@@ -4,13 +4,13 @@
   "product": "not-dead-yet",
   "direction": {
     "premise": "A senior walks through an old personal apartment. Household objects remain tangible and recognizable while memory changes which doorway was behind him.",
-    "composition": "Near-full-screen first-person dwelling, no extra status panels. The same minimal E/touch context action becomes 'Remember' only when the protagonist recognizes an unstable household object.",
+    "composition": "Almost entirely first-person domestic interiors. Journal opens within the existing inventory; no extra permanent HUD clutter or unrelated giant panels.",
     "shapeLanguage": "Old-fashioned lacquered double-leaf wooden doors, glass insets, nonmodular heavy cabinets, brass handles, coat rack silhouettes, Soviet sideboards and inexpensive domestic upholstery.",
     "surfaceAndMaterial": "Late Soviet and post-Soviet lived-in domestic realism: varnished glass-panel doors, wall carpet, heavy polished wall-unit with china, enamel kettle, kitchen oilcloth, familiar faded flower wallpaper and herringbone parquet. More readable textile seams, sofa cushions, worn wardrobe moldings, enamel fridge magnets and shallow geometric wall cast shadows.",
     "paletteLogic": "Desaturated nicotine cream, brown wood and muted sage replace teal industrial corridors; isolated warm brass marks objects and danger appears as faint rusty red.",
     "typography": "Small utilitarian location and objective labels in play; larger compressed worn theatre-poster title only in the initial nocturnal menu.",
-    "signature": "A lived-in irregular Soviet flat whose proportions vary by run while old saves stay intact; unseen rooms acquire recognizable wrong details that the player can touch to recover a memory and slow the next change.",
-    "distinction": "Real domestic identity and actionable memory discrepancies, not haunted industrial corridors or random screen glitches. Recognition has a concrete recovery effect.",
+    "signature": "A familiar post-Soviet apartment that changes behind the old protagonist's back; his hands can tune a textured tabletop radio while a quiet family story emerges from real collected belongings.",
+    "distinction": "Memory is participatory: recognize distorted furniture, tune a radio, connect family objects and resolve a personally meaningful ending. Never a standard gun-vs-monsters progression.",
     "spatialRationale": "A small persistent HUD leaves almost the entire view for walls and belongings. Separate left/right thumb surfaces keep first-person navigation usable in portrait.",
     "comparisons": [
       {
@@ -33,7 +33,7 @@
     "character": "Measured walking inertia and subtle gait synchronized to movement; rounded enemies sway slightly, avoiding ceaseless random camera wobble.",
     "action": "A mistaken family object can be recognized from close physical range, reducing stress and pausing further apartment rearrangements. The interaction shares the existing E/mobile button.",
     "anticipation": "A shadow at a doorway or the sound of furniture shifting warns of a changing remembered room before it can be revisited.",
-    "response": "Holding E or tapping the interaction button opens and closes doors with latch sounds and changing floor shadows; visible HUD tells what the action will do.",
+    "response": "Tuning a physical Bakelite dial switches audible channels and can reveal a meaningful familiar transmission, while respecting reduced motion and disabled audio.",
     "followThrough": "After a glance away, a room may have moved its door; the next visit resolves into a visibly different furniture arrangement while objectives remain accessible.",
     "interruption": "Pointercancel and focus loss always reset movement; pause saves state and freezes pursuit without claiming the user has died.",
     "reducedMotion": "Reduce-motion disables head-bob while keeping navigation, textures, enemy visibility and action states intact."
@@ -57,8 +57,8 @@
     "navigation": "world-travel",
     "chromeTopology": "unframed-scene",
     "dominantMotion": "immediate",
-    "primaryVerb": "Navigate a physically furnished apartment in first person, gather familiar items, disperse perceived figures and open the home door.",
-    "physicalFeedback": "Keyboard or thumb input immediately changes 3D position; look gesture moves sight line while firearm action changes rounds, sound and enemies.",
+    "primaryVerb": "Walk through the mutable Soviet flat, recognize misplaced memories, collect family keepsakes, tune a Bakelite radio and choose whether to leave.",
+    "physicalFeedback": "Walking and looking navigate room geometry, door hinges follow actual collision, the radio tuning dial and audible channel change together, and narrative recognition changes story and stress state.",
     "spatialRationale": "Low-priority HUD hugs the top/phone edges while the inhabited apartment occupies full screen; interactive inventory is a temporary overlay.",
     "comparisons": [
       {
@@ -93,22 +93,22 @@
       },
       {
         "slug": "chyepukha",
-        "spatialDifference": "Rendered brutalist tunnels and open 3D fog replace the paper manuscript and framed shared writing workspace.",
+        "spatialDifference": "A fully furnished 3D post-Soviet apartment with old doors and a tabletop radio replaces a paper manuscript and framed communal writing surface.",
         "interactionDifference": "Survival movement and exploration have immediate spatial consequences rather than alternating between text drafting and chapter reveal."
       },
       {
         "slug": "zamazka",
-        "spatialDifference": "An eye-height full-bleed 3D labyrinth, without Zamazka's tabletop image restorations and picture comparison gallery.",
+        "spatialDifference": "A lived-in first-person Soviet apartment differs from a tabletop image restoration and comparison gallery.",
         "interactionDifference": "Continuous dual-stick physical exploration and real-time survival replaces restoring and voting on altered artworks."
       },
       {
         "slug": "living-history",
-        "spatialDifference": "A narrow first-person concrete labyrinth with nearly invisible interface replaces the readable broad overhead village model.",
+        "spatialDifference": "Eye-height exploration of private family rooms with 1980s furniture differs from a broad overhead historical village simulation.",
         "interactionDifference": "Every swipe turns the character's eyes while movement can provoke stalkers, rather than selecting or observing historical households."
       },
       {
         "slug": "folio",
-        "spatialDifference": "The player sees a foggy 3D service tunnel, not Folio's bright framed illustration and brush workbench.",
+        "spatialDifference": "Perspective through domestic furniture and worn wallpaper replaces a bright drawing workbench.",
         "interactionDifference": "Walk, turn and hide from silhouettes instead of drawing strokes, filling regions and managing layers."
       },
       {
@@ -125,6 +125,11 @@
         "slug": "pepelny-dozor",
         "spatialDifference": "Eye-height corridor navigation replaces top-down abbey and bottom bell plate.",
         "interactionDifference": "Free movement with 3D flashlight replaces pivoting a fixed lamp."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "A continuous first-person Soviet family apartment with physical radio, furniture and localized perception differs from Perekos's compact pixel-art wizard-duel battleground.",
+        "interactionDifference": "The player navigates rooms, collects memory fragments and tunes a radio to resolve a personal story instead of composing competitive conditional rune chains and resolving 1v1 spell tactics."
       }
     ]
   }
