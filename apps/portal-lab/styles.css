@@ -61,3 +61,46 @@ body[data-lab-view="observer"] .canvas-frame{background:#09161c}
 body[data-lab-view="observer"] .readouts>div:nth-child(n+3){display:none}
 body[data-lab-view="observer"] .readouts{grid-template-columns:1fr 1fr}
 @media(max-width:980px){.observer-panel>.optical-diagnostics{grid-column:1/-1}}
+
+/* v0.4: specimen bench — diagnostic rather than decorative cards */
+body:not([data-lab-view="matter"]) .matter-panel{display:none}
+body[data-lab-view="matter"] .observer-panel,
+body[data-lab-view="matter"] .beam-settings,
+body[data-lab-view="matter"] .readouts,
+body[data-lab-view="matter"] .clocks{display:none}
+body[data-lab-view="matter"] #matter-panel{display:block}
+body[data-lab-view="matter"] .instrument{background:#e4e8df}
+body[data-lab-view="matter"] .views{grid-template-columns:repeat(4,auto)}
+body[data-lab-view="matter"] #space{cursor:default}
+body[data-lab-view="matter"] #shoot:disabled{opacity:.46;cursor:not-allowed}
+body[data-lab-view="matter"] .stage-copy .micro{color:#607f74}
+.matter-panel{border-bottom:2px solid #799589;padding-bottom:20px;margin-bottom:21px}
+.matter-panel .section-caption{margin-bottom:13px;color:#416960}
+.matter-description{font-size:12px;color:#4f6c64;line-height:1.6;margin-bottom:11px}
+.matter-phase{display:flex;align-items:center;gap:8px;min-height:32px;border:1px solid #a0b7aa;background:#d7e5d8;color:#27594d;padding:7px 10px;font:bold 11px ui-monospace,Consolas,monospace;letter-spacing:.025em;margin-bottom:15px}
+.matter-phase:before{content:"";width:6px;height:6px;background:#4c9780;border-radius:50%;flex-shrink:0}
+.matter-field{margin:15px 0 0}
+.matter-field select{margin-top:7px}
+.matter-material-note{font-size:10px;line-height:1.45;color:#799185;margin-top:6px}
+.matter-axis{margin-top:8px}
+.matter-panel .range-field{margin-top:15px}
+.matter-results{display:grid;grid-template-columns:1fr 1fr;margin-top:20px;border-top:1px solid #b2c5b7;border-left:1px solid #b2c5b7}
+.matter-results>div{border-right:1px solid #b2c5b7;border-bottom:1px solid #b2c5b7;padding:11px 8px;min-height:88px}
+.matter-results span{display:block;font-size:9px;line-height:1.45;color:#607a6e;letter-spacing:.035em;min-height:26px}
+.matter-results strong{display:inline-block;font:650 22px ui-monospace,Consolas,monospace;color:#2c5b53;font-variant-numeric:tabular-nums}
+.matter-results small{display:block;font-size:9px;color:#7e9587;line-height:1.5;margin-top:2px}
+.matter-metadata{font:10px/1.8 ui-monospace,Consolas,monospace;color:#536f65;display:flex;gap:5px;flex-wrap:wrap;flex-direction:column;margin-top:14px}
+.matter-metadata b{color:#265b52}
+.matter-limit{padding-top:8px;font:10px/1.6 ui-monospace,Consolas,monospace;color:#5b766e}
+.matter-caveat{border-top:1px dashed #acc0b0;margin:14px 0 0;padding-top:11px;color:#7d9182;font-size:10px;line-height:1.65}
+.views button{padding-left:12px;padding-right:12px}
+@media(max-width:1100px){body[data-lab-view="matter"] .matter-panel{display:grid!important;grid-template-columns:1fr 1fr;column-gap:20px;align-items:start}
+body[data-lab-view="matter"] .matter-panel>.section-caption,.matter-description,.matter-phase,.matter-results,.matter-metadata,.matter-limit,.matter-caveat{grid-column:1/-1}
+body[data-lab-view="matter"] .matter-field{min-width:0}
+body[data-lab-view="matter"] .matter-results{margin-top:12px}}
+@media(max-width:540px){.views{display:grid;grid-template-columns:repeat(4,1fr)!important;width:100%}
+.views button{font-size:9px;padding:2px 4px;white-space:nowrap}
+body[data-lab-view="matter"] .matter-panel{column-gap:12px}
+.matter-results strong{font-size:20px}
+body[data-lab-view="matter"] .canvas-frame{min-height:340px;height:min(54dvh,520px)}
+body[data-lab-view="matter"] .canvas-hint{font-size:9px;opacity:.8}}
