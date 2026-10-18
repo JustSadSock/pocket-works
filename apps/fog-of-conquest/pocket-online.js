@@ -20,6 +20,29 @@ lobby.append(leaveButton);
 const turn=document.createElement('span');turn.id='onlineTurnStatus';turn.setAttribute('aria-live','polite');$('controls')?.prepend(turn);
 let client=null,room=null,view=null,joined=false,phase='closed',pending=null;
 let connectPromise=null,selectedSize='medium',generation=0,operation=0,requestSequence=0,warning='';
+let pendingTimeout=null;
+function releasePending(){
+ pending=null;
+ if(pendingTimeout!==null)clearTimeout(pendingTimeout);
+ pendingTimeout=null;
+}
+function watchPending(){
+ if(pendingTimeout!==null)clearTimeout(pendingTimeout);
+ const expected=pending?.requestId;
+ if(!expected)return;
+ pendingTimeout=setTimeout(()=>{
+   if(!pending||pending.requestId!==expected)return;
+   pending.tries=(pending.tries||0)+1;
+   if(pending.tries>2){
+     releasePending();
+     message('Нет подтверждения приказа. Состояние будет обновлено при следующей синхронизации.');
+     refresh();return;
+   }
+   if(connected()&&joined)try{client.sendGame({type:'sync'});}
+   catch{}
+   watchPending();
+ },7000);
+}
 const scopedStore=base=>({
  getItem:key=>base.getItem('fog-of-conquest:net:'+key),
  setItem:(key,value)=>base.setItem('fog-of-conquest:net:'+key,value),
@@ -60,7 +83,7 @@ function setPhase(next,text){
 function clearSession(text='Комната закрыта.',destroyClient=false){
  generation++;operation++;connectPromise=null;
  if(destroyClient&&client){client.close();client=null;}
- room=null;view=null;joined=false;pending=null;
+ room=null;view=null;joined=false;releasePending();
  // No room ID from a previous profile may survive a stale reconnect.
  if(client){client.roomId=null;client.persist();}
  phase='closed';
@@ -82,7 +105,7 @@ function acceptView(next){
  // A delayed, out-of-order state must never overwrite the latest snapshot.
  if(view?.game&&next.game&&next.game.revision<previous)return;
  view=next;joined=true;
- if(pending&&next.game&&next.game.revision>pending.revision)pending=null;
+ if(pending&&next.game&&next.game.revision>pending.revision)releasePending();
  if(next.game){
    phase=next.game.phase==='finished'||next.phase==='finished'?'finished':'battle';
    window.FogApplyOnlineView?.(next);
@@ -94,7 +117,7 @@ function acceptView(next){
 }
 function recoverPending(net){
  if(!pending||!connected()||phase!=='battle'||!joined)return;
- if(view.game.revision!==pending.revision){pending=null;refresh();return;}
+ if(view.game.revision!==pending.revision){releasePending();refresh();return;}
  try{
    net.sendGame(pending.command); // Same request ID and revision, never a new order.
    refresh();
@@ -120,11 +143,11 @@ function installListeners(net){
    if(!current()||!room||packet.roomId!==room.roomId)return;
    const event=packet.event;
    if(event?.type==='notice'){
-     if(!event.requestId||!pending||event.requestId===pending.requestId)pending=null;
+     if(!event.requestId||!pending||event.requestId===pending.requestId)releasePending();
      message(String(event.payload||'Приказ отклонён'));refresh();return;
    }
    if(event?.type==='ack'){
-     if(pending?.requestId===event.requestId)pending=null;
+     if(pending?.requestId===event.requestId)releasePending();
      if(event.status==='duplicate')message('Повторный приказ уже учтён сервером.');
      refresh();return;
    }
@@ -166,7 +189,7 @@ async function ensure(){
  const identityKey=pocketIdentitySessionKey(identity);
  const storage=storageFor(identity);
  if(client&&(client.identityKey!==identityKey||client.storage!==storage)){
-   client.close();client=null;joined=false;room=null;view=null;pending=null;connectPromise=null;
+   client.close();client=null;joined=false;room=null;view=null;releasePending();connectPromise=null;
  }
  if(client&&connected())return client;
  if(connectPromise)return connectPromise;
@@ -194,7 +217,7 @@ async function create(size){
    const net=await ensure();
    if(current!==operation)return;
    if(net.roomId)net.leaveRoom();
-   room=null;view=null;joined=false;pending=null;
+   room=null;view=null;joined=false;releasePending();
    setPhase('connecting','Создаём комнату…');
    net.createRoom('fog-of-conquest',{});
  }catch(error){if(current===operation){message(String(error?.message||error));refresh();}}
@@ -207,7 +230,7 @@ async function join(code){
    const net=await ensure();
    if(current!==operation)return;
    if(net.roomId)net.leaveRoom();
-   room=null;view=null;joined=false;pending=null;
+   room=null;view=null;joined=false;releasePending();
    setPhase('connecting','Входим в комнату…');
    net.joinRoom(trimmed);
  }catch(error){if(current===operation){message(String(error?.message||error));refresh();}}
@@ -215,9 +238,9 @@ async function join(code){
 function issue(action){
  if(!canIssue())return false;
  const command={type:'act',requestId:requestId(),revision:view.game.revision,action};
- pending={...command,command};
- try{client.sendGame(command);refresh();return true;}
- catch(error){pending=null;message('Приказ не отправлен: '+String(error?.message||error));refresh();return false;}
+ pending={...command,command,tries:0};
+ try{client.sendGame(command);watchPending();refresh();return true;}
+ catch(error){releasePending();message('Приказ не отправлен: '+String(error?.message||error));refresh();return false;}
 }
 function leave(){
  // Explicit leave (unlike connection loss) forfeits an active match.
