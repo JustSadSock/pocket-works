@@ -1,6 +1,6 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
-import {createGame,shortestPath,routeVehicle,stopVehicle,autoRoute,botPlan,advanceGame,winner} from './engine.js';
+import {createGame,shortestPath,routeVehicle,stopVehicle,autoRoute,offerRoute,botPlan,advanceGame,winner} from './engine.js';
 import {renderCity,pointerNode,pointerCar} from './art.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -16,6 +16,8 @@ let mode='menu',local=null,net=null,connected=false,me=null,roomId='',remote=nul
 let name=store.getItem('name')||'Игрок',sound=store.getItem('sound')!=='off';
 let dialogKind='',pending='',intentCode='',connectingId=0,showNodes=false,stopMode=false,view=null;
 let drag=null,lastSnapshot=null,animation=null,raf=0,toastTimer=0,audio=null,confirmExit=false;
+let camera={zoom:1,x:.5,y:.5},pointers=new Map(),pinch=null,eventTimer=0;
+const difficultyKey='difficulty';
 const codeFromUrl=(new URLSearchParams(location.search).get('room')||'').toUpperCase().trim();
 const safeNumber=(value,defaultValue)=>Number.isFinite(value)?value:defaultValue;
 const phase=()=>mode==='menu'?'menu':mode==='connecting'?'connecting':mode==='practice'?(local?.phase==='finished'?'finished':'playing'):remote?.phase||'connecting';
@@ -32,8 +34,8 @@ function clickSound(kind='tap'){
   const Context=window.AudioContext||window.webkitAudioContext;if(!Context)return;
   audio ||=new Context();if(audio.state==='suspended')audio.resume();
   const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime;
-  o.type='triangle';o.frequency.setValueAtTime(kind==='delivery'?740:kind==='turn'?310:480,t);
-  o.frequency.exponentialRampToValueAtTime(kind==='delivery'?520:250,t+.11);
+  o.type=kind==='jam'?'sawtooth':'triangle';o.frequency.setValueAtTime(kind==='delivery'?740:kind==='jam'?175:kind==='turn'?310:480,t);
+  o.frequency.exponentialRampToValueAtTime(kind==='delivery'?520:kind==='jam'?110:250,t+.11);
   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.045,t+.007);
   g.gain.exponentialRampToValueAtTime(.0001,t+.115);o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.13);
  }catch{}
@@ -46,8 +48,22 @@ function savedPractice(){
  try{
   const s=JSON.parse(store.getItem('save')||'null');
   if(!s||s.phase!=='playing'||!s.map?.nodes||s.vehicles?.length!==4)return null;
-  if(s.turn<0||s.turn>=30||s.map.nodes.length!==35)return null;
-  return s;
+  if(!Number.isInteger(s.turn)||s.turn<0||s.turn>=30||s.map.nodes.length!==35)return null;
+  if(s.rulesVersion===2)return s;
+  // Carry v1 progress into the new road topology; re-route without teleporting cars.
+  const migrated=createGame(s.seed||123456789,'standard');
+  migrated.turn=s.turn;
+  migrated.scores=Array.isArray(s.scores)?s.scores.slice(0,2):[0,0];
+  migrated.deliveries=Array.isArray(s.deliveries)?s.deliveries.slice(0,2):[0,0];
+  for(let i=0;i<4;i++){
+   const old=s.vehicles[i],car=migrated.vehicles[i];
+   if(Number.isInteger(old.at)&&old.at>=0&&old.at<35)car.at=old.at;
+   if(Number.isInteger(old.goal)&&old.goal>=0&&old.goal<35&&old.goal!==car.at)car.goal=old.goal;
+   car.route=shortestPath(migrated.map,car.at,car.goal).slice(1);
+   car.steps=Math.max(0,Number(old.steps)||0);
+   car.delivered=Math.max(0,Number(old.delivered)||0);
+  }
+  return migrated;
  }catch{return null;}
 }
 function readRoom(){
@@ -59,7 +75,8 @@ function updateFrame(next){
   const old=lastSnapshot.positions,changed=positions.some((p,i)=>old[i]!==p);
   if(changed&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
    animation={start:performance.now(),old:old.map(node=>({node})),progress:0};
-   clickSound(next.last?.length?'delivery':'turn');
+   const event=next.last?.find(e=>e.type==='delivery'||e.type==='offer'||e.type==='jam');
+   clickSound(event?.type==='delivery'||event?.type==='offer'?'delivery':event?.type==='jam'?'jam':'turn');
   }
  }
  lastSnapshot=next?{seed:next.seed,turn:next.turn,positions}:null;
@@ -67,7 +84,7 @@ function updateFrame(next){
 function draw(){
  const g=game();if(!g)return;
  const anim=animation?Object.assign({},Object.fromEntries(animation.old.map((p,i)=>[i,p])),{progress:animation.progress}):null;
- view=renderCity($('cityCanvas'),g,{selected,preview:drag?.draft||null,showNodes,interpolation:anim});
+ view=renderCity($('cityCanvas'),g,{selected,preview:drag?.draft||null,showNodes,interpolation:anim,camera});
 }
 function animate(time){
  raf=0;if(!animation)return;
@@ -88,6 +105,7 @@ function render(){
  showOverlay('menu',p==='menu');showOverlay('lobby',p==='lobby');showOverlay('finish',p==='finished');
  showOverlay('connect',p==='connecting');$('dispatch').hidden=!live;
  $('pause').hidden=!(live||p==='lobby');$('resume').hidden=!savedPractice()||p!=='menu';
+ $('resumeNet').hidden=!(readRoom()&&p==='menu');
  $('turn').textContent=String(g?.turn||0).padStart(2,'0');
  $('leftScore').textContent=g?.scores?.[0]||0;$('rightScore').textContent=g?.scores?.[1]||0;
  $('leftName').textContent=mode==='online'?remote?.players?.[0]?.name||'ИГРОК 1':'ТЫ';
@@ -106,7 +124,7 @@ function render(){
   if(!ids.includes(selected))selected=ids[0];
   const vehicle=g.vehicles[selected];
   const spot=g.map.spots.find(x=>x.node===vehicle?.goal);
-  $('panelLabel').textContent=mode==='online'?'ВАШИ ДОСТАВКИ':'ВАШ АВТОПАРК';
+  $('panelLabel').textContent=mode==='online'?(g.rulesVersion!==2?'КОМНАТА ПРЕЖНЕЙ ВЕРСИИ':'ВАШИ ДОСТАВКИ'):'ВАШ АВТОПАРК';
   for(let i=0;i<2;i++){
    const v=g.vehicles[ids[i]],s=g.map.spots.find(x=>x.node===v?.goal),button=$('dispatch').querySelector('[data-vehicle="'+i+'"]');
    button.classList.toggle('active',v.id===selected);
@@ -118,12 +136,36 @@ function render(){
   $('auto').disabled=blocked;$('undo').disabled=blocked||!vehicle.route.length;
   $('clearRoute').disabled=blocked||!vehicle.route.length;
   $('stopMode').disabled=blocked;
+  const contractNames={rush:'СРОЧНЫЙ',freight:'ГРУЗ',regular:'ОБЫЧНЫЙ'};
+  const hasOffers=Array.isArray(g.offers)&&g.offers.length===2;
+  $('dispatch').querySelector('.offers').hidden=!hasOffers;
+  $('dispatch').querySelector('.offers-head').hidden=!hasOffers;
+  (g.offers||[]).forEach((offer,i)=>{
+   const btn=$('dispatch').querySelector('[data-offer="'+i+'"]');
+   btn.disabled=blocked;btn.dataset.id=String(offer.id);
+   $('offerType'+i).textContent=contractNames[offer.type]||'ЗАКАЗ';
+   $('offerPrize'+i).textContent='+'+offer.reward;
+   $('offerTime'+i).textContent=offer.ttl+' х. · '+(g.map.spots.find(s=>s.node===offer.node)?.name||'Район');
+  });
+  const idle=mode==='online'&&remote?.ready?.[mySide()]&&Date.now()-(remote?.lastAction?.[1-mySide()]||Date.now())>=180000;
+  $('claimIdle').hidden=!idle||!connected;
   $('next').disabled=mode==='online'&&!connected;
   $('next').innerHTML=mode==='online'?(ready?'ОТМЕНИТЬ ГОТОВНОСТЬ <span>↶</span>':'ГОТОВ К ХОДУ <span>✓</span>'):'СЛЕДУЮЩИЙ ХОД <span>→</span>';
   const steps=vehicle.route.length;
+  if(g.turn>0&&g.last?.length){
+   const msg=g.last.find(e=>e.side===mySide()&&(e.type==='offer'||e.type==='delivery'||e.type==='jam'));
+   if(msg?.type==='offer'||msg?.type==='delivery'){
+    $('worldEvent').hidden=false;$('worldEvent').textContent=(msg.type==='offer'?'Перехвачен заказ ':'Доставка ')+'+'+msg.points;
+   }else if(msg?.type==='jam'){$('worldEvent').hidden=false;$('worldEvent').textContent='Пробка на перекрёстке';}
+   else $('worldEvent').hidden=true;
+  }else $('worldEvent').hidden=true;
   const label=ready?'Ожидаем второго диспетчера':mode==='online'&&!connected?'Восстанавливаем соединение':stopMode?'Нажми на узел маршрута — здесь машина сделает остановку':steps?'Маршрут: '+steps+' участк. · можно перепланировать':'Нажми на перекрёсток или проведи путь пальцем';
   $('status').textContent=label;
   $('hint').textContent=label;
+  const last=g.last?.find(e=>(e.type==='delivery'||e.type==='offer')&&e.side===mySide());
+  if(last&&g.turn>0&&lastSnapshot?.turn===g.turn){
+   $('worldEvent').textContent=(last.type==='offer'?'Общий заказ ':'Доставка ')+'+'+last.points;
+  }
   $('stopMode').classList.toggle('chosen',stopMode);
  }
  if(p==='finished'&&g){
@@ -137,7 +179,8 @@ function render(){
  scheduleDraw();
  window.__AI_TEST_STATE__={mode,phase:p,turn:g?.turn,seed:g?.seed,scores:g?.scores,delivered:g?.deliveries,selected,
   cars:g?.vehicles?.map(v=>({at:v.at,goal:v.goal,route:v.route.slice(),stop:v.stop})),
-  connected,room:roomId?.slice(0,8)||'',ready:remote?.ready||null,cityReady:!!view};
+  connected,room:roomId?.slice(0,8)||'',ready:remote?.ready||null,cityReady:!!view,
+  offers:g?.offers?.map(o=>({...o})),traffic:g?.traffic,camera:{...camera},rulesVersion:g?.rulesVersion};
 }
 function selectCar(id){
  if(!myCars().includes(id))return false;
@@ -193,12 +236,26 @@ const canvas=$('cityCanvas');
 canvas.addEventListener('pointerdown',e=>{
  if(phase()!=='playing'||e.button!==0)return;
  e.preventDefault();
- const pt=screenPoint(e),g=game(),car=pointerCar(pt,view,g,mySide());
+ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pointers.size>=2){
+  const [p,q]=[...pointers.values()];pinch={distance:Math.hypot(p.x-q.x,p.y-q.y)||1,zoom:camera.zoom,x:camera.x,y:camera.y,mid:{x:(p.x+q.x)/2,y:(p.y+q.y)/2}};
+  drag=null;try{canvas.setPointerCapture(e.pointerId);}catch{}return;
+ }
+ const pt=screenPoint(e),g=game(),car=stopMode?null:pointerCar(pt,view,g,mySide());
  if(car!==null&&selected!==car)selectCar(car);
  drag={pointer:e.pointerId,origin:pt,car,node:pointerNode(pt,view,g.map),draft:[],moved:false};
  try{canvas.setPointerCapture(e.pointerId);}catch{}
 });
 canvas.addEventListener('pointermove',e=>{
+ if(pointers.has(e.pointerId))pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pinch&&pointers.size>=2){
+  const [p,q]=[...pointers.values()],now=Math.hypot(p.x-q.x,p.y-q.y)||1;
+  camera.zoom=Math.max(1,Math.min(2.6,pinch.zoom*now/pinch.distance));
+  const cx=(p.x+q.x)/2,cy=(p.y+q.y)/2;
+  camera.x=Math.max(.15,Math.min(.85,pinch.x-(cx-pinch.mid.x)/(Math.max(1,view?.scale||1)*800)));
+  camera.y=Math.max(.15,Math.min(.85,pinch.y-(cy-pinch.mid.y)/(Math.max(1,view?.scale||1)*1080)));
+  draw();return;
+ }
  if(!drag||drag.pointer!==e.pointerId||phase()!=='playing'||stopMode)return;
  const pt=screenPoint(e),g=game();
  if(Math.hypot(pt.x-drag.origin.x,pt.y-drag.origin.y)>8)drag.moved=true;
@@ -210,6 +267,8 @@ canvas.addEventListener('pointermove',e=>{
  if(g.map.graph[from]?.includes(n)&&!drag.draft.includes(n)){drag.draft.push(n);draw();}
 });
 canvas.addEventListener('pointerup',e=>{
+ pointers.delete(e.pointerId);
+ if(pinch){if(pointers.size<2)pinch=null;drag=null;draw();return;}
  if(!drag||drag.pointer!==e.pointerId)return;
  const d=drag;drag=null;
  try{canvas.releasePointerCapture(e.pointerId);}catch{}
@@ -218,18 +277,19 @@ canvas.addEventListener('pointerup',e=>{
  else if(!d.moved)mapTap(pt,d.car);
  else render();
 });
-function cancelDrag(){if(drag){drag=null;draw();}}
+function cancelDrag(){pointers.clear();pinch=null;if(drag){drag=null;draw();}}
 canvas.addEventListener('pointercancel',cancelDrag);canvas.addEventListener('lostpointercapture',cancelDrag);
 function startPractice(resume=false){
  closeNet();
  local=resume?savedPractice():null;
- if(!local)local=createGame((Date.now()>>>0)^0x435643);
+ if(!local)local=createGame((Date.now()>>>0)^0x435643,$('difficulty').value);
+ camera={zoom:1,x:.5,y:.5};
  botPlan(local);selected=0;mode='practice';lastSnapshot=null;animation=null;
  save();clickSound('turn');render();
 }
 function menu(){
  closeNet();local=null;remote=null;mode='menu';roomId='';lastSnapshot=null;animation=null;
- stopMode=false;drag=null;history.replaceState(null,'',location.pathname);
+ stopMode=false;drag=null;camera={zoom:1,x:.5,y:.5};history.replaceState(null,'',location.pathname);
  render();
 }
 function closeNet(leave=true){
@@ -264,6 +324,7 @@ async function connect(kind,code=''){
  current.on('room_joined',info=>{
   if(!active())return;
   if(info.gameId!=='trafficity'){menu();say('Это комната другой игры');return;}
+  camera={zoom:1,x:.5,y:.5};
   roomId=info.roomId;remote=info.state;connected=true;mode='online';selected=mySide()*2;lastSnapshot=null;
   history.replaceState(null,'',location.pathname+'?room='+roomId.slice(0,8));
   render();
@@ -302,6 +363,9 @@ function copyCode(){
 }
 $('solo').addEventListener('click',()=>startPractice());
 $('resume').addEventListener('click',()=>startPractice(true));
+$('resumeNet').addEventListener('click',()=>{if(readRoom())void connect('resume');else say('Комната уже закрыта');});
+$('difficulty').value=store.getItem(difficultyKey)||'standard';
+$('difficulty').addEventListener('change',()=>store.setItem(difficultyKey,$('difficulty').value));
 $('host').addEventListener('click',()=>onlineDialog('create'));
 $('join').addEventListener('click',()=>onlineDialog('join'));
 $('dialogCancel').addEventListener('click',closeDialog);
@@ -323,6 +387,26 @@ $('auto').addEventListener('click',()=>{
 $('undo').addEventListener('click',()=>commitRoute(game().vehicles[selected].route.slice(0,-1)));
 $('clearRoute').addEventListener('click',()=>commitRoute([]));
 $('stopMode').addEventListener('click',()=>{stopMode=!stopMode;clickSound();render();});
+document.querySelectorAll('[data-offer]').forEach(button=>button.addEventListener('click',()=>{
+ const offer=game()?.offers?.[Number(button.dataset.offer)];if(!offer)return;
+ if(mode==='online')send({type:'offer',vehicle:selected,offer:offer.id});
+ else if(offerRoute(game(),mySide(),selected,offer.id)){save();clickSound('tap');render();}
+}));
+$('claimIdle').addEventListener('click',()=>send({type:'forfeit'}));
+function zoomTo(value){
+ const g=game(),point=g?.map?.nodes?.[g.vehicles[selected]?.at];
+ const z=Math.max(1,Math.min(2.6,value));
+ if(camera.zoom===1&&z>1&&point){camera.x=point.x/g.map.width;camera.y=point.y/g.map.height;}
+ camera.zoom=z;if(z===1){camera.x=.5;camera.y=.5;}draw();
+}
+$('zoomIn').addEventListener('click',()=>zoomTo(camera.zoom+.35));
+$('zoomOut').addEventListener('click',()=>zoomTo(camera.zoom-.35));
+$('zoomReset').addEventListener('click',()=>zoomTo(1));
+canvas.addEventListener('wheel',e=>{if(phase()!=='playing')return;e.preventDefault();zoomTo(camera.zoom+(e.deltaY>0?-.18:.18));},{passive:false});
+setInterval(()=>{if(mode==='online'&&remote?.phase==='playing'){
+ const wait=remote?.ready?.[mySide()]&&Date.now()-(remote?.lastAction?.[1-mySide()]||Date.now())>=180000;
+ $('claimIdle').hidden=!wait||!connected;
+}},1000);
 $('stopCount').addEventListener('input',()=>{$('stopValue').textContent=$('stopCount').value;});
 $('next').addEventListener('click',turn);
 $('pause').addEventListener('click',()=>{confirmExit=false;$('exitConfirm').hidden=true;showOverlay('pauseOverlay',true);});
@@ -352,5 +436,5 @@ document.addEventListener('keydown',e=>{
 new ResizeObserver(()=>draw()).observe($('cityCanvas'));
 window.addEventListener('pagehide',save);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)draw();else save();});
-if(codeFromUrl)onlineDialog('join');
+if(codeFromUrl&&!readRoom())onlineDialog('join');
 render();
