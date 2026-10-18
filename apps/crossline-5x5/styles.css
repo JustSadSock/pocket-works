@@ -91,3 +91,8 @@
 @media(max-height:710px){:root{--tile:clamp(31px,min(11vw,6.4dvh),47px);--button-size:clamp(33px,5.5dvh,41px)}.play{gap:3px}.hud{gap:3px}.fighters{min-height:40px}.command-deck{gap:3px;padding:6px}.boardnote{font-size:10px}.slot{min-height:27px}.menu{gap:8px}.menu-panel{min-height:53px}.difficulty-view{gap:8px}.difficulty-grid{gap:6px}.difficulty-choice{min-height:47px}}
 @media(max-height:580px) and (orientation:landscape){.play{flex-direction:row;gap:10px;justify-content:center}.hud{position:absolute;top:4px;left:50%;transform:translateX(-50%);width:280px;z-index:2}.hud-bottom{display:none}.battlefield{width:auto}.command-deck{width:290px;margin-top:38px;flex:none}.board{--tile:clamp(28px,8dvh,42px)}.menu{gap:5px}.menu-panel{min-height:45px}.difficulty-grid{gap:3px}.difficulty-choice{min-height:41px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* Keep inspector accessible on actual match and replay while preserving the original Arena layout. */
+.arena-dev-in-game{font-size:21px;min-width:34px;min-height:33px}
+.replay-top .arena-dev-replay{margin-left:auto;min-width:36px}
+@media(max-height:580px) and (orientation:landscape){.hud-bottom{display:flex;position:fixed;top:3px;right:10px;width:auto;transform:none;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:9px;padding:2px 4px;gap:5px;z-index:4}.hud-bottom #roundInfo,.hud-bottom #phaseInfo{display:none}}
