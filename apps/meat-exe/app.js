@@ -19,7 +19,7 @@ let mode='menu',state=null,world=null,last=0,clock=0,lastSave=0,nextId=1;
 let waveBreak=0,recoil=0,damageFlash=0,noticeUntil=0,hitUntil=0,fireUntil=0,killUntil=0;
 let shotsFired=0,confirmedHits=0,wallHits=0,lastShotKind='none',gateHintShown=false,lastGateHitAt=-999;
 const keys=new Set(),movement={x:0,y:0};
-let movingPointer=null,lookPointer=null,lookLast={x:0,y:0},shootHeld=false,mouseLocked=false;
+let movingPointer=null,lookPointer=null,lookLast={x:0,y:0},shootHeld=false,keyFireHeld=false,mouseLocked=false;
 let soundOn=safeRead('sound')!==false;
 const combatAudio=createCombatAudio();if(!soundOn)combatAudio.setEnabled(false);
 let best=safeRead('best')||{score:0,wave:0,kills:0};
@@ -59,7 +59,7 @@ function setMode(next){
   ui.touch.hidden=next!=='playing'||!touch;
   ui.pauseBtn.hidden=next!=='playing'||mouseLocked;
   ui.cross.hidden=next!=='playing';
-  if(next!=='playing'){shootHeld=false;gamepadFire=false;movement.x=movement.y=0;padMove.x=padMove.y=0;keys.clear();resetStick();accumulator=0;}
+  if(next!=='playing'){shootHeld=false;keyFireHeld=false;gamepadFire=false;movement.x=movement.y=0;padMove.x=padMove.y=0;keys.clear();resetStick();accumulator=0;}
   if(next!=='playing'&&document.pointerLockElement===canvas)document.exitPointerLock?.();
   if(next==='menu'){
     save=validateRun(safeRead('session'));
@@ -363,7 +363,7 @@ function update(dt){
     const lookAhead=world.getTissueAt(state.x-Math.sin(state.yaw)*2.0,state.z-Math.cos(state.yaw)*2.0);
     if(lookAhead){gateHintShown=true;setNotice('ПУЛЬСИРУЮЩИЙ ЗАТВОР · РАЗРУШЬ ОГНЁМ',2.5);}
   }
-  if(shootHeld||gamepadFire)shoot();
+  if(shootHeld||keyFireHeld||gamepadFire)shoot();
   if(state.toSpawn>0){
     state.spawnClock-=dt;
     if(state.spawnClock<=0&&state.enemies.length<20){
@@ -511,10 +511,11 @@ document.addEventListener('keydown',e=>{
   if(e.code==='Escape'){if(!ui.confirm.hidden)ui.confirm.hidden=true;else if(mode==='playing')pause();else if(mode==='paused')resume();return;}
   if(e.code==='KeyQ'||e.code==='KeyE'){weaponSwitch();return;}
   if(e.code==='KeyR'&&mode==='dead'){begin(false);return;}
+  if(e.code==='KeyF'){if(mode==='playing'){keyFireHeld=true;shoot();}return;}
   keys.add(e.code);
   if(e.code==='Space'&&mode==='playing')dash();
 });
-document.addEventListener('keyup',e=>keys.delete(e.code));
+document.addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='KeyF')keyFireHeld=false;});
 window.addEventListener('blur',()=>{if(mode==='playing')pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause();});
 window.addEventListener('pagehide',()=>snapshot());
@@ -579,7 +580,7 @@ function frame(timestamp){
   if(world)requestAnimationFrame(frame);
 }
 window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
-  x:state?.x??null,z:state?.z??null,hp:state?.hp??null,wave:state?.wave??null,
+  x:state?.x??null,z:state?.z??null,yaw:state?.yaw??null,pitch:state?.pitch??null,hp:state?.hp??null,wave:state?.wave??null,
   score:state?.score??null,enemies:state?.enemies?.length??0,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},

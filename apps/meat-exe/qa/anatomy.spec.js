@@ -38,8 +38,8 @@ test('shooting a gland opens its corridor and the rupture persists',async ({page
       for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
         const x=node.x+dx,z=node.z+dz;
         if(!open.has(x+','+z))continue;
-        return {v:3,seed,x,z,yaw:Math.atan2(x-node.x,z-node.z),pitch:0,
-          hp:100,maxHp:100,wave:1,toSpawn:0,score:0,ruptured:[],ruptureCount:0,
+        return {v:3,seed,x,z,yaw:Math.atan2(x-node.x,z-node.z),pitch:0,targetId:node.id,
+          hp:100,maxHp:100,wave:1,toSpawn:1,spawnClock:30,score:0,ruptured:[],ruptureCount:0,
           enemies:[],pickups:[],immuneHeat:0,immuneDelay:0};
       }
     }
@@ -51,13 +51,29 @@ test('shooting a gland opens its corridor and the rupture persists',async ({page
   await expect(page.locator('#resumeSaved')).toBeVisible();
   await page.locator('#resumeSaved').click();
   await expect(page.locator('#hud')).toBeVisible();
+  const live=await page.evaluate(()=>window.__MEAT_QA__());
+  expect(live.seed).toBe(fixture.seed);
+  expect(live.x).toBeCloseTo(fixture.x,2);
+  expect(live.z).toBeCloseTo(fixture.z,2);
+  expect(live.yaw).toBeCloseTo(fixture.yaw,3);
   if(isMobile){
-    for(let i=0;i<5;i++){await page.locator('#fireBtn').tap();await page.waitForTimeout(270);}
+    // Switch to the biological shotgun. Two central hits are enough; stop as
+    // soon as the real in-game rupture is observed to avoid needless GPU stress.
+    await page.locator('#weaponBtn').tap();
+    await expect(page.locator('#weaponValue')).toContainText('МЯСОРУБКА');
+    for(let i=0;i<5;i++){
+      await page.locator('#fireBtn').tap();
+      if((await page.evaluate(()=>window.__MEAT_QA__?.().anatomy.ruptures))>0)break;
+      await page.waitForTimeout(650);
+    }
   }else{
-    await page.locator('#stage').click({position:{x:350,y:260}});
-    await page.mouse.down();await page.waitForTimeout(1400);await page.mouse.up();
+    // A real keyboard-fire control prevents initial pointer-lock mouse motion
+    // from rotating away from the gate between click and first shot.
+    await page.keyboard.down('f');
+    await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__?.().anatomy.ruptures),{timeout:14000}).toBeGreaterThan(0);
+    await page.keyboard.up('f');
   }
-  await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__?.().anatomy.ruptures),{timeout:18000}).toBeGreaterThan(0);
+  await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__?.().anatomy.ruptures),{timeout:6000}).toBeGreaterThan(0);
   const first=await page.evaluate(()=>window.__MEAT_QA__());
   expect(first.anatomy.immuneHeat).toBeGreaterThan(0);
   if(isMobile)await page.locator('#pauseBtn').click();
