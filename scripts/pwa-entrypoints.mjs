@@ -4,6 +4,9 @@ export function localScripts(html) {
   return [...html.matchAll(/<script\b[^>]*\bsrc=["']((?:\.\/)?[^"':]+\.m?js(?:\?[^"']*)?)["']/gi)]
     .map(m=>'./'+m[1].replace(/^\.\//,'').split('?')[0]);
 }
+export function appOwnedScripts(html) {
+  return localScripts(html).filter(script => !script.slice(2).startsWith('../'));
+}
 export function hasWorkerRegistration(source, html) {
   return /serviceWorker\.register\(\s*['"`]\.\/sw\.js(?:\?[^'"`]*)?['"`]\s*[,)]/.test(source+'\n'+html) ||
     /registerManagedServiceWorker\(\s*\{[^}]*path\s*:\s*['"]\.\/sw\.js['"]/.test(source) ||
