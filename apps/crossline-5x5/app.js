@@ -409,6 +409,7 @@ function undo(){
 }
 function submit(){
  if(animating||recording||modalOpen||thinkingAI)return;
+ if(editingSlot!==null){toast('Заверши редактирование выбранного шага');return;}
  if(attackMode){toggleAttack();return;}
  if(!isPlanning()||ready()[side()])return;
  if(plan.length!==STEPS){toast('Нужны все пять команд');return;}
@@ -431,6 +432,7 @@ function render(){
  const picture=animFrame||{units:match.units,edgesCollapsed:match.edgesCollapsed,events:[]};
  drawBoard($('board'),picture.units,picture.edgesCollapsed,picture.events,!animating,picture.round||match.round);
  $('roundInfo').textContent='РАУНД '+Math.min(match.round,4)+' / '+MAX_ROUNDS;
+ $('phaseInfo').classList.toggle('is-ai-thinking',thinkingAI);
  $('phaseInfo').textContent=thinkingAI?'ИИ ВЫБИРАЕТ ХОД':mode==='online'&&!connected?'НЕТ СВЯЗИ':mode==='online'&&opponentDisconnected?'СОПЕРНИК ВНЕ СЕТИ':animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
  $('nameA').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[0])?.name||'ИГРОК А'):'ИГРОК А';
  $('nameB').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[1])?.name||'ИГРОК Б'):(mode==='solo'?'КОМПЬЮТЕР':'ИГРОК Б');
@@ -483,8 +485,8 @@ function render(){
    full?'План готов. Нажми шаг для изменения':info.attacked.size?'Направление '+[...info.attacked].map(d=>symbols[d]).join(' ')+' занято атакой':'Выбери команду. Нажми шаг, чтобы заменить его.';
   feedback.classList.toggle('is-risk',projection.risk!==null&&!animating);
  }
- $('submit').textContent=thinkingAI?'ИИ ВЫБИРАЕТ ХОД…':finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
- $('submit').disabled=disabled||plan.length!==STEPS;
+ $('submit').textContent=thinkingAI?'ИИ ВЫБИРАЕТ ХОД…':finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':editingSlot!==null?'ЗАВЕРШИ РЕДАКТИРОВАНИЕ':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
+ $('submit').disabled=disabled||editingSlot!==null||plan.length!==STEPS;
  $('attackHint').classList.toggle('hidden',!attack);
  $('boardNote').textContent=thinkingAI?'План принят. Компьютер выбирает ответ.':mode==='online'&&!connected?'Связь потеряна. Место и отправленный план сохраняются':mode==='online'&&opponentDisconnected?'Соперник отключился: ждём возвращения или выхода из комнаты':animating?'Раунд исполняется одновременно':finished?'Повтор и реванш доступны после боя':flags[turn]?'Соперник '+(flags[turn==='A'?'B':'A']?'готов':'ещё планирует'):'Направления атаки и движения не должны пересекаться.';
  $('beat').classList.toggle('hidden',!animating);
