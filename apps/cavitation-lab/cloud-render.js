@@ -43,18 +43,32 @@ export function renderCloudScene(ctx,w,h,solution,point,mode,selected=0,showPres
  // Monopole-potential pressure perturbations from the SAME integrated solution.
  // The color magnitude is log-compressed for readability and is not a shock map.
  if(showPressure&&mode!=='ready'){
-   const cell=Math.max(12,Math.min(20,Math.floor(w/24)));
-   for(let py=40;py<h-103;py+=cell){
-     for(let px=0;px<Math.min(wallX,w);px+=cell){
-       const [wx,wy]=view.toWorld(px+cell*.5,py+cell*.5);
-       if(solution.geometry.some((g,i)=>Math.hypot(wx-g.x,wy-g.y)<point.bubbles[i].radius*1.08))continue;
-       const pressure=pressureAt(solution,point,wx,wy);
-       const strength=clamp(Math.log1p(Math.abs(pressure)*2.4)/Math.log(21),0,1);
-       if(strength<.085)continue;
-       ctx.fillStyle=pressure>0?'rgba(241,167,95,'+(strength*.34).toFixed(3)+')':'rgba(95,208,202,'+(strength*.31).toFixed(3)+')';
-       ctx.fillRect(px,py,cell+.8,cell+.8);
+   // Render pressure values into a downsampled image and bilinearly interpolate.
+   // Unlike per-cell rectangles, this yields an actual continuous scalar field.
+   const xMax=Math.max(0,Math.min(w,wallX));
+   const top=41,bottom=Math.max(top+1,h-105),unit=6;
+   const cols=Math.max(1,Math.ceil(xMax/unit)),rows=Math.max(1,Math.ceil((bottom-top)/unit));
+   const offscreen=document.createElement('canvas');
+   offscreen.width=cols;offscreen.height=rows;
+   const offCtx=offscreen.getContext('2d',{willReadFrequently:false});
+   const image=offCtx.createImageData(cols,rows);
+   for(let y=0;y<rows;y++){
+     const py=top+(y+.5)*(bottom-top)/rows;
+     for(let x=0;x<cols;x++){
+       const px=(x+.5)*xMax/cols;
+       const [wx,wy]=view.toWorld(px,py);
+       const p=pressureAt(solution,point,wx,wy);
+       const strength=clamp(Math.log1p(Math.abs(p)*2.4)/Math.log(21),0,1);
+       const index=(y*cols+x)*4;
+       if(p>0){image.data[index]=235;image.data[index+1]=156;image.data[index+2]=98}
+       else{image.data[index]=87;image.data[index+1]=202;image.data[index+2]=188}
+       image.data[index+3]=Math.round(strength*108);
      }
    }
+   offCtx.putImageData(image,0,0);
+   ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+   ctx.drawImage(offscreen,0,0,cols,rows,0,top,xMax,bottom-top);
+   ctx.restore();
  }
  // A rigid wall with brushed metallic stratification and image reflection origin.
  const metal=ctx.createLinearGradient(wallX,0,wallX+Math.max(44,w-wallX),0);
