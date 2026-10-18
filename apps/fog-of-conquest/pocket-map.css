@@ -20,7 +20,7 @@
   padding:4px;border-radius:7px;box-shadow:0 3px 18px #0007;
 }
 .fog-atlas-actions button{
-  width:39px;height:40px;border:1px solid #736a4f;
+  width:44px;height:44px;border:1px solid #736a4f;
   border-radius:4px;background:#303a2e;color:#f0e4b9;
   font:700 22px system-ui;display:grid;place-items:center;
   padding:0;touch-action:manipulation;
@@ -78,7 +78,7 @@
 }
 @media(max-width:355px){
   #fogAtlas{right:5px}
-  .fog-atlas-actions button{width:35px;height:38px}
+  .fog-atlas-actions button{width:42px;height:44px}
   #controls button{padding:4px!important;min-width:39px!important}
   #controls #endTurnBtn{min-width:81px}
 }
