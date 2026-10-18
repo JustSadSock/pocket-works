@@ -1,0 +1,29 @@
+name: ОТВЕС spatial geometry
+
+on:
+  pull_request:
+    paths:
+      - 'apps/otves/**'
+      - '.github/workflows/otves-spatial.yml'
+  push:
+    paths:
+      - 'apps/otves/**'
+      - '.github/workflows/otves-spatial.yml'
+
+jobs:
+  geometry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          node --check apps/otves/app.js
+          node --check apps/otves/renderer3d.js
+          node --check apps/otves/render-geometry.js
+          node --check apps/otves/sw.js
+      - name: Geometry regressions
+        run: node --test apps/otves/render-geometry.test.mjs
