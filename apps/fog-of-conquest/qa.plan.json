@@ -50,6 +50,14 @@
           "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "real-playthrough",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/real-flow.spec.ts"
+      ]
     }
   ]
 }
