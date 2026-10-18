@@ -128,7 +128,7 @@ export function makeWell(x, z, radius = 0.385, depth = 0.235) {
     const D = [x+radius*ca,-depth,z+radius*sa];
     // Inward-facing surface, visible from above the recessed opening.
     face(m,A,B,C,D,[-(ca+cb)*.5,0,-(sa+sb)*.5]);
-    face(m,[x,-depth,z],D,C,[0,1,0],[0,1,0]);
+    face(m,[x,-depth,z],D,C,[x,-depth,z],[0,1,0]);
   }
   return finish(m);
 }
