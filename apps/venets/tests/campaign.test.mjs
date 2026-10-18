@@ -24,11 +24,11 @@ test('three alternative county founders and a real legal feud at campaign start'
 test('atlas rulers represent all landed ranks in both stable world sizes',()=>{
   for(const size of [12,48]){
     const choices=campaignPlayableRulers(413,{size});
-    assert.equal(choices.length,size+(size/4)+1);
+    assert.equal(choices.length,size+(size===12?4:12)+1);
     assert.equal(choices.filter(p=>p.rank==='county').length,size);
-    assert.equal(choices.filter(p=>p.rank==='duchy').length,size/4);
+    assert.equal(choices.filter(p=>p.rank==='duchy').length,size===12?4:12);
     assert.equal(choices.filter(p=>p.rank==='kingdom').length,1);
-    for(const id of ['co-'+String(size).padStart(2,'0'),'du-'+String(size/4).padStart(2,'0'),'ki-01']){
+    for(const id of ['co-'+String(size).padStart(2,'0'),'du-'+String(size===12?4:12).padStart(2,'0'),'ki-01']){
       const pick=choices.find(p=>p.titleId===id);
       assert.ok(pick,'title is selectable: '+id);
       const g=startCampaign({seed:413,size,countyId:id});
