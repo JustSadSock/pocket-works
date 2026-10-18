@@ -142,12 +142,12 @@ export function createWorld(canvas, initialSeed) {
   const wallBlood=new THREE.MeshBasicMaterial({color:0x740b19,transparent:true,opacity:.78,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-3});
   const woundMat=new THREE.MeshBasicMaterial({color:0xffd2a9,transparent:true,opacity:.56,depthWrite:false});
   let seed=0, lastChunk='', frame=0;
-  const gun = new THREE.Group(), bolter=new THREE.Group(), shredder=new THREE.Group();
+  const gun = new THREE.Group(), bolter=new THREE.Group(), shredder=new THREE.Group(),stinger=new THREE.Group();
   const metal = new THREE.MeshStandardMaterial({color:0x565151,metalness:.62,roughness:.38});
   const muscle = new THREE.MeshStandardMaterial({color:0x491e26,metalness:.06,roughness:.78});
   const barrelBone = new THREE.MeshStandardMaterial({color:0xd4b49a,metalness:.04,roughness:.84});
   const muzzle = new THREE.MeshBasicMaterial({color:0xffd5a0});
-  gun.add(bolter,shredder);
+  gun.add(bolter,shredder,stinger);
   function part(geo,mat,x,y,z,sx,sy,sz, parent=bolter) {
     const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;
   }
@@ -165,8 +165,20 @@ export function createWorld(canvas, initialSeed) {
     part(new THREE.TorusGeometry(.16,.034,6,9),metal,.27+side*.16,-.24,-1.42,1,1,1,shredder);
   }
   const wideFlash=part(new THREE.IcosahedronGeometry(.23,0),muzzle,.27,-.24,-1.77,1.2,1,1.1,shredder);
+  // Needle launcher: long ivory injector, narrow bronze slide, articulated
+  // cartilage clips. Silhouette remains distinct even with camera bob disabled.
+  part(new THREE.CylinderGeometry(.19,.31,.86,9).rotateX(Math.PI/2),muscle,.28,-.31,-.65,1,1,1,stinger);
+  part(new THREE.CylinderGeometry(.075,.17,1.65,8).rotateX(Math.PI/2),barrelBone,.28,-.18,-1.47,1,1,1,stinger);
+  for(let k=0;k<4;k++){
+    const collar=part(new THREE.TorusGeometry(.125,.035,6,13),k%2?metal:barrelBone,.28,-.18,-.81-k*.35,1,1,1,stinger);
+    collar.rotation.x=.08;
+  }
+  for(const side of [-1,1]){
+    part(new THREE.ConeGeometry(.13,.8,5).rotateX(-Math.PI/2),metal,.28+side*.23,-.34,-.72,1,1,1,stinger);
+  }
+  const needleFlash=part(new THREE.ConeGeometry(.12,.73,7).rotateX(-Math.PI/2),muzzle,.28,-.18,-2.44,1,1,1,stinger);
   let muzzleTime=0,muzzleKind=0,kickPos=0,kickVel=0;
-  longFlash.visible=false;wideFlash.visible=false;
+  longFlash.visible=false;wideFlash.visible=false;needleFlash.visible=false;
   camera.add(gun);scene.add(camera);
   let currentWidth=0,currentHeight=0,quality='medium',ratio=0;
   function setQuality(next){
@@ -401,8 +413,8 @@ export function createWorld(canvas, initialSeed) {
     group.add(outer,ring);group.position.set(x,.55,z);source.add(group);return group;
   }
   function firePulse(weapon){
-    muzzleKind=weapon;muzzleTime=weapon===1?.115:.075;
-    kickVel+=weapon===1?5.7:2.6;
+    muzzleKind=weapon;muzzleTime=weapon===1?.115:weapon===2?.13:.075;
+    kickVel+=weapon===1?5.7:weapon===2?7.0:2.6;
   }
   function fireTrace(origin,point,weapon){
     const budget=quality==='low'?11:24;
@@ -482,8 +494,8 @@ export function createWorld(canvas, initialSeed) {
     camera.rotation.set(player.pitch+(reduced?0:Math.min(.016,kickPos*.03)),player.yaw,0,'YXZ');
     camera.fov=77+recoil*2.8+(player.sprinting?3:0);camera.updateProjectionMatrix();
     lamp.position.set(player.x,1.7,player.z);pulseLamp.position.set(player.x,2.55,player.z-1.8);
-    const w=player.weapon===1?1:0;
-    bolter.visible=w===0;shredder.visible=w===1;
+    const w=player.weapon===2?2:player.weapon===1?1:0;
+    bolter.visible=w===0;shredder.visible=w===1;stinger.visible=w===2;
     const portrait=canvas.clientHeight>canvas.clientWidth;
     gun.scale.setScalar(portrait?.76:1);
     gun.position.set((portrait?.10:.17)+Math.sin(time*8)*(player.moving||0)*.012,
@@ -492,8 +504,10 @@ export function createWorld(canvas, initialSeed) {
     gun.rotation.x=(reduced?0:Math.min(.12,kickPos*.19));
     longFlash.visible=muzzleTime>0&&muzzleKind===0;
     wideFlash.visible=muzzleTime>0&&muzzleKind===1;
+    needleFlash.visible=muzzleTime>0&&muzzleKind===2;
     if(longFlash.visible)longFlash.scale.setScalar(.9+muzzleTime*3);
     if(wideFlash.visible)wideFlash.scale.setScalar(.85+muzzleTime*3.1);
+    if(needleFlash.visible)needleFlash.scale.setScalar(.78+muzzleTime*2.1);
     for(const e of entities)if(e.visual){
       const hit=clamp((e.hitFlash||0)/.18,0,1);
       e.visual.position.set(e.x,Math.sin(time*4+e.id)*.038-hit*.05,e.z);

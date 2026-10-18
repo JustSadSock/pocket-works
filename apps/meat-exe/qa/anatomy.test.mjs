@@ -60,7 +60,7 @@ test('tissue blocks gunfire until ruptured; enemies cannot be hit through it',()
 });
 test('v2 saves migrate with a closed organism, v3 ruptures survive and are sanitized',()=>{
  const old={v:2,seed:413,x:3,z:3,hp:80,maxHp:100,wave:2};
- const v2=validateRun(old);assert.equal(v2.v,4);assert.deepEqual(v2.ruptured,[]);
+ const v2=validateRun(old);assert.equal(v2.v,5);assert.deepEqual(v2.ruptured,[]);
  const newer=validateRun({...v2,ruptured:['4,5','4,5','not-id','8,-3'],ruptureCount:2,immuneHeat:33,immuneDelay:1.2});
  assert.deepEqual(newer.ruptured,['2:4,5','2:8,-3']);assert.equal(newer.immuneHeat,33);
  assert.deepEqual(validateRun(newer),newer);
