@@ -4,6 +4,7 @@
 import { pressureAt } from './coupling.js';
 
 const TAU=Math.PI*2,clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+let pressureBuffer=null;
 export const BUBBLE_COLORS=['#c6f6df','#e7c18b','#a6d6e3','#e4aea8','#bbbee2'];
 
 export function cloudViewport(w,h,solution) {
@@ -48,8 +49,9 @@ export function renderCloudScene(ctx,w,h,solution,point,mode,selected=0,showPres
    const xMax=Math.max(0,Math.min(w,wallX));
    const top=41,bottom=Math.max(top+1,h-105),unit=6;
    const cols=Math.max(1,Math.ceil(xMax/unit)),rows=Math.max(1,Math.ceil((bottom-top)/unit));
-   const offscreen=document.createElement('canvas');
-   offscreen.width=cols;offscreen.height=rows;
+   const offscreen=pressureBuffer||(pressureBuffer=document.createElement('canvas'));
+   if(offscreen.width!==cols)offscreen.width=cols;
+   if(offscreen.height!==rows)offscreen.height=rows;
    const offCtx=offscreen.getContext('2d',{willReadFrequently:false});
    const image=offCtx.createImageData(cols,rows);
    for(let y=0;y<rows;y++){
