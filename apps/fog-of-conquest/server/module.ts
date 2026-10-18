@@ -1,7 +1,7 @@
 // PocketNet adaptation of the ORIGINAL Fog of Conquest, without rebalance.
 // Original unit/building definitions and complete generator are embedded verbatim.
 // Never broadcast raw state: enemies and fogged terrain remain private.
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=2;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=3;
 const TERRAIN={PLAIN:0,WATER:1,FOREST:2,HILL:3,MOUNTAIN:4};
 const TERR_COST=[1,2,2,2,999],TERR_DEF=[0,-1,1,2,0];
 const BASE_ROWS=20,BASE_COLS=30;
@@ -373,16 +373,22 @@ function capture(g,u,b){
  if(b.owner!==u.owner)log(g,u.owner,'Захвачено строение.');
  b.owner=u.owner;b.hp=BUILD_TYPES[b.type].hpMax;
 }
-function victory(g){
+function victory(g,endedSide=null){
  if(g.state.turn===0||g.phase==='finished')return;
  for(const side of [1,2]){
-  const bases=g.buildings.filter(b=>b.owner===side&&(b.gen??BUILD_TYPES[b.type].gen)===0).length,
-    alive=g.units.filter(u=>u.owner===side).length;
-  if(bases===0&&alive===0){g.phase='finished';g.winner=3-side;break;}
-  if(bases===0&&alive>0){if(g.state.grace[side]===null)g.state.grace[side]=5;else if(--g.state.grace[side]<=0){g.phase='finished';g.winner=3-side;break;}}
-  else g.state.grace[side]=null;
+  // Preserve the original definition: all zero-income military buildings.
+  const bases=g.buildings.filter(b=>b.owner===side&&(b.gen??BUILD_TYPES[b.type].gen)===0).length;
+  const alive=g.units.filter(u=>u.owner===side).length;
+  if(!bases&&!alive){g.phase='finished';g.winner=3-side;return;}
+  if(!bases){
+   if(g.state.grace[side]===null)g.state.grace[side]=5;
+   else if(endedSide===side&&--g.state.grace[side]<=0){
+    g.phase='finished';g.winner=3-side;return;
+   }
+  }else g.state.grace[side]=null;
  }
 }
+
 export function originalAction(source,side,action){
  const failure=msg=>({state:source,error:msg});
  if(!source||source.schema!==2||source.phase!=='battle')return failure('Партия закончена.');
@@ -450,11 +456,11 @@ export function originalAction(source,side,action){
    if(!b||b.owner!==p||!info||!BUILD_TYPES[b.type]?.spawn.includes(action.unitType)||action.unitType==='bog'&&!g.modeBeta)return failure('Нельзя нанять такой отряд.');
    if(g.state.gold[p]<info.cost)return failure('Недостаточно золота.');
    if(!ok||dist(b,action)!==1||g.map[action.r][action.c]===TERRAIN.MOUNTAIN||target)return failure('Место для отряда недоступно.');
-   if(g.units.length>140)return failure('Армия слишком велика.');
+   if(g.units.length>=140)return failure('Армия слишком велика.');
    g.state.gold[p]-=info.cost;g.units.push({id:g.nextUnitId++,r:action.r,c:action.c,owner:p,type:action.unitType,hp:info.hpMax,mp:0,startR:action.r,startC:action.c});
    log(g,p,'Отряд нанят.');
  }else return failure('Неизвестный приказ.');
- g.revision++;refresh(g);victory(g);return {state:g,error:null};
+ g.revision++;refresh(g);victory(g,action.type==='end'?p:null);return {state:g,error:null};
 }
 function privateView(g,side){
  const v=copy(g),fog=g.state.fog[side],seen=g.state.seen[side];
