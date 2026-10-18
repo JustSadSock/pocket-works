@@ -398,7 +398,8 @@ function drawBall(g,t) {
     if(charge>.35){
       ctx.fillStyle=g.owner===0?"#b84f37":"#346b81";
       ctx.font="900 12px Arial, sans-serif";
-      ctx.textAlign="left";ctx.fillText("×"+(1+charge*1.39).toFixed(1),bx+27,by-16);
+      ctx.textAlign=bx>270?"right":"left";
+      ctx.fillText("×"+(1+charge*1.39).toFixed(1),bx>270?bx-27:bx+27,Math.max(28,by-16));
     }
     const dir=g.owner===0?-1:1;
     ctx.strokeStyle=g.owner===0?"#b84f37":"#346b81";
@@ -422,7 +423,7 @@ function drawFX() {
     ctx.globalAlpha=Math.min(1,state.comboToast*2);
     ctx.textAlign="center";
     ctx.font="900 15px Arial, sans-serif";ctx.fillStyle="#735d31";
-    ctx.fillText("СВЯЗКА ×"+state.comboCount,state.comboX,Math.max(65,state.comboY-43-(1-state.comboToast)*20));
+    ctx.fillText("СВЯЗКА ×"+state.comboCount,Math.max(84,Math.min(276,state.comboX)),Math.max(65,state.comboY-43-(1-state.comboToast)*20));
     ctx.globalAlpha=1;
   }
 }
