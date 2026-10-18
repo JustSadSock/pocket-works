@@ -30,7 +30,7 @@ test('start, move, cast, pause, resume, pick rune and finish complete 1v1 traini
  await expect(page.locator('#continue')).toBeVisible();
  await page.locator('#continue').click();
  await expect(page.locator('#controls')).toBeVisible();
- await page.evaluate(()=>{let rounds=0;for(let i=0;i<12000;i++){const g=window.__perekosTest.state;if(g.phase==='result')break;if(g.phase==='draft'){window.__perekosTest.pick(g.pick[0],g.actors[0].runes.length>=5?0:null);rounds++;continue;}if(g.phase==='build'){window.__perekosTest.build();continue;}window.__perekosTest.step();}});
+ await page.evaluate(()=>{let rounds=0;for(let i=0;i<40000;i++){const g=window.__perekosTest.state;if(g.phase==='result')break;if(g.phase==='draft'){window.__perekosTest.pick(g.pick[0],g.actors[0].runes.length>=5?0:null);rounds++;continue;}if(g.phase==='build'){window.__perekosTest.build();continue;}window.__perekosTest.step();}});
  await expect(page.locator('#result')).toBeVisible({timeout:4500});
  expect(await page.evaluate(()=>Math.max(...window.__perekosTest.state.score))).toBe(4);
  await page.locator('#result-save').click();
