@@ -5,7 +5,8 @@ import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { resolve, extname, sep, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from '@playwright/test';
+// CI installs Playwright in an isolated prefix because the monorepo intentionally has no lockfile.
+const { chromium } = await import(process.env.OTVES_PLAYWRIGHT_IMPORT || '@playwright/test');
 
 const here=dirname(fileURLToPath(import.meta.url));
 const root=resolve(here,'../../..');
