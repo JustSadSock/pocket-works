@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "product": "throne-three",
+  "status": "draft",
+  "memoryReview": [],
+  "references": [],
+  "concepts": [
+    {
+      "id": "concept-1",
+      "medium": "TODO — Distinct medium decision",
+      "composition": "TODO — Distinct composition decision",
+      "interaction": "TODO — Distinct interaction decision",
+      "motion": "TODO — Distinct motion decision",
+      "rationale": "TODO — Tradeoffs for this game and phone"
+    },
+    {
+      "id": "concept-2",
+      "medium": "TODO — Distinct medium decision",
+      "composition": "TODO — Distinct composition decision",
+      "interaction": "TODO — Distinct interaction decision",
+      "motion": "TODO — Distinct motion decision",
+      "rationale": "TODO — Tradeoffs for this game and phone"
+    },
+    {
+      "id": "concept-3",
+      "medium": "TODO — Distinct medium decision",
+      "composition": "TODO — Distinct composition decision",
+      "interaction": "TODO — Distinct interaction decision",
+      "motion": "TODO — Distinct motion decision",
+      "rationale": "TODO — Tradeoffs for this game and phone"
+    }
+  ],
+  "selection": {
+    "concept": "",
+    "reason": "TODO — Why this direction serves the gameplay",
+    "rejected": []
+  },
+  "tools": [],
+  "assets": [],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [],
+    "comparisons": []
+  }
+}

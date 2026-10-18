@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Трон на троих">
+  <rect width="512" height="512" fill="#12101f"/>
+  <path d="M64 64h384v384H64z" fill="none" stroke="#c38c63" stroke-width="22"/>
+  <path d="M96 352 256 96l160 256-160 64z" fill="#c38c63" opacity=".92"/>
+  <text x="256" y="318" text-anchor="middle" fill="#12101f" font-family="system-ui,sans-serif" font-size="112" font-weight="900">ТН</text>
+</svg>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#12101f">
+    <title>Трон на троих</title>
+    <link rel="stylesheet" href="./styles.css">
+  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+  <body>
+    <main class="phone-shell" data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
+      <section class="screen active" id="screen-menu" data-screen="menu">
+        <div class="menu-hero">
+          <div class="pixel-stage" aria-hidden="true">
+            <div class="pixel-banner banner-left"></div>
+            <div class="pixel-throne big"></div>
+            <div class="pixel-banner banner-right"></div>
+          </div>
+          <p class="eyebrow">политические ментальные шахматы</p>
+          <h1>Трон на троих</h1>
+          <p class="hero-copy">Пять приказов. Три фракции. Один трон, который не любит прямолинейных.</p>
+        </div>
+
+        <div class="menu-actions">
+          <button class="primary-btn" id="start-btn">Новая игра</button>
+          <button class="menu-btn" data-screen-target="online">Онлайн-дуэль</button>
+          <button class="menu-btn" data-screen-target="rules">Правила</button>
+          <button class="menu-btn" data-screen-target="settings">Настройки</button>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-online" data-screen="online">
+        <header class="screen-head">
+          <button class="icon-btn" data-screen-target="menu" aria-label="Назад">‹</button>
+          <div>
+            <p class="eyebrow">комната для дуэли</p>
+            <h2>Онлайн-дуэль</h2>
+          </div>
+        </header>
+
+        <div class="panel">
+          <label class="field-label" for="online-name">Имя на табличке</label>
+          <input id="online-name" class="text-field" maxlength="18" placeholder="Претендент">
+        </div>
+
+        <div class="split-actions">
+          <button class="primary-btn" id="create-room-btn">Создать комнату</button>
+          <div class="join-row">
+            <input id="room-code-input" class="text-field code-field" maxlength="8" placeholder="КОД">
+            <button class="menu-btn compact" id="join-room-btn">Подключиться</button>
+          </div>
+        </div>
+
+        <div class="panel room-card" id="room-card" hidden>
+          <p class="eyebrow">комната</p>
+          <div class="room-code" id="room-code">-----</div>
+          <input class="text-field share-field" id="share-link" readonly>
+          <button class="menu-btn compact" id="copy-link-btn">Скопировать ссылку</button>
+        </div>
+
+        <p class="status-line" id="online-status">Создай комнату или введи код соперника.</p>
+      </section>
+
+      <section class="screen" id="screen-rules" data-screen="rules">
+        <header class="screen-head">
+          <button class="icon-btn" data-screen-target="menu" aria-label="Назад">‹</button>
+          <div>
+            <p class="eyebrow">быстро</p>
+            <h2>Правила</h2>
+          </div>
+        </header>
+        <div class="rules-copy">
+          <p>Шкалы Армии, Казны и Народа идут от -3 до +3. Плюс - первый игрок, минус - второй. Контроль начинается с 2.</p>
+          <p>Каждый ход оба игрока скрыто выбирают: Давить, Подкупить, Успокоить, Обвинить или Ждать. После выбора обоих приказов ход раскрывается одновременно.</p>
+          <p>Контроль двух фракций даёт корону. Три короны - победа. Полная Армия открывает Переворот, полный Народ с не вражеской Казной - Коронацию.</p>
+          <p>Повторы опасны: три одинаковых действия подряд дают штрафы. Каждые три хода нужно публичное заявление, которое усиливает честную линию и наказывает лицемерие.</p>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-settings" data-screen="settings">
+        <header class="screen-head">
+          <button class="icon-btn" data-screen-target="menu" aria-label="Назад">‹</button>
+          <div>
+            <p class="eyebrow">игра</p>
+            <h2>Настройки</h2>
+          </div>
+        </header>
+        <div class="settings-list">
+          <label class="toggle-row">
+            <span>Режим отладки</span>
+            <input type="checkbox" id="debug-toggle">
+          </label>
+          <label class="toggle-row">
+            <span>Мягкие анимации</span>
+            <input type="checkbox" id="motion-toggle" checked>
+          </label>
+        </div>
+      </section>
+
+      <section class="screen game-screen" id="screen-game" data-screen="game">
+        <header class="game-top">
+          <button class="icon-btn" data-screen-target="menu" aria-label="В меню">‹</button>
+          <div class="turn-pill" id="turn-pill">Ход 1</div>
+          <button class="icon-btn" id="debug-open-btn" aria-label="Debug">⚙</button>
+        </header>
+
+        <div class="score-row">
+          <div class="player-score" id="p1-score"></div>
+          <div class="throne-mini" aria-hidden="true"><div class="pixel-throne"></div></div>
+          <div class="player-score right" id="p2-score"></div>
+        </div>
+
+        <section class="board">
+          <div class="board-head">
+            <div class="board-title">
+              <p class="eyebrow">трон</p>
+              <h3>Баланс двора</h3>
+            </div>
+            <div class="board-legend">
+              <span class="legend-rival">Соперник</span>
+              <span class="legend-neutral">Нейтрал</span>
+              <span class="legend-you">Ты</span>
+            </div>
+          </div>
+          <div class="throne-scene">
+            <div class="sprite sprite-army" aria-hidden="true"><span></span></div>
+            <div class="pixel-throne scene-throne" aria-hidden="true"></div>
+            <div class="sprite sprite-treasury" aria-hidden="true"><span></span></div>
+            <div class="sprite sprite-people" aria-hidden="true"><span></span></div>
+          </div>
+          <div class="factions" id="factions"></div>
+        </section>
+
+        <section class="statement-panel" id="statement-panel" hidden>
+          <p class="eyebrow">публичное заявление</p>
+          <h3>Двор требует позицию</h3>
+          <div class="statement-grid" id="statement-grid"></div>
+        </section>
+
+        <section class="action-panel">
+          <div class="pending-line" id="pending-line"></div>
+          <div class="action-grid" id="action-grid"></div>
+          <div class="special-row" id="special-row"></div>
+        </section>
+
+        <section class="intel-panel">
+          <div class="court-panel">
+            <p class="eyebrow">Двор</p>
+            <p id="court-mood">Двор ждёт.</p>
+          </div>
+
+          <div class="reveal-panel">
+            <p class="eyebrow">Разбор хода</p>
+            <div class="last-reveal" id="last-reveal"></div>
+            <div class="history-row" id="history-row"></div>
+            <div class="marks-row" id="marks-row"></div>
+          </div>
+
+          <div class="log-panel" id="log-panel"></div>
+        </section>
+
+        <section class="debug-panel" id="debug-panel" hidden>
+          <div class="debug-head">
+            <h3>Debug</h3>
+            <button class="icon-btn" id="debug-close-btn" aria-label="Закрыть">×</button>
+          </div>
+          <div class="debug-actions">
+            <button class="menu-btn compact" id="debug-reset-btn">Сброс партии</button>
+            <button class="menu-btn compact" id="debug-sim-btn">Симулировать ход</button>
+            <button class="menu-btn compact" id="debug-ai-btn">ИИ: вкл</button>
+            <button class="menu-btn compact danger" id="debug-clear-btn">Очистить комнату</button>
+          </div>
+          <div class="debug-factions" id="debug-factions"></div>
+          <pre id="debug-state"></pre>
+        </section>
+      </section>
+
+      <section class="screen victory-screen" id="screen-victory" data-screen="victory">
+        <div class="pixel-stage victory-stage" aria-hidden="true">
+          <div class="pixel-banner banner-left"></div>
+          <div class="pixel-throne big"></div>
+          <div class="pixel-banner banner-right"></div>
+        </div>
+        <p class="eyebrow">партия окончена</p>
+        <h2 id="victory-title">Трон занят</h2>
+        <p id="victory-method"></p>
+        <div class="victory-story" id="victory-story"></div>
+        <button class="primary-btn" id="rematch-btn">Реванш</button>
+        <button class="menu-btn" data-screen-target="menu">В меню</button>
+      </section>
+    </main>
+
+    <script src="./js/rules.js"></script>
+    <script src="./js/ai.js"></script>
+    <script type="module" src="./app.js"></script><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Трон на троих" data-app-version="0.1.0"></script>
+  </body>
+</html>
