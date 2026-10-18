@@ -4,7 +4,7 @@ on:
     branches: [app/fog-of-conquest-port-20261018]
     paths: [.github/workflows/fog-verify.yml]
 permissions:
-  contents: read
+  contents: write
 jobs:
   original-source:
     runs-on: ubuntu-latest
@@ -29,6 +29,16 @@ jobs:
         run: npx playwright install chromium
       - name: Mobile and desktop browser smoke
         run: node apps/fog-of-conquest/test/port-browser.mjs
+      - name: Store visual QA captures with the app
+        if: success()
+        run: |
+          mkdir -p apps/fog-of-conquest/qa/screens
+          cp /tmp/fog-port-shots/*.png apps/fog-of-conquest/qa/screens/
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/fog-of-conquest/qa/screens/
+          git commit -m 'test(fog): capture real phone and desktop views'
+          git push origin HEAD:app/fog-of-conquest-port-20261018
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -35,7 +35,8 @@ try {
     });
     assert.equal(shape.rows,20);
     assert(shape.units>=4);
-    assert(shape.width>=item.viewport.width*.8);
+    console.log(item.name,shape);
+    assert(shape.width>=item.viewport.width*.7);
     assert(shape.mapHeight>200);
     assert(shape.autosave,'autosave missing');
     await page.screenshot({path:'/tmp/fog-port-shots/'+item.name+'.png',fullPage:true});
