@@ -224,6 +224,7 @@ function applyRemote(next,version=roomVersion){
  if(!next||!['lobby','planning','finished'].includes(next.phase))return;
  if(!['v1','v2'].includes(version)){toast('Версия комнаты несовместима с этим приложением');leaveNet();return;}
  if(pendingForfeitLeave&&next.phase==='finished'){
+  server=next;rememberFinished();
   pendingForfeitLeave=false;clearTimeout(forfeitWatchdog);
   leaveToMenu(true);toast('Сдача записана. Победа присуждена сопернику.');return;
  }
@@ -698,7 +699,7 @@ function startFromSession(){
 if(!IS_DEV_FRAME){
  const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.6.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
  mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
- checkNet();resumeOffer();
+ checkNet();resumeOffer();refreshArchiveCount();
 }else{
  document.body.classList.add('arena-dev-child');
  window.addEventListener('keydown',event=>{
