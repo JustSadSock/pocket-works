@@ -764,6 +764,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       .map(b=>({...b,stale:true}));
     return [...live,...remembered];
   }
+  window.FogVisibleBuildings=visibleBuildings;
   function updateFog(){
     if(onlineGame) return; // Server supplies each participant's private visibility.
     if(!modeBeta && !revealAll){
