@@ -93,6 +93,8 @@ test('client integrates effects without changing authoritative rules or redrawin
  assert.match(src,/drawAxisImpulse\(ctx,visual,u,now,reduced\)/);
  assert.match(src,/drawContactEffects\(ctx,visual,u,now,reduced\)/);
  assert.match(src,/window.ResizeObserver/);
+ assert.ok(src.includes('requestAnimationFrame(tick)'),'RAF must receive the callback, not its timestamp');
+ assert.ok(!src.includes('requestAnimationFrame(t)'),'RAF must never receive frame time');
  assert.match(src,/function tick\(t\)\{if\(screen==='play'\)drawBoard\(t\)/);
  assert.doesNotMatch(src,/const osc=a\.createOscillator/);
 });

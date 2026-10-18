@@ -247,7 +247,7 @@ function drawBoard(now){
  }
  if(visual)drawContactEffects(ctx,visual,u,now,reduced);
 }
-function tick(t){if(screen==='play')drawBoard(t);requestAnimationFrame(t)}
+function tick(t){if(screen==='play')drawBoard(t);requestAnimationFrame(tick)}
 $('name').value=name;
 $('sound').onclick=()=>{sound=!sound;setSound();noise('press')};setSound();
 $('campaign').onclick=()=>{difficulty=$('localDifficulty').value;save('difficulty',difficulty);playLocal('campaign',Number($('chapter').value));};
