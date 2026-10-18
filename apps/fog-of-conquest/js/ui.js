@@ -1911,6 +1911,13 @@ window.addEventListener('DOMContentLoaded', ()=>{
     sel=null;zoneMap=null;zoneList=[];spawnPanel.style.display='none';updateAll();
   }
   const distanceFrom=(a,b)=>abs(a.r-b.r)+abs(a.c-b.c);
+  window.FogLeaveOnline=function(){
+    onlineGame=false;window.onlineGame=false;onlineSide=0;onlineTurn=0;
+    gameOver=false;sel=null;spawnMode=false;zoneMap=null;zoneList=[];
+    spawnPanel.style.display='none';victoryOverlay.style.display='none';
+    endTurnBtn.disabled=false;viewReplayBtn.style.display='';
+    resetState();
+  };
   window.FogApplyOnlineView=function(roomView){
     if(!roomView||!roomView.side)return;
     onlineSide=roomView.side;
@@ -1918,7 +1925,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       onlineGame=false;window.onlineGame=false;
       lobbyPanel.style.display='flex';startPanel.style.display='none';return;
     }
-    const g=roomView.game;onlineGame=true;window.onlineGame=true;aiMode=false;
+    const g=roomView.game;onlineGame=true;window.onlineGame=true;aiMode=false;gameOver=false;
     onlineTurn=g.state.currentPlayer;modeBeta=g.modeBeta;
     if(modeBeta)BUILD_TYPES.base.spawn=[...BASE_SPAWN_DEFAULT,'bog'];else BUILD_TYPES.base.spawn=[...BASE_SPAWN_DEFAULT];
     ROWS=g.rows;COLS=g.cols;window.ROWS=ROWS;window.COLS=COLS;
