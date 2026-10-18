@@ -1,6 +1,7 @@
 // ПЕРЕКОС — deterministic fixed-step combat and bounded rune events.
 import {RUNES,legalRunes,compile,description,eligibleOffers,cooldown,heatCost,repetitions,MAX_CHAIN_DEPTH,MAX_REACTIONS_PER_TICK,MAX_QUEUE,HEAT_LIMIT} from './runes.mjs';
 export {RUNES} from './runes.mjs';
+import {mage,validMage} from './mages.mjs';
 export const W=400,H=620,STEP=1/60,ROUND_SECONDS=25;
 export const WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
 
@@ -8,19 +9,19 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const mag=(x,y)=>Math.hypot(x,y)||1;
 export function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296}
 export function has(a,k){return a.runes.includes(k)}
-export function stats(a){return {max:100,speed:125*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12,reload:.56,shield:34}}
-function actor(id,x,y,runes){return {id,x,y,vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0}}
-function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes);o.hp=stats(o).max;return o}
-export function makeMatch(seed=0x718abc){const s={version:2,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],actors:[actor(0,64,484,['on_cast','ball']),actor(1,336,134,['on_guard','armor'])],shots:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
+export function stats(a){const m=mage(a.mageId);return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power,reload:.56*m.reload,shield:34*m.shield}}
+function actor(id,x,y,runes,mageId='kindle'){return {id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0}}
+function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId);o.hp=stats(o).max;return o}
+export function makeMatch(seed=0x718abc,first='kindle',second='pebble'){const s={version:3,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],draws:0,lastOutcome:'',actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 export function offers(s){return eligibleOffers(s)}
 // Choosing a rune opens the working table. Players may reorder before returning to battle.
 export function chooseRune(s,id,replaceIndex=null){
  if(s.phase!=='draft'||!s.pick.includes(id))return false;
  const a=s.actors[0];
- if(a.runes.length===5){if(!Number.isInteger(replaceIndex)||replaceIndex<0||replaceIndex>=5)return false;a.runes[replaceIndex]=id}
+ if(a.runes.length===9){if(!Number.isInteger(replaceIndex)||replaceIndex<0||replaceIndex>=9)return false;a.runes[replaceIndex]=id}
  else a.runes.push(id);
  const bot=s.actors[1], pool=RUNES.filter(r=>!bot.runes.includes(r.id));
- if(pool.length){if(bot.runes.length===5)bot.runes[Math.floor(random(s)*5)]=pool[Math.floor(random(s)*pool.length)].id;else bot.runes.push(pool[Math.floor(random(s)*pool.length)].id)}
+ if(pool.length){const avail=pool.filter(r=>r.type!=='when'||bot.runes.filter(id=>RUNES.find(z=>z.id===id)?.type==='when').length<3);const picked=avail[Math.floor(random(s)*avail.length)];if(picked){if(bot.runes.length===9)bot.runes[Math.floor(random(s)*9)]=picked.id;else bot.runes.push(picked.id)}}
  s.pick=[];s.phase='build';return true;
 }
 export function reorderRunes(s,from,to){
@@ -30,7 +31,7 @@ export function reorderRunes(s,from,to){
 }
 export function beginRound(s){if(s.phase!=='build')return false;startRound(s);return true}
 export function startRound(s){
- s.phase='fight';s.round=s.score[0]+s.score[1]+1;s.remaining=ROUND_SECONDS;s.overtime=0;
+ s.phase='fight';s.round=s.score[0]+s.score[1]+s.draws+1;s.remaining=ROUND_SECONDS;s.overtime=0;
  s.actors=s.actors.map(freshActor);s.shots=[];s.echoes=[];s.mines=[];s.barriers=[];s.eventQueue=[];s.pick=[];s.fx=[];s.ticks=0;s.reactions=0;
 }
 export function retryMatch(s){return makeMatch((s.seed+0x9e3779b9)>>>0)}
@@ -172,8 +173,8 @@ else{s.phase='draft';s.pick=offers(s)}
 }
 return s}
 export function validState(s){
- return !!s&&s.version===2&&['fight','draft','build','result'].includes(s.phase)
- &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&a.runeTimers&&typeof a.runeTimers==='object')
+ return !!s&&s.version===3&&['fight','draft','build','result'].includes(s.phase)
+ &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&Array.isArray(s.eventQueue)
  &&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&n<=4);
 }
