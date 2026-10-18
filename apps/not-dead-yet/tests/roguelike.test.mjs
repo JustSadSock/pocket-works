@@ -39,7 +39,13 @@ test('player start, drops, furniture and inter-sector path are physically valid'
   const target=w.chunk(1,0);
   const right=target.tiles.findIndex(v=>v===3);
   assert.ok(right>=0);
-  assert.ok(w.findStep(9.5,9.5,SECTOR+9.5,9.5),'neighbor sector cannot be reached');
+  // Some floor-plan families legitimately gate the only through-room
+  // passage behind a closed door. Check navigation after opening it.
+  for(const c of w.nearby(9.5,9.5,35))for(const door of c.doors){
+   if(!w.doorState(door,c).open)w.toggleDoor(door,[])
+  }
+  for(let i=0;i<8;i++)w.animateDoors(.12,[]);
+  assert.ok(w.findStep(9.5,9.5,SECTOR+9.5,9.5),'neighbor sector cannot be reached after opening doors');
  }
 });
 test('old floor behind protagonist actually changes without altering player position',()=>{
