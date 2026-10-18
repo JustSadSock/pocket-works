@@ -3499,7 +3499,7 @@
     "imageVersion": 2
   },
   "crossline-5x5": {
-    "revision": "4fe52a3091e2f29e85bb53d506c85f003035a840",
+    "revision": "8cdae9a4e6d4af1fd995c598780027582fe81c5e",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
@@ -3511,8 +3511,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4fe52a3091e2f29e85bb53d506c85f003035a840",
-    "lastAttemptAt": "2026-10-18T15:08:57.699Z"
+    "lastAttemptRevision": "8cdae9a4e6d4af1fd995c598780027582fe81c5e",
+    "lastAttemptAt": "2026-10-18T18:42:47.892Z"
   },
   "perekos": {
     "revision": "39746947d2a932feba8f93ff70d6daaf84a2cf87",
