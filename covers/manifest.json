@@ -3480,10 +3480,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "3586adee406ebcabf8d280cd277e34be1b2753b1",
-    "lastAttemptAt": "2026-10-18T20:56:00.391Z",
-    "revision": "3586adee406ebcabf8d280cd277e34be1b2753b1",
-    "qualityScore": 77,
+    "lastAttemptRevision": "8679e4ea06b8cf7be2e3f9a6a15e003cda7454ab",
+    "lastAttemptAt": "2026-10-18T21:06:10.608Z",
+    "revision": "8679e4ea06b8cf7be2e3f9a6a15e003cda7454ab",
+    "qualityScore": 79,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3495,7 +3495,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "db62506db87d9e5250063425eb14504d6ea06494969cce988e99ec8ce6de73f2",
+    "sha256": "749a93ec5921c53dba54cc81da784d6124f58bded2c940c7be4f4ed6f3daa712",
     "imageVersion": 2
   },
   "crossline-5x5": {
@@ -3515,8 +3515,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "c95082af588c7eea7a145b2b06f4515d2196e08d",
-    "qualityScore": 58,
+    "revision": "ddc8a3736c17fa192276bc94cb7c21bc51cf312d",
+    "qualityScore": 57,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3529,12 +3529,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "92657ea3cdafbb28779ca4d58a311b36f2e3eb3003c6076d2d649daa8ad588b8",
+    "sha256": "a5ad42b879b96e40928431652259c2d5e5e14362020fc791ae035920ed3985a0",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "c95082af588c7eea7a145b2b06f4515d2196e08d",
-    "lastAttemptAt": "2026-10-18T19:12:44.392Z"
+    "lastAttemptRevision": "ddc8a3736c17fa192276bc94cb7c21bc51cf312d",
+    "lastAttemptAt": "2026-10-18T21:05:55.086Z"
   },
   "portal-lab": {
     "note": "No frame passed image-content checks",
