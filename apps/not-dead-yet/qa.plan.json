@@ -13,7 +13,8 @@
         "tests/textures.test.mjs",
         "tests/doors.test.mjs",
         "tests/memory.test.mjs",
-        "tests/story.test.mjs"
+        "tests/story.test.mjs",
+        "tests/power.test.mjs"
       ]
     },
     {

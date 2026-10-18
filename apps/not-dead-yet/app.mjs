@@ -65,6 +65,8 @@ function nearItem(){
  return found
 }
 function nearExit(){return Math.hypot(player.x-15.5,player.z-21)<2.25}
+function nearFuse(){const p=world.fusePosition();return Math.hypot(player.x-p.x,player.z-p.z)<2.0?p:null}
+function nearPlate(){const p=world.platePosition();return Math.hypot(player.x-p.x,player.z-p.z)<2.25&&world.visible(player.x,player.z,p.x,p.z)?p:null}
 function nearRadio(){
  const pos=world.radioPosition();const d=Math.hypot(player.x-pos.x,player.z-pos.z);
  return d<2.25&&world.visible(player.x,player.z,pos.x,pos.z)?pos:null
@@ -89,7 +91,20 @@ function interact(){
   }
  }
  if(nearExit()){if(inventory.length===4)finish(true);else notice('Ты уверен, что собрал все свои вещи?',2.3);return}
+ if(nearPlate()&&!world.powerAvailable()){
+  const result=world.unplugPlate();
+  if(result.ok){notice('Электроплитка отключена. Теперь — щиток у входа.',4);acoustics.event('breaker');persist();hud()}
+  else notice('Плитка уже выключена.',1.6);
+  return
+ }
+ if(nearFuse()&&!world.powerAvailable()){
+  const result=world.resetBreaker();
+  if(result.ok){notice('Свет вернулся. Снова слышно холодильник.',4);stress=Math.max(0,stress-8);acoustics.event('power-return');persist();hud()}
+  else{notice('Автомат снова выбило. Сначала выключи плитку на кухне.',4);acoustics.event('breaker')}
+  return
+ }
  if(nearRadio()){
+  if(!world.powerAvailable()){notice('Приёмник без питания. Сначала верни электричество.',2.6);return}
   const result=world.tuneRadio(inventory.includes('album'));
   acoustics.event(result.sound,{intensity:1});
   if(result.newMemory){stress=Math.max(0,stress-16);world.nextShift+=13}
@@ -135,6 +150,10 @@ function makeShadow(){
 }
 function simulate(dt){
  elapsed+=dt;world.updateDoors(dt);
+ if(world.tickPower(elapsed,inventory.length)){
+  acoustics.event('blackout');notice('Свет погас. Старую проводку снова выбило. Фонарь работает.',5);
+  stress=Math.min(100,stress+5);hud();persist()
+ }
  if(reloadTime>0){reloadTime=Math.max(0,(reloadDeadline-performance.now())/1000);if(reloadTime===0){const load=Math.min(6-ammo,reserve);ammo+=load;reserve-=load;chirp(310,.13,.023);hud()}}
  shotTime=Math.max(0,shotTime-dt);stunTime=Math.max(0,stunTime-dt);
  let forward=(Number(keys.has('w')||keys.has('arrowup'))-Number(keys.has('s')||keys.has('arrowdown')))+stick.y;
@@ -177,7 +196,7 @@ function simulate(dt){
   }
  }
  shadows=shadows.filter(e=>e.age<30&&world.canStand(e.x,e.z,.07));
- stress=clamp(stress-(shadows.length===0?.75:.15)*dt,0,100);
+ stress=clamp(stress-(shadows.length===0?.75:.15)*dt+(!world.powerAvailable()&&!torch?.45:0)*dt,0,100);
  if(stress>=100){finish(false);return}
  acoustics.tick({elapsed,room:world.location(player.x,player.z),stress,active:phase==='play'});
  if(elapsed>=saveAt){saveAt=elapsed+5;persist()}
@@ -189,21 +208,23 @@ function hud(){
  $('sector').textContent='КВАРТИРА №17 / '+world.location(player.x,player.z);
  $('count').textContent=inventory.length+' / 4';$('packCount').textContent=inventory.length;
  $('ammo').textContent=ammo+' / '+reserve;$('lifeFill').style.width=(100-stress)+'%';
- $('objective').textContent=inventory.length===4?'Вернуться к входной двери':'Найти четыре знакомые вещи';
+ $('objective').textContent=!world.powerAvailable()?world.powerObjective():inventory.length===4?'Вернуться к входной двери':'Найти четыре знакомые вещи';
  $('perception').style.opacity=String(clamp(.08+stress/170,0,.7));
  $('reload').textContent=reloadTime>0?'…':'↻';$('torch').textContent='Свет: '+(torch?'вкл':'выкл');
  const item=nearItem(),memory=!item?nearMemory():null,exit=nearExit();
  const radio=!item&&!memory&&!exit?nearRadio():null;
- const door=!item&&!memory&&!exit&&!radio?world.nearestDoor(player.x,player.z,2.2):null;
- $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:memory?'E / ВСПОМНИТЬ — '+world.location(memory.x,memory.z):radio?'E / НАСТРОИТЬ ПРИЁМНИК':exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):door?'E / '+(door.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' — '+world.location(world.point(door.room).x,world.point(door.room).z):'';
- $('interact').textContent=item?'Взять':memory?'Вспомнить':radio?'Настроить':door?(door.open?'Закрыть':'Открыть'):exit?'Открыть':'Взять';
- $('interact').classList.toggle('ready',Boolean(item||memory||radio||exit||door));
+ const plate=!item&&!memory&&!exit&&!radio&&!world.powerAvailable()?nearPlate():null;
+ const fuse=!item&&!memory&&!exit&&!radio&&!plate&&!world.powerAvailable()?nearFuse():null;
+ const door=!item&&!memory&&!exit&&!radio&&!plate&&!fuse?world.nearestDoor(player.x,player.z,2.2):null;
+ $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:memory?'E / ВСПОМНИТЬ — '+world.location(memory.x,memory.z):radio?'E / '+(world.powerAvailable()?'НАСТРОИТЬ ПРИЁМНИК':'ПРИЁМНИК БЕЗ СВЕТА'):plate?'E / ОТКЛЮЧИТЬ ПЛИТКУ':fuse?'E / ВКЛЮЧИТЬ АВТОМАТ':exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):door?'E / '+(door.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' — '+world.location(world.point(door.room).x,world.point(door.room).z):'';
+ $('interact').textContent=item?'Взять':memory?'Вспомнить':radio?'Настроить':plate?'Выключить':fuse?'Включить':door?(door.open?'Закрыть':'Открыть'):exit?'Открыть':'Взять';
+ $('interact').classList.toggle('ready',Boolean(item||memory||radio||plate||fuse||exit||door));
 }
 function paint(t){
  const dt=Math.min(.20,Math.max(0,(t-lastFrame)/1000));lastFrame=t;
  if(phase==='play')simulate(dt);
  if(world&&renderer&&!renderer.lost){const items=ITEMS.filter(i=>!inventory.includes(i.id)).map(i=>world.itemPosition(i.id));renderer.draw(world,player,shadows,items,torch,elapsed,stress/100,shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)}
- window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true,memoryTraces:world?.rooms.map(r=>world.memoryState(r.type)),radio:world?.radio?{...world.radio}:null,recognized:world?.recognizedCount(),layoutVersion:world?.layoutVersion,doors:world?.doors().map(d=>({room:d.type,open:d.open,angle:d.angle,gate:d.gate})),sovietInterior:true};
+ window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true,memoryTraces:world?.rooms.map(r=>world.memoryState(r.type)),radio:world?.radio?{...world.radio}:null,recognized:world?.recognizedCount(),layoutVersion:world?.layoutVersion,doors:world?.doors().map(d=>({room:d.type,open:d.open,angle:d.angle,gate:d.gate})),sovietInterior:true,power:world?.power?{...world.power}:null,powerAvailable:world?.powerAvailable()};
  requestAnimationFrame(paint)
 }
 function moveStick(e){const b=$('joystick').getBoundingClientRect(),x=e.clientX-b.left-b.width*.5,y=e.clientY-b.top-b.height*.5,rad=b.width*.38,d=Math.max(.01,Math.hypot(x,y)),scale=Math.min(1,rad/d);stick.x=x*scale/rad;stick.y=-y*scale/rad;$('knob').style.transform='translate('+(x*scale)+'px,'+(y*scale)+'px)'}
@@ -247,6 +268,18 @@ try{
  renderer=new Renderer($('view'));setup(nextSeed());phase='menu';overlay('menu');$('continue').hidden=!readSave();
  if(new URLSearchParams(window.location?.search||'').get('qa')==='1'){
   window.__PW_TEST_HOOKS__={
+   teleportNearPower(kind){
+    if(phase!=='play')return false;
+    const p=kind==='fuse'?world.fusePosition():world.platePosition();
+    const candidates=kind==='fuse'?[[.2,0],[.2,.35],[.3,-.35],[.4,.5]]:[[0,1.35],[0,-1.35],[1.45,0],[-1.45,0],[0,1.65],[0,-1.65]];
+    for(const [dx,dz] of candidates){let x=p.x+dx,z=p.z+dz;
+     if(world.canStand(x,z)&&Math.hypot(x-p.x,z-p.z)<2.1&&(kind==='fuse'||world.visible(x,z,p.x,p.z))){player.x=x;player.z=z;hud();return true}
+    }return false
+   },
+   triggerBlackout(){
+    if(phase!=='play')return false;
+    const worked=world.tickPower(Math.max(80,elapsed),inventory.length);hud();return worked
+   },
    teleportNearRadio(){
     if(phase!=='play')return false;
     const pos=world.radioPosition();

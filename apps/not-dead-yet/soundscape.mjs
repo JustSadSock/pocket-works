@@ -78,6 +78,17 @@ export function createSoundscape({Context=(typeof window!=='undefined'?(window.A
       hiss({duration:.55,frequency:550,volume:.013,pan});
       for(let i=0;i<5;i++)note([262,294,330,392,330][i],{type:'triangle',volume:.022,duration:.36,at:now+.15+i*.30,pan});
       note(131,{duration:1.2,volume:.014,type:'sine',end:165,at:now+.30,pan});break;
+     case 'blackout':
+      note(95,{type:'sawtooth',end:33,duration:.6,volume:.055,pan});
+      hiss({frequency:280,duration:.75,volume:.040,pan});
+      note(880,{type:'square',end:370,duration:.06,volume:.021,at:now+.24,pan});break;
+     case 'breaker':
+      note(360,{type:'square',end:120,duration:.075,volume:.035,pan});
+      note(195,{type:'triangle',end:90,duration:.22,volume:.019,at:now+.07,pan});break;
+     case 'power-return':
+      note(72,{type:'sine',end:104,duration:1.1,volume:.035,pan});
+      note(650,{type:'triangle',end:520,duration:.18,volume:.019,at:now+.23,pan});
+      hiss({frequency:460,duration:.50,volume:.012,at:now+.33,pan});break;
      case 'door':
       note(132,{type:'triangle',end:71,duration:.39,volume:.033,pan});
       hiss({duration:.28,volume:.020,frequency:520,pan});

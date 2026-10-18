@@ -13,7 +13,7 @@ const FS=[
 'precision mediump float;',
 'varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
 'uniform vec3 eye;uniform vec3 facing;uniform vec3 lampA;uniform vec3 lampB;',
-'uniform float torch;uniform mediump float time;uniform float hit;',
+'uniform float torch;uniform mediump float time;uniform float hit;uniform float electrical;',
 'uniform sampler2D paintedAtlas;',
 'void main(){',
 'vec3 norm=normalize(n);',
@@ -30,7 +30,8 @@ const FS=[
 'float warm=((1.0-smoothstep(1.0,11.0,length(p-lampA)))*.65+',
 '(1.0-smoothstep(1.0,10.0,length(p-lampB)))*.42)*flicker;',
 'float diffuse=.62+.38*max(dot(norm,normalize(vec3(-.4,.7,-.3))),0.0);',
-'vec3 color=c*(.57+.54*pigment)*(.30+warm+beam*1.70)*diffuse;',
+'warm*=electrical;',
+'vec3 color=c*(.57+.54*pigment)*(mix(.095,.30,electrical)+warm+beam*1.70)*diffuse;',
 'color+=c*warm*vec3(.16,.10,.02);',
 'float mist=smoothstep(14.0,39.0,d);color=mix(color,vec3(.057,.056,.051),mist*.82);',
 'color=mix(color,vec3(.65,.15,.11),hit*.24);',
@@ -378,6 +379,36 @@ function apartmentDetail(out,world,M){
  box(out,x,3.03,z,2.76,.13,.29,timber,6);
 }
 
+
+// The 1970s metal breaker board is mounted on hallway plaster; an old hotplate
+// on the kitchen table has a distinct red on-state and a physically visible plug.
+function electricalProps(out,world,time){
+ const f=world.fusePosition(),x=(f.x-.065)*SCALE,z=f.z*SCALE;
+ const iron=[.44,.43,.38],ceramic=[.78,.74,.62],brass=[.57,.47,.32],dark=[.21,.20,.18];
+ box(out,x,1.06,z,.095,.86,.75,iron,9);
+ box(out,x+.062,1.14,z,.035,.72,.60,ceramic,8);
+ for(let k=0;k<3;k++){
+  const zz=z+(k-1)*.17,up=world.powerAvailable();
+  box(out,x+.091,1.42,zz,.059,.22,.12,[.31,.30,.27],9);
+  box(out,x+.139,up?1.56:1.33,zz,.11,.085,.062,brass,9);
+  box(out,x+.103,.94,zz,.018,.035,.07,dark,9)
+ }
+ const plate=world.platePosition(),px=plate.x*SCALE,pz=plate.z*SCALE;
+ box(out,px,.83,pz,.52,.105,.47,[.61,.57,.47],8);
+ round(out,px,.95,pz,.155,.014,.145,dark,9);
+ for(const q of [-1,1])box(out,px+q*.17,.96,pz+.19,.045,.06,.035,brass,9);
+ // Outlet and cable to the wall; amber lamp vanishes when unplugged or blackout.
+ const live=world.powerAvailable()&&!world.power.unplugged;
+ box(out,px+.22,.96,pz-.15,.045,.085,.06,live?[.72,.30,.11]:dark,live?8:9);
+ if(!world.power.unplugged){box(out,px-.24,.89,pz-.22,.012,.06,.24,dark,9)}
+ else{box(out,px+.40,.85,pz+.19,.12,.05,.065,dark,9)}
+ const kettle=world.objects().find(o=>o.type==='table'&&o.room==='kitchen');
+ if(kettle){
+  round(out,px,.98,pz,.12,.095,.115,[.70,.65,.55],8);
+  box(out,px,1.075,pz,.025,.08,.025,brass,9)
+ }
+}
+
 function clockHands(out,world,time){
  const r=world.room('living');if(!r)return;
  const x=(r.x1-1.7)*SCALE,y=1.67,z=(r.z1-1.4)*SCALE+.293;
@@ -469,7 +500,7 @@ export class Renderer{
   this.gl=gl;const program=gl.createProgram();gl.attachShader(program,shader(gl,gl.VERTEX_SHADER,VS));gl.attachShader(program,shader(gl,gl.FRAGMENT_SHADER,FS));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   this.program=program;gl.useProgram(program);this.attrs=['position','tint','normal','material'].map(name=>{const l=gl.getAttribLocation(program,name);if(l>=0)gl.enableVertexAttribArray(l);return l});
-  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas'].map(x=>[x,gl.getUniformLocation(program,x)]));
+  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical'].map(x=>[x,gl.getUniformLocation(program,x)]));
   const atlas=makeMaterialAtlas(1701);this.texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,atlas.width,atlas.height,0,gl.RGBA,gl.UNSIGNED_BYTE,atlas.pixels);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -490,9 +521,9 @@ export class Renderer{
   const lampA=world.point('living'),lampB=world.point('kitchen');
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
   gl.uniform3fv(this.u.lampA,[lampA.x*SCALE,2.64,lampA.z*SCALE]);gl.uniform3fv(this.u.lampB,[lampB.x*SCALE,2.64,lampB.z*SCALE]);
-  gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);
+  gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);gl.uniform1f(this.u.electrical,world.powerAvailable()?1:0);
   this.bind(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
-  const dyn=[];doorGeometry(dyn,world);clockHands(dyn,world,t);for(const item of items)relicMesh(dyn,item,t);
+  const dyn=[];doorGeometry(dyn,world);electricalProps(dyn,world,t);clockHands(dyn,world,t);for(const item of items)relicMesh(dyn,item,t);
   for(const e of enemies){
    const d=Math.hypot(e.x-player.x,e.z-player.z);
    if(d<14&&flash)castFloorShadow(dyn,e.x*SCALE,e.z*SCALE,.58,.35,1.50,
@@ -502,6 +533,6 @@ export class Renderer{
   if(dyn.length){this.upload(this.dynamicBuffer,dyn,gl.DYNAMIC_DRAW);this.bind(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10)}
   // Proper viewmodel at the lower right: no world-space cyan marker below the camera.
   const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false});
-  if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10)}
+  if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));gl.uniform1f(this.u.electrical,1);this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10)}
  }
 }
