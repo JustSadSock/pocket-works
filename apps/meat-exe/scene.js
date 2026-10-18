@@ -756,14 +756,17 @@ export function createWorld(canvas, initialSeed) {
   function nearChunks(x,z) {
     const cx=Math.floor(Math.round(x)/CELLS_PER_CHUNK),cz=Math.floor(Math.round(z)/CELLS_PER_CHUNK);
     const slim=softwareRenderer&&quality!=='high';
-    const focus=cellKey(cx,cz)+'/'+(slim?'5':'9');if(lastChunk===focus)return;
+    const aheadX=x-cx*CELLS_PER_CHUNK>=3.5?1:-1;
+    const aheadZ=z-cz*CELLS_PER_CHUNK>=3.5?1:-1;
+    const focus=cellKey(cx,cz)+'/'+(slim?'3:'+aheadX+':'+aheadZ:'9');
+    if(lastChunk===focus)return;
     lastChunk=focus;
-    // On SwiftShader and software WebGL, five tiles preserve both open portals
-    // and near-field silhouettes but avoid rendering four unseen corner chunks.
-    // Game collision/nav still use the authoritative, full procedural graph.
+    // Software rasterizers only: preserve the active organ sector and the
+    // two neighbouring approach directions. Authoritative floor and collision
+    // data remain complete, even when out-of-view geometry is omitted.
     const keep=new Set();
     for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
-      if(slim&&Math.abs(dx)+Math.abs(dz)>1)continue;
+      if(slim&&(Math.abs(dx)+Math.abs(dz)>1||dx&&dx!==aheadX||dz&&dz!==aheadZ))continue;
       const k=cellKey(cx+dx,cz+dz);keep.add(k);
       if(!chunks.has(k))buildChunk(cx+dx,cz+dz);
     }
