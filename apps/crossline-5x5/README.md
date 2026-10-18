@@ -44,3 +44,13 @@ The replay screen shows both players' complete orders in two five-step rows, hig
 ## Planning stability patch (v1.6.1)
 
 Stage 3 was delivered in v1.5 and retained in v1.6.1. Controls marked as conflicting remain tappable to show the exact constraint; server/engine plan validation still prevents illegal orders. Submitting while a slot is selected requires ending the edit to avoid accidental confirmation. Solo AI computation is announced before starting CPU work, stores player A's submitted plan and resumes the pending turn after a restart; a generation token prevents resolving a match abandoned during that wait. Regression: `tests/planning-polish.test.mjs` plus all prior `tests/*.test.mjs`.
+
+## Interactive learning, annotations, sound (v1.7.0)
+
+Press **Обучение** on the original main-menu rules panel for an in-context five-action lesson on the same live 5×5 grid: one move, an orthogonal attack, a shield, two final moves and confirmation. Both players' actions resolve through the unchanged `simulateRound` engine, and the recorded lesson opens in the normal replay. The plain-text rules remain available via the lesson header.
+
+Tap any board cell during a normal planning phase to cycle **• watch → ! danger → clear**. Notes belong to the current player side and round. Offline notes are included in the existing local session save, while online notes stay private in the local browser (never included in PocketNet messages or replay exports). Keyboard users can focus cells and press Enter/Space.
+
+Tap the **♪** icon in the menu or **Звук и управление** from pause for volume (0–100%), independent mute, animation and haptic toggles. Settings persist per app, respect system reduced motion, and call real audio/haptic APIs.
+
+QA: 45 isolated gallery scenes; `tests/learning.test.mjs` and `qa/learning.spec.js` verify tutorial logic, rule-engine combat, marks and real persisted controls.
