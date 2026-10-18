@@ -99,8 +99,8 @@ test('selecting a mage in the lobby is server-validated and locks for a full mat
  assert.equal(deny.events[0].type,'notice');assert.equal(s.match.actors[0].mageId,'slate');
 });
 test('invalid nine-rune replacements cannot corrupt server state or ready flags',()=>{
- const s=match(),old=Date.now;let t=100000;Date.now=()=>t;
- try{s.match.remaining=.01;t+=80;send(s,p,'input',input(0,1));assert.equal(s.phase,'draft');
+ const old=Date.now;let t=100000;Date.now=()=>t;
+ try{const s=match();s.match.remaining=.01;t+=80;send(s,p,'input',input(0,1));assert.equal(s.phase,'draft');
  const allowed=s.offers[0][0];send(s,p,'pick',{rune:allowed});
  const before=[...s.match.actors[0].runes];
  send(s,p,'order',{runes:['on_cast','on_cast','ball']});
