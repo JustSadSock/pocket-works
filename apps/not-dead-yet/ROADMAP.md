@@ -99,7 +99,23 @@ hiding simplistic assets.
       middle ground, distant darkness and familiar shapes must communicate
       space and danger.
 
-### 2.1.1 — Architectural geometry with depth, not a box labyrinth (P0)
+### 2.1.1 — Architectural geometry with depth, not a box labyrinth (in progress: 2.1.1 shipped)
+- [x] Five floor-plan families: four-room, staggered-wing, walk-through,
+      service-nook and crooked-vestibule; actual path geometry differs.
+- [x] Room footprints shrink to maximum 4×4 cells, with 2-cell WC/pantry.
+      Furniture placement follows the doorway, so real collision remains safe.
+- [x] Modeled separate toilet; directionally aligned doorframes and thresholds
+      replace obstructive decorative leaves. Gameplay cannot interact with
+      a door until opening/hinge behavior actually exists.
+- [x] Legacy run generator is preserved for old saves (`layoutVersion: 1`),
+      while new runs are v2. The memory shift can change the layout family.
+- [x] 400 seeded/epoch collision traversals reached every room and reward;
+      pure regressions additionally verify all sector seam portals.
+- [ ] Inspect five-family screenshot route in Chromium and mobile WebKit.
+- [ ] Add opening doors, thick partition walls, deeper real architectural
+      connections, wall damage and varied ceiling construction before
+      closing the remaining 2.1.1 scope.
+
 - [ ] Generate several credible floor-plan families rather than a repeated
       four-room module: tiny L-shaped halls, vestibules, walk-through living
       rooms, attached kitchens, combined/separate toilets, closets, uneven

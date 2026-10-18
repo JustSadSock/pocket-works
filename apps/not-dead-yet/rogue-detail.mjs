@@ -159,14 +159,13 @@ export function appendWallDetails(o,{x,z,px,pz,dx,dz,room}){
  }
 }
 export function appendDoorDetails(o,d){
- // The doorway frame now sits on the actual transition between walkable
- // cells, not floating on one arbitrary side of the passage. A door leaf
- // would falsely block traversal until opening/hinge physics is implemented.
+ // Frame, threshold and hinged leaf share the same middle-of-tile plane.
+ // The moving timber leaf lives in rogue-door-visual.mjs.
  const x=(d.x+.5)*S,z=(d.z+.5)*S;
  const brown=[.42,.27,.17],edge=[.57,.38,.23],brass=[.67,.50,.29];
  const horizontal=d.side==='left'||d.side==='right';
  if(horizontal){
-  const plane=(d.x+(d.side==='right'?1:0))*S;
+  const plane=(d.x+.5)*S;
   for(const sign of [-1,1]){
    box(o,plane,.01,z+sign*.568,.16,2.25,.11,brown,6);
    box(o,plane+(d.side==='left'?.07:-.07),.01,z+sign*.565,.034,2.26,.060,edge,6);
@@ -177,7 +176,7 @@ export function appendDoorDetails(o,d){
   // Light-switch plate belongs to the solid adjacent wall, not the opening.
   box(o,plane+(d.side==='left'?.065:-.065),1.14,z+.78,.018,.14,.10,[.69,.62,.48],8)
  }else{
-  const plane=(d.z+(d.side==='north'?1:0))*S;
+  const plane=(d.z+.5)*S;
   for(const sign of [-1,1]){
    box(o,x+sign*.568,.01,plane,.11,2.25,.16,brown,6);
    box(o,x+sign*.565,.01,plane+(d.side==='south'?.07:-.07),.060,2.26,.034,edge,6);

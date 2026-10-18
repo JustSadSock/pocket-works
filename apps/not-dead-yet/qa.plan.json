@@ -19,7 +19,8 @@
         "tests/presences.test.mjs",
         "tests/roguelike.test.mjs",
         "tests/keyboard.test.mjs",
-        "tests/visual-baseline.test.mjs"
+        "tests/visual-baseline.test.mjs",
+        "tests/floorplans.test.mjs"
       ]
     },
     {

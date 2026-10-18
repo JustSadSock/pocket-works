@@ -7,7 +7,7 @@ test('three reproducible visual references render without WebGL errors',async({p
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(origin,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.__PW_ROGUE_QA__?.visual&&window.__PW_TEST_STATE__?.renderer3D,{timeout:20000});
- for(const seed of [222,413,8787]){
+ for(const seed of [222,413,8787,4,14]){
   const ok=await page.evaluate(seed=>window.__PW_ROGUE_QA__.startSeed(seed),seed);
   expect(ok).toBe(true);
   for(const scene of ['corridor','living','kitchen','bathroom']){

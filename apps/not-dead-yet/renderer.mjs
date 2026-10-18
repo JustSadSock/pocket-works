@@ -2,6 +2,7 @@ import {W,H,HOME} from './apartment.mjs';
 import {makeMaterialAtlas} from './textures.mjs';
 import {panels} from './doors.mjs';
 import {rogueStaticMesh,roguePickupsMesh} from './rogue-scene.mjs';
+import {rogueDoorMesh} from './rogue-door-visual.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
@@ -666,7 +667,7 @@ export class Renderer{
   gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);gl.uniform1f(this.u.electrical,rogue?1:world.powerAvailable()?1:0);gl.uniform1f(this.u.sight,rogue?(player.sight||0):0);
   this.bind(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
   const dyn=[];
-  if(rogue)roguePickupsMesh(dyn,items,t);
+  if(rogue){roguePickupsMesh(dyn,items,t);rogueDoorMesh(dyn,world,player)}
   else {doorGeometry(dyn,world);electricalProps(dyn,world,t);clockHands(dyn,world,t);for(const item of items)relicMesh(dyn,item,t);}
   for(const e of enemies){
    const d=Math.hypot(e.x-player.x,e.z-player.z);

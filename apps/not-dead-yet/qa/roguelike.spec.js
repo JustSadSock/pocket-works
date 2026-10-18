@@ -119,3 +119,24 @@ test('desktop mouse look surface is not hidden under the mobile touch area',asyn
  expect(events.p).toBe('none');
  expect(events.hit).toBe('view')
 });
+
+test('five architecturally different apartment families work in the actual renderer',async({page})=>{
+ await boot(page);
+ const families=new Set();
+ for(const seed of [222,413,8787,4,14]){
+  const frame=await page.evaluate(seed=>{
+   const api=window.__PW_ROGUE_QA__;
+   if(!api.startSeed(seed))return null;
+   const room=api.world().chunk(0,0);
+   return{family:room.layoutName,rooms:room.rooms.length,
+    startWalkable:api.world().canStand(9.5,9.5),
+    version:api.world().layoutVersion}
+  },seed);
+  expect(frame).not.toBeNull();
+  expect(frame.startWalkable).toBe(true);
+  expect(frame.version).toBe(2);
+  expect(frame.rooms).toBeGreaterThanOrEqual(4);
+  families.add(frame.family);
+ }
+ expect(families.size).toBe(5)
+});

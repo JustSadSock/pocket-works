@@ -44,3 +44,18 @@ New geometry is rendered only in a **9-cell proximity LOD** for walls, doors and
 - [ ] Check visible overlap / z-fighting / penetration in a complete walk through all six room types.
 - [ ] Validate safe margins for weapon/hands, camera FOV and mobile HUD.
 - [ ] Compare existing story-mode and endless-mode material continuity without modifying the PocketWorks shell.
+
+## Architecture after v2.1.1
+The earlier measurements remain a reproducible historical comparison.
+The new generator supports five different layouts and small WC/pantry
+spaces; new main rooms are at most 4×4 cells and furniture is positioned
+relative to doorway access. Old saved runs retain their prior layout.
+
+Isolated V8 static scene meshes at the start point (triangles): seed 222
+**17,328**; 413 **17,726**; 8787 **17,100**; 127 **18,171**; 91
+**15,875**. These are geometry counts, not GPU benchmarks.
+
+QA image seeds 222, 413, 8787, 4 and 14 collectively cover all five
+families. Their browser screenshots are not yet executed/reviewed.
+400 seeded/epoch combinations passed actual collision-graph tests for all
+rooms, doors and drops; that does not independently verify visual clipping.
