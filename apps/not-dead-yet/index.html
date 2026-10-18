@@ -4,7 +4,7 @@
 <title>NOT DEAD YET — Бесконечный хоррор-рогалик</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css"></head>
 <body><main class="app-shell" data-app-shell data-fullscreen-app>
-<canvas id="view" data-gesture-surface data-block-callout aria-label="Меняющаяся хрущёвка от первого лица"></canvas>
+<canvas id="view" tabindex="0" data-gesture-surface data-block-callout aria-label="Меняющаяся хрущёвка от первого лица"></canvas>
 <div class="grain" aria-hidden="true"></div><div id="perception" class="perception" aria-hidden="true"></div><div class="reticle" aria-hidden="true"></div>
 <header class="hud" data-ui>
  <div class="location"><span class="location-mark"></span><div><strong id="sector">КВАРТИРА №17</strong><small id="objective">Вспомнить дорогу домой</small></div></div>
@@ -31,7 +31,7 @@
  <button id="continue" class="secondary" hidden data-native-press>Продолжить забег</button>
  <button id="sound" class="secondary" data-native-press>Звук: вкл</button>
  <a class="secondary chapter-link" href="./?chapter=1">Сюжетная глава: квартира №17</a><a class="exit" data-app-control href="../../">Вернуться в Pocket Works</a></div>
- <p class="control-help">WASD — ходьба · Мышь — взгляд · E — взять · ЛКМ — стрелять · R — перезарядка · I — вещи</p>
+ <p class="control-help">WASD — движение · Мышь — обзор · Клик — захват мыши · ЛКМ/Пробел — выстрел · Shift — бег · E — взять · R — перезарядить · F — фонарь · Tab/I — улучшения · Esc — пауза · ←/→ — поворот</p>
  </div>
 </section>
 <section id="pauseOverlay" class="overlay" hidden data-ui><div class="dialog">
@@ -58,5 +58,5 @@
 </div></section>
 <div id="fatal" hidden role="alert"><strong>Квартира не открылась</strong><span>WebGL недоступен. Обнови страницу или выбери другой браузер.</span><a href="../../">Вернуться в Pocket Works</a></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="NOT DEAD YET" data-app-version="2.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="NOT DEAD YET" data-app-version="2.0.1"></script>
 <script type="module" src="./app.js"></script></body></html>
