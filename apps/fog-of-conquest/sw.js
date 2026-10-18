@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'fog-of-conquest-';
-const CACHE_NAME = 'fog-of-conquest-v1.2.1';
-const APP_VERSION = '1.2.1';
+const CACHE_NAME = 'fog-of-conquest-v1.2.2';
+const APP_VERSION = '1.2.2';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Сохранены исходная карта, баланс, оба набора графики, семь уровней ИИ, BOG и реплеи.","PocketNet: исходные правила боя и найма, серверная проверка приказов, приватный туман и восстановление подключения.","Две независимые сессии Pocket ID/гостя, безопасное переподключение и центрирование камеры второго игрока."];
+const RELEASE_NOTES = ["BOG безопасен на всех размерах карт; локальные сохранения защищены от повреждений, восстановлены режимы ИИ и beta.","Сохранены исходная карта, баланс, оба набора графики, семь уровней ИИ, BOG и реплеи.","PocketNet: исходные правила боя и найма, серверная проверка приказов, приватный туман и восстановление подключения.","Две независимые сессии Pocket ID/гостя, безопасное переподключение и центрирование камеры второго игрока."];
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -28,6 +28,7 @@ const APP_SHELL = [
   "./js/worldGen.js",
   "./js/lobby.js",
   "./js/replay.js",
+  "./js/save-schema.js",
   "./js/ui.js",
   "./data/lang/en.json",
   "./data/lang/ru.json",
