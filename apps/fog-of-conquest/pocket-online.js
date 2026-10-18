@@ -1,24 +1,25 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
 
-// PocketNet is the only online transport. Original local rules remain untouched.
+// The only network transport is PocketNet. All actions are intents, validated
+// on the server. Offline original rules and local saves remain separate.
 const $=id=>document.getElementById(id);
 const lobby=$('lobbyPanel'),input=$('roomIdInput');
-const status=document.createElement('p');status.id='onlineStatus';status.setAttribute('role','status');status.textContent='Интернет-комната PocketNet';
-lobby.insertBefore(status,lobby.lastElementChild);
+const status=document.createElement('p');
+status.id='onlineStatus';status.setAttribute('role','status');
+status.setAttribute('aria-live','polite');lobby.insertBefore(status,lobby.lastElementChild);
 const controls=document.createElement('div');controls.id='onlineLobbyControls';
 const start=document.createElement('button');start.type='button';start.className='game-btn';start.textContent='Начать матч';start.disabled=true;
 const copyCode=document.createElement('button');copyCode.type='button';copyCode.className='game-btn';copyCode.textContent='Копировать код';copyCode.disabled=true;
 controls.append(start,copyCode);lobby.append(controls);
-const resume=document.createElement('button');
-resume.id='fogResumeRoom';resume.type='button';resume.className='game-btn';
-resume.textContent='Вернуться в интернет-комнату';resume.hidden=true;
-$('startButtons')?.append(resume);
-const turn=document.createElement('span');turn.id='onlineTurnStatus';turn.setAttribute('aria-live','polite');
-$('controls')?.prepend(turn);
-let client=null,room=null,view=null,lock=false,joined=false,connectPromise=null,selectedSize='medium',active=false;
-// PocketNet's generic key is shared by other Pocket Works games. Namespace
-// Fog credentials/rooms so launching another game cannot steal this session.
+const resume=document.createElement('button');resume.id='fogResumeRoom';resume.type='button';resume.className='game-btn';
+resume.textContent='Вернуться в интернет-комнату';resume.hidden=true;$('startButtons')?.append(resume);
+const leaveButton=document.createElement('button');leaveButton.id='fogLeaveRoom';leaveButton.type='button';
+leaveButton.className='game-btn';leaveButton.textContent='Выйти из комнаты';leaveButton.hidden=true;
+lobby.append(leaveButton);
+const turn=document.createElement('span');turn.id='onlineTurnStatus';turn.setAttribute('aria-live','polite');$('controls')?.prepend(turn);
+let client=null,room=null,view=null,joined=false,phase='closed',pending=null;
+let connectPromise=null,selectedSize='medium',generation=0,operation=0,requestSequence=0,warning='';
 const scopedStore=base=>({
  getItem:key=>base.getItem('fog-of-conquest:net:'+key),
  setItem:(key,value)=>base.setItem('fog-of-conquest:net:'+key,value),
@@ -27,131 +28,240 @@ const scopedStore=base=>({
 const memberStore=scopedStore(localStorage),guestStore=scopedStore(sessionStorage);
 const storageFor=identity=>identity?.complete?memberStore:guestStore;
 const storedRoom=storage=>{try{return JSON.parse(storage.getItem('pocket-net:'+location.origin+'/pocketnet')||'null')}catch{return null}};
-const message=text=>{status.textContent=text;};
 const roomCode=()=>room?.roomId?.slice(0,8).toUpperCase()||'';
-const canIssue=()=>Boolean(joined&&active&&view?.game?.phase==='battle'&&view.game.state.currentPlayer===view.side&&!lock&&client?.socket?.readyState===WebSocket.OPEN);
+const connected=()=>client?.socket?.readyState===WebSocket.OPEN;
+const canIssue=()=>Boolean(joined&&phase==='battle'&&view?.game?.phase==='battle'&&
+ view.game.state.currentPlayer===view.side&&!pending&&connected());
+const message=text=>{warning=String(text);status.textContent=warning;};
 function refresh(){
- resume.hidden=!client?.roomId;
- start.disabled=!(room&&view?.phase==='lobby'&&view.host===view.viewerId&&view.seats.length===2&&client?.socket?.readyState===WebSocket.OPEN);
+ const knownRoom=Boolean(room||client?.roomId);
+ resume.hidden=!knownRoom;
+ leaveButton.hidden=!knownRoom||phase==='closed';
+ start.disabled=!(joined&&phase==='lobby'&&view?.host===view?.viewerId&&
+   view?.seats?.length===2&&connected());
  copyCode.disabled=!room;
- if(view?.phase==='lobby')message(view.seats.length===2?'Оба полководца в комнате · '+roomCode():'Код '+roomCode()+' · ожидается соперник');
- if(active&&view?.game){
-   const connected=client?.socket?.readyState===WebSocket.OPEN;
-   $('endTurnBtn').disabled=!canIssue();
-   turn.textContent=!connected?'Связь потеряна':canIssue()?'Твой ход':view.game.state.currentPlayer!==view.side?'Ход соперника':lock?'Приказ обрабатывается':'Партия завершена';
+ const stateText=phase==='connecting'?'Подключаемся к PocketNet…':
+   phase==='reconnecting'?'Связь прервана · восстанавливаем комнату…':
+   phase==='lobby'?(view?.seats?.length===2?'Оба полководца готовы · ':'Ожидается соперник · ')+roomCode():
+   phase==='battle'?'Партия '+roomCode()+' · '+(view?.game?.state.currentPlayer===view?.side?'ваш ход':'ход соперника'):
+   phase==='finished'?'Партия завершена · '+roomCode():'Выбери интернет-комнату';
+ if(!warning)status.textContent=stateText;
+ const end=$('endTurnBtn');
+ if(end&&(view||knownRoom))end.disabled=!canIssue();
+ turn.textContent=phase==='reconnecting'?'Нет связи':
+  phase==='battle'?(pending?'Приказ проверяется':!connected()?'Нет связи':canIssue()?'Твой ход':'Ход соперника'):
+  phase==='finished'?'Матч завершён':'';
+}
+function setPhase(next,text){
+ phase=next;warning='';
+ if(text)message(text);
+ refresh();
+}
+function clearSession(text='Комната закрыта.',destroyClient=false){
+ generation++;operation++;connectPromise=null;
+ if(destroyClient&&client){client.close();client=null;}
+ room=null;view=null;joined=false;pending=null;
+ // No room ID from a previous profile may survive a stale reconnect.
+ if(client){client.roomId=null;client.persist();}
+ phase='closed';
+ window.FogLeaveOnline?.();
+ $('victoryOverlay').style.display='none';$('waitOverlay').style.display='none';
+ lobby.style.display='none';$('startPanel').style.display='flex';
+ $('newGameOptions').style.display='flex';
+ setPhase('closed',text);
+}
+function requestId(){
+ // Unique across reloads and tab sessions, bounded by the server contract.
+ const random=typeof crypto?.randomUUID==='function'?crypto.randomUUID().replaceAll('-',''):
+   Math.random().toString(36).slice(2)+Date.now().toString(36);
+ return 'fog'+random+(++requestSequence).toString(36);
+}
+function acceptView(next){
+ if(!next||next.side!==1&&next.side!==2)return;
+ const previous=view?.game?.revision||0;
+ // A delayed, out-of-order state must never overwrite the latest snapshot.
+ if(view?.game&&next.game&&next.game.revision<previous)return;
+ view=next;joined=true;
+ if(pending&&next.game&&next.game.revision>pending.revision)pending=null;
+ if(next.game){
+   phase=next.game.phase==='finished'||next.phase==='finished'?'finished':'battle';
+   window.FogApplyOnlineView?.(next);
+ }else{
+   phase=next.phase==='finished'?'finished':'lobby';
+   $('startPanel').style.display='none';lobby.style.display='flex';
  }
+ warning='';refresh();
+}
+function recoverPending(net){
+ if(!pending||!connected()||phase!=='battle'||!joined)return;
+ if(view.game.revision!==pending.revision){pending=null;refresh();return;}
+ try{
+   net.sendGame(pending.command); // Same request ID and revision, never a new order.
+   refresh();
+ }catch(e){message('Повторная синхронизация невозможна: '+String(e));}
 }
 function installListeners(net){
+ const current=()=>net===client&&!net.closed;
  net.on('connected',()=>{
-   joined=false; // Authentication precedes the server's room rejoin acknowledgement.
-   if(net.roomId)message('Восстанавливаем комнату…');
-   else message('Соединение установлено');
-   refresh();
+   if(!current())return;
+   joined=false;
+   if(net.roomId)setPhase('reconnecting','Восстанавливаем комнату…');
+   else setPhase('connecting','Соединение установлено');
  });
- net.on('room_joined',payload=>{
-   if(payload.gameId!=='fog-of-conquest')return;
-   room=payload;view=payload.state;lock=false;joined=true;
-   resume.hidden=false;
-   if(view.game){active=true;window.FogApplyOnlineView?.(view);}
-   else{active=false;$('startPanel').style.display='none';lobby.style.display='flex';}
-   refresh();
+ net.on('room_joined',packet=>{
+   if(!current()||packet.gameId!=='fog-of-conquest')return;
+   // Never accept a late acknowledgement for an explicitly abandoned room.
+   if(room&&room.roomId!==packet.roomId)return;
+   room=packet;
+   acceptView(packet.state);
+   recoverPending(net);
  });
  net.on('game_event',packet=>{
-   if(!room||packet.roomId!==room.roomId)return;
-   if(packet.event?.type==='notice'){lock=false;message(String(packet.event.payload||'Приказ отклонён'));refresh();return;}
-   if(packet.event?.type!=='state')return;
-   view=packet.event.payload;lock=false;
-   if(view.game){active=true;window.FogApplyOnlineView?.(view);}
-   refresh();
+   if(!current()||!room||packet.roomId!==room.roomId)return;
+   const event=packet.event;
+   if(event?.type==='notice'){
+     if(!event.requestId||!pending||event.requestId===pending.requestId)pending=null;
+     message(String(event.payload||'Приказ отклонён'));refresh();return;
+   }
+   if(event?.type==='ack'){
+     if(pending?.requestId===event.requestId)pending=null;
+     if(event.status==='duplicate')message('Повторный приказ уже учтён сервером.');
+     refresh();return;
+   }
+   if(event?.type!=='state')return;
+   acceptView(event.payload);
  });
- net.on('presence',packet=>{if(room)room.players=packet.players;refresh();});
- net.on('disconnected',()=>{joined=false;lock=false;message('Связь прервана · восстанавливается автоматически');refresh();});
- net.on('error',error=>{lock=false;message('Ошибка PocketNet: '+String(error?.message||error?.code||'нет соединения'));refresh();});
- net.on('room_closed',()=>{joined=false;room=null;view=null;lock=false;active=false;resume.hidden=true;window.FogLeaveOnline?.();$('startPanel').style.display='flex';lobby.style.display='none';message('Комната закрыта.');refresh();});
- net.on('room_kicked',()=>{joined=false;room=null;view=null;lock=false;active=false;resume.hidden=true;window.FogLeaveOnline?.();$('startPanel').style.display='flex';lobby.style.display='none';message('Доступ к комнате закрыт.');refresh();});
+ net.on('presence',packet=>{
+   if(!current()||!room||packet.roomId!==room.roomId)return;
+   room.players=packet.players;
+   if(phase==='lobby'&&view) {warning='';refresh();}
+ });
+ net.on('disconnected',()=>{
+   if(!current())return;
+   joined=false;
+   setPhase('reconnecting','Связь прервана · восстанавливаем сессию…');
+ });
+ net.on('error',error=>{
+   if(!current())return;
+   const code=String(error?.code||error?.message||'ошибка соединения');
+   if(['room_not_found','room_version_unavailable','not_in_room','room_kicked'].includes(code)){
+     clearSession(code==='room_version_unavailable'?'Версия правил этой комнаты больше недоступна. Начни новый матч.':
+       'Комната больше недоступна. Можно создать новую.',true);
+     return;
+   }
+   message('Ошибка PocketNet: '+code);refresh();
+ });
+ for(const type of ['room_closed','room_kicked']){
+   net.on(type,packet=>{
+     if(!current()||room&&packet?.roomId&&packet.roomId!==room.roomId)return;
+     clearSession(type==='room_kicked'?'Доступ к комнате закрыт.':'Комната закрыта.',true);
+   });
+ }
 }
 async function ensure(){
- if(client&&client.socket?.readyState===WebSocket.OPEN)return client;
+ const generationAtStart=generation;
+ // Never reuse an old live socket before checking the current Pocket ID.
+ const identity=await getPocketIdentity({force:true});
+ if(generationAtStart!==generation)throw Error('Профиль изменился.');
+ const identityKey=pocketIdentitySessionKey(identity);
+ const storage=storageFor(identity);
+ if(client&&(client.identityKey!==identityKey||client.storage!==storage)){
+   client.close();client=null;joined=false;room=null;view=null;pending=null;connectPromise=null;
+ }
+ if(client&&connected())return client;
  if(connectPromise)return connectPromise;
- connectPromise=(async()=>{
-   // PocketNet tokens cannot be reused by another Pocket ID account.
-   // Guests live in sessionStorage so two local testing tabs get separate seats.
-   const identity=await getPocketIdentity({force:true});
-   const identityKey=pocketIdentitySessionKey(identity);
-   const storage=storageFor(identity);
-   let nick='Полководец';
-   try{nick=localStorage.getItem('fog-of-conquest:online-nick')||nick;}catch{}
-   nick=preferredPocketName(identity,nick);
-   if(client&&(client.identityKey!==identityKey||client.storage!==storage)){
-     client.close();client=null;room=null;view=null;active=false;joined=false;
-   }
-   if(!client){
-     client=new PocketNet({serverUrl:location.origin+'/pocketnet',name:nick,identityKey,storage});
-     installListeners(client);
-   }
-   message('Подключаемся к PocketNet…');
-   try{await client.connect();return client;}
-   catch(error){message('Не удалось подключиться: '+String(error?.message||error));throw error;}
- })();
- try{return await connectPromise;}
- finally{connectPromise=null;}
+ let nick='Полководец';
+ try{nick=localStorage.getItem('fog-of-conquest:online-nick')||nick;}catch{}
+ nick=preferredPocketName(identity,nick);
+ const net=client||(client=new PocketNet({serverUrl:location.origin+'/pocketnet',name:nick,identityKey,storage}));
+ if(!net.listeners.has('connected'))installListeners(net);
+ setPhase(net.roomId?'reconnecting':'connecting');
+ const flight=net.connect().then(()=>{
+   if(generationAtStart!==generation||net!==client){net.close();throw Error('Подключение отменено.');}
+   return net;
+ });
+ connectPromise=flight;
+ try{return await flight;}
+ catch(error){
+   if(net===client)message('Не удалось подключиться: '+String(error?.message||error));
+   throw error;
+ }finally{if(connectPromise===flight)connectPromise=null;}
 }
-
 async function create(size){
- try{const c=await ensure();selectedSize=size||'medium';if(c.roomId)c.leaveRoom();c.createRoom('fog-of-conquest',{});message('Создание комнаты…');}
- catch{}
+ const current=++operation;
+ selectedSize=size||'medium';
+ try{
+   const net=await ensure();
+   if(current!==operation)return;
+   if(net.roomId)net.leaveRoom();
+   room=null;view=null;joined=false;pending=null;
+   setPhase('connecting','Создаём комнату…');
+   net.createRoom('fog-of-conquest',{});
+ }catch(error){if(current===operation){message(String(error?.message||error));refresh();}}
 }
 async function join(code){
+ const current=++operation;
  const trimmed=(code||'').trim();
  if(!trimmed){message('Введите код комнаты.');return;}
- try{const c=await ensure();if(c.roomId)c.leaveRoom();c.joinRoom(trimmed);message('Входим в комнату…');}
- catch{}
+ try{
+   const net=await ensure();
+   if(current!==operation)return;
+   if(net.roomId)net.leaveRoom();
+   room=null;view=null;joined=false;pending=null;
+   setPhase('connecting','Входим в комнату…');
+   net.joinRoom(trimmed);
+ }catch(error){if(current===operation){message(String(error?.message||error));refresh();}}
 }
 function issue(action){
  if(!canIssue())return false;
- try{lock=true;client.sendGame({type:'act',revision:view.game.revision,action});refresh();return true;}
- catch(e){lock=false;message('Приказ не отправлен: '+String(e.message||e));return false;}
+ const command={type:'act',requestId:requestId(),revision:view.game.revision,action};
+ pending={...command,command};
+ try{client.sendGame(command);refresh();return true;}
+ catch(error){pending=null;message('Приказ не отправлен: '+String(error?.message||error));refresh();return false;}
 }
 function leave(){
- try{if(client?.roomId&&client.socket?.readyState===WebSocket.OPEN)client.leaveRoom();}
- catch{}
- // Explicit leave also clears local recovery when the socket is offline.
- if(client){client.roomId=null;client.persist();}
- room=null;view=null;active=false;lock=false;joined=false;resume.hidden=true;
- window.FogLeaveOnline?.();
- $('victoryOverlay').style.display='none';
- $('waitOverlay').style.display='none';
- lobby.style.display='none';$('startPanel').style.display='flex';
- $('newGameOptions').style.display='flex';message('Комната закрыта на этом устройстве.');refresh();
+ // Explicit leave (unlike connection loss) forfeits an active match.
+ // Closing stale sockets stops any queued automatic rejoin.
+ if(connected()&&client?.roomId)try{client.leaveRoom();}catch{}
+ clearSession('Ты вышел из комнаты.',true);
 }
-start.addEventListener('click',()=>{if(start.disabled)return;try{client.sendGame({type:'start',size:selectedSize,beta:false});start.disabled=true;message('Создаём поле сражения…');}catch(e){message(String(e.message||e));}});
-copyCode.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(roomCode());message('Код '+roomCode()+' скопирован.');}catch{input.value=roomCode();input.select();message('Код выделен · скопируй его.');}});
-resume.addEventListener('click',async()=>{
- if(!resume.hidden){
-   try{await ensure();message('Восстанавливаем интернет-комнату…');}
-   catch(e){message('Возврат не удался: '+String(e?.message||e));}
- }
-});
-window.FogPocketNet={create,join,issue,leave,canIssue,refresh};
-// Visible lobby actions become usable only after the online bridge has loaded.
-$('createRoomBtn').disabled=false;
-$('joinRoomBtn').disabled=false;
-for(const id of ['settingsMenuBtn','victoryMenuBtn','victoryOkBtn'])$(id)?.addEventListener('click',()=>{if(active)leave();},true);
-// Restore a valid seat only for the same Pocket ID or the current guest tab.
-void getPocketIdentity({force:true}).then(identity=>{
- const storage=storageFor(identity);
+start.addEventListener('click',()=>{
+ if(start.disabled||!client)return;
  try{
-   const saved=storedRoom(storage);
-   if(saved?.roomId&&saved?.identityKey===pocketIdentitySessionKey(identity)){
-     resume.hidden=false;
-     void ensure().catch(()=>{resume.hidden=false;});
-   }
- }catch{}
+   const command={type:'start',size:selectedSize,beta:false,requestId:requestId()};
+   client.sendGame(command);start.disabled=true;message('Создаём поле сражения…');
+ }catch(error){message(String(error?.message||error));refresh();}
+});
+copyCode.addEventListener('click',async()=>{
+ try{await navigator.clipboard.writeText(roomCode());message('Код '+roomCode()+' скопирован.');}
+ catch{input.value=roomCode();input.select();message('Код выделен · скопируй его.');}
+});
+leaveButton.addEventListener('click',leave);
+resume.addEventListener('click',async()=>{
+ if(resume.hidden)return;
+ try{
+   const net=await ensure();
+   if(!joined&&net.roomId&&connected())net.joinRoom(net.roomId);
+   else if(joined&&view){window.FogApplyOnlineView?.(view);refresh();}
+ }catch(error){message('Возврат не удался: '+String(error?.message||error));}
+});
+window.FogPocketNet={create,join,issue,leave,canIssue,refresh,get phase(){return phase;},get side(){return view?.side||0;}};
+$('createRoomBtn').disabled=false;$('joinRoomBtn').disabled=false;
+$('lobbyBackBtn')?.addEventListener('click',()=>{if(client?.roomId)leave();},true);
+for(const id of ['settingsMenuBtn','victoryMenuBtn','victoryOkBtn'])
+ $(id)?.addEventListener('click',()=>{if(client?.roomId)leave();},true);
+// Restore only the seat associated with the same Pocket ID or current guest tab.
+const bootstrapGeneration=generation;
+void getPocketIdentity({force:true}).then(identity=>{
+ if(bootstrapGeneration!==generation)return;
+ const saved=storedRoom(storageFor(identity));
+ if(saved?.roomId&&saved.identityKey===pocketIdentitySessionKey(identity)){
+   resume.hidden=false;
+   void ensure().catch(()=>{resume.hidden=false;});
+ }
 }).catch(()=>{});
 document.addEventListener('pocket-id:changed',event=>{
- if(!client||client.identityKey===pocketIdentitySessionKey(event.detail?.user))return;
- client.close();client=null;room=null;view=null;active=false;lock=false;joined=false;resume.hidden=true;
- window.FogLeaveOnline?.();lobby.style.display='none';
- $('startPanel').style.display='flex';$('newGameOptions').style.display='flex';
- message('Профиль изменён. Сетевая сессия завершена.');refresh();
+ const newKey=pocketIdentitySessionKey(event.detail?.user);
+ if(client&&client.identityKey!==newKey)clearSession('Профиль изменён. Сетевая сессия завершена.',true);
+ else generation++;
 });
