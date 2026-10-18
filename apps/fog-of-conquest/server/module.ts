@@ -1,7 +1,7 @@
 // PocketNet adaptation of the ORIGINAL Fog of Conquest, without rebalance.
 // Original unit/building definitions and complete generator are embedded verbatim.
 // Never broadcast raw state: enemies and fogged terrain remain private.
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=7;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=8;
 const TERRAIN={PLAIN:0,WATER:1,FOREST:2,HILL:3,MOUNTAIN:4};
 const TERR_COST=[1,2,2,2,999],TERR_DEF=[0,-1,1,2,0];
 const BASE_ROWS=20,BASE_COLS=30;
@@ -531,7 +531,7 @@ export function originalAction(source,side,action){
  }else if(action.type==='attack'){
    if(!u||u.owner!==p||u.mp<=0||u.type==='mage'||!ok)return failure('Атака невозможна.');
    const enemy=target&&target.owner!==p?target:null;
-   const building=!enemy&&targetBuilding&&targetBuilding.owner!==p?targetBuilding:null;
+   const building=!target&&targetBuilding&&targetBuilding.owner!==p?targetBuilding:null;
    if(!enemy&&!building)return failure('Вражеская цель не найдена.');
    if(dist(u,action)>UNIT_TYPES[u.type].range||!los(g,u.r,u.c,action.r,action.c,false)||visibility(g,p)[action.r][action.c])return failure('Цель вне видимости.');
    if(g.map[u.r][u.c]===TERRAIN.WATER)return failure('Из воды нельзя атаковать.');
