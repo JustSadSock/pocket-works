@@ -1,6 +1,7 @@
 // Defensive saved-session migration and swept collisions; independent of DOM / WebGL.
 import {sanitizeGrafts,maxWeaponIndex} from './biobuilds.js';
 import {sanitizeImmune} from './immunity.js';
+import {ROUTES,GENES,routeOptions,sanitizeRouteHistory} from './runPaths.js';
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
 const kinds=new Set(['crawler','spitter','brute','heart','leech','warden']);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
@@ -10,6 +11,12 @@ export function validateRun(s){
   if(hp<=0)return null;
   return {
     v:5,seed:s.seed>>>0,x:s.x,z:s.z,
+    routeHistory:sanitizeRouteHistory(s.routeHistory),
+    selectedRoute:Number.isInteger(s.pendingDraft)&&s.pendingDraft>=2&&s.pendingDraft<=5&&routeOptions(s.seed,s.pendingDraft).some(r=>r.id===s.selectedRoute)?s.selectedRoute:'',
+    routeId:Number.isInteger(s.routeWave)&&s.routeWave===Math.floor(s.wave)&&ROUTES.some(r=>r.id===s.routeId)?s.routeId:'',
+    routeWave:Number.isInteger(s.routeWave)&&s.routeWave===Math.floor(s.wave)&&ROUTES.some(r=>r.id===s.routeId)?s.routeWave:0,
+    routeHazard:Number.isInteger(s.routeWave)&&s.routeWave===Math.floor(s.wave)&&s.routeId==='necrosis'?4:0,
+    gene:GENES.some(g=>g.id===s.gene)?s.gene:null,
     immune:sanitizeImmune(s.immune),grafts:sanitizeGrafts(s.grafts),biomass:num(Math.floor(s.biomass),0,99,0),
     pendingDraft:Number.isInteger(s.pendingDraft)&&s.pendingDraft>=2&&s.pendingDraft<=5&&s.pendingDraft===(Math.floor(s.wave)||1)+1?s.pendingDraft:0,
     draftRevision:num(Math.floor(s.draftRevision),0,100,0),
