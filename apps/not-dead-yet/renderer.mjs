@@ -3,7 +3,7 @@ import {makeMaterialAtlas} from './textures.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
-'uniform mat4 mvp;uniform float time;varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
+'uniform mat4 mvp;uniform mediump float time;varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
 'void main(){vec3 pos=position;',
 'if(material>11.5){pos.x+=.05*sin(time*.9+pos.y*2.0+pos.z*3.0);}',
 'p=pos;c=tint;n=normal;mat=material;gl_Position=mvp*vec4(pos,1.0);}'
@@ -12,7 +12,7 @@ const FS=[
 'precision mediump float;',
 'varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
 'uniform vec3 eye;uniform vec3 facing;uniform vec3 lampA;uniform vec3 lampB;',
-'uniform float torch;uniform float time;uniform float hit;',
+'uniform float torch;uniform mediump float time;uniform float hit;',
 'uniform sampler2D paintedAtlas;',
 'float hash21(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
 'float noise(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.0-2.0*f);return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),mix(hash21(i+vec2(0.,1.)),hash21(i+1.),f.x),f.y);}',
