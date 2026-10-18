@@ -39,7 +39,7 @@ const side=()=>mode==='online'?server?.side:mode==='hotseat'?offline?.turn:'A';
 const ready=()=>mode==='online'?server?.ready||{A:false,B:false}:{A:!!offline?.pending?.A,B:!!offline?.pending?.B};
 const score=()=>mode==='online'?server?.score||{A:0,B:0}:offline?.score||{A:0,B:0};
 const isPlanning=()=>latest()?.phase==='planning';
-const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen;
+const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen||pendingForfeitLeave;
 function soundFX(type='tap'){
  if(!sound&&!IS_DEV_FRAME)return;
  try{
@@ -62,7 +62,7 @@ function modal(kicker,title,body,main,alt,third){
  data.forEach(([id,entry])=>{const b=$(id);b.classList.toggle('hidden',!entry);if(entry){b.textContent=entry.label;b.onclick=()=>{closeModal();entry.action?.();}}});
  $('modal').classList.remove('hidden');
 }
-function closeModal(){modalOpen=false;$('modal').classList.add('hidden');if(screen==='play')render();}
+function closeModal(){if(pendingForfeitLeave)return;modalOpen=false;$('modal').classList.add('hidden');if(screen==='play')render();}
 function confirmReturn(){
  const playing=mode==='online'&&server?.phase==='planning';
  modal('ПАУЗА','Дуэль на паузе',playing?
@@ -172,7 +172,11 @@ function wire(client){
  client.on('connected',e=>{if(net!==client)return;connected=true;me=e.player;busy=false;lobby();});
  client.on('room_joined',e=>{if(net!==client)return;roomId=e.roomId;roomVersion=e.version||'v1';busy=false;opponentDisconnected=false;applyRemote(e.state,roomVersion);lobby();});
  client.on('game_event',e=>{if(net!==client)return;if(e.event?.type==='state')applyRemote(e.event.payload,roomVersion);else if(e.event?.type==='notice'){toast(String(e.event.payload));soundFX('error');}});
- client.on('presence',()=>{if(net===client){lobby();try{net.sendGame({type:'sync'})}catch{}}});
+ client.on('presence',e=>{if(net===client){
+  if(e?.disconnected&&e.disconnected!==me?.id)opponentDisconnected=true;
+  else if(!e?.disconnected)opponentDisconnected=false;
+  lobby();render();try{net.sendGame({type:'sync'})}catch{}
+ }});
  client.on('disconnected',()=>{if(net===client){connected=false;toast('Переподключаемся…');lobby();render()}});
  client.on('room_closed',()=>{if(net===client){leaveToMenu();toast('Комната закрыта')}});
  client.on('error',e=>{if(net!==client)return;busy=false;const errors={room_not_found:'Комната не найдена',room_full:'В комнате уже два игрока',game_unavailable:'Правила ещё не опубликованы',match_in_progress:'Матч уже идёт',already_in_room:'Ты уже в комнате',room_version_unavailable:'Старая версия правил недоступна'};toast(errors[e.code]||e.code||'Ошибка PocketNet');lobby()});
@@ -356,8 +360,10 @@ function finish(){
  if(showingOutcome||screen!=='play')return;
  showingOutcome=true;
  const winner=game()?.outcome,name=winner==='draw'?'Ничья':winner==='A'?'Победа игрока А':'Победа игрока Б';
+ const termination=game()?.termination;
+ const narrative=termination?.type==='forfeit'?(termination.by===side()?'Вы сдались. Победа засчитана сопернику.':'Соперник сдался. Победа записана в счёт.'):winner==='draw'?'Оба плана привели к равному исходу.':'Пять ходов решают больше, чем кажется.';
  soundFX('win');
- modal('ПАРТИЯ ОКОНЧЕНА',name,winner==='draw'?'Оба плана привели к равному исходу.':'Пять ходов решают больше, чем кажется.',
+ modal('ПАРТИЯ ОКОНЧЕНА',name,narrative,
   {label:'Смотреть повтор',action:openReplay},
   {label:mode==='online'?(server?.host===me?.id?'Реванш':'Ждём хозяина'):'Реванш',action:rematch},
   {label:'В меню',action:leaveToMenu});
