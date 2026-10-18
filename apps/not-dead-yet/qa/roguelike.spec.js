@@ -140,3 +140,50 @@ test('five architecturally different apartment families work in the actual rende
  }
  expect(families.size).toBe(5)
 });
+
+
+test('a real closed interior door opens with E, animates, and remains open after reload',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await boot(page);
+ const target=await page.evaluate(()=>{
+  const api=window.__PW_ROGUE_QA__,w=api.world(),p=api.player();
+  const chunks=w.nearby(p.x,p.z,17);
+  for(const c of chunks)for(const d of c.doors){
+   if(w.doorState(d,c).open)continue;
+   const cx=d.x+.5,cz=d.z+.5;
+   const checks=d.side==='left'?[{x:cx+1,z:cz,yaw:-Math.PI/2}]:
+    d.side==='right'?[{x:cx-1,z:cz,yaw:Math.PI/2}]:
+    d.side==='south'?[{x:cx,z:cz+1,yaw:0}]:
+    [{x:cx,z:cz-1,yaw:Math.PI}];
+   for(const at of checks){
+    if(!w.canStand(at.x,at.z,.2)||!api.setPosition(at.x,at.z))continue;
+    p.yaw=at.yaw;p.pitch=0;
+    const visible=api.nearestDoor();
+    if(visible?.door===d)return {x:d.x,z:d.z,side:d.side,room:d.id,epoch:c.epoch}
+   }
+  }
+  return null
+ });
+ expect(target).not.toBeNull();
+ const isOpen=()=>page.evaluate(d=>{
+  const w=window.__PW_ROGUE_QA__.world();
+  const chunk=w.chunk(Math.floor(d.x/18),Math.floor(d.z/18));
+  const door=chunk.doors.find(x=>x.x===d.x&&x.z===d.z&&x.id===d.room&&x.side===d.side);
+  if(!door)return null;
+  return{open:w.doorState(door,chunk).open,angle:w.doorState(door,chunk).angle}
+ },target);
+ expect((await isOpen()).open).toBe(false);
+ await page.keyboard.press('e');
+ await expect.poll(async()=>(await isOpen())?.open).toBe(true);
+ await expect.poll(async()=>(await isOpen())?.angle,{timeout:3000}).toBeGreaterThan(1.30);
+ await expect(page.locator('#interact')).toHaveText('Закрыть');
+ await page.locator('#pause').click();
+ await expect(page.locator('#pauseOverlay')).toBeVisible();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#continue')).toBeVisible();
+ await page.locator('#continue').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect((await isOpen()).open).toBe(true);
+ expect((await isOpen()).angle).toBeGreaterThan(1.30);
+ expect(errors).toEqual([])
+});
