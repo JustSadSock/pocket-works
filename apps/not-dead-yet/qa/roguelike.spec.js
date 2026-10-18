@@ -72,3 +72,50 @@ test('forgotten rooms regenerate behind a player without blocking existing terra
  expect(outcome.changes).toBeGreaterThan(0);
  expect(outcome.connected).toBe(true)
 });
+
+
+test('desktop layout-independent FPS controls, arrow-turn, Tab and Esc work without mouse lock',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await boot(page);
+ const initial=await state(page);
+ expect(await page.locator('#view').evaluate(el=>document.activeElement===el)).toBe(true);
+ await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,code:'KeyW',key:'ц'})));
+ await page.waitForTimeout(520);
+ await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keyup',{bubbles:true,code:'KeyW',key:'ц'})));
+ const walking=await state(page);
+ expect(Math.hypot(walking.position.x-initial.position.x,walking.position.z-initial.position.z)).toBeGreaterThan(.5);
+ await page.waitForTimeout(120);
+ const stopped=await state(page);
+ expect(Math.hypot(stopped.position.x-walking.position.x,stopped.position.z-walking.position.z)).toBeLessThan(.1);
+ await page.keyboard.down('ArrowRight');
+ await page.waitForTimeout(470);
+ await page.keyboard.up('ArrowRight');
+ expect((await state(page)).position.yaw).toBeGreaterThan(.3);
+ await page.keyboard.press('Space');
+ await expect.poll(async()=>(await state(page)).ammo).toBe(5);
+ await page.keyboard.press('Tab');
+ await expect(page.locator('#inventoryOverlay')).toBeVisible();
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#inventoryOverlay')).toBeHidden();
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#pauseOverlay')).toBeVisible();
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#pauseOverlay')).toBeHidden();
+ expect((await state(page)).phase).toBe('play');
+ expect(errors).toEqual([])
+});
+
+test('desktop mouse look surface is not hidden under the mobile touch area',async({page})=>{
+ await boot(page);
+ const fine=await page.evaluate(()=>matchMedia('(pointer:fine)').matches);
+ if(!fine)test.skip();
+ const events=await page.evaluate(()=>{
+  const area=document.getElementById('touchLook');
+  const p=getComputedStyle(area).pointerEvents;
+  const canvas=document.getElementById('view');
+  const r=canvas.getBoundingClientRect(),x=r.right-50,y=r.top+r.height*.5;
+  return{p,hit:document.elementFromPoint(x,y)?.id}
+ });
+ expect(events.p).toBe('none');
+ expect(events.hit).toBe('view')
+});
