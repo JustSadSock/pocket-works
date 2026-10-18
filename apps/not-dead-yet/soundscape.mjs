@@ -68,6 +68,9 @@ export function createSoundscape({Context=(typeof window!=='undefined'?(window.A
       hiss({duration:1.2,frequency:360,volume:.007,pan});break;
      case 'radio':
       hiss({duration:.9,frequency:1500,volume:.008,pan});break;
+     case 'fridge':
+      note(68,{type:'sine',end:65,duration:1.4,volume:.014,pan});
+      note(137,{type:'triangle',end:132,duration:1.1,volume:.004,pan});break;
      case 'radio-static':
       hiss({duration:1.0,frequency:1600,volume:.023,pan});
       note(151,{duration:.31,volume:.012,type:'triangle',end:119,pan});break;
@@ -101,13 +104,16 @@ export function createSoundscape({Context=(typeof window!=='undefined'?(window.A
    return true
  }
  function tone(freq,duration=.12,volume=.025,type='sine'){if(!activate())return;safe(()=>note(freq,{duration,volume,type,end:Math.max(28,freq*.65)}))}
- function tick({elapsed=0,room='Прихожая',stress=0,active=true}={}){
+ function tick({elapsed=0,room='Прихожая',stress=0,active=true,powered=true}={}){
   if(!active||!enabled||!ctx)return;
   if(elapsed-clockTick>=1.25){clockTick=elapsed;event('clock',{room,pan:-.5})}
   if(stress>48&&elapsed-lastPulse>clamp(2.4-stress*.017,.7,2)){lastPulse=elapsed;event('heartbeat',{intensity:stress/85})}
   // Deterministic, low-rate domestic sounds. No jump-scare randomness and no timers.
   const cycle=Math.floor(elapsed/7),pulse=(cycle*1103515245+room.length*97)>>>0;
-  if(cycle!==lastAmbienceCycle){lastAmbienceCycle=cycle;if(pulse%4===0)event(room==='Ванная'?'pipe':'radio',{pan:pulse%2===0?-.7:.7})}
+  if(cycle!==lastAmbienceCycle){lastAmbienceCycle=cycle;
+   if(pulse%4===0)event(room==='Ванная'?'pipe':powered?'radio':'pipe',{pan:pulse%2===0?-.7:.7});
+   if(powered&&pulse%5===0)event('fridge',{pan:.7});
+  }
   lastRoom=room
  }
  function setEnabled(value){enabled=Boolean(value);if(!enabled&&ctx?.state==='running')Promise.resolve(ctx.suspend()).catch(()=>{});else if(enabled&&ctx?.state==='suspended')Promise.resolve(ctx.resume()).catch(()=>{})}
