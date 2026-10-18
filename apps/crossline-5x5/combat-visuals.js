@@ -92,6 +92,10 @@ export function paintArena(host,units,edges,events=[],{
    cell.style.setProperty?.('--fall-duration',Math.max(470,fallDuration-delay)+'ms');
    cell.style.setProperty?.('--fall-twist',(order%2?-1:1)*(9+order%5*7)+'deg');
    cell.style.setProperty?.('--fall-drift',((x-2)*10)+'px');
+   cell.style.setProperty?.('--fall-drift-mid',((x-2)*3.5)+'px');
+   cell.style.setProperty?.('--fall-drift-late',((x-2)*7)+'px');
+   cell.style.setProperty?.('--fall-twist-mid',((order%2?-1:1)*(9+order%5*7)*.35)+'deg');
+   cell.style.setProperty?.('--fall-twist-late',((order%2?-1:1)*(9+order%5*7)*.75)+'deg');
   }
   if(traces?.has?.(coord)){cell.classList.add('trace');cell.dataset.trace=String(traces.get(coord))}
   else cell.dataset.trace='';
