@@ -1,0 +1,26 @@
+name: Fog faithful rules verification
+on:
+  push:
+    branches: [app/fog-of-conquest-port-20261018]
+    paths: [.github/workflows/fog-final-rules-qa.yml]
+permissions: {contents: write}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: true}
+      - name: Original rules, multiplayer and app registration
+        run: |
+          node --check apps/fog-of-conquest/js/ui.js
+          node --check apps/fog-of-conquest/pocket-online.js
+          node --test apps/fog-of-conquest/test/original-port.test.mjs apps/fog-of-conquest/test/original-pocketnet.test.mjs
+          npm run registry:check
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git rm -f .github/workflows/fog-final-rules-qa.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'ci: clean up Fog rules verifier'
+          git push origin HEAD:app/fog-of-conquest-port-20261018
