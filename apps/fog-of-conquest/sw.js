@@ -31,6 +31,8 @@ const APP_SHELL = [
   "./data/lang/uk.json",
   "./data/units.json",
   "./data/terrain.json",
+  "../../shared/mobile-runtime.css",
+  "../../shared/mobile-runtime.js",
   "../../shared/update-manager.css",
   "../../shared/update-manager.js",
   "./assets(ai)/archer_ally.png",
