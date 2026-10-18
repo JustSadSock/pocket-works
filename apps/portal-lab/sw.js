@@ -1,0 +1,6 @@
+const PREFIX='portal-lab-',CACHE='portal-lab-v0.1.0',VERSION='0.1.0',RELEASE='2026-10-18';
+const OWN=['./','./index.html','./styles.css','./app.js','./physics.js','./levels.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(OWN))));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('message',e=>{if(e.data?.type==='GET_UPDATE_INFO')e.ports?.[0]?.postMessage({version:VERSION,releaseDate:RELEASE,releaseNotes:['Физический симулятор порталов'],cacheProtocol:2,cacheName:CACHE});if(e.data?.type==='SKIP_WAITING')self.skipWaiting()});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==self.location.origin)return;const own=OWN.map(p=>new URL(p,self.registration.scope).pathname);if(e.request.mode!=='navigate'&&!own.includes(u.pathname))return;e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))))});

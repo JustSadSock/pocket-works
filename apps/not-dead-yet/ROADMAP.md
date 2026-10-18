@@ -46,16 +46,230 @@ unseen: returning does not restore the layout the player remembers.
       buttons from accidentally activating during a run.
 - [x] Keyboard regressions + Playwright flows; pending live browser/device CI.
 
-## 2.1 — The flat must feel lived-in, not modular
-- [ ] Use several genuinely different Soviet layouts per sector, including
-      walk-through rooms, narrow partition corridors, toilets separated from
-      bathrooms and dead-end service spaces.
-- [ ] Consistent wallpaper/fixtures and owner-specific clutter across a
-      contiguous run of rooms; reuse props in unsettling ways after memory shifts.
-- [ ] Add destructible light fixtures, door hinges and reachability-aware physics.
-- [ ] Visual depth: contact shadows, high-quality normal/roughness maps,
-      reflected flashlight highlights and dense, optimized furnishings.
-- [ ] Profile mesh rebuild time and GPU draw budget on 390×844 mobile.
+## 2.1 — VISUAL OVERHAUL: The apartment must feel real (NEXT / highest priority)
+
+**Goal:** turn the already functional first-person roguelike into an unmistakable,
+tactile, atmospheric Khrushchev-era domestic horror experience. The upgrade
+must be visible in a still frame *and* felt while moving. Increase **shape,
+physical detail, depth, texture, animation and personality** — not merely
+recolor identical rooms or layer post-processing over block geometry. Keep
+the lived-in Soviet/post-Soviet setting, tight dimensions and the endless
+behind-the-back memory rewrite.
+
+**Non-negotiable art direction:** an ordinary, cramped, imperfectly maintained
+flat remembered through an old person's eyes. 1960s–1990s accumulated objects;
+cheap manufactured shapes, worn varnish, painted metal, textile, plaster,
+mismatched repairs and warm windows against cold corridors. Domestic intimacy
+before horror. Distinct irregular silhouettes; not a generic concrete maze,
+sterile asset store, neon/glassmorphism, glossy sci-fi or heavy filters
+hiding simplistic assets.
+
+### 2.1.0 — Baseline, references and visual grammar (do first)
+- [ ] Capture repeatable **before** frames and video: starting corridor,
+      kitchen, lived-in room, bathroom, darkness/flashlight, enemy encounter,
+      weapon handling and a freshly rewritten room. Fix three seeds and
+      one desktop + one portrait 390×844 camera path for later A/B comparison.
+- [ ] Audit current architecture: `rogue-scene.mjs` largely uses box
+      primitives, `renderer.mjs` shares an offline procedural albedo atlas,
+      the camera is 1.54m high with a simple sine bob and fixed 90° vertical
+      projection. Record vertex/triangle counts, buffer rebuild frequency,
+      shader costs, visual flaws and current frame-time baseline.
+- [ ] Establish an **architectural and material style sheet** with scale
+      references: door/handle heights, 2.62m ceilings, wall thickness, room
+      proportions, authentic furniture proportions, furniture-free traversal
+      width, lighting temperatures and palette variation. Use the style sheet
+      across procedural seeds and the optional story chapter where shared.
+- [ ] Make the game readable without HUD or glowing collectibles: foreground,
+      middle ground, distant darkness and familiar shapes must communicate
+      space and danger.
+
+### 2.1.1 — Architectural geometry with depth, not a box labyrinth (P0)
+- [ ] Generate several credible floor-plan families rather than a repeated
+      four-room module: tiny L-shaped halls, vestibules, walk-through living
+      rooms, attached kitchens, combined/separate toilets, closets, uneven
+      doorway positions and dead-end service nooks. Preserve infinite seams,
+      navigability and unseen regeneration.
+- [ ] Physically model **wall thickness, real door openings, lintels, baseboards,
+      ceiling cornices, uneven thresholds, protruding ducts/pipe runs,
+      radiators, window reveals, sills and ventilation grilles**. Avoid
+      floating trim and walls made of infinitely thin sheets.
+- [ ] Add 3–5 wall/ceiling/floor signatures per room family: cracked plaster,
+      uneven paint seams, repaired wallpaper, parquet with transition strips,
+      old kitchen tile, crooked bathroom panels, Soviet wiring and water pipes.
+      The room silhouette must change, not only its color.
+- [ ] Doors must have different panel profiles, frames, hinges and handles;
+      add actual opening/closing and persistent collision-safe clearance
+      before treating any door as interactable. Old story-chapter doors are
+      a reference implementation, not a one-off borrowed decoration.
+- [ ] Tune generated scale and collision together: no clipping through
+      wardrobes, door jambs, sinks, tables or the player's camera; no
+      unreachable pickups or trapping after world changes.
+
+### 2.1.2 — Authored, varied and tactile 3D props (P0)
+- [ ] Replace recognizable cuboids with identifiable **low-/mid-poly authored
+      meshes** with readable curves, bevels, legs, cavities, panels, knobs,
+      upholstery, hinges, uneven edges and silhouette-specific details.
+      Keep low-cost geometry and LOD variants for mobile rather than simply
+      multiplying faces.
+- [ ] Build a curated **30–40-prop modular domestic kit**, not 40 color
+      variants: wall units, glass cupboards and dishes, TV/radio, couch,
+      upholstered chairs, dining/study tables, patterned carpets, beds,
+      mattresses, wardrobes, kitchen cupboards, stove, enamel sink,
+      refrigerator, toilet, bathtub, mirror, pipes, old switches, light
+      fixtures, radiators, shoe racks, coats, family photo frames, books,
+      cups, jars, newspapers, medicines, cables and clutter.
+- [ ] Per-type shape families and deterministic aging/arrangements: different
+      legs, door widths, broken panels, draped fabric, stacked books,
+      crockery, scratches and repairs. Make 3 consecutive rooms feel as
+      if different people once lived in them; keep selected motifs stable
+      across memory changes so unsettling repetition is meaningful.
+- [ ] Non-rectangular models for pickups, a more detailed worn revolver and
+      convincingly gripped elderly hands. Silhouette/readability must make
+      ammunition, tea, first aid and memories recognizable at close range
+      without neon beams.
+- [ ] Assign collision footprints and placement/orientation to true meshes;
+      no visual props blocking corridors without matching `canStand`, and
+      no invisible obstacles caused by obsolete bounding boxes.
+- [ ] Spatial budgets: combine static geometry by material/sector, remove
+      invisible backs where safe, instance/merge repeated small props and
+      decimate distant meshes. Retain authored variety within fixed budgets.
+
+### 2.1.3 — Surface materials and genuinely varied textures (P0)
+- [ ] Evolve the current offline procedural albedo atlas into a
+      **deterministic authored/procedural material library** with UV mapping
+      that scales correctly per surface. No stretched floral wallpaper,
+      perfectly uniform brown rectangles or checkerboard-like repetition.
+- [ ] More authentic material families: faded floral and geometric wallpaper,
+      exposed old plaster and paint layers, herringbone/parquet/patched
+      linoleum, glossy kitchen ceramic, cracked bathroom tiles, chipped
+      enamel, oxidized brass, Bakelite, aged lacquer, glass, velvet, cotton,
+      carpet pile and worn bedding.
+- [ ] Use object-space edge wear, dirt near floor/ceiling, seams, decal layers,
+      water damage and fingerprints where believable. Seed per-room wear so
+      unrelated rooms do not look like clones or uniformly damaged sets.
+- [ ] Explore normal + roughness information with WebGL1-compatible fallback;
+      separate shiny glass/enamel/metal from diffuse plaster and cloth,
+      keep atlas/textures local/offline, and measure shader + memory cost.
+      Do not claim physically based rendering before it exists.
+- [ ] Texture LOD, mipmaps when supported, anisotropy if available,
+      consistent texel density and correct gamma/color balance. Avoid blurry
+      nearest-neighbor/pixelated images on high-DPI screens.
+
+### 2.1.4 — Light, shadow and convincing spatial depth (P0)
+- [ ] Shift from two generic nearby light positions to deterministic
+      **fixture-attached, room-aware light placement**: weak hall bulbs,
+      window spill, kitchen fluorescence, bedside pools, stairwell glow,
+      power loss and a tightly controlled flashlight with useful falloff.
+- [ ] Dynamic shadowing of doors, large furniture and figures; first add
+      cheap contact/ambient occlusion and wall-aware torch occlusion, then
+      benchmark shadow-map / filtered-shadow options with graceful mobile
+      fallback. No floating objects or light leaking through closed walls.
+- [ ] Respect material response: modest specular cues on enamel, glass,
+      metal and wet tile; soft diffuse cloth and plaster; localized reflections
+      instead of uniform fake shine. No excessive cinematic bloom.
+- [ ] Introduce limited atmospheric layers: dust within light cones,
+      breathing air, depth haze and restrained lamp fluctuation. Keep
+      silhouettes and interaction targets legible in the dark.
+- [ ] The **same room must read differently** under bulb, flashlight and
+      near-darkness, without hiding geometry behind a permanent black vignette.
+
+### 2.1.5 — Character camera, movement and first-person animation (P0)
+- [ ] Replace the current single sine-wave bob with a **stateful spring camera
+      rig**: small footstep-linked vertical/side displacement, gentle
+      acceleration/stop inertia, subtle turn follow-through, sprint weight,
+      collision/threshold step feedback and optional independent breathing
+      motion. Camera movement must not delay aiming or WASD response.
+- [ ] Distinctly elderly *physical presence* without caricature: deliberately
+      measured gait, asymmetrical footsteps, light hesitation when landing,
+      hand/weapon settling and fatigue cues. Gameplay input remains sharp.
+- [ ] Correct first-person lens/framing on desktop and tall phones:
+      aspect-aware FOV, horizon stability, near-plane clearance, no
+      fisheye/distorted doorframes, manageable viewmodel framing and
+      flashlight aligned with actual weapon/view direction.
+- [ ] Improve revolver actions with shot impulse and recovery, cylinder
+      rotation, visible reload phases, hand/finger movement and believable
+      muzzle flash; sync visuals with actual `shoot()` / `reload()` timing.
+      No phantom second projectile or mismatched damage visual.
+- [ ] Contextual object inspection and interaction poses (door handle,
+      pickup, lamp/switch) that originate from visible geometry; make
+      collectible and interaction response physically understandable.
+- [ ] Comfort controls: independent camera-bob/sway intensity and reduced-
+      motion mode; no forced head whipping, screen shake from generic
+      footsteps, permanent blurred aim or motion-sickness FOV pumping.
+
+### 2.1.6 — World animation, atmospheric FX and audiovisual feel (P1)
+- [ ] Animate actual geometry: loose curtains, TV tube flicker, ceiling
+      light pendulum, small drawer/door movement, dripping taps, dust
+      movement, pipe vibration and small collectible gestures. Vary timing
+      by world seed; keep animation independent of mesh rebuild frequency.
+- [ ] Enhance silhouettes and creature models for the *current* archetypes
+      (coat, figure, crawler) with articulated gait, asymmetrical poses,
+      occlusion and believable reactions. Visually telegraph threat vs
+      misperceived household object without replacing combat rules.
+- [ ] Memory mutation needs a recognizable physical sequence rather than
+      a texture pop: subtle off-screen settling, neighboring sound,
+      changed furniture relationship and light cue after turning back.
+      Never visibly rewrite geometry in the player's forward view.
+- [ ] Integrate **foley as part of physical movement**: sole-on-parquet vs
+      lino vs tile, creaking boards, revolver parts, cloth, door hinges,
+      room-scale muffling and close-distance breathing. Sounds follow
+      actual actions/surfaces; remain fully optional.
+- [ ] Add disciplined microinteractions — grounded pickup, short
+      inspection, weight in doors, subtle visual reaction on enemy hits,
+      readable feedback on reaching a new depth. No overlay spam.
+
+### 2.1.7 — Finishing pass, usability and performance (P1)
+- [ ] Unify first-person screen composition, reticle, inventory, upgrade
+      choices and prompts around **focus-first** UX; fewer simultaneous
+      labels, no vertical scrolling during normal phone gameplay and
+      no HUD covering the center or weapon.
+- [ ] Quality tiers for portrait phones and desktop: limit live lights,
+      shadow/filter cost, mesh radius and material detail without changing
+      collision, pickup placement, AI, readability or saved worlds.
+      WebGL context loss should recover or show a useful error.
+- [ ] Add developer visual inspection mode (seed, room/lighting variants,
+      collision silhouettes, triangle/draw-call/FPS counters and preset
+      camera bookmarks) without exposing debug controls in the ordinary
+      experience.
+- [ ] Profile geometry generation and GPU upload spikes, not just steady
+      FPS. Cache/stream sector meshes and keep deterministic saves intact.
+- [ ] Verify fullscreen browser, PocketWorks shell, keyboard/mouse and
+      touch controls, 390×844 portrait, landscape and at least one desktop
+      resolution. All controls and controls/help copy must stay accurate.
+
+### 2.1 — Acceptance gate before proceeding to combat expansion
+- [ ] A/B screenshots/video for the fixed reference seeds and camera route
+      show **distinct believable geometry and recognizable object models**
+      in every room type; not merely changes in color, post-process or props
+      hidden in corners.
+- [ ] At least 5 visibly distinct flat/layout families, at least 30
+      **silhouette-distinct** prop types, at least 12 surface/material
+      families and three interpretable light conditions. Validate counts
+      programmatically where possible; review results visually.
+- [ ] 100+ generated seeds: no doorway/camera/prop collisions, floating
+      furniture, z-fighting, unreachable reward or regenerated sector in
+      the player's visible field. Revisit old saves and chapter entry.
+- [ ] Input-to-camera responsiveness stays direct; reduced-motion setting
+      disables additive motion. No change to shooting, pickup timing,
+      flashlight, reload, touch gestures or death/restart functionality.
+- [ ] Compare actual GPU/CPU frame timings against the 2.1.0 baseline.
+      Optimize for stable 45–60fps where hardware permits; set honest
+      device-specific mobile targets from measurements (do not mark
+      performance passed on simulated tests alone).
+- [ ] Run unit/render geometry regression, browser gameplay tests,
+      screenshots on desktop and mobile/WebKit where available.
+      No unsupported claim of verified real-device performance.
+
+**Recommended implementation order:**
+`2.1.0` reference capture/architecture →
+`2.1.1 + 2.1.2` architectural + prop silhouettes →
+`2.1.3` materials →
+`2.1.4` lighting/depth →
+`2.1.5` camera, hands, weapon →
+`2.1.6` animation/foley →
+`2.1.7` usability/performance/visual acceptance.
+Each pass must deliver a visible playable difference and a test, not a
+decorative prototype. **No premature rework of the PocketWorks shell.**
 
 ## 2.2 — Roguelike combat identity
 - [ ] Add distinct silhouettes, e.g. ceiling-crawling figure, wardrobe-bound
