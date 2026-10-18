@@ -58,7 +58,8 @@
       "tier": "smoke",
       "files": [
         "qa/journey.spec.js",
-        "qa/avatar.spec.js"
+        "qa/avatar.spec.js",
+        "qa/net.spec.js"
       ]
     }
   ]
