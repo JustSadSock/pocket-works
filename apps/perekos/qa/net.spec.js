@@ -6,7 +6,7 @@ async function mockPocketNet(page,{guest=false}={}){
  await page.addInitScript(({guest})=>{
   const roomId='aabbbccc-0000-4000-8000-000000000000';
   const players=[{id:'host',name:'Первый маг',avatar:'clay',verified:false},{id:'guest',name:'Второй маг',avatar:'wave',verified:false}];
-  const mock={roomId,players,packetCount:0,commands:[],match:null,phase:'lobby',revision:1,code:'AABBBCCC',guest,picked:false,ready:false};
+  const mock={roomId,players,packetCount:0,commands:[],match:null,phase:'lobby',revision:1,code:'AABBBCCC',guest,picked:false,ready:false,makeMatch:null,startRound:null};
   const my=guest?1:0;
   const view=()=>({phase:mock.phase,revision:++mock.revision,host:'host',me:my,seats:['host','guest'],rulesVersion:1,match:mock.match,players,picked:mock.picked,ready:mock.ready,offers:['on_hurt','heal','double'],connected:true,opponentConnected:true});
   function event(socket,m){socket.onmessage?.({data:JSON.stringify({wireVersion:1,...m})})}
@@ -22,7 +22,7 @@ async function mockPocketNet(page,{guest=false}={}){
     if(msg.type!=='game_message')return;
     const p=msg.payload||{};
     if(p.type==='start'||p.type==='rematch'){
-     const rules=await import('/apps/perekos/core.mjs');mock.match=rules.makeMatch(123);
+     mock.match=mock.makeMatch(123);
      mock.phase='fight';mock.packetCount=0;mock.picked=false;mock.ready=false;
      refresh(this);
     }else if(p.type==='input'&&mock.phase==='fight'){
@@ -32,8 +32,8 @@ async function mockPocketNet(page,{guest=false}={}){
     }else if(p.type==='pick'&&mock.phase==='draft'){
      if(!mock.picked){mock.match.actors[my].runes.push(p.rune);mock.picked=true;refresh(this)}
     }else if(p.type==='ready'&&mock.phase==='draft'){
-     const rules=await import('/apps/perekos/core.mjs');mock.ready=true;mock.match.actors[my].runes=[...p.runes];
-     rules.startRound(mock.match);mock.phase='fight';mock.packetCount=0;refresh(this);
+     mock.ready=true;mock.match.actors[my].runes=[...p.runes];
+     mock.startRound(mock.match);mock.phase='fight';mock.packetCount=0;refresh(this);
     }else if(p.type==='sync')refresh(this);
    }
    close(){this.readyState=3;this.onclose?.({})}
@@ -45,6 +45,7 @@ test('PocketNet menu: create, room invitation, active fight, private rune and re
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await mockPocketNet(page);
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.evaluate(async()=>{const core=await import('/apps/perekos/core.mjs');window.__netMock.makeMatch=core.makeMatch;window.__netMock.startRound=core.startRound});
  await page.locator('#online-open').click();
  await expect(page.locator('#online-lobby')).toBeVisible();
  await page.locator('#net-create').click();
