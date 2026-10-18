@@ -1,7 +1,7 @@
 // PocketNet adaptation of the ORIGINAL Fog of Conquest, without rebalance.
 // Original unit/building definitions and complete generator are embedded verbatim.
 // Never broadcast raw state: enemies and fogged terrain remain private.
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=5;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=6;
 const TERRAIN={PLAIN:0,WATER:1,FOREST:2,HILL:3,MOUNTAIN:4};
 const TERR_COST=[1,2,2,2,999],TERR_DEF=[0,-1,1,2,0];
 const BASE_ROWS=20,BASE_COLS=30;
@@ -374,19 +374,78 @@ export function createOriginalMatch(options={}){
  refresh(g);return g;
 }
 function log(g,side,message){g.state.log[side].push(message);if(g.state.log[side].length>50)g.state.log[side].shift();}
-function zones(g,u){
- const rem=matrix(g,-1),q=[{r:u.r,c:u.c,mp:u.mp}];rem[u.r][u.c]=u.mp;
- while(q.length){
-  const p=q.shift();if(p.mp<=0)continue;
-  for(const [dr,dc] of dirs){
-   const r=p.r+dr,c=p.c+dc;
-   if(!inMap(g,r,c)||g.units.some(other=>other.id!==u.id&&other.r===r&&other.c===c))continue;
-   if(g.buildings.some(b=>b.r===r&&b.c===c&&b.owner!==u.owner&&b.hp>0))continue;
-   const cost=TERR_COST[g.map[r][c]];if(cost>p.mp)continue;
-   const left=p.mp-cost;if(left>rem[r][c]){rem[r][c]=left;q.push({r,c,mp:left})}
+const FogRuleKernel=(function(){
+  'use strict';
+  // Pure-ish rules use an explicit battlefield context, never DOM or PocketNet.
+  const DIRECTIONS=[[1,0],[-1,0],[0,1],[0,-1]];
+  function reach(map,units,buildings,unit,costs){
+    const rows=map.length,cols=map[0].length;
+    const rem=Array.from({length:rows},()=>Array(cols).fill(-1));
+    if(!unit||unit.r<0||unit.r>=rows||unit.c<0||unit.c>=cols)return rem;
+    const queue=[{r:unit.r,c:unit.c,mp:unit.mp}];rem[unit.r][unit.c]=unit.mp;
+    for(let i=0;i<queue.length;i++){
+      const p=queue[i];if(p.mp<=0)continue;
+      for(const [dr,dc] of DIRECTIONS){
+        const r=p.r+dr,c=p.c+dc;
+        if(r<0||r>=rows||c<0||c>=cols)continue;
+        if(units.some(other=>other.id!==unit.id&&other.r===r&&other.c===c))continue;
+        if(buildings.some(b=>b.r===r&&b.c===c&&b.owner!==unit.owner&&b.hp>0))continue;
+        const cost=costs[map[r][c]];
+        if(!Number.isFinite(cost)||cost>p.mp)continue;
+        const left=p.mp-cost;
+        if(left>rem[r][c]){rem[r][c]=left;queue.push({r,c,mp:left});}
+      }
+    }
+    return rem;
   }
- }return rem;
-}
+  function unitDamage(att,def,map,buildings,unitTypes,buildingTypes,terrainDefense){
+    if(att.type==='mage')return {damage:0,retaliation:0};
+    const attacker=unitTypes[att.type],target=unitTypes[def.type];
+    let atk=attacker.atk;
+    const supporting=buildings.find(b=>b.r===def.r&&b.c===def.c&&b.owner===def.owner);
+    if(att.type==='cavalry'&&(buildingTypes[supporting?.type]?.def||0)>0)atk--;
+    const damage=Math.max(1,atk-target.def-terrainDefense[map[def.r][def.c]]);
+    const targetSurvives=def.type==='bog'||def.hp-damage>0;
+    const retaliation=attacker.range===1&&targetSurvives?
+      Math.max(1,target.atk-attacker.def-terrainDefense[map[att.r][att.c]]):0;
+    return {damage,retaliation};
+  }
+  function buildingDamage(att,b,map,unitTypes,buildingTypes,terrainDefense){
+    if(att.type==='mage')return 0;
+    const info=unitTypes[att.type],type=buildingTypes[b.type];
+    const attack=info.atk-(att.type==='cavalry'&&type.def>0?1:0);
+    return Math.max(1,attack-type.def-terrainDefense[map[b.r][b.c]]);
+  }
+  function advanceTurn(state,units,buildings,unitTypes,buildingTypes){
+    const prev=state.currentPlayer;
+    for(const u of units)if(u.owner===prev&&u.mp===unitTypes[u.type].move)
+      u.hp=Math.min(unitTypes[u.type].hpMax,u.hp+1);
+    state.turn++;
+    state.currentPlayer=3-prev;
+    const next=state.currentPlayer;
+    state.gold[next]+=buildings.filter(b=>b.owner===next)
+      .reduce((sum,b)=>sum+(b.gen??buildingTypes[b.type].gen),0);
+    for(const u of units)if(u.owner===next){
+      u.mp=unitTypes[u.type].move;u.startR=u.r;u.startC=u.c;
+    }
+    return prev;
+  }
+  function evaluateVictory(state,units,buildings,buildingTypes,endedSide=null){
+    if(state.turn===0)return null;
+    for(const side of [1,2]){
+      const bases=buildings.filter(b=>b.owner===side&&(b.gen??buildingTypes[b.type].gen)===0).length;
+      const alive=units.filter(u=>u.owner===side).length;
+      if(!bases&&!alive)return 3-side;
+      if(!bases){
+        if(state.grace[side]===null)state.grace[side]=5;
+        else if(endedSide===side&&--state.grace[side]<=0)return 3-side;
+      }else state.grace[side]=null;
+    }
+    return null;
+  }
+  return Object.freeze({reach,unitDamage,buildingDamage,advanceTurn,evaluateVictory});
+})();
+function zones(g,u){return FogRuleKernel.reach(g.map,g.units,g.buildings,u,TERR_COST);}
 function woundBuilding(b,d=1){b.hp=Math.max(0,b.hp-d)}
 function capture(g,u,b){
  if(!b||u.r!==b.r||u.c!==b.c||b.hp>0)return;
@@ -394,19 +453,9 @@ function capture(g,u,b){
  b.owner=u.owner;b.hp=BUILD_TYPES[b.type].hpMax;
 }
 function victory(g,endedSide=null){
- if(g.state.turn===0||g.phase==='finished')return;
- for(const side of [1,2]){
-  // Preserve the original definition: all zero-income military buildings.
-  const bases=g.buildings.filter(b=>b.owner===side&&(b.gen??BUILD_TYPES[b.type].gen)===0).length;
-  const alive=g.units.filter(u=>u.owner===side).length;
-  if(!bases&&!alive){g.phase='finished';g.winner=3-side;return;}
-  if(!bases){
-   if(g.state.grace[side]===null)g.state.grace[side]=5;
-   else if(endedSide===side&&--g.state.grace[side]<=0){
-    g.phase='finished';g.winner=3-side;return;
-   }
-  }else g.state.grace[side]=null;
- }
+ if(g.phase==='finished')return;
+ const winner=FogRuleKernel.evaluateVictory(g.state,g.units,g.buildings,BUILD_TYPES,endedSide);
+ if(winner!==null){g.phase='finished';g.winner=winner;}
 }
 
 export function originalAction(source,side,action){
@@ -420,11 +469,8 @@ export function originalAction(source,side,action){
  const target=ok?unitAt(g,action.r,action.c):null;
  const targetBuilding=ok?buildingAt(g,action.r,action.c):null;
  if(action.type==='end'){
-   for(const x of g.units.filter(x=>x.owner===p))if(x.mp===UNIT_TYPES[x.type].move)x.hp=Math.min(UNIT_TYPES[x.type].hpMax,x.hp+1);
-   g.state.turn++;g.state.currentPlayer=3-p;
+   FogRuleKernel.advanceTurn(g.state,g.units,g.buildings,UNIT_TYPES,BUILD_TYPES);
    const next=g.state.currentPlayer;
-   g.state.gold[next]+=g.buildings.filter(b=>b.owner===next).reduce((sum,b)=>sum+(b.gen??BUILD_TYPES[b.type].gen),0);
-   for(const x of g.units.filter(x=>x.owner===next)){x.mp=UNIT_TYPES[x.type].move;x.startR=x.r;x.startC=x.c;}
    log(g,next,'Начало хода '+(g.state.turn+1));
  }else if(action.type==='move'){
    if(!u||u.owner!==p||u.mp<=0||!ok||u.r===action.r&&u.c===action.c)return failure('Отряд не может переместиться.');
@@ -441,17 +487,11 @@ export function originalAction(source,side,action){
    if(!enemy&&!building)return failure('Вражеская цель не найдена.');
    if(dist(u,action)>UNIT_TYPES[u.type].range||!los(g,u.r,u.c,action.r,action.c,false)||visibility(g,p)[action.r][action.c])return failure('Цель вне видимости.');
    if(g.map[u.r][u.c]===TERRAIN.WATER)return failure('Из воды нельзя атаковать.');
-   let atk=UNIT_TYPES[u.type].atk;
    if(enemy){
-     const defBuilding=buildingAt(g,enemy.r,enemy.c);
-     if(u.type==='cavalry'&&(BUILD_TYPES[defBuilding?.type]?.def||0)>0)atk--;
-     const damage=Math.max(1,atk-UNIT_TYPES[enemy.type].def-TERR_DEF[g.map[enemy.r][enemy.c]]);
+     const damageResult=FogRuleKernel.unitDamage(u,enemy,g.map,g.buildings,UNIT_TYPES,BUILD_TYPES,TERR_DEF);
+     const damage=damageResult.damage,ret=damageResult.retaliation;
      if(enemy.type!=='bog')enemy.hp-=damage;
-     let ret=0;
-     if(UNIT_TYPES[u.type].range===1&&enemy.hp>0){
-       ret=Math.max(1,UNIT_TYPES[enemy.type].atk-UNIT_TYPES[u.type].def-TERR_DEF[g.map[u.r][u.c]]);
-       if(u.type!=='bog')u.hp-=ret;
-     }
+     if(u.type!=='bog')u.hp-=ret;
      if(enemy.hp<=0&&enemy.type!=='bog')g.units=g.units.filter(x=>x.id!==enemy.id);
      if(u.hp<=0&&u.type!=='bog')g.units=g.units.filter(x=>x.id!==u.id);
      if(enemy.hp<=0&&UNIT_TYPES[u.type].range===1&&g.units.some(x=>x.id===u.id)){
@@ -461,8 +501,7 @@ export function originalAction(source,side,action){
      }
      log(g,p,'Урон '+damage+(ret?', ответный удар '+ret:''));
    }else{
-     if(u.type==='cavalry'&&BUILD_TYPES[building.type].def>0)atk--;
-     const damage=Math.max(1,atk-BUILD_TYPES[building.type].def-TERR_DEF[g.map[building.r][building.c]]);
+     const damage=FogRuleKernel.buildingDamage(u,building,g.map,UNIT_TYPES,BUILD_TYPES,TERR_DEF);
      woundBuilding(building,damage);
      if(building.hp<=0&&dist(u,building)===1){u.r=building.r;u.c=building.c;capture(g,u,building);}
      log(g,p,'Урон строению '+damage);
