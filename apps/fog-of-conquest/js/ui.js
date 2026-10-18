@@ -728,41 +728,16 @@ window.addEventListener('DOMContentLoaded', ()=>{
     return window.FogRuleKernel.lineOfSight(map,r0,c0,r1,c1,forestBlock);
   }
 
-  // === Fog ===
-  // A remembered building is a frozen observation, never its live hidden state.
+  // Fog storage and last-seen memory are in a side-private, testable module.
   function visibleBuildings(){
-    const p=state.currentPlayer,F=state.fog[p],S=state.seen[p];
-    const live=buildings.filter(b=>!b.lastSeen&&(!F?.[b.r]?.[b.c]||revealAll));
-    if(revealAll)return live;
-    const remembered=Object.values(state.lastSeen?.[p]||{})
-      .filter(b=>F?.[b.r]?.[b.c]&&S?.[b.r]?.[b.c]&&
-        !live.some(x=>x.r===b.r&&x.c===b.c))
-      .map(b=>({...b,stale:true}));
-    return [...live,...remembered];
+    return window.FogVisibility.visible({state,buildings,side:state.currentPlayer,revealAll});
   }
   window.FogVisibleBuildings=visibleBuildings;
   function updateFog(){
-    if(onlineGame) return; // Server supplies each participant's private visibility.
-    if(!map.length||!Array.isArray(map[0])||!map[0].length)return;
-    if(!modeBeta && !revealAll){
-      const p=state.currentPlayer, F=state.fog[p], S=state.seen[p];
-      const projected=window.FogRuleKernel.fogForSide(map,units,buildings,p);
-      for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-        F[r][c]=projected[r][c];
-        if(!F[r][c])S[r][c]=true;
-      }
-    }
-    const p=state.currentPlayer, F=state.fog[p];
-    state.lastSeen??={1:{},2:{}};
-    const memory=state.lastSeen[p]??={};
-    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-      if(!F[r][c]){
-        const b=buildings.find(b=>b.r===r&&b.c===c);
-        const key=r+','+c;
-        if(b)memory[key]={id:b.id,r,c,type:b.type,owner:b.owner,hp:b.hp,gen:b.gen};
-        else delete memory[key];
-      }
-    }
+    return window.FogVisibility.project({
+      map,units,buildings,state,side:state.currentPlayer,modeBeta,revealAll,
+      online:onlineGame,kernel:window.FogRuleKernel
+    });
   }
 
   // === Draw ===

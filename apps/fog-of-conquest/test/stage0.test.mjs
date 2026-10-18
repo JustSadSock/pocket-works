@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import '../js/save-schema.js';
 const {normalize,SAVE_VERSION}=globalThis.FogSaveSchema;
 const server=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
-const pinned=await readFile(new URL('../../../pocketnet/module-versions/fog-of-conquest/v8.ts',import.meta.url),'utf8');
+const pinned=await readFile(new URL('../../../pocketnet/module-versions/fog-of-conquest/v9.ts',import.meta.url),'utf8');
 const game=await import('data:text/javascript;base64,'+Buffer.from(server).toString('base64'));
 const sizes=[['tiny',5,8],['small',10,15],['medium',20,30],['large',20,60]];
 const makeSave=(g,extras={})=>({

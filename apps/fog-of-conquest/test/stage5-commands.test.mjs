@@ -4,8 +4,8 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const source=read('../server/module.ts');
-const prior=read('../../../pocketnet/module-versions/fog-of-conquest/v7.ts');
-const pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v8.ts');
+const prior=read('../../../pocketnet/module-versions/fog-of-conquest/v8.ts');
+const pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v9.ts');
 const rules=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const old=await import('data:text/javascript;base64,'+Buffer.from(prior).toString('base64'));
 const context={};context.window=context;vm.createContext(context);
@@ -20,8 +20,8 @@ test('v8 embedded kernel stays byte-identical to client and immutable pin',()=>{
    c.indexOf('})();',c.indexOf('function reach'))+5);
  assert.equal(block(source),block(read('../js/rules-core.js')));
  assert.equal(source,pinned);
- assert.match(prior,/RULESET_VERSION=6;/);
- assert.match(source,/RULESET_VERSION=7;/);
+ assert.match(prior,/RULESET_VERSION=7;/);
+ assert.match(source,/RULESET_VERSION=8;/);
 });
 test('LOS and fog parity with previous rules on 4 sizes × 40 seeds, including stale buildings',()=>{
  for(const size of ['tiny','small','medium','large']){

@@ -43,3 +43,14 @@ jobs:
             apps/fog-of-conquest/qa/fog-playwright-results/
             apps/fog-of-conquest/qa/fog-playwright-report/
           retention-days: 5
+
+  fog-ai-marathon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Actual FoC AI seven-level 140-campaign simulation
+        run: node --test apps/fog-of-conquest/test/stage6-marathon.test.mjs
