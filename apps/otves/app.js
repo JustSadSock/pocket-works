@@ -7,6 +7,7 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { createMaze, dimensionsForLevel, seedForLevel } from './maze.js';
 import { MarblePhysics } from './physics.js';
 import { MazeRenderer } from './renderer.js';
+import { SpatialMazeRenderer } from './renderer3d.js';
 
 installMobileRuntime();
 setDocumentScrollLocked(true);
@@ -74,7 +75,24 @@ const store = createVersionedStore({
 });
 
 const audio = createAudioFeedback({ enabled: store.get('sound', true), volume: 0.2 });
-const renderer = new MazeRenderer(elements.canvas);
+// Keep the original 2D canvas as the input surface and as a genuine fallback.
+// A separate WebGL canvas avoids the browser's irreversible canvas-context choice.
+let renderer;
+let spatialCanvas = null;
+try {
+  const probe = document.createElement('canvas');
+  if (probe.getContext('webgl2')) {
+    spatialCanvas = document.createElement('canvas');
+    spatialCanvas.className = 'spatial-canvas';
+    spatialCanvas.setAttribute('aria-hidden', 'true');
+    elements.canvas.insertAdjacentElement('afterend', spatialCanvas);
+    renderer = new SpatialMazeRenderer(spatialCanvas);
+  }
+} catch (error) {
+  console.warn('ОТВЕС: 3D renderer unavailable, using Canvas 2D', error);
+  spatialCanvas?.remove();
+}
+if (!renderer) renderer = new MazeRenderer(elements.canvas);
 const marble = new MarblePhysics();
 const capabilities = getDeviceCapabilities();
 
@@ -513,7 +531,7 @@ for (const button of elements.soundButtons) {
 
 createWorkshopMode({
   appName: 'ОТВЕС',
-  version: '1.0.0',
+  version: '1.2.0',
   cachePrefix: 'otves-',
   storageNamespace: 'pocket-works:otves',
   onReset: async () => location.reload()
