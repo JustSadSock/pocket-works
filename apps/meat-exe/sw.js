@@ -1,13 +1,13 @@
 const CACHE_PREFIX='meat-exe-';
-const CACHE_NAME='meat-exe-v1.7.0';
-const APP_VERSION='1.7.0';
+const CACHE_NAME='meat-exe-v1.8.0';
+const APP_VERSION='1.8.0';
 const RELEASE_DATE='2026-10-18';
 const RELEASE_NOTES=[
-'Развивающийся иммунный ответ с предупреждениями и стражем желудка.',
-'Три структурно разных комнаты желудка, рельеф и мышечные складки.',
-'Новые силуэты врагов, движущиеся конечности и сохранение реакции организма.'
+'Три органа получили отдельные скульптурные формы: сосудистые своды, костяные крипты и нервные мосты.',
+'Девять детерминированных архитектурных ориентиров вместо однотипных коридоров.',
+'Кислота, вязкий костный мозг и нервные разряды читаются по форме на полу.'
 ];
-const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./biomes.js','./ecology.js','./biobuilds.js','./immunity.js','./gastricArt.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
+const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./biomes.js','./ecology.js','./biobuilds.js','./immunity.js','./gastricArt.js','./structuralArt.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',event=>{
