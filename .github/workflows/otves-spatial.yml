@@ -25,5 +25,30 @@ jobs:
           node --check apps/otves/renderer3d.js
           node --check apps/otves/render-geometry.js
           node --check apps/otves/sw.js
+          node --check apps/otves/render-materials.js
+          node --check apps/otves/qa/optics-smoke.mjs
       - name: Geometry regressions
-        run: node --test apps/otves/render-geometry.test.mjs
+        run: node --test apps/otves/render-geometry.test.mjs apps/otves/render-materials.test.mjs
+
+  browser-optics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install workspace dependencies
+        run: npm ci --ignore-scripts
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test optical tiers and WebGL2 rendering
+        run: node apps/otves/qa/optics-smoke.mjs
+      - name: Preserve browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: otves-optical-screenshots
+          path: apps/otves/qa/evidence/*.png
+          if-no-files-found: ignore
