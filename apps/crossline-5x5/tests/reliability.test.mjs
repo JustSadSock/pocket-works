@@ -38,7 +38,7 @@ test('opponent plans remain secret when one player has submitted and socket reco
  assert.equal(state.phase,'planning');
  assert.equal(viewForPlayer({state,player:A}).side,'A');
 });
-test('explicit exit retains completed match, score and remaining player's identity',()=>{
+test('explicit exit retains completed match, score and remaining player identity',()=>{
  let state=begin();
  state=moduleV2.onLeave({state,player:B,players:[A]}).state;
  assert.equal(state.phase,'finished');
