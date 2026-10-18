@@ -1,4 +1,4 @@
-// TRAFFICITY v1.5: deterministic, standalone tactical city engine.
+// TRAFFICITY v1.6: deterministic, standalone tactical city engine.
 // No time, browser globals, or network calls: the client and PocketNet share these rules.
 export const TURN_LIMIT=30,COLS=5,ROWS=7,WIDTH=800,HEIGHT=1080;
 export const SITES=['Рынок','Кофейня','Сквер','Вокзал','Пекарня','Мастерская','Театр','Причал'];
@@ -17,14 +17,22 @@ export function createMap(seed){
   if(r<ROWS-1&&(r!==waterRow||bridges.includes(c)))candidates.push([index(r,c),index(r+1,c)]);
  }
  // Carve neighborhoods while preserving full connectivity. The river can only be crossed on two bridges.
- const edges=candidates.slice(),neighborsFrom=list=>{
+ const edges=candidates.slice(),arterial=new Set(),neighborsFrom=list=>{
+ 
   const graph=all(nodes.length).map(()=>[]);
   for(const [a,b] of list){graph[a].push(b);graph[b].push(a);}return graph;
  };
+ // Continuous, readable arteries. Bridges are extensions of these avenues,
+ // never isolated fragments sprinkled among abruptly changing street widths.
+ for(const [a,b] of edges){
+  const ra=Math.floor(a/COLS),rb=Math.floor(b/COLS),ca=a%COLS,cb=b%COLS;
+  if((ca===cb&&(ca===1||ca===3))||(ra===rb&&(ra===1||ra===5)))
+   arterial.add(key(a,b));
+ }
  for(let i=edges.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[edges[i],edges[j]]=[edges[j],edges[i]];}
  for(let i=edges.length-1;i>=0;i--){
   const [a,b]=edges[i],ra=Math.floor(a/COLS),rb=Math.floor(b/COLS);
-  if(ra!==rb&&ra===waterRow)continue;
+  if(arterial.has(key(a,b))||(ra!==rb&&ra===waterRow))continue;
   if(rnd()<.57)continue;
   const removed=edges.splice(i,1)[0],graph=neighborsFrom(edges),seen=new Set([0]),queue=[0];
   for(let k=0;k<queue.length;k++)for(const n of graph[queue[k]])if(!seen.has(n)){seen.add(n);queue.push(n);}
@@ -34,7 +42,7 @@ export function createMap(seed){
  const graph=neighborsFrom(edges),roads={};
  for(const [a,b] of edges){
   const river=Math.min(Math.floor(a/COLS),Math.floor(b/COLS))===waterRow&&Math.max(Math.floor(a/COLS),Math.floor(b/COLS))===waterRow+1;
-  roads[key(a,b)]={width:river||rnd()<.32?'wide':'narrow',bridge:river};
+  roads[key(a,b)]={width:river||arterial.has(key(a,b))||rnd()<.12?'wide':'narrow',bridge:river};
  }
  const pool=all(nodes.length).filter(i=>i%COLS!==0&&i%COLS!==COLS-1&&Math.floor(i/COLS)!==0&&Math.floor(i/COLS)!==ROWS-1);
  for(let i=pool.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
@@ -78,7 +86,7 @@ function spawnOffer(g,slot){
 }
 export function createGame(seed=123456789,difficulty='standard'){
  const s=(Number(seed)>>>0)||123456789,map=createMap(s),g={
-  rulesVersion:2,seed:s,map,goalCounter:1,offerCounter:0,turn:0,limit:TURN_LIMIT,phase:'playing',
+  rulesVersion:3,seed:s,map,goalCounter:1,offerCounter:0,turn:0,limit:TURN_LIMIT,phase:'playing',
   difficulty:['casual','standard','expert'].includes(difficulty)?difficulty:'standard',
   scores:[0,0],deliveries:[0,0],last:[],offers:[],vehicles:[],traffic:[0,0]
  };
@@ -86,7 +94,7 @@ export function createGame(seed=123456789,difficulty='standard'){
  for(let side=0;side<2;side++)for(let unit=0;unit<2;unit++){
   const at=starts[side*2+unit];
   g.vehicles.push({id:side*2+unit,side,unit:unit+1,at,goal:chooseGoal(g,at,-1),
-   route:[],steps:0,waiting:0,parked:false,stop:null,delivered:0,blocked:0});
+   route:[],steps:0,waiting:0,parked:false,stop:null,delivered:0,blocked:0,navigation:'manual',target:null});
  }
  for(let slot=0;slot<2;slot++)g.offers.push(spawnOffer(g,slot));
  return g;
@@ -95,7 +103,7 @@ export function routeVehicle(g,side,id,path){
  if(g?.phase!=='playing')return false;
  const v=g.vehicles?.[id];if(!v||v.side!==side||!Array.isArray(path)||path.length>34)return false;
  let prev=v.at;for(const n of path){if(!Number.isInteger(n)||!g.map.graph[prev]?.includes(n))return false;prev=n;}
- v.route=path.slice();if(v.stop&&v.stop.node!==v.at&&!v.route.includes(v.stop.node))v.stop=null;return true;
+ v.route=path.slice();v.navigation='manual';v.target=null;if(v.stop&&v.stop.node!==v.at&&!v.route.includes(v.stop.node))v.stop=null;return true;
 }
 export function stopVehicle(g,side,id,node,amount){
  if(g?.phase!=='playing')return false;
@@ -106,52 +114,116 @@ export function stopVehicle(g,side,id,node,amount){
  v.stop={node,amount};return true;
 }
 export function roadWidth(map,a,b){return map.roads?.[key(a,b)]?.width||'narrow';}
+// A time-aware approximation of the next turn: occupied junctions, opposing lanes,
+// bridges and announced moves cost more than free streets. We still allow a wait
+// if every approach is blocked. Deterministic ties are resolved by graph order.
 export function weightedPath(g,vehicle,target){
+ const others=g.vehicles.filter(v=>v.id!==vehicle.id);
+ const blockedFirst=vehicle.blocked>=1;
  return shortestPath(g.map,vehicle.at,target,(a,b)=>{
-  let cost=roadWidth(g.map,a,b)==='wide'?.96:1.12;
-  const others=g.vehicles.filter(v=>v.id!==vehicle.id);
-  if(others.some(v=>v.at===b&&!v.parked))cost+=vehicle.side===1?5:3;
-  if(others.some(v=>v.route?.[0]===b))cost+=1.4;
-  if(others.some(v=>v.at===b&&v.route?.[0]===a&&roadWidth(g.map,a,b)==='narrow'))cost+=8;
+  const wide=roadWidth(g.map,a,b)==='wide';
+  let cost=wide?1:1.16;
+  const occupied=others.filter(v=>v.at===b&&!v.parked);
+  if(occupied.length){
+   cost+=wide?2.5:4.2;
+   if(occupied.some(v=>v.route?.[0]===a&&!wide))cost+=10;
+   if(occupied.some(v=>!v.route?.length))cost+=13;
+   if(blockedFirst&&a===vehicle.at)cost+=7;
+  }
+  if(others.some(v=>v.route?.[0]===b))cost+=2.1;
+  if(g.map.roads?.[key(a,b)]?.bridge&&others.some(v=>v.at===b||v.route?.[0]===b))cost+=3.5;
+  // Prefer not to make immediate U-turns after losing a merge conflict.
+  if(a===vehicle.at&&vehicle.blocked>0&&vehicle.route?.[0]===b)cost+=3.2;
   return cost;
  });
 }
+function assignRoute(g,side,id,target,kind,offerId=null){
+ const v=g?.vehicles?.[id];
+ if(!v||v.side!==side||g.phase!=='playing')return false;
+ const path=weightedPath(g,v,target).slice(1);
+ if(!path.length&&v.at!==target)return false;
+ if(!routeVehicle(g,side,id,path))return false;
+ v.navigation='adaptive';
+ v.target={kind,node:target,id:offerId};
+ return true;
+}
 export function autoRoute(g,side,id){
- const v=g?.vehicles?.[id];return !!v&&v.side===side&&routeVehicle(g,side,id,shortestPath(g.map,v.at,v.goal).slice(1));
+ const v=g?.vehicles?.[id];
+ return !!v&&v.side===side&&assignRoute(g,side,id,v.goal,'personal');
 }
 export function offerRoute(g,side,id,offerId){
- const v=g?.vehicles?.[id],offer=g?.offers?.find(o=>o.id===offerId);
- if(!v||v.side!==side||!offer)return false;
- const route=shortestPath(g.map,v.at,offer.node).slice(1);
- return routeVehicle(g,side,id,route);
+ const offer=g?.offers?.find(o=>o.id===offerId),v=g?.vehicles?.[id];
+ return !!offer&&!!v&&v.side===side&&assignRoute(g,side,id,offer.node,'offer',offer.id);
+}
+function targetFor(g,v){
+ if(v.target?.kind==='offer'){
+  const offer=g.offers.find(o=>o.id===v.target.id);
+  if(offer)return offer.node;
+ }
+ return v.goal;
+}
+export function replanAdaptive(g,v,force=false){
+ if(v.navigation!=='adaptive'||g.phase!=='playing')return false;
+ const target=targetFor(g,v);
+ if(!g.offers.some(o=>o.id===v.target?.id)&&v.target?.kind==='offer')
+  v.target={kind:'personal',node:v.goal,id:null};
+ const routeEnd=v.route?.at(-1);
+ const stuck=v.blocked>=1;
+ const next=v.route?.[0];
+ // Replan only when the street ahead is at risk, the assignment changed,
+ // or a traffic jam already caused a delay. Preserve user-drawn manual paths.
+ const hazard=next!==undefined&&g.vehicles.some(o=>o.id!==v.id&&!o.parked&&o.at===next);
+ if(!force&&!stuck&&!hazard&&routeEnd===target)return false;
+ const candidate=weightedPath(g,v,target).slice(1);
+ if(!candidate.length&&v.at!==target)return false;
+ if(!force&&candidate.join(',')===v.route.join(','))return false;
+ v.route=candidate;
+ return true;
 }
 export function botPlan(g){
  if(g.phase!=='playing')return;
- for(const v of g.vehicles.filter(v=>v.side===1)){
+ const bots=g.vehicles.filter(v=>v.side===1);
+ const reserved=new Set();
+ for(const v of bots){
+  if(v.waiting>0||v.stop)continue;
   if(g.difficulty==='casual'){if(!v.route.length)autoRoute(g,1,v.id);continue;}
-  if(v.stop||v.waiting>0)continue;
-  const personal=weightedPath(g,v,v.goal),cost=Math.max(1,personal.length-1);
-  let best={node:v.goal,value:(Math.max(10,40-2*(v.steps+cost))+5)/(cost+1),path:personal};
+  const destination=targetFor(g,v);
+  const currentValid=!!v.route.length&&v.route.at(-1)===destination&&v.blocked===0;
+  const personal=weightedPath(g,v,v.goal),dist=Math.max(1,personal.length-1);
+  const personalRate=Math.max(10,40-2*(v.steps+dist))/(dist+1);
+  let selected={kind:'personal',node:v.goal,id:null,rate:personalRate};
   if(g.difficulty==='expert'){
    for(const offer of g.offers){
-    const path=weightedPath(g,v,offer.node),dist=path.length-1;
-    if(dist<0||dist>=offer.ttl)continue;
-    const opponentNear=g.vehicles.filter(x=>x.side===0).some(x=>shortestPath(g.map,x.at,offer.node).length-1<=dist);
-    const score=offer.reward/(dist+1)*(opponentNear?1.15:1);
-    if(score>best.value){best={node:offer.node,value:score,path};}
+    if(reserved.has(offer.id))continue;
+    const route=weightedPath(g,v,offer.node),distance=route.length-1;
+    if(distance<0||distance>=offer.ttl)continue;
+    const opponentEta=Math.min(...g.vehicles.filter(x=>x.side===0).map(x=>shortestPath(g.map,x.at,offer.node).length-1));
+    const feasible=distance<=opponentEta+1;
+    const rate=offer.reward/(distance+1)*(feasible?1.1:.40);
+    if(rate>selected.rate*1.30)selected={kind:'offer',node:offer.node,id:offer.id,rate};
    }
   }
-  if(!v.route.length||v.blocked>=1||g.difficulty==='expert'){
-   if(best.path.length>1)routeVehicle(g,1,v.id,best.path.slice(1));
+  // Honour a live assignment rather than oscillating between offers every tick.
+  if(v.navigation==='adaptive'&&v.target?.kind==='offer'&&g.offers.some(o=>o.id===v.target.id)&&v.blocked===0){
+   const kept=g.offers.find(o=>o.id===v.target.id);
+   if(kept&&!reserved.has(kept.id)&&weightedPath(g,v,kept.node).length-1<kept.ttl)selected={kind:'offer',node:kept.node,id:kept.id,rate:Infinity};
   }
+  if(selected.kind==='offer')reserved.add(selected.id);
+  if(!currentValid||v.target?.kind!==selected.kind||v.target?.id!==selected.id||v.blocked>=1)
+   assignRoute(g,1,v.id,selected.node,selected.kind,selected.id);
+  else replanAdaptive(g,v);
  }
 }
 const priority=(g,v)=>(v.side*2+v.unit+g.turn+(g.seed&3))%4;
 export function advanceGame(g){
  if(g?.phase!=='playing')return false;
+ // Routes tagged adaptive re-evaluate the *next* movement without overriding
+ // manually prepared turns. This is authoritative on the server, not only the AI.
+ for(const v of g.vehicles)replanAdaptive(g,v);
  const events=[],before=g.vehicles.map(v=>v.at),intents=new Map();
+ const passing=new Set();
  for(const v of g.vehicles){
-  v.parked=false;
+  v.parked=!v.route.length;
   if(v.waiting>0){v.waiting--;v.parked=true;continue;}
   if(v.stop?.node===v.at){v.waiting=v.stop.amount-1;v.stop=null;v.parked=true;events.push({type:'stop',side:v.side,unit:v.unit,node:v.at});continue;}
   if(v.route.length&&g.map.graph[v.at]?.includes(v.route[0]))intents.set(v.id,v.route[0]);
@@ -164,10 +236,18 @@ export function advanceGame(g){
   ids.sort((a,b)=>priority(g,g.vehicles[a])-priority(g,g.vehicles[b]));
   for(const id of ids.slice(1))intents.delete(id);
  }
- // A narrow street cannot host two cars trying to swap; both must detour.
+ // Single-lane head-on: let each driver try a detour first. If neither can
+ // clear the street for two turns, resolve a slow pull-out maneuver atomically.
+ // This guarantees progress in corridor bottlenecks instead of eternal gridlock.
  for(const [id,target] of [...intents]){
   const opposite=[...intents].find(([other,to])=>other!==id&&to===g.vehicles[id].at&&g.vehicles[other].at===target);
-  if(opposite&&roadWidth(g.map,g.vehicles[id].at,target)==='narrow'){intents.delete(id);intents.delete(opposite[0]);}
+  if(!opposite||!intents.has(id)||!intents.has(opposite[0]))continue;
+  if(roadWidth(g.map,g.vehicles[id].at,target)!=='narrow')continue;
+  const otherId=opposite[0];
+  if(g.vehicles[id].blocked>=2&&g.vehicles[otherId].blocked>=2){
+   passing.add(id);passing.add(otherId);
+   events.push({type:'yield',side:g.vehicles[id].side,unit:g.vehicles[id].unit,node:target,peer:otherId});
+  }else{intents.delete(id);intents.delete(otherId);}
  }
  // Eliminate proposed moves into nodes occupied by cars unable to move away.
  let changed=true;
@@ -186,6 +266,7 @@ export function advanceGame(g){
    }continue;
   }
   v.at=next;v.route.shift();v.steps++;v.blocked=0;
+  if(passing.has(v.id))v.waiting=1;
  }
  // Arrival order is deterministic; contested offers go to the first car by initiative.
  for(const v of g.vehicles.slice().sort((a,b)=>priority(g,a)-priority(g,b))){
@@ -198,7 +279,7 @@ export function advanceGame(g){
   if(v.at===v.goal&&before[v.id]!==v.at){
    const gained=Math.max(10,40-2*v.steps);g.scores[v.side]+=gained;g.deliveries[v.side]++;
    events.push({type:'delivery',side:v.side,unit:v.unit,points:gained,node:v.at});
-   v.delivered++;v.steps=0;v.waiting=0;v.parked=false;v.stop=null;v.route=[];
+   v.delivered++;v.steps=0;v.waiting=0;v.parked=false;v.stop=null;v.route=[];v.target=null;
    v.goal=chooseGoal(g,v.at,v.goal);
   }
  }
@@ -210,7 +291,7 @@ export function advanceGame(g){
 }
 export function winner(g){return Number.isInteger(g.winnerOverride)?g.winnerOverride:g.scores[0]===g.scores[1]?-1:g.scores[0]>g.scores[1]?0:1;}
 
-// PocketNet v2: immutable rules, private projections, rejoining seats and idle adjudication.
+// PocketNet v3: immutable rules, private projections, rejoining seats and idle adjudication.
 const broadcast=()=>[{type:'state'}],notice=(id,message)=>[{type:'notice',to:id,payload:message}];
 const sideFor=(s,p)=>s.seats.findIndex(id=>id===p.id);
 const module={
@@ -237,7 +318,7 @@ const module={
   const side=sideFor(state,player);
   if(side<0)return {phase:state.phase,players:state.players,revision:state.revision};
   const view={...state,players:state.players.map(p=>({id:p.id,name:p.name})),game:state.game?{...state.game,vehicles:state.game.vehicles.map(v=>(
-   state.phase==='playing'&&v.side!==side?{...v,route:[],stop:null,goal:-1,waiting:0}: {...v,route:v.route.slice()}
+   state.phase==='playing'&&v.side!==side?{...v,route:[],stop:null,goal:-1,waiting:0,navigation:'manual',target:null}: {...v,route:v.route.slice()}
   ))}:null};
   return view;
  },

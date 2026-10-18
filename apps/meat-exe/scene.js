@@ -1,5 +1,6 @@
 import * as THREE from './three.module.js';
 import { generateOrgan, setSeed, CELLS_PER_CHUNK } from './organGen.js';
+import { sweepCircle } from './stability.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -118,14 +119,20 @@ export function createWorld(canvas, initialSeed) {
   flash.visible=false;
   camera.add(gun);
   scene.add(camera);
-  let currentWidth=0,currentHeight=0;
+  let currentWidth=0,currentHeight=0,quality='medium',ratio=0;
+  function setQuality(next){
+    if(!['low','medium','high'].includes(next))return;
+    if(next!==quality){quality=next;currentWidth=0;resize();}
+  }
   function resize(){
     const w=Math.max(1,Math.round(canvas.clientWidth||window.innerWidth));
     const h=Math.max(1,Math.round(canvas.clientHeight||window.innerHeight));
-    if(w===currentWidth&&h===currentHeight) return;
-    currentWidth=w;currentHeight=h;
     const mobile=w<900 || ('ontouchstart' in window);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?1.35:1.65));
+    const desired=quality==='low'?1:quality==='high'?(mobile?1.5:1.85):(mobile?1.2:1.45);
+    const pixelRatio=Math.min(window.devicePixelRatio||1,desired);
+    if(w===currentWidth&&h===currentHeight&&ratio===pixelRatio) return;
+    currentWidth=w;currentHeight=h;
+    ratio=pixelRatio;renderer.setPixelRatio(ratio);
     renderer.setSize(w,h,false);
     camera.aspect=w/h;camera.updateProjectionMatrix();
   }
@@ -202,12 +209,7 @@ export function createWorld(canvas, initialSeed) {
     for(const [k,m] of chunks){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>1||Math.abs(b-cz)>1){scene.remove(m);chunks.delete(k);}}
     if(layouts.size>120){for(const [k] of layouts){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>6||Math.abs(b-cz)>6)layouts.delete(k);}}
   }
-  function moveCircle(x,z,dx,dz,r=.21){
-    const ok=(a,b)=>isFloor(a-r,b-r)&&isFloor(a+r,b-r)&&isFloor(a-r,b+r)&&isFloor(a+r,b+r);
-    if(ok(x+dx,z))x+=dx;
-    if(ok(x,z+dz))z+=dz;
-    return {x,z};
-  }
+  function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
   function makeEnemy(type,x,z){
     const g=new THREE.Group(), core=mobMats[type]||mobMats.crawler;
     const scale=type==='heart'?1.8:type==='brute'?1.28:type==='spitter'?.84:.95;
@@ -286,5 +288,5 @@ export function createWorld(canvas, initialSeed) {
   }
   function end(){clearChunks();renderer.dispose();}
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, end };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, end };
 }

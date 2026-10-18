@@ -20,6 +20,14 @@ test('solo dispatch works on desktop, Android and iPhone', async ({page}, info) 
  expect(moved.cars[0].at).not.toBe(beginning.cars[0].at);
  const bounds=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,appHeight:document.querySelector('.shell')?.getBoundingClientRect().height||0,viewportHeight:innerHeight}));
  expect(bounds.width).toBeLessThanOrEqual(bounds.viewport+2);
+ const mapBounds=await page.evaluate(()=>{
+  const a=document.querySelector('#cityCanvas').getBoundingClientRect();
+  const b=document.querySelector('.city-inner').getBoundingClientRect();
+  return {cw:a.width,ch:a.height,pw:b.width,ph:b.height,top:Math.abs(a.top-b.top)};
+ });
+ expect(Math.abs(mapBounds.cw-mapBounds.pw)).toBeLessThanOrEqual(2);
+ expect(Math.abs(mapBounds.ch-mapBounds.ph)).toBeLessThanOrEqual(2);
+ expect(mapBounds.top).toBeLessThanOrEqual(2);
  expect(bounds.appHeight).toBeLessThanOrEqual(bounds.viewportHeight+2);
  await page.locator('#pause').click();
  await expect(page.locator('#pauseOverlay')).toBeVisible();
@@ -35,6 +43,24 @@ test('solo dispatch works on desktop, Android and iPhone', async ({page}, info) 
  expect(failures).toEqual([]);
 });
 
+test('roads, zoom and animated turn feedback are responsive',async({page})=>{
+ await page.goto('/apps/trafficity/',{waitUntil:'domcontentloaded'});
+ await page.locator('#solo').click();
+ const initial=await page.evaluate(()=>window.__AI_TEST_STATE__);
+ expect(initial.rulesVersion).toBe(3);
+ await page.locator('#zoomIn').click();
+ const zoom=await page.evaluate(()=>window.__AI_TEST_STATE__);
+ expect(zoom.camera.zoom).toBeGreaterThan(1);
+ await page.locator('#zoomReset').click();
+ await page.locator('#auto').click();
+ await page.locator('#next').click();
+ const movement=await page.evaluate(()=>window.__AI_TEST_STATE__);
+ expect(movement.turn).toBe(1);
+ await expect(page.locator('#cityCanvas')).toBeVisible();
+ await page.waitForTimeout(1050);
+ const settled=await page.evaluate(()=>window.__AI_TEST_STATE__);
+ expect(settled.motion).toBe(null);
+});
 test('full 30 turn match finishes with delivery points', async ({page}) => {
  await page.goto('/apps/trafficity/',{waitUntil:'domcontentloaded'});
  await page.locator('#solo').click();

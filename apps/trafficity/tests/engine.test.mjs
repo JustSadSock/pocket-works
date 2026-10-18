@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createMap,createGame,shortestPath,autoRoute,routeVehicle,stopVehicle,advanceGame,botPlan,winner,offerRoute,roadWidth} from '../engine.js';
+import {createMap,createGame,shortestPath,autoRoute,routeVehicle,stopVehicle,advanceGame,botPlan,winner,offerRoute,roadWidth,weightedPath,replanAdaptive} from '../engine.js';
 const game=(s=101,d='standard')=>createGame(s,d);
 test('120 seeds: complete networks, bridges, bounded 35-node city, actual layout diversity',()=>{
  const layouts=new Set();
@@ -105,4 +105,53 @@ test('terminal state cannot accept commands or more turns',()=>{
  for(let turn=0;turn<30;turn++)advanceGame(g);
  assert.equal(autoRoute(g,0,0),false);assert.equal(advanceGame(g),false);
  assert.equal(routeVehicle(g,0,0,[]),false);assert.equal(stopVehicle(g,0,0,0,1),false);
+});
+
+
+test('arterial avenues are continuous wide roads and both bridges align to them',()=>{
+ for(let seed=1;seed<=40;seed++){
+  const m=createMap(seed);
+  for(const c of [1,3])for(let r=0;r<6;r++){
+   const a=r*5+c,b=(r+1)*5+c;
+   assert.ok(m.graph[a].includes(b));
+   assert.equal(roadWidth(m,a,b),'wide');
+  }
+  for(const row of [1,5])for(let c=0;c<4;c++){
+   const a=row*5+c,b=a+1;
+   assert.ok(m.graph[a].includes(b));
+   assert.equal(roadWidth(m,a,b),'wide');
+  }
+ }
+});
+test('adaptive player navigation avoids a blocked first junction but manual routes remain unchanged',()=>{
+ const g=createGame(1),v=g.vehicles[2],raw=shortestPath(g.map,v.at,v.goal);
+ assert.ok(raw.length>=3);
+ const blocked=raw[1];
+ g.vehicles[0].at=blocked;g.vehicles[0].parked=false;g.vehicles[0].route=[];
+ assert.ok(autoRoute(g,1,2));
+ assert.equal(v.navigation,'adaptive');assert.equal(v.route[0],9);
+ const alternative=v.route.slice();
+ assert.equal(routeVehicle(g,1,2,raw.slice(1)),true);
+ assert.equal(v.navigation,'manual');
+ assert.equal(replanAdaptive(g,v,true),false);
+ assert.deepEqual(v.route,raw.slice(1));
+});
+test('narrow-road deadlocks yield after two blocked turns, rather than repeat forever',()=>{
+ const g=createGame(32),edge=g.map.edges.find(([a,b])=>roadWidth(g.map,a,b)==='narrow');
+ const [a,b]=edge;
+ g.vehicles[0].at=a;g.vehicles[2].at=b;
+ g.vehicles[0].route=[b];g.vehicles[2].route=[a];
+ g.vehicles[1].route=[];g.vehicles[3].route=[];
+ for(let i=0;i<2;i++)advanceGame(g);
+ assert.equal(g.vehicles[0].at,a);assert.equal(g.vehicles[2].at,b);
+ advanceGame(g);
+ assert.equal(g.vehicles[0].at,b);assert.equal(g.vehicles[2].at,a);
+ assert.ok(g.last.some(e=>e.type==='yield'));
+ assert.equal(g.vehicles[0].waiting,1);
+});
+test('expert AI preserves offer choice instead of oscillating at every planning call',()=>{
+ const g=createGame(7,'expert');botPlan(g);
+ const choices=g.vehicles.filter(v=>v.side===1).map(v=>JSON.stringify(v.target));
+ for(let i=0;i<5;i++)botPlan(g);
+ assert.deepEqual(g.vehicles.filter(v=>v.side===1).map(v=>JSON.stringify(v.target)),choices);
 });

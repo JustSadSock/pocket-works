@@ -4,6 +4,7 @@ export const SOUND_PROFILE=Object.freeze({
  press:{hz:480,end:350,duration:.045,gain:.012,noise:.006,noiseHz:1650,type:'triangle'},
  move:{hz:330,end:215,duration:.115,gain:.018,noise:.016,noiseHz:850,type:'triangle'},
  collision:{hz:205,end:104,duration:.125,gain:.025,noise:.025,noiseHz:530,type:'triangle'},
+ arrive:{hz:480,end:760,duration:.17,gain:.017,noise:.008,noiseHz:1300,type:'sine'},
  blocked:{hz:150,end:82,duration:.145,gain:.032,noise:.026,noiseHz:320,type:'triangle'},
  win:{hz:610,end:890,duration:.23,gain:.022,noise:.01,noiseHz:1200,type:'sine'},
  error:{hz:175,end:105,duration:.095,gain:.016,noise:.016,noiseHz:460,type:'triangle'}

@@ -2,6 +2,14 @@
   "schema": 1,
   "suites": [
     {
+      "id": "stability",
+      "kind": "node-test",
+      "files": [
+        "qa/stability.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
       "id": "organ",
       "kind": "node-test",
       "files": [
@@ -32,8 +40,39 @@
         },
         {
           "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pauseBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#pauseMenu"
+        },
+        {
+          "action": "click",
+          "selector": "#qualityPause"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#resumeBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#hud"
         }
       ]
+    },
+    {
+      "id": "journey",
+      "kind": "playwright",
+      "files": [
+        "qa/journey.spec.js"
+      ],
+      "tier": "smoke"
     }
   ]
 }

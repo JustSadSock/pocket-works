@@ -64,5 +64,18 @@ test('new game after completed 30-turn match retains original seats',()=>{
  for(let i=0;i<30;i++){r.send(0,{type:'ready',ready:true});r.send(1,{type:'ready',ready:true});}
  assert.equal(r.state.phase,'finished');r.send(0,{type:'again'});
  assert.equal(r.state.phase,'playing');assert.equal(r.state.game.turn,0);
- assert.equal(r.state.game.rulesVersion,2);
+ assert.equal(r.state.game.rulesVersion,3);
+});
+
+
+test('private PocketNet v3 view does not disclose adaptive target or destination',()=>{
+ const r=room();r.send(0,{type:'start'});
+ r.send(0,{type:'auto',vehicle:0});
+ const own=rules.viewForPlayer({state:r.state,player:p[0],players:p});
+ const enemy=rules.viewForPlayer({state:r.state,player:p[1],players:p});
+ assert.equal(own.game.vehicles[0].navigation,'adaptive');
+ assert.equal(own.game.vehicles[0].target.kind,'personal');
+ assert.equal(enemy.game.vehicles[0].target,null);
+ assert.equal(enemy.game.vehicles[0].navigation,'manual');
+ assert.equal(enemy.game.vehicles[0].goal,-1);
 });
