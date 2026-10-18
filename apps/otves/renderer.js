@@ -1,3 +1,5 @@
+import { sampleGoalCapture } from './marble-motion.js';
+
 const TAU = Math.PI * 2;
 const WALL_HEIGHT = 0.34;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -71,14 +73,23 @@ export class MazeRenderer {
     };
   }
 
-  draw({ maze, marble, visualTilt, elapsed, mode = 'playing', completion = 0 }) {
+  draw({ maze, marble, visualTilt, elapsed, mode = 'playing', completion = 0, goalCapture = null }) {
     const context = this.context;
     this.configureCamera(maze, visualTilt);
+    const capture = goalCapture && (mode === 'finishing' || mode === 'complete')
+      ? sampleGoalCapture(goalCapture, completion) : null;
+    const frameMarble = capture ? {
+      ...marble,
+      position: { x: capture.position.x, y: capture.position.z },
+      renderHeight: capture.position.y,
+      renderAlpha: clamp(1 - Math.max(0, capture.depth - 0.12) * 1.9, 0, 1),
+      speed: () => 0
+    } : marble;
     this.drawBackground(context, visualTilt, elapsed);
     this.drawFloor(context, maze, visualTilt);
     this.drawGoal(context, maze, elapsed, mode, completion);
     this.drawStartMark(context, maze);
-    this.drawSceneObjects(context, maze, marble, visualTilt);
+    this.drawSceneObjects(context, maze, frameMarble, visualTilt);
     this.drawScreenGlass(context, visualTilt);
     this.drawVignette(context);
   }
@@ -323,6 +334,7 @@ export class MazeRenderer {
     const offsetX = 3.5 - tilt.x * 2.3;
     const offsetY = 5.5 - tilt.y * 1.8;
     context.save();
+    context.globalAlpha = marble.renderAlpha ?? 1;
     const shadow = context.createRadialGradient(
       floorCenter.x + offsetX,
       floorCenter.y + offsetY,
@@ -342,13 +354,15 @@ export class MazeRenderer {
   }
 
   drawMarble(context, maze, marble, tilt) {
-    const center = this.project(maze, marble.position.x, marble.position.y, marble.radius * 1.02);
+    const center = this.project(maze, marble.position.x, marble.position.y,
+      marble.renderHeight ?? marble.radius * 1.02);
     const radius = Math.max(8, marble.radius * this.scale);
     const speed = marble.speed();
     const highlightX = clamp(this.light.x * radius * 0.72, -radius * 0.52, radius * 0.18);
     const highlightY = clamp(this.light.y * radius * 0.68, -radius * 0.58, -radius * 0.08);
 
     context.save();
+    context.globalAlpha = marble.renderAlpha ?? 1;
     if (speed > 2.25 && !this.reducedMotion) {
       const length = clamp(speed * 1.7, 4, 11);
       const angle = Math.atan2(marble.velocity.y, marble.velocity.x);
