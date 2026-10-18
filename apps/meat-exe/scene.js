@@ -209,6 +209,14 @@ export function createWorld(canvas, initialSeed) {
     neural:new THREE.MeshStandardMaterial({color:0x9d93c2,roughness:.44,emissive:0x333056,
       emissiveIntensity:.42,map:structuralMaps.neural.color,bumpMap:structuralMaps.neural.bump,bumpScale:.1})
   };
+  // Software WebGL cannot afford the per-pixel bump shader for every wall,
+  // guardian and chamber. Keep physical sculpted geometry and albedo instead.
+  if(softwareRenderer){
+    for(const mat of [stomachWallMat,gastricFoldMat,...Object.values(structuralWallMats),
+      ...Object.values(structuralAccents)]){
+      mat.bumpMap=null;mat.bumpScale=0;mat.needsUpdate=true;
+    }
+  }
   const marrowDark=new THREE.MeshStandardMaterial({color:0x4f303a,roughness:.91});
   const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.64, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
   const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.66, metalness:0, emissive:0x280407, emissiveIntensity:.27});
@@ -254,7 +262,7 @@ export function createWorld(canvas, initialSeed) {
   const spitterNeckGeo=new THREE.CylinderGeometry(.16,.38,.85,9);
   const shieldGeo=new THREE.IcosahedronGeometry(1,1);
   for(const mat of Object.values(mobMats)){
-    mat.map=gastricMaps.color;mat.bumpMap=gastricMaps.bump;mat.bumpScale=.05;mat.needsUpdate=true;
+    mat.map=gastricMaps.color;mat.bumpMap=softwareRenderer?null:gastricMaps.bump;mat.bumpScale=softwareRenderer?0:.05;mat.needsUpdate=true;
   }
   const vesselMat = new THREE.MeshStandardMaterial({color:0x7e2434,metalness:.06,roughness:.33,emissive:0x26050a,emissiveIntensity:.25});
   const vesselGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
