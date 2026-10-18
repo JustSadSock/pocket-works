@@ -196,14 +196,17 @@ function renderStrokes(ctx,strokes,zone,aspect=W/H,cache=null){
  ctx.drawImage(paint.canvas,0,0,W,H);
 }
 
-export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false,legacyFrame=false){
+export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=false,thumbnail=false,legacyFrame=false,overlayOnly=false){
  let ctx;
  try{
   const image=await loadArtwork(id);
   if(!canvas.isConnected)return;
   setArtworkFrame(canvas,image,legacyFrame);
   ctx=prepareCanvas(canvas,false,thumbnail);
-  ctx.clearRect(0,0,W,H);drawArtwork(ctx,image,id,legacyFrame);
+  ctx.clearRect(0,0,W,H);
+  // Voting retains the native-resolution IMG below this transparent repair layer.
+  // Re-rasterizing the entire original into CANVAS was making the forgery visibly softer.
+  if(!overlayOnly)drawArtwork(ctx,image,id,legacyFrame);
  if(damaged){
   const z=zoneFor(id,variation),overlay=document.createElement('canvas');
   overlay.width=canvas.width;overlay.height=canvas.height;

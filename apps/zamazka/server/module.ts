@@ -24,6 +24,8 @@ type State={resumable?:boolean;balancedDamage?:boolean;paused?:boolean;pausedAt?
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
+// The final durable painting, not the drawing clock, closes the restoration stage.
+const allCommitted=(s:State)=>members(s).length>0&&members(s).every(p=>Array.isArray(s.assignments[p.id]?.strokes));
 const strip=(s:State,id:string)=>({
  host:s.host,phase:s.phase,serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
@@ -237,7 +239,7 @@ const module: PocketModule<State>={
    // still have time to complete. Do not render voting before that window.
    if(!state.paused&&state.deadline&&state.phase!=='results'&&now()>=
       (state.phase==='drawing'&&state.drawingSeconds>0
-       ?state.deadline+(members(state).every(p=>state.assignments[p.id]?.strokes!==null)
+       ?state.deadline+(allCommitted(state)
           ?0:FINAL_SUBMISSION_GRACE_MS):state.deadline))step(state);
    if(a.type==='pulse')return {state,events:emit(state)};
     if(state.paused&&a.type!=='kick_player'&&a.type!=='claim_host')return {state,events:notice(id,'Матч на паузе. Дождитесь участников или исключите отсутствующего игрока.')};
@@ -370,8 +372,7 @@ const module: PocketModule<State>={
        return {state,events:[{type:'draft_saved',to:id,payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,lines:completed.length}}]};
      item.strokes=completed;
      delete state.drafts[id];
-     if(members(state).every(p=>state.assignments[p.id]?.strokes!==null)&&
-        (state.drawingSeconds===0||now()>=state.deadline))step(state);
+     if(allCommitted(state))step(state);
      // A WebSocket send is not a confirmed submission: only this durable
      // server-side commit can acknowledge a full multi-packet restoration.
      return {state,events:[...emit(state),{type:'submission_saved',to:id,
@@ -391,8 +392,7 @@ const module: PocketModule<State>={
      if(!strokes)return {state,events:notice(id,'Некорректные или слишком большие данные рисунка.')};
      item.strokes=strokes;
      delete state.drafts?.[id];
-     if(members(state).every(p=>state.assignments[p.id]?.strokes!==null)&&
-        (state.drawingSeconds===0||now()>=state.deadline))step(state);
+     if(allCommitted(state))step(state);
      return {state,events:[...emit(state),{type:'submission_saved',to:id,
        payload:{round:state.round,art:item.art,variation:item.variation,revision:null,lines:strokes.length}}]};
    }else if((a.type==='vote'||a.type==='vote_draft')&&state.phase==='voting'){
