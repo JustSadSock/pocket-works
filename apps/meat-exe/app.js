@@ -49,6 +49,7 @@ function setNotice(message,seconds=2){
 }
 function setMode(next){
   mode=next;
+  if(next!=='playing')lastPaint=0; // One frozen game image behind menus, never a live GPU loop.
   ui.mute.hidden=next!=='menu';
   ui.qualityMenu.hidden=next!=='menu';
   ui.confirm.hidden=true;
@@ -486,7 +487,7 @@ window.addEventListener('blur',()=>{if(mode==='playing')pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause();});
 window.addEventListener('pagehide',()=>snapshot());
 canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();snapshot();fatal(new Error('Видеоконтекст потерян. Забег сохранён. Нажмите «Повторить», чтобы восстановить игру.'));});
-window.addEventListener('resize',()=>world?.resize());
+window.addEventListener('resize',()=>{world?.resize();lastPaint=0;});
 $('startBtn').addEventListener('click',confirmNewRun);
 ui.resume.addEventListener('click',()=>begin(true));
 ui.pauseBtn.addEventListener('click',pause);
@@ -527,8 +528,9 @@ function frame(timestamp){
       }
     }else{accumulator=0;}
     // Frame-rate ceiling in manual Detail mode leaves CPU/GPU time for game input.
-    const interval=mode==='playing'&&effectiveQuality==='high'?20:mode==='playing'?0:80;
-    if(world&&!document.hidden&&(timestamp-lastPaint>=interval)){
+    const interval=effectiveQuality==='high'?20:0;
+    const shouldPaint=mode==='playing'?timestamp-lastPaint>=interval:lastPaint===0;
+    if(world&&!document.hidden&&shouldPaint){
       const elapsed=Math.min(dt,.045);lastPaint=timestamp;
       recoil=Math.max(0,recoil-elapsed*6);damageFlash=Math.max(0,damageFlash-elapsed*2.8);
       ui.damage.style.opacity=String(damageFlash*.8);
