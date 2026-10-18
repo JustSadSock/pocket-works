@@ -161,3 +161,47 @@ test('FOG-014/018: all seven AI levels use affordable zone moves',()=>{
     }
   }
 });
+
+test('FOG-018: one thousand seeded authoritative orders preserve basic invariants',()=>{
+  let tick=0,accepted=0;
+  const random=()=>{tick=(Math.imul(tick,1664525)+1013904223)>>>0;return tick/4294967296;};
+  for(const [size] of sizes){
+    let g=rules.createOriginalMatch({size,seed:17});
+    for(let n=0;n<250;n++){
+      if(g.phase==='finished')g=rules.createOriginalMatch({size,seed:n+23});
+      const p=g.state.currentPlayer;
+      const mine=g.units.filter(x=>x.owner===p);
+      const owned=g.buildings.filter(x=>x.owner===p&&['base','barracks','stable','mageTower'].includes(x.type));
+      const r=random();
+      let action={type:'end'};
+      if(r<0.17&&mine.length){
+        const u=mine[Math.floor(random()*mine.length)];
+        const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+        const [dr,dc]=dirs[Math.floor(random()*dirs.length)];
+        action={type:'move',unit:u.id,r:u.r+dr,c:u.c+dc};
+      }else if(r<0.30&&owned.length){
+        const b=owned[Math.floor(random()*owned.length)];
+        const types={base:'swordsman',barracks:'heavy',stable:'cavalry',mageTower:'mage'};
+        action={type:'spawn',building:b.id,unitType:types[b.type],r:b.r,c:b.c+1};
+      }else if(r<0.40&&mine.length){
+        const u=mine[Math.floor(random()*mine.length)];
+        action={type:'attack',unit:u.id,r:u.r,c:u.c+1};
+      }
+      const before=JSON.stringify(g);
+      const step=rules.originalAction(g,p,action);
+      if(step.error){
+        assert.equal(JSON.stringify(g),before,'denied action must not mutate authoritative state');
+      }else{
+        accepted++;g=step.state;
+        assert.ok(g.revision>0);
+        assert.ok(g.state.gold[1]>=0&&g.state.gold[2]>=0);
+        for(const u of g.units){
+          assert.ok(u.mp>=0&&Number.isFinite(u.mp));
+          assert.ok(u.hp>0&&Number.isFinite(u.hp));
+          assert.ok(u.r>=0&&u.r<g.rows&&u.c>=0&&u.c<g.cols);
+        }
+      }
+    }
+  }
+  assert.ok(accepted>500,'orders must exercise meaningful accepted gameplay');
+});
