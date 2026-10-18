@@ -1,4 +1,4 @@
-import {getAtlasGeometry,countyAtlasModel,heraldryFor,familyRelations} from './atlas-core.js';
+import {getAtlasGeometry,countyAtlasModel,heraldryFor,familyRelations,atlasNoise} from './atlas-core.js';
 const NS='http://www.w3.org/2000/svg';
 let atlasSerial=0;
 const S=(tag,attrs={},children=[])=>{
@@ -78,6 +78,27 @@ function engraving(model,seed,uid){
        ' q37 10 65 -3 t46 -2'}));
      }
    }
+   // Small relief emblems replace generic flat polygon fills. The placement
+   // is derived only from the immutable geographical seed.
+   const n=Number(p.id.slice(3));
+   const xx=Math.round(c.x+50+(atlasNoise(seed,n*11)-.5)*22);
+   const yy=Math.round(c.y-51+(atlasNoise(seed,n*13)-.5)*15);
+   if(h){
+     clipped.append(S('path',{d:'M'+(xx-24)+' '+(yy+21)+
+       ' l17 -34 l12 20 l9 -15 l21 29 z',
+       stroke:'#484d3a','stroke-opacity':.67,'stroke-width':2.2,
+       fill:'#897c60','fill-opacity':.18}),
+       S('path',{d:'M'+(xx-7)+' '+(yy-13)+' l-6 13 l7 -4 m9 -9 l-4 8 l4 0',
+       stroke:'#4a4436','stroke-opacity':.57,'stroke-width':1.4}));
+   }else{
+     for(let i=0;i<4;i++){
+       const tx=xx-20+i*12,ty=yy+Math.round(atlasNoise(seed,n*31+i)*11);
+       clipped.append(S('path',{d:'M'+tx+' '+(ty+15)+' v-19 m-10 5 l10 -18 l10 18 z',
+         stroke:'#384c3c','stroke-opacity':.6,'stroke-width':1.7}),
+         S('path',{d:'M'+tx+' '+(ty-9)+' l-6 9 l12 0 z',
+         stroke:'#384c3c','stroke-opacity':.38,'stroke-width':1}));
+     }
+   }
    scene.append(clipped);
  }
  // Roads are ink-thin and cross the real cardinal neighbor graph.
@@ -95,6 +116,17 @@ function engraving(model,seed,uid){
    stroke:'#476f7c','stroke-opacity':.74,'stroke-width':14,fill:'none'}),
    S('path',{d:'M315 12 C340 72 285 122 346 170 S460 225 426 305 S485 392 535 425 S606 504 570 582',
    stroke:'#b3d2d0','stroke-opacity':.88,'stroke-width':4.5,fill:'none'}));
+ if(model.width>860){
+   // Four plate sections share a family of waterways without modifying the
+   // simulation's topology or moving its political boundaries.
+   for(const [dx,dy] of [[860,0],[0,570],[860,570]]){
+     const d='M315 12 C340 72 285 122 346 170 S460 225 426 305 S485 392 535 425 S606 504 570 582';
+     scene.append(S('path',{d,transform:'translate('+dx+' '+dy+')',
+       stroke:'#476f7c','stroke-opacity':.65,'stroke-width':12,fill:'none'}),
+       S('path',{d,transform:'translate('+dx+' '+dy+')',
+       stroke:'#b3d2d0','stroke-opacity':.76,'stroke-width':4,fill:'none'}));
+   }
+ }
  return scene;
 }
 function mapCounties(world,model,selectedId,changes,onSelect,{rank='county',selectedTitleId=null}={}){
@@ -115,6 +147,8 @@ function mapCounties(world,model,selectedId,changes,onSelect,{rank='county',sele
    const region=S('g',{class:'atlas-county'+(selected?' is-selected':'')+(changed?' title-changed':''),
      role:'button',tabindex:0,'aria-label':rankTitle.name+', '+rankHolder.name+', '+province.name,
      'aria-pressed':selected?'true':'false','data-province':province.id,'data-title':rankTitle.id});
+   const nativeHint=S('title');nativeHint.textContent=rankTitle.name+' — '+rankHolder.name;
+   region.append(nativeHint);
    region.append(S('path',{d:item.path,fill:heraldry.main,'fill-opacity':selected?.4:.26,
      stroke:'#63513c','stroke-opacity':selected?.95:.64,'stroke-width':selected?3.2:1.55,
      'vector-effect':'non-scaling-stroke'}));
