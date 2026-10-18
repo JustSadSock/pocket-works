@@ -108,6 +108,7 @@ export function createWorld(canvas, initialSeed) {
   const valveCore=new THREE.MeshStandardMaterial({color:0xe0ad7c,roughness:.42,emissive:0x8a3318,emissiveIntensity:.8});
   const valveGlow=new THREE.MeshBasicMaterial({color:0xffda9b});
   const valveGeo=new THREE.IcosahedronGeometry(1,1),valveRing=new THREE.TorusGeometry(.51,.095,7,16);
+  const valveEyeGeo=new THREE.SphereGeometry(.11,9,7),archGeo=new THREE.TorusGeometry(.9,.07,6,12,Math.PI);
   const lineMat=new THREE.LineBasicMaterial({color:0xffd5ab,transparent:true,opacity:.62,depthWrite:false});
   const bileLineMat=new THREE.LineBasicMaterial({color:0xffb980,transparent:true,opacity:.48,depthWrite:false});
   const impactGeo=new THREE.CircleGeometry(1,9);
@@ -201,7 +202,7 @@ export function createWorld(canvas, initialSeed) {
     shell.scale.set(.64,1.13,.67);group.add(shell);
     const heart=new THREE.Mesh(valveGeo,valveCore);heart.position.set(0,1.35,-.54);
     heart.scale.set(.28,.38,.22);group.add(heart);
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(.11,9,7),valveGlow);
+    const eye=new THREE.Mesh(valveEyeGeo,valveGlow);
     eye.position.set(0,1.37,-.73);group.add(eye);
     for(let i=0;i<4;i++){
       const ring=new THREE.Mesh(valveRing,i%2?boneMat:valveCore);
@@ -269,9 +270,8 @@ export function createWorld(canvas, initialSeed) {
     }
     for(const tissue of getTissues(cx,cz))if(!openedTissues.has(tissue.id))group.add(makeTissueVisual(tissue));
     if(profile.archetype==='rib-vault'){
-      const ribGeo=new THREE.TorusGeometry(.9,.07,6,12,Math.PI);
       for(const [x,z] of cells.filter(([x,z])=>(x+z+profile.rotation)%5===0).slice(0,7)){
-        const arch=new THREE.Mesh(ribGeo,boneMat);arch.position.set(x,1.82,z);arch.rotation.x=Math.PI/2;group.add(arch);
+        const arch=new THREE.Mesh(archGeo,boneMat);arch.position.set(x,1.82,z);group.add(arch);
       }
     }
     chunks.set(cellKey(cx,cz),group);
