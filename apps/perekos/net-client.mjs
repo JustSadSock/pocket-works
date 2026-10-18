@@ -35,7 +35,7 @@ export class OnlineDuel {
    if(this.client!==client)return;
    if(packet.gameId!==GAME){this.onError('Это комната другой игры.');this.leave();return}
    if(packet.state?.rulesVersion!==RULES){this.onError('Комната использует другую версию правил.');this.leave();return}
-   this.room=packet.roomId;this.seq=0;this.view=packet.state;
+   this.room=packet.roomId;this.seq=Math.max(0,(packet.state?.nextSeq||1)-1);this.view=packet.state;
    this.onRoom(packet.roomId);
    this.onPresence(packet.players||[]);
    this.onView(packet.state);
@@ -48,6 +48,9 @@ export class OnlineDuel {
     const view=packet.event.payload;
     if(view?.rulesVersion!==RULES){this.onError('Правила комнаты изменились. Войдите заново.');return}
     if((view.revision??-1)<(this.view?.revision??-1))return;
+    const previousRound=this.view?.match?.round;
+    if(view.phase==='fight'&&view.match?.round!==previousRound)this.seq=Math.max(0,(view.nextSeq||1)-1);
+    else if(Number.isSafeInteger(view.nextSeq)&&view.nextSeq>this.seq+1)this.seq=view.nextSeq-1;
     this.view=view;this.onView(view);
    }
   });
