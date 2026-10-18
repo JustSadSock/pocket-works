@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0,user-scalable=yes,viewport-fit=cover"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css"/>
   <link rel="stylesheet" href="css/style.css"/>
 <link rel="stylesheet" href="./styles.css"/>
+  <link rel="stylesheet" href="./pocket-map.css"/>
   <link rel="icon" type="image/png" href="assets/icon.png" sizes="512x512"/>
   <link rel="apple-touch-icon" href="assets/icon.png" sizes="512x512"/>
   <link rel="manifest" href="./manifest.webmanifest"/>
@@ -28,7 +29,8 @@
       <h1 data-i18n="title">Fog of Conquest</h1>
       <button id="startSettingsBtn" class="game-btn" title="Settings" data-i18n-title="startSettings">⚙</button>
     </div>
-    <div id="summary" data-i18n="summary">
+    <button id="fogRulesToggle" type="button" class="game-btn" aria-controls="summary" aria-expanded="false">Rules</button>
+    <div id="summary" data-i18n="summary" hidden>
       Turn-based strategy. Capture or destroy all enemy bases.<br><br>
       <em>Units:</em><br>
       • Swordsman — move 2, attack 2, defense 1, range 1, 5 HP, 3 gold.<br>
@@ -228,7 +230,8 @@
   <script src="js/save-schema.js"></script>
   <script src="js/ui.js"></script>
 <script src="./pocket-adapter.js" defer></script>
+<script src="./pocket-map.js" defer></script>
 <script type="module" src="./pocket-online.js"></script>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Fog of Conquest" data-app-version="1.2.2"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Fog of Conquest" data-app-version="1.4.0"></script>
 </body>
 </html>

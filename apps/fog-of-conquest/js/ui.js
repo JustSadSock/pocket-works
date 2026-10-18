@@ -764,6 +764,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       .map(b=>({...b,stale:true}));
     return [...live,...remembered];
   }
+  window.FogVisibleBuildings=visibleBuildings;
   function updateFog(){
     if(onlineGame) return; // Server supplies each participant's private visibility.
     if(!modeBeta && !revealAll){
@@ -951,6 +952,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   function redraw(){
+    // Preserve hard-edged classic sprites when the tactical canvas is zoomed.
+    ctx.imageSmoothingEnabled=style!=='toen';
+    canvas.style.imageRendering=style==='toen'?'pixelated':'auto';
     if(style==='simple'){ redrawSimple(); return; }
     ctx.clearRect(0,0,canvas.width,canvas.height);
     const p=state.currentPlayer, F=state.fog[p], S=state.seen[p];
@@ -1020,6 +1024,16 @@ window.addEventListener('DOMContentLoaded', ()=>{
         if(b.stale)ctx.globalAlpha=0.5;
         const img = getBuildingSprite(b);
         if(img) ctx.drawImage(img,b.c*cellW,b.r*cellH,cellW,cellH);
+        // Illustrated neutral assets fall back to an allied sprite; this seal
+        // marks neutral ownership without replacing any original artwork.
+        if(b.owner===0){
+          const cx=b.c*cellW+cellW*.76,cy=b.r*cellH+cellH*.23;
+          ctx.beginPath();ctx.arc(cx,cy,Math.max(4,cellW*.16),0,Math.PI*2);
+          ctx.fillStyle='#d8d0b2';ctx.fill();
+          ctx.strokeStyle='#514c3c';ctx.lineWidth=Math.max(1,cellW*.04);ctx.stroke();
+          ctx.fillStyle='#413d32';ctx.font=`bold ${Math.max(8,cellH*.24)}px serif`;
+          ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('•',cx,cy);
+        }
         const bGen = b.gen ?? BUILD_TYPES[b.type].gen;
         if(bGen>0||BUILD_TYPES[b.type].def>0){
           ctx.strokeStyle=b.owner===p?'#00f':b.owner? '#f00':'#888';
@@ -1272,6 +1286,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // === updateAll ===
   function updateAll(){
     updateFog(); redraw(); updateLeft(); checkVictory(); renderLog();
+    window.FogRefreshMap?.();
   }
 
 
@@ -1280,9 +1295,10 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(onlineGame){ onlineCanvasClick(e); return; }
     if(gameOver) return;
     const rect=canvas.getBoundingClientRect(),
-          x=Math.floor((e.clientX-rect.left)/cellW),
-          y=Math.floor((e.clientY-rect.top)/cellH),
+          x=Math.floor((e.clientX-rect.left)*COLS/rect.width),
+          y=Math.floor((e.clientY-rect.top)*ROWS/rect.height),
           p=state.currentPlayer;
+    if(x<0||y<0||x>=COLS||y>=ROWS)return;
 
     if(spawnMode){
       let z=spawnZones.find(z=>z.r===y&&z.c===x);
@@ -1471,8 +1487,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   canvas.addEventListener('mousemove',e=>{
     if(!tooltipEnabled) return;
     const rect=canvas.getBoundingClientRect();
-    const x=Math.floor((e.clientX-rect.left)/cellW);
-    const y=Math.floor((e.clientY-rect.top)/cellH);
+    const x=Math.floor((e.clientX-rect.left)*COLS/rect.width);
+    const y=Math.floor((e.clientY-rect.top)*ROWS/rect.height);
     if(x<0||y<0||x>=COLS||y>=ROWS){ tooltipDiv.style.display='none'; return; }
     const p=state.currentPlayer, F=state.fog[p], S=state.seen[p];
     if(!revealAll && !S[y][x]){ tooltipDiv.style.display='none'; return; }
@@ -1794,12 +1810,17 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }else{
       ROWS=BASE_ROWS; COLS=BASE_COLS;
     }
+    // The tactical atlas runs outside the legacy closure and needs accurate
+    // dimensions for every original map size, not only restored/online games.
+    window.ROWS=ROWS;window.COLS=COLS;window.mapSize=mapSize;
     initFog();
     window.dispatchEvent(new Event('resize'));
   }
 
   function nextTurn(){
     const prev=state.currentPlayer;
+    // Hide the map synchronously, before the new side is rendered.
+    if(!aiMode&&!onlineGame)window.FogShowHandoff?.(3-prev);
     sel=null; zoneMap=null; zoneList=[];
     // heal units that didn't spend movement
     units.filter(u=>u.owner===prev).forEach(u=>{
@@ -1957,7 +1978,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   function onlineCanvasClick(e){
     if(!window.FogPocketNet?.canIssue())return;
     const rect=canvas.getBoundingClientRect();
-    const c=Math.floor((e.clientX-rect.left)/cellW),r=Math.floor((e.clientY-rect.top)/cellH);
+    const c=Math.floor((e.clientX-rect.left)*COLS/rect.width),
+          r=Math.floor((e.clientY-rect.top)*ROWS/rect.height);
     if(r<0||c<0||r>=ROWS||c>=COLS)return;
     const action=command=>{spawnMode=false;spawnPanel.style.display='none';onlineBuilding=null;sel=null;zoneMap=null;zoneList=[];updateAll();window.FogPocketNet.issue(command);};
     if(spawnMode&&onlineBuilding){

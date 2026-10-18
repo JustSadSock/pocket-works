@@ -1,0 +1,96 @@
+/* PocketWorks Fog tactical atlas · no neon, no ornamental HUD text. */
+html{height:var(--fog-window-height,100%)!important;max-height:var(--fog-window-height,100%)!important;overflow:hidden!important}
+body{position:fixed!important;inset:0;width:100%!important;height:var(--fog-window-height,100%)!important;max-height:var(--fog-window-height,100%)!important;box-sizing:border-box!important;overflow:hidden!important}
+:root{--fog-hud-height:164px}
+#battleViewport{
+  bottom:var(--fog-hud-height,164px)!important;
+  touch-action:none!important;
+  -webkit-user-select:none;user-select:none;
+}
+#battleViewport #canvas{touch-action:none!important;max-width:none;max-height:none}
+#fogAtlas{
+  position:fixed;z-index:21;
+  top:calc(max(8px,env(safe-area-inset-top)) + 4px);
+  right:calc(max(8px,env(safe-area-inset-right)) + 4px);
+  display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+  pointer-events:none;color:#e8debd;font-family:system-ui,sans-serif;
+}
+#fogAtlas[hidden]{display:none!important}
+.fog-atlas-actions{
+  pointer-events:auto;display:flex;gap:4px;
+  background:#1b231cf0;border:1px solid #7d775c;
+  padding:4px;border-radius:7px;box-shadow:0 3px 18px #0007;
+}
+.fog-atlas-actions button{
+  width:44px;height:44px;border:1px solid #736a4f;
+  border-radius:4px;background:#303a2e;color:#f0e4b9;
+  font:700 22px system-ui;display:grid;place-items:center;
+  padding:0;touch-action:manipulation;
+}
+.fog-atlas-actions button:focus-visible,
+#fogMini:focus-visible,
+#fogAcceptSide:focus-visible{outline:2px solid #f0d18e;outline-offset:2px}
+.fog-atlas-actions button:active{background:#766f54;transform:translateY(1px)}
+#fogMini{
+  pointer-events:auto;display:block;
+  background:#19231e;border:2px solid #8c805b;
+  border-radius:3px;box-shadow:0 6px 24px #0008;
+  image-rendering:pixelated;touch-action:manipulation;cursor:crosshair;
+}
+#fogMini[hidden]{display:none!important}
+#fogHandOff{
+  position:fixed;inset:0;z-index:30000;display:grid;place-items:center;
+  background:#141e19;color:#f2e8c7;text-align:center;
+  padding:calc(18px + env(safe-area-inset-top))
+          calc(18px + env(safe-area-inset-right))
+          calc(18px + env(safe-area-inset-bottom))
+          calc(18px + env(safe-area-inset-left));
+  font-family:'Lora',Georgia,serif;
+}
+#fogHandOff[hidden]{display:none!important}
+.fog-handoff-shield{width:min(420px,100%);display:grid;justify-items:center;gap:20px}
+.fog-handoff-mark{font:600 11px/1.4 system-ui;letter-spacing:.19em;color:#a99e7c;margin:0}
+.fog-handoff-shield h2{font:600 clamp(30px,9vw,48px)/1.1 'Ruslan Display',Georgia,serif;margin:0}
+#fogHandoffHint{font-size:16px;line-height:1.4;margin:0}
+#fogAcceptSide{min-width:190px;min-height:52px;border:1px solid #c2ae79;
+  border-radius:5px;background:#d9be85;color:#1b261e;font:700 17px system-ui}
+#fogAcceptSide:active{transform:scale(.98);background:#f1d59a}
+/* Rules are a secondary action; new game remains the first call to action. */
+#startPanel #startButtons{order:2}
+#startPanel #startHeader{order:1}
+#startPanel #fogRulesToggle{order:3;font:600 13px system-ui;min-height:42px;
+  color:#e5dbb8;background:#28332b;border-color:#666e5a;
+  width:148px;margin-top:7px}
+#startPanel #summary{order:4;width:min(90vw,540px);max-height:30dvh;box-sizing:border-box}
+#startPanel #summary[hidden]{display:none!important}
+/* The map, not a stat sheet, should own the screen on a phone. */
+@media(max-width:720px){
+  #controls{min-height:52px;padding:4px 5px!important;gap:3px!important}
+  #controls button{min-height:44px!important;min-width:43px!important;font:600 14px system-ui!important}
+  #controls #endTurnBtn{min-width:88px;white-space:normal}
+  #infoPanel.collapsed{height:56px!important}
+  #infoPanel.collapsed #statsLog{display:none!important}
+  #statsLog{flex-direction:row!important}
+  #leftStats,#rightLog{font-size:12px;line-height:1.38;padding:10px}
+  #startPanel{justify-content:center;gap:10px}
+  #startHeader{margin-bottom:4px}
+  #newGameOptions{max-height:48dvh}
+  #onlineTurnStatus{position:absolute;bottom:100%;right:10px;min-width:0;
+    background:#1b241f;color:#f1daa9;padding:3px 7px;border-radius:3px}
+}
+@media(max-width:355px){
+  #fogAtlas{right:5px}
+  .fog-atlas-actions button{width:42px;height:44px}
+  #controls button{padding:4px!important;min-width:39px!important}
+  #controls #endTurnBtn{min-width:81px}
+}
+@media(prefers-reduced-motion:reduce){
+  #fogAtlas *{transition:none!important;animation:none!important}
+}
+
+@media(max-height:540px){
+  #infoPanel.collapsed{height:54px!important}
+  #controls{min-height:48px;padding:2px 5px!important}
+  #startPanel{justify-content:flex-start;overflow:auto}
+  #fogAtlas{top:5px}
+}
