@@ -9,14 +9,17 @@ export const BUBBLE_COLORS=['#c6f6df','#e7c18b','#a6d6e3','#e4aea8','#bbbee2'];
 
 export function cloudViewport(w,h,solution) {
  const {geometry,config}=solution;
- const bottom=Math.max(132,Math.min(165,h*.28));
- const top=Math.min(123,Math.max(76,h*.21));
- const available=Math.max(112,h-top-bottom);
+ // Reserve the *actual* graph region: mobile Safari can leave a short chamber.
+ const graphHeight=typeof document!=='undefined'
+   ?document.querySelector('.graph-shell')?.getBoundingClientRect().height||98:98;
+ const bottom=graphHeight+Math.max(8,Math.min(22,h*.035));
+ const top=Math.min(120,Math.max(48,h*.16));
+ const available=Math.max(20,h-top-bottom);
  const xmin=Math.min(...geometry.map(g=>g.x-g.r0-0.4))-.2;
  const xmax=config.standOff+1.9;
  const ymin=Math.min(...geometry.map(g=>g.y-g.r0))-.65;
  const ymax=Math.max(...geometry.map(g=>g.y+g.r0))+.65;
- const scale=Math.max(10,Math.min((w-42)/(xmax-xmin),available/(ymax-ymin)));
+ const scale=Math.max(2,Math.min((w-42)/(xmax-xmin),available/(ymax-ymin)));
  const usedW=(xmax-xmin)*scale,usedH=(ymax-ymin)*scale;
  const originX=(w-usedW)/2-xmin*scale;
  const originY=top+(available-usedH)/2+ymax*scale;
