@@ -24,8 +24,7 @@ function startBallot(people=[curator,viewer]){
  now=state.deadline+1;send(people[0],{type:'pulse'});
  assert.equal(state.phase,'drawing');
  for(const p of people)send(p,{type:'submit',strokes:[]});
- now=state.deadline+1;send(people[0],{type:'pulse'});
- assert.equal(state.phase,'voting');
+ assert.equal(state.phase,'voting','last verified submission starts the ballot');
  return {state,send,started:now,trueIndex:state.selected.indexOf(state.assignments.curator.art)};
 }
 function trial(phase,correct,people=[curator,viewer]){

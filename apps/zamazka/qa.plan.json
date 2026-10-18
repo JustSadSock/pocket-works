@@ -22,6 +22,13 @@
       "install": true
     },
     {
+      "id": "instant-expertise-and-public-profiles",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "qa/instant-expertise-and-public-profiles.mjs",
+      "install": true
+    },
+    {
       "id": "deadline",
       "kind": "node",
       "tier": "smoke",

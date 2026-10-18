@@ -1,7 +1,7 @@
 const CACHE_PREFIX = 'zamazka-';
-const CACHE_NAME = 'zamazka-v1.40.16';
+const CACHE_NAME = 'zamazka-v1.40.17';
 const ART_CACHE = 'zamazka-artworks-v1.12.5';
-const APP_VERSION = '1.40.16';
+const APP_VERSION = '1.40.17';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Поздняя ошибка теперь приносит реставратору всё больше очков по плавной кривой — до +80 за монету.","За позднее правильное обнаружение положено до +30, а за полностью неразгаданную работу — +60.","Быстрые правильные голоса по-прежнему дают до +40. Старые комнаты остаются на прежней версии правил."];

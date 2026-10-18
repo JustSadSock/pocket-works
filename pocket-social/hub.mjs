@@ -183,14 +183,15 @@ export class PocketSocial {
         body.accountId,body.achievementId,body.gameId,body.roomId,body.matchId,Date.now());
       return reply({ok:true,already:!!existing});
     }
+    const publicPortraitRead=path==='/pocket-social/user'&&request.method==='GET'&&request.headers.get('x-pw-public-portrait')==='1';
     const id=request.headers.get('x-pw-account-id');
-    if(!id||!uuid.test(id))return reply({error:'sign_in_required'},401);
+    if((!id||!uuid.test(id))&&!publicPortraitRead)return reply({error:'sign_in_required'},401);
     const name=request.headers.get('x-pw-account-name'),avatar=request.headers.get('x-pw-account-avatar');
-    if(!name||name.length>20)return reply({error:'identity_unavailable'},503);
+    if(!publicPortraitRead&&(!name||name.length>20))return reply({error:'identity_unavailable'},503);
     if(!['GET','POST'].includes(request.method))return reply({error:'method_not_allowed'},405);
     if(request.method==='POST'&&(request.headers.get('origin')!==url.origin||request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json'))
       return reply({error:'origin_denied'},403);
-    this.seed({id,nickname:name,avatar});
+    if(!publicPortraitRead)this.seed({id,nickname:name,avatar});
     if(!this.lastCleanup||Date.now()-this.lastCleanup>3600000){
       this.sql.exec('DELETE FROM invites WHERE expires_at<?',Date.now()-7*86400000);
       this.lastCleanup=Date.now();
@@ -208,8 +209,11 @@ export class PocketSocial {
         if(!uuid.test(other))return reply({error:'invalid_account'},400);
         let u=null;try{u=JSON.parse(request.headers.get('x-pw-target-user')||'null')}catch{}
         if(u?.id===other)this.seed(u);
-        const card=this.card(other,id);
+        const card=this.card(other,publicPortraitRead?'':id);
         if(!card)return reply({error:'user_not_found'},404);
+        // Read-only, deliberately minimal card: no social graph, presence or private settings.
+        if(publicPortraitRead)return reply({profile:{id:card.id,nickname:card.nickname,
+          avatar:card.avatar,artwork:card.artwork,maskot:card.maskot,title:card.title}});
         if(card.friendship==='friends'&&card.presenceVisible){
           const active=await this.activeRooms([other]);
           card.activity=active[other]||null;

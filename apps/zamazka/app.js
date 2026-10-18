@@ -31,7 +31,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.16',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.17',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -85,8 +85,10 @@ function pocketPortrait(identity=pocketIdentity){
 }
 function memberSeal(p){
  const verified=Boolean(p?.verified&&p?.accountId);
- return '<span class="member-seal member-avatar'+(verified?' is-verified':'')+'">'+
-   (verified?pocketAvatarMarkup(p.avatar,{accountId:p.accountId}):'<span class="guest-initial" aria-hidden="true">'+esc(String(p?.name||'?').charAt(0).toLocaleUpperCase())+'</span>')+'</span>';
+ const tag=verified?'button':'span';
+ return '<'+tag+(verified?' type="button" data-action="player-profile" data-account-id="'+esc(p.accountId)+'" aria-label="Открыть профиль '+esc(p.name)+'" title="Профиль игрока"':'')+
+   ' class="member-seal member-avatar'+(verified?' is-verified':'')+'">'+
+   (verified?pocketAvatarMarkup(p.avatar,{accountId:p.accountId}):'<span class="guest-initial" aria-hidden="true">'+esc(String(p?.name||'?').charAt(0).toLocaleUpperCase())+'</span>')+'</'+tag+'>';
 }
 function syncIdentity(){
  const btn=document.querySelector('#profileBtn');
@@ -656,7 +658,7 @@ function vote(){
  exhibitFitter=mountExhibitFrames(screen);
  if(examined){
   const canvas=screen.querySelector('#examinedCanvas');
-  void renderArtwork(canvas,examined.art,examined.variation,examined.strokes||[],true)
+  void renderArtwork(canvas,examined.art,examined.variation,examined.strokes||[],true,false,false,true)
    .then(ok=>{
     if(!canvas?.isConnected)return;
     // Never reveal the forged slot through an unloaded or 4:3 placeholder.
@@ -1221,6 +1223,27 @@ function openPocketProfile(){
  if(window.PocketSocial?.open)void window.PocketSocial.open();
  else notify('Профиль Pocket ID пока загружается. Попробуй ещё раз.');
 }
+async function showPlayerProfile(accountId){
+ const player=view?.participants?.find(p=>p.accountId===accountId&&p.verified);
+ if(!player)return;
+ modal('Профиль игрока','<div class="public-player-card" id="publicPlayerCard" role="status">Загружаем профиль…</div>',[['Закрыть',closeDialog,'primary']]);
+ const card=dialog.querySelector('#publicPlayerCard');
+ try{
+  const reply=await fetch('/pocket-social/user?id='+encodeURIComponent(accountId),{
+   credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(6000)});
+  if(!reply.ok)throw Error('profile_unavailable');
+  const profile=(await reply.json()).profile;
+  if(profile?.id!==accountId)throw Error('profile_unavailable');
+  if(!card?.isConnected)return;
+  card.removeAttribute('role');
+  card.innerHTML=pocketAvatarMarkup(profile.avatar,{accountId})+
+   '<div class="public-player-copy"><strong>'+esc(profile.nickname||player.name)+'</strong>'+
+   '<span>Подтверждённый Pocket ID</span>'+
+   (profile.title?'<small>'+esc(profile.title)+'</small>':'')+'</div>';
+ }catch{
+  if(card?.isConnected)card.textContent='Не удалось загрузить профиль. Проверь соединение.';
+ }
+}
 document.querySelector('#profileBtn')?.addEventListener('click',openPocketProfile);
 document.querySelector('#settingsBtn').addEventListener('click',settings);
 syncIdentity();
@@ -1283,7 +1306,8 @@ screen.addEventListener('click',e=>{
   ]);return;
  }
  if(action!=='museum-next'&&action!=='museum-prev')sound(['submit','vote','advance','next','continue','start'].includes(action)?'confirm':['collection','resume','menu','skip'].includes(action)?'paper':'press',true);
- if(action==='pocket-profile')openPocketProfile();
+ if(action==='player-profile')void showPlayerProfile(b.dataset.accountId);
+ else if(action==='pocket-profile')openPocketProfile();
  else if(action==='create'||action==='join')setup(action);
   else if(action==='museum-next')shiftMuseum(1);
  else if(action==='museum-prev')shiftMuseum(-1);

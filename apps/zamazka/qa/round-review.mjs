@@ -22,9 +22,7 @@ function completeRound(){
  assert.equal(state.phase,'drawing');
  send(host,{type:'submit',strokes:[]});
  send(guest,{type:'submit',strokes:[]});
- assert.equal(state.phase,'drawing','results never open while drawing time remains');
- clock=state.deadline+1;send(host,{type:'pulse'});
- assert.equal(state.phase,'voting');
+ assert.equal(state.phase,'voting','server immediately opens expertise after all confirmed submissions');
  for(let i=0;i<2;i++){
   const author=state.participants[state.turn],voter=author.id===host.id?guest:host;
   send(voter,{type:'vote',chips:[3,0,0,0,0]});

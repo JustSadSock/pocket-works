@@ -67,12 +67,17 @@ export default {
       } catch {
         return new Response(JSON.stringify({error:'identity_unavailable'}), {status:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
       }
-      if (!user?.complete) return new Response(JSON.stringify({error:'sign_in_required'}), {status:401,headers:{'content-type':'application/json','cache-control':'no-store'}});
+      // A guest may read a public player portrait by ID, but cannot use social mutations or private features.
+      const publicPortraitRead=!user?.complete && url.pathname==='/pocket-social/user' && request.method==='GET';
+      if (!user?.complete && !publicPortraitRead) return new Response(JSON.stringify({error:'sign_in_required'}), {status:401,headers:{'content-type':'application/json','cache-control':'no-store'}});
       const headers = new Headers(request.headers);
       for (const key of [...headers.keys()]) if (key.startsWith('x-pw-')) headers.delete(key);
-      headers.set('x-pw-account-id', user.id);
-      headers.set('x-pw-account-name', user.nickname);
-      headers.set('x-pw-account-avatar', user.avatar);
+      if (publicPortraitRead) headers.set('x-pw-public-portrait', '1');
+      else {
+        headers.set('x-pw-account-id', user.id);
+        headers.set('x-pw-account-name', user.nickname);
+        headers.set('x-pw-account-avatar', user.avatar);
+      }
       if (url.pathname === '/pocket-social/search' && request.method === 'GET') {
         const lookup = new URL('/pocket-id/directory', url);
         lookup.searchParams.set('q', url.searchParams.get('q') || '');
@@ -84,7 +89,9 @@ export default {
       if (url.pathname === '/pocket-social/user' && request.method === 'GET') {
         const lookup = new URL('/pocket-id/public', url);
         lookup.searchParams.set('id', url.searchParams.get('id')||'');
-        const result = await identity.fetch(new Request(lookup,{headers:{cookie:request.headers.get('cookie')||'','x-pw-social-internal':'1'}}));
+        const lookupHeaders={cookie:request.headers.get('cookie')||'','x-pw-social-internal':'1'};
+        if(publicPortraitRead)lookupHeaders['x-pw-public-portrait']='1';
+        const result = await identity.fetch(new Request(lookup,{headers:lookupHeaders}));
         if (!result.ok) return result;
         const target=(await result.json()).user;
         if (target) headers.set('x-pw-target-user', JSON.stringify(target));

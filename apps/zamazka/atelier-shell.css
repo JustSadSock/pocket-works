@@ -147,3 +147,12 @@
  .exhibition-lobby .player .lobby-kick{min-height:36px;padding:5px 7px;font-size:10px}
  .exhibition-lobby .player:has(.lobby-kick) .status{display:none}
 }
+
+/* Profiles remain accessible to guest spectators without turning portraits into login prompts. */
+button.member-seal[data-action="player-profile"]{appearance:none;padding:0;cursor:pointer;font:inherit}
+button.member-seal[data-action="player-profile"]:focus-visible{outline:2px solid #c69b55;outline-offset:3px}
+.public-player-card{display:flex;align-items:center;gap:16px;min-height:70px;padding:12px 4px;color:#493b2c}
+.public-player-card>.pw-identity-avatar{width:72px;height:72px;flex:none;border-radius:12px}
+.public-player-copy{display:grid;gap:5px;min-width:0}
+.public-player-copy strong{font:600 20px/1.15 Georgia,serif;overflow-wrap:anywhere}
+.public-player-copy span,.public-player-copy small{font:500 12px/1.35 system-ui,sans-serif;color:#786450}
