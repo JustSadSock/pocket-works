@@ -3485,5 +3485,27 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "3d565623bde70ab15e91a22f2f46b8f770774dd3",
     "lastAttemptAt": "2026-10-18T12:25:45.082Z"
+  },
+  "perekos": {
+    "revision": "4225da987c54f180f32608806e3c35080ab7a1df",
+    "qualityScore": 57,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начать дуэль ↗",
+        "id": "primary-action",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "afedb0f4912791e5aaf6aca5e015965f141e28b430bc18933adad6a7b7bca723",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "4225da987c54f180f32608806e3c35080ab7a1df",
+    "lastAttemptAt": "2026-10-18T12:33:44.631Z"
   }
 }
