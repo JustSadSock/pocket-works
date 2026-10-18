@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "engine.test.mjs"
+        "engine.test.mjs",
+        "actors.test.mjs"
       ]
     },
     {
@@ -33,6 +34,17 @@
         {
           "action": "click",
           "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"up\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-move=\"right\"]"
+        },
+        {
+          "action": "screenshot"
         },
         {
           "action": "screenshot"
