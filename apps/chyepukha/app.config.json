@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "chyepukha",
+  "name": "ЧЕПУХА",
+  "shortName": "Чепуха",
+  "description": "Кооперативная party-игра: пишите абсурдные истории по кругу, передавая лишь выбранные слова.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T02:20:00+03:00",
+  "changelog": [
+    "Перенос десяти оригинальных наборов вопросов, пользовательских структур и жанров.",
+    "Асинхронные листки в синхронных раундах, секреты на PocketNet и переподключение.",
+    "Бумажный интерфейс, финальное раскрытие и локальная сборка комиксов."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#a6533d",
+  "backgroundColor": "#293f3b",
+  "themeColor": "#293f3b",
+  "orientation": "any",
+  "cacheName": "chyepukha-v1.0.0",
+  "storageNamespace": "pocket-works:chyepukha",
+  "tags": [
+    "game",
+    "party",
+    "co-op",
+    "pocketnet",
+    "writing",
+    "stories"
+  ],
+  "order": 351
+}
