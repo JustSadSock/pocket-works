@@ -117,6 +117,7 @@ let collisions = 0;
 let completion = 0;
 let completedAt = 0;
 let goalCapture = null;
+let landingCuePlayed = false;
 let orientationStop = null;
 let sensorEnabled = false;
 let sensorReceived = false;
@@ -195,6 +196,7 @@ function buildLevel(nextLevel = level) {
   completion = 0;
   completedAt = 0;
   goalCapture = null;
+  landingCuePlayed = false;
   elements.level.value = String(level).padStart(2, '0');
   elements.time.textContent = formatTime(0);
   const bestTime = Number(store.get('bestTimes', {})[level]);
@@ -204,6 +206,7 @@ function buildLevel(nextLevel = level) {
 function demoLevel() {
   goalCapture = null;
   completion = 0;
+  landingCuePlayed = false;
   const dimensions = dimensionsForLevel(2, currentAspect());
   maze = createMaze({ ...dimensions, seed: 0x0f7e5a });
   marble.reset({ x: 1.5, y: 1.5 });
@@ -342,6 +345,9 @@ function completeLevel() {
   elements.pauseButton.disabled = true;
   completedAt = performance.now();
   completion = 0;
+  landingCuePlayed = false;
+  // A restrained tap as the ball crosses the brass rim.
+  audio.tone({frequency:390,endFrequency:260,duration:.09,type:'triangle',gain:.052});
   elements.time.textContent = formatTime(elapsed);
   marble.velocity.x = 0;
   marble.velocity.y = 0;
@@ -448,6 +454,11 @@ const loop = createRafLoop((now, deltaMilliseconds) => {
     marble.spin += deltaMilliseconds * 0.0008;
   } else if (state === 'finishing') {
     completion = clamp((now - completedAt) / (reducedMotion ? 560 : GOAL_CAPTURE_MS), 0, 1);
+    if (!landingCuePlayed && completion >= .87) {
+      landingCuePlayed = true;
+      audio.tone({frequency:175,endFrequency:103,duration:.16,type:'sine',gain:.047});
+      navigator.vibrate?.(7);
+    }
     if (completion >= 1) revealCompletedLevel();
   }
 
