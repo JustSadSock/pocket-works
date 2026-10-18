@@ -107,8 +107,12 @@ function simulate(dt){
  if(amount>.03){
   attemptCount++;const x=player.x,z=player.z;
   // Sliding independent axes prevents a door-frame corner from locking both directions.
-  if(world.canStand(player.x+dx,player.z))player.x+=dx;
-  if(world.canStand(player.x,player.z+dz))player.z+=dz;
+  const slices=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dz))/.14));
+  for(let i=0;i<slices;i++){
+   const sx=dx/slices,sz=dz/slices;
+   if(world.canStand(player.x+sx,player.z))player.x+=sx;
+   if(world.canStand(player.x,player.z+sz))player.z+=sz;
+  }
   const moved=Math.hypot(player.x-x,player.z-z);if(moved>.0001){moveCount++;stepCount+=moved}else{blockedCount++;if(blockedCount%120===0)notice('Здесь стена. Попробуй повернуться.',1.4)}
   if(stepCount>.95){stepCount=0;acoustics.event('footstep',{room:world.location(player.x,player.z),intensity:running?1.3:1})}
  }
@@ -149,7 +153,7 @@ function hud(){
  $('interact').classList.toggle('ready',Boolean(item||exit));
 }
 function paint(t){
- const dt=Math.min(.046,Math.max(0,(t-lastFrame)/1000));lastFrame=t;
+ const dt=Math.min(.20,Math.max(0,(t-lastFrame)/1000));lastFrame=t;
  if(phase==='play')simulate(dt);
  if(world&&renderer&&!renderer.lost){const items=ITEMS.filter(i=>!inventory.includes(i.id)).map(i=>world.itemPosition(i.id));renderer.draw(world,player,shadows,items,torch,elapsed,stress/100,shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)}
  window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true};
