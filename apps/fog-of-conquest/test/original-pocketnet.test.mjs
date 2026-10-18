@@ -39,6 +39,7 @@ test('original building recruitment deducts money, prevents impossible unit & do
  const out=rules.originalAction(g,1,params);
  assert.equal(out.error,null);assert.equal(out.state.state.gold[1],2);
  assert.ok(out.state.units.some(u=>u.r===0&&u.c===1&&u.mp===0));
+ out.state.state.gold[1]=5; // Verify occupied-cell rejection independently of depleted funds.
  assert.match(rules.originalAction(out.state,1,params).error,/недоступно/);
  assert.equal(rules.originalAction(g,1,{...params,unitType:'mage'}).error!==null,true);
 });
