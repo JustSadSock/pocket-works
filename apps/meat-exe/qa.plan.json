@@ -142,7 +142,8 @@
       "id": "biobuilds",
       "kind": "node-test",
       "files": [
-        "qa/biobuilds.test.mjs"
+        "qa/biobuilds.test.mjs",
+        "qa/routes.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -150,7 +151,8 @@
       "id": "biobuilds-browser",
       "kind": "playwright",
       "files": [
-        "qa/biobuilds.spec.js"
+        "qa/biobuilds.spec.js",
+        "qa/routes.spec.js"
       ],
       "tier": "smoke"
     },
