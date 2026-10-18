@@ -6,7 +6,7 @@ export function demoView(id){
  const settings={maxPlayers:4,questionSet:'collapsingPlan',visibleTailWords:3,genre:'absurdComedy',customQuestions:[],customGenre:''};
  const v={protocol:1,revision:1,phase:'lobby',host:'qa-host',players:people.slice(0,2),settings,questionSets:SETS,genres:GENRES,round:0,total:0,message:''};
  const d={view:v,me:id==='lobby-guest'?'qa-guest':'qa-host',room:'a1b2c3d4',connected:true,connecting:false,notice:'',invitation:'',storyId:'',modal:'',answer:'',selection:[]};
- if(['home','invite','error','connecting'].includes(id)){
+ if(['home','home-member','invite','error','connecting'].includes(id)){
   d.view=null;d.connected=false;
   if(id==='invite')d.invitation=d.room;
   if(id==='error')d.notice='Кімната не існує або вже закрита.';

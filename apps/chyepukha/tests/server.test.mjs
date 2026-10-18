@@ -123,3 +123,17 @@ test('eight authors and sixteen maximal Cyrillic fragments remain below PocketNe
  assert.equal(final.stories.length,8);
  assert.ok(Buffer.byteLength(JSON.stringify({roomId:'test',event:{type:'state',payload:final}}),'utf8')<256*1024);
 });
+
+test('verified Pocket ID roster comes only from trusted room metadata',()=>{
+ const alice={id:'verified-player',name:'Марта',accountId:'00000000-0000-4000-8000-000000000001',avatar:'moss',verified:true};
+ const guest={id:'guest-player',name:'Гість',accountId:'spoofed',avatar:'plum',verified:false};
+ let state=game.createRoom({player:alice,payload:{}}).state;
+ state=game.onJoin({state,players:[alice,guest]}).state;
+ const v=game.viewForPlayer({state,player:alice,players:[alice,guest]});
+ assert.equal(v.players[0].verified,true);
+ assert.equal(v.players[0].accountId,alice.accountId);
+ assert.equal(v.players[0].avatar,'moss');
+ assert.equal(v.players[1].verified,false);
+ assert.equal(v.players[1].accountId,null);
+ assert.equal(v.players[1].avatar,null);
+});
