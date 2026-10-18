@@ -28,5 +28,9 @@ html,body{height:100dvh;padding:0;overflow:hidden;overscroll-behavior:none}
 @media(max-height:640px){#summary{max-height:17dvh}#newGameOptions{max-height:46dvh}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
 
-/* The original root-WebSocket lobby is retained as source but not advertised until the PocketNet original-rules server is ready. */
-#onlineBtn{display:none!important}
+#onlineBtn{display:block!important}
+#onlineLobbyControls{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;max-width:90vw}
+#onlineLobbyControls button{min-height:44px}
+#onlineStatus{color:#e7d7a9;font:13px/1.45 system-ui,sans-serif;text-align:center;max-width:92vw;overflow-wrap:anywhere}
+#onlineTurnStatus{color:#c7dbaf;min-width:66px;font:600 11px/1.25 system-ui,sans-serif;text-align:center}
+@media(max-width:440px){#controls{gap:0!important}#controls button{padding:5px!important}}
