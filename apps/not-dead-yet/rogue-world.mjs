@@ -292,18 +292,56 @@ export class RogueWorld{
   }
   return moving
  }
- findStep(sx,sz,tx,tz,limit=1200){
-  const a=[Math.floor(sx),Math.floor(sz)],b=KEY(Math.floor(tx),Math.floor(tz)),origin=KEY(...a);
-  if(origin===b)return{x:tx,z:tz};
-  const queue=[a],prev=new Map([[origin,null]]),dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-  for(let n=0;n<queue.length&&n<limit;n++){const [x,z]=queue[n];
-   for(const [dx,dz] of dirs){const xx=x+dx,zz=z+dz,k=KEY(xx,zz);
-    if(prev.has(k)||!this.canStand(xx+.5,zz+.5,.10))continue;prev.set(k,KEY(x,z));
-    if(k===b){let at=k;while(prev.get(at)!==origin){at=prev.get(at);if(!at)return null}
-     const [fx,fz]=at.split(',').map(Number);return{x:fx+.5,z:fz+.5}}
-    queue.push([xx,zz])
+ findStep(sx,sz,tx,tz,limit=1800){
+  // Heuristic A*: closed doors and solid furniture are real obstacles.
+  // A full breadth-first flood was slow with several pursuing enemies.
+  const ox=Math.floor(sx),oz=Math.floor(sz),gx=Math.floor(tx),gz=Math.floor(tz);
+  const origin=KEY(ox,oz),target=KEY(gx,gz);
+  if(origin===target)return{x:tx,z:tz};
+  const heuristic=(x,z)=>Math.abs(gx-x)+Math.abs(gz-z);
+  const distance=heuristic(ox,oz),radius=Math.max(24,distance+10);
+  const heap=[],scores=new Map([[origin,0]]),parent=new Map([[origin,null]]),closed=new Set();
+  const push=node=>{
+   let i=heap.length;heap.push(node);
+   while(i>0){const p=(i-1)>>1;if(heap[p].f<=node.f)break;heap[i]=heap[p];i=p}
+   heap[i]=node
+  };
+  const pop=()=>{
+   const root=heap[0],last=heap.pop();
+   if(heap.length){
+    let i=0;
+    while(true){
+     const l=i*2+1;if(l>=heap.length)break;
+     const r=l+1,k=r<heap.length&&heap[r].f<heap[l].f?r:l;
+     if(last.f<=heap[k].f)break;heap[i]=heap[k];i=k
+    }
+    heap[i]=last
    }
-  }return null
+   return root
+  };
+  push({x:ox,z:oz,g:0,f:heuristic(ox,oz)});
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  for(let explored=0;heap.length&&explored<limit;){
+   const n=pop(),at=KEY(n.x,n.z);
+   if(closed.has(at))continue;
+   closed.add(at);explored++;
+   for(const [dx,dz] of dirs){
+    const x=n.x+dx,z=n.z+dz,k=KEY(x,z);
+    if(closed.has(k)||Math.abs(x-ox)+Math.abs(z-oz)>radius)continue;
+    if(!this.canStand(x+.5,z+.5,.11))continue;
+    const g=n.g+1;
+    if(g>=(scores.get(k)??Infinity))continue;
+    scores.set(k,g);parent.set(k,at);
+    if(k===target){
+     let step=k;
+     while(parent.get(step)!==origin){step=parent.get(step);if(!step)return null}
+     const [firstX,firstZ]=step.split(',').map(Number);
+     return{x:firstX+.5,z:firstZ+.5}
+    }
+    push({x,z,g,f:g+heuristic(x,z)*1.06});
+   }
+  }
+  return null
  }
  location(x,z){const cx=Math.floor(x/SECTOR),cz=Math.floor(z/SECTOR),c=this.chunk(cx,cz),lx=x-cx*SECTOR,lz=z-cz*SECTOR;
   const room=c.rooms.find(r=>lx>=r.x0&&lx<r.x1+1&&lz>=r.z0&&lz<r.z1+1);
