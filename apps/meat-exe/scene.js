@@ -238,6 +238,8 @@ export function createWorld(canvas, initialSeed) {
   const targetTellGeo=new THREE.TorusGeometry(1,.053,6,26);
   const routeSignRoot=new THREE.Group();
   let activeRouteMark='';
+  const forkSigns=new THREE.Group();scene.add(forkSigns);
+  let forkSites=[],forkSelection='';
   scene.add(routeSignRoot);
   const tellMats=Object.fromEntries(Object.entries(ENEMY_TELLS).map(([kind,info])=>[
     kind,new THREE.MeshBasicMaterial({color:info.color,transparent:true,opacity:.88,depthWrite:false})
@@ -410,6 +412,52 @@ export function createWorld(canvas, initialSeed) {
     tissue.visual=group;tissueVisuals.set(tissue.id,group);
     return group;
   }
+  // Two physical route choices are reachable by walking through the room;
+  // choosing one with X / mobile button presets the actual next-organ surgery.
+  function setForkSites(ids=[]){
+    forkSigns.clear();forkSites=[];forkSelection='';
+    if(!Array.isArray(ids)||ids.length!==2)return;
+    const start=getStart(),cells=getOpenCells(0,0);
+    const candidates=cells.filter(c=>{
+      const d=Math.hypot(c.x-start.x,c.z-start.z);
+      return d>=2.0&&d<=5.8;
+    });
+    if(candidates.length<2)return;
+    const first=candidates.reduce((best,c)=>
+      !best||Math.abs(Math.hypot(c.x-start.x,c.z-start.z)-3)<best.d?
+      {...c,d:Math.abs(Math.hypot(c.x-start.x,c.z-start.z)-3)}:best,null);
+    const second=candidates.reduce((best,c)=>{
+      const separation=Math.hypot(c.x-first.x,c.z-first.z);
+      return !best||separation>best.separation?{...c,separation}:best;
+    },null);
+    if(!second||second.separation<1.5)return;
+    for(const [index,point] of [first,second].entries()){
+      const id=ids[index],group=new THREE.Group();
+      group.position.set(point.x,2.03,point.z);
+      const mat=index===0?boneMat:valveSkin;
+      const arch=new THREE.Mesh(index===0?marrowVaultGeo:vascularArchGeo,mat);
+      arch.rotation.z=Math.PI;arch.scale.set(1,.95,1);
+      group.add(arch);
+      const kernel=new THREE.Mesh(index===0?marrowPoreGeo:neuralNodeGeo,
+        index===0?organFeatureMat:valveCore);
+      kernel.position.set(0,-.30,0);kernel.scale.set(.75,1.0,.75);group.add(kernel);
+      for(const side of [-1,1]){
+        const rib=new THREE.Mesh(index===0?marrowSpineGeo:gastricSinewGeo,mat);
+        rib.position.set(side*.56,-.46,0);
+        rib.rotation.z=side*.28;rib.scale.set(1,.72,1);group.add(rib);
+      }
+      forkSigns.add(group);
+      forkSites.push({id,x:point.x,z:point.z,group});
+    }
+  }
+  function setForkSelection(id){
+    forkSelection=String(id||'');
+    for(const site of forkSites)site.group.scale.setScalar(site.id===id?1.16:1);
+  }
+  function getNearbyFork(x,z){
+    const site=forkSites.find(f=>Math.hypot(f.x-x,f.z-z)<1.47);
+    return site?.id||null;
+  }
   function setRouteMark(id){
     routeSignRoot.clear();activeRouteMark='';
     if(!['bypass','calcified','rupture','necrosis'].includes(id))return;
@@ -445,7 +493,7 @@ export function createWorld(canvas, initialSeed) {
     for(const obj of chunks.values()) scene.remove(obj);
     chunks.clear();layouts.clear();tissueChunks.clear();tissueVisuals.clear();lastChunk='';
     for(const line of streaks)line.obj.geometry.dispose();streaks.length=0;
-    source.clear();routeSignRoot.clear();activeRouteMark='';
+    source.clear();routeSignRoot.clear();activeRouteMark='';forkSigns.clear();forkSites=[];forkSelection='';
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
     kickPos=0;kickVel=0;muzzleTime=0;organPulse=0;
   }
@@ -1017,6 +1065,10 @@ export function createWorld(canvas, initialSeed) {
       if(e.visual.userData.shield)e.visual.userData.shield.visible=!(e.windup>0);
     }
     routeSignRoot.rotation.y+=dt*.08;
+    for(const site of forkSites){
+      site.group.rotation.y=Math.sin(time*.85+site.x*.35)*.06;
+      site.group.position.y=2.03+Math.sin(time*1.5+site.z)*.035;
+    }
     for(const p of pickups)if(p.visual){p.visual.position.y=.55+Math.sin(time*3+p.x)*.12;p.visual.rotation.y+=dt*1.8;}
     for(const p of shots)if(p.visual){p.visual.position.set(p.x,.95+Math.sin(time*13+p.x)*.07,p.z);p.visual.rotation.y+=dt*5;}
     tickFx(dt,time);
@@ -1040,5 +1092,6 @@ export function createWorld(canvas, initialSeed) {
       structuralChamber(cx,cz,seed,biome.id);
   }
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark, getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark,
+    setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
 }
