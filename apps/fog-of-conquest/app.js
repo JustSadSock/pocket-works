@@ -4,7 +4,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id), canvas=$('map'),field=$('field'),ctx=canvas.getContext('2d',{alpha:false});
 const KEY='pocket-works:fog-of-conquest:save-v1',PREF='pocket-works:fog-of-conquest:preferences';
-let state=null,online=false,net=null,side=1,room=null,chosen=null,pendingRecruit=null,locked=false,toastId=0,frame=0;
+let state=null,online=false,net=null,side=1,room=null,chosen=null,pendingRecruit=null,pendingHeal=false,locked=false,toastId=0,frame=0;
 const netStorage={getItem:key=>{try{return localStorage.getItem('pocket-works:fog-net:'+key)}catch{return null}},setItem:(key,value)=>{try{localStorage.setItem('pocket-works:fog-net:'+key,value)}catch{}}};
 let soundOn=true,difficulty=3,zoom=1,offX=0,offY=0,dirty=true,mini=false;
 const tile=40,pointers=new Map(),gesture={moved:false,start:null,dist:0,oldZoom:1},toasts=['Туман отступает перед разведчиками.'];
@@ -37,8 +37,8 @@ function noiseHit(type='select'){
  }catch{}
 }
 function store(){if(online||!state)return;try{localStorage.setItem(KEY,JSON.stringify(state));$('continueGame').disabled=false;}catch{toast('Хранилище недоступно — сохранение не удалось.');}}
-function newSolo(){if(net){net.close();net=null;room=null;}difficulty=+$('difficulty').value||3;state=createGame((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0,$('size').value);online=false;side=1;chosen=null;pendingRecruit=null;hide('start');hide('menu');hide('confirm');hide('finish');hide('online');locked=false;centerOnBase();store();update();}
-function continueSolo(){const x=saved();if(!x){toast('Сохранение повреждено.');return;}state=x;online=false;side=1;chosen=null;pendingRecruit=null;hide('start');hide('menu');hide('confirm');hide('finish');centerOnBase();update();}
+function newSolo(){if(net){net.close();net=null;room=null;}difficulty=+$('difficulty').value||3;state=createGame((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0,$('size').value);online=false;side=1;chosen=null;pendingRecruit=null;pendingHeal=false;hide('start');hide('menu');hide('confirm');hide('finish');hide('online');locked=false;centerOnBase();store();update();}
+function continueSolo(){const x=saved();if(!x){toast('Сохранение повреждено.');return;}state=x;online=false;side=1;chosen=null;pendingRecruit=null;pendingHeal=false;hide('start');hide('menu');hide('confirm');hide('finish');centerOnBase();update();}
 function gameView(){return state?online?state:project(state,side):null;}
 function myTurn(){return !!(state&&state.phase==='battle'&&state.current===side&&!locked);}
 function applyAction(action){
@@ -46,7 +46,7 @@ function applyAction(action){
  if(online){try{net.sendGame({type:'act',action,revision:state.revision});locked=true;update();setTimeout(()=>{if(locked){locked=false;update();}},6500);}catch(e){locked=false;toast('Связь потеряна. Ход не отправлен.');}return;}
  const result=transition(state,side,action);
  if(result.error){toast(result.error);noiseHit('invalid');return;}
- state=result.state;chosen=action.type==='end'?null:chosen;pendingRecruit=null;noiseHit(action.type==='attack'?'attack':action.type==='move'?'move':'capture');
+ state=result.state;chosen=action.type==='end'?null:chosen;pendingRecruit=null;pendingHeal=false;noiseHit(action.type==='attack'?'attack':action.type==='move'?'move':'capture');
  if(action.type==='end'&&state.phase==='battle'){locked=true;update();setTimeout(()=>{try{state=aiTurn(state,difficulty);store();}catch(e){console.error(e);toast('Ошибка ИИ. Попробуй завершить ход ещё раз.');}finally{locked=false;centerOnBase(false);update();}},220);}
  else{store();update();}
 }
@@ -62,7 +62,7 @@ function update(){
  $('endTurn').disabled=!my;$('endTurn').textContent=my?'ЗАВЕРШИТЬ ХОД →':playing?'ОЖИДАНИЕ ХОДА':'ВОЙНА ОКОНЧЕНА';
  $('log').textContent=s.history?.[0]||'Выберите отряд.';
  const entity=chosen?.unit?s.units.find(u=>u.id===chosen.unit):chosen?.building?s.buildings.find(b=>b.id===chosen.building):null;
- if(!entity){chosen=null;pendingRecruit=null;}
+ if(!entity){chosen=null;pendingRecruit=null;pendingHeal=false;}
  const isUnit=!!chosen?.unit&&entity;
  $('unitIcon').textContent=entity?(isUnit?UNITS[entity.type].glyph:BUILDINGS[entity.type].glyph):'✣';
  $('unitTitle').textContent=entity?(isUnit?UNITS[entity.type].name:BUILDINGS[entity.type].name):'Выберите отряд';
@@ -74,7 +74,7 @@ function update(){
  if(isUnit){
    const u=entity;
    make('↗ Перемещение',()=>{pendingRecruit=null;toast('Коснитесь доступной клетки.');},!my||u.moved);
-   if(UNITS[u.type].heal)make('✧ Лечение',()=>toast('Выберите раненого союзника рядом.'),!my||u.acted);
+   if(UNITS[u.type].heal)make('✧ Лечение',()=>{pendingHeal=!pendingHeal;pendingRecruit=null;toast(pendingHeal?'Выберите раненого союзника в соседней клетке.':'Лечение отменено.');update();},!my||u.acted).classList.toggle('active',pendingHeal);
    else make('⚔ Атака',()=>toast('Коснитесь противника в радиусе атаки.'),!my||u.acted);
    make('↺ К другим войскам',()=>selectNext(),false);
  }else if(entity?.owner===side){
@@ -88,7 +88,7 @@ function update(){
  if(pendingRecruit)for(const btn of actions.querySelectorAll('button'))if(btn.textContent.includes(UNITS[pendingRecruit.unitType].name))btn.classList.add('active');
  dirty=true;draw();finishCheck();
 }
-function selectNext(){const s=gameView();if(!s)return;const mine=s.units.filter(u=>u.owner===side);const i=mine.findIndex(u=>u.id===chosen?.unit);if(mine.length){chosen={unit:mine[(i+1)%mine.length].id};pendingRecruit=null;centerAt(mine[(i+1)%mine.length].r,mine[(i+1)%mine.length].c);update();}}
+function selectNext(){const s=gameView();if(!s)return;const mine=s.units.filter(u=>u.owner===side);const i=mine.findIndex(u=>u.id===chosen?.unit);if(mine.length){chosen={unit:mine[(i+1)%mine.length].id};pendingRecruit=null;pendingHeal=false;centerAt(mine[(i+1)%mine.length].r,mine[(i+1)%mine.length].c);update();}}
 function mapViewport(){const w=field.clientWidth,h=field.clientHeight;const phone=window.innerWidth<850;
  const top=phone?36:0,bottom=phone?$('orders').offsetHeight+8:0;
  return {w,h,top,bottom,usableH:Math.max(120,h-top-bottom)};
@@ -162,7 +162,11 @@ function tapMap(clientX,clientY){
  if(!s||r<0||c<0||r>=s.h||c>=s.w)return;
  const unit=s.units.find(u=>u.r===r&&u.c===c),building=s.buildings.find(b=>b.r===r&&b.c===c);
  if(pendingRecruit){const a={type:'recruit',...pendingRecruit,r,c};applyAction(a);return;}
- if(unit?.owner===side){chosen={unit:unit.id};pendingRecruit=null;noiseHit();update();return;}
+ if(pendingHeal&&chosen?.unit){
+   if(!unit||unit.owner!==side){toast('Для лечения выберите раненый дружественный отряд.');return;}
+   applyAction({type:'heal',unit:chosen.unit,r,c});return;
+ }
+ if(unit?.owner===side){chosen={unit:unit.id};pendingRecruit=null;pendingHeal=false;noiseHit();update();return;}
  if(chosen?.unit&&myTurn()){const origin=s.units.find(u=>u.id===chosen.unit);
    if(origin&&origin.owner===side){
      if(unit?.owner!==side&&unit || (building?.owner!==side&&building?.owner!==0&&building&&origin.r!==r)){
@@ -171,8 +175,8 @@ function tapMap(clientX,clientY){
      if(!unit&&(origin.r!==r||origin.c!==c)){applyAction({type:'move',unit:origin.id,r,c});return;}
    }
  }
- if(building){chosen={building:building.id};pendingRecruit=null;noiseHit();update();return;}
- if(!unit){chosen=null;update();}else toast('Разведайте позицию или выберите свой отряд.');
+ if(building){chosen={building:building.id};pendingRecruit=null;pendingHeal=false;noiseHit();update();return;}
+ if(!unit){chosen=null;pendingHeal=false;update();}else toast('Разведайте позицию или выберите свой отряд.');
 }
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gesture.start={x:e.clientX,y:e.clientY,ox:offX,oy:offY};gesture.moved=false;if(pointers.size===2){const a=[...pointers.values()];gesture.dist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);gesture.oldZoom=zoom;}});
 canvas.addEventListener('pointermove',e=>{
@@ -186,7 +190,7 @@ function changeZoom(k){const v=mapViewport(),cx=v.w/2,cy=v.top+v.usableH/2,old=z
 canvas.addEventListener('wheel',e=>{e.preventDefault();changeZoom(e.deltaY<0?1.1:.9);},{passive:false});
 canvas.addEventListener('keydown',e=>{if(e.key==='ArrowUp')offY+=25;if(e.key==='ArrowDown')offY-=25;if(e.key==='ArrowLeft')offX+=25;if(e.key==='ArrowRight')offX-=25;if(e.key==='+'||e.key==='=')changeZoom(1.15);if(e.key==='-')changeZoom(.85);clampPan();draw();});
 $('zoomIn').onclick=()=>changeZoom(1.22);$('zoomOut').onclick=()=>changeZoom(.82);$('focus').onclick=()=>centerOnBase();
-$('clear').onclick=()=>{chosen=null;pendingRecruit=null;update();};
+$('clear').onclick=()=>{chosen=null;pendingRecruit=null;pendingHeal=false;update();};
 $('endTurn').onclick=()=>applyAction({type:'end'});
 $('newGame').onclick=newSolo;$('continueGame').onclick=continueSolo;
 $('menuBtn').onclick=()=>show('menu');$('resume').onclick=()=>hide('menu');
@@ -215,7 +219,7 @@ async function connectOnline(){
 function networkStatus(t){$('netStatus').textContent=t;}
 function syncOnline(view){
  if(!view||typeof view!=='object')return;
- if(view.game){const wasLobby=!state;state=view.game;side=view.side||1;online=true;locked=false;hide('start');hide('online');hide('finish');hide('menu');if(wasLobby)centerOnBase();update();}
+ if(view.game){const wasLobby=!state;state=view.game;side=view.side||1;online=true;locked=false;pendingHeal=false;pendingRecruit=null;hide('start');hide('online');hide('finish');hide('menu');if(wasLobby)centerOnBase();update();}
  else if(view.phase==='lobby'){state=null;locked=false;room={...(room||{}),state:view};show('online');updateLobby();}
 }
 function updateLobby(){
