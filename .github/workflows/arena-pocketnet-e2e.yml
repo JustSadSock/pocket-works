@@ -1,0 +1,54 @@
+name: 5×5 Arena Real PocketNet E2E
+
+on:
+  pull_request:
+    paths:
+      - 'apps/crossline-5x5/**'
+      - '.github/workflows/arena-pocketnet-e2e.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/crossline-5x5/**'
+      - '.github/workflows/arena-pocketnet-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-pocketnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install local WebSocket driver
+        run: npm ci --prefix pocket-server --no-audit --no-fund
+      - name: Generate real pinned PocketNet module bundle
+        run: npm run build:pocketnet
+      - name: Install Wrangler 4
+        run: npm install --prefix /tmp/arena-wrangler --no-audit --no-fund wrangler@4
+      - name: Run Cloudflare Worker, SQLite Durable Object and two real socket clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-site
+          printf '<!doctype html><title>Arena E2E</title>' > dist-site/index.html
+          cp privacy.html dist-site/privacy.html
+          cp privacy.html dist-site/privacy.txt
+          /tmp/arena-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/arena-pocketnet.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; tail -n 100 /tmp/arena-pocketnet.log' EXIT
+          node apps/crossline-5x5/qa/pocketnet-live.mjs
+      - name: Upload diagnostic Worker logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arena-pocketnet-worker-log
+          path: /tmp/arena-pocketnet.log
+          if-no-files-found: ignore
+          retention-days: 7
