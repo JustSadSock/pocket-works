@@ -80,6 +80,7 @@ function leave(){
  try{if(client?.roomId&&client.socket?.readyState===WebSocket.OPEN)client.leaveRoom();}
  catch{}
  room=null;view=null;active=false;lock=false;
+ window.FogLeaveOnline?.();
  $('victoryOverlay').style.display='none';
  $('waitOverlay').style.display='none';
  lobby.style.display='none';$('startPanel').style.display='flex';
