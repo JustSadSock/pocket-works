@@ -153,7 +153,7 @@ export function createMaterialLab(options={}){
   for(const link of specimen.links){
    if(link.failedAt===null)continue;
    // Proper-time fracture marker is placed at nearest sampled coordinate time.
-   const sample=specimen.history.reduce((p,c)=>Math.abs(c.proper-link.failedAt)<Math.abs(p.proper-link.failedAt)?c:p,specimen.history[0]);
+   const sample=specimen.history.reduce((p,c)=>Math.abs(c.proper-link.failedAt/specimen.m.a)<Math.abs(p.proper-link.failedAt/specimen.m.a)?c:p,specimen.history[0]);
    if(sample){
     const xx=plot.x+clamp(sample.t/maxT,0,1)*plot.w;
     line(ctx,xx,plot.y,xx,plot.y+plot.h,'#e7ac877a',1);
