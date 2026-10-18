@@ -14,7 +14,7 @@ export function guardianReady(state){
    state.enemies.length<=2 && !state.enemies.some(e=>isGuardian(e.type));
 }
 export function guardianSpawnResolved(state,spawnSucceeded){
- if(!guardianReady(state))return false;
+ if(!state||!guardianForWave(state.wave)||state.guardianPending!==state.wave)return false;
  if(spawnSucceeded){state.guardianPending=0;return true;}
  return false;
 }
