@@ -3,7 +3,7 @@
 export const IMMUNE_EVENTS=Object.freeze({
  probe:{name:'РАЗВЕДКА',units:['crawler','spitter'],minHeat:19},
  purge:{name:'ОЧИЩЕНИЕ',units:['spitter','leech','brute'],minHeat:42},
- guardian:{name:'СТРАЖ ПРИВРАТНИКА',units:['warden'],minHeat:49}
+ guardian:{name:'СТРАЖ ПРИВРАТНИКА',units:['warden'],minHeat:48}
 });
 export function immuneDefaults(){return {heat:0,cooldown:0,warning:0,pending:'',responses:0,guardianStages:[],quiet:0};}
 export function sanitizeImmune(raw){
