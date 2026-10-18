@@ -1,7 +1,7 @@
 // Deterministic camera targets for automated visual regression and human art review.
 // Debug-only module: gameplay does not read or modify these fixtures.
 import {SECTOR} from './rogue-world.mjs';
-export const VISUAL_SEEDS=Object.freeze([222,413,8787]);
+export const VISUAL_SEEDS=Object.freeze([222,413,8787,4,14]);
 export const VISUAL_SCENES=Object.freeze(['corridor','living','kitchen','bedroom','bathroom','closet','nursery']);
 const sq=(x)=>x*x;
 function candidate(world,room,c){
