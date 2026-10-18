@@ -7,7 +7,7 @@ import {timeMode,integrateClock,dayClock,dayPhase,activeShiftCounts,planSubday,s
 import {walkPath,walkingSteps} from './navigation.js';
 import {landCadastre,landAt,tenureSummary,parcelEconomics} from './land-economy.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.8.2',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.9.0',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -142,17 +142,29 @@ function drawFrame(){if(!sim)return;
    if(x<2||y<3||x>w-2||y>h-3)continue;
    const size=Math.max(2,Math.min(8,cam.z*5));
    // Every dot is an actual inhabitant. Clothing identifies their real daily job.
-   const coat=p.job==='farm'?'#9b8860':p.job==='wood'?'#7b6948':p.job==='haul'?'#526f77':p.job==='herd'?'#928458':p.job==='build'?'#a47d59':'#6b7963';
+   const coat=p.job==='farm'?'#9b8860':p.job==='wood'?'#7b6948':p.job==='haul'?'#526f77':p.job==='herd'?'#928458':p.job==='build'?'#a47d59':p.job==='guard'?'#b17a57':'#6b7963';
    ctx.fillStyle='#25362d';ctx.fillRect(Math.round(x-.8),Math.round(y+size*.4),Math.ceil(size)+2,Math.ceil(size*.7)+1);
    ctx.fillStyle=coat;ctx.fillRect(Math.round(x),Math.round(y+size*.52),Math.ceil(size),Math.ceil(size*.8));
    ctx.fillStyle=p.sex==='f'?'#e5bd8f':'#d4c09f';ctx.fillRect(Math.round(x+size*.15),Math.round(y),Math.max(2,size*.7),Math.max(2,size*.7));
     // Actual work phases display small tool gestures, absent in fast overview.
-    if(fine&&cam.z>.65&&real.pose&&['farm','wood','build','herd'].includes(real.activity)){
+    if(fine&&cam.z>.65&&real.pose&&['farm','wood','build','herd','guard'].includes(real.activity)){
       const swing=(Math.floor(movementFraction*96+p.id)%2?1:-1)*Math.max(1,cam.z*2);
-      ctx.strokeStyle=real.activity==='wood'?'#c7ba94':real.activity==='build'?'#d2a878':'#b9ac7c';
+      ctx.strokeStyle=real.activity==='guard'?'#d4b887':real.activity==='wood'?'#c7ba94':real.activity==='build'?'#d2a878':'#b9ac7c';
       ctx.lineWidth=Math.max(1,cam.z*.85);ctx.beginPath();ctx.moveTo(x+size,y+size*.7);
       ctx.lineTo(x+size+swing,y-size*.12);ctx.stroke();
     }
+  }
+  // Local disputes have a physically recorded strip and real inhabitants.
+  // One modest mark locates the encounter; no invented battle entities.
+  for(const c of sim.conflicts||[]){
+   if(c.stage!=='mobilizing'&&sim.day-(c.endDay||0)>4)continue;
+   const x=cam.x+((c.cell%SIZE)*PX+4)*cam.z;
+   const y=cam.y+(Math.floor(c.cell/SIZE)*PX+4)*cam.z;
+   if(x<0||y<0||x>w||y>h)continue;
+   const r=Math.max(4,5*cam.z);
+   ctx.save();ctx.strokeStyle=c.stage==='mobilizing'?'#d6b77d':'#a77d61';ctx.lineWidth=Math.max(1,cam.z*.9);
+   ctx.beginPath();ctx.moveTo(x-r,y-r);ctx.lineTo(x+r,y-r);ctx.lineTo(x+r,y+r);ctx.lineTo(x-r,y+r);ctx.closePath();ctx.stroke();
+   ctx.restore();
   }
   if(cam.z>.36){for(const hom of sim.households){
    for(let i=0;i<Math.min(5,hom.cattle||0);i++){
@@ -212,14 +224,15 @@ if(mode==='overview'){
  const woods=homes.filter(h=>h.focus==='wood'&&h.members.some(id=>adults.some(p=>p.id===id))).length;
  return `<div class="community-row"><span><b>${escapeHTML(c.name)}</b><small>${farmers} полевых · ${woods} лесных · ${homes.filter(h=>h.tenure==='demesne').length} поместье</small></span><strong>${adults.length}</strong></div>`;}).join('');
  const pending=sim.households.filter(h=>h.buildProject?.site).length;
- el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}</div><p class="map-key">Построено домов: ${sim.stats.built||0} · Строится: ${pending} · Древесины заготовлено: ${Math.round((sim.stats.produced||0)/1000)} т.</p><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
+  const disputes=(sim.conflicts||[]).filter(c=>c.stage==='mobilizing');
+ el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}</div><p class="map-key">Построено домов: ${sim.stats.built||0} · Строится: ${pending} · Древесины заготовлено: ${Math.round((sim.stats.produced||0)/1000)} т.${disputes.length?` · Вооружённых споров: ${disputes.length}`:''}${sim.stats.armedDisputesResolved?` · Завершено стычек: ${sim.stats.armedDisputesResolved}`:''}</p><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
 }
 if(mode==='household'){
  const h=getHousehold(sim,selected);
  if(!h){el.innerHTML='<div class="house-name">Выберите дом на карте</div><p class="note">Приблизьте карту и коснитесь крыши.</p>';return;}
  const current=selectedPerson?sim.people.find(p=>p.id===selectedPerson):null;
  const originalPosition=el.scrollTop;
- const residents=h.people.map(p=>`<button class="member ${p.id===selectedPerson?'selected':''}" data-person="${p.id}"><b>${escapeHTML(p.name)}</b> ${Math.floor(p.age)} · ${p.job==='wood'?'лес':p.job==='farm'?'поля':p.job==='haul'?'в дороге':p.job==='build'?'стройка':p.job==='herd'?'пастбище':p.job==='hired'?'наём':'дом'}</button>`).join('')||'<span class="member">Дом пустует</span>';
+ const residents=h.people.map(p=>`<button class="member ${p.id===selectedPerson?'selected':''}" data-person="${p.id}"><b>${escapeHTML(p.name)}</b> ${Math.floor(p.age)} · ${p.job==='wood'?'лес':p.job==='farm'?'поля':p.job==='haul'?'в дороге':p.job==='build'?'стройка':p.job==='herd'?'пастбище':p.job==='hired'?'наём':p.job==='guard'?'земельный спор':'дом'}</button>`).join('')||'<span class="member">Дом пустует</span>';
  const deceased=h.members.map(id=>sim.people.find(p=>p.id===id)).filter(p=>p&&!p.alive).slice(-5);
  let personInfo='';
  if(current&&h.members.includes(current.id)){
@@ -245,7 +258,7 @@ if(mode==='household'){
  const plotEconomics=plot&&plot.kind==='field'?parcelEconomics(sim,h,selectedPlot,Math.max(0,distance)):null;
  const plotDetail=plot&&plot.ownerId===h.id?`<div class="parcel-detail"><b>${plot.kind==='field'?'Выбранная полоса':plot.kind==='croft'?'Приусадебная земля':'Дом'}</b>${plot.kind==='field'?` · 0,0625 га · плодородие ${sim.soil[selectedPlot]}/100 · ${plotEconomics.commuteHours.toFixed(2)} ч в оба конца · оценка ${Math.round(plotEconomics.expectedAnnualKg)} кг/год`:''}${plot.tenant?` · пользуется семья #${plot.tenantId} по договору аренды`:''}</div>`:'';
  const landOverview=`<div class="land-overview"><span>Собственные полосы <b>${holding.owned}</b></span><span>Аренда <b>+${holding.rented} / −${holding.letOut}</b></span><span>Средняя удалённость <b>${holding.meanDistance} клеток</b></span></div>`;
- el.innerHTML=`<div class="house-name">Дом ${escapeHTML(h.name)}</div><div class="house-meta">${escapeHTML(h.tenureTitle||'Хозяйство')} · ${escapeHTML(h.community)} · ${h.people.length} чел. · ${(h.fields.length*.0625).toFixed(2)} га (${h.fields.length} полос${h.leasedIn?`, в аренде +${h.leasedIn}/−${h.leasedOut}`:``}) · ${Math.round(h.grain)} кг хлебного зерна · ${Math.round(h.oats||0)} кг овса · ${Math.round(h.pulses||0)} кг бобовых · ${Math.round(h.wood)} кг дерева · ${Math.round(h.coin)} монет · ${h.draftOxen||0} тягловых · ${h.dairyCows??h.cattle??0} молочных · ${h.sheep||0} овец · ${Math.round(h.wool||0)} кг шерсти · ${Math.round(h.fodder||0)} кг сена</div><div class="economy-line"><b>${h.focus==='wood'?'Лесное хозяйство':h.focus==='trade'?'Перевозки':'Земледелие'}</b> · качество почвы ${h.soil}/100 · урожай ${Math.round(h.lastHarvest?.kg||0)} кг (зерно ${Math.round(h.lastHarvest?.breakdown?.grain??h.lastHarvest?.kg??0)} / овёс ${Math.round(h.lastHarvest?.breakdown?.oats||0)} / бобовые ${Math.round(h.lastHarvest?.breakdown?.pulses||0)}) · ${Math.round(h.annualFood)} кг/год на еду</div><div class="storage-line">${h.manor&&h.tenure!=='demesne'?`Повинности ${h.manor.served}/${h.manor.dueDays} дн. · рента ${h.manor.annualRentCoin} мон./год${h.manor.rentArrears?` · недоимка ${h.manor.rentArrears}`:''} · `:h.tenure==='demesne'?'Поместная пашня и амбар · ':'Наследуемые права · '}общинный выпас ${h.commonUse?'доступен':'не доступен'}${h.landProject?' · расчистка '+h.landProject.days+'/12 рабочих дней':''}${h.buildProject?' · строительство двора '+h.buildProject.days+'/50 дней':''}${h.migration?' · переселение в пути':''}</div><div class="storage-line">Амбар ${storageInfo} · уровень ${h.storeLevel||0}</div>${debtLine}${landOverview}${plotDetail}<button data-action="econ-detail" class="econ-toggle" aria-expanded="${economyOpen}">${economyOpen?'Свернуть хозяйственный учёт':'Почему семья так работает?'} <span>${economyOpen?'−':'+'}</span></button>${econDetail}<div class="members">${residents}</div>${deceased.length?`<div class="family-archive">Память семьи: ${deceased.map(p=>`<button data-person="${p.id}">${escapeHTML(p.name)} (†${Math.floor(p.age)})</button>`).join(' ')}</div>`:''}${personInfo}${!current&&last?`<p class="note">${escapeHTML(last.message)} — ${escapeHTML(last.cause)}.</p>`:''}`;
+ el.innerHTML=`<div class="house-name">Дом ${escapeHTML(h.name)}</div><div class="house-meta">${escapeHTML(h.tenureTitle||'Хозяйство')} · ${escapeHTML(h.community)} · ${h.people.length} чел. · ${(h.fields.length*.0625).toFixed(2)} га (${h.fields.length} полос${h.leasedIn?`, в аренде +${h.leasedIn}/−${h.leasedOut}`:``}) · ${Math.round(h.grain)} кг хлебного зерна · ${Math.round(h.oats||0)} кг овса · ${Math.round(h.pulses||0)} кг бобовых · ${Math.round(h.wood)} кг дерева · ${Math.round(h.coin)} монет · ${h.draftOxen||0} тягловых · ${h.dairyCows??h.cattle??0} молочных · ${h.sheep||0} овец · ${Math.round(h.wool||0)} кг шерсти · ${Math.round(h.fodder||0)} кг сена</div><div class="economy-line"><b>${h.focus==='wood'?'Лесное хозяйство':h.focus==='trade'?'Перевозки':'Земледелие'}</b> · качество почвы ${h.soil}/100 · урожай ${Math.round(h.lastHarvest?.kg||0)} кг (зерно ${Math.round(h.lastHarvest?.breakdown?.grain??h.lastHarvest?.kg??0)} / овёс ${Math.round(h.lastHarvest?.breakdown?.oats||0)} / бобовые ${Math.round(h.lastHarvest?.breakdown?.pulses||0)}) · ${Math.round(h.annualFood)} кг/год на еду</div><div class="storage-line">${h.manor&&h.tenure!=='demesne'?`Повинности ${h.manor.served}/${h.manor.dueDays} дн. · рента ${h.manor.annualRentCoin} мон./год${h.manor.rentArrears?` · недоимка ${h.manor.rentArrears}`:''} · `:h.tenure==='demesne'?'Поместная пашня и амбар · ':'Наследуемые права · '}общинный выпас ${h.commonUse?'доступен':'не доступен'}${h.landProject?' · расчистка '+h.landProject.days+'/12 рабочих дней':''}${h.buildProject?' · строительство двора '+h.buildProject.days+'/50 дней':''}${h.migration?' · переселение в пути':''}</div><div class="storage-line">Амбар ${storageInfo} · уровень ${h.storeLevel||0}${h.staves?` · Посохов: ${h.staves}`:''}</div>${debtLine}${landOverview}${plotDetail}<button data-action="econ-detail" class="econ-toggle" aria-expanded="${economyOpen}">${economyOpen?'Свернуть хозяйственный учёт':'Почему семья так работает?'} <span>${economyOpen?'−':'+'}</span></button>${econDetail}<div class="members">${residents}</div>${deceased.length?`<div class="family-archive">Память семьи: ${deceased.map(p=>`<button data-person="${p.id}">${escapeHTML(p.name)} (†${Math.floor(p.age)})</button>`).join(' ')}</div>`:''}${personInfo}${!current&&last?`<p class="note">${escapeHTML(last.message)} — ${escapeHTML(last.cause)}.</p>`:''}`;
  el.scrollTop=Math.min(originalPosition,el.scrollHeight);
  return;
 }

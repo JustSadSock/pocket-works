@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "chyepukha-regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/server.test.mjs"
+      ]
+    },
+    {
+      "id": "chyepukha-inspector",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/inspector.spec.ts"
+      ]
+    }
+  ]
+}

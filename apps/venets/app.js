@@ -4,6 +4,8 @@ import {installUIInspector, INSPECTOR_SCREENS} from './dev-inspector.js';
 import {renderAtlas,renderGenealogy,shieldSvg} from './atlas.js';
 import {atlasOwnerSnapshot,transferHighlights} from './atlas-core.js';
 import {memoryImpact} from './sim/politics.js';
+import {campaignLegacy,campaignChronicleText} from './sim/legacy.js';
+import {changeTitleHolder} from './sim/transactions.js';
 import {campaignStarts,startCampaign,campaignChoices,campaignAction,campaignYear,
   campaignScore,extendCampaign,serializeCampaign,loadCampaign} from './sim/campaign.js';
 installMobileRuntime();
@@ -531,21 +533,51 @@ function renderGame(){
 }
 function renderEnding(){
   if(!game)return;
-  const score=campaignScore(game);
-  label(by('ending-title'),game.finished?'Последняя страница дома':'Дом '+house(game.world,game.dynastyId));
-  label(by('ending-note'),game.finished?
-    'Не осталось наследников. Летопись этого дома завершилась, но история остальных владений продолжается.':
-    'Прошло '+game.turns+' лет. Мир изменялся без вашего приказа — и каждое принятое решение оставило след.');
-  const stats=[
-    [String(score.year),'последний год'],[String(score.generations),'поколения'],
-    [String(score.titles),'титулов у дома'],[String(score.decisions),'личных решений'],
-    [String(score.family),'живых родственников'],[score.crown?'Да':'Нет','королевский венец']
+  const result=campaignLegacy(game),score=result.stats;
+  const title=result.title;
+  label(by('ending-title'),title);
+  label(by('ending-eyebrow'),(game.finished?'ПОСЛЕДНЯЯ СТРАНИЦА':'ЗАВЕРШЕНИЕ ГЛАВЫ')+' · '+result.year);
+  label(by('ending-note'),result.summary);
+  label(by('ending-house'),'Дом '+result.house+' · '+result.start+'–'+result.year);
+  by('ending-herald').replaceChildren(shieldSvg(result.herald));
+  const metrics=[
+    [String(score.generations),'поколения'],
+    [String(score.holdings),'титулы'],
+    [String(score.transfers),'переходы земель'],
+    [String(score.victories),'победы в войнах'],
+    [String(score.decisions),'ваши решения'],
+    [String(score.family),'живые наследники']
   ];
   const fragment=document.createDocumentFragment();
-  for(const [value,name] of stats){const div=element('div');div.append(element('strong','',value),element('span','',name));fragment.append(div)}
+  for(const [value,name] of metrics){
+    const div=element('div','ending-measure');
+    div.append(element('strong','',value),element('span','',name));
+    fragment.append(div);
+  }
   by('ending-stats').replaceChildren(fragment);
+  const entries=document.createDocumentFragment();
+  for(const e of result.timeline){
+    const li=element('li','ending-event');
+    const year=element('time','',String(e.year));
+    const content=element('div','ending-event-copy');
+    content.append(element('strong','',e.heading),element('span','',e.detail));
+    li.append(year,content);entries.append(li);
+  }
+  by('ending-timeline').replaceChildren(entries);
   by('continue-legacy').hidden=game.finished;
+  by('ending-screen').dataset.outcome=result.id;
 }
+function exportChronicle(){
+  if(!game)return;
+  const content=campaignChronicleText(game);
+  const file=new Blob([content],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(file);
+  const link=document.createElement('a');
+  link.href=url;link.download='venets-'+game.seed+'-'+game.world.year+'.txt';
+  document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+
 function closeGameToMenu(){pause();saveGame();menu()}
 by('restore-backup').addEventListener('click',()=>{
   if(!backupRaw)return;
@@ -591,6 +623,7 @@ by('close-docs').addEventListener('click',menu);
 by('resume').addEventListener('click',resume);
 by('begin').addEventListener('click',showNewConfirmation);
 by('ending-new').addEventListener('click',()=>{pause();menu()});
+by('download-chronicle').addEventListener('click',exportChronicle);
 by('continue-legacy').addEventListener('click',()=>{
   try{extendCampaign(game);saveGame();play()}catch(e){notify(e.message)}
 });
@@ -620,7 +653,12 @@ function initPreview(id){
   game=startCampaign({seed:413,countyId:'co-01',size:id==='expanded-atlas'?48:12});
   if(id==='menu-resume'){menu();return}
   if(id==='docs'){screenTo('docs');return}
-  if(id==='ending'){
+  if(id==='ending'||id==='ending-crown'){
+    if(id==='ending-crown'){
+      const crown=game.world.titles.find(t=>t.rank==='kingdom');
+      changeTitleHolder(game.world,{titleId:crown.id,newHolderId:game.playerId,
+        cause:'inspector-demonstration-legal-coronation'});
+    }
     game.goalYear=1067;
     campaignYear(game); // real turn resolves the short testing chapter
     renderEnding();screenTo('ending');return;

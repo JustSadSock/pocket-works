@@ -69,6 +69,16 @@ try {
     await page.locator("#rematchButton").click();
     assert.equal(await page.locator("#topScore").textContent(),"0");
     assert.equal(await page.locator("#bottomScore").textContent(),"0");
+    await page.locator("#pauseButton").click();
+    await page.on("dialog",dialog=>dialog.accept());
+    await page.locator("#pauseHome").click();
+    await page.locator("#arenaNext").click();
+    assert.equal(await page.locator("#arenaName").textContent(),"РИКОШЕТ");
+    await page.locator("#aiButton").click();
+    await page.locator("#field").click({position:{x:size.width<600?size.width*.5:190,y:size.height*.52}});
+    await page.waitForTimeout(650);
+    if(output)await page.screenshot({path:join(output,"tyaga-kinetic-"+size.width+".png")});
+    assert.equal(await page.locator("#hud").isVisible(),true);
     assert.deepEqual(errors,[],"Unexpected page errors");
     await context.close();passed++;
   }

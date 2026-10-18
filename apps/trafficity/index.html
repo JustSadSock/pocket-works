@@ -22,6 +22,8 @@
   </div>
   <div class="city-inner">
    <canvas id="cityCanvas" aria-label="Миниатюрная карта города. Выбери машину и нажимай дорожные перекрёстки для маршрута." data-gesture-surface data-block-callout></canvas>
+   <div class="zoom-stack"><button id="zoomIn" type="button" aria-label="Увеличить город" data-native-press>+</button><button id="zoomOut" type="button" aria-label="Уменьшить город" data-native-press>−</button><button id="zoomReset" type="button" aria-label="Весь город" data-native-press>⌖</button></div>
+   <div id="worldEvent" class="world-event" hidden aria-live="polite"></div>
    <div class="city-stamp" aria-hidden="true"><span>ГОРОД</span><b id="mapNumber">№ 001</b></div>
   </div>
   <div id="status" class="city-status" aria-live="polite">Выбери машину и проложи маршрут</div>
@@ -32,6 +34,8 @@
    <button class="vehicle-choice active" data-vehicle="0" data-native-press><span class="mini-car">1</span><span class="vcopy"><b>МАШИНА 01</b><small id="goal0">Пункт назначения</small></span><span id="distance0" class="distance">—</span></button>
    <button class="vehicle-choice" data-vehicle="1" data-native-press><span class="mini-car">2</span><span class="vcopy"><b>МАШИНА 02</b><small id="goal1">Пункт назначения</small></span><span id="distance1" class="distance">—</span></button>
   </div>
+  <div class="offers-head"><span>ОТКРЫТЫЕ ЗАКАЗЫ</span><small>КТО ПЕРВЫЙ — ТОГО НАГРАДА</small></div>
+  <div class="offers" aria-label="Общие заказы"><button data-offer="0" type="button" data-native-press class="offer-choice"><span id="offerType0">СРОЧНЫЙ</span><b id="offerPrize0">+54</b><small id="offerTime0">9 ходов</small></button><button data-offer="1" type="button" data-native-press class="offer-choice"><span id="offerType1">ГРУЗ</span><b id="offerPrize1">+43</b><small id="offerTime1">14 ходов</small></button></div>
   <div class="dispatch-tools">
    <button id="auto" class="tool-primary" data-native-press type="button">↗ <span>КРАТЧАЙШИЙ ПУТЬ</span></button>
    <button id="undo" class="tool-secondary" data-native-press type="button" aria-label="Убрать последний участок">↶</button>
@@ -40,6 +44,7 @@
   <div class="stop-strip"><button id="stopMode" data-native-press type="button">◎ ОСТАНОВКА</button><label for="stopCount">ХОДОВ <output id="stopValue">1</output></label><input id="stopCount" type="range" min="1" max="5" value="1"></div>
   <p class="route-hint" id="hint">Нажми на перекрёсток, чтобы провести маршрут. Можно вести пальцем вдоль дороги.</p>
   <button id="next" class="next-button" data-native-press type="button">СЛЕДУЮЩИЙ ХОД <span>→</span></button>
+  <button id="claimIdle" class="idle-button" type="button" data-native-press hidden>СОПЕРНИК НЕ ОТВЕЧАЕТ — ЗАВЕРШИТЬ МАТЧ</button>
  </aside>
 </div>
 <div id="menu" class="screen-cover">
@@ -47,9 +52,11 @@
   <div class="menu-seal">ТАКТИЧЕСКАЯ НАСТОЛЬНАЯ ИГРА</div>
   <h1>Город<br><em>на ладони.</em></h1>
   <p>Две машины. Тридцать ходов. Опереди соперника по доставкам.</p>
+  <label class="difficulty-label" for="difficulty">СЛОЖНОСТЬ ИИ <select id="difficulty"><option value="casual">Спокойный</option><option value="standard" selected>Тактический</option><option value="expert">Эксперт</option></select></label>
   <button id="solo" class="menu-button main-action" data-native-press type="button">ПРОТИВ ИИ <span>→</span></button>
   <div class="menu-row"><button id="host" class="menu-button" data-native-press type="button">СОЗДАТЬ КОМНАТУ</button><button id="join" class="menu-button" data-native-press type="button">ПО КОДУ</button></div>
   <button id="resume" class="text-action" data-native-press type="button" hidden>Продолжить партию →</button>
+  <button id="resumeNet" class="text-action" data-native-press type="button" hidden>Вернуться в сетевую комнату →</button>
   <a class="return" href="../../" data-app-control>Вернуться в Pocket Works</a>
  </section>
 </div>
@@ -82,6 +89,6 @@
 <div id="pauseOverlay" class="screen-cover" hidden><section class="menu-leaf dialog-leaf"><h2>Пауза.</h2><p id="pauseText">Прогресс сохранён.</p><button id="continue" class="menu-button main-action" data-native-press>ПРОДОЛЖИТЬ</button><button id="exitGame" class="menu-button" data-native-press>ЗАВЕРШИТЬ ПАРТИЮ</button><button id="exitConfirm" class="menu-button danger" data-native-press hidden>ДА, ЗАВЕРШИТЬ</button><a class="return" href="../../" data-app-control>Вернуться в Pocket Works</a></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Trafficity" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Trafficity" data-app-version="1.5.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>

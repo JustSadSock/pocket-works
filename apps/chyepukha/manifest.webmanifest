@@ -1,0 +1,20 @@
+{
+  "id": "/apps/chyepukha/",
+  "name": "ЧЕПУХА",
+  "short_name": "Чепуха",
+  "description": "Спільне створення абсурдних історій за кількома словами",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#293f3b",
+  "theme_color": "#293f3b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

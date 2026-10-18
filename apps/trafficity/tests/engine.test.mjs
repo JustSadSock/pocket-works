@@ -1,52 +1,108 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createMap,createGame,shortestPath,autoRoute,routeVehicle,stopVehicle,advanceGame,botPlan,winner} from '../engine.js';
-const G=(s=101)=>createGame(s);
-test('seed produces connected cities with identical streets',()=>{
- for(let seed=1;seed<=65;seed++){
-  const a=createMap(seed),b=createMap(seed);assert.deepEqual(a,b);
-  assert.equal(a.nodes.length,35);assert.equal(a.spots.length,8);
-  for(const n of a.nodes)assert.equal(shortestPath(a,0,n.id)[0],0);
-  assert.equal(new Set(a.edges.map(e=>e.slice().sort((x,y)=>x-y).join(':'))).size,a.edges.length);
+import {createMap,createGame,shortestPath,autoRoute,routeVehicle,stopVehicle,advanceGame,botPlan,winner,offerRoute,roadWidth} from '../engine.js';
+const game=(s=101,d='standard')=>createGame(s,d);
+test('120 seeds: complete networks, bridges, bounded 35-node city, actual layout diversity',()=>{
+ const layouts=new Set();
+ for(let s=1;s<=120;s++){
+  const map=createMap(s),second=createMap(s);
+  assert.deepEqual(map,second);
+  assert.equal(map.nodes.length,35);assert.equal(map.spots.length,8);
+  for(const n of map.nodes)assert.equal(shortestPath(map,0,n.id)[0],0);
+  const edges=new Set(map.edges.map(e=>e.slice().sort((a,b)=>a-b).join(':')));
+  assert.equal(edges.size,map.edges.length);
+  assert.ok(map.edges.length>=34);
+  layouts.add([...edges].sort().join('|'));
+  for(const [a,b] of map.edges){
+   const cross=Math.min(Math.floor(a/5),Math.floor(b/5))===3&&Math.max(Math.floor(a/5),Math.floor(b/5))===4;
+   if(cross)assert.ok(map.bridges.includes(a%5));
+  }
  }
+ assert.ok(layouts.size>50,'seeds must change road topology, not only pixel jitter');
 });
-test('routes require adjacent streets and same owner',()=>{
- const g=G();const v=g.vehicles[0];const p=shortestPath(g.map,v.at,v.goal).slice(1);
- assert.equal(routeVehicle(g,0,0,p),true);assert.deepEqual(v.route,p);
+test('route, stop, private road state are validated without partial mutation',()=>{
+ const g=game(),v=g.vehicles[0],p=shortestPath(g.map,v.at,v.goal).slice(1);
+ assert.equal(routeVehicle(g,0,0,p),true);
  assert.equal(routeVehicle(g,1,0,p),false);
  assert.equal(routeVehicle(g,0,0,[999]),false);
  assert.deepEqual(v.route,p);
  assert.equal(stopVehicle(g,0,0,999,3),false);
  assert.equal(stopVehicle(g,0,0,v.at,2),true);
 });
-test('one tick moves one edge and stop order pauses exactly N turns',()=>{
- const g=G(),v=g.vehicles[0],p=shortestPath(g.map,v.at,v.goal).slice(1);
- routeVehicle(g,0,0,p);const at=v.at;
- stopVehicle(g,0,0,at,3);
- for(let i=0;i<3;i++){advanceGame(g);assert.equal(v.at,at);}
- advanceGame(g);assert.equal(v.at,p[0]);assert.equal(g.turn,4);
+test('stopping off lane waits exactly 3 turns',()=>{
+ const g=game(),v=g.vehicles[0],path=shortestPath(g.map,v.at,v.goal).slice(1);
+ routeVehicle(g,0,0,path);stopVehicle(g,0,0,v.at,3);
+ for(let i=0;i<3;i++){advanceGame(g);assert.equal(v.at,0);assert.equal(v.parked,true);}
+ advanceGame(g);assert.equal(v.at,path[0]);
 });
-test('deliveries score and spawn new contract',()=>{
- const g=G(11),v=g.vehicles[0],first=v.goal;
- autoRoute(g,0,0);let guard=0;
- while(g.deliveries[0]===0&&guard++<25)advanceGame(g);
- assert.equal(g.deliveries[0],1);assert.ok(g.scores[0]>=10);
- assert.notEqual(v.goal,first);assert.equal(v.route.length,0);
+test('intersection capacity blocks one competing arrival; blocked route remains queued',()=>{
+ const g=game(39);let found=null;
+ for(const node of g.map.nodes){
+  const adjacent=g.map.graph[node.id];
+  if(adjacent.length>=3){found={node:node.id,a:adjacent[0],b:adjacent[1]};break;}
+ }
+ assert.ok(found);
+ const [a,b]=[g.vehicles[0],g.vehicles[2]];
+ a.at=found.a;b.at=found.b;a.route=[found.node];b.route=[found.node];
+ for(const v of [g.vehicles[1],g.vehicles[3]])v.route=[];
+ advanceGame(g);
+ const arrived=[a,b].filter(v=>v.at===found.node);
+ assert.equal(arrived.length,1);
+ const loser=[a,b].find(v=>v.at!==found.node);
+ assert.equal(loser.route[0],found.node);
+ assert.ok(loser.blocked>0);
+ assert.ok(g.last.some(e=>e.type==='jam'));
 });
-test('bot completes games; every move respects graph and score remains valid',()=>{
- for(let s=0;s<30;s++){
-  const g=G(s+1);let old=g.vehicles.map(v=>v.at);
-  for(let turn=0;turn<30;turn++){
-   botPlan(g);autoRoute(g,0,0);autoRoute(g,0,1);advanceGame(g);
-   g.vehicles.forEach((v,i)=>assert.ok(v.at===old[i]||g.map.graph[old[i]].includes(v.at)));
-   old=g.vehicles.map(v=>v.at);
+test('head-on cars on a narrow street must reroute; wide streets can pass',()=>{
+ const g=game(12),pair=g.map.edges.find(([a,b])=>roadWidth(g.map,a,b)==='narrow');
+ assert.ok(pair);const [a,b]=pair;
+ g.vehicles[0].at=a;g.vehicles[2].at=b;g.vehicles[0].route=[b];g.vehicles[2].route=[a];
+ g.vehicles[1].route=[];g.vehicles[3].route=[];
+ advanceGame(g);assert.equal(g.vehicles[0].at,a);assert.equal(g.vehicles[2].at,b);
+ assert.equal(g.vehicles[0].blocked,1);assert.equal(g.vehicles[2].blocked,1);
+});
+test('public order is contested, delivered once, and replaced',()=>{
+ const g=game(255),old=g.offers[0];assert.equal(g.offers.length,2);
+ const v=g.vehicles[0];v.at=old.node;const prev=g.map.graph[v.at][0];v.at=prev;
+ v.route=[old.node];g.vehicles.slice(1).forEach(x=>x.route=[]);
+ const score=g.scores[0];advanceGame(g);
+ assert.ok(g.scores[0]>=score+old.reward);
+ assert.ok(g.last.some(e=>e.type==='offer'&&e.points===old.reward));
+ assert.ok(!g.offers.some(o=>o.id===old.id));
+ assert.equal(g.offers.length,2);
+});
+test('offer route uses only owned vehicles and current offer ids',()=>{
+ const g=game(35),id=g.offers[0].id;
+ assert.equal(offerRoute(g,1,0,id),false);
+ assert.equal(offerRoute(g,0,0,99999),false);
+ assert.equal(offerRoute(g,0,0,id),true);
+ assert.equal(g.vehicles[0].route.at(-1),g.offers[0].node);
+});
+test('auto routes complete private deliveries with immediate replacement',()=>{
+ const g=game(111),v=g.vehicles[0],oldGoal=v.goal;
+ for(let i=0;i<28&&g.deliveries[0]===0;i++){autoRoute(g,0,0);advanceGame(g);}
+ assert.ok(g.deliveries[0]>0);
+ assert.ok(g.scores[0]>=10);
+ assert.notEqual(v.goal,oldGoal);
+});
+test('three AI levels make legal progress; deterministic finished scores in 25 worlds',()=>{
+ for(const difficulty of ['casual','standard','expert']){
+  for(let seed=1;seed<=25;seed++){
+   const a=game(seed,difficulty),b=game(seed,difficulty);
+   for(const g of [a,b])for(let turn=0;turn<30;turn++){
+    for(let id=0;id<2;id++)if(!g.vehicles[id].route.length)autoRoute(g,0,id);
+    botPlan(g);const before=g.vehicles.map(x=>x.at);advanceGame(g);
+    g.vehicles.forEach((v,i)=>assert.ok(v.at===before[i]||g.map.graph[before[i]].includes(v.at)));
+   }
+   assert.equal(a.turn,30);assert.equal(a.phase,'finished');assert.deepEqual(a,b);
+   assert.ok(a.scores.every(x=>Number.isInteger(x)&&x>=0));
+   assert.ok([-1,0,1].includes(winner(a)));
   }
-  assert.equal(g.phase,'finished');assert.equal(g.turn,30);
-  assert.ok(g.scores.every(n=>Number.isInteger(n)&&n>=0));
-  assert.ok([-1,0,1].includes(winner(g)));
  }
 });
-test('invalid commands cannot mutate terminal state',()=>{
- const g=G();for(let i=0;i<30;i++)advanceGame(g);
+test('terminal state cannot accept commands or more turns',()=>{
+ const g=game();
+ for(let turn=0;turn<30;turn++)advanceGame(g);
  assert.equal(autoRoute(g,0,0),false);assert.equal(advanceGame(g),false);
+ assert.equal(routeVehicle(g,0,0,[]),false);assert.equal(stopVehicle(g,0,0,0,1),false);
 });

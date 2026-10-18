@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "product": "not-dead-yet",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "gloamstep",
+      "evidence": "apps/gloamstep/app.config.json",
+      "lesson": "Dungeon turns and overhead board representation work there, but repeat neither the grid framing nor the touch d-pad."
+    },
+    {
+      "slug": "melt-crypt",
+      "evidence": "apps/melt-crypt/source/game.js",
+      "lesson": "A first-person action setting can use dynamic geometry, but this survival game should not imitate weapon-dominated HUD and combat."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://github.com/JustSadSock/Not-Dead-Yet",
+      "inspectedAt": "2026-10-18",
+      "observation": "Original 2D map uses independently regenerated tile chunks and a limited memory-visibility duration.",
+      "principle": "Architecture rearranging itself behind the player is the central gameplay identity, not merely random corridors.",
+      "application": "Whole sectors regenerate after being left behind with fixed guaranteed edge portals and a deterministic seed.",
+      "avoid": "Avoid partial merging of old remembered cells into new grids, which was able to strand walking paths."
+    },
+    {
+      "url": "https://github.com/JustSadSock/Not_dead_yet",
+      "inspectedAt": "2026-10-18",
+      "observation": "The Godot prototype already started experimenting with spatial movement, apartment cells, and projectile scripts.",
+      "principle": "Player-scale spatial navigation fits the tension of a horror labyrinth better than reading square tiles from above.",
+      "application": "Build directly authored WebGL polygons with eye-height look and actual collisions, not a visual-only 2D mockup.",
+      "avoid": "Do not carry over engine-specific scene dependencies or half-connected controllers from the abandoned prototype."
+    },
+    {
+      "url": "https://github.com/JustSadSock/pocket-works/tree/main/apps/gloamstep",
+      "inspectedAt": "2026-10-18",
+      "observation": "Existing Gloamstep demonstrates a fully localized mobile dungeon, objective counters and a deliberate exit route.",
+      "principle": "On a small screen, important progress and escape should be visible without permanent panels or scrolling.",
+      "application": "Place only health, memory counter, nearest target compass and pause above the full-bleed geometry.",
+      "avoid": "Avoid copying overhead tile rendering, the framing strips or a full directional control pad."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "webgl-depth",
+      "medium": "Offline native WebGL 1 polygons with a custom flashlight shader and depth-tested concrete geometry.",
+      "composition": "The environment occupies the whole phone, with a narrow permanent compass and peripheral twin-thumb controls.",
+      "interaction": "A drag steers the head independently from movement; players cross real gates, lose sight of old routes, and find signals.",
+      "motion": "Immediate first-person turning and proportional walking bob; distant corridors softly fade through atmospheric fog.",
+      "rationale": "Chosen because changing spaces are felt bodily at eye level and all needed resources are local on slow mobile networks."
+    },
+    {
+      "id": "blueprint-floorplan",
+      "medium": "High-resolution 2D canvas and charcoal ink corridors rendered as an architectural memory diagram.",
+      "composition": "Top-down floor plan drawn onto a stationary document with side navigation and a map scanner.",
+      "interaction": "The player drags a cursor on the blueprint, while ink erases and redraws areas outside a radial sight cone.",
+      "motion": "Ink wash evaporates in slow paper-grain transitions, leaving scratches before returning to the document.",
+      "rationale": "Rejected because the old 2D presentation already obscured personal vulnerability and the sense of scale."
+    },
+    {
+      "id": "physical-installation",
+      "medium": "CSS perspective projections of a paper diorama with separately articulated cardboard walls and doors.",
+      "composition": "A central miniature room suspended between vertically arranged navigation documents and object descriptions.",
+      "interaction": "Players physically rotate a cardboard room, then choose doors by tapping miniature handles one room at a time.",
+      "motion": "Cardboard walls fold on hinges with a spring settling and paper-slot transition to the next isolated scene.",
+      "rationale": "Rejected because one-room-at-a-time jumps weaken continuous navigation and make the world feel like a puzzle box."
+    }
+  ],
+  "selection": {
+    "concept": "webgl-depth",
+    "reason": "True perspective supports the original memory-shifting idea while a fixed connected graph avoids recreating the old navigation failures.",
+    "rejected": [
+      {
+        "concept": "blueprint-floorplan",
+        "reason": "A legible overhead plan would be a clearer editor, but loses the horror of not seeing behind the player."
+      },
+      {
+        "concept": "physical-installation",
+        "reason": "Hand-built CSS cardboard cannot affordably stream the corridors and continuous depth this mechanic depends on."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "webgl",
+      "availability": "available",
+      "reason": "WebGL context, shaders, vertex buffers and geometric occlusion are implemented directly in renderer.mjs."
+    },
+    {
+      "id": "svg",
+      "availability": "available",
+      "reason": "A custom vector double-portal emblem was authored for the launcher icon with a clear at-a-glance silhouette."
+    },
+    {
+      "id": "node",
+      "availability": "available",
+      "reason": "Native Node test runner can exercise connected portals and navigation across seeds without a browser."
+    }
+  ],
+  "assets": [
+    {
+      "id": "threshold-emblem",
+      "tool": "svg",
+      "source": "visual-direction.json",
+      "output": "icons/icon.svg",
+      "role": "Recognizable square app emblem where a narrow signal glows deep behind a concrete double gate.",
+      "acceptance": "The stacked doorway and warm beacon remain distinct as a single app icon at 64 pixels.",
+      "integration": "The launcher, manifest, HTML and offline service worker all reference the same local SVG.",
+      "provenance": "Hand-authored from original paths and gradients for this project, without third-party art or font binaries.",
+      "maxBytes": 30000
+    },
+    {
+      "id": "volumetric-rooms",
+      "tool": "webgl",
+      "source": "world.mjs",
+      "output": "renderer.mjs",
+      "role": "Procedural lit walls, ceiling slabs, floor joints, memory monoliths and pursuer silhouettes define the actual space.",
+      "acceptance": "Cells share matching exits and the renderer draws depth-tested triangles with flashlight shading and fog.",
+      "integration": "The renderer reads chunk geometry from World and draws cached WebGL meshes plus dynamic actors.",
+      "provenance": "All primitives, palette, lighting formula and world topology are original local JavaScript source.",
+      "maxBytes": 120000
+    }
+  ],
+  "evidence": {
+    "firstFrame": "First-person corridor preview under a large compressed title and rotated mechanical aperture.",
+    "action": "Entering the labyrinth removes the menu and the user immediately walks through spatial corridors.",
+    "settled": "A memory signal vanishes on approach, the progress counter increments and compass redirects."
+  },
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 50000,
+    "targetFps": 45
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Shader compile error, WebGL context loss or a missing mobile touch pointer could leave a black frame.",
+      "Long controls on a narrow phone must never obscure the next memory marker or block the real gameplay.",
+      "Sectors may regenerate only after the player leaves, without sealing portals or spawning actors inside walls."
+    ],
+    "comparisons": [
+      "GLOAMSTEP uses top-down flat tiles while this app uses eye-level volumetric corridors and no d-pad.",
+      "MELT//CRYPT is a weapon-centric action arena rather than navigational horror without combat equipment.",
+      "Axis Pals is a planar shared-control puzzle rather than a solo first-person exploration space."
+    ]
+  }
+}

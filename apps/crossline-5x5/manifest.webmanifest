@@ -1,0 +1,20 @@
+{
+  "name": "КРОССЛАЙН: 5×5",
+  "short_name": "КРОССЛАЙН",
+  "description": "Тактическая дуэль на поле 5×5: пять скрытых приказов, одновременный бой, ИИ, повторы и серверный PvP через PocketNet.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161e23",
+  "theme_color": "#161e23",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "/apps/crossline-5x5/"
+}

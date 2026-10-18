@@ -145,9 +145,10 @@
     ]
   },
   "trafficity": {
-    "current": "v1",
+    "current": "v2",
     "versions": [
-      "v1"
+      "v1",
+      "v2"
     ]
   },
   "fog-of-conquest": {
@@ -155,6 +156,18 @@
     "versions": [
       "v1",
       "v2"
+    ]
+  },
+  "chyepukha": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
+  },
+  "crossline-5x5": {
+    "current": "v1",
+    "versions": [
+      "v1"
     ]
   }
 }
