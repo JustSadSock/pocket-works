@@ -5,7 +5,7 @@
   "name": "ЗАМАЗКА",
   "shortName": "ЗАМАЗКА",
   "description": "Музейная party-игра для 2–8 реставраторов: дорисуй повреждение, найди изменённую картину среди пяти и раскрой ответ после каждого голосования.",
-  "version": "1.40.16",
+  "version": "1.40.17",
   "releaseDate": "2026-10-18",
   "releaseDateTime": "2026-10-18T02:05:00+03:00",
   "changelog": [
@@ -60,7 +60,7 @@
   "backgroundColor": "#241e1a",
   "themeColor": "#201b18",
   "orientation": "portrait",
-  "cacheName": "zamazka-v1.40.12",
+  "cacheName": "zamazka-v1.40.17",
   "storageNamespace": "pocket-works:zamazka",
   "tags": [
     "art",
