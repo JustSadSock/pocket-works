@@ -62,16 +62,17 @@ test('walking up to a physical fork and pressing X presets the actual surgery ro
  const first=await page.evaluate(()=>window.__MEAT_QA__());
  expect(first.routes.forks).toHaveLength(2);
  const destination=first.routes.forks[1];
- // Save position as a normal durable checkpoint, no live world mutation.
+ // A pagehide event writes the currently playing state. Inject the checkpoint
+ // on the next document before app.js loads, after the previous page's pagehide.
+ // It is the normal persisted session; no live-world mutation/debug shortcut.
  await page.keyboard.press('Escape');await page.locator('#menuPause').click();
- // Navigate to an unloaded menu first. The old page has no live state left
- // when the fixture is edited, so neither visibilitychange nor pagehide can
- // overwrite the checkpoint with its stale live coordinates.
- await page.goto('/apps/meat-exe/');
- await page.evaluate(({key,destination})=>{
-  const state=JSON.parse(localStorage.getItem(key));
+ await page.addInitScript(({key,destination})=>{
+  if(sessionStorage.getItem('meat-fork-position-fixture')==='done')return;
+  const state=JSON.parse(localStorage.getItem(key)||'null');
+  if(!state)return;
   state.x=destination.x;state.z=destination.z;
   localStorage.setItem(key,JSON.stringify(state));
+  sessionStorage.setItem('meat-fork-position-fixture','done');
  },{key:SESSION,destination});
  await page.reload();await page.locator('#resumeSaved').click();
  const moved=await page.evaluate(()=>window.__MEAT_QA__());
@@ -89,11 +90,13 @@ test('walking up to a physical fork and pressing X presets the actual surgery ro
  expect(saved.routes.selected).toBe(destination.id);
  // Complete this already-cleared seed to ensure surgery respects physical choice.
  await page.keyboard.press('Escape');await page.locator('#menuPause').click();
- await page.goto('/apps/meat-exe/');
- await page.evaluate(key=>{
-  const state=JSON.parse(localStorage.getItem(key));
+ await page.addInitScript(key=>{
+  if(sessionStorage.getItem('meat-fork-cleared-fixture')==='done')return;
+  const state=JSON.parse(localStorage.getItem(key)||'null');
+  if(!state)return;
   state.toSpawn=0;state.enemies=[];state.spawnClock=30;
   localStorage.setItem(key,JSON.stringify(state));
+  sessionStorage.setItem('meat-fork-cleared-fixture','done');
  },SESSION);
  await page.reload();await page.locator('#resumeSaved').click();
  await expect(page.locator('#graftDraft')).toBeVisible({timeout:22000});
