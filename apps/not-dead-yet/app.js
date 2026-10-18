@@ -1,2 +1,7 @@
-// Pocket Works app entry: the game, UI and lifecycle live in the authored ES module.
-import './app.mjs';
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+installMobileRuntime();
+import('./app.mjs').catch(error => {
+  console.error('NOT DEAD YET failed to initialize', error);
+  const fatal = document.getElementById('fatal');
+  if (fatal) fatal.hidden = false;
+});
