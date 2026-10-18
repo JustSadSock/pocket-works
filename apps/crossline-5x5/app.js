@@ -113,9 +113,10 @@ function leaveToMenu(force=false){
   },9000);
   return;
  }
+ if(mode!=='online')storeOffline(); // Keep any unfinished local draft.
  gameToken++;clearTimeout(replayTimer);replayPaused=true;animating=false;attackMode=false;plan=[];
  modalOpen=false;$('modal').classList.add('hidden');
- if(mode==='online')leaveNet(false);else storeOffline();
+ if(mode==='online')leaveNet(false);
  mode='menu';show('menu');resumeOffer();
 }
 function localStart(kind){
