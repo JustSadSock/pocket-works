@@ -154,11 +154,32 @@ export function appendWallDetails(o,{x,z,px,pz,dx,dz,room}){
  }
 }
 export function appendDoorDetails(o,d){
+ // The doorway frame now sits on the actual transition between walkable
+ // cells, not floating on one arbitrary side of the passage. A door leaf
+ // would falsely block traversal until opening/hinge physics is implemented.
  const x=(d.x+.5)*S,z=(d.z+.5)*S;
- // Architrave and a properly visible door handle. No collision-affecting leaf.
- for(const t of [-1,1])box(o,x+.05,.04,z+t*.53,.038,2.43,.14,[.51,.35,.21],6);
- box(o,x+.05,2.42,z,.052,.09,1.14,[.48,.32,.19],6);
- round(o,x+.52,1.10,z+.53,.036,.035,[.65,.50,.28],9,9);
- box(o,x+.51,1.14,z+.55,.18,.026,.038,[.65,.50,.28],9);
- box(o,x+.04,2.20,z+.52,.13,.13,.012,[.67,.55,.36],9)
+ const brown=[.42,.27,.17],edge=[.57,.38,.23],brass=[.67,.50,.29];
+ const horizontal=d.side==='left'||d.side==='right';
+ if(horizontal){
+  const plane=(d.x+(d.side==='right'?1:0))*S;
+  for(const sign of [-1,1]){
+   box(o,plane,.01,z+sign*.568,.16,2.25,.11,brown,6);
+   box(o,plane+(d.side==='left'?.07:-.07),.01,z+sign*.565,.034,2.26,.060,edge,6);
+   for(const y of [.35,1.74])box(o,plane+.086,y,z+sign*.557,.042,.092,.026,brass,9)
+  }
+  box(o,plane,2.23,z,.16,.14,1.25,edge,6);
+  box(o,plane,.009,z,.15,.019,1.035,[.38,.29,.20],6);
+  // Light-switch plate belongs to the solid adjacent wall, not the opening.
+  box(o,plane+(d.side==='left'?.065:-.065),1.14,z+.78,.018,.14,.10,[.69,.62,.48],8)
+ }else{
+  const plane=(d.z+(d.side==='north'?1:0))*S;
+  for(const sign of [-1,1]){
+   box(o,x+sign*.568,.01,plane,.11,2.25,.16,brown,6);
+   box(o,x+sign*.565,.01,plane+(d.side==='south'?.07:-.07),.060,2.26,.034,edge,6);
+   for(const y of [.35,1.74])box(o,x+sign*.557,y,plane+.086,.026,.092,.042,brass,9)
+  }
+  box(o,x,2.23,plane,1.25,.14,.16,edge,6);
+  box(o,x,.009,plane,1.035,.019,.15,[.38,.29,.20],6);
+  box(o,x+.78,1.14,plane+(d.side==='south'?.06:-.06),.10,.14,.018,[.69,.62,.48],8)
+ }
 }
