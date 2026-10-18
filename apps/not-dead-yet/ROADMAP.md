@@ -278,7 +278,7 @@ hiding simplistic assets.
       inspection, weight in doors, subtle visual reaction on enemy hits,
       readable feedback on reaching a new depth. No overlay spam.
 
-### 2.1.4–2.1.5 — real-browser review, gameplay and framing correction (shipped)
+### QA pass 2026-10-19 — real-browser visual and gameplay review (v2.1.4–2.1.7 shipped)
 - [x] Universal Pocket Works QA executed the real PWA in desktop Chromium,
       mobile Chromium, desktop WebKit and mobile WebKit with full screenshot
       evidence; all four initial viewport/browser visual checks passed.
@@ -299,6 +299,16 @@ hiding simplistic assets.
 - [ ] Record final outcomes of the complete interactive Playwright journey
       and dedicated screenshot suite; see
       [VISUAL_QA_REPORT_2026-10-19.md](./VISUAL_QA_REPORT_2026-10-19.md).
+- [x] v2.1.7: actual corridor-mounted ceiling fixtures, enamel electrical
+      panels, coat rails and apartment plaques; seeded sparsely by actual
+      world cell, invisible collision not added, deterministic mesh
+      regressions passed in real GitHub Actions (93/93 Node).
+- [x] Separate clock for weapon reloading from capped 100ms physics
+      timestep; resolves a regression observed only in full software-GPU
+      browser runs. Pixel and input QA now have dedicated fast suites.
+- [ ] Reinspect screenshots after geometry additions for actual readability,
+      especially whether practical ceiling fixtures correspond to the
+      real spatial light sources and whether phone corridor contrast improves.
 - [ ] Address visually repetitive hallways and lighting after fixing
       actual measured art issues, not by adding generic bloom or haze.
 
