@@ -1,29 +1,27 @@
-# NOT DEAD YET — Pocket Works
+# NOT DEAD YET — Глава I: Квартира №17
 
-A complete offline-first first-person WebGL 3D survival horror inspired by JustSadSock/Not-Dead-Yet (HTML5) and JustSadSock/Not_dead_yet (Godot).
+Авторский first-person 3D хоррор внутри PocketWorks. Пожилой герой блуждает по знакомой, но ненадёжной квартире, собирает четыре вещи и пытается открыть входную дверь. Воспринимаемые противники — тревожные видения, а не реальные вооружённые люди. Игра переносит оригинальную идею «забытого пространства» из JustSadSock/Not-Dead-Yet и стрельбу от первого лица из JustSadSock/Not_dead_yet.
 
-## Core gameplay
+## Один полноценный забег
 
-Navigate a changing corridor maze, collect three fixed memory signals and return to the original cyan station. Real pursuers track the player. 70% of silhouettes are five-second illusions. The flashlight dispels false silhouettes and can stun real ones. Sprint to escape, collect all three signals, then return alive.
+Найти альбом в гостиной, таблетницу в ванной, фотографию в спальне и ключи на кухне. Подойти к входной двери и нажать «Взять/Открыть». Прохождение успешно, когда найдены все четыре предмета. Во время поиска квартира переставляет мебель и переносит двустворчатые дверные проёмы за спиной; цель и выход всегда остаются достижимыми. Мнимая угроза повышает напряжение; луч фонаря рассеивает силуэты, револьвер расходует реальные патроны, перезарядка занимает время. Израсходованное самообладание завершает ночь.
 
-## Repairs to the original
+## Управление
 
-- The old fov.js depended on gameMap.cols/rows/tiles while map.js exposed a sparse chunk map, and monsters.js expected yet another representation. Current enemy AI, 3D collision, and occlusion share one World API.
-- The old procedural generator silently abandoned long connections and later trimmed corridor tiles, causing isolated rooms. Every new sector has four mandatory aligned two-cell gates, all linked to a central spine; side rooms explicitly connect to it.
-- The original regenerated forgotten tiles one by one and overlaid old fragments, potentially trapping the player. This implementation regenerates whole distant sectors only while at least two sector steps away and unseen for 13 seconds. Its four gateways never change.
-- Looking direction is independent of walking direction, unlike the previous 2D player movement angle.
-- There is now a complete objective, victory, death, autosave, restart confirmation, sound toggle, desktop controls and mobile twin-thumb controls.
+ПК: WASD/стрелки — ходьба, мышь/перетаскивание справа — смотреть, Shift — быстрый шаг, E — взять/открыть, ЛКМ после захвата курсора или Пробел — стрелять, R — перезарядка, F — фонарь, I — инвентарь, Esc — пауза. Захват курсора не обязателен для ходьбы. Телефон: левая аналоговая область — движение, справа — свободный поворот камеры, отдельные кнопки бега, взаимодействия, выстрела, перезарядки и просмотра вещей. Действия доступны без подключения сервера.
 
-## Controls
+## Архитектура и исправления
 
-Desktop: WASD / arrows, mouse, Shift sprint, F torch, M sound, Esc pause. Mobile: left stick walks, right side turns the view, hold БЕГ to sprint, tap СВЕТ to toggle the torch.
+- `apartment.mjs`: одна целостная карта с 4 комнатами, гарантированными связными проходами, коллизиями, предметами, seed и безопасным изменением не просматриваемых комнат. Генерация не перезаписывает стены под игроком.
+- `renderer.mjs`: WebGL1 с реальной геометрией пола, стен, потолка, мебели, предметов и низкой моделью револьвера. Процедурные фактуры для обоев, плитки, паркета, ткани и металла; два тёплых источника света, фонарь и туман.
+- `app.mjs`: жизненный цикл главы, ввод, цели, журнал вещей, стрельба, звук, состояния победы/проигрыша, сохранение и диагностика.
+- `world.mjs`: сохранённый движок бесконечных секторов из первого переноса для регрессионных тестов и возможных других карт; в главе I не используется.
+- `ROADMAP.md`: следующие этапы, визуальное направление, механики и проверяемые условия готовности.
 
-The compass shows direction and distance to the closest missing memory beacon and then the exit. Progress is saved on pause, page exit and periodically. No remote runtime dependencies.
+Изначально в 1.0 был статичный абстрактный лабиринт с редкой перестройкой далёких чанков и постоянно видимым голубым маркером выхода под камерой. Эти две вещи сознательно удалены из основного сценария 1.1. Управление больше не зависит от успешного pointer lock.
 
-## Test
+## Проверки
 
-Run node --test apps/not-dead-yet/tests/maze.test.mjs.
+`node --test apps/not-dead-yet/tests/*.test.mjs`
 
-Browser QA: start by clicking #start; inspect window.__PW_TEST_STATE__ for renderer3D and current position. Walk forward, toggle torch, pause/resume, save/reload, and inspect phone and PC screenshots.
-
-The renderer uses custom native WebGL geometry and light/fog shaders. Requires a WebGL-enabled browser.
+Проверки квартиры покрывают 300 семян, проходы, четыре сценарные цели, новые варианты планировок, изменение комнат и восстановление состояния. Игровой сценарий проверяется в браузерном QA PocketWorks, включая ходьбу, возобновление, взаимодействие, инвентарь и показ результата. Текущее состояние публикуется в `window.__PW_TEST_STATE__` (phase, position, moves, blocked, inventory, ammo, rearrangements).

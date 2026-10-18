@@ -1,0 +1,120 @@
+// NOT DEAD YET — the first authored apartment chapter and its safe mutable topology.
+export const W=30,H=24,SIZE=30;
+export const HOME={x:15.5,z:12.5};
+export const LABELS={living:'Гостиная',kitchen:'Кухня',bedroom:'Спальня',bathroom:'Ванная',hall:'Прихожая'};
+export const ITEMS=[{id:'album',room:'living',label:'Семейный альбом',note:'Лица знакомые. Имена не вспоминаются.'},{id:'pills',room:'bathroom',label:'Таблетница',note:'Сегодня среда? Дни недели перемешались.'},{id:'photo',room:'bedroom',label:'Фотография',note:'Она улыбалась здесь, раньше.'},{id:'keys',room:'kitchen',label:'Ключи от двери',note:'Ключи всегда были на кухне. Кажется.'}];
+const TYPES=['living','kitchen','bedroom','bathroom'];
+const RECTS=[{x0:2,x1:13,z0:2,z1:10,doorZ:10},{x0:17,x1:27,z0:2,z1:10,doorZ:10},{x0:2,x1:13,z0:14,z1:21,doorZ:14},{x0:17,x1:27,z0:14,z1:21,doorZ:14}];
+export const hash=(...numbers)=>{let v=2166136261;for(let n of numbers){v=Math.imul(v^(n|0),16777619);v^=v>>>13}return (v^(v>>>16))>>>0};
+const rng=(seed)=>{let n=seed>>>0;return()=>{n+=0x6D2B79F5;let z=n;z=Math.imul(z^(z>>>15),z|1);z^=z+Math.imul(z^(z>>>7),z|61);return ((z^(z>>>14))>>>0)/4294967296}};
+const inside=(x,z)=>x>=0&&x<W&&z>=0&&z<H;
+export class Apartment {
+ constructor(seed=1,data=null){
+  this.seed=seed>>>0;this.epoch=0;this.changes=0;this.lastChange=null;this.terrainRevision=0;this.nextShift=5;
+  const types=[...TYPES],rand=rng(hash(seed,177));
+  for(let i=types.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[types[i],types[j]]=[types[j],types[i]]}
+  this.rooms=RECTS.map((r,i)=>({...r,type:types[i],phase:data?.phases?.[i]??0,lastSeen:0,lastChanged:-15}));
+  this.tiles=new Uint8Array(W*H);this.rebuild()
+ }
+ room(type){return this.rooms.find(r=>r.type===type)}
+ point(type){if(type==='hall')return {...HOME};const r=this.room(type);return{x:(r.x0+r.x1)/2+.5,z:(r.z0+r.z1)/2+.5}}
+ door(r){return{x:r.x0+3+hash(this.seed,r.x0,r.z0,r.phase)%(r.x1-r.x0-5),z:r.doorZ}}
+ rebuild(){
+  this.tiles.fill(0);const dig=(x,z,type)=>{if(inside(x,z))this.tiles[z*W+x]=type};
+  for(let z=11;z<=13;z++)for(let x=2;x<=27;x++)dig(x,z,1);
+  for(let z=2;z<=21;z++)for(let x=14;x<=16;x++)dig(x,z,1);
+  for(const r of this.rooms){
+   for(let z=r.z0+1;z<r.z1;z++)for(let x=r.x0+1;x<r.x1;x++)dig(x,z,2);
+   const p=this.door(r);dig(p.x,p.z,3);dig(p.x+1,p.z,3)
+  }this.terrainRevision++;this.itemCache=new Map()
+ }
+ cell(x,z){return inside(x,z)?this.tiles[z*W+x]:0}
+ pass(x,z){return this.cell(x,z)>0}
+ objects(){
+  const out=[];const add=(r,type,rx,rz,w,d,h,solid=true)=>out.push({room:r.type,type,x:r.x0+rx,z:r.z0+rz,w,d,h,solid,phase:r.phase});
+  for(const r of this.rooms){const width=r.x1-r.x0,depth=r.z1-r.z0,shift=((r.phase+this.seed)%3-1)*.22;
+   if(r.type==='living'){
+    add(r,'sofa',2.7,2.3+shift,2.7,1.1,1.04);add(r,'rug',width*.5,depth*.52,3.7,2.3,.015,false);
+    add(r,'books',width-1.4,2.1,1.0,.5,2.2);add(r,'table',width*.52,depth*.56,1.35,.85,.45);
+    add(r,'lamp',width-2,depth-1.9,.35,.35,1.8,false);add(r,'painting',width*.45,.25,1.8,.08,1.25,false)
+   }else if(r.type==='kitchen'){
+    // The entry is always on the corridor-facing wall. Appliances belong opposite it,
+    // so a moving doorway can never put a refrigerator directly inside the threshold.
+    const backWall=r.z0<11?1.45:depth-1.45;
+    add(r,'cabinets',2.8,backWall,3.1,.75,2.1);add(r,'fridge',width-1.35,backWall,.95,.85,2.0);
+    add(r,'table',width*.48,depth*.52+shift,1.65,1.15,.75);add(r,'sink',2.3,backWall,.85,.8,.92,false)
+   }else if(r.type==='bedroom'){
+    add(r,'bed',2.9,2.45+shift,2.25,2.7,.75);add(r,'wardrobe',width-1.2,2.5,.85,2.35,2.18);
+    add(r,'desk',width-2.3,depth-1.3,1.35,.7,.82);add(r,'painting',width*.45,.2,1.7,.08,1.1,false)
+   }else{
+    add(r,'bath',2.65,2.2+shift,2.15,1.05,.72);add(r,'sink',width-1.25,2.0,.75,.65,.8);
+    add(r,'mirror',width-1.25,1.15,.84,.08,1.1,false);add(r,'toilet',width-2,depth-1.4,.67,.85,.64)
+   }
+  }
+  out.push({type:'door',room:'hall',x:15.5,z:21,w:2.2,d:.2,h:2.85,solid:false});return out
+ }
+ canStand(x,z,r=.22){
+  if(!Number.isFinite(x)||!Number.isFinite(z))return false;
+  for(const dx of [-r,r])for(const dz of [-r,r])if(!this.pass(Math.floor(x+dx),Math.floor(z+dz)))return false;
+  for(const a of this.objects())if(a.solid&&Math.abs(x-a.x)<a.w*.5+r&&Math.abs(z-a.z)<a.d*.5+r)return false;
+  return true
+ }
+ reachablePosition(target){
+  const queue=[[Math.floor(HOME.x),Math.floor(HOME.z)]],seen=new Set([Math.floor(HOME.x)+','+Math.floor(HOME.z)]);
+  for(let i=0;i<queue.length;i++){
+   const [x,z]=queue[i];if(Math.hypot(x+.5-target.x,z+.5-target.z)<1.12)return true;
+   for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const xx=x+dx,zz=z+dz,k=xx+','+zz;
+    if(!seen.has(k)&&this.canStand(xx+.5,zz+.5)){seen.add(k);queue.push([xx,zz])}
+   }
+  }return false
+ }
+ itemPosition(id){
+  if(this.itemCache.has(id))return this.itemCache.get(id);
+  const i=ITEMS.find(x=>x.id===id);if(!i)return null;
+  const r=this.room(i.room),base=this.point(i.room),gate=this.door(r),insideZ=gate.z+(r.z0<11?-1.5:1.5);
+  const places=[
+   [base.x,base.z],[base.x+1.7,base.z+1.4],[base.x-1.7,base.z+1.4],
+   [base.x+1.7,base.z-1.4],[base.x-1.7,base.z-1.4],
+   [gate.x+.5,insideZ],[gate.x+1.5,insideZ],[gate.x+.5,insideZ+(r.z0<11?-1.2:1.2)]
+  ];
+  for(const [x,z] of places){
+   if(this.canStand(x,z,.25)&&this.reachablePosition({x,z})){
+    const result={...i,x,z};this.itemCache.set(id,result);return result
+   }
+  }
+  const fallback={...i,x:gate.x+.5,z:insideZ};
+  this.itemCache.set(id,fallback);return fallback
+ }
+ location(x,z){for(const r of this.rooms)if(x>=r.x0&&x<=r.x1+1&&z>=r.z0&&z<=r.z1+1&&this.cell(Math.floor(x),Math.floor(z))===2)return LABELS[r.type];return LABELS.hall}
+ visible(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d*8));for(let i=1;i<n;i++){const t=i/n;if(!this.pass(Math.floor(ax+(bx-ax)*t),Math.floor(az+(bz-az)*t)))return false}return true}
+ tick(px,pz,yaw,t){
+  if(t<this.nextShift)return false;
+  const lx=Math.sin(yaw),lz=-Math.cos(yaw);
+  for(const r of this.rooms){
+   const c=this.point(r.type),dx=c.x-px,dz=c.z-pz,d=Math.hypot(dx,dz),f=(dx*lx+dz*lz)/Math.max(.1,d);
+   const door=this.door(r),doorDx=door.x+.5-px,doorDz=door.z+.5-pz,doorDist=Math.hypot(doorDx,doorDz);
+   const doorFacing=(doorDx*lx+doorDz*lz)/Math.max(.1,doorDist);
+   const seen=(d<14&&f>.15&&this.visible(px,pz,c.x,c.z))||
+    (doorDist<15&&doorFacing>.18&&this.visible(px,pz,door.x+.5,door.z+.5));
+   if(seen)r.lastSeen=t;
+   if(d<5.6||Math.hypot(px-door.x,pz-door.z)<4.5||seen||t-r.lastSeen<2||t-r.lastChanged<7)continue;
+   const prev=r.phase;r.phase++;this.rebuild();
+   if(!this.canStand(px,pz)){r.phase=prev;this.rebuild();continue}
+   r.lastChanged=t;r.lastSeen=t;this.nextShift=t+4.8;this.changes++;this.epoch++;this.lastChange={type:r.type,t};return true
+  }return false
+ }
+ findStep(sx,sz,tx,tz){
+  const start=[Math.floor(sx),Math.floor(sz)],end=[Math.floor(tx),Math.floor(tz)],K=(x,z)=>x+','+z;
+  if(!this.pass(...start)||!this.pass(...end))return null;
+  const queue=[start],seen=new Set([K(...start)]),prev=new Map();let reached=false;
+  for(let i=0;i<queue.length;i++){const [x,z]=queue[i];if(x===end[0]&&z===end[1]){reached=true;break}
+   for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const xx=x+dx,zz=z+dz,k=K(xx,zz);if(this.pass(xx,zz)&&!seen.has(k)){seen.add(k);prev.set(k,K(x,z));queue.push([xx,zz])}}
+  }if(!reached)return null;
+  let at=K(...end),origin=K(...start);while(prev.get(at)!==origin&&at!==origin){at=prev.get(at);if(!at)return null}
+  if(at===origin)return{x:tx,z:tz};const [x,z]=at.split(',').map(Number);return{x:x+.5,z:z+.5}
+ }
+ save(){return{seed:this.seed,phases:this.rooms.map(r=>r.phase)}}
+ fingerprint(){return this.rooms.map(r=>r.type+':'+this.door(r).x+':'+r.phase).join('|')}
+}
+export function validateApartment(seed){const a=new Apartment(seed);if(!a.canStand(HOME.x,HOME.z))return false;return [...ITEMS.map(i=>a.itemPosition(i.id)),HOME].every(p=>a.canStand(p.x,p.z)&&a.findStep(HOME.x,HOME.z,p.x,p.z))}

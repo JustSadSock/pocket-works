@@ -3,15 +3,15 @@
   "status": "ready",
   "product": "not-dead-yet",
   "direction": {
-    "premise": "A physical abandoned maze that literally rearranges forgotten parts. Player feels alone until the corridor breathes behind them.",
-    "composition": "The 3D world fills the screen; one faint axial compass and a tiny slab of health float on top. Menu type wraps around a ghostly lens aperture rather than a card.",
-    "shapeLanguage": "Brutalist tiled service tunnels, sharp double-door apertures, bare concrete ribs, faceless rectangular sentries.",
-    "surfaceAndMaterial": "Tarnished calcium walls, streaked aged concrete, matt graphite ceilings, amber mnemonic relics, fog and hard light.",
-    "paletteLogic": "Deep petrol shadow and muted pale lime grey architecture. Amber appears only where objective or life is recoverable; bruised carmine on threats.",
-    "typography": "Tall compressed mechanical sans for status; huge tightly stacked uppercase title; no atmospheric microcopy during play.",
-    "signature": "The unchangeable four-way structural spine of every chunk is surrounded by peripheral rooms that morph only after the player leaves; a faint rotating target pointer remains stable as architecture shifts.",
-    "distinction": "Unlike GLOAMSTEP's overhead pixel board and MELT//CRYPT's ornamental combat arena, this is first-person embodied navigation through volumetric concrete with deliberately minimal controls.",
-    "spatialRationale": "Every pixel beyond occasional floating controls belongs to rendered corridors; joystick/looking surfaces use separate thumb zones with no document scrolling.",
+    "premise": "A senior walks through an old personal apartment. Household objects remain tangible and recognizable while memory changes which doorway was behind him.",
+    "composition": "Full-bleed eye-level domestic interiors under peripheral self-control and ammunition readouts; inventory opens only when requested.",
+    "shapeLanguage": "Uneven wooden doors, upholstered sofas, bedding folds, kitchen cabinets, framed portraits, familiar plumbing and rounded looming figures.",
+    "surfaceAndMaterial": "Procedural aged floral wallpaper, scratched parquet, ceramic bathroom tile, rough kitchen paint, worn upholstered fabrics, brass handles and warm lamps.",
+    "paletteLogic": "Desaturated nicotine cream, brown wood and muted sage replace teal industrial corridors; isolated warm brass marks objects and danger appears as faint rusty red.",
+    "typography": "Small utilitarian location and objective labels in play; larger compressed worn theatre-poster title only in the initial nocturnal menu.",
+    "signature": "The same apartment quietly changes its door positions and furniture when the protagonist looks away; the world remains physically walkable and all objects remain reachable.",
+    "distinction": "Unlike the abstract brutalist WebGL prototype and GLOAMSTEP's tile dungeon, an intimate recognizable furnished home provides tactile spatial storytelling.",
+    "spatialRationale": "A small persistent HUD leaves almost the entire view for walls and belongings. Separate left/right thumb surfaces keep first-person navigation usable in portrait.",
     "comparisons": [
       {
         "slug": "gloamstep",
@@ -26,17 +26,17 @@
     ]
   },
   "production": {
-    "renderer": "Pure authored WebGL geometry and custom light/fog shader, zero runtime CDN dependencies; generated chunks with cached vertex buffers.",
-    "focalAsset": "Stable two-cell architectural passages, procedurally carved rooms and original faceless phantom meshes."
+    "renderer": "Custom offline WebGL1 interior geometry plus programmable material patterns for parquet, faded wallpaper, tile, upholstery and enamel; near-view held revolver.",
+    "focalAsset": "The opening apartment itself: seeded room assignments, furniture, patterned walls and physical door frames plus a personally authored wooden-door icon."
   },
   "motion": {
-    "character": "Inertial head bob tied only to actual movement, no idle screen wobble.",
-    "action": "Thumb drag or mouse looks and WASD walks through real geometric rooms.",
-    "anticipation": "A low crimson hue and a distant elongated silhouette warn of a nearby genuine pursuer.",
-    "response": "Torch direction immediately reveals detail and can dispel fake phantoms; pressing sprint changes physical movement speed.",
-    "followThrough": "Collected amber mnemonic fades, counter increments and compass redirects to the next source.",
-    "interruption": "Pointer cancellation clears sticks; tab suspension pauses simulation and autosaves.",
-    "reducedMotion": "User motion reduction disables head-bob and incidental shake while preserving traversal."
+    "character": "Measured walking inertia and subtle gait synchronized to movement; rounded enemies sway slightly, avoiding ceaseless random camera wobble.",
+    "action": "WASD and joystick translate the character across walkable rooms; independent mouse/touch look points the revolver through door openings.",
+    "anticipation": "A shadow at a doorway or the sound of furniture shifting warns of a changing remembered room before it can be revisited.",
+    "response": "The camera moves on every directional press; gunshot muzzle exposure and dwindling ammo respond immediately; taking an item changes its world mesh and inventory.",
+    "followThrough": "After a glance away, a room may have moved its door; the next visit resolves into a visibly different furniture arrangement while objectives remain accessible.",
+    "interruption": "Pointercancel and focus loss always reset movement; pause saves state and freezes pursuit without claiming the user has died.",
+    "reducedMotion": "Reduce-motion disables head-bob while keeping navigation, textures, enemy visibility and action states intact."
   },
   "evidence": {
     "entry": "./",
@@ -44,7 +44,7 @@
       "type": "click",
       "selector": "#start"
     },
-    "expectedChange": "Main menu disappears and the first-person 3D labyrinth becomes controllable with compass and health displayed.",
+    "expectedChange": "The apartment menu closes to reveal a furnished first-person interior with functional movement, aim, weapon and interactable objects.",
     "capture": [
       "initial",
       "action",
@@ -57,10 +57,30 @@
     "navigation": "world-travel",
     "chromeTopology": "unframed-scene",
     "dominantMotion": "immediate",
-    "primaryVerb": "Move through geometric 3D corridors and collect memory sources while evading pursuers.",
-    "physicalFeedback": "Position changes with WASD/thumb; corridor parallax and torch cone move continuously; collectible disappears when reached.",
-    "spatialRationale": "Full phone width remains 3D scene. Peripheral overlays do not reduce field of view; buttons sit inside thumb reach only.",
+    "primaryVerb": "Navigate a physically furnished apartment in first person, gather familiar items, disperse perceived figures and open the home door.",
+    "physicalFeedback": "Keyboard or thumb input immediately changes 3D position; look gesture moves sight line while firearm action changes rounds, sound and enemies.",
+    "spatialRationale": "Low-priority HUD hugs the top/phone edges while the inhabited apartment occupies full screen; interactive inventory is a temporary overlay.",
     "comparisons": [
+      {
+        "slug": "fog-of-conquest",
+        "spatialDifference": "A single personal apartment seen through the protagonist's eyes replaces an overhead army map, region borders and tactical interface panels.",
+        "interactionDifference": "Exploration and inventory-based storytelling differ from troop movement, resource management and turn resolution."
+      },
+      {
+        "slug": "trafficity",
+        "spatialDifference": "Eye-level rooms with old wallpaper, a household door and full-bleed perspective are unlike Trafficity's miniature overhead streets and legible road graph.",
+        "interactionDifference": "Walking, recalling family objects and fending off private hallucinations replaces drawing tactical routes for little delivery vehicles."
+      },
+      {
+        "slug": "crossline-5x5",
+        "spatialDifference": "A furnished eye-height domestic interior and working door replace the stylized fixed-grid tactical dueling board and UI lanes.",
+        "interactionDifference": "The player navigates in real time through changing personal rooms and collects narrative objects, not submitting simultaneous tactical actions on a five-by-five battlefield."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "The view opens inside an inhabited, enclosed old apartment with low ceiling, textile furniture and brass door, not a grotesque labyrinth of organic membranes.",
+        "interactionDifference": "Collecting family objects and navigating an unreliable known home with limited subjective combat replaces a fast arcade shooter through fleshy procedural levels."
+      },
       {
         "slug": "tyaga-duel",
         "spatialDifference": "A continuous 3D maze seen through eye-height perspective replaces a flat single-screen competitive gravity or pulling arena.",
