@@ -56,3 +56,8 @@ body[data-lab-view="observer"] .canvas-frame{background:#09161c}
 .observer-panel{grid-column:1/-1}
 }
 @media(max-width:350px){.views button{padding:3px 5px;font-size:9px}.primary{font-size:9px}}
+
+.optical-diagnostics{font:11px/1.5 ui-monospace,Consolas,monospace;color:#4c716b;padding:5px 2px 9px;min-height:36px}
+body[data-lab-view="observer"] .readouts>div:nth-child(n+3){display:none}
+body[data-lab-view="observer"] .readouts{grid-template-columns:1fr 1fr}
+@media(max-width:980px){.observer-panel>.optical-diagnostics{grid-column:1/-1}}
