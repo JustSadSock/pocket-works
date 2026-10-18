@@ -3480,10 +3480,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "6c46dd2f661578b6180ca87cdb3858547ac713ba",
-    "lastAttemptAt": "2026-10-18T21:28:07.195Z",
-    "revision": "6c46dd2f661578b6180ca87cdb3858547ac713ba",
-    "qualityScore": 78,
+    "lastAttemptRevision": "c101497f5f9602f1c6a483e9826ac9e2e14550ad",
+    "lastAttemptAt": "2026-10-18T21:35:08.316Z",
+    "revision": "c101497f5f9602f1c6a483e9826ac9e2e14550ad",
+    "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3495,7 +3495,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "3fa9a07059b0b398e49e6a8e04fc9ae6d0163e645424392e188c3a0e746285b4",
+    "sha256": "6916fa00b43b9ea97cb75f19363cbd86fba016ccd3cbf8679357ea684d8ec03a",
     "imageVersion": 2
   },
   "crossline-5x5": {
@@ -3515,7 +3515,7 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "ddc8a3736c17fa192276bc94cb7c21bc51cf312d",
+    "revision": "da73acde5b237829519a59d01fe6d48c2bebd626",
     "qualityScore": 57,
     "visionScore": null,
     "prepared": false,
@@ -3529,38 +3529,28 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "a5ad42b879b96e40928431652259c2d5e5e14362020fc791ae035920ed3985a0",
+    "sha256": "902463147af489de3e30d37c1503145c6dd29a7dfb6e7b17a4d7970a9a126ccd",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "ddc8a3736c17fa192276bc94cb7c21bc51cf312d",
-    "lastAttemptAt": "2026-10-18T21:05:55.086Z"
+    "lastAttemptRevision": "da73acde5b237829519a59d01fe6d48c2bebd626",
+    "lastAttemptAt": "2026-10-18T21:35:31.229Z"
   },
   "portal-lab": {
     "note": "No frame passed image-content checks",
-    "diagnostic": {
-      "bestScore": 51,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 40181,
-        "variance": 35.08746245808799,
-        "entropy": 2.013692360967079,
-        "edgeDensity": 0.1548859126984127,
-        "colorfulness": 20.317626953125,
-        "centerDetail": 18.948171237070454,
-        "meanLight": 44.90824731445344
-      },
-      "gameplayEntry": {
-        "started": false,
-        "actions": []
-      },
-      "url": "http://127.0.0.1:4173/apps/portal-lab/?pw-cover=1&pw_release=0.1.0&pw_fp=11f7cacfe4ac4bb6daa4d854"
-    },
-    "status": "failed",
+    "diagnostic": null,
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "2a00f772bc15126df3b1902b113990b3b992ed23",
-    "lastAttemptAt": "2026-10-18T20:47:21.888Z"
+    "lastAttemptRevision": "a2672a9600b739fdd5af458623b881c308430c7c",
+    "lastAttemptAt": "2026-10-18T21:35:19.303Z",
+    "revision": "a2672a9600b739fdd5af458623b881c308430c7c",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "shot": 0,
+    "sha256": "1fe3b1920c507e0a7b153ef737806a50efd23186637c0e1c1f1eb713226ae4d2",
+    "imageVersion": 2
   }
 }
