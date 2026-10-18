@@ -36,7 +36,7 @@ export function updatePresence(e,ctx){
  const heard=audible(noise,e,time,world.visible.bind(world));
  const target=heard?noise:(dist<10&&world.visible(e.x,e.z,player.x,player.z)?player:null);
  e.attention=heard?'sound':target?'sight':'none';
- if(e.kind==='figure'&&target&&!illuminated){
+ if((e.kind==='figure'||e.kind==='crawler')&&target&&!illuminated){
   e.pathTime=(e.pathTime??0)-dt;
   if(e.pathTime<=0||!e.path){e.pathTime=.50;e.path=world.findStep(e.x,e.z,target.x,target.z)}
   if(e.path){
