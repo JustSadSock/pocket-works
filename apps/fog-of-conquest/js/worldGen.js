@@ -22,6 +22,7 @@
     balanceStarts();
     spiceRandom();
     ensureTerrainPresence();
+    ensureConnectivity(); // verify after all terrain modifiers
 
     global.units.push({id:global.nextUnitId++,r:1,c:2,owner:1,type:'swordsman',
       hp:global.UNIT_TYPES.swordsman.hpMax,
@@ -173,8 +174,9 @@
       }
     }
     if(!visited[global.ROWS-2][global.COLS-2]){
-      let r=1,c=1; while(r<global.ROWS-1&&c<global.COLS-1){
-        global.map[r][c]=global.TERRAIN.PLAIN; r++; c++; }
+      // Replace the disconnected diagonal carve with a four-neighbour corridor.
+      for(let c=1;c<=global.COLS-2;c++)global.map[1][c]=global.TERRAIN.PLAIN;
+      for(let r=1;r<=global.ROWS-2;r++)global.map[r][global.COLS-2]=global.TERRAIN.PLAIN;
     }
   }
 
