@@ -283,9 +283,9 @@ function handoff(){
 function finishLocalRound(){
  if(!offline?.pending?.A||!offline?.pending?.B)return;
  const match=offline.match,round=match.round,record=simulateRound(match,offline.pending);
- offline.match=record.match;offline.phase=record.match.outcome?'finished':'planning';
+ offline.match=record.match;offline.phase=mode==='tutorial'||record.match.outcome?'finished':'planning';
  offline.pending={A:null,B:null};offline.turn='A';
- if(record.match.outcome&&record.match.outcome!=='draw')offline.score[record.match.outcome]++;
+ if(mode!=='tutorial'&&record.match.outcome&&record.match.outcome!=='draw')offline.score[record.match.outcome]++;
  plan=[];editingSlot=null;attackMode=false;storeOffline();
  animateRecord(record.record,round);
 }
@@ -312,6 +312,7 @@ function submitLocal(){
  offline.pending[who]=JSON.parse(JSON.stringify(plan));
  plan=[];editingSlot=null;attackMode=false;attackDirs=[];soundFX('plan');
  if(mode==='solo'){continueSoloPlanning();return}
+ if(mode==='tutorial'){offline.pending.B=JSON.parse(JSON.stringify(GUIDE_OPPONENT));finishLocalRound();return}
  if(!offline.pending.B){handoff();storeOffline();return}
  finishLocalRound();
 }
@@ -420,12 +421,14 @@ function planProblem(code){
 }
 function saveDraft(){if(mode!=='online')storeOffline()}
 function selectSlot(index){
+ if(mode==='tutorial'){guideWrong();return}
  if(locked()||index<0||index>plan.length||index>=STEPS)return;
  editingSlot=editingSlot===index?null:index;attackMode=false;attackDirs=[];
  $('planFeedback').classList.remove('is-error');
  soundFX('tap');render();
 }
 function reorderSlot(offset){
+ if(mode==='tutorial'){guideWrong();return}
  if(locked()||editingSlot===null)return;
  const changed=trySwapCommand(plan,editingSlot,offset);
  if(changed.error){planProblem(changed.error);return}
@@ -434,12 +437,14 @@ function reorderSlot(offset){
  soundFX('tap');buzz(6);render();saveDraft();
 }
 function removeSlot(){
+ if(mode==='tutorial'){guideWrong();return}
  if(locked()||editingSlot===null)return;
  plan=removeCommand(plan,editingSlot);editingSlot=null;
  attackMode=false;attackDirs=[];$('planFeedback').classList.remove('is-error');soundFX('tap');buzz(6);render();saveDraft();
 }
 function enqueue(action){
  if(locked())return;
+ if(mode==='tutorial'&&!guideAccept(plan.length,action)){guideWrong();return}
  const target=editingSlot??plan.length;
  if(target>=STEPS){planProblem('exactly_five_actions');return}
  const result=trySetCommand(plan,target,action);
@@ -450,6 +455,7 @@ function enqueue(action){
 }
 function direction(d){
  if(locked())return;
+ if(mode==='tutorial'&&attackMode&&d!=='down'){guideWrong();return}
  const info=allowed();
  if(attackMode){
   if(info.moved.has(d)){planProblem('attack_direction_conflict');return}
@@ -460,6 +466,7 @@ function direction(d){
 }
 function toggleAttack(){
  if(locked())return;
+ if(mode==='tutorial'&&plan.length!==1){guideWrong();return}
  if(attackMode){
   if(!attackDirs.length){planProblem('invalid_attack_directions');return}
   enqueue({type:'attack',dirs:attackDirs.slice()});return;
@@ -472,6 +479,7 @@ function toggleAttack(){
  render();soundFX('tap');
 }
 function undo(){
+ if(mode==='tutorial'){guideWrong();return}
  if(locked())return;
  if(attackMode){attackMode=false;attackDirs=[]}
  else if(editingSlot!==null){plan=removeCommand(plan,editingSlot);editingSlot=null}
@@ -480,6 +488,7 @@ function undo(){
 }
 function submit(){
  if(animating||recording||modalOpen||thinkingAI)return;
+ if(mode==='tutorial'&&!guideReady(plan)){guideWrong();return}
  if(editingSlot!==null){toast('Заверши редактирование выбранного шага');return;}
  if(attackMode){toggleAttack();return;}
  if(!isPlanning()||ready()[side()])return;
@@ -494,6 +503,7 @@ function drawBoard(host,units,edges,events=[],preview=false,shownRound=game()?.r
  const targets=new Set((projected?.targetCells||[]).map(p=>p.x+','+p.y));
  paintArena(host,units,edges,events,{round:shownRound,targets,instant:true});
  paintPlanOverlay(host,projected,{selected:editingSlot});
+ paintCellMarks(host,ownMarks(),preview&&mode!=='tutorial');
 }
 function render(){
  if(screen!=='play')return;
@@ -586,6 +596,7 @@ async function animateRecord(record){
 }
 function finish(){
  if(showingOutcome||screen!=='play')return;
+ if(mode==='tutorial'){tutorialFinished();return}
  showingOutcome=true;rememberFinished();
  const winner=game()?.outcome,name=winner==='draw'?'Ничья':winner==='A'?'Победа игрока А':'Победа игрока Б';
  const termination=game()?.termination;
