@@ -8,7 +8,7 @@ installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
 const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'match',booksKey=storage+'grimoire';
-let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0;
+let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
@@ -225,28 +225,37 @@ function applyPendingAppearance(){
  $('my-name').textContent=(appearance.source==='guest'?'ТЫ':appearance.name).slice(0,13).toUpperCase();
  for(const [id,size] of [['menu-portrait',42],['my-portrait',40],['result-portrait',56]])drawPortrait($(id).getContext('2d'),appearance,size);
  if(active?.phase==='build')renderWorkbench();
+ if(mode==='menu')drawHero($('hero-preview').getContext('2d'),appearance,frame/60);
  return true;
 }
-async function refreshAppearance({force=false}={}){
- if(!force&&Date.now()-lastProfileFetch<10000)return;
+function refreshAppearance({force=false}={}){
+ // Safari dispatches focus/visibility events during navigation. Coalesce them
+ // rather than issuing multiple forced Pocket ID requests and racing outcomes.
+ if(avatarInFlight)return avatarInFlight;
+ if(!force&&Date.now()-lastProfileFetch<10000)return Promise.resolve();
  lastProfileFetch=Date.now();const request=++profileRequest;
- let identity=null,social=null;
- try{
-  identity=await getPocketIdentity({force});
-  if(identity?.complete){
-   const result=await fetch('/pocket-social/me',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(3500)});
-   if(result.ok)social=await result.json();
-  }
- }catch{/* guest/preset fallback */}
- let next=normalizeAppearance(identity,social);
- next=await decodeAppearance(next);
- if(request!==profileRequest)return;
- pendingAppearance=next;
- if(!active||mode==='menu'||mode==='books'||mode==='result')applyPendingAppearance();
+ const task=(async()=>{
+  let identity=null,social=null;
+  try{
+   identity=await getPocketIdentity({force});
+   if(identity?.complete){
+    const result=await fetch('/pocket-social/me',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(3500)});
+    if(result.ok)social=await result.json();
+   }
+  }catch{/* safe guest/preset fallback */}
+  let next=normalizeAppearance(identity,social);
+  next=await decodeAppearance(next);
+  if(request!==profileRequest)return;
+  pendingAppearance=next;
+  if(!active||mode==='menu'||mode==='books'||mode==='result')applyPendingAppearance();
+ })();
+ avatarInFlight=task;
+ return task.finally(()=>{if(avatarInFlight===task)avatarInFlight=null});
 }
 window.addEventListener('focus',()=>{if(mode==='menu'||mode==='books')void refreshAppearance({force:true})});
 document.addEventListener('pocket-social:portrait',()=>{void refreshAppearance({force:true})});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(mode==='menu'||mode==='books'))void refreshAppearance({force:true})});
+drawHero($('hero-preview').getContext('2d'),appearance,0);
 drawPortrait($('menu-portrait').getContext('2d'),appearance,42);
 drawPortrait($('my-portrait').getContext('2d'),appearance,40);
 drawPortrait($('result-portrait').getContext('2d'),appearance,56);
