@@ -3,6 +3,7 @@
 // fictional losses, or separate combat-time economy.
 import {walkingSteps,walkPath} from './navigation.js';
 import {scheduleWork,commitWork} from './work-time.js';
+import {assessFieldTactics,tacticalBreak,pursuitChance} from './battle-tactics.js';
 
 const SIDE=160,WOOD_PER_STAFF=2,MAX_MUSTER=4;
 const EXPEDITION_RATION=.68,EXPEDITION_DAYS=4,DAILY_MARCH_CELLS=64;
@@ -107,6 +108,7 @@ export function beginLandDispute(s,claimId,ownerId,cell,notify,options={}){
   claimantId:claimId,ownerId,cell,claimants:as.map(p=>p.id),owners:bs.map(p=>p.id),
   muster,expedition,outcome:null,wounded:[],dead:[],compensationCoin:0,
   morale:null,retreated:null,arrived:{claimants:0,owners:0},
+  tactics:null,broken:null,pursued:[],
   ...(expedition?{
    supply:{claimants:{grain:leftFood,loaded:leftFood,eaten:0,returned:0},
            owners:{grain:rightFood,loaded:rightFood,eaten:0,returned:0}},
@@ -155,15 +157,15 @@ function readiness(s,ids){
  }
  return {power:rnd(power),morale:arrived?rnd(moraleSum/arrived):0,arrived};
 }
-function wound(s,c,people,threat,side,notify){
+function wound(s,c,people,threat,side,notify,pursuit=false){
  for(const id of people){
-  const p=citizen(s,id);if(!p?.alive||p.combatDutyDay!==s.day)continue;
-  const r=draw(s.seed,s.day,p.randomKey??p.id,side?0x75c9:0x5a7d);
+  const p=citizen(s,id);if(!p?.alive||p.health<=0||p.combatDutyDay!==s.day||c.wounded.includes(id))continue;
+  const r=draw(s.seed,s.day,p.randomKey??p.id,pursuit?(side?0x5bbf:0x46ae):(side?0x75c9:0x5a7d));
   if(r>=threat)continue;
-  const lost=Math.round(6+draw(s.seed,s.day,p.id,0x27bd)*25);
+  const lost=Math.round((pursuit?3:6)+draw(s.seed,s.day,p.id,pursuit?0x6fa2:0x27bd)*(pursuit?15:25));
   p.health=clamp(p.health-lost,0,100);
-  c.wounded.push(p.id);
-  p.lifeLog??=[];p.lifeLog.push({day:s.day,type:'battle-wound',text:`Получил рану в споре о полосе пашни: здоровье −${lost}`});
+  c.wounded.push(p.id);if(pursuit)c.pursued.push(p.id);
+  p.lifeLog??=[];p.lifeLog.push({day:s.day,type:pursuit?'battle-pursuit-wound':'battle-wound',text:`${pursuit?'Ранен при преследовании':'Получил рану в споре о полосе пашни'}: здоровье −${lost}`});
   if(p.lifeLog.length>240)p.lifeLog.splice(1,p.lifeLog.length-240);
   // A genuinely severe and rare injury causes a death in the existing
   // biological lifeCycle. The latter marks it as combat, not starvation.
@@ -177,22 +179,34 @@ function resolve(s,c,notify){
  const attacker=byId(s,c.claimantId),defender=byId(s,c.ownerId);
  c.morale={claimants:left.morale,owners:right.morale};
  c.arrived={claimants:left.arrived,owners:right.arrived};
- const total=left.power+right.power;
+ c.tactics=assessFieldTactics(s,c,left,right);
+ const total=c.tactics.claimants.power+c.tactics.owners.power;
  const bias=draw(s.seed,s.day,c.cell,0x117a)*.32-.16;
  if(!left.power||!right.power){
   c.outcome='dispersed';
  }else{
   // Drastically outnumbered, exhausted or hungry villagers may withdraw
   // before any blows are exchanged. Retreat is not a new battle entity.
-  const lRetreat=left.morale<.26||(left.power/total<.30&&left.morale<.75);
-  const rRetreat=right.morale<.26||(right.power/total<.30&&right.morale<.75);
+  const lRetreat=left.morale<.26||(c.tactics.advantage<.30&&left.morale<.75);
+  const rRetreat=right.morale<.26||(1-c.tactics.advantage<.30&&right.morale<.75);
   c.retreated=lRetreat&&rRetreat?'both':lRetreat?'claimants':rRetreat?'owners':null;
-  const pressure=left.power/total+bias;
+  const pressure=c.tactics.advantage+bias;
   c.outcome=lRetreat&&rRetreat?'dispersed':lRetreat?'owner':rRetreat?'claimant':
    pressure>.53?'claimant':'owner';
   if(!c.retreated){
-   wound(s,c,c.claimants,clamp(.18+right.power/total*.22,.1,.44),0,notify);
-   wound(s,c,c.owners,clamp(.18+left.power/total*.22,.1,.44),1,notify);
+   const winner=c.outcome==='claimant'?'claimants':'owners';
+   const loser=winner==='owners'?'claimants':'owners';
+   wound(s,c,c.claimants,clamp(.18+(1-c.tactics.advantage)*.22,.1,.44),0,notify);
+   wound(s,c,c.owners,clamp(.18+c.tactics.advantage*.22,.1,.44),1,notify);
+   if(tacticalBreak(c.tactics,loser)){
+    c.broken=loser;
+    // Pursuit is a second, smaller injury opportunity for actual fleeing
+    // villagers only; it cannot spawn casualties or strike a phantom unit.
+    wound(s,c,c[loser],pursuitChance(c.tactics,winner,loser),
+     loser==='owners'?1:0,notify,true);
+    if(c.pursued.length)s.stats.pursuitWounds=(s.stats.pursuitWounds||0)+c.pursued.length;
+    s.stats.brokenGroups=(s.stats.brokenGroups||0)+1;
+   }
   }
   if(c.outcome!=='dispersed'){
    // A payment is a transfer of EXISTING money. No capture of legal title.
@@ -215,7 +229,8 @@ function resolve(s,c,notify){
   'Исход определили пришедшие жители, их здоровье, сплочённость и усталость. Права на поле не изменились',
   [c.claimantId,c.ownerId,...c.claimants,...c.owners],
   {cell:c.cell,outcome:c.outcome,wounded:c.wounded.length,dead:c.dead.length,
-   compensationCoin:c.compensationCoin,morale:c.morale,arrived:c.arrived,retreated:c.retreated});
+   compensationCoin:c.compensationCoin,morale:c.morale,arrived:c.arrived,retreated:c.retreated,
+   tactics:c.tactics?{terrain:c.tactics.terrain.label,formation:{claimants:c.tactics.claimants.formation,owners:c.tactics.owners.formation},flankPersonId:c.tactics.flank?.personId||null,broken:c.broken,pursued:c.pursued}:null});
 }
 // Grain transferred into an expedition is a physical, serialised inventory.
 // This is deliberately separate from the household's ordinary daily feeding.
@@ -367,6 +382,14 @@ export function conflictAudit(s){
    c.claimants.length>(c.muster?MAX_MUSTER:2)||c.owners.length>(c.muster?MAX_MUSTER:2)||
    c.muster&&c.rallyDay!==c.startDay+1||
    c.morale&&Object.values(c.morale).some(m=>!Number.isFinite(m)||m<0||m>1)||
+   c.tactics&&(!c.tactics.terrain||!['claimants','owners'].every(side=>{
+    const t=c.tactics[side];return t&&Number.isInteger(t.count)&&t.count>=0&&t.count<=c[side].length&&
+      Number.isFinite(t.cohesion)&&t.cohesion>=0&&t.cohesion<=1&&Number.isFinite(t.power)&&t.power>=0;
+   })||c.tactics.flank&&(!c.claimants.includes(c.tactics.flank.personId)||
+      c.tactics.flank.fromCell!==c.cell||Math.abs(xy(c.cell).x-xy(c.tactics.flank.toCell).x)+
+      Math.abs(xy(c.cell).y-xy(c.tactics.flank.toCell).y)!==1))||
+   c.broken&&!['claimants','owners'].includes(c.broken)||
+   (c.pursued||[]).some(id=>!c.wounded.includes(id)||!c[c.broken||'claimants'].includes(id))||
    c.expedition&&(
     !c.supply||!c.positions||!['claimants','owners'].every(side=>{
      const q=c.supply[side],ids=side==='claimants'?c.claimants:c.owners;
