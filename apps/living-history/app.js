@@ -7,7 +7,7 @@ import {timeMode,integrateClock,dayClock,dayPhase,activeShiftCounts,planSubday,s
 import {walkPath,walkingSteps} from './navigation.js';
 import {landCadastre,landAt,tenureSummary,parcelEconomics} from './land-economy.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.9.2',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.9.3',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -164,6 +164,12 @@ function drawFrame(){if(!sim)return;
    const r=Math.max(4,5*cam.z);
    ctx.save();ctx.strokeStyle=['marching','returning'].includes(c.stage)?'#c9af7b':c.stage==='encamped'?'#e0b575':c.stage==='mobilizing'?'#d6b77d':c.stage==='mustering'?'#b9a76f':'#a77d61';ctx.lineWidth=Math.max(1,cam.z*.9);
    ctx.beginPath();ctx.moveTo(x-r,y-r);ctx.lineTo(x+r,y-r);ctx.lineTo(x+r,y+r);ctx.lineTo(x-r,y+r);ctx.closePath();ctx.stroke();
+   // This short line corresponds to an actual villager using adjacent passable land.
+   if(c.tactics?.flank){
+    const target=c.tactics.flank.toCell,fx=cam.x+((target%SIZE)*PX+4)*cam.z;
+    const fy=cam.y+(Math.floor(target/SIZE)*PX+4)*cam.z;
+    ctx.strokeStyle='#e2c28b';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(fx,fy);ctx.stroke();
+   }
    ctx.restore();
   }
   if(cam.z>.36){for(const hom of sim.households){
@@ -235,7 +241,11 @@ if(mode==='overview'){
    const details=c.stage==='resolved'?count+' пришли · '+c.wounded.length+' ранены'+(c.compensationCoin?' · '+c.compensationCoin+' мон.':'')+(c.expedition?' · '+(c.travelDays||0)+' дн. в пути':''):
     c.expedition?c.claimants.length+c.owners.length+' участников · '+ration.toFixed(1)+' кг зерна · '+(c.travelDays||0)+' дн. в пути':
     c.claimants.length+c.owners.length+' участников · день встречи '+(c.meetDay+1);
-   return `<div class="community-row"><span><b>Земельный спор · ${escapeHTML(phase)}</b><small>Семьи #${claim?.id??c.claimantId} и #${owner?.id??c.ownerId} · ${details}</small></span></div>`;
+   const formation=c.tactics?
+     ' · '+c.tactics.terrain.label+' · '+c.tactics.claimants.formation+' / '+c.tactics.owners.formation+
+     (c.tactics.flank?' · обход с фланга':'')+(c.broken?' · строй рассыпался':'')+
+     (c.pursued?.length?' · преследование: '+c.pursued.length:''):'';
+    return `<div class="community-row"><span><b>Земельный спор · ${escapeHTML(phase)}</b><small>Семьи #${claim?.id??c.claimantId} и #${owner?.id??c.ownerId} · ${details}${escapeHTML(formation)}</small></span></div>`;
   }).join('');
  el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}${encounterRows}</div><p class="map-key">Построено домов: ${sim.stats.built||0} · Строится: ${pending} · Древесины заготовлено: ${Math.round((sim.stats.produced||0)/1000)} т.${disputes.length?` · Вооружённых споров: ${disputes.length}`:''}${sim.stats.armedDisputesResolved?` · Завершено стычек: ${sim.stats.armedDisputesResolved}`:''}</p><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
 }
