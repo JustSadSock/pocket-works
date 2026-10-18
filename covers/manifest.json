@@ -3316,29 +3316,29 @@
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 62,
+      "bestScore": 63,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 20310,
-        "variance": 49.75760834266108,
-        "entropy": 1.1420393870419285,
-        "edgeDensity": 0.0873015873015873,
-        "colorfulness": 8.335693359375,
-        "centerDetail": 68.10796365809878,
-        "meanLight": 210.65023579102495
+        "bytes": 22628,
+        "variance": 49.908273466262784,
+        "entropy": 1.1771610982859548,
+        "edgeDensity": 0.09387400793650794,
+        "colorfulness": 8.328369140625,
+        "centerDetail": 68.10806175080057,
+        "meanLight": 210.30948544922668
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/tyaga-duel/?pw-cover=1&pw_release=1.0.0&pw_fp=9515e0291758b1854abcfb23"
+      "url": "http://127.0.0.1:4173/apps/tyaga-duel/?pw-cover=1&pw_release=1.1.0&pw_fp=15ccbb360217c56fe78719ac"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "64ff976686c00084606ebbd84bb386823d900818",
-    "lastAttemptAt": "2026-10-17T23:51:10.452Z"
+    "lastAttemptRevision": "c941fcfdf0ff8b5945ca0655009415c99726326f",
+    "lastAttemptAt": "2026-10-18T00:58:04.029Z"
   },
   "axis-pals": {
     "revision": "d6bd9d9715868552e0741fcb281d79fb85903ff9",
@@ -3415,5 +3415,32 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "42f5cd86b26cc24eb18c4fc155481c214aded57d",
     "lastAttemptAt": "2026-10-18T00:27:28.079Z"
+  },
+  "not-dead-yet": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 62,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 27685,
+        "variance": 44.199798821024906,
+        "entropy": 0.9855785423575809,
+        "edgeDensity": 0.10032242063492064,
+        "colorfulness": 19.694580078125,
+        "centerDetail": 60.61479182289343,
+        "meanLight": 38.54907226562548
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/not-dead-yet/?pw-cover=1&pw_release=1.0.0&pw_fp=63dcc55493ae154830ecdfd0"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "ccec837ec8c3c511c495d5e713e9a70ed31d6564",
+    "lastAttemptAt": "2026-10-18T00:58:15.850Z"
   }
 }
