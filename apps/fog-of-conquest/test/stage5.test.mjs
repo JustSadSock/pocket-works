@@ -12,7 +12,10 @@ vm.runInContext(read('js/save-schema.js'),g);
 const codec=g.FogReplayCodec,schema=g.FogSaveSchema;
 const clean=o=>JSON.parse(JSON.stringify(o));
 function frame(n){
- return {units:[{id:1,r:1,c:2+n%2,owner:1,hp:5,mp:1,type:'swordsman'}],
+ const units=[{id:1,r:1,c:2+n%2,owner:1,hp:5,mp:1,type:'swordsman'}];
+ for(let id=2;id<=12;id++)units.push({id,r:2+id%7,c:3+id%10,owner:id%2+1,
+   hp:5,mp:1,type:'swordsman'});
+ return {units,
   buildings:[{r:1,c:1,type:'base',owner:1,hp:10-n%3,gen:0}],
   state:{turn:n,currentPlayer:n%2+1,gold:{1:10+n,2:10}}};
 }
@@ -22,7 +25,7 @@ function save(replayEvents=[]){
  const rows=10,cols=15,blank=()=>Array.from({length:rows},()=>Array(cols).fill(false));
  return {version:4,origin:'offline',aiMode:true,aiLevel:6,modeBeta:false,
  map:Array.from({length:rows},()=>Array(cols).fill(0)),units:frame(0).units,
- buildings:frame(0).buildings,nextUnitId:2,
+ buildings:frame(0).buildings,nextUnitId:13,
  state:{turn:0,currentPlayer:1,gold:{1:10,2:10},fog:{1:blank(),2:blank()},
  seen:{1:blank(),2:blank()},lastSeen:{1:{},2:{}},log:{1:[],2:[]},grace:{1:null,2:null}},
  timestamp:Date.now(),replayEvents};
