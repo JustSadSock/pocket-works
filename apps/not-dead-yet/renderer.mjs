@@ -529,7 +529,7 @@ function pistolMesh(){
  box(o,.50,-.48,-2.10,.055,.039,.042,brass,9); // front sight
  return o
 }
-export function animateViewmodel(original,{time=0,recoil=0,reload=0,movement=0,reduceMotion=false}={}){
+export function animateViewmodel(original,{time=0,recoil=0,reload=0,movement=0,reduceMotion=false,aspect=1.5}={}){
  const out=original.slice(),step=10,sway=reduceMotion?0:Math.sin(time*7)*.009*Math.min(1,movement);
  const pull=Math.max(0,Math.min(1,recoil));
  const lower=reload>0? Math.sin(Math.PI*Math.max(0,Math.min(1,reload)))*.33:0;
@@ -541,6 +541,14 @@ export function animateViewmodel(original,{time=0,recoil=0,reload=0,movement=0,r
   out[i]=.49+x*cos-y*sin+sway;
   out[i+1]=-1.1+x*sin+y*cos-lower+pull*.13;
   out[i+2]=original[i+2]+pull*.17+(reduceMotion?0:Math.cos(time*5)*.008*Math.min(1,movement));
+  // The very narrow horizontal FOV on portrait displays otherwise enlarges
+  // the sleeve and barrel beyond the playable scene's intended framing.
+  const compact=Math.max(.56,Math.min(1,(aspect-.35)/.78));
+  if(compact<1){
+   out[i]=.52+(out[i]-.52)*compact+(1-compact)*.06;
+   out[i+1]=-.89+(out[i+1]+.89)*compact-(1-compact)*.11;
+   out[i+2]-=(1-compact)*.20
+  }
  }
  return out
 }
@@ -684,7 +692,7 @@ export class Renderer{
   }
   if(dyn.length){this.upload(this.dynamicBuffer,dyn,gl.DYNAMIC_DRAW);this.bind(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10);this.visualMetrics.dynamicTriangles=dyn.length/30;this.visualMetrics.drawCalls++}
   // Proper viewmodel at the lower right: no world-space cyan marker below the camera.
-  const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false});
+  const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false,aspect:this.canvas.width/this.canvas.height});
   if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));gl.uniform1f(this.u.electrical,1);this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10);this.visualMetrics.drawCalls++}
  }
 }
