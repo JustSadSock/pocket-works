@@ -7,9 +7,9 @@ import {initialMatch,simulateRound,validatePlan} from '../engine.js';
 const file=async path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const [app,html,css,sw]=await Promise.all(['app.js','index.html','dev-gallery.css','sw.js'].map(file));
 const required=['Меню','PocketNet','План','Диалоги','Повторы','Анимации','Эффекты','Звуки'];
-test('all QA categories and 34 selectable previews exist',()=>{
- assert.equal(DEV_SCENES.length,34);
- assert.equal(new Set(DEV_SCENES.map(x=>x.id)).size,34);
+test('all QA categories and 37 selectable previews exist',()=>{
+ assert.equal(DEV_SCENES.length,37);
+ assert.equal(new Set(DEV_SCENES.map(x=>x.id)).size,37);
  for(const category of required)assert.ok(DEV_SCENES.some(x=>x.group===category),category);
  assert.equal(devScene('not-a-real-scene'),'menu');
  assert.equal(devScene('anim-attack'),'anim-attack');

@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/appearance.test.mjs",
+        "tests/combat-visuals.test.mjs",
+        "tests/dev-gallery.test.mjs",
+        "tests/engine.test.mjs",
+        "tests/planning.test.mjs",
+        "tests/reliability.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#solo",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#solo"
+        },
+        {
+          "action": "click",
+          "selector": "[data-difficulty-choice=\"easy\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#board"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-dir=\"right\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-dir=\"left\"]"
+        },
+        {
+          "action": "visible",
+          "selector": ".arena-plan-route"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "planning-journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/planning.spec.js"
+      ]
+    }
+  ]
+}
