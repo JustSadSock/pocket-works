@@ -11,6 +11,8 @@ const scoped={getItem:k=>{try{return sessionStorage.getItem(KEY+k)}catch{return 
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const symbols={up:'↑',down:'↓',left:'←',right:'→',shield:'▣'};
 let profile=null,sound=read('sound','on')==='on',difficulty=read('difficulty','normal');
+const storedTheme=read('theme','dark');
+document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
 let plan=[],attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
 let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null;
@@ -37,7 +39,7 @@ function soundFX(type='tap'){
 }
 function buzz(v=8){try{navigator.vibrate?.(v)}catch{}}
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600)}
-function show(view){screen=view;for(const id of ['menu','lobby','play','replay'])$(id).classList.toggle('hidden',view!==id);if(view==='play')render();}
+function show(view){screen=view;for(const id of ['menu','difficultyView','lobby','play','replay'])$(id).classList.toggle('hidden',view!==id);if(view==='play')render();}
 function modal(kicker,title,body,main,alt,third){
  modalOpen=true;const data=[['modalMain',main],['modalAlt',alt],['modalThird',third]];
  $('modalKicker').textContent=kicker;$('modalTitle').textContent=title;$('modalBody').textContent=body;
@@ -265,7 +267,7 @@ function render(){
   b.disabled=disabled?true:attack?info.moved.has(d):info.used.has(d)||plan.length>=STEPS;
  });
  $('attack').disabled=disabled||(!attack&&info.attacks);$('shield').disabled=disabled||attack||info.shielded||plan.length>=STEPS;
- $('attack').textContent=attack?'ДОБАВИТЬ':'АТАКА';$('undo').textContent=attack?'ОТМЕНА':'← Удалить';
+ $('attack').textContent=attack?'✓':'⚔';$('undo').textContent=attack?'ОТМЕНА':'← Удалить';
  $('undo').disabled=disabled||(!attack&&!plan.length);
  $('submit').textContent=finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
  $('submit').disabled=disabled||plan.length!==STEPS;
@@ -348,7 +350,7 @@ function download(data,filename,mime){
  const url=URL.createObjectURL(new Blob([data],{type:mime})),a=document.createElement('a');
  a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
-function exportReplay(){const g=game();if(!g?.replays?.length)return;download(JSON.stringify({format:'crossline-5x5',version:1,match:g},null,2),'crossline-'+Date.now()+'.json','application/json');toast('Повтор сохранён')}
+function exportReplay(){const g=game();if(!g?.replays?.length)return;download(JSON.stringify({format:'crossline-5x5',version:1,match:g},null,2),'5x5-arena-'+Date.now()+'.json','application/json');toast('Повтор сохранён')}
 async function videoReplay(){
  if(recording)return;
  if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){toast('Этот браузер не поддерживает WebM');return;}
@@ -369,7 +371,7 @@ async function videoReplay(){
    await new Promise(resolve=>setTimeout(resolve,750));
   }
   recorder.stop();await finished;
-  download(new Blob(clips,{type:mime}),'crossline-round-'+rec.round+'.webm',mime);
+  download(new Blob(clips,{type:mime}),'5x5-arena-round-'+rec.round+'.webm',mime);
   toast('Видеоповтор сохранён');
  }catch(e){toast(e.message||'Ошибка записи')}finally{
   try{if(recorder?.state==='recording')recorder.stop()}catch{}
@@ -378,7 +380,7 @@ async function videoReplay(){
 }
 function drawVideoFrame(ctx,frame,round,i,size){
  ctx.fillStyle='#151e22';ctx.fillRect(0,0,size,840);
- ctx.fillStyle='#f4b35f';ctx.font='bold 34px system-ui';ctx.fillText('КРОССЛАЙН / РАУНД '+round,45,55);
+ ctx.fillStyle='#f4b35f';ctx.font='bold 34px system-ui';ctx.fillText('5×5 ARENA / РАУНД '+round,45,55);
  const start=50,cell=140;ctx.lineWidth=2;
  for(let y=0;y<5;y++)for(let x=0;x<5;x++){
   const outer=x===0||x===4||y===0||y===4,collapsed=frame.edgesCollapsed&&outer;
@@ -391,7 +393,19 @@ function drawVideoFrame(ctx,frame,round,i,size){
  }
  ctx.font='bold 22px system-ui';ctx.fillStyle='#d2ddda';ctx.fillText('ШАГ '+i+' / '+STEPS,45,810);
 }
-$('solo').onclick=()=>localStart('solo');$('hotseat').onclick=()=>localStart('hotseat');
+$('themeToggle').onclick=()=>{
+ const next=document.documentElement.dataset.theme==='light'?'dark':'light';
+ document.documentElement.dataset.theme=next;write('theme',next);
+ document.querySelector('meta[name="theme-color"]').content=next==='light'?'#f8fafc':'#05060d';
+ soundFX('tap');
+};
+$('solo').onclick=()=>{show('difficultyView');soundFX('tap')};
+$('difficultyBack').onclick=()=>show('menu');
+document.querySelectorAll('[data-difficulty-choice]').forEach(b=>b.onclick=()=>{
+ difficulty=b.dataset.difficultyChoice;write('difficulty',difficulty);$('difficulty').value=difficulty;
+ localStart('solo');
+});
+$('hotseat').onclick=()=>localStart('hotseat');
 $('online').onclick=()=>connect('create');$('joinOnline').onclick=()=>connect('join');$('openRules').onclick=showRules;
 $('difficulty').value=difficulty;$('difficulty').onchange=()=>{difficulty=$('difficulty').value;write('difficulty',difficulty)};
 $('sound').onclick=()=>{sound=!sound;write('sound',sound?'on':'off');$('sound').textContent=sound?'♪':'♪̸';soundFX('tap')};$('sound').textContent=sound?'♪':'♪̸';
@@ -409,7 +423,7 @@ $('replayPlay').onclick=toggleReplay;$('replaySpeed').onclick=()=>{const list=[1
 $('replaySave').onclick=exportReplay;$('replayVideo').onclick=videoReplay;
 window.addEventListener('keydown',e=>{
  if(/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName||''))return;
- if(e.key==='Escape'){if(modalOpen)closeModal();else if(screen==='replay')$('replayBack').click();else if(screen==='play')confirmReturn();return;}
+ if(e.key==='Escape'){if(modalOpen)closeModal();else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
  if(screen!=='play'||modalOpen)return;
  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
  if(map[e.key]){direction(map[e.key]);e.preventDefault()}
@@ -429,5 +443,5 @@ function startFromSession(){
  const restored=new PocketNet({serverUrl:NET,name:profile?.complete?profile.nickname:'Игрок',storage:scoped,identityKey:profile?.id||'guest'});
  if(restored.roomId)connect('resume');
 }
-createWorkshopMode({appName:'КРОССЛАЙН: 5×5',version:'1.0.0',cachePrefix: 'crossline-5x5-',storageNamespace: 'pocket-works:crossline-5x5',onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+createWorkshopMode({appName:'5×5 Arena',version:'1.1.0',cachePrefix: 'crossline-5x5-',storageNamespace: 'pocket-works:crossline-5x5',onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
 checkNet();resumeOffer();

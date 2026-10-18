@@ -1,6 +1,6 @@
-# КРОССЛАЙН · 5×5 Arena
+# 5×5 Arena
 
-Port of JustSadSock/5x5 to Pocket Works as an independent Quick PWA.
+Restored original 5×5 Arena branding and visual language, while preserving the Pocket Works standalone Quick PWA and authoritative PocketNet implementation.
 
 Rules: 5×5 battlefield, two fighters at (0,2) and (4,2), five private commands each round, at most four rounds. Moves resolve simultaneously before attacks and shields. Each plan allows a single attack with one or more orthogonal adjacent directions, and a single shield. Attack directions cannot be used as movement directions within the same plan. Repeating a move direction is permitted. In round four, the outer perimeter collapses after the first beat.
 
