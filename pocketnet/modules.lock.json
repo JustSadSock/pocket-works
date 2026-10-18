@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "current": "v27",
+    "current": "v28",
     "versions": [
       "v1",
       "v2",
@@ -28,7 +28,8 @@
       "v24",
       "v25",
       "v26",
-      "v27"
+      "v27",
+      "v28"
     ]
   },
   "flagpost": {
