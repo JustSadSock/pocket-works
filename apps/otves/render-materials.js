@@ -11,11 +11,13 @@ uniform mat4 uVP;
 uniform mat4 uLightVP;
 out vec3 vPosition;
 out vec3 vNormal;
+out vec3 vLocalPosition;
 out vec4 vLightSpace;
 void main() {
   vec4 world = uModel * vec4(aPosition, 1.0);
   vPosition = world.xyz;
   vNormal = normalize(mat3(uModel) * aNormal);
+  vLocalPosition = aPosition;
   vLightSpace = uLightVP * world;
   gl_Position = uVP * world;
 }`;
@@ -75,6 +77,7 @@ export const OPAQUE_FRAGMENT_SOURCE = `#version 300 es
 precision highp float;
 in vec3 vPosition;
 in vec3 vNormal;
+in vec3 vLocalPosition;
 in vec4 vLightSpace;
 uniform vec3 uEye;
 uniform vec3 uLightDirection;
@@ -139,6 +142,7 @@ export const GLASS_FRAGMENT_SOURCE = `#version 300 es
 precision highp float;
 in vec3 vPosition;
 in vec3 vNormal;
+in vec3 vLocalPosition;
 in vec4 vLightSpace;
 uniform vec3 uEye;
 uniform vec3 uLightDirection;
@@ -148,6 +152,7 @@ uniform sampler2D uSceneColor;
 uniform vec2 uViewport;
 uniform bool uUseRefraction;
 uniform int uGlassType; // 1 = glass ribs, 2 = rolled solid glass marble
+uniform float uImpact;
 out vec4 outColor;
 ${LIGHTING}
 
@@ -186,6 +191,19 @@ void main() {
     vec3 color = mix(transmitted, reflection * 1.35, clamp(fres * 1.5, 0.0, 0.88));
     color += vec3(0.19, 0.27, 0.22) * clamp(direct * 0.21, 0.0, 0.8);
     color += vec3(0.05, 0.11, 0.08) * pow(1.0 - ndv, 2.0);
+    // Tiny subsurface inclusions are anchored to LOCAL marble geometry.
+    // Their visible movement is driven exclusively by the physical quaternion,
+    // not by scrolling a highlight texture in screen coordinates.
+    float inclusionA = 1.0 - smoothstep(0.032, 0.067,
+      length(vLocalPosition - vec3(0.108, 0.075, 0.182)));
+    float inclusionB = 1.0 - smoothstep(0.020, 0.046,
+      length(vLocalPosition - vec3(-0.137, -0.095, -0.169)));
+    float fiber = pow(1.0 - abs(sin(vLocalPosition.x * 19.0
+      + vLocalPosition.z * 13.0)), 23.0) * 0.018;
+    color += (inclusionA * 0.14 + inclusionB * 0.10 + fiber)
+      * vec3(0.22, 0.32, 0.28);
+    // Hit feedback is restricted to the surface glint, not a fake expanding ring.
+    color += vec3(0.058, 0.071, 0.049) * uImpact * pow(1.0 - ndv, 2.5);
     // Opaque composite: sphere has an actual depth silhouette and refraction.
     outColor = vec4(clamp(color, 0.0, 1.0), 1.0);
   } else {

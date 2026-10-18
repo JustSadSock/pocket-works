@@ -1,3 +1,5 @@
+import { WELL_DEPTH } from './marble-motion.js';
+
 // Pure, deterministic 3D meshes shared by the WebGL renderer and its regression tests.
 // World: X = maze column, Z = maze row, Y = height above the maze floor.
 function mesh() {
@@ -11,6 +13,15 @@ function face(target, a, b, c, d, normal) {
     target.normals.push(...normal);
   }
   target.indices.push(index, index + 1, index + 2, index, index + 2, index + 3);
+}
+
+function triangle(target,a,b,c,normal) {
+  const index=target.positions.length/3;
+  for(const point of [a,b,c]) {
+    target.positions.push(...point);
+    target.normals.push(...normal);
+  }
+  target.indices.push(index,index+1,index+2);
 }
 
 function finish(target) {
@@ -115,7 +126,19 @@ export function makeFloorWithHole(cols, rows, goal, radius = 0.385) {
   return finish(m);
 }
 
-export function makeWell(x, z, radius = 0.385, depth = 0.235) {
+// The plinth must have the same opening as the goal; a solid box below the
+// floor would visually block the marble halfway through its descent.
+export function makeFrameWithOpening(cols,rows,goal) {
+  const gx=Math.floor(goal.x), gz=Math.floor(goal.y);
+  return [
+    makeBox(-.20,-.34,-.20,gx,-.25,rows+.20),
+    makeBox(gx+1,-.34,-.20,cols+.20,-.25,rows+.20),
+    makeBox(gx,-.34,-.20,gx+1,-.25,gz),
+    makeBox(gx,-.34,gz+1,gx+1,-.25,rows+.20)
+  ].filter((part)=>part.indices.length>0);
+}
+
+export function makeWell(x, z, radius = 0.385, depth = WELL_DEPTH) {
   const m = mesh();
   const steps = 64;
   for (let i = 0; i < steps; i++) {
@@ -128,7 +151,7 @@ export function makeWell(x, z, radius = 0.385, depth = 0.235) {
     const D = [x+radius*ca,-depth,z+radius*sa];
     // Inward-facing surface, visible from above the recessed opening.
     face(m,A,B,C,D,[-(ca+cb)*.5,0,-(sa+sb)*.5]);
-    face(m,[x,-depth,z],D,C,[x,-depth,z],[0,1,0]);
+    triangle(m,[x,-depth,z],D,C,[0,1,0]);
   }
   return finish(m);
 }

@@ -1,4 +1,5 @@
-import { makeBox, makeFloorWithHole, makeSphere, makeTorus, makeUnifiedWalls, makeWell } from './render-geometry.js';
+import { makeFloorWithHole, makeFrameWithOpening, makeSphere, makeTorus, makeUnifiedWalls, makeWell } from './render-geometry.js';
+import { marbleModelMatrix, sampleGoalCapture } from './marble-motion.js';
 import {
   VERTEX_SOURCE, OPAQUE_FRAGMENT_SOURCE, GLASS_FRAGMENT_SOURCE,
   DEPTH_VERTEX_SOURCE, DEPTH_FRAGMENT_SOURCE,
@@ -104,7 +105,7 @@ function commonUniforms(gl,p) {
     shadow:get('uShadowMap'),hasShadows:get('uHasShadows'),
     surface:get('uSurface'),scene:get('uSceneColor'),
     viewport:get('uViewport'),refraction:get('uUseRefraction'),
-    glassType:get('uGlassType')
+    glassType:get('uGlassType'),impact:get('uImpact')
   };
 }
 
@@ -322,7 +323,7 @@ export class SpatialMazeRenderer {
     const add=(data,surface,model=IDENTITY,castsShadow=false)=> {
       this.meshes.push({mesh:upload(gl,data),surface,model,castsShadow});
     };
-    add(makeBox(-.20,-.34,-.20,maze.cols+.20,-.25,maze.rows+.20),5);
+    for (const slab of makeFrameWithOpening(maze.cols,maze.rows,maze.goal)) add(slab,5);
     add(makeFloorWithHole(maze.cols,maze.rows,maze.goal),0);
     add(makeWell(maze.goal.x,maze.goal.y),4);
     add(makeUnifiedWalls(maze.walls,.46),1,IDENTITY,true);
@@ -401,7 +402,7 @@ export class SpatialMazeRenderer {
     }
   }
 
-  renderGlass(ballModel) {
+  renderGlass(ballModel,impact=0) {
     const gl=this.gl;
     this.prepareProgram(this.glass,this.glassU);
     const refract=Boolean(this.targets&&this.profile.refraction);
@@ -411,6 +412,7 @@ export class SpatialMazeRenderer {
     gl.bindTexture(gl.TEXTURE_2D,refract?this.targets.scene:null);
     gl.uniform1i(this.glassU.scene,1);
     gl.uniform1i(this.glassU.glassType,2);
+    gl.uniform1f(this.glassU.impact,clamp(impact,0,1));
     gl.uniformMatrix4fv(this.glassU.model,false,ballModel);
     gl.bindVertexArray(this.ballMesh.vao);
     gl.drawElements(gl.TRIANGLES,this.ballMesh.count,gl.UNSIGNED_INT,0);
@@ -421,6 +423,7 @@ export class SpatialMazeRenderer {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
     gl.uniform1i(this.glassU.glassType,1);
+    gl.uniform1f(this.glassU.impact,0);
     for(const item of this.meshes) {
       if(item.surface!==1) continue;
       gl.uniformMatrix4fv(this.glassU.model,false,item.model);
@@ -435,13 +438,19 @@ export class SpatialMazeRenderer {
     gl.activeTexture(gl.TEXTURE0);
   }
 
-  draw({maze,marble,completion=0,mode='playing'}) {
+  draw({maze,marble,completion=0,mode='playing',goalCapture=null}) {
     if(!maze||this.lost) return;
     if(this.maze!==maze) this.rebuild(maze);
     this.configureCamera(maze);
     const gl=this.gl;
-    const sinking=mode==='complete'?.18*(completion*completion):0;
-    const ballModel=translation(marble.position.x,marble.radius-sinking,marble.position.y);
+    const capture=goalCapture && (mode==='finishing'||mode==='complete')
+      ? sampleGoalCapture(goalCapture,completion) : null;
+    const pose=capture||{
+      position:{x:marble.position.x,y:marble.radius,z:marble.position.y},
+      rotation:marble.orientation||[0,0,0,1]
+    };
+    const ballModel=marbleModelMatrix(pose.position,pose.rotation);
+    const impact=capture?0:marble.impact;
     this.renderShadow(ballModel);
     if(this.targets&&this.profile.refraction) {
       gl.bindFramebuffer(gl.FRAMEBUFFER,this.targets.opaqueFbo);
@@ -454,7 +463,7 @@ export class SpatialMazeRenderer {
       gl.blitFramebuffer(0,0,this.pixelWidth,this.pixelHeight,
         0,0,this.pixelWidth,this.pixelHeight,gl.COLOR_BUFFER_BIT,gl.NEAREST);
       gl.bindFramebuffer(gl.FRAMEBUFFER,this.targets.compositeFbo);
-      this.renderGlass(ballModel);
+      this.renderGlass(ballModel,impact);
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);
       gl.viewport(0,0,this.pixelWidth,this.pixelHeight);
       gl.disable(gl.DEPTH_TEST);
@@ -472,7 +481,7 @@ export class SpatialMazeRenderer {
       gl.viewport(0,0,this.pixelWidth,this.pixelHeight);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       this.renderOpaque();
-      this.renderGlass(ballModel);
+      this.renderGlass(ballModel,impact);
     }
   }
 }

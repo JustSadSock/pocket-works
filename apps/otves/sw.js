@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'otves-';
-const CACHE_NAME = 'otves-v1.3.0';
-const APP_VERSION = '1.3.0';
+const CACHE_NAME = 'otves-v1.4.0';
+const APP_VERSION = '1.4.0';
 const RELEASE_DATE = '2026-10-18';
 const RELEASE_NOTES = [
-  'Прозрачные стеклянные рёбра отражают свет и преломляют изображение.',
-  'Керамика, латунь и шар получили новые физически обоснованные материалы.',
-  'Добавлены три качества оптики и запасной рендер при потере WebGL.'
+  'Настоящее 3D-вращение шара по пройденному пути и оптический отклик на удары.',
+  'Шар проваливается в глубокую шахту: экран результатов появляется после анимации.',
+  'Анимация завершения доступна в 2D и 3D, сохранены физика и рекорды.'
 ];
 const APP_SHELL = [
   './',
@@ -18,6 +18,7 @@ const APP_SHELL = [
   './renderer.js',
   './renderer3d.js',
   './render-materials.js',
+  './marble-motion.js',
   './render-geometry.js',
   './manifest.webmanifest',
   './icons/icon.svg',
