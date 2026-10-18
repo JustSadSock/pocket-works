@@ -43,7 +43,7 @@ function chooseSuccessor(game,deadId){
 }
 export function assertCampaign(g){
   if(!g||g.schemaVersion!==CAMPAIGN_SCHEMA||!g.world||
-    !COUNTY_STARTS.includes(g.startCountyId)||!Number.isSafeInteger(g.seed)||
+    !g.world.titles.some(t=>t.id===g.startCountyId&&['county','duchy','kingdom'].includes(t.rank))||!Number.isSafeInteger(g.seed)||
     g.seed<0||g.seed>0xffffffff||!Number.isSafeInteger(g.goalYear)||
     g.goalYear<=1066||!Number.isSafeInteger(g.turns)||g.turns<0||
     !Number.isSafeInteger(g.actions)||g.actions<0||
@@ -66,26 +66,43 @@ export function campaignStarts(seed=413,{size=12}={}){
       duke:duke.name,realm:duke.holderId,traits:{...p.politics.traits}};
   });
 }
+// The historical three county openings remain for compatibility. The atlas can
+// start at any actual landed title, including ducal seats and the crown.
+export function campaignPlayableRulers(seed=413,{size=12}={}){
+  const w=createWorld(seed,{size});
+  return w.titles.filter(t=>['county','duchy','kingdom'].includes(t.rank)).map(t=>{
+    const p=person(w,t.holderId),liege=t.liegeId?title(w,t.liegeId):null;
+    return {titleId:t.id,countyId:t.id,name:t.name,rank:t.rank,personId:p.id,
+      personName:p.name,dynastyId:p.dynastyId,liegeId:liege?.id||null,
+      liegeName:liege?.name||null,liegeRuler:liege?pname(w,liege.holderId):null};
+  });
+}
+const pname=(w,id)=>person(w,id)?.name||'';
+
 export function startCampaign({seed=413,countyId='co-01',size=12}={}){
-  if(!COUNTY_STARTS.includes(countyId))throw new RangeError('Invalid initial county');
   const world=createWorld(seed,{size});
-  const county=title(world,countyId),founder=person(world,county.holderId);
-  const liege=title(world,county.liegeId),ruler=person(world,liege.holderId);
+  const county=title(world,countyId);
+  if(!county||!['county','duchy','kingdom'].includes(county.rank))throw new RangeError('Invalid initial title');
+  const founder=person(world,county.holderId);
+  const liege=county.liegeId?title(world,county.liegeId):null;
+  const ruler=liege?person(world,liege.holderId):null;
   // Documentary conflict provides legal leverage at the first turn, and is
   // explicitly part of the generated campaign, not a hidden narrative stub.
-  if(!liege.claims.some(c=>c.personId===founder.id)){
+  if(liege&&!liege.claims.some(c=>c.personId===founder.id)){
     liege.claims.push({personId:founder.id,origin:'passed-over',sourceId:ruler.id,year:world.year});
     recordEvent(world,'claim-founded','disputed-ducal-charter',{titleId:liege.id,personId:founder.id,sourceId:ruler.id});
   }
-  if(!county.claims.some(c=>c.personId===ruler.id)){
+  if(ruler&&!county.claims.some(c=>c.personId===ruler.id)){
     county.claims.push({personId:ruler.id,origin:'passed-over',sourceId:founder.id,year:world.year});
     recordEvent(world,'claim-founded','contested-comital-charter',{titleId:county.id,personId:ruler.id,sourceId:founder.id});
   }
-  founder.politics.traits.ambition=Math.max(68,founder.politics.traits.ambition);
-  remember(world,{witnessId:founder.id,otherId:ruler.id,kind:'grievance',weight:-16,cause:'disputed-charter'});
-  remember(world,{witnessId:ruler.id,otherId:founder.id,kind:'grievance',weight:-12,cause:'disputed-charter'});
+  if(ruler){
+    founder.politics.traits.ambition=Math.max(68,founder.politics.traits.ambition);
+    remember(world,{witnessId:founder.id,otherId:ruler.id,kind:'grievance',weight:-16,cause:'disputed-charter'});
+    remember(world,{witnessId:ruler.id,otherId:founder.id,kind:'grievance',weight:-12,cause:'disputed-charter'});
+  }
   recordEvent(world,'campaign-founded','contested-ducal-rights',{
-    founderId:founder.id,countyId,duchyId:liege.id,rivalId:ruler.id
+    founderId:founder.id,countyId,duchyId:liege?.id||null,rivalId:ruler?.id||null
   });
   const g={schemaVersion:CAMPAIGN_SCHEMA,world,seed,startCountyId:countyId,
     founderId:founder.id,dynastyId:founder.dynastyId,playerId:founder.id,
