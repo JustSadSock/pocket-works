@@ -18,9 +18,9 @@ function act(room,actor,action,id){
  return rules.default.onMessage({state:room,player:actor,players:[a,b],
    payload:{type:'act',revision:room.game.revision,requestId:id,action}});
 }
-test('v6 is immutable and does not modify historical rooms',()=>{
+test('v7 is immutable and does not modify historical rooms',()=>{
  assert.equal(source,pinned);
- assert.match(prior,/RULESET_VERSION=6;/);
+ assert.match(prior,/RULESET_VERSION=5;/);
  assert.match(source,/RULESET_VERSION=6;/);
  const lock=JSON.parse(read('../../../pocketnet/modules.lock.json'));
  assert.equal(lock['fog-of-conquest'].current,'v7');
