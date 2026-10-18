@@ -94,6 +94,13 @@ function applyRemote(next,version='v1'){
  if(version!=='v1'){toast('Версия комнаты несовместима с этим приложением');leaveNet();return;}
  const previous=server,oldKey=previous?.match?.round+':'+previous?.match?.revision;
  server=next;
+ if(previous?.phase==='finished'&&next.phase==='planning'){
+  // A host rematch must dismiss the previous result for BOTH players, even
+  // when the guest is still in the score modal or replay viewer.
+  showingOutcome=false;pauseReplay();
+  if(modalOpen)closeModal();
+  if(screen==='replay')show('play');
+ }
  if(next.phase==='lobby'){plan=[];attackMode=false;show('lobby');lobby();return;}
  if(screen==='lobby'||screen==='menu')show('play');
  const newKey=next.match?.round+':'+next.match?.revision;
