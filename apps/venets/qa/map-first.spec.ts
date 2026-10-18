@@ -21,7 +21,7 @@ test('political start is on the map and picks a real vassal duchy',async({page})
   await expect(page.locator('#game-screen')).toBeVisible();
   await expect(page.locator('#panel-lands .living-atlas')).toBeVisible();
   await expect(page.locator('#ruler-rank')).toHaveText(/ГЕРЦОГСТВО/);
-  const saved=await page.evaluate(async()=>new Promise((resolve,reject)=>{
+  const saved=await expect.poll(()=>page.evaluate(async()=>new Promise((resolve,reject)=>{
     const open=indexedDB.open('venets-campaigns',1);
     open.onsuccess=()=>{
       const db=open.result,q=db.transaction('saves','readonly').objectStore('saves').get('active');
