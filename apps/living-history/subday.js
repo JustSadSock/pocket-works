@@ -102,7 +102,7 @@ export function sampleSubday(person,dayPlan,time){
  const p=dayPlan.plans.get(person.id),t=clamp(time);
  if(p.shift){
   const phase=timeAt(p.shift,t);
-  if(phase.phase==='home')return inactive(p.from);
+  if(phase.phase==='home')return inactive(p.shift.expedition&&phase.part===1?p.to:p.from);
   if(phase.phase==='travel'||phase.phase==='return'){
    const progress=phase.phase==='travel'?phase.part:1-phase.part;
    // Route pace derives from actual work/commute hours, not an arbitrary
