@@ -12,7 +12,7 @@ const copyCode=document.createElement('button');copyCode.type='button';copyCode.
 controls.append(start,copyCode);lobby.append(controls);
 const turn=document.createElement('span');turn.id='onlineTurnStatus';turn.setAttribute('aria-live','polite');
 $('controls')?.prepend(turn);
-let client=null,room=null,view=null,lock=false,connectPromise=null,selectedSize='medium',active=false;
+let client=null,room=null,view=null,lock=false,joined=false,connectPromise=null,selectedSize='medium',active=false;
 // PocketNet's generic key is shared by other Pocket Works games. Namespace
 // Fog credentials/rooms so launching another game cannot steal this session.
 const scopedStore=base=>({
@@ -24,7 +24,7 @@ const memberStore=scopedStore(localStorage),guestStore=scopedStore(sessionStorag
 const storageFor=identity=>identity?.complete?memberStore:guestStore;
 const message=text=>{status.textContent=text;};
 const roomCode=()=>room?.roomId?.slice(0,8).toUpperCase()||'';
-const canIssue=()=>Boolean(active&&view?.game?.phase==='battle'&&view.game.state.currentPlayer===view.side&&!lock&&client?.socket?.readyState===WebSocket.OPEN);
+const canIssue=()=>Boolean(joined&&active&&view?.game?.phase==='battle'&&view.game.state.currentPlayer===view.side&&!lock&&client?.socket?.readyState===WebSocket.OPEN);
 function refresh(){
  start.disabled=!(room&&view?.phase==='lobby'&&view.host===view.viewerId&&view.seats.length===2&&client?.socket?.readyState===WebSocket.OPEN);
  copyCode.disabled=!room;
@@ -37,13 +37,14 @@ function refresh(){
 }
 function installListeners(net){
  net.on('connected',()=>{
+   joined=false; // Authentication precedes the server's room rejoin acknowledgement.
    if(net.roomId)message('Восстанавливаем комнату…');
    else message('Соединение установлено');
    refresh();
  });
  net.on('room_joined',payload=>{
    if(payload.gameId!=='fog-of-conquest')return;
-   room=payload;view=payload.state;lock=false;
+   room=payload;view=payload.state;lock=false;joined=true;
    if(view.game){active=true;window.FogApplyOnlineView?.(view);}
    else{active=false;$('startPanel').style.display='none';lobby.style.display='flex';}
    refresh();
@@ -57,10 +58,10 @@ function installListeners(net){
    refresh();
  });
  net.on('presence',packet=>{if(room)room.players=packet.players;refresh();});
- net.on('disconnected',()=>{lock=false;message('Связь прервана · восстанавливается автоматически');refresh();});
+ net.on('disconnected',()=>{joined=false;lock=false;message('Связь прервана · восстанавливается автоматически');refresh();});
  net.on('error',error=>{lock=false;message('Ошибка PocketNet: '+String(error?.message||error?.code||'нет соединения'));refresh();});
- net.on('room_closed',()=>{room=null;view=null;lock=false;active=false;message('Комната закрыта.');refresh();});
- net.on('room_kicked',()=>{room=null;view=null;lock=false;active=false;message('Доступ к комнате закрыт.');refresh();});
+ net.on('room_closed',()=>{joined=false;room=null;view=null;lock=false;active=false;message('Комната закрыта.');refresh();});
+ net.on('room_kicked',()=>{joined=false;room=null;view=null;lock=false;active=false;message('Доступ к комнате закрыт.');refresh();});
 }
 async function ensure(){
  if(client&&client.socket?.readyState===WebSocket.OPEN)return client;
@@ -75,7 +76,7 @@ async function ensure(){
    try{nick=localStorage.getItem('fog-of-conquest:online-nick')||nick;}catch{}
    nick=preferredPocketName(identity,nick);
    if(client&&(client.identityKey!==identityKey||client.storage!==storage)){
-     client.close();client=null;room=null;view=null;active=false;
+     client.close();client=null;room=null;view=null;active=false;joined=false;
    }
    if(!client){
      client=new PocketNet({serverUrl:location.origin+'/pocketnet',name:nick,identityKey,storage});
@@ -107,7 +108,7 @@ function issue(action){
 function leave(){
  try{if(client?.roomId&&client.socket?.readyState===WebSocket.OPEN)client.leaveRoom();}
  catch{}
- room=null;view=null;active=false;lock=false;
+ room=null;view=null;active=false;lock=false;joined=false;
  window.FogLeaveOnline?.();
  $('victoryOverlay').style.display='none';
  $('waitOverlay').style.display='none';
@@ -132,7 +133,7 @@ void getPocketIdentity({force:true}).then(identity=>{
 }).catch(()=>{});
 document.addEventListener('pocket-id:changed',event=>{
  if(!client||client.identityKey===pocketIdentitySessionKey(event.detail?.user))return;
- client.close();client=null;room=null;view=null;active=false;lock=false;
+ client.close();client=null;room=null;view=null;active=false;lock=false;joined=false;
  window.FogLeaveOnline?.();lobby.style.display='none';
  $('startPanel').style.display='flex';$('newGameOptions').style.display='flex';
  message('Профиль изменён. Сетевая сессия завершена.');refresh();
