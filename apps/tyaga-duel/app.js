@@ -247,9 +247,14 @@ function update(dt) {
         const g = state.game, b = g.ball, depth = b.y / g.h;
         // An imperfect, reactive opponent: anticipate trajectory and dangerous build-up,
         // without instant perfect counters or arbitrary free impulses.
-        const urgent = depth > .70 || (depth > .47 && b.vy > 235)
-          || (g.charge > .57 && depth > .29 && b.vy < -50);
-        const opportunity = depth > .39 && b.vy < 120 && Math.random() < .28;
+        // The bottom AI scores at the bottom: defend against upward motion,
+        // not against the ball already travelling toward its own goal.
+        const urgent = (b.vy < -110 && depth < .40)
+          || (b.vy < -450 && depth < .60)
+          || (g.owner === 0 && g.charge > .55 && b.vy < -80)
+          || (depth < .20 && b.vy < 0);
+        const opportunity = (g.owner === -1 && g.elapsed > 1.1)
+          || (depth < .62 && b.vy < 100 && Math.random() < .25);
         if (urgent || opportunity) {
           if (claim(g, 1)) {
             state.claimSide = 1;state.claimFlash = .3;
