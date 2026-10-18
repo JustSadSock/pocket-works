@@ -612,7 +612,7 @@ export class Renderer{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.uniform1i(this.u.paintedAtlas,0);this.textureBytes=atlas.pixels.byteLength;
-  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;this.rogueMeshCache=new RogueMeshCache({limit:3,grid:5});this.visualMetrics={staticTriangles:0,staticVertices:0,staticBytes:0,meshBuildMs:0,meshUploadMs:0,dynamicTriangles:0,drawCalls:0,textureBytes:0,cacheHits:0,cacheMisses:0,cacheEntries:0,cacheBytes:0};
+  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;this.staticWorld=null;this.rogueMeshCache=new RogueMeshCache({limit:3,grid:5});this.visualMetrics={staticTriangles:0,staticVertices:0,staticBytes:0,meshBuildMs:0,meshUploadMs:0,dynamicTriangles:0,drawCalls:0,textureBytes:0,cacheHits:0,cacheMisses:0,cacheEntries:0,cacheBytes:0};
   gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true});this.lost=false
  }
@@ -646,12 +646,12 @@ export class Renderer{
   if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
   const rogue=world.endless===true;
   const meshKey=rogue?'rogue:'+world.terrainRevision+':'+Math.floor(player.x/5)+':'+Math.floor(player.z/5):world.terrainRevision;
-  if(this.staticRevision!==meshKey){
+  if(this.staticRevision!==meshKey||this.staticWorld!==world){
    const start=performance.now(),entry=rogue?this.rogueMeshCache.get(world,player,
     anchor=>rogueStaticMesh(world,anchor)):null;
    const mesh=rogue?entry.data:apartmentMesh(world),built=performance.now();
    this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);
-   this.staticCount=mesh.length/10;this.staticRevision=meshKey;
+   this.staticCount=mesh.length/10;this.staticRevision=meshKey;this.staticWorld=world;
    this.visualMetrics.staticTriangles=this.staticCount/3;
    this.visualMetrics.staticVertices=this.staticCount;
    this.visualMetrics.staticBytes=mesh.length*4;
