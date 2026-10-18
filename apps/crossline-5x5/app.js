@@ -1,12 +1,16 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
+import {DEV_QUERY,DEV_SCENES,devScene,mountArenaDevGallery,isDevKey} from './dev-gallery.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DIRECTIONS,STEPS,MAX_ROUNDS,initialMatch,validatePlan,simulateRound,aiPlan} from './engine.js';
-installMobileRuntime();
+const previewRequested=new URLSearchParams(location.search).get(DEV_QUERY);
+const IS_DEV_FRAME=window.parent!==window&&DEV_SCENES.some(s=>s.id===previewRequested);
+if(!IS_DEV_FRAME)installMobileRuntime();
+let devAnimationSpeed=1;
 const $=id=>document.getElementById(id),NET=location.origin+'/pocketnet',KEY='pocket-works:crossline-5x5:';
-const read=(key,fallback='')=>{try{return localStorage.getItem(KEY+key)??fallback}catch{return fallback}};
-const write=(key,val)=>{try{localStorage.setItem(KEY+key,String(val))}catch{}};
+const read=(key,fallback='')=>{if(IS_DEV_FRAME)return fallback;try{return localStorage.getItem(KEY+key)??fallback}catch{return fallback}};
+const write=(key,val)=>{if(IS_DEV_FRAME)return;try{localStorage.setItem(KEY+key,String(val))}catch{}};
 const scoped={getItem:k=>{try{return sessionStorage.getItem(KEY+k)}catch{return null}},setItem:(k,v)=>{try{sessionStorage.setItem(KEY+k,v)}catch{}},removeItem:k=>{try{sessionStorage.removeItem(KEY+k)}catch{}}};
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const symbols={up:'↑',down:'↓',left:'←',right:'→',shield:'▣'};
@@ -25,7 +29,7 @@ const score=()=>mode==='online'?server?.score||{A:0,B:0}:offline?.score||{A:0,B:
 const isPlanning=()=>latest()?.phase==='planning';
 const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen;
 function soundFX(type='tap'){
- if(!sound)return;
+ if(!sound&&!IS_DEV_FRAME)return;
  try{
   const A=window.AudioContext||window.webkitAudioContext;if(!A)return;
   audio ||= new A();audio.resume?.();
@@ -126,6 +130,7 @@ function wire(client){
  client.on('error',e=>{if(net!==client)return;busy=false;const errors={room_not_found:'Комната не найдена',room_full:'В комнате уже два игрока',game_unavailable:'Правила ещё не опубликованы',match_in_progress:'Матч уже идёт',already_in_room:'Ты уже в комнате',room_version_unavailable:'Старая версия правил недоступна'};toast(errors[e.code]||e.code||'Ошибка PocketNet');lobby()});
 }
 async function connect(action,code=''){
+ if(IS_DEV_FRAME){initDevPreview(action==='create'?'lobby-host':'lobby-guest');return;}
  leaveNet(false);mode='online';busy=true;show('lobby');lobby();
  try{
   const name=profile?.complete?profile.nickname:read('nick','Игрок');
@@ -151,6 +156,7 @@ function joinFromField(){
  try{busy=true;net.joinRoom(code);lobby()}catch{busy=false;lobby();toast('Не удалось войти')}
 }
 function send(payload){
+ if(IS_DEV_FRAME){if(payload?.type==='start'||payload?.type==='rematch'){initDevPreview('planning');return true;}if(payload?.type==='plan'){initDevPreview('plan-wait');return true;}return true;}
  if(!net||!connected){toast('Ожидаем восстановления сети');return false;}
  try{net.sendGame(payload);return true}catch{toast('Нет соединения');return false;}
 }
@@ -287,12 +293,12 @@ function animateRecord(record){
   else animFrame={...frames[i],round:record.round};
   render();
   if(i>=frames.length-1){
-   setTimeout(()=>{if(ticket!==gameToken)return;animating=false;animFrame=null;plan=[];render();if(latest()?.phase==='finished')finish();},560);
+   setTimeout(()=>{if(ticket!==gameToken)return;animating=false;animFrame=null;plan=[];render();if(latest()?.phase==='finished')finish();},560/devAnimationSpeed);
    return;
   }
   i++;const evt=frames[i]?.events||[];
   soundFX(evt.some(e=>e.type==='hit'||e.type==='fall')?'hit':evt.some(e=>e.type==='block')?'block':'move');
-  setTimeout(step,580);
+  setTimeout(step,580/devAnimationSpeed);
  };
  step();
 }
@@ -435,7 +441,7 @@ window.addEventListener('keydown',e=>{
 async function checkNet(){
  try{const r=await fetch(NET+'/health',{cache:'no-store',signal:AbortSignal.timeout(6000)}),j=await r.json();$('netStatus').textContent=r.ok&&j.modules?.includes('crossline-5x5')?'POCKETNET · ДОСТУПЕН':'POCKETNET · ОЖИДАЕТ ПУБЛИКАЦИИ'}catch{$('netStatus').textContent='POCKETNET · СЕЙЧАС НЕ В СЕТИ'}
 }
-getPocketIdentity().then(p=>{profile=p;startFromSession()}).catch(()=>startFromSession());
+if(!IS_DEV_FRAME)getPocketIdentity().then(p=>{profile=p;startFromSession()}).catch(()=>startFromSession());
 function startFromSession(){
  if(roomQuery){$('code').value=roomQuery;connect('join',roomQuery);return;}
  // Saved session and pinned room ID survive a page reload in this browser.
@@ -443,5 +449,20 @@ function startFromSession(){
  const restored=new PocketNet({serverUrl:NET,name:profile?.complete?profile.nickname:'Игрок',storage:scoped,identityKey:profile?.id||'guest'});
  if(restored.roomId)connect('resume');
 }
-createWorkshopMode({appName:'5×5 Arena',version:'1.1.0',cachePrefix: 'crossline-5x5-',storageNamespace: 'pocket-works:crossline-5x5',onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
-checkNet();resumeOffer();
+if(!IS_DEV_FRAME){
+ const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.2.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+ mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
+ checkNet();resumeOffer();
+}else{
+ document.body.classList.add('arena-dev-child');
+ window.addEventListener('keydown',event=>{
+  if(isDevKey(event)&&!event.repeat){event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'arena-dev-toggle'},location.origin)}
+ },true);
+ window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||event.source!==window.parent)return;
+  if(event.data?.type==='arena-dev-restart')initDevPreview(previewRequested);
+  if(event.data?.type==='arena-dev-speed'&&[.25,.5,1,2,4].includes(event.data.speed))devAnimationSpeed=event.data.speed;
+  if(event.data?.type==='arena-dev-theme')$('themeToggle').click();
+ });
+ initDevPreview(previewRequested);
+}
