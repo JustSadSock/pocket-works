@@ -3421,9 +3421,9 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "b086865a4ca3313ef33443c596002520e401a3cd",
-    "lastAttemptAt": "2026-10-18T11:39:59.369Z",
-    "revision": "b086865a4ca3313ef33443c596002520e401a3cd",
+    "lastAttemptRevision": "3ccdcf6a89eca59f02747fd960f7122bd363a549",
+    "lastAttemptAt": "2026-10-18T12:11:18.433Z",
+    "revision": "3ccdcf6a89eca59f02747fd960f7122bd363a549",
     "qualityScore": 75,
     "visionScore": null,
     "prepared": false,
@@ -3436,7 +3436,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "947cfdc09fd7928696032cce4ed035606f4c637425d1f0249a1d943715855c11",
+    "sha256": "b62da9c2f9c9cb7ad48a650bb71f0d0b7b75d545f439e8b1d66ab489219ca73e",
     "imageVersion": 2
   },
   "crossline-5x5": {
