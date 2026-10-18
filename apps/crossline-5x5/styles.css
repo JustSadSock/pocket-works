@@ -263,3 +263,43 @@
 @keyframes arenaAIWorking{50%{opacity:.56}}
 @media(prefers-reduced-motion:reduce){#phaseInfo.is-ai-thinking{animation:none}}
 :root[data-motion="off"] #phaseInfo.is-ai-thinking{animation:none}
+
+
+/* v1.7 — tactile but restrained instruction panel; the original board stays
+   in focus, without a long scroll or additional overlay during normal play. */
+.arena-lesson{width:min(440px,97%);align-self:center;padding:9px 12px;border:1px solid rgba(56,189,248,.45);border-left:3px solid #0af;background:var(--color-surface-alt);border-radius:7px;flex-shrink:0}
+.arena-lesson-head{display:flex;align-items:center;gap:7px;min-height:20px}
+.arena-lesson-head small{font:700 10px Orbitron,Roboto,sans-serif;color:var(--color-accent);white-space:nowrap}
+.arena-lesson-head strong{flex:1;font:700 14px "Russo One",Roboto,sans-serif;color:var(--color-heading);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.arena-lesson-head button{border:0;background:none;padding:3px;color:var(--color-text-muted);font:700 10px Roboto,sans-serif}
+.arena-lesson p{margin:4px 0 0;font:400 12px/1.32 Roboto,sans-serif;color:var(--color-text-primary)}
+.play:has(.arena-lesson:not(.hidden)){gap:4px;justify-content:center}
+.play:has(.arena-lesson:not(.hidden)) .board{--tile:clamp(28px,min(11vw,6.1dvh),46px)}
+.controls button.lesson-focus,#submit.lesson-focus{outline:3px solid #ffe9a0;outline-offset:2px;box-shadow:0 0 14px rgba(255,208,86,.45)}
+@keyframes arenaLessonFocus{50%{outline-offset:4px;box-shadow:0 0 20px rgba(255,208,86,.62)}}
+:root:not([data-motion="off"]) .lesson-focus{animation:arenaLessonFocus 1.4s ease-in-out infinite}
+.arena-mark-hint{height:13px;line-height:13px;color:var(--color-text-muted);font:500 10px/13px Roboto,sans-serif;text-align:center}
+.arena-mark-hint b{font-weight:800;color:var(--color-accent)}
+.arena-cell-mark{position:absolute;z-index:3;top:0;left:2px;width:13px;height:13px;display:grid;place-items:center;border-radius:3px;font:900 12px/1 Roboto,sans-serif;pointer-events:none;background:#075879;color:#dcf5ff}
+.arena-cell-mark.is-danger{background:#b2401d;color:#fff}
+.board>.cell[tabindex="0"]{cursor:crosshair}
+.board>.cell[tabindex="0"]:focus-visible{outline:2px solid var(--color-accent);outline-offset:-3px}
+.arena-settings{position:fixed;inset:0;z-index:20;background:rgba(4,9,18,.84);display:flex;align-items:center;justify-content:center;padding:18px}
+.arena-settings-panel{background:var(--color-surface-alt);width:min(390px,100%);border:1px solid var(--color-border);border-radius:13px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px #0006}
+.arena-settings-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.arena-settings-head h2{font:700 20px "Russo One",Roboto,sans-serif;color:var(--color-heading);margin:0}
+.arena-settings-panel .arena-volume{display:flex;justify-content:space-between;align-items:center;font:700 13px Roboto,sans-serif}
+.arena-settings-panel input[type=range]{width:100%;accent-color:var(--color-accent);min-height:32px;cursor:pointer}
+.arena-settings-panel .textbtn{text-align:left}
+@media(max-height:720px){.arena-lesson{padding:6px 9px}.arena-lesson p{font-size:11px;margin:2px 0 0}}
+@media(max-height:580px) and (orientation:landscape){
+ .arena-lesson{position:absolute;top:2px;left:8px;width:min(300px,35vw);padding:5px 8px;z-index:5;background:var(--color-surface-alt)}
+ .arena-lesson-head strong{font-size:11px}
+ .arena-lesson-head button{font-size:9px}
+ .arena-lesson p{font-size:10px;line-height:1.15}
+ .play:has(.arena-lesson:not(.hidden)) .battlefield{margin-top:26px}
+ .play:has(.arena-lesson:not(.hidden)) .command-deck{margin-top:36px}
+ .arena-mark-hint{display:none}
+}
+@media(max-height:670px) and (orientation:portrait){.arena-mark-hint{display:none}.play:has(.arena-lesson:not(.hidden)) .board{--tile:clamp(28px,min(10vw,5.7dvh),39px)}}
+@media(prefers-reduced-motion:reduce){.lesson-focus{animation:none!important}}
