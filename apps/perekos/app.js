@@ -27,12 +27,12 @@ $('menu-audio').addEventListener('click',setAudio);$('pause-audio').addEventList
 $('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');
 function show(name){mode=name;for(const id of ['menu','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=name==='menu'||name==='online-lobby';if(name==='fight'||name==='menu')paused=false;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
 function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff));fxParticles=[];seen=0;audioContext();show('fight');toast('Двигайся и удерживай «Шар»');remember()}
-$('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',newMatch);
+$('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',()=>online?.active?online.start():newMatch());
 $('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
 function pause(){if(mode!=='fight')return;paused=true;show('pause');$('pause-title').textContent=online?.active?'Сетевой матч':'Передышка';$('pause-online-note').hidden=!online?.active;remember()}
 $('pause-btn').addEventListener('click',pause);
 $('resume').addEventListener('click',()=>{show('fight');last=performance.now()});
-$('quit').addEventListener('click',()=>{quitPrompt=true;$('pause').hidden=true;$('confirm').hidden=false;mode='confirm'});
+$('quit').addEventListener('click',()=>{$('quit-warning').textContent=online?.active?'Выход из комнаты засчитает поражение в текущем матче.':'Прогресс текущей серии будет потерян.';quitPrompt=true;$('pause').hidden=true;$('confirm').hidden=false;mode='confirm'});
 $('quit-no').addEventListener('click',()=>{quitPrompt=false;show('pause')});
 $('quit-yes').addEventListener('click',()=>{if(online?.active)online.leave();onlinePhase='';active=null;forget();$('continue').hidden=true;show('menu')});
 let toastT=0;
@@ -210,8 +210,8 @@ function drawConstructs(s){
  for(const w of s.barriers){circle(w.x+3,w.y+6,w.r,'#12251f9e');circle(w.x,w.y,w.r,'#60745d');circle(w.x-3,w.y-5,Math.max(6,w.r-8),'#82917a');pixel(w.x-w.r*.35,w.y-3,5,3,'#a6ad89')}
  for(const m of s.mines){circle(m.x,m.y+3,9,'#111f1b90');circle(m.x,m.y,7,'#ae6a55');pixel(m.x-3,m.y-4,6,4,'#ffdf9f');pixel(m.x-1,m.y-8,2,4,'#f3a66e')}
 }
-function drawShots(s){for(const q of s.shots){const x=Math.round(q.x),y=Math.round(q.y);pixel(x-5,y-1,9,3,q.owner===0?'#dfa660':'#d7807c');circle(x,y,q.r+2,q.owner===0?'#ffc97999':'#df8d8099');pixel(x-3,y-3,6,6,'#ffecb9');pixel(x-1,y-5,3,2,'#fff4db');pixel(x-Math.sign(q.vx)*9,y-Math.sign(q.vy)*9,2,2,'#c4a46c')}}
-function drawEffects(s){for(const e of s.echoes){wizard(e.x,e.y,0,frame/60,e.owner===1,Math.min(.5,e.life/4),0,0)}
+function drawShots(s){for(const q of s.shots){const x=Math.round(q.x),y=Math.round(q.y);pixel(x-5,y-1,9,3,q.owner===myIndex()?'#dfa660':'#d7807c');circle(x,y,q.r+2,q.owner===myIndex()?'#ffc97999':'#df8d8099');pixel(x-3,y-3,6,6,'#ffecb9');pixel(x-1,y-5,3,2,'#fff4db');pixel(x-Math.sign(q.vx)*9,y-Math.sign(q.vy)*9,2,2,'#c4a46c')}}
+function drawEffects(s){for(const e of s.echoes){wizard(e.x,e.y,0,frame/60,e.owner!==myIndex(),Math.min(.5,e.life/4),0,0)}
 for(const f of s.fx){const t=f.t/.38,r=Math.round(t*23)+3;if(f.k==='hit'){circle(f.x,f.y,Math.max(1,r),'#f5b36a30');for(let n=0;n<6;n++){const a=n*Math.PI/3+f.id;pixel(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,3,3,'#efc28c')}}else if(f.k==='shoot'){circle(f.x,f.y,8*(1-t),'#f9d39996')}else if(f.k==='shield'){ctx.strokeStyle='#c7edd0';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,14+27*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='heal'){pixel(f.x-1,f.y-19-t*10,4,11,'#aff0b2');pixel(f.x-5,f.y-15-t*10,12,3,'#aff0b2')}else if(f.k==='dash'){pixel(f.x-15+t*8,f.y-10,24*(1-t),3,'#d6c3a3')}else if(f.k==='overload'){ctx.strokeStyle='#f6b16f';ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x,f.y,10+62*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='mine'){circle(f.x,f.y,16*(1-t),'#f2b476ab')}else if(f.k==='spark'){pixel(f.x-5+t*8,f.y-4,4,4,'#fbca87');pixel(f.x+6-t*7,f.y+5,3,3,'#f9ddab')}}}
 function drawOverlay(s){if(s?.phase==='fight'&&s.overtime){ctx.fillStyle='#9c3c3044';ctx.fillRect(16,16,369,10);ctx.fillRect(16,594,369,9)}
 for(let i=0;i<14;i++){const v=(frame*.2+i*71)%620,x=20+(i*71%360);pixel(x,(v+Math.sin(frame*.003+i)*3)%620,2,2,'#f3dca128')}}
@@ -266,5 +266,82 @@ drawPortrait($('menu-portrait').getContext('2d'),appearance,42);
 drawPortrait($('my-portrait').getContext('2d'),appearance,40);
 drawPortrait($('result-portrait').getContext('2d'),appearance,56);
 void refreshAppearance({force:true});
+
+
+function roomRoster(players=[],disconnected=''){
+ const root=$('net-players');root.replaceChildren();
+ for(let i=0;i<2;i++){
+  const row=document.createElement('div');row.className='net-player';
+  const p=players[i]||null,face=document.createElement('span');face.className='net-avatar';face.textContent=p?String(i+1):'○';
+  const title=document.createElement('strong');title.textContent=p?.name||'Ждём второго мага';
+  const tag=document.createElement('small');tag.textContent=p?(p.id===disconnected?'Не в сети':p.verified?'Pocket ID':'В комнате'):'';
+  row.append(face,title,tag);root.append(row);
+ }
+}
+function roomInfo(roomId){
+ $('net-room-info').hidden=!roomId;$('net-choice').hidden=!!roomId;
+ $('net-copy-code').textContent=roomId?inviteCode(roomId):'--------';
+ $('net-title').textContent=roomId?'Комната готова':'Играть вдвоём';
+}
+function onlineView(view){
+ if(!online?.active||!view)return;
+ online.view=view;active=view.match||null;
+ const stamp=[view.phase,active?.round??0,view.picked,view.ready].join(':');
+ if(stamp===onlinePhase){if(view.phase==='lobby')updateNetworkLobby(view);return}
+ onlinePhase=stamp;displayXY=[null,null];
+ if(view.phase==='lobby'){show('online-lobby');updateNetworkLobby(view)}
+ else if(view.phase==='fight'){onlinePreviewRunes=null;applyPendingAppearance();show('fight');toast('Дуэль началась')}
+ else if(view.phase==='draft'){
+  if(view.ready){show('net-wait')}
+  else if(view.picked){onlinePreviewRunes=[...myActor().runes];show('build');renderWorkbench()}
+  else{onlinePreviewRunes=null;show('draft');renderDraft()}
+ }else if(view.phase==='result'){show('result');renderResult()}
+}
+function updateNetworkLobby(view){
+ const full=(view?.seats?.length||0)===2;
+ const isHost=view?.host===view?.seats?.[view.me];
+ $('net-start').hidden=!full||!isHost;
+ $('net-help').textContent=full?'Оба мага на месте. Создатель комнаты запускает дуэль.':'Пришли код другу. Оба игрока смогут участвовать со своих устройств.';
+ roomRoster(view?.players||[]);
+}
+online=new OnlineDuel({
+ onView:onlineView,
+ onRoom:roomId=>{roomInfo(roomId);if(!roomId)onlinePhase='';},
+ onStatus:message=>{$('net-feedback').textContent=message;$('net-signal').textContent=message.includes('потеряна')?'НЕТ СВЯЗИ':online?.connected?'В СЕТИ':'ПОДКЛЮЧЕНИЕ';if(!['fight','draft','build','result','net-wait'].includes(mode))$('net-feedback').textContent=message},
+ onError:message=>{$('net-feedback').textContent=message;toast(message);$('net-signal').textContent='ОШИБКА'},
+ onPresence:roomRoster
+});
+function startNetwork(kind,code=''){
+ show('online-lobby');onlinePhase='';active=null;displayXY=[null,null];
+ $('net-feedback').textContent='Подключаемся…';
+ roomInfo(null);online.open(kind,code).catch(e=>{$('net-feedback').textContent=e.message||String(e)});
+}
+$('online-open').addEventListener('click',()=>startNetwork('create'));
+$('net-create').addEventListener('click',()=>startNetwork('create'));
+$('net-join').addEventListener('click',()=>{
+ const code=$('net-code').value.trim().toUpperCase();
+ if(!/^[0-9A-F]{8}$/.test(code)&&!/^[0-9A-F-]{36}$/.test(code)){$('net-feedback').textContent='Введите восемь символов из приглашения.';return}
+ startNetwork('join',code);
+});
+$('net-resume').addEventListener('click',()=>startNetwork('resume'));
+$('net-start').addEventListener('click',()=>online.start());
+$('net-back').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
+$('net-wait-leave').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
+$('net-result-leave').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
+async function copyRoom(link){
+ const code=online.room;if(!code)return;
+ const value=link?location.origin+location.pathname+'?room='+encodeURIComponent(inviteCode(code)):inviteCode(code);
+ try{await navigator.clipboard.writeText(value);toast(link?'Приглашение скопировано':'Код скопирован')}
+ catch{const input=$('net-code');input.value=value;input.focus();input.select();toast('Скопируй выделенный текст')}
+}
+$('net-copy-code').addEventListener('click',()=>void copyRoom(false));
+$('net-copy-link').addEventListener('click',()=>void copyRoom(true));
+try{
+ const prefix='perekos-net:pocket-net:'+location.origin+'/pocketnet';
+ const saved=JSON.parse(localStorage.getItem(prefix)||'null');
+ $('net-resume').hidden=!saved?.roomId;
+}catch{}
+const invite=incomingCode();
+if(invite){$('net-code').value=invite;show('online-lobby');$('net-feedback').textContent='Приглашение готово. Нажми «Войти».'}
 
 window.__perekosTest={get state(){return active},get mode(){return mode},get appearance(){return {source:appearance.source,accountId:appearance.accountId,preset:appearance.preset,mascot:appearance.mascot,colors:appearance.colors,hasArt:!!appearance.artCanvas}},get hasPendingAppearance(){return !!pendingAppearance},refreshAvatar:()=>refreshAppearance({force:true}),start:newMatch,step:()=>{if(active){tick(active,{attack:true});if(active.phase!=='fight')transition()}},pick:(id,slot=null)=>{if(active?.phase==='draft'){return finishPick(id,slot)}return false},build:()=>{$('bench-fight').click()},reorder:(from,to)=>{const result=reorderRunes(active,from,to);if(result)renderWorkbench();return result},save:saveBuild};
