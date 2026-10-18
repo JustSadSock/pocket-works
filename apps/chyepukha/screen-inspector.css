@@ -1,0 +1,35 @@
+/* QA-only visual layer. Game art is rendered inside the real app iframe. */
+.chy-qa{position:fixed!important;inset:7px;z-index:2147483000;display:grid;grid-template-columns:235px minmax(0,1fr);min-height:0;overflow:hidden;background:#26382f;color:#f2e7d4;border:1px solid #6b7666;box-shadow:0 20px 60px #06110ddd;font:12px/1.4 system-ui,sans-serif}
+.chy-qa *{box-sizing:border-box}
+.chy-qa button{font:inherit;cursor:pointer;border-radius:0;transition:background .12s}
+.chy-qa button:focus-visible{outline:2px solid #f4be86;outline-offset:1px}
+.chy-qa-side{display:flex;flex-direction:column;min-height:0;border-right:1px solid #647363;background:#2d4035}
+.chy-qa-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 11px;border-bottom:1px solid #647363}
+.chy-qa-head small{display:block;font-size:9px;color:#d0bb99;letter-spacing:.15em}
+.chy-qa-head strong{display:block;font:600 20px Georgia,serif;letter-spacing:-.03em;margin-top:5px}
+.chy-qa-close{border:1px solid #7e8b78;background:transparent;color:inherit;width:32px;height:32px;flex:none;font-size:21px!important}
+.chy-qa-modes{display:flex;flex-wrap:wrap;gap:4px;padding:8px;border-bottom:1px solid #647363}
+.chy-qa-modes button{flex:1;min-height:31px;padding:5px;font-size:10px;border:1px solid #768477;background:transparent;color:#f0dfc2}
+.chy-qa-modes button.selected{background:#eddbb8;color:#283b30}
+.chy-qa-list{flex:1;min-height:0;overflow-y:auto;padding:6px}
+.chy-qa-group{margin:0;padding:10px 8px 4px;color:#e1b487;font-size:10px;text-transform:uppercase;letter-spacing:.09em}
+.chy-qa-list button{display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;color:#f3e7d6;min-height:34px;padding:7px 8px}
+.chy-qa-list button:hover{background:#49614d}
+.chy-qa-list button.selected{background:#e8d6b7;color:#2b3e32;font-weight:700}
+.chy-qa-note{font-size:10px;line-height:1.4;color:#c7cabb;border-top:1px solid #647363;margin:0;padding:10px}
+.chy-qa-main{min-height:0;min-width:0;display:flex;flex-direction:column}
+.chy-qa-bar{min-height:45px;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid #647363}
+.chy-qa-bar strong{font-size:12px;font-weight:650}
+.chy-qa-bar button{font-size:20px;background:transparent;border:1px solid #788676;color:inherit;min-height:29px;min-width:32px}
+.chy-qa-stage{flex:1;min-height:0;min-width:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:11px;background:repeating-linear-gradient(45deg,#394f40 0 12px,#304539 12px 24px)}
+.chy-qa-wrap{flex:none;overflow:hidden;background:#263f35;box-shadow:0 18px 50px #07130dc9}
+.chy-qa-frame{display:block;border:0;background:#293f3b;transform-origin:top left}
+.chy-qa-footer{display:flex;justify-content:space-between;gap:10px;min-height:31px;padding:8px 12px;border-top:1px solid #647363;color:#c7d0bc;font-size:10px}
+.chy-qa-expand{display:none;position:absolute;left:9px;top:9px;background:#e8d6b7;color:#294034;border:1px solid #aa9473;padding:8px 11px}
+.chy-qa.collapsed{grid-template-columns:minmax(0,1fr)}
+.chy-qa.collapsed .chy-qa-side{display:none}
+.chy-qa.collapsed .chy-qa-expand{display:block}
+.chy-qa.loading .chy-qa-wrap{opacity:.7}
+body.chyepukha-preview .rail a{opacity:.4;pointer-events:none}
+@media(max-width:760px){.chy-qa{inset:0;grid-template-columns:155px minmax(0,1fr)}.chy-qa-head{padding:9px 6px}.chy-qa-head strong{font-size:16px}.chy-qa-modes{padding:4px}.chy-qa-modes button{font-size:9px;min-width:56px}.chy-qa-list button{font-size:10px;padding:6px;min-height:37px}.chy-qa-group{font-size:9px;padding:7px 4px 2px}.chy-qa-stage{padding:6px}.chy-qa-footer{font-size:9px;padding:6px}.chy-qa-footer span:last-child{display:none}}
+@media(prefers-reduced-motion:reduce){.chy-qa button{transition:none}}
