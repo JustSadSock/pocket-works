@@ -71,7 +71,68 @@ const FogRuleKernel=(function(){
     }
     return null;
   }
-  return Object.freeze({reach,unitDamage,buildingDamage,advanceTurn,evaluateVictory});
+  const manhattan=(a,b)=>Math.abs(a.r-b.r)+Math.abs(a.c-b.c);
+  function canHeal(caster,target,side,unitTypes){
+    return !!caster&&!!target&&caster.owner===side&&target.owner===side&&
+      caster.type==='mage'&&caster.mp>0&&manhattan(caster,target)<=1&&
+      target.hp<unitTypes[target.type].hpMax;
+  }
+  function canSpawn(map,units,buildings,state,building,unitType,point,unitTypes,buildTypes,beta){
+    const info=unitTypes[unitType];
+    if(!building||!point||!info||building.owner!==state.currentPlayer||
+      !buildTypes[building.type]?.spawn.includes(unitType)||
+      (unitType==='bog'&&!beta))return false;
+    if(!Number.isInteger(point.r)||!Number.isInteger(point.c)||
+      point.r<0||point.r>=map.length||point.c<0||point.c>=map[0].length||
+      manhattan(building,point)!==1||map[point.r][point.c]===4)return false;
+    return units.length<140&&state.gold[state.currentPlayer]>=info.cost&&
+      !units.some(u=>u.r===point.r&&u.c===point.c);
+  }
+  function capture(unit,building,buildTypes){
+    if(!unit||!building||unit.r!==building.r||unit.c!==building.c||
+      building.hp>0)return {valid:false,captured:false};
+    const captured=building.owner!==unit.owner;
+    building.owner=unit.owner;
+    building.hp=buildTypes[building.type].hpMax;
+    return {valid:true,captured};
+  }
+  function lineOfSight(map,r0,c0,r1,c1,forestBlock=true){
+    if(!map.length||r0<0||c0<0||r1<0||c1<0||
+      r0>=map.length||r1>=map.length||
+      c0>=map[0].length||c1>=map[0].length)return false;
+    let dx=Math.abs(c1-c0),dy=Math.abs(r1-r0),
+        sx=c0<c1?1:-1,sy=r0<r1?1:-1,err=dx-dy,
+        afterForest=forestBlock?-1:null;
+    while(true){
+      if(map[r0][c0]===4&&(r0!==r1||c0!==c1))return false;
+      if(afterForest!==null){
+        if(afterForest>=0)afterForest++;
+        if(afterForest>1)return false;
+        if(map[r0][c0]===2&&(r0!==r1||c0!==c1))afterForest=0;
+      }
+      if(r0===r1&&c0===c1)break;
+      const e2=err*2;
+      if(e2>-dy){err-=dy;c0+=sx;}
+      if(e2<dx){err+=dx;r0+=sy;}
+    }
+    return true;
+  }
+  function fogForSide(map,units,buildings,side){
+    const rows=map.length,cols=map[0].length;
+    const f=Array.from({length:rows},()=>Array(cols).fill(true));
+    for(const o of [...buildings.filter(x=>x.owner===side),...units.filter(x=>x.owner===side)]){
+      if(o.r<0||o.r>=rows||o.c<0||o.c>=cols)continue;
+      const rad=map[o.r][o.c]===2?2:map[o.r][o.c]===3?4:3;
+      for(let dr=-rad;dr<=rad;dr++)for(let dc=-rad;dc<=rad;dc++){
+        const r=o.r+dr,c=o.c+dc;
+        if(r>=0&&r<rows&&c>=0&&c<cols&&Math.abs(dr)+Math.abs(dc)<=rad&&
+          lineOfSight(map,o.r,o.c,r,c,true))f[r][c]=false;
+      }
+    }
+    return f;
+  }
+  return Object.freeze({reach,unitDamage,buildingDamage,advanceTurn,evaluateVictory,
+    canHeal,canSpawn,capture,lineOfSight,fogForSide});
 })();
   root.FogRuleKernel=FogRuleKernel;
 })(typeof window!=='undefined'?window:globalThis);
