@@ -1929,7 +1929,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
       onlineGame=false;window.onlineGame=false;
       lobbyPanel.style.display='flex';startPanel.style.display='none';return;
     }
-    const g=roomView.game;onlineGame=true;window.onlineGame=true;aiMode=false;gameOver=false;
+    const g=roomView.game;
+    const firstView=!onlineGame||ROWS!==g.rows||COLS!==g.cols;
+    onlineGame=true;window.onlineGame=true;aiMode=false;gameOver=false;
     onlineTurn=g.state.currentPlayer;modeBeta=g.modeBeta;
     if(modeBeta)BUILD_TYPES.base.spawn=[...BASE_SPAWN_DEFAULT,'bog'];else BUILD_TYPES.base.spawn=[...BASE_SPAWN_DEFAULT];
     ROWS=g.rows;COLS=g.cols;window.ROWS=ROWS;window.COLS=COLS;
@@ -1949,6 +1951,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
     endTurnBtn.title=onlineTurn===onlineSide?'Твой ход':'Ожидание соперника';
     window.dispatchEvent(new Event('resize'));
     updateAll();
+    // Each client starts at their own stronghold, not the host's top-left corner.
+    // Never re-center after routine state updates: manual map panning must persist.
+    if(firstView)requestAnimationFrame(()=>window.FogCenterCamera?.(onlineSide));
     if(g.phase==='finished'){
       gameOver=true;victoryText.textContent=g.winner===onlineSide?'Победа!':g.winner===3-onlineSide?'Поражение':'Игра завершена';
       viewReplayBtn.style.display='none';victoryOverlay.style.display='flex';
