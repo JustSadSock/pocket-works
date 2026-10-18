@@ -31,7 +31,8 @@
         "grounded-motion.test.mjs",
         "land-economy.test.mjs",
         "conflicts.test.mjs",
-        "realism-contract.test.mjs"
+        "realism-contract.test.mjs",
+        "realism-ensemble.test.mjs"
       ]
     },
     {
@@ -318,15 +319,21 @@
       ]
     },
     {
-      "id": "historical-monte-carlo",
+      "id": "realism-25-year",
       "kind": "node",
-      "tier": "deep",
-      "entry": "qa/historical-calibration.mjs",
+      "tier": "smoke",
+      "entry": "qa/realism-ensemble.mjs",
       "args": [
-        "--group=summary",
-        "--seeds=413,7777,43821,9001,11,29,12345,21773,51291,71331,101,202",
-        "--years=20",
-        "--output={output}/distribution.json"
+        "--seed={seed}",
+        "--scenario=normal",
+        "--years=25",
+        "--output={output}/realism-25-year.json"
+      ],
+      "seeds": [
+        413,
+        7777,
+        43821,
+        9001
       ]
     }
   ]
