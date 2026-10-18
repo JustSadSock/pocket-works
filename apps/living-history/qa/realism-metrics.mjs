@@ -123,6 +123,41 @@ export function validateObservation(row){
   errors.push('fabricated-historical-validation');
  return errors;
 }
+// Pre-registered review heuristics, NOT medieval population parameters
+// and NOT proof that any result is historically true or false.
+export function reviewSignals(run){
+ const flags=[];
+ const add=(code,year,value,reference,reason)=>flags.push({seed:run.seed,scenario:run.scenario,
+  years:run.years,year,code,value,reference,reason,severity:'investigate-not-validated'});
+ const founding=run.initial?.historicalComparison?.find(x=>x.metric==='customaryTenementsAbove10Acres');
+ if(founding?.observed!==null&&Number.isFinite(founding?.observed)&&
+  Math.abs(founding.observed-founding.reference)>.10)
+  add('founding-tenure-source-mismatch',0,founding.observed,founding.reference,
+   'Different regional samples: inspect selection bias before touching household initialization');
+ for(const row of run.annual){
+  if(![5,10,25,50,100].includes(row.year))continue;
+  const size=row.marriages.householdSize;
+  if(row.year>=10&&row.households>=8&&size!==null&&Math.abs(size-5.8)>5.8*.5)
+   add('household-size-deviation',row.year,size,5.8,
+    'More than 50% from an illustrative English reconstruction; check cohort survival and mobility');
+  for(const [metric,n,observed,ref] of [
+   ['women-first-marriage',row.marriages.firstAgeWomen,row.marriages.observedWomen,24],
+   ['men-first-marriage',row.marriages.firstAgeMen,row.marriages.observedMen,27]]){
+   if(observed>=8&&n!==null&&Math.abs(n-ref)>8)
+    add(metric+'-deviation',row.year,n,ref,'First-marriage ages diverge by >8 years in an observed cohort; investigate selection');
+  }
+  if(run.initial?.population>0&&row.population<run.initial.population*.25)
+   add('severe-population-collapse',row.year,row.population,run.initial.population,
+    'Less than one quarter of the founders remain: explain births, deaths, access and migration; no artificial rescue');
+  if(row.vital.deaths>=20&&row.food.starvationDeaths/row.vital.deaths>.4)
+   add('famine-dominates-mortality',row.year,row.food.starvationDeaths,row.vital.deaths,
+    'More than 40% of annual deaths attributed to starvation: inspect household-level access');
+ }
+ if(run.years>=50&&run.annual.reduce((n,y)=>n+y.disputes.started,0)===0)
+  add('no-local-land-disputes',run.years,0,null,
+   'This model may not generate conflicts under this configuration; no documentary frequency benchmark available');
+ return flags;
+}
 export function summarizeEnsemble(runs){
  if(!Array.isArray(runs)||!runs.length)throw Error('No completed runs');
  const seen=new Set();
@@ -164,9 +199,10 @@ export function summarizeEnsemble(runs){
       baseline.annual.reduce((n,y)=>n+y.food.starvationDeaths,0)
   });
  }
+ const flags=runs.flatMap(reviewSignals);
  return {schema:1,method:'multi-seed descriptive ensemble; no fitting to historical targets',
   historicalEvidence:'unvalidated; ancient records are not sampled from the simulated population',
-  runs:runs.length,groups:summaries,pairedCounterfactuals:paired,
+  runs:runs.length,groups:summaries,pairedCounterfactuals:paired,reviewFlags:flags,
   warnings:[
    'Per-year vital rates are crude rates using approximate average midyear population.',
    'Age at infant death is counted, but birth-cohort survival cannot yet be estimated reliably.',
