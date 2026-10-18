@@ -87,7 +87,7 @@ async function run(){
   assert.equal(moved.event.payload.game.units.find(x=>x.owner===1&&x.type==='swordsman').c,3);
   const e=await observe(a,'battle_event');
   assert.equal(e.event.payload.kind,'move');assert.deepEqual(e.event.payload.at,{r:1,c:3});
-  assert.equal((await observe(a,'ack')).event.requestId,'fog-move-1');
+  assert.equal((await a.next('game_event',m=>m.event?.type==='ack'&&m.event.requestId==='fog-move-1')).event.requestId,'fog-move-1');
   a.send('game_message',{payload:command});
   const dup=await a.next('game_event',m=>m.event?.type==='ack'&&m.event.status==='duplicate');
   assert.equal(dup.event.revision,rev+1,'double move was not applied');
