@@ -40,7 +40,7 @@ function mageCards(node,value,onPick,small=false){
   for(const m of MAGES.filter(m=>m.school===school.id)){
    const btn=document.createElement('button');btn.type='button';btn.dataset.mage=m.id;
    btn.className='mage-option'+(value===m.id?' picked':'');btn.setAttribute('aria-pressed',String(value===m.id));
-   const symbol=document.createElement('i');symbol.textContent=m.school==='fire'?'✹':m.school==='storm'?'ϟ':'▣';
+   const symbol=document.createElement('canvas');symbol.className='mage-sprite';symbol.width=50;symbol.height=54;const miniature=symbol.getContext('2d');miniature.imageSmoothingEnabled=false;drawMage(miniature,appearance,{x:25,y:38,scale:1,time:0,mageId:m.id});
    const label=document.createElement('span'),title=document.createElement('strong');title.textContent=m.name;label.append(title);
    if(!small){const detail=document.createElement('small');detail.textContent=m.description;label.append(detail)}
    btn.append(symbol,label);btn.addEventListener('click',()=>onPick(m.id));choices.append(btn);
@@ -284,7 +284,13 @@ function drawShots(s){
  }
 }
 function drawEffects(s){for(const e of s.echoes){wizard(e.x,e.y,0,frame/60,e.owner!==myIndex(),Math.min(.5,e.life/4),0,0)}
-for(const f of s.fx){const t=f.t/.38,r=Math.round(t*23)+3;if(f.k==='hit'){circle(f.x,f.y,Math.max(1,r),'#f5b36a30');for(let n=0;n<6;n++){const a=n*Math.PI/3+f.id;pixel(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,3,3,'#efc28c')}}else if(f.k==='shoot'){circle(f.x,f.y,8*(1-t),'#f9d39996')}else if(f.k==='shield'){ctx.strokeStyle='#c7edd0';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,14+27*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='heal'){pixel(f.x-1,f.y-19-t*10,4,11,'#aff0b2');pixel(f.x-5,f.y-15-t*10,12,3,'#aff0b2')}else if(f.k==='dash'){pixel(f.x-15+t*8,f.y-10,24*(1-t),3,'#d6c3a3')}else if(f.k==='overload'){ctx.strokeStyle='#f6b16f';ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x,f.y,10+62*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='mine'){circle(f.x,f.y,16*(1-t),'#f2b476ab')}else if(f.k==='spark'){pixel(f.x-5+t*8,f.y-4,4,4,'#fbca87');pixel(f.x+6-t*7,f.y+5,3,3,'#f9ddab')}}}
+for(const f of s.fx){const t=f.t/.38,r=Math.round(t*23)+3;if(f.k==='hit'){circle(f.x,f.y,Math.max(1,r),'#f5b36a30');for(let n=0;n<6;n++){const a=n*Math.PI/3+f.id;pixel(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,3,3,'#efc28c')}}else if(f.k.startsWith('impact_')){
+ const kind=f.k.slice(7),color=kind==='bolt'||kind==='arc'?'#b7f3df':kind==='rock'||kind==='wave'?'#c7c9a5':'#ffb377';
+ const spikes=kind==='arc'?8:kind==='rock'?5:6;
+ for(let i=0;i<spikes;i++){const a=i*Math.PI*2/spikes+(kind==='rock'?.3:f.id*.2),rad=5+24*t;
+ pixel(f.x+Math.cos(a)*rad,f.y+Math.sin(a)*rad,kind==='rock'?6:3,kind==='rock'?5:3,color)}
+ if(kind==='wave'){ctx.lineWidth=3;ctx.strokeStyle='#e4d8b177';ctx.beginPath();ctx.arc(f.x,f.y,6+28*t,-1,Math.PI+1);ctx.stroke()}
+}else if(f.k==='shoot'){circle(f.x,f.y,8*(1-t),'#f9d39996')}else if(f.k==='shield'){ctx.strokeStyle='#c7edd0';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,14+27*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='heal'){pixel(f.x-1,f.y-19-t*10,4,11,'#aff0b2');pixel(f.x-5,f.y-15-t*10,12,3,'#aff0b2')}else if(f.k==='dash'){pixel(f.x-15+t*8,f.y-10,24*(1-t),3,'#d6c3a3')}else if(f.k==='overload'){ctx.strokeStyle='#f6b16f';ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x,f.y,10+62*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='mine'){circle(f.x,f.y,16*(1-t),'#f2b476ab')}else if(f.k==='spark'){pixel(f.x-5+t*8,f.y-4,4,4,'#fbca87');pixel(f.x+6-t*7,f.y+5,3,3,'#f9ddab')}}}
 function drawOverlay(s){if(s?.phase==='fight'&&s.overtime){ctx.fillStyle='#9c3c3044';ctx.fillRect(16,16,369,10);ctx.fillRect(16,594,369,9)}
 for(let i=0;i<14;i++){const v=(frame*.2+i*71)%620,x=20+(i*71%360);pixel(x,(v+Math.sin(frame*.003+i)*3)%620,2,2,'#f3dca128')}}
 function render(){if(mode==='menu'&&frame%3===0)drawHero($('hero-preview').getContext('2d'),appearance,frame/60,[],selectedMage);if(!bgCanvas)bgCanvas=background();ctx.clearRect(0,0,W,H);ctx.drawImage(bgCanvas,0,0);
