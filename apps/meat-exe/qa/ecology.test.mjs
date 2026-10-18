@@ -7,7 +7,7 @@ const mk=(type)=>({type,x:0,z:0,hp:72,maxHp:72,...initialEnemyIntent(type,1),att
 const ctx=(x=0,z=4,visible=true)=>({x:0,z:0,visible,playerX:x,playerZ:z});
 test('every role has a positive telegraph, cooldown and distinct visual color',()=>{
  assert.equal(ENEMY_KINDS.length,6);
- assert.equal(new Set(ENEMY_KINDS.map(type=>ENEMY_TELLS[type].color)).size,5);
+ assert.equal(new Set(ENEMY_KINDS.map(type=>ENEMY_TELLS[type].color)).size,6);
  for(const type of ENEMY_KINDS){assert.ok(ENEMY_TELLS[type].windup>=.3);assert.ok(ENEMY_TELLS[type].cooldown>=1.3);}
 });
 test('spitter commits only after warning and a wall cancels the actual shot',()=>{
