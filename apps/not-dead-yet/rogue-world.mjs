@@ -1,6 +1,7 @@
 // NOT DEAD YET — infinite, deterministic Khrushchev flat sectors.
 // The layout is a graph of one-cell-wide halls and small rooms, never a scaled-up house.
 import {FLOORPLANS} from './rogue-floorplans.mjs';
+import {DOOR_SWING,doorKey,doorSegment,leafBlocksPoint,leafIntersectsRay,advanceLeaf,sweptLeafSafe,defaultDoorOpen} from './rogue-doors.mjs';
 export const SECTOR=18;
 export const TILE=1.27;
 const HASH=(...values)=>{let h=2166136261;for(const value of values){h=Math.imul(h^(value|0),16777619);h^=h>>>13}return(h^(h>>>16))>>>0};
@@ -189,6 +190,12 @@ export class RogueWorld{
   this.endless=true;this.seed=seed>>>0;this.chunks=new Map();
    this.layoutVersion=data&&!('layoutVersion' in data)?1:data?.layoutVersion===1?1:2;
   this.epochs=new Map(Array.isArray(data?.epochs)?data.epochs:[]);
+  // Door state uses epoch-specific IDs: a rewritten sector has new hinges.
+  // A missing door map in a legacy save intentionally keeps all doors open.
+  this.doorStates=new Map(Array.isArray(data?.doors)?data.doors.filter(
+   entry=>Array.isArray(entry)&&typeof entry[0]==='string'&&entry[1]&&
+   typeof entry[1].open==='boolean'&&Number.isFinite(entry[1].angle)
+  ).slice(-400).map(([id,state])=>[id,{open:state.open,angle:Math.max(0,Math.min(DOOR_SWING,state.angle))}]):[]);
   this.taken=new Set(Array.isArray(data?.taken)?data.taken:[]);
   this.visited=new Set(Array.isArray(data?.visited)?data.visited:[]);
   this.lastNear=new Map();this.shifted=new Map();
@@ -209,10 +216,81 @@ export class RogueWorld{
   const cx=Math.floor(x/SECTOR),cz=Math.floor(z/SECTOR);
   for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)for(const p of this.chunk(cx+dx,cz+dz).props){
    if(p.solid&&Math.abs(x-p.x)<p.w*.5+r&&Math.abs(z-p.z)<p.d*.5+r)return false
-  }return true
+  }
+  for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
+   const c=this.chunk(cx+dx,cz+dz);
+   for(const door of c.doors){
+    if(Math.abs(door.x+.5-x)>1.8||Math.abs(door.z+.5-z)>1.8)continue;
+    if(leafBlocksPoint(door,this.doorState(door,c).angle,x,z,r))return false
+   }
+  }
+  return true
  }
- visible(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d*7));
-  for(let i=1;i<n;i++){const t=i/n;if(!this.pass(Math.floor(ax+(bx-ax)*t),Math.floor(az+(bz-az)*t)))return false}return true
+ visible(ax,az,bx,bz){
+  if(!this.visibleTiles(ax,az,bx,bz))return false;
+  const minX=Math.floor(Math.min(ax,bx)/SECTOR),maxX=Math.floor(Math.max(ax,bx)/SECTOR);
+  const minZ=Math.floor(Math.min(az,bz)/SECTOR),maxZ=Math.floor(Math.max(az,bz)/SECTOR);
+  for(let cz=minZ;cz<=maxZ;cz++)for(let cx=minX;cx<=maxX;cx++){
+   const c=this.chunk(cx,cz);
+   for(const door of c.doors){
+    if(leafIntersectsRay(door,this.doorState(door,c).angle,ax,az,bx,bz))return false
+   }
+  }
+  return true
+ }
+ visibleTiles(ax,az,bx,bz){
+  const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d*7));
+  for(let i=1;i<n;i++){const t=i/n;if(!this.pass(Math.floor(ax+(bx-ax)*t),Math.floor(az+(bz-az)*t)))return false}
+  return true
+ }
+ doorState(door,c=null){
+  const chunk=c||this.chunk(Math.floor(door.x/SECTOR),Math.floor(door.z/SECTOR));
+  const key=doorKey(door,chunk.epoch),stored=this.doorStates.get(key);
+  if(stored)return stored;
+  const open=this.layoutVersion===1||defaultDoorOpen(this.seed,chunk,door,HASH);
+  return{open,angle:open?DOOR_SWING:0}
+ }
+ nearestDoor(px,pz,yaw,maxDistance=1.8){
+  let closest=null,best=maxDistance;
+  for(const c of this.nearby(px,pz,3)){
+   for(const door of c.doors){
+    const tx=door.x+.5,tz=door.z+.5,dist=Math.hypot(tx-px,tz-pz);
+    if(dist>=best||dist<.04)continue;
+    const alignment=((tx-px)*Math.sin(yaw)+(tz-pz)*-Math.cos(yaw))/dist;
+    if(alignment<.22||!this.visibleTiles(px,pz,tx,tz))continue;
+    closest={door,chunk:c,dist,state:this.doorState(door,c)};best=dist
+   }
+  }
+  return closest
+ }
+ toggleDoor(door,actors=[]){
+  if(!door)return{ok:false,reason:'missing'};
+  const chunk=this.chunk(Math.floor(door.x/SECTOR),Math.floor(door.z/SECTOR));
+  if(!chunk.doors.includes(door))return{ok:false,reason:'stale'};
+  const key=doorKey(door,chunk.epoch),previous=this.doorState(door,chunk);
+  const target=previous.open?0:DOOR_SWING;
+  if(!sweptLeafSafe(door,previous.angle,target,actors))
+   return{ok:false,reason:'occupied'};
+  const updated={open:!previous.open,angle:previous.angle};
+  this.doorStates.set(key,updated);
+  return{ok:true,open:updated.open,door}
+ }
+ animateDoors(dt,actors=[]){
+  let moving=false;
+  for(const [key,state] of this.doorStates){
+   const target=state.open?DOOR_SWING:0;
+   if(Math.abs(target-state.angle)<.001){state.angle=target;continue}
+   // The closing animation stops if any living actor enters its sweep.
+   const parts=key.split(':'),coords=parts[1]?.split(',').map(Number);
+   if(!coords||coords.length!==2||coords.some(v=>!Number.isFinite(v)))continue;
+   const c=this.chunk(Math.floor(coords[0]/SECTOR),Math.floor(coords[1]/SECTOR));
+   const door=c.doors.find(d=>doorKey(d,c.epoch)===key);
+   if(!door){this.doorStates.delete(key);continue}
+   const next=advanceLeaf(state.angle,target,dt);
+   if(!sweptLeafSafe(door,state.angle,next,actors))continue;
+   state.angle=next;moving=true
+  }
+  return moving
  }
  findStep(sx,sz,tx,tz,limit=1200){
   const a=[Math.floor(sx),Math.floor(sz)],b=KEY(Math.floor(tx),Math.floor(tz)),origin=KEY(...a);
@@ -220,7 +298,7 @@ export class RogueWorld{
   const queue=[a],prev=new Map([[origin,null]]),dirs=[[1,0],[-1,0],[0,1],[0,-1]];
   for(let n=0;n<queue.length&&n<limit;n++){const [x,z]=queue[n];
    for(const [dx,dz] of dirs){const xx=x+dx,zz=z+dz,k=KEY(xx,zz);
-    if(prev.has(k)||!this.pass(xx,zz))continue;prev.set(k,KEY(x,z));
+    if(prev.has(k)||!this.canStand(xx+.5,zz+.5,.10))continue;prev.set(k,KEY(x,z));
     if(k===b){let at=k;while(prev.get(at)!==origin){at=prev.get(at);if(!at)return null}
      const [fx,fz]=at.split(',').map(Number);return{x:fx+.5,z:fz+.5}}
     queue.push([xx,zz])
@@ -263,6 +341,7 @@ export class RogueWorld{
     return this.pass(Math.floor(tx),Math.floor(tz))&&this.visible(px,pz,tx,tz)
    });
    if(seen&&eligible&&!exposed){
+    for(const key of this.doorStates.keys())if(key.startsWith(c.stamp+':'))this.doorStates.delete(key);
     const next=c.epoch+1;this.epochs.set(k,next);this.chunks.set(k,(this.layoutVersion===1?generateLegacySector:generateSector)(this.seed,c.cx,c.cz,next));
     this.lastNear.delete(k);this.shifted.set(k,time);this.terrainRevision++;
     this.changes++;this.lastChange={cx:c.cx,cz:c.cz,time};changed=true
@@ -283,6 +362,6 @@ export class RogueWorld{
   }
   return cells.length?cells[Math.floor(rand()*cells.length)]:null
  }
- save(){return{layoutVersion:this.layoutVersion,epochs:[...this.epochs].slice(-160),taken:[...this.taken].slice(-300),visited:[...this.visited].slice(-500),changes:this.changes,depth:this.depth}}
+ save(){return{layoutVersion:this.layoutVersion,doors:[...this.doorStates].slice(-400),epochs:[...this.epochs].slice(-160),taken:[...this.taken].slice(-300),visited:[...this.visited].slice(-500),changes:this.changes,depth:this.depth}}
  fingerprint(){return [...this.chunks.values()].sort((a,b)=>a.cx-b.cx||a.cz-b.cz).slice(0,9).map(c=>c.stamp+':'+c.epoch+':'+Array.from(c.tiles).reduce((a,b)=>a+b,0)).join('|')}
 }
