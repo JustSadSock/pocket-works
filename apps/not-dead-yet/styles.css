@@ -25,3 +25,7 @@
 .chapter-link{font-size:11px;text-decoration:none;min-width:190px;display:inline-flex;align-items:center}
 @media(max-height:670px){.upgrade-card{min-height:60px;padding:8px 12px;gap:3px}.upgrade-card strong{font-size:16px}.upgrade-list{gap:6px}}
 @media(pointer:coarse){.upgrade-card{min-height:72px}.chapter-link{min-height:43px}}
+
+/* Fine-pointer desktops must not have an invisible mobile look layer over the canvas. */
+@media(pointer:fine){#touchLook{pointer-events:none}#view{cursor:crosshair}#view:focus{outline:none}}
+@media(pointer:coarse){#touchLook{pointer-events:auto}}
