@@ -123,6 +123,22 @@ function pickup(){
  if(drop.type==='relic'){openUpgrade();return}
  persist();showHud()
 }
+function nearDoor(){return world.nearestDoor(player.x,player.z,player.yaw,1.75)}
+function interact(){
+ if(phase!=='play')return;
+ const door=nearDoor(),drop=nearDrop();
+ // Prefer the door when the crosshair faces it; nearby loot remains accessible
+ // after opening the room (no accidental pickups through a closed leaf).
+ if(door&&(!drop||door.dist<=Math.hypot(drop.x-player.x,drop.z-player.z)+.12)){
+  const result=world.toggleDoor(door.door,[player,...enemies]);
+  if(!result.ok){notify(result.reason==='occupied'?'Слишком близко. Отойди от створки.':'Не получается открыть.',1.4);return}
+  audio.event('door');
+  noise=acousticEvent(player.x,player.z,elapsed,'door');
+  notify(result.open?'Дверь открывается.':'Дверь закрывается.',1);
+  persist();showHud();return
+ }
+ pickup()
+}
 function torchToggle(){if(phase!=='play')return;torch=!torch;$('torch').textContent='Свет: '+(torch?'вкл':'выкл');audio.event('torch')}
 function reload(){
  if(phase!=='play'||reloadAt||ammo===6||reserve===0)return;
@@ -156,6 +172,7 @@ function spawnEnemy(){
 }
 function simulation(dt){
  elapsed+=dt;
+ world.animateDoors(dt,[player,...enemies]);
  if(reloadAt&&elapsed>=reloadAt){const n=Math.min(6-ammo,reserve);ammo+=n;reserve-=n;reloadAt=0;reloadTime=0}
  else if(reloadAt)reloadTime=reloadAt-elapsed;
  shotTime=Math.max(0,shotTime-dt);
@@ -223,8 +240,11 @@ function showHud(){
  $('lifeFill').style.width=Math.max(0,100-stress/maxStress()*100)+'%';
  $('count').textContent=String(world.depth);
  $('packCount').textContent=String(Object.values(upgrades).reduce((a,b)=>a+b,0));
- const drop=nearDrop();$('aimHint').textContent=drop?'E / ВЗЯТЬ — '+REWARDS[drop.type].name:'';
- $('interact').classList.toggle('ready',!!drop);
+ const door=nearDoor(),drop=nearDrop();
+ const useDoor=door&&(!drop||door.dist<=Math.hypot(drop.x-player.x,drop.z-player.z)+.12);
+ $('aimHint').textContent=useDoor?'E / '+(door.state.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' ДВЕРЬ':drop?'E / ВЗЯТЬ — '+REWARDS[drop.type].name:'';
+ $('interact').textContent=useDoor?(door.state.open?'Закрыть':'Открыть'):'Взять';
+ $('interact').classList.toggle('ready',Boolean(useDoor||drop));
  $('torch').textContent='Свет: '+(torch?'вкл':'выкл')
 }
 function draw(time){
@@ -239,6 +259,7 @@ function draw(time){
   health:maxStress()-stress,ammo,reserve,elapsed,rearrangements:world?.changes||0,depth:world?.depth,visited:world?.visited.size,
   kills,collected,upgrades:{...upgrades},enemies:enemies.length,attempts,moves,blocked,renderer3D:!!renderer&&!renderer.lost,
   sovietInterior:true,endless:true,variant:world?.fingerprint(),fpsFrameTime:dt,
+  doors:world?.doorStates?.size||0,
   geometry:renderer?.visualMetrics?{...renderer.visualMetrics}:null};
  requestAnimationFrame(draw)
 }
@@ -308,7 +329,7 @@ function wireInputs(){
    return
   }
   if(phase!=='play'||!key.first)return;
-  if(key.action==='interact')pickup();
+  if(key.action==='interact')interact();
   else if(key.action==='reload')reload();
   else if(key.action==='torch')torchToggle();
   else if(key.action==='inventory')showInventory();
@@ -319,7 +340,7 @@ function wireInputs(){
  const run=$('run');
  run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.classList.add('held');run.setPointerCapture(e.pointerId)});
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])run.addEventListener(ev,()=>{sprintHeld=false;run.classList.remove('held')});
- $('interact').addEventListener('click',pickup);$('fire').addEventListener('click',shoot);
+ $('interact').addEventListener('click',interact);$('fire').addEventListener('click',shoot);
  $('reload').addEventListener('click',reload);$('torch').addEventListener('click',torchToggle);
  $('pause').addEventListener('click',pause);$('pack').addEventListener('click',showInventory);
  $('resume').addEventListener('click',resume);$('closePack').addEventListener('click',resume);
@@ -348,6 +369,10 @@ try{
    shoot,collect:pickup,upgrade:chooseUpgrade,
    spawn:()=>{spawnEnemy();return enemies.length},
    save:persist,
+   interact,
+   nearestDoor:()=>nearDoor(),
+   doorStates:()=>[...world.doorStates].map(([id,state])=>({id,...state})),
+   toggleDoor:door=>world.toggleDoor(door,[player,...enemies]),
    // Visual development mode: deterministic camera positions and mesh diagnostics.
    visual:()=>({seeds:VISUAL_SEEDS,scenes:VISUAL_SCENES,...visualCoverage(world,renderer)}),
    startSeed:seed=>{if(!VISUAL_SEEDS.includes(seed))return false;start({seed});qaVisualMode=true;elapsed=2;enemies=[];return true},
