@@ -170,3 +170,20 @@
  .route-option{min-height:63px}
 }
 @media(prefers-reduced-motion:reduce){.route-option{transition:none}}
+
+
+/* v1.8.2: a single narrow boss marker anchored between the top readouts and sightline. */
+.guardian-status{position:absolute;z-index:4;top:calc(63px + env(safe-area-inset-top));
+ left:50%;transform:translateX(-50%);width:min(280px,45vw);pointer-events:none;
+ display:flex;flex-direction:column;gap:5px;text-align:center;
+ font:800 12px Arial,sans-serif;letter-spacing:.12em;color:#e9d5c2;
+ text-shadow:0 2px 5px #120407}
+.guardian-track{height:5px;width:100%;background:rgba(24,4,9,.80);
+ outline:1px solid rgba(232,192,163,.52)}
+.guardian-track i{display:block;height:100%;width:100%;background:#d8a397;
+ transition:width .14s linear}
+@media(max-width:620px){.guardian-status{top:calc(69px + env(safe-area-inset-top));
+ font-size:10px;width:min(210px,49vw);gap:3px}}
+@media(max-height:480px){.guardian-status{top:calc(38px + env(safe-area-inset-top));
+ width:min(230px,34vw);font-size:9px}.guardian-track{height:3px}}
+@media(prefers-reduced-motion:reduce){.guardian-track i{transition:none}}
