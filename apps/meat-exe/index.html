@@ -22,11 +22,11 @@
 
   <section class="hud" id="hud" data-ui hidden aria-label="Игровые показатели">
     <div class="hud-top">
-      <div class="stat health"><small>ЖИЗНЬ</small><strong id="healthValue">100</strong><div class="health-track"><i id="healthFill"></i></div></div>
+      
       <div class="hud-center"><small>ГЛУБИНА</small><strong id="waveValue">01 / 05</strong><span id="seedValue">ORGAN #2026</span></div>
       <div class="hud-right"><div class="stat"><small>ЦЕЛЕЙ</small><strong id="enemyValue">00</strong></div><div class="stat"><small>УБИЙСТВ</small><strong id="killValue">00</strong></div></div>
     </div>
-    <div class="hud-bottom"><div><strong id="weaponValue">КОСТОЛОМ LV.1</strong><small>Q / E — ОРУЖИЕ</small></div><div class="score"><small>ОЧКИ</small><strong id="scoreValue">0</strong></div></div>
+    <div class="hud-bottom"><div class="stat health"><small>ЖИЗНЬ</small><strong id="healthValue">100</strong><div class="health-track"><i id="healthFill"></i></div></div><div class="weapon-block"><strong id="weaponValue">КОСТОЛОМ LV.1</strong><small>Q / E — ОРУЖИЕ</small></div><div class="score"><small>ОЧКИ</small><strong id="scoreValue">0</strong></div></div>
   </section>
 
   <button id="pauseBtn" class="pause-control" type="button" aria-label="Пауза" data-native-press hidden>Ⅱ</button>
@@ -51,8 +51,9 @@
       <div class="menu-actions">
         <button id="startBtn" class="primary" type="button" data-native-press>РАЗРЕЗАТЬ ОРГАН <span>↗</span></button>
         <button id="resumeSaved" class="secondary" type="button" data-native-press hidden>ПРОДОЛЖИТЬ ЗАБЕГ</button>
+        <button id="qualityMenu" class="secondary quality-button" type="button" data-native-press>ГРАФИКА: АВТО</button>
       </div>
-      <div class="instructions"><span>ПК: WASD · МЫШЬ · ЛКМ · SPACE · SHIFT · Q</span><span>ТЕЛЕФОН: ДВИЖЕНИЕ СЛЕВА · ПРИЦЕЛ СПРАВА</span></div>
+      <div class="instructions"><span>ПК: WASD · МЫШЬ · ЛКМ · SPACE · SHIFT · Q</span><span>ТЕЛЕФОН: ДВИЖЕНИЕ СЛЕВА · ПРИЦЕЛ СПРАВА</span><span>ГЕЙМПАД: СТИКИ · RT ОГОНЬ · A РЫВОК · B СМЕНА · START ПАУЗА</span></div>
       <div class="menu-footer"><span id="record">РЕКОРД 0</span><span id="scar"></span></div>
     </div>
   </section>
@@ -64,11 +65,19 @@
       <button id="resumeBtn" class="primary" type="button" data-native-press>ВЕРНУТЬСЯ В ОРГАН</button>
       <button id="restartPause" class="secondary" type="button" data-native-press>НОВЫЙ ЗАБЕГ</button>
       <button id="soundPause" class="secondary" type="button" data-native-press>ЗВУК: ВКЛ</button>
+      <button id="qualityPause" class="secondary" type="button" data-native-press>ГРАФИКА: АВТО</button>
       <button id="menuPause" class="secondary" type="button" data-native-press>В ГЛАВНОЕ МЕНЮ</button>
       <a href="../../" data-shell-exit data-app-control data-native-press class="exit">ВЫЙТИ В POCKET WORKS</a>
     </div>
   </section>
 
+  <section id="confirmRestart" class="overlay panel-overlay confirmation" data-ui hidden>
+    <div class="panel"><span class="eyebrow">НЕОБРАТИМОЕ ДЕЙСТВИЕ</span>
+      <h2>НОВЫЙ ЗАБЕГ?</h2><p class="result-copy">Текущий забег будет заменён новым.</p>
+      <button id="confirmYes" class="primary" type="button" data-native-press>НАЧАТЬ ЗАНОВО</button>
+      <button id="confirmNo" class="secondary" type="button" data-native-press>ОСТАТЬСЯ</button>
+    </div>
+  </section>
   <section id="result" class="overlay panel-overlay" data-ui hidden>
     <div class="panel result-panel">
       <span class="eyebrow">ЗАБЕГ ЗАВЕРШЁН</span>
