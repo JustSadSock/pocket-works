@@ -94,6 +94,7 @@ export function createObservatory(canvas,options={}){
  function setDistance(v){fly=null;state.l=(Math.sign(state.l)||1)*clamp(v,.2,6);state.facingSign=Math.sign(state.l);request();save();updateControls();}
  function rebuild(width,height,quick=false){
   if(!active||!metricNow||width<10||height<10)return;
+  clearTimeout(pending);pending=0;
   makeSky();w=width;h=height;
   const token=++run,side=state.l>=0?1:-1;
   stage='geodesics';progress=0;warning='';
@@ -239,7 +240,7 @@ export function createObservatory(canvas,options={}){
  canvas.addEventListener('pointerup',e=>{
   if(!mouse||e.pointerId!==mouse.id)return;
   const p=point(e);
-  if(!mouse.drag&&transfer){
+  if(!mouse.drag&&transfer&&stage==='ready'){
    const b=cameraBasis(state.yaw,state.pitch,Math.sign(state.l)||1,state.facingSign);
    const direction=pixelDirection(2*p.x/w-1,1-2*p.y/h,b,state.fov,w/h);
    const theta=Math.acos(clamp(dot(direction,b.radial),-1,1));
