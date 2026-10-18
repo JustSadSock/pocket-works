@@ -125,3 +125,17 @@ test('capturing destroyed enemy base restores original HP and updates owner',()=
  assert.equal(moved.state.units[0].r,r);
  assert.equal(moved.state.units[0].c,c);
 });
+
+test('beta BOG recruitment matches original local base access, forbidden in normal mode',()=>{
+ const g=rules.createOriginalMatch({size:'tiny',seed:59,beta:true});
+ g.map=simple();g.units=[];g.state.currentPlayer=1;g.state.gold[1]=30;
+ const b=g.buildings.find(b=>b.owner===1&&b.type==='base');
+ const at=[{r:b.r+1,c:b.c},{r:b.r,c:b.c+1}].find(p=>p.r<g.rows&&p.c<g.cols);
+ assert.ok(at);
+ const cmd={type:'spawn',building:b.id,unitType:'bog',...at};
+ const accepted=rules.originalAction(g,1,cmd);
+ assert.equal(accepted.error,null);
+ assert.equal(accepted.state.units.at(-1).type,'bog');
+ const denied=rules.originalAction({...g,modeBeta:false},1,cmd);
+ assert.match(denied.error,/Нельзя нанять/);
+});
