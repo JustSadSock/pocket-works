@@ -704,6 +704,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // expose for tests
   Object.assign(window, {
+    FogVisibleBuildings: visibleBuildings,
     computeZone,
     hasLOS,
     doAttack,
