@@ -3480,8 +3480,8 @@
     "diagnostic": null,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "8d504cf8261c7df2377b737a9fc7bc1a3ce2cf8a",
-    "lastAttemptAt": "2026-10-18T22:37:43.550Z",
+    "lastAttemptRevision": "e43726d97b6f320efa0a2a94f49e30d3624a1d2e",
+    "lastAttemptAt": "2026-10-18T22:44:19.206Z",
     "revision": "010e2a40ab158c451d539375fd36c55b77df4840",
     "qualityScore": 75,
     "visionScore": null,
@@ -3537,12 +3537,12 @@
     "lastAttemptAt": "2026-10-18T21:35:31.229Z"
   },
   "portal-lab": {
-    "note": "No frame passed image-content checks",
+    "note": "existing cover rated higher",
     "diagnostic": null,
-    "status": "published",
+    "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a2672a9600b739fdd5af458623b881c308430c7c",
-    "lastAttemptAt": "2026-10-18T21:35:19.303Z",
+    "lastAttemptRevision": "a47c6eb4522252660e83a7b543d2f303e0e4391d",
+    "lastAttemptAt": "2026-10-18T22:43:51.032Z",
     "revision": "a2672a9600b739fdd5af458623b881c308430c7c",
     "qualityScore": 76,
     "visionScore": null,
@@ -3552,5 +3552,21 @@
     "shot": 0,
     "sha256": "1fe3b1920c507e0a7b153ef737806a50efd23186637c0e1c1f1eb713226ae4d2",
     "imageVersion": 2
+  },
+  "cavitation-lab": {
+    "revision": "109cbdcb0538bd55e92f46be0a77eb1ba0289db5",
+    "qualityScore": 80,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "53dcec3c93260e8438f10218bf43defe0c3fd00750203b2a78ce123eba8956ba",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "109cbdcb0538bd55e92f46be0a77eb1ba0289db5",
+    "lastAttemptAt": "2026-10-18T22:44:01.857Z"
   }
 }
