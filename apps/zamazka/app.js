@@ -726,6 +726,13 @@ function roundReview(){
 function results(){
  if(!view?.participants||!view?.scores)return;
  change(finaleResultsMarkup({view,escapeText:esc,memberSeal,pocketPlayerBadge,hostId:me?.id}),'results');
+ const painting=screen.querySelector('#winnerRestoration');
+ if(painting){
+  const total=p=>(Number(view.scores?.[p.id]?.mask)||0)+(Number(view.scores?.[p.id]?.eye)||0);
+  const winner=[...view.participants].sort((a,b)=>total(b)-total(a))[0];
+  const work=view.gallery?.find(g=>g?.id===winner?.id&&Number.isInteger(g.art));
+  if(work)void renderArtwork(painting,work.art,work.variation,work.strokes||[],true);
+ }
 }
 let earnedAchievementIds=new Set(),achievementStatus='loading',achievementError='';
 let achievementSelection=zamazkaAchievements[0]?.id||'';
