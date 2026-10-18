@@ -22,3 +22,42 @@
 @media(max-width:540px){.topbar{min-height:56px;padding:calc(env(safe-area-inset-top,0px) + 4px) 11px 5px}.back-label{display:none}.back>span:first-child{font-size:24px}.identity{gap:6px}.identity strong{font-size:15px}.identity small{font-size:7px}.mark{width:30px;height:33px}.mark:before,.mark:after{width:17px;height:23px;border-width:2px}.export{font-size:11px;padding:0 7px;min-height:37px;gap:4px}.icon{min-height:37px;min-width:37px}.stage-head{margin-bottom:8px;min-height:48px;align-items:center}.stage-copy .micro{font-size:8px;letter-spacing:.055em}h1{font-size:17px}.views button{font-size:10px;min-height:33px;padding:4px 7px}.canvas-frame{height:clamp(325px,48dvh,490px);min-height:325px}.canvas-hint{font-size:10px;bottom:8px}.transport{gap:5px}.transport-left{gap:5px}.primary{font-size:10px;padding:0 8px;min-height:43px}.primary span{margin-left:1px}.secondary{font-size:10px;padding:0 7px;min-height:43px}.transport-time{font-size:9px}.transport-time b{font-size:12px}.bottom-note{font-size:10px;padding-top:7px}.instrument{padding:15px 12px;column-gap:13px}.section-caption.second{margin-top:14px}.formula{font-size:9px}.readouts b{font-size:16px}.foot{display:block;font-size:9px}.foot>span{display:block}.foot>span+span{text-align:left;margin-top:3px}}
 @media(max-width:360px){.stage-copy .micro{font-size:7px}.canvas-frame{height:43dvh;min-height:290px}h1{font-size:15px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+
+
+/* v0.3: observation is the primary action. Detailed diagnostics remain contextual. */
+body[data-lab-view="observer"] .beam-settings{display:none}
+body:not([data-lab-view="observer"]) #observer-panel{display:none}
+body[data-lab-view="observer"] .canvas-frame{background:#09161c}
+.observer-panel{border-bottom:2px solid #9ab5a9;padding-bottom:15px;margin-bottom:18px}
+.observer-panel .section-caption{color:#2b5b57;border-bottom-color:#90aaa0;margin-bottom:10px}
+.observer-region{font:700 11px ui-monospace,monospace;letter-spacing:.12em;color:#315b59;margin-bottom:8px;background:#cbdcd1;padding:10px}
+.observer-actions{display:grid;grid-template-columns:1.3fr 1fr;gap:6px;margin-top:9px}
+.observer-actions button,.probe-launch{border:1px solid #719a8d;background:transparent;color:#245551;min-height:41px;padding:7px 11px;font-size:11px;font-weight:700;cursor:pointer}
+.observer-actions button:first-child{background:#335f5d;color:#f1f6e9;border-color:#335f5d}
+.probe-launch{width:100%;background:#d4e6d9;text-align:left;display:flex;align-items:center;justify-content:space-between}
+.probe-launch span{font-size:18px}
+.probe-read{font:11px/1.6 ui-monospace,monospace;min-height:28px;color:#3d6b66;border-bottom:1px solid #a8bcb0;padding:9px 0}
+.observer-limit{font-size:10px;line-height:1.5;color:#71867b;margin:10px 0 0}
+.icon.muted{opacity:.45}
+@media(max-width:980px){.instrument{background:#e5e8df}.observer-panel{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;column-gap:13px;align-items:start}
+.observer-panel>.section-caption,.observer-panel>.observer-region,.observer-panel>.observer-actions,.observer-panel>.probe-launch,.observer-panel>.probe-read,.observer-panel>.observer-limit{grid-column:1/-1}
+.observer-panel>.range-field{margin-top:8px}
+.observer-panel>.section-caption.second{margin-top:15px}
+}
+@media(max-width:600px){
+.stage-head{flex-direction:column;align-items:flex-start;gap:9px}
+.stage-copy{width:100%}
+.views{width:100%;display:grid;grid-template-columns:1.15fr 1fr 1fr}
+.views button{white-space:nowrap;min-height:39px}
+.canvas-frame{height:min(60dvh,550px);min-height:320px}
+.transport{align-items:flex-start}
+.transport-left{flex-wrap:wrap}
+.transport-time{padding-top:6px}
+.observer-panel{grid-column:1/-1}
+}
+@media(max-width:350px){.views button{padding:3px 5px;font-size:9px}.primary{font-size:9px}}
+
+.optical-diagnostics{font:11px/1.5 ui-monospace,Consolas,monospace;color:#4c716b;padding:5px 2px 9px;min-height:36px}
+body[data-lab-view="observer"] .readouts>div:nth-child(n+3){display:none}
+body[data-lab-view="observer"] .readouts{grid-template-columns:1fr 1fr}
+@media(max-width:980px){.observer-panel>.optical-diagnostics{grid-column:1/-1}}

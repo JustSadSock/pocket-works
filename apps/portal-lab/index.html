@@ -16,31 +16,42 @@
 <main class="lab">
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
-<div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1>Два региона. Одна геометрия.</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="map" class="selected" type="button" aria-pressed="true">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1>Увидеть искривлённое пространство</h1></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
-<div class="canvas-frame"><canvas id="space" role="img" aria-label="Интерактивная схема двух асимптотически плоских регионов, соединённых горловиной кротовой норы"></canvas>
-<div class="canvas-hint" id="canvas-hint">Коснись региона, чтобы поместить источник. Потяни от источника, чтобы направить луч.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
+<div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
+<div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
 </div>
 <div class="transport">
-<div class="transport-left"><button type="button" id="shoot" class="primary">Испустить лучи <span aria-hidden="true">↗</span></button><button type="button" id="pause" class="secondary" aria-label="Приостановить симуляцию">Пауза</button><button type="button" id="clear" class="secondary" title="Очистить траектории">Очистить</button></div>
+<div class="transport-left"><button type="button" id="shoot" class="primary">Пройти горловину <span aria-hidden="true">↗</span></button><button type="button" id="pause" class="secondary" aria-label="Приостановить симуляцию">Пауза</button><button type="button" id="clear" class="secondary" title="Очистить траектории">Очистить</button></div>
 <div class="transport-time"><span>ВРЕМЯ <b id="elapsed">0.00</b> <span class="unit">a/c</span></span><span id="track-count">0 траекторий</span></div>
 </div>
-<div class="bottom-note"><span class="tiny-dot"></span><span>Траектории вычисляются из метрики, а не рисуются по заранее заданным кривым.</span></div>
+<div class="bottom-note"><span class="tiny-dot"></span><span>Фотоны интегрируются из метрики; пиксели получают свет одной из двух фоновых сфер.</span></div>
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
+<section class="observer-panel" id="observer-panel" aria-label="Наблюдатель и приливные зонды">
+<div class="section-caption"><span>КАМЕРА · ГЕОДЕЗИЧЕСКАЯ ОПТИКА</span><span id="lens-eta">N₀ = 1</span></div>
+<div class="observer-region" id="lens-region">A · ВНЕШНИЙ РЕГИОН</div><div class="optical-diagnostics" id="lens-optical-read" aria-live="polite">Подготовка оптического поля</div>
+<label class="range-field"><span>Удаление от горловины <output id="lens-distance-value">2.10</output> <small>a</small></span><input id="lens-distance" type="range" min=".2" max="6" step=".1" value="2.1"></label>
+<label class="range-field"><span>Угол обзора <output id="lens-fov-value">80</output> <small>°</small></span><input id="lens-fov" type="range" min="50" max="110" step="2" value="80"></label>
+<div class="observer-actions"><button id="lens-flight" type="button">Пройти горловину</button><button id="lens-reset" type="button">Исходный вид</button></div>
+<div class="section-caption second"><span>ПРОБНАЯ МАТЕРИЯ</span><span>Jacobi</span></div>
+<button type="button" class="probe-launch" id="lens-probe">Отправить зонд <span>↗</span></button>
+<div id="lens-probe-read" class="probe-read" aria-live="polite">Зонд не запущен</div>
+<p class="observer-limit">Изображение: световые геодезические. Зонд: отклонение соседних траекторий, не расчёт разрушения материала. Звёзды — две искусственные фоновые сферы.</p>
+</section>
 <div class="section-caption"><span>01 — ГЕОМЕТРИЯ</span><span>g<sub>μν</sub></span></div>
 <label class="field"><span>Пространственная модель</span><select id="model"><option value="ellis">Эллис · точная метрика</option><option value="redshift">С красным смещением · анзац</option></select></label>
 <div class="formula" id="formula">ds² = −dt² + dl² + (l²+a²)dφ²</div>
 <label class="range-field"><span>Радиус горловины a <output id="radius-value">1.00</output> <small>ед.</small></span><input type="range" id="radius" min=".5" max="3" value="1" step=".05"></label>
 <label class="range-field" id="redshift-group"><span>Глубина потенциала <output id="eta-value">0.45</output> <small>η</small></span><input type="range" id="eta" min="0" max=".85" value=".45" step=".01" disabled></label>
-<div class="section-caption second"><span>02 — ЗОНДИРОВАНИЕ</span><span>p<sub>μ</sub></span></div>
+<div class="beam-settings"><div class="section-caption second"><span>02 — ЗОНДИРОВАНИЕ</span><span>p<sub>μ</sub></span></div>
 <div class="mode-switch" role="group" aria-label="Тип пробного объекта"><button type="button" data-kind="light" class="selected" aria-pressed="true">Фотоны</button><button type="button" data-kind="matter" aria-pressed="false">Частицы</button></div>
 <label class="range-field"><span>Число траекторий <output id="count-value">13</output></span><input type="range" id="count" min="1" max="25" step="2" value="13"></label>
 <label class="range-field"><span>Угловое раскрытие <output id="spread-value">32</output> <small>°</small></span><input type="range" id="spread" min="0" max="100" step="2" value="32"></label>
 <button id="critical" type="button" class="critical">Критический фотон <span>b ≈ b<sub>crit</sub></span></button>
 <label class="range-field" id="speed-group"><span>Начальная скорость <output id="speed-value">0.70</output> <small>c</small></span><input type="range" id="speed" min=".05" max=".95" step=".05" value=".7" disabled></label>
-<div class="section-caption second"><span>03 — ИЗМЕРЕНИЯ</span><span>∂g</span></div>
+</div><div class="section-caption second"><span>03 — ИЗМЕРЕНИЯ</span><span>∂g</span></div>
 <div class="readouts">
 <div><span>КРИВИЗНА В ГОРЛОВИНЕ</span><b id="curvature">−1.000</b><small> K [ед. 1/a²]</small></div>
 <div><span>УСКОРЕНИЕ СВОБОДНОГО ПАДЕНИЯ</span><b id="acceleration">0.000</b><small> c²/a · при l=a</small></div>
