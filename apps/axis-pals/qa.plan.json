@@ -8,7 +8,8 @@
       "files": [
         "engine.test.mjs",
         "actors.test.mjs",
-        "diorama.test.mjs"
+        "diorama.test.mjs",
+        "feedback.test.mjs"
       ]
     },
     {

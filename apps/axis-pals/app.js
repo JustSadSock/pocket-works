@@ -4,6 +4,8 @@ import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {campaign,endless,solve,step,solved,CAMPAIGN_NAMES} from './engine.js';
 import {drawRobot,describeMove,bumpMotion,poseFor} from './actors.js';
 import {drawDiorama,sceneFingerprint} from './diorama.js';
+import {drawAxisImpulse,drawContactEffects,axisOf} from './feedback.js';
+import {createSoundPlayer,soundForMove} from './sound.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id),NET=location.origin+'/pocketnet',PREFIX='pocket-works:axis-pals:';
 const local=(k,d='')=>{try{return localStorage.getItem(PREFIX+k)??d}catch{return d}};
@@ -17,30 +19,34 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 let profile=null,name=local('name','Игрок'),sound=local('sound','on')!=='off',difficulty=local('difficulty','medium');
 if(!['easy','medium','hard'].includes(difficulty))difficulty='medium';
 let mode='menu',screen='menu',net=null,me=null,server=null,roomId='',connected=false,busy=false,offline=null;
-let paused=false,overlayMode='',visual=null,toastTimer=0,previousKey='',audioContext=null,lastAttempt='';
+let paused=false,overlayMode='',visual=null,toastTimer=0,previousKey='',lastAttempt='';
+const soundPlayer=createSoundPlayer(()=>window.AudioContext||window.webkitAudioContext);
+const pressTimers=new WeakMap();let axisTimer=0;
 const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
 let roomQuery=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();
 const roleIndex=()=>server?.roles?.indexOf(me?.id)??-1;
 function notify(msg){$('toast').textContent=String(msg);$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2100)}
-function noise(kind){
- if(!sound)return;try{
-  const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;
-  audioContext ||= new Audio();audioContext.resume?.();
-  const a=audioContext,t=a.currentTime;
-  const osc=a.createOscillator(),gain=a.createGain(),filter=a.createBiquadFilter();
-  const freq=kind==='win'?640:kind==='error'?124:kind==='press'?270:365;
-  osc.type=kind==='win'?'sine':'triangle';osc.frequency.setValueAtTime(freq*(.96+Math.random()*.06),t);
-  osc.frequency.exponentialRampToValueAtTime(freq*(kind==='win'?1.42:.69),t+.16);
-  filter.type='lowpass';filter.frequency.value=kind==='win'?1750:680;
-  osc.connect(filter).connect(gain).connect(a.destination);gain.gain.setValueAtTime(.0001,t);
-  gain.gain.exponentialRampToValueAtTime(.025,t+.008);gain.gain.exponentialRampToValueAtTime(.0001,t+.19);
-  osc.start(t);osc.stop(t+.2);
-  const buffer=a.createBuffer(1,Math.floor(a.sampleRate*.06),a.sampleRate),data=buffer.getChannelData(0);
-  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length);
-  const src=a.createBufferSource(),ng=a.createGain(),nf=a.createBiquadFilter();nf.type='bandpass';nf.frequency.value=kind==='error'?280:kind==='win'?1600:530;
-  src.buffer=buffer;src.connect(nf).connect(ng).connect(a.destination);ng.gain.value=.022;src.start(t);src.stop(t+.065);
- }catch{}
+function noise(kind){soundPlayer.play(kind,sound)}
+function flashAxis(direction){
+ const axis=['up','down'].includes(direction)?'y':['left','right'].includes(direction)?'x':direction;
+ if(axis!=='x'&&axis!=='y')return;
+ const controls=document.querySelector('.controls');
+ if(!controls)return;
+ controls.dataset.activeAxis=axis;
+ clearTimeout(axisTimer);
+ axisTimer=setTimeout(()=>delete controls.dataset.activeAxis,155);
 }
+function pressFeedback(dir){
+ flashAxis(dir);
+ const button=document.querySelector('[data-move="'+dir+'"]');
+ if(!button||button.disabled)return;
+ clearTimeout(pressTimers.get(button));
+ button.classList.remove('is-pressed');
+ void button.offsetWidth;
+ button.classList.add('is-pressed');
+ pressTimers.set(button,setTimeout(()=>button.classList.remove('is-pressed'),145));
+}
+
 function vibrate(ms){try{navigator.vibrate?.(ms)}catch{}}
 function show(which){
  screen=which;for(const id of ['menu','lobby','play'])$(id).classList.toggle('hidden',id!==which);
@@ -65,12 +71,13 @@ function takeMove(dir){
  if(mode==='online'){
   if(!connected){notify('Восстанавливаем соединение');return}
   const role=roleIndex();if(role<0||(role===0)!==isY){notify('Это ось партнёра');return}
-  lastAttempt=dir;send({type:'move',direction:dir});return;
+  lastAttempt=dir;pressFeedback(dir);send({type:'move',direction:dir});return;
  }
- const outcome=step(g.level,g.positions,dir);if(!outcome.moved){visual=bumpMotion(g.positions,performance.now(),dir);noise('error');vibrate(12);notify('Оба ящика заблокированы');return}
+ pressFeedback(dir);
+ const outcome=step(g.level,g.positions,dir);if(!outcome.moved){visual=bumpMotion(g.positions,performance.now(),dir);noise('blocked');vibrate(14);notify('Оба ящика заблокированы');return}
  g.history.push(g.positions.map(p=>({...p})));g.positions=outcome.positions;g.steps++;g.revision++;
  visual=describeMove(g.history.at(-1),g.positions,performance.now(),dir);
- noise(outcome.blocked.some(Boolean)?'press':'move');vibrate(7);
+ noise(soundForMove(visual));vibrate(outcome.blocked.some(Boolean)?12:6);
  if(solved(g.level,g.positions)){g.phase='won';noise('win');vibrate([40,50,40]);if(g.kind==='campaign')save('checkpoint',Math.max(+local('checkpoint','0')||0,Math.min(CAMPAIGN_NAMES.length,g.index+1)));if(g.kind==='endless')save('endless',Math.max(+local('endless','1')||1,g.index+1));setTimeout(()=>finishOverlay(),760)}
  else if(g.steps>=g.level.moveLimits[g.difficulty]){g.phase='lost';setTimeout(()=>finishOverlay(),200)}
  renderHUD();
@@ -146,7 +153,7 @@ function consume(next){
  if(screen!=='play'){hideOverlay();show('play')}
  if(old?.level&&old.revision!==next.revision&&old.level.seed===next.level.seed&&old.positions?.length===2&&next.positions?.length===2){
   visual=describeMove(old.positions,next.positions,performance.now());
-  if(old.steps!==next.steps){noise('move');vibrate(7)}
+  if(old.steps!==next.steps){noise(soundForMove(visual));vibrate(visual?.blocked?.some(Boolean)?12:6);flashAxis(axisOf(visual))}
  }else visual=null;
  renderHUD();
  const key=next.phase+':'+next.index;
@@ -161,7 +168,7 @@ function closeNet(navigate=true){
 function wire(client){
  client.on('connected',e=>{if(net!==client)return;connected=true;me=e.player;status('POCKETNET · В СЕТИ');if(screen==='lobby')showLobby()});
  client.on('room_joined',e=>{if(net!==client)return;roomId=e.roomId;busy=false;consume(e.state);send({type:'sync'})});
- client.on('game_event',e=>{if(net!==client)return;if(e.event?.type==='state')consume(e.event.payload);if(e.event?.type==='notice'){if(String(e.event.payload).includes('Оба пути перекрыты')&&server?.positions?.length===2)visual=bumpMotion(server.positions,performance.now(),lastAttempt);notify(e.event.payload)}});
+ client.on('game_event',e=>{if(net!==client)return;if(e.event?.type==='state')consume(e.event.payload);if(e.event?.type==='notice'){if(String(e.event.payload).includes('Оба пути перекрыты')&&server?.positions?.length===2){visual=bumpMotion(server.positions,performance.now(),lastAttempt);noise('blocked');vibrate(14)}notify(e.event.payload)}});
  client.on('presence',()=>{if(net===client)send({type:'sync'})});
  client.on('disconnected',()=>{if(net===client){connected=false;status('POCKETNET · ПЕРЕПОДКЛЮЧЕНИЕ',true);renderHUD()}});
  client.on('room_closed',()=>{if(net===client){closeNet();notify('Комната закрылась')}});
@@ -217,10 +224,11 @@ function drawBoard(now){
  ctx.setTransform(d,0,0,d,0,0);
  if(sceneCache)ctx.drawImage(sceneCache,0,0,lvl.width*u,lvl.height*u);
  else{ctx.fillStyle='#cadacf';ctx.fillRect(0,0,lvl.width*u,lvl.height*u)}
+ const reduced=Boolean(reducedMotion?.matches);
+ if(visual)drawAxisImpulse(ctx,visual,u,now,reduced);
 
  const base=g.positions||lvl.starts;
  if(base.length!==2)return;
- const reduced=Boolean(reducedMotion?.matches);
  const positions=base.map((p,i)=>{
   if(visual&&visual.to&&now-visual.at<310){
    const pose=poseFor(visual,i,now,reduced);
@@ -237,8 +245,9 @@ function drawBoard(now){
   const goal=lvl.goals[i],onGoal=base[i].x===goal.x&&base[i].y===goal.y;
   drawRobot(ctx,i,positions[i],positions[1-i],u,now,pose,{onGoal,win,reduced});
  }
+ if(visual)drawContactEffects(ctx,visual,u,now,reduced);
 }
-function tick(t){if(screen==='play'){resizeBoard();drawBoard(t)}requestAnimationFrame(tick)}
+function tick(t){if(screen==='play')drawBoard(t);requestAnimationFrame(tick)}
 $('name').value=name;
 $('sound').onclick=()=>{sound=!sound;setSound();noise('press')};setSound();
 $('campaign').onclick=()=>{difficulty=$('localDifficulty').value;save('difficulty',difficulty);playLocal('campaign',Number($('chapter').value));};
@@ -265,7 +274,10 @@ document.addEventListener('keydown',e=>{
  if(e.code==='KeyR'&&!overlayMode){e.preventDefault();restart()}
  if(e.code==='KeyZ'&&!overlayMode){e.preventDefault();undo()}
 });
-window.addEventListener('resize',resizeBoard);document.addEventListener('visibilitychange',()=>{if(document.hidden&&screen==='play'&&!overlayMode)openOverlay('pause')});
+window.addEventListener('resize',resizeBoard);
+window.visualViewport?.addEventListener('resize',resizeBoard);
+if(window.ResizeObserver)new ResizeObserver(resizeBoard).observe(document.querySelector('.board-zone'));
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&screen==='play'&&!overlayMode)openOverlay('pause')});
 document.addEventListener('keydown',e=>{if(screen==='lobby'&&e.code==='Enter'&&document.activeElement===$('code'))joinCode()});
 $('localDifficulty').value=difficulty;$('localDifficulty').onchange=()=>{difficulty=$('localDifficulty').value;save('difficulty',difficulty)};refreshProgress();checkNet();requestAnimationFrame(tick);
 getPocketIdentity().then(id=>{profile=id;if(profile?.complete){name=profile.nickname;$('name').value=name;$('name').readOnly=true}}).catch(()=>{});
