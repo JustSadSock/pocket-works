@@ -126,7 +126,8 @@
       "id": "ecology",
       "kind": "node-test",
       "files": [
-        "qa/ecology.test.mjs"
+        "qa/ecology.test.mjs",
+        "qa/guardians.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -134,7 +135,8 @@
       "id": "ecology-browser",
       "kind": "playwright",
       "files": [
-        "qa/ecology.spec.js"
+        "qa/ecology.spec.js",
+        "qa/guardians.spec.js"
       ],
       "tier": "smoke"
     },
