@@ -37,6 +37,7 @@ export function startRound(s){
 export function retryMatch(s){return makeMatch((s.seed+0x9e3779b9)>>>0)}
 export function distWall(x,y,r=0){return WALLS.some(w=>x+r>w.x&&x-r<w.x+w.w&&y+r>w.y&&y-r<w.y+w.h)}
 export function canStand(x,y,r=12){return x>=r+13&&x<=W-r-13&&y>=r+16&&y<=H-r-16&&!distWall(x,y,r)}
+export function ringRadius(s){return s.remaining>=10?230:Math.max(80,80+15*s.remaining)}
 let safeWorld=null;const blocking=(s,x,y,r=12)=>!!s?.barriers?.some(b=>Math.hypot(x-b.x,y-b.y)<r+b.r);function move(a,x,y,r=12){const nx=clamp(a.x+x,r+13,W-r-13),ny=clamp(a.y+y,r+16,H-r-16);if(canStand(nx,a.y,r)&&!blocking(safeWorld,nx,a.y,r))a.x=nx;if(canStand(a.x,ny,r)&&!blocking(safeWorld,a.x,ny,r))a.y=ny}
 function fx(s,k,x,y,t=0){if(s.fx.length>60)s.fx.shift();s.fx.push({k,x,y,t,id:++s.serial})}
 function harm(s,a,amount,from,depth=0){
@@ -159,6 +160,15 @@ for(let j=s.mines.length-1;j>=0;j--){
  else if(mine.life<=0)s.mines.splice(j,1);
  }
  for(let j=s.barriers.length-1;j>=0;j--){s.barriers[j].life-=dt;if(s.barriers[j].life<=0)s.barriers.splice(j,1)}
+ // The court tightens in the last ten seconds. Environmental damage bypasses
+ // endlessly rechargeable shields; the clock itself still never awards a point.
+ if(s.remaining<10){
+  const radius=ringRadius(s);
+  for(const a of s.actors){
+   const outside=Math.hypot(a.x-200,a.y-310)-radius;
+   if(outside>0){a.hp=Math.max(0,a.hp-(18+outside*.55)*dt);if(s.ticks%22===0){a.flash=Math.max(a.flash,.12);fx(s,'ring',a.x,a.y)}}
+  }
+ }
  flushEvents(s);
  s.fx.forEach(f=>f.t+=dt);s.fx=s.fx.filter(f=>f.t<.38);
 if(s.actors.some(a=>a.hp<=0)||s.remaining<=0){const [a,b]=s.actors;let winner=null;
