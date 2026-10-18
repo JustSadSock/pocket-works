@@ -35,6 +35,19 @@ test('coupled cloud: switching modes, enabling and disabling wall, choosing bubb
  await page.locator('[data-cloud="cluster"]').click();
  await expect(page.locator('[data-cloud="cluster"]')).toHaveAttribute('aria-pressed','true');
  await expect(page.locator('#experiment-title')).toContainText('05');
+ // Select bubble 2 using coordinates computed from the same rendered geometry.
+ const hit=await page.evaluate(async()=>{
+   const [{cloudViewport},{simulateCloud}]=await Promise.all([
+     import('/apps/cavitation-lab/cloud-render.js'),
+     import('/apps/cavitation-lab/coupling.js')
+   ]);
+   const rect=document.querySelector('#field').getBoundingClientRect();
+   const model=simulateCloud({radiusMm:.9,pressureBar:1.8,standOff:1.65},{mode:'cluster',wall:true});
+   const bubble=cloudViewport(rect.width,rect.height,model).bubbles[1];
+   return {x:bubble.x,y:bubble.y};
+ });
+ await page.locator('#field').click({position:hit});
+ await expect(page.locator('#radius-label')).toHaveText('РАДИУС R2');
  await expect(page.locator('#cloud-options')).toBeVisible();
  await page.locator('#wall-mode').click();
  await expect(page.locator('#wall-mode')).toHaveAttribute('aria-pressed','false');
