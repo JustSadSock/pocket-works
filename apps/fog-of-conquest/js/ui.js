@@ -1810,6 +1810,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }else{
       ROWS=BASE_ROWS; COLS=BASE_COLS;
     }
+    // The tactical atlas runs outside the legacy closure and needs accurate
+    // dimensions for every original map size, not only restored/online games.
+    window.ROWS=ROWS;window.COLS=COLS;window.mapSize=mapSize;
     initFog();
     window.dispatchEvent(new Event('resize'));
   }
