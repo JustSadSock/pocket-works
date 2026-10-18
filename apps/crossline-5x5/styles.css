@@ -136,3 +136,7 @@
  .board>.piece{transition:none!important;animation:none!important}
  .cell.attack-zone,.cell.shield-pulse,.cell.impact,.cell.block,.cell.fall-burst,.cell.shatter,.cell:before{animation:none!important}
 }
+
+
+:root[data-motion="off"] .board>.piece{transition:none!important;animation:none!important}
+:root[data-motion="off"] .cell.attack-zone,:root[data-motion="off"] .cell.shield-pulse,:root[data-motion="off"] .cell.impact,:root[data-motion="off"] .cell.block,:root[data-motion="off"] .cell.fall-burst,:root[data-motion="off"] .cell.shatter,:root[data-motion="off"] .cell:before{animation:none!important}
