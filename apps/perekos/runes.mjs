@@ -1,6 +1,12 @@
-// ПЕРЕКОС 0.2 — plain-language rune grammar and deterministic chain compiler.
+// ПЕРЕКОС 0.5 — deterministic rune grammar, three chains and school-weighted choices.
 // Nine slots, across up to three independent WHEN chains, are read from left to right: WHEN -> DO -> CHANGE. A new WHEN starts a new chain.
+import {mage} from './mages.mjs';
 const entry=(id,type,name,desc,detail='')=>({id,type,name,desc,detail});
+const SCHOOL_FAVORITES={
+ fire:new Set(['ball','blast','mine','strong','wide','on_cast','on_hit','drain']),
+ storm:new Set(['blink','slow','haste','quick','fastshot','on_dash','on_bounce','bounce']),
+ stone:new Set(['wall','armor','push','lasting','on_hurt','on_guard','on_break','strong'])
+};
 export const RUNES=Object.freeze([
 entry('on_cast','when','При выстреле','Когда сам выпускаю обычный шар.'),
 entry('on_hit','when','При попадании','Когда мой шар наносит урон.'),
@@ -68,8 +74,10 @@ export function eligibleOffers(state,player=0){
  const info=description(ids);
  // A meaningful action is always favored when a newly opened trigger still has none.
  let pref=info.chains.some(c=>!c.actions.length)?'do':info.chains.length===0?'when':info.chains.some(c=>c.actions.some(a=>a.mods.length===0))?'how':'when';
+ const favorites=SCHOOL_FAVORITES[mage(state.actors[player]?.mageId).school];
+ const weight=r=>(r.type===pref?3:1)*(favorites.has(r.id)?1.6:1);
  const shuffled=[];const allowWhen=ids.filter(id=>RUNE_BY_ID.get(id)?.type==='when').length<MAX_CHAINS;
- while(pool.length){if(!allowWhen){for(let i=pool.length-1;i>=0;i--)if(pool[i].type==='when')pool.splice(i,1)}let total=0;for(const r of pool)total+=r.type===pref?3:1;let x=stateRandom(state)*total,chosen=pool.length-1;for(let i=0;i<pool.length;i++){x-=pool[i].type===pref?3:1;if(x<0){chosen=i;break}}shuffled.push(pool.splice(chosen,1)[0].id)}
+ while(pool.length){if(!allowWhen){for(let i=pool.length-1;i>=0;i--)if(pool[i].type==='when')pool.splice(i,1)}let total=0;for(const r of pool)total+=weight(r);let x=stateRandom(state)*total,chosen=pool.length-1;for(let i=0;i<pool.length;i++){x-=weight(pool[i]);if(x<0){chosen=i;break}}shuffled.push(pool.splice(chosen,1)[0].id)}
  return shuffled.slice(0,3);
 }
 function stateRandom(state){state.seed=(Math.imul(state.seed,1664525)+1013904223)>>>0;return state.seed/4294967296}
