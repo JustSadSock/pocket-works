@@ -28,8 +28,13 @@ test('music / sfx settings persist and mute removes all synthesized output',asyn
  await expect(page.locator('#settingsOverlay')).toBeVisible();
  await page.locator('#musicEnable').check();
  await page.locator('#sfxEnable').uncheck();
- await page.locator('#musicVolume').fill('0.35');
- await page.locator('#sfxVolume').fill('0.8');
+ await page.evaluate(()=>{
+   for(const [id,value] of [['musicVolume','.35'],['sfxVolume','.8']]){
+     const slider=document.getElementById(id) as HTMLInputElement;
+     slider.value=value;
+     slider.dispatchEvent(new Event('input',{bubbles:true}));
+   }
+ });
  const muted=await page.evaluate(()=>{
    const a=window.FogAudio;
    return {state:a.state(),attack:a.play('attack'),click:a.play('uiClick')};
