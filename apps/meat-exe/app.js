@@ -5,6 +5,7 @@ import { hitRay, pelletAim, staggerDuration } from './combat.js';
 import { createCombatAudio } from './sound-forge.js';
 import {initialEnemyIntent,advanceEnemyIntent,interruptIntent,enemyTerrainReaction,maxActiveAttackers,resetIntent,chooseEnemyKind} from './ecology.js';
 import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal} from './biomes.js';
+import {drawGrafts,applyGraft,graftForId,weaponBuild,dashCooldown,moveSpeed,incomingDamage,membraneDamage,immuneHeatGain,hasGraft,maxWeaponIndex} from './biobuilds.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -31,7 +32,7 @@ let save=validateRun(safeRead('session'));
 let quality=safeRead('quality');if(!['auto','speed','detail'].includes(quality))quality='auto';
 let effectiveQuality=quality==='speed'?'low':quality==='detail'?'high':'medium';
 let gamepadFire=false,padMove={x:0,y:0},prevPadButtons=[],accumulator=0,lastPaint=0,fpsClock=0,fpsFrames=0;
-let paintCoolDownUntil=0,paintCost=0;
+let paintCoolDownUntil=0,paintCost=0,draftIndex=0;
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
   touch:$('touchControls'),cross:$('crosshair'),pauseBtn:$('pauseBtn'),wave:$('waveValue'),
@@ -40,12 +41,9 @@ const ui={
   resume:$('resumeSaved'),record:$('record'),mutation:$('scar'),resultTitle:$('resultTitle'),
   resultBody:$('resultBody'),note:$('notice'),damage:$('damageOverlay'),
   mute:$('soundMenu'),pauseMute:$('soundPause'),resumeBtn:$('resumeBtn'),
-  qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue')
+  qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue'),
+  draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel')
 };
-const weaponStats=[
-  {name:'КОСТОЛОМ',cooldown:.22,damage:26,pellets:1,spread:.015},
-  {name:'МЯСОРУБКА',cooldown:.55,damage:14,pellets:7,spread:.12}
-];
 function audioStart(){combatAudio.unlock();}
 function sound(kind){combatAudio.pulse(kind);}
 function setNotice(message,seconds=2){
@@ -57,7 +55,7 @@ function setMode(next){
   ui.mute.hidden=next!=='menu';
   ui.qualityMenu.hidden=next!=='menu';
   ui.confirm.hidden=true;
-  ui.menu.hidden=next!=='menu';ui.pause.hidden=next!=='paused';ui.result.hidden=next!=='dead'&&next!=='won';
+  ui.menu.hidden=next!=='menu';ui.pause.hidden=next!=='paused';ui.result.hidden=next!=='dead'&&next!=='won';ui.draft.hidden=next!=='draft';
   ui.hud.hidden=next!=='playing'&&next!=='paused';
   ui.touch.hidden=next!=='playing'||!touch;
   ui.pauseBtn.hidden=next!=='playing'||mouseLocked;
@@ -73,11 +71,12 @@ function setMode(next){
 }
 function newState(seed){
   const start=world.getStart();
-  return {v:4,seed,x:start.x,z:start.z,yaw:findOpenFacing(start.x,start.z,world.isFloor),pitch:0,hp:100,maxHp:100,heat:0,
+  return {v:5,seed,x:start.x,z:start.z,yaw:findOpenFacing(start.x,start.z,world.isFloor),pitch:0,hp:100,maxHp:100,heat:0,
     weapon:0,level:0,damageBonus:0,cooldown:0,dashCooldown:0,dashTime:0,dashDirX:0,dashDirZ:0,
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
-    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0};
+    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,
+    grafts:[],biomass:0,pendingDraft:0,draftRevision:0};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
@@ -89,7 +88,7 @@ function makeEnemy(type,x,z,hp){
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
   const {enemies,pickups,projectiles,...base}=state;
-  safeWrite('session',{...base,v:4,enemies:enemies.map(({visual,...e})=>e),pickups:pickups.map(({visual,...p})=>p)});
+  safeWrite('session',{...base,v:5,enemies:enemies.map(({visual,...e})=>e),pickups:pickups.map(({visual,...p})=>p)});
 }
 function restore(raw){
   const s=validateRun(raw);if(!s)return false;
@@ -118,7 +117,8 @@ function begin(resume=false){
       }
       startWave(1);
     }
-    audioStart();sound('menu');setMode('playing');
+    audioStart();sound('menu');
+    if(state.pendingDraft){showDraft();}else setMode('playing');
     shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';telegraphsSeen=0;chargesDodged=0;attacksInterrupted=0;terrainEnemyHits=0;hitUntil=fireUntil=killUntil=0;gateHintShown=false;lastGateHitAt=-999;
     ui.cross.classList.remove('hit','firing','killed');
     last=performance.now();clock=0;waveBreak=0;lastSave=0;accumulator=0;lastPaint=0;
@@ -168,8 +168,8 @@ function spawnUnit(type){
 }
 function weaponSwitch(){
   if(!state||mode!=='playing')return;
-  state.weapon=(state.weapon+1)%2;state.cooldown=Math.min(state.cooldown,.17);
-  sound('switch');setNotice(weaponStats[state.weapon].name,1);
+  state.weapon=(state.weapon+1)%(maxWeaponIndex(state)+1);state.cooldown=Math.min(state.cooldown,.17);
+  sound('switch');setNotice(weaponBuild(state,state.weapon).name,1);
   syncHUD();
 }
 function dash(){
@@ -178,8 +178,17 @@ function dash(){
   if(length<.2){dir={x:-Math.sin(state.yaw),z:-Math.cos(state.y)};}
   const norm=Math.hypot(dir.x,dir.z)||1;
   state.dashDirX=dir.x/norm;state.dashDirZ=dir.z/norm;
-  state.dashTime=.21;state.dashCooldown=2.7;state.invuln=Math.max(state.invuln,.3);
+  state.dashTime=.21;state.dashCooldown=dashCooldown(state);state.invuln=Math.max(state.invuln,.3);
   recoil=Math.max(recoil,.35);sound('dash');
+  if(hasGraft(state,'shock_dash')){
+    for(const e of [...state.enemies]){
+      if(Math.hypot(e.x-state.x,e.z-state.z)>1.65)continue;
+      e.hp-=27;e.hitFlash=.2;e.stagger=Math.max(e.stagger||0,.32);
+      world.impact({x:e.x,y:.75,z:e.z},{x:0,y:1,z:0},'flesh');
+      if(e.hp<=0)defeatEnemy(e);
+      if(mode!=='playing')break;
+    }
+  }
 }
 function direction(){
   const f=(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-movement.y-padMove.y;
@@ -193,7 +202,7 @@ function look(dx,dy,sensitivity=touch?.0049:.0023){
 }
 function harm(amount){
   if(!state||state.invuln>0||mode!=='playing')return;
-  state.hp=Math.max(0,state.hp-amount);state.invuln=.55;damageFlash=1;recoil=Math.max(recoil,.65);
+  state.hp=Math.max(0,state.hp-Math.ceil(incomingDamage(state,amount)));state.invuln=.55;damageFlash=1;recoil=Math.max(recoil,.65);
   sound('pain');navigator.vibrate?.(40);
   if(state.hp<=0)finish(false);
 }
@@ -208,6 +217,7 @@ function defeatEnemy(e){
   world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
   state.kills++;state.score+=e.type==='heart'?2500:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
+  if(hasGraft(state,'blood_pump'))state.hp=Math.min(state.maxHp,state.hp+7);
   killUntil=clock+.2;ui.cross.classList.add('killed');
   if(e.type==='heart'){finish(true);return;}
   if(Math.random()<.36)dropAt(e.x,e.z);
@@ -215,9 +225,9 @@ function defeatEnemy(e){
 }
 function shoot(){
   if(!state||mode!=='playing'||state.cooldown>0)return;
-  const weapon=state.weapon,gun=weaponStats[weapon];
-  state.cooldown=gun.cooldown*Math.max(.56,1-state.level*.055);
-  recoil=Math.max(recoil,weapon===1?1.25:.89);
+  const weapon=state.weapon,gun=weaponBuild(state,weapon);
+  state.cooldown=gun.cooldown;
+  recoil=Math.max(recoil,weapon===1?1.25:weapon===2?1.5:.89);
   shotsFired++;sound(weapon===1?'shotgun':'fire');
   world.firePulse(weapon);
   fireUntil=clock+(weapon===1?.16:.105);
@@ -226,13 +236,13 @@ function shoot(){
   let hits=0,walls=0,tissueHits=0,oneKill=false;
   for(let pellet=0;pellet<gun.pellets;pellet++){
     const direction=pelletAim(state.yaw,state.pitch,pellet,gun.pellets,gun.spread);
-    const result=hitRay(origin,direction,state.enemies,world.isFloor,weapon===1?12:17,world.getTissueAt);
+    const result=hitRay(origin,direction,state.enemies,world.isFloor,gun.range,world.getTissueAt);
     if(!result)continue;
     if(pellet===0||result.kind==='flesh'||(weapon===1&&pellet%2===0))world.fireTrace(origin,result.point,weapon);
     if(result.kind==='flesh'){
       const enemy=result.enemy;
       hits++;confirmedHits++;
-      const shotDamage=gun.damage+state.damageBonus+state.level*3;
+      const shotDamage=gun.damage;
       enemy.hp-=shotDamage;
       enemy.hitFlash=.18;
       const cancelled=interruptIntent(enemy,shotDamage,weapon);
@@ -250,16 +260,30 @@ function shoot(){
           sound('heart');setNotice('СЕРДЦЕ / ФАЗА '+next,2);
         }
       }
+      if(weapon===2&&mode==='playing'){
+        // The high-pressure needle continues through one body, but the second
+        // ray still resolves walls/membranes and cannot damage the same target.
+        const secondOrigin={x:result.point.x+direction.x*1.30,y:result.point.y+direction.y*1.30,
+          z:result.point.z+direction.z*1.30};
+        const second=hitRay(secondOrigin,direction,state.enemies.filter(e=>e!==enemy),world.isFloor,9,world.getTissueAt);
+        if(second?.kind==='flesh'){
+          const victim=second.enemy;victim.hp-=gun.damage*.58;victim.hitFlash=.18;
+          victim.stagger=Math.max(victim.stagger||0,.12);
+          world.fireTrace(secondOrigin,second.point,2);
+          world.impact(second.point,direction,'flesh');confirmedHits++;hits++;
+          if(victim.hp<=0){oneKill=true;defeatEnemy(victim);}
+        }
+      }
     }else if(result.kind==='tissue'){
       tissueHits++;gateHintShown=true;
       world.impact(result.point,direction,'flesh');
-      const damage=world.damageTissue(result.tissue.id,gun.damage*(weapon===1?.75:1.3));
+      const damage=world.damageTissue(result.tissue.id,membraneDamage(state,gun.damage*(weapon===1?.75:1.3)));
       if(damage?.opened){
         state.ruptured.push(damage.id);state.ruptureCount++;
         state.score+=180;
         const heal=biomeRuptureHeal(state.wave);
         if(heal)state.hp=Math.min(state.maxHp,state.hp+heal);
-        state.immuneHeat=Math.min(100,state.immuneHeat+26);
+        state.immuneHeat=Math.min(100,state.immuneHeat+immuneHeatGain(state,26));
         state.immuneDelay=1.85;
         navAt=0;sound('heart');
         if(state.pickups.length<18)state.pickups.push({x:damage.x,z:damage.z,type:'fragment',visual:world.makePickup(damage.x,damage.z)});
@@ -395,7 +419,9 @@ function updatePickups(dt){
     const p=state.pickups[i];
     if(Math.hypot(state.x-p.x,state.z-p.z)<.72){
       if(p.type==='heal'){state.hp=Math.min(state.maxHp,state.hp+28);setNotice('ПЛОТЬ ВОССТАНОВЛЕНА',1.5);}
-      else {state.level=Math.min(8,state.level+1);state.damageBonus+=2;state.score+=75;setNotice('ФРАГМЕНТ ВСТРОЕН / УРОВЕНЬ '+state.level,1.7);}
+      else {state.level=Math.min(8,state.level+1);state.damageBonus+=2;state.score+=75;state.biomass=Math.min(99,(state.biomass||0)+1);
+        if(hasGraft(state,'scavenger'))state.hp=Math.min(state.maxHp,state.hp+9);
+        setNotice('ФРАГМЕНТ / БИОМАССА '+state.biomass,1.7);}
       world.disposeVisual(p.visual);state.pickups.splice(i,1);sound('pickup');
     }
   }
@@ -429,7 +455,7 @@ function update(dt){
   const d=state.dashTime>0?{x:state.dashDirX,z:state.dashDirZ}:direction();
   state.moving=Math.min(1,Math.hypot(d.x,d.z));
   state.sprinting=keys.has('ShiftLeft')||keys.has('ShiftRight');
-  const speed=(state.dashTime>0?14:state.sprinting?4.8:3.4)*biomeSpeedFactor(terrain);
+  const speed=(state.dashTime>0?14:state.sprinting?4.8:3.4)*biomeSpeedFactor(terrain)*moveSpeed(state);
   const next=world.moveCircle(state.x,state.z,d.x*speed*dt,d.z*speed*dt,.22);
   state.x=next.x;state.z=next.z;
   if(!gateHintShown){
@@ -452,7 +478,7 @@ function update(dt){
     if(waveBreak>2.2){
       waveBreak=0;
       if(state.wave>=5)finish(true);
-      else {state.hp=Math.min(state.maxHp,state.hp+16);startWave(state.wave+1);}
+      else openDraft(state.wave+1);
     }
   }else waveBreak=0;
   if(clock-lastSave>5){lastSave=clock;snapshot();}
@@ -471,11 +497,67 @@ function syncHUD(){
   ui.healthFill.style.background=state.hp<30?'#f83f39':'#dec09b';
   ui.enemies.textContent=String(state.enemies.length+state.toSpawn).padStart(2,'0');
   ui.kills.textContent=String(state.kills).padStart(2,'0');
-  ui.weapon.textContent=weaponStats[state.weapon].name+'  LV.'+(state.level+1);
+  ui.weapon.textContent=weaponBuild(state,state.weapon).name+'  LV.'+(state.level+1);
+  ui.buildLabel.textContent=(state.grafts?.length||0)+' ПРИРАЩЕНИЯ';
   ui.score.textContent=state.score.toLocaleString('ru-RU');
   ui.seed.textContent='ORGAN #'+String(state.seed).slice(-6);
   $('dashBtn').disabled=state.dashCooldown>0;
-  $('dashBtn').style.setProperty('--cooldown',state.dashCooldown>0?Math.ceil(state.dashCooldown*100/2.7)+'%':'0%');
+  $('dashBtn').style.setProperty('--cooldown',state.dashCooldown>0?Math.ceil(state.dashCooldown*100/dashCooldown(state))+'%':'0%');
+}
+function availableDraft(){
+  if(!state?.pendingDraft)return [];
+  return drawGrafts(state.seed,state.pendingDraft,state.grafts,state.draftRevision||0);
+}
+function renderDraft(){
+  const options=availableDraft();
+  ui.draftCount.textContent='ОРГАН '+state.wave+' / 5 → '+state.pendingDraft+' / 5';
+  ui.draftMass.textContent='БИОМАССА '+(state.biomass||0);
+  ui.draftCards.replaceChildren();
+  options.forEach((g,i)=>{
+    const button=document.createElement('button');
+    button.type='button';button.className='graft-option';
+    button.dataset.graft=g.id;button.dataset.index=String(i);button.setAttribute('data-native-press','');
+    button.setAttribute('aria-label',g.name+' — '+g.detail+' Цена: '+g.cost);
+    const num=document.createElement('span');num.className='graft-num';num.textContent=String(i+1).padStart(2,'0');
+    const body=document.createElement('span');body.className='graft-copy';
+    const title=document.createElement('strong');title.textContent=g.name;
+    const desc=document.createElement('span');desc.textContent=g.detail;
+    const price=document.createElement('small');price.textContent='ОБРАТНАЯ СТОРОНА: '+g.cost;
+    body.append(title,desc,price);
+    const mark=document.createElement('b');mark.textContent=g.mark;
+    button.append(num,body,mark);
+    button.addEventListener('click',()=>chooseGraft(g.id));
+    ui.draftCards.append(button);
+  });
+  draftIndex=Math.max(0,Math.min(options.length-1,draftIndex));
+  ui.draftReroll.disabled=(state.biomass||0)<2;
+  ui.draftReroll.textContent='ЗАМЕНИТЬ ВАРИАНТЫ · 2 БИОМАССЫ';
+}
+function showDraft(){
+  if(!state?.pendingDraft)return;
+  renderDraft();setMode('draft');snapshot();
+}
+function openDraft(nextWave){
+  state.pendingDraft=nextWave;state.draftRevision=0;
+  state.enemies.forEach(e=>world.disposeVisual(e.visual));state.enemies=[];
+  showDraft();sound('heart');
+}
+function chooseGraft(id){
+  if(mode!=='draft'||!availableDraft().some(g=>g.id===id))return;
+  if(!applyGraft(state,id))return;
+  const chosen=graftForId(id);
+  const next=state.pendingDraft;
+  state.pendingDraft=0;state.draftRevision=0;
+  state.hp=Math.min(state.maxHp,state.hp+16);
+  startWave(next);
+  setMode('playing');clock=0;last=performance.now();accumulator=0;lastPaint=0;
+  setNotice(chosen.name+' · ВСТРОЕНО',2.6);sound('pickup');
+  syncHUD();snapshot();
+}
+function rerollDraft(){
+  if(mode!=='draft'||state.biomass<2)return;
+  state.biomass-=2;state.draftRevision=(state.draftRevision||0)+1;
+  renderDraft();sound('switch');snapshot();
 }
 function finish(victory){
   if(mode!=='playing')return;
@@ -525,6 +607,12 @@ function pollGamepad(dt){
   if(!pad){padMove.x=padMove.y=0;gamepadFire=false;prevPadButtons=[];return;}
   const buttons=Array.from(pad.buttons,b=>Boolean(b?.pressed));
   const pressed=i=>buttons[i]&&!prevPadButtons[i];
+  if(mode==='draft'){
+    if(pressed(14)||pressed(12))draftIndex=(draftIndex+2)%3;
+    if(pressed(15)||pressed(13))draftIndex=(draftIndex+1)%3;
+    if(pressed(0)){const option=availableDraft()[draftIndex];if(option)chooseGraft(option.id);}
+    if(pressed(2))rerollDraft();
+  }
   if(mode==='menu'&&pressed(0))begin(Boolean(save));
   else if((mode==='dead'||mode==='won')&&pressed(0))begin(false);
   else if(mode==='paused'&&pressed(0)&&ui.confirm.hidden)resume();
@@ -582,6 +670,12 @@ document.addEventListener('pointerlockchange',()=>{
 document.addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat&&['Escape','KeyQ','KeyE','KeyR'].includes(e.code))return;
+  if(mode==='draft'){
+    if(['Digit1','Digit2','Digit3'].includes(e.code)){const pick=availableDraft()[Number(e.code.slice(-1))-1];if(pick)chooseGraft(pick.id);return;}
+    if(e.code==='KeyR'){rerollDraft();return;}
+    if(e.code==='Escape'){menu();return;}
+    return;
+  }
   if(e.code==='Escape'){if(!ui.confirm.hidden)ui.confirm.hidden=true;else if(mode==='playing')pause();else if(mode==='paused')resume();return;}
   if(e.code==='KeyQ'||e.code==='KeyE'){weaponSwitch();return;}
   if(e.code==='KeyR'&&mode==='dead'){begin(false);return;}
@@ -598,6 +692,8 @@ window.addEventListener('resize',()=>{world?.resize();lastPaint=0;});
 $('startBtn').addEventListener('click',confirmNewRun);
 ui.resume.addEventListener('click',()=>begin(true));
 ui.pauseBtn.addEventListener('click',pause);
+ui.draftReroll.addEventListener('click',rerollDraft);
+$('draftExit').addEventListener('click',menu);
 ui.resumeBtn.addEventListener('click',resume);
 $('restartPause').addEventListener('click',confirmNewRun);
 $('confirmYes').addEventListener('click',()=>{ui.confirm.hidden=true;safeRemove('session');save=null;begin(false);});
@@ -662,6 +758,9 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
     pending:state?.enemies?.filter(e=>e.windup>0).length??0,
     enemies:state?.enemies?.slice(0,8).map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,attack:e.attack,
       windup:e.windup,kind:e.windupKind,lunge:e.lunge}))??[]},
+  builds:{grafts:state?.grafts||[],biomass:state?.biomass||0,pendingDraft:state?.pendingDraft||0,
+    revision:state?.draftRevision||0,choices:availableDraft().map(g=>g.id),weaponCount:state?maxWeaponIndex(state)+1:2,
+    damage:state?weaponBuild(state,state.weapon).damage:26},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{
