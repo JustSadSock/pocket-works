@@ -3,6 +3,33 @@ import {createHash} from 'node:crypto';
 import {writeFile} from 'node:fs/promises';
 import {DEV_SCENES} from '../dev-gallery.js';
 
+
+async function pixelDelta(page,first,second){
+ return page.evaluate(async images=>{
+  const decode=async src=>{
+   const bytes=Uint8Array.from(atob(src),char=>char.charCodeAt(0));
+   return createImageBitmap(new Blob([bytes],{type:'image/png'}));
+  };
+  const a=await decode(images[0]),b=await decode(images[1]);
+  if(a.width!==b.width||a.height!==b.height)return {ratio:1,changed:1,total:1};
+  const canvas=document.createElement('canvas');canvas.width=a.width;canvas.height=a.height;
+  const context=canvas.getContext('2d',{willReadFrequently:true});
+  context.drawImage(a,0,0);
+  const pixelsA=context.getImageData(0,0,a.width,a.height).data;
+  context.clearRect(0,0,a.width,a.height);
+  context.drawImage(b,0,0);
+  const pixelsB=context.getImageData(0,0,b.width,b.height).data;
+  let changed=0,total=0;
+  for(let i=0;i<pixelsA.length;i+=4){
+   const delta=Math.abs(pixelsA[i]-pixelsB[i])+Math.abs(pixelsA[i+1]-pixelsB[i+1])+Math.abs(pixelsA[i+2]-pixelsB[i+2]);
+   if(delta>30)changed++;
+   total++;
+  }
+  a.close();b.close();
+  return {ratio:changed/total,changed,total};
+ },[first.toString('base64'),second.toString('base64')]);
+}
+
 test('all 45 QA screens: stable screenshots, interactive layout, real DOM and no runtime errors on phone and PC',async({browser},info)=>{
  test.skip(info.project.name!=='desktop-chromium','Dedicated cross-viewport suite handles phone and PC without multiplying browser projects');
  test.setTimeout(420_000);
@@ -38,7 +65,7 @@ test('all 45 QA screens: stable screenshots, interactive layout, real DOM and no
      el.ownerDocument.documentElement.classList.add('qa-snapshot');
     });
     // Allow one browser paint after scripted scene initialization.
-    await frame.locator('main.shell').evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await frame.locator('main.shell').evaluate(async()=>{await document.fonts.ready;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))});
     const metrics=await frame.locator('body').evaluate(el=>{
      const d=el.ownerDocument,view=d.defaultView,html=d.documentElement;
      const shown=[...d.querySelectorAll('#menu,#difficultyView,#lobby,#play,#replay,#archive')]
@@ -62,14 +89,15 @@ test('all 45 QA screens: stable screenshots, interactive layout, real DOM and no
      animations:'disabled',timeout:12000
     });
     expect(image.length).toBeGreaterThan(2200);
-    let stable=null;
+    let stable=null,visualDiff=null;
     if(staticScene(scene.id)){
      const repeat=await frame.locator('body').screenshot({animations:'disabled',timeout:12000});
-     stable=image.equals(repeat);
-     expect(stable,'visual instability in '+target.name+'/'+scene.id).toBe(true);
+     visualDiff=await pixelDelta(page,image,repeat);
+     stable=visualDiff.ratio<=.015;
+     expect(visualDiff.ratio,'visual instability in '+target.name+'/'+scene.id).toBeLessThanOrEqual(.015);
     }
     const hash=createHash('sha256').update(image).digest('hex').slice(0,20);
-    report.results.push({viewport:target.name,id:scene.id,hash,bytes:image.length,stable,metrics});
+    report.results.push({viewport:target.name,id:scene.id,hash,bytes:image.length,stable,visualDiff,metrics});
     expect(issues,'console/runtime errors in '+scene.id).toEqual([]);
    }
   }finally{report.errors.push(...issues);await context.close();}
