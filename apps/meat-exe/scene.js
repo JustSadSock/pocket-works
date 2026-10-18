@@ -914,5 +914,5 @@ export function createWorld(canvas, initialSeed) {
       structuralChamber(cx,cz,seed,biome.id);
   }
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, getHazardAt, getBiome:()=>biome, getStage:()=>stage, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
 }
