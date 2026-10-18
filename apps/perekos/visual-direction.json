@@ -6,10 +6,10 @@
     "premise": "Two tiny, stubborn wizards have no idea how badly their own spell combinations will misbehave, but the duel still reads at a glance.",
     "composition": "A pixel-art stone arena fills the phone. The player's movement thumb rests at the lower left and three spell buttons at the lower right; the top carries two slim health readings.",
     "shapeLanguage": "Wizard silhouettes are large hats on tiny coats; masonry is made of offset broken rectangles and the runes live in compact paper pieces rather than generic glossy cards.",
-    "surfaceAndMaterial": "Stone and moss are hand-composed in a deterministic low-resolution Canvas atlas, with solid pixel blocks, rough outlined edges, copper-colored UI parchment and dark ink.",
+    "surfaceAndMaterial": "The courtyard remains hand-composed pixel stone; the mage is now a manually layered pixel costume with safe account-drawing cameo patches and MASKOT-dependent ears, helmets, hat and coat geometry.",
     "paletteLogic": "The arena uses muddy mineral greens and warm brown shadows to keep peach projectiles, gold sparks and a second reddish wizard distinguishable without electric neon.",
     "typography": "Headings use an old-book serif as a restrained signboard; interface text uses sturdy system sans, short Russian instructions and plain names such as Шар больнее.",
-    "signature": "A wizard with a comically oversized hat stands inside a ruined courtyard while tiny pixel projectiles spark across masonry; the same scene is visible behind the menu.",
+    "signature": "A genuinely individual little pixel wizard carries the PocketWorks account's actual drawing or animal MASKOT, while a few spells add visible gear without replacing their identifying ears and coat.",
     "distinction": "Unlike VENETS parchment political screens and MEAT.EXE first-person corridors, Perekos has an unframed bird's-eye arcade arena with bottom-corner direct spell buttons."
   },
   "architecture": {
@@ -36,12 +36,17 @@
         "slug": "crossline-5x5",
         "spatialDifference": "The 5x5 tactical game uses a distinct framed board and its order planning layer; Perekos keeps an unframed real-time moving world behind contextual result sheets.",
         "interactionDifference": "Real-time dodging, spell cooldowns and hold-to-fire differ from ordered tactical commands and simultaneous phase resolution."
+      },
+      {
+        "slug": "chyepukha",
+        "spatialDifference": "ЧЕПУХА размещает одно письмо на ровной письменной странице, а ПЕРЕКОС заполняет экран движущейся пиксельной каменной ареной и двумя персонажами с портретными значками.",
+        "interactionDifference": "Набор текста и передача скрытых фрагментов ЧЕПУХИ противопоставлены реальному управлению магом, прицеливанию и сборке цепочки рун между дуэлями."
       }
     ]
   },
   "production": {
     "renderer": "Quick PWA uses a standalone 400x620 Canvas 2D low-resolution scene with deterministic pre-rendered masonry; simple DOM controls remain crisp and accessible.",
-    "focalAsset": "The focal pixel wizard is painted at runtime from deliberately authored rectangular patches of hat, eyes, coat and staff, while textured stone and moss atlas is rendered once."
+    "focalAsset": "The hero object is an avatar-derived mage sprite authored with Canvas pixel rectangles: its species, hat, clothing, drawing cameo and signed-in portrait all come from validated account data, while rune effects add a removable final layer."
   },
   "motion": {
     "character": "Movement and spells are instant and snappy, while robe and hat gently bob to keep the character alive and distinguish standing still from a frozen sprite.",
@@ -58,7 +63,7 @@
       "type": "click",
       "selector": "#primary-action"
     },
-    "expectedChange": "Clicking Start removes the menu and exposes the running arena, the health HUD, the controllable wizard and three spell controls.",
+    "expectedChange": "Starting the duel reveals a personalized hero instead of a generic sprite, and a valid PocketWorks MASKOT is recognizable in the hero canvas, HUD portrait and the live battle.",
     "capture": [
       "initial",
       "action",

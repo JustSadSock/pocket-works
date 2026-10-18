@@ -2,12 +2,13 @@ import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reo
 import {rune,description,compile,TYPES,legalRunes} from './runes.mjs';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
+import {DEFAULT_APPEARANCE,normalizeAppearance,decodeAppearance} from './avatar-profile.mjs';
+import {drawMage,drawPortrait,drawHero} from './mage-art.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
 const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'match',booksKey=storage+'grimoire';
-const palette={clay:['#b56e5d','#d9b798'],moss:['#527e67','#b5c99c'],ink:['#55748a','#b2cdd6'],sun:['#c89a53','#f7df9f'],wave:['#457e93','#b3d7d3'],ember:['#a95440','#f1c191'],plum:['#825b83','#d4b5cb'],stone:['#797f73','#d9d7bd']};
-let identityColor=palette.clay,identityName='Ты';
+let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
@@ -23,9 +24,9 @@ function setAudio(){sound=!sound;remember();$('menu-audio').textContent=$('pause
 $('menu-audio').addEventListener('click',setAudio);$('pause-audio').addEventListener('click',setAudio);
 $('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');
 function show(name){mode=name;for(const id of ['menu','draft','build','books','book-delete','result','pause','confirm'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=name==='menu';if(name==='fight'||name==='menu')paused=false;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
-function newMatch(){active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff));fxParticles=[];seen=0;audioContext();show('fight');toast('Двигайся и удерживай «Шар»');remember()}
+function newMatch(){applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff));fxParticles=[];seen=0;audioContext();show('fight');toast('Двигайся и удерживай «Шар»');remember()}
 $('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',newMatch);
-$('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
+$('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
 function pause(){if(mode!=='fight')return;paused=true;show('pause');remember()}
 $('pause-btn').addEventListener('click',pause);
 $('resume').addEventListener('click',()=>{show('fight');last=performance.now()});
@@ -74,6 +75,8 @@ function renderDraft(){
 }
 function renderWorkbench(){
  if(!active)return;const slots=active.actors[0].runes;
+ const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
+ drawMage(mini,appearance,{x:32,y:57,scale:1.25,time:0,runes:slots});
  $('bench-count').textContent=slots.length+' / 5';const rack=$('bench-slots');rack.replaceChildren();
  const info=description(slots);
  slots.forEach((id,i)=>{
@@ -125,9 +128,9 @@ function drawBenchSample(ids){
  else if(special==='clone'){wizard(123,'#d4bc93')}
  else{p.fillRect(171,26,13,13);p.fillStyle='#e59e65';p.fillRect(177,20,3,6);p.fillRect(181,33,8,4)}
 }
-$('bench-fight').addEventListener('click',()=>{if(active&&beginRound(active)){sfx('shield');remember();show('fight');toast('Сборка готова')}});
-function renderResult(){const won=active.champion===0;$('result-title').textContent=won?'Ты выиграл.':'Ты проиграл.';$('result-copy').textContent=won?'Сборка выдержала проверку. А может, просто повезло.':'В следующий раз собери что-нибудь похуже для врага.';$('result-score').textContent=active.score[0]+' : '+active.score[1];forget();$('continue').hidden=true}
-function transition(){if(!active)return;if(active.phase==='draft'){show('draft');renderDraft();remember();sfx('shield')}else if(active.phase==='build'){show('build');renderWorkbench();remember()}else if(active.phase==='result'){show('result');renderResult();sfx('overtime')}}
+$('bench-fight').addEventListener('click',()=>{if(active&&beginRound(active)){applyPendingAppearance();sfx('shield');remember();show('fight');toast('Сборка готова')}});
+function renderResult(){drawPortrait($('result-portrait').getContext('2d'),appearance,56);const won=active.champion===0;$('result-title').textContent=won?'Ты выиграл.':'Ты проиграл.';$('result-copy').textContent=won?'Сборка выдержала проверку. А может, просто повезло.':'В следующий раз собери что-нибудь похуже для врага.';$('result-score').textContent=active.score[0]+' : '+active.score[1];forget();$('continue').hidden=true}
+function transition(){if(!active)return;if(active.phase==='draft'){void refreshAppearance();show('draft');renderDraft();remember();sfx('shield')}else if(active.phase==='build'){show('build');renderWorkbench();remember()}else if(active.phase==='result'){show('result');renderResult();sfx('overtime')}}
 function savedBooks(){const books=stored(booksKey);return Array.isArray(books)?books.filter(b=>b&&legalRunes(b.runes)&&b.runes.length>=2).slice(0,12):[]}
 function saveBuild(){
  if(!active||!legalRunes(active.actors[0].runes))return false;
@@ -147,7 +150,7 @@ function renderBooks(){
   const summary=document.createElement('small');summary.textContent=book.runes.length+' рун · '+book.runes.map(id=>rune(id).name).join(' · ');name.append(title,summary);
   const actions=document.createElement('div');actions.className='book-actions';
   const play=document.createElement('button');play.type='button';play.textContent='Испытать';play.addEventListener('click',()=>{
-   active=makeMatch((Date.now()>>>0)^book.runes.length);active.actors[0].runes=[...book.runes];startRound(active);remember();show('fight');toast('Сборка из гримуара');
+   applyPendingAppearance();active=makeMatch((Date.now()>>>0)^book.runes.length);active.actors[0].runes=[...book.runes];startRound(active);remember();show('fight');toast('Сборка из гримуара');
   });
   const del=document.createElement('button');del.type='button';del.textContent='Удалить';del.addEventListener('click',()=>{bookToDelete=book.id;show('book-delete')});
   actions.append(play,del);row.append(name,actions);root.append(row);
@@ -192,18 +195,11 @@ return b}
 function pixel(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))}
 function circle(x,y,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
 function line(x,y,a,b,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(a,b);ctx.stroke()}
-function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0){const coat=enemy?'#b26258':identityColor[0],trim=enemy?'#ecc08f':identityColor[1],mid=enemy?'#7a393f':'#32473c';ctx.save();ctx.globalAlpha=alpha;const bob=Math.sin(ticktime*9+(enemy?3:0))*1.1;ctx.translate(Math.round(x),Math.round(y+bob));ctx.scale(enemy?-1:1,1);
-ctx.fillStyle='#101c1eb0';ctx.beginPath();ctx.ellipse(0,12,16,6,0,0,Math.PI*2);ctx.fill();
-pixel(-9,5,6,12,'#25322d');pixel(4,5,6,12,'#25322d');pixel(-9,13,5,3,trim);pixel(5,13,5,3,trim);
-pixel(-12,-5,24,18,coat);pixel(-13,3,26,10,mid);pixel(-10,7,20,5,coat);pixel(-12,-4,5,10,trim);pixel(8,-4,5,10,trim);
-pixel(-7,-16,14,15,'#d6b395');pixel(-5,-12,3,3,'#243a32');pixel(3,-12,3,3,'#243a32');pixel(-4,-5,8,2,'#b57d64');
-pixel(-13,-18,26,5,trim);pixel(-8,-26,16,11,coat);pixel(-4,-33,10,9,coat);pixel(4,-29,5,7,coat);pixel(-6,-22,15,3,mid);pixel(-9,-17,19,2,'#efe0aa');
-pixel(11,-1,4,10,'#c8ad81');pixel(14,-20,3,27,'#83694d');pixel(12,-23,7,7,trim);pixel(14,-27,4,5,'#fff0be');
-if(Math.abs(face)>2)pixel(-5,-13,3,2,'#192a27');
-if(enemy){pixel(-3,-25,7,3,'#f0d3bd');pixel(-9,5,5,4,'#ad4f43')}else if(has(active?.actors?.[0]||{runes:[]},'shield'))pixel(-13,-3,3,11,'#eddb9f');
-if(flash>0)pixel(-15,-34,30,52,'#fff2bf8c');
-if(shield>0){ctx.strokeStyle='#b6d9b4bb';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(0,-7,27,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);pixel(-20,-17,3,6,'#f7e3b0');pixel(20,0,3,6,'#f7e3b0')}
-ctx.restore()}
+function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0){
+ const look=enemy?DEFAULT_APPEARANCE:appearance;
+ const runes=active?.actors?.[enemy?1:0]?.runes||[];
+ drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,shield,flash,runes});
+}
 function drawConstructs(s){
  for(const w of s.barriers){circle(w.x+3,w.y+6,w.r,'#12251f9e');circle(w.x,w.y,w.r,'#60745d');circle(w.x-3,w.y-5,Math.max(6,w.r-8),'#82917a');pixel(w.x-w.r*.35,w.y-3,5,3,'#a6ad89')}
  for(const m of s.mines){circle(m.x,m.y+3,9,'#111f1b90');circle(m.x,m.y,7,'#ae6a55');pixel(m.x-3,m.y-4,6,4,'#ffdf9f');pixel(m.x-1,m.y-8,2,4,'#f3a66e')}
@@ -213,10 +209,56 @@ function drawEffects(s){for(const e of s.echoes){wizard(e.x,e.y,0,frame/60,e.own
 for(const f of s.fx){const t=f.t/.38,r=Math.round(t*23)+3;if(f.k==='hit'){circle(f.x,f.y,Math.max(1,r),'#f5b36a30');for(let n=0;n<6;n++){const a=n*Math.PI/3+f.id;pixel(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,3,3,'#efc28c')}}else if(f.k==='shoot'){circle(f.x,f.y,8*(1-t),'#f9d39996')}else if(f.k==='shield'){ctx.strokeStyle='#c7edd0';ctx.lineWidth=3;ctx.beginPath();ctx.arc(f.x,f.y,14+27*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='heal'){pixel(f.x-1,f.y-19-t*10,4,11,'#aff0b2');pixel(f.x-5,f.y-15-t*10,12,3,'#aff0b2')}else if(f.k==='dash'){pixel(f.x-15+t*8,f.y-10,24*(1-t),3,'#d6c3a3')}else if(f.k==='overload'){ctx.strokeStyle='#f6b16f';ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x,f.y,10+62*t,0,Math.PI*2);ctx.stroke()}else if(f.k==='mine'){circle(f.x,f.y,16*(1-t),'#f2b476ab')}else if(f.k==='spark'){pixel(f.x-5+t*8,f.y-4,4,4,'#fbca87');pixel(f.x+6-t*7,f.y+5,3,3,'#f9ddab')}}}
 function drawOverlay(s){if(s?.phase==='fight'&&s.overtime){ctx.fillStyle='#9c3c3044';ctx.fillRect(16,16,369,10);ctx.fillRect(16,594,369,9)}
 for(let i=0;i<14;i++){const v=(frame*.2+i*71)%620,x=20+(i*71%360);pixel(x,(v+Math.sin(frame*.003+i)*3)%620,2,2,'#f3dca128')}}
-function render(){if(!bgCanvas)bgCanvas=background();ctx.clearRect(0,0,W,H);ctx.drawImage(bgCanvas,0,0);
+function render(){if(mode==='menu'&&frame%3===0)drawHero($('hero-preview').getContext('2d'),appearance,frame/60);if(!bgCanvas)bgCanvas=background();ctx.clearRect(0,0,W,H);ctx.drawImage(bgCanvas,0,0);
 if(active){drawConstructs(active);drawEffects(active);wizard(active.actors[0].x,active.actors[0].y,active.actors[0].face,frame/60,false,1,active.actors[0].shield,active.actors[0].flash);wizard(active.actors[1].x,active.actors[1].y,active.actors[1].face,frame/60,true,1,active.actors[1].shield,active.actors[1].flash);drawShots(active)}else{wizard(107,352,0,frame/60,false,1,12,0);wizard(297,252,Math.PI,frame/60,true,1,9,0);for(let j=0;j<6;j++){const x=180+Math.sin(frame/50+j*2)*35,y=270+j*19+Math.cos(frame/37+j)*14;circle(x,y,4,'#f1c880');pixel(x-1,y-1,3,3,'#fdf3ca')}}drawOverlay(active)}
 function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k);played.add(f.k);count++}seen=active.serial}
 function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(mode==='fight'&&active){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
-getPocketIdentity().then(profile=>{if(!profile?.complete)return;identityName=profile.nickname||'Ты';identityColor=palette[profile.avatar]||palette.clay;$('identity').textContent=identityName;$('my-name').textContent=identityName.slice(0,13).toUpperCase()}).catch(()=>{});
-window.__perekosTest={get state(){return active},get mode(){return mode},start:newMatch,step:()=>{if(active){tick(active,{attack:true});if(active.phase!=='fight')transition()}},pick:(id,slot=null)=>{if(active?.phase==='draft'){return finishPick(id,slot)}return false},build:()=>{$('bench-fight').click()},reorder:(from,to)=>{const result=reorderRunes(active,from,to);if(result)renderWorkbench();return result},save:saveBuild};
+// The authenticated avatar is presentation only: never serialize art into a
+// combat save. Switching profiles does not change the sprite mid-round.
+function applyPendingAppearance(){
+ if(!pendingAppearance)return false;
+ appearance=pendingAppearance;pendingAppearance=null;
+ const label=appearance.source==='guest'?'Гостевой маг':appearance.name;
+ const status={guest:'Открой профиль PocketWorks',preset:'Цвет из Pocket ID',maskot:'Маскот из PocketWorks',drawing:'Рисунок из PocketWorks'}[appearance.source];
+ $('identity').textContent=label;$('identity-kind').textContent=status||'';
+ $('my-name').textContent=(appearance.source==='guest'?'ТЫ':appearance.name).slice(0,13).toUpperCase();
+ for(const [id,size] of [['menu-portrait',42],['my-portrait',40],['result-portrait',56]])drawPortrait($(id).getContext('2d'),appearance,size);
+ if(active?.phase==='build')renderWorkbench();
+ if(mode==='menu')drawHero($('hero-preview').getContext('2d'),appearance,frame/60);
+ return true;
+}
+function refreshAppearance({force=false}={}){
+ // Safari dispatches focus/visibility events during navigation. Coalesce them
+ // rather than issuing multiple forced Pocket ID requests and racing outcomes.
+ if(avatarInFlight)return avatarInFlight;
+ if(!force&&Date.now()-lastProfileFetch<10000)return Promise.resolve();
+ lastProfileFetch=Date.now();const request=++profileRequest;
+ const task=(async()=>{
+  let identity=null,social=null;
+  try{
+   identity=await getPocketIdentity({force});
+   if(identity?.complete){
+    const result=await fetch('/pocket-social/me',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(3500)});
+    if(result.ok)social=await result.json();
+   }
+  }catch{/* safe guest/preset fallback */}
+  let next=normalizeAppearance(identity,social);
+  next=await decodeAppearance(next);
+  if(request!==profileRequest)return;
+  pendingAppearance=next;
+  if(!active||mode==='menu'||mode==='books'||mode==='result')applyPendingAppearance();
+ })();
+ avatarInFlight=task;
+ return task.finally(()=>{if(avatarInFlight===task)avatarInFlight=null});
+}
+window.addEventListener('focus',()=>{if(mode==='menu'||mode==='books')void refreshAppearance({force:true})});
+document.addEventListener('pocket-social:portrait',()=>{void refreshAppearance({force:true})});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(mode==='menu'||mode==='books'))void refreshAppearance({force:true})});
+drawHero($('hero-preview').getContext('2d'),appearance,0);
+drawPortrait($('menu-portrait').getContext('2d'),appearance,42);
+drawPortrait($('my-portrait').getContext('2d'),appearance,40);
+drawPortrait($('result-portrait').getContext('2d'),appearance,56);
+void refreshAppearance({force:true});
+
+window.__perekosTest={get state(){return active},get mode(){return mode},get appearance(){return {source:appearance.source,accountId:appearance.accountId,preset:appearance.preset,mascot:appearance.mascot,colors:appearance.colors,hasArt:!!appearance.artCanvas}},get hasPendingAppearance(){return !!pendingAppearance},refreshAvatar:()=>refreshAppearance({force:true}),start:newMatch,step:()=>{if(active){tick(active,{attack:true});if(active.phase!=='fight')transition()}},pick:(id,slot=null)=>{if(active?.phase==='draft'){return finishPick(id,slot)}return false},build:()=>{$('bench-fight').click()},reorder:(from,to)=>{const result=reorderRunes(active,from,to);if(result)renderWorkbench();return result},save:saveBuild};
