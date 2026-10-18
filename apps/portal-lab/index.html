@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#142025"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>ШОВ — лаборатория порталов</title>
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./styles.css">
+</head><body>
+<div id="app">
+<header class="top"><a class="back" href="../../" aria-label="Назад в PocketWorks">‹ <span>PocketWorks</span></a><div class="brand"><b class="brand-symbol">◧</b><div><strong>ШОВ</strong><small>Лаборатория порталов</small></div></div><div class="top-right"><button id="sound" class="icon-btn" title="Звук" aria-label="Звук включен">♪</button><button id="pause" class="icon-btn" title="Пауза" aria-label="Пауза">Ⅱ</button></div></header>
+<main class="workspace">
+<aside class="missions" aria-label="Эксперименты"><div class="aside-heading">ЭКСПЕРИМЕНТЫ</div><div id="mission-list" class="mission-list"></div><p class="aside-note">Направь капсулу в приёмник. Оба конца портала можно переназначить.</p></aside>
+<section class="experiment">
+<div class="experiment-heading"><div><span id="stage-index" class="eyebrow">ОПЫТ 01 / 06</span><h1 id="stage-title">Разрыв пространства</h1><p id="stage-desc">Один барьер. Два выхода.</p></div><div class="counter"><span>ПОПЫТОК</span><strong id="shots">00</strong></div></div>
+<div class="board-shell"><div class="board" id="board"><canvas id="game" width="720" height="920" aria-label="Двумерная камера эксперимента с порталами" role="img"></canvas><div class="board-overlay" id="win" hidden><div class="win-panel"><span>КОНТАКТ УСТАНОВЛЕН</span><strong>Цель достигнута</strong><button id="win-next" class="primary">Следующий опыт →</button></div></div><div class="board-message" id="toast" role="status" aria-live="polite"></div></div></div>
+<div class="control-deck">
+<div class="portal-controls" aria-label="Монтаж порталов">
+ <div class="pair-select"><button data-pair="0" class="pair-button selected"><span class="pair-mark aqua"></span>КАНАЛ А</button><button data-pair="1" class="pair-button"><span class="pair-mark amber"></span>КАНАЛ Б</button></div>
+ <div class="end-select"><button data-end="0" class="end-button selected">Вход</button><button data-end="1" class="end-button">Выход</button></div>
+</div>
+<div class="launch-controls"><label class="power" for="power"><span>ИМПУЛЬС <b id="power-value">14.5</b> м/с</span><input id="power" type="range" min="5" max="24" step=".5" value="14.5"></label><button id="reset" class="minor" title="Сбросить тела">↺</button><button id="fire" class="primary">ЗАПУСК <span>↗</span></button></div>
+</div>
+</section>
+<aside class="diagnostics" aria-label="Физические данные"><div class="aside-heading">НАБЛЮДЕНИЯ <span class="live-dot"></span></div><div class="metric"><span>СКОРОСТЬ КАПСУЛЫ</span><strong id="speed">0.0 <small>м/с</small></strong></div><div class="metric"><span>КИНЕТИЧЕСКАЯ ЭНЕРГИЯ</span><strong id="kinetic">0.0 <small>Дж</small></strong></div><div class="metric"><span>РАБОТА ОПОР ПОРТАЛОВ</span><strong id="work">0.0 <small>Дж</small></strong></div><div class="metric"><span>ПЕРЕХОДЫ</span><strong id="transits">0</strong></div>
+<div id="sandbox-tools" class="sandbox-tools" hidden><label>ГРАВИТАЦИЯ <output id="gravity-value">9.81</output> м/с²<input id="gravity" type="range" min="0" max="20" step=".1" value="9.81"></label><label>УПРУГОСТЬ <output id="bounce-value">0.68</output><input id="bounce" type="range" min=".1" max="1" step=".01" value=".68"></label></div>
+<div class="physics-note" id="physics-note">Пересечение границы сохраняет |v|. Поворот определяется ориентацией входа и выхода.</div>
+<div class="hint"><b>КАК УПРАВЛЯТЬ</b><p>Нажми на камеру, чтобы прицелиться. Тапни на крепление, чтобы переставить портал. Потяни от пушки и отпусти для выстрела.</p></div>
+</aside>
+</main>
+<div class="mobile-missions"><button id="prev" aria-label="Предыдущий эксперимент">‹</button><div id="mobile-step">01 / 06</div><button id="next" aria-label="Следующий эксперимент">›</button></div>
+</div>
+<script type="module" src="./app.js"></script>
+</body></html>
