@@ -2969,8 +2969,8 @@
     "sha256": "54eb398ac7bafd27fe2e89ee9af9efbf616f416c156595a06a84362419a3d5e7",
     "imageVersion": 2,
     "status": "preserved",
-    "lastAttemptRevision": "59ff993e9f4d5630468d40fad28d0c4d0bbf7ba2",
-    "lastAttemptAt": "2026-10-18T12:59:16.652Z",
+    "lastAttemptRevision": "fe6a42e06fe0a1fa3c98c934b92e60b98e5702ca",
+    "lastAttemptAt": "2026-10-18T14:36:57.014Z",
     "note": "existing cover rated higher",
     "captureEngine": "safe-gameplay-v3"
   },
@@ -3473,7 +3473,7 @@
     "imageVersion": 2
   },
   "crossline-5x5": {
-    "revision": "4328690be5cc03c4e3446dbf0b290064fba95cd6",
+    "revision": "883783ce8153d82fa5f5e099825016a640623337",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
@@ -3481,15 +3481,15 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "35b650b9ae5ed6dc7f50c858fa2b4088126459496ac60487c725b0fdd9dd5847",
+    "sha256": "d92552f90d4928186550d95fd4f5a3c0c12fff6e96781d3798c04503f2ce2430",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4328690be5cc03c4e3446dbf0b290064fba95cd6",
-    "lastAttemptAt": "2026-10-18T13:50:46.535Z"
+    "lastAttemptRevision": "883783ce8153d82fa5f5e099825016a640623337",
+    "lastAttemptAt": "2026-10-18T14:36:42.560Z"
   },
   "perekos": {
-    "revision": "37365aa5214b3cfa0c13088fba479fffbf7954c2",
+    "revision": "39746947d2a932feba8f93ff70d6daaf84a2cf87",
     "qualityScore": 57,
     "visionScore": null,
     "prepared": false,
@@ -3503,11 +3503,11 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "336abd3668a2ecc6b92ab927c7b3663975fab600b1358cb93c812336082e363e",
+    "sha256": "bdb8be0cd031e4ad1b1848cd3ab4b138f45d8ee39ac929c33c12e3de061773bd",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "37365aa5214b3cfa0c13088fba479fffbf7954c2",
-    "lastAttemptAt": "2026-10-18T13:04:55.854Z"
+    "lastAttemptRevision": "39746947d2a932feba8f93ff70d6daaf84a2cf87",
+    "lastAttemptAt": "2026-10-18T14:37:08.948Z"
   }
 }
