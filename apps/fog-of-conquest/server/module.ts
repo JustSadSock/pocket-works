@@ -494,7 +494,7 @@ function privateView(g,side){
    v.buildings.push({...remembered,lastSeen:true});
   }
  }
- v.state={...g.state,gold:{[side]:g.state.gold[side]},fog:{[side]:fog},seen:{[side]:seen},lastSeen:{[side]:copy(memory)},log:{[side]:g.state.log[side]}};
+ v.state={...g.state,gold:{[side]:g.state.gold[side]},fog:{[side]:fog},seen:{[side]:seen},lastSeen:{[side]:copy(memory)},log:{[side]:g.state.log[side]},grace:{[side]:g.state.grace[side]}};
  // Never disclose a seeded map's reconstruction key while fog is active.
  delete v.seed;
  v.nextUnitId=0;return v;
