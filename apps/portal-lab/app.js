@@ -1,8 +1,9 @@
 import {metric,geometry,launch,advance,constraint,collectBeam,staticAcceleration,staticClockRate,nullEnergyRadial,localSpeed} from './relativity.js';
 import {AudioBus} from './audio.js';
+import {createObservatory} from './observatory.js';
 const $=id=>document.getElementById(id),canvas=$('space'),ctx=canvas.getContext('2d',{alpha:false});
-const sound=new AudioBus(),STORAGE='pocket-works:portal-lab:relativity-v2';
-const defaults={model:'ellis',a:1,eta:.45,kind:'light',count:13,spread:32,speed:.7,timeScale:1,view:'map',source:{l:3.15,phi:Math.PI,alpha:Math.PI}};
+const sound=new AudioBus(),observatory=createObservatory(canvas),STORAGE='pocket-works:portal-lab:relativity-v2';
+const defaults={model:'ellis',a:1,eta:.45,kind:'light',count:13,spread:32,speed:.7,timeScale:1,view:'observer',source:{l:3.15,phi:Math.PI,alpha:Math.PI}};
 let settings=structuredClone(defaults);
 let rays=[],elapsed=0,paused=false,lastTime=0,accum=0,drag=null,displayW=800,displayH=600,layout=null,dirty=true,saveTimeout=0;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -17,7 +18,7 @@ function load(){
   settings.kind=x.kind==='matter'?'matter':'light';
   settings.count=Math.round(clean(x.count,1,25,13));settings.spread=clean(x.spread,0,100,32);
   settings.speed=clean(x.speed,.05,.95,.7);settings.timeScale=clean(x.timeScale,.25,5,1);
-  settings.view=x.view==='profile'?'profile':'map';
+  settings.view=x.view==='profile'?'profile':x.view==='map'?'map':'observer';
   if(x.source&&[x.source.l,x.source.phi,x.source.alpha].every(Number.isFinite))
    settings.source={l:Math.max(-24,Math.min(24,x.source.l)),phi:x.source.phi,alpha:x.source.alpha};
   if(Array.isArray(value.rays)&&value.rays.length<=35&&Number.isFinite(value.elapsed)){
@@ -59,7 +60,14 @@ function sync(){
    :'У горловины часы идут медленнее относительно координатного времени. Источник напряжений-энергии для этого анзаца не моделируется.';
  document.querySelectorAll('[data-kind]').forEach(b=>{const active=b.dataset.kind===settings.kind;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));});
  document.querySelectorAll('[data-view]').forEach(b=>{const active=b.dataset.view===settings.view;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));});
- $('canvas-hint').textContent=settings.view==='profile'?'Профиль — изометрическое вложение пространственного среза. Масштаб проекции условный.':'Коснись региона, чтобы переместить источник. Потяни от источника, чтобы изменить направление.';
+ document.body.dataset.labView=settings.view;
+ observatory.setActive(settings.view==='observer');
+ $('shoot').innerHTML=settings.view==='observer'?'Пройти горловину <span aria-hidden="true">↗</span>':'Испустить лучи <span aria-hidden="true">↗</span>';
+ $('clear').textContent=settings.view==='observer'?'Исходный вид':'Очистить';
+ $('canvas-hint').textContent=settings.view==='observer'
+   ?'Перетащи для поворота камеры. Коснись изображения для данных фотона.'
+   :settings.view==='profile'?'Профиль — изометрическое вложение пространственного среза. Масштаб проекции условный.'
+   :'Коснись региона для перемещения источника. Потяни от источника для направления луча.';
  $('curvature').textContent=geometry(0,m).K.toFixed(3);
  $('acceleration').textContent=staticAcceleration(m.a,m).toFixed(3);
  updateReadouts();
@@ -104,6 +112,7 @@ function changeMetric(){
  // The existing E and L belong to the old metric: discard them rather than
  // spuriously preserving a worldline after editing the spacetime itself.
  resetData(true);
+ observatory.configure(currentMetric());
 }
 const bindings=[
  ['radius','a',true],['eta','eta',true],['count','count',false],
@@ -117,7 +126,7 @@ for(const [id,key,rebuild]of bindings)$(id).addEventListener('input',e=>{
 $('model').addEventListener('change',e=>{settings.model=e.target.value;changeMetric();});
 for(const button of document.querySelectorAll('[data-kind]'))button.addEventListener('click',()=>{settings.kind=button.dataset.kind;sync();scheduleSave();});
 for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{settings.view=button.dataset.view;sync();scheduleSave();});
-$('shoot').addEventListener('click',()=>emit());
+$('shoot').addEventListener('click',()=>{if(settings.view==='observer')observatory.triggerFlight();else emit();});
 $('critical').addEventListener('click',()=>{
  const m=currentMetric(),src=settings.source;
  const R=geometry(src.l*m.a,m).R,N=geometry(src.l*m.a,m).N;
@@ -128,12 +137,12 @@ $('critical').addEventListener('click',()=>{
  settings.source.alpha=Math.PI+Math.asin(argument);
  sync();emit();sound.play('mount');scheduleSave();
 });
-$('clear').addEventListener('click',()=>resetData());
+$('clear').addEventListener('click',()=>{if(settings.view==='observer')$('lens-reset').click();else resetData();});
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Продолжить':'Пауза';$('pause').setAttribute('aria-label',paused?'Продолжить':'Приостановить симуляцию');});
 $('sound').addEventListener('click',()=>{sound.set(!sound.enabled);$('sound').classList.toggle('muted',!sound.enabled);$('sound').setAttribute('aria-label',sound.enabled?'Выключить звук':'Включить звук');});
 $('sound').classList.toggle('muted',!sound.enabled);
 $('export').addEventListener('click',()=>{
- const data={schema:'portal-lab-relativity-v2',description:'Geodesics in ds²=-N(l)²dt²+dl²+(l²+a²)dφ², c=G=1',metric:currentMetric(),assumptions:['equatorial test-particle approximation','no self gravity or backreaction','redshift metric is an ansatz'],elapsed,settings,rays};
+ const data={schema:'portal-lab-relativity-v3',description:'Geodesics in ds²=-N(l)²dt²+dl²+(l²+a²)dφ², c=G=1',metric:currentMetric(),assumptions:['equatorial test-particle approximation','no self gravity or backreaction','redshift metric is an ansatz'],elapsed,settings,observer:observatory.state,probe:observatory.probe,rays};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=url;link.download='shov-relativity-experiment.json';document.body.append(link);link.click();link.remove();
  setTimeout(()=>URL.revokeObjectURL(url),1200);
@@ -355,22 +364,28 @@ function tick(t){
    const advanceTime=dt*settings.timeScale*2;
    elapsed+=advanceTime;
    const m=currentMetric();
-   for(const ray of rays){
-    if(Math.abs(ray.l)<m.a*30&&ray.t<220*m.a)advance(ray,m,advanceTime);
+   if(settings.view==='observer'){
+    observatory.tick(dt,settings.timeScale);
+   }else{
+    for(const ray of rays){
+     if(Math.abs(ray.l)<m.a*30&&ray.t<220*m.a)advance(ray,m,advanceTime);
+    }
    }
    accum+=dt;dirty=true;
    if(accum>.11){updateReadouts();accum=0;}
   }
-  if(dirty){if(layout){if(settings.view==='profile')drawProfile();else drawMap();}dirty=false;}
+  if(settings.view==='observer'){observatory.draw(ctx,displayW,displayH);dirty=false;}
+  else if(dirty){if(layout){if(settings.view==='profile')drawProfile();else drawMap();}dirty=false;}
  }
  requestAnimationFrame(tick);
 }
 load();
 settings.source.l=Math.sign(settings.source.l||1)*Math.min(4.25,Math.max(.3,Math.abs(settings.source.l)));
+observatory.configure(currentMetric());
 sync();if(!rays.length)emit(true);
 requestAnimationFrame(tick);
 window.__SHOV__={snapshot:()=>({
- metric:currentMetric(),settings:structuredClone(settings),elapsed,
+ metric:currentMetric(),settings:structuredClone(settings),elapsed,observer:{...observatory.state},optics:observatory.status,tidal:observatory.probe,
  rays:rays.map(r=>({l:r.l,phi:r.phi,E:r.E,L:r.L,k:r.k,crossings:r.crossings,constraint:constraint(r,currentMetric())}))
  }),emit,clear:()=>resetData(),setModel:(model)=>{settings.model=model==='redshift'?'redshift':'ellis';changeMetric();}};
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
