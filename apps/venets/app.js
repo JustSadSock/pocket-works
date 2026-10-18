@@ -49,7 +49,7 @@ const ICONS={marriage:'✦',gift:'◇',grant:'♜',petition:'§',faction:'⚑',j
 const GOALS={'secure-claim':'Вернуть спорный титул','political-leverage':'Ослабить сюзерена',
   'gain-land':'Получить владение','stabilize-realm':'Укрепить мир','seek-marriage':'Создать союзный дом',
   'secure-house':'Защитить род'};
-let game=null,saved=null,backupRaw=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
+let game=null,saved=null,backupRaw=null,selectedCounty='co-01',selectedProvince='pr-01',panel='lands',filter='house';
 let screen='loading',autoSpeed=0,autoHandle=null,saveQueue=Promise.resolve();
 let storage='indexeddb',database=null,actionPending=null,busy=false,toastHandle=null;
 let atlasView='atlas',familyFocus=null,atlasChanges=[],atlasRegion=0,selectedSize=12,showAllChoices=false;
@@ -636,7 +636,7 @@ by('restore-dialog').addEventListener('close',async()=>{
     if(!prior)throw Error('Резервная запись повреждена');
     const restored=loadCampaign(prior);
     await writeSave(prior,{rotate:false}); // preserve checkpoint, never overwrite it with corrupted active
-    saved=prior;game=restored;panel='council';atlasView='atlas';familyFocus=null;
+    saved=prior;game=restored;panel='lands';atlasView='atlas';familyFocus=null;
     selectedProvince='pr-'+game.startCountyId.slice(-2);atlasRegion=0;
     notify('Резервная хроника восстановлена');
     resume();
