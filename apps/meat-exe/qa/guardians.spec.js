@@ -68,6 +68,8 @@ test('walking up to a physical fork and pressing X presets the actual surgery ro
   const state=JSON.parse(localStorage.getItem(key));
   state.x=destination.x;state.z=destination.z;
   localStorage.setItem(key,JSON.stringify(state));
+  // This deliberate fixture edit must survive the outgoing page's automatic pagehide save.
+  window.addEventListener('pagehide',event=>event.stopImmediatePropagation(),{capture:true,once:true});
  },{key:SESSION,destination});
  await page.reload();await page.locator('#resumeSaved').click();
  await expect(page.locator('#hud')).toBeVisible();
@@ -86,6 +88,7 @@ test('walking up to a physical fork and pressing X presets the actual surgery ro
   const state=JSON.parse(localStorage.getItem(key));
   state.toSpawn=0;state.enemies=[];state.spawnClock=30;
   localStorage.setItem(key,JSON.stringify(state));
+  window.addEventListener('pagehide',event=>event.stopImmediatePropagation(),{capture:true,once:true});
  },SESSION);
  await page.reload();await page.locator('#resumeSaved').click();
  await expect(page.locator('#graftDraft')).toBeVisible({timeout:22000});
