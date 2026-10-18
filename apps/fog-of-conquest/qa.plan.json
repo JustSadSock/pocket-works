@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "game-rules",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "test/engine.test.mjs",
+        "test/server.test.mjs"
+      ]
+    },
+    {
+      "id": "field-mobile-desktop",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#newGame",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#newGame"
+        },
+        {
+          "action": "visible",
+          "selector": "#field"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#menuBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#menu"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "real-playthrough",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/real-flow.spec.ts"
+      ]
+    }
+  ]
+}
