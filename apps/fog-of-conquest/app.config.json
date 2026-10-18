@@ -4,10 +4,11 @@
   "name": "FOG OF CONQUEST",
   "shortName": "Fog Conquest",
   "description": "Оригинальная пошаговая стратегия Fog of Conquest с туманом войны, всеми режимами и графикой, адаптированная для PocketWorks.",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "releaseDate": "2026-10-18",
-  "releaseDateTime": "2026-10-18T03:57:00+03:00",
+  "releaseDateTime": "2026-10-18T15:10:00+03:00",
   "changelog": [
+    "Исправлены BOG на маленькой карте, схема сохранений и восстановление ИИ/beta; онлайн-снимки не попадают в локальные сейвы.",
     "Сохранены исходная карта, баланс, оба набора графики, семь уровней ИИ, BOG и реплеи.",
     "PocketNet: исходные правила боя и найма, серверная проверка приказов, приватный туман и восстановление подключения.",
     "Две независимые сессии Pocket ID/гостя, безопасное переподключение и центрирование камеры второго игрока."
@@ -18,7 +19,7 @@
   "backgroundColor": "#151610",
   "themeColor": "#1b1b14",
   "orientation": "any",
-  "cacheName": "fog-of-conquest-v1.2.1",
+  "cacheName": "fog-of-conquest-v1.2.2",
   "storageNamespace": "pocket-works:fog-of-conquest",
   "runtime": "quick",
   "tags": [
