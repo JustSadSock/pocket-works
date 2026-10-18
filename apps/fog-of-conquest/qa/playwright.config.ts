@@ -4,7 +4,8 @@ const baseURL='http://127.0.0.1:8765';
 export default defineConfig({
  testDir:'.',
  testMatch:['real-flow.spec.ts','online-flow.spec.ts','stage0.spec.ts'],
- timeout:55000,
+ timeout:35000,
+ maxFailures:1,
  expect:{timeout:9000},
  retries:0,
  workers:1,
