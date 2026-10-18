@@ -2968,11 +2968,37 @@
     "shot": 0,
     "sha256": "54eb398ac7bafd27fe2e89ee9af9efbf616f416c156595a06a84362419a3d5e7",
     "imageVersion": 2,
-    "status": "preserved",
-    "lastAttemptRevision": "e74ecab63c23be79c46c473a66589f591822b1f0",
-    "lastAttemptAt": "2026-10-18T14:44:15.555Z",
-    "note": "existing cover rated higher",
-    "captureEngine": "safe-gameplay-v3"
+    "status": "failed",
+    "lastAttemptRevision": "9c2acfea66f4081f2d3aedece467fb3d024fea36",
+    "lastAttemptAt": "2026-10-18T15:08:46.735Z",
+    "note": "No frame passed image-content checks",
+    "captureEngine": "safe-gameplay-v3",
+    "diagnostic": {
+      "bestScore": 36,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 25365,
+        "variance": 18.31932832595625,
+        "entropy": 1.5026638444011233,
+        "edgeDensity": 0.07415674603174603,
+        "colorfulness": 15.596923828125,
+        "centerDetail": 6.084488750042301,
+        "meanLight": 105.04418901367703
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "РАЗРЕШИТЬ НАКЛОН И ИГРАТЬ",
+            "id": "continueButton",
+            "score": 74
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/otves/?pw-cover=1&pw_release=1.5.0&pw_fp=12e981aca425f6d51018b5df"
+    }
   },
   "kromka": {
     "note": "No frame passed image-content checks",
@@ -3473,7 +3499,7 @@
     "imageVersion": 2
   },
   "crossline-5x5": {
-    "revision": "883783ce8153d82fa5f5e099825016a640623337",
+    "revision": "4fe52a3091e2f29e85bb53d506c85f003035a840",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
@@ -3481,12 +3507,12 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "d92552f90d4928186550d95fd4f5a3c0c12fff6e96781d3798c04503f2ce2430",
+    "sha256": "390b47574cc993f9dfb595fe508d95a7b754bc521fb5e4262a7e89962f7e93a0",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "883783ce8153d82fa5f5e099825016a640623337",
-    "lastAttemptAt": "2026-10-18T14:36:42.560Z"
+    "lastAttemptRevision": "4fe52a3091e2f29e85bb53d506c85f003035a840",
+    "lastAttemptAt": "2026-10-18T15:08:57.699Z"
   },
   "perekos": {
     "revision": "39746947d2a932feba8f93ff70d6daaf84a2cf87",
