@@ -2,6 +2,14 @@
 (function(){
 const canvas=document.getElementById('canvas');
 const viewport=document.getElementById('battleViewport');
+window.FogCenterCamera=function(side){
+  if(!viewport||!canvas.width||!window.COLS||!window.ROWS)return;
+  const c=side===1?1:window.COLS-2,r=side===1?1:window.ROWS-2;
+  const x=(c+.5)*canvas.width/window.COLS,y=(r+.5)*canvas.height/window.ROWS;
+  viewport.scrollTo({left:Math.max(0,x-viewport.clientWidth*.45),
+    top:Math.max(0,y-viewport.clientHeight*.48),behavior:'auto'});
+};
+
 document.getElementById('cancelSelectBtn')?.addEventListener('click',()=>canvas.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true})));
 document.addEventListener('keydown',e=>{
 if(e.key==='Escape'&&!['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName||'')){

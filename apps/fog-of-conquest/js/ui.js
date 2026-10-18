@@ -1720,6 +1720,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       u.mp=UNIT_TYPES[u.type].move; u.startR=u.r; u.startC=u.c;
     });
     recordTurn(); updateAll();
+    if(!aiMode)window.FogCenterCamera?.(state.currentPlayer);
   }
 
 
