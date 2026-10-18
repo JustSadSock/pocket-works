@@ -111,7 +111,7 @@ export function createWorld(canvas, initialSeed) {
   let seed=0, lastChunk='', frame=0;
   const gun = new THREE.Group(), bolter=new THREE.Group(), shredder=new THREE.Group();
   const metal = new THREE.MeshStandardMaterial({color:0x565151,metalness:.62,roughness:.38});
-  const muscle = new THREE.MeshStandardMaterial({color:0x6b2530,metalness:.12,roughness:.52});
+  const muscle = new THREE.MeshStandardMaterial({color:0x491e26,metalness:.06,roughness:.78});
   const barrelBone = new THREE.MeshStandardMaterial({color:0xd4b49a,metalness:.04,roughness:.84});
   const muzzle = new THREE.MeshBasicMaterial({color:0xffd5a0});
   gun.add(bolter,shredder);
@@ -119,13 +119,13 @@ export function createWorld(canvas, initialSeed) {
     const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;
   }
   // Distinct real silhouettes: a long screwed-in bolt lance and a paired bone jaw shotgun.
-  part(new THREE.BoxGeometry(1,1,1),muscle,.27,-.28,-.75,.23,.23,.75);
+  part(new THREE.CylinderGeometry(.15,.21,.83,9,4).rotateX(Math.PI/2),muscle,.27,-.31,-.73,1,1,1);
   part(new THREE.CylinderGeometry(.13,.19,1,8).rotateX(Math.PI/2),metal,.27,-.19,-1.06,1,1,1);
-  part(new THREE.BoxGeometry(1,1,1),metal,.27,-.39,-.5,.15,.32,.28);
+  part(new THREE.CylinderGeometry(.075,.13,.32,7),metal,.28,-.49,-.48,1,1,1);
   for(let k=0;k<3;k++) part(new THREE.TorusGeometry(.14,.034,6,12),k===1?muscle:metal,.27,-.19,-.72-k*.21,1,1,1);
   const longFlash=part(new THREE.ConeGeometry(.18,.5,7).rotateX(-Math.PI/2),muzzle,.27,-.19,-1.73,1,1,1);
-  part(new THREE.BoxGeometry(1,1,1),muscle,.27,-.31,-.64,.44,.27,.85,shredder);
-  part(new THREE.BoxGeometry(1,1,1),metal,.26,-.33,-.32,.31,.25,.33,shredder);
+  part(new THREE.CylinderGeometry(.23,.3,.75,9,4).rotateX(Math.PI/2),muscle,.27,-.31,-.68,1,1,1,shredder);
+  part(new THREE.CylinderGeometry(.13,.17,.33,7).rotateX(Math.PI/2),metal,.26,-.34,-.33,1,1,1,shredder);
   for(const side of [-1,1]){
     part(new THREE.CylinderGeometry(.13,.16,1.25,7).rotateX(Math.PI/2),barrelBone,.27+side*.16,-.24,-1.14,1,1,1,shredder);
     for(let tooth=0;tooth<3;tooth++) part(new THREE.ConeGeometry(.075,.25,5),barrelBone,.27+side*.20,-.37,-.78-tooth*.29,.92,1,.9,shredder);
@@ -326,7 +326,11 @@ export function createWorld(canvas, initialSeed) {
     lamp.position.set(player.x,1.7,player.z);pulseLamp.position.set(player.x,2.55,player.z-1.8);
     const w=player.weapon===1?1:0;
     bolter.visible=w===0;shredder.visible=w===1;
-    gun.position.set(Math.sin(time*8)*(player.moving||0)*.012,Math.cos(time*8)*(player.moving||0)*.008-recoil*.06,-Math.min(.34,kickPos*.26));
+    const portrait=canvas.clientHeight>canvas.clientWidth;
+    gun.scale.setScalar(portrait?.76:1);
+    gun.position.set((portrait?.23:.17)+Math.sin(time*8)*(player.moving||0)*.012,
+      (portrait?-.28:-.16)+Math.cos(time*8)*(player.moving||0)*.008-recoil*.04,
+      -.20-Math.min(.23,kickPos*.2));
     gun.rotation.x=(reduced?0:Math.min(.12,kickPos*.19));
     longFlash.visible=muzzleTime>0&&muzzleKind===0;
     wideFlash.visible=muzzleTime>0&&muzzleKind===1;
