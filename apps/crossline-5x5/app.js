@@ -583,42 +583,41 @@ function download(data,filename,mime){
  const url=URL.createObjectURL(new Blob([data],{type:mime})),a=document.createElement('a');
  a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
-function exportReplay(){const g=game();if(!g?.replays?.length)return;download(JSON.stringify({format:'crossline-5x5',version:1,match:g},null,2),'5x5-arena-'+Date.now()+'.json','application/json');toast('Повтор сохранён')}
+function exportReplay(){const item=currentReplayEntry();if(item)exportEntry(item)}
 async function videoReplay(){
  if(recording)return;
- if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){
-  toast('Этот браузер не поддерживает WebM');return;
- }
- const rec=currentRecord();if(!rec)return;
- const button=$('replayVideo');recording=true;button.disabled=true;button.textContent='ЗАПИСЬ…';pauseReplay();
+ if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){toast('WebM недоступен — используй JSON');return}
+ const rounds=game()?.replays||[];if(!rounds.length){toast('Нет записанных раундов');return}
+ const button=$('replayVideo');recording=true;button.disabled=true;button.textContent='ЗАПИСЬ МАТЧА…';pauseReplay();
  let recorder,stream;
  try{
   const canvas=document.createElement('canvas');canvas.width=800;canvas.height=840;
-  const ctx=canvas.getContext('2d'),clips=[];if(!ctx)throw Error('Не удаётся рисовать видеоповтор');
+  const ctx=canvas.getContext('2d'),clips=[];if(!ctx)throw Error('Не удалось открыть Canvas');
   stream=canvas.captureStream(30);
   const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
   if(!mime)throw Error('Кодек WebM недоступен');
   recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000});
   const finished=new Promise((resolve,reject)=>{
-   recorder.ondataavailable=e=>{if(e.data.size)clips.push(e.data)};
-   recorder.onstop=resolve;recorder.onerror=()=>reject(Error('Ошибка MediaRecorder'));
+   recorder.ondataavailable=e=>{if(e.data?.size)clips.push(e.data)};
+   recorder.onstop=resolve;recorder.onerror=()=>reject(Error('Ошибка видеозаписи'));
   });
   recorder.start(100);
-  for(let i=0;i<rec.frames.length;i++){
-   const before=frameBefore(rec,i),frame=rec.frames[i],duration=timing(1,false),steps=24;
+  // The complete match is encoded, including rounds not currently selected.
+  for(const round of rounds)for(let i=0;i<round.frames.length;i++){
+   const before=frameBefore(round,i),frame=round.frames[i],duration=timing(1,false),steps=24;
    for(let n=0;n<=steps;n++){
-    drawArenaCanvas(ctx,before,frame,rec.round,n/steps,{step:frame.beat});
+    drawArenaCanvas(ctx,before,frame,round.round,n/steps,{step:frame.beat});
     await new Promise(resolve=>setTimeout(resolve,duration/steps));
    }
   }
   recorder.stop();await finished;
-  if(!clips.length)throw Error('Нет данных видеозаписи');
-  download(new Blob(clips,{type:mime}),'5x5-arena-round-'+rec.round+'.webm',mime);
-  toast('Видеоповтор сохранён');
+  if(!clips.length)throw Error('Нет данных WebM');
+  download(new Blob(clips,{type:mime}),'5x5-arena-full-match.webm',mime);
+  toast('Видео всего матча сохранено');
  }catch(error){toast(error?.message||'Ошибка записи')}
  finally{
   try{if(recorder?.state==='recording')recorder.stop()}catch{}
-  stream?.getTracks().forEach(t=>t.stop());recording=false;button.disabled=false;button.textContent='● WebM';
+  stream?.getTracks().forEach(t=>t.stop());recording=false;button.disabled=false;button.textContent='● WebM матча';
  }
 }
 $('themeToggle').onclick=()=>{
@@ -673,7 +672,7 @@ $('replayPlay').onclick=toggleReplay;$('replaySpeed').onclick=()=>{const list=[1
 $('replaySave').onclick=exportReplay;$('replayVideo').onclick=videoReplay;
 window.addEventListener('keydown',e=>{
  if(/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName||''))return;
- if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
+ if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='archive')show('menu');else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
  if(screen==='replay'&&!modalOpen&&['ArrowLeft','ArrowRight'].includes(e.key)){seekReplay(replayIndex+(e.key==='ArrowLeft'?-1:1));e.preventDefault();return}
   if(screen!=='play'||modalOpen)return;
  if(e.key>='1'&&e.key<='5'){selectSlot(Number(e.key)-1);e.preventDefault();return}
@@ -697,7 +696,7 @@ function startFromSession(){
  if(restored.roomId)connect('resume');
 }
 if(!IS_DEV_FRAME){
- const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.3.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+ const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.6.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
  mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
  checkNet();resumeOffer();
 }else{
