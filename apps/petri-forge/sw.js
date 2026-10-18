@@ -3,7 +3,7 @@ const CACHE_NAME = 'petri-forge-v0.1.0';
 const APP_VERSION = '0.1.0';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Initial canvas preset release."];
+const RELEASE_NOTES = ["Перенесена восстановленная облачная версия: редактор среды, Q-learning и случайный агент; сенсорное рисование и сохранение сцен."];
 const APP_SHELL = [
   './',
   './index.html',

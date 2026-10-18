@@ -1,48 +1,74 @@
 {
   "schemaVersion": 2,
-  "status": "draft",
+  "status": "ready",
   "product": "petri-forge",
   "direction": {
-    "premise": "TODO — What should PetriForge feel like, beyond its genre?",
-    "composition": "TODO — Describe the dominant spatial layout and focal point on a phone",
-    "shapeLanguage": "TODO — Name distinctive silhouettes, edges, proportions and negative space",
-    "surfaceAndMaterial": "TODO — Describe material response, texture or illustration method",
-    "paletteLogic": "TODO — Describe value hierarchy and why the chosen colors belong to this world",
-    "typography": "TODO — Describe type character and hierarchy, including in-game functional text",
-    "signature": "TODO — One unique visual or interactive behavior recognizable without a logo",
-    "distinction": "TODO — Which nearby Pocket Works apps look similar and how will this differ?"
+    "premise": "A small computational petri dish: construct an environment and watch a single blue learner discover its consequences.",
+    "composition": "The rectangular cell culture occupies the central work surface. A wrapping instrument strip sits above it and only step/reward counters sit below.",
+    "shapeLanguage": "Hard square cells and compact rectangular instrument buttons match the discrete world. The icon places that grid inside a circular specimen dish.",
+    "surfaceAndMaterial": "Flat opaque cell pigments retain the source renderer. Muted teal instrument metal surrounds a near-black culture surface without glass effects.",
+    "paletteLogic": "Blue marks the learner and spawn, green marks the goal, red the harmful cells, and yellow the rewards. Grey walls preserve legibility over a dark empty grid.",
+    "typography": "System sans-serif labels keep controls legible at compact sizes. The product name is a small bench label rather than a decorative title.",
+    "signature": "Draw an obstacle with a finger and immediately send the learner one step into the edited environment; reward changes remain visible in the bottom counter.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted fragments; PetriForge keeps every editable element aligned to a fixed discrete laboratory grid."
   },
   "architecture": {
-    "spatialLayout": "TODO — choose the actual phone layout",
-    "controlLocation": "TODO — place controls by the core verbs",
-    "navigation": "TODO — define how navigation works in the product",
-    "chromeTopology": "TODO — decide which permanent frames or surfaces exist",
-    "dominantMotion": "TODO — choose a physical timing model",
-    "primaryVerb": "TODO — name a real action that a player performs with the object",
-    "physicalFeedback": "TODO — describe response, inertia, friction, sound and cancellation",
-    "spatialRationale": "TODO — explain why this composition is optimal on a phone",
-    "comparisons": []
+    "spatialLayout": "open-workbench",
+    "controlLocation": "perimeter",
+    "navigation": "editor-toolbox",
+    "chromeTopology": "tiled-grid",
+    "dominantMotion": "none",
+    "primaryVerb": "Paint individual cells or generator patterns, then advance or run a learner against the resulting rewards and walls.",
+    "physicalFeedback": "A painted cell changes immediately and persists until undo; the agent advances in discrete steps with no interpolated movement to obscure its sampled state.",
+    "spatialRationale": "The whole 30 by 20 environment remains visible when fitted to the phone width; the wrapping tool strip allows direct editing without a modal navigation stack.",
+    "comparisons": [
+      {
+        "slug": "fog-of-conquest",
+        "spatialDifference": "fog-of-conquest uses full-bleed-world and diegetic-tools; this port shows a fitted rectangular laboratory grid with an explicit tool strip.",
+        "interactionDifference": "fog-of-conquest uses scene-zoom navigation; PetriForge exposes cell brushes, undo, procedural maps and a separately stepped learning worker."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "zamazka uses open-workbench and diegetic-tools; this port shows a fitted rectangular laboratory grid with an explicit tool strip.",
+        "interactionDifference": "zamazka uses world-travel navigation; PetriForge exposes cell brushes, undo, procedural maps and a separately stepped learning worker."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels; this port shows a fitted rectangular laboratory grid with an explicit tool strip.",
+        "interactionDifference": "meat-exe uses world-travel navigation; PetriForge exposes cell brushes, undo, procedural maps and a separately stepped learning worker."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene; this port shows a fitted rectangular laboratory grid with an explicit tool strip.",
+        "interactionDifference": "not-dead-yet uses world-travel navigation; PetriForge exposes cell brushes, undo, procedural maps and a separately stepped learning worker."
+      },
+      {
+        "slug": "crossline-5x5",
+        "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage; this port shows a fitted rectangular laboratory grid with an explicit tool strip.",
+        "interactionDifference": "crossline-5x5 uses overlay-list navigation; PetriForge exposes cell brushes, undo, procedural maps and a separately stepped learning worker."
+      }
+    ]
   },
   "production": {
-    "renderer": "TODO — Why DOM/CSS, sprites, Canvas, WebGL, or authored 3D is appropriate",
-    "focalAsset": "TODO — What is the hero object and how will its visual asset be authored?"
+    "renderer": "Canvas 2D preserves the recovered source cell renderer and exact 30 by 20 simulation without a GPU or external assets.",
+    "focalAsset": "The focal object is the editable cell culture drawn from source rules; a hand-authored SVG dish and cell path provide the install identity."
   },
   "motion": {
-    "character": "TODO — Heavy, elastic, precise, organic, mechanical, etc; give reasons",
-    "action": "TODO — Identify the user action whose motion must feel distinctive",
-    "anticipation": "TODO — What moves BEFORE the action and why?",
-    "response": "TODO — What visually reacts on the first frame of input?",
-    "followThrough": "TODO — What settles, lags, rebounds, or remains changed afterward?",
-    "interruption": "TODO — How rapid repeat input redirects motion without queued delay",
-    "reducedMotion": "TODO — What remains legible when motion is reduced"
+    "character": "Discrete and immediate: state changes occur on cell boundaries because the learner samples one action at a time.",
+    "action": "Painting a wall or advancing the agent is the primary visible interaction.",
+    "anticipation": "The selected tool and tile value expose the pending edit before the pointer touches the culture.",
+    "response": "Pointer input changes the cell pigment immediately; a worker action changes the blue learner position and reward counter.",
+    "followThrough": "Edited cells remain until an explicit undo or another paint operation; the completed episode stops the run control.",
+    "interruption": "Pointer cancellation releases the current stroke; repeated run input toggles execution while a single pending worker request prevents backlogs.",
+    "reducedMotion": "There are no decorative transitions to remove; discrete cell changes retain all simulation information."
   },
   "evidence": {
     "entry": "./",
     "interaction": {
       "type": "click",
-      "selector": "#primary-action"
+      "selector": "#step"
     },
-    "expectedChange": "TODO — What should an observer see after performing this real action?",
+    "expectedChange": "The blue learner takes one discrete action and the step counter advances by exactly one.",
     "capture": [
       "initial",
       "action",
