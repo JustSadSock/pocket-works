@@ -88,7 +88,7 @@ test('board keeps persistent actors and 25 cells across event frames, with round
   assert.ok(host.children[10].className.includes('fall-burst'));
   assert.ok(host.children[0].className.includes('shatter'));
   assert.ok(host.children[0].className.includes('lava'));
-  assert.ok(actor.className.includes('dying'));
+  assert.ok(actor.className.includes('falling'),'fighter must drop with the disintegrating tile');
  }finally{globalThis.document=saved}
 });
 test('reduced-motion playback resolves one engine event frame without future callbacks',async()=>{
