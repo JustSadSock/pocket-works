@@ -521,6 +521,14 @@ function render(){
  }
  const picture=animFrame||{units:match.units,edgesCollapsed:match.edgesCollapsed,events:[]};
  drawBoard($('board'),picture.units,picture.edgesCollapsed,picture.events,!animating,picture.round||match.round);
+ const marksAvailable=!locked()&&mode!=='tutorial';
+ for(const cell of $('board').querySelectorAll(':scope > .cell')){
+  cell.tabIndex=marksAvailable?0:-1;
+  const kind=ownMarks()[cell.dataset.x+','+cell.dataset.y];
+  cell.setAttribute('aria-label','Клетка '+(Number(cell.dataset.x)+1)+', '+(Number(cell.dataset.y)+1)+
+   (kind==='watch'?', помечена':kind==='danger'?', опасность':'')+
+   (marksAvailable?', нажми для пометки':''));
+ }
  $('roundInfo').textContent='РАУНД '+Math.min(match.round,4)+' / '+MAX_ROUNDS;
  $('phaseInfo').classList.toggle('is-ai-thinking',thinkingAI);
  $('phaseInfo').textContent=thinkingAI?'ИИ ВЫБИРАЕТ ХОД':mode==='online'&&!connected?'НЕТ СВЯЗИ':mode==='online'&&opponentDisconnected?'СОПЕРНИК ВНЕ СЕТИ':animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
@@ -756,6 +764,38 @@ $('themeToggle').onclick=()=>{
  soundFX('tap');
 };
 $('archiveOpen').onclick=openArchive;
+$('lessonExit').onclick=()=>leaveToMenu(true);
+$('lessonRules').onclick=showRules;
+$('board').addEventListener('click',event=>{
+ const cell=event.target.closest('.cell');
+ if(cell)changeBoardMark(Number(cell.dataset.x),Number(cell.dataset.y));
+});
+$('board').addEventListener('keydown',event=>{
+ const cell=event.target.closest('.cell');
+ if(cell&&['Enter',' '].includes(event.key)){
+  event.preventDefault();changeBoardMark(Number(cell.dataset.x),Number(cell.dataset.y));
+ }
+});
+$('sound').onclick=openSettings;
+$('pauseSettings').onclick=openSettings;
+$('settingsClose').onclick=closeSettings;
+$('arenaSettings').addEventListener('click',event=>{
+ if(event.target===$('arenaSettings'))closeSettings();
+});
+$('settingsMute').onclick=()=>{
+ sound=!sound;write('sound',sound?'on':'off');syncSettings();
+ if(sound)soundFX('tap');
+};
+$('settingsVolume').oninput=()=>{
+ volume=Number($('settingsVolume').value);write('volume',volume);syncSettings();
+};
+$('settingsVolume').onchange=()=>soundFX('tap');
+$('settingsMotion').onclick=()=>{$('motionToggle').click();syncSettings()};
+$('settingsHaptics').onclick=()=>{
+ haptics=!haptics;write('haptics',haptics?'on':'off');syncSettings();
+ if(haptics)buzz(12);
+};
+syncSettings();
 $('archiveBack').onclick=()=>{archiveEntry=null;show('menu')};
 $('archiveList').addEventListener('click',event=>{
  const button=event.target.closest('button');if(!button)return;
@@ -771,9 +811,9 @@ document.querySelectorAll('[data-difficulty-choice]').forEach(b=>b.onclick=()=>{
  localStart('solo');
 });
 $('hotseat').onclick=()=>localStart('hotseat');
-$('online').onclick=()=>connect('create');$('joinOnline').onclick=()=>connect('join');$('openRules').onclick=showRules;
+$('online').onclick=()=>connect('create');$('joinOnline').onclick=()=>connect('join');$('openRules').onclick=startTutorial;
 $('difficulty').value=difficulty;$('difficulty').onchange=()=>{difficulty=$('difficulty').value;write('difficulty',difficulty)};
-$('sound').onclick=()=>{sound=!sound;write('sound',sound?'on':'off');$('sound').textContent=sound?'♪':'♪̸';soundFX('tap')};$('sound').textContent=sound?'♪':'♪̸';
+syncSettings();
 $('motionToggle').onclick=()=>{motion=!motion;write('motion',motion?'on':'off');document.documentElement.dataset.motion=motion?'on':'off';$('motionToggle').textContent=motion?'▶':'⏭';$('motionToggle').setAttribute('aria-pressed',String(!motion));soundFX('tap')};
 $('motionToggle').textContent=motion?'▶':'⏭';$('motionToggle').setAttribute('aria-pressed',String(!motion));
 $('pause').onclick=confirmReturn;
@@ -801,9 +841,9 @@ $('replayPlay').onclick=toggleReplay;$('replaySpeed').onclick=()=>{const list=[1
 $('replaySave').onclick=exportReplay;$('replayVideo').onclick=videoReplay;
 window.addEventListener('keydown',e=>{
  if(/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName||''))return;
- if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='archive')show('menu');else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
+ if(e.key==='Escape'){if(settingsOpen){closeSettings();return}if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='archive')show('menu');else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
  if(screen==='replay'&&!modalOpen&&['ArrowLeft','ArrowRight'].includes(e.key)){seekReplay(replayIndex+(e.key==='ArrowLeft'?-1:1));e.preventDefault();return}
-  if(screen!=='play'||modalOpen)return;
+  if(screen!=='play'||modalOpen||settingsOpen)return;
  if(e.key>='1'&&e.key<='5'){selectSlot(Number(e.key)-1);e.preventDefault();return}
  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
  if(map[e.key]){direction(map[e.key]);e.preventDefault()}
