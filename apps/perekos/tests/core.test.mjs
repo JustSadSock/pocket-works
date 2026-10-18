@@ -50,10 +50,10 @@ test('barrier and mine actions are physical, not decorative',()=>{
  assert.ok(t.barriers[0].life>0);
 });
 test('shield, dash and overload have real bounded cooldown and heat behavior',()=>{
- const s=makeMatch(1);s.actors[0].heat=99;
+ const s=makeMatch(1);s.actors[0].heat=92;
  tick(s,{x:1,shield:true,dash:true,attack:true});
  let a=s.actors[0];assert.ok(a.shield>0&&a.dashReady>0);
- // Rising to 100 overloads on the following deterministic tick.
+ // Dash then shield cross 100 in the same tick; overload interrupts the following cast.
  tick(s,{x:1});assert.ok(a.overloadCd>0);assert.ok(a.heat<100);
  const cd=a.dashReady;tick(s,{x:1,dash:true});assert.ok(a.dashReady<cd);
  for(let i=0;i<600&&s.phase==='fight';i++){tick(s,{x:1,y:1});assert.ok(canStand(a.x,a.y));assert.ok(a.x<=W&&a.y<=H)}
@@ -129,4 +129,13 @@ test('six mage characters each have distinct attack styles and gameplay traits',
  tick(stone,{shield:true});tick(fire,{shield:true});
  assert.ok(stone.actors[0].shield>fire.actors[0].shield);
  const runner=makeMatch(9,'wire');tick(runner,{dash:true,x:1,y:0});assert.ok(runner.actors[0].haste>0);
+});
+
+test('closing arena forces a stalling duelist toward the center before the clock, without awarding a timeout point',()=>{
+ const s=makeMatch(88);s.remaining=5;
+ const old=s.actors[0].hp;
+ tick(s,{x:0,y:0},STEP,{x:0,y:0,aim:{x:200,y:300},attack:false});
+ assert.ok(s.actors[0].hp<old,'the closing circle has meaningful physical pressure');
+ assert.equal(s.score[0]+s.score[1],0);
+ assert.ok(s.remaining>0);
 });
