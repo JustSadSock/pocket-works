@@ -99,7 +99,7 @@ hiding simplistic assets.
       middle ground, distant darkness and familiar shapes must communicate
       space and danger.
 
-### 2.1.1 — Architectural geometry with depth, not a box labyrinth (in progress: 2.1.1 shipped)
+### 2.1.1 — Architectural geometry with depth, not a box labyrinth (in progress: 2.1.2 doors)
 - [x] Five floor-plan families: four-room, staggered-wing, walk-through,
       service-nook and crooked-vestibule; actual path geometry differs.
 - [x] Room footprints shrink to maximum 4×4 cells, with 2-cell WC/pantry.
@@ -111,9 +111,21 @@ hiding simplistic assets.
       while new runs are v2. The memory shift can change the layout family.
 - [x] 400 seeded/epoch collision traversals reached every room and reward;
       pure regressions additionally verify all sector seam portals.
+- [x] v2.1.2: physical hinged single-leaf doors with 1.5-radian swing,
+      embossed wooden panels, handles, actual nearest-door interaction
+      (keyboard E / touch), audible door creaks and tactile captions.
+- [x] Door collision, AI A* navigation, flashlight/shot LOS and geometry
+      all consult the same rotating segment; moving leaf checks its full
+      occupied sweep to avoid closing over player or enemies.
+- [x] Persist actual door state/angle, clear outdated door states on
+      behind-player rewrites, leave old 2.0 save routes fully unobstructed.
+- [x] Door regression suite: rotation/orientation, player collision,
+      occlusion, safe sweeping, sound-relevant interaction, saved state,
+      enemy routing, epoch cleanup, rendered vertices; browser E journey
+      authored but not yet run on a real device.
 - [ ] Inspect five-family screenshot route in Chromium and mobile WebKit.
-- [ ] Add opening doors, thick partition walls, deeper real architectural
-      connections, wall damage and varied ceiling construction before
+- [ ] Add thick partition walls, more differentiated panel profiles,
+      deeper architectural connections, wall damage and varied ceiling construction before
       closing the remaining 2.1.1 scope.
 
 - [ ] Generate several credible floor-plan families rather than a repeated
