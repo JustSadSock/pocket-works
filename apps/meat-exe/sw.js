@@ -1,13 +1,13 @@
 const CACHE_PREFIX='meat-exe-';
-const CACHE_NAME='meat-exe-v1.1.0';
-const APP_VERSION='1.1.0';
+const CACHE_NAME='meat-exe-v1.2.0';
+const APP_VERSION='1.2.0';
 const RELEASE_DATE='2026-10-18';
 const RELEASE_NOTES=[
-'Исправлены коллизии рывка и стабильность FPS.',
-'Устойчивые сохранения с совместимостью v1 и обработкой ошибок.',
-'Геймпад, настройки графики и подтверждение нового забега.'
+'Точная стрельба с блокировкой попаданий стенами и собственным разбросом дробовика.',
+'Отдача, вспышки, кровавые трассеры и реакция врагов на попадания.',
+'Авторский многослойный процедурный звук плоти, кости и оружейного железа.'
 ];
-const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./stability.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
+const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',event=>{

@@ -1,10 +1,11 @@
 // Living History: local armed disputes made only of existing adults and
 // physically owned field strips. No spawned troops, teleporting resources,
 // fictional losses, or separate combat-time economy.
-import {walkingSteps} from './navigation.js';
+import {walkingSteps,walkPath} from './navigation.js';
 import {scheduleWork,commitWork} from './work-time.js';
 
 const SIDE=160,WOOD_PER_STAFF=2,MAX_MUSTER=4;
+const EXPEDITION_RATION=.68,EXPEDITION_DAYS=4,DAILY_MARCH_CELLS=64;
 const rnd=n=>Math.round(n*100)/100;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const xy=i=>({x:i%SIDE,y:Math.floor(i/SIDE)});
@@ -76,6 +77,7 @@ export function beginLandDispute(s,claimId,ownerId,cell,notify,options={}){
  // Large musters are opt-in or arise only from severe local land pressure.
  // Every participant must be a living, available member of the actual household.
  const muster=options.muster===true;
+ const expedition=muster&&options.expedition===true;
  const cap=muster?MAX_MUSTER:2;
  const as=roster(s,claimant).slice(0,cap),bs=roster(s,owner).slice(0,cap);
  if(!as.length||!bs.length||
@@ -88,18 +90,35 @@ export function beginLandDispute(s,claimId,ownerId,cell,notify,options={}){
   if(q.workHours<=0||!Number.isFinite(q.workHours))return null;
  }
  const woodSpent=(Math.max(0,as.length-(claimant.staves||0))+Math.max(0,bs.length-(owner.staves||0)))*WOOD_PER_STAFF;
+ // Portable grain is transferred, not minted. At least a day's ration must
+ // be available after protecting three days of the family's current need.
+ const need=(ids)=>ids.length*EXPEDITION_RATION;
+ const load=(h,ids)=>rnd(Math.min(ids.length*EXPEDITION_RATION*EXPEDITION_DAYS,Math.max(0,(h.grain||0)-h.members.filter(id=>citizen(s,id)?.alive).length*.68*3)));
+ const leftFood=expedition?load(claimant,as):0,rightFood=expedition?load(owner,bs):0;
+ if(expedition&&(leftFood+1e-6<need(as)||rightFood+1e-6<need(bs)))return null;
+ // All validations precede mutation of household stocks.
+ if(expedition){
+  for(const [h,people] of [[claimant,as],[owner,bs]])if(!people.every(p=>walkPath(s,h,spot).length>1))return null;
+ }
  kit(s,claimant,as.length);kit(s,owner,bs.length);
+ if(expedition){claimant.grain=rnd(claimant.grain-leftFood);owner.grain=rnd(owner.grain-rightFood);}
  const c={id:s.nextId++,stage:muster?'mustering':'mobilizing',startDay:s.day,
   rallyDay:muster?s.day+1:null,meetDay:s.day+(muster?2:1),endDay:null,
   claimantId:claimId,ownerId,cell,claimants:as.map(p=>p.id),owners:bs.map(p=>p.id),
-  muster,outcome:null,wounded:[],dead:[],compensationCoin:0,
-  morale:null,retreated:null,arrived:{claimants:0,owners:0}};
+  muster,expedition,outcome:null,wounded:[],dead:[],compensationCoin:0,
+  morale:null,retreated:null,arrived:{claimants:0,owners:0},
+  ...(expedition?{
+   supply:{claimants:{grain:leftFood,loaded:leftFood,eaten:0,returned:0},
+           owners:{grain:rightFood,loaded:rightFood,eaten:0,returned:0}},
+   positions:Object.fromEntries([...as,...bs].map(p=>{const h=byId(s,p.houseId);return [p.id,h.y*SIDE+h.x]})),
+   campDays:0,travelDays:0,returnDays:0,aborted:null
+  }:{})};
  s.conflicts.push(c);
  claimant.lastArmedDisputeDay=s.day;owner.lastArmedDisputeDay=s.day;
  s.stats.armedDisputes=(s.stats.armedDisputes||0)+1;
  notify?.('armed-dispute',muster?'Соседние семьи собирают ополчение для спора о земле':'У полосы общинной пашни назревает вооружённый спор',
   muster?'Сбор у родных дворов, затем пеший поход к спорной полосе. Участники теряют рабочее время':'Соседние семьи оспаривают право пользования полем; вышли реальные взрослые жители с деревянными посохами',
-  [claimId,ownerId,...c.claimants,...c.owners],{cell,people:as.length+bs.length,woodSpent,muster});
+  [claimId,ownerId,...c.claimants,...c.owners],{cell,people:as.length+bs.length,woodSpent,muster,expedition,foodLoadedKg:rnd(leftFood+rightFood)});
  return c;
 }
 function patrol(s,c,atHome=false){
@@ -185,7 +204,9 @@ function resolve(s,c,notify){
    s.stats.disputeCompensations=(s.stats.disputeCompensations||0)+payment;
   }
  }
- c.stage='resolved';c.endDay=s.day;s.stats.armedDisputesResolved=(s.stats.armedDisputesResolved||0)+1;
+ c.stage=c.expedition?'returning':'resolved';
+ c.resultDay=s.day;if(!c.expedition)c.endDay=s.day;
+ s.stats.armedDisputesResolved=(s.stats.armedDisputesResolved||0)+1;
  s.stats.battleWounds=(s.stats.battleWounds||0)+c.wounded.length;
  if(c.retreated)s.stats.disputeRetreats=(s.stats.disputeRetreats||0)+1;
  notify?.('armed-clash',c.outcome==='dispersed'?'Участники земельного спора разошлись':
@@ -196,14 +217,114 @@ function resolve(s,c,notify){
   {cell:c.cell,outcome:c.outcome,wounded:c.wounded.length,dead:c.dead.length,
    compensationCoin:c.compensationCoin,morale:c.morale,arrived:c.arrived,retreated:c.retreated});
 }
+// Grain transferred into an expedition is a physical, serialised inventory.
+// This is deliberately separate from the household's ordinary daily feeding.
+export function expeditionGrain(s){
+ return rnd((s.conflicts||[]).reduce((sum,c)=>sum+(c.supply?.claimants?.grain||0)+(c.supply?.owners?.grain||0),0));
+}
+function feedExpedition(s,c,side){
+ const ids=side==='claimants'?c.claimants:c.owners,stock=c.supply[side];
+ const present=ids.map(id=>citizen(s,id)).filter(p=>p?.alive&&(!c.expedition||c.stage!=='returning'||p.combatAwayDay===s.day));
+ const required=rnd(present.length*EXPEDITION_RATION);
+ const eaten=rnd(Math.min(required,stock.grain));
+ stock.grain=rnd(stock.grain-eaten);stock.eaten=rnd(stock.eaten+eaten);
+ s.stats.consumed=rnd((s.stats.consumed||0)+eaten);
+ s.stats.expeditionGrainEaten=rnd((s.stats.expeditionGrainEaten||0)+eaten);
+ const deficit=Math.max(0,required-eaten);
+ if(deficit>.005){
+  // Physical famine applies to the actual participants, not their
+  // safely fed relatives, and is audited as an army subsistence shortage.
+  s.stats.expeditionHungerDays=(s.stats.expeditionHungerDays||0)+present.length;
+  for(const p of present){p.foodDebt=clamp((p.foodDebt||0)+.75*deficit/Math.max(.01,required),0,100);
+   p.health=clamp(p.health-.72*deficit/Math.max(.01,required),0,100);}
+ }
+ return {required,eaten,deficit};
+}
+function campShift(s,p,from,to,path){
+ const q=scheduleWork(s,p,'guard',to,from);
+ if(!Number.isFinite(q.workHours)||q.workHours<=0)return false;
+ // Overnight expeditions end at their real field camp, not an invented
+ // return to the home yard at the end of each subday animation.
+ q.expedition=true;q.returnStart=q.end=q.arrive+q.workHours;
+ q.travelHours=rnd(q.travelHours/2);
+ q.routeCells=path.map(pt=>pt.y*SIDE+pt.x);
+ commitWork(s,p,q);
+ p.combatDutyDay=s.day;p.combatAwayDay=s.day;
+ p.workDays??={};p.workDays.guard=rnd((p.workDays.guard||0)+q.fraction);
+ s.stats.guardHours=rnd((s.stats.guardHours||0)+q.workHours);
+ return true;
+}
+function stepMarch(s,c,returning){
+ const active=[...c.claimants,...c.owners].map(id=>citizen(s,id)).filter(p=>p?.alive);
+ let moving=0,blocked=0;
+ for(const p of active){
+  const h=byId(s,p.houseId);if(!h)continue;
+  const from=xy(c.positions[p.id]),to=returning?{x:h.x,y:h.y}:xy(c.cell);
+  if(returning&&from.x===to.x&&from.y===to.y)continue;
+  const path=walkPath(s,from,to);
+  if(!path.length){blocked++;continue;}
+  const segment=path.slice(0,DAILY_MARCH_CELLS+1);
+  const end=segment[segment.length-1];
+  if(!campShift(s,p,from,end,segment)){blocked++;continue;}
+  c.positions[p.id]=end.y*SIDE+end.x;
+  if(c.positions[p.id]!==to.y*SIDE+to.x)moving++;
+ }
+ for(const side of ['claimants','owners'])feedExpedition(s,c,side);
+ if(returning)c.returnDays++;else c.travelDays++;
+ return {moving,blocked,remaining:active.some(p=>{
+  const h=byId(s,p.houseId),want=returning?h&&h.y*SIDE+h.x:c.cell;
+  return want!==undefined&&c.positions[p.id]!==want;
+ })};
+}
+function finishExpedition(s,c,notify){
+ // Surplus provisions physically return to the originating household.
+ for(const side of ['claimants','owners']){
+  const supply=c.supply[side],home=byId(s,side==='claimants'?c.claimantId:c.ownerId);
+  const leftover=supply.grain;
+  home.grain=rnd(home.grain+leftover);
+  supply.returned=rnd(supply.returned+leftover);supply.grain=0;
+ }
+ c.stage='resolved';c.endDay=s.day;
+ notify?.('armed-return','Ополчение вернулось по домам',
+  'Остатки походного зерна возвращены настоящим хозяйствам',
+  [c.claimantId,c.ownerId],{cell:c.cell,travelDays:c.travelDays,returnDays:c.returnDays,
+   foodKg:rnd(c.supply.claimants.eaten+c.supply.owners.eaten),aborted:c.aborted});
+}
+function abortExpedition(s,c,reason,notify){
+ c.aborted=reason;c.outcome='dispersed';c.resultDay=s.day;c.stage='returning';
+ s.stats.armedDisputesResolved=(s.stats.armedDisputesResolved||0)+1;
+ s.stats.expeditionsAborted=(s.stats.expeditionsAborted||0)+1;
+ notify?.('armed-retreat','Поход ополчения прекращён',
+  reason==='food'?'Походные запасы истощились, отряд возвращается':'Нет проходимого пути, отряд ищет дорогу назад',
+  [c.claimantId,c.ownerId],{cell:c.cell,reason});
+}
 export function advanceLocalConflicts(s,notify){
  s.conflicts??=[];
  // Each event is fully resolved or cancelled; old entries remain inspectable
  // until 90 recent disputes, without uncontrolled battlefield object growth.
  for(const c of s.conflicts){
   if(c.stage==='mustering'){
-   // A full day of gathering at real homes precedes the day's march.
-   if(s.day>=c.rallyDay){patrol(s,c,true);c.stage='mobilizing';}
+   if(s.day>=c.rallyDay){patrol(s,c,true);c.stage=c.expedition?'marching':'mobilizing';}
+  }else if(c.stage==='marching'){
+   // No trip can continue for free after available carried rations expire.
+   const canEat=['claimants','owners'].every(side=>c.supply[side].grain+1e-6>=
+     (side==='claimants'?c.claimants:c.owners).filter(id=>citizen(s,id)?.alive).length*EXPEDITION_RATION);
+   if(!canEat){abortExpedition(s,c,'food',notify);continue;}
+   const step=stepMarch(s,c,false);
+   if(step.blocked){abortExpedition(s,c,'route',notify);continue;}
+   if(!step.remaining){c.stage='encamped';c.meetDay=s.day+1;}
+  }else if(c.stage==='encamped'){
+   const canEat=['claimants','owners'].every(side=>c.supply[side].grain+1e-6>=
+     (side==='claimants'?c.claimants:c.owners).filter(id=>citizen(s,id)?.alive).length*EXPEDITION_RATION);
+   if(!canEat){abortExpedition(s,c,'food',notify);continue;}
+   const step=stepMarch(s,c,false);
+   if(step.blocked){abortExpedition(s,c,'route',notify);continue;}
+   c.campDays++;
+   if(s.day>=c.meetDay)resolve(s,c,notify);
+  }else if(c.stage==='returning'){
+   const step=stepMarch(s,c,true);
+   // A new obstacle blocks physical return instead of teleporting troops.
+   if(!step.remaining&&!step.blocked)finishExpedition(s,c,notify);
   }else if(c.stage==='mobilizing'){
    patrol(s,c);
    if(s.day>=c.meetDay)resolve(s,c,notify);
@@ -220,10 +341,15 @@ export function advanceLocalConflicts(s,notify){
   // The most severe local shortages can motivate a longer organised muster.
   // Ordinary household scuffles retain their original one-day timetable.
   const muster=c.claim>.78&&draw(s.seed,s.day,c.claimant.id,0x719e)<.35;
-  const fight=beginLandDispute(s,c.claimant.id,c.owner.id,c.cell,notify,{muster});
+  const fight=beginLandDispute(s,c.claimant.id,c.owner.id,c.cell,notify,{muster,expedition:muster});
   if(fight){used.add(c.claimant.communityId);started++;patrol(s,fight,muster);}
  }
- if(s.conflicts.length>90)s.conflicts.splice(0,s.conflicts.length-90);
+ // Never drop a live field inventory. Only old finished history is capped.
+ if(s.conflicts.length>90){
+  const excess=s.conflicts.length-90;
+  let removed=0;
+  s.conflicts=s.conflicts.filter(c=>c.stage!=='resolved'||removed++>=excess);
+ }
 }
 export function conflictAudit(s){
  const issues=[];
@@ -233,14 +359,22 @@ export function conflictAudit(s){
    issues.push('Неверный запас деревянного оружия '+h.id);
  }
  for(const c of s.conflicts||[]){
-  if(!['mustering','mobilizing','resolved'].includes(c.stage)||!Number.isInteger(c.cell)||c.cell<0||c.cell>=SIDE*SIDE||
+  if(!['mustering','mobilizing','marching','encamped','returning','resolved'].includes(c.stage)||!Number.isInteger(c.cell)||c.cell<0||c.cell>=SIDE*SIDE||
    !byId(s,c.claimantId)||!byId(s,c.ownerId)||c.meetDay<c.startDay||
    !Array.isArray(c.claimants)||!Array.isArray(c.owners)||c.claimants.some(id=>!citizen(s,id))||
    c.owners.some(id=>!citizen(s,id))||
    new Set([...c.claimants,...c.owners]).size!==c.claimants.length+c.owners.length||
    c.claimants.length>(c.muster?MAX_MUSTER:2)||c.owners.length>(c.muster?MAX_MUSTER:2)||
    c.muster&&c.rallyDay!==c.startDay+1||
-   c.morale&&Object.values(c.morale).some(m=>!Number.isFinite(m)||m<0||m>1))
+   c.morale&&Object.values(c.morale).some(m=>!Number.isFinite(m)||m<0||m>1)||
+   c.expedition&&(
+    !c.supply||!c.positions||!['claimants','owners'].every(side=>{
+     const q=c.supply[side],ids=side==='claimants'?c.claimants:c.owners;
+     return q&&[q.grain,q.loaded,q.eaten,q.returned].every(n=>Number.isFinite(n)&&n>=0)&&
+      Math.abs(q.grain+q.eaten+q.returned-q.loaded)<.04&&
+      ids.every(id=>Number.isInteger(c.positions[id])&&c.positions[id]>=0&&c.positions[id]<SIDE*SIDE);
+    })
+   ))
    issues.push('Повреждён земельный конфликт '+c.id);
  }
  return issues;

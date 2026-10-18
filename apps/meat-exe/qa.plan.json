@@ -2,6 +2,14 @@
   "schema": 1,
   "suites": [
     {
+      "id": "combat",
+      "kind": "node-test",
+      "files": [
+        "qa/combat.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
       "id": "stability",
       "kind": "node-test",
       "files": [
@@ -71,6 +79,14 @@
       "kind": "playwright",
       "files": [
         "qa/journey.spec.js"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "combat-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/combat.spec.js"
       ],
       "tier": "smoke"
     }

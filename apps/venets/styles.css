@@ -480,3 +480,298 @@ h2{letter-spacing:-.025em}
  .ending-event{padding:4px 0}
 }
 @media(prefers-reduced-motion:reduce){.ending-sheet{animation:none!important}}
+
+
+/* v1.1 THE CHARTER ATLAS: political map is the stage, parchment is the surface.
+   Panels behave as overlays, not three competing equal columns. */
+:root{
+ --paper:#c6b38d;--linen:#d4c29e;--ink:#292a24;--muted:#655d4d;
+ --line:#91816a;--deep:#364a39;--clay:#734332;--gold:#b18b51;
+ --shadow:0 13px 36px #281e1559;
+}
+html,body{background:#554a3c}
+body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.app-shell{
+ background:
+ radial-gradient(ellipse at 26% 17%,#e4d3ae 0%,transparent 49%),
+ radial-gradient(ellipse at 85% 90%,#89785e75 0%,transparent 65%),
+ repeating-linear-gradient(105deg,#6d543b06 0 2px,transparent 2px 7px),
+ #bba57f;
+ position:relative;
+}
+.app-shell::before{content:"";pointer-events:none;position:absolute;inset:0;z-index:12;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+ opacity:.10;mix-blend-mode:multiply;
+}
+.app-header{min-height:51px;padding:5px clamp(12px,2vw,27px);
+ background:linear-gradient(#c8b58e,#bdab89);
+ border-bottom:1px solid #8e7857;box-shadow:0 2px 6px #3b2e1d24;z-index:5}
+.home-link{font-size:11px;min-height:37px;color:#463f32}
+.brand strong{font:normal 24px/1 Georgia,serif;color:#392b22}
+.brand small{color:#695441;letter-spacing:.18em}
+.brand-icon{width:27px;height:27px}
+.quiet-control{background:#cfbe9b88;border:1px solid #988269}
+.quiet-control:hover{background:#dfcdab}
+.notice-toast{background:#e3d2ad;border-color:#9c7853}
+
+/* Menu: no page scrolling at any viewport; only a real land-based picker. */
+.menu-screen{
+ display:grid;grid-template-columns:clamp(175px,15vw,230px) minmax(0,1fr) clamp(245px,22vw,318px);
+ grid-template-rows:minmax(0,1fr);gap:0;width:100%;max-width:none;
+ margin:0;padding:clamp(9px,1.3vw,19px);overflow:hidden;isolation:isolate;
+ min-height:0;position:relative;
+}
+.menu-hero{min-height:0;padding:28px 12px 16px 16px;justify-content:flex-start;z-index:2;
+ background:linear-gradient(90deg,#dcc9a4eb,#c9b58e77)}
+.menu-hero::after{content:"♛";font:clamp(90px,13vw,210px)/1 Georgia,serif;
+ color:#483d2612;top:30%;bottom:auto;left:-8%;right:auto;z-index:0}
+.menu-hero>*{position:relative;z-index:1}
+.menu-hero h1{font:normal clamp(42px,5vw,74px)/.99 Georgia,serif;
+ letter-spacing:-.052em;margin:6px 0 13px;color:#392b21}
+.menu-hero .eyebrow{font-size:9px;line-height:1.5;letter-spacing:.17em}
+.menu-hero>p:last-child{font:15px/1.4 Georgia,serif;color:#634d3a;margin:0;max-width:195px}
+.menu-map-frame{position:relative;min-width:0;min-height:0;overflow:hidden;
+ border:7px double #736144;box-shadow:inset 0 0 0 1px #d7c39a,0 12px 25px #41362735;
+ background:radial-gradient(ellipse at 55% 44%,#d5c29d,#7b8d7f)}
+.map-cartouche{position:absolute;z-index:3;top:10px;left:50%;transform:translateX(-50%);
+ width:max-content;max-width:92%;font:12px Georgia,serif;color:#3d392a;pointer-events:none;
+ padding:5px 15px;border:1px solid #817051;background:#ddca9fc9;
+ box-shadow:0 2px 7px #493b2830}
+.map-cartouche span{margin:0 9px;color:#80603c}
+.start-map{width:100%;height:100%;min-height:0}
+.start-map .atlas-canvas{height:100%;width:100%;max-width:none;max-height:none;aspect-ratio:auto;
+ box-shadow:none;overflow:hidden;background:transparent;border:0}
+.start-map .living-atlas{width:100%;height:100%;max-height:none}
+.start-map .atlas-county{outline:none}
+.start-map .atlas-county>path:first-child{transition:fill-opacity .16s,stroke-width .18s}
+.start-map .atlas-county.is-selected>path:first-child{filter:drop-shadow(0 1px 3px #22170f72)}
+.start-region-controls{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+ display:flex;align-items:center;gap:10px;background:#d6c29bf5;border:1px solid #8d7856;
+ padding:3px 8px;z-index:4;color:#564831}
+.start-region-controls button{width:36px;height:32px;border:0;background:#a18a64;color:#231e17;
+ font-size:21px}
+.start-region-controls span{font:13px Georgia,serif;white-space:nowrap}
+.menu-bottom{min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;
+ justify-content:center;gap:9px;background:linear-gradient(110deg,#d8c39d,#c1aa81);
+ padding:clamp(10px,1.4vw,18px);border:1px solid #998461;border-left:0;
+ box-shadow:inset 0 0 0 4px #dbc79c66}
+.new-campaign{background:transparent;border:0;box-shadow:none;padding:0;min-height:0}
+.new-heading{padding-bottom:8px}
+.new-heading h2{font:normal 23px/1.1 Georgia,serif;color:#392c25}
+.start-rank-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;
+ margin-bottom:12px;border-bottom:1px solid #8e785c;padding-bottom:10px}
+.start-rank-options button{font-size:11px;min-height:37px;padding:5px 4px;
+ color:#4d4639;background:#e5d4b386;border:1px solid #a18c69}
+.start-rank-options button.active{background:#374c3a;color:#f4e5c6;border-color:#334632}
+.start-rank-options button:hover:not(.active){background:#efdfbb}
+.starts{min-height:0;display:block}
+.start-ruler{display:flex;align-items:center;gap:10px;padding:13px 3px;min-height:112px;
+ border-top:1px solid #a38d69;border-bottom:1px solid #a38d69}
+.start-ruler-seal{display:block;flex:none;width:54px;height:68px}
+.start-ruler-seal svg{display:block;width:100%;height:100%;filter:drop-shadow(1px 3px 2px #41311a65)}
+.start-ruler-copy{flex:1;min-width:0}
+.start-ruler-rank{color:#76482d;font-size:9px;letter-spacing:.16em;font-weight:800}
+.start-ruler-copy h3{font:normal 20px/1.14 Georgia,serif;margin:4px 0 5px;color:#302b22}
+.start-ruler-copy p{font:12px/1.3 Georgia,serif;margin:0 0 6px;color:#453e32}
+.start-ruler-copy small{display:block;font-size:10px;line-height:1.28;color:#655640}
+.start-vassal-count{display:none}
+.new-campaign>.primary-control{width:100%;font-size:12px;min-height:47px;margin-top:14px;
+ background:#344638;color:#f5e6bf;border-color:#273d2e;box-shadow:0 3px 0 #203323}
+.new-campaign>.primary-control:disabled{box-shadow:none}
+.world-settings{padding:10px 0 0;font-size:11px;color:#5b503f}
+.world-settings summary{cursor:pointer;list-style:none;text-decoration:underline;
+ text-underline-offset:3px;min-height:26px}
+.world-settings summary::before{content:"⚙";margin-right:7px;text-decoration:none}
+.world-settings[open]{border-top:1px solid #a39373;margin-top:7px}
+.world-settings label{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:4px}
+.world-settings input{width:100px;min-height:31px;background:#eee1c5;border:1px solid #a18b64;
+ padding:4px 7px;font-size:12px;color:#342c23}
+.world-settings .world-size-options{max-width:none;margin:6px 0 0}
+.world-settings .world-size-options button{min-height:29px;padding:5px}
+.menu-bottom>.text-link{font-size:11px;min-height:29px;padding:5px 0}
+.menu-bottom>.big-button{font:12px Georgia,serif;min-height:45px;padding:7px 11px;
+ background:#76593e;border-color:#725338}
+.menu-bottom>.big-button span{font-size:10px}
+.start-error{font-size:12px;color:#883829;min-height:45px}
+.menu-hero,.menu-bottom,.menu-map-frame{animation:venets-unroll .33s ease-out both}
+@keyframes venets-unroll{from{opacity:.7;transform:translateY(7px)}to{opacity:1;transform:none}}
+
+/* A map-led game like a miniature illuminated grand strategy atlas. */
+.game-screen{background:#a99775}
+.campaign-top{min-height:64px;padding:7px 16px;background:linear-gradient(#dbcaa5,#c8b38c);
+ gap:9px;border-bottom:2px solid #897354}
+.ruler-seal{width:39px;height:48px}
+.ruler-seal svg{width:39px;height:47px}
+.campaign-identity .eyebrow{font-size:9px;margin:0 0 3px}
+.campaign-identity h1{font:normal 23px/1 Georgia,serif}
+.subline{margin:3px 0 0;font-size:10px}
+.campaign-wealth{gap:17px}
+.campaign-wealth strong{font:normal 24px/1 Georgia,serif}
+.campaign-wealth span{font-size:8px}
+.game-columns{display:block;position:relative;overflow:hidden;flex:1;min-height:0}
+.game-panel+.game-panel{border:0}
+.game-columns .lands-panel{position:absolute;inset:0;padding:0;display:flex!important;
+ flex-direction:column;overflow:hidden!important;z-index:0;background:#a99672}
+.lands-panel .panel-head{position:absolute;z-index:4;left:50%;top:7px;
+ transform:translateX(-50%);margin:0;padding:4px 18px;text-align:center;
+ background:#d6c49ece;border:1px solid #927956;pointer-events:none}
+.lands-panel .panel-head .eyebrow{font-size:8px;margin:0 0 2px}
+.lands-panel .panel-head h2{font:20px Georgia,serif}
+.lands-panel .atlas-tools{position:absolute;right:13px;top:11px;z-index:5;
+ margin:0;padding:3px;background:#d9c69ff2;border:1px solid #9f8c6c;gap:2px}
+.lands-panel .atlas-tools button{min-height:31px;color:#483e2f;font-size:11px;padding:5px 9px}
+.lands-panel .atlas-tools button.active{background:#394c3a;color:#eee0ba}
+.lands-panel .atlas-stage,.lands-panel .genealogy-stage{width:100%;height:100%;flex:1;min-height:0}
+.lands-panel .province-grid{width:100%;height:100%;max-width:none;border:0;padding:0;
+ flex:1;display:block;min-height:0;background:radial-gradient(#c7b691,#9d8867);
+ box-shadow:none;overflow:hidden}
+.lands-panel .atlas-canvas{width:100%;height:100%;max-width:none;max-height:none;
+ aspect-ratio:auto;display:block;overflow:hidden;border:0;box-shadow:none;
+ background:radial-gradient(circle at 55% 25%,#d7c6a2,#a68d68)}
+.lands-panel .living-atlas{display:block;width:100%;height:100%;max-height:none}
+.lands-panel .atlas-corner-mark{font-size:10px;right:18px;bottom:12px;color:#433b2a9e}
+.lands-panel .province-info{position:absolute;z-index:4;right:16px;bottom:15px;
+ width:min(430px,calc(100% - 34px));margin:0;padding:10px 12px;
+ background:#d9c8a8ee;border:1px solid #8e7656;box-shadow:0 6px 25px #3e2f2455}
+.lands-panel .atlas-selected h3{font-size:19px}
+.lands-panel .atlas-selected-text p{font-size:10px}
+.lands-panel .atlas-selected-meta span{color:#574935;border-color:#988064}
+.lands-panel .atlas-transfer:not([hidden]){position:absolute;left:50%;bottom:14px;z-index:5;
+ transform:translateX(-50%);max-width:40%;border:1px solid #998052}
+.game-columns .council-panel,.game-columns .history-panel{position:absolute;z-index:3;
+ top:13px;bottom:12px;width:min(310px,29vw);overflow:auto;
+ background:linear-gradient(123deg,#e0d0aedb,#cbb790ee);
+ border:1px solid #998160!important;
+ box-shadow:2px 10px 28px #30251e52;backdrop-filter:blur(2px);
+ padding:14px 14px 12px;scrollbar-width:thin}
+.game-columns .council-panel{left:13px;display:block}
+.game-columns .history-panel{right:13px;display:none}
+.game-screen[data-active-panel="history"] .game-columns .history-panel{display:block}
+.game-screen[data-active-panel="history"] .game-columns .council-panel{display:none}
+.panel-head{margin-bottom:8px}
+.panel-head h2{font:normal 24px/1.05 Georgia,serif}
+.panel-head .eyebrow{margin-bottom:4px}
+.council-panel .story-message{font:13px/1.4 Georgia,serif;color:#554633;
+ padding:9px 0;margin-bottom:10px}
+.action-choice{background:#dfd0b49e;border:1px solid #a89473;min-height:56px;padding:8px}
+.action-choice:first-of-type{background:#d8dfcbcc;border-color:#819277}
+.action-copy strong{font-size:12px}
+.action-copy small{font-size:10px;line-height:1.3}
+.action-sign{width:29px;height:29px;font-size:16px}
+.history-list .entry{padding:9px 0}
+.game-controls{min-height:57px;padding:5px 14px;background:#353d33;
+ gap:14px;justify-content:space-between}
+.mobile-tabs{display:flex;gap:3px;align-self:center}
+.mobile-tabs button{min-width:66px;min-height:38px;padding:6px 9px;display:flex;
+ align-items:center;justify-content:center;gap:5px;border:1px solid #65725b;
+ background:transparent;color:#e5dec8;font-size:11px}
+.mobile-tabs button span{font-size:14px}
+.mobile-tabs button.active{background:#d4c09a;color:#342e23}
+.time-controls{flex:1;justify-content:center}
+.speed-controls button{min-height:34px;min-width:39px}
+.next-year{min-height:39px;min-width:142px;padding:8px 13px;background:#c7a574}
+.save-status{flex-basis:120px;font-size:10px}
+
+@media(max-width:1100px){
+ .menu-screen{grid-template-columns:155px minmax(0,1fr) 255px}
+ .menu-hero{padding:20px 9px}
+ .menu-hero h1{font-size:48px}
+ .game-columns .council-panel,.game-columns .history-panel{width:268px}
+}
+@media(max-width:900px){
+ .menu-screen{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,36%);
+  grid-template-rows:52px minmax(0,1fr);padding:8px;overflow:hidden}
+ .menu-hero{grid-column:1/-1;grid-row:1;display:flex;flex-direction:row;
+  align-items:center;gap:12px;padding:4px 10px;background:transparent}
+ .menu-hero::after{display:none}
+ .menu-hero .eyebrow{font-size:9px;margin:0}
+ .menu-hero h1{font-size:35px;margin:0}
+ .menu-hero>p:last-child{font-size:12px;margin:0}
+ .menu-map-frame{grid-column:1;grid-row:2}
+ .menu-bottom{grid-column:2;grid-row:2}
+ .campaign-top{min-height:56px;padding:5px 10px}
+ .ruler-seal,.ruler-seal svg{width:34px;height:42px}
+ .campaign-identity h1{font-size:21px}
+ .campaign-wealth strong{font-size:21px}
+ .game-columns .lands-panel{display:flex!important;overflow:hidden!important}
+ .game-columns .council-panel,.game-columns .history-panel{display:none;
+  left:auto;right:0;top:auto;bottom:0;width:min(100%,480px);height:min(70%,490px);
+  padding:13px 15px;box-shadow:0 -8px 26px #29231d73;
+  border-top:3px solid #7e6648!important}
+ .game-screen[data-active-panel="council"] .game-columns .council-panel{display:block}
+ .game-screen[data-active-panel="history"] .game-columns .history-panel{display:block}
+ .game-screen[data-active-panel="lands"] .game-columns .council-panel{display:none}
+ .lands-panel .panel-head{top:7px;left:9px;transform:none;padding:5px 9px}
+ .lands-panel .panel-head h2{font-size:17px}
+ .lands-panel .atlas-tools{right:9px;top:8px}
+ .lands-panel .atlas-tools button{padding:5px 7px}
+ .lands-panel .atlas-canvas{overflow:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin}
+ .lands-panel .living-atlas{width:max(100%,calc((100dvh - 220px)*1.5));min-width:610px;
+  height:100%;max-height:none}
+ .lands-panel .province-info{bottom:8px;left:8px;right:8px;width:auto;padding:6px 8px}
+ .lands-panel .atlas-selected h3{font-size:16px}
+ .lands-panel .atlas-selected-meta{gap:3px}
+ .lands-panel .atlas-selected-meta span{font-size:9px;padding:3px}
+ .game-controls{min-height:77px;flex-direction:column;gap:3px;padding:4px 8px}
+ .mobile-tabs{align-self:stretch;margin:0;gap:3px}
+ .mobile-tabs button{flex:1;min-width:0;min-height:29px;padding:3px;font-size:11px}
+ .time-controls{margin:0;flex:none;width:100%;gap:7px}
+ .speed-controls button{min-width:33px;min-height:32px}
+ .next-year{min-height:34px;flex:1;min-width:0;padding:5px 10px}
+ .save-status{display:none}
+}
+@media(max-width:680px){
+ .menu-screen{grid-template-columns:minmax(0,1fr);grid-template-rows:46px minmax(100px,1fr) auto;gap:0;padding:5px}
+ .menu-hero{grid-column:1;grid-row:1;gap:9px;padding:2px 9px}
+ .menu-hero .eyebrow{display:none}
+ .menu-hero h1{font-size:33px}
+ .menu-hero>p:last-child{font-size:12px}
+ .menu-map-frame{grid-column:1;grid-row:2;border-width:5px}
+ .menu-bottom{grid-column:1;grid-row:3;padding:7px 12px;border:1px solid #988163}
+ .new-heading{padding-bottom:5px}
+ .new-heading h2{font-size:17px}
+ .start-rank-options{margin-bottom:3px;padding-bottom:5px}
+ .start-rank-options button{min-height:30px;font-size:11px}
+ .start-ruler{min-height:64px;padding:5px 0;gap:8px}
+ .start-ruler-seal{width:39px;height:48px}
+ .start-ruler-copy h3{font-size:17px;margin:2px 0}
+ .start-ruler-copy p{margin:0 0 2px}
+ .start-ruler-copy small{font-size:9px}
+ .start-ruler-rank{font-size:8px}
+ .new-campaign>.primary-control{min-height:38px;margin-top:6px;padding:8px 11px;font-size:11px}
+ .menu-bottom>.big-button{min-height:33px;padding:6px 10px}
+ .menu-bottom>.text-link{min-height:21px;font-size:10px;padding:2px 0}
+ .world-settings{padding-top:4px}
+ .world-settings summary{min-height:21px}
+ .world-settings[open]{position:absolute;z-index:20;bottom:8px;right:10px;
+  width:min(310px,94%);padding:12px;background:#e0cdab;border:2px solid #8f7854;
+  box-shadow:0 10px 32px #342b2288}
+ .map-cartouche{top:5px;font-size:9px;padding:3px 8px}
+ .start-region-controls{bottom:5px}
+ .start-region-controls button{height:25px;width:30px}
+ .game-columns .council-panel,.game-columns .history-panel{width:100%;height:min(71%,485px)}
+ .lands-panel .panel-head .eyebrow{display:none}
+ .lands-panel .panel-head h2{font-size:15px}
+ .atlas-selected-meta span:nth-child(2){display:none}
+}
+@media(max-height:650px) and (max-width:680px){
+ .menu-screen{grid-template-rows:33px minmax(105px,1fr) auto}
+ .menu-hero h1{font-size:27px}
+ .menu-hero>p:last-child{font-size:10px}
+ .new-heading{display:none}
+ .start-ruler-copy small{display:none}
+ .start-rank-options button{min-height:27px}
+ .start-ruler{min-height:53px}
+ .start-ruler-seal{height:40px;width:34px}
+ .menu-bottom>.text-link{min-height:19px;font-size:9px;padding:1px 0}
+ .map-cartouche{display:none}
+ .lands-panel .province-info{max-height:58px;overflow:hidden}
+}
+@media(prefers-reduced-motion:reduce){
+ .menu-hero,.menu-bottom,.menu-map-frame{animation:none}
+ .start-map .atlas-county>path:first-child{transition:none}
+}
+
+/* The map tab must also dismiss the council parchment on wide screens. */
+.game-screen[data-active-panel="lands"] .game-columns .council-panel{display:none}

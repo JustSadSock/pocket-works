@@ -12,6 +12,7 @@ test('expanded 48-land campaign is opt-in, playable and navigable without page s
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(ENTRY);
  await expect(page.locator('#begin')).toBeVisible();
+ await page.locator('.world-settings summary').click();
  await page.locator('[data-world-size="48"]').click();
  await expect(page.locator('[data-world-size="48"]')).toHaveAttribute('aria-pressed','true');
  await page.locator('#begin').click();
@@ -44,6 +45,7 @@ test('expanded 48-land campaign is opt-in, playable and navigable without page s
 test('48-land mode works on 320x568 with fixed time and regional navigation',async({page},testInfo)=>{
  await page.setViewportSize({width:320,height:568});
  await page.goto(ENTRY);
+ await page.locator('.world-settings summary').click();
  await page.locator('[data-world-size="48"]').click();
  await page.locator('#begin').click();
  await page.locator('[data-panel="lands"]').click();
@@ -62,6 +64,7 @@ test('48-land mode works on 320x568 with fixed time and regional navigation',asy
 });
 test('48-land campaign resume preserves world scale and political state',async({page})=>{
  await page.goto(ENTRY);
+ await page.locator('.world-settings summary').click();
  await page.locator('[data-world-size="48"]').click();
  await page.locator('#begin').click();
  await page.locator('#next-year').click();
