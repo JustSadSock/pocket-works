@@ -13,6 +13,15 @@ controls.append(start,copyCode);lobby.append(controls);
 const turn=document.createElement('span');turn.id='onlineTurnStatus';turn.setAttribute('aria-live','polite');
 $('controls')?.prepend(turn);
 let client=null,room=null,view=null,lock=false,connectPromise=null,selectedSize='medium',active=false;
+// PocketNet's generic key is shared by other Pocket Works games. Namespace
+// Fog credentials/rooms so launching another game cannot steal this session.
+const scopedStore=base=>({
+ getItem:key=>base.getItem('fog-of-conquest:net:'+key),
+ setItem:(key,value)=>base.setItem('fog-of-conquest:net:'+key,value),
+ removeItem:key=>base.removeItem('fog-of-conquest:net:'+key)
+});
+const memberStore=scopedStore(localStorage),guestStore=scopedStore(sessionStorage);
+const storageFor=identity=>identity?.complete?memberStore:guestStore;
 const message=text=>{status.textContent=text;};
 const roomCode=()=>room?.roomId?.slice(0,8).toUpperCase()||'';
 const canIssue=()=>Boolean(active&&view?.game?.phase==='battle'&&view.game.state.currentPlayer===view.side&&!lock&&client?.socket?.readyState===WebSocket.OPEN);
@@ -57,7 +66,7 @@ async function ensure(){
    // Guests live in sessionStorage so two local testing tabs get separate seats.
    const identity=await getPocketIdentity({force:true});
    const identityKey=pocketIdentitySessionKey(identity);
-   const storage=identity?.complete?localStorage:sessionStorage;
+   const storage=storageFor(identity);
    let nick='Полководец';
    try{nick=localStorage.getItem('fog-of-conquest:online-nick')||nick;}catch{}
    nick=preferredPocketName(identity,nick);
@@ -107,7 +116,7 @@ window.FogPocketNet={create,join,issue,leave,canIssue,refresh};
 for(const id of ['settingsMenuBtn','victoryMenuBtn','victoryOkBtn'])$(id)?.addEventListener('click',()=>{if(active)leave();},true);
 // Restore a valid seat only for the same Pocket ID or the current guest tab.
 void getPocketIdentity({force:true}).then(identity=>{
- const storage=identity?.complete?localStorage:sessionStorage;
+ const storage=storageFor(identity);
  try{
    const saved=JSON.parse(storage.getItem('pocket-net:'+location.origin+'/pocketnet')||'null');
    if(saved?.roomId&&saved?.identityKey===pocketIdentitySessionKey(identity))
