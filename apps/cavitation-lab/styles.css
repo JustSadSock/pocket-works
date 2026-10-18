@@ -155,3 +155,7 @@ button:disabled{opacity:.38;cursor:default}
 
 .pressure-legend{position:absolute;top:95px;right:22px;pointer-events:none;color:#c9e0d6;font-size:10px;letter-spacing:.1em;opacity:.85}
 @media(max-width:830px){.pressure-legend{top:73px;right:12px;font-size:9px}}
+
+.pressure-legend{display:flex;gap:5px;align-items:center;letter-spacing:0}
+.pressure-legend i{width:9px;height:9px;display:inline-block;margin-left:7px}
+.pressure-legend i.cold{background:#58bbb5}.pressure-legend i.hot{background:#eead7b}
