@@ -61,12 +61,11 @@ export function vec(x,y,z){return [x,y,z];}
 export const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 export const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 export function normalize(a){const k=Math.hypot(...a)||1;return a.map(v=>v/k);}
-export function cameraBasis(yaw=0,pitch=0,side=1){
+export function cameraBasis(yaw=0,pitch=0,side=1,facingSign=side){
  // Spherical radial direction of the static observer; +x is the radial
  // direction of either asymptotic chart.
- const radial=[1,0,0],h=normalize([0,1,0]),up=[0,0,1];
- const inward=side>0?-1:1;
- const f=normalize([inward*Math.cos(yaw)*Math.cos(pitch),Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch)]);
+ const radial=[side,0,0],up=[0,0,1];
+ const f=normalize([-facingSign*Math.cos(yaw)*Math.cos(pitch),Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch)]);
  const right=normalize(cross(f,up));
  const vertical=normalize(cross(right,f));
  return {radial,forward:f,right,up:vertical};
@@ -79,16 +78,16 @@ export function pixelDirection(nx,ny,basis,fovDeg=80,aspect=1){
   basis.forward[2]*focal+basis.right[2]*nx*aspect+basis.up[2]*ny
  ]);
 }
-export function outgoingDirection(incoming,transfer){
- const n=[1,0,0],c=dot(n,incoming);
- const perpendicular=[incoming[0]-c,incoming[1],incoming[2]];
+export function outgoingDirection(incoming,transfer,radial=[1,0,0]){
+ const c=dot(radial,incoming);
+ const perpendicular=[incoming[0]-radial[0]*c,incoming[1]-radial[1]*c,incoming[2]-radial[2]*c];
  const p=normalize(perpendicular);
- return normalize([Math.cos(transfer.angle),Math.sin(transfer.angle)*p[1],Math.sin(transfer.angle)*p[2]]);
+ return normalize([radial[0]*Math.cos(transfer.angle)+p[0]*Math.sin(transfer.angle),radial[1]*Math.cos(transfer.angle)+p[1]*Math.sin(transfer.angle),radial[2]*Math.cos(transfer.angle)+p[2]*Math.sin(transfer.angle)]);
 }
 export function backgroundDirection(pixel,basis,table){
  const theta=Math.acos(Math.max(-1,Math.min(1,dot(basis.radial,pixel))));
  const transfer=lookup(table,theta);
  if(!transfer)return null;
- return {region:transfer.region,direction:outgoingDirection(pixel,transfer),transfer};
+ return {region:transfer.region,direction:outgoingDirection(pixel,transfer,basis.radial),transfer};
 }
 export function originRay(m,l0){return photonTransfer(m,l0,Math.PI);}
