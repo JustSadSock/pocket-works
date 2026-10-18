@@ -51,3 +51,22 @@ test('arrow-right rotates camera on slow WebGL and Escape returns to live play',
  await expect(page.locator('#pauseOverlay')).toBeHidden();
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play',{timeout:12000})
 });
+
+test('revolver reload uses real active time even after a stalled renderer frame',async({page})=>{
+ test.setTimeout(90000);
+ await boot(page,'/apps/not-dead-yet/?qa=1');
+ await page.keyboard.press('Space');
+ await expect.poll(()=>page.evaluate(()=>window.__PW_TEST_STATE__.ammo)).toBe(5);
+ await page.keyboard.press('r');
+ // Simulate an expensive shader / 3D mesh submission on the browser main
+ // thread. Camera physics must not jump the missing 650ms, but the gun must
+ // still finish a 1.55s reload without needing 1.55s of simulated frames.
+ await page.evaluate(()=>{
+  const start=performance.now();
+  while(performance.now()-start<650){}
+ });
+ await expect.poll(()=>page.evaluate(()=>window.__PW_TEST_STATE__.ammo),{timeout:7000}).toBe(6);
+ const times=await page.evaluate(()=>window.__PW_TEST_STATE__);
+ expect(times.simulationFrameTime).toBeLessThanOrEqual(.10001);
+ expect(times.fpsFrameTime).toBeGreaterThanOrEqual(0)
+});
