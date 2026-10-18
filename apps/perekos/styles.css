@@ -111,3 +111,5 @@
 #net-result-leave{background:#687667!important}
 #net-wait-leave{border:1px solid #735d46}
 @media(max-height:710px){.online-button{min-height:45px;font-size:14px}.net-sheet{padding:15px 12px}.net-invite{padding:12px}#net-copy-code{font-size:26px!important}.net-wait-mark{font-size:42px}}
+
+.net-feedback{user-select:text;-webkit-user-select:text;overflow-wrap:anywhere}
