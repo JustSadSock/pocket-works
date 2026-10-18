@@ -26,7 +26,7 @@ the authoritative server. The server validates ownership, range, terrain and
 gold; `viewForPlayer` hides unknown terrain, enemy units, opponent resources,
 and privately projects explored fog. Commands include revision checks.
 
-The immutable PocketNet `v3.ts` snapshot (with v2 preserved), `modules.lock.json` activation
+The immutable PocketNet `v4.ts` snapshot (with v2/v3 preserved), `modules.lock.json` activation
 and hub room-retention support are published in the same atomic release.
 Disconnected users can rejoin with their saved guest token and room ID;
 inactive rooms are retained for up to six days, subject to platform quotas,
@@ -38,8 +38,12 @@ is a forfeit; simply losing network connectivity is not.
 node --test apps/fog-of-conquest/test/original-port.test.mjs
 node apps/fog-of-conquest/test/port-browser.mjs
 ```
-Run `node --test apps/fog-of-conquest/test/stage0.test.mjs` for critical save / beta regressions. Run the original browser gameplay QA after changes; confirm both desktop and mobile states and two-client PocketNet integration. Original offline local modes do not require an internet connection.
+Run `node --test apps/fog-of-conquest/test/stage0.test.mjs apps/fog-of-conquest/test/stage1.test.mjs` for critical save / beta regressions. Run the original browser gameplay QA after changes; confirm both desktop and mobile states and two-client PocketNet integration. Original offline local modes do not require an internet connection.
 
 ## Post-port audit and roadmap
 - [Defect register / audit (18 October 2026)](./AUDIT-2026-10-18.md)
 - [Prioritized remediation and improvements roadmap](./ROADMAP.md)
+
+## Stage 1 rules and AI (v1.3.0)
+
+AI healers prioritize injured allies, and AI movement spends only points proven legal by the original computeZone. After a side loses all military buildings, its five rescue turns tick only when that side ends its turn. Each side maintains frozen last-seen building intelligence without live opponent updates; v4 offline saves include this memory. Optional seeded worlds support reproducible regression tests. PocketNet uses a new immutable v4 ruleset and keeps active v2/v3 games on their pinned version. Full completed-match AI soak testing remains open (FOG-018).
