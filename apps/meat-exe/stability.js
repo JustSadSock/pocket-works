@@ -2,8 +2,9 @@
 import {sanitizeGrafts,maxWeaponIndex} from './biobuilds.js';
 import {sanitizeImmune} from './immunity.js';
 import {ROUTES,GENES,routeOptions,sanitizeRouteHistory} from './runPaths.js';
+import {GUARDIAN_TYPES,guardianForWave,sanitizeGuardianPending} from './guardians.js';
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
-const kinds=new Set(['crawler','spitter','brute','heart','leech','warden']);
+const kinds=new Set(['crawler','spitter','brute','heart','leech','warden',...GUARDIAN_TYPES]);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
 export function validateRun(s){
   if(!s||typeof s!=='object'||![1,2,3,4,5].includes(s.v)||!Number.isInteger(s.seed)||s.seed<0||s.seed>4294967295||!validPosition(s)||!Number.isFinite(s.hp)||s.hp<=0)return null;
@@ -11,6 +12,9 @@ export function validateRun(s){
   if(hp<=0)return null;
   return {
     v:5,seed:s.seed>>>0,x:s.x,z:s.z,
+    guardianDefeated:Array.isArray(s.guardianDefeated)?[...new Set(s.guardianDefeated.filter(v=>Number.isInteger(v)&&!!guardianForWave(v)))].sort():[],
+    guardianPending:Array.isArray(s.guardianDefeated)&&s.guardianDefeated.includes(s.wave)?0:
+      sanitizeGuardianPending(s.guardianPending,s.wave),
     routeHistory:sanitizeRouteHistory(s.routeHistory),
     selectedRoute:Number.isInteger(s.pendingDraft)&&s.pendingDraft>=2&&s.pendingDraft<=5&&routeOptions(s.seed,s.pendingDraft).some(r=>r.id===s.selectedRoute)?s.selectedRoute:'',
     routeId:Number.isInteger(s.routeWave)&&s.routeWave===Math.floor(s.wave)&&ROUTES.some(r=>r.id===s.routeId)?s.routeId:'',
@@ -33,7 +37,7 @@ export function validateRun(s){
     wave:num(Math.floor(s.wave),1,5,1),elapsed:num(s.elapsed,0,10000000,0),
     waveTime:num(s.waveTime,0,1000000,0),toSpawn:num(Math.floor(s.toSpawn),0,40,0),
     spawnClock:num(s.spawnClock,0,30,0),
-    enemies:(Array.isArray(s.enemies)?s.enemies:[]).filter(e=>validPosition(e)&&kinds.has(e.type)&&Number.isFinite(e.hp)&&e.hp>0).slice(0,28).map(e=>({type:e.type,x:e.x,z:e.z,hp:num(e.hp,1,500,1)})),
+    enemies:(Array.isArray(s.enemies)?s.enemies:[]).filter(e=>validPosition(e)&&kinds.has(e.type)&&Number.isFinite(e.hp)&&e.hp>0).slice(0,28).map(e=>({type:e.type,x:e.x,z:e.z,hp:num(e.hp,1,500,1),facing:num(e.facing,-100000,100000,0)})),
     pickups:(Array.isArray(s.pickups)?s.pickups:[]).filter(validPosition).slice(0,30).map(p=>({x:p.x,z:p.z,type:p.type==='heal'?'heal':'fragment'})),
     projectiles:[],moving:0,sprinting:false,heartPhase:num(Math.floor(s.heartPhase),1,3,1),phase:0
   };
