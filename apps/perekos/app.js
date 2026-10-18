@@ -147,6 +147,7 @@ function renderWorkbench(){
   });
   row.append(drag,moves);lane.append(row);
  });
+ while(laneNumber<3){laneNumber++;const empty=document.createElement('div');empty.className='spell-lane spell-lane-empty';const label=document.createElement('div');label.className='spell-lane-head';label.textContent='ПРИЁМ '+laneNumber;const hint=document.createElement('p');hint.textContent='Для нового приёма нужна руна «КОГДА».';empty.append(label,hint);rack.append(empty)}
  const display=$('chain-preview');display.replaceChildren();
  for(const text of info.lines.length?info.lines:['Добавь «КОГДА» и «ЧТО». Руна «КАК» меняет действие прямо перед ней.']){
   const p=document.createElement('p');p.textContent=text;display.append(p);
