@@ -1,0 +1,36 @@
+name: ZAMAZKA colour fill real canvas
+
+on:
+  pull_request:
+    paths:
+      - 'apps/zamazka/editor.js'
+      - 'apps/zamazka/fill-core.js'
+      - 'apps/zamazka/qa/fill-colour-real-canvas.mjs'
+      - '.github/workflows/zamazka-colour-fill.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/zamazka/editor.js'
+      - 'apps/zamazka/fill-core.js'
+      - 'apps/zamazka/qa/fill-colour-real-canvas.mjs'
+      - '.github/workflows/zamazka-colour-fill.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-recolour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install test runtime
+        run: npm ci --ignore-scripts
+      - name: Install real Chromium Canvas2D
+        run: npx playwright install --with-deps chromium
+      - name: Reproduce opaque tan field and black multi-gesture outline
+        run: node apps/zamazka/qa/fill-colour-real-canvas.mjs
