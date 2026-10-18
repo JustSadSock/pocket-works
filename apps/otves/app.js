@@ -598,12 +598,17 @@ for (const button of elements.soundButtons) {
     const enabled = !audio.enabled;
     audio.setEnabled(enabled);
     store.set('sound', enabled);
-    if (enabled) {
-      await audio.unlock();
-      audio.setPaused(state !== 'playing');
-      audio.play('click');
-    }
+    // Feedback is immediate even if Safari/Chromium delays AudioContext.resume.
     updateSoundButtons();
+    if (enabled) {
+      try {
+        await audio.unlock();
+        audio.setPaused(state !== 'playing');
+        audio.play('click');
+      } catch (error) {
+        console.warn('ОТВЕС: audio cannot resume on this device',error);
+      }
+    }
   });
 }
 
