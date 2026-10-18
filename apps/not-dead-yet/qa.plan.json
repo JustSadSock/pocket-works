@@ -18,7 +18,8 @@
         "tests/landing.test.mjs",
         "tests/presences.test.mjs",
         "tests/roguelike.test.mjs",
-        "tests/keyboard.test.mjs"
+        "tests/keyboard.test.mjs",
+        "tests/visual-baseline.test.mjs"
       ]
     },
     {
@@ -64,7 +65,8 @@
       "tier": "smoke",
       "files": [
         "qa/journey.spec.js",
-        "qa/roguelike.spec.js"
+        "qa/roguelike.spec.js",
+        "qa/visual-baseline.spec.js"
       ]
     }
   ]
