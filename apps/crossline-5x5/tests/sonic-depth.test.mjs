@@ -46,7 +46,7 @@ test('eleven acoustic recipes schedule multiple finite audio voices and shared s
  assert.equal(data.contexts,1);
  assert.ok(data.sources>=10);
  assert.ok(data.oscillators>=18);
- assert.equal(data.started,data.stopped);
+ assert.equal(data.started,data.stopped+data.sources,'noise sources stop automatically at bounded buffer duration');
  audio.stop();
 });
 test('falling slabs are 16 actual perimeter tiles with distinct release orders',()=>{
