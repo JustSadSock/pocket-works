@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "crossline-5x5",
+  "name": "КРОССЛАЙН: 5×5",
+  "shortName": "КРОССЛАЙН",
+  "description": "Тактическая дуэль на поле 5×5: пять скрытых приказов, одновременный бой, ИИ, повторы и серверный PvP через PocketNet.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T03:31:00+03:00",
+  "changelog": [
+    "Оригинальная механика 5x5 Arena: пять приказов, направления атаки, щит и обрушение краёв.",
+    "Одиночная игра с пятью уровнями ИИ, локальная дуэль и серверная игра через PocketNet.",
+    "Восстановление соединения, повторы с перемоткой, экспорт JSON/WebM и самостоятельная иконка."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "accent": "#f4b35f",
+  "backgroundColor": "#161e23",
+  "themeColor": "#161e23",
+  "orientation": "portrait",
+  "cacheName": "crossline-5x5-v1.0.0",
+  "storageNamespace": "pocket-works:crossline-5x5",
+  "tags": [
+    "game",
+    "strategy",
+    "pvp",
+    "tactics",
+    "turn-based",
+    "PocketNet",
+    "offline"
+  ],
+  "order": 353
+}
