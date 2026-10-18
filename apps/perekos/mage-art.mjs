@@ -4,17 +4,27 @@
 import {DEFAULT_APPEARANCE,cosmeticFeatures} from './avatar-profile.mjs';
 import {mage} from './mages.mjs';
 
-export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0}={}){
+export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0,face=0,moving=0}={}){
  if(!ctx)return;
  const p=enemy&&(!look||look.source==='guest')?{...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}:(look||DEFAULT_APPEARANCE);
- const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes),character=mage(mageId),isCasting=casting>.15;
+ const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes),character=mage(mageId),isCasting=casting>.06;
+ const stride=Math.min(1,Math.max(0,moving)),walk=Math.sin(time*16)*stride,castPower=casting>0?Math.max(0,Math.sin((1-Math.min(1,casting/.68))*Math.PI)):.0;
+ const lean=(dashing>0?4:Math.sin(time*11)*.8*stride),shake=flash>0?Math.sin(time*65)*1.5:0;
+ const elementColor=character.school==='storm'?'#bcefe0':character.school==='stone'?'#d5d8aa':'#ffd29a';
  const px=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))};
  const arc=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
- ctx.translate(Math.round(x),Math.round(y+Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1)));ctx.scale((enemy?-1:1)*scale,scale);
+ ctx.translate(Math.round(x+shake),Math.round(y+Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1)));
+ const dir=Math.cos(face);ctx.scale((dir<-.12?-1:1)*scale,scale);ctx.translate(lean,0);
  // Tight shadow and feet establish a stable battle hitbox.
  ctx.fillStyle='#101c1eb8';ctx.beginPath();ctx.ellipse(0,12,17,6,0,0,Math.PI*2);ctx.fill();
- px(-9,6,6,12,'#23332d');px(5,6,6,12,'#23332d');px(-9,13,6,3,trim);px(5,13,6,3,trim);
+ // Individual footsteps and short knee bends create motion rather than bobbing a static doll.
+ px(-9,6+walk,6,12,'#23332d');px(5,6-walk,6,12,'#23332d');px(-9,13+walk,6,3,trim);px(5,13-walk,6,3,trim);
+ // Cape material flares under sprint; folds settle while standing still.
+ const capeSwing=(dashing>0?9:stride*4)+Math.sin(time*9)*1.5;
+ px(-17-capeSwing*.5,-3,9+capeSwing*.4,24,shade);
+ px(-18-capeSwing*.65,11,11+capeSwing*.45,5,'#263d35');
+ px(-15-capeSwing*.35,2,3,15,trim);
  // A split coat, sleeves, sash, and permanent palette from account avatar.
  px(-12,-5,24,18,coat);px(-13,3,26,10,shade);
  px(-10,7,20,6,coat);px(-12,-4,5,11,trim);px(8,-4,5,11,trim);
@@ -23,6 +33,7 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  if(character.school==='stone'){px(-15,-2,6,13,'#7c8f81');px(10,-2,6,13,'#7c8f81');px(-13,9,26,3,'#a5af8d')}
  if(character.school==='fire'){px(-11,7,4,5,'#d89561');px(7,7,4,5,'#e9b270')}
  px(-4,2,9,3,trim);px(0,-5,2,13,'#132522a8');
+ px(-8,11,7,5,shade);px(4,11,7,5,shade);if(stride>0){px(-10,9+walk,4,3,trim);px(9,9-walk,4,3,trim)}
  if(maskot?.clothes==='vest'||maskot?.clothes==='groom'){
   px(-10,-4,8,11,'#34535a');px(4,-4,7,11,'#34535a');px(-2,-4,5,12,'#eee7c7');
  }
@@ -46,8 +57,8 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
   px(-9,-18,9,9,'#9acb77');px(2,-18,9,9,'#9acb77');
   px(-7,-16,4,4,'#f0f1de');px(4,-16,4,4,'#f0f1de');
  }
- const face=maskot?.animal==='frog'?'#93bb72':maskot?.animal==='rabbit'?'#ebd2ba':maskot?.animal==='cat'?'#d1ac91':'#d6b395';
- px(-7,-16,14,15,face);
+ const skinTone=maskot?.animal==='frog'?'#93bb72':maskot?.animal==='rabbit'?'#ebd2ba':maskot?.animal==='cat'?'#d1ac91':'#d6b395';
+ px(-7,-16,14,15,skinTone);
  px(-5,-12,3,3,'#273c34');px(3,-12,3,3,'#273c34');px(-4,-5,8,2,maskot?.animal==='frog'?'#547f55':'#ae7c69');
  if(maskot?.face==='glasses'||maskot?.face==='monocle'){
   px(-7,-14,7,6,'#e6dec0');px(-6,-13,5,4,'#32433d');px(1,-14,7,6,trim);px(2,-13,5,4,'#32433d');px(-1,-12,2,2,trim);
@@ -129,7 +140,19 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  if(character.trait==='guard_slow'){px(-12,-8,4,3,'#9dd3c7')}
  if(character.trait==='miss_cool'){px(-8,-33,5,3,'#cfad87')}
  if(isCasting){px(9,-3,9,4,character.school==='storm'?'#b6e6db':character.school==='stone'?'#b7c4a3':'#ffc588')}
- if(dashing>0){px(-19,5,6,4,'#a3c4ad');px(-23,10,7,2,'#668b7b')}
+ // A real raised elbow, sweeping shaft and hand-written spark strokes:
+ // casting the weapon is more than translating a static staff upwards.
+ if(isCasting){
+  const reach=9+castPower*8,up=12+castPower*10;
+  px(9-reach*.2,-4-up*.1,9,5,coat);px(16-reach*.2,-6-up*.1,5,5,faceColorOrTrim(trim));
+  ctx.save();ctx.strokeStyle='#9c7852';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(16,-15);ctx.lineTo(17+reach*.55,-36-up);ctx.stroke();
+  ctx.strokeStyle=elementColor;ctx.lineWidth=2;ctx.beginPath();ctx.arc(17+reach*.55,-40-up,4+castPower*3,-.7,2.2);ctx.stroke();
+  ctx.fillStyle='#f9f0d6';ctx.fillRect(Math.round(16+reach*.55),Math.round(-41-up),3,3);
+  ctx.restore();
+ }
+ function faceColorOrTrim(value){return value||'#cdb6a0'}
+ if(dashing>0){px(-19,5,6,4,'#a3c4ad');px(-23,10,7,2,'#668b7b');
+  px(-31,1,12,3,'#c2c6a790');px(-38,7,14,2,'#96a89a80');px(-42,-8,9,2,'#aabfa087')}
  // Build-driven alterations have distinct silhouettes and material cues.
  if(features.stone){px(-17,-5,7,9,'#859383');px(11,-5,7,9,'#859383');px(-16,-6,5,3,'#ced5ac');px(12,-6,5,3,'#ced5ac')}
  if(features.ember){px(-12,-33,3,5,'#f0a267');px(-12,-36,2,3,'#ffe0a0');px(17,-17,4,5,'#f8b86a')}
@@ -140,7 +163,12 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  if(features.haste){px(-12,11,6,2,'#e0c599');px(8,11,7,2,'#e0c599')}
  if(shield>0){ctx.strokeStyle='#b6d9b4bb';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(0,-7,27,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);px(-20,-17,3,6,'#f7e3b0');px(20,0,3,6,'#f7e3b0')}
  if(enemy){px(-11,17,22,3,'#a84b42');px(-8,20,16,2,'#e4a28a')}
- if(flash>0){ctx.globalAlpha=.38;px(-16,-35,32,53,'#fff2bf')}
+ if(flash>0){ctx.globalAlpha=Math.min(.65,flash*3.1);px(-16,-35,32,53,'#fff2bf');ctx.globalAlpha=Math.max(0,Math.min(1,alpha))}
+ // Very short-lived class wisps around the casting tip, with no persistent glow.
+ if(isCasting){
+  for(let i=0;i<3;i++){const angle=time*9+i*2.09,rx=20+Math.cos(angle)*8,ry=-44+Math.sin(angle)*7;
+   px(rx,ry,2+(i%2),2,elementColor)}
+ }
  ctx.restore();
 }
 export function drawPortrait(ctx,appearance=DEFAULT_APPEARANCE,size=48){

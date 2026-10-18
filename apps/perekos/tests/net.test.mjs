@@ -57,7 +57,7 @@ test('two server-side rune offers stay secret across room joined and state event
   assert.deepEqual(first.offers,s.offers[0]);assert.deepEqual(second.offers,s.offers[1]);
   assert.equal('offers' in first.match,false);
   assert.equal(JSON.stringify(first).includes(JSON.stringify(s.offers[1])),false);
-  const bad=send(s,p,'pick',{rune:'on_cast'});assert.ok(bad.events.some(e=>e.type==='notice'));
+  const bad=send(s,p,'pick',{rune:'this_is_not_a_rune'});assert.ok(bad.events.some(e=>e.type==='notice'));
   assert.equal(s.picked[0],false);
   assert.ok(send(s,p,'pick',{rune:s.offers[0][0]}).events.length);
   assert.ok(send(s,q,'pick',{rune:s.offers[1][0]}).events.length);

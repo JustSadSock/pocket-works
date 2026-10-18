@@ -10,7 +10,8 @@
         "tests/avatar.test.mjs",
         "tests/net.test.mjs",
         "tests/elements.test.mjs",
-        "tests/balance.test.mjs"
+        "tests/balance.test.mjs",
+        "tests/combat-presentation.test.mjs"
       ]
     },
     {
@@ -63,7 +64,8 @@
         "qa/avatar.spec.js",
         "qa/net.spec.js",
         "qa/visual-review.spec.js",
-        "qa/elements.spec.js"
+        "qa/elements.spec.js",
+        "qa/spectacle.spec.js"
       ]
     }
   ]
