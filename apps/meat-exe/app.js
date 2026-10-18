@@ -897,7 +897,7 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   guardians:{pending:state?.guardianPending||0,defeated:state?.guardianDefeated||[],
     active:state?.enemies?.filter(e=>isGuardian(e.type)).map(e=>({type:e.type,hp:e.hp,maxHp:e.maxHp,
       windup:e.windup,facing:e.facing}))||[]},
-  routes:{selected:state?.selectedRoute||null,active:state?.routeId||null,history:state?.routeHistory||[],
+  routes:{selected:state?.selectedRoute||null,active:state?.routeId||null,marker:world?.getRouteMark?.()||null,history:state?.routeHistory||[],
     offers:state?.pendingDraft?routeOptions(state.seed,state.pendingDraft).map(r=>r.id):[],hazardExtra:state?.routeHazard||0},
   archive:{echoes:archive.echoes,unlocked:archive.unlocked,equipped:archive.equipped,runs:archive.runs},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
