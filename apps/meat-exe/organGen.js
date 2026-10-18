@@ -138,8 +138,9 @@ export function generateOrgan(cx,cy){
   ];
   for(const p of portals){
     dig(p.x,p.y);
-    corridor(p,p.inner,true);
-    // Edge stem can meet the loop anywhere along the corresponding side.
+    const loopEntry={x:Math.min(6,Math.max(1,p.inner.x)),y:Math.min(6,Math.max(1,p.inner.y))};
+    corridor(p,loopEntry,true);
+    // Corner portals are pulled inward to the vessel loop before entering a chamber.
   }
   // A few irregular vessel bulbs; never carve disconnected cells.
   for(let j=0;j<3;j++){
