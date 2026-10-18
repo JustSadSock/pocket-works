@@ -3171,7 +3171,7 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "63ea0df77f5570c7ff15831fa30274263977f63d",
+    "revision": "4bc623a4a4214beb3e9cb90f0d8717764fb8d9e8",
     "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
@@ -3183,8 +3183,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "63ea0df77f5570c7ff15831fa30274263977f63d",
-    "lastAttemptAt": "2026-10-17T23:18:51.449Z"
+    "lastAttemptRevision": "4bc623a4a4214beb3e9cb90f0d8717764fb8d9e8",
+    "lastAttemptAt": "2026-10-18T00:27:06.387Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3251,9 +3251,9 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "03413f1531e06e07fe1ca26b835500ecd043c022",
-    "lastAttemptAt": "2026-10-17T23:44:45.306Z",
-    "revision": "03413f1531e06e07fe1ca26b835500ecd043c022",
+    "lastAttemptRevision": "84a4d1921c6438805e3f879462a0f8b1f52dde05",
+    "lastAttemptAt": "2026-10-18T00:27:17.230Z",
+    "revision": "84a4d1921c6438805e3f879462a0f8b1f52dde05",
     "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
@@ -3399,5 +3399,21 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "b78f8ccf5aadb1b31daace8c716580f2bf5679f0",
     "lastAttemptAt": "2026-10-18T00:16:06.535Z"
+  },
+  "chyepukha": {
+    "revision": "42f5cd86b26cc24eb18c4fc155481c214aded57d",
+    "qualityScore": 79,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "228a1daa4b8f506cefdf65a12f3c44688e3692f0eecfa2f4299f8130888612b7",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "42f5cd86b26cc24eb18c4fc155481c214aded57d",
+    "lastAttemptAt": "2026-10-18T00:27:28.079Z"
   }
 }
