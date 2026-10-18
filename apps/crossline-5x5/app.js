@@ -1,5 +1,6 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DIRECTIONS,STEPS,MAX_ROUNDS,initialMatch,validatePlan,simulateRound,aiPlan} from './engine.js';
 installMobileRuntime();
@@ -414,5 +415,6 @@ async function checkNet(){
  try{const r=await fetch(NET+'/health',{cache:'no-store',signal:AbortSignal.timeout(6000)}),j=await r.json();$('netStatus').textContent=r.ok&&j.modules?.includes('crossline-5x5')?'POCKETNET · ДОСТУПЕН':'POCKETNET · ОЖИДАЕТ ПУБЛИКАЦИИ'}catch{$('netStatus').textContent='POCKETNET · СЕЙЧАС НЕ В СЕТИ'}
 }
 getPocketIdentity().then(p=>{profile=p}).catch(()=>{});
+createWorkshopMode({appName:'КРОССЛАЙН: 5×5',version:'1.0.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
 checkNet();resumeOffer();
 if(roomQuery){connect('join',roomQuery);$('code').value=roomQuery}
