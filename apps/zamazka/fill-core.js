@@ -179,6 +179,8 @@ export function fillMatchingColorRaster({width,height,zone,output,point,color,ch
  const fringe=new Uint8Array(total),SMOOTH_LIMIT=72;
  for(let n=0;n<tail;n++){
   const i=queue[n],ix=i%width,iy=(i/width)|0;
+  if((ix===0||visited[i-1])&&(ix===width-1||visited[i+1])&&
+     (iy===0||visited[i-width])&&(iy===height-1||visited[i+width]))continue;
   const near=[ix>0?i-1:-1,ix+1<width?i+1:-1,iy>0?i-width:-1,iy+1<height?i+width:-1];
   for(let d=0;d<4;d++){
    const j=near[d];if(j<0||visited[j]||fringe[j])continue;
