@@ -63,12 +63,12 @@ button:disabled{opacity:.38;cursor:default}
 .result>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .result span{color:#637670;font-size:11px}
 .result b{color:#1e393c;font:600 14px Georgia,serif;white-space:nowrap}
-.actions{margin-top:auto;display:grid;grid-template-columns:1fr 78px 45px;gap:5px}
+.actions{margin-top:auto;display:grid;grid-template-columns:minmax(0,1fr) 99px 45px;gap:5px}
 .launch{grid-column:1/-1;min-height:61px;background:#d38e4f;color:#152b2e;border:0;padding:0 16px;display:flex;align-items:center;gap:11px;justify-content:space-between;text-align:left;font-weight:800;font-size:13px;letter-spacing:.085em}
 .launch>span:last-child{font-size:21px}
 .launch:active{background:#f0b773;transform:translateY(1px)}
 .launch-symbol{font-size:20px;line-height:1}
-.pause,.speed{background:transparent;border:1px solid #b3bdaf;min-height:37px;color:#3f5754}
+.pause,.speed{background:transparent;border:1px solid #b3bdaf;min-height:37px;color:#3f5754;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
 .pause{font-size:17px;font-weight:700}
 .pause{grid-column:2}.speed{grid-column:3}
 .pause:active,.speed:active{background:#c7d0c6}
@@ -104,10 +104,10 @@ button:disabled{opacity:.38;cursor:default}
  .instrument input{height:13px}
  .instrument input::-webkit-slider-thumb{width:14px;height:14px;margin-top:-6px}
  .result{display:none}
- .actions{margin-top:0;grid-template-columns:1fr 68px 40px;gap:4px}
+ .actions{margin-top:0;grid-template-columns:minmax(0,1fr) 102px 45px;gap:4px}
  .launch{min-height:47px;padding:0 12px;font-size:12px}
  .launch-symbol{font-size:16px}
- .pause,.speed{min-height:29px}
+ .pause,.speed{min-height:34px}
  .console-foot{display:none}
 }
 @media(max-width:830px) and (max-height:660px){
@@ -115,7 +115,7 @@ button:disabled{opacity:.38;cursor:default}
  .console-main{gap:5px;padding-top:7px}
  .preset{min-height:31px;font-size:9px}.sliders{gap:2px}
  .instrument>span{font-size:10px}.instrument input{height:12px}
- .launch{min-height:41px}.pause,.speed{min-height:26px}
+ .launch{min-height:41px}.pause,.speed{min-height:30px}
 }
 @media(min-width:831px) and (max-height:660px){
  .console-head{height:53px;padding:9px 18px}
