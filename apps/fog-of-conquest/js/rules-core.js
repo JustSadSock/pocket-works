@@ -119,6 +119,8 @@ const FogRuleKernel=(function(){
     return true;
   }
   function fogForSide(map,units,buildings,side){
+    if(!Array.isArray(map)||!map.length||!Array.isArray(map[0])||!map[0].length)
+      return [];
     const rows=map.length,cols=map[0].length;
     const f=Array.from({length:rows},()=>Array(cols).fill(true));
     for(const o of [...buildings.filter(x=>x.owner===side),...units.filter(x=>x.owner===side)]){
