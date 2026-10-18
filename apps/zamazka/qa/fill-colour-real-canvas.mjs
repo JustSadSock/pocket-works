@@ -12,7 +12,9 @@ const editor=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
 const beginning=editor.indexOf('export function drawStroke(');
 const ending=editor.indexOf('export async function renderArtwork(',beginning);
 assert(beginning>=0&&ending>beginning,'cannot isolate the actual production raster renderer');
-const originalRenderer=editor.slice(beginning,ending)
+const dabBeginning=editor.indexOf('function dab(',0);
+assert(dabBeginning>=0&&dabBeginning<beginning,'cannot isolate the actual brush nib');
+const originalRenderer=editor.slice(dabBeginning,ending)
  .replaceAll('export function ','function ');
 const fillCore=readFileSync(new URL('../fill-core.js',import.meta.url),'utf8')
  .replaceAll('export function ','function ');
