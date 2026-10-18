@@ -74,7 +74,8 @@ async function run(){
   assert.equal(joined.state.side,2);
   assert.equal(made.state.side,1);
   a.send('game_message',{payload:{type:'start',size:'medium',requestId:'fog-start'}});
-  const stA=await observe(a,'state'),stB=await observe(b,'state');
+  const stA=await a.next('game_event',m=>m.event?.type==='state'&&m.event.payload?.phase==='battle');
+  const stB=await b.next('game_event',m=>m.event?.type==='state'&&m.event.payload?.phase==='battle');
   assert.equal(stA.event.payload.phase,'battle');
   assert.equal(stB.event.payload.phase,'battle');
   assert.equal(stB.event.payload.game.units.some(u=>u.owner===1),false,'enemy unit leaked');
