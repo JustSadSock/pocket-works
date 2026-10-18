@@ -241,7 +241,7 @@ export function chooseOpticalProfile({ width, height, dpr = 1, maxTextureSize = 
     deviceMemory = 8, hardwareConcurrency = 8, reducedMotion = false }) {
   const pixels = width * height * Math.min(2, dpr) ** 2;
   const low = maxTextureSize < 2048 || deviceMemory < 3 ||
-    (hardwareConcurrency <= 4 && pixels > 900000);
+    (hardwareConcurrency <= 2 && pixels > 900000);
   const high = !low && deviceMemory >= 4 && maxTextureSize >= 4096 &&
     pixels <= 2800000 && hardwareConcurrency >= 5;
   return {
