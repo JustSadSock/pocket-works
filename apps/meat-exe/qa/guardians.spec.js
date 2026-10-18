@@ -50,7 +50,7 @@ test('organ route produces physical landmark in stage four and spawns neural bos
 });
 
 
-test('walking up to a physical fork and pressing X presets the actual surgery route',async ({page})=>{
+test('walking up to a physical fork and pressing X presets the actual surgery route',async ({page,isMobile})=>{
  test.setTimeout(105000);
  await page.goto('/apps/meat-exe/');
  const fixture={v:5,seed:413,x:3,z:3,wave:1,hp:100,maxHp:100,toSpawn:1,spawnClock:30,
@@ -71,7 +71,10 @@ test('walking up to a physical fork and pressing X presets the actual surgery ro
  },{key:SESSION,destination});
  await page.reload();await page.locator('#resumeSaved').click();
  await expect(page.locator('#hud')).toBeVisible();
- await page.keyboard.press('x');
+ if(isMobile){
+  await expect(page.locator('#forkInteract')).toBeVisible();
+  await page.locator('#forkInteract').tap();
+ }else await page.keyboard.press('x');
  await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__().routes.selected)).toBe(destination.id);
  await page.keyboard.press('Escape');await page.locator('#menuPause').click();
  await page.reload();await page.locator('#resumeSaved').click();
