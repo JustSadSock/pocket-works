@@ -124,6 +124,7 @@
      entries.push(event);if(entries.length>96)entries.shift();
    }
    if(!playing)animate(event);
+   window.FogAudio?.play(event.kind);
    if(!overlay.hidden)render();
  };
  historyButton.addEventListener('click',show);
