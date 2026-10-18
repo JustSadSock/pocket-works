@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "0d836a7921add7c300861e76ff41403507ea3a49",
+    "revision": "378eae6610d3eef4c90faad817370c7e444d5e2c",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "0d836a7921add7c300861e76ff41403507ea3a49",
-    "lastAttemptAt": "2026-10-17T23:28:47.710Z",
+    "lastAttemptRevision": "378eae6610d3eef4c90faad817370c7e444d5e2c",
+    "lastAttemptAt": "2026-10-18T13:12:40.780Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3422,15 +3422,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.2.1&pw_fp=c65c1726743969ef9073b69e"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.2.2&pw_fp=b0808d6ecf2a4c6a4b87a86a"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a779615cccc51ef26e5948f7e430a5f7977942f7",
-    "lastAttemptAt": "2026-10-18T12:40:23.168Z",
+    "lastAttemptRevision": "69ff1c2b2e09bcf8490e6ef6662e5d82a29ae67c",
+    "lastAttemptAt": "2026-10-18T13:12:28.874Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3454,10 +3454,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "3ccdcf6a89eca59f02747fd960f7122bd363a549",
-    "lastAttemptAt": "2026-10-18T12:11:18.433Z",
-    "revision": "3ccdcf6a89eca59f02747fd960f7122bd363a549",
-    "qualityScore": 75,
+    "lastAttemptRevision": "a754d95e7007b1202694aec1625fd8aba10ef3c1",
+    "lastAttemptAt": "2026-10-18T13:12:16.141Z",
+    "revision": "a754d95e7007b1202694aec1625fd8aba10ef3c1",
+    "qualityScore": 77,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3469,7 +3469,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "b62da9c2f9c9cb7ad48a650bb71f0d0b7b75d545f439e8b1d66ab489219ca73e",
+    "sha256": "d1ece120a4a1f32266b3fc1df1380d5fb8f6ead9eb2c71d9d6f299e0fc219acd",
     "imageVersion": 2
   },
   "crossline-5x5": {
