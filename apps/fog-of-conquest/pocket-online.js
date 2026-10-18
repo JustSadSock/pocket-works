@@ -10,6 +10,10 @@ const controls=document.createElement('div');controls.id='onlineLobbyControls';
 const start=document.createElement('button');start.type='button';start.className='game-btn';start.textContent='Начать матч';start.disabled=true;
 const copyCode=document.createElement('button');copyCode.type='button';copyCode.className='game-btn';copyCode.textContent='Копировать код';copyCode.disabled=true;
 controls.append(start,copyCode);lobby.append(controls);
+const resume=document.createElement('button');
+resume.id='fogResumeRoom';resume.type='button';resume.className='game-btn';
+resume.textContent='Вернуться в интернет-комнату';resume.hidden=true;
+$('startButtons')?.append(resume);
 const turn=document.createElement('span');turn.id='onlineTurnStatus';turn.setAttribute('aria-live','polite');
 $('controls')?.prepend(turn);
 let client=null,room=null,view=null,lock=false,joined=false,connectPromise=null,selectedSize='medium',active=false;
@@ -22,10 +26,12 @@ const scopedStore=base=>({
 });
 const memberStore=scopedStore(localStorage),guestStore=scopedStore(sessionStorage);
 const storageFor=identity=>identity?.complete?memberStore:guestStore;
+const storedRoom=storage=>{try{return JSON.parse(storage.getItem('pocket-net:'+location.origin+'/pocketnet')||'null')}catch{return null}};
 const message=text=>{status.textContent=text;};
 const roomCode=()=>room?.roomId?.slice(0,8).toUpperCase()||'';
 const canIssue=()=>Boolean(joined&&active&&view?.game?.phase==='battle'&&view.game.state.currentPlayer===view.side&&!lock&&client?.socket?.readyState===WebSocket.OPEN);
 function refresh(){
+ resume.hidden=!client?.roomId;
  start.disabled=!(room&&view?.phase==='lobby'&&view.host===view.viewerId&&view.seats.length===2&&client?.socket?.readyState===WebSocket.OPEN);
  copyCode.disabled=!room;
  if(view?.phase==='lobby')message(view.seats.length===2?'Оба полководца в комнате · '+roomCode():'Код '+roomCode()+' · ожидается соперник');
@@ -45,6 +51,7 @@ function installListeners(net){
  net.on('room_joined',payload=>{
    if(payload.gameId!=='fog-of-conquest')return;
    room=payload;view=payload.state;lock=false;joined=true;
+   resume.hidden=false;
    if(view.game){active=true;window.FogApplyOnlineView?.(view);}
    else{active=false;$('startPanel').style.display='none';lobby.style.display='flex';}
    refresh();
@@ -60,8 +67,8 @@ function installListeners(net){
  net.on('presence',packet=>{if(room)room.players=packet.players;refresh();});
  net.on('disconnected',()=>{joined=false;lock=false;message('Связь прервана · восстанавливается автоматически');refresh();});
  net.on('error',error=>{lock=false;message('Ошибка PocketNet: '+String(error?.message||error?.code||'нет соединения'));refresh();});
- net.on('room_closed',()=>{joined=false;room=null;view=null;lock=false;active=false;message('Комната закрыта.');refresh();});
- net.on('room_kicked',()=>{joined=false;room=null;view=null;lock=false;active=false;message('Доступ к комнате закрыт.');refresh();});
+ net.on('room_closed',()=>{joined=false;room=null;view=null;lock=false;active=false;resume.hidden=true;window.FogLeaveOnline?.();$('startPanel').style.display='flex';lobby.style.display='none';message('Комната закрыта.');refresh();});
+ net.on('room_kicked',()=>{joined=false;room=null;view=null;lock=false;active=false;resume.hidden=true;window.FogLeaveOnline?.();$('startPanel').style.display='flex';lobby.style.display='none';message('Доступ к комнате закрыт.');refresh();});
 }
 async function ensure(){
  if(client&&client.socket?.readyState===WebSocket.OPEN)return client;
@@ -108,7 +115,9 @@ function issue(action){
 function leave(){
  try{if(client?.roomId&&client.socket?.readyState===WebSocket.OPEN)client.leaveRoom();}
  catch{}
- room=null;view=null;active=false;lock=false;joined=false;
+ // Explicit leave also clears local recovery when the socket is offline.
+ if(client){client.roomId=null;client.persist();}
+ room=null;view=null;active=false;lock=false;joined=false;resume.hidden=true;
  window.FogLeaveOnline?.();
  $('victoryOverlay').style.display='none';
  $('waitOverlay').style.display='none';
@@ -117,6 +126,12 @@ function leave(){
 }
 start.addEventListener('click',()=>{if(start.disabled)return;try{client.sendGame({type:'start',size:selectedSize,beta:false});start.disabled=true;message('Создаём поле сражения…');}catch(e){message(String(e.message||e));}});
 copyCode.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(roomCode());message('Код '+roomCode()+' скопирован.');}catch{input.value=roomCode();input.select();message('Код выделен · скопируй его.');}});
+resume.addEventListener('click',async()=>{
+ if(!resume.hidden){
+   try{await ensure();message('Восстанавливаем интернет-комнату…');}
+   catch(e){message('Возврат не удался: '+String(e?.message||e));}
+ }
+});
 window.FogPocketNet={create,join,issue,leave,canIssue,refresh};
 // Visible lobby actions become usable only after the online bridge has loaded.
 $('createRoomBtn').disabled=false;
@@ -126,14 +141,16 @@ for(const id of ['settingsMenuBtn','victoryMenuBtn','victoryOkBtn'])$(id)?.addEv
 void getPocketIdentity({force:true}).then(identity=>{
  const storage=storageFor(identity);
  try{
-   const saved=JSON.parse(storage.getItem('pocket-net:'+location.origin+'/pocketnet')||'null');
-   if(saved?.roomId&&saved?.identityKey===pocketIdentitySessionKey(identity))
-     void ensure().catch(()=>{});
+   const saved=storedRoom(storage);
+   if(saved?.roomId&&saved?.identityKey===pocketIdentitySessionKey(identity)){
+     resume.hidden=false;
+     void ensure().catch(()=>{resume.hidden=false;});
+   }
  }catch{}
 }).catch(()=>{});
 document.addEventListener('pocket-id:changed',event=>{
  if(!client||client.identityKey===pocketIdentitySessionKey(event.detail?.user))return;
- client.close();client=null;room=null;view=null;active=false;lock=false;joined=false;
+ client.close();client=null;room=null;view=null;active=false;lock=false;joined=false;resume.hidden=true;
  window.FogLeaveOnline?.();lobby.style.display='none';
  $('startPanel').style.display='flex';$('newGameOptions').style.display='flex';
  message('Профиль изменён. Сетевая сессия завершена.');refresh();
