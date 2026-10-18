@@ -10,7 +10,7 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),keyboard=new GameKeyboard(),stick
 const quiet=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false;
 let world,renderer,player,phase='menu',stress=0,energy=100,ammo=6,reserve=18,elapsed=0,shotTime=0,reloadTime=0,reloadAt=0;
 let torch=true,enemies=[],upgrades={},collected=0,kills=0,sectorBest=0,spawnAt=4,saveAt=6,worldAt=0,noise=null;
-let lastFrame=performance.now(),moveSteps=0,moves=0,attempts=0,blocked=0,joystickPointer=null,lookPointer=null,lastLook=null,mouseDrag=null,sprintHeld=false,sound=true,noticeUntil=0,upgradeChoices=[],lastPresenceCue=0;
+let qaVisualMode=false,lastFrame=performance.now(),moveSteps=0,moves=0,attempts=0,blocked=0,joystickPointer=null,lookPointer=null,lastLook=null,mouseDrag=null,sprintHeld=false,sound=true,noticeUntil=0,upgradeChoices=[],lastPresenceCue=0;
 const audio=createSoundscape();
 try{sound=JSON.parse(localStorage.getItem(OPTIONS)||'{}').sound!==false}catch{}
 audio.setEnabled(sound);
@@ -39,7 +39,7 @@ function overlay(id){for(const n of ['menu','pauseOverlay','inventoryOverlay','e
  const el=$(n);if(!el)continue;el.hidden=n!==id;el.classList.toggle('is-open',n===id)}}
 function notify(msg,duration=2.6){const h=$('hint');if(!h)return;h.textContent=msg;h.classList.add('visible');noticeUntil=elapsed+duration}
 function start(data=null){
- setup(data?.seed??newSeed(),data);phase='play';overlay(null);lastFrame=performance.now();audio.activate();audio.event('radio');
+ qaVisualMode=false;setup(data?.seed??newSeed(),data);phase='play';overlay(null);lastFrame=performance.now();audio.activate();audio.event('radio');
  notify(data?'Ты опять здесь.':'WASD — ходьба · Мышь — обзор · Клик по игре — захват мыши',4);
  focusScene();
  if(data?.phase==='upgrade'&&upgradeChoices.length)openUpgrade(true);else persist()
@@ -229,7 +229,7 @@ function showHud(){
 }
 function draw(time){
  let dt=clamp((time-lastFrame)/1000,0,.65);lastFrame=time;
- if(phase==='play')simulation(dt);
+ if(phase==='play'&&!qaVisualMode)simulation(dt);
  if(world&&renderer&&!renderer.lost){
   const drops=world.nearby(player.x,player.z,17).flatMap(c=>c.drops).filter(p=>!world.taken.has(p.id)&&Math.hypot(p.x-player.x,p.z-player.z)<17);
   renderer.draw(world,player,enemies,drops,torch,elapsed,stress/maxStress(),shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)
@@ -350,7 +350,7 @@ try{
    save:persist,
    // Visual development mode: deterministic camera positions and mesh diagnostics.
    visual:()=>({seeds:VISUAL_SEEDS,scenes:VISUAL_SCENES,...visualCoverage(world,renderer)}),
-   startSeed:seed=>{if(!VISUAL_SEEDS.includes(seed))return false;start({seed});return true},
+   startSeed:seed=>{if(!VISUAL_SEEDS.includes(seed))return false;start({seed});qaVisualMode=true;elapsed=2;enemies=[];return true},
    bookmark:scene=>{
     const b=visualBookmark(world,scene);
     if(!b||!world.canStand(b.x,b.z))return null;

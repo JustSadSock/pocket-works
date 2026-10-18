@@ -64,7 +64,23 @@ before horror. Distinct irregular silhouettes; not a generic concrete maze,
 sterile asset store, neon/glassmorphism, glossy sci-fi or heavy filters
 hiding simplistic assets.
 
-### 2.1.0 — Baseline, references and visual grammar (do first)
+### 2.1.0 — Baseline, references and visual grammar (first implementation released)
+- [x] Source audit and offline mesh-generation comparison are recorded
+      in [VISUAL_BASELINE.md](./VISUAL_BASELINE.md); shader and FOV limitations
+      are documented rather than presented as already solved.
+- [x] Fixed seeds 222 / 413 / 8787, QA-only scene bookmarks for 7 room types,
+      renderer geometry/build/upload counters and Playwright screenshot
+      artifact capture flow are implemented.
+- [x] First visible mesh detailing: fabric cushions, glass cabinet compartments,
+      fridge/wardrobe panel relief, enamel bath/sink taps, teacups, ceiling
+      fittings, hall cornices and authentic door trim. 9–11-cell detail LOD.
+- [x] Initial 120-seed collision-preservation checks and three-seed geometry
+      finiteness/coverage test.
+- [ ] Actually run and visually review the reference browser screenshots;
+      phone/WebKit and GPU timing are still unverified. Initial scene now
+      contains ~18.6k triangles vs ~13.6k before: optimize mesh caching
+      and upload spikes before multiplying decoration further.
+
 - [ ] Capture repeatable **before** frames and video: starting corridor,
       kitchen, lived-in room, bathroom, darkness/flashlight, enemy encounter,
       weapon handling and a freshly rewritten room. Fix three seeds and
