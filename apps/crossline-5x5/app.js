@@ -6,6 +6,7 @@ import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DIRECTIONS,STEPS,MAX_ROUNDS,initialMatch,validatePlan,simulateRound,aiPlan} from './engine.js';
 import {paintArena,playArenaBeat,frameBefore,drawArenaCanvas,timing} from './combat-visuals.js';
 import {trySetCommand,trySwapCommand,removeCommand,controlsFor,previewOrders,paintPlanOverlay,describeIssue} from './planning.js';
+import {HISTORY_KEY,getHistory,saveHistory,deleteHistory,captureHistory,commandLabel,outcomeText,analyzeBeat,exportMatch} from './replay-archive.js';
 const previewRequested=new URLSearchParams(location.search).get(DEV_QUERY);
 const IS_DEV_FRAME=window.parent!==window&&DEV_SCENES.some(s=>s.id===previewRequested);
 if(!IS_DEV_FRAME)installMobileRuntime();
@@ -33,7 +34,7 @@ const storedTheme=read('theme','dark');
 document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
 let plan=[],editingSlot=null,attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
-let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0;
+let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0,archiveEntry=null,devHistory=[];
 let roomVersion='v1',opponentDisconnected=false,pendingForfeitLeave=false,forfeitWatchdog=0;
 const roomQuery=new URLSearchParams(location.search).get('room')?.trim()||'';
 const latest=()=>mode==='online'?server:offline;
@@ -59,7 +60,7 @@ function soundFX(type='tap'){
 }
 function buzz(v=8){try{navigator.vibrate?.(v)}catch{}}
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600)}
-function show(view){screen=view;for(const id of ['menu','difficultyView','lobby','play','replay'])$(id).classList.toggle('hidden',view!==id);if(view==='play')render();}
+function show(view){screen=view;for(const id of ['menu','difficultyView','lobby','play','replay','archive'])$(id).classList.toggle('hidden',view!==id);if(view==='play')render();if(view==='menu')refreshArchiveCount();if(view==='archive')paintArchive();}
 function modal(kicker,title,body,main,alt,third){
  modalOpen=true;const data=[['modalMain',main],['modalAlt',alt],['modalThird',third]];
  $('modalKicker').textContent=kicker;$('modalTitle').textContent=title;$('modalBody').textContent=body;
@@ -77,6 +78,80 @@ function confirmReturn(){
 }
 function showRules(){modal('ПРАВИЛА','Предугадай противника','Каждый раунд оба игрока скрытно выбирают 5 команд. Перемещения выполняются одновременно, затем срабатывают атаки и щиты. Атака один раз за раунд: отмечай соседние направления (и свою клетку). Щит один раз за раунд. Направление, выбранное для атаки, нельзя использовать для движения в этом плане, и наоборот. В 4-м раунде после первого шага внешний контур обрушится.',{label:'Понятно',action:()=>{}});}
 function storeOffline(){if(offline)write('saved',JSON.stringify({mode,offline,draft:mode==='hotseat'&&offline.pending?.A&&offline.turn==='A'?[]:plan}));}
+function matchSeriesId(){
+ try{return crypto.randomUUID()}catch{return 'match-'+Date.now()+'-'+Math.floor(Math.random()*1e9)}
+}
+function readArchive(){return IS_DEV_FRAME?devHistory:getHistory(localStorage,HISTORY_KEY)}
+function refreshArchiveCount(){
+ const count=readArchive().length;
+ $('archiveCount').textContent=count?' · '+count:'';
+}
+function playerLabels(){
+ if(mode==='online')return ['A','B'].map((side,i)=>server?.players?.find(p=>p.id===server.seats?.[i])?.name||'Игрок '+side);
+ return ['Синий',mode==='solo'?'ИИ':'Оранжевый'];
+}
+function currentReplayEntry(){
+ if(archiveEntry)return archiveEntry;
+ const m=game();if(!m)return null;
+ return {id:'current',mode,players:playerLabels(),score:score(),match:m};
+}
+function rememberFinished(){
+ if(IS_DEV_FRAME||mode==='archive'||game()?.outcome==null)return;
+ const item=captureHistory(game(),{mode,roomId,seriesId:mode==='online'?'':offline?.seriesId,
+  score:score(),players:playerLabels()});
+ if(!item)return;
+ const saved=saveHistory(localStorage,item,HISTORY_KEY);
+ if(!saved.saved)toast('Память заполнена — экспортируй запись JSON');
+ refreshArchiveCount();
+}
+function archiveWhenEmpty(){
+ $('archiveEmpty').classList.remove('hidden');
+ $('archiveList').replaceChildren();
+}
+function paintArchive(){
+ if(screen!=='archive')return;
+ const history=readArchive(),host=$('archiveList');
+ $('archiveEmpty').classList.toggle('hidden',history.length>0);
+ if(!history.length){host.replaceChildren();return}
+ host.innerHTML=history.map((item,index)=>{
+  const when=new Date(item.savedAt||0);
+  const stamp=Number.isFinite(when.getTime())?when.toLocaleDateString('ru-RU',{day:'2-digit',month:'short',year:'numeric'}):'Сохранённый матч';
+  const rounds=item.match.replays.length,winner=outcomeText(item.match.outcome);
+  const opponents=esc((item.players||[]).join(' / ')||'5×5 Arena');
+  return '<article class="archive-row" data-record="'+index+'"><div class="archive-row-info">'+
+   '<small>'+esc(stamp)+' · '+esc(item.mode==='online'?'Сеть':item.mode==='hotseat'?'Вдвоём':'ИИ')+' · '+rounds+' раунд.</small>'+
+   '<strong>'+esc(winner)+'</strong><span>'+opponents+'</span></div>'+
+   '<div class="archive-row-actions"><button data-archive-play="'+index+'" '+(!rounds?'disabled ':'')+'aria-label="Смотреть матч '+(index+1)+'">'+(rounds?'▶ Повтор':'Без раундов')+'</button>'+
+   '<button data-archive-export="'+index+'" aria-label="Экспорт JSON">↓</button>'+
+   '<button data-archive-remove="'+index+'" aria-label="Удалить запись">×</button></div></article>';
+ }).join('');
+}
+function openArchive(){
+ if(mode==='online'&&server?.phase==='planning'){toast('Закончи сетевую партию перед открытием архива');return}
+ archiveEntry=null;pauseReplay();show('archive');soundFX('tap');
+}
+function viewHistory(index){
+ const item=readArchive()[index];if(!item)return;
+ if(!item.match.replays.length){toast('Партия завершилась до первого раунда: доступен JSON');return}
+ archiveEntry=item;
+ // Read-only snapshot, never overwrites unfinished solo state in localStorage.
+ leaveNet(false);
+ offline={match:JSON.parse(JSON.stringify(item.match)),score:item.score,phase:'finished',pending:{A:null,B:null},turn:'A'};
+ mode='archive';openReplay();$('replayBack').textContent='← Архив';
+}
+function exportEntry(entry){
+ const serialized=exportMatch(entry);if(!serialized){toast('Нет данных записи');return}
+ download(serialized,'5x5-arena-'+(entry?.id==='current'?'session':String(entry.id).replace(/[^a-z0-9-]/gi,'-').slice(0,48))+'.json','application/json');
+ toast('Полный матч сохранён');
+}
+function removeArchived(index){
+ const record=readArchive()[index];if(!record)return;
+ modal('АРХИВ','Удалить эту запись?',outcomeText(record.match.outcome)+' · '+record.match.replays.length+' раунд(ов). Действие нельзя отменить.',
+  {label:'Отмена',action:()=>{}},{label:'Удалить навсегда',action:()=>{
+   const result=deleteHistory(localStorage,record.id,HISTORY_KEY);
+   if(!result.saved)toast('Не удалось удалить запись');else{paintArchive();refreshArchiveCount()}
+  }});
+}
 function resumeOffer(){
  let cached;try{cached=JSON.parse(read('saved','null'))}catch{}
  document.getElementById('resume')?.remove();
@@ -124,7 +199,7 @@ function leaveToMenu(force=false){
  mode='menu';show('menu');resumeOffer();
 }
 function localStart(kind){
- leaveNet(false);gameToken++;clearTimeout(replayTimer);mode=kind;offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:initialMatch(),score:{A:0,B:0}};
+ leaveNet(false);gameToken++;clearTimeout(replayTimer);mode=kind;offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:initialMatch(),score:{A:0,B:0},seriesId:matchSeriesId()};
  plan=[];editingSlot=null;attackMode=false;animating=false;showingOutcome=false;show('play');storeOffline();soundFX('tap');
 }
 function handoff(){
@@ -149,6 +224,7 @@ function applyRemote(next,version=roomVersion){
  if(!next||!['lobby','planning','finished'].includes(next.phase))return;
  if(!['v1','v2'].includes(version)){toast('Версия комнаты несовместима с этим приложением');leaveNet();return;}
  if(pendingForfeitLeave&&next.phase==='finished'){
+  server=next;rememberFinished();
   pendingForfeitLeave=false;clearTimeout(forfeitWatchdog);
   leaveToMenu(true);toast('Сдача записана. Победа присуждена сопернику.');return;
  }
@@ -407,7 +483,7 @@ async function animateRecord(record){
 }
 function finish(){
  if(showingOutcome||screen!=='play')return;
- showingOutcome=true;
+ showingOutcome=true;rememberFinished();
  const winner=game()?.outcome,name=winner==='draw'?'Ничья':winner==='A'?'Победа игрока А':'Победа игрока Б';
  const termination=game()?.termination;
  const narrative=termination?.type==='forfeit'?(termination.by===side()?'Вы сдались. Победа засчитана сопернику.':'Соперник сдался. Победа записана в счёт.'):winner==='draw'?'Оба плана привели к равному исходу.':'Пять ходов решают больше, чем кажется.';
@@ -427,11 +503,11 @@ function finish(){
 function rematch(){
  showingOutcome=false;gameToken++;plan=[];attackMode=false;
  if(mode==='online'){send({type:'rematch'});render();}
- else if(offline){offline.match=initialMatch();offline.pending={A:null,B:null};offline.phase='planning';offline.turn='A';show('play');storeOffline();}
+ else if(offline){offline.match=initialMatch();offline.seriesId=matchSeriesId();offline.pending={A:null,B:null};offline.phase='planning';offline.turn='A';show('play');storeOffline();}
 }
 function openReplay(){
  if(!game()?.replays?.length){toast('Повтор появится после первого раунда');return;}
- gameToken++;animating=false;animFrame=null;show('replay');replayRound=game().replays.length-1;replayIndex=0;replayPaused=true;paintReplayOptions();paintReplay();soundFX('tap');
+ gameToken++;animating=false;animFrame=null;show('replay');$('replayBack').textContent=mode==='archive'?'← Архив':'← Матч';replayRound=game().replays.length-1;replayIndex=0;replayPaused=true;paintReplayOptions();paintReplay();soundFX('tap');
 }
 function paintReplayOptions(){
  $('replayRound').innerHTML=game().replays.map((r,i)=>'<option value="'+i+'">РАУНД '+r.round+'</option>').join('');
@@ -442,6 +518,32 @@ function replayFrame(){
  const rec=currentRecord();if(!rec)return null;
  return replayIndex===0?{units:rec.begin,edgesCollapsed:rec.round===4?false:rec.round>4,events:[],beat:0}:rec.frames[Math.min(replayIndex-1,rec.frames.length-1)];
 }
+function analyzeReplayPresentation(rec){
+ const info=analyzeBeat(rec,replayIndex),names=archiveEntry?.players||playerLabels();
+ if(!info){$('replayAnalysis').replaceChildren();return}
+ $('replayAnalysis').innerHTML=['A','B'].map((side,idx)=>{
+  const projected=previewOrders({round:rec.round,units:rec.begin,edgesCollapsed:rec.round>4},side,rec.plans[side]).steps;
+  const cells=Array.from({length:STEPS},(_,i)=>{
+   const expected=projected[i]?.to,actual=rec.frames[i]?.units?.[side],executed=!!rec.frames[i];
+   const different=executed&&expected&&actual&&(expected.x!==actual.x||expected.y!==actual.y);
+   const location=p=>p?(p.x+1)+','+(p.y+1):'–';
+   return '<button data-analysis-beat="'+(i+1)+'" class="analysis-beat'+(replayIndex===i+1?' is-current':'')+
+    (different?' is-different':'')+(!executed?' is-unplayed':'')+'" '+(!executed?'disabled':'')+
+    ' aria-label="'+side+' шаг '+(i+1)+'" aria-pressed="'+(replayIndex===i+1)+'"><small>'+(i+1)+'</small>'+
+    '<strong>'+esc(commandLabel(rec.plans[side][i]))+'</strong><span>'+location(expected)+' → '+location(executed?actual:null)+'</span></button>';
+  }).join('');
+  return '<div class="analysis-side '+side.toLowerCase()+'"><div class="analysis-side-head"><strong><i></i>'+
+   esc(names[idx]||'Игрок '+side)+'</strong><small>'+
+   (replayIndex===0?'До исполнения':esc(info.projected[side].verdict))+
+   '</small></div><div class="analysis-beats">'+cells+'</div></div>';
+ }).join('')+'<p class="analysis-explainer">План → факт (столбец, строка). Расчёт маршрута не предсказывает действия соперника; оба плана раскрываются после раунда.</p>';
+ $('replayStepBack').disabled=replayIndex<=0;
+ $('replayStepForward').disabled=replayIndex>=rec.frames.length;
+}
+function seekReplay(index){
+ const rec=currentRecord();if(!rec)return;
+ pauseReplay();replayIndex=Math.max(0,Math.min(rec.frames.length,index));paintReplay();
+}
 function paintReplay(){
  const rec=currentRecord();if(!rec)return;const frame=replayFrame();
  drawBoard($('replayBoard'),frame.units,frame.edgesCollapsed,frame.events,false,rec.round);
@@ -449,6 +551,7 @@ function paintReplay(){
  $('replayLabel').textContent=replayIndex===0?'ПЕРЕД ИСПОЛНЕНИЕМ':('ШАГ '+frame.beat+' / '+rec.frames.length+' · '+rec.frames[Math.max(0,replayIndex-1)].events.map(e=>e.type==='hit'?'ПОПАДАНИЕ':e.type==='block'?'БЛОК':e.type==='collapse'?'ОБРУШЕНИЕ':'').filter(Boolean).join(' '));
  $('replayPlay').textContent=replayPaused?'▶ Играть':'Ⅱ Пауза';
  $('replaySpeed').textContent=replaySpeed+'×';
+ analyzeReplayPresentation(rec);
 }
 function pauseReplay(){
  replayPaused=true;replayPlaybackId++;clearTimeout(replayTimer);
@@ -481,42 +584,41 @@ function download(data,filename,mime){
  const url=URL.createObjectURL(new Blob([data],{type:mime})),a=document.createElement('a');
  a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
-function exportReplay(){const g=game();if(!g?.replays?.length)return;download(JSON.stringify({format:'crossline-5x5',version:1,match:g},null,2),'5x5-arena-'+Date.now()+'.json','application/json');toast('Повтор сохранён')}
+function exportReplay(){const item=currentReplayEntry();if(item)exportEntry(item)}
 async function videoReplay(){
  if(recording)return;
- if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){
-  toast('Этот браузер не поддерживает WebM');return;
- }
- const rec=currentRecord();if(!rec)return;
- const button=$('replayVideo');recording=true;button.disabled=true;button.textContent='ЗАПИСЬ…';pauseReplay();
+ if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){toast('WebM недоступен — используй JSON');return}
+ const rounds=game()?.replays||[];if(!rounds.length){toast('Нет записанных раундов');return}
+ const button=$('replayVideo');recording=true;button.disabled=true;button.textContent='ЗАПИСЬ МАТЧА…';pauseReplay();
  let recorder,stream;
  try{
   const canvas=document.createElement('canvas');canvas.width=800;canvas.height=840;
-  const ctx=canvas.getContext('2d'),clips=[];if(!ctx)throw Error('Не удаётся рисовать видеоповтор');
+  const ctx=canvas.getContext('2d'),clips=[];if(!ctx)throw Error('Не удалось открыть Canvas');
   stream=canvas.captureStream(30);
   const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
   if(!mime)throw Error('Кодек WebM недоступен');
   recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000});
   const finished=new Promise((resolve,reject)=>{
-   recorder.ondataavailable=e=>{if(e.data.size)clips.push(e.data)};
-   recorder.onstop=resolve;recorder.onerror=()=>reject(Error('Ошибка MediaRecorder'));
+   recorder.ondataavailable=e=>{if(e.data?.size)clips.push(e.data)};
+   recorder.onstop=resolve;recorder.onerror=()=>reject(Error('Ошибка видеозаписи'));
   });
   recorder.start(100);
-  for(let i=0;i<rec.frames.length;i++){
-   const before=frameBefore(rec,i),frame=rec.frames[i],duration=timing(1,false),steps=24;
+  // The complete match is encoded, including rounds not currently selected.
+  for(const round of rounds)for(let i=0;i<round.frames.length;i++){
+   const before=frameBefore(round,i),frame=round.frames[i],duration=timing(1,false),steps=24;
    for(let n=0;n<=steps;n++){
-    drawArenaCanvas(ctx,before,frame,rec.round,n/steps,{step:frame.beat});
+    drawArenaCanvas(ctx,before,frame,round.round,n/steps,{step:frame.beat});
     await new Promise(resolve=>setTimeout(resolve,duration/steps));
    }
   }
   recorder.stop();await finished;
-  if(!clips.length)throw Error('Нет данных видеозаписи');
-  download(new Blob(clips,{type:mime}),'5x5-arena-round-'+rec.round+'.webm',mime);
-  toast('Видеоповтор сохранён');
+  if(!clips.length)throw Error('Нет данных WebM');
+  download(new Blob(clips,{type:mime}),'5x5-arena-full-match.webm',mime);
+  toast('Видео всего матча сохранено');
  }catch(error){toast(error?.message||'Ошибка записи')}
  finally{
   try{if(recorder?.state==='recording')recorder.stop()}catch{}
-  stream?.getTracks().forEach(t=>t.stop());recording=false;button.disabled=false;button.textContent='● WebM';
+  stream?.getTracks().forEach(t=>t.stop());recording=false;button.disabled=false;button.textContent='● WebM матча';
  }
 }
 $('themeToggle').onclick=()=>{
@@ -525,6 +627,15 @@ $('themeToggle').onclick=()=>{
  document.querySelector('meta[name="theme-color"]').content=next==='light'?'#f8fafc':'#05060d';
  soundFX('tap');
 };
+$('archiveOpen').onclick=openArchive;
+$('archiveBack').onclick=()=>{archiveEntry=null;show('menu')};
+$('archiveList').addEventListener('click',event=>{
+ const button=event.target.closest('button');if(!button)return;
+ const {archivePlay,archiveExport,archiveRemove}=button.dataset;
+ if(archivePlay!==undefined)viewHistory(Number(archivePlay));
+ else if(archiveExport!==undefined){const record=readArchive()[Number(archiveExport)];if(record)exportEntry(record)}
+ else if(archiveRemove!==undefined)removeArchived(Number(archiveRemove));
+});
 $('solo').onclick=()=>{show('difficultyView');soundFX('tap')};
 $('difficultyBack').onclick=()=>show('menu');
 document.querySelectorAll('[data-difficulty-choice]').forEach(b=>b.onclick=()=>{
@@ -549,15 +660,22 @@ $('moveEarlier').onclick=()=>reorderSlot(-1);
 $('moveLater').onclick=()=>reorderSlot(1);
 $('removeSelected').onclick=removeSlot;
 $('endEdit').onclick=()=>{editingSlot=null;attackMode=false;attackDirs=[];soundFX('tap');render()};
-$('replayBack').onclick=()=>{pauseReplay();show('play');if(latest()?.phase==='finished'){showingOutcome=false;finish();}};
+$('replayBack').onclick=()=>{pauseReplay();if(mode==='archive'){archiveEntry=null;show('archive');return;}show('play');if(latest()?.phase==='finished'){showingOutcome=false;finish();}};
 $('replayRound').onchange=()=>{replayRound=Number($('replayRound').value);replayIndex=0;pauseReplay();paintReplay()};
-$('replaySeek').oninput=()=>{replayIndex=Number($('replaySeek').value);pauseReplay();paintReplay()};
+$('replaySeek').oninput=()=>seekReplay(Number($('replaySeek').value));
+$('replayStepBack').onclick=()=>seekReplay(replayIndex-1);
+$('replayStepForward').onclick=()=>seekReplay(replayIndex+1);
+$('replayAnalysis').addEventListener('click',event=>{
+ const button=event.target.closest('[data-analysis-beat]');
+ if(button)seekReplay(Number(button.dataset.analysisBeat));
+});
 $('replayPlay').onclick=toggleReplay;$('replaySpeed').onclick=()=>{const list=[1,2,3,5];replaySpeed=list[(list.indexOf(replaySpeed)+1)%list.length];paintReplay()};
 $('replaySave').onclick=exportReplay;$('replayVideo').onclick=videoReplay;
 window.addEventListener('keydown',e=>{
  if(/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName||''))return;
- if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
- if(screen!=='play'||modalOpen)return;
+ if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='archive')show('menu');else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
+ if(screen==='replay'&&!modalOpen&&['ArrowLeft','ArrowRight'].includes(e.key)){seekReplay(replayIndex+(e.key==='ArrowLeft'?-1:1));e.preventDefault();return}
+  if(screen!=='play'||modalOpen)return;
  if(e.key>='1'&&e.key<='5'){selectSlot(Number(e.key)-1);e.preventDefault();return}
  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
  if(map[e.key]){direction(map[e.key]);e.preventDefault()}
@@ -579,9 +697,9 @@ function startFromSession(){
  if(restored.roomId)connect('resume');
 }
 if(!IS_DEV_FRAME){
- const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.3.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+ const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.6.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
  mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
- checkNet();resumeOffer();
+ checkNet();resumeOffer();refreshArchiveCount();
 }else{
  document.body.classList.add('arena-dev-child');
  window.addEventListener('keydown',event=>{
@@ -661,6 +779,12 @@ function initDevPreview(requested){
  offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:initialMatch(),score:{A:2,B:1}};
  if(scene==='menu'){show('menu');return;}
  if(scene==='difficulty'){show('difficultyView');return;}
+  if(scene==='archive-empty'){devHistory=[];show('archive');return;}
+  if(scene==='archive-list'){
+   const sample=devCombat('collapse').match;
+   devHistory=[captureHistory(sample,{mode:'hotseat',seriesId:'dev-archive',score:{A:1,B:1},players:['Синий','Оранжевый']})];
+   show('archive');return;
+  }
  if(scene==='rules'){show('menu');showRules();return;}
  if(scene==='sounds'){devSounds();return;}
  if(scene.startsWith('lobby-')){devLobby(scene);return;}
@@ -683,11 +807,11 @@ function initDevPreview(requested){
   show('play');finish();return;
  }
  if(scene==='toast'){show('play');toast('План успешно подтверждён');return;}
- if(scene==='replay'||scene==='replay-end'||scene==='replay-playing'){
+ if(scene==='replay'||scene==='replay-end'||scene==='replay-playing'||scene==='replay-analysis'){
   offline.match=devCombat('move').match;
   offline.phase=offline.match.outcome?'finished':'planning';
   show('play');openReplay();
-  if(scene==='replay-end'){replayIndex=currentRecord().frames.length;paintReplay();}
+  if(scene==='replay-end'||scene==='replay-analysis'){replayIndex=currentRecord().frames.length;paintReplay();}
   if(scene==='replay-playing')toggleReplay();
   return;
  }
