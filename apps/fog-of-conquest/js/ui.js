@@ -2030,6 +2030,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     state.gold={1:g.state.gold[1]||0,2:g.state.gold[2]||0};
     state.fog={[onlineSide]:g.state.fog[onlineSide]};
     state.seen={[onlineSide]:g.state.seen[onlineSide]};
+    state.lastSeen={[onlineSide]:g.state.lastSeen?.[onlineSide]||{}};
     state.log={[onlineSide]:g.state.log[onlineSide]||[]};
     state.grace=g.state.grace||{1:null,2:null};
     sel=null;zoneMap=null;zoneList=[];spawnMode=false;onlineBuilding=null;
