@@ -59,7 +59,9 @@ test('tutorial and game marks do not alter rules or authoritative PocketNet snap
 });
 test('settings affect real WebAudio gain/haptic and persist; no visual-only toggles',async()=>{
  const app=await readFile(new URL('../app.js',import.meta.url),'utf8');
- assert.match(app,/volume\/70/);
+ assert.match(app,/arenaSoundscape\.play\(type,\{enabled:sound,volume,preview:IS_DEV_FRAME\}\)/);
+ const audio=await readFile(new URL('../audio-design.js',import.meta.url),'utf8');
+ assert.match(audio,/clamp\(Number\(volume\)\|\|0,0,100\)\/140/);
  assert.match(app,/if\(!haptics\)return/);
  assert.match(app,/write\('volume',volume\)/);
  assert.match(app,/write\('sound',sound\?'on':'off'\)/);
