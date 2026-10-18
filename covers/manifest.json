@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "378eae6610d3eef4c90faad817370c7e444d5e2c",
+    "revision": "3517528f2925a9102ca7d22c2b882f2fc332473d",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "378eae6610d3eef4c90faad817370c7e444d5e2c",
-    "lastAttemptAt": "2026-10-18T13:12:40.780Z",
+    "lastAttemptRevision": "3517528f2925a9102ca7d22c2b882f2fc332473d",
+    "lastAttemptAt": "2026-10-18T13:50:58.394Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3434,20 +3434,20 @@
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
-    "revision": "48de9e4c7e54def25fa8382de398743c37b49b58",
-    "qualityScore": 80,
+    "revision": "9006f819868185dfaccb91bcd10dc528342b5ed6",
+    "qualityScore": 77,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "76f85b538d517a549955976a0a6b9b513920636270cbfc8c8619300e51a81c8c",
+    "sha256": "ff3978e6abb7624660ed43aa4630ecdb6b62b24e3a20cadcf7892f1622c9482d",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "48de9e4c7e54def25fa8382de398743c37b49b58",
-    "lastAttemptAt": "2026-10-18T12:43:30.673Z"
+    "lastAttemptRevision": "9006f819868185dfaccb91bcd10dc528342b5ed6",
+    "lastAttemptAt": "2026-10-18T13:50:35.710Z"
   },
   "not-dead-yet": {
     "note": "No frame passed image-content checks",
@@ -3473,7 +3473,7 @@
     "imageVersion": 2
   },
   "crossline-5x5": {
-    "revision": "3d565623bde70ab15e91a22f2f46b8f770774dd3",
+    "revision": "4328690be5cc03c4e3446dbf0b290064fba95cd6",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
@@ -3485,8 +3485,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "3d565623bde70ab15e91a22f2f46b8f770774dd3",
-    "lastAttemptAt": "2026-10-18T12:25:45.082Z"
+    "lastAttemptRevision": "4328690be5cc03c4e3446dbf0b290064fba95cd6",
+    "lastAttemptAt": "2026-10-18T13:50:46.535Z"
   },
   "perekos": {
     "revision": "37365aa5214b3cfa0c13088fba479fffbf7954c2",
