@@ -97,7 +97,7 @@ async function verify(page,label,evidence) {
   assert.equal(await page.locator('#pauseScreen').getAttribute('aria-hidden'),'true');
   assert.equal(await page.locator('#pauseScreen').evaluate(el=>el.inert),true);
   assert.equal(await page.locator('#pauseButton').isEnabled(),true);
-  assert.equal(await page.locator('.app-shell').getAttribute('class'),'app-shell is-playing');
+  assert.equal(await page.locator('.app-shell').evaluate(el=>el.classList.contains('is-playing')),true);
   assert.deepEqual(errors,[],label+': no errors after tactile interactions');
   return status;
 }
