@@ -108,7 +108,7 @@ async function run(){
   // South's move is concealed by the northern side's unexplored fog.
   const current=await b.next('game_event',m=>m.event?.type==='state'&&m.event.payload.game.revision===rev+2);
   const own=current.event.payload.game.units.find(u=>u.owner===2&&u.type==='swordsman');
-  const before= a.all.filter(m=>m.type==='game_event'&&m.event?.type==='battle_event').length;
+  const before=a.all.filter(m=>m.type==='game_event'&&m.event?.type==='battle_event'&&m.event.payload.kind==='move').length;
   let accepted=false;let target;
   for(const [dr,dc] of [[0,-1],[-1,0],[0,1],[1,0]]){
     b.send('game_message',{payload:{type:'act',revision:rev+2,requestId:'fog-south-'+dr+'-'+dc,
