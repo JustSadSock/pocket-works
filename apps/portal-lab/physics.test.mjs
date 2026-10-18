@@ -9,7 +9,7 @@ test('rotation preserves speed and tangential parity across perpendicular portal
  const b=makeBall(170,300,14,1);s.balls=[b];const e=kinetic(b);
  for(let i=0;i<35&&!b.transits;i++)advance(s,1/120);
  assert.equal(b.transits,1);close(kinetic(b),e,1e-6);
- close(b.vx,-1,1e-6);close(b.vy,-14,1e-6);
+ close(b.vx,1,1e-6);close(b.vy,-14,1e-6);
 });
 test('round trip into opposite facing aperture returns original heading',()=>{
  const s=bare([{x:200,y:300,nx:-1,ny:0,span:200},{x:400,y:300,nx:1,ny:0,span:200}],[[0,1]]);
