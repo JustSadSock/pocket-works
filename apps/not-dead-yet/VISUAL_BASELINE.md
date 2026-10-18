@@ -59,3 +59,23 @@ QA image seeds 222, 413, 8787, 4 and 14 collectively cover all five
 families. Their browser screenshots are not yet executed/reviewed.
 400 seeded/epoch combinations passed actual collision-graph tests for all
 rooms, doors and drops; that does not independently verify visual clipping.
+
+## v2.1.2 — interactive physical door pass
+The old static fake leaves were replaced by animated carved timber panels.
+The entire physical state is represented by an epoch-specific door key and
+one horizontal 2D segment. That *same segment* builds the visible WebGL
+triangles, stops player/monster movement, occludes flashlight/shots and
+drives safe opening/closing. Gameplay interactions show contextual E/touch
+text and invoke offline door acoustics. Open/close saves include the
+current animation angle. In contrast, legacy saves use no new door obstacle.
+
+A heuristic A* traversal replaced broad BFS for enemies to handle doors
+and furniture without flooding unrelated sectors. Closed doors may
+intentionally make a route impossible until a player opens them.
+22/22 combined source-level roguelike/floorplan/visual/door regression
+cases passed in an isolated JS runtime after implementing the doors.
+A separate integration harness exercised the actual game initialization
+and E-open animation, but it is *not a real WebGL browser run*.
+
+The mobile/browser screenshots, GPU timings and manual overlap inspection
+are still outstanding and must not be inferred from these test results.
