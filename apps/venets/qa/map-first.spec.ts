@@ -21,16 +21,15 @@ test('political start is on the map and picks a real vassal duchy',async({page})
   await expect(page.locator('#game-screen')).toBeVisible();
   await expect(page.locator('#panel-lands .living-atlas')).toBeVisible();
   await expect(page.locator('#ruler-rank')).toHaveText(/ГЕРЦОГСТВО/);
-  const saved=await expect.poll(()=>page.evaluate(async()=>new Promise((resolve,reject)=>{
+  await expect.poll(()=>page.evaluate(async()=>new Promise((resolve,reject)=>{
     const open=indexedDB.open('venets-campaigns',1);
     open.onsuccess=()=>{
       const db=open.result,q=db.transaction('saves','readonly').objectStore('saves').get('active');
-      q.onsuccess=()=>{db.close();resolve(JSON.parse(q.result).startCountyId)};
+      q.onsuccess=()=>{db.close();resolve(q.result?JSON.parse(q.result).startCountyId:null)};
       q.onerror=()=>reject(q.error);
     };
     open.onerror=()=>reject(open.error);
-  }));
-  expect(saved).toBe('du-02');
+  }))).toBe('du-02');
   expect(errors).toEqual([]);
 });
 test('king is selectable as genuine top liege and the year advances',async({page})=>{
