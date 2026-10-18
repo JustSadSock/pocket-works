@@ -250,7 +250,7 @@ function line(x,y,a,b,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;c
 function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0){
  const look=enemy?(online?.active?rivalAppearance:DEFAULT_APPEARANCE):appearance;
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
- const a=active?.actors?.[enemy?1-myIndex():myIndex()];drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0});
+ const a=active?.actors?.[enemy?1-myIndex():myIndex()];drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1.16,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0});
 }
 function drawConstructs(s){
  for(const w of s.barriers){circle(w.x+3,w.y+6,w.r,'#12251f9e');circle(w.x,w.y,w.r,'#60745d');circle(w.x-3,w.y-5,Math.max(6,w.r-8),'#82917a');pixel(w.x-w.r*.35,w.y-3,5,3,'#a6ad89')}
