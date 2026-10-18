@@ -6,7 +6,9 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "tests/server.test.mjs"
+        "tests/server.test.mjs",
+        "tests/hardening.test.mjs",
+        "tests/tab-session.test.mjs"
       ]
     },
     {
@@ -15,7 +17,8 @@
       "tier": "smoke",
       "files": [
         "qa/inspector.spec.ts",
-        "qa/account.spec.ts"
+        "qa/account.spec.ts",
+        "qa/network.spec.ts"
       ]
     }
   ]

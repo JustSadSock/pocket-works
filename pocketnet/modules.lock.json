@@ -160,10 +160,11 @@
     ]
   },
   "chyepukha": {
-    "current": "v2",
+    "current": "v3",
     "versions": [
       "v1",
-      "v2"
+      "v2",
+      "v3"
     ]
   },
   "crossline-5x5": {

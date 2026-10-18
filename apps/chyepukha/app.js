@@ -22,7 +22,7 @@ const GENDERS=[['male','Чоловік'],['female','Жінка'],['nonbinary','�
 let net=null,view=null,me='',room='',connected=false,connecting=false,notice='';
 let name=read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',comicImage='',modal='',sound=read('sound','off')==='on',audio=null;
 let previewDraft='';
-let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0;
+let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
 const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
 // Legacy v1 guest sessions used this key. Preserve them across the account-aware upgrade.
@@ -73,7 +73,7 @@ async function refreshPocketBadge(initial=false){
  if(seq!==identityRefresh)return;
  const after=pocketIdentitySessionKey(next);
  if(before!==null&&before!==after){
-  ++connectionAttempt;
+  ++connectionAttempt;clearRoomTimeout();
   net?.close();net=null;releaseActive();
   try{storageForTab().removeItem('pocket-net:'+ORIGIN)}catch{}
   const hadRoom=Boolean(view||room);view=null;me='';room='';connected=false;connecting=false;modal='';storyId='';
@@ -87,6 +87,21 @@ async function refreshPocketBadge(initial=false){
   if(savedRoom())void connect('resume');
   else if(member()&&code(invitation))void connect('join');
  }
+}
+function clearRoomTimeout(){if(roomTimeout!==null){clearTimeout(roomTimeout);roomTimeout=null}}
+function cancelConnection(){
+ ++connectionAttempt;clearRoomTimeout();releaseActive();
+ const c=net;net=null;
+ if(c){c.roomId=null;c.persist();c.close()}
+ connected=false;connecting=false;view=null;room='';me='';modal='';storyId='';
+ notice='';syncUrl();render();
+}
+async function openPocketInvites(){
+ if(IS_PREVIEW){toast('Тестове запрошення друзів.');return}
+ if(!member()||!room){toast('Увійди в Pocket ID та відкрий кімнату.');return}
+ if(!window.PocketSocial?.open)try{await import('../../shared/pocket-social.js')}catch{}
+ if(window.PocketSocial?.open)void window.PocketSocial.open(room,'chyepukha');
+ else toast('Не вдалося відкрити друзів. Скопіюй посилання на кімнату.');
 }
 async function openPocketProfile(){
  if(IS_PREVIEW){toast('Тестовий профіль.');return}
@@ -153,7 +168,8 @@ async function connect(how,settings){
   c.on('connected',v=>{if(net!==c)return;me=v.player?.id||'';connected=true;connecting=false;markActive(ORIGIN,c.token);netStatus()});
   c.on('room_joined',v=>{
    if(net!==c)return;
-   if(v.gameId!=='chyepukha'||!['v1','v2'].includes(v.version)||v.state?.protocol!==1){
+   clearRoomTimeout();
+   if(v.gameId!=='chyepukha'||!['v1','v2','v3'].includes(v.version)||v.state?.protocol!==1){
     notice='Несумісна версія кімнати. Створи нову.';try{c.leaveRoom()}catch{}
     room='';view=null;render();return;
    }
@@ -165,20 +181,32 @@ async function connect(how,settings){
   c.on('disconnected',()=>{if(net!==c)return;connected=false;connecting=true;netStatus()});
   c.on('room_closed',()=>{if(net!==c)return;room='';view=null;connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
   c.on('error',e=>{
-   if(net!==c)return;connecting=false;
+   if(net!==c)return;connecting=false;clearRoomTimeout();
    const labels={room_not_found:'Кімната не існує або вже закрита.',room_full:'Усі місця зайняті.',match_in_progress:'Гра вже почалася.',room_version_unavailable:'Версія кімнати недоступна.',account_already_in_room:'Цей Pocket ID уже є в кімнаті.',server_at_capacity:'Сервер заповнений.',rate_limited:'Зачекай перед наступною дією.'};
    notice=labels[e?.code]||('Помилка підключення: '+String(e?.code||e?.message||'невідома'));
    if(!view){room='';c.close();net=null;releaseActive();connected=false;render()}
    toast(notice);
   });
-  await c.connect();
+  let authTimeout;
+  try{
+   await Promise.race([
+    c.connect(),
+    new Promise((_,reject)=>{authTimeout=setTimeout(()=>reject(Error('Сервер не підтвердив з’єднання.')),15000)})
+   ]);
+  }finally{clearTimeout(authTimeout)}
   if(net!==c||ticket!==connectionAttempt)return;
   if(how==='create')c.createRoom('chyepukha',{settings});
   else if(how==='join')c.joinRoom(code(invitation));
   else if(how==='resume'&&!c.roomId)throw Error('Попередню кімнату не знайдено.');
+  roomTimeout=setTimeout(()=>{
+   if(net!==c||ticket!==connectionAttempt||room)return;
+   cancelConnection();
+   notice='Сервер не відкрив кімнату. Перевір з’єднання й спробуй ще раз.';
+   render();toast(notice);
+  },12000);
  }catch(error){
   if(ticket!==connectionAttempt)return;
-  net?.close();net=null;releaseActive();connected=false;connecting=false;
+  clearRoomTimeout();net?.close();net=null;releaseActive();connected=false;connecting=false;
   netHealth='offline';view=null;
   notice='Не вдалося підключитися: '+String(error.message||error);render();toast(notice);
  }
@@ -213,13 +241,13 @@ function overlay(){if(modal==='leave')return '<div class="comic-modal"><section 
  if(modal==='comic')return '<div class="comic-modal"><section class="comic-inner"><div class="eyebrow">ДОДАТКОВИЙ ВИПУСК</div><h3>Комікс зібрано</h3><img alt="Автоматично зібрана ілюстрована сторінка" src="'+comicImage+'"><div class="button-row"><a class="button small" download="chyepukha-comic.png" href="'+comicImage+'">Зберегти PNG ↓</a><button class="button outline small" data-act="close-comic">Закрити</button></div></section></div>';
  return ''}
 function render(){netStatus();syncIdentityBar();$('sound').textContent='Звук: '+(sound?'увімк.':'вимк.');
- if(connecting&&!view){scene.innerHTML='<section class="paper waiting"><div class="eyebrow">POCKETNET</div><h2>З’єднуємо авторів…</h2><p class="mini">Відновлюємо захищену кімнату.</p></section>';return}
+ if(connecting&&!view){scene.innerHTML='<section class="paper waiting"><div class="eyebrow">POCKETNET</div><h2>З’єднуємо авторів…</h2><p class="mini">Відновлюємо захищену кімнату.</p><button class="button outline" type="button" data-act="cancel-connect">Скасувати підключення</button></section>';return}
  scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):home())+overlay();
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
 }
 function indices(){const w=words($('answer')?.value||'');return (draftSelections[draftKey()]||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<w.length)}
 function refreshWords(){const a=$('answer'),tray=$('wordTray');if(!a||!tray)return;const ws=words(a.value),need=Math.min(view.settings.visibleTailWords,ws.length);let ids=indices().slice(0,need);draftSelections[draftKey()]=ids;tray.innerHTML=ws.length?ws.map((w,i)=>'<button type="button" class="word '+(ids.includes(i)?'selected':'')+'" data-act="word" data-index="'+i+'" aria-pressed="'+ids.includes(i)+'">'+escape(w)+'</button>').join(''):'<span class="mini">Спершу напиши свій фрагмент.</span>';$('wordCount').textContent=ids.length+'/'+need;$('chars').textContent=a.value.length+'/800'}
-function leaveNow(){++connectionAttempt;releaseActive();const c=net;net=null;try{if(connected&&c?.roomId)c.leaveRoom()}catch{}try{c?.close()}catch{}view=null;me='';room='';connected=false;connecting=false;modal='';storyId='';syncUrl();render()}
+function leaveNow(){++connectionAttempt;clearRoomTimeout();releaseActive();const c=net;net=null;try{if(connected&&c?.roomId)c.leaveRoom()}catch{}try{if(c){c.roomId=null;c.persist();c.close()}}catch{}view=null;me='';room='';connected=false;connecting=false;modal='';storyId='';syncUrl();render()}
 scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  if(f.id==='createForm'||f.id==='joinForm'){const d=new FormData(f);if(!member())name=String($('guestNick')?.value||d.get('name')||'').trim().slice(0,24);invitation=String(d.get('room')||'');connect(f.id==='createForm'?'create':'join',{maxPlayers:4,questionSet:'collapsingPlan',visibleTailWords:3,genre:'absurdComedy'});return}
  if(f.id==='settingsForm'){const d=new FormData(f),settings={maxPlayers:+d.get('maxPlayers'),visibleTailWords:+d.get('visibleTailWords'),questionSet:d.get('questionSet'),genre:d.get('genre'),customGenre:d.get('customGenre'),customQuestions:String(d.get('customQuestions')||'').split('\n').map(s=>s.trim()).filter(Boolean)};if(settings.questionSet==='custom'&&settings.customQuestions.length<2){toast('Додай хоча б два питання.');return}send({type:'settings',settings});return}
@@ -228,10 +256,10 @@ scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  const gender=document.querySelector('input[name=gender]:checked')?.value||'unspecified';save('gender',gender);
  if(send({type:'submit',round:view.round,sheetId:view.sheet.id,answer,tailIndexes:chosen,gender}))tick(445);
  }});
-scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.id==='answer'){saveDraft(e.target.value);refreshWords()}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
+scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){saveDraft(e.target.value);refreshWords()}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
 scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
  if(act==='word'){const i=Number(b.dataset.index),ids=indices(),need=Math.min(view.settings.visibleTailWords,words($('answer')?.value).length),at=ids.indexOf(i);if(at>=0)ids.splice(at,1);else if(ids.length<need)ids.push(i);else{toast('Вже вибрано '+need+' слів.');return}draftSelections[draftKey()]=ids;refreshWords();tick(650);return}
- if(act==='profile'){openPocketProfile();return}if(act==='invite-social'){if(window.PocketSocial?.open)void window.PocketSocial.open(room,'chyepukha');else toast('Запрошення друзів тимчасово недоступне.');return}
+ if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection();return}
  if(act==='resume'){connect('resume');return}if(act==='copy-code'){if(IS_PREVIEW){toast('Це демонстраційна кімната.');return}copyText(room.slice(0,8).toUpperCase());return}
  if(act==='copy-link'){if(IS_PREVIEW){toast('Тестове посилання не створюється.');return}copyText(location.origin+location.pathname+'?room='+room.slice(0,8));return}
  if(act==='start'||act==='again'){send({type:act});return}
