@@ -342,7 +342,7 @@ function startNetwork(kind,code=''){
  $('net-feedback').textContent='Подключаемся…';
  roomInfo(null);online.open(kind,code).catch(e=>{$('net-feedback').textContent=e.message||String(e)});
 }
-$('online-open').addEventListener('click',()=>startNetwork('create'));
+$('online-open').addEventListener('click',()=>{roomInfo(null);show('online-lobby');onlinePhase='';$('net-feedback').textContent='Создай комнату или введи код друга.'});
 $('net-create').addEventListener('click',()=>startNetwork('create'));
 $('net-join').addEventListener('click',()=>{
  const code=$('net-code').value.trim().toUpperCase();
