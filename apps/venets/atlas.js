@@ -1,5 +1,6 @@
 import {getAtlasGeometry,countyAtlasModel,heraldryFor,familyRelations} from './atlas-core.js';
 const NS='http://www.w3.org/2000/svg';
+let atlasSerial=0;
 const S=(tag,attrs={},children=[])=>{
   const n=document.createElementNS(NS,tag);
   for(const [key,value] of Object.entries(attrs))if(value!==null&&value!==undefined)n.setAttribute(key,String(value));
@@ -39,32 +40,32 @@ function pathText(x,y,value,size=11){
   return T('text',value,{x,y,fill:'#3d433b','font-family':'Georgia,serif','font-size':size,'font-weight':600,
     'text-anchor':'middle','paint-order':'stroke',stroke:'#e9e2c8','stroke-width':3,'stroke-linejoin':'round'});
 }
-function atlasDefs(svg,model){
+function atlasDefs(svg,model,uid){
  const defs=S('defs');
- const paper=S('linearGradient',{id:'atlas-paper',x1:'0',y1:'0',x2:'1',y2:'1'},[
+ const paper=S('linearGradient',{id:uid+'-paper',x1:'0',y1:'0',x2:'1',y2:'1'},[
    S('stop',{offset:'0%', 'stop-color':'#b7aa82'}),
    S('stop',{offset:'55%','stop-color':'#d3c29c'}),
    S('stop',{offset:'100%','stop-color':'#a99b76'})]);
- const light=S('radialGradient',{id:'atlas-light',cx:'44%',cy:'38%',r:'71%'},[
+ const light=S('radialGradient',{id:uid+'-light',cx:'44%',cy:'38%',r:'71%'},[
    S('stop',{offset:'0%','stop-color':'#fff4cd','stop-opacity':.26}),
    S('stop',{offset:'100%','stop-color':'#4d392b','stop-opacity':.30})]);
- const noise=S('filter',{id:'atlas-grain',x:'0%',y:'0%',width:'100%',height:'100%'},[
+ const noise=S('filter',{id:uid+'-grain',x:'0%',y:'0%',width:'100%',height:'100%'},[
    S('feTurbulence',{type:'fractalNoise',baseFrequency:'.45',numOctaves:3,seed:8,result:'n'}),
    S('feColorMatrix',{in:'n',type:'saturate',values:0,result:'mono'}),
    S('feComponentTransfer',{},[S('feFuncA',{type:'linear',slope:'.21'})])]);
- defs.append(paper,light,noise,S('clipPath',{id:'atlas-land'},[S('path',{d:model.perimeter})]));
+ defs.append(paper,light,noise,S('clipPath',{id:uid+'-land'},[S('path',{d:model.perimeter})]));
  for(const item of model.polygons)
-   defs.append(S('clipPath',{id:'county-clip-'+item.id},[S('path',{d:item.path})]));
+   defs.append(S('clipPath',{id:uid+'-county-clip-'+item.id},[S('path',{d:item.path})]));
  svg.append(defs);
 }
-function engraving(model,seed){
- const scene=S('g',{'clip-path':'url(#atlas-land)',class:'atlas-engraving','pointer-events':'none'});
+function engraving(model,seed,uid){
+ const scene=S('g',{'clip-path':'url(#'+uid+'-land)',class:'atlas-engraving','pointer-events':'none'});
  // Atlas shading changes only with the immutable province terrain.
  for(const item of model.polygons){
    const p=item.province,c=item.center;
    const ink=p.terrain==='hills'?'#4b5848':'#657059';
    const inkOpacity=p.terrain==='hills'?.40:.21;
-   const clipped=S('g',{'clip-path':'url(#county-clip-'+item.id+')',stroke:ink,
+   const clipped=S('g',{'clip-path':'url(#'+uid+'-county-clip-'+item.id+')',stroke:ink,
       'stroke-opacity':inkOpacity,fill:'none','stroke-width':1.45,'stroke-linecap':'round'});
    const h=p.terrain==='hills';
    for(let i=0;i<(h?8:6);i++){
@@ -158,19 +159,20 @@ function compass(svg){
 }
 export function renderAtlas(world,{selectedId='pr-01',onSelect=()=>{},changes=[],region=0,rank='county',selectedTitleId=null}={}){
  const expanded=world.provinces.length===48;
+ const uid='venets-map-'+(++atlasSerial);
  const model=countyAtlasModel(world,getAtlasGeometry(world.seed,world.provinces.length));
  const ox=expanded?(region%2)*860:0,oy=expanded?Math.floor(region/2)*570:0;
  const svg=S('svg',{viewBox:ox+' '+oy+' 860 570',class:'living-atlas',role:'group',
    'aria-label':'Политическая карта Междуречья: '+world.provinces.length+' графств',preserveAspectRatio:'xMidYMid meet'});
- atlasDefs(svg,model);
+ atlasDefs(svg,model,uid);
  svg.append(S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#788b83'}),
    S('rect',{x:0,y:0,width:model.width,height:model.height,fill:'#e1d3b4','fill-opacity':.27}),
    S('path',{d:model.perimeter,transform:'translate(8 12)',fill:'#443e32','fill-opacity':.30}),
-   S('path',{d:model.perimeter,fill:'url(#atlas-paper)',stroke:'#4b4638','stroke-width':5}),
-   S('path',{d:model.perimeter,fill:'url(#atlas-light)'}),
+   S('path',{d:model.perimeter,fill:'url(#'+uid+'-paper)',stroke:'#4b4638','stroke-width':5}),
+   S('path',{d:model.perimeter,fill:'url(#'+uid+'-light)'}),
    S('g',{'clip-path':'url(#atlas-land)'},[
-     S('rect',{width:model.width,height:model.height,fill:'#5c452e',filter:'url(#atlas-grain)'})]),
-   engraving(model,world.seed),mapCounties(world,model,selectedId,changes,onSelect,{rank,selectedTitleId}));
+     S('rect',{width:model.width,height:model.height,fill:'#5c452e',filter:'url(#'+uid+'-grain)'})]),
+   engraving(model,world.seed,uid),mapCounties(world,model,selectedId,changes,onSelect,{rank,selectedTitleId}));
  warMarkers(svg,model,world);
  if(expanded){
    const point=S('g',{transform:'translate('+ox+' '+oy+')','pointer-events':'none'});
