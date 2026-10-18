@@ -203,7 +203,7 @@ function pixel(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Mat
 function circle(x,y,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
 function line(x,y,a,b,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(a,b);ctx.stroke()}
 function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0){
- const look=enemy&&online?.active?rivalAppearance:appearance;
+ const look=enemy?(online?.active?rivalAppearance:DEFAULT_APPEARANCE):appearance;
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
  drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,shield,flash,runes});
 }
