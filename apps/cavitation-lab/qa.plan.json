@@ -50,6 +50,10 @@
           "selector": "#pause"
         },
         {
+          "action": "click",
+          "selector": "#trace"
+        },
+        {
           "action": "screenshot"
         },
         {
