@@ -198,7 +198,7 @@ function simulate(dt){
  shadows=shadows.filter(e=>e.age<30&&world.canStand(e.x,e.z,.07));
  stress=clamp(stress-(shadows.length===0?.75:.15)*dt+(!world.powerAvailable()&&!torch?.45:0)*dt,0,100);
  if(stress>=100){finish(false);return}
- acoustics.tick({elapsed,room:world.location(player.x,player.z),stress,active:phase==='play'});
+ acoustics.tick({elapsed,room:world.location(player.x,player.z),stress,active:phase==='play',powered:world.powerAvailable()});
  if(elapsed>=saveAt){saveAt=elapsed+5;persist()}
  if(showHintUntil&&elapsed>=showHintUntil){showHintUntil=0;$('hint').classList.remove('visible')}
  hud()
@@ -218,7 +218,7 @@ function hud(){
  const door=!item&&!memory&&!exit&&!radio&&!plate&&!fuse?world.nearestDoor(player.x,player.z,2.2):null;
  $('aimHint').textContent=item?'E / ВЗЯТЬ — '+item.label:memory?'E / ВСПОМНИТЬ — '+world.location(memory.x,memory.z):radio?'E / '+(world.powerAvailable()?'НАСТРОИТЬ ПРИЁМНИК':'ПРИЁМНИК БЕЗ СВЕТА'):plate?'E / ОТКЛЮЧИТЬ ПЛИТКУ':fuse?'E / ВКЛЮЧИТЬ АВТОМАТ':exit?(inventory.length===4?'E / ОТКРЫТЬ ДВЕРЬ':'Дверь заперта'):door?'E / '+(door.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' — '+world.location(world.point(door.room).x,world.point(door.room).z):'';
  $('interact').textContent=item?'Взять':memory?'Вспомнить':radio?'Настроить':plate?'Выключить':fuse?'Включить':door?(door.open?'Закрыть':'Открыть'):exit?'Открыть':'Взять';
- $('interact').classList.toggle('ready',Boolean(item||memory||radio||plate||fuse||exit||door));
+ $('interact').classList.toggle('ready',Boolean(item||memory||(radio&&world.powerAvailable())||plate||fuse||exit||door));
 }
 function paint(t){
  const dt=Math.min(.20,Math.max(0,(t-lastFrame)/1000));lastFrame=t;
