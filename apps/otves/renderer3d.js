@@ -303,6 +303,8 @@ export class SpatialMazeRenderer {
       if(!this.targets) this.profile={...profile,refraction:false,level:'balanced'};
     }
     this.makeShadowTarget(Math.min(this.profile.shadowSize,this.maxTarget));
+    this.canvas.dataset.renderProfile = this.profile.level;
+    this.canvas.dataset.opticalRefraction = String(Boolean(this.targets && this.profile.refraction));
     gl.viewport(0,0,w,h);
   }
 
