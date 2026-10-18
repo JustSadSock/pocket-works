@@ -764,7 +764,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
  .start-rank-options button{min-height:27px}
  .start-ruler{min-height:53px}
  .start-ruler-seal{height:40px;width:34px}
- .menu-bottom>.text-link{display:none}
+ .menu-bottom>.text-link{min-height:19px;font-size:9px;padding:1px 0}
  .map-cartouche{display:none}
  .lands-panel .province-info{max-height:58px;overflow:hidden}
 }
