@@ -489,7 +489,7 @@ function devCombat(kind){
 }
 function devLobby(scene){
  mode='online';connected=scene!=='lobby-connect'&&scene!=='lobby-error';busy=scene==='lobby-connect';
- roomId=scene==='lobby-connect'?'':'F3A4B5C6';
+ roomId=scene==='lobby-connect'||scene==='lobby-error'?'':'F3A4B5C6';
  const a={id:'dev-a',name:'Синий',verified:true},b={id:'dev-b',name:'Оранжевый',verified:false};
  const guest=scene==='lobby-guest';me=guest?b:a;
  server={phase:'lobby',host:a.id,players:scene==='lobby-ready'||guest?[a,b]:[a],
