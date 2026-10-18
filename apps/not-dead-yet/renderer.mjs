@@ -443,7 +443,28 @@ function relicMesh(out,item,time){const x=item.x*SCALE,z=item.z*SCALE,h=.55+.09*
 function phantom(out,e,t){
  const x=e.x*SCALE,z=e.z*SCALE,visible=1-Math.min(1,Math.max(0,(e.age-23)/7)),coat=e.kind==='coat';
  const breath=.035*Math.sin(t*1.2+e.x*2),limp=.17*Math.sin(t*1.4+e.z);
- const coatCloth=coat?[.16,.17,.16]:[.27,.25,.23],shadow=[.27,.25,.23],pale=[.45,.43,.39];
+ const clarity=Math.min(1,Math.max(0,(e.hit||0)*1.5));
+ const blend=(a,b)=>a.map((v,i)=>v+(b[i]-v)*clarity);
+ const coatCloth=blend(coat?[.16,.17,.16]:[.27,.25,.23],[.46,.37,.28]),
+  shadow=blend([.27,.25,.23],[.49,.42,.35]),pale=blend([.45,.43,.39],[.60,.52,.43]);
+ // The familiar Soviet coat stand briefly comes into focus in the torch beam.
+ if(coat&&e.hit>.38){
+  box(out,x,.02,z,.11,1.98,.11,[.30,.21,.14],6);
+  round(out,x,.12,z,.31,.06,.28,[.36,.25,.17],6);
+  for(const side of [-1,1]){
+   box(out,x+side*.23,1.60,z,.46,.07,.07,[.38,.26,.17],6);
+   round(out,x+side*.30,1.08,z,.20,.62,.22,coatCloth,7);
+  }
+  round(out,x,1.95,z,.27,.14,.25,coatCloth,7);
+  return
+ }
+ if(!coat&&e.hit>.70){
+  // A bathrobe hanging from a chair is momentarily mistaken for a standing person.
+  box(out,x,.05,z,.70,.86,.45,[.31,.23,.17],6);
+  round(out,x,.95,z,.48,.65,.27,coatCloth,7);
+  box(out,x,1.30,z-.15,.11,.40,.07,[.37,.26,.18],6);
+  return
+ }
  // Layered tailored coat and asymmetrical shoulders, rather than a group of cubes.
  round(out,x,.85+breath,z,.43,.72,.32,coatCloth,7);
  round(out,x,1.36+breath,z,.51,.31,.28,coatCloth,7);

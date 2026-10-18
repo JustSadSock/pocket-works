@@ -2,9 +2,10 @@ import {Apartment,ITEMS,HOME,hash} from './apartment.mjs';
 import {Renderer} from './renderer.mjs';
 import {createSoundscape} from './soundscape.mjs';
 import {chapterJournal,chapterEnding} from './story.mjs';
+import {acousticEvent,updatePresence,shouldDespawn,presenceCue} from './presences.mjs';
 const $=id=>document.getElementById(id),STORAGE='pocket-works:not-dead-yet:chapter-one:v2',OPTIONS='pocket-works:not-dead-yet:options';
 const keys=new Set(),stick={x:0,y:0},quiet=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false;
-let world,renderer,player,phase='menu',inventory=[],shadows=[],stress=0,elapsed=0,ammo=6,reserve=18,reloadTime=0,reloadDeadline=0,shotTime=0,stunTime=0,torch=true,energy=100,showHintUntil=0,spawnAt=8,saveAt=5,worldAt=0,lastFrame=performance.now(),moveCount=0,attemptCount=0,blockedCount=0,stepCount=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,confirmSource='pause',screenNotice='',sound=true,runId=0,peeking=false;
+let world,renderer,player,phase='menu',inventory=[],shadows=[],stress=0,elapsed=0,ammo=6,reserve=18,reloadTime=0,reloadDeadline=0,shotTime=0,stunTime=0,torch=true,energy=100,showHintUntil=0,spawnAt=8,saveAt=5,worldAt=0,lastFrame=performance.now(),moveCount=0,attemptCount=0,blockedCount=0,stepCount=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,confirmSource='pause',screenNotice='',sound=true,runId=0,peeking=false,noise=null,lastPresenceCue=0;
 try{sound=JSON.parse(localStorage.getItem(OPTIONS)||'{}').sound!==false}catch{}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const acoustics=createSoundscape();acoustics.setEnabled(sound);
@@ -21,7 +22,7 @@ function setup(seed,save=null){
  stress=clamp(save?.stress??0,0,99);energy=clamp(save?.energy??100,0,100);
  ammo=clamp(save?.ammo??6,0,6);reserve=clamp(save?.reserve??18,0,40);
  inventory=(save?.inventory||[]).filter(id=>ITEMS.some(x=>x.id===id));
- elapsed=save?.elapsed??0;shadows=[];spawnAt=elapsed+7.5;worldAt=elapsed+1;saveAt=elapsed+5;reloadTime=0;reloadDeadline=0;shotTime=0;stunTime=0;
+ elapsed=save?.elapsed??0;shadows=[];noise=null;lastPresenceCue=elapsed;spawnAt=elapsed+7.5;worldAt=elapsed+1;saveAt=elapsed+5;reloadTime=0;reloadDeadline=0;shotTime=0;stunTime=0;
  torch=true;moveCount=0;attemptCount=0;blockedCount=0;stepCount=0;clearInputs();hud()
 }
 function overlay(id){for(const name of ['menu','pauseOverlay','inventoryOverlay','endOverlay','confirmOverlay']){const e=$(name);e.hidden=id!==name;e.classList.toggle('is-open',id===name)}}
@@ -119,6 +120,7 @@ function interact(){
  if(nearRadio()){
   if(!world.powerAvailable()){notice('Приёмник без питания. Сначала верни электричество.',2.6);return}
   const result=world.tuneRadio(inventory.includes('album'));
+  noise=acousticEvent(player.x,player.z,elapsed,'radio');
   acoustics.event(result.sound,{intensity:1});
   if(result.newMemory){stress=Math.max(0,stress-16);world.nextShift+=13}
   notice(result.message,result.newMemory?5:3.3);
@@ -126,7 +128,7 @@ function interact(){
  }
  const door=world.nearestDoor(player.x,player.z,2.2);
  if(door){const result=world.toggleDoor(door.room,player.x,player.z);
-  if(result.ok){acoustics.event('door');notice(result.open?'Дверь открылась.':'Дверь закрылась.',1.6);persist()}
+  if(result.ok){noise=acousticEvent(player.x,player.z,elapsed,'door');acoustics.event('door');notice(result.open?'Дверь открылась.':'Дверь закрылась.',1.6);persist()}
   else notice('Отойди от дверного полотна.',1.8);
   hud();return
  }
@@ -143,7 +145,9 @@ function shoot(){
  if(phase!=='play'||peeking)return;
  if(reloadTime>0){notice('Сначала перезарядить.',.8);return}
  if(ammo<=0){acoustics.event('empty');notice('Пустой барабан. R — перезарядить.',1.7);return}
- ammo--;shotTime=.17;stress=clamp(stress+1.6,0,100);acoustics.event('shot');if(navigator.vibrate)navigator.vibrate(40);
+ ammo--;shotTime=.17;stress=clamp(stress+2.2,0,100);
+ noise=acousticEvent(player.x,player.z,elapsed,'shot');spawnAt=Math.min(spawnAt,elapsed+2.4);
+ acoustics.event('shot');if(navigator.vibrate)navigator.vibrate(40);
  let victim=null,best=15;
  for(const s of shadows){const dx=s.x-player.x,dz=s.z-player.z,dist=Math.hypot(dx,dz);
   const angle=Math.atan2(dx,-dz)-player.yaw,heading=Math.atan2(Math.sin(angle),Math.cos(angle));
@@ -158,7 +162,7 @@ function makeShadow(){
   if(d<5||!world.canStand(p.x,p.z))continue;
   const dot=((p.x-player.x)*Math.sin(player.yaw)-(p.z-player.z)*Math.cos(player.yaw))/d;
   if(dot>.6&&world.visible(player.x,player.z,p.x,p.z))continue;
-  shadows.push({x:p.x,z:p.z,age:0,speed:.45+Math.random()*.24,kind:Math.random()<.45?'coat':'figure',path:null,pathTime:0,hit:0});acoustics.event('sighting',{pan:Math.sign(p.x-player.x)*.5});return
+  shadows.push({x:p.x,z:p.z,age:0,speed:.45+Math.random()*.24,kind:Math.random()<.45?'coat':'figure',path:null,pathTime:0,hit:0,attention:'none'});acoustics.event('sighting',{pan:Math.sign(p.x-player.x)*.5});return
  }
 }
 function simulate(dt){
@@ -166,7 +170,7 @@ function simulate(dt){
  elapsed+=dt;world.updateDoors(dt);
  if(world.knock(elapsed,inventory.length)){acoustics.event('knock');notice('Три негромких удара во входную дверь. В подъезде кто-то есть?',4);persist()}
  if(world.tickPower(elapsed,inventory.length)){
-  acoustics.event('blackout');notice('Свет погас. Старую проводку снова выбило. Фонарь работает.',5);
+  noise=acousticEvent(player.x,player.z,elapsed,'breaker');acoustics.event('blackout');notice('Свет погас. Старую проводку снова выбило. Фонарь работает.',5);
   stress=Math.min(100,stress+5);hud();persist()
  }
  if(reloadTime>0){reloadTime=Math.max(0,(reloadDeadline-performance.now())/1000);if(reloadTime===0){const load=Math.min(6-ammo,reserve);ammo+=load;reserve-=load;chirp(310,.13,.023);hud()}}
@@ -188,7 +192,7 @@ function simulate(dt){
    if(world.canStand(player.x,player.z+sz))player.z+=sz;
   }
   const moved=Math.hypot(player.x-x,player.z-z);if(moved>.0001){moveCount++;stepCount+=moved}else{blockedCount++;if(blockedCount%120===0)notice('Здесь стена. Попробуй повернуться.',1.4)}
-  if(stepCount>.95){stepCount=0;acoustics.event('footstep',{room:world.location(player.x,player.z),intensity:running?1.3:1})}
+  if(stepCount>.95){stepCount=0;noise=acousticEvent(player.x,player.z,elapsed,running?'sprint':'step');acoustics.event('footstep',{room:world.location(player.x,player.z),intensity:running?1.3:1})}
  }
  player.movement=Math.min(1,amount);player.bob=quiet?0:Math.sin(elapsed*(running?13:8))*Math.min(.025,amount*.019);
  if(elapsed>worldAt){worldAt=elapsed+.42;const changed=world.tick(player.x,player.z,player.yaw,elapsed);if(changed){
@@ -198,19 +202,21 @@ function simulate(dt){
   }}
  if(elapsed>=spawnAt){makeShadow();spawnAt=elapsed+10+Math.random()*5}
  for(const e of shadows){
-  e.age+=dt;e.pathTime-=dt;
-  if(e.pathTime<0){e.pathTime=.8;e.path=world.findStep(e.x,e.z,player.x,player.z)}
-  if(e.kind==='figure'&&e.path){const vx=e.path.x-e.x,vz=e.path.z-e.z,l=Math.hypot(vx,vz);if(l>.08){
-   const step=Math.min(l,e.speed*dt),nx=e.x+vx/l*step,nz=e.z+vz/l*step;
-   if(world.canStand(nx,nz,.09)){e.x=nx;e.z=nz}}}
-  const d=Math.hypot(e.x-player.x,e.z-player.z);
-  if(d<1.35){stress=clamp(stress+(e.kind==='coat'?8:18)*dt,0,100);if(elapsed>showHintUntil)notice('Только не смотри на него.',1)}
-  if(d<12&&torch&&world.visible(player.x,player.z,e.x,e.z)){
-   const angle=Math.atan2(e.x-player.x,-(e.z-player.z))-player.yaw;
-   if(Math.abs(Math.atan2(Math.sin(angle),Math.cos(angle)))<.33){e.hit+=dt;if(e.hit>1.25){e.age=100;notice('Это всего лишь тень.',1.7);stress=Math.max(0,stress-5)}}
+  const result=updatePresence(e,{world,player,noise,torch,time:elapsed,dt});
+  if(result.resolved){
+   e.age=100;stress=Math.max(0,stress+result.stressDelta);
+   notice('Свет выхватил знакомый силуэт. Страх отступает.',2.3);
+   acoustics.event('memory');continue
+  }
+  stress=clamp(stress+result.stressDelta,0,100);
+  if(result.near&&elapsed>showHintUntil)notice('Нужно посмотреть внимательнее, а не стрелять.',1.7);
+  if(result.heard&&result.near&&elapsed-lastPresenceCue>3){
+   lastPresenceCue=elapsed;
+   const cue=presenceCue(e,player);
+   acoustics.event('presence-step',{pan:cue.pan,intensity:.65});
   }
  }
- shadows=shadows.filter(e=>e.age<30&&world.canStand(e.x,e.z,.07));
+ shadows=shadows.filter(e=>!shouldDespawn(e,world));
  stress=clamp(stress-(shadows.length===0?.75:.15)*dt+(!world.powerAvailable()&&!torch?.45:0)*dt,0,100);
  if(stress>=100){finish(false);return}
  acoustics.tick({elapsed,room:world.location(player.x,player.z),stress,active:phase==='play'});
@@ -245,7 +251,7 @@ function paint(t){
   else{const items=ITEMS.filter(i=>!inventory.includes(i.id)).map(i=>world.itemPosition(i.id));
    renderer.draw(world,player,shadows,items,torch,elapsed,stress/100,shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)}
  }
- window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true,memoryTraces:world?.rooms.map(r=>world.memoryState(r.type)),radio:world?.radio?{...world.radio}:null,recognized:world?.recognizedCount(),layoutVersion:world?.layoutVersion,doors:world?.doors().map(d=>({room:d.type,open:d.open,angle:d.angle,gate:d.gate})),sovietInterior:true,power:world?.power?{...world.power}:null,powerAvailable:world?.powerAvailable(),landing:world?.landing?{...world.landing}:null,peephole:peeking};
+ window.__PW_TEST_STATE__={phase,seed:world?.seed,variant:world?.fingerprint?.(),position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,health:100-stress,inventory:[...inventory],ammo,elapsed,rearrangements:world?.changes||0,attempts:attemptCount,moves:moveCount,blocked:blockedCount,renderer3D:!!renderer&&!renderer.lost,textureBytes:renderer?.textureBytes||0,soundEnabled:sound,weaponAnimated:true,memoryTraces:world?.rooms.map(r=>world.memoryState(r.type)),radio:world?.radio?{...world.radio}:null,recognized:world?.recognizedCount(),layoutVersion:world?.layoutVersion,doors:world?.doors().map(d=>({room:d.type,open:d.open,angle:d.angle,gate:d.gate})),sovietInterior:true,power:world?.power?{...world.power}:null,powerAvailable:world?.powerAvailable(),landing:world?.landing?{...world.landing}:null,peephole:peeking,noise:noise?{type:noise.type,until:noise.until,x:noise.x,z:noise.z}:null,presences:shadows.map(e=>({x:e.x,z:e.z,kind:e.kind,attention:e.attention,hit:e.hit}))};
  requestAnimationFrame(paint)
 }
 function moveStick(e){const b=$('joystick').getBoundingClientRect(),x=e.clientX-b.left-b.width*.5,y=e.clientY-b.top-b.height*.5,rad=b.width*.38,d=Math.max(.01,Math.hypot(x,y)),scale=Math.min(1,rad/d);stick.x=x*scale/rad;stick.y=-y*scale/rad;$('knob').style.transform='translate('+(x*scale)+'px,'+(y*scale)+'px)'}
@@ -289,6 +295,18 @@ try{
  renderer=new Renderer($('view'));setup(nextSeed());phase='menu';overlay('menu');$('continue').hidden=!readSave();
  if(new URLSearchParams(window.location?.search||'').get('qa')==='1'){
   window.__PW_TEST_HOOKS__={
+   spawnPresenceAhead(kind='coat'){
+    if(phase!=='play'||peeking)return false;
+    const x=player.x+Math.sin(player.yaw)*2.2,z=player.z-Math.cos(player.yaw)*2.2;
+    if(!world.canStand(x,z,.09)||!world.visible(player.x,player.z,x,z))return false;
+    shadows.push({x,z,kind,age:0,speed:.45,path:null,pathTime:0,hit:0});return true
+   },
+   spawnPresenceBehind(kind='figure'){
+    if(phase!=='play'||peeking)return false;
+    const x=player.x-Math.sin(player.yaw)*2.3,z=player.z+Math.cos(player.yaw)*2.3;
+    if(!world.canStand(x,z,.09))return false;
+    shadows.push({x,z,kind,age:0,speed:.45,path:null,pathTime:0,hit:0});return true
+   },
    teleportNearEntrance(){
     if(phase!=='play')return false;const candidates=[[15.5,19.8],[15.5,19.5],[15.0,20.0],[16.0,20]];
     for(const [x,z] of candidates){if(world.canStand(x,z)){player.x=x;player.z=z;hud();return true}}return false
