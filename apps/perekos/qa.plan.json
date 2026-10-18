@@ -7,7 +7,8 @@
       "tier": "smoke",
       "files": [
         "tests/core.test.mjs",
-        "tests/avatar.test.mjs"
+        "tests/avatar.test.mjs",
+        "tests/net.test.mjs"
       ]
     },
     {
