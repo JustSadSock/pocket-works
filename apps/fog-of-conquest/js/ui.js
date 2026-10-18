@@ -1414,6 +1414,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
           if(bb) damageBuilding(bb);
           if(moved && !aiMode) addReplay({type:'move',unit:sel,from,to:{r:y,c:x}});
           animateMove(sel,sel.r,sel.c,y,x);
+          if(moved){window.FogAudio?.play('move');window.FogVisual?.action('move',y,x);}
           sel.r=y; sel.c=x;
           bb=buildings.find(b=>b.r===sel.r&&b.c===sel.c);
           if(bb) attemptCapture(sel, bb);
