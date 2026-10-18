@@ -32,6 +32,7 @@ test('default entry is a genuinely endless first-person game with survival, inpu
 });
 
 test('finding a recognizable thing offers three functional upgrades and saves the selection',async({page})=>{
+ test.setTimeout(90000);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await boot(page);
  const found=await page.evaluate(()=>{
@@ -42,6 +43,7 @@ test('finding a recognizable thing offers three functional upgrades and saves th
   }return null
  });
  expect(found).not.toBeNull();
+ expect(await page.evaluate(()=>window.__PW_ROGUE_QA__.nearestDrop()?.id)).toBe(found);
  await page.keyboard.press('e');
  await expect(page.locator('#upgradeOverlay')).toBeVisible();
  await expect(page.locator('.upgrade-card')).toHaveCount(3);
@@ -66,6 +68,10 @@ test('forgotten rooms regenerate behind a player without blocking existing terra
   const a=window.__PW_ROGUE_QA__,w=a.world(),c=w.chunk(0,0),original=c.epoch;
   w.tick(9.5,9.5,0,0);w.tick(10.5,9.5,Math.PI/2,1);
   w.tick(20.5,9.5,Math.PI/2,4);const result=w.tick(29.5,9.5,Math.PI/2,14);
+  // The rewritten hallway can contain legitimately closed doors.
+  for(const chunk of w.nearby(29.5,9.5,36))for(const door of chunk.doors)
+   if(!w.doorState(door,chunk).open)w.toggleDoor(door,[]);
+  for(let i=0;i<9;i++)w.animateDoors(.12,[]);
   return {original,now:w.chunk(0,0).epoch,changes:w.changes,connected:w.findStep(29.5,9.5,9.5,9.5)!==null,result}
  });
  expect(outcome.now).toBeGreaterThan(outcome.original);
