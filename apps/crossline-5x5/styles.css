@@ -357,8 +357,8 @@
 @keyframes arenaSlabGravity{
  0%{transform:translate3d(0,0,2px) rotateX(0) rotateZ(0) scale(1);opacity:1}
  12%{transform:translate3d(0,-3px,2px) rotateX(-8deg) rotateZ(2deg) scale(1.02);opacity:1}
- 38%{transform:translate3d(calc(var(--fall-drift,0px)*.35),18px,-50px) rotateX(29deg) rotateZ(calc(var(--fall-twist,18deg)*.35)) scale(.9);opacity:1}
- 72%{transform:translate3d(calc(var(--fall-drift,0px)*.7),72px,-180px) rotateX(65deg) rotateZ(calc(var(--fall-twist,18deg)*.75)) scale(.49);opacity:.64}
+ 38%{transform:translate3d(var(--fall-drift-mid,0px),18px,-50px) rotateX(29deg) rotateZ(var(--fall-twist-mid,7deg)) scale(.9);opacity:1}
+ 72%{transform:translate3d(var(--fall-drift-late,0px),72px,-180px) rotateX(65deg) rotateZ(var(--fall-twist-late,14deg)) scale(.49);opacity:.64}
  100%{transform:translate3d(var(--fall-drift,0px),140px,-360px) rotateX(84deg) rotateZ(var(--fall-twist,18deg)) scale(.13);opacity:0}
 }
 @keyframes arenaVoidDust{
