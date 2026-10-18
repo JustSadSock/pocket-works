@@ -23,7 +23,8 @@
         "tests/floorplans.test.mjs",
         "tests/rogue-doors.test.mjs",
         "tests/architecture-cache.test.mjs",
-        "tests/viewmodel-visual.test.mjs"
+        "tests/viewmodel-visual.test.mjs",
+        "tests/hall-fixtures.test.mjs"
       ]
     },
     {
