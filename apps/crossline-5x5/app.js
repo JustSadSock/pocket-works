@@ -228,14 +228,14 @@ function markerSet(actions,units,edges){
  }
  return {traces,targets};
 }
-function drawBoard(host,units,edges,events=[],preview=false){
+function drawBoard(host,units,edges,events=[],preview=false,shownRound=game()?.round){
  const traces=preview?markerSet(null,units,edges):{traces:new Map(),targets:new Set()};
  const impacts=new Set(events.filter(e=>e.type==='hit'||e.type==='fall').map(e=>e.side));
  const blocked=new Set(events.filter(e=>e.type==='block').map(e=>e.side));
  let html='';
  for(let y=0;y<5;y++)for(let x=0;x<5;x++){
   const at=['A','B'].filter(k=>units[k]?.alive&&units[k].x===x&&units[k].y===y),coord=x+','+y,outer=x===0||y===0||x===4||y===4;
-  const warned=(!edges&&game()?.round===4&&outer),lava=edges&&outer;
+  const warned=(!edges&&shownRound===4&&outer),lava=edges&&outer;
   const hit=at.some(k=>impacts.has(k)),block=at.some(k=>blocked.has(k));
   html+='<div class="cell '+(warned?'edge-warning ':'')+(lava?'lava ':'')+(traces.traces.has(coord)?'trace ':'')+(traces.targets.has(coord)?'target ':'')+(hit?'impact ':'')+(block?'block ':'')+'" role="gridcell" data-x="'+x+'" data-y="'+y+'" data-trace="'+(traces.traces.get(coord)||'')+'">';
   if(at.length)html+='<div class="piece '+(at.length===2?'both':at[0].toLowerCase())+'"><span>'+(at.length===2?'ⅠⅡ':at[0]==='A'?'Ⅰ':'Ⅱ')+'</span></div>';
@@ -249,7 +249,7 @@ function render(){
  if(!match)return;
  const sidescore=score(),turn=side(),flags=ready(),finished=state.phase==='finished';
  const picture=animFrame||{units:match.units,edgesCollapsed:match.edgesCollapsed,events:[]};
- drawBoard($('board'),picture.units,picture.edgesCollapsed,picture.events,!animating);
+ drawBoard($('board'),picture.units,picture.edgesCollapsed,picture.events,!animating,picture.round||match.round);
  $('roundInfo').textContent='РАУНД '+Math.min(match.round,4)+' / '+MAX_ROUNDS;
  $('phaseInfo').textContent=animating?'ИСПОЛНЕНИЕ':finished?'ПАРТИЯ ОКОНЧЕНА':flags[turn]?'ПЛАН ПОДТВЕРЖДЁН':'ПЛАНИРОВАНИЕ';
  $('nameA').textContent=mode==='online'?(server.players.find(p=>p.id===server.seats[0])?.name||'ИГРОК А'):'ИГРОК А';
@@ -281,8 +281,8 @@ function animateRecord(record){
  show('play');let i=-1;
  const step=()=>{
   if(ticket!==gameToken)return;
-  if(i<0){animFrame={units:record.begin,edgesCollapsed:record.round===4?false:record.round>4,events:[],beat:0};}
-  else animFrame=frames[i];
+  if(i<0){animFrame={units:record.begin,edgesCollapsed:record.round===4?false:record.round>4,events:[],beat:0,round:record.round};}
+  else animFrame={...frames[i],round:record.round};
   render();
   if(i>=frames.length-1){
    setTimeout(()=>{if(ticket!==gameToken)return;animating=false;animFrame=null;plan=[];render();if(latest()?.phase==='finished')finish();},560);
@@ -325,7 +325,7 @@ function replayFrame(){
 }
 function paintReplay(){
  const rec=currentRecord();if(!rec)return;const frame=replayFrame();
- drawBoard($('replayBoard'),frame.units,frame.edgesCollapsed,frame.events);
+ drawBoard($('replayBoard'),frame.units,frame.edgesCollapsed,frame.events,false,rec.round);
  $('replaySeek').max=String(rec.frames.length);$('replaySeek').value=String(replayIndex);
  $('replayLabel').textContent=replayIndex===0?'ПЕРЕД ИСПОЛНЕНИЕМ':('ШАГ '+frame.beat+' / '+rec.frames.length+' · '+rec.frames[Math.max(0,replayIndex-1)].events.map(e=>e.type==='hit'?'ПОПАДАНИЕ':e.type==='block'?'БЛОК':e.type==='collapse'?'ОБРУШЕНИЕ':'').filter(Boolean).join(' '));
  $('replayPlay').textContent=replayPaused?'▶ Играть':'Ⅱ Пауза';
