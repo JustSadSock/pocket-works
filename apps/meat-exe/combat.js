@@ -1,6 +1,6 @@
 // Combat hit resolution is shared by touch, mouse and gamepad: no render-dependent hit tests.
-const SIZE={crawler:.56,spitter:.56,brute:.79,heart:1.18};
-const HEIGHT={crawler:.89,spitter:.89,brute:.92,heart:1.52};
+const SIZE={crawler:.56,spitter:.56,brute:.79,heart:1.18,leech:.52};
+const HEIGHT={crawler:.89,spitter:.89,brute:.92,heart:1.52,leech:.82};
 export function directionFromAim(yaw,pitch){
   const c=Math.cos(pitch);
   return {x:-Math.sin(yaw)*c,y:Math.sin(pitch),z:-Math.cos(yaw)*c};
@@ -41,5 +41,5 @@ export function hitRay(origin,dir,enemies,isFloor,range=15,getTissueAt=null){
   return {kind:'miss',enemy:null,distance:range,point:{x:origin.x+d.x*range,y:origin.y+d.y*range,z:origin.z+d.z*range},direction:d};
 }
 export function staggerDuration(type){
-  return type==='heart'?.055:type==='brute'?.10:type==='spitter'?.19:.16;
+  return type==='heart'?.055:type==='brute'?.10:type==='spitter'?.19:type==='leech'?.21:.16;
 }

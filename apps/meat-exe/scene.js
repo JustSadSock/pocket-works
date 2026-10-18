@@ -95,6 +95,7 @@ export function createWorld(canvas, initialSeed) {
     crawler:new THREE.MeshStandardMaterial({color:0x9f2937,roughness:.46,emissive:0x330307,emissiveIntensity:.4}),
     spitter:new THREE.MeshStandardMaterial({color:0x718a3d,roughness:.44,emissive:0x283108,emissiveIntensity:.36}),
     brute:new THREE.MeshStandardMaterial({color:0x765361,roughness:.82,emissive:0x22070e,emissiveIntensity:.25}),
+    leech:new THREE.MeshStandardMaterial({color:0x6c516f,roughness:.46,emissive:0x271332,emissiveIntensity:.45}),
     heart:new THREE.MeshStandardMaterial({color:0xbd132d,roughness:.31,emissive:0x5f0713,emissiveIntensity:1})
   };
   const eyeMat = new THREE.MeshBasicMaterial({color:0xffe6bc});
@@ -105,6 +106,7 @@ export function createWorld(canvas, initialSeed) {
   const spitterSacGeo=new THREE.IcosahedronGeometry(.30,1);
   const brutePlateGeo=new THREE.ConeGeometry(.23,.65,5);
   const crawlerClawGeo=new THREE.ConeGeometry(.12,.62,5);
+  const leechTubeGeo=new THREE.TorusGeometry(.34,.09,6,12);
   const vesselMat = new THREE.MeshStandardMaterial({color:0x7e2434,metalness:.06,roughness:.33,emissive:0x26050a,emissiveIntensity:.25});
   const vesselGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
     new THREE.Vector3(-.46,.09,-.25),new THREE.Vector3(-.20,.11,-.05),
@@ -339,7 +341,7 @@ export function createWorld(canvas, initialSeed) {
   function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
   function makeEnemy(type,x,z){
     const g=new THREE.Group(), core=mobMats[type]||mobMats.crawler;
-    const scale=type==='heart'?1.8:type==='brute'?1.28:type==='spitter'?.84:.95;
+    const scale=type==='heart'?1.8:type==='brute'?1.28:type==='spitter'?.84:type==='leech'?.93:.95;
     const body=new THREE.Mesh(organicGeo,core);body.position.y=.85;body.scale.set(.42,.5,.32);g.add(body);
     const wound=new THREE.Mesh(organicGeo,woundMat);wound.position.y=.85;wound.scale.set(.46,.54,.37);wound.visible=false;g.add(wound);g.userData.wound=wound;
     const jaw=new THREE.Mesh(new THREE.TorusGeometry(.2,.07,6,12),boneMat);jaw.position.set(0,.65,-.3);g.add(jaw);
@@ -357,6 +359,13 @@ export function createWorld(canvas, initialSeed) {
       for(const side of [-1,1]){
         const sac=new THREE.Mesh(spitterSacGeo,bile);
         sac.position.set(side*.32,1.18,.14);sac.scale.set(.9,1.4,1.25);g.add(sac);
+      }
+    }
+    if(type==='leech'){
+      for(let ring=0;ring<3;ring++){
+        const collar=new THREE.Mesh(leechTubeGeo,ring===1?boneMat:core);
+        collar.position.set(0,.63+ring*.24,0);collar.rotation.x=Math.PI/2;
+        collar.scale.setScalar(.8+ring*.15);g.add(collar);
       }
     }
     if(type==='brute'){
@@ -490,7 +499,7 @@ export function createWorld(canvas, initialSeed) {
       e.visual.position.set(e.x,Math.sin(time*4+e.id)*.038-hit*.05,e.z);
       e.visual.rotation.y=Math.atan2(player.x-e.x,player.z-e.z)+Math.PI;
       e.visual.rotation.z=(reduced?0:Math.sin(time*26+e.id)*hit*.075);
-      e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='brute'?1.28:e.type==='spitter'?.84:.95)*(1+Math.sin(time*5+e.id)*.045-hit*.07));
+      e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='brute'?1.28:e.type==='spitter'?.84:e.type==='leech'?.93:.95)*(1+Math.sin(time*5+e.id)*.045-hit*.07));
       if(e.visual.userData.wound)e.visual.userData.wound.visible=hit>.1;
       const tell=e.visual.userData.tell;
       if(tell){

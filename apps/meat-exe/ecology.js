@@ -5,7 +5,8 @@ export const ENEMY_TELLS=Object.freeze({
   crawler:{name:'ПРЫЖОК',windup:.38,range:1.14,cooldown:1.5,color:0xeb6858},
   spitter:{name:'ПЛЕВОК',windup:.72,range:8,cooldown:2.25,color:0xa2bb53},
   brute:{name:'ТАРАН',windup:.79,range:4.8,cooldown:2.6,color:0xf5b783},
-  heart:{name:'ЗАЛП',windup:.88,range:10,cooldown:2.25,color:0xefb3ce}
+  heart:{name:'ЗАЛП',windup:.88,range:10,cooldown:2.25,color:0xefb3ce},
+  leech:{name:'ВЫСАСЫВАНИЕ',windup:.83,range:3.6,cooldown:3.1,color:0x9b7bd1}
 });
 export const ENEMY_KINDS=Object.freeze(Object.keys(ENEMY_TELLS));
 
@@ -20,7 +21,7 @@ export function resetIntent(e,delay=.65){
 export function interruptIntent(e,damage,weapon){
  if(!e.windup||e.windup<=0)return false;
  // Heavy impacts can cancel the dangerous commitment, not trivial grazing shots.
- const threshold=e.type==='brute'?(weapon===1?12:32):e.type==='heart'?80:e.type==='spitter'?(weapon===1?12:20):22;
+ const threshold=e.type==='brute'?(weapon===1?12:32):e.type==='heart'?80:e.type==='spitter'?(weapon===1?12:20):e.type==='leech'?(weapon===1?12:24):22;
  if(damage<threshold)return false;
  resetIntent(e,e.type==='heart'?.65:1);
  e.stagger=Math.max(e.stagger||0,.35);
@@ -38,6 +39,7 @@ export function advanceEnemyIntent(e,dt,context){
    e.attack=ENEMY_TELLS[e.type]?.cooldown||1.4;
    if(kind==='spit')return {action:visible&&gap<9?'shoot':'miss',kind};
    if(kind==='volley')return {action:visible&&gap<11?'volley':'miss',kind};
+   if(kind==='drain')return {action:visible&&gap<4?'drain':'miss',kind};
    if(kind==='charge'){
      e.lunge=.37;
      const n=Math.hypot(e.intentX-x,e.intentZ-z)||1;
@@ -56,6 +58,7 @@ export function advanceEnemyIntent(e,dt,context){
  if(e.type==='spitter'&&gap>=1.7&&gap<8)kind='spit';
  if(e.type==='spitter'&&gap<.85)kind='bite';
  if(e.type==='heart'&&gap<10)kind='volley';
+ if(e.type==='leech'&&gap<3.6)kind='drain';
  if(!kind)return {action:'approach'};
  e.windup=kind==='bite'?.40:ENEMY_TELLS[e.type].windup;
  e.windupKind=kind;e.intentX=playerX;e.intentZ=playerZ;
@@ -66,6 +69,16 @@ export function enemyTerrainReaction(type,hazard){
  if(hazard==='marrow')return type==='brute'?{damage:0,speed:1,stagger:0}:{damage:0,speed:.7,stagger:0};
  if(hazard==='charge')return type==='heart'?{damage:0,speed:1,stagger:0}:{damage:8,speed:.63,stagger:.48};
  return {damage:0,speed:1,stagger:0};
+}
+export function chooseEnemyKind(wave,roll){
+ const r=cap(Number.isFinite(roll)?roll:0,0,.999999);
+ if(wave===5)return 'heart';
+ const heavy=wave===3?.38:wave===4?.25:.17;
+ const siphon=wave===2||wave===4?.20:.12;
+ if(r<heavy)return 'brute';
+ if(r<heavy+siphon)return 'leech';
+ if(r<heavy+siphon+.26)return 'spitter';
+ return 'crawler';
 }
 export function maxActiveAttackers(enemies){
  return cap(3+Math.floor((enemies?.length||0)/8),3,5);

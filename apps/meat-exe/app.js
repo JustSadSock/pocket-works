@@ -3,7 +3,7 @@ import { createWorld } from './scene.js';
 import { validateRun, deadzone, findOpenFacing } from './stability.js';
 import { hitRay, pelletAim, staggerDuration } from './combat.js';
 import { createCombatAudio } from './sound-forge.js';
-import {initialEnemyIntent,advanceEnemyIntent,interruptIntent,enemyTerrainReaction,maxActiveAttackers,resetIntent} from './ecology.js';
+import {initialEnemyIntent,advanceEnemyIntent,interruptIntent,enemyTerrainReaction,maxActiveAttackers,resetIntent,chooseEnemyKind} from './ecology.js';
 import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal,biomeSpawnWeight} from './biomes.js';
 
 installMobileRuntime();
@@ -81,10 +81,10 @@ function newState(seed){
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
-  const max=type==='heart'?310:type==='brute'?118:type==='spitter'?49:61;
+  const max=type==='heart'?310:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61;
   const id=nextId++;
   return {id,type,x,z,hp:hp||max,maxHp:max,...initialEnemyIntent(type,id),
-    speed:type==='heart'?.8:type==='brute'?.86:type==='spitter'?1.14:1.55,visual:world.makeEnemy(type,x,z)};
+    speed:type==='heart'?.8:type==='brute'?.86:type==='spitter'?1.14:type==='leech'?1.20:1.55,visual:world.makeEnemy(type,x,z)};
 }
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
@@ -207,7 +207,7 @@ function defeatEnemy(e){
   world.splatter(e.x,e.z,e.type==='heart'?55:16);
   world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
-  state.kills++;state.score+=e.type==='heart'?2500:e.type==='brute'?160:e.type==='spitter'?110:80;
+  state.kills++;state.score+=e.type==='heart'?2500:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
   killUntil=clock+.2;ui.cross.classList.add('killed');
   if(e.type==='heart'){finish(true);return;}
   if(Math.random()<.36)dropAt(e.x,e.z);
@@ -357,6 +357,10 @@ function updateEnemies(dt){
     if(result.action==='shoot'){createProjectile(e);sound('heart');}
     else if(result.action==='volley'){for(let n=-2;n<=2;n++)createProjectile(e,n*.29);}
     else if(result.action==='bite'){harm(e.type==='brute'?18:e.type==='heart'?21:10);}
+    else if(result.action==='drain'){
+      const before=state.hp;harm(10);
+      if(state.hp<before){e.hp=Math.min(e.maxHp,e.hp+12);world.impact({x:e.x,y:.8,z:e.z},{x:0,y:1,z:0},'flesh');}
+    }
     else if(result.action==='charge'){e.chargeHit=false;setNotice('ТАРАН · УВЕРНИСЬ',.7);}
     if(e.lunge>0){
       const before=Math.hypot(state.x-e.x,state.z-e.z);
@@ -369,7 +373,7 @@ function updateEnemies(dt){
       if(before>1.1&&e.lunge<=dt&&!e.chargeHit){chargesDodged++;state.score+=25;}
       continue;
     }
-    if(e.windup>0&&(e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.windupKind==='bite'))continue;
+    if(e.windup>0&&(e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
     if(dist>.76){
       const modifier=mutation?.key==='faster'?1.18:1;
       let pace=e.speed*modifier*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1)*terrain.speed;
@@ -435,7 +439,7 @@ function update(dt){
   if(state.toSpawn>0){
     state.spawnClock-=dt;
     if(state.spawnClock<=0&&state.enemies.length<20){
-      const type=state.wave===5?'heart':Math.random()<biomeSpawnWeight(state.wave)?'brute':Math.random()<.33?'spitter':'crawler';
+      const type=chooseEnemyKind(state.wave,Math.random());
       if(spawnUnit(type)){state.toSpawn--;state.spawnClock=state.wave===5?0:rng(.4,.9);}
       else state.spawnClock=1.1;
     }
