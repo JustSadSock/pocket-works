@@ -45,7 +45,7 @@ for(let seed=0;seed<80;seed++){
  const f=fixture(30,30),target=[146,90,56];
  for(let y=4;y<25;y++)for(let x=4;x<25;x++)write(f,x,y,target);
  for(let y=4;y<25;y++)write(f,15,y,[31,34,40]);
- check(paint(f,[8,13],[30,130,210])===10*21,'left region must stay bounded by different colour');
+ check(paint(f,[8,13],[30,130,210])===11*21,'left region must stay bounded by different colour');
  check(read(f,20,13).join()===target.join(),'right side remains original');
  check(paint(f,[20,13],[54,190,120])===9*21,'right region recolours independently');
  check(read(f,8,13)[0]===30,'second fill changed left');
