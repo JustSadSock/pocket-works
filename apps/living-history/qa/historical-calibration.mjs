@@ -81,9 +81,9 @@ if(dest){
  const quantitativeReport={schema:1,study:'living-history-realism-ensemble',
   sourceCommit:process.env.GITHUB_SHA||null,generatedAt:new Date().toISOString(),
   method:{group,years,seeds:listed,baselineOnly:true},summary,runs:measured};
- const companion=dest.replace(/\\.json$/i,'')+'-realism.json';
- fs.writeFileSync(companion,JSON.stringify(quantitativeReport,null,2)+'\\n');
- const note=companion.replace(/\\.json$/i,'')+'.md';
+ const companion=dest.replace(/\.json$/i,'')+'-realism.json';
+ fs.writeFileSync(companion,JSON.stringify(quantitativeReport,null,2)+'\n');
+ const note=companion.replace(/\.json$/i,'')+'.md';
  fs.writeFileSync(note,renderRealismReport(quantitativeReport));
  console.log('REALISM COMPANION seed='+listed.join(',')+' years='+years+' status=NOT_HISTORICALLY_VALIDATED json='+companion+' md='+note);
 }
