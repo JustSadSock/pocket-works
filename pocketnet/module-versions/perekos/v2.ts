@@ -308,11 +308,11 @@ function advanceNet(s){
 }
 function chooseNet(s,i,id,replace){
  if(s.phase!=='draft'||s.picked[i]||!s.offers[i].includes(id))return false;
- const list=s.match.actors[i].runes;
- if(list.length===9){if(!Number.isInteger(replace)||replace<0||replace>=9)return false;list[replace]=id}
- else list.push(id);
- if(!legalRunes(list))return false;
- s.picked[i]=true;s.revision++;return true;
+ const list=s.match.actors[i].runes,proposed=[...list];
+ if(proposed.length===9){if(!Number.isInteger(replace)||replace<0||replace>=9)return false;proposed[replace]=id}
+ else proposed.push(id);
+ if(!legalRunes(proposed))return false;
+ s.match.actors[i].runes=proposed;s.picked[i]=true;s.revision++;return true;
 }
 function reorderNet(s,i,list){
  if(s.phase!=='draft'||!s.picked[i]||s.ready[i]||!legalRunes(list))return false;
