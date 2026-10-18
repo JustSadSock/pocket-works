@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "product": "perekos",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "meat-exe",
+      "evidence": "apps/meat-exe/visual-direction.json and prior project architecture",
+      "lesson": "Keep the battlefield comprehensible in overhead view and avoid the first-person tunnel HUD and heavy dark vignette which would hide tiny spells."
+    },
+    {
+      "slug": "venets",
+      "evidence": "apps/venets/visual-direction.json and project review",
+      "lesson": "Avoid text-first parchment spreads during active play; reserve ink-on-paper only for between-round upgrade choices and results."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://www.noitagame.com/",
+      "observation": "Noita combines readable small pixel characters with strongly expressive magical particle interactions.",
+      "principle": "Unexpected interaction outcomes must have visible causes and a readable payoff.",
+      "application": "The duel uses pixel block bolts, shield rings, dash wakes and impact sparks triggered from deterministic combat events.",
+      "avoid": "Do not copy Noita's caves, destructive physics or heavy effect noise which would obscure a competitive arena.",
+      "inspectedAt": "2026-10-18"
+    },
+    {
+      "url": "https://store.steampowered.com/app/257850/Hyper_Light_Drifter/",
+      "observation": "Hyper Light Drifter gives tiny top-down combat figures a strong silhouette against richly designed ruined spaces.",
+      "principle": "Silhouette and contrast should do more work than labels during a fast duel.",
+      "application": "Give both wizards distinct coats, bright headwear, staff shapes and differentiated projectile tint on a dark mineral floor.",
+      "avoid": "Do not borrow its cyan neon-tech aesthetic, character art or sword-centric combat pose.",
+      "inspectedAt": "2026-10-18"
+    },
+    {
+      "url": "https://eastwardgame.com/media/",
+      "observation": "Eastward uses dense handcrafted pixel detail with layered lighting and cozy lived-in environments.",
+      "principle": "Small, restrained scenic detail can make a tiny place memorable without requiring busy UI decorations.",
+      "application": "Set the arena in chipped stone, varied grout, moss flecks, torch pedestals and small cracks around collision blocks.",
+      "avoid": "Do not imitate its specific portraits, side-scrolling composition or plot-heavy screens.",
+      "inspectedAt": "2026-10-18"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "courtyard",
+      "medium": "400x620 low-resolution Canvas art for masonry and animated pixel-sprite-like wizard characters.",
+      "composition": "Overhead rectangular courtyard with tiny opponents and two thumb clusters in the phone corners.",
+      "interaction": "Direct movement stick, hold to fire and tap shield or dash; rune selection sits over the arena.",
+      "motion": "Short projectile trails, fast dodge displacements and impact blocks illustrate every collision.",
+      "rationale": "Selected because arcade mechanics and straightforward collision patterns suit a short deterministic duel."
+    },
+    {
+      "id": "magic-diagram",
+      "medium": "Vector strokes and node-linked rings inside one DOM/SVG interactive diagram screen.",
+      "composition": "The rune circuit itself is the full screen, and combat remains a small preview on the edge.",
+      "interaction": "Players drag links and activate circuits rather than directly steering two magicians.",
+      "motion": "Propagation pulses move around wires and gradually illuminate connected nodes.",
+      "rationale": "Too abstract for the early v0.1 product; interesting as an optional later builder visualization."
+    },
+    {
+      "id": "miniature-stage",
+      "medium": "Isometric 3D toy stage with physically sculpted figures, rendered in WebGL on device.",
+      "composition": "Camera looks across a tabletop miniature arena with very low side-angle walls.",
+      "interaction": "Swipe to orbit camera and tap targets while virtual buttons call spells.",
+      "motion": "Clay miniatures squash, roll and bob after spell explosions.",
+      "rationale": "Heavy setup and camera complexity would cost responsiveness and clear PvP aim on the first version."
+    }
+  ],
+  "selection": {
+    "concept": "courtyard",
+    "reason": "A top-down pixel courtyard makes spell impacts and movement legible with a small deterministic ruleset and restrained controls.",
+    "rejected": [
+      {
+        "concept": "magic-diagram",
+        "reason": "Rune visualization before real duel mechanics would become a decorative tech demo rather than a playable competition."
+      },
+      {
+        "concept": "miniature-stage",
+        "reason": "Isometric depth and camera control add cognitive load and visual production work before combat balance is proven."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas2d",
+      "availability": "available",
+      "reason": "The browser Canvas 2D API ships on target Safari and Chromium and supports exact low-resolution pixels without a CDN."
+    },
+    {
+      "id": "svg",
+      "availability": "available",
+      "reason": "Local vector icon can be authored and shipped without external libraries, fonts, streaming textures or licenses."
+    },
+    {
+      "id": "webaudio",
+      "availability": "available",
+      "reason": "Web Audio provides tiny user-unlocked feedback tones that remain under user sound settings and offline operation."
+    }
+  ],
+  "assets": [
+    {
+      "id": "arena",
+      "tool": "canvas2d",
+      "source": "app.js",
+      "output": "index.html",
+      "role": "The cached masonry composition gives the small courtyard tactile depth during a duel.",
+      "acceptance": "Every obstacle has legible solid walls, top facets, shadow and moss without hiding small projectiles.",
+      "integration": "background() rasterizes a deterministic low-resolution canvas once, then render() reuses it for every frame.",
+      "provenance": "Original in-app authored Canvas paint instructions, not scraped or AI-generated image assets.",
+      "maxBytes": 250000
+    },
+    {
+      "id": "wizard",
+      "tool": "canvas2d",
+      "source": "core.mjs",
+      "output": "app.js",
+      "role": "Small top-down hat, coat, face and staff identify the two players even at phone scale.",
+      "acceptance": "Two characters remain visually different by coat color and detail while their health changes in real time.",
+      "integration": "The renderer receives game state coordinates, portrait palette hints and current effects as explicit arguments.",
+      "provenance": "Original custom-painted pixel rectangles and no derived third-party character sprites.",
+      "maxBytes": 250000
+    },
+    {
+      "id": "icon",
+      "tool": "svg",
+      "source": "README.md",
+      "output": "icons/icon.svg",
+      "role": "A single angular overgrown wizard hat emblem connects the app to its tiny battle characters.",
+      "acceptance": "Shows an identifiable pointed hat and warm torn-paper palette at a launcher tile scale.",
+      "integration": "Linked from HTML, webmanifest and PocketWorks app configuration for the standalone application.",
+      "provenance": "Original vector geometry, no downloaded artwork, fonts or licensing dependency.",
+      "maxBytes": 15000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 500000,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Wizard and bolt may become too small on a narrow phone.",
+      "Virtual thumb controls may obscure a spell near the bottom wall.",
+      "Three rune choices may overflow on a short iPhone viewport."
+    ],
+    "comparisons": [
+      "Compare home and fight screenshots at 390x844: background remains readable, menu hides cleanly.",
+      "Compare fight and rune-draft screens: choices appear above scene without vertical overflow.",
+      "Compare fight state to not-dead-yet and meat-exe: different view axis, text density and ability placement."
+    ]
+  }
+}
