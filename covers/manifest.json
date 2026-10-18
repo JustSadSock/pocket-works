@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "ed649c2d14de2badb783bbfb28edcabe70e8c55d",
+    "revision": "c3c43a000a2299e9f4d0fa1ccce7a6c57e97cd65",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "ed649c2d14de2badb783bbfb28edcabe70e8c55d",
-    "lastAttemptAt": "2026-10-18T19:12:21.199Z",
+    "lastAttemptRevision": "c3c43a000a2299e9f4d0fa1ccce7a6c57e97cd65",
+    "lastAttemptAt": "2026-10-18T20:47:33.815Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3199,7 +3199,7 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "e2293daba79eb718519e837625c0745641630909",
+    "revision": "f9f5dc97bd12939f28a7fd2f00a893bbf9ca80f9",
     "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
@@ -3211,8 +3211,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "e2293daba79eb718519e837625c0745641630909",
-    "lastAttemptAt": "2026-10-18T19:35:46.107Z"
+    "lastAttemptRevision": "f9f5dc97bd12939f28a7fd2f00a893bbf9ca80f9",
+    "lastAttemptAt": "2026-10-18T20:48:00.946Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3448,15 +3448,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.6.0&pw_fp=6ee01f2b097052aea8feeeb0"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.9.0&pw_fp=16e8a4749c5254e5d72b9a46"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "b4615609f477324a08eaba003781c31e59c59d5d",
-    "lastAttemptAt": "2026-10-18T19:20:41.003Z",
+    "lastAttemptRevision": "a71efb44caa0a547b7b907f5dab11eae4d9a1164",
+    "lastAttemptAt": "2026-10-18T20:47:10.968Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3480,9 +3480,9 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "2a66f5775258f346e92e3cca47e30bb4b7a0f591",
-    "lastAttemptAt": "2026-10-18T19:35:35.058Z",
-    "revision": "2a66f5775258f346e92e3cca47e30bb4b7a0f591",
+    "lastAttemptRevision": "1704224802eb850c9278b63deec3c68ef2884dac",
+    "lastAttemptAt": "2026-10-18T20:47:49.945Z",
+    "revision": "1704224802eb850c9278b63deec3c68ef2884dac",
     "qualityScore": 78,
     "visionScore": null,
     "prepared": false,
@@ -3494,8 +3494,8 @@
         "score": 74
       }
     ],
-    "shot": 1,
-    "sha256": "b5ba0489bab8e1c6d87d4730d77d560e23c39ae4d5ee88147f7b96c15c9d3091",
+    "shot": 0,
+    "sha256": "b1c6745bea863718a11f188e400b2c7628bff5a969e22afbc27e7074b815f48b",
     "imageVersion": 2
   },
   "crossline-5x5": {
@@ -3535,5 +3535,32 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "c95082af588c7eea7a145b2b06f4515d2196e08d",
     "lastAttemptAt": "2026-10-18T19:12:44.392Z"
+  },
+  "portal-lab": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 51,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 40181,
+        "variance": 35.08746245808799,
+        "entropy": 2.013692360967079,
+        "edgeDensity": 0.1548859126984127,
+        "colorfulness": 20.317626953125,
+        "centerDetail": 18.948171237070454,
+        "meanLight": 44.90824731445344
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/portal-lab/?pw-cover=1&pw_release=0.1.0&pw_fp=11f7cacfe4ac4bb6daa4d854"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "2a00f772bc15126df3b1902b113990b3b992ed23",
+    "lastAttemptAt": "2026-10-18T20:47:21.888Z"
   }
 }
