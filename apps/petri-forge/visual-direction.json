@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 2,
+  "status": "draft",
+  "product": "petri-forge",
+  "direction": {
+    "premise": "TODO — What should PetriForge feel like, beyond its genre?",
+    "composition": "TODO — Describe the dominant spatial layout and focal point on a phone",
+    "shapeLanguage": "TODO — Name distinctive silhouettes, edges, proportions and negative space",
+    "surfaceAndMaterial": "TODO — Describe material response, texture or illustration method",
+    "paletteLogic": "TODO — Describe value hierarchy and why the chosen colors belong to this world",
+    "typography": "TODO — Describe type character and hierarchy, including in-game functional text",
+    "signature": "TODO — One unique visual or interactive behavior recognizable without a logo",
+    "distinction": "TODO — Which nearby Pocket Works apps look similar and how will this differ?"
+  },
+  "architecture": {
+    "spatialLayout": "TODO — choose the actual phone layout",
+    "controlLocation": "TODO — place controls by the core verbs",
+    "navigation": "TODO — define how navigation works in the product",
+    "chromeTopology": "TODO — decide which permanent frames or surfaces exist",
+    "dominantMotion": "TODO — choose a physical timing model",
+    "primaryVerb": "TODO — name a real action that a player performs with the object",
+    "physicalFeedback": "TODO — describe response, inertia, friction, sound and cancellation",
+    "spatialRationale": "TODO — explain why this composition is optimal on a phone",
+    "comparisons": []
+  },
+  "production": {
+    "renderer": "TODO — Why DOM/CSS, sprites, Canvas, WebGL, or authored 3D is appropriate",
+    "focalAsset": "TODO — What is the hero object and how will its visual asset be authored?"
+  },
+  "motion": {
+    "character": "TODO — Heavy, elastic, precise, organic, mechanical, etc; give reasons",
+    "action": "TODO — Identify the user action whose motion must feel distinctive",
+    "anticipation": "TODO — What moves BEFORE the action and why?",
+    "response": "TODO — What visually reacts on the first frame of input?",
+    "followThrough": "TODO — What settles, lags, rebounds, or remains changed afterward?",
+    "interruption": "TODO — How rapid repeat input redirects motion without queued delay",
+    "reducedMotion": "TODO — What remains legible when motion is reduced"
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#primary-action"
+    },
+    "expectedChange": "TODO — What should an observer see after performing this real action?",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

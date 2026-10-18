@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "petri-forge",
+  "name": "PetriForge",
+  "shortName": "PetriForge",
+  "description": "Редактор клеточных сред с обучаемым агентом, наградами и препятствиями.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T20:26:58.535Z",
+  "changelog": [
+    "Перенесена восстановленная облачная версия: редактор среды, Q-learning и случайный агент; сенсорное рисование и сохранение сцен."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#67ba99",
+  "backgroundColor": "#0f1719",
+  "themeColor": "#0f1719",
+  "orientation": "landscape",
+  "cacheName": "petri-forge-v0.1.0",
+  "storageNamespace": "pocket-works:petri-forge",
+  "tags": [
+    "simulation",
+    "editor",
+    "AI",
+    "offline"
+  ],
+  "order": 100
+}
