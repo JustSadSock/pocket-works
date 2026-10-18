@@ -228,8 +228,12 @@
   });
   $('langSelect')?.addEventListener('change',()=>requestAnimationFrame(updateRulesLabel));
   window.addEventListener('DOMContentLoaded',()=>{
-    if(window.matchMedia('(max-width:720px)').matches&&!panel.classList.contains('collapsed'))
+    if(window.matchMedia('(max-width:720px), (max-height:540px)').matches&&!panel.classList.contains('collapsed'))
       $('panelToggleBtn')?.click();
+    if(window.matchMedia('(max-height:460px)').matches){
+      miniVisible=false;mini.hidden=true;
+      $('fogToggleMini').setAttribute('aria-expanded','false');
+    }
     updateRulesLabel();resize();scheduleMap();
   });
 })();
