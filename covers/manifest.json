@@ -3427,8 +3427,8 @@
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "f182cc9af45f6c1bf19636f0fb6a27a60bf00a81",
-    "lastAttemptAt": "2026-10-18T12:15:07.738Z",
+    "lastAttemptRevision": "a779615cccc51ef26e5948f7e430a5f7977942f7",
+    "lastAttemptAt": "2026-10-18T12:40:23.168Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
