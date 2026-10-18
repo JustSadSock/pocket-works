@@ -65,7 +65,7 @@
     "note": "existing cover rated higher",
     "status": "preserved",
     "lastAttemptRevision": "12252b96c0defcbbd8df4fdec54f00ee336c4928",
-    "lastAttemptAt": "2026-10-16T18:43:35.480Z",
+    "lastAttemptAt": "2026-10-18T18:46:38.375Z",
     "captureEngine": "safe-gameplay-v3"
   },
   "lipki": {
@@ -3448,15 +3448,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.5.0&pw_fp=3de2fcf60224609575b013a1"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.5.1&pw_fp=87d7c30bac468a825c510012"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "88e50551b8d4edf249a4efb7f96efede4e2a6126",
-    "lastAttemptAt": "2026-10-18T15:40:09.436Z",
+    "lastAttemptRevision": "40d5e751cd69f0f9125f1edabc136ebd02968416",
+    "lastAttemptAt": "2026-10-18T18:46:27.432Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
