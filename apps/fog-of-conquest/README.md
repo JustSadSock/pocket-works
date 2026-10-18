@@ -26,7 +26,7 @@ the authoritative server. The server validates ownership, range, terrain and
 gold; `viewForPlayer` hides unknown terrain, enemy units, opponent resources,
 and privately projects explored fog. Commands include revision checks.
 
-The immutable PocketNet `v2.ts` snapshot, `modules.lock.json` activation
+The immutable PocketNet `v3.ts` snapshot (with v2 preserved), `modules.lock.json` activation
 and hub room-retention support are published in the same atomic release.
 Disconnected users can rejoin with their saved guest token and room ID;
 inactive rooms are retained for up to six days, subject to platform quotas,
@@ -38,7 +38,7 @@ is a forfeit; simply losing network connectivity is not.
 node --test apps/fog-of-conquest/test/original-port.test.mjs
 node apps/fog-of-conquest/test/port-browser.mjs
 ```
-Run the original browser gameplay QA after changes; confirm both desktop and mobile states and two-client PocketNet integration. Original offline local modes do not require an internet connection.
+Run `node --test apps/fog-of-conquest/test/stage0.test.mjs` for critical save / beta regressions. Run the original browser gameplay QA after changes; confirm both desktop and mobile states and two-client PocketNet integration. Original offline local modes do not require an internet connection.
 
 ## Post-port audit and roadmap
 - [Defect register / audit (18 October 2026)](./AUDIT-2026-10-18.md)
