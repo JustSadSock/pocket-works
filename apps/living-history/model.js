@@ -1,7 +1,7 @@
 import {walkingDistances,walkingSteps,workdayFraction,walkPath,pathEffort} from './navigation.js';
 import {WORK_HOURS,scheduleWork,commitWork,shiftAudit} from './work-time.js';
 import {parcelEconomics,leaseEconomics} from './land-economy.js';
-import {advanceLocalConflicts,conflictAudit} from './conflicts.js';
+import {advanceLocalConflicts,conflictAudit,expeditionGrain} from './conflicts.js';
 // Living History: deterministic, renderer-independent regional society simulation.
 export const SIZE = 160;
 const T = SIZE * SIZE;
@@ -670,7 +670,10 @@ function cropSeedReserve(s,h,kind){
  return round(Math.max(0,area*CROP_KINDS[kind].share*CROP_KINDS[kind].seedRate));
 }
 function spendFood(s,h){
- const need=foodNeed(s,h);
+ // Expedition members eat measured grain from their own carried inventory.
+ // Feeding them again at home would consume the same day's ration twice.
+ const homeMembers=liveMembers(s,h).filter(p=>p.combatAwayDay!==s.day);
+ const need=homeMembers.reduce((v,p)=>v+(p.age<4?.35:p.age<10?.55:p.age<15?.77:1)*.68,0);
  const gardenEaten=round(Math.min(h.garden||0,need*.22));
  const dairyEaten=round(Math.min(h.dairy||0,need*.16));
  // Pulses complement but do not replace an entire caloric ration. Oat porridge,
@@ -693,7 +696,7 @@ function spendFood(s,h){
  h.grain=round(h.grain-eaten);earn(s,h,'foodKg',eaten);
  s.stats.consumed=round(s.stats.consumed+eaten);
  const hungry=need>0?clamp(1-(eaten+gardenEaten+dairyEaten+pulsesEaten+oatsEaten)/need,0,1):0;
- for(const p of liveMembers(s,h)){
+ for(const p of homeMembers){
   if(hungry>.01){
    p.foodDebt=clamp(p.foodDebt+hungry*.75,0,100);
    p.health=clamp(p.health-hungry*(CALIBRATION.famineHealthLoss+p.foodDebt*CALIBRATION.famineDebtStress),0,100);
@@ -2151,7 +2154,7 @@ export function advanceDays(s,days=1,profiler=null){
 }
 
 export const population=s=>s.people.reduce((n,p)=>n+(p.alive?1:0),0);
-export function overview(s){const h=s.households.filter(h=>liveMembers(s,h).length),grain=round(s.households.reduce((a,h)=>a+h.grain,0)+s.shipments.filter(t=>t.good==='grain').reduce((a,t)=>a+t.amount,0)),wood=round(s.households.reduce((a,h)=>a+h.wood,0)+s.shipments.filter(t=>t.good==='wood').reduce((a,t)=>a+t.amount,0));return {population:population(s),households:h.length,grain,wood,scenario:s.scenario||'normal',coin:s.households.reduce((a,h)=>a+h.coin,0)+s.shipments.reduce((a,t)=>a+t.cost,0),trade:s.stats.trades,born:s.stats.born,died:s.stats.died,hungry:h.filter(h=>h.shortage>7).length,year:Math.floor(s.day/365)+1,day:s.day%365+1};}
+export function overview(s){const h=s.households.filter(h=>liveMembers(s,h).length),grain=round(s.households.reduce((a,h)=>a+h.grain,0)+s.shipments.filter(t=>t.good==='grain').reduce((a,t)=>a+t.amount,0)+expeditionGrain(s)),wood=round(s.households.reduce((a,h)=>a+h.wood,0)+s.shipments.filter(t=>t.good==='wood').reduce((a,t)=>a+t.amount,0));return {population:population(s),households:h.length,grain,wood,scenario:s.scenario||'normal',coin:s.households.reduce((a,h)=>a+h.coin,0)+s.shipments.reduce((a,t)=>a+t.cost,0),trade:s.stats.trades,born:s.stats.born,died:s.stats.died,hungry:h.filter(h=>h.shortage>7).length,year:Math.floor(s.day/365)+1,day:s.day%365+1};}
 export function audit(s){
  const o=overview(s),issues=[];
  const expectedCoin=s.economy.coinsInitial+(s.stats.outsideCoinIn||0)-(s.stats.outsideCoinOut||0);
