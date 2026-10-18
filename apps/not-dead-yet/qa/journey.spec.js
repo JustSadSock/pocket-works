@@ -61,3 +61,18 @@ test('mobile twin-stick traversal, turn, shoot and item drawer',async({browser})
   expect(errors).toEqual([]);
  }finally{await context.close()}
 });
+
+test('1.2 material atlas and pause-menu sound controls survive a page refresh',async({page})=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await launch(page);
+ await expect.poll(async()=> (await state(page)).textureBytes).toBe(384*384*4);
+ await page.locator('#pause').click();
+ await expect(page.locator('#pauseSound')).toBeVisible();
+ const before=(await state(page)).soundEnabled;
+ await page.locator('#pauseSound').click();
+ await expect.poll(async()=>(await state(page)).soundEnabled).toBe(!before);
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#start')).toBeVisible();
+ await expect(page.locator('#sound')).toContainText(!before?'вкл':'выкл');
+ expect(errors).toEqual([]);
+});

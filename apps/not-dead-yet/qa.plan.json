@@ -8,7 +8,9 @@
       "files": [
         "tests/maze.test.mjs",
         "tests/apartment.test.mjs",
-        "tests/chapter.test.mjs"
+        "tests/chapter.test.mjs",
+        "tests/sensory.test.mjs",
+        "tests/textures.test.mjs"
       ]
     },
     {

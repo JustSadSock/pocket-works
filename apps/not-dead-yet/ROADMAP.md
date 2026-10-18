@@ -15,11 +15,22 @@ A confused, visually impaired elderly protagonist believes he is walking around 
 - [ ] Acceptance on device: physically inspect portrait/landscape Chromium and WebKit screenshots, first interaction to ending, suspend and resume; fix discovered issues before release.
 
 ## 1.2 — Physical apartment and animation
-- Art direction: personal Soviet-era flat that has accumulated decades of lived-in objects, worn polish, exposed parquet seams, floral wallpaper, rugs, warped family photographs, kitchenware and imperfect window lighting.
-- Create authored or modelled higher-resolution assets for doors, lamps, sofas, kitchen appliances, books, picture frames and revolver, retaining light-material mobile LODs.
-- True material atlases with albedo/roughness/normal detail, dynamic lamp shadows, curtain motion, non-linear door animations and convincing occlusion.
-- Character embodiment: slow first-person gait, old hands/revolver reload and recoil, balance and effort cues, optional reduced visual motion. No default exaggerated shaking.
-- Responsive surface materials, impact decals, soft radio hiss, wall knocks, room-specific reverb and positional murmurs. Audio opt-out.
+
+### Shipped in version 1.2.0
+- [x] A lived-in apartment: carved door frames and shutters, framed windows, drawn curtains, kitchenware, a real ticking clock and more furniture detail.
+- [x] Offline authored albedo texture atlas; different deterministic painted materials for aged floral wallpaper, parquet, ceramic tile, linoleum, metal, woven fabric, plaster and wood.
+- [x] Small lamp flicker, moving curtains via vertex animation and dynamic clock hands, with no per-frame world mesh regeneration.
+- [x] First-person revolver and elderly character hand/forearm gesture: footstep sway, recoil and reload pose rather than whole-camera shake, honoring OS reduced-motion.
+- [x] Two differentiated and animated silhouette models: a familiar coat shape and a distant human form with asymmetrical limbs and non-neon facial features.
+- [x] Dedicated Web Audio ambient apartment acoustics: surfaces, drum, shot, collectible, wallpaper shift, pipe, clock, radio, heartbeat, sounds toggle in menu and pause.
+- [x] Dedicated image atlas and mock-GPU tests, muted/audio-resume tests, four mobile profiles plus functional journey verification.
+
+### Still required before art-complete 1.2
+- [ ] Authored high-detail furniture/door models and material roughness / tangent-space normal maps, with lightweight mobile LODs.
+- [ ] Dynamic shadow casting (shadows from furniture, doors and player flashlight), reflective window glass, believable day/night variation.
+- [ ] Physical swinging interior doors with proper interaction and non-linear animation.
+- [ ] Room-aware convolution reverb, positional voice memories and localized high-quality foley rather than synthesis only.
+- [ ] Phone screenshots and GPU frame-time profiling to establish a 45–60fps device-specific target.
 
 ## 1.3 — Memory and perception
 - Context-sensitive changes: family pictures reverse, bathroom door leads elsewhere, furniture shifts while unseen, radios recite distorted memories, doors become unfamiliar.

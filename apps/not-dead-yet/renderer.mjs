@@ -1,51 +1,36 @@
 import {W,H,HOME} from './apartment.mjs';
+import {makeMaterialAtlas} from './textures.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
-'uniform mat4 mvp;varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
-'void main(){p=position;c=tint;n=normal;mat=material;gl_Position=mvp*vec4(position,1.0);}'
+'uniform mat4 mvp;uniform mediump float time;varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
+'void main(){vec3 pos=position;',
+'if(material>11.5){pos.x+=.05*sin(time*.9+pos.y*2.0+pos.z*3.0);}',
+'p=pos;c=tint;n=normal;mat=material;gl_Position=mvp*vec4(pos,1.0);}'
 ].join('\n');
 const FS=[
 'precision mediump float;',
 'varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
 'uniform vec3 eye;uniform vec3 facing;uniform vec3 lampA;uniform vec3 lampB;',
-'uniform float torch;uniform float time;uniform float hit;',
-'float hash21(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
-'float noise(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.0-2.0*f);return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),mix(hash21(i+vec2(0.,1.)),hash21(i+1.),f.x),f.y);}',
+'uniform float torch;uniform mediump float time;uniform float hit;',
+'uniform sampler2D paintedAtlas;',
 'void main(){',
-'vec3 norm=normalize(n);vec2 uv=abs(norm.y)>.6?p.xz:(abs(norm.x)>.6?p.zy:p.xy);',
-'float grain=noise(uv*10.0)*.3+noise(uv*34.0)*.12;',
-'float textureV=.88+grain;',
-'if(mat<1.5){',
-'float seam=step(.962,fract(uv.x*1.8))*.22;float scratches=noise(vec2(uv.x*4.0,uv.y*18.0));',
-'textureV=.75+.25*noise(uv*3.0)+grain*.23-seam+scratches*.055;',
-'}else if(mat<2.5){',
-'float stripe=sin(uv.x*17.0)*.06;float flowers=noise(floor(uv*6.0))*.18;',
-'textureV=.80+grain*.65+stripe-flowers*.28;',
-'}else if(mat<3.5){',
-'vec2 plank=vec2(uv.x*2.4,uv.y*1.3);float edges=step(.957,fract(plank.x))* .28+step(.977,fract(plank.y))* .25;',
-'textureV=.82+sin(uv.x*46.0+noise(uv*2.0)*9.0)*.07+noise(uv*9.0)*.1-edges;',
-'}else if(mat<4.5){',
-'float grout=max(step(.956,fract(uv.x*1.35)),step(.956,fract(uv.y*1.35)));',
-'textureV=.93-grout*.35+noise(uv*12.0)*.08;',
-'}else if(mat<5.5){',
-'textureV=.86+noise(uv*8.0)*.12+sin(uv.y*13.0)*.035;',
-'}else if(mat<6.5){',
-'textureV=.81+sin(uv.x*34.0+noise(uv*1.5)*10.0)*.09+noise(uv*15.0)*.1;',
-'}else if(mat<7.5){',
-'textureV=.82+noise(uv*28.0)*.2+noise(uv*75.0)*.11;',
-'}else if(mat<8.5){textureV=.88+noise(uv*21.0)*.1;',
-'}else if(mat<9.5){textureV=.68+.18*pow(max(dot(norm,normalize(vec3(-.2,.9,.5))),0.0),5.0)+noise(uv*21.0)*.06;',
-'}else if(mat<10.5){textureV=.74+noise(uv*11.0)*.11;',
-'}else{textureV=.86+noise(uv*9.0)*.13;}',
-'vec3 delta=p-eye;float d=length(delta);vec3 direction=normalize(delta+vec3(.0001));',
-'float cone=smoothstep(.65,.96,dot(direction,normalize(facing)));',
-'float beam=torch*cone*(1.0-smoothstep(6.0,24.0,d));',
-'float warm=(1.0-smoothstep(1.0,12.0,length(p-lampA)))*.65+',
-'(1.0-smoothstep(1.0,10.0,length(p-lampB)))*.42;',
-'float diffuse=.64+.36*max(dot(norm,normalize(vec3(-.4,.7,-.3))),0.0);',
-'vec3 color=c*textureV*(.27+warm+beam*1.7)*diffuse;',
-'color+=c*warm*vec3(.18,.10,.02);',
+'vec3 norm=normalize(n);',
+'vec2 uv=abs(norm.y)>.6?p.xz:(abs(norm.x)>.6?p.zy:p.xy);',
+'float idx=clamp(floor(mat+.5)-1.0,0.0,15.0);',
+'vec2 tile=vec2(mod(idx,4.0),floor(idx/4.0));',
+'vec2 texel=(tile+fract(uv*.24)*.968+.016)/4.0;',
+'float pigment=texture2D(paintedAtlas,texel).r;',
+'vec3 delta=p-eye;float d=length(delta);',
+'vec3 look=normalize(delta+vec3(.0001));',
+'float cone=smoothstep(.69,.96,dot(look,normalize(facing)));',
+'float beam=torch*cone*(1.0-smoothstep(6.0,23.0,d));',
+'float flicker=.965+.018*sin(time*3.7)+.011*sin(time*11.1);',
+'float warm=((1.0-smoothstep(1.0,11.0,length(p-lampA)))*.65+',
+'(1.0-smoothstep(1.0,10.0,length(p-lampB)))*.42)*flicker;',
+'float diffuse=.62+.38*max(dot(norm,normalize(vec3(-.4,.7,-.3))),0.0);',
+'vec3 color=c*(.57+.54*pigment)*(.30+warm+beam*1.70)*diffuse;',
+'color+=c*warm*vec3(.16,.10,.02);',
 'float mist=smoothstep(14.0,39.0,d);color=mix(color,vec3(.057,.056,.051),mist*.82);',
 'color=mix(color,vec3(.65,.15,.11),hit*.24);',
 'gl_FragColor=vec4(color,1.0);',
@@ -110,10 +95,84 @@ function apartmentMesh(world){
   if(f.type==='painting'){box(out,x,1.4,z,w,h,d,wood,6);box(out,x,1.47,z,w*.83,h*.78,d*1.1,[.31,.37,.34],7)}
   if(f.type==='door'){box(out,x,.03,z,w,h,d,[.26,.18,.11],6);box(out,x+w*.37,1.30,z+d*.6,.14,.08,.09,brass,9);box(out,x,2.72,z,w*.92,.07,.06,[.41,.32,.19],6)}
  }
+ apartmentDetail(out,world,M);
  for(const r of world.rooms){const x=(r.x0+r.x1+1)*M*.5,z=(r.z0+r.z1+1)*M*.5;box(out,x,ceil-.17,z,1.25,.18,1.25,[.48,.43,.32],8);round(out,x,ceil-.32,z,.34,.15,.34,[.83,.63,.40],8)}
  for(const z of [5,12,19]){box(out,15.5*M,ceil-.11,z*M,1.1,.16,1.1,[.42,.38,.28],8);round(out,15.5*M,ceil-.29,z*M,.30,.13,.30,[.81,.66,.42],8)}
  return out
 }
+
+// The static room identity is legible without a texture download: door casings,
+// cornices, paintings, dishes, a wall clock, windows and uneven lived-in objects.
+function apartmentDetail(out,world,M){
+ const timber=[.41,.29,.19],ivory=[.69,.64,.52],metal=[.59,.49,.31],linen=[.46,.42,.32],glass=[.21,.31,.32];
+ for(const r of world.rooms){
+  const port=world.door(r),z=(port.z+.5)*M,left=(port.x-.055)*M,right=(port.x+2.055)*M;
+  box(out,left,0,z,.095,2.99,.19,timber,6);
+  box(out,right,0,z,.095,2.99,.19,timber,6);
+  box(out,(left+right)/2,2.88,z,right-left+.18,.14,.24,[.55,.41,.27],6);
+  box(out,(left+right)/2,3.03,z,right-left+.32,.05,.31,[.30,.20,.13],6);
+  for(const x of [left+.12,right-.12])box(out,x,.95,z,.027,.30,.05,metal,9);
+  const centralX=((r.x0+r.x1+1)/2)*M;
+  const topZ=(r.z0+1)*M+.02;
+  // Recessed apartment window and dense curtains are visual surfaces, not portals.
+  const ww=Math.min(2.15,(r.x1-r.x0-4)*M*.5);
+  box(out,centralX,1.17,topZ,ww,1.43,.055,[.39,.29,.21],6);
+  box(out,centralX,1.24,topZ+.04,ww*.87,1.22,.018,glass,10);
+  box(out,centralX,1.18,topZ+.055,.06,1.22,.075,ivory,8);
+  box(out,centralX,1.83,topZ+.05,ww*.9,.055,.08,ivory,8);
+  box(out,centralX,1.02,topZ+.12,ww+.18,.08,.31,[.35,.24,.15],6);
+  box(out,centralX,1.98,topZ+.10,ww+0.35,.035,.035,metal,9);
+  // Loose curtains respond to room airflow in the vertex shader.
+  for(const side of [-1,1]){
+   box(out,centralX+side*ww*.41,1.08,topZ+.14,ww*.20,1.6,.08,[.42,.35,.31],12);
+   box(out,centralX+side*ww*.33,1.14,topZ+.17,.06,1.47,.085,[.58,.48,.40],12)
+  }
+  if(r.type==='living'){
+   // An old grandfather clock with a working, not decorative, face.
+   const cx=(r.x1-1.7)*M,cz=(r.z1-1.4)*M;
+   box(out,cx,0,cz,.55,1.95,.45,timber,6);box(out,cx,1.48,cz+.246,.38,.39,.016,[.70,.63,.45],8);
+   round(out,cx,1.67,cz+.268,.17,.17,.016,[.75,.69,.56],8);
+   // Clock hands live in the dynamic mesh, and tick while the player explores.
+   round(out,cx,.69,cz+.27,.12,.19,.012,metal,9);
+   const table=world.objects().find(f=>f.room==='living'&&f.type==='table');
+   if(table){const x=table.x*M,z=table.z*M;box(out,x,.78,z,.25,.045,.23,[.70,.63,.50],8);round(out,x,.86,z,.075,.07,.07,[.47,.42,.33],8)}
+  }else if(r.type==='kitchen'){
+   const obj=world.objects().find(f=>f.room==='kitchen'&&f.type==='table');
+   if(obj){const x=obj.x*M,z=obj.z*M;
+    for(let k=0;k<3;k++){round(out,x+(.34*k-.34),.86,z-.09,.11,.07,.11,[.69,.66,.53],8);
+     round(out,x+(.34*k-.34),.925,z-.09,.072,.03,.072,[.44,.40,.31],8)}
+    box(out,x+.43,.84,z+.23,.14,.25,.14,[.45,.48,.34],8)}
+  }else if(r.type==='bedroom'){
+   const rX=(r.x1-2.0)*M,rZ=(r.z0+2.1)*M;
+   box(out,rX,.57,rZ,.61,.10,.42,[.50,.32,.21],6);
+   box(out,rX,.73,rZ,.55,.055,.30,[.64,.59,.47],8);
+   box(out,rX,1.1,rZ,.09,.6,.1,[.30,.28,.27],9);
+   round(out,rX,1.40,rZ,.25,.13,.24,[.65,.60,.46],8);
+  }else if(r.type==='bathroom'){
+   const x=(r.x0+3)*M,z=(r.z1-1.45)*M;
+   for(let k=0;k<3;k++)round(out,x+.23*k,.65,z,.065,.15,.065,[.54+k*.06,.60,.55],8);
+   box(out,x+.25,.44,z-.25,.47,.055,.25,[.47,.49,.45],9);
+  }
+ }
+ // Never physically obstruct the exit; the frame is attached to existing wall cells.
+ const x=15.5*M,z=21*M;
+ box(out,x-1.33,0,z,.10,3.11,.22,timber,6);
+ box(out,x+1.33,0,z,.10,3.11,.22,timber,6);
+ box(out,x,3.03,z,2.76,.13,.29,timber,6);
+}
+
+function clockHands(out,world,time){
+ const r=world.room('living');if(!r)return;
+ const x=(r.x1-1.7)*SCALE,y=1.67,z=(r.z1-1.4)*SCALE+.293;
+ const hand=(angle,length,width,color)=>{
+  const dx=Math.sin(angle)*length,dy=Math.cos(angle)*length,nx=-Math.cos(angle)*width,ny=Math.sin(angle)*width;
+  quad(out,[x+nx,y+ny,z],[x+dx+nx,y+dy+ny,z],[x+dx-nx,y+dy-ny,z],[x-nx,y-ny,z],color,[0,0,1],9)
+ };
+ hand(time*.14,.14,.011,[.21,.19,.15]);
+ hand(time*.008,.095,.014,[.34,.23,.14]);
+ round(out,x,y,z+.009,.025,.028,.01,[.53,.40,.22],9)
+}
+
 function relicMesh(out,item,time){const x=item.x*SCALE,z=item.z*SCALE,h=.55+.09*Math.sin(time*2);
  box(out,x,.015,z,.55,.015,.55,[.39,.30,.21],9);
  if(item.id==='album'){box(out,x,h,z,.60,.085,.46,[.43,.23,.17],7);box(out,x,h+.065,z,.50,.012,.42,[.68,.61,.48],8)}
@@ -121,22 +180,71 @@ function relicMesh(out,item,time){const x=item.x*SCALE,z=item.z*SCALE,h=.55+.09*
  if(item.id==='keys'){round(out,x,h+.04,z,.20,.035,.20,[.79,.57,.23],9);box(out,x+.23,h,z,.34,.09,.05,[.77,.58,.29],9)}
  if(item.id==='pills'){round(out,x,h,z,.17,.21,.17,[.70,.62,.50],8);box(out,x,h+.22,z,.33,.07,.33,[.65,.27,.15],9)}
 }
-function phantom(out,e,t){const x=e.x*SCALE,z=e.z*SCALE,lean=Math.sin(t*1.6+e.x)*.06,y=.1+Math.sin(t*2+e.x)*.05,coat=e.kind==='coat';
- const cloth=coat?[.24,.20,.19]:[.28,.29,.28];
- round(out,x,y+1.08,z,.40,.75,.26,cloth,7);
- round(out,x+lean,y+2.02,z,.22,.31,.23,[.49,.48,.43],8);
- for(const s of [-1,1]){round(out,x+s*.27,y+.72,z,.13,.56,.17,cloth,7);round(out,x+s*.14,y+.24,z,.13,.31,.18,[.21,.22,.23],7)}
- if(!coat){for(const s of [-1,1])box(out,x+s*.083,y+2.10,z-.208,.046,.034,.018,[.62,.15,.10],9)}
- else box(out,x,y+2.35,z,.12,.43,.08,[.19,.17,.15],6)
+function phantom(out,e,t){
+ const x=e.x*SCALE,z=e.z*SCALE,visible=1-Math.min(1,Math.max(0,(e.age-23)/7)),coat=e.kind==='coat';
+ const breath=.035*Math.sin(t*1.2+e.x*2),limp=.17*Math.sin(t*1.4+e.z);
+ const coatCloth=coat?[.16,.17,.16]:[.27,.25,.23],shadow=[.27,.25,.23],pale=[.45,.43,.39];
+ // Layered tailored coat and asymmetrical shoulders, rather than a group of cubes.
+ round(out,x,.85+breath,z,.43,.72,.32,coatCloth,7);
+ round(out,x,1.36+breath,z,.51,.31,.28,coatCloth,7);
+ box(out,x,.45,z,.78,.50,.52,coatCloth,7);
+ for(const side of [-1,1]){
+  const sx=x+side*.44,armSwing=Math.sin(t*1.7+e.x)*.09*side;
+  round(out,sx,1.00+breath+armSwing,z+.03,.16,.50,.19,coatCloth,7);
+  round(out,sx+side*.018,.52+breath,z+.02,.11,.19,.12,coat?[.40,.38,.33]:pale,8);
+  round(out,x+side*.18,.32,z+side*.02,.19,.35,.20,shadow,7);
+  box(out,x+side*.19,0,z-.025,.26,.14,.43,[.19,.19,.17],6);
+ }
+ round(out,x,.18,z,.40,.15,.31,coatCloth,7);
+ const headX=x+limp*.20,headZ=z-.035;
+ round(out,headX,1.95+breath,headZ,.255,.315,.24,coat?[.26,.26,.24]:pale,8);
+ if(coat){
+  round(out,headX,2.19+breath,headZ,.31,.17,.28,coatCloth,7);
+  round(out,headX,1.95+breath,headZ-.12,.20,.21,.11,[.18,.19,.18],7);
+  box(out,headX,2.14+breath,headZ-.27,.62,.07,.17,coatCloth,7);
+ }else{
+  round(out,headX,2.12+breath,headZ+.06,.27,.15,.25,[.22,.21,.19],7);
+  // Lifeless eyes are shaded recesses, not red glowing indicators.
+  for(const side of [-1,1]){
+   round(out,headX+side*.096,1.99+breath,headZ-.235,.040,.023,.019,[.17,.17,.17],9);
+   round(out,headX+side*.095,1.965+breath,headZ-.246,.014,.012,.012,[.50,.46,.41],8);
+  }
+  box(out,headX,1.84+breath,headZ-.244,.12,.020,.014,[.24,.23,.22],9);
+ }
 }
-function pistolMesh(){const o=[],steel=[.21,.23,.24],wood=[.36,.22,.17],skin=[.58,.44,.33];
- round(o,.49,-.91,-1.28,.22,.26,.21,skin,8);
- box(o,.50,-.87,-1.48,.19,.49,.22,wood,6);
- box(o,.49,-.56,-1.61,.23,.19,.55,steel,9);
- box(o,.49,-.52,-1.85,.12,.10,.43,[.30,.32,.33],9);
- round(o,.49,-.64,-1.52,.17,.16,.20,[.34,.35,.36],9);
- box(o,.49,-.44,-1.47,.12,.04,.12,[.45,.43,.38],9);
+function pistolMesh(){
+ const o=[],steel=[.31,.32,.31],blue=[.18,.23,.24],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.34,.30],brass=[.57,.48,.30];
+ // Sleeve, wrist, palm and knuckles. The worn revolver stays in the lower right.
+ round(o,.49,-1.14,-1.12,.29,.38,.32,shirt,7);
+ round(o,.49,-.91,-1.28,.205,.22,.19,skin,8);
+ round(o,.46,-.74,-1.42,.12,.18,.19,skin,8);
+ for(let k=0;k<3;k++)round(o,.42+k*.065,-.71,-1.57,.045,.12,.095,skin,8);
+ box(o,.51,-.88,-1.46,.215,.48,.23,wood,6);
+ box(o,.51,-.91,-1.58,.22,.09,.22,[.23,.24,.24],9);
+ box(o,.50,-.56,-1.61,.245,.19,.55,steel,9);
+ round(o,.50,-.605,-1.53,.178,.165,.17,blue,9); // revolving drum
+ for(let k=0;k<6;k++){let a=k*Math.PI/3;round(o,.50+Math.cos(a)*.109,-.605+Math.sin(a)*.102,-1.61,.020,.021,.020,brass,9)}
+ box(o,.50,-.53,-1.87,.125,.115,.48,blue,9);
+ box(o,.50,-.44,-1.47,.115,.038,.13,[.52,.50,.43],9);
+ box(o,.50,-.705,-1.43,.14,.031,.24,[.17,.19,.18],9);
+ round(o,.50,-.77,-1.42,.042,.055,.045,[.19,.20,.19],9);
+ box(o,.50,-.48,-2.10,.055,.039,.042,brass,9); // front sight
  return o
+}
+export function animateViewmodel(original,{time=0,recoil=0,reload=0,movement=0,reduceMotion=false}={}){
+ const out=original.slice(),step=10,sway=reduceMotion?0:Math.sin(time*7)*.009*Math.min(1,movement);
+ const pull=Math.max(0,Math.min(1,recoil));
+ const lower=reload>0? Math.sin(Math.PI*Math.max(0,Math.min(1,reload)))*.33:0;
+ // Held object rotation around wrist is coherent with arm, not a screen shake.
+ const angle=reload>0?-.57*Math.sin(Math.PI*Math.max(0,Math.min(1,reload))):pull*.23;
+ const cos=Math.cos(angle),sin=Math.sin(angle);
+ for(let i=0;i<out.length;i+=step){
+  const x=original[i]-.49,y=original[i+1]+1.1;
+  out[i]=.49+x*cos-y*sin+sway;
+  out[i+1]=-1.1+x*sin+y*cos-lower+pull*.13;
+  out[i+2]=original[i+2]+pull*.17+(reduceMotion?0:Math.cos(time*5)*.008*Math.min(1,movement));
+ }
+ return out
 }
 export class Renderer{
  constructor(canvas){
@@ -144,7 +252,12 @@ export class Renderer{
   this.gl=gl;const program=gl.createProgram();gl.attachShader(program,shader(gl,gl.VERTEX_SHADER,VS));gl.attachShader(program,shader(gl,gl.FRAGMENT_SHADER,FS));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   this.program=program;gl.useProgram(program);this.attrs=['position','tint','normal','material'].map(name=>{const l=gl.getAttribLocation(program,name);if(l>=0)gl.enableVertexAttribArray(l);return l});
-  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit'].map(x=>[x,gl.getUniformLocation(program,x)]));
+  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas'].map(x=>[x,gl.getUniformLocation(program,x)]));
+  const atlas=makeMaterialAtlas(1701);this.texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,atlas.width,atlas.height,0,gl.RGBA,gl.UNSIGNED_BYTE,atlas.pixels);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.uniform1i(this.u.paintedAtlas,0);this.textureBytes=atlas.pixels.byteLength;
   this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;
   gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true});this.lost=false
@@ -152,8 +265,8 @@ export class Renderer{
  bind(buffer){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(let i=0;i<4;i++)if(this.attrs[i]>=0)gl.vertexAttribPointer(this.attrs[i],i===3?1:3,gl.FLOAT,false,40,[0,12,24,36][i])}
  upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(values),kind)}
  resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.3:1.6),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
- draw(world,player,enemies,items,flash,t,damage=0,shot=0){
-  if(this.lost)return;this.resize();const gl=this.gl;gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
+ draw(world,player,enemies,items,flash,t,damage=0,shot=0,reload=0){
+  if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
   if(this.staticRevision!==world.terrainRevision){const mesh=apartmentMesh(world);this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);this.staticCount=mesh.length/10;this.staticRevision=world.terrainRevision}
   const eye=[player.x*SCALE,1.54+(player.bob||0),player.z*SCALE],dir=[Math.sin(player.yaw)*Math.cos(player.pitch),-Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)];
   const proj=projection(Math.PI*.50,this.canvas.width/this.canvas.height),mvp=multiply(proj,view(eye,dir));
@@ -162,11 +275,11 @@ export class Renderer{
   gl.uniform3fv(this.u.lampA,[lampA.x*SCALE,2.64,lampA.z*SCALE]);gl.uniform3fv(this.u.lampB,[lampB.x*SCALE,2.64,lampB.z*SCALE]);
   gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);
   this.bind(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
-  const dyn=[];for(const item of items)relicMesh(dyn,item,t);
+  const dyn=[];clockHands(dyn,world,t);for(const item of items)relicMesh(dyn,item,t);
   for(const e of enemies)phantom(dyn,e,t);
   if(dyn.length){this.upload(this.dynamicBuffer,dyn,gl.DYNAMIC_DRAW);this.bind(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10)}
   // Proper viewmodel at the lower right: no world-space cyan marker below the camera.
-  const gun=this.weapon;
-  if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10)}
+  const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false});
+  if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10)}
  }
 }
