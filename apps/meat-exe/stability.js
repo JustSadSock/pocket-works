@@ -3,13 +3,16 @@ const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.m
 const kinds=new Set(['crawler','spitter','brute','heart']);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
 export function validateRun(s){
-  if(!s||typeof s!=='object'||![1,2,3].includes(s.v)||!Number.isInteger(s.seed)||s.seed<0||s.seed>4294967295||!validPosition(s)||!Number.isFinite(s.hp)||s.hp<=0)return null;
+  if(!s||typeof s!=='object'||![1,2,3,4].includes(s.v)||!Number.isInteger(s.seed)||s.seed<0||s.seed>4294967295||!validPosition(s)||!Number.isFinite(s.hp)||s.hp<=0)return null;
   const maxHp=num(s.maxHp,1,100,100),hp=num(s.hp,0,maxHp,100);
   if(hp<=0)return null;
   return {
-    v:3,seed:s.seed>>>0,x:s.x,z:s.z,
-    ruptured:(Array.isArray(s.ruptured)?s.ruptured:[]).filter(id=>typeof id==='string'&&/^-?\d+,-?\d+$/.test(id)&&id.length<=26).slice(0,2000).filter((id,i,a)=>a.indexOf(id)===i),
-    ruptureCount:num(Math.floor(s.ruptureCount),0,2000,0),immuneHeat:num(s.immuneHeat,0,100,0),immuneDelay:num(s.immuneDelay,0,6,0),
+    v:4,seed:s.seed>>>0,x:s.x,z:s.z,
+    ruptured:(Array.isArray(s.ruptured)?s.ruptured:[])
+      .filter(id=>typeof id==='string'&&id.length<=29&&/^(?:[1-5]:)?-?\d+,-?\d+$/.test(id))
+      .slice(0,2000).map(id=>id.includes(':')?id:(num(Math.floor(s.wave),1,5,1)+':'+id))
+      .filter((id,i,a)=>a.indexOf(id)===i),
+    ruptureCount:num(Math.floor(s.ruptureCount),0,2000,0),immuneHeat:num(s.immuneHeat,0,100,0),immuneDelay:num(s.immuneDelay,0,6,0),hazardCooldown:num(s.hazardCooldown,0,3,0),
     yaw:num(s.yaw,-100000,100000,Math.PI/2),pitch:num(s.pitch,-1.24,1.24,0),
     hp,maxHp,heat:0,weapon:s.weapon===1?1:0,
     level:num(Math.floor(s.level),0,8,0),damageBonus:num(s.damageBonus,0,250,0),

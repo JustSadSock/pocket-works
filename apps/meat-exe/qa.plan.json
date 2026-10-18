@@ -105,6 +105,22 @@
         "qa/anatomy.spec.js"
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "biomes",
+      "kind": "node-test",
+      "files": [
+        "qa/biomes.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "biomes-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/biomes.spec.js"
+      ],
+      "tier": "smoke"
     }
   ]
 }

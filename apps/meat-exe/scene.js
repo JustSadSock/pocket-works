@@ -1,6 +1,7 @@
 import * as THREE from './three.module.js';
 import { generateOrgan, getOrganProfile, getTissueNodes, setSeed, CELLS_PER_CHUNK } from './organGen.js';
 import { sweepCircle } from './stability.js';
+import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -29,7 +30,7 @@ export function createWorld(canvas, initialSeed) {
   scene.fog = new THREE.FogExp2(0x210b0d, 0.098);
   const camera = new THREE.PerspectiveCamera(77, 1, 0.06, 42);
   camera.rotation.order = 'YXZ';
-  scene.add(new THREE.HemisphereLight(0x9b5451, 0x260b0b, 1.3));
+  const sky=new THREE.HemisphereLight(0x9b5451, 0x260b0b, 1.3);scene.add(sky);
   const lamp = new THREE.PointLight(0xffc19a, 20, 12, 1.7);
   scene.add(lamp);
   const pulseLamp = new THREE.PointLight(0xe32135, 8, 8, 1.5);
@@ -55,7 +56,7 @@ export function createWorld(canvas, initialSeed) {
     const x=c.getContext('2d');if(!x)return null;
     let seed=0x13b0de;
     const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};
-    x.fillStyle='#d8a09b';x.fillRect(0,0,256,256);
+    x.fillStyle='#d6cac2';x.fillRect(0,0,256,256);
     for(let i=0;i<700;i++){
       const a=random()*256,b=random()*256,r=1+random()*13;
       x.fillStyle=random()>.49?'rgba(60,13,18,.065)':'rgba(250,211,194,.11)';
@@ -77,8 +78,8 @@ export function createWorld(canvas, initialSeed) {
     return t;
   }
   const fleshMap=makeFleshMap();
-  const membrane = new THREE.MeshStandardMaterial({color:0xc18487, map:fleshMap, roughness:.64, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
-  const wallMat = new THREE.MeshStandardMaterial({color:0xa35862, map:fleshMap, roughness:.66, metalness:0, emissive:0x280407, emissiveIntensity:.27});
+  const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.64, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
+  const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.66, metalness:0, emissive:0x280407, emissiveIntensity:.27});
   const boneMat = new THREE.MeshStandardMaterial({color:0xb3a087, roughness:.91, metalness:0});
   const bile = new THREE.MeshStandardMaterial({color:0x88b36e, roughness:.32, emissive:0x223b10, emissiveIntensity:.65});
   const bloodMat = new THREE.MeshBasicMaterial({color:0x9c0b19, transparent:true, opacity:.64, depthWrite:false, side:THREE.DoubleSide});
@@ -103,7 +104,14 @@ export function createWorld(canvas, initialSeed) {
   ]),12,.038,5,false);
   const sacGeo = new THREE.IcosahedronGeometry(.19,1);
   const sacMat = new THREE.MeshStandardMaterial({color:0x9c4a54,roughness:.41,metalness:0,emissive:0x270b0f,emissiveIntensity:.25});
-  const particlesGeo = new THREE.BufferGeometry();
+  const hazardGeo=new THREE.IcosahedronGeometry(.43,1);
+   const hazardMat=new THREE.MeshStandardMaterial({color:0xd4d07d,roughness:.36,
+     transparent:true,opacity:.87,emissive:0x484c2e,emissiveIntensity:.48,depthWrite:false});
+   const organFeatureGeo=new THREE.IcosahedronGeometry(.36,1);
+   const organFeatureMat=new THREE.MeshStandardMaterial({color:0xc2a17f,roughness:.55});
+   const axonGeo=new THREE.TorusGeometry(.55,.045,5,13,Math.PI*1.5);
+   const axonMat=new THREE.MeshStandardMaterial({color:0xaaa7c7,roughness:.48,emissive:0x30294c,emissiveIntensity:.45});
+   const particlesGeo = new THREE.BufferGeometry();
   const particleArr = new Float32Array(600*3);
   particlesGeo.setAttribute('position', new THREE.BufferAttribute(particleArr,3));
   particlesGeo.setDrawRange(0,0);
@@ -112,7 +120,7 @@ export function createWorld(canvas, initialSeed) {
   const source = new THREE.Group();
   scene.add(source);
   const chunks = new Map(), layouts = new Map(), tissueChunks = new Map(), tissueVisuals = new Map(), stains = [], droplets = [], streaks = [];
-  let openedTissues=new Set(),organPulse=0;
+  let openedTissues=new Set(),organPulse=0,stage=1,biome=biomeForWave(1);
   const valveSkin=new THREE.MeshStandardMaterial({color:0x9d3c4d,roughness:.48,emissive:0x631822,emissiveIntensity:.65});
   const valveCore=new THREE.MeshStandardMaterial({color:0xe0ad7c,roughness:.42,emissive:0x8a3318,emissiveIntensity:.8});
   const valveGlow=new THREE.MeshBasicMaterial({color:0xffda9b});
@@ -180,7 +188,7 @@ export function createWorld(canvas, initialSeed) {
   }
   function getTissues(cx,cz){
     const k=cellKey(cx,cz);
-    if(!tissueChunks.has(k))tissueChunks.set(k,getTissueNodes(cx,cz).map(t=>({...t,visual:null})));
+    if(!tissueChunks.has(k))tissueChunks.set(k,getTissueNodes(cx,cz).map(t=>({...t,id:stage+':'+t.id,visual:null})));
     return tissueChunks.get(k);
   }
   function getTissueAt(x,z){
@@ -192,10 +200,15 @@ export function createWorld(canvas, initialSeed) {
     return nodes?.find(t=>t.x===a&&t.z===b&&!openedTissues.has(t.id))||null;
   }
   function isFloor(x,z){return isBaseFloor(x,z)&&!getTissueAt(x,z);}
+  function getHazardAt(x,z){const a=Math.round(x),b=Math.round(z);
+    if(Math.abs(a-x)>.33||Math.abs(b-z)>.33||!isFloor(x,z))return null;
+    return biomeHazard(seed,stage,a,b);
+  }
   function getTissueCount(cx,cz){return getTissues(cx,cz).filter(t=>!openedTissues.has(t.id)).length;}
   function damageTissue(id,amount){
     if(typeof id!=='string'||!Number.isFinite(amount)||amount<=0||openedTissues.has(id))return null;
-    const [x,z]=id.split(',').map(Number);
+    if(!id.startsWith(stage+':'))return null;
+    const [x,z]=id.slice(id.indexOf(':')+1).split(',').map(Number);
     if(!Number.isInteger(x)||!Number.isInteger(z))return null;
     const tissue=getTissues(Math.floor(x/CELLS_PER_CHUNK),Math.floor(z/CELLS_PER_CHUNK)).find(t=>t.id===id);
     if(!tissue)return null;
@@ -234,9 +247,11 @@ export function createWorld(canvas, initialSeed) {
   }
   function buildChunk(cx,cz){
     const cs=getCells(cx,cz),cells=[...cs].map(k=>k.split(',').map(Number)),profile=getOrganProfile(cx,cz);
-    const walls=[],bones=[],vessels=[],sacs=[];
+    const walls=[],bones=[],vessels=[],sacs=[],hazards=[],features=[];
     for(const [x,z] of cells){
-      if(rand(x,z,seed+161)>.27)vessels.push([x,.01,z,rand(x,z,seed+162)*Math.PI*2]);
+      if(rand(x,z,seed+161)>(stage===1?.22:stage===4?.50:.72))vessels.push([x,.01,z,rand(x,z,seed+162)*Math.PI*2]);
+      if(biomeHazard(seed,stage,x,z))hazards.push([x,z]);
+      if(rand(x,z,seed+stage*59+177)>(stage===3?.75:.87))features.push([x,z,rand(x,z,seed+174)*Math.PI*2]);
       if(rand(x,z,seed+171)>(profile.archetype==='atrium'?.82:.92))sacs.push([x+(rand(x,z,seed+172)-.5)*.43,2.62,z+(rand(x,z,seed+173)-.5)*.43]);
       for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
         if(!isBaseFloor(x+dx,z+dz)) {
@@ -252,16 +267,16 @@ export function createWorld(canvas, initialSeed) {
     cells.forEach(([x,z],i)=>{
       temp.position.set(x,0,z);temp.rotation.set(0,0,0);
       temp.scale.set(1,1,1);temp.updateMatrix();floor.setMatrixAt(i,temp.matrix);
-      floor.setColorAt(i,new THREE.Color().setHSL(.965+rand(x,z,seed)*.027,.3+profile.tone*.12,.44+profile.growth*.09));
+      floor.setColorAt(i,new THREE.Color().setHSL(biome.hue+(rand(x,z,seed)-.5)*.018,biome.saturation,biome.floorLight+(profile.growth-.5)*.09));
       temp.position.y=2.76;temp.rotation.set(0,0,0);temp.updateMatrix();ceiling.setMatrixAt(i,temp.matrix);
-      ceiling.setColorAt(i,new THREE.Color().setHSL(.96+rand(x,z,seed+7)*.027,.31+profile.tone*.1,.29+profile.growth*.09));
+      ceiling.setColorAt(i,new THREE.Color().setHSL(biome.hue+(rand(x,z,seed+7)-.5)*.019,biome.saturation*.8,biome.floorLight*.67+(profile.growth-.5)*.045));
     });
     floor.instanceMatrix.needsUpdate=true;ceiling.instanceMatrix.needsUpdate=true;
     group.add(floor,ceiling);
     const wall=new THREE.InstancedMesh(wallShape,wallMat,walls.length);
     walls.forEach(([x,y,z,rot,a,b],i)=>{
       temp.position.set(x,y,z);temp.rotation.set(0,rot,0);temp.scale.set(1,1,1);temp.updateMatrix();wall.setMatrixAt(i,temp.matrix);
-      wall.setColorAt(i,new THREE.Color().setHSL(.965,.33,.41+rand(a,b,seed+12)*.17));
+      wall.setColorAt(i,new THREE.Color().setHSL(biome.hue+(rand(a,b,seed+12)-.5)*.019,biome.saturation,biome.wallLight+rand(a,b,seed+14)*.14));
     });
     wall.instanceMatrix.needsUpdate=true;group.add(wall);
     if(bones.length){
@@ -278,6 +293,23 @@ export function createWorld(canvas, initialSeed) {
       const sacsMesh=new THREE.InstancedMesh(sacGeo,sacMat,sacs.length);
       sacs.forEach(([x,y,z],i)=>{temp.position.set(x,y,z);temp.rotation.set(0,0,0);temp.scale.set(1,1,1);temp.updateMatrix();sacsMesh.setMatrixAt(i,temp.matrix);});
       sacsMesh.instanceMatrix.needsUpdate=true;group.add(sacsMesh);
+    }
+    if(hazards.length){
+      const pools=new THREE.InstancedMesh(hazardGeo,hazardMat,hazards.length);
+      hazards.forEach(([x,z],i)=>{temp.position.set(x,.067,z);temp.rotation.set(0,rand(x,z,seed)*6.28,0);
+        temp.scale.set(stage===3?.84:1,.085,stage===3?.84:1);temp.updateMatrix();pools.setMatrixAt(i,temp.matrix);});
+      pools.instanceMatrix.needsUpdate=true;group.add(pools);
+    }
+    if(features.length){
+      const geom=stage===4?axonGeo:stage===3?archGeo:organFeatureGeo;
+      const mat=stage===4?axonMat:stage===3?boneMat:organFeatureMat;
+      const landmark=new THREE.InstancedMesh(geom,mat,features.length);
+      features.forEach(([x,z,rot],i)=>{
+        temp.position.set(x,stage===3?1.4:stage===4?2.15:2.50,z);
+        temp.rotation.set(stage===3?0:Math.PI*.5,rot,0);
+        temp.scale.set(stage===2?1:stage===3?1.12:.9,stage===2?1.6:1,stage===2?1.5:1);
+        temp.updateMatrix();landmark.setMatrixAt(i,temp.matrix);
+      });landmark.instanceMatrix.needsUpdate=true;group.add(landmark);
     }
     for(const tissue of getTissues(cx,cz))if(!openedTissues.has(tissue.id))group.add(makeTissueVisual(tissue));
     if(profile.archetype==='rib-vault'){
@@ -381,15 +413,25 @@ export function createWorld(canvas, initialSeed) {
     for(let i=0;i<droplets.length;i++){const p=droplets[i];particleArr[i*3]=p.x;particleArr[i*3+1]=p.y;particleArr[i*3+2]=p.z;}
     particlesGeo.attributes.position.needsUpdate=true;particlesGeo.setDrawRange(0,droplets.length);
     organPulse=Math.max(0,organPulse-dt);
-    pulseLamp.intensity=6.5+Math.sin(time*3.8)*2.6+organPulse*7;
+    pulseLamp.intensity=6.5+Math.sin(time*(stage===4?5.2:stage===1?3.8:2.7))*2.6+organPulse*7;
+    hazardMat.emissiveIntensity=.48+Math.sin(time*(stage===4?6:2.5))*.17;
     for(const root of tissueVisuals.values())if(root.visible){root.userData.flash=Math.max(0,root.userData.flash-dt);
       root.scale.setScalar(1+Math.sin(time*3.4+root.position.x*.25)*.045+root.userData.flash*.4);
     }
     membrane.emissiveIntensity=.3+Math.sin(time*2.15)*.09;
   }
-  function reset(newSeed,ruptured=[]){
-    seed=(newSeed>>>0);setSeed(seed);clearChunks();
-    openedTissues=new Set((Array.isArray(ruptured)?ruptured:[]).filter(id=>typeof id==='string'&&/^-?\d+,-?\d+$/.test(id)).slice(0,2000));
+  function reset(newSeed,ruptured=[],newStage=1){
+    seed=(newSeed>>>0);stage=Math.max(1,Math.min(5,Math.trunc(newStage)||1));
+    biome=biomeForWave(stage);clearChunks();setSeed(stageSeed(seed,stage));
+    openedTissues=new Set((Array.isArray(ruptured)?ruptured:[]).filter(id=>typeof id==='string'&&/^[1-5]:-?\d+,-?\d+$/.test(id)).slice(0,2000));
+    scene.background.setHex(biome.background);scene.fog.color.setHex(biome.fog);scene.fog.density=biome.fogDensity;
+    sky.color.setHex(biome.light);sky.groundColor.setHex(biome.background);
+    lamp.color.setHex(biome.light);pulseLamp.color.setHex(biome.pulse);
+    boneMat.color.setHex(biome.bone);vesselMat.color.setHex(biome.vein);
+    valveSkin.color.setHex(biome.vein);valveCore.color.setHex(biome.accent);
+    sacMat.color.setHex(biome.accent);axonMat.color.setHex(biome.accent);
+    hazardMat.color.setHex(biome.accent);hazardMat.emissive.setHex(biome.pulse);
+    organFeatureMat.color.setHex(biome.vein);
     return seed;
   }
   function paint(player,entities,pickups,time,dt,recoil=0,damage=0,shots=[]){
@@ -434,5 +476,5 @@ export function createWorld(canvas, initialSeed) {
   }
   function end(){clearChunks();renderer.dispose();}
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, getHazardAt, getBiome:()=>biome, getStage:()=>stage, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
 }
