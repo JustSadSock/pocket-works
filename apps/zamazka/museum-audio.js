@@ -5,7 +5,7 @@ export const MUSEUM_SOUND_EVENTS=Object.freeze([
  'press','frame','paper','tool','brush','fill','token','undo','confirm','reveal','door',
  'warning','final-warning','clock-tick','watch-warning','watch-five','time-up','error'
 ]);
-const cooldown={press:44,frame:100,paper:65,tool:75,brush:95,fill:125,token:55,undo:90,
+const cooldown={press:220,frame:420,paper:370,tool:230,brush:1050,fill:360,token:110,undo:240,
  confirm:190,reveal:230,door:520,warning:450,'final-warning':450,'clock-tick':650,
  'watch-warning':1500,'watch-five':1500,'time-up':1500,error:190};
 const vary=(n,range=.036)=>n*(1+(Math.random()*2-1)*range);
@@ -171,36 +171,37 @@ export class MuseumAudio{
    switch(kind){
     // Latch → long worn hinge drag → low wooden closing knock.
     case 'door':
-     this.wood(at,205,.065);
-     this.rub(at+.075,.29,420,.062,10);
-     this.grain(at+.13,.27,300,.042,.4);
-     this.wood(at+.37,114,.18);
+     this.wood(at,205,.030);
+     this.rub(at+.075,.25,420,.028,7);
+     this.grain(at+.13,.17,300,.016,.4);
+     this.wood(at+.34,114,.073);
      break;
     // A carved frame slides across the museum desk and is set down twice.
     case 'frame':
-     this.wood(at,197,.12);
-     this.rub(at+.05,.21,490,.047,8);
-     this.wood(at+.31,142,.18);
-     this.grain(at+.325,.07,620,.036,.8);
+     this.wood(at,197,.064);
+     this.rub(at+.05,.18,490,.020,6);
+     this.wood(at+.26,142,.082);
+     this.grain(at+.30,.05,620,.012,.8);
      break;
     // Archive sheet: dry broad-band fibre rustle, crisp curved page turnover.
     case 'paper':
-     this.rub(at,.24,2120,.056,10);
-     this.rub(at+.06,.15,3270,.035,7);
-     this.grain(at+.29,.075,1240,.028,.65);
+     this.rub(at,.19,2100,.027,7);
+     this.rub(at+.07,.11,3200,.015,5);
+     this.grain(at+.20,.055,1350,.009,.65);
      break;
     case 'tool':this.grain(at,.06,680,.073,1.15);this.ring(at+.008,264,.07,.023);break;
     // Bristles scraping woven canvas, with changing contact pressure.
     case 'brush':
-     this.rub(at,.20,920,.041,9);
-     this.rub(at+.011,.17,2230,.025,7);
-     this.grain(at+.21,.055,480,.019,.58);
+     // Soft linen drag, no bright repeated attack on every short gesture.
+     this.rub(at,.11,1480,.018,5);
+     this.grain(at+.045,.09,2380,.009,.75);
      break;
     // Pigment dragged into canvas: broad softer swish and a grounded final dab.
     case 'fill':
-     this.rub(at,.26,700,.066,10);
-     this.cloth(at+.035,.20,.032);
-     this.wood(at+.28,175,.048);
+     // One low wet pigment pad is deliberately unlike bristle friction.
+     this.grain(at,.10,350,.032,.45);
+     this.ring(at+.02,118,.12,.017,'sine');
+     this.grain(at+.14,.07,490,.014,.58);
      break;
     // The user's selected "coin on wooden table": dry woody knock plus a short metal wobble.
     case 'token':
@@ -256,8 +257,9 @@ export class MuseumAudio{
      break;
     // The button itself is a substantial low-pitched, spring-return wooden latch.
     case 'press':
-     this.wood(at,153,.125);
-     this.grain(at+.032,.033,1520,.020,1.35);
+     // UI acknowledgement: quiet dry latch, never a repeated museum knock.
+     this.grain(at,.032,1170,.019,1.1);
+     this.ring(at+.006,224,.035,.006,'sine');
      break;
     default:this.wood(at,171,.08);
    }
