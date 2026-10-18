@@ -30,6 +30,11 @@ test('finishing a wave travels into an actual new anatomical world',async ({page
   enemies:[],pickups:[],ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0
  })));
  await page.reload();await page.locator('#resumeSaved').click();
+ // v1.6 intentionally pauses between organs for a real surgery decision.
+ await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__()?.builds.pendingDraft),{timeout:20000}).toBe(2);
+ await expect(page.locator('#graftDraft')).toBeVisible();
+ await expect(page.locator('.graft-option')).toHaveCount(3);
+ await page.locator('.graft-option').first().click();
  await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__()?.worldStage),{timeout:20000}).toBe(2);
  await expect(page.locator('#zoneValue')).toHaveText('ЖЕЛУДОК');
  const s=await page.evaluate(()=>window.__MEAT_QA__());
