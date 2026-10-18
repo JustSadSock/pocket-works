@@ -9,3 +9,5 @@
 @media(max-width:370px){.spellbar{gap:5px}.spell-button{min-width:50px;height:58px}.spell-attack{min-width:63px;height:68px}.joystick{width:107px;height:107px}.control-layer{padding:0 10px}.menu h1{font-size:50px}.sheet{padding:17px 12px}.sheet h2{font-size:29px}}
 @media(max-height:710px){.spell-seal{height:110px;width:130px;transform:scale(.77);margin-bottom:-23px}.menu p{margin:6px 0 15px}.menu h1{font-size:54px}.menu-composition{margin-top:0}.play-block{gap:8px}.sheet{padding-top:15px;padding-bottom:13px}.rune-choice{min-height:67px}.joystick{width:100px;height:100px}.spell-button{height:58px}.spell-attack{height:68px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+/* Desktop battlefield stays a coherent 510px instrument rather than spreading touch HUD to window edges. */
+.battle-hud{max-width:510px;margin-inline:auto}.control-layer{max-width:510px;margin-inline:auto}
