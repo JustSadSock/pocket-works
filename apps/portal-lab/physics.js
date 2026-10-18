@@ -19,7 +19,7 @@ export function makeBall(x,y,vx,vy,options={}){
 export function kinetic(b){return .5*b.m*(b.vx*b.vx+b.vy*b.vy);}
 export function potential(b,gravity){return b.m*gravity*(H-b.y)/SCALE;}
 export function totalEnergy(sim){return sim.balls.reduce((s,b)=>s+kinetic(b)+potential(b,sim.gravity),0)+(sim.anchorWork||0);}
-function checkPortal(b,px,py,dx,dy,pair,sim,h){
+function checkPortal(b,px,py,pair,sim,h){
   // +normal is the open side. The center passes the oriented plane, not an AABB trigger.
   for(const [entry,exit] of [[pair.a,pair.b],[pair.b,pair.a]]){
     const before=dot(px-entry.x,py-entry.y,entry.nx,entry.ny);
