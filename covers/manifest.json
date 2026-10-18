@@ -2968,9 +2968,11 @@
     "shot": 0,
     "sha256": "54eb398ac7bafd27fe2e89ee9af9efbf616f416c156595a06a84362419a3d5e7",
     "imageVersion": 2,
-    "status": "published",
-    "lastAttemptRevision": "92a29e8a19255aa615d2a2bc1ee50c24b8e25d9c",
-    "lastAttemptAt": "2026-10-13T13:09:07.301Z"
+    "status": "preserved",
+    "lastAttemptRevision": "59ff993e9f4d5630468d40fad28d0c4d0bbf7ba2",
+    "lastAttemptAt": "2026-10-18T12:59:16.652Z",
+    "note": "existing cover rated higher",
+    "captureEngine": "safe-gameplay-v3"
   },
   "kromka": {
     "note": "No frame passed image-content checks",
