@@ -54,10 +54,14 @@ test('door cannot close on player/enemy, and has continuous collision-safe anima
  assert.equal(sweptLeafSafe(d,DOOR_SWING,0,[actor]),false);
  assert.equal(w.toggleDoor(d,[]).ok,true);
  const past=w.doorState(d,c).angle;
+ for(let i=0;i<9;i++)w.animateDoors(.12,[actor]);
+ const stopped=w.doorState(d,c).angle;
+ assert.ok(stopped>0&&stopped<past,'panel should approach the actor before stopping');
+ assert.equal(w.canStand(actor.x,actor.z,.11),true,'no door crosses the actor');
  w.animateDoors(.12,[actor]);
- assert.equal(w.doorState(d,c).angle,past,'closing should wait for actor to leave');
+ assert.equal(w.doorState(d,c).angle,stopped,'closing waits when the next sweep is occupied');
  w.animateDoors(.12,[]);
- assert.ok(w.doorState(d,c).angle<past,'safe closing advances')
+ assert.ok(w.doorState(d,c).angle<stopped,'closing resumes when the actor has left')
 });
 test('open angle, random world identity and door state survive save/reload',()=>{
  const w=new RogueWorld(413),c=w.chunk(0,0),d=c.doors.find(x=>!w.doorState(x,c).open);
