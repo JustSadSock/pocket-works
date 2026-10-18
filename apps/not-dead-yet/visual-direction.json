@@ -5,12 +5,12 @@
   "direction": {
     "premise": "A senior walks through an old personal apartment. Household objects remain tangible and recognizable while memory changes which doorway was behind him.",
     "composition": "Full-bleed eye-level domestic interiors under peripheral self-control and ammunition readouts; inventory opens only when requested.",
-    "shapeLanguage": "Uneven wooden doors, upholstered sofas, bedding folds, kitchen cabinets, framed portraits, familiar plumbing and rounded looming figures.",
-    "surfaceAndMaterial": "Procedural aged floral wallpaper, scratched parquet, ceramic bathroom tile, rough kitchen paint, worn upholstered fabrics, brass handles and warm lamps.",
+    "shapeLanguage": "Old-fashioned lacquered double-leaf wooden doors, glass insets, nonmodular heavy cabinets, brass handles, coat rack silhouettes, Soviet sideboards and inexpensive domestic upholstery.",
+    "surfaceAndMaterial": "Late Soviet and post-Soviet lived-in domestic realism: varnished glass-panel doors, wall carpet, heavy polished wall-unit with china, enamel kettle, kitchen oilcloth, familiar faded flower wallpaper and herringbone parquet.",
     "paletteLogic": "Desaturated nicotine cream, brown wood and muted sage replace teal industrial corridors; isolated warm brass marks objects and danger appears as faint rusty red.",
     "typography": "Small utilitarian location and objective labels in play; larger compressed worn theatre-poster title only in the initial nocturnal menu.",
-    "signature": "The same apartment quietly changes its door positions and furniture when the protagonist looks away; the world remains physically walkable and all objects remain reachable.",
-    "distinction": "Unlike the abstract brutalist WebGL prototype and GLOAMSTEP's tile dungeon, an intimate recognizable furnished home provides tactile spatial storytelling.",
+    "signature": "The elderly protagonist is in an unmistakable Soviet apartment: remembered spaces move behind his back; physically hinged glass-paneled doors swing when interacted with, and projected shadows respond to their pose.",
+    "distinction": "Unlike abstract first-person corridors, the setting is an intimate post-Soviet flat with tangible family objects, worn apartment doors, furniture wall units and rug-covered walls.",
     "spatialRationale": "A small persistent HUD leaves almost the entire view for walls and belongings. Separate left/right thumb surfaces keep first-person navigation usable in portrait.",
     "comparisons": [
       {
@@ -26,14 +26,14 @@
     ]
   },
   "production": {
-    "renderer": "Custom offline WebGL1 interior geometry plus programmable material patterns for parquet, faded wallpaper, tile, upholstery and enamel; near-view held revolver.",
+    "renderer": "Offline WebGL1 furnished Soviet interior, authored vertex hinge geometry, 384px material atlas, physically-derived projected floor shadows and procedural lighting, compatible with mobile WebKit.",
     "focalAsset": "The opening apartment itself: seeded room assignments, furniture, patterned walls and physical door frames plus a personally authored wooden-door icon."
   },
   "motion": {
     "character": "Measured walking inertia and subtle gait synchronized to movement; rounded enemies sway slightly, avoiding ceaseless random camera wobble.",
-    "action": "WASD and joystick translate the character across walkable rooms; independent mouse/touch look points the revolver through door openings.",
+    "action": "Walk, independently look and interact with glass-paneled inner doors. Panels rotate around real hinges; capsule collision and animation share the same geometry.",
     "anticipation": "A shadow at a doorway or the sound of furniture shifting warns of a changing remembered room before it can be revisited.",
-    "response": "The camera moves on every directional press; gunshot muzzle exposure and dwindling ammo respond immediately; taking an item changes its world mesh and inventory.",
+    "response": "Holding E or tapping the interaction button opens and closes doors with latch sounds and changing floor shadows; visible HUD tells what the action will do.",
     "followThrough": "After a glance away, a room may have moved its door; the next visit resolves into a visibly different furniture arrangement while objectives remain accessible.",
     "interruption": "Pointercancel and focus loss always reset movement; pause saves state and freezes pursuit without claiming the user has died.",
     "reducedMotion": "Reduce-motion disables head-bob while keeping navigation, textures, enemy visibility and action states intact."

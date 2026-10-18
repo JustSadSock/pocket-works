@@ -16,7 +16,7 @@ const MAX_CONNECTIONS = 48;
 const MAX_PLAYERS = 8;
 // Versioned game modules enforce these caps in onJoin; mirror them for accurate
 // discoverability before a player follows an invitation link.
-const GAME_SEATS=Object.freeze({'blind-pals':2,flagpost:2,'last-tile-duel':2,'kromka-duel':2,
+const GAME_SEATS=Object.freeze({'blind-pals':2,flagpost:2,'fog-of-conquest':2,'last-tile-duel':2,'kromka-duel':2,
   folio:6,lipki:4,natyazhenie:5,komnatka:5,'uzel-party':6,'ne-tem-golosom':6,'fog-of-conquest':2});
 const ROOM_TTL = 30 * 60_000;
 const SESSION_TTL = 7 * 86400_000;

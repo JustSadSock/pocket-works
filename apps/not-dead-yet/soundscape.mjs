@@ -64,6 +64,10 @@ export function createSoundscape({Context=(typeof window!=='undefined'?(window.A
       hiss({duration:1.2,frequency:360,volume:.007,pan});break;
      case 'radio':
       hiss({duration:.9,frequency:1500,volume:.008,pan});break;
+     case 'door':
+      note(132,{type:'triangle',end:71,duration:.39,volume:.033,pan});
+      hiss({duration:.28,volume:.020,frequency:520,pan});
+      note(460,{type:'triangle',end:230,duration:.07,volume:.020,at:now+.32,pan});break;
      case 'torch':note(320,{type:'triangle',end:210,duration:.07,volume:.025});break;
      case 'win':for(let i=0;i<4;i++)note([262,330,392,523][i],{type:'triangle',volume:.032,duration:.56,at:now+i*.2});break;
      case 'lose':note(116,{type:'sine',end:38,duration:1.3,volume:.036});break
