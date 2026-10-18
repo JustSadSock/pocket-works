@@ -3317,29 +3317,29 @@
   "meat-exe": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 72,
+      "bestScore": 71,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 36500,
-        "variance": 54.50409492161729,
-        "entropy": 1.9424119586944553,
-        "edgeDensity": 0.11036706349206349,
-        "colorfulness": 28.1796875,
-        "centerDetail": 72.79403647264523,
-        "meanLight": 41.12700161132833
+        "bytes": 39968,
+        "variance": 52.49233141048032,
+        "entropy": 1.9874470713752495,
+        "edgeDensity": 0.11755952380952381,
+        "colorfulness": 28.88037109375,
+        "centerDetail": 60.91720115208873,
+        "meanLight": 39.738913281250255
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.7.0&pw_fp=74b907e93159a9d25362cb72"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.1&pw_fp=0fbbfd0c7277997f05430195"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "cbb0478e5a76d92fde77972fa9ed2052eda5f7ae",
-    "lastAttemptAt": "2026-10-18T20:55:44.710Z"
+    "lastAttemptRevision": "966a7cc949610bbe767cbea8128f117e07b511bf",
+    "lastAttemptAt": "2026-10-18T21:57:03.295Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3480,10 +3480,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "c101497f5f9602f1c6a483e9826ac9e2e14550ad",
-    "lastAttemptAt": "2026-10-18T21:35:08.316Z",
-    "revision": "c101497f5f9602f1c6a483e9826ac9e2e14550ad",
-    "qualityScore": 73,
+    "lastAttemptRevision": "010e2a40ab158c451d539375fd36c55b77df4840",
+    "lastAttemptAt": "2026-10-18T22:17:54.911Z",
+    "revision": "010e2a40ab158c451d539375fd36c55b77df4840",
+    "qualityScore": 75,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3494,8 +3494,8 @@
         "score": 74
       }
     ],
-    "shot": 0,
-    "sha256": "6916fa00b43b9ea97cb75f19363cbd86fba016ccd3cbf8679357ea684d8ec03a",
+    "shot": 2,
+    "sha256": "30b2394efee5f3570a61327242107baf8b95a79c8d11bde6d8644a1428e9a5af",
     "imageVersion": 2
   },
   "crossline-5x5": {

@@ -3,6 +3,7 @@ import {makeMaterialAtlas} from './textures.mjs';
 import {panels} from './doors.mjs';
 import {rogueStaticMesh,roguePickupsMesh} from './rogue-scene.mjs';
 import {rogueDoorMesh} from './rogue-door-visual.mjs';
+import {RogueMeshCache} from './rogue-mesh-cache.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
@@ -509,6 +510,22 @@ function phantom(out,e,t){
   box(out,headX,1.84+breath,headZ-.244,.12,.020,.014,[.24,.23,.22],9);
  }
 }
+// Faceted cylindrical barrel points along the muzzle Z axis, not a solid box.
+// Side normals follow the silhouette so steel catches light as metal.
+function revolverBarrel(o,x,y,z,rx,ry,length,color,material=9,sides=12){
+ const front=z-length*.5,back=z+length*.5;
+ for(let k=0;k<sides;k++){
+  const a=k*Math.PI*2/sides,b=(k+1)*Math.PI*2/sides,
+   ax=Math.cos(a),ay=Math.sin(a),bx=Math.cos(b),by=Math.sin(b);
+  quad(o,[x+ax*rx,y+ay*ry,front],[x+bx*rx,y+by*ry,front],
+   [x+bx*rx,y+by*ry,back],[x+ax*rx,y+ay*ry,back],color,
+   [(ax+bx)*.5,(ay+by)*.5,0],material);
+  for(const t of [
+    [[x,y,back],[x+bx*rx,y+by*ry,back],[x+ax*rx,y+ay*ry,back],[0,0,1]],
+    [[x,y,front],[x+ax*rx,y+ay*ry,front],[x+bx*rx,y+by*ry,front],[0,0,-1]]
+  ])for(const p of t.slice(0,3))o.push(...p,...color,...t[3],material)
+ }
+}
 function pistolMesh(){
  const o=[],steel=[.31,.32,.31],blue=[.18,.23,.24],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.34,.30],brass=[.57,.48,.30];
  // Sleeve, wrist, palm and knuckles. The worn revolver stays in the lower right.
@@ -518,17 +535,19 @@ function pistolMesh(){
  for(let k=0;k<3;k++)round(o,.42+k*.065,-.71,-1.57,.045,.12,.095,skin,8);
  box(o,.51,-.88,-1.46,.215,.48,.23,wood,6);
  box(o,.51,-.91,-1.58,.22,.09,.22,[.23,.24,.24],9);
- box(o,.50,-.56,-1.61,.245,.19,.55,steel,9);
+ box(o,.50,-.56,-1.61,.22,.15,.32,steel,9);
  round(o,.50,-.605,-1.53,.178,.165,.17,blue,9); // revolving drum
  for(let k=0;k<6;k++){let a=k*Math.PI/3;round(o,.50+Math.cos(a)*.109,-.605+Math.sin(a)*.102,-1.61,.020,.021,.020,brass,9)}
- box(o,.50,-.53,-1.87,.125,.115,.48,blue,9);
+ revolverBarrel(o,.50,-.53,-1.84,.091,.071,.52,blue,9,12);
+ revolverBarrel(o,.50,-.53,-2.107,.077,.056,.024,[.11,.13,.14],9,12);
+ revolverBarrel(o,.50,-.53,-2.121,.038,.029,.008,[.035,.046,.045],10,12);
  box(o,.50,-.44,-1.47,.115,.038,.13,[.52,.50,.43],9);
  box(o,.50,-.705,-1.43,.14,.031,.24,[.17,.19,.18],9);
  round(o,.50,-.77,-1.42,.042,.055,.045,[.19,.20,.19],9);
  box(o,.50,-.48,-2.10,.055,.039,.042,brass,9); // front sight
  return o
 }
-export function animateViewmodel(original,{time=0,recoil=0,reload=0,movement=0,reduceMotion=false}={}){
+export function animateViewmodel(original,{time=0,recoil=0,reload=0,movement=0,reduceMotion=false,aspect=1.5}={}){
  const out=original.slice(),step=10,sway=reduceMotion?0:Math.sin(time*7)*.009*Math.min(1,movement);
  const pull=Math.max(0,Math.min(1,recoil));
  const lower=reload>0? Math.sin(Math.PI*Math.max(0,Math.min(1,reload)))*.33:0;
@@ -540,6 +559,14 @@ export function animateViewmodel(original,{time=0,recoil=0,reload=0,movement=0,r
   out[i]=.49+x*cos-y*sin+sway;
   out[i+1]=-1.1+x*sin+y*cos-lower+pull*.13;
   out[i+2]=original[i+2]+pull*.17+(reduceMotion?0:Math.cos(time*5)*.008*Math.min(1,movement));
+  // The very narrow horizontal FOV on portrait displays otherwise enlarges
+  // the sleeve and barrel beyond the playable scene's intended framing.
+  const compact=Math.max(.56,Math.min(1,(aspect-.35)/.78));
+  if(compact<1){
+   out[i]=.52+(out[i]-.52)*compact+(1-compact)*.06;
+   out[i+1]=-.89+(out[i+1]+.89)*compact-(1-compact)*.11;
+   out[i+2]-=(1-compact)*.20
+  }
  }
  return out
 }
@@ -611,7 +638,7 @@ export class Renderer{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.uniform1i(this.u.paintedAtlas,0);this.textureBytes=atlas.pixels.byteLength;
-  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;this.visualMetrics={staticTriangles:0,staticVertices:0,staticBytes:0,meshBuildMs:0,meshUploadMs:0,dynamicTriangles:0,drawCalls:0,textureBytes:0};
+  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;this.staticWorld=null;this.rogueMeshCache=new RogueMeshCache({limit:3,grid:5});this.visualMetrics={staticTriangles:0,staticVertices:0,staticBytes:0,meshBuildMs:0,meshUploadMs:0,dynamicTriangles:0,drawCalls:0,textureBytes:0,cacheHits:0,cacheMisses:0,cacheEntries:0,cacheBytes:0};
   gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true});this.lost=false
  }
@@ -639,23 +666,29 @@ export class Renderer{
  }
 
  bind(buffer){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(let i=0;i<4;i++)if(this.attrs[i]>=0)gl.vertexAttribPointer(this.attrs[i],i===3?1:3,gl.FLOAT,false,40,[0,12,24,36][i])}
- upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(values),kind)}
+ upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,values instanceof Float32Array?values:new Float32Array(values),kind)}
  resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.3:1.6),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
  draw(world,player,enemies,items,flash,t,damage=0,shot=0,reload=0){
   if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
   const rogue=world.endless===true;
   const meshKey=rogue?'rogue:'+world.terrainRevision+':'+Math.floor(player.x/5)+':'+Math.floor(player.z/5):world.terrainRevision;
-  if(this.staticRevision!==meshKey){
-   const start=performance.now(),mesh=rogue?rogueStaticMesh(world,player):apartmentMesh(world);
-   const built=performance.now();this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);
-   this.staticCount=mesh.length/10;this.staticRevision=meshKey;
+  if(this.staticRevision!==meshKey||this.staticWorld!==world){
+   const start=performance.now(),entry=rogue?this.rogueMeshCache.get(world,player,
+    anchor=>rogueStaticMesh(world,anchor)):null;
+   const mesh=rogue?entry.data:apartmentMesh(world),built=performance.now();
+   this.upload(this.staticBuffer,mesh,gl.STATIC_DRAW);
+   this.staticCount=mesh.length/10;this.staticRevision=meshKey;this.staticWorld=world;
    this.visualMetrics.staticTriangles=this.staticCount/3;
    this.visualMetrics.staticVertices=this.staticCount;
    this.visualMetrics.staticBytes=mesh.length*4;
-   this.visualMetrics.meshBuildMs=Math.round((built-start)*100)/100;
+   this.visualMetrics.meshBuildMs=entry?.hit?0:Math.round((built-start)*100)/100;
    this.visualMetrics.meshUploadMs=Math.round((performance.now()-built)*100)/100;
    this.visualMetrics.textureBytes=this.textureBytes;
    this.visualMetrics.lastMeshKey=meshKey;
+   this.visualMetrics.cacheHits=this.rogueMeshCache.hits;
+   this.visualMetrics.cacheMisses=this.rogueMeshCache.misses;
+   this.visualMetrics.cacheEntries=this.rogueMeshCache.size;
+   this.visualMetrics.cacheBytes=this.rogueMeshCache.bytes;
   }
   const eye=[player.x*SCALE,1.54+(player.bob||0),player.z*SCALE],dir=[Math.sin(player.yaw)*Math.cos(player.pitch),-Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)];
   const proj=projection(Math.PI*.50,this.canvas.width/this.canvas.height),mvp=multiply(proj,view(eye,dir));
@@ -677,7 +710,7 @@ export class Renderer{
   }
   if(dyn.length){this.upload(this.dynamicBuffer,dyn,gl.DYNAMIC_DRAW);this.bind(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10);this.visualMetrics.dynamicTriangles=dyn.length/30;this.visualMetrics.drawCalls++}
   // Proper viewmodel at the lower right: no world-space cyan marker below the camera.
-  const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false});
+  const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false,aspect:this.canvas.width/this.canvas.height});
   if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));gl.uniform1f(this.u.electrical,1);this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10);this.visualMetrics.drawCalls++}
  }
 }

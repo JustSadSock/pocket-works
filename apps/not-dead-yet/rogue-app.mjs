@@ -40,7 +40,12 @@ function overlay(id){for(const n of ['menu','pauseOverlay','inventoryOverlay','e
 function notify(msg,duration=2.6){const h=$('hint');if(!h)return;h.textContent=msg;h.classList.add('visible');noticeUntil=elapsed+duration}
 function start(data=null){
  qaVisualMode=false;setup(data?.seed??newSeed(),data);phase='play';overlay(null);lastFrame=performance.now();audio.activate();audio.event('radio');
- notify(data?'Ты опять здесь.':'WASD — ходьба · Мышь — обзор · Клик по игре — захват мыши',4);
+ // Do not plaster desktop key bindings across a portrait phone's only
+ // view of the corridor. Controls are visible on mobile, and desktop help
+ // remains available in the pause menu.
+ if(window.matchMedia?.('(pointer:coarse)')?.matches){
+  $('hint').classList.remove('visible');noticeUntil=elapsed;
+ }else notify(data?'Ты опять здесь.':'WASD — ходьба · Мышь — обзор · ЛКМ — выстрел',2.25);
  focusScene();
  if(data?.phase==='upgrade'&&upgradeChoices.length)openUpgrade(true);else persist()
 }

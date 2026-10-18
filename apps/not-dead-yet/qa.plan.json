@@ -21,7 +21,9 @@
         "tests/keyboard.test.mjs",
         "tests/visual-baseline.test.mjs",
         "tests/floorplans.test.mjs",
-        "tests/rogue-doors.test.mjs"
+        "tests/rogue-doors.test.mjs",
+        "tests/architecture-cache.test.mjs",
+        "tests/viewmodel-visual.test.mjs"
       ]
     },
     {
@@ -67,7 +69,14 @@
       "tier": "smoke",
       "files": [
         "qa/journey.spec.js",
-        "qa/roguelike.spec.js",
+        "qa/roguelike.spec.js"
+      ]
+    },
+    {
+      "id": "visual-regression",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
         "qa/visual-baseline.spec.js"
       ]
     }
