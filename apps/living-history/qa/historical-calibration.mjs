@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createWorld,advanceDays,audit} from '../model.js';
 import {historicalObservation,historicalComparison,summarizeHistoricalRuns} from '../historical-calibration.js';
+import {snapshotReality,validateObservation,summarizeEnsemble} from './realism-metrics.mjs';
+import {renderRealismReport} from './realism-report.mjs';
 
 const options=Object.fromEntries(process.argv.slice(2).filter(s=>s.startsWith('--')).map(s=>{const i=s.indexOf('=');return [s.slice(2,i<0?undefined:i),i<0?'true':s.slice(i+1)];}));
 const group=options.group||'ensemble';
@@ -22,10 +24,17 @@ const variants=group==='sensitivity'?[
 const runs=[];
 for(const seed of listed)for(const variant of variants){
  const state=createWorld(seed,{tuning:variant.tuning}),founding=historicalObservation(state),history=[];
+ const quantitative=[];let previous=snapshotReality(state,null).next;
+ const initialPopulation=state.people.filter(p=>p.alive).length;
+ const initialComparison=historicalComparison(founding);
  for(let y=1;y<=years;y++){
   advanceDays(state,365);
   const result=audit(state);
   if(!result.ok)throw Error(`Material audit failed on seed=${seed}, variant=${variant.name}, year=${y}: ${result.issues.slice(0,5).join(' | ')}`);
+  const reading=snapshotReality(state,previous);
+  const problems=validateObservation(reading.observation);
+  if(problems.length)throw Error(`Invalid quantitative observation on seed=${seed}, variant=${variant.name}, year=${y}: ${problems.join(', ')}`);
+  quantitative.push(reading.observation);previous=reading.next;
   if(y===1||y===5||y===10||y%10===0||y===years){
    const o=historicalObservation(state);
    history.push({year:y,population:o.population,householdSize:o.householdSize,
@@ -36,7 +45,7 @@ for(const seed of listed)for(const variant of variants){
  }
  const end=historicalObservation(state);
  runs.push({seed,variant:variant.name,founding,final:end,comparison:historicalComparison(end),
-  history,audit:{ok:true,yearsTested:years}});
+  history,quantitative,initialPopulation,initialComparison,audit:{ok:true,yearsTested:years}});
  console.log(`HISTORICAL WORLD COMPLETE seed=${seed} variant=${variant.name} years=${years} population=${end.population} famineDeaths=${end.starvationDeaths}`);
 }
 const baseline=runs.filter(r=>r.variant==='baseline'),baselineStats=summarizeHistoricalRuns(baseline.map(r=>r.final));
@@ -59,5 +68,23 @@ const result={schemaVersion:1,group,years,seeds:listed,variants:variants.map(v=>
   'One-factor sensitivity trials have shared initial seed and keyed weather/demography, but decisions and population may diverge after intervention'
  ]};
 const dest=options.output||options.out;
-if(dest){fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,JSON.stringify(result,null,2));console.log('Report: '+dest);}
+if(dest){
+ fs.mkdirSync(path.dirname(dest),{recursive:true});
+ fs.writeFileSync(dest,JSON.stringify(result,null,2));
+ console.log('Report: '+dest);
+ // Companion dataset: old calibration JSON format is preserved, while the
+ // independent demographic/food/dispute study produces its own report.
+ const measured=baseline.map(r=>({seed:r.seed,scenario:'normal',years,
+  initial:{population:r.initialPopulation,historicalComparison:r.initialComparison},
+  annual:r.quantitative,validation:{materialAudit:true,observedYears:r.quantitative.length}}));
+ const summary=summarizeEnsemble(measured);
+ const quantitativeReport={schema:1,study:'living-history-realism-ensemble',
+  sourceCommit:process.env.GITHUB_SHA||null,generatedAt:new Date().toISOString(),
+  method:{group,years,seeds:listed,baselineOnly:true},summary,runs:measured};
+ const companion=dest.replace(/\.json$/i,'')+'-realism.json';
+ fs.writeFileSync(companion,JSON.stringify(quantitativeReport,null,2)+'\n');
+ const note=companion.replace(/\.json$/i,'')+'.md';
+ fs.writeFileSync(note,renderRealismReport(quantitativeReport));
+ console.log('REALISM COMPANION seed='+listed.join(',')+' years='+years+' status=NOT_HISTORICALLY_VALIDATED json='+companion+' md='+note);
+}
 else console.log(JSON.stringify({...result,runs:undefined},null,2));
