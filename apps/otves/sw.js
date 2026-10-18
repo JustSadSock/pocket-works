@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'otves-';
-const CACHE_NAME = 'otves-v1.2.0';
-const APP_VERSION = '1.2.0';
+const CACHE_NAME = 'otves-v1.3.0';
+const APP_VERSION = '1.3.0';
 const RELEASE_DATE = '2026-10-18';
 const RELEASE_NOTES = [
-  'Теперь лабиринт является настоящей трёхмерной сценой с перспективой и динамическими тенями.',
-  'Стены объединены без пересечений, финишная лунка углублена в основание.',
-  'Полностью сохранена игровая физика и офлайн-работа, есть fallback на Canvas 2D.'
+  'Прозрачные стеклянные рёбра отражают свет и преломляют изображение.',
+  'Керамика, латунь и шар получили новые физически обоснованные материалы.',
+  'Добавлены три качества оптики и запасной рендер при потере WebGL.'
 ];
 const APP_SHELL = [
   './',
@@ -17,6 +17,7 @@ const APP_SHELL = [
   './physics.js',
   './renderer.js',
   './renderer3d.js',
+  './render-materials.js',
   './render-geometry.js',
   './manifest.webmanifest',
   './icons/icon.svg',
