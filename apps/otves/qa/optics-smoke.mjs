@@ -74,6 +74,31 @@ async function verify(page,label,evidence) {
   assert.equal(status.glError,0,label+': no GL error after draw');
   await mkdir(evidence.dir,{recursive:true});
   await page.screenshot({path:join(evidence.dir,'optics-'+label+'.png')});
+  // All tactile and sensory controls are functional, not decorative.
+  await page.locator('#pauseButton').click();
+  assert.equal(await page.locator('#pauseScreen').getAttribute('aria-hidden'),'false');
+  assert.equal(await page.locator('#startScreen').getAttribute('aria-hidden'),'true');
+  assert.equal(await page.locator('#pauseScreen').evaluate(el=>el.inert),false);
+  const sound=page.locator('#pauseSoundButton');
+  const before=await sound.getAttribute('aria-pressed');
+  await sound.click();
+  assert.notEqual(await sound.getAttribute('aria-pressed'),before,label+': sound toggles');
+  await sound.click();
+  assert.equal(await sound.getAttribute('aria-pressed'),before,label+': sound toggles back');
+  const vib=page.locator('#pauseHapticButton');
+  if(await vib.isVisible()){
+    const beforeVibration=await vib.getAttribute('aria-pressed');
+    await vib.click();
+    assert.notEqual(await vib.getAttribute('aria-pressed'),beforeVibration);
+    await vib.click();
+  }
+  await page.screenshot({path:join(evidence.dir,'controls-'+label+'.png')});
+  await page.locator('#resumeButton').click();
+  assert.equal(await page.locator('#pauseScreen').getAttribute('aria-hidden'),'true');
+  assert.equal(await page.locator('#pauseScreen').evaluate(el=>el.inert),true);
+  assert.equal(await page.locator('#pauseButton').isEnabled(),true);
+  assert.equal(await page.locator('.app-shell').getAttribute('class'),'app-shell is-playing');
+  assert.deepEqual(errors,[],label+': no errors after tactile interactions');
   return status;
 }
 
