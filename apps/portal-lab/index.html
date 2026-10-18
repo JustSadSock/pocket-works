@@ -16,8 +16,8 @@
 <main class="lab">
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
-<div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1>Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -26,9 +26,35 @@
 <div class="transport-left"><button type="button" id="shoot" class="primary">Пройти горловину <span aria-hidden="true">↗</span></button><button type="button" id="pause" class="secondary" aria-label="Приостановить симуляцию">Пауза</button><button type="button" id="clear" class="secondary" title="Очистить траектории">Очистить</button></div>
 <div class="transport-time"><span>ВРЕМЯ <b id="elapsed">0.00</b> <span class="unit">a/c</span></span><span id="track-count">0 траекторий</span></div>
 </div>
-<div class="bottom-note"><span class="tiny-dot"></span><span>Фотоны интегрируются из метрики; пиксели получают свет одной из двух фоновых сфер.</span></div>
+<div class="bottom-note"><span class="tiny-dot"></span><span>Свет и материя вычисляются в одной метрике. Нагрузка образца — локальное приближение.</span></div>
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
+<section id="matter-panel" class="matter-panel" aria-label="Физическое испытание образца">
+<div class="section-caption"><span>ИСПЫТАТЕЛЬНЫЙ СТЕНД</span><span>v0.4</span></div>
+<div class="matter-description">Образец свободно падает через горловину. Расчёт упругих сил и разрывов идёт в локальной системе Ферми.</div>
+<div id="matter-phase" class="matter-phase" aria-live="polite">ГОТОВ К ИСПЫТАНИЮ</div>
+<label class="field matter-field"><span>Материал образца</span><select id="matter-material">
+<option value="ceramic">Керамика</option><option value="steel">Сталь</option><option value="polymer">Полимер</option><option value="elastomer">Эластомер</option>
+</select></label>
+<div id="matter-material-note" class="matter-material-note"></div>
+<div class="field matter-field"><span>Ориентация стержня</span>
+<div class="matter-axis mode-switch" role="group" aria-label="Ось образца">
+<button data-axis="radial" type="button" aria-pressed="false">Радиальная</button>
+<button data-axis="transverse" class="selected" type="button" aria-pressed="true">Поперечная</button>
+</div></div>
+<label class="range-field"><span>Радиус горловины <output id="matter-throat-value">1 000</output> <small>м</small></span><input id="matter-throat" type="range" min="2" max="8" step=".25" value="3"></label>
+<label class="range-field"><span>Длина образца <output id="matter-size-value">2.00</output> <small>м</small></span><input id="matter-size" type="range" min=".25" max="4" step=".25" value="2"></label>
+<label class="range-field"><span>Скорость на входе <output id="matter-speed-value">0.72</output> <small>c</small></span><input id="matter-speed" type="range" min=".1" max=".95" step=".05" value=".72"></label>
+<div class="matter-results">
+<div><span>ПИК НАПРЯЖЕНИЯ</span><strong id="matter-peak">0.00</strong><small>МПа</small></div>
+<div><span>РАЗРУШЕННЫЕ СВЯЗИ</span><strong id="matter-fractures">0/16</strong><small>из 16</small></div>
+<div><span>ВРЕМЯ НА ЗОНДЕ</span><strong id="matter-proper">0.000</strong><small>a/c</small></div>
+<div><span>ПРИЛИВНОЕ Δa</span><strong id="matter-accel">0.00</strong><small id="matter-accel-unit">м/с²</small></div>
+</div>
+<div class="matter-metadata"><span id="matter-lapse">l/a = 3.25 · РЕГИОН A</span><span>Скорость звука <b id="matter-sound">0</b> м/с</span></div>
+<div class="matter-limit" id="matter-limit"></div>
+<p class="matter-caveat">Линейная модель упругого стержня с разрывами. Нет пластичности, контактов обломков, самогравитации и обратного воздействия на метрику. Применимо при длине образца много меньше радиуса горловины.</p>
+</section>
 <section class="observer-panel" id="observer-panel" aria-label="Наблюдатель и приливные зонды">
 <div class="section-caption"><span>КАМЕРА · ГЕОДЕЗИЧЕСКАЯ ОПТИКА</span><span id="lens-eta">N₀ = 1</span></div>
 <div class="observer-region" id="lens-region">A · ВНЕШНИЙ РЕГИОН</div><div class="optical-diagnostics" id="lens-optical-read" aria-live="polite">Подготовка оптического поля</div>
