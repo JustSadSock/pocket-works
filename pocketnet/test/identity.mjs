@@ -88,6 +88,22 @@ try{
  const bobID=(await (await fetch(base+'/pocket-id/me',{headers:{cookie:bob.cookie}})).json()).user.id;
  const socialAlice=await callSocial(alice.cookie,'me');
  assert.equal(socialAlice.status,200);
+ // A guest in the same room can inspect public player identities without logging in.
+ // It must not gain access to the social graph, profile edits or internal lookups.
+ const publicHost=await callSocial('', 'user?id='+auth.player.accountId);
+ assert.equal(publicHost.status,200,'guest player portrait lookup must be public');
+ assert.equal(publicHost.data.profile.id,auth.player.accountId);
+ assert.equal(publicHost.data.profile.nickname,nick1);
+ assert.equal(publicHost.data.profile.avatar,'plum');
+ assert.deepEqual(Object.keys(publicHost.data.profile).sort(),
+  ['artwork','avatar','id','maskot','nickname','title'].sort(),'guest card contains public fields only');
+ assert.equal((await callSocial('', 'friends')).status,401,'guest cannot read friend graph');
+ assert.equal((await callSocial('', 'me')).status,401,'guest cannot read private social snapshot');
+ assert.equal((await callSocial('', 'friend-request',{id:auth.player.accountId})).status,401,'guest cannot mutate social state');
+ const forgedPublic=await fetch(base+'/pocket-id/public?id='+encodeURIComponent(auth.player.accountId),{
+  headers:{'x-pw-social-internal':'1','x-pw-public-portrait':'1'}
+ });
+ assert.equal(forgedPublic.status,404,'direct client headers cannot bypass private Pocket ID routing');
  const findBob=await callSocial(alice.cookie,'search?q='+encodeURIComponent(nick2.slice(0,7)));
  assert.equal(findBob.status,200,JSON.stringify(findBob.data));
  assert.ok(findBob.data.users.some(p=>p.id===bobID),'Verified Pocket ID directory should find Bob');
