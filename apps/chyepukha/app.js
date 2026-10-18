@@ -22,7 +22,7 @@ const words=s=>String(s||'').trim().split(/\s+/u).filter(Boolean);
 const GENDERS=[['male','Чоловік'],['female','Жінка'],['nonbinary','Інше'],['unspecified','Неважливо']];
 let net=null,view=null,me='',room='',connected=false,connecting=false,notice='';
 let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',comicImage='',modal='',sound=read('sound','off')==='on',audio=null;
-let previewDraft='';
+let previewDraft='',previewEditions=[];
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
@@ -30,7 +30,7 @@ const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
 // Legacy v1 guest sessions used this key. Preserve them across the account-aware upgrade.
 const sessionKey=()=>member()?pocketIdentitySessionKey(pocketIdentity):'chyepukha-1';
 const archiveKey=()=>KEY+'archive:'+(member()?sessionKey():'guest:'+name.trim().toLocaleLowerCase());
-function editions(){if(IS_PREVIEW||!identityReady)return [];try{return readEditions(localStorage,archiveKey())}catch{return []}}
+function editions(){if(IS_PREVIEW)return previewEditions;if(!identityReady)return [];try{return readEditions(localStorage,archiveKey())}catch{return []}}
 function archiveSelection(){const all=editions(),edition=all.find(x=>x.id===archiveEditionId)||all[0];return {all,edition,story:edition?.stories.find(x=>x.id===archiveStoryId)||edition?.stories[0]}}
 function keepFinished(v){
  if(IS_PREVIEW||!identityReady||!room||v.phase!=='finished')return;
@@ -292,7 +292,7 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
   if(act==='archive-copy'){const st=archiveSelection().story;if(st)copyText(storyText(st));return}
   if(act==='archive-ask-delete'){archivePendingDelete=archiveSelection().edition?.id||'';modal='archive-delete';render();return}
   if(act==='archive-confirm-delete'){
-   if(archivePendingDelete){try{const remaining=removeEdition(editions(),archivePendingDelete);if(remaining.length){if(!writeEditions(localStorage,archiveKey(),remaining)){toast('Не вдалося видалити видання.');modal='';render();return}}else localStorage.removeItem(archiveKey());toast('Видання видалено.')}catch{toast('Не вдалося видалити видання.')}}
+   if(archivePendingDelete){try{const remaining=removeEdition(editions(),archivePendingDelete);if(IS_PREVIEW)previewEditions=remaining;else if(remaining.length){if(!writeEditions(localStorage,archiveKey(),remaining)){toast('Не вдалося видалити видання.');modal='';render();return}}else localStorage.removeItem(archiveKey());toast('Видання видалено.')}catch{toast('Не вдалося видалити видання.')}}
    archivePendingDelete='';archiveEditionId='';archiveStoryId='';modal='';render();return
   }
   if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection();return}
@@ -320,6 +320,11 @@ if(IS_PREVIEW){
  const d=demoView(PREVIEW_ID);
  view=d.view;me=d.me;room=d.room;connected=d.connected;connecting=d.connecting;
  notice=d.notice;invitation=d.invitation;storyId=d.storyId;modal=d.modal;previewDraft=d.answer;
+  if(PREVIEW_ID==='archive'||PREVIEW_ID==='archive-empty'||PREVIEW_ID==='archive-delete'){
+   archiveOpen=true;view=null;const final=demoView('results');
+   previewEditions=PREVIEW_ID==='archive-empty'?[]:addFinishedEdition([],d.room,final.view,1760781600000);
+   if(PREVIEW_ID==='archive-delete')modal='archive-delete';
+  }
  if(PREVIEW_ID==='home-member'){pocketIdentity={id:'00000000-0000-4000-8000-000000000001',nickname:'Марта',avatar:'moss',complete:true};identityReady=true}
  else identityReady=true;
  if(view?.phase==='writing')draftSelections[draftKey()]=d.selection;
