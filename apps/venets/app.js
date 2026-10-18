@@ -5,6 +5,7 @@ import {renderAtlas,renderGenealogy,shieldSvg} from './atlas.js';
 import {atlasOwnerSnapshot,transferHighlights} from './atlas-core.js';
 import {memoryImpact} from './sim/politics.js';
 import {campaignLegacy,campaignChronicleText} from './sim/legacy.js';
+import {changeTitleHolder} from './sim/transactions.js';
 import {campaignStarts,startCampaign,campaignChoices,campaignAction,campaignYear,
   campaignScore,extendCampaign,serializeCampaign,loadCampaign} from './sim/campaign.js';
 installMobileRuntime();
@@ -652,7 +653,12 @@ function initPreview(id){
   game=startCampaign({seed:413,countyId:'co-01',size:id==='expanded-atlas'?48:12});
   if(id==='menu-resume'){menu();return}
   if(id==='docs'){screenTo('docs');return}
-  if(id==='ending'){
+  if(id==='ending'||id==='ending-crown'){
+    if(id==='ending-crown'){
+      const crown=game.world.titles.find(t=>t.rank==='kingdom');
+      changeTitleHolder(game.world,{titleId:crown.id,newHolderId:game.playerId,
+        cause:'inspector-demonstration-legal-coronation'});
+    }
     game.goalYear=1067;
     campaignYear(game); // real turn resolves the short testing chapter
     renderEnding();screenTo('ending');return;
