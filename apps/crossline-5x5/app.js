@@ -72,14 +72,14 @@ function confirmReturn(){
   {label:playing?'Сдаться и выйти':'В меню',action:()=>leaveToMenu()});
 }
 function showRules(){modal('ПРАВИЛА','Предугадай противника','Каждый раунд оба игрока скрытно выбирают 5 команд. Перемещения выполняются одновременно, затем срабатывают атаки и щиты. Атака один раз за раунд: отмечай соседние направления (и свою клетку). Щит один раз за раунд. Направление, выбранное для атаки, нельзя использовать для движения в этом плане, и наоборот. В 4-м раунде после первого шага внешний контур обрушится.',{label:'Понятно',action:()=>{}});}
-function storeOffline(){if(offline)write('saved',JSON.stringify({mode,offline}));}
+function storeOffline(){if(offline)write('saved',JSON.stringify({mode,offline,draft:mode==='hotseat'&&offline.pending?.A&&offline.turn==='A'?[]:plan}));}
 function resumeOffer(){
  let cached;try{cached=JSON.parse(read('saved','null'))}catch{}
  document.getElementById('resume')?.remove();
  if(!cached?.offline?.match||cached.offline.phase==='finished')return;
  const btn=document.createElement('button');btn.id='resume';btn.className='minor';btn.textContent='Продолжить незавершённую партию';
  btn.onclick=()=>{
-  leaveNet(false);mode=cached.mode;offline=cached.offline;plan=[];attackMode=false;animating=false;
+  leaveNet(false);mode=cached.mode;offline=cached.offline;plan=Array.isArray(cached.draft)?cached.draft.slice(0,STEPS):[];attackMode=false;animating=false;
   show('play');render();
   if(mode==='hotseat'&&offline?.pending?.A&&!offline?.pending?.B&&offline.turn==='A')handoff();
  };
@@ -114,6 +114,7 @@ function leaveToMenu(force=false){
   return;
  }
  gameToken++;clearTimeout(replayTimer);replayPaused=true;animating=false;attackMode=false;plan=[];
+ modalOpen=false;$('modal').classList.add('hidden');
  if(mode==='online')leaveNet(false);else storeOffline();
  mode='menu';show('menu');resumeOffer();
 }
@@ -242,7 +243,7 @@ function enqueue(action){
   if(info.attacks||!action.dirs.length||action.dirs.some(d=>info.moved.has(d))){soundFX('error');toast('Невозможно выбрать эти направления');return;}
  }else if(action==='shield'){if(info.shielded)return;}
  else if(info.used.has(action))return;
- plan.push(action);attackMode=false;attackDirs=[];soundFX('plan');buzz(6);render(); // candidate validated on confirmation.
+ plan.push(action);attackMode=false;attackDirs=[];soundFX('plan');buzz(6);render();if(mode!=='online')storeOffline(); // candidate validated on confirmation.
 }
 function direction(d){
  if(locked()&&!attackMode)return;
@@ -266,7 +267,7 @@ function undo(){
  if(locked()&&!attackMode)return;
  if(attackMode){attackMode=false;attackDirs=[];}
  else plan.pop();
- soundFX('tap');render();
+ soundFX('tap');render();if(mode!=='online')storeOffline();
 }
 function submit(){
  if(animating||recording||modalOpen)return;
