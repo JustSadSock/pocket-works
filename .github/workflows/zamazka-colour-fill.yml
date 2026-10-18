@@ -27,9 +27,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install test runtime
-        run: npm install --no-package-lock --no-save --ignore-scripts --no-audit --no-fund
+      - name: Install Playwright in an isolated runner directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/zamazka-playwright" node_modules/@playwright
+          printf '{"name":"zamazka-browser-qa","version":"1.0.0","private":true}' > "$RUNNER_TEMP/zamazka-playwright/package.json"
+          npm install --prefix "$RUNNER_TEMP/zamazka-playwright" --no-package-lock --ignore-scripts --no-audit --no-fund @playwright/test@1.55.0
+          ln -s "$RUNNER_TEMP/zamazka-playwright/node_modules/@playwright/test" node_modules/@playwright/test
       - name: Install real Chromium Canvas2D
-        run: npx playwright install --with-deps chromium
+        run: "$RUNNER_TEMP/zamazka-playwright/node_modules/.bin/playwright" install --with-deps chromium
       - name: Reproduce opaque tan field and black multi-gesture outline
         run: node apps/zamazka/qa/fill-colour-real-canvas.mjs
