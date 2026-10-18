@@ -1,7 +1,8 @@
 // Client-only test inspector. Each screen is rendered by the actual app in an isolated iframe.
 export const PREVIEW_PARAM='chyepukha-preview';
 export const SCREENS=[
- ['home','Початок','Головний екран'],
+ ['home','Початок','Головний екран · гість'],
+ ['home-member','Початок','Головний екран · Pocket ID'],
  ['invite','Початок','Запрошення в кімнату'],
  ['error','Початок','Помилка входу'],
  ['connecting','Початок','Підключення'],

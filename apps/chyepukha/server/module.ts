@@ -54,7 +54,7 @@ function begin(s){
 function viewForPlayer({state:s,player,players}){
  const p=players.find(x=>x.id===player.id);
  const common={protocol:1,revision:s.revision,phase:s.phase,host:s.host,
-   players:players.map(x=>({id:x.id,name:clean(x.name,24)||'Гравець',submitted:Boolean(s.submitted[x.id])})),
+   players:players.map(x=>({id:x.id,name:clean(x.name,32)||'Гравець',submitted:Boolean(s.submitted[x.id]),verified:x.verified===true&&typeof x.accountId==='string',accountId:x.verified===true&&typeof x.accountId==='string'?x.accountId:null,avatar:x.verified===true&&typeof x.avatar==='string'?clean(x.avatar,32):null})),
    settings:s.settings,questionSets:questionOptions(),genres:genreOptions(),
    round:s.round,total:s.total,message:s.message||''};
  if(!p) return common;

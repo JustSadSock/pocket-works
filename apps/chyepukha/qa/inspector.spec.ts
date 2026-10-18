@@ -8,12 +8,12 @@ test('screen inspector has all stages and actual responsive app views',async({pa
  await page.keyboard.press('Backquote');
  const inspector=page.locator('.chy-qa');
  await expect(inspector).toBeVisible();
- await expect(inspector.locator('[data-screen]')).toHaveCount(18);
+ await expect(inspector.locator('[data-screen]')).toHaveCount(19);
  await inspector.locator('[data-device=phone]').click();
  await expect(inspector.locator('[data-size]')).toContainText('390 × 844');
  const frame=page.frameLocator('.chy-qa-frame');
  for(const [id,selector] of [
-  ['home','.home-cover'],['invite','#joinForm'],['error','.warning'],['connecting','.waiting'],
+  ['home','.home-cover'],['home-member','.home-identity.is-member'],['invite','#joinForm'],['error','.warning'],['connecting','.waiting'],
   ['lobby-host','.room'],['lobby-guest','.room'],['lobby-ready','.room'],
   ['lobby-custom','#customField:not(.hidden)'],
   ['writing-first','#answerForm'],['writing-tail','.incoming'],

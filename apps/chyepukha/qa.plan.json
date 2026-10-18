@@ -14,7 +14,8 @@
       "kind": "playwright",
       "tier": "smoke",
       "files": [
-        "qa/inspector.spec.ts"
+        "qa/inspector.spec.ts",
+        "qa/account.spec.ts"
       ]
     }
   ]
