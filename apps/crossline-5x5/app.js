@@ -244,7 +244,7 @@ const allowed=()=>controlsFor(plan,editingSlot);
 function planProblem(code){
  const message=describeIssue(code);
  const feedback=$('planFeedback');
- feedback.textContent=message;feedback.classList.add('is-error');
+ feedback.textContent=message;feedback.classList.add('is-error');feedback.classList.remove('is-risk');
  toast(message);soundFX('error');buzz(16);
 }
 function saveDraft(){if(mode!=='online')storeOffline()}
@@ -259,12 +259,13 @@ function reorderSlot(offset){
  const changed=trySwapCommand(plan,editingSlot,offset);
  if(changed.error){planProblem(changed.error);return}
  plan=changed.actions;editingSlot=changed.index;
+ $('planFeedback').classList.remove('is-error');
  soundFX('tap');buzz(6);render();saveDraft();
 }
 function removeSlot(){
  if(locked()||editingSlot===null)return;
  plan=removeCommand(plan,editingSlot);editingSlot=null;
- attackMode=false;attackDirs=[];soundFX('tap');buzz(6);render();saveDraft();
+ attackMode=false;attackDirs=[];$('planFeedback').classList.remove('is-error');soundFX('tap');buzz(6);render();saveDraft();
 }
 function enqueue(action){
  if(locked())return;
@@ -304,7 +305,7 @@ function undo(){
  if(attackMode){attackMode=false;attackDirs=[]}
  else if(editingSlot!==null){plan=removeCommand(plan,editingSlot);editingSlot=null}
  else plan.pop();
- soundFX('tap');render();saveDraft();
+ $('planFeedback').classList.remove('is-error');soundFX('tap');render();saveDraft();
 }
 function submit(){
  if(animating||recording||modalOpen)return;
@@ -371,8 +372,9 @@ function render(){
   const projection=previewOrders(match,turn,plan);
   feedback.textContent=animating?'Исполнение пяти команд':projection.risk!==null?
    'Опасно: шаг '+projection.risk+' ведёт на разрушенный край':
+   attack?'Укажи направление удара'+(info.moved.size?' · движение '+[...info.moved].map(d=>symbols[d]).join(' ')+' уже занято':''):
    edit?'Замени команду или передвинь выбранный шаг':
-   full?'План готов. Нажми шаг для изменения':'Выбери команду. Нажми шаг, чтобы заменить его.';
+   full?'План готов. Нажми шаг для изменения':info.attacked.size?'Направление '+[...info.attacked].map(d=>symbols[d]).join(' ')+' занято атакой':'Выбери команду. Нажми шаг, чтобы заменить его.';
   feedback.classList.toggle('is-risk',projection.risk!==null&&!animating);
  }
  $('submit').textContent=finished?'ИТОГ':animating?'ИСПОЛНЕНИЕ…':flags[turn]?'ЖДЁМ СОПЕРНИКА':plan.length===5?'ПОДТВЕРДИТЬ →':'ЗАПОЛНИ ПЛАН →';
