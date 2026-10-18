@@ -474,6 +474,18 @@ test.describe('AI exploratory mobile gameplay', () => {
         failedRequests.push(`${request.method()} ${request.url()} :: ${failure?.errorText || 'unknown failure'}`);
       });
 
+      // The static preview server on :4173 has no Pocket ID API. Give this
+      // Pocket ID-integrated app an explicit guest response; verified-account
+      // behavior is covered separately by its dedicated Playwright fixtures.
+      // This avoids a WebKit-origin error from an endpoint absent in preview.
+      if(app.slug==='chyepukha'){
+        await page.route('**/pocket-id/me',route=>route.fulfill({
+          status:200,contentType:'application/json',body:JSON.stringify({user:null})
+        }));
+        await page.route('**/pocket-social/me',route=>route.fulfill({
+          status:200,contentType:'application/json',body:JSON.stringify({profile:null})
+        }));
+      }
       const response = await page.goto(`/apps/${app.slug}/${app.slug==='komnatka'?'?qa=1':''}`, { waitUntil: 'domcontentloaded' });
       expect(response, `No navigation response for ${app.slug}`).not.toBeNull();
       expect(response?.status(), `Unexpected HTTP status for ${app.slug}`).toBeLessThan(400);
