@@ -1,6 +1,6 @@
 const CACHE_NAME='not-dead-yet-v1.0.0',PREFIX='not-dead-yet-',VERSION='1.0.0',PROTOCOL=1;
 const SCOPE=new URL('./',self.registration.scope);
-const ASSETS=['./','./index.html','./app.config.json','./styles.css','./world.mjs','./renderer.mjs','./app.mjs','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const ASSETS=['./','./index.html','./app.config.json','./styles.css','./world.mjs','./renderer.mjs','./app.mjs','./app.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const FILES=new Map(ASSETS.map(s=>{const u=new URL(s,SCOPE);return [u.pathname,u.href]}));
 function fresh(url){const u=new URL(url);u.searchParams.set('__pw_build',VERSION+'-p'+PROTOCOL);return fetch(u,{cache:'no-store',credentials:'same-origin'}).then(r=>{if(!r.ok)throw Error('Network '+r.status);return r})}
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>Promise.all([...new Set(FILES.values())].map(async u=>c.put(u,await fresh(u)))))));
