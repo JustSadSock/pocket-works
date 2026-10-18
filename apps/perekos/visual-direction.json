@@ -36,6 +36,11 @@
         "slug": "crossline-5x5",
         "spatialDifference": "The 5x5 tactical game uses a distinct framed board and its order planning layer; Perekos keeps an unframed real-time moving world behind contextual result sheets.",
         "interactionDifference": "Real-time dodging, spell cooldowns and hold-to-fire differ from ordered tactical commands and simultaneous phase resolution."
+      },
+      {
+        "slug": "chyepukha",
+        "spatialDifference": "ЧЕПУХА размещает одно письмо на ровной письменной странице, а ПЕРЕКОС заполняет экран движущейся пиксельной каменной ареной и двумя персонажами с портретными значками.",
+        "interactionDifference": "Набор текста и передача скрытых фрагментов ЧЕПУХИ противопоставлены реальному управлению магом, прицеливанию и сборке цепочки рун между дуэлями."
       }
     ]
   },
