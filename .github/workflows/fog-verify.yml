@@ -21,11 +21,12 @@ jobs:
           node --check apps/fog-of-conquest/pocket-adapter.js
           node --check apps/fog-of-conquest/sw.js
       - name: Install root tooling
-        run: npm install --workspaces=false --no-save --package-lock=false --no-audit --no-fund --ignore-scripts
+        run: mkdir -p /tmp/fog-deps && cd /tmp/fog-deps && npm init -y >/dev/null && npm install @playwright/test@1.55.0 --no-audit --no-fund --ignore-scripts && ln -s /tmp/fog-deps/node_modules "$GITHUB_WORKSPACE/node_modules"
       - name: Validate site manifest and staging build
         run: |
           npm run registry:check
-          npm run deploy:site
+          npm run prepare:site
+          npm run validate:site
       - name: Install browser
         run: npx playwright install chromium
       - name: Mobile and desktop browser smoke
