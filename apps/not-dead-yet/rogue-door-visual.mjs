@@ -22,7 +22,7 @@ function between(a,b,t){return{x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t}}
 export function rogueDoorMesh(out,world,player){
  for(const c of world.nearby(player.x,player.z,16)){
   for(const door of c.doors){
-   if(Math.hypot(door.x+.5-player.x,door.z+.5-player.z)>15)continue;
+   if(Math.hypot(door.x+.5-player.x,door.z+.5-player.z)>15||world.legacyDoor(door,c))continue;
    const state=world.doorState(door,c),segment=doorSegment(door,state.angle);
    const a={x:segment.a.x*S,z:segment.a.z*S},b={x:segment.b.x*S,z:segment.b.z*S};
    const tint=(Math.abs(door.x*13+door.z*7)%3);
