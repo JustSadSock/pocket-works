@@ -41,8 +41,8 @@ function checkPortal(b,px,py,pair,sim,h){
     b.x=exit.x-u*exit.tx+exit.nx*(b.r+2)+vx*SCALE*remainder;
     b.y=exit.y-u*exit.ty+exit.ny*(b.r+2)+vy*SCALE*remainder;
     b.vx=vx;b.vy=vy;b.cool=Math.max(.09,3*h);b.transits++;
-    const newP=potential({m:b.m,y:exit.y},sim.gravity);
-    sim.anchorWork+=(oldP-newP); // work done by the seam's external anchors
+    const newP=potential({m:b.m,y:b.y-vy*SCALE*remainder},sim.gravity);
+    sim.anchorWork+=(oldP-newP); // including aperture offset; supplied by external anchors
     sim.events.push({type:'portal',pair:pair.pair,x:b.x,y:b.y,speed:Math.hypot(vx,vy)});
     return true;
   }
