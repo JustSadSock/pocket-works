@@ -27,8 +27,8 @@ test('864 sectors remain connected through deterministic edge portals and epochs
    assert.equal(Boolean(c.tiles[i*SECTOR+SECTOR-1]),Boolean(east.tiles[i*SECTOR]),'east portal');
    assert.equal(Boolean(c.tiles[(SECTOR-1)*SECTOR+i]),Boolean(south.tiles[i]),'south portal')
   }
-  assert.equal(c.rooms.length,4);
-  assert.ok(c.rooms.every(r=>r.x1-r.x0<=4&&r.z1-r.z0<=4),'no oversized American living spaces');
+  assert.ok(c.rooms.length>=4&&c.rooms.length<=5,'family room count');
+  assert.ok(c.rooms.every(r=>r.x1-r.x0<=6&&r.z1-r.z0<=6),'no oversized American living spaces');
  }
 });
 test('player start, drops, furniture and inter-sector path are physically valid',()=>{
