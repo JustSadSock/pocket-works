@@ -187,3 +187,58 @@ export function appendDoorDetails(o,d){
   box(o,x+.78,1.14,plane+(d.side==='south'?.06:-.06),.10,.14,.018,[.69,.62,.48],8)
  }
 }
+
+
+// Sparse shared-corridor fixtures. These are actual three-dimensional meshes
+// fastened to the plaster, never imaginary full-height corridor furniture.
+// Their visual footprint is at most 8 cm into an already walkable tile.
+export function appendHallFixtures(out,{x,z,px,pz,seed=0,epoch=0,walls=[],tile=S}){
+ const a=(Math.imul(x+109,73856093)^Math.imul(z+47,19349663)^Math.imul(seed+epoch*29,83492791))>>>0;
+ const cx=px+tile*.5,cz=pz+tile*.5;
+ // Old opal glass ceiling lantern: porcelain fitting, stained shade,
+ // exposed fixing and hanging glass. Rare enough to make lighting rhythmic.
+ if(a%13===0){
+  round(out,cx,2.485,cz,.15,.065,[.29,.27,.23],9,12);
+  round(out,cx,2.39,cz,.18,.105,[.66,.61,.48],8,12);
+  round(out,cx,2.36,cz,.125,.036,[.76,.68,.50],8,12);
+  for(const sign of [-1,1])box(out,cx+sign*.09,2.51,cz,.025,.027,.12,[.36,.32,.27],9)
+ }
+ if(!walls.length)return;
+ // Each detail belongs to a true wall in an actual corridor tile.
+ const [dx,dz]=walls[a%walls.length],axisX=dx!==0;
+ const face=axisX?(dx>0?px+tile:px):(dz>0?pz+tile:pz);
+ const mount=face-(dx||dz)*.051;
+ const plank=(y,w,h,depth,col,m=6,offset=0)=>{
+  if(axisX)box(out,mount,y,cz+offset,depth,h,w,col,m);
+  else box(out,cx+offset,y,mount,w,h,depth,col,m)
+ };
+ const r=a%37;
+ if(r===0||r===1){
+  // Mains junction box / black bakelite switches over enamel backing.
+  plank(1.31,.30,.39,.068,[.39,.34,.29],9);
+  plank(1.36,.245,.28,.075,[.67,.64,.55],8);
+  for(let i=-1;i<=1;i++){
+   plank(1.46,.036,.07,.09,[.21,.24,.24],9,i*.065);
+   plank(1.31,.036,.065,.09,[.35,.31,.27],9,i*.065)
+  }
+  plank(1.76,.018,.43,.029,[.43,.42,.38],9,-.13);
+ }else if(r===2||r===3){
+  // Plain hall peg rail, curved steel hooks and one faded coat.
+  plank(1.93,.57,.115,.095,[.40,.25,.17],6);
+  for(let i=-1;i<=1;i++){
+   plank(1.78,.026,.22,.055,[.42,.42,.39],9,i*.20);
+   plank(1.78,.096,.026,.10,[.55,.52,.47],9,i*.20)
+  }
+  if(r===3){
+   // Hanging fabric does not touch the floor or become a collision obstacle.
+   plank(.99,.38,.67,.12,[.38,.35,.30],7,-.18);
+   plank(.91,.22,.11,.13,[.28,.26,.23],7,-.18)
+  }
+ }else if(r===4){
+  // Weathered room-number enamel plate with a separate shallow doorbell.
+  plank(1.67,.35,.19,.055,[.57,.55,.47],8);
+  plank(1.695,.24,.065,.061,[.21,.22,.21],9);
+  plank(1.43,.09,.11,.076,[.49,.43,.32],9,.20);
+  plank(1.47,.038,.032,.086,[.67,.57,.40],8,.20)
+ }
+}
