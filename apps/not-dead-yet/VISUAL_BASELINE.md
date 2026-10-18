@@ -79,3 +79,32 @@ and E-open animation, but it is *not a real WebGL browser run*.
 
 The mobile/browser screenshots, GPU timings and manual overlap inspection
 are still outstanding and must not be inferred from these test results.
+
+## v2.1.3 — Structural wall depth / geometry cache
+
+The wall renderer now extrudes **155 mm** dry wall and **190 mm**
+bathroom/toilet partitions into existing solid tiles (never into walkable
+corridors). It adds modeled skirting/cornices, repaired wallpaper patches,
+aged plaster, exposed cable fixings and shallow doorway returns. Five aged
+room palettes are deterministic; these are not full PBR normal/roughness
+materials.
+
+`RogueMeshCache` holds up to three static CPU meshes from stable 5-cell
+anchors. Returning across a previously visited grid cell does not
+regenerate its triangle mesh. Changes to `terrainRevision` or the run's
+world object invalidate cached entries; WebGL still uploads the reused
+Float32Array at region changes. New telemetry: `cacheHits`, `cacheMisses`,
+`cacheEntries`, `cacheBytes`.
+
+Isolated V8 mesh counts / build timings at camera anchor (7.5, 7.5):
+- Seed 222: 23,156 triangles (~41ms);
+- Seed 413: 24,000 triangles (~39ms);
+- Seed 8787: 23,566 triangles (~51ms);
+- Seed 4: 24,597 triangles (~64ms);
+- Seed 14: 21,735 triangles (~39ms).
+
+These are JS geometry samples, NOT browser frame times or GPU benchmarks.
+Three CPU meshes may cost ~7–10 MB, plus the current WebGL buffer.
+All 29 relevant deterministic suites passed in the isolated JavaScript
+harness. Real browser screenshots, Z-fighting inspection and GPU profiling
+are still outstanding.
