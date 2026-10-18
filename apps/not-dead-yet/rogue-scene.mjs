@@ -152,19 +152,9 @@ export function rogueStaticMesh(world,player){
    const rx=c.cx*SECTOR+(room.x0+room.x1)/2+0.5,rz=c.cz*SECTOR+(room.z0+room.z1)/2+.5;
    if(Math.hypot(rx-player.x,rz-player.z)<17){roomDetail(out,c,room);if(Math.hypot(rx-player.x,rz-player.z)<11)appendRoomDetails(out,c,room)}
   }
-  for(const d of c.doors)if(Math.hypot(d.x-player.x,d.z-player.z)<17){
-   const x=(d.x+.5)*S,z=(d.z+.5)*S;
-   const wood=[.40,.27,.15];
-   if(d.side==='left'){
-    box(out,x,0,z-.53,.12,2.45,.12,wood,6);box(out,x,0,z+.53,.12,2.45,.12,wood,6);
-    box(out,x,2.41,z,.13,.12,1.21,wood,6)
-   }else{
-    box(out,x,0,z-.53,.12,2.45,.12,wood,6);box(out,x,0,z+.53,.12,2.45,.12,wood,6);
-    box(out,x,2.41,z,.13,.12,1.21,wood,6)
-   }
-   box(out,x+.29,.04,z+.48,.49,2.28,.075,[.37,.22,.12],6);
-   box(out,x+.29,1.25,z+.52,.36,.66,.03,[.16,.22,.21],10);
-   if(Math.hypot(d.x-player.x,d.z-player.z)<9)appendDoorDetails(out,d)
+  for(const door of c.doors){
+   if(Math.hypot(door.x-player.x,door.z-player.z)>=13)continue;
+   appendDoorDetails(out,door)
   }
  }
  return out
