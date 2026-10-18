@@ -1,0 +1,43 @@
+name: Fog real browsers isolated deps
+on:
+  push:
+    branches: [app/fog-of-conquest-port-20261018]
+    paths: [.github/workflows/fog-browser-isolated.yml]
+permissions: {contents: write}
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: true}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - name: Install Playwright isolated from root workspaces
+        run: |
+          mkdir -p /tmp/fog-browser-deps
+          cd /tmp/fog-browser-deps
+          npm init -y
+          npm install --no-audit --no-fund @playwright/test@1.55.0
+          cd "$GITHUB_WORKSPACE"
+          ln -s /tmp/fog-browser-deps/node_modules ./node_modules
+          ./node_modules/.bin/playwright install --with-deps chromium webkit
+      - name: Chromium and WebKit: phone and desktop original gameplay
+        run: ./node_modules/.bin/playwright test --config apps/fog-of-conquest/qa/playwright.config.ts
+      - name: Upload screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fog-v12-real-browsers
+          path: |
+            apps/fog-of-conquest/qa/fog-playwright-results/
+            apps/fog-of-conquest/qa/fog-playwright-report/
+          retention-days: 4
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git rm -f .github/workflows/fog-browser-isolated.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'ci: clean up Fog isolated browser runner'
+          git push origin HEAD:app/fog-of-conquest-port-20261018
