@@ -35,7 +35,7 @@ export function architecturalWall(o,{x,z,px,pz,dx,dz,room,sector,seed,tile=1.27,
  if(axisX){
   box(o,inner,0,pz+tile*.5,thick,HEIGHT,tile,p.back,1);
   // Outer wallpaper, directly on the wall face, with real trim relief.
-  box(o,walkFace+dx*.004,.13,pz+tile*.5,.008,HEIGHT-.20,tile-.015,p.paper,mat);
+  box(o,walkFace-dx*.005,.13,pz+tile*.5,.008,HEIGHT-.20,tile-.015,p.paper,mat);
   if(detail)decorate(o,walkFace,pz,dx,0,tile,p,sector,room,x,z)
  }else{
   box(o,px+tile*.5,0,inner,tile,HEIGHT,thick,p.back,1);
