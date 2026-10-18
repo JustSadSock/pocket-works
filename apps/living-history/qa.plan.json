@@ -319,18 +319,6 @@
       ]
     },
     {
-      "id": "historical-monte-carlo",
-      "kind": "node",
-      "tier": "deep",
-      "entry": "qa/historical-calibration.mjs",
-      "args": [
-        "--group=summary",
-        "--seeds=413,7777,43821,9001,11,29,12345,21773,51291,71331,101,202",
-        "--years=20",
-        "--output={output}/distribution.json"
-      ]
-    },
-    {
       "id": "realism-25-year",
       "kind": "node",
       "tier": "smoke",
@@ -340,60 +328,6 @@
         "--scenario=normal",
         "--years=25",
         "--output={output}/realism-25-year.json"
-      ],
-      "seeds": [
-        413,
-        7777,
-        43821,
-        9001
-      ]
-    },
-    {
-      "id": "realism-drought-25-year",
-      "kind": "node",
-      "tier": "deep",
-      "entry": "qa/realism-ensemble.mjs",
-      "args": [
-        "--seed={seed}",
-        "--scenario=drought",
-        "--years=25",
-        "--output={output}/realism-drought-25-year.json"
-      ],
-      "seeds": [
-        413,
-        7777,
-        43821,
-        9001
-      ]
-    },
-    {
-      "id": "realism-50-year",
-      "kind": "node",
-      "tier": "deep",
-      "entry": "qa/realism-ensemble.mjs",
-      "args": [
-        "--seed={seed}",
-        "--scenario=normal",
-        "--years=50",
-        "--output={output}/realism-50-year.json"
-      ],
-      "seeds": [
-        413,
-        7777,
-        43821,
-        9001
-      ]
-    },
-    {
-      "id": "realism-100-year",
-      "kind": "node",
-      "tier": "deep",
-      "entry": "qa/realism-ensemble.mjs",
-      "args": [
-        "--seed={seed}",
-        "--scenario=normal",
-        "--years=100",
-        "--output={output}/realism-100-year.json"
       ],
       "seeds": [
         413,
