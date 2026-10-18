@@ -5,6 +5,7 @@ import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DEFAULT_APPEARANCE,COLORSETS,normalizeAppearance,decodeAppearance} from './avatar-profile.mjs';
 import {drawMage,drawPortrait,drawHero} from './mage-art.mjs';
 import {OnlineDuel,inviteCode,incomingCode} from './net-client.mjs';
+import {MAGES,SCHOOLS,mage,validMage} from './mages.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
@@ -12,12 +13,13 @@ const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'
 let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
 let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
+let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle';
 let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
-const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;
-function remember(){put(prefsKey,{sound});if(!online?.active&&active&&validState(active))put(saveKey,active)}
+const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';
+function remember(){put(prefsKey,{sound,mage:selectedMage});if(!online?.active&&active&&validState(active))put(saveKey,active)}
 function forget(){try{localStorage.removeItem(saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
@@ -26,8 +28,8 @@ function sfx(type){const ac=audioContext();if(!ac)return;const now=ac.currentTim
 function setAudio(){sound=!sound;remember();$('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');if(sound)audioContext()}
 $('menu-audio').addEventListener('click',setAudio);$('pause-audio').addEventListener('click',setAudio);
 $('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');
-function show(name){mode=name;for(const id of ['menu','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=name==='menu'||name==='online-lobby';if(name==='fight'||name==='menu')paused=false;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
-function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff));fxParticles=[];seen=0;audioContext();show('fight');toast('Двигайся и удерживай «Шар»');remember()}
+function show(name){mode=name;for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=name==='menu'||name==='online-lobby';if(name==='fight'||name==='menu')paused=false;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
+function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff),selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+3)%MAGES.length].id);fxParticles=[];seen=0;audioContext();show('fight');toast('Зажми атаку, веди пальцем для прицеливания');remember()}
 $('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',()=>online?.active?online.start():newMatch());
 $('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
 function pause(){if(mode!=='fight')return;paused=true;show('pause');$('pause-title').textContent=online?.active?'Сетевой матч':'Передышка';$('pause-online-note').hidden=!online?.active;remember()}
@@ -70,12 +72,12 @@ $('replace-cancel').addEventListener('click',()=>{pendingRune=null;$('replace-zo
 function renderDraft(){
  if(!active)return;
  $('draft-score').textContent=active.score[myIndex()]+' : '+active.score[1-myIndex()];
- $('draft-title').textContent=active.lastWinner===myIndex()?'Хороший раунд. Возьми руну.':'Проиграли раунд. Возьми руну.';
+ $('draft-title').textContent=active.lastOutcome==='draw'?'Ничья. Очки не меняются. Возьми руну.':active.lastWinner===myIndex()?'Хороший раунд. Возьми руну.':'Проиграли раунд. Возьми руну.';
  $('rune-cards').hidden=false;$('replace-zone').hidden=true;pendingRune=null;
  const list=$('rune-cards');list.replaceChildren();
  for(const id of (online?.active?online.view?.offers||[]:active.pick)){
   const r=rune(id);if(!r)continue;const btn=document.createElement('button');btn.className='rune-choice';btn.type='button';btn.append(drawRuneNode(r));
-  btn.addEventListener('click',()=>{if(myActor().runes.length>=5)renderReplacement(id);else finishPick(id)});list.append(btn);
+  btn.addEventListener('click',()=>{if(myActor().runes.length>=9)renderReplacement(id);else finishPick(id)});list.append(btn);
  }
  drawOwned();
 }
@@ -84,7 +86,7 @@ function renderWorkbench(){
  if(!active)return;const slots=online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
  const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
  drawMage(mini,appearance,{x:32,y:57,scale:1.25,time:0,runes:slots});
- $('bench-count').textContent=slots.length+' / 5';const rack=$('bench-slots');rack.replaceChildren();
+ $('bench-count').textContent=slots.length+' / 9';const rack=$('bench-slots');rack.replaceChildren();
  const info=description(slots);
  slots.forEach((id,i)=>{
   const r=rune(id);if(!r)return;
