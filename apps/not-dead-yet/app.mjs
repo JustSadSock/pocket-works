@@ -95,7 +95,7 @@ function interact(){
    hud();persist();return
   }
  }
- if(nearExit()){
+ if(nearExit()&&(world.powerAvailable()||!nearFuse())){
   const doorMemory=world.landing.knocked&&(!world.landing.seen||inventory.includes('photo')&&!world.landing.recognized);
   if(doorMemory){
    const result=world.inspectLanding(inventory.includes('photo'));
@@ -236,7 +236,7 @@ function hud(){
  $('objective').textContent=!world.powerAvailable()?world.powerObjective():inventory.length===4?'Вернуться к входной двери':'Найти четыре знакомые вещи';
  $('perception').style.opacity=String(clamp(.08+stress/170,0,.7));
  $('reload').textContent=reloadTime>0?'…':'↻';$('torch').textContent='Свет: '+(torch?'вкл':'выкл');
- const item=nearItem(),memory=!item?nearMemory():null,exit=nearExit();
+ const item=nearItem(),memory=!item?nearMemory():null,exit=nearExit()&&(world.powerAvailable()||!nearFuse());
  const doorMemory=exit&&world.landing.knocked&&(!world.landing.seen||inventory.includes('photo')&&!world.landing.recognized);
  const radio=!item&&!memory&&!exit?nearRadio():null;
  const plate=!item&&!memory&&!exit&&!radio&&!world.powerAvailable()?nearPlate():null;
