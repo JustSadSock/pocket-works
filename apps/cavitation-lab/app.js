@@ -42,7 +42,9 @@ function refreshState(){
  dirty=true;
  $('launch-label').textContent=mode==='running'?'НАЧАТЬ ЗАНОВО':mode==='paused'?'ПРОДОЛЖИТЬ ОПЫТ':mode==='complete'?'ПОВТОРИТЬ ИМПУЛЬС':'СХЛОПНУТЬ ПУЗЫРЁК';
  pauseButton.disabled=mode==='ready'||mode==='complete';
- pauseButton.textContent=mode==='paused'?'Продолжить':'Пауза';
+ pauseButton.textContent=mode==='paused'?'▶':'Ⅱ';
+ pauseButton.setAttribute('aria-label',mode==='paused'?'Продолжить':'Пауза');
+ pauseButton.title=mode==='paused'?'Продолжить':'Пауза';
  $('status-led').classList.toggle('impact',timeTau>=solution.firstMinimumTau&&mode!=='ready');
  let label='ГОТОВ К ИМПУЛЬСУ';
  if(mode==='paused')label='ОПЫТ НА ПАУЗЕ';
