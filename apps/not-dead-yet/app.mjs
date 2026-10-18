@@ -14,7 +14,7 @@ function nextSeed(){runId++;const a=new Uint32Array(1);try{crypto.getRandomValue
 function readSave(){try{const o=JSON.parse(localStorage.getItem(STORAGE)||'null');if(!o||o.schema!==2||!Number.isFinite(o.seed)||!o.position||!Array.isArray(o.inventory)||!Number.isFinite(o.position.x)||!Number.isFinite(o.position.z))return null;return o}catch{return null}}
 function persist(){if(phase!=='play'&&phase!=='paused'&&phase!=='inventory')return;try{localStorage.setItem(STORAGE,JSON.stringify({schema:2,seed:world.seed,world:world.save(),position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},stress,energy,inventory,ammo,reserve,elapsed,runId}))}catch{}}
 function setup(seed,save=null){
- peeking=false;document.querySelector('.app-shell')?.classList.remove('is-peephole');
+ peeking=false;document.querySelector?.('.app-shell')?.classList.remove('is-peephole');
  world=new Apartment(seed,save?.world);
  player={x:save?.position?.x??HOME.x,z:save?.position?.z??HOME.z,yaw:save?.position?.yaw??0,pitch:save?.position?.pitch??0,bob:0,movement:0,reduceMotion:quiet};
  if(!world.canStand(player.x,player.z)){player.x=HOME.x;player.z=HOME.z}
@@ -33,7 +33,7 @@ function start(save=null){
 function releaseMouse(){if(document.pointerLockElement)document.exitPointerLock?.()}
 function clearStick(){joystickPointer=null;stick.x=0;stick.y=0;$('knob').style.transform='translate(0px,0px)'}
 function clearInputs(){keys.clear();sprintHeld=false;lookPointer=null;lastLook=null;clearStick()}
-function pause(){if(phase!=='play')return;peeking=false;document.querySelector('.app-shell')?.classList.remove('is-peephole');phase='paused';clearInputs();releaseMouse();persist();acoustics.suspend();
+function pause(){if(phase!=='play')return;peeking=false;document.querySelector?.('.app-shell')?.classList.remove('is-peephole');phase='paused';clearInputs();releaseMouse();persist();acoustics.suspend();
  $('pauseText').textContent='Вещей: '+inventory.length+' / 4 · '+world.location(player.x,player.z)+' · '+Math.floor(elapsed/60)+' мин.';overlay('pauseOverlay');chirp(170,.12,.016)}
 function resume(){if(phase!=='paused'&&phase!=='inventory')return;phase='play';overlay(null);acoustics.activate();lastFrame=performance.now()}
 function showInventory(){if(phase!=='play'||peeking)return;phase='inventory';clearInputs();releaseMouse();drawInventory();overlay('inventoryOverlay');persist()}
@@ -81,7 +81,7 @@ function nearMemory(){
 }
 function interact(){
  if(phase!=='play')return;
- if(peeking){peeking=false;document.querySelector('.app-shell')?.classList.remove('is-peephole');acoustics.event('peephole');hud();return}
+ if(peeking){peeking=false;document.querySelector?.('.app-shell')?.classList.remove('is-peephole');acoustics.event('peephole');hud();return}
  const item=nearItem();
  if(item){inventory.push(item.id);stress=Math.max(0,stress-13);notice('Вспомнил: '+item.label+'. '+item.note,4.5);acoustics.event('pickup');persist();hud();return}
  const memory=nearMemory();
@@ -96,7 +96,7 @@ function interact(){
   const doorMemory=world.landing.knocked&&(!world.landing.seen||inventory.includes('photo')&&!world.landing.recognized);
   if(doorMemory){
    const result=world.inspectLanding(inventory.includes('photo'));
-   peeking=true;document.querySelector('.app-shell')?.classList.add('is-peephole');
+   peeking=true;document.querySelector?.('.app-shell')?.classList.add('is-peephole');
    acoustics.event('peephole');
    if(result.recognized){stress=Math.max(0,stress-11);world.nextShift+=7;acoustics.event('memory')}
    notice(result.text,6);persist();hud();return
@@ -264,7 +264,7 @@ document.addEventListener('mousedown',e=>{if(phase==='play'&&document.pointerLoc
 document.addEventListener('keydown',e=>{
  const key=e.key.toLowerCase();
  if(['w','a','s','d','shift','arrowup','arrowdown','arrowleft','arrowright',' ','e','f','i','r'].includes(key))e.preventDefault();
- if(key==='escape'){if(peeking){peeking=false;document.querySelector('.app-shell')?.classList.remove('is-peephole');hud();return}if(phase==='play')pause();else if(phase==='paused')resume();else if(phase==='inventory')resume();return}
+ if(key==='escape'){if(peeking){peeking=false;document.querySelector?.('.app-shell')?.classList.remove('is-peephole');hud();return}if(phase==='play')pause();else if(phase==='paused')resume();else if(phase==='inventory')resume();return}
  if(phase==='play'&&!e.repeat){if(key==='e')interact();if(key==='r')reload();if(key==='f')toggleTorch();if(key==='i')showInventory();if(key===' ')shoot()}
  keys.add(key)
 });
