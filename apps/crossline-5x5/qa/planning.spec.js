@@ -39,7 +39,7 @@ test('real planning journey: each stop, swap, delete, replace and blocked attack
  await page.locator('[data-slot="1"]').click();
  await page.keyboard.press('ArrowUp');
  await expect(page.locator('#planFeedback')).toContainText('направление');
- await expect(page.locator('[data-slot="1"]')).toHaveText('→');
+ await expect(page.locator('[data-slot="1"]')).toHaveText('←');
  await page.locator('#endEdit').click();
  await expect(page.locator('#submit')).toBeEnabled();
  await page.screenshot({path:info.outputPath('arena-five-plan.png')});
