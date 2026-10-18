@@ -79,6 +79,14 @@
       "files": [
         "qa/visual-baseline.spec.js"
       ]
+    },
+    {
+      "id": "interaction-regressions",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/interaction-regressions.spec.js"
+      ]
     }
   ]
 }
