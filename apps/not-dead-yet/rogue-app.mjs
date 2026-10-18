@@ -262,7 +262,7 @@ function showHud(){
  $('torch').textContent='Свет: '+(torch?'вкл':'выкл')
 }
 function draw(time){
- let dt=clamp((time-lastFrame)/1000,0,.65);lastFrame=time;
+ let dt=clamp((time-lastFrame)/1000,0,.10);lastFrame=time;
  if(phase==='play'&&!qaVisualMode)simulation(dt);
  if(world&&renderer&&!renderer.lost){
   const drops=world.nearby(player.x,player.z,17).flatMap(c=>c.drops).filter(p=>!world.taken.has(p.id)&&Math.hypot(p.x-player.x,p.z-player.z)<17);
