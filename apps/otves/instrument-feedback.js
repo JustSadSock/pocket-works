@@ -48,7 +48,7 @@ export function createInstrumentAudio({ enabled = true, volume = .28 } = {}) {
   let active = Boolean(enabled);
   let context = null, master = null, noise = null, rollGain = null;
   let rollFilter = null, rollTone = null, toneGain = null;
-  let paused = true, lastImpact = -Infinity;
+  let paused = true, lastImpact = -Infinity, lastRollingAt = -Infinity;
   let destroyed = false;
   const nodes = [];
 
@@ -122,6 +122,8 @@ export function createInstrumentAudio({ enabled = true, volume = .28 } = {}) {
     const shape = rollingEnvelope(speed);
     const now = context.currentTime;
     const audible = active && !paused && context.state === 'running';
+    if(audible && now-lastRollingAt<.033) return;
+    lastRollingAt=now;
     rollGain.gain.setTargetAtTime(audible ? shape.gain : 0,now,.043);
     rollFilter.frequency.setTargetAtTime(shape.cutoff,now,.070);
     toneGain.gain.setTargetAtTime(audible ? shape.gain * .12 : 0,now,.055);
