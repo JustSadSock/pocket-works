@@ -25,26 +25,38 @@
  </header>
  <div class="workspace">
   <section class="chamber" aria-label="Камера с водой">
-   <canvas id="field" data-gesture-surface data-block-callout aria-label="Пузырёк и перетаскиваемая стенка"></canvas>
+   <canvas id="field" data-gesture-surface data-block-callout aria-label="Исследовательская камера: выберите пузырёк или перетащите стенку"></canvas>
    <div class="field-top" data-ui>
-    <div class="readout"><span>РАДИУС</span><strong id="radius-now">0,90 <small>мм</small></strong></div>
+    <div class="readout"><span id="radius-label">РАДИУС</span><strong id="radius-now">0,90 <small>мм</small></strong></div>
     <div class="readout time-readout"><span>ВРЕМЯ</span><strong id="time-now">0 <small>мкс</small></strong></div>
    </div>
+   <div id="pressure-legend" class="pressure-legend" data-ui hidden>p′ − / p′ +</div>
    <div class="chamber-label" data-ui><i id="status-led"></i><span id="phase-label">ГОТОВ К ИМПУЛЬСУ</span></div>
    <div class="wall-instruction" data-ui id="wall-instruction">↔ СТЕНКУ МОЖНО ДВИГАТЬ</div>
    <div class="graph-shell" data-ui>
-    <div class="graph-head"><span>R / R₀</span><span id="graph-caption">ЗАВИСИМОСТЬ РАДИУСА ОТ ВРЕМЕНИ</span></div>
+    <div class="graph-head"><span id="graph-axis">R / R₀</span><span id="graph-caption">ЗАВИСИМОСТЬ РАДИУСА ОТ ВРЕМЕНИ</span></div>
     <canvas id="trace" data-gesture-surface aria-label="График радиуса от времени, можно перемещать курсор"></canvas>
    </div>
   </section>
   <aside class="console" data-ui aria-label="Управление лабораторией">
-   <div class="console-head"><div class="serial">01 <span>/</span> ОДИН ПУЗЫРЁК</div><div class="medium">H₂O · 20 °C</div></div>
+   <div class="console-head"><div class="serial" id="experiment-title">01 <span>/</span> ОДИН ПУЗЫРЁК</div><div class="medium">H₂O · 20 °C</div></div>
    <div class="console-main">
     <div class="presets" role="group" aria-label="Готовые эксперименты">
       <button type="button" class="preset" data-preset="free" data-native-press>Свободная вода</button>
       <button type="button" class="preset active" data-preset="wall" aria-pressed="true" data-native-press>У стенки</button>
       <button type="button" class="preset" data-preset="gentle" data-native-press>Мягкий импульс</button>
     </div>
+    <section class="cloud-tools" aria-label="Количество пузырьков и физические эффекты">
+      <div class="cloud-count" role="group" aria-label="Количество пузырьков">
+        <button type="button" data-cloud="single" class="cloud-mode active" aria-pressed="true" data-native-press>Один</button>
+        <button type="button" data-cloud="pair" class="cloud-mode" aria-pressed="false" data-native-press>Пара</button>
+        <button type="button" data-cloud="cluster" class="cloud-mode" aria-pressed="false" data-native-press>Облако · 5</button>
+      </div>
+      <div class="cloud-options" id="cloud-options" hidden>
+        <button type="button" id="wall-mode" aria-pressed="true" data-native-press>Отражение стенки · вкл.</button>
+        <button type="button" id="pressure-view" aria-pressed="true" data-native-press>Поле давления · вкл.</button>
+      </div>
+    </section>
     <div class="sliders">
      <label class="instrument"><span>Перепад давления <output id="pressure-val">1,80 бар</output></span><input id="pressure" type="range" min="0.3" max="4" value="1.8" step="0.05"></label>
      <label class="instrument"><span>Начальный радиус <output id="size-val">0,90 мм</output></span><input id="size" type="range" min="0.25" max="2.5" value="0.9" step="0.05"></label>
@@ -60,7 +72,7 @@
      <button type="button" id="pause" class="pause" data-native-press disabled>Пауза</button>
      <button type="button" id="speed" class="speed" data-native-press title="Скорость воспроизведения">1×</button>
     </div>
-    <div class="console-foot">СФЕРИЧЕСКАЯ МОДЕЛЬ · СТРУЯ У СТЕНКИ — СХЕМА</div>
+    <div class="console-foot" id="model-note">СФЕРИЧЕСКАЯ МОДЕЛЬ · СТРУЯ У СТЕНКИ — СХЕМА</div>
    </div>
   </aside>
  </div>
@@ -69,13 +81,15 @@
    <header><strong>Что здесь рассчитывается?</strong><button type="button" id="close-science" data-native-press aria-label="Закрыть">×</button></header>
    <p>Размер пузырька рассчитывается численным интегрированием уравнения Рэлея–Плессета для воды при 20 °C. Учитываются инерция, вязкость, поверхностное натяжение, давление пара и небольшой остаток газа.</p>
    <p>Давление меняется скачком. Физическое время показано в микросекундах; анимация замедлена. Вспышка и круговая волна — поясняющая графика, а не расчёт распространения ударной волны.</p>
-   <p>Возле твёрдой стенки реальный пузырёк деформируется и образует микрострую. Здесь показана <b>качественная схема струи</b> в зависимости от расстояния: сферическая модель не рассчитывает её скорость или давление удара.</p>
+   <p>В режимах «Пара» и «Облако» уравнения радиуса связаны через потенциал потока соседних пузырьков. Стенка учитывается методом зеркальных источников. Выбор пузырька меняет выделенную траекторию на графике.</p>
+   <p>Цветное поле показывает нормированное <b>квазистатическое возмущение давления</b> из этой модели; оно не является рассчитанной ударной волной и не показывает задержку распространения звука.</p>
+   <p>Реальная микроструя требует расчёта меняющейся формы поверхности. Здесь у одиночного пузырька отображается качественная схема струи. В многопузырьковой модели поверхности остаются сферическими: скорости микроструй, силы ударов и деформация пузырьков не вычисляются.</p>
    <p class="source-label">МОДЕЛЬ · Rayleigh–Plesset / Rayleigh collapse time</p>
    <button class="science-close" type="button" id="science-done" data-native-press>Вернуться к опыту</button>
   </div>
  </section>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАВИТАЦИЯ" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАВИТАЦИЯ" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

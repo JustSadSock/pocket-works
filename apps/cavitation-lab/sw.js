@@ -1,11 +1,11 @@
 const CACHE_PREFIX='cavitation-lab-';
-const CACHE_NAME='cavitation-lab-v1.0.0';
-const APP_VERSION='1.0.0';
+const CACHE_NAME='cavitation-lab-v1.1.0';
+const APP_VERSION='1.1.0';
 const RELEASE_DATE='2026-10-19';
 const CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Rayleigh–Plesset bubble dynamics, interactive pressure and wall experiments, instrument chart.'];
+const RELEASE_NOTES=['Coupled bubble pairs and five-bubble cluster, pressure field, reflected wall sources and selectable radius curves.'];
 const APP_SHELL=[
- './','./index.html','./styles.css','./app.js','./render.js','./physics.js','./app.config.json',
+ './','./index.html','./styles.css','./app.js','./render.js','./cloud-render.js','./physics.js','./coupling.js','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
  '../../shared/update-manager.css','../../shared/update-manager.js',

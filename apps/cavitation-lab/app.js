@@ -1,6 +1,8 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { DEFAULTS, PRESETS, sanitize, simulateBubble, sampleAt } from './physics.js';
 import { resizeCanvas, renderScene, renderGraph, sceneMetrics } from './render.js';
+import { sanitizeCloud, simulateCloud, cloudAt } from './coupling.js';
+import { cloudViewport, renderCloudScene, renderCloudGraph } from './cloud-render.js';
 installMobileRuntime();
 
 const $=id=>document.getElementById(id);
@@ -10,8 +12,11 @@ const key='pocket-works:cavitation-lab:state:v1';
 let restored={};
 try{restored=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{restored={}}
 let config=sanitize(restored.config||DEFAULTS);
+let cloud=sanitizeCloud(restored.cloud);
+let showPressure=restored.showPressure!==false;
+let selectedBubble=0;
 let speed= [0.6,1,1.8].includes(restored.speed)?restored.speed:1;
-let solution=simulateBubble(config),timeTau=Math.min(Math.max(0,+restored.timeTau||0),solution.durationTau);
+let solution=simulateCloud(config,cloud),timeTau=Math.min(Math.max(0,+restored.timeTau||0),solution.durationTau);
 let mode=restored.mode==='ready'?'ready':timeTau>0?'paused':'ready';
 let lastFrame=0,draggingWall=null,scrubbing=false,lastDimensions=null,pendingRebuild=false,needGraph=true,dirty=true;
 const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -19,7 +24,7 @@ const num=(n,d=2)=>n.toFixed(d).replace('.',',');
 const formatMicros=(n)=>Math.round(n).toLocaleString('ru-RU');
 const pauseButton=$('pause');
 function save(){
- try{localStorage.setItem(key,JSON.stringify({config,speed,timeTau,mode}))}catch{ /* Storage unavailable, experiment still works */ }
+ try{localStorage.setItem(key,JSON.stringify({config,speed,timeTau,mode,cloud,showPressure}))}catch{ /* Storage unavailable, experiment still works */ }
 }
 function syncControls(){
  control.pressure.value=String(config.pressureBar);
@@ -33,9 +38,28 @@ function syncControls(){
   const active=Object.keys(p).every(k=>Math.abs(p[k]-config[k])<0.025);
   el.classList.toggle('active',active);el.setAttribute('aria-pressed',String(active));
  });
- $('collapse-time').textContent=formatMicros(solution.collapseTimeUs)+' мкс';
+ document.querySelectorAll('[data-cloud]').forEach(el=>{
+   const active=el.dataset.cloud===cloud.mode;
+   el.classList.toggle('active',active);
+   el.setAttribute('aria-pressed',String(active));
+ });
+ $('cloud-options').hidden=cloud.mode==='single';
+ $('wall-mode').setAttribute('aria-pressed',String(cloud.wall));
+ $('wall-mode').textContent='Отражение стенки · '+(cloud.wall?'вкл.':'выкл.');
+ $('pressure-view').setAttribute('aria-pressed',String(showPressure));
+ $('pressure-view').textContent='Поле давления · '+(showPressure?'вкл.':'выкл.');
+ $('experiment-title').innerHTML=cloud.mode==='single'?'01 <span>/</span> ОДИН ПУЗЫРЁК':cloud.mode==='pair'?'02 <span>/</span> СВЯЗАННАЯ ПАРА':'05 <span>/</span> ОБЛАКО ПУЗЫРЬКОВ';
+ $('radius-label').textContent=solution.kind==='cloud'?'РАДИУС R'+(selectedBubble+1):'РАДИУС';
+ $('graph-axis').textContent=solution.kind==='cloud'?'R / Rᵢ₀':'R / R₀';
+ $('pressure-legend').hidden=solution.kind!=='cloud'||!showPressure;
+ $('model-note').textContent=solution.kind==='cloud'?'СВЯЗАННЫЕ СФЕРЫ · ПОЛЕ БЕЗ УДАРНЫХ ВОЛН':'СФЕРИЧЕСКАЯ МОДЕЛЬ · СТРУЯ У СТЕНКИ — СХЕМА';
+ $('collapse-time').textContent=solution.kind==='cloud'
+   ?solution.individualCollapseUs.map(n=>formatMicros(n)).join(' / ')+' мкс'
+   :formatMicros(solution.collapseTimeUs)+' мкс';
  $('min-radius').textContent=num(solution.minRadiusMm,3)+' мм';
- $('jet-status').textContent=solution.jetFactor>.48?'Вероятна микроструя':solution.jetFactor>.12?'Слабая асимметрия':'Почти свободный';
+ $('jet-status').textContent=solution.kind==='cloud'
+   ?(cloud.wall?'Источники + отражения':'Взаимодействие без стенки')
+   :solution.jetFactor>.48?'Вероятна микроструя':solution.jetFactor>.12?'Слабая асимметрия':'Почти свободный';
  $('speed').textContent=num(speed, speed===1?0:1)+'×';
 }
 function refreshState(){
@@ -51,9 +75,11 @@ function refreshState(){
  else if(mode==='complete')label='ОПЫТ ЗАВЕРШЁН · ПОВТОРИТЕ';
  else if(mode==='running' && timeTau<solution.firstMinimumTau*.7)label='ДАВЛЕНИЕ СЖИМАЕТ ПУЗЫРЁК';
  else if(mode==='running' && timeTau<solution.firstMinimumTau)label='УСКОРЕНИЕ КОЛЛАПСА';
- else if(mode==='running')label=solution.jetFactor>.15?'КОЛЛАПС · СТРУЯ У СТЕНКИ':'КОЛЛАПС · РАДИАЛЬНАЯ ВОЛНА';
+ else if(mode==='running')label=solution.kind==='cloud'?'СВЯЗАННЫЙ КОЛЛАПС · '+solution.geometry.length+' ПУЗЫРЬКОВ':solution.jetFactor>.15?'КОЛЛАПС · СТРУЯ У СТЕНКИ':'КОЛЛАПС · РАДИАЛЬНАЯ ВОЛНА';
  $('phase-label').textContent=label;
- $('graph-caption').textContent=mode==='ready'?'РАСЧЁТНАЯ ТРАЕКТОРИЯ':'РАДИУС / РЕАЛЬНОЕ ВРЕМЯ';
+ $('graph-caption').textContent=solution.kind==='cloud'
+   ?(mode==='ready'?'ВЫБЕРИТЕ ПУЗЫРЁК В КАМЕРЕ':'РАСЧЁТНЫЕ РАДИУСЫ')
+   :(mode==='ready'?'РАСЧЁТНАЯ ТРАЕКТОРИЯ':'РАДИУС / РЕАЛЬНОЕ ВРЕМЯ');
  $('wall-instruction').style.opacity=mode==='running'?'.35':'.75';
 }
 function applyConfig(next){
@@ -64,7 +90,7 @@ function applyConfig(next){
    pendingRebuild=true;
    requestAnimationFrame(()=>{
     pendingRebuild=false;
-    try{solution=simulateBubble(config);syncControls();refreshState();needGraph=true;save()}
+    try{solution=simulateCloud(config,cloud);syncControls();refreshState();needGraph=true;save()}
     catch(error){$('phase-label').textContent='ОШИБКА РАСЧЁТА';console.error(error)}
    });
  }
@@ -80,10 +106,21 @@ for(const [name,el] of Object.entries(control)){
  });
 }
 document.querySelectorAll('[data-preset]').forEach(el=>el.addEventListener('click',()=>applyConfig(PRESETS[el.dataset.preset])));
+document.querySelectorAll('[data-cloud]').forEach(el=>el.addEventListener('click',()=>{
+ if(cloud.mode===el.dataset.cloud)return;
+ cloud=sanitizeCloud({...cloud,mode:el.dataset.cloud});
+ selectedBubble=0;applyConfig(config);
+}));
+$('wall-mode').addEventListener('click',()=>{
+ cloud=sanitizeCloud({...cloud,wall:!cloud.wall});applyConfig(config);
+});
+$('pressure-view').addEventListener('click',()=>{
+ showPressure=!showPressure;syncControls();dirty=true;save();
+});
 $('launch').addEventListener('click',()=>{
  if(pendingRebuild) {
   pendingRebuild=false;
-  solution=simulateBubble(config);
+  solution=simulateCloud(config,cloud);
   syncControls();
  }
  if(mode!=='paused')timeTau=0;
@@ -118,16 +155,22 @@ field.addEventListener('pointerdown',e=>{
  if(mode==='running')return;
  const rect=field.getBoundingClientRect();
  const px=e.clientX-rect.left,py=e.clientY-rect.top;
- const g=sceneMetrics(rect.width,rect.height,config.standOff);
+ const g=solution.kind==='cloud'?cloudViewport(rect.width,rect.height,solution):sceneMetrics(rect.width,rect.height,config.standOff);
+ if(solution.kind==='cloud'){
+   const index=g.bubbles.findIndex(b=>Math.hypot(b.x-px,b.y-py)<Math.max(25,b.r+10));
+   if(index>=0){
+     selectedBubble=index;syncControls();refreshState();needGraph=true;dirty=true;save();return;
+   }
+ }
  if(Math.abs(px-g.wallX)>Math.max(31,g.baseRadius*.55)||py>rect.height-96)return;
- draggingWall={x:e.clientX,gamma:config.standOff,pointerId:e.pointerId};
+ draggingWall={x:e.clientX,gamma:config.standOff,pointerId:e.pointerId,scale:g.baseRadius};
+
  field.setPointerCapture(e.pointerId);e.preventDefault();
 });
 field.addEventListener('pointermove',e=>{
  if(!draggingWall||draggingWall.pointerId!==e.pointerId)return;
  const rect=field.getBoundingClientRect();
- const g=sceneMetrics(rect.width,rect.height,config.standOff);
- const next=draggingWall.gamma+(e.clientX-draggingWall.x)/Math.max(68,g.baseRadius*1.4);
+ const next=draggingWall.gamma+(e.clientX-draggingWall.x)/Math.max(35,draggingWall.scale);
  applyConfig({...config,standOff:Math.round(Math.max(1.15,Math.min(4,next))*20)/20});
  e.preventDefault();
 });
@@ -160,16 +203,20 @@ function render(timestamp){
   refreshState();needGraph=true;
  }
  const fieldBox=resizeCanvas(field);
- const point=mode==='ready'?sampleAt(solution,0):sampleAt(solution,timeTau);
+ const point=solution.kind==='cloud'?cloudAt(solution,mode==='ready'?0:timeTau)
+   :mode==='ready'?sampleAt(solution,0):sampleAt(solution,timeTau);
  if(dirty||mode==='running'||!lastDimensions||fieldBox.w!==lastDimensions.w||fieldBox.h!==lastDimensions.h){
-   lastDimensions=renderScene(fieldBox.ctx,fieldBox.w,fieldBox.h,solution,point,mode,timestamp/1000);
-   $('radius-now').innerHTML=num(config.radiusMm*point.radius,3)+' <small>мм</small>';
+   lastDimensions=solution.kind==='cloud'
+     ?renderCloudScene(fieldBox.ctx,fieldBox.w,fieldBox.h,solution,point,mode,selectedBubble,showPressure)
+     :renderScene(fieldBox.ctx,fieldBox.w,fieldBox.h,solution,point,mode,timestamp/1000);
+   $('radius-now').innerHTML=num(config.radiusMm*(solution.kind==='cloud'?point.bubbles[selectedBubble].radius:point.radius),3)+' <small>мм</small>';
    $('time-now').innerHTML=formatMicros(point.t*solution.scaleUs)+' <small>мкс</small>';
    dirty=false;
  }
  if(needGraph||graph.width===0){
   const graphBox=resizeCanvas(graph);
-  renderGraph(graphBox.ctx,graphBox.w,graphBox.h,solution,timeTau,mode!=='ready');
+  if(solution.kind==='cloud')renderCloudGraph(graphBox.ctx,graphBox.w,graphBox.h,solution,timeTau,mode!=='ready',selectedBubble);
+  else renderGraph(graphBox.ctx,graphBox.w,graphBox.h,solution,timeTau,mode!=='ready');
   needGraph=false;
  }
  requestAnimationFrame(render);

@@ -28,3 +28,33 @@ test('cavitation experiment: launch, pause, scrub, restart and persist input',as
  await expect(page.locator('#field')).toBeVisible();
  expect(failures).toEqual([]);
 });
+
+test('coupled cloud: switching modes, enabling and disabling wall, choosing bubbles and persistence',async({page})=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/apps/cavitation-lab/');
+ await page.locator('[data-cloud="cluster"]').click();
+ await expect(page.locator('[data-cloud="cluster"]')).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#experiment-title')).toContainText('05');
+ await expect(page.locator('#cloud-options')).toBeVisible();
+ await page.locator('#wall-mode').click();
+ await expect(page.locator('#wall-mode')).toHaveAttribute('aria-pressed','false');
+ await page.locator('#pressure-view').click();
+ await expect(page.locator('#pressure-view')).toHaveAttribute('aria-pressed','false');
+ await expect(page.locator('#pressure-legend')).toBeHidden();
+ await page.locator('#pressure-view').click();
+ await expect(page.locator('#pressure-legend')).toBeVisible();
+ await page.locator('#launch').click();
+ await expect(page.locator('#phase-label')).not.toHaveText('ГОТОВ К ИМПУЛЬСУ');
+ await page.waitForTimeout(650);
+ await page.locator('#pause').click();
+ await expect(page.locator('#phase-label')).toHaveText('ОПЫТ НА ПАУЗЕ');
+ await page.locator('#trace').click({position:{x:80,y:24}});
+ await page.reload();
+ await expect(page.locator('[data-cloud="cluster"]')).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#wall-mode')).toHaveAttribute('aria-pressed','false');
+ await page.locator('[data-cloud="pair"]').click();
+ await expect(page.locator('#experiment-title')).toContainText('02');
+ await page.locator('[data-cloud="single"]').click();
+ await expect(page.locator('#cloud-options')).toBeHidden();
+ expect(errors).toEqual([]);
+});

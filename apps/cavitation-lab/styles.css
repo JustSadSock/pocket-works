@@ -124,3 +124,34 @@ button:disabled{opacity:.38;cursor:default}
  .result{gap:5px;padding:7px 0}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+
+/* 1.1: physical ensemble selector, deliberately integrated into instrument tray */
+.cloud-tools{display:flex;flex-direction:column;gap:5px;margin-top:-8px}
+.cloud-count{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;border-bottom:1px solid #b4c1b4;padding-bottom:5px}
+.cloud-mode{border:1px solid #bdc8bd;background:#eff0e6;color:#465952;min-height:37px;font-size:12px;font-weight:700;padding:4px 3px}
+.cloud-mode.active{border-color:#244349;background:#244349;color:#eff4e9}
+.cloud-mode:active{transform:translateY(1px)}
+.cloud-options{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.cloud-options button{min-width:0;border:1px solid #8ca39b;background:#dce4d9;color:#274d4e;min-height:30px;font-size:10px;padding:3px 4px}
+.cloud-options button[aria-pressed="false"]{background:#eae9e0;border-color:#c3cac1;color:#82928c}
+#field{cursor:crosshair}
+@media(max-width:830px){
+ .cloud-tools{gap:3px;margin-top:-3px}
+ .cloud-count{padding-bottom:3px;gap:3px}
+ .cloud-mode{min-height:31px;font-size:11px}
+ .cloud-options button{min-height:27px;font-size:9px}
+ .console-main{gap:7px}
+ .presets .preset{min-height:33px}
+ .instrument input{height:12px}
+ .console-foot{display:none}
+}
+@media(max-width:830px) and (max-height:660px){
+ .cloud-mode{min-height:27px}
+ .cloud-options button{min-height:24px}
+ .console-main{gap:3px}
+ .instrument input{height:11px}
+ .sliders{gap:1px}
+}
+
+.pressure-legend{position:absolute;top:95px;right:22px;pointer-events:none;color:#c9e0d6;font-size:10px;letter-spacing:.1em;opacity:.85}
+@media(max-width:830px){.pressure-legend{top:73px;right:12px;font-size:9px}}
