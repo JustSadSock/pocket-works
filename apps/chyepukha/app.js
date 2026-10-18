@@ -1,31 +1,57 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {makeComic} from './comic.js';
+import {installScreenInspector,PREVIEW_PARAM} from './screen-inspector.js';
+import {demoView} from './preview-data.js';
 installMobileRuntime();
+const PREVIEW_ID=new URLSearchParams(location.search).get(PREVIEW_PARAM);
+const IS_PREVIEW=PREVIEW_ID!==null;
+if(IS_PREVIEW)document.body.classList.add('chyepukha-preview');
 const $=id=>document.getElementById(id);
 const scene=$('scene'),network=$('network'),toastEl=$('toast');
 const ORIGIN=location.origin+'/pocketnet',KEY='pocket-works:chyepukha:';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-const read=(k,d='')=>{try{return localStorage.getItem(KEY+k)??d}catch{return d}};
-const save=(k,v)=>{try{localStorage.setItem(KEY+k,String(v))}catch{}};
-const savedRoom=()=>{try{const item=JSON.parse(sessionStorage.getItem('pocket-net:'+ORIGIN)||'null');return item?.identityKey==='chyepukha-1'?item.roomId||'':''}catch{return ''}};
+const read=(k,d='')=>{if(IS_PREVIEW)return d;try{return localStorage.getItem(KEY+k)??d}catch{return d}};
+const save=(k,v)=>{if(IS_PREVIEW)return;try{localStorage.setItem(KEY+k,String(v))}catch{}};
+const savedRoom=()=>{if(IS_PREVIEW)return '';try{const item=JSON.parse(sessionStorage.getItem('pocket-net:'+ORIGIN)||'null');return item?.identityKey==='chyepukha-1'?item.roomId||'':''}catch{return ''}};
 const code=s=>{let x=String(s||'').trim();try{x=new URL(x).searchParams.get('room')||x}catch{}return /^(?:[a-f0-9]{8}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i.test(x)?x.toLowerCase():''};
 const words=s=>String(s||'').trim().split(/\s+/u).filter(Boolean);
 const GENDERS=[['male','Чоловік'],['female','Жінка'],['nonbinary','Інше'],['unspecified','Неважливо']];
 let net=null,view=null,me='',room='',connected=false,connecting=false,notice='';
 let name=read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',comicImage='',modal='',sound=read('sound','off')==='on',audio=null;
+let previewDraft='';
 const draftKey=()=>KEY+'draft:'+room+':'+(view?.round??0)+':'+(view?.sheet?.id||'');
-const loadDraft=()=>{try{return localStorage.getItem(draftKey())||''}catch{return ''}};
-const saveDraft=x=>{try{localStorage.setItem(draftKey(),x)}catch{}};
-const clearDraft=()=>{try{localStorage.removeItem(draftKey())}catch{}};
+const loadDraft=()=>{if(IS_PREVIEW)return previewDraft;try{return localStorage.getItem(draftKey())||''}catch{return ''}};
+const saveDraft=x=>{if(IS_PREVIEW){previewDraft=x;return}try{localStorage.setItem(draftKey(),x)}catch{}};
+const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';return}try{localStorage.removeItem(draftKey())}catch{}};
 function toast(x){toastEl.textContent=String(x);toastEl.classList.add('show');clearTimeout(toastEl.timer);toastEl.timer=setTimeout(()=>toastEl.classList.remove('show'),3200)}
 function tick(f=580){if(!sound)return;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;audio||=new A();audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.026,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.12);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+.13)}catch{}}
-function netStatus(){network.textContent=connected?'POCKETNET · ONLINE':connecting?'ПОНОВЛЮЄМО ЗВ’ЯЗОК':'POCKETNET · OFFLINE';network.classList.toggle('online',connected)}
-function syncUrl(){const u=new URL(location.href);if(room)u.searchParams.set('room',room.slice(0,8));else u.searchParams.delete('room');history.replaceState({},'',u)}
+function netStatus(){network.textContent=IS_PREVIEW?(connected?'POCKETNET · DEMO':connecting?'DEMO · З’ЄДНАННЯ':'DEMO · OFFLINE'):connected?'POCKETNET · ONLINE':connecting?'ПОНОВЛЮЄМО ЗВ’ЯЗОК':'POCKETNET · OFFLINE';network.classList.toggle('online',connected)}
+function syncUrl(){if(IS_PREVIEW)return;const u=new URL(location.href);if(room)u.searchParams.set('room',room.slice(0,8));else u.searchParams.delete('room');history.replaceState({},'',u)}
 function copyText(t){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(t).then(()=>toast('Скопійовано.')).catch(()=>fallbackCopy(t));return fallbackCopy(t)}
 function fallbackCopy(t){const x=document.createElement('textarea');x.value=t;x.style.position='fixed';x.style.opacity='0';document.body.append(x);x.select();try{document.execCommand('copy');toast('Скопійовано.')}catch{toast('Копіювання недоступне.')}x.remove()}
-function send(payload){if(!connected||!net?.roomId){toast('Немає зв’язку. Дочекайся відновлення.');return false}try{net.sendGame(payload);return true}catch{toast('Не вдалося надіслати.');return false}}
+function send(payload){if(IS_PREVIEW)return demoSend(payload);if(!connected||!net?.roomId){toast('Немає зв’язку. Дочекайся відновлення.');return false}try{net.sendGame(payload);return true}catch{toast('Не вдалося надіслати.');return false}}
+function demoSend(payload){
+ if(!connected){toast('Тестовий стан: PocketNet офлайн.');return false}
+ if(!view)return false;
+ if(payload.type==='sync')return true;
+ if(payload.type==='settings'){
+  view={...view,settings:{...view.settings,...payload.settings},revision:view.revision+1};
+  render();toast('Тестові правила збережено.');return true;
+ }
+ if(payload.type==='start'||payload.type==='again'){
+  const d=demoView('writing-first');
+  view={...d.view,settings:view.settings,players:view.players.length>=2?view.players:demoView('lobby-ready').view.players};
+  me='qa-host';previewDraft='';modal='';render();return true;
+ }
+ if(payload.type==='submit'&&view.phase==='writing'&&!view.waiting){
+  view={...view,waiting:true,players:view.players.map(p=>p.id===me?{...p,submitted:true}:p)};
+  clearDraft();render();return true;
+ }
+ toast('Дія недоступна у тестовій кімнаті.');return false;
+}
 function connect(how,settings){
+ if(IS_PREVIEW){const d=demoView('lobby-ready');view=d.view;me=d.me;room=d.room;connected=true;connecting=false;notice='';render();return}
  if(connecting)return;
  const nick=name.trim().slice(0,24);if(!nick){toast('Вкажи ім’я.');return}name=nick;save('name',nick);
  if(how==='join'&&!code(invitation)){toast('Вкажи правильний код кімнати.');return}
@@ -93,8 +119,8 @@ scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
 scene.addEventListener('input',e=>{if(e.target.id==='answer'){saveDraft(e.target.value);refreshWords()}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
 scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
  if(act==='word'){const i=Number(b.dataset.index),ids=indices(),need=Math.min(view.settings.visibleTailWords,words($('answer')?.value).length),at=ids.indexOf(i);if(at>=0)ids.splice(at,1);else if(ids.length<need)ids.push(i);else{toast('Вже вибрано '+need+' слів.');return}draftSelections[draftKey()]=ids;refreshWords();tick(650);return}
- if(act==='resume'){connect('resume');return}if(act==='copy-code'){copyText(room.slice(0,8).toUpperCase());return}
- if(act==='copy-link'){copyText(location.origin+location.pathname+'?room='+room.slice(0,8));return}
+ if(act==='resume'){connect('resume');return}if(act==='copy-code'){if(IS_PREVIEW){toast('Це демонстраційна кімната.');return}copyText(room.slice(0,8).toUpperCase());return}
+ if(act==='copy-link'){if(IS_PREVIEW){toast('Тестове посилання не створюється.');return}copyText(location.origin+location.pathname+'?room='+room.slice(0,8));return}
  if(act==='start'||act==='again'){send({type:act});return}
  if(act==='leave'){modal='leave';render();return}if(act==='cancel'){modal='';render();return}if(act==='confirm-leave'){leaveNow();return}
  if(act==='story'){storyId=b.dataset.id;render();return}
@@ -104,4 +130,22 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
 });
 $('sound').addEventListener('click',()=>{sound=!sound;save('sound',sound?'on':'off');render();tick()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&connected&&room)send({type:'sync'})});
-render();if(savedRoom())connect('resume');
+if(IS_PREVIEW){
+ const d=demoView(PREVIEW_ID);
+ view=d.view;me=d.me;room=d.room;connected=d.connected;connecting=d.connecting;
+ notice=d.notice;invitation=d.invitation;storyId=d.storyId;modal=d.modal;previewDraft=d.answer;
+ if(view?.phase==='writing')draftSelections[draftKey()]=d.selection;
+ if(modal==='comic'){
+  try{comicImage=makeComic(view.stories[0]).toDataURL('image/png')}
+  catch{modal='';notice='Тестовий комікс не вдалося зібрати.'}
+ }
+ window.addEventListener('keydown',e=>{
+  if((e.code==='Backquote'&&!e.repeat)||e.key==='Escape'){
+   e.preventDefault();e.stopImmediatePropagation();
+   window.parent.postMessage({type:'chyepukha-qa-toggle'},location.origin);
+  }
+ },true);
+}else{
+ installScreenInspector();
+}
+render();if(!IS_PREVIEW&&savedRoom())connect('resume');

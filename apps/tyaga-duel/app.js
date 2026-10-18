@@ -1,4 +1,4 @@
-import { createGame, resizeGame, serve, claim, stepGame, getBumpers, STEP, WIN_SCORE, ARENAS } from "./physics.js";
+import { createGame, resizeGame, serve, claim, stepGame, getBumpers, getBoosters, STEP, WIN_SCORE, ARENAS } from "./physics.js";
 import { installMobileRuntime } from "../../shared/mobile-runtime.js";
 installMobileRuntime();
 
@@ -20,16 +20,23 @@ const state = {
   screen:"menu", returnScreen:"play", mode:prefs.mode, arena:prefs.arena,
   game:createGame(prefs.arena), last:0, accumulator:0, betweenTime:0, hintTime:0,
   aiDelay:.5, claimFlash:0, claimSide:-1, trail:[], sparks:[], ripples:[],
-  frameCount:0, time:0, cssW:360, cssH:720, scale:1, pointerFlash:0
+  frameCount:0, time:0, cssW:360, cssH:720, scale:1, pointerFlash:0,
+  comboToast:0, comboCount:0, comboX:180, comboY:360
 };
 
 class Sound {
-  constructor() { this.ctx = null; }
+  constructor() { this.ctx = null; this.noise = null; }
   unlock() {
     if (!prefs.sound) return;
     try {
       if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
+      if (!this.noise) {
+        const buf = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * .3), this.ctx.sampleRate);
+        const samples = buf.getChannelData(0);
+        for (let i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * (1 - i / samples.length);
+        this.noise = buf;
+      }
     } catch { this.ctx = null; }
   }
   tone(frequency, duration, wave = "sine", volume = .06, end = null, delay = 0) {
@@ -46,8 +53,35 @@ class Sound {
     gain.gain.exponentialRampToValueAtTime(.0001, t + duration);
     o.connect(gain).connect(a.destination);o.start(t);o.stop(t + duration + .02);
   }
-  pull(side) { this.tone(side === 0 ? 370 : 260,.135,"triangle",.048,side === 0 ? 650 : 165); }
-  hit(strength) { this.tone(115 + strength * 120,.06,"sine",.025 + strength * .025,74); }
+  // Dry contact of an electromagnetic relay, layered with a short metal resonance.
+  texture(frequency, duration = .09, volume = .035) {
+    if (!prefs.sound) return;
+    this.unlock();
+    if (!this.ctx || !this.noise) return;
+    const a = this.ctx, t = a.currentTime;
+    const source = a.createBufferSource(), filter = a.createBiquadFilter(), gain = a.createGain();
+    source.buffer = this.noise;
+    filter.type = "bandpass"; filter.frequency.value = frequency; filter.Q.value = 1.4;
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.exponentialRampToValueAtTime(volume, t + .005);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + duration);
+    source.connect(filter).connect(gain).connect(a.destination);
+    source.start(t); source.stop(t + duration + .005);
+  }
+  pull(side, counter = 115) {
+    const force = Math.min(1, (counter - 115) / 455);
+    this.tone(side === 0 ? 370 : 260, .13 + force * .07, "triangle", .042 + force * .02, side === 0 ? 620 + force * 140 : 175 - force * 50);
+    this.texture(480 + 820 * force, .048 + force * .06, .014 + force * .02);
+  }
+  hit(strength) {
+    this.tone(125 + strength * 90, .075, "triangle", .023 + strength * .02, 85);
+    this.texture(340 + strength * 460, .05, .018 + strength * .018);
+  }
+  boost(combo = 1) {
+    this.tone(240 + combo * 25, .15, "sawtooth", .019, 670 + combo * 100);
+    this.texture(1200 + combo * 110, .11, .04);
+    if (combo > 1) this.tone(570, .11, "triangle", .029, 850, .075);
+  }
   goal(side) {
     this.tone(side === 0 ? 440 : 330,.2,"triangle",.065,side === 0 ? 610 : 250);
     this.tone(side === 0 ? 660 : 495,.27,"sine",.04,side === 0 ? 880 : 390,.13);
@@ -97,7 +131,7 @@ function start(mode) {
   state.game = createGame(state.arena, state.cssH / state.scale);
   state.accumulator = 0; state.betweenTime = 0; state.aiDelay = .45;
   state.trail.length = 0; state.sparks.length = 0; state.ripples.length = 0;
-  state.claimFlash = 0; state.hintTime = 4;
+  state.claimFlash = 0; state.hintTime = 4;state.comboToast = 0;state.comboCount = 0;
   $("inputHint").textContent = mode === "ai" ? "КАСАНИЕ ГДЕ УГОДНО · W / ↑ / ПРОБЕЛ" : "ВЕРХНЯЯ И НИЖНЯЯ ПОЛОВИНЫ · W / S";
   $("inputHint").classList.remove("dismissed");
   savePrefs();updateLabels();setScreen("play");
@@ -144,12 +178,13 @@ function pull(side) {
   state.claimSide = side;state.claimFlash = .3;
   $("inputHint").classList.add("dismissed");state.hintTime = 0;
   state.trail.length = 0;
-  spawnRing(state.game.ball.x,state.game.ball.y,side);
+  spawnRing(state.game.ball.x,state.game.ball.y,side,8+Math.max(0,state.game.lastCounter-115)*.03);
   const target = side === 0 ? document.querySelector(".score-top") : document.querySelector(".score-bottom");
   target.classList.remove("pulse");void target.offsetWidth;target.classList.add("pulse");
   window.setTimeout(() => target.classList.remove("pulse"),150);
   if (state.mode === "ai" && side === 0) state.aiDelay = .35 + Math.random() * .35;
-  sound.pull(side);vibrate(8);
+  if(state.game.lastCounter > 260) emitImpact(state.game.ball.x,state.game.ball.y,(state.game.lastCounter-115)/455,side);
+  sound.pull(side,state.game.lastCounter);vibrate(state.game.lastCounter > 350 ? 15 : 8);
 }
 function onGoal(event) {
   const side = event.scorer;
@@ -209,15 +244,27 @@ function update(dt) {
     if (state.mode === "ai") {
       state.aiDelay -= dt;
       if (state.aiDelay <= 0 && state.game.owner !== 1) {
-        const b=state.game.ball, risk=b.y/state.game.h;
-        if (risk > .12) {
-          if (claim(state.game,1)) {
-            state.claimSide=1;state.claimFlash=.22;
-            spawnRing(b.x,b.y,1);
-            sound.pull(1);
+        const g = state.game, b = g.ball, depth = b.y / g.h;
+        // An imperfect, reactive opponent: anticipate trajectory and dangerous build-up,
+        // without instant perfect counters or arbitrary free impulses.
+        // The bottom AI scores at the bottom: defend against upward motion,
+        // not against the ball already travelling toward its own goal.
+        const urgent = (b.vy < -110 && depth < .40)
+          || (b.vy < -450 && depth < .60)
+          || (g.owner === 0 && g.charge > .55 && b.vy < -80)
+          || (depth < .20 && b.vy < 0);
+        const opportunity = (g.owner === -1 && g.elapsed > 1.1)
+          || (depth < .62 && b.vy < 100 && Math.random() < .25);
+        if (urgent || opportunity) {
+          if (claim(g, 1)) {
+            state.claimSide = 1;state.claimFlash = .3;
+            state.trail.length = 0;
+            spawnRing(b.x, b.y, 1, 8 + Math.max(0,g.lastCounter-115)*.03);
+            if (g.lastCounter > 260) emitImpact(b.x,b.y,(g.lastCounter-115)/455,1);
+            sound.pull(1,g.lastCounter);
           }
         }
-        state.aiDelay = risk > .72 ? .35 + Math.random()*.25 : .52 + Math.random()*.34;
+        state.aiDelay = urgent ? .25 + Math.random()*.14 : .24 + Math.random()*.3;
       }
     }
     state.accumulator = Math.min(state.accumulator + dt,.06);
@@ -233,7 +280,16 @@ function update(dt) {
       if(event?.kind==="impact") {
         sound.hit(event.strength);
         emitImpact(event.x,event.y,event.strength);
-      } else if(event?.kind==="goal") {
+      } else if(event?.kind==="boost") {
+        sound.boost(event.combo);
+        emitImpact(event.x,event.y,.65+event.strength*.34,state.game.owner);
+        spawnRing(event.x,event.y,state.game.owner,15);
+        vibrate(event.combo > 1 ? 20 : 11);
+      }
+      if(event?.combo>1) {
+        state.comboToast=.88;state.comboCount=event.combo;state.comboX=event.x;state.comboY=event.y;
+      }
+      if(event?.kind==="goal") {
         onGoal(event);state.accumulator=0;break;
       }
       iterations++;
@@ -246,6 +302,7 @@ function update(dt) {
     }
   }
   state.claimFlash = Math.max(0,state.claimFlash-dt);
+  state.comboToast = Math.max(0,state.comboToast-dt);
   if(state.hintTime>0) {state.hintTime-=dt;if(state.hintTime<=0)$("inputHint").classList.add("dismissed");}
   for (const p of state.sparks) {p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=1-dt*2.2;p.vy*=1-dt*2.2;p.life-=dt;}
   state.sparks=state.sparks.filter(p=>p.life>0);
@@ -285,6 +342,37 @@ function drawField(h,t) {
     ctx.globalAlpha=1;
   }
 }
+function drawBoosters(g,t) {
+  const gates = getBoosters(g);
+  for (let i=0;i<gates.length;i++) {
+    const p=gates[i], energy=g.boostFlash[i]||0, top=p.y-p.h/2;
+    ctx.globalAlpha=.95;
+    ctx.fillStyle=energy>.02?"#e2cf94":"#c7c2a6";
+    ctx.fillRect(p.x,top,p.w,p.h);
+    ctx.strokeStyle=energy>.02?"#967131":"#897d57";
+    ctx.lineWidth=1.8;ctx.strokeRect(p.x,top,p.w,p.h);
+    ctx.save();ctx.beginPath();ctx.rect(p.x,top,p.w,p.h);ctx.clip();
+    ctx.strokeStyle="#665c43";ctx.lineWidth=1.5;
+    const scroll=(t*24)%19;
+    for(let j=-2;j<9;j++){
+      const x=p.x+j*19+(p.bias>0?scroll:19-scroll);
+      if(p.bias>0) {
+        strokeLine(x,top+3,x+7,top+p.h/2);
+        strokeLine(x+7,top+p.h/2,x,top+p.h-3);
+      } else {
+        strokeLine(x+7,top+3,x,top+p.h/2);
+        strokeLine(x,top+p.h/2,x+7,top+p.h-3);
+      }
+    }
+    ctx.restore();
+    ctx.globalAlpha=1;
+    ctx.fillStyle="#5d5b4a";ctx.fillRect(p.x-4,top-3,4,p.h+6);ctx.fillRect(p.x+p.w,top-3,4,p.h+6);
+    if(energy>.01){
+      ctx.globalAlpha=energy*.35;ctx.fillStyle="#d5aa4c";
+      ctx.fillRect(p.x-5,top-6,p.w+10,p.h+12);ctx.globalAlpha=1;
+    }
+  }
+}
 function drawBumpers(g) {
   const bumpers=getBumpers(g);
   for(const p of bumpers){
@@ -312,6 +400,17 @@ function drawBall(g,t) {
   ctx.fillStyle="#f2f1e9";pathCircle(bx-4,by-4,4.7);ctx.fill();
   ctx.strokeStyle="#88928d";ctx.lineWidth=1.5;pathCircle(bx,by,13.5);ctx.stroke();
   if(state.screen!=="menu" && g.owner!==-1){
+    const charge=g.charge;
+    ctx.strokeStyle=g.owner===0?"#b84f37":"#346b81";
+    ctx.globalAlpha=.35+charge*.6;ctx.lineWidth=2.5+charge*2;
+    ctx.beginPath();ctx.arc(bx,by,19+charge*4,-Math.PI/2,-Math.PI/2+charge*Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=1;
+    if(charge>.35){
+      ctx.fillStyle=g.owner===0?"#b84f37":"#346b81";
+      ctx.font="900 12px Arial, sans-serif";
+      ctx.textAlign=bx>270?"right":"left";
+      ctx.fillText("×"+(1+charge*1.39).toFixed(1),bx>270?bx-27:bx+27,Math.max(28,by-16));
+    }
     const dir=g.owner===0?-1:1;
     ctx.strokeStyle=g.owner===0?"#b84f37":"#346b81";
     ctx.lineWidth=2;ctx.beginPath();
@@ -330,12 +429,20 @@ function drawFX() {
     ctx.fillRect(p.x-1,p.y-1,3.5,3.5);
   }
   ctx.globalAlpha=1;
+  if(state.comboToast>0 && state.screen==="play"){
+    ctx.globalAlpha=Math.min(1,state.comboToast*2);
+    ctx.textAlign="center";
+    ctx.font="900 15px Arial, sans-serif";ctx.fillStyle="#735d31";
+    ctx.fillText("СВЯЗКА ×"+state.comboCount,Math.max(84,Math.min(276,state.comboX)),Math.max(65,state.comboY-43-(1-state.comboToast)*20));
+    ctx.globalAlpha=1;
+  }
 }
 function render(t) {
   const g=state.game;
   ctx.setTransform(canvas.width/360,0,0,canvas.height/g.h,0,0);
   ctx.clearRect(0,0,360,g.h);
   drawField(g.h,t);
+  drawBoosters(g,t);
   drawBumpers(g);
   drawBall(g,t);
   drawFX();

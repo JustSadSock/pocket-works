@@ -10,3 +10,33 @@
 @media (max-width:720px){.chrome{height:48px;gap:6px;padding:0 10px}.brand{justify-content:center;gap:5px;font-size:11px}.brand small,.brand-icon{display:none}.launcher{font-size:10px}.header-btn{width:34px;height:34px}.workspace{padding:4px;gap:4px;flex-direction:column;justify-content:stretch}.city{max-width:none;min-height:0;flex:1;width:100%;border-width:3px;box-shadow:inset 0 0 15px #917d5e}.city-head{height:42px;padding:3px 8px}.turn-badge{font-size:9px}.turn-badge b{font-size:19px}.score-field{gap:5px;font-size:9px}.score-field b{font-size:19px}.score-field span{max-width:65px}.city-status{height:24px;padding:5px 8px;font-size:10px}.city-stamp{right:7px;bottom:6px;width:44px;height:44px;font-size:7px}.city-stamp b{font-size:9px}.dispatch{width:100%;height:220px;gap:7px;padding:7px 10px 9px;flex:none;border-width:1px;box-shadow:none}.dispatch-title{padding:0 0 4px}.dispatch-title small,.stamp{display:none}.dispatch-title b{font-size:12px}.vehicles{flex-direction:row;gap:6px}.vehicle-choice{height:48px;width:50%;min-width:0;padding:4px;gap:7px}.mini-car{width:31px;height:21px;font-size:10px}.vcopy b{font-size:9px}.vcopy small{font-size:9px}.distance{font-size:10px}.dispatch-tools{gap:5px}.tool-primary,.tool-secondary{height:34px}.tool-primary span{font-size:9px}.tool-secondary{width:40px;font-size:18px}.stop-strip{gap:7px}.stop-strip button{padding:5px 8px;font-size:9px}.stop-strip input{width:70px}.route-hint{display:none}.next-button{height:42px;font-size:10px;padding:0 13px;border-bottom-width:3px}.next-button span{font-size:17px}.screen-cover{top:48px;padding:12px}.menu-leaf{padding:22px}.menu-leaf:before,.menu-leaf:after{top:11px;left:22px}.menu-leaf h1{font-size:48px}.menu-leaf h2{font-size:43px}.menu-leaf p{margin:13px 0 19px;font-size:13px}.menu-button{min-height:43px}.main-action{min-height:50px}}
 @media (max-height:700px) and (max-width:720px){.dispatch{height:201px}.city-status{display:none}.workspace{gap:2px}.dispatch-title{display:none}.stop-strip{font-size:9px}.city-head{height:37px}.menu-leaf h1{font-size:38px}.menu-leaf{padding:18px}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+
+/* Trafficity 1.5: physical dispatch tools, tactical information and accessible zoom. */
+.zoom-stack{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:5px;z-index:1}
+.zoom-stack button{width:38px;height:36px;border:2px solid #7c8f7a;background:#f1e7d0;color:#344e42;box-shadow:0 3px 0 #8e8a73;font:900 22px Georgia;border-radius:4px}
+.zoom-stack button:last-child{font-size:19px}
+.world-event{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:#f1e8d6;color:#385547;box-shadow:0 3px 0 #a59476;padding:8px 14px;border:1px solid #997e5c;font-weight:900;font-size:11px;letter-spacing:.04em;white-space:nowrap;max-width:70%;text-overflow:ellipsis;overflow:hidden;pointer-events:none}
+.offers-head{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding-top:3px}.offers-head span{font-weight:900;letter-spacing:.12em;font-size:10px}.offers-head small{font-size:8px;color:#6e806f}
+.offers{display:flex;gap:7px}.offer-choice{flex:1;min-width:0;border:1px solid #c1aa85;background:#e8dbc1;color:#3c5047;padding:7px 8px;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;text-align:left;gap:3px}
+.offer-choice:disabled{opacity:.55}.offer-choice:focus-visible,.zoom-stack button:focus-visible{outline:3px solid #337f80;outline-offset:1px}
+.offer-choice span{font-weight:900;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.offer-choice b{font:900 17px Georgia,serif;color:#a34f35}.offer-choice small{font-size:10px;opacity:.78;grid-column:1/-1}
+.idle-button{border:1px solid #a65b42;background:#e8d7c5;color:#8a4833;text-align:center;font-weight:900;font-size:10px;padding:10px;letter-spacing:.03em}
+.difficulty-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font:900 10px Arial;letter-spacing:.10em}
+.difficulty-label select{border:1px solid #b5a483;background:#e9dcc2;color:#31493f;font:700 12px Arial;padding:8px;border-radius:2px;max-width:60%}
+@media(max-width:720px){
+ .dispatch{height:268px;gap:5px;padding:6px 8px}
+ .offers-head{padding-top:1px}.offers-head span{font-size:9px}.offers-head small{display:none}
+ .offer-choice{padding:3px 6px;grid-template-columns:1fr auto;gap:1px}
+ .offer-choice span{font-size:9px}.offer-choice b{font-size:13px}.offer-choice small{font-size:9px}
+ .zoom-stack{top:7px;left:7px;gap:3px}.zoom-stack button{width:31px;height:30px;font-size:17px}
+ .zoom-stack button:last-child{font-size:16px}
+ .world-event{top:7px;font-size:10px;padding:6px;max-width:66%}
+ .stop-strip{font-size:9px}
+ .menu-leaf h1{margin:12px 0}.menu-leaf p{margin:10px 0 15px}
+ .idle-button{padding:6px}
+}
+@media(max-width:720px) and (max-height:700px){
+ .dispatch{height:233px;gap:3px}.offers-head{display:none}.offer-choice small{display:none}.offer-choice{padding:4px 7px}
+ .next-button{height:37px}.stop-strip{min-height:25px}.zoom-stack button{height:26px;width:27px}
+}
