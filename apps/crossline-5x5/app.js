@@ -27,6 +27,7 @@ const scoped={
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const symbols={up:'↑',down:'↓',left:'←',right:'→',shield:'▣'};
 let profile=null,sound=read('sound','on')==='on',difficulty=read('difficulty','normal'),motion=read('motion','on')!=='off';
+document.documentElement.dataset.motion=motion?'on':'off';
 const storedTheme=read('theme','dark');
 document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
@@ -483,7 +484,7 @@ $('hotseat').onclick=()=>localStart('hotseat');
 $('online').onclick=()=>connect('create');$('joinOnline').onclick=()=>connect('join');$('openRules').onclick=showRules;
 $('difficulty').value=difficulty;$('difficulty').onchange=()=>{difficulty=$('difficulty').value;write('difficulty',difficulty)};
 $('sound').onclick=()=>{sound=!sound;write('sound',sound?'on':'off');$('sound').textContent=sound?'♪':'♪̸';soundFX('tap')};$('sound').textContent=sound?'♪':'♪̸';
-$('motionToggle').onclick=()=>{motion=!motion;write('motion',motion?'on':'off');$('motionToggle').textContent=motion?'▶':'⏭';$('motionToggle').setAttribute('aria-pressed',String(!motion));soundFX('tap')};
+$('motionToggle').onclick=()=>{motion=!motion;write('motion',motion?'on':'off');document.documentElement.dataset.motion=motion?'on':'off';$('motionToggle').textContent=motion?'▶':'⏭';$('motionToggle').setAttribute('aria-pressed',String(!motion));soundFX('tap')};
 $('motionToggle').textContent=motion?'▶':'⏭';$('motionToggle').setAttribute('aria-pressed',String(!motion));
 $('pause').onclick=confirmReturn;
 $('lobbyBack').onclick=leaveToMenu;$('enter').onclick=joinFromField;
