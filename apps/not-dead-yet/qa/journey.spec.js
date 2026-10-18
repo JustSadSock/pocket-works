@@ -163,3 +163,36 @@ test('1.5 family radio: collect album, tune home station, reveal journal and res
  expect((await state(page)).radio).toMatchObject({channel:2,heard:true});
  expect(errors).toEqual([]);
 });
+
+
+test('1.6 outage: fuse cannot reset until kitchen hotplate is unplugged, persists across reload',async({page})=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#start')).toBeVisible();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.triggerBlackout())).toBe(true);
+ await expect.poll(async()=>(await state(page)).power.stage).toBe('tripped');
+ expect((await state(page)).powerAvailable).toBe(false);
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearPower('fuse'))).toBe(true);
+ await expect(page.locator('#aimHint')).toContainText('АВТОМАТ');
+ await page.keyboard.press('e');
+ expect((await state(page)).power.stage).toBe('tripped');
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearPower('plate'))).toBe(true);
+ for(let i=0;i<4;i++){
+  if((await state(page)).power.stage==='safe')break;
+  await page.keyboard.press('e');
+ }
+ await expect.poll(async()=>(await state(page)).power.stage).toBe('safe');
+ await page.locator('#pause').click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#continue').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect((await state(page)).power.stage).toBe('safe');
+ expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearPower('fuse'))).toBe(true);
+ if(await page.locator('#interact').isVisible())await page.locator('#interact').click();else await page.keyboard.press('e');
+ await expect.poll(async()=>(await state(page)).power.stage).toBe('restored');
+ expect((await state(page)).powerAvailable).toBe(true);
+ expect(errors).toEqual([]);
+});

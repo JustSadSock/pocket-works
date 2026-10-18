@@ -6,10 +6,10 @@
     "premise": "A senior walks through an old personal apartment. Household objects remain tangible and recognizable while memory changes which doorway was behind him.",
     "composition": "Almost entirely first-person domestic interiors. Journal opens within the existing inventory; no extra permanent HUD clutter or unrelated giant panels.",
     "shapeLanguage": "Old-fashioned lacquered double-leaf wooden doors, glass insets, nonmodular heavy cabinets, brass handles, coat rack silhouettes, Soviet sideboards and inexpensive domestic upholstery.",
-    "surfaceAndMaterial": "Late Soviet and post-Soviet lived-in domestic realism: varnished glass-panel doors, wall carpet, heavy polished wall-unit with china, enamel kettle, kitchen oilcloth, familiar faded flower wallpaper and herringbone parquet. More readable textile seams, sofa cushions, worn wardrobe moldings, enamel fridge magnets and shallow geometric wall cast shadows.",
+    "surfaceAndMaterial": "Late Soviet and post-Soviet lived-in domestic realism: varnished glass-panel doors, wall carpet, heavy polished wall-unit with china, enamel kettle, kitchen oilcloth, familiar faded flower wallpaper and herringbone parquet. More readable textile seams, sofa cushions, worn wardrobe moldings, enamel fridge magnets and shallow geometric wall cast shadows. A pale ceramic breaker board and a battered plug-in hotplate have visually meaningful switch states.",
     "paletteLogic": "Desaturated nicotine cream, brown wood and muted sage replace teal industrial corridors; isolated warm brass marks objects and danger appears as faint rusty red.",
     "typography": "Small utilitarian location and objective labels in play; larger compressed worn theatre-poster title only in the initial nocturnal menu.",
-    "signature": "A familiar post-Soviet apartment that changes behind the old protagonist's back; his hands can tune a textured tabletop radio while a quiet family story emerges from real collected belongings.",
+    "signature": "An unmistakable Soviet-era apartment where memory dislocates rooms and aged wiring suddenly loses power; the player turns off an overloaded kitchen hotplate and resets a ceramic fusebox instead of completing generic fetch quests.",
     "distinction": "Memory is participatory: recognize distorted furniture, tune a radio, connect family objects and resolve a personally meaningful ending. Never a standard gun-vs-monsters progression.",
     "spatialRationale": "A small persistent HUD leaves almost the entire view for walls and belongings. Separate left/right thumb surfaces keep first-person navigation usable in portrait.",
     "comparisons": [
@@ -26,14 +26,14 @@
     ]
   },
   "production": {
-    "renderer": "Offline WebGL1 procedural domestic meshes, fixed small texture atlas, planar geometry-based cast floor AND wall shadows, reconstructed only on room revisions; mobile asset budget.",
+    "renderer": "Offline WebGL1 domestic furniture meshes with an electrical uniform that darkens lamp contribution after a real circuit trip, physical fuseboard and old kitchen hotplate, projected contact shadows and small texture atlas.",
     "focalAsset": "The opening apartment itself: seeded room assignments, furniture, patterned walls and physical door frames plus a personally authored wooden-door icon."
   },
   "motion": {
     "character": "Measured walking inertia and subtle gait synchronized to movement; rounded enemies sway slightly, avoiding ceaseless random camera wobble.",
     "action": "A mistaken family object can be recognized from close physical range, reducing stress and pausing further apartment rearrangements. The interaction shares the existing E/mobile button.",
     "anticipation": "A shadow at a doorway or the sound of furniture shifting warns of a changing remembered room before it can be revisited.",
-    "response": "Tuning a physical Bakelite dial switches audible channels and can reveal a meaningful familiar transmission, while respecting reduced motion and disabled audio.",
+    "response": "Real E/touch interactions change kettle/plug and breaker state, audible latches, radio availability and electrical ambient illumination; the flashlight remains independently powered.",
     "followThrough": "After a glance away, a room may have moved its door; the next visit resolves into a visibly different furniture arrangement while objectives remain accessible.",
     "interruption": "Pointercancel and focus loss always reset movement; pause saves state and freezes pursuit without claiming the user has died.",
     "reducedMotion": "Reduce-motion disables head-bob while keeping navigation, textures, enemy visibility and action states intact."

@@ -1,7 +1,7 @@
 /* Versioned, offline-only save contract. Parse and validate BEFORE mutating a live game. */
 (function(root){
   'use strict';
-  const SAVE_VERSION=3;
+  const SAVE_VERSION=4;
   const SIZES={tiny:[5,8],small:[10,15],medium:[20,30],large:[20,60]};
   const UNIT_TYPES=new Set(['swordsman','archer','heavy','cavalry','mage','bog']);
   const BUILD_TYPES=new Set(['base','barracks','stable','mageTower','mill','fort']);
@@ -46,6 +46,21 @@
         s.log[p].every(item=>typeof item==='string'),'повреждён журнал');
       assert(s.grace[p]===null||integer(s.grace[p],0,10000),'повреждён счётчик защиты');
     }
+    // v3 saves had no last-observed buildings: start with empty reconnaissance.
+    const lastSeen={1:{},2:{}};
+    if(s.lastSeen!==undefined){
+      for(const p of [1,2]){
+        const records=s.lastSeen[p]??{};
+        assert(records&&typeof records==='object'&&!Array.isArray(records)&&
+          Object.keys(records).length<=rows*cols,'повреждён архив разведки');
+        for(const [key,b] of Object.entries(records)){
+          assert(inBounds(b)&&key===b.r+','+b.c&&BUILD_TYPES.has(b.type)&&
+            [0,1,2].includes(b.owner)&&integer(b.hp,0,20)&&
+            (b.gen===undefined||Number.isFinite(b.gen)),'повреждённое известное строение');
+          lastSeen[p][key]={id:b.id,r:b.r,c:b.c,type:b.type,owner:b.owner,hp:b.hp,gen:b.gen};
+        }
+      }
+    }
     const replayEvents=raw.replayEvents===undefined?[]:raw.replayEvents;
     assert(Array.isArray(replayEvents)&&replayEvents.length<=30000,'повреждена запись повтора');
     const legacy=raw.version===undefined||raw.version<3;
@@ -66,6 +81,7 @@
         gold:{1:s.gold[1],2:s.gold[2]},
         fog:{1:s.fog[1].map(r=>r.slice()),2:s.fog[2].map(r=>r.slice())},
         seen:{1:s.seen[1].map(r=>r.slice()),2:s.seen[2].map(r=>r.slice())},
+        lastSeen,
         grace:{1:s.grace[1],2:s.grace[2]},
         log:{1:[...s.log[1]],2:[...s.log[2]]}
       },

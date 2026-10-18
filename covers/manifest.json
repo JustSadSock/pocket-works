@@ -2969,8 +2969,8 @@
     "sha256": "54eb398ac7bafd27fe2e89ee9af9efbf616f416c156595a06a84362419a3d5e7",
     "imageVersion": 2,
     "status": "preserved",
-    "lastAttemptRevision": "fe6a42e06fe0a1fa3c98c934b92e60b98e5702ca",
-    "lastAttemptAt": "2026-10-18T14:36:57.014Z",
+    "lastAttemptRevision": "e74ecab63c23be79c46c473a66589f591822b1f0",
+    "lastAttemptAt": "2026-10-18T14:44:15.555Z",
     "note": "existing cover rated higher",
     "captureEngine": "safe-gameplay-v3"
   },
@@ -3291,29 +3291,29 @@
   "meat-exe": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 69,
+      "bestScore": 71,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 35113,
-        "variance": 57.5159365642552,
-        "entropy": 1.4627031032424236,
-        "edgeDensity": 0.11135912698412699,
-        "colorfulness": 25.282470703125,
-        "centerDetail": 78.63071153891137,
-        "meanLight": 31.553363427734663
+        "bytes": 34194,
+        "variance": 56.92616782482961,
+        "entropy": 1.616284229433976,
+        "edgeDensity": 0.11371527777777778,
+        "colorfulness": 28.635009765625,
+        "centerDetail": 76.8519179230167,
+        "meanLight": 33.452069921875314
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.2.0&pw_fp=c183ee86caad8b43dd384c12"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.3.0&pw_fp=ee8e2b71d1ef8b17bff108bb"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "549142e9d6f7d7d0152a0f4a2e4a8047094d7242",
-    "lastAttemptAt": "2026-10-18T10:54:37.399Z"
+    "lastAttemptRevision": "a78df2c3f4c42e617c317f07a0c097e9a443b5b6",
+    "lastAttemptAt": "2026-10-18T14:44:26.474Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3422,15 +3422,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.2.2&pw_fp=b0808d6ecf2a4c6a4b87a86a"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.3.0&pw_fp=647b0fab3a2a93ba0f719264"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "69ff1c2b2e09bcf8490e6ef6662e5d82a29ae67c",
-    "lastAttemptAt": "2026-10-18T13:12:28.874Z",
+    "lastAttemptRevision": "e79aa66d10ec97d9068ed9c707750002b13a57e0",
+    "lastAttemptAt": "2026-10-18T14:51:34.739Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3454,10 +3454,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "7df8b3cd36136aa10fae0527cf66b51439bd83ca",
-    "lastAttemptAt": "2026-10-18T13:56:47.096Z",
-    "revision": "7df8b3cd36136aa10fae0527cf66b51439bd83ca",
-    "qualityScore": 77,
+    "lastAttemptRevision": "bbda18abddb6e5d727deee97b4a486f94b27a25f",
+    "lastAttemptAt": "2026-10-18T14:51:21.789Z",
+    "revision": "bbda18abddb6e5d727deee97b4a486f94b27a25f",
+    "qualityScore": 78,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3469,7 +3469,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "abde47c1361577e1321e5bd23e5f3715a9519dc055f7abae2cb20adb8b2f6c11",
+    "sha256": "be9ef3890f33b8c963349715857a666b6fbc305c9eab1495d48bb25d934690c3",
     "imageVersion": 2
   },
   "crossline-5x5": {

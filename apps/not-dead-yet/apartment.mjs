@@ -1,5 +1,6 @@
 import {MAX_SWING,blockedByPanels,advanceDoor,panels,doorOccludesRay} from './doors.mjs';
 import {radioBroadcast} from './story.mjs';
+import {FUSE_LOCATION,readPower,powerOn,powerHint,tripPower,unplugPlate,resetBreaker} from './power.mjs';
 // NOT DEAD YET — the first authored apartment chapter and its safe mutable topology.
 export const W=30,H=24,SIZE=30;
 export const HOME={x:15.5,z:12.5};
@@ -35,6 +36,7 @@ export class Apartment {
    return [r.type,{type:r.type,open:opened,angle:opened?MAX_SWING:0}]
   }));
   this.radio={channel:Math.max(0,Math.min(2,Number.isInteger(data?.radio?.channel)?data.radio.channel:0)),heard:data?.radio?.heard===true};
+  this.power=readPower(data?.power);
   this.tiles=new Uint8Array(W*H);this.rebuild()
  }
  room(type){return this.rooms.find(r=>r.type===type)}
@@ -139,11 +141,22 @@ export class Apartment {
  }
  // The memory trace is near a real collectible: reaching it never requires a
  // second collision graph or a procedurally placed, unreachable prop.
+ fusePosition(){return {...FUSE_LOCATION}}
+ platePosition(){
+  const table=this.objects().find(o=>o.room==='kitchen'&&o.type==='table');
+  return table?{x:table.x+.33,z:table.z+.12}:this.point('kitchen')
+ }
+ powerAvailable(){return powerOn(this.power)}
+ powerObjective(){return powerHint(this.power)}
+ tickPower(t,found){return tripPower(this.power,t,found)}
+ unplugPlate(){return unplugPlate(this.power)}
+ resetBreaker(){return resetBreaker(this.power)}
  radioPosition(){
   const table=this.objects().find(o=>o.room==='living'&&o.type==='table');
   return table?{x:table.x,z:table.z}:this.point('living')
  }
  tuneRadio(hasAlbum=false){
+  if(!this.powerAvailable())return{blocked:true,channel:this.radio.channel,heard:false,newMemory:false,sound:'empty',message:'Радио обесточено.'};
   this.radio.channel=(this.radio.channel+1)%3;
   const channel=radioBroadcast(this.radio.channel,hasAlbum);
   const newMemory=channel.heard&&!this.radio.heard;
@@ -200,7 +213,7 @@ export class Apartment {
  }
  save(){return{seed:this.seed,layoutVersion:this.layoutVersion,phases:this.rooms.map(r=>r.phase),
   recognized:Object.fromEntries(this.rooms.map(r=>[r.type,r.recognizedPhase])),
-  radio:{...this.radio},
+  radio:{...this.radio},power:{...this.power},
   doors:Object.fromEntries(Object.entries(this.doorStates).map(([k,v])=>[k,v.open]))}}
  fingerprint(){return this.rooms.map(r=>r.type+':'+this.door(r).x+':'+r.phase+':'+r.x0+':'+r.x1+':'+r.z0+':'+r.z1).join('|')}
 }

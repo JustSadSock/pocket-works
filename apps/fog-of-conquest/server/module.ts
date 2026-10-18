@@ -1,7 +1,7 @@
 // PocketNet adaptation of the ORIGINAL Fog of Conquest, without rebalance.
 // Original unit/building definitions and complete generator are embedded verbatim.
 // Never broadcast raw state: enemies and fogged terrain remain private.
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=2;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=3;
 const TERRAIN={PLAIN:0,WATER:1,FOREST:2,HILL:3,MOUNTAIN:4};
 const TERR_COST=[1,2,2,2,999],TERR_DEF=[0,-1,1,2,0];
 const BASE_ROWS=20,BASE_COLS=30;
@@ -27,6 +27,7 @@ const UNIT_TYPES = {
 function originalGenerator(global){
 'use strict';
   const abs = Math.abs;
+  const random = typeof global.random==='function' ? global.random : Math.random;
   const NOISE_FREQS = [8, 16, 32];
   const WATER_RATIO = 0.1;
   const HILL_RATIO = 0.15;
@@ -255,7 +256,7 @@ function originalGenerator(global){
     types.forEach(t=>{
       if(!global.map.some(row=>row.includes(t))){
         for(let i=0;i<1000;i++){
-          const r=Math.random()*global.ROWS|0, c=Math.random()*global.COLS|0;
+          const r=random()*global.ROWS|0, c=random()*global.COLS|0;
           if(global.map[r][c]===global.TERRAIN.PLAIN){ global.map[r][c]=t; break; }
         }
       }
@@ -290,8 +291,8 @@ function originalGenerator(global){
 
   function freeCell(side){
     for(let i=0;i<500;i++){
-      let r=2+Math.random()*(global.ROWS-4)|0,
-          c=2+Math.random()*(global.COLS-4)|0;
+      let r=2+random()*(global.ROWS-4)|0,
+          c=2+random()*(global.COLS-4)|0;
       if(side===1&&c>=global.COLS/2) continue;
       if(side===2&&c<global.COLS/2)  continue;
       if(global.map[r][c]!==global.TERRAIN.PLAIN) continue;
@@ -332,7 +333,25 @@ function visibility(g,side){
  return f;
 }
 function refresh(g){
- for(const side of [1,2]){const f=visibility(g,side);g.state.fog[side]=f;for(let r=0;r<g.rows;r++)for(let c=0;c<g.cols;c++)if(!f[r][c])g.state.seen[side][r][c]=true;}
+ g.state.lastSeen??={1:{},2:{}};
+ for(const side of [1,2]){
+  const f=visibility(g,side);g.state.fog[side]=f;
+  const memory=g.state.lastSeen[side]??={};
+  for(let r=0;r<g.rows;r++)for(let c=0;c<g.cols;c++){
+   if(f[r][c])continue;
+   g.state.seen[side][r][c]=true;
+   const key=r+','+c;
+   const b=g.buildings.find(x=>x.r===r&&x.c===c);
+   if(b)memory[key]={id:b.id,r,c,type:b.type,owner:b.owner,hp:b.hp,gen:b.gen};
+   else delete memory[key];
+  }
+ }
+}
+// Only terrain's original random choices are seeded. A missing seed preserves
+// normal gameplay; a supplied seed makes QA worlds exactly reproducible.
+function seededRandom(seed){
+ let x=(seed>>>0)||0x9e3779b9;
+ return ()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296;};
 }
 function dimensions(size){
  if(size==='tiny')return [5,8];
@@ -342,10 +361,11 @@ function dimensions(size){
 }
 export function createOriginalMatch(options={}){
  const size=['tiny','small','medium','large'].includes(options.size)?options.size:'medium',modeBeta=options.beta===true,[rows,cols]=dimensions(size);
- const g={schema:2,rows,cols,map:[],units:[],buildings:[],nextUnitId:1,modeBeta,
-   state:{currentPlayer:1,turn:0,gold:{1:5,2:5},fog:{},seen:{},grace:{1:null,2:null},log:{1:[],2:[]}},phase:'battle',winner:null,revision:1};
+ const seed=Number.isInteger(options.seed)&&options.seed>=0&&options.seed<=0xffffffff?options.seed:null;
+ const g={schema:2,rows,cols,map:[],units:[],buildings:[],nextUnitId:1,modeBeta,seed,
+   state:{currentPlayer:1,turn:0,gold:{1:5,2:5},fog:{},seen:{},lastSeen:{1:{},2:{}},grace:{1:null,2:null},log:{1:[],2:[]}},phase:'battle',winner:null,revision:1};
  for(const side of [1,2]){g.state.fog[side]=matrix(g,true);g.state.seen[side]=matrix(g,false);}
- const global={ROWS:rows,COLS:cols,BASE_ROWS,BASE_COLS,TERRAIN,TERR_COST,TERR_DEF,UNIT_TYPES,BUILD_TYPES:copy(BUILD_TYPES),modeBeta,nextUnitId:1,
+ const global={ROWS:rows,COLS:cols,BASE_ROWS,BASE_COLS,TERRAIN,TERR_COST,TERR_DEF,UNIT_TYPES,BUILD_TYPES:copy(BUILD_TYPES),modeBeta,nextUnitId:1,random:seed===null?Math.random:seededRandom(seed),
    map:g.map,units:g.units,buildings:g.buildings};
  if(modeBeta)global.BUILD_TYPES.base.spawn.push('bog');
  originalGenerator(global);
@@ -373,16 +393,22 @@ function capture(g,u,b){
  if(b.owner!==u.owner)log(g,u.owner,'Захвачено строение.');
  b.owner=u.owner;b.hp=BUILD_TYPES[b.type].hpMax;
 }
-function victory(g){
+function victory(g,endedSide=null){
  if(g.state.turn===0||g.phase==='finished')return;
  for(const side of [1,2]){
-  const bases=g.buildings.filter(b=>b.owner===side&&(b.gen??BUILD_TYPES[b.type].gen)===0).length,
-    alive=g.units.filter(u=>u.owner===side).length;
-  if(bases===0&&alive===0){g.phase='finished';g.winner=3-side;break;}
-  if(bases===0&&alive>0){if(g.state.grace[side]===null)g.state.grace[side]=5;else if(--g.state.grace[side]<=0){g.phase='finished';g.winner=3-side;break;}}
-  else g.state.grace[side]=null;
+  // Preserve the original definition: all zero-income military buildings.
+  const bases=g.buildings.filter(b=>b.owner===side&&(b.gen??BUILD_TYPES[b.type].gen)===0).length;
+  const alive=g.units.filter(u=>u.owner===side).length;
+  if(!bases&&!alive){g.phase='finished';g.winner=3-side;return;}
+  if(!bases){
+   if(g.state.grace[side]===null)g.state.grace[side]=5;
+   else if(endedSide===side&&--g.state.grace[side]<=0){
+    g.phase='finished';g.winner=3-side;return;
+   }
+  }else g.state.grace[side]=null;
  }
 }
+
 export function originalAction(source,side,action){
  const failure=msg=>({state:source,error:msg});
  if(!source||source.schema!==2||source.phase!=='battle')return failure('Партия закончена.');
@@ -450,18 +476,27 @@ export function originalAction(source,side,action){
    if(!b||b.owner!==p||!info||!BUILD_TYPES[b.type]?.spawn.includes(action.unitType)||action.unitType==='bog'&&!g.modeBeta)return failure('Нельзя нанять такой отряд.');
    if(g.state.gold[p]<info.cost)return failure('Недостаточно золота.');
    if(!ok||dist(b,action)!==1||g.map[action.r][action.c]===TERRAIN.MOUNTAIN||target)return failure('Место для отряда недоступно.');
-   if(g.units.length>140)return failure('Армия слишком велика.');
+   if(g.units.length>=140)return failure('Армия слишком велика.');
    g.state.gold[p]-=info.cost;g.units.push({id:g.nextUnitId++,r:action.r,c:action.c,owner:p,type:action.unitType,hp:info.hpMax,mp:0,startR:action.r,startC:action.c});
    log(g,p,'Отряд нанят.');
  }else return failure('Неизвестный приказ.');
- g.revision++;refresh(g);victory(g);return {state:g,error:null};
+ g.revision++;refresh(g);victory(g,action.type==='end'?p:null);return {state:g,error:null};
 }
 function privateView(g,side){
  const v=copy(g),fog=g.state.fog[side],seen=g.state.seen[side];
  v.map=g.map.map((row,r)=>row.map((t,c)=>seen[r][c]?t:0));
  v.units=g.units.filter(u=>u.owner===side||!fog[u.r][u.c]).map(copy);
+ const memory=g.state.lastSeen?.[side]||{};
  v.buildings=g.buildings.filter(b=>b.owner===side||!fog[b.r][b.c]).map(copy);
- v.state={...g.state,gold:{[side]:g.state.gold[side]},fog:{[side]:fog},seen:{[side]:seen},log:{[side]:g.state.log[side]}};
+ for(const remembered of Object.values(memory)){
+  if(fog[remembered.r]?.[remembered.c]&&seen[remembered.r]?.[remembered.c]&&
+     !v.buildings.some(b=>b.r===remembered.r&&b.c===remembered.c)){
+   v.buildings.push({...remembered,lastSeen:true});
+  }
+ }
+ v.state={...g.state,gold:{[side]:g.state.gold[side]},fog:{[side]:fog},seen:{[side]:seen},lastSeen:{[side]:copy(memory)},log:{[side]:g.state.log[side]},grace:{[side]:g.state.grace[side]}};
+ // Never disclose a seeded map's reconstruction key while fog is active.
+ delete v.seed;
  v.nextUnitId=0;return v;
 }
 const stateEvent=()=>[{type:'state',payload:null}],notice=(id,msg)=>[{type:'notice',to:id,payload:msg}];
