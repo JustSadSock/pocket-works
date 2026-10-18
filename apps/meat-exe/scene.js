@@ -417,6 +417,7 @@ export function createWorld(canvas, initialSeed) {
   function setForkSites(ids=[]){
     forkSigns.clear();forkSites=[];forkSelection='';
     if(!Array.isArray(ids)||ids.length!==2)return;
+    getTissues(0,0); // Gate cells must already be excluded even before first chunk paint.
     const start=getStart(),cells=getOpenCells(0,0);
     const candidates=cells.filter(c=>{
       const d=Math.hypot(c.x-start.x,c.z-start.z);
