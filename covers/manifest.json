@@ -3341,7 +3341,7 @@
     "lastAttemptAt": "2026-10-18T00:58:04.029Z"
   },
   "axis-pals": {
-    "revision": "53f4caf76cad21c723c5fb5fa32370968c2e24c0",
+    "revision": "483d05f215b538a81685e9b749a63198c426ffd4",
     "qualityScore": 70,
     "visionScore": null,
     "prepared": false,
@@ -3359,11 +3359,11 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "53f4caf76cad21c723c5fb5fa32370968c2e24c0",
-    "lastAttemptAt": "2026-10-18T08:50:30.353Z"
+    "lastAttemptRevision": "483d05f215b538a81685e9b749a63198c426ffd4",
+    "lastAttemptAt": "2026-10-18T08:57:08.656Z"
   },
   "trafficity": {
-    "revision": "51ea14f0aaec60f97c480ebc914b7dfbc25dcb52",
+    "revision": "483d05f215b538a81685e9b749a63198c426ffd4",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -3371,12 +3371,12 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "2b598bea711141773d98f3af5fef24788995dad2d8d4b28a24b4c16e14612b09",
+    "sha256": "f1e52cc6391e134354a39ba6fd08c1e18887cfac1d41c5bf5810a548d820ff70",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "51ea14f0aaec60f97c480ebc914b7dfbc25dcb52",
-    "lastAttemptAt": "2026-10-18T00:42:00.423Z"
+    "lastAttemptRevision": "483d05f215b538a81685e9b749a63198c426ffd4",
+    "lastAttemptAt": "2026-10-18T08:56:56.757Z"
   },
   "fog-of-conquest": {
     "revision": "b78f8ccf5aadb1b31daace8c716580f2bf5679f0",
@@ -3444,7 +3444,7 @@
     "lastAttemptAt": "2026-10-18T00:58:15.850Z"
   },
   "crossline-5x5": {
-    "revision": "96bad20aafb21fb6eedaf4ceeca97a642b8b0338",
+    "revision": "9fef283a7733d5ba41efeca8955ae937badbe8e1",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
@@ -3456,7 +3456,7 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "96bad20aafb21fb6eedaf4ceeca97a642b8b0338",
-    "lastAttemptAt": "2026-10-18T08:23:10.011Z"
+    "lastAttemptRevision": "9fef283a7733d5ba41efeca8955ae937badbe8e1",
+    "lastAttemptAt": "2026-10-18T08:56:45.951Z"
   }
 }
