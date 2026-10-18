@@ -3377,5 +3377,27 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "5d33749e7cdd4ef94dde991b165bed4d7cad89fd",
     "lastAttemptAt": "2026-10-17T23:58:08.377Z"
+  },
+  "fog-of-conquest": {
+    "revision": "b78f8ccf5aadb1b31daace8c716580f2bf5679f0",
+    "qualityScore": 72,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "НАЧАТЬ ПОХОД →",
+        "id": "newGame",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "b78f8ccf5aadb1b31daace8c716580f2bf5679f0",
+    "lastAttemptAt": "2026-10-18T00:16:06.535Z"
   }
 }
