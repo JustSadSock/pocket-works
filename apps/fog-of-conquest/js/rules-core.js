@@ -79,9 +79,10 @@ const FogRuleKernel=(function(){
   }
   function canSpawn(map,units,buildings,state,building,unitType,point,unitTypes,buildTypes,beta){
     const info=unitTypes[unitType];
+    const allowed=buildTypes[building?.type]?.spawn.includes(unitType)||
+      (beta&&unitType==='bog'&&building?.type==='base');
     if(!building||!point||!info||building.owner!==state.currentPlayer||
-      !buildTypes[building.type]?.spawn.includes(unitType)||
-      (unitType==='bog'&&!beta))return false;
+      !allowed||(unitType==='bog'&&!beta))return false;
     if(!Number.isInteger(point.r)||!Number.isInteger(point.c)||
       point.r<0||point.r>=map.length||point.c<0||point.c>=map[0].length||
       manhattan(building,point)!==1||map[point.r][point.c]===4)return false;
