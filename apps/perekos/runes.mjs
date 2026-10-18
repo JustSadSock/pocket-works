@@ -1,11 +1,11 @@
-// ПЕРЕКОС 0.5 — deterministic rune grammar, three chains and school-weighted choices.
+// ПЕРЕКОС 0.6 — deterministic elemental rune grammar and three chain laboratory.
 // Nine slots, across up to three independent WHEN chains, are read from left to right: WHEN -> DO -> CHANGE. A new WHEN starts a new chain.
 import {mage} from './mages.mjs';
 const entry=(id,type,name,desc,detail='')=>({id,type,name,desc,detail});
 const SCHOOL_FAVORITES={
- fire:new Set(['ball','blast','mine','strong','wide','on_cast','on_hit','drain']),
- storm:new Set(['blink','slow','haste','quick','fastshot','on_dash','on_bounce','bounce']),
- stone:new Set(['wall','armor','push','lasting','on_hurt','on_guard','on_break','strong'])
+ fire:new Set(['ball','blast','mine','strong','wide','on_cast','on_hit','drain','as_fire']),
+ storm:new Set(['blink','slow','haste','quick','fastshot','on_dash','on_bounce','bounce','as_storm']),
+ stone:new Set(['wall','armor','push','lasting','on_hurt','on_guard','on_break','strong','as_stone'])
 };
 export const RUNES=Object.freeze([
 entry('on_cast','when','При выстреле','Когда сам выпускаю обычный шар.'),
@@ -43,7 +43,10 @@ entry('wide','how','Пошире','Радиус взрыва и размер с�
 entry('cheap','how','Меньше нагрев','Эта цепочка создаёт меньше перегрузки.'),
 entry('quick','how','Чаще','У этой цепочки короче пауза.'),
 entry('reverse','how','В обратную сторону','Шар и прыжок идут в обратном направлении.'),
-entry('fastshot','how','Быстрее летит','Снаряд летит быстрее, толчок сильнее.')
+entry('fastshot','how','Быстрее летит','Снаряд летит быстрее, толчок сильнее.'),
+entry('as_fire','how','Сделать горячим','Шар, мина или удар рядом оставляют жар.'),
+entry('as_storm','how','Дать разряд','Шар, мина или удар рядом оставляют заряд.'),
+entry('as_stone','how','Добавить камень','Шар, мина или удар рядом оставляют камень.')
 ]);
 export const RUNE_BY_ID=new Map(RUNES.map(r=>[r.id,r]));
 export const TYPES=Object.freeze({when:'КОГДА',do:'ЧТО',how:'КАК'});
@@ -68,6 +71,8 @@ export function description(ids){
 }
 export function cooldown(mods){return mods.includes('quick')?.28:.56}
 export function heatCost(mods){return Math.max(2,Math.round((11+mods.length*4)*(mods.includes('cheap')?.38:1)))}
+export const ELEMENT_MODS=Object.freeze({as_fire:'fire',as_storm:'storm',as_stone:'stone'});
+export function chosenElement(mods=[],fallback='fire'){for(let i=mods.length-1;i>=0;i--)if(ELEMENT_MODS[mods[i]])return ELEMENT_MODS[mods[i]];return fallback}
 export function repetitions(mods){return mods.includes('triple')?3:mods.includes('double')?2:1}
 export function eligibleOffers(state,player=0){
  const ids=state.actors[player].runes,existing=new Set(ids),pool=RUNES.filter(r=>!existing.has(r.id));

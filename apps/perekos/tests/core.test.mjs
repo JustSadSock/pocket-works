@@ -4,13 +4,13 @@ import {makeMatch,chooseRune,beginRound,reorderRunes,offers,tick,stats,validStat
 import {rune,compile,description,legalRunes,MAX_REACTIONS_PER_TICK,MAX_QUEUE} from '../runes.mjs';
 import {MAGES,mage} from '../mages.mjs';
 
-test('36 unique plain-language runes, 12 per grammatical category',()=>{
- assert.equal(RUNES.length,36);assert.equal(new Set(RUNES.map(r=>r.id)).size,36);
- for(const type of ['when','do','how'])assert.equal(RUNES.filter(r=>r.type===type).length,12);
+test('39 plain-language runes, three new elemental modifiers',()=>{
+ assert.equal(RUNES.length,39);assert.equal(new Set(RUNES.map(r=>r.id)).size,39);
+ assert.deepEqual(['when','do','how'].map(type=>RUNES.filter(r=>r.type===type).length),[12,12,15]);
  for(const r of RUNES){assert.ok(r.name.length>3&&r.desc.length>10);assert.equal(rune(r.id).name,r.name)}
 });
 test('new session is a fully deterministic fixed-step game',()=>{
- const a=makeMatch(701),b=makeMatch(701);assert.equal(a.version,3);assert.deepEqual(a.score,[0,0]);
+ const a=makeMatch(701),b=makeMatch(701);assert.equal(a.version,4);assert.deepEqual(a.score,[0,0]);
  assert.ok(validState(a));assert.equal(a.remaining,25);
  for(let i=0;i<400;i++){const command={x:i%60<30?1:-1,y:.2,attack:true,shield:i===5,dash:i===55};tick(a,command);tick(b,command)}
  assert.deepEqual(a,b);

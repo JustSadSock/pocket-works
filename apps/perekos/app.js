@@ -1,11 +1,12 @@
 import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reorderRunes,startRound,ringRadius,has,stats} from './core.mjs';
-import {rune,description,compile,TYPES,legalRunes} from './runes.mjs';
+import {rune,description,compile,TYPES,legalRunes,chosenElement} from './runes.mjs';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DEFAULT_APPEARANCE,COLORSETS,normalizeAppearance,decodeAppearance} from './avatar-profile.mjs';
 import {drawMage,drawPortrait,drawHero} from './mage-art.mjs';
 import {OnlineDuel,inviteCode,incomingCode} from './net-client.mjs';
 import {MAGES,SCHOOLS,mage,validMage} from './mages.mjs';
+import {ELEMENTS,reactionFor} from './elements.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
@@ -24,7 +25,7 @@ function forget(){try{localStorage.removeItem(saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
 function audioContext(){if(!sound)return null;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;if(!audio)audio=new C();if(audio.state==='suspended')audio.resume().catch(()=>{});return audio}catch{return null}}
-function sfx(type){const ac=audioContext();if(!ac)return;const now=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();const notes={overload:[96,440,.33,'sawtooth'],mine:[380,85,.22,'triangle'],shoot:[450,160,.085,'triangle'],hit:[120,55,.12,'square'],shield:[330,650,.2,'sine'],spark:[740,220,.09,'square'],heal:[480,700,.14,'sine'],dash:[230,520,.09,'triangle'],overtime:[95,160,.3,'sawtooth']};const [a,b,len,wave]=notes[type]||notes.shoot;o.type=wave;o.frequency.setValueAtTime(a,now);o.frequency.exponentialRampToValueAtTime(Math.max(20,b),now+len);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(type==='hit'?.045:.028,now+.01);g.gain.exponentialRampToValueAtTime(.0001,now+len);o.connect(g).connect(ac.destination);o.start(now);o.stop(now+len+.02)}
+function sfx(type){const ac=audioContext();if(!ac)return;const now=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();const notes={overload:[96,440,.33,'sawtooth'],mine:[380,85,.22,'triangle'],shoot:[450,160,.085,'triangle'],hit:[120,55,.12,'square'],shield:[330,650,.2,'sine'],spark:[740,220,.09,'square'],heal:[480,700,.14,'sine'],dash:[230,520,.09,'triangle'],react_steam:[420,160,.23,'sine'],react_crack:[110,380,.19,'square'],react_slag:[150,85,.26,'sawtooth'],overtime:[95,160,.3,'sawtooth']};const [a,b,len,wave]=notes[type]||notes.shoot;o.type=wave;o.frequency.setValueAtTime(a,now);o.frequency.exponentialRampToValueAtTime(Math.max(20,b),now+len);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(type==='hit'?.045:.028,now+.01);g.gain.exponentialRampToValueAtTime(.0001,now+len);o.connect(g).connect(ac.destination);o.start(now);o.stop(now+len+.02)}
 function setAudio(){sound=!sound;remember();$('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');if(sound)audioContext()}
 $('menu-audio').addEventListener('click',setAudio);$('pause-audio').addEventListener('click',setAudio);
 $('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');
@@ -116,9 +117,14 @@ function reorderOnBench(from,to){if(online?.active){const list=onlinePreviewRune
 function renderWorkbench(){
  if(!active)return;const slots=online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
  const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
- drawMage(mini,appearance,{x:32,y:57,scale:1.25,time:0,runes:slots});
+ drawMage(mini,appearance,{x:32,y:57,scale:1.25,time:0,runes:slots,mageId:myActor().mageId});
  $('bench-count').textContent=slots.length+' / 9';const rack=$('bench-slots'),previousScroll=rack.scrollTop;rack.replaceChildren();let lane=null,laneNumber=0;
  const info=description(slots);
+ const available=new Set([mage(myActor().mageId).school]);
+ for(const chain of info.chains)for(const action of chain.actions)if(['ball','blast','mine'].includes(action.id))available.add(chosenElement(action.mods,mage(myActor().mageId).school));
+ const recipes=[];for(const first of available)for(const second of available)if(first<second){const reaction=reactionFor(first,second);if(reaction)recipes.push(reaction.label)}
+ const recipeNode=$('chemistry-preview');recipeNode.classList.toggle('has-reaction',recipes.length>0);
+ recipeNode.textContent=recipes.length?'Можно получить: '+recipes.join(' · ')+'. Попади двумя разными видами магии подряд.':'Для реакции добавь к шару руну «Дать разряд», «Сделать горячим» или «Добавить камень».';
  slots.forEach((id,i)=>{
   const r=rune(id);if(!r)return;
   if(r.type==='when'||!lane){laneNumber++;lane=document.createElement('div');lane.className='spell-lane';const head=document.createElement('div');head.className='spell-lane-head';head.textContent='ПРИЁМ '+Math.min(3,laneNumber);lane.append(head);rack.append(lane)}
@@ -275,6 +281,7 @@ function drawShots(s){
  for(const q of s.shots){
   const x=Math.round(q.x),y=Math.round(q.y),style=q.style||'orb',friendly=q.owner===myIndex();
   const backX=q.vx/(Math.hypot(q.vx,q.vy)||1),backY=q.vy/(Math.hypot(q.vx,q.vy)||1);
+  const element=ELEMENTS[q.element];if(element){circle(x,y,Math.max(4,q.r+3),element.color+'52');pixel(x-backX*13-2,y-backY*13-2,4,4,element.color)}
   if(style==='bolt'||style==='arc'){
    ctx.lineWidth=style==='arc'?4:2;ctx.strokeStyle=friendly?'#a6e6d7':'#eab7df';
    ctx.beginPath();ctx.moveTo(x-backX*27,y-backY*27);ctx.lineTo(x-backX*11-backY*5,y-backY*11+backX*5);
@@ -300,7 +307,16 @@ function drawShots(s){
  }
 }
 function drawEffects(s){for(const e of s.echoes){wizard(e.x,e.y,0,frame/60,e.owner!==myIndex(),Math.min(.5,e.life/4),0,0)}
-for(const f of s.fx){const t=f.t/.38,r=Math.round(t*23)+3;if(f.k==='hit'){circle(f.x,f.y,Math.max(1,r),'#f5b36a30');for(let n=0;n<6;n++){const a=n*Math.PI/3+f.id;pixel(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,3,3,'#efc28c')}}else if(f.k.startsWith('impact_')){
+for(const f of s.fx){const t=f.t/.38,r=Math.round(t*23)+3;
+ if(f.k.startsWith('react_')){
+  const id=f.k.slice(6),spec={steam:['ПАР','#b8e9dc',9],slag:['ШЛАК','#e8a46d',7],crack:['ПРОБОЙ','#c5c6a4',8]}[id];
+  if(spec){
+   const [name,color,spikes]=spec;
+   ctx.lineWidth=id==='steam'?3:5;ctx.strokeStyle=color;ctx.beginPath();ctx.arc(f.x,f.y,10+(1-t)*3+32*t,0,Math.PI*2);ctx.stroke();
+   for(let j=0;j<spikes;j++){const a=j*Math.PI*2/spikes+f.id*.3,dist=9+37*t;pixel(f.x+Math.cos(a)*dist,f.y+Math.sin(a)*dist,id==='crack'?6:4,id==='steam'?3:5,color)}
+   ctx.save();ctx.globalAlpha=Math.max(0,1-t);ctx.fillStyle=color;ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.fillText(name,f.x,f.y-26-17*t);ctx.restore();
+  }
+ }else if(f.k==='hit'){circle(f.x,f.y,Math.max(1,r),'#f5b36a30');for(let n=0;n<6;n++){const a=n*Math.PI/3+f.id;pixel(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,3,3,'#efc28c')}}else if(f.k.startsWith('impact_')){
  const kind=f.k.slice(7),color=kind==='bolt'||kind==='arc'?'#b7f3df':kind==='rock'||kind==='wave'?'#c7c9a5':'#ffb377';
  const spikes=kind==='arc'?8:kind==='rock'?5:6;
  for(let i=0;i<spikes;i++){const a=i*Math.PI*2/spikes+(kind==='rock'?.3:f.id*.2),rad=5+24*t;
@@ -317,7 +333,15 @@ function drawOverlay(s){
  }
 for(let i=0;i<14;i++){const v=(frame*.2+i*71)%620,x=20+(i*71%360);pixel(x,(v+Math.sin(frame*.003+i)*3)%620,2,2,'#f3dca128')}}
 function render(){if(mode==='menu'&&frame%3===0)drawHero($('hero-preview').getContext('2d'),appearance,frame/60,[],selectedMage);if(!bgCanvas)bgCanvas=background();ctx.clearRect(0,0,W,H);ctx.drawImage(bgCanvas,0,0);
-if(active){drawConstructs(active);drawEffects(active);for(let i=0;i<2;i++){const a=active.actors[i],mine=i===myIndex();if(!displayXY[i])displayXY[i]={x:a.x,y:a.y};const p=displayXY[i];if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash)}drawShots(active);if(mode==='fight'&&input.aim){ctx.strokeStyle='#eee1b1a0';ctx.lineWidth=1.5;const {x,y}=input.aim;ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.moveTo(x-15,y);ctx.lineTo(x-6,y);ctx.moveTo(x+6,y);ctx.lineTo(x+15,y);ctx.stroke()}}else{wizard(107,352,0,frame/60,false,1,12,0);wizard(297,252,Math.PI,frame/60,true,1,9,0);for(let j=0;j<6;j++){const x=180+Math.sin(frame/50+j*2)*35,y=270+j*19+Math.cos(frame/37+j)*14;circle(x,y,4,'#f1c880');pixel(x-1,y-1,3,3,'#fdf3ca')}}drawOverlay(active)}
+if(active){drawConstructs(active);drawEffects(active);for(let i=0;i<2;i++){const a=active.actors[i],mine=i===myIndex();if(!displayXY[i])displayXY[i]={x:a.x,y:a.y};const p=displayXY[i];if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash);
+ if(a.markLife>0&&ELEMENTS[a.mark]){
+  const color=ELEMENTS[a.mark].color;
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.globalAlpha=.55+.2*Math.sin(frame*.09);
+  ctx.beginPath();ctx.arc(p.x,p.y-5,23+Math.sin(frame*.09)*2,-.95*Math.PI,.2*Math.PI);ctx.stroke();
+  ctx.globalAlpha=1;
+  pixel(p.x-3,p.y-37,6,5,color);pixel(p.x-1,p.y-34,2,3,'#fff3cf');
+ }
+ }drawShots(active);if(mode==='fight'&&input.aim){ctx.strokeStyle='#eee1b1a0';ctx.lineWidth=1.5;const {x,y}=input.aim;ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.moveTo(x-15,y);ctx.lineTo(x-6,y);ctx.moveTo(x+6,y);ctx.lineTo(x+15,y);ctx.stroke()}}else{wizard(107,352,0,frame/60,false,1,12,0);wizard(297,252,Math.PI,frame/60,true,1,9,0);for(let j=0;j<6;j++){const x=180+Math.sin(frame/50+j*2)*35,y=270+j*19+Math.cos(frame/37+j)*14;circle(x,y,4,'#f1c880');pixel(x-1,y-1,3,3,'#fdf3ca')}}drawOverlay(active)}
 function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k);played.add(f.k);count++}seen=active.serial}
 function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);

@@ -8,7 +8,9 @@
       "files": [
         "tests/core.test.mjs",
         "tests/avatar.test.mjs",
-        "tests/net.test.mjs"
+        "tests/net.test.mjs",
+        "tests/elements.test.mjs",
+        "tests/balance.test.mjs"
       ]
     },
     {
@@ -60,7 +62,8 @@
         "qa/journey.spec.js",
         "qa/avatar.spec.js",
         "qa/net.spec.js",
-        "qa/visual-review.spec.js"
+        "qa/visual-review.spec.js",
+        "qa/elements.spec.js"
       ]
     }
   ]

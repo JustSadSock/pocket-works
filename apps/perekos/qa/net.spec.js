@@ -8,10 +8,10 @@ async function mockPocketNet(page,{guest=false}={}){
   const players=[{id:'host',name:'Первый маг',avatar:'clay',verified:false},{id:'guest',name:'Второй маг',avatar:'wave',verified:false}];
   const mock={roomId,players,packetCount:0,commands:[],match:null,phase:'lobby',revision:1,code:'AABBBCCC',guest,picked:false,ready:false,makeMatch:null,startRound:null};
   const my=guest?1:0;
-  const view=()=>({phase:mock.phase,revision:++mock.revision,host:'host',me:my,seats:['host','guest'],rulesVersion:2,match:mock.match,players,mages:['kindle','wire'],picked:mock.picked,ready:mock.ready,offers:['on_hurt','heal','double'],connected:true,opponentConnected:true});
+  const view=()=>({phase:mock.phase,revision:++mock.revision,host:'host',me:my,seats:['host','guest'],rulesVersion:3,match:mock.match,players,mages:['kindle','wire'],picked:mock.picked,ready:mock.ready,offers:['on_hurt','heal','double'],connected:true,opponentConnected:true});
   function event(socket,m){socket.onmessage?.({data:JSON.stringify({wireVersion:1,...m})})}
   function refresh(socket){event(socket,{type:'game_event',roomId,event:{type:'state',payload:view()}})}
-  function join(socket){event(socket,{type:'room_joined',roomId,gameId:'perekos',version:'v2',state:view(),players})}
+  function join(socket){event(socket,{type:'room_joined',roomId,gameId:'perekos',version:'v3',state:view(),players})}
   class FakeWebSocket{
    static OPEN=1;static CLOSED=3;
    constructor(){this.readyState=0;mock.socket=this;setTimeout(()=>{if(this.readyState!==3){this.readyState=1;this.onopen?.()}},8)}

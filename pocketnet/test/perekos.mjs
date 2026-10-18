@@ -63,7 +63,7 @@ const receive=(who,phase)=>who.next('game_event',m=>m.event.type==='state'&&m.ev
 try{
  host.send('create_room',{gameId:'perekos'});
  const opened=await host.next('room_joined');const room=opened.roomId,code=room.slice(0,8);
- assert.equal(opened.version,'v2');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
+ assert.equal(opened.version,'v3');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
  guest.send('join_room',{roomId:code.toUpperCase()});
  const joined=await guest.next('room_joined');assert.equal(joined.state.me,1);assert.equal(joined.roomId,room);
  assert.equal(joined.state.players.length,2);

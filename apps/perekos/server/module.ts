@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Perekos PocketNet v2 immutable combat snapshot, class-weighted rune offers.
+// Perekos PocketNet v3: authoritative elemental status and reactions. Immutable snapshot.
 // Six mechanically distinct fighters in three plain-language magic families.
 // This data is frozen into the matching server ruleset version.
 const mageEntry=(id,school,name,trait,description,style,speed,power,reload,shield)=>({id,school,name,trait,description,style,speed,power,reload,shield});
@@ -12,22 +12,39 @@ const MAGES=Object.freeze([
  mageEntry('kindle','fire','Искра','burn','Попадание чуть нагревает врага.','orb',1,1,.98,.94),
  mageEntry('cinder','fire','Уголёк','miss_cool','Промах помогает остыть.','flame',1.05,.92,.9,.9),
  mageEntry('wire','storm','Провод','dash_haste','После рывка ненадолго ускоряется.','bolt',1.07,.94,.88,.88),
- mageEntry('coil','storm','Катушка','guard_slow','Щит замедляет врага рядом.','arc',1.02,.95,1,.94),
+ mageEntry('coil','storm','Катушка','guard_slow','Щит замедляет врага рядом.','arc',1.03,.98,.97,.96),
  mageEntry('pebble','stone','Галька','guard_extra','Щит получает ещё немного прочности.','rock',.94,1.1,1.12,1.15),
- mageEntry('slate','stone','Плита','hit_push','Попадания слегка толкают врага.','wave',.92,1.06,1.1,1.08)
+ mageEntry('slate','stone','Плита','hit_push','Попадания слегка толкают врага.','wave',.97,1.06,1.06,1.06)
 ]);
 const MAGE_BY_ID=new Map(MAGES.map(x=>[x.id,x]));
 function mage(id){return MAGE_BY_ID.get(id)||MAGES[0]}
 function validMage(id){return typeof id==='string'&&MAGE_BY_ID.has(id)}
 
-// ПЕРЕКОС 0.5 — deterministic rune grammar, three chains and school-weighted choices.
+// Element pairs react only on an actual hit, never from a cosmetic particle.
+const ELEMENTS=Object.freeze({
+ fire:{label:'Жар',color:'#ed9765'},
+ storm:{label:'Заряд',color:'#8bd8d1'},
+ stone:{label:'Крошка',color:'#bcc49b'}
+});
+const REACTIONS=Object.freeze({
+ 'fire|storm':{id:'steam',label:'Пар',bonus:4,slow:.65,shield:0,heat:0,push:0},
+ 'fire|stone':{id:'slag',label:'Шлак',bonus:5,slow:0,shield:0,heat:5,push:0},
+ 'stone|storm':{id:'crack',label:'Пробой',bonus:2,slow:0,shield:10,heat:0,push:12}
+});
+function reactionFor(a,b){
+ if(!ELEMENTS[a]||!ELEMENTS[b]||a===b)return null;
+ return REACTIONS[[a,b].sort().join('|')]||null;
+}
+function isElement(id){return Object.hasOwn(ELEMENTS,id)}
+
+// ПЕРЕКОС 0.6 — deterministic elemental rune grammar and three chain laboratory.
 // Nine slots, across up to three independent WHEN chains, are read from left to right: WHEN -> DO -> CHANGE. A new WHEN starts a new chain.
 
 const entry=(id,type,name,desc,detail='')=>({id,type,name,desc,detail});
 const SCHOOL_FAVORITES={
- fire:new Set(['ball','blast','mine','strong','wide','on_cast','on_hit','drain']),
- storm:new Set(['blink','slow','haste','quick','fastshot','on_dash','on_bounce','bounce']),
- stone:new Set(['wall','armor','push','lasting','on_hurt','on_guard','on_break','strong'])
+ fire:new Set(['ball','blast','mine','strong','wide','on_cast','on_hit','drain','as_fire']),
+ storm:new Set(['blink','slow','haste','quick','fastshot','on_dash','on_bounce','bounce','as_storm']),
+ stone:new Set(['wall','armor','push','lasting','on_hurt','on_guard','on_break','strong','as_stone'])
 };
 const RUNES=Object.freeze([
 entry('on_cast','when','При выстреле','Когда сам выпускаю обычный шар.'),
@@ -65,7 +82,10 @@ entry('wide','how','Пошире','Радиус взрыва и размер с�
 entry('cheap','how','Меньше нагрев','Эта цепочка создаёт меньше перегрузки.'),
 entry('quick','how','Чаще','У этой цепочки короче пауза.'),
 entry('reverse','how','В обратную сторону','Шар и прыжок идут в обратном направлении.'),
-entry('fastshot','how','Быстрее летит','Снаряд летит быстрее, толчок сильнее.')
+entry('fastshot','how','Быстрее летит','Снаряд летит быстрее, толчок сильнее.'),
+entry('as_fire','how','Сделать горячим','Шар, мина или удар рядом оставляют жар.'),
+entry('as_storm','how','Дать разряд','Шар, мина или удар рядом оставляют заряд.'),
+entry('as_stone','how','Добавить камень','Шар, мина или удар рядом оставляют камень.')
 ]);
 const RUNE_BY_ID=new Map(RUNES.map(r=>[r.id,r]));
 const TYPES=Object.freeze({when:'КОГДА',do:'ЧТО',how:'КАК'});
@@ -90,6 +110,8 @@ function description(ids){
 }
 function cooldown(mods){return mods.includes('quick')?.28:.56}
 function heatCost(mods){return Math.max(2,Math.round((11+mods.length*4)*(mods.includes('cheap')?.38:1)))}
+const ELEMENT_MODS=Object.freeze({as_fire:'fire',as_storm:'storm',as_stone:'stone'});
+function chosenElement(mods=[],fallback='fire'){for(let i=mods.length-1;i>=0;i--)if(ELEMENT_MODS[mods[i]])return ELEMENT_MODS[mods[i]];return fallback}
 function repetitions(mods){return mods.includes('triple')?3:mods.includes('double')?2:1}
 function eligibleOffers(state,player=0){
  const ids=state.actors[player].runes,existing=new Set(ids),pool=RUNES.filter(r=>!existing.has(r.id));
@@ -110,6 +132,7 @@ function compilePreview(ids){const info=description(ids);return info.lines.lengt
 
 
 
+
 const W=400,H=620,STEP=1/60,ROUND_SECONDS=25;
 const WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
 
@@ -118,9 +141,9 @@ const mag=(x,y)=>Math.hypot(x,y)||1;
 function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296}
 function has(a,k){return a.runes.includes(k)}
 function stats(a){const m=mage(a.mageId);return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power,reload:.56*m.reload,shield:34*m.shield}}
-function actor(id,x,y,runes,mageId='kindle'){return {id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0}}
+function actor(id,x,y,runes,mageId='kindle'){return {id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0}}
 function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId);o.hp=stats(o).max;return o}
-function makeMatch(seed=0x718abc,first='kindle',second='pebble'){const s={version:3,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],draws:0,lastOutcome:'',actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
+function makeMatch(seed=0x718abc,first='kindle',second='pebble'){const s={version:4,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 function offers(s){return eligibleOffers(s)}
 // Choosing a rune opens the working table. Players may reorder before returning to battle.
 function chooseRune(s,id,replaceIndex=null){
@@ -156,12 +179,29 @@ function harm(s,a,amount,from,depth=0){
  if(blocked>0&&before>0&&a.shield===0)emit(s,'on_break',a.id,{from},depth);
  fx(s,'hit',a.x,a.y);return d;
 }
+function markTarget(s,target,element,source,depth=0){
+ if(!isElement(element)||target.hp<=0)return null;
+ const previous=target.markLife>0?target.mark:'';
+ const reaction=target.reactionCd<=0?reactionFor(previous,element):null;
+ target.mark=element;target.markLife=3.8;
+ if(!reaction)return null;
+ target.reactionCd=.9;
+ const attacker=s.actors[source];
+ if(attacker){attacker.reactionsDone++;s.elementCombos[source]++}
+ if(reaction.shield)target.shield=Math.max(0,target.shield-reaction.shield);
+ if(reaction.bonus)harm(s,target,reaction.bonus,source,Math.min(3,depth+1));
+ if(reaction.slow)target.slow=Math.max(target.slow,reaction.slow);
+ if(reaction.heat)target.heat=Math.min(HEAT_LIMIT,target.heat+reaction.heat);
+ if(reaction.push&&attacker){const d=mag(target.x-attacker.x,target.y-attacker.y);move(target,(target.x-attacker.x)/d*reaction.push,(target.y-attacker.y)/d*reaction.push)}
+ fx(s,'react_'+reaction.id,target.x,target.y);
+ return reaction.id;
+}
 function receiveHeal(s,a,amount,depth=0){const old=a.hp;a.hp=Math.min(stats(a).max,a.hp+amount);const delta=a.hp-old;if(delta>0){emit(s,'on_heal',a.id,{},depth);fx(s,'heal',a.x,a.y)}return delta}
 function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
  if(s.shots.length>=80)return false;
- const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style;const v=(style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1),speed=Number.isFinite(v)?v:252;
+ const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style,element=options.element||base.school;const v=(style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1),speed=Number.isFinite(v)?v:252;
  s.shots.push({x,y,vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,owner:a.id,
-  style,damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:(options.far?1.8:1.15)*(style==='arc'?.68:style==='rock'?1.2:style==='wave'?.65:1),
+  style,element,damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:(options.far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1),
   bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0});
  fx(s,'shoot',x,y);return true;
 }
@@ -196,13 +236,13 @@ function act(s,a,action,mods,ev){
  const other=s.actors[1-a.id],m=new Set(mods),strong=m.has('strong')?1.6:1,reach=m.has('far')?1.5:1;
  const angle=a.face+(m.has('reverse')?Math.PI:0),depth=ev.depth+1;
  switch(action){
- case 'ball':spawnShot(s,a,angle,a.x,a.y,{strong:m.has('strong'),far:m.has('far'),bounce:m.has('bounce'),drain:m.has('drain'),wide:m.has('wide'),fastshot:m.has('fastshot'),depth});break;
+ case 'ball':spawnShot(s,a,angle,a.x,a.y,{element:chosenElement(mods,mage(a.mageId).school),strong:m.has('strong'),far:m.has('far'),bounce:m.has('bounce'),drain:m.has('drain'),wide:m.has('wide'),fastshot:m.has('fastshot'),depth});break;
  case 'heal':receiveHeal(s,a,7*strong,depth);break;
  case 'armor':a.shield=Math.min(80,a.shield+11*strong);fx(s,'shield',a.x,a.y);break;
- case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach){const d=harm(s,other,11*strong,a.id,depth);if(d>0)emit(s,'on_hit',a.id,{},depth)}fx(s,'overload',a.x,a.y);break;
+ case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach){const d=harm(s,other,11*strong,a.id,depth);if(d>0){markTarget(s,other,chosenElement(mods,mage(a.mageId).school),a.id,depth);emit(s,'on_hit',a.id,{},depth)}}fx(s,'overload',a.x,a.y);break;
  case 'blink':{const step=38*reach*(m.has('reverse')?-1:1);move(a,Math.cos(a.face)*step,Math.sin(a.face)*step);fx(s,'dash',a.x,a.y);break}
  case 'clone':if(s.echoes.length<12)s.echoes.push({owner:a.id,x:a.x,y:a.y,life:m.has('lasting')?3.5:2.2,cast:.25,shots:2,extra:m.has('strong')});fx(s,'dash',a.x,a.y);break;
- case 'mine':if(s.mines.length<14)s.mines.push({x:a.x,y:a.y,owner:a.id,life:m.has('lasting')?6:3.5,damage:14*strong,r:m.has('wide')?57:40});fx(s,'mine',a.x,a.y);break;
+ case 'mine':if(s.mines.length<14)s.mines.push({x:a.x,y:a.y,owner:a.id,life:m.has('lasting')?6:3.5,damage:14*strong,element:chosenElement(mods,mage(a.mageId).school),r:m.has('wide')?57:40});fx(s,'mine',a.x,a.y);break;
  case 'wall':if(s.barriers.length<10){let bx=a.x+Math.cos(a.face)*34*reach,by=a.y+Math.sin(a.face)*34*reach;if(canStand(bx,by,14)&&!blocking(s,bx,by,15))s.barriers.push({owner:a.id,x:bx,y:by,r:m.has('wide')?23:15,life:m.has('lasting')?4:2.5})}fx(s,'shield',a.x,a.y);break;
  case 'push':{const dx=other.x-a.x,dy=other.y-a.y;if(mag(dx,dy)<100*reach){const k=mag(dx,dy);move(other,dx/k*30*strong*(m.has('fastshot')?1.3:1),dy/k*30*strong*(m.has('fastshot')?1.3:1))}fx(s,'dash',other.x,other.y);break}
  case 'slow':other.slow=Math.max(other.slow,m.has('lasting')?3.4:2);fx(s,'hit',other.x,other.y);break;
@@ -240,7 +280,7 @@ function tick(s,input={},dt=STEP,otherInput=null){
  if(s.phase!=='fight')return s;dt=STEP;safeWorld=s;s.ticks++;s.remaining=Math.max(0,s.remaining-dt);
  for(const a of s.actors){
   a.heat=Math.max(0,a.heat-7*dt);a.overloadCd=Math.max(0,a.overloadCd-dt);
-  a.haste=Math.max(0,a.haste-dt);a.slow=Math.max(0,a.slow-dt);
+  a.haste=Math.max(0,a.haste-dt);a.slow=Math.max(0,a.slow-dt);a.markLife=Math.max(0,a.markLife-dt);a.reactionCd=Math.max(0,a.reactionCd-dt);if(a.markLife===0)a.mark='';
   if(s.ticks%120===0)emit(s,'on_clock',a.id);
   if(s.ticks%60===0&&Math.hypot(a.x-s.actors[1-a.id].x,a.y-s.actors[1-a.id].y)<78)emit(s,'on_close',a.id);
   if(a.heat>=HEAT_LIMIT&&a.overloadCd<=0)addHeat(s,a,0);
@@ -256,7 +296,7 @@ if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
 if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
- const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn')a.heat=Math.min(100,a.heat+2);if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
+ const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn')a.heat=Math.min(100,a.heat+2);if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
  fx(s,'impact_'+(q.style||'orb'),nx,ny);s.shots.splice(j,1);continue
 }
 const wall=distWall(nx,ny,q.r)||blocking(s,nx,ny,q.r),edge=nx<19||nx>W-19||ny<21||ny>H-21;
@@ -265,7 +305,7 @@ if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='mis
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
- if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r){const d=harm(s,target,mine.damage,mine.owner);if(d>0)emit(s,'on_hit',mine.owner);fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
+ if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
  else if(mine.life<=0)s.mines.splice(j,1);
  }
  for(let j=s.barriers.length-1;j>=0;j--){s.barriers[j].life-=dt;if(s.barriers[j].life<=0)s.barriers.splice(j,1)}
@@ -291,13 +331,13 @@ else{s.phase='draft';s.pick=offers(s)}
 }
 return s}
 function validState(s){
- return !!s&&s.version===3&&['fight','draft','build','result'].includes(s.phase)
- &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&a.runeTimers&&typeof a.runeTimers==='object')
+ return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
+ &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&Array.isArray(s.eventQueue)
- &&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&n<=4);
+ &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&n<=4);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=2;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=3;
 const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
@@ -347,7 +387,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:2,mages:s.mages,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:3,mages:s.mages,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
