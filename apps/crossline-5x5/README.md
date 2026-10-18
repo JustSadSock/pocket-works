@@ -54,3 +54,13 @@ Tap any board cell during a normal planning phase to cycle **• watch → ! dan
 Tap the **♪** icon in the menu or **Звук и управление** from pause for volume (0–100%), independent mute, animation and haptic toggles. Settings persist per app, respect system reduced motion, and call real audio/haptic APIs.
 
 QA: 45 isolated gallery scenes; `tests/learning.test.mjs` and `qa/learning.spec.js` verify tutorial logic, rule-engine combat, marks and real persisted controls.
+
+## Финальные проверки v1.7.1
+
+QA-галерея: 45 настоящих экранов × 2 размера (390×844 и 1280×800), 90 PNG-артефактов с SHA-256, проверки выхода за экран, ошибок и повторных идентичных снимков статичных состояний. Снимки предназначены для автоматической проверки стабильности и ревью, не являются утверждёнными человеком визуальными эталонами.
+
+Стресс-тест: 20 000 полных seeded-партий, инварианты раундов/записей и совпадение с серверными версиями v1/v2. Отдельно оцениваются все уровни ИИ, 150 комнат и недопустимые команды.
+
+Real Edge QA: .github/workflows/arena-pocketnet-e2e.yml запускает настоящий локальный Worker с SQLite Durable Object и двумя WebSocket-клиентами. Скрипт apps/crossline-5x5/qa/pocketnet-live.mjs проверяет скрытые планы, реконнект, сдачу, реванш и выход. Включены Chromium/WebKit mobile/browser QA и экспорт архивов.
+
+Не подтверждается исключительно автоматизированным тестом: публикация production Cloudflare, реальное 7-дневное истечение сессии, ощущения вибрации и звука на физических устройствах.
