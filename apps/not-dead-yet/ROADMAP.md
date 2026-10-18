@@ -278,6 +278,26 @@ hiding simplistic assets.
       inspection, weight in doors, subtle visual reaction on enemy hits,
       readable feedback on reaching a new depth. No overlay spam.
 
+### 2.1.4 — screenshot-driven review and framing correction (shipped)
+- [x] Universal Pocket Works QA executed the real PWA in desktop Chromium,
+      mobile Chromium, desktop WebKit and mobile WebKit with full screenshot
+      evidence; all four initial viewport/browser visual checks passed.
+- [x] GitHub Actions ran the entire app Node regression suite (89/89 before
+      fixes, 91/91 after), no suite skipped in the CPU job.
+- [x] Reviewed actual screenshots to identify phone center-screen startup
+      banner, overlarge blocky gun, and long hallway repetition.
+- [x] Removed desktop keyboard instruction from mobile opening, moved
+      transient text away from the center, narrowed the portrait weapon rig
+      and introduced a faceted revolver barrel/bore.
+- [x] Added Playwright first-frame composition, real PNG screenshot pixel
+      variance, deterministic room screenshot and cache regression tests;
+      isolated the visual-regression suite for targeted reruns.
+- [ ] Record final outcomes of the complete interactive Playwright journey
+      and dedicated screenshot suite; see
+      [VISUAL_QA_REPORT_2026-10-19.md](./VISUAL_QA_REPORT_2026-10-19.md).
+- [ ] Address visually repetitive hallways and lighting after fixing
+      actual measured art issues, not by adding generic bloom or haze.
+
 ### 2.1.7 — Finishing pass, usability and performance (P1)
 - [ ] Unify first-person screen composition, reticle, inventory, upgrade
       choices and prompts around **focus-first** UX; fewer simultaneous
