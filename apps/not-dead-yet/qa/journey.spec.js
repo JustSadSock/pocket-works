@@ -103,3 +103,34 @@ test('1.3 hinged Soviet interior door opens, blocks passage, saves and restores'
  await expect.poll(async()=> (await state(page)).doors.find(d=>d.room===room).angle).toBeGreaterThan(1.4);
  expect(errors).toEqual([]);
 });
+
+
+test('1.4 unfamiliar furniture can be remembered, reduces panic and survives resume',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ const room=await page.evaluate(()=>{
+  // A lower room is safely behind the protagonist's initial north-facing gaze.
+  const r=window.__PW_TEST_STATE__.doors;
+  return r.find(x=>x.gate.z===14)?.room
+ });
+ expect(room).toBeTruthy();
+ expect(await page.evaluate(room=>window.__PW_TEST_HOOKS__.triggerUnseenShift(room),room)).toBe(true);
+ await expect.poll(async()=>(await state(page)).memoryTraces.find(x=>x.type===room).active).toBe(true);
+ expect(await page.evaluate(room=>window.__PW_TEST_HOOKS__.teleportNearMemory(room),room)).toBe(true);
+ // The familiar family object is collected first, then the false memory is confronted.
+ await page.keyboard.press('e');
+ await expect.poll(async()=> (await state(page)).inventory.length).toBe(1);
+ await expect(page.locator('#aimHint')).toContainText('ВСПОМНИТЬ');
+ await page.keyboard.press('e');
+ await expect.poll(async()=>(await state(page)).memoryTraces.find(x=>x.type===room).active).toBe(false);
+ await page.locator('#pause').click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#continue').click();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
+ expect((await state(page)).memoryTraces.find(x=>x.type===room).active).toBe(false);
+ expect((await state(page)).layoutVersion).toBe(2);
+ expect(errors).toEqual([]);
+});

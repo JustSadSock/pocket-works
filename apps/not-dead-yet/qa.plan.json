@@ -11,7 +11,8 @@
         "tests/chapter.test.mjs",
         "tests/sensory.test.mjs",
         "tests/textures.test.mjs",
-        "tests/doors.test.mjs"
+        "tests/doors.test.mjs",
+        "tests/memory.test.mjs"
       ]
     },
     {

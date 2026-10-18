@@ -44,6 +44,17 @@ A confused, visually impaired elderly protagonist believes he is walking around 
 - [ ] High-quality authored models and more believable reflective glass and translucent cloth.
 - [ ] A real apartment layout with additional tighter and individualized rooms and a physically animated front exit door.
 
+## 1.4.0 — Spatial memory and lived-in furnishing (implemented)
+- [x] Seeded asymmetric room dimensions, stable shared hall/entrances, safe reachability for all four objectives.
+- [x] Explicit `layoutVersion`: previous 1.1–1.3 saves load with their exact legacy geometry.
+- [x] Four embodied perceptual disturbances: inverted portrait, doubled kitchen crockery, missing mirror reflection and unfamiliar television.
+- [x] Real `E`/touch recognition action near a known physical object, stress recovery, saved remembered-state and a delay until the next rearrangement.
+- [x] Higher-detail furnishings: upholstered sofa, fringed Soviet carpet, paneled wardrobe, enamel fridge, foyer shoes and radiator.
+- [x] Dynamic-on-rebuild planar silhouettes projected onto plaster walls from high objects and room lamps; no claim of full GPU shadow maps.
+- [x] 500 seeded floor-plan regression, legacy save tests, 100 memory/recognition cases and Playwright recognition journey.
+- [ ] Physically based soft GPU shadow mapping from torch and every bulb, GPU frame profiling at real device resolution.
+- [ ] Narrative triggers with original spoken memories, photograph content variations and a more intricate apartment topology beyond four primary rooms.
+
 ## 1.3 — Memory and perception
 - Context-sensitive changes: family pictures reverse, bathroom door leads elsewhere, furniture shifts while unseen, radios recite distorted memories, doors become unfamiliar.
 - Explicit safety invariants: all accessible objectives and exit remain reachable; no geometry changes inside view, player capsule, or an occupied prop.

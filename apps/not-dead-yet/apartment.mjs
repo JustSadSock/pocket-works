@@ -5,16 +5,30 @@ export const HOME={x:15.5,z:12.5};
 export const LABELS={living:'Гостиная',kitchen:'Кухня',bedroom:'Спальня',bathroom:'Ванная',hall:'Прихожая'};
 export const ITEMS=[{id:'album',room:'living',label:'Семейный альбом',note:'Лица знакомые. Имена не вспоминаются.'},{id:'pills',room:'bathroom',label:'Таблетница',note:'Сегодня среда? Дни недели перемешались.'},{id:'photo',room:'bedroom',label:'Фотография',note:'Она улыбалась здесь, раньше.'},{id:'keys',room:'kitchen',label:'Ключи от двери',note:'Ключи всегда были на кухне. Кажется.'}];
 const TYPES=['living','kitchen','bedroom','bathroom'];
-const RECTS=[{x0:2,x1:13,z0:2,z1:10,doorZ:10},{x0:17,x1:27,z0:2,z1:10,doorZ:10},{x0:2,x1:13,z0:14,z1:21,doorZ:14},{x0:17,x1:27,z0:14,z1:21,doorZ:14}];
+const LEGACY_RECTS=[{x0:2,x1:13,z0:2,z1:10,doorZ:10},{x0:17,x1:27,z0:2,z1:10,doorZ:10},{x0:2,x1:13,z0:14,z1:21,doorZ:14},{x0:17,x1:27,z0:14,z1:21,doorZ:14}];
+// Irregular flats preserve the same safe corridor entrances, but walls and room
+// proportions differ. Older v1.1–v1.3 saves use the exact legacy coordinates.
+export function floorplan(seed,legacy=false){
+ if(legacy)return LEGACY_RECTS.map(r=>({...r}));
+ return [
+  {x0:2+hash(seed,14)%2,x1:13,z0:2+hash(seed,21)%2,z1:10,doorZ:10},
+  {x0:17,x1:26+hash(seed,31)%2,z0:2+hash(seed,37)%2,z1:10,doorZ:10},
+  {x0:2+hash(seed,41)%2,x1:13,z0:14,z1:20+hash(seed,43)%2,doorZ:14},
+  {x0:17,x1:26+hash(seed,47)%2,z0:14,z1:20+hash(seed,53)%2,doorZ:14}
+ ]
+}
 export const hash=(...numbers)=>{let v=2166136261;for(let n of numbers){v=Math.imul(v^(n|0),16777619);v^=v>>>13}return (v^(v>>>16))>>>0};
 const rng=(seed)=>{let n=seed>>>0;return()=>{n+=0x6D2B79F5;let z=n;z=Math.imul(z^(z>>>15),z|1);z^=z+Math.imul(z^(z>>>7),z|61);return ((z^(z>>>14))>>>0)/4294967296}};
 const inside=(x,z)=>x>=0&&x<W&&z>=0&&z<H;
 export class Apartment {
  constructor(seed=1,data=null){
-  this.seed=seed>>>0;this.epoch=0;this.changes=0;this.lastChange=null;this.terrainRevision=0;this.nextShift=5;
+  this.seed=seed>>>0;this.layoutVersion=data?.layoutVersion===2||!data?2:1;this.epoch=0;this.changes=0;this.lastChange=null;this.terrainRevision=0;this.nextShift=5;
   const types=[...TYPES],rand=rng(hash(seed,177));
   for(let i=types.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[types[i],types[j]]=[types[j],types[i]]}
-  this.rooms=RECTS.map((r,i)=>({...r,type:types[i],phase:data?.phases?.[i]??0,lastSeen:0,lastChanged:-15}));
+  this.rooms=floorplan(this.seed,this.layoutVersion===1).map((r,i)=>({
+   ...r,type:types[i],phase:data?.phases?.[i]??0,
+   recognizedPhase:data?.recognized?.[types[i]]??0,lastSeen:0,lastChanged:-15
+  }));
   // Doors begin open for old saves and newly generated rooms; closing is optional.
   this.doorStates=Object.fromEntries(this.rooms.map(r=>{const opened=data?.doors?.[r.type]!==false;
    return [r.type,{type:r.type,open:opened,angle:opened?MAX_SWING:0}]
@@ -56,6 +70,11 @@ export class Apartment {
     add(r,'mirror',width-1.25,1.15,.84,.08,1.1,false);add(r,'toilet',width-2,depth-1.4,.67,.85,.64)
    }
   }
+  // Foyer details carry recognizable domestic context but never obstruct exits.
+  out.push({type:'doormat',room:'hall',x:15.5,z:19.4,w:1.8,d:.95,h:.02,solid:false});
+  out.push({type:'shoerack',room:'hall',x:14.15,z:19.65,w:.44,d:.65,h:.8,solid:false});
+  out.push({type:'coatstand',room:'hall',x:16.25,z:18.6,w:.36,d:.36,h:2,solid:false});
+  out.push({type:'radiator',room:'hall',x:14.35,z:9.3,w:.32,d:1.2,h:.75,solid:false});
   out.push({type:'door',room:'hall',x:15.5,z:21,w:2.2,d:.2,h:2.85,solid:false});return out
  }
  canStand(x,z,r=.22){
@@ -116,6 +135,23 @@ export class Apartment {
   const fallback={...i,x:gate.x+.5,z:insideZ};
   this.itemCache.set(id,fallback);return fallback
  }
+ // The memory trace is near a real collectible: reaching it never requires a
+ // second collision graph or a procedurally placed, unreachable prop.
+ memorySpot(type){const r=this.room(type);if(!r)return null;
+  const item=ITEMS.find(i=>i.room===type);return item?this.itemPosition(item.id):this.point(type)}
+ memoryState(type){const r=this.room(type);if(!r)return null;
+  const active=r.phase>0&&r.recognizedPhase!==r.phase;
+  const kind={living:'wrong-television',kitchen:'doubled-crockery',bedroom:'reversed-photo',bathroom:'missing-reflection'}[type];
+  return{type,phase:r.phase,active,kind,recognized:r.recognizedPhase===r.phase}
+ }
+ recognize(type){const r=this.room(type),state=this.memoryState(type);
+  if(!r||!state.active)return {ok:false};
+  r.recognizedPhase=r.phase;
+  this.nextShift+=5;this.epoch++;
+  // Render static family props with their familiar details again.
+  this.terrainRevision++;
+  return{ok:true,type,kind:state.kind}
+ }
  location(x,z){for(const r of this.rooms)if(x>=r.x0&&x<=r.x1+1&&z>=r.z0&&z<=r.z1+1&&this.cell(Math.floor(x),Math.floor(z))===2)return LABELS[r.type];return LABELS.hall}
  visible(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d*8));for(let i=1;i<n;i++){const t=i/n;if(!this.pass(Math.floor(ax+(bx-ax)*t),Math.floor(az+(bz-az)*t)))return false}
   for(const r of this.rooms){if(doorOccludesRay(ax,az,bx,bz,this.door(r),r.z0<11?-1:1,this.doorStates[r.type].angle))return false}
@@ -147,7 +183,9 @@ export class Apartment {
   let at=K(...end),origin=K(...start);while(prev.get(at)!==origin&&at!==origin){at=prev.get(at);if(!at)return null}
   if(at===origin)return{x:tx,z:tz};const [x,z]=at.split(',').map(Number);return{x:x+.5,z:z+.5}
  }
- save(){return{seed:this.seed,phases:this.rooms.map(r=>r.phase),doors:Object.fromEntries(Object.entries(this.doorStates).map(([k,v])=>[k,v.open]))}}
- fingerprint(){return this.rooms.map(r=>r.type+':'+this.door(r).x+':'+r.phase).join('|')}
+ save(){return{seed:this.seed,layoutVersion:this.layoutVersion,phases:this.rooms.map(r=>r.phase),
+  recognized:Object.fromEntries(this.rooms.map(r=>[r.type,r.recognizedPhase])),
+  doors:Object.fromEntries(Object.entries(this.doorStates).map(([k,v])=>[k,v.open]))}}
+ fingerprint(){return this.rooms.map(r=>r.type+':'+this.door(r).x+':'+r.phase+':'+r.x0+':'+r.x1+':'+r.z0+':'+r.z1).join('|')}
 }
 export function validateApartment(seed){const a=new Apartment(seed);if(!a.canStand(HOME.x,HOME.z))return false;return [...ITEMS.map(i=>a.itemPosition(i.id)),HOME].every(p=>a.canStand(p.x,p.z)&&a.findStep(HOME.x,HOME.z,p.x,p.z))}
