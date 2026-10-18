@@ -254,7 +254,11 @@ export function createWorld(canvas, initialSeed) {
   ]),12,.038,5,false);
   const sacGeo = new THREE.IcosahedronGeometry(.19,1);
   const sacMat = new THREE.MeshStandardMaterial({color:0x9c4a54,roughness:.41,metalness:0,emissive:0x270b0f,emissiveIntensity:.25});
+  // Ground warnings read differently at a glance, not just through hue.
   const hazardGeo=new THREE.IcosahedronGeometry(.43,1);
+  const acidPoolGeo=new THREE.CircleGeometry(.43,20).rotateX(-Math.PI/2);
+  const marrowSinkGeo=new THREE.TorusGeometry(.33,.085,7,18).rotateX(-Math.PI/2);
+  const neuralDischargeGeo=new THREE.TorusGeometry(.33,.054,7,18).rotateX(-Math.PI/2);
    const hazardMat=new THREE.MeshStandardMaterial({color:0xd4d07d,roughness:.36,
      transparent:true,opacity:.87,emissive:0x484c2e,emissiveIntensity:.48,depthWrite:false});
    const organFeatureGeo=new THREE.IcosahedronGeometry(.36,1);
@@ -627,9 +631,11 @@ export function createWorld(canvas, initialSeed) {
       sacsMesh.instanceMatrix.needsUpdate=true;group.add(sacsMesh);
     }
     if(hazards.length){
-      const pools=new THREE.InstancedMesh(hazardGeo,hazardMat,hazards.length);
+      const hazardShape=stage===2?acidPoolGeo:stage===3?marrowSinkGeo:stage>=4?neuralDischargeGeo:hazardGeo;
+      const pools=new THREE.InstancedMesh(hazardShape,hazardMat,hazards.length);
       hazards.forEach(([x,z],i)=>{temp.position.set(x,.067,z);temp.rotation.set(0,rand(x,z,seed)*6.28,0);
-        temp.scale.set(stage===3?.84:1,.085,stage===3?.84:1);temp.updateMatrix();pools.setMatrixAt(i,temp.matrix);});
+        temp.scale.set(stage===3?.9:1,stage===2?1:stage===3?1:stage>=4?1:.085,stage===3?.9:1);
+        temp.updateMatrix();pools.setMatrixAt(i,temp.matrix);});
       pools.instanceMatrix.needsUpdate=true;group.add(pools);
     }
     if(features.length){
