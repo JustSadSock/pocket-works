@@ -1,11 +1,11 @@
 const CACHE_PREFIX='meat-exe-';
-const CACHE_NAME='meat-exe-v1.2.0';
-const APP_VERSION='1.2.0';
+const CACHE_NAME='meat-exe-v1.3.0';
+const APP_VERSION='1.3.0';
 const RELEASE_DATE='2026-10-18';
 const RELEASE_NOTES=[
-'Точная стрельба с блокировкой попаданий стенами и собственным разбросом дробовика.',
-'Отдача, вспышки, кровавые трассеры и реакция врагов на попадания.',
-'Авторский многослойный процедурный звук плоти, кости и оружейного железа.'
+'Процедурные анатомические камеры, кольцевые сосуды и обходные пути.',
+'Разрушаемые стрельбой затворы: новый путь, фрагмент и иммунная реакция.',
+'Устойчивые сохранения открытых проходов и регрессии 1000 миров.'
 ];
 const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES))));
