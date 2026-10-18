@@ -380,7 +380,7 @@ try{
    start:()=>start(),world:()=>world,player:()=>player,state:()=>window.__PW_TEST_STATE__,
    setPosition:(x,z)=>{if(!world.canStand(x,z))return false;player.x=x;player.z=z;return true},
    advance:(seconds)=>{if(phase==='play')simulation(seconds)},
-   shoot,collect:pickup,upgrade:chooseUpgrade,
+   shoot,collect:pickup,upgrade:chooseUpgrade,nearestDrop:()=>nearDrop(),
    spawn:()=>{spawnEnemy();return enemies.length},
    save:persist,
    interact,
