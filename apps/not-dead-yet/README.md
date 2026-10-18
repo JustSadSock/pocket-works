@@ -1,4 +1,4 @@
-# NOT DEAD YET — бесконечный хоррор-рогалик (v2.1.3)
+# NOT DEAD YET — бесконечный хоррор-рогалик (v2.1.4)
 
 **Основной режим:** старик с частичной потерей зрения блуждает по бесконечным
 комнатам тесной хрущёвки, которая меняется вне поля зрения. Не нужно собирать
@@ -26,6 +26,8 @@
   её функциональность не смешивается с главным roguelike-режимом.
 
 Проверка: `node --test apps/not-dead-yet/tests/*.test.mjs`.
+Результат реальной Chromium/WebKit QA и визуальные дефекты:
+[VISUAL_QA_REPORT_2026-10-19.md](./VISUAL_QA_REPORT_2026-10-19.md).
 Browser QA: `apps/not-dead-yet/qa/roguelike.spec.js` и
 `apps/not-dead-yet/qa/journey.spec.js` (старая глава).
 
