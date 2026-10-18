@@ -17,9 +17,9 @@ test('breaching tissue provokes staged warning, then gastric sentinel response',
  assert.ok(s.heat>=IMMUNE_EVENTS.guardian.minHeat);
  let ev=tick(s,.016);assert.equal(ev.kind,'warning');assert.equal(ev.event,'guardian');
  assert.ok(s.warning>2);assert.equal(s.responses,0);
- for(let i=0;i<180;i++)ev=tick(s,.016);
+ let dispatch=null;for(let i=0;i<180;i++){ev=tick(s,.016);if(ev?.kind==='dispatch')dispatch=ev;}
  assert.ok(s.responses===1,'immunity dispatch should be counted once');
- assert.equal(ev?.kind,'dispatch');assert.deepEqual(ev.units,['warden']);
+ assert.equal(dispatch?.kind,'dispatch');assert.deepEqual(dispatch.units,['warden']);
  assert.deepEqual(s.guardianStages,[2]);assert.ok(s.cooldown>=16);
  assert.equal(tick(s,.1),null);
 });
