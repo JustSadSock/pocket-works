@@ -3,7 +3,10 @@ import {test,expect} from '@playwright/test';
 // Run with the app's regular Playwright harness, not in normal user mode.
 // Captures artifacts for real browser review; does not claim phone GPU validation.
 const origin='/apps/not-dead-yet/?qa=1';
-test('three reproducible visual references render without WebGL errors',async({page})=>{
+test('five reproducible visual reference seeds render in Chromium/WebKit',async({page})=>{
+ // Twenty genuine WebGL screenshots per project can take over 45s under
+ // software GPU emulation; only the screenshot matrix needs a longer budget.
+ test.setTimeout(180000);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(origin,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.__PW_ROGUE_QA__?.visual&&window.__PW_TEST_STATE__?.renderer3D,{timeout:20000});
