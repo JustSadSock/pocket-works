@@ -1,7 +1,7 @@
 // ТЯГА: deterministic, fixed-step gravity duel. World width 360, adaptive height.
 export const STEP = 1 / 120;
 export const WIN_SCORE = 5;
-export const HOLD_RAMP = 2.2;
+export const HOLD_RAMP = 1.4;
 export const ARENAS = [
   { id: "open", name: "ПУСТОТА", detail: "Чистая дуэль перегрузок" },
   { id: "pins", name: "РИКОШЕТ", detail: "Отражатели и ускорители" },
@@ -9,7 +9,7 @@ export const ARENAS = [
 ];
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const R = 12, GOAL = 26;
-const BASE_GRAVITY = 920, PEAK_GRAVITY = 2200, MAX_SPEED = 1420;
+const BASE_GRAVITY = 340, PEAK_GRAVITY = 930, MAX_SPEED = 1420;
 const MAX_COMBO = 4;
 
 export function createGame(arena = "open", height = 720) {
@@ -35,7 +35,7 @@ export function resizeGame(g, height) {
 export function serve(g) {
   g.rounds += 1;
   const direction = g.rounds % 2 ? 1 : -1;
-  g.ball = { x: 180, y: g.h * .5, vx: direction * 62, vy: 0, r: R };
+  g.ball = { x: 180, y: g.h * .5, vx: direction * 110, vy: 0, r: R };
   g.gravity = 0; g.owner = -1; g.hold = 0; g.charge = 0;
   g.lastCounter = 0; g.elapsed = 0; g.lastImpact = -10;
   g.lastCollision = ""; g.lastCollisionAt = -10; g.combo = 0;
@@ -74,12 +74,12 @@ export function getBumpers(g) {
 export function getBoosters(g) {
   const h = g.h;
   if (g.arena === "pins") return [
-    { x: 38, y: h * .56, w: 104, h: 17, bias: 1 },
-    { x: 218, y: h * .42, w: 104, h: 17, bias: -1 }
+    { x: 172, y: h * .58, w: 115, h: 17, bias: 1 },
+    { x: 105, y: h * .42, w: 115, h: 17, bias: -1 }
   ];
   if (g.arena === "swing") return [
-    { x: 42, y: h * .40, w: 97, h: 17, bias: 1 },
-    { x: 221, y: h * .60, w: 97, h: 17, bias: -1 }
+    { x: 105, y: h * .40, w: 115, h: 17, bias: -1 },
+    { x: 171, y: h * .60, w: 115, h: 17, bias: 1 }
   ];
   return [];
 }
