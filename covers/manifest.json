@@ -3489,7 +3489,7 @@
     "lastAttemptAt": "2026-10-18T12:25:45.082Z"
   },
   "perekos": {
-    "revision": "4225da987c54f180f32608806e3c35080ab7a1df",
+    "revision": "37365aa5214b3cfa0c13088fba479fffbf7954c2",
     "qualityScore": 57,
     "visionScore": null,
     "prepared": false,
@@ -3503,11 +3503,11 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "afedb0f4912791e5aaf6aca5e015965f141e28b430bc18933adad6a7b7bca723",
+    "sha256": "336abd3668a2ecc6b92ab927c7b3663975fab600b1358cb93c812336082e363e",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4225da987c54f180f32608806e3c35080ab7a1df",
-    "lastAttemptAt": "2026-10-18T12:33:44.631Z"
+    "lastAttemptRevision": "37365aa5214b3cfa0c13088fba479fffbf7954c2",
+    "lastAttemptAt": "2026-10-18T13:04:55.854Z"
   }
 }
