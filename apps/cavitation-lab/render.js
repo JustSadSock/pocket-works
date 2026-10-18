@@ -168,7 +168,7 @@ export function renderScene(ctx,w,h,solution,point,phase,elapsed) {
    }
  }
  // Scale bar, tied to actual starting radius (one initial R0).
- const barW=baseRadius,barY=Math.min(h-(w<=830?131:170),cy+baseRadius*1.72);
+ const barW=baseRadius,barY=Math.min(h-(w<=830?153:170),cy+baseRadius*1.72);
  ctx.strokeStyle='#d1ecdc99';ctx.lineWidth=2;
  line(ctx,cx-barW/2,barY,cx+barW/2,barY);line(ctx,cx-barW/2,barY-4,cx-barW/2,barY+4);line(ctx,cx+barW/2,barY-4,cx+barW/2,barY+4);
  ctx.fillStyle='#d1ecdcaa';ctx.font='10px Georgia';ctx.textAlign='center';
