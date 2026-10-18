@@ -8,6 +8,7 @@ import {initialEnemyIntent,advanceEnemyIntent,interruptIntent,enemyTerrainReacti
 import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal} from './biomes.js';
 import {drawGrafts,applyGraft,graftForId,weaponBuild,dashCooldown,moveSpeed,incomingDamage,membraneDamage,immuneHeatGain,hasGraft,maxWeaponIndex} from './biobuilds.js';
 import {GENES,routeOptions,applyRoute,sanitizeArchive,unlockGene,equipGene,applyGene,earnEchoes} from './runPaths.js';
+import {guardianForWave,isGuardian,guardianReady,guardianSpawnResolved,guardianDamage,guardianAction} from './guardians.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -47,7 +48,8 @@ const ui={
   mute:$('soundMenu'),pauseMute:$('soundPause'),resumeBtn:$('resumeBtn'),
   qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue'),
   draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel'),
-  routeFork:$('routeFork'),archiveToggle:$('archiveToggle'),archivePanel:$('archivePanel'),archiveOptions:$('archiveOptions'),archiveBalance:$('archiveBalance')
+  routeFork:$('routeFork'),archiveToggle:$('archiveToggle'),archivePanel:$('archivePanel'),archiveOptions:$('archiveOptions'),archiveBalance:$('archiveBalance'),
+  guardian:$('guardianStatus'),guardianName:$('guardianName'),guardianFill:$('guardianFill')
 };
 function audioStart(){combatAudio.unlock();}
 function sound(kind){combatAudio.pulse(kind);}
@@ -91,6 +93,7 @@ function setMode(next){
   ui.touch.hidden=next!=='playing'||!touch;
   ui.pauseBtn.hidden=next!=='playing'||mouseLocked;
   ui.cross.hidden=next!=='playing';
+  ui.guardian.hidden=next!=='playing';
   if(next!=='playing'){shootHeld=false;keyFireHeld=false;gamepadFire=false;movement.x=movement.y=0;padMove.x=padMove.y=0;keys.clear();resetStick();accumulator=0;}
   if(next!=='playing'&&document.pointerLockElement===canvas)document.exitPointerLock?.();
   if(next==='menu'){
@@ -109,14 +112,17 @@ function newState(seed){
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
     ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
     grafts:[],biomass:0,pendingDraft:0,draftRevision:0,
-    routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null};
+    routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null,
+    guardianPending:0,guardianDefeated:[]};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
-  const max=type==='heart'?310:type==='warden'?222:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61;
+  const max=Object.values({1:guardianForWave(1),3:guardianForWave(3),4:guardianForWave(4)}).find(g=>g?.type===type)?.hp||
+    (type==='heart'?310:type==='warden'?222:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61);
   const id=nextId++;
-  return {id,type,x,z,hp:hp||max,maxHp:max,...initialEnemyIntent(type,id),
-    speed:type==='heart'?.8:type==='warden'?.76:type==='brute'?.86:type==='spitter'?1.14:type==='leech'?1.20:1.55,visual:world.makeEnemy(type,x,z)};
+  return {id,type,x,z,hp:hp??max,maxHp:max,...initialEnemyIntent(type,id),
+    facing:Math.atan2(state?.x-x||0,state?.z-z||0),
+    speed:type==='clot'?.82:type==='ossuary'?.74:type==='synapse'?1.07:type==='heart'?.8:type==='warden'?.76:type==='brute'?.86:type==='spitter'?1.14:type==='leech'?1.20:1.55,visual:world.makeEnemy(type,x,z)};
 }
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
@@ -131,8 +137,11 @@ function restore(raw){
   if(!world.isFloor(state.x,state.z)){state.x=base.x;state.z=base.z;}
   for(const e of s.enemies){
     if(!world.isFloor(e.x,e.z))continue;
-    state.enemies.push(makeEnemy(e.type,e.x,e.z,e.hp));
+    const mob=makeEnemy(e.type,e.x,e.z,e.hp);
+    if(Number.isFinite(e.facing))mob.facing=e.facing;
+    state.enemies.push(mob);
   }
+  world.setRouteMark?.(state.routeId);
   for(const p of s.pickups){
     if(world.isFloor(p.x,p.z))state.pickups.push({...p,visual:world.makePickup(p.x,p.z)});
   }
@@ -179,6 +188,8 @@ function startWave(number){
   }
   state.wave=number;state.waveTime=0;state.spawnClock=0;state.toSpawn=number===5?1:7+number*3;
   state.routeId='';state.routeWave=0;state.routeHazard=0;
+  state.guardianPending=guardianForWave(number)?number:0;
+  world.setRouteMark?.('');
   if(number===2)state.immune.heat=Math.max(state.immune.heat,18);
   if(number===5){setNotice('НЕРВНЫЙ УЗЕЛ · СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
   else {setNotice(biomeForWave(number).name+' · ВОЛНА '+number+'/05',2.8);sound('heart');}
@@ -197,7 +208,8 @@ function chooseSpawn(min=4,max=11){
   return choices[Math.floor(Math.random()*choices.length)];
 }
 function spawnUnit(type){
-  const p=chooseSpawn(type==='heart'||type==='warden'?5:3,type==='heart'||type==='warden'?9:11);
+  const p=chooseSpawn(type==='heart'||type==='warden'||isGuardian(type)?4.6:3,
+    type==='heart'||type==='warden'||isGuardian(type)?11:11);
   if(!p)return false;
   state.enemies.push(makeEnemy(type,p.x,p.z));
   return true;
@@ -249,14 +261,21 @@ function dropAt(x,z){
   state.pickups.push({x,z,type,visual:world.makePickup(x,z)});
 }
 function defeatEnemy(e){
-  world.splatter(e.x,e.z,e.type==='heart'?55:16);
+  world.splatter(e.x,e.z,e.type==='heart'?55:isGuardian(e.type)?35:16);
   world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
-  state.kills++;state.score+=e.type==='heart'?2500:e.type==='warden'?580:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
+  state.kills++;state.score+=isGuardian(e.type)?guardianForWave(state.wave)?.score||800:e.type==='heart'?2500:e.type==='warden'?580:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
   if(hasGraft(state,'blood_pump'))state.hp=Math.min(state.maxHp,state.hp+7);
   if(e.type!=='heart')provokeImmune(state.immune,'kill',state.wave);
   killUntil=clock+.2;ui.cross.classList.add('killed');
   if(e.type==='heart'){finish(true);return;}
+  if(isGuardian(e.type)){
+    state.guardianDefeated=[...new Set([...(state.guardianDefeated||[]),state.wave])];
+    state.biomass=Math.min(99,(state.biomass||0)+2);
+    state.hp=Math.min(state.maxHp,state.hp+12);
+    setNotice('СТРАЖ ПОВЕРЖЕН · +2 БИОМАССЫ',2.5);
+    sound('heart');snapshot();return;
+  }
   if(Math.random()<.36)dropAt(e.x,e.z);
   sound('kill');
 }
@@ -279,7 +298,7 @@ function shoot(){
     if(result.kind==='flesh'){
       const enemy=result.enemy;
       hits++;confirmedHits++;
-      const shotDamage=gun.damage;
+      const shotDamage=guardianDamage(enemy,gun.damage,state.x,state.z);
       enemy.hp-=shotDamage;
       enemy.hitFlash=.18;
       const cancelled=interruptIntent(enemy,shotDamage,weapon);
@@ -304,7 +323,9 @@ function shoot(){
           z:result.point.z+direction.z*1.30};
         const second=hitRay(secondOrigin,direction,state.enemies.filter(e=>e!==enemy),world.isFloor,9,world.getTissueAt);
         if(second?.kind==='flesh'){
-          const victim=second.enemy;victim.hp-=gun.damage*.58;victim.hitFlash=.18;
+          const victim=second.enemy;
+          victim.hp-=guardianDamage(victim,gun.damage*.58,state.x,state.z);
+          victim.hitFlash=.18;
           victim.stagger=Math.max(victim.stagger||0,.12);
           world.fireTrace(secondOrigin,second.point,2);
           world.impact(second.point,direction,'flesh');confirmedHits++;hits++;
@@ -418,6 +439,16 @@ function updateEnemies(dt){
     if(!wasWinding&&result.action==='warn'&&e.windup>0){
       active++;telegraphsSeen++;
     }
+    const special=guardianAction(e.type,result.action,e,state);
+    if(special?.kind==='pulse'||special?.kind==='surge'){
+      if(special.hit)harm(special.damage);
+      world.impact({x:special.kind==='surge'?e.intentX:e.x,y:.12,
+        z:special.kind==='surge'?e.intentZ:e.z},{x:0,y:1,z:0},'wall');
+      sound('heart');
+    }else if(special?.kind==='shards'){
+      for(const angle of special.angles)createProjectile(e,angle);
+      sound('heart');
+    }
     if(result.action==='shoot'){createProjectile(e);sound('heart');}
     else if(result.action==='volley'){for(let n=-2;n<=2;n++)createProjectile(e,n*.29);}
     else if(result.action==='bite'){harm(e.type==='warden'?21:e.type==='brute'?18:e.type==='heart'?21:10);}
@@ -437,7 +468,11 @@ function updateEnemies(dt){
       if(before>1.1&&e.lunge<=dt&&!e.chargeHit){chargesDodged++;state.score+=25;}
       continue;
     }
-    if(e.windup>0&&(e.type==='warden'||e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
+    if(e.type==='ossuary'){
+      const wanted=Math.atan2(state.x-e.x,state.z-e.z),difference=Math.atan2(Math.sin(wanted-e.facing),Math.cos(wanted-e.facing));
+      e.facing+=clamp(difference,-dt*.75,dt*.75);
+    }
+    if(e.windup>0&&(isGuardian(e.type)||e.type==='warden'||e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
     if(dist>.76){
       const modifier=mutation?.key==='faster'?1.18:1;
       let pace=e.speed*modifier*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1)*terrain.speed;
@@ -520,8 +555,14 @@ function update(dt){
     }
   }
   updateEnemies(dt);updateProjectiles(dt);updatePickups(dt);
+  if(mode==='playing'&&guardianReady(state)){
+    const kind=guardianForWave(state.wave);
+    if(guardianSpawnResolved(state,spawnUnit(kind.type))){
+      setNotice(kind.name+' · ПРИГОТОВЬСЯ',3);sound('heart');snapshot();
+    }
+  }
   if(mode!=='playing')return;
-  if(state.toSpawn===0&&state.enemies.length===0){
+  if(state.toSpawn===0&&state.enemies.length===0&&!state.guardianPending){
     waveBreak+=dt;
     if(waveBreak>2.2){
       waveBreak=0;
@@ -543,7 +584,14 @@ function syncHUD(){
   ui.hp.textContent=String(Math.ceil(state.hp)).padStart(3,'0');
   ui.healthFill.style.width=(state.hp/state.maxHp*100)+'%';
   ui.healthFill.style.background=state.hp<30?'#f83f39':'#dec09b';
-  ui.enemies.textContent=String(state.enemies.length+state.toSpawn).padStart(2,'0');
+  ui.enemies.textContent=String(state.enemies.length+state.toSpawn+(state.guardianPending?1:0)).padStart(2,'0');
+  const boss=state.enemies.find(e=>isGuardian(e.type)||e.type==='heart');
+  ui.guardian.hidden=mode!=='playing'||!boss;
+  if(boss){
+    const spec=guardianForWave(state.wave);
+    ui.guardianName.textContent=spec?.type===boss.type?spec.name:'СЕРДЦЕ ОРГАНА';
+    ui.guardianFill.style.width=clamp(boss.hp/boss.maxHp*100,0,100)+'%';
+  }
   ui.kills.textContent=String(state.kills).padStart(2,'0');
   ui.weapon.textContent=weaponBuild(state,state.weapon).name+'  LV.'+(state.level+1);
   ui.buildLabel.textContent=(state.grafts?.length||0)+' ПРИРАЩЕНИЯ';
@@ -620,6 +668,7 @@ function chooseGraft(id){
   state.hp=Math.min(state.maxHp,state.hp+16);
   startWave(next);
   if(!applyRoute(state,route,next))throw new Error('Не удалось выбрать путь: '+route);
+  world.setRouteMark?.(route);
   setMode('playing');last=performance.now();accumulator=0;lastPaint=0;
   setNotice(chosen.name+' · ПУТЬ: '+state.routeId.toUpperCase(),2.6);sound('pickup');
   syncHUD();snapshot();
@@ -845,6 +894,9 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   builds:{grafts:state?.grafts||[],biomass:state?.biomass||0,pendingDraft:state?.pendingDraft||0,
     revision:state?.draftRevision||0,choices:availableDraft().map(g=>g.id),weaponCount:state?maxWeaponIndex(state)+1:2,
     damage:state?weaponBuild(state,state.weapon).damage:26},
+  guardians:{pending:state?.guardianPending||0,defeated:state?.guardianDefeated||[],
+    active:state?.enemies?.filter(e=>isGuardian(e.type)).map(e=>({type:e.type,hp:e.hp,maxHp:e.maxHp,
+      windup:e.windup,facing:e.facing}))||[]},
   routes:{selected:state?.selectedRoute||null,active:state?.routeId||null,history:state?.routeHistory||[],
     offers:state?.pendingDraft?routeOptions(state.seed,state.pendingDraft).map(r=>r.id):[],hazardExtra:state?.routeHazard||0},
   archive:{echoes:archive.echoes,unlocked:archive.unlocked,equipped:archive.equipped,runs:archive.runs},
