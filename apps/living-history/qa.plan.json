@@ -319,15 +319,15 @@
       ]
     },
     {
-      "id": "realism-25-year",
+      "id": "realism-100-year-research",
       "kind": "node",
       "tier": "smoke",
       "entry": "qa/realism-ensemble.mjs",
       "args": [
         "--seed={seed}",
         "--scenario=normal",
-        "--years=25",
-        "--output={output}/realism-25-year.json"
+        "--years=100",
+        "--output={output}/realism-100-year.json"
       ],
       "seeds": [
         413,
