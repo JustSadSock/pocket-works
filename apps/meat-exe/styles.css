@@ -54,3 +54,18 @@
   .hud-bottom{width:min(43vw,440px);padding:5px 4px}
   .hud-bottom .health-track{margin-top:1px}
 }
+
+/* v1.2: the reticle expands with pressure, then contracts to mark confirmed flesh.
+   The hit and kill states use geometry rather than extra floating score labels. */
+.crosshair{filter:drop-shadow(0 1px 3px #1c0706);transition:transform .085s ease-out,filter .1s ease-out}
+.crosshair.firing{transform:scale(1.26)}
+.crosshair.hit{transform:scale(.66);filter:drop-shadow(0 0 7px #ffd4a0)}
+.crosshair.killed{transform:scale(.84) rotate(45deg);filter:drop-shadow(0 0 8px #e85640)}
+.crosshair.killed:before,.crosshair.killed:after,.crosshair.killed i,.crosshair.killed b{background:#ffbd91}
+.fire-control:active{background:#e14c36;box-shadow:0 0 0 8px rgba(171,43,30,.24),inset 0 -8px 0 rgba(44,5,7,.15)}
+.weapon-block strong{transition:filter .1s}
+@media(prefers-reduced-motion:reduce){
+ .crosshair{transition:none!important}
+ .crosshair.firing{transform:none}
+ .crosshair.killed{transform:none}
+}

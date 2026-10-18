@@ -1,6 +1,8 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorld } from './scene.js';
 import { validateRun, deadzone, findOpenFacing } from './stability.js';
+import { hitRay, pelletAim, staggerDuration } from './combat.js';
+import { createCombatAudio } from './sound-forge.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -14,10 +16,12 @@ const safeWrite=(name,value)=>{try{localStorage.setItem(KEY+name,JSON.stringify(
 const safeRemove=name=>{try{localStorage.removeItem(KEY+name);}catch{}};
 const sample=[[-1,0],[1,0],[0,-1],[0,1]];
 let mode='menu',state=null,world=null,last=0,clock=0,lastSave=0,nextId=1;
-let waveBreak=0,recoil=0,damageFlash=0,noticeUntil=0;
+let waveBreak=0,recoil=0,damageFlash=0,noticeUntil=0,hitUntil=0,fireUntil=0,killUntil=0;
+let shotsFired=0,confirmedHits=0,wallHits=0,lastShotKind='none';
 const keys=new Set(),movement={x:0,y:0};
 let movingPointer=null,lookPointer=null,lookLast={x:0,y:0},shootHeld=false,mouseLocked=false;
-let soundOn=safeRead('sound')!==false,audio=null,noise=null;
+let soundOn=safeRead('sound')!==false;
+const combatAudio=createCombatAudio();if(!soundOn)combatAudio.setEnabled(false);
 let best=safeRead('best')||{score:0,wave:0,kills:0};
 let mutation=safeRead('mutation')||null;
 let save=validateRun(safeRead('session'));
@@ -38,49 +42,14 @@ const weaponStats=[
   {name:'КОСТОЛОМ',cooldown:.22,damage:26,pellets:1,spread:.015},
   {name:'МЯСОРУБКА',cooldown:.55,damage:14,pellets:7,spread:.12}
 ];
-function audioStart(){
-  if(!soundOn)return;
-  try{
-    const C=window.AudioContext||window.webkitAudioContext;
-    if(!C)return;
-    if(!audio){audio=new C();noise=audio.createBuffer(1,audio.sampleRate*.45,audio.sampleRate);const arr=noise.getChannelData(0);for(let i=0;i<arr.length;i++)arr[i]=Math.random()*2-1;}
-    if(audio.state==='suspended')audio.resume().catch(()=>{});
-  }catch{audio=null;}
-}
-function sound(kind){
-  if(!soundOn||!audio||audio.state!=='running')return;
-  const palette={
-    fire:[85,.11,.22,760],shotgun:[59,.23,.31,280],
-    hit:[135,.12,.12,1000],kill:[48,.23,.16,420],
-    pain:[64,.34,.22,190],pickup:[320,.27,.14,1800],
-    heart:[42,.52,.20,280],menu:[110,.07,.08,900]
-  };
-  const [freq,duration,gain,filter]=palette[kind]||palette.menu;
-  const now=audio.currentTime;
-  try{
-    const osc=audio.createOscillator(),og=audio.createGain(),filterNode=audio.createBiquadFilter();
-    osc.type=kind==='pickup'?'triangle':'sawtooth';
-    osc.frequency.setValueAtTime(freq*rng(.96,1.04),now);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(24,freq*.34),now+duration);
-    filterNode.type='lowpass';filterNode.frequency.value=filter;
-    og.gain.setValueAtTime(.0001,now);
-    og.gain.exponentialRampToValueAtTime(gain*.28+.0001,now+.012);
-    og.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    osc.connect(filterNode).connect(og).connect(audio.destination);
-    osc.start(now);osc.stop(now+duration+.03);
-    const src=audio.createBufferSource(),nf=audio.createBiquadFilter(),ng=audio.createGain();
-    src.buffer=noise;nf.type='bandpass';nf.frequency.value=filter*rng(.83,1.17);nf.Q.value=.7;
-    ng.gain.setValueAtTime(.0001,now);ng.gain.exponentialRampToValueAtTime(gain*.7,now+.007);
-    ng.gain.exponentialRampToValueAtTime(.0001,now+duration*.84);
-    src.connect(nf).connect(ng).connect(audio.destination);
-    src.start(now);src.stop(now+duration+.03);
-  }catch{}
-}
+function audioStart(){combatAudio.unlock();}
+function sound(kind){combatAudio.pulse(kind);}
 function setNotice(message,seconds=2){
   ui.note.textContent=message;ui.note.classList.add('visible');noticeUntil=clock+seconds;
 }
 function setMode(next){
   mode=next;
+  if(next!=='playing')lastPaint=0; // One frozen game image behind menus, never a live GPU loop.
   ui.mute.hidden=next!=='menu';
   ui.qualityMenu.hidden=next!=='menu';
   ui.confirm.hidden=true;
@@ -144,6 +113,8 @@ function begin(resume=false){
       startWave(1);
     }
     audioStart();sound('menu');setMode('playing');
+    shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';hitUntil=fireUntil=killUntil=0;
+    ui.cross.classList.remove('hit','firing','killed');
     last=performance.now();clock=0;waveBreak=0;lastSave=0;accumulator=0;lastPaint=0;
     setQuality(quality);
     world.nearChunks(state.x,state.z);
@@ -179,7 +150,7 @@ function spawnUnit(type){
 function weaponSwitch(){
   if(!state||mode!=='playing')return;
   state.weapon=(state.weapon+1)%2;state.cooldown=Math.min(state.cooldown,.17);
-  sound('menu');setNotice(weaponStats[state.weapon].name,1);
+  sound('switch');setNotice(weaponStats[state.weapon].name,1);
   syncHUD();
 }
 function dash(){
@@ -189,7 +160,7 @@ function dash(){
   const norm=Math.hypot(dir.x,dir.z)||1;
   state.dashDirX=dir.x/norm;state.dashDirZ=dir.z/norm;
   state.dashTime=.21;state.dashCooldown=2.7;state.invuln=Math.max(state.invuln,.3);
-  recoil=Math.max(recoil,.35);sound('menu');
+  recoil=Math.max(recoil,.35);sound('dash');
 }
 function direction(){
   const f=(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-movement.y-padMove.y;
@@ -218,38 +189,38 @@ function defeatEnemy(e){
   world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
   state.kills++;state.score+=e.type==='heart'?2500:e.type==='brute'?160:e.type==='spitter'?110:80;
+  killUntil=clock+.2;ui.cross.classList.add('killed');
   if(e.type==='heart'){finish(true);return;}
   if(Math.random()<.36)dropAt(e.x,e.z);
   sound('kill');
 }
 function shoot(){
   if(!state||mode!=='playing'||state.cooldown>0)return;
-  const gun=weaponStats[state.weapon];
-  const heat=Math.max(0,1-state.level*.055);
-  state.cooldown=gun.cooldown*heat;
-  recoil=1;
-  sound(state.weapon===1?'shotgun':'fire');
-  let hadHit=false;
-  const dirBase={x:-Math.sin(state.yaw)*Math.cos(state.pitch),y:Math.sin(state.pitch),z:-Math.cos(state.yaw)*Math.cos(state.pitch)};
-  for(let p=0;p<gun.pellets;p++){
-    const yaw=state.yaw+(p? rng(-gun.spread,gun.spread):0);
-    const pitch=state.pitch+(p? rng(-gun.spread,gun.spread):0);
-    const dir={x:-Math.sin(yaw)*Math.cos(pitch),y:Math.sin(pitch),z:-Math.cos(yaw)*Math.cos(pitch)};
-    let chosen=null,closest=15;
-    for(const e of state.enemies){
-      const cx=e.x-state.x,cy=(e.type==='heart'?1.52:.89)-1.41,cz=e.z-state.z;
-      const t=cx*dir.x+cy*dir.y+cz*dir.z;
-      if(t<0||t>closest)continue;
-      const radius=e.type==='heart'?1.20:e.type==='brute'?.78:.56;
-      const miss=cx*cx+cy*cy+cz*cz-t*t;
-      if(miss<radius*radius&&world.visible(state,e)) {chosen=e;closest=t;}
-    }
-    if(chosen){
-      chosen.hp-=gun.damage+state.damageBonus+state.level*3;hadHit=true;
-      world.splatter(chosen.x,chosen.z,p===0?4:1);
-      if(chosen.hp<=0)defeatEnemy(chosen);
-      else if(chosen.type==='heart'){
-        const fraction=chosen.hp/chosen.maxHp;
+  const weapon=state.weapon,gun=weaponStats[weapon];
+  state.cooldown=gun.cooldown*Math.max(.56,1-state.level*.055);
+  recoil=Math.max(recoil,weapon===1?1.25:.89);
+  shotsFired++;sound(weapon===1?'shotgun':'fire');
+  world.firePulse(weapon);
+  fireUntil=clock+(weapon===1?.16:.105);
+  ui.cross.classList.add('firing');
+  const origin={x:state.x,y:1.41,z:state.z};
+  let hits=0,walls=0,oneKill=false;
+  for(let pellet=0;pellet<gun.pellets;pellet++){
+    const direction=pelletAim(state.yaw,state.pitch,pellet,gun.pellets,gun.spread);
+    const result=hitRay(origin,direction,state.enemies,world.isFloor,weapon===1?12:17);
+    if(!result)continue;
+    if(pellet===0||result.kind==='flesh'||(weapon===1&&pellet%2===0))world.fireTrace(origin,result.point,weapon);
+    if(result.kind==='flesh'){
+      const enemy=result.enemy;
+      hits++;confirmedHits++;
+      enemy.hp-=gun.damage+state.damageBonus+state.level*3;
+      enemy.hitFlash=.18;
+      enemy.stagger=Math.max(enemy.stagger||0,staggerDuration(enemy.type));
+      world.impact(result.point,direction,'flesh');
+      if(enemy.hp<=0){
+        oneKill=true;defeatEnemy(enemy);
+      }else if(enemy.type==='heart'){
+        const fraction=enemy.hp/enemy.maxHp;
         const next=fraction<=.32?3:fraction<=.65?2:1;
         if(next>state.heartPhase){
           state.heartPhase=next;state.score+=300;
@@ -257,11 +228,19 @@ function shoot(){
           sound('heart');setNotice('СЕРДЦЕ / ФАЗА '+next,2);
         }
       }
-      if(mode!=='playing')break;
+    }else if(result.kind==='wall'){
+      walls++;wallHits++;
+      if(pellet===0||pellet===3)world.impact(result.point,direction,'wall');
     }
+    if(mode!=='playing')break;
   }
-  if(hadHit) {sound('hit');ui.cross.classList.add('hit');}
-  else ui.cross.classList.remove('hit');
+  if(hits){
+    sound('hit');hitUntil=clock+.18;
+    ui.cross.classList.add('hit');
+    if(oneKill)ui.cross.classList.add('killed');
+    if(hits>=3)navigator.vibrate?.(10);
+  }else if(walls){sound('wall');}
+  lastShotKind=hits?'flesh':walls?'wall':'miss';
 }
 function createProjectile(e,angle=0){
   const toX=state.x-e.x,toZ=state.z-e.z,theta=Math.atan2(toX,toZ)+angle;
@@ -307,6 +286,8 @@ function updateEnemies(dt){
       if(target){tx=target.x;tz=target.z;}
     }
     e.attack-=dt;
+    e.hitFlash=Math.max(0,(e.hitFlash||0)-dt);
+    e.stagger=Math.max(0,(e.stagger||0)-dt);
     const gap=Math.hypot(state.x-e.x,state.z-e.z);
     if(e.type==='spitter'&&gap<8&&gap>2&&hasSight&&e.attack<=0){
       createProjectile(e);e.attack=2.0+rng(0,.45);
@@ -319,7 +300,7 @@ function updateEnemies(dt){
     if(gap>.75){
       const distGoal=Math.hypot(tx-e.x,tz-e.z)||1;
       const modifier=mutation?.key==='faster'?1.18:1;
-      const speed=e.speed*modifier*dt*(e.type==='heart'?.78:1);
+      const speed=e.speed*modifier*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1);
       const candidate=world.moveCircle(e.x,e.z,(tx-e.x)/distGoal*speed,(tz-e.z)/distGoal*speed,e.type==='heart'?.23:.19);
       e.x=candidate.x;e.z=candidate.z;
     }
@@ -371,6 +352,9 @@ function update(dt){
   }else waveBreak=0;
   if(clock-lastSave>5){lastSave=clock;snapshot();}
   if(noticeUntil&&clock>noticeUntil){ui.note.classList.remove('visible');noticeUntil=0;}
+  if(clock>fireUntil)ui.cross.classList.remove('firing');
+  if(clock>hitUntil)ui.cross.classList.remove('hit');
+  if(clock>killUntil)ui.cross.classList.remove('killed');
   syncHUD();
 }
 function syncHUD(){
@@ -480,7 +464,7 @@ $('weaponBtn').addEventListener('click',weaponSwitch);
 canvas.addEventListener('pointerdown',e=>{
   if(mode!=='playing'||touch||e.button!==0)return;
   if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.()?.catch?.(()=>{});
-  else{shootHeld=true;shoot();}
+  shootHeld=true;shoot(); // The first click must fire, not only acquire the cursor.
 });
 document.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')shootHeld=false;});
 document.addEventListener('mousemove',e=>{if(mouseLocked)look(e.movementX,e.movementY);});
@@ -503,7 +487,7 @@ window.addEventListener('blur',()=>{if(mode==='playing')pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause();});
 window.addEventListener('pagehide',()=>snapshot());
 canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();snapshot();fatal(new Error('Видеоконтекст потерян. Забег сохранён. Нажмите «Повторить», чтобы восстановить игру.'));});
-window.addEventListener('resize',()=>world?.resize());
+window.addEventListener('resize',()=>{world?.resize();lastPaint=0;});
 $('startBtn').addEventListener('click',confirmNewRun);
 ui.resume.addEventListener('click',()=>begin(true));
 ui.pauseBtn.addEventListener('click',pause);
@@ -520,7 +504,7 @@ $('menuResult').addEventListener('click',()=>{state=null;setMode('menu');});
 $('retryWebgl').addEventListener('click',()=>location.reload());
 function toggleSound(){
   soundOn=!soundOn;safeWrite('sound',soundOn);
-  if(soundOn)audioStart();else audio?.suspend?.().catch?.(()=>{});
+  combatAudio.setEnabled(soundOn);
   ui.mute.textContent=ui.pauseMute.textContent=soundOn?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ';
 }
 ui.mute.addEventListener('click',toggleSound);ui.pauseMute.addEventListener('click',toggleSound);
@@ -543,8 +527,10 @@ function frame(timestamp){
         fpsClock=0;fpsFrames=0;
       }
     }else{accumulator=0;}
-    const interval=mode==='playing'?0:80;
-    if(world&&!document.hidden&&(timestamp-lastPaint>=interval)){
+    // Frame-rate ceiling in manual Detail mode leaves CPU/GPU time for game input.
+    const interval=effectiveQuality==='high'?20:0;
+    const shouldPaint=mode==='playing'?timestamp-lastPaint>=interval:lastPaint===0;
+    if(world&&!document.hidden&&shouldPaint){
       const elapsed=Math.min(dt,.045);lastPaint=timestamp;
       recoil=Math.max(0,recoil-elapsed*6);damageFlash=Math.max(0,damageFlash-elapsed*2.8);
       ui.damage.style.opacity=String(damageFlash*.8);
@@ -557,7 +543,8 @@ function frame(timestamp){
 window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   x:state?.x??null,z:state?.z??null,hp:state?.hp??null,wave:state?.wave??null,
   score:state?.score??null,enemies:state?.enemies?.length??0,
-  saved:Boolean(validateRun(safeRead('session')))});
+  saved:Boolean(validateRun(safeRead('session'))),
+  combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{
   world=createWorld(canvas,save?.v===2?save.seed:2026);
