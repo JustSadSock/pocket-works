@@ -354,8 +354,11 @@ export function createWorld(canvas, initialSeed) {
     const mobile=w<900 || ('ontouchstart' in window);
     const desired=quality==='low'?1:quality==='high'?(mobile?1.32:1.55):(mobile?1.14:1.35);
     // Bound real pixel work, not only CSS size: software WebGL must never stall input.
-    const budget=softwareRenderer?310_000:mobile?1_300_000:2_200_000;
-    const pixelRatio=Math.min(window.devicePixelRatio||1,softwareRenderer?.66:desired,Math.sqrt(budget/(w*h)));
+    // On software/masked mobile GPUs the *pixel count* dominates memory pressure.
+    // Keep a bounded frame buffer instead of letting a large portrait DPR
+    // exhaust WebGL during repeated bursts. Native GPU detail remains intact.
+    const budget=softwareRenderer?235_000:maskedRenderer?530_000:mobile?1_300_000:2_200_000;
+    const pixelRatio=Math.min(window.devicePixelRatio||1,softwareRenderer?.59:maskedRenderer?.88:desired,Math.sqrt(budget/(w*h)));
     if(w===currentWidth&&h===currentHeight&&ratio===pixelRatio) return;
     currentWidth=w;currentHeight=h;
     ratio=pixelRatio;renderer.setPixelRatio(ratio);
