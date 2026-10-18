@@ -1,0 +1,53 @@
+#fogBattleHistoryButton[hidden],#fogBattleVictoryHistory[hidden],#fogBattleStop[hidden]{display:none!important}
+#fogBattleHistoryButton{min-height:44px;min-width:57px}
+#fogBattleHistory{
+ position:fixed;inset:0;z-index:20001;background:rgba(12,20,17,.89);
+ display:grid;place-items:center;padding:14px;
+ color:#ede3c3;font-family:system-ui,sans-serif;
+}
+#fogBattleHistory[hidden]{display:none!important}
+.fog-battle-sheet{
+ width:min(520px,100%);max-height:min(75dvh,640px);
+ display:flex;flex-direction:column;min-height:200px;
+ background:#243027;border:1px solid #8c7955;border-radius:6px;
+ box-shadow:0 18px 60px #0009;overflow:hidden;
+}
+.fog-battle-sheet header,.fog-battle-sheet footer{
+ display:flex;align-items:center;justify-content:space-between;
+ padding:12px 14px;background:#18241d;gap:10px;
+}
+.fog-battle-sheet h2{font:600 21px/1.2 Georgia,serif;margin:0}
+.fog-battle-sheet button{
+ background:#cfbb89;color:#232d25;border:1px solid #b69e69;
+ border-radius:4px;padding:9px 13px;min-height:44px;
+ font:600 14px system-ui;cursor:pointer
+}
+.fog-battle-sheet button:disabled{opacity:.5;cursor:default}
+.fog-battle-entries{overflow:auto;overscroll-behavior:contain;padding:10px 14px;flex:1}
+.fog-battle-entry{display:flex;gap:16px;align-items:baseline;justify-content:flex-start;
+ border-bottom:1px solid #475142;padding:10px 0;margin:0;font:14px/1.35 system-ui}
+.fog-battle-entry span:first-child{flex:0 0 45px;color:#bfab7d;font-variant-numeric:tabular-nums}
+.fog-battle-empty{padding:26px 5px;color:#b3ad93;font:14px/1.5 system-ui}
+#fogBattleFx{position:fixed;inset:0;pointer-events:none;z-index:700}
+.fog-battle-pulse{
+ position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;
+ border-radius:50%;border:3px solid #efca87;box-shadow:0 0 0 3px #1a241ead;
+ animation:fogBattlePulse .65s ease-out both;
+}
+.fog-battle-attack{border-color:#d17b59}
+.fog-battle-heal{border-color:#8fca97}
+.fog-battle-spawn{border-color:#e8c76f}
+.fog-battle-end{border-color:#9ca9b9}
+@keyframes fogBattlePulse{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.35)}
+ 25%{opacity:1}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(2.8)}
+}
+#fogBattleStop{
+ position:fixed;top:calc(env(safe-area-inset-top) + 74px);
+ left:50%;transform:translateX(-50%);z-index:25000;
+ max-width:90vw;min-height:44px;background:#f1dfb2;border:1px solid #917d4f;
+ color:#233126;border-radius:5px;font:600 13px system-ui;padding:8px 16px
+}
+@media(max-width:720px){#controls #fogBattleHistoryButton{min-width:45px;padding:3px!important;font-size:12px!important}}
+@media(prefers-reduced-motion:reduce){.fog-battle-pulse{animation:none;opacity:0}}
