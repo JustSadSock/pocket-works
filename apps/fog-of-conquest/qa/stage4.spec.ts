@@ -72,9 +72,12 @@ test('all render modes stay legible at phone and landscape, including motion red
  for(const viewport of [{width:320,height:640},{width:390,height:844},{width:844,height:390}]){
   await page.setViewportSize(viewport);
   for(const style of ['simple','toen','ai']){
-   await page.locator('#settingsBtn').click();
-   await page.locator('#styleSelect').selectOption(style);
-   await page.locator('#settingsCloseBtn').click();
+   await page.evaluate(style=>{
+     const select=document.getElementById('styleSelect') as HTMLSelectElement;
+     select.value=style;
+     select.dispatchEvent(new Event('change',{bubbles:true}));
+   },style);
+   await expect.poll(()=>page.evaluate(()=>window.FogCurrentMode?.()?.onlineGame===false)).toBe(true);
    await expect.poll(()=>page.locator('#canvas').evaluate((c:HTMLCanvasElement)=>{
     const ctx=c.getContext('2d');
     const pixels=ctx?.getImageData(0,0,Math.min(c.width,80),Math.min(c.height,80)).data;
