@@ -35,8 +35,9 @@ test('angular transfer samples conserve both sky region and finite numbers',()=>
  }
 });
 test('static camera central ray comes from the opposite universe',()=>{
- const m=metric({a:1}),t=buildTransfer(m,2.1,50);
+ const m=metric({a:1});
  for(const side of [1,-1]){
+  const t=buildTransfer(m,side*2.1,50);
   const b=cameraBasis(0,0,side,side);
   const forward=pixelDirection(0,0,b,80,1.5);
   const actual=backgroundDirection(forward,b,t);
