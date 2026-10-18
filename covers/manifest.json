@@ -3448,15 +3448,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.9.0&pw_fp=16e8a4749c5254e5d72b9a46"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.10.0&pw_fp=365b10fcc250fe9182d71546"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "b0ea374ddafe5d174cd12908c5edbf01e7c7d7f1",
-    "lastAttemptAt": "2026-10-18T20:55:33.421Z",
+    "lastAttemptRevision": "361d0d59fb00d0c5564c3b445652b6ada7b811a8",
+    "lastAttemptAt": "2026-10-18T21:20:16.286Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3480,8 +3480,8 @@
     "diagnostic": null,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "3f7e488e5ec0e68108894b55ed4c89af2ee30fcd",
-    "lastAttemptAt": "2026-10-18T21:13:25.878Z",
+    "lastAttemptRevision": "ed0817c47b133fcf77a2a8bf8daaf49ea03c4cc5",
+    "lastAttemptAt": "2026-10-18T21:20:30.414Z",
     "revision": "8679e4ea06b8cf7be2e3f9a6a15e003cda7454ab",
     "qualityScore": 79,
     "visionScore": null,
