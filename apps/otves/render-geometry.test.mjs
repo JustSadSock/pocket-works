@@ -49,7 +49,7 @@ test('wall rectangles are unioned before generating any upward-facing surface',(
   for (let i=0;i<mesh.positions.length;i+=12) {
     if (mesh.normals[i+1] !== 1) continue;
     const w=Math.abs(mesh.positions[i+6]-mesh.positions[i]);
-    const h=Math.abs(mesh.positions[i+11]-mesh.positions[i+2]);
+    const h=Math.abs(mesh.positions[i+5]-mesh.positions[i+2]);
     topArea += w*h;
   }
   // 0.2 + 0.1 - 0.02 overlap = 0.28 square units.
