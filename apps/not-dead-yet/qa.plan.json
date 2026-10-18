@@ -22,7 +22,8 @@
         "tests/visual-baseline.test.mjs",
         "tests/floorplans.test.mjs",
         "tests/rogue-doors.test.mjs",
-        "tests/architecture-cache.test.mjs"
+        "tests/architecture-cache.test.mjs",
+        "tests/viewmodel-visual.test.mjs"
       ]
     },
     {
