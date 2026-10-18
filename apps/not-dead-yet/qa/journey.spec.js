@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 
 async function launch(page){
- await page.goto('/apps/not-dead-yet/',{waitUntil:'domcontentloaded'});
+ await page.goto('/apps/not-dead-yet/?chapter=1',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#start')).toBeVisible({timeout:15000});
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true,{timeout:15000});
  await page.locator('#start').click();
@@ -80,7 +80,7 @@ test('1.2 material atlas and pause-menu sound controls survive a page refresh',a
 
 test('1.3 hinged Soviet interior door opens, blocks passage, saves and restores',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.goto('/apps/not-dead-yet/?chapter=1&qa=1',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#start')).toBeVisible();
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
  await page.locator('#start').click();
@@ -107,7 +107,7 @@ test('1.3 hinged Soviet interior door opens, blocks passage, saves and restores'
 
 test('1.4 unfamiliar furniture can be remembered, reduces panic and survives resume',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.goto('/apps/not-dead-yet/?chapter=1&qa=1',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
  await page.locator('#start').click();
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
@@ -138,7 +138,7 @@ test('1.4 unfamiliar furniture can be remembered, reduces panic and survives res
 
 test('1.5 family radio: collect album, tune home station, reveal journal and restore after reload',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.goto('/apps/not-dead-yet/?chapter=1&qa=1',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true,{timeout:20000});
  await page.locator('#start').click();
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
@@ -167,7 +167,7 @@ test('1.5 family radio: collect album, tune home station, reveal journal and res
 
 test('1.6 outage: fuse cannot reset until kitchen hotplate is unplugged, persists across reload',async({page})=>{
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
- await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.goto('/apps/not-dead-yet/?chapter=1&qa=1',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#start')).toBeVisible();
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
  await page.locator('#start').click();
@@ -200,7 +200,7 @@ test('1.6 outage: fuse cannot reset until kitchen hotplate is unplugged, persist
 
 test('1.7 real peephole reveals stairwell and family object, survives mobile/desktop resume',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.goto('/apps/not-dead-yet/?chapter=1&qa=1',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#start')).toBeVisible({timeout:15000});
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
  await page.locator('#start').click();
@@ -236,7 +236,7 @@ test('1.7 real peephole reveals stairwell and family object, survives mobile/des
 
 test('1.8 flashlight recognition disperses a remembered coat while a loud shot attracts a different figure',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/apps/not-dead-yet/?qa=1',{waitUntil:'domcontentloaded'});
+ await page.goto('/apps/not-dead-yet/?chapter=1&qa=1',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#start')).toBeVisible();
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.renderer3D===true);
  await page.locator('#start').click();
