@@ -55,7 +55,12 @@ test('real player collision can reach every room, pickup and threshold in 240 ge
  const archetypes=new Set();
  for(let seed=1;seed<=60;seed++)for(let epoch=0;epoch<4;epoch++){
   const w=new RogueWorld(seed,{layoutVersion:2,epochs:[['0,0',epoch]]});
-  const c=w.chunk(0,0),reachable=walk(w);
+  const c=w.chunk(0,0);
+  // An unopened room is intentionally inaccessible. Open each real hinged
+  // door first, then verify actual furniture/pickup/threshold reachability.
+  for(const door of c.doors)if(!w.doorState(door,c).open)assert.ok(w.toggleDoor(door).ok);
+  for(let i=0;i<8;i++)w.animateDoors(.12);
+  const reachable=walk(w);
   archetypes.add(c.layoutName);
   for(const r of c.rooms){
    let found=false;
