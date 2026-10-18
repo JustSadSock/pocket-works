@@ -1,5 +1,6 @@
 // NOT DEAD YET — infinite, deterministic Khrushchev flat sectors.
 // The layout is a graph of one-cell-wide halls and small rooms, never a scaled-up house.
+import {FLOORPLANS} from './rogue-floorplans.mjs';
 export const SECTOR=18;
 export const TILE=1.27;
 const HASH=(...values)=>{let h=2166136261;for(const value of values){h=Math.imul(h^(value|0),16777619);h^=h>>>13}return(h^(h>>>16))>>>0};
@@ -32,35 +33,40 @@ export function generateSector(seed,cx,cz,epoch=0){
  // Edge ports are keyed by shared boundaries and are invariant under mutation.
  const north=8+HASH(seed,cx,cz-1,1)%3,south=8+HASH(seed,cx,cz,1)%3;
  const west=8+HASH(seed,cx-1,cz,2)%3,east=8+HASH(seed,cx,cz,2)%3;
- // Stagger turns before the center: no 3-4-cell-wide American-house corridors.
- lineZ(north,0,3);lineX(north,9,3);lineZ(9,3,14);
+ // Five internal layouts share four immutable seam portals.
+ const layout=HASH(seed,cx,cz,epoch,8731)%FLOORPLANS.length;
+ const plan=FLOORPLANS[layout],topAxis=plan.topAxis||9,topTurn=plan.topTurn||3;
+ lineZ(north,0,3);lineX(north,topAxis,3);
+ lineZ(topAxis,3,topTurn);lineX(topAxis,9,topTurn);lineZ(9,topTurn,14);
  lineZ(south,14,17);lineX(9,south,14);
- lineX(0,3,west);lineZ(3,west,9);lineX(3,9,9);
+ if(plan.walkthrough){
+  lineX(0,2,west);lineZ(2,7,west)
+ }else{
+  lineX(0,3,west);lineZ(3,west,9);lineX(3,9,9)
+ }
  lineX(14,17,east);lineZ(14,east,9);lineX(9,14,9);
- const specs=[
-  {x0:2,x1:6,z0:2,z1:6,face:'left'},
-  {x0:11,x1:15,z0:2,z1:6,face:'right'},
-  {x0:2,x1:6,z0:11,z1:15,face:'left'},
-  {x0:11,x1:15,z0:11,z1:15,face:'right'}
- ];
+ if(plan.southAxis&&plan.southAxis!==9){lineZ(plan.southAxis,12,14);lineX(9,plan.southAxis,12)}
+ if(plan.serviceBranch)lineX(8,9,plan.serviceBranch);
+ const specs=plan.rooms;
  const types=[...TYPE].sort((a,b)=>HASH(seed,cx,cz,epoch,TYPE.indexOf(a))-HASH(seed,cx,cz,epoch,TYPE.indexOf(b)));
  const rooms=[],props=[],doors=[];
  const add=(room,type,x,z,w,d,h,solid=true)=>props.push({room:room.id,type,x:cx*SECTOR+x,z:cz*SECTOR+z,w,d,h,solid});
  for(let i=0;i<specs.length;i++){
-  const spec=specs[i],room={...spec,id:KEY(cx,cz)+':'+i,type:types[i],epoch,cx,cz};
-  // Shape variations only trim the OUTER edge; door and hall remain fixed.
-  if(i%2===0&&rand()<.45)room.x0++;
-  if(i%2===1&&rand()<.45)room.x1--;
-  if(i<2&&rand()<.38)room.z0++;
-  if(i>=2&&rand()<.38)room.z1--;
+  const spec=specs[i],room={...spec,id:KEY(cx,cz)+':'+i,type:spec.service?'closet':plan.walkthrough&&i===0?'living':plan.walkthrough&&i===2?'bedroom':types[i],epoch,cx,cz};
+  // Only trim the OUTSIDE edge; keep the room entrance reachable.
+  if(!spec.service&&i%2===0&&rand()<.22&&room.x0<room.x1-3)room.x0++;
+  if(!spec.service&&i%2===1&&rand()<.22&&room.x1>room.x0+3)room.x1--;
   for(let z=room.z0;z<=room.z1;z++)for(let x=room.x0;x<=room.x1;x++)paint(x,z,2);
-  const entryZ=i<2?4:13,entryX=spec.face==='left'?7:10;
-  lineX(spec.face==='left'?6:9, spec.face==='left'?9:11,entryZ,1);
-  // Isolated one-tile threshold; no visual or collision-only door.
-  paint(entryX,entryZ,3);doors.push({x:cx*SECTOR+entryX,z:cz*SECTOR+entryZ,side:spec.face,id:room.id});
+  if(spec.via!=='walkthrough'){
+   const entryZ=spec.entryZ,entryX=spec.face==='left'?room.x1+1:room.x0-1;
+   lineX(entryX,9,entryZ,1);paint(entryX,entryZ,3);
+   doors.push({x:cx*SECTOR+entryX,z:cz*SECTOR+entryZ,side:spec.face,id:room.id});
+  }
   rooms.push(room);
   const centerX=(room.x0+room.x1)/2,centerZ=(room.z0+room.z1)/2;
-  if(room.type==='living'){
+  if(spec.service){
+   add(room,'shelf',room.x0+.48,room.z0+.27,.32,.44,1.65);
+  }else if(room.type==='living'){
    add(room,'sofa',centerX,room.z0+.75,2.12,.72,1.08);
    add(room,'wallunit',room.x1-.14,centerZ,.42,1.82,2.25);
    add(room,'rug',centerX,centerZ,2.3,1.85,.02,false);
@@ -69,7 +75,7 @@ export function generateSector(seed,cx,cz,epoch=0){
    add(room,'fridge',room.x1-.12,room.z0+.7,.55,.65,1.92);
    add(room,'table',centerX,centerZ+.30,1.12,.76,.74);
   }else if(room.type==='bedroom'||room.type==='nursery'){
-   add(room,'bed',centerX-.35,room.z0+1.05,1.25,1.78,.71);
+   add(room,'bed',plan.walkthrough&&i===2?room.x1-.80:centerX-.35,plan.walkthrough&&i===2?room.z0+2.25:room.z0+1.05,1.25,1.78,.71);
    add(room,'wardrobe',room.x1-.20,room.z1-.48,.50,.79,2.16);
   }else if(room.type==='bathroom'){
    add(room,'bath',room.x0+1.12,room.z0+.52,1.58,.65,.65);
@@ -79,7 +85,13 @@ export function generateSector(seed,cx,cz,epoch=0){
    add(room,'wardrobe',room.x0+.28,room.z1-.30,.48,.60,1.85)
   }
  }
- // Connected spine and all eight perimeter threshold cells retain their seam.
+ if(plan.walkthrough){
+  // Short passage between adjacent rooms; the bedroom has no hall door.
+  paint(4,8,3);paint(4,9,3);
+  doors.push({x:cx*SECTOR+4,z:cz*SECTOR+8,side:'south',id:rooms[0].id});
+  doors.push({x:cx*SECTOR+4,z:cz*SECTOR+9,side:'north',id:rooms[2].id})
+ }
+ // Connected spine and four perimeter threshold cells retain their seam.
  for(const [x,z] of [[north,0],[south,17],[0,west],[17,east]])paint(x,z,3);
  const tile=(x,z)=>within(x)&&within(z)?tiles[z*SECTOR+x]:0;
  const safe=[];
@@ -95,7 +107,7 @@ export function generateSector(seed,cx,cz,epoch=0){
   const roll=rand(),type=roll<.21?'relic':roll<.57?'ammo':roll<.83?'tea':'bandage';
   drops.push({...pos,id:KEY(cx,cz)+':'+epoch+':'+i,type});
  }
- return{cx,cz,epoch,tiles,rooms,props,doors,drops,stamp:KEY(cx,cz)};
+ return{cx,cz,epoch,layout,layoutName:plan.name,tiles,rooms,props,doors,drops,stamp:KEY(cx,cz)};
 }
 export class RogueWorld{
  constructor(seed=1,data=null){
