@@ -945,6 +945,20 @@ function initDevPreview(requested){
  document.getElementById('arenaDevSoundLab')?.remove();
  mode='solo';
  offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:initialMatch(),score:{A:2,B:1}};
+ if(scene==='tutorial-start'||scene==='tutorial-attack'||scene==='tutorial-ready'){
+  startTutorial();
+  if(scene!=='tutorial-start'){
+   plan=['right'];
+   if(scene==='tutorial-ready')plan=['right',{type:'attack',dirs:['down']},'shield','up','left'];
+   show('play');render();
+  }
+  return;
+ }
+ if(scene==='marks'){
+  offline.boardMarks={A:{'1':{'1,2':'watch','2,2':'danger'}},B:{}};
+  show('play');render();return;
+ }
+ if(scene==='settings'){show('menu');openSettings();return;}
  if(scene==='menu'){show('menu');return;}
  if(scene==='difficulty'){show('difficultyView');return;}
   if(scene==='archive-empty'){devHistory=[];show('archive');return;}
