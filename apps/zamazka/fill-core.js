@@ -160,11 +160,10 @@ export function fillMatchingColorRaster({width,height,zone,output,point,color,ch
  // prevents freshly recoloured pixels being reconsidered as part of that region.
  while(head<tail){
   const i=queue[head++],ix=i%width,iy=(i/width)|0;
-  const neighbours=[ix>0?i-1:-1,ix<width-1?i+1:-1,iy>0?i-width:-1,iy<height-1?i+width:-1];
-  for(const near of neighbours){
-   if(near<0||visited[near]||!matches(near))continue;
-   visited[near]=1;queue[tail++]=near;
-  }
+  if(ix>0&&!visited[i-1]&&matches(i-1)){visited[i-1]=1;queue[tail++]=i-1}
+  if(ix<width-1&&!visited[i+1]&&matches(i+1)){visited[i+1]=1;queue[tail++]=i+1}
+  if(iy>0&&!visited[i-width]&&matches(i-width)){visited[i-width]=1;queue[tail++]=i-width}
+  if(iy<height-1&&!visited[i+width]&&matches(i+width)){visited[i+width]=1;queue[tail++]=i+width}
  }
  const touched=changed&&changed.length>=total?changed:null;
  for(let n=0;n<tail;n++){
