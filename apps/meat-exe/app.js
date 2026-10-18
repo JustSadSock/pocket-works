@@ -1,5 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorld } from './scene.js';
+import {immuneDefaults,updateImmune,provokeImmune,immuneIntensity,IMMUNE_EVENTS} from './immunity.js';
 import { validateRun, deadzone, findOpenFacing } from './stability.js';
 import { hitRay, pelletAim, staggerDuration } from './combat.js';
 import { createCombatAudio } from './sound-forge.js';
@@ -75,15 +76,15 @@ function newState(seed){
     weapon:0,level:0,damageBonus:0,cooldown:0,dashCooldown:0,dashTime:0,dashDirX:0,dashDirZ:0,
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
-    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,
+    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
     grafts:[],biomass:0,pendingDraft:0,draftRevision:0};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
-  const max=type==='heart'?310:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61;
+  const max=type==='heart'?310:type==='warden'?222:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61;
   const id=nextId++;
   return {id,type,x,z,hp:hp||max,maxHp:max,...initialEnemyIntent(type,id),
-    speed:type==='heart'?.8:type==='brute'?.86:type==='spitter'?1.14:type==='leech'?1.20:1.55,visual:world.makeEnemy(type,x,z)};
+    speed:type==='heart'?.8:type==='warden'?.76:type==='brute'?.86:type==='spitter'?1.14:type==='leech'?1.20:1.55,visual:world.makeEnemy(type,x,z)};
 }
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
@@ -216,8 +217,9 @@ function defeatEnemy(e){
   world.splatter(e.x,e.z,e.type==='heart'?55:16);
   world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
-  state.kills++;state.score+=e.type==='heart'?2500:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
+  state.kills++;state.score+=e.type==='heart'?2500:e.type==='warden'?580:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
   if(hasGraft(state,'blood_pump'))state.hp=Math.min(state.maxHp,state.hp+7);
+  if(e.type!=='heart')provokeImmune(state.immune,'kill',state.wave);
   killUntil=clock+.2;ui.cross.classList.add('killed');
   if(e.type==='heart'){finish(true);return;}
   if(Math.random()<.36)dropAt(e.x,e.z);
@@ -283,8 +285,10 @@ function shoot(){
         state.score+=180;
         const heal=biomeRuptureHeal(state.wave);
         if(heal)state.hp=Math.min(state.maxHp,state.hp+heal);
-        state.immuneHeat=Math.min(100,state.immuneHeat+immuneHeatGain(state,26));
-        state.immuneDelay=1.85;
+        provokeImmune(state.immune,'rupture',state.wave);
+        if(hasGraft(state,'rupture_gland'))state.immune.heat=Math.min(100,state.immune.heat+14);
+        state.immuneHeat=state.immune.heat;
+        state.immuneDelay=0;
         navAt=0;sound('heart');
         if(state.pickups.length<18)state.pickups.push({x:damage.x,z:damage.z,type:'fragment',visual:world.makePickup(damage.x,damage.z)});
         setNotice('ЗАТВОР РАЗОРВАН · ИММУННАЯ РЕАКЦИЯ',2.3);
@@ -309,7 +313,7 @@ function shoot(){
 }
 function createProjectile(e,angle=0){
   const toX=(e.intentX??state.x)-e.x,toZ=(e.intentZ??state.z)-e.z,theta=Math.atan2(toX,toZ)+angle;
-  const r=e.type==='heart'?.24:.16;
+  const r=e.type==='heart'?.24:e.type==='warden'?.22:.16;
   state.projectiles.push({x:e.x,z:e.z,vx:Math.sin(theta)*3.15,vz:Math.cos(theta)*3.15,ttl:4,r,visual:world.makeProjectile(e.x,e.z,r)});
 }
 function updateProjectiles(dt){
@@ -386,14 +390,14 @@ function updateEnemies(dt){
       const before=state.hp;harm(10);
       if(state.hp<before){e.hp=Math.min(e.maxHp,e.hp+12);world.impact({x:e.x,y:.8,z:e.z},{x:0,y:1,z:0},'flesh');}
     }
-    else if(result.action==='charge'){e.chargeHit=false;setNotice('ТАРАН · УВЕРНИСЬ',.7);}
+    else if(result.action==='charge'){e.chargeHit=false;setNotice(e.type==='warden'?'СТРАЖ · ОБХОДИ ФЛАНГ':'ТАРАН · УВЕРНИСЬ',.7);}
     if(e.lunge>0){
       const before=Math.hypot(state.x-e.x,state.z-e.z);
       const step=8.2*dt*terrain.speed*(e.stagger>0?.45:1);
       const candidate=world.moveCircle(e.x,e.z,e.lungeX*step,e.lungeZ*step,.27);
       e.x=candidate.x;e.z=candidate.z;
       if(!e.chargeHit&&Math.hypot(state.x-e.x,state.z-e.z)<.91){
-        e.chargeHit=true;harm(19);
+        e.chargeHit=true;harm(e.type==='warden'?25:19);
       }
       if(before>1.1&&e.lunge<=dt&&!e.chargeHit){chargesDodged++;state.score+=25;}
       continue;
@@ -430,15 +434,24 @@ function update(dt){
   clock+=dt;
   if(mode!=='playing')return;
   state.elapsed+=dt;state.waveTime+=dt;
-  state.immuneHeat=Math.max(0,state.immuneHeat-dt*.53);
-  if(state.immuneDelay>0){
-    state.immuneDelay=Math.max(0,state.immuneDelay-dt);
-    if(state.immuneDelay===0&&state.enemies.length<18){
-      const response=state.immuneHeat>48?2:1;
-      for(let i=0;i<response;i++)spawnUnit(i===0?'spitter':'crawler');
-      if(state.enemies.length>0)setNotice('ИММУННАЯ СИСТЕМА ОТВЕТИЛА',1.4);
-    }
+  // Damage wakes immune sentinels only after an announced window; never spawn
+  // extra mobs into a lethal crowd or on top of an injured player.
+  const reaction=updateImmune(state.immune,dt,{wave:state.wave,enemies:state.enemies.length,
+    remaining:state.toSpawn,playerHp:state.hp});
+  state.immuneHeat=state.immune.heat;
+  if(reaction?.kind==='warning'&&state.immune.warning>1.47&&clock-(state.lastImmuneAlert||-999)>.95){
+    state.lastImmuneAlert=clock;
+    setNotice('ОРГАНИЗМ РЕАГИРУЕТ · '+IMMUNE_EVENTS[reaction.event].name,1.7);
+    sound('heart');
   }
+  if(reaction?.kind==='dispatch'){
+    let added=0;for(const type of reaction.units){
+      if(state.enemies.length>=16)break;
+      if(spawnUnit(type))added++;
+    }
+    if(added)setNotice('ИММУННАЯ АТАКА · '+IMMUNE_EVENTS[reaction.event].name,1.8);
+  }
+  world.setImmunePressure?.(immuneIntensity(state.immune));
   state.hazardCooldown=Math.max(0,(state.hazardCooldown||0)-dt);
   const terrain=world.getHazardAt(state.x,state.z);
   if(terrain&&state.hazardCooldown===0&&biomeDamage(terrain)>0){
@@ -756,6 +769,7 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   score:state?.score??null,enemies:state?.enemies?.length??0,biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
+  immunity:{...state?.immune},
   ecology:{telegraphsSeen,chargesDodged,attacksInterrupted,terrainEnemyHits,
     pending:state?.enemies?.filter(e=>e.windup>0).length??0,
     enemies:state?.enemies?.slice(0,8).map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,attack:e.attack,

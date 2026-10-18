@@ -1,7 +1,8 @@
 // Defensive saved-session migration and swept collisions; independent of DOM / WebGL.
 import {sanitizeGrafts,maxWeaponIndex} from './biobuilds.js';
+import {sanitizeImmune} from './immunity.js';
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
-const kinds=new Set(['crawler','spitter','brute','heart','leech']);
+const kinds=new Set(['crawler','spitter','brute','heart','leech','warden']);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
 export function validateRun(s){
   if(!s||typeof s!=='object'||![1,2,3,4,5].includes(s.v)||!Number.isInteger(s.seed)||s.seed<0||s.seed>4294967295||!validPosition(s)||!Number.isFinite(s.hp)||s.hp<=0)return null;
@@ -9,7 +10,7 @@ export function validateRun(s){
   if(hp<=0)return null;
   return {
     v:5,seed:s.seed>>>0,x:s.x,z:s.z,
-    grafts:sanitizeGrafts(s.grafts),biomass:num(Math.floor(s.biomass),0,99,0),
+    immune:sanitizeImmune(s.immune),grafts:sanitizeGrafts(s.grafts),biomass:num(Math.floor(s.biomass),0,99,0),
     pendingDraft:Number.isInteger(s.pendingDraft)&&s.pendingDraft>=2&&s.pendingDraft<=5&&s.pendingDraft===(Math.floor(s.wave)||1)+1?s.pendingDraft:0,
     draftRevision:num(Math.floor(s.draftRevision),0,100,0),
     ruptured:(Array.isArray(s.ruptured)?s.ruptured:[])
