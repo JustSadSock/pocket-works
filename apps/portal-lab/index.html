@@ -38,6 +38,7 @@
 <div class="mode-switch" role="group" aria-label="Тип пробного объекта"><button type="button" data-kind="light" class="selected" aria-pressed="true">Фотоны</button><button type="button" data-kind="matter" aria-pressed="false">Частицы</button></div>
 <label class="range-field"><span>Число траекторий <output id="count-value">13</output></span><input type="range" id="count" min="1" max="25" step="2" value="13"></label>
 <label class="range-field"><span>Угловое раскрытие <output id="spread-value">32</output> <small>°</small></span><input type="range" id="spread" min="0" max="100" step="2" value="32"></label>
+<button id="critical" type="button" class="critical">Критический фотон <span>b ≈ b<sub>crit</sub></span></button>
 <label class="range-field" id="speed-group"><span>Начальная скорость <output id="speed-value">0.70</output> <small>c</small></span><input type="range" id="speed" min=".05" max=".95" step=".05" value=".7" disabled></label>
 <div class="section-caption second"><span>03 — ИЗМЕРЕНИЯ</span><span>∂g</span></div>
 <div class="readouts">
@@ -45,6 +46,8 @@
 <div><span>УСКОРЕНИЕ ПОКОЯЩЕГОСЯ ЗОНДА</span><b id="acceleration">0.000</b><small> c²/a · при l=a</small></div>
 <div><span>ПРОХОДОВ ЧЕРЕЗ ГОРЛОВИНУ</span><b id="crossings">0</b><small> за сеанс</small></div>
 <div><span>ПОГРЕШНОСТЬ НОРМИРОВКИ</span><b id="precision">0.0</b><small> max |g(u,u)+κ|</small></div>
+<div><span>ПАРАМЕТР ПОПАДАНИЯ · СВЕТ</span><b id="impact">—</b><small> b = |L/E|</small></div>
+<div><span>ПОРОГ ПРОХОДА ГОРЛОВИНЫ</span><b id="critical-value">1.000</b><small> b₍crit₎ = a/N(0)</small></div>
 </div>
 <div class="clocks"><div class="clocks-head"><span>СТАТИЧЕСКИЕ ЧАСЫ</span><span>dτ = N dt</span></div><div class="clock-pair"><div><small>БЛИЖНИЕ · 0.8a</small><strong id="clock-near">00.000</strong></div><div><small>ДАЛЬНИЕ · 5a</small><strong id="clock-far">00.000</strong></div></div><div id="clock-note" class="clock-note">У модели Эллиса часы идут одинаково, несмотря на кривизну пространства.</div></div>
 <div class="section-caption second"><span>04 — ВРЕМЕННОЙ МАСШТАБ</span><span>dt</span></div>
