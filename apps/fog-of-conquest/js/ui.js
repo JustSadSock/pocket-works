@@ -216,7 +216,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       sfxVolume = 0.5,
       musicEnabled = false,
       sfxEnabled = true,
-      lang = 'en',
+      lang = 'ru',
       strings = {};
 
   function loadSettings(){
@@ -469,6 +469,19 @@ window.addEventListener('DOMContentLoaded', ()=>{
     };
   }
 
+  // One fixed autosave slot avoids unbounded save-list growth.
+  // The game's original explicit numbered saves are preserved.
+  function persistAutoSave(){
+    if(onlineGame || startPanel.style.display!=='none' || !map.length || !units.length)return;
+    try {
+      const data={version:SAVE_VERSION,timestamp:Date.now(),map,buildings,units,state,
+        mapSize,nextUnitId,replayEvents:replayEvents.slice(-180)};
+      localStorage.setItem(SAVE_PREFIX+'autosave',JSON.stringify(data));
+    }catch(error){ console.warn('fog_autosave_unavailable',String(error)); }
+  }
+  window.addEventListener('pagehide',persistAutoSave);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)persistAutoSave()});
+
   function recordEvent(txt){
     const p = state.currentPlayer;
     state.log[p].push(txt);
@@ -478,6 +491,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(onlineGame && gameConn) gameConn.send({event:ev});
     lastAction=null;
     renderLog();
+    persistAutoSave();
   }
   function recordTurn(){
     const p = state.currentPlayer;
@@ -486,6 +500,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     replayEvents.push(ev);
     if(onlineGame && gameConn) gameConn.send({event:ev});
     renderLog();
+    persistAutoSave();
   }
   function renderLog(){
     rightLog.innerHTML = '';
@@ -520,14 +535,15 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // === Resize ===
   window.addEventListener('resize',()=>{
-    const size = Math.floor(Math.min(
-      window.innerWidth / COLS,
-      (window.innerHeight - MIN_INFO_HEIGHT) / ROWS
-    ));
+    // Keep the original cell arithmetic while making the battlefield
+    // physically tappable. Large maps scroll inside #battleViewport.
+    const fitted=Math.floor(Math.min(Math.max(250,window.innerWidth-8)/COLS,
+      Math.max(180,window.innerHeight-MIN_INFO_HEIGHT-40)/ROWS));
+    const size=window.innerWidth<720?Math.max(30,fitted):Math.max(18,fitted);
     cellW = cellH = size;
     canvas.width  = cellW * COLS;
     canvas.height = cellH * ROWS;
-    const panelH = Math.max(MIN_INFO_HEIGHT, window.innerHeight - canvas.height);
+    const panelH=164;
     if(!infoPanel.classList.contains('collapsed')){
       infoPanel.style.height = panelH + 'px';
     }
