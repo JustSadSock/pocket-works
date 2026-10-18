@@ -1,7 +1,5 @@
-import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {World,SIZE} from './world.mjs';
 import {Renderer} from './renderer.mjs';
-installMobileRuntime();
 const $=id=>document.getElementById(id),STORE='pocket-works:not-dead-yet:run-v1',OPT='pocket-works:not-dead-yet:options';
 const goals=[{cx:1,cy:0},{cx:0,cy:-1},{cx:-1,cy:1}].map((a,i)=>({...a,id:i,x:a.cx*SIZE+SIZE/2+.5,z:a.cy*SIZE+SIZE/2+.5}));
 const home={home:true,x:SIZE/2+.5,z:SIZE/2+.5};
