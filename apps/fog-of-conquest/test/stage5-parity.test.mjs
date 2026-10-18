@@ -4,8 +4,8 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const source=read('../server/module.ts');
-const pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v8.ts');
-const originalV6=read('../../../pocketnet/module-versions/fog-of-conquest/v7.ts');
+const pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v9.ts');
+const originalV6=read('../../../pocketnet/module-versions/fog-of-conquest/v8.ts');
 const client=read('../js/rules-core.js');
 const load=async text=>import('data:text/javascript;base64,'+Buffer.from(text).toString('base64'));
 const newer=await load(source),legacy=await load(originalV6);
@@ -29,8 +29,8 @@ test('embedded PocketNet rules exactly match the client kernel and v7 immutable 
  const a=extract(client),b=extract(source);
  assert.equal(a,b,'Current server embedded kernel drifted from client source');
  assert.equal(source,pinned);
- assert.match(originalV6,/RULESET_VERSION=6;/);
- assert.match(source,/RULESET_VERSION=7;/);
+ assert.match(originalV6,/RULESET_VERSION=8;/);
+ assert.match(source,/RULESET_VERSION=8;/);
 });
 test('movement legality and movement points match authoritative historical rules on 4 sizes',()=>{
  let checks=0;
