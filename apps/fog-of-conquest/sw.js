@@ -31,6 +31,7 @@ const APP_SHELL = [
   "./js/dropdown.js",
   "./js/data.js",
   "./js/gameState.js",
+  "./js/rules-core.js",
   "./js/worldGen.js",
   "./js/replay.js",
   "./js/replay-codec.js",
