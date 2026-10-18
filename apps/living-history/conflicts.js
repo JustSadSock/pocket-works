@@ -1,7 +1,7 @@
 // Living History: local armed disputes made only of existing adults and
 // physically owned field strips. No spawned troops, teleporting resources,
 // fictional losses, or separate combat-time economy.
-import {walkingSteps,walkPath} from './navigation.js';
+import {walkingSteps,walkPath,pathEffort} from './navigation.js';
 import {scheduleWork,commitWork} from './work-time.js';
 import {assessFieldTactics,tacticalBreak,pursuitChance} from './battle-tactics.js';
 
@@ -174,6 +174,26 @@ function wound(s,c,people,threat,side,notify,pursuit=false){
   }
  }
 }
+function commitFlank(s,c){
+ const m=c.tactics?.flank;
+ if(!m)return;
+ const p=citizen(s,m.personId),q=p?.dailyShift;
+ if(!p?.alive||q?.day!==s.day||q.workHours<.04){c.tactics.flank=null;return;}
+ const distance=pathEffort(s,m.routeCells.map(xy));
+ const extra=rnd(distance*.025/4); // one physical 25-metre maneuver at 4 km/h
+ const total=q.expedition?extra:2*extra;
+ if(!Number.isFinite(extra)||q.workHours<=total){c.tactics.flank=null;return;}
+ q.travelHours=Math.round((q.travelHours+total)*10000)/10000;
+ q.workHours=Math.round((q.workHours-total)*10000)/10000;
+ q.fraction=Math.round(q.workHours/8.5*10000)/10000;
+ q.arrive=Math.round((q.arrive+extra)*10000)/10000;
+ if(!q.expedition)q.returnStart=Math.round((q.returnStart-extra)*10000)/10000;
+ q.to=xy(m.toCell);q.routeCells=[...(q.routeCells||[]),m.toCell];
+ p.x=q.to.x;p.y=q.to.y;
+ if(c.expedition)c.positions[p.id]=m.toCell;
+ s.stats.guardHours=rnd(Math.max(0,(s.stats.guardHours||0)-total));
+ p.workDays.guard=rnd(Math.max(0,(p.workDays.guard||0)-total/8.5));
+}
 function resolve(s,c,notify){
  c.pursued??=[];c.broken??=null;
  const left=readiness(s,c.claimants),right=readiness(s,c.owners);
@@ -181,6 +201,7 @@ function resolve(s,c,notify){
  c.morale={claimants:left.morale,owners:right.morale};
  c.arrived={claimants:left.arrived,owners:right.arrived};
  c.tactics=assessFieldTactics(s,c,left,right);
+ commitFlank(s,c);
  const total=c.tactics.claimants.power+c.tactics.owners.power;
  const bias=draw(s.seed,s.day,c.cell,0x117a)*.32-.16;
  if(!left.power||!right.power){
