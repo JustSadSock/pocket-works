@@ -11,3 +11,56 @@
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 /* Desktop battlefield stays a coherent 510px instrument rather than spreading touch HUD to window edges. */
 .battle-hud{max-width:510px;margin-inline:auto}.control-layer{max-width:510px;margin-inline:auto}
+
+
+/* 0.2 · heat is tactical information; the small top line never competes with health. */
+.heat-row{grid-column:1/4;display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;margin-top:3px;color:#e4c597;font-size:9px;letter-spacing:.8px;font-weight:900}
+.heat-track{height:7px;border:1px solid #947a62;background:#1e2928;overflow:hidden;box-shadow:0 2px #16201f}
+.heat-track i{display:block;width:0;height:100%;background:#daa26f;transition:width .12s linear}.heat-track i.danger{background:#f08863}.heat-row b{font-size:10px;min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
+.play-block #open-grimoire{width:100%;background:#314537;border:1px solid #978867;color:#efdbb4;min-height:43px;font-size:14px}
+.rune-node{display:flex;align-items:center;gap:11px;min-width:0;text-align:left;flex:1}
+.rune-node>span:last-child{min-width:0;flex:1}.rune-node strong{font-size:14px;color:inherit;line-height:1.15}.rune-node small{font-size:11px;margin-top:3px;font-weight:650;line-height:1.3;color:#686453}
+.rune-node .rune-icon{width:42px;height:42px;min-width:42px;display:grid;place-items:center;font-size:24px;background:#4a6154;border:2px solid #718375;color:#f2ddaf}
+.rune-node.rune-when .rune-icon{background:#715d4a;border-color:#a48662}
+.rune-node.rune-do .rune-icon{background:#3c605a;border-color:#6c9380}
+.rune-node.rune-how .rune-icon{background:#69516b;border-color:#958093}
+#draft .rune-choice{min-height:69px;padding:8px 9px!important}
+#draft .rune-choice .rune-node{width:100%}
+.replace-zone{padding-top:10px;display:grid;gap:7px}
+.replace-zone strong{color:#5b473a;font-size:14px}
+#replace-list{display:grid;gap:5px}
+.replace-zone .replacement{background:#e3d2b0!important;color:#2b342b!important;text-align:left;border:1px solid #a18b6e;margin:0!important;padding:8px 12px!important;font-size:12px}
+#replace-cancel{background:#766452!important;color:#f4e2c7}
+.workbench{background:linear-gradient(175deg,#ddc8a4,#d6be97);max-width:430px;padding:16px 16px 18px}
+.workbench h2{font-size:28px;margin:6px 0 3px}
+.workbench .bench-explain{font-size:11px;line-height:1.4;margin:4px 0 12px;color:#685a48}
+.bench-slots{display:grid;gap:5px}
+.bench-slot{display:flex;align-items:stretch;background:#f3e6c9;border:1px solid #99866d;box-shadow:inset 3px 0 #8c6e50;min-height:49px;position:relative}
+.bench-slot.is-dormant{background:#d6c7ad;border-left:3px dashed #a26c53}
+.slot-drag{touch-action:none;cursor:grab;display:flex;flex:1;min-width:0;padding:4px 5px 4px 7px;position:relative;z-index:1;align-items:center}
+.slot-drag.dragging{cursor:grabbing;z-index:10;background:#f9e9ca;box-shadow:0 7px 14px #332c2a50}
+.bench-slot .rune-icon{width:30px;height:31px;min-width:30px;font-size:19px}
+.bench-slot .rune-node{gap:8px}.bench-slot .rune-node strong{font-size:12px}.bench-slot .rune-node small{font-size:9px;color:#806d59}
+.slot-move{display:flex;flex-direction:column;width:38px;flex-shrink:0;border-left:1px solid #9f8969}
+.slot-move button{padding:0!important;margin:0!important;width:100%;flex:1;background:#776750!important;color:#fbead2!important;font-size:15px;min-height:24px}
+.slot-move button+button{border-top:1px solid #988368}
+.slot-move button:disabled{opacity:.3;cursor:default}
+.bench-result{background:#b3a18152;border-top:2px solid #8d7a63;margin-top:12px;padding:8px 9px 5px}
+.bench-result>strong{font-size:10px;letter-spacing:1.3px;color:#4f4b3b}
+.chain-preview{display:grid;gap:4px;margin:5px 0}
+.chain-preview p{background:#ecddbc;margin:0;padding:5px 7px;font-size:11px;line-height:1.4;color:#283c33;border-left:3px solid #677e68}
+.chain-preview .dormant-hint{background:#ddc9a8;color:#754c3f;border-left-color:#a66555}
+#bench-canvas{display:block;width:100%;max-height:55px;object-fit:fill;image-rendering:pixelated;margin:4px 0}
+.bench-actions{display:flex;gap:8px;align-items:center;margin-top:9px}
+.bench-actions #bench-save{width:40%;height:56px;margin:0;background:#344b3f;border:2px solid #758671;color:#f0debd;font-size:12px;font-weight:850;padding:6px}
+.bench-actions #bench-fight{width:60%;min-height:56px;font-size:15px;padding:10px 11px}
+.secondary-action{background:#344b40!important;border:2px solid #718678;color:#ebd8bc!important;padding:13px 16px!important;min-height:45px;font-weight:850}
+.book-list{display:grid;gap:10px;max-height:52dvh;overflow-y:auto}
+.book-row{padding:11px;background:#ead9ba;border:1px solid #988065;display:grid;gap:7px}
+.book-identity{display:grid;gap:5px;color:#34413b;min-width:0}
+.book-identity strong{font-size:13px}.book-identity small{font-size:11px;line-height:1.4;color:#7a6754;overflow-wrap:anywhere}
+.book-actions{display:flex;gap:7px}
+.book-actions button{margin:0!important;width:auto!important;flex:1;padding:10px!important;font-size:12px}
+.book-actions button:last-child{background:#816458!important}
+@media(max-height:710px){.workbench{padding:12px}.workbench h2{font-size:24px}.workbench .bench-explain{font-size:10px;margin:3px 0 8px}.bench-slot{min-height:42px}.bench-result{margin-top:8px;padding:5px 7px}.chain-preview p{font-size:10px;padding:3px 6px}#bench-canvas{max-height:40px}.bench-actions #bench-fight,.bench-actions #bench-save{min-height:46px;height:46px}}
+@media(max-width:360px){.workbench{padding:10px}.slot-move{width:32px}.bench-slot .rune-node strong{font-size:11px}}
