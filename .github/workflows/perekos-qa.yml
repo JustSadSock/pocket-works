@@ -1,0 +1,64 @@
+name: Perekos QA
+
+on:
+  pull_request:
+    paths:
+      - 'apps/perekos/**'
+      - 'pocketnet/module-versions/perekos/**'
+      - 'pocketnet/modules.lock.json'
+      - '.github/workflows/perekos-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/perekos/**'
+      - 'pocketnet/module-versions/perekos/**'
+      - '.github/workflows/perekos-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perekos-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify classes, server snapshot, fair draws and full game loops
+        run: node --test apps/perekos/tests/core.test.mjs apps/perekos/tests/avatar.test.mjs apps/perekos/tests/net.test.mjs
+
+  visual-and-gameplay:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned browser runner
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
+      - name: Browser journey and screenshot review (Chromium/WebKit, mobile/PC)
+        env:
+          PW_QA_SITE_ROOT: ${{ github.workspace }}
+          PW_QA_OUTPUT_DIR: ${{ github.workspace }}/qa-artifacts/perekos-journey
+        run: node node_modules/@playwright/test/cli.js test --config=scripts/universal-qa/playwright.config.mjs apps/perekos/qa/journey.spec.js apps/perekos/qa/avatar.spec.js apps/perekos/qa/net.spec.js apps/perekos/qa/visual-review.spec.js
+      - name: Upload real browser screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perekos-v0-5-visual-evidence
+          path: qa-artifacts/perekos-journey/
+          retention-days: 14
+          if-no-files-found: warn
