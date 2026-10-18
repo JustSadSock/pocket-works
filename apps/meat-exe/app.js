@@ -526,7 +526,8 @@ function frame(timestamp){
         fpsClock=0;fpsFrames=0;
       }
     }else{accumulator=0;}
-    const interval=mode==='playing'?0:80;
+    // Frame-rate ceiling in manual Detail mode leaves CPU/GPU time for game input.
+    const interval=mode==='playing'&&effectiveQuality==='high'?20:mode==='playing'?0:80;
     if(world&&!document.hidden&&(timestamp-lastPaint>=interval)){
       const elapsed=Math.min(dt,.045);lastPaint=timestamp;
       recoil=Math.max(0,recoil-elapsed*6);damageFlash=Math.max(0,damageFlash-elapsed*2.8);

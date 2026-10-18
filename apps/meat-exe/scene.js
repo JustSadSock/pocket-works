@@ -144,8 +144,10 @@ export function createWorld(canvas, initialSeed) {
     const w=Math.max(1,Math.round(canvas.clientWidth||window.innerWidth));
     const h=Math.max(1,Math.round(canvas.clientHeight||window.innerHeight));
     const mobile=w<900 || ('ontouchstart' in window);
-    const desired=quality==='low'?1:quality==='high'?(mobile?1.5:1.85):(mobile?1.2:1.45);
-    const pixelRatio=Math.min(window.devicePixelRatio||1,desired);
+    const desired=quality==='low'?1:quality==='high'?(mobile?1.32:1.55):(mobile?1.14:1.35);
+    // Bound real pixel work, not only CSS size: software WebGL must never stall input.
+    const budget=mobile?1_300_000:2_200_000;
+    const pixelRatio=Math.min(window.devicePixelRatio||1,desired,Math.sqrt(budget/(w*h)));
     if(w===currentWidth&&h===currentHeight&&ratio===pixelRatio) return;
     currentWidth=w;currentHeight=h;
     ratio=pixelRatio;renderer.setPixelRatio(ratio);
