@@ -35,10 +35,11 @@ test('QA frame does not touch PocketNet, profile, app storage or updater',()=>{
  assert.match(app,/if\(!IS_DEV_FRAME\)getPocketIdentity/);
  assert.match(html,/removeAttribute\("data-update-manager"\)/);
 });
-test('real animation renderer and adjustable playback speed',()=>{
+test('real shared combat renderer supports adjustable playback speed',()=>{
  assert.match(app,/animateRecord\(completed\.record\)/);
- assert.match(app,/580\/devAnimationSpeed/);
- assert.match(app,/560\/devAnimationSpeed/);
+ assert.match(app,/playArenaBeat\(\$\('board'\)/);
+ assert.match(app,/playArenaBeat\(\$\('replayBoard'\)/);
+ assert.match(app,/speed:devAnimationSpeed/);
  assert.match(app,/devAnimationSpeed=event\.data\.speed/);
  assert.ok(css.includes('.arena-dev__frame'));
 });

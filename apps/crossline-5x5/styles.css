@@ -96,3 +96,47 @@
 .arena-dev-in-game{font-size:21px;min-width:34px;min-height:33px}
 .replay-top .arena-dev-replay{margin-left:auto;min-width:36px}
 @media(max-height:580px) and (orientation:landscape){.hud-bottom{display:flex;position:fixed;top:3px;right:10px;width:auto;transform:none;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:9px;padding:2px 4px;gap:5px;z-index:4}.hud-bottom #roundInfo,.hud-bottom #phaseInfo{display:none}}
+
+
+/* Combat v1.4: persistent pieces travelling over stable cells. No layout jumps,
+   no CSS-driven gameplay decisions: the event log owns the entire sequence. */
+.board{position:relative;isolation:isolate}
+.board>.piece{
+ position:absolute;z-index:4;display:block;
+ width:calc(var(--tile) * .75);height:calc(var(--tile) * .75);
+ border-radius:50%;pointer-events:none;
+ transform:translate(-50%,-50%);will-change:left,top,opacity;
+ transition-property:left,top;transition-duration:0ms;
+ transition-timing-function:cubic-bezier(.25,.78,.18,1);
+ box-shadow:inset 0 -5px 8px rgba(0,0,0,.23),0 2px 3px rgba(0,0,0,.43),0 0 11px rgba(0,0,0,.2);
+}
+.board>.piece[hidden]{display:none!important}
+.board>.piece.a{background:#0af;box-shadow:inset 0 -6px 9px #036a91,0 0 9px #00aaff80}
+.board>.piece.b{background:#f40;box-shadow:inset 0 -6px 9px #a72d0a,0 0 9px #ff440080}
+.board>.piece.a.overlap{clip-path:inset(-15% 50% -15% -15%)}
+.board>.piece.b.overlap{clip-path:inset(-15% -15% -15% 50%)}
+.board>.piece.dying{animation:arenaPieceVanish .46s cubic-bezier(.25,.8,.24,1) forwards}
+.cell.attack-zone{border-color:#ffac80;box-shadow:inset 0 0 16px rgba(244,93,66,.8),0 0 8px rgba(244,93,66,.6);animation:arenaAttackPulse .42s ease-out}
+.cell.shield-pulse{border-color:#71dfff;box-shadow:inset 0 0 8px #71dfff,0 0 19px #00bbee}
+.cell.shield-pulse:before{content:"";position:absolute;inset:9%;border:3px solid #8feaff;border-radius:50%;animation:arenaShieldWave .46s ease-out both;pointer-events:none}
+.cell.impact{z-index:2;animation:arenaContact .43s cubic-bezier(.16,.88,.29,1)}
+.cell.impact:before{content:"";position:absolute;z-index:3;inset:10%;background:conic-gradient(from 15deg,#ffeab8 0 9deg,transparent 9deg 43deg,#ff864e 43deg 58deg,transparent 58deg 101deg,#ffeab8 101deg 115deg,transparent 115deg 160deg,#ff864e 160deg 177deg,transparent 177deg 230deg,#ffeab8 230deg 244deg,transparent 244deg 300deg,#ff864e 300deg 318deg,transparent 318deg);clip-path:circle(48%);animation:arenaBurst .36s ease-out both;pointer-events:none}
+.cell.block{z-index:2;animation:blockFlash .5s ease-out}
+.cell.fall-burst{border-color:#ff5d16;box-shadow:inset 0 0 24px #f60,0 0 14px #f70;animation:arenaFall .47s ease-in both}
+.cell.shatter{animation:arenaShatter .57s cubic-bezier(.15,.7,.23,1) both}
+.cell.lava{background:radial-gradient(circle at 48% 55%,#d8541f,#7d1c16 72%,#400d0a)}
+@keyframes arenaPieceVanish{0%,35%{opacity:1;scale:1}65%{opacity:.8;scale:1.28}100%{opacity:0;scale:.12}}
+@keyframes arenaAttackPulse{0%{filter:brightness(1.8)}100%{filter:brightness(1)}}
+@keyframes arenaShieldWave{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.55);opacity:0}}
+@keyframes arenaContact{0%{filter:brightness(2);scale:1.09}55%{filter:brightness(1.35);scale:.97}100%{filter:brightness(1);scale:1}}
+@keyframes arenaBurst{0%{transform:scale(.1) rotate(-18deg);opacity:1}100%{transform:scale(2.1) rotate(20deg);opacity:0}}
+@keyframes arenaFall{0%{filter:brightness(2)}100%{filter:brightness(.8)}}
+@keyframes arenaShatter{0%{transform:scale(1);filter:brightness(1.5)}45%{transform:rotate(-3deg) scale(.92);filter:brightness(2)}100%{transform:scale(.96);filter:brightness(.78)}}
+@media(prefers-reduced-motion:reduce){
+ .board>.piece{transition:none!important;animation:none!important}
+ .cell.attack-zone,.cell.shield-pulse,.cell.impact,.cell.block,.cell.fall-burst,.cell.shatter,.cell:before{animation:none!important}
+}
+
+
+:root[data-motion="off"] .board>.piece{transition:none!important;animation:none!important}
+:root[data-motion="off"] .cell.attack-zone,:root[data-motion="off"] .cell.shield-pulse,:root[data-motion="off"] .cell.impact,:root[data-motion="off"] .cell.block,:root[data-motion="off"] .cell.fall-burst,:root[data-motion="off"] .cell.shatter,:root[data-motion="off"] .cell:before{animation:none!important}

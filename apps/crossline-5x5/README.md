@@ -22,3 +22,9 @@ QA frames use synthetic room data and bypass PocketNet connections, identity ret
 ## Development roadmap / v1.3.0
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for priorities, acceptance criteria, release stages 1–6 and known risks. Stage 1 delivers fair difficulty-scaled AI, durable scoped PocketNet credentials, authoritative v2 match forfeits, v1 backward compatibility, saved offline drafts and private hotseat handoffs. Run `node --experimental-strip-types --test apps/crossline-5x5/tests/*.test.mjs` to include `tests/reliability.test.mjs`. Test two real logged-in PocketNet clients before claiming production validation.
+
+## Animation and effects (v1.4.0)
+
+`combat-visuals.js` is the single event-sourced renderer for the live 5×5 board, interactive replay and 30-fps WebM. It retains 25 cell and 2 fighter elements, uses interpolation for movement, telegraphed orthogonal attack zones, shield pulses, hits, falls using `event.at`, and perimeter collapse. Sound is emitted at the relevant event phase; the combat clock obeys QA animation speeds. `▶` / `⏭` in the top menu toggles motion, and `prefers-reduced-motion` is respected. Neither renderer nor exporter recomputes game outcomes.
+
+Tests: `node --experimental-strip-types --test apps/crossline-5x5/tests/*.test.mjs`, including `tests/combat-visuals.test.mjs`. The full roadmap is `docs/ROADMAP.md`.
