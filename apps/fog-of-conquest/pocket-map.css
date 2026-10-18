@@ -1,6 +1,6 @@
 /* PocketWorks Fog tactical atlas · no neon, no ornamental HUD text. */
 html{height:var(--fog-window-height,100%)!important;max-height:var(--fog-window-height,100%)!important;overflow:hidden!important}
-body{height:var(--fog-window-height,100%)!important;max-height:var(--fog-window-height,100%)!important;box-sizing:border-box!important;overflow:hidden!important}
+body{position:fixed!important;inset:0;width:100%!important;height:var(--fog-window-height,100%)!important;max-height:var(--fog-window-height,100%)!important;box-sizing:border-box!important;overflow:hidden!important}
 :root{--fog-hud-height:164px}
 #battleViewport{
   bottom:var(--fog-hud-height,164px)!important;
