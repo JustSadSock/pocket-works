@@ -110,6 +110,7 @@ test('desktop layout-independent FPS controls, arrow-turn, Tab and Esc work with
  await expect(page.locator('#pauseOverlay')).toBeVisible();
  await page.keyboard.press('Escape');
  await expect(page.locator('#pauseOverlay')).toBeHidden();
+ await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
  expect((await state(page)).phase).toBe('play');
  expect(errors).toEqual([])
 });
