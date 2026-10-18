@@ -1,6 +1,6 @@
-const PREFIX='portal-lab-',CACHE='portal-lab-v0.2.0',VERSION='0.2.0',RELEASE='2026-10-19';
-const NOTES=['Симуляция кротовой норы: непрерывные геодезические, кривизна, красное смещение и часы'];
-const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
+const PREFIX='portal-lab-',CACHE='portal-lab-v0.3.0',VERSION='0.3.0',RELEASE='2026-10-19';
+const NOTES=['Линзирование через кротовую нору, свободная геодезическая камера, приливные зонды'];
+const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
 const SCOPE=new URL('./',self.registration.scope);
 const ASSETS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(async c=>{
