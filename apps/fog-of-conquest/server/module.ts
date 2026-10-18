@@ -498,6 +498,8 @@ function privateView(g,side){
  // Never disclose a seeded map's reconstruction key while fog is active.
  delete v.seed;
  v.battleHistory={[side]:copy(g.battleHistory?.[side]||[])};
+ // Global event indices reveal the number of opponent's hidden moves.
+ delete v.battleSeq;delete v.battleSeqBySide;
  v.nextUnitId=0;return v;
 }
 // Each side receives only observations it could already make with its fog.
@@ -512,14 +514,16 @@ function recordBattleEvents(before,after,actor,action){
  // No HP, hidden entity IDs, concealed spawn types or unseen ownership.
  const kind=['move','attack','heal','spawn','end'].includes(action.type)?action.type:null;
  if(!kind)return [];
- after.battleSeq=(before.battleSeq||0)+1;
+ after.battleSeqBySide??={1:0,2:0};
  after.battleHistory??={1:[],2:[]};
  const packets=[];
  for(const side of [1,2]){
    const fromKnown=side===actor||visibleAt(before,side,from);
    const targetKnown=side===actor||visibleAt(before,side,target)||visibleAt(after,side,target);
    if(kind!=='end'&&!fromKnown&&!targetKnown)continue;
-   const ev={seq:after.battleSeq,kind,actor,turn:after.state.turn,revision:after.revision};
+   // Recipient-local sequence numbers contain no gaps caused by hidden acts.
+   const seq=++after.battleSeqBySide[side];
+   const ev={seq,kind,actor,turn:after.state.turn,revision:after.revision};
    if(fromKnown&&from)ev.from=from;
    if(targetKnown&&target)ev.at=target;
    if(kind==='spawn'&&side===actor)ev.unitType=action.unitType;
