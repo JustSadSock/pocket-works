@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {performance} from 'node:perf_hooks';
 import {initialMatch,simulateRound,validatePlan,aiPlan} from '../engine.js';
-import moduleV2 from '../server/module.ts';
-import moduleV1 from '../../../pocketnet/module-versions/crossline-5x5/v1.ts';
+import moduleV2,{initialMatch as initialMatchV2,simulateRound as simulateV2} from '../server/module.ts';
+import moduleV1,{initialMatch as initialMatchV1,simulateRound as simulateV1} from '../../../pocketnet/module-versions/crossline-5x5/v1.ts';
 
 const dirs=['up','down','left','right'];
 function seeded(seed){let x=seed>>>0;return ()=>((x=(Math.imul(x,1664525)+1013904223)>>>0)/4294967296);}
@@ -48,10 +48,10 @@ test('20,000 seeded complete matches: conservation, termination, replay integrit
  const total=20_000;let finished={A:0,B:0,draw:0},rounds=0,frames=0;
  for(let seed=1;seed<=total;seed++){
   const r=seeded(Math.imul(seed,2654435761)),start=initialMatch();
-  let a=start,b=moduleV2.initialMatch(),v1=moduleV1.initialMatch();
+  let a=start,b=initialMatchV2(),v1=initialMatchV1();
   for(let n=0;n<4&&!a.outcome;n++){
    const plans={A:randomLegalPlan(r),B:randomLegalPlan(r)};
-   const output=simulateRound(a,plans),server=moduleV2.simulateRound(b,plans),old=moduleV1.simulateRound(v1,plans);
+   const output=simulateRound(a,plans),server=simulateV2(b,plans),old=simulateV1(v1,plans);
    verifyRecord(a,output.match,output.record);
    assert.deepEqual(output,server,'browser and pinned v2 diverged at seed '+seed);
    assert.deepEqual(output,old,'v1 and v2 physics diverged at seed '+seed);
