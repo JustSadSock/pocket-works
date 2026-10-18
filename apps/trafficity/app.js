@@ -15,7 +15,7 @@ const preview=createGame(73522);
 let mode='menu',local=null,net=null,connected=false,me=null,roomId='',remote=null,selected=0;
 let name=store.getItem('name')||'Игрок',sound=store.getItem('sound')!=='off';
 let dialogKind='',pending='',intentCode='',connectingId=0,showNodes=false,stopMode=false,view=null;
-let drag=null,lastSnapshot=null,animation=null,raf=0,toastTimer=0,audio=null,confirmExit=false;
+let drag=null,lastSnapshot=null,animation=null,raf=0,lastPaint=0,toastTimer=0,audio=null,confirmExit=false;
 let camera={zoom:1,x:.5,y:.5},pointers=new Map(),pinch=null,eventTimer=0;
 const difficultyKey='difficulty';
 const codeFromUrl=(new URLSearchParams(location.search).get('room')||'').toUpperCase().trim();
@@ -49,7 +49,15 @@ function savedPractice(){
   const s=JSON.parse(store.getItem('save')||'null');
   if(!s||s.phase!=='playing'||!s.map?.nodes||s.vehicles?.length!==4)return null;
   if(!Number.isInteger(s.turn)||s.turn<0||s.turn>=30||s.map.nodes.length!==35)return null;
-  if(s.rulesVersion===2)return s;
+  if(s.rulesVersion===3)return s;
+  if(s.rulesVersion===2){
+   s.rulesVersion=3;
+   for(const car of s.vehicles){
+    if(car.navigation==='adaptive'&&car.route?.length)car.target??={kind:'personal',node:car.goal,id:null};
+    else {car.navigation='manual';car.target=null;}
+   }
+   return s;
+  }
   // Carry v1 progress into the new road topology; re-route without teleporting cars.
   const migrated=createGame(s.seed||123456789,'standard');
   migrated.turn=s.turn;
@@ -74,29 +82,34 @@ function updateFrame(next){
  if(positions&&lastSnapshot&&next.seed===lastSnapshot.seed&&next.turn!==lastSnapshot.turn){
   const old=lastSnapshot.positions,changed=positions.some((p,i)=>old[i]!==p);
   if(changed&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
-   animation={start:performance.now(),old:old.map(node=>({node})),progress:0};
+   animation={start:performance.now(),old:old.map(node=>({node})),progress:0,duration:920};
    const event=next.last?.find(e=>e.type==='delivery'||e.type==='offer'||e.type==='jam');
    clickSound(event?.type==='delivery'||event?.type==='offer'?'delivery':event?.type==='jam'?'jam':'turn');
   }
  }
  lastSnapshot=next?{seed:next.seed,turn:next.turn,positions}:null;
 }
-function draw(){
+function draw(time=performance.now()){
  const g=game();if(!g)return;
  const anim=animation?Object.assign({},Object.fromEntries(animation.old.map((p,i)=>[i,p])),{progress:animation.progress}):null;
- view=renderCity($('cityCanvas'),g,{selected,preview:drag?.draft||null,showNodes,interpolation:anim,camera});
+ view=renderCity($('cityCanvas'),g,{selected,preview:drag?.draft||null,showNodes,interpolation:anim,camera,time});
 }
-function animate(time){
- raf=0;if(!animation)return;
- animation.progress=Math.min(1,(time-animation.start)/260);
- draw();
- if(animation.progress<1)raf=requestAnimationFrame(animate);
- else animation=null;
+// A paced 30fps scene loop animates cars, ripples, factory smoke and route markers.
+// The town remains a static cached layer; canvas is never redrawn in a background tab.
+function sceneFrame(time){
+ raf=0;
+ if(document.hidden||matchMedia('(prefers-reduced-motion: reduce)').matches||phase()!=='playing'||!$('pauseOverlay').hidden)return;
+ if(animation){
+  animation.progress=Math.min(1,(time-animation.start)/animation.duration);
+  if(animation.progress>=1)animation=null;
+ }
+ if(window.__AI_TEST_STATE__)window.__AI_TEST_STATE__.motion=animation?.progress??null;
+ if(time-lastPaint>=32){draw(time);lastPaint=time;}
+ raf=requestAnimationFrame(sceneFrame);
 }
 function scheduleDraw(){
- if(raf)cancelAnimationFrame(raf);
  draw();
- if(animation)raf=requestAnimationFrame(animate);
+ if(!raf&&!document.hidden&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&phase()==='playing'&&$('pauseOverlay').hidden)raf=requestAnimationFrame(sceneFrame);
 }
 function showOverlay(id,visible){$(id).hidden=!visible;}
 function render(){
@@ -124,7 +137,7 @@ function render(){
   if(!ids.includes(selected))selected=ids[0];
   const vehicle=g.vehicles[selected];
   const spot=g.map.spots.find(x=>x.node===vehicle?.goal);
-  $('panelLabel').textContent=mode==='online'?(g.rulesVersion!==2?'КОМНАТА ПРЕЖНЕЙ ВЕРСИИ':'ВАШИ ДОСТАВКИ'):'ВАШ АВТОПАРК';
+  $('panelLabel').textContent=mode==='online'?(g.rulesVersion<3?'КОМНАТА ПРЕЖНЕЙ ВЕРСИИ':'ВАШИ ДОСТАВКИ'):'ВАШ АВТОПАРК';
   for(let i=0;i<2;i++){
    const v=g.vehicles[ids[i]],s=g.map.spots.find(x=>x.node===v?.goal),button=$('dispatch').querySelector('[data-vehicle="'+i+'"]');
    button.classList.toggle('active',v.id===selected);
@@ -157,9 +170,10 @@ function render(){
    if(msg?.type==='offer'||msg?.type==='delivery'){
     $('worldEvent').hidden=false;$('worldEvent').textContent=(msg.type==='offer'?'Перехвачен заказ ':'Доставка ')+'+'+msg.points;
    }else if(msg?.type==='jam'){$('worldEvent').hidden=false;$('worldEvent').textContent='Пробка на перекрёстке';}
+   else if(g.last.some(e=>e.type==='yield')){$('worldEvent').hidden=false;$('worldEvent').textContent='РАЗЪЕЗД В УЗКОМ ПРОЕЗДЕ';}
    else $('worldEvent').hidden=true;
   }else $('worldEvent').hidden=true;
-  const label=ready?'Ожидаем второго диспетчера':mode==='online'&&!connected?'Восстанавливаем соединение':stopMode?'Нажми на узел маршрута — здесь машина сделает остановку':steps?'Маршрут: '+steps+' участк. · можно перепланировать':'Нажми на перекрёсток или проведи путь пальцем';
+  const label=ready?'Ожидаем второго диспетчера':mode==='online'&&!connected?'Восстанавливаем соединение':stopMode?'Нажми на узел маршрута — здесь машина сделает остановку':vehicle.blocked>0?'ПРОБКА · '+vehicle.blocked+' ход. · '+(vehicle.navigation==='adaptive'?'маршрут перестраивается':'проложи объезд'):steps?'Маршрут: '+steps+' ул. · '+(vehicle.navigation==='adaptive'?'объезд пробок включён':'ручной план'):'Нажми на перекрёсток или проведи путь пальцем';
   $('status').textContent=label;
   $('hint').textContent=label;
   const last=g.last?.find(e=>(e.type==='delivery'||e.type==='offer')&&e.side===mySide());
@@ -180,7 +194,7 @@ function render(){
  window.__AI_TEST_STATE__={mode,phase:p,turn:g?.turn,seed:g?.seed,scores:g?.scores,delivered:g?.deliveries,selected,
   cars:g?.vehicles?.map(v=>({at:v.at,goal:v.goal,route:v.route.slice(),stop:v.stop})),
   connected,room:roomId?.slice(0,8)||'',ready:remote?.ready||null,cityReady:!!view,
-  offers:g?.offers?.map(o=>({...o})),traffic:g?.traffic,camera:{...camera},rulesVersion:g?.rulesVersion};
+  offers:g?.offers?.map(o=>({...o})),traffic:g?.traffic,camera:{...camera},rulesVersion:g?.rulesVersion,motion:animation?.progress??null};
 }
 function selectCar(id){
  if(!myCars().includes(id))return false;
@@ -352,7 +366,7 @@ async function connect(kind,code=''){
 }
 function turn(){
  const g=game();if(!g||phase()!=='playing')return;
- if(mode==='practice'){botPlan(g);advanceGame(g);botPlan(g);save();clickSound('turn');render();return;}
+ if(mode==='practice'){botPlan(g);advanceGame(g);botPlan(g);save();render();return;}
  send({type:'ready',ready:!remote?.ready?.[mySide()]});
 }
 function copyCode(){
@@ -397,7 +411,7 @@ function zoomTo(value){
  const g=game(),point=g?.map?.nodes?.[g.vehicles[selected]?.at];
  const z=Math.max(1,Math.min(2.6,value));
  if(camera.zoom===1&&z>1&&point){camera.x=point.x/g.map.width;camera.y=point.y/g.map.height;}
- camera.zoom=z;if(z===1){camera.x=.5;camera.y=.5;}draw();
+ camera.zoom=z;if(z===1){camera.x=.5;camera.y=.5;}render();
 }
 $('zoomIn').addEventListener('click',()=>zoomTo(camera.zoom+.35));
 $('zoomOut').addEventListener('click',()=>zoomTo(camera.zoom-.35));
@@ -410,7 +424,7 @@ setInterval(()=>{if(mode==='online'&&remote?.phase==='playing'){
 $('stopCount').addEventListener('input',()=>{$('stopValue').textContent=$('stopCount').value;});
 $('next').addEventListener('click',turn);
 $('pause').addEventListener('click',()=>{confirmExit=false;$('exitConfirm').hidden=true;showOverlay('pauseOverlay',true);});
-$('continue').addEventListener('click',()=>showOverlay('pauseOverlay',false));
+$('continue').addEventListener('click',()=>{showOverlay('pauseOverlay',false);scheduleDraw();});
 $('exitGame').addEventListener('click',()=>{confirmExit=true;$('exitConfirm').hidden=false;$('pauseText').textContent=mode==='online'?'Вы покинете сетевой матч.':'Сохранённую одиночную партию можно продолжить позже.';});
 $('exitConfirm').addEventListener('click',()=>{showOverlay('pauseOverlay',false);menu();});
 $('again').addEventListener('click',()=>{
@@ -435,6 +449,6 @@ document.addEventListener('keydown',e=>{
 });
 new ResizeObserver(()=>draw()).observe($('cityCanvas'));
 window.addEventListener('pagehide',save);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)draw();else save();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleDraw();else{if(raf)cancelAnimationFrame(raf);raf=0;save();}});
 if(codeFromUrl&&!readRoom())onlineDialog('join');
 render();
