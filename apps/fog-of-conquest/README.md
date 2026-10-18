@@ -47,3 +47,7 @@ Run `node --test apps/fog-of-conquest/test/stage0.test.mjs apps/fog-of-conquest/
 ## Stage 1 rules and AI (v1.3.0)
 
 AI healers prioritize injured allies, and AI movement spends only points proven legal by the original computeZone. After a side loses all military buildings, its five rescue turns tick only when that side ends its turn. Each side maintains frozen last-seen building intelligence without live opponent updates; v4 offline saves include this memory. Optional seeded worlds support reproducible regression tests. PocketNet uses a new immutable v4 ruleset and keeps active v2/v3 games on their pinned version. Full completed-match AI soak testing remains open (FOG-018).
+
+## Mobile tactical atlas (v1.4.0)
+
+`pocket-map.js` and `pocket-map.css` add pinch/double-tap/button zoom on the existing original canvas, a side-private minimap, a quick centering action, responsive focus-first HUD and a private hotseat handoff curtain. Client hit testing uses the actual rendered canvas size, so changing CSS scale does not change legal movement or attacks. Fog memory used by the minimap never reads current invisible enemy information. Rule text is still accessible via the main menu. Regression tests: `qa/stage2.spec.ts`.
