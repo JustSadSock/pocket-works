@@ -235,7 +235,9 @@ export class PocketIdentity {
       }
       if(path==='/pocket-id/public'&&request.method==='GET') {
         if(request.headers.get('x-pw-social-internal')!=='1')return response({error:'not_found'},404);
-        if(!await this.session(request))return response({error:'sign_in_required'},401);
+        // Only the trusted edge may permit guest reads of a known player's public card.
+        if(!await this.session(request)&&request.headers.get('x-pw-public-portrait')!=='1')
+          return response({error:'sign_in_required'},401);
         const id=url.searchParams.get('id')||'';
         if(!/^[0-9a-f-]{36}$/i.test(id))return response({user:null});
         const row=this.one('SELECT id,nickname,avatar FROM accounts WHERE id=?',id);
