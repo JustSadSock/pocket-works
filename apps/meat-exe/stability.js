@@ -9,7 +9,7 @@ export function validateRun(s){
   return {
     v:4,seed:s.seed>>>0,x:s.x,z:s.z,
     ruptured:(Array.isArray(s.ruptured)?s.ruptured:[])
-      .filter(id=>typeof id==='string'&&id.length<=29&&/^(?:[1-5]:)?-?\\d+,-?\\d+$/.test(id))
+      .filter(id=>typeof id==='string'&&id.length<=29&&/^(?:[1-5]:)?-?\d+,-?\d+$/.test(id))
       .slice(0,2000).map(id=>id.includes(':')?id:(num(Math.floor(s.wave),1,5,1)+':'+id))
       .filter((id,i,a)=>a.indexOf(id)===i),
     ruptureCount:num(Math.floor(s.ruptureCount),0,2000,0),immuneHeat:num(s.immuneHeat,0,100,0),immuneDelay:num(s.immuneDelay,0,6,0),hazardCooldown:num(s.hazardCooldown,0,3,0),

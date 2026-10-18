@@ -423,7 +423,7 @@ export function createWorld(canvas, initialSeed) {
   function reset(newSeed,ruptured=[],newStage=1){
     seed=(newSeed>>>0);stage=Math.max(1,Math.min(5,Math.trunc(newStage)||1));
     biome=biomeForWave(stage);clearChunks();setSeed(stageSeed(seed,stage));
-    openedTissues=new Set((Array.isArray(ruptured)?ruptured:[]).filter(id=>typeof id==='string'&&/^[1-5]:-?\\d+,-?\\d+$/.test(id)).slice(0,2000));
+    openedTissues=new Set((Array.isArray(ruptured)?ruptured:[]).filter(id=>typeof id==='string'&&/^[1-5]:-?\d+,-?\d+$/.test(id)).slice(0,2000));
     scene.background.setHex(biome.background);scene.fog.color.setHex(biome.fog);scene.fog.density=biome.fogDensity;
     sky.color.setHex(biome.light);sky.groundColor.setHex(biome.background);
     lamp.color.setHex(biome.light);pulseLamp.color.setHex(biome.pulse);
