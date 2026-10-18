@@ -42,7 +42,7 @@ export function advanceEnemyIntent(e,dt,context){
    if(kind==='volley')return {action:visible&&gap<11?'volley':'miss',kind};
    if(kind==='drain')return {action:visible&&gap<4?'drain':'miss',kind};
    if(kind==='charge'){
-     e.lunge=.37;
+     e.lunge=e.type==='warden'?.5:.37;
      const n=Math.hypot(e.intentX-x,e.intentZ-z)||1;
      e.lungeX=(e.intentX-x)/n;e.lungeZ=(e.intentZ-z)/n;
      return {action:'charge',kind};

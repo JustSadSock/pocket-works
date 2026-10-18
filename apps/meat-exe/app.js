@@ -145,6 +145,7 @@ function startWave(number){
     navAt=0;gateHintShown=false;
   }
   state.wave=number;state.waveTime=0;state.spawnClock=0;state.toSpawn=number===5?1:7+number*3;
+  if(number===2)state.immune.heat=Math.max(state.immune.heat,18);
   if(number===5){setNotice('НЕРВНЫЙ УЗЕЛ · СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
   else {setNotice(biomeForWave(number).name+' · ВОЛНА '+number+'/05',2.8);sound('heart');}
   snapshot();
@@ -162,7 +163,7 @@ function chooseSpawn(min=4,max=11){
   return choices[Math.floor(Math.random()*choices.length)];
 }
 function spawnUnit(type){
-  const p=chooseSpawn(type==='heart'?5:3,type==='heart'?9:11);
+  const p=chooseSpawn(type==='heart'||type==='warden'?5:3,type==='heart'||type==='warden'?9:11);
   if(!p)return false;
   state.enemies.push(makeEnemy(type,p.x,p.z));
   return true;
@@ -385,7 +386,7 @@ function updateEnemies(dt){
     }
     if(result.action==='shoot'){createProjectile(e);sound('heart');}
     else if(result.action==='volley'){for(let n=-2;n<=2;n++)createProjectile(e,n*.29);}
-    else if(result.action==='bite'){harm(e.type==='brute'?18:e.type==='heart'?21:10);}
+    else if(result.action==='bite'){harm(e.type==='warden'?21:e.type==='brute'?18:e.type==='heart'?21:10);}
     else if(result.action==='drain'){
       const before=state.hp;harm(10);
       if(state.hp<before){e.hp=Math.min(e.maxHp,e.hp+12);world.impact({x:e.x,y:.8,z:e.z},{x:0,y:1,z:0},'flesh');}
@@ -402,7 +403,7 @@ function updateEnemies(dt){
       if(before>1.1&&e.lunge<=dt&&!e.chargeHit){chargesDodged++;state.score+=25;}
       continue;
     }
-    if(e.windup>0&&(e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
+    if(e.windup>0&&(e.type==='warden'||e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
     if(dist>.76){
       const modifier=mutation?.key==='faster'?1.18:1;
       let pace=e.speed*modifier*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1)*terrain.speed;

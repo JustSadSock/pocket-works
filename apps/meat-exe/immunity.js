@@ -3,7 +3,7 @@
 export const IMMUNE_EVENTS=Object.freeze({
  probe:{name:'РАЗВЕДКА',units:['crawler','spitter'],minHeat:19},
  purge:{name:'ОЧИЩЕНИЕ',units:['spitter','leech','brute'],minHeat:42},
- guardian:{name:'СТРАЖ ПРИВРАТНИКА',units:['warden'],minHeat:57}
+ guardian:{name:'СТРАЖ ПРИВРАТНИКА',units:['warden'],minHeat:49}
 });
 export function immuneDefaults(){return {heat:0,cooldown:0,warning:0,pending:'',responses:0,guardianStages:[],quiet:0};}
 export function sanitizeImmune(raw){
@@ -37,7 +37,7 @@ export function updateImmune(immune,dt,{wave,enemies,remaining,playerHp}){
  }
  if(wave>=5||wave<1||immune.cooldown>0||remaining<0||enemies>=12||playerHp<=24)return null;
  let event='';
- if(wave===2&&immune.heat>=57&&!immune.guardianStages.includes(wave))event='guardian';
+ if(wave===2&&immune.heat>=IMMUNE_EVENTS.guardian.minHeat&&!immune.guardianStages.includes(wave))event='guardian';
  else if(immune.heat>=42)event='purge';
  else if(immune.heat>=19)event='probe';
  if(!event)return null;
