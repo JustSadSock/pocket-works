@@ -137,6 +137,7 @@ export function createMaterialLab(options={}){
   // Stress history: real Hookean stresses in Pa, not arbitrary normalized art.
   const plot={x:pad,y:chartY+30,w:w-pad*2,h:Math.max(20,chartH-14)};
   txt(ctx,'НАПРЯЖЕНИЕ / МПа',pad,chartY,{size:12,color:'#b3ccbc',weight:720});
+  txt(ctx,'МАХ '+format(stat.stressPeakMPa,1),w-pad,chartY,{size:11,color:'#efd1ab',align:'right'});
   const mat=MATERIALS[state.material],limit=mat.E*mat.tension/1e6;
   const maxStress=Math.max(limit*1.18,stat.stressPeakMPa*1.22,.05);
   for(let i=0;i<=4;i++){
@@ -144,10 +145,19 @@ export function createMaterialLab(options={}){
    line(ctx,plot.x,y,plot.x+plot.w,y,'#7a958c2b',1);
   }
   const maxT=Math.max(1,Math.ceil(specimen.history.at(-1)?.t||1));
-  chartPath(ctx,specimen.history,'stressPeakMPa',plot,maxT,0,maxStress,'#bce6c9');
+  chartPath(ctx,specimen.history,'stressMPa',plot,maxT,0,maxStress,'#bce6c9');
   const targetY=plot.y+(1-limit/maxStress)*plot.h;
   if(targetY>=plot.y){
    ctx.setLineDash([4,4]);line(ctx,plot.x,targetY,plot.x+plot.w,targetY,'#e8ae8e97',1);ctx.setLineDash([]);
+  }
+  for(const link of specimen.links){
+   if(link.failedAt===null)continue;
+   // Proper-time fracture marker is placed at nearest sampled coordinate time.
+   const sample=specimen.history.reduce((p,c)=>Math.abs(c.proper-link.failedAt)<Math.abs(p.proper-link.failedAt)?c:p,specimen.history[0]);
+   if(sample){
+    const xx=plot.x+clamp(sample.t/maxT,0,1)*plot.w;
+    line(ctx,xx,plot.y,xx,plot.y+plot.h,'#e7ac877a',1);
+   }
   }
   txt(ctx,'0',plot.x,plot.y+plot.h+14,{size:10,color:'#8da898'});
   txt(ctx,format(maxT,0)+' a/c',plot.x+plot.w,plot.y+plot.h+14,{size:10,color:'#8da898',align:'right'});
