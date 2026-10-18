@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2d3730"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Туман завоеваний">
+<meta name="description" content="Тактическая пошаговая стратегия о разведке, снабжении и захвате крепостей.">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css"><title>ТУМАН ЗАВОЕВАНИЙ</title></head>
+<body data-app-preset="game-2d"><main class="shell" data-app-shell data-fullscreen-app>
+<header class="header" data-ui><a class="return" href="../../" data-app-control>← Pocket Works</a>
+<div class="wordmark"><span class="wordmark-emblem">✣</span> ТУМАН ЗАВОЕВАНИЙ</div>
+<button data-native-press class="subtle" id="menuBtn" type="button" aria-label="Открыть меню">☰</button></header>
+<div class="campaign" id="campaign">
+<div class="ribbon" data-ui><span id="season">ХОД 1 · СЕВЕР</span><span id="status">Золото 7 · Доход +4</span></div>
+<div class="field" id="field" data-gesture-surface data-block-callout>
+<canvas id="map" aria-label="Карта сражения. Выберите свой отряд, затем цель." tabindex="0"></canvas>
+<div class="zoom" data-ui><button id="zoomIn" aria-label="Приблизить карту">+</button><button id="zoomOut" aria-label="Отдалить карту">−</button><button id="focus" aria-label="К своей цитадели">◎</button></div>
+<div class="field-message" id="toast" role="status" aria-live="polite"></div>
+<div class="side-badge" id="sideBadge">СЕВЕР</div>
+</div>
+<section class="orders" id="orders" data-ui><div class="unit-summary"><div class="unit-seal" id="unitIcon">✣</div>
+<div class="unit-copy"><strong id="unitTitle">Выберите отряд</strong><small id="unitHint">Коснитесь своего знамени на карте</small></div>
+<button class="clear" id="clear" title="Снять выделение" aria-label="Снять выделение">×</button></div>
+<div class="actions" id="actions"><div class="starter-tip">Разведайте местность, займите мельницы и осадите цитадель соперника.</div></div>
+<div class="bottomline"><div id="log" class="last-event">Поле ждёт первого приказа.</div><button data-native-press id="endTurn" class="end-turn">ЗАВЕРШИТЬ ХОД <span>→</span></button></div></section>
+</div>
+<section class="veil" id="start"><div class="start-panel">
+<div class="cover-art" aria-hidden="true"><svg viewBox="0 0 360 190"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#aab7a3"/><stop offset="1" stop-color="#e4d6b4"/></linearGradient></defs>
+<rect width="360" height="190" fill="url(#sky)"/><circle cx="275" cy="53" r="30" fill="#e7c07d"/>
+<path d="M0 106 Q85 44 170 109 T360 102 V190H0" fill="#879a7e"/><path d="M0 138Q95 88 175 139T360 128V190H0" fill="#5f7768"/>
+<path d="M0 170 Q100 120 176 169T360 150V190H0" fill="#3c584e"/><path d="M95 137V67L132 51L165 68V137Z" fill="#c3b28c" stroke="#465047" stroke-width="4"/>
+<path d="M90 72 130 44 170 72Z" fill="#6b5a4b"/><path d="M117 136V100Q130 82 143 100V136" fill="#38463c"/>
+<path d="M130 83V34M130 35 179 44 161 70 130 62" fill="#a34c40" stroke="#513c35" stroke-width="2"/>
+<path d="M207 165V83M208 84l34 10-14 26-20-9" fill="#b5a263" stroke="#333d35" stroke-width="3"/>
+<path d="M0 135 Q95 95 180 130T360 124" fill="none" stroke="#e7dfc2" stroke-width="12" opacity=".22"/>
+<path d="M0 9Q45 25 89 7T180 14 270 8 360 13" stroke="#fff" stroke-width="19" opacity=".16" fill="none"/></svg></div>
+<div class="title-kicker">ПЕРЕОСМЫСЛЕНИЕ FOG OF CONQUEST</div>
+<h1>Туман<br><i>завоеваний</i></h1>
+<p>Война видна лишь до горизонта. Всё остальное приходится завоёвывать.</p>
+<div class="start-controls"><label>КАРТА <select id="size"><option value="compact">Малая · 12×16</option><option value="standard" selected>Средняя · 16×22</option><option value="expanse">Большая · 20×28</option></select></label>
+<label>ПРОТИВНИК <select id="difficulty"><option value="1">I · Новобранец</option><option value="2">II · Ополчение</option><option value="3" selected>III · Командир</option><option value="4">IV · Стратег</option><option value="5">V · Полководец</option><option value="6">VI · Кошмар</option></select></label></div>
+<button data-native-press class="primary" id="newGame">НАЧАТЬ ПОХОД <span>→</span></button>
+<div class="secondary-grid"><button data-native-press id="continueGame" disabled>Продолжить</button><button data-native-press id="onlineBtn">Партия с другом</button></div>
+<a class="exit" href="../../" data-app-control>← Вернуться в Pocket Works</a>
+</div></section>
+<section class="modal" id="online" hidden><div class="dialog"><h2>Поле для двоих</h2><p>Ходы сохраняются на сервере. Дождитесь соперника или вернитесь к партии позднее.</p>
+<label class="field-label">ВАШЕ ИМЯ<input id="nickname" maxlength="24" value="Полководец" autocomplete="nickname"></label>
+<div class="online-pair"><button id="createRoom" class="primary">Создать комнату</button><span>или</span>
+<input id="roomCode" placeholder="Код комнаты" maxlength="40" aria-label="Код комнаты"><button id="joinRoom">Войти</button></div>
+<div id="roomDetails" hidden><div class="room-code" id="roomText">—</div>
+<div class="room-actions"><button id="copyRoom">Копировать приглашение</button><button id="startRoom" class="primary" hidden>Начать дуэль</button></div></div>
+<div id="netStatus" class="net-status" role="status">Выберите действие.</div>
+<button class="text-button" id="onlineClose">Закрыть · слот в партии сохранится</button>
+</div></section>
+<section class="modal" id="menu" hidden><div class="dialog"><h2>Военный совет</h2><p id="menuNote">Партия автоматически сохраняется после каждого приказа.</p>
+<button id="resume" class="primary">Вернуться на поле</button>
+<button id="sound">Звук: включён</button>
+<button id="save">Сохранить сейчас</button>
+<button id="newConfirm">Новый поход</button>
+<a class="exit" href="../../" data-app-control>← Вернуться в Pocket Works</a></div></section>
+<section class="modal" id="confirm" hidden><div class="dialog"><h2>Начать сначала?</h2><p>Текущая одиночная партия будет заменена новой.</p>
+<button id="confirmYes" class="primary">Новый поход</button><button id="confirmNo">Отмена</button></div></section>
+<section class="modal" id="finish" hidden><div class="dialog"><div class="final-emblem">✣</div><h2 id="finishTitle">Исход войны</h2><p id="finishText"></p>
+<button id="finishNew" class="primary">Новый поход</button><a class="exit" href="../../" data-app-control>← Вернуться в Pocket Works</a></div></section>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Туман завоеваний" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>

@@ -17,7 +17,7 @@ const MAX_PLAYERS = 8;
 // Versioned game modules enforce these caps in onJoin; mirror them for accurate
 // discoverability before a player follows an invitation link.
 const GAME_SEATS=Object.freeze({'blind-pals':2,flagpost:2,'last-tile-duel':2,'kromka-duel':2,
-  folio:6,lipki:4,natyazhenie:5,komnatka:5,'uzel-party':6,'ne-tem-golosom':6});
+  folio:6,lipki:4,natyazhenie:5,komnatka:5,'uzel-party':6,'ne-tem-golosom':6,'fog-of-conquest':2});
 const ROOM_TTL = 30 * 60_000;
 const SESSION_TTL = 7 * 86400_000;
 const GAME_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -624,7 +624,7 @@ export class PocketNetHub {
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
     for (const row of rows) {
       const room = this.readRoom(row.id);
-      const ttl=room?.gameId==='zamazka'&&room.state?.paused?12*60*60_000:ROOM_TTL;
+      const ttl=room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000 : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
       if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
       if(room)await this.closeRoom(room);
     }
