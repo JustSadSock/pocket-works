@@ -550,7 +550,7 @@ function chooseGraft(id){
   state.pendingDraft=0;state.draftRevision=0;
   state.hp=Math.min(state.maxHp,state.hp+16);
   startWave(next);
-  setMode('playing');clock=0;last=performance.now();accumulator=0;lastPaint=0;
+  setMode('playing');last=performance.now();accumulator=0;lastPaint=0;
   setNotice(chosen.name+' · ВСТРОЕНО',2.6);sound('pickup');
   syncHUD();snapshot();
 }
@@ -612,6 +612,8 @@ function pollGamepad(dt){
     if(pressed(15)||pressed(13))draftIndex=(draftIndex+1)%3;
     if(pressed(0)){const option=availableDraft()[draftIndex];if(option)chooseGraft(option.id);}
     if(pressed(2))rerollDraft();
+    // Consuming A to transplant must not simultaneously trigger a dash.
+    padMove.x=padMove.y=0;gamepadFire=false;prevPadButtons=buttons;return;
   }
   if(mode==='menu'&&pressed(0))begin(Boolean(save));
   else if((mode==='dead'||mode==='won')&&pressed(0))begin(false);
