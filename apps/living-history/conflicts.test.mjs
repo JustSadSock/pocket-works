@@ -161,3 +161,75 @@ test('muster preserves deterministic outcomes through two independent save/reloa
  assert.ok(result.morale&&result.arrived);
  assert.ok(audit(once).ok,audit(once).issues.join('; '));
 });
+
+test('carried field rations conserve actual grain and prevent double meals at home',()=>{
+ const s=createWorld(413),pair=settlementPair(s);assert.ok(pair);
+ const allGrain=()=>s.households.reduce((sum,h)=>sum+h.grain,0)+
+  (s.conflicts||[]).reduce((sum,c)=>sum+(c.supply?.claimants?.grain||0)+(c.supply?.owners?.grain||0),0);
+ const initial=allGrain();
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot,null,{muster:true,expedition:true});
+ assert.ok(c,'actual reserve grain must enable expedition');
+ assert.equal(c.stage,'mustering');
+ assert.ok(c.supply.claimants.loaded>0&&c.supply.owners.loaded>0);
+ assert.ok(Math.abs(allGrain()-initial)<.03,'loading grain does not create or consume it');
+ assert.ok(audit(s).ok,audit(s).issues.join('; '));
+ advanceDays(s,1);assert.equal(c.stage,'marching');
+ advanceDays(s,1);
+ assert.ok(c.travelDays>=1);
+ assert.ok(c.supply.claimants.eaten>0&&c.supply.owners.eaten>0,'carried food eaten while marching');
+ assert.ok([...c.claimants,...c.owners].some(id=>s.people.find(p=>p.id===id)?.combatAwayDay===s.day));
+ assert.ok(audit(s).ok,audit(s).issues.join('; '));
+ for(let i=0;i<12&&c.stage!=='resolved';i++){advanceDays(s,1);assert.ok(audit(s).ok,audit(s).issues.join('; '));}
+ assert.equal(c.stage,'resolved','survivors physically return home');
+ assert.ok(c.returnDays>=1);
+ for(const side of ['claimants','owners']){
+  const bag=c.supply[side];
+  assert.equal(bag.grain,0);
+  assert.ok(Math.abs(bag.loaded-bag.eaten-bag.returned)<.04,'no free or lost field grain');
+ }
+ assert.equal(s.stats.expeditionGrainEaten,
+  Math.round((c.supply.claimants.eaten+c.supply.owners.eaten)*100)/100);
+});
+
+test('insufficient initial rations reject an expedition without any inventory mutation',()=>{
+ const s=createWorld(43821),pair=settlementPair(s);assert.ok(pair);
+ const original=pair.poor.grain;
+ pair.poor.grain=0;
+ s.economy.grainInitial-=original;
+ const before=serialize(s);
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot,null,{muster:true,expedition:true});
+ assert.equal(c,null);
+ assert.equal(serialize(s),before);
+ assert.ok(audit(s).ok,audit(s).issues.join('; '));
+});
+
+test('field ration exhaustion cancels a march, sends survivors back and balances returned grain',()=>{
+ const s=createWorld(9001),pair=settlementPair(s);assert.ok(pair);
+ // Leave precisely one day of provisions after protecting the household reserve.
+ const people=pair.poor.members.filter(id=>s.people.some(p=>p.id===id&&p.alive)).length;
+ const desired=people*.68*3+.68;
+ const original=pair.poor.grain;
+ pair.poor.grain=Math.round(desired*100)/100;
+ s.economy.grainInitial=Math.round((s.economy.grainInitial+pair.poor.grain-original)*100)/100;
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot,null,{muster:true,expedition:true});
+ assert.ok(c);
+ advanceDays(s,1);
+ for(let i=0;i<14&&c.stage!=='resolved';i++)advanceDays(s,1);
+ assert.equal(c.stage,'resolved');
+ assert.equal(c.aborted,'food');
+ assert.equal(c.outcome,'dispersed');
+ assert.ok(s.stats.expeditionsAborted>=1);
+ assert.ok(audit(s).ok,audit(s).issues.join('; '));
+});
+
+test('expedition across saves has identical grain, participants and chronological positions',()=>{
+ const s=createWorld(7777),pair=settlementPair(s);assert.ok(pair);
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot,null,{muster:true,expedition:true});assert.ok(c);
+ advanceDays(s,2);
+ const snap=serialize(s),a=deserialize(snap),b=deserialize(snap);
+ advanceDays(a,25);for(let i=0;i<25;i++)advanceDays(b,1);
+ assert.equal(serialize(a),serialize(b));
+ const after=a.conflicts.find(x=>x.id===c.id);
+ assert.equal(after.stage,'resolved');
+ assert.ok(audit(a).ok,audit(a).issues.join('; '));
+});
