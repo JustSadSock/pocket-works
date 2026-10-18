@@ -81,6 +81,72 @@ function confirmReturn(){
   {label:playing?'Сдаться и выйти':'В меню',action:()=>leaveToMenu()});
  $('pauseSettings').classList.remove('hidden');
 }
+
+function syncSettings(){
+ $('settingsMute').textContent=sound?'Выключить звук':'Включить звук';
+ $('settingsMute').setAttribute('aria-pressed',String(!sound));
+ $('settingsVolume').value=String(volume);
+ $('volumeOutput').textContent=volume+'%';
+ $('settingsMotion').textContent=motion?'Анимации: включены':'Анимации: выключены';
+ $('settingsHaptics').textContent=haptics?'Вибрация: включена':'Вибрация: выключена';
+ $('sound').textContent=sound?'♪':'♪̸';
+ $('sound').setAttribute('aria-label','Настройки звука и управления');
+}
+function openSettings(){
+ if(settingsOpen)return;
+ settingsReturnFocus=document.activeElement;settingsOpen=true;syncSettings();
+ $('arenaSettings').classList.remove('hidden');$('settingsMute').focus({preventScroll:true});
+}
+function closeSettings(){
+ if(!settingsOpen)return;
+ settingsOpen=false;$('arenaSettings').classList.add('hidden');
+ settingsReturnFocus?.focus?.({preventScroll:true});settingsReturnFocus=null;
+ if(screen==='play')render();
+}
+function startTutorial(){
+ leaveNet(false);gameToken++;clearTimeout(replayTimer);
+ mode='tutorial';offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:createGuideMatch(),score:{A:0,B:0},boardMarks:{A:{},B:{}}};
+ plan=[];editingSlot=null;attackMode=false;attackDirs=[];animating=false;showingOutcome=false;
+ show('play');soundFX('tap');
+}
+function guideWrong(){
+ const step=guideStep(plan.length,attackMode,attackDirs);
+ toast('Сейчас: '+step.text);buzz(9);
+}
+function ownMarks(){
+ if(!game()||!side())return {};
+ if(mode==='online'){
+  const key=roomId+':'+game().round+':'+side();
+  return sanitizeMarks(onlineMarkCache[key]);
+ }
+ const round=String(game().round);
+ return sanitizeMarks(offline?.boardMarks?.[side()]?.[round]);
+}
+function changeBoardMark(x,y){
+ if(screen!=='play'||mode==='tutorial'||locked()||!Number.isInteger(x)||!Number.isInteger(y))return;
+ const next=cycleCellMark(ownMarks(),x,y);
+ if(mode==='online'){
+  const key=roomId+':'+game().round+':'+side();
+  delete onlineMarkCache[key];onlineMarkCache[key]=next;
+  const entries=Object.entries(onlineMarkCache).slice(-28);
+  onlineMarkCache=Object.fromEntries(entries);
+  write('onlineMarks',JSON.stringify(onlineMarkCache));
+ }else{
+  offline.boardMarks||={A:{},B:{}};
+  offline.boardMarks[side()]||={};
+  offline.boardMarks[side()][String(game().round)]=next;
+  storeOffline();
+ }
+ render();soundFX('tap');
+}
+function tutorialFinished(){
+ showingOutcome=true;soundFX('win');
+ modal('ОБУЧЕНИЕ','Пять шагов выполнены','Ты передвинул фишку, выбрал направление атаки, поставил щит и увидел одновременное исполнение команд.',
+  {label:'Сыграть с ИИ',action:()=>{mode='menu';offline=null;show('difficultyView')}},
+  {label:'Смотреть повтор',action:openReplay},
+  {label:'В меню',action:()=>leaveToMenu(true)});
+}
+
 function showRules(){modal('ПРАВИЛА','Предугадай противника','Каждый раунд оба игрока скрытно выбирают 5 команд. Перемещения выполняются одновременно, затем срабатывают атаки и щиты. Атака один раз за раунд: отмечай соседние направления (и свою клетку). Щит один раз за раунд. Направление, выбранное для атаки, нельзя использовать для движения в этом плане, и наоборот. В 4-м раунде после первого шага внешний контур обрушится.',{label:'Понятно',action:()=>{}});}
 function storeOffline(){if(mode==='tutorial')return;if(offline)write('saved',JSON.stringify({mode,offline,draft:mode==='hotseat'&&offline.pending?.A&&offline.turn==='A'?[]:plan}));}
 function matchSeriesId(){
