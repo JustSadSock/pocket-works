@@ -562,7 +562,7 @@ for (const button of elements.soundButtons) {
 
 createWorkshopMode({
   appName: 'ОТВЕС',
-  version: '1.3.0',
+  version: '1.4.0',
   cachePrefix: 'otves-',
   storageNamespace: 'pocket-works:otves',
   onReset: async () => location.reload()
