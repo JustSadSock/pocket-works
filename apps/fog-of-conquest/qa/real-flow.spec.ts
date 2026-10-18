@@ -50,9 +50,19 @@ test('original campaign: render, move, turn, autosave, restore and launcher link
  const documentScroll=await page.evaluate(async()=>{
    window.scrollTo(0,200);
    await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
-   return window.scrollY;
+   const overflowing=[...document.querySelectorAll('body *')].map(element=>{
+     const r=element.getBoundingClientRect(),style=getComputedStyle(element);
+     return {id:element.id,tag:element.tagName,top:Math.round(r.top),
+       bottom:Math.round(r.bottom),height:Math.round(r.height),
+       position:style.position,display:style.display};
+   }).filter(x=>x.display!=='none'&&x.bottom>innerHeight+1).slice(0,15);
+   return {scrollY:window.scrollY,innerHeight,scrollHeight:document.documentElement.scrollHeight,
+     rootHeight:getComputedStyle(document.documentElement).height,
+     bodyHeight:getComputedStyle(document.body).height,
+     cssVariable:document.documentElement.style.getPropertyValue('--fog-window-height'),
+     overflowing};
  });
- expect(documentScroll).toBe(0);
+ expect(documentScroll.scrollY,JSON.stringify(documentScroll)).toBe(0);
  expect(errors).toEqual([]);
 });
 test('menu: original settings, AI choices and PocketNet lobby are reachable',async({page})=>{
