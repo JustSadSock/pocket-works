@@ -3391,14 +3391,45 @@
         "score": 74
       }
     ],
-    "diagnostic": null,
+    "diagnostic": {
+      "bestScore": 44,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 11297,
+        "variance": 34.48706133845976,
+        "entropy": 1.411001387139736,
+        "edgeDensity": 0.04030257936507937,
+        "colorfulness": 0.8193359375,
+        "centerDetail": 48.1621700306336,
+        "meanLight": 21.914232910156258
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Новая игра",
+            "id": "newGameBtn",
+            "score": 62
+          },
+          {
+            "label": "Одиночная игра",
+            "id": "aiBtn",
+            "score": 92
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.2.1&pw_fp=c65c1726743969ef9073b69e"
+    },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
-    "status": "published",
+    "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "b78f8ccf5aadb1b31daace8c716580f2bf5679f0",
-    "lastAttemptAt": "2026-10-18T00:16:06.535Z"
+    "lastAttemptRevision": "f182cc9af45f6c1bf19636f0fb6a27a60bf00a81",
+    "lastAttemptAt": "2026-10-18T12:15:07.738Z",
+    "note": "No frame passed image-content checks"
   },
   "chyepukha": {
     "revision": "625c43646d2bcd6835b9b178ec629dcc7c1f07a5",
