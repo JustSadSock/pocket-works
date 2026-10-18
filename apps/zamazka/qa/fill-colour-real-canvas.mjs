@@ -76,7 +76,7 @@ try{
    check(rgb(pixel(cx,cy),tan),'initial multi-stroke interior is not tan');
    check(rgb(pixel(440,cy),tan),'initial outside should be the same tan');
    check(rgb(pixel(cx+r,cy),black),'the boundary must be visibly black');
-   const outsideBefore=pixel(440,cy),paperBefore=pixel(30,30),edgeBefore=pixel(cx+r,cy);
+   const outsideBefore=pixel(440,cy),paperBefore=[232,221,198],edgeBefore=pixel(cx+r,cy);
    strokes.push(stroke('#217bd2',8,[[cx,cy]],'fill'));
    render(); // executes chronological production fillRegion, not a test stub
    for(const [x,y] of [[cx,cy],[cx-35,cy],[cx+28,cy-19],[cx,cy+35]]){
