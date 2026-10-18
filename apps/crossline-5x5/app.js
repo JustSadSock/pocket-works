@@ -11,7 +11,18 @@ let devAnimationSpeed=1;
 const $=id=>document.getElementById(id),NET=location.origin+'/pocketnet',KEY='pocket-works:crossline-5x5:';
 const read=(key,fallback='')=>{if(IS_DEV_FRAME)return fallback;try{return localStorage.getItem(KEY+key)??fallback}catch{return fallback}};
 const write=(key,val)=>{if(IS_DEV_FRAME)return;try{localStorage.setItem(KEY+key,String(val))}catch{}};
-const scoped={getItem:k=>{try{return sessionStorage.getItem(KEY+k)}catch{return null}},setItem:(k,v)=>{try{sessionStorage.setItem(KEY+k,v)}catch{}},removeItem:k=>{try{sessionStorage.removeItem(KEY+k)}catch{}}};
+// PocketNet identity-scoped room resumes across browser restarts; migrate v1
+// sessionStorage once, without allowing disposable QA frames to access it.
+const scoped={
+ getItem:k=>{if(IS_DEV_FRAME)return null;try{
+  const current=localStorage.getItem(KEY+k);if(current)return current;
+  const legacy=sessionStorage.getItem(KEY+k);
+  if(legacy){localStorage.setItem(KEY+k,legacy);sessionStorage.removeItem(KEY+k)}
+  return legacy;
+ }catch{return null}},
+ setItem:(k,v)=>{if(IS_DEV_FRAME)return;try{localStorage.setItem(KEY+k,v)}catch{}},
+ removeItem:k=>{if(IS_DEV_FRAME)return;try{localStorage.removeItem(KEY+k);sessionStorage.removeItem(KEY+k)}catch{}}
+};
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const symbols={up:'↑',down:'↓',left:'←',right:'→',shield:'▣'};
 let profile=null,sound=read('sound','on')==='on',difficulty=read('difficulty','normal');
@@ -20,6 +31,7 @@ document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
 let plan=[],attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
 let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null;
+let roomVersion='v1',opponentDisconnected=false,pendingForfeitLeave=false,forfeitWatchdog=0;
 const roomQuery=new URLSearchParams(location.search).get('room')?.trim()||'';
 const latest=()=>mode==='online'?server:offline;
 const game=()=>latest()?.match;
@@ -51,8 +63,14 @@ function modal(kicker,title,body,main,alt,third){
  $('modal').classList.remove('hidden');
 }
 function closeModal(){modalOpen=false;$('modal').classList.add('hidden');if(screen==='play')render();}
-function confirmReturn(){modal('ПАУЗА','Дуэль на паузе','Выход из сетевой комнаты считается сдачей текущей партии.',{label:'Продолжить',action:()=>{}},
-  {label:'Повтор раундов',action:openReplay},{label:'В меню',action:leaveToMenu});}
+function confirmReturn(){
+ const playing=mode==='online'&&server?.phase==='planning';
+ modal('ПАУЗА','Дуэль на паузе',playing?
+  'Сдача присуждает победу сопернику. Кратковременный обрыв связи сдачей не считается.':'Партию можно продолжить после паузы.',
+  {label:'Продолжить',action:()=>{}},
+  {label:'Повтор раундов',action:openReplay},
+  {label:playing?'Сдаться и выйти':'В меню',action:()=>leaveToMenu()});
+}
 function showRules(){modal('ПРАВИЛА','Предугадай противника','Каждый раунд оба игрока скрытно выбирают 5 команд. Перемещения выполняются одновременно, затем срабатывают атаки и щиты. Атака один раз за раунд: отмечай соседние направления (и свою клетку). Щит один раз за раунд. Направление, выбранное для атаки, нельзя использовать для движения в этом плане, и наоборот. В 4-м раунде после первого шага внешний контур обрушится.',{label:'Понятно',action:()=>{}});}
 function storeOffline(){if(offline)write('saved',JSON.stringify({mode,offline}));}
 function resumeOffer(){
@@ -60,10 +78,15 @@ function resumeOffer(){
  document.getElementById('resume')?.remove();
  if(!cached?.offline?.match||cached.offline.phase==='finished')return;
  const btn=document.createElement('button');btn.id='resume';btn.className='minor';btn.textContent='Продолжить незавершённую партию';
- btn.onclick=()=>{leaveNet(false);mode=cached.mode;offline=cached.offline;plan=[];attackMode=false;animating=false;show('play');render()};
+ btn.onclick=()=>{
+  leaveNet(false);mode=cached.mode;offline=cached.offline;plan=[];attackMode=false;animating=false;
+  show('play');render();
+  if(mode==='hotseat'&&offline?.pending?.A&&!offline?.pending?.B&&offline.turn==='A')handoff();
+ };
  $('menu').querySelector('.menu-controls').append(btn);
 }
 function leaveNet(navigate=true){
+ clearTimeout(forfeitWatchdog);pendingForfeitLeave=false;opponentDisconnected=false;roomVersion='v1';
  const active=net;net=null;
  if(active){try{if(connected&&active.roomId)active.leaveRoom()}catch{}active.roomId=null;active.persist();active.close()}
  connected=false;busy=false;server=null;roomId='';me=null;
@@ -79,15 +102,16 @@ function localStart(kind){
  plan=[];attackMode=false;animating=false;showingOutcome=false;show('play');storeOffline();soundFX('tap');
 }
 function handoff(){
+ plan=[];attackMode=false;attackDirs=[];render();
  modal('ЛОКАЛЬНАЯ ДУЭЛЬ','Передай устройство','Игрок А закончил планирование. Теперь пять команд выбирает игрок Б. План соперника скрыт.',{label:'Игрок Б готов',action:()=>{
   offline.turn='B';plan=[];attackMode=false;show('play');render();storeOffline();
  }});
 }
 function submitLocal(){
  const g=offline.match,who=side(),err=validatePlan(plan);if(err){toast('План недопустим');soundFX('error');return;}
- offline.pending[who]=JSON.parse(JSON.stringify(plan));soundFX('plan');
+ offline.pending[who]=JSON.parse(JSON.stringify(plan));plan=[];attackMode=false;attackDirs=[];soundFX('plan');
  if(mode==='solo'){
-  offline.pending.B=aiPlan(g,offline.pending.A,difficulty);
+  offline.pending.B=aiPlan(g,null,difficulty);
  }else if(!offline.pending.B){handoff();storeOffline();return;}
  const oldRound=g.round,record=simulateRound(g,offline.pending);
  offline.match=record.match;offline.phase=offline.match.outcome?'finished':'planning';
@@ -431,7 +455,7 @@ $('replayPlay').onclick=toggleReplay;$('replaySpeed').onclick=()=>{const list=[1
 $('replaySave').onclick=exportReplay;$('replayVideo').onclick=videoReplay;
 window.addEventListener('keydown',e=>{
  if(/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName||''))return;
- if(e.key==='Escape'){if(modalOpen)closeModal();else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
+ if(e.key==='Escape'){if(modalOpen){if(mode!=='hotseat'||!offline?.pending?.A||offline?.turn!=='A')closeModal();}else if(screen==='replay')$('replayBack').click();else if(screen==='difficultyView')show('menu');else if(screen==='play')confirmReturn();return;}
  if(screen!=='play'||modalOpen)return;
  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
  if(map[e.key]){direction(map[e.key]);e.preventDefault()}
@@ -452,7 +476,7 @@ function startFromSession(){
  if(restored.roomId)connect('resume');
 }
 if(!IS_DEV_FRAME){
- const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.2.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+ const workshop=createWorkshopMode({appName:'5×5 Arena',version:'1.3.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',triggerSelector:'[data-workshop-diagnostics-trigger]',shortcut:false,onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
  mountArenaDevGallery({onDiagnostics:()=>workshop.open()});
  checkNet();resumeOffer();
 }else{
