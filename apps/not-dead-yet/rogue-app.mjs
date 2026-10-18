@@ -1,4 +1,5 @@
 import {RogueWorld,SECTOR,hash,UPGRADES,REWARDS} from './rogue-world.mjs';
+import {VISUAL_SEEDS,VISUAL_SCENES,visualBookmark,visualCoverage} from './visual-baseline.mjs';
 import {GameKeyboard,isTextEditingTarget} from './keyboard.mjs';
 import {Renderer} from './renderer.mjs';
 import {createSoundscape} from './soundscape.mjs';
@@ -237,7 +238,8 @@ function draw(time){
  window.__PW_TEST_STATE__={phase,seed:world?.seed,position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,
   health:maxStress()-stress,ammo,reserve,elapsed,rearrangements:world?.changes||0,depth:world?.depth,visited:world?.visited.size,
   kills,collected,upgrades:{...upgrades},enemies:enemies.length,attempts,moves,blocked,renderer3D:!!renderer&&!renderer.lost,
-  sovietInterior:true,endless:true,variant:world?.fingerprint(),fpsFrameTime:dt};
+  sovietInterior:true,endless:true,variant:world?.fingerprint(),fpsFrameTime:dt,
+  geometry:renderer?.visualMetrics?{...renderer.visualMetrics}:null};
  requestAnimationFrame(draw)
 }
 function onMoveStick(e){
@@ -345,7 +347,16 @@ try{
    advance:(seconds)=>{if(phase==='play')simulation(seconds)},
    shoot,collect:pickup,upgrade:chooseUpgrade,
    spawn:()=>{spawnEnemy();return enemies.length},
-   save:persist
+   save:persist,
+   // Visual development mode: deterministic camera positions and mesh diagnostics.
+   visual:()=>({seeds:VISUAL_SEEDS,scenes:VISUAL_SCENES,...visualCoverage(world,renderer)}),
+   startSeed:seed=>{if(!VISUAL_SEEDS.includes(seed))return false;start({seed});return true},
+   bookmark:scene=>{
+    const b=visualBookmark(world,scene);
+    if(!b||!world.canStand(b.x,b.z))return null;
+    clearInputs();player.x=b.x;player.z=b.z;player.yaw=b.yaw;player.pitch=b.pitch;
+    renderer.staticRevision=-1;showHud();return b
+   }
   }
  }
  requestAnimationFrame(draw)
