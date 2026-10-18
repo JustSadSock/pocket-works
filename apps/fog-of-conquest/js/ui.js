@@ -692,6 +692,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // === Fog ===
   function updateFog(){
+    if(onlineGame) return; // Server supplies each participant's private visibility.
     if(!modeBeta && !revealAll){
       const p=state.currentPlayer, F=state.fog[p], S=state.seen[p];
       for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)F[r][c]=true;
@@ -1124,6 +1125,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // === checkVictory ===
   function checkVictory(){
+    if(onlineGame)return; // Projected enemy data cannot be used to declare local victory.
     if(state.turn===0) return;      // не проверяем до первого хода
     if(gameOver) return;
     [1,2].forEach(p=>{
@@ -1187,6 +1189,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // === click handler ===
   canvas.addEventListener('click',e=>{
+    if(onlineGame){ onlineCanvasClick(e); return; }
     if(gameOver) return;
     const rect=canvas.getBoundingClientRect(),
           x=Math.floor((e.clientX-rect.left)/cellW),
@@ -1400,6 +1403,13 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // === Передача хода ===
   endTurnBtn.addEventListener('click',()=>{
+    if(onlineGame){
+      if(!window.FogPocketNet?.canIssue())return;
+      overlayMsg.textContent='Передать ход сопернику?';
+      overlay.style.display='flex';
+      continueAfter=()=>{window.FogPocketNet.issue({type:'end'});};
+      return;
+    }
     if(gameOver) return;
     spawnMode=false; spawnZones=[]; window.spawnZones = spawnZones; spawnPanel.style.display='none';
     overlayMsg.textContent = t('passTurnConfirm').replace('{player}', state.currentPlayer===1?2:1);
@@ -1789,6 +1799,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   lobbyBackBtn.addEventListener('click', ()=>{
+    if(window.FogPocketNet){window.FogPocketNet.leave();return;}
     if(lobbyConn){ lobbyConn.close(); lobbyConn=null; }
     gameConn = null; onlineGame = false;
     window.gameConn = gameConn; window.onlineGame = onlineGame;
@@ -1821,6 +1832,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   createRoomBtn.addEventListener('click', ()=>{
+    if(window.FogPocketNet){void window.FogPocketNet.create(mapSizeSel.value);return;}
     connectLobbyWrapper();
     const room = roomIdInput.value.trim();
     lobbyConn.on('connected', ()=> lobbyConn.send({action:'create', room}));
@@ -1829,6 +1841,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   });
 
   joinRoomBtn.addEventListener('click', ()=>{
+    if(window.FogPocketNet){void window.FogPocketNet.join(roomIdInput.value.trim());return;}
     connectLobbyWrapper();
     const room = roomIdInput.value.trim();
     lobbyConn.on('connected', ()=> lobbyConn.send({action:'join', room}));
@@ -1844,4 +1857,92 @@ window.addEventListener('DOMContentLoaded', ()=>{
     window.dispatchEvent(new Event('resize'));
     handleOrientation();
   })();
+
+  // PocketNet adapter: retain original rendering, UI logic and local rules in solo mode.
+  // Online commands are intents sent to authoritative matching rules, never full snapshots.
+  let onlineSide=0,onlineTurn=0,onlineBuilding=null;
+  function onlineCanvasClick(e){
+    if(!window.FogPocketNet?.canIssue())return;
+    const rect=canvas.getBoundingClientRect();
+    const c=Math.floor((e.clientX-rect.left)/cellW),r=Math.floor((e.clientY-rect.top)/cellH);
+    if(r<0||c<0||r>=ROWS||c>=COLS)return;
+    const action=command=>{spawnMode=false;spawnPanel.style.display='none';onlineBuilding=null;sel=null;zoneMap=null;zoneList=[];updateAll();window.FogPocketNet.issue(command);};
+    if(spawnMode&&onlineBuilding){
+      if(spawnZones.some(x=>x.r===r&&x.c===c)){action({type:'spawn',building:onlineBuilding,unitType:spawnType,r,c});return;}
+      spawnMode=false;onlineBuilding=null;spawnPanel.style.display='none';
+    }
+    if(state.fog[onlineSide]?.[r]?.[c]){sel=null;zoneMap=null;zoneList=[];updateAll();return;}
+    const own=units.find(u=>u.owner===onlineSide&&u.r===r&&u.c===c);
+    if(sel?.type==='mage'&&own&&distanceFrom(sel,own)<=1&&own.hp<UNIT_TYPES[own.type].hpMax&&sel.mp>0){
+      action({type:'heal',unit:sel.id,r,c});return;
+    }
+    if(sel&&sel.mp>0){
+      const enemy=units.find(u=>u.owner!==onlineSide&&u.r===r&&u.c===c);
+      const bld=buildings.find(b=>b.owner!==onlineSide&&b.r===r&&b.c===c);
+      if((enemy||bld)&&distanceFrom(sel,{r,c})<=UNIT_TYPES[sel.type].range){
+        action({type:'attack',unit:sel.id,r,c});return;
+      }
+      if(zoneMap?.rem?.[r]?.[c]>=0&&!units.some(u=>u.r===r&&u.c===c)){
+        action({type:'move',unit:sel.id,r,c});return;
+      }
+    }
+    if(own){
+      sel=own;zoneMap=own.mp>0?computeZone(own):null;zoneList=zoneMap?.list||[];
+      spawnPanel.style.display='none';spawnMode=false;onlineBuilding=null;updateAll();return;
+    }
+    const b=buildings.find(b=>b.owner===onlineSide&&b.r===r&&b.c===c&&BUILD_TYPES[b.type].spawn.length);
+    if(b){
+      onlineBuilding=b.id;spawnMode=false;spawnPanel.replaceChildren();
+      const label=document.createElement('strong');label.textContent=BUILD_LABELS[b.type];spawnPanel.append(label);
+      for(const type of BUILD_TYPES[b.type].spawn.filter(t=>t!=='bog'||modeBeta)){
+        const button=document.createElement('button');
+        button.textContent=UNIT_LABELS[type]+' · '+UNIT_TYPES[type].cost+' зол.';
+        button.disabled=state.gold[onlineSide]<UNIT_TYPES[type].cost;
+        button.onclick=()=>{
+          spawnType=type;spawnMode=true;
+          spawnZones=[[b.r-1,b.c],[b.r+1,b.c],[b.r,b.c-1],[b.r,b.c+1]].map(([r,c])=>({r,c}))
+            .filter(p=>p.r>=0&&p.c>=0&&p.r<ROWS&&p.c<COLS&&map[p.r][p.c]!==TERRAIN.MOUNTAIN&&!units.some(u=>u.r===p.r&&u.c===p.c));
+          window.spawnZones=spawnZones;spawnPanel.style.display='none';updateAll();
+        };
+        spawnPanel.append(button);
+      }
+      spawnPanel.style.display='block';sel=null;zoneMap=null;zoneList=[];updateAll();return;
+    }
+    sel=null;zoneMap=null;zoneList=[];spawnPanel.style.display='none';updateAll();
+  }
+  const distanceFrom=(a,b)=>abs(a.r-b.r)+abs(a.c-b.c);
+  window.FogApplyOnlineView=function(roomView){
+    if(!roomView||!roomView.side)return;
+    onlineSide=roomView.side;
+    if(!roomView.game){
+      onlineGame=false;window.onlineGame=false;
+      lobbyPanel.style.display='flex';startPanel.style.display='none';return;
+    }
+    const g=roomView.game;onlineGame=true;window.onlineGame=true;aiMode=false;
+    onlineTurn=g.state.currentPlayer;modeBeta=g.modeBeta;
+    if(modeBeta)BUILD_TYPES.base.spawn=[...BASE_SPAWN_DEFAULT,'bog'];else BUILD_TYPES.base.spawn=[...BASE_SPAWN_DEFAULT];
+    ROWS=g.rows;COLS=g.cols;window.ROWS=ROWS;window.COLS=COLS;
+    map.length=0;g.map.forEach(row=>map.push([...row]));
+    buildings.length=0;g.buildings.forEach(b=>buildings.push({...b}));
+    units.length=0;g.units.forEach(u=>units.push({...u}));
+    state.turn=g.state.turn;state.currentPlayer=onlineSide;
+    state.gold={1:g.state.gold[1]||0,2:g.state.gold[2]||0};
+    state.fog={[onlineSide]:g.state.fog[onlineSide]};
+    state.seen={[onlineSide]:g.state.seen[onlineSide]};
+    state.log={[onlineSide]:g.state.log[onlineSide]||[]};
+    state.grace=g.state.grace||{1:null,2:null};
+    sel=null;zoneMap=null;zoneList=[];spawnMode=false;onlineBuilding=null;
+    spawnPanel.style.display='none';startPanel.style.display='none';lobbyPanel.style.display='none';
+    waitOverlay.style.display='none';revealBtn.style.display='none';
+    endTurnBtn.disabled=onlineTurn!==onlineSide||g.phase!=='battle';
+    endTurnBtn.title=onlineTurn===onlineSide?'Твой ход':'Ожидание соперника';
+    window.dispatchEvent(new Event('resize'));
+    updateAll();
+    if(g.phase==='finished'){
+      gameOver=true;victoryText.textContent=g.winner===onlineSide?'Победа!':g.winner===3-onlineSide?'Поражение':'Игра завершена';
+      viewReplayBtn.style.display='none';victoryOverlay.style.display='flex';
+    }
+    const status=document.getElementById('onlineTurnStatus');
+    if(status)status.textContent=onlineTurn===onlineSide?'Твой ход':'Ход противника';
+  };
 });
