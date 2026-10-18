@@ -1,19 +1,19 @@
 {
   "id": "./",
-  "name": "Туман завоеваний",
-  "short_name": "Туман",
+  "name": "Fog of Conquest",
+  "short_name": "Fog Conquest",
   "description": "Тактическая пошаговая стратегия с туманом войны",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#2d3730",
-  "theme_color": "#2d3730",
+  "background_color": "#151610",
+  "theme_color": "#1b1b14",
   "icons": [
     {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "./assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
