@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createWorld,advanceDays,audit,serialize,deserialize,population} from './model.js';
 import {beginLandDispute,advanceLocalConflicts,fieldGrievances,conflictAudit} from './conflicts.js';
 import {walkPath} from './navigation.js';
+import {assessFieldTactics,tacticalBreak,pursuitChance} from './battle-tactics.js';
 const settlementPair=s=>{
  for(const community of s.communities){
   const houses=s.households.filter(h=>h.communityId===community.id);
@@ -233,5 +234,81 @@ test('expedition across saves has identical grain, participants and chronologica
  assert.equal(serialize(a),serialize(b));
  const after=a.conflicts.find(x=>x.id===c.id);
  assert.equal(after.stage,'resolved');
+ assert.ok(audit(a).ok,audit(a).issues.join('; '));
+});
+
+test('field tactics use only actual arrivals and navigable flanking positions',()=>{
+ const s=createWorld(413),pair=settlementPair(s);assert.ok(pair);
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot);assert.ok(c);
+ advanceDays(s,1);
+ assert.equal(c.stage,'resolved');
+ assert.ok(c.tactics&&c.tactics.terrain&&c.tactics.claimants);
+ assert.equal(c.tactics.claimants.count,c.arrived.claimants);
+ assert.equal(c.tactics.owners.count,c.arrived.owners);
+ assert.ok(c.tactics.advantage>=0&&c.tactics.advantage<=1);
+ assert.ok(['одиночка','пара','плотный ряд','рассеянная группа'].includes(c.tactics.claimants.formation));
+ if(c.tactics.flank){
+  const {personId,fromCell,toCell,routeCells}=c.tactics.flank;
+  assert.ok(c.claimants.includes(personId));
+  assert.equal(fromCell,pair.plot);
+  assert.equal(routeCells[0],fromCell);
+  assert.equal(routeCells[routeCells.length-1],toCell);
+  assert.equal(routeCells.length,2);
+ }
+ assert.ok(c.pursued.every(id=>c.wounded.includes(id)));
+ assert.ok(c.wounded.every(id=>[...c.claimants,...c.owners].includes(id)));
+ assert.ok(audit(s).ok,audit(s).issues.join('; '));
+});
+
+test('an adjacent wooded or rocky edge gives a measurable local defensive advantage',()=>{
+ const s=createWorld(43821),pair=settlementPair(s);assert.ok(pair);
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot);assert.ok(c);
+ for(const id of [...c.claimants,...c.owners]){
+  const p=s.people.find(x=>x.id===id);
+  p.combatDutyDay=s.day;p.dailyShift={day:s.day,workHours:3};
+ }
+ const x=pair.plot%160,y=Math.floor(pair.plot/160);
+ const adjacent=[x>0?pair.plot-1:-1,x<159?pair.plot+1:-1,y>0?pair.plot-160:-1,y<159?pair.plot+160:-1]
+  .find(index=>index>=0&&s.terrain[index]===0);
+ assert.ok(adjacent!==undefined);
+ const previous=s.forest[adjacent];
+ const left={power:2,morale:.7},right={power:2,morale:.7};
+ s.forest[adjacent]=0;
+ const flat=assessFieldTactics(s,c,left,right);
+ s.forest[adjacent]=300;
+ const protectedSite=assessFieldTactics(s,c,left,right);
+ assert.ok(protectedSite.terrain.cover>=flat.terrain.cover);
+ assert.ok(protectedSite.owners.power>=flat.owners.power);
+ assert.ok(protectedSite.advantage<=flat.advantage);
+ s.forest[adjacent]=previous;
+ const before=serialize(s);assessFieldTactics(s,c,left,right);
+ assert.equal(serialize(s),before,'tactical observation cannot mutate the world');
+});
+
+test('group cohesion controls formation break and pursuit without phantom attackers',()=>{
+ const stronger={claimants:{count:3,cohesion:.94,power:3.2},
+  owners:{count:2,cohesion:.31,power:.7}};
+ assert.equal(tacticalBreak(stronger,'owners'),true);
+ assert.equal(tacticalBreak(stronger,'claimants'),false);
+ assert.ok(pursuitChance(stronger,'claimants','owners')>0);
+ assert.equal(pursuitChance(stronger,'owners','claimants'),0);
+ assert.equal(pursuitChance(stronger,'claimants','claimants'),0);
+ const other={claimants:{count:0,cohesion:.9,power:3.2},
+  owners:{count:2,cohesion:.2,power:.1}};
+ assert.equal(tacticalBreak(other,'owners'),false,'absent pursuers cannot break anyone');
+ assert.equal(pursuitChance(other,'claimants','owners'),0);
+});
+
+test('tactics are deterministic across a save taken before an expedition battle',()=>{
+ const s=createWorld(9001),pair=settlementPair(s);assert.ok(pair);
+ const c=beginLandDispute(s,pair.poor.id,pair.rich.id,pair.plot,null,{muster:true,expedition:true});
+ assert.ok(c);
+ advanceDays(s,2);
+ const raw=serialize(s),a=deserialize(raw),b=deserialize(raw);
+ advanceDays(a,16);for(let i=0;i<16;i++)advanceDays(b,1);
+ assert.equal(serialize(a),serialize(b));
+ const fight=a.conflicts.find(x=>x.id===c.id);
+ assert.equal(fight.stage,'resolved');
+ if(!fight.aborted)assert.ok(fight.tactics?.terrain?.label);
  assert.ok(audit(a).ok,audit(a).issues.join('; '));
 });
