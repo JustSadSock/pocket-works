@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { edgeMazeDimensions, edgeCameraFit } from './edge-layout.js';
+import { edgeMazeDimensions, edgeCameraFit, recordKey } from './edge-layout.js';
 import { createMaze, dimensionsForLevel } from './maze.js';
 import { makePerimeterHardware, makeUnifiedWalls } from './render-geometry.js';
 
@@ -48,4 +48,14 @@ test('invalid aspect ratios never create degenerate dimensions or scale',()=>{
     const fit=edgeCameraFit(cols,rows,390,844);
     assert.ok(Number.isFinite(fit.scale)&&fit.scale>0);
   }
+});
+
+test('record formats remain distinct while historical numeric keys are preserved',()=>{
+  assert.equal(recordKey(1,7,15),'1:7x15');
+  assert.equal(recordKey(1,7,10),'1:7x10');
+  assert.notEqual(recordKey(1,7,10),recordKey(1,7,15));
+  const saves={'1':18.5};
+  saves[recordKey(1,7,15)]=22.3;
+  assert.equal(saves['1'],18.5);
+  assert.equal(saves[recordKey(1,7,15)],22.3);
 });
