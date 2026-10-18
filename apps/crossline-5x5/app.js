@@ -59,7 +59,7 @@ function resumeOffer(){
 }
 function leaveNet(navigate=true){
  const active=net;net=null;
- if(active){try{if(connected&&active.roomId)active.leaveRoom()}catch{}active.close()}
+ if(active){try{if(connected&&active.roomId)active.leaveRoom()}catch{}active.roomId=null;active.persist();active.close()}
  connected=false;busy=false;server=null;roomId='';me=null;
  if(navigate){mode='menu';show('menu');resumeOffer();}
 }
@@ -123,7 +123,7 @@ async function connect(action,code=''){
   const client=new PocketNet({serverUrl:NET,name,storage:scoped,identityKey:profile?.id||'guest'});
   // Explicit create/join means abandon any saved room. Only an unprompted
   // reconnect to the current online session should restore the old room.
-  if(client.roomId){client.roomId=null;client.persist();}
+  if(action!=='resume'&&client.roomId){client.roomId=null;client.persist();}
   net=client;wire(client);
   await Promise.race([client.connect(),new Promise((_,reject)=>setTimeout(()=>reject(Error('PocketNet не отвечает')),16000))]);
   if(net!==client)return;
@@ -414,7 +414,13 @@ window.addEventListener('keydown',e=>{
 async function checkNet(){
  try{const r=await fetch(NET+'/health',{cache:'no-store',signal:AbortSignal.timeout(6000)}),j=await r.json();$('netStatus').textContent=r.ok&&j.modules?.includes('crossline-5x5')?'POCKETNET · ДОСТУПЕН':'POCKETNET · ОЖИДАЕТ ПУБЛИКАЦИИ'}catch{$('netStatus').textContent='POCKETNET · СЕЙЧАС НЕ В СЕТИ'}
 }
-getPocketIdentity().then(p=>{profile=p}).catch(()=>{});
+getPocketIdentity().then(p=>{profile=p;startFromSession()}).catch(()=>startFromSession());
+function startFromSession(){
+ if(roomQuery){$('code').value=roomQuery;connect('join',roomQuery);return;}
+ // Saved session and pinned room ID survive a page reload in this browser.
+ // PocketNet handles the server-side seat restore and on-join state projection.
+ const restored=new PocketNet({serverUrl:NET,name:profile?.complete?profile.nickname:'Игрок',storage:scoped,identityKey:profile?.id||'guest'});
+ if(restored.roomId)connect('resume');
+}
 createWorkshopMode({appName:'КРОССЛАЙН: 5×5',version:'1.0.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
 checkNet();resumeOffer();
-if(roomQuery){connect('join',roomQuery);$('code').value=roomQuery}
