@@ -34,7 +34,7 @@ const storedTheme=read('theme','dark');
 document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
 let plan=[],editingSlot=null,attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
-let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0,archiveEntry=null;
+let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0,archiveEntry=null,devHistory=[];
 let roomVersion='v1',opponentDisconnected=false,pendingForfeitLeave=false,forfeitWatchdog=0;
 const roomQuery=new URLSearchParams(location.search).get('room')?.trim()||'';
 const latest=()=>mode==='online'?server:offline;
@@ -81,7 +81,7 @@ function storeOffline(){if(offline)write('saved',JSON.stringify({mode,offline,dr
 function matchSeriesId(){
  try{return crypto.randomUUID()}catch{return 'match-'+Date.now()+'-'+Math.floor(Math.random()*1e9)}
 }
-function readArchive(){return IS_DEV_FRAME?[]:getHistory(localStorage,HISTORY_KEY)}
+function readArchive(){return IS_DEV_FRAME?devHistory:getHistory(localStorage,HISTORY_KEY)}
 function refreshArchiveCount(){
  const count=readArchive().length;
  $('archiveCount').textContent=count?' · '+count:'';
@@ -778,6 +778,12 @@ function initDevPreview(requested){
  offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:initialMatch(),score:{A:2,B:1}};
  if(scene==='menu'){show('menu');return;}
  if(scene==='difficulty'){show('difficultyView');return;}
+  if(scene==='archive-empty'){devHistory=[];show('archive');return;}
+  if(scene==='archive-list'){
+   const sample=devCombat('collapse').match;
+   devHistory=[captureHistory(sample,{mode:'hotseat',seriesId:'dev-archive',score:{A:1,B:1},players:['Синий','Оранжевый']})];
+   show('archive');return;
+  }
  if(scene==='rules'){show('menu');showRules();return;}
  if(scene==='sounds'){devSounds();return;}
  if(scene.startsWith('lobby-')){devLobby(scene);return;}
@@ -800,11 +806,11 @@ function initDevPreview(requested){
   show('play');finish();return;
  }
  if(scene==='toast'){show('play');toast('План успешно подтверждён');return;}
- if(scene==='replay'||scene==='replay-end'||scene==='replay-playing'){
+ if(scene==='replay'||scene==='replay-end'||scene==='replay-playing'||scene==='replay-analysis'){
   offline.match=devCombat('move').match;
   offline.phase=offline.match.outcome?'finished':'planning';
   show('play');openReplay();
-  if(scene==='replay-end'){replayIndex=currentRecord().frames.length;paintReplay();}
+  if(scene==='replay-end'||scene==='replay-analysis'){replayIndex=currentRecord().frames.length;paintReplay();}
   if(scene==='replay-playing')toggleReplay();
   return;
  }
