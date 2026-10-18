@@ -21,7 +21,7 @@ jobs:
           node --check apps/fog-of-conquest/pocket-adapter.js
           node --check apps/fog-of-conquest/sw.js
       - name: Install root tooling
-        run: npm install --no-save --package-lock=false --no-audit --no-fund --ignore-scripts
+        run: npm install --workspaces=false --no-save --package-lock=false --no-audit --no-fund --ignore-scripts
       - name: Validate site manifest and staging build
         run: |
           npm run registry:check
