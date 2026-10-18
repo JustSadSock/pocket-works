@@ -8,9 +8,10 @@ const run=(s,time=16,dt=.025)=>{let i=0;while(s.phase!=='completed'&&i++<time/dt
 test('frame eigenvalues agree with Ellis: radial zero, transverse positive',()=>{
  const m=metric({a:2,eta:0});
  for(const l of [0,2,4,12]){
-  const ray=launch(m,{l:l||.001,alpha:Math.PI,speed:.72,kind:'matter'});
+  const l0=l||.001;
+  const ray=launch(m,{l:l0,alpha:Math.PI,speed:.72,kind:'matter'});
   const t=tidalFrame(ray,m);
-  close(t.radial,0);assert.ok(t.transverse>0);close(t.transverse*t.gamma**-2/t.beta**2,4/(l*l+4)**2,2e-8);
+  close(t.radial,0);assert.ok(t.transverse>0);close(t.transverse*t.gamma**-2/t.beta**2,4/(l0*l0+4)**2,2e-8);
  }
 });
 test('the redshift radial eigenvalue uses the analytic Hessian of lapse',()=>{
@@ -53,7 +54,8 @@ test('sample resolution, measured length, stress and coordinate scales',()=>{
  const start=specimenStats(s);
  close(start.l,3.25);close(start.actualLengthMeters,3.5);
  close(start.proper,0);
- const after=stepSpecimen(s,.05);
+ stepSpecimen(s,.05);
+ const after=specimenStats(s);
  assert.ok(after.proper>0&&after.t>after.proper);
  assert.ok(after.tidalEndAcceleration>0);
 });
