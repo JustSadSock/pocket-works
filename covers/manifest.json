@@ -3448,15 +3448,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.5.1&pw_fp=87d7c30bac468a825c510012"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.6.0&pw_fp=6ee01f2b097052aea8feeeb0"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "5d085c7965b9386d184c5f51c81e55a088b38b4a",
-    "lastAttemptAt": "2026-10-18T18:53:46.075Z",
+    "lastAttemptRevision": "b4615609f477324a08eaba003781c31e59c59d5d",
+    "lastAttemptAt": "2026-10-18T19:20:41.003Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3480,9 +3480,9 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "cdcc6ebdc4cfaad752d867d32773b224d0452e27",
-    "lastAttemptAt": "2026-10-18T19:12:09.200Z",
-    "revision": "cdcc6ebdc4cfaad752d867d32773b224d0452e27",
+    "lastAttemptRevision": "8ff891d61054311a5eddaa94019c0aa6320b68cd",
+    "lastAttemptAt": "2026-10-18T19:20:28.156Z",
+    "revision": "8ff891d61054311a5eddaa94019c0aa6320b68cd",
     "qualityScore": 78,
     "visionScore": null,
     "prepared": false,
@@ -3495,11 +3495,11 @@
       }
     ],
     "shot": 0,
-    "sha256": "6e3a79b6b7b09ee6f2e0aeaeeb7d3802f42418bd7d9e5921f69685f5fbda7106",
+    "sha256": "f130f4dc466d2b677096a1e58ff0a0109f645e1d20f3f16c5d4a79d3ec4e9cf0",
     "imageVersion": 2
   },
   "crossline-5x5": {
-    "revision": "1ccbf9a7fe1ae2428cb51ff85d31d58810578200",
+    "revision": "bd5e5c420f6ab34c9185545f01dfd04c19683afa",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
@@ -3511,8 +3511,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "1ccbf9a7fe1ae2428cb51ff85d31d58810578200",
-    "lastAttemptAt": "2026-10-18T18:54:12.007Z"
+    "lastAttemptRevision": "bd5e5c420f6ab34c9185545f01dfd04c19683afa",
+    "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
     "revision": "c95082af588c7eea7a145b2b06f4515d2196e08d",
