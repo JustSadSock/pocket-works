@@ -167,16 +167,16 @@ function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
 function attack(s,a,target){
  if(a.cast>0||a.stun>0)return false;
  a.face=Math.atan2(target.y-a.y,target.x-a.x);a.cast=stats(a).reload;
- spawnShot(s,a,a.face);a.heat=Math.min(HEAT_LIMIT,a.heat+7);emit(s,'on_cast',a.id);return true;
+ spawnShot(s,a,a.face);addHeat(s,a,7);emit(s,'on_cast',a.id);return true;
 }
 function guard(s,a){
  if(a.shieldReady>0||a.stun>0)return false;
- a.shield=Math.min(80,a.shield+stats(a).shield+(mage(a.mageId).trait==='guard_extra'?5:0));a.shieldReady=5;if(mage(a.mageId).trait==='guard_slow'){const enemy=s.actors[1-a.id];if(Math.hypot(a.x-enemy.x,a.y-enemy.y)<105)enemy.slow=Math.max(enemy.slow,1.1)}a.heat=Math.min(HEAT_LIMIT,a.heat+7);
+ a.shield=Math.min(80,a.shield+stats(a).shield+(mage(a.mageId).trait==='guard_extra'?5:0));a.shieldReady=5;if(mage(a.mageId).trait==='guard_slow'){const enemy=s.actors[1-a.id];if(Math.hypot(a.x-enemy.x,a.y-enemy.y)<105)enemy.slow=Math.max(enemy.slow,1.1)}addHeat(s,a,7);
  fx(s,'shield',a.x,a.y);emit(s,'on_guard',a.id);return true;
 }
 function dash(s,a,dir){
  if(a.dashReady>0||a.stun>0)return false;const m=mag(dir.x,dir.y);
- a.vx=dir.x/m*370;a.vy=dir.y/m*370;if(mage(a.mageId).trait==='dash_haste')a.haste=Math.max(a.haste,.9);a.dash=.17;a.dashReady=2.5;a.invuln=.13;a.heat=Math.min(HEAT_LIMIT,a.heat+6);
+ a.vx=dir.x/m*370;a.vy=dir.y/m*370;if(mage(a.mageId).trait==='dash_haste')a.haste=Math.max(a.haste,.9);a.dash=.17;a.dashReady=2.5;a.invuln=.13;addHeat(s,a,6);
  fx(s,'dash',a.x,a.y);emit(s,'on_dash',a.id);return true;
 }
 // The queue is cleared each update and every event owns a bounded ancestry depth.
@@ -269,7 +269,7 @@ for(let j=s.mines.length-1;j>=0;j--){
  for(let j=s.barriers.length-1;j>=0;j--){s.barriers[j].life-=dt;if(s.barriers[j].life<=0)s.barriers.splice(j,1)}
  flushEvents(s);
  s.fx.forEach(f=>f.t+=dt);s.fx=s.fx.filter(f=>f.t<.38);
-if(s.actors.some(a=>a.hp<=0)||s.remaining<=0){const [a,b]=s.actors;let winner;
+if(s.actors.some(a=>a.hp<=0)||s.remaining<=0){const [a,b]=s.actors;let winner=null;
 if(a.hp<=0&&b.hp<=0)winner=null;
 else if(a.hp<=0)winner=1;else if(b.hp<=0)winner=0;
 // Timeouts and double knockouts are actual draws: no overtime tie-breaker or free point.
