@@ -81,7 +81,10 @@ test('all 45 QA screens: stable screenshots, interactive layout, real DOM and no
     expect(metrics.height).toBe(target.height);
     expect(metrics.scrollW,'horizontal overflow '+scene.id+' '+target.name).toBeLessThanOrEqual(target.width+3);
     expect(metrics.scrollH,'vertical overflow '+scene.id+' '+target.name).toBeLessThanOrEqual(target.height+3);
-    expect(metrics.shown.length,'missing scene '+scene.id).toBeGreaterThan(0);
+    if(scene.id==='sounds'){
+     await expect(frame.locator('#arenaDevSoundLab')).toBeVisible();
+     await expect(frame.locator('#arenaDevSoundLab [data-arena-audio]')).toHaveCount(10);
+    }else expect(metrics.shown.length,'missing scene '+scene.id).toBeGreaterThan(0);
     if(metrics.shown.includes('play'))expect(metrics.boardCells).toBe(25);
     expect(metrics.text.length,'empty screen '+scene.id).toBeGreaterThan(8);
     const image=await frame.locator('body').screenshot({
