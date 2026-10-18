@@ -48,3 +48,47 @@ test('organ route produces physical landmark in stage four and spawns neural bos
  await page.keyboard.press('Escape');
  await expect(page.locator('#pauseMenu')).toBeVisible();
 });
+
+
+test('walking up to a physical fork and pressing X presets the actual surgery route',async ({page})=>{
+ test.setTimeout(105000);
+ await page.goto('/apps/meat-exe/');
+ const fixture={v:5,seed:413,x:3,z:3,wave:1,hp:100,maxHp:100,toSpawn:1,spawnClock:30,
+  guardianPending:0,guardianDefeated:[],enemies:[],pickups:[],ruptured:[],
+  immune:{heat:0,cooldown:30,warning:0,pending:'',responses:0,guardianStages:[],quiet:0}};
+ await page.evaluate(({key,fixture})=>localStorage.setItem(key,JSON.stringify(fixture)),
+  {key:SESSION,fixture});
+ await page.reload();await page.locator('#resumeSaved').click();
+ const first=await page.evaluate(()=>window.__MEAT_QA__());
+ expect(first.routes.forks).toHaveLength(2);
+ const destination=first.routes.forks[1];
+ // Save position as a normal durable checkpoint, no live world mutation.
+ await page.keyboard.press('Escape');await page.locator('#menuPause').click();
+ await page.evaluate(({key,destination})=>{
+  const state=JSON.parse(localStorage.getItem(key));
+  state.x=destination.x;state.z=destination.z;
+  localStorage.setItem(key,JSON.stringify(state));
+ },{key:SESSION,destination});
+ await page.reload();await page.locator('#resumeSaved').click();
+ await expect(page.locator('#hud')).toBeVisible();
+ await page.keyboard.press('x');
+ await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__().routes.selected)).toBe(destination.id);
+ await page.keyboard.press('Escape');await page.locator('#menuPause').click();
+ await page.reload();await page.locator('#resumeSaved').click();
+ let saved=await page.evaluate(()=>window.__MEAT_QA__());
+ expect(saved.routes.selected).toBe(destination.id);
+ // Complete this already-cleared seed to ensure surgery respects physical choice.
+ await page.keyboard.press('Escape');await page.locator('#menuPause').click();
+ await page.evaluate(key=>{
+  const state=JSON.parse(localStorage.getItem(key));
+  state.toSpawn=0;state.enemies=[];state.spawnClock=30;
+  localStorage.setItem(key,JSON.stringify(state));
+ },SESSION);
+ await page.reload();await page.locator('#resumeSaved').click();
+ await expect(page.locator('#graftDraft')).toBeVisible({timeout:22000});
+ await expect(page.locator('[data-route="'+destination.id+'"]')).toHaveAttribute('aria-pressed','true');
+ await page.locator('.graft-option').first().click();
+ saved=await page.evaluate(()=>window.__MEAT_QA__());
+ expect(saved.routes.active).toBe(destination.id);
+ expect(saved.routes.marker).toBe(destination.id);
+});
