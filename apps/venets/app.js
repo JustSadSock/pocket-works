@@ -6,6 +6,7 @@ import {atlasOwnerSnapshot,transferHighlights} from './atlas-core.js';
 import {memoryImpact} from './sim/politics.js';
 import {campaignLegacy,campaignChronicleText} from './sim/legacy.js';
 import {changeTitleHolder} from './sim/transactions.js';
+import {createWorld} from './sim/world.js';
 import {campaignStarts,startCampaign,campaignChoices,campaignAction,campaignYear,
   campaignScore,extendCampaign,serializeCampaign,loadCampaign} from './sim/campaign.js';
 installMobileRuntime();
@@ -48,10 +49,11 @@ const ICONS={marriage:'✦',gift:'◇',grant:'♜',petition:'§',faction:'⚑',j
 const GOALS={'secure-claim':'Вернуть спорный титул','political-leverage':'Ослабить сюзерена',
   'gain-land':'Получить владение','stabilize-realm':'Укрепить мир','seek-marriage':'Создать союзный дом',
   'secure-house':'Защитить род'};
-let game=null,saved=null,backupRaw=null,selectedCounty='co-01',selectedProvince='pr-01',panel='council',filter='house';
+let game=null,saved=null,backupRaw=null,selectedCounty='co-01',selectedProvince='pr-01',panel='lands',filter='house';
 let screen='loading',autoSpeed=0,autoHandle=null,saveQueue=Promise.resolve();
 let storage='indexeddb',database=null,actionPending=null,busy=false,toastHandle=null;
 let atlasView='atlas',familyFocus=null,atlasChanges=[],atlasRegion=0,selectedSize=12,showAllChoices=false;
+let startRank='county',startRegion=0;
 const houseColor=(w,id)=>{
   const p=w.people.find(p=>p.id===id);
   const index=w.dynasties.findIndex(h=>h.id===p?.dynastyId);
@@ -76,6 +78,9 @@ function notify(message){
 }
 function screenTo(name){
   screen=name;
+  // Remove the hidden menu SVG on gameplay entry: global atlas controls and
+  // browser queries must refer to the current map, not an invisible duplicate.
+  if(name!=='menu')by('start-map').replaceChildren();
   for(const [key,node] of Object.entries(screens))node.hidden=key!==name;
   by('back-menu').hidden=name==='menu'||name==='loading';
 }
@@ -168,26 +173,59 @@ function saveMenu(){
     }catch(e){saved=null;by('resume').hidden=true;notify('Старое сохранение повреждено. Можно начать новую хронику.')}
   }
 }
+// The starting map uses exactly the same feudal registry as live campaigns.
 function buildStarts(){
   const seed=Number(by('seed-input').value);
   const valid=Number.isSafeInteger(seed)&&seed>=0&&seed<=0xffffffff;
   by('begin').disabled=!valid;
-  if(!valid){by('starts').replaceChildren(element('p','subnote','Укажите целый номер мира от 0 до 4294967295.'));return}
-  let starts;
-  try{starts=campaignStarts(seed,{size:selectedSize})}catch(e){by('starts').replaceChildren(element('p','subnote',e.message));return}
-  const fragment=document.createDocumentFragment();
-  for(const entry of starts){
-    const button=element('button','start-choice'+(selectedCounty===entry.countyId?' active':''));
-    button.type='button';button.dataset.county=entry.countyId;
-    button.setAttribute('aria-pressed',String(selectedCounty===entry.countyId));
-    const seal=element('span','shield');seal.append(shieldSvg(entry.dynastyId));
-    const details=element('span','start-copy');
-    details.append(element('strong','',entry.name),element('small','',entry.personName+' · спор с герцогом'));
-    button.append(seal,details,element('span','choice-check',selectedCounty===entry.countyId?'✓':''));
-    button.addEventListener('click',()=>{selectedCounty=entry.countyId;buildStarts()});
-    fragment.append(button);
+  if(!valid){
+    by('starts').replaceChildren(element('p','start-error','Укажите целый номер мира от 0 до 4294967295.'));
+    by('start-map').replaceChildren();
+    return;
   }
-  by('starts').replaceChildren(fragment);
+  let w;
+  try{w=createWorld(seed,{size:selectedSize})}
+  catch(e){by('begin').disabled=true;by('starts').textContent=e.message;return}
+  const available=w.titles.filter(t=>t.rank===startRank);
+  if(!available.some(t=>t.id===selectedCounty))selectedCounty=available[0].id;
+  const chosen=w.titles.find(t=>t.id===selectedCounty),person=w.people.find(p=>p.id===chosen.holderId);
+  const lord=chosen.liegeId?w.titles.find(t=>t.id===chosen.liegeId):null;
+  const overlord=lord?w.people.find(p=>p.id===lord.holderId):null;
+  const vassals=w.titles.filter(t=>t.liegeId===chosen.id).length;
+  const counties=w.titles.filter(t=>t.rank==='county'&&(
+    t.id===chosen.id||t.liegeId===chosen.id||
+    w.titles.find(d=>d.id===t.liegeId)?.liegeId===chosen.id));
+  const representative=w.provinces.find(p=>p.titleId===counties[0]?.id);
+  if(!counties.some(t=>t.provinceId===selectedProvince))selectedProvince=representative?.id||w.provinces[0].id;
+  const details=element('div','start-ruler');
+  const seal=element('span','start-ruler-seal');seal.append(shieldSvg(person.dynastyId));
+  const copy=element('div','start-ruler-copy');
+  copy.append(element('span','start-ruler-rank',
+    ({county:'ГРАФ',duchy:'ГЕРЦОГ',kingdom:'КОРОЛЬ'})[startRank]),
+    element('h3','',person.name),
+    element('p','',chosen.name),
+    element('small','',lord?'Сюзерен: '+overlord.name+' · '+lord.name:
+      'Независимый государь Междуречья'));
+  details.append(seal,copy);
+  if(vassals)details.append(element('span','start-vassal-count',vassals+' васс.'));
+  by('starts').replaceChildren(details);
+  for(const button of document.querySelectorAll('[data-start-rank]')){
+    const active=button.dataset.startRank===startRank;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  }
+  const expanded=w.provinces.length===48;
+  by('start-region-controls').hidden=!expanded;
+  if(expanded)label(by('start-region-label'),['I','II','III','IV'][startRegion]+' / IV');
+  const oldMap=by('start-map').querySelector('.atlas-canvas');
+  const horizontal=oldMap?.scrollLeft||0;
+  const map=renderAtlas(w,{selectedId:selectedProvince,selectedTitleId:chosen.id,
+    region:startRegion,rank:startRank,onSelect:(provinceId,titleId)=>{
+      selectedCounty=titleId;selectedProvince=provinceId;
+      buildStarts();
+    }});
+  by('start-map').replaceChildren(map);
+  map.scrollLeft=horizontal;
 }
 function menu(){
   if(game)selectedSize=game.world.provinces.length;
@@ -213,8 +251,14 @@ function begin(){
   if(!Number.isSafeInteger(seed)||seed<0||seed>0xffffffff){notify('Номер мира должен быть целым положительным числом или нулём.');return}
   try{
     game=startCampaign({seed,countyId:selectedCounty,size:selectedSize});
-    selectedProvince='pr-'+selectedCounty.slice(-2);atlasRegion=0;
-    panel='council';filter='house';atlasView='atlas';familyFocus=null;atlasChanges=[];showAllChoices=false;saveGame();play();
+    const seat=game.world.titles.find(t=>t.id===selectedCounty);
+    const firstCounty=game.world.titles.find(t=>t.rank==='county'&&(
+      t.id===seat.id||t.liegeId===seat.id||
+      game.world.titles.find(d=>d.id===t.liegeId)?.liegeId===seat.id));
+    selectedProvince=seat.provinceId||firstCounty?.provinceId||game.world.provinces[0].id;
+    atlasRegion=game.world.provinces.length===48?
+      regionFor(game.world.provinces.find(p=>p.id===selectedProvince)):0;
+    panel='lands';filter='house';atlasView='atlas';familyFocus=null;atlasChanges=[];showAllChoices=false;saveGame();play();
   }catch(e){notify('Не удалось создать мир: '+e.message)}
 }
 function showNewConfirmation(){
@@ -418,10 +462,13 @@ function renderProvinces(){
   const expanded=w.provinces.length===48;
   by('region-controls').hidden=!expanded||atlasView==='family';
   if(expanded)label(by('region-label'),['I','II','III','IV'][atlasRegion]+' / IV');
+  const oldMap=by('province-grid').querySelector('.atlas-canvas');
+  const oldScroll=oldMap?.scrollLeft||0;
   const rendered=renderAtlas(w,{selectedId:selectedProvince,changes:atlasChanges,region:atlasRegion,onSelect:id=>{
     selectedProvince=id;renderProvinces();
   }});
   by('province-grid').replaceChildren(rendered);
+  rendered.scrollLeft=oldScroll;
   const county=w.titles.find(t=>t.id===province.titleId);
   const ruler=w.people.find(p=>p.id===county.holderId);
   const duke=w.titles.find(t=>t.id===county.liegeId);
@@ -592,7 +639,7 @@ by('restore-dialog').addEventListener('close',async()=>{
     if(!prior)throw Error('Резервная запись повреждена');
     const restored=loadCampaign(prior);
     await writeSave(prior,{rotate:false}); // preserve checkpoint, never overwrite it with corrupted active
-    saved=prior;game=restored;panel='council';atlasView='atlas';familyFocus=null;
+    saved=prior;game=restored;panel='lands';atlasView='atlas';familyFocus=null;
     selectedProvince='pr-'+game.startCountyId.slice(-2);atlasRegion=0;
     notify('Резервная хроника восстановлена');
     resume();
@@ -606,8 +653,18 @@ document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click',
 document.querySelectorAll('[data-atlas-view]').forEach(button=>button.addEventListener('click',()=>selectAtlasView(button.dataset.atlasView)));
 by('region-prev').addEventListener('click',()=>moveRegion(-1));
 by('region-next').addEventListener('click',()=>moveRegion(1));
+document.querySelectorAll('[data-start-rank]').forEach(button=>button.addEventListener('click',()=>{
+  startRank=button.dataset.startRank;buildStarts();
+}));
+by('start-region-prev').addEventListener('click',()=>{
+  startRegion=(startRegion+3)%4;buildStarts();
+});
+by('start-region-next').addEventListener('click',()=>{
+  startRegion=(startRegion+1)%4;buildStarts();
+});
 document.querySelectorAll('[data-world-size]').forEach(button=>button.addEventListener('click',()=>{
-  selectedSize=Number(button.dataset.worldSize);
+  selectedSize=Number(button.dataset.worldSize);startRegion=0;
+  document.querySelector('.world-settings').open=false;
   for(const b of document.querySelectorAll('[data-world-size]')){
     const selected=Number(b.dataset.worldSize)===selectedSize;
     b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));
@@ -627,7 +684,10 @@ by('download-chronicle').addEventListener('click',exportChronicle);
 by('continue-legacy').addEventListener('click',()=>{
   try{extendCampaign(game);saveGame();play()}catch(e){notify(e.message)}
 });
-by('seed-input').addEventListener('change',buildStarts);
+by('seed-input').addEventListener('change',()=>{
+  buildStarts();
+  if(!by('begin').disabled)document.querySelector('.world-settings').open=false;
+});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 window.addEventListener('pagehide',()=>{pause()});
 // Inspector frame uses the *real renderers and state transitions* in an isolated
