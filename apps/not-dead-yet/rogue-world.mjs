@@ -82,7 +82,7 @@ export function generateSector(seed,cx,cz,epoch=0){
    add(room,'sink',room.x1-.30,room.z1-.40,.47,.43,.86);
   }else{
    add(room,'books',room.x1-.20,room.z0+.82,.5,1.3,1.91);
-   add(room,'wardrobe',room.x0+.28,room.z1-.30,.48,.60,1.85)
+   add(room,'wardrobe',spec.face==='right'?room.x1-.30:room.x0+.30,room.z1-.30,.48,.60,1.85)
   }
  }
  if(plan.walkthrough){
