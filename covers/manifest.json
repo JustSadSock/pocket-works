@@ -3322,24 +3322,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 39968,
-        "variance": 52.49233141048032,
-        "entropy": 1.9874470713752495,
-        "edgeDensity": 0.11755952380952381,
-        "colorfulness": 28.88037109375,
-        "centerDetail": 60.91720115208873,
-        "meanLight": 39.738913281250255
+        "bytes": 39903,
+        "variance": 52.50207615454381,
+        "entropy": 1.9888537498701038,
+        "edgeDensity": 0.11793154761904762,
+        "colorfulness": 28.8935546875,
+        "centerDetail": 60.92146355645503,
+        "meanLight": 39.75557460937526
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.1&pw_fp=0fbbfd0c7277997f05430195"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.2&pw_fp=3b314080c9e89a7676bb7332"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "966a7cc949610bbe767cbea8128f117e07b511bf",
-    "lastAttemptAt": "2026-10-18T21:57:03.295Z"
+    "lastAttemptRevision": "383b01cbf093209c64d69613810aa65ec2d372bc",
+    "lastAttemptAt": "2026-10-18T23:23:03.212Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3480,10 +3480,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "34692b7416e20766f7db841ace3959e0b6a91c11",
-    "lastAttemptAt": "2026-10-18T23:14:44.654Z",
-    "revision": "34692b7416e20766f7db841ace3959e0b6a91c11",
-    "qualityScore": 72,
+    "lastAttemptRevision": "f2518c6156ed2c96ab0b2735e678aacfc8e0d357",
+    "lastAttemptAt": "2026-10-18T23:22:51.764Z",
+    "revision": "f2518c6156ed2c96ab0b2735e678aacfc8e0d357",
+    "qualityScore": 68,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3495,7 +3495,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "69a82f0fb517dd1f5e17272dede4df059dd533f1f4e07fe908f95d62ecc411a8",
+    "sha256": "4e134c5d50dc895dc2b57c800d2134821d8efb16134fb2b515747b776e7233a5",
     "imageVersion": 2
   },
   "crossline-5x5": {
