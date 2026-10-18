@@ -4,6 +4,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {DEV_QUERY,DEV_SCENES,devScene,mountArenaDevGallery,isDevKey} from './dev-gallery.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DIRECTIONS,STEPS,MAX_ROUNDS,initialMatch,validatePlan,simulateRound,aiPlan} from './engine.js';
+import {paintArena,playArenaBeat,frameBefore,drawArenaCanvas,timing} from './combat-visuals.js';
 const previewRequested=new URLSearchParams(location.search).get(DEV_QUERY);
 const IS_DEV_FRAME=window.parent!==window&&DEV_SCENES.some(s=>s.id===previewRequested);
 if(!IS_DEV_FRAME)installMobileRuntime();
@@ -25,12 +26,12 @@ const scoped={
 };
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const symbols={up:'↑',down:'↓',left:'←',right:'→',shield:'▣'};
-let profile=null,sound=read('sound','on')==='on',difficulty=read('difficulty','normal');
+let profile=null,sound=read('sound','on')==='on',difficulty=read('difficulty','normal'),motion=read('motion','on')!=='off';
 const storedTheme=read('theme','dark');
 document.documentElement.dataset.theme=storedTheme==='light'?'light':'dark';
 let mode='menu',screen='menu',offline=null,server=null,net=null,me=null,roomId='',connected=false,busy=false;
 let plan=[],attackMode=false,attackDirs=[],animating=false,animFrame=null,showingOutcome=false,toastTimer=0,gameToken=0,modalOpen=false;
-let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null;
+let replayRound=0,replayIndex=0,replaySpeed=1,replayPaused=true,replayTimer=0,recording=false,audio=null,replayPlaybackId=0;
 let roomVersion='v1',opponentDisconnected=false,pendingForfeitLeave=false,forfeitWatchdog=0;
 const roomQuery=new URLSearchParams(location.search).get('room')?.trim()||'';
 const latest=()=>mode==='online'?server:offline;
@@ -40,17 +41,18 @@ const ready=()=>mode==='online'?server?.ready||{A:false,B:false}:{A:!!offline?.p
 const score=()=>mode==='online'?server?.score||{A:0,B:0}:offline?.score||{A:0,B:0};
 const isPlanning=()=>latest()?.phase==='planning';
 const locked=()=>animating||!isPlanning()||!!ready()[side()]||recording||modalOpen||pendingForfeitLeave;
+const reduceMotion=()=>!motion||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
 function soundFX(type='tap'){
  if(!sound&&!IS_DEV_FRAME)return;
  try{
   const A=window.AudioContext||window.webkitAudioContext;if(!A)return;
   audio ||= new A();audio.resume?.();
   const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime;
-  o.type=type==='win'?'sine':type==='hit'?'sawtooth':'triangle';
-  const freq={tap:370,plan:440,hit:140,block:620,move:280,win:570,error:115}[type]||340;
-  o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(freq*(type==='win'?1.7:.74),t+.12);
-  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.035,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+.15);
-  o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.16);
+  o.type=type==='win'||type==='block'?'sine':['hit','attack','collapse','fall'].includes(type)?'sawtooth':'triangle';
+  const freq={tap:370,plan:440,hit:140,block:620,move:280,win:570,error:115,attack:420,shield:670,collapse:105,fall:120}[type]||340;
+  o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(freq*(type==='win'?1.7:type==='collapse'?.4:.74),t+(type==='collapse'?.23:.12));
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(type==='hit'?.052:.032,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+(type==='collapse'?.26:.15));
+  o.connect(g).connect(audio.destination);o.start(t);o.stop(t+(type==='collapse'?.27:.16));
  }catch{}
 }
 function buzz(v=8){try{navigator.vibrate?.(v)}catch{}}
@@ -296,21 +298,8 @@ function markerSet(actions,units,edges){
  return {traces,targets};
 }
 function drawBoard(host,units,edges,events=[],preview=false,shownRound=game()?.round){
- const traces=preview?markerSet(null,units,edges):{traces:new Map(),targets:new Set()};
- const impacts=new Set(events.filter(e=>e.type==='hit'||e.type==='fall').map(e=>e.side));
- const blocked=new Set(events.filter(e=>e.type==='block').map(e=>e.side));
- let html='';
- for(let y=0;y<5;y++)for(let x=0;x<5;x++){
-  const at=['A','B'].filter(k=>units[k]?.alive&&units[k].x===x&&units[k].y===y),coord=x+','+y,outer=x===0||y===0||x===4||y===4;
-  const warned=(!edges&&shownRound===4&&outer),lava=edges&&outer;
-  // A struck unit is already marked dead in the resolved frame. Paint the
-  // hit on its final cell rather than requiring an alive actor there.
-  const hit=[...impacts].some(k=>units[k]?.x===x&&units[k]?.y===y),block=[...blocked].some(k=>units[k]?.x===x&&units[k]?.y===y);
-  html+='<div class="cell '+(warned?'edge-warning ':'')+(lava?'lava ':'')+(traces.traces.has(coord)?'trace ':'')+(traces.targets.has(coord)?'target ':'')+(hit?'impact ':'')+(block?'block ':'')+'" role="gridcell" data-x="'+x+'" data-y="'+y+'" data-trace="'+(traces.traces.get(coord)||'')+'">';
-  if(at.length)html+='<div class="piece '+(at.length===2?'both':at[0].toLowerCase())+'"><span>'+(at.length===2?'ⅠⅡ':at[0]==='A'?'Ⅰ':'Ⅱ')+'</span></div>';
-  html+='</div>';
- }
- host.innerHTML=html;
+ const markers=preview?markerSet(null,units,edges):{traces:null,targets:null};
+ paintArena(host,units,edges,events,{round:shownRound,traces:markers.traces,targets:markers.targets,instant:true});
 }
 function render(){
  if(screen!=='play')return;
@@ -343,25 +332,26 @@ function render(){
  $('beat').classList.toggle('hidden',!animating);
  if(animFrame)$('beat').textContent='ШАГ '+animFrame.beat+' / '+STEPS;
 }
-function animateRecord(record){
- const ticket=++gameToken;
- animating=true;showingOutcome=false;const base=game(),frames=record.frames||[];
- if(screen==='replay'){animating=false;return;}
- show('play');let i=-1;
- const step=()=>{
-  if(ticket!==gameToken)return;
-  if(i<0){animFrame={units:record.begin,edgesCollapsed:record.round===4?false:record.round>4,events:[],beat:0,round:record.round};}
-  else animFrame={...frames[i],round:record.round};
-  render();
-  if(i>=frames.length-1){
-   setTimeout(()=>{if(ticket!==gameToken)return;animating=false;animFrame=null;plan=[];render();if(latest()?.phase==='finished')finish();},560/devAnimationSpeed);
-   return;
-  }
-  i++;const evt=frames[i]?.events||[];
-  soundFX(evt.some(e=>e.type==='hit'||e.type==='fall')?'hit':evt.some(e=>e.type==='block')?'block':'move');
-  setTimeout(step,580/devAnimationSpeed);
- };
- step();
+async function animateRecord(record){
+ const ticket=++gameToken,frames=record?.frames||[];
+ if(screen==='replay'||!frames.length)return;
+ animating=true;showingOutcome=false;
+ animFrame=frameBefore(record,0);
+ show('play');
+ const still=()=>ticket===gameToken&&screen==='play';
+ for(let i=0;i<frames.length&&still();i++){
+  const before=frameBefore(record,i),frame=frames[i];
+  const completed=await playArenaBeat($('board'),before,frame,{
+   round:record.round,speed:devAnimationSpeed,reduced:reduceMotion(),alive:still,
+   sound:soundFX,feedback:buzz
+  });
+  if(!completed||!still())return;
+  animFrame={...frame,round:record.round};render();
+  if(i<frames.length-1)await new Promise(r=>setTimeout(r,Math.round(55/devAnimationSpeed)));
+ }
+ if(!still())return;
+ animating=false;animFrame=null;plan=[];render();
+ if(latest()?.phase==='finished')finish();
 }
 function finish(){
  if(showingOutcome||screen!=='play')return;
@@ -408,18 +398,32 @@ function paintReplay(){
  $('replayPlay').textContent=replayPaused?'▶ Играть':'Ⅱ Пауза';
  $('replaySpeed').textContent=replaySpeed+'×';
 }
-function pauseReplay(){replayPaused=true;clearTimeout(replayTimer);paintReplay();}
-function replayTick(){
- if(replayPaused||screen!=='replay')return;
- const rec=currentRecord();if(!rec)return;
- if(replayIndex>=rec.frames.length){pauseReplay();return;}
- replayIndex++;paintReplay();replayTimer=setTimeout(replayTick,700/replaySpeed);
+function pauseReplay(){
+ replayPaused=true;replayPlaybackId++;clearTimeout(replayTimer);
+ if(screen==='replay')paintReplay();
+}
+async function replayTick(ticket){
+ if(replayPaused||screen!=='replay'||ticket!==replayPlaybackId)return;
+ const record=currentRecord();if(!record)return;
+ if(replayIndex>=record.frames.length){pauseReplay();return}
+ const before=frameBefore(record,replayIndex),frame=record.frames[replayIndex];
+ const valid=()=>!replayPaused&&screen==='replay'&&ticket===replayPlaybackId;
+ const played=await playArenaBeat($('replayBoard'),before,frame,{
+  round:record.round,speed:replaySpeed*devAnimationSpeed,reduced:reduceMotion(),
+  alive:valid,sound:soundFX,feedback:buzz
+ });
+ if(!played||!valid())return;
+ replayIndex++;paintReplay();
+ if(replayIndex>=record.frames.length){pauseReplay();return}
+ replayTimer=setTimeout(()=>replayTick(ticket),80);
 }
 function toggleReplay(){
  if(!currentRecord())return;
- if(!replayPaused){pauseReplay();return;}
+ if(!replayPaused){pauseReplay();return}
  if(replayIndex>=currentRecord().frames.length)replayIndex=0;
- replayPaused=false;replayTick();
+ replayPaused=false;
+ const ticket=++replayPlaybackId;
+ replayTick(ticket);
 }
 function download(data,filename,mime){
  const url=URL.createObjectURL(new Blob([data],{type:mime})),a=document.createElement('a');
@@ -428,45 +432,40 @@ function download(data,filename,mime){
 function exportReplay(){const g=game();if(!g?.replays?.length)return;download(JSON.stringify({format:'crossline-5x5',version:1,match:g},null,2),'5x5-arena-'+Date.now()+'.json','application/json');toast('Повтор сохранён')}
 async function videoReplay(){
  if(recording)return;
- if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){toast('Этот браузер не поддерживает WebM');return;}
+ if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){
+  toast('Этот браузер не поддерживает WebM');return;
+ }
  const rec=currentRecord();if(!rec)return;
  const button=$('replayVideo');recording=true;button.disabled=true;button.textContent='ЗАПИСЬ…';pauseReplay();
  let recorder,stream;
  try{
   const canvas=document.createElement('canvas');canvas.width=800;canvas.height=840;
-  const ctx=canvas.getContext('2d'),clips=[];
+  const ctx=canvas.getContext('2d'),clips=[];if(!ctx)throw Error('Не удаётся рисовать видеоповтор');
   stream=canvas.captureStream(30);
   const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
   if(!mime)throw Error('Кодек WebM недоступен');
   recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000});
-  const finished=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)clips.push(e.data)};recorder.onstop=resolve;recorder.onerror=reject});
-  recorder.start(100);for(let i=0;i<=rec.frames.length;i++){
-   const frame=i?rec.frames[i-1]:{units:rec.begin,edgesCollapsed:false,events:[]};
-   drawVideoFrame(ctx,frame,rec.round,i,canvas.width);
-   await new Promise(resolve=>setTimeout(resolve,750));
+  const finished=new Promise((resolve,reject)=>{
+   recorder.ondataavailable=e=>{if(e.data.size)clips.push(e.data)};
+   recorder.onstop=resolve;recorder.onerror=()=>reject(Error('Ошибка MediaRecorder'));
+  });
+  recorder.start(100);
+  for(let i=0;i<rec.frames.length;i++){
+   const before=frameBefore(rec,i),frame=rec.frames[i],duration=timing(1,false),steps=24;
+   for(let n=0;n<=steps;n++){
+    drawArenaCanvas(ctx,before,frame,rec.round,n/steps,{step:frame.beat});
+    await new Promise(resolve=>setTimeout(resolve,duration/steps));
+   }
   }
   recorder.stop();await finished;
+  if(!clips.length)throw Error('Нет данных видеозаписи');
   download(new Blob(clips,{type:mime}),'5x5-arena-round-'+rec.round+'.webm',mime);
   toast('Видеоповтор сохранён');
- }catch(e){toast(e.message||'Ошибка записи')}finally{
+ }catch(error){toast(error?.message||'Ошибка записи')}
+ finally{
   try{if(recorder?.state==='recording')recorder.stop()}catch{}
   stream?.getTracks().forEach(t=>t.stop());recording=false;button.disabled=false;button.textContent='● WebM';
  }
-}
-function drawVideoFrame(ctx,frame,round,i,size){
- ctx.fillStyle='#151e22';ctx.fillRect(0,0,size,840);
- ctx.fillStyle='#f4b35f';ctx.font='bold 34px system-ui';ctx.fillText('5×5 ARENA / РАУНД '+round,45,55);
- const start=50,cell=140;ctx.lineWidth=2;
- for(let y=0;y<5;y++)for(let x=0;x<5;x++){
-  const outer=x===0||x===4||y===0||y===4,collapsed=frame.edgesCollapsed&&outer;
-  ctx.fillStyle=collapsed?'#7d4d3b':'#354448';ctx.fillRect(start+x*cell,start+65+y*cell,cell-3,cell-3);
-  for(const [s,color,letter] of [['A','#f4b35f','Ⅰ'],['B','#8cc4d4','Ⅱ']]){
-   const u=frame.units[s];if(!u?.alive||u.x!==x||u.y!==y)continue;
-   ctx.beginPath();ctx.fillStyle=color;ctx.arc(start+x*cell+cell/2,start+65+y*cell+cell/2,s==='B'?33:29,0,Math.PI*2);ctx.fill();
-   ctx.fillStyle='#253137';ctx.font='bold 36px system-ui';ctx.fillText(letter,start+x*cell+cell/2-12,start+65+y*cell+cell/2+13);
-  }
- }
- ctx.font='bold 22px system-ui';ctx.fillStyle='#d2ddda';ctx.fillText('ШАГ '+i+' / '+STEPS,45,810);
 }
 $('themeToggle').onclick=()=>{
  const next=document.documentElement.dataset.theme==='light'?'dark':'light';
@@ -484,6 +483,8 @@ $('hotseat').onclick=()=>localStart('hotseat');
 $('online').onclick=()=>connect('create');$('joinOnline').onclick=()=>connect('join');$('openRules').onclick=showRules;
 $('difficulty').value=difficulty;$('difficulty').onchange=()=>{difficulty=$('difficulty').value;write('difficulty',difficulty)};
 $('sound').onclick=()=>{sound=!sound;write('sound',sound?'on':'off');$('sound').textContent=sound?'♪':'♪̸';soundFX('tap')};$('sound').textContent=sound?'♪':'♪̸';
+$('motionToggle').onclick=()=>{motion=!motion;write('motion',motion?'on':'off');$('motionToggle').textContent=motion?'▶':'⏭';$('motionToggle').setAttribute('aria-pressed',String(!motion));soundFX('tap')};
+$('motionToggle').textContent=motion?'▶':'⏭';$('motionToggle').setAttribute('aria-pressed',String(!motion));
 $('pause').onclick=confirmReturn;
 $('lobbyBack').onclick=leaveToMenu;$('enter').onclick=joinFromField;
 $('startOnline').onclick=()=>send({type:'start'});
@@ -578,7 +579,7 @@ function devSounds(){
  show('menu');$('menu').classList.add('hidden');
  const root=document.createElement('section');root.id='arenaDevSoundLab';root.className='view arena-dev-sound-lab';
  const entries=[['tap','Нажатие'],['plan','Команда плана'],['move','Перемещение'],
-  ['hit','Попадание'],['block','Щит / блок'],['win','Победа'],['error','Ошибка']];
+  ['hit','Попадание'],['block','Щит / блок'],['attack','Взмах атаки'],['shield','Поднятие щита'],['collapse','Обрушение'],['win','Победа'],['error','Ошибка']];
  root.innerHTML='<h2>Звуки 5×5 Arena</h2><p>Это реальные игровые сигналы. Нажми на звук для воспроизведения, включая режим с отключённым в основной игре звуком.</p>'+
  '<div class="arena-dev-sounds">'+entries.map(([key,title])=>
  '<button type="button" data-arena-audio="'+key+'">'+title+' <small>'+key+'</small></button>').join('')+
