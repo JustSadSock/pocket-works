@@ -772,3 +772,6 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
  .menu-hero,.menu-bottom,.menu-map-frame{animation:none}
  .start-map .atlas-county>path:first-child{transition:none}
 }
+
+/* The map tab must also dismiss the council parchment on wide screens. */
+.game-screen[data-active-panel="lands"] .game-columns .council-panel{display:none}
