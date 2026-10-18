@@ -48,7 +48,7 @@ test('cache fingerprint changes on every relevant scene dimension',()=>{
  assert.equal(base,sceneFingerprint(l,420,420,2));
  assert.notEqual(base,sceneFingerprint(l,320,420,2));
  assert.notEqual(base,sceneFingerprint(l,420,420,1));
- assert.notEqual(base,sceneFingerprint({...l,map:l.map((r,i)=>i===0?r.replace('#',' '):r)},420,420,2));
+ assert.notEqual(base,sceneFingerprint({...l,map:l.map.map((r,i)=>i===0?r.replace('#',' '):r)},420,420,2));
  assert.notEqual(base,sceneFingerprint({...l,goals:[{x:l.goals[0].x+13,y:l.goals[0].y},l.goals[1]]},420,420,2));
 });
 test('renderer draws five solved layouts in narrow and wide tile scales without invalid geometry',()=>{
