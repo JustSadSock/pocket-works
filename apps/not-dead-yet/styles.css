@@ -8,3 +8,8 @@
 .memory-entry p{margin:0;color:#d0bfa9;font-size:11px;line-height:1.55}
 .journal-status{width:100%;max-width:350px;margin:4px 0 6px;font-size:11px;line-height:1.48;color:#cabb9f}
 @media(max-height:640px){.memory-entry{padding:6px 9px}.memory-entry p{font-size:10px}.journal-heading{padding-top:8px}}
+
+/* Optical tunnel at the brass door peephole; no new overlay or scrolling screen. */
+.app-shell.is-peephole::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:6;background:radial-gradient(ellipse 30% 32% at 50% 47%,transparent 20%,rgba(9,10,9,.36) 47%,rgba(4,6,5,.98) 69%,#030403 84%);box-shadow:inset 0 0 11vw rgba(0,0,0,.9)}
+.app-shell.is-peephole .reticle,.app-shell.is-peephole #fire,.app-shell.is-peephole #reload,.app-shell.is-peephole #torch,.app-shell.is-peephole #pack,.app-shell.is-peephole #run,.app-shell.is-peephole #joystick{visibility:hidden;pointer-events:none}
+.app-shell.is-peephole .control.use{visibility:visible}

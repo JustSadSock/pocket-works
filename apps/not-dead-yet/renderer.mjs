@@ -286,7 +286,19 @@ function apartmentMesh(world){
    for(let i=0;i<7;i++)box(out,x,.24,z+(i-3)*d*.14,w*.8,h*.81,d*.080,[.62,.61,.53],9);
    box(out,x,.26,z,.04,.10,d,[.35,.34,.31],9)
   }
-  if(f.type==='door'){box(out,x,.03,z,w,h,d,[.26,.18,.11],6);box(out,x+w*.37,1.30,z+d*.6,.14,.08,.09,brass,9);box(out,x,2.72,z,w*.92,.07,.06,[.41,.32,.19],6)}
+  if(f.type==='door'){
+   box(out,x,.03,z,w,h,d,[.26,.18,.11],6);
+   box(out,x+w*.37,1.30,z+d*.6,.14,.08,.09,brass,9);
+   box(out,x,2.72,z,w*.92,.07,.06,[.41,.32,.19],6);
+   // Actual brass peephole fitted through the Soviet front door, at eye-height.
+   round(out,x,1.63,z-d*.62,.090,.085,.022,[.67,.48,.23],9);
+   round(out,x,1.63,z-d*.65,.050,.049,.026,[.16,.18,.16],10);
+   round(out,x,1.63,z-d*.68,.018,.018,.010,[.36,.46,.43],10);
+   // Bakelite bell button and scratched enamel apartment number plate.
+   box(out,x+w*.57,1.34,z-d*.47,.19,.20,.05,[.34,.30,.27],9);
+   round(out,x+w*.57,1.43,z-d*.52,.041,.045,.018,[.55,.50,.35],8);
+   box(out,x,2.30,z-d*.55,.33,.14,.025,[.73,.67,.48],8)
+  }
  }
  apartmentDetail(out,world,M);
  familyRadioMesh(out,world);
@@ -494,6 +506,62 @@ export function animateViewmodel(original,{time=0,recoil=0,reload=0,movement=0,r
  }
  return out
 }
+
+// A small actual 3D Soviet stairwell. Rendered only from the physical door's
+// peephole, never pretending a static picture is navigable gameplay.
+function stairwellMesh(recognized=false){
+ const o=[],plaster=[.40,.43,.35],peeling=[.52,.52,.39],floor=[.27,.29,.26],steel=[.31,.34,.33],wood=[.30,.33,.23],ivory=[.58,.54,.42];
+ // narrow landing and cracked pale-green oil paint up to waist height
+ box(o,0,-.08,-2.0,4.8,.12,9.8,floor,4);
+ box(o,-2.27,0,-2.0,.15,3.45,9.8,plaster,1);
+ box(o,2.27,0,-2.0,.15,3.45,9.8,plaster,1);
+ box(o,0,0,-6.8,4.7,3.45,.17,plaster,1);
+ for(const side of [-1,1]){
+  box(o,side*2.17,0,-2.0,.025,1.36,9.7,[.36,.43,.34],2);
+  box(o,side*2.15,1.34,-2,.06,.055,9.7,[.42,.43,.35],6)
+ }
+ for(let j=0;j<8;j++){
+  const z=-6.1+j*1.0;
+  box(o,0,.015,z,4.45,.012,.038,[.20,.23,.22],4);
+  if(j%3===0)box(o,(j%2?1:-1)*1.85,.013,z+.27,.28,.010,.30,[.45,.42,.32],4)
+ }
+ // worn timber door opposite with mail slots and worn brass, NOT a traversable portal
+ box(o,1.01,0,-6.66,1.67,2.75,.095,wood,6);
+ box(o,1.02,.18,-6.59,1.47,2.25,.031,[.32,.38,.29],6);
+ box(o,1.02,.34,-6.55,1.31,.85,.018,[.28,.32,.25],6);
+ box(o,1.02,1.34,-6.55,1.31,.94,.019,[.28,.33,.26],6);
+ box(o,1.65,1.12,-6.48,.06,.13,.07,[.67,.55,.29],9);
+ box(o,.92,2.33,-6.50,.35,.20,.017,ivory,8);
+ // metal lift shaft with analog call button and weathered plate
+ box(o,-1.05,0,-6.69,1.72,2.79,.081,[.37,.40,.37],9);
+ box(o,-1.05,.07,-6.61,1.55,2.61,.020,[.34,.38,.37],9);
+ box(o,-1.05,0,-6.58,.045,2.7,.025,[.17,.20,.20],9);
+ box(o,-.18,1.38,-6.55,.14,.31,.085,[.52,.49,.35],9);
+ round(o,-.18,1.55,-6.49,.045,.045,.035,recognized?[.76,.65,.38]:[.46,.45,.39],8);
+ // separate chipped paint panels and abandoned notice board
+ box(o,-2.18,1.25,-2.50,.036,.89,1.1,[.42,.28,.18],6);
+ box(o,-2.145,1.32,-2.50,.038,.69,.93,[.67,.61,.48],8);
+ for(let i=0;i<4;i++)box(o,-2.11,1.46,-2.72+i*.13,.018,.026,.1,[.36,.32,.25],9);
+ // open staircase: each riser has actual depth/height
+ for(let j=0;j<5;j++){
+  const z=-4.65+j*.39,x=-1.95+j*.075;
+  box(o,x,.04+j*.17,z,.47,.17,.41,[.38,.39,.35],4);
+ }
+ // rusted metal handrail
+ for(let k=0;k<4;k++){const z=-3.3+k*.42;box(o,-1.62,.04,z,.055,.88,.06,steel,9)}
+ box(o,-1.62,.95,-2.65,.045,.05,2.18,[.43,.39,.30],9);
+ // Grocery net (авоська) left by a neighbor: player recognizes its context.
+ box(o,.48,.70,-5.67,.39,.43,.10,[.44,.37,.28],7);
+ for(let i=-2;i<=2;i++){box(o,.48+i*.071,.71,-5.59,.010,.42,.010,[.69,.61,.43],7)}
+ for(let j=0;j<4;j++){box(o,.48,.74+j*.105,-5.58,.40,.009,.018,[.69,.61,.43],7)}
+ round(o,.48,1.22,-5.64,.13,.20,.024,[.62,.54,.39],7);
+ if(recognized){round(o,.39,.79,-5.55,.10,.10,.075,[.40,.48,.28],7)}
+ // landings are not lit by the apartment's fuse: separate dim shared lamp
+ box(o,0,3.16,-3.15,.62,.10,.40,[.49,.49,.38],8);
+ round(o,0,3.08,-3.15,.19,.10,.19,[.61,.54,.34],8);
+ return o
+}
+
 export class Renderer{
  constructor(canvas){
   this.canvas=canvas;const gl=canvas.getContext('webgl',{alpha:false,antialias:true,powerPreference:'high-performance'});if(!gl)throw Error('WebGL unavailable');
@@ -506,10 +574,33 @@ export class Renderer{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.uniform1i(this.u.paintedAtlas,0);this.textureBytes=atlas.pixels.byteLength;
-  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;
+  this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;
   gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true});this.lost=false
  }
+
+ drawPeephole(landing,t,powered=true){
+  if(this.lost)return;
+  this.resize();const gl=this.gl;
+  gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
+  gl.clearColor(.025,.028,.026,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  const recognized=Boolean(landing?.recognized);
+  if(this.landingVersion!==Number(recognized)){
+   const mesh=stairwellMesh(recognized);
+   this.upload(this.landingBuffer,mesh,gl.STATIC_DRAW);
+   this.landingCount=mesh.length/10;this.landingVersion=Number(recognized)
+  }
+  const eye=[0,1.60,1.25],dir=[0,-.04,-1];
+  const proj=projection(Math.PI*.43,this.canvas.width/this.canvas.height);
+  gl.uniformMatrix4fv(this.u.mvp,false,multiply(proj,view(eye,dir)));
+  gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
+  gl.uniform3fv(this.u.lampA,[-1.55,2.4,-2.9]);gl.uniform3fv(this.u.lampB,[0,3.05,-4.1]);
+  gl.uniform1f(this.u.torch,0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,0);
+  // Communal landing has its own light, even if the flat's electricity is out.
+  gl.uniform1f(this.u.electrical,.36);
+  this.bind(this.landingBuffer);gl.drawArrays(gl.TRIANGLES,0,this.landingCount)
+ }
+
  bind(buffer){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(let i=0;i<4;i++)if(this.attrs[i]>=0)gl.vertexAttribPointer(this.attrs[i],i===3?1:3,gl.FLOAT,false,40,[0,12,24,36][i])}
  upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(values),kind)}
  resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.3:1.6),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
