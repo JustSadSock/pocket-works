@@ -88,6 +88,7 @@ function clearSession(text='Комната закрыта.',destroyClient=false)
  if(client){client.roomId=null;client.persist();}
  phase='closed';
  window.FogLeaveOnline?.();
+ window.FogBattleClear?.();
  $('victoryOverlay').style.display='none';$('waitOverlay').style.display='none';
  lobby.style.display='none';$('startPanel').style.display='flex';
  $('newGameOptions').style.display='flex';
@@ -107,6 +108,7 @@ function acceptView(next){
  view=next;joined=true;
  if(pending&&next.game&&next.game.revision>pending.revision)releasePending();
  if(next.game){
+   window.FogBattleSync?.(next,room?.roomId);
    phase=next.game.phase==='finished'||next.phase==='finished'?'finished':'battle';
    window.FogApplyOnlineView?.(next);
  }else{
@@ -150,6 +152,9 @@ function installListeners(net){
      if(pending?.requestId===event.requestId)releasePending();
      if(event.status==='duplicate')message('Повторный приказ уже учтён сервером.');
      refresh();return;
+   }
+   if(event?.type==='battle_event'){
+     window.FogBattleEvent?.(event.payload);return;
    }
    if(event?.type!=='state')return;
    acceptView(event.payload);
@@ -217,6 +222,7 @@ async function create(size){
    const net=await ensure();
    if(current!==operation)return;
    if(net.roomId)net.leaveRoom();
+   window.FogBattleClear?.();
    room=null;view=null;joined=false;releasePending();
    setPhase('connecting','Создаём комнату…');
    net.createRoom('fog-of-conquest',{});
@@ -230,6 +236,7 @@ async function join(code){
    const net=await ensure();
    if(current!==operation)return;
    if(net.roomId)net.leaveRoom();
+   window.FogBattleClear?.();
    room=null;view=null;joined=false;releasePending();
    setPhase('connecting','Входим в комнату…');
    net.joinRoom(trimmed);
