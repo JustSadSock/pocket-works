@@ -69,6 +69,33 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  }
  if(maskot?.hat==='brush'){px(10,-36,3,18,'#bb8c62');px(9,-40,5,6,'#334f62')}
  if(maskot?.hat==='veil'){px(-13,-27,4,33,'#e9d5d9');px(10,-27,4,33,'#e9d5d9')}
+ // Readable class silhouettes are equipment, not replacements for the Pocket ID face or hat.
+ // Every fighter has a different silhouette even when all six use the same avatar.
+ switch(character.id){
+ case 'kindle':
+  px(-19,-17,6,5,'#b3543e');px(-18,-21,4,7,'#eaa15b');px(-17,-25,2,5,'#f8e0a2');
+  px(-17,-7,6,14,'#9d5541');px(-16,7,5,4,'#e0a06e');break;
+ case 'cinder':
+  px(-19,-20,7,27,'#4a4742');px(-21,-15,3,19,'#7f6660');
+  px(-19,-27,6,7,'#6e5a4f');px(-17,-30,3,4,'#c49b78');
+  px(9,8,7,6,'#4a3939');break;
+ case 'wire':
+  px(-18,-12,4,24,'#3e7276');px(-18,-20,3,11,'#b6d4c4');
+  px(-22,-23,10,3,'#7cb9b8');px(-20,-28,3,5,'#dcf9d7');
+  px(-17,4,5,3,'#b3e9dc');break;
+ case 'coil':
+  px(-21,-14,8,25,'#a57255');px(-23,-18,11,5,'#d8ac81');
+  px(-22,-11,10,4,'#dea57c');px(-22,-3,10,4,'#dea57c');
+  px(-22,5,10,4,'#dea57c');px(-17,-24,4,6,'#a7d5cb');break;
+ case 'pebble':
+  px(-20,-13,10,17,'#697970');px(-18,-16,9,5,'#afbba1');
+  px(11,-11,9,14,'#77897a');px(12,-15,8,5,'#b2bfa2');
+  px(-15,7,7,8,'#60786a');break;
+ case 'slate':
+  px(-23,-14,10,29,'#53685d');px(-24,-18,12,5,'#a0af94');
+  px(-21,-10,5,16,'#84977e');px(12,-13,9,23,'#657768');
+  px(13,-17,8,5,'#b7c3a4');px(12,6,10,4,'#9aa990');break;
+ }
  if(p.source==='preset'){
   // The eight standard Pocket ID presets get different badges.
   const motifs={sun:'sun',wave:'wave',ember:'ember',moss:'moss',ink:'ink',plum:'plum',stone:'stone',clay:'clay'};
