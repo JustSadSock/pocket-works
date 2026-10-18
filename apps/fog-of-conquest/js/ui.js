@@ -200,8 +200,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // constants moved to gameState.js
   const MIN_INFO_HEIGHT = 140;
   let aiMode = false, aiLevel = 2;
-  let lobbyConn = null;
-  let gameConn = null;
+  // No legacy root-WebSocket connection: PocketNet owns all network state.
   let onlineGame = false;
   // terrain and unit data moved to gameState.js
 
@@ -429,10 +428,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     fogSnapshot,
     replayEvents,
     replayPaused,
-    gameConn,
     onlineGame
   });
-  window.gameConn = gameConn;
   window.onlineGame = onlineGame;
 
   let cellW, cellH;
@@ -461,7 +458,10 @@ window.addEventListener('DOMContentLoaded', ()=>{
     };
   }
   function safeSavePayload(replays=replayEvents){
-    return window.FogSaveSchema.normalize(gameSavePayload(replays));
+    // Validate first, then encode. A network-projected view can never enter
+    // offline storage, even by importing or calling this code directly.
+    const verified=window.FogSaveSchema.normalize(gameSavePayload(replays));
+    return window.FogReplayCodec.packSave(verified);
   }
   const saveNotice=document.createElement('div');
   saveNotice.id='fogSaveNotice';saveNotice.setAttribute('role','status');
@@ -495,7 +495,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(aiMode && p===2) state.log[1].push(t('logEnemy').replace('{text}', txt));
     const ev = {type:'action',action:lastAction,text:txt,snapshot:snapshot()};
     replayEvents.push(ev);
-    if(onlineGame && gameConn) gameConn.send({event:ev});
+    if(replayEvents.length>window.FogReplayCodec.LIMIT)
+      replayEvents.splice(0,replayEvents.length-window.FogReplayCodec.LIMIT);
     lastAction=null;
     renderLog();
     persistAutoSave();
@@ -505,7 +506,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
     state.log[p].push(t('logTurn').replace('{turn}', state.turn+1));
     const ev = {type:'turn',turn:state.turn+1,snapshot:snapshot()};
     replayEvents.push(ev);
-    if(onlineGame && gameConn) gameConn.send({event:ev});
+    if(replayEvents.length>window.FogReplayCodec.LIMIT)
+      replayEvents.splice(0,replayEvents.length-window.FogReplayCodec.LIMIT);
     renderLog();
     persistAutoSave();
   }
@@ -631,6 +633,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   function applySavedData(d){
+    // Expand/validate before clearing a live game (also applies to rollback).
+    d=window.FogSaveSchema.normalize(d);
     resetState();
     mapSize=d.mapSize;ROWS=d.map.length;COLS=d.map[0].length;
     window.ROWS=ROWS;window.COLS=COLS;
@@ -717,7 +721,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     updateReplayPauseBtn,
     saveGame, loadGameData, listSaves, deleteSave,
     startMatchReplay, stopMatchReplay, seekReplay,
-    handleNetEvent, handleNetMessage, attachConnection });
+    });
 
   // === LOS ===
   function hasLOS(r0,c0,r1,c1,{forestBlock=true}={}){
@@ -1900,59 +1904,21 @@ window.addEventListener('DOMContentLoaded', ()=>{
     });
   }
 
-  lobbyBackBtn.addEventListener('click', ()=>{
+  lobbyBackBtn.addEventListener('click',()=>{
     if(window.FogPocketNet){window.FogPocketNet.leave();return;}
-    if(lobbyConn){ lobbyConn.close(); lobbyConn=null; }
-    gameConn = null; onlineGame = false;
-    window.gameConn = gameConn; window.onlineGame = onlineGame;
     lobbyPanel.style.display='none';
     startPanel.style.display='flex';
-    if(newGameOptions) newGameOptions.style.display='flex';
+    if(newGameOptions)newGameOptions.style.display='flex';
   });
 
-  function connectLobbyWrapper(){
-    if(lobbyConn){ lobbyConn.close(); }
-    lobbyConn = connectLobby();
-    lobbyConn.on('message', data=>{
-      if(data && data.action==='start'){
-        lobbyPanel.style.display='none';
-        waitOverlay.style.display='none';
-        gameConn = lobbyConn;
-        onlineGame = true;
-        window.gameConn = gameConn;
-        window.onlineGame = onlineGame;
-        gameConn.on('message', handleNetMessage);
-        twoBtn.click();
-      }
-    });
-  lobbyConn.on('disconnect', ()=>{
-    waitOverlay.style.display='none';
-    lobbyPanel.style.display='flex';
-    gameConn = null; onlineGame = false;
-    window.gameConn = gameConn; window.onlineGame = onlineGame;
-  });
-  }
-
-  createRoomBtn.addEventListener('click', ()=>{
+  // PocketNet is the only transport; historical root-WebSocket code removed.
+  createRoomBtn.addEventListener('click',()=>{
     if(window.FogPocketNet)void window.FogPocketNet.create(mapSizeSel.value);
-    else console.warn('PocketNet is loading; old root-WebSocket transport is disabled');
-    return;
-    connectLobbyWrapper();
-    const room = roomIdInput.value.trim();
-    lobbyConn.on('connected', ()=> lobbyConn.send({action:'create', room}));
-    lobbyPanel.style.display='none';
-    waitOverlay.style.display='flex';
+    else reportSave('PocketNet ещё загружается. Повтори действие.',true);
   });
-
-  joinRoomBtn.addEventListener('click', ()=>{
+  joinRoomBtn.addEventListener('click',()=>{
     if(window.FogPocketNet)void window.FogPocketNet.join(roomIdInput.value.trim());
-    else console.warn('PocketNet is loading; old root-WebSocket transport is disabled');
-    return;
-    connectLobbyWrapper();
-    const room = roomIdInput.value.trim();
-    lobbyConn.on('connected', ()=> lobbyConn.send({action:'join', room}));
-    lobbyPanel.style.display='none';
-    waitOverlay.style.display='flex';
+    else reportSave('PocketNet ещё загружается. Повтори действие.',true);
   });
 
   // === Инициализация ===
