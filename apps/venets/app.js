@@ -78,6 +78,9 @@ function notify(message){
 }
 function screenTo(name){
   screen=name;
+  // Remove the hidden menu SVG on gameplay entry: global atlas controls and
+  // browser queries must refer to the current map, not an invisible duplicate.
+  if(name!=='menu')by('start-map').replaceChildren();
   for(const [key,node] of Object.entries(screens))node.hidden=key!==name;
   by('back-menu').hidden=name==='menu'||name==='loading';
 }
