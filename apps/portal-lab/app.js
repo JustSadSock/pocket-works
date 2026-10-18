@@ -74,7 +74,7 @@ function emit(silent=false){
  if(settings.view==='profile'){settings.view='map';sync();}
  const m=currentMetric(),src=settings.source;
  const count= Math.max(1,Math.min(25,settings.count));
- const input={l:src.l,phi:src.phi,alpha:src.alpha};
+ const input={l:src.l*m.a,phi:src.phi,alpha:src.alpha};
  const beam=collectBeam(m,input,{count,spread:settings.spread*Math.PI/180,kind:settings.kind,speed:settings.speed});
  // Keep a bounded history. Every geodesic carries its own E, L, norm, and proper time.
  rays.push(...beam);
@@ -97,12 +97,6 @@ function updateReadouts(){
  $('clock-far').textContent=(elapsed*staticClockRate(5*m.a,m)).toFixed(3);
  $('frame-state').textContent=settings.view==='map'?settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`:'r² = l² + a²';
 }
-function signedSource(){
- const s=settings.source;
- return {l:s.l*magnitudeScale(),phi:s.phi,alpha:s.alpha};
-}
-function magnitudeScale(){return settings.a;}
-function normalizeSource(){settings.source.l=Math.sign(settings.source.l||1)*Math.max(.3,Math.min(4.25,Math.abs(settings.source.l)));settings.source.phi=((settings.source.phi+Math.PI*3)%(Math.PI*2))-Math.PI;}
 function changeMetric(){
  // The existing E and L belong to the old metric: discard them rather than
  // spuriously preserving a worldline after editing the spacetime itself.
@@ -353,14 +347,14 @@ function tick(t){
    accum+=dt;dirty=true;
    if(accum>.11){updateReadouts();accum=0;}
   }
-  if(dirty||!reduced){if(layout){if(settings.view==='profile')drawProfile();else drawMap();}dirty=false;}
+  if(dirty){if(layout){if(settings.view==='profile')drawProfile();else drawMap();}dirty=false;}
  }
  requestAnimationFrame(tick);
 }
 load();
 settings.source.l=Math.sign(settings.source.l||1)*Math.min(4.25,Math.max(.3,Math.abs(settings.source.l)));
 sync();if(!rays.length)emit(true);
-resize.observe(canvas);requestAnimationFrame(tick);
+requestAnimationFrame(tick);
 window.__SHOV__={snapshot:()=>({
  metric:currentMetric(),settings:structuredClone(settings),elapsed,
  rays:rays.map(r=>({l:r.l,phi:r.phi,E:r.E,L:r.L,k:r.k,crossings:r.crossings,constraint:constraint(r,currentMetric())}))
