@@ -1,10 +1,10 @@
 const CACHE_PREFIX = 'fog-of-conquest-';
-const CACHE_NAME = 'fog-of-conquest-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'fog-of-conquest-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Полная пошаговая кампания: карты, войска, экономики, штурмы, туман и шесть уровней ИИ.","Мобильная карта, автоматические сохранения и дуэли PocketNet с серверным контролем ходов."];
-const APP_SHELL = ["./","./index.html","./app.config.json","./styles.css","./app.js","./engine.js","./manifest.webmanifest","./icons/icon.svg","../../shared/mobile-runtime.css","../../shared/mobile-runtime.js","../../shared/update-manager.css","../../shared/update-manager.js","../../shared/capabilities/net.js"];
+const APP_SHELL = ["./","./index.html","./app.config.json","./styles.css","./pocket-adapter.css","./pocket-adapter.js","./css/style.css","./js/ai.js","./js/dropdown.js","./js/network.js","./js/data.js","./js/gameState.js","./js/worldGen.js","./js/lobby.js","./js/replay.js","./js/ui.js","./data/lang/ru.json","./data/lang/en.json","./data/lang/uk.json","./manifest.webmanifest","./icons/icon.svg","../../shared/mobile-runtime.css","../../shared/mobile-runtime.js","../../shared/update-manager.css","../../shared/update-manager.js","../../shared/capabilities/net.js"];
 
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;

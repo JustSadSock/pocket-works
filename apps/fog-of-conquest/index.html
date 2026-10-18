@@ -10,9 +10,10 @@
   <title>Fog of Conquest</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=MedievalSharp&family=Ruslan+Display&family=Lora&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
+<link rel="stylesheet" href="./pocket-adapter.css"/>
   <link rel="icon" type="image/png" href="assets/icon.png" sizes="512x512"/>
   <link rel="apple-touch-icon" href="assets/icon.png" sizes="512x512"/>
-  <link rel="manifest" href="manifest.json"/>
+  <link rel="manifest" href="./manifest.webmanifest"/>
 </head>
 <body>
   <!-- Background music removed -->
@@ -21,7 +22,7 @@
   <audio id="captureSfx" src="https://samplelib.com/lib/preview/mp3/sample-9s.mp3" data-type="sfx"></audio>
   <audio id="uiClickSfx" src="https://samplelib.com/lib/preview/mp3/sample-12s.mp3" data-type="sfx"></audio>
   <audio id="uiHoverSfx" src="https://samplelib.com/lib/preview/mp3/sample-15s.mp3" data-type="sfx"></audio>
-  <div id="startPanel">
+  <div id="startPanel"><a class="pocket-back menu-back" href="../../">← Pocket Works</a>
     <div id="startHeader">
       <h1 data-i18n="title">Fog of Conquest</h1>
       <button id="startSettingsBtn" class="game-btn" title="Settings" data-i18n-title="startSettings">⚙</button>
@@ -112,7 +113,7 @@
 
   <div id="victoryOverlay">
     <div class="panel">
-      <div id="victoryText"></div>
+      <div id="victoryText"></div><a class="pocket-back" href="../../">← Pocket Works</a>
       <button id="viewReplayBtn" class="game-btn" data-i18n="viewReplay">View replay</button>
       <button id="victoryOkBtn" class="game-btn" data-i18n="victoryOk">Ok</button>
       <button id="victoryMenuBtn" class="game-btn" data-i18n="exitReplay">Menu</button>
@@ -183,7 +184,7 @@
       </div>
       <button id="fullscreenBtn" class="game-btn" data-i18n="fullscreen">Fullscreen</button>
       <button id="saveBtn" class="game-btn" style="display:none;" data-i18n="saveBtn">Save</button>
-      <button id="settingsMenuBtn" class="game-btn" data-i18n="exitReplay">Menu</button>
+      <button id="settingsMenuBtn" class="game-btn" data-i18n="exitReplay">Menu</button><a class="pocket-back" href="../../">← Pocket Works</a>
       <button id="settingsCloseBtn" class="game-btn" data-i18n="settingsClose">Close</button>
     </div>
   </div>
@@ -195,7 +196,7 @@
     </div>
   </div>
 
-  <canvas id="canvas"></canvas>
+  <div id="battleViewport"><canvas id="canvas" data-block-callout aria-label="Тактическая карта"></canvas></div>
 
   <div id="spawnPanel"></div>
 
@@ -207,7 +208,7 @@
       <button id="settingsBtn" class="game-btn" title="Settings" data-i18n-title="settingsBtn">⚙</button>
       <button id="panelToggleBtn" class="game-btn" title="Hide panel" data-i18n-title="infoCollapse">▼</button>
       <button id="revealBtn" class="game-btn" data-i18n="revealShow">Show map</button>
-      <button id="endTurnBtn" class="game-btn" data-i18n="endTurn">End turn</button>
+      <button id="cancelSelectBtn" type="button" class="game-btn">Отмена</button><button id="endTurnBtn" class="game-btn" data-i18n="endTurn">End turn</button>
     </div>
     <div id="statsLog">
       <div id="leftStats"></div>
@@ -224,5 +225,7 @@
   <script src="js/lobby.js"></script>
   <script src="js/replay.js"></script>
   <script src="js/ui.js"></script>
+<script src="./pocket-adapter.js" defer></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Fog of Conquest" data-app-version="1.1.0"></script>
 </body>
 </html>
