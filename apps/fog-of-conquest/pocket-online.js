@@ -29,7 +29,11 @@ function refresh(){
  start.disabled=!(room&&view?.phase==='lobby'&&view.host===view.viewerId&&view.seats.length===2&&client?.socket?.readyState===WebSocket.OPEN);
  copyCode.disabled=!room;
  if(view?.phase==='lobby')message(view.seats.length===2?'Оба полководца в комнате · '+roomCode():'Код '+roomCode()+' · ожидается соперник');
- if(active&&view?.game)turn.textContent=canIssue()?'Твой ход':view.game.state.currentPlayer!==view.side?'Ход соперника':lock?'Приказ обрабатывается':'Связь потеряна';
+ if(active&&view?.game){
+   const connected=client?.socket?.readyState===WebSocket.OPEN;
+   $('endTurnBtn').disabled=!canIssue();
+   turn.textContent=!connected?'Связь потеряна':canIssue()?'Твой ход':view.game.state.currentPlayer!==view.side?'Ход соперника':lock?'Приказ обрабатывается':'Партия завершена';
+ }
 }
 function installListeners(net){
  net.on('connected',()=>{
