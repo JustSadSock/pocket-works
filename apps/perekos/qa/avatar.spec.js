@@ -1,4 +1,7 @@
 import {test,expect} from '@playwright/test';
+// Route-mocked profile requests must not be intercepted by the app service worker.
+// Offline/PWA operation stays covered by the real (unmocked) journey suite.
+test.use({serviceWorkers:'block'});
 const ID='11111111-1111-4111-8111-111111111111';
 const user={user:{id:ID,complete:true,nickname:'Свой маг',avatar:'moss'}};
 const routeProfiles=async(page,readProfile)=>{
