@@ -31,7 +31,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.19',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.20',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -726,6 +726,13 @@ function roundReview(){
 function results(){
  if(!view?.participants||!view?.scores)return;
  change(finaleResultsMarkup({view,escapeText:esc,memberSeal,pocketPlayerBadge,hostId:me?.id}),'results');
+ const painting=screen.querySelector('#winnerRestoration');
+ if(painting){
+  const total=p=>(Number(view.scores?.[p.id]?.mask)||0)+(Number(view.scores?.[p.id]?.eye)||0);
+  const winner=[...view.participants].sort((a,b)=>total(b)-total(a))[0];
+  const work=view.gallery?.find(g=>g?.id===winner?.id&&Number.isInteger(g.art));
+  if(work)void renderArtwork(painting,work.art,work.variation,work.strokes||[],true);
+ }
 }
 let earnedAchievementIds=new Set(),achievementStatus='loading',achievementError='';
 let achievementSelection=zamazkaAchievements[0]?.id||'';

@@ -1,0 +1,243 @@
+/* ZAMAZKA v1.40.20 — desktop phase continuity.
+   One last, targeted layer over legacy scenery and grid variants. */
+
+/* The two pale vertical bars came from persistent architectural pilasters
+   and wallpaper repeating stripes. Remove just these stage rails; retain
+   lamps, hanging hardware, paintings and the actual room furniture. */
+.app-shell .museum-architecture::before{display:none!important;content:none!important}
+#screen>.page:not(.museum-home) .set-pilaster,
+#screen>.phase-page .set-pilaster,
+#screen>.restore .set-pilaster{display:none!important}
+#screen>.passage-preparing::before,#screen>.passage-preparing::after,
+#screen>.passage-connection::before,#screen>.passage-connection::after{
+ content:none!important;display:none!important
+}
+
+/* Creation ticket is an invitation, not a desktop-sized form. */
+@media(min-width:1100px) and (pointer:fine){
+ #screen>.passage-entry{
+  width:min(100%,1330px)!important;max-width:1330px!important;
+  grid-template-columns:minmax(0,450px) minmax(0,1fr)!important;
+  gap:clamp(20px,3vw,46px)!important;
+  justify-content:center!important;
+ }
+ #screen>.passage-entry .passage-document{
+  box-sizing:border-box;max-width:450px!important;width:100%!important;
+  padding:clamp(12px,1.5vh,23px) clamp(14px,1.5vw,22px)!important;
+  gap:clamp(7px,1.2vh,16px)!important;
+ }
+ #screen>.passage-entry .passage-heading h2{
+  font-size:clamp(27px,2.4vw,39px)!important
+ }
+ #screen>.passage-entry .passage-entry-content{gap:clamp(8px,1vh,12px)!important}
+ #screen>.passage-entry .entry-fields .input{height:clamp(36px,5.2vh,44px)!important}
+ #screen>.passage-entry .passage-art{max-height:min(72dvh,610px)!important}
+}
+
+/* PocketNet: two asynchronous rings and the real cancel command directly
+   below the illuminated seal. Reduced-motion users see static concentric arcs. */
+#screen>.passage-connection .passage-connection-panel{
+ gap:clamp(15px,2.8vh,28px)!important
+}
+#screen>.passage-connection .passage-connection-seal{
+ isolation:isolate;margin:0 auto 4px!important
+}
+#screen>.passage-connection .passage-connection-seal::after{
+ animation:quiet-portrait-spin 1.83s linear infinite!important
+}
+#screen>.passage-connection .passage-connection-seal::before{
+ content:""!important;display:block!important;position:absolute;inset:-26px;
+ border:1px dashed #e0c99480;border-left-color:transparent;
+ border-top-color:#e0c99429;border-radius:50%;pointer-events:none;
+ animation:zam-counter-spin 2.9s linear infinite;
+}
+@keyframes zam-counter-spin{to{transform:rotate(-360deg)}}
+#screen>.passage-connection [data-action="cancel-connect"]{
+ position:relative!important;display:inline-flex!important;align-items:center;
+ justify-content:center;margin:8px auto 0!important;padding:8px 18px!important;
+ min-width:123px!important;min-height:38px!important;opacity:.94;
+ border:1px solid #a7b69e72!important;background:#1b3229a8!important;
+ color:#e9deca!important;letter-spacing:.015em;
+}
+#screen>.passage-connection [data-action="cancel-connect"]:hover{background:#344d40!important}
+
+/* The participant rail begins at the same top edge as the invitation ticket,
+   not a large arbitrary percentage down the page. */
+@media(min-width:1100px) and (min-height:600px){
+ #screen>.exhibition-lobby>.lobby-invite{
+  align-self:stretch!important;justify-content:flex-start!important
+ }
+ #screen>.exhibition-lobby>.lobby-attendance{
+  justify-content:flex-start!important;padding-top:0!important;
+  align-self:stretch!important
+ }
+ #screen>.exhibition-lobby .lobby-list-heading{padding-top:2px!important}
+}
+@media(min-width:1020px) and (max-width:1099px) and (min-height:770px){
+ #screen>.exhibition-lobby>.lobby-attendance{padding-top:0!important}
+}
+
+/* A single middle forest tone across the ENTIRE preparation stage and its
+   exposed parent, instead of a green card surrounded by dark framing. */
+#screen.screen:has(>.passage-preparing){background:#1c362b!important}
+#screen>.passage-preparing{
+ background:#1c362b!important;background-image:none!important;
+ box-shadow:none!important;border:0!important;outline:0!important
+}
+#screen>.passage-preparing .passage-prep-workspace{
+ background:transparent!important;box-shadow:none!important;border:0!important
+}
+
+/* Exact same gallery real estate on your own ballot. The controls may be
+   replaced by a waiting label, but MUST NOT change painting height. */
+#screen>.expert-phase.is-vote-waiting .stake-card{
+ padding-top:0!important;justify-content:stretch!important;
+ align-self:stretch!important
+}
+#screen>.expert-phase.is-vote-waiting .stake-card .zam-exhibit-stage{
+ justify-content:center!important;align-self:stretch!important;
+ height:100%!important
+}
+#screen>.expert-phase.is-vote-waiting .suspect-gallery{
+ align-items:stretch!important
+}
+#screen>.expert-phase .stake-locked{
+ min-height:40px!important;display:grid!important;place-items:center!important;
+ flex:0 0 40px!important;margin:0 auto!important
+}
+
+/* Ballot protocol: its exhibit stage used to collapse to zero height,
+   leaving only lower rims and coin counters visible. */
+#screen>.verdict-phase>.finale-verdict-body{
+ min-height:0!important;overflow:hidden!important
+}
+#screen>.verdict-phase .finale-ballot-grid{
+ width:100%!important;max-width:100%!important;min-height:0!important;
+ flex:1 1 auto!important;align-items:stretch!important
+}
+#screen>.verdict-phase .finale-ballot-card{
+ min-width:0!important;min-height:0!important;max-height:100%!important;
+ justify-content:stretch!important;align-items:stretch!important;
+ overflow:hidden!important;padding:4px 3px 7px!important;
+ gap:clamp(6px,1vh,13px)!important
+}
+#screen>.verdict-phase .finale-ballot-card>.zam-exhibit-stage{
+ flex:1 1 0!important;display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;
+ width:100%!important;height:auto!important;min-width:0!important;min-height:155px!important;
+ overflow:visible!important
+}
+#screen>.verdict-phase .verdict-image.zam-exhibit-rim{
+ flex:0 1 auto!important;align-self:center!important;min-height:0!important;
+ max-width:100%!important;transform:none!important;transform-origin:center!important
+}
+#screen>.verdict-phase .verdict-image.zam-exhibit-rim img{
+ display:block!important;width:100%!important;height:100%!important;object-fit:fill!important
+}
+#screen>.verdict-phase .finale-ballot-votes{
+ flex:0 0 auto!important;margin-top:auto!important;min-height:55px!important;
+ max-height:86px!important;padding:5px 0 0!important
+}
+@media(max-width:700px){
+ #screen>.verdict-phase .finale-ballot-card{
+  min-height:0!important;flex:0 0 clamp(205px,66vw,305px)!important
+ }
+ #screen>.verdict-phase .finale-ballot-card>.zam-exhibit-stage{
+  min-height:clamp(135px,33dvh,305px)!important
+ }
+}
+
+/* Exhibition: all canvases in a genuine wrap grid, no side-scrolling gallery.
+   Vertical scrolling is confined to this one collection when eight works
+   cannot fit on a short screen. */
+#screen>.round-review-phase .round-review-body{
+ flex:1 1 auto!important;min-width:0!important;min-height:0!important;
+ overflow:hidden!important
+}
+#screen>.round-review-phase .round-review-grid{
+ display:grid!important;grid-auto-flow:row!important;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))!important;
+ grid-auto-rows:minmax(175px,max-content)!important;
+ flex:1 1 auto!important;width:100%!important;min-width:0!important;min-height:0!important;
+ height:100%!important;max-height:100%!important;
+ overflow-x:hidden!important;overflow-y:auto!important;
+ align-items:start!important;align-content:start!important;
+ scroll-snap-type:none!important;overscroll-behavior-y:contain
+}
+#screen>.round-review-phase .round-art-card{
+ width:100%!important;min-width:0!important;max-width:none!important;
+ height:auto!important;min-height:172px!important;align-self:stretch!important;
+ flex:none!important;scroll-snap-align:none!important
+}
+#screen>.round-review-phase .round-art-card .zam-exhibit-stage{
+ width:100%!important;height:auto!important;min-height:135px!important
+}
+#screen>.round-review-phase .round-art-image{
+ height:auto!important;max-width:100%!important;max-height:min(34dvh,310px)!important;
+ aspect-ratio:var(--art-aspect,1.333333)!important
+}
+@media(max-width:699px){
+ #screen>.round-review-phase .round-review-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-auto-rows:minmax(130px,max-content)!important;gap:8px!important;
+  touch-action:pan-y!important
+ }
+ #screen>.round-review-phase .round-art-card{min-height:135px!important}
+ #screen>.round-review-phase .round-art-image{max-height:27dvh!important}
+}
+@media(max-width:359px){
+ #screen>.round-review-phase .round-review-grid{grid-template-columns:minmax(0,1fr)!important}
+}
+
+/* Coin registration must share an exact baseline regardless of its colour. */
+#screen>.finale-reveal .finale-jury-coins{
+ display:flex!important;align-items:center!important;justify-content:flex-end!important;
+ gap:7px!important
+}
+#screen>.finale-reveal :is(.correct-coins,.missed-coins){
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ min-height:17px!important;padding:0!important;margin:0!important;
+ transform:none!important
+}
+#screen>.finale-reveal :is(.correct-coins,.missed-coins) .chip-dots{
+ display:inline-flex!important;align-items:center!important;gap:2px!important;
+ padding:0!important;margin:0!important;line-height:1!important
+}
+#screen>.finale-reveal :is(.correct-coins,.missed-coins) .chip-dot{
+ box-sizing:border-box!important;vertical-align:middle!important;
+ margin:0!important;position:static!important;transform:none!important
+}
+
+/* Winner's actual restored work replaces decorative heraldry on tall desktop
+   screens. The time-based scoring gets its own single legible sentence. */
+#screen>.finale-results .finale-laureate-art{
+ width:min(100%,210px);max-height:min(25dvh,205px);min-height:0;
+ margin:0 auto clamp(6px,1.1vh,12px);padding:0;display:grid;place-items:center;
+ gap:4px;overflow:hidden
+}
+#screen>.finale-results .finale-laureate-art canvas{
+ display:block;width:auto;max-width:100%;height:auto;max-height:min(21dvh,170px);
+ object-fit:contain;border:5px ridge #b99b66;box-shadow:0 6px 15px #102018a0
+}
+#screen>.finale-results .finale-laureate-art figcaption{
+ color:#e2d0a8;font:10px/1.3 system-ui;text-align:center;max-width:190px;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+#screen>.finale-results .finale-time-scoring{
+ margin-top:3px!important;color:#e3cda8!important;font:11px/1.35 system-ui!important;
+ max-width:35ch;text-align:center
+}
+#screen>.finale-results .finale-results-head p{max-width:90ch!important}
+@media(max-width:700px){
+ #screen>.finale-results .finale-laureate-art{
+  grid-column:1!important;grid-row:1/3!important;width:50px!important;
+  margin:0!important;max-height:80px!important
+ }
+ #screen>.finale-results .finale-laureate-art canvas{max-width:50px!important;max-height:68px!important;border-width:3px!important}
+ #screen>.finale-results .finale-laureate-art figcaption{display:none!important}
+ #screen>.finale-results .finale-time-scoring{display:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen>.passage-connection .passage-connection-seal::before,
+ #screen>.passage-connection .passage-connection-seal::after{animation:none!important}
+}

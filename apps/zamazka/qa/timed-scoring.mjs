@@ -137,7 +137,7 @@ function finishRound(match){
 {
  const view={participants:people,scores:{curator:{mask:170,eye:0},bravo:{mask:0,eye:375},charlie:{mask:80,eye:30}},host:'curator',timedScoring:true};
  const txt=finaleResultsMarkup({view,escapeText:x=>x,memberSeal:()=>'',pocketPlayerBadge:()=>'' ,hostId:'curator'});
- assert(txt.includes('Точность, скорость и выдержка')&&txt.includes('375'));
+ assert(txt.includes('Время голосования влияет на очки')&&txt.includes('Скорость: до +40')&&txt.includes('Выдержка: до +80')&&txt.includes('375'));
  checks++;
 }
 console.log('ZAMAZKA timed-scoring: '+checks+' server clock, anti-backdating, partial ballot, fairness, UI and full-round checks OK');

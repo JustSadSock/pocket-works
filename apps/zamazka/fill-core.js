@@ -171,5 +171,27 @@ export function fillMatchingColorRaster({width,height,zone,output,point,color,ch
   ink[k]=color[0];ink[k+1]=color[1];ink[k+2]=color[2];ink[k+3]=255;
   if(touched)touched[i]=1;
  }
+ // Colour-bucket edges used to stop abruptly at the fixed RGB threshold,
+ // producing a pixel staircase against otherwise anti-aliased painted lines.
+ // Underpaint only the immediate one-pixel fringe where its original colour
+ // is STILL predominantly the seed pigment. A different-colour dark outline
+ // remains wholly untouched and never becomes another flood seed.
+ const fringe=new Uint8Array(total),SMOOTH_LIMIT=72;
+ for(let n=0;n<tail;n++){
+  const i=queue[n],ix=i%width,iy=(i/width)|0;
+  if((ix===0||visited[i-1])&&(ix===width-1||visited[i+1])&&
+     (iy===0||visited[i-width])&&(iy===height-1||visited[i+width]))continue;
+  const near=[ix>0?i-1:-1,ix+1<width?i+1:-1,iy>0?i-width:-1,iy+1<height?i+width:-1];
+  for(let d=0;d<4;d++){
+   const j=near[d];if(j<0||visited[j]||fringe[j])continue;
+   const k=j*4;if(area[k+3]<120||ink[k+3]<120)continue;
+   const dist=Math.max(Math.abs(ink[k]-r),Math.abs(ink[k+1]-g),Math.abs(ink[k+2]-b));
+   if(dist<=channelTolerance||dist>=SMOOTH_LIMIT)continue;
+   // A subtle feather at anti-aliased pigment boundaries, not a second fill.
+   const weight=.55*(SMOOTH_LIMIT-dist)/(SMOOTH_LIMIT-channelTolerance);
+   for(let c=0;c<3;c++)ink[k+c]=Math.round(ink[k+c]*(1-weight)+color[c]*weight);
+   fringe[j]=1;if(touched)touched[j]=1;
+  }
+ }
  return tail;
 }

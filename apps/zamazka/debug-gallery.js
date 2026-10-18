@@ -48,7 +48,7 @@ export function debugMatch(ids){
  }));
  return {
   host:participants[0].id,participants,selected,round:2,rounds:3,turn:0,
-  phase:'lobby',deadline:Date.now()+160000,drawingSeconds:160,readyCount:2,
+  phase:'lobby',timedScoring:true,deadline:Date.now()+160000,drawingSeconds:160,readyCount:2,
   mine:{art:selected[2],variation:1,strokes:[],id:participants[0].id,name:participants[0].name},
   candidate:gallery[0],author:participants[1],gallery,
   done:[participants[0].id,participants[2].id],voted:[],

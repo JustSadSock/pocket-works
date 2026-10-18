@@ -37,6 +37,7 @@ export function finaleResultsMarkup({view:v,escapeText,memberSeal,pocketPlayerBa
   .sort((a,b)=>(b.mask+b.eye)-(a.mask+a.eye));
  if(!scored.length)return '<section class="page finale-results"><h2>Результаты недоступны</h2><button class="btn ghost" data-action="menu">В главное меню</button></section>';
  const total=s=>s.mask+s.eye,winner=scored[0],max=Math.max(1,...scored.map(total)),ties=scored.filter(s=>total(s)===total(winner)).length;
+ const winnerWork=(v.gallery||[]).find(g=>g?.id===winner.person.id&&Number.isInteger(g.art));
  const points=n=>n+' очк.';
  const ranking=scored.map((s,i)=>{
   const rank=1+scored.filter(x=>total(x)>total(s)).length;
@@ -50,12 +51,13 @@ export function finaleResultsMarkup({view:v,escapeText,memberSeal,pocketPlayerBa
    '</article>';
  }).join('');
  return '<section class="page finale-results finale-scene" data-finale-phase="results">'+
-  '<header class="finale-results-head"><span class="finale-overline">ПОДВЕДЕНИЕ ИТОГОВ / ЭКСПОЗИЦИЯ ЗАКРЫТА</span><h2>Каталог победителей</h2><p>'+(v.timedScoring?'Точность, скорость и выдержка входят в итоговый счёт.':'Обман и наблюдательность оцениваются отдельно.')+'</p></header>'+
+  '<header class="finale-results-head"><span class="finale-overline">ПОДВЕДЕНИЕ ИТОГОВ / ЭКСПОЗИЦИЯ ЗАКРЫТА</span><h2>Каталог победителей</h2><p>'+(v.timedScoring?'Время голосования влияет на очки: ранние верные ставки приносят бонус эксперту, поздние — реставратору.':'Обман и наблюдательность оцениваются отдельно.')+'</p></header>'+
   '<div class="finale-results-main"><div class="finale-laureate"><span class="finale-laureate-hatch" aria-hidden="true"></span>'+
-   '<div class="finale-laureate-seal" aria-hidden="true"><span>❦</span><i>Ⅰ</i></div><div class="finale-laureate-label">'+(ties>1?'ПЕРВОЕ МЕСТО РАЗДЕЛИЛИ':'ЛАУРЕАТ ВЫСТАВКИ')+'</div>'+
+   (winnerWork?'<figure class="finale-laureate-art"><canvas id="winnerRestoration" aria-label="Реставрация победителя"></canvas><figcaption>'+label(winnerWork.name||winner.person.name)+'</figcaption></figure>':'<div class="finale-laureate-seal" aria-hidden="true"><span>❦</span><i>Ⅰ</i></div>')+'<div class="finale-laureate-label">'+(ties>1?'ПЕРВОЕ МЕСТО РАЗДЕЛИЛИ':'ЛАУРЕАТ ВЫСТАВКИ')+'</div>'+
    '<div class="finale-laureate-person">'+memberSeal(winner.person)+'<div><h3>'+label(winner.person.name)+'</h3><p>'+(ties>1?'Лидеров с равным счётом: '+ties:'Первое место в каталоге')+'</p></div></div>'+
    '<div class="finale-laureate-total"><strong>'+total(winner)+'</strong><span>ОЧКОВ</span></div>'+
-   '<div class="finale-laureate-split"><div><span>МАСКИРОВКА</span><b>'+winner.mask+'</b></div><div><span>ЭКСПЕРТИЗА</span><b>'+winner.eye+'</b></div></div>'+
+   '<div class="finale-laureate-split"><div><span>МАСКИРОВКА</span><b>'+winner.mask+'</b></div><div><span>ЭКСПЕРТИЗА</span><b>'+winner.eye+'</b></div></div>'+ 
+   (v.timedScoring?'<p class="finale-time-scoring">Скорость: до +40 за раннюю верную монету. Выдержка: до +80 за позднюю ошибку и до +30 за позднее разоблачение.</p>':'')+
    '</div>'+
    '<div class="finale-ledger-panel"><div class="finale-ledger-heading"><span class="finale-overline">ПОЛНАЯ ВЕДОМОСТЬ</span><strong>'+scored.length+' участников</strong></div>'+
    '<div class="results-shelf finale-ranking">'+ranking+'</div></div></div>'+

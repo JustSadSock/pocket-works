@@ -18,6 +18,7 @@ const layer=()=>{
  layers++;return {canvas,ctx};
 };
 const env={W:600,H:450,layer,damagePath(){},floodFillRaster(){},
+ priorityContourWalls(){return null},
  drawStroke(ctx,s){ctx.canvas.events.push('draw:'+s.id+':'+s.t)},
  fillRegion(lines,paint,mask,p,color){
   fills++;paint.canvas.events.push('fill:'+color+':'+p.join(','));},

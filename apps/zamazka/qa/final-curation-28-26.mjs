@@ -89,8 +89,8 @@ assert.ok(lock.zamazka.versions.includes('v26')&&lock.zamazka.versions.includes(
 const config=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
-assert.equal(config.version,'1.40.17');
-assert.match(html,/data-app-version="1\.40\.17"/);
-assert.match(sw,/APP_VERSION = '1\.40\.17'/);
+assert.ok(/^1[.]40[.]\d+$/.test(config.version),'ZAMAZKA remains in the 1.40 release series');
+assert.ok(html.includes('data-app-version="'+config.version+'"'),'HTML version matches manifest');
+assert.ok(sw.includes("APP_VERSION = '"+config.version+"'"),'service worker version matches manifest');
 assert.match(sw,/museum-approved-second-2026\.js/);
 console.log('ZAMAZKA curation: 27 rejected originals excluded, 28 approved originals added, 108 playable, archive editions 1-6 safe, server v28 OK');
