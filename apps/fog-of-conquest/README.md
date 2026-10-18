@@ -17,12 +17,25 @@ This is the original browser strategy from [JustSadSock/Fog-Of-Conquest](https:/
 - `sw.js`: versioned application offline cache including original sprite packs.
 - Original 512×512 game icon is the PWA icon.
 
-## Networking caveat — NOT RELEASE READY
-The original `js/network.js` and `js/lobby.js` use the root WebSocket endpoint and cannot safely be connected to PocketNet as written. The preceding PocketWorks v1 module (`server/module.ts`, immutable v1 snapshot) is a **different ruleset**: it must not be presented as a faithful port. The legacy online button is hidden until a PocketNet v2 module accepts the original battle actions, validates authority, projects fog individually and retains asynchronous rooms across disconnections. This is tracked as a release blocker, not a cosmetic follow-up.
+## PocketNet: source rules, not a remake
+The original generator, original unit/building constants, movement points, attacks,
+retaliation, capture damage, healing, training costs and turn economy are embedded
+in `server/module.ts`, not replaced with the obsolete alternative `engine.js`.
+The two-client protocol sends intents (move, attack, heal, spawn, end) to
+the authoritative server. The server validates ownership, range, terrain and
+gold; `viewForPlayer` hides unknown terrain, enemy units, opponent resources,
+and privately projects explored fog. Commands include revision checks.
+
+The immutable PocketNet `v2.ts` snapshot, `modules.lock.json` activation
+and hub room-retention support are published in the same atomic release.
+Disconnected users can rejoin with their saved guest token and room ID;
+inactive rooms are retained for up to six days, subject to platform quotas,
+which are not a guarantee of long-term storage. Explicitly leaving a game
+is a forfeit; simply losing network connectivity is not.
 
 ## Verification
 ```sh
 node --test apps/fog-of-conquest/test/original-port.test.mjs
 node apps/fog-of-conquest/test/port-browser.mjs
 ```
-Do not merge this draft until mobile/desktop browser QA and faithful PocketNet v2 are validated.
+Run the original browser gameplay QA after changes; confirm both desktop and mobile states and two-client PocketNet integration. Original offline local modes do not require an internet connection.
