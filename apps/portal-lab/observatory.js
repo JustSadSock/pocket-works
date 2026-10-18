@@ -56,7 +56,7 @@ export function createObservatory(canvas,options={}){
  let fly=null,probe=null,probeRead=null,metricNow=null;
  let active=false,w=0,h=0,run=0,stage='ready',progress=0,warning='';
  let skyA=null,skyB=null,picture=null,basis=null,transfer=null;
- let lastRender=0,flightRender=0,needsRender=true,mouse=null,selected=null;
+ let lastRender=0,flightRender=0,needsRender=true,mouse=null,selected=null,pending=0;
  const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify({l:state.l,yaw:state.yaw,pitch:state.pitch,fov:state.fov}));}catch{}};
  const onProgress=options.onProgress||(()=>{});
  function updateControls(){
@@ -74,9 +74,9 @@ export function createObservatory(canvas,options={}){
  }
  function cancel(){run++;progress=0;stage='calculating';needsRender=true;}
  function makeSky(){if(!skyA){skyA=stars(15540,true);skyB=stars(78036,false);}}
- function configure(m){metricNow=m;fly=null;probe=null;probeRead=null;state.facingSign=Math.sign(state.l)||1;cancel();updateControls();}
- function setActive(next){active=next;if(next){needsRender=true;updateControls();}else cancel();}
- function setDistance(v){fly=null;state.l=(Math.sign(state.l)||1)*clamp(v,.2,6);state.facingSign=Math.sign(state.l);cancel();save();updateControls();}
+ function configure(m){metricNow=m;fly=null;probe=null;probeRead=null;state.facingSign=Math.sign(state.l)||1;request();updateControls();}
+ function setActive(next){if(next===active)return;active=next;if(next){updateControls();request();}else{clearTimeout(pending);cancel();}}
+ function setDistance(v){fly=null;state.l=(Math.sign(state.l)||1)*clamp(v,.2,6);state.facingSign=Math.sign(state.l);request();save();updateControls();}
  function rebuild(width,height,quick=false){
   if(!active||!metricNow||width<10||height<10)return;
   makeSky();w=width;h=height;
@@ -84,7 +84,7 @@ export function createObservatory(canvas,options={}){
   stage='geodesics';progress=0;warning='';
   const l0=state.l*metricNow.a,m={...metricNow};
   basis=cameraBasis(state.yaw,state.pitch,side,state.facingSign);
-  const n=quick?180:720,table=new Array(n+1);
+  const n=quick?150:640,table=new Array(n+1);
   let i=0;
   function chunk(){
    if(token!==run||!active)return;
@@ -114,8 +114,7 @@ export function createObservatory(canvas,options={}){
        const src=arrival.region===0?skyA:skyB;
        const sky=sampleSky(src,arrival.direction);
        // Preserve spectral boundary conditions: no arbitrary painted rings.
-       const gain=clamp(geometry(l0,m).N/(geometry(arrival.transfer.side*22*m.a,m).N),.4,1.2);
-       pixels[o]=clamp(sky[0]*gain,0,255);pixels[o+1]=clamp(sky[1]*gain,0,255);pixels[o+2]=clamp(sky[2]*gain,0,255);
+       pixels[o]=sky[0];pixels[o+1]=sky[1];pixels[o+2]=sky[2];
       }
       pixels[o+3]=255;
     }
@@ -129,7 +128,7 @@ export function createObservatory(canvas,options={}){
   }
   raf(chunk);
  }
- function request(){cancel();lastRender=0;}
+ function request(){clearTimeout(pending);cancel();pending=setTimeout(()=>{if(active&&w&&h)rebuild(w,h,false);},110);}
  function triggerFlight(){
   if(fly){fly=null;updateControls();return;}
   fly=launch(metricNow,{kind:'matter',l:state.l*metricNow.a,alpha:Math.PI,phi:0,speed:.73});
@@ -153,12 +152,12 @@ export function createObservatory(canvas,options={}){
   if(probe){
     probeRead=stepCongruence(probe,Math.min(.08,dt*speed*2.2));
     if(probe.done)probe=null;
-    if(Math.random()<.11)updateControls();
+    updateControls();
   }
  }
  function draw(ctx,width,height){
   if(!active)return;
-  if(w!==width||h!==height||(!picture&&!needsRender)||needsRender&&!run){
+  if(w!==width||h!==height||(!picture&&run===0)){
     w=width;h=height;rebuild(width,height,false);
   }
   ctx.fillStyle='#071319';ctx.fillRect(0,0,width,height);
