@@ -30,8 +30,8 @@ test('all 45 QA screens: stable screenshots, interactive layout, real DOM and no
     issues.length=0;
     await page.evaluate(id=>{const button=document.querySelector('[data-arena-scene="'+id+'"]');if(!button)throw Error('Missing dev scene '+id);button.click()},scene.id);
     await expect(frame.locator('main.shell')).toBeVisible({timeout:12000});
-    await expect.poll(async()=>frame.locator('body').evaluate(el=>
-      el.ownerDocument.defaultView.location.search.includes('__arena_dev='+scene.id)
+    await expect.poll(async()=>frame.locator('body').evaluate((el,id)=>
+      el.ownerDocument.defaultView.location.search.includes('__arena_dev='+id),scene.id
     )).toBe(true);
     await frame.locator('body').evaluate(el=>{
      el.ownerDocument.documentElement.dataset.motion='off';
