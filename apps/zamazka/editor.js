@@ -1,6 +1,6 @@
 import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame,artworkAspect} from './artworks.js';
 import {zamazkaStore} from './storage.js';
-import {floodFillRaster} from './fill-core.js';
+import {floodFillRaster,fillMatchingColorRaster} from './fill-core.js';
 import {enclosingContourAt,fillEscapedContour} from './fill-contours.js';
 import {brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
 export {floodFillRaster};
@@ -79,6 +79,23 @@ function fillRegion(lines,paint,zoneMask,p,colour,priority=null){
  const inkBefore=new Uint8ClampedArray(current.data);
  const changed=new Uint8Array(w*h);
  const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
+ // Sample the actual composited canvas, not the opaque wall-mask alpha.
+ // A filled tan interior surrounded by black strokes must recolour as one
+ // connected area regardless of when/how many gestures painted it.
+ const px=Math.floor(p[0]*FILL_SCALE),py=Math.floor(p[1]*FILL_SCALE);
+ if(px>=0&&px<w&&py>=0&&py<h){
+  const k=(py*w+px)*4,ink=current.data,paper=[232,221,198];
+  const isPigment=ink[k+3]>=120&&
+   Math.max(Math.abs(ink[k]-paper[0]),Math.abs(ink[k+1]-paper[1]),
+    Math.abs(ink[k+2]-paper[2]))>18;
+  if(isPigment){
+   const painted=fillMatchingColorRaster({
+    width:w,height:h,zone:zoneMask,output:current,changed,
+    point:[px,py],color
+   });
+   if(painted){paint.ctx.putImageData(current,0,0);return}
+  }
+ }
  const apply=walls=>floodFillRaster({
   width:w,height:h,walls,zone:zoneMask,output:current,changed,
   point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color

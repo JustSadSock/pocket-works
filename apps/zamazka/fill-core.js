@@ -126,3 +126,50 @@ export function floodFillRaster({width,height,walls,zone,output,point,color,chan
  }
  return tail;
 }
+
+// Recolour connected visible pigment, rather than treating its opaque alpha as
+// an obstacle. This works for painted backgrounds, several separate strokes,
+// bucket colours and contours assembled from multiple gestures.
+// The seed colour is sampled BEFORE any writes; neighbours are compared to that
+// fixed colour, so a replacement colour cannot grow into an adjacent basin.
+export function fillMatchingColorRaster({width,height,zone,output,point,color,changed=null,tolerance=24}){
+ const total=width*height;
+ if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||
+    !zone||!output||!Array.isArray(point)||point.length!==2||
+    !point.every(Number.isFinite)||!Array.isArray(color)||color.length<3||
+    !color.slice(0,3).every(channel=>Number.isFinite(channel)&&channel>=0&&channel<=255))return 0;
+ const area=zone.data||zone,ink=output.data||output;
+ if(area.length<total*4||ink.length<total*4)return 0;
+ const x=Math.floor(point[0]),y=Math.floor(point[1]);
+ if(x<0||x>=width||y<0||y>=height)return 0;
+ const start=y*width+x,base=start*4;
+ if(area[base+3]<120||ink[base+3]<120)return 0;
+ const r=ink[base],g=ink[base+1],b=ink[base+2];
+ const channelTolerance=Math.max(0,Math.min(80,Number.isFinite(tolerance)?tolerance:24));
+ const sumTolerance=channelTolerance*2.5;
+ const matches=i=>{
+  const k=i*4;
+  if(area[k+3]<120||ink[k+3]<120)return false;
+  const dr=Math.abs(ink[k]-r),dg=Math.abs(ink[k+1]-g),db=Math.abs(ink[k+2]-b);
+  return dr<=channelTolerance&&dg<=channelTolerance&&db<=channelTolerance&&
+    dr+dg+db<=sumTolerance;
+ };
+ const visited=new Uint8Array(total),queue=new Int32Array(total);
+ let head=0,tail=1;queue[0]=start;visited[start]=1;
+ // Only topology of the original same-colour region matters. The visited mask
+ // prevents freshly recoloured pixels being reconsidered as part of that region.
+ while(head<tail){
+  const i=queue[head++],ix=i%width,iy=(i/width)|0;
+  if(ix>0&&!visited[i-1]&&matches(i-1)){visited[i-1]=1;queue[tail++]=i-1}
+  if(ix<width-1&&!visited[i+1]&&matches(i+1)){visited[i+1]=1;queue[tail++]=i+1}
+  if(iy>0&&!visited[i-width]&&matches(i-width)){visited[i-width]=1;queue[tail++]=i-width}
+  if(iy<height-1&&!visited[i+width]&&matches(i+width)){visited[i+width]=1;queue[tail++]=i+width}
+ }
+ const touched=changed&&changed.length>=total?changed:null;
+ for(let n=0;n<tail;n++){
+  const i=queue[n],k=i*4;
+  ink[k]=color[0];ink[k+1]=color[1];ink[k+2]=color[2];ink[k+3]=255;
+  if(touched)touched[i]=1;
+ }
+ return tail;
+}
