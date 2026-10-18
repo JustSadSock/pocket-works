@@ -466,3 +466,123 @@ if(!IS_DEV_FRAME){
  });
  initDevPreview(previewRequested);
 }
+
+
+// QA scenarios are constructed from the real rules engine, never from screenshots.
+// This executes only inside the isolated iframe indicated by DEV_QUERY.
+function devPlanA(){return ['right','up','left','down','shield'];}
+function devPlanB(){return ['left','up','right','down','shield'];}
+function devCombat(kind){
+ const match=initialMatch();
+ match.units.A={x:2,y:2,alive:true};match.units.B={x:2,y:3,alive:true};
+ const attackDown={type:'attack',dirs:['down']},attackUp={type:'attack',dirs:['up']};
+ let A=[attackDown,'up','left','right','shield'];
+ let B=['up','down','left','right','shield'];
+ if(kind==='shield')B=['shield','up','down','left','right'];
+ if(kind==='mutual')B=[attackUp,'down','left','right','shield'];
+ if(kind==='move'){match.units.A={x:0,y:2,alive:true};match.units.B={x:4,y:2,alive:true};A=['right','right','up','down','shield'];B=['left','left','up','down','shield'];}
+ if(kind==='collapse'){
+  match.round=4;match.units.A={x:0,y:2,alive:true};match.units.B={x:4,y:2,alive:true};
+  A=['up','down','left','right','shield'];B=['up','down','left','right','shield'];
+ }
+ return simulateRound(match,{A,B});
+}
+function devLobby(scene){
+ mode='online';connected=scene!=='lobby-connect'&&scene!=='lobby-error';busy=scene==='lobby-connect';
+ roomId=scene==='lobby-connect'?'':'F3A4B5C6';
+ const a={id:'dev-a',name:'Синий',verified:true},b={id:'dev-b',name:'Оранжевый',verified:false};
+ const guest=scene==='lobby-guest';me=guest?b:a;
+ server={phase:'lobby',host:a.id,players:scene==='lobby-ready'||guest?[a,b]:[a],
+  seats:[a.id,b.id],side:guest?'B':'A',match:null,score:{A:0,B:0},ready:{A:false,B:false}};
+ show('lobby');lobby();
+ if(scene==='lobby-error'){busy=false;toast('Комната не найдена или соединение потеряно');lobby();}
+}
+function devPlayOnline(scene){
+ mode='online';connected=true;roomId='F3A4B5C6';me={id:'dev-a',name:'Синий'};
+ const state=initialMatch();
+ server={phase:'planning',host:'dev-a',side:'A',
+  players:[{id:'dev-a',name:'Синий'},{id:'dev-b',name:'Оранжевый'}],
+  seats:['dev-a','dev-b'],match:state,score:{A:2,B:1},ready:{A:scene==='plan-wait',B:scene==='plan-rival-wait'},ownPlan:scene==='plan-wait'?devPlanA():[],revision:0};
+ show('play');
+}
+function devSounds(){
+ show('menu');$('menu').classList.add('hidden');
+ const root=document.createElement('section');root.id='arenaDevSoundLab';root.className='view arena-dev-sound-lab';
+ const entries=[['tap','Нажатие'],['plan','Команда плана'],['move','Перемещение'],
+  ['hit','Попадание'],['block','Щит / блок'],['win','Победа'],['error','Ошибка']];
+ root.innerHTML='<h2>Звуки 5×5 Arena</h2><p>Это реальные игровые сигналы. Нажми на звук для воспроизведения, включая режим с отключённым в основной игре звуком.</p>'+
+ '<div class="arena-dev-sounds">'+entries.map(([key,title])=>
+ '<button type="button" data-arena-audio="'+key+'">'+title+' <small>'+key+'</small></button>').join('')+
+ '</div><output class="arena-dev-status" aria-live="polite">Выбери любой сигнал.</output>';
+ document.querySelector('.shell').append(root);
+ root.querySelectorAll('[data-arena-audio]').forEach(b=>b.addEventListener('click',()=>{
+  const id=b.dataset.arenaAudio;soundFX(id);
+  root.querySelector('output').textContent='Воспроизведён звук: '+b.textContent.trim();
+ }));
+}
+function initDevPreview(requested){
+ if(!IS_DEV_FRAME)return;
+ const scene=devScene(requested);
+ gameToken++;clearTimeout(replayTimer);clearTimeout(toastTimer);
+ replayPaused=true;animating=false;animFrame=null;showingOutcome=false;modalOpen=false;recording=false;
+ attackMode=false;attackDirs=[];plan=[];server=null;offline=null;net=null;me=null;roomId='';busy=false;connected=false;
+ $('modal').classList.add('hidden');$('toast').classList.remove('show');
+ document.getElementById('arenaDevSoundLab')?.remove();
+ mode='solo';
+ offline={phase:'planning',turn:'A',pending:{A:null,B:null},match:initialMatch(),score:{A:2,B:1}};
+ if(scene==='menu'){show('menu');return;}
+ if(scene==='difficulty'){show('difficultyView');return;}
+ if(scene==='rules'){show('menu');showRules();return;}
+ if(scene==='sounds'){devSounds();return;}
+ if(scene.startsWith('lobby-')){devLobby(scene);return;}
+ if(scene==='plan-wait'||scene==='plan-rival-wait'){devPlayOnline(scene);return;}
+ if(scene==='planning'||scene==='plan-partial'||scene==='plan-attack'||scene==='plan-full'||scene==='round-four'){
+  if(scene==='plan-partial')plan=['right','up','shield'];
+  if(scene==='plan-attack'){plan=['up'];attackMode=true;attackDirs=['right'];}
+  if(scene==='plan-full')plan=devPlanA();
+  if(scene==='round-four'){offline.match.round=4;offline.match.units.A={x:1,y:2,alive:true};offline.match.units.B={x:3,y:2,alive:true};}
+  show('play');render();return;
+ }
+ if(scene==='handoff'){mode='hotseat';offline.pending.A=devPlanA();show('play');handoff();return;}
+ if(scene==='pause'){show('play');confirmReturn();return;}
+ if(['win','lose','draw'].includes(scene)){
+  offline.phase='finished';offline.match.outcome=scene==='win'?'A':scene==='lose'?'B':'draw';
+  offline.match.units.A.alive=scene!=='lose';offline.match.units.B.alive=scene!=='win';
+  show('play');finish();return;
+ }
+ if(scene==='toast'){show('play');toast('План успешно подтверждён');return;}
+ if(scene==='replay'||scene==='replay-end'||scene==='replay-playing'){
+  offline.match=devCombat('move').match;
+  offline.phase=offline.match.outcome?'finished':'planning';
+  show('play');openReplay();
+  if(scene==='replay-end'){replayIndex=currentRecord().frames.length;paintReplay();}
+  if(scene==='replay-playing')toggleReplay();
+  return;
+ }
+ if(scene.startsWith('anim-')){
+  const kind=scene.slice(5);
+  const actual=kind==='attack'?'attack':kind==='shield'?'shield':kind==='mutual'?'mutual':kind==='collapse'?'collapse':'move';
+  const completed=devCombat(actual);
+  offline.match=completed.match;
+  // Previewing combat does not accidentally trigger an end-of-match dialog.
+  offline.phase='planning';
+  show('play');animateRecord(completed.record);
+  return;
+ }
+ if(scene.startsWith('fx-')){
+  if(scene==='fx-danger'){
+   offline.match.round=4;offline.match.units.A={x:1,y:2,alive:true};offline.match.units.B={x:3,y:2,alive:true};
+   show('play');return;
+  }
+  const data=devCombat(scene==='fx-block'?'shield':scene==='fx-fall'?'collapse':'attack');
+  offline.match=data.match;
+  offline.match.round=scene==='fx-fall'?4:1;
+  const frame=data.record.frames[0];
+  animating=true;
+  animFrame={...frame,round:data.record.round};
+  show('play');render();
+  // Flash can be replayed by the parent's repeat control.
+  return;
+ }
+ show('menu');
+}
