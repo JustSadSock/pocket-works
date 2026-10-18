@@ -3,11 +3,12 @@ const CACHE_NAME = 'fog-of-conquest-v1.2.0';
 const APP_VERSION = '1.2.0';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ['Сохранены исходные боевые правила и оригинальная графика.', 'Подключена серверная сеть PocketNet с проверкой приказов.'];
+const RELEASE_NOTES = ["Сохранены исходная карта, баланс, оба набора графики, семь уровней ИИ, BOG и реплеи.","PocketNet: исходные правила боя и найма, серверная проверка приказов, приватный туман и восстановление подключения."];
 const APP_SHELL = [
   "./",
   "./index.html",
   "./app.config.json",
+  "./styles.css",
   "./css/style.css",
   "./pocket-adapter.css",
   "./pocket-adapter.js",
