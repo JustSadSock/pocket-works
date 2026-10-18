@@ -5,7 +5,7 @@ import {setSeed,generateOrgan,CELLS_PER_CHUNK} from '../organGen.js';
 const valid={v:1,seed:413,x:3,z:3,hp:82,maxHp:82,wave:4,score:100,kills:7,toSpawn:3,level:2,weapon:1,
   enemies:[{x:5,z:5,hp:30,type:'crawler'}],pickups:[{x:6,z:6,type:'heal'}]};
 test('v1 run upgrades to safe v2 with preserved progression',()=>{
- const s=validateRun(valid);assert.equal(s.v,3);assert.equal(s.wave,4);assert.equal(s.maxHp,82);
+ const s=validateRun(valid);assert.equal(s.v,4);assert.equal(s.wave,4);assert.equal(s.maxHp,82);
  assert.equal(s.weapon,1);assert.equal(s.enemies.length,1);assert.equal(s.pickups[0].type,'heal');
  assert.deepEqual(validateRun(s),s);
 });
