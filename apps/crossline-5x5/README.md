@@ -15,7 +15,7 @@ Manual E2E: complete four nonlethal rounds; verify collapse after round-four fir
 
 ## QA screen gallery (v1.2)
 
-Press **⋯** in the main header, the in-game HUD, or the replay header. On desktop, **Backquote / Ё** also opens the gallery. The isolated same-origin iframe renders 34 deterministic previews using the app's actual DOM screens, rules engine, effects and sound generator. Available groups: main/difficulty/rules, PocketNet lobby and errors, planning and handoff, outcomes, replays, movement/attack/shield/collapse animations, hit/block/fall effects and all seven SFX. Device viewports: phone 390×844, landscape 844×390, desktop 1280×800. Animation speed: 0.25×–4×; replay, theme, and inspector collapse controls available. The **Diagnostics** action switches to the pre-existing Workshop view with FPS, errors, cache and reset actions.
+Press **⋯** in the main header, the in-game HUD, or the replay header. On desktop, **Backquote / Ё** also opens the gallery. The isolated same-origin iframe renders 37 deterministic previews using the app's actual DOM screens, rules engine, effects and sound generator. Available groups: main/difficulty/rules, PocketNet lobby and errors, planning and handoff, outcomes, replays, movement/attack/shield/collapse animations, hit/block/fall effects and all seven SFX. Device viewports: phone 390×844, landscape 844×390, desktop 1280×800. Animation speed: 0.25×–4×; replay, theme, and inspector collapse controls available. The **Diagnostics** action switches to the pre-existing Workshop view with FPS, errors, cache and reset actions.
 
 QA frames use synthetic room data and bypass PocketNet connections, identity retrieval, game writes and managed service-worker registration. Live games are not interrupted by opening or leaving the QA gallery. Regression coverage: `tests/dev-gallery.test.mjs` and original `tests/engine.test.mjs`.
 
@@ -28,3 +28,9 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for priorities, acceptance criteria, rele
 `combat-visuals.js` is the single event-sourced renderer for the live 5×5 board, interactive replay and 30-fps WebM. It retains 25 cell and 2 fighter elements, uses interpolation for movement, telegraphed orthogonal attack zones, shield pulses, hits, falls using `event.at`, and perimeter collapse. Sound is emitted at the relevant event phase; the combat clock obeys QA animation speeds. `▶` / `⏭` in the top menu toggles motion, and `prefers-reduced-motion` is respected. Neither renderer nor exporter recomputes game outcomes.
 
 Tests: `node --experimental-strip-types --test apps/crossline-5x5/tests/*.test.mjs`, including `tests/combat-visuals.test.mjs`. The full roadmap is `docs/ROADMAP.md`.
+
+## Interactive command planning (v1.5.0)
+
+The five slots are interactive buttons. Tap one to replace that command, or use the compact step toolbar to swap with the preceding/following command, remove it, or exit editing. No other slot is discarded and invalid edits fail atomically with a concrete message. On desktop, number keys 1–5 select the corresponding step. The client projects movement, attack zones, shield positions, repeated-cell visits and round-four edge collapse; risk warnings describe an actual projected fall, not a guessed hit. The server still validates the full five-command plan.
+
+`planning.js` contains the pure partial-plan editor and projection; `tests/planning.test.mjs` covers replacement, command conflicts, swap, repeated visits, collapse and SVG stop markers. QA gallery now includes 37 scenes: route, selected edit and danger scenarios were added.
