@@ -743,6 +743,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   window.FogVisibleBuildings=visibleBuildings;
   function updateFog(){
     if(onlineGame) return; // Server supplies each participant's private visibility.
+    if(!map.length||!Array.isArray(map[0])||!map[0].length)return;
     if(!modeBeta && !revealAll){
       const p=state.currentPlayer, F=state.fog[p], S=state.seen[p];
       const projected=window.FogRuleKernel.fogForSide(map,units,buildings,p);
