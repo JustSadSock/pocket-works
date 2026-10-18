@@ -4,7 +4,7 @@ import { validateRun, deadzone, findOpenFacing } from './stability.js';
 import { hitRay, pelletAim, staggerDuration } from './combat.js';
 import { createCombatAudio } from './sound-forge.js';
 import {initialEnemyIntent,advanceEnemyIntent,interruptIntent,enemyTerrainReaction,maxActiveAttackers,resetIntent,chooseEnemyKind} from './ecology.js';
-import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal,biomeSpawnWeight} from './biomes.js';
+import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal} from './biomes.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -349,9 +349,10 @@ function updateEnemies(dt){
     }
     // Prevent twenty simultaneous telegraphs without freezing existing AI.
     const canStart=active<cap;
+    const wasWinding=e.windup>0;
     const result=advanceEnemyIntent(e,dt,{x:e.x,z:e.z,visible:hasSight&&(canStart||e.windup>0||e.lunge>0),
       playerX:state.x,playerZ:state.z});
-    if(result.action==='warn'&&e.windup>=.3&&e.windupKind&&Math.abs(e.windup-(e.windupKind==='bite'?.4:e.type==='spitter'?.72:e.type==='brute'?.79:.88))<dt+.01){
+    if(!wasWinding&&result.action==='warn'&&e.windup>0){
       active++;telegraphsSeen++;
     }
     if(result.action==='shoot'){createProjectile(e);sound('heart');}
