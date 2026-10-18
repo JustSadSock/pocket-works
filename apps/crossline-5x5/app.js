@@ -510,6 +510,15 @@ function render(){
  const state=latest(),match=state?.match;
  if(!match)return;
  const sidescore=score(),turn=side(),flags=ready(),finished=state.phase==='finished';
+ const isGuide=mode==='tutorial';
+ $('lessonPanel').classList.toggle('hidden',!isGuide);
+ $('markHint').classList.toggle('hidden',isGuide||finished||animating||!isPlanning());
+ if(isGuide){
+  const guide=guideStep(plan.length,attackMode,attackDirs);
+  $('lessonProgress').textContent=animating?'ИСПОЛНЕНИЕ':Math.min(6,plan.length+1)+' / 6';
+  $('lessonTitle').textContent=animating?'Смотри на бой':guide.title;
+  $('lessonText').textContent=animating?'Оба бойца выполняют по одному действию за такт.':guide.text;
+ }
  const picture=animFrame||{units:match.units,edgesCollapsed:match.edgesCollapsed,events:[]};
  drawBoard($('board'),picture.units,picture.edgesCollapsed,picture.events,!animating,picture.round||match.round);
  $('roundInfo').textContent='РАУНД '+Math.min(match.round,4)+' / '+MAX_ROUNDS;
@@ -522,7 +531,7 @@ function render(){
  $('planOwner').textContent=thinkingAI?'КОМПЬЮТЕР ДУМАЕТ':animating?'РАЗРЕШЕНИЕ ХОДА':finished?'БИТВА ЗАВЕРШЕНА':flags[turn]?'ПЛАН ОТПРАВЛЕН':turn==='A'?'КОМАНДЫ ИГРОКА А':'КОМАНДЫ ИГРОКА Б';
  $('planCount').textContent=String(plan.length)+' / '+STEPS;
  $('slots').innerHTML=Array.from({length:STEPS},(_,i)=>{
-  const selectable=!locked()&&i<=plan.length,active=editingSlot===i,cmd=plan[i];
+  const selectable=!locked()&&!isGuide&&i<=plan.length,active=editingSlot===i,cmd=plan[i];
   return '<button type="button" class="slot '+(cmd?'filled ':'')+(i===plan.length?'current ':'')+
    (active?'editing ':'')+'" data-slot="'+i+'" '+(selectable?'':'disabled ')+
    'aria-pressed="'+String(active)+'" aria-label="Шаг '+(i+1)+': '+esc(cmd?actionText(cmd):'пустой')+
@@ -546,8 +555,13 @@ function render(){
  $('shield').classList.toggle('conflict',info.shieldUsed&&!disabled&&!full);
  $('shield').setAttribute('aria-disabled',String(info.shieldUsed));
  $('attack').textContent=attack?'✓':'⚔';
+ const focus=isGuide&&!animating&&!finished?
+  (plan.length===1?(attack?(attackDirs.includes('down')?'attack':'down'):'attack'):(['right',null,'shield','up','left','submit'][plan.length])):null;
+ for(const element of document.querySelectorAll('#controls button,#submit')){
+  element.classList.toggle('lesson-focus',Boolean(focus&&(element.id===focus||element.dataset.dir===focus)));
+ }
  $('undo').textContent=attack?'ОТМЕНА':editingSlot!==null?'× Удалить шаг':'← Удалить';
- $('undo').disabled=disabled||(!attack&&!plan.length);
+ $('undo').disabled=disabled||isGuide||(!attack&&!plan.length);
  const edit=editingSlot!==null&&!disabled;
  $('editBar').classList.toggle('hidden',!edit);
  if(edit){
