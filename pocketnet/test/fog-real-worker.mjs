@@ -61,7 +61,7 @@ async function run(){
  assert.ok(response,'Cloudflare Wrangler did not become healthy within startup window');
  const health=await response.json();
  assert.equal(health.games['fog-of-conquest'].version,'v7');
- assert.equal(health.games['fog-of-conquest'].rulesVersion,5);
+ assert.equal(health.games['fog-of-conquest'].rulesVersion,6);
  const ta=await token('Fog northern'),tb=await token('Fog southern');
  let a=await connect(ta),b=await connect(tb);
  try{
