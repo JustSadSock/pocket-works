@@ -157,12 +157,12 @@ function drawFrame(){if(!sim)return;
   // Local disputes have a physically recorded strip and real inhabitants.
   // One modest mark locates the encounter; no invented battle entities.
   for(const c of sim.conflicts||[]){
-   if(c.stage!=='mobilizing'&&sim.day-(c.endDay||0)>4)continue;
+   if(c.stage==='resolved'&&sim.day-(c.endDay||0)>4)continue;
    const x=cam.x+((c.cell%SIZE)*PX+4)*cam.z;
    const y=cam.y+(Math.floor(c.cell/SIZE)*PX+4)*cam.z;
    if(x<0||y<0||x>w||y>h)continue;
    const r=Math.max(4,5*cam.z);
-   ctx.save();ctx.strokeStyle=c.stage==='mobilizing'?'#d6b77d':'#a77d61';ctx.lineWidth=Math.max(1,cam.z*.9);
+   ctx.save();ctx.strokeStyle=c.stage==='mobilizing'?'#d6b77d':c.stage==='mustering'?'#b9a76f':'#a77d61';ctx.lineWidth=Math.max(1,cam.z*.9);
    ctx.beginPath();ctx.moveTo(x-r,y-r);ctx.lineTo(x+r,y-r);ctx.lineTo(x+r,y+r);ctx.lineTo(x-r,y+r);ctx.closePath();ctx.stroke();
    ctx.restore();
   }
@@ -224,8 +224,17 @@ if(mode==='overview'){
  const woods=homes.filter(h=>h.focus==='wood'&&h.members.some(id=>adults.some(p=>p.id===id))).length;
  return `<div class="community-row"><span><b>${escapeHTML(c.name)}</b><small>${farmers} полевых · ${woods} лесных · ${homes.filter(h=>h.tenure==='demesne').length} поместье</small></span><strong>${adults.length}</strong></div>`;}).join('');
  const pending=sim.households.filter(h=>h.buildProject?.site).length;
-  const disputes=(sim.conflicts||[]).filter(c=>c.stage==='mobilizing');
- el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}</div><p class="map-key">Построено домов: ${sim.stats.built||0} · Строится: ${pending} · Древесины заготовлено: ${Math.round((sim.stats.produced||0)/1000)} т.${disputes.length?` · Вооружённых споров: ${disputes.length}`:''}${sim.stats.armedDisputesResolved?` · Завершено стычек: ${sim.stats.armedDisputesResolved}`:''}</p><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
+  const disputes=(sim.conflicts||[]).filter(c=>c.stage!=='resolved');
+  const encounters=(sim.conflicts||[]).filter(c=>c.stage!=='resolved'||sim.day-(c.endDay||0)<=7).slice(-2).reverse();
+  const encounterRows=encounters.map(c=>{
+   const claim=sim.households.find(h=>h.id===c.claimantId),owner=sim.households.find(h=>h.id===c.ownerId);
+   const phase=c.stage==='mustering'?'Сбор у дворов':c.stage==='mobilizing'?'Путь к полю':c.retreated?'Отступление':c.outcome==='dispersed'?'Разошлись':'Спор разрешён';
+   const count=(c.arrived?.claimants||0)+(c.arrived?.owners||0);
+   const details=c.stage==='resolved'?count+' пришли · '+c.wounded.length+' ранены'+(c.compensationCoin?' · '+c.compensationCoin+' мон.':''):
+    c.claimants.length+c.owners.length+' участников · день встречи '+(c.meetDay+1);
+   return `<div class="community-row"><span><b>Земельный спор · ${escapeHTML(phase)}</b><small>Семьи #${claim?.id??c.claimantId} и #${owner?.id??c.ownerId} · ${details}</small></span></div>`;
+  }).join('');
+ el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}${encounterRows}</div><p class="map-key">Построено домов: ${sim.stats.built||0} · Строится: ${pending} · Древесины заготовлено: ${Math.round((sim.stats.produced||0)/1000)} т.${disputes.length?` · Вооружённых споров: ${disputes.length}`:''}${sim.stats.armedDisputesResolved?` · Завершено стычек: ${sim.stats.armedDisputesResolved}`:''}</p><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
 }
 if(mode==='household'){
  const h=getHousehold(sim,selected);
