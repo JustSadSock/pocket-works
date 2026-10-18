@@ -8,6 +8,10 @@ async function boot(page,url){
  await page.locator('#start').click();
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play',{timeout:30000})
 }
+async function activateInteraction(page){
+ if(await page.locator('#interact').isVisible())await page.locator('#interact').click();
+ else await page.keyboard.press('e')
+}
 test('fuse interaction wins over neighboring hotspots after a kitchen blackout',async({page})=>{
  test.setTimeout(90000);
  await boot(page,'/apps/not-dead-yet/?chapter=1&qa=1');
@@ -15,11 +19,11 @@ test('fuse interaction wins over neighboring hotspots after a kitchen blackout',
  await expect.poll(()=>page.evaluate(()=>window.__PW_TEST_STATE__.power.stage)).toBe('tripped');
  expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearPower('fuse'))).toBe(true);
  await expect(page.locator('#interact')).toHaveText('Включить');
- await page.locator('#interact').click();
+ await activateInteraction(page);
  expect(await page.evaluate(()=>window.__PW_TEST_STATE__.power.stage)).toBe('tripped');
  expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearPower('plate'))).toBe(true);
  await expect(page.locator('#interact')).toHaveText('Выключить');
- await page.locator('#interact').click();
+ await activateInteraction(page);
  await expect.poll(()=>page.evaluate(()=>window.__PW_TEST_STATE__.power.stage)).toBe('safe');
  await page.locator('#pause').click();
  await page.reload({waitUntil:'domcontentloaded'});
@@ -27,7 +31,7 @@ test('fuse interaction wins over neighboring hotspots after a kitchen blackout',
  await page.waitForFunction(()=>window.__PW_TEST_STATE__?.phase==='play');
  expect(await page.evaluate(()=>window.__PW_TEST_HOOKS__.teleportNearPower('fuse'))).toBe(true);
  await expect(page.locator('#interact')).toHaveText('Включить');
- await page.locator('#interact').click();
+ await activateInteraction(page);
  await expect.poll(()=>page.evaluate(()=>window.__PW_TEST_STATE__.power.stage),{timeout:12000}).toBe('restored')
 });
 test('arrow-right rotates camera on slow WebGL and Escape returns to live play',async({page})=>{
