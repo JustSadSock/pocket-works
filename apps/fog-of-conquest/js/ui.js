@@ -16,13 +16,11 @@ window.addEventListener('DOMContentLoaded', ()=>{
   orientationQuery.addEventListener('change', handleOrientation);
 
   function playAudio(a){
-    if(!a || isTestEnv) return;
-    if(a.dataset.type==='sfx' && !sfxEnabled) return;
-    if(a.dataset.type==='music' && !musicEnabled) return;
-    try{
-      a.currentTime = 0;
-      a.play && a.play().catch(()=>{});
-    }catch(e){}
+    // IDs preserve the original action bindings; all sounds are offline Web Audio.
+    if(!a||isTestEnv)return;
+    const names={attackSfx:'attack',healSfx:'heal',captureSfx:'capture',
+      uiClickSfx:'uiClick',uiHoverSfx:'uiHover'};
+    window.FogAudio?.play(names[a.id]);
   }
 
   function loadImages(basePath='assets'){
@@ -247,22 +245,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   function applyVolumes(){
-    document.querySelectorAll('audio').forEach(a=>{
-      if(a.dataset.type==='sfx'){
-        a.volume = sfxVolume;
-        a.muted = !sfxEnabled;
-      } else {
-        a.volume = musicVolume;
-        a.muted = !musicEnabled;
-      }
-    });
-    if(bgm){
-      if(musicEnabled){
-        playAudio(bgm);
-      } else {
-        bgm.pause();
-      }
-    }
+    window.FogAudio?.configure({musicEnabled,musicVolume,sfxEnabled,sfxVolume});
   }
 
   function loadLangStrings(){
@@ -542,12 +525,16 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   function animateMove(u,fr,fc,tr,tc,dur=200){
-    u.animMove={fr,fc,tr,tc,start:Date.now(),dur};
-    requestAnimationFrame(redraw);
+    if(!window.matchMedia?.('(prefers-reduced-motion:reduce)').matches){
+      u.animMove={fr,fc,tr,tc,start:Date.now(),dur};
+      requestAnimationFrame(redraw);
+    }
   }
   function animateShake(u,dur=100){
-    u.animShake={start:Date.now(),dur};
-    requestAnimationFrame(redraw);
+    if(!window.matchMedia?.('(prefers-reduced-motion:reduce)').matches){
+      u.animShake={start:Date.now(),dur};
+      requestAnimationFrame(redraw);
+    }
   }
 
   function initFog(){
@@ -828,6 +815,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
         drawUnknownGround(r,c,x,y);
       } else {
         ctx.fillStyle=TERR_COL[map[r][c]]; ctx.fillRect(x,y,cellW,cellH);
+        window.FogVisual?.depth(ctx,map[r][c],r,c,x,y,cellW,cellH,style==='toen');
         if(!revealAll&&F[r][c]){
           ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(x,y,cellW,cellH);
         }
@@ -976,6 +964,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
         }else if(map[r][c]===TERRAIN.FOREST){
           ctx.drawImage(IMG[TILE_IMAGES.forest[0]],x,y,cellW,cellH);
         }
+        window.FogVisual?.depth(ctx,map[r][c],r,c,x,y,cellW,cellH,style==='toen');
         if(!revealAll&&F[r][c]){
           ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(x,y,cellW,cellH);
         }
@@ -1205,6 +1194,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
           ? t('eventBaseCaptured')
           : t('eventResourceCaptured').replace('{building}', BUILD_LABELS[building.type]));
         playAudio(captureSfx);
+        window.FogVisual?.action('capture',building.r,building.c);
         building.owner = unit.owner;
         if(!aiMode) addReplay({type:'capture', building});
       }
@@ -1219,6 +1209,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(state.gold[p]<cost) return;
     const unit={id:nextUnitId++,r,c,owner:p,type,hp:UNIT_TYPES[type].hpMax,mp:0,startR:r,startC:c};
     units.push(unit);
+    window.FogAudio?.play('spawn');window.FogVisual?.action('spawn',r,c);
     if(!aiMode) addReplay({type:'spawn',unit});
     state.gold[p]-=cost;
     recordEvent(t('eventUnitCreated').replace('{unit}', UNIT_LABELS[type]));
@@ -1314,7 +1305,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       if(tgt&&abs(tgt.r-sel.r)+abs(tgt.c-sel.c)<=1){
         sel.mp=0; tgt.hp=Math.min(UNIT_TYPES[tgt.type].hpMax,tgt.hp+2);
         recordEvent(t('mageHeal').replace('{unit}', UNIT_LABELS[tgt.type]));
-        playAudio(healSfx);
+        playAudio(healSfx);window.FogVisual?.action('heal',y,x,{amount:2});
         sel=null; zoneMap=null; zoneList=[]; updateAll(); return;
       }
     }
@@ -1359,7 +1350,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
           sel.mp=0;
           const {dmg,rdmg,killed}=doAttack(sel,tgt);
           if(!aiMode) addReplay({type:'attack',target:tgt});
-          playAudio(attackSfx);
+          playAudio(attackSfx);window.FogVisual?.action('attack',tgt.r,tgt.c,{amount:dmg});
           animateShake(tgt);
           if(killed && UNIT_TYPES[sel.type].range===1){
             if(!aiMode) addReplay({type:'move',unit:sel,from:{r:sel.r,c:sel.c},to:{r:tgt.r,c:tgt.c}});
@@ -1393,7 +1384,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
           sel.mp=0;
           const {dmg}=doAttackBuilding(sel,bldTgt);
           if(!aiMode) addReplay({type:'attack',target:bldTgt});
-          playAudio(attackSfx);
+          playAudio(attackSfx);window.FogVisual?.action('attack',bldTgt.r,bldTgt.c,{amount:dmg});
           animateShake(bldTgt);
           let destroyed = bldTgt.hp<=0;
           if(destroyed && hadMove && dist===1){
