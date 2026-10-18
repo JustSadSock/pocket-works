@@ -156,3 +156,6 @@
 .mage-family.mage-stone .mage-sprite{background:#414a3f}
 .net-mages .mage-option .mage-sprite{flex-basis:27px;width:27px;height:27px}
 .net-sheet{max-height:90dvh;overflow-y:auto;scrollbar-width:thin}
+
+.spell-lane-empty{background:#d3c4a9;border-style:dashed;opacity:.82}
+.spell-lane-empty p{font-size:10px;color:#7b6d51;margin:0;padding:3px 6px 5px;line-height:1.3}
