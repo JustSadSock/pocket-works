@@ -237,6 +237,7 @@ export function createWorld(canvas, initialSeed) {
   const tellRingGeo=new THREE.TorusGeometry(.57,.052,6,20);
   const targetTellGeo=new THREE.TorusGeometry(1,.053,6,26);
   const routeSignRoot=new THREE.Group();
+  let activeRouteMark='';
   scene.add(routeSignRoot);
   const tellMats=Object.fromEntries(Object.entries(ENEMY_TELLS).map(([kind,info])=>[
     kind,new THREE.MeshBasicMaterial({color:info.color,transparent:true,opacity:.88,depthWrite:false})
@@ -410,7 +411,7 @@ export function createWorld(canvas, initialSeed) {
     return group;
   }
   function setRouteMark(id){
-    routeSignRoot.clear();
+    routeSignRoot.clear();activeRouteMark='';
     if(!['bypass','calcified','rupture','necrosis'].includes(id))return;
     const cells=getOpenCells(0,0),start=getStart();
     const candidates=cells.filter(c=>{
@@ -424,6 +425,7 @@ export function createWorld(canvas, initialSeed) {
       return !best||d<best.distance?{...c,distance:d}:best;
     },null);
     if(!target)return;
+    activeRouteMark=id;
     routeSignRoot.position.set(target.x,2.29,target.z);
     const ringMat=id==='bypass'||id==='calcified'?boneMat:valveSkin;
     const rim=new THREE.Mesh(id==='bypass'||id==='rupture'?vascularArchGeo:marrowVaultGeo,ringMat);
@@ -443,7 +445,7 @@ export function createWorld(canvas, initialSeed) {
     for(const obj of chunks.values()) scene.remove(obj);
     chunks.clear();layouts.clear();tissueChunks.clear();tissueVisuals.clear();lastChunk='';
     for(const line of streaks)line.obj.geometry.dispose();streaks.length=0;
-    source.clear();routeSignRoot.clear();
+    source.clear();routeSignRoot.clear();activeRouteMark='';
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
     kickPos=0;kickVel=0;muzzleTime=0;organPulse=0;
   }
@@ -1038,5 +1040,5 @@ export function createWorld(canvas, initialSeed) {
       structuralChamber(cx,cz,seed,biome.id);
   }
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark, getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
 }
