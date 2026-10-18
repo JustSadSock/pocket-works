@@ -5,7 +5,7 @@
 const mageEntry=(id,school,name,trait,description,style,speed,power,reload,shield)=>({id,school,name,trait,description,style,speed,power,reload,shield});
 const SCHOOLS=Object.freeze([
  {id:'fire',name:'Жар',explain:'Плотные горячие сгустки. Попадания и перегрузка.'},
- {id:'storm',name:'Искра',explain:'Быстрые тонкие разряды. Рывки и контроль.'},
+ {id:'storm',name:'Ток',explain:'Быстрые тонкие разряды. Рывки и контроль.'},
  {id:'stone',name:'Камень',explain:'Тяжёлые куски и волны. Щиты и ближний бой.'}
 ]);
 const MAGES=Object.freeze([
