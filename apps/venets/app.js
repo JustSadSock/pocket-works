@@ -193,7 +193,7 @@ function buildStarts(){
     t.id===chosen.id||t.liegeId===chosen.id||
     w.titles.find(d=>d.id===t.liegeId)?.liegeId===chosen.id));
   const representative=w.provinces.find(p=>p.titleId===counties[0]?.id);
-  if(!w.provinces.some(p=>p.id===selectedProvince))selectedProvince=representative?.id||w.provinces[0].id;
+  if(!counties.some(t=>t.provinceId===selectedProvince))selectedProvince=representative?.id||w.provinces[0].id;
   const details=element('div','start-ruler');
   const seal=element('span','start-ruler-seal');seal.append(shieldSvg(person.dynastyId));
   const copy=element('div','start-ruler-copy');
@@ -214,12 +214,15 @@ function buildStarts(){
   const expanded=w.provinces.length===48;
   by('start-region-controls').hidden=!expanded;
   if(expanded)label(by('start-region-label'),['I','II','III','IV'][startRegion]+' / IV');
+  const oldMap=by('start-map').querySelector('.atlas-canvas');
+  const horizontal=oldMap?.scrollLeft||0;
   const map=renderAtlas(w,{selectedId:selectedProvince,selectedTitleId:chosen.id,
     region:startRegion,rank:startRank,onSelect:(provinceId,titleId)=>{
       selectedCounty=titleId;selectedProvince=provinceId;
       buildStarts();
     }});
   by('start-map').replaceChildren(map);
+  map.scrollLeft=horizontal;
 }
 function menu(){
   if(game)selectedSize=game.world.provinces.length;
@@ -456,10 +459,13 @@ function renderProvinces(){
   const expanded=w.provinces.length===48;
   by('region-controls').hidden=!expanded||atlasView==='family';
   if(expanded)label(by('region-label'),['I','II','III','IV'][atlasRegion]+' / IV');
+  const oldMap=by('province-grid').querySelector('.atlas-canvas');
+  const oldScroll=oldMap?.scrollLeft||0;
   const rendered=renderAtlas(w,{selectedId:selectedProvince,changes:atlasChanges,region:atlasRegion,onSelect:id=>{
     selectedProvince=id;renderProvinces();
   }});
   by('province-grid').replaceChildren(rendered);
+  rendered.scrollLeft=oldScroll;
   const county=w.titles.find(t=>t.id===province.titleId);
   const ruler=w.people.find(p=>p.id===county.holderId);
   const duke=w.titles.find(t=>t.id===county.liegeId);
