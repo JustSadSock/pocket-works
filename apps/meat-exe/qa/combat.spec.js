@@ -27,11 +27,11 @@ test('live shooting produces resolved shots, misses and remains pausible',async 
   await expect(page.locator('#pauseMenu')).toBeVisible();
   expect(errors).toEqual([]);
 });
-test('the two guns differ and can be swapped during gameplay',async ({page})=>{
+test('the two guns differ and can be swapped during gameplay',async ({page,isMobile})=>{
   await page.goto('/apps/meat-exe/');
   await page.locator('#startBtn').click();
   await expect(page.locator('#weaponValue')).toContainText('КОСТОЛОМ');
-  await page.locator('#weaponBtn').click({force:true});
+  if(isMobile)await page.locator('#weaponBtn').tap();else await page.keyboard.press('q');
   await expect(page.locator('#weaponValue')).toContainText('МЯСОРУБКА');
   await page.locator('#pauseBtn').click();
   await expect(page.locator('#pauseMenu')).toBeVisible();
