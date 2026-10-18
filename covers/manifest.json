@@ -3401,7 +3401,7 @@
     "lastAttemptAt": "2026-10-18T00:16:06.535Z"
   },
   "chyepukha": {
-    "revision": "42f5cd86b26cc24eb18c4fc155481c214aded57d",
+    "revision": "80bc519c38ad99de73c2ef8c4cf23038f79476e7",
     "qualityScore": 79,
     "visionScore": null,
     "prepared": false,
@@ -3413,8 +3413,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "42f5cd86b26cc24eb18c4fc155481c214aded57d",
-    "lastAttemptAt": "2026-10-18T00:27:28.079Z"
+    "lastAttemptRevision": "80bc519c38ad99de73c2ef8c4cf23038f79476e7",
+    "lastAttemptAt": "2026-10-18T01:15:06.971Z"
   },
   "not-dead-yet": {
     "note": "No frame passed image-content checks",
@@ -3442,5 +3442,27 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "ccec837ec8c3c511c495d5e713e9a70ed31d6564",
     "lastAttemptAt": "2026-10-18T00:58:15.850Z"
+  },
+  "crossline-5x5": {
+    "revision": "a15b65c7a3d116b9b38f42f847d16ab163848bf3",
+    "qualityScore": 63,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Как играть ↗",
+        "id": "openRules",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "eee4f47d1daa14aa48c72d5325984c80acce93c4a12fcb4a939976b6f4cde756",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "a15b65c7a3d116b9b38f42f847d16ab163848bf3",
+    "lastAttemptAt": "2026-10-18T01:14:56.060Z"
   }
 }
