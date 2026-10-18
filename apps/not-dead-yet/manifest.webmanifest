@@ -1,0 +1,20 @@
+{
+  "name": "NOT DEAD YET",
+  "short_name": "NOT DEAD YET",
+  "id": "/apps/not-dead-yet/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b171b",
+  "theme_color": "#0b171b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "description": "Трёхмерный хоррор от первого лица: блуждающий лабиринт забывает пройденные комнаты, а реальные и ложные преследователи появляются за спиной. Найди три сигнала памяти и вернись к выходу."
+}
