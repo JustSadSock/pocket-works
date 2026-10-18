@@ -7,3 +7,8 @@
 - Сохранение: рекорд кампании, текущая бесконечная смена, звук и сложность через localStorage. Сеть и роль через PocketNet.
 - Проверка: node --test apps/axis-pals/engine.test.mjs.
 - Публикация: обязательно запинить серверный файл в pocketnet/module-versions/axis-pals/v1.ts и добавить в modules.lock.json; основной Worker подключит модуль при деплое main.
+
+## Визуальное развитие
+См. [ROADMAP.md](./ROADMAP.md). Начиная с v1.1 Тихоня (Y) и Шустрик (X) отрисовываются модулем `actors.js`: статичная сетка и серверные позиции отделены от моргания, деформации при столкновениях и коротких локальных анимаций. `prefers-reduced-motion` убирает вторичное движение.
+
+Дополнительные регрессии: `node --test apps/axis-pals/actors.test.mjs apps/axis-pals/engine.test.mjs`.
