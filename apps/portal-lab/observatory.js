@@ -58,7 +58,7 @@ export function createObservatory(canvas,options={}){
  let skyA=null,skyB=null,picture=null,basis=null,transfer=null;
  let lastRender=0,flightRender=0,needsRender=true,mouse=null,selected=null,pending=0;
  const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify({l:state.l,yaw:state.yaw,pitch:state.pitch,fov:state.fov}));}catch{}};
- const onProgress=options.onProgress||(()=>{});
+ const onProgress=options.onProgress||(()=>{}),onAction=options.onAction||(()=>{});
  function updateControls(){
   const d=$('lens-distance');
   if(d){d.value=clamp(Math.abs(state.l),.2,6);$('lens-distance-value').textContent=fmt(Math.abs(state.l));}
@@ -71,6 +71,21 @@ export function createObservatory(canvas,options={}){
    $('lens-probe-read').textContent=s?'Δl '+fmt(s.radial.length)+'× · Δ⊥ '+fmt(s.transverse.length)+'× · τ '+fmt(s.properTime):'Зонд не запущен';
   }
   if($('lens-eta'))$('lens-eta').textContent=metricNow?.eta?('N₀ = '+fmt(Math.exp(-metricNow.eta))):'N₀ = 1';
+  if($('lens-optical-read')){
+   let message='Интегрирование нулевых геодезических…';
+   if(stage==='ready'&&transfer&&metricNow){
+    const b=cameraBasis(state.yaw,state.pitch,Math.sign(state.l)||1,state.facingSign);
+    const dir=pixelDirection(0,0,b,state.fov,w/Math.max(1,h));
+    const arrival=backgroundDirection(dir,b,transfer);
+    if(arrival){
+     message=arrival.region<0?'Центральный луч: численно не разрешён':
+      'Центр → регион '+(arrival.region===0?'A':'B')+
+      ' · b/a '+fmt(arrival.transfer.impact/metricNow.a)+
+      ' · обороты '+fmt(arrival.transfer.winding);
+    }
+   }
+   $('lens-optical-read').textContent=message;
+  }
  }
  function cancel(){run++;progress=0;stage='calculating';needsRender=true;}
  function makeSky(){if(!skyA){skyA=stars(15540,true);skyB=stars(78036,false);}}
@@ -122,7 +137,7 @@ export function createObservatory(canvas,options={}){
     if(row<ih){raf(raster);return;}
     bufferCtx.putImageData(image,0,0);
     picture=buffer;stage='ready';progress=1;needsRender=false;selected=null;
-    onProgress(1);
+    updateControls();onProgress(1);
    }
    raf(raster);
   }
@@ -130,14 +145,14 @@ export function createObservatory(canvas,options={}){
  }
  function request(){clearTimeout(pending);cancel();pending=setTimeout(()=>{if(active&&w&&h)rebuild(w,h,false);},110);}
  function triggerFlight(){
-  if(fly){fly=null;updateControls();return;}
+  if(fly){fly=null;onAction('mount');updateControls();return;}
   fly=launch(metricNow,{kind:'matter',l:state.l*metricNow.a,alpha:Math.PI,phi:0,speed:.73});
   state.facingSign=Math.sign(state.l)||1;
-  updateControls();request();
+  onAction('launch');updateControls();request();
  }
  function launchProbe(){
   probe=createCongruence(metricNow,{l:state.l*metricNow.a,phi:0,speed:.72,size:.038*metricNow.a});
-  probeRead=strain(probe);updateControls();
+  probeRead=strain(probe);onAction('launch');updateControls();
  }
  function tick(dt,speed=1){
   if(!active||!metricNow)return;
@@ -230,7 +245,7 @@ export function createObservatory(canvas,options={}){
    const theta=Math.acos(clamp(dot(direction,b.radial),-1,1));
    selected=lookup(transfer,theta);
   }
-  mouse=null;save();
+  mouse=null;updateControls();save();
  });
  canvas.addEventListener('pointercancel',()=>{mouse=null;});
  canvas.addEventListener('lostpointercapture',()=>{mouse=null;});
@@ -240,7 +255,7 @@ export function createObservatory(canvas,options={}){
  $('lens-probe')?.addEventListener('click',launchProbe);
  $('lens-reset')?.addEventListener('click',()=>{
   fly=null;probe=null;probeRead=null;state.l=2.1;state.yaw=0;state.pitch=0;state.fov=80;state.facingSign=1;
-  updateControls();request();save();
+  onAction('mount');updateControls();request();save();
  });
  return {
   state,configure,setActive,draw,tick,request,updateControls,launchProbe,triggerFlight,
