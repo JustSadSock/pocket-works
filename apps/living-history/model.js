@@ -1,6 +1,7 @@
 import {walkingDistances,walkingSteps,workdayFraction,walkPath,pathEffort} from './navigation.js';
 import {WORK_HOURS,scheduleWork,commitWork,shiftAudit} from './work-time.js';
 import {parcelEconomics,leaseEconomics} from './land-economy.js';
+import {advanceLocalConflicts,conflictAudit} from './conflicts.js';
 // Living History: deterministic, renderer-independent regional society simulation.
 export const SIZE = 160;
 const T = SIZE * SIZE;
@@ -252,7 +253,7 @@ function viableVillage(s,pt){
  }
  return pt;
 }
-export function createWorld(seed=43821, options={}){const scenario=MODES.includes(options.scenario)?options.scenario:'normal';const s={version:1,scenario,historicalProfile:{...HISTORIC_PROFILE},tuning:normalizeTuning(options.tuning),seed:seed>>>0,rng:seed|0,randomStreams:{},day:0,nextId:1,terrain:[],soil:[],forest:[],stone:[],usage:[],traffic:[],communities:[],households:[],people:[],shipments:[],loans:[],events:[],stats:{born:0,died:0,trades:0,built:0,delivered:0,produced:0,consumed:0,harvest:0,cattleBorn:0,cattleDied:0,forageGrown:0,forageConsumed:0,forageConverted:0},economy:{coinsInitial:0,gardenInitial:0,dairyInitial:0},weather:1}; terrainAt(s);for(const fordY of [40,119]){const fordX=Math.round(riverX(fordY));for(let y=fordY-1;y<=fordY+1;y++)for(let x=fordX-3;x<=fordX+3;x++){const i=idx(x,y);if(s.terrain[i]===1){s.terrain[i]=0;s.soil[i]=45;s.forest[i]=0;}}}if(s.scenario==='uplands'){for(let i=0;i<T;i++)if(s.terrain[i]===0)s.soil[i]=Math.max(29,Math.round(s.soil[i]*.82));};const settlements=[{x:37,y:43,name:'Ольховая долина'},{x:112,y:40,name:'Каменный брод'},{x:40,y:120,name:'Тихая низина'},{x:111,y:119,name:'Сосновый мыс'}];for(const original of settlements){const pt=viableVillage(s,original);const c={id:s.nextId++,name:pt.name,x:pt.x,y:pt.y,prices:{grain:1.1,wood:2.8},volume:0};s.communities.push(c);for(let k=0;k<FOUNDATION_HOLDINGS.length;k++){
+export function createWorld(seed=43821, options={}){const scenario=MODES.includes(options.scenario)?options.scenario:'normal';const s={version:1,scenario,historicalProfile:{...HISTORIC_PROFILE},tuning:normalizeTuning(options.tuning),seed:seed>>>0,rng:seed|0,randomStreams:{},day:0,nextId:1,terrain:[],soil:[],forest:[],stone:[],usage:[],traffic:[],communities:[],households:[],people:[],shipments:[],loans:[],events:[],conflicts:[],stats:{born:0,died:0,trades:0,built:0,delivered:0,produced:0,consumed:0,harvest:0,cattleBorn:0,cattleDied:0,forageGrown:0,forageConsumed:0,forageConverted:0},economy:{coinsInitial:0,gardenInitial:0,dairyInitial:0},weather:1}; terrainAt(s);for(const fordY of [40,119]){const fordX=Math.round(riverX(fordY));for(let y=fordY-1;y<=fordY+1;y++)for(let x=fordX-3;x<=fordX+3;x++){const i=idx(x,y);if(s.terrain[i]===1){s.terrain[i]=0;s.soil[i]=45;s.forest[i]=0;}}}if(s.scenario==='uplands'){for(let i=0;i<T;i++)if(s.terrain[i]===0)s.soil[i]=Math.max(29,Math.round(s.soil[i]*.82));};const settlements=[{x:37,y:43,name:'Ольховая долина'},{x:112,y:40,name:'Каменный брод'},{x:40,y:120,name:'Тихая низина'},{x:111,y:119,name:'Сосновый мыс'}];for(const original of settlements){const pt=viableVillage(s,original);const c={id:s.nextId++,name:pt.name,x:pt.x,y:pt.y,prices:{grain:1.1,wood:2.8},volume:0};s.communities.push(c);for(let k=0;k<FOUNDATION_HOLDINGS.length;k++){
  const pattern=FOUNDATION_HOLDINGS[k];
  // The two original founding random draws remain part of the family's
  // micro-location preference, preventing irrelevant demographic RNG shifts.
@@ -349,7 +350,7 @@ export function workCapacity(p,kind='farm'){
   kind==='farm'?1.12:kind==='wood'?1.22:kind==='build'?1.35:1.0;
  return Math.pow(base,power);
 }
-const activeAdults=(s,h)=>liveMembers(s,h).filter(p=>workCapacity(p,'farm')>0&&(!p.travel||p.travel.end<=s.day));
+const activeAdults=(s,h)=>liveMembers(s,h).filter(p=>workCapacity(p,'farm')>0&&(!p.travel||p.travel.end<=s.day)&&p.combatDutyDay!==s.day);
 const labourTotal=(people,kind)=>people.reduce((n,p)=>n+workCapacity(p,kind),0);
 // The shift is a real finite time allocation used to determine productive
 // effort, and later reused verbatim for slow-motion representation.
@@ -1337,16 +1338,18 @@ function lifeCycle(s){
  const physicalRisk=1+Math.max(0,65-p.health)*.009+(p.age<5?Math.max(0,p.foodDebt-3)*.015:0);
  const death=p.health<=0||demographicDraw(s,'death',p.randomKey??p.id)<hazard*(1+p.foodDebt*.025)*physicalRisk/365;
  if(!death)continue;
- if(p.health<=0){
+ if(p.health<=0&&p.combatFatalDay!==s.day){
    s.stats.starvationDeaths=(s.stats.starvationDeaths||0)+1;
    const home=livingHouse(s,p.houseId);
    if(home){s.foodCases??=[];s.foodCases.push({...foodAccess(s,home),personId:p.id,age:round(p.age),shortageDays:home.shortage});
     if(s.foodCases.length>160)s.foodCases.shift();}
   }
-  p.alive=false;p.job='dead';s.stats.died++;recordLife(p,s.day,'death',`Умер в ${Math.floor(p.age)} лет (${p.health<=0?'истощение':'возраст или болезнь'})`);
+  const battleDeath=p.combatFatalDay===s.day;
+  if(battleDeath)s.stats.battleDeaths=(s.stats.battleDeaths||0)+1;
+  p.alive=false;p.job='dead';s.stats.died++;recordLife(p,s.day,'death',`Умер в ${Math.floor(p.age)} лет (${battleDeath?'рана после стычки':p.health<=0?'истощение':'возраст или болезнь'})`);
  const spouse=personById(s,p.spouse);
  if(spouse?.alive){spouse.spouse=null;recordLife(spouse,s.day,'widowed',`Потерял супруга ${p.name}`);}
- event(s,'death',`${p.name} умер в возрасте ${Math.floor(p.age)} лет`,p.health<=0?'Истощение':'Возраст, здоровье и случайный риск',[p.id,p.houseId],{age:round(p.age)});
+ event(s,'death',`${p.name} умер в возрасте ${Math.floor(p.age)} лет`,battleDeath?'Смертельное ранение в вооружённой стычке':p.health<=0?'Истощение':'Возраст, здоровье и случайный риск',[p.id,p.houseId],{age:round(p.age),battle:!!battleDeath});
  }
  // An estate must be examined on EVERY transition from inhabited to empty.
  // A dwelling can pass through several generations of occupants; a once-only
@@ -2098,7 +2101,7 @@ function decayAbandonedHoldings(s){
 }
 function updateHouse(s,h){
  const members=liveMembers(s,h);if(!members.length)return;
- for(const p of members)if((!p.travel||p.travel.end<=s.day)&&p.hiredDay!==s.day)p.job='home';
+ for(const p of members)if((!p.travel||p.travel.end<=s.day)&&p.hiredDay!==s.day&&p.combatDutyDay!==s.day)p.job='home';
  account(s,h);
  spendFood(s,h);
  const adults=activeAdults(s,h).filter(p=>p.hiredDay!==s.day);
@@ -2127,6 +2130,7 @@ export function advanceDays(s,days=1,profiler=null){
   if(s.day%30===0)wearOutFootpaths(s);
   measure('weatherAndJobs',()=>{localWeather(s);for(const p of s.people){if(p.dailyShift)delete p.dailyShift;if(p.alive&&(!p.travel||p.travel.end<=s.day))p.job='home';}if(s.day%365===1){for(const h of s.households)account(s,h);seasonalLeases(s);for(const c of s.communities){c.recentVolume=c.volume;c.volume=0;}}});
   measure('delivery',()=>{deliver(s);finishMigration(s);});
+  measure('armedDisputes',()=>advanceLocalConflicts(s,(type,message,cause,subjects,facts)=>event(s,type,message,cause,subjects,facts)));
   // Guest labour is a day-local work assignment, never a persistent workforce.
   // A stale non-serialized map previously duplicated hired labour after day 65
   // and made a loaded 25-year world diverge from its source chronology.
@@ -2174,8 +2178,9 @@ export function audit(s){
   if(Math.abs(actual-expected)>.55)issues.push(`Баланс стоящего леса: ${actual} вместо ${expected}`);
  }
  issues.push(...shiftAudit(s));
+ issues.push(...conflictAudit(s));
  if(Number.isFinite(s.economy.woodInitial)){
-  const expected=round(s.economy.woodInitial+s.stats.produced-s.stats.harvest-490*s.stats.built-(s.stats.storageWood||0)-(s.stats.landWood||0)-(s.stats.houseWoodReserved||0));
+  const expected=round(s.economy.woodInitial+s.stats.produced-s.stats.harvest-490*s.stats.built-(s.stats.storageWood||0)-(s.stats.landWood||0)-(s.stats.houseWoodReserved||0)-s.households.reduce((v,h)=>v+(h.staveWood||0),0));
   if(Math.abs(o.wood-expected)>.051)issues.push(`Нарушено сохранение древесины: ${o.wood} вместо ${expected}`);
  }
  if(Number.isFinite(s.economy.forageInitial)&&Array.isArray(s.pasture)){const stock=round(s.pasture.reduce((n,v)=>n+v,0)+s.households.reduce((n,h)=>n+(h.fodder||0),0));const expected=round(s.economy.forageInitial+(s.stats.forageGrown||0)-(s.stats.forageConsumed||0)-(s.stats.forageConverted||0));if(Math.abs(stock-expected)>.35)issues.push(`Нарушен баланс кормов: ${stock} вместо ${expected}`);}
@@ -2267,6 +2272,6 @@ export function deserialize(raw){const s=typeof raw==='string'?JSON.parse(raw):r
   s.stats.woodlandFelled=0;s.stats.woodlandRegrown=0;s.stats.woodlandWaste=0;
   s.economy.woodlandInitial=round(s.forest.reduce((n,v)=>n+v,0));
  }
- s.loans??=[];s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
+ s.loans??=[];s.conflicts??=[];s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
  ensureCommons(s);for(const h of s.households){h.garden??=0;h.dairy??=0;h.oats??=0;h.pulses??=0;h.sheep??=0;h.wool??=0;h.dairyCows??=h.cattle||0;h.draftOxen??=0;h.tenure??='customary';h.tenureOrigin??='legacy-holding';h.leaseIn??=[];h.leaseOut??=[];h.leaseTerms??=[];h.croft??=[];}if(s.version!==1||s.terrain?.length!==T||!Array.isArray(s.people)||!Array.isArray(s.households)||!Array.isArray(s.shipments))throw Error('Сохранение несовместимо с моделью v0.1');const v=audit(s);if(!v.ok)throw Error(`Повреждённые данные: ${v.issues[0]}`);return s;}
 export function getHousehold(s,id){const h=livingHouse(s,id);if(!h)return null;return {...h,people:liveMembers(s,h),name:familyName(s,h),tenureTitle:h.tenure==='demesne'?'Сеньориальный двор':h.tenure==='free'?'Свободный держатель':h.tenure==='cottar'?'Малоземельный коттер':'Обычное зависимое держание',manor:h.manorAgreement||null,community:s.communities.find(c=>c.id===h.communityId)?.name,soil:round(fieldSoil(s,h)),annualFood:round(annualNeed(s,h)),storageKg:storageCapacity(h,s),croftHa:round((h.croft?.length||0)*LAND_HA),tenure:h.tenure||'customary',tenureOrigin:h.tenureOrigin||'legacy-holding',landProject:h.landProject||null,leasedIn:h.leaseIn?.length||0,leasedOut:h.leaseOut?.length||0,commonUse:homeHasCommons(s,h),livestock:{cattle:h.cattle||0,fodderKg:h.fodder||0,health:h.livestockHealth||0},decision:h.decision||null,accounts:h.accounting||null,foodAccess:liveMembers(s,h).length?foodAccess(s,h):null};}

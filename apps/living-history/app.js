@@ -7,7 +7,7 @@ import {timeMode,integrateClock,dayClock,dayPhase,activeShiftCounts,planSubday,s
 import {walkPath,walkingSteps} from './navigation.js';
 import {landCadastre,landAt,tenureSummary,parcelEconomics} from './land-economy.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Живая история',version:'0.8.2',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
+createWorkshopMode({appName:'Живая история',version:'0.9.0',cachePrefix:'living-history-',storageNamespace:'pocket-works:living-history'});
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
@@ -142,7 +142,7 @@ function drawFrame(){if(!sim)return;
    if(x<2||y<3||x>w-2||y>h-3)continue;
    const size=Math.max(2,Math.min(8,cam.z*5));
    // Every dot is an actual inhabitant. Clothing identifies their real daily job.
-   const coat=p.job==='farm'?'#9b8860':p.job==='wood'?'#7b6948':p.job==='haul'?'#526f77':p.job==='herd'?'#928458':p.job==='build'?'#a47d59':'#6b7963';
+   const coat=p.job==='farm'?'#9b8860':p.job==='wood'?'#7b6948':p.job==='haul'?'#526f77':p.job==='herd'?'#928458':p.job==='build'?'#a47d59':p.job==='guard'?'#b17a57':'#6b7963';
    ctx.fillStyle='#25362d';ctx.fillRect(Math.round(x-.8),Math.round(y+size*.4),Math.ceil(size)+2,Math.ceil(size*.7)+1);
    ctx.fillStyle=coat;ctx.fillRect(Math.round(x),Math.round(y+size*.52),Math.ceil(size),Math.ceil(size*.8));
    ctx.fillStyle=p.sex==='f'?'#e5bd8f':'#d4c09f';ctx.fillRect(Math.round(x+size*.15),Math.round(y),Math.max(2,size*.7),Math.max(2,size*.7));
@@ -153,6 +153,18 @@ function drawFrame(){if(!sim)return;
       ctx.lineWidth=Math.max(1,cam.z*.85);ctx.beginPath();ctx.moveTo(x+size,y+size*.7);
       ctx.lineTo(x+size+swing,y-size*.12);ctx.stroke();
     }
+  }
+  // Local disputes have a physically recorded strip and real inhabitants.
+  // One modest mark locates the encounter; no invented battle entities.
+  for(const c of sim.conflicts||[]){
+   if(c.stage!=='mobilizing'&&sim.day-(c.endDay||0)>4)continue;
+   const x=cam.x+((c.cell%SIZE)*PX+4)*cam.z;
+   const y=cam.y+(Math.floor(c.cell/SIZE)*PX+4)*cam.z;
+   if(x<0||y<0||x>w||y>h)continue;
+   const r=Math.max(4,5*cam.z);
+   ctx.save();ctx.strokeStyle=c.stage==='mobilizing'?'#d6b77d':'#a77d61';ctx.lineWidth=Math.max(1,cam.z*.9);
+   ctx.beginPath();ctx.moveTo(x-r,y-r);ctx.lineTo(x+r,y-r);ctx.lineTo(x+r,y+r);ctx.lineTo(x-r,y+r);ctx.closePath();ctx.stroke();
+   ctx.restore();
   }
   if(cam.z>.36){for(const hom of sim.households){
    for(let i=0;i<Math.min(5,hom.cattle||0);i++){
@@ -212,14 +224,15 @@ if(mode==='overview'){
  const woods=homes.filter(h=>h.focus==='wood'&&h.members.some(id=>adults.some(p=>p.id===id))).length;
  return `<div class="community-row"><span><b>${escapeHTML(c.name)}</b><small>${farmers} полевых · ${woods} лесных · ${homes.filter(h=>h.tenure==='demesne').length} поместье</small></span><strong>${adults.length}</strong></div>`;}).join('');
  const pending=sim.households.filter(h=>h.buildProject?.site).length;
- el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}</div><p class="map-key">Построено домов: ${sim.stats.built||0} · Строится: ${pending} · Древесины заготовлено: ${Math.round((sim.stats.produced||0)/1000)} т.</p><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
+  const disputes=(sim.conflicts||[]).filter(c=>c.stage==='mobilizing');
+ el.innerHTML=`<div class="stat-strip"><div class="stat"><label>Жители</label><strong>${o.population}</strong></div><div class="stat"><label>Зерно</label><strong>${Math.round(o.grain/1000)}</strong><small>тонн</small></div><div class="stat"><label>Сделки</label><strong>${o.trade}</strong></div></div><div class="region-tag">${sim.historicalProfile?'Мидлендс, около 1280 г. · ':''}${escapeHTML(names[o.scenario]||names.normal)}${o.hungry?` · Нехватка у ${o.hungry} хозяйств`:''}</div><div class="community-list">${regionRows}</div><p class="map-key">Построено домов: ${sim.stats.built||0} · Строится: ${pending} · Древесины заготовлено: ${Math.round((sim.stats.produced||0)/1000)} т.${disputes.length?` · Вооружённых споров: ${disputes.length}`:''}${sim.stats.armedDisputesResolved?` · Завершено стычек: ${sim.stats.armedDisputesResolved}`:''}</p><p class="map-key">Карта: пашня — полосы · светло-зелёное — пар · охристое — стерня. Каждая фигурка — житель; животных видно у пастбищ.</p>`;return;
 }
 if(mode==='household'){
  const h=getHousehold(sim,selected);
  if(!h){el.innerHTML='<div class="house-name">Выберите дом на карте</div><p class="note">Приблизьте карту и коснитесь крыши.</p>';return;}
  const current=selectedPerson?sim.people.find(p=>p.id===selectedPerson):null;
  const originalPosition=el.scrollTop;
- const residents=h.people.map(p=>`<button class="member ${p.id===selectedPerson?'selected':''}" data-person="${p.id}"><b>${escapeHTML(p.name)}</b> ${Math.floor(p.age)} · ${p.job==='wood'?'лес':p.job==='farm'?'поля':p.job==='haul'?'в дороге':p.job==='build'?'стройка':p.job==='herd'?'пастбище':p.job==='hired'?'наём':'дом'}</button>`).join('')||'<span class="member">Дом пустует</span>';
+ const residents=h.people.map(p=>`<button class="member ${p.id===selectedPerson?'selected':''}" data-person="${p.id}"><b>${escapeHTML(p.name)}</b> ${Math.floor(p.age)} · ${p.job==='wood'?'лес':p.job==='farm'?'поля':p.job==='haul'?'в дороге':p.job==='build'?'стройка':p.job==='herd'?'пастбище':p.job==='hired'?'наём':p.job==='guard'?'земельный спор':'дом'}</button>`).join('')||'<span class="member">Дом пустует</span>';
  const deceased=h.members.map(id=>sim.people.find(p=>p.id===id)).filter(p=>p&&!p.alive).slice(-5);
  let personInfo='';
  if(current&&h.members.includes(current.id)){
