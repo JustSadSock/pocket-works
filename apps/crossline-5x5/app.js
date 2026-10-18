@@ -652,7 +652,7 @@ function initDevPreview(requested){
  const scene=devScene(requested);
  gameToken++;clearTimeout(replayTimer);clearTimeout(toastTimer);
  replayPaused=true;animating=false;animFrame=null;showingOutcome=false;modalOpen=false;recording=false;
- attackMode=false;attackDirs=[];plan=[];server=null;offline=null;net=null;me=null;roomId='';busy=false;connected=false;
+ attackMode=false;attackDirs=[];plan=[];editingSlot=null;server=null;offline=null;net=null;me=null;roomId='';busy=false;connected=false;
  $('modal').classList.add('hidden');$('toast').classList.remove('show');
  document.getElementById('arenaDevSoundLab')?.remove();
  mode='solo';
@@ -663,10 +663,13 @@ function initDevPreview(requested){
  if(scene==='sounds'){devSounds();return;}
  if(scene.startsWith('lobby-')){devLobby(scene);return;}
  if(scene==='plan-wait'||scene==='plan-rival-wait'){devPlayOnline(scene);return;}
- if(scene==='planning'||scene==='plan-partial'||scene==='plan-attack'||scene==='plan-full'||scene==='round-four'){
+ if(['planning','plan-partial','plan-attack','plan-full','plan-route','plan-edit','plan-danger','round-four'].includes(scene)){
   if(scene==='plan-partial')plan=['right','up','shield'];
   if(scene==='plan-attack'){plan=['up'];attackMode=true;attackDirs=['right'];}
   if(scene==='plan-full')plan=devPlanA();
+  if(scene==='plan-route')plan=['right','left','right','left','shield'];
+  if(scene==='plan-edit'){plan=devPlanA();editingSlot=2;}
+  if(scene==='plan-danger'){offline.match.round=4;plan=['up','right','down','left','shield'];}
   if(scene==='round-four'){offline.match.round=4;offline.match.units.A={x:1,y:2,alive:true};offline.match.units.B={x:3,y:2,alive:true};}
   show('play');render();return;
  }
