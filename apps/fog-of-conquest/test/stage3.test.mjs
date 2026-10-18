@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
-const source=read('../server/module.ts'), pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v5.ts');
-const old=read('../../../pocketnet/module-versions/fog-of-conquest/v4.ts');
+const source=read('../server/module.ts'), pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v6.ts');
+const old=read('../../../pocketnet/module-versions/fog-of-conquest/v5.ts');
 const lock=JSON.parse(read('../../../pocketnet/modules.lock.json'));
 const rules=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const mod=rules.default;
@@ -17,12 +17,12 @@ const start=(s=make(),requestId='begin-1')=>mod.onMessage({
   state:s,player:a,players:[a,b],
   payload:{type:'start',size:'small',requestId}
 });
-test('immutable v5 and earlier match rules remain pinned',()=>{
+test('immutable v6 and earlier match rules remain pinned',()=>{
   assert.equal(source,pinned);
-  assert.match(old,/RULESET_VERSION=3;/);
-  assert.match(source,/RULESET_VERSION=4;/);
-  assert.equal(lock['fog-of-conquest'].current,'v5');
-  assert.deepEqual(lock['fog-of-conquest'].versions,['v1','v2','v3','v4','v5']);
+  assert.match(old,/RULESET_VERSION=4;/);
+  assert.match(source,/RULESET_VERSION=5;/);
+  assert.equal(lock['fog-of-conquest'].current,'v6');
+  assert.deepEqual(lock['fog-of-conquest'].versions,['v1','v2','v3','v4','v5','v6']);
 });
 test('exiting host in lobby transfers host and never strands remaining guest',()=>{
   let s=make();
@@ -62,9 +62,11 @@ test('accepted command has private ack, lost duplicate never applies twice',()=>
   const first=mod.onMessage({state:s,player:a,players:[a,b],payload:cmd});
   assert.equal(first.state.game.revision,rev+1);
   assert.equal(first.state.game.units.find(x=>x.id===u.id).c,3);
-  assert.deepEqual(first.events.map(e=>e.type),['state','ack']);
+  assert.deepEqual(first.events.map(e=>e.type),['state','battle_event','ack']);
   assert.equal(first.events[1].to,a.id);
-  assert.equal(first.events[1].revision,rev+1);
+  assert.equal(first.events[1].payload.kind,'move');
+  assert.equal(first.events[2].to,a.id);
+  assert.equal(first.events[2].revision,rev+1);
   const serialized=JSON.stringify(first.state);
   const duplicate=mod.onMessage({state:first.state,player:a,players:[a,b],payload:cmd});
   assert.equal(JSON.stringify(duplicate.state),serialized);

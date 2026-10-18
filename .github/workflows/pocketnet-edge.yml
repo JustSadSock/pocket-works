@@ -106,3 +106,22 @@ jobs:
           node pocketnet/test/identity.mjs
           node pocketnet/test/edge.mjs
           node pocketnet/test/flagpost.mjs
+      - name: Install real Fog browser QA and copy authentic app assets
+        run: |
+          mkdir -p dist-site/apps
+          cp -R apps/fog-of-conquest dist-site/apps/fog-of-conquest
+          cp -R shared dist-site/shared
+          mkdir -p /tmp/fog-real-browser
+          npm install --prefix /tmp/fog-real-browser --no-audit --no-fund @playwright/test@1.55.0
+          /tmp/fog-real-browser/node_modules/.bin/playwright install --with-deps chromium
+          ln -s /tmp/fog-real-browser/node_modules node_modules
+      - name: FoC real Durable Object and independent browser reconnection scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/pocketnet-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/pocketnet-fog.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; tail -n 120 /tmp/pocketnet-fog.log' EXIT
+          node pocketnet/test/fog-real-worker.mjs
+          node_modules/.bin/playwright test --config apps/fog-of-conquest/qa/worker.config.ts
+

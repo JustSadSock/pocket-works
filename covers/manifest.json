@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "3517528f2925a9102ca7d22c2b882f2fc332473d",
+    "revision": "e8028dfcbbdcc2d94c921e01de1adebb01f8b88e",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "3517528f2925a9102ca7d22c2b882f2fc332473d",
-    "lastAttemptAt": "2026-10-18T13:50:58.394Z",
+    "lastAttemptRevision": "e8028dfcbbdcc2d94c921e01de1adebb01f8b88e",
+    "lastAttemptAt": "2026-10-18T18:38:56.386Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -65,7 +65,7 @@
     "note": "existing cover rated higher",
     "status": "preserved",
     "lastAttemptRevision": "12252b96c0defcbbd8df4fdec54f00ee336c4928",
-    "lastAttemptAt": "2026-10-16T18:43:35.480Z",
+    "lastAttemptAt": "2026-10-18T18:46:38.375Z",
     "captureEngine": "safe-gameplay-v3"
   },
   "lipki": {
@@ -3322,24 +3322,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 36515,
-        "variance": 54.50301264107146,
-        "entropy": 1.9436971238883962,
+        "bytes": 36496,
+        "variance": 54.50119056839797,
+        "entropy": 1.9433854338682877,
         "edgeDensity": 0.11024305555555555,
-        "colorfulness": 28.198974609375,
-        "centerDetail": 72.79759373644822,
-        "meanLight": 41.139546386718955
+        "colorfulness": 28.197265625,
+        "centerDetail": 72.79490533144146,
+        "meanLight": 41.14535385742208
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.4.0&pw_fp=bfe84e5f9f705c2121f52180"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.5.0&pw_fp=12537aed2427b3a30ae15da9"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "150db9ca16325b43135c658049d6781c6d871965",
-    "lastAttemptAt": "2026-10-18T15:02:12.902Z"
+    "lastAttemptRevision": "89a6cf0de0e17991fe602256feba9c170626ced4",
+    "lastAttemptAt": "2026-10-18T18:38:29.744Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3448,15 +3448,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.5.0&pw_fp=3de2fcf60224609575b013a1"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.5.1&pw_fp=87d7c30bac468a825c510012"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "88e50551b8d4edf249a4efb7f96efede4e2a6126",
-    "lastAttemptAt": "2026-10-18T15:40:09.436Z",
+    "lastAttemptRevision": "40d5e751cd69f0f9125f1edabc136ebd02968416",
+    "lastAttemptAt": "2026-10-18T18:46:27.432Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3480,10 +3480,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "365bd58b56abd8d06f281fc8b866b4c9565eeca1",
-    "lastAttemptAt": "2026-10-18T15:18:41.832Z",
-    "revision": "365bd58b56abd8d06f281fc8b866b4c9565eeca1",
-    "qualityScore": 76,
+    "lastAttemptRevision": "b1df028596ec7c0694fde875921648dc1956a52e",
+    "lastAttemptAt": "2026-10-18T18:38:44.440Z",
+    "revision": "b1df028596ec7c0694fde875921648dc1956a52e",
+    "qualityScore": 78,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3495,11 +3495,11 @@
       }
     ],
     "shot": 0,
-    "sha256": "895b450c7dbed00a96ba3e281e5ed0c2a521380b21fa850489460e2afa146b1a",
+    "sha256": "36811715044fe09ed4494b49b4298b30fae39a98991e1973f65ea10d6e8ecfc9",
     "imageVersion": 2
   },
   "crossline-5x5": {
-    "revision": "4fe52a3091e2f29e85bb53d506c85f003035a840",
+    "revision": "8cdae9a4e6d4af1fd995c598780027582fe81c5e",
     "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
@@ -3511,8 +3511,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4fe52a3091e2f29e85bb53d506c85f003035a840",
-    "lastAttemptAt": "2026-10-18T15:08:57.699Z"
+    "lastAttemptRevision": "8cdae9a4e6d4af1fd995c598780027582fe81c5e",
+    "lastAttemptAt": "2026-10-18T18:42:47.892Z"
   },
   "perekos": {
     "revision": "39746947d2a932feba8f93ff70d6daaf84a2cf87",
