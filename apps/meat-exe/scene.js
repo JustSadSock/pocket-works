@@ -16,15 +16,17 @@ const rand = (a,b,s=0) => {
 
 export function createWorld(canvas, initialSeed) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
-  // Software rasterizers are common on headless Chromium and older devices.
-  // Detect capability, not user agent, so regular GPUs keep full detail.
-  let softwareRenderer=false;
+  // Prefer GPU capabilities over user agent. Some WebKit contexts mask their
+  // renderer as "WebKit WebGL", making software fallbacks otherwise invisible.
+  let softwareRenderer=false,maskedRenderer=false;
   try {
     const gl=renderer.getContext();
     const debug=gl.getExtension('WEBGL_debug_renderer_info');
     const gpu=debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
     softwareRenderer=/swiftshader|llvmpipe|software|softpipe/i.test(String(gpu));
+    maskedRenderer=!debug&&/webkit webgl/i.test(String(gpu));
   }catch{}
+  const conservativeRenderer=softwareRenderer||maskedRenderer;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.25;
@@ -211,7 +213,7 @@ export function createWorld(canvas, initialSeed) {
   };
   // Software WebGL cannot afford the per-pixel bump shader for every wall,
   // guardian and chamber. Keep physical sculpted geometry and albedo instead.
-  if(softwareRenderer){
+  if(conservativeRenderer){
     for(const mat of [stomachWallMat,gastricFoldMat,...Object.values(structuralWallMats),
       ...Object.values(structuralAccents)]){
       mat.bumpMap=null;mat.bumpScale=0;mat.needsUpdate=true;
@@ -262,7 +264,7 @@ export function createWorld(canvas, initialSeed) {
   const spitterNeckGeo=new THREE.CylinderGeometry(.16,.38,.85,9);
   const shieldGeo=new THREE.IcosahedronGeometry(1,1);
   for(const mat of Object.values(mobMats)){
-    mat.map=gastricMaps.color;mat.bumpMap=softwareRenderer?null:gastricMaps.bump;mat.bumpScale=softwareRenderer?0:.05;mat.needsUpdate=true;
+    mat.map=gastricMaps.color;mat.bumpMap=conservativeRenderer?null:gastricMaps.bump;mat.bumpScale=conservativeRenderer?0:.05;mat.needsUpdate=true;
   }
   const vesselMat = new THREE.MeshStandardMaterial({color:0x7e2434,metalness:.06,roughness:.33,emissive:0x26050a,emissiveIntensity:.25});
   const vesselGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
@@ -755,7 +757,7 @@ export function createWorld(canvas, initialSeed) {
   }
   function nearChunks(x,z) {
     const cx=Math.floor(Math.round(x)/CELLS_PER_CHUNK),cz=Math.floor(Math.round(z)/CELLS_PER_CHUNK);
-    const slim=softwareRenderer&&quality!=='high';
+    const slim=conservativeRenderer&&quality!=='high';
     const aheadX=x-cx*CELLS_PER_CHUNK>=3.5?1:-1;
     const aheadZ=z-cz*CELLS_PER_CHUNK>=3.5?1:-1;
     const focus=cellKey(cx,cz)+'/'+(slim?'3:'+aheadX+':'+aheadZ:'9');
