@@ -1117,66 +1117,34 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // === computeZone ===
   function computeZone(u){
-    const rem=Array.from({length:ROWS},()=>Array(COLS).fill(-1)),
-          q=[{r:u.r,c:u.c,mp:u.mp}];
-    rem[u.r][u.c]=u.mp;
-    while(q.length){
-      let o=q.shift();
-      if(o.mp<=0) continue;
-      [[1,0],[-1,0],[0,1],[0,-1]].forEach(d=>{
-        let rr=o.r+d[0], cc=o.c+d[1];
-        if(rr<0||rr>=ROWS||cc<0||cc>=COLS) return;
-        if(units.some(us=>us.r===rr&&us.c===cc&&us!==u)) return;
-        let bldBlock = buildings.find(b=>b.r===rr&&b.c===cc && b.owner!==u.owner && b.hp>0);
-        if(bldBlock) return;
-        let cost=TERR_COST[map[rr][cc]];
-        if(cost>o.mp) return;
-        let left=o.mp-cost;
-        if(left>rem[rr][cc]){
-          rem[rr][cc]=left; q.push({r:rr,c:cc,mp:left});
-        }
-      });
-    }
+    const rem=window.FogRuleKernel.reach(map,units,buildings,u,TERR_COST);
     const list=[];
     for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-      if(rem[r][c]>=0&&(r!==u.r||c!==u.c) && !units.find(us=>us.r===r&&us.c===c)) list.push({r,c});
+      if(rem[r][c]>=0&&(r!==u.r||c!==u.c)&&
+         !units.some(other=>other.r===r&&other.c===c))list.push({r,c});
     }
     return {rem,list};
   }
 
-
   // === doAttack ===
   function doAttack(att,def){
-    if(att.type==='mage') return {dmg:0,rdmg:0};
-    const info=UNIT_TYPES[att.type];
-    let atk=info.atk;
-    if(att.type==='cavalry'){
-      let cellDef=(BUILD_TYPES[(buildings.find(b=>b.r===def.r&&b.c===def.c&&b.owner===def.owner)||{}).type]?.def)||0;
-      if(cellDef>0) atk--;
-    }
-    let defV=UNIT_TYPES[def.type].def+TERR_DEF[map[def.r][def.c]];
-    let dmg=Math.max(1,atk-defV);
-    if(def.type!=='bog') def.hp-=dmg;
-    let rdmg=0;
-    if(info.range===1&&def.hp>0){
-      let attD=UNIT_TYPES[att.type].def+TERR_DEF[map[att.r][att.c]];
-      rdmg=Math.max(1,UNIT_TYPES[def.type].atk-attD);
-      if(att.type!=='bog') att.hp-=rdmg;
-    }
+    if(att.type==='mage')return {dmg:0,rdmg:0};
+    const result=window.FogRuleKernel.unitDamage(att,def,map,buildings,
+      UNIT_TYPES,BUILD_TYPES,TERR_DEF);
+    const dmg=result.damage,rdmg=result.retaliation;
+    if(def.type!=='bog')def.hp-=dmg;
+    if(att.type!=='bog')att.hp-=rdmg;
     let killed=false;
-    if(def.hp<=0&&def.type!=='bog'){ units.splice(units.indexOf(def),1); killed=true; }
-    if(att.hp<=0&&att.type!=='bog') units.splice(units.indexOf(att),1);
+    if(def.hp<=0&&def.type!=='bog'){units.splice(units.indexOf(def),1);killed=true;}
+    if(att.hp<=0&&att.type!=='bog')units.splice(units.indexOf(att),1);
     return {dmg,rdmg,killed};
   }
 
   function doAttackBuilding(att,bld){
-    if(att.type==='mage') return {dmg:0};
-    const info=UNIT_TYPES[att.type];
-    let atk=info.atk;
-    if(att.type==='cavalry' && BUILD_TYPES[bld.type].def>0) atk--;
-    let defV=BUILD_TYPES[bld.type].def+TERR_DEF[map[bld.r][bld.c]];
-    let dmg=Math.max(1,atk-defV);
-    damageBuilding(bld, dmg);
+    if(att.type==='mage')return {dmg:0};
+    const dmg=window.FogRuleKernel.buildingDamage(att,bld,map,UNIT_TYPES,
+      BUILD_TYPES,TERR_DEF);
+    damageBuilding(bld,dmg);
     return {dmg};
   }
 
@@ -1225,16 +1193,10 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // Five completed turns by the affected side, never five redraws/actions.
   // Military buildings (gen=0) retain the original game's base definition.
   function checkVictory(endedSide=null){
-    if(onlineGame||state.turn===0||gameOver)return;
-    for(const p of [1,2]){
-      const bases=buildings.filter(b=>b.owner===p&&(b.gen??BUILD_TYPES[b.type].gen)===0).length;
-      const alive=units.filter(u=>u.owner===p).length;
-      if(!bases&&!alive){endGame(3-p);return;}
-      if(!bases){
-        if(state.grace[p]===null)state.grace[p]=5;
-        else if(endedSide===p&&--state.grace[p]<=0){endGame(3-p);return;}
-      }else state.grace[p]=null;
-    }
+    if(onlineGame||gameOver)return;
+    const winner=window.FogRuleKernel.evaluateVictory(state,units,buildings,
+      BUILD_TYPES,endedSide);
+    if(winner!==null)endGame(winner);
   }
 
   function endGame(w){
@@ -1868,30 +1830,13 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   function nextTurn(){
     const prev=state.currentPlayer;
-    // Hide the map synchronously, before the new side is rendered.
     if(!aiMode&&!onlineGame)window.FogShowHandoff?.(3-prev);
-    sel=null; zoneMap=null; zoneList=[];
-    // heal units that didn't spend movement
-    units.filter(u=>u.owner===prev).forEach(u=>{
-      if(u.mp===UNIT_TYPES[u.type].move){
-        u.hp=Math.min(UNIT_TYPES[u.type].hpMax,u.hp+1);
-      }
-    });
-
-    state.turn++;
-    state.currentPlayer = prev===1?2:1;
-    state.gold[state.currentPlayer] += buildings
-      .filter(b=>b.owner===state.currentPlayer)
-      .reduce((s,b)=>s+(b.gen ?? BUILD_TYPES[b.type].gen),0);
-    units.filter(u=>u.owner===state.currentPlayer).forEach(u=>{
-      u.mp=UNIT_TYPES[u.type].move; u.startR=u.r; u.startC=u.c;
-    });
-    // Check the rescue clock only when an actual player finishes a turn.
+    sel=null;zoneMap=null;zoneList=[];
+    window.FogRuleKernel.advanceTurn(state,units,buildings,UNIT_TYPES,BUILD_TYPES);
     checkVictory(prev);
-    recordTurn(); updateAll();
+    recordTurn();updateAll();
     if(!aiMode)window.FogCenterCamera?.(state.currentPlayer);
   }
-
 
 
   twoBtn.addEventListener('click',()=>{
