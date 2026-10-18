@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {startCampaign,campaignStarts,campaignChoices,campaignAction,campaignYear,campaignScore,
+import {startCampaign,campaignStarts,campaignPlayableRulers,campaignChoices,campaignAction,campaignYear,campaignScore,
   serializeCampaign,loadCampaign,extendCampaign,assertCampaign} from '../sim/campaign.js';
 import {assertWorld,die} from '../sim/world.js';
 
@@ -19,6 +19,28 @@ test('three alternative county founders and a real legal feud at campaign start'
     assert.ok(choices.some(a=>a.kind==='petition'),'legal request is offered');
     assert.ok(choices.some(a=>a.kind==='faction'),'alternative pressure route is offered');
     assertCampaign(g);
+  }
+});
+test('atlas rulers represent all landed ranks in both stable world sizes',()=>{
+  for(const size of [12,48]){
+    const choices=campaignPlayableRulers(413,{size});
+    assert.equal(choices.length,size+(size/4)+1);
+    assert.equal(choices.filter(p=>p.rank==='county').length,size);
+    assert.equal(choices.filter(p=>p.rank==='duchy').length,size/4);
+    assert.equal(choices.filter(p=>p.rank==='kingdom').length,1);
+    for(const id of ['co-'+String(size).padStart(2,'0'),'du-'+String(size/4).padStart(2,'0'),'ki-01']){
+      const pick=choices.find(p=>p.titleId===id);
+      assert.ok(pick,'title is selectable: '+id);
+      const g=startCampaign({seed:413,size,countyId:id});
+      assert.equal(g.playerId,pick.personId);
+      assert.equal(g.dynastyId,pick.dynastyId);
+      assertCampaign(g);
+      const restored=loadCampaign(serializeCampaign(g));
+      assert.equal(restored.playerId,g.playerId);
+      assert.equal(restored.startCountyId,id);
+      campaignYear(restored);
+      assertCampaign(restored);
+    }
   }
 });
 test('player can make a political choice and the same year cannot be exploited twice',()=>{
@@ -92,7 +114,7 @@ test('chapter ending has an explicit outcome and can be extended to keep playing
   }
 });
 test('invalid starts, saves, actions and suspicious campaign mutations are rejected',()=>{
-  assert.throws(()=>startCampaign({seed:42,countyId:'co-10'}),/Invalid/);
+  assert.throws(()=>startCampaign({seed:42,countyId:'co-99'}),/Invalid/);
   const g=startCampaign({seed:13,countyId:'co-01'});
   assert.throws(()=>campaignAction(g,{kind:'grant',titleId:'co-05'}),/not available/);
   assert.throws(()=>loadCampaign('not json'));
