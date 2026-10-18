@@ -17,7 +17,8 @@
         "tests/power.test.mjs",
         "tests/landing.test.mjs",
         "tests/presences.test.mjs",
-        "tests/roguelike.test.mjs"
+        "tests/roguelike.test.mjs",
+        "tests/keyboard.test.mjs"
       ]
     },
     {
