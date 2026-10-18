@@ -1,7 +1,27 @@
 // @ts-nocheck
-// Perekos PocketNet server snapshot, rules included and frozen per room.
+// Perekos v2 — immutable deterministic rules: mage classes, fair draws, 3 spell chains.
+// Six mechanically distinct fighters in three plain-language magic families.
+// This data is frozen into the matching server ruleset version.
+const mageEntry=(id,school,name,trait,description,style,speed,power,reload,shield)=>({id,school,name,trait,description,style,speed,power,reload,shield});
+const SCHOOLS=Object.freeze([
+ {id:'fire',name:'Жар',explain:'Плотные горячие сгустки. Попадания и перегрузка.'},
+ {id:'storm',name:'Искра',explain:'Быстрые тонкие разряды. Рывки и контроль.'},
+ {id:'stone',name:'Камень',explain:'Тяжёлые куски и волны. Щиты и ближний бой.'}
+]);
+const MAGES=Object.freeze([
+ mageEntry('kindle','fire','Искра','burn','Попадание чуть нагревает врага.','orb',1,1,.98,.94),
+ mageEntry('cinder','fire','Уголёк','miss_cool','Промах помогает остыть.','flame',1.05,.92,.9,.9),
+ mageEntry('wire','storm','Провод','dash_haste','После рывка ненадолго ускоряется.','bolt',1.07,.94,.88,.88),
+ mageEntry('coil','storm','Катушка','guard_slow','Щит замедляет врага рядом.','arc',1.02,.95,1,.94),
+ mageEntry('pebble','stone','Галька','guard_extra','Щит получает ещё немного прочности.','rock',.94,1.1,1.12,1.15),
+ mageEntry('slate','stone','Плита','hit_push','Попадания слегка толкают врага.','wave',.92,1.06,1.1,1.08)
+]);
+const MAGE_BY_ID=new Map(MAGES.map(x=>[x.id,x]));
+function mage(id){return MAGE_BY_ID.get(id)||MAGES[0]}
+function validMage(id){return typeof id==='string'&&MAGE_BY_ID.has(id)}
+
 // ПЕРЕКОС 0.2 — plain-language rune grammar and deterministic chain compiler.
-// Five slots are read from left to right: WHEN -> DO -> CHANGE. A new WHEN starts a new chain.
+// Nine slots, across up to three independent WHEN chains, are read from left to right: WHEN -> DO -> CHANGE. A new WHEN starts a new chain.
 const entry=(id,type,name,desc,detail='')=>({id,type,name,desc,detail});
 const RUNES=Object.freeze([
 entry('on_cast','when','При выстреле','Когда сам выпускаю обычный шар.'),
@@ -43,9 +63,9 @@ entry('fastshot','how','Быстрее летит','Снаряд летит бы
 ]);
 const RUNE_BY_ID=new Map(RUNES.map(r=>[r.id,r]));
 const TYPES=Object.freeze({when:'КОГДА',do:'ЧТО',how:'КАК'});
-const MAX_RUNES=5,MAX_CHAIN_DEPTH=3,MAX_REACTIONS_PER_TICK=20,MAX_QUEUE=48,HEAT_LIMIT=100;
+const MAX_RUNES=9,MAX_CHAINS=3,MAX_CHAIN_DEPTH=3,MAX_REACTIONS_PER_TICK=20,MAX_QUEUE=48,HEAT_LIMIT=100;
 function rune(id){return RUNE_BY_ID.get(id)||null}
-function legalRunes(ids){return Array.isArray(ids)&&ids.length<=MAX_RUNES&&new Set(ids).size===ids.length&&ids.every(id=>typeof id==='string'&&RUNE_BY_ID.has(id))}
+function legalRunes(ids){return Array.isArray(ids)&&ids.length<=MAX_RUNES&&ids.filter(id=>RUNE_BY_ID.get(id)?.type==='when').length<=MAX_CHAINS&&new Set(ids).size===ids.length&&ids.every(id=>typeof id==='string'&&RUNE_BY_ID.has(id))}
 function compile(ids){
  const chains=[];let chain=null,lastAction=null;
  for(const id of ids||[]){
@@ -70,8 +90,8 @@ function eligibleOffers(state,player=0){
  const info=description(ids);
  // A meaningful action is always favored when a newly opened trigger still has none.
  let pref=info.chains.some(c=>!c.actions.length)?'do':info.chains.length===0?'when':info.chains.some(c=>c.actions.some(a=>a.mods.length===0))?'how':'when';
- const shuffled=[];
- while(pool.length){let total=0;for(const r of pool)total+=r.type===pref?3:1;let x=stateRandom(state)*total,chosen=pool.length-1;for(let i=0;i<pool.length;i++){x-=pool[i].type===pref?3:1;if(x<0){chosen=i;break}}shuffled.push(pool.splice(chosen,1)[0].id)}
+ const shuffled=[];const allowWhen=ids.filter(id=>RUNE_BY_ID.get(id)?.type==='when').length<MAX_CHAINS;
+ while(pool.length){if(!allowWhen){for(let i=pool.length-1;i>=0;i--)if(pool[i].type==='when')pool.splice(i,1)}let total=0;for(const r of pool)total+=r.type===pref?3:1;let x=stateRandom(state)*total,chosen=pool.length-1;for(let i=0;i<pool.length;i++){x-=pool[i].type===pref?3:1;if(x<0){chosen=i;break}}shuffled.push(pool.splice(chosen,1)[0].id)}
  return shuffled.slice(0,3);
 }
 function stateRandom(state){state.seed=(Math.imul(state.seed,1664525)+1013904223)>>>0;return state.seed/4294967296}
@@ -79,6 +99,9 @@ function chainMatches(id,event){return id===event}
 function compilePreview(ids){const info=description(ids);return info.lines.length?info.lines:['Поставь после «КОГДА» руну «ЧТО». Порядок рун влияет на результат.']}
 
 // ПЕРЕКОС — deterministic fixed-step combat and bounded rune events.
+
+
+
 const W=400,H=620,STEP=1/60,ROUND_SECONDS=25;
 const WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
 
@@ -86,19 +109,19 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const mag=(x,y)=>Math.hypot(x,y)||1;
 function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296}
 function has(a,k){return a.runes.includes(k)}
-function stats(a){return {max:100,speed:125*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12,reload:.56,shield:34}}
-function actor(id,x,y,runes){return {id,x,y,vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0}}
-function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes);o.hp=stats(o).max;return o}
-function makeMatch(seed=0x718abc){const s={version:2,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],actors:[actor(0,64,484,['on_cast','ball']),actor(1,336,134,['on_guard','armor'])],shots:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
+function stats(a){const m=mage(a.mageId);return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power,reload:.56*m.reload,shield:34*m.shield}}
+function actor(id,x,y,runes,mageId='kindle'){return {id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0}}
+function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId);o.hp=stats(o).max;return o}
+function makeMatch(seed=0x718abc,first='kindle',second='pebble'){const s={version:3,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],draws:0,lastOutcome:'',actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 function offers(s){return eligibleOffers(s)}
 // Choosing a rune opens the working table. Players may reorder before returning to battle.
 function chooseRune(s,id,replaceIndex=null){
  if(s.phase!=='draft'||!s.pick.includes(id))return false;
  const a=s.actors[0];
- if(a.runes.length===5){if(!Number.isInteger(replaceIndex)||replaceIndex<0||replaceIndex>=5)return false;a.runes[replaceIndex]=id}
+ if(a.runes.length===9){if(!Number.isInteger(replaceIndex)||replaceIndex<0||replaceIndex>=9)return false;a.runes[replaceIndex]=id}
  else a.runes.push(id);
  const bot=s.actors[1], pool=RUNES.filter(r=>!bot.runes.includes(r.id));
- if(pool.length){if(bot.runes.length===5)bot.runes[Math.floor(random(s)*5)]=pool[Math.floor(random(s)*pool.length)].id;else bot.runes.push(pool[Math.floor(random(s)*pool.length)].id)}
+ if(pool.length){const avail=pool.filter(r=>r.type!=='when'||bot.runes.filter(id=>RUNES.find(z=>z.id===id)?.type==='when').length<3);const picked=avail[Math.floor(random(s)*avail.length)];if(picked){if(bot.runes.length===9)bot.runes[Math.floor(random(s)*9)]=picked.id;else bot.runes.push(picked.id)}}
  s.pick=[];s.phase='build';return true;
 }
 function reorderRunes(s,from,to){
@@ -108,7 +131,7 @@ function reorderRunes(s,from,to){
 }
 function beginRound(s){if(s.phase!=='build')return false;startRound(s);return true}
 function startRound(s){
- s.phase='fight';s.round=s.score[0]+s.score[1]+1;s.remaining=ROUND_SECONDS;s.overtime=0;
+ s.phase='fight';s.round=s.score[0]+s.score[1]+s.draws+1;s.remaining=ROUND_SECONDS;s.overtime=0;
  s.actors=s.actors.map(freshActor);s.shots=[];s.echoes=[];s.mines=[];s.barriers=[];s.eventQueue=[];s.pick=[];s.fx=[];s.ticks=0;s.reactions=0;
 }
 function retryMatch(s){return makeMatch((s.seed+0x9e3779b9)>>>0)}
@@ -127,10 +150,10 @@ function harm(s,a,amount,from,depth=0){
 function receiveHeal(s,a,amount,depth=0){const old=a.hp;a.hp=Math.min(stats(a).max,a.hp+amount);const delta=a.hp-old;if(delta>0){emit(s,'on_heal',a.id,{},depth);fx(s,'heal',a.x,a.y)}return delta}
 function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
  if(s.shots.length>=80)return false;
- const v=252*(options.fastshot?1.42:1),speed=Number.isFinite(v)?v:252;
+ const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style;const v=(style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1),speed=Number.isFinite(v)?v:252;
  s.shots.push({x,y,vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,owner:a.id,
-  damage:options.clone?6:12*(options.strong?1.6:1),life:options.far?1.8:1.15,
-  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?9:options.clone?4:5,depth:options.depth||0});
+  style,damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:(options.far?1.8:1.15)*(style==='arc'?.68:style==='rock'?1.2:style==='wave'?.65:1),
+  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0});
  fx(s,'shoot',x,y);return true;
 }
 function attack(s,a,target){
@@ -140,12 +163,12 @@ function attack(s,a,target){
 }
 function guard(s,a){
  if(a.shieldReady>0||a.stun>0)return false;
- a.shield=Math.min(80,a.shield+stats(a).shield);a.shieldReady=5;a.heat=Math.min(HEAT_LIMIT,a.heat+7);
+ a.shield=Math.min(80,a.shield+stats(a).shield+(mage(a.mageId).trait==='guard_extra'?5:0));a.shieldReady=5;if(mage(a.mageId).trait==='guard_slow'){const enemy=s.actors[1-a.id];if(Math.hypot(a.x-enemy.x,a.y-enemy.y)<105)enemy.slow=Math.max(enemy.slow,1.1)}a.heat=Math.min(HEAT_LIMIT,a.heat+7);
  fx(s,'shield',a.x,a.y);emit(s,'on_guard',a.id);return true;
 }
 function dash(s,a,dir){
  if(a.dashReady>0||a.stun>0)return false;const m=mag(dir.x,dir.y);
- a.vx=dir.x/m*370;a.vy=dir.y/m*370;a.dash=.17;a.dashReady=2.5;a.invuln=.13;a.heat=Math.min(HEAT_LIMIT,a.heat+6);
+ a.vx=dir.x/m*370;a.vy=dir.y/m*370;if(mage(a.mageId).trait==='dash_haste')a.haste=Math.max(a.haste,.9);a.dash=.17;a.dashReady=2.5;a.invuln=.13;a.heat=Math.min(HEAT_LIMIT,a.heat+6);
  fx(s,'dash',a.x,a.y);emit(s,'on_dash',a.id);return true;
 }
 // The queue is cleared each update and every event owns a bounded ancestry depth.
@@ -162,7 +185,7 @@ function addHeat(s,a,amount,depth=0){
 }
 function act(s,a,action,mods,ev){
  const other=s.actors[1-a.id],m=new Set(mods),strong=m.has('strong')?1.6:1,reach=m.has('far')?1.5:1;
- const angle=Math.atan2(other.y-a.y,other.x-a.x)+(m.has('reverse')?Math.PI:0),depth=ev.depth+1;
+ const angle=a.face+(m.has('reverse')?Math.PI:0),depth=ev.depth+1;
  switch(action){
  case 'ball':spawnShot(s,a,angle,a.x,a.y,{strong:m.has('strong'),far:m.has('far'),bounce:m.has('bounce'),drain:m.has('drain'),wide:m.has('wide'),fastshot:m.has('fastshot'),depth});break;
  case 'heal':receiveHeal(s,a,7*strong,depth);break;
@@ -223,12 +246,12 @@ if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
 if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
- const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,s.actors[q.owner],3,q.depth)}
+ const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn')a.heat=Math.min(100,a.heat+2);if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
  s.shots.splice(j,1);continue
 }
 const wall=distWall(nx,ny,q.r)||blocking(s,nx,ny,q.r),edge=nx<19||nx>W-19||ny<21||ny>H-21;
 if(wall||edge){if(q.bounces>0){q.bounces--;const wallX=distWall(nx,q.y,q.r)||blocking(s,nx,q.y,q.r)||nx<19||nx>W-19;if(wallX)q.vx*=-1;else q.vy*=-1;q.x+=q.vx*dt;q.y+=q.vy*dt;fx(s,'spark',q.x,q.y);emit(s,'on_bounce',q.owner,{},q.depth)}else{s.shots.splice(j,1);fx(s,'spark',q.x,q.y);emit(s,'on_expire',q.owner,{},q.depth)}continue}
-if(q.life<=0){s.shots.splice(j,1);emit(s,'on_expire',q.owner,{},q.depth);continue}q.x=nx;q.y=ny}
+if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}q.x=nx;q.y=ny}
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
@@ -239,26 +262,23 @@ for(let j=s.mines.length-1;j>=0;j--){
  flushEvents(s);
  s.fx.forEach(f=>f.t+=dt);s.fx=s.fx.filter(f=>f.t<.38);
 if(s.actors.some(a=>a.hp<=0)||s.remaining<=0){const [a,b]=s.actors;let winner;
-if(a.hp<=0&&b.hp<=0)winner=a.hit>=b.hit?0:1;
+if(a.hp<=0&&b.hp<=0)winner=null;
 else if(a.hp<=0)winner=1;else if(b.hp<=0)winner=0;
-else if(Math.abs(a.hp/stats(a).max-b.hp/stats(b).max)>.001)winner=a.hp/stats(a).max>b.hp/stats(b).max?0:1;
-else if(s.overtime<1){s.overtime=1;s.remaining=8;fx(s,'overtime',200,310);return s}
-else winner=a.hit>=b.hit?0:1;
-s.score[winner]++;s.lastWinner=winner;
-if(s.score[winner]>=4){s.phase='result';s.champion=winner}
+// Timeouts and double knockouts are actual draws: no overtime tie-breaker or free point.
+if(winner===null){s.draws++;s.lastWinner=null;s.lastOutcome='draw'}
+else{s.score[winner]++;s.lastWinner=winner;s.lastOutcome='win'}
+if(winner!==null&&s.score[winner]>=4){s.phase='result';s.champion=winner}
 else{s.phase='draft';s.pick=offers(s)}
 }
 return s}
 function validState(s){
- return !!s&&s.version===2&&['fight','draft','build','result'].includes(s.phase)
- &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&a.runeTimers&&typeof a.runeTimers==='object')
+ return !!s&&s.version===3&&['fight','draft','build','result'].includes(s.phase)
+ &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&Array.isArray(s.eventQueue)
  &&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&n<=4);
 }
 
-
-
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=1;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=2;
 const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
@@ -269,8 +289,7 @@ const safeInput=v=>{
  const m=Math.max(1,Math.hypot(x,y));return {x:x/m,y:y/m,aim:{x:ax,y:ay},attack:v.attack===true,shield:v.shield===true,dash:v.dash===true};
 };
 function beginNet(s){
- s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff));
- for(const a of s.match.actors)a.runes=['on_cast','ball'];
+ s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1]);
  startRound(s.match);s.phase='fight';s.offers=[[],[]];s.picked=[false,false];s.ready=[false,false];
  s.inputs=[{...ZERO},{...ZERO}];s.seq=[-1,-1];s.seen=[clock(),clock()];s.at=clock();s.credit=0;s.lastEmit=0;s.revision++;
 }
@@ -290,7 +309,7 @@ function advanceNet(s){
 function chooseNet(s,i,id,replace){
  if(s.phase!=='draft'||s.picked[i]||!s.offers[i].includes(id))return false;
  const list=s.match.actors[i].runes;
- if(list.length===5){if(!Number.isInteger(replace)||replace<0||replace>=5)return false;list[replace]=id}
+ if(list.length===9){if(!Number.isInteger(replace)||replace<0||replace>=9)return false;list[replace]=id}
  else list.push(id);
  if(!legalRunes(list))return false;
  s.picked[i]=true;s.revision++;return true;
@@ -309,7 +328,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:1,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:2,mages:s.mages,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
@@ -317,19 +336,19 @@ function viewForPlayer({state:s,player,players}){
 const module={
  protocolVersion:1,
  createRoom({player}){return {state:{host:player.id,seats:[player.id],phase:'lobby',match:null,revision:0,
-  offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
+  mages:['kindle','wire'],offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
   seen:[clock(),clock()],at:clock(),credit:0,lastEmit:0}}},
  onJoin({state:s,player,players}){
   if(s.seats.filter(Boolean).length>=2||players.length>2)throw Error('room_full');
   if(!['lobby','result'].includes(s.phase))throw Error('match_in_progress');
-  const slot=s.seats.indexOf('');if(slot>=0)s.seats[slot]=player.id;else s.seats.push(player.id);s.seen[slot>=0?slot:1]=clock();s.revision++;return {state:s,events:updates()};
+  const slot=s.seats.indexOf('');if(slot>=0)s.seats[slot]=player.id;else s.seats.push(player.id);s.seen[slot>=0?slot:1]=clock();s.mages[slot>=0?slot:1]='wire';s.revision++;return {state:s,events:updates()};
  },
  onLeave({state:s,player}){
   const i=side(s,player.id);if(i<0)return {state:s,events:[]};
   if(s.match&&!['lobby','result'].includes(s.phase)){
    s.phase='result';s.match.phase='result';s.match.champion=1-i;s.match.score[1-i]=4;
   }
-  s.seats[i]='';if(s.host===player.id)s.host=s.seats.find(Boolean)||'';
+  s.seats[i]='';s.mages[i]='wire';if(s.host===player.id)s.host=s.seats.find(Boolean)||'';
   s.revision++;return {state:s,events:updates()};
  },
  viewForPlayer,
@@ -344,6 +363,7 @@ const module={
    if((p.type==='start'&&s.phase!=='lobby')||(p.type==='rematch'&&s.phase!=='result'))return out([]);
    beginNet(s);return out();
   }
+  if(p.type==='mage'){if(s.phase!=='lobby'||!validMage(p.mageId))return out(warn(player.id,'Выбрать мага можно только до боя.'));s.mages[i]=p.mageId;s.revision++;return out()}
   if(p.type==='input'){
    if(s.phase!=='fight'||p.round!==s.match.round||!Number.isSafeInteger(p.seq)||p.seq<=s.seq[i]||p.seq>s.seq[i]+100000)return out([]);
    const input=safeInput(p.control);if(!input)return out(warn(player.id,'Неверная команда.'));
