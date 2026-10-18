@@ -67,6 +67,11 @@
     scheduleMap();
   }
   const resize=()=>{
+    // Chrome/WebKit mobile viewport units can differ from innerHeight by a
+    // few CSS pixels while browser bars move. Lock only the app shell, never
+    // the independent tactical map/explicit lists.
+    document.documentElement.style.setProperty('--fog-window-height',
+      Math.floor(window.innerHeight)+'px');
     applyCanvasSize();
     document.documentElement.style.setProperty('--fog-hud-height',
       Math.round(panel.getBoundingClientRect().height)+'px');
