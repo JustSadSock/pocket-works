@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const source=read('../server/module.ts');
-const pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v7.ts');
-const prior=read('../../../pocketnet/module-versions/fog-of-conquest/v6.ts');
+const pinned=read('../../../pocketnet/module-versions/fog-of-conquest/v8.ts');
+const prior=read('../../../pocketnet/module-versions/fog-of-conquest/v7.ts');
 const rules=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const a={id:'a',name:'Alpha'},b={id:'b',name:'Beta'};
 function match(size='medium',seed=222){
@@ -18,13 +18,13 @@ function act(room,actor,action,id){
  return rules.default.onMessage({state:room,player:actor,players:[a,b],
    payload:{type:'act',revision:room.game.revision,requestId:id,action}});
 }
-test('v7 is immutable and does not modify historical rooms',()=>{
+test('v8 is immutable and does not modify historical rooms',()=>{
  assert.equal(source,pinned);
- assert.match(prior,/RULESET_VERSION=5;/);
- assert.match(source,/RULESET_VERSION=6;/);
+ assert.match(prior,/RULESET_VERSION=6;/);
+ assert.match(source,/RULESET_VERSION=7;/);
  const lock=JSON.parse(read('../../../pocketnet/modules.lock.json'));
- assert.equal(lock['fog-of-conquest'].current,'v7');
- assert.deepEqual(lock['fog-of-conquest'].versions,['v1','v2','v3','v4','v5','v6','v7']);
+ assert.equal(lock['fog-of-conquest'].current,'v8');
+ assert.deepEqual(lock['fog-of-conquest'].versions,['v1','v2','v3','v4','v5','v6','v7','v8']);
 });
 test('battle journal does not expose hidden enemy movement or ownership',()=>{
  let state=match();
