@@ -7,7 +7,10 @@ export const ENEMY_TELLS=Object.freeze({
   brute:{name:'ТАРАН',windup:.79,range:4.8,cooldown:2.6,color:0xf5b783},
   heart:{name:'ЗАЛП',windup:.88,range:10,cooldown:2.25,color:0xefb3ce},
   leech:{name:'ВЫСАСЫВАНИЕ',windup:.83,range:3.6,cooldown:3.1,color:0x9b7bd1},
-  warden:{name:'ПРИВРАТНИК',windup:1.15,range:5.4,cooldown:3.2,color:0xe6a868}
+  warden:{name:'ПРИВРАТНИК',windup:1.15,range:5.4,cooldown:3.2,color:0xe6a868},
+  clot:{name:'УДАР ДАВЛЕНИЯ',windup:1.25,range:2.65,cooldown:3.1,color:0xe89a91},
+  ossuary:{name:'КОСТЯНАЯ ШРАПНЕЛЬ',windup:1.38,range:7.2,cooldown:3.5,color:0xe9d5b4},
+  synapse:{name:'НЕРВНЫЙ ПРОБОЙ',windup:1.35,range:7.5,cooldown:3.2,color:0xc1b2f6}
 });
 export const ENEMY_KINDS=Object.freeze(Object.keys(ENEMY_TELLS));
 
@@ -22,7 +25,7 @@ export function resetIntent(e,delay=.65){
 export function interruptIntent(e,damage,weapon){
  if(!e.windup||e.windup<=0)return false;
  // Heavy impacts can cancel the dangerous commitment, not trivial grazing shots.
- const threshold=e.type==='warden'?(weapon===1?40:65):e.type==='brute'?(weapon===1?12:32):e.type==='heart'?80:e.type==='spitter'?(weapon===1?12:20):e.type==='leech'?(weapon===1?12:24):22;
+ const threshold=e.type==='clot'?40:e.type==='ossuary'?55:e.type==='synapse'?46:e.type==='warden'?(weapon===1?40:65):e.type==='brute'?(weapon===1?12:32):e.type==='heart'?80:e.type==='spitter'?(weapon===1?12:20):e.type==='leech'?(weapon===1?12:24):22;
  if(damage<threshold)return false;
  resetIntent(e,e.type==='heart'?.65:1);
  e.stagger=Math.max(e.stagger||0,.35);
@@ -38,6 +41,9 @@ export function advanceEnemyIntent(e,dt,context){
    if(e.windup>0)return {action:'warn',kind:e.windupKind};
    const kind=e.windupKind;e.windupKind='';
    e.attack=ENEMY_TELLS[e.type]?.cooldown||1.4;
+   if(kind==='pulse')return {action:'pulse',kind};
+   if(kind==='shards')return {action:'shards',kind};
+   if(kind==='surge')return {action:'surge',kind};
    if(kind==='spit')return {action:visible&&gap<9?'shoot':'miss',kind};
    if(kind==='volley')return {action:visible&&gap<11?'volley':'miss',kind};
    if(kind==='drain')return {action:visible&&gap<4?'drain':'miss',kind};
@@ -53,6 +59,9 @@ export function advanceEnemyIntent(e,dt,context){
  if(e.lunge>0)return {action:'lunge',kind:'charge'};
  if(e.attack>0||!visible)return {action:'approach'};
  let kind='';
+ if(e.type==='clot'&&gap<2.65)kind='pulse';
+ if(e.type==='ossuary'&&gap<7.2)kind='shards';
+ if(e.type==='synapse'&&gap<7.5)kind='surge';
  if(e.type==='crawler'&&gap<1.15)kind='bite';
  if(e.type==='warden'&&gap<5.4&&gap>1.1)kind='charge';
  if(e.type==='warden'&&gap<=1.1)kind='bite';
@@ -68,6 +77,7 @@ export function advanceEnemyIntent(e,dt,context){
  return {action:'warn',kind};
 }
 export function enemyTerrainReaction(type,hazard){
+ if(['clot','ossuary','synapse'].includes(type))return {damage:0,speed:1,stagger:0};
  if(hazard==='acid')return type==='spitter'||type==='warden'?{damage:0,speed:1.15,stagger:0}:{damage:6,speed:.92,stagger:.06};
  if(hazard==='marrow')return type==='brute'||type==='warden'?{damage:0,speed:1,stagger:0}:{damage:0,speed:.7,stagger:0};
  if(hazard==='charge')return type==='heart'||type==='warden'?{damage:0,speed:1,stagger:0}:{damage:8,speed:.63,stagger:.48};
