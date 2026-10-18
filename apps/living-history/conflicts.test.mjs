@@ -207,7 +207,9 @@ test('field ration exhaustion cancels a march, sends survivors back and balances
  const s=createWorld(9001),pair=settlementPair(s);assert.ok(pair);
  // Leave precisely one day of provisions after protecting the household reserve.
  const people=pair.poor.members.filter(id=>s.people.some(p=>p.id===id&&p.alive)).length;
- const desired=people*.68*3+.68;
+ const fighters=pair.poor.members.map(id=>s.people.find(p=>p.id===id))
+  .filter(p=>p?.alive&&p.sex==='m'&&p.age>=16&&p.age<=62&&p.health>=38).length;
+ const desired=people*.68*3+Math.min(4,fighters)*.68;
  const original=pair.poor.grain;
  pair.poor.grain=Math.round(desired*100)/100;
  s.economy.grainInitial=Math.round((s.economy.grainInitial+pair.poor.grain-original)*100)/100;
