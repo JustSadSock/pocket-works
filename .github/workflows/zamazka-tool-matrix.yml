@@ -5,6 +5,7 @@ on:
     paths:
       - 'apps/zamazka/editor.js'
       - 'apps/zamazka/fill-core.js'
+      - 'apps/zamazka/qa/fill-matching-colour.mjs'
       - 'apps/zamazka/qa/all-tools-matrix.mjs'
       - 'apps/zamazka/qa/editor-input.mjs'
       - '.github/workflows/zamazka-tool-matrix.yml'
@@ -30,4 +31,7 @@ jobs:
         with:
           node-version: 22
       - name: Exercise painting, erasing, fill, smudge, picking, pan, zoom and precision touch
-        run: node apps/zamazka/qa/all-tools-matrix.mjs
+        run: |
+          node apps/zamazka/qa/all-tools-matrix.mjs
+          node apps/zamazka/qa/fill-matching-colour.mjs
+          node apps/zamazka/qa/fill-integrity.mjs
