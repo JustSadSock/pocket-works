@@ -952,6 +952,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
 
   function redraw(){
+    // Preserve hard-edged classic sprites when the tactical canvas is zoomed.
+    ctx.imageSmoothingEnabled=style!=='toen';
+    canvas.style.imageRendering=style==='toen'?'pixelated':'auto';
     if(style==='simple'){ redrawSimple(); return; }
     ctx.clearRect(0,0,canvas.width,canvas.height);
     const p=state.currentPlayer, F=state.fog[p], S=state.seen[p];
