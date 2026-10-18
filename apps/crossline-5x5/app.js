@@ -422,5 +422,5 @@ function startFromSession(){
  const restored=new PocketNet({serverUrl:NET,name:profile?.complete?profile.nickname:'Игрок',storage:scoped,identityKey:profile?.id||'guest'});
  if(restored.roomId)connect('resume');
 }
-createWorkshopMode({appName:'КРОССЛАЙН: 5×5',version:'1.0.0',cachePrefix:'crossline-5x5-',storageNamespace:'pocket-works:crossline-5x5',onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
+createWorkshopMode({appName:'КРОССЛАЙН: 5×5',version:'1.0.0',cachePrefix: 'crossline-5x5-',storageNamespace: 'pocket-works:crossline-5x5',onReset(){gameToken++;leaveNet(false);offline=null;plan=[];mode='menu';show('menu')}});
 checkNet();resumeOffer();
