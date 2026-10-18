@@ -10,7 +10,9 @@
  historyButton.className='game-btn';historyButton.title='События боя';
  historyButton.setAttribute('aria-label','История сражения');
  historyButton.textContent='Журнал';
- historyButton.hidden=true;controls.insertBefore(historyButton,$('endTurnBtn'));
+ historyButton.hidden=true;
+ const atlas=document.querySelector('#fogAtlas .fog-atlas-actions');
+ if(atlas)atlas.append(historyButton);else controls.insertBefore(historyButton,$('endTurnBtn'));
  const victory=$('victoryOverlay'),victoryPanel=victory?.querySelector('.panel')||victory;
  const victoryButton=document.createElement('button');
  victoryButton.id='fogBattleVictoryHistory';victoryButton.type='button';
@@ -31,7 +33,7 @@
  cancel.textContent='Остановить повтор';cancel.type='button';cancel.hidden=true;
  document.body.append(cancel);
  const labels={move:'Перемещение',attack:'Атака',heal:'Лечение',spawn:'Новый отряд',end:'Конец хода'};
- let entries=[],side=0,roomId='',seenLive=new Set(),sequence=[],playing=false,playingTimer=null;
+ let entries=[],side=0,roomId='',seenLive=new Set(),sequence=[],playing=false,playingTimer=null,victoryWasVisible=false;
  const label=e=>{
   const place=e.at?' · '+(e.at.r+1)+':'+(e.at.c+1):
    e.from?' · '+(e.from.r+1)+':'+(e.from.c+1):'';
@@ -54,6 +56,8 @@
  function stop(){
    if(playingTimer!==null)clearTimeout(playingTimer);
    playingTimer=null;sequence=[];playing=false;cancel.hidden=true;
+   if(victoryWasVisible&&victory)victory.style.display='flex';
+   victoryWasVisible=false;
    $('fogBattleReplay').disabled=entries.length===0;
  }
  function animate(e){
@@ -76,6 +80,8 @@
    if(playing)return;
    sequence=entries.slice(-12);if(!sequence.length)return;
    overlay.hidden=true;playing=true;cancel.hidden=false;
+   victoryWasVisible=!!victory&&getComputedStyle(victory).display!=='none';
+   if(victoryWasVisible)victory.style.display='none';
    const step=()=>{
      if(!playing)return;
      const item=sequence.shift();
