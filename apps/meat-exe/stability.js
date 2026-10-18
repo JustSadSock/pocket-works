@@ -36,3 +36,20 @@ export function deadzone(v,threshold=.16){
   if(!Number.isFinite(v))return 0;
   const a=Math.abs(v);return a<=threshold?0:Math.sign(v)*Math.min(1,(a-threshold)/(1-threshold));
 }
+
+// Pick an actual traversable sightline rather than spawning the camera into a wall.
+// The full collision footprint is tested, not just the cell center.
+export function findOpenFacing(x,z,isFloor){
+  let chosen=Math.PI/2,reach=-1;
+  for(let i=0;i<24;i++){
+    const yaw=i*Math.PI/12,dx=-Math.sin(yaw),dz=-Math.cos(yaw);
+    let distance=0;
+    for(let d=.25;d<=6;d+=.25){
+      const a=x+dx*d,b=z+dz*d,r=.21;
+      if(!(isFloor(a-r,b-r)&&isFloor(a+r,b-r)&&isFloor(a-r,b+r)&&isFloor(a+r,b+r)))break;
+      distance=d;
+    }
+    if(distance>reach){reach=distance;chosen=yaw;}
+  }
+  return chosen;
+}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateRun,sweepCircle,deadzone} from '../stability.js';
+import {validateRun,sweepCircle,deadzone,findOpenFacing} from '../stability.js';
 import {setSeed,generateOrgan,CELLS_PER_CHUNK} from '../organGen.js';
 const valid={v:1,seed:413,x:3,z:3,hp:82,maxHp:82,wave:4,score:100,kills:7,toSpawn:3,level:2,weapon:1,
   enemies:[{x:5,z:5,hp:30,type:'crawler'}],pickups:[{x:6,z:6,type:'heal'}]};
@@ -43,4 +43,24 @@ test('movement stays inside generated cells on 60 seeds',()=>{
      assert.ok(floor(p.x,p.z),'seed '+seed+' step '+j);
    }
  }
+});
+
+// A just-started game should look along a real corridor, not straight into wall tissue.
+test('the initial gaze chooses the deepest unobstructed corridor',()=>{
+  const floor=(x,z)=>Math.abs(x)<1.4&&Math.abs(z)<9;
+  const yaw=findOpenFacing(0,0,floor);
+  assert.ok(Math.abs(Math.sin(yaw))<.3,'camera should look along long Z corridor');
+});
+test('generated starting cells always produce finite legal initial yaw',()=>{
+  for(let seed=0;seed<70;seed++){
+    setSeed(seed*1957+19);
+    const cells=generateOrgan(0,0),c=cells.reduce((a,b)=>Math.hypot(b.x-3.5,b.y-3.5)<Math.hypot(a.x-3.5,a.y-3.5)?b:a,cells[0]);
+    const cache=new Map(),floor=(x,z)=>{
+      const a=Math.round(x),b=Math.round(z),cx=Math.floor(a/CELLS_PER_CHUNK),cz=Math.floor(b/CELLS_PER_CHUNK),k=cx+','+cz;
+      if(!cache.has(k))cache.set(k,new Set(generateOrgan(cx,cz).map(p=>p.x+','+p.y)));
+      return cache.get(k).has(a+','+b);
+    };
+    const yaw=findOpenFacing(c.x,c.y,floor);
+    assert.ok(Number.isFinite(yaw)&&yaw>=0&&yaw<2*Math.PI);
+  }
 });

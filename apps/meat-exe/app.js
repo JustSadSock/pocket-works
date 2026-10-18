@@ -1,6 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorld } from './scene.js';
-import { validateRun, deadzone } from './stability.js';
+import { validateRun, deadzone, findOpenFacing } from './stability.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -100,7 +100,7 @@ function setMode(next){
 }
 function newState(seed){
   const start=world.getStart();
-  return {v:2,seed,x:start.x,z:start.z,yaw:Math.PI*.5,pitch:0,hp:100,maxHp:100,heat:0,
+  return {v:2,seed,x:start.x,z:start.z,yaw:findOpenFacing(start.x,start.z,world.isFloor),pitch:0,hp:100,maxHp:100,heat:0,
     weapon:0,level:0,damageBonus:0,cooldown:0,dashCooldown:0,dashTime:0,dashDirX:0,dashDirZ:0,
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0};
