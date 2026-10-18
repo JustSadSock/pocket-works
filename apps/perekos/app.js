@@ -159,7 +159,7 @@ function renderWorkbench(){
   button.addEventListener('click',()=>{
    nav.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
    button.classList.add('active');
-   rack.scrollTo({top:Math.max(0,panel.offsetTop-rack.offsetTop),behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
+   rack.scrollTo({top:Math.max(0,panel.offsetTop-rack.offsetTop),behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});
   });nav.append(button);
  });
  rack.scrollTop=previousScroll;
