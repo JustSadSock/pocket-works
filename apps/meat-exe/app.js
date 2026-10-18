@@ -349,7 +349,7 @@ function updateEnemies(dt){
     }
     // Prevent twenty simultaneous telegraphs without freezing existing AI.
     const canStart=active<cap;
-    const result=advanceEnemyIntent(e,dt,{x:e.x,z:e.z,visible:hasSight&&canStart,
+    const result=advanceEnemyIntent(e,dt,{x:e.x,z:e.z,visible:hasSight&&(canStart||e.windup>0||e.lunge>0),
       playerX:state.x,playerZ:state.z});
     if(result.action==='warn'&&e.windup>=.3&&e.windupKind&&Math.abs(e.windup-(e.windupKind==='bite'?.4:e.type==='spitter'?.72:e.type==='brute'?.79:.88))<dt+.01){
       active++;telegraphsSeen++;

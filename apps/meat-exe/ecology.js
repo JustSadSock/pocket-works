@@ -20,7 +20,7 @@ export function resetIntent(e,delay=.65){
 export function interruptIntent(e,damage,weapon){
  if(!e.windup||e.windup<=0)return false;
  // Heavy impacts can cancel the dangerous commitment, not trivial grazing shots.
- const threshold=e.type==='brute'?32:e.type==='heart'?80:e.type==='spitter'?20:22;
+ const threshold=e.type==='brute'?(weapon===1?12:32):e.type==='heart'?80:e.type==='spitter'?(weapon===1?12:20):22;
  if(damage<threshold)return false;
  resetIntent(e,e.type==='heart'?.65:1);
  e.stagger=Math.max(e.stagger||0,.35);
