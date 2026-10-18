@@ -3363,20 +3363,20 @@
     "lastAttemptAt": "2026-10-18T00:35:17.337Z"
   },
   "trafficity": {
-    "revision": "5d33749e7cdd4ef94dde991b165bed4d7cad89fd",
-    "qualityScore": 75,
+    "revision": "51ea14f0aaec60f97c480ebc914b7dfbc25dcb52",
+    "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "b092e43e39d02d4fb623b11f1d05273f68208ba89695168e1fded3669c02caa9",
+    "sha256": "2b598bea711141773d98f3af5fef24788995dad2d8d4b28a24b4c16e14612b09",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "5d33749e7cdd4ef94dde991b165bed4d7cad89fd",
-    "lastAttemptAt": "2026-10-17T23:58:08.377Z"
+    "lastAttemptRevision": "51ea14f0aaec60f97c480ebc914b7dfbc25dcb52",
+    "lastAttemptAt": "2026-10-18T00:42:00.423Z"
   },
   "fog-of-conquest": {
     "revision": "b78f8ccf5aadb1b31daace8c716580f2bf5679f0",
