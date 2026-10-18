@@ -18,9 +18,9 @@
     "navigation": "overlay-list",
     "chromeTopology": "layered-panels",
     "dominantMotion": "sliding",
-    "primaryVerb": "Keep one thumb on the movement circle and hold the other on the fire spell while avoiding incoming bolts.",
-    "physicalFeedback": "Projectiles appear instantly and strike with small bright pixel bursts; shield casts emit an expanding ring and the wizard dashes between positions.",
-    "spatialRationale": "The uninterrupted portrait battle canvas occupies the center, while health readings above and two thumb clusters below preserve visibility of attacks and cover.",
+    "primaryVerb": "Run with one thumb, aim a single class-specific spell with the other, and craft three independent reaction chains between rounds.",
+    "physicalFeedback": "Six projectile silhouettes and trail materials, casting staff reach, pressure hit sparks and class-unique poses, brief impact particles and speed-linked dash streaks; shots fire in the actual chosen direction.",
+    "spatialRationale": "Borderless portrait arena, status on the top edge, left movement and right adjustable thumb aim; a character selector and three inset handwritten spell lanes replace the original single long build list.",
     "comparisons": [
       {
         "slug": "not-dead-yet",
@@ -46,6 +46,11 @@
         "slug": "chyepukha",
         "spatialDifference": "ЧЕПУХА размещает одно письмо на ровной письменной странице, а ПЕРЕКОС заполняет экран движущейся пиксельной каменной ареной и двумя персонажами с портретными значками.",
         "interactionDifference": "Набор текста и передача скрытых фрагментов ЧЕПУХИ противопоставлены реальному управлению магом, прицеливанию и сборке цепочки рун между дуэлями."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "Замазка показывает центральный холст для рисования и компактные инструменты вокруг него; ПЕРЕКОС занимает всю доступную область непрерывным полем боя, а мастерская рун открывается между раундами вместо наложения на само действие.",
+        "interactionDifference": "Замазка опирается на точные штрихи, заливку и голосование за работы, тогда как ПЕРЕКОС — на непрерывное уклонение, направляемые пальцем атаки, выбор персонажа с трейтом и составление трёх независимых цепочек рун."
       }
     ]
   },

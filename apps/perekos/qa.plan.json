@@ -59,7 +59,8 @@
       "files": [
         "qa/journey.spec.js",
         "qa/avatar.spec.js",
-        "qa/net.spec.js"
+        "qa/net.spec.js",
+        "qa/visual-review.spec.js"
       ]
     }
   ]

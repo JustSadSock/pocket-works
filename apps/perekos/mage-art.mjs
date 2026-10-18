@@ -2,21 +2,26 @@
 // never as SVG/HTML supplied by a user. The drawing badges remain small so
 // different hats/coats do not gain a gameplay silhouette advantage.
 import {DEFAULT_APPEARANCE,cosmeticFeatures} from './avatar-profile.mjs';
+import {mage} from './mages.mjs';
 
-export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[]}={}){
+export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0}={}){
  if(!ctx)return;
  const p=enemy&&(!look||look.source==='guest')?{...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}:(look||DEFAULT_APPEARANCE);
- const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes);
+ const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes),character=mage(mageId),isCasting=casting>.15;
  const px=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))};
  const arc=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
- ctx.translate(Math.round(x),Math.round(y+Math.sin(time*9+(enemy?3:0))*1.1));ctx.scale((enemy?-1:1)*scale,scale);
+ ctx.translate(Math.round(x),Math.round(y+Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1)));ctx.scale((enemy?-1:1)*scale,scale);
  // Tight shadow and feet establish a stable battle hitbox.
  ctx.fillStyle='#101c1eb8';ctx.beginPath();ctx.ellipse(0,12,17,6,0,0,Math.PI*2);ctx.fill();
  px(-9,6,6,12,'#23332d');px(5,6,6,12,'#23332d');px(-9,13,6,3,trim);px(5,13,6,3,trim);
  // A split coat, sleeves, sash, and permanent palette from account avatar.
  px(-12,-5,24,18,coat);px(-13,3,26,10,shade);
  px(-10,7,20,6,coat);px(-12,-4,5,11,trim);px(8,-4,5,11,trim);
+ // Each class has its own material rather than six recolored fireballs.
+ if(character.school==='storm'){px(-11,-2,4,13,'#80ada6');px(7,-2,4,13,'#89c5c0');px(-5,9,10,2,'#b3ddd0')}
+ if(character.school==='stone'){px(-15,-2,6,13,'#7c8f81');px(10,-2,6,13,'#7c8f81');px(-13,9,26,3,'#a5af8d')}
+ if(character.school==='fire'){px(-11,7,4,5,'#d89561');px(7,7,4,5,'#e9b270')}
  px(-4,2,9,3,trim);px(0,-5,2,13,'#132522a8');
  if(maskot?.clothes==='vest'||maskot?.clothes==='groom'){
   px(-10,-4,8,11,'#34535a');px(4,-4,7,11,'#34535a');px(-2,-4,5,12,'#eee7c7');
@@ -64,6 +69,33 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  }
  if(maskot?.hat==='brush'){px(10,-36,3,18,'#bb8c62');px(9,-40,5,6,'#334f62')}
  if(maskot?.hat==='veil'){px(-13,-27,4,33,'#e9d5d9');px(10,-27,4,33,'#e9d5d9')}
+ // Readable class silhouettes are equipment, not replacements for the Pocket ID face or hat.
+ // Every fighter has a different silhouette even when all six use the same avatar.
+ switch(character.id){
+ case 'kindle':
+  px(-19,-17,6,5,'#b3543e');px(-18,-21,4,7,'#eaa15b');px(-17,-25,2,5,'#f8e0a2');
+  px(-17,-7,6,14,'#9d5541');px(-16,7,5,4,'#e0a06e');break;
+ case 'cinder':
+  px(-19,-20,7,27,'#4a4742');px(-21,-15,3,19,'#7f6660');
+  px(-19,-27,6,7,'#6e5a4f');px(-17,-30,3,4,'#c49b78');
+  px(9,8,7,6,'#4a3939');break;
+ case 'wire':
+  px(-18,-12,4,24,'#3e7276');px(-18,-20,3,11,'#b6d4c4');
+  px(-22,-23,10,3,'#7cb9b8');px(-20,-28,3,5,'#dcf9d7');
+  px(-17,4,5,3,'#b3e9dc');break;
+ case 'coil':
+  px(-21,-14,8,25,'#a57255');px(-23,-18,11,5,'#d8ac81');
+  px(-22,-11,10,4,'#dea57c');px(-22,-3,10,4,'#dea57c');
+  px(-22,5,10,4,'#dea57c');px(-17,-24,4,6,'#a7d5cb');break;
+ case 'pebble':
+  px(-20,-13,10,17,'#697970');px(-18,-16,9,5,'#afbba1');
+  px(11,-11,9,14,'#77897a');px(12,-15,8,5,'#b2bfa2');
+  px(-15,7,7,8,'#60786a');break;
+ case 'slate':
+  px(-23,-14,10,29,'#53685d');px(-24,-18,12,5,'#a0af94');
+  px(-21,-10,5,16,'#84977e');px(12,-13,9,23,'#657768');
+  px(13,-17,8,5,'#b7c3a4');px(12,6,10,4,'#9aa990');break;
+ }
  if(p.source==='preset'){
   // The eight standard Pocket ID presets get different badges.
   const motifs={sun:'sun',wave:'wave',ember:'ember',moss:'moss',ink:'ink',plum:'plum',stone:'stone',clay:'clay'};
@@ -87,9 +119,17 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
   px(-3,2,6,6,trim);px(-1,4,2,3,shade);
  }
  // Personal item stays visible even as the spell build gets out of hand.
- px(11,-1,4,10,'#c7ae80');px(14,-20,3,27,'#856b4e');
- px(12,-23,7,7,features.frost?'#8fc6c9':trim);
- px(14,-27,4,5,features.frost?'#d4f1e7':'#fff0bb');
+ px(11+(isCasting?4:0),-1-(isCasting?8:0),4,10,'#c7ae80');px(14+(isCasting?5:0),-20-(isCasting?9:0),3,27,'#856b4e');
+ px(12+(isCasting?5:0),-23-(isCasting?9:0),7,7,character.school==='storm'?'#9bd7d4':character.school==='stone'?'#bdc8a8':features.frost?'#8fc6c9':trim);
+ px(14+(isCasting?5:0),-27-(isCasting?9:0),4,5,character.school==='storm'?'#e6ffef':features.frost?'#d4f1e7':'#fff0bb');
+ if(character.trait==='dash_haste'){px(-15,7,4,3,'#9de4c9');px(-19,9,3,3,'#90c2ba')}
+ if(character.trait==='guard_extra'){px(-17,-9,7,5,'#c0c5a5')}
+ if(character.trait==='hit_push'){px(10,9,7,4,'#95a186')}
+ if(character.trait==='burn'){px(-9,-32,3,4,'#efb074')}
+ if(character.trait==='guard_slow'){px(-12,-8,4,3,'#9dd3c7')}
+ if(character.trait==='miss_cool'){px(-8,-33,5,3,'#cfad87')}
+ if(isCasting){px(9,-3,9,4,character.school==='storm'?'#b6e6db':character.school==='stone'?'#b7c4a3':'#ffc588')}
+ if(dashing>0){px(-19,5,6,4,'#a3c4ad');px(-23,10,7,2,'#668b7b')}
  // Build-driven alterations have distinct silhouettes and material cues.
  if(features.stone){px(-17,-5,7,9,'#859383');px(11,-5,7,9,'#859383');px(-16,-6,5,3,'#ced5ac');px(12,-6,5,3,'#ced5ac')}
  if(features.ember){px(-12,-33,3,5,'#f0a267');px(-12,-36,2,3,'#ffe0a0');px(17,-17,4,5,'#f8b86a')}
@@ -116,10 +156,10 @@ export function drawPortrait(ctx,appearance=DEFAULT_APPEARANCE,size=48){
   const k=size/66;drawMage(ctx,appearance,{x:size/2,y:size*.74,scale:k,time:0});
  }
 }
-export function drawHero(ctx,appearance=DEFAULT_APPEARANCE,time=0,runes=[]){
+export function drawHero(ctx,appearance=DEFAULT_APPEARANCE,time=0,runes=[],mageId='kindle'){
  ctx.clearRect(0,0,128,156);ctx.imageSmoothingEnabled=false;
  // An earthbound oval instead of another floating decorative stat panel.
  ctx.fillStyle='#30443b';ctx.beginPath();ctx.ellipse(63,133,48,10,0,0,Math.PI*2);ctx.fill();
  ctx.fillStyle='#8a8c6b';ctx.fillRect(22,137,83,3);
- drawMage(ctx,appearance,{x:64,y:108,scale:2.45,time,runes,shield:0});
+ drawMage(ctx,appearance,{x:64,y:108,scale:2.45,time,runes,shield:0,mageId});
 }
