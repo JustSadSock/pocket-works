@@ -106,3 +106,4 @@ jobs:
           node pocketnet/test/identity.mjs
           node pocketnet/test/edge.mjs
           node pocketnet/test/flagpost.mjs
+          node pocketnet/test/perekos.mjs
