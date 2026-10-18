@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { collectAppConfigs } from './app-config.mjs';
 import { shouldPublishAppPath, shouldPublishGodotWebPath } from './publish-policy.mjs';
+import { appOwnedScripts } from './pwa-entrypoints.mjs';
 
 const root=process.cwd();
 const output=path.join(root,'dist-site');
@@ -71,9 +72,17 @@ for(const config of configs){
   const directory=path.join(output,'apps',config.slug);
   const required=config.runtime==='godot'
     ? ['index.html','app.config.json','release.json','manifest.webmanifest','sw.js','icons','pocketworks-build.json']
-    : ['index.html','styles.css','app.js','app.config.json','release.json','manifest.webmanifest','sw.js','icons'];
+    : ['index.html','styles.css',...(config.runtime==='enhanced'?['app.js']:[]),'app.config.json','release.json','manifest.webmanifest','sw.js','icons'];
   for(const file of required){
     if(!(await exists(path.join(directory,file))))errors.push(`dist-site/apps/${config.slug} is missing ${file}`);
+  }
+  if(config.runtime==='quick'&&await exists(path.join(directory,'index.html'))){
+    const html=await readFile(path.join(directory,'index.html'),'utf8');
+    const scripts=appOwnedScripts(html);
+    if(!scripts.length)errors.push(`dist-site/apps/${config.slug} has no app-owned JavaScript entrypoint`);
+    for(const script of scripts){
+      if(!(await exists(path.join(directory,script))))errors.push(`dist-site/apps/${config.slug} is missing referenced JavaScript ${script}`);
+    }
   }
   if(config.runtime==='godot'&&await exists(directory)){
     const entries=await readdir(directory,{withFileTypes:true});
