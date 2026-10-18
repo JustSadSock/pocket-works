@@ -3444,25 +3444,19 @@
     "lastAttemptAt": "2026-10-18T00:58:15.850Z"
   },
   "crossline-5x5": {
-    "revision": "a15b65c7a3d116b9b38f42f847d16ab163848bf3",
-    "qualityScore": 63,
+    "revision": "96bad20aafb21fb6eedaf4ceeca97a642b8b0338",
+    "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
-    "started": true,
-    "gameplayEntry": [
-      {
-        "label": "Как играть ↗",
-        "id": "openRules",
-        "score": 74
-      }
-    ],
+    "started": false,
+    "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "eee4f47d1daa14aa48c72d5325984c80acce93c4a12fcb4a939976b6f4cde756",
+    "sha256": "beb23dd00bee7723985076b0bca1728e1abc843ee18fe6fcd4f7563628af0b3c",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a15b65c7a3d116b9b38f42f847d16ab163848bf3",
-    "lastAttemptAt": "2026-10-18T01:14:56.060Z"
+    "lastAttemptRevision": "96bad20aafb21fb6eedaf4ceeca97a642b8b0338",
+    "lastAttemptAt": "2026-10-18T08:23:10.011Z"
   }
 }
