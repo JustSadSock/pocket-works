@@ -247,7 +247,9 @@
  .replay-analysis{margin-top:32px;flex:1;min-width:0;justify-content:center;gap:5px}
  .replay-controls{position:absolute;bottom:4px;left:44%;right:8px;width:auto}
  .replay-buttons button{font-size:10px;min-height:30px}
- .replay-step-actions{display:none}
+ .replay-step-actions{display:flex;gap:4px}
+ .replay-step-actions button{min-height:29px;padding:2px 6px;font-size:10px}
+ .replay-step-actions span{font-size:9px}
  .analysis-side{padding:4px 5px}
  .analysis-explainer{display:none}
 }
