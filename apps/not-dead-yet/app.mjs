@@ -8,6 +8,8 @@ const keys=new Set(),stick={x:0,y:0},quiet=window.matchMedia?.('(prefers-reduced
 let world,renderer,player,phase='menu',inventory=[],shadows=[],stress=0,elapsed=0,ammo=6,reserve=18,reloadTime=0,reloadDeadline=0,shotTime=0,stunTime=0,torch=true,energy=100,showHintUntil=0,spawnAt=8,saveAt=5,worldAt=0,lastFrame=performance.now(),moveCount=0,attemptCount=0,blockedCount=0,stepCount=0,joystickPointer=null,lookPointer=null,lastLook=null,sprintHeld=false,confirmSource='pause',screenNotice='',sound=true,runId=0,peeking=false,noise=null,lastPresenceCue=0;
 try{sound=JSON.parse(localStorage.getItem(OPTIONS)||'{}').sound!==false}catch{}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const PHYSICAL_KEYS={KeyW:'w',KeyS:'s',KeyA:'a',KeyD:'d',KeyE:'e',KeyR:'r',KeyF:'f',KeyI:'i',ShiftLeft:'shift',ShiftRight:'shift',Space:' ',Tab:'tab',Escape:'escape',
+ ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'};
 const acoustics=createSoundscape();acoustics.setEnabled(sound);
 function chirp(freq=280,secs=.09,vol=.018,form='sine'){if(sound)acoustics.tone(freq,secs,vol,form)}
 function nextSeed(){runId++;const a=new Uint32Array(1);try{crypto.getRandomValues(a)}catch{a[0]=Date.now()>>>0}
@@ -29,14 +31,14 @@ function overlay(id){for(const name of ['menu','pauseOverlay','inventoryOverlay'
 function notice(message,seconds=2.6){screenNotice=message;showHintUntil=elapsed+seconds;$('hint').textContent=message;$('hint').classList.add('visible')}
 function start(save=null){
  setup(save?.seed??nextSeed(),save);phase='play';overlay(null);hud();acoustics.activate();acoustics.event('radio');notice('Это твоя квартира. Вспомни, где лежат четыре вещи.',4);
- chirp(300,.20,.025,'triangle');persist();lastFrame=performance.now()
+ chirp(300,.20,.025,'triangle');persist();lastFrame=performance.now();document.activeElement?.blur?.();$('view').focus?.()
 }
 function releaseMouse(){if(document.pointerLockElement)document.exitPointerLock?.()}
 function clearStick(){joystickPointer=null;stick.x=0;stick.y=0;$('knob').style.transform='translate(0px,0px)'}
 function clearInputs(){keys.clear();sprintHeld=false;lookPointer=null;lastLook=null;clearStick()}
 function pause(){if(phase!=='play')return;peeking=false;document.querySelector?.('.app-shell')?.classList.remove('is-peephole');phase='paused';clearInputs();releaseMouse();persist();acoustics.suspend();
  $('pauseText').textContent='Вещей: '+inventory.length+' / 4 · '+world.location(player.x,player.z)+' · '+Math.floor(elapsed/60)+' мин.';overlay('pauseOverlay');chirp(170,.12,.016)}
-function resume(){if(phase!=='paused'&&phase!=='inventory')return;phase='play';overlay(null);acoustics.activate();lastFrame=performance.now()}
+function resume(){if(phase!=='paused'&&phase!=='inventory')return;clearInputs();phase='play';overlay(null);acoustics.activate();lastFrame=performance.now();document.activeElement?.blur?.();$('view').focus?.()}
 function showInventory(){if(phase!=='play'||peeking)return;phase='inventory';clearInputs();releaseMouse();drawInventory();overlay('inventoryOverlay');persist()}
 function drawInventory(){const list=$('inventoryList');list.replaceChildren();
  for(const item of ITEMS){const row=document.createElement('div');row.className='inventory-row'+(inventory.includes(item.id)?' found':'');
@@ -176,7 +178,8 @@ function simulate(dt){
  if(reloadTime>0){reloadTime=Math.max(0,(reloadDeadline-performance.now())/1000);if(reloadTime===0){const load=Math.min(6-ammo,reserve);ammo+=load;reserve-=load;chirp(310,.13,.023);hud()}}
  shotTime=Math.max(0,shotTime-dt);stunTime=Math.max(0,stunTime-dt);
  let forward=(Number(keys.has('w')||keys.has('arrowup'))-Number(keys.has('s')||keys.has('arrowdown')))+stick.y;
- let side=(Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')))+stick.x;
+ let side=(Number(keys.has('d'))-Number(keys.has('a')))+stick.x;
+  if(keys.has('arrowleft')||keys.has('arrowright'))player.yaw+=((keys.has('arrowright')?1:0)-(keys.has('arrowleft')?1:0))*2.1*dt;
  const amount=Math.hypot(forward,side);if(amount>1){forward/=amount;side/=amount}
  const running=(sprintHeld||keys.has('shift'))&&energy>4&&amount>.04,velocity=running?3.25:1.85;
  energy=clamp(energy+(running?-16:9)*dt,0,100);
@@ -268,14 +271,15 @@ document.addEventListener('mousemove',e=>{if(phase==='play'&&!peeking&&document.
 $('view').addEventListener('click',e=>{if(phase!=='play'||peeking)return;if(document.pointerLockElement===$('view'))shoot();else if(e.pointerType!=='touch'&&window.matchMedia?.('(pointer:fine)')?.matches)$('view').requestPointerLock?.().catch(()=>{})});
 document.addEventListener('mousedown',e=>{if(phase==='play'&&document.pointerLockElement===$('view')&&e.button===0)e.preventDefault()});
 document.addEventListener('keydown',e=>{
- const key=e.key.toLowerCase();
- if(['w','a','s','d','shift','arrowup','arrowdown','arrowleft','arrowright',' ','e','f','i','r'].includes(key))e.preventDefault();
+ const key=PHYSICAL_KEYS[e.code]||String(e.key||'').toLowerCase();
+ if(['w','a','s','d','shift','arrowup','arrowdown','arrowleft','arrowright',' ','e','f','i','r','tab'].includes(key)&&phase==='play')e.preventDefault();
  if(key==='escape'){if(peeking){peeking=false;document.querySelector?.('.app-shell')?.classList.remove('is-peephole');hud();return}if(phase==='play')pause();else if(phase==='paused')resume();else if(phase==='inventory')resume();return}
- if(phase==='play'&&!e.repeat){if(key==='e')interact();if(key==='r')reload();if(key==='f')toggleTorch();if(key==='i')showInventory();if(key===' ')shoot()}
+ if(phase==='play'&&!e.repeat){if(key==='e')interact();if(key==='r')reload();if(key==='f')toggleTorch();if(key==='i'||key==='tab')showInventory();if(key===' ')shoot()}
  keys.add(key)
 });
-document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+document.addEventListener('keyup',e=>keys.delete(PHYSICAL_KEYS[e.code]||String(e.key||'').toLowerCase()));
 window.addEventListener('blur',()=>{keys.clear();clearStick();sprintHeld=false});
+ document.addEventListener('pointerlockchange',()=>{if(phase==='play'&&document.pointerLockElement!==$('view'))pause()});
 const run=$('run');run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.setPointerCapture(e.pointerId);run.classList.add('held')});
 for(const ev of ['pointercancel','pointerup','lostpointercapture'])run.addEventListener(ev,()=>{sprintHeld=false;run.classList.remove('held')});
 $('torch').addEventListener('click',toggleTorch);$('fire').addEventListener('click',shoot);$('interact').addEventListener('click',interact);$('reload').addEventListener('click',reload);$('pack').addEventListener('click',showInventory);
