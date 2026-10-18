@@ -185,11 +185,33 @@ run, not inferred from CPU mesh tests.
 - Test real mobile hardware under load. GitHub CI uses software/virtualized
   browser rendering, not the user's GPU.
 
+## Validated v2.1.7 snapshot
+
+- [Hallway and image-quality screenshot suite 39175557084](https://github.com/JustSadSock/pocket-works/actions/runs/39175557084)
+  **12/12 passed in Chromium and WebKit**.
+  [Captured artifact](https://github.com/JustSadSock/pocket-works/actions/runs/39175557084/artifacts/12154153224)
+  contains **60 reproducible scene screenshots**: 5 seeds × corridor,
+  bathroom, kitchen and living room × mobile Chromium, mobile WebKit and
+  desktop Chromium, plus the additional QA screenshots.
+- Examined a contact sheet of all 15 corridor bookmarks: the seeded
+  ceiling lights, switch boxes and occasional rail/door plate now have
+  meaningful visible volume and change the composition across layouts.
+  The hall geometry is still simplified: no wall/fixture-accurate bounced
+  light, dedicated normal maps or comprehensive GPU occlusion.
+- [Post-stall interaction suite 39175830656](https://github.com/JustSadSock/pocket-works/actions/runs/39175830656)
+  **9/9 passed**, including the previously failing clock-sensitive reload
+  under an intentionally imposed 650ms main-thread stall.
+- [Geometry and gameplay Node suite 39175555758](https://github.com/JustSadSock/pocket-works/actions/runs/39175555758)
+  **93/93 passed**, including new corridor material mesh tests.
+- [Long-form post-fix journey 39175833714](https://github.com/JustSadSock/pocket-works/actions/runs/39175833714)
+  is the remaining independent end-to-end gate; its completion should be
+  checked before claiming *all* suites have passed.
+
 ## Outstanding acceptance gates
 
 - [x] Confirm initial visual Playwright browser tests **pass**, including
       narrow mobile mode, WebGL image variance, seed bookmarks, reload/doors.
-- [ ] Review *post-fix* Chromium/WebKit screenshot artifacts side-by-side
+- [x] Review *post-fix* Chromium/WebKit screenshot artifacts side-by-side
       with the baseline photos and verify the weapon actually frames better.
 - [ ] Test real iPhone/Android GPU cost and screenshot geometry on hardware.
 - [ ] Audit z-fighting around thick wall junctions, frames and doors by
