@@ -20,7 +20,7 @@ function act(room,actor,action,id){
 }
 test('v8 is immutable and does not modify historical rooms',()=>{
  assert.equal(source,pinned);
- assert.match(prior,/RULESET_VERSION=8;/);
+ assert.match(prior,/RULESET_VERSION=7;/);
  assert.match(source,/RULESET_VERSION=8;/);
  const lock=JSON.parse(read('../../../pocketnet/modules.lock.json'));
  assert.equal(lock['fog-of-conquest'].current,'v9');
