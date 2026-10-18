@@ -29,7 +29,7 @@ test('embedded PocketNet rules exactly match the client kernel and v7 immutable 
  const a=extract(client),b=extract(source);
  assert.equal(a,b,'Current server embedded kernel drifted from client source');
  assert.equal(source,pinned);
- assert.match(originalV6,/RULESET_VERSION=5;/);
+ assert.match(originalV6,/RULESET_VERSION=6;/);
  assert.match(source,/RULESET_VERSION=7;/);
 });
 test('movement legality and movement points match authoritative historical rules on 4 sizes',()=>{
