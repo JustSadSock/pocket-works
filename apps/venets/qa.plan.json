@@ -13,7 +13,8 @@
         "tests/atlas.test.mjs",
         "tests/conflicts.test.mjs",
         "tests/scale.test.mjs",
-        "tests/refinement.test.mjs"
+        "tests/refinement.test.mjs",
+        "tests/legacy.test.mjs"
       ]
     },
     {
@@ -128,7 +129,8 @@
         "qa/atlas.spec.ts",
         "qa/war.spec.ts",
         "qa/scale.spec.ts",
-        "qa/refinement.spec.ts"
+        "qa/refinement.spec.ts",
+        "qa/legacy.spec.ts"
       ]
     },
     {
