@@ -1,7 +1,8 @@
 // Dense Soviet interiors for the endless roguelike, using the same WebGL material
 // atlas as the authored chapter. All positions are actual collidable world cells.
 import {SECTOR,TILE} from './rogue-world.mjs';
-import {appendPropDetails,appendRoomDetails,appendWallDetails,appendDoorDetails} from './rogue-detail.mjs';
+import {appendPropDetails,appendRoomDetails,appendDoorDetails} from './rogue-detail.mjs';
+import {architecturalWall,doorwayReturn} from './rogue-architecture.mjs';
 const S=TILE,HEIGHT=2.62;
 const C={
  living:[.49,.38,.30],kitchen:[.45,.52,.43],bedroom:[.46,.39,.32],
@@ -142,14 +143,11 @@ export function rogueStaticMesh(world,player){
   for(const [dx,dz,n] of [[1,0,[-1,0,0]],[-1,0,[1,0,0]],[0,1,[0,0,-1]],[0,-1,[0,0,1]]]){
    if(world.pass(x+dx,z+dz))continue;
    const w=dx===1?px+S:dx===-1?px:0,q=dz===1?pz+S:dz===-1?pz:0;
-   if(dx){quad(out,[w,0,pz],[w,0,pz+S],[w,HEIGHT,pz+S],[w,HEIGHT,pz],col,n,room?2:1);
-    box(out,w,.08,pz+S/2,.055,.13,S,[.28,.24,.19],6);
-    if(!room)box(out,w,.84,pz+S/2,.018,.035,S,[.30,.34,.26],8);
-   }else{quad(out,[px,0,q],[px+S,0,q],[px+S,HEIGHT,q],[px,HEIGHT,q],col,n,room?2:1);
-    box(out,px+S/2,.08,q,S,.13,.055,[.28,.24,.19],6);
-    if(!room)box(out,px+S/2,.84,q,S,.035,.018,[.30,.34,.26],8)
-   }
-   if(Math.hypot(x+.5-player.x,z+.5-player.z)<9)appendWallDetails(out,{x,z,px,pz,dx,dz,room});
+   // Finite slab thickness projects strictly into SOLID cells: real volume
+   // and side caps without changing the world collision/door seam geometry.
+   architecturalWall(out,{x,z,px,pz,dx,dz,room,sector:sec,seed:world.seed,
+    tile:S,detail:Math.hypot(x+.5-player.x,z+.5-player.z)<9});
+
   }
  }
  for(const c of world.nearby(player.x,player.z,17)){
@@ -160,6 +158,7 @@ export function rogueStaticMesh(world,player){
   }
   for(const door of c.doors){
    if(Math.hypot(door.x-player.x,door.z-player.z)>=13)continue;
+   doorwayReturn(out,door,S);
    appendDoorDetails(out,door)
   }
  }
