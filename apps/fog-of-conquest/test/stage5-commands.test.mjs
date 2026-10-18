@@ -20,7 +20,7 @@ test('v8 embedded kernel stays byte-identical to client and immutable pin',()=>{
    c.indexOf('})();',c.indexOf('function reach'))+5);
  assert.equal(block(source),block(read('../js/rules-core.js')));
  assert.equal(source,pinned);
- assert.match(prior,/RULESET_VERSION=8;/);
+ assert.match(prior,/RULESET_VERSION=7;/);
  assert.match(source,/RULESET_VERSION=8;/);
 });
 test('LOS and fog parity with previous rules on 4 sizes × 40 seeds, including stale buildings',()=>{
