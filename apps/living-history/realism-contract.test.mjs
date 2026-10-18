@@ -39,7 +39,7 @@ test('historical references yield measured discrepancies, NEVER an unearned proo
  }
  assert.equal(sample.customarySampleSize,16,'small historical sample is disclosed');
  assert.equal(sample.customaryTenementsAbove10Acres,.75);
- assert.ok(Math.abs(sample.customaryTenementsAbove10Acres-REFERENCE_POINTS.customaryTenementsAbove10Acres)>.10,
+ assert.ok(Math.abs(sample.customaryTenementsAbove10Acres-REFERENCE_POINTS.customaryTenementsAbove10Acres.value)>.10,
   'current initial tenure differs by over 10 percentage points from the narrow published source sample');
 });
 
