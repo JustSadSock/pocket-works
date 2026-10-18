@@ -36,6 +36,8 @@ test('visual audit: six mages, own silhouette, different projectile and three-ru
  await expect(page.locator('#spell-index button')).toHaveCount(3);
  await page.locator('#spell-index button').nth(2).click();
  await expect(page.locator('#spell-index button').nth(2)).toHaveClass(/active/);
+ await expect(page.locator('#bench-fight')).toBeInViewport({ratio:0.9});
+ await expect(page.locator('#bench-save')).toBeInViewport({ratio:0.9});
  await testInfo.attach('three-spells-workbench',{body:await page.screenshot(),contentType:'image/png'});
  const sizing=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,slots:document.querySelector('#bench-slots').scrollHeight,visible:document.querySelector('#bench-slots').clientHeight}));
  expect(sizing.scroll).toBeLessThanOrEqual(sizing.width+1);
