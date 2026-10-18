@@ -1,0 +1,38 @@
+name: Fog faithful-port QA
+on:
+  push:
+    branches: [app/fog-of-conquest-port-20261018]
+    paths: [.github/workflows/fog-verify.yml]
+permissions:
+  contents: read
+jobs:
+  original-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Source mechanics and asset parity
+        run: |
+          node --test apps/fog-of-conquest/test/original-port.test.mjs
+          node --check apps/fog-of-conquest/js/worldGen.js
+          node --check apps/fog-of-conquest/js/ui.js
+          node --check apps/fog-of-conquest/pocket-adapter.js
+          node --check apps/fog-of-conquest/sw.js
+      - name: Install root tooling
+        run: npm ci --no-audit --no-fund --ignore-scripts
+      - name: Validate site manifest and staging build
+        run: |
+          npm run registry:check
+          npm run deploy:site
+      - name: Install browser
+        run: npx playwright install chromium
+      - name: Mobile and desktop browser smoke
+        run: node apps/fog-of-conquest/test/port-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fog-faithful-screens
+          path: /tmp/fog-port-shots/
+          if-no-files-found: ignore
