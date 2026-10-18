@@ -1,0 +1,110 @@
+{
+  "title": "Fog of Conquest",
+  "summary": "Turn-based strategy. Capture or destroy all enemy bases.<br><br><em>Units:</em><br>• Swordsman — move 2, attack 2, defense 1, range 1, 5 HP, 3 gold.<br>• Archer — move 2, attack 3, defense 0, range 2, 4 HP, 4 gold.<br>• Heavy — move 1, attack 3, defense 2, range 1, 6 HP, 5 gold.<br>• Rider — move 3, attack 3, defense 1, range 1, 5 HP, 7 gold.<br>• Mage — move 2, attack 0, defense 0, range 1, 4 HP, 7 gold; heals adjacent allies.<br>• Bog (beta) has unique abilities.<br><br><em>Buildings:</em><br>• Base trains basic troops.<br>• Barracks, stable and mage tower unlock new units.<br>• Mills bring gold each turn.<br>• Fort grants defense bonus.<br><br><em>Terrain:</em><br>Forest and hills give defense, water slows, mountains impassable.<br><br><em>Gameplay:</em><br>• Capture buildings to get gold and recruit units.<br>• Income from resources each turn.<br>• Move units and attack, then press End turn.<br>• Fog of war hides unexplored areas.<br>Win by destroying all enemy bases and troops.<br><br><em>Controls:</em><br>• Left click to select units and cells.<br>• Right click to cancel selection.<br>• ℹ️ shows legend, Show map only in beta.",
+  "mapSizeLabel": "Map size:",
+  "mapSizeTiny": "Tiny",
+  "mapSizeSmall": "Small",
+  "mapSizeMedium": "Medium",
+  "mapSizeLarge": "Large",
+  "startTwo": "Start game",
+  "startAi": "Single player",
+  "startBeta": "Extended mode (beta)",
+  "startSettings": "Settings",
+  "aiTitle": "Choose difficulty",
+  "aiL0": "Very Easy",
+  "aiL1": "Easy",
+  "aiL2": "Normal",
+  "aiL3": "Hard",
+  "aiL4": "Impossible",
+  "aiL5": "Extreme",
+  "aiL6": "Nightmare",
+  "aiStart": "Start",
+  "yes": "Ok",
+  "no": "Cancel",
+  "wait": "Please wait...",
+  "skip": "Skip",
+  "viewReplay": "View replay",
+  "victoryOk": "Ok",
+  "exitReplay": "Menu",
+  "legendClose": "Close",
+  "simplify": "Simplified",
+  "styleLabel": "Theme",
+  "styleToen": "Classic",
+  "styleAi": "AI style",
+  "music": "Music",
+  "musicVolume": "Music volume",
+  "sfx": "Sound effects",
+  "sfxVolume": "Effects volume",
+  "langLabel": "Language",
+  "settingsClose": "Close",
+  "legendBtnTitle": "Legend",
+  "settingsBtn": "Settings",
+  "infoCollapse": "Hide panel",
+  "infoExpand": "Show panel",
+  "revealShow": "Show map",
+  "revealHide": "Hide map",
+  "tooltip": "Hints",
+  "tooltipOn": "Hints ✓",
+  "endTurn": "End turn",
+  "notSelected": "Nothing selected",
+  "selectedMage": "Selected: {unit} MP:{mp}/{move}",
+  "selectedUnit": "Selected: {unit} HP:{hp}/{hpMax} MP:{mp}/{move}",
+  "victory": "Player {player} wins!",
+  "noAttackWater": "Cannot attack from water",
+  "mageHeal": "Mage healed {unit} for 2 HP"
+  ,"saveBtn": "Save"
+  ,"loadBtn": "Load game"
+  ,"loadSave": "Load"
+  ,"deleteSave": "Delete"
+  ,"noSaves": "No saves found"
+  ,"newGame": "Start new game"
+  ,"fullscreen": "Fullscreen"
+  ,"replaySide": "Switch side"
+  ,"replayRestart": "Restart"
+  ,"saveReplay": "Save video"
+  ,"replayCollapse": "Hide controls"
+  ,"replayExpand": "Show controls"
+  ,"terrPlain": "Plain"
+  ,"terrWater": "Water"
+  ,"terrForest": "Forest"
+  ,"terrHill": "Hill"
+  ,"terrMountain": "Mountain"
+  ,"unitSwordsman": "Swordsman"
+  ,"unitArcher": "Archer"
+  ,"unitHeavy": "Heavy"
+  ,"unitCavalry": "Rider"
+  ,"unitMage": "Mage"
+  ,"unitBog": "Bog"
+  ,"legendUnits": "Units"
+  ,"legendTerrain": "Terrain"
+  ,"moveShort": "move"
+  ,"attackShort": "atk"
+  ,"defShort": "def"
+  ,"rangeShort": "rng"
+  ,"goldShort": "gold"
+  ,"impassable": "impassable"
+  ,"passTurnConfirm": "Player {player}'s turn. Continue?"
+  ,"waitEnemyTurn": "Enemy turn..."
+  ,"replayEnemyTurn": "Replaying enemy turn..."
+  ,"eventBaseCaptured": "Base captured"
+  ,"eventResourceCaptured": "Resource captured ({building})"
+  ,"eventUnitCreated": "{unit} created"
+  ,"eventAttackUnit": "{attacker} attacked {target} for {dmg}"
+  ,"eventRetaliation": ", took {dmg}"
+  ,"eventAttackBuilding": "{attacker} attacked {building} for {dmg}"
+  ,"eventMove": "Moved {unit}"
+  ,"statsTurn": "Turn: {turn} — Player {player}"
+  ,"statsGold": "Gold: {gold} (+{income}/turn)"
+  ,"statsBases": "Military bases: {count}"
+  ,"statsResources": "Resources: {count}"
+  ,"statsUnits": "Units:"
+  ,"logEnemy": "Enemy: {text}"
+  ,"logTurn": "--- Turn {turn} ---"
+  ,"startOnline": "Online"
+  ,"createRoom": "Create room"
+  ,"joinRoom": "Join room"
+  ,"onlineTitle": "Online lobby"
+  ,"tutorialBtn": "Tutorial"
+  ,"tutorialText": "Capture enemy bases to win. Use \u274c to cancel selections."
+  ,"tutorialClose": "Close"
+}

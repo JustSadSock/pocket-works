@@ -1,0 +1,29 @@
+// data/terrain.json
+{
+  "PLAIN": {
+    "cost": 1,
+    "def": 0,
+    "passable": true
+  },
+  "WATER": {
+    "cost": 2,
+    "def": -1,
+    "passable": true
+  },
+  "FOREST": {
+    "cost": 1,
+    "def": 1,
+    "passable": true
+  },
+  "HILL": {
+    "cost": 2,
+    "def": 2,
+    "passable": true,
+    "visionBonus": 1
+  },
+  "MOUNTAIN": {
+    "cost": 999,
+    "def": 0,
+    "passable": false
+  }
+}
