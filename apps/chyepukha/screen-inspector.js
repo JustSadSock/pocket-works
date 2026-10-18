@@ -19,7 +19,10 @@ export const SCREENS=[
  ['leave','Партія','Підтвердження виходу'],
  ['results','Фінал','Всі історії'],
  ['results-second','Фінал','Друга історія'],
- ['comic','Фінал','Готовий комікс']
+ ['comic','Фінал','Готовий комікс'],
+ ['archive','Архів','Збережені рукописи'],
+ ['archive-empty','Архів','Порожня полиця'],
+ ['archive-delete','Архів','Підтвердження видалення']
 ].map(([id,group,name])=>({id,group,name}));
 export const isPreviewId=id=>SCREENS.some(x=>x.id===id);
 export function installScreenInspector(){

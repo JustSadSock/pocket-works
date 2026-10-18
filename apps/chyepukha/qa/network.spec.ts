@@ -126,3 +126,32 @@ test('guest username is persisted and the same room resumes after reload',async(
  await expect(page.locator('.room')).toBeVisible();
  await expect(page.locator('.code')).toContainText('ABCDEF12');
 });
+
+test('completed manuscripts remain in the private local archive after leaving the room and reload',async({page})=>{
+ await runPocketRoom(page);
+ await newRoom(page);
+ await page.locator('[data-act=start]').click();
+ await page.evaluate(()=>window.__finishQaGame());
+ await expect(page.locator('.story-paper')).toContainText('Марта загубила древній ключ');
+ const storageKeys=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.includes('archive:')));
+ expect(storageKeys.length).toBe(1);
+ await page.locator('.story-paper [data-act=leave]').click();
+ await page.locator('[data-act=confirm-leave]').click();
+ await expect(page.locator('.archive-ticket')).toContainText('1');
+ await page.reload();
+ await page.locator('[data-act=archive]').click();
+ await expect(page.locator('.archive-page')).toBeVisible();
+ await expect(page.locator('.archive-manuscript')).toContainText('Ключ знайшли у печері');
+ await page.locator('[data-act=archive-comic]').click();
+ await expect(page.locator('.comic-inner img')).toBeVisible();
+ await page.locator('[data-act=close-comic]').click();
+ await page.locator('[data-act=archive-ask-delete]').click();
+ await expect(page.locator('[data-act=archive-confirm-delete]')).toBeVisible();
+ await page.locator('[data-act=cancel]').click();
+ await expect(page.locator('.archive-manuscript')).toBeVisible();
+ await page.locator('[data-act=archive-ask-delete]').click();
+ await page.locator('[data-act=archive-confirm-delete]').click();
+ await expect(page.locator('.archive-empty')).toBeVisible();
+ await page.locator('[data-act=archive-back]').first().click();
+ await expect(page.locator('.home-cover')).toBeVisible();
+});

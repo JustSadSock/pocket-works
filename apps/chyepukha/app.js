@@ -3,6 +3,7 @@ import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketAvatarMarkup,pocketPlayerBadge,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import {storageForTab,prepareSession,markActive,releaseActive} from './tab-session.js';
 import {makeComic} from './comic.js';
+import {readEditions,writeEditions,addFinishedEdition,removeEdition,storyText} from './story-library.js';
 import {installScreenInspector,PREVIEW_PARAM} from './screen-inspector.js';
 import {demoView} from './preview-data.js';
 installMobileRuntime();
@@ -21,12 +22,24 @@ const words=s=>String(s||'').trim().split(/\s+/u).filter(Boolean);
 const GENDERS=[['male','Чоловік'],['female','Жінка'],['nonbinary','Інше'],['unspecified','Неважливо']];
 let net=null,view=null,me='',room='',connected=false,connecting=false,notice='';
 let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',comicImage='',modal='',sound=read('sound','off')==='on',audio=null;
-let previewDraft='';
+let previewDraft='',previewEditions=[];
+let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
 const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
 // Legacy v1 guest sessions used this key. Preserve them across the account-aware upgrade.
 const sessionKey=()=>member()?pocketIdentitySessionKey(pocketIdentity):'chyepukha-1';
+const archiveKey=()=>KEY+'archive:'+(member()?sessionKey():'guest:'+name.trim().toLocaleLowerCase());
+function editions(){if(IS_PREVIEW)return previewEditions;if(!identityReady)return [];try{return readEditions(localStorage,archiveKey())}catch{return []}}
+function archiveSelection(){const all=editions(),edition=all.find(x=>x.id===archiveEditionId)||all[0];return {all,edition,story:edition?.stories.find(x=>x.id===archiveStoryId)||edition?.stories[0]}}
+function keepFinished(v){
+ if(IS_PREVIEW||!identityReady||!room||v.phase!=='finished')return;
+ const old=editions(),next=addFinishedEdition(old,room,v);
+ if(next.length===old.length&&next.every((x,i)=>x.id===old[i].id))return;
+ try{if(writeEditions(localStorage,archiveKey(),next))toast('Рукописи збережено на цьому пристрої.');
+ else toast('Не вдалося зберегти архів. Скопіюй історії перед виходом.')}
+ catch{toast('Немає доступу до локального архіву.')}
+}
 const portrait=()=>pocketAvatarMarkup(pocketIdentity?.artwork||pocketIdentity?.avatar,{accountId:pocketIdentity?.id||''});
 const draftKey=()=>KEY+'draft:'+sessionKey()+':'+room+':'+(view?.round??0)+':'+(view?.sheet?.id||'');
 const loadDraft=()=>{if(IS_PREVIEW)return previewDraft;try{return localStorage.getItem(draftKey())||''}catch{return ''}};
@@ -76,7 +89,7 @@ async function refreshPocketBadge(initial=false){
   ++connectionAttempt;clearRoomTimeout();
   net?.close();net=null;releaseActive();
   try{storageForTab().removeItem('pocket-net:'+ORIGIN)}catch{}
-  const hadRoom=Boolean(view||room);view=null;me='';room='';connected=false;connecting=false;modal='';storyId='';
+  const hadRoom=Boolean(view||room);view=null;me='';room='';connected=false;connecting=false;modal='';storyId='';archiveOpen=false;archiveEditionId='';archiveStoryId='';
   if(hadRoom){notice='Pocket ID змінився. Підключися до кімнати з новим профілем.';syncUrl();toast(notice)}
  }
  pocketIdentity=next;identityReady=true;
@@ -217,7 +230,7 @@ function apply(v){if(!v||v.protocol!==1||!Array.isArray(v.players))return;
  if(v.phase==='finished'&&Array.isArray(v.stories))v={...v,stories:v.stories.map(st=>({...st,text:st.fragments.map(f=>f.answer).join('\n\n')}))};
  const prev=view;const same=prev?.phase==='writing'&&v.phase==='writing'&&!prev.waiting&&!v.waiting&&prev.round===v.round&&prev.sheet?.id===v.sheet?.id;
  if(prev?.phase==='writing'&&!prev.waiting&&v.waiting)clearDraft();
- view=v;if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
+ view=v;if(v.phase==='finished')keepFinished(v);if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
  if(same){const el=$('sideRoster');if(el)el.innerHTML=rosterCompact();return}
  render();
 }
@@ -227,7 +240,18 @@ function home(){
  const identityTile='<div class="home-identity '+(logged?'is-member':'is-guest')+'"><span class="home-identity-art">'+portrait()+'</span><div><small>'+(logged?'POCKET ID · ПІДТВЕРДЖЕНО':ready?'ГОСТЬОВИЙ РЕЖИМ':'ПЕРЕВІРЯЄМО ПРОФІЛЬ')+'</small><strong>'+escape(logged?pocketIdentity.nickname:ready?'Твій профіль':'З’єднуємося…')+'</strong></div><button type="button" data-act="profile" class="identity-open">'+(logged?'Профіль ↗':'Увійти ↗')+'</button></div>';
  const field='<label class="guest-name"><span class="field-label">Ім’я автора</span><input id="guestNick" class="field" name="name" autocomplete="nickname" maxlength="24" placeholder="Як тебе звати?" value="'+escape(name)+'"></label>';
  const hold=ready?'':' disabled';
- return '<div class="home home-edition"><section class="paper home-cover"><div class="home-binding" aria-hidden="true"></div><div class="eyebrow">ВИДАВНИЦТВО НЕЙМОВІРНИХ ПРИГОД</div><h1>ЧЕПУХА<span class="home-period">.</span></h1><p class="lead">Одна історія. Кілька авторів. Ніхто не знає, що було до нього.</p><div class="home-sketch">'+mark()+'<span class="sketch-seal" aria-hidden="true">ЦІЛКОМ ТАЄМНО</span></div><div class="home-colophon"><span>№ 01 / НЕЗАКІНЧЕНІ ІСТОРІЇ</span><span>2–8 АВТОРІВ</span></div></section><div class="home-entry">'+identityTile+(logged?'':field)+'<section class="slip slip-create"><div class="slip-index">01 / ВІДКРИТИ ІСТОРІЮ</div><h3>Нова кімната</h3><form id="createForm"><button class="button" type="submit"'+hold+'>Створити кімнату <span>↗</span></button></form></section><section class="slip slip-join"><div class="slip-index">02 / ДОЄДНАТИСЯ</div><h3>Вже є код?</h3><form id="joinForm"><label><span class="field-label">Код або посилання</span><input class="field" name="room" autocomplete="off" spellcheck="false" placeholder="8 символів" required value="'+escape(invitation)+'"></label><button class="button outline" type="submit"'+hold+'>Приєднатися <span>↗</span></button></form></section>'+(savedRoom()?'<button class="return-ticket" type="button" data-act="resume">Повернутися до кімнати <span>↗</span></button>':'')+(notice?'<p class="warning home-warning">'+escape(notice)+'</p>':'')+'</div></div>';
+ return '<div class="home home-edition"><section class="paper home-cover"><div class="home-binding" aria-hidden="true"></div><div class="eyebrow">ВИДАВНИЦТВО НЕЙМОВІРНИХ ПРИГОД</div><h1>ЧЕПУХА<span class="home-period">.</span></h1><p class="lead">Одна історія. Кілька авторів. Ніхто не знає, що було до нього.</p><div class="home-sketch">'+mark()+'<span class="sketch-seal" aria-hidden="true">ЦІЛКОМ ТАЄМНО</span></div><div class="home-colophon"><span>№ 01 / НЕЗАКІНЧЕНІ ІСТОРІЇ</span><span>2–8 АВТОРІВ</span></div></section><div class="home-entry">'+identityTile+(logged?'':field)+'<section class="slip slip-create"><div class="slip-index">01 / ВІДКРИТИ ІСТОРІЮ</div><h3>Нова кімната</h3><form id="createForm"><button class="button" type="submit"'+hold+'>Створити кімнату <span>↗</span></button></form></section><section class="slip slip-join"><div class="slip-index">02 / ДОЄДНАТИСЯ</div><h3>Вже є код?</h3><form id="joinForm"><label><span class="field-label">Код або посилання</span><input class="field" name="room" autocomplete="off" spellcheck="false" placeholder="8 символів" required value="'+escape(invitation)+'"></label><button class="button outline" type="submit"'+hold+'>Приєднатися <span>↗</span></button></form></section>'+(savedRoom()?'<button class="return-ticket" type="button" data-act="resume">Повернутися до кімнати <span>↗</span></button>':'')+'<button class="archive-ticket" type="button" data-act="archive"><span>Архів рукописів <small>Збережено на пристрої</small></span><b>'+editions().length+' →</b></button>'+(notice?'<p class="warning home-warning">'+escape(notice)+'</p>':'')+'</div></div>';
+}
+function archiveScreen(){
+ const {all,edition,story}=archiveSelection();
+ const back='<button class="button outline small archive-back" type="button" data-act="archive-back">← До меню</button>';
+ const heading='<header class="archive-heading"><div><div class="eyebrow">ПРИВАТНА ПОЛИЦЯ</div><h2>Архів рукописів</h2><p class="mini">Лише на цьому пристрої · '+all.length+' видань</p></div>'+back+'</header>';
+ if(!edition)return '<div class="archive-page">'+heading+'<section class="paper archive-empty"><div class="eyebrow">ПОЛИЦЯ ПОКИ ПОРОЖНЯ</div><h3>Спочатку створіть історію</h3><p class="lead">Завершені партії з’являються тут автоматично. Тексти лишаються на цьому пристрої, не в хмарі.</p><button class="button" type="button" data-act="archive-back">Повернутися до гри →</button></section></div>';
+ archiveEditionId=edition.id;archiveStoryId=story?.id||'';
+ const date=new Date(edition.savedAt).toLocaleDateString('uk-UA',{day:'2-digit',month:'short',year:'numeric'});
+ const episodes=edition.stories.map((x,i)=>'<button type="button" class="archive-tab '+(x.id===story.id?'is-active':'')+'" data-act="archive-story" data-id="'+escape(x.id)+'">'+String(i+1).padStart(2,'0')+' · '+escape(x.starter)+'</button>').join('');
+ const fragments=story.fragments.map((f,i)=>'<details class="fragment"><summary>№ '+(i+1)+' · '+escape(f.author)+' · '+escape(f.question)+'</summary><p>'+escape(f.answer)+'</p></details>').join('');
+ return '<div class="archive-page">'+heading+'<div class="results archive-layout"><nav class="chapters archive-editions"><h3>Видання</h3>'+all.map((item,i)=>'<button type="button" class="chapter '+(item.id===edition.id?'active':'')+'" data-act="archive-edition" data-id="'+escape(item.id)+'"><small>№ '+String(all.length-i).padStart(2,'0')+' · '+new Date(item.savedAt).toLocaleDateString('uk-UA')+'</small>'+item.stories.length+' історій · '+item.playerCount+' авторів</button>').join('')+'</nav><article class="paper story-paper archive-manuscript"><div class="progress"><span class="eyebrow">ЗБЕРЕЖЕНЕ ВИДАННЯ</span><span class="mini">'+date+'</span></div><h3>Історія '+escape(story.starter)+'</h3><p class="mini">'+escape(story.setLabel)+' · '+escape(story.genre)+'</p><div class="archive-tabs">'+episodes+'</div><div class="content"><div class="story-text">'+escape(storyText(story))+'</div><details class="archive-credits"><summary>Автори фрагментів</summary>'+fragments+'</details></div><div class="button-row"><button type="button" class="button outline small" data-act="archive-copy">Копіювати текст</button><button type="button" class="button small" data-act="archive-comic">Зробити комікс ↗</button></div><button class="leave archive-delete" type="button" data-act="archive-ask-delete">Видалити це видання</button></article></div></div>';
 }
 function opts(arr,id){return arr.map(x=>'<option value="'+escape(x.id)+'" '+(id===x.id?'selected':'')+'>'+escape(x.label)+'</option>').join('')}
 function settingsForm(s){return '<form class="settings" id="settingsForm"><div class="two"><label><span class="field-label">Максимум гравців</span><select class="field" name="maxPlayers">'+[2,3,4,5,6,7,8].map(n=>'<option value="'+n+'" '+(n===s.maxPlayers?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label><span class="field-label">Передати слів</span><select class="field" name="visibleTailWords">'+[0,1,2,3,4,5,6,8,10,12].map(n=>'<option value="'+n+'" '+(n===s.visibleTailWords?'selected':'')+'>'+n+'</option>').join('')+'</select></label></div><label><span class="field-label">Сюжетний набір</span><select class="field" name="questionSet" id="questionSet">'+opts([...view.questionSets,{id:'random',label:'Випадковий'},{id:'perSheetRandom',label:'Різний для кожної історії'},{id:'custom',label:'Свої питання'}],s.questionSet)+'</select></label><label class="'+(s.questionSet==='custom'?'':'hidden')+'" id="customField"><span class="field-label">Свої питання (по одному на рядок)</span><textarea class="field" name="customQuestions" rows="4">'+escape(s.customQuestions?.join('\n')||'')+'</textarea></label><label><span class="field-label">Жанр</span><select class="field" name="genre" id="genre">'+opts([...view.genres,{id:'random',label:'Випадковий'},{id:'perSheetRandom',label:'Різний для кожної історії'},{id:'custom',label:'Свій жанр'}],s.genre)+'</select></label><label class="'+(s.genre==='custom'?'':'hidden')+'" id="customGenreField"><span class="field-label">Свій жанр</span><input class="field" name="customGenre" maxlength="60" value="'+escape(s.customGenre||'')+'"></label><button class="button outline small" type="submit">Зберегти правила</button></form>'}
@@ -238,12 +262,13 @@ function writing(){const s=view.sheet;if(!s)return '<section class="paper waitin
  const hero=s.gender?GENDERS.find(([id])=>id===s.gender)?.[1]||'Неважливо':null;return '<div class="play"><section class="paper writing"><div class="progress"><span class="eyebrow">ІСТОРІЯ · АРКУШ</span><button type="button" class="leave mobile-leave" data-act="leave">Вийти</button><strong>'+String(view.round+1).padStart(2,'0')+' / '+view.total+'</strong></div><div class="mini" style="margin-top:12px">'+escape(s.setLabel)+' · '+escape(s.genreLabel)+'</div><h2 class="question">'+escape(s.question?.prompt||'Продовж історію')+'</h2><div class="incoming"><b>'+ (s.tail?'ВІД ПОПЕРЕДНЬОГО АВТОРА':'ПОЧАТОК ІСТОРІЇ')+'</b><p>'+escape(s.tail||'Ти пишеш першим. Нехай буде дивно.')+'</p>'+(hero?'<span class="mini">Головний герой: '+escape(hero)+'</span>':'')+'</div><details class="note"><summary>Підказка до питання</summary><p>'+escape(s.question?.guidance||'')+' '+escape(s.question?.creativeFreedom||'')+'</p></details><form id="answerForm" class="writer"><textarea id="answer" class="answer" maxlength="800" name="answer" placeholder="Продовж історію..." aria-label="Твій фрагмент">'+escape(loadDraft())+'</textarea>'+(view.round===0?'<div class="genders" role="group" aria-label="Стать героя">'+GENDERS.map(([id,label])=>'<label><input name="gender" type="radio" value="'+id+'" '+(read('gender','unspecified')===id?'checked':'')+'>'+label+'</label>').join('')+'</div>':'')+'<div class="word-head"><span>ВИБЕРИ СЛОВА ДЛЯ НАСТУПНОГО</span><span id="wordCount"></span></div><div id="wordTray" class="word-tray"></div><div class="submit-row"><button class="button" type="submit">Запечатати аркуш <span>↗</span></button><span id="chars" class="mini"></span></div></form></section><aside class="side"><div class="stamp">СЕКРЕТНО</div><h3>Наступний автор побачить лише вибрані слова</h3><p class="mini">Передай рівно '+view.settings.visibleTailWords+' слів. Слова можна вибрати в будь-якій частині тексту.</p><div id="sideRoster">'+rosterCompact()+'</div><button class="leave" data-act="leave">Вийти з партії</button></aside></div>'}
 function waiting(){return '<section class="paper waiting"><div class="eyebrow">АРКУШ ПЕРЕДАНО</div><div class="wax" aria-hidden="true">✓</div><h2>Запечатано</h2><p class="lead">Твоя частина прихована. Чекаємо решту авторів.</p><div class="roster" style="width:100%">'+roster()+'</div><button class="leave" data-act="leave">Залишити партію</button></section>'}
 function results(){if(!view.stories?.length)return waiting();let st=view.stories.find(s=>s.id===storyId)||view.stories[0];storyId=st.id;return '<div class="results"><nav class="chapters"><h3>Рукописи</h3>'+view.stories.map((s,i)=>'<button class="chapter '+(s.id===st.id?'active':'')+'" data-act="story" data-id="'+escape(s.id)+'"><small>ІСТОРІЯ '+String(i+1).padStart(2,'0')+'</small>'+escape(s.starter)+'</button>').join('')+'</nav><article class="paper story-paper"><div class="progress"><span class="eyebrow">ФІНАЛЬНЕ РОЗКРИТТЯ</span><span class="stamp">ГОТОВО</span></div><h2 style="margin-top:17px">Історія '+escape(st.starter)+'</h2><p class="mini">'+escape(st.setLabel)+' · '+escape(st.genre)+'</p><div class="content"><div class="story-text">'+escape(st.text)+'</div><details style="margin-top:12px"><summary style="cursor:pointer">Показати авторів фрагментів</summary>'+st.fragments.map((f,i)=>'<details class="fragment"><summary>№'+(i+1)+' · '+escape(f.author)+' · '+escape(f.question)+'</summary><p>'+escape(f.answer)+'</p></details>').join('')+'</details></div><div class="button-row"><button class="button outline small" data-act="copy-story">Копіювати текст</button><button class="button small" data-act="comic">Зробити комікс ↗</button></div>'+(view.host===me?'<button class="leave" data-act="again">Нова партія</button>':'<p class="mini">Ведучий може запустити нову партію.</p>')+'<button class="leave" data-act="leave">Вийти до меню</button></article></div>'}
-function overlay(){if(modal==='leave')return '<div class="comic-modal"><section class="comic-inner"><h3>Залишити партію?</h3><p class="mini">Якщо гра триває, для інших авторів партію буде скинуто.</p><div class="button-row"><button class="button outline" data-act="cancel">Залишитись</button><button class="button" data-act="confirm-leave">Вийти</button></div></section></div>';
+function overlay(){if(modal==='archive-delete')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Видалити видання"><section class="comic-inner"><div class="eyebrow">ПІДТВЕРДИТИ ВИДАЛЕННЯ</div><h3>Видалити це видання?</h3><p class="mini">Усі рукописи цього випуску буде видалено лише з цього пристрою. Дію не можна скасувати.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Залишити</button><button class="button" type="button" data-act="archive-confirm-delete">Видалити</button></div></section></div>';
+ if(modal==='leave')return '<div class="comic-modal"><section class="comic-inner"><h3>Залишити партію?</h3><p class="mini">Якщо гра триває, для інших авторів партію буде скинуто.</p><div class="button-row"><button class="button outline" data-act="cancel">Залишитись</button><button class="button" data-act="confirm-leave">Вийти</button></div></section></div>';
  if(modal==='comic')return '<div class="comic-modal"><section class="comic-inner"><div class="eyebrow">ДОДАТКОВИЙ ВИПУСК</div><h3>Комікс зібрано</h3><img alt="Автоматично зібрана ілюстрована сторінка" src="'+comicImage+'"><div class="button-row"><a class="button small" download="chyepukha-comic.png" href="'+comicImage+'">Зберегти PNG ↓</a><button class="button outline small" data-act="close-comic">Закрити</button></div></section></div>';
  return ''}
 function render(){netStatus();syncIdentityBar();$('sound').textContent='Звук: '+(sound?'увімк.':'вимк.');
  if(connecting&&!view){scene.innerHTML='<section class="paper waiting"><div class="eyebrow">POCKETNET</div><h2>З’єднуємо авторів…</h2><p class="mini">Відновлюємо захищену кімнату.</p><button class="button outline" type="button" data-act="cancel-connect">Скасувати підключення</button></section>';return}
- scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):home())+overlay();
+ scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+overlay();
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
 }
 function indices(){const w=words($('answer')?.value||'');return (draftSelections[draftKey()]||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<w.length)}
@@ -260,14 +285,24 @@ scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
 scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){saveDraft(e.target.value);refreshWords()}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
 scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
  if(act==='word'){const i=Number(b.dataset.index),ids=indices(),need=Math.min(view.settings.visibleTailWords,words($('answer')?.value).length),at=ids.indexOf(i);if(at>=0)ids.splice(at,1);else if(ids.length<need)ids.push(i);else{toast('Вже вибрано '+need+' слів.');return}draftSelections[draftKey()]=ids;refreshWords();tick(650);return}
- if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection();return}
+ if(act==='archive'){archiveOpen=true;archiveEditionId='';archiveStoryId='';render();return}
+  if(act==='archive-back'){archiveOpen=false;archiveEditionId='';archiveStoryId='';render();return}
+  if(act==='archive-edition'){archiveEditionId=b.dataset.id;archiveStoryId='';render();return}
+  if(act==='archive-story'){archiveStoryId=b.dataset.id;render();return}
+  if(act==='archive-copy'){const st=archiveSelection().story;if(st)copyText(storyText(st));return}
+  if(act==='archive-ask-delete'){archivePendingDelete=archiveSelection().edition?.id||'';modal='archive-delete';render();return}
+  if(act==='archive-confirm-delete'){
+   if(archivePendingDelete){try{const remaining=removeEdition(editions(),archivePendingDelete);if(IS_PREVIEW)previewEditions=remaining;else if(remaining.length){if(!writeEditions(localStorage,archiveKey(),remaining)){toast('Не вдалося видалити видання.');modal='';render();return}}else localStorage.removeItem(archiveKey());toast('Видання видалено.')}catch{toast('Не вдалося видалити видання.')}}
+   archivePendingDelete='';archiveEditionId='';archiveStoryId='';modal='';render();return
+  }
+  if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection();return}
  if(act==='resume'){connect('resume');return}if(act==='copy-code'){if(IS_PREVIEW){toast('Це демонстраційна кімната.');return}copyText(room.slice(0,8).toUpperCase());return}
  if(act==='copy-link'){if(IS_PREVIEW){toast('Тестове посилання не створюється.');return}copyText(location.origin+location.pathname+'?room='+room.slice(0,8));return}
  if(act==='start'||act==='again'){send({type:act});return}
  if(act==='leave'){modal='leave';render();return}if(act==='cancel'){modal='';render();return}if(act==='confirm-leave'){leaveNow();return}
  if(act==='story'){storyId=b.dataset.id;render();return}
  if(act==='copy-story'){const st=view.stories.find(x=>x.id===storyId);if(st)copyText(st.text);return}
- if(act==='comic'){const st=view.stories.find(x=>x.id===storyId);if(!st)return;try{b.disabled=true;b.textContent='Створюємо…';comicImage=makeComic(st).toDataURL('image/png');modal='comic';tick(800);render()}catch(error){toast('Не вдалося зібрати комікс: '+error.message);b.disabled=false}return}
+ if(act==='comic'||act==='archive-comic'){const st=act==='archive-comic'?archiveSelection().story:view.stories.find(x=>x.id===storyId);if(!st)return;try{b.disabled=true;b.textContent='Створюємо…';comicImage=makeComic(st).toDataURL('image/png');modal='comic';tick(800);render()}catch(error){toast('Не вдалося зібрати комікс: '+error.message);b.disabled=false}return}
  if(act==='close-comic'){modal='';comicImage='';render();return}
 });
 $('sound').addEventListener('click',()=>{sound=!sound;save('sound',sound?'on':'off');render();tick()});
@@ -285,6 +320,11 @@ if(IS_PREVIEW){
  const d=demoView(PREVIEW_ID);
  view=d.view;me=d.me;room=d.room;connected=d.connected;connecting=d.connecting;
  notice=d.notice;invitation=d.invitation;storyId=d.storyId;modal=d.modal;previewDraft=d.answer;
+  if(PREVIEW_ID==='archive'||PREVIEW_ID==='archive-empty'||PREVIEW_ID==='archive-delete'){
+   archiveOpen=true;view=null;const final=demoView('results');
+   previewEditions=PREVIEW_ID==='archive-empty'?[]:addFinishedEdition([],d.room,final.view,1760781600000);
+   if(PREVIEW_ID==='archive-delete')modal='archive-delete';
+  }
  if(PREVIEW_ID==='home-member'){pocketIdentity={id:'00000000-0000-4000-8000-000000000001',nickname:'Марта',avatar:'moss',complete:true};identityReady=true}
  else identityReady=true;
  if(view?.phase==='writing')draftSelections[draftKey()]=d.selection;
