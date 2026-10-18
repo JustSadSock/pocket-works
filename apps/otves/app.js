@@ -78,6 +78,7 @@ const audio = createAudioFeedback({ enabled: store.get('sound', true), volume: 0
 // Keep the original 2D canvas as the input surface and as a genuine fallback.
 // A separate WebGL canvas avoids the browser's irreversible canvas-context choice.
 let renderer;
+let fallbackRenderer = null;
 let spatialCanvas = null;
 try {
   const probe = document.createElement('canvas');
@@ -93,6 +94,16 @@ try {
   spatialCanvas?.remove();
 }
 if (!renderer) renderer = new MazeRenderer(elements.canvas);
+
+function activeRenderer() {
+  if (spatialCanvas && !renderer.isReady) {
+    if (!fallbackRenderer) fallbackRenderer = new MazeRenderer(elements.canvas);
+    spatialCanvas.style.display = 'none';
+    return fallbackRenderer;
+  }
+  if (spatialCanvas) spatialCanvas.style.display = 'block';
+  return renderer;
+}
 const marble = new MarblePhysics();
 const capabilities = getDeviceCapabilities();
 
@@ -425,7 +436,7 @@ const loop = createRafLoop((now, deltaMilliseconds) => {
     completion = clamp((now - completedAt) / 650, 0, 1);
   }
 
-  renderer.draw({ maze, marble, visualTilt, elapsed: now, mode: state, completion });
+  activeRenderer().draw({ maze, marble, visualTilt, elapsed: now, mode: state, completion });
   updateHud(now);
 });
 
@@ -477,10 +488,14 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('keyup', (event) => keyState.delete(event.code));
 window.addEventListener('blur', () => keyState.clear());
 
-window.addEventListener('resize', () => renderer.resize());
+window.addEventListener('resize', () => {
+  renderer.resize();
+  fallbackRenderer?.resize();
+});
 window.addEventListener('orientationchange', () => {
   window.setTimeout(() => {
     renderer.resize();
+    fallbackRenderer?.resize();
     if (sensorReceived) calibrate(false);
   }, 280);
 });
@@ -492,6 +507,7 @@ document.addEventListener('visibilitychange', () => {
 watchReducedMotion((value) => {
   reducedMotion = value;
   renderer.setReducedMotion(value);
+  fallbackRenderer?.setReducedMotion(value);
 });
 
 elements.continueButton.addEventListener('click', () => {
