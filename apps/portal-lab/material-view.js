@@ -86,7 +86,7 @@ export function createMaterialLab(options={}){
   ctx.fillStyle='#0c1c21';ctx.fillRect(0,0,w,h);
   const specimen=body,stat=specimenStats(specimen),region=stat.l>=0?'A':'B';
   const wide=w>540,pad=wide?34:17;
-  const top=34,stripY=Math.round(h*.23),bandY=Math.round(h*.51),chartY=Math.round(h*.69),chartH=h-chartY-42;
+  const top=25,stripY=Math.round(h*.235),bandY=Math.round(h*.50),chartY=Math.round(h*.74),chartH=h-chartY-42;
   const mapX=pad+6,mapW=w-pad*2-12;
   const xFor=val=>mapX+(4-clamp(val,-4,4))/8*mapW;
   // Measured spacetime atlas: same l coordinate as relativity.js.
@@ -106,12 +106,12 @@ export function createMaterialLab(options={}){
   txt(ctx,'l/a',pad,stripY+42,{size:10});
   txt(ctx,'0',xFor(0),stripY-42,{size:10,color:'#ffdfb6',align:'center'});
   // Rod schematic in its comoving Fermi frame — not an optical view.
-  txt(ctx,'ЛОКАЛЬНАЯ СИСТЕМА ФЕРМИ',pad,bandY-88,{size:wide?13:11,color:'#a2c7b7',weight:720});
+  txt(ctx,'ЛОКАЛЬНАЯ СИСТЕМА ФЕРМИ',pad,bandY-38,{size:wide?13:11,color:'#a2c7b7',weight:720});
   txt(ctx,state.axis==='radial'?'ОСЬ / РАДИАЛЬНО':'ОСЬ / ПОПЕРЕЧНО',w-pad,bandY-88,{size:10,color:'#96a8a0',align:'right'});
   const scope=Math.min(w*.68,540),unit=scope/(specimen.h*(specimen.nodes.length-1));
   const nodes=specimen.nodes,xpos=n=>clamp(w/2+n.x*unit,w*.04,w*.96);
   const col=MATERIALS[state.material].color;
-  const baseline=bandY-8;
+  const baseline=bandY+5;
   line(ctx,w/2-scope/2,baseline,w/2+scope/2,baseline,'#6c928653',1);
   for(let i=0;i<nodes.length-1;i++){
    const x=xpos(nodes[i]),x2=xpos(nodes[i+1]),link=specimen.links[i];
@@ -127,12 +127,12 @@ export function createMaterialLab(options={}){
    ctx.beginPath();ctx.arc(x,baseline,2.5,0,2*Math.PI);
    ctx.fillStyle=i===8?'#f7e8ba':col;ctx.fill();
   }
-  txt(ctx,'ИСХОДНАЯ ДЛИНА '+format(state.length,2)+' м',w/2,baseline+32,{size:wide?11:10,color:'#adc2af',align:'center'});
+  txt(ctx,'ИСХОДНАЯ ДЛИНА '+format(state.length,2)+' м',w/2,baseline+24,{size:wide?11:10,color:'#adc2af',align:'center'});
   const frame=tidalFrame(specimen.ray,specimen.m);
   const eigen=state.axis==='radial'?frame.radial:frame.transverse;
   const A=eigen*specimen.m.a**2;
-  txt(ctx,'ПРИЛИВНОЕ СОБСТВЕННОЕ ЧИСЛО',pad,bandY+57,{size:10,color:'#92b5a7'});
-  txt(ctx,(A>=0?'+':'')+format(A,4)+' / a²',pad,bandY+74,{size:wide?19:16,color:A>=0?'#dbbaa0':'#a3d3bc',weight:750});
+  txt(ctx,'ПРИЛИВНОЕ СОБСТВЕННОЕ ЧИСЛО',pad,bandY+46,{size:10,color:'#92b5a7'});
+  txt(ctx,(A>=0?'+':'')+format(A,4)+' / a²',pad,bandY+65,{size:wide?19:16,color:A>=0?'#dbbaa0':'#a3d3bc',weight:750});
   txt(ctx,'РАЗРЫВЫ '+stat.broken+'/'+stat.total,w-pad,bandY+74,{size:wide?18:14,color:stat.broken?'#efab88':'#9ed2bf',align:'right',weight:750});
   // Stress history: real Hookean stresses in Pa, not arbitrary normalized art.
   const plot={x:pad,y:chartY+30,w:w-pad*2,h:Math.max(20,chartH-14)};
@@ -163,7 +163,7 @@ export function createMaterialLab(options={}){
   txt(ctx,format(maxT,0)+' a/c',plot.x+plot.w,plot.y+plot.h+14,{size:10,color:'#8da898',align:'right'});
   if(phase==='completed'){
    const msg=stat.broken?'РАЗРУШЕН · '+stat.broken+' СВЯЗЕЙ':'ПРОХОД ЗАВЕРШЁН · СВЯЗИ ЦЕЛЫ';
-   const ww=Math.min(w-22,360),xx=(w-ww)/2,yy=bandY-48;
+   const ww=Math.min(w-22,360),xx=(w-ww)/2,yy=bandY-43;
    fillRound(ctx,xx,yy,ww,26,3,'#1a3131e8');
    txt(ctx,msg,w/2,yy+14,{size:wide?12:10,color:stat.broken?'#f0b297':'#b6e2c4',align:'center',weight:720});
   }
