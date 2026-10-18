@@ -39,7 +39,24 @@ try {
     assert(shape.width>=item.viewport.width*.7);
     assert(shape.mapHeight>200);
     assert(shape.autosave,'autosave missing');
+    await page.waitForTimeout(150);
     await page.screenshot({path:'/tmp/fog-port-shots/'+item.name+'.png',fullPage:true});
+    await page.locator('#endTurnBtn').click();
+    await page.locator('#yesBtn').click();
+    await page.waitForFunction(()=>window.state?.currentPlayer===2);
+    const turn=await page.evaluate(()=>({
+      side:window.state.currentPlayer,
+      scrollLeft:document.getElementById('battleViewport').scrollLeft,
+      saved:JSON.parse(localStorage.getItem('focSave_autosave')||'{}').state?.currentPlayer
+    }));
+    assert.equal(turn.side,2);
+    assert.equal(turn.saved,2,'second-turn autosave missing');
+    if(item.isMobile)assert(turn.scrollLeft>0,'mobile handoff must pan to opposing army');
+    await page.screenshot({path:'/tmp/fog-port-shots/'+item.name+'-turn2.png',fullPage:true});
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.locator('#loadBtn').click();
+    await page.locator('#loadList .loadBtn').first().click();
+    await page.waitForFunction(()=>window.state?.currentPlayer===2&&document.getElementById('startPanel').style.display==='none');
     assert.deepEqual(errors,[],'Browser errors: '+errors.join('; '));
     await context.close();
   }
