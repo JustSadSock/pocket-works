@@ -65,12 +65,27 @@ function originalGenerator(global){
       hp:global.UNIT_TYPES.archer.hpMax,
       mp:global.UNIT_TYPES.archer.move,startR:global.ROWS-3,startC:global.COLS-2});
     if(beta){
-      global.units.push({id:global.nextUnitId++,r:5,c:5,owner:1,type:'bog',
-        hp:global.UNIT_TYPES.bog.hpMax,
-        mp:global.UNIT_TYPES.bog.move,startR:5,startC:5});
-      global.units.push({id:global.nextUnitId++,r:global.ROWS-6,c:global.COLS-6,
-        owner:2,type:'bog',hp:global.UNIT_TYPES.bog.hpMax,
-        mp:global.UNIT_TYPES.bog.move,startR:global.ROWS-6,startC:global.COLS-6});
+      // Preserve the original fixed positions where safe, otherwise choose
+      // a free tile near each side's stronghold (tiny is only 5x8).
+      const placeBog=(owner,r0,c0)=>{
+        const base=global.buildings.find(b=>b.owner===owner&&b.type==='base');
+        const cells=[{r:r0,c:c0}];
+        for(let r=0;r<global.ROWS;r++)for(let c=0;c<global.COLS;c++)cells.push({r,c});
+        cells.sort((a,b)=>{
+          const score=o=>o.r===r0&&o.c===c0?-1000:Math.abs(o.r-base.r)+Math.abs(o.c-base.c);
+          return score(a)-score(b);
+        });
+        const cell=cells.find(({r,c})=>r>=0&&r<global.ROWS&&c>=0&&c<global.COLS&&
+          global.map[r][c]!==global.TERRAIN.MOUNTAIN&&
+          !global.units.some(u=>u.r===r&&u.c===c)&&
+          !global.buildings.some(b=>b.r===r&&b.c===c));
+        if(!cell)return;
+        global.units.push({id:global.nextUnitId++,r:cell.r,c:cell.c,owner,type:'bog',
+          hp:global.UNIT_TYPES.bog.hpMax,mp:global.UNIT_TYPES.bog.move,
+          startR:cell.r,startC:cell.c});
+      };
+      placeBog(1,5,5);
+      placeBog(2,global.ROWS-6,global.COLS-6);
     }
   }
 
