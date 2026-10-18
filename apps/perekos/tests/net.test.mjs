@@ -48,7 +48,7 @@ test('valid inputs move real server fighter; client cannot choose physics or win
 test('two server-side rune offers stay secret across room joined and state event',()=>{
  const old=Date.now;let time=2_000_000;Date.now=()=>time;
  try{
-  const s=match();s.match.remaining=.01;time+=80;
+  const s=match();s.match.remaining=.01;s.match.overtime=1;s.match.actors[0].hp=50;time+=80;
   send(s,p,'input',input(0,1));
   assert.equal(s.phase,'draft');assert.equal(s.offers[0].length,3);assert.equal(s.offers[1].length,3);
   assert.deepEqual(s.match.pick,[]);
