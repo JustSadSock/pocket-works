@@ -11,7 +11,8 @@
         "tests/dev-gallery.test.mjs",
         "tests/engine.test.mjs",
         "tests/planning.test.mjs",
-        "tests/reliability.test.mjs"
+        "tests/reliability.test.mjs",
+        "tests/replay-archive.test.mjs"
       ]
     },
     {
@@ -65,6 +66,14 @@
       "tier": "smoke",
       "files": [
         "qa/planning.spec.js"
+      ]
+    },
+    {
+      "id": "archive-journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/archive.spec.js"
       ]
     }
   ]
