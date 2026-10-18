@@ -95,7 +95,7 @@
     }
     runReplayStep = function(){
       if(replayPaused || replayIndex >= replayEvents.length - 1){
-        if(videoRecorder && videoRecorder.state !== 'inactive') videoRecorder.stop();
+        stopRecording();
         return;
       }
       replayIndex++;
@@ -112,34 +112,82 @@
     runReplayStep();
   }
 
+  // Explicit recording UX; unsupported browsers get a useful explanation.
+  function recordNotice(text,error=false){
+    let status=document.getElementById('fogRecordStatus');
+    if(!status){
+      status=document.createElement('span');status.id='fogRecordStatus';
+      status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+      saveReplayBtn?.insertAdjacentElement('afterend',status);
+    }
+    status.textContent=text;
+    status.dataset.error=error?'true':'false';
+  }
+  function stopRecording(){
+    if(videoRecorder&&videoRecorder.state!=='inactive'){
+      try{videoRecorder.stop();}catch(error){recordNotice('Не удалось остановить запись.',true);}
+      return true;
+    }
+    return false;
+  }
   function recordReplayVideo(){
-    if(videoRecorder && videoRecorder.state !== 'inactive'){
-      videoRecorder.stop();
+    if(stopRecording())return;
+    if(!replayEvents?.length||!canvas){
+      recordNotice('Нет записанного повтора.',true);return;
+    }
+    if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined'){
+      recordNotice('Запись видео не поддерживается этим браузером. Используй интерактивный повтор.',true);
       return;
     }
-    const stream = canvas.captureStream();
-    recordedChunks = [];
+    const types=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    const type=types.find(t=>typeof MediaRecorder.isTypeSupported==='function'
+      ?MediaRecorder.isTypeSupported(t):t==='video/webm');
+    if(!type){
+      recordNotice('Нет поддерживаемого формата WebM для записи.',true);return;
+    }
+    let stream,recorder;
     try{
-      videoRecorder = new MediaRecorder(stream);
-    }catch(e){
-      return;
+      stream=canvas.captureStream(30);
+      recorder=new MediaRecorder(stream,{mimeType:type});
+    }catch(error){
+      stream?.getTracks?.().forEach(track=>track.stop());
+      recordNotice('Браузер не разрешил захват игрового поля.',true);return;
     }
-    videoRecorder.ondataavailable = e => {
-      if(e.data && e.data.size) recordedChunks.push(e.data);
+    videoRecorder=recorder;window.videoRecorder=recorder;
+    recordedChunks=[];window.recordedChunks=recordedChunks;
+    const release=()=>{
+      stream.getTracks().forEach(track=>track.stop());
+      if(saveReplayBtn)saveReplayBtn.textContent=saveReplayBtn.dataset.originalText||'Save video';
     };
-  videoRecorder.onstop = () => {
-      const blob = new Blob(recordedChunks, {type:'video/webm'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'replay.webm';
-      a.click();
+    recorder.ondataavailable=e=>{if(e.data&&e.data.size)recordedChunks.push(e.data);};
+    recorder.onerror=()=>{
+      release();recordNotice('Запись была прервана браузером.',true);
     };
-  videoRecorder.start();
-    replayPaused = false;
-    replaySpeed = 1;
+    recorder.onstop=()=>{
+      release();
+      if(!recordedChunks.length){
+        recordNotice('Видео пустое. Повтори запись после начала воспроизведения.',true);return;
+      }
+      const blob=new Blob(recordedChunks,{type:recorder.mimeType||'video/webm'});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');link.href=url;link.download='fog-of-conquest-replay.webm';
+      document.body.append(link);link.click();link.remove();
+      recordNotice('Повтор сохранён.');
+      // Deferred revocation leaves the download time to initialize on mobile.
+      setTimeout(()=>URL.revokeObjectURL(url),30000);
+      recordedChunks=[];window.recordedChunks=recordedChunks;
+    };
+    try{recorder.start(250);}
+    catch(error){release();recordNotice('Не удалось начать запись.',true);return;}
+    if(saveReplayBtn){
+      saveReplayBtn.dataset.originalText=saveReplayBtn.dataset.originalText||saveReplayBtn.textContent;
+      saveReplayBtn.textContent='■ Стоп';
+    }
+    recordNotice('Идёт запись повтора…');
+    replayPaused=false;replaySpeed=1;
     speedBtns.forEach(b=>b.classList.remove('speed-selected'));
     const def=document.querySelector('.speedBtn[data-speed="1"]');
-    if(def) def.classList.add('speed-selected');
+    if(def)def.classList.add('speed-selected');
     updateReplayPauseBtn();
     seekReplay(0);
   }

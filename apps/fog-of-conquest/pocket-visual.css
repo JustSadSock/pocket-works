@@ -1,0 +1,24 @@
+#fogLandscapeActions{position:fixed;inset:0;pointer-events:none;z-index:52;overflow:hidden}
+.fog-action-mark{
+ position:fixed;transform:translate(-50%,-50%);width:24px;height:24px;
+ border-radius:50%;box-sizing:border-box;border:2px solid #d1b27a;
+ box-shadow:0 0 0 1px rgba(24,32,25,.62);
+ animation:fog-ground-burst .67s cubic-bezier(.1,.6,.25,1) both;
+}
+.fog-action-attack{border-color:#b45945;background:rgba(129,37,28,.19)}
+.fog-action-heal{border-color:#83b89b;background:rgba(54,106,74,.13)}
+.fog-action-capture{border-color:#dfc478;background:rgba(174,129,48,.18)}
+.fog-action-spawn{border-color:#e4d3a3}
+.fog-action-move{border-color:#c7c2a6}
+.fog-action-amount{
+ position:absolute;left:50%;top:-18px;transform:translateX(-50%);
+ font:700 16px/1 system-ui;white-space:nowrap;
+ text-shadow:0 1px 3px #1118;color:#f3dfc7
+}
+.fog-action-heal .fog-action-amount{color:#bbf1c5}
+@keyframes fog-ground-burst{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}
+ 22%{opacity:.95}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(2.9)}
+}
+@media(prefers-reduced-motion:reduce){.fog-action-mark{animation:none!important;opacity:0}}
