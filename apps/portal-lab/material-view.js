@@ -76,7 +76,7 @@ export function createMaterialLab(options={}){
   const n=Math.min(dt,.05)*Math.min(timeScale,5)*2.5;
   const stats=stepSpecimen(body,n);
   if(body.breakCount>reportedBreaks){
-   reportedBreaks=body.breakCount;onAction('mount');
+   reportedBreaks=body.breakCount;onAction('fracture');
   }
   if(body.phase==='completed'){phase='completed';onAction('mount');save();}
   dirty=true;update();
