@@ -156,7 +156,7 @@ function interact(){
 function torchToggle(){if(phase!=='play')return;torch=!torch;$('torch').textContent='Свет: '+(torch?'вкл':'выкл');audio.event('torch')}
 function reload(){
  if(phase!=='play'||reloadAt||ammo===6||reserve===0)return;
- reloadAt=elapsed+1.55;reloadTime=1.55;audio.event('reload');notify('Перезаряжаю...',1.2)
+ reloadAt=1;reloadTime=1.55;audio.event('reload');notify('Перезаряжаю...',1.2)
 }
 function shoot(){
  if(phase!=='play'||reloadAt)return;
@@ -184,11 +184,17 @@ function spawnEnemy(){
  enemies.push({...pos,kind,hp:kind==='coat'?1:kind==='crawler'?2:2+Math.floor(world.depth/6),age:0,hit:0,speed:kind==='crawler'?.88:kind==='coat'?.43:.53+Math.min(.26,world.depth*.009),attackAt:elapsed+1});
  audio.event('sighting')
 }
-function simulation(dt){
+function simulation(dt,wallDt=dt){
  elapsed+=dt;
  world.animateDoors(dt,[player,...enemies]);
- if(reloadAt&&elapsed>=reloadAt){const n=Math.min(6-ammo,reserve);ammo+=n;reserve-=n;reloadAt=0;reloadTime=0}
- else if(reloadAt)reloadTime=reloadAt-elapsed;
+ // Reloading follows real active play time even when WebGL is slow. Keep
+ // camera movement/physics bounded independently of the gun clock.
+ if(reloadAt){
+  reloadTime=Math.max(0,reloadTime-wallDt);
+  if(reloadTime<=0){
+   const n=Math.min(6-ammo,reserve);ammo+=n;reserve-=n;reloadAt=0;reloadTime=0
+  }
+ }
  shotTime=Math.max(0,shotTime-dt);
  const controls=keyboard.intent;
  if(controls.turn)applyLook(controls.turn*dt*2.1,0,1);
@@ -262,8 +268,8 @@ function showHud(){
  $('torch').textContent='Свет: '+(torch?'вкл':'выкл')
 }
 function draw(time){
- let dt=clamp((time-lastFrame)/1000,0,.10);lastFrame=time;
- if(phase==='play'&&!qaVisualMode)simulation(dt);
+ const wallDt=clamp((time-lastFrame)/1000,0,5),dt=Math.min(wallDt,.10);lastFrame=time;
+ if(phase==='play'&&!qaVisualMode)simulation(dt,wallDt);
  if(world&&renderer&&!renderer.lost){
   const drops=world.nearby(player.x,player.z,17).flatMap(c=>c.drops).filter(p=>!world.taken.has(p.id)&&Math.hypot(p.x-player.x,p.z-player.z)<17);
   renderer.draw(world,player,enemies,drops,torch,elapsed,stress/maxStress(),shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)
@@ -272,7 +278,7 @@ function draw(time){
  window.__PW_TEST_STATE__={phase,seed:world?.seed,position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,
   health:maxStress()-stress,ammo,reserve,elapsed,rearrangements:world?.changes||0,depth:world?.depth,visited:world?.visited.size,
   kills,collected,upgrades:{...upgrades},enemies:enemies.length,attempts,moves,blocked,renderer3D:!!renderer&&!renderer.lost,
-  sovietInterior:true,endless:true,variant:world?.fingerprint(),fpsFrameTime:dt,
+  sovietInterior:true,endless:true,variant:world?.fingerprint(),fpsFrameTime:wallDt,simulationFrameTime:dt,
   doors:world?.doorStates?.size||0,
   geometry:renderer?.visualMetrics?{...renderer.visualMetrics}:null};
  requestAnimationFrame(draw)
