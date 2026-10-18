@@ -32,7 +32,7 @@
 <div class="section-caption"><span>01 — ГЕОМЕТРИЯ</span><span>g<sub>μν</sub></span></div>
 <label class="field"><span>Пространственная модель</span><select id="model"><option value="ellis">Эллис · точная метрика</option><option value="redshift">С красным смещением · анзац</option></select></label>
 <div class="formula" id="formula">ds² = −dt² + dl² + (l²+a²)dφ²</div>
-<label class="range-field"><span>Радиус горловины <output id="radius-value">1.00</output> <small>a</small></span><input type="range" id="radius" min=".5" max="3" value="1" step=".05"></label>
+<label class="range-field"><span>Радиус горловины a <output id="radius-value">1.00</output> <small>ед.</small></span><input type="range" id="radius" min=".5" max="3" value="1" step=".05"></label>
 <label class="range-field" id="redshift-group"><span>Глубина потенциала <output id="eta-value">0.45</output> <small>η</small></span><input type="range" id="eta" min="0" max=".85" value=".45" step=".01" disabled></label>
 <div class="section-caption second"><span>02 — ЗОНДИРОВАНИЕ</span><span>p<sub>μ</sub></span></div>
 <div class="mode-switch" role="group" aria-label="Тип пробного объекта"><button type="button" data-kind="light" class="selected" aria-pressed="true">Фотоны</button><button type="button" data-kind="matter" aria-pressed="false">Частицы</button></div>
@@ -42,8 +42,8 @@
 <label class="range-field" id="speed-group"><span>Начальная скорость <output id="speed-value">0.70</output> <small>c</small></span><input type="range" id="speed" min=".05" max=".95" step=".05" value=".7" disabled></label>
 <div class="section-caption second"><span>03 — ИЗМЕРЕНИЯ</span><span>∂g</span></div>
 <div class="readouts">
-<div><span>КРИВИЗНА В ГОРЛОВИНЕ</span><b id="curvature">−1.000</b><small> K · 1/a²</small></div>
-<div><span>УСКОРЕНИЕ ПОКОЯЩЕГОСЯ ЗОНДА</span><b id="acceleration">0.000</b><small> c²/a · при l=a</small></div>
+<div><span>КРИВИЗНА В ГОРЛОВИНЕ</span><b id="curvature">−1.000</b><small> K [ед. 1/a²]</small></div>
+<div><span>УСКОРЕНИЕ СВОБОДНОГО ПАДЕНИЯ</span><b id="acceleration">0.000</b><small> c²/a · при l=a</small></div>
 <div><span>ПРОХОДОВ ЧЕРЕЗ ГОРЛОВИНУ</span><b id="crossings">0</b><small> за сеанс</small></div>
 <div><span>ПОГРЕШНОСТЬ НОРМИРОВКИ</span><b id="precision">0.0</b><small> max |g(u,u)+κ|</small></div>
 <div><span>ПАРАМЕТР ПОПАДАНИЯ · СВЕТ</span><b id="impact">—</b><small> b = |L/E|</small></div>
