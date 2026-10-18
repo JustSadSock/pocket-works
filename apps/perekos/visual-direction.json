@@ -28,6 +28,11 @@
         "interactionDifference": "Perekos demands two-thumb movement and casting with between-round rune selection instead of room exploration, discovery and first-person gun interaction."
       },
       {
+        "slug": "fog-of-conquest",
+        "spatialDifference": "Fog of Conquest frames a discoverable strategic map with units, structures, economy and terrain information, whereas Perekos keeps two large readable pixellated fighter silhouettes directly on an uninterrupted portrait arena with hand-sized tactical thumb controls.",
+        "interactionDifference": "Simultaneous thumb movement and spell casting plus a short between-round build queue differs from Fog of Conquest's deliberate turn-based unit selection, resource use, fog of war and map-scale orders."
+      },
+      {
         "slug": "meat-exe",
         "spatialDifference": "MEAT.EXE is a full-screen first-person flesh labyrinth, whereas this title places tiny top-down characters and handmade masonry under a visible light-colored rune sheet.",
         "interactionDifference": "Holding projectile fire and selecting permanent between-round upgrades replaces first-person weapon aiming, pickups and navigating a procedural maze."

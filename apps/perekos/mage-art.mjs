@@ -5,7 +5,7 @@ import {DEFAULT_APPEARANCE,cosmeticFeatures} from './avatar-profile.mjs';
 
 export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[]}={}){
  if(!ctx)return;
- const p=enemy?{...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}:(look||DEFAULT_APPEARANCE);
+ const p=enemy&&(!look||look.source==='guest')?{...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}:(look||DEFAULT_APPEARANCE);
  const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes);
  const px=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))};
  const arc=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
@@ -64,7 +64,7 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  }
  if(maskot?.hat==='brush'){px(10,-36,3,18,'#bb8c62');px(9,-40,5,6,'#334f62')}
  if(maskot?.hat==='veil'){px(-13,-27,4,33,'#e9d5d9');px(10,-27,4,33,'#e9d5d9')}
- if(p.source==='preset'&&!enemy){
+ if(p.source==='preset'){
   // The eight standard Pocket ID presets get different badges.
   const motifs={sun:'sun',wave:'wave',ember:'ember',moss:'moss',ink:'ink',plum:'plum',stone:'stone',clay:'clay'};
   switch(motifs[p.preset]){
@@ -78,7 +78,7 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
    default:px(3,-25,4,3,trim);
   }
  }
- if(p.source==='drawing'&&p.artCanvas&&!enemy){
+ if(p.source==='drawing'&&p.artCanvas){
   // The owner's ACTUAL drawn image survives as a legible pixel cameo on the
   // coat, not an arbitrary color-only recolor. The full drawing is in HUD.
   ctx.save();ctx.imageSmoothingEnabled=false;px(-8,-1,16,14,'#1b3631');
@@ -99,6 +99,7 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  if(features.spark){px(-15,-35,3,3,'#fbdc99');px(14,-32,3,3,'#fbdc99')}
  if(features.haste){px(-12,11,6,2,'#e0c599');px(8,11,7,2,'#e0c599')}
  if(shield>0){ctx.strokeStyle='#b6d9b4bb';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(0,-7,27,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);px(-20,-17,3,6,'#f7e3b0');px(20,0,3,6,'#f7e3b0')}
+ if(enemy){px(-11,17,22,3,'#a84b42');px(-8,20,16,2,'#e4a28a')}
  if(flash>0){ctx.globalAlpha=.38;px(-16,-35,32,53,'#fff2bf')}
  ctx.restore();
 }

@@ -26,8 +26,29 @@
 <div class="menu-top"><a href="../../" data-app-control>← В PocketWorks</a><button id="menu-audio" type="button" data-native-press>Звук: вкл.</button></div>
 <div class="menu-composition"><canvas id="hero-preview" width="128" height="156" aria-label="Ваш маг в пиксельном мире"></canvas>
 <h1>ПЕРЕКОС</h1><p>Маги. Руны. Очень плохие идеи.</p>
-<div class="play-block"><button id="primary-action" class="big-button" type="button" data-native-press>Начать дуэль <span>↗</span></button><button id="continue" type="button" hidden data-native-press>Продолжить матч</button><button id="open-grimoire" type="button" data-native-press>Мои сборки</button><small>7 раундов максимум · соперник управляется ИИ</small></div>
-</div><div class="menu-bottom"><span>v0.3 · МОЙ МАГ</span><a class="identity-card" id="profile-link" href="../../?pocket-id=profile" data-app-control><canvas id="menu-portrait" width="42" height="42" aria-hidden="true"></canvas><span><strong id="identity">Гостевой маг</strong><small id="identity-kind">Открой профиль PocketWorks</small></span><span aria-hidden="true">↗</span></a></div></section>
+<div class="play-block"><button id="primary-action" class="big-button" type="button" data-native-press>Начать дуэль <span>↗</span></button><button id="continue" type="button" hidden data-native-press>Продолжить матч</button><button id="online-open" class="online-button" type="button" data-native-press>Дуэль с другом <span>↗</span></button><button id="open-grimoire" type="button" data-native-press>Мои сборки</button><small>7 раундов максимум · соперник управляется ИИ</small></div>
+</div><div class="menu-bottom"><span>v0.4 · ДУЭЛИ</span><a class="identity-card" id="profile-link" href="../../?pocket-id=profile" data-app-control><canvas id="menu-portrait" width="42" height="42" aria-hidden="true"></canvas><span><strong id="identity">Гостевой маг</strong><small id="identity-kind">Открой профиль PocketWorks</small></span><span aria-hidden="true">↗</span></a></div></section>
+<section id="online-lobby" class="scene-panel online-lobby" hidden data-ui>
+<div class="sheet net-sheet">
+<div class="sheet-kicker"><span>POCKETNET / ДУЭЛЬ</span><span id="net-signal" role="status">НЕ В СЕТИ</span></div>
+<h2 id="net-title">Играть вдвоём</h2>
+<p id="net-help">Один создаёт комнату, другой вводит код. У каждого свой маг.</p>
+<div id="net-choice" class="net-choice">
+<button id="net-create" class="big-button" type="button" data-native-press>Создать комнату <span>↗</span></button>
+<label for="net-code">Код друга</label>
+<div class="net-code-row"><input id="net-code" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder="8 символов" maxlength="40" data-selectable><button id="net-join" type="button" data-native-press>Войти</button></div>
+<button id="net-resume" type="button" hidden data-native-press>Вернуться в комнату</button>
+</div>
+<div id="net-room-info" hidden>
+<div class="net-invite"><small>КОД КОМНАТЫ</small><button id="net-copy-code" type="button" data-native-press>--------</button><button id="net-copy-link" type="button" data-native-press>Скопировать приглашение</button></div>
+<div id="net-players" class="net-players"></div>
+<button id="net-start" type="button" class="big-button" data-native-press hidden>Начать дуэль <span>↗</span></button>
+</div>
+<p id="net-feedback" class="net-feedback" role="status" aria-live="polite">Создай комнату или введи код.</p>
+<button id="net-back" type="button" data-native-press>← Назад</button>
+</div></section>
+<section id="net-wait" class="scene-panel net-wait" hidden data-ui>
+<div class="sheet"><div class="sheet-kicker">НАСТРОЙКА МАГИИ</div><h2>Руна готова.</h2><p>Второй маг ещё собирает свои правила. Бой начнётся, когда оба будут готовы.</p><div class="net-wait-mark" aria-hidden="true">✷</div><button id="net-wait-leave" type="button" data-native-press>Выйти из комнаты</button></div></section>
 <section id="draft" class="scene-panel draft" hidden data-ui>
 <div class="sheet"><div class="sheet-kicker">ПОСЛЕ РАУНДА <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><p>Что поменяем в твоём маге?</p><div id="rune-cards" class="rune-cards"></div><div id="replace-zone" class="replace-zone" hidden><strong>Что заменить?</strong><div id="replace-list"></div><button id="replace-cancel" type="button">Другую руну</button></div><div class="loadout" id="loadout"></div></div>
 </section>
@@ -55,14 +76,14 @@
 <button id="book-delete-no" type="button" data-native-press>Отмена</button>
 </div></section>
 <section id="result" class="scene-panel result" hidden data-ui>
-<div class="sheet"><div class="sheet-kicker">МАТЧ ОКОНЧЕН</div><h2 id="result-title">Победа</h2><p id="result-copy"></p><div class="result-identity"><canvas id="result-portrait" width="56" height="56" aria-hidden="true"></canvas><div class="result-score" id="result-score"></div></div><button id="result-save" type="button" class="secondary-action" data-native-press>Сохранить сборку</button><button id="again" class="big-button" type="button" data-native-press>Ещё один матч <span>↗</span></button><a class="sub-link" href="../../" data-app-control>В PocketWorks</a></div>
+<div class="sheet"><div class="sheet-kicker">МАТЧ ОКОНЧЕН</div><h2 id="result-title">Победа</h2><p id="result-copy"></p><div class="result-identity"><canvas id="result-portrait" width="56" height="56" aria-hidden="true"></canvas><div class="result-score" id="result-score"></div></div><button id="result-save" type="button" class="secondary-action" data-native-press>Сохранить сборку</button><button id="net-result-leave" type="button" hidden data-native-press>Выйти из сетевой комнаты</button><button id="again" class="big-button" type="button" data-native-press>Ещё один матч <span>↗</span></button><a class="sub-link" href="../../" data-app-control>В PocketWorks</a></div>
 </section>
 <section id="pause" class="scene-panel pause" hidden data-ui>
-<div class="sheet"><div class="sheet-kicker">ПАУЗА</div><h2>Передышка</h2><button id="resume" class="big-button" type="button" data-native-press>Вернуться в бой <span>↗</span></button><button id="pause-audio" type="button" data-native-press>Звук: вкл.</button><button id="quit" type="button" data-native-press>Закончить матч</button><a class="sub-link" href="../../" data-app-control>Вернуться в PocketWorks</a></div>
+<div class="sheet"><div class="sheet-kicker">ПАУЗА</div><h2 id="pause-title">Передышка</h2><p id="pause-online-note" hidden>В сетевой дуэли бой не останавливается. Выход завершит матч для вас.</p><button id="resume" class="big-button" type="button" data-native-press>Вернуться в бой <span>↗</span></button><button id="pause-audio" type="button" data-native-press>Звук: вкл.</button><button id="quit" type="button" data-native-press>Закончить матч</button><a class="sub-link" href="../../" data-app-control>Вернуться в PocketWorks</a></div>
 </section>
-<section id="confirm" class="scene-panel confirm" hidden data-ui><div class="sheet"><h2>Закончить матч?</h2><p>Прогресс текущей серии будет потерян.</p><button id="quit-yes" type="button" class="big-button" data-native-press>Да, закончить</button><button id="quit-no" type="button" data-native-press>Отмена</button></div></section>
+<section id="confirm" class="scene-panel confirm" hidden data-ui><div class="sheet"><h2>Закончить матч?</h2><p id="quit-warning">Прогресс текущей серии будет потерян.</p><button id="quit-yes" type="button" class="big-button" data-native-press>Да, закончить</button><button id="quit-no" type="button" data-native-press>Отмена</button></div></section>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕКОС" data-app-version="0.3.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕКОС" data-app-version="0.4.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>

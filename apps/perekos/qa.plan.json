@@ -7,7 +7,8 @@
       "tier": "smoke",
       "files": [
         "tests/core.test.mjs",
-        "tests/avatar.test.mjs"
+        "tests/avatar.test.mjs",
+        "tests/net.test.mjs"
       ]
     },
     {
@@ -57,7 +58,8 @@
       "tier": "smoke",
       "files": [
         "qa/journey.spec.js",
-        "qa/avatar.spec.js"
+        "qa/avatar.spec.js",
+        "qa/net.spec.js"
       ]
     }
   ]
