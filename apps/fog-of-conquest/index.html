@@ -1,70 +1,231 @@
-<!doctype html>
-<html lang="ru"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#2d3730"><meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Туман завоеваний">
-<meta name="description" content="Тактическая пошаговая стратегия о разведке, снабжении и захвате крепостей.">
-<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./icons/icon.svg">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css">
-<link rel="stylesheet" href="./styles.css"><title>ТУМАН ЗАВОЕВАНИЙ</title></head>
-<body data-app-preset="game-2d"><main class="shell" data-app-shell data-fullscreen-app>
-<header class="header" data-ui><a class="return" href="../../" data-app-control>← Pocket Works</a>
-<div class="wordmark"><span class="wordmark-emblem">✣</span> ТУМАН ЗАВОЕВАНИЙ</div>
-<button data-native-press class="subtle" id="menuBtn" type="button" aria-label="Открыть меню">☰</button></header>
-<div class="campaign" id="campaign">
-<div class="ribbon" data-ui><span id="season">ХОД 1 · СЕВЕР</span><span id="status">Золото 7 · Доход +4</span></div>
-<div class="field" id="field" data-gesture-surface data-block-callout>
-<canvas id="map" aria-label="Карта сражения. Выберите свой отряд, затем цель." tabindex="0"></canvas>
-<div class="zoom" data-ui><button id="zoomIn" aria-label="Приблизить карту">+</button><button id="zoomOut" aria-label="Отдалить карту">−</button><button id="focus" aria-label="К своей цитадели">◎</button></div>
-<div class="field-message" id="toast" role="status" aria-live="polite"></div>
-<div class="side-badge" id="sideBadge">СЕВЕР</div>
-</div>
-<section class="orders" id="orders" data-ui><div class="unit-summary"><div class="unit-seal" id="unitIcon">✣</div>
-<div class="unit-copy"><strong id="unitTitle">Выберите отряд</strong><small id="unitHint">Коснитесь своего знамени на карте</small></div>
-<button class="clear" id="clear" title="Снять выделение" aria-label="Снять выделение">×</button></div>
-<div class="actions" id="actions"><div class="starter-tip">Разведайте местность, займите мельницы и осадите цитадель соперника.</div></div>
-<div class="bottomline"><div id="log" class="last-event">Поле ждёт первого приказа.</div><button data-native-press id="endTurn" class="end-turn">ЗАВЕРШИТЬ ХОД <span>→</span></button></div></section>
-</div>
-<section class="veil" id="start"><div class="start-panel">
-<div class="cover-art" aria-hidden="true"><svg viewBox="0 0 360 190"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#aab7a3"/><stop offset="1" stop-color="#e4d6b4"/></linearGradient></defs>
-<rect width="360" height="190" fill="url(#sky)"/><circle cx="275" cy="53" r="30" fill="#e7c07d"/>
-<path d="M0 106 Q85 44 170 109 T360 102 V190H0" fill="#879a7e"/><path d="M0 138Q95 88 175 139T360 128V190H0" fill="#5f7768"/>
-<path d="M0 170 Q100 120 176 169T360 150V190H0" fill="#3c584e"/><path d="M95 137V67L132 51L165 68V137Z" fill="#c3b28c" stroke="#465047" stroke-width="4"/>
-<path d="M90 72 130 44 170 72Z" fill="#6b5a4b"/><path d="M117 136V100Q130 82 143 100V136" fill="#38463c"/>
-<path d="M130 83V34M130 35 179 44 161 70 130 62" fill="#a34c40" stroke="#513c35" stroke-width="2"/>
-<path d="M207 165V83M208 84l34 10-14 26-20-9" fill="#b5a263" stroke="#333d35" stroke-width="3"/>
-<path d="M0 135 Q95 95 180 130T360 124" fill="none" stroke="#e7dfc2" stroke-width="12" opacity=".22"/>
-<path d="M0 9Q45 25 89 7T180 14 270 8 360 13" stroke="#fff" stroke-width="19" opacity=".16" fill="none"/></svg></div>
-<div class="title-kicker">ПЕРЕОСМЫСЛЕНИЕ FOG OF CONQUEST</div>
-<h1>Туман<br><i>завоеваний</i></h1>
-<p>Война видна лишь до горизонта. Всё остальное приходится завоёвывать.</p>
-<div class="start-controls"><label>КАРТА <select id="size"><option value="compact">Малая · 12×16</option><option value="standard" selected>Средняя · 16×22</option><option value="expanse">Большая · 20×28</option></select></label>
-<label>ПРОТИВНИК <select id="difficulty"><option value="1">I · Новобранец</option><option value="2">II · Ополчение</option><option value="3" selected>III · Командир</option><option value="4">IV · Стратег</option><option value="5">V · Полководец</option><option value="6">VI · Кошмар</option></select></label></div>
-<button data-native-press class="primary" id="newGame">НАЧАТЬ ПОХОД <span>→</span></button>
-<div class="secondary-grid"><button data-native-press id="continueGame" disabled>Продолжить</button><button data-native-press id="onlineBtn">Партия с другом</button></div>
-<a class="exit" href="../../" data-app-control>← Вернуться в Pocket Works</a>
-</div></section>
-<section class="modal" id="online" hidden><div class="dialog"><h2>Поле для двоих</h2><p>Ходы сохраняются на сервере. Дождитесь соперника или вернитесь к партии позднее.</p>
-<label class="field-label">ВАШЕ ИМЯ<input id="nickname" maxlength="24" value="Полководец" autocomplete="nickname"></label>
-<div class="online-pair"><button id="createRoom" class="primary">Создать комнату</button><span>или</span>
-<input id="roomCode" placeholder="Код комнаты" maxlength="40" aria-label="Код комнаты"><button id="joinRoom">Войти</button></div>
-<div id="roomDetails" hidden><div class="room-code" id="roomText">—</div>
-<div class="room-actions"><button id="copyRoom">Копировать приглашение</button><button id="startRoom" class="primary" hidden>Начать дуэль</button></div></div>
-<div id="netStatus" class="net-status" role="status">Выберите действие.</div>
-<button class="text-button" id="onlineClose">Закрыть · слот в партии сохранится</button>
-</div></section>
-<section class="modal" id="menu" hidden><div class="dialog"><h2>Военный совет</h2><p id="menuNote">Партия автоматически сохраняется после каждого приказа.</p>
-<button id="resume" class="primary">Вернуться на поле</button>
-<button id="sound">Звук: включён</button>
-<button id="save">Сохранить сейчас</button>
-<button id="newConfirm">Новый поход</button>
-<a class="exit" href="../../" data-app-control>← Вернуться в Pocket Works</a></div></section>
-<section class="modal" id="confirm" hidden><div class="dialog"><h2>Начать сначала?</h2><p>Текущая одиночная партия будет заменена новой.</p>
-<button id="confirmYes" class="primary">Новый поход</button><button id="confirmNo">Отмена</button></div></section>
-<section class="modal" id="finish" hidden><div class="dialog"><div class="final-emblem">✣</div><h2 id="finishTitle">Исход войны</h2><p id="finishText"></p>
-<button id="finishNew" class="primary">Новый поход</button><a class="exit" href="../../" data-app-control>← Вернуться в Pocket Works</a></div></section>
-</main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Туман завоеваний" data-app-version="1.0.0"></script>
-<script type="module" src="./app.js"></script>
-</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#000000"/>
+  <title>Fog of Conquest</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=MedievalSharp&family=Ruslan+Display&family=Lora&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+<link rel="stylesheet" href="./pocket-adapter.css"/>
+  <link rel="icon" type="image/png" href="assets/icon.png" sizes="512x512"/>
+  <link rel="apple-touch-icon" href="assets/icon.png" sizes="512x512"/>
+  <link rel="manifest" href="./manifest.webmanifest"/>
+</head>
+<body>
+  <!-- Background music removed -->
+  <audio id="attackSfx" src="https://samplelib.com/lib/preview/mp3/sample-3s.mp3" data-type="sfx"></audio>
+  <audio id="healSfx" src="https://samplelib.com/lib/preview/mp3/sample-6s.mp3" data-type="sfx"></audio>
+  <audio id="captureSfx" src="https://samplelib.com/lib/preview/mp3/sample-9s.mp3" data-type="sfx"></audio>
+  <audio id="uiClickSfx" src="https://samplelib.com/lib/preview/mp3/sample-12s.mp3" data-type="sfx"></audio>
+  <audio id="uiHoverSfx" src="https://samplelib.com/lib/preview/mp3/sample-15s.mp3" data-type="sfx"></audio>
+  <div id="startPanel"><a class="pocket-back menu-back" href="../../">← Pocket Works</a>
+    <div id="startHeader">
+      <h1 data-i18n="title">Fog of Conquest</h1>
+      <button id="startSettingsBtn" class="game-btn" title="Settings" data-i18n-title="startSettings">⚙</button>
+    </div>
+    <div id="summary" data-i18n="summary">
+      Turn-based strategy. Capture or destroy all enemy bases.<br><br>
+      <em>Units:</em><br>
+      • Swordsman — move 2, attack 2, defense 1, range 1, 5 HP, 3 gold.<br>
+      • Archer — move 2, attack 3, defense 0, range 2, 4 HP, 4 gold.<br>
+      • Heavy — move 1, attack 3, defense 2, range 1, 6 HP, 5 gold.<br>
+      • Rider — move 3, attack 3, defense 1, range 1, 5 HP, 7 gold.<br>
+      • Mage — move 2, attack 0, defense 0, range 1, 4 HP, 7 gold; heals adjacent allies.<br>
+      • Bog (beta) has unique abilities.<br><br>
+      <em>Buildings:</em><br>
+      • Base trains basic troops.<br>
+      • Barracks, stable and mage tower unlock new units.<br>
+      • Mills bring gold each turn.<br>
+      • Fort grants defense bonus.<br><br>
+      <em>Terrain:</em><br>
+      Forest and hills give defense, water slows, mountains impassable.<br><br>
+      <em>Gameplay:</em><br>
+      • Capture buildings to get gold and recruit units.<br>
+      • Income from resources each turn.<br>
+      • Move units and attack, then press End turn.<br>
+      • Fog of war hides unexplored areas.<br>
+      Win by destroying all enemy bases and troops.<br><br>
+      <em>Controls:</em><br>
+      • Left click to select units and cells.<br>
+      • Right click to cancel selection.<br>
+      • ℹ️ shows the legend; "Show map" is only available in beta.
+      </div>
+    <div id="startButtons">
+      <button id="loadBtn" class="game-btn" data-i18n="loadBtn">Load game</button>
+      <button id="newGameBtn" class="game-btn" data-i18n="newGame">Start new game</button>
+      <div id="newGameOptions" style="display:none; flex-direction:column; align-items:center;">
+        <div id="setupOpts">
+          <label for="mapSizeSelect" data-i18n="mapSizeLabel">Map size:</label>
+          <select id="mapSizeSelect">
+            <option value="tiny" data-i18n="mapSizeTiny">Tiny</option>
+            <option value="small" data-i18n="mapSizeSmall">Small</option>
+            <option value="medium" selected data-i18n="mapSizeMedium">Medium</option>
+            <option value="large" data-i18n="mapSizeLarge">Large</option>
+          </select>
+        </div>
+        <button id="twoBtn" class="game-btn" data-i18n="startTwo">Start game</button>
+        <button id="aiBtn" class="game-btn" data-i18n="startAi">Single player</button>
+        <button id="onlineBtn" class="game-btn" data-i18n="startOnline">Online</button>
+        <button id="tutorialBtn" class="game-btn" data-i18n="tutorialBtn">Tutorial</button>
+        <button id="betaBtn" class="game-btn" data-i18n="startBeta">Extended mode (beta)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="aiPanel" style="display:none;">
+    <h1 data-i18n="aiTitle">Choose difficulty</h1>
+    <select id="aiLevelSelect">
+      <option value="0" data-i18n="aiL0">Very Easy</option>
+      <option value="1" data-i18n="aiL1">Easy</option>
+      <option value="2" selected data-i18n="aiL2">Normal</option>
+      <option value="3" data-i18n="aiL3">Hard</option>
+      <option value="4" data-i18n="aiL4">Impossible</option>
+      <option value="5" data-i18n="aiL5">Extreme</option>
+      <option value="6" data-i18n="aiL6">Nightmare</option>
+    </select>
+    <button id="aiStartBtn" class="game-btn" data-i18n="aiStart">Start</button>
+  </div>
+
+  <div id="lobbyPanel" style="display:none; flex-direction:column; align-items:center;">
+    <h1 data-i18n="onlineTitle">Online lobby</h1>
+    <input id="roomIdInput" placeholder="Room" />
+    <div>
+      <button id="createRoomBtn" class="game-btn" data-i18n="createRoom">Create room</button>
+      <button id="joinRoomBtn" class="game-btn" data-i18n="joinRoom">Join room</button>
+      <button id="lobbyBackBtn" class="game-btn" data-i18n="exitReplay">Menu</button>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div id="overlayMessage"></div>
+    <button id="yesBtn" class="game-btn" data-i18n="yes">Ok</button>
+    <button id="noBtn" class="game-btn" data-i18n="no">Cancel</button>
+  </div>
+
+  <div id="waitOverlay">
+    <div id="waitText" data-i18n="wait">Please wait...</div>
+    <button id="skipReplayBtn" class="game-btn" style="display:none;" data-i18n="skip">Skip</button>
+  </div>
+
+  <div id="victoryOverlay">
+    <div class="panel">
+      <div id="victoryText"></div><a class="pocket-back" href="../../">← Pocket Works</a>
+      <button id="viewReplayBtn" class="game-btn" data-i18n="viewReplay">View replay</button>
+      <button id="victoryOkBtn" class="game-btn" data-i18n="victoryOk">Ok</button>
+      <button id="victoryMenuBtn" class="game-btn" data-i18n="exitReplay">Menu</button>
+    </div>
+  </div>
+
+  <div id="replayOverlay">
+    <div id="replayControls">
+      <button id="replayToggleBtn" class="game-btn" data-i18n-title="replayCollapse">☰</button>
+      <input id="replaySeek" type="range" min="0" value="0">
+      <button id="replayRestartBtn" class="game-btn" data-i18n="replayRestart">Restart</button>
+      <button class="speedBtn game-btn" data-speed="1">1×</button>
+      <button class="speedBtn game-btn" data-speed="2">2×</button>
+      <button class="speedBtn game-btn" data-speed="3">3×</button>
+      <button class="speedBtn game-btn" data-speed="4">4×</button>
+      <button class="speedBtn game-btn" data-speed="5">5×</button>
+      <button id="replaySideBtn" class="game-btn" data-i18n="replaySide">Switch side</button>
+      <button id="saveReplayBtn" class="game-btn" data-i18n="saveReplay">Save video</button>
+      <button id="replayPauseBtn" class="game-btn">⏸</button>
+    </div>
+    <button id="exitReplayBtn" class="game-btn" data-i18n="exitReplay">Menu</button>
+  </div>
+
+  <div id="legendOverlay">
+    <div class="panel" id="legendPanel"></div>
+    <button id="legendCloseBtn" class="game-btn" data-i18n="legendClose">Close</button>
+  </div>
+
+  <div id="tutorialOverlay" style="display:none;">
+    <div class="panel">
+      <div id="tutorialText" data-i18n="tutorialText"></div>
+      <button id="tutorialCloseBtn" class="game-btn" data-i18n="tutorialClose">Close</button>
+    </div>
+  </div>
+
+  <div id="settingsOverlay">
+    <div class="panel">
+      <div class="settings-group">
+        <label for="styleSelect" data-i18n="styleLabel">Theme</label>
+        <select id="styleSelect">
+          <option value="simple" data-i18n="simplify">Simplified</option>
+          <option value="toen" data-i18n="styleToen">Classic</option>
+          <option value="ai" data-i18n="styleAi">AI style</option>
+        </select>
+        <label><input type="checkbox" id="hintsChk"/> <span data-i18n="tooltip">Hints</span></label>
+      </div>
+      <div class="settings-group">
+        <div class="volume-setting">
+          <input type="checkbox" id="musicEnable"/>
+          <span data-i18n="music">Music</span>
+          <span data-i18n="musicVolume">Music volume</span>
+          <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.5"/>
+        </div>
+        <div class="volume-setting">
+          <input type="checkbox" id="sfxEnable"/>
+          <span data-i18n="sfx">Sound effects</span>
+          <span data-i18n="sfxVolume">Effects volume</span>
+          <input type="range" id="sfxVolume" min="0" max="1" step="0.01" value="0.5"/>
+        </div>
+      </div>
+      <div class="settings-group">
+        <label for="langSelect" data-i18n="langLabel">Language</label>
+        <select id="langSelect">
+          <option value="ru">Russian</option>
+          <option value="en" selected>English</option>
+          <option value="uk">Ukrainian</option>
+        </select>
+      </div>
+      <button id="fullscreenBtn" class="game-btn" data-i18n="fullscreen">Fullscreen</button>
+      <button id="saveBtn" class="game-btn" style="display:none;" data-i18n="saveBtn">Save</button>
+      <button id="settingsMenuBtn" class="game-btn" data-i18n="exitReplay">Menu</button><a class="pocket-back" href="../../">← Pocket Works</a>
+      <button id="settingsCloseBtn" class="game-btn" data-i18n="settingsClose">Close</button>
+    </div>
+  </div>
+
+  <div id="loadOverlay">
+    <div class="panel">
+      <div id="loadList"></div>
+      <button id="loadCloseBtn" class="game-btn" data-i18n="settingsClose">Close</button>
+    </div>
+  </div>
+
+  <div id="battleViewport"><canvas id="canvas" data-block-callout aria-label="Тактическая карта"></canvas></div>
+
+  <div id="spawnPanel"></div>
+
+  <div id="tooltip"></div>
+
+  <div id="infoPanel">
+    <div id="controls">
+      <button id="legendBtn" class="game-btn" title="Legend" data-i18n-title="legendBtnTitle">ℹ️</button>
+      <button id="settingsBtn" class="game-btn" title="Settings" data-i18n-title="settingsBtn">⚙</button>
+      <button id="panelToggleBtn" class="game-btn" title="Hide panel" data-i18n-title="infoCollapse">▼</button>
+      <button id="revealBtn" class="game-btn" data-i18n="revealShow">Show map</button>
+      <button id="cancelSelectBtn" type="button" class="game-btn">Отмена</button><button id="endTurnBtn" class="game-btn" data-i18n="endTurn">End turn</button>
+    </div>
+    <div id="statsLog">
+      <div id="leftStats"></div>
+      <div id="rightLog"></div>
+    </div>
+  </div>
+
+  <script src="js/ai.js"></script>
+  <script src="js/dropdown.js"></script>
+  <script src="js/network.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/gameState.js"></script>
+  <script src="js/worldGen.js"></script>
+  <script src="js/lobby.js"></script>
+  <script src="js/replay.js"></script>
+  <script src="js/ui.js"></script>
+<script src="./pocket-adapter.js" defer></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Fog of Conquest" data-app-version="1.1.0"></script>
+</body>
+</html>

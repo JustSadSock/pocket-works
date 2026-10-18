@@ -1,25 +1,28 @@
-# Туман завоеваний · Fog of Conquest
+# Fog of Conquest — faithful PocketWorks port
 
-Standalone Pocket Works adaptation of [JustSadSock/Fog-Of-Conquest](https://github.com/JustSadSock/Fog-Of-Conquest).
+This is the original browser strategy from [JustSadSock/Fog-Of-Conquest](https://github.com/JustSadSock/Fog-Of-Conquest), with the original `index.html`, `js/` game rules, `css/style.css`, original pixel sprite pack in `assets/`, complete illustrated pack in `assets(ai)/`, original icon and language files. Game rules are deliberately **not replaced** by the earlier `engine.js` reinterpretation.
 
-## Features
-- Seeded symmetric topographic maps: 12×16, 16×22, 20×28, with stable land crossings.
-- True hidden fog plus explored memory, LOS limited by peaks.
-- Six field formations (swordsmen, archers, heavies, cavalry, healers, scouts).
-- Six military/economic buildings (citadel, mill, barracks, stable, healer tower, fort).
-- Recruitment, mill upgrades, unit health, terrain cover, flank support, capture and citadel sieges.
-- Six AI difficulties; deterministic rule engine, autosave and recovery after reload.
-- PocketNet server-authoritative two-player turn-based combat with private views and resumable seats.
-- Touch pan, pinch-to-zoom, wheel and keyboard navigation; desktop status mini-map.
-- An offline first PWA, separate namespace, icon and cache.
+## Modes preserved
+- Four map sizes (5×8, 10×15, 20×30, 20×60), original layered height-map generator, resource placement, balanced starts.
+- Two-player hot-seat, seven AI presets (0–6), and the original extended/beta mode with the BOG unit.
+- Swordsmen, archers, heavy infantry, cavalry, mage/healer, beta BOG; all original combat and movement values.
+- Bases, barracks, stables, mage towers, mills, forts, capture, combat retaliation, ranged attacks and income.
+- Original explored/visible fog model and line of sight, classic / illustrated / simplified renderers.
+- Built-in tutorial, language selector, manual saves, autosave slot, match replay, playback speed, replay video export when the browser supports MediaRecorder.
 
-## Controls
-Tap one of your own banner tokens, then a legal position or enemy. Tap your building to recruit: choose unit and an adjacent free tile. Capture neutral structures by moving onto them, and defeat the enemy by destroying the citadel. Click End turn to transfer control. With a healer selected, tap a wounded ally to heal. Zoom using +/- or pinch; drag to pan. You may safely return after each completed command; autosave stores solo matches.
+## PocketWorks changes
+- `pocket-adapter.css` / `pocket-adapter.js`: launcher return links, minimum 30px mobile cell size, native scrollable battlefield, cancel-selection button, safe areas.
+- `js/ui.js`: fixed-slot autosave and mobile cell sizing; original combat, economy and unit definitions retained.
+- `js/worldGen.js`: repairs an invalid diagonal connectivity fallback and checks connectivity after terrain balancing.
+- `sw.js`: versioned application offline cache including original sprite packs.
+- Original 512×512 game icon is the PWA icon.
 
-## Multiplayer
-A PocketNet room is server-authoritative and persists while disconnected. The owner starts when both participants join. Turn ownership, recruitment economy, combat and fog are validated by the server. Each projection hides unexplored terrain, enemy units and unobserved buildings. Client revisions prevent stale commands.
+## Networking caveat — NOT RELEASE READY
+The original `js/network.js` and `js/lobby.js` use the root WebSocket endpoint and cannot safely be connected to PocketNet as written. The preceding PocketWorks v1 module (`server/module.ts`, immutable v1 snapshot) is a **different ruleset**: it must not be presented as a faithful port. The legacy online button is hidden until a PocketNet v2 module accepts the original battle actions, validates authority, projects fog individually and retains asynchronous rooms across disconnections. This is tracked as a release blocker, not a cosmetic follow-up.
 
-Backend activation is part of this coordinated app/platform release: the immutable `pocketnet/module-versions/fog-of-conquest/v1.ts` snapshot, `pocketnet/modules.lock.json` registration, and `pocketnet/hub.mjs` seat/async-retention rules travel in the same `platform-change`-labeled PR. Active matches are retained for up to six days without activity, subject to PocketNet session expiry and Cloudflare service limits.
-
-## Rules & verification
-Run: node --test apps/fog-of-conquest/test/engine.test.mjs. Verify new game, end turn, reload, AI progression and two clients joining PocketNet. Production deployment relies on Cloudflare Workers Builds after merge.
+## Verification
+```sh
+node --test apps/fog-of-conquest/test/original-port.test.mjs
+node apps/fog-of-conquest/test/port-browser.mjs
+```
+Do not merge this draft until mobile/desktop browser QA and faithful PocketNet v2 are validated.

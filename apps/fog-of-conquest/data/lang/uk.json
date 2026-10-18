@@ -1,0 +1,110 @@
+{
+  "title": "Fog of Conquest",
+  "summary": "<strong>Суть гри:</strong><br>Fog of Conquest — покрокова стратегія. Головна мета — захопити або зруйнувати всі ворожі бази і позбавити супротивника можливості наймати війська.<br><br><em>Юніти:</em><br>• Рубака — хід 2, атака 2, захист 1, дальність 1, 5 HP, 3 зол.<br>• Стрілець — хід 2, атака 3, захист 0, дальність 2, 4 HP, 4 зол.<br>• Щитоносець — хід 1, атака 3, захист 2, дальність 1, 6 HP, 5 зол.<br>• Вершник — хід 3, атака 3, захист 1, дальність 1, 5 HP, 7 зол.<br>• Чарівник — хід 2, атака 0, захист 0, дальність 1, 4 HP, 7 зол; лікує сусідні загони.<br>• Бог (бета) має унікальні здібності.<br><br><em>Будівлі:</em><br>• База навчає базові війська.<br>• Казарма, стайня і вежа мага відкривають нові типи юнітів.<br>• Млини приносять золото кожен хід.<br>• Форт дає бонус до захисту.<br><br><em>Рельєф:</em><br>Ліс і пагорби підвищують захист, вода сповільнює, гори непрохідні.<br><br><em>Ігровий процес:</em><br>• Захоплюйте будівлі, щоб отримувати золото і наймати війська.<br>• На початку ходу ви отримуєте дохід з ресурсних будівель.<br>• Переміщайте загони і атакуйте ворога, потім тисніть \"Кінець ходу\".<br>• Туман війни приховує невивчені області.<br>Перемога досягається знищенням усіх ворожих баз і військ.<br><br><em>Керування:</em><br>• Ліва кнопка миші — вибір юнітів і клітин.<br>• Права кнопка — скасування вибору.<br>• \"ℹ️\" показує легенду, \"Показати карту\" лише у бета-режимі.",
+  "mapSizeLabel": "Розмір карти:",
+  "mapSizeTiny": "Крихітна",
+  "mapSizeSmall": "Мала",
+  "mapSizeMedium": "Середня",
+  "mapSizeLarge": "Велика",
+  "startTwo": "Почати гру",
+  "startAi": "Один гравець",
+  "startBeta": "Розширений режим (бета)",
+  "startSettings": "Налаштування",
+  "aiTitle": "Вибір складності",
+  "aiL0": "Дуже легка",
+  "aiL1": "Легка",
+  "aiL2": "Середня",
+  "aiL3": "Складна",
+  "aiL4": "Неможливо",
+  "aiL5": "Екстремальна",
+  "aiL6": "Жах",
+  "aiStart": "Почати",
+  "yes": "Ок",
+  "no": "Скасувати",
+  "wait": "Зачекайте...",
+  "skip": "Пропустити",
+  "viewReplay": "Переглянути повтор",
+  "victoryOk": "Ок",
+  "exitReplay": "У меню",
+  "legendClose": "Закрити",
+  "simplify": "Спрощений",
+  "styleLabel": "Оформлення",
+  "styleToen": "Класичний",
+  "styleAi": "AI стиль",
+  "music": "Музика",
+  "musicVolume": "Гучність музики",
+  "sfx": "Ефекти",
+  "sfxVolume": "Гучність ефектів",
+  "langLabel": "Мова",
+  "settingsClose": "Закрити",
+  "legendBtnTitle": "Легенда",
+  "settingsBtn": "Налаштування",
+  "infoCollapse": "Згорнути панель",
+  "infoExpand": "Розгорнути панель",
+  "revealShow": "Показати карту",
+  "revealHide": "Сховати карту",
+  "tooltip": "Підказки",
+  "tooltipOn": "Підказки ✓",
+  "endTurn": "Кінець ходу",
+  "notSelected": "Об'єкт не вибрано",
+  "selectedMage": "Обрано: {unit} MP:{mp}/{move}",
+  "selectedUnit": "Обрано: {unit} HP:{hp}/{hpMax} MP:{mp}/{move}",
+  "victory": "Гравець {player} переміг!",
+  "noAttackWater": "Не можна атакувати з води",
+  "mageHeal": "Чарівник відновив {unit} на 2 HP",
+  "saveBtn": "Зберегти",
+  "loadBtn": "Завантажити гру",
+  "loadSave": "Завантажити",
+  "deleteSave": "Видалити",
+  "noSaves": "Немає збережень"
+  ,"newGame": "Нова гра"
+  ,"fullscreen": "Повний екран"
+  ,"replaySide": "Змінити сторону"
+  ,"replayRestart": "Почати спочатку"
+  ,"saveReplay": "Зберегти відео"
+  ,"replayCollapse": "Згорнути"
+  ,"replayExpand": "Розгорнути"
+  ,"terrPlain": "Рівнина"
+  ,"terrWater": "Вода"
+  ,"terrForest": "Ліс"
+  ,"terrHill": "Пагорб"
+  ,"terrMountain": "Гори"
+  ,"unitSwordsman": "Мечник"
+  ,"unitArcher": "Стрілець"
+  ,"unitHeavy": "Щитоносець"
+  ,"unitCavalry": "Вершник"
+  ,"unitMage": "Чарівник"
+  ,"unitBog": "Бог"
+  ,"legendUnits": "Юніти"
+  ,"legendTerrain": "Рельєф"
+  ,"moveShort": "хід"
+  ,"attackShort": "атк"
+  ,"defShort": "зах"
+  ,"rangeShort": "дальн"
+  ,"goldShort": "зол."
+  ,"impassable": "непрохідно"
+  ,"passTurnConfirm": "Хід переходить гравцю {player}. Продовжити?"
+  ,"waitEnemyTurn": "Хід противника..."
+  ,"replayEnemyTurn": "Повтор ходу супротивника..."
+  ,"eventBaseCaptured": "Базу захоплено"
+  ,"eventResourceCaptured": "Захоплено ресурс ({building})"
+  ,"eventUnitCreated": "{unit} створено"
+  ,"eventAttackUnit": "{attacker} атакував {target} на {dmg}"
+  ,"eventRetaliation": ", отримав {dmg}"
+  ,"eventAttackBuilding": "{attacker} атакував {building} на {dmg}"
+  ,"eventMove": "Переміщено {unit}"
+  ,"statsTurn": "Хід: {turn} — Гравець {player}"
+  ,"statsGold": "Золото: {gold} (+{income}/хід)"
+  ,"statsBases": "Бойові бази: {count}"
+  ,"statsResources": "Ресурси: {count}"
+  ,"statsUnits": "Юнітів:"
+  ,"logEnemy": "Ворог: {text}"
+  ,"logTurn": "--- Хід {turn} ---"
+  ,"startOnline": "Онлайн"
+  ,"createRoom": "Створити кімнату"
+  ,"joinRoom": "Приєднатися"
+  ,"onlineTitle": "Лобі"
+  ,"tutorialBtn": "Навчання"
+  ,"tutorialText": "Захопіть усі ворожі бази, щоб перемогти. ЛКМ - вибір, ПКМ - скасувати." 
+  ,"tutorialClose": "Закрити"
+}

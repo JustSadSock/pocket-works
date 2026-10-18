@@ -1,0 +1,32 @@
+
+/* Layout bridge: all original images, source rules and rendering remain intact. */
+html,body{height:100dvh;padding:0;overflow:hidden;overscroll-behavior:none}
+#battleViewport{position:fixed;inset:max(0px,env(safe-area-inset-top)) 0 calc(164px + env(safe-area-inset-bottom));overflow:auto;touch-action:pan-x pan-y;overscroll-behavior:contain;background:#171b16;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+#battleViewport #canvas{position:relative;left:0;top:0;transform:none;display:block;margin:0 auto;width:auto;height:auto;max-width:none;touch-action:manipulation}
+#infoPanel{height:calc(164px + env(safe-area-inset-bottom))!important;bottom:0;padding-bottom:env(safe-area-inset-bottom)}
+#infoPanel.collapsed{height:auto!important}
+#controls{display:flex!important;flex-flow:row nowrap!important;justify-content:space-around!important;align-items:center!important;min-height:52px;gap:2px;padding:5px}
+#controls button{min-height:42px;min-width:40px;padding:5px 8px!important;margin:1px!important;font-size:12px}
+#controls #endTurnBtn{flex:1;min-width:93px;background:#d8c18f}
+#cancelSelectBtn{display:none}
+#statsLog{display:flex!important;flex-direction:row!important;flex:1;min-height:0;overflow:hidden}
+#leftStats,#rightLog{flex:1;min-width:0;overflow:auto;font-size:11px;padding:5px 8px}
+#leftStats{border-bottom:0!important;border-right:1px solid #555}
+#spawnPanel{bottom:calc(175px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);max-height:40vh;max-width:90vw;overflow:auto}
+#spawnPanel button{min-height:44px}
+#startPanel{height:100dvh;box-sizing:border-box;overflow:auto;padding:calc(50px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom));justify-content:center;gap:5px}
+#startHeader{width:min(96%,620px)}
+#startHeader h1{font-size:clamp(21px,5vw,32px);text-align:center}
+#summary{width:min(94%,680px);height:auto;max-height:28dvh;box-sizing:border-box;margin:6px 0}
+#newGameOptions{max-height:52dvh;overflow:auto;max-width:95vw;margin-top:2px;gap:4px}
+#newGameOptions>.game-btn,#startButtons>.game-btn{min-height:42px;width:min(85vw,270px);font-size:13px}
+#aiPanel,#lobbyPanel,#overlay,#settingsOverlay,#loadOverlay,#legendOverlay,#tutorialOverlay,#victoryOverlay,#waitOverlay{height:100dvh;box-sizing:border-box;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom)}
+#settingsOverlay .panel,#legendOverlay .panel,#tutorialOverlay .panel,#loadOverlay .panel{max-height:78dvh;overflow:auto}
+.pocket-back{display:inline-flex;align-items:center;justify-content:center;min-height:42px;background:#22291fe8;border:1px solid #9c845b;border-radius:3px;text-decoration:none;color:#e8d2a6;padding:8px 12px;font:600 12px system-ui;z-index:35}
+.menu-back{position:fixed;top:max(5px,env(safe-area-inset-top));left:max(7px,env(safe-area-inset-left));z-index:40}
+@media(max-width:720px){#cancelSelectBtn{display:block}#startPanel{justify-content:flex-start}#summary{max-height:25dvh}#replayControls{width:94vw;box-sizing:border-box;max-height:32vh}#settingsOverlay .panel{width:93vw}}
+@media(max-height:640px){#summary{max-height:17dvh}#newGameOptions{max-height:46dvh}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+/* The original root-WebSocket lobby is retained as source but not advertised until the PocketNet original-rules server is ready. */
+#onlineBtn{display:none!important}

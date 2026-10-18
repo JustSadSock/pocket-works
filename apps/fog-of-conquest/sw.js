@@ -1,10 +1,105 @@
 const CACHE_PREFIX = 'fog-of-conquest-';
-const CACHE_NAME = 'fog-of-conquest-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'fog-of-conquest-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-10-18';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = ["Полная пошаговая кампания: карты, войска, экономики, штурмы, туман и шесть уровней ИИ.","Мобильная карта, автоматические сохранения и дуэли PocketNet с серверным контролем ходов."];
-const APP_SHELL = ["./","./index.html","./app.config.json","./styles.css","./app.js","./engine.js","./manifest.webmanifest","./icons/icon.svg","../../shared/mobile-runtime.css","../../shared/mobile-runtime.js","../../shared/update-manager.css","../../shared/update-manager.js","../../shared/capabilities/net.js"];
+const APP_SHELL = [
+  "./",
+  "./index.html",
+  "./app.config.json",
+  "./css/style.css",
+  "./pocket-adapter.css",
+  "./pocket-adapter.js",
+  "./manifest.webmanifest",
+  "./manifest.json",
+  "./icons/icon.svg",
+  "./js/ai.js",
+  "./js/dropdown.js",
+  "./js/network.js",
+  "./js/data.js",
+  "./js/gameState.js",
+  "./js/worldGen.js",
+  "./js/lobby.js",
+  "./js/replay.js",
+  "./js/ui.js",
+  "./data/lang/en.json",
+  "./data/lang/ru.json",
+  "./data/lang/uk.json",
+  "./data/units.json",
+  "./data/terrain.json",
+  "../../shared/update-manager.css",
+  "../../shared/update-manager.js",
+  "./assets(ai)/archer_ally.png",
+  "./assets(ai)/archer_enemy.png",
+  "./assets(ai)/field_fortification_enemy.png",
+  "./assets(ai)/field_fortifications_ally.png",
+  "./assets(ai)/healer_ally.png",
+  "./assets(ai)/healer_enemy.png",
+  "./assets(ai)/healer_tent_ally.png",
+  "./assets(ai)/healer_tent_enemy.png",
+  "./assets(ai)/heavy_barracks_ally.png",
+  "./assets(ai)/heavy_barracks_enemy.png",
+  "./assets(ai)/heavy_warrior_ally.png",
+  "./assets(ai)/heavy_warrior_enemy.png",
+  "./assets(ai)/horseman_ally.png",
+  "./assets(ai)/horseman_enemy.png",
+  "./assets(ai)/main_castle_ally.png",
+  "./assets(ai)/main_castle_enemy.png",
+  "./assets(ai)/stable_ally.png",
+  "./assets(ai)/stable_enemy.png",
+  "./assets(ai)/tile_grass.png",
+  "./assets(ai)/tile_grass_bottom.png",
+  "./assets(ai)/tile_hill.png",
+  "./assets(ai)/tile_mountain.png",
+  "./assets(ai)/tile_trees.png",
+  "./assets(ai)/tile_water.png",
+  "./assets(ai)/warrior_ally.png",
+  "./assets(ai)/warrior_enemy.png",
+  "./assets(ai)/windmill_ally.png",
+  "./assets(ai)/windmill_enemy.png",
+  "./assets/buildings/barracks.png",
+  "./assets/buildings/base_ally.png",
+  "./assets/buildings/base_enemy.png",
+  "./assets/buildings/fort_ally.png",
+  "./assets/buildings/fort_enemy.png",
+  "./assets/buildings/fort_neutral.png",
+  "./assets/buildings/healers_tents_ally.png",
+  "./assets/buildings/healers_tents_enemy.png",
+  "./assets/buildings/healers_tents_neutral.png",
+  "./assets/buildings/stable.png",
+  "./assets/buildings/windmill.png",
+  "./assets/icon.png",
+  "./assets/symbols/green_selection.png",
+  "./assets/symbols/red_selection.png",
+  "./assets/symbols/white_shield.png",
+  "./assets/symbols/yellow_selection.png",
+  "./assets/symbols/yellow_shield.png",
+  "./assets/tiles/grass1.png",
+  "./assets/tiles/grass2.png",
+  "./assets/tiles/hill.png",
+  "./assets/tiles/hill2.png",
+  "./assets/tiles/mountains1.png",
+  "./assets/tiles/mountains2.png",
+  "./assets/tiles/mountains3.png",
+  "./assets/tiles/pound.png",
+  "./assets/tiles/pound2.png",
+  "./assets/tiles/pound3.png",
+  "./assets/tiles/trees1.png",
+  "./assets/tiles/trees2.png",
+  "./assets/tiles/trees3.png",
+  "./assets/tiles/water.png",
+  "./assets/units/archer_ally.png",
+  "./assets/units/archer_enemy.png",
+  "./assets/units/healer_ally.png",
+  "./assets/units/healer_enemy.png",
+  "./assets/units/heavy_ally.png",
+  "./assets/units/heavy_enemy.png",
+  "./assets/units/horseman_ally.png",
+  "./assets/units/horseman_enemy.png",
+  "./assets/units/militia_ally.png",
+  "./assets/units/militia_enemy.png"
+];
 
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
@@ -37,12 +132,14 @@ async function fetchFresh(input) {
 
 async function precacheFreshShell() {
   const cache = await caches.open(CACHE_NAME);
-  await Promise.all(
-    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
-      const response = await fetchFresh(canonicalUrl);
-      await cache.put(canonicalUrl, response);
-    })
-  );
+  const urls=[...new Set(SHELL_KEYS.values())];
+  let next=0;
+  await Promise.all(Array.from({length:6},async()=>{
+    while(next<urls.length){
+      const url=urls[next++];
+      await cache.put(url,await fetchFresh(url));
+    }
+  }));
 }
 
 async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
