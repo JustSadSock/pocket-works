@@ -119,7 +119,7 @@ function runCampaign({level=6,seed=1,size='small',maxHalfTurns=60}={}){
       if(!command({type:'move',unit:u.id,r:best.r,c:best.c}))break;
     }
   }
-  command({type:'end'});
+  if(g.phase==='battle')command({type:'end'});
  }
  const ai={Math:randMath,console};
  const w={Math:randMath,console};
@@ -173,7 +173,10 @@ function runCampaign({level=6,seed=1,size='small',maxHalfTurns=60}={}){
   const before=g.state.turn;
   if(g.state.currentPlayer===1)opponentTurn();
   else aiTurn();
-  if(g.state.turn!==before+1)throw Error('turn did not advance exactly once');
+  if(g.phase==='battle'&&g.state.turn!==before+1)
+   throw Error('turn did not advance exactly once: '+JSON.stringify({seed,level,turn,before,after:g.state.turn,side:g.state.currentPlayer}));
+  if(g.phase==='finished'&&g.state.turn!==before&&g.state.turn!==before+1)
+   throw Error('victory changed turn unexpectedly');
   invariant(g,'seed '+seed+' level '+level+' turn '+turn);
   metric.turns++;
   metric.maximumArmy=Math.max(metric.maximumArmy,g.units.length);
