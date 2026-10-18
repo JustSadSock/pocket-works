@@ -178,7 +178,7 @@ export function drawArenaCanvas(ctx,from,to,round=1,progress=1,{
   ctx.fill();
   ctx.strokeStyle=C.border;ctx.lineWidth=1;ctx.stroke();
   if(progress>=.38&&hasCoord(positions.attacks,x,y)){
-   ctx.fillStyle='rgba(244,93,66,.34)';ctx.fillRect(baseX+8,baseY+8,unit-19,unit-19);
+   ctx.save();ctx.globalAlpha=.34;ctx.fillStyle=C.attack;ctx.fillRect(baseX+8,baseY+8,unit-19,unit-19);ctx.restore();
   }
   if(progress>=.61&&hasCoord(positions.hits,x,y)){
    ctx.strokeStyle=C.hit;ctx.lineWidth=6;ctx.strokeRect(baseX+7,baseY+7,unit-17,unit-17);
