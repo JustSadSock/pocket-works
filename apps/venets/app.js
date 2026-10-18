@@ -664,6 +664,7 @@ by('start-region-next').addEventListener('click',()=>{
 });
 document.querySelectorAll('[data-world-size]').forEach(button=>button.addEventListener('click',()=>{
   selectedSize=Number(button.dataset.worldSize);startRegion=0;
+  document.querySelector('.world-settings').open=false;
   for(const b of document.querySelectorAll('[data-world-size]')){
     const selected=Number(b.dataset.worldSize)===selectedSize;
     b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));
@@ -683,7 +684,10 @@ by('download-chronicle').addEventListener('click',exportChronicle);
 by('continue-legacy').addEventListener('click',()=>{
   try{extendCampaign(game);saveGame();play()}catch(e){notify(e.message)}
 });
-by('seed-input').addEventListener('change',buildStarts);
+by('seed-input').addEventListener('change',()=>{
+  buildStarts();
+  if(!by('begin').disabled)document.querySelector('.world-settings').open=false;
+});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 window.addEventListener('pagehide',()=>{pause()});
 // Inspector frame uses the *real renderers and state transitions* in an isolated
