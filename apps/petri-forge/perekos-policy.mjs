@@ -94,8 +94,13 @@ export function perekosControl(o,p,player=0,tick=0){
  if(!validatePerekosPolicy(p))throw Error('Недопустимая модель Перекоса');
  const w=p.weights,s=o.self,e=o.opponent,dx=(e.x-s.x)*400,dy=(e.y-s.y)*620;
  const distance=Math.hypot(dx,dy)||1,[nx,ny]=vec(dx,dy),side=player===0?1:-1;
- const target=92+w[index.preferredRange]*190,distBias=distance>target+25?1:distance<target-35?-1:0;
- const pressure=.55+w[index.pressure]*.7;
+ const shotSpeed=({kindle:260,cinder:260,wire:365,coil:365,pebble:198,slate:205})[s.mageId]||252;
+ const shotLifetime=shotSpeed<=205?1.32:shotSpeed>=350?.96:1.15;
+ const effectiveRange=shotSpeed*shotLifetime-25;
+ // Stay inside practical projectile lifetime, not the theoretical maximum map range.
+ const target=Math.min(90+w[index.preferredRange]*155,effectiveRange-65);
+ const distBias=distance>target+12?1:distance<target-43?-1:.15;
+ const pressure=.75+w[index.pressure]*.7;
  let mx=nx*distBias*pressure-ny*(w[index.orbit]*1.9-.95)*side;
  let my=ny*distBias*pressure+nx*(w[index.orbit]*1.9-.95)*side;
  const ax=s.x*400,ay=s.y*620,bx=e.x*400,by=e.y*620;
@@ -113,20 +118,22 @@ export function perekosControl(o,p,player=0,tick=0){
   my=my*(1-w[index.dodge])+mag[1]*sign*2*w[index.dodge];
  }
  const centerDist=Math.hypot((s.x-.5)*400,(s.y-.5)*620),ring=o.arena.ring;
- if(o.remaining<10&&centerDist>ring-35){
+ if(o.remaining<12&&centerDist>ring-50){
   const [cx,cy]=vec(.5-s.x,.5-s.y);
   mx=mx*.25+cx*1.7;my=my*.25+cy*1.7;
  }
  const n=Math.max(1,Math.hypot(mx,my));mx/=n;my/=n;
- const lead=clamp((distance/252)*w[index.leadAim]*.92,0,.75);
+ const lead=clamp((distance/shotSpeed)*(.55+w[index.leadAim]*.5),0,.72);
  const aimX=e.x*400+e.vx*lead,aimY=e.y*620+e.vy*lead;
  const jitter=Math.sin(tick*.041+player*3)*w[index.jitter]*20;
- const fire=e.hp>0&&!blockingWall&&s.cast<=.05&&s.heat<w[index.cooling]*.5+.49&&distance<(210+w[index.shotDiscipline]*290);
+ const fire=e.hp>0&&!blockingWall&&s.cast<=.05&&s.heat<w[index.cooling]*.5+.49&&distance<effectiveRange*(.8+w[index.shotDiscipline]*.2);
  const critical=danger&&threat.distance<45;
- return {x:mx,y:my,attack:fire,shield:critical&&s.shieldReady<=0&&w[index.guard]>.22,
-  dash:critical&&threat.t<.22&&s.dashReady<=0&&w[index.dash]>.35,
+ const dashAttack=!!(!critical&&!blockingWall&&distance>effectiveRange*.78&&distance<400&&s.dashReady<=0&&w[index.pressure]>.68&&w[index.dash]>.45);
+ const canShield=critical&&s.shieldReady<=0&&w[index.guard]>.22;
+ return {x:mx,y:my,attack:fire,shield:canShield,
+  dash:(critical&&threat.t<.22&&s.dashReady<=0&&w[index.dash]>.35)||dashAttack,
   aim:{x:clamp(aimX+jitter,1,399),y:clamp(aimY-jitter,1,619)},
-  meta:{distance:Math.round(distance),danger:!!danger,pressure:Math.round(pressure*100),preferred:Math.round(target),blocked:!!blockingWall}};
+  meta:{distance:Math.round(distance),danger:!!danger,pressure:Math.round(pressure*100),preferred:Math.round(target),effectiveRange:Math.round(effectiveRange),blocked:!!blockingWall}};
 }
 export function tacticalTransfer(combat){
  if(!Array.isArray(combat?.weights)||combat.weights.length!==8||combat.weights.some(v=>typeof v!=='number'||!Number.isFinite(v)||v<0||v>1))throw Error('Неподдерживаемый боевой мозг');
