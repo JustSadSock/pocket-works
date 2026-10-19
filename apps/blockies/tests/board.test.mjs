@@ -103,7 +103,8 @@ test('rotation rejects other active tetrominoes in a shared well',()=>{
  two.currentPiece=[[1,1,1,1]];two.position={x:4,y:8};
  // Every horizontal kick intersects the second player's active row, and vertical
  // escape paths are blocked by fixed blocks in the next two rows.
- for(let y=5;y<=7;y++) for(let x=3;x<10;x++)state.engine.board[y][x]=2;
+ for(let y=5;y<=7;y++) for(let x=3;x<14;x++)state.engine.board[y][x]=2;
+ for(let x=8;x<14;x++) state.engine.board[8][x]=2;
  const before=JSON.stringify({shape:one.currentPiece,pos:one.position});
  state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'rotate'}}}).state;
  const after=state.engine.players[0];
