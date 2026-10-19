@@ -17,7 +17,7 @@
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -29,6 +29,41 @@
 <div class="bottom-note"><span class="tiny-dot"></span><span>Свет, материя и скалярные волны рассчитываются на одной заданной геометрии пространства-времени.</span></div>
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
+<section id="design-panel" class="design-panel" aria-label="Конструктор метрики">
+<div class="section-caption"><span>КОНСТРУКТОР МЕТРИКИ</span><span>Gμν = 8πTμν</span></div>
+<p class="design-lead">Изменяйте форму горловины и функцию хода часов. Перетащите точки непосредственно на графиках или используйте параметры ниже.</p>
+<div class="design-presets" role="group" aria-label="Физические профили">
+<button type="button" data-design-preset="ellis">Эллис</button>
+<button type="button" data-design-preset="wide">Расширенная</button>
+<button type="button" data-design-preset="sharp">Узкая</button>
+<button type="button" data-design-preset="well">Колодец</button>
+</div>
+<div id="design-preset-value" class="design-profile">Пользовательская</div>
+<label class="range-field"><span>Радиус горловины a <output id="design-a-value">1.00</output></span><input id="design-a" type="range" min=".5" max="3" step=".05" value="1"></label>
+<label class="range-field"><span>Кривизна формы <output id="design-shape-value">0.00</output> <small>q</small></span><input id="design-shape" type="range" min="-.35" max=".55" step=".01" value="0"></label>
+<label class="range-field"><span>Ширина изменения радиуса <output id="design-shape-width-value">1.45</output> <small>a</small></span><input id="design-shape-width" type="range" min=".65" max="3" step=".05" value="1.45"></label>
+<label class="range-field"><span>Базовое красное смещение <output id="design-eta-value">0.00</output> <small>η</small></span><input id="design-eta" type="range" min="0" max=".85" step=".01" value="0"></label>
+<label class="range-field"><span>Дополнительный ход часов <output id="design-lapse-value">0.00</output> <small>ζ</small></span><input id="design-lapse" type="range" min="-.45" max=".45" step=".01" value="0"></label>
+<label class="range-field"><span>Ширина изменения часов <output id="design-lapse-width-value">1.30</output> <small>a</small></span><input id="design-lapse-width" type="range" min=".65" max="3" step=".05" value="1.3"></label>
+<div class="section-caption second"><span>ТРЕБУЕМЫЙ ИСТОЧНИК ЭНЕРГИИ</span><span>8πGa²/c⁴</span></div>
+<div class="design-matter">
+<div><span>ρ(0) · a²</span><strong id="design-rho">—</strong></div>
+<div><span>pᵣ(0) · a²</span><strong id="design-pr">—</strong></div>
+<div><span>pₜ(0) · a²</span><strong id="design-pt">—</strong></div>
+<div><span>ρ+pᵣ · a²</span><strong id="design-nec-r">—</strong></div>
+<div><span>ρ+pₜ · a²</span><strong id="design-nec-t">—</strong></div>
+<div><span>R″(0) · a</span><strong id="design-flare">—</strong></div>
+</div>
+<div class="design-conditions">
+<div><span>NEC · нулевое</span><strong id="design-nec">—</strong></div>
+<div><span>WEC · слабое</span><strong id="design-wec">—</strong></div>
+<div><span>SEC · сильное</span><strong id="design-sec">—</strong></div>
+<div><span>DEC · доминантное</span><strong id="design-dec">—</strong></div>
+</div>
+<div class="design-details"><span>Ход часов N(0): <b id="design-lapse0">—</b></span><span>Евклидово вложение: <b id="design-embedding">—</b></span></div>
+<p id="design-rule" class="design-rule">Расчёт в процессе</p>
+<p class="design-legal">Тензор Tμν выведен из выбранной метрики через уравнения Эйнштейна. Это формально требуемый источник, а не подтверждение существования материи, способной поддерживать кротовую нору. Энергетические условия проверяются в горловине.</p>
+</section>
 <section id="wave-panel" class="wave-panel" aria-label="Эксперименты с полем Клейна — Гордона">
 <div class="section-caption"><span>ВОЛНОВАЯ ЛАБОРАТОРИЯ</span><span>□Φ = 0</span></div>
 <div class="wave-intro">Безмассовое скалярное поле на фиксированной метрике кротовой норы. Реальное численное решение, а не эффект частиц.</div>
