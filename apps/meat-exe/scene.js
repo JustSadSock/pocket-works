@@ -3,6 +3,9 @@ import { generateOrgan, getOrganProfile, getTissueNodes, setSeed, CELLS_PER_CHUN
 import { sweepCircle } from './stability.js';
 import {ENEMY_TELLS,telegraphSeverity} from './ecology.js';
 import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
+import {gastricChamber} from './gastricArt.js';
+import {structuralChamber} from './structuralArt.js';
+import {atmosphereProfile,moteAt,organLight,materialProperties,enemyMotion,fxLimits} from './atmosphere.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -14,15 +17,17 @@ const rand = (a,b,s=0) => {
 
 export function createWorld(canvas, initialSeed) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
-  // Software rasterizers are common on headless Chromium and older devices.
-  // Detect capability, not user agent, so regular GPUs keep full detail.
-  let softwareRenderer=false;
+  // Prefer GPU capabilities over user agent. Some WebKit contexts mask their
+  // renderer as "WebKit WebGL", making software fallbacks otherwise invisible.
+  let softwareRenderer=false,maskedRenderer=false;
   try {
     const gl=renderer.getContext();
     const debug=gl.getExtension('WEBGL_debug_renderer_info');
     const gpu=debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
     softwareRenderer=/swiftshader|llvmpipe|software|softpipe/i.test(String(gpu));
+    maskedRenderer=!debug&&/webkit webgl/i.test(String(gpu));
   }catch{}
+  const conservativeRenderer=softwareRenderer||maskedRenderer;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.25;
@@ -36,6 +41,8 @@ export function createWorld(canvas, initialSeed) {
   scene.add(lamp);
   const pulseLamp = new THREE.PointLight(0xe32135, 8, 8, 1.5);
   scene.add(pulseLamp);
+  const shotLight=new THREE.PointLight(0xffc5a0,0,3.9,2);
+  shotLight.visible=false;scene.add(shotLight);
   const geometryFloor = new THREE.PlaneGeometry(1.03, 1.03, 6, 6).rotateX(-Math.PI/2);
   const floorPos = geometryFloor.attributes.position;
   for (let i=0;i<floorPos.count;i++) {
@@ -51,6 +58,56 @@ export function createWorld(canvas, initialSeed) {
   }
   wallShape.computeVertexNormals();
   const boneShape = new THREE.CylinderGeometry(.085,.12,2.45,5,6);
+  // Sculpted stomach mesh: twisted, nonplanar muscle bands interrupt the
+  // repeated flat wall box at silhouette level, without affecting walkability.
+  const gastricWallGeo=new THREE.BoxGeometry(1.03,2.8,.24,10,14,2);
+  const gs=gastricWallGeo.attributes.position;
+  for(let i=0;i<gs.count;i++){
+    const x=gs.getX(i),y=gs.getY(i),z=gs.getZ(i);
+    const fold=Math.sin(x*12.5+Math.sin(y*2.3)*1.9)+.45*Math.sin(y*8+x*9);
+    gs.setXYZ(i,x+Math.sin(y*2.6+x*3.1)*.07,y,z+
+      (z>=0?1:-1)*(.10*Math.sin(y*4.8+x*1.9)+.075*fold));
+  }
+  gastricWallGeo.computeVertexNormals();
+  // Different anatomy must remain identifiable without its palette:
+  // a compressed rounded artery, honeycomb-like bone, and fibrous neural sheath.
+  function sculptOrganWall(type){
+    const g=new THREE.BoxGeometry(1.03,2.8,.28,12,16,2);
+    const a=g.attributes.position;
+    for(let i=0;i<a.count;i++){
+      const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
+      const side=z>=0?1:-1;
+      if(type==='vascular'){
+        a.setXYZ(i,x+Math.sin(y*3.8+x*3.2)*.055,
+          y, z+side*(.10*Math.sin(y*2.8)+.06*Math.cos(x*9+y*4.3)));
+      }else if(type==='marrow'){
+        const pore=Math.pow(Math.max(0,Math.sin(x*13+y*5)*Math.cos(y*8-x*4)),2);
+        a.setXYZ(i,x+Math.sin(y*5+x*7)*.032,y,
+          z+side*(.07*Math.sin(y*7+x*5)-.115*pore));
+      }else{
+        const fiber=Math.sin(y*11+x*16)+.4*Math.cos(x*25-y*6);
+        a.setXYZ(i,x+Math.sin(y*4.4)*.05,y,z+side*(.06*fiber+.04*Math.cos(y*17)));
+      }
+    }
+    g.computeVertexNormals();return g;
+  }
+  const structuralWallGeo={
+    vascular:sculptOrganWall('vascular'),marrow:sculptOrganWall('marrow'),
+    neural:sculptOrganWall('neural')
+  };
+  const vascularArchGeo=new THREE.TorusGeometry(.68,.105,7,18,Math.PI);
+  const vascularValveGeo=new THREE.TorusGeometry(.34,.082,8,20);
+  const marrowVaultGeo=new THREE.TorusGeometry(.69,.145,7,16,Math.PI);
+  const marrowPoreGeo=new THREE.IcosahedronGeometry(.23,1);
+  const marrowSpineGeo=new THREE.ConeGeometry(.14,.61,7);
+  const neuralFiberGeo=new THREE.CylinderGeometry(.065,.045,1.24,7,2);
+  const neuralNodeGeo=new THREE.IcosahedronGeometry(.36,2);
+  const neuralHaloGeo=new THREE.TorusGeometry(.33,.044,5,15);
+  const gastricDrapeGeo=new THREE.IcosahedronGeometry(1,2);
+  const gastricRugaGeo=new THREE.TorusGeometry(.43,.115,7,15,Math.PI*1.55);
+  const gastricPylorusGeo=new THREE.TorusGeometry(.75,.21,8,18);
+  const gastricSinewGeo=new THREE.CylinderGeometry(.042,.115,1.24,6);
+  const gastricSeedArt=(x,z,k)=>rand(x,z,seed+k);
   // Generated collagen and capillary colour map. One shared atlas keeps the nine visible chunks cheap.
   function makeFleshMap(){
     const c=document.createElement('canvas');c.width=c.height=256;
@@ -79,8 +136,124 @@ export function createWorld(canvas, initialSeed) {
     return t;
   }
   const fleshMap=makeFleshMap();
-  const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.64, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
-  const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.66, metalness:0, emissive:0x280407, emissiveIntensity:.27});
+  function makeGastricMaps(){
+    const c=document.createElement('canvas');c.width=c.height=256;
+    const cx=c.getContext('2d');if(!cx)return {color:fleshMap,bump:fleshMap};
+    const height=document.createElement('canvas');height.width=height.height=256;
+    const hx=height.getContext('2d');
+    const picture=cx.createImageData(256,256),relief=hx.createImageData(256,256);
+    // Deterministic layered rugae; same phase drives both albedo and bump.
+    for(let y=0;y<256;y++)for(let x=0;x<256;x++){
+      const xx=x/256,yy=y/256;
+      const ridges=Math.sin(xx*24+Math.sin(yy*9)*1.65+Math.sin(yy*22)*.6);
+      const finer=Math.sin(xx*67+yy*31)*.18+Math.sin(yy*83-xx*49)*.13;
+      const scar=Math.pow(Math.max(0,Math.sin(xx*8+yy*5)),11);
+      const grain=rand(x,y,277)*.12-.06;
+      const profile=clamp(.5+ridges*.28+finer*.16+grain,0,1),i=(y*256+x)*4;
+      picture.data[i]=clamp(93+profile*81+scar*19,0,255);
+      picture.data[i+1]=clamp(39+profile*62+scar*13,0,255);
+      picture.data[i+2]=clamp(35+profile*46+scar*9,0,255);
+      picture.data[i+3]=255;
+      const h=Math.floor(profile*255);
+      relief.data[i]=relief.data[i+1]=relief.data[i+2]=h;relief.data[i+3]=255;
+    }
+    cx.putImageData(picture,0,0);hx.putImageData(relief,0,0);
+    const color=new THREE.CanvasTexture(c),bump=new THREE.CanvasTexture(height);
+    for(const t of [color,bump]){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=2;}
+    color.colorSpace=THREE.SRGBColorSpace;
+    return {color,bump};
+  }
+  const gastricMaps=makeGastricMaps();
+  const stomachWallMat=new THREE.MeshStandardMaterial({color:0xffffff,map:gastricMaps.color,
+    bumpMap:gastricMaps.bump,bumpScale:.16,roughness:.49,metalness:0,emissive:0x170b09,emissiveIntensity:.12});
+  const gastricFoldMat=new THREE.MeshStandardMaterial({color:0x9c7770,map:gastricMaps.color,
+    bumpMap:gastricMaps.bump,bumpScale:.17,roughness:.48,side:THREE.DoubleSide,emissive:0x180c08,emissiveIntensity:.08});
+  const gastricMucusMat=new THREE.MeshStandardMaterial({color:0xa9a56d,roughness:.14,
+    transparent:true,opacity:.88,emissive:0x384522,emissiveIntensity:.36,depthWrite:false});
+
+  function makeStructuralMaps(kind){
+    const colorCanvas=document.createElement('canvas'),heightCanvas=document.createElement('canvas');
+    colorCanvas.width=colorCanvas.height=heightCanvas.width=heightCanvas.height=128;
+    const colorCtx=colorCanvas.getContext('2d'),heightCtx=heightCanvas.getContext('2d');
+    if(!colorCtx||!heightCtx)return {color:fleshMap,bump:fleshMap};
+    const color=colorCtx.createImageData(128,128),bump=heightCtx.createImageData(128,128);
+    for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+      const u=x/128,v=y/128,grain=rand(x,y,kind==='vascular'?811:kind==='marrow'?997:1297)*.14;
+      const fold=kind==='vascular'?
+        Math.sin(v*34+Math.sin(u*8)*2)*.23+Math.sin(u*65+v*10)*.13:
+        kind==='marrow'?
+        -Math.pow(Math.max(0,Math.sin(u*31)*Math.sin(v*29)),5)*.59+Math.sin(u*17+v*15)*.09:
+        Math.sin(u*52+v*12)*.17+Math.sin(v*40-u*29)*.14;
+      const shade=clamp(.73+fold+grain,0,1),j=(y*128+x)*4;
+      const tint=kind==='vascular'?[252,204,211]:kind==='marrow'?[245,236,215]:[215,217,249];
+      for(let n=0;n<3;n++)color.data[j+n]=Math.round(tint[n]*(.66+.34*shade));
+      color.data[j+3]=255;
+      for(let n=0;n<3;n++)bump.data[j+n]=Math.round(shade*255);
+      bump.data[j+3]=255;
+    }
+    colorCtx.putImageData(color,0,0);heightCtx.putImageData(bump,0,0);
+    const map=new THREE.CanvasTexture(colorCanvas),relief=new THREE.CanvasTexture(heightCanvas);
+    map.colorSpace=THREE.SRGBColorSpace;
+    for(const t of [map,relief]){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=2;}
+    return {color:map,bump:relief};
+  }
+  const structuralMaps={
+    vascular:makeStructuralMaps('vascular'),marrow:makeStructuralMaps('marrow'),
+    neural:makeStructuralMaps('neural')
+  };
+  // Separate micro-roughness sampling from color: wet arteries reflect soft
+  // light, marrow scatters matte highlights, neural myelin has narrow glints.
+  function makeRoughness(kind){
+    const c=document.createElement('canvas');c.width=c.height=128;
+    const cx=c.getContext('2d');if(!cx)return null;
+    const pixels=cx.createImageData(128,128);
+    for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+      const u=x/128,v=y/128;
+      const fold=kind==='vascular'?Math.sin(v*29+Math.sin(u*9)*2.2):
+        kind==='gastric'?Math.sin(u*31+v*12):
+        kind==='marrow'?Math.sin(u*45)*Math.sin(v*39):
+        Math.sin(u*58-v*28);
+      const variance=(rand(x,y,kind==='vascular'?631:kind==='gastric'?827:kind==='marrow'?1031:1207)-.5)*20;
+      const baseline=kind==='marrow'?232:kind==='gastric'?174:kind==='neural'?194:152;
+      const value=clamp(Math.round(baseline+fold*(kind==='marrow'?13:32)+variance),68,254);
+      const i=(y*128+x)*4;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;pixels.data[i+3]=255;
+    }
+    cx.putImageData(pixels,0,0);
+    const map=new THREE.CanvasTexture(c);
+    map.wrapS=map.wrapT=THREE.RepeatWrapping;map.anisotropy=2;
+    return map;
+  }
+  const roughnessMaps=conservativeRenderer?null:{
+    vascular:makeRoughness('vascular'),gastric:makeRoughness('gastric'),
+    marrow:makeRoughness('marrow'),neural:makeRoughness('neural')
+  };
+  stomachWallMat.roughnessMap=roughnessMaps?.gastric||null;
+  gastricFoldMat.roughnessMap=roughnessMaps?.gastric||null;
+  const structuralWallMats=Object.fromEntries(Object.entries(structuralMaps).map(([id,m])=>[
+    id,new THREE.MeshStandardMaterial({color:0xffffff,map:m.color,bumpMap:m.bump,
+      bumpScale:id==='marrow'?.20:.12,roughnessMap:roughnessMaps?.[id]||null,
+      roughness:id==='vascular'?.55:id==='marrow'?.98:.69,
+      emissive:id==='neural'?0x141025:id==='vascular'?0x28080c:0x1a1113,emissiveIntensity:.14})
+  ]));
+  const structuralAccents={
+    vascular:new THREE.MeshStandardMaterial({color:0xa43d4c,roughness:.55,roughnessMap:roughnessMaps?.vascular||null,
+      map:structuralMaps.vascular.color,bumpMap:structuralMaps.vascular.bump,bumpScale:.11}),
+    marrow:new THREE.MeshStandardMaterial({color:0xe2d1b9,roughness:.98,roughnessMap:roughnessMaps?.marrow||null,
+      map:structuralMaps.marrow.color,bumpMap:structuralMaps.marrow.bump,bumpScale:.18}),
+    neural:new THREE.MeshStandardMaterial({color:0x9d93c2,roughness:.72,roughnessMap:roughnessMaps?.neural||null,emissive:0x333056,
+      emissiveIntensity:.42,map:structuralMaps.neural.color,bumpMap:structuralMaps.neural.bump,bumpScale:.1})
+  };
+  // Software WebGL cannot afford the per-pixel bump shader for every wall,
+  // guardian and chamber. Keep physical sculpted geometry and albedo instead.
+  if(conservativeRenderer){
+    for(const mat of [stomachWallMat,gastricFoldMat,...Object.values(structuralWallMats),
+      ...Object.values(structuralAccents)]){
+      mat.bumpMap=null;mat.bumpScale=0;mat.needsUpdate=true;
+    }
+  }
+  const marrowDark=new THREE.MeshStandardMaterial({color:0x4f303a,roughness:.91});
+  const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap,roughnessMap:roughnessMaps?.vascular||null, roughness:.72, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
+  const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap,roughnessMap:roughnessMaps?.vascular||null, roughness:.76, metalness:0, emissive:0x280407, emissiveIntensity:.27});
   const boneMat = new THREE.MeshStandardMaterial({color:0xb3a087, roughness:.91, metalness:0});
   const bile = new THREE.MeshStandardMaterial({color:0x88b36e, roughness:.32, emissive:0x223b10, emissiveIntensity:.65});
   const bloodMat = new THREE.MeshBasicMaterial({color:0x9c0b19, transparent:true, opacity:.64, depthWrite:false, side:THREE.DoubleSide});
@@ -94,12 +267,22 @@ export function createWorld(canvas, initialSeed) {
   const mobMats = {
     crawler:new THREE.MeshStandardMaterial({color:0x9f2937,roughness:.46,emissive:0x330307,emissiveIntensity:.4}),
     spitter:new THREE.MeshStandardMaterial({color:0x718a3d,roughness:.44,emissive:0x283108,emissiveIntensity:.36}),
-    brute:new THREE.MeshStandardMaterial({color:0x765361,roughness:.82,emissive:0x22070e,emissiveIntensity:.25}),
+    brute:new THREE.MeshStandardMaterial({color:0x765361,roughness:.62,emissive:0x22070e,emissiveIntensity:.25}),
+     warden:new THREE.MeshStandardMaterial({color:0x74564a,roughness:.49,emissive:0x3b160d,emissiveIntensity:.32}),
     leech:new THREE.MeshStandardMaterial({color:0x6c516f,roughness:.46,emissive:0x271332,emissiveIntensity:.45}),
-    heart:new THREE.MeshStandardMaterial({color:0xbd132d,roughness:.31,emissive:0x5f0713,emissiveIntensity:1})
+    heart:new THREE.MeshStandardMaterial({color:0xbd132d,roughness:.31,emissive:0x5f0713,emissiveIntensity:1}),
+    clot:new THREE.MeshStandardMaterial({color:0x90333d,roughness:.35,emissive:0x2c0810,emissiveIntensity:.48}),
+    ossuary:new THREE.MeshStandardMaterial({color:0xd4bda5,roughness:.9,emissive:0x281619,emissiveIntensity:.18}),
+    synapse:new THREE.MeshStandardMaterial({color:0x9e93cc,roughness:.42,emissive:0x463060,emissiveIntensity:.5})
   };
   const eyeMat = new THREE.MeshBasicMaterial({color:0xffe6bc});
   const tellRingGeo=new THREE.TorusGeometry(.57,.052,6,20);
+  const targetTellGeo=new THREE.TorusGeometry(1,.053,6,26);
+  const routeSignRoot=new THREE.Group();
+  let activeRouteMark='';
+  const forkSigns=new THREE.Group();scene.add(forkSigns);
+  let forkSites=[],forkSelection='';
+  scene.add(routeSignRoot);
   const tellMats=Object.fromEntries(Object.entries(ENEMY_TELLS).map(([kind,info])=>[
     kind,new THREE.MeshBasicMaterial({color:info.color,transparent:true,opacity:.88,depthWrite:false})
   ]));
@@ -107,6 +290,23 @@ export function createWorld(canvas, initialSeed) {
   const brutePlateGeo=new THREE.ConeGeometry(.23,.65,5);
   const crawlerClawGeo=new THREE.ConeGeometry(.12,.62,5);
   const leechTubeGeo=new THREE.TorusGeometry(.34,.09,6,12);
+  const jointGeo=new THREE.SphereGeometry(.18,9,7);
+  const limbGeo=new THREE.CylinderGeometry(.065,.14,.82,7);
+  const mandibleGeo=new THREE.ConeGeometry(.25,.83,6);
+  const spitterNeckGeo=new THREE.CylinderGeometry(.16,.38,.85,9);
+  const shieldGeo=new THREE.IcosahedronGeometry(1,1);
+  // Enemy skin now tells species apart through its actual surface relief,
+  // not merely through a differently colored base material.
+  for(const [type,mat] of Object.entries(mobMats)){
+    const property=materialProperties(type);
+    const maps=property.family==='gastric'?gastricMaps:structuralMaps[property.family];
+    mat.map=maps.color;
+    mat.bumpMap=conservativeRenderer?null:maps.bump;
+    mat.bumpScale=conservativeRenderer?0:property.bumpScale;
+    mat.roughnessMap=roughnessMaps?.[property.family]||null;
+    mat.roughness=conservativeRenderer?property.roughness:clamp(property.roughness*1.32,.34,1);
+    mat.needsUpdate=true;
+  }
   const vesselMat = new THREE.MeshStandardMaterial({color:0x7e2434,metalness:.06,roughness:.33,emissive:0x26050a,emissiveIntensity:.25});
   const vesselGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
     new THREE.Vector3(-.46,.09,-.25),new THREE.Vector3(-.20,.11,-.05),
@@ -114,7 +314,11 @@ export function createWorld(canvas, initialSeed) {
   ]),12,.038,5,false);
   const sacGeo = new THREE.IcosahedronGeometry(.19,1);
   const sacMat = new THREE.MeshStandardMaterial({color:0x9c4a54,roughness:.41,metalness:0,emissive:0x270b0f,emissiveIntensity:.25});
+  // Ground warnings read differently at a glance, not just through hue.
   const hazardGeo=new THREE.IcosahedronGeometry(.43,1);
+  const acidPoolGeo=new THREE.CircleGeometry(.43,20).rotateX(-Math.PI/2);
+  const marrowSinkGeo=new THREE.TorusGeometry(.33,.085,7,18).rotateX(-Math.PI/2);
+  const neuralDischargeGeo=new THREE.TorusGeometry(.33,.054,7,18).rotateX(-Math.PI/2);
    const hazardMat=new THREE.MeshStandardMaterial({color:0xd4d07d,roughness:.36,
      transparent:true,opacity:.87,emissive:0x484c2e,emissiveIntensity:.48,depthWrite:false});
    const organFeatureGeo=new THREE.IcosahedronGeometry(.36,1);
@@ -127,10 +331,26 @@ export function createWorld(canvas, initialSeed) {
   particlesGeo.setDrawRange(0,0);
   const particles = new THREE.Points(particlesGeo,new THREE.PointsMaterial({color:0xf3404c,size:.095,transparent:true,opacity:.9,depthWrite:false}));
   scene.add(particles);
+  // One bounded, depth-tested draw call: drifting blood, spores, bone dust or sparks.
+  const motesArray=new Float32Array(88*3);
+  const motesGeo=new THREE.BufferGeometry();
+  motesGeo.setAttribute('position',new THREE.BufferAttribute(motesArray,3).setUsage(THREE.DynamicDrawUsage));
+  motesGeo.setDrawRange(0,0);
+  const motesMat=new THREE.PointsMaterial({color:0xe0a9aa,size:.065,
+    transparent:true,opacity:.30,depthWrite:false,depthTest:true,sizeAttenuation:true});
+  const motes=new THREE.Points(motesGeo,motesMat);motes.frustumCulled=false;scene.add(motes);
+  // Pooled organic fragments keep dying enemies physically legible.
+  const deathGeo=new THREE.TetrahedronGeometry(.105,0);
+  const deathMat=new THREE.MeshStandardMaterial({color:0x9f5b65,roughness:.47,
+    emissive:0x2e0b12,emissiveIntensity:.35});
+  const deathMesh=new THREE.InstancedMesh(deathGeo,deathMat,24);
+  deathMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  deathMesh.frustumCulled=false;deathMesh.count=0;scene.add(deathMesh);
+  const deathBits=[],deathTemp=new THREE.Object3D();
   const source = new THREE.Group();
   scene.add(source);
   const chunks = new Map(), layouts = new Map(), tissueChunks = new Map(), tissueVisuals = new Map(), stains = [], droplets = [], streaks = [];
-  let openedTissues=new Set(),organPulse=0,stage=1,biome=biomeForWave(1);
+  let openedTissues=new Set(),organPulse=0,stage=1,biome=biomeForWave(1),immunePressure=0;
   const valveSkin=new THREE.MeshStandardMaterial({color:0x9d3c4d,roughness:.48,emissive:0x631822,emissiveIntensity:.65});
   const valveCore=new THREE.MeshStandardMaterial({color:0xe0ad7c,roughness:.42,emissive:0x8a3318,emissiveIntensity:.8});
   const valveGlow=new THREE.MeshBasicMaterial({color:0xffda9b});
@@ -183,7 +403,14 @@ export function createWorld(canvas, initialSeed) {
   let currentWidth=0,currentHeight=0,quality='medium',ratio=0;
   function setQuality(next){
     if(!['low','medium','high'].includes(next))return;
-    if(next!==quality){quality=next;currentWidth=0;resize();}
+    if(next!==quality){
+      quality=next;currentWidth=0;lastChunk='';
+      if(next==='low'){
+        deathBits.length=0;deathMesh.count=0;
+        motesGeo.setDrawRange(0,0);shotLight.visible=false;shotLight.intensity=0;
+      }
+      resize();
+    }
   }
   function resize(){
     const w=Math.max(1,Math.round(canvas.clientWidth||window.innerWidth));
@@ -191,8 +418,11 @@ export function createWorld(canvas, initialSeed) {
     const mobile=w<900 || ('ontouchstart' in window);
     const desired=quality==='low'?1:quality==='high'?(mobile?1.32:1.55):(mobile?1.14:1.35);
     // Bound real pixel work, not only CSS size: software WebGL must never stall input.
-    const budget=softwareRenderer?310_000:mobile?1_300_000:2_200_000;
-    const pixelRatio=Math.min(window.devicePixelRatio||1,softwareRenderer?.66:desired,Math.sqrt(budget/(w*h)));
+    // On software/masked mobile GPUs the *pixel count* dominates memory pressure.
+    // Keep a bounded frame buffer instead of letting a large portrait DPR
+    // exhaust WebGL during repeated bursts. Native GPU detail remains intact.
+    const budget=softwareRenderer?235_000:maskedRenderer?530_000:mobile?1_300_000:2_200_000;
+    const pixelRatio=Math.min(window.devicePixelRatio||1,softwareRenderer?.59:maskedRenderer?.88:desired,Math.sqrt(budget/(w*h)));
     if(w===currentWidth&&h===currentHeight&&ratio===pixelRatio) return;
     currentWidth=w;currentHeight=h;
     ratio=pixelRatio;renderer.setPixelRatio(ratio);
@@ -259,12 +489,92 @@ export function createWorld(canvas, initialSeed) {
     tissue.visual=group;tissueVisuals.set(tissue.id,group);
     return group;
   }
+  // Two physical route choices are reachable by walking through the room;
+  // choosing one with X / mobile button presets the actual next-organ surgery.
+  function setForkSites(ids=[]){
+    forkSigns.clear();forkSites=[];forkSelection='';
+    if(!Array.isArray(ids)||ids.length!==2)return;
+    getTissues(0,0); // Gate cells must already be excluded even before first chunk paint.
+    const start=getStart(),cells=getOpenCells(0,0);
+    const candidates=cells.filter(c=>{
+      const d=Math.hypot(c.x-start.x,c.z-start.z);
+      return d>=2.0&&d<=5.8;
+    });
+    if(candidates.length<2)return;
+    const first=candidates.reduce((best,c)=>
+      !best||Math.abs(Math.hypot(c.x-start.x,c.z-start.z)-3)<best.d?
+      {...c,d:Math.abs(Math.hypot(c.x-start.x,c.z-start.z)-3)}:best,null);
+    const second=candidates.reduce((best,c)=>{
+      const separation=Math.hypot(c.x-first.x,c.z-first.z);
+      return !best||separation>best.separation?{...c,separation}:best;
+    },null);
+    if(!second||second.separation<1.5)return;
+    for(const [index,point] of [first,second].entries()){
+      const id=ids[index],group=new THREE.Group();
+      group.position.set(point.x,2.03,point.z);
+      const mat=index===0?boneMat:valveSkin;
+      const arch=new THREE.Mesh(index===0?marrowVaultGeo:vascularArchGeo,mat);
+      arch.rotation.z=Math.PI;arch.scale.set(1,.95,1);
+      group.add(arch);
+      const kernel=new THREE.Mesh(index===0?marrowPoreGeo:neuralNodeGeo,
+        index===0?organFeatureMat:valveCore);
+      kernel.position.set(0,-.30,0);kernel.scale.set(.75,1.0,.75);group.add(kernel);
+      for(const side of [-1,1]){
+        const rib=new THREE.Mesh(index===0?marrowSpineGeo:gastricSinewGeo,mat);
+        rib.position.set(side*.56,-.46,0);
+        rib.rotation.z=side*.28;rib.scale.set(1,.72,1);group.add(rib);
+      }
+      forkSigns.add(group);
+      forkSites.push({id,x:point.x,z:point.z,group});
+    }
+  }
+  function setForkSelection(id){
+    forkSelection=String(id||'');
+    for(const site of forkSites)site.group.scale.setScalar(site.id===id?1.16:1);
+  }
+  function getNearbyFork(x,z){
+    const site=forkSites.find(f=>Math.hypot(f.x-x,f.z-z)<1.47);
+    return site?.id||null;
+  }
+  function setRouteMark(id){
+    routeSignRoot.clear();activeRouteMark='';
+    if(!['bypass','calcified','rupture','necrosis'].includes(id))return;
+    const cells=getOpenCells(0,0),start=getStart();
+    const candidates=cells.filter(c=>{
+      const dist=Math.hypot(c.x-start.x,c.z-start.z);
+      return dist>1.65&&dist<4.6;
+    });
+    // Overhead/non-colliding landmark after a choice was made. The open
+    // navigation graph is not altered, and the initial camera is never covered.
+    const target=(candidates.length?candidates:cells).reduce((best,c)=>{
+      const d=Math.abs(Math.hypot(c.x-start.x,c.z-start.z)-3);
+      return !best||d<best.distance?{...c,distance:d}:best;
+    },null);
+    if(!target)return;
+    activeRouteMark=id;
+    routeSignRoot.position.set(target.x,2.29,target.z);
+    const ringMat=id==='bypass'||id==='calcified'?boneMat:valveSkin;
+    const rim=new THREE.Mesh(id==='bypass'||id==='rupture'?vascularArchGeo:marrowVaultGeo,ringMat);
+    rim.rotation.x=Math.PI*.5;rim.scale.set(.69,.62,.67);routeSignRoot.add(rim);
+    const core=new THREE.Mesh(id==='necrosis'?marrowPoreGeo:id==='calcified'?marrowSpineGeo:neuralNodeGeo,
+      id==='necrosis'?marrowDark:id==='calcified'?boneMat:id==='rupture'?valveSkin:axonMat);
+    core.scale.set(id==='calcified'?1.2:.7,.7,.74);core.position.y=-.05;
+    core.rotation.x=id==='calcified'?Math.PI:0;routeSignRoot.add(core);
+    for(let i=0;i<(id==='rupture'?5:3);i++){
+      const fiber=new THREE.Mesh(id==='calcified'?marrowSpineGeo:gastricSinewGeo,ringMat);
+      fiber.rotation.set(i*.36,0,i*1.6);
+      fiber.scale.set(.75,.55,.75);fiber.position.set(Math.sin(i*2.09)*.36,-.20,Math.cos(i*2.09)*.36);
+      routeSignRoot.add(fiber);
+    }
+  }
   function clearChunks() {
     for(const obj of chunks.values()) scene.remove(obj);
     chunks.clear();layouts.clear();tissueChunks.clear();tissueVisuals.clear();lastChunk='';
     for(const line of streaks)line.obj.geometry.dispose();streaks.length=0;
-    source.clear();
+    source.clear();routeSignRoot.clear();activeRouteMark='';forkSigns.clear();forkSites=[];forkSelection='';
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
+    deathBits.length=0;deathMesh.count=0;motesGeo.setDrawRange(0,0);
+    shotLight.visible=false;shotLight.intensity=0;
     kickPos=0;kickVel=0;muzzleTime=0;organPulse=0;
   }
   function buildChunk(cx,cz){
@@ -295,12 +605,182 @@ export function createWorld(canvas, initialSeed) {
     });
     floor.instanceMatrix.needsUpdate=true;ceiling.instanceMatrix.needsUpdate=true;
     group.add(floor,ceiling);
-    const wall=new THREE.InstancedMesh(wallShape,wallMat,walls.length);
+    const nonGastric=stage===1?'vascular':stage===3?'marrow':'neural';
+    const wall=new THREE.InstancedMesh(stage===2?gastricWallGeo:structuralWallGeo[nonGastric],
+      stage===2?stomachWallMat:structuralWallMats[nonGastric],walls.length);
     walls.forEach(([x,y,z,rot,a,b],i)=>{
       temp.position.set(x,y,z);temp.rotation.set(0,rot,0);temp.scale.set(1,1,1);temp.updateMatrix();wall.setMatrixAt(i,temp.matrix);
       wall.setColorAt(i,new THREE.Color().setHSL(biome.hue+(rand(a,b,seed+12)-.5)*.019,biome.saturation,biome.wallLight+rand(a,b,seed+14)*.14));
     });
     wall.instanceMatrix.needsUpdate=true;group.add(wall);
+    if(stage===2){
+      // Real gastric architecture: distinct per-sector landmarks and irregular
+      // pleated hanging vaults. All large forms stay overhead or in wall space,
+      // not inside movement / hitscan lanes.
+      const art=gastricChamber(cx,cz,seed),style=art.seed;
+      const archCount=art.arches;
+      const arches=new THREE.InstancedMesh(gastricPylorusGeo,gastricFoldMat,archCount);
+      let placed=0;
+      const clearCenter=cells.filter(([x,z])=>{
+        const lx=x-cx*8,lz=z-cz*8;
+        return lx>=2&&lx<=5&&lz>=2&&lz<=5&&isBaseFloor(x,z);
+      });
+      // A giant ring over the player's spawn reads as an orange obstruction,
+      // not anatomy. Keep major structures in the surrounding tissue perimeter.
+      const landmarkCells=(cx===0&&cz===0?
+        cells.filter(([x,z])=>Math.hypot(x-3.5,z-3.5)>=2.45):clearCenter);
+      const sites=landmarkCells.length?landmarkCells:cells;
+      for(let j=0;j<archCount;j++){
+        const [x,z]=sites[(j*5+style)%sites.length];
+        temp.position.set(x,2.47,z);temp.rotation.set(Math.PI/2,gastricSeedArt(x,z,31)*Math.PI,0);
+        temp.scale.set(.69+gastricSeedArt(x,z,32)*.11,.71,.47);
+        temp.updateMatrix();arches.setMatrixAt(placed++,temp.matrix);
+      }
+      arches.count=placed;arches.instanceMatrix.needsUpdate=true;group.add(arches);
+      const folds=[];
+      for(const [x,z] of cells){
+        if(gastricSeedArt(x,z,23)>art.folds)continue;
+        folds.push([x+(gastricSeedArt(x,z,24)-.5)*.3,z+(gastricSeedArt(x,z,25)-.5)*.3]);
+      }
+      if(folds.length){
+        const drapes=new THREE.InstancedMesh(gastricDrapeGeo,gastricFoldMat,folds.length);
+        folds.forEach(([x,z],i)=>{
+          temp.position.set(x,2.53,z);temp.rotation.set(.13,gastricSeedArt(x,z,26)*6.28,.13);
+          const stretch=.09+gastricSeedArt(x,z,27)*.11*art.hang;
+          temp.scale.set(.20+stretch,.16+stretch,.15+stretch);
+          temp.updateMatrix();drapes.setMatrixAt(i,temp.matrix);
+        });
+        drapes.instanceMatrix.needsUpdate=true;group.add(drapes);
+      }
+      const ridges=walls.filter((_,i)=>i%3!==0);
+      if(ridges.length){
+        const creases=new THREE.InstancedMesh(gastricRugaGeo,gastricFoldMat,ridges.length);
+        ridges.forEach(([x,y,z,rot,a,b],i)=>{
+          temp.position.set(x,2.24+(gastricSeedArt(a,b,45)-.5)*.14,z);
+          temp.rotation.set(0,rot,gastricSeedArt(a,b,46)*.3);
+          temp.scale.set(.46,.73,.36);temp.updateMatrix();creases.setMatrixAt(i,temp.matrix);
+        });
+        creases.instanceMatrix.needsUpdate=true;group.add(creases);
+      }
+      // Per-sector hero geometry:
+      // pylorus: layered occluding rings;
+      // cistern: pendant bladder;
+      // rugae: pleated tendon vault.
+      if(art.type==='cistern'&&clearCenter.length>=4){
+        const [x,z]=sites[Math.floor(style%sites.length)];
+        const bulb=new THREE.Mesh(gastricDrapeGeo,gastricFoldMat);
+        bulb.position.set(x,2.56,z);bulb.scale.set(.46,.22,.43);group.add(bulb);
+        for(let i=0;i<3;i++){
+          const mouth=new THREE.Mesh(gastricPylorusGeo,i===1?gastricMucusMat:gastricFoldMat);
+          mouth.position.set(x,2.48-i*.12,z);mouth.rotation.x=Math.PI/2;
+          mouth.scale.setScalar(.36+i*.07);group.add(mouth);
+        }
+      }
+      if(art.type==='rugae'&&clearCenter.length>=4){
+        const pleats=new THREE.InstancedMesh(gastricRugaGeo,gastricFoldMat,6);
+        for(let i=0;i<6;i++){
+          const [x,z]=sites[(i*5+style)%sites.length];
+          temp.position.set(x,2.48,z);temp.rotation.set(Math.PI/2,i*.9,.1);
+          temp.scale.set(.47+.05*i,.61,.68);temp.updateMatrix();pleats.setMatrixAt(i,temp.matrix);
+        }
+        pleats.instanceMatrix.needsUpdate=true;group.add(pleats);
+      }
+      // Twisted pyloric tendons in especially open atria.
+      if((profile.archetype==='atrium'||art.type==='pylorus')&&clearCenter.length>=7){
+        const cords=new THREE.InstancedMesh(gastricSinewGeo,gastricFoldMat,4);
+        for(let i=0;i<4;i++){
+          const [x,z]=sites[(i*3)%sites.length];
+          temp.position.set(x,2.39,z);temp.rotation.set(.25*i,.4*i,.52);
+          temp.scale.set(1,1.0,1);temp.updateMatrix();cords.setMatrixAt(i,temp.matrix);
+        }
+        cords.instanceMatrix.needsUpdate=true;group.add(cords);
+      }
+    }
+    if(stage!==2){
+      // The same walkable cells now carry three very different 3D vault systems.
+      // All hanging forms are at ceiling height. Only existing blocked wall
+      // cells contain lower relief, so movement and bullet logic stay stable.
+      const art=structuralChamber(cx,cz,seed,biome.id);
+      const marginCells=cells.filter(([x,z])=>Math.hypot(x-(cx*8+3.5),z-(cz*8+3.5))>=2.30);
+      const sites=(cx===0&&cz===0&&marginCells.length?marginCells:cells);
+      if(art&&sites.length){
+        const at=(i)=>(sites[(i*5+art.seed)%sites.length]);
+        if(art.biome==='vascular'){
+          const arches=new THREE.InstancedMesh(vascularArchGeo,structuralAccents.vascular,art.ribs);
+          for(let i=0;i<art.ribs;i++){
+            const [x,z]=at(i);temp.position.set(x,1.87,z);
+            temp.rotation.set(0,Math.round((art.twist+i)*2/Math.PI)*Math.PI/2,0);
+            temp.scale.set(art.mass,.86,1);temp.updateMatrix();arches.setMatrixAt(i,temp.matrix);
+          }
+          arches.instanceMatrix.needsUpdate=true;group.add(arches);
+          // Valve rings and thick arteries create an anatomical focal point.
+          const valveCount=art.type==='valve-hall'?3:1;
+          const valves=new THREE.InstancedMesh(vascularValveGeo,structuralAccents.vascular,valveCount);
+          for(let i=0;i<valveCount;i++){
+            const [x,z]=at(i+2);temp.position.set(x,2.43,z);temp.rotation.set(0,i*.68,0);
+            temp.scale.setScalar(.89+art.mass*.10);temp.updateMatrix();valves.setMatrixAt(i,temp.matrix);
+          }
+          valves.instanceMatrix.needsUpdate=true;group.add(valves);
+          if(art.type==='anastomosis'){
+            const a=new THREE.InstancedMesh(sacGeo,sacMat,3);
+            for(let i=0;i<3;i++){
+              const [x,z]=at(i+5);temp.position.set(x,2.46,z);
+              temp.rotation.set(0,i,0);temp.scale.set(1.9,1.2,1.6);temp.updateMatrix();a.setMatrixAt(i,temp.matrix);
+            }
+            a.instanceMatrix.needsUpdate=true;group.add(a);
+          }
+        }
+        if(art.biome==='marrow'){
+          const vaults=new THREE.InstancedMesh(marrowVaultGeo,structuralAccents.marrow,art.ribs);
+          for(let i=0;i<art.ribs;i++){
+            const [x,z]=at(i);temp.position.set(x,1.92,z);
+            temp.rotation.set(0,i%2*Math.PI/2,0);temp.scale.set(art.mass,.85,1);
+            temp.updateMatrix();vaults.setMatrixAt(i,temp.matrix);
+          }
+          vaults.instanceMatrix.needsUpdate=true;group.add(vaults);
+          const teeth=new THREE.InstancedMesh(marrowSpineGeo,structuralAccents.marrow,art.filaments);
+          for(let i=0;i<art.filaments;i++){
+            const [x,z]=at(i+7);temp.position.set(x,2.49,z);temp.rotation.set(0,i,Math.PI);
+            temp.scale.set(1,art.mass*.74,1);temp.updateMatrix();teeth.setMatrixAt(i,temp.matrix);
+          }
+          teeth.instanceMatrix.needsUpdate=true;group.add(teeth);
+          if(art.type==='bone-well'||art.type==='marrow-crypt'){
+            const pores=new THREE.InstancedMesh(marrowPoreGeo,marrowDark,5);
+            for(let i=0;i<5;i++){
+              const [x,z]=at(i+11);temp.position.set(x,2.59,z);temp.rotation.set(i*.6,i*.9,0);
+              temp.scale.set(art.pores*1.5,.20,art.pores*1.4);
+              temp.updateMatrix();pores.setMatrixAt(i,temp.matrix);
+            }
+            pores.instanceMatrix.needsUpdate=true;group.add(pores);
+          }
+        }
+        if(art.biome==='neural'){
+          const fibers=new THREE.InstancedMesh(neuralFiberGeo,structuralAccents.neural,art.filaments);
+          for(let i=0;i<art.filaments;i++){
+            const [x,z]=at(i);temp.position.set(x,2.43,z);
+            temp.rotation.set(Math.PI/2,i*.67+art.twist,.38);
+            temp.scale.set(1,art.mass,1);temp.updateMatrix();fibers.setMatrixAt(i,temp.matrix);
+          }
+          fibers.instanceMatrix.needsUpdate=true;group.add(fibers);
+          const nodes=new THREE.InstancedMesh(neuralNodeGeo,structuralAccents.neural,art.ribs);
+          for(let i=0;i<art.ribs;i++){
+            const [x,z]=at(i+9);temp.position.set(x,2.47,z);
+            temp.rotation.set(i*.5,art.twist+i,0);temp.scale.set(.67,.42,.66);
+            temp.updateMatrix();nodes.setMatrixAt(i,temp.matrix);
+          }
+          nodes.instanceMatrix.needsUpdate=true;group.add(nodes);
+          if(art.type==='synapse'||art.type==='ganglion'){
+            const rings=new THREE.InstancedMesh(neuralHaloGeo,structuralAccents.neural,2);
+            for(let i=0;i<2;i++){
+              const [x,z]=at(i+12);temp.position.set(x,2.49,z);
+              temp.rotation.set(Math.PI*.5,art.twist+i*.8,0);temp.scale.setScalar(.9);
+              temp.updateMatrix();rings.setMatrixAt(i,temp.matrix);
+            }
+            rings.instanceMatrix.needsUpdate=true;group.add(rings);
+          }
+        }
+      }
+    }
     if(bones.length){
       const bone=new THREE.InstancedMesh(boneShape,boneMat,bones.length);
       bones.forEach(([x,y,z,rot],i)=>{temp.position.set(x,y,z);temp.rotation.set(0,rot,.13);temp.scale.set(1,1,1);temp.updateMatrix();bone.setMatrixAt(i,temp.matrix);});
@@ -317,9 +797,11 @@ export function createWorld(canvas, initialSeed) {
       sacsMesh.instanceMatrix.needsUpdate=true;group.add(sacsMesh);
     }
     if(hazards.length){
-      const pools=new THREE.InstancedMesh(hazardGeo,hazardMat,hazards.length);
+      const hazardShape=stage===2?acidPoolGeo:stage===3?marrowSinkGeo:stage>=4?neuralDischargeGeo:hazardGeo;
+      const pools=new THREE.InstancedMesh(hazardShape,hazardMat,hazards.length);
       hazards.forEach(([x,z],i)=>{temp.position.set(x,.067,z);temp.rotation.set(0,rand(x,z,seed)*6.28,0);
-        temp.scale.set(stage===3?.84:1,.085,stage===3?.84:1);temp.updateMatrix();pools.setMatrixAt(i,temp.matrix);});
+        temp.scale.set(stage===3?.9:1,stage===2?1:stage===3?1:stage>=4?1:.085,stage===3?.9:1);
+        temp.updateMatrix();pools.setMatrixAt(i,temp.matrix);});
       pools.instanceMatrix.needsUpdate=true;group.add(pools);
     }
     if(features.length){
@@ -344,62 +826,184 @@ export function createWorld(canvas, initialSeed) {
   }
   function nearChunks(x,z) {
     const cx=Math.floor(Math.round(x)/CELLS_PER_CHUNK),cz=Math.floor(Math.round(z)/CELLS_PER_CHUNK);
-    const focus=cellKey(cx,cz);if(lastChunk===focus)return;
+    const slim=conservativeRenderer&&quality!=='high';
+    const aheadX=x-cx*CELLS_PER_CHUNK>=3.5?1:-1;
+    const aheadZ=z-cz*CELLS_PER_CHUNK>=3.5?1:-1;
+    const focus=cellKey(cx,cz)+'/'+(slim?'3:'+aheadX+':'+aheadZ:'9');
+    if(lastChunk===focus)return;
     lastChunk=focus;
-    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++) if(!chunks.has(cellKey(cx+dx,cz+dz)))buildChunk(cx+dx,cz+dz);
-    for(const [k,m] of chunks){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>1||Math.abs(b-cz)>1){scene.remove(m);chunks.delete(k);for(const t of getTissues(a,b)){t.visual=null;tissueVisuals.delete(t.id);}}}
+    // Software rasterizers only: preserve the active organ sector and the
+    // two neighbouring approach directions. Authoritative floor and collision
+    // data remain complete, even when out-of-view geometry is omitted.
+    const keep=new Set();
+    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
+      if(slim&&(Math.abs(dx)+Math.abs(dz)>1||dx&&dx!==aheadX||dz&&dz!==aheadZ))continue;
+      const k=cellKey(cx+dx,cz+dz);keep.add(k);
+      if(!chunks.has(k))buildChunk(cx+dx,cz+dz);
+    }
+    for(const [k,m] of chunks)if(!keep.has(k)){
+      scene.remove(m);chunks.delete(k);
+      const [a,b]=k.split(',').map(Number);
+      for(const t of getTissues(a,b)){t.visual=null;tissueVisuals.delete(t.id);}
+    }
     if(layouts.size>120){for(const [k] of layouts){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>6||Math.abs(b-cz)>6)layouts.delete(k);}}
   }
   function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
   function makeEnemy(type,x,z){
     const g=new THREE.Group(), core=mobMats[type]||mobMats.crawler;
-    const scale=type==='heart'?1.8:type==='brute'?1.28:type==='spitter'?.84:type==='leech'?.93:.95;
-    const body=new THREE.Mesh(organicGeo,core);body.position.y=.85;body.scale.set(.42,.5,.32);g.add(body);
-    const wound=new THREE.Mesh(organicGeo,woundMat);wound.position.y=.85;wound.scale.set(.46,.54,.37);wound.visible=false;g.add(wound);g.userData.wound=wound;
-    const jaw=new THREE.Mesh(new THREE.TorusGeometry(.2,.07,6,12),boneMat);jaw.position.set(0,.65,-.3);g.add(jaw);
-    for(let i=0;i<4;i++){
-      const a=i*Math.PI/2+.35;
-      const spine=new THREE.Mesh(toothGeo,i%2?boneMat:core);
-      spine.position.set(Math.sin(a)*.37,.73,Math.cos(a)*.3);spine.rotation.z=Math.sin(a)*.52;spine.rotation.x=Math.cos(a)*.52;g.add(spine);
-    }
-    for(const s of [-1,1]){
-      const eye=new THREE.Mesh(eyeGeo,eyeMat);eye.position.set(.17*s,1,-.25);g.add(eye);
-      const leg=new THREE.Mesh(toothGeo,core);leg.position.set(.29*s,.28,.02);leg.rotation.z=s*Math.PI*.34;g.add(leg);
-    }
-    if(type==='spitter'){
-      // High, swollen venom glands: identifiable before the creature attacks.
-      for(const side of [-1,1]){
-        const sac=new THREE.Mesh(spitterSacGeo,bile);
-        sac.position.set(side*.32,1.18,.14);sac.scale.set(.9,1.4,1.25);g.add(sac);
-      }
-    }
-    if(type==='leech'){
-      for(let ring=0;ring<3;ring++){
-        const collar=new THREE.Mesh(leechTubeGeo,ring===1?boneMat:core);
-        collar.position.set(0,.63+ring*.24,0);collar.rotation.x=Math.PI/2;
-        collar.scale.setScalar(.8+ring*.15);g.add(collar);
-      }
-    }
-    if(type==='brute'){
-      // Back armour leaves a clear heavy silhouette even in volumetric fog.
-      for(const side of [-1,0,1]){
-        const plate=new THREE.Mesh(brutePlateGeo,boneMat);
-        plate.position.set(side*.28,1.29,.10);plate.rotation.x=-.28;
-        plate.scale.set(1.25,1.25,1.08);g.add(plate);
-      }
+    const sizes={crawler:1,spitter:.90,brute:1.36,leech:.94,warden:1.67,heart:1.8,
+      clot:1.18,ossuary:1.42,synapse:1.24};
+    const scale=sizes[type]||1;
+    const body=new THREE.Mesh(organicGeo,core);
+    body.position.y=type==='crawler'?.53:type==='leech'?.61:type==='clot'?.86:1;
+    body.scale.set(type==='brute'||type==='warden'?.70:type==='leech'?.28:.42,
+      type==='crawler'?.28:type==='spitter'?.48:type==='leech'?.30:.55,
+      type==='leech'?.68:type==='crawler'?.64:.38);
+    g.add(body);g.userData.body=body;
+    const wound=new THREE.Mesh(organicGeo,woundMat);
+    wound.position.copy(body.position);wound.scale.copy(body.scale).multiplyScalar(1.07);
+    wound.visible=false;g.add(wound);g.userData.wound=wound;
+    const limbs=[];
+    function leg(side,index,length=.76){
+      const joint=new THREE.Group();
+      joint.position.set(side*(type==='brute'?.56:.37),type==='crawler'?.52:.55,
+        -.25+index*.28);
+      const upper=new THREE.Mesh(limbGeo,index%2?boneMat:core);
+      upper.position.set(side*.20,-.22,0);upper.rotation.z=side*(.85+index*.13);
+      upper.scale.set(.85,length,1);joint.add(upper);
+      const claw=new THREE.Mesh(mandibleGeo,boneMat);
+      claw.position.set(side*.46,-.48,-.12);claw.rotation.z=side*.39;claw.scale.set(.52,.62,.56);
+      joint.add(claw);g.add(joint);limbs.push({joint,side,index});
     }
     if(type==='crawler'){
+      // Six sprawled grasping limbs, hinged mandibles, almost floor-hugging.
+      for(const side of [-1,1])for(let i=0;i<3;i++)leg(side,i,.85);
       for(const side of [-1,1]){
-        const claw=new THREE.Mesh(crawlerClawGeo,core);
-        claw.position.set(side*.43,.17,-.31);claw.rotation.z=side*.49;g.add(claw);
+        const jaw=new THREE.Mesh(mandibleGeo,boneMat);
+        jaw.position.set(side*.18,.47,-.64);jaw.rotation.z=side*.6;jaw.rotation.x=-.9;
+        g.add(jaw);
+      }
+      const hump=new THREE.Mesh(organicGeo,core);hump.position.set(0,.73,.18);
+      hump.scale.set(.31,.19,.39);g.add(hump);
+    }else if(type==='spitter'){
+      // Tall forward-leaning proboscis plus gigantic asymmetric bile sacs.
+      for(const side of [-1,1])for(let i=0;i<2;i++)leg(side,i,.75);
+      const neck=new THREE.Mesh(spitterNeckGeo,core);neck.position.set(0,1.46,-.21);
+      neck.rotation.x=-.35;g.add(neck);
+      const nozzle=new THREE.Mesh(new THREE.TorusGeometry(.15,.085,7,12),boneMat);
+      nozzle.position.set(0,1.77,-.42);nozzle.rotation.x=Math.PI/2;g.add(nozzle);
+      for(const side of [-1,1]){
+        const sac=new THREE.Mesh(spitterSacGeo,bile);
+        sac.position.set(side*.37,1.30,.28+side*.04);sac.scale.set(1.40,1.77,1.38);g.add(sac);
+      }
+    }else if(type==='brute'||type==='warden'){
+      // Armour-torso, exposed heavy shoulder pads and forward ivory blades.
+      for(const side of [-1,1]){
+        leg(side,1,1.25);
+        const shield=new THREE.Mesh(shieldGeo,type==='warden'?core:boneMat);
+        shield.position.set(side*.64,1.31,-.06);shield.scale.set(.43,.65,.38);g.add(shield);
+        const tusk=new THREE.Mesh(mandibleGeo,boneMat);
+        tusk.position.set(side*.50,.92,-.57);tusk.rotation.x=-.60;
+        tusk.rotation.z=-side*.27;tusk.scale.set(1.1,1.6,1.1);g.add(tusk);
+      }
+      for(let i=0;i<5;i++){
+        const plate=new THREE.Mesh(brutePlateGeo,i%2?core:boneMat);
+        plate.position.set((i-2)*.25,1.73+Math.abs(i-2)*.06,.22);
+        plate.rotation.x=-.2;plate.scale.set(1.34,1.35,1.05);g.add(plate);
+      }
+      if(type==='warden'){
+        // The stomach guardian is a distinct bell-shaped anchored figure,
+        // not a bigger brute with recoloured skin.
+        const sphincter=new THREE.Mesh(gastricPylorusGeo,gastricFoldMat);
+        sphincter.position.set(0,1.27,-.68);sphincter.rotation.x=Math.PI/2;g.add(sphincter);
+        for(const side of [-1,1]){
+          const crown=new THREE.Mesh(mandibleGeo,core);
+          crown.position.set(side*.28,2.12,0);crown.rotation.z=-side*.28;g.add(crown);
+        }
+      }
+    }else if(type==='clot'){
+      // Squat blood clot / valve sentry: a heavy multi-lobed compression mass.
+      body.scale.set(.64,.54,.61);
+      for(const side of [-1,1]){
+        const lobe=new THREE.Mesh(organicGeo,core);
+        lobe.position.set(side*.39,.71,.10);lobe.scale.set(.37,.48,.42);g.add(lobe);
+        const vein=new THREE.Mesh(vascularValveGeo,boneMat);
+        vein.position.set(side*.33,1.24,-.24);vein.rotation.x=Math.PI/2;
+        vein.scale.set(1.07,.83,1);g.add(vein);
+      }
+      const aorta=new THREE.Mesh(vascularArchGeo,core);
+      aorta.position.set(0,1.5,.05);aorta.scale.set(.9,1.2,1.1);g.add(aorta);
+      for(let i=0;i<4;i++){
+        const tail=new THREE.Mesh(gastricSinewGeo,core);
+        tail.position.set(Math.sin(i*1.57)*.30,.41,Math.cos(i*1.57)*.24);
+        tail.rotation.z=i*.39;g.add(tail);
+      }
+    }else if(type==='ossuary'){
+      // Distinct bone cage with front-facing living shield, broad frontal plate.
+      body.scale.set(.53,.73,.46);
+      for(let i=0;i<6;i++){
+        const rib=new THREE.Mesh(marrowVaultGeo,i%2?core:boneMat);
+        rib.position.set(0,.68+i*.22,0);rib.rotation.set(.14,i*.36,0);
+        rib.scale.set(.80-i*.035,.69,.83);g.add(rib);
+      }
+      const shield=new THREE.Mesh(shieldGeo,boneMat);
+      shield.position.set(0,1.14,-.55);shield.scale.set(.58,.79,.27);
+      g.add(shield);g.userData.shield=shield;
+      for(const side of [-1,1]){
+        const horn=new THREE.Mesh(marrowSpineGeo,boneMat);
+        horn.position.set(side*.42,1.92,-.05);horn.rotation.z=side*.17;
+        horn.scale.set(1.45,1.4,1.3);g.add(horn);
+        leg(side,1,1.15);
+      }
+    }else if(type==='synapse'){
+      // A hanging neural chandelier, branching white axons and a naked node.
+      body.position.y=1.32;body.scale.set(.41,.49,.39);
+      for(let i=0;i<8;i++){
+        const angle=i*Math.PI/4;
+        const stalk=new THREE.Mesh(neuralFiberGeo,i%2?core:axonMat);
+        stalk.position.set(Math.sin(angle)*.40,1.26+Math.sin(angle*2)*.18,Math.cos(angle)*.37);
+        stalk.rotation.set(Math.sin(angle)*.6,0,Math.cos(angle)*.6);
+        stalk.scale.set(1,.86,1);g.add(stalk);
+        const pearl=new THREE.Mesh(neuralNodeGeo,core);
+        pearl.position.set(Math.sin(angle)*.77,1.26+Math.sin(angle*2)*.3,Math.cos(angle)*.74);
+        pearl.scale.set(.26,.30,.26);g.add(pearl);
+      }
+      const crown=new THREE.Mesh(neuralHaloGeo,axonMat);crown.position.set(0,1.9,0);
+      crown.rotation.x=Math.PI/2;crown.scale.set(1.6,1.6,1.3);g.add(crown);
+      const lock=new THREE.Mesh(targetTellGeo,tellMats.synapse);
+      lock.rotation.x=Math.PI/2;lock.visible=false;lock.position.y=.08;
+      g.userData.marker=lock;source.add(lock);
+    }else if(type==='leech'){
+      // Long low segmented sucker with open ivory mouth.
+      for(let i=0;i<5;i++){
+        const segment=new THREE.Mesh(organicGeo,core);
+        segment.position.set(0,.52,(-i+2)*.23);
+        segment.scale.set(.23+i*.032,.25+i*.016,.29);g.add(segment);
+      }
+      for(let i=0;i<4;i++){
+        const collar=new THREE.Mesh(leechTubeGeo,i%2?boneMat:core);
+        collar.position.set(0,.56,(-i+1.4)*.24);
+        collar.rotation.x=Math.PI/2;collar.scale.setScalar(.80);g.add(collar);
+      }
+      const mouth=new THREE.Mesh(new THREE.TorusGeometry(.26,.07,8,17),boneMat);
+      mouth.position.set(0,.50,-.80);mouth.rotation.x=Math.PI/2;g.add(mouth);
+    }else if(type==='heart'){
+      for(let i=0;i<7;i++){
+        const ring=new THREE.Mesh(veinGeo,i%2?boneMat:core);
+        ring.position.set(Math.sin(i*2)*.09,1+i*.09,0);
+        ring.rotation.set(i*.24,i*.58,0);ring.scale.setScalar(1.6+i*.12);g.add(ring);
+      }
+      for(const side of [-1,1])for(let i=0;i<2;i++)leg(side,i,1.15);
+    }
+    if(!['leech','heart','warden','clot','ossuary','synapse'].includes(type)){
+      for(const side of [-1,1]){
+        const eye=new THREE.Mesh(eyeGeo,eyeMat);
+        eye.position.set(side*.19,type==='crawler'?.65:1.13,-.30);g.add(eye);
       }
     }
     const tell=new THREE.Mesh(tellRingGeo,tellMats[type]||tellMats.crawler);
     tell.rotation.x=Math.PI/2;tell.position.y=.085;tell.visible=false;g.add(tell);
-    g.userData.tell=tell;
-    if(type==='heart')for(let i=0;i<5;i++){
-      const ring=new THREE.Mesh(veinGeo,i%2?boneMat:core);ring.position.set(0,.8+i*.065,0);ring.rotation.set(i*.23,i*.5,0);ring.scale.setScalar(1.4+i*.08);g.add(ring);
-    }
+    g.userData.tell=tell;g.userData.limbs=limbs;g.userData.bodyBaseY=body.scale.y;
     g.scale.setScalar(scale);g.position.set(x,0,z);source.add(g);
     return g;
   }
@@ -447,7 +1051,21 @@ export function createWorld(canvas, initialSeed) {
         life:.19+Math.random()*.5});
     }
   }
+  function spawnDeathScraps(x,z,count){
+    const limits=fxLimits(quality,conservativeRenderer);
+    if(!limits.deaths)return;
+    const n=Math.min(limits.deaths,Math.max(2,Math.floor(count/4)));
+    for(let i=0;i<n;i++){
+      if(deathBits.length>=24)deathBits.shift();
+      const a=rand(Math.floor(x*23),Math.floor(z*17),seed+i*173)*Math.PI*2;
+      const speed=1+rand(Math.floor(x*9),i,seed+39)*1.5;
+      deathBits.push({x,y:.55+rand(i,seed,9)*.3,z,vx:Math.cos(a)*speed,
+        vy:1.9+rand(i,seed,19)*1.8,vz:Math.sin(a)*speed,
+        angle:a,life:.55+rand(i,seed,67)*.55,size:.75+rand(i,seed,47)*.9});
+    }
+  }
   function splatter(x,z,count=13){
+    spawnDeathScraps(x,z,count);
     for(let i=0;i<count&&droplets.length<600;i++){
       const a=Math.random()*Math.PI*2,force=.8+Math.random()*3;
       droplets.push({x,y:.7+Math.random()*.6,z,vx:Math.cos(a)*force,vy:1.4+Math.random()*2,vz:Math.sin(a)*force,life:.35+Math.random()*.75});
@@ -465,19 +1083,50 @@ export function createWorld(canvas, initialSeed) {
     }
     for(let i=0;i<droplets.length;i++){const p=droplets[i];particleArr[i*3]=p.x;particleArr[i*3+1]=p.y;particleArr[i*3+2]=p.z;}
     particlesGeo.attributes.position.needsUpdate=true;particlesGeo.setDrawRange(0,droplets.length);
+    for(let i=deathBits.length-1;i>=0;i--){
+      const bit=deathBits[i];bit.x+=bit.vx*dt;bit.z+=bit.vz*dt;
+      bit.y=Math.max(.085,bit.y+bit.vy*dt);bit.vy-=10.5*dt;bit.life-=dt;
+      if(bit.life<=0)deathBits.splice(i,1);
+    }
+    for(let i=0;i<deathBits.length;i++){
+      const bit=deathBits[i];
+      deathTemp.position.set(bit.x,bit.y,bit.z);
+      deathTemp.rotation.set(bit.angle+time*4,bit.angle*.7+time*3,0);
+      deathTemp.scale.setScalar(bit.size*Math.min(1,bit.life*4));
+      deathTemp.updateMatrix();deathMesh.setMatrixAt(i,deathTemp.matrix);
+    }
+    deathMesh.count=deathBits.length;
+    if(deathBits.length)deathMesh.instanceMatrix.needsUpdate=true;
     organPulse=Math.max(0,organPulse-dt);
-    pulseLamp.intensity=6.5+Math.sin(time*(stage===4?5.2:stage===1?3.8:2.7))*2.6+organPulse*7;
+    const physiology=organLight(stage,time,immunePressure,organPulse);
+    pulseLamp.intensity=physiology.light;
+    scene.fog.density=biome.fogDensity*physiology.fog;
+    if(stage===2)stomachWallMat.roughness=.67-physiology.beat*.035;
+    structuralAccents.vascular.roughness=.55-physiology.beat*.035;
+    structuralAccents.marrow.roughness=.98-physiology.beat*.012;
+    structuralAccents.neural.emissiveIntensity=.32+physiology.beat*.20;
+    stomachWallMat.emissiveIntensity=.12+physiology.beat*.06;
+    shotLight.visible=!conservativeRenderer&&quality!=='low'&&muzzleTime>0;
+    shotLight.intensity=shotLight.visible?clamp(muzzleTime*38,0,5.2):0;
     hazardMat.emissiveIntensity=.48+Math.sin(time*(stage===4?6:2.5))*.17;
     for(const root of tissueVisuals.values())if(root.visible){root.userData.flash=Math.max(0,root.userData.flash-dt);
       root.scale.setScalar(1+Math.sin(time*3.4+root.position.x*.25)*.045+root.userData.flash*.4);
     }
-    membrane.emissiveIntensity=.3+Math.sin(time*2.15)*.09;
+    membrane.emissiveIntensity=.23+physiology.beat*.14;
   }
+  function setImmunePressure(value){immunePressure=clamp(Number(value)||0,0,1);}
   function reset(newSeed,ruptured=[],newStage=1){
-    seed=(newSeed>>>0);stage=Math.max(1,Math.min(5,Math.trunc(newStage)||1));
+    seed=(newSeed>>>0);stage=Math.max(1,Math.min(5,Math.trunc(newStage)||1));immunePressure=0;
     biome=biomeForWave(stage);clearChunks();setSeed(stageSeed(seed,stage));
     openedTissues=new Set((Array.isArray(ruptured)?ruptured:[]).filter(id=>typeof id==='string'&&/^[1-5]:-?\d+,-?\d+$/.test(id)).slice(0,2000));
     scene.background.setHex(biome.background);scene.fog.color.setHex(biome.fog);scene.fog.density=biome.fogDensity;
+    if(roughnessMaps){
+      membrane.roughnessMap=roughnessMaps[biome.id]||roughnessMaps.vascular;
+      wallMat.roughnessMap=roughnessMaps[biome.id]||roughnessMaps.vascular;
+    }
+    const mistHue=stage===5?0xd65e75:stage===2?0xa1ac80:stage===3?0xc4b4ac:stage===4?0xaba9f3:0xc86d78;
+    motesMat.color.setHex(mistHue);motesMat.opacity=stage===3?.36:.28;
+    shotLight.color.setHex(stage===5?0xffa8a1:biome.light);deathMat.color.setHex(stage===5?0x9a2234:biome.vein);
     sky.color.setHex(biome.light);sky.groundColor.setHex(biome.background);
     lamp.color.setHex(biome.light);pulseLamp.color.setHex(biome.pulse);
     boneMat.color.setHex(biome.bone);vesselMat.color.setHex(biome.vein);
@@ -493,7 +1142,18 @@ export function createWorld(canvas, initialSeed) {
     const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     camera.rotation.set(player.pitch+(reduced?0:Math.min(.016,kickPos*.03)),player.yaw,0,'YXZ');
     camera.fov=77+recoil*2.8+(player.sprinting?3:0);camera.updateProjectionMatrix();
-    lamp.position.set(player.x,1.7,player.z);pulseLamp.position.set(player.x,2.55,player.z-1.8);
+    lamp.position.set(player.x,1.7,player.z);
+    pulseLamp.position.set(player.x-Math.sin(player.yaw)*1.8,2.28,
+      player.z-Math.cos(player.yaw)*1.8);
+    shotLight.position.set(player.x-Math.sin(player.yaw)*.8,1.15,
+      player.z-Math.cos(player.yaw)*.8);
+    const haze=atmosphereProfile(stage,quality,conservativeRenderer);
+    for(let i=0;i<haze.count;i++){
+      const m=moteAt(seed,stage,i,time,player.x,player.z);
+      motesArray[i*3]=m.x;motesArray[i*3+1]=m.y;motesArray[i*3+2]=m.z;
+    }
+    motesGeo.setDrawRange(0,haze.count);
+    if(haze.count)motesGeo.attributes.position.needsUpdate=true;
     const w=player.weapon===2?2:player.weapon===1?1:0;
     bolter.visible=w===0;shredder.visible=w===1;stinger.visible=w===2;
     const portrait=canvas.clientHeight>canvas.clientWidth;
@@ -510,29 +1170,56 @@ export function createWorld(canvas, initialSeed) {
     if(needleFlash.visible)needleFlash.scale.setScalar(.78+muzzleTime*2.1);
     for(const e of entities)if(e.visual){
       const hit=clamp((e.hitFlash||0)/.18,0,1);
-      e.visual.position.set(e.x,Math.sin(time*4+e.id)*.038-hit*.05,e.z);
-      e.visual.rotation.y=Math.atan2(player.x-e.x,player.z-e.z)+Math.PI;
-      e.visual.rotation.z=(reduced?0:Math.sin(time*26+e.id)*hit*.075);
-      e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='brute'?1.28:e.type==='spitter'?.84:e.type==='leech'?.93:.95)*(1+Math.sin(time*5+e.id)*.045-hit*.07));
+      const motion=enemyMotion(e.type,time,e.id,e.windup>0?1:0,hit,reduced);
+      e.visual.position.set(e.x,motion.bob,e.z);
+      e.visual.rotation.y=(e.type==='ossuary'?(e.facing??0):Math.atan2(player.x-e.x,player.z-e.z))+Math.PI;
+      e.visual.rotation.z=motion.roll+Math.sin(time*26+e.id)*hit*.075;
+      e.visual.rotation.x=motion.pitch;
+      e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='warden'?1.67:e.type==='ossuary'?1.42:
+        e.type==='clot'?1.18:e.type==='synapse'?1.24:e.type==='brute'?1.36:e.type==='spitter'?.90:e.type==='leech'?.94:1)*
+        (1+Math.sin(time*5+e.id)*.045-hit*.07));
+       if(e.visual.userData.body){const body=e.visual.userData.body;
+         body.scale.y=e.visual.userData.bodyBaseY*motion.breath;}
+       if(e.visual.userData.limbs&&!reduced){for(const limb of e.visual.userData.limbs){
+         limb.joint.rotation.x=Math.sin(time*motion.limb+e.id+limb.index*2+limb.side)*
+           (.15+(e.windup>0?.10:0));}}
       if(e.visual.userData.wound)e.visual.userData.wound.visible=hit>.1;
       const tell=e.visual.userData.tell;
       if(tell){
         const severity=telegraphSeverity(e);
         tell.visible=severity>0;
         if(tell.visible){
-          const amp=(e.type==='brute'?1.43:1.0)*(0.80+severity*.47);
+          const amp=e.type==='clot'?4.65*(.8+severity*.2):e.type==='ossuary'?1.8*(.8+severity*.47):
+            (e.type==='brute'?1.43:1.0)*(.80+severity*.47);
           tell.scale.setScalar(amp);
           // Face-to-floor organic warning ring, no UI popover or unrelated glow.
           tell.position.y=.09+Math.sin(time*12)*.012;
         }
       }
+      const marker=e.visual.userData.marker;
+      if(marker){
+        marker.visible=e.type==='synapse'&&e.windupKind==='surge'&&e.windup>0;
+        if(marker.visible){
+          marker.position.set(e.intentX,.075,e.intentZ);
+          marker.scale.setScalar(1.1+.17*Math.sin(time*11));
+        }
+      }
+      if(e.visual.userData.shield)e.visual.userData.shield.visible=!(e.windup>0);
+    }
+    routeSignRoot.rotation.y+=dt*.08;
+    for(const site of forkSites){
+      site.group.rotation.y=Math.sin(time*.85+site.x*.35)*.06;
+      site.group.position.y=2.03+Math.sin(time*1.5+site.z)*.035;
     }
     for(const p of pickups)if(p.visual){p.visual.position.y=.55+Math.sin(time*3+p.x)*.12;p.visual.rotation.y+=dt*1.8;}
     for(const p of shots)if(p.visual){p.visual.position.set(p.x,.95+Math.sin(time*13+p.x)*.07,p.z);p.visual.rotation.y+=dt*5;}
     tickFx(dt,time);
     renderer.render(scene,camera);
   }
-  function disposeVisual(obj){if(obj){source.remove(obj);}}
+  function disposeVisual(obj){if(obj){
+    if(obj.userData?.marker)source.remove(obj.userData.marker);
+    source.remove(obj);
+  }}
   function getOpenCells(cx,cz){return [...getCells(cx,cz)].map(k=>{const a=k.split(',');return {x:+a[0],z:+a[1]};}).filter(p=>isFloor(p.x,p.z));}
   function getStart(){const cells=getOpenCells(0,0);return cells.reduce((a,b)=>Math.hypot(b.x-3.5,b.z-3.5)<Math.hypot(a.x-3.5,a.z-3.5)?b:a,cells[0]||{x:3,z:3});}
   function visible(a,b) {
@@ -540,7 +1227,27 @@ export function createWorld(canvas, initialSeed) {
     for(let i=1;i<steps;i++){const t=i/steps;if(!isFloor(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t))return false;}
     return true;
   }
-  function end(){clearChunks();renderer.dispose();}
+  function end(){
+    clearChunks();motesGeo.dispose();motesMat.dispose();deathGeo.dispose();deathMat.dispose();
+    for(const map of Object.values(roughnessMaps||{}))map?.dispose();
+    renderer.dispose();
+  }
+  function getAtmosphereSignature(){
+    const profile=atmosphereProfile(stage,quality,conservativeRenderer);
+    return {biome:biome.id,stage,quality,motes:profile.count,deathFragments:deathMesh.count,
+      wetMaps:roughnessMaps?Object.keys(roughnessMaps).length:0,
+      enemyTextureFamilies:[...new Set(Object.keys(mobMats).map(type=>materialProperties(type).family))],
+      shotLightActive:shotLight.visible?1:0,
+      maxAdditionalLights:fxLimits(quality,conservativeRenderer).additionalLights};
+  }
+  function getArchitectureSignature(){
+    const cx=0,cz=0;
+    return stage===2?{biome:'gastric',...gastricChamber(cx,cz,seed)}:
+      structuralChamber(cx,cz,seed,biome.id);
+  }
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, getHazardAt, getBiome:()=>biome, getStage:()=>stage, softwareRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark,
+    setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, getAtmosphereSignature, softwareRenderer, conservativeRenderer, end,
+    getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length,
+      motes:motesGeo.drawRange.count,deathFragments:deathBits.length}) };
 }

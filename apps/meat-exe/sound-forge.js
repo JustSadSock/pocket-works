@@ -1,5 +1,6 @@
 // MEAT.EXE sound forge: steel pressure, wet muscle, brittle bone, hollow organs.
 // Voices are finite, sounds are transient and audible only after a real input gesture.
+import {organAudio} from './atmosphere.js';
 const profiles={
   fire:{freq:123,tail:.13,noise:1120,edge:'sawtooth',loud:.23,bass:.22},
   shotgun:{freq:72,tail:.27,noise:500,edge:'sawtooth',loud:.32,bass:.36},
@@ -15,7 +16,7 @@ const profiles={
 };
 const rests={fire:.065,shotgun:.19,hit:.045,wall:.09,kill:.085,pain:.18,heart:.34,dash:.17,menu:.06};
 export function createCombatAudio(){
-  let ctx=null,master=null,noise=null,enabled=true,active=0;
+  let ctx=null,master=null,noise=null,enabled=true,active=0,biome=organAudio(1);
   const last=new Map();
   function unlock(){
     if(!enabled)return;
@@ -53,15 +54,15 @@ export function createCombatAudio(){
       output.gain.exponentialRampToValueAtTime(.0001,now+tail);
       output.connect(master);
       const low=ctx.createOscillator(),lf=ctx.createBiquadFilter(),lg=ctx.createGain();
-      low.type=p.edge;low.frequency.setValueAtTime(p.freq*variation,now);
+      low.type=p.edge;low.frequency.setValueAtTime(p.freq*variation*biome.pitch,now);
       low.frequency.exponentialRampToValueAtTime(Math.max(26,p.freq*.36),now+tail*.78);
-      lf.type='lowpass';lf.frequency.value=p.noise*.8;
-      lg.gain.value=p.bass;
+      lf.type='lowpass';lf.frequency.value=p.noise*.8*biome.brightness;
+      lg.gain.value=p.bass*biome.bass;
       low.connect(lf).connect(lg).connect(output);
       low.start(now);low.stop(now+tail+.02);
       const wet=ctx.createBufferSource(),band=ctx.createBiquadFilter(),wetGain=ctx.createGain();
       wet.buffer=noise;band.type=kind==='wall'?'highpass':'bandpass';
-      band.frequency.value=p.noise*variation;band.Q.value=kind==='hit'?1.35:.65;
+      band.frequency.value=p.noise*variation*biome.brightness;band.Q.value=kind==='hit'?1.35:.65;
       wetGain.gain.value=kind==='pickup'?.37:.65;
       wet.connect(band).connect(wetGain).connect(output);
       wet.start(now,Math.random()*.18);wet.stop(now+tail+.02);
@@ -70,5 +71,6 @@ export function createCombatAudio(){
   }
   function setEnabled(next){enabled=Boolean(next);if(enabled)unlock();else ctx?.suspend?.().catch?.(()=>{});}
   function suspend(){ctx?.suspend?.().catch?.(()=>{});}
-  return {unlock,pulse,setEnabled,suspend,isEnabled:()=>enabled};
+  function setBiome(stage){biome=organAudio(stage);}
+  return {unlock,pulse,setEnabled,setBiome,suspend,isEnabled:()=>enabled};
 }

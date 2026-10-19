@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "physics",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "physics.test.mjs",
+        "coupling.test.mjs",
+        "constructor.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#field",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-cloud='custom']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-layout='arc']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#launch"
+        },
+        {
+          "action": "visible",
+          "selector": "#time-now"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
+        },
+        {
+          "action": "click",
+          "selector": "#trace"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#science"
+        },
+        {
+          "action": "visible",
+          "selector": "#science-panel"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/journey.spec.js",
+        "qa/constructor.spec.js"
+      ]
+    }
+  ]
+}

@@ -110,7 +110,8 @@
       "id": "biomes",
       "kind": "node-test",
       "files": [
-        "qa/biomes.test.mjs"
+        "qa/biomes.test.mjs",
+        "qa/pacing.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -118,7 +119,9 @@
       "id": "biomes-browser",
       "kind": "playwright",
       "files": [
-        "qa/biomes.spec.js"
+        "qa/biomes.spec.js",
+        "qa/pacing.spec.js",
+        "qa/atmosphere.spec.js"
       ],
       "tier": "smoke"
     },
@@ -126,7 +129,8 @@
       "id": "ecology",
       "kind": "node-test",
       "files": [
-        "qa/ecology.test.mjs"
+        "qa/ecology.test.mjs",
+        "qa/guardians.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -134,7 +138,8 @@
       "id": "ecology-browser",
       "kind": "playwright",
       "files": [
-        "qa/ecology.spec.js"
+        "qa/ecology.spec.js",
+        "qa/guardians.spec.js"
       ],
       "tier": "smoke"
     },
@@ -142,7 +147,9 @@
       "id": "biobuilds",
       "kind": "node-test",
       "files": [
-        "qa/biobuilds.test.mjs"
+        "qa/biobuilds.test.mjs",
+        "qa/routes.test.mjs",
+        "qa/tuning.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -150,7 +157,29 @@
       "id": "biobuilds-browser",
       "kind": "playwright",
       "files": [
-        "qa/biobuilds.spec.js"
+        "qa/biobuilds.spec.js",
+        "qa/routes.spec.js",
+        "qa/tuning.spec.js"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "immunity",
+      "kind": "node-test",
+      "files": [
+        "qa/immunity.test.mjs",
+        "qa/gastric.test.mjs",
+        "qa/structural.test.mjs",
+        "qa/atmosphere.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "gastric-browser",
+      "kind": "playwright",
+      "files": [
+        "qa/gastric.spec.js",
+        "qa/structural.spec.js"
       ],
       "tier": "smoke"
     }

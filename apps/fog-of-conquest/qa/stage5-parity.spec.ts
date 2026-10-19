@@ -39,7 +39,8 @@ test('battle kernel is present in the offline cache and available before UI init
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/fog-of-conquest/',{waitUntil:'domcontentloaded'});
  expect(await page.evaluate(()=>Object.keys(window.FogRuleKernel))).toEqual([
-  'reach','unitDamage','buildingDamage','advanceTurn','evaluateVictory'
+  'reach','unitDamage','buildingDamage','advanceTurn','evaluateVictory',
+   'canHeal','canSpawn','capture','lineOfSight','fogForSide'
  ]);
  await page.locator('#newGameBtn').click();
  await page.locator('#twoBtn').click();

@@ -9,7 +9,7 @@ if (!base) {
   process.exit(0);
 }
 
-const result = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACMRD', base, head], {
+const result = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACMRD', `${base}...${head}`], {
   encoding: 'utf8',
   shell: false
 });
