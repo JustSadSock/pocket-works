@@ -99,7 +99,8 @@ function refreshControls(){
   $('sound').classList.toggle('on',state.sound);
   $('sound').setAttribute('aria-pressed',String(state.sound));
   $('sound').setAttribute('aria-label',state.sound?'Выключить звук':'Включить звук');
-  $('mode-help').textContent=({pulse:'ТАП: ИМПУЛЬС · УДЕРЖАНИЕ: СЕРИЯ',wall:'ВЕДИТЕ ПАЛЬЦЕМ, ЧТОБЫ ПОСТРОИТЬ СТЕНУ',erase:'ПРОВЕДИТЕ ПО СТЕНЕ, ЧТОБЫ СТЕРЕТЬ',probe:'КАСАНИЕ: ИЗМЕРИТЬ ПАРАМЕТРЫ'})[state.tool];
+  $('mode-help').textContent=({pulse:isFlow?'КАСАНИЕ: ИМПУЛЬС В ПОТОК':'ТАП: ИМПУЛЬС · УДЕРЖАНИЕ: СЕРИЯ',wall:'ВЕДИТЕ ПАЛЬЦЕМ, ЧТОБЫ ПОСТРОИТЬ СТЕНУ',erase:'ПРОВЕДИТЕ ПО СТЕНЕ, ЧТОБЫ СТЕРЕТЬ',probe:'КАСАНИЕ: ИЗМЕРИТЬ ПАРАМЕТРЫ'})[state.tool];
+  $('hint').textContent=isFlow?'ПОТОК СЛЕВА НАПРАВО · ПЕРЕКЛЮЧИ РЕЖИМ И ИЗМЕРЯЙ':'Коснись камеры, чтобы создать ударную волну';
   $('undo').disabled=!state.edits[state.preset].length;
   $('remove-edits').disabled=!state.edits[state.preset].length;
   display.dataset.tool=state.tool;
@@ -575,6 +576,24 @@ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',(
 }));
 $('power').addEventListener('input',e=>{state.power=+e.target.value;$('power-value').textContent=state.power.toFixed(1);persist()});
 $('speed').addEventListener('input',e=>{state.speed=+e.target.value;$('speed-value').textContent=state.speed+'×';persist()});
+$('flow-mach').addEventListener('input',e=>{
+  $('flow-mach-value').textContent=(+e.target.value).toFixed(1)+' M';
+  $('regime').textContent=(+e.target.value)>=1?'СВЕРХЗВУК':'ДОЗВУК';
+  $('flow-velocity').textContent=((+e.target.value)*Math.sqrt(1.4)).toFixed(2);
+});
+$('flow-mach').addEventListener('change',e=>{
+  const requested=+e.target.value;
+  if(state.flowMach===requested)return;
+  state.flowMach=requested;persist();refreshControls();
+  if(FLOW_PRESETS.has(state.preset)){resetGas(false);drawScope();render();toast('ПОТОК: МАХ '+state.flowMach.toFixed(1));}
+});
+$('streamlines').addEventListener('click',()=>{
+  state.streamlines=!state.streamlines;persist();refreshControls();render();
+});
+$('flow-restart').addEventListener('click',()=>{
+  if(!FLOW_PRESETS.has(state.preset))return;
+  resetGas(false);drawScope();render();toast('НАБЕГАЮЩИЙ ПОТОК ПЕРЕЗАПУЩЕН');
+});
 $('ratio').addEventListener('input',e=>{
   state.ratio=+e.target.value;persist();
   if(state.preset==='tube'){resetGas();drawScope();}
@@ -600,7 +619,7 @@ $('csv').addEventListener('click',()=>{
 $('sound').addEventListener('click',()=>{state.sound=!state.sound;persist();refreshControls();if(state.sound)playSound('wall')});
 runBtn.addEventListener('click',()=>setActive(!active));
 $('step').addEventListener('click',()=>{if(tubeReady)releaseTube();setActive(false);if(sim){sim.step();trace.record(sim,true);}updateMetrics();drawScope();render();});
-$('clear').addEventListener('click',()=>{resetGas();drawScope();toast(state.preset==='tube'?'ТРУБА ЗАРЯЖЕНА · ОЖИДАНИЕ РАЗРЫВА':'ДАВЛЕНИЕ СБРОШЕНО ДО P₀');});
+$('clear').addEventListener('click',()=>{resetGas();drawScope();toast(state.preset==='tube'?'ТРУБА ЗАРЯЖЕНА · ОЖИДАНИЕ РАЗРЫВА':FLOW_PRESETS.has(state.preset)?'НАБЕГАЮЩИЙ ПОТОК ПЕРЕЗАПУЩЕН':'ДАВЛЕНИЕ СБРОШЕНО ДО P₀');});
 $('undo').addEventListener('click',()=>{
   if(!state.edits[state.preset].length)return;
   state.edits[state.preset].pop();rebuildGeometry();persist();toast('ПОСЛЕДНИЙ ШТРИХ ОТМЕНЁН');
