@@ -1,0 +1,77 @@
+import {test,expect} from '@playwright/test';
+
+test('one named agent learns repeatedly, persists brain and has separate combat experience',async({page})=>{
+ test.setTimeout(110000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#agentHub')).toBeVisible();
+ await expect(page.locator('#hubAgents option')).toHaveCount(1,{timeout:25000});
+ await expect(page.locator('#labPanel')).toBeHidden();
+ await page.locator('#hubVariant').selectOption('corridor');
+ await page.locator('#hubBatch').selectOption('100');
+ await page.locator('#hubTrain').click();
+ await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:45000});
+ const afterFirst=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ expect(afterFirst.type).toBe('qlearning');
+ expect(afterFirst.q.length).toBeGreaterThan(0);
+ await page.locator('#hubTrain').click();
+ await expect(page.locator('#hubRuns')).toHaveText('2',{timeout:45000});
+ await expect(page.locator('.hub-history-entry')).toHaveCount(2);
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#hubRuns')).toHaveText('2',{timeout:15000});
+ const reloaded=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ expect(reloaded.q.length).toBeGreaterThan(0);
+ await page.locator('[data-world-mode="combat"]').click();
+ await expect(page.locator('#hubWorldTitle')).toHaveText('Боевая арена');
+ await expect(page.locator('#hubRuns')).toHaveText('0');
+ await page.locator('#hubBatch').selectOption('8');
+ await page.locator('#hubTrain').click();
+ await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:50000});
+ await page.locator('[data-world-mode="grid"]').click();
+ await expect(page.locator('#hubRuns')).toHaveText('2');
+ expect(errors).toEqual([]);
+});
+
+test('two agents keep independent brains, progress and names across restart',async({page})=>{
+ test.setTimeout(90000);
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#hubAgents option')).toHaveCount(1,{timeout:20000});
+ const firstId=await page.locator('#hubAgents').inputValue();
+ await page.locator('#hubBatch').selectOption('100');
+ await page.locator('#hubTrain').click();
+ await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:45000});
+ await page.locator('#hubManage').click();
+ await page.locator('.hub-manage-dialog [data-action="new"]').click();
+ await page.locator('#hubDialogName').fill('Второй исследователь');
+ await page.locator('#hubDialogConfirm').click();
+ await expect(page.locator('#hubAgents')).toHaveValue(/a-/);
+ await expect(page.locator('#hubAgents')).toContainText('Второй исследователь');
+ await expect(page.locator('#hubRuns')).toHaveText('0');
+ const secondSnapshot=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ expect(secondSnapshot.q).toHaveLength(0);
+ await page.locator('#hubAgents').selectOption(firstId);
+ await expect(page.locator('#hubRuns')).toHaveText('1');
+ const firstSnapshot=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ expect(firstSnapshot.q.length).toBeGreaterThan(0);
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#hubAgents option')).toHaveCount(2,{timeout:25000});
+ await expect(page.locator('#hubRuns')).toHaveText('1');
+});
+
+test('advanced tools are reversible without hiding the playable arena',async({page})=>{
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#agentHub')).toBeVisible();
+ await page.locator('#hubTools').click();
+ await expect(page.locator('#labPanel')).toBeVisible();
+ await expect(page.locator('#agentHub')).toBeHidden();
+ await expect(page.locator('#makeScenario')).toBeVisible();
+ await page.locator('#labPanel .hub-back').click();
+ await expect(page.locator('#agentHub')).toBeVisible();
+ await page.locator('[data-world-mode="combat"]').click();
+ await expect(page.locator('#agentHub')).toBeVisible();
+ await page.locator('#hubEdit').click();
+ await expect(page.locator('#combatPanel')).toBeVisible();
+ await expect(page.locator('#studioEdit')).toBeVisible();
+ await page.locator('#combatPanel .hub-back').click();
+ await expect(page.locator('#hubTrain')).toBeVisible();
+});
