@@ -121,6 +121,7 @@ let gameState = {
     boardWidth: BASE_BOARD_WIDTH,
     sharedStats: { ...TEAM_SCORE_TEMPLATE },
     sharedStatsDirty: false,
+    pieceBag: [],
     inputStates: new Map(),
     randomSeed: normalizeSeed(Date.now()),
     rng: createPrng(normalizeSeed(Date.now())),
@@ -189,6 +190,22 @@ function randomFloat() {
         return gameState.rng();
     }
     return Math.random();
+}
+
+// Shared seven-bag: the same seeded queue is consumed by all players.
+// No tetromino can disappear for more than twelve consecutive shared draws.
+function nextBaggedPiece() {
+    if (!Array.isArray(gameState.pieceBag)) gameState.pieceBag = [];
+    if (!gameState.pieceBag.length) {
+        const bag = Object.keys(SHAPES);
+        for (let i = bag.length - 1; i > 0; i--) {
+            const j = Math.floor(randomFloat() * (i + 1));
+            [bag[i], bag[j]] = [bag[j], bag[i]];
+        }
+        gameState.pieceBag = bag;
+    }
+    const shape = gameState.pieceBag.pop();
+    return SHAPES[shape].map(row => [...row]);
 }
 
 function formatKeyLabel(code) {
@@ -290,9 +307,7 @@ class Player {
     }
 
     randomPiece() {
-        const shapes = Object.keys(SHAPES);
-        const shape = shapes[Math.floor(randomFloat() * shapes.length)];
-        return SHAPES[shape];
+        return nextBaggedPiece();
     }
 
     spawnPiece() {
@@ -595,10 +610,10 @@ function checkAllPlayersGameOver() {
  if(saved){Object.assign(gameState,saved);gameState.players=saved.players.map(p=>Object.assign(new Player(p.id,p.color,p.keys,p.spawnAnchor),p));}
  gameState.rng=rng;
  return {
- init(players){gameState.numPlayers=players.length;gameState.boardWidth=computeBoardWidth(players.length);gameState.board=createEmptyBoard();gameState.players=[];resetSharedStats();players.forEach((p,i)=>{const v=new Player(i,p.color,{},((i+1)/(players.length+1))*gameState.boardWidth);v.init();gameState.players.push(v);});},
+ init(players){gameState.numPlayers=players.length;gameState.boardWidth=computeBoardWidth(players.length);gameState.board=createEmptyBoard();gameState.players=[];gameState.pieceBag=[];resetSharedStats();players.forEach((p,i)=>{const v=new Player(i,p.color,{},((i+1)/(players.length+1))*gameState.boardWidth);v.init();gameState.players.push(v);});},
  step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(50,ms-t));},
  input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop'].includes(p.action))v[p.action]({broadcast:false});else throw Error('Некорректная команда');},
- snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p}))};}
+ snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,pieceBag:gameState.pieceBag,players:gameState.players.map(p=>({...p}))};}
  };
 }
 const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
