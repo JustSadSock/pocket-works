@@ -469,6 +469,7 @@ let gameState = {
     boardWidth: BASE_BOARD_WIDTH,
     sharedStats: { ...TEAM_SCORE_TEMPLATE },
     sharedStatsDirty: false,
+    pieceBag: [],
     inputStates: new Map(),
     randomSeed: normalizeSeed(Date.now()),
     rng: createPrng(normalizeSeed(Date.now())),
@@ -530,6 +531,7 @@ function resetSharedStats() {
 function setRandomSeed(seed) {
     gameState.randomSeed = normalizeSeed(seed);
     gameState.rng = createPrng(gameState.randomSeed);
+    gameState.pieceBag = [];
 }
 
 function randomFloat() {
@@ -537,6 +539,22 @@ function randomFloat() {
         return gameState.rng();
     }
     return Math.random();
+}
+
+// Shared seven-bag: the same seeded queue is consumed by all players.
+// No tetromino can disappear for more than twelve consecutive shared draws.
+function nextBaggedPiece() {
+    if (!Array.isArray(gameState.pieceBag)) gameState.pieceBag = [];
+    if (!gameState.pieceBag.length) {
+        const bag = Object.keys(SHAPES);
+        for (let i = bag.length - 1; i > 0; i--) {
+            const j = Math.floor(randomFloat() * (i + 1));
+            [bag[i], bag[j]] = [bag[j], bag[i]];
+        }
+        gameState.pieceBag = bag;
+    }
+    const shape = gameState.pieceBag.pop();
+    return SHAPES[shape].map(row => [...row]);
 }
 
 function formatKeyLabel(code) {
@@ -640,9 +658,7 @@ class Player {
     }
 
     randomPiece() {
-        const shapes = Object.keys(SHAPES);
-        const shape = shapes[Math.floor(randomFloat() * shapes.length)];
-        return SHAPES[shape];
+        return nextBaggedPiece();
     }
 
     spawnPiece() {
