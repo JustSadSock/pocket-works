@@ -98,6 +98,7 @@ function setActive(value){
 const flowEnabled=()=>state.flowMode==='on'||(state.flowMode==='auto'&&FLOW_PRESETS.has(state.preset));
 function switchPanel(value){
   if(!['scene','construct','measure'].includes(value))return;
+  const changed=document.querySelector('.workspace-tab.selected')?.dataset.panelTab!==value;
   state.panel=value;
   document.querySelectorAll('[data-panel-tab]').forEach(b=>{
     const yes=b.dataset.panelTab===value;b.classList.toggle('selected',yes);
@@ -106,7 +107,7 @@ function switchPanel(value){
   document.querySelectorAll('.controls-scroll [data-panel]').forEach(el=>{
     el.classList.toggle('panel-filtered',el.dataset.panel!==value);
   });
-  const scroll=document.querySelector('.controls-scroll');if(scroll)scroll.scrollTop=0;
+  const scroll=document.querySelector('.controls-scroll');if(scroll&&changed)scroll.scrollTop=0;
 }
 function refreshControls(){
   document.querySelectorAll('[data-tool]').forEach(b=>{const yes=b.dataset.tool===state.tool;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes))});
@@ -882,16 +883,18 @@ document.querySelectorAll('[data-material]').forEach(b=>b.addEventListener('clic
   toast('МАТЕРИАЛ ВЫБРАН · РИСУЙ В КАМЕРЕ');
 }));
 document.querySelectorAll('[data-emitter-type]').forEach(b=>b.addEventListener('click',()=>{
-  state.emitterType=b.dataset.emitterType;selectTool('source');
+  state.emitterType=b.dataset.emitterType;
+  const selected=state.emitters[state.preset][selectedEmitter];if(selected){selected.type=state.emitterType;syncEmitters();}
+  selectTool('source');
   toast('ИСТОЧНИК ВЫБРАН · КОСНИСЬ КАМЕРЫ');
 }));
 $('source-strength').addEventListener('input',e=>{
   state.sourceStrength=+e.target.value;$('source-strength-value').textContent=state.sourceStrength.toFixed(1);
-  persist();
+  const selected=state.emitters[state.preset][selectedEmitter];if(selected){selected.strength=state.sourceStrength;syncEmitters();}else persist();
 });
 $('source-angle').addEventListener('input',e=>{
   state.sourceAngle=+e.target.value;$('source-angle-value').textContent=state.sourceAngle+'°';
-  persist();
+  const selected=state.emitters[state.preset][selectedEmitter];if(selected){selected.angle=state.sourceAngle;syncEmitters();}else persist();
 });
 $('emitter-list').addEventListener('click',e=>{
   const b=e.target.closest('button[data-emitter-index]');if(!b)return;
