@@ -1,65 +1,13 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 installMobileRuntime();
 
-/* ===================== Environment (pure JS) ===================== */
-const GRID_W=30, GRID_H=20, TILE_SIZE=24;
-const TILE = { EMPTY:0, WALL:1, GOAL:2, HAZARD:3, REWARD:4 };
-const COLORS = {
-  [TILE.EMPTY]:"#18181f",
-  [TILE.WALL]:"#3a3a46",
-  [TILE.GOAL]:"#47b66b",
-  [TILE.HAZARD]:"#b84a4a",
-  [TILE.REWARD]:"#c8aa3c",
+import {GridEnvironment as Env,WIDTH,HEIGHT,TILE,createScenario,validateScene} from './lab-core.mjs';
+import {listModels,saveModel,loadModel,deleteModel} from './model-store.mjs';
+const GRID_W=WIDTH,GRID_H=HEIGHT,TILE_SIZE=24;
+const COLORS={
+  [TILE.EMPTY]:'#26372f',[TILE.WALL]:'#66766b',
+  [TILE.GOAL]:'#83bb77',[TILE.HAZARD]:'#be665c',[TILE.REWARD]:'#d9b65f'
 };
-class Env {
-  constructor(w,h, rules={}) {
-    this.w=w; this.h=h;
-    this.grid = Array.from({length:h},()=>Array.from({length:w},()=>TILE.EMPTY));
-    this.ax=1; this.ay=1; this.gx=w-2; this.gy=h-2;
-    this.steps=0; this.done=false; this.totalReward=0;
-    this.rules=Object.assign({
-      blocked:[TILE.WALL], maxSteps:1000, stepPenalty:-0.01,
-      hazardPunish:-0.5, goalReward:1.0
-    }, rules);
-  }
-  reset(spawn=[1,1], goal=[GRID_W-2,GRID_H-2]){
-    this.ax=spawn[0]; this.ay=spawn[1];
-    this.gx=goal[0]; this.gy=goal[1];
-    this.steps=0; this.done=false; this.totalReward=0;
-    return this.observe();
-  }
-  inBounds(x,y){ return x>=0&&y>=0&&x<this.w&&y<this.h; }
-  passable(x,y){ return this.inBounds(x,y) && !this.rules.blocked.includes(this.grid[y][x]); }
-  step(a){
-    if(this.done) return [this.observe(),0,true,{}];
-    const dir = {UP:[0,-1],DOWN:[0,1],LEFT:[-1,0],RIGHT:[1,0],STAY:[0,0]};
-    const [dx,dy]=dir[a];
-    const nx=this.ax+dx, ny=this.ay+dy;
-    if(this.passable(nx,ny)){ this.ax=nx; this.ay=ny; }
-
-    let r=this.rules.stepPenalty;
-    const t=this.grid[this.ay][this.ax];
-    if(t===TILE.HAZARD) r+=this.rules.hazardPunish;
-    if(t===TILE.REWARD){ r+=0.2; this.grid[this.ay][this.ax]=TILE.EMPTY; }
-    if(this.ax===this.gx && this.ay===this.gy){ r+=this.rules.goalReward; this.done=true; }
-
-    this.steps++; if(this.steps>=this.rules.maxSteps) this.done=true;
-    this.totalReward += r;
-    return [this.observe(), r, this.done, {}];
-  }
-  observe(){
-    const rad=3, tiles=[];
-    for(let dy=-rad; dy<=rad; dy++){
-      const row=[];
-      for(let dx=-rad; dx<=rad; dx++){
-        const x=this.ax+dx, y=this.ay+dy;
-        row.push(this.inBounds(x,y) ? this.grid[y][x] : TILE.WALL);
-      }
-      tiles.push(row);
-    }
-    return { tiles, goalVec:[this.gx-this.ax, this.gy-this.ay], pos:[this.ax,this.ay] };
-  }
-}
 
 /* ===================== UI wiring ===================== */
 const cv = document.getElementById('cv');
@@ -84,53 +32,50 @@ const env = new Env(GRID_W, GRID_H);
 let spawn=[1,1], goal=[GRID_W-2,GRID_H-2];
 env.reset(spawn,goal);
 
-// drawing state & history
-let tool='brush';
-let drawing=false;
-let startX=0,startY=0;
-let undoStack=[], redoStack=[];
+// Each drawing gesture is a single reversible edit.
+let tool='brush',drawing=false,startX=0,startY=0,panStart=null;
+let undoStack=[],redoStack=[],operation=null;
 let view={x:0,y:0,scale:1};
-let panStart=null;
-toolSelect.onchange = ()=>{ tool = toolSelect.value; };
-zoomSel.onchange = ()=>{ view.scale=parseFloat(zoomSel.value); redraw(); };
-
-function setTile(x,y,val){
-  if(x<0||y<0||x>=GRID_W||y>=GRID_H) return;
-  const old=env.grid[y][x];
-  if(old===val) return;
-  env.grid[y][x]=val;
-  undoStack.push({x,y,old,val});
-  redoStack.length=0;
+toolSelect.onchange=()=>{tool=toolSelect.value;};
+zoomSel.onchange=()=>{view.scale=parseFloat(zoomSel.value);view.x=(cv.width-cv.width*view.scale)*.5;view.y=(cv.height-cv.height*view.scale)*.5;redraw();};
+function beginOperation(){if(operation)commitOperation();operation=new Map();}
+function commitOperation(){
+  if(!operation)return;
+  const items=[...operation.values()].filter(op=>op.old!==op.val);
+  if(items.length){undoStack.push(items);if(undoStack.length>80)undoStack.shift();redoStack.length=0;}
+  operation=null;
 }
-
+function setTile(x,y,val){
+  if(x<0||y<0||x>=GRID_W||y>=GRID_H||!Number.isInteger(val)||val<0||val>4)return;
+  const old=env.grid[y][x];if(old===val)return;
+  const op={x,y,old,val},key=y*GRID_W+x;
+  if(operation){if(!operation.has(key))operation.set(key,op);else operation.get(key).val=val;}
+  else {undoStack.push([op]);if(undoStack.length>80)undoStack.shift();redoStack.length=0;}
+  env.grid[y][x]=val;
+}
 function floodFill(x,y,target,repl){
-  if(target===repl) return;
-  const stack=[[x,y]]; const seen=new Set();
+  if(target===repl)return;
+  const stack=[[x,y]],seen=new Set();
   while(stack.length){
-    const [cx,cy]=stack.pop();
-    const key=cx+','+cy;
-    if(seen.has(key)) continue;
+    const [cx,cy]=stack.pop(),key=cy*GRID_W+cx;
+    if(seen.has(key)||cx<0||cy<0||cx>=GRID_W||cy>=GRID_H)continue;
     seen.add(key);
-    if(cx<0||cy<0||cx>=GRID_W||cy>=GRID_H) continue;
-    if(env.grid[cy][cx]!==target) continue;
+    if(env.grid[cy][cx]!==target)continue;
     setTile(cx,cy,repl);
     stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
   }
 }
-
 function undo(){
-  const op=undoStack.pop();
-  if(!op) return;
-  env.grid[op.y][op.x]=op.old;
-  redoStack.push(op);
-  redraw();
+  if(training)return;
+  commitOperation();stopReplay();const ops=undoStack.pop();if(!ops)return;
+  for(const op of ops)env.grid[op.y][op.x]=op.old;
+  redoStack.push(ops);env.reset(spawn,goal);redraw();
 }
 function redo(){
-  const op=redoStack.pop();
-  if(!op) return;
-  env.grid[op.y][op.x]=op.val;
-  undoStack.push(op);
-  redraw();
+  if(training)return;
+  commitOperation();stopReplay();const ops=redoStack.pop();if(!ops)return;
+  for(const op of ops)env.grid[op.y][op.x]=op.val;
+  undoStack.push(ops);env.reset(spawn,goal);redraw();
 }
 
 function mouseToTile(e){
@@ -207,6 +152,8 @@ function generateIsland(){
 
 let ctxTile={x:0,y:0};
 function handleCtx(i){
+  if(training)return;
+  stopReplay();beginOperation();
   switch(i){
     case 0: spawn=[ctxTile.x,ctxTile.y]; env.reset(spawn,goal); break;
     case 1: goal=[ctxTile.x,ctxTile.y]; env.reset(spawn,goal); break;
@@ -216,7 +163,7 @@ function handleCtx(i){
     case 5: generateRooms(); break;
     case 6: generateIsland(); break;
   }
-  redraw();
+  commitOperation();env.reset(spawn,goal);redraw();
 }
 
 function redraw(){
@@ -228,6 +175,21 @@ function redraw(){
       ctx.fillStyle = COLORS[env.grid[y][x]];
       ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE-1, TILE_SIZE-1);
     }
+  }
+  if(document.querySelector('#heatToggle')?.checked&&heatData.length===GRID_W*GRID_H){
+    const peak=Math.max(1,...heatData);
+    for(let y=0;y<GRID_H;y++)for(let x=0;x<GRID_W;x++){
+      const amount=heatData[y*GRID_W+x];if(amount<1)continue;
+      ctx.fillStyle=`rgba(245,155,70,${Math.min(.72,Math.sqrt(amount/peak)*.72)})`;
+      ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE-1,TILE_SIZE-1);
+    }
+  }
+  if(replayData?.trace?.length){
+    const trace=replayData.trace,limit=Math.min(replayIndex,trace.length-1);
+    ctx.beginPath();
+    for(let i=0;i<=limit;i++){const p=trace[i];if(i===0)ctx.moveTo((p.x+.5)*TILE_SIZE,(p.y+.5)*TILE_SIZE);else ctx.lineTo((p.x+.5)*TILE_SIZE,(p.y+.5)*TILE_SIZE);}
+    ctx.strokeStyle='#edcf7e';ctx.lineWidth=2;ctx.stroke();
+    const p=trace[limit];ctx.fillStyle='#fff1a8';ctx.beginPath();ctx.arc((p.x+.5)*TILE_SIZE,(p.y+.5)*TILE_SIZE,7,0,Math.PI*2);ctx.fill();
   }
   ctx.fillStyle = "#4fd18a";
   ctx.fillRect(env.gx*TILE_SIZE, env.gy*TILE_SIZE, TILE_SIZE-1, TILE_SIZE-1);
@@ -257,6 +219,8 @@ redraw();
 
 let dragSpawn=false, dragGoal=false;
 cv.addEventListener('pointerdown', e=>{
+  if(training)return;
+  stopReplay();
   if(e.button===1){
     panStart={x:e.clientX,y:e.clientY,ox:view.x,oy:view.y};
     e.preventDefault();
@@ -267,14 +231,15 @@ cv.addEventListener('pointerdown', e=>{
   const t=mouseToTile(e);
   if(t.x===spawn[0] && t.y===spawn[1]){ dragSpawn=true; return; }
   if(t.x===goal[0] && t.y===goal[1]){ dragGoal=true; return; }
+  beginOperation();
   drawing=true;
   startX=t.x; startY=t.y;
   paint(e);
 });
 cv.addEventListener('pointermove', e=>{
   if(panStart){
-    view.x = panStart.ox + (e.clientX-panStart.x);
-    view.y = panStart.oy + (e.clientY-panStart.y);
+    view.x = panStart.ox + (e.clientX-panStart.x)*cv.width/cv.getBoundingClientRect().width;
+    view.y = panStart.oy + (e.clientY-panStart.y)*cv.height/cv.getBoundingClientRect().height;
     redraw();
     return;
   }
@@ -300,12 +265,14 @@ window.addEventListener('pointerup', e=>{
     const t=mouseToTile(e);
     drawShape(startX,startY,t.x,t.y);
   }
+  commitOperation();
+  if(dragSpawn||dragGoal){env.reset(spawn,goal);}
   drawing=false;
   dragSpawn=false; dragGoal=false;
 });
 
 cv.addEventListener('contextmenu', e=>{
-  e.preventDefault();
+  e.preventDefault();if(training)return;
   const t=mouseToTile(e);
   ctxTile=t;
   ctxMenu.style.left=e.clientX+'px';
@@ -346,7 +313,134 @@ document.addEventListener('keydown', e=>{
     if(k==='z'){ e.preventDefault(); undo(); }
     else if(k==='y'){ e.preventDefault(); redo(); }
     else if(k==='s'){ e.preventDefault(); saveBtn.onclick(); }
-    else if(k==='l'){ e.preventDefault(); loadBtn.onclick(); }
+    else if(k==='l'){ e.preventDefault(); 
+/* ===================== Experiment controls ===================== */
+$('makeScenario').onclick=()=>{
+  if(training)return;
+  stopReplay();commitOperation();
+  const chosen=$('scenarioSelect').value;
+  if(chosen==='custom'){status('Нарисованный мир сохранён в редакторе');return;}
+  const generated=createScenario(chosen,Number($('worldSeed').value)||41);
+  env.setScene(generated);spawn=generated.spawn;goal=generated.goal;
+  undoStack=[];redoStack=[];heatData=[];lastBest=null;lastWorst=null;
+  $('bestReplay').disabled=true;$('worstReplay').disabled=true;
+  view={x:0,y:0,scale:1};zoomSel.value='1';redraw();
+  status('Испытание построено: '+$('scenarioSelect').selectedOptions[0].textContent);
+};
+$('trainBtn').onclick=()=>{
+  if(training)return;
+  stopReplay();running=false;pendingAction=false;
+  playBtn.textContent='▶ Наблюдать';
+  if(agentSelect.value==='random'){status('Для обучения выберите Q-learning');return;}
+  try{
+    const scene=validateScene(sceneNow()),episodes=Number($('episodeCount').value);
+    $('metricEpisodes').textContent='0';$('metricSuccess').textContent='—';$('metricReward').textContent='—';$('progressFill').style.width='0%';
+    historyData=[];heatData=[];drawLearningChart();lastBest=null;lastWorst=null;
+    $('bestReplay').disabled=true;$('worstReplay').disabled=true;
+    controlsEnabled(true);
+    worker.postMessage({type:'train',payload:{scene,episodes,seed:Number($('worldSeed').value)||41,maxSteps:320}});
+  }catch(error){controlsEnabled(false);status('Нельзя обучать: '+error.message);}
+};
+$('stopTrain').onclick=()=>{if(training)worker.postMessage({type:'stop'});};
+$('evaluateBtn').onclick=()=>{
+  if(training)return;
+  try{
+    const scene=validateScene(sceneNow());
+    status('Идёт независимая оценка...');
+    worker.postMessage({type:'evaluate',payload:{scene,seed:9101,scenarioId:$('scenarioSelect').value==='custom'?'corridor':$('scenarioSelect').value}});
+  }catch(error){status('Ошибка проверки: '+error.message);}
+};
+function beginReplay(candidate){
+  if(training||!candidate?.trace?.length)return;
+  stopReplay();running=false;playBtn.textContent='▶ Наблюдать';
+  replayData=candidate;replayIndex=0;redraw();
+  $('replayInfo').textContent='Эпизод '+(candidate.episode||'тест')+' · '+candidate.trace.length+' кадров · '+(candidate.success?'Цель достигнута':'Цель не достигнута')+'. Нажмите ещё раз для остановки.';
+  replayTimer=setInterval(()=>{
+    if(!replayData)return;
+    replayIndex=Math.min(replayData.trace.length-1,replayIndex+1);
+    redraw();
+    if(replayIndex>=replayData.trace.length-1){clearInterval(replayTimer);replayTimer=null;status('Повтор завершён');}
+  },45);
+}
+$('bestReplay').onclick=()=>{if(replayTimer!==null){stopReplay();redraw();}else beginReplay(lastBest);};
+$('worstReplay').onclick=()=>{if(replayTimer!==null){stopReplay();redraw();}else beginReplay(lastWorst);};
+$('heatToggle').onchange=redraw;
+async function refreshLibrary(){
+  const select=$('modelSelect'),selected=select.value;
+  try{
+    const records=await listModels();select.replaceChildren();
+    if(!records.length){const option=document.createElement('option');option.value='';option.textContent='Нет сохранённых моделей';select.append(option);}
+    for(const item of records){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' · '+(item.states||0)+' состояний';select.append(option);}
+    if(records.some(m=>m.id===selected))select.value=selected;
+  }catch(error){status('Библиотека недоступна: '+error.message);}
+}
+const askSnapshot=handler=>{
+  if(snapshotRequest||training){status('Мозг занят; завершите текущую операцию');return;}
+  snapshotRequest=handler;worker.postMessage({type:'snapshot'});
+};
+$('saveBrain').onclick=()=>askSnapshot(async snapshot=>{
+  const name=$('modelName').value.trim()||'Мой агент',id='model-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);
+  try{await saveModel({id,name,kind:snapshot.type,snapshot,states:snapshot.q?.length||0});await refreshLibrary();$('modelSelect').value=id;status('Мозг сохранён: '+name);}
+  catch(error){status('Не удалось сохранить: '+error.message);}
+});
+$('loadBrain').onclick=async()=>{
+  if(training)return;
+  const id=$('modelSelect').value;if(!id){status('Выберите сохранённую модель');return;}
+  try{
+    const item=await loadModel(id);if(!item)throw Error('Модель не найдена');
+    stopReplay();agentSelect.value=item.snapshot.type==='random'?'random':'qlearning';
+    loadAgent(agentSelect.value,item.snapshot);$('modelName').value=item.name;
+    status('Модель загружена: '+item.name);
+  }catch(error){status('Не удалось загрузить: '+error.message);}
+};
+$('deleteBrain').onclick=async()=>{
+  const id=$('modelSelect').value;if(!id)return;
+  const option=$('modelSelect').selectedOptions[0];
+  if(!confirm('Удалить модель «'+option.textContent+'» без возможности восстановления?'))return;
+  try{await deleteModel(id);await refreshLibrary();status('Модель удалена');}catch(error){status('Не удалось удалить: '+error.message);}
+};
+$('exportBrain').onclick=()=>askSnapshot(snapshot=>{
+  try{
+    const data={format:'petri-forge-agent',version:1,name:$('modelName').value.slice(0,64),snapshot};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+    const link=document.createElement('a');link.href=url;link.download='petri-forge-agent.json';document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);status('Модель экспортирована');
+  }catch(error){status('Ошибка экспорта: '+error.message);}
+});
+$('importBrain').onchange=async event=>{
+  const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  if(file.size>10_000_000){status('Файл слишком большой (макс. 10 МБ)');return;}
+  try{
+    const data=JSON.parse(await file.text());
+    if(data?.format!=='petri-forge-agent'||data.version!==1||!data.snapshot)throw Error('Несовместимый файл');
+    const kind=data.snapshot.type;
+    if(!['qlearning','random'].includes(kind))throw Error('Алгоритм не поддерживается');
+    const name=String(data.name||'Импортированный мозг').slice(0,64);
+    // Validate the checkpoint in the Worker before saving it.
+    stopReplay();agentSelect.value=kind;loadAgent(kind,data.snapshot);
+    const id='import-'+Date.now().toString(36);
+    await saveModel({id,name,kind,snapshot:data.snapshot,states:data.snapshot.q?.length||0});
+    await refreshLibrary();$('modelSelect').value=id;$('modelName').value=name;status('Модель импортирована: '+name);
+  }catch(error){status('Не удалось импортировать: '+error.message);}
+};
+drawLearningChart();
+try{
+  if(localStorage.getItem('pocket-works:petri-forge:scene'))loadBtn.onclick();
+  else{
+    const initial=createScenario('corridor',41);
+    env.setScene(initial);spawn=initial.spawn;goal=initial.goal;
+    $('scenarioSelect').value='corridor';redraw();
+    status('Первый маршрут готов. Запустите обучение.');
+  }
+}catch(error){status('Ошибка открытия сцены: '+error.message);}
+void refreshLibrary();
+window.render_game_to_text=()=>JSON.stringify({
+  coordinates:'origin top-left; x right, y down; cells',
+  running,training,done:env.done,agent:{x:env.ax,y:env.ay,algorithm:agentSelect.value},
+  spawn,goal,steps:env.steps,reward:env.totalReward,
+  history:historyData.slice(-6),replay:replayData?{cursor:replayIndex,total:replayData.trace.length}:null,grid:env.grid
+});
+ }
     return;
   }
     switch(e.key){
@@ -366,90 +460,110 @@ document.addEventListener('keydown', e=>{
     }
   });
 
-/* ===================== Inline Web Worker ===================== */
-const workerCode = `
-let ACTIONS=["UP","DOWN","LEFT","RIGHT","STAY"];
-class QLearning{
-  constructor(){ this.q=new Map(); this.eps=0.1; this.lr=0.2; this.gamma=0.98; }
-  key(o){ const c=o.tiles.length>>1; const p=[...o.tiles[c-1].slice(c-1,c+2),...o.tiles[c].slice(c-1,c+2),...o.tiles[c+1].slice(c-1,c+2)];
-    return o.pos[0]+","+o.pos[1]+"|"+o.goalVec[0]+","+o.goalVec[1]+"|"+p.join(","); }
-  ensure(k){ if(!this.q.has(k)) this.q.set(k,{UP:0,DOWN:0,LEFT:0,RIGHT:0,STAY:0}); return this.q.get(k) }
-  reset(_o){}
-  act(o){ const k=this.key(o), q=this.ensure(k);
-    if(Math.random()<this.eps) return ACTIONS[(Math.random()*ACTIONS.length)|0];
-    let b="STAY",v=-1e9; for(const a of ACTIONS){ const val=q[a]; if(val>v){v=val;b=a} } return b; }
-  learn(tr){ const q1=this.ensure(this.key(tr.s)); const q2=this.ensure(this.key(tr.s2));
-    const target = tr.r + (tr.done?0:this.gamma*Math.max(...Object.values(q2)));
-    q1[tr.a] += this.lr*(target - q1[tr.a]); }
+/* ===================== Asynchronous learning system ===================== */
+const worker=new Worker(new URL('./lab-worker.mjs',import.meta.url),{type:'module'});
+let running=false,pendingAction=false,training=false,replayData=null,replayIndex=0,replayTimer=null;
+let heatData=[],historyData=[],lastBest=null,lastWorst=null,snapshotRequest=null;
+const $=id=>document.getElementById(id);
+const status=text=>{statusEl.textContent=text;};
+const sceneNow=()=>({grid:env.grid.map(row=>row.slice()),spawn:spawn.slice(),goal:goal.slice()});
+function stopReplay(){if(replayTimer!==null)clearInterval(replayTimer);replayTimer=null;replayData=null;replayIndex=0;}
+function requestAction(){if(training||pendingAction||env.done||replayTimer!==null)return;pendingAction=true;worker.postMessage({type:'act',payload:{obs:env.observe()}});}
+function loadAgent(name,snapshot=null){pendingAction=false;running=false;playBtn.textContent='▶ Наблюдать';worker.postMessage({type:'loadAgent',payload:{name,snapshot}});}
+function updateTrainingUI(data){
+  $('metricEpisodes').textContent=Number(data.complete||0).toLocaleString('ru-RU');
+  $('metricSuccess').textContent=data.complete?Math.round((data.success||0)*100)+'%':'—';
+  $('metricReward').textContent=data.complete?Number(data.average||0).toFixed(2):'—';
+  $('progressFill').style.width=(data.episodes?Math.min(100,100*data.complete/data.episodes):0)+'%';
+  if(data.history)historyData=data.history;
+  if(data.heat)heatData=data.heat;
+  drawLearningChart();
+  if($('heatToggle').checked)redraw();
 }
-class RandomAgent{ reset(_o){} act(_o){ return ACTIONS[(Math.random()*ACTIONS.length)|0] } }
-let agent=null;
-onmessage = (e)=>{
-  const {type,payload}=e.data;
-  if(type==="loadAgent"){
-    agent = payload.name==="qlearning" ? new QLearning() : new RandomAgent();
-    postMessage({type:"loaded"}); return;
-  }
-  if(!agent) return;
-  if(type==="reset"){ agent.reset(payload.obs); postMessage({type:"ready"}); return; }
-  if(type==="act"){ const a=agent.act(payload.obs); postMessage({type:"action",payload:{a}}); return; }
-  if(type==="learn" && agent.learn){ agent.learn(payload.tr); }
-};
-`;
-const worker = new Worker(URL.createObjectURL(new Blob([workerCode],{type:'text/javascript'})));
-
-let running=false, pendingAction=false;
-function requestAction(){if(pendingAction || env.done) return; pendingAction=true; worker.postMessage({type:'act',payload:{obs:env.observe()}});}
-
-function loadAgent(name){
-  statusEl.textContent = 'loading agent...';
-  worker.postMessage({ type:'loadAgent', payload:{ name } });
+function drawLearningChart(){
+  const canvas=$('learningChart'),c=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  c.clearRect(0,0,w,h);c.strokeStyle='#456251';c.lineWidth=1;
+  for(const v of [0,.5,1]){const y=8+(h-19)*(1-v);c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();}
+  if(!historyData.length){c.fillStyle='#9aaa9b';c.font='16px system-ui';c.fillText('Запустите обучение, чтобы увидеть прогресс',15,68);return;}
+  const max=Math.max(1,historyData[historyData.length-1].episode);
+  c.beginPath();
+  historyData.forEach((p,i)=>{const x=5+(w-10)*p.episode/max,y=8+(h-19)*(1-p.rate/100);if(i)c.lineTo(x,y);else c.moveTo(x,y);});
+  c.strokeStyle='#c1e891';c.lineWidth=3;c.lineCap='round';c.lineJoin='round';c.stroke();
 }
-worker.onmessage = e=>{
-  const {type,payload} = e.data;
-  if(type==='loaded'){
-    statusEl.textContent = `agent: ${agentSelect.value}`;
-    worker.postMessage({ type:'reset', payload:{ obs: env.observe() } });
-  } else if(type==='action'){
-    pendingAction=false; stepWithAction(payload.a);
+function controlsEnabled(isTraining){
+  training=isTraining;
+  for(const id of ['trainBtn','evaluateBtn','saveBrain','loadBrain','deleteBrain','makeScenario','load','save','playPause','step','reset','agentSelect']){
+    $(id).disabled=isTraining;
+  }
+  $('stopTrain').disabled=!isTraining;
+  $('trainState').textContent=isTraining?'Обучение...':'Ожидание';
+  if(isTraining){running=false;pendingAction=false;playBtn.textContent='▶ Наблюдать';stopReplay();}
+}
+async function autosave(snapshot){
+  if(snapshot.type!=='qlearning')return;
+  try{await saveModel({id:'autosave',name:'Автосохранение',kind:'qlearning',snapshot,states:snapshot.q.length});await refreshLibrary();$('stateCount').textContent=snapshot.q.length.toLocaleString('ru-RU')+' состояний';}
+  catch(error){status('Автосохранение: '+error.message);}
+}
+worker.addEventListener('error',event=>{controlsEnabled(false);pendingAction=false;status('Ошибка модуля обучения');console.error(event.message);});
+worker.onmessage=event=>{
+  const d=event.data||{};
+  if(d.type==='loaded'){pendingAction=false;status('Агент: '+(d.kind==='random'?'случайный':'Q-learning'));$('stateCount').textContent=(d.states||0)+' состояний';}
+  else if(d.type==='action'){
+    pendingAction=false;if(!training&&replayTimer===null)stepWithAction(d.action);
+  }else if(d.type==='training'){controlsEnabled(true);status('Обучение запущено');}
+  else if(d.type==='progress'){updateTrainingUI(d);status('Эпизодов: '+d.complete+' / '+d.episodes);}
+  else if(d.type==='trained'||d.type==='stopped'){
+    controlsEnabled(false);
+    const sample=Math.max(1,d.complete);
+    const last=(d.history||[]).at(-1);
+    updateTrainingUI({complete:d.complete,episodes:d.episodes,success:last?.rate/100||0,average:last?.average||0,history:d.history,heat:d.heat});
+    lastBest=d.best;lastWorst=d.worst;$('bestReplay').disabled=!lastBest;$('worstReplay').disabled=!lastWorst;
+    status(d.type==='trained'?'Обучение завершено':'Обучение остановлено');
+    $('trainState').textContent=d.type==='trained'?'Готово':'Остановлено';
+    if(d.snapshot)void autosave(d.snapshot);
+  }else if(d.type==='evaluated'){
+    const a=d.train,b=d.holdout;
+    $('evalResults').innerHTML='<strong>Текущая карта: '+Math.round(a.success*100)+'%</strong> ('+a.count+' тестов), средний путь '+a.steps.toFixed(0)+' шагов.<br><strong class="'+(b.success<.2?'bad':'')+'">Новые карты: '+Math.round(b.success*100)+'%</strong> ('+b.count+' тестов), средний путь '+b.steps.toFixed(0)+' шагов. Проверка не изменяет обученную модель.';
+    status('Независимая проверка завершена');
+    if(d.replay?.trace){lastBest=d.replay;$('bestReplay').disabled=false;}
+  }else if(d.type==='snapshot'){
+    if(snapshotRequest){const done=snapshotRequest;snapshotRequest=null;void done(d.snapshot);}
+  }else if(d.type==='error'){
+    controlsEnabled(false);pendingAction=false;snapshotRequest=null;status('Ошибка: '+d.message);console.error('PetriForge worker:',d.message);
   }
 };
-loadAgent(agentSelect.value);
-agentSelect.onchange = ()=> loadAgent(agentSelect.value);
-
 function stepWithAction(a){
-  const s = env.observe();
-  const [s2, r, done] = env.step(a);
-  worker.postMessage({ type:'learn', payload:{ tr:{ s, a, r, s2, done } } });
+  if(!a||env.done||training)return;
+  const s=env.observe(),[s2,r,done]=env.step(a);
+  worker.postMessage({type:'learn',payload:{tr:{s,a,r,s2,done}}});
   redraw();
-  if(done){ running=false; playBtn.textContent='Запустить'; statusEl.textContent=env.ax===env.gx&&env.ay===env.gy?'Цель достигнута':'Лимит шагов'; }
+  if(done){running=false;playBtn.textContent='▶ Наблюдать';status(env.success?'Цель достигнута':'Лимит шагов');}
 }
+loadAgent(agentSelect.value);
+agentSelect.onchange=()=>{if(training)return;stopReplay();loadAgent(agentSelect.value);};
 
 /* ===================== Controls ===================== */
 playBtn.onclick = ()=>{
   running = !running;
-  playBtn.textContent = running ? 'Пауза' : 'Запустить';
+  playBtn.textContent = running ? 'Ⅱ Пауза' : '▶ Наблюдать';
 };
-stepBtn.onclick = requestAction;
+stepBtn.onclick = ()=>{if(!training){stopReplay();requestAction();}};
 resetBtn.onclick = ()=>{
-  env.reset(spawn,goal); redraw();
-  worker.postMessage({ type:'reset', payload:{ obs: env.observe() } });
+  if(training)return;stopReplay();env.reset(spawn,goal);redraw();
 };
 saveBtn.onclick = ()=>{
-  const data={grid:env.grid,spawn,goal};
+  if(training)return;commitOperation();const data=sceneNow();
   try {localStorage.setItem('pocket-works:petri-forge:scene', JSON.stringify(data)); statusEl.textContent='Сцена сохранена';} catch {statusEl.textContent='Хранилище недоступно';}
 };
 loadBtn.onclick = ()=>{
-  const raw = localStorage.getItem('pocket-works:petri-forge:scene');
+  if(training)return;stopReplay();const raw = localStorage.getItem('pocket-works:petri-forge:scene');
   if(!raw){statusEl.textContent='Сохранённой сцены пока нет'; return;}
   try{
     const data=JSON.parse(raw);
     if(!Array.isArray(data.grid)||data.grid.length!==GRID_H||data.grid.some(row=>!Array.isArray(row)||row.length!==GRID_W||row.some(t=>!Number.isInteger(t)||t<0||t>4))) throw Error('grid');
     for(const p of [data.spawn,data.goal]) if(!Array.isArray(p)||p.length!==2||!env.inBounds(...p)||!p.every(Number.isInteger)) throw Error('position');
-    env.grid=data.grid;
-    spawn=data.spawn||spawn;
-    goal=data.goal||goal;
-    env.reset(spawn,goal);
+    const safe=validateScene(data);spawn=safe.spawn;goal=safe.goal;env.setScene(safe);
+    undoStack=[];redoStack=[];
   }catch{statusEl.textContent='Сцена повреждена';}
   redraw();
 };
@@ -460,11 +574,11 @@ loadBtn.onclick = ()=>{
   requestAnimationFrame(loop);
 })();
 
-cv.addEventListener('pointercancel',()=>{drawing=false;dragSpawn=false;dragGoal=false;panStart=null;});
+cv.addEventListener('pointercancel',()=>{commitOperation();drawing=false;dragSpawn=false;dragGoal=false;panStart=null;});
 document.querySelector('#undo').onclick=undo;
 document.querySelector('#redo').onclick=redo;
 document.querySelector('#generate').onchange=e=>{const v=e.target.value;if(v)handleCtx(Number(v));e.target.value='';};
-document.addEventListener('visibilitychange',()=>{if(document.hidden){running=false;playBtn.textContent='Запустить';}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){running=false;playBtn.textContent='▶ Наблюдать';stopReplay();}});
 window.render_game_to_text=()=>JSON.stringify({coordinates:'origin top-left; x right, y down; cells',running,done:env.done,agent:{x:env.ax,y:env.ay,algorithm:agentSelect.value},spawn,goal,steps:env.steps,reward:env.totalReward,tool,grid:env.grid});
 window.advanceTime=async(ms)=>{for(let i=0;i<Math.min(120,Math.round(ms/16.667));i++){if(!running)break;requestAction();await new Promise(r=>setTimeout(r,0));}redraw();};
 loadBtn.onclick();
