@@ -16,6 +16,7 @@ const compareButton=document.createElement('button');compareButton.id='pkCompare
 
 const worker=new Worker(new URL('./perekos-worker-v06.mjs',import.meta.url),{type:'module'});
 let policy=createPerekosPolicy(41),busy=false,training=false,replay=null,cursor=0,timer=null,openCount=0,learningHistory=[];
+let autoplayNextReplay=false;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const fmt=n=>Number.isFinite(n)?Number(n).toFixed(1):'—';
 function notify(message){$('pkStatus').textContent=message;const footer=$('modeStatus');if(footer)footer.textContent=message;}
@@ -128,7 +129,7 @@ window.PetriForgeRuntime.perekos={
  train:()=>{if(busy)return false;$('pkTrain').click();return true;},
  test:()=>{if(busy)return false;$('pkTest').click();return true;},
  stop:()=>{$('pkStop').click();},
- replay:()=>{if(replay?.frames?.length)$('pkPlay').click();else $('pkTest').click();},
+ replay:()=>{if(replay?.frames?.length)$('pkPlay').click();else{autoplayNextReplay=true;$('pkTest').click();}},
  isBusy:()=>busy,hasReplay:()=>!!replay?.frames?.length,
  configure:variant=>{$('pkCurriculum').value=variant||'balanced';},
  batch:count=>{$('pkGenerations').value=String(count);}
@@ -197,7 +198,7 @@ worker.onmessage=async event=>{
    window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'perekos',snapshot:policy,
      report:{units:d.complete||0,outcome:'stopped',label:'Остановлено после '+d.complete+' поколений'}}}));
   }else if(d.type==='perekos-tested'){
-   lock(false);policy=d.policy;showReplay(d.replay);
+   lock(false);policy=d.policy;showReplay(d.replay);if(autoplayNextReplay){autoplayNextReplay=false;$('pkPlay').click();}
    $('pkValidation').textContent='Контрольный матч: '+d.replay.rounds+' раундов, счёт '+d.replay.score+', руны '+(d.replay.draft.join(' · ')||'нет')+'. '+(d.replay.finished?'Матч завершён.':'Достигнут лимит симуляции.'); 
    $('pkMatchStats').textContent='Матч: '+(d.replay.won?'победа':d.replay.finished?'поражение':'незавершён')+' · нанесено '+fmt(d.replay.dealt)+' · получено '+fmt(d.replay.received);
    notify('Контрольный бой завершён');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'perekos',text:$('pkValidation').textContent}}));
