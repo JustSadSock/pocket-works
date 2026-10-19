@@ -102,7 +102,12 @@ export function mountAgentCockpit(api){
  };
  $('cpDuel').onclick=()=>{
   if(state().busy||state().pending)return;
-  profileOptions();$('cpDuelResult').replaceChildren();$('cpDuelDialog').showModal();
+  profileOptions();$('cpDuelResult').replaceChildren();
+  const enough=state().careers.length>=2;
+  $('cpFight').disabled=!enough;
+  $('cpDuelInfo').textContent=enough?'Два настоящих боя со сменой сторон. Используются боевые навыки выбранных персонажей.':
+   'Создайте второго агента через профиль, затем обучите обоих в режиме «Бой».';
+  $('cpDuelDialog').showModal();
  };
  $('cpFight').onclick=async()=>{
   if(fighting||state().busy||state().pending)return;
