@@ -679,7 +679,7 @@ function cycleRole(step = 1) {
   let idx = modules.findIndex((m) => m.id === currentId);
   if (idx === -1) idx = step > 0 ? -1 : 0;
   const next = modules[(idx + step + modules.length) % modules.length];
-  if (!next) return;
+  if (!next || next.id === currentId) return;
   socket.emit("occupyModule", { moduleId: next.id });
   showToast(`Role: ${next.type}`);
 }
