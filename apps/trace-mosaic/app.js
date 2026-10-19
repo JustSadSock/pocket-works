@@ -579,6 +579,8 @@ app.addEventListener("pointerdown", (event) => {
     visited: sourceKind === "board" && Number.isInteger(location?.cell) ? [location.cell] : [],
   };
   event.preventDefault();
+  // Capture on a stable parent: the selected tile DOM is replaced by snapshots.
+  try { app.setPointerCapture(event.pointerId); } catch {}
   render();
 });
 
