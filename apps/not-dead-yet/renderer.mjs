@@ -694,7 +694,7 @@ export class Renderer{
 
  bind(buffer){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(let i=0;i<4;i++)if(this.attrs[i]>=0)gl.vertexAttribPointer(this.attrs[i],i===3?1:3,gl.FLOAT,false,40,[0,12,24,36][i])}
  upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,values instanceof Float32Array?values:new Float32Array(values),kind)}
- resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.3:1.6),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
+ resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.2:1.4),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
  draw(world,player,enemies,items,flash,t,damage=0,shot=0,reload=0){
   if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
   const rogue=world.endless===true;
@@ -738,7 +738,7 @@ export class Renderer{
   const lampA=rogue?this.practicalLights[0]:world.point('living'),
    lampB=rogue?this.practicalLights[1]:world.point('kitchen');
   gl.uniform1f(this.u.structureEnabled,rogue?1:0);
-  gl.uniform1f(this.u.occlusionSteps,this.canvas.width/this.canvas.height<.75?7:10);
+  gl.uniform1f(this.u.occlusionSteps,this.canvas.width/this.canvas.height<.75?6:8);
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
   gl.uniform3fv(this.u.lampA,rogue?[lampA.x,lampA.y,lampA.z]:[lampA.x*SCALE,2.64,lampA.z*SCALE]);
   gl.uniform3fv(this.u.lampB,rogue?[lampB.x,lampB.y,lampB.z]:[lampB.x*SCALE,2.64,lampB.z*SCALE]);
