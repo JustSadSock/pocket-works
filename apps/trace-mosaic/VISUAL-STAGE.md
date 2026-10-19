@@ -1,4 +1,4 @@
-# Trace Mosaic — Visual Atelier 0.3.0
+# Trace Mosaic — Visual Atelier 0.4.0
 
 19 October 2026. Primary change: replace the generic frosted-card/mint-neon UI with a *conservation light table* whose centerpiece is the actual playable mosaic and active trace paths. PocketNet protocol and published rules **v5** are unchanged.
 
@@ -44,3 +44,5 @@ This update does not claim a completed screenshot review. Run the following in t
 - Editorial art direction for new painterly mosaic illustrations rather than changing original puzzle assets.
 - Moment-to-moment physical lighting responding to the lifted tile, optional environmental audio and replay of the most meaningful team routes.
 - Full mouse/keyboard accessible tile movement with selectable target cells.
+
+Art extension v0.4.0: 24 self-contained, differently composed SVG scenes. Server art metadata pinned to immutable module v6; interactive browser QA remains to be verified.
