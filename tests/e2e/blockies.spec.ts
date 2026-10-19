@@ -288,6 +288,25 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
     expect(result.active).toBe(true);
   });
 
+  test('PocketNet v6 uses autonomous server ticks instead of client pulse intervals', async ({ page }) => {
+    await openSolo(page);
+    const result=await page.evaluate(()=>{
+      const net=(window as any).networkManager;
+      net.stopPulse();
+      net.moduleVersion='v6';
+      net.started=true;
+      net.startPulse();
+      const modern=net.timer===null;
+      net.moduleVersion='v5';
+      net.startPulse();
+      const legacy=net.timer!==null;
+      net.stopPulse();
+      net.started=false;
+      return {modern,legacy};
+    });
+    expect(result).toEqual({modern:true,legacy:true});
+  });
+
   test('online-touch ownership and mobile board bounds', async ({ page }) => {
     await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean((window as any).uiManager));
