@@ -276,9 +276,16 @@ export class PocketNetHub {
     this.ensureAlarm();
   }
   ensureAlarm() {
-    // Pending grants survive room closure and are retried until Pocket Social confirms them.
+    // Only Blockies v6+ opts into sub-minute server simulation. Other modules retain
+    // their existing low-frequency garbage-collection/achievement alarms.
     const waiting=this.sql('SELECT 1 FROM achievement_outbox LIMIT 1').toArray().length>0;
-    if (this.countRooms()||waiting) this.ctx.storage.setAlarm(Date.now() + (waiting?20_000:ROOM_TTL)).catch(e=>console.error('pocketnet_alarm',String(e)));
+    const live=this.sql("SELECT 1 FROM rooms WHERE game_id='blockies' AND json_extract(state,'$.phase')='playing' LIMIT 1").toArray()
+      .some(()=>this.sql("SELECT version FROM rooms WHERE game_id='blockies' AND json_extract(state,'$.phase')='playing'")
+        .toArray().some(row=>typeof this.module('blockies',row.version)?.onTick==='function'));
+    if(this.countRooms()||waiting){
+      const delay=live?1_000:waiting?20_000:ROOM_TTL;
+      this.ctx.storage.setAlarm(Date.now()+delay).catch(e=>console.error('pocketnet_alarm',String(e)));
+    }
   }
   recordZamazkaRewards(room, previous, next, events, actor) {
     if(room.gameId!=='zamazka')return;
@@ -624,6 +631,18 @@ export class PocketNetHub {
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
     for (const row of rows) {
       const room = this.readRoom(row.id);
+      if(room?.gameId==='blockies'&&room.state?.phase==='playing'){
+        const mod=this.module(room.gameId,room.version);
+        if(typeof mod?.onTick==='function'){
+          const onlineIds=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
+          const result=await mod.onTick({state:copied(room.state),players:room.players,onlineIds,now});
+          if(result&&'state'in result){
+            room.state=result.state;
+            this.persist(room);
+            if(result.events?.length)this.emit(room,result.events);
+          }
+        }
+      }
       const ttl=room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000 : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
       if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
       if(room)await this.closeRoom(room);
