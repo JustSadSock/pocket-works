@@ -612,12 +612,31 @@ window.addEventListener("pointermove", (event) => {
 
 window.addEventListener("pointerup", (event) => {
   if (!state.drag || event.pointerId !== state.drag.pointerId) return;
-  // Dropping outside the board cancels instead of scoring the original cell.
+  // Resolve the release coordinate as well as the last pointermove coordinate.
   const targetCell = getBoardCellFromPoint(event.clientX, event.clientY);
+  if (targetCell === null ||
+      (targetCell === state.drag.sourceCell && state.drag.visited.length <= 1)) {
+    cancelDrag();
+    return;
+  }
+  if (targetCell !== state.drag.hoveredCell) {
+    const cols = state.room.game.grid.cols;
+    const hop = state.drag.visited.length
+      ? connectCells(state.drag.visited.at(-1), targetCell, cols)
+      : [targetCell];
+    for (const cell of hop) {
+      if (!state.drag.visited.includes(cell)) state.drag.visited.push(cell);
+    }
+    send("drag_update", {
+      tileId: state.drag.tileId,
+      targetCell,
+      cells: state.drag.visited,
+    });
+  }
   send("drag_end", {
     tileId: state.drag.tileId,
-    targetCell: targetCell ?? -1,
-    cells: targetCell === null ? [] : state.drag.visited,
+    targetCell,
+    cells: state.drag.visited,
   });
   state.drag = null;
   render();
