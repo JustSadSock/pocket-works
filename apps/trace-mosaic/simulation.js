@@ -136,6 +136,7 @@ function buildRoomSnapshot(room, viewerId) {
     settings: room.settings,
     players,
     reconnectGraceSec: PRESENCE_GRACE_MS / 1000,
+    serverNow: Date.now(),
     viewerId,
     imagePreview: artManifest[(room.imageCursor || 0) % Math.max(artManifest.length, 1)] || null,
     catalogSize: artManifest.length,
