@@ -7,7 +7,7 @@ test('three laboratory modes switch without losing the grid',async({page})=>{
  await expect(page.locator('#cv')).toBeVisible();
  await page.locator('[data-cp-mode="combat"]:visible, [data-world-mode="combat"]:visible').first().click();
  await expect(page.locator('#battleCanvas')).toBeVisible();
- await page.locator('#hubTools').click();
+ await page.locator('#cpExpert').click();
  await expect(page.locator('#combatPanel')).toBeVisible();
  await expect(page.locator('#cv')).toBeHidden();
  await page.locator('#battleTest').click();
@@ -21,7 +21,7 @@ test('three laboratory modes switch without losing the grid',async({page})=>{
 test('combat policies differ by loadout and arena',async({page})=>{
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
  await page.locator('[data-cp-mode="combat"]:visible, [data-world-mode="combat"]:visible').first().click();
- await page.locator('#hubTools').click();
+ await page.locator('#cpExpert').click();
  await page.locator('#battleArena').selectOption('open');
  await page.locator('#battleTeamSize').selectOption('1');
  await page.locator('#battleTest').click();
