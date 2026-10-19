@@ -1,0 +1,75 @@
+// Portable personal agent package: one identity, all genuinely trained specialist brains.
+import {DOMAINS,KINDS,assertCareer,createCareer,readBrain,writeBrain,writeCareer} from './agent-career.mjs';
+import {QAgent} from './lab-core.mjs';
+import {validPolicy} from './combat-core.mjs';
+import {validatePerekosPolicy} from './perekos-policy.mjs';
+const MAX_JSON=20_000_000;
+export function validBrain(domain,brain){
+ if(brain==null)return true;
+ if(domain==='grid'){try{new QAgent(1).load(brain);return true;}catch{return false;}}
+ if(domain==='combat')return validPolicy(brain);
+ if(domain==='perekos')return validatePerekosPolicy(brain);
+ if(domain==='race')return Array.isArray(brain)&&brain.length===9&&brain.every(n=>Number.isFinite(n)&&Math.abs(n)<=2);
+ return false;
+}
+export async function packCareer(c){
+ assertCareer(c);
+ const brains={};
+ for(const domain of DOMAINS){
+  const snapshot=await readBrain(c,domain);
+  if(snapshot&&!validBrain(domain,snapshot))throw Error('Повреждённый мозг '+domain);
+  brains[domain]=snapshot;
+ }
+ return {format:'petri-forge-career',version:1,profile:{name:c.name,createdAt:c.createdAt,
+  branches:structuredClone(c.branches)},brains};
+}
+export function validatePackage(pkg){
+ if(!pkg||pkg.format!=='petri-forge-career'||pkg.version!==1||!pkg.profile||!pkg.brains)throw Error('Это не файл агента PetriForge');
+ const name=pkg.profile.name;
+ if(typeof name!=='string'||!name.trim()||name.length>42)throw Error('Неверное имя агента');
+ const branches=pkg.profile.branches;
+ if(!branches||typeof branches!=='object')throw Error('Файл не содержит историю обучения');
+ for(const domain of DOMAINS){
+  const b=branches[domain],snapshot=pkg.brains[domain]??null;
+  if(!b||!Number.isInteger(b.sessions)||b.sessions<0||b.sessions>1e6||
+     !Number.isFinite(b.units)||b.units<0||b.units>1e10||
+     !Array.isArray(b.history)||b.history.length>40||
+     b.history.some(h=>!h||typeof h.label!=='string'||h.label.length>240||
+         !Number.isFinite(h.at)||!Number.isFinite(h.units)||h.units<0))
+   throw Error('Повреждённая история агента: '+domain);
+  if(!validBrain(domain,snapshot))throw Error('Несовместимый мозг: '+domain);
+ }
+ return pkg;
+}
+export async function unpackCareer(pkg){
+ validatePackage(pkg);
+ // A new unique identity is always created; never overwrite another agent.
+ const c=await createCareer(pkg.profile.name);
+ try{
+  for(const domain of DOMAINS){
+   const src=pkg.profile.branches[domain],b=c.branches[domain];
+   b.sessions=src.sessions;b.units=src.units;b.imported=!!src.imported;
+   b.trainedAt=Number.isFinite(src.trainedAt)?src.trainedAt:null;
+   b.history=structuredClone(src.history);
+   const brain=pkg.brains[domain]??null;
+   if(brain)await writeBrain(c,domain,brain);
+  }
+  await writeCareer(c);
+  return c;
+ }catch(e){
+  // Partial imports remain recoverable as local profiles, never overwrite existing ones.
+  throw Error('Не удалось импортировать все навыки: '+e.message);
+ }
+}
+export function savePackageFile(pkg){
+ validatePackage(pkg);
+ const encoded=JSON.stringify(pkg);
+ if(encoded.length>MAX_JSON)throw Error('Файл больше 20 МБ, экспорт слишком велик');
+ const url=URL.createObjectURL(new Blob([encoded],{type:'application/json'}));
+ const a=document.createElement('a');a.href=url;a.download='petriforge-'+pkg.profile.name.replace(/[^a-zа-яіїєґ0-9_-]/gi,'_').slice(0,36)+'.json';
+ document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+}
+export async function readPackageFile(file){
+ if(!file||file.size>MAX_JSON)throw Error('Файл агента слишком большой (максимум 20 МБ)');
+ return validatePackage(JSON.parse(await file.text()));
+}
