@@ -20,7 +20,7 @@ const raster=document.createElement('canvas'), rg=raster.getContext('2d',{alpha:
 const runBtn=$('run'), dialog=$('dialog'), scope=$('scope'), scopeG=scope.getContext('2d');
 let sim, image, pointer=null, probe=null, ripples=[],toastTimer=null, lastFrame=0, accumulator=0;
 let stageW=0,stageH=0, paintW=0,paintH=0,dpr=1, active=true, audioCtx=null,lastPulseSound=0, audioVoiceCount=0;
-let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0,compareIndex=-1;
+let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0,compareIndex=-1,lastLoads=null;
 
 function normalizeEdits(edits){
   const result={};
@@ -383,8 +383,8 @@ function drawOverlay(now){
   const unitX=paintW/sim.nx,unitY=paintH/sim.ny;
   over.lineWidth=Math.max(1,dpr);
   drawStreamlines();
-  if(sim.flowActive&&sim.bodyBounds&&sim.time>.5){
-    const loads=sim.aeroForces(),bounds=sim.bodyBounds;
+  if(sim.flowActive&&sim.bodyBounds&&sim.time>.5&&lastLoads){
+    const loads=lastLoads,bounds=sim.bodyBounds;
     const cx=(bounds.left+bounds.right)*.5*unitX,cy=paintH*.5;
     const fx=clamp(loads.cd*54*dpr,-61*dpr,61*dpr);
     const fy=clamp(-loads.cl*54*dpr,-61*dpr,61*dpr);
@@ -547,7 +547,7 @@ function drawCpChart(){
   const ctx=canvas.getContext('2d');ctx.setTransform(ratio,0,0,ratio,0,0);
   ctx.fillStyle='#11252b';ctx.fillRect(0,0,w,h);
   const l=39,r=w-11,t=16,b=h-22;const width=r-l,height=b-t;
-  const current=sim.aeroForces();
+  const current=lastLoads;
   const reference=state.records[compareIndex];
   const values=[...(current?.upper||[]),...(current?.lower||[]),...(reference?.upper||[]),...(reference?.lower||[])].filter(v=>v!==null&&Number.isFinite(v));
   const lim=Math.max(.5,...values.map(v=>Math.abs(v)))*1.15;
@@ -595,7 +595,7 @@ function updateMetrics(){
   $('time').textContent=sim.time.toFixed(2);
   $('flow-peak').textContent=sim.maxMach.toFixed(2);
   $('mach-peak').textContent=sim.maxMach.toFixed(2);
-  const loads=sim.aeroForces();
+  const loads=sim.aeroForces();lastLoads=loads;
   $('lift-value').textContent=loads?formatLoad(loads.cl):'—';
   $('drag-value').textContent=loads?formatLoad(loads.cd):'—';
   $('moment-value').textContent=loads?formatLoad(loads.cm):'—';
