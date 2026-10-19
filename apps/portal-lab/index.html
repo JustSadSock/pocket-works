@@ -1,35 +1,164 @@
 <!doctype html>
 <html lang="ru"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#142025"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>ШОВ — лаборатория порталов</title>
+<meta name="theme-color" content="#e7e7de"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>ШОВ — симулятор геометрии пространства-времени</title>
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon.svg">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="./styles.css">
-</head><body>
-<div id="app">
-<header class="top"><a class="back" href="../../" aria-label="Назад в PocketWorks">‹ <span>PocketWorks</span></a><div class="brand"><b class="brand-symbol">◧</b><div><strong>ШОВ</strong><small>Лаборатория порталов</small></div></div><div class="top-right"><button id="sound" class="icon-btn" title="Звук" aria-label="Звук включен">♪</button><button id="pause" class="icon-btn" title="Пауза" aria-label="Пауза">Ⅱ</button></div></header>
-<main class="workspace">
-<aside class="missions" aria-label="Эксперименты"><div class="aside-heading">ЭКСПЕРИМЕНТЫ</div><div id="mission-list" class="mission-list"></div><p class="aside-note">Направь капсулу в приёмник. Оба конца портала можно переназначить.</p></aside>
-<section class="experiment">
-<div class="experiment-heading"><div><span id="stage-index" class="eyebrow">ОПЫТ 01 / 06</span><h1 id="stage-title">Разрыв пространства</h1><p id="stage-desc">Один барьер. Два выхода.</p></div><div class="counter"><span>ПОПЫТОК</span><strong id="shots">00</strong></div></div>
-<div class="board-shell"><div class="board" id="board"><canvas id="game" width="720" height="920" aria-label="Двумерная камера эксперимента с порталами" role="img"></canvas><div class="board-overlay" id="win" hidden><div class="win-panel"><span>КОНТАКТ УСТАНОВЛЕН</span><strong>Цель достигнута</strong><button id="win-next" class="primary">Следующий опыт →</button></div></div><div class="board-message" id="toast" role="status" aria-live="polite"></div></div></div>
-<div class="control-deck">
-<div class="portal-controls" aria-label="Монтаж порталов">
- <div class="pair-select"><button data-pair="0" class="pair-button selected"><span class="pair-mark aqua"></span>КАНАЛ А</button><button data-pair="1" class="pair-button"><span class="pair-mark amber"></span>КАНАЛ Б</button></div>
- <div class="end-select"><button data-end="0" class="end-button selected">Вход</button><button data-end="1" class="end-button">Выход</button></div>
+</head><body><div class="shell">
+<header class="topbar">
+<a class="back" href="../../" aria-label="Вернуться в PocketWorks"><span aria-hidden="true">←</span><span class="back-label">PocketWorks</span></a>
+<div class="identity"><span class="mark" aria-hidden="true"><span></span></span><div><strong>ШОВ</strong><small>РЕЛЯТИВИСТСКАЯ ЛАБОРАТОРИЯ</small></div></div>
+<div class="top-actions"><button id="sound" class="icon" type="button" title="Звук" aria-label="Переключить звук"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 9H5v6h4l5 4V5L9 9Z"/><path d="M17 9c2 2 2 4 0 6"/></svg></button><button id="export" class="export" type="button">Экспорт <span aria-hidden="true">↗</span></button></div>
+</header>
+<main class="lab">
+<section class="workspace" aria-label="Пространственная модель">
+<div class="stage-head">
+<div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
-<div class="launch-controls"><label class="power" for="power"><span>ИМПУЛЬС <b id="power-value">14.5</b> м/с</span><input id="power" type="range" min="5" max="24" step=".5" value="14.5"></label><button id="reset" class="minor" title="Сбросить тела">↺</button><button id="fire" class="primary">ЗАПУСК <span>↗</span></button></div>
+<div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
+<div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
 </div>
+<div class="transport">
+<div class="transport-left"><button type="button" id="shoot" class="primary">Пройти горловину <span aria-hidden="true">↗</span></button><button type="button" id="pause" class="secondary" aria-label="Приостановить симуляцию">Пауза</button><button type="button" id="clear" class="secondary" title="Очистить траектории">Очистить</button></div>
+<div class="transport-time"><span>ВРЕМЯ <b id="elapsed">0.00</b> <span class="unit">a/c</span></span><span id="track-count">0 траекторий</span></div>
+</div>
+<div class="bottom-note"><span class="tiny-dot"></span><span>Свет, материя и скалярные волны рассчитываются на одной заданной геометрии пространства-времени.</span></div>
 </section>
-<aside class="diagnostics" aria-label="Физические данные"><div class="aside-heading">НАБЛЮДЕНИЯ <span class="live-dot"></span></div><div class="metric"><span>СКОРОСТЬ КАПСУЛЫ</span><strong id="speed">0.0 <small>м/с</small></strong></div><div class="metric"><span>КИНЕТИЧЕСКАЯ ЭНЕРГИЯ</span><strong id="kinetic">0.0 <small>Дж</small></strong></div><div class="metric"><span>РАБОТА ОПОР ПОРТАЛОВ</span><strong id="work">0.0 <small>Дж</small></strong></div><div class="metric"><span>ПЕРЕХОДЫ</span><strong id="transits">0</strong></div>
-<div id="sandbox-tools" class="sandbox-tools" hidden><label>ГРАВИТАЦИЯ <output id="gravity-value">9.81</output> м/с²<input id="gravity" type="range" min="0" max="20" step=".1" value="9.81"></label><label>УПРУГОСТЬ <output id="bounce-value">0.68</output><input id="bounce" type="range" min=".1" max="1" step=".01" value=".68"></label></div>
-<div class="physics-note" id="physics-note">Пересечение границы сохраняет |v|. Поворот определяется ориентацией входа и выхода.</div>
-<div class="hint"><b>КАК УПРАВЛЯТЬ</b><p>Нажми на камеру, чтобы прицелиться. Тапни на крепление, чтобы переставить портал. Потяни от пушки и отпусти для выстрела.</p></div>
+<aside class="instrument" aria-label="Параметры эксперимента">
+<section id="design-panel" class="design-panel" aria-label="Конструктор метрики">
+<div class="section-caption"><span>КОНСТРУКТОР МЕТРИКИ</span><span>Gμν = 8πTμν</span></div>
+<p class="design-lead">Изменяйте форму горловины и функцию хода часов. Перетащите точки непосредственно на графиках или используйте параметры ниже.</p>
+<div class="design-presets" role="group" aria-label="Физические профили">
+<button type="button" data-design-preset="ellis">Эллис</button>
+<button type="button" data-design-preset="wide">Расширенная</button>
+<button type="button" data-design-preset="sharp">Узкая</button>
+<button type="button" data-design-preset="well">Колодец</button>
+</div>
+<div id="design-preset-value" class="design-profile">Пользовательская</div>
+<label class="range-field"><span>Радиус горловины a <output id="design-a-value">1.00</output></span><input id="design-a" type="range" min=".5" max="3" step=".05" value="1"></label>
+<label class="range-field"><span>Кривизна формы <output id="design-shape-value">0.00</output> <small>q</small></span><input id="design-shape" type="range" min="-.35" max=".55" step=".01" value="0"></label>
+<label class="range-field"><span>Ширина изменения радиуса <output id="design-shape-width-value">1.45</output> <small>a</small></span><input id="design-shape-width" type="range" min=".65" max="3" step=".05" value="1.45"></label>
+<label class="range-field"><span>Базовое красное смещение <output id="design-eta-value">0.00</output> <small>η</small></span><input id="design-eta" type="range" min="0" max=".85" step=".01" value="0"></label>
+<label class="range-field"><span>Дополнительный ход часов <output id="design-lapse-value">0.00</output> <small>ζ</small></span><input id="design-lapse" type="range" min="-.45" max=".45" step=".01" value="0"></label>
+<label class="range-field"><span>Ширина изменения часов <output id="design-lapse-width-value">1.30</output> <small>a</small></span><input id="design-lapse-width" type="range" min=".65" max="3" step=".05" value="1.3"></label>
+<div class="section-caption second"><span>ТРЕБУЕМЫЙ ИСТОЧНИК ЭНЕРГИИ</span><span>8πGa²/c⁴</span></div>
+<div class="design-matter">
+<div><span>ρ(0) · a²</span><strong id="design-rho">—</strong></div>
+<div><span>pᵣ(0) · a²</span><strong id="design-pr">—</strong></div>
+<div><span>pₜ(0) · a²</span><strong id="design-pt">—</strong></div>
+<div><span>ρ+pᵣ · a²</span><strong id="design-nec-r">—</strong></div>
+<div><span>ρ+pₜ · a²</span><strong id="design-nec-t">—</strong></div>
+<div><span>R″(0) · a</span><strong id="design-flare">—</strong></div>
+</div>
+<div class="design-conditions">
+<div><span>NEC · нулевое</span><strong id="design-nec">—</strong></div>
+<div><span>WEC · слабое</span><strong id="design-wec">—</strong></div>
+<div><span>SEC · сильное</span><strong id="design-sec">—</strong></div>
+<div><span>DEC · доминантное</span><strong id="design-dec">—</strong></div>
+</div>
+<div class="design-details"><span>Ход часов N(0): <b id="design-lapse0">—</b></span><span>Евклидово вложение: <b id="design-embedding">—</b></span></div>
+<p id="design-rule" class="design-rule">Расчёт в процессе</p>
+<p class="design-legal">Тензор Tμν выведен из выбранной метрики через уравнения Эйнштейна. Это формально требуемый источник, а не подтверждение существования материи, способной поддерживать кротовую нору. Энергетические условия проверяются в горловине.</p>
+</section>
+<section id="wave-panel" class="wave-panel" aria-label="Эксперименты с полем Клейна — Гордона">
+<div class="section-caption"><span>ВОЛНОВАЯ ЛАБОРАТОРИЯ</span><span>□Φ = 0</span></div>
+<div class="wave-intro">Безмассовое скалярное поле на фиксированной метрике кротовой норы. Реальное численное решение, а не эффект частиц.</div>
+<div class="wave-preset-grid" role="group" aria-label="Готовые волновые опыты">
+<button type="button" data-wave-preset="pass">Прохождение</button>
+<button type="button" data-wave-preset="barrier">Отражение</button>
+<button type="button" data-wave-preset="interfere">Интерференция</button>
+<button type="button" data-wave-preset="cancel">Противофаза</button>
+</div>
+<div id="wave-state" class="wave-state" aria-live="polite">ПАКЕТ ПОДГОТОВЛЕН</div>
+<div id="wave-wavekind" class="wave-kind">ОДНОСТОРОННИЙ ПАКЕТ · РАССЕЯНИЕ</div>
+<label class="field wave-selector"><span>Начальные источники</span>
+<select id="wave-source"><option value="single">Пакет из региона A</option><option value="double">Два встречных пакета</option></select></label>
+<label class="field wave-selector" id="wave-phase-group"><span>Относительная фаза</span>
+<select id="wave-phase"><option value="zero">Синфазно · 0</option><option value="pi">Противофаза · π</option></select></label>
+<label class="range-field"><span>Угловое число <output id="wave-harmonic-value">2</output> <small>ℓ</small></span>
+<input id="wave-harmonic" type="range" min="0" max="5" step="1" value="2"></label>
+<label class="range-field"><span>Длина волны <output id="wave-lambda-value">2.25</output> <small>λ/a</small></span>
+<input id="wave-lambda" type="range" min=".6" max="3.5" step=".05" value="2.25"></label>
+<label class="range-field"><span>Ширина пакета <output id="wave-width-value">1.25</output> <small>σ/a</small></span>
+<input id="wave-width" type="range" min=".7" max="2.5" step=".05" value="1.25"></label>
+<div class="section-caption second"><span>ДАТЧИКИ ЭНЕРГИИ</span><span>Tμν</span></div>
+<div class="wave-measures">
+<div><span>ОТРАЖЕНИЕ · A</span><strong id="wave-reflection">0.0</strong><small>% падающей энергии</small></div>
+<div><span>ПРОХОЖДЕНИЕ · B</span><strong id="wave-transmission">0.0</strong><small>% падающей энергии</small></div>
+<div><span>ЭНЕРГИЯ В ОБЛАСТИ</span><strong id="wave-energy">100.0</strong><small>% начальной</small></div>
+<div><span>ПОГЛОТИТЕЛЬ ГРАНИЦ</span><strong id="wave-loss">0.0</strong><small>% начальной</small></div>
+</div>
+<div class="wave-metrology"><span>БАЛАНС ВЫЧИСЛЕНИЙ</span><strong id="wave-budget">100.0</strong><small>% E + потери</small></div>
+<div class="wave-metrology"><span>БАРЬЕР В ГОРЛОВИНЕ</span><strong id="wave-potential">0.00</strong><small>U(0) a²</small></div>
+<div class="wave-metrology"><span>ВРЕМЯ</span><strong id="wave-time">0.00</strong><small>a/c</small></div>
+<p id="wave-meaning" class="wave-meaning">Проценты R/T рассчитываются после прохода сигналов через датчики.</p>
+<p class="wave-limit">Тестовое скалярное поле, не гравитационная или звуковая волна. Границы оснащены численным поглотителем; значение энергетического баланса показывает точность расчёта.</p>
+</section>
+<section id="matter-panel" class="matter-panel" aria-label="Физическое испытание образца">
+<div class="section-caption"><span>ИСПЫТАТЕЛЬНЫЙ СТЕНД</span><span>v0.4</span></div>
+<div class="matter-description">Образец свободно падает через горловину. Расчёт упругих сил и разрывов идёт в локальной системе Ферми.</div>
+<div id="matter-phase" class="matter-phase" aria-live="polite">ГОТОВ К ИСПЫТАНИЮ</div>
+<label class="field matter-field"><span>Материал образца</span><select id="matter-material">
+<option value="ceramic">Керамика</option><option value="steel">Сталь</option><option value="polymer">Полимер</option><option value="elastomer">Эластомер</option>
+</select></label>
+<div id="matter-material-note" class="matter-material-note"></div>
+<div class="field matter-field"><span>Ориентация стержня</span>
+<div class="matter-axis mode-switch" role="group" aria-label="Ось образца">
+<button data-axis="radial" type="button" aria-pressed="false">Радиальная</button>
+<button data-axis="transverse" class="selected" type="button" aria-pressed="true">Поперечная</button>
+</div></div>
+<label class="range-field"><span>Радиус горловины <output id="matter-throat-value">1 000</output> <small>м</small></span><input id="matter-throat" type="range" min="2" max="8" step=".25" value="3"></label>
+<label class="range-field"><span>Длина образца <output id="matter-size-value">2.00</output> <small>м</small></span><input id="matter-size" type="range" min=".25" max="4" step=".25" value="2"></label>
+<label class="range-field"><span>Скорость на входе <output id="matter-speed-value">0.72</output> <small>c</small></span><input id="matter-speed" type="range" min=".1" max=".95" step=".05" value=".72"></label>
+<div class="matter-results">
+<div><span>ПИК НАПРЯЖЕНИЯ</span><strong id="matter-peak">0.00</strong><small>МПа</small></div>
+<div><span>РАЗРУШЕННЫЕ СВЯЗИ</span><strong id="matter-fractures">0/16</strong><small>из 16</small></div>
+<div><span>ВРЕМЯ НА ЗОНДЕ</span><strong id="matter-proper">0.000</strong><small>a/c</small></div>
+<div><span>ПРИЛИВНОЕ Δa</span><strong id="matter-accel">0.00</strong><small id="matter-accel-unit">м/с²</small></div>
+</div>
+<div class="matter-metadata"><span id="matter-lapse">l/a = 3.25 · РЕГИОН A</span><span>Скорость звука <b id="matter-sound">0</b> м/с</span></div>
+<div class="matter-limit" id="matter-limit"></div>
+<p class="matter-caveat">Линейная модель упругого стержня с разрывами. Нет пластичности, контактов обломков, самогравитации и обратного воздействия на метрику. Применимо при длине образца много меньше радиуса горловины.</p>
+</section>
+<section class="observer-panel" id="observer-panel" aria-label="Наблюдатель и приливные зонды">
+<div class="section-caption"><span>КАМЕРА · ГЕОДЕЗИЧЕСКАЯ ОПТИКА</span><span id="lens-eta">N₀ = 1</span></div>
+<div class="observer-region" id="lens-region">A · ВНЕШНИЙ РЕГИОН</div><div class="optical-diagnostics" id="lens-optical-read" aria-live="polite">Подготовка оптического поля</div>
+<label class="range-field"><span>Удаление от горловины <output id="lens-distance-value">2.10</output> <small>a</small></span><input id="lens-distance" type="range" min=".2" max="6" step=".1" value="2.1"></label>
+<label class="range-field"><span>Угол обзора <output id="lens-fov-value">80</output> <small>°</small></span><input id="lens-fov" type="range" min="50" max="110" step="2" value="80"></label>
+<div class="observer-actions"><button id="lens-flight" type="button">Пройти горловину</button><button id="lens-reset" type="button">Исходный вид</button></div>
+<div class="section-caption second"><span>ПРОБНАЯ МАТЕРИЯ</span><span>Jacobi</span></div>
+<button type="button" class="probe-launch" id="lens-probe">Отправить зонд <span>↗</span></button>
+<div id="lens-probe-read" class="probe-read" aria-live="polite">Зонд не запущен</div>
+<p class="observer-limit">Изображение: световые геодезические. Зонд: отклонение соседних траекторий, не расчёт разрушения материала. Звёзды — две искусственные фоновые сферы.</p>
+</section>
+<div class="section-caption"><span>01 — ГЕОМЕТРИЯ</span><span>g<sub>μν</sub></span></div>
+<label class="field"><span>Пространственная модель</span><select id="model"><option value="ellis">Эллис · точная метрика</option><option value="redshift">С красным смещением · анзац</option><option value="custom">Пользовательская метрика</option></select></label>
+<div class="formula" id="formula">ds² = −dt² + dl² + (l²+a²)dφ²</div>
+<label class="range-field"><span>Радиус горловины a <output id="radius-value">1.00</output> <small>ед.</small></span><input type="range" id="radius" min=".5" max="3" value="1" step=".05"></label>
+<label class="range-field" id="redshift-group"><span>Глубина потенциала <output id="eta-value">0.45</output> <small>η</small></span><input type="range" id="eta" min="0" max=".85" value=".45" step=".01" disabled></label>
+<div class="beam-settings"><div class="section-caption second"><span>02 — ЗОНДИРОВАНИЕ</span><span>p<sub>μ</sub></span></div>
+<div class="mode-switch" role="group" aria-label="Тип пробного объекта"><button type="button" data-kind="light" class="selected" aria-pressed="true">Фотоны</button><button type="button" data-kind="matter" aria-pressed="false">Частицы</button></div>
+<label class="range-field"><span>Число траекторий <output id="count-value">13</output></span><input type="range" id="count" min="1" max="25" step="2" value="13"></label>
+<label class="range-field"><span>Угловое раскрытие <output id="spread-value">32</output> <small>°</small></span><input type="range" id="spread" min="0" max="100" step="2" value="32"></label>
+<button id="critical" type="button" class="critical">Критический фотон <span>b ≈ b<sub>crit</sub></span></button>
+<label class="range-field" id="speed-group"><span>Начальная скорость <output id="speed-value">0.70</output> <small>c</small></span><input type="range" id="speed" min=".05" max=".95" step=".05" value=".7" disabled></label>
+</div><div class="section-caption second"><span>03 — ИЗМЕРЕНИЯ</span><span>∂g</span></div>
+<div class="readouts">
+<div><span>КРИВИЗНА В ГОРЛОВИНЕ</span><b id="curvature">−1.000</b><small> K [ед. 1/a²]</small></div>
+<div><span>УСКОРЕНИЕ СВОБОДНОГО ПАДЕНИЯ</span><b id="acceleration">0.000</b><small> c²/a · при l=a</small></div>
+<div><span>ПРОХОДОВ ЧЕРЕЗ ГОРЛОВИНУ</span><b id="crossings">0</b><small> за сеанс</small></div>
+<div><span>ПОГРЕШНОСТЬ НОРМИРОВКИ</span><b id="precision">0.0</b><small> max |g(u,u)+κ|</small></div>
+<div><span>ПАРАМЕТР ПОПАДАНИЯ · СВЕТ</span><b id="impact">—</b><small> b = |L/E|</small></div>
+<div><span>ПОРОГ ПРОХОДА ГОРЛОВИНЫ</span><b id="critical-value">1.000</b><small> b₍crit₎ = a/N(0)</small></div>
+</div>
+<div class="clocks"><div class="clocks-head"><span>СТАТИЧЕСКИЕ ЧАСЫ</span><span>dτ = N dt</span></div><div class="clock-pair"><div><small>БЛИЖНИЕ · 0.8a</small><strong id="clock-near">00.000</strong></div><div><small>ДАЛЬНИЕ · 5a</small><strong id="clock-far">00.000</strong></div></div><div id="clock-note" class="clock-note">У модели Эллиса часы идут одинаково, несмотря на кривизну пространства.</div></div>
+<div class="section-caption second"><span>04 — ВРЕМЕННОЙ МАСШТАБ</span><span>dt</span></div>
+<label class="range-field last"><span>Скорость моделирования <output id="time-value">1.0</output> <small>×</small></span><input type="range" id="time-scale" min=".25" max="5" value="1" step=".25"></label>
 </aside>
 </main>
-<div class="mobile-missions"><button id="prev" aria-label="Предыдущий эксперимент">‹</button><div id="mobile-step">01 / 06</div><button id="next" aria-label="Следующий эксперимент">›</button></div>
-</div>
-<script type="module" src="./app.js"></script>
-</body></html>
+<footer class="foot"><span>c = G = 1 · пробные тела · экваториальный срез 3+1D метрики</span><span id="model-warning">Проходимые кротовые норы не обнаружены экспериментально</span></footer>
+</div><script type="module" src="./app.js"></script></body></html>

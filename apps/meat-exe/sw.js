@@ -1,13 +1,27 @@
 const CACHE_PREFIX='meat-exe-';
-const CACHE_NAME='meat-exe-v1.6.0';
-const APP_VERSION='1.6.0';
-const RELEASE_DATE='2026-10-18';
+const CACHE_NAME='meat-exe-v1.9.0';
+const APP_VERSION='1.9.0';
+const RELEASE_DATE='2026-10-19';
 const RELEASE_NOTES=[
-'Выбор из трёх операций между органами, биомасса и пересборка.',
-'Игломёт, 11 биологических приращений и настоящие компромиссы.',
-'Сохранение сборки и незавершённого выбора, миграция до v5.'
+'Новые мокрые и сухие физические микроматериалы тканей, разные фактуры девяти типов врагов.',
+'Туманная биовзвесь, кровяные осколки с инерцией и живое освещение при выстрелах — без нагрузки на слабые WebGL.',
+'У каждой ткани свой тембр ударов и стрельбы; анатомия, движения и свет подчёркивают глубину органов.',
+'Три добровольных протокола сложности с реальными ограничениями и бонусным эхо за полноценный забег.',
+'Архив показывает фактические результаты и медиану последних попыток, урон и время по органам.',
+'Боевые цепочки награждают быстрые серии убийств; спавн осторожнее, если игрок на грани гибели.',
+'Каждый орган переживает три боевых пульса с различными врагами вместо короткой одноразовой зачистки.',
+'За очищенные пульсы начисляются ресурсы и лечение, мембрану можно добыть ради дополнительной биомассы.',
+'Старые сохранённые забеги продолжаются без внезапного удлинения своих волн.',
+'Три уникальных стража: тромб, костяной панцирь и синаптический узел, каждый со своей тактикой.',
+'Выбор пути теперь возможен физически: подойди к двум разным 3D-ответвлениям и нажми X или кнопку на телефоне.',
+'Боссы телеграфируют атаки, а победа даёт биомассу и исцеление; сохранение между боями.',
+'Между органами выбирается рискованный или безопасный путь: реальные враги, лечение, биомасса и иммунитет.',
+'Архив шрамов: постоянные разблокировки и выбор активной адаптации для нового забега.',
+'Три органа получили отдельные скульптурные формы: сосудистые своды, костяные крипты и нервные мосты.',
+'Девять детерминированных архитектурных ориентиров вместо однотипных коридоров.',
+'Кислота, вязкий костный мозг и нервные разряды читаются по форме на полу.'
 ];
-const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./biomes.js','./ecology.js','./biobuilds.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
+const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./biomes.js','./ecology.js','./biobuilds.js','./runPaths.js','./runPacing.js','./atmosphere.js','./runTuning.js','./guardians.js','./immunity.js','./gastricArt.js','./structuralArt.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',event=>{

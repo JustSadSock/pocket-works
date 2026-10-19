@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "cavitation-lab",
+  "name": "КАВИТАЦИЯ — лаборатория пузырька",
+  "shortName": "КАВИТАЦИЯ",
+  "description": "Лаборатория кавитации: свободная расстановка до семи взаимосвязанных пузырьков, давление, отражённые стенкой поля, схлопывания и точные временные измерения.",
+  "version": "1.2.0",
+  "releaseDate": "2026-10-19",
+  "releaseDateTime": "2026-10-19T11:34:00+03:00",
+  "changelog": [
+    "Добавлен Конструктор кавитации: свободное создание, перемещение и удаление до семи пузырьков в экспериментальной камере.",
+    "Для каждого пузырька доступен свой относительный радиус, три шаблона расположения и отмена правок.",
+    "Отображается вычисленный порядок первых схлопываний и разброс времён; положение и размеры напрямую влияют на связанное численное решение.",
+    "Физические ограничения, локальное сохранение и адаптивное сенсорное управление для мобильного интерфейса."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#d38e4f",
+  "backgroundColor": "#13262b",
+  "themeColor": "#13262b",
+  "orientation": "any",
+  "cacheName": "cavitation-lab-v1.2.0",
+  "storageNamespace": "pocket-works:cavitation-lab",
+  "tags": [
+    "simulation",
+    "cavitation",
+    "physics",
+    "water",
+    "rayleigh-plesset",
+    "science",
+    "bubble",
+    "offline",
+    "coupled bubbles",
+    "pressure field",
+    "editor",
+    "interactive physics"
+  ],
+  "order": 81
+}

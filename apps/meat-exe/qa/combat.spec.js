@@ -13,7 +13,7 @@ test('live shooting produces resolved shots, misses and remains pausible',async 
     await page.locator('#fireBtn').tap();
   }else{
     const surface=page.locator('#stage');
-    await surface.click({position:{x:400,y:340}}); // first click now fires and captures the mouse
+    await surface.click({position:{x:400,y:340},noWaitAfter:true}); // first click now fires and captures the mouse
     await page.mouse.down();await page.mouse.up(); // now a real primary-fire gesture
   }
   await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__?.().combat.shotsFired),{timeout:7000}).toBeGreaterThan(0);
