@@ -3239,7 +3239,7 @@
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "b14fa3951b3d9643e465e3659cf50d872da937b4",
-    "lastAttemptAt": "2026-10-17T07:55:08.109Z"
+    "lastAttemptAt": "2026-10-19T08:40:09.797Z"
   },
   "oskolki": {
     "revision": "5bd6b125d60059beca391659370485e7681bb4a4",
@@ -3480,10 +3480,10 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "d727d34a2acb025e1aea7fe3d84c8628474550a4",
-    "lastAttemptAt": "2026-10-18T23:33:29.990Z",
-    "revision": "d727d34a2acb025e1aea7fe3d84c8628474550a4",
-    "qualityScore": 72,
+    "lastAttemptRevision": "a82756feea3324de443d0e490e9e00bd3214ba96",
+    "lastAttemptAt": "2026-10-19T08:39:58.612Z",
+    "revision": "a82756feea3324de443d0e490e9e00bd3214ba96",
+    "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3495,7 +3495,7 @@
       }
     ],
     "shot": 0,
-    "sha256": "79c1fe0b4bdb2224749e8458a6eff801f32332bba561d7d4657df3ce3396f51a",
+    "sha256": "45642e3fc43551afbdc3f659954d900b04f032e31aaf8ec75a87d1b3c70d6f38",
     "imageVersion": 2
   },
   "crossline-5x5": {
@@ -3554,19 +3554,19 @@
     "imageVersion": 2
   },
   "cavitation-lab": {
-    "revision": "109cbdcb0538bd55e92f46be0a77eb1ba0289db5",
-    "qualityScore": 80,
+    "revision": "782c21d962265a938b39a2e875ad6db8dade77b9",
+    "qualityScore": 79,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "53dcec3c93260e8438f10218bf43defe0c3fd00750203b2a78ce123eba8956ba",
+    "sha256": "ea40c2abb1170e94dba4618ae96db41bfa6aae4a75a5d567d621dbafe423c0ff",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "109cbdcb0538bd55e92f46be0a77eb1ba0289db5",
-    "lastAttemptAt": "2026-10-18T22:44:01.857Z"
+    "lastAttemptRevision": "782c21d962265a938b39a2e875ad6db8dade77b9",
+    "lastAttemptAt": "2026-10-19T08:39:39.535Z"
   }
 }
