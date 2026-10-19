@@ -11,6 +11,7 @@ parentPort.on('message', async ({ id, action, payload }) => {
       action === 'message' ? await module.onMessage(payload) :
       action === 'join' && module.onJoin ? await module.onJoin(payload) :
       action === 'leave' && module.onLeave ? await module.onLeave(payload) :
+      action === 'tick' && module.onTick ? await module.onTick(payload) :
       { state: payload.state, events: [] };
     if (!result || typeof result !== 'object' || !('state' in result)) throw new Error('Module must return { state, events }');
     result.events ??= [];
