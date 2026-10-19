@@ -7,3 +7,5 @@ Pending: build, damage regression tests, Chromium/WebKit real driving and visual
 
 2026-10-19: Chromium landscape driving/pause passed. Offline acceptance exposed an existing Workbox activation bug: clientsClaim() was registering a listener after activate had already begun. Changed to awaited self.clients.claim(); rebuilding and repeating offline acceptance.
 
+
+Пользователь остановил дальнейшую полировку и разрешил перенос с известными проблемами. См. KNOWN_ISSUES.md; не тратить следующий запуск на повтор уже перечисленных проверок.
