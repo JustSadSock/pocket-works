@@ -176,3 +176,83 @@ button:disabled{opacity:.38;cursor:default}
  .pause,.speed{min-height:32px}
  .console-foot{padding-top:0}
 }
+
+/* 1.2 — an instrument for drawing a physical arrangement, not a generic card stack. */
+.cloud-count{grid-template-columns:repeat(4,minmax(0,1fr))}
+.cloud-mode{font-size:11px}
+.app-shell.custom-mode .presets{display:none}
+.constructor-panel{display:grid;gap:5px;border-top:1px solid #a7b7ab;padding-top:8px}
+.constructor-panel[hidden]{display:none}
+.layout-chooser,.editing-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.layout-chooser button,.editing-row button{min-height:31px;padding:4px 3px;background:#e5e8dc;border:1px solid #adbdaf;font-size:10px;font-weight:650;color:#304b48}
+.layout-chooser button:active,.editing-row button:active{background:#b8cdbd}
+.editing-row button:first-child{background:#295052;color:#eff4e6;border-color:#295052}
+.editing-row button:disabled{opacity:.35}
+.edit-size{display:grid;gap:2px}
+.edit-size>span{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:650}
+.edit-size output{font-family:Georgia,serif;font-size:14px;color:#1b3b3e}
+.edit-size input{width:100%;appearance:none;height:13px;background:transparent;touch-action:pan-x}
+.edit-size input::-webkit-slider-runnable-track{height:3px;background:#92b2a8}
+.edit-size input::-webkit-slider-thumb{appearance:none;background:#e3ab67;border:2px solid #355457;width:16px;height:16px;border-radius:50%;margin-top:-7px}
+.edit-size input::-moz-range-track{height:3px;background:#92b2a8}
+.edit-size input::-moz-range-thumb{background:#e3ab67;border:2px solid #355457;width:12px;height:12px}
+.editor-message{font-size:10px;line-height:1.25;color:#657b72;min-height:13px}
+.editor-message.error{color:#994d31;font-weight:700}
+.cascade-summary{font-size:10px;font-variant-numeric:tabular-nums;letter-spacing:.02em;
+ border-top:1px solid #bbc7ba;padding:6px 0 0;color:#355653;font-weight:700;min-height:19px}
+.app-shell.custom-mode .actions{position:sticky;bottom:0;z-index:3;background:var(--paper);padding-top:3px}
+.app-shell.custom-mode #experiment-title{letter-spacing:.06em}
+@media(max-width:830px){
+ .app-shell.custom-mode .workspace{grid-template-rows:minmax(180px,1fr) minmax(270px,310px)}
+ .app-shell.custom-mode .console-main{padding:7px 12px max(7px,var(--safe-bottom));gap:4px}
+ .cloud-count{gap:2px}
+ .cloud-mode{font-size:10px;padding:3px 1px;min-height:32px}
+ .app-shell.custom-mode .cloud-tools{margin-top:0;gap:3px}
+ .app-shell.custom-mode .constructor-panel{padding-top:3px;gap:2px}
+ .app-shell.custom-mode .editing-row button,
+ .app-shell.custom-mode .layout-chooser button{min-height:27px;font-size:9px;padding:3px 2px}
+ .app-shell.custom-mode .edit-size>span{font-size:10px}
+ .app-shell.custom-mode .edit-size output{font-size:12px}
+ .app-shell.custom-mode .editor-message{font-size:9px}
+ .app-shell.custom-mode .cascade-summary{font-size:9px;padding-top:2px}
+ .app-shell.custom-mode .sliders{gap:0}
+ .app-shell.custom-mode .instrument>span{font-size:10px}
+ .app-shell.custom-mode .instrument output{font-size:11px}
+ .app-shell.custom-mode .cloud-options button{min-height:23px}
+ .app-shell.custom-mode .launch{min-height:42px}
+ .app-shell.custom-mode .pause,.app-shell.custom-mode .speed{min-height:27px}
+}
+@media(max-width:830px) and (max-height:620px){
+ .app-shell.custom-mode .workspace{grid-template-rows:minmax(150px,1fr) 263px}
+ .app-shell.custom-mode .console-main{padding:4px 10px;gap:2px}
+ .app-shell.custom-mode .layout-chooser button,
+ .app-shell.custom-mode .editing-row button{min-height:24px}
+ .app-shell.custom-mode .editor-message{display:none}
+ .app-shell.custom-mode .launch{min-height:36px}
+}
+@media(min-width:831px) and (max-height:800px){
+ .app-shell.custom-mode .console-main{gap:6px;padding:9px 15px}
+ .app-shell.custom-mode .cloud-tools{gap:4px}
+ .app-shell.custom-mode .sliders{gap:6px}
+ .app-shell.custom-mode .result{gap:3px;padding:5px 0}
+ .app-shell.custom-mode .console-foot{display:none}
+ .app-shell.custom-mode .cloud-mode{min-height:31px}
+ .app-shell.custom-mode .editing-row button,
+ .app-shell.custom-mode .layout-chooser button{min-height:27px}
+}
+
+/* Visual QA follow-up: full custom tools and global pressure controls fit at phone height. */
+@media(max-width:830px){
+ .app-shell.custom-mode .workspace{grid-template-rows:minmax(165px,1fr) minmax(325px,380px)}
+ .app-shell.custom-mode .wall-instruction{display:none}
+ .app-shell.custom-mode .console-main{gap:3px;padding-bottom:max(7px,var(--safe-bottom))}
+ .app-shell.custom-mode .instrument{margin-bottom:0}
+ .app-shell.custom-mode .instrument>span{margin-bottom:0}
+ .app-shell.custom-mode .actions{box-shadow:0 -5px 8px var(--paper)}
+}
+@media(max-width:830px) and (max-height:670px){
+ .app-shell.custom-mode .workspace{grid-template-rows:minmax(135px,1fr) minmax(292px,345px)}
+ .app-shell.custom-mode .console-main{gap:1px;padding-top:4px}
+ .app-shell.custom-mode .constructor-panel{gap:1px}
+ .app-shell.custom-mode .editor-message{display:none}
+}

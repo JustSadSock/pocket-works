@@ -1,3 +1,4 @@
+import {criticalImpact} from './spacetime.js';
 /**
  * Optical transfer function for a static, spherically symmetric wormhole.
  *
@@ -32,7 +33,7 @@ export function photonTransfer(m,l0,theta,{outer=OUTER_RADIUS,maxTime=145,step=.
 }
 export function criticalAngle(m,l0){
  const g=geometry(l0,m);
- const ratio=m.a/g.R*g.N/geometry(0,m).N;
+ const ratio=criticalImpact(m).b*g.N/g.R;
  return ratio<1?Math.PI-Math.asin(ratio):Math.PI/2;
 }
 export function buildTransfer(m,l0,count=640,{onProgress,signal}={}){

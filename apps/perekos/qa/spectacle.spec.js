@@ -57,3 +57,39 @@ test('art pass: six unique costumes and weapon stance on mobile and desktop',asy
  expect(new Set(shapes).size).toBe(6);
  await info.attach('six-fighter-materials',{body:await page.screenshot(),contentType:'image/png'});
 });
+
+test('v0.8 danger guides are visible and align with existing projectile hitboxes',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ const data=await page.evaluate(async()=>{
+  const {combatCues,drawGroundCues}=await import('/apps/perekos/combat-readability.mjs');
+  const s={phase:'fight',actors:[{x:180,y:310},{x:335,y:310}],barriers:[],
+   shots:[{owner:1,x:95,y:310,vx:300,vy:0,r:5,life:1,element:'fire'}],mines:[]};
+  const canvas=document.createElement('canvas');canvas.width=400;canvas.height=620;
+  const c=canvas.getContext('2d');drawGroundCues(c,s,0,2);
+  const pixels=c.getImageData(90,298,120,25).data;
+  return {isDanger:combatCues(s).shots[0].imminent,
+   painted:pixels.some((channel,index)=>index%4===3&&channel>10)};
+ });
+ expect(data.isDanger).toBe(true);expect(data.painted).toBe(true);
+});
+
+test('v0.9: the six signature spells are genuinely different drawn geometry',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ const shapes=await page.evaluate(async()=>{
+  const {MAGE_SIGNS,SpellChoreography,drawSpellGround}=
+   await import('/apps/perekos/spell-choreography.mjs');
+  const paint=style=>{
+   const s={phase:'fight',round:1,ticks:4,serial:1,
+    actors:[{x:100,y:260,id:0,mageId:style},{x:300,y:310,id:1,mageId:'slate'}],
+    shots:[{owner:0,x:100,y:260,vx:220,vy:0,element:'fire'}],
+    fx:[{id:1,k:'shoot',x:100,y:260}]};
+   const m=new SpellChoreography();m.ingest(s);
+   const canvas=document.createElement('canvas');canvas.width=400;canvas.height=620;
+   const c=canvas.getContext('2d');drawSpellGround(c,m);
+   return canvas.toDataURL();
+  };
+  return MAGE_SIGNS.map(paint);
+ });
+ expect(shapes).toHaveLength(6);
+ expect(new Set(shapes).size).toBe(6);
+});

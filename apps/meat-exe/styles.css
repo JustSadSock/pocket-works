@@ -203,3 +203,19 @@
 .hud-center .pulse-indicator{display:block;font:700 9px/1.15 Arial,sans-serif;font-style:normal;
  letter-spacing:.14em;color:#d8ab91;margin:2px 0;white-space:nowrap}
 @media(max-height:480px){.hud-center .pulse-indicator{font-size:8px;margin:1px 0}}
+
+/* v1.8.4 / measured experiments, presented as a field log rather than fake stats. */
+.archive-panel{max-height:min(42vh,340px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.archive-subtitle{margin:12px 1px 6px;color:#eac2a0;letter-spacing:.13em;
+ font:800 10px/1.3 Arial,sans-serif}
+.protocol-option strong{font-size:11px}
+.protocol-option small{line-height:1.4}
+.archive-stats,.archive-record{font:10px/1.45 Arial,sans-serif;color:#d1ae9c;padding:6px 4px;
+ border-top:1px solid rgba(194,134,112,.24)}
+.archive-stats{color:#f2d0b2;font-weight:700}
+.combo-chip{display:block;font:900 10px/1.25 Arial,sans-serif;letter-spacing:.08em;
+ color:#f4c39b;margin-top:4px;text-shadow:0 0 8px rgba(220,84,55,.35);
+ animation:chain-pulse .3s ease-out}
+@keyframes chain-pulse{from{transform:scale(1.17);opacity:.55}to{transform:scale(1);opacity:1}}
+@media(max-width:650px){.archive-panel{max-height:34vh}.archive-subtitle{margin-top:9px}}
+@media(prefers-reduced-motion:reduce){.combo-chip{animation:none}}

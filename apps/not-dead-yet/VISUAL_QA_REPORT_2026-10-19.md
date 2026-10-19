@@ -255,3 +255,90 @@ the same corridor layout with another pastel shade.
 - [ ] Improve corridor-specific domestic geometry, texture-scale variation,
       fixture placement and believable shadows; do not confuse a passing
       browser screenshot with visual realism.
+
+## v2.2.0 — Geometry and practical lighting experiments
+
+The preceding 2.1.7 checks apply to that release, not automatically
+to 2.2.0. The new layoutVersion 3 adds actual connected walkable
+corridor niches and high-up alcove structures while keeping original
+sector boundary portals intact. Legacy saves keep versions 1 or 2.
+
+Two closest relevant lights originate from actually modeled room shades
+and opal hall lights. The shader uses a 48×48 wall/hinge occupancy texture
+and twelve fixed intermediate samples per light ray, with
+`structureEnabled=0` for the separate story chapter and revolver
+viewmodel. This is an inexpensive WebGL1 occlusion approximation;
+full bounced lighting or PCF soft shadows are not claimed.
+
+Testing requested through universal PocketWorks QA:
+- [New 2.2.0 Node architecture regression](https://github.com/JustSadSock/pocket-works/issues/1010)
+- [New 2.2.0 visual/browser shader suite](https://github.com/JustSadSock/pocket-works/issues/1011)
+
+Individual conclusions must be recorded after the runs have actually
+finished. Isolated deterministic JavaScript validation passed 37
+focused tests on new and existing scene/door/lighting modules.
+
+### v2.2.1 — first actual Playwright findings
+
+The first new WebGL1 shader run
+[39230314384](https://github.com/JustSadSock/pocket-works/actions/runs/39230314384)
+compiled the shader and completed **5/6 Playwright scenarios** in
+Chromium and WebKit. The remaining test hit Playwright's default **7-second
+screenshot timeout** on software-rendered **desktop Chromium**, including
+its retry; the error did not report a shader compile or JavaScript
+exception. The new pipeline renders more expensive than the old flat
+shader because it checks masonry occlusion along actual lamp rays.
+
+Two mitigations were pushed:
+
+1. Scene pixel ratio cap lowered from 1.3→1.2 on narrow/mobile and
+   1.6→1.4 on desktop to reduce software-GPU pixel cost.
+2. Number of occlusion-mask texture samples per light ray bounded to
+   **6 portrait / 8 desktop**, instead of 12.
+3. Full five-seed screenshot matrix uses a scoped **45-second screenshot
+   timeout** and 240-second test budget so slow screenshot encoding does
+   not masquerade as broken 3D geometry. This does not hide missing
+   light masks, WebGL errors or invalid map assertions.
+4. In frozen visual reference mode, door opening tests advance the hinge
+   explicitly rather than waiting for gameplay time to resume.
+
+Retest via [visual shader issue #1015](https://github.com/JustSadSock/pocket-works/issues/1015)
+and [CPU issue #1016](https://github.com/JustSadSock/pocket-works/issues/1016).
+A separate [four-viewport smoke visual check #1013](https://github.com/JustSadSock/pocket-works/issues/1013)
+tests startup and image capture. All follow-up outcomes need verification,
+and software-emulated rendering cannot stand in for physical device GPU p95.
+
+
+### v2.2.2 — resolving the software-GPU stall
+
+The first optimized *still ray-marching* shader subsequently passed
+[6/6 real Playwright lighting scenarios](https://github.com/JustSadSock/pocket-works/actions/runs/39231535622),
+but the four-viewport visual smoke check
+[39231023376](https://github.com/JustSadSock/pocket-works/actions/runs/39231023376)
+revealed a **desktop Chromium 7-second start-button click timeout**.
+In that report the app had loaded and JS errors were empty; the
+software GPU was consuming too much frame time for a dependable
+interactive test. This is a real responsiveness risk, not just a
+timeout threshold problem.
+
+The rendering design was therefore changed:
+- A CPU-computed 48×48 RGBA light-visibility texture is updated only
+  on player tile changes, door threshold changes or a memory rewrite.
+- The WebGL1 fragment shader makes **one texel lookup per fragment**
+  instead of walking 6–12 occlusion samples for each of two lamps.
+- Both practical lights are still attached to real 3D ceiling fixtures,
+  and walls/closed hinges still stop their illumination.
+- A single isolated V8 lightmap build took about 3 ms at seed 222.
+  This is a microbenchmark only, not mobile GPU frame rate.
+- [Real GitHub Node regression on 2.2.2](https://github.com/JustSadSock/pocket-works/actions/runs/39232633677)
+  passed **101/101** tests including additional CPU texture-visibility
+  checks across a closing/opening physical door.
+- [Post-redesign WebGL Playwright](https://github.com/JustSadSock/pocket-works/actions/runs/39232638773)
+  and [four-viewport visual smoke](https://github.com/JustSadSock/pocket-works/actions/runs/39232641393)
+  are the remaining shader performance validation gates.
+
+A review of actual early 2.2.0 phone screenshots also exposed overly
+bright beige ceilings and an unnatural blue-green weapon barrel.
+The shader got restrained practical-light and flashlight intensities
+with a mild tone-mapping shoulder; the weapon iron/sleeve pigments
+were neutralized. A fresh screenshot A/B review is still required.

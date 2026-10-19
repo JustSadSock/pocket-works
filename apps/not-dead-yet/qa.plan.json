@@ -24,7 +24,8 @@
         "tests/rogue-doors.test.mjs",
         "tests/architecture-cache.test.mjs",
         "tests/viewmodel-visual.test.mjs",
-        "tests/hall-fixtures.test.mjs"
+        "tests/hall-fixtures.test.mjs",
+        "tests/spatial-lighting.test.mjs"
       ]
     },
     {
@@ -87,6 +88,14 @@
       "tier": "smoke",
       "files": [
         "qa/interaction-regressions.spec.js"
+      ]
+    },
+    {
+      "id": "spatial-lighting",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/spatial-lighting.spec.js"
       ]
     }
   ]

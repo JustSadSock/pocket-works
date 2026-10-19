@@ -35,7 +35,7 @@ export function createWaveLab(options={}){
  const onAction=options.onAction||(()=>{});
  const save=()=>{try{localStorage.setItem(key,JSON.stringify(state));}catch{}};
  function rebuild(){
-  wave=createWave({...state,eta:metric.eta});
+  wave=createWave({...state,...metric});
   cachedLastRow=null;phase='ready';update();save();
  }
  function configure(m){metric={...m};rebuild();}

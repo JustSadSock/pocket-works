@@ -146,7 +146,7 @@ test('five architecturally different apartment families work in the actual rende
   },seed);
   expect(frame).not.toBeNull();
   expect(frame.startWalkable).toBe(true);
-  expect(frame.version).toBe(2);
+  expect(frame.version).toBe(3);
   expect(frame.rooms).toBeGreaterThanOrEqual(4);
   families.add(frame.family);
  }

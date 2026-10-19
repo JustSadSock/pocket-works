@@ -155,7 +155,8 @@ export function requestFromInputs(data) {
 
 export function changedApps(root, base, head) {
   if (!/^[0-9a-f]{40}$/.test(base) || !/^[0-9a-f]{40}$/.test(head)) throw Error('Invalid PR SHA');
-  const paths = execFileSync('git', ['diff', '--name-only', base, head], { cwd: root, encoding: 'utf8' }).split(/\r?\n/);
+  // Compare the PR's work from its fork point, excluding later target-branch work.
+  const paths = execFileSync('git', ['diff', '--name-only', `${base}...${head}`], { cwd: root, encoding: 'utf8' }).split(/\r?\n/);
   return [...new Set(paths.flatMap(p => {
     const match = /^apps\/([a-z0-9-]+)\//.exec(p);
     return match ? [match[1]] : [];
