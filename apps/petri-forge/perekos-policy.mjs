@@ -71,7 +71,7 @@ export function perekosControl(o,p,player=0,tick=0){
  let mx=nx*distBias*pressure-ny*(w[index.orbit]*1.9-.95)*side;
  let my=ny*distBias*pressure+nx*(w[index.orbit]*1.9-.95)*side;
  const threat=nearestThreat(o,player);
- const danger=threat&&threat.distance<42+w[index.anticipation]*40&&threat.t<.52;
+ const danger=!!(threat&&threat.distance<42+w[index.anticipation]*40&&threat.t<.52);
  if(danger){
   const mag=vec(-threat.vy,threat.vx),sign=((s.x*400-threat.shot.x*400)*mag[0]+(s.y*620-threat.shot.y*620)*mag[1])>=0?1:-1;
   mx=mx*(1-w[index.dodge])+mag[0]*sign*2*w[index.dodge];
