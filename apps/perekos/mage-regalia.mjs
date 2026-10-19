@@ -119,3 +119,57 @@ export function drawGarbFront(c,id,{coat='#657c68',trim='#c7af85',shade='#354c40
  }
  c.restore();
 }
+
+
+// Six head shapes tuned from actual Chromium/WebKit 48-view contact sheets.
+// Only used if Pocket ID did NOT supply a custom head accessory.
+// The base face remains unobscured; all shapes are 2D rigid pixel materials.
+export function drawClassHeadgear(ctx,id,{trim='#d6bf91',coat='#63785f',shade='#384b3b'}={}){
+ const c=ctx;
+ switch(id){
+  case 'kindle': // split copper diadem + swept flame-wrought crown
+   poly(c,[[-16,-18],[-14,-24],[-6,-27],[4,-24],[15,-20],[15,-16]],'#965439');
+   px(c,-17,-18,34,4,'#b67b4f');px(c,-13,-21,26,3,'#f4b777');
+   poly(c,[[-6,-23],[-3,-33],[2,-36],[5,-28],[10,-24]],'#d98c52');
+   poly(c,[[1,-27],[4,-34],[7,-27],[7,-23]],'#f3bd75');
+   px(c,-1,-27,4,4,'#ffe0a2');
+   break;
+  case 'cinder': // hanging black cowl with an uneven heavy forehead
+   poly(c,[[-17,-14],[-19,-23],[-12,-31],[2,-34],[13,-29],[18,-19],[14,-12]],'#273632');
+   poly(c,[[-15,-22],[-9,-31],[2,-32],[10,-26],[12,-22]],'#55544a');
+   poly(c,[[-20,-19],[-18,-5],[-13,2],[-11,-18]],'#343b38');
+   poly(c,[[14,-22],[19,-13],[17,-3],[11,2],[11,-18]],'#3c443f');
+   px(c,-14,-19,28,4,'#7d7760');px(c,-10,-24,15,2,'#9b9275');
+   px(c,10,-11,3,8,'#ae8965');
+   break;
+  case 'wire': // twin upright conductor blades and a low airy visor
+   poly(c,[[-15,-20],[-9,-24],[9,-24],[16,-17],[12,-15],[-14,-15]],'#467875');
+   px(c,-14,-18,29,3,'#a0d9ce');
+   poly(c,[[-11,-22],[-9,-36],[-5,-38],[-3,-21]],'#7bbab1');
+   poly(c,[[5,-22],[7,-38],[10,-35],[11,-20]],'#599c9e');
+   px(c,-10,-37,5,2,'#edfff1');px(c,8,-38,3,3,'#e4fff0');
+   px(c,-7,-23,16,2,'#dae7c7');
+   break;
+  case 'coil': // open copper induction ring; no default stovepipe crown
+   c.lineWidth=5;c.strokeStyle='#804936';c.beginPath();c.arc(0,-22,17,-Math.PI*.93,-Math.PI*.07);c.stroke();
+   c.lineWidth=2;c.strokeStyle='#dfae82';c.beginPath();c.arc(0,-22,17,-Math.PI*.91,-Math.PI*.09);c.stroke();
+   px(c,-17,-22,6,8,'#945c40');px(c,11,-22,6,8,'#945c40');
+   px(c,-16,-20,4,3,'#e1b588');px(c,12,-20,4,3,'#e1b588');
+   poly(c,[[-13,-19],[-9,-25],[9,-25],[13,-19],[12,-15],[-12,-15]],'#714b3b');
+   px(c,-8,-23,16,2,'#e9ca9c');px(c,-1,-26,3,4,'#f3debc');
+   break;
+  case 'pebble': // short off-axis rock crest and chipped granite brow
+   poly(c,[[-17,-17],[-19,-23],[-11,-27],[-5,-30],[4,-27],[13,-25],[17,-19],[15,-15]],'#506859');
+   poly(c,[[-17,-21],[-8,-30],[1,-28],[-2,-20]],'#a8ba9d');
+   poly(c,[[1,-25],[11,-28],[18,-21],[13,-16],[4,-18]],'#788b73');
+   px(c,-17,-18,34,4,'#384d40');px(c,-13,-20,9,3,'#d2d8b3');
+   px(c,5,-23,7,2,'#bcc9aa');
+   break;
+  default: // slate: tall squared monolith with inset limestone front
+   poly(c,[[-13,-15],[-16,-23],[-12,-36],[9,-36],[15,-26],[14,-15]],'#405748');
+   poly(c,[[-11,-33],[-7,-38],[7,-38],[10,-30],[9,-17],[-11,-17]],'#93a38a');
+   px(c,-12,-18,25,5,'#566d59');
+   px(c,-8,-37,15,3,'#d8dbb5');px(c,-5,-31,11,3,'#bfcaa6');
+   px(c,4,-28,3,11,'#506c59');px(c,-14,-23,4,6,'#c0cfab');
+ }
+}
