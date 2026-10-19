@@ -22,32 +22,60 @@
         },
         {
           "action": "click",
+          "selector": "[data-panel-tab='construct']"
+        },
+        {
+          "action": "visible",
+          "selector": ".material-builder"
+        },
+        {
+          "action": "visible",
+          "selector": ".sources-builder"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-emitter-type='pressure']"
+        },
+        {
+          "action": "click",
+          "selector": "#field"
+        },
+        {
+          "action": "visible",
+          "selector": ".emitter-entry"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#remove-emitter"
+        },
+        {
+          "action": "click",
+          "selector": "[data-panel-tab='scene']"
+        },
+        {
+          "action": "click",
           "selector": "[data-preset='airfoil']"
         },
         {
-          "action": "visible",
-          "selector": "#shape-controls"
+          "action": "click",
+          "selector": "[data-panel-tab='measure']"
         },
         {
           "action": "visible",
-          "selector": "#load-scope"
+          "selector": "#load-panel"
         },
         {
           "action": "screenshot"
         },
         {
           "action": "click",
-          "selector": "[data-view='vorticity']"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-preset='cylinder']"
-        },
-        {
-          "action": "screenshot"
+          "selector": "[data-panel-tab='scene']"
         },
         {
           "action": "click",
