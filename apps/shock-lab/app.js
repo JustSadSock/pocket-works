@@ -267,7 +267,7 @@ function drawPhysics(){
         value=Math.min(7,grad*6) * (p>=1?1:-1);
       }
       let color;
-      if(value>=0){const t=clamp(Math.log1p(Math.min(24,value)*2.5)/Math.log1p(4.5),0,1);color=palette(t,hot);}
+      if(value>=0){const range=state.preset==='tube'?Math.log1p(state.ratio*7.5):Math.log1p(4.5);const t=clamp(Math.log1p(Math.min(24,value)*2.5)/range,0,1);color=palette(t,hot);}
       else {const t=clamp(Math.sqrt(-value*1.6),0,1);color=palette(t,cold);}
       // Thin isolines follow the actual pressure field; no animated fake wavefront.
       if(state.view==='pressure'&&Math.abs(value)>.05){
