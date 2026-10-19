@@ -1575,8 +1575,23 @@ class UIManager {
         nextCanvas.id = `next-${player.id}`;
         nextCanvas.width = PREVIEW_SIZE * BLOCK_SIZE;
         nextCanvas.height = PREVIEW_SIZE * BLOCK_SIZE;
-        item.appendChild(nextCanvas);
-        
+        const nextLabel = document.createElement('span');
+        nextLabel.className = 'piece-preview-label';
+        nextLabel.textContent = currentLanguage === 'ru' ? 'Дальше' : 'Next';
+        const heldLabel = document.createElement('span');
+        heldLabel.className = 'piece-preview-label';
+        heldLabel.textContent = currentLanguage === 'ru' ? 'Запас' : 'Hold';
+        const heldCanvas = document.createElement('canvas');
+        heldCanvas.id = `held-${player.id}`;
+        heldCanvas.width = PREVIEW_SIZE * BLOCK_SIZE;
+        heldCanvas.height = PREVIEW_SIZE * BLOCK_SIZE;
+        const nextSlot = document.createElement('div');
+        nextSlot.className = 'piece-preview-slot';
+        nextSlot.append(nextLabel, nextCanvas);
+        const heldSlot = document.createElement('div');
+        heldSlot.className = 'piece-preview-slot';
+        heldSlot.append(heldLabel, heldCanvas);
+        item.append(nextSlot, heldSlot);
         container.appendChild(item);
     }
 
@@ -1808,50 +1823,31 @@ class UIManager {
     }
 
     drawNextPiece(player) {
-        const nextCanvas = document.getElementById(`next-${player.id}`);
-        if (!nextCanvas) return;
-
-        const nextCtx = nextCanvas.getContext('2d');
-        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-
-        if (player.nextPiece) {
-            const offsetX = Math.floor((PREVIEW_SIZE - player.nextPiece[0].length) / 2);
-            const offsetY = Math.floor((PREVIEW_SIZE - player.nextPiece.length) / 2);
-
-            for (let y = 0; y < player.nextPiece.length; y++) {
-                for (let x = 0; x < player.nextPiece[y].length; x++) {
-                    if (player.nextPiece[y][x]) {
-                        const drawX = (offsetX + x) * BLOCK_SIZE;
-                        const drawY = (offsetY + y) * BLOCK_SIZE;
-                        
-                        // Glow effect
-                        nextCtx.shadowColor = player.color;
-                        nextCtx.shadowBlur = 6;
-                        
-                        // Main block with gradient
-                        const gradient = nextCtx.createLinearGradient(
-                            drawX, drawY,
-                            drawX, drawY + BLOCK_SIZE
-                        );
-                        gradient.addColorStop(0, player.color);
-                        gradient.addColorStop(1, this.darkenColor(player.color, 0.3));
-                        nextCtx.fillStyle = gradient;
-                        nextCtx.fillRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                        
-                        nextCtx.shadowBlur = 0;
-
-                        // Highlight
-                        nextCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                        nextCtx.fillRect(drawX + 2, drawY + 2, BLOCK_SIZE - 6, 3);
-                        
-                        // Border
-                        nextCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-                        nextCtx.lineWidth = 2;
-                        nextCtx.strokeRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                    }
+        for (const [name, piece] of [['next',player.nextPiece], ['held',player.heldPiece]]) {
+            const canvas = document.getElementById(`${name}-${player.id}`);
+            if (!canvas) continue;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            if (!piece) continue;
+            const ox = Math.floor((PREVIEW_SIZE - piece[0].length) / 2);
+            const oy = Math.floor((PREVIEW_SIZE - piece.length) / 2);
+            for (let y = 0; y < piece.length; y++) {
+                for (let x = 0; x < piece[y].length; x++) {
+                    if (!piece[y][x]) continue;
+                    const px = (ox + x) * BLOCK_SIZE;
+                    const py = (oy + y) * BLOCK_SIZE;
+                    const gradient = ctx.createLinearGradient(px,py,px,py+BLOCK_SIZE);
+                    gradient.addColorStop(0,player.color);
+                    gradient.addColorStop(1,this.darkenColor(player.color,.3));
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(px,py,BLOCK_SIZE-2,BLOCK_SIZE-2);
+                    ctx.fillStyle='rgba(255,255,255,.32)';
+                    ctx.fillRect(px+2,py+2,BLOCK_SIZE-6,3);
                 }
             }
         }
+        const item = document.getElementById(`next-item-${player.id}`);
+        if (item) item.classList.toggle('hold-exhausted',Boolean(player.holdUsed));
     }
 
     updatePlayerInfo(player) {
