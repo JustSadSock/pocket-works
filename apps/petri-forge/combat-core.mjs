@@ -1,4 +1,5 @@
-// Combat Forge 0.3: independent seeded, deterministic 2D combat engine.
+// Combat Forge 0.4: seeded tactical combat with configurable objectives and material rules.
+import {validateCombatRules} from './combat-rules.mjs';
 export const CW=800,CH=480,DT=1/30;
 export const ARENAS=[
  {id:'open',name:'Арена',description:'Манёвренный бой без укрытий'},
@@ -52,20 +53,25 @@ export function mutatePolicy(policy,seed,scale=.16){
  const random=rand(seed);
  return {...policy,weights:policy.weights.map(v=>clamp(v+(random()+random()-1)*scale,0,1))};
 }
-export function createBattle({arena='cover',teamSize=1,seed=1,loadouts=['skirmisher','guardian'],policies=null,maxSeconds=55}={}){
+export function createBattle({arena='cover',teamSize=1,seed=1,loadouts=['skirmisher','guardian'],policies=null,maxSeconds=55,rules=null}={}){
  if(!ARENAS.some(x=>x.id===arena)||![1,2].includes(teamSize))throw Error('Некорректная арена');
+ const custom=rules?validateCombatRules(rules):null;
  const rng=rand(seed),agents=[];
  for(let side=0;side<2;side++)for(let slot=0;slot<teamSize;slot++){
   const id=side*teamSize+slot,requested=loadouts[side],loadout=Array.isArray(requested)?requested.filter(x=>Object.hasOwn(SKILLS,x)).slice(0,4):(LOADOUTS[requested]||LOADOUTS.skirmisher);
   if(!loadout.length)throw Error('У бойца должна быть хотя бы одна способность');
   agents.push({id,team:side,slot,x:side===0?110:690,y:teamSize===1?240:slot===0?163:317,
-   vx:0,vy:0,face:side===0?0:Math.PI,hp:120,energy:100,shield:0,damage:0,kills:0,alive:true,
+   vx:0,vy:0,face:side===0?0:Math.PI,hp:custom?.teams[side].hp??120,maxHp:custom?.teams[side].hp??120,
+   topSpeed:custom?.teams[side].speed??140,energyRegen:custom?.teams[side].energyRegen??14,
+   energy:100,shield:0,damage:0,kills:0,alive:true,
    loadout:loadout.slice(),cd:{bolt:0,dash:0,shield:0,strike:0,mine:0,heal:0},policy:validPolicy(policies?.[side])?policies[side]:makePolicy(side?'balanced':'aggressive',seed+id*13)});
  }
- return {version:1,arena,seed,teamSize,agents,shots:[],mines:[],events:[],ticks:0,time:0,maxSeconds,
+ return {version:2,arena,seed,teamSize,agents,shots:[],mines:[],events:[],ticks:0,time:0,
+   maxSeconds:custom?custom.limitSeconds:maxSeconds,rules:custom,objectives:[0,0],
    done:false,winner:null,randomState:Math.floor(rng()*0xffffffff),scores:[0,0],hazardHits:[0,0]};
 }
-const safe=state=>arenaWalls(state.arena,state.ticks);
+export function battleWalls(state){return [...arenaWalls(state.arena,state.ticks),...(state.rules?.walls||[])];}
+const safe=battleWalls;
 function move(agent,dx,dy,walls){
  const r=15;
  const x=clamp(agent.x+dx,r,CW-r),y=clamp(agent.y+dy,r,CH-r);
@@ -90,15 +96,16 @@ function cast(s,a,skill,t,dx,dy,walls){
  if(!entry||!a.loadout.includes(skill)||a.cd[skill]>0||a.energy<entry.cost)return false;
  const dir=norm(dx,dy);
  if(skill==='strike'&&Math.hypot(t.x-a.x,t.y-a.y)>78)return false;
- if(skill==='heal'&&a.hp>112)return false;
+ if(skill==='heal'&&a.hp>a.maxHp-8)return false;
  if(skill==='mine'&&s.mines.filter(m=>m.owner===a.id).length>=3)return false;
  a.energy-=entry.cost;a.cd[skill]=entry.cooldown;
- if(skill==='bolt'&&s.shots.length<90)s.shots.push({x:a.x+dir[0]*19,y:a.y+dir[1]*19,vx:dir[0]*440,vy:dir[1]*440,life:1.8,owner:a.id,damage:19});
- else if(skill==='dash'){move(a,dir[0]*70,dir[1]*70,walls);s.events.push({kind:'dash',x:a.x,y:a.y,team:a.team});}
- else if(skill==='shield')a.shield=Math.min(70,a.shield+38);
- else if(skill==='strike')injure(s,t,31,a);
- else if(skill==='heal')a.hp=Math.min(120,a.hp+35);
- else if(skill==='mine')s.mines.push({x:a.x,y:a.y,owner:a.id,life:9,r:46});
+ const power=id=>s.rules?.skillPower?.[id]??{bolt:19,dash:70,shield:38,strike:31,mine:29,heal:35}[id];
+ if(skill==='bolt'&&s.shots.length<90)s.shots.push({x:a.x+dir[0]*19,y:a.y+dir[1]*19,vx:dir[0]*440,vy:dir[1]*440,life:1.8,owner:a.id,damage:power('bolt')});
+ else if(skill==='dash'){move(a,dir[0]*power('dash'),dir[1]*power('dash'),walls);s.events.push({kind:'dash',x:a.x,y:a.y,team:a.team});}
+ else if(skill==='shield')a.shield=Math.min(100,a.shield+power('shield'));
+ else if(skill==='strike')injure(s,t,power('strike'),a);
+ else if(skill==='heal')a.hp=Math.min(a.maxHp,a.hp+power('heal'));
+ else if(skill==='mine')s.mines.push({x:a.x,y:a.y,owner:a.id,life:9,r:46,damage:power('mine')});
  s.events.push({kind:skill,x:a.x,y:a.y,team:a.team});return true;
 }
 function policyControl(s,a,t,walls){
@@ -113,7 +120,7 @@ function policyControl(s,a,t,walls){
  if(cw&&lineBlocked(a,t,walls)){mx+=-uy*.5;my+=ux*.5;}
  const strength=p[2]*.3+.7;
  const energyBias=p[6],healthBias=p[7];
- const skillOrder=a.hp<45&&healthBias>.44?['heal','shield','bolt','dash','mine','strike']:
+ const skillOrder=a.hp<a.maxHp*.38&&healthBias>.44?['heal','shield','bolt','dash','mine','strike']:
   d<90&&energyBias>.5?['strike','dash','bolt','mine','shield','heal']:
   d<180?['bolt','mine','shield','dash','strike','heal']:
   ['bolt','dash','mine','shield','heal','strike'];
@@ -122,7 +129,7 @@ function policyControl(s,a,t,walls){
   if(skill==='shield'&&a.shield>25)continue;
   if(skill==='dash'&&(d>220||d<70||urge<.35))continue;
   if(skill==='mine'&&d>240)continue;
-  if(skill==='heal'&&a.hp>80)continue;
+  if(skill==='heal'&&a.hp>a.maxHp*.68)continue;
   if(skill==='bolt'&&lineBlocked(a,t,walls))continue;
   if(skill==='strike'&&d>78)continue;
   if(cast(s,a,skill,t,dx,dy,walls))break;
@@ -135,17 +142,17 @@ export function stepBattle(s){
  for(const a of s.agents){
   if(!a.alive)continue;
   for(const k of Object.keys(a.cd))a.cd[k]=Math.max(0,a.cd[k]-DT);
-  a.energy=clamp(a.energy+14*DT,0,100);
+  a.energy=clamp(a.energy+a.energyRegen*DT,0,100);
   const t=targetFor(s,a,walls);if(!t)continue;
   const dx=t.x-a.x,dy=t.y-a.y;
   a.face=Math.atan2(dy,dx);
-  const control=policyControl(s,a,t,walls),v=140*(a.loadout.includes('dash')?1.08:1);
+  const control=policyControl(s,a,t,walls),v=a.topSpeed*(a.loadout.includes('dash')?1.08:1);
   a.vx+=((control.mx*v)-a.vx)*Math.min(1,DT*8);
   a.vy+=((control.my*v)-a.vy)*Math.min(1,DT*8);
   move(a,a.vx*DT,a.vy*DT,walls);
-  if(s.arena==='hazards'){
-    const dist=Math.hypot(a.x-400,a.y-240);
-    if(dist<84){injure(s,a,11*DT,null);s.hazardHits[a.team]++;}
+  const zones=s.rules?.zones||(s.arena==='hazards'?[{x:400,y:240,r:84,dps:11}]:[]);
+  for(const z of zones){
+    if(Math.hypot(a.x-z.x,a.y-z.y)<z.r){injure(s,a,z.dps*DT,null);s.hazardHits[a.team]++;}
   }
  }
  for(let i=s.shots.length-1;i>=0;i--){
@@ -158,13 +165,23 @@ export function stepBattle(s){
  for(let i=s.mines.length-1;i>=0;i--){
   const m=s.mines[i];m.life-=DT;const owner=s.agents[m.owner];
   const hits=s.agents.filter(a=>a.alive&&a.team!==owner.team&&Math.hypot(a.x-m.x,a.y-m.y)<m.r);
-  if(hits.length){for(const hit of hits)injure(s,hit,29,owner);s.events.push({kind:'mine-hit',x:m.x,y:m.y,team:owner.team});s.mines.splice(i,1);}
+  if(hits.length){for(const hit of hits)injure(s,hit,m.damage??29,owner);s.events.push({kind:'mine-hit',x:m.x,y:m.y,team:owner.team});s.mines.splice(i,1);}
   else if(m.life<=0)s.mines.splice(i,1);
  }
  const alive=[0,1].map(team=>s.agents.some(a=>a.team===team&&a.alive));
- if(!alive[0]||!alive[1]||s.time>=s.maxSeconds){
+ if(s.rules?.mode==='control'){
+  const point=s.rules.point;
+  const occupied=[0,1].map(team=>s.agents.some(a=>a.alive&&a.team===team&&Math.hypot(a.x-point.x,a.y-point.y)<=point.r));
+  // Only an uncontested point accumulates occupation progress.
+  for(const team of [0,1])if(occupied[team]&&!occupied[1-team])s.objectives[team]+=DT*3;
+ }
+ if(s.rules?.mode==='score')s.objectives=s.scores.slice();
+ const completedObjective=s.rules?.mode!=='elimination'&&s.rules?.mode!=null&&s.objectives.some(value=>value>=s.rules.targetScore);
+ if(!alive[0]||!alive[1]||completedObjective||s.time>=s.maxSeconds){
   s.done=true;
   if(alive[0]!==alive[1])s.winner=alive[0]?0:1;
+  else if(s.rules&&s.rules.mode!=='elimination'&&Math.abs(s.objectives[0]-s.objectives[1])>1e-6)
+   s.winner=s.objectives[0]>s.objectives[1]?0:1;
   else {
    const score=[0,1].map(team=>s.agents.filter(a=>a.team===team).reduce((sum,a)=>sum+a.hp+a.shield*.5,0)+s.scores[team]*.2);
    s.winner=Math.abs(score[0]-score[1])<.001?-1:score[0]>score[1]?0:1;
@@ -174,11 +191,11 @@ export function stepBattle(s){
  return s;
 }
 export function battleSummary(s){
- return {winner:s.winner,seconds:Math.round(s.time*10)/10,damage:s.scores.slice(),hp:[0,1].map(team=>Math.round(s.agents.filter(a=>a.team===team).reduce((x,a)=>x+a.hp,0))),kills:[0,1].map(team=>s.agents.filter(a=>a.team===team).reduce((x,a)=>x+a.kills,0)),hazards:s.hazardHits.slice()};
+ return {winner:s.winner,seconds:Math.round(s.time*10)/10,damage:s.scores.slice(),hp:[0,1].map(team=>Math.round(s.agents.filter(a=>a.team===team).reduce((x,a)=>x+a.hp,0))),kills:[0,1].map(team=>s.agents.filter(a=>a.team===team).reduce((x,a)=>x+a.kills,0)),hazards:s.hazardHits.slice(),objectives:s.objectives.slice(),mode:s.rules?.mode||'elimination'};
 }
 export function simulateBattle(options={},record=false){
  const s=createBattle(options),frames=[];
  while(!s.done){stepBattle(s);if(record&&s.ticks%3===0&&frames.length<800)frames.push(snapshotBattle(s));}
  return {summary:battleSummary(s),frames};
 }
-export function snapshotBattle(s){return {time:s.time,agents:s.agents.map(a=>({id:a.id,team:a.team,x:a.x,y:a.y,hp:a.hp,shield:a.shield,energy:a.energy,alive:a.alive,face:a.face})),shots:s.shots.map(p=>({x:p.x,y:p.y,team:s.agents[p.owner].team})),mines:s.mines.map(m=>({x:m.x,y:m.y,team:s.agents[m.owner].team})),events:s.events.slice(),winner:s.winner};}
+export function snapshotBattle(s){return {time:s.time,agents:s.agents.map(a=>({id:a.id,team:a.team,x:a.x,y:a.y,hp:a.hp,shield:a.shield,energy:a.energy,alive:a.alive,face:a.face})),shots:s.shots.map(p=>({x:p.x,y:p.y,team:s.agents[p.owner].team})),mines:s.mines.map(m=>({x:m.x,y:m.y,team:s.agents[m.owner].team})),events:s.events.slice(),winner:s.winner,objectives:s.objectives.slice(),walls:battleWalls(s).map(w=>({...w})),zones:(s.rules?.zones||(s.arena==='hazards'?[{x:400,y:240,r:84,dps:11}]:[])).map(z=>({...z})),point:s.rules?.mode==='control'?{...s.rules.point}:null,maxHp:s.agents[0]?.maxHp||120};}
