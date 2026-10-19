@@ -18,9 +18,6 @@ export function applyProtocol(state,id){
   state.maxHp=Math.max(40,state.maxHp-18);
   state.hp=Math.min(state.maxHp,state.hp);
  }
- if(protocol==='siege'&&state.pulseMax===3&&state.wave===1){
-  state.toSpawn=Math.min(40,state.toSpawn+2);
- }
  return protocol;
 }
 export function extraEnemiesForPulse(protocol,pulseMax=3){
@@ -48,6 +45,15 @@ export function echoBonus(base,run,victory){
     (!victory&&(!Number.isInteger(run.wave)||run.wave<2)))return 0;
  return Math.ceil(base*protocol.bonus);
 }
+export function registerCombatChain(state){
+ const now=Number.isFinite(state?.elapsed)?state.elapsed:0;
+ state.combo=now<=(state.comboExpires||0)?Math.min(12,(state.combo||0)+1):1;
+ state.comboExpires=now+4.5;
+ state.peakCombo=Math.max(state.peakCombo||0,state.combo);
+ const bonus=state.combo>=2?(state.combo-1)*18:0;
+ state.score=Math.max(0,(state.score||0)+bonus);
+ return {combo:state.combo,bonus};
+}
 export function sanitizeRunHistory(value){
  if(!Array.isArray(value))return [];
  return value.slice(-12).filter(r=>r&&typeof r==='object'&&Number.isFinite(r.elapsed)&&r.elapsed>=0)
@@ -57,6 +63,7 @@ export function sanitizeRunHistory(value){
     kills:Math.floor(finite(r.kills,0,9999)),
     score:Math.floor(finite(r.score,0,99999999)),
     damageTaken:Math.floor(finite(r.damageTaken,0,9999)),
+    peakCombo:Math.floor(finite(r.peakCombo,0,12)),
     protocol:sanitizeProtocol(r.protocol),
     victory:r.victory===true,
     stageTimes:Array.isArray(r.stageTimes)?r.stageTimes.slice(0,5).map(t=>Math.floor(finite(t,0,99999))):[]
@@ -74,7 +81,7 @@ export function recordFinishedRun(archive,run,victory){
  const entry={
    elapsed:Math.floor(finite(run.elapsed,0,99999)),wave:Math.floor(finite(run.wave,1,5,1)),
    kills:Math.floor(finite(run.kills,0,9999)),score:Math.floor(finite(run.score,0,99999999)),
-   damageTaken:Math.floor(finite(run.damageTaken,0,9999)),
+   damageTaken:Math.floor(finite(run.damageTaken,0,9999)),peakCombo:Math.floor(finite(run.peakCombo,0,12)),
    protocol:sanitizeProtocol(run.protocol),victory:Boolean(victory),stageTimes
  };
  archive.history=sanitizeRunHistory([...(archive.history||[]),entry]);
