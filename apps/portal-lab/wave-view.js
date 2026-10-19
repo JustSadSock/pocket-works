@@ -82,7 +82,7 @@ export function createWaveLab(options={}){
  function reset(){rebuild();onAction('mount');}
  function tick(dt,timeScale=1){
   if(!active||phase!=='running'||!wave)return;
-  const result=advanceWave(wave,Math.min(.085,dt*timeScale*2.5));
+  const result=advanceWave(wave,Math.min(.5,dt*timeScale*2.5));
   if(result.phase==='finished'){phase='finished';onAction('mount');}
   update();
  }
