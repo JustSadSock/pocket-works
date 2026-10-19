@@ -50,6 +50,19 @@
 <button type="button" id="field-start">Запустить 3D-пучок</button>
 <button type="button" id="field-reset">Стереть траектории</button>
 </div>
+<div class="section-caption second"><span>ПОСТАВИТЬ НАБЛЮДАТЕЛЯ</span><span>3D → ОПТИКА</span></div>
+<p class="field-location-lede">Ромб на схеме — точка статического наблюдателя. Выберите координаты в регионе A или B либо перенесите метку к летящему фотону.</p>
+<div class="field-location-region"><label for="field-location-region">РЕГИОН</label><select id="field-location-region"><option value="A">A · l > 0</option><option value="B">B · l < 0</option></select></div>
+<label class="range-field"><span>Расстояние по собственной координате <output id="field-location-distance-value">3.10a</output></span><input type="range" id="field-location-distance" min=".2" max="6" step=".05" value="3.1"></label>
+<label class="range-field"><span>Долгота позиции <output id="field-location-longitude-value">0°</output></span><input type="range" id="field-location-longitude" min="-180" max="180" step="1" value="0"></label>
+<label class="range-field"><span>Широта позиции <output id="field-location-latitude-value">0°</output></span><input type="range" id="field-location-latitude" min="-85" max="85" step="1" value="0"></label>
+<div class="field-photon-picker"><label for="field-photon-index">Фотон <output id="field-photon-index-value">1 / 0</output></label><input type="range" id="field-photon-index" min="1" max="25" value="1" step="1"><button type="button" id="field-take-photon">Поставить камеру у фотона</button></div>
+<p id="field-position-notice" class="field-position-notice">Метка соответствует физической точке выбранного региона.</p>
+<div class="field-observer-action"><button id="field-open-observer" type="button">Смотреть из этой точки <span aria-hidden="true">↗</span></button></div>
+<div class="section-caption second"><span>ПРОВЕРИТЬ ЛУЧ ИЗ ЭТОЙ ТОЧКИ</span><span>H = 0</span></div>
+<label class="range-field"><span>Угол луча к наружной радиали <output id="field-probe-angle-value">170°</output></span><input type="range" id="field-probe-angle" min="0" max="180" step="1" value="170"></label>
+<button type="button" class="field-ray-test" id="field-ray-test">Вычислить исход фотона</button>
+<p class="field-ray-measure" id="field-ray-measure">Выберите точку и проверьте исход луча.</p>
 <div class="section-caption second"><span>НАВИГАЦИЯ НАД АТЛАСОМ</span><span>КАМЕРА</span></div>
 <div class="field-cameras" role="group" aria-label="Ракурс пространственного поля">
 <button type="button" data-field-camera="diagram">Общий</button>
@@ -386,6 +399,12 @@
 <section class="observer-panel" id="observer-panel" aria-label="Наблюдатель и приливные зонды">
 <div class="section-caption"><span>КАМЕРА · ГЕОДЕЗИЧЕСКАЯ ОПТИКА</span><span id="lens-eta">N₀ = 1</span></div>
 <div class="observer-region" id="lens-region">A · ВНЕШНИЙ РЕГИОН</div><div class="optical-diagnostics" id="lens-optical-read" aria-live="polite">Подготовка оптического поля</div>
+<div class="lens-world-link">
+<div class="section-caption second"><span>ПОЛОЖЕНИЕ В 3D</span><span>НАБЛЮДАТЕЛЬ</span></div>
+<div id="lens-world-position" class="lens-world-coordinates">A · l/a 2.10 · λ 0° · φ 0°</div>
+<button id="lens-open-field" type="button">Показать позицию в «Свет 3D» <span aria-hidden="true">↗</span></button>
+<p>Оптическое изображение рассчитано из указанной точки. Направления звёзд поворачиваются вместе с локальным сферическим базисом камеры.</p>
+</div>
 <label class="range-field"><span>Удаление от горловины <output id="lens-distance-value">2.10</output> <small>a</small></span><input id="lens-distance" type="range" min=".2" max="6" step=".1" value="2.1"></label>
 <label class="range-field"><span>Угол обзора <output id="lens-fov-value">80</output> <small>°</small></span><input id="lens-fov" type="range" min="50" max="110" step="2" value="80"></label>
 <div class="section-caption second"><span>НЕБЕСНАЯ СЪЁМКА</span><span>φ / θ</span></div>
