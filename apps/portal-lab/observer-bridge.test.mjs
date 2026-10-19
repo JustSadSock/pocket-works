@@ -6,7 +6,7 @@ import {cameraBasis,pixelDirection} from './optics.js';
 import {
  BRIDGE_MIN_RADIUS,BRIDGE_MAX_RADIUS,normalizeObserverPoint,
  frameAt,worldDirection,localDirection,chartObserverPosition,
- pointFromPhoton,photonLocalAngle,inspectObserverRay,bridgeSnapshot
+ pointFromPhoton,photonLocalAngle,inspectObserverRay,cameraForRay,bridgeSnapshot
 } from './observer-bridge.js';
 const eq=(a,b,tol=1e-9)=>assert.ok(Math.abs(a-b)<=tol,'Expected '+a+' ≈ '+b);
 const point=(l=3.2,longitude=0,latitude=0)=>({l,longitude,latitude});
@@ -148,4 +148,26 @@ test('bad sampling direction and missing photon are rejected, not fabricated',()
  assert.throws(()=>localDirection([NaN,0,1],frameAt(point())));
  assert.throws(()=>inspectObserverRay(m,point(),-1));
  assert.throws(()=>inspectObserverRay(m,point(),4));
+});
+
+test('first-person camera center is exactly the selected inspected angle in both exteriors',()=>{
+ for(const l of [-3,3])for(const deg of [0,10,45,90,130,170,180]){
+  const p=point(l,25,-30),theta=deg*Math.PI/180;
+  const pose=cameraForRay(p,theta);
+  const basis=cameraBasis(pose.yaw,pose.pitch,Math.sign(l),pose.facingSign);
+  const actual=photonLocalAngle(metric({a:1}),p,pixelDirection(0,0,basis,80,1));
+  eq(actual,theta,1e-10);
+ }
+});
+test('rotated local camera preserves world direction of its center when transported',()=>{
+ const p=point(-2.1,76,34),cam=cameraForRay(p,2.7);
+ const basis=cameraBasis(cam.yaw,cam.pitch,-1,cam.facingSign);
+ const world=worldDirection(basis.forward,frameAt(p));
+ const back=localDirection(world,frameAt(p));
+ for(let i=0;i<3;i++)eq(back[i],basis.forward[i],1e-10);
+});
+test('invalid camera angles fail before opening the optical view',()=>{
+ assert.throws(()=>cameraForRay(point(3),-1));
+ assert.throws(()=>cameraForRay(point(3),Infinity));
+ assert.throws(()=>cameraForRay(point(-2),4));
 });
