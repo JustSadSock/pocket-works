@@ -29,12 +29,13 @@ export function createEmbeddedLab(canvas,{getMetric,onAction,onDirty}={}){
   mesh:saved.mesh!==false,showPaths:saved.showPaths!==false
  };
  let active=false,m=null,profile=null,segments=[],bundle=null,running=false;
- let pointer=new Map(),gesture=null,throttle=0;
+ let pointer=new Map(),gesture=null,throttle=0,meshCache={key:'',image:null};
  const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(state));}catch{}};
  const mark=()=>onDirty?.();
  function build(met){
   m=met;profile=spatialEmbedding(m,{span:state.span,steps:240});
   segments=profile.valid?embeddedGrid(profile,{meridians:20,ringStep:12}):[];
+  meshCache={key:'',image:null};
   bundle=null;running=false;pointer.clear();gesture=null;
   refresh();mark();
  }
@@ -145,17 +146,27 @@ export function createEmbeddedLab(canvas,{getMetric,onAction,onDirty}={}){
    line(ctx,{x:cx+dx,y:0},{x:cx+dx,y:h},'#82bca00c');
   }
   if(state.mesh){
-   const projected=segments.map(s=>{
-    const a=project(s.a),b=project(s.b);
-    return {...s,a,b,depth:(a.depth+b.depth)/2};
-   }).sort((a,b)=>a.depth-b.depth);
-   for(const edge of projected){
-    const region=edge.region;
-    const bright=edge.depth>0;
-    const col=edge.throat?'#f0dcb2':region==='A'?
-     (bright?'#a8d6c3b9':'#5d95898e'):(bright?'#deb39fc2':'#956e6a85');
-    line(ctx,edge.a,edge.b,col,edge.throat?2.8:edge.ring?1.05:.85);
+   // Projection + painter depth-sort are a camera-dependent STATIC layer.
+   // Only animated photons are redrawn every frame.
+   const key=[w,h,state.yaw.toFixed(5),state.pitch.toFixed(5),
+    state.zoom.toFixed(5),state.span].join('/');
+   if(meshCache.key!==key||!meshCache.image){
+    const layer=document.createElement('canvas');
+    layer.width=Math.ceil(w);layer.height=Math.ceil(h);
+    const g=layer.getContext('2d');
+    const projected=segments.map(s=>{
+     const a=project(s.a),b=project(s.b);
+     return {...s,a,b,depth:(a.depth+b.depth)/2};
+    }).sort((a,b)=>a.depth-b.depth);
+    for(const edge of projected){
+     const bright=edge.depth>0;
+     const col=edge.throat?'#f0dcb2':edge.region==='A'?
+      (bright?'#a8d6c3b9':'#5d95898e'):(bright?'#deb39fc2':'#956e6a85');
+     line(g,edge.a,edge.b,col,edge.throat?2.8:edge.ring?1.05:.85);
+    }
+    meshCache={key,image:layer};
    }
+   ctx.drawImage(meshCache.image,0,0,w,h);
   }
   // Distinct physical ends; the throat ring is not an event horizon.
   for(const z of [-state.span,state.span]){
