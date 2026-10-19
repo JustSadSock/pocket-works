@@ -10,6 +10,8 @@ import {drawGrafts,applyGraft,graftForId,weaponBuild,dashCooldown,moveSpeed,inco
 import {GENES,routeOptions,applyRoute,sanitizeArchive,unlockGene,equipGene,applyGene,earnEchoes} from './runPaths.js';
 import {guardianForWave,isGuardian,guardianReady,guardianSpawnResolved,guardianDamage,guardianAction} from './guardians.js';
 import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
+import {PROTOCOLS,sanitizeProtocol,applyProtocol,extraEnemiesForPulse,incomingProtocolDamage,
+  enemyProtocolSpeed,spawnCadence,registerCombatChain,recordFinishedRun,observedRunStats} from './runTuning.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -42,7 +44,7 @@ let paintCoolDownUntil=0,paintCost=0,draftIndex=0,lastForkNearby='';
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
   touch:$('touchControls'),cross:$('crosshair'),pauseBtn:$('pauseBtn'),wave:$('waveValue'),
-  hp:$('healthValue'),healthFill:$('healthFill'),enemies:$('enemyValue'),kills:$('killValue'),pulse:$('pulseValue'),
+  hp:$('healthValue'),healthFill:$('healthFill'),enemies:$('enemyValue'),kills:$('killValue'),pulse:$('pulseValue'),combo:$('comboValue'),
   weapon:$('weaponValue'),score:$('scoreValue'),seed:$('seedValue'),intro:$('introSubtitle'),
   resume:$('resumeSaved'),record:$('record'),mutation:$('scar'),resultTitle:$('resultTitle'),
   resultBody:$('resultBody'),note:$('notice'),damage:$('damageOverlay'),
@@ -50,6 +52,7 @@ const ui={
   qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue'),
   draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel'),
   routeFork:$('routeFork'),archiveToggle:$('archiveToggle'),archivePanel:$('archivePanel'),archiveOptions:$('archiveOptions'),archiveBalance:$('archiveBalance'),
+  protocolOptions:$('protocolOptions'),archiveMetrics:$('archiveMetrics'),
   guardian:$('guardianStatus'),guardianName:$('guardianName'),guardianFill:$('guardianFill'),forkBtn:$('forkInteract')
 };
 function audioStart(){combatAudio.unlock();}
@@ -82,6 +85,39 @@ function renderArchive(){
     });
     ui.archiveOptions.append(button);
   }
+  renderProtocols();
+}
+function renderProtocols(){
+ ui.protocolOptions.replaceChildren();
+ for(const protocol of PROTOCOLS){
+   const button=document.createElement('button');
+   button.type='button';button.className='archive-option protocol-option';
+   button.setAttribute('aria-pressed',String(archive.protocol===protocol.id));
+   const body=document.createElement('span'),name=document.createElement('strong'),detail=document.createElement('small'),tag=document.createElement('b');
+   name.textContent=protocol.name;detail.textContent=protocol.description;
+   tag.textContent=archive.protocol===protocol.id?'АКТИВЕН':protocol.bonus?'+ЭХО':'БАЗА';
+   body.append(name,detail);button.append(body,tag);
+   button.addEventListener('click',()=>{
+     archive.protocol=sanitizeProtocol(protocol.id);
+     safeWrite('archive',archive);renderArchive();sound('switch');
+   });
+   ui.protocolOptions.append(button);
+ }
+ const stats=observedRunStats(archive.history);
+ ui.archiveMetrics.replaceChildren();
+ const summary=document.createElement('div');
+ summary.className='archive-stats';
+ summary.textContent=stats.runs?('ПОСЛЕДНИЕ '+stats.runs+' ПОПЫТОК · ПОБЕД '+stats.wins+
+   ' · '+stats.winRate+'% · МЕДИАНА '+Math.floor(stats.medianSeconds/60)+':'+
+   String(Math.floor(stats.medianSeconds%60)).padStart(2,'0')):'ПОКА НЕТ ЗАВЕРШЁННЫХ ПОПЫТОК';
+ ui.archiveMetrics.append(summary);
+ for(const run of [...archive.history].slice(-4).reverse()){
+   const item=document.createElement('div');item.className='archive-record';
+   item.textContent=(run.victory?'ПОБЕДА':'ПОРАЖЕНИЕ')+' · '+Math.floor(run.elapsed/60)+':'+
+     String(run.elapsed%60).padStart(2,'0')+' · '+run.wave+'/5 · '+
+     run.kills+' УБ. · '+run.damageTaken+' УРОНА · '+run.protocol.toUpperCase();
+   ui.archiveMetrics.append(item);
+ }
 }
 function setMode(next){
   mode=next;
@@ -116,6 +152,7 @@ function newState(seed){
     grafts:[],biomass:0,pendingDraft:0,draftRevision:0,
     routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null,
     guardianPending:0,guardianDefeated:[],
+    protocol:'normal',damageTaken:0,stageTimes:[],combo:0,comboExpires:0,peakCombo:0,
     pulse:1,pulseMax:3,pulseSpawned:0,organRuptureClaimed:false};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
@@ -164,6 +201,7 @@ function begin(resume=false){
         if(mutation.key==='armed')state.level=1;
       }
       if(archive.equipped)applyGene(state,archive.equipped);
+      applyProtocol(state,archive.protocol);
       startWave(1);
     }
     audioStart();sound('menu');
@@ -180,6 +218,11 @@ function begin(resume=false){
   }catch(error){fatal(error);}
 }
 function startWave(number){
+  if(state.wave>=1&&state.wave<number&&state.waveTime>0){
+    state.stageTimes=[...(state.stageTimes||[]).filter(t=>t.wave!==state.wave),
+      {wave:state.wave,seconds:Math.round(state.waveTime)}].slice(-5);
+  }
+  state.combo=0;state.comboExpires=0;
   if(world.getStage()!==number){
     // A new organ must be a real spatial transition, not just a tint:
     // its geometry, seed, hazards, drop positions and environment all change.
@@ -196,7 +239,8 @@ function startWave(number){
   state.wave=number;state.waveTime=0;state.spawnClock=0;
   state.pulse=1;state.pulseSpawned=0;state.organRuptureClaimed=false;
   const first=state.pulseMax===3?pulsePlan(state.seed,number,1):null;
-  state.toSpawn=number===5?1:first?.count??7+number*3;
+  state.toSpawn=number===5?1:(first?.count??7+number*3)+
+    (first?extraEnemiesForPulse(state.protocol,state.pulseMax):0);
   state.routeId='';state.routeWave=0;state.routeHazard=0;
   // The guardian is only activated after the final contraction, never
   // during the first minutes of a newly generated multi-pulse organ.
@@ -274,7 +318,8 @@ function look(dx,dy,sensitivity=touch?.0049:.0023){
 }
 function harm(amount){
   if(!state||state.invuln>0||mode!=='playing')return;
-  state.hp=Math.max(0,state.hp-Math.ceil(incomingDamage(state,amount)));state.invuln=.55;damageFlash=1;recoil=Math.max(recoil,.65);
+  const applied=Math.ceil(incomingProtocolDamage(state,incomingDamage(state,amount)));
+  state.hp=Math.max(0,state.hp-applied);state.damageTaken=(state.damageTaken||0)+applied;state.invuln=.55;damageFlash=1;recoil=Math.max(recoil,.65);
   sound('pain');navigator.vibrate?.(40);
   if(state.hp<=0)finish(false);
 }
@@ -288,7 +333,10 @@ function defeatEnemy(e){
   world.splatter(e.x,e.z,e.type==='heart'?55:isGuardian(e.type)?35:16);
   world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
-  state.kills++;state.score+=isGuardian(e.type)?guardianForWave(state.wave)?.score||800:e.type==='heart'?2500:e.type==='warden'?580:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
+  state.kills++;
+  const chain=registerCombatChain(state);
+  if(chain.combo>=3){setNotice('ЦЕПНАЯ РЕАКЦИЯ ×'+chain.combo+' · +'+chain.bonus,1.1);}
+  state.score+=isGuardian(e.type)?guardianForWave(state.wave)?.score||800:e.type==='heart'?2500:e.type==='warden'?580:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
   if(hasGraft(state,'blood_pump'))state.hp=Math.min(state.maxHp,state.hp+7);
   if(e.type!=='heart')provokeImmune(state.immune,'kill',state.wave);
   killUntil=clock+.2;ui.cross.classList.add('killed');
@@ -508,7 +556,7 @@ function updateEnemies(dt){
     if(e.windup>0&&(isGuardian(e.type)||e.type==='warden'||e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
     if(dist>.76){
       const modifier=mutation?.key==='faster'?1.18:1;
-      let pace=e.speed*modifier*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1)*terrain.speed;
+      let pace=e.speed*modifier*enemyProtocolSpeed(state)*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1)*terrain.speed;
       let vx=(tx-e.x)/(Math.hypot(tx-e.x,tz-e.z)||1),vz=(tz-e.z)/(Math.hypot(tx-e.x,tz-e.z)||1);
       // Crawlers weave into corridors instead of forming a single straight queue.
       if(e.type==='crawler'&&hasSight&&dist>2.1){
@@ -592,7 +640,7 @@ function update(dt){
         pulseEnemyKind(state.seed,state.wave,state.pulse,state.pulseSpawned||0):
         chooseEnemyKind(state.wave,Math.random());
       if(spawnUnit(type)){state.toSpawn--;state.pulseSpawned=(state.pulseSpawned||0)+1;
-        state.spawnClock=state.wave===5?0:rng(.46,.90);}
+        state.spawnClock=state.wave===5?0:spawnCadence(state,Math.random());}
       else state.spawnClock=1.1;
     }
   }
@@ -611,7 +659,8 @@ function update(dt){
       waveBreak+=dt;
       if(waveBreak>1.4){
         const next=nextPulse(state);waveBreak=0;
-        if(next){setNotice(next.name+' · ПУЛЬС '+next.pulse+'/3',3);
+        if(next){
+          state.toSpawn=Math.min(40,state.toSpawn+extraEnemiesForPulse(state.protocol,state.pulseMax));setNotice(next.name+' · ПУЛЬС '+next.pulse+'/3',3);
           sound('heart');snapshot();}
       }
     }else if(state.pulseMax===3&&guardianForWave(state.wave)&&
@@ -638,6 +687,9 @@ function update(dt){
 function syncHUD(){
   if(!state)return;
   ui.wave.textContent=String(state.wave).padStart(2,'0')+' / 05';
+  if(state.combo>1&&state.elapsed>state.comboExpires)state.combo=0;
+  ui.combo.textContent=state.combo>=2?'ЦЕПЬ ×'+state.combo:'';
+  ui.combo.hidden=state.combo<2;
   ui.pulse.textContent=state.wave===5?'СЕРДЦЕ':
     state.pulseMax===3?'ПУЛЬС '+state.pulse+'/3':'ЗАЧИСТКА';
   ui.zone.textContent=biomeForWave(state.wave).short;
@@ -746,7 +798,8 @@ function finish(victory){
   if(mode!=='playing')return;
   snapshot();safeRemove('session');
   if(victory)state.score+=Math.max(0,Math.round(2500-state.elapsed*6));
-  const gained=earnEchoes(archive,state,victory);safeWrite('archive',archive);
+  const gained=earnEchoes(archive,state,victory);
+  recordFinishedRun(archive,state,victory);safeWrite('archive',archive);
   if(state.score>best.score){best={score:state.score,wave:state.wave,kills:state.kills};safeWrite('best',best);}
   const options=[
     {key:'strong',label:'УСИЛЕННЫЙ БОЛТЕР'},
@@ -757,7 +810,9 @@ function finish(victory){
   mutation=options[(state.seed+state.kills+state.wave)%options.length];
   safeWrite('mutation',mutation);
   ui.resultTitle.textContent=victory?'СЕРДЦЕ РАЗОРВАНО':'ТЫ ПЕРЕВАРЕН';
-  ui.resultBody.textContent='ОЧКИ '+state.score.toLocaleString('ru-RU')+' · УБИЙСТВ '+state.kills+'\nВОЛНА '+state.wave+'/5 · '+Math.floor(state.elapsed/60)+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0')+'\nСЛЕДУЮЩАЯ МУТАЦИЯ: '+mutation.label+'\nАРХИВ: +'+gained+' ЭХО · ВСЕГО '+archive.echoes;
+  ui.resultBody.textContent='ОЧКИ '+state.score.toLocaleString('ru-RU')+' · УБИЙСТВ '+state.kills+'\nВОЛНА '+state.wave+'/5 · '+Math.floor(state.elapsed/60)+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0')+'\nСЛЕДУЮЩАЯ МУТАЦИЯ: '+mutation.label+'\nАРХИВ: +'+gained+' ЭХО · ВСЕГО '+archive.echoes+
+  '\nПОЛУЧЕНО УРОНА '+Math.round(state.damageTaken||0)+' · ЛУЧШАЯ ЦЕПЬ ×'+(state.peakCombo||0)+
+  '\nПРОТОКОЛ '+(PROTOCOLS.find(p=>p.id===state.protocol)?.name||'БАЗОВЫЙ');
   setMode(victory?'won':'dead');
   sound(victory?'pickup':'heart');
 }
@@ -970,7 +1025,11 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   routes:{selected:state?.selectedRoute||null,active:state?.routeId||null,marker:world?.getRouteMark?.()||null,history:state?.routeHistory||[],
     offers:state?.pendingDraft?routeOptions(state.seed,state.pendingDraft).map(r=>r.id):[],
     forks:world?.getForkSites?.()||[],hazardExtra:state?.routeHazard||0},
-  archive:{echoes:archive.echoes,unlocked:archive.unlocked,equipped:archive.equipped,runs:archive.runs},
+  archive:{echoes:archive.echoes,unlocked:archive.unlocked,equipped:archive.equipped,
+    protocol:archive.protocol,history:archive.history,runs:archive.runs},
+  calibration:{protocol:state?.protocol||'normal',damageTaken:state?.damageTaken||0,
+    combo:state?.combo||0,peakCombo:state?.peakCombo||0,stageTimes:state?.stageTimes||[],
+    elapsed:state?.elapsed||0,spawnCadence:state?spawnCadence(state,.5):null},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{
