@@ -598,7 +598,15 @@ const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
 const copy=s=>structuredClone(s),out=state=>({state,events:[{type:'state',payload:{}}]});
 function active(s){return s.players.filter(p=>!p.departed);}
 function add(s,p){
- if(s.players.some(v=>v.id===p.id))return;
+ const existing=s.players.find(v=>v.id===p.id);
+ if(existing){
+  if(existing.departed){
+   if(s.phase==='playing')throw Error('Партия уже идёт');
+   existing.departed=false;existing.ready=false;
+   existing.name=String(p.name||existing.name).slice(0,24);
+  }
+  return;
+ }
  if(s.phase==='playing'||active(s).length>=4)throw Error('Комната заполнена или игра уже началась');
  s.players.push({id:p.id,name:String(p.name||'Игрок').slice(0,24),
   color:COLORS.find(c=>!active(s).some(v=>v.color===c)),ready:false,departed:false});
