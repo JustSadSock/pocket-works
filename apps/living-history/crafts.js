@@ -15,8 +15,7 @@ const requiredForCourt=(s,p)=>{
 };
 const workReady=(s,p)=>p?.alive&&p.age>=15&&p.health>28&&
  (!p.travel||p.travel.end<=s.day)&&p.hiredDay!==s.day&&
- p.combatDutyDay!==s.day&&p.dailyShift?.day!==s.day&&
- !requiredForCourt(s,p);
+ p.combatDutyDay!==s.day&&p.dailyShift?.day!==s.day;
 const aliveHome=(s,h)=>living(s,h).length>0;
 export const CRAFT_GOODS=Object.freeze({
  boards:{label:'тёсаных досок',price:3.2,material:'wood'},
@@ -173,7 +172,7 @@ export function tradeCrafts(s,notify){
      !s.shipments.some(t=>t.good===good&&t.seller===h.id&&t.buyer===b.id));
     let done=false;
     for(const a of offered){
-     const carrier=living(s,a).find(p=>workReady(s,p));
+     const carrier=living(s,a).find(p=>workReady(s,p)&&!requiredForCourt(s,p));
      if(!carrier)continue;
      const path=walkPath(s,a,b);
      if(path.length<2||path.length>85)continue;
