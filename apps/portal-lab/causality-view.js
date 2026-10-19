@@ -1,6 +1,7 @@
 import {createCausality,presetParameters,mouthB,sendSignal,audit,sampleWorldlines,CAUSAL_PRESETS} from './causality.js';
 const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const STORE='pocket-works:portal-lab:causality-v08';
+const safe=(v,defaultValue,lo,hi)=>{const n=Number(v);return Number.isFinite(n)?clamp(n,lo,hi):defaultValue;};
 const fmt=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
 function label(ctx,t,x,y,size=11,color='#c5d8cc',align='left',bold=false){
  ctx.font=(bold?'700 ':'500 ')+size+'px ui-monospace,Consolas,monospace';
@@ -19,10 +20,10 @@ const PRESETS=Object.fromEntries(Object.keys(CAUSAL_PRESETS).map(id=>[id,presetP
 export function createCausalityLab(canvas,{onAction}={}){
  let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}')||{};}catch{}
  const state={
-  distance:clamp(Number(saved.distance??3),.3,12),
-  speed:clamp(Number(saved.speed??.85),0,.98),
-  duration:clamp(Number(saved.duration??34),4,160),
-  throatTime:clamp(Number(saved.throatTime??.55),0,5),
+  distance:safe(saved.distance??3,3,.3,12),
+  speed:safe(saved.speed??.85,.85,0,.98),
+  duration:safe(saved.duration??34,34,4,160),
+  throatTime:safe(saved.throatTime??.55,.55,0,5),
   origin:saved.origin==='A'?'A':'B',
   route:saved.route==='exterior'?'exterior':'tunnel'
  };
@@ -41,7 +42,7 @@ export function createCausalityLab(canvas,{onAction}={}){
  function reset(){time=model.duration+8;running=false;signal=analysis.witness;signalSent=false;onAction?.('mount');update();}
  function send(){
   signal=sendSignal(model,{origin:state.origin,first:state.route,time});
-  signalSent=true;running=false;onAction?.(signal.loop?'fracture':'launch');update();
+  signalSent=true;running=false;onAction?.(signal.loop?'paradox':'portal');update();
  }
  function tick(dt,scale=1){
   if(!active||!running)return;
