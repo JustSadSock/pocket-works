@@ -16,8 +16,8 @@ const base=(id='exp-1a2b3c')=>({
   'wave-budget':{value:.991,label:'Баланс энергии',unit:'E₀'}
  }
 });
-test('all nine existing experiment modes are valid archive sources',()=>{
- for(const mode of ['observer','matter','wave','designer','rotation','causality','atlas','map','profile']){
+test('all ten physical experiment modes are valid archive sources',()=>{
+ for(const mode of ['observer','matter','wave','designer','rotation','causality','atlas','map','profile','volume']){
   const r=makeRecord({...base(),mode,title:MODE_LABELS[mode]});
   assert.equal(r.mode,mode);
  }
