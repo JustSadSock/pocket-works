@@ -12,6 +12,7 @@
         "tests/spell-kinetics.test.mjs",
         "tests/mage-motion.test.mjs",
         "tests/mage-regalia.test.mjs",
+        "tests/mage-facing.test.mjs",
         "tests/court-materials.test.mjs",
         "tests/avatar.test.mjs",
         "tests/net.test.mjs",
@@ -79,7 +80,8 @@
         "qa/aim-precision.spec.js",
         "qa/art-direction.spec.js",
         "qa/kinetics.spec.js",
-        "qa/character-overhaul.spec.js"
+        "qa/character-overhaul.spec.js",
+        "qa/eight-direction.spec.js"
       ]
     }
   ]
