@@ -3541,8 +3541,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "c97fc62baa0ba210342fac089be736eccff0376c",
-    "qualityScore": 61,
+    "revision": "7078654df7a1a55266a857277d01c307a7051ad8",
+    "qualityScore": 62,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3555,12 +3555,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "d2936e16e20594ea7808913d546fdbf03c7c6e1ebf95690be79a451cc7617b51",
+    "sha256": "194b4265455913c2ef952da8cd293107a9b897f3ed5e2a747913f5a2139900e3",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "c97fc62baa0ba210342fac089be736eccff0376c",
-    "lastAttemptAt": "2026-10-19T10:32:15.710Z"
+    "lastAttemptRevision": "7078654df7a1a55266a857277d01c307a7051ad8",
+    "lastAttemptAt": "2026-10-19T10:40:03.331Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3580,7 +3580,7 @@
     "imageVersion": 2
   },
   "cavitation-lab": {
-    "revision": "ea71e979d8d2a5a4248af44f3d34f9fd10a8c566",
+    "revision": "340ded2117143e4fce08b598e5346e550d2293ad",
     "qualityScore": 79,
     "visionScore": null,
     "prepared": false,
@@ -3588,39 +3588,29 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "592feaf17e1008b10ace43e4448c5d69a8635fa9b94b1e1c8dd7942f01b5cd93",
+    "sha256": "b2636babd01657bb9f4b999b1ab3c9b8df82a9c75ef699373a73f0d1ca3cf901",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "ea71e979d8d2a5a4248af44f3d34f9fd10a8c566",
-    "lastAttemptAt": "2026-10-19T09:54:14.160Z"
+    "lastAttemptRevision": "340ded2117143e4fce08b598e5346e550d2293ad",
+    "lastAttemptAt": "2026-10-19T10:40:14.184Z"
   },
   "petri-forge": {
     "note": "No frame passed image-content checks",
-    "diagnostic": {
-      "bestScore": 51,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 40805,
-        "variance": 31.604872187293765,
-        "entropy": 1.9324725680886332,
-        "edgeDensity": 0.11098710317460317,
-        "colorfulness": 15.26611328125,
-        "centerDetail": 29.488783027825324,
-        "meanLight": 42.679733691405744
-      },
-      "gameplayEntry": {
-        "started": false,
-        "actions": []
-      },
-      "url": "http://127.0.0.1:4173/apps/petri-forge/?pw-cover=1&pw_release=0.1.0&pw_fp=86df29b402ccd025514afd61"
-    },
-    "status": "failed",
+    "diagnostic": null,
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "f5daddaed4b26848db4be82beefe3144c70565cf",
-    "lastAttemptAt": "2026-10-19T10:32:48.977Z"
+    "lastAttemptRevision": "bf91eb645d38bf3512888a52e86b8ca11eeb0026",
+    "lastAttemptAt": "2026-10-19T10:39:51.423Z",
+    "revision": "bf91eb645d38bf3512888a52e86b8ca11eeb0026",
+    "qualityScore": 55,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "shot": 0,
+    "sha256": "de9e93ff812cc4b08e4b526dad08f2812635dd1012becbbf5deda801289fc768",
+    "imageVersion": 2
   },
   "blockies": {
     "revision": "afa8ad7dfe3fbfb2179e007e6529bb1005b349fc",
