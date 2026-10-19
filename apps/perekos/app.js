@@ -67,8 +67,26 @@ function sfx(type,school='fire'){
   if(school==='stone'){tone(165,53,.22,'triangle',.054);tone(80,39,.16,'sine',.034);grit(.10,300,.036)}
   else if(school==='storm'){tone(950,260,.11,'sawtooth',.017);tone(530,1030,.07,'square',.015);tone(280,112,.13,'triangle',.025)}
   else{tone(315,87,.19,'sawtooth',.032);tone(860,350,.085,'triangle',.026);grit(.055,1250,.019)}
- }else if(type==='hit'||type.startsWith('impact_')){
-  tone(140,52,.13,'triangle',.035);grit(.085,380,.028);
+ }else if(type.startsWith('impact_')){
+  // Only server-confirmed collision events generate the contact sound.
+  // Each material has a physically distinct envelope and mass.
+  const style=type.slice(7);
+  if(style==='rock'||style==='wave'){
+   tone(style==='rock'?148:105,style==='rock'?43:37,.2,'triangle',.039);
+   tone(68,36,.16,'sine',.018,.012);
+   grit(style==='rock'?.15:.12,style==='rock'?250:430,.024);
+  }else if(style==='bolt'||style==='arc'){
+   tone(style==='arc'?1050:1280,style==='arc'?170:300,.085,'sawtooth',.018);
+   tone(460,130,.12,'triangle',.016,.008);
+   grit(.042,2400,.012);
+  }else if(style==='flame'||style==='orb'){
+   tone(style==='flame'?360:270,65,.14,'triangle',.023);
+   grit(style==='flame'?.11:.065,style==='flame'?780:1050,.02);
+  }else{
+   tone(340,120,.08,'sine',.012);
+  }
+ }else if(type==='hit'){
+  tone(195,65,.08,'triangle',.015);
  }else if(type==='shield'){
   tone(270,550,.18,'sine',.023);tone(440,310,.25,'triangle',.018,.015);
  }else if(type==='dash'){
