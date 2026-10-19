@@ -43,7 +43,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
  state.selectedPhoton=Number.isInteger(saved.selectedPhoton)?Math.max(0,saved.selectedPhoton):0;
  let inspectResult=null,positionNotice='';
  let metric=null,field=null,active=false,running=false,lastStatus=0;
- const touches=new Map();let pinch=null,staticLayer={key:'',canvas:null};
+ const touches=new Map(),pressStart=new Map();let pinch=null,staticLayer={key:'',canvas:null};
  const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(state))}catch{}};
  const changed=()=>onDirty?.();
  const stats=()=>field&&metric?fieldStatistics(field,metric):null;
@@ -173,11 +173,18 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
     }
    }
   }
+  // Keep the chosen physical observer visible even when placed beyond the
+  // reference shell radius; the physical position itself is never moved.
+  if(metric){
+   const marker=project3D(chartObserverPosition(metric,state.observerPoint).xyz,base,w,h);
+   ex=Math.max(ex,Math.abs(marker.x-w*.5));
+   ey=Math.max(ey,Math.abs(marker.y-h*.51));
+  }
   const fit=Math.min(1.10,(w*.46)/Math.max(ex,1),(h*.40)/Math.max(ey,1));
   return {yaw:state.yaw,pitch:state.pitch,zoom:state.zoom*fit};
  }
  function cacheStatic(ctx,w,h){
-  const key=[w,h,state.yaw.toFixed(4),state.pitch.toFixed(4),state.zoom.toFixed(4),state.showGrid,state.showConnections,metric.a,metric.shape,metric.shapeWidth].join('|');
+  const key=[w,h,state.yaw.toFixed(4),state.pitch.toFixed(4),state.zoom.toFixed(4),state.showGrid,state.showConnections,metric.a,metric.shape,metric.shapeWidth,state.observerPoint.l.toFixed(2),state.observerPoint.longitude.toFixed(1),state.observerPoint.latitude.toFixed(1)].join('|');
   if(staticLayer.key===key&&staticLayer.canvas)return staticLayer.canvas;
   const image=document.createElement('canvas');
   image.width=Math.ceil(w);image.height=Math.ceil(h);
@@ -270,7 +277,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
  function local(e){const rect=canvas.getBoundingClientRect();return{x:e.clientX-rect.left,y:e.clientY-rect.top};}
  canvas.addEventListener('pointerdown',e=>{
   if(!active||e.pointerType==='mouse'&&e.button!==0)return;
-  e.preventDefault();canvas.setPointerCapture(e.pointerId);touches.set(e.pointerId,local(e));
+  e.preventDefault();canvas.setPointerCapture(e.pointerId);touches.set(e.pointerId,local(e));pressStart.set(e.pointerId,local(e));
   if(touches.size>=2){const p=[...touches.values()];pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),zoom:state.zoom}}
  });
  canvas.addEventListener('pointermove',e=>{
@@ -285,7 +292,24 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
   }
   save();refresh();changed();
  });
- const end=e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null;save()};
+ const end=e=>{
+  const start=pressStart.get(e.pointerId),last=touches.get(e.pointerId);
+  const isClick=e.type==='pointerup'&&start&&last&&Math.hypot(last.x-start.x,last.y-start.y)<9&&touches.size===1;
+  if(isClick&&field&&metric){
+   const cam=sceneCamera(canvas.clientWidth||canvas.getBoundingClientRect().width,canvas.clientHeight||canvas.getBoundingClientRect().height);
+   const bounds=canvas.getBoundingClientRect(),w=bounds.width,h=bounds.height;
+   const samples=lightFieldSamples(field,metric,{maxPoints:12});
+   let chosen=-1,best=25;
+   for(const sample of samples){
+    const v=project3D(sample.current.position,cam,w,h);
+    const dist=Math.hypot(last.x-v.x,last.y-v.y);
+    if(dist<best){chosen=sample.index;best=dist;}
+   }
+   if(chosen>=0){state.selectedPhoton=chosen;takePhoton(chosen);}
+  }
+  touches.delete(e.pointerId);pressStart.delete(e.pointerId);
+  if(touches.size<2)pinch=null;save();
+ };
  for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,end);
  canvas.addEventListener('wheel',e=>{
   if(!active)return;e.preventDefault();state.zoom=clamp(state.zoom*(e.deltaY>0?.92:1.08),.55,1.65);
