@@ -13,7 +13,7 @@ import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
 import {addScar,scarSignature,scarSurfaceStats,locateWallWound} from './scars.js';
 import {initialAutoQuality,autoQualityWindow,runtimeBudget} from './runtimeBudget.js';
 import {campaignReport} from './runReport.js';
-import {emptyFieldTelemetry,recordFieldWindow,fieldPerformance,observedBalance,buildFieldExport} from './fieldTelemetry.js';
+import {emptyFieldTelemetry,presentationDelta,recordFieldWindow,fieldPerformance,observedBalance,buildFieldExport} from './fieldTelemetry.js';
 import {PROTOCOLS,sanitizeProtocol,applyProtocol,extraEnemiesForPulse,incomingProtocolDamage,
   enemyProtocolSpeed,spawnCadence,registerCombatChain,recordFinishedRun,observedRunStats} from './runTuning.js';
 
@@ -1038,7 +1038,8 @@ ui.mute.addEventListener('click',toggleSound);ui.pauseMute.addEventListener('cli
 ui.mute.textContent=ui.pauseMute.textContent=soundOn?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ';
 function frame(timestamp){
   try{
-    const dt=Math.min(.1,Math.max(0,(timestamp-last)/1000||0));last=timestamp;
+    const realElapsed=presentationDelta(timestamp-last);
+    const dt=Math.min(.1,realElapsed);last=timestamp;
     pollGamepad(dt);
     if(world&&mode==='playing'){
       accumulator=Math.min(.10,accumulator+dt);
@@ -1047,7 +1048,7 @@ function frame(timestamp){
         update(1/60);accumulator-=1/60;steps++;
       }
       // Measured FPS is actual paint throughput, not animation callback frequency.
-      fpsClock+=dt;
+      fpsClock+=realElapsed;
       if(fpsClock>4){
         const observedFps=fpsFrames/fpsClock;
         const stats=world.getRuntimeStats?.();
