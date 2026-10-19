@@ -86,5 +86,5 @@ test('forensic evidence is inspectable through the real household economy screen
  assert.match(app,/foodStressHistory/);
  assert.match(app,/famineDeaths/);
  assert.match(app,/distress/);
- assert.match(app,/after-ration-before-market/);
+ assert.match(app,/Данные после еды/);
 });
