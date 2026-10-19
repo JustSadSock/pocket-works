@@ -3,6 +3,7 @@ import {WORK_HOURS,scheduleWork,commitWork,shiftAudit} from './work-time.js';
 import {parcelEconomics,leaseEconomics} from './land-economy.js';
 import {advanceLocalConflicts,conflictAudit,expeditionGrain} from './conflicts.js';
 import {advanceInstitutions,institutionsAudit} from './institutions.js';
+import {advanceCrafts,tradeCrafts,craftAudit,craftMaterialStocks,craftLabel} from './crafts.js';
 // Living History: deterministic, renderer-independent regional society simulation.
 export const SIZE = 160;
 const T = SIZE * SIZE;
@@ -218,6 +219,7 @@ function newHousehold(s,c,x,y,wealth=1000,grain=470,wood=130,foundingFields=30) 
   work:'farm',focus:'farm',farmYear:null,leaseIn:[],leaseOut:[],leaseTerms:[],landValue:0,
   wealthOrigin:'initial',builtDay:s.day,courierUntil:0,cattle:s.day===0?(rand(s)<.55?0:1+Math.floor(rand(s)*1.35)):0,
   fodder:0,livestockHealth:85,garden:0,dairy:0,oats:0,pulses:0,wool:0,sheep:0,
+   boards:0,chests:0,cloth:0,
   draftOxen:0,dairyCows:0,gardenYear:null};
  h.fodder=h.cattle*(700+Math.floor(rand(s)*180));
  const takePlot=i=>{if(s.pasture){s.stats.forageConverted=round((s.stats.forageConverted||0)+s.pasture[i]);s.pasture[i]=0;}};
@@ -417,7 +419,7 @@ function account(s,h){
  return h.accounting;
 }
 function earn(s,h,field,quantity){const a=account(s,h);a[field]=round((a[field]||0)+quantity);}
-export function storageCapacity(h,s){return (CALIBRATION.baseStorageKg+(h.foundingStoreKg||0)+(h.manorGranaryKg||0)+(h.storeLevel||0)*CALIBRATION.storageExpansionKg)*(s?tuning(s,'storage'):1);}
+export function storageCapacity(h,s){return (CALIBRATION.baseStorageKg+(h.foundingStoreKg||0)+(h.manorGranaryKg||0)+(h.storeLevel||0)*CALIBRATION.storageExpansionKg)*(s?tuning(s,'storage'):1)+(h.chests||0)/7*130;}
 function maintainStorage(s,h){
  if(!liveMembers(s,h).length)return;
  const capacity=storageCapacity(h,s);
@@ -1683,10 +1685,12 @@ function deliver(s){
    a.coin+=t.cost-wage;
    if(recipient){recipient.coin+=wage;earn(s,recipient,'haulEarned',wage);}
    s.stats.delivered++;
+   // A journey only wears local tracks once the real load arrives.
+   if(t.kind==='craft'&&t.route?.length>1)markRoad(s,t.route,2);
    const carrier=personById(s,t.carrierId);
-   if(carrier)recordLife(carrier,s.day,'delivery',`Доставил ${t.amount} кг зерна/товара в дом ${b.id}`);
+   if(carrier)recordLife(carrier,s.day,'delivery',`Доставил ${t.amount} кг ${t.good==='grain'?'зерна':t.good==='wood'?'древесины':craftLabel(t.good)} в дом ${b.id}`);
    b.lastTrade={day:s.day,good:t.good,quantity:t.amount,from:a.id};
-   event(s,'delivery',`Семья ${familyName(s,b)} получила ${Math.round(t.amount)} кг ${t.good==='grain'?'зерна':'древесины'}`,
+   event(s,'delivery',`Семья ${familyName(s,b)} получила ${round(t.amount)} кг ${t.good==='grain'?'зерна':t.good==='wood'?'древесины':craftLabel(t.good)}`,
     t.kind==='loan'?'Получение зерна с обязательством возврата':t.kind==='loan-repayment'?'Возврат ранее полученного зерна':'Физическая доставка',
     [a.id,b.id,t.id],{quantity:t.amount,coin:t.cost});
   }else if(a){
@@ -2158,6 +2162,9 @@ export function advanceDays(s,days=1,profiler=null){
   measure('delivery',()=>{deliver(s);finishMigration(s);});
   measure('armedDisputes',()=>advanceLocalConflicts(s,(type,message,cause,subjects,facts)=>event(s,type,message,cause,subjects,facts)));
   measure('communityCourts',()=>advanceInstitutions(s,(type,message,cause,subjects,facts)=>event(s,type,message,cause,subjects,facts)));
+  // Crafts claim real transport time before farm shifts. A courier no longer
+  // works a full field day and simultaneously transports a remote wool bale.
+  if(s.day%7===0)measure('craftExchange',()=>tradeCrafts(s,(type,message,cause,subjects,facts)=>event(s,type,message,cause,subjects,facts)));
   // Guest labour is a day-local work assignment, never a persistent workforce.
   // A stale non-serialized map previously duplicated hired labour after day 65
   // and made a loaded 25-year world diverge from its source chronology.
@@ -2165,6 +2172,7 @@ export function advanceDays(s,days=1,profiler=null){
   measure('manorialService',()=>scheduleManorialService(s));
   measure('seasonalHiring',()=>inRandomScope(s,'hiring',()=>seasonalLaborMarket(s)));
   measure('households',()=>{for(const h of [...s.households])inRandomScope(s,'house:'+h.id,()=>updateHouse(s,h));});
+  measure('craftProduction',()=>advanceCrafts(s,(type,message,cause,subjects,facts)=>event(s,type,message,cause,subjects,facts)));
   measure('manorialAccounting',()=>{finishManorialService(s);settleManorialRent(s);});
   measure('demography',()=>inRandomScope(s,'demography',()=>{lifeCycle(s);decayAbandonedHoldings(s);}));
   if(s.day%30===0)measure('orphanCare',()=>fosterOrphans(s));
@@ -2207,9 +2215,12 @@ export function audit(s){
  issues.push(...shiftAudit(s));
  issues.push(...conflictAudit(s));
  issues.push(...institutionsAudit(s));
+ issues.push(...craftAudit(s));
  if(Number.isFinite(s.economy.woodInitial)){
-  const expected=round(s.economy.woodInitial+s.stats.produced-s.stats.harvest-490*s.stats.built-(s.stats.storageWood||0)-(s.stats.landWood||0)-(s.stats.houseWoodReserved||0)-s.households.reduce((v,h)=>v+(h.staveWood||0),0));
-  if(Math.abs(o.wood-expected)>.051)issues.push(`Нарушено сохранение древесины: ${o.wood} вместо ${expected}`);
+  const crafted=craftMaterialStocks(s);
+  const actual=round(o.wood+crafted.wood);
+  const expected=round(s.economy.woodInitial+s.stats.produced-s.stats.harvest-490*s.stats.built-(s.stats.storageWood||0)-(s.stats.landWood||0)-(s.stats.houseWoodReserved||0)-(s.stats.craftWoodWaste||0)-(s.stats.craftWoodWear||0)-s.households.reduce((v,h)=>v+(h.staveWood||0),0));
+  if(Math.abs(actual-expected)>.051)issues.push(`Нарушено сохранение древесины с ремеслом: ${actual} вместо ${expected}`);
  }
  if(Number.isFinite(s.economy.forageInitial)&&Array.isArray(s.pasture)){const stock=round(s.pasture.reduce((n,v)=>n+v,0)+s.households.reduce((n,h)=>n+(h.fodder||0),0));const expected=round(s.economy.forageInitial+(s.stats.forageGrown||0)-(s.stats.forageConsumed||0)-(s.stats.forageConverted||0));if(Math.abs(stock-expected)>.35)issues.push(`Нарушен баланс кормов: ${stock} вместо ${expected}`);}
  if(Number.isFinite(s.economy.sheepInitial)){
@@ -2217,9 +2228,9 @@ export function audit(s){
   if(actual!==s.economy.sheepInitial+(s.stats.sheepBorn||0)-(s.stats.sheepDied||0))issues.push(`Баланс овец: ${actual}`);
  }
  if(Number.isFinite(s.economy.woolInitial)){
-  const wool=round(s.households.reduce((n,h)=>n+(h.wool||0),0)+s.shipments.filter(t=>t.kind==='outside-export').reduce((n,t)=>n+t.amount,0));
-  const expected=round(s.economy.woolInitial+(s.stats.woolProduced||0)-(s.stats.woolExported||0));
-  if(Math.abs(wool-expected)>.051)issues.push(`Баланс шерсти: ${wool} вместо ${expected}`);
+  const wool=round(s.households.reduce((n,h)=>n+(h.wool||0),0)+s.shipments.filter(t=>t.good==='wool').reduce((n,t)=>n+t.amount,0)+craftMaterialStocks(s).wool);
+  const expected=round(s.economy.woolInitial+(s.stats.woolProduced||0)-(s.stats.woolExported||0)-(s.stats.craftWoolWaste||0)-(s.stats.craftWoolWear||0));
+  if(Math.abs(wool-expected)>.051)issues.push(`Баланс шерсти и сукна: ${wool} вместо ${expected}`);
  }
  if(s.creditHistory&&Object.values(s.creditHistory).some(row=>row.repaidKg<0||row.unpaidKg<0||row.contracts<0))issues.push('Повреждён кредитный реестр');
  if(s.outside){
@@ -2300,7 +2311,7 @@ export function deserialize(raw){const s=typeof raw==='string'?JSON.parse(raw):r
   s.stats.woodlandFelled=0;s.stats.woodlandRegrown=0;s.stats.woodlandWaste=0;
   s.economy.woodlandInitial=round(s.forest.reduce((n,v)=>n+v,0));
  }
- s.loans??=[];s.conflicts??=[];if(!s.institutions){for(const c of s.conflicts)if(Number.isInteger(c.resultDay))c.legacyPreCourt=true;}s.institutions??={cases:[],officers:{},statistics:{}};s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
+ s.loans??=[];s.conflicts??=[];if(!s.institutions){for(const c of s.conflicts)if(Number.isInteger(c.resultDay))c.legacyPreCourt=true;}s.institutions??={cases:[],officers:{},statistics:{}};for(const h of s.households){h.boards??=0;h.chests??=0;h.cloth??=0;}s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
  ensureCommons(s);for(const h of s.households){h.garden??=0;h.dairy??=0;h.oats??=0;h.pulses??=0;h.sheep??=0;h.wool??=0;h.dairyCows??=h.cattle||0;h.draftOxen??=0;h.tenure??='customary';h.tenureOrigin??='legacy-holding';h.leaseIn??=[];h.leaseOut??=[];h.leaseTerms??=[];h.croft??=[];}if(s.version!==1||s.terrain?.length!==T||!Array.isArray(s.people)||!Array.isArray(s.households)||!Array.isArray(s.shipments))throw Error('Сохранение несовместимо с моделью v0.1');const v=audit(s);if(!v.ok)throw Error(`Повреждённые данные: ${v.issues[0]}`);return s;}
 // A read-only chronological view; another family's stored grain is not food
 // automatically accessible to the patient or household.
