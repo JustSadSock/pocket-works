@@ -3541,7 +3541,7 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "ee9827bbe47a4891ef0663235a6d419522064615",
+    "revision": "bf5f654896b50a02c1c80ca6019f3308d775d40d",
     "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
@@ -3555,12 +3555,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "5c178018378246a21c6a6bd36d6ca774adcfdbb85e149693f3180cb60169bdcc",
+    "sha256": "b2137ccc7bf0b7031ee27966d6a652f9fd4add360729a7120b800608fd38e266",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "ee9827bbe47a4891ef0663235a6d419522064615",
-    "lastAttemptAt": "2026-10-19T12:14:41.666Z"
+    "lastAttemptRevision": "bf5f654896b50a02c1c80ca6019f3308d775d40d",
+    "lastAttemptAt": "2026-10-19T12:22:39.864Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3759,10 +3759,11 @@
     "shot": 0,
     "sha256": "17c5e2586ef338ace432adbab76c9245924631c88643e61c74ad18156185af4e",
     "imageVersion": 2,
-    "status": "published",
+    "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "7c500a68337995156b0384047b52e6c88697b352",
-    "lastAttemptAt": "2026-10-19T12:14:29.582Z"
+    "lastAttemptRevision": "3a88596385806e332ce85938622de81b088a26be",
+    "lastAttemptAt": "2026-10-19T12:22:27.833Z",
+    "note": "existing cover rated higher"
   },
   "crown-laws": {
     "revision": "174f5b4a923933b319f4c6821a2d046bbcd43dc3",
