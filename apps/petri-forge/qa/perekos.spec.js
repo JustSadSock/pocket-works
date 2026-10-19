@@ -13,7 +13,7 @@ test('native Perekos training station plays, replays and saves brains',async({pa
  await page.locator('#pkPlay').click();
  await expect(page.locator('#pkPlay')).toContainText('Пауза');
  await page.locator('#pkPlay').click();
- await page.locator('#pkSeek').fill('5');
+ await page.locator('#pkSeek').evaluate(el=>{el.value='5';el.dispatchEvent(new Event('input',{bubbles:true}));});
  await page.locator('#pkName').fill('QA Ruin Mage');
  await page.locator('#pkSave').click();
  await expect(page.locator('#pkModels')).toContainText('QA Ruin Mage');
