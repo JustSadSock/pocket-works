@@ -3,6 +3,7 @@ import { DEFAULTS, PRESETS, sanitize, simulateBubble, sampleAt } from './physics
 import { resizeCanvas, renderScene, renderGraph, sceneMetrics } from './render.js';
 import { sanitizeCloud, simulateCloud, cloudAt } from './coupling.js';
 import { cloudViewport, renderCloudScene, renderCloudGraph } from './cloud-render.js';
+import { buildSurfaceHistory, surfaceAt, jetDirectionLabel } from './surface-flow.js';
 import { MAX_BUBBLES, layoutTemplate, editedBubble, findNewBubble, cascadeMetrics, normalizeBubbles, layoutIssue } from './constructor.js';
 installMobileRuntime();
 
@@ -15,12 +16,14 @@ try{restored=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch{restored={}}
 let config=sanitize(restored.config||DEFAULTS);
 let cloud=sanitizeCloud(restored.cloud);
 let showPressure=restored.showPressure!==false;
+let shapeVisible=restored.shapeVisible!==false;
+let shapeGain=[1,3].includes(restored.shapeGain)?restored.shapeGain:3;
 let selectedBubble=Math.max(0,Math.floor(Number(restored.selectedBubble)||0));
 let customDraft=normalizeBubbles(restored.customDraft||cloud.bubbles||layoutTemplate());
 let history=[];
 let bubbleDrag=null;
 let speed= [0.6,1,1.8].includes(restored.speed)?restored.speed:1;
-let solution=simulateCloud(config,cloud),timeTau=Math.min(Math.max(0,+restored.timeTau||0),solution.durationTau);
+let solution=simulateCloud(config,cloud),surfaceHistory=buildSurfaceHistory(solution),timeTau=Math.min(Math.max(0,+restored.timeTau||0),solution.durationTau);
 let mode=restored.mode==='ready'?'ready':timeTau>0?'paused':'ready';
 selectedBubble=Math.min(selectedBubble,solution.geometry.length-1);
 let lastFrame=0,draggingWall=null,scrubbing=false,lastDimensions=null,pendingRebuild=false,needGraph=true,dirty=true;
@@ -29,7 +32,7 @@ const num=(n,d=2)=>n.toFixed(d).replace('.',',');
 const formatMicros=(n)=>Math.round(n).toLocaleString('ru-RU');
 const pauseButton=$('pause');
 function save(){
- try{localStorage.setItem(key,JSON.stringify({config,speed,timeTau,mode,cloud,showPressure,customDraft,selectedBubble}))}catch{ /* Storage unavailable, experiment still works */ }
+ try{localStorage.setItem(key,JSON.stringify({config,speed,timeTau,mode,cloud,showPressure,customDraft,selectedBubble,shapeVisible,shapeGain}))}catch{ /* Storage unavailable, experiment still works */ }
 }
 function syncControls(){
  control.pressure.value=String(config.pressureBar);
@@ -68,6 +71,9 @@ function syncControls(){
  $('wall-mode').textContent='Отражение стенки · '+(cloud.wall?'вкл.':'выкл.');
  $('pressure-view').setAttribute('aria-pressed',String(showPressure));
  $('pressure-view').textContent='Поле давления · '+(showPressure?'вкл.':'выкл.');
+ $('shape-toggle').setAttribute('aria-pressed',String(shapeVisible));
+ $('shape-toggle').textContent='ФОРМА · '+(shapeVisible?'ВКЛ':'ВЫКЛ');
+ $('shape-gain').textContent='ВИД ×'+shapeGain;
  $('experiment-title').innerHTML=cloud.mode==='single'?'01 <span>/</span> ОДИН ПУЗЫРЁК'
    :cloud.mode==='pair'?'02 <span>/</span> СВЯЗАННАЯ ПАРА'
    :cloud.mode==='cluster'?'05 <span>/</span> ОБЛАКО ПУЗЫРЬКОВ'
@@ -120,12 +126,15 @@ function refreshState(){
 function applyConfig(next){
  config=sanitize(next);
  mode='ready';timeTau=0;
+ // Commit the new experiment selection synchronously; do not depend on a
+ // browser paint before a test, low-memory WebKit tab or app reload can read it.
+ save();
  // Coalesce slider gestures to one numerical solve per paint.
  if(!pendingRebuild) {
    pendingRebuild=true;
    requestAnimationFrame(()=>{
     pendingRebuild=false;
-    try{solution=simulateCloud(config,cloud);syncControls();refreshState();needGraph=true;save()}
+    try{solution=simulateCloud(config,cloud);surfaceHistory=buildSurfaceHistory(solution);syncControls();refreshState();needGraph=true;save()}
     catch(error){$('phase-label').textContent='ОШИБКА РАСЧЁТА';console.error(error)}
    });
  }
@@ -224,10 +233,17 @@ $('wall-mode').addEventListener('click',()=>{
 $('pressure-view').addEventListener('click',()=>{
  showPressure=!showPressure;syncControls();dirty=true;save();
 });
+$('shape-toggle').addEventListener('click',()=>{
+ shapeVisible=!shapeVisible;syncControls();dirty=true;save();
+});
+$('shape-gain').addEventListener('click',()=>{
+ shapeGain=shapeGain===1?3:1;syncControls();dirty=true;save();
+});
 $('launch').addEventListener('click',()=>{
  if(pendingRebuild) {
   pendingRebuild=false;
   solution=simulateCloud(config,cloud);
+  surfaceHistory=buildSurfaceHistory(solution);
   syncControls();
  }
  if(mode!=='paused')timeTau=0;
@@ -365,12 +381,18 @@ function render(timestamp){
   refreshState();needGraph=true;
  }
  const fieldBox=resizeCanvas(field);
+ const surfaceFrame=surfaceAt(surfaceHistory,mode==='ready'?0:timeTau);
+ const chosen=surfaceFrame.bubbles[Math.min(selectedBubble,surfaceFrame.bubbles.length-1)];
+ if(chosen){
+   $('deform-now').textContent=num(chosen.deformation,1)+'%';
+   $('flow-direction').textContent=jetDirectionLabel(chosen,cloud.wall);
+ }
  const point=solution.kind==='cloud'?cloudAt(solution,mode==='ready'?0:timeTau)
    :mode==='ready'?sampleAt(solution,0):sampleAt(solution,timeTau);
  if(dirty||mode==='running'||!lastDimensions||fieldBox.w!==lastDimensions.w||fieldBox.h!==lastDimensions.h){
    lastDimensions=solution.kind==='cloud'
-     ?renderCloudScene(fieldBox.ctx,fieldBox.w,fieldBox.h,solution,point,mode,selectedBubble,showPressure)
-     :renderScene(fieldBox.ctx,fieldBox.w,fieldBox.h,solution,point,mode,timestamp/1000);
+     ?renderCloudScene(fieldBox.ctx,fieldBox.w,fieldBox.h,solution,point,mode,selectedBubble,showPressure,shapeVisible?surfaceFrame:null,shapeVisible?shapeGain:0)
+     :renderScene(fieldBox.ctx,fieldBox.w,fieldBox.h,solution,point,mode,timestamp/1000,shapeVisible?surfaceFrame.bubbles[0]:null,shapeVisible?shapeGain:0);
    $('radius-now').innerHTML=num(config.radiusMm*(solution.kind==='cloud'?point.bubbles[selectedBubble].radius:point.radius),3)+' <small>мм</small>';
    $('time-now').innerHTML=formatMicros(point.t*solution.scaleUs)+' <small>мкс</small>';
    dirty=false;

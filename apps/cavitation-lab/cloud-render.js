@@ -2,6 +2,7 @@
 // Color is the dimensionless, instantaneous potential-flow pressure perturbation;
 // no acoustic travel time or actual microjet boundary has been computed.
 import { pressureAt } from './coupling.js';
+import { contourPath, drawJetTongue, drawFlowTracers } from './surface-render.js';
 
 const TAU=Math.PI*2,clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 let pressureBuffer=null;
@@ -32,7 +33,7 @@ export function cloudViewport(w,h,solution) {
 function drawCircle(ctx,x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,TAU)}
 function strokeLine(ctx,x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
 
-export function renderCloudScene(ctx,w,h,solution,point,mode,selected=0,showPressure=true) {
+export function renderCloudScene(ctx,w,h,solution,point,mode,selected=0,showPressure=true,surfaceFrame=null,surfaceGain=3) {
  const view=cloudViewport(w,h,solution),{wallX,scale}=view;
  ctx.clearRect(0,0,w,h);
  const water=ctx.createLinearGradient(0,0,w,h);
@@ -88,6 +89,10 @@ export function renderCloudScene(ctx,w,h,solution,point,mode,selected=0,showPres
  for(let i=0;i<solution.geometry.length;i++){
    const item=view.bubbles[i],bubble=point.bubbles[i],r=Math.max(1.7,bubble.radius*scale);
    const isSelected=i===selected;
+   const surface=surfaceFrame?.bubbles[i]||null;
+   const isDeformed=surface!==null&&surfaceGain>0&&mode!=='ready';
+   const boundary=()=>isDeformed?contourPath(ctx,item.x,item.y,r,surface,surfaceGain):drawCircle(ctx,item.x,item.y,r);
+   if(mode!=='ready')drawFlowTracers(ctx,solution,point,i,item.x,item.y,scale,r,true);
    const close=clamp((r/item.r-.12)/.9,0,1);
    let glow=ctx.createRadialGradient(item.x-r*.25,item.y-r*.3,0,item.x,item.y,r*2.15);
    glow.addColorStop(0, isSelected?'#ccf8c72e':'#b2ddd515');
@@ -97,9 +102,10 @@ export function renderCloudScene(ctx,w,h,solution,point,mode,selected=0,showPres
    const core=ctx.createRadialGradient(item.x-r*.36,item.y-r*.37,r*.05,item.x+r*.12,item.y+r*.12,r*1.2);
    core.addColorStop(0,'#1f686b');core.addColorStop(.43,'#103640');core.addColorStop(.77,'#1b5d68');
    core.addColorStop(.93,'#77b9b2');core.addColorStop(1,BUBBLE_COLORS[i]);
-   ctx.fillStyle=core;drawCircle(ctx,item.x,item.y,r);ctx.fill();
+   ctx.fillStyle=core;boundary();ctx.fill();
    ctx.strokeStyle=isSelected?'#e5ffe3':'#b6e8da91';ctx.lineWidth=isSelected?2.1:1.25;
-   drawCircle(ctx,item.x,item.y,r);ctx.stroke();
+   boundary();ctx.stroke();
+   if(isDeformed)drawJetTongue(ctx,item.x,item.y,r,surface,surfaceGain,bubble.radius/item.r*scale);
    ctx.beginPath();ctx.arc(item.x,item.y,r*.84,3.40,4.72);
    ctx.strokeStyle=isSelected?'#eeffe0b9':'#dafff08c';ctx.lineWidth=Math.max(1.2,r*.07);ctx.stroke();
    if(isSelected&&solution.cloud.mode==='custom'&&mode==='ready'){

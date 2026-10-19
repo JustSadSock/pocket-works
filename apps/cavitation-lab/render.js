@@ -1,3 +1,5 @@
+import { contourFactors } from './surface-flow.js';
+import { drawJetTongue } from './surface-render.js';
 const TAU = Math.PI * 2;
 const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
 const rand = i => { const t = Math.sin(i*127.1+51.8)*43758.5453; return t-Math.floor(t); };
@@ -22,7 +24,7 @@ function line(ctx,x1,y1,x2,y2) {ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,
 function ellipse(ctx,x,y,rx,ry) {ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,TAU)}
 function rgba(r,g,b,a){return 'rgba('+r+','+g+','+b+','+a+')'}
 
-export function renderScene(ctx,w,h,solution,point,phase,elapsed) {
+export function renderScene(ctx,w,h,solution,point,phase,elapsed,surface=null,surfaceGain=3) {
  const {standOff}=solution.config;
  const geo=sceneMetrics(w,h,standOff), {cx,cy,wallX,baseRadius}=geo;
  const radius=Math.max(2.4,baseRadius*point.radius);
@@ -112,11 +114,11 @@ export function renderScene(ctx,w,h,solution,point,phase,elapsed) {
    ctx.fillStyle=wallGlow;ellipse(ctx,wallX,cy,baseRadius*.85,baseRadius);ctx.fill();
  }
  // Bubble body uses multiple refraction and rim layers; 2D meridional depiction.
- let deform=jet*approach*.2;
+ const factors=surfaceGain>0&&phase!=='ready'?contourFactors(surface,surfaceGain,96):null;
  const shape=(ang,extra=0)=>{
-  const side=Math.cos(ang);
-  const squash=1-deform*Math.max(0,-side);
-  return [cx+(radius+extra)*Math.cos(ang)*squash, cy+(radius+extra)*Math.sin(ang)*(1+.04*Math.sin(ang*3)*approach)];
+   const index=(Math.round(ang/TAU*96)+96)%96;
+   const stretch=factors?factors[index]:1;
+   return [cx+(radius*stretch+extra)*Math.cos(ang),cy+(radius*stretch+extra)*Math.sin(ang)];
  };
  const path=(extra=0)=>{
    ctx.beginPath();
@@ -145,20 +147,10 @@ export function renderScene(ctx,w,h,solution,point,phase,elapsed) {
  // Refraction arc and bubble specular.
  ctx.beginPath();ctx.arc(cx,cy,radius*.86,Math.PI*.95,Math.PI*1.47);ctx.strokeStyle='rgba(241,255,223,.83)';ctx.lineWidth=Math.max(1.2,radius*.037);ctx.stroke();
  ctx.beginPath();ctx.arc(cx,cy,radius*.9,-.18,.38);ctx.strokeStyle='rgba(176,244,230,.28)';ctx.lineWidth=2;ctx.stroke();
- if(jet>.05 && approach>.55){
-   // The drawn jet deliberately does not alter the spherical ODE.
-   const progress=clamp((approach-.55)/.45,0,1);
-   const start=cx-radius*.78;
-   const finish=cx+radius*(.2+1.0*progress);
-   ctx.save();path();ctx.clip();
-   ctx.beginPath();ctx.moveTo(start,cy-6*progress);
-   ctx.quadraticCurveTo(cx,cy-radius*.22,finish,cy);
-   ctx.quadraticCurveTo(cx,cy+radius*.22,start,cy+6*progress);
-   ctx.closePath();
-   ctx.fillStyle=rgba(135,243,219,progress*.8);
-   ctx.fill();ctx.restore();
-   ctx.strokeStyle=rgba(226,255,232,progress*.7);ctx.lineWidth=1.2;line(ctx,start,cy,Math.min(finish,wallX),cy);
+ if(surface&&surfaceGain>0&&phase!=='ready'){
+   drawJetTongue(ctx,cx,cy,radius,surface,surfaceGain,point.radius);
  }
+
  if(impact){
    const f=Math.max(0,1-post*8);
    if(f>0){
