@@ -1,0 +1,25 @@
+{
+  "id": "/apps/throne-three/",
+  "name": "Трон на троих",
+  "short_name": "Трон",
+  "description": "Политическая дуэль со скрытыми приказами, тремя фракциями и борьбой за трон.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#12101f",
+  "theme_color": "#12101f",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

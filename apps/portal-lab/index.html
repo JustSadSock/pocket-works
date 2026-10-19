@@ -17,7 +17,7 @@
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -29,6 +29,36 @@
 <div class="bottom-note"><span class="tiny-dot"></span><span>Свет, материя и скалярные волны рассчитываются на одной заданной геометрии пространства-времени.</span></div>
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
+<section id="rotation-panel" class="rotation-panel" aria-label="Сравнительная лаборатория вращающихся кротовых нор и горизонтов">
+<div class="section-caption"><span>ВРАЩЕНИЕ И ГОРИЗОНТЫ</span><span>v0.7</span></div>
+<p class="rotation-description">Два фотона испускаются с одинаковым локальным углом и ареальным радиусом. Сравните геодезическую кротовой норы с точной чёрной дырой Шварцшильда.</p>
+<div class="rotation-presets" role="group" aria-label="Готовые сравнительные опыты">
+<button type="button" data-rotation-preset="cross">Через горловину</button>
+<button type="button" data-rotation-preset="corotate">По вращению</button>
+<button type="button" data-rotation-preset="counter">Против вращения</button>
+<button type="button" data-rotation-preset="lens">Фотонная сфера</button>
+<button type="button" data-rotation-preset="ergo">Эргорегион</button>
+</div>
+<div class="rotation-phase" id="rotation-state" aria-live="polite">ГОТОВ К СРАВНЕНИЮ</div>
+<label class="range-field"><span>Вращение устья <output id="rotation-spin-value">0.42</output> <small>ω(0)a</small></span><input type="range" id="rotation-spin" min="-1.3" max="1.3" step=".01" value=".42"></label>
+<label class="range-field"><span>Угол запуска <output id="rotation-angle-value">4.6</output> <small>°</small></span><input type="range" id="rotation-angle" min="-.65" max=".65" step=".01" value=".08"></label>
+<label class="range-field"><span>Ареальный радиус старта <output id="rotation-radius-value">6.0</output> <small>a</small></span><input type="range" id="rotation-radius" min="4" max="8" step=".2" value="6"></label>
+<div class="section-caption second"><span>УВЛЕЧЕНИЕ ПРОСТРАНСТВА</span><span>ω, gₜₜ</span></div>
+<div class="rotation-data">
+<div><span>УГЛОВАЯ СКОРОСТЬ ZAMO</span><strong id="rotation-omega">0.000</strong><small>ω(0) · a</small></div>
+<div><span>gₜₜ В ГОРЛОВИНЕ</span><strong id="rotation-gtt">0.000</strong><small>стационарный Killing-вектор</small></div>
+<div><span>ЭРГОРЕГИОН</span><strong id="rotation-ergo" data-active="false">НЕТ</strong><small>gₜₜ > 0</small></div>
+<div><span>ЧАСЫ У ГОРЛОВИНЫ</span><strong id="rotation-redshift">1.000</strong><small>ход локальных часов N(0)</small></div>
+</div>
+<div class="section-caption second"><span>РЕЗУЛЬТАТЫ ЛУЧЕЙ</span><span>H = 0</span></div>
+<div class="rotation-outcomes">
+<div class="rotation-outcome wormhole"><span>НОРА ТИПА ТЕО</span><strong id="rotation-wormhole-state">ГОТОВО</strong><small>Переходов: <b id="rotation-wormhole-passed">0</b> · Δφ <b id="rotation-wormhole-phi">0.000</b> рад</small><small>Невязка H: <b id="rotation-wormhole-error">—</b></small></div>
+<div class="rotation-outcome blackhole"><span>ШВАРЦШИЛЬД</span><strong id="rotation-hole-state">ГОТОВО</strong><small>Δφ <b id="rotation-hole-phi">0.000</b> рад · часы <b id="rotation-clock">0.000</b></small><small>Невязка H: <b id="rotation-hole-error">—</b></small></div>
+</div>
+<div class="rotation-time">Время координатной модели <b id="rotation-time">0.0</b> a/c</div>
+<div class="rotation-theory">У чёрной дыры <strong>горизонт r=2M=a</strong>, <strong>фотонная сфера r=3M=1.5a</strong>, критический параметр b=3√3M. У кротовой норы нет горизонта, а вращение меняет траектории по и против вращения.</div>
+<p class="rotation-caveat">Метрика вращающейся норы — стационарный анзац типа Тео, не самосогласованное решение уравнений Эйнштейна. Отрисовка — нелинейная двухмерная карта радиусов, не фотография линзирования; после прохода регион B показан пунктиром поверх карты A. Вычисления выполняются в экваториальной плоскости.</p>
+</section>
 <section id="design-panel" class="design-panel" aria-label="Конструктор метрики">
 <div class="section-caption"><span>КОНСТРУКТОР МЕТРИКИ</span><span>Gμν = 8πTμν</span></div>
 <p class="design-lead">Изменяйте форму горловины и функцию хода часов. Перетащите точки непосредственно на графиках или используйте параметры ниже.</p>

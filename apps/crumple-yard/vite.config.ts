@@ -62,7 +62,7 @@ export default defineConfig({
     })
   ],
   test: {
-    include: [path.join(sourceRoot, '**/*.test.ts')],
+    include: ['**/*.test.ts'],
     environment: 'node'
   }
 });
