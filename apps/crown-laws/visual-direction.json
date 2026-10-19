@@ -23,14 +23,9 @@
     "spatialRationale": "The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards. This keeps the current game object and its real inputs spatially connected on a phone.",
     "comparisons": [
       {
-        "slug": "fog-of-conquest",
-        "spatialDifference": "fog-of-conquest uses full-bleed-world and diegetic-tools. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
-        "interactionDifference": "fog-of-conquest uses contextual with scene-zoom. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
-      },
-      {
-        "slug": "zamazka",
-        "spatialDifference": "zamazka uses open-workbench and diegetic-tools. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
-        "interactionDifference": "zamazka uses direct-on-object with world-travel. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
       },
       {
         "slug": "meat-exe",
@@ -38,14 +33,19 @@
         "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
       },
       {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      },
+      {
         "slug": "not-dead-yet",
         "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
         "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
-      },
-      {
-        "slug": "crossline-5x5",
-        "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
-        "interactionDifference": "crossline-5x5 uses bottom-deck with overlay-list. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
       }
     ]
   },
