@@ -1521,6 +1521,10 @@ class UIManager {
         canvas.style.maxHeight = `${canvas.height}px`;
         boardWrapper.style.setProperty('--board-max-width', `${canvas.width}px`);
         boardWrapper.appendChild(canvas);
+        const effects = document.createElement('div');
+        effects.id = 'clear-effects';
+        effects.setAttribute('aria-hidden','true');
+        boardWrapper.appendChild(effects);
 
         container.appendChild(boardWrapper);
 
@@ -1681,6 +1685,38 @@ class UIManager {
             target.y++;
         }
         return target;
+    }
+
+    signalLineClear(rows) {
+        if (!Array.isArray(rows) || !rows.length ||
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const layer = document.getElementById('clear-effects');
+        if (!layer) return;
+        const width = gameState.boardWidth || BASE_BOARD_WIDTH;
+        // Sparks retain the colors of the blocks that completed the actual row.
+        for (const row of rows.slice(0,4)) {
+            if (!Number.isInteger(row.y) || row.y < 0 || row.y >= BOARD_HEIGHT ||
+                !Array.isArray(row.owners) || row.owners.length !== width) continue;
+            const stripe = document.createElement('div');
+            stripe.className = 'clear-line-stripe';
+            stripe.style.top = ((row.y / BOARD_HEIGHT) * 100) + '%';
+            stripe.style.height = (100 / BOARD_HEIGHT) + '%';
+            layer.appendChild(stripe);
+            for (let x = 0; x < width; x++) {
+                const owner = row.owners[x];
+                if (!Number.isInteger(owner) || owner < 1 || owner > gameState.players.length) continue;
+                const spark = document.createElement('span');
+                spark.className = 'clear-line-spark';
+                spark.style.left = ((x + .5) / width * 100) + '%';
+                spark.style.top = ((row.y + .5) / BOARD_HEIGHT * 100) + '%';
+                spark.style.backgroundColor = gameState.players[owner-1]?.color || '#fff';
+                spark.style.setProperty('--throw-x', ((x % 2 ? 1 : -1) * (12 + (x * 7 % 22))) + 'px');
+                spark.style.setProperty('--throw-y', (-(8 + (x * 3 % 16))) + 'px');
+                layer.appendChild(spark);
+                setTimeout(() => spark.remove(),370);
+            }
+            setTimeout(() => stripe.remove(),370);
+        }
     }
 
     signalImpact(lines = 0) {
@@ -3422,7 +3458,10 @@ function applyNetworkSnapshot(s){
  if(!s||!Array.isArray(s.board)||!Array.isArray(s.players)||!s.sharedStats||!window.uiManager?.isOnlineMode)return;
  const previousLines=gameState.sharedStats?.lines || 0;
  gameState.board=s.board;gameState.sharedStats=s.sharedStats;gameState.sharedStatsDirty=true;gameState.isGameOver=s.isGameOver;
- if(s.sharedStats.lines>previousLines)window.uiManager.signalImpact(s.sharedStats.lines-previousLines);
+ if(s.sharedStats.lines>previousLines){
+  window.uiManager.signalImpact(s.sharedStats.lines-previousLines);
+  window.uiManager.signalLineClear(s.sharedStats.lastClearDetail?.rows);
+ }
  s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){const keys=player.keys;Object.assign(player,data,{keys});}});
  window.uiManager.drawBoard();
  window.uiManager.updateTeamStatsIfNeeded();
