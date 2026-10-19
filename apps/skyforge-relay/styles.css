@@ -323,3 +323,15 @@ button.primary {
 }
 
 .pocket-exit{position:fixed;z-index:25;left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top));min-height:44px;padding:12px;background:#132a32;color:#f3d6a9;text-decoration:none;font:600 12px system-ui;border:1px solid #6d765f}#app{height:var(--app-viewport-height,100dvh)}#touchDeck{position:fixed;bottom:max(8px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));display:none;justify-content:space-between;z-index:15;pointer-events:none}.move-pad,.ability-pad{display:grid;grid-template-columns:repeat(2,54px);gap:4px;pointer-events:auto}#touchDeck button{min-height:48px;touch-action:none;background:#16383cc9;color:#fff1d3;border:1px solid #6f9a86;border-radius:5px;font-size:11px}#touchDeck button:active{background:#9d713d}#topHud{padding-top:52px}#menuPanel{max-height:90dvh;overflow:auto}button,input{min-height:44px}button:active{filter:brightness(1.2)}@media(pointer:coarse){#touchDeck{display:flex}}@media(max-width:600px){#sideHud{font-size:10px;max-width:140px}#topHud{gap:3px}.chip{padding:3px;font-size:9px}#menuPanel{margin-top:50px}.hint{display:none}}
+
+@media(max-width:1160px){
+ #app{display:block;overflow:hidden}#menuPanel{position:fixed;z-index:20;top:58px;left:12px;right:12px;bottom:12px;margin:0;max-height:none;overflow:auto}
+ #topHud{position:fixed;top:58px;left:8px;right:8px;padding:4px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;z-index:5;border-radius:6px}
+ #topHud .chip{padding:2px 5px;border:0;min-width:0;gap:0}#topHud .chip span{font-size:9px}#topHud .chip strong{font-size:11px}#topHud .objective{grid-column:1/-1;display:flex;gap:8px}
+ #gameCanvas{position:fixed;top:132px;left:0;width:100%;height:calc(var(--app-viewport-height,100dvh) - 132px);min-height:0;border-radius:0}
+ #sideHud{position:fixed;z-index:6;top:142px;right:8px;max-height:calc(100dvh - 270px);overflow:auto;max-width:210px;padding:8px}
+ body[data-phase="playing"] #sideHud{top:8px;left:120px;right:8px;max-width:none;max-height:44px;padding:3px;display:flex;gap:8px;font-size:10px;border-radius:5px}
+ body[data-phase="playing"] #sideHud h2,body[data-phase="playing"] #playersList,body[data-phase="playing"] #sideHud .controls{display:none}
+ body[data-phase="playing"] #abilityPanel{display:flex;gap:8px;align-items:center;font-size:10px}
+ #endPanel{position:fixed;z-index:30;inset:70px 12px 115px;overflow:auto}
+} @media(prefers-reduced-motion:reduce){.panel,.hud{animation:none}}

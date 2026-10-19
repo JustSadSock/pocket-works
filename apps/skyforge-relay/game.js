@@ -1,4 +1,4 @@
-﻿
+
 /* global io */
 
 const socket = globalThis.skySocket;
@@ -228,6 +228,7 @@ function syncHud() {
     lost: "Поражение",
   };
   phaseLabel.textContent = phaseMap[snapshot.mode] || snapshot.mode;
+  document.body.dataset.phase=snapshot.mode;
 
   const isHost = snapshot.hostId === state.playerId;
   hostControls.classList.toggle("hidden", !isHost);
@@ -927,8 +928,8 @@ function renderFrame() {
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.max(900, Math.floor(rect.width * dpr));
-  canvas.height = Math.max(500, Math.floor(rect.height * dpr));
+  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
 }
 
 function sendInput(force=false) {
@@ -1269,7 +1270,10 @@ init();
 document.querySelector('#practiceBtn').onclick=()=>socket.practice(nameInput.value);
 for(const button of document.querySelectorAll('[data-flag]')){
  const flag=button.dataset.flag;
- button.onpointerdown=e=>{button.setPointerCapture(e.pointerId);inputState[flag]=true;e.preventDefault();};
- const release=()=>{inputState[flag]=false;};button.onpointerup=release;button.onpointercancel=release;button.onlostpointercapture=release;
+ button.onpointerdown=e=>{button.setPointerCapture(e.pointerId);inputState[flag]=true;sendInput(true);e.preventDefault();};
+ const release=()=>{inputState[flag]=false;sendInput(true);};button.onpointerup=release;button.onpointercancel=release;button.onlostpointercapture=release;
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const flag of Object.keys(inputState))inputState[flag]=false;sendInput(true);}});
+
+
+new ResizeObserver(resizeCanvas).observe(canvas);
