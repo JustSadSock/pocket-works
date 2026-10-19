@@ -99,7 +99,7 @@ export function project3D(p,camera,w,h){
 }
 export function createSpatialBeam(m,{angle=Math.PI,spread=.44,count=7,source=3.3}={}){
  if(!Number.isFinite(angle)||angle<Math.PI-1.35||angle>Math.PI+1.35||
-    !Number.isFinite(spread)||spread<0||spread>1.25||
+    !Number.isFinite(spread)||spread<0||spread>1.28||
     !Number.isInteger(count)||count<1||count>15||
     !Number.isFinite(source)||source<2||source>4.4)
    throw Error('Недопустимая подготовка фотонов');
