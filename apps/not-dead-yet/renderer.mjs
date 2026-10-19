@@ -4,7 +4,7 @@ import {panels} from './doors.mjs';
 import {rogueStaticMesh,roguePickupsMesh} from './rogue-scene.mjs';
 import {rogueDoorMesh} from './rogue-door-visual.mjs';
 import {RogueMeshCache} from './rogue-mesh-cache.mjs';
-import {LIGHT_GRID,selectPracticalLights,occupancyMask,lightingMaskKey} from './rogue-lighting.mjs';
+import {LIGHT_GRID,selectPracticalLights,occupancyMask,practicalLightMap,lightingMaskKey} from './rogue-lighting.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
@@ -20,21 +20,10 @@ const FS=[
 'uniform float torch;uniform mediump float time;uniform float hit;uniform float electrical;uniform float sight;',
 'uniform sampler2D paintedAtlas;uniform sampler2D structureMask;',
 'uniform vec2 structureOrigin;uniform float structureEnabled;',
-'float fixtureVisibility(vec3 source){',
-' if(structureEnabled<.5)return 1.0;',
-' vec2 line=p.xz-source.xz;',
-' if(length(line)<.6)return 1.0;',
-' float visible=1.0;',
-' for(int i=1;i<=12;i++){',
-'  vec2 point=source.xz+line*(float(i)/13.0);',
-'  vec2 uv=(point-structureOrigin)/60.96;',
-'  if(uv.x<0.0||uv.y<0.0||uv.x>1.0||uv.y>1.0)continue;',
-'  if(texture2D(structureMask,uv).r<.5)visible=0.0;',
-' }',
-' return visible;',
-'}',
 'void main(){',
 'vec3 norm=normalize(n);',
+'vec2 lightUv=(p.xz+vec2(norm.x,norm.z)*.065-structureOrigin)/60.96;',
+'vec2 lightVis=structureEnabled>.5?texture2D(structureMask,clamp(lightUv,vec2(.0),vec2(.9999))).rg:vec2(1.0);',
 'vec2 uv=abs(norm.y)>.6?p.xz:(abs(norm.x)>.6?p.zy:p.xy);',
 'float idx=clamp(floor(mat+.5)-1.0,0.0,15.0);',
 'vec2 tile=vec2(mod(idx,4.0),floor(idx/4.0));',
@@ -45,15 +34,16 @@ const FS=[
 'float cone=smoothstep(.69,.96,dot(look,normalize(facing)));',
 'float beam=torch*cone*(1.0-smoothstep(6.0,23.0+sight*5.0,d));',
 'float flicker=.965+.018*sin(time*3.7)+.011*sin(time*11.1);',
-'float warmA=(1.0-smoothstep(.6,8.7,length(p-lampA)))*.95;',
-'float warmB=(1.0-smoothstep(.6,7.6,length(p-lampB)))*.68;',
-'if(warmA>.015)warmA*=fixtureVisibility(lampA);',
-'if(warmB>.015)warmB*=fixtureVisibility(lampB);',
+'float warmA=(1.0-smoothstep(.6,8.7,length(p-lampA)))*.78;',
+'float warmB=(1.0-smoothstep(.6,7.6,length(p-lampB)))*.48;',
+'warmA*=lightVis.r;',
+'warmB*=lightVis.g;',
 'float warm=(warmA+warmB)*flicker;',
 'float diffuse=.62+.38*max(dot(norm,normalize(vec3(-.4,.7,-.3))),0.0);',
 'warm*=electrical;',
-'vec3 color=c*(.57+.54*pigment)*(mix(.095,.30,electrical)+warm+beam*1.70)*diffuse;',
+'vec3 color=c*(.57+.54*pigment)*(mix(.095,.30,electrical)+warm+beam*1.13)*diffuse;',
 'color+=c*warm*vec3(.16,.10,.02);',
+'color=color/(vec3(1.0)+color*.24);',
 'float mist=smoothstep(14.0+sight*2.8,39.0+sight*5.0,d);color=mix(color,vec3(.057,.056,.051),mist*.82);',
 'color=mix(color,vec3(.65,.15,.11),hit*.24);',
 'gl_FragColor=vec4(color,1.0);',
@@ -545,7 +535,7 @@ function revolverBarrel(o,x,y,z,rx,ry,length,color,material=9,sides=12){
  }
 }
 function pistolMesh(){
- const o=[],steel=[.31,.32,.31],blue=[.18,.23,.24],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.34,.30],brass=[.57,.48,.30];
+ const o=[],steel=[.28,.28,.27],blue=[.18,.19,.19],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.30,.27],brass=[.57,.48,.30];
  // Sleeve, wrist, palm and knuckles. The worn revolver stays in the lower right.
  round(o,.49,-1.14,-1.12,.29,.38,.32,shirt,7);
  round(o,.49,-.91,-1.28,.205,.22,.19,skin,8);
@@ -693,7 +683,7 @@ export class Renderer{
 
  bind(buffer){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(let i=0;i<4;i++)if(this.attrs[i]>=0)gl.vertexAttribPointer(this.attrs[i],i===3?1:3,gl.FLOAT,false,40,[0,12,24,36][i])}
  upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,values instanceof Float32Array?values:new Float32Array(values),kind)}
- resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.3:1.6),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
+ resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.2:1.4),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
  draw(world,player,enemies,items,flash,t,damage=0,shot=0,reload=0){
   if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
   const rogue=world.endless===true;
@@ -723,10 +713,11 @@ export class Renderer{
    if(this.structureKey!==key||this.structureWorld!==world){
     const x0=Math.floor(player.x)-LIGHT_GRID/2,z0=Math.floor(player.z)-LIGHT_GRID/2;
     const mask=occupancyMask(world,x0,z0);
-    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.structureTexture);
-    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_GRID,LIGHT_GRID,gl.RGBA,gl.UNSIGNED_BYTE,mask);
-    gl.activeTexture(gl.TEXTURE0);
     this.practicalLights=selectPracticalLights(world,player.x,player.z);
+    const lighting=practicalLightMap(x0,z0,mask,this.practicalLights);
+    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.structureTexture);
+    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_GRID,LIGHT_GRID,gl.RGBA,gl.UNSIGNED_BYTE,lighting);
+    gl.activeTexture(gl.TEXTURE0);
     this.structureKey=key;this.structureWorld=world;this.structureOrigin=[x0*SCALE,z0*SCALE];
     this.visualMetrics.lightMaskUploads=(this.visualMetrics.lightMaskUploads||0)+1;
     this.visualMetrics.occludedCells=LIGHT_GRID*LIGHT_GRID-mask.filter((x,i)=>i%4===0&&x===255).length;

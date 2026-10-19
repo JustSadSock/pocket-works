@@ -3322,24 +3322,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 39911,
-        "variance": 52.50332243382241,
-        "entropy": 1.9893348534419,
-        "edgeDensity": 0.11805555555555555,
-        "colorfulness": 28.894287109375,
-        "centerDetail": 60.921077004244005,
-        "meanLight": 39.75384604492215
+        "bytes": 39887,
+        "variance": 52.50995283445435,
+        "entropy": 1.9922189337871365,
+        "edgeDensity": 0.11793154761904762,
+        "colorfulness": 28.895751953125,
+        "centerDetail": 60.92314712940596,
+        "meanLight": 39.74340175781279
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.3&pw_fp=b38f7a01220669f4c1aa5e97"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.4&pw_fp=60333e69d848aa6c2675ec46"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "205aa9de4fa1e77ae13898f00ca167bdfc8a347a",
-    "lastAttemptAt": "2026-10-19T08:50:55.322Z"
+    "lastAttemptRevision": "031e25be041adf64f0323a28c09df94c7b962318",
+    "lastAttemptAt": "2026-10-19T09:41:51.167Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3480,8 +3480,8 @@
     "diagnostic": null,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "d727ed65f08d8026b57f39b34b5d1c67abd1dadb",
-    "lastAttemptAt": "2026-10-19T09:30:31.881Z",
+    "lastAttemptRevision": "4081add90d7e54fbbc139bd807993e125fedf7ed",
+    "lastAttemptAt": "2026-10-19T09:42:31.276Z",
     "revision": "0996fb05a878277215ea63a20753901cb6dec043",
     "qualityScore": 78,
     "visionScore": null,
@@ -3515,7 +3515,7 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "e9f360e561ad675f90b415df656a9fcc2edbcd37",
+    "revision": "f28d6d5879f4164d40a16c3b7528ee7eced840e8",
     "qualityScore": 60,
     "visionScore": null,
     "prepared": false,
@@ -3529,20 +3529,20 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "57027c788b8e34f6585af54b726adc70552f02b228eead42297edbde8adcfc3c",
+    "sha256": "bcc57080a013bd454382bbc0c8fddf6688695d5eaa760dce4c84c9b4c2bacc55",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "e9f360e561ad675f90b415df656a9fcc2edbcd37",
-    "lastAttemptAt": "2026-10-18T23:07:25.175Z"
+    "lastAttemptRevision": "f28d6d5879f4164d40a16c3b7528ee7eced840e8",
+    "lastAttemptAt": "2026-10-19T09:41:39.746Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
     "diagnostic": null,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4c280664042e1fa7f9dede1ecd3a9e5a7cb6ab7d",
-    "lastAttemptAt": "2026-10-19T08:59:20.128Z",
+    "lastAttemptRevision": "280451251d45079e42cd80197e49b0a35b3e7b8d",
+    "lastAttemptAt": "2026-10-19T09:42:02.126Z",
     "revision": "a2672a9600b739fdd5af458623b881c308430c7c",
     "qualityScore": 76,
     "visionScore": null,

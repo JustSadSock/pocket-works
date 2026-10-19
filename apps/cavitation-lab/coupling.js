@@ -3,6 +3,7 @@
 // The wall is an impermeable plane approximated by same-sign image sources.
 // Valid away from contact, strong jetting, shock formation and high-Mach collapse.
 import { WATER, sanitize, simulateBubble, sampleAt } from './physics.js';
+import { normalizeBubbles, layoutTemplate } from './constructor.js';
 
 const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
 export const CLOUD_LAYOUTS = Object.freeze({
@@ -14,15 +15,15 @@ export const CLOUD_LAYOUTS = Object.freeze({
     {x:-4.8,y:1.45,s:0.63}
   ]
 });
-export const CLOUD_MODES = Object.keys(CLOUD_LAYOUTS);
+export const CLOUD_MODES = [...Object.keys(CLOUD_LAYOUTS),'custom'];
 export function sanitizeCloud(raw = {}) {
   const mode = CLOUD_MODES.includes(raw.mode) ? raw.mode : 'single';
-  return { mode, wall: raw.wall !== false };
+  return { mode, wall: raw.wall !== false, ...(mode==='custom'?{bubbles:normalizeBubbles(raw.bubbles||layoutTemplate())}:{}) };
 }
 
 export function cloudGeometry(config, cloud) {
   const base = sanitize(config), selected = sanitizeCloud(cloud);
-  return CLOUD_LAYOUTS[selected.mode].map((b,i)=>({
+  return (selected.mode==='custom'?selected.bubbles:CLOUD_LAYOUTS[selected.mode]).map((b,i)=>({
     id:i, x:b.x, y:b.y, r0:b.s,
     // The wall location is x = standOff, measured in reference bubble radii.
     wallDistance:base.standOff-b.x
@@ -49,17 +50,19 @@ function solveLinear(matrix, vector) {
 
 // This is a radial Rayleigh-Plesset equation coupled by monopole-pressure fields.
 // The image bubble enforces a zero-normal-flow *far-field approximation* at wall.
-export function coupledAcceleration(q,v,geo,config,withWall=true) {
+export function coupledAcceleration(q,v,geo,config,withWall=true,frozen=[]) {
  const n=geo.length,rho=WATER.density,ref=config.radiusMm*.001,dp=config.pressureBar*1e5;
  const m=Array.from({length:n},()=>new Array(n).fill(0)),rhs=new Array(n).fill(0);
  for(let i=0;i<n;i++){
-   const r=Math.max(0.035,q[i]),dr=v[i];
-   const pg=5000*Math.pow(geo[i].r0/r,4.2);
+   if(frozen[i]){m[i][i]=1;rhs[i]=0;continue}
+   const r=Math.max(0.020,q[i]),dr=v[i];
+   const pg=(config.gasPressurePa??5000)*Math.pow(geo[i].r0/r,4.2);
    rhs[i]=(pg-dp-2*WATER.surfaceTension/(ref*r))/dp
      -4*WATER.viscosity*dr/(ref*Math.sqrt(rho*dp)*r)
      -1.5*dr*dr;
    m[i][i]=r;
    for(let j=0;j<n;j++){
+     if(frozen[j])continue;
      if(i!==j){
        const dx=geo[i].x-geo[j].x,dy=geo[i].y-geo[j].y;
        const distance=Math.hypot(dx,dy);
@@ -79,13 +82,13 @@ export function coupledAcceleration(q,v,geo,config,withWall=true) {
  return solveLinear(m,rhs);
 }
 
-function derivatives(state,geo,config,wall) {
+function derivatives(state,geo,config,wall,frozen=[]) {
  const n=geo.length;
  const q=state.slice(0,n),v=state.slice(n);
- return [...v,...coupledAcceleration(q,v,geo,config,wall)];
+ return [...v,...coupledAcceleration(q,v,geo,config,wall,frozen)];
 }
-function rk4(state,dt,geo,config,wall) {
- const f=(s)=>derivatives(s,geo,config,wall);
+function rk4(state,dt,geo,config,wall,frozen=[]) {
+ const f=(s)=>derivatives(s,geo,config,wall,frozen);
  const a=f(state),b=f(state.map((s,i)=>s+a[i]*dt*.5));
  const c=f(state.map((s,i)=>s+b[i]*dt*.5)),d=f(state.map((s,i)=>s+c[i]*dt));
  return state.map((s,i)=>s+dt*(a[i]+2*b[i]+2*c[i]+d[i])/6);
@@ -110,7 +113,10 @@ export function pressureAt(solution, point, x, y) {
  return clamp(p,-30,30);
 }
 export function simulateCloud(raw={}, cloudRaw={}) {
- const config=sanitize(raw),cloud=sanitizeCloud(cloudRaw);
+ const cloud=sanitizeCloud(cloudRaw);
+ // A slightly larger specified trapped-gas cushion keeps editor configurations
+ // inside the first-rebound regime across the supported pressure range.
+ const config={...sanitize(raw),...(cloud.mode==='custom'?{gasPressurePa:6500}:{})};
  if(cloud.mode==='single'){
    const s=simulateBubble(config);
    return {...s,kind:'single',cloud,geometry:cloudGeometry(config,cloud)};
@@ -120,9 +126,10 @@ export function simulateCloud(raw={}, cloudRaw={}) {
  const scaleUs=1e6*reference*Math.sqrt(WATER.density/dp);
  let state=[...geometry.map(g=>g.r0),...geometry.map(()=>0)],t=0,lastSaved=0;
  const firstMin=Array(n).fill(null),minimum=geometry.map(g=>g.r0);
+ const frozen=Array(n).fill(false);
  const samples=[],horizon=4.2;
  const emit=()=>{
-    const accelerations=coupledAcceleration(state.slice(0,n),state.slice(n),geometry,config,cloud.wall);
+    const accelerations=coupledAcceleration(state.slice(0,n),state.slice(n),geometry,config,cloud.wall,frozen);
     samples.push({t,bubbles:geometry.map((g,i)=>({
       radius:state[i],velocity:state[n+i],acceleration:accelerations[i]
     }))});
@@ -130,8 +137,16 @@ export function simulateCloud(raw={}, cloudRaw={}) {
  emit();
  let truncated=false;
  for(let step=0;step<180000&&t<horizon;step++){
+   // Beyond the first rebound, the potential-flow model cannot safely predict
+   // secondary collapses. Hold a bubble after its primary rebound; other bubbles
+   // still evolve and continue to interact with the remaining active sources.
+   if(cloud.mode==='custom')for(let i=0;i<n;i++){
+     if(!frozen[i]&&firstMin[i]!==null&&t-firstMin[i]>=0.12){
+       frozen[i]=true;state[n+i]=0;
+     }
+   }
    const q=state.slice(0,n),v=state.slice(n);
-   const a=coupledAcceleration(q,v,geometry,config,cloud.wall);
+   const a=coupledAcceleration(q,v,geometry,config,cloud.wall,frozen);
    let dt=0.002;
    for(let i=0;i<n;i++){
       dt=Math.min(dt,0.006*q[i]/(Math.abs(v[i])+.35),
@@ -140,9 +155,9 @@ export function simulateCloud(raw={}, cloudRaw={}) {
    dt=clamp(dt,1e-7,.002);
    dt=Math.min(dt,horizon-t);
    if(dt<=0)break;
-   let next=rk4(state,dt,geometry,config,cloud.wall);
+   let next=rk4(state,dt,geometry,config,cloud.wall,frozen);
    // Never integrate into an unresolvable zero-radius, high-Mach singularity.
-   if(next.some(x=>!Number.isFinite(x))||next.slice(0,n).some(x=>x<0.028)) {
+   if(next.some(x=>!Number.isFinite(x))||next.slice(0,n).some(x=>x<0.020)) {
      truncated=true;break;
    }
    for(let i=0;i<n;i++){

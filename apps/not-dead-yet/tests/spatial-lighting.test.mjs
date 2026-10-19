@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {RogueWorld,generateSector,generateSectorV3,SECTOR,TILE} from '../rogue-world.mjs';
 import {hallHasLamp,sectorLightSources,selectPracticalLights,occupancyMask,
- LIGHT_GRID,lightingMaskKey} from '../rogue-lighting.mjs';
+ LIGHT_GRID,lightingMaskKey,practicalLightMap} from '../rogue-lighting.mjs';
 import {rogueStaticMesh} from '../rogue-scene.mjs';
 import {appendHallFixtures} from '../rogue-detail.mjs';
 
@@ -111,4 +111,33 @@ test('new silhouettes stay bounded, deterministic and finite for all five famili
   assert.ok(m.every(Number.isFinite))
  }
  assert.equal(families.size,5)
+});
+
+
+test('CPU light-visibility map blocks a real shut door and brightens when opened',()=>{
+ const w=new RogueWorld(222),c=w.chunk(0,0),d=c.doors.find(x=>
+  (x.side==='left'||x.side==='right')&&!w.doorState(x,c).open);
+ assert.ok(d);
+ const sx=d.side==='left'?d.x-1:d.x+1,tx=d.side==='left'?d.x+1:d.x-1,z=d.z;
+ const lamp={x:(sx+.5)*TILE,y:2.4,z:(z+.5)*TILE},read=arr=>
+  arr[((z+14)*LIGHT_GRID+(tx+14))*4];
+ const baseline=practicalLightMap(-14,-14,occupancyMask(w,-14,-14),[lamp,lamp]);
+ assert.equal(read(baseline),0);
+ assert.ok(w.toggleDoor(d).ok);
+ for(let i=0;i<9;i++)w.animateDoors(.12,[]);
+ const illuminated=practicalLightMap(-14,-14,occupancyMask(w,-14,-14),[lamp,lamp]);
+ assert.equal(read(illuminated),255);
+ assert.equal(illuminated.length,LIGHT_GRID*LIGHT_GRID*4);
+});
+test('CPU visibility cache stays within bounded RGBA footprint on mobile',()=>{
+ for(const seed of [222,413,8787,4,14]){
+  const w=new RogueWorld(seed),lights=selectPracticalLights(w,9.5,9.5);
+  const mask=occupancyMask(w,-14,-14);
+  const output=practicalLightMap(-14,-14,mask,lights);
+  assert.equal(output.length,48*48*4);
+  assert.ok(output.every(Number.isFinite));
+  const lit=output.filter((v,i)=>i%4<2&&v>0).length;
+  assert.ok(lit>0,'real fixtures must illuminate at least one tile');
+  assert.ok(lit<48*48*2,'concrete must hide light from most tiles')
+ }
 });

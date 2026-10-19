@@ -9,6 +9,7 @@ import {MAGES,SCHOOLS,mage,validMage} from './mages.mjs';
 import {ELEMENTS,reactionFor} from './elements.mjs';
 import {createCourtBackdrop,drawCourtAtmosphere} from './court-art.mjs';
 import {CombatPresentation,drawProjectileTrail} from './combat-presentation.mjs';
+import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
@@ -353,6 +354,10 @@ function render(){
  ctx.drawImage(bgCanvas,0,0);
  drawCourtAtmosphere(ctx,frame/60,reducedMotion);
  if(active){
+  drawSpellLighting(ctx,active,frame/60,reducedMotion);
+  // Telegraphs belong to the physical court: visible projectiles and placed
+  // mines only. No enemy hidden runes, damage estimates or artificial aim.
+  drawGroundCues(ctx,active,myIndex(),frame/60,reducedMotion);
   combatPresentation.ground(ctx);
   drawConstructs(active);
   drawEffects(active);
@@ -363,6 +368,7 @@ function render(){
    if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}
    const moving=Math.min(1,Math.hypot(p.x-oldX,p.y-oldY)*.48);
    wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash,moving);
+   drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
    if(a.markLife>0&&ELEMENTS[a.mark]){
     const color=ELEMENTS[a.mark].color;
     ctx.strokeStyle=color;ctx.lineWidth=2;ctx.globalAlpha=.55+.2*Math.sin(frame*.09);
