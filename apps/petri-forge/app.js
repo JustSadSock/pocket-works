@@ -1,7 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 installMobileRuntime();
 
-import {GridEnvironment as Env,WIDTH,HEIGHT,TILE,createScenario,validateScene} from './lab-core.mjs';
+import {GridEnvironment as Env,WIDTH,HEIGHT,TILE,createScenario,validateScene,QAgent} from './lab-core.mjs';
 import {listModels,saveModel,loadModel,deleteModel} from './model-store.mjs';
 const GRID_W=WIDTH,GRID_H=HEIGHT,TILE_SIZE=24;
 const COLORS={
@@ -164,6 +164,7 @@ function handleCtx(i){
     case 5: generateRooms(); break;
     case 6: generateIsland(); break;
   }
+  if(i>=3&&i<=6){setTile(spawn[0],spawn[1],TILE.EMPTY);setTile(goal[0],goal[1],TILE.EMPTY);}
   commitOperation();env.reset(spawn,goal);redraw();
 }
 
@@ -416,6 +417,8 @@ $('importBrain').onchange=async event=>{
     if(data?.format!=='petri-forge-agent'||data.version!==1||!data.snapshot)throw Error('Несовместимый файл');
     const kind=data.snapshot.type;
     if(!['qlearning','random'].includes(kind))throw Error('Алгоритм не поддерживается');
+    if(kind==='qlearning'){const validator=new QAgent(1);validator.load(data.snapshot);}
+    else if(data.snapshot.version!==1)throw Error('Версия модели не поддерживается');
     const name=String(data.name||'Импортированный мозг').slice(0,64);
     // Validate the checkpoint in the Worker before saving it.
     stopReplay();agentSelect.value=kind;loadAgent(kind,data.snapshot);
@@ -516,8 +519,7 @@ worker.onmessage=event=>{
   else if(d.type==='trained'||d.type==='stopped'){
     controlsEnabled(false);
     const sample=Math.max(1,d.complete);
-    const last=(d.history||[]).at(-1);
-    updateTrainingUI({complete:d.complete,episodes:d.episodes,success:last?.rate/100||0,average:last?.average||0,history:d.history,heat:d.heat});
+    updateTrainingUI({complete:d.complete,episodes:d.episodes,success:d.success,average:d.average,history:d.history,heat:d.heat});
     lastBest=d.best;lastWorst=d.worst;$('bestReplay').disabled=!lastBest;$('worstReplay').disabled=!lastWorst;
     status(d.type==='trained'?'Обучение завершено':'Обучение остановлено');
     $('trainState').textContent=d.type==='trained'?'Готово':'Остановлено';
