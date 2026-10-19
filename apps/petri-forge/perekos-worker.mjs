@@ -23,7 +23,7 @@ function snap(env,decision,enemyDecision){
 function play(model,seed,options={},record=false){
  const cfg=config(options),env=new PerekosEnvironment({seed,first:cfg.mage,second:cfg.opponent,limitTicks:9600});
  const rival=options.rivalPolicy||null;
- let reward=0,damage=0,frames=[],runePicks=[],fired=0,dodges=0,guarded=0;
+ let reward=0,dealt=0,received=0,frames=[],runePicks=[],fired=0,dodges=0,guarded=0;
  let prevRound=env.state.round,decision=null,enemyDecision=null;
  const maxSteps=Math.max(1000,Math.min(9600,options.limitTicks||8400));
  while(env.steps<maxSteps&&env.state.phase!=='result'){
@@ -38,9 +38,11 @@ function play(model,seed,options={},record=false){
   }else{
    decision=perekosControl(obs,model,0,env.steps);
    enemyDecision=rival?perekosControl(env.observe(1),rival,1,env.steps):null;
+   const before=[env.state.actors[0].hp,env.state.actors[1].hp];
    const result=env.step(decision,enemyDecision);
    reward+=result.reward;
-   if(result.reward>0)damage+=result.reward;
+   dealt+=Math.max(0,before[1]-env.state.actors[1].hp);
+   received+=Math.max(0,before[0]-env.state.actors[0].hp);
    if(decision.attack)fired++;
    if(decision.shield)dodges++;
    if(decision.dash)guarded++;
@@ -51,10 +53,10 @@ function play(model,seed,options={},record=false){
  const s=env.state,score=s.score[0]-s.score[1],health=s.actors[0].hp-s.actors[1].hp;
  const finished=s.phase==='result',won=finished&&s.champion===0;
  // Genuine combat score, no fictitious win bonus when the match was truncated.
- const fitness=score*10+health*.04+reward*.25+(won?18:finished&&s.champion===1?-18:0);
+ const fitness=score*10+(dealt-received)*.085+health*.025+reward*.2+(won?18:finished&&s.champion===1?-18:0);
  if(record&&frames.length<512)frames.push(snap(env,decision,enemyDecision));
  return {fitness,won,finished,score:score,rounds:s.round,steps:env.steps,remaining:s.remaining,draws:s.draws,reward,
-  hp:[s.actors[0].hp,s.actors[1].hp],draft:runePicks,shots:fired,shields:dodges,dashes:guarded,frames,winner:s.champion};
+  hp:[s.actors[0].hp,s.actors[1].hp],dealt,received,draft:runePicks,shots:fired,shields:dodges,dashes:guarded,frames,winner:s.champion};
 }
 function evaluate(model,base,setting,count=2){
  let fitness=0,wins=0,finished=0,score=0,steps=0;
