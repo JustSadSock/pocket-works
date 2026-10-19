@@ -84,6 +84,25 @@ export class ShockField {
   // The cross-flow is a time-varying, energy-consistent Euler inlet boundary.
   // The resulting downstream vortical structures derive from conserved states.
   // It does not model real turbulence, skin friction, or viscous shedding.
+  // Combine a shock-tube pressure ratio with an already moving inlet.
+  // The uniform initial speed is deliberately separate from the pressure
+  // discontinuity; initial pressure and density stay unchanged.
+  superimposeFlow(mach=1.8){
+    this.flowActive=true;
+    this.flowMach=clamp(Number.isFinite(mach)?mach:1.8,.3,3.2);
+    const speed=this.flowMach*Math.sqrt(GAMMA);
+    for(let i=0;i<this.size;i++){
+      if(this.solid[i])continue;
+      const k=i*4,rho=this.U[k];
+      const prior=.5*(this.U[k+1]**2+this.U[k+2]**2)/rho;
+      this.U[k+1]=rho*speed;this.U[k+2]=0;
+      this.U[k+3]+= .5*rho*speed*speed-prior;
+    }
+    this.V.set(this.U);
+    this.setFlowInlet();
+    this.maxMach=this.flowMach;
+  }
+
   setFlowInlet(mach = this.flowMach) {
     this.flowMach = clamp(Number.isFinite(mach) ? mach : 1.8, .3, 3.2);
     const speed = this.flowMach * Math.sqrt(GAMMA), k = this.size * 4;
