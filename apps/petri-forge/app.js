@@ -3,6 +3,7 @@ installMobileRuntime();
 
 import {GridEnvironment as Env,WIDTH,HEIGHT,TILE,createScenario,validateScene,QAgent} from './lab-core.mjs';
 import {listModels,saveModel,loadModel,deleteModel} from './model-store.mjs';
+import {mountMultiWorld} from './multiworld.mjs';
 const GRID_W=WIDTH,GRID_H=HEIGHT,TILE_SIZE=24;
 const COLORS={
   [TILE.EMPTY]:'#26372f',[TILE.WALL]:'#66766b',
@@ -596,3 +597,6 @@ window.render_game_to_text=()=>JSON.stringify({
   spawn,goal,steps:env.steps,reward:env.totalReward,
   history:historyData.slice(-6),replay:replayData?{cursor:replayIndex,total:replayData.trace.length}:null,grid:env.grid
 });
+
+void mountMultiWorld({pauseGrid:()=>{running=false;playBtn.textContent='▶ Наблюдать';stopReplay();}})
+ .catch(error=>{status('Станции недоступны: '+error.message);console.error(error);});
