@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'blockies-';
-const CACHE_NAME = 'blockies-v0.1.4';
-const APP_VERSION = '0.1.4';
+const CACHE_NAME = 'blockies-v0.1.5';
+const APP_VERSION = '0.1.5';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Честное распределение тетромино 7-bag.", "Персональный запас фигуры для коопа и онлайна.", "Новые клавиши, сенсорная кнопка и предпросмотр запаса."];
+const RELEASE_NOTES = ["Сетевая партия переживает кратковременное отключение игроков.", "Очистка рядов получила цветные осколки по реальной схеме блоков.", "Физика клиента и сервера проверяется на регрессионные расхождения."];
 const APP_SHELL = [
   "./",
   "./index.html",
