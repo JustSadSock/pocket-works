@@ -3,6 +3,7 @@ import {sanitizeGrafts,maxWeaponIndex} from './biobuilds.js';
 import {sanitizeImmune} from './immunity.js';
 import {ROUTES,GENES,routeOptions,sanitizeRouteHistory} from './runPaths.js';
 import {GUARDIAN_TYPES,guardianForWave,sanitizeGuardianPending} from './guardians.js';
+import {pulsePlan} from './runPacing.js';
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
 const kinds=new Set(['crawler','spitter','brute','heart','leech','warden',...GUARDIAN_TYPES]);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
