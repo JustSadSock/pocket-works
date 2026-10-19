@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {drawKineticProjectiles,ContactTheater,spellSilhouette,SHAPE_FAMILIES,MAX_KINETIC_SHOTS,MAX_CONTACTS} from '../spell-kinetics.mjs';
 
 const shot=(style,element='fire',index=0)=>({style,element,owner:index%2,x:140+index,y:260+index,
- vx:style==='rock'?198:style==='bolt'?365:255,vy:17,r:style==='rock'?8:style==='wave'?12:5,life:.9});
+ vx:style==='rock'?198:style==='bolt'?365:255,vy:17,r:style==='rock'?8:style==='wave'?12:style==='bolt'?3:style==='echo'?4:5,life:.9});
 function fakeCanvas(){
  const ops=[];let depth=0;
  const ctx=new Proxy({},{
