@@ -288,6 +288,7 @@ async function start(){
 const cockpit=mountAgentCockpit({
  state:()=>({mode,active,careers,busy,pending,advanced,config:cfg,lastEval}),
  notify,
+ setEvaluation:value=>{lastEval=value;refresh();},
  switchAgent,
  create,
  rename:async()=>{
