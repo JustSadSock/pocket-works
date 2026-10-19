@@ -870,12 +870,50 @@ function playSound(type){
 }
 
 document.querySelector('.controls').addEventListener('pointerdown', clearHint, { once:true });
-document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{
-  state.tool=b.dataset.tool;armingSensor=null;persist();refreshControls();toast('ИНСТРУМЕНТ: '+b.textContent.trim());
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',ev=>{
+  ev.stopPropagation();selectTool(b.dataset.tool);
+  toast('ИНСТРУМЕНТ: '+b.textContent.trim());
 }));
+document.querySelectorAll('[data-panel-tab]').forEach(b=>b.addEventListener('click',()=>{
+  switchPanel(b.dataset.panelTab);persist();
+}));
+document.querySelectorAll('[data-material]').forEach(b=>b.addEventListener('click',()=>{
+  state.materialType=+b.dataset.material;selectTool('material');
+  toast('МАТЕРИАЛ ВЫБРАН · РИСУЙ В КАМЕРЕ');
+}));
+document.querySelectorAll('[data-emitter-type]').forEach(b=>b.addEventListener('click',()=>{
+  state.emitterType=b.dataset.emitterType;selectTool('source');
+  toast('ИСТОЧНИК ВЫБРАН · КОСНИСЬ КАМЕРЫ');
+}));
+$('source-strength').addEventListener('input',e=>{
+  state.sourceStrength=+e.target.value;$('source-strength-value').textContent=state.sourceStrength.toFixed(1);
+  persist();
+});
+$('source-angle').addEventListener('input',e=>{
+  state.sourceAngle=+e.target.value;$('source-angle-value').textContent=state.sourceAngle+'°';
+  persist();
+});
+$('emitter-list').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-emitter-index]');if(!b)return;
+  selectedEmitter=+b.dataset.emitterIndex;
+  const e0=state.emitters[state.preset][selectedEmitter];
+  if(e0){state.emitterType=e0.type;state.sourceStrength=e0.strength;state.sourceAngle=e0.angle;}
+  state.panel='construct';refreshControls();renderEmitters();
+});
+$('remove-emitter').addEventListener('click',()=>{
+  if(selectedEmitter<0)return;
+  const list=state.emitters[state.preset];if(selectedEmitter>=list.length)return;
+  list.splice(selectedEmitter,1);selectedEmitter=-1;syncEmitters();
+  toast('ИСТОЧНИК УДАЛЁН');
+});
+$('flow-mode').addEventListener('change',e=>{
+  state.flowMode=e.target.value;persist();
+  if(sim){resetGas(false);drawScope();drawLoadScope();render();}
+  refreshControls();toast(flowEnabled()?'ПОСТОЯННЫЙ ПОТОК ВКЛЮЧЁН':'ПОТОК ОТ КРАЯ ВЫКЛЮЧЕН');
+});
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
   if(state.preset===b.dataset.preset)return;
-  state.preset=b.dataset.preset;probe=null;armingSensor=null;compareIndex=-1;rebuildGeometry();resetGas(true);persist();refreshControls();drawScope();drawCpChart();renderRecords();toast('КАМЕРА: '+TITLES[state.preset]);
+  state.preset=b.dataset.preset;selectedEmitter=-1;probe=null;armingSensor=null;compareIndex=-1;rebuildGeometry();resetGas(true);persist();refreshControls();renderEmitters();drawScope();drawCpChart();renderRecords();toast('КАМЕРА: '+TITLES[state.preset]);
 }));
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
   state.view=b.dataset.view;persist();refreshControls();drawScope();
@@ -891,7 +929,7 @@ $('flow-mach').addEventListener('change',e=>{
   const requested=+e.target.value;
   if(state.flowMach===requested)return;
   state.flowMach=requested;persist();refreshControls();
-  if(FLOW_PRESETS.has(state.preset)){resetGas(false);drawScope();render();toast('ПОТОК: МАХ '+state.flowMach.toFixed(1));}
+  if(flowEnabled()){resetGas(false);drawScope();render();toast('ПОТОК: МАХ '+state.flowMach.toFixed(1));}
 });
 $('streamlines').addEventListener('click',()=>{
   state.streamlines=!state.streamlines;persist();refreshControls();render();
@@ -958,7 +996,7 @@ $('loads-csv').addEventListener('click',()=>{
  toast('ВРЕМЕННЫЕ ДАННЫЕ СОХРАНЕНЫ');
 });
 $('flow-restart').addEventListener('click',()=>{
-  if(!FLOW_PRESETS.has(state.preset))return;
+  if(!flowEnabled())return;
   resetGas(false);drawScope();render();toast('НАБЕГАЮЩИЙ ПОТОК ПЕРЕЗАПУЩЕН');
 });
 $('ratio').addEventListener('input',e=>{
@@ -986,7 +1024,7 @@ $('csv').addEventListener('click',()=>{
 $('sound').addEventListener('click',()=>{state.sound=!state.sound;persist();refreshControls();if(state.sound)playSound('wall')});
 runBtn.addEventListener('click',()=>setActive(!active));
 $('step').addEventListener('click',()=>{if(tubeReady)releaseTube();setActive(false);if(sim){sim.step();trace.record(sim,true);loadHistory.record(sim,.13,true);}updateMetrics();drawScope();drawLoadScope();render();});
-$('clear').addEventListener('click',()=>{resetGas();drawScope();toast(state.preset==='tube'?'ТРУБА ЗАРЯЖЕНА · ОЖИДАНИЕ РАЗРЫВА':FLOW_PRESETS.has(state.preset)?'НАБЕГАЮЩИЙ ПОТОК ПЕРЕЗАПУЩЕН':'ДАВЛЕНИЕ СБРОШЕНО ДО P₀');});
+$('clear').addEventListener('click',()=>{resetGas();drawScope();toast(state.preset==='tube'?'ТРУБА ЗАРЯЖЕНА · ОЖИДАНИЕ РАЗРЫВА':flowEnabled()?'НАБЕГАЮЩИЙ ПОТОК ПЕРЕЗАПУЩЕН':'ДАВЛЕНИЕ СБРОШЕНО ДО P₀');});
 $('undo').addEventListener('click',()=>{
   if(!state.edits[state.preset].length)return;
   state.edits[state.preset].pop();rebuildGeometry();persist();toast('ПОСЛЕДНИЙ ШТРИХ ОТМЕНЁН');
@@ -998,7 +1036,7 @@ $('confirm-remove').addEventListener('click',()=>{
   state.edits[state.preset]=[];dialog.hidden=true;rebuildGeometry();persist();toast('ПРАВКИ КАМЕРЫ УДАЛЕНЫ');
 });
 $('export').addEventListener('click',()=>{
-  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,camber:state.camber,thickness:state.thickness,gustAmplitude:state.gustAmplitude,gustPeriod:state.gustPeriod,records:state.records,streamlines:state.streamlines,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
+  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,panel:state.panel,materialType:state.materialType,emitterType:state.emitterType,sourceStrength:state.sourceStrength,sourceAngle:state.sourceAngle,flowMode:state.flowMode,emitters:state.emitters,camber:state.camber,thickness:state.thickness,gustAmplitude:state.gustAmplitude,gustPeriod:state.gustPeriod,records:state.records,streamlines:state.streamlines,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='shock-'+state.preset+'-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
@@ -1011,7 +1049,7 @@ $('import-file').addEventListener('change',async e=>{
   try{
     const parsed=JSON.parse(await file.text());
     if(parsed.format!=='shock-lab-v1'||!parsed.experiment||!applyData(parsed.experiment))throw new Error('bad format');
-    trace.setSensors(state.sensors);compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();drawScope();drawCpChart();drawLoadScope();renderRecords();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
+    trace.setSensors(state.sensors);selectedEmitter=-1;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();renderEmitters();drawScope();drawCpChart();drawLoadScope();renderRecords();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
   }catch{toast('НЕВЕРНЫЙ ФОРМАТ ФАЙЛА');}
 });
 document.addEventListener('keydown',ev=>{
@@ -1026,9 +1064,10 @@ document.addEventListener('keydown',ev=>{
 });
 createWorkshopMode({
   appName:'SHOCK',version:'1.4.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
-  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);armingSensor=null;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);drawScope();drawCpChart();drawLoadScope();renderRecords();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
+  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);selectedEmitter=-1;armingSensor=null;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);renderEmitters();drawScope();drawCpChart();drawLoadScope();renderRecords();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
 });
 refreshControls();
+renderEmitters();
 resizeField();
 drawScope();
 renderRecords();
