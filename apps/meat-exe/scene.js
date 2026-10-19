@@ -943,7 +943,26 @@ export function createWorld(canvas, initialSeed) {
       const [a,b]=k.split(',').map(Number);
       for(const t of getTissues(a,b)){t.visual=null;tissueVisuals.delete(t.id);}
     }
-    if(layouts.size>120){for(const [k] of layouts){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>6||Math.abs(b-cz)>6)layouts.delete(k);}}
+    if(layouts.size>120){
+      for(const [k] of layouts){const [a,b]=k.split(',').map(Number);
+        if(Math.abs(a-cx)>6||Math.abs(b-cz)>6)layouts.delete(k);}
+    }
+    // Old worlds retained tissue node graphs forever while exploring.
+    // Persist wounded cells independently; purge invisible distant nodes.
+    if(tissueChunks.size>48){
+      for(const [k,nodes] of tissueChunks){
+        if(keep.has(k))continue;
+        const [a,b]=k.split(',').map(Number);
+        if(Math.abs(a-cx)<=5&&Math.abs(b-cz)<=5)continue;
+        for(const tissue of nodes){
+          if(tissue.hp>0&&tissue.hp<100&&!openedTissues.has(tissue.id)){
+            damagedTissues.set(tissue.id,{id:tissue.id,hp:tissue.hp,sealDelay:tissue.sealDelay||0});
+          }
+          tissueVisuals.delete(tissue.id);
+        }
+        tissueChunks.delete(k);
+      }
+    }
   }
   function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
   function setScars(list){
