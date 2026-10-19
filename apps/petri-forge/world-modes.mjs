@@ -195,6 +195,22 @@ $('battleDelete').onclick=async()=>{
 };
 
 const frame=$('raceFrame');
+const raceReconnect=document.createElement('button');
+raceReconnect.id='raceReconnect';raceReconnect.className='btn-outline full-width';
+raceReconnect.textContent='Переподключить гоночный движок';
+$('raceConnect').after(raceReconnect);
+let raceConnectTimer=null;
+function connectRace(){
+ if(raceBusy)return;
+ raceReady=false;raceLock(false);
+ $('raceConnect').textContent='Подключение физики Шпильки...';
+ frame.src='../shpilka/?petri=1&boot='+Date.now();
+ if(raceConnectTimer)clearTimeout(raceConnectTimer);
+ raceConnectTimer=setTimeout(()=>{
+  if(!raceReady){$('raceConnect').textContent='Не удалось подключить Шпильку';status('Движок недоступен — используйте повторное подключение');}
+ },20000);
+}
+raceReconnect.onclick=connectRace;
 function raceCommand(type,payload={}){
  if(!raceReady||!frame.contentWindow){status('Движок Шпильки ещё не подключён');return false;}
  frame.contentWindow.postMessage({bridge:raceBridge,type,payload},location.origin);return true;
@@ -210,6 +226,7 @@ window.addEventListener('message',async event=>{
  try{
   if(d.type==='ready'){
    raceReady=true;racePolicy=d.policy;raceLock(false);
+   if(raceConnectTimer){clearTimeout(raceConnectTimer);raceConnectTimer=null;}
    $('raceConnect').textContent='Физика ШПИЛЬКИ · подключена';
    status('Настоящий гоночный движок готов');
   }else if(d.type==='started'){raceLock(true);$('raceProgress').style.width='0%';status('Гонщик обучается на трассах Шпильки');}
@@ -265,7 +282,7 @@ function openMode(mode){
  if(combat&&!battleReplay)sendCombat('combat-test',{config:sceneConfig(),seed:41});
  if(race&&!frame.src.includes('petri=1')){
   $('raceConnect').textContent='Подключение физики Шпильки...';
-  frame.src='../shpilka/?petri=1';raceReady=false;raceLock(false);
+  connectRace();
  }
 }
 for(const b of document.querySelectorAll('[data-world-mode]'))b.onclick=()=>openMode(b.dataset.worldMode);
