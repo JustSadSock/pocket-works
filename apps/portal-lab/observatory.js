@@ -2,6 +2,7 @@ import {metric,geometry,launch,advance} from './relativity.js';
 import {photonTransfer,lookup,cameraBasis,pixelDirection,backgroundDirection,dot} from './optics.js';
 import {createCongruence,stepCongruence,strain,diagnosticGeometry} from './tidal.js';
 import {SKY_MODES,CAMERA_PRESETS,sourceGrid,paintSurvey,comparisonSplit,skyStats,geometryTrace} from './optical-display.js';
+import {frameAt,worldDirection,normalizeObserverPoint} from './observer-bridge.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rad=d=>d*Math.PI/180;
@@ -55,20 +56,23 @@ export function createObservatory(canvas,options={}){
   mode:SKY_MODES.includes(saved.mode)?saved.mode:'combined',
   compare:saved.compare===true,divider:Number.isFinite(Number(saved.divider))?clamp(Number(saved.divider),.08,.92):.5,
   geometryInset:saved.geometryInset!==false,
-  quality:saved.quality==='fine'?'fine':'balanced'
+  quality:saved.quality==='fine'?'fine':'balanced',
+  longitude:Number.isFinite(saved.longitude)?clamp(saved.longitude,-180,180):0,
+  latitude:Number.isFinite(saved.latitude)?clamp(saved.latitude,-85,85):0
  };
  if(Math.abs(state.l)<.12)state.l=2.1;
  let fly=null,probe=null,probeRead=null,metricNow=null;
  let active=false,w=0,h=0,run=0,stage='ready',progress=0,warning='';
  let skyA=null,skyB=null,picture=null,reference=null,basis=null,transfer=null,opticalStats=null,renderedAt=0;
  let lastRender=0,flightRender=0,needsRender=true,mouse=null,selected=null,pending=0;
- const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify({l:state.l,yaw:state.yaw,pitch:state.pitch,fov:state.fov,facingSign:state.facingSign,mode:state.mode,compare:state.compare,divider:state.divider,geometryInset:state.geometryInset,quality:state.quality}));}catch{}};
+ const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify({l:state.l,yaw:state.yaw,pitch:state.pitch,fov:state.fov,facingSign:state.facingSign,mode:state.mode,compare:state.compare,divider:state.divider,geometryInset:state.geometryInset,quality:state.quality,longitude:state.longitude,latitude:state.latitude}));}catch{}};
  const onProgress=options.onProgress||(()=>{}),onAction=options.onAction||(()=>{});
  function updateControls(){
   const d=$('lens-distance');
   if(d){d.value=clamp(Math.abs(state.l),.2,6);$('lens-distance-value').textContent=fmt(Math.abs(state.l));}
   if($('lens-fov')){$('lens-fov').value=state.fov;$('lens-fov-value').textContent=state.fov.toFixed(0);}
   if($('lens-region'))$('lens-region').textContent=state.l>=0?'A · ВНЕШНИЙ РЕГИОН':'B · ВНЕШНИЙ РЕГИОН';
+  $('lens-world-position').textContent=(state.l>=0?'A':'B')+' · l/a '+fmt(state.l)+' · λ '+state.longitude.toFixed(0)+'° · φ '+state.latitude.toFixed(0)+'°';
   if($('lens-flight'))$('lens-flight').textContent=fly?'Остановить полёт':'Пройти горловину';
   if($('lens-probe'))$('lens-probe').textContent=probe?'Новый зонд':'Отправить зонд';
   if($('lens-probe-read')){
@@ -124,6 +128,7 @@ export function createObservatory(canvas,options={}){
   const refCtx=refCanvas.getContext('2d',{willReadFrequently:true});
   const refImage=refCtx.createImageData(iw,ih),refPixels=refImage.data;
   const localBasis=cameraBasis(state.yaw,state.pitch,Math.sign(state.l)||1,state.facingSign);
+  const worldFrame=frameAt({l:state.l,longitude:state.longitude,latitude:state.latitude});
   const cameraMode=state.mode,observerRegion=state.l>=0?0:1;
   const localA=skyA,localB=skyB;
   const count={regionA:0,regionB:0,unresolved:0},total=iw*ih;
@@ -140,14 +145,16 @@ export function createObservatory(canvas,options={}){
      count.unresolved++;
     }else{
      const region=arrival.region,src=region===0?localA:localB;
-     const sky=sampleSky(src,arrival.direction),
-       colored=paintSurvey(sky,cameraMode==='stars'?0:sourceGrid(arrival.direction),cameraMode,region);
+     const srcDir=worldDirection(arrival.direction,worldFrame);
+     const sky=sampleSky(src,srcDir),
+       colored=paintSurvey(sky,cameraMode==='stars'?0:sourceGrid(srcDir),cameraMode,region);
      pixels[o]=colored[0];pixels[o+1]=colored[1];pixels[o+2]=colored[2];
      if(region===0)count.regionA++;else count.regionB++;
     }
     pixels[o+3]=255;
-    const sky=sampleSky(observerRegion===0?localA:localB,dir),
-      colored=paintSurvey(sky,cameraMode==='stars'?0:sourceGrid(dir),cameraMode,observerRegion);
+    const skyDir=worldDirection(dir,worldFrame);
+    const sky=sampleSky(observerRegion===0?localA:localB,skyDir),
+      colored=paintSurvey(sky,cameraMode==='stars'?0:sourceGrid(skyDir),cameraMode,observerRegion);
     refPixels[o]=colored[0];refPixels[o+1]=colored[1];refPixels[o+2]=colored[2];
     refPixels[o+3]=255;
    }
@@ -385,6 +392,7 @@ export function createObservatory(canvas,options={}){
    updateControls();request();save();
   });
  }
+ $('lens-open-field').addEventListener('click',()=>options.onOpenField?.({l:state.l,longitude:state.longitude,latitude:state.latitude}));
  $('lens-flight')?.addEventListener('click',triggerFlight);
  $('lens-probe')?.addEventListener('click',launchProbe);
  $('lens-reset')?.addEventListener('click',()=>{
@@ -404,6 +412,10 @@ export function createObservatory(canvas,options={}){
   if(Number.isFinite(p.divider))state.divider=clamp(p.divider,.08,.92);
   if(typeof p.geometryInset==='boolean')state.geometryInset=p.geometryInset;
   if(p.quality==='fine'||p.quality==='balanced')state.quality=p.quality;
+  if(Number.isFinite(p.longitude))state.longitude=clamp(p.longitude,-180,180);
+  if(Number.isFinite(p.latitude))state.latitude=clamp(p.latitude,-85,85);
+  // The observer's local radial tetrad is attached to the selected 3D point.
+  normalizeObserverPoint({l:state.l,longitude:state.longitude,latitude:state.latitude});
   updateControls();request();save();
  }
  return {
