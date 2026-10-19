@@ -1,0 +1,10 @@
+{
+  "commit": "196574a70ec18d6e27d778cdf424573160764fb9",
+  "engine": "Chromium",
+  "viewport": [
+    390,
+    844
+  ],
+  "scenario": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+  "passed": true
+}

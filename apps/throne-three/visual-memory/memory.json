@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "throne-three",
+  "captures": [
+    {
+      "id": "dca36ff0a301577d643c87bc500103700354118d98c5c6fdfc95af63ff27d5f9",
+      "recordedAt": "2026-10-19T09:56:16.479Z",
+      "commit": "196574a70ec18d6e27d778cdf424573160764fb9",
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "initial, real input and settled game, then offline reload",
+      "engine": "Chromium",
+      "action": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+      "files": [
+        {
+          "path": "fe9c992eec1da1cc3c6cf34847552e08757034ca6776fe1091c17f800956170d.png",
+          "sha256": "fe9c992eec1da1cc3c6cf34847552e08757034ca6776fe1091c17f800956170d"
+        },
+        {
+          "path": "4489d31102fecad8f6ba593375414e094447977c6ba980d0739b75d649ee9cfd.png",
+          "sha256": "4489d31102fecad8f6ba593375414e094447977c6ba980d0739b75d649ee9cfd"
+        },
+        {
+          "path": "fe9c992eec1da1cc3c6cf34847552e08757034ca6776fe1091c17f800956170d.png",
+          "sha256": "fe9c992eec1da1cc3c6cf34847552e08757034ca6776fe1091c17f800956170d"
+        },
+        {
+          "path": "0b1eb1e4f53a0c59f29a01cbd5edbe87c9fb70f2f8627db659715d05531c6ca3.webm",
+          "sha256": "0b1eb1e4f53a0c59f29a01cbd5edbe87c9fb70f2f8627db659715d05531c6ca3"
+        },
+        {
+          "path": "0bb56ff25db1fdbd70597b6be01f0b697e61a9c2af2c0f8fa72bed1b420f4ed1.png",
+          "sha256": "0bb56ff25db1fdbd70597b6be01f0b697e61a9c2af2c0f8fa72bed1b420f4ed1"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}
