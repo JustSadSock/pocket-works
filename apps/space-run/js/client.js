@@ -721,6 +721,8 @@ canvas.addEventListener("pointerdown", (e) => {
     }
 
     if (moveModuleId) {
+      const failure = placementError(g);
+      if (failure) { showToast(failure); return; }
       socket.emit("moveModule", { moduleId: moveModuleId, x: g.gx, y: g.gy, rotation: buildRotation });
       moveModuleId = null;
       closeModuleActions();
@@ -728,12 +730,16 @@ canvas.addEventListener("pointerdown", (e) => {
     }
 
     if (buildMode?.kind === "module") {
+      const failure = placementError(g);
+      if (failure) { showToast(failure); return; }
       socket.emit("placeModule", { templateId: buildMode.templateId, x: g.gx, y: g.gy, rotation: buildRotation });
       buildMode = null;
       closeModuleActions();
       return;
     }
     if (buildMode?.kind === "shape") {
+      const failure = placementError(g);
+      if (failure) { showToast(failure); return; }
       socket.emit("addHullShape", { shapeId: buildMode.shapeId, x: g.gx, y: g.gy, rotation: buildRotation });
       buildMode = null;
       closeModuleActions();
@@ -749,6 +755,8 @@ canvas.addEventListener("pointerdown", (e) => {
   }
 
   if (e.button === 2 && isGarage() && moveModuleId) {
+    const failure = placementError(g);
+    if (failure) { showToast(failure); return; }
     socket.emit("moveModule", { moduleId: moveModuleId, x: g.gx, y: g.gy, rotation: buildRotation });
     moveModuleId = null;
     closeModuleActions();
@@ -1215,22 +1223,60 @@ function drawCombatCrosshair() {
   ctx.stroke();
 }
 
+
+function placementError(grid) {
+  if (!state || state.phase === "combat") return "Строительство заблокировано во время боя";
+  const hull = new Set(state.ship.cells.map(c => `${c.x},${c.y}`));
+  const cellKey = (x, y) => `${x},${y}`;
+  if (moveModuleId || buildMode?.kind === "module") {
+    const moved = moveModuleId ? moduleByIdLocal(moveModuleId) : null;
+    const tpl = moved ? state.moduleLibrary[moved.templateId] : state.moduleLibrary[buildMode?.templateId];
+    if (!tpl) return "Модуль недоступен";
+    const quarterTurn = buildRotation % 180 !== 0;
+    const w = quarterTurn ? tpl.h : tpl.w;
+    const h = quarterTurn ? tpl.w : tpl.h;
+    for (let x=grid.gx;x<grid.gx+w;x++) for(let y=grid.gy;y<grid.gy+h;y++){
+      if(!hull.has(cellKey(x,y))) return "Модуль выходит за корпус";
+      if(state.ship.modules.some(m => m.id !== moveModuleId &&
+        x>=m.x && x<m.x+m.w && y>=m.y && y<m.y+m.h)) return "Место занято другим модулем";
+    }
+    return null;
+  }
+  if (buildMode?.kind === "shape") {
+    const shape = state.hullShapes[buildMode.shapeId];
+    if (!shape) return "Фрагмент корпуса отсутствует";
+    let connected = false;
+    for(const [sx,sy] of shape.cells){
+      let x=sx,y=sy;
+      if(buildRotation===90){x=-sy;y=sx;}
+      else if(buildRotation===180){x=-sx;y=-sy;}
+      else if(buildRotation===270){x=sy;y=-sx;}
+      x+=grid.gx;y+=grid.gy;
+      if(hull.has(cellKey(x,y)))return "Наложение на корпус";
+      if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>hull.has(cellKey(x+dx,y+dy))))connected=true;
+    }
+    return connected ? null : "Новый фрагмент должен соприкасаться с корпусом";
+  }
+  return null;
+}
+
 function drawBuildGhost() {
   if (!state || state.phase === "combat" || (!buildMode && !moveModuleId)) return;
   const g = worldToShipGrid(mouse.worldX, mouse.worldY);
+  const invalidReason = placementError(g);
   const csz = state.cellSize;
   const ph = displayPhysics();
   const pos = worldToScreen(ph.x, ph.y);
   ctx.save();
   ctx.translate(pos.x, pos.y);
   ctx.rotate(ph.a);
-  ctx.globalAlpha = 0.45;
+  ctx.globalAlpha = invalidReason ? 0.65 : 0.45;
   if (moveModuleId) {
     const current = moduleByIdLocal(moveModuleId);
     if (current) {
-      ctx.fillStyle = "rgba(255,191,102,0.42)";
+      ctx.fillStyle = invalidReason ? "rgba(235,70,86,.65)" : "rgba(255,191,102,0.42)";
       ctx.fillRect(g.gx * csz, g.gy * csz, current.w * csz, current.h * csz);
-      ctx.strokeStyle = "rgba(255,224,141,0.95)";
+      ctx.strokeStyle = invalidReason ? "#ff536b" : "rgba(255,224,141,0.95)";
       ctx.strokeRect(g.gx * csz, g.gy * csz, current.w * csz, current.h * csz);
     }
   } else if (buildMode.kind === "module") {
@@ -1239,9 +1285,9 @@ function drawBuildGhost() {
       const rot = ((buildRotation % 360) + 360) % 360;
       const w = rot === 90 || rot === 270 ? t.h : t.w;
       const h = rot === 90 || rot === 270 ? t.w : t.h;
-      ctx.fillStyle = "rgba(112,255,244,0.45)";
+      ctx.fillStyle = invalidReason ? "rgba(235,70,86,.65)" : "rgba(112,255,244,0.45)";
       ctx.fillRect(g.gx * csz, g.gy * csz, w * csz, h * csz);
-      ctx.strokeStyle = "rgba(163,255,246,0.95)";
+      ctx.strokeStyle = invalidReason ? "#ff536b" : "rgba(163,255,246,0.95)";
       ctx.strokeRect(g.gx * csz, g.gy * csz, w * csz, h * csz);
     }
   } else if (buildMode.kind === "shape") {
@@ -1253,14 +1299,23 @@ function drawBuildGhost() {
         if (rot === 90) { x = -sy; y = sx; }
         else if (rot === 180) { x = -sx; y = -sy; }
         else if (rot === 270) { x = sy; y = -sx; }
-        ctx.fillStyle = "rgba(120,215,255,0.4)";
+        ctx.fillStyle = invalidReason ? "rgba(235,70,86,.65)" : "rgba(120,215,255,0.4)";
         ctx.fillRect((g.gx + x) * csz, (g.gy + y) * csz, csz, csz);
-        ctx.strokeStyle = "rgba(176,233,255,0.9)";
+        ctx.strokeStyle = invalidReason ? "#ff536b" : "rgba(176,233,255,0.9)";
         ctx.strokeRect((g.gx + x) * csz, (g.gy + y) * csz, csz, csz);
       });
     }
   }
   ctx.restore();
+  if (invalidReason) {
+    const pos = worldToScreen(mouse.worldX, mouse.worldY);
+    ctx.save();
+    ctx.font = "12px Sora";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ff8191";
+    ctx.fillText(invalidReason, Math.max(90, Math.min(canvas.clientWidth-90,pos.x)), Math.max(96,pos.y-20));
+    ctx.restore();
+  }
 }
 
 function render(dt, t) {
