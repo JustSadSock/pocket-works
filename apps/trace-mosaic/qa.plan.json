@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "simulation.test.mjs",
+        "network.test.mjs",
+        "visual.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#practiceBtn",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#practiceBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-action=\"start-game\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action=\"start-game\"]"
+        },
+        {
+          "action": "visible",
+          "selector": ".board-shell"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action=\"show-reference\"]"
+        },
+        {
+          "action": "visible",
+          "selector": ".reference-overlay"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "real-interaction",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/atelier-browser.mjs"
+    }
+  ]
+}
