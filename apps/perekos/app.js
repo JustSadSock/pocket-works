@@ -105,7 +105,7 @@ function mageCards(node,value,onPick,small=false){
  }
 }
 function updateSelectedMage(){
- $('chosen-mage-name').textContent=mage(selectedMage).name;drawHero($('hero-preview').getContext('2d'),appearance,0,[],selectedMage);
+ $('chosen-mage-name').textContent=mage(selectedMage).name;drawHero($('hero-preview').getContext('2d'),appearance,0,[],selectedMage,reducedMotion);
  $('attack-name').textContent={fire:'ЖАР',storm:'РАЗРЯД',stone:'КАМЕНЬ'}[mage(selectedMage).school];
 }
 $('choose-mage').addEventListener('click',()=>{
@@ -418,7 +418,7 @@ function drawOverlay(s){
  }
 for(let i=0;i<14;i++){const v=(frame*.2+i*71)%620,x=20+(i*71%360);pixel(x,(v+Math.sin(frame*.003+i)*3)%620,2,2,'#f3dca128')}}
 function render(){
- if(mode==='menu'&&frame%3===0)drawHero($('hero-preview').getContext('2d'),appearance,frame/60,[],selectedMage);
+ if(mode==='menu'&&frame%3===0)drawHero($('hero-preview').getContext('2d'),appearance,frame/60,[],selectedMage,reducedMotion);
  if(!bgCanvas)bgCanvas=background();
  combatPresentation.ingest(active,reducedMotion);
  spellChoreography.ingest(active,reducedMotion);
@@ -490,7 +490,7 @@ function applyPendingAppearance(){
  $('my-name').textContent=(appearance.source==='guest'?'ТЫ':appearance.name).slice(0,13).toUpperCase();
  for(const [id,size] of [['menu-portrait',42],['my-portrait',40],['result-portrait',56]])drawPortrait($(id).getContext('2d'),appearance,size);
  if(active?.phase==='build')renderWorkbench();
- if(mode==='menu')drawHero($('hero-preview').getContext('2d'),appearance,frame/60);
+ if(mode==='menu')drawHero($('hero-preview').getContext('2d'),appearance,frame/60,[],selectedMage,reducedMotion);
  return true;
 }
 function refreshAppearance({force=false}={}){
