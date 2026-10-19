@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {MAGES} from '../mages.mjs';
 import {makeMatch,tick,STEP} from '../core.mjs';
-import {directionalAim,aimHeading,visualReticle} from '../aim-geometry.mjs';
+import {directionalAim,courtAim,aimHeading,visualReticle} from '../aim-geometry.mjs';
 
 const other={x:0,y:0,attack:false,shield:false,dash:false};
 const near=(a,b)=>Math.abs(a-b)<1e-9;
@@ -12,7 +12,7 @@ test('mobile drag preserves the angle at court edges instead of clamping axes in
  for(const [dx,dy] of [[1,0],[0,-1],[-1,1],[1,1],[-1,-1],[.02,1],[-1,.02]]){
   const target=directionalAim(from,dx,dy);
   assert.ok(near(Math.atan2(target.y-from.y,target.x-from.x),Math.atan2(dy,dx)));
-  const sight=visualReticle(from,target);
+  const sight=courtAim(from,dx,dy);
   assert.ok(sight.x>=0&&sight.x<=400&&sight.y>=0&&sight.y<=620);
   assert.ok(near(aimHeading(from,sight),aimHeading(from,target)));
  }
