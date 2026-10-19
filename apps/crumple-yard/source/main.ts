@@ -6,7 +6,7 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { CrumpleGame } from './game';
 
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 const RELEASE_NOTES = ["Фиксированное направление 3D-камеры по умолчанию; переключение погонной камеры в гараже и паузе сохраняется между запусками."];
 
 const runtime = installMobileRuntime();
