@@ -1,11 +1,11 @@
 const CACHE_PREFIX='cavitation-lab-';
-const CACHE_NAME='cavitation-lab-v1.2.0';
-const APP_VERSION='1.2.0';
+const CACHE_NAME='cavitation-lab-v1.3.0';
+const APP_VERSION='1.3.0';
 const RELEASE_DATE='2026-10-19';
 const CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Bubble designer with placement, drag, independent radii, safe editing, three layouts and measurable collapse order.'];
+const RELEASE_NOTES=['Potential-flow interface deformation, directed liquid-tongue precursor, shape magnification and vector flow.'];
 const APP_SHELL=[
- './','./index.html','./styles.css','./app.js','./render.js','./cloud-render.js','./physics.js','./coupling.js','./constructor.js','./app.config.json',
+ './','./index.html','./styles.css','./app.js','./render.js','./cloud-render.js','./physics.js','./coupling.js','./constructor.js','./surface-flow.js','./surface-render.js','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
  '../../shared/update-manager.css','../../shared/update-manager.js',

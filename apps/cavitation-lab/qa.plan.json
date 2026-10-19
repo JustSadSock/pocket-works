@@ -8,7 +8,8 @@
       "files": [
         "physics.test.mjs",
         "coupling.test.mjs",
-        "constructor.test.mjs"
+        "constructor.test.mjs",
+        "surface-flow.test.mjs"
       ]
     },
     {
@@ -26,6 +27,25 @@
       "ready": "#field",
       "steps": [
         {
+          "action": "click",
+          "selector": "#launch"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
+        },
+        {
+          "action": "click",
+          "selector": "#trace"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#shape-gain"
+        },
+        {
           "action": "screenshot"
         },
         {
@@ -33,25 +53,12 @@
           "selector": "[data-cloud='custom']"
         },
         {
-          "action": "screenshot"
-        },
-        {
           "action": "click",
           "selector": "[data-layout='arc']"
         },
         {
-          "action": "screenshot"
-        },
-        {
           "action": "click",
           "selector": "#launch"
-        },
-        {
-          "action": "visible",
-          "selector": "#time-now"
-        },
-        {
-          "action": "screenshot"
         },
         {
           "action": "click",
@@ -83,7 +90,8 @@
       "tier": "smoke",
       "files": [
         "qa/journey.spec.js",
-        "qa/constructor.spec.js"
+        "qa/constructor.spec.js",
+        "qa/surface-flow.spec.js"
       ]
     }
   ]

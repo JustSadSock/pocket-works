@@ -30,6 +30,7 @@
     <div class="readout"><span id="radius-label">РАДИУС</span><strong id="radius-now">0,90 <small>мм</small></strong></div>
     <div class="readout time-readout"><span>ВРЕМЯ</span><strong id="time-now">0 <small>мкс</small></strong></div>
    </div>
+   <div id="surface-readout" class="surface-readout" data-ui aria-live="off">ФОРМА · <strong id="deform-now">0,0%</strong> <span id="flow-direction">нет направленного течения</span></div>
    <div id="pressure-legend" class="pressure-legend" data-ui hidden><i class="cold"></i> p′ &lt; 0 <i class="hot"></i> p′ &gt; 0</div>
    <div class="chamber-label" data-ui><i id="status-led"></i><span id="phase-label">ГОТОВ К ИМПУЛЬСУ</span></div>
    <div class="wall-instruction" data-ui id="wall-instruction">↔ СТЕНКУ МОЖНО ДВИГАТЬ</div>
@@ -76,6 +77,10 @@
         <button type="button" id="pressure-view" aria-pressed="true" data-native-press>Поле давления · вкл.</button>
       </div>
     </section>
+    <div class="surface-controls" role="group" aria-label="Параметры отображения поверхности">
+      <button type="button" id="shape-toggle" aria-pressed="true" data-native-press>ФОРМА · ВКЛ</button>
+      <button type="button" id="shape-gain" aria-label="Увеличение деформации только для визуализации" data-native-press>ВИД ×3</button>
+    </div>
     <div class="sliders">
      <label class="instrument"><span>Перепад давления <output id="pressure-val">1,80 бар</output></span><input id="pressure" type="range" min="0.3" max="4" value="1.8" step="0.05"></label>
      <label class="instrument"><span>Начальный радиус <output id="size-val">0,90 мм</output></span><input id="size" type="range" min="0.25" max="2.5" value="0.9" step="0.05"></label>
@@ -102,6 +107,8 @@
    <p>Давление меняется скачком. Физическое время показано в микросекундах; анимация замедлена. Вспышка и круговая волна — поясняющая графика, а не расчёт распространения ударной волны.</p>
    <p>В «Конструкторе» можно размещать до семи сферических пузырьков в рабочей области, перетаскивать их, менять относительные радиусы, сохранять конфигурацию и сравнивать <b>времена первого коллапса</b>. Упорядоченные коллапсы не означают акустическую цепную реакцию — звук здесь не распространяется численно.</p>
    <p>В режимах «Пара» и «Облако» уравнения радиуса связаны через потенциал потока соседних пузырьков. Стенка учитывается методом зеркальных источников. Выбор пузырька меняет выделенную траекторию на графике.</p>
+   <p><b>Деформация (v1.3):</b> внешние скорости воды вычисляются из потенциальных источников соседних пузырьков и зеркальных источников стенки. Из нормальной скорости на поверхности интегрируются малые угловые моды формы 2-го и 3-го порядков. Направление зарождающейся жидкой струи определяется интегралом внешней скорости в центре пузырька. Форма сохраняет площадь двумерного сечения. Это приближённая кинематическая модель, а не расчёт реального прорыва микроструи, ударных давлений или полной гидродинамики.</p>
+   <p>Кнопка «ВИД ×3» <b>увеличивает только изображение деформации</b>, не меняет физический расчёт или измеряемые радиусы. Показатель деформации — амплитуда угловых мод до увеличения.</p>
    <p>Цветное поле показывает нормированное <b>квазистатическое возмущение давления</b> из этой модели; оно не является рассчитанной ударной волной и не показывает задержку распространения звука.</p>
    <p>Реальная микроструя требует расчёта меняющейся формы поверхности. Здесь у одиночного пузырька отображается качественная схема струи. В многопузырьковой модели поверхности остаются сферическими: скорости микроструй, силы ударов и деформация пузырьков не вычисляются.</p>
    <p class="source-label">МОДЕЛЬ · Rayleigh–Plesset / Rayleigh collapse time</p>
@@ -109,7 +116,7 @@
   </div>
  </section>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАВИТАЦИЯ" data-app-version="1.2.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАВИТАЦИЯ" data-app-version="1.3.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
