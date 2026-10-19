@@ -133,6 +133,7 @@ function handleMessage(type, payload) {
         state.preparedGame = null;
         state.preparingKey = null;
       }
+      if (payload?.phase !== 'playing') state.referenceOpen = false;
       if (state.drag && (payload?.phase !== "playing" ||
           payload.game?.tileMeta?.[state.drag.tileId]?.ownerId !== state.selfId)) {
         state.drag = null;
@@ -226,9 +227,11 @@ function patchGame() {
     const absent = tileId == null || state.drag?.tileId === tileId;
     const previous = el.dataset.currentTile || '';
     const next = absent ? '' : String(tileId);
-    if (previous !== next) {
+    const asset = next ? prepared?.tiles[tileId]?.url : null;
+    if (previous !== next || (next && asset && el.dataset.artLoaded !== '1')) {
       el.dataset.currentTile = next;
-      el.style.backgroundImage = next ? `url("${prepared?.tiles[tileId]?.url || ''}")` : '';
+      el.dataset.artLoaded = asset ? '1' : '0';
+      el.style.backgroundImage = asset ? `url("${asset}")` : '';
       if (next && tileId === cellIndex && state.lastCorrectTile === tileId) {
         el.classList.remove('snap-in');
         void el.offsetWidth;
@@ -236,8 +239,6 @@ function patchGame() {
         feedback('correct');
         state.lastCorrectTile = null;
       }
-    } else if (next && prepared?.tiles[tileId] && !el.style.backgroundImage) {
-      el.style.backgroundImage = `url("${prepared.tiles[tileId].url}")`;
     }
     const owner = next ? game.tileMeta[tileId]?.ownerId === state.selfId : false;
     el.classList.toggle('empty', absent);
@@ -257,11 +258,11 @@ function patchGame() {
     const tileId = game.assignments[slot];
     const active = game.tileLocations[tileId]?.kind === 'inventory' && state.drag?.tileId !== tileId;
     const desired = active ? String(tileId) : '';
-    if (el.dataset.currentTile !== desired) {
+    const asset = active ? prepared?.tiles[tileId]?.url : null;
+    if (el.dataset.currentTile !== desired || (desired && asset && el.dataset.artLoaded !== '1')) {
       el.dataset.currentTile = desired;
-      el.style.backgroundImage = active ? `url("${prepared?.tiles[tileId]?.url || ''}")` : '';
-    } else if (active && prepared?.tiles[tileId] && !el.style.backgroundImage) {
-      el.style.backgroundImage = `url("${prepared.tiles[tileId].url}")`;
+      el.dataset.artLoaded = asset ? '1' : '0';
+      el.style.backgroundImage = asset ? `url("${asset}")` : '';
     }
     el.classList.toggle('empty', !active);
     el.style.setProperty('--piece-owner', viewerColor);
@@ -512,14 +513,14 @@ function renderGame() {
     const id = game.board[i], empty = id == null || state.drag?.tileId === id;
     const own = !empty && game.tileMeta[id]?.ownerId === state.selfId;
     return `<div class="placed-piece ${empty?'empty':id===i?'correct':''} ${!empty&&!own?'foreign':''}"
-      data-cell="${i}" data-current-tile="${empty?'':id}"
+      data-cell="${i}" data-current-tile="${empty?'':id}" data-art-loaded="${!empty&&prepared?.tiles[id]?.url?'1':'0'}"
       ${own?`data-piece-id="${id}" data-source-kind="board"`:''}
       style="background-image:${empty?'none':`url('${prepared?.tiles[id]?.url||''}')`};"></div>`;
   }).join('');
   const inventory = game.assignments.map((id,slot)=>{
     const active = game.tileLocations[id]?.kind==='inventory' && state.drag?.tileId!==id;
     return `<button type="button" data-native-press class="inventory-piece ${active?'':'empty'}"
-       data-slot="${slot}" data-current-tile="${active?id:''}" ${active?`data-piece-id="${id}" data-source-kind="inventory"`:''}
+       data-slot="${slot}" data-current-tile="${active?id:''}" data-art-loaded="${active&&prepared?.tiles[id]?.url?'1':'0'}" ${active?`data-piece-id="${id}" data-source-kind="inventory"`:''}
        ${active?'':'disabled'} aria-label="${active?'Переместить фрагмент '+(id+1):'Пустое место'}"
        style="--piece-owner:${viewerColor};background-image:${active?`url('${prepared?.tiles[id]?.url||''}')`:'none'}"></button>`;
   }).join('');
