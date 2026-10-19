@@ -1,6 +1,6 @@
-const PREFIX='portal-lab-',CACHE='portal-lab-v1.1.0',VERSION='1.1.0',RELEASE='2026-10-19';
-const NOTES=['Геодезическая оптика: небесная угловая сетка, неискажённый эталон, камеры и физический профиль горловины'];
-const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./optical-display.js','./material.js','./material-view.js','./waves.js','./wave-view.js','./spacetime.js','./designer.js','./rotation.js','./rotation-view.js','./causality.js','./causality-view.js','./chronology.js','./atlas-view.js','./notebook.js','./notebook-view.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
+const PREFIX='portal-lab-',CACHE='portal-lab-v1.2.0',VERSION='1.2.0',RELEASE='2026-10-19';
+const NOTES=['Изометрическое пространственное вложение кротовой норы, 3D-камера и реальные фотонные геодезические'];
+const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./optical-display.js','./embedded-space.js','./embedded-view.js','./material.js','./material-view.js','./waves.js','./wave-view.js','./spacetime.js','./designer.js','./rotation.js','./rotation-view.js','./causality.js','./causality-view.js','./chronology.js','./atlas-view.js','./notebook.js','./notebook-view.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
 const SCOPE=new URL('./',self.registration.scope);
 const ASSETS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(async c=>{
