@@ -201,6 +201,10 @@ socket.on("state", (next) => {
         }
       }
       if(ev.type==="defeat")showToast(ev.reason==="timeout"?"Время истекло — экспедиция сорвана":"Корабль потерян — возвращение в док",2600);
+      if(ev.type==="hull-breach")showToast(`Пробоина! Секция ${ev.x},${ev.y}`,1900);
+      if(ev.type==="overheat")showToast(`Перегрев модуля ${ev.moduleId} — охлаждение`,2200);
+      if(ev.type==="power-grid"&&!ev.powered)showToast(`Обрыв питания ${ev.moduleId}`,2000);
+      if(ev.type==="hull-patch")beep(510,.10,"triangle",.21);
       if (ev.type === "enemy-destroyed") {
         const count = ev.elite ? 34 : 16;
         for (let i = 0; i < count; i += 1) {
@@ -294,6 +298,101 @@ function clearNode(node) {
 
 
 const repairConsole = document.getElementById("repair-console");
+
+const systemsStatus=document.getElementById("systems-status");
+const engineeringPanel=document.getElementById("engineering-panel");
+let engineeringSignature="";
+const PLATE_MAX=48;
+
+function damagedPlates(){
+  return (state?.ship?.plates||[]).filter(p=>p.hp<PLATE_MAX-.1)
+    .sort((a,b)=>a.hp-b.hp);
+}
+function appendPlateActions(container,combat=false){
+  const plates=damagedPlates();
+  if(!plates.length)return false;
+  const heading=document.createElement("div");
+  heading.className="eng-subtitle";
+  heading.textContent=combat?"АВАРИЙНАЯ ГЕРМЕТИЗАЦИЯ — 12 энергии":"ПРОБОИНЫ — 16 кредитов за заплатку";
+  container.appendChild(heading);
+  for(const p of plates.slice(0,8)){
+    const row=document.createElement("div");row.className="eng-plate";
+    const info=document.createElement("div");info.className="eng-label";
+    const name=document.createElement("strong");
+    name.textContent=`Секция ${p.x}, ${p.y}${p.hp<=0?" · ПРОБИТА":""}`;
+    const details=document.createElement("small");
+    details.textContent=`Броня ${Math.round(p.hp)}/${PLATE_MAX} · ${p.hp<=9?"разрыв шины":p.hp<22?"трещины":"царапины"}`;
+    const meter=document.createElement("div");meter.className="eng-meter";
+    const fill=document.createElement("i");
+    fill.style.width=`${100*p.hp/PLATE_MAX}%`;meter.append(fill);
+    info.append(name,details,meter);
+    const b=button(combat?"Залатать +18":"Залатать +26","",()=>socket.emit("patchHull",{x:p.x,y:p.y}));
+    b.disabled=combat ? state.ship.energy<12 : state.ship.credits<16;
+    row.append(info,b);container.appendChild(row);
+  }
+  if(plates.length>8){
+    const more=document.createElement("p");more.className="eng-empty";
+    more.textContent=`Ещё повреждённых секций: ${plates.length-8}. После ремонта появятся следующие.`;
+    container.appendChild(more);
+  }
+  return true;
+}
+function renderEngineeringUI(){
+  if(!state||!engineeringPanel)return;
+  const plates=damagedPlates(),offline=state.ship.modules.filter(m=>m.powered===false);
+  const heat=state.ship.modules.filter(m=>m.overheated||m.heat>=65);
+  const breaches=plates.filter(p=>p.hp<=0).length;
+  const connected=(state.ship.networkCells||[]).length;
+  const total=state.ship.cells.length;
+  const statusLines=[
+    {text:`Шина ${connected}/${total} · ${offline.length} отключено`,cls:offline.length?"danger":""},
+    {text:`Корпус: ${breaches} пробоин · ${plates.length} повреждений`,cls:breaches?"danger":plates.length?"warning":""},
+    {text:`Температура: ${heat.length} критических систем`,cls:heat.length?"warning":""}
+  ];
+  clearNode(systemsStatus);
+  for(const entry of statusLines){
+    const item=document.createElement("div");
+    item.className=`system-line ${entry.cls}`;
+    item.textContent=entry.text;systemsStatus.appendChild(item);
+  }
+  const sig=JSON.stringify({phase:state.phase,credits:state.ship.credits>=16,
+    plates:plates.map(p=>[p.x,p.y,Math.floor(p.hp)]),
+    modules:state.ship.modules.map(m=>[m.id,m.powered,m.overheated,Math.floor((m.heat||0)/10)])});
+  if(sig===engineeringSignature)return;
+  engineeringSignature=sig;
+  clearNode(engineeringPanel);
+  const summary=document.createElement("div");summary.className="eng-summary";
+  summary.innerHTML="";
+  const live=document.createElement("strong"),fault=document.createElement("span");
+  live.textContent=`ПИТАНИЕ ${state.ship.modules.length-offline.length}/${state.ship.modules.length}`;
+  fault.textContent=breaches?`${breaches} ПРОБОИН`:"ШИНА РАБОТАЕТ";
+  fault.style.color=breaches?"#ffb1a1":"#9be0ca";
+  summary.append(live,fault);engineeringPanel.append(summary);
+  if(!appendPlateActions(engineeringPanel)){
+    const empty=document.createElement("div");empty.className="eng-empty";
+    empty.textContent="Обшивка целая. В бою попадания разрывают секции и питающие линии.";
+    engineeringPanel.appendChild(empty);
+  }
+  const subsystem=document.createElement("div");
+  subsystem.className="eng-subtitle";subsystem.textContent="СИСТЕМЫ И ТЕМПЕРАТУРА";
+  engineeringPanel.appendChild(subsystem);
+  for(const m of state.ship.modules){
+    const row=document.createElement("div");row.className="eng-module";
+    const info=document.createElement("div");info.className="eng-label";
+    const name=document.createElement("strong");
+    name.textContent=`${m.name || m.type} · ${m.id}`;
+    const small=document.createElement("small");
+    small.textContent=m.powered===false?"ШИНА ОБОРВАНА":m.overheated?"АВАРИЙНОЕ ОТКЛЮЧЕНИЕ":
+      `Температура ${Math.round(m.heat||0)}° · питание ${Math.round((m.powerFactor??1)*100)}%`;
+    const meter=document.createElement("div");meter.className="eng-meter heat";
+    const fill=document.createElement("i");
+    fill.style.width=`${Math.min(100,m.heat||0)}%`;
+    meter.appendChild(fill);
+    info.append(name,small,meter);
+    row.append(info);engineeringPanel.append(row);
+  }
+}
+
 let repairSignature = null;
 
 function repairActionButton(label, action) {
@@ -312,6 +411,7 @@ function renderRepairConsole() {
   const task = target?.malfunction;
   const signature = JSON.stringify({
     target: target?.id, selected: pilot.repairTarget,
+    plates:damagedPlates().map(p=>[p.x,p.y,Math.round(p.hp)]),energy:state.ship.energy>=12,
     damaged: damaged.map(m => [m.id, m.status, Math.round(m.hp), m.malfunction?.kind,
       m.malfunction?.index, m.malfunction?.progress, m.malfunction?.bits, m.malfunction?.targetBits])
   });
@@ -322,10 +422,11 @@ function renderRepairConsole() {
     const title = document.createElement("h3");
     title.textContent = "ИНЖЕНЕРНЫЙ ПОСТ";
     repairConsole.appendChild(title);
+    const hasPlateDamage=appendPlateActions(repairConsole,true);
 
     if (!target) {
       const allClear = document.createElement("p");
-      allClear.textContent = "Системы исправны. Ожидайте повреждений или смените станцию (Tab).";
+      allClear.textContent=hasPlateDamage?"Модули исправны. Залатайте повреждённые секции.":"Системы исправны. Ожидайте повреждений или смените станцию (Tab).";
       repairConsole.appendChild(allClear);
       return;
     }
@@ -402,6 +503,7 @@ function renderUI() {
   hud.hull.textContent = `${Math.round(state.ship.hull || 0)}/${Math.round(state.ship.hullMax || 0)}`;
   hud.energy.textContent = `${Math.round(state.ship.energy || 0)}/${Math.round(state.ship.energyMax || 0)}`;
   renderRepairConsole();
+  renderEngineeringUI();
 
   const panelSignature=JSON.stringify({phase:state.phase,players:state.players.map(p=>[p.id,p.name,p.moduleId]),modules:state.ship.modules.map(m=>[m.id,m.occupiedBy,m.status,Math.round(m.hp),m.x,m.y,m.rotation]),inventory:state.ship.inventoryModules,shapes:state.ship.inventoryShapes,offers:state.offers,affordable:state.offers.map(o=>state.ship.credits>=o.cost),missions:state.missionOptions,buildMode});
   if(panelSignature===lastPanelSignature)return;
