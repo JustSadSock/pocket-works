@@ -9,7 +9,7 @@ const PRESETS={
  corotate:{omega:.72,angle:.19,arealRadius:6},
  counter:{omega:.72,angle:-.19,arealRadius:6},
  lens:{omega:0,angle:.49,arealRadius:6},
- ergo:{omega:.94,angle:.08,arealRadius:6}
+ ergo:{omega:1.25,angle:.08,arealRadius:6}
 };
 const STORAGE='pocket-works:portal-lab:rotation-v07';
 const colors={A:'#a7e6ce',B:'#e6a98b',black:'#edd7ab',ring:'#e4d2aa',grid:'#5d8980'};
@@ -107,7 +107,7 @@ export function createRotationLab({getMetric,onAction}={}){
  let persisted={};
  try{persisted=JSON.parse(localStorage.getItem(STORAGE)||'{}')||{}}catch{}
  const state={
-  omega:clamp(Number(persisted.omega??.42),-.95,.95),
+  omega:clamp(Number(persisted.omega??.42),-1.3,1.3),
   angle:clamp(Number(persisted.angle??.08),-.65,.65),
   arealRadius:clamp(Number(persisted.arealRadius??6),4,8)
  };
@@ -225,7 +225,7 @@ export function createRotationLab({getMetric,onAction}={}){
   if(error)text(ctx,error,w/2,h*.5,12,'#e7a18c','center',700);
  }
  for(const [id,key,minimum,maximum] of [
-  ['rotation-spin','omega',-.95,.95],
+  ['rotation-spin','omega',-1.3,1.3],
   ['rotation-angle','angle',-.65,.65],
   ['rotation-radius','arealRadius',4,8]
  ]){
