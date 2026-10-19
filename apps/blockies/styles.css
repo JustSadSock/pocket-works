@@ -1903,3 +1903,10 @@ canvas {
 }
 
 .pocket-exit{display:inline-flex;align-items:center;min-height:44px;padding:10px;color:#bcebe0;text-decoration:none;font:600 13px system-ui}.container{min-height:var(--app-viewport-height,100dvh);padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}button,input{min-height:44px}button:active{filter:brightness(1.25)}#rooms-list{display:none}#pocket-room-code{font:700 22px monospace;color:#8ce4d2;letter-spacing:.1em}#join-code{width:min(200px,100%);font:18px monospace}
+.container{height:calc(var(--app-viewport-height,100dvh) - 44px);min-height:0;overflow:hidden}
+.container:has(#game-screen.active) header h1{display:none}
+.container:has(#game-screen.active) header{padding:4px;justify-content:center}
+.container:has(#game-screen.active) .menu-buttons{display:flex;flex-wrap:nowrap;gap:4px}
+.container:has(#game-screen.active) .menu-buttons .btn{padding:6px 8px;min-width:0;font-size:10px}
+.container:has(#game-screen.active) .language-selector{min-height:44px;padding:4px;margin:0;width:48px}
+#game-screen.active{overflow:hidden}#game-container{padding:4px;overflow:hidden;min-height:60px}#shared-board{flex-shrink:0;max-height:100%;box-sizing:border-box}#touch-controls{padding:6px;gap:4px;flex-shrink:0}#touch-controls .touch-btn{min-height:44px;padding:6px}.touch-status{padding:4px!important;min-height:0!important}.touch-row{gap:4px!important}#touch-status{font-size:10px}

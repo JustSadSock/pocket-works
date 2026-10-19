@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "blockies",
+  "direction": {
+    "premise": "Several falling pieces occupy one shared stack rather than separate competitive wells.",
+    "composition": "A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
+    "shapeLanguage": "Square bevelled blocks, block previews and chunky rectangular arcade buttons retain the source arcade silhouette.",
+    "surfaceAndMaterial": "Opaque pink and cyan bevels sit on the dark stack field; purple cabinet chrome remains outside the falling grid.",
+    "paletteLogic": "Each player owns a fixed vivid piece color, so active and locked cells remain attributable on the shared board.",
+    "typography": "The recovered arcade monospace labels distinguish score, piece actions and room state with short text.",
+    "signature": "Two colored active pieces share one authoritative well; a hard drop becomes the same locked cells on every connected screen.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+  },
+  "architecture": {
+    "spatialLayout": "single-instrument",
+    "controlLocation": "bottom-deck",
+    "navigation": "overlay-list",
+    "chromeTopology": "framed-stage",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player.",
+    "physicalFeedback": "Touch movement changes a piece immediately in local play; online actions resolve into the same complete board snapshot for all peers.",
+    "spatialRationale": "A fitted vertical falling-block well sits between the small team score and two large rows of touch commands. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "fog-of-conquest",
+        "spatialDifference": "fog-of-conquest uses full-bleed-world and diegetic-tools. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
+        "interactionDifference": "fog-of-conquest uses contextual with scene-zoom. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "zamazka uses open-workbench and diegetic-tools. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
+        "interactionDifference": "zamazka uses direct-on-object with world-travel. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+      },
+      {
+        "slug": "crossline-5x5",
+        "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
+        "interactionDifference": "crossline-5x5 uses bottom-deck with overlay-list. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Canvas 2D preserves the source block renderer and original collision, scoring and line-clear engine on the server.",
+    "focalAsset": "The original bevelled block stack is the main rendered object; the authored interlocking-block SVG supplies the install identity."
+  },
+  "motion": {
+    "character": "Grid movement snaps one cell at a time; the original gravity timer drops pieces discretely rather than interpolating their falling positions.",
+    "action": "Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: Two colored active pieces share one authoritative well; a hard drop becomes the same locked cells on every connected screen.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#mode-single"
+    },
+    "expectedChange": "The solo stack opens with one controllable falling piece, a next-piece preview and fitted touch controls.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

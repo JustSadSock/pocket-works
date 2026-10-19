@@ -1926,8 +1926,8 @@ class UIManager {
             availableHeight = window.innerHeight * 0.35;
         }
 
-        const minimumBoardSlot = window.innerHeight * 0.56;
-        availableHeight = Math.max(60, availableHeight, minimumBoardSlot);
+        const minimumBoardSlot = 60;
+        availableHeight = Math.max(60,parentRect?.height ? parentRect.height-24 : availableHeight);
 
         const widthScale = availableWidth / boardWidth;
         const heightScale = availableHeight / boardHeight;
@@ -3109,3 +3109,4 @@ document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(doc
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!window.uiManager?.isOnlineMode)gameState.isPaused=true;});
 window.render_game_to_text=()=>JSON.stringify({coordinates:'cells, x right, y down, top-left origin',online:!!window.uiManager?.isOnlineMode,paused:gameState.isPaused,gameOver:gameState.isGameOver,board:gameState.board,score:gameState.sharedStats,players:gameState.players.map(p=>({id:p.id,position:p.position,piece:p.currentPiece,next:p.nextPiece,gameOver:p.gameOver}))});
 window.advanceTime=ms=>{if(window.uiManager&&!gameState.isPaused&&!window.uiManager.isOnlineMode){for(let t=0;t<ms;t+=16.667)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(16.667,ms-t));window.uiManager.drawBoard();}};
+
