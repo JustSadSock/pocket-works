@@ -62,7 +62,7 @@ export function createWave(options={}){
   amplitude:clamp(Number(options.amplitude??1),.1,2)
  };
  const grid=waveGeometry(params.eta),potential=wavePotential(grid,params.j);
- const n=grid.points,field=new Float64Array(n),velocity=new Float64Array(n),next=new Float64Array(n);
+ const n=grid.points,field=new Float64Array(n),velocity=new Float64Array(n);
  const gradient=(data,i)=>(data[i+1]-data[i-1])/(2*grid.dx);
  for(let i=0;i<n;i++){
   const x=grid.x[i];
@@ -78,8 +78,8 @@ export function createWave(options={}){
     packet(x-h,-WAVE_SOURCE,params.width,params.wavelength,params.amplitude,params.relativePhase))/(2*h):0;
   velocity[i]=plus-minus;
  }
- const wave={params,grid,potential,field,velocity,next,t:0,steps:0,
-  outgoingA:0,outgoingB:0,loss:0,initialEnergy:0,history:[],finished:false,
+ const wave={params,grid,potential,field,velocity,t:0,steps:0,
+  outgoingA:0,outgoingB:0,loss:0,initialEnergy:0,history:[],waterfall:[],finished:false,
   detectorA:Math.round((WAVE_DETECTOR+grid.span)/grid.dx),
   detectorB:Math.round((-WAVE_DETECTOR+grid.span)/grid.dx),
   sponge:null};
@@ -115,7 +115,7 @@ function addFlux(w,dt){
  w.outgoingB+=velocity[b]*gradientB*dt;
 }
 function waveStep(w,dt){
- const {field,velocity,next,potential,grid,sponge}=w,n=field.length,dx=grid.dx;
+ const {field,velocity,potential,grid,sponge}=w,n=field.length,dx=grid.dx;
  const accelOld=new Float64Array(n),accelNew=new Float64Array(n);
  acceleration(w,accelOld);
  for(let i=1;i<n-1;i++)field[i]+=dt*velocity[i]+.5*dt*dt*accelOld[i];
@@ -166,6 +166,9 @@ function sampleWave(w){
  w.history.push({t:d.t,reflection:d.reflection,transmission:d.transmission,energy:d.relativeEnergy,
   loss:d.loss,budget:d.budget,peak,fieldAtThroat:w.field[w.grid.mid]});
  if(w.history.length>600)w.history.shift();
+ const strip=new Float32Array(201);
+ for(let i=0;i<strip.length;i++)strip[i]=w.field[Math.round(i*(n-1)/(strip.length-1))];
+ w.waterfall.push(strip);if(w.waterfall.length>160)w.waterfall.shift();
  return d;
 }
 export function waveSnapshot(w){
