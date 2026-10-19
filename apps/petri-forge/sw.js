@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.8.0';
-const APP_VERSION = '0.8.0';
+const CACHE_NAME = 'petri-forge-v0.8.1';
+const APP_VERSION = '0.8.1';
 const RELEASE_DATE = '2026-10-19';
-const CACHE_PROTOCOL = 7;
-const RELEASE_NOTES = ['Огромное поле, одна нижняя панель, единые агенты, полные экспортируемые профили и настоящие дуэли между обученными бойцами.'];
+const CACHE_PROTOCOL = 8;
+const RELEASE_NOTES = ['Исправлены заблокированные кнопки и компоновка: поле слева, активные настройки и обучение агента справа; добавлены браузерные проверки.'];
 const APP_SHELL = [
   './',
   './index.html',
