@@ -104,3 +104,52 @@ body[data-lab-view="matter"] .matter-panel{column-gap:12px}
 .matter-results strong{font-size:20px}
 body[data-lab-view="matter"] .canvas-frame{min-height:340px;height:min(54dvh,520px)}
 body[data-lab-view="matter"] .canvas-hint{font-size:9px;opacity:.8}}
+
+/* v0.5 -- physical oscilloscope and scalar-wave scattering bench */
+body:not([data-lab-view="wave"]) #wave-panel{display:none}
+body[data-lab-view="wave"] #matter-panel,
+body[data-lab-view="wave"] #observer-panel,
+body[data-lab-view="wave"] .beam-settings,
+body[data-lab-view="wave"] .readouts,
+body[data-lab-view="wave"] .clocks{display:none}
+body[data-lab-view="wave"] .instrument{background:#e1e6df}
+body[data-lab-view="wave"] .canvas-frame{background:#091a1e}
+body[data-lab-view="wave"] #space{cursor:default}
+body[data-lab-view="wave"] #shoot:disabled{opacity:.45;cursor:default}
+body[data-lab-view="wave"] .views{grid-template-columns:repeat(5,auto)}
+.wave-panel{border-bottom:2px solid #789c8b;padding-bottom:16px;margin-bottom:20px}
+.wave-intro{color:#5a756b;font-size:11px;line-height:1.6;margin-bottom:13px}
+.wave-preset-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-bottom:12px}
+.wave-preset-grid button{min-height:37px;border:1px solid #a4bcae;background:transparent;color:#426e61;font-size:11px;font-weight:670;padding:5px;text-align:center}
+.wave-preset-grid button.selected{background:#34665a;border-color:#34665a;color:#f3f6eb}
+.wave-state{min-height:30px;padding:8px 10px;border:1px solid #afc5b9;background:#d5e7d8;color:#2b6655;font:bold 10px ui-monospace,Consolas,monospace}
+.wave-kind{font:10px/1.5 ui-monospace,Consolas,monospace;letter-spacing:.01em;color:#698879;padding:8px 0}
+.wave-selector{display:block;margin:11px 0}.wave-selector select{margin:6px 0 0}
+.wave-panel .range-field{margin-top:14px}
+.wave-panel .section-caption.second{margin-top:22px}
+.wave-measures{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid #aec0b4;border-top:1px solid #aec0b4}
+.wave-measures>div{border-right:1px solid #aec0b4;border-bottom:1px solid #aec0b4;padding:9px 8px;min-height:85px}
+.wave-measures span,.wave-metrology>span{display:block;color:#5c786c;letter-spacing:.02em;font-size:9px;line-height:1.4;min-height:23px}
+.wave-measures strong,.wave-metrology strong{font:650 21px ui-monospace,Consolas,monospace;color:#35675d;font-variant-numeric:tabular-nums}
+.wave-measures small,.wave-metrology small{display:block;font-size:9px;color:#849789;margin-top:3px}
+.wave-metrology{padding:11px 3px 5px;border-bottom:1px solid #b3c3b8;display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:8px}
+.wave-metrology>span{min-height:0}.wave-metrology strong{font-size:17px}.wave-metrology small{grid-column:1/-1}
+.wave-meaning{margin:12px 0;color:#4c7467;font-size:11px;line-height:1.5}
+.wave-limit{color:#839587;font-size:10px;line-height:1.6;padding-top:11px;border-top:1px dashed #adbcaf;margin:10px 0 0}
+@media(max-width:1100px){body[data-lab-view="wave"] .wave-panel{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;column-gap:16px;align-items:start}
+body[data-lab-view="wave"] .wave-panel>.section-caption,
+body[data-lab-view="wave"] .wave-panel>.wave-intro,
+body[data-lab-view="wave"] .wave-panel>.wave-preset-grid,
+body[data-lab-view="wave"] .wave-panel>.wave-state,
+body[data-lab-view="wave"] .wave-panel>.wave-kind,
+body[data-lab-view="wave"] .wave-panel>.wave-measures,
+body[data-lab-view="wave"] .wave-panel>.wave-metrology,
+body[data-lab-view="wave"] .wave-panel>.wave-meaning,
+body[data-lab-view="wave"] .wave-panel>.wave-limit{grid-column:1/-1}}
+@media(max-width:640px){
+.views{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.views button{font-size:clamp(8px,2.25vw,10px);letter-spacing:-.01em;padding:3px 1px;white-space:nowrap}
+body[data-lab-view="wave"] .canvas-frame{min-height:330px;height:min(54dvh,520px)}
+body[data-lab-view="wave"] .canvas-hint{font-size:9px}
+.wave-preset-grid button{font-size:10px}
+}
