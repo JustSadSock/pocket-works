@@ -37,6 +37,8 @@ class NetworkManager {
       this.apply(msg.state,true);
     });
     this.net.on('game_event',msg=>{
+      // Queued packets from a room we have just left must not reopen an old match.
+      if(msg.roomId!==this.net.roomId)return;
       if(msg.event?.type==='state')this.apply(msg.event.payload);
     });
     this.net.on('error',msg=>this.trigger('error',msg.message||msg.code||'Ошибка сети'));
