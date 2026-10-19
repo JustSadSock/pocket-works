@@ -1,5 +1,6 @@
 import {createCausality,presetParameters,mouthB,sendSignal,audit,sampleWorldlines,CAUSAL_PRESETS} from './causality.js';
 const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const safe=(value,fallback,min,max)=>{const n=Number(value);return Number.isFinite(n)?clamp(n,min,max):fallback;};
 const STORE='pocket-works:portal-lab:causality-v08';
 const safe=(v,defaultValue,lo,hi)=>{const n=Number(v);return Number.isFinite(n)?clamp(n,lo,hi):defaultValue;};
 const fmt=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
