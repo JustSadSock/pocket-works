@@ -17,7 +17,7 @@
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="notebook" type="button" aria-pressed="false">Журнал</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="notebook" type="button" aria-pressed="false">Журнал</button><button data-view="volume" type="button" aria-pressed="false">Объём</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -30,6 +30,48 @@
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
 
+<section id="volume-panel" class="volume-panel" aria-label="Изометрическое пространственное вложение кротовой норы">
+<div class="section-caption"><span>ОБЪЁМ / ПРОСТРАНСТВЕННЫЙ СРЕЗ</span><span>v1.2</span></div>
+<p class="volume-lede">Поверните горловину пальцем или мышью. Это вычисленный экваториальный срез метрики, а световые траектории проходят по самой поверхности.</p>
+<div id="volume-status" class="volume-status" data-valid="true" aria-live="polite">ВЫЧИСЛЕНИЕ ГЕОМЕТРИИ</div>
+<div class="volume-viewpoints" role="group" aria-label="Ракурсы модели">
+<button type="button" data-volume-view="oblique">Объём</button>
+<button type="button" data-volume-view="edge">Сбоку</button>
+<button type="button" data-volume-view="overhead">Сверху</button>
+<button type="button" data-volume-view="across">Из региона B</button>
+</div>
+<div class="volume-orbit" role="group" aria-label="Повернуть модель">
+<button type="button" data-volume-orbit="left" aria-label="Влево">←</button>
+<button type="button" data-volume-orbit="up" aria-label="Вверх">↑</button>
+<button type="button" data-volume-orbit="down" aria-label="Вниз">↓</button>
+<button type="button" data-volume-orbit="right" aria-label="Вправо">→</button>
+</div>
+<label class="range-field"><span>Масштаб камеры <output id="volume-zoom-value">1.00×</output></span><input id="volume-zoom" type="range" min=".56" max="2.2" value="1" step=".02"></label>
+<label class="range-field"><span>Протяжённость среза <output id="volume-span-value">4.6a</output></span><input id="volume-span" type="range" min="3" max="6.5" value="4.6" step=".1"></label>
+<div class="volume-switches">
+<label><input id="volume-mesh" type="checkbox" checked> Координатная сетка</label>
+<label><input id="volume-paths" type="checkbox" checked> След фотонов</label>
+</div>
+<div class="section-caption second"><span>ПРОБНЫЕ ФОТОНЫ</span><span>NULL / H=0</span></div>
+<label class="range-field"><span>Угол запуска <output id="volume-angle-value">180°</output></span><input id="volume-angle" type="range" min="103" max="257" step="1" value="180"></label>
+<label class="range-field"><span>Угловое раскрытие <output id="volume-spread-value">25°</output></span><input id="volume-spread" type="range" min="0" max="72" step="1" value="25"></label>
+<label class="range-field"><span>Число фотонов <output id="volume-count-value">7</output></span><input id="volume-count" type="range" min="1" max="15" step="1" value="7"></label>
+<label class="range-field"><span>Удаление источника <output id="volume-source-value">3.3a</output></span><input id="volume-source" type="range" min="2" max="4.4" step=".1" value="3.3"></label>
+<div class="volume-actions">
+<button type="button" id="volume-shoot">Запустить фотонный пучок</button>
+<button type="button" id="volume-reset">Убрать траектории</button>
+</div>
+<div class="section-caption second"><span>НАУЧНЫЕ ПОКАЗАНИЯ</span><span>dl² + R²dφ²</span></div>
+<div class="volume-metrics">
+<div><span>ПЕРЕХОДЫ ГОРЛОВИНЫ</span><strong id="volume-crossings">0</strong></div>
+<div><span>ФОТОНЫ В РЕГИОНЕ B</span><strong id="volume-region-b">—</strong></div>
+<div><span>МАКС. НЕВЯЗКА H=0</span><strong id="volume-errors">—</strong></div>
+<div><span>ВРЕМЯ ПУЧКА</span><strong id="volume-time">0.00 a/c</strong></div>
+</div>
+<div id="volume-condition" class="volume-condition" data-valid="true">|R′| ≤ 1 · ДОПУСТИМО</div>
+<p id="volume-warning" class="volume-warning">Проверка геометрии пространственного среза.</p>
+<p class="volume-footnote">Это двумерная экваториальная пространственная поверхность, изометрически вложенная в трёхмерное евклидово пространство, <strong>не</strong> объёмное изображение четырёхмерного пространства-времени. У нестандартных метрик вложение может не существовать. Свет рассчитывается по исходной 3+1D метрике, а не по евклидовой модели.</p>
+</section>
 <section id="notebook-panel" class="notebook-panel" aria-label="Общий журнал физических экспериментов">
 <div class="section-caption"><span>ПРОТОКОЛЫ ЭКСПЕРИМЕНТОВ</span><span id="notebook-count">0/32</span></div>
 <p class="notebook-intro">Сохраняйте исходные настройки и реальные измерения любой из девяти лабораторий. Восстановление повторяет подготовку опыта и начинает новый расчёт; старые измерения остаются в журнале.</p>
@@ -44,7 +86,7 @@
 <label class="notebook-field">Режим
 <select id="notebook-filter">
 <option value="all">Все эксперименты</option>
-<option value="observer">Наблюдатель</option>
+<option value="observer">Наблюдатель</option><option value="volume">Объём</option>
 <option value="matter">Материя</option>
 <option value="wave">Волны</option>
 <option value="designer">Конструктор</option>
