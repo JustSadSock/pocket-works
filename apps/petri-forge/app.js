@@ -391,7 +391,7 @@ async function autosave(snapshot){
   try{await saveModel({id:'autosave',name:'Автосохранение',kind:'qlearning',snapshot,states:snapshot.q.length});await refreshLibrary();$('stateCount').textContent=snapshot.q.length.toLocaleString('ru-RU')+' состояний';}
   catch(error){status('Автосохранение: '+error.message);}
 }
-worker.addEventListener('error',event=>{controlsEnabled(false);pendingAction=false;status('Ошибка модуля обучения');console.error(event.message);});
+worker.addEventListener('error',event=>{controlsEnabled(false);pendingAction=false;status('Ошибка модуля обучения');window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'grid',message:event.message}}));console.error(event.message);});
 worker.onmessage=event=>{
   const d=event.data||{};
   if(d.type==='loaded'){pendingAction=false;status('Агент: '+(d.kind==='random'?'случайный':'Q-learning'));$('stateCount').textContent=(d.states||0)+' состояний';}
@@ -420,7 +420,7 @@ worker.onmessage=event=>{
   }else if(d.type==='snapshot'){
     if(snapshotRequest){const done=snapshotRequest;snapshotRequest=null;void done(d.snapshot);}
   }else if(d.type==='error'){
-    controlsEnabled(false);pendingAction=false;snapshotRequest=null;status('Ошибка: '+d.message);console.error('PetriForge worker:',d.message);
+    controlsEnabled(false);pendingAction=false;snapshotRequest=null;status('Ошибка: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'grid',message:d.message}}));console.error('PetriForge worker:',d.message);
   }
 };
 function stepWithAction(a){
