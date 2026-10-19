@@ -11,6 +11,8 @@ import {createCourtBackdrop,drawCourtAtmosphere} from './court-art.mjs';
 import {CombatPresentation,drawProjectileTrail} from './combat-presentation.mjs';
 import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
 import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellProjectiles,drawSpellForeground} from './spell-choreography.mjs';
+import {DuelFeedback} from './duel-feedback.mjs';
+import {directionalAim} from './aim-geometry.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
@@ -22,6 +24,7 @@ let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle';
 let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
 const combatPresentation=new CombatPresentation();
 const spellChoreography=new SpellChoreography();
+const duelFeedback=new DuelFeedback();
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
@@ -248,7 +251,7 @@ aimButton.addEventListener('pointerdown',e=>{if(mode==='fight'){aimedPointer=e.p
 aimButton.addEventListener('pointermove',e=>{
  if(mode!=='fight'||e.pointerId!==aimedPointer||!active)return;
  const r=aimButton.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
- if(Math.hypot(dx,dy)>11){const a=myActor(),d=Math.hypot(dx,dy);input.aim={x:Math.max(0,Math.min(W,a.x+dx/d*330)),y:Math.max(0,Math.min(H,a.y+dy/d*330))};}
+ if(Math.hypot(dx,dy)>11){const a=myActor(),d=Math.hypot(dx,dy);input.aim=directionalAim(a,dx,dy);}
 });
 const stopAim=e=>{if(e.pointerId!==aimedPointer)return;aimedPointer=null;aimButton.classList.remove('aiming');if(e.pointerType!=='mouse')input.aim=null};
 aimButton.addEventListener('pointerup',stopAim);aimButton.addEventListener('pointercancel',stopAim);aimButton.addEventListener('lostpointercapture',stopAim);
@@ -350,6 +353,8 @@ function render(){
  if(!bgCanvas)bgCanvas=background();
  combatPresentation.ingest(active,reducedMotion);
  spellChoreography.ingest(active,reducedMotion);
+ duelFeedback.ingest(active,reducedMotion);
+ duelFeedback.advance(1/60,reducedMotion);
  combatPresentation.advance(1/60,reducedMotion);
  spellChoreography.advance(1/60);
  const offset=combatPresentation.offset(reducedMotion);
@@ -363,6 +368,7 @@ function render(){
   // mines only. No enemy hidden runes, damage estimates or artificial aim.
   drawGroundCues(ctx,active,myIndex(),frame/60,reducedMotion);
   drawSpellGround(ctx,spellChoreography,reducedMotion);
+  duelFeedback.ground(ctx,reducedMotion);
   combatPresentation.ground(ctx);
   drawConstructs(active);
   drawEffects(active);
@@ -382,15 +388,13 @@ function render(){
     pixel(p.x-3,p.y-37,6,5,color);pixel(p.x-1,p.y-34,2,3,'#fff3cf');
    }
   }
+  duelFeedback.actors(ctx,active,frame/60,reducedMotion);
   drawSpellProjectiles(ctx,active,frame/60,reducedMotion);
   drawShots(active);
+  duelFeedback.air(ctx);
   drawSpellForeground(ctx,spellChoreography,reducedMotion);
   combatPresentation.foreground(ctx);
-  if(mode==='fight'&&input.aim){
-   ctx.strokeStyle='#eee1b1a0';ctx.lineWidth=1.5;const{x,y}=input.aim;
-   ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.moveTo(x-15,y);ctx.lineTo(x-6,y);
-   ctx.moveTo(x+6,y);ctx.lineTo(x+15,y);ctx.stroke();
-  }
+  if(mode==='fight'&&input.aim)duelFeedback.aim(ctx,active.actors[myIndex()],input.aim,{reduced:reducedMotion});
  }else{
   wizard(107,352,0,frame/60,false,1,12,0);
   wizard(297,252,Math.PI,frame/60,true,1,9,0);
