@@ -403,7 +403,14 @@ export function createWorld(canvas, initialSeed) {
   let currentWidth=0,currentHeight=0,quality='medium',ratio=0;
   function setQuality(next){
     if(!['low','medium','high'].includes(next))return;
-    if(next!==quality){quality=next;currentWidth=0;lastChunk='';resize();}
+    if(next!==quality){
+      quality=next;currentWidth=0;lastChunk='';
+      if(next==='low'){
+        deathBits.length=0;deathMesh.count=0;
+        motesGeo.setDrawRange(0,0);shotLight.visible=false;shotLight.intensity=0;
+      }
+      resize();
+    }
   }
   function resize(){
     const w=Math.max(1,Math.round(canvas.clientWidth||window.innerWidth));
@@ -1117,9 +1124,9 @@ export function createWorld(canvas, initialSeed) {
       membrane.roughnessMap=roughnessMaps[biome.id]||roughnessMaps.vascular;
       wallMat.roughnessMap=roughnessMaps[biome.id]||roughnessMaps.vascular;
     }
-    const mistHue=stage===2?0xa1ac80:stage===3?0xc4b4ac:stage>=4?0xaba9f3:0xc86d78;
+    const mistHue=stage===5?0xd65e75:stage===2?0xa1ac80:stage===3?0xc4b4ac:stage===4?0xaba9f3:0xc86d78;
     motesMat.color.setHex(mistHue);motesMat.opacity=stage===3?.36:.28;
-    shotLight.color.setHex(biome.light);deathMat.color.setHex(biome.vein);
+    shotLight.color.setHex(stage===5?0xffa8a1:biome.light);deathMat.color.setHex(stage===5?0x9a2234:biome.vein);
     sky.color.setHex(biome.light);sky.groundColor.setHex(biome.background);
     lamp.color.setHex(biome.light);pulseLamp.color.setHex(biome.pulse);
     boneMat.color.setHex(biome.bone);vesselMat.color.setHex(biome.vein);
