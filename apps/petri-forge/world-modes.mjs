@@ -1,5 +1,6 @@
 import './mode-shell.mjs';
 import {CW,CH,ARENAS,SKILLS,makePolicy,validPolicy,arenaWalls} from './combat-core.mjs';
+import {mountCombatEditor} from './combat-editor.mjs';
 import {listModels,loadModel,saveModel,deleteModel} from './model-store.mjs';
 
 const $=id=>document.getElementById(id);
@@ -10,11 +11,16 @@ let battlePolicy=makePolicy('aggressive',17),battleBusy=false,battleReplay=null,
 let racePolicy=null,raceReady=false,raceBusy=false,raceReplay=null;
 const framesInterval=95;
 const raceBridge='petri-shpilka-v1';
+const editor=mountCombatEditor({panel:document.getElementById('combatPanel'),canvas:document.getElementById('battleCanvas'),notify:status,onChange:()=>{
+  stopPlayback();battleReplay=null;$('battlePlay').disabled=true;$('battleSeek').disabled=true;
+  $('battleSummary').textContent='Правила изменены. Проведите новый бой или запустите обучение.';
+  editor.paintPreview();
+}});
 function notifyError(e){status('Ошибка: '+String(e.message||e));}
 function sceneConfig(){
  const loadouts=[0,1].map(i=>[...document.querySelectorAll('[data-side="'+i+'"] input:checked')].map(el=>el.value));
  if(loadouts.some(l=>!l.length))throw Error('У каждой стороны должна быть хотя бы одна способность');
- return {arena:$('battleArena').value,teamSize:Number($('battleTeamSize').value),ownLoadout:loadouts[0],enemyLoadout:loadouts[1]};
+ return {arena:$('battleArena').value,teamSize:Number($('battleTeamSize').value),ownLoadout:loadouts[0],enemyLoadout:loadouts[1],rules:editor.getRules()};
 }
 function sendCombat(type,payload={}){combatWorker.postMessage({type,payload});}
 const fmt=x=>Number.isFinite(x)?Number(x).toFixed(1):'—';
@@ -23,6 +29,7 @@ function setBattleBusy(value){
  for(const id of ['battleTrain','battleTest','battleTournament','battleReset','battleSave','battleLoad','battleDelete','battleArena','battleTeamSize','battleSeed','battleIterations'])$(id).disabled=value;
  for(const box of document.querySelectorAll('#combatPanel input[type=checkbox]'))box.disabled=value;
  $('battleStop').disabled=!value;
+ editor.setBusy(value);
 }
 function drawCombat(frame){
  const canvas=$('battleCanvas'),ctx=canvas.getContext('2d');
@@ -31,12 +38,14 @@ function drawCombat(frame){
  ctx.fillStyle='#202b25';ctx.fillRect(0,0,CW,CH);
  ctx.fillStyle='#26372c';
  for(let y=0;y<CH;y+=40)for(let x=0;x<CW;x+=40)if((x+y)/40%2===0)ctx.fillRect(x,y,38,38);
- const walls=arenaWalls($('battleArena').value,Math.round(frame.time*30));
- if($('battleArena').value==='hazards'){
-  const h=ctx.createRadialGradient(400,240,4,400,240,85);
-  h.addColorStop(0,'rgba(220,99,61,.31)');h.addColorStop(1,'rgba(220,99,61,0)');
-  ctx.fillStyle=h;ctx.fillRect(310,150,180,180);
-  ctx.strokeStyle='#ae6949';ctx.setLineDash([7,6]);ctx.beginPath();ctx.arc(400,240,84,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+ const walls=frame.walls||arenaWalls($('battleArena').value,Math.round(frame.time*30));
+ for(const z of frame.zones||[]){
+  ctx.fillStyle='rgba(220,99,61,.25)';ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#ed9973';ctx.lineWidth=2;ctx.setLineDash([7,6]);ctx.stroke();ctx.setLineDash([]);
+ }
+ if(frame.point){
+  ctx.fillStyle='rgba(155,215,161,.18)';ctx.beginPath();ctx.arc(frame.point.x,frame.point.y,frame.point.r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#bbdf93';ctx.lineWidth=3;ctx.stroke();
  }
  ctx.fillStyle='#667a6a';ctx.strokeStyle='#111a18';ctx.lineWidth=5;
  for(const w of walls){ctx.fillRect(w.x+7,w.y+8,w.w,w.h);ctx.strokeRect(w.x,w.y,w.w,w.h);ctx.fillStyle='#97a894';ctx.fillRect(w.x,w.y,w.w,w.h);ctx.fillStyle='#667a6a';}
@@ -61,7 +70,7 @@ function drawCombat(frame){
   if(a.shield>0){ctx.strokeStyle=a.team?'#ffe0ab':'#8ce1d1';ctx.lineWidth=3;ctx.globalAlpha=.35+.5*Math.min(1,a.shield/60);ctx.beginPath();ctx.arc(a.x,a.y,24,0,Math.PI*2);ctx.stroke();}
   ctx.globalAlpha=1;
   ctx.fillStyle='#0d1814';ctx.fillRect(a.x-23,a.y-33,46,5);
-  ctx.fillStyle=a.team?'#e99c6b':'#b6dfb2';ctx.fillRect(a.x-22,a.y-32,44*Math.max(0,a.hp)/120,3);
+  ctx.fillStyle=a.team?'#e99c6b':'#b6dfb2';ctx.fillRect(a.x-22,a.y-32,44*Math.max(0,a.hp)/(a.maxHp||120),3);
   ctx.textAlign='center';ctx.font='bold 10px system-ui';ctx.fillStyle='#e3e8da';ctx.fillText('#'+(a.id+1),a.x,a.y-39);
  }
  if(frame.events?.length){
@@ -73,7 +82,7 @@ function drawCombat(frame){
  $('battleClock').textContent=fmt(frame.time)+' с';
  const left=frame.agents.filter(a=>a.team===0).reduce((n,a)=>n+a.hp,0);
  const right=frame.agents.filter(a=>a.team===1).reduce((n,a)=>n+a.hp,0);
- $('battleHealth').textContent=Math.round(left)+' : '+Math.round(right);
+ $('battleHealth').textContent=Math.round(left)+' : '+Math.round(right)+(frame.point?' · захват '+frame.objectives.map(x=>Math.floor(x)).join(':'):'');
 }
 function stopPlayback(){if(battleTimer){clearInterval(battleTimer);battleTimer=null;}$('battlePlay').textContent='▶ Смотреть';}
 function displayReplay(replay){
@@ -82,7 +91,7 @@ function displayReplay(replay){
  $('battleSeek').max=String(Math.max(0,frames.length-1));
  $('battleSeek').value='0';$('battleSeek').disabled=frames.length===0;
  $('battlePlay').disabled=frames.length===0;
- $('battleSummary').textContent=frames.length?'Победа: '+(replay.summary.winner===-1?'ничья':'команда '+(replay.summary.winner+1))+' · '+replay.summary.seconds+' с · урон '+replay.summary.damage.join(' : '):'Нет записи';
+ $('battleSummary').textContent=frames.length?'Победа: '+(replay.summary.winner===-1?'ничья':'команда '+(replay.summary.winner+1))+' · '+replay.summary.seconds+' с · '+(replay.summary.mode==='control'?'контроль '+replay.summary.objectives.map(x=>x.toFixed(0)).join(' : '):'урон '+replay.summary.damage.map(x=>x.toFixed(0)).join(' : ')):'Нет записи';
  if(frames.length)drawCombat(frames[0]);
 }
 function seekBattle(frame){
@@ -279,7 +288,7 @@ function openMode(mode){
  for(const [id,show] of [['worldPanel',grid],['labPanel',grid],['combatWorld',combat],['combatPanel',combat],['raceWorld',race],['racePanel',race]])$(id).hidden=!show;
  for(const button of document.querySelectorAll('[data-world-mode]')){button.classList.toggle('selected',button.dataset.worldMode===mode);button.setAttribute('aria-pressed',String(button.dataset.worldMode===mode));}
  if(!grid&&$('playPause').textContent.includes('Пауза'))$('playPause').click();
- if(combat&&!battleReplay)sendCombat('combat-test',{config:sceneConfig(),seed:41});
+ if(combat&&!battleReplay&&!editor.isEditing())sendCombat('combat-test',{config:sceneConfig(),seed:41});
  if(race&&!frame.src.includes('petri=1')){
   $('raceConnect').textContent='Подключение физики Шпильки...';
   connectRace();
