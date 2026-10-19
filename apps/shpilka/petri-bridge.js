@@ -127,7 +127,7 @@
         if(task){checkpoint=task.best.slice();const t=task;task=null;post('stopped',{complete:t.index,total:t.iterations,policy:checkpoint});}
       }else if(type==='load'){
         if(task)throw Error('Остановите обучение');if(!valid(payload.policy))throw Error('Некорректный мозг');
-        checkpoint=payload.policy.slice();post('loaded',{policy:checkpoint});
+        checkpoint=payload.policy.slice();post('loaded',{policy:checkpoint,requestId:payload.requestId??null});
       }else if(type==='test'){
         if(task)throw Error('Сначала закончите обучение');
         const seed=(Number(payload.seed)>>>0)||8411;
