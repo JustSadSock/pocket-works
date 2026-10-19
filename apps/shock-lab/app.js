@@ -293,8 +293,8 @@ function drawPhysics(){
       let color;
       if(state.view==='mach'){
         // Mach 1 is the visible transition: blue subsonic, amber supersonic.
-        const sonic=[[24,55,71],[48,112,132],[83,177,179],[220,187,112]];
-        const fast=[[220,187,112],[239,131,70],[242,93,64],[255,227,169]];
+        const sonic=[[24,55,71],[48,112,132],[83,177,179],[110,130,124]];
+        const fast=[[110,130,124],[116,107,90],[163,91,64],[239,128,68],[255,227,169]];
         color=value<1?palette(clamp(value,0,1),sonic)
           :palette(clamp((value-1)/2.2,0,1),fast);
       }else if(value>=0){const range=state.preset==='tube'?Math.log1p(state.ratio*7.5):FLOW_PRESETS.has(state.preset)?Math.log1p(10):Math.log1p(4.5);const t=clamp(Math.log1p(Math.min(24,value)*2.5)/range,0,1);color=palette(t,hot);}
