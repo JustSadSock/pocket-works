@@ -73,5 +73,23 @@ test('v0.8 danger guides are visible and align with existing projectile hitboxes
  expect(data.isDanger).toBe(true);expect(data.painted).toBe(true);
 });
 
-// Existing app-specific browser CI executes this file directly.
-import './choreography.spec.js';
+test('v0.9: the six signature spells are genuinely different drawn geometry',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ const shapes=await page.evaluate(async()=>{
+  const {MAGE_SIGNS,SpellChoreography,drawSpellGround}=
+   await import('/apps/perekos/spell-choreography.mjs');
+  const paint=style=>{
+   const s={phase:'fight',round:1,ticks:4,serial:1,
+    actors:[{x:100,y:260,id:0,mageId:style},{x:300,y:310,id:1,mageId:'slate'}],
+    shots:[{owner:0,x:100,y:260,vx:220,vy:0,element:'fire'}],
+    fx:[{id:1,k:'shoot',x:100,y:260}]};
+   const m=new SpellChoreography();m.ingest(s);
+   const canvas=document.createElement('canvas');canvas.width=400;canvas.height=620;
+   const c=canvas.getContext('2d');drawSpellGround(c,m);
+   return canvas.toDataURL();
+  };
+  return MAGE_SIGNS.map(paint);
+ });
+ expect(shapes).toHaveLength(6);
+ expect(new Set(shapes).size).toBe(6);
+});
