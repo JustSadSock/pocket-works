@@ -13,7 +13,25 @@ import {createLightFieldLab} from './light-field-view.js';
 import {metric as measure} from './notebook.js';
 import {throatDiagnostics,criticalImpact} from './spacetime.js';
 const $=id=>document.getElementById(id),canvas=$('space'),ctx=canvas.getContext('2d',{alpha:false});
-const sound=new AudioBus(),observatory=createObservatory(canvas,{onAction:kind=>sound.play(kind)}),materialLab=createMaterialLab({onAction:kind=>sound.play(kind)}),waveLab=createWaveLab({onAction:kind=>sound.play(kind)}),designer=createDesigner(canvas,{getMetric:()=>currentMetric(),onEdit:changes=>applyDesign(changes),onAction:kind=>sound.play(kind)}),rotationLab=createRotationLab({getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind)}),causalityLab=createCausalityLab(canvas,{onAction:kind=>sound.play(kind)}),atlasLab=createChronologyAtlas(canvas,{onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;},onOpen:params=>{causalityLab.applyParameters(params,{showWitness:true});settings.view='causality';sync();scheduleSave();}}),notebookLab=createNotebook(canvas,{onSave:()=>captureExperiment(),onRestore:record=>replayExperiment(record),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),volumeLab=createEmbeddedLab(canvas,{getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),fieldLab=createLightFieldLab(canvas,{getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),STORAGE='pocket-works:portal-lab:relativity-v2';
+const sound=new AudioBus(),observatory=createObservatory(canvas,{
+ onAction:kind=>sound.play(kind),
+ onOpenField:point=>{
+  fieldLab.setObserverPoint(point,'Точка перенесена из оптической камеры без изменения физической метрики.');
+  settings.view='field3d';lastScientificView='field3d';sync();scheduleSave();
+ }
+}),materialLab=createMaterialLab({onAction:kind=>sound.play(kind)}),waveLab=createWaveLab({onAction:kind=>sound.play(kind)}),designer=createDesigner(canvas,{getMetric:()=>currentMetric(),onEdit:changes=>applyDesign(changes),onAction:kind=>sound.play(kind)}),rotationLab=createRotationLab({getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind)}),causalityLab=createCausalityLab(canvas,{onAction:kind=>sound.play(kind)}),atlasLab=createChronologyAtlas(canvas,{onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;},onOpen:params=>{causalityLab.applyParameters(params,{showWitness:true});settings.view='causality';sync();scheduleSave();}}),notebookLab=createNotebook(canvas,{onSave:()=>captureExperiment(),onRestore:record=>replayExperiment(record),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),volumeLab=createEmbeddedLab(canvas,{getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),fieldLab=createLightFieldLab(canvas,{
+ getMetric:()=>currentMetric(),
+ onAction:kind=>sound.play(kind),
+ onDirty:()=>{dirty=true;},
+ onOpenObserver:({point,view})=>{
+  observatory.applyParameters({
+   l:point.l,longitude:point.longitude,latitude:point.latitude,
+   yaw:view.yaw,pitch:view.pitch,fov:view.fov,mode:view.mode,
+   quality:view.quality,facingSign:view.facingSign
+  });
+  settings.view='observer';lastScientificView='observer';sync();scheduleSave();
+ }
+}),STORAGE='pocket-works:portal-lab:relativity-v2';
 const defaults={model:'ellis',a:1,eta:.45,shape:0,shapeWidth:1.45,lapseBump:0,lapseWidth:1.3,kind:'light',count:13,spread:32,speed:.7,timeScale:1,view:'observer',source:{l:3.15,phi:Math.PI,alpha:Math.PI}};
 let settings=structuredClone(defaults);
 let lastScientificView='observer';
@@ -175,6 +193,9 @@ function captureExperiment(){
  if(mode==='observer'){
   const st=observatory.state,info=observatory.status;
   extras.camera={...st};
+  put('position-l',st.l,'Положение камеры l/a','a');
+  put('position-longitude',st.longitude,'Долгота камеры','°');
+  put('position-latitude',st.latitude,'Широта камеры','°');
   put('observer-l',st.l,'Координата наблюдателя l/a','a');
   put('observer-fov',st.fov,'Угол обзора','°');
   put('observer-yaw',st.yaw,'Поворот камеры','рад');
@@ -227,13 +248,20 @@ function captureExperiment(){
   put('causal-t',snapshot.signals.returnTime,'Время возврата сигнала','с');
  }else if(mode==='field3d'){
   const st=fieldLab.snapshot;
-  extras.field3d={...fieldLab.state};
+  extras.field3d={...fieldLab.state,observerPoint:{...fieldLab.state.observerPoint}};
+  const location=fieldLab.state.observerPoint;
+  put('position-l',location.l,'Положение камеры l/a','a');
+  put('position-longitude',location.longitude,'Долгота камеры','°');
+  put('position-latitude',location.latitude,'Широта камеры','°');
   put('field-photons',st.statistics?.photons??0,'Фотонов в 3D-пучке','шт');
   put('field-planes',st.statistics?.distinctOrbitalPlanes??0,'Плоскостей фотонных орбит','шт');
   put('field-crossings',st.statistics?.crossings??0,'Переходы через горловину','шт');
   put('field-escaped-b',st.statistics?.escapedB??0,'Вышло в регион B','шт');
   put('field-residual',st.statistics?.worstResidual,'Максимальная невязка H=0','');
   put('field-time',st.statistics?.time/m.a,'Время эксперимента','a/c');
+  put('field-probe-impact',st.inspection?.impact/m.a,'Прицельный параметр проверочного луча','b/a');
+  put('field-probe-error',st.inspection?.impactError/m.a,'Разность прицельных параметров','b/a');
+  put('field-probe-passes',st.inspection?.passes,'Переходы проверочного луча','шт');
  }else if(mode==='volume'){
   const state=volumeLab.state,shot=volumeLab.snapshot;
   extras.volume={...state};

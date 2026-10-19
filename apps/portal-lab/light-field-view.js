@@ -4,6 +4,7 @@ import {
  chartPoint,sphereWires,coordinateConsistency
 } from './light-field.js';
 import {project3D} from './embedded-space.js';
+import {normalizeObserverPoint,chartObserverPosition,pointFromPhoton,inspectObserverRay,cameraForRay} from './observer-bridge.js';
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const f=(n,d=2)=>Number.isFinite(n)?n.toFixed(d):'—';
@@ -24,7 +25,7 @@ function polygon(ctx,pts,color,width=1){
  for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();
 }
-export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
+export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObserver}={}){
  let saved={};try{saved=JSON.parse(localStorage.getItem(STORAGE)||'null')||{}}catch{}
  const state={};
  for(const [key,a,b]of [
@@ -35,13 +36,19 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
  state.showRays=saved.showRays!==false;
  state.showGrid=saved.showGrid!==false;
  state.showConnections=saved.showConnections!==false;
+ let initial={l:state.source,longitude:0,latitude:0};
+ try{initial=normalizeObserverPoint(saved.observerPoint||initial)}catch{}
+ state.observerPoint=initial;
+ state.probeAngle=Number.isFinite(saved.probeAngle)?clamp(saved.probeAngle,0,180):170;
+ state.selectedPhoton=Number.isInteger(saved.selectedPhoton)?Math.max(0,saved.selectedPhoton):0;
+ let inspectResult=null,positionNotice='';
  let metric=null,field=null,active=false,running=false,lastStatus=0;
- const touches=new Map();let pinch=null,staticLayer={key:'',canvas:null};
+ const touches=new Map(),pressStart=new Map();let pinch=null,staticLayer={key:'',canvas:null};
  const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(state))}catch{}};
  const changed=()=>onDirty?.();
  const stats=()=>field&&metric?fieldStatistics(field,metric):null;
  function configure(m){
-  metric=m;field=null;running=false;staticLayer={key:'',canvas:null};
+  metric=m;field=null;running=false;staticLayer={key:'',canvas:null};inspectResult=null;
   refresh();changed();
  }
  function setActive(v){
@@ -49,11 +56,11 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
  }
  function trigger(){
   if(!metric)configure(getMetric());
-  field=newLightField(metric,state);running=true;
+  field=newLightField(metric,state);running=true;state.selectedPhoton=clamp(state.selectedPhoton,0,field.rays.length-1);inspectResult=null;
   onAction?.('launch');refresh();changed();
  }
  function reset(){
-  field=null;running=false;refresh();changed();onAction?.('mount');
+  field=null;running=false;inspectResult=null;refresh();changed();onAction?.('mount');
  }
  function tick(dt,speed=1){
   if(!active||!running||!field)return;
@@ -88,6 +95,24 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
   $('field-status').textContent=running?'СВЕТОВЫЕ ГЕОДЕЗИЧЕСКИЕ · ИНТЕГРИРОВАНИЕ':
     field?'ЭКСПЕРИМЕНТ ОСТАНОВЛЕН / ПОВТОР ДОСТУПЕН':'ГОТОВО К ЗАПУСКУ · ДВЕ КООРДИНАТНЫЕ КАРТЫ';
   $('field-start').textContent=running?'Перезапустить пучок':'Запустить 3D-пучок';
+  const p=state.observerPoint;
+  $('field-location-region').value=p.l>=0?'A':'B';
+  $('field-location-distance').value=Math.abs(p.l);
+  $('field-location-distance-value').textContent=f(Math.abs(p.l),2)+'a';
+  $('field-location-longitude').value=p.longitude;
+  $('field-location-longitude-value').textContent=f(p.longitude,0)+'°';
+  $('field-location-latitude').value=p.latitude;
+  $('field-location-latitude-value').textContent=f(p.latitude,0)+'°';
+  $('field-probe-angle').value=state.probeAngle;
+  $('field-probe-angle-value').textContent=f(state.probeAngle,0)+'°';
+  $('field-photon-index').max=Math.max(1,field?.rays.length||1);
+  $('field-photon-index').value=clamp(state.selectedPhoton+1,1,field?.rays.length||1);
+  $('field-photon-index-value').textContent=(state.selectedPhoton+1)+' / '+(field?.rays.length||0);
+  $('field-take-photon').disabled=!field;
+  $('field-ray-measure').textContent=inspectResult?
+   'ИЗ '+inspectResult.sourceRegion+' → '+inspectResult.exit+' · b/a '+f(inspectResult.impact/metric.a,3)+' · '+inspectResult.passes+' переходов · H '+inspectResult.residual.toExponential(1):
+   'Выберите точку и проверьте исход луча. Геодезика рассчитывается из текущей точки.';
+  $('field-position-notice').textContent=positionNotice||'Метка соответствует реальному l и направлению на ареальной сфере выбранной области.';
  }
  function applyParameters(p={}){
   for(const [key,a,b]of [
@@ -97,7 +122,39 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
   state.count=Math.round(state.count);
   for(const key of ['showGrid','showRays','showConnections'])
    if(typeof p[key]==='boolean')state[key]=p[key];
+  if(p.observerPoint){
+   try{state.observerPoint=normalizeObserverPoint(p.observerPoint)}catch{}
+  }
+  if(Number.isFinite(p.probeAngle))state.probeAngle=clamp(p.probeAngle,0,180);
+  if(Number.isInteger(p.selectedPhoton))state.selectedPhoton=Math.max(0,p.selectedPhoton);
   configure(getMetric());save();
+ }
+ function setObserverPoint(value,notice=''){
+  const next=normalizeObserverPoint(value);
+  state.observerPoint=next;positionNotice=notice;inspectResult=null;
+  refresh();save();changed();
+ }
+ function takePhoton(index=state.selectedPhoton){
+  if(!field){positionNotice='Для выбора фотона сначала запустите пучок.';refresh();return false;}
+  const sample=lightFieldSamples(field,metric,{maxPoints:25})[clamp(index,0,field.rays.length-1)];
+  const selected=pointFromPhoton(sample);
+  setObserverPoint(selected.point,selected.displaced?
+   'Фотон находится вне допустимого радиуса камеры. Метка перенесена к ближайшей доступной позиции (|l|≤6a).':
+   'Метка установлена в текущую точку настоящей геодезической фотона №'+(index+1)+'.');
+  return true;
+ }
+ function checkRay(){
+  inspectResult=inspectObserverRay(metric,state.observerPoint,state.probeAngle*Math.PI/180);
+  refresh();onAction?.('mount');return inspectResult;
+ }
+ function openObserver(){
+  // The camera centre is the SAME local null direction as the inspector.
+  // For inward rays use the inward branch; outward rays use the opposite.
+  const theta=state.probeAngle*Math.PI/180;
+  onOpenObserver?.({point:{...state.observerPoint},view:{
+   ...cameraForRay(state.observerPoint,theta),
+   fov:80,mode:'combined',quality:'balanced',rayAngle:theta
+  }});
  }
  function sceneCamera(w,h){
   // Camera-fit the two finite coordinate domains, not a physical distortion.
@@ -119,11 +176,18 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
     }
    }
   }
+  // Keep the chosen physical observer visible even when placed beyond the
+  // reference shell radius; the physical position itself is never moved.
+  if(metric){
+   const marker=project3D(chartObserverPosition(metric,state.observerPoint).xyz,base,w,h);
+   ex=Math.max(ex,Math.abs(marker.x-w*.5));
+   ey=Math.max(ey,Math.abs(marker.y-h*.51));
+  }
   const fit=Math.min(1.10,(w*.46)/Math.max(ex,1),(h*.40)/Math.max(ey,1));
   return {yaw:state.yaw,pitch:state.pitch,zoom:state.zoom*fit};
  }
  function cacheStatic(ctx,w,h){
-  const key=[w,h,state.yaw.toFixed(4),state.pitch.toFixed(4),state.zoom.toFixed(4),state.showGrid,state.showConnections,metric.a,metric.shape,metric.shapeWidth].join('|');
+  const key=[w,h,state.yaw.toFixed(4),state.pitch.toFixed(4),state.zoom.toFixed(4),state.showGrid,state.showConnections,metric.a,metric.shape,metric.shapeWidth,state.observerPoint.l.toFixed(2),state.observerPoint.longitude.toFixed(1),state.observerPoint.latitude.toFixed(1)].join('|');
   if(staticLayer.key===key&&staticLayer.canvas)return staticLayer.canvas;
   const image=document.createElement('canvas');
   image.width=Math.ceil(w);image.height=Math.ceil(h);
@@ -177,8 +241,10 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
   // Photons are lifted to arbitrary spatial orbital planes; line fragments
   // are deliberately BROKEN at the chart boundary (the visual gap is not a
   // real length or travel time).
+  const camera=sceneCamera(w,h);
+  const observerPoint=chartObserverPosition(metric,state.observerPoint);
+  const marker=project3D(observerPoint.xyz,camera,w,h);
   if(field&&state.showRays){
-   const camera=sceneCamera(w,h);
    for(const item of lightFieldSamples(field,metric,{maxPoints:250})){
     const col=colors[item.index%colors.length];
     let points=[],oldRegion=null;
@@ -200,6 +266,12 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
     sceneCamera(w,h),w,h);
    ctx.fillStyle='#f0e7bc';ctx.beginPath();ctx.arc(p.x,p.y,4.3,0,Math.PI*2);ctx.fill();
   }
+  ctx.strokeStyle='#f3e5bb';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(marker.x,marker.y-11);ctx.lineTo(marker.x+9,marker.y);
+  ctx.lineTo(marker.x,marker.y+11);ctx.lineTo(marker.x-9,marker.y);ctx.closePath();
+  ctx.fillStyle='#f3e5b6cc';ctx.fill();ctx.stroke();
+  label(ctx,'КАМЕРА · '+observerPoint.chart+' / '+f(Math.abs(state.observerPoint.l),2)+'a',
+   marker.x,marker.y-24,w<520?8:10,'#f8e5b8','center',740);
   label(ctx,'ШОВ / СВЕТОВОЕ ПОЛЕ · 3D',14,24,w<520?10:14,'#e9e7c6','left',760);
   label(ctx,'СФЕРИЧЕСКАЯ СИММЕТРИЯ → ПЛОСКОСТИ ОРБИТ',14,43,w<520?8:10,'#b0c9b9');
   label(ctx,'РАЗНЕСЕНИЕ УСТЬЕВ НЕ В МАСШТАБЕ',14,h-38,w<520?9:11,'#d9b8a0');
@@ -208,7 +280,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
  function local(e){const rect=canvas.getBoundingClientRect();return{x:e.clientX-rect.left,y:e.clientY-rect.top};}
  canvas.addEventListener('pointerdown',e=>{
   if(!active||e.pointerType==='mouse'&&e.button!==0)return;
-  e.preventDefault();canvas.setPointerCapture(e.pointerId);touches.set(e.pointerId,local(e));
+  e.preventDefault();canvas.setPointerCapture(e.pointerId);touches.set(e.pointerId,local(e));pressStart.set(e.pointerId,local(e));
   if(touches.size>=2){const p=[...touches.values()];pinch={distance:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),zoom:state.zoom}}
  });
  canvas.addEventListener('pointermove',e=>{
@@ -223,7 +295,24 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
   }
   save();refresh();changed();
  });
- const end=e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null;save()};
+ const end=e=>{
+  const start=pressStart.get(e.pointerId),last=touches.get(e.pointerId);
+  const isClick=e.type==='pointerup'&&start&&last&&Math.hypot(last.x-start.x,last.y-start.y)<9&&touches.size===1;
+  if(isClick&&field&&metric){
+   const cam=sceneCamera(canvas.clientWidth||canvas.getBoundingClientRect().width,canvas.clientHeight||canvas.getBoundingClientRect().height);
+   const bounds=canvas.getBoundingClientRect(),w=bounds.width,h=bounds.height;
+   const samples=lightFieldSamples(field,metric,{maxPoints:12});
+   let chosen=-1,best=25;
+   for(const sample of samples){
+    const v=project3D(sample.current.position,cam,w,h);
+    const dist=Math.hypot(last.x-v.x,last.y-v.y);
+    if(dist<best){chosen=sample.index;best=dist;}
+   }
+   if(chosen>=0){state.selectedPhoton=chosen;takePhoton(chosen);}
+  }
+  touches.delete(e.pointerId);pressStart.delete(e.pointerId);
+  if(touches.size<2)pinch=null;save();
+ };
  for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,end);
  canvas.addEventListener('wheel',e=>{
   if(!active)return;e.preventDefault();state.zoom=clamp(state.zoom*(e.deltaY>0?.92:1.08),.55,1.65);
@@ -263,14 +352,36 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
    Object.assign(state,cameras[button.dataset.fieldCamera]||cameras.diagram);
    save();refresh();changed();onAction?.('mount');
   });
+ for(const [id,key,transform]of [
+  ['field-location-distance','l',Number],
+  ['field-location-longitude','longitude',Number],
+  ['field-location-latitude','latitude',Number]
+ ])$(''+id).addEventListener('input',e=>{
+  const p={...state.observerPoint};
+  const num=transform(e.target.value);
+  p[key]=key==='l'?Math.sign(p.l)*num:num;
+  setObserverPoint(p);
+ });
+ $('field-location-region').addEventListener('change',e=>{
+  setObserverPoint({...state.observerPoint,l:(e.target.value==='B'?-1:1)*Math.abs(state.observerPoint.l)});
+ });
+ $('field-probe-angle').addEventListener('input',e=>{
+  state.probeAngle=clamp(Number(e.target.value),0,180);inspectResult=null;refresh();save();
+ });
+ $('field-photon-index').addEventListener('input',e=>{
+  state.selectedPhoton=clamp(Math.round(Number(e.target.value))-1,0,Math.max(0,field?.rays.length-1));refresh();save();
+ });
+ $('field-take-photon').addEventListener('click',()=>takePhoton());
+ $('field-ray-test').addEventListener('click',checkRay);
+ $('field-open-observer').addEventListener('click',openObserver);
  $('field-start').addEventListener('click',trigger);
  $('field-reset').addEventListener('click',reset);
  return {
-  state,configure,setActive,trigger,reset,tick,draw,refresh,applyParameters,
+  state,configure,setActive,trigger,reset,tick,draw,refresh,applyParameters,setObserverPoint,takePhoton,checkRay,openObserver,
   get running(){return running},
   get snapshot(){return {
-   parameters:{...state},
-   statistics:stats(),
+   parameters:{...state,observerPoint:{...state.observerPoint}},
+   statistics:stats(),inspection:inspectResult?{...inspectResult}:null,
    coordinates:field?coordinateConsistency(field,metric):[],
    rays:field?lightFieldSamples(field,metric,{maxPoints:120}):[],
    assumptions:FIELD_ASSUMPTIONS.slice()
