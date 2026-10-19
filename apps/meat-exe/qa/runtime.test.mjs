@@ -26,6 +26,22 @@ test('auto quality stops oscillating across realistic 4-second FPS windows',()=>
  assert.equal(gpu.quality,'low');
  assert.equal(autoQualityWindow(gpu.state,'low',60,4,true).quality,'low');
 });
+test('speed-mode FPS cap permits upgrading after genuine 46-50 rendered FPS',()=>{
+ let q='low',state=initialAutoQuality();
+ for(let i=0;i<9;i++){
+  const result=autoQualityWindow(state,q,48,4);
+  state=result.state;q=result.quality;
+ }
+ assert.equal(q,'medium');
+ assert.ok(state.samples>=4);
+ q='low';state=initialAutoQuality();
+ for(let i=0;i<14;i++){
+  const result=autoQualityWindow(state,q,43,4);
+  state=result.state;q=result.quality;
+ }
+ assert.equal(q,'low','43 real frames/s is not enough for recovering detail');
+});
+
 test('GPU budgets reject leaked chunks and remain correct under realistic samples',()=>{
  const baseline={visibleChunks:9,instancedLive:235,gpuGeometries:140,layoutCache:80,tissueCache:42};
  assert.deepEqual(runtimeBudget(baseline),{ok:true,reason:'bounded'});
@@ -66,7 +82,7 @@ test('full campaign transition ledger cannot deadlock and guarantees three diffe
    }
   }
   assert.equal(ordinary,111);
-  assert.equal(guardians,3);
+  assert.equal(guardians,4);
   assert.equal(pulseStats(seed).enemies,111);
   simulated++;
  }
