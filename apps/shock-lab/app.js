@@ -136,11 +136,35 @@ function resizeField(){
   for(const c of [canvas,overlay]){c.width=paintW;c.height=paintH;}
   const nx=clamp(Math.round(stageW/5.4),86,156);
   const ny=clamp(Math.round(nx*stageH/stageW),54,125);
+  const oldField=sim,oldTubeReady=tubeReady;
   sim=new ShockField(nx,ny);
   raster.width=nx;raster.height=ny;image=rg.createImageData(nx,ny);
-  rebuildGeometry();resetGas(true);
+  rebuildGeometry();
+  if(!oldField)resetGas(true);
+  else if(oldTubeReady){
+    sim.loadTube(state.ratio);
+    tubeReady=true;setActive(false);
+    trace.clear();trace.record(sim,true);
+  }else{
+    // Remap conserved quantities by normalised chamber coordinates. A resize
+    // preserves a running experiment instead of silently resetting the gas.
+    // Sensor histories are cleared because changing cell scale invalidates
+    // the formerly measured arrival speeds.
+    for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
+      const i=y*nx+x;if(sim.solid[i])continue;
+      const ox=Math.round(x*(oldField.nx-1)/Math.max(1,nx-1));
+      const oy=Math.round(y*(oldField.ny-1)/Math.max(1,ny-1));
+      const oldI=oy*oldField.nx+ox;if(oldField.solid[oldI])continue;
+      for(let j=0;j<4;j++)sim.U[i*4+j]=oldField.U[oldI*4+j];
+    }
+    sim.V.set(sim.U);
+    sim.time=oldField.time;
+    sim.maxPressure=oldField.maxPressure;
+    trace.clear();trace.record(sim,true);
+  }
+  refreshControls();updateMetrics();
   lastFrame=0;accumulator=0;
-  render();
+  render();drawScope();
 }
 function getPosition(ev){
   const rect=display.getBoundingClientRect();
