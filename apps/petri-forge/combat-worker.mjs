@@ -1,9 +1,14 @@
 import {ARENAS,LOADOUTS,SKILLS,makePolicy,validPolicy,mutatePolicy,simulateBattle} from './combat-core.mjs';
+import {validateCombatRules} from './combat-rules.mjs';
 
 let job=null,policy=makePolicy('aggressive',17);
 const emit=(type,data={})=>postMessage({type,...data});
 const validLoadout=loadout=>LOADOUTS[loadout]||Array.isArray(loadout)&&loadout.length>0&&loadout.length<=4&&loadout.every(k=>Object.hasOwn(SKILLS,k));
-const validConfig=config=>ARENAS.some(a=>a.id===config?.arena)&&[1,2].includes(config?.teamSize)&&validLoadout(config?.ownLoadout)&&validLoadout(config?.enemyLoadout);
+const validConfig=config=>{
+ if(!ARENAS.some(a=>a.id===config?.arena)||![1,2].includes(config?.teamSize)||!validLoadout(config?.ownLoadout)||!validLoadout(config?.enemyLoadout))return false;
+ try{if(config.rules)validateCombatRules(config.rules);return true;}catch{return false;}
+};
+const battleRules=(config,reverse)=>config.rules?{...config.rules,teams:reverse?config.rules.teams.slice().reverse():config.rules.teams}:null;
 
 const evaluate=(policy,config,seed,episodes=4)=>{
  let score=0,wins=0,damage=0;
@@ -12,7 +17,7 @@ const evaluate=(policy,config,seed,episodes=4)=>{
   const opponent=makePolicy(['balanced','evasive','support','aggressive'][i%4],source+71);
   const policies=reverse?[opponent,policy]:[policy,opponent];
   const loadouts=reverse?[config.enemyLoadout,config.ownLoadout]:[config.ownLoadout,config.enemyLoadout];
-  const {summary}=simulateBattle({arena:config.arena,teamSize:config.teamSize,seed:source,maxSeconds:config.maxSeconds||23,loadouts,policies});
+  const {summary}=simulateBattle({arena:config.arena,teamSize:config.teamSize,seed:source,maxSeconds:config.maxSeconds||23,loadouts,policies,rules:battleRules(config,reverse)});
   const team=reverse?1:0,other=1-team;
   const won=summary.winner===team;
   wins+=Number(won);damage+=summary.damage[team];
@@ -24,7 +29,7 @@ const evaluate=(policy,config,seed,episodes=4)=>{
 function makeReplay(config,current,seed){
  const options={arena:config.arena,teamSize:config.teamSize,seed,maxSeconds:30,
  loadouts:[config.ownLoadout,config.enemyLoadout],policies:[current,makePolicy('balanced',seed+45)]};
- return simulateBattle(options,true);
+ return simulateBattle({...options,rules:battleRules(config,false)},true);
 }
 function iterate(){
  const active=job;if(!active)return;
@@ -82,7 +87,7 @@ onmessage=({data})=>{
      for(let i=0;i<12;i++){
        const reverse=i%2===1,rival=makePolicy(style,seed+index*29+i*301),policies=reverse?[rival,policy]:[policy,rival];
        const loadouts=reverse?[config.enemyLoadout,config.ownLoadout]:[config.ownLoadout,config.enemyLoadout];
-       const {summary}=simulateBattle({arena:config.arena,teamSize:config.teamSize,seed:seed+index*10003+Math.floor(i/2)*701,loadouts,policies,maxSeconds:30});
+       const {summary}=simulateBattle({arena:config.arena,teamSize:config.teamSize,seed:seed+index*10003+Math.floor(i/2)*701,loadouts,policies,maxSeconds:30,rules:battleRules(config,reverse)});
        const team=reverse?1:0;
        wins+=Number(summary.winner===team);
        points+=summary.damage[team]-summary.damage[1-team];
