@@ -64,7 +64,8 @@ function attend(s,entries){
 function record(s,c,kind,message,subjects,notify){
  notifyEvent(notify,kind,message,c.cause||'Запись общинного суда: права и реальные ресурсы проверены',
   subjects,{caseId:c.id,kind:c.kind,communityId:c.communityId,disposition:c.disposition,
-   officerId:c.officerId,grainKg:c.grainKg||0,paidCoin:c.paidCoin||0,debts:c.debts||[]});
+   officerId:c.officerId,grainKg:c.grainKg||0,paidCoin:c.paidCoin||0,
+   debts:(c.debts||[]).map(d=>({...d}))});
 }
 function fileLandCases(s,notify){
  const reg=ensure(s);
