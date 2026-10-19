@@ -56,6 +56,12 @@ function choices(){
  for(const n of x.counts){const o=document.createElement('option');o.value=String(n);o.textContent=fmt(n)+' '+x.units;batch.append(o);}
  select.value=x.first;batch.value=String(x.counts[1]);
 }
+function choices(){
+ const data=cfg[mode],select=$('hubVariant'),batch=$('hubBatch');select.replaceChildren();batch.replaceChildren();
+ for(const [value,label] of data.variants){const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option);}
+ for(const n of data.counts){const option=document.createElement('option');option.value=String(n);option.textContent=fmt(n)+' '+data.units;batch.append(option);}
+ select.value=data.first;batch.value=String(data.counts[1]||data.counts[0]);
+}
 async function persist(c,domain){
  const r=runtime()[domain];if(!r||r.isBusy?.())return;
  const snapshot=await r.getModel();if(snapshot)await writeBrain(c,domain,snapshot);
