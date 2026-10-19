@@ -3541,8 +3541,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "bf5f654896b50a02c1c80ca6019f3308d775d40d",
-    "qualityScore": 61,
+    "revision": "bd8a4f9612cec977063b965bc0ce1590e98d20a2",
+    "qualityScore": 62,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3555,12 +3555,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "b2137ccc7bf0b7031ee27966d6a652f9fd4add360729a7120b800608fd38e266",
+    "sha256": "73316767e459b5ddb617c8e4b7dc113d8baab4a509d300940f2f6296fdaedff6",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "bf5f654896b50a02c1c80ca6019f3308d775d40d",
-    "lastAttemptAt": "2026-10-19T12:22:39.864Z"
+    "lastAttemptRevision": "bd8a4f9612cec977063b965bc0ce1590e98d20a2",
+    "lastAttemptAt": "2026-10-19T13:08:00.442Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3600,9 +3600,9 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "96950a6bb63ee8b575d36b82f7e37bbd391cef5c",
-    "lastAttemptAt": "2026-10-19T12:06:39.892Z",
-    "revision": "96950a6bb63ee8b575d36b82f7e37bbd391cef5c",
+    "lastAttemptRevision": "38d646f981b6a8ed0ada73a6388cd1e4faaeac49",
+    "lastAttemptAt": "2026-10-19T13:08:11.290Z",
+    "revision": "38d646f981b6a8ed0ada73a6388cd1e4faaeac49",
     "qualityScore": 55,
     "visionScore": null,
     "prepared": false,
@@ -3743,7 +3743,7 @@
     "lastAttemptAt": "2026-10-19T10:16:36.235Z"
   },
   "trace-mosaic": {
-    "revision": "a9613de65f34616a9f8fe4fa75bf7425f4afa16f",
+    "revision": "db9370060a8de31ee2b935618b2794d0291fce9b",
     "qualityScore": 67,
     "visionScore": null,
     "prepared": false,
@@ -3751,12 +3751,12 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "81ed538122f2a43454628939693ba963c216768b6802a996925180747ef2de42",
+    "sha256": "f4cc7ecb14940de8f785a930d8330f799a549515cdc8566320a299ba217e46d4",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "a9613de65f34616a9f8fe4fa75bf7425f4afa16f",
-    "lastAttemptAt": "2026-10-19T13:00:17.109Z",
+    "lastAttemptRevision": "db9370060a8de31ee2b935618b2794d0291fce9b",
+    "lastAttemptAt": "2026-10-19T13:07:48.446Z",
     "note": "existing cover rated higher"
   },
   "crown-laws": {
