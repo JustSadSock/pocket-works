@@ -41,6 +41,8 @@ export function mountAgentCockpit(api){
   profileOptions();
   const current=v.mode,setting=v.config[current],variant=$('hubVariant').selectedOptions[0]?.textContent||'Сцена';
   $('cpGoal').textContent=variant;
+  $('cpTrainingCount').textContent=v.active.branches[current].sessions+' '+(v.active.branches[current].sessions===1?'тренировка':'тренировок');
+  $('cpLastResult').textContent=v.active.branches[current].history.at(-1)?.label||'Пока без опыта. Нажмите «Обучить», чтобы агент начал учиться.';
   $('cpBatchLabel').textContent=fmt($('hubBatch').value)+' '+setting.units;
   $('cpTrainLabel').textContent=v.active.branches[current].sessions?'Продолжить обучение':'Обучить агента';
   $('cpStop').hidden=!v.busy;$('cpTrain').hidden=v.busy;
@@ -53,12 +55,12 @@ export function mountAgentCockpit(api){
   $('cpState').textContent=v.busy?$('hubProgressText').textContent:v.lastEval||v.active.branches[current].history.at(-1)?.label||'Выберите задачу и начните обучение.';
   $('cpBar').hidden=!v.busy;
   if(v.busy)$('cpBarFill').style.width=$('hubProgressFill').style.width;
-  $('cpScenario').replaceChildren();
-  for(const [value,text] of setting.variants){const o=document.createElement('option');o.value=value;o.textContent=text;$('cpScenario').append(o);}
-  $('cpScenario').value=$('hubVariant').value;
-  $('cpBatch').replaceChildren();
-  for(const n of setting.counts){const o=document.createElement('option');o.value=String(n);o.textContent=fmt(n)+' '+setting.units;$('cpBatch').append(o);}
-  $('cpBatch').value=$('hubBatch').value;
+  $('cpScenario').replaceChildren();$('cpQuickScenario').replaceChildren();
+  for(const [value,text] of setting.variants){for(const id of ['cpScenario','cpQuickScenario']){const o=document.createElement('option');o.value=value;o.textContent=text;$(id).append(o);}}
+  $('cpScenario').value=$('hubVariant').value;$('cpQuickScenario').value=$('hubVariant').value;
+  $('cpBatch').replaceChildren();$('cpQuickBatch').replaceChildren();
+  for(const n of setting.counts){for(const id of ['cpBatch','cpQuickBatch']){const o=document.createElement('option');o.value=String(n);o.textContent=fmt(n)+' '+setting.units;$(id).append(o);}}
+  $('cpBatch').value=$('hubBatch').value;$('cpQuickBatch').value=$('hubBatch').value;
   $('cpSetupHelp').textContent=current==='grid'?'Эпизод — одна попытка пройти мир. Повторное обучение продолжит изученную Q-таблицу.':
    current==='combat'?'Поколение — серия боёв. Агент сохраняет только выбранные изменения тактики.':
    current==='race'?'Кандидат — новый вариант управления настоящим автомобилем.':
@@ -72,6 +74,12 @@ export function mountAgentCockpit(api){
  $('cpExpert').onclick=()=>{closeAll();api.expert();};
  $('cpSetup').onclick=()=>{$('cpSetupDialog').showModal();};
  $('cpScenario').onchange=e=>{api.updateChoice('variant',e.target.value);$('cpGoal').textContent=e.target.selectedOptions[0]?.textContent||'Сцена';};
+ $('cpQuickScenario').onchange=e=>api.updateChoice('variant',e.target.value);
+ $('cpQuickBatch').onchange=e=>api.updateChoice('batch',e.target.value);
+ $('cpGuide').onclick=()=>{
+  $('cpSetupDialog').showModal();
+  $('cpSetupHelp').textContent='Выберите задачу и число попыток. «Обучить» улучшает сохранённый мозг. «Проверить» запускает испытание без обучения. «Бой агентов» сравнивает двух персонажей. Профиль хранит и экспортирует их опыт.';
+ };
  $('cpBatch').onchange=e=>api.updateChoice('batch',e.target.value);
  $('cpEditWorld').onclick=()=>{closeAll();api.expert();};
  $('cpProfile').onclick=()=>{drawProfile();$('cpProfileStatus').textContent='';$('cpProfileDialog').showModal();};
