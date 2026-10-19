@@ -23,9 +23,19 @@
     "spatialRationale": "The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field. This keeps the current game object and its real inputs spatially connected on a phone.",
     "comparisons": [
       {
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
+      },
+      {
         "slug": "meat-exe",
         "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
         "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
+      },
+      {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
       },
       {
         "slug": "cavitation-lab",
@@ -36,16 +46,6 @@
         "slug": "not-dead-yet",
         "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
         "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
-      },
-      {
-        "slug": "perekos",
-        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
-        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
-      },
-      {
-        "slug": "fog-of-conquest",
-        "spatialDifference": "fog-of-conquest uses full-bleed-world and diegetic-tools. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
-        "interactionDifference": "fog-of-conquest uses contextual with scene-zoom. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
       }
     ]
   },
