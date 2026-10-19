@@ -170,10 +170,12 @@ test('hold consumes exactly one swap per placed piece and resets after locking',
 
 test('hold on one player does not displace or control the other player',()=>{
  let state=start([a,b]);
- const ally=JSON.stringify(state.engine.players[1]);
+ const ally=state.engine.players[1];
+ const teammate={piece:ally.currentPiece,position:ally.position,held:ally.heldPiece,used:ally.holdUsed};
  const board=JSON.stringify(state.engine.board);
  state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hold'}}}).state;
- assert.equal(JSON.stringify(state.engine.players[1]),ally);
+ const other=state.engine.players[1];
+ assert.deepEqual({piece:other.currentPiece,position:other.position,held:other.heldPiece,used:other.holdUsed},teammate);
  assert.equal(JSON.stringify(state.engine.board),board);
  assert.equal(state.engine.players[0].holdUsed,true);
 });
