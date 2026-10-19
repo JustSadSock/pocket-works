@@ -102,3 +102,5 @@ body.hub-on.hub-advanced #agentHub{display:none!important}
 }
 @media(max-width:370px){#agentHub .cockpit-heading{display:none}#agentHub .cockpit-mode-pair button{font-size:10px;padding:4px 5px}}
 @media(prefers-reduced-motion:reduce){#agentHub .cockpit *{transition:none!important}}
+
+#agentHub .cockpit [hidden]{display:none!important}
