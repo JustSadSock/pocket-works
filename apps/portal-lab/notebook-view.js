@@ -19,8 +19,16 @@ export function createNotebook(canvas,{onSave,onRestore,onAction,onDirty}={}){
  }catch(e){message='Предыдущий журнал повреждён. Старые записи не изменялись.';}
  const store=()=>{
   try{localStorage.setItem(key,JSON.stringify({schema:NOTEBOOK_SCHEMA,records}));return true;}
-  catch(e){message='Не удалось сохранить журнал: память устройства заполнена.';return false;}
+  catch(e){message='Не удалось сохранить журнал: память устройства заполнена или запрещена.';return false;}
  };
+ /** Make local disk confirmation part of every archive mutation. */
+ function commit(next,success){
+  const old=records;
+  records=next;
+  if(!store()){records=old;return false;}
+  message=success;
+  return true;
+ }
  const latest=()=>records.at(-1);
  const find=id=>records.find(r=>r.id===id);
  const visible=()=>filter==='all'?records:records.filter(x=>x.mode===filter);
@@ -40,10 +48,9 @@ export function createNotebook(canvas,{onSave,onRestore,onAction,onDirty}={}){
   const record=createRecord({...input,
    id:'exp-'+now.toString(36)+'-'+(++recordsTimestamp).toString(36),
    at:now,title:recordName(input.mode)});
-  records=appendRecord(records,record);
+  if(!commit(appendRecord(records,record),'Опыт сохранён вместе с настройками и измерениями.')){render();return false;}
   selected=record.id;if(!left)left=record.id;
   right=record.id;filter='all';confirmDelete='';confirmClear=false;
-  store();message='Опыт сохранён вместе с настройками и измерениями.';
   onAction?.('mount');render();return true;
  }
  function restore(id){
@@ -155,21 +162,22 @@ export function createNotebook(canvas,{onSave,onRestore,onAction,onDirty}={}){
  });
  $('notebook-restore').addEventListener('click',()=>restore(selected));
  $('notebook-rename').addEventListener('click',()=>{
-  try{records=renameRecord(records,selected,$('notebook-title').value);store();message='Название изменено.';}
+  try{commit(renameRecord(records,selected,$('notebook-title').value),'Название изменено.');}
   catch(e){message=e.message;}render();
  });
  $('notebook-delete').addEventListener('click',()=>{
   if(!find(selected))return;
   if(confirmDelete!==selected){confirmDelete=selected;render();return;}
-  records=removeRecord(records,selected);selected=latest()?.id||'';
+  if(!commit(removeRecord(records,selected),'Опыт удалён.')){render();return;}
+  selected=latest()?.id||'';
   if(!find(left))left='';if(!find(right))right='';
-  confirmDelete='';store();message='Опыт удалён.';render();
+  confirmDelete='';render();
  });
  $('notebook-clear').addEventListener('click',()=>{
   if(!records.length)return;
   if(!confirmClear){confirmClear=true;render();return;}
-  records=[];selected=left=right='';confirmClear=false;store();
-  message='Журнал очищен.';render();
+  if(!commit([],'Журнал очищен.')){render();return;}
+  selected=left=right='';confirmClear=false;render();
  });
  $('notebook-export').addEventListener('click',()=>{
   if(records.length)exportFile(exportNotebook(records),'shov-experiments-v1.json');
@@ -182,9 +190,10 @@ export function createNotebook(canvas,{onSave,onRestore,onAction,onDirty}={}){
   try{
    if(file.size>250000)throw Error('Файл больше 250 КБ');
    const data=await file.text();
-   records=importNotebook(data,records,'merge');store();
-   selected=records.at(-1)?.id||'';filter='all';
-   message='Импорт завершён: '+records.length+' записей.';
+   const merged=importNotebook(data,records,'merge');
+   if(commit(merged,'Импорт завершён: '+merged.length+' записей.')){
+    selected=records.at(-1)?.id||'';filter='all';
+   }
   }catch(e){message='Импорт отклонён: '+e.message;}
   input.value='';render();
  });
