@@ -158,10 +158,10 @@ combatWorker.onmessage=async event=>{
    }
    status('Турнир завершён');
   }else if(d.type==='combat-set-done'){battlePolicy=d.policy;status('Боевой мозг загружен');}
-  else if(d.type==='combat-error'){setBattleBusy(false);status('Ошибка боя: '+d.message);}
+  else if(d.type==='combat-error'){setBattleBusy(false);status('Ошибка боя: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'combat',message:d.message}}));}
  }catch(e){notifyError(e);}
 };
-combatWorker.addEventListener('error',()=>{setBattleBusy(false);status('Ошибка боевого Worker');});
+combatWorker.addEventListener('error',()=>{setBattleBusy(false);status('Ошибка боевого Worker');window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'combat',message:'Боевой вычислительный модуль не отвечает'}}));});
 $('battleTrain').onclick=()=>{
  try{
   stopPlayback();const config=sceneConfig();
@@ -276,7 +276,7 @@ window.addEventListener('message',async event=>{
    status('Проверка на гоночной трассе завершена');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'race',text:$('raceReport').textContent}}));
   }else if(d.type==='loaded'){racePolicy=d.policy;status('Гоночная модель загружена');}
   else if(d.type==='previewed'){$('raceFrameCount').textContent=(Number(d.frame)+1)+' / '+d.total;}
-  else if(d.type==='error'){raceLock(false);status('Шпилька: '+d.message);}
+  else if(d.type==='error'){raceLock(false);status('Шпилька: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'race',message:d.message}}));}
  }catch(e){notifyError(e);}
 });
 function updateRaceReplay(replay){
