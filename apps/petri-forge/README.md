@@ -1,13 +1,37 @@
-# PetriForge
+# PetriForge 0.2 — лаборатория обучаемых агентов
 
-Port of the recovered Petri-forge cloud build. A 30×20 grid editor with brush, line, rectangle, flood fill, pipette, undo/redo, procedural maps, draggable spawn/goal and a Random or Q-learning agent running in a Worker.
+Самостоятельное приложение PocketWorks. Существующий редактор 30×20 сохранён, но теперь агент обучается на тысячах эпизодов, а не только шагает по клеткам.
 
-Run from the PocketWorks static server. No external service is required. Scene storage is isolated at `pocket-works:petri-forge:scene`. Explicit Save/Load preserve the authored grid; resetting restarts an episode. Drag the blue start or green goal to relocate it. The environment selector exposes generators on touch devices.
+## Запуск эксперимента
 
-The port retains original learning rules. It fixes fractional indices in room generation, pointer coordinate scaling, out-of-bounds endpoint dragging and unbounded worker request queues. Hidden tabs pause simulation. Network multiplayer is not part of this project.
+1. Откройте один из **6 сценариев** (либо нарисуйте свой), задайте seed и количество эпизодов.
+2. Выберите **Q-learning** и нажмите **Обучить мозг**. Обучение выполняется в отдельном модульном Web Worker; карта не перерисовывается на каждом шаге. Кнопка **Стоп** завершает текущую серию, сохраняя уже выученную таблицу.
+3. График показывает успешность последних попыток (окно до 80), три метрики показывают прогресс всей серии. По окончании доступны лучший и худший повтор, а также тепловая карта посещений (замеры по выбранным эпизодам).
+4. **Проверить на новых мирах**: 20 оценок на текущей карте и 30 на новых seed того же шаблона. Оценка использует копию весов и не меняет мозг; для собственного нарисованного мира второй набор испытаний — шаблон «Первый маршрут», а не автоматически изменённая версия пользовательской карты.
+5. **Библиотека мозгов**: каждая завершённая/остановленная серия автоматически сохраняется как «Автосохранение». Можно сохранить именованный чекпоинт, загрузить после перезапуска, удалить с подтверждением, экспортировать/импортировать безопасный JSON.
 
-## План развития
+Сохранение мира («Сохр. мир») и сохранение мозга **разделены**. Мир по старому ключу `pocket-works:petri-forge:scene` остаётся совместимым с 0.1. Модели хранятся в IndexedDB `pocket-works:petri-forge:models`. При отказе хранилища приложение сообщает об этом; экспорт JSON позволяет сохранить модель вручную. Импорт Q-learning проверяет схему и значения таблицы перед принятием файла.
 
-[Полная дорожная карта PetriForge](../../docs/PETRIFORGE-ROADMAP.md): Этап 0 — циклы обучения, оценка и сохранение мозгов; Этап 1 — **Шпилька** как первая внешняя игра плюс настоящий дуэльный полигон; Этап 2 — конструктор боевых систем; Этап 3 — подключение **Перекоса**; затем нейросети, физические миры и библиотека переносимых агентов.
+## Правила
 
-Roadmap describes **planned** features. Current 0.1.0 implementation remains the simple grid/Random/Q-learning lab; no Shpilka or combat adapter is shipped yet.
+- Чистый модуль `lab-core.mjs`: seed-генераторы карт, состояние среды, награды, Random и Q-learning, сериализация моделей, replay traces. Обучение и оценка не зависят от Canvas или DOM.
+- `lab-worker.mjs`: контролируемые батчи, остановка между батчами, отсутствие лавины асинхронных запросов на каждый тик.
+- `model-store.mjs`: IndexedDB с транзакциями.
+- Визуальный мир 30×20, кисть, прямая, прямоугольник, заливка, пипетка, undo/redo одним жестом, процедурные генераторы, перенос старта/цели, управление клавиатурой и касанием.
+- Награда: достижение цели (+8), стоимость шага, штраф за стену/опасность, одноразовые награды, небольшой бонус приближения к цели. Успех измеряется **достижением цели**, не суммой наград. Самообучение на новых мирах в ходе одной серии пока не реализовано: серия изучает текущий мир и разные точки старта, а новые карты служат независимым тестом обобщения.
+- Это табличный Q-learning, **не нейросеть**. Настоящие DQN/PPO и межигровые среды запланированы отдельно.
+
+## Тесты и проверка
+
+```sh
+node --test apps/petri-forge/tests/lab-core.test.mjs
+npx playwright test apps/petri-forge/qa/experiments.spec.js
+npm run registry:check
+npm run validate:updates
+```
+
+В репозиторий добавлены unit- и Playwright-сценарии. При публикации необходимо проверить desktop Chromium и WebKit, portrait/landscape iPhone, IndexedDB после перезапуска, обновление Service Worker и офлайн-перезапуск. Наличие тестов в репозитории **не означает**, что полный браузерный прогон уже выполнен.
+
+## Дальнейшая разработка
+
+[Полная дорожная карта](../../docs/PETRIFORGE-ROADMAP.md). Следующий большой этап — реальная интеграция с физикой **Шпильки** и первая дуэльная арена агентов внутри PetriForge; далее конструктор боевых систем и подключение **Перекоса**. Эти функции в версии 0.2 ещё не представлены.
