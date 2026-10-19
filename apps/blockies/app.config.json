@@ -5,11 +5,14 @@
   "name": "Blockies",
   "shortName": "Blockies",
   "description": "Совместная аркада с падающими блоками, общим полем и серверными правилами.",
-  "version": "0.1.0",
-  "releaseDate": "2026-10-18",
-  "releaseDateTime": "2026-10-18T20:45:00Z",
+  "version": "0.1.8",
+  "releaseDate": "2026-10-19",
+  "releaseDateTime": "2026-10-20T09:30:00Z",
   "changelog": [
-    "Перенесена исходная игра с сохранением правил и отдельным хранением данных."
+    "Повтор партии: запись игровых кадров, шкала времени, воспроизведение, сохранение и импорт JSON.",
+    "Двухклиентское WebSocket-тестирование Blockies с отключением и восстановлением сессии.",
+    "Node Pocket Server передаёт актуальные состояния матча и поддерживает автономное серверное время.",
+    "Добавлены безопасный формат повтора и ограничения его размера."
   ],
   "status": "experimental",
   "preset": "canvas",
@@ -17,7 +20,7 @@
   "backgroundColor": "#121922",
   "themeColor": "#121922",
   "orientation": "portrait",
-  "cacheName": "blockies-v0.1.0",
+  "cacheName": "blockies-v0.1.8",
   "storageNamespace": "pocket-works:blockies",
   "tags": [
     "game",

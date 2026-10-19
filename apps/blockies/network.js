@@ -1,24 +1,175 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
+
 class NetworkManager {
- constructor(){this.callbacks={};this.connected=false;this.currentRoom=null;this.socket={id:null};this.started=false;this.timer=null;}
- on(type,f){this.callbacks[type]=f;} trigger(type,p){this.callbacks[type]?.(p);}
- async connect(){if(this.connected)return;if(this.connecting)return this.connecting;const storage={getItem:k=>sessionStorage.getItem('pocket-works:blockies:'+k),setItem:(k,v)=>sessionStorage.setItem('pocket-works:blockies:'+k,v),removeItem:k=>sessionStorage.removeItem('pocket-works:blockies:'+k)};
- this.net=new PocketNet({serverUrl:location.origin+'/pocketnet',name:document.querySelector('#nickname-input').value||'Игрок',storage});
- this.net.on('connected',m=>{this.socket.id=m.player.id;this.connected=true;this.trigger('connect');});
- this.net.on('room_joined',m=>{this.code=m.roomId.slice(0,8).toUpperCase();this.apply(m.state,true);});
- this.net.on('game_event',m=>{if(m.event.type==='state')this.apply(m.event.payload);});
- this.net.on('error',m=>this.trigger('error',m.message||m.code||'Ошибка сети'));
- this.net.on('disconnected',()=>{this.connected=false;this.trigger('disconnect');});
- this.connecting=this.net.connect().catch(e=>this.trigger('error',e.message)).finally(()=>this.connecting=null);return this.connecting;}
- apply(s,joined=false){const room={...s,id:this.code,name:'Blockies · '+this.code,maxPlayers:4,gameStarted:s.started,availableColors:['#FF1493','#00D9FF','#FFDB58','#39FF14'].filter(c=>!s.players.some(p=>p.color===c))};this.currentRoom=room;document.querySelector('#pocket-room-code').textContent=this.code;
- if(joined)this.trigger(this.creating?'roomCreated':'roomJoined',room);else this.trigger('roomUpdate',room);
- if(s.started&&!this.started){this.started=true;this.trigger('gameStart',{players:s.players,seed:s.seed});clearInterval(this.timer);this.timer=setInterval(()=>{if(!document.hidden&&this.connected)this.send({type:'pulse'});},100);}
- if(s.engine)this.trigger('snapshot',s.engine);
- if(!s.started&&this.started){this.started=false;clearInterval(this.timer);window.uiManager.isOnlineMode=false;window.uiManager.showScreen('onlineLobby');this.trigger('roomJoined',room);}
- }
- send(p){try{this.net.sendGame(p);}catch(e){this.trigger('error',e.message);}}
- createRoom(){this.creating=true;this.net.createRoom('blockies',{});}joinRoom(code){this.creating=false;this.net.joinRoom(code);}leaveRoom(){clearInterval(this.timer);this.started=false;this.net.leaveRoom();this.currentRoom=null;this.trigger('leftRoom');}
- changeColor(color){this.send({type:'color',color});}toggleReady(){this.send({type:'ready'});}setNickname(name){if(this.currentRoom)this.send({type:'nickname',name});}
- sendPlayerInput(input){this.send({type:'input',input});}sendGameState(){}disconnect(){clearInterval(this.timer);this.net?.close();this.connected=false;}
+  constructor() {
+    this.callbacks={};
+    this.connected=false;
+    this.currentRoom=null;
+    this.socket={id:null};
+    this.started=false;
+    this.inGameUI=false;
+    this.timer=null;
+    this.phase='lobby';
+    this.moduleVersion=null;
+    this.currentRound=null;
+    this.lastRevision=-1;
+    this.connecting=null;
+  }
+  on(type,fn){this.callbacks[type]=fn;}
+  trigger(type,payload){this.callbacks[type]?.(payload);}
+  async connect(){
+    if(this.connected)return;
+    if(this.connecting)return this.connecting;
+    const storage={
+      getItem:key=>sessionStorage.getItem('pocket-works:blockies:'+key),
+      setItem:(key,value)=>sessionStorage.setItem('pocket-works:blockies:'+key,value),
+      removeItem:key=>sessionStorage.removeItem('pocket-works:blockies:'+key)
+    };
+    this.net=new PocketNet({
+      serverUrl:location.origin+'/pocketnet',
+      name:document.querySelector('#nickname-input')?.value||'Игрок',
+      storage
+    });
+    this.net.on('connected',msg=>{
+      this.socket.id=msg.player.id;
+      this.connected=true;
+      this.trigger('connect');
+    });
+    this.net.on('room_joined',msg=>{
+      if(msg.roomId.slice(0,8).toUpperCase()!==this.code) {
+        this.lastRevision=-1;
+        this.currentRound=null;
+      }
+      this.moduleVersion=msg.version||null;
+      this.code=msg.roomId.slice(0,8).toUpperCase();
+      this.apply(msg.state,true);
+    });
+    this.net.on('game_event',msg=>{
+      // Queued packets from a room we have just left must not reopen an old match.
+      if(msg.roomId!==this.net.roomId)return;
+      if(msg.event?.type==='state')this.apply(msg.event.payload);
+    });
+    this.net.on('error',msg=>this.trigger('error',msg.message||msg.code||'Ошибка сети'));
+    this.net.on('disconnected',()=>{
+      this.connected=false;
+      this.stopPulse();
+      this.trigger('disconnect');
+    });
+    this.connecting=this.net.connect().catch(error=>this.trigger('error',error.message))
+      .finally(()=>this.connecting=null);
+    return this.connecting;
+  }
+  stopPulse(){
+    if(this.timer!=null)clearInterval(this.timer);
+    this.timer=null;
+  }
+  startPulse(){
+    // v6+ advances on Durable Object alarms; client pulses only remain for
+    // pre-v6 rooms created before the upgrade.
+    if(Number(this.moduleVersion?.slice(1))>=6){
+      this.stopPulse();
+      return;
+    }
+    if(this.timer!=null)return;
+    this.timer=setInterval(()=>{
+      if(!document.hidden&&this.connected&&this.started)this.send({type:'pulse'});
+    },100);
+  }
+  apply(snapshot,joined=false){
+    if(!snapshot||!Array.isArray(snapshot.players))return;
+    // A reordered snapshot from an old round must never replace current state.
+    // Rejoins explicitly accept an equal revision to restore the visible screen.
+    if(!joined && Number.isInteger(snapshot.revision) &&
+       snapshot.revision<=this.lastRevision)return;
+    if(Number.isInteger(snapshot.revision))this.lastRevision=snapshot.revision;
+    if(Number.isInteger(snapshot.round))this.currentRound=snapshot.round;
+    const phase=snapshot.phase || (snapshot.started?'playing':'lobby');
+    this.phase=phase;
+    const room={...snapshot,id:this.code,name:'Blockies · '+this.code,maxPlayers:4,
+      gameStarted:phase==='playing',
+      availableColors:['#FF1493','#00D9FF','#FFDB58','#39FF14']
+        .filter(color=>!snapshot.players.some(p=>!p.departed&&p.color===color))};
+    this.currentRoom=room;
+    const code=document.querySelector('#pocket-room-code');
+    if(code)code.textContent=this.code||'';
+    // Reconnecting into an active match must never move the player to the lobby.
+    if(joined&&phase==='lobby')this.trigger(this.creating?'roomCreated':'roomJoined',room);
+    else if(!joined)this.trigger('roomUpdate',room);
+
+    if(phase==='playing'){
+      if(!this.started||!this.inGameUI){
+        this.inGameUI=true;
+        this.started=true;
+        this.trigger('gameStart',{players:room.players,seed:room.seed});
+      }
+      this.started=true;
+      this.startPulse();
+      if(room.engine)this.trigger('snapshot',room.engine);
+      this.trigger('presence',room.players);
+      return;
+    }
+
+    this.stopPulse();
+    this.started=false;
+    if(phase==='results'){
+      // A reconnect after game over still needs a board under the results dialog.
+      if(!this.inGameUI){
+        this.inGameUI=true;
+        this.trigger('gameStart',{players:room.players,seed:room.seed});
+      }
+      if(room.engine)this.trigger('snapshot',room.engine);
+      this.trigger('presence',room.players);
+      this.trigger('matchResults',room);
+    }else if(this.inGameUI){
+      this.inGameUI=false;
+      const ui=window.uiManager;
+      if(ui){
+        ui.isOnlineMode=false;
+        ui.hideModal('gameOver');
+        ui.showScreen('onlineLobby');
+      }
+      this.trigger('roomJoined',room);
+    }
+  }
+  send(payload){
+    try{this.net?.sendGame(payload);}
+    catch(error){this.trigger('error',error.message||'Нет соединения');}
+  }
+  createRoom(){this.creating=true;this.net?.createRoom('blockies',{});}
+  joinRoom(code){
+    this.creating=false;
+    const normalized=String(code||'').trim();
+    if(!normalized){this.trigger('error','Введите код комнаты');return;}
+    this.net?.joinRoom(normalized);
+  }
+  leaveRoom(){
+    this.stopPulse();
+    this.started=false;
+    this.inGameUI=false;
+    this.phase='lobby';
+    this.moduleVersion=null;
+    this.currentRound=null;
+    this.lastRevision=-1;
+    try{this.net?.leaveRoom();}catch(error){this.trigger('error',error.message);}
+    this.currentRoom=null;
+    this.trigger('leftRoom');
+  }
+  changeColor(color){this.send({type:'color',color});}
+  toggleReady(){this.send({type:'ready'});}
+  requestRematch(){if(this.phase==='results')this.send({type:'rematch'});}
+  setNickname(name){if(this.currentRoom&&this.phase==='lobby')this.send({type:'nickname',name});}
+  sendPlayerInput(input){
+    if(this.phase!=='playing')return;
+    const round=Number(this.moduleVersion?.slice(1))>=7?this.currentRound:undefined;
+    this.send({type:'input',...(round!=null?{round}:{}),input});
+  }
+  disconnect(){
+    this.stopPulse();
+    this.net?.close();
+    this.connected=false;
+    this.currentRoom=null;
+    this.started=false;
+    this.inGameUI=false;
+  }
 }
 globalThis.networkManager=new NetworkManager();

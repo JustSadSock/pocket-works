@@ -46,6 +46,26 @@
         "slug": "not-dead-yet",
         "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
         "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+      },
+      {
+        "slug": "crumple-yard",
+        "spatialDifference": "CRUMPLE YARD uses a full-bleed 3D yard with a third-person car as its focus; Blockies uses one narrow framed vertical well, where every falling cell is a shared tactical constraint.",
+        "interactionDifference": "CRUMPLE YARD relies on continuous steering and physical deformation after impacts; Blockies uses discrete grid inputs, synchronized gravity and cooperative line clears across independent players."
+      },
+      {
+        "slug": "trace-mosaic",
+        "spatialDifference": "TRACE MOSAIC uses an open workbench with a square picture grid and movable fragment tray; Blockies uses a tall falling-block well flanked only by ownership and next-piece indicators.",
+        "interactionDifference": "TRACE MOSAIC paints temporary drag-path barriers between other players; Blockies creates permanent shared stack geometry from locked pieces and rewards line clears."
+      },
+      {
+        "slug": "petri-forge",
+        "spatialDifference": "PETRIFORGE presents an editable simulation arena with terrain and autonomous agents; Blockies keeps a narrow shared falling-block well and compact score controls visible at once.",
+        "interactionDifference": "PETRIFORGE experiments with agent behaviors and environment changes over simulated time; Blockies requires timed manual rotation, lateral positioning, and synchronous cooperative row clearing."
+      },
+      {
+        "slug": "space-run",
+        "spatialDifference": "Space Run presents continuous forward motion through a side-scrolling obstacle corridor, while Blockies centers a fixed vertical cooperative stack with distinct player-owned blocks and stable piece previews.",
+        "interactionDifference": "Space Run asks for real-time trajectory and obstacle timing, whereas Blockies relies on discrete team-controlled tetromino rotations, wall kicks, hold swaps, and synchronized line clears."
       }
     ]
   },

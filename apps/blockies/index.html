@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Blockies - Team Puzzle Arcade</title>
     <link rel="stylesheet" href="styles.css">
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#121922"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
@@ -48,6 +48,10 @@
                         <span class="mode-title" data-i18n="online">Online</span>
                         <span class="mode-desc" data-i18n="playOverNetwork">Play over network</span>
                     </button>
+                </div>
+                <div class="replay-menu-actions">
+                    <button data-native-press id="replay-last" class="btn btn-secondary">Последний повтор</button>
+                    <button data-native-press id="replay-menu-import" class="btn btn-secondary">Импорт повтора</button>
                 </div>
             </div>
         </div>
@@ -120,6 +124,7 @@
 
         <!-- Game Screen -->
         <div id="game-screen" class="screen">
+            <div id="recovery-notice" class="recovery-notice" role="status" aria-live="polite" hidden></div>
             <div id="team-stats" class="team-stats">
                 <div id="team-score-card" class="team-score-card">
                     <div class="score-card__label" data-i18n="teamScore">Team Score</div>
@@ -151,6 +156,7 @@
                 <div class="touch-row">
                     <button data-native-press class="touch-btn" data-action="rotate" data-i18n="rotate">Rotate</button>
                     <button data-native-press class="touch-btn" data-action="drop" data-i18n="drop">Drop</button>
+                    <button data-native-press class="touch-btn touch-btn--hold" data-action="hold" data-i18n="hold" aria-label="Hold current piece">Hold</button>
                 </div>
             </div>
         </div>
@@ -183,12 +189,38 @@
             <div class="modal-content">
                 <h2>Game Over!</h2>
                 <div id="final-scores"></div>
+                <div id="rematch-status" class="rematch-status" role="status" aria-live="polite"></div>
+                <button data-native-press id="replay-open" class="btn btn-secondary">Посмотреть повтор</button>
+                <button data-native-press id="replay-save" class="btn btn-secondary">Сохранить повтор</button>
                 <button data-native-press id="play-again-btn" class="btn btn-primary">Play Again</button>
                 <button data-native-press id="menu-btn" class="btn btn-secondary">Main Menu</button>
             </div>
         </div>
+        <section id="replay-viewer" class="replay-viewer" role="dialog" aria-label="Просмотр повтора Blockies" aria-modal="true" hidden>
+            <div class="replay-panel">
+                <div class="replay-heading">
+                    <h2>Повтор партии</h2>
+                    <button data-native-press id="replay-close" class="btn btn-secondary" aria-label="Закрыть повтор">Закрыть</button>
+                </div>
+                <div class="replay-viewport"><canvas id="replay-canvas" aria-label="Состояние поля на выбранном кадре"></canvas></div>
+                <div id="replay-score" class="replay-score"></div>
+                <label id="replay-caption" for="replay-slider">Выберите кадр</label>
+                <input id="replay-slider" type="range" min="0" max="0" step="1" value="0">
+                <div class="replay-controls">
+                    <button data-native-press id="replay-prev" class="btn btn-secondary">Назад</button>
+                    <button data-native-press id="replay-play" class="btn btn-primary">Воспроизвести</button>
+                    <button data-native-press id="replay-next" class="btn btn-secondary">Вперёд</button>
+                </div>
+                <div class="replay-controls replay-file-actions">
+                    <button data-native-press id="replay-export" class="btn btn-secondary">Сохранить JSON</button>
+                    <button data-native-press id="replay-import" class="btn btn-secondary">Открыть JSON</button>
+                </div>
+                <div id="replay-error" class="replay-message" role="status" aria-live="polite" hidden></div>
+            </div>
+        </section>
+        <input id="replay-file" type="file" accept=".json,application/json" hidden aria-label="Выбрать файл повтора">
     </div>
 
     </main><script type="module" src="./app.js"></script>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.1.0"></script></body>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.1.8"></script></body>
 </html>

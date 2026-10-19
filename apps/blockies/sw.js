@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'blockies-';
-const CACHE_NAME = 'blockies-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-10-18';
+const CACHE_NAME = 'blockies-v0.1.8';
+const APP_VERSION = '0.1.8';
+const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Перенесена исходная игра с сохранением правил и отдельным хранением данных."];
+const RELEASE_NOTES = ["Повтор партии с перемоткой и экспортом JSON.", "Восстановление матча при потере связи.", "Дополнительные проверки реальных WebSocket-сессий."];
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -12,6 +12,10 @@ const APP_SHELL = [
   "./app.js",
   "./art-bible.json",
   "./game.js",
+  "./engine-core-v1.js",
+  "./player-core-v1.js",
+  "./replay-core-v1.js",
+  "./replay-ui.js",
   "./network.js",
   "./styles.css",
   "./sw.js",
