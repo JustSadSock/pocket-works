@@ -91,7 +91,7 @@ export class PocketSocket extends EventTarget {
       });
     }
     this.net.connect()
-      .then(() => this.dispatchEvent(new Event('open')))
+      .then(() => { if (!this.local) this.dispatchEvent(new Event('open')); })
       .catch(error => this.report(error));
     // Server deadlines are authoritative; the visible tab merely supplies
     // periodic authenticated messages. Hidden tabs may be throttled, so a
@@ -99,6 +99,7 @@ export class PocketSocket extends EventTarget {
     this.timer = setInterval(() => this.heartbeat(), 2500);
   }
   report(error) {
+    if (this.local) return;
     this.message('connection_status', { status: 'reconnecting' });
     this.message('toast', { tone: 'error', message: error?.message || 'Нет связи. Соло-тренировка доступна без сети.' });
   }
@@ -118,6 +119,9 @@ export class PocketSocket extends EventTarget {
   }
   practice(name, fresh = false) {
     if (!this.local) {
+      if (this.net.roomId && this.readyState === 1) {
+        try { this.net.leaveRoom(); } catch {}
+      }
       this.net.roomId = null;
       this.net.persist();
       this.net.close();
