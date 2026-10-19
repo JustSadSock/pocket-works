@@ -431,5 +431,5 @@ export function drawHero(ctx,appearance=DEFAULT_APPEARANCE,time=0,runes=[],mageI
  // An earthbound oval instead of another floating decorative stat panel.
  ctx.fillStyle='#30443b';ctx.beginPath();ctx.ellipse(63,133,48,10,0,0,Math.PI*2);ctx.fill();
  ctx.fillStyle='#8a8c6b';ctx.fillRect(22,137,83,3);
- drawMage(ctx,appearance,{x:64,y:110,scale:2.0,time,runes,shield:0,mageId,face:Math.PI/4,pose:reduced?{still:true}:null});
+ drawMage(ctx,appearance,{x:64,y:101,scale:1.78,time,runes,shield:0,mageId,face:Math.PI/4,pose:reduced?{still:true}:null});
 }
