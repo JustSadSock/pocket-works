@@ -24,3 +24,12 @@ Chromium and WebKit passed desktop, portrait and landscape: procedural rooms, to
 
 Next: resolve live-browser regressions, measure Shpilka parity/performance on real engine, then expand Combat Forge editor and add Perekos adapter.
 
+
+2026-10-19 — **PetriForge 0.4.0 / Combat Forge Studio**, merged into main:
+- Combat rule schema: elimination, point capture, damage-score race; adjustable match timer and winning score; two teams with independent HP/speed/energy regen and six meaningful configurable skill strengths.
+- Paint custom 60×60 cover, damaging circles and capture point directly onto the battle canvas; erase, undo/redo, presets, local named maps, JSON export/import, validation and spawn protection. Training locks editing to prevent nonstationary configurations.
+- Physics and replay both use real rules. Aim/pathing adapts to capture point; capture gives points only when uncontested. Replay snapshots preserve map objects, dynamic barriers, zone damage, capture objective and custom maximum HP.
+- Worker evaluation carries rules to every training, tournament and test episode and reverses team stats when sides swap.
+- Added environment adapter over original Perekos core with reset/observe/step/checkpoint API, seed, bounded input and restricted observations. **Perekos mode is not yet accessible in the UI**.
+- V8 checks executed: six combinations (3 combat modes × 1v1/2v2) deterministic with valid replay; learning Worker completed 6 generations with 4 accepted mutations and produced a checkpoint and a tournament on user-made control arena. Import/export and edge-case regression tests added as Node + Playwright files. **Deployed browser/real Playwright acceptance and Perekos adapter Node suite are not executed in this chat**.
+- Main risk for next iteration: connect Perekos adapter to visible UI; full Shpilka engine parity/performance, WebKit portrait and offline cross-origin Perekos dependencies require browser testing.
