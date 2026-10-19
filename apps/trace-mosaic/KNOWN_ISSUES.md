@@ -33,3 +33,8 @@
 - Six first-puzzle SVGs replaced; all other puzzle artworks remain unchanged.
 - Browser script `qa/atelier-browser.mjs` records menu, board, reference, after first placement and final artwork in Chromium/WebKit, four viewports; checks 16/16 completion.
 - CI trigger: https://github.com/JustSadSock/pocket-works/issues/1042. Run completion and screenshot review must be verified independently; do not claim passed without run artifacts.
+
+## Gallery release v0.4.0
+- Original images puzzle-01 through puzzle-24 have all been replaced with bespoke SVG compositions. Artwork metadata has been aligned with immutable PocketNet v6.
+- No further procedural placeholder pictures remain in the 24-entry gallery.
+- Browser QA evidence is pending; do not treat the artwork visual acceptance as passed until Chromium/WebKit screenshots have been reviewed.
