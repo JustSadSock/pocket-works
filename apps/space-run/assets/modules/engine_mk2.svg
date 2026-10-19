@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns='http://www.w3.org/2000/svg' width='256' height='160' viewBox='0 0 256 160'>
+<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#5ff5ff'/><stop offset='100%' stop-color='#1685d2'/></linearGradient><filter id='glow'><feGaussianBlur stdDeviation='3' result='b'/><feMerge><feMergeNode in='b'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs>
+<rect width='100%' height='100%' rx='22' fill='url(#g)'/>
+<rect x='8' y='8' width='240' height='144' rx='16' fill='rgba(3,18,28,.44)' stroke='rgba(180,255,255,.32)'/>
+<rect x='68' y='60' width='120' height='40' rx='12' fill='rgba(12,35,55,.8)'/><rect x='188' y='66' width='28' height='28' rx='7' fill='#8ff7ff'/><rect x='40' y='68' width='28' height='24' rx='6' fill='#58d4ff'/>
+<text x='14' y='148' font-size='18' font-family='Sora,Segoe UI,sans-serif' fill='rgba(230,250,255,.9)' filter='url(#glow)'>AFT</text>
+</svg>

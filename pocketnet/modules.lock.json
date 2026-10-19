@@ -231,5 +231,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "space-run": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Space Run Co-op</title>
+  <link rel="stylesheet" href="./styles.css" />
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#081a26"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+<body>
+  <nav id="mobile-tabs"><button data-native-press data-panel="crew">Экипаж</button><button data-native-press data-panel="build">Мастерская</button></nav><div id="app" data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
+    <aside class="panel panel-left">
+      <h1>Space Run</h1>
+      <div class="card stat-card">
+        <div><span>Room</span><strong id="hud-room">-</strong></div>
+        <div><span>Phase</span><strong id="hud-phase">-</strong></div>
+        <div><span>Wave</span><strong id="hud-wave">0</strong></div>
+        <div><span>Credits</span><strong id="hud-credits">0</strong></div>
+        <div><span>Hull</span><strong id="hud-hull">0/0</strong></div>
+        <div><span>Energy</span><strong id="hud-energy">0/0</strong></div>
+      </div>
+      <div class="card controls-card">
+        <h2>Quick Hint</h2>
+        <p>Combat: click module to sit in it.</p>
+        <p>Garage: click module -> Move/Store.</p>
+        <p><b>W/A/S/D</b> engine | <b>LMB</b> turret | <b>RMB/Space</b> shield</p>
+      </div>
+      <div class="card">
+        <h2>Roles</h2>
+        <div id="role-list" class="list"></div>
+      </div>
+      <div class="card">
+        <h2>Players</h2>
+        <div id="player-list" class="list"></div>
+      </div>
+    </aside>
+
+    <main class="main-stage">
+      <canvas id="game"></canvas>
+      <div id="toast"></div>
+      <div id="module-actions" class="module-actions hidden">
+        <button data-native-press id="module-move" class="warn">Move</button>
+        <button data-native-press id="module-remove" class="danger">Store</button>
+      </div>
+    </main>
+
+    <aside class="panel panel-right">
+      <div class="card">
+        <h2>Storage: Modules</h2>
+        <div id="inventory-modules" class="list"></div>
+      </div>
+      <div class="card">
+        <h2>Storage: Hull Shapes</h2>
+        <div id="inventory-shapes" class="list"></div>
+      </div>
+      <div class="card">
+        <h2>Damaged Modules</h2>
+        <div id="repair-targets" class="list"></div>
+      </div>
+      <div class="card">
+        <h2>Mission / Shop</h2>
+        <label>Mission
+          <select id="mission-select">
+            <option value="scout">Разведка</option>
+            <option value="assault">Штурм</option>
+          </select>
+        </label>
+        <div id="shop-list" class="list"></div>
+        <button data-native-press id="start-wave" class="primary">Вперед</button>
+      </div>
+    </aside>
+  </div>
+
+  <div id="lobby" class="overlay visible">
+    <div class="lobby-card">
+      <h2>Join Co-op Room</h2>
+      <label>Name <input id="name-input" maxlength="24" placeholder="Pilot" value="Pilot" /></label>
+      <label>Room code <input id="room-input" maxlength="8" placeholder="Код из 8 символов" value="" /></label>
+      <button data-native-press id="practice-btn">Одиночная практика</button><button data-native-press id="create-btn" class="primary">Создать комнату</button><button data-native-press id="join-btn">Войти по коду</button>
+      <p id="lobby-msg"></p>
+    </div>
+  </div>
+
+  
+  <div id="touchDeck"><div><button data-key="KeyW">↑</button><button data-key="KeyA">←</button><button data-key="KeyS">↓</button><button data-key="KeyD">→</button></div><div><button data-key="Space">Щит</button><button data-key="KeyR">Ремонт</button><button id="touch-fire">Огонь</button><button id="touch-rotate">Поворот</button></div></div><script type="module" src="./app.js"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Space Run" data-app-version="0.1.0"></script></body>
+</html>
+

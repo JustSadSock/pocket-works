@@ -1,0 +1,20 @@
+{
+  "id": "/apps/space-run/",
+  "name": "Space Run",
+  "short_name": "Space Run",
+  "description": "Совместная постройка корабля: модули, роли экипажа, ремонт и боевые волны.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#081a26",
+  "theme_color": "#081a26",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

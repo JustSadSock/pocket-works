@@ -1,0 +1,196 @@
+const CACHE_PREFIX = 'space-run-';
+const CACHE_NAME = 'space-run-v0.1.0';
+const APP_VERSION = '0.1.0';
+const RELEASE_DATE = '2026-10-18';
+const CACHE_PROTOCOL = 2;
+const RELEASE_NOTES = ["Перенесена исходная игра с сохранением правил и отдельным хранением данных."];
+const APP_SHELL = [
+'./assets/fonts/font-1.ttf',
+'./assets/fonts/font-2.ttf',
+'./assets/fonts/font-3.ttf',
+'./assets/fonts/font-4.ttf',
+'./assets/fonts/font-5.ttf',
+  "./",
+  "./index.html",
+  "./app.config.json",
+  "./manifest.webmanifest",
+  "./app.js",
+  "./art-bible.json",
+  "./network.js",
+  "./simulation.js",
+  "./styles.css",
+  "./sw.js",
+  "./visual-direction.json",
+  "./icons/icon.svg",
+  "./icons/source.svg",
+  "./js/client.js",
+  "./assets/backgrounds/bg_space_1.png",
+  "./assets/backgrounds/bg_space_2.png",
+  "./assets/backgrounds/bg_space_3.png",
+  "./assets/enemies/enemy_bruiser.svg",
+  "./assets/enemies/enemy_bruiser_1.png",
+  "./assets/enemies/enemy_bruiser_2.png",
+  "./assets/enemies/enemy_bruiser_3.png",
+  "./assets/enemies/enemy_bruiser_4.png",
+  "./assets/enemies/enemy_drone.svg",
+  "./assets/enemies/enemy_drone_1.png",
+  "./assets/enemies/enemy_drone_2.png",
+  "./assets/enemies/enemy_drone_3.png",
+  "./assets/enemies/enemy_drone_4.png",
+  "./assets/enemies/enemy_skirmisher.svg",
+  "./assets/enemies/enemy_skirmisher_1.png",
+  "./assets/enemies/enemy_skirmisher_2.png",
+  "./assets/enemies/enemy_skirmisher_3.png",
+  "./assets/enemies/enemy_skirmisher_4.png",
+  "./assets/fonts/fonts.css",
+  "./assets/modules/engine_mk1.svg",
+  "./assets/modules/engine_mk1_1.png",
+  "./assets/modules/engine_mk1_2.png",
+  "./assets/modules/engine_mk1_3.png",
+  "./assets/modules/engine_mk2.svg",
+  "./assets/modules/engine_mk2_1.png",
+  "./assets/modules/engine_mk2_2.png",
+  "./assets/modules/engine_mk2_3.png",
+  "./assets/modules/reactor_mk1.svg",
+  "./assets/modules/reactor_mk1_1.png",
+  "./assets/modules/reactor_mk1_2.png",
+  "./assets/modules/reactor_mk1_3.png",
+  "./assets/modules/reactor_mk2.svg",
+  "./assets/modules/reactor_mk2_1.png",
+  "./assets/modules/reactor_mk2_2.png",
+  "./assets/modules/reactor_mk2_3.png",
+  "./assets/modules/repair_bay_mk1.svg",
+  "./assets/modules/repair_bay_mk1_1.png",
+  "./assets/modules/repair_bay_mk1_2.png",
+  "./assets/modules/repair_bay_mk1_3.png",
+  "./assets/modules/sensor_mk1.svg",
+  "./assets/modules/sensor_mk1_1.png",
+  "./assets/modules/sensor_mk1_2.png",
+  "./assets/modules/sensor_mk1_3.png",
+  "./assets/modules/shield_mk1.svg",
+  "./assets/modules/shield_mk1_1.png",
+  "./assets/modules/shield_mk1_2.png",
+  "./assets/modules/shield_mk1_3.png",
+  "./assets/modules/shield_mk2.svg",
+  "./assets/modules/shield_mk2_1.png",
+  "./assets/modules/shield_mk2_2.png",
+  "./assets/modules/shield_mk2_3.png",
+  "./assets/modules/turret_mk1.svg",
+  "./assets/modules/turret_mk1_1.png",
+  "./assets/modules/turret_mk1_2.png",
+  "./assets/modules/turret_mk1_3.png",
+  "./assets/modules/turret_mk2.svg",
+  "./assets/modules/turret_mk2_1.png",
+  "./assets/modules/turret_mk2_2.png",
+  "./assets/modules/turret_mk2_3.png",
+  "./assets/ui/pickup_credits.png",
+  "./assets/ui/pickup_module.png",
+  "./assets/ui/pickup_module.svg",
+  "./assets/ui/pickup_shape.png",
+  "./assets/ui/pickup_shape.svg",
+  "./assets/ui/status_malfunction.png",
+  "./assets/ui/status_repair.png",
+  "./assets/ui/status_warning.png",
+  "../../shared/mobile-runtime.css",
+  "../../shared/mobile-runtime.js",
+  "../../shared/update-manager.js",
+  "../../shared/update-manager.css",
+  "../../shared/capabilities/net.js"
+];
+
+const SCOPE_URL = new URL('./', self.registration.scope);
+const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
+const SHELL_KEYS = new Map(
+  APP_SHELL.map((entry) => {
+    const url = new URL(entry, SCOPE_URL);
+    return [url.pathname, url.href];
+  })
+);
+
+function buildNetworkUrl(input) {
+  const url = new URL(input instanceof Request ? input.url : input, SCOPE_URL);
+  url.searchParams.set('__pw_build', BUILD_TOKEN);
+  return url;
+}
+
+async function fetchFresh(input) {
+  const response = await fetch(buildNetworkUrl(input), {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    redirect: 'follow'
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(`Fresh application request failed: ${response?.status || 'network'}`);
+  }
+
+  return response;
+}
+
+async function precacheFreshShell() {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.all(
+    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
+      const response = await fetchFresh(canonicalUrl);
+      await cache.put(canonicalUrl, response);
+    })
+  );
+}
+
+async function networkFirstFresh(request, canonicalUrl, fallbackUrl = canonicalUrl) {
+  try {
+    const response = await fetchFresh(request);
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(canonicalUrl, response.clone());
+    return response;
+  } catch {
+    return caches.match(canonicalUrl).then((cached) => cached || caches.match(fallbackUrl));
+  }
+}
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(precacheFreshShell());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'GET_UPDATE_INFO') {
+    event.ports?.[0]?.postMessage({
+      version: APP_VERSION,
+      releaseDate: RELEASE_DATE,
+      releaseNotes: RELEASE_NOTES,
+      cacheProtocol: CACHE_PROTOCOL,
+      cacheName: CACHE_NAME
+    });
+  }
+
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(networkFirstFresh(event.request, SCOPE_URL.href, SCOPE_URL.href));
+    return;
+  }
+
+  const canonicalUrl = SHELL_KEYS.get(requestUrl.pathname);
+  if (!canonicalUrl) return;
+
+  event.respondWith(networkFirstFresh(event.request, canonicalUrl, SCOPE_URL.href));
+});

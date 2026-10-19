@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "space-run",
+  "direction": {
+    "premise": "A modular spacecraft is both the shared construction surface and the crew’s fighting vehicle.",
+    "composition": "The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
+    "shapeLanguage": "Square hull cells and source illustrated engine, turret and reactor modules expose the playable ship architecture.",
+    "surfaceAndMaterial": "Original raster module illustrations sit on a translucent engineering grid against a restrained starfield.",
+    "paletteLogic": "Cyan outlines construction cells and friendly ship systems; orange signals combat, damage and pickups.",
+    "typography": "Locally bundled Audiowide headings and Sora control labels preserve the original technical lettering offline.",
+    "signature": "A crew member sits in the engine while another takes the turret; both actions affect the same ship and enemy wave.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+  },
+  "architecture": {
+    "spatialLayout": "split-workspace",
+    "controlLocation": "side-rail",
+    "navigation": "editor-toolbox",
+    "chromeTopology": "tiled-grid",
+    "dominantMotion": "rotational-inertia",
+    "primaryVerb": "Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves.",
+    "physicalFeedback": "A module snaps to hull cells during construction; occupied stations show their pilot and produce immediate shared movement or weapon fire.",
+    "spatialRationale": "The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
+      },
+      {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
+        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Canvas draws the original modular ship and combat sprites; stable DOM panels expose crew occupancy, inventory and repair commands.",
+    "focalAsset": "The recovered ship module sprites and hull grid remain the main authored object; an app-specific ship-on-grid SVG supplies install identity."
+  },
+  "motion": {
+    "character": "A module snaps to hull cells during construction; occupied stations show their pilot and produce immediate shared movement or weapon fire.",
+    "action": "Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: A crew member sits in the engine while another takes the turret; both actions affect the same ship and enemy wave.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#practice-btn"
+    },
+    "expectedChange": "The saved offline practice ship opens in its construction or combat phase using the same server rules.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
