@@ -1184,35 +1184,74 @@ class UIManager {
 
     initTouchControls() {
         if (!this.touchControls) return;
-
+        this.activeTouchPointers = new Map();
+        const continuous = new Set(['left', 'right', 'down']);
         const buttons = this.touchControls.querySelectorAll('[data-action]');
         buttons.forEach(button => {
             const action = button.dataset.action;
             if (!action) return;
+            button.setAttribute('aria-pressed', 'false');
 
-            const handler = (event) => {
+            const begin = (event, pointerId) => {
                 event.preventDefault();
-                this.handleTouchAction(action);
+                if (gameState.isPaused || gameState.isGameOver || !this.screens.gameScreen.classList.contains('active')) return;
+                if (!continuous.has(action)) {
+                    this.handleTouchAction(action);
+                    return;
+                }
+                const player = this.getTouchPlayer();
+                if (!player || [...this.activeTouchPointers.values()].some(entry => entry.button === button)) return;
+                const source = 'touch:' + pointerId;
+                this.activeTouchPointers.set(pointerId, { button, action, playerId: player.id, source });
+                button.classList.add('is-held');
+                button.setAttribute('aria-pressed', 'true');
+                if (action === 'down') this.activateSoftDrop(player, source);
+                else this.activateMovementAction(player, action, source);
+                this.drawBoard();
+            };
+            const end = pointerId => {
+                const entry = this.activeTouchPointers.get(pointerId);
+                if (!entry || entry.button !== button) return;
+                this.releaseContinuousAction(entry.playerId, entry.action, entry.source);
+                entry.button.classList.remove('is-held');
+                entry.button.setAttribute('aria-pressed', 'false');
+                this.activeTouchPointers.delete(pointerId);
             };
 
             if (window.PointerEvent) {
-                button.addEventListener('pointerdown', handler);
+                button.addEventListener('pointerdown', event => {
+                    begin(event, event.pointerId);
+                    if (this.activeTouchPointers.has(event.pointerId)) {
+                        try { button.setPointerCapture(event.pointerId); } catch { /* Pointer already ended. */ }
+                    }
+                });
+                for (const eventName of ['pointerup','pointercancel','lostpointercapture']) {
+                    button.addEventListener(eventName, event => end(event.pointerId));
+                }
             } else {
-                button.addEventListener('touchstart', handler, { passive: false });
-                button.addEventListener('mousedown', handler);
+                button.addEventListener('touchstart', event => {
+                    for (const touch of event.changedTouches) begin(event, 't' + touch.identifier);
+                }, { passive: false });
+                for (const name of ['touchend','touchcancel']) {
+                    button.addEventListener(name, event => {
+                        for (const touch of event.changedTouches) end('t' + touch.identifier);
+                    });
+                }
+                button.addEventListener('mousedown', event => begin(event, 'mouse'));
+                button.addEventListener('mouseup', () => end('mouse'));
+                button.addEventListener('mouseleave', () => end('mouse'));
             }
-
-            button.addEventListener('click', (event) => {
+            button.addEventListener('click', event => {
+                // Keyboard activation has no pointerdown and must remain accessible.
                 if (event.detail === 0) {
-                    handler(event);
+                    event.preventDefault();
+                    this.handleTouchAction(action);
                 }
             });
-            button.addEventListener('contextmenu', (event) => event.preventDefault());
+            button.addEventListener('contextmenu', event => event.preventDefault());
         });
 
-        if (this.touchStatus) {
-            this.touchStatus.textContent = t('startGameForTouch');
-        }
+        if (this.touchStatus) this.touchStatus.textContent = t('startGameForTouch');
     }
 
     refreshTouchStatus() {
