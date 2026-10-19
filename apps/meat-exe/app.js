@@ -357,7 +357,8 @@ function dropAt(x,z){
 function defeatEnemy(e){
   markScar(e.x,e.z,'blood');
   world.splatter(e.x,e.z,e.type==='heart'?55:isGuardian(e.type)?35:16);
-  world.playDeath?.(e.visual,e.type,e.x,e.z)??world.disposeVisual(e.visual);
+  if(world.playDeath)world.playDeath(e.visual,e.type,e.x,e.z);
+  else world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
   state.kills++;
   const chain=registerCombatChain(state);
