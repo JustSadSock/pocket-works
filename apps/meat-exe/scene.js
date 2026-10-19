@@ -1135,7 +1135,18 @@ export function createWorld(canvas, initialSeed) {
     const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     camera.rotation.set(player.pitch+(reduced?0:Math.min(.016,kickPos*.03)),player.yaw,0,'YXZ');
     camera.fov=77+recoil*2.8+(player.sprinting?3:0);camera.updateProjectionMatrix();
-    lamp.position.set(player.x,1.7,player.z);pulseLamp.position.set(player.x,2.55,player.z-1.8);
+    lamp.position.set(player.x,1.7,player.z);
+    pulseLamp.position.set(player.x-Math.sin(player.yaw)*1.8,2.28,
+      player.z-Math.cos(player.yaw)*1.8);
+    shotLight.position.set(player.x-Math.sin(player.yaw)*.8,1.15,
+      player.z-Math.cos(player.yaw)*.8);
+    const haze=atmosphereProfile(stage,quality,conservativeRenderer);
+    for(let i=0;i<haze.count;i++){
+      const m=moteAt(seed,stage,i,time,player.x,player.z);
+      motesArray[i*3]=m.x;motesArray[i*3+1]=m.y;motesArray[i*3+2]=m.z;
+    }
+    motesGeo.setDrawRange(0,haze.count);
+    if(haze.count)motesGeo.attributes.position.needsUpdate=true;
     const w=player.weapon===2?2:player.weapon===1?1:0;
     bolter.visible=w===0;shredder.visible=w===1;stinger.visible=w===2;
     const portrait=canvas.clientHeight>canvas.clientWidth;
@@ -1152,14 +1163,19 @@ export function createWorld(canvas, initialSeed) {
     if(needleFlash.visible)needleFlash.scale.setScalar(.78+muzzleTime*2.1);
     for(const e of entities)if(e.visual){
       const hit=clamp((e.hitFlash||0)/.18,0,1);
-      e.visual.position.set(e.x,Math.sin(time*4+e.id)*.038-hit*.05,e.z);
+      const motion=enemyMotion(e.type,time,e.id,e.windup>0?1:0,hit,reduced);
+      e.visual.position.set(e.x,motion.bob,e.z);
       e.visual.rotation.y=(e.type==='ossuary'?(e.facing??0):Math.atan2(player.x-e.x,player.z-e.z))+Math.PI;
-      e.visual.rotation.z=(reduced?0:Math.sin(time*26+e.id)*hit*.075);
+      e.visual.rotation.z=motion.roll+Math.sin(time*26+e.id)*hit*.075;
+      e.visual.rotation.x=motion.pitch;
       e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='warden'?1.67:e.type==='ossuary'?1.42:
         e.type==='clot'?1.18:e.type==='synapse'?1.24:e.type==='brute'?1.36:e.type==='spitter'?.90:e.type==='leech'?.94:1)*
         (1+Math.sin(time*5+e.id)*.045-hit*.07));
-       if(e.visual.userData.body){const body=e.visual.userData.body;body.scale.y=e.visual.userData.bodyBaseY*(1+Math.sin(time*3+e.id)*.045);}
-       if(e.visual.userData.limbs&&!reduced){for(const limb of e.visual.userData.limbs){limb.joint.rotation.x=Math.sin(time*(e.type==='crawler'?10:6)+e.id+limb.index*2+limb.side)*(.15+(e.windup>0?.10:0));}}
+       if(e.visual.userData.body){const body=e.visual.userData.body;
+         body.scale.y=e.visual.userData.bodyBaseY*motion.breath;}
+       if(e.visual.userData.limbs&&!reduced){for(const limb of e.visual.userData.limbs){
+         limb.joint.rotation.x=Math.sin(time*motion.limb+e.id+limb.index*2+limb.side)*
+           (.15+(e.windup>0?.10:0));}}
       if(e.visual.userData.wound)e.visual.userData.wound.visible=hit>.1;
       const tell=e.visual.userData.tell;
       if(tell){
@@ -1204,7 +1220,19 @@ export function createWorld(canvas, initialSeed) {
     for(let i=1;i<steps;i++){const t=i/steps;if(!isFloor(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t))return false;}
     return true;
   }
-  function end(){clearChunks();renderer.dispose();}
+  function end(){
+    clearChunks();motesGeo.dispose();motesMat.dispose();deathGeo.dispose();deathMat.dispose();
+    for(const map of Object.values(roughnessMaps||{}))map?.dispose();
+    renderer.dispose();
+  }
+  function getAtmosphereSignature(){
+    const profile=atmosphereProfile(stage,quality,conservativeRenderer);
+    return {biome:biome.id,stage,quality,motes:profile.count,deathFragments:deathMesh.count,
+      wetMaps:roughnessMaps?Object.keys(roughnessMaps).length:0,
+      enemyTextureFamilies:[...new Set(Object.keys(mobMats).map(type=>materialProperties(type).family))],
+      shotLightActive:shotLight.visible?1:0,
+      maxAdditionalLights:fxLimits(quality,conservativeRenderer).additionalLights};
+  }
   function getArchitectureSignature(){
     const cx=0,cz=0;
     return stage===2?{biome:'gastric',...gastricChamber(cx,cz,seed)}:
@@ -1212,5 +1240,7 @@ export function createWorld(canvas, initialSeed) {
   }
   reset(initialSeed);resize();
   return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark,
-    setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, softwareRenderer, conservativeRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+    setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, getAtmosphereSignature, softwareRenderer, conservativeRenderer, end,
+    getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length,
+      motes:motesGeo.drawRange.count,deathFragments:deathBits.length}) };
 }
