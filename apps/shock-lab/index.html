@@ -42,7 +42,14 @@
         <canvas id="field" aria-label="Газовая симуляция. Коснитесь поля, чтобы создать волну" tabindex="0"></canvas>
         <canvas id="overlay" aria-hidden="true"></canvas>
         <div class="view-mark"><span id="view-short">ΔP</span><span class="view-unit">RELATIVE FIELD</span></div>
-        <div class="hint" id="hint">Коснись камеры, чтобы создать ударную волну</div>
+        <div class="hint" id="hint">Выбери инструмент и коснись поля</div>
+        <div class="stage-tools" role="group" aria-label="Быстрые инструменты конструктора">
+          <button type="button" data-tool="pulse" class="stage-tool active">◎ <span>УДАР</span></button>
+          <button type="button" data-tool="source" class="stage-tool">◉ <span>ИСТОЧНИК</span></button>
+          <button type="button" data-tool="material" class="stage-tool">▦ <span>МАТЕРИАЛ</span></button>
+          <button type="button" data-tool="erase" class="stage-tool">⌫ <span>СТЕРЕТЬ</span></button>
+          <button type="button" data-tool="probe" class="stage-tool">⊕ <span>ЗОНД</span></button>
+        </div>
         <button type="button" class="rupture" id="rupture" data-native-press hidden><span>РАЗОРВАТЬ МЕМБРАНУ</span><small>ВЫСОКОЕ ДАВЛЕНИЕ → НИЗКОЕ</small></button>
         <div class="axis-label axis-x">X →</div><div class="axis-label axis-y">Y →</div>
       </div>
@@ -56,21 +63,27 @@
     </section>
 
     <aside class="controls" data-ui aria-label="Управление лабораторией">
-      <div class="panel-head"><span>ПУЛЬТ УПРАВЛЕНИЯ</span><span>EXP / 001</span></div>
+      <div class="panel-head"><span>SHOCK · КОНСТРУКТОР</span><span>EXP / 001</span></div>
+      <div class="workspace-tabs" role="tablist" aria-label="Разделы лаборатории">
+        <button type="button" class="workspace-tab selected" data-panel-tab="scene" role="tab" aria-selected="true">СЦЕНА</button>
+        <button type="button" class="workspace-tab" data-panel-tab="construct" role="tab" aria-selected="false">СОЗДАТЬ</button>
+        <button type="button" class="workspace-tab" data-panel-tab="measure" role="tab" aria-selected="false">ИЗМЕРИТЬ</button>
+      </div>
       <div class="controls-scroll">
 
-      <div class="control-section">
+      <div class="control-section" data-panel="construct">
         <div class="section-title"><span>01</span><label>ИНСТРУМЕНТ</label></div>
         <div class="toolstrip" role="group" aria-label="Режим взаимодействия">
           <button class="tool active" data-tool="pulse" data-native-press><span class="tool-icon">◎</span><span>ИМПУЛЬС</span></button>
-          <button class="tool" data-tool="wall" data-native-press><span class="tool-icon">╱</span><span>СТЕНА</span></button>
+          <button class="tool" data-tool="material" data-native-press><span class="tool-icon">▦</span><span>МАТЕРИАЛ</span></button>
+          <button class="tool" data-tool="source" data-native-press><span class="tool-icon">◉</span><span>ИСТОЧНИК</span></button>
           <button class="tool" data-tool="erase" data-native-press><span class="tool-icon">⌁</span><span>СТЕРЕТЬ</span></button>
           <button class="tool" data-tool="probe" data-native-press><span class="tool-icon">⊕</span><span>ЗОНД</span></button>
         </div>
       </div>
 
-      <div class="control-section">
-        <div class="section-title"><span>02</span><label>ГЕОМЕТРИЯ</label></div>
+      <div class="control-section" data-panel="scene">
+        <div class="section-title"><span>01</span><label>КАМЕРА</label></div>
         <div class="preset-grid" role="group" aria-label="Готовые камеры">
           <button data-preset="reflector" class="preset active" data-native-press><span class="preset-shape shape-reflector" aria-hidden="true"></span><span>ЗЕРКАЛО</span></button>
           <button data-preset="slits" class="preset" data-native-press><span class="preset-shape shape-slits" aria-hidden="true"></span><span>ЩЕЛИ</span></button>
@@ -85,8 +98,18 @@
         </div>
       </div>
 
-      <div class="control-section">
-        <div class="section-title"><span>03</span><label>ПАРАМЕТРЫ</label></div>
+      <section class="control-section" data-panel="scene">
+        <div class="section-title"><span>02</span><label>ПОСТОЯННЫЙ ПОТОК</label></div>
+        <label for="flow-mode" class="flow-mode-label">Подача газа слева</label>
+        <select id="flow-mode" aria-label="Режим постоянного потока">
+          <option value="auto">АВТО · ПО КАМЕРЕ</option>
+          <option value="on">ВКЛЮЧЁН В ЛЮБОЙ КАМЕРЕ</option>
+          <option value="off">ВЫКЛЮЧЕН</option>
+        </select>
+        <p class="builder-note">В аэродинамических камерах включён автоматически. В остальных его можно активировать вручную.</p>
+      </section>
+      <div class="control-section" data-panel="scene">
+        <div class="section-title"><span>03</span><label>ПАРАМЕТРЫ ИМПУЛЬСА</label></div>
         <div class="slider-line"><label for="power">Энергия импульса</label><output id="power-value" for="power">4.5</output></div>
         <input type="range" id="power" min="0.7" max="10" step="0.1" value="4.5" aria-label="Энергия импульса">
         <div class="slider-line speed-line"><label for="speed">Скорость расчёта</label><output id="speed-value" for="speed">2×</output></div>
@@ -98,7 +121,7 @@
         </div>
       </div>
 
-      <div class="control-section">
+      <div class="control-section" data-panel="measure">
         <div class="section-title"><span>04</span><label>ВИЗУАЛИЗАЦИЯ</label></div>
         <div class="viewstrip" role="group" aria-label="Способ визуализации">
           <button data-view="pressure" class="view active" data-native-press>ДАВЛЕНИЕ</button>
@@ -109,7 +132,32 @@
         </div>
         <div class="legend" aria-hidden="true"><span id="legend-low">РАЗРЕЖЕНИЕ</span><div class="legend-ramp" id="legend-ramp"></div><span id="legend-high">СЖАТИЕ</span></div>
       </div>
-      <section class="control-section flow-panel" id="flow-panel" hidden aria-label="Настройка аэродинамической трубы">
+      <section class="control-section material-builder" data-panel="construct">
+        <div class="section-title"><span>02</span><label>МАТЕРИАЛЫ</label></div>
+        <div class="constructor-choices" role="group" aria-label="Материалы">
+          <button type="button" data-material="1" class="choice selected"><span class="choice-swatch rigid"></span><strong>ТВЁРДАЯ СТЕНА</strong><small>Отражает волну</small></button>
+          <button type="button" data-material="2" class="choice"><span class="choice-swatch porous"></span><strong>ПОРИСТЫЙ ФИЛЬТР</strong><small>Тормозит газ</small></button>
+          <button type="button" data-material="3" class="choice"><span class="choice-swatch absorber"></span><strong>ПОГЛОТИТЕЛЬ</strong><small>Гасит колебания</small></button>
+        </div>
+        <p class="builder-note">Выбери материал и рисуй в камере. Ластик удаляет нарисованную область.</p>
+      </section>
+      <section class="control-section sources-builder" data-panel="construct">
+        <div class="section-title"><span>03</span><label>ИСТОЧНИКИ</label></div>
+        <div class="constructor-choices" role="group" aria-label="Тип источника">
+          <button type="button" data-emitter-type="pressure" class="choice selected"><span class="choice-mark">✳</span><strong>НАГНЕТАНИЕ</strong><small>Газ и энергия</small></button>
+          <button type="button" data-emitter-type="suction" class="choice"><span class="choice-mark">◌</span><strong>ОТСОС</strong><small>Удаляет газ</small></button>
+          <button type="button" data-emitter-type="jet" class="choice"><span class="choice-mark">➝</span><strong>СТРУЯ</strong><small>Направленный поток</small></button>
+        </div>
+        <div class="slider-line"><label for="source-strength">Интенсивность</label><output for="source-strength" id="source-strength-value">3.0</output></div>
+        <input type="range" min=".5" max="8" step=".5" value="3" id="source-strength">
+        <div class="slider-line"><label for="source-angle">Направление струи</label><output for="source-angle" id="source-angle-value">0°</output></div>
+        <input type="range" min="-180" max="180" step="15" value="0" id="source-angle">
+        <div class="emitter-list-head"><span>НА СЦЕНЕ</span><span id="emitter-count">0 / 12</span></div>
+        <div id="emitter-list" class="emitter-list"><p>Выбери «Источник» и коснись места в камере.</p></div>
+        <button type="button" class="remove-emitter" id="remove-emitter" disabled>УДАЛИТЬ ВЫБРАННЫЙ</button>
+        <p class="builder-note">Коснись источника, чтобы выбрать его. Коснись пустой области, чтобы поставить новый. Работают до удаления.</p>
+      </section>
+      <section class="control-section flow-panel" data-panel="scene" id="flow-panel" hidden aria-label="Настройка аэродинамической трубы">
         <div class="section-title"><span>05</span><label>СВЕРХЗВУКОВОЙ ПОТОК</label></div>
         <div class="flow-caption"><span><i class="flow-led"></i> ВХОД → ВЫХОД</span><strong id="regime">СВЕРХЗВУК</strong></div>
         <div class="slider-line"><label for="flow-mach">Число Маха на входе</label><output id="flow-mach-value" for="flow-mach">1.8 M</output></div>
@@ -129,7 +177,7 @@
         <p class="flow-note">Идеальный невязкий газ · γ = 1.4. Входное состояние фиксировано, выход свободный. Поток, скачки и зоны сжатия вычисляются — это не готовые анимации. В режиме M &lt; 1 граница приближённая.</p>
       </section>
 
-      <section class="load-panel" id="load-panel" hidden aria-label="Аэродинамические силы">
+      <section class="load-panel" data-panel="measure" id="load-panel" hidden aria-label="Аэродинамические силы">
         <div class="section-title"><span>06</span><label>НАГРУЗКИ НА ПРОФИЛЬ</label></div>
         <div class="angle-controls" id="angle-controls">
           <div class="slider-line"><label for="attack-angle">Угол атаки</label><output id="attack-angle-value" for="attack-angle">+0°</output></div>
@@ -173,7 +221,7 @@
         <p class="load-note">Силы получены интегрированием давления по границе твёрдого тела. Только давление, без вязкости. Коэффициенты безразмерны, зависят от разрешения и стадии развития потока; это экспериментальная оценка, не аэродинамический сертификат.</p>
       </section>
 
-      <section class="scope-section" aria-label="Регистратор давления">
+      <section class="scope-section" data-panel="measure" aria-label="Регистратор давления">
         <div class="section-title"><span>07</span><label>ОСЦИЛЛОГРАФ</label></div>
         <div class="scope-top"><span class="scope-status"><i></i> ДВА ДАТЧИКА</span><div class="scope-tabs" role="group" aria-label="Режим графика"><button type="button" data-plot="history" class="selected">ВРЕМЯ</button><button type="button" data-plot="profile">ПРОФИЛЬ X</button></div></div>
         <canvas id="scope" class="scope-canvas" role="img" aria-label="Измеренный график давления, вычисляемый по состоянию газа"></canvas>
@@ -212,7 +260,7 @@
     </div>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.4.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.5.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
