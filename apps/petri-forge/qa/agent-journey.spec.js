@@ -21,13 +21,13 @@ test('one named agent learns repeatedly, persists brain and has separate combat 
  await expect(page.locator('#hubRuns')).toHaveText('2',{timeout:15000});
  const reloaded=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
  expect(reloaded.q.length).toBeGreaterThan(0);
- await page.locator('[data-world-mode="combat"]').click();
+ await page.locator('[data-cp-mode="combat"]:visible, [data-world-mode="combat"]:visible').first().click();
  await expect(page.locator('#hubWorldTitle')).toHaveText('Боевая арена');
  await expect(page.locator('#hubRuns')).toHaveText('0');
  await page.locator('#hubBatch').selectOption('8');
  await page.locator('#hubTrain').click();
  await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:50000});
- await page.locator('[data-world-mode="grid"]').click();
+ await page.locator('[data-cp-mode="grid"]:visible, [data-world-mode="grid"]:visible').first().click();
  await expect(page.locator('#hubRuns')).toHaveText('2');
  expect(errors).toEqual([]);
 });
@@ -67,7 +67,7 @@ test('advanced tools are reversible without hiding the playable arena',async({pa
  await expect(page.locator('#makeScenario')).toBeVisible();
  await page.locator('#labPanel .hub-back').click();
  await expect(page.locator('#agentHub')).toBeVisible();
- await page.locator('[data-world-mode="combat"]').click();
+ await page.locator('[data-cp-mode="combat"]:visible, [data-world-mode="combat"]:visible').first().click();
  await expect(page.locator('#agentHub')).toBeVisible();
  await page.locator('#hubEdit').click();
  await expect(page.locator('#combatPanel')).toBeVisible();
