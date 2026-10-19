@@ -239,4 +239,45 @@ for(let i=0;i<45;i++)uniformGust.step();
 near(uniformGust.wakeVorticity().rms,0,.0001);
 near(uniformGust.sample(20,20).mach,1.8,.0002);
 
-console.log('SHOCK: legacy Euler, parametric profiles, gust cycle, real vorticity and load time series PASS');
+
+const sourceOptions=[{x:.50,y:.50,type:'pressure',strength:6,angle:0}];
+const baseline=new ShockField(82,55);baseline.geometry('empty');
+const inflating=new ShockField(82,55);inflating.geometry('empty');inflating.setEmitters(sourceOptions);
+const vacuum=new ShockField(82,55);vacuum.geometry('empty');vacuum.setEmitters([{x:.5,y:.5,type:'suction',strength:6,angle:0}]);
+const oriented=new ShockField(82,55);oriented.geometry('empty');oriented.setEmitters([{x:.5,y:.5,type:'jet',strength:6,angle:90}]);
+for(let i=0;i<125;i++){baseline.step();inflating.step();vacuum.step();oriented.step();}
+assert.ok(inflating.sample(41,27).pressure>baseline.sample(41,27).pressure+.35,'persistent pressure injection increases pressure');
+assert.ok(vacuum.sample(41,27).rho<baseline.sample(41,27).rho-.2,'persistent sink actually removes gas');
+assert.ok(oriented.sample(41,27).v>1,'jet injects directional y momentum');
+assert.ok(Math.abs(oriented.sample(41,27).u)<.25,'jet does not inject unwanted horizontal momentum');
+inflating.setEmitters([]);assert.equal(inflating.emitters.length,0,'deletion stops all emitters');
+inflating.setEmitters(Array.from({length:25},()=>sourceOptions[0]));
+assert.equal(inflating.emitters.length,16,'numerical emitter list is bounded');
+const solidMat=new ShockField(82,55),porousMat=new ShockField(82,55),spongeMat=new ShockField(82,55);
+for(const [f,type] of [[solidMat,1],[porousMat,2],[spongeMat,3]]){
+ f.geometry('empty');f.paintMaterial(26,10,26,44,type,2);
+ f.setEmitters([{x:.21,y:.5,type:'pressure',strength:6}]);
+ for(let i=0;i<100;i++)f.step();
+ assert.ok(f.scan().minP>0,'all material types remain pressure-positive');
+}
+assert.ok(solidMat.sample(27,27).solid,'solid material impermeable');
+assert.ok(!porousMat.sample(27,27).solid&&!spongeMat.sample(27,27).solid,'porous and absorber remain gas cells');
+assert.ok(porousMat.sample(27,27).pressure>spongeMat.sample(27,27).pressure+.06,'absorber damps local pressure stronger than porous drag');
+porousMat.paintMaterial(26,10,26,44,0,2);
+assert.equal(porousMat.material[27*82+26],0,'eraser clears porous medium');
+const builtIn=new ShockField(82,55);
+builtIn.geometry('cylinder');
+const count=builtIn.body.reduce((a,b)=>a+b,0);
+builtIn.paintMaterial(41,27,41,27,0,10);
+assert.equal(builtIn.body.reduce((a,b)=>a+b,0),count,'eraser preserves builtin experimental solids');
+builtIn.paintMaterial(15,10,15,26,2,2);
+assert.ok(builtIn.material.some(Boolean),'custom material coexists with the body mask');
+const combined=new ShockField(100,70);
+combined.geometry('tube');combined.loadTube(8);combined.superimposeFlow(2);
+near(combined.sample(24,35).pressure,8,.0001);
+near(combined.sample(75,35).pressure,1,.0001);
+assert.equal(combined.flowActive,true,'shock tube can use a user-enabled steady inflow');
+for(let i=0;i<90;i++)combined.step();
+assert.ok(Number.isFinite(combined.scan().maxP)&&combined.scan().minP>0,'combined flow stays numerically stable');
+
+console.log('SHOCK: Euler regression, materials, pressure/suction/jet sources, wind-in-tube and unsteady loads PASS');
