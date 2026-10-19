@@ -38,6 +38,8 @@ let state = null;
 let camera = { x: 0, y: 0, z: 1 };
 let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, downLeft: false, downRight: false };
 let keyState = new Set();
+let touchFiring = false;
+let lastTouchAimAt = 0;
 let buildMode = null;
 let moveModuleId = null;
 let moduleAction = null;
@@ -175,8 +177,9 @@ socket.on("joinError", (payload) => {
 });
 
 socket.on("actionError", (payload) => {
-  showToast(payload.message || "Action failed", 1700);
+  showToast(payload.message || "Action failed", 2200);
 });
+socket.on("connectionStatus", (payload) => showToast(payload.message || "Connection lost", 3000));
 
 socket.on("state", (next) => {
   const prevPhase = state?.phase;
@@ -189,6 +192,19 @@ socket.on("state", (next) => {
   if (Array.isArray(next.events)) {
     next.events.forEach((ev) => {
       handleEventAudio(ev);
+      if(ev.type==="shot"&&Number.isFinite(ev.x)&&Number.isFinite(ev.y)){
+        addShake(ev.crit?.085:.035);
+        for(let i=0;i<5;i++){
+          const a=ev.angle+random(-.6,.6),speed=random(35,110);
+          particles.push({x:ev.x,y:ev.y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,
+            life:random(.10,.28),t:0,color:ev.crit?"#ffe8a1":"#b1f9ff",r:random(1,2.4)});
+        }
+      }
+      if(ev.type==="defeat")showToast(ev.reason==="timeout"?"Время истекло — экспедиция сорвана":"Корабль потерян — возвращение в док",2600);
+      if(ev.type==="hull-breach")showToast(`Пробоина! Секция ${ev.x},${ev.y}`,1900);
+      if(ev.type==="overheat")showToast(`Перегрев модуля ${ev.moduleId} — охлаждение`,2200);
+      if(ev.type==="power-grid"&&!ev.powered)showToast(`Обрыв питания ${ev.moduleId}`,2000);
+      if(ev.type==="hull-patch")beep(510,.10,"triangle",.21);
       if (ev.type === "enemy-destroyed") {
         const count = ev.elite ? 34 : 16;
         for (let i = 0; i < count; i += 1) {
@@ -217,8 +233,9 @@ socket.on("state", (next) => {
     });
   }
 
-  const now = performance.now();
-  if (now - lastUiStamp > 120) {
+  if(particles.length>550)particles.splice(0,particles.length-550);
+  const now=performance.now();
+  if(now-lastUiStamp>120){
     renderUI();
     lastUiStamp = now;
   }
@@ -279,6 +296,211 @@ function clearNode(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
+
+const repairConsole = document.getElementById("repair-console");
+
+const systemsStatus=document.getElementById("systems-status");
+const engineeringPanel=document.getElementById("engineering-panel");
+let engineeringSignature="";
+const PLATE_MAX=48;
+
+function damagedPlates(){
+  return (state?.ship?.plates||[]).filter(p=>p.hp<PLATE_MAX-.1)
+    .sort((a,b)=>a.hp-b.hp);
+}
+function appendPlateActions(container,combat=false){
+  const plates=damagedPlates();
+  if(!plates.length)return false;
+  const heading=document.createElement("div");
+  heading.className="eng-subtitle";
+  heading.textContent=combat?"АВАРИЙНАЯ ГЕРМЕТИЗАЦИЯ — 12 энергии":"ПРОБОИНЫ — 16 кредитов за заплатку";
+  container.appendChild(heading);
+  for(const p of plates.slice(0,8)){
+    const row=document.createElement("div");row.className="eng-plate";
+    const info=document.createElement("div");info.className="eng-label";
+    const name=document.createElement("strong");
+    name.textContent=`Секция ${p.x}, ${p.y}${p.hp<=0?" · ПРОБИТА":""}`;
+    const details=document.createElement("small");
+    details.textContent=`Броня ${Math.round(p.hp)}/${PLATE_MAX} · ${p.hp<=9?"разрыв шины":p.hp<22?"трещины":"царапины"}`;
+    const meter=document.createElement("div");meter.className="eng-meter";
+    const fill=document.createElement("i");
+    fill.style.width=`${100*p.hp/PLATE_MAX}%`;meter.append(fill);
+    info.append(name,details,meter);
+    const b=button(combat?"Залатать +18":"Залатать +26","",()=>socket.emit("patchHull",{x:p.x,y:p.y}));
+    const station=moduleByIdLocal(playerMe()?.moduleId);
+    const stationReady=station?.type==="repair"&&station.status==="online"&&!station.overheated&&station.powered!==false;
+    b.disabled=combat ? state.ship.energy<12||!stationReady : state.ship.credits<16;
+    row.append(info,b);container.appendChild(row);
+  }
+  if(plates.length>8){
+    const more=document.createElement("p");more.className="eng-empty";
+    more.textContent=`Ещё повреждённых секций: ${plates.length-8}. После ремонта появятся следующие.`;
+    container.appendChild(more);
+  }
+  return true;
+}
+function renderEngineeringUI(){
+  if(!state||!engineeringPanel)return;
+  const plates=damagedPlates(),offline=state.ship.modules.filter(m=>m.powered===false);
+  const heat=state.ship.modules.filter(m=>m.overheated||m.heat>=65);
+  const breaches=plates.filter(p=>p.hp<=0).length;
+  const connected=(state.ship.networkCells||[]).length;
+  const total=state.ship.cells.length;
+  const statusLines=[
+    {text:`Шина ${connected}/${total} · ${offline.length} отключено`,cls:offline.length?"danger":""},
+    {text:`Корпус: ${breaches} пробоин · ${plates.length} повреждений`,cls:breaches?"danger":plates.length?"warning":""},
+    {text:`Температура: ${heat.length} критических систем`,cls:heat.length?"warning":""}
+  ];
+  clearNode(systemsStatus);
+  for(const entry of statusLines){
+    const item=document.createElement("div");
+    item.className=`system-line ${entry.cls}`;
+    item.textContent=entry.text;systemsStatus.appendChild(item);
+  }
+  const sig=JSON.stringify({phase:state.phase,credits:state.ship.credits>=16,
+    plates:plates.map(p=>[p.x,p.y,Math.floor(p.hp)]),
+    modules:state.ship.modules.map(m=>[m.id,m.powered,m.overheated,Math.floor((m.heat||0)/10)])});
+  if(sig===engineeringSignature)return;
+  engineeringSignature=sig;
+  clearNode(engineeringPanel);
+  const summary=document.createElement("div");summary.className="eng-summary";
+  summary.innerHTML="";
+  const live=document.createElement("strong"),fault=document.createElement("span");
+  live.textContent=`ПИТАНИЕ ${state.ship.modules.length-offline.length}/${state.ship.modules.length}`;
+  fault.textContent=breaches?`${breaches} ПРОБОИН`:"ШИНА РАБОТАЕТ";
+  fault.style.color=breaches?"#ffb1a1":"#9be0ca";
+  summary.append(live,fault);engineeringPanel.append(summary);
+  if(!appendPlateActions(engineeringPanel)){
+    const empty=document.createElement("div");empty.className="eng-empty";
+    empty.textContent="Обшивка целая. В бою попадания разрывают секции и питающие линии.";
+    engineeringPanel.appendChild(empty);
+  }
+  const subsystem=document.createElement("div");
+  subsystem.className="eng-subtitle";subsystem.textContent="СИСТЕМЫ И ТЕМПЕРАТУРА";
+  engineeringPanel.appendChild(subsystem);
+  for(const m of state.ship.modules){
+    const row=document.createElement("div");row.className="eng-module";
+    const info=document.createElement("div");info.className="eng-label";
+    const name=document.createElement("strong");
+    name.textContent=`${m.name || m.type} · ${m.id}`;
+    const small=document.createElement("small");
+    small.textContent=m.powered===false?"ШИНА ОБОРВАНА":m.overheated?"АВАРИЙНОЕ ОТКЛЮЧЕНИЕ":
+      `Температура ${Math.round(m.heat||0)}° · питание ${Math.round((m.powerFactor??1)*100)}%`;
+    const meter=document.createElement("div");meter.className="eng-meter heat";
+    const fill=document.createElement("i");
+    fill.style.width=`${Math.min(100,m.heat||0)}%`;
+    meter.appendChild(fill);
+    info.append(name,small,meter);
+    row.append(info);engineeringPanel.append(row);
+  }
+}
+
+let repairSignature = null;
+
+function repairActionButton(label, action) {
+  return button(label, "", () => socket.emit("repairAction", { action }));
+}
+
+function renderRepairConsole() {
+  const pilot = playerMe();
+  const station = moduleByIdLocal(pilot?.moduleId);
+  const active = joined && station?.type === "repair";
+  repairConsole.hidden = !active;
+  if (!active) { repairSignature = null; return; }
+  if(station.status!=="online"||station.overheated||station.powered===false){
+    repairSignature=null;
+    clearNode(repairConsole);
+    const alert=document.createElement("h3");alert.textContent="ИНЖЕНЕРНЫЙ ПОСТ ОТКЛЮЧЁН";
+    const reason=document.createElement("p");
+    reason.textContent=station.overheated?"Перегрев: охлаждение происходит автоматически.":
+      station.powered===false?"Питание прервано: восстановите обшивку или запитайте участок от реактора.":
+      "Модуль повреждён: восстановите его перед ремонтом обшивки.";
+    repairConsole.append(alert,reason);return;
+  }
+
+  const damaged = state.ship.modules.filter(m => m.status !== "online" || m.hp < m.maxHp);
+  const target = damaged.find(m => m.id === pilot.repairTarget) || damaged[0];
+  const task = target?.malfunction;
+  const signature = JSON.stringify({
+    target: target?.id, selected: pilot.repairTarget,
+    plates:damagedPlates().map(p=>[p.x,p.y,Math.round(p.hp)]),
+    energy:state.ship.energy>=12,stationPowered:station.powered,stationOverheated:station.overheated,stationStatus:station.status,
+    damaged: damaged.map(m => [m.id, m.status, Math.round(m.hp), m.malfunction?.kind,
+      m.malfunction?.index, m.malfunction?.progress, m.malfunction?.bits, m.malfunction?.targetBits])
+  });
+
+  if (signature !== repairSignature) {
+    repairSignature = signature;
+    clearNode(repairConsole);
+    const title = document.createElement("h3");
+    title.textContent = "ИНЖЕНЕРНЫЙ ПОСТ";
+    repairConsole.appendChild(title);
+    const hasPlateDamage=appendPlateActions(repairConsole,true);
+
+    if (!target) {
+      const allClear = document.createElement("p");
+      allClear.textContent=hasPlateDamage?"Модули исправны. Залатайте повреждённые секции.":"Системы исправны. Ожидайте повреждений или смените станцию (Tab).";
+      repairConsole.appendChild(allClear);
+      return;
+    }
+
+    const prompt = document.createElement("p");
+    prompt.textContent = "Выберите систему для ремонта:";
+    repairConsole.appendChild(prompt);
+    const targetList = document.createElement("div");
+    targetList.className = "repair-target-list";
+    damaged.forEach(m => {
+      const b = button(`${m.type} · ${Math.round(m.hp)}/${Math.round(m.maxHp)}`,
+        m.id === target.id ? "selected" : "", () => socket.emit("setRepairTarget", { moduleId: m.id }));
+      targetList.appendChild(b);
+    });
+    repairConsole.appendChild(targetList);
+
+    const progress = document.createElement("p");
+    progress.className = "repair-task-progress";
+    if (!task) {
+      progress.textContent = "Повреждение корпуса: удерживайте R / «Ремонт» для восстановления прочности.";
+      repairConsole.appendChild(progress);
+      return;
+    }
+    progress.textContent = `Сбой: ${task.kind} · ${task.progress}/${task.target} · удерживайте R для восстановления HP`;
+    repairConsole.appendChild(progress);
+
+    const actions = document.createElement("div");
+    actions.className = "repair-actions";
+    if (task.kind === "sequence") {
+      const expected = {left:"←", right:"→", up:"↑", down:"↓"};
+      const next = document.createElement("p");
+      next.textContent = `Команда ${Math.min(task.index + 1, task.sequence.length)}/${task.sequence.length}: ${expected[task.sequence[task.index]] || "—"}`;
+      repairConsole.appendChild(next);
+      for (const [dir, glyph] of Object.entries(expected)) actions.appendChild(repairActionButton(glyph, dir));
+    } else if (task.kind === "timing") {
+      const explain = document.createElement("p");
+      explain.textContent = "Нажмите в зелёной зоне шкалы. Клавиша: Пробел.";
+      repairConsole.appendChild(explain);
+      const track = document.createElement("div");
+      track.className = "repair-timing-track";
+      const one = document.createElement("span"); one.className = "repair-timing-zone one";
+      const two = document.createElement("span"); two.className = "repair-timing-zone two";
+      const marker = document.createElement("span"); marker.className = "repair-timing-marker";
+      track.append(one, two, marker); repairConsole.appendChild(track);
+      actions.appendChild(repairActionButton("ЗАФИКСИРОВАТЬ", "hit"));
+    } else if (task.kind === "circuit") {
+      const reference = document.createElement("p");
+      reference.className = "repair-circuit-target";
+      reference.textContent = `Образец: ${task.targetBits.join(" ")} · схема: ${task.bits.join(" ")}`;
+      repairConsole.appendChild(reference);
+      task.bits.forEach((bit, i) => actions.appendChild(repairActionButton(
+        `Контакт ${i+1}: ${bit}`, `toggle_${i}`)));
+    }
+    repairConsole.appendChild(actions);
+  }
+  if (task?.kind === "timing") {
+    const marker = repairConsole.querySelector(".repair-timing-marker");
+    if (marker) marker.style.left = `${(task.phase * 100).toFixed(2)}%`;
+  }
+}
+
 let lastPanelSignature=null;
 function renderUI() {
   if (!state) return;
@@ -293,6 +515,8 @@ function renderUI() {
   hud.credits.textContent = String(Math.round(state.ship.credits || 0));
   hud.hull.textContent = `${Math.round(state.ship.hull || 0)}/${Math.round(state.ship.hullMax || 0)}`;
   hud.energy.textContent = `${Math.round(state.ship.energy || 0)}/${Math.round(state.ship.energyMax || 0)}`;
+  renderRepairConsole();
+  renderEngineeringUI();
 
   const panelSignature=JSON.stringify({phase:state.phase,players:state.players.map(p=>[p.id,p.name,p.moduleId]),modules:state.ship.modules.map(m=>[m.id,m.occupiedBy,m.status,Math.round(m.hp),m.x,m.y,m.rotation]),inventory:state.ship.inventoryModules,shapes:state.ship.inventoryShapes,offers:state.offers,affordable:state.offers.map(o=>state.ship.credits>=o.cost),missions:state.missionOptions,buildMode});
   if(panelSignature===lastPanelSignature)return;
@@ -339,11 +563,14 @@ function renderUI() {
     const actions = document.createElement("div");
     actions.className = "row";
     const seatedHere = mePlayer && mePlayer.moduleId === m.id;
-    const seatAction = () => socket.emit("occupyModule", { moduleId: m.id });
-    actions.appendChild(button(seatedHere ? "Leave" : "Seat", seatedHere ? "danger" : "primary", () => {
+    const occupiedByOther = Boolean(m.occupiedBy && m.occupiedBy !== me);
+    const seatAction = () => {if(!occupiedByOther) socket.emit("occupyModule", { moduleId: m.id });};
+    const seatBtn = button(seatedHere ? "Встать" : occupiedByOther ? "Занято" : "Занять", seatedHere ? "danger" : "primary", () => {
       if (seatedHere) socket.emit("leaveModule");
       else seatAction();
-    }));
+    });
+    seatBtn.disabled = occupiedByOther;
+    actions.appendChild(seatBtn);
     row.appendChild(actions);
     row.addEventListener("click", (ev) => {
       if (ev.target instanceof HTMLElement && ev.target.closest("button")) return;
@@ -370,7 +597,7 @@ function renderUI() {
     row.appendChild(Object.assign(document.createElement("div"), { textContent: `${lib?.type || "?"} | ${lib?.w || 1}x${lib?.h || 1}` }));
     const actions = document.createElement("div");
     actions.className = "row";
-    actions.appendChild(button("Place", buildMode?.kind === "module" && buildMode?.index === idx ? "warn" : "primary", () => {
+    actions.appendChild(button("Разместить", buildMode?.kind === "module" && buildMode?.index === idx ? "warn" : "primary", () => {
       buildMode = { kind: "module", templateId, index: idx };
       moveModuleId = null;
       closeModuleActions();
@@ -389,7 +616,7 @@ function renderUI() {
     row.appendChild(Object.assign(document.createElement("div"), { textContent: `${sh?.cells?.length || 0} cells` }));
     const actions = document.createElement("div");
     actions.className = "row";
-    actions.appendChild(button("Place", buildMode?.kind === "shape" && buildMode?.index === idx ? "warn" : "primary", () => {
+    actions.appendChild(button("Разместить", buildMode?.kind === "shape" && buildMode?.index === idx ? "warn" : "primary", () => {
       buildMode = { kind: "shape", shapeId, index: idx };
       moveModuleId = null;
       closeModuleActions();
@@ -408,7 +635,7 @@ function renderUI() {
       row.appendChild(Object.assign(document.createElement("div"), { textContent: `${m.name} ${Math.round(m.hp)}/${m.maxHp}` }));
       const actions = document.createElement("div");
       actions.className = "row";
-      actions.appendChild(button("Set Target", "primary", () => socket.emit("setRepairTarget", { moduleId: m.id })));
+      actions.appendChild(button("Цель ремонта", "primary", () => socket.emit("setRepairTarget", { moduleId: m.id })));
       row.appendChild(actions);
       repairTargets.appendChild(row);
     });
@@ -421,7 +648,9 @@ function renderUI() {
     row.appendChild(Object.assign(document.createElement("div"), { textContent: `${o.description} | ${o.cost} cr` }));
     const actions = document.createElement("div");
     actions.className = "row";
-    actions.appendChild(button("Buy", state.ship.credits >= o.cost ? "primary" : "", () => socket.emit("buyItem", { itemId: o.id })));
+    const buyBtn = button("Купить", state.ship.credits >= o.cost ? "primary" : "", () => socket.emit("buyItem", { itemId: o.id }));
+    buyBtn.disabled = state.ship.credits < o.cost || state.phase === "combat";
+    actions.appendChild(buyBtn);
     row.appendChild(actions);
     shopList.appendChild(row);
   });
@@ -481,8 +710,8 @@ resize();
 
 function screenToWorld(sx, sy) {
   const rect = canvas.getBoundingClientRect();
-  const x = sx - rect.left;
-  const y = sy - rect.top;
+  const x = sx - rect.left - (camera.shakeX || 0);
+  const y = sy - rect.top - (camera.shakeY || 0);
   return {
     x: (x - rect.width / 2) / camera.z + camera.x,
     y: (y - rect.height / 2) / camera.z + camera.y,
@@ -568,14 +797,14 @@ function pickModuleByPoint(wx, wy) {
 
 function cycleRole(step = 1) {
   if (!state?.ship?.modules?.length) return;
-  const modules = state.ship.modules.slice();
+  const modules = state.ship.modules.filter(m => !m.occupiedBy || m.occupiedBy === me);
   if (!modules.length) return;
   const mePlayer = playerMe();
   const currentId = mePlayer?.moduleId || null;
   let idx = modules.findIndex((m) => m.id === currentId);
   if (idx === -1) idx = step > 0 ? -1 : 0;
   const next = modules[(idx + step + modules.length) % modules.length];
-  if (!next) return;
+  if (!next || next.id === currentId) return;
   socket.emit("occupyModule", { moduleId: next.id });
   showToast(`Role: ${next.type}`);
 }
@@ -586,6 +815,7 @@ canvas.addEventListener("pointermove", (e) => {
   const w = screenToWorld(mouse.x, mouse.y);
   mouse.worldX = w.x;
   mouse.worldY = w.y;
+  if (e.pointerType === "touch") lastTouchAimAt = performance.now();
 });
 
 canvas.addEventListener("pointerdown", (e) => {
@@ -598,6 +828,11 @@ canvas.addEventListener("pointerdown", (e) => {
   const w = screenToWorld(e.clientX, e.clientY);
   const g = worldToShipGrid(w.x, w.y);
   const clickedModule = pickModuleByPoint(w.x, w.y);
+  if (e.pointerType === "touch") {
+    mouse.x = e.clientX; mouse.y = e.clientY;
+    mouse.worldX = w.x; mouse.worldY = w.y;
+    if (!clickedModule) lastTouchAimAt = performance.now();
+  }
 
   if (e.button === 0) {
     if (!isGarage()) {
@@ -611,6 +846,8 @@ canvas.addEventListener("pointerdown", (e) => {
     }
 
     if (moveModuleId) {
+      const failure = placementError(g);
+      if (failure) { showToast(failure); return; }
       socket.emit("moveModule", { moduleId: moveModuleId, x: g.gx, y: g.gy, rotation: buildRotation });
       moveModuleId = null;
       closeModuleActions();
@@ -618,12 +855,16 @@ canvas.addEventListener("pointerdown", (e) => {
     }
 
     if (buildMode?.kind === "module") {
+      const failure = placementError(g);
+      if (failure) { showToast(failure); return; }
       socket.emit("placeModule", { templateId: buildMode.templateId, x: g.gx, y: g.gy, rotation: buildRotation });
       buildMode = null;
       closeModuleActions();
       return;
     }
     if (buildMode?.kind === "shape") {
+      const failure = placementError(g);
+      if (failure) { showToast(failure); return; }
       socket.emit("addHullShape", { shapeId: buildMode.shapeId, x: g.gx, y: g.gy, rotation: buildRotation });
       buildMode = null;
       closeModuleActions();
@@ -639,6 +880,8 @@ canvas.addEventListener("pointerdown", (e) => {
   }
 
   if (e.button === 2 && isGarage() && moveModuleId) {
+    const failure = placementError(g);
+    if (failure) { showToast(failure); return; }
     socket.emit("moveModule", { moduleId: moveModuleId, x: g.gx, y: g.gy, rotation: buildRotation });
     moveModuleId = null;
     closeModuleActions();
@@ -646,14 +889,17 @@ canvas.addEventListener("pointerdown", (e) => {
 });
 
 canvas.addEventListener("pointerup", (e) => {
-  if (e.button === 0) mouse.downLeft = false;
+  if (e.button === 0) mouse.downLeft = touchFiring;
   if (e.button === 2) mouse.downRight = false;
 });
 
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 window.addEventListener("keydown", (e) => {
-  if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "KeyR", "BracketLeft", "BracketRight", "Tab"].includes(e.code)) e.preventDefault();
+  const active = e.target;
+  if (active instanceof HTMLElement && (active.matches("input,textarea,select") || active.isContentEditable)) return;
+  if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "KeyR", "BracketLeft", "BracketRight", "Tab"].includes(e.code) && joined) e.preventDefault();
+  if (e.repeat && ["Enter", "Tab", "BracketLeft", "BracketRight", "Escape", "Space", "Digit1", "Digit2", "Digit3", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.code)) return;
   keyState.add(e.code);
 
   if (e.code === "BracketLeft") {
@@ -693,7 +939,22 @@ window.addEventListener("keyup", (e) => {
 function inputPayload() {
   if (!state) return null;
   const ph = displayPhysics();
-  const aim = Math.atan2(mouse.worldY - ph.y, mouse.worldX - ph.x);
+  const pilot=playerMe(),mod=moduleByIdLocal(pilot?.moduleId);
+  let originX=ph.x,originY=ph.y;
+  if(mod?.type==="turret"){
+    const lx=(mod.x+mod.w*.5)*state.cellSize,ly=(mod.y+mod.h*.5)*state.cellSize;
+    originX+=Math.cos(ph.a)*lx-Math.sin(ph.a)*ly;
+    originY+=Math.sin(ph.a)*lx+Math.cos(ph.a)*ly;
+  }
+  const point=screenToWorld(mouse.x,mouse.y);
+  let aim=Math.atan2(point.y-originY,point.x-originX);
+  if(touchFiring && performance.now()-lastTouchAimAt>3500 && state.enemies?.length){
+    // One finger fires; a second finger can manually aim on the canvas.
+    const target = state.enemies.reduce((best, enemy) =>
+      !best || Math.hypot(enemy.x-originX,enemy.y-originY) < Math.hypot(best.x-originX,best.y-originY)
+        ? enemy : best, null);
+    if(target)aim=Math.atan2(target.y-originY,target.x-originX);
+  }
   return {
     up: keyState.has("KeyW"),
     down: keyState.has("KeyS"),
@@ -768,8 +1029,8 @@ function drawHullEdgeLines(csz) {
 function drawEngineExhaust(csz, t) {
   const ts = t * 0.001;
   state.ship.modules.forEach((m) => {
-    if (m.type !== "engine") return;
-    const level = clamp(m.thrustLevel || 0, 0, 2.2);
+    if(m.type!=="engine"||m.powered===false||m.overheated)return;
+    const level=clamp(m.thrustLevel||0,0,2.2);
     if (level < 0.06) return;
 
     const rot = ((m.rotation || 0) % 360 + 360) % 360;
@@ -814,7 +1075,7 @@ function drawTurretEffects(csz, shipAngle) {
     if (m.type !== "turret") return;
     const cx = (m.x + m.w * 0.5) * csz;
     const cy = (m.y + m.h * 0.5) * csz;
-    const localAim = normalizeAngle((m.aim || shipAngle) - shipAngle);
+    const localAim=normalizeAngle((Number.isFinite(m.aim)?m.aim:shipAngle)-shipAngle);
     const recoil = (m.recoil || 0) * 6;
     const barrelLen = Math.max(m.w, m.h) * csz * 0.42 + 12;
     const sx = cx + Math.cos(localAim) * (8 - recoil);
@@ -846,8 +1107,8 @@ function drawTurretEffects(csz, shipAngle) {
     if ((m.shotFlash || 0) > 0.01) {
       const flash = clamp(m.shotFlash, 0, 1);
       const radius = 7 + flash * 9;
-      const mx = ex + Math.cos(localAim) * 2;
-      const my = ey + Math.sin(localAim) * 2;
+      const mx=cx+Math.cos(localAim)*barrelLen;
+      const my=cy+Math.sin(localAim)*barrelLen;
       const grad = ctx.createRadialGradient(mx, my, 0, mx, my, radius);
       grad.addColorStop(0, `rgba(255,250,196,${0.95 * flash})`);
       grad.addColorStop(0.45, `rgba(255,187,96,${0.8 * flash})`);
@@ -868,6 +1129,7 @@ function drawShip(t) {
   ctx.save();
   ctx.translate(shipPos.x, shipPos.y);
   ctx.rotate(ph.a);
+  ctx.scale(camera.z,camera.z);
 
   if (state.ship.bounds) {
     const b = state.ship.bounds;
@@ -892,16 +1154,44 @@ function drawShip(t) {
     ctx.fill();
   }
 
-  state.ship.cells.forEach((c) => {
-    const x = c.x * csz;
-    const y = c.y * csz;
-    const garage = isGarage();
-    const glow = 0.1 + Math.sin((c.x + c.y) * 0.9 + performance.now() * 0.002) * 0.03;
-    ctx.fillStyle = garage ? `rgba(60,140,170,${0.4 + glow})` : "rgba(34,80,104,0.82)";
-    ctx.fillRect(x, y, csz, csz);
-    if (garage) {
-      ctx.strokeStyle = "rgba(138,237,255,0.24)";
-      ctx.strokeRect(x + 0.5, y + 0.5, csz - 1, csz - 1);
+  const plateMap=new Map((state.ship.plates||[]).map(p=>[`${p.x},${p.y}`,p.hp]));
+  const liveBus=new Set((state.ship.networkCells||[]).map(p=>`${p.x},${p.y}`));
+  const garage=isGarage(), pulse=.48+.20*Math.sin(t*.005);
+  state.ship.cells.forEach(c=>{
+    const x=c.x*csz,y=c.y*csz,key=`${c.x},${c.y}`;
+    const hp=plateMap.get(key)??48, integrity=clamp(hp/48,0,1);
+    ctx.fillStyle=hp<=0?"#02080d":garage?`rgba(${Math.round(50+18*integrity)},${Math.round(83+55*integrity)},${Math.round(100+58*integrity)},.86)`:
+      `rgb(${Math.round(16+20*integrity)},${Math.round(26+54*integrity)},${Math.round(39+65*integrity)})`;
+    ctx.fillRect(x,y,csz,csz);
+    if(garage){
+      ctx.strokeStyle="rgba(138,237,255,.23)";
+      ctx.strokeRect(x+.5,y+.5,csz-1,csz-1);
+      if(liveBus.has(key)){
+        ctx.lineWidth=1.4;
+        ctx.strokeStyle=`rgba(88,236,202,${pulse*.54})`;
+        ctx.beginPath();ctx.moveTo(x+csz*.5,y+csz*.18);ctx.lineTo(x+csz*.5,y+csz*.82);
+        ctx.moveTo(x+csz*.18,y+csz*.5);ctx.lineTo(x+csz*.82,y+csz*.5);
+        ctx.stroke();
+      }
+    }
+    if(integrity<.75){
+      ctx.save();
+      ctx.strokeStyle=hp<=9?"rgba(254,115,98,.96)":"rgba(245,184,117,.75)";
+      ctx.lineWidth=hp<=9?2.1:1.2;
+      ctx.beginPath();
+      ctx.moveTo(x+3,y+csz*.27);
+      ctx.lineTo(x+csz*.39,y+csz*.52);
+      ctx.lineTo(x+csz*.26,y+csz*.83);
+      ctx.lineTo(x+csz*.7,y+csz*.92);
+      ctx.stroke();
+      if(hp<=0){
+        ctx.strokeStyle=`rgba(244,88,69,${pulse})`;
+        ctx.lineWidth=2.1;ctx.strokeRect(x+1.5,y+1.5,csz-3,csz-3);
+        ctx.fillStyle="rgba(234,85,76,.32)";
+        ctx.beginPath();ctx.moveTo(x+2,y+1);ctx.lineTo(x+csz-1,y+1);
+        ctx.lineTo(x+csz*.6,y+csz*.4);ctx.fill();
+      }
+      ctx.restore();
     }
   });
   drawHullEdgeLines(csz);
@@ -914,7 +1204,9 @@ function drawShip(t) {
     const h = m.h * csz;
     const img = sprite(m.sprite);
     const hpN = clamp(m.hp / Math.max(1, m.maxHp), 0, 1);
-    const broken = m.status !== "online";
+    const unpowered=m.powered===false;
+    const overheating=Boolean(m.overheated);
+    const broken=m.status!=="online"||unpowered||overheating;
 
     if (img) {
       ctx.save();
@@ -926,14 +1218,58 @@ function drawShip(t) {
       ctx.fillRect(x, y, w, h);
     }
 
-    ctx.strokeStyle = broken ? "rgba(255,130,145,0.9)" : "rgba(120,245,255,0.85)";
+    // Damage is carved into the physical module silhouette, not just a HUD bar.
+    if(hpN < .82){
+      const damage=1-hpN;
+      const lines=Math.ceil(damage*5);
+      ctx.save();
+      ctx.beginPath();ctx.rect(x+3,y+3,w-6,h-6);ctx.clip();
+      ctx.lineCap="round";
+      for(let i=0;i<lines;i++){
+        const seed=(m.id.length*17+i*37)%97/97;
+        const sx=x+w*(.22+seed*.57),sy=y+h*(.15+((i*31)%73)/100*.65);
+        const len=(6+damage*24)*(i%2===0?1:-1);
+        ctx.strokeStyle=i%3===0?"rgba(255,167,105,.74)":"rgba(4,12,23,.85)";
+        ctx.lineWidth=1+damage*1.5;ctx.beginPath();
+        ctx.moveTo(sx,sy);
+        ctx.lineTo(sx+len*.32,sy-len*.22);
+        ctx.lineTo(sx+len*.58,sy+len*.31);
+        ctx.stroke();
+      }
+      if(m.status!=="online"){
+        const pulse=.24+.18*Math.sin(performance.now()*.015+m.x);
+        ctx.fillStyle=`rgba(244,76,59,${pulse})`;
+        ctx.fillRect(x,y,Math.max(4,w*.12),Math.max(4,h*.12));
+      }
+      ctx.restore();
+    }
+
+    ctx.strokeStyle=unpowered?"rgba(140,150,159,.92)":overheating?"rgba(255,105,74,.98)":
+      broken?"rgba(255,130,145,.9)":"rgba(120,245,255,.85)";
     ctx.lineWidth = 1.3;
     ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
 
     ctx.fillStyle = "rgba(5,14,22,0.8)";
     ctx.fillRect(x + 3, y + h - 7, w - 6, 4);
     ctx.fillStyle = hpN > 0.45 ? "#6cf2a4" : hpN > 0.2 ? "#ffd56b" : "#ff7f8f";
-    ctx.fillRect(x + 3, y + h - 7, (w - 6) * hpN, 4);
+    ctx.fillRect(x+3,y+h-7,(w-6)*hpN,4);
+    const temperature=clamp((m.heat||0)/100,0,1);
+    if(temperature>.03){
+      ctx.fillStyle=temperature>.85?"#ff6a48":temperature>.55?"#ffae6f":"#d0a871";
+      ctx.fillRect(x+3,y+3,(w-6)*temperature,3);
+    }
+    if(unpowered){
+      ctx.save();ctx.globalAlpha=.66;
+      ctx.strokeStyle="#f1c178";ctx.lineWidth=1.6;
+      ctx.beginPath();ctx.moveTo(x+5,y+5);ctx.lineTo(x+w-5,y+h-10);
+      ctx.moveTo(x+w-5,y+5);ctx.lineTo(x+5,y+h-10);
+      ctx.stroke();ctx.restore();
+    }
+    if(overheating){
+      const intensity=.15+.1*Math.sin(t*.018+m.x);
+      ctx.fillStyle=`rgba(255,96,57,${intensity})`;
+      ctx.fillRect(x,y,w,h);
+    }
 
     if (m.occupiedBy) {
       ctx.fillStyle = "rgba(230,255,255,0.95)";
@@ -947,8 +1283,20 @@ function drawShip(t) {
       ctx.fillRect(x + 2, y + 2, (w - 4) * (m.malfunction.progress / Math.max(1, m.malfunction.target)), 3);
     }
   });
-  drawTurretEffects(csz, ph.a);
-
+  drawTurretEffects(csz,ph.a);
+  if(isGarage()&&state.ship.massProperties){
+    const mass=state.ship.massProperties;
+    ctx.save();ctx.setLineDash([3,4]);
+    ctx.strokeStyle="rgba(255,209,141,.85)";
+    ctx.lineWidth=1.4;ctx.beginPath();
+    ctx.arc(mass.centerX,mass.centerY,11,0,Math.PI*2);
+    ctx.moveTo(mass.centerX-17,mass.centerY);ctx.lineTo(mass.centerX+17,mass.centerY);
+    ctx.moveTo(mass.centerX,mass.centerY-17);ctx.lineTo(mass.centerX,mass.centerY+17);
+    ctx.stroke();ctx.setLineDash([]);
+    ctx.font="10px Sora";ctx.fillStyle="#ffe5ba";
+    ctx.fillText("ЦМ",mass.centerX+14,mass.centerY-10);
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -995,8 +1343,18 @@ function drawEnemies() {
 function drawProjectiles() {
   if (!state) return;
   state.projectiles.forEach((p) => {
-    const pos = worldToScreen(p.x, p.y);
-    ctx.fillStyle = p.color || (p.friendly ? "#8ef7ff" : "#ff8d7b");
+    const pos=worldToScreen(p.x,p.y);
+    const color=p.color||(p.friendly?"#8ef7ff":"#ff8d7b");
+    if(Number.isFinite(p.vx)&&Number.isFinite(p.vy)){
+      const motion=Math.max(1,Math.hypot(p.vx,p.vy));
+      const trail=Math.min(25,motion*.035)*camera.z;
+      ctx.lineCap="round";ctx.lineWidth=(p.friendly?3.2:2.4)*camera.z;
+      ctx.globalAlpha=.48;ctx.strokeStyle=color;
+      ctx.beginPath();ctx.moveTo(pos.x,pos.y);
+      ctx.lineTo(pos.x-p.vx/motion*trail,pos.y-p.vy/motion*trail);
+      ctx.stroke();ctx.globalAlpha=1;
+    }
+    ctx.fillStyle=color;
     ctx.shadowBlur = 8;
     ctx.shadowColor = ctx.fillStyle;
     ctx.beginPath();
@@ -1095,22 +1453,61 @@ function drawCombatCrosshair() {
   ctx.stroke();
 }
 
+
+function placementError(grid) {
+  if (!state || state.phase === "combat") return "Строительство заблокировано во время боя";
+  const hull = new Set(state.ship.cells.map(c => `${c.x},${c.y}`));
+  const cellKey = (x, y) => `${x},${y}`;
+  if (moveModuleId || buildMode?.kind === "module") {
+    const moved = moveModuleId ? moduleByIdLocal(moveModuleId) : null;
+    const tpl = moved ? state.moduleLibrary[moved.templateId] : state.moduleLibrary[buildMode?.templateId];
+    if (!tpl) return "Модуль недоступен";
+    const quarterTurn = buildRotation % 180 !== 0;
+    const w = quarterTurn ? tpl.h : tpl.w;
+    const h = quarterTurn ? tpl.w : tpl.h;
+    for (let x=grid.gx;x<grid.gx+w;x++) for(let y=grid.gy;y<grid.gy+h;y++){
+      if(!hull.has(cellKey(x,y))) return "Модуль выходит за корпус";
+      if(state.ship.modules.some(m => m.id !== moveModuleId &&
+        x>=m.x && x<m.x+m.w && y>=m.y && y<m.y+m.h)) return "Место занято другим модулем";
+    }
+    return null;
+  }
+  if (buildMode?.kind === "shape") {
+    const shape = state.hullShapes[buildMode.shapeId];
+    if (!shape) return "Фрагмент корпуса отсутствует";
+    let connected = false;
+    for(const [sx,sy] of shape.cells){
+      let x=sx,y=sy;
+      if(buildRotation===90){x=-sy;y=sx;}
+      else if(buildRotation===180){x=-sx;y=-sy;}
+      else if(buildRotation===270){x=sy;y=-sx;}
+      x+=grid.gx;y+=grid.gy;
+      if(hull.has(cellKey(x,y)))return "Наложение на корпус";
+      if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>hull.has(cellKey(x+dx,y+dy))))connected=true;
+    }
+    return connected ? null : "Новый фрагмент должен соприкасаться с корпусом";
+  }
+  return null;
+}
+
 function drawBuildGhost() {
   if (!state || state.phase === "combat" || (!buildMode && !moveModuleId)) return;
   const g = worldToShipGrid(mouse.worldX, mouse.worldY);
+  const invalidReason = placementError(g);
   const csz = state.cellSize;
   const ph = displayPhysics();
   const pos = worldToScreen(ph.x, ph.y);
   ctx.save();
   ctx.translate(pos.x, pos.y);
   ctx.rotate(ph.a);
-  ctx.globalAlpha = 0.45;
+  ctx.scale(camera.z,camera.z);
+  ctx.globalAlpha = invalidReason ? 0.65 : 0.45;
   if (moveModuleId) {
     const current = moduleByIdLocal(moveModuleId);
     if (current) {
-      ctx.fillStyle = "rgba(255,191,102,0.42)";
+      ctx.fillStyle = invalidReason ? "rgba(235,70,86,.65)" : "rgba(255,191,102,0.42)";
       ctx.fillRect(g.gx * csz, g.gy * csz, current.w * csz, current.h * csz);
-      ctx.strokeStyle = "rgba(255,224,141,0.95)";
+      ctx.strokeStyle = invalidReason ? "#ff536b" : "rgba(255,224,141,0.95)";
       ctx.strokeRect(g.gx * csz, g.gy * csz, current.w * csz, current.h * csz);
     }
   } else if (buildMode.kind === "module") {
@@ -1119,9 +1516,9 @@ function drawBuildGhost() {
       const rot = ((buildRotation % 360) + 360) % 360;
       const w = rot === 90 || rot === 270 ? t.h : t.w;
       const h = rot === 90 || rot === 270 ? t.w : t.h;
-      ctx.fillStyle = "rgba(112,255,244,0.45)";
+      ctx.fillStyle = invalidReason ? "rgba(235,70,86,.65)" : "rgba(112,255,244,0.45)";
       ctx.fillRect(g.gx * csz, g.gy * csz, w * csz, h * csz);
-      ctx.strokeStyle = "rgba(163,255,246,0.95)";
+      ctx.strokeStyle = invalidReason ? "#ff536b" : "rgba(163,255,246,0.95)";
       ctx.strokeRect(g.gx * csz, g.gy * csz, w * csz, h * csz);
     }
   } else if (buildMode.kind === "shape") {
@@ -1133,14 +1530,23 @@ function drawBuildGhost() {
         if (rot === 90) { x = -sy; y = sx; }
         else if (rot === 180) { x = -sx; y = -sy; }
         else if (rot === 270) { x = sy; y = -sx; }
-        ctx.fillStyle = "rgba(120,215,255,0.4)";
+        ctx.fillStyle = invalidReason ? "rgba(235,70,86,.65)" : "rgba(120,215,255,0.4)";
         ctx.fillRect((g.gx + x) * csz, (g.gy + y) * csz, csz, csz);
-        ctx.strokeStyle = "rgba(176,233,255,0.9)";
+        ctx.strokeStyle = invalidReason ? "#ff536b" : "rgba(176,233,255,0.9)";
         ctx.strokeRect((g.gx + x) * csz, (g.gy + y) * csz, csz, csz);
       });
     }
   }
   ctx.restore();
+  if (invalidReason) {
+    const pos = worldToScreen(mouse.worldX, mouse.worldY);
+    ctx.save();
+    ctx.font = "12px Sora";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ff8191";
+    ctx.fillText(invalidReason, Math.max(90, Math.min(canvas.clientWidth-90,pos.x)), Math.max(96,pos.y-20));
+    ctx.restore();
+  }
 }
 
 function render(dt, t) {
@@ -1192,7 +1598,7 @@ function render(dt, t) {
   ctx.font = "12px Sora";
   const line1 = state.phase === "combat"
     ? `Role: ${mode}`
-    : `Garage | Rotation ${buildRotation}°${moveModuleId ? " | moving module" : ""}`;
+    : `Garage | Масса ${Math.round(state.ship.massProperties?.mass||0)} | Поворот ${buildRotation}°${moveModuleId ? " | перемещение" : ""}`;
   ctx.fillText(line1, 22, 33);
   ctx.fillStyle = "#9fd5e8";
   const line2 = state.phase === "combat"
@@ -1261,10 +1667,12 @@ window.advanceTime = async (ms) => {
 document.querySelector('#practice-btn').onclick=()=>socket.practice(nameInput.value);
 document.querySelector('#create-btn').onclick=()=>socket.create(nameInput.value);
 for(const b of document.querySelectorAll('[data-key]')){const key=b.dataset.key;b.onpointerdown=e=>{b.setPointerCapture(e.pointerId);keyState.add(key);e.preventDefault();};const release=()=>keyState.delete(key);b.onpointerup=release;b.onpointercancel=release;b.onlostpointercapture=release;}
-const fire=document.querySelector('#touch-fire');fire.onpointerdown=e=>{fire.setPointerCapture(e.pointerId);mouse.downLeft=true;e.preventDefault();};fire.onpointerup=fire.onpointercancel=fire.onlostpointercapture=()=>mouse.downLeft=false;
+const fire=document.querySelector('#touch-fire');fire.onpointerdown=e=>{fire.setPointerCapture(e.pointerId);touchFiring=true;mouse.downLeft=true;e.preventDefault();};fire.onpointerup=fire.onpointercancel=fire.onlostpointercapture=()=>{touchFiring=false;mouse.downLeft=false;};
 document.querySelector('#touch-rotate').onclick=()=>{buildRotation=(buildRotation+90)%360;showToast('Поворот '+buildRotation+'°');};
-canvas.addEventListener('pointercancel',()=>{mouse.downLeft=false;mouse.downRight=false;});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){keyState.clear();mouse.downLeft=false;mouse.downRight=false;if(joined)socket.emit('playerInput',inputPayload());}});
+canvas.addEventListener('pointercancel',()=>{mouse.downLeft=touchFiring;mouse.downRight=false;});
+window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'){mouse.downLeft=false;mouse.downRight=false;}});
+window.addEventListener('blur',()=>{keyState.clear();mouse.downLeft=false;mouse.downRight=false;touchFiring=false;if(joined&&state)socket.emit('playerInput',inputPayload());});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){keyState.clear();mouse.downLeft=false;mouse.downRight=false;touchFiring=false;if(joined&&state)socket.emit('playerInput',inputPayload());}});
 
 
 for(const button of document.querySelectorAll('[data-panel]'))button.onclick=()=>{document.body.dataset.panel=document.body.dataset.panel===button.dataset.panel?'':button.dataset.panel;};

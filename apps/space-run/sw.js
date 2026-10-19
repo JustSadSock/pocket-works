@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'space-run-';
-const CACHE_NAME = 'space-run-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-10-18';
+const CACHE_NAME = 'space-run-v0.3.0';
+const APP_VERSION = '0.3.0';
+const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Перенесена исходная игра с сохранением правил и отдельным хранением данных."];
+const RELEASE_NOTES = ["Локальные пробоины корпуса, повреждаемая энергосеть и отключение систем.", "Рабочий аварийный ремонт, перегрев и охлаждение с инженерной диагностикой.", "Точные турели и инерционная физика корабля."];
 const APP_SHELL = [
 './assets/fonts/font-1.ttf',
 './assets/fonts/font-2.ttf',
@@ -17,6 +17,7 @@ const APP_SHELL = [
   "./app.js",
   "./art-bible.json",
   "./network.js",
+  "./practice-state.js",
   "./simulation.js",
   "./styles.css",
   "./sw.js",
@@ -98,6 +99,14 @@ const APP_SHELL = [
   "../../shared/capabilities/net.js"
 ];
 
+// The authored sprite atlas is ~96 MB. Caching every variant during SW install
+// can exceed mobile storage quotas and abort installation. Only the starting
+// ship/background art is mandatory; all other registered media is cached on use.
+const INSTALL_SHELL = APP_SHELL.filter((entry) =>
+  !entry.endsWith('.png') ||
+  /\/assets\/(?:backgrounds\/bg_space_1|modules\/(?:engine_mk1|turret_mk1)_[123])\.png$/.test(entry)
+);
+
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = `${APP_VERSION}-p${CACHE_PROTOCOL}`;
 const SHELL_KEYS = new Map(
@@ -130,7 +139,8 @@ async function fetchFresh(input) {
 async function precacheFreshShell() {
   const cache = await caches.open(CACHE_NAME);
   await Promise.all(
-    [...new Set(SHELL_KEYS.values())].map(async (canonicalUrl) => {
+    INSTALL_SHELL.map(async (entry) => {
+      const canonicalUrl = new URL(entry, SCOPE_URL).href;
       const response = await fetchFresh(canonicalUrl);
       await cache.put(canonicalUrl, response);
     })

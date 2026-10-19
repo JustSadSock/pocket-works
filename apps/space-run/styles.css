@@ -358,3 +358,96 @@ body.combat-ui .controls-card {
  #module-actions{max-width:260px}
 }
 
+
+
+/* Shipboard repair console — accessible during combat, unlike the workshop rail. */
+#repair-console {
+  position: absolute;
+  z-index: 12;
+  right: 16px;
+  bottom: 16px;
+  width: min(345px, calc(100% - 32px));
+  max-height: min(54vh, 470px);
+  overflow-y: auto;
+  padding: 13px;
+  color: #e5faff;
+  background: linear-gradient(145deg, rgba(8,30,38,.97), rgba(13,45,49,.96));
+  border: 1px solid #8caea3;
+  border-left: 4px solid #e5b973;
+  box-shadow: 0 12px 38px rgba(0,0,0,.44);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  font: 13px "Sora", system-ui, sans-serif;
+}
+#repair-console[hidden] { display: none; }
+#repair-console h3 { margin:0 0 7px; font: 700 14px "Audiowide", sans-serif; letter-spacing: .035em; }
+#repair-console p { margin: 5px 0; color: #afd4d8; line-height:1.4; }
+.repair-target-list, .repair-actions { display: flex; flex-wrap: wrap; gap: 6px; margin:8px 0; }
+#repair-console button {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 7px 9px;
+  border: 1px solid #65999b;
+  border-radius: 5px;
+  background: #143c43;
+  color: #e7f4ed;
+  font: 650 12px "Sora", sans-serif;
+  cursor: pointer;
+}
+#repair-console button.selected { background: #e2b973; border-color: #ffdfad; color:#102933; }
+#repair-console button:active { transform: scale(.97); }
+#repair-console button:focus-visible { outline: 2px solid #ffffff; outline-offset:2px; }
+.repair-task-progress { font-variant-numeric: tabular-nums; color:#f7d79b!important; }
+.repair-timing-track { position:relative; height:14px; border:1px solid #577f89; margin:10px 2px; background:#0a1e25; }
+.repair-timing-zone { position:absolute;top:0;bottom:0;background:rgba(119,231,158,.43); }
+.repair-timing-zone.one { left:17.1%;width:15.8%; }
+.repair-timing-zone.two { left:67.1%;width:15.8%; }
+.repair-timing-marker {position:absolute;top:-4px;bottom:-4px;width:3px;background:#fbe2a3;box-shadow:0 0 7px #fbe2a3;transform:translateX(-50%); }
+.repair-circuit-target { letter-spacing: .15em; font-variant-numeric:tabular-nums; }
+@media (max-width:1024px), (pointer:coarse) {
+  #repair-console {
+    bottom: 104px;
+    right: 8px;
+    width: min(335px, calc(100% - 16px));
+    max-height: min(42dvh, 340px);
+    padding:10px;
+  }
+}
+@media (max-height:520px) {
+  #repair-console {bottom: 8px; max-height: 55dvh; width: min(310px, 48vw);}
+}
+
+
+/* Engineering telemetry is integrated with the ship, not a generic dashboard. */
+#systems-status{
+ position:absolute;z-index:7;right:12px;top:78px;
+ display:flex;flex-direction:column;gap:3px;align-items:flex-end;
+ font:700 11px "Sora",sans-serif;letter-spacing:.02em;
+ pointer-events:none;text-shadow:0 1px 4px #06131b;
+}
+#systems-status .system-line{padding:5px 8px;background:rgba(5,22,31,.80);
+ border-right:3px solid #7ac2c6;max-width:min(290px,60vw);}
+#systems-status .system-line.warning{border-right-color:#e8a05b;color:#ffdfab;}
+#systems-status .system-line.danger{border-right-color:#f66e74;color:#ffb4bd;}
+.engineering-card{border-left:3px solid #d7ad75;}
+#engineering-panel{display:grid;gap:9px;font:12px "Sora",system-ui,sans-serif;}
+.eng-summary{display:flex;justify-content:space-between;gap:6px;
+ padding:7px 0;border-bottom:1px solid rgba(159,212,211,.18);}
+.eng-plate,.eng-module{display:flex;align-items:center;justify-content:space-between;
+ gap:8px;padding:6px 0;border-bottom:1px solid rgba(159,212,211,.10);}
+.eng-plate .eng-label,.eng-module .eng-label{display:grid;gap:4px;flex:1;min-width:0;}
+.eng-plate .eng-label small,.eng-module .eng-label small{color:#accbd1;font:10px "Sora",sans-serif;}
+.eng-plate button{font-size:11px;min-height:38px;flex-shrink:0;background:#b77e43;color:#081821;font-weight:700;}
+.eng-plate button:disabled{opacity:.36;cursor:not-allowed;}
+.eng-meter{height:4px;background:#233a40;border-radius:2px;overflow:hidden;}
+.eng-meter>i{display:block;height:100%;background:#f3ba73;}
+.eng-meter.power>i{background:#86d8d7;}
+.eng-meter.heat>i{background:#ed7d50;}
+.eng-subtitle{font-size:11px;color:#ecc697;letter-spacing:.06em;font-weight:700;margin-top:5px;}
+.eng-empty{font-size:11px;color:#a3c0c6;line-height:1.4;}
+#repair-console .eng-plate{border-color:rgba(160,206,201,.22);}
+#repair-console .eng-plate button{min-height:40px;flex:0 0 auto;}
+@media(max-width:1024px){
+  #systems-status{top:14px;right:8px;font-size:10px;gap:2px}
+  #systems-status .system-line{padding:4px 6px;max-width:55vw}
+}

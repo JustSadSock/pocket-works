@@ -9,7 +9,7 @@
     "surfaceAndMaterial": "Original raster module illustrations sit on a translucent engineering grid against a restrained starfield.",
     "paletteLogic": "Cyan outlines construction cells and friendly ship systems; orange signals combat, damage and pickups.",
     "typography": "Locally bundled Audiowide headings and Sora control labels preserve the original technical lettering offline.",
-    "signature": "A crew member sits in the engine while another takes the turret; both actions affect the same ship and enemy wave.",
+    "signature": "A hole in the ship's plating blackens one visible hull tile, severs a luminous electrical trunk, and shuts down remote weapon stations until an engineer physically patches the breach.",
     "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
   },
   "architecture": {
@@ -46,6 +46,21 @@
         "slug": "not-dead-yet",
         "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
         "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves."
+      },
+      {
+        "slug": "trace-mosaic",
+        "spatialDifference": "trace-mosaic keeps a square shared picture puzzle grid above a fragment tray; space-run uses a wide ship flight field with overlaid repair console, workshop side-rail and simultaneous crew stations.",
+        "interactionDifference": "trace-mosaic drags picture fragments and leaves blocking paths; space-run places hull modules, occupies real ship systems, aims turrets, drives engines and repairs faults under enemy fire."
+      },
+      {
+        "slug": "crumple-yard",
+        "spatialDifference": "crumple-yard frames an oblique deformable car in a fixed 3D concrete test yard; space-run shows top-down rotating ship modules on a 2D hull grid with combat actors and crew overlays.",
+        "interactionDifference": "crumple-yard crashes a single vehicle into barriers and displays damage; space-run splits actual engine, turret, shield and repair duties across co-op players and changes the same vessel during waves."
+      },
+      {
+        "slug": "petri-forge",
+        "spatialDifference": "petri-forge uses a compact fixed laboratory grid with a horizontal instrument strip. Space Run presents a freely moving modular vessel in a full-width 2D combat world and a separate multi-crew engineering workshop with power-network diagnostics.",
+        "interactionDifference": "petri-forge paints discrete obstacles and observes one learner. Space Run physically assembles ship components, rotates/steers them in real time, routes power across damaged plating, fires turrets and authorizes active co-op hull repairs."
       }
     ]
   },
@@ -55,7 +70,7 @@
   },
   "motion": {
     "character": "A module snaps to hull cells during construction; occupied stations show their pilot and produce immediate shared movement or weapon fire.",
-    "action": "Buy and place ship modules, take a crew station, steer the shared vessel and repair systems while fighting successive waves.",
+    "action": "The modular vessel twists under off-centre thrust; punctured plates flicker red, linked modules go dark, hot systems pulse orange, and an active engineer restores the exact failed cell.",
     "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
     "response": "The next visible state responds to the actual control: A crew member sits in the engine while another takes the turret; both actions affect the same ship and enemy wave.",
     "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
