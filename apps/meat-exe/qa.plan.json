@@ -171,7 +171,8 @@
         "qa/gastric.test.mjs",
         "qa/structural.test.mjs",
         "qa/atmosphere.test.mjs",
-        "qa/scars.test.mjs"
+        "qa/scars.test.mjs",
+        "qa/wounds.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -181,7 +182,8 @@
       "files": [
         "qa/gastric.spec.js",
         "qa/structural.spec.js",
-        "qa/scars.spec.js"
+        "qa/scars.spec.js",
+        "qa/wounds.spec.js"
       ],
       "tier": "smoke"
     }

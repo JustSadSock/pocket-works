@@ -10,7 +10,7 @@ import {drawGrafts,applyGraft,graftForId,weaponBuild,dashCooldown,moveSpeed,inco
 import {GENES,routeOptions,applyRoute,sanitizeArchive,unlockGene,equipGene,applyGene,earnEchoes} from './runPaths.js';
 import {guardianForWave,isGuardian,guardianReady,guardianSpawnResolved,guardianDamage,guardianAction} from './guardians.js';
 import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
-import {addScar,scarSignature} from './scars.js';
+import {addScar,scarSignature,scarSurfaceStats,locateWallWound} from './scars.js';
 import {PROTOCOLS,sanitizeProtocol,applyProtocol,extraEnemiesForPulse,incomingProtocolDamage,
   enemyProtocolSpeed,spawnCadence,registerCombatChain,recordFinishedRun,observedRunStats} from './runTuning.js';
 
@@ -143,9 +143,9 @@ function setMode(next){
     renderArchive();
   }
 }
-function markScar(x,z,kind){
+function markScar(x,z,kind,wall=null){
  if(!state||!Number.isFinite(x)||!Number.isFinite(z))return;
- state.scars=addScar(state.scars,state.wave,x,z,kind);
+ state.scars=addScar(state.scars,state.wave,x,z,kind,wall);
  world.setScars?.(state.scars);
 }
 function showOrganTransition(wave){
@@ -168,7 +168,7 @@ function newState(seed){
     weapon:0,level:0,damageBonus:0,cooldown:0,dashCooldown:0,dashTime:0,dashDirX:0,dashDirZ:0,
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
-    ruptured:[],scars:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
+    ruptured:[],scars:[],tissueIntegrity:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
     grafts:[],biomass:0,pendingDraft:0,draftRevision:0,
     routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null,
     guardianPending:0,guardianDefeated:[],
@@ -187,11 +187,12 @@ function makeEnemy(type,x,z,hp){
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
   const {enemies,pickups,projectiles,...base}=state;
-  safeWrite('session',{...base,v:5,enemies:enemies.map(({visual,...e})=>e),pickups:pickups.map(({visual,...p})=>p)});
+  safeWrite('session',{...base,v:5,tissueIntegrity:world.getTissueDamage?.()||[],
+    enemies:enemies.map(({visual,...e})=>e),pickups:pickups.map(({visual,...p})=>p)});
 }
 function restore(raw){
   const s=validateRun(raw);if(!s)return false;
-  world.reset(s.seed,s.ruptured,s.wave);nextId=1;
+  world.reset(s.seed,s.ruptured,s.wave);world.setTissueDamage?.(s.tissueIntegrity);nextId=1;
   const base=newState(s.seed);
   state={...base,...s,enemies:[],pickups:[],projectiles:[]};
   combatAudio.setBiome(state.wave);
@@ -458,14 +459,22 @@ function shoot(){
         setNotice('ЗАТВОР РАЗОРВАН · ИММУННАЯ РЕАКЦИЯ',2.3);
         snapshot();
       }else if(damage&&clock-lastGateHitAt>.42){
-        setNotice('МЕМБРАНА '+Math.ceil(damage.hp)+'% · СТРЕЛЯЙ',.75);
+        setNotice('МЕМБРАНА '+Math.ceil(damage.hp)+'% · ЗАТЯНЕТСЯ БЕЗ ОГНЯ',.9);
         lastGateHitAt=clock;
       }
     }else if(result.kind==='wall'){
       walls++;wallHits++;
       if(pellet===0||pellet===3){
         world.impact(result.point,direction,'wall');
-        if(pellet===0)markScar(result.point.x,result.point.z,'burn');
+        if(pellet===0){
+          const wall=locateWallWound(result.point,direction);
+          if(wall){
+            const before=scarSurfaceStats(state.scars,state.wave).wall;
+            markScar(wall.x,wall.z,'burn',wall);
+            if(scarSurfaceStats(state.scars,state.wave).wall>before)
+              state.immune.heat=Math.min(100,state.immune.heat+2);
+          } // Shots that hit floor/ceiling never counterfeit a vertical wall wound.
+        }
       }
     }
     if(mode!=='playing')break;
@@ -615,6 +624,7 @@ function updatePickups(dt){
 function update(dt){
   clock+=dt;
   if(mode!=='playing')return;
+  world.tickTissues?.(dt);
   state.elapsed+=dt;state.waveTime+=dt;
   // Damage wakes immune sentinels only after an announced window; never spawn
   // extra mobs into a lethal crowd or on top of an injured player.
@@ -1042,6 +1052,8 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   architecture:world?.getArchitectureSignature?.()??null,
   tissueMemory:state?scarSignature(state.scars,state.wave):null,
+  woundSurfaces:state?scarSurfaceStats(state.scars,state.wave):null,
+  membranes:world?.getTissueSignature?.()||null,
   atmosphere:world?.getAtmosphereSignature?.()??null,
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
   immunity:{...state?.immune},
