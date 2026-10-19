@@ -228,6 +228,66 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
     await expect(page.locator('#next-item-0')).toHaveClass(/hold-exhausted/);
   });
 
+
+  test('completed rows produce color-aware fragments at the actual cleared Y and clean up', async ({ page }) => {
+    await openSolo(page);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.evaluate(() => {
+      const ui = (window as any).uiManager;
+      ui.signalLineClear([{ y: 19, owners: Array(10).fill(1) }]);
+    });
+    await expect(page.locator('#clear-effects .clear-line-stripe')).toHaveCount(1);
+    await expect(page.locator('#clear-effects .clear-line-spark')).toHaveCount(10);
+    await expect(page.locator('#clear-effects .clear-line-stripe')).toHaveCSS('top', /.+/);
+    await expect(page.locator('#clear-effects .clear-line-spark')).toHaveCount(0, { timeout: 2000 });
+  });
+
+  test('reconnection UI reports teammate absence without blocking the board', async ({ page }) => {
+    await openSolo(page);
+    await page.evaluate(() => {
+      const win = window as any;
+      const ui = win.uiManager;
+      ui.isOnlineMode = true;
+      ui.localPlayerIndex = 0;
+      win.networkManager.connected = true;
+      ui.updateOnlinePresence([{ id: 'a', away: true, timedOut: false, departed: false }]);
+      ui.showRecoveryNotice('Reconnecting to PocketNet');
+    });
+    await expect(page.locator('#status-0')).toContainText(/Reconnecting|подключения/);
+    await expect(page.locator('#recovery-notice')).toBeVisible();
+    await expect(page.locator('#game-canvas')).toBeVisible();
+    await page.evaluate(() => {
+      const ui = (window as any).uiManager;
+      ui.updateOnlinePresence([{ id: 'a', away: false, timedOut: false, departed: false }]);
+    });
+    await expect(page.locator('#recovery-notice')).toBeHidden();
+  });
+
+  test('rejoin during playing never triggers a lobby navigation', async ({ page }) => {
+    await openSolo(page);
+    const result = await page.evaluate(() => {
+      const win = window as any;
+      const net = win.networkManager;
+      let lobby = 0;
+      net.callbacks.roomJoined = () => { lobby++; };
+      net.callbacks.roomCreated = () => { lobby++; };
+      net.started = true;
+      net.inGameUI = true;
+      net.connected = true;
+      net.code = '1234ABCD';
+      const state = win.render_game_to_text();
+      net.apply({
+        phase: 'playing',
+        seed: 123,
+        players: [{ id: 'a', color: '#FF1493', ready: false, away: false }],
+        engine: { ...JSON.parse(state), sharedStats: { score: 0, lines: 0 }, players: [] }
+      }, true);
+      return { lobby, active: win.uiManager.screens.gameScreen.classList.contains('active') };
+    });
+    expect(result.lobby).toBe(0);
+    expect(result.active).toBe(true);
+  });
+
   test('online-touch ownership and mobile board bounds', async ({ page }) => {
     await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean((window as any).uiManager));
