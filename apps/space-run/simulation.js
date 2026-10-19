@@ -997,7 +997,9 @@ function repairAction(room, playerId, action) {
   const p = playerById(room, playerId);
   if (!p || !p.moduleId) return { ok: false, message: "Take repair station first" };
   const station = moduleById(room, p.moduleId);
-  if (!station || MODULES[station.templateId].type !== "repair") return { ok: false, message: "Need repair bay" };
+  if(!station||MODULES[station.templateId].type!=="repair")return {ok:false,message:"Требуется ремонтный отсек"};
+  if(station.status!=="online"||station.overheated||!station.powered)
+    return {ok:false,message:"Ремонтный отсек повреждён, перегрет или не запитан"};
   let target = moduleById(room, p.repairTarget);
   if (!target || target.status === "online") target = room.ship.modules.find((x) => x.status !== "online") || null;
   if (!target) return { ok: false, message: "No damaged module selected" };
