@@ -129,7 +129,11 @@ export function lightFieldSamples(field,m,{maxPoints=270}={}){
   if(path.length>1&&(path.length-1)%step!==0){
    const p=path.at(-1);points.push(chartPoint(m,p.l,p.phi,r.tangent));
   }
-  return {index:r.index,points,current:chartPoint(m,r.ray.l,r.ray.phi,r.tangent),
+  // The integrator sparsely records its historic trail, so always close it
+  // with the real current phase-space position (no visual extrapolation).
+  const current=chartPoint(m,r.ray.l,r.ray.phi,r.tangent);
+  points.push(current);
+  return {index:r.index,points,current,
    residual:Math.abs(constraint(r.ray,m)),L:r.ray.L,E:r.ray.E,crossings:r.ray.crossings};
  });
 }
