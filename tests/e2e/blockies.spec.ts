@@ -365,6 +365,51 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
       sent:{type:'input',round:3,input:{action:'rotate'}}});
   });
 
+  test('replay timeline opens on results and persists after a page reload',async({page})=>{
+    await openSolo(page);
+    await page.keyboard.press('Space');
+    await page.evaluate(()=>((window as any).uiManager as any).showGameOver());
+    await expect(page.locator('#replay-open')).toBeEnabled();
+    await page.locator('#replay-open').click();
+    await expect(page.locator('#replay-viewer')).toBeVisible();
+    await expect(page.locator('#replay-canvas')).toBeVisible();
+    await expect(page.locator('#replay-caption')).toContainText('кадр');
+    await page.locator('#replay-next').click();
+    await page.locator('#replay-play').click();
+    await expect(page.locator('#replay-play')).toContainText(/Пауза|Воспроизвести/);
+    await page.locator('#replay-close').click();
+    await expect(page.locator('#replay-viewer')).toBeHidden();
+    await page.reload();
+    await page.waitForFunction(()=>Boolean((window as any).uiManager));
+    await expect(page.locator('#replay-last')).toBeEnabled();
+    await page.locator('#replay-last').click();
+    await expect(page.locator('#replay-viewer')).toBeVisible();
+  });
+
+  test('exported replay imports with the same board and score and rejects invalid files',async({page})=>{
+    await openSolo(page);
+    await page.keyboard.press('Space');
+    await page.evaluate(()=>((window as any).uiManager as any).showGameOver());
+    const raw=await page.evaluate(()=>localStorage.getItem('pocket-works:blockies:last-replay-v1')!);
+    expect(raw).toContain('blockies-replay-v1');
+    const download=page.waitForEvent('download');
+    await page.locator('#replay-save').click();
+    const file=await download;
+    expect(file.suggestedFilename()).toMatch(/blockies-replay-.*\.json/);
+    await page.locator('#replay-file').setInputFiles({
+      name:'blockies.json',mimeType:'application/json',buffer:Buffer.from(raw)
+    });
+    await expect(page.locator('#replay-viewer')).toBeVisible();
+    const score=await page.locator('#replay-score').textContent();
+    expect(score).toContain('Счёт');
+    await page.locator('#replay-file').setInputFiles({
+      name:'bad.json',mimeType:'application/json',
+      buffer:Buffer.from('{"format":"blockies-replay-v1","frames":[]}')
+    });
+    await expect(page.locator('#replay-error')).toContainText('Не удалось открыть повтор');
+    await expect(page.locator('#replay-viewer')).toBeVisible();
+  });
+
   test('online-touch ownership and mobile board bounds', async ({ page }) => {
     await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean((window as any).uiManager));
