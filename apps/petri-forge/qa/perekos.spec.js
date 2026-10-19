@@ -6,6 +6,8 @@ test('native Perekos training station plays, replays and saves brains',async({pa
  await expect(page.locator('[data-world-mode]')).toHaveCount(4);
  await page.locator('[data-world-mode="perekos"]').click();
  await expect(page.locator('#pkCanvas')).toBeVisible();
+ await expect(page.locator('#pkCurriculum')).toBeVisible();
+ await expect(page.locator('#pkLearningChart')).toBeVisible();
  await expect(page.locator('#pkValidation')).toContainText('Контрольный матч',{timeout:50000});
  await expect(page.locator('#pkPlay')).toBeEnabled();
  const before=await page.evaluate(()=>window.petriForgePerekosDiagnostics());
@@ -38,6 +40,8 @@ test('cross-game combat policy can transfer as a Perekos heuristic',async({page}
  await page.locator('[data-world-mode="perekos"]').click();
  await expect(page.locator('#pkTransferModels')).toContainText('Transfer QA');
  await page.locator('#pkTransferModels').selectOption({label:'Transfer QA'});
+ await page.locator('#pkCompareTransfer').click();
+ await expect(page.locator('#pkTransferInfo')).toContainText('Сравнение на одинаковых контрольных раундах',{timeout:60000});
  await page.locator('#pkTransfer').click();
  await expect(page.locator('#pkTransferInfo')).toContainText('эвристически');
  await expect.poll(async()=> (await page.evaluate(()=>window.petriForgePerekosDiagnostics())).policySource,{timeout:12000}).toBe('heuristic-transfer');
