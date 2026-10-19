@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.5.0';
-const APP_VERSION = '0.5.0';
+const CACHE_NAME = 'petri-forge-v0.6.0';
+const APP_VERSION = '0.6.0';
 const RELEASE_DATE = '2026-10-19';
-const CACHE_PROTOCOL = 4;
-const RELEASE_NOTES = ['Новая лаборатория Перекоса: обучение на настоящем игровом движке, руны, тактика, контрольные бои, перенос из Combat Forge.'];
+const CACHE_PROTOCOL = 5;
+const RELEASE_NOTES = ['Перекос 0.6: поэтапная подготовка магов, обучающие раунды, self-play против прежних поколений и независимая проверка полных матчей.'];
 const APP_SHELL = [
   './',
   './index.html',
@@ -23,7 +23,8 @@ const APP_SHELL = [
   './combat-studio.css',
   './perekos-adapter.mjs',
   './perekos-policy.mjs',
-  './perekos-worker.mjs',
+  './perekos-training.mjs',
+  './perekos-worker-v06.mjs',
   './perekos-shell.mjs',
   './perekos-lab.mjs',
   './perekos-lab.css',
