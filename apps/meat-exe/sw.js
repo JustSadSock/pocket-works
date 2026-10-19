@@ -1,8 +1,11 @@
 const CACHE_PREFIX='meat-exe-';
-const CACHE_NAME='meat-exe-v1.9.4';
-const APP_VERSION='1.9.4';
+const CACHE_NAME='meat-exe-v1.9.5';
+const APP_VERSION='1.9.5';
 const RELEASE_DATE='2026-10-19';
 const RELEASE_NOTES=[
+'Полевой журнал считает настоящий FPS и нагрузку GPU во время забега, без фонового сетевого сбора данных.',
+'Архив показывает медиану времени только победных забегов, целевые 15–25 минут и достаточность выборки.',
+'Одно касание выгружает компактный анонимный отчёт JSON: результаты, FPS, рендер и пики геометрии.',
 'Желудочный Привратник теперь настоящий обязательный четвёртый босс, с отдельной шкалой HP и предупреждённым рывком.',
 'АВТО-графика оценивает реально отрисованные кадры и умеет восстанавливать детализацию в ограниченном до 50 FPS режиме.',
 'После победы или гибели показываются фактические времена органов, суммарный урон и самые длительные схватки.',
@@ -33,7 +36,7 @@ const RELEASE_NOTES=[
 'Девять детерминированных архитектурных ориентиров вместо однотипных коридоров.',
 'Кислота, вязкий костный мозг и нервные разряды читаются по форме на полу.'
 ];
-const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./biomes.js','./ecology.js','./biobuilds.js','./runPaths.js','./runPacing.js','./atmosphere.js','./tissueLifecycle.js','./runtimeBudget.js','./runReport.js','./scars.js','./runTuning.js','./guardians.js','./immunity.js','./gastricArt.js','./structuralArt.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
+const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./biomes.js','./ecology.js','./biobuilds.js','./runPaths.js','./runPacing.js','./atmosphere.js','./tissueLifecycle.js','./runtimeBudget.js','./runReport.js','./fieldTelemetry.js','./scars.js','./runTuning.js','./guardians.js','./immunity.js','./gastricArt.js','./structuralArt.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',event=>{
