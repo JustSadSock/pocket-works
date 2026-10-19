@@ -3478,10 +3478,10 @@
   "not-dead-yet": {
     "note": "existing cover rated higher",
     "diagnostic": null,
-    "status": "published",
+    "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "0996fb05a878277215ea63a20753901cb6dec043",
-    "lastAttemptAt": "2026-10-19T09:19:11.969Z",
+    "lastAttemptRevision": "d727ed65f08d8026b57f39b34b5d1c67abd1dadb",
+    "lastAttemptAt": "2026-10-19T09:30:31.881Z",
     "revision": "0996fb05a878277215ea63a20753901cb6dec043",
     "qualityScore": 78,
     "visionScore": null,
@@ -3568,5 +3568,32 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "782c21d962265a938b39a2e875ad6db8dade77b9",
     "lastAttemptAt": "2026-10-19T08:39:39.535Z"
+  },
+  "petri-forge": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 38,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 23384,
+        "variance": 22.9054978453002,
+        "entropy": 1.6611523109675774,
+        "edgeDensity": 0.07155257936507936,
+        "colorfulness": 13.431884765625,
+        "centerDetail": 17.6839768317013,
+        "meanLight": 35.00391015625099
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/petri-forge/?pw-cover=1&pw_release=0.1.0&pw_fp=80bdbdb17d748228fd74792d"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "0a4ccb7b86030b37639f3746f8ce55aaa37bf761",
+    "lastAttemptAt": "2026-10-19T09:30:43.044Z"
   }
 }
