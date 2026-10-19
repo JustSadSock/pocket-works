@@ -645,5 +645,36 @@ export default {protocolVersion:1,
   }else if(p?.type!=='sync')throw Error('Неизвестная команда');
   return out(state);
  },
+ // Durable Object alarms advance the round even when not one client sends input.
+ // This is separate from player heartbeats: sockets prove presence; no synthetic player.
+ onTick({state,onlineIds=[],now=Date.now()}){
+  state=copy(state);
+  if(state.phase!=='playing'||!state.engine)return {state,events:[]};
+  const connected=new Set(onlineIds);
+  for(let i=0;i<state.players.length;i++){
+   const seat=state.players[i];
+   if(seat.departed||seat.timedOut)continue;
+   if(connected.has(seat.id)){
+    seat.lastSeenAt=now;
+    seat.away=false;
+    continue;
+   }
+   const elapsed=now-(seat.lastSeenAt??state.lastTick);
+   seat.away=elapsed>IDLE_GRACE_MS;
+   if(elapsed>SEAT_EXPIRY_MS){
+    seat.timedOut=true;seat.ready=false;
+    const piece=state.engine.players[i];
+    if(piece){piece.gameOver=true;piece.currentPiece=null;}
+   }
+  }
+  const r=runtime(state.engine,state.seed);
+  r.step(Math.min(1000,Math.max(0,now-state.lastTick)),
+    state.players.flatMap((seat,i)=>seat.away||seat.timedOut||seat.departed?[i]:[]));
+  state.engine=r.snapshot();
+  state.lastTick=now;
+  if(state.engine.players.every(piece=>piece.gameOver))state.engine.isGameOver=true;
+  finishIfOver(state);
+  return out(state);
+ },
  viewForPlayer({state}){return state;}
 };
