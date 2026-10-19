@@ -1067,7 +1067,7 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='Enter'&&document.activeElement===canvas)addPulse({x:.22,y:.5});
 });
 createWorkshopMode({
-  appName:'SHOCK',version:'1.4.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
+  appName:'SHOCK',version:'1.5.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
   onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);selectedEmitter=-1;armingSensor=null;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);renderEmitters();drawScope();drawCpChart();drawLoadScope();renderRecords();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
 });
 refreshControls();
