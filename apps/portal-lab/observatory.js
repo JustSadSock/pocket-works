@@ -53,7 +53,7 @@ export function createObservatory(canvas,options={}){
   pitch:clamp(Number(saved.pitch)||0,-1.1,1.1),fov:clamp(Number(saved.fov)||80,50,110),
   facingSign:Math.sign(Number(saved.l)||2.1)||1,
   mode:SKY_MODES.includes(saved.mode)?saved.mode:'combined',
-  compare:saved.compare===true,divider:clamp(Number(saved.divider??.5),.08,.92),
+  compare:saved.compare===true,divider:Number.isFinite(Number(saved.divider))?clamp(Number(saved.divider),.08,.92):.5,
   geometryInset:saved.geometryInset!==false,
   quality:saved.quality==='fine'?'fine':'balanced'
  };
@@ -141,13 +141,13 @@ export function createObservatory(canvas,options={}){
     }else{
      const region=arrival.region,src=region===0?localA:localB;
      const sky=sampleSky(src,arrival.direction),
-       colored=paintSurvey(sky,sourceGrid(arrival.direction),cameraMode,region);
+       colored=paintSurvey(sky,cameraMode==='stars'?0:sourceGrid(arrival.direction),cameraMode,region);
      pixels[o]=colored[0];pixels[o+1]=colored[1];pixels[o+2]=colored[2];
      if(region===0)count.regionA++;else count.regionB++;
     }
     pixels[o+3]=255;
     const sky=sampleSky(observerRegion===0?localA:localB,dir),
-      colored=paintSurvey(sky,sourceGrid(dir),cameraMode,observerRegion);
+      colored=paintSurvey(sky,cameraMode==='stars'?0:sourceGrid(dir),cameraMode,observerRegion);
     refPixels[o]=colored[0];refPixels[o+1]=colored[1];refPixels[o+2]=colored[2];
     refPixels[o+3]=255;
    }
@@ -276,7 +276,7 @@ export function createObservatory(canvas,options={}){
   ctx.fillStyle='#081e23db';ctx.fillRect(x,y,pw,ph);
   ctx.strokeStyle='#83a99c72';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,pw-1,ph-1);
   const points=geometryTrace(metricNow,geometry,{samples:91,span:4});
-  const minR=1,maxR=Math.max(...points.map(p=>p.R)),left=x+10,right=x+pw-10;
+  const minR=Math.min(...points.map(p=>p.R))-.1,maxR=Math.max(...points.map(p=>p.R))+.1,left=x+10,right=x+pw-10;
   const yy=value=>y+ph-15-clamp((value-minR)/(maxR-minR),0,1)*(ph-30);
   ctx.beginPath();
   points.forEach((p,i)=>{const px=left+i/(points.length-1)*(right-left),py=yy(p.R);
