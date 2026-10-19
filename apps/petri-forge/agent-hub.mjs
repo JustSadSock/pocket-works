@@ -1,4 +1,5 @@
 import './agent-hub-shell.mjs';
+import {mountAgentCockpit} from './agent-cockpit.mjs';
 import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
 
@@ -80,12 +81,7 @@ function refresh(){
  mode==='combat'?'Проверка проводит настоящий поединок. Можно наблюдать движения, умения и последствия решений.':
  mode==='race'?'Контрольный заезд не учит машину. Для просмотра предыдущей записи используйте ползунок под трассой.':
  'Контрольный матч покажет реальные попадания, руны, счёт и ничьи. Повтор доступен после матча.';
-}
-function choices(){
- const x=cfg[mode],select=$('hubVariant'),batch=$('hubBatch');select.replaceChildren();batch.replaceChildren();
- for(const [val,label] of x.variants){const o=document.createElement('option');o.value=val;o.textContent=label;select.append(o);}
- for(const n of x.counts){const o=document.createElement('option');o.value=String(n);o.textContent=fmt(n)+' '+x.units;batch.append(o);}
- select.value=x.first;batch.value=String(x.counts[1]);
+ window.dispatchEvent(new Event('petri:cockpit-sync'));
 }
 function choices(){
  const data=cfg[mode],select=$('hubVariant'),batch=$('hubBatch');select.replaceChildren();batch.replaceChildren();
@@ -282,5 +278,47 @@ async function start(){
  }catch(e){notify('Не удалось открыть агентов: '+e.message);}
  finally{pending=false;lock();}
 }
+const cockpit=mountAgentCockpit({
+ state:()=>({mode,active,careers,busy,pending,advanced,config:cfg,lastEval}),
+ notify,
+ switchAgent,
+ create,
+ rename:async()=>{
+  if(busy||pending||!active)return;
+  const name=await ask('rename','Имя агента',active.name);
+  if(!name)return;
+  active=await renameCareer(active,name);
+  careers=careers.map(c=>c.id===active.id?active:c);profiles();refresh();
+ },
+ delete:async()=>{
+  if(busy||pending||!active)return;
+  if(!confirm('Удалить агента «'+active.name+'» и все его мозги? Отменить это нельзя.'))return;
+  pending=true;lock();
+  try{
+   await eraseCareer(active);careers=careers.filter(c=>c.id!==active.id);
+   if(!careers.length)careers.push(await createCareer('Искра'));
+   active=careers[0];localStorage.setItem(LAST,active.id);await restore(active,mode);profiles();refresh();
+  }finally{pending=false;lock();}
+ },
+ legacy:importOld,
+ expert:()=>advancedMode(true),
+ persist:async()=>{if(active)await persist(active,mode);},
+ updateChoice:(type,value)=>{
+  if(busy||pending)return;
+  if(type==='variant')$('hubVariant').value=value;
+  else if(type==='batch')$('hubBatch').value=value;
+  refresh();
+ },
+ importCareer:async c=>{
+  if(busy||pending)return;
+  pending=true;lock();
+  try{
+   if(active)await persist(active,mode);
+   careers.unshift(c);active=c;localStorage.setItem(LAST,c.id);await restore(c,mode);
+   lastEval='';profiles();refresh();
+  }finally{pending=false;lock();}
+ },
+ whenMode:async next=>{await chain;if(mode!==next)throw Error('Не удалось открыть арену');}
+});
 void start();
 window.PetriForgeAgentHub=()=>({agent:active?.name,id:active?.id,mode,busy,advanced,profiles:careers.length,sessions:active?.branches?.[mode]?.sessions||0});
