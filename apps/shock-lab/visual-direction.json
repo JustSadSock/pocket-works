@@ -4,12 +4,12 @@
   "product": "shock-lab",
   "direction": {
     "premise": "A tabletop supersonic-flow instrument, with a luminous compressible-gas chamber and a dark oxide-steel control console.",
-    "composition": "A single illuminated visualization tank dominates the screen. Compact mechanical lab instruments occupy a side console on desktop and a vertically scrollable lower console on narrow phones.",
+    "composition": "The computed gas field dominates the surface. A working chart recorder lives inside the industrial side console (the lower scrollable deck on phones); shock-tube rupture is commanded directly over the field.",
     "shapeLanguage": "Hard square-cut aluminum geometry, paper-thin graduations, sharp instrument toggles and an uncaged central visualization.",
     "surfaceAndMaterial": "Opaque charcoal-blue oxided metal; brushed mineral wall inclusions; the gas field itself provides dynamic luminous volume. No glassmorphism or decorative gradients over UI components.",
     "paletteLogic": "Cool sea-glass blue denotes rarefaction, warm sulfur amber denotes compression, gray-yellow denotes impermeable walls. Controls follow the chamber's material scale.",
     "typography": "Condensed utility labels with monospaced physical measurements; short Russian action labels remain readable on phones.",
-    "signature": "A finger can draw a reflecting mirror directly into the gas in real time, and the computed shock splits and wraps around its geometry.",
+    "signature": "Operator charges a sealed shock tube at two independent thermodynamic states, releases a real Riemann wave, then drags two physical probes to compare measured arrival signals.",
     "distinction": "Where PetriForge is a discrete editable microcosm, SHOCK shows continuous conservation-law fronts and reflective solid boundaries with industrial instrumentation."
   },
   "architecture": {
@@ -18,7 +18,7 @@
     "navigation": "editor-toolbox",
     "chromeTopology": "framed-stage",
     "dominantMotion": "immediate",
-    "primaryVerb": "Place a high-pressure impulse, alter the wall shape and measure where the front reaches.",
+    "primaryVerb": "Charge a shock tube, break its membrane, place two sensors and measure pressure arrival delays; freehand obstacles remain available.",
     "physicalFeedback": "The actual HLL field changes on each step, a brief excitation circle identifies the contact source, and wall edits appear immediately as solid reflective cells.",
     "spatialRationale": "Desktop shows a broad physical chamber and a right instrument console. On portrait phones a compact top bar, live upper canvas and internally scrollable bottom control deck form a header-stage-footer topology, distinct from the desktop split.",
     "comparisons": [
@@ -61,9 +61,9 @@
     "entry": "./",
     "interaction": {
       "type": "click",
-      "selector": "#clear"
+      "selector": "[data-preset='tube']"
     },
-    "expectedChange": "The computed gas pressure returns to ambient while walls remain visible.",
+    "expectedChange": "The new tube preset exposes a real two-state pressure discontinuity, suspended membrane and launch control while the live oscilloscope is available.",
     "capture": [
       "initial",
       "action",
