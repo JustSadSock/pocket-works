@@ -65,6 +65,7 @@ export class MageMotion{
   const impact=m.hit,guard=Math.max(m.guard,(actor.shield||0)>0?.15:0);
   const stun=clamp((actor.stun||0)/.2,0,1);
   const pose={
+   still:!!reduced,
    move:m.speed,step:m.walk,lean:clamp(m.lean+dash*2-impact*2,-5,5),
    bodyBob:-Math.abs(gaitWave)*m.speed*config.step*1.9+impact*3.3+stun*3,
    cloth:clamp(m.cloth+(1-m.speed)*Math.sin(reduced?0:time*1.8)*.4,-8,8),
