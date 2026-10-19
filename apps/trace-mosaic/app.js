@@ -119,8 +119,14 @@ function handleMessage(type, payload) {
     case "room_state":
       // Ignore identical lobby/results heartbeats: replacing focused controls would
       // dismiss mobile keyboards and reset selections every 750 ms.
-      if (state.room && payload.phase !== "playing" && payload.phase === state.room.phase &&
-          JSON.stringify(state.room) === JSON.stringify(payload)) {
+      // serverNow is a heartbeat clock sample, not a UI change. Comparing
+      // the raw snapshot rebuilt focused lobby inputs on every network pulse.
+      const sameRoom = state.room && payload.phase !== "playing" &&
+        payload.phase === state.room.phase &&
+        JSON.stringify(state.room, (key, value) => key === 'serverNow' ? undefined : value) ===
+        JSON.stringify(payload, (key, value) => key === 'serverNow' ? undefined : value);
+      if (sameRoom) {
+        if (Number.isFinite(payload.serverNow)) state.clockOffset = payload.serverNow - Date.now();
         return;
       }
       state.room = payload;
@@ -217,6 +223,11 @@ function patchGame() {
   }
   const score = root.querySelector('[data-team-score]');
   if (score) score.textContent = String(game.score.teamScore);
+  const soundButton = root.querySelector('[data-action="toggle-sound"]');
+  if (soundButton) {
+    soundButton.textContent = state.soundEnabled ? 'Звук · вкл' : 'Звук · выкл';
+    soundButton.setAttribute('aria-pressed', String(state.soundEnabled));
+  }
   const count = root.querySelector('[data-correct-count]');
   if (count) count.textContent = String(correctCount).padStart(2, '0') + ' / ' + game.totalTiles;
   const remaining = root.querySelector('[data-piece-count]');
@@ -811,7 +822,16 @@ app.addEventListener("click", async (event) => {
   }
 });
 
+window.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && state.referenceOpen) {
+    state.referenceOpen = false;
+    render();
+    event.preventDefault();
+  }
+});
+
 app.addEventListener("pointerdown", (event) => {
+  if (state.drag || state.referenceOpen || (event.button !== undefined && event.button !== 0)) return;
   const pieceButton = event.target.closest("[data-piece-id]");
   if (!pieceButton || !state.room?.game || getPhase() !== "playing" ||
       (!state.room.practice && state.connection !== 'connected')) {
@@ -896,7 +916,10 @@ window.addEventListener("pointerup", (event) => {
   }
   const possibleSuccess = targetCell === state.drag.tileId &&
       (state.room.game.board[targetCell] == null || state.room.game.board[targetCell] === state.drag.tileId);
-  state.lastCorrectTile = possibleSuccess ? state.drag.tileId : null;
+  const competingTrail = state.room.game.trails?.some(trail =>
+    trail.playerId !== state.selfId && trail.expiresAt > state.now && trail.cells?.includes(targetCell));
+  if (competingTrail) state.lastCorrectTile = null;
+  state.lastCorrectTile = possibleSuccess && !competingTrail ? state.drag.tileId : null;
   send("drag_end", {
     tileId: state.drag.tileId,
     targetCell,
@@ -1107,13 +1130,14 @@ function updateTransientUI() {
       d.cells.includes(target))
   );
   root.querySelectorAll('.board-cell.hot, .board-cell.blocked').forEach(node => {
-    if (Number(node.dataset.cell) !== target || (!blocked && node.classList.contains('blocked'))) {
-      node.classList.remove('hot','blocked');
-    }
+    const isTarget = Number(node.dataset.cell) === target;
+    node.classList.toggle('hot', isTarget && !blocked);
+    node.classList.toggle('blocked', isTarget && blocked);
   });
   if (target !== null) {
     const el = root.querySelector(`.board-cell[data-cell="${target}"]`);
-    el?.classList.add(blocked ? 'blocked' : 'hot');
+    el?.classList.toggle('hot', !blocked);
+    el?.classList.toggle('blocked', blocked);
   }
   if (state.now - state.lastTrailPaint > 140) {
     state.lastTrailPaint = state.now;
