@@ -23,3 +23,10 @@ export function visualReticle(origin,target,width=400,height=620){
  t=Math.max(0,t);
  return {x:origin.x+dx*t,y:origin.y+dy*t,edge:true};
 }
+
+// PocketNet v3 accepts only aim coordinates inside the court. Intersect
+// the pointer ray with the inset court boundary, not independent x/y clamps.
+export function courtAim(origin,dx,dy,width=400,height=620){
+ const p=visualReticle(origin,directionalAim(origin,dx,dy),width,height);
+ return {x:p.x,y:p.y};
+}
