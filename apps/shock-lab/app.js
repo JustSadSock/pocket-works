@@ -168,8 +168,10 @@ function refreshControls(){
   $('sound').classList.toggle('on',state.sound);
   $('sound').setAttribute('aria-pressed',String(state.sound));
   $('sound').setAttribute('aria-label',state.sound?'Выключить звук':'Включить звук');
-  $('mode-help').textContent=({pulse:isFlow?'КАСАНИЕ: ИМПУЛЬС В ПОТОК':'ТАП: ИМПУЛЬС · УДЕРЖАНИЕ: СЕРИЯ',wall:'ВЕДИТЕ ПАЛЬЦЕМ, ЧТОБЫ ПОСТРОИТЬ СТЕНУ',erase:'ПРОВЕДИТЕ ПО СТЕНЕ, ЧТОБЫ СТЕРЕТЬ',probe:'КАСАНИЕ: ИЗМЕРИТЬ ПАРАМЕТРЫ'})[state.tool];
-  $('hint').textContent=isFlow?'ПОТОК СЛЕВА НАПРАВО · ПЕРЕКЛЮЧИ РЕЖИМ И ИЗМЕРЯЙ':'Коснись камеры, чтобы создать ударную волну';
+  $('mode-help').textContent=({pulse:isFlow?'КАСАНИЕ: ОДИН ИМПУЛЬС':'ТАП: УДАР · УДЕРЖАНИЕ: СЕРИЯ',wall:'НАРИСУЙ ТВЁРДУЮ СТЕНУ',material:'РИСУЙ ВЫБРАННЫМ МАТЕРИАЛОМ',source:'ТАП: ПОСТАВИТЬ ИЛИ ВЫБРАТЬ ИСТОЧНИК',erase:'СТИРАЙ МАТЕРИАЛЫ И ИСТОЧНИКИ',probe:'КАСАНИЕ: ИЗМЕРИТЬ ПАРАМЕТРЫ'})[state.tool];
+  $('hint').textContent=state.tool==='source'?'КОСНИСЬ КАМЕРЫ · ИСТОЧНИК БУДЕТ РАБОТАТЬ ПОСТОЯННО':
+    state.tool==='material'?'РИСУЙ В КАМЕРЕ · МАТЕРИАЛ ИЗ КОНСТРУКТОРА':
+    isFlow?'ПОТОК СЛЕВА НАПРАВО · ИСТОЧНИКИ МОЖНО ДОБАВИТЬ':'КОСНИСЬ КАМЕРЫ ДЛЯ ИМПУЛЬСА';
   $('undo').disabled=!state.edits[state.preset].length;
   $('remove-edits').disabled=!state.edits[state.preset].length;
   display.dataset.tool=state.tool;
@@ -279,8 +281,33 @@ function addPulse(pos,quiet=false){
   if(!quiet)playSound('pulse');
   updateMetrics();
 }
+function emitterAt(pos,radius=.045){
+ const list=state.emitters[state.preset];
+ return list.findIndex(e=>Math.hypot((e.x-pos.x)*stageW,(e.y-pos.y)*stageH)<Math.max(16,radius*Math.min(stageW,stageH)));
+}
+function syncEmitters(){
+ if(!sim)return;
+ sim.setEmitters(state.emitters[state.preset]);
+ persist();refreshControls();renderEmitters();
+}
+function renderEmitters(){
+ const host=$('emitter-list');host.replaceChildren();
+ const list=state.emitters[state.preset];
+ if(!list.length){const p=document.createElement('p');p.textContent='Пока пусто. Выбери инструмент «Источник» и коснись камеры.';host.append(p);}
+ list.forEach((e,i)=>{
+   const b=document.createElement('button');b.type='button';b.dataset.emitterIndex=String(i);
+   b.className='emitter-entry'+(i===selectedEmitter?' chosen':'');
+   b.textContent=(['pressure','suction','jet'].indexOf(e.type)+1)+'. '+({pressure:'НАГНЕТАНИЕ',suction:'ОТСОС',jet:'СТРУЯ'})[e.type]+' · '+e.strength.toFixed(1)+(e.type==='jet'?' · '+e.angle+'°':'');
+   host.append(b);
+ });
+}
+function selectTool(tool){
+ state.tool=tool;armingSensor=null;
+ if(tool==='source'||tool==='material')state.panel='construct';
+ persist();refreshControls();renderEmitters();
+}
 function beginGesture(ev){
-  if(ev.button!==0||!sim||!dialog.hidden)return;
+  if(ev.button!==0||!sim||!dialog.hidden||ev.target.closest('.stage-tools')||ev.target.closest('button'))return;
   ev.preventDefault();clearHint();
   const pos=getPosition(ev);
   if(armingSensor!==null){
@@ -299,12 +326,22 @@ function beginGesture(ev){
       $('hint').textContent='ПЕРЕТАСКИВАЙТЕ КРЫЛО · МЕНЯЙТЕ КРИВИЗНУ';return;
     }
   }
-    if(state.tool==='pulse'&&tubeReady){toast('СНАЧАЛА РАЗОРВИТЕ МЕМБРАНУ');return;}
+    const near=emitterAt(pos);
+  if(state.tool==='source'){
+    if(near>=0){selectedEmitter=near;state.panel='construct';refreshControls();renderEmitters();toast('ИСТОЧНИК ВЫБРАН · УДАЛИТЬ ИЛИ ИЗМЕНИТЬ');return;}
+    const list=state.emitters[state.preset];
+    if(list.length>=MAX_EMITTERS){toast('МАКСИМУМ 12 ИСТОЧНИКОВ');return;}
+    if(sampleAt(pos).solid){toast('ИСТОЧНИК НЕЛЬЗЯ ПОСТАВИТЬ В СТЕНУ');return;}
+    list.push({x:+pos.x.toFixed(4),y:+pos.y.toFixed(4),type:state.emitterType,strength:state.sourceStrength,angle:state.sourceAngle});
+    selectedEmitter=list.length-1;syncEmitters();playSound('wall');toast('ПОСТОЯННЫЙ ИСТОЧНИК УСТАНОВЛЕН');return;
+  }
+  if(state.tool==='erase'&&near>=0){state.emitters[state.preset].splice(near,1);selectedEmitter=-1;syncEmitters();toast('ИСТОЧНИК УДАЛЁН');return;}
+  if(state.tool==='pulse'&&tubeReady){toast('СНАЧАЛА РАЗОРВИТЕ МЕМБРАНУ');return;}
   try{display.setPointerCapture(ev.pointerId)}catch{}
   pointer={id:ev.pointerId,pos,at:performance.now(),points:[pos],tool:state.tool};
   if(state.tool==='pulse')addPulse(pos);
   if(state.tool==='probe')probe=pos;
-  if(state.tool==='wall'||state.tool==='erase')sim.stroke(pos.x*sim.nx,pos.y*sim.ny,pos.x*sim.nx,pos.y*sim.ny,state.tool==='wall',brushRadius());
+  if(['wall','material','erase'].includes(state.tool))sim.paintMaterial(pos.x*sim.nx,pos.y*sim.ny,pos.x*sim.nx,pos.y*sim.ny,state.tool==='erase'?0:state.tool==='wall'?1:state.materialType,brushRadius());
 }
 function moveGesture(ev){
   if(!pointer||pointer.id!==ev.pointerId||!sim)return;
@@ -314,8 +351,8 @@ function moveGesture(ev){
     const proposed=clamp(Math.round(pointer.initialCamber-(pos.y-pointer.initialY)*120),-6,6);
     $('camber').value=String(proposed);$('camber-value').textContent=(proposed>0?'+':'')+proposed+'%';
     refreshShapePreview(proposed);
-  }else if(pointer.tool==='wall'||pointer.tool==='erase'){
-    sim.stroke(old.x*sim.nx,old.y*sim.ny,pos.x*sim.nx,pos.y*sim.ny,pointer.tool==='wall',brushRadius());
+  }else if(['wall','material','erase'].includes(pointer.tool)){
+    sim.paintMaterial(old.x*sim.nx,old.y*sim.ny,pos.x*sim.nx,pos.y*sim.ny,pointer.tool==='erase'?0:pointer.tool==='wall'?1:state.materialType,brushRadius());
     if(Math.hypot(pos.x-old.x,pos.y-old.y)>.0025)pointer.points.push(pos);
   }else if(pointer.tool==='probe')probe=pos;
   else if(pointer.tool==='pulse'){
@@ -333,12 +370,12 @@ function endGesture(ev){
       state.camber=proposed;persist();rebuildGeometry();resetGas(false);drawCpChart();drawLoadScope();
       toast('ФОРМА КРЫЛА ИЗМЕНЕНА · НОВЫЙ РАСЧЁТ');
     }else refreshControls();
-  }else if(pointer.tool==='wall'||pointer.tool==='erase'){
+  }else if(['wall','material','erase'].includes(pointer.tool)){
     const points=pointer.points.map(p=>[+p.x.toFixed(4),+p.y.toFixed(4)]);
     const tail=pointer.pos;
     const last=points[points.length-1];
     if(last&&Math.hypot(last[0]-tail.x,last[1]-tail.y)>.0001)points.push([+tail.x.toFixed(4),+tail.y.toFixed(4)]);
-    state.edits[state.preset].push({tool:pointer.tool,points});
+    state.edits[state.preset].push({tool:pointer.tool,materialType:state.materialType,points});
     if(state.edits[state.preset].length>90)state.edits[state.preset].shift();
     persist();refreshControls();playSound('wall');
   }
@@ -365,6 +402,10 @@ function drawPhysics(){
   for(let y=0;y<H;y++){
     for(let x=0;x<W;x++){
       const i=y*W+x,k=i*4,r=k;
+      if(sim.material[i]){
+        const mat=sim.material[i];
+        d[r]=mat===1?79:65;d[r+1]=mat===1?122:78;d[r+2]=mat===1?111:119;d[r+3]=255;continue;
+      }
       if(solid[i]){
         const edge=x===0||x===W-1||y===0||y===H-1||!solid[i-1]||!solid[i+1]||!solid[i-W]||!solid[i+W];
         d[r]=edge?180:52;d[r+1]=edge?158:78;d[r+2]=edge?124:80;d[r+3]=255;continue;
@@ -466,6 +507,21 @@ function drawOverlay(now){
   over.clearRect(0,0,paintW,paintH);
   const unitX=paintW/sim.nx,unitY=paintH/sim.ny;
   over.lineWidth=Math.max(1,dpr);
+  state.emitters[state.preset].forEach((e,i)=>{
+    const x=e.x*paintW,y=e.y*paintH;
+    const col=e.type==='pressure'?'#f4c98e':e.type==='suction'?'#87bfc6':'#e7a16b';
+    over.save();over.strokeStyle=col;over.fillStyle=col;over.lineWidth=(i===selectedEmitter?2.6:1.6)*dpr;
+    over.beginPath();over.arc(x,y,(i===selectedEmitter?13:10)*dpr,0,Math.PI*2);over.stroke();
+    if(e.type==='jet'){
+      const angle=e.angle*Math.PI/180;
+      over.beginPath();over.moveTo(x,y);over.lineTo(x+Math.cos(angle)*18*dpr,y+Math.sin(angle)*18*dpr);over.stroke();
+    }else{
+      over.font=(15*dpr)+'px sans-serif';over.textAlign='center';over.textBaseline='middle';
+      over.fillText(e.type==='pressure'?'+':'−',x,y);
+    }
+    over.font=(9*dpr)+'px monospace';over.fillText(String(i+1),x+13*dpr,y-12*dpr);
+    over.restore();
+  });
   drawStreamlines();
   if(sim.flowActive&&sim.bodyBounds&&sim.time>.5&&lastLoads){
     const loads=lastLoads,bounds=sim.bodyBounds;
