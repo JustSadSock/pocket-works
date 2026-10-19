@@ -1,6 +1,7 @@
 import {metric,geometry,launch,advance} from './relativity.js';
 import {photonTransfer,lookup,cameraBasis,pixelDirection,backgroundDirection,dot} from './optics.js';
 import {createCongruence,stepCongruence,strain,diagnosticGeometry} from './tidal.js';
+import {SKY_MODES,CAMERA_PRESETS,sourceGrid,paintSurvey,comparisonSplit,skyStats,geometryTrace} from './optical-display.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rad=d=>d*Math.PI/180;
@@ -50,14 +51,18 @@ export function createObservatory(canvas,options={}){
  const state={
   l:clamp(Number(saved.l)||2.1,-6,6),yaw:clamp(Number(saved.yaw)||0,-2.6,2.6),
   pitch:clamp(Number(saved.pitch)||0,-1.1,1.1),fov:clamp(Number(saved.fov)||80,50,110),
-  facingSign:Math.sign(Number(saved.l)||2.1)||1
+  facingSign:Math.sign(Number(saved.l)||2.1)||1,
+  mode:SKY_MODES.includes(saved.mode)?saved.mode:'combined',
+  compare:saved.compare===true,divider:clamp(Number(saved.divider??.5),.08,.92),
+  geometryInset:saved.geometryInset!==false,
+  quality:saved.quality==='fine'?'fine':'balanced'
  };
  if(Math.abs(state.l)<.12)state.l=2.1;
  let fly=null,probe=null,probeRead=null,metricNow=null;
  let active=false,w=0,h=0,run=0,stage='ready',progress=0,warning='';
- let skyA=null,skyB=null,picture=null,basis=null,transfer=null;
+ let skyA=null,skyB=null,picture=null,reference=null,basis=null,transfer=null,opticalStats=null,renderedAt=0;
  let lastRender=0,flightRender=0,needsRender=true,mouse=null,selected=null,pending=0;
- const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify({l:state.l,yaw:state.yaw,pitch:state.pitch,fov:state.fov}));}catch{}};
+ const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify({l:state.l,yaw:state.yaw,pitch:state.pitch,fov:state.fov,facingSign:state.facingSign,mode:state.mode,compare:state.compare,divider:state.divider,geometryInset:state.geometryInset,quality:state.quality}));}catch{}};
  const onProgress=options.onProgress||(()=>{}),onAction=options.onAction||(()=>{});
  function updateControls(){
   const d=$('lens-distance');
@@ -71,6 +76,18 @@ export function createObservatory(canvas,options={}){
    $('lens-probe-read').textContent=s?'Δl '+fmt(s.radial.length)+'× · Δ⊥ '+fmt(s.transverse.length)+'× · τ '+fmt(s.properTime):'Зонд не запущен';
   }
   if($('lens-eta'))$('lens-eta').textContent=metricNow?.eta?('N₀ = '+fmt(Math.exp(-metricNow.eta))):'N₀ = 1';
+  for(const btn of document.querySelectorAll('[data-lens-mode]')){
+   const yes=btn.dataset.lensMode===state.mode;
+   btn.classList.toggle('selected',yes);btn.setAttribute('aria-pressed',String(yes));
+  }
+  $('lens-compare').checked=state.compare;
+  $('lens-geometry').checked=state.geometryInset;
+  $('lens-divider').value=Math.round(100*state.divider);
+  $('lens-comparison-value').textContent=String(Math.round(100*state.divider));
+  $('lens-comparison-group').hidden=!state.compare;
+  $('lens-quality').value=state.quality;
+  $('lens-observed').textContent=opticalStats?
+   'A '+opticalStats.regionA.toFixed(0)+'% · B '+opticalStats.regionB.toFixed(0)+'% · ? '+opticalStats.unresolved.toFixed(0)+'%':'Рассчитывается…';
   if($('lens-optical-read')){
    let message='Интегрирование нулевых геодезических…';
    if(stage==='ready'&&transfer&&metricNow){
@@ -92,57 +109,88 @@ export function createObservatory(canvas,options={}){
  function configure(m){metricNow=m;fly=null;probe=null;probeRead=null;state.facingSign=Math.sign(state.l)||1;request();updateControls();}
  function setActive(next){if(next===active)return;active=next;if(next){updateControls();request();}else{clearTimeout(pending);cancel();}}
  function setDistance(v){fly=null;state.l=(Math.sign(state.l)||1)*clamp(v,.2,6);state.facingSign=Math.sign(state.l);request();save();updateControls();}
+
+ function rasterize(table,token,quick=false){
+  if(!active||!metricNow||!table)return;
+  stage='pixels';progress=.60;
+  const target=quick?clamp(Math.floor(w*.45),125,310):
+    state.quality==='fine'?clamp(Math.floor(w*1.14),390,880):
+      clamp(Math.floor(w*.78),250,620);
+  const iw=Math.round(target),ih=Math.max(110,Math.round(target*h/w));
+  const source=document.createElement('canvas');source.width=iw;source.height=ih;
+  const sourceCtx=source.getContext('2d',{willReadFrequently:true});
+  const pixelsFrame=sourceCtx.createImageData(iw,ih),pixels=pixelsFrame.data;
+  const refCanvas=document.createElement('canvas');refCanvas.width=iw;refCanvas.height=ih;
+  const refCtx=refCanvas.getContext('2d',{willReadFrequently:true});
+  const refImage=refCtx.createImageData(iw,ih),refPixels=refImage.data;
+  const localBasis=cameraBasis(state.yaw,state.pitch,Math.sign(state.l)||1,state.facingSign);
+  const cameraMode=state.mode,observerRegion=state.l>=0?0:1;
+  const localA=skyA,localB=skyB;
+  const count={regionA:0,regionB:0,unresolved:0},total=iw*ih;
+  let row=0;
+  function scan(){
+   if(token!==run||!active)return;
+   const final=Math.min(ih,row+(quick?22:state.quality==='fine'?11:18));
+   for(let y=row;y<final;y++)for(let x=0;x<iw;x++){
+    const nx=2*(x+.5)/iw-1,ny=1-2*(y+.5)/ih,
+      dir=pixelDirection(nx,ny,localBasis,state.fov,iw/ih),
+      arrival=backgroundDirection(dir,localBasis,table),o=(y*iw+x)*4;
+    if(!arrival||arrival.region<0){
+     pixels[o]=8;pixels[o+1]=14;pixels[o+2]=19;
+     count.unresolved++;
+    }else{
+     const region=arrival.region,src=region===0?localA:localB;
+     const sky=sampleSky(src,arrival.direction),
+       colored=paintSurvey(sky,sourceGrid(arrival.direction),cameraMode,region);
+     pixels[o]=colored[0];pixels[o+1]=colored[1];pixels[o+2]=colored[2];
+     if(region===0)count.regionA++;else count.regionB++;
+    }
+    pixels[o+3]=255;
+    const sky=sampleSky(observerRegion===0?localA:localB,dir),
+      colored=paintSurvey(sky,sourceGrid(dir),cameraMode,observerRegion);
+    refPixels[o]=colored[0];refPixels[o+1]=colored[1];refPixels[o+2]=colored[2];
+    refPixels[o+3]=255;
+   }
+   row=final;progress=.60+.40*row/ih;onProgress(progress);
+   if(row<ih){raf(scan);return;}
+   sourceCtx.putImageData(pixelsFrame,0,0);
+   refCtx.putImageData(refImage,0,0);
+   picture=source;reference=refCanvas;
+   opticalStats=skyStats({total,...count});
+   stage='ready';progress=1;needsRender=false;selected=null;
+   renderedAt=performance.now();
+   updateControls();onProgress(1);
+  }
+  raf(scan);
+ }
+ function refreshSurvey(){
+  if(!active||!transfer||stage==='geodesics')return;
+  clearTimeout(pending);
+  rasterize(transfer,++run,false);
+ }
  function rebuild(width,height,quick=false){
   if(!active||!metricNow||width<10||height<10)return;
   clearTimeout(pending);pending=0;
   makeSky();w=width;h=height;
   const token=++run,side=state.l>=0?1:-1;
-  stage='geodesics';progress=0;warning='';
+  stage='geodesics';progress=0;warning='';opticalStats=null;
   const l0=state.l*metricNow.a,m={...metricNow};
   basis=cameraBasis(state.yaw,state.pitch,side,state.facingSign);
-  const n=quick?150:640,table=new Array(n+1);
+  const n=quick?130:state.quality==='fine'?720:420,table=new Array(n+1);
   let i=0;
-  function chunk(){
+  function trace(){
    if(token!==run||!active)return;
-   const last=Math.min(i+(quick?45:28),n+1);
-   for(;i<last;i++)table[i]=photonTransfer(m,l0,Math.PI*i/n,{step:quick?.12:.075,maxTime:quick?90:165,outer:22});
+   const last=Math.min(i+(quick?42:state.quality==='fine'?22:35),n+1);
+   for(;i<last;i++)table[i]=photonTransfer(m,l0,Math.PI*i/n,{
+    step:quick?.13:state.quality==='fine'?.057:.085,
+    maxTime:quick?84:state.quality==='fine'?185:145,outer:22
+   });
    progress=i/(n+1)*.6;onProgress(progress);
-   if(i<=n){raf(chunk);return;}
-   transfer=table;stage='pixels';
-   // Fixed-size raster; never stretch indefinitely beyond the intended fidelity.
-   const target=quick?clamp(Math.floor(w*.38),130,300):clamp(Math.floor(w*.95),280,760);
-   const iw=Math.round(target),ih=Math.round(target*h/w);
-   const buffer=document.createElement('canvas');buffer.width=iw;buffer.height=ih;
-   const bufferCtx=buffer.getContext('2d',{willReadFrequently:true});
-   const image=bufferCtx.createImageData(iw,ih),pixels=image.data;
-   let row=0;
-   function raster(){
-    if(token!==run||!active)return;
-    const end=Math.min(row+(quick?24:15),ih);
-    for(let y=row;y<end;y++)for(let x=0;x<iw;x++){
-      const dx=2*(x+.5)/iw-1,dy=1-2*(y+.5)/ih;
-      const dir=pixelDirection(dx,dy,basis,state.fov,iw/ih);
-      const arrival=backgroundDirection(dir,basis,table);
-      const o=(y*iw+x)*4;
-      if(!arrival||arrival.region<0){
-       pixels[o]=9;pixels[o+1]=13;pixels[o+2]=16;
-      }else{
-       const src=arrival.region===0?skyA:skyB;
-       const sky=sampleSky(src,arrival.direction);
-       // Preserve spectral boundary conditions: no arbitrary painted rings.
-       pixels[o]=sky[0];pixels[o+1]=sky[1];pixels[o+2]=sky[2];
-      }
-      pixels[o+3]=255;
-    }
-    row=end;progress=.6+.4*row/ih;onProgress(progress);
-    if(row<ih){raf(raster);return;}
-    bufferCtx.putImageData(image,0,0);
-    picture=buffer;stage='ready';progress=1;needsRender=false;selected=null;
-    updateControls();onProgress(1);
-   }
-   raf(raster);
+   if(i<=n){raf(trace);return;}
+   transfer=table;
+   rasterize(table,token,quick);
   }
-  raf(chunk);
+  raf(trace);
  }
  function request(){clearTimeout(pending);cancel();pending=setTimeout(()=>{if(active&&w&&h)rebuild(w,h,false);},110);}
  function triggerFlight(){
@@ -178,6 +226,22 @@ export function createObservatory(canvas,options={}){
   }
   ctx.fillStyle='#071319';ctx.fillRect(0,0,width,height);
   if(picture)ctx.drawImage(picture,0,0,width,height);
+  if(reference&&state.compare){
+   const divider=comparisonSplit(width,state.divider);
+   ctx.save();ctx.beginPath();ctx.rect(0,0,divider,height);ctx.clip();
+   ctx.drawImage(reference,0,0,width,height);ctx.restore();
+   const grd=ctx.createLinearGradient(divider-9,0,divider+9,0);
+   grd.addColorStop(0,'rgba(235,231,203,0)');
+   grd.addColorStop(.5,'rgba(246,236,201,.75)');
+   grd.addColorStop(1,'rgba(235,231,203,0)');
+   ctx.fillStyle=grd;ctx.fillRect(divider-9,0,18,height);
+   ctx.strokeStyle='#f4ecd6';ctx.lineWidth=1;ctx.beginPath();
+   ctx.moveTo(divider,0);ctx.lineTo(divider,height);ctx.stroke();
+   ctx.fillStyle='#0d2630ee';ctx.fillRect(Math.max(2,divider-48),12,96,21);
+   ctx.textAlign='center';ctx.font='700 9px ui-monospace,monospace';
+   ctx.fillStyle='#ebeedf';ctx.fillText('ИСХОДНОЕ / НОРА',divider,26);
+  }
+  if(state.geometryInset&&metricNow)drawMetricStrip(ctx,width,height);
   if(stage!=='ready'){
    ctx.fillStyle='rgba(6,16,19,.55)';ctx.fillRect(0,0,width,height);
    ctx.fillStyle='#cde8d7';ctx.font='12px ui-monospace,monospace';ctx.textAlign='center';
@@ -190,7 +254,7 @@ export function createObservatory(canvas,options={}){
   ctx.moveTo(crossX,crossY-16);ctx.lineTo(crossX,crossY-5);
   ctx.moveTo(crossX,crossY+5);ctx.lineTo(crossX,crossY+16);ctx.stroke();
   ctx.font='11px ui-monospace,monospace';ctx.textAlign='left';
-  ctx.fillStyle='#c1e3d2';ctx.fillText('NULL GEODESICS / 3+1D',15,26);
+  ctx.fillStyle='#c1e3d2';ctx.fillText('NULL GEODESICS / 3+1D · ГЕОДЕЗИЧЕСКАЯ ОПТИКА',15,26);
   ctx.fillStyle='#8eb7a4';ctx.fillText('l/a '+fmt(state.l)+'   FOV '+fmt(state.fov)+'°',15,44);
   ctx.textAlign='right';ctx.fillStyle='#d1d8cd';
   ctx.fillText(state.l>=0?'REGION A':'REGION B',width-14,26);
@@ -200,9 +264,32 @@ export function createObservatory(canvas,options={}){
     'ЛУЧ → '+(selected.region===0?'A':'B')+'   b/a '+fmt(selected.impact/metricNow.a)+'   W '+fmt(selected.winding),14,height-20);
   }else{
    ctx.textAlign='left';ctx.fillStyle='#9bb5a6';
-   ctx.fillText('Перетащи: взгляд · касание: исследовать луч',14,height-20);
+   ctx.fillText('ВРАЩАЙТЕ КАМЕРУ · КОСНИТЕСЬ ДЛЯ ДАННЫХ ФОТОНА',14,height-20);
   }
   if(probeRead)drawProbe(ctx,width,height,probeRead);
+ }
+
+ function drawMetricStrip(ctx,width,height){
+  // A physical radial metric profile. No Euclidean embedding implied.
+  const compact=width<480,pw=Math.min(compact?160:215,width*.43),
+    ph=compact?78:100,x=width-pw-13,y=compact?68:64;
+  ctx.fillStyle='#081e23db';ctx.fillRect(x,y,pw,ph);
+  ctx.strokeStyle='#83a99c72';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,pw-1,ph-1);
+  const points=geometryTrace(metricNow,geometry,{samples:91,span:4});
+  const minR=1,maxR=Math.max(...points.map(p=>p.R)),left=x+10,right=x+pw-10;
+  const yy=value=>y+ph-15-clamp((value-minR)/(maxR-minR),0,1)*(ph-30);
+  ctx.beginPath();
+  points.forEach((p,i)=>{const px=left+i/(points.length-1)*(right-left),py=yy(p.R);
+   if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  });
+  ctx.lineWidth=1.8;ctx.strokeStyle='#aadcc5';ctx.stroke();
+  const u=clamp(state.l,-4,4),marker=left+(u+4)/8*(right-left);
+  ctx.strokeStyle='#dfbb91';ctx.lineWidth=1;ctx.beginPath();
+  ctx.moveTo(marker,y+19);ctx.lineTo(marker,y+ph-14);ctx.stroke();
+  ctx.fillStyle='#e9debc';ctx.font='700 9px ui-monospace,monospace';ctx.textAlign='left';
+  ctx.fillText('R(l) / a',x+9,y+14);
+  ctx.textAlign='right';ctx.fillStyle='#a1c2b4';
+  ctx.fillText('l/a '+fmt(state.l),x+pw-8,y+14);
  }
  function drawProbe(ctx,width,height,s){
   const size=Math.min(124,width*.27),ox=width-size*.62,oy=height-size*.72;
@@ -226,11 +313,17 @@ export function createObservatory(canvas,options={}){
  canvas.addEventListener('pointerdown',e=>{
   if(!active||e.pointerType==='mouse'&&e.button!==0)return;
   e.preventDefault();canvas.setPointerCapture(e.pointerId);
-  mouse={id:e.pointerId,...point(e),yaw:state.yaw,pitch:state.pitch,drag:false};
+  const p=point(e);
+  mouse={id:e.pointerId,...p,yaw:state.yaw,pitch:state.pitch,drag:false,
+   split:state.compare&&Math.abs(p.x-state.divider*w)<23};
  });
  canvas.addEventListener('pointermove',e=>{
   if(!active||!mouse||e.pointerId!==mouse.id)return;
   const p=point(e),dx=p.x-mouse.x,dy=p.y-mouse.y;
+  if(mouse.split){
+   mouse.drag=true;state.divider=clamp(p.x/Math.max(1,w),.08,.92);
+   updateControls();save();return;
+  }
   if(Math.hypot(dx,dy)>5)mouse.drag=true;
   if(!mouse.drag)return;
   state.yaw=clamp(mouse.yaw+dx/Math.max(300,w)*2.2,-2.6,2.6);
@@ -240,7 +333,7 @@ export function createObservatory(canvas,options={}){
  canvas.addEventListener('pointerup',e=>{
   if(!mouse||e.pointerId!==mouse.id)return;
   const p=point(e);
-  if(!mouse.drag&&transfer&&stage==='ready'){
+  if(!mouse.drag&&transfer&&stage==='ready'&&(!state.compare||p.x>=state.divider*w)){
    const b=cameraBasis(state.yaw,state.pitch,Math.sign(state.l)||1,state.facingSign);
    const direction=pixelDirection(2*p.x/w-1,1-2*p.y/h,b,state.fov,w/h);
    const theta=Math.acos(clamp(dot(direction,b.radial),-1,1));
@@ -252,10 +345,50 @@ export function createObservatory(canvas,options={}){
  canvas.addEventListener('lostpointercapture',()=>{mouse=null;});
  $('lens-distance')?.addEventListener('input',e=>setDistance(Number(e.target.value)));
  $('lens-fov')?.addEventListener('input',e=>{state.fov=Number(e.target.value);updateControls();request();save();});
+ for(const btn of document.querySelectorAll('[data-lens-mode]')){
+  btn.addEventListener('click',()=>{
+   if(!SKY_MODES.includes(btn.dataset.lensMode))return;
+   state.mode=btn.dataset.lensMode;updateControls();save();refreshSurvey();
+  });
+ }
+ $('lens-compare').addEventListener('change',e=>{
+  state.compare=e.target.checked;updateControls();save();
+ });
+ $('lens-geometry').addEventListener('change',e=>{
+  state.geometryInset=e.target.checked;updateControls();save();
+ });
+ $('lens-divider').addEventListener('input',e=>{
+  state.divider=clamp(Number(e.target.value)/100,.08,.92);updateControls();save();
+ });
+ $('lens-quality').addEventListener('change',e=>{
+  state.quality=e.target.value==='fine'?'fine':'balanced';updateControls();request();save();
+ });
+ for(const btn of document.querySelectorAll('[data-lens-preset]')){
+  btn.addEventListener('click',()=>{
+   if(!CAMERA_PRESETS.includes(btn.dataset.lensPreset))return;
+   const preset=btn.dataset.lensPreset,side=Math.sign(state.l)||1;
+   fly=null;state.facingSign=preset==='away'?-side:side;
+   state.yaw=preset==='oblique'?.8:0;
+   state.pitch=preset==='oblique'?.20:0;
+   if(preset==='wide')state.fov=105;
+   else state.fov=80;
+   updateControls();request();save();onAction?.('mount');
+  });
+ }
+ for(const btn of document.querySelectorAll('[data-lens-turn]')){
+  btn.addEventListener('click',()=>{
+   const mode=btn.dataset.lensTurn;
+   if(mode==='left')state.yaw=clamp(state.yaw-.24,-2.6,2.6);
+   if(mode==='right')state.yaw=clamp(state.yaw+.24,-2.6,2.6);
+   if(mode==='up')state.pitch=clamp(state.pitch+.17,-1.1,1.1);
+   if(mode==='down')state.pitch=clamp(state.pitch-.17,-1.1,1.1);
+   updateControls();request();save();
+  });
+ }
  $('lens-flight')?.addEventListener('click',triggerFlight);
  $('lens-probe')?.addEventListener('click',launchProbe);
  $('lens-reset')?.addEventListener('click',()=>{
-  fly=null;probe=null;probeRead=null;state.l=2.1;state.yaw=0;state.pitch=0;state.fov=80;state.facingSign=1;
+  fly=null;probe=null;probeRead=null;state.l=2.1;state.yaw=0;state.pitch=0;state.fov=80;state.facingSign=1;state.compare=false;state.mode='combined';
   onAction('mount');updateControls();request();save();
  });
  function applyParameters(p={}){
@@ -266,11 +399,16 @@ export function createObservatory(canvas,options={}){
   if(Number.isFinite(p.pitch))state.pitch=clamp(p.pitch,-1.1,1.1);
   if(Number.isFinite(p.fov))state.fov=clamp(p.fov,50,110);
   state.facingSign=p.facingSign===-1?-1:1;
+  if(SKY_MODES.includes(p.mode))state.mode=p.mode;
+  if(typeof p.compare==='boolean')state.compare=p.compare;
+  if(Number.isFinite(p.divider))state.divider=clamp(p.divider,.08,.92);
+  if(typeof p.geometryInset==='boolean')state.geometryInset=p.geometryInset;
+  if(p.quality==='fine'||p.quality==='balanced')state.quality=p.quality;
   updateControls();request();save();
  }
  return {
   state,configure,applyParameters,setActive,draw,tick,request,updateControls,launchProbe,triggerFlight,
   get probe(){return probeRead;},
-  get status(){return {stage,progress,region:state.l>=0?'A':'B',selected,flight:!!fly,rays:transfer?.length||0};}
+  get status(){return {stage,progress,region:state.l>=0?'A':'B',selected,flight:!!fly,rays:transfer?.length||0,opticalStats,mode:state.mode,quality:state.quality,compare:state.compare};}
  };
 }
