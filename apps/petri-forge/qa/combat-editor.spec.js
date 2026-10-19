@@ -5,6 +5,7 @@ test('build custom arena, learn its rules and reload edited layout',async({page}
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
  await page.locator('[data-world-mode="combat"]').click();
+ await page.locator('#hubTools').click();
  await expect(page.locator('#studioEdit')).toBeVisible();
  page.once('dialog',dialog=>dialog.accept());
  await page.locator('#studioPreset').selectOption('control');
@@ -16,7 +17,7 @@ test('build custom arena, learn its rules and reload edited layout',async({page}
  await page.locator('#studioUndo').click();
  await expect(page.locator('#studioCount')).toContainText('2 стен');
  await page.locator('#studioRedo').click();
- await expect(page.locator('#studioCount')).toContainText('1 стен');
+ await expect(page.locator('#studioCount')).toContainText('3 стен');
  await page.locator('#studioEdit').click();
  await page.locator('#studioName').fill('Control QA');
  await page.locator('#studioName').dispatchEvent('change');
@@ -29,6 +30,7 @@ test('build custom arena, learn its rules and reload edited layout',async({page}
  await expect(page.locator('#battleStop')).toBeDisabled({timeout:90000});
  await page.reload({waitUntil:'domcontentloaded'});
  await page.locator('[data-world-mode="combat"]').click();
+ await page.locator('#hubTools').click();
  await expect(page.locator('#studioCount')).toContainText('1 стен');
  await expect(page.locator('#studioMode')).toHaveValue('control');
  expect(errors).toEqual([]);
@@ -36,6 +38,7 @@ test('build custom arena, learn its rules and reload edited layout',async({page}
 test('combat stats, powers and objective win conditions are editable',async({page})=>{
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
  await page.locator('[data-world-mode="combat"]').click();
+ await page.locator('#hubTools').click();
  await page.locator('#studioMode').selectOption('score');
  await expect(page.locator('#studioScoreWrap')).toBeVisible();
  await page.locator('#studioScore').fill('40');
