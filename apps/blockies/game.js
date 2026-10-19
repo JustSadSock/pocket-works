@@ -858,7 +858,8 @@ class Player {
             return;
         }
 
-        // Play line clear sound
+        // Distinguish a line clear from ordinary touchdown, with reduced-motion safety.
+        window.uiManager?.signalImpact(linesCleared);
         soundManager.lineClear(linesCleared);
 
         const comboStep = gameState.sharedStats.comboChain || 0;
@@ -1064,7 +1065,12 @@ class UIManager {
             // Check D-pad buttons for each action
             for (const action in GAMEPAD_BUTTON_MAP) {
                 const buttons = GAMEPAD_BUTTON_MAP[action];
-                const pressed = buttons.some(btnIndex => gamepad.buttons[btnIndex]?.pressed);
+                const stickX = gamepad.axes?.[0] || 0;
+                const stickY = gamepad.axes?.[1] || 0;
+                const stickHeld = (action === 'left' && stickX < -GAMEPAD_DEADZONE)
+                    || (action === 'right' && stickX > GAMEPAD_DEADZONE)
+                    || (action === 'down' && stickY > GAMEPAD_DEADZONE);
+                const pressed = stickHeld || buttons.some(btnIndex => gamepad.buttons[btnIndex]?.pressed);
                 
                 const wasPressed = buttonState[action].wasPressed;
                 buttonState[action].pressed = pressed;
@@ -3301,7 +3307,9 @@ for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'
 }
 function applyNetworkSnapshot(s){
  if(!s||!Array.isArray(s.board)||!Array.isArray(s.players)||!s.sharedStats||!window.uiManager?.isOnlineMode)return;
+ const previousLines=gameState.sharedStats?.lines || 0;
  gameState.board=s.board;gameState.sharedStats=s.sharedStats;gameState.sharedStatsDirty=true;gameState.isGameOver=s.isGameOver;
+ if(s.sharedStats.lines>previousLines)window.uiManager.signalImpact(s.sharedStats.lines-previousLines);
  s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){const keys=player.keys;Object.assign(player,data,{keys});}});
  window.uiManager.drawBoard();
  window.uiManager.updateTeamStatsIfNeeded();
