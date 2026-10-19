@@ -296,6 +296,11 @@ export function createWorld(canvas, initialSeed) {
   const mandibleGeo=new THREE.ConeGeometry(.25,.83,6);
   const spitterNeckGeo=new THREE.CylinderGeometry(.16,.38,.85,9);
   const shieldGeo=new THREE.IcosahedronGeometry(1,1);
+  // Shared instantiations avoid orphaning WebGL buffers over 100+ deaths.
+  const spitterNozzleGeo=new THREE.TorusGeometry(.15,.085,7,12);
+  const leechMouthGeo=new THREE.TorusGeometry(.26,.07,8,17);
+  const pickupShellGeo=new THREE.OctahedronGeometry(.22);
+  const pickupRingGeo=new THREE.TorusGeometry(.3,.04,6,12);
   // Enemy skin now tells species apart through its actual surface relief,
   // not merely through a differently colored base material.
   for(const [type,mat] of Object.entries(mobMats)){
@@ -936,7 +941,7 @@ export function createWorld(canvas, initialSeed) {
       for(const side of [-1,1])for(let i=0;i<2;i++)leg(side,i,.75);
       const neck=new THREE.Mesh(spitterNeckGeo,core);neck.position.set(0,1.46,-.21);
       neck.rotation.x=-.35;g.add(neck);
-      const nozzle=new THREE.Mesh(new THREE.TorusGeometry(.15,.085,7,12),boneMat);
+      const nozzle=new THREE.Mesh(spitterNozzleGeo,boneMat);
       nozzle.position.set(0,1.77,-.42);nozzle.rotation.x=Math.PI/2;g.add(nozzle);
       for(const side of [-1,1]){
         const sac=new THREE.Mesh(spitterSacGeo,bile);
@@ -1031,7 +1036,7 @@ export function createWorld(canvas, initialSeed) {
         collar.position.set(0,.56,(-i+1.4)*.24);
         collar.rotation.x=Math.PI/2;collar.scale.setScalar(.80);g.add(collar);
       }
-      const mouth=new THREE.Mesh(new THREE.TorusGeometry(.26,.07,8,17),boneMat);
+      const mouth=new THREE.Mesh(leechMouthGeo,boneMat);
       mouth.position.set(0,.50,-.80);mouth.rotation.x=Math.PI/2;g.add(mouth);
     }else if(type==='heart'){
       for(let i=0;i<7;i++){
@@ -1058,8 +1063,8 @@ export function createWorld(canvas, initialSeed) {
   }
   function makePickup(x,z){
     const group=new THREE.Group();
-    const outer=new THREE.Mesh(new THREE.OctahedronGeometry(.22),bile);
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.04,6,12),boneMat);ring.rotation.x=Math.PI/2;
+    const outer=new THREE.Mesh(pickupShellGeo,bile);
+    const ring=new THREE.Mesh(pickupRingGeo,boneMat);ring.rotation.x=Math.PI/2;
     group.add(outer,ring);group.position.set(x,.55,z);source.add(group);return group;
   }
   function firePulse(weapon){
@@ -1285,6 +1290,7 @@ export function createWorld(canvas, initialSeed) {
   function end(){
     clearChunks();motesGeo.dispose();motesMat.dispose();deathGeo.dispose();deathMat.dispose();
     scarGeo.dispose();scarMat.dispose();
+    for(const geo of [spitterNozzleGeo,leechMouthGeo,pickupShellGeo,pickupRingGeo])geo.dispose();
     for(const map of Object.values(roughnessMaps||{}))map?.dispose();
     renderer.dispose();
   }
