@@ -111,7 +111,8 @@
       "kind": "node-test",
       "files": [
         "qa/biomes.test.mjs",
-        "qa/pacing.test.mjs"
+        "qa/pacing.test.mjs",
+        "qa/runtime.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -121,7 +122,8 @@
       "files": [
         "qa/biomes.spec.js",
         "qa/pacing.spec.js",
-        "qa/atmosphere.spec.js"
+        "qa/atmosphere.spec.js",
+        "qa/runtime.spec.js"
       ],
       "tier": "smoke"
     },
