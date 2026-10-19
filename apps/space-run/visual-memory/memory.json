@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "space-run",
+  "captures": [
+    {
+      "id": "544c0f0deb6d7ce9322ef76e8f0c55b1872c9474f1e7890faecf263632bb0987",
+      "recordedAt": "2026-10-19T09:56:16.538Z",
+      "commit": "2b256b7d67b2826919ab8503101860b3bd95b46d",
+      "viewport": [
+        844,
+        390
+      ],
+      "state": "initial, real input and settled game, then offline reload",
+      "engine": "Chromium",
+      "action": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+      "files": [
+        {
+          "path": "5d6b99228c9ce534c06a1495d79b213c10a0efd7994490b98dcadd165eae4fb5.png",
+          "sha256": "5d6b99228c9ce534c06a1495d79b213c10a0efd7994490b98dcadd165eae4fb5"
+        },
+        {
+          "path": "0743f8286d92074ed3ed7caf4ddda4b877f60084a810ecbb9dea9742471a52c6.png",
+          "sha256": "0743f8286d92074ed3ed7caf4ddda4b877f60084a810ecbb9dea9742471a52c6"
+        },
+        {
+          "path": "ef91c2abb72903740a509fb761c78a49fffae0b86c503319bbad6526edc245e1.png",
+          "sha256": "ef91c2abb72903740a509fb761c78a49fffae0b86c503319bbad6526edc245e1"
+        },
+        {
+          "path": "91032b4344477fcf537141187e3acb104a312da80f9620305436747ce8672ae8.webm",
+          "sha256": "91032b4344477fcf537141187e3acb104a312da80f9620305436747ce8672ae8"
+        },
+        {
+          "path": "ed091b8629e64be2d362e25c133ed26197f55de619eb35e3aff93f219f48d0d6.png",
+          "sha256": "ed091b8629e64be2d362e25c133ed26197f55de619eb35e3aff93f219f48d0d6"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}
