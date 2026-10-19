@@ -23,7 +23,7 @@ export function pulsePlan(seed,wave,pulse=1){
  if(!counts||!Number.isInteger(pulse)||pulse<1||pulse>3)return null;
  // Three patterns rotate once per organ; no seed can lock a whole stage
  // into one repeated behavior.
- const first=hash(seed,wave,0)%3;
+ const first=wave===1?0:hash(seed,wave,0)%3;
  const kind=PULSE_KINDS[(first+pulse-1)%3];
  return Object.freeze({wave,pulse,total:3,count:counts[pulse-1],
    kind:kind.id,name:kind.name,description:kind.desc});
