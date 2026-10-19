@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'blockies-';
-const CACHE_NAME = 'blockies-v0.1.1';
-const APP_VERSION = '0.1.1';
+const CACHE_NAME = 'blockies-v0.1.2';
+const APP_VERSION = '0.1.2';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Исправлены паузы и игровые циклы.", "Исправлены онлайн-управление, выход и экран комнаты."];
+const RELEASE_NOTES = ["Сетевые партии сохраняются после выхода участника.", "Повторные матчи запускаются по общему голосованию.", "Исправлены управление, паузы и игровые циклы."];
 const APP_SHELL = [
   "./",
   "./index.html",
