@@ -312,19 +312,22 @@ function releaseStick(e){if(e.pointerId!==stick.pointer)return;stick.pointer=nul
 stickEl.addEventListener('pointerup',releaseStick);stickEl.addEventListener('pointercancel',releaseStick);stickEl.addEventListener('lostpointercapture',releaseStick);
 function binder(id,field){const b=$(id);b.addEventListener('pointerdown',e=>{if(mode!=='fight')return;e.preventDefault();b.setPointerCapture(e.pointerId);if(field==='attack')input.attack=true;else input[field]=true});const release=e=>{if(field==='attack')input.attack=false};b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release);b.addEventListener('click',()=>{if(mode==='fight'&&field!=='attack')input[field]=true})}
 binder('attack-btn','attack');binder('shield-btn','shield');binder('dash-btn','dash');
-const aimButton=$('attack-btn');let aimedPointer=null;
+const aimButton=$('attack-btn');let aimedPointer=null,aimOrigin=null;
 // A touch drag must establish its heading BEFORE the first shot. A brief tap
 // still fires once; a deliberate hold fires repeatedly after the aim window.
 aimButton.addEventListener('pointerdown',e=>{
  if(mode!=='fight')return;
- aimedPointer=e.pointerId;aimTouch=e.pointerType!=='mouse';
+ aimedPointer=e.pointerId;aimOrigin={x:e.clientX,y:e.clientY};aimTouch=e.pointerType!=='mouse';
  aimTouchStart=performance.now();aimDragged=false;aimVector=null;
  if(aimTouch){input.aim=null;input.attack=false}
  aimButton.classList.add('aiming');
 });
 aimButton.addEventListener('pointermove',e=>{
  if(mode!=='fight'||e.pointerId!==aimedPointer||!active)return;
- const r=aimButton.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+ // The button scales and moves when pressed: its bounding rect is NOT a
+ // stable drag origin. Use the first pointer coordinate for exact vectors.
+ if(!aimOrigin)return;
+ const dx=e.clientX-aimOrigin.x,dy=e.clientY-aimOrigin.y;
  if(Math.hypot(dx,dy)>11){
   const a=myActor();aimVector={dx,dy};input.aim=courtAim(a,dx,dy,W,H);
   aimDragged=true;input.attack=true;
@@ -336,7 +339,7 @@ const stopAim=e=>{
   if(e.type==='pointerup'&&!aimDragged)tapAttackQueued=true;
   input.aim=null;input.attack=false;
  }
- aimedPointer=null;aimTouch=false;aimDragged=false;aimVector=null;aimButton.classList.remove('aiming');
+ aimedPointer=null;aimOrigin=null;aimTouch=false;aimDragged=false;aimVector=null;aimButton.classList.remove('aiming');
 };
 aimButton.addEventListener('pointerup',stopAim);aimButton.addEventListener('pointercancel',stopAim);aimButton.addEventListener('lostpointercapture',stopAim);
 
