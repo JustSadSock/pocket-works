@@ -2,7 +2,7 @@ const CACHE_NAME = 'kalibr-v2.0.1';
 const CACHE_PREFIX = 'kalibr-';
 const APP_SHELL = [
   './', './index.html', './styles.css', './styles-core.css', './styles-menu.css', './styles-panels.css',
-  './app.js', './game-part-1.js', './game-part-2.js', './game-part-3.js', './game-part-4.js', './game-part-5.js', './game-part-6.js',
+  './app.js', './game-part-1.js', './game-pack-0.txt', './game-pack-1.txt', './game-pack-2.txt', './game-pack-3.txt',
   './manifest.webmanifest', './icons/icon.svg',
   '../../shared/mobile-runtime.css', '../../shared/update-manager.css', '../../shared/workshop-mode.css',
   '../../shared/update-manager.js', '../../shared/mobile-runtime.js', '../../shared/workshop-mode.js'
