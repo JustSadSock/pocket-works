@@ -776,6 +776,7 @@ class Player {
                 this.merge();
                 soundManager.drop();
                 this.clearLines();
+                window.uiManager?.signalImpact();
                 this.spawnPiece();
             }
         }
@@ -811,6 +812,7 @@ class Player {
             this.merge();
             soundManager.drop();
             this.clearLines();
+            window.uiManager?.signalImpact();
             this.spawnPiece();
         }
         this.dropCounter = 0;
@@ -1586,6 +1588,34 @@ class UIManager {
         this.gameFrame = requestAnimationFrame((time) => this.gameLoop(time));
     }
 
+    projectLanding(player) {
+        if (!player || player.gameOver || !player.currentPiece) return null;
+        const target = { x: player.position.x, y: player.position.y };
+        // Active pieces are physical obstacles too. Never project through a teammate.
+        for (let i = 0; i < BOARD_HEIGHT; i++) {
+            const next = { x: target.x, y: target.y + 1 };
+            if (player.checkCollision(player.currentPiece, next).collides) break;
+            target.y++;
+        }
+        return target;
+    }
+
+    signalImpact(lines = 0) {
+        const surface = document.getElementById('shared-board');
+        if (!surface?.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        surface.animate(
+            lines ? [
+                { filter: 'brightness(1.4)', transform: 'translateY(-2px)' },
+                { filter: 'brightness(1)', transform: 'translateY(0)' }
+            ] : [
+                { transform: 'translateY(0)' },
+                { transform: 'translateY(3px) scaleY(.994)' },
+                { transform: 'translateY(0)' }
+            ],
+            { duration: lines ? 200 : 105, easing: 'ease-out' }
+        );
+    }
+
     drawBoard() {
         const canvas = document.getElementById('game-canvas');
         if (!canvas) return;
@@ -1626,6 +1656,31 @@ class UIManager {
                 }
             }
         }
+
+        // Each player's outlined landing guide is rendered behind every active piece.
+        gameState.players.forEach(player => {
+            if (!player.currentPiece || player.gameOver) return;
+            const landing = this.projectLanding(player);
+            if (!landing || landing.y <= player.position.y) return;
+            ctx.save();
+            ctx.strokeStyle = player.color;
+            ctx.fillStyle = player.color;
+            ctx.globalAlpha = .4;
+            ctx.lineWidth = 2;
+            ctx.setLineDash?.([3, 3]);
+            for (let y = 0; y < player.currentPiece.length; y++) {
+                for (let x = 0; x < player.currentPiece[y].length; x++) {
+                    if (!player.currentPiece[y][x]) continue;
+                    const px = (landing.x + x) * BLOCK_SIZE;
+                    const py = (landing.y + y) * BLOCK_SIZE;
+                    ctx.globalAlpha = .12;
+                    ctx.fillRect(px + 2, py + 2, BLOCK_SIZE - 5, BLOCK_SIZE - 5);
+                    ctx.globalAlpha = .68;
+                    ctx.strokeRect(px + 2, py + 2, BLOCK_SIZE - 6, BLOCK_SIZE - 6);
+                }
+            }
+            ctx.restore();
+        });
 
         // Draw active pieces with glow
         gameState.players.forEach(player => {
