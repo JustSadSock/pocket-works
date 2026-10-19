@@ -12,6 +12,7 @@ import {guardianForWave,isGuardian,guardianReady,guardianSpawnResolved,guardianD
 import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
 import {addScar,scarSignature,scarSurfaceStats,locateWallWound} from './scars.js';
 import {initialAutoQuality,autoQualityWindow,runtimeBudget} from './runtimeBudget.js';
+import {campaignReport} from './runReport.js';
 import {PROTOCOLS,sanitizeProtocol,applyProtocol,extraEnemiesForPulse,incomingProtocolDamage,
   enemyProtocolSpeed,spawnCadence,registerCombatChain,recordFinishedRun,observedRunStats} from './runTuning.js';
 
@@ -854,7 +855,7 @@ function finish(victory){
   safeWrite('mutation',mutation);
   ui.resultTitle.textContent=victory?'СЕРДЦЕ РАЗОРВАНО':'ТЫ ПЕРЕВАРЕН';
   ui.resultBody.textContent='ОЧКИ '+state.score.toLocaleString('ru-RU')+' · УБИЙСТВ '+state.kills+'\nВОЛНА '+state.wave+'/5 · '+Math.floor(state.elapsed/60)+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0')+'\nСЛЕДУЮЩАЯ МУТАЦИЯ: '+mutation.label+'\nАРХИВ: +'+gained+' ЭХО · ВСЕГО '+archive.echoes+
-  '\nПОЛУЧЕНО УРОНА '+Math.round(state.damageTaken||0)+' · ЛУЧШАЯ ЦЕПЬ ×'+(state.peakCombo||0)+
+  '\n'+campaignReport(state,victory)+
   '\nПРОТОКОЛ '+(PROTOCOLS.find(p=>p.id===state.protocol)?.name||'БАЗОВЫЙ');
   setMode(victory?'won':'dead');
   sound(victory?'pickup':'heart');
