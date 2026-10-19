@@ -40,6 +40,23 @@ function betweenFields(s,h){
  nearest.sort((a,b)=>a.distance-b.distance||b.owner.fields.length-a.owner.fields.length||a.cell-b.cell);
  return nearest[0]||null;
 }
+// Four seed-stable reviews per community, distributed over the calendar.
+// The last quarter has 92 days; year is zero-based and doy is 0..364.
+export function disputeReviewDay(seed,year,communityId,quarter){
+ if(!Number.isInteger(quarter)||quarter<0||quarter>3)throw Error('Invalid quarter');
+ const length=quarter===3?92:91;
+ return quarter*91+Math.floor(draw(seed,year*4+quarter,communityId,0x6d31)*length);
+}
+export function disputeRiskPerReview(annualChance){
+ return 1-Math.pow(1-clamp(annualChance,0,1),.25);
+}
+export function injuryImpact(seed,day,personId,pursuit=false){
+ // This serious-injury tail is experimental, NOT a measured medieval rate.
+ const serious=draw(seed,day,personId,pursuit?0x67b2:0x78bd)<(pursuit?.025:.055);
+ const ordinary=(pursuit?3:6)+Math.round(draw(seed,day,personId,pursuit?0x6fa2:0x27bd)*(pursuit?15:25));
+ const extra=serious?Math.round(30+draw(seed,day,personId,pursuit?0x71bb:0x66c1)*22):0;
+ return {damage:ordinary+extra,serious};
+}
 export function fieldGrievances(s){
  const options=[];
  for(const h of s.households){
@@ -106,7 +123,7 @@ export function beginLandDispute(s,claimId,ownerId,cell,notify,options={}){
  const c={id:s.nextId++,stage:muster?'mustering':'mobilizing',startDay:s.day,
   rallyDay:muster?s.day+1:null,meetDay:s.day+(muster?2:1),endDay:null,
   claimantId:claimId,ownerId,cell,claimants:as.map(p=>p.id),owners:bs.map(p=>p.id),
-  muster,expedition,outcome:null,wounded:[],dead:[],compensationCoin:0,
+  muster,expedition,outcome:null,wounded:[],dead:[],severeWounds:[],compensationCoin:0,
   morale:null,retreated:null,arrived:{claimants:0,owners:0},
   tactics:null,broken:null,pursued:[],
   ...(expedition?{
@@ -162,16 +179,16 @@ function wound(s,c,people,threat,side,notify,pursuit=false){
   const p=citizen(s,id);if(!p?.alive||p.health<=0||p.combatDutyDay!==s.day||c.wounded.includes(id))continue;
   const r=draw(s.seed,s.day,p.randomKey??p.id,pursuit?(side?0x5bbf:0x46ae):(side?0x75c9:0x5a7d));
   if(r>=threat)continue;
-  const lost=Math.round((pursuit?3:6)+draw(s.seed,s.day,p.id,pursuit?0x6fa2:0x27bd)*(pursuit?15:25));
-  p.health=clamp(p.health-lost,0,100);
+  const injury=injuryImpact(s.seed,s.day,p.id,pursuit);
+  p.health=clamp(p.health-injury.damage,0,100);
   c.wounded.push(p.id);if(pursuit)c.pursued.push(p.id);
-  p.lifeLog??=[];p.lifeLog.push({day:s.day,type:pursuit?'battle-pursuit-wound':'battle-wound',text:`${pursuit?'Ранен при преследовании':'Получил рану в споре о полосе пашни'}: здоровье −${lost}`});
+  if(injury.serious){c.severeWounds??=[];c.severeWounds.push(p.id);
+   s.stats.severeBattleWounds=(s.stats.severeBattleWounds||0)+1;}
+  p.lifeLog??=[];p.lifeLog.push({day:s.day,type:pursuit?'battle-pursuit-wound':'battle-wound',text:`${pursuit?'Ранен при преследовании':'Получил рану в споре о полосе пашни'}: здоровье −${injury.damage}${injury.serious?' · тяжёлая травма':''}`});
   if(p.lifeLog.length>240)p.lifeLog.splice(1,p.lifeLog.length-240);
-  // A genuinely severe and rare injury causes a death in the existing
-  // biological lifeCycle. The latter marks it as combat, not starvation.
-  if(p.health<12&&draw(s.seed,s.day,p.id,0x8a31)<.12){
-   p.health=0;p.combatFatalDay=s.day;c.dead.push(p.id);
-  }
+  // The biological life-cycle owns the actual death transition.
+  // No wounded person at zero health may be misclassified as famine.
+  if(p.health<=0){p.combatFatalDay=s.day;c.dead.push(p.id);}
  }
 }
 function commitFlank(s,c){
@@ -195,7 +212,7 @@ function commitFlank(s,c){
  p.workDays.guard=rnd(Math.max(0,(p.workDays.guard||0)-total/8.5));
 }
 function resolve(s,c,notify){
- c.pursued??=[];c.broken??=null;
+ c.pursued??=[];c.severeWounds??=[];c.broken??=null;
  const left=readiness(s,c.claimants),right=readiness(s,c.owners);
  const attacker=byId(s,c.claimantId),defender=byId(s,c.ownerId);
  c.morale={claimants:left.morale,owners:right.morale};
@@ -246,7 +263,7 @@ function resolve(s,c,notify){
  s.stats.battleWounds=(s.stats.battleWounds||0)+c.wounded.length;
  if(c.retreated)s.stats.disputeRetreats=(s.stats.disputeRetreats||0)+1;
  const cause=c.tactics?
-  `Местность: ${c.tactics.terrain.label}. ${c.tactics.claimants.formation} против ${c.tactics.owners.formation}${c.tactics.flank?' · реальный обход с фланга':''}${c.broken?' · группа потеряла строй':''}${c.pursued.length?' · раненых при преследовании: '+c.pursued.length:''}. Права на поле не изменились`:
+  `Местность: ${c.tactics.terrain.label}. ${c.tactics.claimants.formation} против ${c.tactics.owners.formation}${c.tactics.flank?' · реальный обход с фланга':''}${c.broken?' · группа потеряла строй':''}${c.pursued.length?' · раненых при преследовании: '+c.pursued.length:''}${c.dead.length?' · смертельных ран: '+c.dead.length:''}. Права на поле не изменились`:
   'Численность, здоровье и мораль прибывших жителей. Права на землю не изменились';
  notify?.('armed-clash',c.outcome==='dispersed'?'Участники земельного спора разошлись':
   c.retreated?'Участники земельного спора отступили без схватки':
@@ -370,14 +387,21 @@ export function advanceLocalConflicts(s,notify){
    if(s.day>=c.meetDay)resolve(s,c,notify);
   }
  }
- if(s.day%365!==315||s.day<365)return;
+ // Unlike the former single day-315 trigger, independent communities now
+ // review disputes in four seed-stable calendar windows throughout each year.
+ // The fourth root keeps a stable claimant's annual hazard approximately equal.
+ if(s.day<366)return;
+ const year=Math.floor((s.day-1)/365),doy=(s.day-1)%365;
+ const due=new Set(s.communities.filter(cm=>
+  [0,1,2,3].some(q=>disputeReviewDay(s.seed,year,cm.id,q)===doy)).map(cm=>cm.id));
+ if(!due.size)return;
  const candidates=fieldGrievances(s);
  const used=new Set();let started=0;
  for(const c of candidates){
   if(started>=2)break;
-  if(used.has(c.claimant.communityId))continue;
-  const lottery=draw(s.seed,Math.floor(s.day/365),c.claimant.id^c.owner.id,0xf892);
-  if(lottery>c.chance)continue;
+  if(!due.has(c.claimant.communityId)||used.has(c.claimant.communityId))continue;
+  const lottery=draw(s.seed,s.day,c.claimant.id^c.owner.id,0xf892);
+  if(lottery>disputeRiskPerReview(c.chance))continue;
   // The most severe local shortages can motivate a longer organised muster.
   // Ordinary household scuffles retain their original one-day timetable.
   const muster=c.claim>.78&&draw(s.seed,s.day,c.claimant.id,0x719e)<.35;
@@ -414,6 +438,8 @@ export function conflictAudit(s){
       c.tactics.flank.fromCell!==c.cell||Math.abs(xy(c.cell).x-xy(c.tactics.flank.toCell).x)+
       Math.abs(xy(c.cell).y-xy(c.tactics.flank.toCell).y)!==1))||
    c.broken&&!['claimants','owners'].includes(c.broken)||
+   (c.severeWounds||[]).some(id=>!c.wounded.includes(id))||
+   c.dead.some(id=>!c.wounded.includes(id))||
    (c.pursued||[]).some(id=>!c.wounded.includes(id)||!c[c.broken||'claimants'].includes(id))||
    c.expedition&&(
     !c.supply||!c.positions||!['claimants','owners'].every(side=>{

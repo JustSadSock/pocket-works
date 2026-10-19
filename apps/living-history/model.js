@@ -708,6 +708,21 @@ function spendFood(s,h){
   }
  }
  h.shortage=hungry>.12?h.shortage+1:Math.max(0,h.shortage-1);
+ // Bounded, serialized forensic meal evidence. Phase: after the household
+ // ration, before market and aid review. Never produces or transfers food.
+ if(hungry>.01||h.foodStressHistory?.length){
+  if(hungry>.01)h.lastShortRationDay=s.day;
+  if(hungry>.01||s.day-(h.lastShortRationDay??-1000)<=14){
+   h.foodStressHistory??=[];
+   h.foodStressHistory.push({day:s.day,phase:'after-ration-before-market',
+    needKg:round(need),eatenKg:round(eaten+gardenEaten+dairyEaten+pulsesEaten+oatsEaten),
+    deficitKg:round(Math.max(0,need-(eaten+gardenEaten+dairyEaten+pulsesEaten+oatsEaten))),
+    grainKg:h.grain,oatsKg:h.oats||0,pulsesKg:h.pulses||0,
+    gardenKg:h.garden||0,dairyKg:h.dairy||0,coin:h.coin,shortageDays:h.shortage,
+    inboundKg:round((s.shipments||[]).filter(t=>t.good==='grain'&&t.buyer===h.id).reduce((n,t)=>n+t.amount,0))});
+   if(h.foodStressHistory.length>28)h.foodStressHistory.splice(0,h.foodStressHistory.length-28);
+  }else{delete h.foodStressHistory;delete h.lastShortRationDay;}
+ }
  if(h.shortage===22)event(s,'crisis',`У семьи ${familyName(s,h)} закончились запасы`,'Ежедневное потребление превысило доходы',[h.id],{need:round(need),grain:h.grain});
 }
 // Kitchen gardens require real household labour, season and soil.
@@ -1344,7 +1359,14 @@ function lifeCycle(s){
  if(p.health<=0&&p.combatFatalDay!==s.day){
    s.stats.starvationDeaths=(s.stats.starvationDeaths||0)+1;
    const home=livingHouse(s,p.houseId);
-   if(home){s.foodCases??=[];s.foodCases.push({...foodAccess(s,home),personId:p.id,age:round(p.age),shortageDays:home.shortage});
+   if(home){s.foodCases??=[];
+    const recentTransfers=s.events.filter(e=>e.day>=s.day-35&&
+     e.subjects?.includes(home.id)&&['aid','delivery','credit','trade','outside-import','credit-default','grain-wage','fostering'].includes(e.type))
+     .slice(-16).map(e=>({day:e.day,type:e.type,subjects:e.subjects.slice(),facts:e.facts||null}));
+    s.foodCases.push({...foodAccess(s,home),personId:p.id,age:round(p.age),
+     shortageDays:home.shortage,mealPhase:'after-ration-before-next-market',
+     rationHistory:(home.foodStressHistory||[]).map(row=>({...row})),
+     recentTransfers});
     if(s.foodCases.length>160)s.foodCases.shift();}
   }
   const battleDeath=p.combatFatalDay===s.day;
@@ -2277,4 +2299,12 @@ export function deserialize(raw){const s=typeof raw==='string'?JSON.parse(raw):r
  }
  s.loans??=[];s.conflicts??=[];s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
  ensureCommons(s);for(const h of s.households){h.garden??=0;h.dairy??=0;h.oats??=0;h.pulses??=0;h.sheep??=0;h.wool??=0;h.dairyCows??=h.cattle||0;h.draftOxen??=0;h.tenure??='customary';h.tenureOrigin??='legacy-holding';h.leaseIn??=[];h.leaseOut??=[];h.leaseTerms??=[];h.croft??=[];}if(s.version!==1||s.terrain?.length!==T||!Array.isArray(s.people)||!Array.isArray(s.households)||!Array.isArray(s.shipments))throw Error('Сохранение несовместимо с моделью v0.1');const v=audit(s);if(!v.ok)throw Error(`Повреждённые данные: ${v.issues[0]}`);return s;}
+// A read-only chronological view; another family's stored grain is not food
+// automatically accessible to the patient or household.
+export function householdFamineTrace(s,houseId){
+ const h=livingHouse(s,houseId);
+ if(!h)return null;
+ return {houseId,day:s.day,meals:(h.foodStressHistory||[]).map(row=>({...row})),
+  cases:(s.foodCases||[]).filter(c=>c.houseId===houseId).slice(-4)};
+}
 export function getHousehold(s,id){const h=livingHouse(s,id);if(!h)return null;return {...h,people:liveMembers(s,h),name:familyName(s,h),tenureTitle:h.tenure==='demesne'?'Сеньориальный двор':h.tenure==='free'?'Свободный держатель':h.tenure==='cottar'?'Малоземельный коттер':'Обычное зависимое держание',manor:h.manorAgreement||null,community:s.communities.find(c=>c.id===h.communityId)?.name,soil:round(fieldSoil(s,h)),annualFood:round(annualNeed(s,h)),storageKg:storageCapacity(h,s),croftHa:round((h.croft?.length||0)*LAND_HA),tenure:h.tenure||'customary',tenureOrigin:h.tenureOrigin||'legacy-holding',landProject:h.landProject||null,leasedIn:h.leaseIn?.length||0,leasedOut:h.leaseOut?.length||0,commonUse:homeHasCommons(s,h),livestock:{cattle:h.cattle||0,fodderKg:h.fodder||0,health:h.livestockHealth||0},decision:h.decision||null,accounts:h.accounting||null,foodAccess:liveMembers(s,h).length?foodAccess(s,h):null};}

@@ -32,7 +32,8 @@
         "land-economy.test.mjs",
         "conflicts.test.mjs",
         "realism-contract.test.mjs",
-        "realism-ensemble.test.mjs"
+        "realism-ensemble.test.mjs",
+        "forensics.test.mjs"
       ]
     },
     {
