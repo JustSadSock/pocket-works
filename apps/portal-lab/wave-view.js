@@ -173,7 +173,15 @@ export function createWaveLab(options={}){
  $('wave-phase').addEventListener('change',e=>{state.relativePhase=e.target.value==='pi'?Math.PI:0;rebuild();});
  for(const b of document.querySelectorAll('[data-wave-preset]'))
   b.addEventListener('click',()=>{Object.assign(state,presets[b.dataset.wavePreset]);rebuild();onAction('mount');});
- return {state,configure,setActive,draw,trigger,reset,tick,update,
+ function applyParameters(p={}){
+  state.j=Math.max(0,Math.min(5,Math.round(Number(p.j??state.j))));
+  state.wavelength=Math.max(.6,Math.min(3.5,Number(p.wavelength??state.wavelength)));
+  state.width=Math.max(.7,Math.min(2.5,Number(p.width??state.width)));
+  state.double=p.double===true;
+  state.relativePhase=p.relativePhase===Math.PI?Math.PI:0;
+  rebuild();
+ }
+ return {state,configure,applyParameters,setActive,draw,trigger,reset,tick,update,
   get phase(){return phase;},
   get snapshot(){return wave?{...waveSnapshot(wave),samples:{
    x:Array.from(wave.grid.x),l:Array.from(wave.grid.z),potential:Array.from(wave.potential),
