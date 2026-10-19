@@ -350,6 +350,7 @@ loadBtn.onclick();
 /* ===================== Asynchronous learning system ===================== */
 const worker=new Worker(new URL('./lab-worker.mjs',import.meta.url),{type:'module'});
 let running=false,pendingAction=false,training=false;
+let agentLoadSerial=0,agentLoadWaiter=null;
 let historyData=[],lastBest=null,lastWorst=null,snapshotRequest=null;
 let replayAfterCheck=false;
 const $=id=>document.getElementById(id);
@@ -357,7 +358,7 @@ const status=text=>{statusEl.textContent=text;};
 const sceneNow=()=>({grid:env.grid.map(row=>row.slice()),spawn:spawn.slice(),goal:goal.slice()});
 function stopReplay(){if(replayTimer!==null)clearInterval(replayTimer);replayTimer=null;replayData=null;replayIndex=0;}
 function requestAction(){if(training||pendingAction||env.done||replayTimer!==null)return;pendingAction=true;worker.postMessage({type:'act',payload:{obs:env.observe()}});}
-function loadAgent(name,snapshot=null){pendingAction=false;running=false;playBtn.textContent='▶ Наблюдать';worker.postMessage({type:'loadAgent',payload:{name,snapshot}});}
+function loadAgent(name,snapshot=null,requestId=null){pendingAction=false;running=false;playBtn.textContent='▶ Наблюдать';worker.postMessage({type:'loadAgent',payload:{name,snapshot,requestId}});}
 function updateTrainingUI(data){
   $('metricEpisodes').textContent=Number(data.complete||0).toLocaleString('ru-RU');
   $('metricSuccess').textContent=data.complete?Math.round((data.success||0)*100)+'%':'—';
@@ -392,10 +393,10 @@ async function autosave(snapshot){
   try{await saveModel({id:'autosave',name:'Автосохранение',kind:'qlearning',snapshot,states:snapshot.q.length});await refreshLibrary();$('stateCount').textContent=snapshot.q.length.toLocaleString('ru-RU')+' состояний';}
   catch(error){status('Автосохранение: '+error.message);}
 }
-worker.addEventListener('error',event=>{controlsEnabled(false);pendingAction=false;status('Ошибка модуля обучения');window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'grid',message:event.message}}));console.error(event.message);});
+worker.addEventListener('error',event=>{if(agentLoadWaiter){const w=agentLoadWaiter;agentLoadWaiter=null;w.reject(Error('Ошибка загрузки модели'));}controlsEnabled(false);pendingAction=false;status('Ошибка модуля обучения');window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'grid',message:event.message}}));console.error(event.message);});
 worker.onmessage=event=>{
   const d=event.data||{};
-  if(d.type==='loaded'){pendingAction=false;status('Агент: '+(d.kind==='random'?'случайный':'Q-learning'));$('stateCount').textContent=(d.states||0)+' состояний';}
+  if(d.type==='loaded'){pendingAction=false;status('Агент: '+(d.kind==='random'?'случайный':'Q-learning'));$('stateCount').textContent=(d.states||0)+' состояний';if(agentLoadWaiter&&d.requestId===agentLoadWaiter.id){const w=agentLoadWaiter;agentLoadWaiter=null;w.resolve();}}
   else if(d.type==='action'){
     pendingAction=false;if(!training&&replayTimer===null)stepWithAction(d.action);
   }else if(d.type==='training'){controlsEnabled(true);status('Обучение запущено');window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'grid',busy:true,text:'Учится находить путь…'}}));}
@@ -478,8 +479,14 @@ window.PetriForgeRuntime.grid={
     snapshotRequest=resolve;worker.postMessage({type:'snapshot'});
   }),
   setModel:async snapshot=>{
-    if(training)throw Error('Завершите обучение перед сменой агента');
-    agentSelect.value='qlearning';stopReplay();loadAgent('qlearning',snapshot||new QAgent(17).serialize());
+    if(training||agentLoadWaiter)throw Error('Модуль занят загрузкой модели');
+    agentSelect.value='qlearning';stopReplay();
+    const id=++agentLoadSerial;
+    await new Promise((resolve,reject)=>{
+      const timeout=setTimeout(()=>{if(agentLoadWaiter?.id===id){agentLoadWaiter=null;reject(Error('Истекло время загрузки мозга'));}},7000);
+      agentLoadWaiter={id,resolve:()=>{clearTimeout(timeout);resolve();},reject:e=>{clearTimeout(timeout);reject(e);}};
+      loadAgent('qlearning',snapshot||new QAgent(17).serialize(),id);
+    });
     $('modelName').value='Активный исследователь';
   },
   train:()=>{if(training)return false;$('trainBtn').click();return true;},
