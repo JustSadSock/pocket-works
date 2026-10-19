@@ -2311,7 +2311,11 @@ export function deserialize(raw){const s=typeof raw==='string'?JSON.parse(raw):r
   s.stats.woodlandFelled=0;s.stats.woodlandRegrown=0;s.stats.woodlandWaste=0;
   s.economy.woodlandInitial=round(s.forest.reduce((n,v)=>n+v,0));
  }
- s.loans??=[];s.conflicts??=[];if(!s.institutions){for(const c of s.conflicts)if(Number.isInteger(c.resultDay))c.legacyPreCourt=true;}s.institutions??={cases:[],officers:{},statistics:{}};for(const h of s.households){h.boards??=0;h.chests??=0;h.cloth??=0;}s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
+ s.loans??=[];s.conflicts??=[];if(!s.institutions){for(const c of s.conflicts)if(Number.isInteger(c.resultDay))c.legacyPreCourt=true;}s.institutions??={cases:[],officers:{},statistics:{}};for(const h of s.households){h.boards??=0;h.chests??=0;h.cloth??=0;}
+  // v0.1 shipments carried no carrier identity. Do not invent a person or
+  // retroactively claim that a historical transport was observed.
+  for(const t of s.shipments)if(t.kind==='craft'&&!t.carrierId)t.legacyCarrierUnknown=true;
+  s.randomStreams??={};delete s._randomScope;for(const p of s.people){p.randomKey??=p.id;p.birthSerial??=s.people.filter(child=>child.parents.includes(p.id)).length;}
  ensureCommons(s);for(const h of s.households){h.garden??=0;h.dairy??=0;h.oats??=0;h.pulses??=0;h.sheep??=0;h.wool??=0;h.dairyCows??=h.cattle||0;h.draftOxen??=0;h.tenure??='customary';h.tenureOrigin??='legacy-holding';h.leaseIn??=[];h.leaseOut??=[];h.leaseTerms??=[];h.croft??=[];}if(s.version!==1||s.terrain?.length!==T||!Array.isArray(s.people)||!Array.isArray(s.households)||!Array.isArray(s.shipments))throw Error('Сохранение несовместимо с моделью v0.1');const v=audit(s);if(!v.ok)throw Error(`Повреждённые данные: ${v.issues[0]}`);return s;}
 // A read-only chronological view; another family's stored grain is not food
 // automatically accessible to the patient or household.
