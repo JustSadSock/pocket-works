@@ -631,3 +631,29 @@ body[data-lab-view="field3d"] .clocks{display:none}
  body[data-lab-view="field3d"] .field-cameras{grid-template-columns:repeat(2,minmax(0,1fr))}
  body[data-lab-view="field3d"] .canvas-hint{font-size:9px}
 }
+
+/* v1.4 — physical observer-to-field survey bridge. */
+.field-location-lede{color:#638175;font:10px/1.6 system-ui,sans-serif;margin:9px 0 12px}
+.field-location-region{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;align-items:center;margin:12px 0}
+.field-location-region label{font:730 10px ui-monospace,Consolas,monospace;color:#5a796f}
+.field-location-region select{min-width:0;min-height:40px;background:#d9e6df;color:#326655;border:1px solid #a6c2b1;padding:7px;font:650 11px system-ui,sans-serif}
+.field-photon-picker{background:#dce6dd;border:1px solid #b7c9b8;padding:10px;display:grid;grid-template-columns:1fr;gap:8px;margin:14px 0}
+.field-photon-picker>label{font:750 10px ui-monospace,Consolas,monospace;color:#446e5e;display:flex;justify-content:space-between}
+.field-photon-picker>input{width:100%;accent-color:#407969;min-height:24px}
+.field-photon-picker>button{min-height:42px;background:#456b60;color:#f2eddb;border:0;font:730 11px system-ui,sans-serif}
+.field-photon-picker>button:disabled{opacity:.48;cursor:default}
+.field-position-notice{font:10px/1.5 system-ui,sans-serif;color:#6c8577;background:#dbe8e0;border-left:3px solid #8ab5a2;padding:9px;margin:8px 0 12px}
+.field-observer-action button{background:#d8b88e;color:#312c25;border:1px solid #b89468;font:780 12px system-ui,sans-serif;min-height:47px;padding:10px;width:100%;cursor:pointer}
+.field-observer-action button:active{transform:translateY(1px)}
+.field-ray-test{width:100%;min-height:40px;border:1px solid #7da694;color:#366959;background:#e3ede5;font:740 11px system-ui,sans-serif}
+.field-ray-measure{font:10px/1.6 ui-monospace,Consolas,monospace;background:#244f4b;color:#e4e8c9;padding:12px;overflow-wrap:anywhere;margin:10px 0 15px}
+.lens-world-link{border:1px solid #a7c0ad;background:#e0e9dc;padding:12px;margin:7px 0 14px}
+.lens-world-link .section-caption.second{margin:0 0 10px}
+.lens-world-coordinates{font:720 11px/1.5 ui-monospace,Consolas,monospace;color:#2c6756;background:#d1e0d2;padding:9px;margin-bottom:8px}
+.lens-world-link button{min-height:42px;width:100%;background:#335f51;color:#f3eedf;border:0;padding:8px;font:740 11px system-ui,sans-serif}
+.lens-world-link button:active{transform:translateY(1px)}
+.lens-world-link p{font:10px/1.55 system-ui,sans-serif;color:#7b8c7e;margin:9px 0 0}
+@media(max-width:610px){
+.field-location-region{grid-template-columns:65px minmax(0,1fr)}
+.field-observer-action button,.lens-world-link button{min-height:46px}
+}
