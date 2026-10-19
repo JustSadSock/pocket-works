@@ -60,7 +60,7 @@ onmessage=({data})=>{
   if(type==='combat-set'){
    if(job)throw Error('Сначала остановите обучение');
    if(!validPolicy(payload.policy))throw Error('Недопустимый мозг');
-   policy=structuredClone(payload.policy);emit('combat-set-done',{policy});
+   policy=structuredClone(payload.policy);emit('combat-set-done',{policy,requestId:payload.requestId??null});
   }else if(type==='combat-train'){
    if(job)throw Error('Обучение уже запущено');
    const config=payload.config;
