@@ -1,7 +1,10 @@
 // MEAT.EXE v1.8.2 — anatomical guardians, not scaled copies of common mobs.
-// Three stage-specific encounters with readable counterplay and pure combat rules.
+// Four organ-specific encounters, one after the third pulse in every organ.
+// The gastric Warden already had unique geometry and charge telegraph, but was
+// previously missing from the actual required boss progression.
 export const ORGAN_GUARDIANS=Object.freeze({
   1:Object.freeze({type:'clot',name:'ТРОМБ-СТРАЖ',hp:145,speed:.82,score:700,kind:'pulse'}),
+  2:Object.freeze({type:'warden',name:'ЖЕЛЧНЫЙ ПРИВРАТНИК',hp:245,speed:.76,score:950,kind:'charge'}),
   3:Object.freeze({type:'ossuary',name:'КОСТОГРЫЗ',hp:235,speed:.74,score:1100,kind:'shards'}),
   4:Object.freeze({type:'synapse',name:'СИНАПТИЧЕСКИЙ УЗЕЛ',hp:180,speed:1.07,score:1250,kind:'surge'})
 });
