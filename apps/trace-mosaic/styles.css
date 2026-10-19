@@ -600,3 +600,50 @@ body[data-phase="playing"] .placed-piece[data-piece-id]:active { cursor: grabbin
 @media (prefers-reduced-motion: reduce) {
   .trail-cell, .pill-button, .ghost-button, .accent-button { transition: none; }
 }
+
+/* First-stage network reliability: explicit feedback without hiding gameplay. */
+.net-banner {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  top: max(62px, calc(env(safe-area-inset-top) + 48px));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 580px;
+  margin-inline: auto;
+  padding: 11px 12px;
+  border: 1px solid rgba(248,191,113,.55);
+  background: #1a2730;
+  box-shadow: 0 14px 35px rgba(0,0,0,.4);
+  border-radius: 12px;
+  color: #fff2dd;
+  font: 600 13px/1.35 system-ui, sans-serif;
+}
+.net-indicator { width: 9px; height: 9px; background: #f7b65b; flex: none; border-radius: 50%; }
+.net-banner span:nth-child(2) { flex: 1; }
+.net-banner button {
+  padding: 9px 12px;
+  min-height: 38px;
+  color: #1a2730;
+  background: #ffe2a6;
+  border-radius: 8px;
+  font: 700 12px system-ui;
+}
+#resetPracticeBtn {
+  display: inline-flex;
+  margin: 8px 16px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 5px;
+  border: 1px solid #7b9586;
+  background: #122c35;
+  color: #e6efe6;
+}
+body[data-phase]:not([data-phase="menu"]) #resetPracticeBtn,
+body:has(.board-grid) #resetPracticeBtn { display:none; }
+@media (max-width:390px) {
+  .net-banner { top: max(56px, calc(env(safe-area-inset-top) + 32px)); font-size: 12px; }
+  .net-banner button { min-width: 70px; }
+}
