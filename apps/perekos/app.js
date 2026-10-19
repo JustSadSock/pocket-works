@@ -9,7 +9,7 @@ import {MAGES,SCHOOLS,mage,validMage} from './mages.mjs';
 import {ELEMENTS,reactionFor} from './elements.mjs';
 import {createCourtBackdrop,drawCourtAtmosphere} from './court-art.mjs';
 import {CombatPresentation,drawProjectileTrail} from './combat-presentation.mjs';
-import {drawGroundCues,drawActorCues} from './combat-readability.mjs';
+import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
@@ -354,6 +354,7 @@ function render(){
  ctx.drawImage(bgCanvas,0,0);
  drawCourtAtmosphere(ctx,frame/60,reducedMotion);
  if(active){
+  drawSpellLighting(ctx,active,frame/60,reducedMotion);
   // Telegraphs belong to the physical court: visible projectiles and placed
   // mines only. No enemy hidden runes, damage estimates or artificial aim.
   drawGroundCues(ctx,active,myIndex(),frame/60,reducedMotion);
