@@ -144,10 +144,7 @@ export function mountAgentCockpit(api){
   }catch(e){$('cpDuelResult').textContent='Бой: '+e.message;}
   finally{fighting=false;$('cpFight').disabled=false;redraw();}
  };
- const team=document.createElement('label');team.htmlFor='cpDuelTeam';team.textContent='Формат';
- const select=document.createElement('select');select.id='cpDuelTeam';
- for(const [value,text] of [['1','1 на 1'],['2','2 на 2']]){const opt=document.createElement('option');opt.value=value;opt.textContent=text;select.append(opt);}
- team.append(select);$('cpDuelArena').closest('label').after(team);
+
  window.addEventListener('petri:mode',()=>queueMicrotask(redraw));
  window.addEventListener('petri:progress',()=>queueMicrotask(redraw));
  window.addEventListener('petri:finished',()=>queueMicrotask(redraw));
