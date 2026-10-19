@@ -15,8 +15,8 @@ export function validPerekosAction(a){
   (a.aim===undefined||a.aim&&Number.isFinite(a.aim.x)&&Number.isFinite(a.aim.y)&&a.aim.x>=0&&a.aim.x<=W&&a.aim.y>=0&&a.aim.y<=H)&&
   ['attack','dash','shield'].every(key=>a[key]===undefined||typeof a[key]==='boolean');
 }
-const projection=a=>({
- x:a.x/W,y:a.y/H,vx:a.vx,vy:a.vy,
+const projection=(a,motion=[0,0])=>({
+ x:a.x/W,y:a.y/H,vx:motion[0],vy:motion[1],
  hp:a.hp/100,shield:a.shield/80,heat:a.heat/100,
  mageId:a.mageId,cast:a.cast,dashReady:a.dashReady,shieldReady:a.shieldReady,
  stunned:a.stun>0,runes:a.runes.slice()
@@ -27,13 +27,13 @@ export class PerekosEnvironment{
  }
  reset(seed=this.cfg.seed){
   this.state=makeMatch(seed>>>0||1,this.cfg.first,this.cfg.second);
-  this.steps=0;this.lastScore=[0,0];
+  this.steps=0;this.lastScore=[0,0];this.motion=[[0,0],[0,0]];
   return this.observe();
  }
  observe(player=0){
   if(player!==0&&player!==1)throw Error('Неизвестная сторона');
   const s=this.state,a=s.actors[player],b=s.actors[1-player];
-  const self=projection(a),opponent=projection(b);
+  const self=projection(a,this.motion[player]),opponent=projection(b,this.motion[1-player]);
   // Opponent runes are not included in the sensor data by default.
   delete opponent.runes;
   return {phase:s.phase,round:s.round,remaining:s.remaining,score:s.score.slice(),self,opponent,
@@ -46,6 +46,7 @@ export class PerekosEnvironment{
   const s=this.state;
   if(s.phase==='result')return {observation:this.observe(),reward:0,terminated:true,truncated:false,info:{champion:s.champion}};
   const prevHp=s.actors.map(a=>a.hp),prevScore=s.score.slice(),draft=s.phase==='draft';
+  const before=s.actors.map(a=>[a.x,a.y]);
   if(draft){
    // Preserves the original rune selection rules and the built-in rival draft.
    const proposed=s.pick.includes(input.draft)?input.draft:s.pick[0];
@@ -59,6 +60,8 @@ export class PerekosEnvironment{
     aim:a?.aim||undefined});
    tick(s,move(input),STEP,opponentInput===null?null:move(opponentInput));
   }
+  this.motion=s.phase==='fight'&&s.ticks>0&&prevScore[0]===s.score[0]&&prevScore[1]===s.score[1]?
+   s.actors.map((a,i)=>[(a.x-before[i][0])/STEP,(a.y-before[i][1])/STEP]):[[0,0],[0,0]];
   this.steps++;
   const damage=(prevHp[1]-s.actors[1].hp)-(prevHp[0]-s.actors[0].hp);
   const roundWins=(s.score[0]-prevScore[0])-(s.score[1]-prevScore[1]);
@@ -66,10 +69,11 @@ export class PerekosEnvironment{
   return {observation:this.observe(),reward,terminated:s.phase==='result',truncated:this.steps>=this.cfg.limitTicks,
    info:{round:s.round,score:s.score.slice(),draws:s.draws,phase:s.phase,engineTicks:s.ticks}};
  }
- snapshot(){return JSON.parse(JSON.stringify({version:1,steps:this.steps,state:this.state}));}
+ snapshot(){return JSON.parse(JSON.stringify({version:1,steps:this.steps,state:this.state,motion:this.motion}));}
  restore(saved){
   if(!saved||saved.version!==1||!validState(saved.state)||!Number.isInteger(saved.steps)||saved.steps<0||saved.steps>1e7)throw Error('Неверный чекпоинт Перекоса');
-  this.steps=saved.steps;this.state=JSON.parse(JSON.stringify(saved.state));
+  if(saved.motion&&(!Array.isArray(saved.motion)||saved.motion.length!==2||saved.motion.some(v=>!Array.isArray(v)||v.length!==2||v.some(n=>!Number.isFinite(n)))))throw Error('Повреждена память движения');
+  this.steps=saved.steps;this.state=JSON.parse(JSON.stringify(saved.state));this.motion=saved.motion?JSON.parse(JSON.stringify(saved.motion)):[[0,0],[0,0]];
   return this.observe();
  }
 }
