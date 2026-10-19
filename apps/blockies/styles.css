@@ -1934,3 +1934,12 @@ canvas {
 
 /* Never visually display controls disabled by authoritative multiplayer. */
 #pause-btn[hidden] { display: none !important; }
+
+/* Two compact inventories per player; no overlay on the playable well. */
+.next-piece-item{flex-direction:row;gap:6px;align-items:center;padding:2px 5px}
+.piece-preview-slot{display:flex;flex-direction:column;align-items:center;min-width:48px}
+.piece-preview-label{font:700 9px/1.15 system-ui;text-transform:uppercase;letter-spacing:.08em;color:#d8e1e9}
+.piece-preview-slot canvas{width:43px;height:43px;max-width:43px;max-height:43px}
+.next-piece-item.hold-exhausted .piece-preview-slot:last-child{opacity:.48}
+.touch-btn--hold{background:linear-gradient(135deg,#284b54,#2b293f);border-color:#75c1c9}
+@media(max-width:400px){.next-piece-item{gap:3px;padding:1px 3px}.piece-preview-slot{min-width:40px}.piece-preview-slot canvas{width:36px;height:36px}}
