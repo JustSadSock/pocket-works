@@ -311,12 +311,16 @@ function maintainPresence(room, now = Date.now()) {
     tile.ownerId = next; inventory.set(next,inventory.get(next)+1); changed = true;
   }
   for (const p of active) {
-    if (inventory.get(p.id) > 0) continue;
+    if (!p.recoveryPending || inventory.get(p.id) > 0) {
+      p.recoveryPending = false;
+      continue;
+    }
     const movable = game.tileMeta.filter(tile=>tile.ownerId !== p.id &&
       game.tileLocations[tile.id]?.kind === "inventory" &&
       !Object.values(game.activeDrags).some(d=>d.tileId===tile.id));
     movable.sort((x,y)=>(inventory.get(y.ownerId)||0)-(inventory.get(x.ownerId)||0));
     const donor = movable[0];
+    p.recoveryPending = false;
     if (!donor || inventory.get(donor.ownerId)<=1) continue;
     inventory.set(donor.ownerId,inventory.get(donor.ownerId)-1);
     inventory.set(p.id,1); donor.ownerId=p.id; changed=true;
@@ -621,7 +625,7 @@ function tickGames() {
  if(saved){room={...structuredClone(saved.room),players:new Map(saved.room.players.map(p=>[p.id,{...structuredClone(p),socket:socket(p.id)}]))};rooms.set(room.id,room);for(const p of room.players.values())p.socket.roomId=room.id;}
  function pack(r){return {room:{...r,players:[...r.players.values()].map(p=>({...p,socket:null}))}};}
  return {room,events,socket,pack,create:createRoom,join:joinRoom,leave:leaveCurrentRoom,view:buildRoomSnapshot,
- touch(id){const p=room?.players.get(id);if(p){p.lastSeenAt=Date.now();p.connected=true;}},
+ touch(id){const p=room?.players.get(id);if(p){const now=Date.now();p.recoveryPending=p.recoveryPending||!p.connected||now-(p.lastSeenAt||room.createdAt)>PRESENCE_GRACE_MS;p.lastSeenAt=now;p.connected=true;}},
   tick(){if(room){maintainPresence(room);if(room.game){expireTrails(room.game);maybeFinishGame(room);}}},
  message(s,type,p){switch(type){case 'toggle_ready':handleToggleReady(s);break;case 'cycle_image':handleCycleImage(s,Number(p?.delta)>=0?1:-1);break;case 'update_settings':handleUpdateSettings(s,p);break;case 'start_game':handleStartGame(s);break;case 'drag_update':handleDragUpdate(s,p);break;case 'drag_end':handleDragEnd(s,p);break;case 'play_again':handlePlayAgain(s);break;case 'pulse':break;default:throw Error('Неизвестная команда');}}
  };
@@ -629,7 +633,7 @@ function tickGames() {
 function output(c,r){return {state:c.pack(r),events:[...c.events,{type:'state',payload:{}}]};}
 export default {protocolVersion:1,
  createRoom({player,payload}){const c=context(null),s=c.socket(player.id);const r=c.create(s,payload);return output(c,r);},
-  onJoin({state,player}){const c=context(state),r=c.room,s=c.socket(player.id);if(r.players.has(player.id)){const p=r.players.get(player.id);p.connected=true;p.lastSeenAt=Date.now();p.socket=s;}else{if(!c.join(s,{roomId:r.id,nickname:player.name}))throw Error('Комната заполнена или раунд уже начат');}c.tick();return output(c,r);},
+  onJoin({state,player}){const c=context(state),r=c.room,s=c.socket(player.id);if(r.players.has(player.id)){const p=r.players.get(player.id);p.recoveryPending=!p.connected||Date.now()-(p.lastSeenAt||r.createdAt)>PRESENCE_GRACE_MS;p.connected=true;p.lastSeenAt=Date.now();p.socket=s;}else{if(!c.join(s,{roomId:r.id,nickname:player.name}))throw Error('Комната заполнена или раунд уже начат');}c.tick();return output(c,r);},
  onLeave({state,player}){const c=context(state),r=c.room;c.leave(c.socket(player.id),true);return output(c,r);},
   onMessage({state,player,payload:m}){const c=context(state),r=c.room;if(!r.players.has(player.id))throw Error('Игрок не в комнате');c.touch(player.id);c.tick();c.message(c.socket(player.id),m?.type,m?.payload);c.tick();return output(c,r);},
  viewForPlayer({state,player}){const c=context(state);return {...c.view(c.room,player.id),practice:c.room.practice===true};}
