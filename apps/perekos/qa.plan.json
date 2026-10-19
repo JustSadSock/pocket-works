@@ -9,6 +9,8 @@
         "tests/core.test.mjs",
         "tests/aim-precision.test.mjs",
         "tests/duel-feedback.test.mjs",
+        "tests/mage-motion.test.mjs",
+        "tests/court-materials.test.mjs",
         "tests/avatar.test.mjs",
         "tests/net.test.mjs",
         "tests/elements.test.mjs",
@@ -72,7 +74,8 @@
         "qa/spectacle.spec.js",
         "qa/readability.spec.js",
         "qa/choreography.spec.js",
-        "qa/aim-precision.spec.js"
+        "qa/aim-precision.spec.js",
+        "qa/art-direction.spec.js"
       ]
     }
   ]
