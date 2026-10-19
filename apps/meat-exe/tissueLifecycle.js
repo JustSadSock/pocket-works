@@ -15,11 +15,15 @@ export function tissueTick(tissue,dt){
  if(!tissue||tissue.hp<=0||tissue.hp>=TISSUE_MAX)return false;
  const step=clamp(Number.isFinite(dt)?dt:0,0,.1);
  if(!step)return false;
+ let active=step;
  if(tissue.sealDelay>0){
-  tissue.sealDelay=Math.max(0,tissue.sealDelay-step);
-  return false;
+  const waiting=Math.min(step,tissue.sealDelay);
+  tissue.sealDelay=Math.max(0,tissue.sealDelay-waiting);
+  if(tissue.sealDelay<1e-8)tissue.sealDelay=0;
+  active=Math.max(0,step-waiting);
  }
- tissue.hp=Math.min(TISSUE_MAX,tissue.hp+TISSUE_SEAL_RATE*step);
+ if(active<1e-8)return false;
+ tissue.hp=Math.min(TISSUE_MAX,tissue.hp+TISSUE_SEAL_RATE*active);
  return true;
 }
 export function sanitizeTissueDamage(entries,wave){
