@@ -123,5 +123,33 @@
       "FOG geographic playfield versus this source game object at phone scale.",
       "ZAMAZKA restoration controls versus this source game input and feedback loop."
     ]
+  },
+  "styleRevision": "conservation-atelier-v2",
+  "executionNotes": {
+    "objective": "A physically tangible mosaic restoration table; not glassmorphism, generic cards or neon.",
+    "light": "Soft lateral museum illumination, warm ivory inset, restrained brass specular accents and credible lifted fragment shadows.",
+    "layouts": [
+      "mobile portrait: header, board, scrolling fragment tray",
+      "desktop: board left, inventory rail right",
+      "short landscape: compact header and side tray"
+    ],
+    "interactions": [
+      "hold/drag tile with raised offset ghost",
+      "continuous path from authoritative cell sequence",
+      "valid/blocked target feedback",
+      "subdued correct-placement snap",
+      "hold archive reference and user-toggleable sounds"
+    ],
+    "palette": {
+      "mineral": "#151c1e",
+      "paper": "#e6d7b8",
+      "brass": "#dcb27a",
+      "ivory": "#f4ecd9"
+    },
+    "constraints": [
+      "do not change gameplay tile and trail semantics",
+      "do not use generic unrelated icons",
+      "preserve PocketNet immutable snapshots"
+    ]
   }
 }
