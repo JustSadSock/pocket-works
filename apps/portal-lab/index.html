@@ -11,13 +11,13 @@
 <header class="topbar">
 <a class="back" href="../../" aria-label="Вернуться в PocketWorks"><span aria-hidden="true">←</span><span class="back-label">PocketWorks</span></a>
 <div class="identity"><span class="mark" aria-hidden="true"><span></span></span><div><strong>ШОВ</strong><small>РЕЛЯТИВИСТСКАЯ ЛАБОРАТОРИЯ</small></div></div>
-<div class="top-actions"><button id="sound" class="icon" type="button" title="Звук" aria-label="Переключить звук"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 9H5v6h4l5 4V5L9 9Z"/><path d="M17 9c2 2 2 4 0 6"/></svg></button><button id="export" class="export" type="button">Экспорт <span aria-hidden="true">↗</span></button></div>
+<div class="top-actions"><button id="sound" class="icon" type="button" title="Звук" aria-label="Переключить звук"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 9H5v6h4l5 4V5L9 9Z"/><path d="M17 9c2 2 2 4 0 6"/></svg></button><button id="save-experiment" class="save-experiment" type="button">Сохранить опыт</button><button id="export" class="export" type="button">Экспорт <span aria-hidden="true">↗</span></button></div>
 </header>
 <main class="lab">
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="notebook" type="button" aria-pressed="false">Журнал</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -30,6 +30,56 @@
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
 
+<section id="notebook-panel" class="notebook-panel" aria-label="Общий журнал физических экспериментов">
+<div class="section-caption"><span>ПРОТОКОЛЫ ЭКСПЕРИМЕНТОВ</span><span id="notebook-count">0/32</span></div>
+<p class="notebook-intro">Сохраняйте исходные настройки и реальные измерения любой из девяти лабораторий. Восстановление повторяет подготовку опыта и начинает новый расчёт; старые измерения остаются в журнале.</p>
+<div class="notebook-primary-tools">
+<button id="notebook-capture" type="button">Зафиксировать текущий опыт <span aria-hidden="true">↗</span></button>
+<button id="notebook-export" type="button">Экспорт JSON</button>
+<button id="notebook-import" type="button">Импорт JSON</button>
+<input id="notebook-file" type="file" accept=".json,application/json" hidden>
+</div>
+<p id="notebook-notice" class="notebook-notice" role="status">Выберите опыт или сохраните измерения из другого режима.</p>
+<div class="section-caption second"><span>АРХИВ ИЗМЕРЕНИЙ</span><span>1–32</span></div>
+<label class="notebook-field">Режим
+<select id="notebook-filter">
+<option value="all">Все эксперименты</option>
+<option value="observer">Наблюдатель</option>
+<option value="matter">Материя</option>
+<option value="wave">Волны</option>
+<option value="designer">Конструктор</option>
+<option value="rotation">Вращение</option>
+<option value="causality">Причинность</option>
+<option value="atlas">Атлас</option>
+<option value="map">Топология</option>
+<option value="profile">Профиль</option>
+</select></label>
+<div id="notebook-list" class="notebook-list">
+<div class="notebook-empty"><strong>Записей пока нет</strong><p>Проведите опыт в любой лаборатории и сохраните его.</p></div>
+</div>
+<div id="notebook-detail" class="notebook-detail" hidden>
+<div class="section-caption second"><span>ВЫБРАННЫЙ ОПЫТ</span><span id="notebook-mode">—</span></div>
+<div id="notebook-date" class="notebook-date">—</div>
+<label class="notebook-field">Название
+<input type="text" id="notebook-title" maxlength="80" placeholder="Название опыта"></label>
+<div id="notebook-metrics" class="notebook-metrics"></div>
+<div class="notebook-detail-actions">
+<button id="notebook-restore" type="button">Воспроизвести настройки</button>
+<button id="notebook-rename" type="button">Переименовать</button>
+<button id="notebook-delete" type="button">Удалить опыт</button>
+</div>
+</div>
+<div class="section-caption second"><span>СРАВНЕНИЕ ОПЫТОВ</span><span>B − A</span></div>
+<div class="notebook-compare-picker">
+<label class="notebook-field">Эксперимент A
+<select id="notebook-compare-a"><option value="">Выберите опыт</option></select></label>
+<label class="notebook-field">Эксперимент B
+<select id="notebook-compare-b"><option value="">Выберите опыт</option></select></label>
+</div>
+<div id="notebook-comparison" class="notebook-comparison"><p class="notebook-comparison-note">Выберите две разные записи для сопоставления измерений.</p></div>
+<button type="button" id="notebook-clear" class="notebook-clear">Очистить журнал</button>
+<p class="notebook-caveat">Журнал хранится локально в этом браузере и не передаёт данные на сервер. Экспортируйте JSON для резервной копии. Исторические значения измерений — фактический снимок на момент сохранения, а не обещание идентичной численной траектории после перезапуска.</p>
+</section>
 <section id="atlas-panel" class="atlas-panel" aria-label="Атлас причинности двух устьев">
 <div class="section-caption"><span>АТЛАС ПРИЧИННОСТИ</span><span>β × D</span></div>
 <p class="atlas-intro">Исследуйте множество возможных рейсов. Цвет на карте рассчитывается из релятивистского рассогласования часов и полного маршрута светового сигнала — без визуальных допущений.</p>
