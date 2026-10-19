@@ -16,6 +16,12 @@ export class ShockField {
     this.bodyBounds = null;
     this.incidence = 0;
     this.bodyType = null;
+    this.camber = 0;
+    this.thickness = 11;
+    this.gustAmplitude = 0;
+    this.gustPeriod = 6;
+    this.gustAngle = 0;
+    this.lastInletAngle = 0;
     this.U = new Float32Array((this.size + 1) * 4);
     this.V = new Float32Array((this.size + 1) * 4);
     this.fx = new Float32Array((nx + 1) * ny * 4);
@@ -42,6 +48,8 @@ export class ShockField {
     this.time = 0;
     this.maxPressure = 1;
     this.maxMach = 0;
+    this.gustAngle = 0;
+    this.lastInletAngle = 0;
   }
 
   // Uniform dimensionless freestream: rho=1, p=1, u=M sqrt(gamma).
@@ -66,13 +74,26 @@ export class ShockField {
     return this.flowMach;
   }
 
+  setGust(amplitude = 0, period = 6) {
+    this.gustAmplitude = clamp(Number.isFinite(amplitude) ? amplitude : 0, 0, 14);
+    this.gustPeriod = clamp(Number.isFinite(period) ? period : 6, 2, 18);
+  }
+
+  // The cross-flow is a time-varying, energy-consistent Euler inlet boundary.
+  // The resulting downstream vortical structures derive from conserved states.
+  // It does not model real turbulence, skin friction, or viscous shedding.
   setFlowInlet(mach = this.flowMach) {
     this.flowMach = clamp(Number.isFinite(mach) ? mach : 1.8, .3, 3.2);
-    const u = this.flowMach * Math.sqrt(GAMMA), k = this.size * 4;
+    const speed = this.flowMach * Math.sqrt(GAMMA), k = this.size * 4;
+    const angle = this.gustAmplitude * Math.sin(2 * Math.PI * this.time / this.gustPeriod);
+    const phi = angle * Math.PI / 180;
+    const u=speed*Math.cos(phi),v=-speed*Math.sin(phi);
+    this.gustAngle=angle;
+    this.lastInletAngle=angle;
     this.U[k] = this.V[k] = 1;
     this.U[k+1] = this.V[k+1] = u;
-    this.U[k+2] = this.V[k+2] = 0;
-    this.U[k+3] = this.V[k+3] = 1/(GAMMA-1)+.5*u*u;
+    this.U[k+2] = this.V[k+2] = v;
+    this.U[k+3] = this.V[k+3] = 1/(GAMMA-1)+.5*(u*u+v*v);
   }
 
   setWall(x, y, on = true, radius = 1.3) {
@@ -103,12 +124,14 @@ export class ShockField {
     }
   }
 
-  geometry(preset, incidence = 0) {
+  geometry(preset, incidence = 0, shape = {}) {
     this.solid.fill(0);
     this.body.fill(0);
     this.bodyBounds = null;
     this.bodyType = null;
     this.incidence = clamp(Number.isFinite(incidence) ? incidence : 0,-14,14);
+    this.camber=clamp(Number.isFinite(shape?.camber) ? shape.camber : 0,-6,6);
+    this.thickness=clamp(Number.isFinite(shape?.thickness) ? shape.thickness : 11,5,22);
     const W = this.nx, H = this.ny;
     const line = (x0, y0, x1, y1, r = 1.35) =>
       this.stroke(x0 * W, y0 * H, x1 * W, y1 * H, true, r);
@@ -146,7 +169,7 @@ export class ShockField {
       this.fillPolygon(this.rotateProfile([[.265,.5],[.66,.34],[.86,.5],[.66,.66]],this.incidence));
       this.bodyType = 'wedge';
     } else if (preset === 'airfoil') {
-      this.fillPolygon(this.rotateProfile([[.23,.5],[.54,.435],[.89,.5],[.54,.565]],this.incidence));
+      this.fillPolygon(this.rotateProfile(this.airfoilProfile(this.camber,this.thickness),this.incidence));
       this.bodyType = 'airfoil';
     } else if (preset === 'cylinder') {
       this.bodyType = 'cylinder';
@@ -184,6 +207,22 @@ export class ShockField {
       }
       this.bodyBounds={left,right,top,bottom,chord:Math.max(1,right-left+1)};
     }
+  }
+
+  // Thin symmetric/arched closed airfoil with user-controlled centreline
+  // and thickness. Sections scale with the grid's aspect ratio so the
+  // thickness is a fraction of chord length in physical grid cells.
+  airfoilProfile(camber=this.camber, thickness=this.thickness) {
+    const x0=.23,x1=.89, chordCells=(x1-x0)*this.nx;
+    const top=[],bottom=[];
+    for(let i=0;i<=24;i++){
+      const t=i/24,x=x0+(x1-x0)*t;
+      const arch=(camber/100)*chordCells/this.ny*4*t*(1-t);
+      const half=.5*(thickness/100)*chordCells/this.ny*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.85);
+      const centre=.5-arch;
+      top.push([x,centre-half]);bottom.push([x,centre+half]);
+    }
+    return [...top,...bottom.reverse()];
   }
 
   rotateProfile(points,angle) {
@@ -361,6 +400,39 @@ export class ShockField {
     this.maxPressure=maxP;
     this.maxMach=maxM;
     return dt;
+  }
+
+  // Centred finite differences of u,v on the actual conserved flow field.
+  // Skip derivatives crossing a solid mask to avoid fictitious solid velocity
+  // discontinuities and keep vorticity as a diagnostic, not an injection.
+  vorticity(x,y) {
+    const ix=clamp(Math.round(x),1,this.nx-2),iy=clamp(Math.round(y),1,this.ny-2);
+    const i=iy*this.nx+ix, W=this.nx;
+    if(this.solid[i])return 0;
+    const L=i-1,R=i+1,T=i-W,B=i+W,a=this.U;
+    const velocity=(index,component)=>{
+      const k=index*4;
+      return a[k+component]/Math.max(FLOOR,a[k]);
+    };
+    let dv_dx=0,du_dy=0;
+    if(!this.solid[L]&&!this.solid[R])dv_dx=.5*(velocity(R,2)-velocity(L,2));
+    else if(!this.solid[R])dv_dx=velocity(R,2)-velocity(i,2);
+    else if(!this.solid[L])dv_dx=velocity(i,2)-velocity(L,2);
+    if(!this.solid[T]&&!this.solid[B])du_dy=.5*(velocity(B,1)-velocity(T,1));
+    else if(!this.solid[B])du_dy=velocity(B,1)-velocity(i,1);
+    else if(!this.solid[T])du_dy=velocity(i,1)-velocity(T,1);
+    return dv_dx-du_dy;
+  }
+
+  wakeVorticity() {
+    const x0=this.bodyBounds ? Math.min(this.nx-2,this.bodyBounds.right+3) : Math.floor(this.nx*.58);
+    let sum=0,count=0,peak=0;
+    for(let y=2;y<this.ny-2;y+=2)for(let x=x0;x<this.nx-2;x+=2){
+      const index=y*this.nx+x;if(this.solid[index])continue;
+      const w=this.vorticity(x,y);
+      sum+=w*w;peak=Math.max(peak,Math.abs(w));count++;
+    }
+    return {rms:count?Math.sqrt(sum/count):0,peak};
   }
 
   // Pressure traction integrated over the staircase body mask. Each
