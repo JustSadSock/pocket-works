@@ -1,15 +1,18 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-10-18';
+const CACHE_NAME = 'petri-forge-v0.2.0';
+const APP_VERSION = '0.2.0';
+const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Перенесена восстановленная облачная версия: редактор среды, Q-learning и случайный агент; сенсорное рисование и сохранение сцен."];
+const RELEASE_NOTES = ['Эксперименты с многократным Q-learning обучением, сохранение моделей, повторы, график и независимая оценка.'];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
   './styles.css',
   './app.js',
+  './lab-core.mjs',
+  './lab-worker.mjs',
+  './model-store.mjs',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
