@@ -92,4 +92,51 @@ near(tube.sample(24,35).pressure,3,.00001);
 near(tube.time,0,.00001);
 assert.ok(tube.solid.some(Boolean),'recharging tube preserves its physical walls');
 
-console.log('SHOCK solver: ambient equilibrium, propagation, symmetry, shock tube mass conservation, transducers and CSV PASS');
+
+// SHOCK 1.2 wind tunnel verification. No preanimated shock rays:
+const uniform=new ShockField(74,48);
+uniform.geometry('empty');
+uniform.startFlow(2);
+for(let i=0;i<100;i++)uniform.step();
+near(uniform.sample(37,24).pressure,1,.001);
+near(uniform.sample(37,24).rho,1,.001);
+near(uniform.sample(37,24).mach,2,.001);
+assert.equal(uniform.flowActive,true);
+assert.ok(uniform.maxMach>=1.99&&uniform.maxMach<=2.01);
+assert.ok(uniform.U.length === (uniform.size+1)*4,'conservative inlet ghost cell allocated');
+for(const preset of ['wedge','airfoil','cylinder','nozzle']){
+  const field=new ShockField(74,48);
+  field.geometry(preset);
+  assert.ok(field.solid.some(Boolean),preset+' has actual geometry');
+  field.startFlow(2);
+  assert.ok(field.flowActive&&field.flowMach===2);
+  let bounded=true;
+  for(let i=0;i<135;i++){
+    field.step();
+    if(i%15===0 && (!Number.isFinite(field.maxPressure)||field.maxPressure>200))bounded=false;
+  }
+  assert.ok(bounded,preset+' numerical pressure remains finite');
+  assert.ok(field.maxPressure>1.18,preset+' produces a computed compression front');
+  assert.ok(field.maxMach>0.3&&field.maxMach<12,preset+' has finite local Mach diagnostics');
+  for(let i=0;i<field.U.length;i++)assert.ok(Number.isFinite(field.U[i]),preset+' finite conserved state');
+}
+const cylinder=new ShockField(74,48);
+cylinder.geometry('cylinder');cylinder.startFlow(2);
+for(let i=0;i<160;i++)cylinder.step();
+assert.ok(cylinder.maxPressure>2,'cylinder builds bow compression');
+assert.ok(cylinder.sample(1,24).mach>1.85,'left inlet remains prescribed Mach');
+const nozzle=new ShockField(74,48);
+nozzle.geometry('nozzle');nozzle.startFlow(1.5);
+assert.ok(nozzle.sample(25,1).solid,'nozzle exterior is solid rather than empty gas');
+assert.ok(!nozzle.sample(25,24).solid,'nozzle core is open');
+for(let i=0;i<120;i++)nozzle.step();
+assert.ok(nozzle.maxPressure>1.05,'converging nozzle causes numerical compression');
+nozzle.startFlow(.7);
+near(nozzle.sample(5,24).mach,.7,.001);
+nozzle.step();
+assert.ok(Number.isFinite(nozzle.maxPressure));
+nozzle.resetGas();
+assert.equal(nozzle.flowActive,false,'switching to blast mode clears inflow BC');
+near(nozzle.sample(5,24).mach,0,.00001);
+
+console.log('SHOCK solver: Euler equilibrium, shock tube, measured fronts, Mach inlet, wind-tunnel shocks and numerical stability PASS');
