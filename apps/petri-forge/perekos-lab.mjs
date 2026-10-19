@@ -5,8 +5,17 @@ import {WALLS} from '../perekos/core.mjs';
 
 const $=id=>document.getElementById(id);
 const canvas=$('pkCanvas'),ctx=canvas.getContext('2d');
-const worker=new Worker(new URL('./perekos-worker.mjs',import.meta.url),{type:'module'});
-let policy=createPerekosPolicy(41),busy=false,training=false,replay=null,cursor=0,timer=null,openCount=0;
+const focusBox=document.createElement('div');
+focusBox.className='pk-curriculum-choices';
+focusBox.innerHTML='<div class="split"><label class="stack">Программа обучения <select id="pkCurriculum"><option value="balanced">От простого к сложному</option><option value="offense">Атака и добивание</option><option value="competitive">Сильные соперники</option></select></label><label class="stack">Контрольный соперник <select id="pkRivalStyle"><option value="native">Игровой ИИ</option><option value="aggressive">Агрессивный</option><option value="evasive">Уклоняющийся</option><option value="defensive">Защитный</option><option value="dummy">Неподвижный</option><option value="charger">Преследователь</option></select></label></div>';
+$('pkGenerations').closest('.split').after(focusBox);
+const metricsBox=document.createElement('div');metricsBox.className='pk-quality-panel';
+metricsBox.innerHTML='<div class="section-label">КАЧЕСТВО ОБУЧЕНИЯ · КОНТРОЛЬНЫЕ SEED</div><canvas id="pkLearningChart" width="380" height="125" aria-label="График оценки и принятия политик"></canvas><div class="pk-quality-score"><span id="pkRoundStats">Раунды: нет данных</span><span id="pkMatchStats">Матчи: нет данных</span></div><small id="pkLeagueSize">Архив противников: 1</small>';
+$('pkValidation').before(metricsBox);
+const compareButton=document.createElement('button');compareButton.id='pkCompareTransfer';compareButton.className='btn-outline full-width';compareButton.textContent='Сравнить до переноса';$('pkTransfer').before(compareButton);
+
+const worker=new Worker(new URL('./perekos-worker-v06.mjs',import.meta.url),{type:'module'});
+let policy=createPerekosPolicy(41),busy=false,training=false,replay=null,cursor=0,timer=null,openCount=0,learningHistory=[];
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const fmt=n=>Number.isFinite(n)?Number(n).toFixed(1):'—';
 function notify(message){$('pkStatus').textContent=message;const footer=$('modeStatus');if(footer)footer.textContent=message;}
@@ -17,13 +26,25 @@ $('pkMage').value='kindle';$('pkEnemy').value='pebble';
 function settings(){
  const mage=$('pkMage').value,opponent=$('pkEnemy').value;
  if(!MAGE_CHOICES.some(m=>m.id===mage)||!MAGE_CHOICES.some(m=>m.id===opponent))throw Error('Недопустимый маг');
- return {mage,opponent,seed:(Number($('pkSeed').value)>>>0)||41};
+ return {mage,opponent,curriculum:$('pkCurriculum').value,seed:(Number($('pkSeed').value)>>>0)||41};
 }
 function send(type,payload={}){worker.postMessage({type,payload});}
 function lock(value,isTraining=false){
  busy=value;training=isTraining;
- for(const id of ['pkTrain','pkTest','pkTournament','pkReset','pkSave','pkLoad','pkDelete','pkExport','pkImport','pkTransfer','pkMage','pkEnemy','pkSeed','pkGenerations'])$(id).disabled=value;
+ for(const id of ['pkTrain','pkTest','pkTournament','pkReset','pkSave','pkLoad','pkDelete','pkExport','pkImport','pkTransfer','pkMage','pkEnemy','pkSeed','pkGenerations','pkCurriculum','pkRivalStyle','pkCompareTransfer'])$(id).disabled=value;
  $('pkStop').disabled=!isTraining;
+}
+function drawLearning(){
+ const c=$('pkLearningChart'),g=c.getContext('2d'),w=c.width,h=c.height;g.clearRect(0,0,w,h);
+ g.fillStyle='#18282f';g.fillRect(0,0,w,h);
+ g.strokeStyle='#3c5962';g.lineWidth=1;
+ for(const y of [22,60,99]){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
+ if(!learningHistory.length){g.fillStyle='#adbec7';g.font='12px system-ui';g.fillText('Обучите агента, чтобы увидеть эволюцию',16,69);return;}
+ const values=learningHistory.map(x=>x.fitness),lo=Math.min(...values,-5),hi=Math.max(...values,5),span=Math.max(1,hi-lo);
+ g.beginPath();
+ learningHistory.forEach((p,i)=>{const x=14+i*(w-28)/Math.max(1,learningHistory.length-1),y=10+(h-24)*(1-(p.fitness-lo)/span);if(i===0)g.moveTo(x,y);else g.lineTo(x,y);});
+ g.strokeStyle='#b5dfbb';g.lineWidth=3;g.lineJoin='round';g.stroke();
+ learningHistory.forEach((p,i)=>{const x=14+i*(w-28)/Math.max(1,learningHistory.length-1),y=10+(h-24)*(1-(p.fitness-lo)/span);g.fillStyle='#d7efd0';g.beginPath();g.arc(x,y,3,0,Math.PI*2);g.fill();});
 }
 function stopPlayback(){
  if(timer!==null){clearInterval(timer);timer=null;}
@@ -96,7 +117,7 @@ function showReplay(next){
  $('pkSeek').max=String(Math.max(0,frames.length-1));$('pkSeek').value='0';
  $('pkSeek').disabled=frames.length===0;$('pkPlay').disabled=frames.length===0;
  $('pkOutcome').textContent=next.finished?'ИТОГ '+(next.winner===0?'ПОБЕДА':next.winner===1?'ПОРАЖЕНИЕ':'НИЧЬЯ'):'ЛИМИТ ВРЕМЕНИ · НЕ ЗАВЕРШЁН';
- if(frames.length)paintFrame(frames[0]);else paintIdle();
+ if(frames.length)paintFrame(frames[0]);else paintIdle();drawLearning();
 }
 function seek(n){
  if(!replay?.frames.length)return;
@@ -135,26 +156,36 @@ async function store(name='Автосохранение',id='perekos-autosave'){
 worker.onmessage=async event=>{
  const d=event.data||{};
  try{
-  if(d.type==='perekos-started'){lock(true,true);notify('Тренировка начата');}
+  if(d.type==='perekos-started'){lock(true,true);learningHistory=[];drawLearning();notify('Тренировка: '+(d.curriculum==='balanced'?'от простого к сложному':d.curriculum==='offense'?'атака':'сильные соперники'));}
   else if(d.type==='perekos-progress'){
    $('pkComplete').textContent=d.complete+' / '+d.total;
    $('pkAccepted').textContent=String(d.accepted);
    $('pkFitness').textContent=fmt(d.fitness);
    $('pkProgress').style.width=Math.round(100*d.complete/d.total)+'%';
+   learningHistory=d.history||[];drawLearning();
+   $('pkRoundStats').textContent='Тренировочные победы в раундах: '+Math.round(100*d.roundWinRate)+'%';
+   $('pkLeagueSize').textContent='Текущая пара: '+d.rival+' · разница нанесённого урона '+fmt(d.damageMargin);
   }else if(d.type==='perekos-trained'){
    lock(false);policy=d.policy;
-   $('pkValidation').textContent='Контроль: исходный мозг '+Math.round(100*d.baseline.winRate)+'% побед → обученный '+Math.round(100*d.validation.winRate)+'%. Завершённых матчей: '+Math.round(100*d.validation.finishRate)+'%. Средняя разница счёта: '+fmt(d.validation.score)+'.';
-   showReplay(d.replay);await store();notify('Обучение завершено. Принятых изменений: '+d.accepted);
+   $('pkValidation').textContent='Независимая проверка: '+fmt(d.roundBaseline.fitness)+' → '+fmt(d.roundValidation.fitness)+' очков на раундах. '+(d.rolledBack?'Кандидат ухудшил контрольную оценку — восстановлен исходный мозг.':'Контрольная серия завершена.') ;
+   $('pkRoundStats').textContent='Раунды: '+d.roundValidation.roundWins+' побед · '+d.roundValidation.roundLosses+' поражений · '+d.roundValidation.roundDraws+' ничьих; урон '+fmt(d.roundValidation.damageMargin);
+   $('pkMatchStats').textContent='Полные матчи: '+d.validation.matchWins+'/'+d.validation.count+' побед, завершено '+Math.round(d.validation.finishRate*100)+'%';
+   $('pkLeagueSize').textContent='Архив политик: '+d.leagueSize+' · принятые мутации: '+d.accepted;
+   showReplay(d.replay);await store();notify(d.rolledBack?'Контроль обнаружил регрессию; исходный мозг восстановлен':'Обучение завершено. Принято изменений: '+d.accepted);
   }else if(d.type==='perekos-stopped'){
    lock(false);policy=d.policy;await store();notify('Тренировка остановлена после '+d.complete+' поколений');
   }else if(d.type==='perekos-tested'){
    lock(false);policy=d.policy;showReplay(d.replay);
-   $('pkValidation').textContent='Контрольный матч: '+d.replay.rounds+' раундов, счёт '+d.replay.score+', руны '+(d.replay.draft.join(' · ')||'нет')+'. '+(d.replay.finished?'Матч завершён.':'Достигнут лимит симуляции.');
+   $('pkValidation').textContent='Контрольный матч: '+d.replay.rounds+' раундов, счёт '+d.replay.score+', руны '+(d.replay.draft.join(' · ')||'нет')+'. '+(d.replay.finished?'Матч завершён.':'Достигнут лимит симуляции.'); 
+   $('pkMatchStats').textContent='Матч: '+(d.replay.won?'победа':d.replay.finished?'поражение':'незавершён')+' · нанесено '+fmt(d.replay.dealt)+' · получено '+fmt(d.replay.received);
    notify('Контрольный бой завершён');
   }else if(d.type==='perekos-tournament'){
    lock(false);$('pkTourney').replaceChildren();
-   for(const x of d.table){const row=document.createElement('div');row.className='leader-row';row.textContent=x.style+' · '+x.wins+'/'+x.total+' побед · завершено '+x.completed+' · оценка '+fmt(x.fitness);$('pkTourney').append(row);}
+   for(const x of d.table){const row=document.createElement('div');row.className='leader-row';row.textContent=x.style+' · раунды: '+x.wins+' побед, '+x.losses+' поражений, '+x.draws+' ничьих · урон '+fmt(x.damageMargin);$('pkTourney').append(row);}
    notify('Турнир завершён');
+  }else if(d.type==='perekos-compared'){
+   lock(false);$('pkTransferInfo').textContent='Сравнение на одинаковых контрольных раундах: ваш мозг '+fmt(d.mine.fitness)+' очков / урон '+fmt(d.mine.damageMargin)+'; переносимый '+fmt(d.other.fitness)+' очков / урон '+fmt(d.other.damageMargin)+'. Это не подтверждает преимущество в полных матчах.';
+   notify('Сравнение переноса завершено');
   }else if(d.type==='perekos-loaded'){lock(false);policy=d.policy;notify('Мозг загружен');}
   else if(d.type==='perekos-error'){lock(false);notify('Ошибка: '+d.message);}
  }catch(e){lock(false);notify('Ошибка сохранения: '+e.message);}
@@ -162,12 +193,20 @@ worker.onmessage=async event=>{
 worker.addEventListener('error',e=>{lock(false);notify('Ошибка вычислительного Worker: '+e.message);});
 $('pkTrain').onclick=()=>{try{const cfg=settings();stopPlayback();lock(true,true);$('pkProgress').style.width='0%';send('perekos-train',{...cfg,generations:Number($('pkGenerations').value),policy});notify('Идёт обучение на реальных матчах...');}catch(e){lock(false);notify(e.message);}};
 $('pkStop').onclick=()=>send('perekos-stop');
-$('pkTest').onclick=()=>{try{lock(true);send('perekos-test',{...settings(),policy});notify('Запущен реальный матч...');}catch(e){lock(false);notify(e.message);}};
+$('pkTest').onclick=()=>{try{lock(true);send('perekos-test',{...settings(),rivalStyle:$('pkRivalStyle').value,policy});notify('Запущен реальный матч...');}catch(e){lock(false);notify(e.message);}};
 $('pkTournament').onclick=()=>{try{lock(true);send('perekos-tournament',settings());notify('Проверяем четыре стратегии...');}catch(e){lock(false);notify(e.message);}};
 $('pkReset').onclick=()=>{stopPlayback();send('perekos-reset');$('pkValidation').textContent='Создан чистый мозг. Проверьте или обучите его.';};
 $('pkSave').onclick=async()=>{try{const name=$('pkName').value.trim()||'Боевой маг',id='perekos-'+Date.now().toString(36);await store(name,id);$('pkModels').value=id;notify('Модель сохранена: '+name);}catch(e){notify(e.message);}};
 $('pkLoad').onclick=async()=>{try{const file=await loadModel($('pkModels').value);if(!validatePerekosPolicy(file?.snapshot))throw Error('Мозг повреждён');send('perekos-load',{policy:file.snapshot});$('pkName').value=file.name;}catch(e){notify(e.message);}};
 $('pkDelete').onclick=async()=>{const id=$('pkModels').value;if(!id)return;if(!confirm('Удалить выбранный мозг Перекоса?'))return;try{await deleteModel(id);await refreshModels();notify('Мозг удалён');}catch(e){notify(e.message);}};
+$('pkCompareTransfer').onclick=async()=>{
+ try{
+  const file=await loadModel($('pkTransferModels').value);
+  if(file?.kind!=='combat-policy')throw Error('Выберите мозг Combat Forge');
+  const other=tacticalTransfer(file.snapshot);
+  lock(true);send('perekos-compare',{...settings(),other});notify('Сравниваем на одинаковых контрольных раундах...');
+ }catch(e){lock(false);notify('Сравнение: '+e.message);}
+};
 $('pkTransfer').onclick=async()=>{
  try{const file=await loadModel($('pkTransferModels').value);if(file?.kind!=='combat-policy')throw Error('Выберите модель Combat Forge');
   const transferred=tacticalTransfer(file.snapshot);send('perekos-load',{policy:transferred});
