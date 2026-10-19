@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.4.0';
-const APP_VERSION = '0.4.0';
+const CACHE_NAME = 'petri-forge-v0.5.0';
+const APP_VERSION = '0.5.0';
 const RELEASE_DATE = '2026-10-19';
-const CACHE_PROTOCOL = 3;
-const RELEASE_NOTES = ['Combat Forge Studio: строить собственные арены, изменять способности, здоровье, скорости и условия победы, сохранять сценарии.', 'Подготовлен адаптер Перекоса к реальной игровой симуляции.'];
+const CACHE_PROTOCOL = 4;
+const RELEASE_NOTES = ['Новая лаборатория Перекоса: обучение на настоящем игровом движке, руны, тактика, контрольные бои, перенос из Combat Forge.'];
 const APP_SHELL = [
   './',
   './index.html',
@@ -21,6 +21,16 @@ const APP_SHELL = [
   './combat-rules.mjs',
   './combat-editor.mjs',
   './combat-studio.css',
+  './perekos-adapter.mjs',
+  './perekos-policy.mjs',
+  './perekos-worker.mjs',
+  './perekos-shell.mjs',
+  './perekos-lab.mjs',
+  './perekos-lab.css',
+  '../perekos/core.mjs',
+  '../perekos/runes.mjs',
+  '../perekos/elements.mjs',
+  '../perekos/mages.mjs',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
