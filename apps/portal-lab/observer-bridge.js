@@ -19,7 +19,7 @@ export function normalizeObserverPoint(input={}){
  const {l,longitude,latitude}=input;
  if(![l,longitude,latitude].every(Number.isFinite)||
     l===0||Math.abs(l)<BRIDGE_MIN_RADIUS-1e-9||Math.abs(l)>BRIDGE_MAX_RADIUS+1e-9||
-    longitude< -180||longitude>180||latitude<-85||latitude>85)
+    longitude< -180||longitude>180||latitude<-90||latitude>90)
   throw Error('Точка наблюдения выходит за пределы разрешённой области');
  return {l,longitude,latitude};
 }
