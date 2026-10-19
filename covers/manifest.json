@@ -888,11 +888,37 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "crumple-yard": {
-    "note": "existing cover rated higher",
-    "status": "preserved",
-    "lastAttemptRevision": "c1c58d0256bc5b7d134031f0488ed21da976f038",
-    "lastAttemptAt": "2026-10-17T15:17:39.456Z",
-    "captureEngine": "safe-gameplay-v3"
+    "note": "No frame passed image-content checks",
+    "status": "failed",
+    "lastAttemptRevision": "1d70c158a537508ed7ebb879f84da65493a89c34",
+    "lastAttemptAt": "2026-10-19T10:17:14.480Z",
+    "captureEngine": "safe-gameplay-v3",
+    "diagnostic": {
+      "bestScore": 46,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 18304,
+        "variance": 28.769392183445426,
+        "entropy": 1.6354039831201599,
+        "edgeDensity": 0.08742559523809523,
+        "colorfulness": 11.9443359375,
+        "centerDetail": 13.988362010568013,
+        "meanLight": 134.80905356445825
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "ВЫЕХАТЬ В ЯРД газ справа · руль слева · разбить по вкусу",
+            "id": "startButton",
+            "score": 62
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/crumple-yard/?pw-cover=1&pw_release=1.2.0&pw_fp=4d0dba43c18dc71556723bca"
+    }
   },
   "formica-colony": {
     "note": "No frame passed image-content checks",
@@ -1718,8 +1744,8 @@
   "kalibr": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "2b3ec76686e637b691596b9439826e384f894d46",
-    "lastAttemptAt": "2026-10-17T15:23:10.955Z",
+    "lastAttemptRevision": "0d7082c1da3a158271be6324b0f00d1d0681c306",
+    "lastAttemptAt": "2026-10-19T10:14:48.101Z",
     "diagnostic": {
       "bestScore": 24,
       "qualityReasons": [
@@ -1739,7 +1765,7 @@
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/kalibr/?pw-cover=1&pw_release=2.0.0&pw_fp=1ee3d45581ec52607b9249c4"
+      "url": "http://127.0.0.1:4173/apps/kalibr/?pw-cover=1&pw_release=2.0.1&pw_fp=32d09139bfba5956f289079d"
     },
     "captureEngine": "safe-gameplay-v3"
   },
@@ -3322,24 +3348,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 39887,
-        "variance": 52.50995283445435,
-        "entropy": 1.9922189337871365,
-        "edgeDensity": 0.11793154761904762,
-        "colorfulness": 28.895751953125,
-        "centerDetail": 60.92314712940596,
-        "meanLight": 39.74340175781279
+        "bytes": 39863,
+        "variance": 52.13988866889285,
+        "entropy": 2.023370600985355,
+        "edgeDensity": 0.11805555555555555,
+        "colorfulness": 29.265380859375,
+        "centerDetail": 60.5806960183846,
+        "meanLight": 40.767028808594006
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.4&pw_fp=60333e69d848aa6c2675ec46"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.0&pw_fp=19a7b4808485bd8c0fad8348"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "031e25be041adf64f0323a28c09df94c7b962318",
-    "lastAttemptAt": "2026-10-19T09:41:51.167Z"
+    "lastAttemptRevision": "8498873aff9edcdd95af18f1467c546ac17c780e",
+    "lastAttemptAt": "2026-10-19T10:15:10.458Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3478,10 +3504,10 @@
   "not-dead-yet": {
     "note": "existing cover rated higher",
     "diagnostic": null,
-    "status": "published",
+    "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "9ee0a9961d1ba0fc99448975be4023a2d624f513",
-    "lastAttemptAt": "2026-10-19T09:54:35.261Z",
+    "lastAttemptRevision": "1cad8215924ac1967ea5f20aa10cd1bc26e121bc",
+    "lastAttemptAt": "2026-10-19T10:15:31.637Z",
     "revision": "9ee0a9961d1ba0fc99448975be4023a2d624f513",
     "qualityScore": 71,
     "visionScore": null,
@@ -3515,7 +3541,7 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "f28d6d5879f4164d40a16c3b7528ee7eced840e8",
+    "revision": "9d8c0930d8d3ead35d9e8ca4bfb86a17029fa78f",
     "qualityScore": 60,
     "visionScore": null,
     "prepared": false,
@@ -3529,20 +3555,20 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "bcc57080a013bd454382bbc0c8fddf6688695d5eaa760dce4c84c9b4c2bacc55",
+    "sha256": "ffaa0023066f3f85f33231ce224b71d1ce50940fb712edb478b3dbf05d02f547",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "f28d6d5879f4164d40a16c3b7528ee7eced840e8",
-    "lastAttemptAt": "2026-10-19T09:41:39.746Z"
+    "lastAttemptRevision": "9d8c0930d8d3ead35d9e8ca4bfb86a17029fa78f",
+    "lastAttemptAt": "2026-10-19T10:14:37.318Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
     "diagnostic": null,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "280451251d45079e42cd80197e49b0a35b3e7b8d",
-    "lastAttemptAt": "2026-10-19T09:42:02.126Z",
+    "lastAttemptRevision": "90cd40c612be780e6deaf1c1e1fbe9c4d0ce52f7",
+    "lastAttemptAt": "2026-10-19T10:14:59.068Z",
     "revision": "a2672a9600b739fdd5af458623b881c308430c7c",
     "qualityScore": 76,
     "visionScore": null,
@@ -3595,5 +3621,206 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "0a4ccb7b86030b37639f3746f8ce55aaa37bf761",
     "lastAttemptAt": "2026-10-19T09:30:43.044Z"
+  },
+  "blockies": {
+    "revision": "afa8ad7dfe3fbfb2179e007e6529bb1005b349fc",
+    "qualityScore": 83,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "🎯 SINGLE PLAYER Play solo",
+        "id": "mode-single",
+        "score": 104
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "191a7abe88a94565a5c14a7c5b3d0666de349ce935ad6969a444bea437b2ed69",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "afa8ad7dfe3fbfb2179e007e6529bb1005b349fc",
+    "lastAttemptAt": "2026-10-19T10:15:43.592Z"
+  },
+  "katana-echo": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 35,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 22561,
+        "variance": 20.980421924556257,
+        "entropy": 1.660495552585128,
+        "edgeDensity": 0.06708829365079365,
+        "colorfulness": 13.821533203125,
+        "centerDetail": 13.905562179040514,
+        "meanLight": 25.74503154296872
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/katana-echo/?pw-cover=1&pw_release=0.1.0&pw_fp=289ffc71adbe7f93a7933429"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "75f18ab0e9e2c8b143418203c4ee4e9f2807df96",
+    "lastAttemptAt": "2026-10-19T10:15:54.402Z"
+  },
+  "mini-car-3d": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 35,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 17096,
+        "variance": 22.376833479641164,
+        "entropy": 1.5627422835745273,
+        "edgeDensity": 0.06671626984126984,
+        "colorfulness": 15.716796875,
+        "centerDetail": 13.204218409373091,
+        "meanLight": 25.073126171876197
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": [
+          {
+            "label": "Одиночная езда",
+            "error": "locator.click: Timeout 3500ms exceeded.\nCall log:\n  - waiting for locator('button, input[type=\"butto"
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/mini-car-3d/?pw-cover=1&pw_release=0.1.0&pw_fp=689d7658377369ce36144616"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "fed707cd07a6d13464f1144c456d36cf32954a18",
+    "lastAttemptAt": "2026-10-19T10:16:11.326Z"
+  },
+  "skyforge-relay": {
+    "revision": "17306a5f165b40899e9dd965645bb1c0b936d67e",
+    "qualityScore": 68,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "ОДИНОЧНАЯ ПРАКТИКА",
+        "id": "practiceBtn",
+        "score": 92
+      },
+      {
+        "label": "START MISSION",
+        "id": "startBtn",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "2d406a53f03974556572a9542cb08a8b7b79d591a5276e17be5c049854938b62",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "17306a5f165b40899e9dd965645bb1c0b936d67e",
+    "lastAttemptAt": "2026-10-19T10:16:24.287Z"
+  },
+  "space-run": {
+    "revision": "d135357ef7f68f3be2a2777ae00bde19ca5ee602",
+    "qualityScore": 53,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Одиночная практика",
+        "id": "practice-btn",
+        "score": 92
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "0700169abcac1b8e0af4e71dbd2fda8ec84cc16a4a4a0a3232073e7bc40b2ca6",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "d135357ef7f68f3be2a2777ae00bde19ca5ee602",
+    "lastAttemptAt": "2026-10-19T10:16:36.235Z"
+  },
+  "trace-mosaic": {
+    "revision": "926c369404b68908300504665837b0a9f8916c5e",
+    "qualityScore": 68,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Соло-тренировка без сети",
+        "id": "practiceBtn",
+        "score": 92
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "bd0da1fd2a0bd0649022a6efcc03233307ae0c5f4792ea48935136f7ea750aa1",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "926c369404b68908300504665837b0a9f8916c5e",
+    "lastAttemptAt": "2026-10-19T10:16:48.006Z"
+  },
+  "crown-laws": {
+    "revision": "174f5b4a923933b319f4c6821a2d046bbcd43dc3",
+    "qualityScore": 50,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "8b03120e97dd9473eb7851745fabdd730e599c719574c9daad904f0774c8aea7",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "174f5b4a923933b319f4c6821a2d046bbcd43dc3",
+    "lastAttemptAt": "2026-10-19T10:16:58.780Z"
+  },
+  "throne-three": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 51,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 44759,
+        "variance": 28.10564609651693,
+        "entropy": 1.6458387814296191,
+        "edgeDensity": 0.1331845238095238,
+        "colorfulness": 19.5849609375,
+        "centerDetail": 35.22594947064966,
+        "meanLight": 35.995522265624984
+      },
+      "gameplayEntry": {
+        "started": true,
+        "actions": [
+          {
+            "label": "Новая игра",
+            "id": "start-btn",
+            "score": 80
+          }
+        ]
+      },
+      "url": "http://127.0.0.1:4173/apps/throne-three/?pw-cover=1&pw_release=0.1.0&pw_fp=7e3bc40935b7941a591facf7"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "0fdcf5c63e8f960a5dbc7626ea2f8472a2e8f741",
+    "lastAttemptAt": "2026-10-19T10:17:26.292Z"
   }
 }
