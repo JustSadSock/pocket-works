@@ -10,6 +10,7 @@ const playerPalette = [
 
 const rooms = new Map();
 const sockets = new Map();
+const PRESENCE_GRACE_MS = 20000;
 
 const artManifest = [{"id": "puzzle-01", "title": "Sky Loom", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-01.svg", "palette": ["#09131b", "#4cd5ff", "#ffe27a", "#f37272"], "difficulty": "easy"}, {"id": "puzzle-02", "title": "Petal Route", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-02.svg", "palette": ["#111827", "#b8ff5d", "#44c2ff", "#f5a6ff"], "difficulty": "medium"}, {"id": "puzzle-03", "title": "Neon Koi", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-03.svg", "palette": ["#140f1f", "#ffcc57", "#ff7b7b", "#7ce7db"], "difficulty": "spicy"}, {"id": "puzzle-04", "title": "Sand Relay", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-04.svg", "palette": ["#07131a", "#6cf0c2", "#76a5ff", "#f8f3d6"], "difficulty": "easy"}, {"id": "puzzle-05", "title": "Moss Beacon", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-05.svg", "palette": ["#11131a", "#f29e4c", "#f1c453", "#84dcc6"], "difficulty": "medium"}, {"id": "puzzle-06", "title": "Prism Orchard", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-06.svg", "palette": ["#0c1621", "#db5461", "#ffd166", "#3ec1d3"], "difficulty": "spicy"}, {"id": "puzzle-07", "title": "Nova Steps", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-07.svg", "palette": ["#09131b", "#4cd5ff", "#ffe27a", "#f37272"], "difficulty": "easy"}, {"id": "puzzle-08", "title": "Lagoon Pulse", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-08.svg", "palette": ["#111827", "#b8ff5d", "#44c2ff", "#f5a6ff"], "difficulty": "medium"}, {"id": "puzzle-09", "title": "Copper Bloom", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-09.svg", "palette": ["#140f1f", "#ffcc57", "#ff7b7b", "#7ce7db"], "difficulty": "spicy"}, {"id": "puzzle-10", "title": "Echo Nest", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-10.svg", "palette": ["#07131a", "#6cf0c2", "#76a5ff", "#f8f3d6"], "difficulty": "easy"}, {"id": "puzzle-11", "title": "Glass Dunes", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-11.svg", "palette": ["#11131a", "#f29e4c", "#f1c453", "#84dcc6"], "difficulty": "medium"}, {"id": "puzzle-12", "title": "Solar Stitch", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-12.svg", "palette": ["#0c1621", "#db5461", "#ffd166", "#3ec1d3"], "difficulty": "spicy"}, {"id": "puzzle-13", "title": "Mint Harbor", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-13.svg", "palette": ["#09131b", "#4cd5ff", "#ffe27a", "#f37272"], "difficulty": "easy"}, {"id": "puzzle-14", "title": "Amber Chorus", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-14.svg", "palette": ["#111827", "#b8ff5d", "#44c2ff", "#f5a6ff"], "difficulty": "medium"}, {"id": "puzzle-15", "title": "Fjord Signal", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-15.svg", "palette": ["#140f1f", "#ffcc57", "#ff7b7b", "#7ce7db"], "difficulty": "spicy"}, {"id": "puzzle-16", "title": "Drift Atlas", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-16.svg", "palette": ["#07131a", "#6cf0c2", "#76a5ff", "#f8f3d6"], "difficulty": "easy"}, {"id": "puzzle-17", "title": "Ribbon Spring", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-17.svg", "palette": ["#11131a", "#f29e4c", "#f1c453", "#84dcc6"], "difficulty": "medium"}, {"id": "puzzle-18", "title": "Quiet Meteor", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-18.svg", "palette": ["#0c1621", "#db5461", "#ffd166", "#3ec1d3"], "difficulty": "spicy"}, {"id": "puzzle-19", "title": "Golden Mural", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-19.svg", "palette": ["#09131b", "#4cd5ff", "#ffe27a", "#f37272"], "difficulty": "easy"}, {"id": "puzzle-20", "title": "Circuit Meadow", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-20.svg", "palette": ["#111827", "#b8ff5d", "#44c2ff", "#f5a6ff"], "difficulty": "medium"}, {"id": "puzzle-21", "title": "Velvet Tide", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-21.svg", "palette": ["#140f1f", "#ffcc57", "#ff7b7b", "#7ce7db"], "difficulty": "spicy"}, {"id": "puzzle-22", "title": "Crimson Grove", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-22.svg", "palette": ["#07131a", "#6cf0c2", "#76a5ff", "#f8f3d6"], "difficulty": "easy"}, {"id": "puzzle-23", "title": "Signal Fern", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-23.svg", "palette": ["#11131a", "#f29e4c", "#f1c453", "#84dcc6"], "difficulty": "medium"}, {"id": "puzzle-24", "title": "Polar Bloom", "width": 1600, "height": 1200, "path": "./assets/puzzles/puzzle-24.svg", "palette": ["#0c1621", "#db5461", "#ffd166", "#3ec1d3"], "difficulty": "spicy"}];
 
@@ -134,6 +135,7 @@ function buildRoomSnapshot(room, viewerId) {
     phase: room.phase,
     settings: room.settings,
     players,
+    reconnectGraceSec: PRESENCE_GRACE_MS / 1000,
     viewerId,
     imagePreview: artManifest[(room.imageCursor || 0) % Math.max(artManifest.length, 1)] || null,
     catalogSize: artManifest.length,
@@ -197,6 +199,7 @@ function joinRoom(socket, payload) {
     color,
     ready: false,
     connected: true,
+    lastSeenAt: Date.now(),
     socket,
     stats: {
       correctDrops: 0,
@@ -209,6 +212,7 @@ function joinRoom(socket, payload) {
   };
   player.nickname = sanitizeNickname(payload?.nickname || existing?.nickname || `Player ${room.players.size + 1}`);
   player.connected = true;
+  player.lastSeenAt = Date.now();
   player.socket = socket;
   player.isHost = room.hostId === player.id;
   room.players.set(player.id, player);
@@ -245,12 +249,10 @@ function leaveCurrentRoom(socket, notify = true) {
     }
   }
   if (room.hostId === socket.playerId) {
-    const replacement = Array.from(room.players.values()).find((candidate) => candidate.connected) || Array.from(room.players.values())[0];
-    room.hostId = replacement?.id || null;
-    if (replacement) {
-      replacement.isHost = true;
-    }
+    room.hostId = Array.from(room.players.values()).find(p=>p.id !== socket.playerId && p.connected)?.id || null;
   }
+  if (room.phase !== "lobby") room.players.delete(socket.playerId);
+  maintainPresence(room);
   socket.roomId = null;
   cleanupRoom(room);
   if (notify && rooms.has(room.id)) {
@@ -263,6 +265,63 @@ function cleanupRoom(room) {
   if (activePlayers.length === 0 && room.phase !== "playing") {
     rooms.delete(room.id);
   }
+}
+
+
+function rebuildAssignments(game) {
+  const result = {};
+  for (const tile of game.tileMeta) {
+    (result[tile.ownerId] ||= []).push(tile.id);
+    if (game.tileLocations[tile.id]) game.tileLocations[tile.id].ownerId = tile.ownerId;
+  }
+  for (const tiles of Object.values(result)) tiles.forEach((id, slot) => {
+    const location = game.tileLocations[id];
+    if (location?.kind === "inventory") location.slot = slot;
+  });
+  game.assignments = result;
+}
+function maintainPresence(room, now = Date.now()) {
+  const active = [];
+  for (const p of room.players.values()) {
+    const alive = room.practice || (p.connected !== false &&
+      now - (Number.isFinite(p.lastSeenAt) ? p.lastSeenAt : room.createdAt) <= PRESENCE_GRACE_MS);
+    p.connected = !!alive;
+    if (alive) active.push(p);
+    else {
+      p.ready = false;
+      if (room.game?.activeDrags) delete room.game.activeDrags[p.id];
+    }
+  }
+  if (!active.some(p => p.id === room.hostId) && active.length) room.hostId = active[0].id;
+  for (const p of room.players.values()) p.isHost = p.id === room.hostId;
+  if (room.phase !== "playing" || !room.game || !active.length) return;
+  const game = room.game, online = new Set(active.map(p=>p.id));
+  const inventory = new Map(active.map(p=>[p.id,0]));
+  for (const tile of game.tileMeta) {
+    if (online.has(tile.ownerId) && game.tileLocations[tile.id]?.kind === "inventory")
+      inventory.set(tile.ownerId, inventory.get(tile.ownerId)+1);
+  }
+  let changed = false;
+  for (const tile of game.tileMeta) {
+    if (online.has(tile.ownerId)) continue;
+    const loc = game.tileLocations[tile.id];
+    if (loc?.kind === "board" && loc.cell === tile.correctCell) continue;
+    const next = [...inventory.keys()].sort((x,y)=>inventory.get(x)-inventory.get(y))[0];
+    if (!next) continue;
+    tile.ownerId = next; inventory.set(next,inventory.get(next)+1); changed = true;
+  }
+  for (const p of active) {
+    if (inventory.get(p.id) > 0) continue;
+    const movable = game.tileMeta.filter(tile=>tile.ownerId !== p.id &&
+      game.tileLocations[tile.id]?.kind === "inventory" &&
+      !Object.values(game.activeDrags).some(d=>d.tileId===tile.id));
+    movable.sort((x,y)=>(inventory.get(y.ownerId)||0)-(inventory.get(x.ownerId)||0));
+    const donor = movable[0];
+    if (!donor || inventory.get(donor.ownerId)<=1) continue;
+    inventory.set(donor.ownerId,inventory.get(donor.ownerId)-1);
+    inventory.set(p.id,1); donor.ownerId=p.id; changed=true;
+  }
+  if(changed) rebuildAssignments(game);
 }
 
 function handleToggleReady(socket) {
@@ -562,16 +621,17 @@ function tickGames() {
  if(saved){room={...structuredClone(saved.room),players:new Map(saved.room.players.map(p=>[p.id,{...structuredClone(p),socket:socket(p.id)}]))};rooms.set(room.id,room);for(const p of room.players.values())p.socket.roomId=room.id;}
  function pack(r){return {room:{...r,players:[...r.players.values()].map(p=>({...p,socket:null}))}};}
  return {room,events,socket,pack,create:createRoom,join:joinRoom,leave:leaveCurrentRoom,view:buildRoomSnapshot,
- tick(){if(room?.game){expireTrails(room.game);maybeFinishGame(room);}},
+ touch(id){const p=room?.players.get(id);if(p){p.lastSeenAt=Date.now();p.connected=true;}},
+  tick(){if(room){maintainPresence(room);if(room.game){expireTrails(room.game);maybeFinishGame(room);}}},
  message(s,type,p){switch(type){case 'toggle_ready':handleToggleReady(s);break;case 'cycle_image':handleCycleImage(s,Number(p?.delta)>=0?1:-1);break;case 'update_settings':handleUpdateSettings(s,p);break;case 'start_game':handleStartGame(s);break;case 'drag_update':handleDragUpdate(s,p);break;case 'drag_end':handleDragEnd(s,p);break;case 'play_again':handlePlayAgain(s);break;case 'pulse':break;default:throw Error('Неизвестная команда');}}
  };
 }
 function output(c,r){return {state:c.pack(r),events:[...c.events,{type:'state',payload:{}}]};}
 export default {protocolVersion:1,
  createRoom({player,payload}){const c=context(null),s=c.socket(player.id);const r=c.create(s,payload);return output(c,r);},
- onJoin({state,player}){const c=context(state),r=c.room,s=c.socket(player.id);if(r.players.has(player.id)){const p=r.players.get(player.id);p.connected=true;p.socket=s;}else{if(!c.join(s,{roomId:r.id,nickname:player.name}))throw Error('Комната заполнена или раунд уже начат');}return output(c,r);},
+  onJoin({state,player}){const c=context(state),r=c.room,s=c.socket(player.id);if(r.players.has(player.id)){const p=r.players.get(player.id);p.connected=true;p.lastSeenAt=Date.now();p.socket=s;}else{if(!c.join(s,{roomId:r.id,nickname:player.name}))throw Error('Комната заполнена или раунд уже начат');}c.tick();return output(c,r);},
  onLeave({state,player}){const c=context(state),r=c.room;c.leave(c.socket(player.id),true);return output(c,r);},
- onMessage({state,player,payload:m}){const c=context(state),r=c.room;if(!r.players.has(player.id))throw Error('Игрок не в комнате');c.tick();c.message(c.socket(player.id),m?.type,m?.payload);c.tick();return output(c,r);},
+  onMessage({state,player,payload:m}){const c=context(state),r=c.room;if(!r.players.has(player.id))throw Error('Игрок не в комнате');c.touch(player.id);c.tick();c.message(c.socket(player.id),m?.type,m?.payload);c.tick();return output(c,r);},
  viewForPlayer({state,player}){const c=context(state);return {...c.view(c.room,player.id),practice:c.room.practice===true};}
 };
 export function createPractice(player){const c=context(null),r=c.create(c.socket(player.id),{nickname:player.name});r.practice=true;return c.pack(r);}
