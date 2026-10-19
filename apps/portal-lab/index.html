@@ -17,7 +17,7 @@
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="notebook" type="button" aria-pressed="false">Журнал</button><button data-view="volume" type="button" aria-pressed="false">Объём</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="notebook" type="button" aria-pressed="false">Журнал</button><button data-view="volume" type="button" aria-pressed="false">Объём</button><button data-view="field3d" type="button" aria-pressed="false">Свет 3D</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -30,6 +30,50 @@
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
 
+<section id="field-panel" class="field-panel" aria-label="Трёхмерная геодезическая оптика">
+<div class="section-caption"><span>3D / КООРДИНАТНЫЙ АТЛАС</span><span>v1.3</span></div>
+<p class="field-intro">Один и тот же световой пучок в разных направлениях. Два внешних региона показаны отдельно: их расстояние на схеме условно. Фотоны следуют геодезическим, а не декоративным кривым.</p>
+<div id="field-status" class="field-status" role="status">ГОТОВО К ЗАПУСКУ · ДВЕ КООРДИНАТНЫЕ КАРТЫ</div>
+<div class="section-caption second"><span>ИССЛЕДОВАТЕЛЬСКИЕ СЦЕНАРИИ</span><span>4 РЕЖИМА</span></div>
+<div class="field-presets" role="group" aria-label="Готовые эксперименты с фотонами">
+<button type="button" data-field-preset="axial">Радиальный</button>
+<button type="button" data-field-preset="cone">Конус</button>
+<button type="button" data-field-preset="fan">Веер</button>
+<button type="button" data-field-preset="grazing">Касательный</button>
+</div>
+<label class="range-field"><span>Угол к оси горловины <output id="field-polar-value">24°</output></span><input id="field-polar" type="range" min="0" max="75" step="1" value="24"></label>
+<label class="range-field"><span>Азимут направления <output id="field-azimuth-value">42°</output></span><input id="field-azimuth" type="range" min="0" max="360" step="1" value="42"></label>
+<label class="range-field"><span>Угловой конус <output id="field-cone-value">24°</output></span><input id="field-cone" type="range" min="0" max="65" step="1" value="24"></label>
+<label class="range-field"><span>Число фотонов <output id="field-count-value">13</output></span><input id="field-count" type="range" min="1" max="25" step="1" value="13"></label>
+<label class="range-field"><span>Радиальная координата источника <output id="field-source-value">3.1a</output></span><input id="field-source" type="range" min="1.5" max="4.5" step=".1" value="3.1"></label>
+<div class="field-actions">
+<button type="button" id="field-start">Запустить 3D-пучок</button>
+<button type="button" id="field-reset">Стереть траектории</button>
+</div>
+<div class="section-caption second"><span>НАВИГАЦИЯ НАД АТЛАСОМ</span><span>КАМЕРА</span></div>
+<div class="field-cameras" role="group" aria-label="Ракурс пространственного поля">
+<button type="button" data-field-camera="diagram">Общий</button>
+<button type="button" data-field-camera="front">Сбоку</button>
+<button type="button" data-field-camera="top">Сверху</button>
+<button type="button" data-field-camera="below">Снизу</button>
+</div>
+<label class="range-field"><span>Масштаб <output id="field-zoom-value">1.00×</output></span><input id="field-zoom" type="range" min=".55" max="1.65" step=".02" value="1"></label>
+<div class="field-switches">
+<label><input id="field-grid" type="checkbox" checked> Оболочки</label>
+<label><input id="field-paths" type="checkbox" checked> Следы лучей</label>
+<label><input id="field-seams" type="checkbox" checked> Связь горловин</label>
+</div>
+<div class="section-caption second"><span>ИЗМЕРЕНИЯ ПУЧКА</span><span>H = 0 · c=1</span></div>
+<div class="field-metrics">
+<div><span>ФОТОНЫ</span><strong id="field-stat-photons">0</strong></div>
+<div><span>ПЛОСКОСТИ ОРБИТ</span><strong id="field-stat-planes">0</strong></div>
+<div><span>ПЕРЕХОДЫ В ГОРЛОВИНЕ</span><strong id="field-stat-crossings">0</strong></div>
+<div><span>ВЫХОД A / B</span><strong id="field-stat-escaped">— / —</strong></div>
+<div><span>НЕВЯЗКА НУЛЕВОЙ СВЯЗИ</span><strong id="field-stat-h">—</strong></div>
+<div><span>ВРЕМЯ ПУЧКА</span><strong id="field-stat-time">0.00 a/c</strong></div>
+</div>
+<p class="field-model-note">Сферическая симметрия позволяет точно свести движение каждого 3D фотона к двум координатам в собственной плоскости орбиты. Визуализация потом возвращает эту плоскость в 3D. <strong>Показанные сферы — координатные карты, а не вложение кривого трёхмерного пространства в евклидово R³.</strong> Пунктир между горловинами обозначает их топологическое соответствие, не расстояние и не время прохождения.</p>
+</section>
 <section id="volume-panel" class="volume-panel" aria-label="Изометрическое пространственное вложение кротовой норы">
 <div class="section-caption"><span>ОБЪЁМ / ПРОСТРАНСТВЕННЫЙ СРЕЗ</span><span>v1.2</span></div>
 <p class="volume-lede">Поверните горловину пальцем или мышью. Это вычисленный экваториальный срез метрики, а световые траектории проходят по самой поверхности.</p>
@@ -86,7 +130,7 @@
 <label class="notebook-field">Режим
 <select id="notebook-filter">
 <option value="all">Все эксперименты</option>
-<option value="observer">Наблюдатель</option><option value="volume">Объём</option>
+<option value="observer">Наблюдатель</option><option value="volume">Объём</option><option value="field3d">Свет 3D</option>
 <option value="matter">Материя</option>
 <option value="wave">Волны</option>
 <option value="designer">Конструктор</option>

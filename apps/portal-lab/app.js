@@ -9,10 +9,11 @@ import {createCausalityLab} from './causality-view.js';
 import {createChronologyAtlas} from './atlas-view.js';
 import {createNotebook} from './notebook-view.js';
 import {createEmbeddedLab} from './embedded-view.js';
+import {createLightFieldLab} from './light-field-view.js';
 import {metric as measure} from './notebook.js';
 import {throatDiagnostics,criticalImpact} from './spacetime.js';
 const $=id=>document.getElementById(id),canvas=$('space'),ctx=canvas.getContext('2d',{alpha:false});
-const sound=new AudioBus(),observatory=createObservatory(canvas,{onAction:kind=>sound.play(kind)}),materialLab=createMaterialLab({onAction:kind=>sound.play(kind)}),waveLab=createWaveLab({onAction:kind=>sound.play(kind)}),designer=createDesigner(canvas,{getMetric:()=>currentMetric(),onEdit:changes=>applyDesign(changes),onAction:kind=>sound.play(kind)}),rotationLab=createRotationLab({getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind)}),causalityLab=createCausalityLab(canvas,{onAction:kind=>sound.play(kind)}),atlasLab=createChronologyAtlas(canvas,{onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;},onOpen:params=>{causalityLab.applyParameters(params,{showWitness:true});settings.view='causality';sync();scheduleSave();}}),notebookLab=createNotebook(canvas,{onSave:()=>captureExperiment(),onRestore:record=>replayExperiment(record),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),volumeLab=createEmbeddedLab(canvas,{getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),STORAGE='pocket-works:portal-lab:relativity-v2';
+const sound=new AudioBus(),observatory=createObservatory(canvas,{onAction:kind=>sound.play(kind)}),materialLab=createMaterialLab({onAction:kind=>sound.play(kind)}),waveLab=createWaveLab({onAction:kind=>sound.play(kind)}),designer=createDesigner(canvas,{getMetric:()=>currentMetric(),onEdit:changes=>applyDesign(changes),onAction:kind=>sound.play(kind)}),rotationLab=createRotationLab({getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind)}),causalityLab=createCausalityLab(canvas,{onAction:kind=>sound.play(kind)}),atlasLab=createChronologyAtlas(canvas,{onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;},onOpen:params=>{causalityLab.applyParameters(params,{showWitness:true});settings.view='causality';sync();scheduleSave();}}),notebookLab=createNotebook(canvas,{onSave:()=>captureExperiment(),onRestore:record=>replayExperiment(record),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),volumeLab=createEmbeddedLab(canvas,{getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),fieldLab=createLightFieldLab(canvas,{getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind),onDirty:()=>{dirty=true;}}),STORAGE='pocket-works:portal-lab:relativity-v2';
 const defaults={model:'ellis',a:1,eta:.45,shape:0,shapeWidth:1.45,lapseBump:0,lapseWidth:1.3,kind:'light',count:13,spread:32,speed:.7,timeScale:1,view:'observer',source:{l:3.15,phi:Math.PI,alpha:Math.PI}};
 let settings=structuredClone(defaults);
 let lastScientificView='observer';
@@ -31,7 +32,7 @@ function load(){
   settings.kind=x.kind==='matter'?'matter':'light';
   settings.count=Math.round(clean(x.count,1,25,13));settings.spread=clean(x.spread,0,100,32);
   settings.speed=clean(x.speed,.05,.95,.7);settings.timeScale=clean(x.timeScale,.25,5,1);
-  settings.view=['profile','map','matter','wave','designer','rotation','causality','atlas','notebook','volume','observer'].includes(x.view)?x.view:'observer';
+  settings.view=['profile','map','matter','wave','designer','rotation','causality','atlas','notebook','volume','field3d','observer'].includes(x.view)?x.view:'observer';
   if(x.source&&[x.source.l,x.source.phi,x.source.alpha].every(Number.isFinite))
    settings.source={l:Math.max(-24,Math.min(24,x.source.l)),phi:x.source.phi,alpha:x.source.alpha};
   if(Array.isArray(value.rays)&&value.rays.length<=35&&Number.isFinite(value.elapsed)){
@@ -90,14 +91,16 @@ function sync(){
  atlasLab.setActive(settings.view==='atlas');
  notebookLab.setActive(settings.view==='notebook');
  volumeLab.setActive(settings.view==='volume');
+ fieldLab.setActive(settings.view==='field3d');
  observatory.setActive(settings.view==='observer');
  materialLab.setActive(settings.view==='matter');
  waveLab.setActive(settings.view==='wave');
- $('lab-headline').textContent=settings.view==='volume'?'Пройти сквозь пространство':settings.view==='notebook'?'Архивировать открытия':settings.view==='atlas'?'Где начинается парадокс':settings.view==='causality'?'Когда свет возвращается раньше':settings.view==='rotation'?'Вращение и горизонты':settings.view==='designer'?'Спроектировать пространство-время':settings.view==='matter'?'Материя под нагрузкой':settings.view==='wave'?'Волновая геометрия':settings.view==='observer'?'Увидеть искривлённое пространство':'Два региона. Одна геометрия.';
+ $('lab-headline').textContent=settings.view==='field3d'?'Проследить свет во всех направлениях':settings.view==='volume'?'Пройти сквозь пространство':settings.view==='notebook'?'Архивировать открытия':settings.view==='atlas'?'Где начинается парадокс':settings.view==='causality'?'Когда свет возвращается раньше':settings.view==='rotation'?'Вращение и горизонты':settings.view==='designer'?'Спроектировать пространство-время':settings.view==='matter'?'Материя под нагрузкой':settings.view==='wave'?'Волновая геометрия':settings.view==='observer'?'Увидеть искривлённое пространство':'Два региона. Одна геометрия.';
  $('shoot').disabled=(settings.view==='causality'&&causalityLab.running)||settings.view==='rotation'&&rotationLab.status.hasRun&&(rotationLab.status.wormhole==='flying'||rotationLab.status.blackHole==='flying')||settings.view==='designer'||(settings.view==='matter'&&materialLab.phase==='running')||(settings.view==='wave'&&waveLab.phase==='running');
- $('shoot').innerHTML=settings.view==='volume'?'Запустить фотонный пучок <span aria-hidden="true">↗</span>':settings.view==='notebook'?'Сохранить опыт <span aria-hidden="true">↗</span>':settings.view==='atlas'?'Проверить полный маршрут <span aria-hidden="true">↗</span>':settings.view==='causality'?(causalityLab.running?'Рейс выполняется':'Проиграть рейс')+' <span aria-hidden="true">↗</span>':settings.view==='observer'?'Пройти горловину <span aria-hidden="true">↗</span>':settings.view==='rotation'?(rotationLab.status.hasRun?'Повторить сравнение':'Запустить фотоны')+' <span aria-hidden="true">↗</span>':settings.view==='matter'?(materialLab.phase==='running'?'Эксперимент идёт':materialLab.phase==='completed'?'Повторить испытание':'Запустить образец')+' <span aria-hidden="true">↗</span>':settings.view==='wave'?(waveLab.phase==='running'?'Волна распространяется':waveLab.phase==='finished'?'Повторить опыт':'Запустить волну')+' <span aria-hidden="true">↗</span>':'Испустить лучи <span aria-hidden="true">↗</span>';
- $('clear').textContent=settings.view==='volume'?'Убрать траектории':settings.view==='notebook'?'Обновить архив':settings.view==='atlas'?'Исходная карта':settings.view==='causality'?'Вернуть часы':settings.view==='rotation'?'Сброс лучей':settings.view==='designer'?'Сбросить к Эллису':settings.view==='observer'?'Исходный вид':settings.view==='matter'?'Сброс опыта':settings.view==='wave'?'Сброс волны':'Очистить';
- $('canvas-hint').textContent=settings.view==='volume'?'Поворот: перетаскивание · масштаб: два пальца или колесо · линии: световые геодезические.'
+ $('shoot').innerHTML=settings.view==='field3d'?'Запустить трёхмерный пучок <span aria-hidden="true">↗</span>':settings.view==='volume'?'Запустить фотонный пучок <span aria-hidden="true">↗</span>':settings.view==='notebook'?'Сохранить опыт <span aria-hidden="true">↗</span>':settings.view==='atlas'?'Проверить полный маршрут <span aria-hidden="true">↗</span>':settings.view==='causality'?(causalityLab.running?'Рейс выполняется':'Проиграть рейс')+' <span aria-hidden="true">↗</span>':settings.view==='observer'?'Пройти горловину <span aria-hidden="true">↗</span>':settings.view==='rotation'?(rotationLab.status.hasRun?'Повторить сравнение':'Запустить фотоны')+' <span aria-hidden="true">↗</span>':settings.view==='matter'?(materialLab.phase==='running'?'Эксперимент идёт':materialLab.phase==='completed'?'Повторить испытание':'Запустить образец')+' <span aria-hidden="true">↗</span>':settings.view==='wave'?(waveLab.phase==='running'?'Волна распространяется':waveLab.phase==='finished'?'Повторить опыт':'Запустить волну')+' <span aria-hidden="true">↗</span>':'Испустить лучи <span aria-hidden="true">↗</span>';
+ $('clear').textContent=settings.view==='field3d'?'Стереть 3D траектории':settings.view==='volume'?'Убрать траектории':settings.view==='notebook'?'Обновить архив':settings.view==='atlas'?'Исходная карта':settings.view==='causality'?'Вернуть часы':settings.view==='rotation'?'Сброс лучей':settings.view==='designer'?'Сбросить к Эллису':settings.view==='observer'?'Исходный вид':settings.view==='matter'?'Сброс опыта':settings.view==='wave'?'Сброс волны':'Очистить';
+ $('canvas-hint').textContent=settings.view==='field3d'?'Вращение атласа: перетаскивание · масштаб: жест или колесо · координатная дистанция между регионами условна.'
+   :settings.view==='volume'?'Поворот: перетаскивание · масштаб: два пальца или колесо · линии: световые геодезические.'
    :settings.view==='notebook'?'Временная лента сохранённых измерений · исторические показания не меняются при повторном запуске.'
    :settings.view==='atlas'?'Нажмите на карту β × D: изменение координат пересчитывает причинный результат.'
    :settings.view==='causality'?'Перетащите устье B внизу для изменения расстояния; по диаграмме можно перемещаться во времени.'
@@ -113,6 +116,7 @@ function sync(){
  $('acceleration').textContent=staticAcceleration(m.a,m).toFixed(3);
  updateReadouts();
  designer.refresh();
+ if(settings.view==='field3d')$('model-warning').textContent='Два внешних координатных пространства показаны раздельно: расстояния между ними на схеме не физические';
  if(settings.view==='volume')$('model-warning').textContent='Изометрический 2D пространственный срез; не изображение четырёхмерного пространства-времени';
  if(settings.view==='notebook')$('model-warning').textContent='Повтор восстанавливает исходные условия, не прошлое состояние интегратора';
  if(settings.view==='atlas')$('model-warning').textContent='Фазовая карта условной склейки устьев; не решение полных уравнений Эйнштейна';
@@ -143,8 +147,8 @@ function emit(silent=false){
 }
 function updateReadouts(){
  const m=currentMetric();
- $('elapsed').textContent=settings.view==='volume'?(volumeLab.snapshot.beam?.time/currentMetric().a||0).toFixed(2):settings.view==='notebook'?'—':settings.view==='atlas'?'—':settings.view==='causality'?$('causality-time').textContent:settings.view==='rotation'?$('rotation-time').textContent:settings.view==='wave'?(waveLab.diagnostics?.t.toFixed(2)??'0.00'):elapsed.toFixed(2);
- $('track-count').textContent=settings.view==='volume'?(volumeLab.snapshot.beam?.photons||0)+' фотонов':settings.view==='notebook'?notebookLab.snapshot.count+' протоколов':settings.view==='atlas'?'КАРТА β × D':settings.view==='causality'?'2 устья · 2 маршрута':settings.view==='rotation'?'2 фотона · 2 метрики':settings.view==='wave'?'801 узел · поле ψ':rays.length+' '+(rays.length===1?'траектория':'траекторий');
+ $('elapsed').textContent=settings.view==='field3d'?(fieldLab.snapshot.statistics?.time/currentMetric().a||0).toFixed(2):settings.view==='volume'?(volumeLab.snapshot.beam?.time/currentMetric().a||0).toFixed(2):settings.view==='notebook'?'—':settings.view==='atlas'?'—':settings.view==='causality'?$('causality-time').textContent:settings.view==='rotation'?$('rotation-time').textContent:settings.view==='wave'?(waveLab.diagnostics?.t.toFixed(2)??'0.00'):elapsed.toFixed(2);
+ $('track-count').textContent=settings.view==='field3d'?(fieldLab.snapshot.statistics?.photons||0)+' фотонов':settings.view==='volume'?(volumeLab.snapshot.beam?.photons||0)+' фотонов':settings.view==='notebook'?notebookLab.snapshot.count+' протоколов':settings.view==='atlas'?'КАРТА β × D':settings.view==='causality'?'2 устья · 2 маршрута':settings.view==='rotation'?'2 фотона · 2 метрики':settings.view==='wave'?'801 узел · поле ψ':rays.length+' '+(rays.length===1?'траектория':'траекторий');
  $('crossings').textContent=rays.reduce((s,r)=>s+r.crossings,0);
  let error=0;for(const r of rays)error=Math.max(error,Math.abs(constraint(r,m)));
  $('precision').textContent=error<.001?error.toExponential(1):error.toFixed(4);
@@ -153,7 +157,7 @@ function updateReadouts(){
  $('critical-value').textContent=criticalImpact(m).b.toFixed(3);
  $('clock-near').textContent=(elapsed*staticClockRate(.8*m.a,m)).toFixed(3);
  $('clock-far').textContent=(elapsed*staticClockRate(5*m.a,m)).toFixed(3);
- $('frame-state').textContent=settings.view==='volume'?'ИЗОМЕТРИЧЕСКИЙ СРЕЗ · R(l)':settings.view==='notebook'?'АРХИВ · '+notebookLab.snapshot.count+' ОПЫТОВ':settings.view==='atlas'?'Δ−D−δ · ГРАНИЦА':settings.view==='causality'?'c=1 · Δτ · ПРИЧИННОСТЬ':settings.view==='rotation'?'ВРАЩЕНИЕ · gₜφ ≠ 0':settings.view==='wave'?'□Φ=0 · ℓ='+waveLab.state.j:settings.view==='map'?(settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`):'R² = l² + a²';
+ $('frame-state').textContent=settings.view==='field3d'?'3D ГЕОДЕЗИЧЕСКИЕ · H=0':settings.view==='volume'?'ИЗОМЕТРИЧЕСКИЙ СРЕЗ · R(l)':settings.view==='notebook'?'АРХИВ · '+notebookLab.snapshot.count+' ОПЫТОВ':settings.view==='atlas'?'Δ−D−δ · ГРАНИЦА':settings.view==='causality'?'c=1 · Δτ · ПРИЧИННОСТЬ':settings.view==='rotation'?'ВРАЩЕНИЕ · gₜφ ≠ 0':settings.view==='wave'?'□Φ=0 · ℓ='+waveLab.state.j:settings.view==='map'?(settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`):'R² = l² + a²';
 }
 
 /** Select a small, immutable set of scientific readings from the live mode.
@@ -221,6 +225,15 @@ function captureExperiment(){
   put('causal-lag',snapshot.analysis.lag,'Отставание часов B','с');
   put('causal-margin',snapshot.signals.chronologyMargin,'Запас причинной петли','с');
   put('causal-t',snapshot.signals.returnTime,'Время возврата сигнала','с');
+ }else if(mode==='field3d'){
+  const st=fieldLab.snapshot;
+  extras.field3d={...fieldLab.state};
+  put('field-photons',st.statistics?.photons??0,'Фотонов в 3D-пучке','шт');
+  put('field-planes',st.statistics?.distinctOrbitalPlanes??0,'Плоскостей фотонных орбит','шт');
+  put('field-crossings',st.statistics?.crossings??0,'Переходы через горловину','шт');
+  put('field-escaped-b',st.statistics?.escapedB??0,'Вышло в регион B','шт');
+  put('field-residual',st.statistics?.worstResidual,'Максимальная невязка H=0','');
+  put('field-time',st.statistics?.time/m.a,'Время эксперимента','a/c');
  }else if(mode==='volume'){
   const state=volumeLab.state,shot=volumeLab.snapshot;
   extras.volume={...state};
@@ -288,6 +301,7 @@ function replayExperiment(record){
  if(record.mode==='causality')causalityLab.applyParameters(record.setup.causality||{});
  if(record.mode==='atlas')atlasLab.applyParameters(record.setup.atlas||{});
  if(record.mode==='volume')volumeLab.applyParameters(record.setup.volume||{});
+ if(record.mode==='field3d')fieldLab.applyParameters(record.setup.field3d||{});
  if(record.mode==='map')emit(true);
  designer.refresh();sync();updateReadouts();dirty=true;scheduleSave();
 }
@@ -311,6 +325,7 @@ function changeMetric(){
  waveLab.configure(currentMetric());
  rotationLab.configure(currentMetric());
  volumeLab.configure(currentMetric());
+ fieldLab.configure(currentMetric());
  designer.refresh();
 }
 const bindings=[
@@ -325,7 +340,7 @@ for(const [id,key,rebuild]of bindings)$(id).addEventListener('input',e=>{
 $('model').addEventListener('change',e=>{settings.model=e.target.value;changeMetric();});
 for(const button of document.querySelectorAll('[data-kind]'))button.addEventListener('click',()=>{settings.kind=button.dataset.kind;sync();scheduleSave();});
 for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{if(settings.view!=='notebook')lastScientificView=settings.view;settings.view=button.dataset.view;if(settings.view!=='notebook')lastScientificView=settings.view;sync();scheduleSave();});
-$('shoot').addEventListener('click',()=>{if(settings.view==='observer')observatory.triggerFlight();else if(settings.view==='matter')materialLab.trigger();else if(settings.view==='rotation')rotationLab.trigger();else if(settings.view==='causality')causalityLab.trigger();else if(settings.view==='atlas')atlasLab.trigger();else if(settings.view==='notebook')notebookLab.capture();else if(settings.view==='volume')volumeLab.trigger();else if(settings.view==='wave')waveLab.trigger();else if(settings.view!=='designer')emit();});
+$('shoot').addEventListener('click',()=>{if(settings.view==='observer')observatory.triggerFlight();else if(settings.view==='matter')materialLab.trigger();else if(settings.view==='rotation')rotationLab.trigger();else if(settings.view==='causality')causalityLab.trigger();else if(settings.view==='atlas')atlasLab.trigger();else if(settings.view==='notebook')notebookLab.capture();else if(settings.view==='volume')volumeLab.trigger();else if(settings.view==='field3d')fieldLab.trigger();else if(settings.view==='wave')waveLab.trigger();else if(settings.view!=='designer')emit();});
 $('critical').addEventListener('click',()=>{
  const m=currentMetric(),src=settings.source;
  const R=geometry(src.l*m.a,m).R,N=geometry(src.l*m.a,m).N;
@@ -336,19 +351,19 @@ $('critical').addEventListener('click',()=>{
  settings.source.alpha=Math.PI+Math.asin(argument);
  sync();emit();sound.play('mount');scheduleSave();
 });
-$('clear').addEventListener('click',()=>{if(settings.view==='observer')$('lens-reset').click();else if(settings.view==='matter')materialLab.reset();else if(settings.view==='rotation')rotationLab.reset();else if(settings.view==='causality')causalityLab.reset();else if(settings.view==='atlas')atlasLab.reset();else if(settings.view==='notebook')notebookLab.render();else if(settings.view==='volume')volumeLab.reset();else if(settings.view==='wave')waveLab.reset();else if(settings.view==='designer')applyDesign({shape:0,lapseBump:0,eta:0,shapeWidth:1.45,lapseWidth:1.3});else resetData();});
+$('clear').addEventListener('click',()=>{if(settings.view==='observer')$('lens-reset').click();else if(settings.view==='matter')materialLab.reset();else if(settings.view==='rotation')rotationLab.reset();else if(settings.view==='causality')causalityLab.reset();else if(settings.view==='atlas')atlasLab.reset();else if(settings.view==='notebook')notebookLab.render();else if(settings.view==='volume')volumeLab.reset();else if(settings.view==='field3d')fieldLab.reset();else if(settings.view==='wave')waveLab.reset();else if(settings.view==='designer')applyDesign({shape:0,lapseBump:0,eta:0,shapeWidth:1.45,lapseWidth:1.3});else resetData();});
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Продолжить':'Пауза';$('pause').setAttribute('aria-label',paused?'Продолжить':'Приостановить симуляцию');});
 $('sound').addEventListener('click',()=>{sound.set(!sound.enabled);$('sound').classList.toggle('muted',!sound.enabled);$('sound').setAttribute('aria-label',sound.enabled?'Выключить звук':'Включить звук');});
 $('sound').classList.toggle('muted',!sound.enabled);
 $('export').addEventListener('click',()=>{
- const data={schema:'portal-lab-relativity-v12',description:'SHOV: geodesics, tidal physics, scalar waves, Einstein source, stationary null-ray comparison and conditional two-mouth causality model (c=1)',metric:currentMetric(),assumptions:['equatorial test-particle approximation','no self gravity or backreaction','custom and rotating metrics are prescribed ansatzes','Schwarzschild black hole is an exact vacuum solution','no computed Einstein matter tensor for rotating model','two-mouth external clock ageing follows special relativity, mouth event identification is an imposed assumption','a causal loop in the model is not a self-consistent Einstein solution or a prediction of real time travel','the atlas phase boundary is conditional on identical prescribed mouth clock gluing and smooth round-trip worldlines'],elapsed,settings,observer:observatory.state,probe:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,causality:causalityLab.snapshot,atlas:atlasLab.snapshot,notebook:notebookLab.snapshot,volume:volumeLab.snapshot,rays};
+ const data={schema:'portal-lab-relativity-v13',description:'SHOV: geodesics, tidal physics, scalar waves, Einstein source, stationary null-ray comparison and conditional two-mouth causality model (c=1)',metric:currentMetric(),assumptions:['equatorial test-particle approximation','no self gravity or backreaction','custom and rotating metrics are prescribed ansatzes','Schwarzschild black hole is an exact vacuum solution','no computed Einstein matter tensor for rotating model','two-mouth external clock ageing follows special relativity, mouth event identification is an imposed assumption','a causal loop in the model is not a self-consistent Einstein solution or a prediction of real time travel','the atlas phase boundary is conditional on identical prescribed mouth clock gluing and smooth round-trip worldlines'],elapsed,settings,observer:observatory.state,probe:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,causality:causalityLab.snapshot,atlas:atlasLab.snapshot,notebook:notebookLab.snapshot,volume:volumeLab.snapshot,field3d:fieldLab.snapshot,rays};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=url;link.download='shov-relativity-experiment.json';document.body.append(link);link.click();link.remove();
  setTimeout(()=>URL.revokeObjectURL(url),1200);
 });
 window.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
- if(e.code==='Space'){e.preventDefault();if(!e.repeat){if(settings.view==='matter')materialLab.trigger();else if(settings.view==='causality')causalityLab.trigger();else if(settings.view==='atlas')atlasLab.trigger();else if(settings.view==='notebook')notebookLab.capture();else if(settings.view==='volume')volumeLab.trigger();else if(settings.view==='rotation')rotationLab.trigger();else if(settings.view==='wave')waveLab.trigger();else if(settings.view==='designer')return;else if(settings.view==='observer')observatory.triggerFlight();else emit();}}
- if(e.code==='KeyR'){if(settings.view==='matter')materialLab.reset();else if(settings.view==='causality')causalityLab.reset();else if(settings.view==='atlas')atlasLab.reset();else if(settings.view==='notebook')notebookLab.render();else if(settings.view==='volume')volumeLab.reset();else if(settings.view==='rotation')rotationLab.reset();else if(settings.view==='wave')waveLab.reset();else if(settings.view==='designer')$('clear').click();else if(settings.view==='observer')$('lens-reset').click();else resetData();}
+ if(e.code==='Space'){e.preventDefault();if(!e.repeat){if(settings.view==='matter')materialLab.trigger();else if(settings.view==='causality')causalityLab.trigger();else if(settings.view==='atlas')atlasLab.trigger();else if(settings.view==='notebook')notebookLab.capture();else if(settings.view==='volume')volumeLab.trigger();else if(settings.view==='field3d')fieldLab.trigger();else if(settings.view==='rotation')rotationLab.trigger();else if(settings.view==='wave')waveLab.trigger();else if(settings.view==='designer')return;else if(settings.view==='observer')observatory.triggerFlight();else emit();}}
+ if(e.code==='KeyR'){if(settings.view==='matter')materialLab.reset();else if(settings.view==='causality')causalityLab.reset();else if(settings.view==='atlas')atlasLab.reset();else if(settings.view==='notebook')notebookLab.render();else if(settings.view==='volume')volumeLab.reset();else if(settings.view==='field3d')fieldLab.reset();else if(settings.view==='rotation')rotationLab.reset();else if(settings.view==='wave')waveLab.reset();else if(settings.view==='designer')$('clear').click();else if(settings.view==='observer')$('lens-reset').click();else resetData();}
  if(e.code==='KeyP')$('pause').click();
 });
 document.addEventListener('visibilitychange',()=>{lastTime=0;if(document.hidden){persist();sound.ctx?.suspend();}});
@@ -610,6 +625,8 @@ function tick(t){
     observatory.tick(dt,settings.timeScale);
    }else if(settings.view==='volume'){
     volumeLab.tick(dt,settings.timeScale);
+   }else if(settings.view==='field3d'){
+    fieldLab.tick(dt,settings.timeScale);
    }else if(settings.view==='causality'){
     causalityLab.tick(dt,settings.timeScale);
    }else if(settings.view==='rotation'){
@@ -634,6 +651,7 @@ function tick(t){
   else if(settings.view==='atlas'&&dirty){atlasLab.draw(ctx,displayW,displayH);dirty=false;}
   else if(settings.view==='notebook'&&dirty){notebookLab.draw(ctx,displayW,displayH);dirty=false;}
   else if(settings.view==='volume'&&dirty){volumeLab.draw(ctx,displayW,displayH);dirty=false;}
+  else if(settings.view==='field3d'&&dirty){fieldLab.draw(ctx,displayW,displayH);dirty=false;}
   else if(settings.view==='designer'&&dirty){designer.draw(ctx,displayW,displayH);dirty=false;}
   else if(dirty){if(layout){if(settings.view==='profile')drawProfile();else drawMap();}dirty=false;}
  }
@@ -646,13 +664,14 @@ materialLab.configure(currentMetric());
 waveLab.configure(currentMetric());
 rotationLab.configure(currentMetric());
 volumeLab.configure(currentMetric());
+fieldLab.configure(currentMetric());
 causalityLab.configure();
 atlasLab.configure();
 loadNotebookDefaults();
 sync();if(!rays.length)emit(true);
 requestAnimationFrame(tick);
 window.__SHOV__={snapshot:()=>({
- metric:currentMetric(),settings:structuredClone(settings),elapsed,observer:{...observatory.state},optics:observatory.status,tidal:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,causality:causalityLab.snapshot,atlas:atlasLab.snapshot,notebook:notebookLab.snapshot,volume:volumeLab.snapshot,
+ metric:currentMetric(),settings:structuredClone(settings),elapsed,observer:{...observatory.state},optics:observatory.status,tidal:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,causality:causalityLab.snapshot,atlas:atlasLab.snapshot,notebook:notebookLab.snapshot,volume:volumeLab.snapshot,field3d:fieldLab.snapshot,
  rays:rays.map(r=>({l:r.l,phi:r.phi,E:r.E,L:r.L,k:r.k,crossings:r.crossings,constraint:constraint(r,currentMetric())}))
  }),emit,clear:()=>resetData(),setModel:(model)=>{settings.model=model==='redshift'?'redshift':'ellis';changeMetric();}};
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));

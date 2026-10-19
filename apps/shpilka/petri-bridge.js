@@ -109,7 +109,7 @@
         const replay=runEpisode(checkpoint,t.seed+909101,3500,true);
         lastTrace=replay.trace;
         draw();
-        post('trained',{policy:checkpoint,baseline,validation,replay});
+        post('trained',{policy:checkpoint,baseline,validation,replay,complete:t.index,accepted:t.accepted});
       }else setTimeout(trainingTick,0);
     }catch(err){task=null;post('error',{message:String(err.message||err)});}
   }

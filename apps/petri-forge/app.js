@@ -351,6 +351,7 @@ loadBtn.onclick();
 const worker=new Worker(new URL('./lab-worker.mjs',import.meta.url),{type:'module'});
 let running=false,pendingAction=false,training=false;
 let historyData=[],lastBest=null,lastWorst=null,snapshotRequest=null;
+let replayAfterCheck=false;
 const $=id=>document.getElementById(id);
 const status=text=>{statusEl.textContent=text;};
 const sceneNow=()=>({grid:env.grid.map(row=>row.slice()),spawn:spawn.slice(),goal:goal.slice()});
@@ -391,14 +392,14 @@ async function autosave(snapshot){
   try{await saveModel({id:'autosave',name:'Автосохранение',kind:'qlearning',snapshot,states:snapshot.q.length});await refreshLibrary();$('stateCount').textContent=snapshot.q.length.toLocaleString('ru-RU')+' состояний';}
   catch(error){status('Автосохранение: '+error.message);}
 }
-worker.addEventListener('error',event=>{controlsEnabled(false);pendingAction=false;status('Ошибка модуля обучения');console.error(event.message);});
+worker.addEventListener('error',event=>{controlsEnabled(false);pendingAction=false;status('Ошибка модуля обучения');window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'grid',message:event.message}}));console.error(event.message);});
 worker.onmessage=event=>{
   const d=event.data||{};
   if(d.type==='loaded'){pendingAction=false;status('Агент: '+(d.kind==='random'?'случайный':'Q-learning'));$('stateCount').textContent=(d.states||0)+' состояний';}
   else if(d.type==='action'){
     pendingAction=false;if(!training&&replayTimer===null)stepWithAction(d.action);
-  }else if(d.type==='training'){controlsEnabled(true);status('Обучение запущено');}
-  else if(d.type==='progress'){updateTrainingUI(d);status('Эпизодов: '+d.complete+' / '+d.episodes);}
+  }else if(d.type==='training'){controlsEnabled(true);status('Обучение запущено');window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'grid',busy:true,text:'Учится находить путь…'}}));}
+  else if(d.type==='progress'){updateTrainingUI(d);status('Эпизодов: '+d.complete+' / '+d.episodes);window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'grid',busy:true,done:d.complete,total:d.episodes,success:d.success,text:'Исследовано '+d.complete+' из '+d.episodes+' попыток'}}));}
   else if(d.type==='trained'||d.type==='stopped'){
     controlsEnabled(false);
     const sample=Math.max(1,d.complete);
@@ -407,15 +408,20 @@ worker.onmessage=event=>{
     status(d.type==='trained'?'Обучение завершено':'Обучение остановлено');
     $('trainState').textContent=d.type==='trained'?'Готово':'Остановлено';
     if(d.snapshot)void autosave(d.snapshot);
+    window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'grid',snapshot:d.snapshot,
+      report:{units:d.complete,after:d.success,before:d.history?.[0]?.rate!=null?d.history[0].rate/100:null,
+        label:'Достиг цели в '+Math.round((d.success||0)*100)+'% учебных эпизодов · '+(d.snapshot?.q?.length||0)+' изученных состояний',
+        outcome:d.type==='stopped'?'stopped':'completed'}}}));
   }else if(d.type==='evaluated'){
     const a=d.train,b=d.holdout;
     $('evalResults').innerHTML='<strong>Текущая карта: '+Math.round(a.success*100)+'%</strong> ('+a.count+' тестов), средний путь '+a.steps.toFixed(0)+' шагов.<br><strong class="'+(b.success<.2?'bad':'')+'">Новые карты: '+Math.round(b.success*100)+'%</strong> ('+b.count+' тестов), средний путь '+b.steps.toFixed(0)+' шагов. Проверка не изменяет обученную модель.';
     status('Независимая проверка завершена');
-    if(d.replay?.trace){lastBest=d.replay;$('bestReplay').disabled=false;}
+    if(d.replay?.trace){lastBest=d.replay;$('bestReplay').disabled=false;if(replayAfterCheck)beginReplay(lastBest);}replayAfterCheck=false;
+    window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'grid',text:'Новые карты: '+Math.round(b.success*100)+'% успешных попыток · '+b.count+' проверок'}}));
   }else if(d.type==='snapshot'){
     if(snapshotRequest){const done=snapshotRequest;snapshotRequest=null;void done(d.snapshot);}
   }else if(d.type==='error'){
-    controlsEnabled(false);pendingAction=false;snapshotRequest=null;status('Ошибка: '+d.message);console.error('PetriForge worker:',d.message);
+    controlsEnabled(false);pendingAction=false;snapshotRequest=null;status('Ошибка: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'grid',message:d.message}}));console.error('PetriForge worker:',d.message);
   }
 };
 function stepWithAction(a){
@@ -465,6 +471,31 @@ document.querySelector('#undo').onclick=undo;
 document.querySelector('#redo').onclick=redo;
 document.querySelector('#generate').onchange=e=>{const v=e.target.value;if(v)handleCtx(Number(v));e.target.value='';};
 document.addEventListener('visibilitychange',()=>{if(document.hidden){running=false;playBtn.textContent='▶ Наблюдать';stopReplay();}});
+window.PetriForgeRuntime=window.PetriForgeRuntime||{};
+window.PetriForgeRuntime.grid={
+  getModel:()=>new Promise((resolve,reject)=>{
+    if(training||snapshotRequest){reject(Error('Мозг занят обучением'));return;}
+    snapshotRequest=resolve;worker.postMessage({type:'snapshot'});
+  }),
+  setModel:async snapshot=>{
+    if(training)throw Error('Завершите обучение перед сменой агента');
+    agentSelect.value='qlearning';stopReplay();loadAgent('qlearning',snapshot||new QAgent(17).serialize());
+    $('modelName').value='Активный исследователь';
+  },
+  train:()=>{if(training)return false;$('trainBtn').click();return true;},
+  test:()=>{if(training)return false;$('evaluateBtn').click();return true;},
+  stop:()=>{if(training)$('stopTrain').click();},
+  replay:()=>{if(!$('bestReplay').disabled)$('bestReplay').click();else{replayAfterCheck=true;$('evaluateBtn').click();}},
+  isBusy:()=>training,
+  configure:choice=>{
+    if(training)throw Error('Сначала остановите обучение');
+    if(choice&&choice!=='custom'){
+      $('scenarioSelect').value=choice;$('makeScenario').click();
+    }else $('scenarioSelect').value='custom';
+  },
+  batch:value=>{$('episodeCount').value=String(value);},
+  hasReplay:()=>!!lastBest
+};
 window.render_game_to_text=()=>JSON.stringify({coordinates:'origin top-left; x right, y down; cells',running,done:env.done,agent:{x:env.ax,y:env.ay,algorithm:agentSelect.value},spawn,goal,steps:env.steps,reward:env.totalReward,tool,grid:env.grid});
 window.advanceTime=async(ms)=>{for(let i=0;i<Math.min(120,Math.round(ms/16.667));i++){if(!running)break;requestAction();await new Promise(r=>setTimeout(r,0));}redraw();};
 

@@ -1,0 +1,87 @@
+
+/* One agent, one journey. The original power tools are available on request. */
+body.hub-on:not(.hub-advanced) :is(#labPanel,#combatPanel,#racePanel,#perekosPanel){display:none!important}
+body.hub-on:not(.hub-advanced) #editorBar,body.hub-on:not(.hub-advanced) #hud{display:none!important}
+body.hub-on.hub-advanced #agentHub{display:none!important}
+body.hub-on #workspace{grid-template-columns:minmax(0,1fr) minmax(340px,385px)}
+#agentHub{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:#eeeede;color:#243a31;border-left:1px solid #607d6c;--hub-muted:#66756c;--hub-border:#cbd3c3}
+#agentHub button,#agentHub input,#agentHub select{font:inherit}
+#agentHub button:not(:disabled){cursor:pointer}
+#agentHub button:focus-visible,#agentHub select:focus-visible{outline:2px solid #386b4b;outline-offset:2px}
+.hub-top{background:#d6e3cf;border-bottom:1px solid #b6c8b5;padding:16px 20px 18px}
+.hub-kicker{display:flex;justify-content:space-between;align-items:center;font:800 10px/1.3 system-ui;letter-spacing:.16em;color:#56745b;margin-bottom:13px}
+.hub-kicker span{font-variant-numeric:tabular-nums}
+.hub-profile{display:grid;grid-template-columns:59px minmax(0,1fr) 32px;align-items:center;gap:11px}
+.hub-avatar{width:59px;height:59px;background:#243e30;border-radius:14px;display:grid;place-items:center;color:#e0efbd;border:1px solid #55715b;box-shadow:inset 0 -8px 0 #111f162c}
+.hub-avatar svg{width:51px;height:51px;transition:transform .22s ease}
+.hub-avatar:hover svg{transform:rotate(-7deg) scale(1.06)}
+.hub-identity{min-width:0}
+.hub-identity label{display:block;color:#69826e;font:700 9px/1.5 system-ui;letter-spacing:.11em;margin-bottom:4px}
+.hub-identity select{display:block;min-height:34px;width:100%;max-width:100%;background:transparent;color:#193828;border:0;border-bottom:2px solid #819e82;padding:0 17px 2px 0;border-radius:0;font-size:20px;font-weight:800;letter-spacing:-.04em}
+.hub-identity #hubLifetime{color:#6e8671;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:6px}
+#agentHub .hub-icon-button{background:#e5eddd;color:#396044;border:1px solid #abc6ac;border-radius:7px;min-height:34px;width:32px;padding:4px;font-size:13px;letter-spacing:1px}
+.hub-content{overflow-y:auto;overscroll-behavior:contain;flex:1;scrollbar-color:#9eb4a6 transparent}
+.hub-chapter{padding:19px 21px 20px;border-bottom:1px solid var(--hub-border)}
+.hub-index{font-size:12px;line-height:1.2;color:#47775c;font-weight:900;letter-spacing:.04em;display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.hub-index span{font-size:9px;letter-spacing:.17em;color:#6e8274}
+.hub-title{font:800 25px/1.1 system-ui;letter-spacing:-.04em;margin-bottom:9px;color:#1b392a}
+#hubDescription{font-size:12px;line-height:1.55;color:#587062;margin:0 0 14px}
+#agentHub .hub-field{display:flex;flex-direction:column;align-items:stretch;gap:6px;color:#637769;font-size:10px;font-weight:700;letter-spacing:.01em}
+#agentHub .hub-field select{width:100%;min-height:40px;color:#244030;background:#fbfff4;border:1px solid #afc4ae;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:650}
+#agentHub .hub-text-button{margin-top:9px;background:transparent;border:0;padding:6px 0;min-height:28px;display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;color:#3a7854;font-weight:700;width:100%}
+#agentHub .hub-text-button:hover{color:#1d4831;text-decoration:underline}
+.hub-training{background:#e4ecd9}
+.hub-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.hub-stats>div{background:#f0f5e9;border:1px solid #c4d3bf;padding:11px 12px;border-radius:7px;min-width:0}
+.hub-stats small{color:#718573;display:block;font-size:10px;margin-bottom:4px}
+.hub-stats strong{display:block;color:#294b35;font-weight:850;font-size:15px;line-height:1.5;white-space:normal}
+.hub-hint{font-size:11px;line-height:1.5;color:#617463;margin:11px 0}
+#agentHub .hub-main-button{width:100%;min-height:70px;background:#224c35;color:#f1f6e5;border:1px solid #1d5036;box-shadow:0 4px 0 #152c22;display:grid;grid-template-columns:36px 1fr;grid-template-rows:auto auto;align-items:center;text-align:left;column-gap:10px;padding:13px 18px;border-radius:8px;white-space:normal;font-size:16px;font-weight:800;transition:background .15s,transform .15s,box-shadow .15s}
+#agentHub .hub-main-button:hover:not(:disabled){background:#315f43}
+#agentHub .hub-main-button:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #152c22}
+#hubTrainIcon{font-size:29px;grid-row:1/3;line-height:1;text-align:center;color:#c5eab4}
+#hubTrainSub{grid-column:2;color:#b8d3bc;font-size:10px;font-weight:500}
+#agentHub #hubStop{width:100%;color:#702d25;border:1px solid #cba49b;background:#f2dbd2;min-height:45px}
+.hub-progress-wrap{margin-top:12px}.hub-progress-header{display:flex;gap:8px;justify-content:space-between;font-size:11px;color:#46624e;margin-bottom:6px}.hub-progress{height:8px;background:#bed3bd;border-radius:20px;overflow:hidden}.hub-progress>div{height:100%;width:0;background:#4d9561;transition:width .18s}
+.hub-result{color:#315440;font-size:12px;line-height:1.5;margin:0 0 12px;background:#dde9d8;border-left:3px solid #69a874;padding:12px}
+.hub-action-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#agentHub .hub-action-row button{color:#365b45;background:#f7fbf1;border:1px solid #b7cdb7;min-height:42px;white-space:normal;padding:7px;font-size:11px;line-height:1.3;font-weight:700}
+#agentHub .hub-action-row button:hover:not(:disabled){background:#e0ebd9}
+.hub-history{border-top:1px solid #c9d8c7;margin-top:14px;padding-top:5px;display:grid;gap:4px}
+.hub-history-entry{padding:8px 2px;border-bottom:1px dashed #cad8c8;display:grid;gap:3px}
+.hub-history-entry strong{color:#375940;font-size:10px;font-weight:750}
+.hub-history-entry span{font-size:10px;color:#637867;line-height:1.45}
+.hub-footer{padding:13px 21px 21px;background:#e1e8d8}
+#agentHub #hubTools{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:1px solid #bed0bf;background:transparent;color:#466f50;font-size:11px;text-align:left;white-space:normal;min-height:42px}
+.hub-save{color:#718673;font-size:10px;margin-top:9px;line-height:1.5}
+#hubDialog,.hub-manage-dialog{width:min(90vw,420px);max-height:85dvh;overflow:auto;border:1px solid #779e80;border-radius:10px;padding:23px;background:#e7efe1;color:#1d3828;box-shadow:0 25px 90px #07130da9}
+#hubDialog::backdrop,.hub-manage-dialog::backdrop{background:#06150bbd;backdrop-filter:blur(3px)}
+.hub-dialog-title{font-size:20px;font-weight:800;letter-spacing:-.025em;margin-bottom:17px;color:#254633}
+#hubDialog label{display:block;color:#4a6b50;font-size:12px;margin-bottom:6px}
+#hubDialog input,.hub-manage-dialog select{width:100%;min-height:43px;border:1px solid #b0c7af;background:#fcfff9;color:#244630;padding:9px;margin-bottom:10px}
+#hubDialog p,.hub-manage-dialog p{font-size:12px;line-height:1.6;color:#6a8270}
+.hub-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+#hubDialog button,.hub-manage-dialog button{min-height:42px;border:1px solid #9ebba1;background:#f8fcf4;color:#31503b;padding:10px 12px;margin:3px}
+#hubDialog .btn-primary,.hub-manage-dialog .btn-primary{background:#225038!important;color:#effce8;border-color:#27623c}
+.hub-manage-dialog{display:grid;gap:8px}
+.hub-manage-dialog:not([open]){display:none}
+.hub-manage-dialog button{text-align:left;white-space:normal}
+.hub-manage-dialog .hub-danger{color:#8a3432;border-color:#d4aea5}
+.hub-back{width:calc(100% - 20px);margin:10px;min-height:44px!important;white-space:normal!important}
+body.hub-on.hub-advanced #editorBar,body.hub-on.hub-advanced #hud{display:flex}
+@media(max-width:700px){
+ body.hub-on #workspace{display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+ #agentHub{flex:0 0 auto;min-height:0;overflow:visible;border-left:0;border-top:1px solid #b0cbb4}
+ .hub-content{overflow:visible}
+ .hub-top{padding:12px 16px}
+ .hub-chapter{padding:15px 16px}
+ .hub-footer{padding:12px 16px}
+ body.hub-on:not(.hub-advanced) #worldPanel{min-height:290px;flex:0 0 auto}
+ body.hub-on:not(.hub-advanced) #stage{height:clamp(220px,43dvh,380px);min-height:220px;flex:0 0 auto}
+ body.hub-on:not(.hub-advanced) .extra-world{flex:0 0 auto;min-height:290px}
+ body.hub-on:not(.hub-advanced) .arena-canvas-wrap{height:clamp(220px,43dvh,380px)}
+ body.hub-on:not(.hub-advanced) .perekos-stage{height:clamp(280px,53dvh,550px)}
+ body.hub-on:not(.hub-advanced) .race-viewport{height:clamp(310px,55dvh,620px)}
+}
+@media(max-width:410px){.hub-avatar{width:49px;height:49px}.hub-profile{grid-template-columns:49px minmax(0,1fr) 32px;gap:8px}.hub-identity select{font-size:18px}.hub-action-row button{font-size:10px}}
+@media(prefers-reduced-motion:reduce){#agentHub *,#hubDialog *{transition:none!important}}
