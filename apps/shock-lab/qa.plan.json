@@ -25,15 +25,16 @@
           "selector": "[data-panel-tab='construct']"
         },
         {
-          "action": "visible",
-          "selector": ".material-builder"
+          "action": "click",
+          "selector": "[data-material='2']"
         },
         {
-          "action": "visible",
-          "selector": ".sources-builder"
+          "action": "click",
+          "selector": "[data-tool='material']"
         },
         {
-          "action": "screenshot"
+          "action": "click",
+          "selector": "#field"
         },
         {
           "action": "click",
@@ -69,21 +70,6 @@
         {
           "action": "visible",
           "selector": "#load-panel"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-panel-tab='scene']"
-        },
-        {
-          "action": "click",
-          "selector": "[data-preset='tube']"
-        },
-        {
-          "action": "visible",
-          "selector": "#rupture"
         },
         {
           "action": "screenshot"
