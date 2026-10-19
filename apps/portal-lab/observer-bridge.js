@@ -78,6 +78,12 @@ export function inspectObserverRay(metric,point,angle,{step=.085,maxTime=145,out
   impactError:Math.abs(expectedImpact-ray.impact),residual:ray.error,
   sourceRegion:p.l>=0?'A':'B'};
 }
+export function cameraForRay(point,angle){
+ const p=normalizeObserverPoint(point);
+ if(!Number.isFinite(angle)||angle<0||angle>Math.PI)throw Error('Направление вне допустимой полусферы');
+ const side=Math.sign(p.l),outward=angle<=Math.PI/2;
+ return {yaw:outward?angle:Math.PI-angle,pitch:0,facingSign:outward?-side:side};
+}
 export function bridgeSnapshot(point,view={}){
  const p=normalizeObserverPoint(point);
  return {point:p,yaw:Number.isFinite(view.yaw)?clamp(view.yaw,-2.6,2.6):0,
