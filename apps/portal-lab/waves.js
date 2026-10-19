@@ -1,3 +1,4 @@
+import {geometry,metric} from './spacetime.js';
 /**
  * One radial partial wave of the test massless scalar Klein-Gordon equation
  * on the same fixed static, spherical 3+1D metric as relativity.js:
@@ -21,13 +22,14 @@ export const WAVE_SPONGE=15.5;
 export const WAVE_CFL=.62;
 const SQ=Math.sqrt;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-export function waveLapse(z,eta=0){return Math.exp(-eta/SQ(1+z*z));}
+export function waveLapse(z,eta=0){return geometry(z,metric(typeof eta==='number'?{eta}:eta)).N;}
 export function waveGeometry(eta=0,points=WAVE_POINTS,span=WAVE_SPAN){
- if(!Number.isFinite(eta)||eta<0||eta>.85||points<121||points%2!==1||span<14)throw Error('Неверная волновая геометрия');
+ const config=metric(typeof eta==='number'?{eta}:eta);
+ if(points<121||points%2!==1||span<14)throw Error('Неверная волновая геометрия');
  const dx=2*span/(points-1),x=new Float64Array(points),z=new Float64Array(points),lapse=new Float64Array(points);
  const mid=(points-1)/2;
  // Exact metric tortoise transformation integrated using fourth-order RK.
- function f(u){return waveLapse(u,eta);}
+ function f(u){return waveLapse(u,config);}
  function rk4(v,h){
   const k1=f(v),k2=f(v+h*k1/2),k3=f(v+h*k2/2),k4=f(v+h*k3);
   return v+h*(k1+2*k2+2*k3+k4)/6;
@@ -35,16 +37,17 @@ export function waveGeometry(eta=0,points=WAVE_POINTS,span=WAVE_SPAN){
  for(let i=0;i<points;i++)x[i]=(i-mid)*dx;
  z[mid]=0;lapse[mid]=f(0);
  for(let i=mid+1;i<points;i++){z[i]=rk4(z[i-1],dx);z[points-1-i]=-z[i];lapse[i]=f(z[i]);lapse[points-1-i]=lapse[i];}
- return {eta,dx,x,z,lapse,points,span,mid};
+ return {eta:config.eta,config,dx,x,z,lapse,points,span,mid};
 }
 export function scalarPotential(z,j=0,eta=0){
  if(!Number.isInteger(j)||j<0||j>8)throw Error('Неверная гармоника');
- const r2=1+z*z,R=SQ(r2),N=waveLapse(z,eta);
- return N*N*(j*(j+1)/r2+1/(r2*r2)+eta*z*z/(r2*r2*R));
+ const config=metric(typeof eta==='number'?{eta}:eta);
+ const g=geometry(z,config),R=g.R,N=g.N;
+ return N*N*(j*(j+1)/(R*R)+g.Rpp/R+g.dlogN*g.Rp/R);
 }
 export function wavePotential(grid,j){
  const u=new Float64Array(grid.points);
- for(let i=0;i<grid.points;i++)u[i]=scalarPotential(grid.z[i],j,grid.eta);
+ for(let i=0;i<grid.points;i++)u[i]=scalarPotential(grid.z[i],j,grid.config);
  return u;
 }
 function packet(x,x0,width,lambda,amplitude,phase=0){
@@ -54,6 +57,8 @@ function packet(x,x0,width,lambda,amplitude,phase=0){
 export function createWave(options={}){
  const params={
   eta:clamp(Number(options.eta??0),0,.85),
+  shape:Number(options.shape??0),shapeWidth:Number(options.shapeWidth??1.45),
+  lapseBump:Number(options.lapseBump??0),lapseWidth:Number(options.lapseWidth??1.3),
   j:Math.floor(clamp(Number(options.j??1),0,5)),
   wavelength:clamp(Number(options.wavelength??1.25),.6,3.5),
   width:clamp(Number(options.width??1.25),.7,2.5),
@@ -61,7 +66,7 @@ export function createWave(options={}){
   relativePhase:options.relativePhase===Math.PI?Math.PI:0,
   amplitude:clamp(Number(options.amplitude??1),.1,2)
  };
- const grid=waveGeometry(params.eta),potential=wavePotential(grid,params.j);
+ const grid=waveGeometry(params),potential=wavePotential(grid,params.j);
  const n=grid.points,field=new Float64Array(n),velocity=new Float64Array(n);
  const gradient=(data,i)=>(data[i+1]-data[i-1])/(2*grid.dx);
  for(let i=0;i<n;i++){
