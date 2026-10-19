@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { clientsClaim, setCacheNameDetails } from 'workbox-core';
+import { setCacheNameDetails } from 'workbox-core';
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 
@@ -27,6 +27,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && !key.includes('v' + APP_VERSION) && key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => clientsClaim())
+      .then(() => self.clients.claim())
   );
 });
+
