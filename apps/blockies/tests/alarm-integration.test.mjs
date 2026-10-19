@@ -10,10 +10,10 @@ function section(start,end){
  assert.ok(i!==-1&&j>i,'PocketNetHub method anchors available');
  return hub.slice(i,j);
 }
-const Hub=new Function('ROOM_TTL',`return class TestHub {
+const Hub=new Function('ROOM_TTL','copied',`return class TestHub {
 ${section('  ensureAlarm() {','  recordZamazkaRewards(')}
 ${section('  async alarm() {','\n}\n')}
-}`)(30*60_000);
+}`)(30*60_000,structuredClone);
 
 function fakeHub(){
  const obj=new Hub();
