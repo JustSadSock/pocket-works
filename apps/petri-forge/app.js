@@ -553,7 +553,7 @@ $('heatToggle').onchange=redraw;
 async function refreshLibrary(){
   const select=$('modelSelect'),selected=select.value;
   try{
-    const records=(await listModels()).filter(record=>['qlearning','random'].includes(record.kind));select.replaceChildren();
+    const records=(await listModels()).filter(record=>['qlearning','random'].includes(record.kind)&&!record.id.startsWith('career-v1:'));select.replaceChildren();
     if(!records.length){const option=document.createElement('option');option.value='';option.textContent='Нет сохранённых моделей';select.append(option);}
     for(const item of records){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' · '+(item.states||0)+' состояний';select.append(option);}
     if(records.some(m=>m.id===selected))select.value=selected;
