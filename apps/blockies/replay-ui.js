@@ -99,6 +99,7 @@ export class ReplayViewer {
   const frame=unpackReplayFrame(this.replay.frames[this.index]);
   const {board,players}=frame,width=board[0].length,height=board.length;
   this.canvas.width=width*24;this.canvas.height=height*24;
+  this.canvas.style.setProperty('--replay-ratio',width+'/'+height);
   const ctx=this.canvas.getContext('2d');
   ctx.fillStyle='#14121f';ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
   ctx.strokeStyle='rgba(255,255,255,.065)';ctx.lineWidth=1;
