@@ -351,6 +351,7 @@ loadBtn.onclick();
 const worker=new Worker(new URL('./lab-worker.mjs',import.meta.url),{type:'module'});
 let running=false,pendingAction=false,training=false;
 let historyData=[],lastBest=null,lastWorst=null,snapshotRequest=null;
+let replayAfterCheck=false;
 const $=id=>document.getElementById(id);
 const status=text=>{statusEl.textContent=text;};
 const sceneNow=()=>({grid:env.grid.map(row=>row.slice()),spawn:spawn.slice(),goal:goal.slice()});
@@ -415,7 +416,7 @@ worker.onmessage=event=>{
     const a=d.train,b=d.holdout;
     $('evalResults').innerHTML='<strong>Текущая карта: '+Math.round(a.success*100)+'%</strong> ('+a.count+' тестов), средний путь '+a.steps.toFixed(0)+' шагов.<br><strong class="'+(b.success<.2?'bad':'')+'">Новые карты: '+Math.round(b.success*100)+'%</strong> ('+b.count+' тестов), средний путь '+b.steps.toFixed(0)+' шагов. Проверка не изменяет обученную модель.';
     status('Независимая проверка завершена');
-    if(d.replay?.trace){lastBest=d.replay;$('bestReplay').disabled=false;}
+    if(d.replay?.trace){lastBest=d.replay;$('bestReplay').disabled=false;if(replayAfterCheck)beginReplay(lastBest);}replayAfterCheck=false;
     window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'grid',text:'Новые карты: '+Math.round(b.success*100)+'% успешных попыток · '+b.count+' проверок'}}));
   }else if(d.type==='snapshot'){
     if(snapshotRequest){const done=snapshotRequest;snapshotRequest=null;void done(d.snapshot);}
@@ -484,7 +485,7 @@ window.PetriForgeRuntime.grid={
   train:()=>{if(training)return false;$('trainBtn').click();return true;},
   test:()=>{if(training)return false;$('evaluateBtn').click();return true;},
   stop:()=>{if(training)$('stopTrain').click();},
-  replay:()=>{if(!$('bestReplay').disabled)$('bestReplay').click();else{resetBtn.click();playBtn.click();}},
+  replay:()=>{if(!$('bestReplay').disabled)$('bestReplay').click();else{replayAfterCheck=true;$('evaluateBtn').click();}},
   isBusy:()=>training,
   configure:choice=>{
     if(training)throw Error('Сначала остановите обучение');
