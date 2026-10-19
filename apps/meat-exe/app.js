@@ -174,6 +174,7 @@ function restore(raw){
   world.reset(s.seed,s.ruptured,s.wave);nextId=1;
   const base=newState(s.seed);
   state={...base,...s,enemies:[],pickups:[],projectiles:[]};
+  combatAudio.setBiome(state.wave);
   if(!world.isFloor(state.x,state.z)){state.x=base.x;state.z=base.z;}
   for(const e of s.enemies){
     if(!world.isFloor(e.x,e.z))continue;
@@ -236,7 +237,7 @@ function startWave(number){
     world.nearChunks(spawn.x,spawn.z);
     navAt=0;gateHintShown=false;
   }
-  state.wave=number;state.waveTime=0;state.spawnClock=0;
+  state.wave=number;combatAudio.setBiome(number);state.waveTime=0;state.spawnClock=0;
   state.pulse=1;state.pulseSpawned=0;state.organRuptureClaimed=false;
   const first=state.pulseMax===3?pulsePlan(state.seed,number,1):null;
   state.toSpawn=number===5?1:(first?.count??7+number*3)+
