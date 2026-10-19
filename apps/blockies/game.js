@@ -752,7 +752,7 @@ class Player {
         );
         // Stable, bounded kicks: nearby cells first; only one upward rescue.
         // Every candidate respects locked blocks and other players' active pieces.
-        const kicks = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[-1,-1],[1,-1]];
+        const kicks = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[-3,0],[3,0],[0,-1],[-1,-1],[1,-1],[0,-2],[0,-3]];
         for (const [dx, dy] of kicks) {
             const next = { x: this.position.x + dx, y: this.position.y + dy };
             if (this.checkCollision(rotated, next).collides) continue;
