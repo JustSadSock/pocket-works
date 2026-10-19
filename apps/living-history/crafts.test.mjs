@@ -23,7 +23,7 @@ test('physical boards become chests, increase storage and are not free timber',(
  assert.ok((s.stats.craftWoodWaste||0)>0,'wood processing physically sheds material');
  assert.ok(craftMaterialStocks(s).boards+craftMaterialStocks(s).chests>0);
  assert.ok(s.households.some(h=>(h.chests||0)>0&&storageCapacity(h,s)>storageCapacity({...h,chests:0},s)));
- assert.ok(s.people.some(p=>p.workDays?.craft>0),'the producing household consumes a real person's time');
+ assert.ok(s.people.some(p=>p.workDays?.craft>0),'a craft must consume an existing worker day');
  const check=audit(s);assert.ok(check.ok,check.issues.join('; '));
 });
 
