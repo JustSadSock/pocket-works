@@ -1,3 +1,4 @@
+import { SHAPES, sevenBag, collision as coreCollision, rotateWithKick, chooseSpawn, clearCompletedRows, lineScore } from '../../../apps/blockies/engine-core-v1.js';
 // Original Blockies engine; the wrapper below owns the room clock and serializable RNG.
 function runtime(saved,seed){const soundManager={move(){},rotate(){},drop(){},lineClear(){},gameOver(){}};
 // Game Configuration
@@ -10,17 +11,6 @@ const PREVIEW_SIZE = 4;
 const BASE_LINE_SCORE = 100;
 const STREAK_BONUS_STEP = 0.1;
 const MULTI_LINE_BONUS_STEP = 0.2;
-
-// Tetromino shapes
-const SHAPES = {
-    I: [[1, 1, 1, 1]],
-    O: [[1, 1], [1, 1]],
-    T: [[0, 1, 0], [1, 1, 1]],
-    S: [[0, 1, 1], [1, 1, 0]],
-    Z: [[1, 1, 0], [0, 1, 1]],
-    J: [[1, 0, 0], [1, 1, 1]],
-    L: [[0, 0, 1], [1, 1, 1]]
-};
 
 // Default colors for players - Retro-futurism palette
 const DEFAULT_COLORS = ['#FF1493', '#00D9FF', '#FFDB58', '#39FF14'];
@@ -194,19 +184,7 @@ function randomFloat() {
 
 // Shared seven-bag: the same seeded queue is consumed by all players.
 // No tetromino can disappear for more than twelve consecutive shared draws.
-function nextBaggedPiece() {
-    if (!Array.isArray(gameState.pieceBag)) gameState.pieceBag = [];
-    if (!gameState.pieceBag.length) {
-        const bag = Object.keys(SHAPES);
-        for (let i = bag.length - 1; i > 0; i--) {
-            const j = Math.floor(randomFloat() * (i + 1));
-            [bag[i], bag[j]] = [bag[j], bag[i]];
-        }
-        gameState.pieceBag = bag;
-    }
-    const shape = gameState.pieceBag.pop();
-    return SHAPES[shape].map(row => [...row]);
-}
+function nextBaggedPiece() {return sevenBag(gameState, randomFloat);}
 
 function formatKeyLabel(code) {
     if (!code) return '';
@@ -338,91 +316,23 @@ class Player {
     }
 
     placeSpawn() {
-        const pieceWidth = this.currentPiece[0].length;
-        const boardWidth = getBoardWidth();
-        const preferredX = Math.min(
-            boardWidth - pieceWidth,
-            Math.max(0, Math.round(this.spawnAnchor - pieceWidth / 2))
-        );
-
-        let spawnPosition = null;
-        const checked = new Set();
-
-        for (let offset = 0; offset < boardWidth; offset++) {
-            const candidates = [];
-            if (offset === 0) {
-                candidates.push(preferredX);
-            } else {
-                const left = preferredX - offset;
-                const right = preferredX + offset;
-
-                if (left >= 0) candidates.push(left);
-                if (right <= boardWidth - pieceWidth) candidates.push(right);
-            }
-
-            for (const candidate of candidates) {
-                if (checked.has(candidate)) continue;
-                checked.add(candidate);
-
-                if (!this.checkCollision(this.currentPiece, { x: candidate, y: 0 }).collides) {
-                    spawnPosition = { x: candidate, y: 0 };
-                    break;
-                }
-            }
-
-            if (spawnPosition) break;
-        }
-
-        this.position = spawnPosition || { x: preferredX, y: 0 };
-
-        if (!spawnPosition && this.checkCollision().collides) {
-            this.gameOver = true;
+        const found=chooseSpawn(this.currentPiece,this.spawnAnchor,getBoardWidth(),
+            (piece,pos)=>this.checkCollision(piece,pos));
+        const preferredX=Math.min(getBoardWidth()-this.currentPiece[0].length,
+            Math.max(0,Math.round(this.spawnAnchor-this.currentPiece[0].length/2)));
+        this.position=found||{x:preferredX,y:0};
+        if(!found&&this.checkCollision().collides){
+            this.gameOver=true;
             checkAllPlayersGameOver();
         }
-
-        this.dropCounter = 0;
+        this.dropCounter=0;
     }
 
-    checkCollision(piece = this.currentPiece, pos = this.position) {
-        const result = {
-            collides: false,
-            withLocked: false,
-            withActive: false
-        };
-
-        for (let y = 0; y < piece.length; y++) {
-            for (let x = 0; x < piece[y].length; x++) {
-                if (!piece[y][x]) continue;
-
-                const boardX = pos.x + x;
-                const boardY = pos.y + y;
-                const boardWidth = getBoardWidth();
-
-                if (boardX < 0 || boardX >= boardWidth || boardY >= BOARD_HEIGHT) {
-                    result.collides = true;
-                    result.withLocked = true;
-                    return result;
-                }
-
-                if (boardY < 0) continue;
-
-                if (gameState.board[boardY][boardX]) {
-                    result.collides = true;
-                    result.withLocked = true;
-                    return result;
-                }
-
-                if (isCellOccupiedByOtherPiece(boardX, boardY, this.id)) {
-                    result.collides = true;
-                    result.withActive = true;
-                }
-            }
-        }
-
-        return result;
+    checkCollision(piece=this.currentPiece,pos=this.position) {
+        return coreCollision(piece,pos,gameState.board,gameState.players,this.id,getBoardWidth(),BOARD_HEIGHT);
     }
 
-    move(dir, { broadcast = true } = {}) {
+     move(dir, { broadcast = true } = {}) {
         this.position.x += dir;
         if (this.checkCollision().collides) {
             this.position.x -= dir;
@@ -436,28 +346,18 @@ class Player {
     }
 
     rotate({ broadcast = true } = {}) {
-        if (this.gameOver || !this.currentPiece) return false;
-        const rotated = this.currentPiece[0].map((_, i) =>
-            this.currentPiece.map(row => row[i]).reverse()
-        );
-        // Stable, bounded kicks: nearby cells first; only one upward rescue.
-        // Every candidate respects locked blocks and other players' active pieces.
-        const kicks = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[-3,0],[3,0],[0,-1],[-1,-1],[1,-1],[0,-2],[0,-3]];
-        for (const [dx, dy] of kicks) {
-            const next = { x: this.position.x + dx, y: this.position.y + dy };
-            if (this.checkCollision(rotated, next).collides) continue;
-            this.currentPiece = rotated;
-            this.position = next;
-            soundManager.rotate();
-            if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-                networkManager.sendPlayerInput({ action: 'rotate' });
-            }
-            return true;
-        }
-        return false;
+        if(this.gameOver||!this.currentPiece)return false;
+        const next=rotateWithKick(this.currentPiece,this.position,(piece,pos)=>this.checkCollision(piece,pos));
+        if(!next)return false;
+        this.currentPiece=next.piece;
+        this.position=next.position;
+        soundManager.rotate();
+        if(broadcast&&typeof networkManager!=='undefined'&&networkManager.connected&&window.uiManager?.isOnlineMode)
+            networkManager.sendPlayerInput({action:'rotate'});
+        return true;
     }
 
-    drop({ broadcast = true } = {}) {
+     drop({ broadcast = true } = {}) {
         this.position.y++;
         const collision = this.checkCollision();
         if (collision.collides) {
@@ -525,21 +425,10 @@ class Player {
     }
 
     clearLines() {
-        let linesCleared = 0;
-        const clearedRows = [];
+        const clearedRows=clearCompletedRows(gameState.board,getBoardWidth());
+        const linesCleared=clearedRows.length;
 
-        const boardWidth = getBoardWidth();
-        for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
-            if (gameState.board[y].every(cell => cell !== 0)) {
-                clearedRows.push({ y, owners: gameState.board[y].slice() });
-                gameState.board.splice(y, 1);
-                gameState.board.unshift(Array(boardWidth).fill(0));
-                linesCleared++;
-                y++; // Check the same row again
-            }
-        }
-
-        if (linesCleared === 0) {
+         if (linesCleared === 0) {
             if (gameState.sharedStats.comboChain !== 0) {
                 gameState.sharedStats.comboChain = 0;
                 gameState.sharedStatsDirty = true;
@@ -551,16 +440,11 @@ class Player {
         // Play line clear sound
         soundManager.lineClear(linesCleared);
 
-        const comboStep = gameState.sharedStats.comboChain || 0;
-        const comboMultiplier = 1 + STREAK_BONUS_STEP * comboStep;
-        const multiMultiplier = 1 + MULTI_LINE_BONUS_STEP * (linesCleared - 1);
-        const perLineScore = Math.round(BASE_LINE_SCORE * comboMultiplier * multiMultiplier);
-        const gained = perLineScore * linesCleared;
+        const comboStep=gameState.sharedStats.comboChain||0;
+        const {gained,perLineScore,comboMultiplier,multiMultiplier,
+            streakBonusPercent,multiBonusPercent}=lineScore(linesCleared,comboStep,BASE_LINE_SCORE);
 
-        const streakBonusPercent = Math.round((comboMultiplier - 1) * 100);
-        const multiBonusPercent = Math.round((multiMultiplier - 1) * 100);
-
-        gameState.sharedStats.lines += linesCleared;
+         gameState.sharedStats.lines += linesCleared;
         gameState.sharedStats.score += gained;
         gameState.sharedStats.level = Math.floor(gameState.sharedStats.lines / 10) + 1;
         gameState.sharedStats.comboChain = comboStep + 1;
